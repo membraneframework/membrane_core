@@ -73,7 +73,7 @@ defmodule Membrane.Element.Base.Mixin.Process do
           :stopped ->
             case __MODULE__.handle_play(element_state) do
               {:ok, new_element_state} ->
-                {:noreply, %{state | playback_state: :started, lement_state: new_element_state}}
+                {:noreply, %{state | playback_state: :started, element_state: new_element_state}}
 
               {:error, reason} ->
                 {:noreply, state} # FIXME handle errors
