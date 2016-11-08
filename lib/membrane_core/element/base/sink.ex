@@ -33,12 +33,12 @@ defmodule Membrane.Element.Base.Sink do
 
       Will delegate actual processing to handle_buffer/3.
       """
-      def handle_info({:membrane_buffer, {caps, data}}, state) do
+      def handle_info({:membrane_buffer, {caps, data}}, %{element_state: element_state} = state) do
         # debug("Incoming buffer: caps = #{inspect(caps)}, byte_size(data) = #{byte_size(data)}, data = #{inspect(data)}")
 
-        case handle_buffer(caps, data, state) do
-          {:ok, new_state} ->
-            {:noreply, new_state}
+        case handle_buffer(caps, data, element_state) do
+          {:ok, new_element_state} ->
+            {:noreply, %{state | element_state: new_element_state}}
 
           # TODO handle errors
         end
