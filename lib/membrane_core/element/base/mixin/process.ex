@@ -130,11 +130,13 @@ defmodule Membrane.Element.Base.Mixin.Process do
       end
 
 
+      # Sends buffer list to all linked destinations, final case when buffer list is empty
       defp send_buffer_list_loop([], _link_destinations) do
         :ok
       end
 
 
+      # Sends buffer list to all linked destinations, recurrent case when buffer list is non-empty
       defp send_buffer_list_loop([{caps, data}|buffer_tail], link_destinations) do
         :ok = send_buffer_loop(caps, data, link_destinations)
         send_buffer_list_loop(buffer_tail, link_destinations)
