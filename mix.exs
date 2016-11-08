@@ -19,7 +19,6 @@ defmodule Membrane.Mixfile do
   def application do
     [applications: [
       :logger,
-      :porcelain
     ], mod: {Membrane, []}]
   end
 
@@ -30,7 +29,6 @@ defmodule Membrane.Mixfile do
 
   defp deps do
     [
-      {:porcelain, "~> 2.0"}
     ]
   end
 end
