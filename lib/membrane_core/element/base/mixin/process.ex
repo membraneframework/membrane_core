@@ -69,6 +69,7 @@ defmodule Membrane.Element.Base.Mixin.Process do
 
         {:ok, %{
           playback_state: :stopped,
+          link_destinations: [],
           element_state: element_state
         }}
       end
