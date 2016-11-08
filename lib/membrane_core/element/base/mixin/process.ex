@@ -73,15 +73,33 @@ defmodule Membrane.Element.Base.Mixin.Process do
           :stopped ->
             case __MODULE__.handle_play(element_state) do
               {:ok, new_element_state} ->
-                {:noreply, %{state | playback_state: :started, element_state: new_element_state}}
+                {:reply, :ok, %{state | playback_state: :playing, element_state: new_element_state}}
 
               {:error, reason} ->
-                {:noreply, state} # FIXME handle errors
+                {:reply, {:error, reason}, state} # FIXME handle errors
             end
 
-          :started ->
-            # Do nothing if already started
-            {:noreply, state}
+          :playing ->
+            # Do nothing if already playing
+            {:reply, :noop, state}
+        end
+      end
+
+
+      def handle_call(:membrane_stop, _from, %{playback_state: playback_state, element_state: element_state} = state) do
+        case playback_state do
+          :playing ->
+            case __MODULE__.handle_stop(element_state) do
+              {:ok, new_element_state} ->
+                {:reply, :ok, %{state | playback_state: :stopped, element_state: new_element_state}}
+
+              {:error, reason} ->
+                {:reply, {:error, reason}, state} # FIXME handle errors
+            end
+
+          :stopped ->
+            # Do nothing if already stopped
+            {:reply, :noop, state}
         end
       end
 
