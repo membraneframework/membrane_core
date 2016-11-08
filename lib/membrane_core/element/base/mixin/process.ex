@@ -11,7 +11,9 @@ defmodule Membrane.Element.Base.Mixin.Process do
   Callback invoked when element is initialized. It will receive options
   passed to start_link.
   """
-  @callback handle_prepare(any) :: any
+  @callback handle_prepare(any) ::
+    {:ok, any} |
+    {:error, any}
 
 
   defmacro __using__(_) do
@@ -25,8 +27,11 @@ defmodule Membrane.Element.Base.Mixin.Process do
 
 
       def init(options) do
+        {:ok, element_state} = __MODULE__.handle_prepare(options)
+        # TODO handle errors
+        
         {:ok, %{
-          element_state: __MODULE__.handle_prepare(options)
+          element_state: element_state
         }}
       end
 

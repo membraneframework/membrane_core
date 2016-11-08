@@ -18,7 +18,8 @@ defmodule Membrane.Element.Base.Sink do
   signature per each caps supported.
   """
   @callback handle_buffer(%Membrane.Caps{}, bitstring, any) ::
-    {:ok, any}
+    {:ok, any} |
+    {:error, any}
 
 
   defmacro __using__(_) do
