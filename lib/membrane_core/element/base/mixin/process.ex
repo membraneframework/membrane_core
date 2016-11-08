@@ -118,15 +118,15 @@ defmodule Membrane.Element.Base.Mixin.Process do
 
 
       # Sends buffer to all linked destinations, final case when list is empty
-      defp send_buffer_loop(_caps, _data, []) do
+      defp send_buffer_loop(_buffer, []) do
         :ok
       end
 
 
       # Sends buffer to all linked destinations, recurrent case when list is non-empty
-      defp send_buffer_loop(caps, data, [head|tail]) do
-        send(head, {:membrane_buffer, {caps, data}})
-        send_buffer_loop(caps, data, tail)
+      defp send_buffer_loop(buffer, [link_destinations_head|link_destinations_tail]) when is_tuple(buffer) do
+        send(link_destinations_head, {:membrane_buffer, buffer})
+        send_buffer_loop(buffer, link_destinations_tail)
       end
 
 
@@ -137,8 +137,8 @@ defmodule Membrane.Element.Base.Mixin.Process do
 
 
       # Sends buffer list to all linked destinations, recurrent case when buffer list is non-empty
-      defp send_buffer_list_loop([{caps, data}|buffer_tail], link_destinations) do
-        :ok = send_buffer_loop(caps, data, link_destinations)
+      defp send_buffer_list_loop([buffer_head|buffer_tail], link_destinations) when is_tuple(buffer_head) do
+        :ok = send_buffer_loop(buffer_head, link_destinations)
         send_buffer_list_loop(buffer_tail, link_destinations)
       end
 

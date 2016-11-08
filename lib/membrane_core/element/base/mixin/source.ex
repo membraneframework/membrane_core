@@ -7,9 +7,9 @@ defmodule Membrane.Element.Base.Mixin.Source do
       end
 
 
-      def send_buffer(server, caps, data) do
-        debug("Send buffer #{inspect(data)} -> #{inspect(server)}")
-        GenServer.call(server, {:membrane_send_buffer, caps, data})
+      def send_buffer(server, buffer) when is_tuple(buffer) do
+        debug("Send buffer #{inspect(buffer)} -> #{inspect(server)}")
+        GenServer.call(server, {:membrane_send_buffer, buffer})
       end
 
 
@@ -26,8 +26,8 @@ defmodule Membrane.Element.Base.Mixin.Source do
       end
 
 
-      def handle_call({:membrane_send_buffer, caps, data}, _from, %{link_destinations: link_destinations} = state) do
-        :ok = send_buffer_loop(caps, data, link_destinations)
+      def handle_call({:membrane_send_buffer, buffer}, _from, %{link_destinations: link_destinations} = state) do
+        :ok = send_buffer_loop(buffer, link_destinations)
         {:reply, :ok, state}
       end
     end

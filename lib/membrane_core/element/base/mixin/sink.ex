@@ -37,9 +37,9 @@ defmodule Membrane.Element.Base.Mixin.Sink do
                 debug("Incoming buffer: OK (caps = #{inspect(caps)}, byte_size(data) = #{byte_size(data)}, data = #{inspect(data)})")
                 {:noreply, %{state | element_state: new_element_state}}
 
-              {:send_buffer, {caps_to_send, data_to_send}, new_element_state} ->
-                debug("Incoming buffer: OK + send buffer #{inspect(caps_to_send)}, #{inspect(data_to_send)} (caps = #{inspect(caps)}, byte_size(data) = #{byte_size(data)}, data = #{inspect(data)})")
-                :ok = send_buffer_loop(caps_to_send, data_to_send, link_destinations)
+              {:send_buffer, {_caps_to_send, _data_to_send} = buffer, new_element_state} ->
+                debug("Incoming buffer: OK + send buffer #{inspect(buffer)} (caps = #{inspect(caps)}, byte_size(data) = #{byte_size(data)}, data = #{inspect(data)})")
+                :ok = send_buffer_loop(buffer, link_destinations)
                 {:noreply, %{state | element_state: new_element_state}}
 
               {:send_buffer, buffer_list, new_element_state} ->
