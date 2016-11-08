@@ -32,16 +32,24 @@ defmodule Membrane.Element.Base.Sink do
       @doc """
       Callback invoked on incoming buffer.
 
-      Will delegate actual processing to handle_buffer/3.
+      If element is playing it will delegate actual processing to handle_buffer/3.
+
+      Otherwise it will silently drop the buffer.
       """
-      def handle_info({:membrane_buffer, {caps, data}}, %{element_state: element_state} = state) do
+      def handle_info({:membrane_buffer, {caps, data}}, %{playback_state: playback_state, lement_state: element_state} = state) do
         # debug("Incoming buffer: caps = #{inspect(caps)}, byte_size(data) = #{byte_size(data)}, data = #{inspect(data)}")
 
-        case handle_buffer(caps, data, element_state) do
-          {:ok, new_element_state} ->
-            {:noreply, %{state | element_state: new_element_state}}
+        case playback_state do
+          :playing ->
+            case handle_buffer(caps, data, element_state) do
+              {:ok, new_element_state} ->
+                {:noreply, %{state | element_state: new_element_state}}
 
-          # TODO handle errors
+              # TODO handle errors
+            end
+
+          :stopped ->
+            {:noreply, state}
         end
       end
     end
