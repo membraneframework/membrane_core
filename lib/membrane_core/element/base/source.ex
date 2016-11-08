@@ -22,7 +22,7 @@ defmodule Membrane.Element.Base.Source do
 
 
       def handle_call({:membrane_link, destination}, _from, %{link_destinations: link_destinations} = state) do
-        cond Enum.find(link_destinations, fn(x) -> x == destination end) do
+        case Enum.find(link_destinations, fn(x) -> x == destination end) do
           nil ->
             debug("Handle Link: OK, #{inspect(destination)} added")
             {:reply, :ok, %{state | link_destinations: link_destinations ++ [destination]}}
