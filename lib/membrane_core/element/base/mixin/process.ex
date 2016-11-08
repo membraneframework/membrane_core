@@ -88,13 +88,13 @@ defmodule Membrane.Element.Base.Mixin.Process do
 
       # Default implementations
 
-      def handle_prepare(_options), do: %{}
+      def handle_prepare(_options), do: {:ok, %{}}
 
 
-      def handle_play(_options), do: %{}
+      def handle_play(_options), do: {:ok, %{}}
 
 
-      def handle_stop(_options), do: %{}
+      def handle_stop(_options), do: {:ok, %{}}
 
 
       defoverridable [
