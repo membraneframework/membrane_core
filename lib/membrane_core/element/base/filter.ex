@@ -5,7 +5,7 @@ defmodule Membrane.Element.Base.Filter do
 
 
   defmacro __using__(_) do
-    quote do
+    quote location: :keep do
       use Membrane.Element.Base.Source
       use Membrane.Element.Base.Sink
     end

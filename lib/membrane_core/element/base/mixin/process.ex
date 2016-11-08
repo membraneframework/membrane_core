@@ -35,7 +35,7 @@ defmodule Membrane.Element.Base.Mixin.Process do
 
 
   defmacro __using__(_) do
-    quote do
+    quote location: :keep do
       use GenServer
       use Membrane.Mixins.Log
 

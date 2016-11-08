@@ -23,7 +23,7 @@ defmodule Membrane.Element.Base.Sink do
 
 
   defmacro __using__(_) do
-    quote do
+    quote location: :keep do
       @behaviour Membrane.Element.Base.Sink
 
       use Membrane.Element.Base.Mixin.Process

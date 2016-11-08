@@ -5,7 +5,7 @@ defmodule Membrane.Element.Base.Source do
 
 
   defmacro __using__(_) do
-    quote do
+    quote location: :keep do
       use Membrane.Element.Base.Mixin.Process
 
 
