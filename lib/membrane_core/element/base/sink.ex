@@ -36,7 +36,7 @@ defmodule Membrane.Element.Base.Sink do
 
       Otherwise it will silently drop the buffer.
       """
-      def handle_info({:membrane_buffer, {caps, data}}, %{playback_state: playback_state, lement_state: element_state} = state) do
+      def handle_info({:membrane_buffer, {caps, data}}, %{playback_state: playback_state, element_state: element_state} = state) do
         # debug("Incoming buffer: caps = #{inspect(caps)}, byte_size(data) = #{byte_size(data)}, data = #{inspect(data)}")
 
         case playback_state do
