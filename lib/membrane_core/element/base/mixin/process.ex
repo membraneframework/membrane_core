@@ -37,19 +37,23 @@ defmodule Membrane.Element.Base.Mixin.Process do
   defmacro __using__(_) do
     quote do
       use GenServer
+      use Membrane.Mixins.Log
 
 
       def start_link(options) do
+        debug("Start Link: options = #{inspect(options)}")
         GenServer.start_link(__MODULE__, options)
       end
 
 
       def play(server) do
+        debug("Play -> #{inspect(server)}")
         GenServer.call(server, :membrane_play)
       end
 
 
       def stop(server) do
+        debug("Stop -> #{inspect(server)}")
         GenServer.call(server, :membrane_stop)
       end
 
@@ -60,6 +64,8 @@ defmodule Membrane.Element.Base.Mixin.Process do
       def init(options) do
         {:ok, element_state} = __MODULE__.handle_prepare(options)
         # TODO handle errors
+
+        debug("Initial state: #{inspect(element_state)}")
 
         {:ok, %{
           playback_state: :stopped,
@@ -73,13 +79,16 @@ defmodule Membrane.Element.Base.Mixin.Process do
           :stopped ->
             case __MODULE__.handle_play(element_state) do
               {:ok, new_element_state} ->
+                debug("Handle Play: OK, new state = #{inspect(new_element_state)}")
                 {:reply, :ok, %{state | playback_state: :playing, element_state: new_element_state}}
 
               {:error, reason} ->
+                debug("Handle Play: Error, reason = #{inspect(reason)}")
                 {:reply, {:error, reason}, state} # FIXME handle errors
             end
 
           :playing ->
+            debug("Handle Play: Already playing")
             # Do nothing if already playing
             {:reply, :noop, state}
         end
@@ -91,13 +100,16 @@ defmodule Membrane.Element.Base.Mixin.Process do
           :playing ->
             case __MODULE__.handle_stop(element_state) do
               {:ok, new_element_state} ->
+                debug("Handle Stop: OK, new state = #{inspect(new_element_state)}")
                 {:reply, :ok, %{state | playback_state: :stopped, element_state: new_element_state}}
 
               {:error, reason} ->
+                debug("Handle Stop: Error, reason = #{inspect(reason)}")
                 {:reply, {:error, reason}, state} # FIXME handle errors
             end
 
           :stopped ->
+            debug("Handle Stop: Already stopped")
             # Do nothing if already stopped
             {:reply, :noop, state}
         end
