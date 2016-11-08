@@ -36,12 +36,17 @@ defmodule Membrane.Element.Base.Sink do
 
       Otherwise it will silently drop the buffer.
       """
-      def handle_info({:membrane_buffer, {caps, data}}, %{playback_state: playback_state, element_state: element_state} = state) do
+      def handle_info({:membrane_buffer, {caps, data}}, %{link_destinations: link_destinations, playback_state: playback_state, element_state: element_state} = state) do
         case playback_state do
           :playing ->
             case handle_buffer(caps, data, element_state) do
               {:ok, new_element_state} ->
                 debug("Incoming buffer: OK (caps = #{inspect(caps)}, byte_size(data) = #{byte_size(data)}, data = #{inspect(data)})")
+                {:noreply, %{state | element_state: new_element_state}}
+
+              {:send_buffer, {caps_to_send, data_to_send}, new_element_state} ->
+                debug("Incoming buffer: OK + send buffer #{inspect(caps_to_send)}, #{inspect(data_to_send)} (caps = #{inspect(caps)}, byte_size(data) = #{byte_size(data)}, data = #{inspect(data)})")
+                :ok = send_buffer_loop(caps_to_send, data_to_send, link_destinations)
                 {:noreply, %{state | element_state: new_element_state}}
 
               {:error, reason} ->
@@ -54,6 +59,17 @@ defmodule Membrane.Element.Base.Sink do
             debug("Incoming buffer: Error, not started (caps = #{inspect(caps)}, byte_size(data) = #{byte_size(data)}, data = #{inspect(data)})")
             {:noreply, state}
         end
+      end
+
+
+      defp send_buffer_loop(_caps, _data, []) do
+        :ok
+      end
+
+
+      defp send_buffer_loop(caps, data, [head|tail]) do
+        send(head, {:membrane_buffer, {caps, data}})
+        send_buffer_loop(caps, data, tail)
       end
     end
   end

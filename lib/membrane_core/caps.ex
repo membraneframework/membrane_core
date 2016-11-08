@@ -1,12 +1,11 @@
 defmodule Membrane.Caps do
   @type content_type :: String.t
-  @type t :: %Membrane.Caps{content: Membrane.Caps.content_type}
+  @type channels_type :: non_neg_integer
 
-  defstruct content: nil
+  @type t :: %Membrane.Caps{
+    content: Membrane.Caps.content_type,
+    channels: Membrane.Caps.channels_type
+  }
 
-
-  def to_gstreamer(%Membrane.Caps{content: "audio/x-raw"}) do
-    # FIXME do not use hardcoded format
-    "audio/x-raw,rate=#{Membrane.Const.sample_rate},format=S16LE,channels=#{Membrane.Const.channels}"
-  end
+  defstruct content: nil, channels: nil
 end
