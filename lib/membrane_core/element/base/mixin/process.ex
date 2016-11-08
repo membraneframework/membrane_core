@@ -130,6 +130,17 @@ defmodule Membrane.Element.Base.Mixin.Process do
       end
 
 
+      defp send_buffer_list_loop([], _link_destinations) do
+        :ok
+      end
+
+
+      defp send_buffer_list_loop([{caps, data}|buffer_tail], link_destinations) do
+        :ok = send_buffer_loop(caps, data, link_destinations)
+        send_buffer_list_loop(buffer_tail, link_destinations)
+      end
+
+
       # Default implementations
 
       def handle_prepare(_options), do: {:ok, %{}}
