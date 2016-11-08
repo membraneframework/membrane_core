@@ -48,13 +48,13 @@ defmodule Membrane.Element.Base.Mixin.Sink do
                 {:noreply, %{state | element_state: new_element_state}}
 
               {:error, reason} ->
-                debug("Incoming buffer: Error (reason = #{inspect(reason)}, caps = #{inspect(caps)}, byte_size(data) = #{byte_size(data)}, data = #{inspect(data)})")
+                warn("Incoming buffer: Error (reason = #{inspect(reason)}, caps = #{inspect(caps)}, byte_size(data) = #{byte_size(data)}, data = #{inspect(data)})")
                 {:noreply, state}
                 # TODO handle errors
             end
 
           :stopped ->
-            debug("Incoming buffer: Error, not started (caps = #{inspect(caps)}, byte_size(data) = #{byte_size(data)}, data = #{inspect(data)})")
+            warn("Incoming buffer: Error, not started (caps = #{inspect(caps)}, byte_size(data) = #{byte_size(data)}, data = #{inspect(data)})")
             {:noreply, state}
         end
       end

@@ -84,12 +84,12 @@ defmodule Membrane.Element.Base.Mixin.Process do
                 {:reply, :ok, %{state | playback_state: :playing, element_state: new_element_state}}
 
               {:error, reason} ->
-                debug("Handle Play: Error, reason = #{inspect(reason)}")
+                warn("Handle Play: Error, reason = #{inspect(reason)}")
                 {:reply, {:error, reason}, state} # FIXME handle errors
             end
 
           :playing ->
-            debug("Handle Play: Already playing")
+            warn("Handle Play: Error, already playing")
             # Do nothing if already playing
             {:reply, :noop, state}
         end
@@ -105,12 +105,12 @@ defmodule Membrane.Element.Base.Mixin.Process do
                 {:reply, :ok, %{state | playback_state: :stopped, element_state: new_element_state}}
 
               {:error, reason} ->
-                debug("Handle Stop: Error, reason = #{inspect(reason)}")
+                warn("Handle Stop: Error, reason = #{inspect(reason)}")
                 {:reply, {:error, reason}, state} # FIXME handle errors
             end
 
           :stopped ->
-            debug("Handle Stop: Already stopped")
+            warn("Handle Stop: Error, already stopped")
             # Do nothing if already stopped
             {:reply, :noop, state}
         end

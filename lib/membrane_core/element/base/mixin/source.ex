@@ -20,7 +20,7 @@ defmodule Membrane.Element.Base.Mixin.Source do
             {:reply, :ok, %{state | link_destinations: link_destinations ++ [destination]}}
 
           _ ->
-            debug("Handle Link: Error, #{inspect(destination)} already present")
+            warn("Handle Link: Error, #{inspect(destination)} already present")
             {:reply, :noop, state}
         end
       end
