@@ -7,8 +7,8 @@ defmodule Membrane.Caps do
 
   @type t :: %Membrane.Caps{
     content: Membrane.Caps.content_type,
-    channels: Membrane.Caps.channels_type
-    frame_size: Membrane.Caps.frame_size_type
+    channels: Membrane.Caps.channels_type,
+    frame_size: Membrane.Caps.frame_size_type,
     endianness: Membrane.Caps.endianness_type
   }
 
