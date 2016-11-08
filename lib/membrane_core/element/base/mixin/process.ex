@@ -117,6 +117,19 @@ defmodule Membrane.Element.Base.Mixin.Process do
       end
 
 
+      # Sends buffer to all linked destinations, final case when list is empty
+      defp send_buffer_loop(_caps, _data, []) do
+        :ok
+      end
+
+
+      # Sends buffer to all linked destinations, recurrent case when list is non-empty
+      defp send_buffer_loop(caps, data, [head|tail]) do
+        send(head, {:membrane_buffer, {caps, data}})
+        send_buffer_loop(caps, data, tail)
+      end
+
+
       # Default implementations
 
       def handle_prepare(_options), do: {:ok, %{}}
