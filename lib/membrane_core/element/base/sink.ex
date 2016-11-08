@@ -37,18 +37,21 @@ defmodule Membrane.Element.Base.Sink do
       Otherwise it will silently drop the buffer.
       """
       def handle_info({:membrane_buffer, {caps, data}}, %{playback_state: playback_state, element_state: element_state} = state) do
-        # debug("Incoming buffer: caps = #{inspect(caps)}, byte_size(data) = #{byte_size(data)}, data = #{inspect(data)}")
-
         case playback_state do
           :playing ->
             case handle_buffer(caps, data, element_state) do
               {:ok, new_element_state} ->
+                debug("Incoming buffer: OK (caps = #{inspect(caps)}, byte_size(data) = #{byte_size(data)}, data = #{inspect(data)})")
                 {:noreply, %{state | element_state: new_element_state}}
 
-              # TODO handle errors
+              {:error, reason} ->
+                debug("Incoming buffer: Error (reason = #{inspect(reason)}, caps = #{inspect(caps)}, byte_size(data) = #{byte_size(data)}, data = #{inspect(data)})")
+                {:noreply, state}
+                # TODO handle errors
             end
 
           :stopped ->
+            debug("Incoming buffer: Error, not started (caps = #{inspect(caps)}, byte_size(data) = #{byte_size(data)}, data = #{inspect(data)})")
             {:noreply, state}
         end
       end
