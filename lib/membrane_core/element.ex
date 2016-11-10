@@ -52,10 +52,10 @@ defmodule Membrane.Element do
 
   If destination is already present, returns `:noop`.
   """
-  @spec link(pid, timeout) :: :ok | :noop
-  def link(server, destination) do
+  @spec link(pid, pid, timeout) :: :ok | :noop
+  def link(server, destination, timeout \\ 5000) do
     debug("Link #{inspect(destination)} -> #{inspect(server)}")
-    GenServer.call(server, {:membrane_link, destination})
+    GenServer.call(server, {:membrane_link, destination}, timeout)
   end
 
 
@@ -73,9 +73,9 @@ defmodule Membrane.Element do
 
   In case of success, returns `:ok`.
   """
-  @spec send_buffer(pid, timeout) :: :ok | :noop
-  def send_buffer(server, buffer) when is_tuple(buffer) do
+  @spec send_buffer(pid, %Membrane.Buffer{}, timeout) :: :ok | :noop
+  def send_buffer(server, buffer, timeout \\ 5000) do
     debug("Send buffer #{inspect(buffer)} -> #{inspect(server)}")
-    GenServer.call(server, {:membrane_send_buffer, buffer})
+    GenServer.call(server, {:membrane_send_buffer, buffer}, timeout)
   end
 end
