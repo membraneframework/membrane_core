@@ -8,17 +8,17 @@ defmodule Membrane.Mixins.Log do
     quote location: :keep do
       require Logger
 
-      def info(message) do
+      defp info(message) do
         Logger.info("[#{List.last(String.split(to_string(__MODULE__), ".", parts: 2))}} #{inspect(self())}] #{message}")
       end
 
 
-      def warn(message) do
+      defp warn(message) do
         Logger.warn("[#{List.last(String.split(to_string(__MODULE__), ".", parts: 2))}} #{inspect(self())}] #{message}")
       end
 
 
-      def debug(message) do
+      defp debug(message) do
         Logger.debug("[#{List.last(String.split(to_string(__MODULE__), ".", parts: 2))}} #{inspect(self())}] #{message}")
       end
     end

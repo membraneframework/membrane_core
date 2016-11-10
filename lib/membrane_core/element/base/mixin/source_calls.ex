@@ -1,18 +1,6 @@
-defmodule Membrane.Element.Base.Mixin.Source do
+defmodule Membrane.Element.Base.Mixin.SourceCalls do
   defmacro __using__(_) do
     quote location: :keep do
-      def link(server, destination) do
-        debug("Link #{inspect(destination)} -> #{inspect(server)}")
-        GenServer.call(server, {:membrane_link, destination})
-      end
-
-
-      def send_buffer(server, buffer) when is_tuple(buffer) do
-        debug("Send buffer #{inspect(buffer)} -> #{inspect(server)}")
-        GenServer.call(server, {:membrane_send_buffer, buffer})
-      end
-
-
       def handle_call({:membrane_link, destination}, _from, %{link_destinations: link_destinations} = state) do
         case Enum.find(link_destinations, fn(x) -> x == destination end) do
           nil ->
