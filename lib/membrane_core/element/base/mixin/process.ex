@@ -34,6 +34,15 @@ defmodule Membrane.Element.Base.Mixin.Process do
     {:error, any}
 
 
+  @doc """
+  Callback invoked when element is receiving message of other kind.
+  It will receive the message and element state.
+  """
+  @callback handle_other(any, any) ::
+    {:ok, any} |
+    {:error, any}
+
+
   defmacro __using__(_) do
     quote location: :keep do
       use GenServer
@@ -117,6 +126,16 @@ defmodule Membrane.Element.Base.Mixin.Process do
       end
 
 
+      def handle_info(message, %{element_state: element_state} = state) do
+        case __MODULE__.handle_other(message, element_state) do
+          {:ok, new_element_state} ->
+            {:noreply, %{state | element_state: new_element_state}}
+
+          # TODO handle errors
+        end
+      end
+
+
       # Sends buffer to all linked destinations, final case when list is empty
       defp send_buffer_loop(_buffer, []) do
         :ok
@@ -154,10 +173,14 @@ defmodule Membrane.Element.Base.Mixin.Process do
       def handle_stop(state), do: {:ok, state}
 
 
+      def handle_other(_message, state), do: {:ok, state}
+
+
       defoverridable [
         handle_prepare: 1,
         handle_play: 1,
         handle_stop: 1,
+        handle_other: 2,
       ]
     end
   end
