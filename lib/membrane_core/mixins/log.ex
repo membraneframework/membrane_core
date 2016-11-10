@@ -9,17 +9,17 @@ defmodule Membrane.Mixins.Log do
       require Logger
 
       defp info(message) do
-        Logger.info("[#{List.last(String.split(to_string(__MODULE__), ".", parts: 2))}} #{inspect(self())}] #{message}")
+        Logger.info("[#{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{message}")
       end
 
 
       defp warn(message) do
-        Logger.warn("[#{List.last(String.split(to_string(__MODULE__), ".", parts: 2))}} #{inspect(self())}] #{message}")
+        Logger.warn("[#{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{message}")
       end
 
 
       defp debug(message) do
-        Logger.debug("[#{List.last(String.split(to_string(__MODULE__), ".", parts: 2))}} #{inspect(self())}] #{message}")
+        Logger.debug("[#{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{message}")
       end
     end
   end
