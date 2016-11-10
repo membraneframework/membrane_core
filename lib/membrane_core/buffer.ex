@@ -1,5 +1,5 @@
 defmodule Membrane.Buffer do
-  @doc """
+  @moduledoc """
   Structure representing a single chunk of data that flows between elements.
 
   It is just a wrapper around bitstring so there can be some metadata attached
