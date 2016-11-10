@@ -31,6 +31,8 @@ defmodule Membrane.Element.Base.Mixin.Process do
   """
   @callback handle_stop(any) ::
     {:ok, any} |
+    {:send_buffer, [{%Membrane.Caps{}, bitstring}], any} |
+    {:send_buffer, {%Membrane.Caps{}, bitstring}, any} |
     {:error, any}
 
 
@@ -126,12 +128,26 @@ defmodule Membrane.Element.Base.Mixin.Process do
       end
 
 
-      def handle_info(message, %{element_state: element_state} = state) do
+      def handle_info(message, %{link_destinations: link_destinations, element_state: element_state} = state) do
         case __MODULE__.handle_other(message, element_state) do
           {:ok, new_element_state} ->
+            debug("Handle other: OK (message = #{inspect(message)})")
             {:noreply, %{state | element_state: new_element_state}}
 
-          # TODO handle errors
+          {:send_buffer, {_caps_to_send, _data_to_send} = buffer, new_element_state} ->
+            debug("Handle other: OK + send buffer #{inspect(buffer)} (message = #{inspect(message)})")
+            :ok = send_buffer_loop(buffer, link_destinations)
+            {:noreply, %{state | element_state: new_element_state}}
+
+          {:send_buffer, buffer_list, new_element_state} ->
+            debug("Handle other: OK + send buffer_list #{inspect(buffer_list)} (message = #{inspect(message)})")
+            :ok = send_buffer_list_loop(buffer_list, link_destinations)
+            {:noreply, %{state | element_state: new_element_state}}
+
+          {:error, reason} ->
+            warn("Handle other: Error (reason = #{inspect(reason)}, (message = #{inspect(message)})")
+            {:noreply, state}
+            # TODO handle errors
         end
       end
 
