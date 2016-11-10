@@ -29,8 +29,8 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_stop(any) ::
     {:ok, any} |
-    {:send_buffer, [{%Membrane.Caps{}, bitstring}], any} |
-    {:send_buffer, {%Membrane.Caps{}, bitstring}, any} |
+    {:send_buffer, [%Membrane.Buffer{}], any} |
+    {:send_buffer, %Membrane.Buffer{}, any} |
     {:error, any}
 
 
@@ -40,6 +40,8 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_other(any, any) ::
     {:ok, any} |
+    {:send_buffer, [%Membrane.Buffer{}], any} |
+    {:send_buffer, %Membrane.Buffer{}, any} |
     {:error, any}
 
 

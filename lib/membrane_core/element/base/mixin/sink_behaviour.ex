@@ -4,15 +4,14 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
 
   The arguments are:
 
-  - caps
-  - data
+  - buffer
   - current element state
 
   While implementing these callbacks, please use pattern matching to define
   what caps are supported. In other words, define one function matching this
   signature per each caps supported.
   """
-  @callback handle_buffer(%Membrane.Caps{}, bitstring, any) ::
+  @callback handle_buffer(%Membrane.Buffer{}, any) ::
     {:ok, any} |
     {:error, any}
 

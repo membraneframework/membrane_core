@@ -12,5 +12,10 @@ defmodule Membrane.Caps do
     endianness: Membrane.Caps.endianness_type
   }
 
-  defstruct content: nil, channels: nil, sample_rate: nil, endianness: nil, frame_size: nil
+  defstruct \
+    content: nil,
+    channels: nil,
+    sample_rate: nil,
+    endianness: nil,
+    frame_size: nil
 end

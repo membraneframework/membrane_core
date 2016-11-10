@@ -13,7 +13,7 @@ defmodule Membrane.Element.Base.Mixin.CommonInfos do
             debug("Handle other: OK (message = #{inspect(message)})")
             {:noreply, %{state | element_state: new_element_state}}
 
-          {:send_buffer, {_caps_to_send, _data_to_send} = buffer, new_element_state} ->
+          {:send_buffer, %Membrane.Buffer{} = buffer, new_element_state} ->
             debug("Handle other: OK + send buffer #{inspect(buffer)} (message = #{inspect(message)})")
             :ok = send_buffer_loop(buffer, link_destinations)
             {:noreply, %{state | element_state: new_element_state}}

@@ -1,8 +1,9 @@
 defmodule Membrane.Element.Core.CapsOverrideOptions do
-  defstruct caps: nil
+  defstruct \
+    caps: nil
 
   @type t :: %Membrane.Element.Core.CapsOverrideOptions{
-    caps: %Membrane.Caps{}
+    caps: %Membrane.Caps{} | nil
   }
 end
 
@@ -20,12 +21,16 @@ defmodule Membrane.Element.Core.CapsOverride do
   alias Membrane.Element.Core.CapsOverrideOptions
 
 
+  # Private API
+
+  @doc false
   def handle_prepare(%CapsOverrideOptions{caps: caps}) do
     {:ok, %{caps: caps}}
   end
 
 
-  def handle_buffer(_caps, data, %{caps: caps} = state) do
-    {:send_buffer, {caps, data}, state}
+  @doc false
+  def handle_buffer(buffer, %{caps: caps} = state) do
+    {:send_buffer, %Membrane.Buffer{buffer | caps: caps}, state}
   end
 end
