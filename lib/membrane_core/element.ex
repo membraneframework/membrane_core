@@ -7,6 +7,23 @@ defmodule Membrane.Element do
 
 
   @doc """
+  Sends synchronous call to the given element requesting it to prepare.
+
+  It will wait for reply for amount of time passed as second argument
+  (in milliseconds).
+
+  In case of success, returns `:ok`.
+
+  If element is already playing, returns `:noop`.
+  """
+  @spec prepare(pid, timeout) :: :ok | :noop
+  def prepare(server, timeout \\ 5000) do
+    debug("Prepare -> #{inspect(server)}")
+    GenServer.call(server, :membrane_prepare, timeout)
+  end
+
+
+  @doc """
   Sends synchronous call to the given element requesting it to start playing.
 
   It will wait for reply for amount of time passed as second argument
@@ -56,26 +73,5 @@ defmodule Membrane.Element do
   def link(server, destination, timeout \\ 5000) do
     debug("Link #{inspect(destination)} -> #{inspect(server)}")
     GenServer.call(server, {:membrane_link, destination}, timeout)
-  end
-
-
-  @doc """
-  FIXME remove this, we can use handle_other for the same purpose
-
-  Sends synchronous call to the given element requesting it to send buffer
-  to its destinations. It makes sense only for source elements.
-
-  It should not be used in the application, it is added primarily for
-  making elements.
-
-  It will wait for reply for amount of time passed as second argument
-  (in milliseconds).
-
-  In case of success, returns `:ok`.
-  """
-  @spec send_buffer(pid, %Membrane.Buffer{}, timeout) :: :ok | :noop
-  def send_buffer(server, buffer, timeout \\ 5000) do
-    debug("Send buffer #{inspect(buffer)} -> #{inspect(server)}")
-    GenServer.call(server, {:membrane_send_buffer, buffer}, timeout)
   end
 end

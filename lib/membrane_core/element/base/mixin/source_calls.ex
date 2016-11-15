@@ -12,12 +12,6 @@ defmodule Membrane.Element.Base.Mixin.SourceCalls do
             {:reply, :noop, state}
         end
       end
-
-
-      def handle_call({:membrane_send_buffer, buffer}, _from, %{link_destinations: link_destinations} = state) do
-        :ok = send_buffer_loop(buffer, link_destinations)
-        {:reply, :ok, state}
-      end
     end
   end
 end

@@ -20,7 +20,7 @@ defmodule Membrane.Element.Base.Mixin.CommonProcess do
 
       @doc false
       def init(options) do
-        {:ok, element_state} = __MODULE__.handle_prepare(options)
+        {:ok, element_state} = __MODULE__.handle_init(options)
         # TODO handle errors
 
         debug("Initial state: #{inspect(element_state)}")

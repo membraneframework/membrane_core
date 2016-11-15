@@ -8,6 +8,16 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @doc """
   Callback invoked when element is initialized. It will receive options
   passed to start_link.
+
+  On success it should return `{:ok, element_state}`.
+  """
+  @callback handle_init(any) ::
+    {:ok, any} |
+    {:error, any}
+
+
+  @doc """
+  Callback invoked when element is prepared. It will receive element state.
   """
   @callback handle_prepare(any) ::
     {:ok, any} |
@@ -29,8 +39,6 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_stop(any) ::
     {:ok, any} |
-    {:send_buffer, [%Membrane.Buffer{}], any} |
-    {:send_buffer, %Membrane.Buffer{}, any} |
     {:error, any}
 
 
@@ -40,9 +48,8 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_other(any, any) ::
     {:ok, any} |
-    {:send_buffer, [%Membrane.Buffer{}], any} |
-    {:send_buffer, %Membrane.Buffer{}, any} |
-    {:error, any}
+    {:send, [%Membrane.Buffer{}], any} |
+    {:error, any, any}
 
 
   defmacro __using__(_) do

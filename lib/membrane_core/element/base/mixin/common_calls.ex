@@ -7,9 +7,37 @@ defmodule Membrane.Element.Base.Mixin.CommonCalls do
 
   defmacro __using__(_) do
     quote location: :keep do
+      def handle_call(:membrane_prepare, _from, %{plaback_state: plaback_state, element_state: element_state} = state) do
+        case plaback_state do
+          :stopped ->
+            case __MODULE__.handle_prepare(element_state) do
+              {:ok, new_element_state} ->
+                debug("Handle Prepare: OK, new state = #{inspect(new_element_state)}")
+                {:reply, :ok, %{state | plaback_state: :prepared, element_state: new_element_state}}
+
+              {:error, reason} ->
+                warn("Handle Prepare: Error, reason = #{inspect(reason)}")
+                {:reply, {:error, reason}, state} # FIXME handle errors
+            end
+
+          :prepared ->
+            warn("Handle Prepare: Error, already prepared")
+            # Do nothing if already prepared
+            {:reply, :noop, state}
+
+          :playing ->
+            warn("Handle Prepare: Error, already playing")
+            # Do nothing if already playing
+            {:reply, :noop, state}
+        end
+      end
+
+
       def handle_call(:membrane_play, _from, %{playback_state: playback_state, element_state: element_state} = state) do
         case playback_state do
-          :stopped ->
+          # TODO add stopped
+
+          :prepared ->
             case __MODULE__.handle_play(element_state) do
               {:ok, new_element_state} ->
                 debug("Handle Play: OK, new state = #{inspect(new_element_state)}")
@@ -30,7 +58,12 @@ defmodule Membrane.Element.Base.Mixin.CommonCalls do
 
       def handle_call(:membrane_stop, _from, %{playback_state: playback_state, element_state: element_state} = state) do
         case playback_state do
-          :playing ->
+          :stopped ->
+            warn("Handle Stop: Error, already stopped")
+            # Do nothing if already stopped
+            {:reply, :noop, state}
+
+          :prepared ->
             case __MODULE__.handle_stop(element_state) do
               {:ok, new_element_state} ->
                 debug("Handle Stop: OK, new state = #{inspect(new_element_state)}")
@@ -41,10 +74,16 @@ defmodule Membrane.Element.Base.Mixin.CommonCalls do
                 {:reply, {:error, reason}, state} # FIXME handle errors
             end
 
-          :stopped ->
-            warn("Handle Stop: Error, already stopped")
-            # Do nothing if already stopped
-            {:reply, :noop, state}
+          :playing ->
+            case __MODULE__.handle_stop(element_state) do
+              {:ok, new_element_state} ->
+                debug("Handle Stop: OK, new state = #{inspect(new_element_state)}")
+                {:reply, :ok, %{state | playback_state: :stopped, element_state: new_element_state}}
+
+              {:error, reason} ->
+                warn("Handle Stop: Error, reason = #{inspect(reason)}")
+                {:reply, {:error, reason}, state} # FIXME handle errors
+            end
         end
       end
     end

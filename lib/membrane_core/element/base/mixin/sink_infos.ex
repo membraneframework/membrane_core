@@ -8,33 +8,18 @@ defmodule Membrane.Element.Base.Mixin.SinkInfos do
 
       Otherwise it will silently drop the buffer.
       """
-      def handle_info({:membrane_buffer, buffer}, %{link_destinations: link_destinations, playback_state: playback_state, element_state: element_state} = state) do
+      def handle_info({:membrane_buffer, buffer}, %{element_state: element_state, playback_state: playback_state} = state) do
         case playback_state do
-          :playing ->
-            case handle_buffer(buffer, element_state) do
-              {:ok, new_element_state} ->
-                debug("Incoming buffer: OK (buffer = #{inspect(buffer)})")
-                {:noreply, %{state | element_state: new_element_state}}
-
-              {:send_buffer, %Membrane.Buffer{} = buffer, new_element_state} ->
-                debug("Incoming buffer: OK + send buffer #{inspect(buffer)} (buffer = #{inspect(buffer)})")
-                :ok = send_buffer_loop(buffer, link_destinations)
-                {:noreply, %{state | element_state: new_element_state}}
-
-              {:send_buffer, buffer_list, new_element_state} ->
-                debug("Incoming buffer: OK + send buffer_list #{inspect(buffer_list)} (buffer = #{inspect(buffer)})")
-                :ok = send_buffer_list_loop(buffer_list, link_destinations)
-                {:noreply, %{state | element_state: new_element_state}}
-
-              {:error, reason} ->
-                warn("Incoming buffer: Error #{inspect(reason)} (buffer = #{inspect(buffer)})")
-                {:noreply, state}
-                # TODO handle errors
-            end
-
           :stopped ->
             warn("Incoming buffer: Error, not started (buffer = #{inspect(buffer)})")
             {:noreply, state}
+
+          :prepared ->
+            warn("Incoming buffer: Error, not started (buffer = #{inspect(buffer)})")
+            {:noreply, state}
+
+          :playing ->
+            handle_buffer(buffer, element_state) |> handle_callback(state)
         end
       end
     end

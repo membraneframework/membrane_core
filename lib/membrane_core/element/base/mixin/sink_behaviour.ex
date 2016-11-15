@@ -13,7 +13,8 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   """
   @callback handle_buffer(%Membrane.Buffer{}, any) ::
     {:ok, any} |
-    {:error, any}
+    {:send, [%Membrane.Buffer{}], any} |
+    {:error, any, any}
 
 
   defmacro __using__(_) do

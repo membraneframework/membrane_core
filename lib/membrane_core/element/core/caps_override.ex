@@ -24,8 +24,10 @@ defmodule Membrane.Element.Core.CapsOverride do
   # Private API
 
   @doc false
-  def handle_prepare(%CapsOverrideOptions{caps: caps}) do
-    {:ok, %{caps: caps}}
+  def handle_init(%CapsOverrideOptions{caps: caps}) do
+    {:ok, %{
+      caps: caps,
+    }}
   end
 
 
