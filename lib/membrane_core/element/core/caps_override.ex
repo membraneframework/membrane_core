@@ -33,6 +33,6 @@ defmodule Membrane.Element.Core.CapsOverride do
 
   @doc false
   def handle_buffer(buffer, %{caps: caps} = state) do
-    {:send_buffer, %Membrane.Buffer{buffer | caps: caps}, state}
+    {:send, [%Membrane.Buffer{buffer | caps: caps}], state}
   end
 end
