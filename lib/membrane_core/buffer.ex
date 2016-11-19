@@ -17,7 +17,7 @@ defmodule Membrane.Buffer do
   """
 
   @type t :: %Membrane.Buffer{
-    caps: %Membrane.Caps{},
+    caps: map,
     payload: bitstring,
     origin: map
   }

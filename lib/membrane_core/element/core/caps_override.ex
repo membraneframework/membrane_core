@@ -3,7 +3,7 @@ defmodule Membrane.Element.Core.CapsOverrideOptions do
     caps: nil
 
   @type t :: %Membrane.Element.Core.CapsOverrideOptions{
-    caps: %Membrane.Caps{} | nil
+    caps: map | nil
   }
 end
 
