@@ -33,9 +33,18 @@ defmodule Membrane.Element.Base.Mixin.CommonCalls do
       end
 
 
-      def handle_call(:membrane_play, _from, %{playback_state: playback_state, element_state: element_state} = state) do
+      def handle_call(:membrane_play, from, %{playback_state: playback_state, element_state: element_state} = state) do
         case playback_state do
-          # TODO add stopped
+          :stopped ->
+            case __MODULE__.handle_prepare(element_state) do
+              {:ok, new_element_state} ->
+                debug("Handle Play: Prepared, new state = #{inspect(new_element_state)}")
+                handle_call(:membrane_play, from, %{state | playback_state: :prepared, element_state: new_element_state})
+
+              {:error, reason} ->
+                warn("Handle Play: Error while preparing, reason = #{inspect(reason)}")
+                {:reply, {:error, reason}, state} # FIXME handle errors
+            end
 
           :prepared ->
             case __MODULE__.handle_play(element_state) do
