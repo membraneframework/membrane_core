@@ -4,14 +4,14 @@ defmodule Membrane.Caps.Audio.Raw do
   interleaved channels.
   """
 
-  @type channels_type :: non_neg_integer
-  @type sample_rate_type :: non_neg_integer
-  @type format_type :: :s16le # TODO add more formats
+  @type channels_t :: non_neg_integer
+  @type sample_rate_t :: non_neg_integer
+  @type format_t :: :s16le # TODO add more formats
 
   @type t :: %Membrane.Caps.Audio.Raw{
-    channels: Membrane.Caps.Audio.Raw.channels_type,
-    sample_rate: Membrane.Caps.Audio.Raw.sample_rate_type,
-    format: Membrane.Caps.Audio.Raw.format_type
+    channels: channels_t,
+    sample_rate: sample_rate_t,
+    format: format_t
   }
 
   defstruct \
