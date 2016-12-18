@@ -16,10 +16,14 @@ defmodule Membrane.Buffer do
   If origin is nil, it means that payload has unknown origin.
   """
 
+  @type payload_t :: bitstring
+  @type caps_t    :: map
+  @type origin_t  :: map
+
   @type t :: %Membrane.Buffer{
-    caps: map,
-    payload: bitstring,
-    origin: map
+    caps: cals_t,
+    payload: payload_t,
+    origin: origin_t
   }
 
   defstruct \
