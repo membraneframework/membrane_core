@@ -21,7 +21,7 @@ defmodule Membrane.Buffer do
   @type origin_t  :: map
 
   @type t :: %Membrane.Buffer{
-    caps: cals_t,
+    caps: caps_t,
     payload: payload_t,
     origin: origin_t
   }
