@@ -14,10 +14,12 @@ defmodule Membrane.Event do
   Payload should always be a named struct appropriate for given event type.
   """
 
+  @type type_t :: atom
+  @type payload_t :: map
 
   @type t :: %Membrane.Event{
-    type: atom,
-    payload: map
+    type: type_t,
+    payload: payload_t
   }
 
   defstruct \
