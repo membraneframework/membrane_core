@@ -3,8 +3,13 @@ defmodule Membrane.Helper.Bitstring do
   Splits given bitstring into parts of given size, and calls given function
   for each part.
 
-  Passed function has to accept one argument that will be a bitstring and
-  return a value. It accumulates result of all function calls.
+  Passed processing function has to accept at least one argument that will
+  be always a bitstring representing current part.
+
+  Additionally you may pass a list of extra arguments that will be passed
+  as second and further arguments to the given function.
+
+  It accumulates return values of all of such function calls.
 
   Returns `{:ok, {accumulated_result, remaining_bitstring}}`.
 
@@ -16,20 +21,20 @@ defmodule Membrane.Helper.Bitstring do
 
   Please note that size is expressed in bytes, not samples.
   """
-  @spec split_map(bitstring, pos_integer, fun) :: {:ok, {[] | [...], bitstring}}
-  def split_map(data, size, process_fun) do
-    split_map_recurse(data, size, process_fun, [])
+  @spec split_map(bitstring, pos_integer, fun, [] | [...]) :: {:ok, {[] | [...], bitstring}}
+  def split_map(data, size, process_fun, extra_fun_args \\ []) do
+    split_map_recurse(data, size, process_fun, extra_fun_args, [])
   end
 
 
-  defp split_map_recurse(data, size, process_fun, acc) when byte_size(data) >= size do
+  defp split_map_recurse(data, size, process_fun, extra_fun_args, acc) when byte_size(data) >= size do
     << part :: binary-size(size), rest :: binary >> = data
-    item = Kernel.apply(process_fun, [part])
-    split_map_recurse(rest, size, process_fun, [item|acc])
+    item = Kernel.apply(process_fun, [part] ++ extra_fun_args)
+    split_map_recurse(rest, size, process_fun, extra_fun_args, [item|acc])
   end
 
 
-  defp split_map_recurse(data, _size, _process_fun, acc) do
+  defp split_map_recurse(data, _size, _process_fun, _extra_fun_args, acc) do
     {:ok, {acc |> Enum.reverse, data}}
   end
 end
