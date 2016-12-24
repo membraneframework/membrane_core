@@ -6,7 +6,7 @@ defmodule Membrane.Helpers.Bitstring do
   Passed function has to accept one argument that will be a bitstring and
   return a value. It accumulates result of all function calls.
 
-  Returns `{:ok, accumulated_result, remaining_bitstring}`.
+  Returns `{:ok, {accumulated_result, remaining_bitstring}}`.
 
   This function is useful for handling buffer's payload if element's logic
   expects to process certain amount of samples in one pass. For example,
