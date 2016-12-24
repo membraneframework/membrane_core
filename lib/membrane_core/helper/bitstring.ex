@@ -1,4 +1,4 @@
-defmodule Membrane.Helpers.Bitstring do
+defmodule Membrane.Helper.Bitstring do
   @doc """
   Splits given bitstring into parts of given size, and calls given function
   for each part.

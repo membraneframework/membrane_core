@@ -1,4 +1,4 @@
-defmodule Membrane.Helpers.BitstringSpec do
+defmodule Membrane.Helper.BitstringSpec do
   use ESpec, async: true
 
 

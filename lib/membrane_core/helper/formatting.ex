@@ -1,4 +1,4 @@
-defmodule Membrane.Helpers.Formatting do
+defmodule Membrane.Helper.Formatting do
   @doc """
   Formats IP address.
   """

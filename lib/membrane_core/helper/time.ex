@@ -1,4 +1,4 @@
-defmodule Membrane.Helpers.Time do
+defmodule Membrane.Helper.Time do
   @doc """
   Returns internal Erlang VM clock resolution.
 
