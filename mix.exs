@@ -29,6 +29,7 @@ defmodule Membrane.Mixfile do
 
   defp deps do
     [
+      {:espec, "~> 1.1.2", only: :test},
     ]
   end
 end
