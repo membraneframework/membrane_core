@@ -3,10 +3,9 @@ defmodule Membrane.Event.Discontinuity.Payload do
   Structure representing a payload for the Discontinuity event.
   """
 
-  @doc """
-  Discontinuity duration in nanoseconds or nil if it is unknown.
-  """
-  @type duration_t :: non_neg_integer | nil
+
+  # Discontinuity duration in nanoseconds or nil if it is unknown.
+  @type duration_t :: pos_integer | nil
 
 
   @type t :: %Membrane.Event.Discontinuity.Payload{

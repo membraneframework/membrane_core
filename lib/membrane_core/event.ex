@@ -47,6 +47,8 @@ defmodule Membrane.Event do
 
   Frequent reasons for this are soundcards' drops while capturing sound, network
   data loss etc.
+
+  If duration of the discontinuity is known, it can be passed as an argument.
   """
   @spec discontinuity(Membrane.Event.Discontinuity.Payload.duration_t) :: t
   def discontinuity(duration \\ nil) do
