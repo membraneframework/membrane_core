@@ -38,7 +38,15 @@ defmodule Membrane.Element.Base.Mixin.CommonProcess do
       end
 
 
-      # TODO implement terminate callback and handle_shutdown element callback
+      @doc false
+      def terminate(reason, %{playback_state: playback_state, element_state: element_state} = state) do
+        if playback_state != :stopped do
+          warn("Terminating: Attempt to terminate element when it is not stopped, state = #{inspect(state)}")
+        end
+
+        debug("Terminating: reason = #{inspect(reason)}, state = #{inspect(state)}")
+        __MODULE__.handle_shutdown(element_state)
+      end
     end
   end
 end

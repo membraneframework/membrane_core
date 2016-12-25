@@ -6,14 +6,17 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
 
   @doc """
-  Callback invoked when element is initialized. It will receive options
-  passed to start_link.
+  Callback invoked when element is initialized, right after new process is
+  spawned. It will receive options passed to `Membrane.Element.start_link/3`
+  or `Membrane.Element.start/3`.
 
-  On success it should return `{:ok, element_state}`.
+  On success it should return `{:ok, initial_element_state}`. Then given state
+  becomes first element's state.
 
   On failure it should return `{:error, reason}`.
 
-  Returning error will terminate the process.
+  Returning error will terminate the process without calling `handle_shutdown/1`
+  callback.
   """
   @callback handle_init(any) ::
     {:ok, any} |
@@ -22,6 +25,12 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   @doc """
   Callback invoked when element is prepared. It will receive element state.
+
+  Normally this is the place where you will allocate most of the resources
+  used by the element. For example, if your element opens a file, this is
+  the place to try to actually open it and return error if that has failed.
+
+  Such resources should be released in `handle_stop/1`.
 
   If it returns `{:ok, new_state}` it just updates element's state to the new
   state.
@@ -71,6 +80,10 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   Callback invoked when element is supposed to stop playing. It will receive
   element state.
 
+  Normally this is the place where you will release most of the resources
+  used by the element. For example, if your element opens a file, this is
+  the place to close it.
+
   If it returns `{:ok, new_state}` it just updates element's state to the new
   state.
 
@@ -92,8 +105,8 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
 
   @doc """
-  Callback invoked when element is receiving message of other kind.
-  It will receive the message and element state.
+  Callback invoked when element is receiving message of other kind. It will
+  receive the message and element state.
 
   If it returns `{:ok, new_state}` it just updates element's state to the new
   state.
@@ -115,6 +128,22 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
     {:error, any, any}
 
 
+  @doc """
+  Callback invoked when element is shutting down just before process is exiting.
+  It will the element state.
+
+  Return value is ignored.
+
+  If shutdown will be invoked without stopping element first, warning will be
+  issued and this is considered to be a programmer's mistake. That implicates
+  that most of the resources should be normally released in `handle_stop/1`.
+
+  However, you might want to do some additional cleanup when process is exiting,
+  and this is the right place to do so.
+  """
+  @callback handle_shutdown(any) :: any
+
+
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Membrane.Element.Base.Mixin.CommonBehaviour
@@ -123,14 +152,13 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
       def handle_prepare(state), do: {:ok, state}
 
-
       def handle_play(state), do: {:ok, state}
-
 
       def handle_stop(state), do: {:ok, state}
 
-
       def handle_other(_message, state), do: {:ok, state}
+
+      def handle_shutdown(_state), do: :ok
 
 
       defoverridable [
@@ -138,6 +166,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
         handle_play: 1,
         handle_stop: 1,
         handle_other: 2,
+        handle_shutdown: 1,
       ]
     end
   end

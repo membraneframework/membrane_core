@@ -25,8 +25,8 @@ defmodule Membrane.Element do
 
 
   @doc """
-  Causes element of given module, initialized with given options to start as
-  a new process and links it to the current process in the supervision tree.
+  Starts process for element of given module, initialized with given options and
+  links it to the current process in the supervision tree.
 
   Works similarily to `GenServer.start_link/3` and has the same return values.
   """
@@ -38,8 +38,8 @@ defmodule Membrane.Element do
 
 
   @doc """
-  Causes element of given module, initialized with given element_options to start as
-  a new process outside of the supervision tree.
+  Starts process for element of given module, initialized with given
+  element_options outside of the supervision tree.
 
   Works similarily to `GenServer.start/3` and has the same return values.
   """
@@ -47,6 +47,24 @@ defmodule Membrane.Element do
   def start(module, element_options, process_options \\ []) do
     debug("Start: module = #{inspect(module)}, element_options = #{inspect(element_options)}, process_options = #{inspect(process_options)}")
     GenServer.start(module, element_options, process_options)
+  end
+
+
+  @doc """
+  Stops given element process.
+
+  It will wait for reply for amount of time passed as second argument
+  (in milliseconds).
+
+  Will trigger calling `handle_shutdown/2` element callback.
+
+  Returns `:ok`.
+  """
+  @spec shutdown(pid, timeout) :: :ok
+  def shutdown(server, timeout \\ 5000) do
+    debug("Shutdown -> #{inspect(server)}")
+    GenServer.stop(server, :normal, timeout)
+    :ok
   end
 
 
