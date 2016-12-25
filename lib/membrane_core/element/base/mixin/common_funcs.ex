@@ -24,9 +24,9 @@ defmodule Membrane.Element.Base.Mixin.CommonFuncs do
       #
       # Case when callback returned success and wants to send some messages
       # (such as buffers) in response.
-      defp handle_callback({:send, message_list, new_element_state}, %{link_destinations: link_destinations} = state) do
-        debug("Handle callback: OK + send #{inspect(message_list)}")
-        :ok = send_message_list(message_list, link_destinations)
+      defp handle_callback({:ok, commands, new_element_state}, %{link_destinations: link_destinations} = state) do
+        debug("Handle callback: OK + commands #{inspect(commands)}")
+        :ok = send_commands(commands, link_destinations)
         {:noreply, %{state | element_state: new_element_state}}
       end
 
@@ -58,16 +58,16 @@ defmodule Membrane.Element.Base.Mixin.CommonFuncs do
 
       # Sends message list to all linked destinations, final case when message
       # list is empty
-      defp send_message_list([], _link_destinations) do
+      defp send_commands([], _link_destinations) do
         :ok
       end
 
 
       # Sends message list to all linked destinations, recurrent case when
       # message list is non-empty
-      defp send_message_list([message_head|message_tail], link_destinations) do
+      defp send_commands([message_head|message_tail], link_destinations) do
         :ok = send_message(message_head, link_destinations)
-        send_message_list(message_tail, link_destinations)
+        send_commands(message_tail, link_destinations)
       end
     end
   end

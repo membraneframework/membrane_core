@@ -18,6 +18,7 @@ defmodule Membrane.Element.Base.Source do
       use Membrane.Element.Base.Mixin.CommonCalls
 
       use Membrane.Element.Base.Mixin.CommonBehaviour
+      use Membrane.Element.Base.Mixin.SourceBehaviour
 
       use Membrane.Element.Base.Mixin.SourceCalls
 

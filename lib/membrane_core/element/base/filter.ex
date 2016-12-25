@@ -19,6 +19,7 @@ defmodule Membrane.Element.Base.Filter do
 
       use Membrane.Element.Base.Mixin.CommonBehaviour
       use Membrane.Element.Base.Mixin.SinkBehaviour
+      use Membrane.Element.Base.Mixin.SourceBehaviour
 
       use Membrane.Element.Base.Mixin.SourceCalls
 
