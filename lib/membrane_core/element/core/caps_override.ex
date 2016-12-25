@@ -11,19 +11,16 @@ defmodule Membrane.Element.Core.CapsOverride do
   alias Membrane.Element.Core.CapsOverrideOptions
 
 
-  # Private API
+  def_known_source_pads %{
+    :source => {:always, :any}
+  }
 
-  @doc false
-  def potential_sink_pads(), do: %{
+  def_known_sink_pads %{
     :sink => {:always, :any}
   }
 
 
-  @doc false
-  def potential_source_pads(), do: %{
-    :source => {:always, :any}
-  }
-
+  # Private API
 
   @doc false
   def handle_init(%CapsOverrideOptions{caps: caps}) do

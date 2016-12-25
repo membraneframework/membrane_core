@@ -4,7 +4,8 @@ defmodule Membrane.Element.Base.Filter do
   """
 
 
-  defmacro __using__(_) do
+  defmacro __using__(options) do
+    IO.puts inspect(options)
     quote location: :keep do
       # Order here is important
       #

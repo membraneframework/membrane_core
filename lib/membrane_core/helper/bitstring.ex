@@ -1,6 +1,6 @@
 defmodule Membrane.Helper.Bitstring do
   @moduledoc """
-  Module containing helper functions to manipulate bitstrings.
+  Module containing helper functions for manipulating bitstrings.
   """
 
 

@@ -112,7 +112,7 @@ defmodule Membrane.Element do
   def is_source?(module) do
     # FIXME use module attributes instead of checking if function is defined
     module.__info__(:functions)
-      |> List.keyfind(:potential_source_pads, 0) != nil
+      |> List.keyfind(:known_source_pads, 0) != nil
   end
 
 
@@ -123,7 +123,7 @@ defmodule Membrane.Element do
   def is_sink?(module) do
     # FIXME use module attributes instead of checking if function is defined
     module.__info__(:functions)
-      |> List.keyfind(:potential_sink_pads, 0) != nil
+      |> List.keyfind(:known_sink_pads, 0) != nil
   end
 
 

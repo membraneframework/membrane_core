@@ -9,7 +9,7 @@ defmodule Membrane.Support.Element.TrivialSource do
   use Membrane.Element.Base.Source
 
 
-  def potential_source_pads(), do: %{
+  def known_source_pads(), do: %{
     :source => {:always, :any}
   }
 
