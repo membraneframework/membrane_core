@@ -10,7 +10,7 @@ defmodule Membrane.Mixfile do
      maintainers: ["Marcin Lewandowski"],
      licenses: ["LGPL"],
      name: "Membrane Core",
-     source_url: "https://github.com/radiokit/membrane-core",
+     source_url: "https://bitbucket.org/radiokit/membrane-core",
      preferred_cli_env: [espec: :test],
      deps: deps]
   end
