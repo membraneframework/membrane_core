@@ -23,6 +23,33 @@ defmodule Membrane.Element do
   @type callback_return_commands_t :: [] | [callback_return_command_t]
 
 
+
+  @doc """
+  Causes element of given module, initialized with given options to start as
+  a new process and links it to the current process in the supervision tree.
+
+  Works similarily to `GenServer.start_link/3` and has the same return values.
+  """
+  @spec start_link(module, struct, GenServer.options) :: GenServer.on_start
+  def start_link(module, element_options, process_options \\ []) do
+    debug("Start Link: module = #{inspect(module)}, element_options = #{inspect(element_options)}, process_options = #{inspect(process_options)}")
+    GenServer.start_link(module, element_options, process_options)
+  end
+
+
+  @doc """
+  Causes element of given module, initialized with given element_options to start as
+  a new process outside of the supervision tree.
+
+  Works similarily to `GenServer.start/3` and has the same return values.
+  """
+  @spec start(module, struct, GenServer.options) :: GenServer.on_start
+  def start(module, element_options, process_options \\ []) do
+    debug("Start: module = #{inspect(module)}, element_options = #{inspect(element_options)}, process_options = #{inspect(process_options)}")
+    GenServer.start(module, element_options, process_options)
+  end
+
+
   @doc """
   Determines module for given process identifier.
 

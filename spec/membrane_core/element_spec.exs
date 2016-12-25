@@ -1,10 +1,13 @@
 defmodule Membrane.ElementSpec do
   use ESpec, async: true
 
+  pending ".start_link/3"
+  pending ".start/3"
+
 
   describe ".get_module/1" do
     context "if given pid is for element process" do
-      let_ok :server, do: module.start(%{})
+      let_ok :server, do: Membrane.Element.start(module, %{})
       finally do: Process.exit(server, :kill)
 
       context "if given pid is a source element" do
@@ -62,7 +65,7 @@ defmodule Membrane.ElementSpec do
 
   describe ".get_module!/1" do
     context "if given pid is for element process" do
-      let_ok :server, do: module.start(%{})
+      let_ok :server, do: Membrane.Element.start(module, %{})
       finally do: Process.exit(server, :kill)
 
       context "if given pid is a source element" do
@@ -161,7 +164,7 @@ defmodule Membrane.ElementSpec do
     context "if first given PID is not a PID of an element process" do
       let :server, do: self()
 
-      let_ok :destination, do: Membrane.Support.Element.TrivialSink.start(%{})
+      let_ok :destination, do: Membrane.Element.start(Membrane.Support.Element.TrivialSink, %{})
       finally do: Process.exit(destination, :kill)
 
       it "should return an error result" do
@@ -175,7 +178,7 @@ defmodule Membrane.ElementSpec do
     end
 
     context "if second given PID is not a PID of an element process" do
-      let_ok :server, do: Membrane.Support.Element.TrivialSink.start(%{})
+      let_ok :server, do: Membrane.Element.start(Membrane.Support.Element.TrivialSink, %{})
       finally do: Process.exit(server, :kill)
 
       let :destination, do: self()
@@ -207,10 +210,10 @@ defmodule Membrane.ElementSpec do
 
 
     context "if both given PIDs are PIDs of element processes" do
-      let_ok :server, do: server_module.start(%{})
+      let_ok :server, do: Membrane.Element.start(server_module, %{})
       finally do: Process.exit(server, :kill)
 
-      let_ok :destination, do: destination_module.start(%{})
+      let_ok :destination, do: Membrane.Element.start(destination_module, %{})
       finally do: Process.unlink(destination)
 
       context "but first given PID is not a source" do

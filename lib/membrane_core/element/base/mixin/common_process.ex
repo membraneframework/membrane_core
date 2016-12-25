@@ -10,32 +10,6 @@ defmodule Membrane.Element.Base.Mixin.CommonProcess do
       use GenServer
 
 
-      @doc """
-      Causes given element to start as a new process and links it to the current
-      process in the supervision tree.
-
-      Works similarily to `GenServer.start_link/3` and has the same return values.
-      """
-      @spec start_link(struct) :: GenServer.on_start
-      def start_link(options) do
-        debug("Start Link: options = #{inspect(options)}")
-        GenServer.start_link(__MODULE__, options)
-      end
-
-
-      @doc """
-      Causes given element to start as a new process outside of the supervision
-      tree.
-
-      Works similarily to `GenServer.start/3` and has the same return values.
-      """
-      @spec start(struct) :: GenServer.on_start
-      def start(options) do
-        debug("Start: options = #{inspect(options)}")
-        GenServer.start(__MODULE__, options)
-      end
-
-
       # Callbacks
 
       @doc false
