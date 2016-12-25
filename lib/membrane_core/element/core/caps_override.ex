@@ -1,6 +1,6 @@
 defmodule Membrane.Element.Core.CapsOverride do
   @moduledoc """
-  This element can be used to override caps of buffers.
+  Element capable of overriding caps of buffers flowing through it.
 
   Useful if you e.g. read file with raw data of known type, File source returns
   buffers with unknown caps and you want to convert these caps annotation into

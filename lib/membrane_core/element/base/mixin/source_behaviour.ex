@@ -1,4 +1,7 @@
 defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
+  @moduledoc false
+
+
   @doc """
   Callback that defines what source pads may be ever available for this
   element type.

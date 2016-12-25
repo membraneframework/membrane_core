@@ -1,6 +1,6 @@
 defmodule Membrane.Element.Base.Filter do
   @moduledoc """
-  This module should be used by all elements that are both sources and sinks.
+  Base module to be used by all elements that are both sources and sinks.
   """
 
 

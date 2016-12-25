@@ -1,6 +1,6 @@
 defmodule Membrane.Element.Base.Sink do
   @moduledoc """
-  This module should be used by all elements that are sinks.
+  Base module to be used by all elements that are sinks.
   """
 
 

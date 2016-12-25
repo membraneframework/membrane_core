@@ -1,4 +1,7 @@
 defmodule Membrane.Element.Base.Mixin.SourceCalls do
+  @moduledoc false
+
+
   defmacro __using__(_) do
     quote location: :keep do
       def handle_call({:membrane_link, destination}, _from, %{link_destinations: link_destinations} = state) do

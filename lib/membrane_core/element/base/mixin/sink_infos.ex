@@ -1,4 +1,6 @@
 defmodule Membrane.Element.Base.Mixin.SinkInfos do
+  @moduledoc false
+
   defmacro __using__(_) do
     quote location: :keep do
       @doc """

@@ -1,12 +1,13 @@
 defmodule Membrane.Element.Base.Mixin.CommonCalls do
-  @moduledoc """
-  This module is a mixin with common routines for all elements regarding
-  calls they may receive.
-  """
+  @moduledoc false
+
+  # This module is a mixin with common routines for all elements regarding
+  # calls they may receive.
 
 
   defmacro __using__(_) do
     quote location: :keep do
+      @doc false
       def handle_call(:membrane_prepare, _from, %{plaback_state: plaback_state, element_state: element_state} = state) do
         case plaback_state do
           :stopped ->
@@ -33,6 +34,7 @@ defmodule Membrane.Element.Base.Mixin.CommonCalls do
       end
 
 
+      @doc false
       def handle_call(:membrane_play, from, %{playback_state: playback_state, element_state: element_state} = state) do
         case playback_state do
           :stopped ->
@@ -65,6 +67,7 @@ defmodule Membrane.Element.Base.Mixin.CommonCalls do
       end
 
 
+      @doc false
       def handle_call(:membrane_stop, _from, %{playback_state: playback_state, element_state: element_state} = state) do
         case playback_state do
           :stopped ->

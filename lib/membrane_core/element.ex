@@ -1,6 +1,7 @@
 defmodule Membrane.Element do
   @moduledoc """
-  This module contains functions that can be applied to all elements.
+  Module containing functions spawning, shutting down, inspecting and controlling
+  playback of elements.
   """
 
   use Membrane.Mixins.Log

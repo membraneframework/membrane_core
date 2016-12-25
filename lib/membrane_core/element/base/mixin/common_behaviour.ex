@@ -1,8 +1,8 @@
 defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
-  @moduledoc """
-  This module is a mixin with common routines for all elements regarding
-  their callbacks.
-  """
+  @moduledoc false
+
+  # This module is a mixin with common routines for all elements regarding
+  # their callbacks.
 
 
   @doc """
@@ -150,14 +150,19 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
       # Default implementations
 
+      @doc false
       def handle_prepare(state), do: {:ok, state}
 
+      @doc false
       def handle_play(state), do: {:ok, state}
 
+      @doc false
       def handle_stop(state), do: {:ok, state}
 
+      @doc false
       def handle_other(_message, state), do: {:ok, state}
 
+      @doc false
       def handle_shutdown(_state), do: :ok
 
 

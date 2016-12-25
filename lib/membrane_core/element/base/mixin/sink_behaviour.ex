@@ -1,4 +1,7 @@
 defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
+  @moduledoc false
+
+
   @doc """
   Callback that is called when buffer arrives.
 

@@ -1,8 +1,8 @@
 defmodule Membrane.Element.Base.Mixin.CommonProcess do
-  @moduledoc """
-  This module is a mixin with common routines for all elements regarding
-  their process lifecycle.
-  """
+  @moduledoc false
+
+  # This module is a mixin with common routines for all elements regarding
+  # their process lifecycle.
 
 
   defmacro __using__(_) do

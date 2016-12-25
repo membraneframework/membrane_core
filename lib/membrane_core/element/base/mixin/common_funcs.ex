@@ -1,7 +1,7 @@
 defmodule Membrane.Element.Base.Mixin.CommonFuncs do
-  @moduledoc """
-  This module is a mixin with functions common to all elements.
-  """
+  @moduledoc false
+
+  # This module is a mixin with functions common to all elements.
 
 
   defmacro __using__(_) do

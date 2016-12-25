@@ -1,4 +1,9 @@
 defmodule Membrane.Helper.Bitstring do
+  @moduledoc """
+  Module containing helper functions to manipulate bitstrings.
+  """
+
+
   @doc """
   Splits given bitstring into parts of given size, and calls given function
   for each part.

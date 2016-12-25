@@ -15,7 +15,7 @@ defmodule Membrane.Event do
   """
 
   @type type_t :: atom
-  @type payload_t :: map
+  @type payload_t :: struct
 
   @type t :: %Membrane.Event{
     type: type_t,
@@ -49,6 +49,9 @@ defmodule Membrane.Event do
   data loss etc.
 
   If duration of the discontinuity is known, it can be passed as an argument.
+
+  See `Membrane.Event.Discontinuity.Payload` for the full description of the
+  payload.
   """
   @spec discontinuity(Membrane.Event.Discontinuity.Payload.duration_t) :: t
   def discontinuity(duration \\ nil) do

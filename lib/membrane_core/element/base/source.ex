@@ -1,6 +1,6 @@
 defmodule Membrane.Element.Base.Source do
   @moduledoc """
-  This module should be used by all elements that are sources.
+  Base module to be used by all elements that are sources.
   """
 
 
