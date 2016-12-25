@@ -1,6 +1,9 @@
 defmodule Membrane.Element.Base.Filter do
   @moduledoc """
   Base module to be used by all elements that are both sources and sinks.
+
+  See `Membrane.Element.Base.Source` and `Membrane.Element.Base.Sink` for
+  more information.
   """
 
 
