@@ -5,11 +5,11 @@ defmodule Membrane.Support.Element.TrivialSource do
   Modify with caution as many specs may depend on its shape.
   """
 
-  
+
   use Membrane.Element.Base.Source
 
 
-  def known_source_pads(), do: %{
+  def_known_source_pads %{
     :source => {:always, :any}
   }
 

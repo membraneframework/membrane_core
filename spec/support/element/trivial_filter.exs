@@ -9,12 +9,12 @@ defmodule Membrane.Support.Element.TrivialFilter do
   use Membrane.Element.Base.Filter
 
 
-  def known_source_pads(), do: %{
+  def_known_source_pads %{
     :source => {:always, :any}
   }
 
 
-  def known_sink_pads(), do: %{
+  def_known_sink_pads %{
     :sink => {:always, :any}
   }
 

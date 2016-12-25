@@ -9,7 +9,7 @@ defmodule Membrane.Support.Element.TrivialSink do
   use Membrane.Element.Base.Sink
 
 
-  def known_sink_pads(), do: %{
+  def_known_sink_pads %{
     :sink => {:always, :any}
   }
 
