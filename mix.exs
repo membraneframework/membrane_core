@@ -30,6 +30,7 @@ defmodule Membrane.Mixfile do
   defp deps do
     [
       {:espec, "~> 1.1.2", only: :test},
+      {:ex_doc, "~> 0.14", only: :dev},
     ]
   end
 end
