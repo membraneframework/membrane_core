@@ -71,9 +71,9 @@ defmodule Membrane.Element do
   @doc """
   Determines module for given process identifier.
 
-  It returns `{:ok, module}` in case of success.
+  Returns `{:ok, module}` in case of success.
 
-  It returns `{:error, :invalid}` if given pid does not denote element.
+  Returns `{:error, :invalid}` if given pid does not denote element.
   """
   @spec get_module(pid) :: {:ok, module} | {:error, any}
   def get_module(server) when is_pid(server) do
