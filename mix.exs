@@ -31,6 +31,7 @@ defmodule Membrane.Mixfile do
     [
       {:espec, "~> 1.1.2", only: :test},
       {:ex_doc, "~> 0.14", only: :dev},
+      {:connection, "~> 1.0.4"},
     ]
   end
 end
