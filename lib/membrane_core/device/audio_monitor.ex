@@ -16,7 +16,7 @@ defmodule Membrane.Device.AudioMonitor do
       end
 
       {:ok, pid} = Membrane.Device.AudioMonitor.start_link(MyApp.MyDeviceMonitor,
-        [Membrane.Driver.WASAPI.Enumerator])
+        [Membrane.Device.WASAPI.Enumerator])
   """
 
 
