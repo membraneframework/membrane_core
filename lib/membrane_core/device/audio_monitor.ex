@@ -117,9 +117,7 @@ defmodule Membrane.Device.AudioMonitor do
 
 
   def connect(:init, %{module: module, enumerators: enumerators, interval: interval, internal_state: internal_state} = state) do
-    {devices, _, _} = list_devices(enumerators, [])
-
-    case devices do
+    case list_devices(enumerators, []) do
       [] ->
         {:backoff, interval, %{state | previous_devices: devices}}
 
