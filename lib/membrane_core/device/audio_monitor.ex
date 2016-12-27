@@ -20,8 +20,6 @@ defmodule Membrane.Device.AudioMonitor do
   """
 
 
-  use Connection
-
   alias Membrane.Device.AudioDevice
   alias Membrane.Device.AudioEnumerator
 
@@ -71,7 +69,7 @@ defmodule Membrane.Device.AudioMonitor do
   """
   @spec start_link(module, [module], pos_integer, GenServer.options) :: GenServer.on_start
   def start_link(module, enumerators, interval \\ 5000, process_options \\ []) do
-    Connection.start_link(module, {module, enumerators, interval}, process_options)
+    Connection.start_link(__MODULE__, {module, enumerators, interval}, process_options)
   end
 
 
@@ -80,7 +78,7 @@ defmodule Membrane.Device.AudioMonitor do
   """
   @spec start(module, [module], pos_integer, GenServer.options) :: GenServer.on_start
   def start(module, enumerators, interval \\ 5000, process_options \\ []) do
-    Connection.start(module, {module, enumerators, interval}, process_options)
+    Connection.start(__MODULE__, {module, enumerators, interval}, process_options)
   end
 
 
@@ -161,6 +159,8 @@ defmodule Membrane.Device.AudioMonitor do
 
   defmacro __using__(_) do
     quote location: :keep do
+      use Connection
+
       @behaviour Membrane.Device.AudioMonitor
 
 
@@ -170,7 +170,7 @@ defmodule Membrane.Device.AudioMonitor do
       def handle_init(_enumerators, _interval) do
         {:ok, %{}}
       end
-      
+
 
       defoverridable [
         handle_init: 2,
