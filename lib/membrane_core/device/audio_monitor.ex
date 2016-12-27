@@ -168,8 +168,9 @@ defmodule Membrane.Device.AudioMonitor do
 
       @doc false
       def handle_init(_enumerators, _interval) do
-        {:ok, state}
+        {:ok, %{}}
       end
+      
 
       defoverridable [
         handle_init: 2,
