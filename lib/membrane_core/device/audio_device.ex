@@ -30,6 +30,6 @@ defmodule Membrane.Device.AudioDevice do
   defstruct \
     name: nil,
     id: nil,
-    driver: driver,
-    direction: direction
+    driver: nil,
+    direction: nil
 end

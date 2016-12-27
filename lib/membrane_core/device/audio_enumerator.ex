@@ -11,7 +11,7 @@ defmodule Membrane.Device.AudioEnumerator do
   """
   @callback list(:capture | :playback | :all) ::
     {:ok, [] | [%AudioDevice{}]} |
-    {:error, reason}
+    {:error, any}
 
 
   defmacro __using__(_) do
