@@ -172,19 +172,19 @@ defmodule Membrane.Device.AudioMonitor do
 
 
   @doc false
-  def handle_call({:get_devices, :all}, %{previous_devices: previous_devices} = state) do
+  def handle_call({:get_devices, :all}, _from, %{previous_devices: previous_devices} = state) do
     {:reply, previous_devices, state}
   end
 
 
   @doc false
-  def handle_call({:get_devices, query}, %{previous_devices: previous_devices} = state) do
+  def handle_call({:get_devices, query}, _from, %{previous_devices: previous_devices} = state) do
     filtered_devices =
       previous_devices
       |> Enum.filter(fn(%AudioDevice{direction: direction}) ->
         direction == query
       end)
-      
+
     {:reply, filtered_devices, state}
   end
 
