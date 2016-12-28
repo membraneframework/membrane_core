@@ -96,6 +96,26 @@ defmodule Membrane.Device.AudioMonitor do
   end
 
 
+  @doc """
+  Synchronously calls given server and retreives currently known list of active
+  devices.
+
+  Query may be one of `:all`, `:capture` or `:playback`, and it can be used to
+  limit scope of returned devices.
+
+  It will return devices known by the process, which were retreived during last
+  refresh.
+
+  It will wait for reply for timeout passed, expressed in milliseconds.
+
+  Returns list of `AudioDevice` structs.
+  """
+  @spec get_devices(pid, :all | :capture | :playback, timeout) :: [] | [%AudioDevice{}]
+  def get_devices(server, query \\ :all, timeout \\ 5000) do
+    Connection.call(server, {:get_devices, query}, timeout)
+  end
+
+
   # Private API
 
   @doc false
@@ -116,6 +136,7 @@ defmodule Membrane.Device.AudioMonitor do
   end
 
 
+  @doc false
   def connect(:init, %{module: module, enumerators: enumerators, interval: interval, internal_state: internal_state} = state) do
     case list_devices(enumerators, []) do
       [] ->
@@ -130,6 +151,7 @@ defmodule Membrane.Device.AudioMonitor do
   end
 
 
+  @doc false
   def connect(_, %{module: module, enumerators: enumerators, interval: interval, previous_devices: previous_devices, internal_state: internal_state} = state) do
     current_devices = list_devices(enumerators, [])
 
@@ -146,6 +168,24 @@ defmodule Membrane.Device.AudioMonitor do
       true ->
         {:backoff, interval, state}
     end
+  end
+
+
+  @doc false
+  def handle_call({:get_devices, :all}, %{previous_devices: previous_devices} = state) do
+    {:reply, previous_devices, state}
+  end
+
+
+  @doc false
+  def handle_call({:get_devices, query}, %{previous_devices: previous_devices} = state) do
+    filtered_devices =
+      previous_devices
+      |> Enum.filter(fn(%AudioDevice{direction: direction}) ->
+        direction == query
+      end)
+      
+    {:reply, filtered_devices, state}
   end
 
 
