@@ -126,7 +126,7 @@ defmodule Membrane.Device.AudioMonitor do
           enumerators: enumerators,
           interval: interval,
           module: module,
-          previous_devices: nil,
+          devices: [],
           internal_state: internal_state,
         }}
 
@@ -140,29 +140,29 @@ defmodule Membrane.Device.AudioMonitor do
   def connect(:init, %{module: module, enumerators: enumerators, interval: interval, internal_state: internal_state} = state) do
     case list_devices(enumerators, []) do
       [] ->
-        {:backoff, interval, %{state | previous_devices: []}}
+        {:backoff, interval, %{state | devices: []}}
 
       devices ->
         case module.handle_diff(devices, [], [], internal_state) do
           {:ok, new_internal_state} ->
-            {:backoff, interval, %{state | previous_devices: devices, internal_state: new_internal_state}}
+            {:backoff, interval, %{state | devices: devices, internal_state: new_internal_state}}
         end
     end
   end
 
 
   @doc false
-  def connect(_, %{module: module, enumerators: enumerators, interval: interval, previous_devices: previous_devices, internal_state: internal_state} = state) do
+  def connect(_, %{module: module, enumerators: enumerators, interval: interval, devices: devices, internal_state: internal_state} = state) do
     current_devices = list_devices(enumerators, [])
 
     {added, removed, unchanged} =
-      AudioEnumerator.diff_list(previous_devices, current_devices)
+      AudioEnumerator.diff_list(devices, current_devices)
 
     cond do
       added != [] || removed != [] ->
         case module.handle_diff(added, removed, unchanged, internal_state) do
           {:ok, new_internal_state} ->
-            {:backoff, interval, %{state | previous_devices: current_devices, internal_state: new_internal_state}}
+            {:backoff, interval, %{state | devices: current_devices, internal_state: new_internal_state}}
         end
 
       true ->
@@ -172,15 +172,15 @@ defmodule Membrane.Device.AudioMonitor do
 
 
   @doc false
-  def handle_call({:get_devices, :all}, _from, %{previous_devices: previous_devices} = state) do
-    {:reply, previous_devices, state}
+  def handle_call({:get_devices, :all}, _from, %{devices: devices} = state) do
+    {:reply, devices, state}
   end
 
 
   @doc false
-  def handle_call({:get_devices, query}, _from, %{previous_devices: previous_devices} = state) do
+  def handle_call({:get_devices, query}, _from, %{devices: devices} = state) do
     filtered_devices =
-      previous_devices
+      devices
       |> Enum.filter(fn(%AudioDevice{direction: direction}) ->
         direction == query
       end)
