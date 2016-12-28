@@ -211,8 +211,15 @@ defmodule Membrane.Device.AudioMonitor do
       end
 
 
+      @doc false
+      def handle_diff(_added, _removed, _unchagned, state) do
+        {:ok, state}
+      end
+
+
       defoverridable [
         handle_init: 2,
+        handle_diff: 4,
       ]
     end
   end
