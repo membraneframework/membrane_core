@@ -192,7 +192,7 @@ defmodule Membrane.Device.AudioMonitor do
   defp list_devices([], acc), do: acc
   defp list_devices([enumerator_head|tail], acc) do
     {:ok, devices} = enumerator_head.list(:all)
-    list_devices(tail, [devices|acc])
+    list_devices(tail, acc ++ devices)
   end
 
 
