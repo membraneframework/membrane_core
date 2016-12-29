@@ -24,11 +24,23 @@ defmodule Membrane.Element.Base.Mixin.CommonProcess do
             # to retreive module from PID in `Membrane.Element.get_module/1`.
             Process.put(:membrane_element_module, __MODULE__)
 
+            source_pads = if Membrane.Element.is_source?(__MODULE__) do
+              known_source_pads() |> known_pads_to_pads_state
+            else
+              nil
+            end
+
+            sink_pads = if Membrane.Element.is_sink?(__MODULE__) do
+              known_sink_pads() |> known_pads_to_pads_state
+            else
+              nil
+            end
+
             # Return initial state of the server, including element state.
             {:ok, %{
               playback_state: :stopped,
-              source_pads: known_source_pads() |> known_pads_to_pads_state,
-              sink_pads: known_sink_pads() |> known_pads_to_pads_state,
+              source_pads: source_pads,
+              sink_pads: sink_pads,
               element_state: element_state
             }}
 
