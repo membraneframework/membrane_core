@@ -42,7 +42,7 @@ defmodule Membrane.Pipeline do
 
   It is supposed to return `{:ok, initial_state}` or `{:error, reason}`.
   """
-  @callback handle_init([module], pos_integer) ::
+  @callback handle_init(any, pos_integer) ::
     {:ok, any} |
     {:error, any}
 
