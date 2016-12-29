@@ -129,10 +129,12 @@ defmodule Membrane.Pipeline do
             }}
 
           {:error, reason} ->
+            warn("Failed to initialize pipeline: reason = #{inspect(reason)}")
             {:stop, reason}
         end
 
       {:error, reason} ->
+        warn("Failed to initialize pipeline: reason = #{inspect(reason)}")
         {:stop, reason}
     end
   end
