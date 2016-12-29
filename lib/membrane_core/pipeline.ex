@@ -220,7 +220,7 @@ defmodule Membrane.Pipeline do
 
 
       defoverridable [
-        handle_init: 2,
+        handle_init: 1,
       ]
     end
   end
