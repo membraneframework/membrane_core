@@ -138,6 +138,55 @@ defmodule Membrane.Pipeline do
   end
 
 
+  @doc false
+  def handle_call(:membrane_prepare, _from, %{elements: elements} = state) do
+    case elements |> Map.to_list |> call_element(:prepare) do
+      :ok ->
+        {:reply, :ok, state}
+      {:error, reason} ->
+        {:reply, {:error, reason}, state}
+    end
+  end
+
+
+  @doc false
+  def handle_call(:membrane_play, _from, %{elements: elements} = state) do
+    case elements |> Map.to_list |> call_element(:play) do
+      :ok ->
+        {:reply, :ok, state}
+      {:error, reason} ->
+        {:reply, {:error, reason}, state}
+    end
+  end
+
+
+  @doc false
+  def handle_call(:membrane_stop, _from, %{elements: elements} = state) do
+    case elements |> Map.to_list |> call_element(:stop) do
+      :ok ->
+        {:reply, :ok, state}
+      {:error, reason} ->
+        {:reply, {:error, reason}, state}
+    end
+  end
+
+
+  defp call_element([], _fun_name), do: :ok
+
+  defp call_element([{_name, pid}|tail], fun_name) do
+    case Kernel.apply(Membrane.Element, fun_name, [pid]) do
+      :ok ->
+        call_element(tail, fun_name)
+
+      :noop ->
+        call_element(tail, fun_name)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+
   defp spawn_elements(elements, acc) when is_map(elements) do
     spawn_elements(Map.to_list(elements), acc)
   end
@@ -160,56 +209,6 @@ defmodule Membrane.Pipeline do
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Membrane.Pipeline
-
-
-      @doc false
-      def handle_call(:membrane_prepare, _from, %{elements: elements} = state) do
-        case elements |> Map.to_list |> call_element(:prepare) do
-          :ok ->
-            {:reply, :ok, state}
-          {:error, reason} ->
-            {:reply, {:error, reason}, state}
-        end
-      end
-
-
-      @doc false
-      def handle_call(:membrane_play, _from, %{elements: elements} = state) do
-        case elements |> Map.to_list |> call_element(:play) do
-          :ok ->
-            {:reply, :ok, state}
-          {:error, reason} ->
-            {:reply, {:error, reason}, state}
-        end
-      end
-
-
-      @doc false
-      def handle_call(:membrane_stop, _from, %{elements: elements} = state) do
-        case elements |> Map.to_list |> call_element(:stop) do
-          :ok ->
-            {:reply, :ok, state}
-          {:error, reason} ->
-            {:reply, {:error, reason}, state}
-        end
-      end
-
-
-      defp call_element([], _fun_name), do: :ok
-
-      defp call_element([{_name, pid}|tail], fun_name) do
-        case Kernel.apply(Membrane.Element, fun_name, [pid]) do
-          :ok ->
-            call_element(tail, fun_name)
-
-          :noop ->
-            call_element(tail, fun_name)
-
-          {:error, reason} ->
-            {:error, reason}
-        end
-      end
-
 
       # Default implementations
 
