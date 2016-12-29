@@ -27,7 +27,8 @@ defmodule Membrane.Element.Base.Mixin.CommonProcess do
             # Return initial state of the server, including element state.
             {:ok, %{
               playback_state: :stopped,
-              link_destinations: [],
+              source_pads: known_source_pads() |> known_pads_to_pads_state,
+              sink_pads: known_sink_pads() |> known_pads_to_pads_state,
               element_state: element_state
             }}
 
@@ -46,6 +47,18 @@ defmodule Membrane.Element.Base.Mixin.CommonProcess do
 
         debug("Terminating: reason = #{inspect(reason)}, state = #{inspect(state)}")
         __MODULE__.handle_shutdown(element_state)
+      end
+
+
+      defp known_pads_to_pads_state(known_pads) do
+        known_pads
+        |> Map.to_list
+        |> Enum.filter(fn({_name, {availability, _caps}}) ->
+          availability == :always
+        end)
+        |> Enum.reduce(%{}, fn({name, {_availability, _caps}}, acc) ->
+          acc |> Map.put(name, %{peer: nil, caps: nil})
+        end)
       end
     end
   end
