@@ -86,7 +86,7 @@ defmodule Membrane.Pipeline do
   end
 
   defp spawn_elements([], acc) do
-    acc
+    {:ok, acc}
   end
 
   defp spawn_elements([{name, {module, options}}|tail], acc) do
