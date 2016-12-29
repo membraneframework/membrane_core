@@ -8,13 +8,13 @@ defmodule Membrane.Element.Base.Mixin.CommonCalls do
   defmacro __using__(_) do
     quote location: :keep do
       @doc false
-      def handle_call(:membrane_prepare, _from, %{plaback_state: plaback_state, element_state: element_state} = state) do
-        case plaback_state do
+      def handle_call(:membrane_prepare, _from, %{playback_state: playback_state, element_state: element_state} = state) do
+        case playback_state do
           :stopped ->
             case __MODULE__.handle_prepare(element_state) do
               {:ok, new_element_state} ->
                 debug("Handle Prepare: OK, new state = #{inspect(new_element_state)}")
-                {:reply, :ok, %{state | plaback_state: :prepared, element_state: new_element_state}}
+                {:reply, :ok, %{state | playback_state: :prepared, element_state: new_element_state}}
 
               {:error, reason} ->
                 warn("Handle Prepare: Error, reason = #{inspect(reason)}")

@@ -42,8 +42,7 @@ defmodule Membrane.Pipeline do
   @doc """
   Callback invoked on process initialization.
 
-  It will receive second and third argument passed to `start_link/4` or `start/4`
-  (list of enumerators and interval).
+  It will receive pipeline options passed to `start_link/4` or `start/4`.
 
   It is supposed to return `{:ok, initial_elements, initial_state}` or
   `{:error, reason}`.
@@ -52,9 +51,67 @@ defmodule Membrane.Pipeline do
   within the pipeline, and value is a tuple of `{element_module, element_options}`
   that will be used to spawn the element process.
   """
-  @callback handle_init(any, any) ::
+  @callback handle_init(any) ::
     {:ok, element_defs_t, any} |
     {:error, any}
+
+
+
+  @doc """
+  Sends synchronous call to the given element requesting it to prepare.
+
+  It will wait for reply for amount of time passed as second argument
+  (in milliseconds).
+
+  In case of success, returns `:ok`.
+
+  If any of the child elements has failed to reach desired state it returns
+  `{:error, reason}`. Please note that in such case state of some elements may
+  be already changed.
+  """
+  @spec prepare(pid, timeout) :: :ok | {:error, any}
+  def prepare(server, timeout \\ 5000) when is_pid(server) do
+    debug("Prepare -> #{inspect(server)}")
+    GenServer.call(server, :membrane_prepare, timeout)
+  end
+
+
+  @doc """
+  Sends synchronous call to the given element requesting it to start playing.
+
+  It will wait for reply for amount of time passed as second argument
+  (in milliseconds).
+
+  In case of success, returns `:ok`.
+
+  If any of the child elements has failed to reach desired state it returns
+  `{:error, reason}`. Please note that in such case state of some elements may
+  be already changed.
+  """
+  @spec play(pid, timeout) :: :ok | {:error, any}
+  def play(server, timeout \\ 5000) when is_pid(server) do
+    debug("Play -> #{inspect(server)}")
+    GenServer.call(server, :membrane_play, timeout)
+  end
+
+
+  @doc """
+  Sends synchronous call to the given element requesting it to stop playing.
+
+  It will wait for reply for amount of time passed as second argument
+  (in milliseconds).
+
+  In case of success, returns `:ok`.
+
+  If any of the child elements has failed to reach desired state it returns
+  `{:error, reason}`. Please note that in such case state of some elements may
+  be already changed.
+  """
+  @spec stop(pid, timeout) :: :ok | {:error, any}
+  def stop(server, timeout \\ 5000) when is_pid(server) do
+    debug("Stop -> #{inspect(server)}")
+    GenServer.call(server, :membrane_stop, timeout)
+  end
 
 
   # Private API
@@ -103,6 +160,68 @@ defmodule Membrane.Pipeline do
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Membrane.Pipeline
+
+
+      @doc false
+      def handle_call(:membrane_prepare, _from, %{elements: elements} = state) do
+        case elements |> Map.to_list |> call_element(:prepare) do
+          :ok ->
+            {:reply, :ok, state}
+          {:error, reason} ->
+            {:reply, {:error, reason}, state}
+        end
+      end
+
+
+      @doc false
+      def handle_call(:membrane_play, _from, %{elements: elements} = state) do
+        case elements |> Map.to_list |> call_element(:play) do
+          :ok ->
+            {:reply, :ok, state}
+          {:error, reason} ->
+            {:reply, {:error, reason}, state}
+        end
+      end
+
+
+      @doc false
+      def handle_call(:membrane_stop, _from, %{elements: elements} = state) do
+        case elements |> Map.to_list |> call_element(:stop) do
+          :ok ->
+            {:reply, :ok, state}
+          {:error, reason} ->
+            {:reply, {:error, reason}, state}
+        end
+      end
+
+
+      defp call_element([], _fun_name), do: :ok
+
+      defp call_element([{_name, pid}|tail], fun_name) do
+        case Kernel.apply(Membrane.Element, fun_name, [pid]) do
+          :ok ->
+            call_element(tail, fun_name)
+
+          :noop ->
+            call_element(tail, fun_name)
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+      end
+
+
+      # Default implementations
+
+      @doc false
+      def handle_init(_options) do
+        {:ok, %{}, %{}}
+      end
+
+
+      defoverridable [
+        handle_init: 2,
+      ]
     end
   end
 end

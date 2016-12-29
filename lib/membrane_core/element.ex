@@ -136,8 +136,10 @@ defmodule Membrane.Element do
   In case of success, returns `:ok`.
 
   If element is already playing, returns `:noop`.
+
+  If element has failed to reach desired state it returns `{:error, reason}`.
   """
-  @spec prepare(pid, timeout) :: :ok | :noop
+  @spec prepare(pid, timeout) :: :ok | :noop | {:error, any}
   def prepare(server, timeout \\ 5000) when is_pid(server) do
     debug("Prepare -> #{inspect(server)}")
     GenServer.call(server, :membrane_prepare, timeout)
@@ -153,8 +155,10 @@ defmodule Membrane.Element do
   In case of success, returns `:ok`.
 
   If element is already playing, returns `:noop`.
+
+  If element has failed to reach desired state it returns `{:error, reason}`.
   """
-  @spec play(pid, timeout) :: :ok | :noop
+  @spec play(pid, timeout) :: :ok | :noop | {:error, any}
   def play(server, timeout \\ 5000) when is_pid(server) do
     debug("Play -> #{inspect(server)}")
     GenServer.call(server, :membrane_play, timeout)
@@ -170,8 +174,10 @@ defmodule Membrane.Element do
   In case of success, returns `:ok`.
 
   If element is not playing, returns `:noop`.
+
+  If element has failed to reach desired state it returns `{:error, reason}`.
   """
-  @spec stop(pid, timeout) :: :ok | :noop
+  @spec stop(pid, timeout) :: :ok | :noop | {:error, any}
   def stop(server, timeout \\ 5000) when is_pid(server) do
     debug("Stop -> #{inspect(server)}")
     GenServer.call(server, :membrane_stop, timeout)
