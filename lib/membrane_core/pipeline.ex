@@ -65,7 +65,7 @@ defmodule Membrane.Pipeline do
 
   defmacro __using__(_) do
     quote location: :keep do
-      use Membrane.Pipeline
+      @behaviour Membrane.Pipeline
     end
   end
 end
