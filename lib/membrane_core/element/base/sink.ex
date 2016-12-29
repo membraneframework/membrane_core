@@ -30,6 +30,15 @@ defmodule Membrane.Element.Base.Sink do
     quote location: :keep do
       use Membrane.Element.Base.Mixin.CommonBehaviour
       use Membrane.Element.Base.Mixin.SinkBehaviour
+
+
+      @doc false
+      @spec is_source?() :: boolean
+      def is_source?, do: false
+
+      @doc false
+      @spec is_sink?() :: boolean
+      def is_sink?, do: true
     end
   end
 end

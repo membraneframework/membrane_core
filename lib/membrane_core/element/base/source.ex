@@ -25,6 +25,15 @@ defmodule Membrane.Element.Base.Source do
     quote location: :keep do
       use Membrane.Element.Base.Mixin.CommonBehaviour
       use Membrane.Element.Base.Mixin.SourceBehaviour
+
+
+      @doc false
+      @spec is_source?() :: boolean
+      def is_source?, do: true
+
+      @doc false
+      @spec is_sink?() :: boolean
+      def is_sink?, do: false
     end
   end
 end

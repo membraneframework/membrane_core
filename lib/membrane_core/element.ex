@@ -110,9 +110,7 @@ defmodule Membrane.Element do
   """
   @spec is_source?(module) :: boolean
   def is_source?(module) do
-    # FIXME use module attributes instead of checking if function is defined
-    module.__info__(:functions)
-      |> List.keyfind(:known_source_pads, 0) != nil
+    module.is_source?
   end
 
 
@@ -121,9 +119,7 @@ defmodule Membrane.Element do
   """
   @spec is_sink?(module) :: boolean
   def is_sink?(module) do
-    # FIXME use module attributes instead of checking if function is defined
-    module.__info__(:functions)
-      |> List.keyfind(:known_sink_pads, 0) != nil
+    module.is_sink?
   end
 
 
@@ -316,100 +312,92 @@ defmodule Membrane.Element do
   end
 
 
-  # Callback invoked on incoming prepare command.
+  # Callback invoked on incoming prepare command if playback state is stopped.
   @doc false
-  def handle_call(:membrane_prepare, _from, %{module: module, playback_state: playback_state, element_state: element_state} = state) do
-    case playback_state do
-      :stopped ->
-        case module.handle_prepare(element_state) do
-          {:ok, new_element_state} ->
-            debug("Handle Prepare: OK, new state = #{inspect(new_element_state)}")
-            {:reply, :ok, %{state | playback_state: :prepared, element_state: new_element_state}}
+  def handle_call(:membrane_prepare, _from, %{module: module, playback_state: :stopped, element_state: element_state} = state) do
+    module.handle_prepare(:stopped, element_state)
+      |> handle_callback(%{state | playback_state: :prepared})
+      |> format_callback_response(:reply)
+  end
 
-          {:error, reason} ->
-            warn("Handle Prepare: Error, reason = #{inspect(reason)}")
-            {:reply, {:error, reason}, state} # FIXME handle errors
-        end
 
-      :prepared ->
-        warn("Handle Prepare: Error, already prepared")
-        # Do nothing if already prepared
-        {:reply, :noop, state}
+  # Callback invoked on incoming prepare command if playback state is prepared.
+  @doc false
+  def handle_call(:membrane_prepare, _from, %{playback_state: :prepared} = state) do
+    {:reply, :noop, state}
+  end
 
-      :playing ->
-        warn("Handle Prepare: Error, already playing")
-        # Do nothing if already playing
-        {:reply, :noop, state}
+
+  # Callback invoked on incoming prepare command if playback state is playing.
+  @doc false
+  def handle_call(:membrane_prepare, _from, %{module: module, playback_state: :playing, element_state: element_state} = state) do
+    module.handle_prepare(:playing, element_state)
+      |> handle_callback(%{state | playback_state: :prepared})
+      |> format_callback_response(:reply)
+  end
+
+
+  # Callback invoked on incoming play command if playback state is stopped.
+  @doc false
+  def handle_call(:membrane_play, _from, %{module: module, playback_state: :stopped, element_state: element_state} = state) do
+    case module.handle_prepare(:stopped, element_state)
+      |> handle_callback(%{state | playback_state: :prepared}) do
+      {:ok, state} ->
+        module.handle_play(element_state)
+        |> handle_callback(%{state | playback_state: :playing})
+        |> format_callback_response(:reply)
+
+      # FIXME handle errors
     end
   end
 
 
-  # Callback invoked on incoming play command.
+  # Callback invoked on incoming play command if playback state is prepared.
   @doc false
-  def handle_call(:membrane_play, from, %{module: module, playback_state: playback_state, element_state: element_state} = state) do
-    case playback_state do
-      :stopped ->
-        case module.handle_prepare(element_state) do
-          {:ok, new_element_state} ->
-            debug("Handle Play: Prepared, new state = #{inspect(new_element_state)}")
-            handle_call(:membrane_play, from, %{state | playback_state: :prepared, element_state: new_element_state})
-
-          {:error, reason} ->
-            warn("Handle Play: Error while preparing, reason = #{inspect(reason)}")
-            {:reply, {:error, reason}, state} # FIXME handle errors
-        end
-
-      :prepared ->
-        case module.handle_play(element_state) do
-          {:ok, new_element_state} ->
-            debug("Handle Play: OK, new state = #{inspect(new_element_state)}")
-            {:reply, :ok, %{state | playback_state: :playing, element_state: new_element_state}}
-
-          {:error, reason} ->
-            warn("Handle Play: Error, reason = #{inspect(reason)}")
-            {:reply, {:error, reason}, state} # FIXME handle errors
-        end
-
-      :playing ->
-        warn("Handle Play: Error, already playing")
-        # Do nothing if already playing
-        {:reply, :noop, state}
-    end
+  def handle_call(:membrane_play, _from, %{module: module, playback_state: :prepared, element_state: element_state} = state) do
+    module.handle_play(element_state)
+      |> handle_callback(%{state | playback_state: :playing})
+      |> format_callback_response(:reply)
   end
 
 
-  # Callback invoked on incoming stop command.
+  # Callback invoked on incoming play command if playback state is playing.
   @doc false
-  def handle_call(:membrane_stop, _from, %{module: module, playback_state: playback_state, element_state: element_state} = state) do
-    case playback_state do
-      :stopped ->
-        warn("Handle Stop: Error, already stopped")
-        # Do nothing if already stopped
-        {:reply, :noop, state}
+  def handle_call(:membrane_play, _from, %{playback_state: :playing} = state) do
+    {:reply, :noop, state}
+  end
 
-      :prepared ->
-        case module.handle_stop(element_state) do
-          {:ok, new_element_state} ->
-            debug("Handle Stop: OK, new state = #{inspect(new_element_state)}")
-            {:reply, :ok, %{state | playback_state: :stopped, element_state: new_element_state}}
 
-          {:error, reason} ->
-            warn("Handle Stop: Error, reason = #{inspect(reason)}")
-            {:reply, {:error, reason}, state} # FIXME handle errors
-        end
+  # Callback invoked on incoming stop command if playback state is stopped.
+  @doc false
+  def handle_call(:membrane_stop, _from, %{playback_state: :stopped} = state) do
+    {:reply, :noop, state}
+  end
 
-      :playing ->
-        case module.handle_stop(element_state) do
-          {:ok, new_element_state} ->
-            debug("Handle Stop: OK, new state = #{inspect(new_element_state)}")
-            {:reply, :ok, %{state | playback_state: :stopped, element_state: new_element_state}}
 
-          {:error, reason} ->
-            warn("Handle Stop: Error, reason = #{inspect(reason)}")
-            {:reply, {:error, reason}, state} # FIXME handle errors
-        end
+  # Callback invoked on incoming stop command if playback state is prepared.
+  @doc false
+  def handle_call(:membrane_stop, _from, %{module: module, playback_state: :prepared, element_state: element_state} = state) do
+    module.handle_stop(element_state)
+      |> handle_callback(%{state | playback_state: :stopped})
+      |> format_callback_response(:reply)
+  end
+
+
+  # Callback invoked on incoming stop command if playback state is playing.
+  @doc false
+  def handle_call(:membrane_stop, _from, %{module: module, playback_state: :playing, element_state: element_state} = state) do
+    case module.handle_prepare(:playing, element_state)
+      |> handle_callback(%{state | playback_state: :prepared}) do
+      {:ok, state} ->
+        module.handle_stop(element_state)
+        |> handle_callback(%{state | playback_state: :stopped})
+        |> format_callback_response(:reply)
+
+      # FIXME handle errors
     end
   end
+
 
 
   # Callback invoked on incoming link request.
@@ -437,7 +425,9 @@ defmodule Membrane.Element do
           {:noreply, state}
 
         :playing ->
-          module.handle_buffer(buffer, element_state) |> handle_callback(state)
+          module.handle_buffer(buffer, element_state)
+            |> handle_callback(state)
+            |> format_callback_response(:noreply)
       end
 
     else
@@ -449,7 +439,9 @@ defmodule Membrane.Element do
   # Callback invoked on other incoming message
   @doc false
   def handle_info(message, %{module: module, element_state: element_state} = state) do
-    module.handle_other(message, element_state) |> handle_callback(state)
+    module.handle_other(message, element_state)
+      |> handle_callback(state)
+      |> format_callback_response(:noreply)
   end
 
 
@@ -466,13 +458,27 @@ defmodule Membrane.Element do
   end
 
 
+  defp format_callback_response({:ok, new_state}, type) do
+    {type, :ok, new_state}
+  end
+
+
+  defp format_callback_response({:error, reason, new_state}, :reply) do
+    {:reply, {:error, reason}, new_state}
+  end
+
+
+  defp format_callback_response({:error, _reason, new_state}, :noreply) do
+    {:noreply, new_state}
+  end
+
+
   # Generic handler that can be used to convert return value from
   # element callback to reply that is accepted by GenServer.handle_info.
   #
   # Case when callback returned success and requests no further action.
   defp handle_callback({:ok, new_element_state}, state) do
-    debug("Handle callback: OK")
-    {:noreply, %{state | element_state: new_element_state}}
+    {:ok, %{state | element_state: new_element_state}}
   end
 
 
@@ -482,9 +488,10 @@ defmodule Membrane.Element do
   # Case when callback returned success and wants to send some messages
   # (such as buffers) in response.
   defp handle_callback({:ok, commands, new_element_state}, state) do
-    debug("Handle callback: OK + commands #{inspect(commands)}")
-    :ok = handle_commands(commands, state)
-    {:noreply, %{state | element_state: new_element_state}}
+    case handle_commands(commands, %{state | element_state: new_element_state}) do
+      {:ok, new_state} ->
+        {:ok, new_state}
+    end
   end
 
 
@@ -494,7 +501,7 @@ defmodule Membrane.Element do
   # Case when callback returned failure.
   defp handle_callback({:error, reason, new_element_state}, state) do
     warn("Handle callback: Error (reason = #{inspect(reason)}")
-    {:noreply, %{state | element_state: new_element_state}}
+    {:error, reason, %{state | element_state: new_element_state}}
     # TODO handle errors
   end
 

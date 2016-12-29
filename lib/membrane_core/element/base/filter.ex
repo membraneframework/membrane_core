@@ -12,6 +12,15 @@ defmodule Membrane.Element.Base.Filter do
       use Membrane.Element.Base.Mixin.CommonBehaviour
       use Membrane.Element.Base.Mixin.SinkBehaviour
       use Membrane.Element.Base.Mixin.SourceBehaviour
+
+
+      @doc false
+      @spec is_source?() :: boolean
+      def is_source?, do: true
+
+      @doc false
+      @spec is_sink?() :: boolean
+      def is_sink?, do: true
     end
   end
 end
