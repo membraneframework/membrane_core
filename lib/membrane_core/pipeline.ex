@@ -7,6 +7,11 @@ defmodule Membrane.Pipeline do
   use GenServer
 
 
+  @type element_name_t :: String.t
+  @type element_def_t :: {module, struct}
+  @type element_defs_t :: %{required(element_name_t) => element_def_t}
+
+
   @doc """
   Starts the Pipeline based on given module and links it to the current
   process.
@@ -40,10 +45,15 @@ defmodule Membrane.Pipeline do
   It will receive second and third argument passed to `start_link/4` or `start/4`
   (list of enumerators and interval).
 
-  It is supposed to return `{:ok, initial_state}` or `{:error, reason}`.
+  It is supposed to return `{:ok, initial_elements, initial_state}` or
+  `{:error, reason}`.
+
+  Initial elements is a map where key is a string with element name unique
+  within the pipeline, and value is a tuple of `{element_module, element_options}`
+  that will be used to spawn the element process.
   """
-  @callback handle_init(any, pos_integer) ::
-    {:ok, any} |
+  @callback handle_init(any, any) ::
+    {:ok, element_defs_t, any} |
     {:error, any}
 
 
@@ -52,13 +62,40 @@ defmodule Membrane.Pipeline do
   @doc false
   def init({module, pipeline_options}) do
     case module.handle_init(pipeline_options) do
-      {:ok, internal_state} ->
-        {:ok, %{
-          internal_state: internal_state,
-        }}
+      {:ok, initial_elements, internal_state} ->
+
+        case initial_elements |> spawn_elements(%{}) do
+          {:ok, elements} ->
+            {:ok, %{
+              elements: elements,
+              internal_state: internal_state,
+            }}
+
+          {:error, reason} ->
+            {:stop, reason}
+        end
 
       {:error, reason} ->
         {:stop, reason}
+    end
+  end
+
+
+  defp spawn_elements(elements, acc) when is_map(elements) do
+    spawn_elements(Map.to_list(elements), acc)
+  end
+
+  defp spawn_elements([], acc) do
+    acc
+  end
+
+  defp spawn_elements([{name, {module, options}}|tail], acc) do
+    case Membrane.Element.start_link(module, options) do
+      {:ok, pid} ->
+        spawn_elements(tail, Map.put(acc, name, pid))
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
