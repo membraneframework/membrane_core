@@ -458,8 +458,13 @@ defmodule Membrane.Element do
   end
 
 
-  defp format_callback_response({:ok, new_state}, type) do
-    {type, :ok, new_state}
+  defp format_callback_response({:ok, new_state}, :reply) do
+    {:reply, :ok, new_state}
+  end
+
+
+  defp format_callback_response({:ok, new_state}, :noreply) do
+    {:noreply, new_state}
   end
 
 
