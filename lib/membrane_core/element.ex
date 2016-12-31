@@ -34,7 +34,7 @@ defmodule Membrane.Element do
   @spec start_link(module, struct, GenServer.options) :: GenServer.on_start
   def start_link(module, element_options, process_options \\ []) do
     debug("Start Link: module = #{inspect(module)}, element_options = #{inspect(element_options)}, process_options = #{inspect(process_options)}")
-    GenServer.start_link(module, element_options, process_options)
+    GenServer.start_link(__MODULE__, {module, element_options}, process_options)
   end
 
 
@@ -47,7 +47,7 @@ defmodule Membrane.Element do
   @spec start(module, struct, GenServer.options) :: GenServer.on_start
   def start(module, element_options, process_options \\ []) do
     debug("Start: module = #{inspect(module)}, element_options = #{inspect(element_options)}, process_options = #{inspect(process_options)}")
-    GenServer.start(module, element_options, process_options)
+    GenServer.start(__MODULE__, {module, element_options}, process_options)
   end
 
 
@@ -110,9 +110,7 @@ defmodule Membrane.Element do
   """
   @spec is_source?(module) :: boolean
   def is_source?(module) do
-    # FIXME use module attributes instead of checking if function is defined
-    module.__info__(:functions)
-      |> List.keyfind(:known_source_pads, 0) != nil
+    module.is_source?
   end
 
 
@@ -121,9 +119,7 @@ defmodule Membrane.Element do
   """
   @spec is_sink?(module) :: boolean
   def is_sink?(module) do
-    # FIXME use module attributes instead of checking if function is defined
-    module.__info__(:functions)
-      |> List.keyfind(:known_sink_pads, 0) != nil
+    module.is_sink?
   end
 
 
@@ -136,8 +132,10 @@ defmodule Membrane.Element do
   In case of success, returns `:ok`.
 
   If element is already playing, returns `:noop`.
+
+  If element has failed to reach desired state it returns `{:error, reason}`.
   """
-  @spec prepare(pid, timeout) :: :ok | :noop
+  @spec prepare(pid, timeout) :: :ok | :noop | {:error, any}
   def prepare(server, timeout \\ 5000) when is_pid(server) do
     debug("Prepare -> #{inspect(server)}")
     GenServer.call(server, :membrane_prepare, timeout)
@@ -153,8 +151,10 @@ defmodule Membrane.Element do
   In case of success, returns `:ok`.
 
   If element is already playing, returns `:noop`.
+
+  If element has failed to reach desired state it returns `{:error, reason}`.
   """
-  @spec play(pid, timeout) :: :ok | :noop
+  @spec play(pid, timeout) :: :ok | :noop | {:error, any}
   def play(server, timeout \\ 5000) when is_pid(server) do
     debug("Play -> #{inspect(server)}")
     GenServer.call(server, :membrane_play, timeout)
@@ -170,8 +170,10 @@ defmodule Membrane.Element do
   In case of success, returns `:ok`.
 
   If element is not playing, returns `:noop`.
+
+  If element has failed to reach desired state it returns `{:error, reason}`.
   """
-  @spec stop(pid, timeout) :: :ok | :noop
+  @spec stop(pid, timeout) :: :ok | :noop | {:error, any}
   def stop(server, timeout \\ 5000) when is_pid(server) do
     debug("Stop -> #{inspect(server)}")
     GenServer.call(server, :membrane_stop, timeout)
@@ -252,5 +254,286 @@ defmodule Membrane.Element do
         warn("Failed to link #{inspect(server)}/#{inspect(server_pad)} -> #{inspect(destination)}/#{inspect(destination_pad)}: #{inspect(server)} is not a PID of an element")
         {:error, :invalid_element}
     end
+  end
+
+
+
+  # Private API
+
+  @doc false
+  def init({module, options}) do
+    # Call element's initialization callback
+    case module.handle_init(options) do
+      {:ok, element_state} ->
+        debug("Initialized: element_state = #{inspect(element_state)}")
+
+        # Store module name in the process dictionary so it can be used
+        # to retreive module from PID in `Membrane.Element.get_module/1`.
+        Process.put(:membrane_element_module, module)
+
+        # Determine initial list of source pads
+        source_pads = if is_source?(module) do
+          module.known_source_pads() |> known_pads_to_pads_state
+        else
+          nil
+        end
+
+        # Determine initial list of sink pads
+        sink_pads = if is_sink?(module) do
+          module.known_sink_pads() |> known_pads_to_pads_state
+        else
+          nil
+        end
+
+        # Return initial state of the process, including element state.
+        {:ok, %{
+          module: module,
+          playback_state: :stopped,
+          source_pads: source_pads,
+          sink_pads: sink_pads,
+          element_state: element_state,
+        }}
+
+      {:error, reason} ->
+        warn("Failed to initialize element: reason = #{inspect(reason)}")
+        {:stop, reason}
+    end
+  end
+
+
+  @doc false
+  def terminate(reason, %{module: module, playback_state: playback_state, element_state: element_state} = state) do
+    if playback_state != :stopped do
+      warn("Terminating: Attempt to terminate element when it is not stopped, state = #{inspect(state)}")
+    end
+
+    debug("Terminating: reason = #{inspect(reason)}, state = #{inspect(state)}")
+    module.handle_shutdown(element_state)
+  end
+
+
+  # Callback invoked on incoming prepare command if playback state is stopped.
+  @doc false
+  def handle_call(:membrane_prepare, _from, %{module: module, playback_state: :stopped, element_state: element_state} = state) do
+    module.handle_prepare(:stopped, element_state)
+      |> handle_callback(%{state | playback_state: :prepared})
+      |> format_callback_response(:reply)
+  end
+
+
+  # Callback invoked on incoming prepare command if playback state is prepared.
+  @doc false
+  def handle_call(:membrane_prepare, _from, %{playback_state: :prepared} = state) do
+    {:reply, :noop, state}
+  end
+
+
+  # Callback invoked on incoming prepare command if playback state is playing.
+  @doc false
+  def handle_call(:membrane_prepare, _from, %{module: module, playback_state: :playing, element_state: element_state} = state) do
+    module.handle_prepare(:playing, element_state)
+      |> handle_callback(%{state | playback_state: :prepared})
+      |> format_callback_response(:reply)
+  end
+
+
+  # Callback invoked on incoming play command if playback state is stopped.
+  @doc false
+  def handle_call(:membrane_play, _from, %{module: module, playback_state: :stopped, element_state: element_state} = state) do
+    case module.handle_prepare(:stopped, element_state)
+      |> handle_callback(%{state | playback_state: :prepared}) do
+      {:ok, state} ->
+        module.handle_play(element_state)
+        |> handle_callback(%{state | playback_state: :playing})
+        |> format_callback_response(:reply)
+
+      # FIXME handle errors
+    end
+  end
+
+
+  # Callback invoked on incoming play command if playback state is prepared.
+  @doc false
+  def handle_call(:membrane_play, _from, %{module: module, playback_state: :prepared, element_state: element_state} = state) do
+    module.handle_play(element_state)
+      |> handle_callback(%{state | playback_state: :playing})
+      |> format_callback_response(:reply)
+  end
+
+
+  # Callback invoked on incoming play command if playback state is playing.
+  @doc false
+  def handle_call(:membrane_play, _from, %{playback_state: :playing} = state) do
+    {:reply, :noop, state}
+  end
+
+
+  # Callback invoked on incoming stop command if playback state is stopped.
+  @doc false
+  def handle_call(:membrane_stop, _from, %{playback_state: :stopped} = state) do
+    {:reply, :noop, state}
+  end
+
+
+  # Callback invoked on incoming stop command if playback state is prepared.
+  @doc false
+  def handle_call(:membrane_stop, _from, %{module: module, playback_state: :prepared, element_state: element_state} = state) do
+    module.handle_stop(element_state)
+      |> handle_callback(%{state | playback_state: :stopped})
+      |> format_callback_response(:reply)
+  end
+
+
+  # Callback invoked on incoming stop command if playback state is playing.
+  @doc false
+  def handle_call(:membrane_stop, _from, %{module: module, playback_state: :playing, element_state: element_state} = state) do
+    case module.handle_prepare(:playing, element_state)
+      |> handle_callback(%{state | playback_state: :prepared}) do
+      {:ok, state} ->
+        module.handle_stop(element_state)
+        |> handle_callback(%{state | playback_state: :stopped})
+        |> format_callback_response(:reply)
+
+      # FIXME handle errors
+    end
+  end
+
+
+
+  # Callback invoked on incoming link request.
+  @doc false
+  def handle_call({:membrane_link, destination}, _from, state) do
+    {:reply, :ok, state} # TODO
+  end
+
+
+  # Callback invoked on incoming buffer.
+  #
+  # If element is playing it will delegate actual processing to handle_buffer/3.
+  #
+  # Otherwise it will silently drop the buffer.
+  @doc false
+  def handle_info({:membrane_buffer, buffer}, %{module: module, element_state: element_state, playback_state: playback_state} = state) do
+    if is_sink?(module) do
+      case playback_state do
+        :stopped ->
+          warn("Incoming buffer: Error, not started (buffer = #{inspect(buffer)})")
+          {:noreply, state}
+
+        :prepared ->
+          warn("Incoming buffer: Error, not started (buffer = #{inspect(buffer)})")
+          {:noreply, state}
+
+        :playing ->
+          module.handle_buffer(buffer, element_state)
+            |> handle_callback(state)
+            |> format_callback_response(:noreply)
+      end
+
+    else
+      throw :buffer_on_non_sink
+    end
+  end
+
+
+  # Callback invoked on other incoming message
+  @doc false
+  def handle_info(message, %{module: module, element_state: element_state} = state) do
+    module.handle_other(message, element_state)
+      |> handle_callback(state)
+      |> format_callback_response(:noreply)
+  end
+
+
+  # Converts list of known pads into map of pad states
+  defp known_pads_to_pads_state(known_pads) do
+    known_pads
+    |> Map.to_list
+    |> Enum.filter(fn({_name, {availability, _caps}}) ->
+      availability == :always
+    end)
+    |> Enum.reduce(%{}, fn({name, {_availability, _caps}}, acc) ->
+      acc |> Map.put(name, %{peer: nil, caps: nil})
+    end)
+  end
+
+
+  defp format_callback_response({:ok, new_state}, :reply) do
+    {:reply, :ok, new_state}
+  end
+
+
+  defp format_callback_response({:ok, new_state}, :noreply) do
+    {:noreply, new_state}
+  end
+
+
+  defp format_callback_response({:error, reason, new_state}, :reply) do
+    {:reply, {:error, reason}, new_state}
+  end
+
+
+  defp format_callback_response({:error, _reason, new_state}, :noreply) do
+    {:noreply, new_state}
+  end
+
+
+  # Generic handler that can be used to convert return value from
+  # element callback to reply that is accepted by GenServer.handle_info.
+  #
+  # Case when callback returned success and requests no further action.
+  defp handle_callback({:ok, new_element_state}, state) do
+    {:ok, %{state | element_state: new_element_state}}
+  end
+
+
+  # Generic handler that can be used to convert return value from
+  # element callback to reply that is accepted by GenServer.handle_info.
+  #
+  # Case when callback returned success and wants to send some messages
+  # (such as buffers) in response.
+  defp handle_callback({:ok, commands, new_element_state}, state) do
+    case handle_commands(commands, %{state | element_state: new_element_state}) do
+      {:ok, new_state} ->
+        {:ok, new_state}
+    end
+  end
+
+
+  # Generic handler that can be used to convert return value from
+  # element callback to reply that is accepted by GenServer.handle_info.
+  #
+  # Case when callback returned failure.
+  defp handle_callback({:error, reason, new_element_state}, state) do
+    warn("Handle callback: Error (reason = #{inspect(reason)}")
+    {:error, reason, %{state | element_state: new_element_state}}
+    # TODO handle errors
+  end
+
+
+  defp handle_commands([], state) do
+    {:ok, state}
+  end
+
+
+  # Handles command that is supposed to send buffer of event from the
+  # given pad to its linked peer.
+  defp handle_commands([{:send, {pad, buffer_or_event}}|tail], state) do
+    debug("Sending message from pad #{inspect(pad)}: #{inspect(buffer_or_event)}")
+    # :ok = send_message(head, link_destinations)
+
+    handle_commands(tail, state)
+  end
+
+
+  # Handles command that is informs that caps on given pad were set.
+  #
+  # If this pad has a peer it will additionally send Membrane.Event.caps
+  # to it.
+  defp handle_commands([{:caps, {pad, caps}}|tail], state) do
+    debug("Setting caps for pad #{inspect(pad)} to #{inspect(caps)}")
+    # :ok = send_message(head, link_destinations)
+
+    handle_commands(tail, state)
   end
 end

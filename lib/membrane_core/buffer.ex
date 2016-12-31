@@ -8,26 +8,20 @@ defmodule Membrane.Buffer do
   Each buffer:
 
   - must contain payload,
-  - may contain caps describing format of the payload,
-  - may contain information about origin (e.g. IP address that has sent data to us)
+  - may contain caps describing format of the payload.
 
   If caps are nil, it means that payload has unknown format.
-
-  If origin is nil, it means that payload has unknown origin.
   """
 
   @type payload_t :: bitstring
   @type caps_t    :: map
-  @type origin_t  :: map
 
   @type t :: %Membrane.Buffer{
     caps: caps_t,
     payload: payload_t,
-    origin: origin_t
   }
 
   defstruct \
     caps: nil,
-    payload: nil,
-    origin: nil
+    payload: nil
 end

@@ -46,7 +46,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   went wrong, and element was unable to handle callback. Error along with
   reason will be propagated (TODO) and state will be updated to the new state.
   """
-  @callback handle_prepare(any) ::
+  @callback handle_prepare(:stopped | :playing, any) ::
     {:ok, any} |
     {:ok, Membrane.Element.callback_return_commands_t, any} |
     {:error, any, any}
@@ -151,7 +151,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
       # Default implementations
 
       @doc false
-      def handle_prepare(state), do: {:ok, state}
+      def handle_prepare(_previous_playback_state, state), do: {:ok, state}
 
       @doc false
       def handle_play(state), do: {:ok, state}
@@ -167,7 +167,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
 
       defoverridable [
-        handle_prepare: 1,
+        handle_prepare: 2,
         handle_play: 1,
         handle_stop: 1,
         handle_other: 2,
