@@ -57,6 +57,9 @@ defmodule Membrane.Helper.Bitstring do
   @doc """
   Works similarily to `split_map/4` but does not accumulate return values.
 
+  Processing function should return `:ok` on success and `{:error, reason}`
+  otherwise. Returning `{:error, reason}` will break the recursion.
+
   In case of success, returns `{:ok, remaining_bitstring}`.
   In case of failure, returns `{:error, reason}`.
   """
@@ -72,7 +75,7 @@ defmodule Membrane.Helper.Bitstring do
   when byte_size(data) >= size do
     << part :: binary-size(size), rest :: binary >> = data
     case Kernel.apply(process_fun, [part] ++ extra_fun_args) do
-      {:ok, item} ->
+      :ok ->
         split_each_recurse(rest, size, process_fun, extra_fun_args)
       {:error, reason} ->
         {:error, reason}

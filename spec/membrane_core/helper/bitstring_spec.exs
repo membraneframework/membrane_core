@@ -3,24 +3,43 @@ defmodule Membrane.Helper.BitstringSpec do
 
   # These functions just wraps result of sample function used for specs in
   # the `{:ok, something}` return value.
-  def sample_fun_upcase_ok(bitstring) do
+  def sample_fun_upcase_ok_with_value(bitstring) do
     {:ok, String.upcase(bitstring)}
   end
 
 
-  def sample_fun_equivalent_ok?(bitstring1, bitstring2) do
+  def sample_fun_upcase_ok_without_value(_bitstring) do
+    :ok
+  end
+
+
+  def sample_fun_equivalent_ok_with_value?(bitstring1, bitstring2) do
     {:ok, String.equivalent?(bitstring1, bitstring2)}
+  end
+
+
+  def sample_fun_equivalent_ok_without_value?(_bitstring1, _bitstring2) do
+    :ok
   end
 
 
   # These functions just wraps result of sample function used for specs in
   # the `{:error, something}` return value.
-  def sample_fun_upcase_error("ab") do
+  def sample_fun_upcase_error_with_value("ab") do
     {:error, :something}
   end
 
-  def sample_fun_upcase_error(bitstring) do
+  def sample_fun_upcase_error_with_value(bitstring) do
     {:ok, String.upcase(bitstring)}
+  end
+
+
+  def sample_fun_upcase_error_without_value("ab") do
+    {:error, :something}
+  end
+
+  def sample_fun_upcase_error_without_value(_bitstring) do
+    :ok
   end
 
 
@@ -28,7 +47,7 @@ defmodule Membrane.Helper.BitstringSpec do
     let :data, do: "abcd"
 
     context "if at least one call to the processing function have returned an error" do
-      let :process_fun, do: &sample_fun_upcase_error/1
+      let :process_fun, do: &sample_fun_upcase_error_with_value/1
 
       context "if there were no extra arguments passed" do
         let :extra_fun_args, do: []
@@ -49,7 +68,7 @@ defmodule Membrane.Helper.BitstringSpec do
     end
 
     context "if no call to the processing function have returned an error" do
-      let :process_fun, do: &sample_fun_upcase_ok/1
+      let :process_fun, do: &sample_fun_upcase_ok_with_value/1
 
       context "if there were no extra arguments passed" do
         let :extra_fun_args, do: []
@@ -92,7 +111,7 @@ defmodule Membrane.Helper.BitstringSpec do
       end
 
       context "if there were some arguments passed" do
-        let :process_fun, do: &sample_fun_equivalent_ok?/2
+        let :process_fun, do: &sample_fun_equivalent_ok_with_value?/2
         let :extra_fun_args, do: ["ab"]
 
         context "if given size allows to split given bitstring into parts without leaving any unprocessed bitstring" do
@@ -139,7 +158,7 @@ defmodule Membrane.Helper.BitstringSpec do
     let :data, do: "abcd"
 
     context "if at least one call to the processing function have returned an error" do
-      let :process_fun, do: &sample_fun_upcase_error/1
+      let :process_fun, do: &sample_fun_upcase_error_without_value/1
 
       context "if there were no extra arguments passed" do
         let :extra_fun_args, do: []
@@ -160,7 +179,7 @@ defmodule Membrane.Helper.BitstringSpec do
     end
 
     context "if no call to the processing function have returned an error" do
-      let :process_fun, do: &sample_fun_upcase_ok/1
+      let :process_fun, do: &sample_fun_upcase_ok_without_value/1
 
       context "if there were no extra arguments passed" do
         let :extra_fun_args, do: []
@@ -193,7 +212,7 @@ defmodule Membrane.Helper.BitstringSpec do
       end
 
       context "if there were some arguments passed" do
-        let :process_fun, do: &sample_fun_equivalent_ok?/2
+        let :process_fun, do: &sample_fun_equivalent_ok_without_value?/2
         let :extra_fun_args, do: ["ab"]
 
         context "if given size allows to split given bitstring into parts without leaving any unprocessed bitstring" do
