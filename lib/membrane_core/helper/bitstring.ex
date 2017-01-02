@@ -32,7 +32,9 @@ defmodule Membrane.Helper.Bitstring do
   @spec split_map(bitstring, pos_integer, fun, [] | [...]) ::
     {:ok, {[] | [...], bitstring}} |
     {:error, any}
-  def split_map(data, size, process_fun, extra_fun_args \\ []) do
+  def split_map(data, size, process_fun, extra_fun_args \\ [])
+  when is_bitstring(data) and is_integer(size) and size > 0 and
+       is_function(process_fun) and is_list(extra_fun_args) do
     split_map_recurse(data, size, process_fun, extra_fun_args, [])
   end
 
@@ -66,7 +68,9 @@ defmodule Membrane.Helper.Bitstring do
   @spec split_each(bitstring, pos_integer, fun, [] | [...]) ::
     {:ok, bitstring} |
     {:error, any}
-  def split_each(data, size, process_fun, extra_fun_args \\ []) do
+  def split_each(data, size, process_fun, extra_fun_args \\ [])
+  when is_bitstring(data) and is_integer(size) and size > 0 and
+       is_function(process_fun) and is_list(extra_fun_args)do
     split_each_recurse(data, size, process_fun, extra_fun_args)
   end
 
