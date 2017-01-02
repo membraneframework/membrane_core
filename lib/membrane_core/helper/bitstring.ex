@@ -14,32 +14,73 @@ defmodule Membrane.Helper.Bitstring do
   Additionally you may pass a list of extra arguments that will be passed
   as second and further arguments to the given function.
 
-  It accumulates return values of all of such function calls.
+  Processing function should return `{:ok, value}` on success and
+  `{:error, reason}` otherwise. Returning `{:error, reason}` will break the
+  recursion.
 
-  Returns `{:ok, {accumulated_result, remaining_bitstring}}`.
+  It accumulates return values of all successful function calls.
+
+  In case of success, returns `{:ok, {accumulated_result, remaining_bitstring}}`.
+  In case of failure, returns `{:error, reason}`.
 
   This function is useful for handling buffer's payload if element's logic
   expects to process certain amount of samples in one pass. For example,
   Opus encoder expects to receive particular amount of samples, which total
   duration is equal to the selected frame size duration, but there's no guarantee
   that incoming buffer contains exactly requested amount of samples.
-
-  Please note that size is expressed in bytes, not samples.
   """
-  @spec split_map(bitstring, pos_integer, fun, [] | [...]) :: {:ok, {[] | [...], bitstring}}
+  @spec split_map(bitstring, pos_integer, fun, [] | [...]) ::
+    {:ok, {[] | [...], bitstring}} |
+    {:error, any}
   def split_map(data, size, process_fun, extra_fun_args \\ []) do
     split_map_recurse(data, size, process_fun, extra_fun_args, [])
   end
 
 
-  defp split_map_recurse(data, size, process_fun, extra_fun_args, acc) when byte_size(data) >= size do
+  defp split_map_recurse(data, size, process_fun, extra_fun_args, acc)
+  when byte_size(data) >= size do
     << part :: binary-size(size), rest :: binary >> = data
-    item = Kernel.apply(process_fun, [part] ++ extra_fun_args)
-    split_map_recurse(rest, size, process_fun, extra_fun_args, [item|acc])
+    case Kernel.apply(process_fun, [part] ++ extra_fun_args) do
+      {:ok, item} ->
+        split_map_recurse(rest, size, process_fun, extra_fun_args, [item|acc])
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
 
   defp split_map_recurse(data, _size, _process_fun, _extra_fun_args, acc) do
     {:ok, {acc |> Enum.reverse, data}}
+  end
+
+
+  @doc """
+  Works similarily to `split_map/4` but does not accumulate return values.
+
+  In case of success, returns `{:ok, remaining_bitstring}`.
+  In case of failure, returns `{:error, reason}`.
+  """
+  @spec split_each(bitstring, pos_integer, fun, [] | [...]) ::
+    {:ok, bitstring} |
+    {:error, any}
+  def split_each(data, size, process_fun, extra_fun_args \\ []) do
+    split_each_recurse(data, size, process_fun, extra_fun_args)
+  end
+
+
+  defp split_each_recurse(data, size, process_fun, extra_fun_args)
+  when byte_size(data) >= size do
+    << part :: binary-size(size), rest :: binary >> = data
+    case Kernel.apply(process_fun, [part] ++ extra_fun_args) do
+      {:ok, item} ->
+        split_each_recurse(rest, size, process_fun, extra_fun_args)
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+
+  defp split_each_recurse(data, _size, _process_fun, _extra_fun_args) do
+    {:ok, data}
   end
 end
