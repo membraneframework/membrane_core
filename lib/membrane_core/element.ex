@@ -7,6 +7,8 @@ defmodule Membrane.Element do
   use Membrane.Mixins.Log
 
 
+  @type name_t :: :atom | String.t
+
   # Type that defines what may be sent from one element to another.
   @type sendable_t :: %Membrane.Buffer{} | %Membrane.Event{}
 

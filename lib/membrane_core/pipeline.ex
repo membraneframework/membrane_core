@@ -7,11 +7,6 @@ defmodule Membrane.Pipeline do
   use GenServer
 
 
-  @type element_name_t :: String.t
-  @type element_def_t :: {module, struct}
-  @type element_defs_t :: %{required(element_name_t) => element_def_t}
-
-
   @doc """
   Starts the Pipeline based on given module and links it to the current
   process.
@@ -44,15 +39,15 @@ defmodule Membrane.Pipeline do
 
   It will receive pipeline options passed to `start_link/4` or `start/4`.
 
-  It is supposed to return `{:ok, initial_elements, initial_state}` or
-  `{:error, reason}`.
+  It is supposed to return `{:ok, pipeline_topology, initial_state}`,
+  `{:ok, initial_state}` or `{:error, reason}`.
 
-  Initial elements is a map where key is a string with element name unique
-  within the pipeline, and value is a tuple of `{element_module, element_options}`
-  that will be used to spawn the element process.
+  See `Membrane.PipelineTopology` for more information about how to define
+  elements and links in the pipeline.
   """
   @callback handle_init(any) ::
-    {:ok, element_defs_t, any} |
+    {:ok, any} |
+    {:ok, PipelineTopology.t, any} |
     {:error, any}
 
 
