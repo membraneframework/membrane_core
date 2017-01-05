@@ -18,7 +18,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   Returning error will terminate the process without calling `handle_shutdown/1`
   callback.
   """
-  @callback handle_init(any) ::
+  @callback handle_init(Membrane.Element.options_t) ::
     {:ok, any} |
     {:error, any}
 

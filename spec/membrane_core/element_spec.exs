@@ -9,6 +9,8 @@ defmodule Membrane.ElementSpec do
   alias Membrane.Support.Element.TrivialSink
   alias Membrane.Support.Element.TrivialFilter
 
+  alias Membrane.ElementState
+
 
   pending ".start_link/3"
   pending ".start/3"
@@ -167,6 +169,8 @@ defmodule Membrane.ElementSpec do
   pending ".prepare/2"
   pending ".play/2"
   pending ".stop/2"
+  pending ".set_message_bus/3"
+  pending ".clear_message_bus/2"
 
 
   xdescribe ".link/2" do
@@ -272,8 +276,8 @@ defmodule Membrane.ElementSpec do
     context "if message is :membrane_play" do
       let :message, do: :membrane_play
       let :module, do: TrivialFilter
-      let :element_state, do: %{}
-      let :state, do: %{module: module, playback_state: playback_state, element_state: element_state}
+      let :internal_state, do: %{}
+      let :state, do: %ElementState{module: module, playback_state: playback_state, internal_state: internal_state}
 
       context "and current playback state is :stopped" do
         let :playback_state, do: :stopped
@@ -282,9 +286,9 @@ defmodule Membrane.ElementSpec do
 
         context "and all callbacks have returned {:ok, state}" do
           before do
-            allow(module).to accept(:handle_play, fn(element_state) -> {:ok, element_state} end)
-            allow(module).to accept(:handle_prepare, fn(_previous_playback_state, element_state) -> {:ok, element_state} end)
-            allow(module).to accept(:handle_stop, fn(element_state) -> {:ok, element_state} end)
+            allow(module).to accept(:handle_play, fn(internal_state) -> {:ok, internal_state} end)
+            allow(module).to accept(:handle_prepare, fn(_previous_playback_state, internal_state) -> {:ok, internal_state} end)
+            allow(module).to accept(:handle_stop, fn(internal_state) -> {:ok, internal_state} end)
           end
 
           it "should not call handle_stop callback on element's module" do
@@ -292,14 +296,14 @@ defmodule Membrane.ElementSpec do
             expect(module).to_not accepted(:handle_stop)
           end
 
-          it "should call handle_prepare(:stopped, element_state) callback on element's module" do
+          it "should call handle_prepare(:stopped, internal_state) callback on element's module" do
             described_module.handle_call(message, self(), state)
-            expect(module).to accepted(:handle_prepare, [:stopped, element_state])
+            expect(module).to accepted(:handle_prepare, [:stopped, internal_state])
           end
 
-          it "should call handle_play(element_state) callback on element's module" do
+          it "should call handle_play(internal_state) callback on element's module" do
             described_module.handle_call(message, self(), state)
-            expect(module).to accepted(:handle_play, [element_state])
+            expect(module).to accepted(:handle_play, [internal_state])
           end
 
           pending "should return {:reply, :ok, state} with element state updated"
@@ -318,9 +322,9 @@ defmodule Membrane.ElementSpec do
 
         context "and all callbacks have returned {:ok, state}" do
           before do
-            allow(module).to accept(:handle_play, fn(element_state) -> {:ok, element_state} end)
-            allow(module).to accept(:handle_prepare, fn(_previous_playback_state, element_state) -> {:ok, element_state} end)
-            allow(module).to accept(:handle_stop, fn(element_state) -> {:ok, element_state} end)
+            allow(module).to accept(:handle_play, fn(internal_state) -> {:ok, internal_state} end)
+            allow(module).to accept(:handle_prepare, fn(_previous_playback_state, internal_state) -> {:ok, internal_state} end)
+            allow(module).to accept(:handle_stop, fn(internal_state) -> {:ok, internal_state} end)
           end
 
           it "should not call handle_stop callback on element's module" do
@@ -333,9 +337,9 @@ defmodule Membrane.ElementSpec do
             expect(module).to_not accepted(:handle_prepare)
           end
 
-          it "should call handle_play(element_state) callback on element's module" do
+          it "should call handle_play(internal_state) callback on element's module" do
             described_module.handle_call(message, self(), state)
-            expect(module).to accepted(:handle_play, [element_state])
+            expect(module).to accepted(:handle_play, [internal_state])
           end
 
           pending "should return {:reply, :ok, state} with element state updated"
@@ -351,9 +355,9 @@ defmodule Membrane.ElementSpec do
         let :playback_state, do: :playing
 
         before do
-          allow(module).to accept(:handle_play, fn(element_state) -> {:ok, element_state} end)
-          allow(module).to accept(:handle_prepare, fn(_previous_playback_state, element_state) -> {:ok, element_state} end)
-          allow(module).to accept(:handle_stop, fn(element_state) -> {:ok, element_state} end)
+          allow(module).to accept(:handle_play, fn(internal_state) -> {:ok, internal_state} end)
+          allow(module).to accept(:handle_prepare, fn(_previous_playback_state, internal_state) -> {:ok, internal_state} end)
+          allow(module).to accept(:handle_stop, fn(internal_state) -> {:ok, internal_state} end)
         end
 
         it "should not call handle_stop callback on element's module" do
@@ -380,8 +384,8 @@ defmodule Membrane.ElementSpec do
     context "if message is :membrane_prepare" do
       let :message, do: :membrane_prepare
       let :module, do: TrivialFilter
-      let :element_state, do: %{}
-      let :state, do: %{module: module, playback_state: playback_state, element_state: element_state}
+      let :internal_state, do: %{}
+      let :state, do: %ElementState{module: module, playback_state: playback_state, internal_state: internal_state}
 
       context "and current playback state is :stopped" do
         let :playback_state, do: :stopped
@@ -390,9 +394,9 @@ defmodule Membrane.ElementSpec do
 
         context "and all callbacks have returned {:ok, state}" do
           before do
-            allow(module).to accept(:handle_play, fn(element_state) -> {:ok, element_state} end)
-            allow(module).to accept(:handle_prepare, fn(_previous_playback_state, element_state) -> {:ok, element_state} end)
-            allow(module).to accept(:handle_stop, fn(element_state) -> {:ok, element_state} end)
+            allow(module).to accept(:handle_play, fn(internal_state) -> {:ok, internal_state} end)
+            allow(module).to accept(:handle_prepare, fn(_previous_playback_state, internal_state) -> {:ok, internal_state} end)
+            allow(module).to accept(:handle_stop, fn(internal_state) -> {:ok, internal_state} end)
           end
 
           it "should not call handle_stop callback on element's module" do
@@ -400,9 +404,9 @@ defmodule Membrane.ElementSpec do
             expect(module).to_not accepted(:handle_stop)
           end
 
-          it "should call handle_prepare(:stopped, element_state) callback on element's module" do
+          it "should call handle_prepare(:stopped, internal_state) callback on element's module" do
             described_module.handle_call(message, self(), state)
-            expect(module).to accepted(:handle_prepare, [:stopped, element_state])
+            expect(module).to accepted(:handle_prepare, [:stopped, internal_state])
           end
 
           it "should not call handle_play callback on element's module" do
@@ -423,9 +427,9 @@ defmodule Membrane.ElementSpec do
         let :playback_state, do: :prepared
 
         before do
-          allow(module).to accept(:handle_play, fn(element_state) -> {:ok, element_state} end)
-          allow(module).to accept(:handle_prepare, fn(_previous_playback_state, element_state) -> {:ok, element_state} end)
-          allow(module).to accept(:handle_stop, fn(element_state) -> {:ok, element_state} end)
+          allow(module).to accept(:handle_play, fn(internal_state) -> {:ok, internal_state} end)
+          allow(module).to accept(:handle_prepare, fn(_previous_playback_state, internal_state) -> {:ok, internal_state} end)
+          allow(module).to accept(:handle_stop, fn(internal_state) -> {:ok, internal_state} end)
         end
 
         it "should not call handle_stop callback on element's module" do
@@ -456,9 +460,9 @@ defmodule Membrane.ElementSpec do
 
         context "and all callbacks have returned {:ok, state}" do
           before do
-            allow(module).to accept(:handle_play, fn(element_state) -> {:ok, element_state} end)
-            allow(module).to accept(:handle_prepare, fn(_previous_playback_state, element_state) -> {:ok, element_state} end)
-            allow(module).to accept(:handle_stop, fn(element_state) -> {:ok, element_state} end)
+            allow(module).to accept(:handle_play, fn(internal_state) -> {:ok, internal_state} end)
+            allow(module).to accept(:handle_prepare, fn(_previous_playback_state, internal_state) -> {:ok, internal_state} end)
+            allow(module).to accept(:handle_stop, fn(internal_state) -> {:ok, internal_state} end)
           end
 
           it "should not call handle_stop callback on element's module" do
@@ -466,9 +470,9 @@ defmodule Membrane.ElementSpec do
             expect(module).to_not accepted(:handle_stop)
           end
 
-          it "should call handle_prepare(:playing, element_state) callback on element's module" do
+          it "should call handle_prepare(:playing, internal_state) callback on element's module" do
             described_module.handle_call(message, self(), state)
-            expect(module).to accepted(:handle_prepare, [:playing, element_state])
+            expect(module).to accepted(:handle_prepare, [:playing, internal_state])
           end
 
           it "should not call handle_play callback on element's module" do
@@ -488,8 +492,8 @@ defmodule Membrane.ElementSpec do
     context "if message is :membrane_stop" do
       let :message, do: :membrane_stop
       let :module, do: TrivialFilter
-      let :element_state, do: %{}
-      let :state, do: %{module: module, playback_state: playback_state, element_state: element_state}
+      let :internal_state, do: %{}
+      let :state, do: %ElementState{module: module, playback_state: playback_state, internal_state: internal_state}
 
       context "and current playback state is :playing" do
         let :playback_state, do: :playing
@@ -498,19 +502,19 @@ defmodule Membrane.ElementSpec do
 
         context "and all callbacks have returned {:ok, state}" do
           before do
-            allow(module).to accept(:handle_play, fn(element_state) -> {:ok, element_state} end)
-            allow(module).to accept(:handle_prepare, fn(_previous_playback_state, element_state) -> {:ok, element_state} end)
-            allow(module).to accept(:handle_stop, fn(element_state) -> {:ok, element_state} end)
+            allow(module).to accept(:handle_play, fn(internal_state) -> {:ok, internal_state} end)
+            allow(module).to accept(:handle_prepare, fn(_previous_playback_state, internal_state) -> {:ok, internal_state} end)
+            allow(module).to accept(:handle_stop, fn(internal_state) -> {:ok, internal_state} end)
           end
 
           it "should call handle_stop callback on element's module" do
             described_module.handle_call(message, self(), state)
-            expect(module).to accepted(:handle_stop, [element_state])
+            expect(module).to accepted(:handle_stop, [internal_state])
           end
 
-          it "should call handle_prepare(:playing, element_state) callback on element's module" do
+          it "should call handle_prepare(:playing, internal_state) callback on element's module" do
             described_module.handle_call(message, self(), state)
-            expect(module).to accepted(:handle_prepare, [:playing, element_state])
+            expect(module).to accepted(:handle_prepare, [:playing, internal_state])
           end
 
           it "should not call handle_play callback on element's module" do
@@ -534,14 +538,14 @@ defmodule Membrane.ElementSpec do
 
         context "and all callbacks have returned {:ok, state}" do
           before do
-            allow(module).to accept(:handle_play, fn(element_state) -> {:ok, element_state} end)
-            allow(module).to accept(:handle_prepare, fn(_previous_playback_state, element_state) -> {:ok, element_state} end)
-            allow(module).to accept(:handle_stop, fn(element_state) -> {:ok, element_state} end)
+            allow(module).to accept(:handle_play, fn(internal_state) -> {:ok, internal_state} end)
+            allow(module).to accept(:handle_prepare, fn(_previous_playback_state, internal_state) -> {:ok, internal_state} end)
+            allow(module).to accept(:handle_stop, fn(internal_state) -> {:ok, internal_state} end)
           end
 
           it "should call handle_stop callback on element's module" do
             described_module.handle_call(message, self(), state)
-            expect(module).to accepted(:handle_stop, [element_state])
+            expect(module).to accepted(:handle_stop, [internal_state])
           end
 
           it "should not call handle_prepare callback on element's module" do
@@ -567,9 +571,9 @@ defmodule Membrane.ElementSpec do
         let :playback_state, do: :stopped
 
         before do
-          allow(module).to accept(:handle_play, fn(element_state) -> {:ok, element_state} end)
-          allow(module).to accept(:handle_prepare, fn(_previous_playback_state, element_state) -> {:ok, element_state} end)
-          allow(module).to accept(:handle_stop, fn(element_state) -> {:ok, element_state} end)
+          allow(module).to accept(:handle_play, fn(internal_state) -> {:ok, internal_state} end)
+          allow(module).to accept(:handle_prepare, fn(_previous_playback_state, internal_state) -> {:ok, internal_state} end)
+          allow(module).to accept(:handle_stop, fn(internal_state) -> {:ok, internal_state} end)
         end
 
         it "should not call handle_stop callback on element's module" do
@@ -592,5 +596,8 @@ defmodule Membrane.ElementSpec do
         end
       end
     end
+
+    pending "if message is {:membrane_set_message_bus, pid}"
+    pending "if message is :membrane_clear_message_bus"
   end
 end

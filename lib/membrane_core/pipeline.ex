@@ -5,6 +5,8 @@ defmodule Membrane.Pipeline do
 
   use Membrane.Mixins.Log
   use GenServer
+  alias Membrane.PipelineState
+  alias Membrane.PipelineTopology
 
 
   @doc """
@@ -49,6 +51,17 @@ defmodule Membrane.Pipeline do
     {:ok, any} |
     {:ok, PipelineTopology.t, any} |
     {:error, any}
+
+
+  @doc """
+  Callback invoked on if any of the child element has sent a message.
+
+  It will receive message, sender name and state.
+
+  It is supposed to return `{:ok, state}`.
+  """
+  @callback handle_message(Membrane.Message.t, Membrane.Element.name_t, any) ::
+    {:ok, any}
 
 
 
@@ -114,30 +127,43 @@ defmodule Membrane.Pipeline do
   @doc false
   def init({module, pipeline_options}) do
     case module.handle_init(pipeline_options) do
-      {:ok, initial_elements, internal_state} ->
+      {:ok, internal_state} ->
+        {:ok, %PipelineState{
+          internal_state: internal_state,
+          module: module,
+        }}
 
-        case initial_elements |> spawn_elements(%{}) do
-          {:ok, elements} ->
-            {:ok, %{
-              elements: elements,
+      {:ok, %PipelineTopology{children: nil}, internal_state} ->
+        {:ok, %PipelineState{
+          internal_state: internal_state,
+          module: module,
+        }}
+
+      {:ok, %PipelineTopology{children: children}, internal_state} ->
+        case children |> PipelineTopology.start_children do
+          {:ok, {elements_to_pids, pids_to_elements}} ->
+            {:ok, %PipelineState{
+              elements_to_pids: elements_to_pids,
+              pids_to_elements: pids_to_elements,
               internal_state: internal_state,
+              module: module,
             }}
 
           {:error, reason} ->
-            warn("Failed to initialize pipeline: reason = #{inspect(reason)}")
+            warn("Failed to initialize pipeline: unable to start pipeline's children, reason = #{inspect(reason)}")
             {:stop, reason}
         end
 
       {:error, reason} ->
-        warn("Failed to initialize pipeline: reason = #{inspect(reason)}")
+        warn("Failed to initialize pipeline: handle_init has failed, reason = #{inspect(reason)}")
         {:stop, reason}
     end
   end
 
 
   @doc false
-  def handle_call(:membrane_prepare, _from, %{elements: elements} = state) do
-    case elements |> Map.to_list |> call_element(:prepare) do
+  def handle_call(:membrane_prepare, _from, %PipelineState{elements_to_pids: elements_to_pids} = state) do
+    case elements_to_pids |> Map.to_list |> call_element(:prepare) do
       :ok ->
         {:reply, :ok, state}
       {:error, reason} ->
@@ -147,8 +173,8 @@ defmodule Membrane.Pipeline do
 
 
   @doc false
-  def handle_call(:membrane_play, _from, %{elements: elements} = state) do
-    case elements |> Map.to_list |> call_element(:play) do
+  def handle_call(:membrane_play, _from, %PipelineState{elements_to_pids: elements_to_pids} = state) do
+    case elements_to_pids |> Map.to_list |> call_element(:play) do
       :ok ->
         {:reply, :ok, state}
       {:error, reason} ->
@@ -158,12 +184,21 @@ defmodule Membrane.Pipeline do
 
 
   @doc false
-  def handle_call(:membrane_stop, _from, %{elements: elements} = state) do
-    case elements |> Map.to_list |> call_element(:stop) do
+  def handle_call(:membrane_stop, _from, %PipelineState{elements_to_pids: elements_to_pids} = state) do
+    case elements_to_pids |> Map.to_list |> call_element(:stop) do
       :ok ->
         {:reply, :ok, state}
       {:error, reason} ->
         {:reply, {:error, reason}, state}
+    end
+  end
+
+
+  @doc false
+  def handle_info({:membrane_message, %Membrane.Message{} = message}, from, %PipelineState{pids_to_elements: pids_to_elements, module: module, internal_state: internal_state} = state) do
+    case module.handle_message(message, Map.get(pids_to_elements, from), internal_state) do
+      {:ok, new_internal_state} ->
+        {:noreply, %{state | internal_state: new_internal_state}}
     end
   end
 
@@ -184,24 +219,6 @@ defmodule Membrane.Pipeline do
   end
 
 
-  defp spawn_elements(elements, acc) when is_map(elements) do
-    spawn_elements(Map.to_list(elements), acc)
-  end
-
-  defp spawn_elements([], acc) do
-    {:ok, acc}
-  end
-
-  defp spawn_elements([{name, {module, options}}|tail], acc) do
-    case Membrane.Element.start_link(module, options) do
-      {:ok, pid} ->
-        spawn_elements(tail, Map.put(acc, name, pid))
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
 
   defmacro __using__(_) do
     quote location: :keep do
@@ -211,12 +228,19 @@ defmodule Membrane.Pipeline do
 
       @doc false
       def handle_init(_options) do
-        {:ok, %{}, %{}}
+        {:ok, %{}}
+      end
+
+
+      @doc false
+      def handle_message(_message, _from, state) do
+        {:ok, state}
       end
 
 
       defoverridable [
         handle_init: 1,
+        handle_message: 3,
       ]
     end
   end

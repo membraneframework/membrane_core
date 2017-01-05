@@ -5,9 +5,13 @@ defmodule Membrane.Element do
   """
 
   use Membrane.Mixins.Log
+  alias Membrane.ElementState
 
+  # Type that defines an element name within a pipeline
+  @type name_t :: atom | String.t
 
-  @type name_t :: :atom | String.t
+  # Type that defines what options can be passed while starting an element.
+  @type options_t :: struct | nil
 
   # Type that defines what may be sent from one element to another.
   @type sendable_t :: %Membrane.Buffer{} | %Membrane.Event{}
@@ -15,11 +19,19 @@ defmodule Membrane.Element do
   # Type that defines a single command that may be returned from handle_*
   # callbacks.
   #
-  # If it is `{:send, pad_name, [buffers_or_events]}` it will cause sending
+  # If it is `{:send, {pad_name, buffer_or_event}` it will cause sending
   # given buffers and/or events downstream to the linked elements via pad of
   # given name.
+  #
+  # If it is `{:caps, {pad_name, caps}` it will set current caps for given
+  # pad and inform downstream element (if linked) about the change.
+  #
+  # If it is `{:message, message}` it will send message to the message bus
+  # if any is defined.
   @type callback_return_command_t ::
-    {:send, Membrane.Pad.name_t, [sendable_t]}
+    {:send, {Membrane.Pad.name_t, sendable_t}} |
+    {:message, Membrane.Message.t} |
+    {:caps, {Membrane.Pad.name_t, Membrane.Caps.t}}
 
   # Type that defines list of commands that may be returned from handle_*
   # callbacks.
@@ -33,8 +45,8 @@ defmodule Membrane.Element do
 
   Works similarily to `GenServer.start_link/3` and has the same return values.
   """
-  @spec start_link(module, struct, GenServer.options) :: GenServer.on_start
-  def start_link(module, element_options, process_options \\ []) do
+  @spec start_link(module, options_t, GenServer.options) :: GenServer.on_start
+  def start_link(module, element_options \\ nil, process_options \\ []) do
     debug("Start Link: module = #{inspect(module)}, element_options = #{inspect(element_options)}, process_options = #{inspect(process_options)}")
     GenServer.start_link(__MODULE__, {module, element_options}, process_options)
   end
@@ -46,8 +58,8 @@ defmodule Membrane.Element do
 
   Works similarily to `GenServer.start/3` and has the same return values.
   """
-  @spec start(module, struct, GenServer.options) :: GenServer.on_start
-  def start(module, element_options, process_options \\ []) do
+  @spec start(module, options_t, GenServer.options) :: GenServer.on_start
+  def start(module, element_options \\ nil, process_options \\ []) do
     debug("Start: module = #{inspect(module)}, element_options = #{inspect(element_options)}, process_options = #{inspect(process_options)}")
     GenServer.start(__MODULE__, {module, element_options}, process_options)
   end
@@ -122,6 +134,40 @@ defmodule Membrane.Element do
   @spec is_sink?(module) :: boolean
   def is_sink?(module) do
     module.is_sink?
+  end
+
+
+  @doc """
+  Sends synchronous call to the given element requesting it to set message bus.
+
+  It will wait for reply for amount of time passed as second argument
+  (in milliseconds).
+
+  In case of success, returns `:ok`.
+
+  If case of failure, returns `{:error, reason}`
+  """
+  @spec set_message_bus(pid, pid, timeout) :: :ok | {:error, any}
+  def set_message_bus(server, message_bus, timeout \\ 5000) when is_pid(server) do
+    debug("Set Message Bus to #{inspect(message_bus)} -> #{inspect(server)}")
+    GenServer.call(server, {:membrane_set_message_bus, message_bus}, timeout)
+  end
+
+
+  @doc """
+  Sends synchronous call to the given element requesting it to clear message bus.
+
+  It will wait for reply for amount of time passed as second argument
+  (in milliseconds).
+
+  In case of success, returns `:ok`.
+
+  If case of failure, returns `{:error, reason}`
+  """
+  @spec clear_message_bus(pid, timeout) :: :ok | {:error, any}
+  def clear_message_bus(server, timeout \\ 5000) when is_pid(server) do
+    debug("Clear Message Bus -> #{inspect(server)}")
+    GenServer.call(server, :membrane_clear_message_bus, timeout)
   end
 
 
@@ -266,8 +312,8 @@ defmodule Membrane.Element do
   def init({module, options}) do
     # Call element's initialization callback
     case module.handle_init(options) do
-      {:ok, element_state} ->
-        debug("Initialized: element_state = #{inspect(element_state)}")
+      {:ok, internal_state} ->
+        debug("Initialized: internal_state = #{inspect(internal_state)}")
 
         # Store module name in the process dictionary so it can be used
         # to retreive module from PID in `Membrane.Element.get_module/1`.
@@ -277,23 +323,23 @@ defmodule Membrane.Element do
         source_pads = if is_source?(module) do
           module.known_source_pads() |> known_pads_to_pads_state
         else
-          nil
+          %{}
         end
 
         # Determine initial list of sink pads
         sink_pads = if is_sink?(module) do
           module.known_sink_pads() |> known_pads_to_pads_state
         else
-          nil
+          %{}
         end
 
         # Return initial state of the process, including element state.
-        {:ok, %{
+        {:ok, %ElementState{
           module: module,
           playback_state: :stopped,
           source_pads: source_pads,
           sink_pads: sink_pads,
-          element_state: element_state,
+          internal_state: internal_state,
         }}
 
       {:error, reason} ->
@@ -304,20 +350,20 @@ defmodule Membrane.Element do
 
 
   @doc false
-  def terminate(reason, %{module: module, playback_state: playback_state, element_state: element_state} = state) do
+  def terminate(reason, %ElementState{module: module, playback_state: playback_state, internal_state: internal_state} = state) do
     if playback_state != :stopped do
       warn("Terminating: Attempt to terminate element when it is not stopped, state = #{inspect(state)}")
     end
 
     debug("Terminating: reason = #{inspect(reason)}, state = #{inspect(state)}")
-    module.handle_shutdown(element_state)
+    module.handle_shutdown(internal_state)
   end
 
 
   # Callback invoked on incoming prepare command if playback state is stopped.
   @doc false
-  def handle_call(:membrane_prepare, _from, %{module: module, playback_state: :stopped, element_state: element_state} = state) do
-    module.handle_prepare(:stopped, element_state)
+  def handle_call(:membrane_prepare, _from, %ElementState{module: module, playback_state: :stopped, internal_state: internal_state} = state) do
+    module.handle_prepare(:stopped, internal_state)
       |> handle_callback(%{state | playback_state: :prepared})
       |> format_callback_response(:reply)
   end
@@ -325,15 +371,15 @@ defmodule Membrane.Element do
 
   # Callback invoked on incoming prepare command if playback state is prepared.
   @doc false
-  def handle_call(:membrane_prepare, _from, %{playback_state: :prepared} = state) do
+  def handle_call(:membrane_prepare, _from, %ElementState{playback_state: :prepared} = state) do
     {:reply, :noop, state}
   end
 
 
   # Callback invoked on incoming prepare command if playback state is playing.
   @doc false
-  def handle_call(:membrane_prepare, _from, %{module: module, playback_state: :playing, element_state: element_state} = state) do
-    module.handle_prepare(:playing, element_state)
+  def handle_call(:membrane_prepare, _from, %ElementState{module: module, playback_state: :playing, internal_state: internal_state} = state) do
+    module.handle_prepare(:playing, internal_state)
       |> handle_callback(%{state | playback_state: :prepared})
       |> format_callback_response(:reply)
   end
@@ -341,11 +387,11 @@ defmodule Membrane.Element do
 
   # Callback invoked on incoming play command if playback state is stopped.
   @doc false
-  def handle_call(:membrane_play, _from, %{module: module, playback_state: :stopped, element_state: element_state} = state) do
-    case module.handle_prepare(:stopped, element_state)
+  def handle_call(:membrane_play, _from, %ElementState{module: module, playback_state: :stopped, internal_state: internal_state} = state) do
+    case module.handle_prepare(:stopped, internal_state)
       |> handle_callback(%{state | playback_state: :prepared}) do
       {:ok, state} ->
-        module.handle_play(element_state)
+        module.handle_play(internal_state)
         |> handle_callback(%{state | playback_state: :playing})
         |> format_callback_response(:reply)
 
@@ -356,8 +402,8 @@ defmodule Membrane.Element do
 
   # Callback invoked on incoming play command if playback state is prepared.
   @doc false
-  def handle_call(:membrane_play, _from, %{module: module, playback_state: :prepared, element_state: element_state} = state) do
-    module.handle_play(element_state)
+  def handle_call(:membrane_play, _from, %ElementState{module: module, playback_state: :prepared, internal_state: internal_state} = state) do
+    module.handle_play(internal_state)
       |> handle_callback(%{state | playback_state: :playing})
       |> format_callback_response(:reply)
   end
@@ -365,22 +411,22 @@ defmodule Membrane.Element do
 
   # Callback invoked on incoming play command if playback state is playing.
   @doc false
-  def handle_call(:membrane_play, _from, %{playback_state: :playing} = state) do
+  def handle_call(:membrane_play, _from, %ElementState{playback_state: :playing} = state) do
     {:reply, :noop, state}
   end
 
 
   # Callback invoked on incoming stop command if playback state is stopped.
   @doc false
-  def handle_call(:membrane_stop, _from, %{playback_state: :stopped} = state) do
+  def handle_call(:membrane_stop, _from, %ElementState{playback_state: :stopped} = state) do
     {:reply, :noop, state}
   end
 
 
   # Callback invoked on incoming stop command if playback state is prepared.
   @doc false
-  def handle_call(:membrane_stop, _from, %{module: module, playback_state: :prepared, element_state: element_state} = state) do
-    module.handle_stop(element_state)
+  def handle_call(:membrane_stop, _from, %ElementState{module: module, playback_state: :prepared, internal_state: internal_state} = state) do
+    module.handle_stop(internal_state)
       |> handle_callback(%{state | playback_state: :stopped})
       |> format_callback_response(:reply)
   end
@@ -388,11 +434,11 @@ defmodule Membrane.Element do
 
   # Callback invoked on incoming stop command if playback state is playing.
   @doc false
-  def handle_call(:membrane_stop, _from, %{module: module, playback_state: :playing, element_state: element_state} = state) do
-    case module.handle_prepare(:playing, element_state)
+  def handle_call(:membrane_stop, _from, %ElementState{module: module, playback_state: :playing, internal_state: internal_state} = state) do
+    case module.handle_prepare(:playing, internal_state)
       |> handle_callback(%{state | playback_state: :prepared}) do
       {:ok, state} ->
-        module.handle_stop(element_state)
+        module.handle_stop(internal_state)
         |> handle_callback(%{state | playback_state: :stopped})
         |> format_callback_response(:reply)
 
@@ -400,6 +446,19 @@ defmodule Membrane.Element do
     end
   end
 
+
+  # Callback invoked on incoming set_message_bus command.
+  @doc false
+  def handle_call({:membrane_set_message_bus, message_bus}, _from, state) do
+    %{state | message_bus: message_bus}
+  end
+
+
+  # Callback invoked on incoming set_message_bus command.
+  @doc false
+  def handle_call(:membrane_clear_message_bus, _from, state) do
+    %{state | message_bus: nil}
+  end
 
 
   # Callback invoked on incoming link request.
@@ -414,9 +473,10 @@ defmodule Membrane.Element do
   # If element is playing it will delegate actual processing to handle_buffer/3.
   #
   # Otherwise it will silently drop the buffer.
+  # FIXME message should contain target pad
   @doc false
-  def handle_info({:membrane_buffer, buffer}, %{module: module, element_state: element_state, playback_state: playback_state} = state) do
-    if is_sink?(module) do
+  def handle_info({:membrane_buffer, buffer}, %ElementState{module: module, internal_state: internal_state, playback_state: playback_state} = state) do
+    if is_sink?(module) do # FIXME check if target pad exists
       case playback_state do
         :stopped ->
           warn("Incoming buffer: Error, not started (buffer = #{inspect(buffer)})")
@@ -427,7 +487,7 @@ defmodule Membrane.Element do
           {:noreply, state}
 
         :playing ->
-          module.handle_buffer(buffer, element_state)
+          module.handle_buffer(buffer, internal_state)
             |> handle_callback(state)
             |> format_callback_response(:noreply)
       end
@@ -440,8 +500,8 @@ defmodule Membrane.Element do
 
   # Callback invoked on other incoming message
   @doc false
-  def handle_info(message, %{module: module, element_state: element_state} = state) do
-    module.handle_other(message, element_state)
+  def handle_info(message, %ElementState{module: module, internal_state: internal_state} = state) do
+    module.handle_other(message, internal_state)
       |> handle_callback(state)
       |> format_callback_response(:noreply)
   end
@@ -464,16 +524,13 @@ defmodule Membrane.Element do
     {:reply, :ok, new_state}
   end
 
-
   defp format_callback_response({:ok, new_state}, :noreply) do
     {:noreply, new_state}
   end
 
-
   defp format_callback_response({:error, reason, new_state}, :reply) do
     {:reply, {:error, reason}, new_state}
   end
-
 
   defp format_callback_response({:error, _reason, new_state}, :noreply) do
     {:noreply, new_state}
@@ -481,21 +538,21 @@ defmodule Membrane.Element do
 
 
   # Generic handler that can be used to convert return value from
-  # element callback to reply that is accepted by GenServer.handle_info.
+  # element callback to reply that is accepted by GenServer.handle_*.
   #
-  # Case when callback returned success and requests no further action.
-  defp handle_callback({:ok, new_element_state}, state) do
-    {:ok, %{state | element_state: new_element_state}}
+  # Case when callback returned successfully and requests no further action.
+  defp handle_callback({:ok, new_internal_state}, state) do
+    {:ok, %{state | internal_state: new_internal_state}}
   end
 
 
   # Generic handler that can be used to convert return value from
-  # element callback to reply that is accepted by GenServer.handle_info.
+  # element callback to reply that is accepted by GenServer.handle_*.
   #
-  # Case when callback returned success and wants to send some messages
-  # (such as buffers) in response.
-  defp handle_callback({:ok, commands, new_element_state}, state) do
-    case handle_commands(commands, %{state | element_state: new_element_state}) do
+  # Case when callback returned successfully and wants to execute some commands
+  # in response.
+  defp handle_callback({:ok, commands, new_internal_state}, state) do
+    case handle_commands(commands, %{state | internal_state: new_internal_state}) do
       {:ok, new_state} ->
         {:ok, new_state}
     end
@@ -506,9 +563,9 @@ defmodule Membrane.Element do
   # element callback to reply that is accepted by GenServer.handle_info.
   #
   # Case when callback returned failure.
-  defp handle_callback({:error, reason, new_element_state}, state) do
+  defp handle_callback({:error, reason, new_internal_state}, state) do
     warn("Handle callback: Error (reason = #{inspect(reason)}")
-    {:error, reason, %{state | element_state: new_element_state}}
+    {:error, reason, %{state | internal_state: new_internal_state}}
     # TODO handle errors
   end
 
@@ -518,11 +575,49 @@ defmodule Membrane.Element do
   end
 
 
-  # Handles command that is supposed to send buffer of event from the
+  # Handles command that is supposed to send buffer from the given pad to its
+  # linked peer. # FIXME add match when there's no peer
+  defp handle_commands([{:send, {pad, %Membrane.Buffer{} = buffer}}|tail], state) do
+    debug("Sending buffer from pad #{inspect(pad)}: #{inspect(buffer)}")
+    # :ok = send_message(head, link_destinations)
+
+    handle_commands(tail, state)
+  end
+
+
+  # Handles command that is supposed to send event from the given pad to its
+  # linked peer. # FIXME add match when there's no peer
+  defp handle_commands([{:send, {pad, %Membrane.Event{} = event}}|tail], state) do
+    debug("Sending event from pad #{inspect(pad)}: #{inspect(event)}")
+    # :ok = send_message(head, link_destinations)
+
+    handle_commands(tail, state)
+  end
+
+
+  # Handles command that is supposed to send buffer or event from the
   # given pad to its linked peer.
   defp handle_commands([{:send, {pad, buffer_or_event}}|tail], state) do
-    debug("Sending message from pad #{inspect(pad)}: #{inspect(buffer_or_event)}")
+    debug("Sending buffer/event from pad #{inspect(pad)}: #{inspect(buffer_or_event)}")
     # :ok = send_message(head, link_destinations)
+
+    handle_commands(tail, state)
+  end
+
+
+  # Handles command that is supposed to send message from the element if there's
+  # no message bus set.
+  defp handle_commands([{:message, %Membrane.Message{} = message}|tail], %ElementState{message_bus: nil} = state) do
+    debug("Would emit message but no message bus is set: #{inspect(message)}")
+
+    handle_commands(tail, state)
+  end
+
+  # Handles command that is supposed to send message from the element if there's
+  # a message bus.
+  defp handle_commands([{:message, %Membrane.Message{} = message}|tail], %ElementState{message_bus: message_bus} = state) do
+    debug("Emitting message: #{inspect(message)}")
+    send(message_bus, {:membrane_message, message})
 
     handle_commands(tail, state)
   end

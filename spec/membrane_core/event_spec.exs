@@ -1,6 +1,18 @@
 defmodule Membrane.EventSpec do
   use ESpec, async: true
 
+  describe "when creating new struct" do
+    it "should have type field set to nil" do
+      %Membrane.Event{type: type} = struct(described_module)
+      expect(type).to be_nil
+    end
+
+    it "should have payload field set to nil" do
+      %Membrane.Event{payload: payload} = struct(described_module)
+      expect(payload).to be_nil
+    end
+  end
+
 
   describe ".eos/0" do
     it "should return a Membrane.Event with type set to :eos" do

@@ -16,7 +16,7 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   """
   @callback handle_buffer(%Membrane.Buffer{}, any) ::
     {:ok, any} |
-    {:send, [%Membrane.Buffer{}], any} |
+    {:ok, Membrane.Element.callback_return_commands_t, any} |
     {:error, any, any}
 
 
