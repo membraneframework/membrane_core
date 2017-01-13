@@ -170,7 +170,9 @@ defmodule Membrane.ElementSpec do
   pending ".play/2"
   pending ".stop/2"
   pending ".set_message_bus/3"
+  pending ".get_message_bus/2"
   pending ".clear_message_bus/2"
+  pending ".link/3"
 
 
   xdescribe ".link/2" do
@@ -269,20 +271,88 @@ defmodule Membrane.ElementSpec do
   end
 
 
-  pending ".link/3"
-
 
   describe ".handle_call/3" do
     context "if message is :membrane_play" do
       let :message, do: :membrane_play
       let :module, do: TrivialFilter
-      let :internal_state, do: %{}
+      let :internal_state, do: %{a: 1}
       let :state, do: %ElementState{module: module, playback_state: playback_state, internal_state: internal_state}
 
       context "and current playback state is :stopped" do
         let :playback_state, do: :stopped
 
-        pending "and at least one of the callbacks has returned an error"
+        context "and handle_prepare callback has returned an error" do
+          let :reason, do: :whatever
+
+          before do
+            allow(module).to accept(:handle_play, fn(internal_state) -> {:ok, internal_state} end)
+            allow(module).to accept(:handle_prepare, fn(_previous_playback_state, internal_state) -> {:error, reason, %{internal_state | a: 2}} end)
+            allow(module).to accept(:handle_stop, fn(internal_state) -> {:ok, internal_state} end)
+          end
+
+          it "should not call handle_stop callback on element's module" do
+            described_module.handle_call(message, self(), state)
+            expect(module).to_not accepted(:handle_stop)
+          end
+
+          it "should call handle_prepare(:stopped, internal_state) callback on element's module" do
+            described_module.handle_call(message, self(), state)
+            expect(module).to accepted(:handle_prepare, [:stopped, internal_state])
+          end
+
+          it "should not call handle_play(internal_state) callback on element's module" do
+            described_module.handle_call(message, self(), state)
+            expect(module).to_not accepted(:handle_play)
+          end
+
+          it "should return :reply response" do
+            {response, _info, _state} = described_module.handle_call(message, self(), state)
+            expect(response).to eq :reply
+          end
+
+          it "should return {:error, reason} as a reply info" do
+            {_response, info, _state} = described_module.handle_call(message, self(), state)
+            expect(info).to eq {:error, reason}
+          end
+
+          it "should return {:reply, {:error, reason}, state} with internal state updated" do
+            {_response, _info, %ElementState{internal_state: new_internal_state}} = described_module.handle_call(message, self(), state)
+            expect(new_internal_state).to eq(%{internal_state | a: 2})
+          end
+
+          it "should return {:reply, {:error, reason}, state} with unchanged playback state" do
+            {_response, _info, %ElementState{playback_state: new_playback_state}} = described_module.handle_call(message, self(), state)
+            expect(playback_state).to eq :stopped
+          end
+        end
+
+        context "and handle_play callback has returned an error" do
+          let :reason, do: :whatever
+
+          before do
+            allow(module).to accept(:handle_play, fn(internal_state) -> {:error, reason, %{internal_state | a: 3}} end)
+            allow(module).to accept(:handle_prepare, fn(_previous_playback_state, internal_state) -> {:ok, %{internal_state | a: 2}} end)
+            allow(module).to accept(:handle_stop, fn(internal_state) -> {:ok, internal_state} end)
+          end
+
+          it "should not call handle_stop callback on element's module" do
+            described_module.handle_call(message, self(), state)
+            expect(module).to_not accepted(:handle_stop)
+          end
+
+          it "should call handle_prepare(:stopped, internal_state) callback on element's module" do
+            described_module.handle_call(message, self(), state)
+            expect(module).to accepted(:handle_prepare, [:stopped, internal_state])
+          end
+
+          it "should call handle_play(internal_state) callback on element's module with internal state updated by previous handle_prepare call" do
+            described_module.handle_call(message, self(), state)
+            expect(module).to accepted(:handle_play, [%{internal_state | a: 2}])
+          end
+
+          # TODO similar to above
+        end
 
         context "and all callbacks have returned {:ok, state}" do
           before do
@@ -306,7 +376,9 @@ defmodule Membrane.ElementSpec do
             expect(module).to accepted(:handle_play, [internal_state])
           end
 
-          pending "should return {:reply, :ok, state} with element state updated"
+          pending "it should call handle_play(internal_state) callback with internal state updated by handle_prepare"
+
+          pending "should return {:reply, :ok, state} with internal state updated"
 
           it "should return {:reply, :ok, state} with playback state set to :playing" do
             expect(described_module.handle_call(message, self(), state)).to eq {:reply, :ok, %{state | playback_state: :playing}}
@@ -342,7 +414,7 @@ defmodule Membrane.ElementSpec do
             expect(module).to accepted(:handle_play, [internal_state])
           end
 
-          pending "should return {:reply, :ok, state} with element state updated"
+          pending "should return {:reply, :ok, state} with internal state updated"
 
           it "should return {:reply, :ok, state} with playback state set to :playing" do
             expect(described_module.handle_call(message, self(), state)).to eq {:reply, :ok, %{state | playback_state: :playing}}
@@ -414,7 +486,7 @@ defmodule Membrane.ElementSpec do
             expect(module).to_not accepted(:handle_play)
           end
 
-          pending "should return {:reply, :ok, state} with element state updated"
+          pending "should return {:reply, :ok, state} with internal state updated"
 
           it "should return {:reply, :ok, state} with playback state set to :prepared" do
             expect(described_module.handle_call(message, self(), state)).to eq {:reply, :ok, %{state | playback_state: :prepared}}
@@ -480,7 +552,7 @@ defmodule Membrane.ElementSpec do
             expect(module).to_not accepted(:handle_play)
           end
 
-          pending "should return {:reply, :ok, state} with element state updated"
+          pending "should return {:reply, :ok, state} with internal state updated"
 
           it "should return {:reply, :ok, state} with playback state set to :prepared" do
             expect(described_module.handle_call(message, self(), state)).to eq {:reply, :ok, %{state | playback_state: :prepared}}
@@ -522,7 +594,8 @@ defmodule Membrane.ElementSpec do
             expect(module).to_not accepted(:handle_play)
           end
 
-          pending "should return {:reply, :ok, state} with element state updated"
+          pending "should return {:reply, :ok, state} with internal state updated"
+          pending "it should call handle_stop(internal_state) callback with internal state updated by handle_prepare"
 
           it "should return {:reply, :ok, state} with playback state set to :stopped" do
             expect(described_module.handle_call(message, self(), state)).to eq {:reply, :ok, %{state | playback_state: :stopped}}
@@ -558,7 +631,7 @@ defmodule Membrane.ElementSpec do
             expect(module).to_not accepted(:handle_play)
           end
 
-          pending "should return {:reply, :ok, state} with element state updated"
+          pending "should return {:reply, :ok, state} with internal state updated"
 
           it "should return {:reply, :ok, state} with playback state set to :stopped" do
             expect(described_module.handle_call(message, self(), state)).to eq {:reply, :ok, %{state | playback_state: :stopped}}
@@ -597,7 +670,71 @@ defmodule Membrane.ElementSpec do
       end
     end
 
-    pending "if message is {:membrane_set_message_bus, pid}"
-    pending "if message is :membrane_clear_message_bus"
+
+    context "if message is {:membrane_set_message_bus, pid}" do
+      let :new_message_bus, do: self()
+      let :message, do: {:membrane_set_message_bus, new_message_bus}
+      let :state, do: %ElementState{message_bus: message_bus}
+
+      context "and current message bus is nil" do
+        let :message_bus, do: nil
+
+        it "should return {:reply, :ok, state} with message bus set to the new message bus" do
+          expect(described_module.handle_call(message, self(), state)).to eq {:reply, :ok, %{state | message_bus: new_message_bus}}
+        end
+      end
+
+      context "and current message bus is set to the same message bus as requested" do
+        let :message_bus, do: new_message_bus
+
+        it "should return {:reply, :ok, state} with message bus set to the new message bus" do
+          expect(described_module.handle_call(message, self(), state)).to eq {:reply, :ok, %{state | message_bus: new_message_bus}}
+        end
+      end
+    end
+
+
+    context "if message is :membrane_get_message_bus" do
+      let :message, do: :membrane_get_message_bus
+      let :state, do: %ElementState{message_bus: message_bus}
+
+      context "and current message bus is nil" do
+        let :message_bus, do: nil
+
+        it "should return {:reply, {:ok, nil}, state} with unmodified state" do
+          expect(described_module.handle_call(message, self(), state)).to eq {:reply, {:ok, nil}, state}
+        end
+      end
+
+      context "and current message bus is not nil" do
+        let :message_bus, do: self()
+
+        it "should return {:reply, {:ok, pid}, state} with unmodified state" do
+          expect(described_module.handle_call(message, self(), state)).to eq {:reply, {:ok, message_bus}, state}
+        end
+      end
+    end
+
+
+    context "if message is :membrane_clear_message_bus" do
+      let :message, do: :membrane_clear_message_bus
+      let :state, do: %ElementState{message_bus: message_bus}
+
+      context "and current message bus is nil" do
+        let :message_bus, do: nil
+
+        it "should return {:reply, :ok, state} with message bus set to nil" do
+          expect(described_module.handle_call(message, self(), state)).to eq {:reply, :ok, %{state | message_bus: nil}}
+        end
+      end
+
+      context "and current message bus is not nil" do
+        let :message_bus, do: self()
+
+        it "should return {:reply, :ok, state} with message bus set to nil" do
+          expect(described_module.handle_call(message, self(), state)).to eq {:reply, :ok, %{state | message_bus: nil}}
+        end
+      end
+    end
   end
 end
