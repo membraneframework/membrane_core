@@ -47,12 +47,12 @@ defmodule Membrane.Time do
   @doc """
   Returns current monotonic time.
 
-  It is a wrapper around `:erlang.monotonic_time/0` made mostly for purpose
+  It is a wrapper around `System.monotonic_time/0` made mostly for purpose
   of mocking such calls in specs.
   """
   @spec native_monotonic_time() :: native_t
   def native_monotonic_time do
-    :erlang.monotonic_time()
+    System.monotonic_time()
   end
 
 
