@@ -40,7 +40,7 @@ defmodule Membrane.Time do
   """
   @spec native_resolution() :: pos_integer
   def native_resolution do
-    :erlang.convert_time_unit(1, :seconds, :native)
+    System.convert_time_unit(1, :seconds, :native)
   end
 
 
