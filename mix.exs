@@ -12,7 +12,7 @@ defmodule Membrane.Mixfile do
      name: "Membrane Core",
      source_url: "https://bitbucket.org/radiokit/membrane-core",
      preferred_cli_env: [espec: :test],
-     deps: deps]
+     deps: deps()]
   end
 
 
