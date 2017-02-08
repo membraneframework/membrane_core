@@ -3,14 +3,14 @@ defmodule Membrane.Device.AudioEnumerator do
   Behaviour for defining enumerators of audio devices.
   """
 
-  alias Membrane.Device.AudioDevice
+  alias Membrane.Device.AudioEndpoint
 
 
   @doc """
   Returns list of available audio devices.
   """
   @callback list(:capture | :playback | :all) ::
-    {:ok, [] | [%AudioDevice{}]} |
+    {:ok, [] | [%AudioEndpoint{}]} |
     {:error, any}
 
 
@@ -23,7 +23,7 @@ defmodule Membrane.Device.AudioEnumerator do
   * list of removed audio devices,
   * list of unchanged audio devices.
 
-  While comparing it take under consideration whole `Membrane.Device.AudioDevice`
+  While comparing it take under consideration whole `Membrane.Device.AudioEndpoint`
   struct. In other words, changing any of the fields will cause this function
   to detect change.
 
@@ -31,8 +31,8 @@ defmodule Membrane.Device.AudioEnumerator do
   complexity. It should not be an issue as usually list of devices is short
   but you are warned.
   """
-  @spec diff_list([] | [%AudioDevice{}], [] | [%AudioDevice{}]) ::
-    {[] | [%AudioDevice{}], [] | [%AudioDevice{}], [] | [%AudioDevice{}]}
+  @spec diff_list([] | [%AudioEndpoint{}], [] | [%AudioEndpoint{}]) ::
+    {[] | [%AudioEndpoint{}], [] | [%AudioEndpoint{}], [] | [%AudioEndpoint{}]}
   def diff_list(list1, list2) do
     mapset1 = list1 |> MapSet.new
     mapset2 = list2 |> MapSet.new
