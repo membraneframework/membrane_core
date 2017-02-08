@@ -110,9 +110,9 @@ defmodule Membrane.Device.AudioMonitor do
 
   Returns list of `AudioEndpoint` structs.
   """
-  @spec get_devices(pid, :all | :capture | :playback, timeout) :: [] | [%AudioEndpoint{}]
-  def get_devices(server, query \\ :all, timeout \\ 5000) do
-    Connection.call(server, {:get_devices, query}, timeout)
+  @spec get_endpoints(pid, :all | :capture | :playback, timeout) :: [] | [%AudioEndpoint{}]
+  def get_endpoints(server, query \\ :all, timeout \\ 5000) do
+    Connection.call(server, {:get_endpoints, query}, timeout)
   end
 
 
@@ -172,13 +172,13 @@ defmodule Membrane.Device.AudioMonitor do
 
 
   @doc false
-  def handle_call({:get_devices, :all}, _from, %{devices: devices} = state) do
+  def handle_call({:get_endpoints, :all}, _from, %{devices: devices} = state) do
     {:reply, devices, state}
   end
 
 
   @doc false
-  def handle_call({:get_devices, query}, _from, %{devices: devices} = state) do
+  def handle_call({:get_endpoints, query}, _from, %{devices: devices} = state) do
     filtered_devices =
       devices
       |> Enum.filter(fn(%AudioEndpoint{direction: direction}) ->
