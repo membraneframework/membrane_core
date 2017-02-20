@@ -8,7 +8,7 @@ defmodule Membrane.Time do
 
   Please note that Erlang VM may internally use different units and that may
   differ from platform to platform. Still, unless you need to perform calculations
-  that do not touch hardware clock, you should use Membrane units for consistency. 
+  that do not touch hardware clock, you should use Membrane units for consistency.
   """
 
   @compile {:inline, [
@@ -66,6 +66,7 @@ defmodule Membrane.Time do
     value
   end
 
+
   @doc """
   The same as `nanosecond/1`.
 
@@ -75,6 +76,7 @@ defmodule Membrane.Time do
   def nanoseconds(value) when is_integer(value) and value >= 0 do
     nanosecond(value)
   end
+
 
   @doc """
   Returns given microseconds in internal Membrane time units.
@@ -86,6 +88,7 @@ defmodule Membrane.Time do
     value * 1_000
   end
 
+
   @doc """
   The same as `microsecond/1`.
 
@@ -95,6 +98,7 @@ defmodule Membrane.Time do
   def microseconds(value) when is_integer(value) and value >= 0 do
     microsecond(value)
   end
+
 
   @doc """
   Returns given milliseconds in internal Membrane time units.
@@ -106,6 +110,7 @@ defmodule Membrane.Time do
     value * 1_000_000
   end
 
+
   @doc """
   The same as `millisecond/1`.
 
@@ -115,6 +120,7 @@ defmodule Membrane.Time do
   def milliseconds(value) when is_integer(value) and value >= 0 do
     millisecond(value)
   end
+
 
   @doc """
   Returns given seconds in internal Membrane time units.
@@ -126,6 +132,7 @@ defmodule Membrane.Time do
     value * 1_000_000_000
   end
 
+
   @doc """
   The same as `second/1`.
 
@@ -135,6 +142,7 @@ defmodule Membrane.Time do
   def seconds(value) when is_integer(value) and value >= 0 do
     second(value)
   end
+
 
   @doc """
   Returns given minutes in internal Membrane time units.
@@ -146,6 +154,7 @@ defmodule Membrane.Time do
     value * 60_000_000_000
   end
 
+
   @doc """
   The same as `minute/1`.
 
@@ -155,6 +164,7 @@ defmodule Membrane.Time do
   def minutes(value) when is_integer(value) and value >= 0 do
     minute(value)
   end
+
 
   @doc """
   Returns given hours in internal Membrane time units.
@@ -166,6 +176,7 @@ defmodule Membrane.Time do
     value * 3_600_000_000_000
   end
 
+
   @doc """
   The same as `hour/1`.
 
@@ -176,6 +187,7 @@ defmodule Membrane.Time do
     hour(value)
   end
 
+
   @doc """
   Returns given days in internal Membrane time units.
 
@@ -185,6 +197,7 @@ defmodule Membrane.Time do
   def day(value) when is_integer(value) and value >= 0 do
     value * 86_400_000_000_000
   end
+
 
   @doc """
   The same as `day/1`.
