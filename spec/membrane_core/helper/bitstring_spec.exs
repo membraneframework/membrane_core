@@ -56,11 +56,11 @@ defmodule Membrane.Helper.BitstringSpec do
           let :size, do: 2
 
           it "should return an error result" do
-            expect(described_module.split_map(data, size, process_fun, extra_fun_args)).to be_error_result
+            expect(described_module().split_map(data(), size(), process_fun(), extra_fun_args())).to be_error_result()
           end
 
           it "should return reason given by the processing function as a reason" do
-            {:error, reason} = described_module.split_map(data, size, process_fun, extra_fun_args)
+            {:error, reason} = described_module().split_map(data(), size(), process_fun(), extra_fun_args())
             expect(reason).to eq :something
           end
         end
@@ -77,16 +77,16 @@ defmodule Membrane.Helper.BitstringSpec do
           let :size, do: 2
 
           it "should return an ok result" do
-            expect(described_module.split_map(data, size, process_fun, extra_fun_args)).to be_ok_result
+            expect(described_module().split_map(data(), size(), process_fun(), extra_fun_args())).to be_ok_result()
           end
 
           it "should return a list of items that was processed using given function" do
-            {:ok, {items, _rest}} = described_module.split_map(data, size, process_fun, extra_fun_args)
+            {:ok, {items, _rest}} = described_module().split_map(data(), size(), process_fun(), extra_fun_args())
             expect(items).to eq ["AB", "CD"]
           end
 
           it "should return an empty bitstring as remaining bitstring" do
-            {:ok, {_items, rest}} = described_module.split_map(data, size, process_fun, extra_fun_args)
+            {:ok, {_items, rest}} = described_module().split_map(data(), size(), process_fun(), extra_fun_args())
             expect(rest).to eq << >>
           end
         end
@@ -95,16 +95,16 @@ defmodule Membrane.Helper.BitstringSpec do
           let :size, do: 3
 
           it "should return an ok result" do
-            expect(described_module.split_map(data, size, process_fun, extra_fun_args)).to be_ok_result
+            expect(described_module().split_map(data(), size(), process_fun(), extra_fun_args())).to be_ok_result()
           end
 
           it "should return a list of items that was processed using given function" do
-            {:ok, {items, _rest}} = described_module.split_map(data, size, process_fun, extra_fun_args)
+            {:ok, {items, _rest}} = described_module().split_map(data(), size(), process_fun(), extra_fun_args())
             expect(items).to eq ["ABC"]
           end
 
           it "should return a unprocessed bitstring as remaining bitstring" do
-            {:ok, {_items, rest}} = described_module.split_map(data, size, process_fun, extra_fun_args)
+            {:ok, {_items, rest}} = described_module().split_map(data(), size(), process_fun(), extra_fun_args())
             expect(rest).to eq "d"
           end
         end
@@ -118,16 +118,16 @@ defmodule Membrane.Helper.BitstringSpec do
           let :size, do: 2
 
           it "should return an ok result" do
-            expect(described_module.split_map(data, size, process_fun, extra_fun_args)).to be_ok_result
+            expect(described_module().split_map(data(), size(), process_fun(), extra_fun_args())).to be_ok_result()
           end
 
           it "should return a list of items that was processed using given function" do
-            {:ok, {items, _rest}} = described_module.split_map(data, size, process_fun, extra_fun_args)
+            {:ok, {items, _rest}} = described_module().split_map(data(), size(), process_fun(), extra_fun_args())
             expect(items).to eq [true, false]
           end
 
           it "should return an empty bitstring as remaining bitstring" do
-            {:ok, {_items, rest}} = described_module.split_map(data, size, process_fun, extra_fun_args)
+            {:ok, {_items, rest}} = described_module().split_map(data(), size(), process_fun(), extra_fun_args())
             expect(rest).to eq << >>
           end
         end
@@ -136,16 +136,16 @@ defmodule Membrane.Helper.BitstringSpec do
           let :size, do: 3
 
           it "should return an ok result" do
-            expect(described_module.split_map(data, size, process_fun, extra_fun_args)).to be_ok_result
+            expect(described_module().split_map(data(), size(), process_fun(), extra_fun_args())).to be_ok_result()
           end
 
           it "should return a list of items that was processed using given function" do
-            {:ok, {items, _rest}} = described_module.split_map(data, size, process_fun, extra_fun_args)
+            {:ok, {items, _rest}} = described_module().split_map(data(), size(), process_fun(), extra_fun_args())
             expect(items).to eq [false]
           end
 
           it "should return a unprocessed bitstring as remaining bitstring" do
-            {:ok, {_items, rest}} = described_module.split_map(data, size, process_fun, extra_fun_args)
+            {:ok, {_items, rest}} = described_module().split_map(data(), size(), process_fun(), extra_fun_args())
             expect(rest).to eq "d"
           end
         end
@@ -167,11 +167,11 @@ defmodule Membrane.Helper.BitstringSpec do
           let :size, do: 2
 
           it "should return an error result" do
-            expect(described_module.split_each(data, size, process_fun, extra_fun_args)).to be_error_result
+            expect(described_module().split_each(data(), size(), process_fun(), extra_fun_args())).to be_error_result()
           end
 
           it "should return reason given by the processing function as a reason" do
-            {:error, reason} = described_module.split_each(data, size, process_fun, extra_fun_args)
+            {:error, reason} = described_module().split_each(data(), size(), process_fun(), extra_fun_args())
             expect(reason).to eq :something
           end
         end
@@ -188,11 +188,11 @@ defmodule Membrane.Helper.BitstringSpec do
           let :size, do: 2
 
           it "should return an ok result" do
-            expect(described_module.split_each(data, size, process_fun, extra_fun_args)).to be_ok_result
+            expect(described_module().split_each(data(), size(), process_fun(), extra_fun_args())).to be_ok_result()
           end
 
           it "should return an empty bitstring as remaining bitstring" do
-            {:ok,rest} = described_module.split_each(data, size, process_fun, extra_fun_args)
+            {:ok,rest} = described_module().split_each(data(), size(), process_fun(), extra_fun_args())
             expect(rest).to eq << >>
           end
         end
@@ -201,11 +201,11 @@ defmodule Membrane.Helper.BitstringSpec do
           let :size, do: 3
 
           it "should return an ok result" do
-            expect(described_module.split_each(data, size, process_fun, extra_fun_args)).to be_ok_result
+            expect(described_module().split_each(data(), size(), process_fun(), extra_fun_args())).to be_ok_result()
           end
 
           it "should return a unprocessed bitstring as remaining bitstring" do
-            {:ok, rest} = described_module.split_each(data, size, process_fun, extra_fun_args)
+            {:ok, rest} = described_module().split_each(data(), size(), process_fun(), extra_fun_args())
             expect(rest).to eq "d"
           end
         end
@@ -219,11 +219,11 @@ defmodule Membrane.Helper.BitstringSpec do
           let :size, do: 2
 
           it "should return an ok result" do
-            expect(described_module.split_each(data, size, process_fun, extra_fun_args)).to be_ok_result
+            expect(described_module().split_each(data(), size(), process_fun(), extra_fun_args())).to be_ok_result()
           end
 
           it "should return an empty bitstring as remaining bitstring" do
-            {:ok, rest} = described_module.split_each(data, size, process_fun, extra_fun_args)
+            {:ok, rest} = described_module().split_each(data(), size(), process_fun(), extra_fun_args())
             expect(rest).to eq << >>
           end
         end
@@ -232,11 +232,11 @@ defmodule Membrane.Helper.BitstringSpec do
           let :size, do: 3
 
           it "should return an ok result" do
-            expect(described_module.split_each(data, size, process_fun, extra_fun_args)).to be_ok_result
+            expect(described_module().split_each(data(), size(), process_fun(), extra_fun_args())).to be_ok_result()
           end
 
           it "should return a unprocessed bitstring as remaining bitstring" do
-            {:ok, rest} = described_module.split_each(data, size, process_fun, extra_fun_args)
+            {:ok, rest} = described_module().split_each(data(), size(), process_fun(), extra_fun_args())
             expect(rest).to eq "d"
           end
         end
