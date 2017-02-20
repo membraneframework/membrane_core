@@ -8,6 +8,18 @@ defmodule Membrane.Pipeline do
   alias Membrane.PipelineState
   alias Membrane.PipelineTopology
 
+  # Type that defines possible return values of start/start_link functions.
+  @type on_start :: GenServer.on_start
+
+  # Type that defines possible process options passed to start/start_link
+  # functions.
+  @type process_options_t :: GenServer.options
+
+  # Type that defines possible pipeline-specific options passed to
+  # start/start_link functions.
+  @type pipeline_options_t :: struct | nil
+
+
 
   @doc """
   Starts the Pipeline based on given module and links it to the current
@@ -19,7 +31,7 @@ defmodule Membrane.Pipeline do
 
   Returns the same values as `GenServer.start_link/3`.
   """
-  @spec start_link(module, any, GenServer.options) :: GenServer.on_start
+  @spec start_link(module, pipeline_options_t, process_options_t) :: on_start
   def start_link(module, pipeline_options, process_options \\ []) do
     debug("Start Link: module = #{inspect(module)}, pipeline_options = #{inspect(pipeline_options)}, process_options = #{inspect(process_options)}")
     GenServer.start_link(__MODULE__, {module, pipeline_options}, process_options)
@@ -29,7 +41,7 @@ defmodule Membrane.Pipeline do
   @doc """
   Does the same as `start_link/3` but starts process outside of supervision tree.
   """
-  @spec start(module, any, GenServer.options) :: GenServer.on_start
+  @spec start(module, pipeline_options_t, process_options_t) :: on_start
   def start(module, pipeline_options, process_options \\ []) do
     debug("Start: module = #{inspect(module)}, pipeline_options = #{inspect(pipeline_options)}, process_options = #{inspect(process_options)}")
     GenServer.start(__MODULE__, {module, pipeline_options}, process_options)
@@ -47,7 +59,7 @@ defmodule Membrane.Pipeline do
   See `Membrane.PipelineTopology` for more information about how to define
   elements and links in the pipeline.
   """
-  @callback handle_init(any) ::
+  @callback handle_init(pipeline_options_t) ::
     {:ok, any} |
     {:ok, PipelineTopology.t, any} |
     {:error, any}

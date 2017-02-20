@@ -7,14 +7,19 @@ defmodule Membrane.Element do
   use Membrane.Mixins.Log
   alias Membrane.ElementState
 
-  # Type that defines possible return values of start/start_link functions. 
+  # Type that defines possible return values of start/start_link functions.
   @type on_start :: GenServer.on_start
+
+  # Type that defines possible process options passed to start/start_link
+  # functions.
+  @type process_options_t :: GenServer.options
+
+  # Type that defines possible element-specific options passed to
+  # start/start_link functions.
+  @type element_options_t :: struct | nil
 
   # Type that defines an element name within a pipeline
   @type name_t :: atom | String.t
-
-  # Type that defines what options can be passed while starting an element.
-  @type options_t :: struct | nil
 
   # Type that defines what may be sent from one element to another.
   @type sendable_t :: %Membrane.Buffer{} | %Membrane.Event{}
@@ -48,7 +53,7 @@ defmodule Membrane.Element do
 
   Works similarily to `GenServer.start_link/3` and has the same return values.
   """
-  @spec start_link(module, options_t, GenServer.options) :: Membrane.Element.on_start
+  @spec start_link(module, element_options_t, process_options_t) :: on_start
   def start_link(module, element_options \\ nil, process_options \\ []) do
     debug("Start Link: module = #{inspect(module)}, element_options = #{inspect(element_options)}, process_options = #{inspect(process_options)}")
     GenServer.start_link(__MODULE__, {module, element_options}, process_options)
@@ -61,7 +66,7 @@ defmodule Membrane.Element do
 
   Works similarily to `GenServer.start/3` and has the same return values.
   """
-  @spec start(module, options_t, GenServer.options) :: Membrane.Element.on_start
+  @spec start(module, element_options_t, process_options_t) :: on_start
   def start(module, element_options \\ nil, process_options \\ []) do
     debug("Start: module = #{inspect(module)}, element_options = #{inspect(element_options)}, process_options = #{inspect(process_options)}")
     GenServer.start(__MODULE__, {module, element_options}, process_options)
