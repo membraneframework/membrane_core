@@ -20,7 +20,7 @@ defmodule Membrane.Device.AudioMonitor do
   """
 
 
-  alias Membrane.Device.AudioDevice
+  alias Membrane.Device.AudioEndpoint
   alias Membrane.Device.AudioEnumerator
 
 
@@ -49,7 +49,7 @@ defmodule Membrane.Device.AudioMonitor do
 
   It is supposed to return `{:ok, new_state}`.
   """
-  @callback handle_diff([] | [%AudioDevice{}], [] | [%AudioDevice{}], [] | [%AudioDevice{}], any) ::
+  @callback handle_diff([] | [%AudioEndpoint{}], [] | [%AudioEndpoint{}], [] | [%AudioEndpoint{}], any) ::
     {:ok, any}
 
 
@@ -108,11 +108,11 @@ defmodule Membrane.Device.AudioMonitor do
 
   It will wait for reply for timeout passed, expressed in milliseconds.
 
-  Returns list of `AudioDevice` structs.
+  Returns list of `AudioEndpoint` structs.
   """
-  @spec get_devices(pid, :all | :capture | :playback, timeout) :: [] | [%AudioDevice{}]
-  def get_devices(server, query \\ :all, timeout \\ 5000) do
-    Connection.call(server, {:get_devices, query}, timeout)
+  @spec get_endpoints(pid, :all | :capture | :playback, timeout) :: [] | [%AudioEndpoint{}]
+  def get_endpoints(server, query \\ :all, timeout \\ 5000) do
+    Connection.call(server, {:get_endpoints, query}, timeout)
   end
 
 
@@ -172,16 +172,16 @@ defmodule Membrane.Device.AudioMonitor do
 
 
   @doc false
-  def handle_call({:get_devices, :all}, _from, %{devices: devices} = state) do
+  def handle_call({:get_endpoints, :all}, _from, %{devices: devices} = state) do
     {:reply, devices, state}
   end
 
 
   @doc false
-  def handle_call({:get_devices, query}, _from, %{devices: devices} = state) do
+  def handle_call({:get_endpoints, query}, _from, %{devices: devices} = state) do
     filtered_devices =
       devices
-      |> Enum.filter(fn(%AudioDevice{direction: direction}) ->
+      |> Enum.filter(fn(%AudioEndpoint{direction: direction}) ->
         direction == query
       end)
 

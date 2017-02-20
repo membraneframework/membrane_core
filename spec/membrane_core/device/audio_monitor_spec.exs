@@ -7,7 +7,7 @@ defmodule Membrane.Device.AudioMonitorSpec do
   pending ".start/4"
   pending ".stop/2"
 
-  describe ".get_devices/3" do
+  describe ".get_endpoints/3" do
     let :timeout, do: 5000
     let :enumerator, do: FakeAudioEnumerator
 
@@ -19,7 +19,7 @@ defmodule Membrane.Device.AudioMonitorSpec do
 
       it "should return all devices returned by the underlying enumerator for the same query regardless of its order" do
         # We are using MapSet to compare because order does not matter
-        returned_devices = described_module().get_devices(server(), query(), timeout()) |> MapSet.new
+        returned_devices = described_module().get_endpoints(server(), query(), timeout()) |> MapSet.new
         {:ok, expected_devices} = enumerator().list(query())
         expected_devices = expected_devices |> MapSet.new
         expect(MapSet.equal?(returned_devices, expected_devices)).to be_true()
@@ -31,7 +31,7 @@ defmodule Membrane.Device.AudioMonitorSpec do
 
       it "should return all devices returned by the underlying enumerator for the same query regardless of its order" do
         # We are using MapSet to compare because order does not matter
-        returned_devices = described_module().get_devices(server(), query(), timeout()) |> MapSet.new
+        returned_devices = described_module().get_endpoints(server(), query(), timeout()) |> MapSet.new
         {:ok, expected_devices} = enumerator().list(query())
         expected_devices = expected_devices |> MapSet.new
         expect(MapSet.equal?(returned_devices, expected_devices)).to be_true()
@@ -43,7 +43,7 @@ defmodule Membrane.Device.AudioMonitorSpec do
 
       it "should return all devices returned by the underlying enumerator for the same query regardless of its order" do
         # We are using MapSet to compare because order does not matter
-        returned_devices = described_module().get_devices(server(), query(), timeout()) |> MapSet.new
+        returned_devices = described_module().get_endpoints(server(), query(), timeout()) |> MapSet.new
         {:ok, expected_devices} = enumerator().list(query())
         expected_devices = expected_devices |> MapSet.new
         expect(MapSet.equal?(returned_devices, expected_devices)).to be_true()

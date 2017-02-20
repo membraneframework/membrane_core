@@ -6,17 +6,17 @@ defmodule Membrane.Support.Device.FakeAudioEnumerator do
   """
 
   use Membrane.Device.AudioEnumerator
-  alias Membrane.Device.AudioDevice
+  alias Membrane.Device.AudioEndpoint
 
 
   @capture [
-    %AudioDevice{
+    %AudioEndpoint{
       direction: :capture,
       driver: :spec,
       name: "ABC",
       id: "abc",
     },
-    %AudioDevice{
+    %AudioEndpoint{
       direction: :capture,
       driver: :spec,
       name: "DEF",
@@ -25,13 +25,13 @@ defmodule Membrane.Support.Device.FakeAudioEnumerator do
   ]
 
   @playback [
-    %AudioDevice{
+    %AudioEndpoint{
       direction: :playback,
       driver: :spec,
       name: "GHI",
       id: "ghi",
     },
-    %AudioDevice{
+    %AudioEndpoint{
       direction: :playback,
       driver: :spec,
       name: "IJK",
