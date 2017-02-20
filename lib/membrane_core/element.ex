@@ -7,6 +7,9 @@ defmodule Membrane.Element do
   use Membrane.Mixins.Log
   alias Membrane.ElementState
 
+  # Type that defines possible return values of start/start_link functions. 
+  @type on_start :: GenServer.on_start
+
   # Type that defines an element name within a pipeline
   @type name_t :: atom | String.t
 
@@ -19,11 +22,11 @@ defmodule Membrane.Element do
   # Type that defines a single command that may be returned from handle_*
   # callbacks.
   #
-  # If it is `{:send, {pad_name, buffer_or_event}` it will cause sending
+  # If it is `{:send, {pad_name, buffer_or_event}}` it will cause sending
   # given buffers and/or events downstream to the linked elements via pad of
   # given name.
   #
-  # If it is `{:caps, {pad_name, caps}` it will set current caps for given
+  # If it is `{:caps, {pad_name, caps}}` it will set current caps for given
   # pad and inform downstream element (if linked) about the change.
   #
   # If it is `{:message, message}` it will send message to the message bus
@@ -45,7 +48,7 @@ defmodule Membrane.Element do
 
   Works similarily to `GenServer.start_link/3` and has the same return values.
   """
-  @spec start_link(module, options_t, GenServer.options) :: GenServer.on_start
+  @spec start_link(module, options_t, GenServer.options) :: Membrane.Element.on_start
   def start_link(module, element_options \\ nil, process_options \\ []) do
     debug("Start Link: module = #{inspect(module)}, element_options = #{inspect(element_options)}, process_options = #{inspect(process_options)}")
     GenServer.start_link(__MODULE__, {module, element_options}, process_options)
@@ -58,7 +61,7 @@ defmodule Membrane.Element do
 
   Works similarily to `GenServer.start/3` and has the same return values.
   """
-  @spec start(module, options_t, GenServer.options) :: GenServer.on_start
+  @spec start(module, options_t, GenServer.options) :: Membrane.Element.on_start
   def start(module, element_options \\ nil, process_options \\ []) do
     debug("Start: module = #{inspect(module)}, element_options = #{inspect(element_options)}, process_options = #{inspect(process_options)}")
     GenServer.start(__MODULE__, {module, element_options}, process_options)
@@ -499,9 +502,8 @@ defmodule Membrane.Element do
   # If element is playing it will delegate actual processing to handle_buffer/3.
   #
   # Otherwise it will silently drop the buffer.
-  # FIXME message should contain target pad
   @doc false
-  def handle_info({:membrane_buffer, buffer}, %ElementState{module: module, internal_state: internal_state, playback_state: playback_state} = state) do
+  def handle_info({:membrane_buffer, pad, buffer}, %ElementState{module: module, internal_state: internal_state, playback_state: playback_state} = state) do
     if is_sink?(module) do # FIXME check if target pad exists
       case playback_state do
         :stopped ->
@@ -513,7 +515,7 @@ defmodule Membrane.Element do
           {:noreply, state}
 
         :playing ->
-          module.handle_buffer(buffer, internal_state)
+          module.handle_buffer(pad, %{}, buffer, internal_state) # FIXME caps
             |> handle_callback(state, fn(state) -> state end)
             |> format_callback_response(:noreply)
       end

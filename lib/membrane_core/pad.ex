@@ -5,6 +5,7 @@ defmodule Membrane.Pad do
   @type known_pads_t   :: %{required(name_t) => {availability_t, known_caps_t}}
 
 
+  # FIXME move to Caps
   @doc """
   Checks if given list of known caps are compatible.
 

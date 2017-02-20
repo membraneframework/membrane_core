@@ -7,14 +7,16 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
 
   The arguments are:
 
-  * buffer
-  * current element state
+  * name of the pad receiving a buffer,
+  * current caps of this pad,
+  * buffer,
+  * current element state.
 
   While implementing these callbacks, please use pattern matching to define
   what caps are supported. In other words, define one function matching this
   signature per each caps supported.
   """
-  @callback handle_buffer(%Membrane.Buffer{}, any) ::
+  @callback handle_buffer(Membrane.Pad.name_t, Membrane.Caps.t, Membrane.Buffer.t, any) ::
     {:ok, any} |
     {:ok, Membrane.Element.callback_return_commands_t, any} |
     {:error, any, any}
