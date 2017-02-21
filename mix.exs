@@ -30,10 +30,10 @@ defmodule Membrane.Mixfile do
 
   defp deps do
     [
-      {:espec, "~> 1.1.2", only: :test},
-      {:excoveralls, "~> 0.6.2", only: :test},
-      {:ex_doc, "~> 0.14", only: :dev},
-      {:connection, "~> 1.0.4"},
+      {:espec,       "~> 1.1",  only: :test},
+      {:excoveralls, "~> 0.6",  only: :test},
+
+      {:ex_doc,      "~> 0.14", only: :dev},
     ]
   end
 end
