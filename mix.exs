@@ -11,7 +11,8 @@ defmodule Membrane.Mixfile do
      licenses: ["LGPL"],
      name: "Membrane Core",
      source_url: "https://bitbucket.org/radiokit/membrane-core",
-     preferred_cli_env: [espec: :test],
+     preferred_cli_env: [espec: :test, "coveralls": :test, "coveralls.detail": :test, "coveralls.post": :test, "coveralls.html": :test],
+     test_coverage: [tool: ExCoveralls, test_task: "espec"],
      deps: deps()]
   end
 
@@ -30,6 +31,7 @@ defmodule Membrane.Mixfile do
   defp deps do
     [
       {:espec, "~> 1.1.2", only: :test},
+      {:excoveralls, "~> 0.6.2", only: :test},
       {:ex_doc, "~> 0.14", only: :dev},
       {:connection, "~> 1.0.4"},
     ]
