@@ -1,13 +1,13 @@
 defmodule Membrane.Device.AudioEnumerator do
   @moduledoc """
-  Behaviour for defining enumerators of audio devices.
+  Behaviour for defining enumerators of audio endpoints.
   """
 
   alias Membrane.Device.AudioEndpoint
 
 
   @doc """
-  Returns list of available audio devices.
+  Returns list of available audio endpoints.
   """
   @callback list(:capture | :playback | :all) ::
     {:ok, [] | [%AudioEndpoint{}]} |
@@ -15,20 +15,20 @@ defmodule Membrane.Device.AudioEnumerator do
 
 
   @doc """
-  Performs diff on two given list of audio devices.
+  Performs diff on two given list of audio endpoints.
 
   It will return a tuple that will contain three elements:
 
-  * list of added audio devices,
-  * list of removed audio devices,
-  * list of unchanged audio devices.
+  * list of added audio endpoints,
+  * list of removed audio endpoints,
+  * list of unchanged audio endpoints.
 
   While comparing it take under consideration whole `Membrane.Device.AudioEndpoint`
   struct. In other words, changing any of the fields will cause this function
   to detect change.
 
   Please note that at the moment this function can have suboptimal computational
-  complexity. It should not be an issue as usually list of devices is short
+  complexity. It should not be an issue as usually list of endpoints is short
   but you are warned.
   """
   @spec diff_list([] | [%AudioEndpoint{}], [] | [%AudioEndpoint{}]) ::

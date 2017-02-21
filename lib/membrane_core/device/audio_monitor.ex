@@ -1,6 +1,6 @@
 defmodule Membrane.Device.AudioMonitor do
   @moduledoc """
-  Worker process for monitoring list of available audio devices.
+  Worker process for monitoring list of available audio endpoints.
 
   Example:
 
@@ -8,8 +8,8 @@ defmodule Membrane.Device.AudioMonitor do
         use Membrane.Device.AudioMonitor
 
         def handle_diff(added, removed, unchanged, state) do
-          IO.puts "Audio devices added: " <> inspect(added)
-          IO.puts "Audio devices removed: " <> inspect(removed)
+          IO.puts "Audio endpoints added: " <> inspect(added)
+          IO.puts "Audio endpoints removed: " <> inspect(removed)
 
           {:ok, state}
         end
@@ -42,9 +42,9 @@ defmodule Membrane.Device.AudioMonitor do
 
   It will receive four arguments:
 
-  * list of added audio devices,
-  * list of removed audio devices,
-  * list of unchanged audio devices,
+  * list of added audio endpoints,
+  * list of removed audio endpoints,
+  * list of unchanged audio endpoints,
   * state.
 
   It is supposed to return `{:ok, new_state}`.
@@ -98,12 +98,12 @@ defmodule Membrane.Device.AudioMonitor do
 
   @doc """
   Synchronously calls given server and retreives currently known list of active
-  devices.
+  endpoints.
 
   Query may be one of `:all`, `:capture` or `:playback`, and it can be used to
-  limit scope of returned devices.
+  limit scope of returned endpoints.
 
-  It will return devices known by the process, which were retreived during last
+  It will return endpoints known by the process, which were retreived during last
   refresh.
 
   It will wait for reply for timeout passed, expressed in milliseconds.
@@ -126,7 +126,7 @@ defmodule Membrane.Device.AudioMonitor do
           enumerators: enumerators,
           interval: interval,
           module: module,
-          devices: [],
+          endpoints: [],
           internal_state: internal_state,
         }}
 
@@ -138,31 +138,31 @@ defmodule Membrane.Device.AudioMonitor do
 
   @doc false
   def connect(:init, %{module: module, enumerators: enumerators, interval: interval, internal_state: internal_state} = state) do
-    case list_devices(enumerators, []) do
+    case list_endpoints(enumerators, []) do
       [] ->
-        {:backoff, interval, %{state | devices: []}}
+        {:backoff, interval, %{state | endpoints: []}}
 
-      devices ->
-        case module.handle_diff(devices, [], [], internal_state) do
+      endpoints ->
+        case module.handle_diff(endpoints, [], [], internal_state) do
           {:ok, new_internal_state} ->
-            {:backoff, interval, %{state | devices: devices, internal_state: new_internal_state}}
+            {:backoff, interval, %{state | endpoints: endpoints, internal_state: new_internal_state}}
         end
     end
   end
 
 
   @doc false
-  def connect(_, %{module: module, enumerators: enumerators, interval: interval, devices: devices, internal_state: internal_state} = state) do
-    current_devices = list_devices(enumerators, [])
+  def connect(_, %{module: module, enumerators: enumerators, interval: interval, endpoints: endpoints, internal_state: internal_state} = state) do
+    current_endpoints = list_endpoints(enumerators, [])
 
     {added, removed, unchanged} =
-      AudioEnumerator.diff_list(devices, current_devices)
+      AudioEnumerator.diff_list(endpoints, current_endpoints)
 
     cond do
       added != [] || removed != [] ->
         case module.handle_diff(added, removed, unchanged, internal_state) do
           {:ok, new_internal_state} ->
-            {:backoff, interval, %{state | devices: current_devices, internal_state: new_internal_state}}
+            {:backoff, interval, %{state | endpoints: current_endpoints, internal_state: new_internal_state}}
         end
 
       true ->
@@ -172,27 +172,27 @@ defmodule Membrane.Device.AudioMonitor do
 
 
   @doc false
-  def handle_call({:get_endpoints, :all}, _from, %{devices: devices} = state) do
-    {:reply, devices, state}
+  def handle_call({:get_endpoints, :all}, _from, %{endpoints: endpoints} = state) do
+    {:reply, endpoints, state}
   end
 
 
   @doc false
-  def handle_call({:get_endpoints, query}, _from, %{devices: devices} = state) do
-    filtered_devices =
-      devices
+  def handle_call({:get_endpoints, query}, _from, %{endpoints: endpoints} = state) do
+    filtered_endpoints =
+      endpoints
       |> Enum.filter(fn(%AudioEndpoint{direction: direction}) ->
         direction == query
       end)
 
-    {:reply, filtered_devices, state}
+    {:reply, filtered_endpoints, state}
   end
 
 
-  defp list_devices([], acc), do: acc
-  defp list_devices([enumerator_head|tail], acc) do
-    {:ok, devices} = enumerator_head.list(:all)
-    list_devices(tail, acc ++ devices)
+  defp list_endpoints([], acc), do: acc
+  defp list_endpoints([enumerator_head|tail], acc) do
+    {:ok, endpoints} = enumerator_head.list(:all)
+    list_endpoints(tail, acc ++ endpoints)
   end
 
 
