@@ -32,7 +32,7 @@ defmodule Membrane.Pipeline do
   Returns the same values as `GenServer.start_link/3`.
   """
   @spec start_link(module, pipeline_options_t, process_options_t) :: on_start
-  def start_link(module, pipeline_options, process_options \\ []) do
+  def start_link(module, pipeline_options \\ nil, process_options \\ []) do
     debug("Start Link: module = #{inspect(module)}, pipeline_options = #{inspect(pipeline_options)}, process_options = #{inspect(process_options)}")
     GenServer.start_link(__MODULE__, {module, pipeline_options}, process_options)
   end
@@ -42,7 +42,7 @@ defmodule Membrane.Pipeline do
   Does the same as `start_link/3` but starts process outside of supervision tree.
   """
   @spec start(module, pipeline_options_t, process_options_t) :: on_start
-  def start(module, pipeline_options, process_options \\ []) do
+  def start(module, pipeline_options \\ nil, process_options \\ []) do
     debug("Start: module = #{inspect(module)}, pipeline_options = #{inspect(pipeline_options)}, process_options = #{inspect(process_options)}")
     GenServer.start(__MODULE__, {module, pipeline_options}, process_options)
   end
@@ -91,7 +91,6 @@ defmodule Membrane.Pipeline do
   """
   @spec prepare(pid, timeout) :: :ok | {:error, any}
   def prepare(server, timeout \\ 5000) when is_pid(server) do
-    debug("Prepare -> #{inspect(server)}")
     GenServer.call(server, :membrane_prepare, timeout)
   end
 
@@ -110,7 +109,6 @@ defmodule Membrane.Pipeline do
   """
   @spec play(pid, timeout) :: :ok | {:error, any}
   def play(server, timeout \\ 5000) when is_pid(server) do
-    debug("Play -> #{inspect(server)}")
     GenServer.call(server, :membrane_play, timeout)
   end
 
@@ -129,7 +127,6 @@ defmodule Membrane.Pipeline do
   """
   @spec stop(pid, timeout) :: :ok | {:error, any}
   def stop(server, timeout \\ 5000) when is_pid(server) do
-    debug("Stop -> #{inspect(server)}")
     GenServer.call(server, :membrane_stop, timeout)
   end
 
@@ -151,12 +148,14 @@ defmodule Membrane.Pipeline do
           module: module,
         }}
 
-      {:ok, %Spec{children: children}, internal_state} ->
+      {:ok, %Spec{children: children} = spec, internal_state} ->
+        debug("Initializing: spec = #{inspect(spec)}, internal_state = #{inspect(internal_state)}")
         case children |> start_children do
-          {:ok, {elements_to_pids, pids_to_elements}} ->
+          {:ok, {children_to_pids, pids_to_children}} ->
+            debug("Initialized: spec = #{inspect(spec)}, internal_state = #{inspect(internal_state)}, children_to_pids = #{inspect(children_to_pids)}")
             {:ok, %State{
-              elements_to_pids: elements_to_pids,
-              pids_to_elements: pids_to_elements,
+              children_to_pids: children_to_pids,
+              pids_to_children: pids_to_children,
               internal_state: internal_state,
               module: module,
             }}
@@ -174,41 +173,53 @@ defmodule Membrane.Pipeline do
 
 
   @doc false
-  def handle_call(:membrane_prepare, _from, %State{elements_to_pids: elements_to_pids} = state) do
-    case elements_to_pids |> Map.to_list |> call_element(:prepare) do
+  def handle_call(:membrane_prepare, _from, %State{children_to_pids: children_to_pids} = state) do
+    debug("Changing playback state of children to PREPARED, state = #{inspect(state)}")
+    case children_to_pids |> Map.to_list |> call_element(:prepare) do
       :ok ->
+        debug("Changed playback state of children to PREPARED, state = #{inspect(state)}")
         {:reply, :ok, state}
+
       {:error, reason} ->
+        warn("Unable to change playback state of children to PREPARED, reason = #{inspect(reason)}, state = #{inspect(state)}")
         {:reply, {:error, reason}, state}
     end
   end
 
 
   @doc false
-  def handle_call(:membrane_play, _from, %State{elements_to_pids: elements_to_pids} = state) do
-    case elements_to_pids |> Map.to_list |> call_element(:play) do
+  def handle_call(:membrane_play, _from, %State{children_to_pids: children_to_pids} = state) do
+    debug("Changing playback state of children to PLAYING, state = #{inspect(state)}")
+    case children_to_pids |> Map.to_list |> call_element(:play) do
       :ok ->
+        debug("Changed playback state of children to PLAYING, state = #{inspect(state)}")
         {:reply, :ok, state}
+
       {:error, reason} ->
+        warn("Unable to change playback state of children to PLAYING, reason = #{inspect(reason)}, state = #{inspect(state)}")
         {:reply, {:error, reason}, state}
     end
   end
 
 
   @doc false
-  def handle_call(:membrane_stop, _from, %State{elements_to_pids: elements_to_pids} = state) do
-    case elements_to_pids |> Map.to_list |> call_element(:stop) do
+  def handle_call(:membrane_stop, _from, %State{children_to_pids: children_to_pids} = state) do
+    debug("Changing playback state of children to STOPPED, state = #{inspect(state)}")
+    case children_to_pids |> Map.to_list |> call_element(:stop) do
       :ok ->
+        debug("Changed playback state of children to STOPPED, state = #{inspect(state)}")
         {:reply, :ok, state}
+
       {:error, reason} ->
+        warn("Unable to change playback state of children to STOPPED, reason = #{inspect(reason)}, state = #{inspect(state)}")
         {:reply, {:error, reason}, state}
     end
   end
 
 
   @doc false
-  def handle_info({:membrane_message, %Membrane.Message{} = message}, from, %State{pids_to_elements: pids_to_elements, module: module, internal_state: internal_state} = state) do
-    case module.handle_message(message, Map.get(pids_to_elements, from), internal_state) do
+  def handle_info({:membrane_message, %Membrane.Message{} = message}, from, %State{pids_to_children: pids_to_children, module: module, internal_state: internal_state} = state) do
+    case module.handle_message(message, Map.get(pids_to_children, from), internal_state) do
       {:ok, new_internal_state} ->
         {:noreply, %{state | internal_state: new_internal_state}}
     end
@@ -246,16 +257,18 @@ defmodule Membrane.Pipeline do
   # Please note that this function is not atomic and in case of error there's
   # no guarantee that some of children will remain running.
   defp start_children(children) when is_map(children) do
+    debug("Starting children: children = #{inspect(children)}")
     start_children_recurse(children |> Map.to_list, {%{}, %{}})
   end
 
 
   # Recursion that starts children processes, final case
-  defp start_children_recurse([], acc), do: acc
+  defp start_children_recurse([], acc), do: {:ok, acc}
 
-  # Recursion that starts children processes, case when only module is provided
-  defp start_children_recurse([{name, module}|tail], {names_to_pids, pids_to_names}) do
-    case Membrane.Element.start_link(module) do
+  # Recursion that starts children processes, case when both module and options
+  # are provided.
+  defp start_children_recurse([{name, {module, options}}|tail], {names_to_pids, pids_to_names}) do
+    case Membrane.Element.start_link(module, options) do
       {:ok, pid} ->
         start_children_recurse(tail, {
           names_to_pids |> Map.put(name, pid),
@@ -267,10 +280,10 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  # Recursion that starts children processes, case when both module and options
-  # are provided.
-  defp start_children_recurse([{name, {module, options}}|tail], {names_to_pids, pids_to_names}) do
-    case Membrane.Element.start_link(module, options) do
+  # Recursion that starts children processes, case when only module is provided
+  defp start_children_recurse([{name, module}|tail], {names_to_pids, pids_to_names}) do
+    debug("Starting child: name = #{inspect(name)}, module = #{inspect(module)}")
+    case Membrane.Element.start_link(module) do
       {:ok, pid} ->
         start_children_recurse(tail, {
           names_to_pids |> Map.put(name, pid),

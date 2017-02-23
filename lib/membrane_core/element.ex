@@ -157,7 +157,6 @@ defmodule Membrane.Element do
   """
   @spec set_message_bus(pid, pid, timeout) :: :ok | {:error, any}
   def set_message_bus(server, message_bus, timeout \\ 5000) when is_pid(server) do
-    debug("Set Message Bus to #{inspect(message_bus)} -> #{inspect(server)}")
     GenServer.call(server, {:membrane_set_message_bus, message_bus}, timeout)
   end
 
@@ -174,7 +173,6 @@ defmodule Membrane.Element do
   """
   @spec get_message_bus(pid, timeout) :: :ok | {:error, any}
   def get_message_bus(server, timeout \\ 5000) when is_pid(server) do
-    debug("Get Message Bus -> #{inspect(server)}")
     GenServer.call(server, :membrane_get_message_bus, timeout)
   end
 
@@ -191,7 +189,6 @@ defmodule Membrane.Element do
   """
   @spec clear_message_bus(pid, timeout) :: :ok | {:error, any}
   def clear_message_bus(server, timeout \\ 5000) when is_pid(server) do
-    debug("Clear Message Bus -> #{inspect(server)}")
     GenServer.call(server, :membrane_clear_message_bus, timeout)
   end
 
@@ -210,7 +207,6 @@ defmodule Membrane.Element do
   """
   @spec prepare(pid, timeout) :: :ok | :noop | {:error, any}
   def prepare(server, timeout \\ 5000) when is_pid(server) do
-    debug("Prepare -> #{inspect(server)}")
     GenServer.call(server, :membrane_prepare, timeout)
   end
 
@@ -229,7 +225,6 @@ defmodule Membrane.Element do
   """
   @spec play(pid, timeout) :: :ok | :noop | {:error, any}
   def play(server, timeout \\ 5000) when is_pid(server) do
-    debug("Play -> #{inspect(server)}")
     GenServer.call(server, :membrane_play, timeout)
   end
 
@@ -248,7 +243,6 @@ defmodule Membrane.Element do
   """
   @spec stop(pid, timeout) :: :ok | :noop | {:error, any}
   def stop(server, timeout \\ 5000) when is_pid(server) do
-    debug("Stop -> #{inspect(server)}")
     GenServer.call(server, :membrane_stop, timeout)
   end
 
@@ -388,7 +382,9 @@ defmodule Membrane.Element do
   # Callback invoked on incoming prepare command if playback state is stopped.
   @doc false
   def handle_call(:membrane_prepare, _from, %ElementState{module: module, playback_state: :stopped, internal_state: internal_state} = state) do
+    debug("Changing playback state from STOPPED to PREPARED, target is PREPARED, state = #{inspect(state)}")
     module.handle_prepare(:stopped, internal_state)
+      |> log_callback("Changed playback state from STOPPED to PREPARED, state = #{inspect(state)}")
       |> handle_callback(state, fn(state) -> %{state | playback_state: :prepared} end)
       |> format_callback_response(:reply)
   end
@@ -397,6 +393,7 @@ defmodule Membrane.Element do
   # Callback invoked on incoming prepare command if playback state is prepared.
   @doc false
   def handle_call(:membrane_prepare, _from, %ElementState{playback_state: :prepared} = state) do
+    debug("Changing playback state from PREPARED to PREPARED, target is PREPARED, state = #{inspect(state)}")
     {:reply, :noop, state}
   end
 
@@ -404,7 +401,9 @@ defmodule Membrane.Element do
   # Callback invoked on incoming prepare command if playback state is playing.
   @doc false
   def handle_call(:membrane_prepare, _from, %ElementState{module: module, playback_state: :playing, internal_state: internal_state} = state) do
+    debug("Changing playback state from PLAYING to PREPARED, target is PREPARED, state = #{inspect(state)}")
     module.handle_prepare(:playing, internal_state)
+      |> log_callback("Changed playback state from PLAYING to PREPARED, state = #{inspect(state)}")
       |> handle_callback(state, fn(state) -> %{state | playback_state: :prepared} end)
       |> format_callback_response(:reply)
   end
@@ -413,10 +412,14 @@ defmodule Membrane.Element do
   # Callback invoked on incoming play command if playback state is stopped.
   @doc false
   def handle_call(:membrane_play, _from, %ElementState{module: module, playback_state: :stopped, internal_state: internal_state} = state) do
+    debug("Changing playback state from STOPPED to PREPARED, target is PLAYING, state = #{inspect(state)}")
     case module.handle_prepare(:stopped, internal_state)
+      |> log_callback("Changed playback state from STOPPED to PREPARED, state = #{inspect(state)}")
       |> handle_callback(state, fn(state) -> %{state | playback_state: :prepared} end) do
       {:ok, %ElementState{internal_state: internal_state} = state} ->
+        debug("Changing playback state from PREPARED to PLAYING, target is PLAYING, state = #{inspect(state)}")
         module.handle_play(internal_state)
+        |> log_callback("Changed playback state from PREPARED to PLAYING, state = #{inspect(state)}")
         |> handle_callback(state, fn(state) -> %{state | playback_state: :playing} end)
         |> format_callback_response(:reply)
 
@@ -430,7 +433,9 @@ defmodule Membrane.Element do
   # Callback invoked on incoming play command if playback state is prepared.
   @doc false
   def handle_call(:membrane_play, _from, %ElementState{module: module, playback_state: :prepared, internal_state: internal_state} = state) do
+    debug("Changing playback state from PREPARED to PLAYING, target is PLAYING, state = #{inspect(state)}")
     module.handle_play(internal_state)
+      |> log_callback("Changed playback state from PREPARED to PLAYING, state = #{inspect(state)}")
       |> handle_callback(state, fn(state) -> %{state | playback_state: :playing} end)
       |> format_callback_response(:reply)
   end
@@ -439,6 +444,7 @@ defmodule Membrane.Element do
   # Callback invoked on incoming play command if playback state is playing.
   @doc false
   def handle_call(:membrane_play, _from, %ElementState{playback_state: :playing} = state) do
+    debug("Changing playback state from PLAYING to PLAYING, target is PLAYING, state = #{inspect(state)}")
     {:reply, :noop, state}
   end
 
@@ -446,6 +452,7 @@ defmodule Membrane.Element do
   # Callback invoked on incoming stop command if playback state is stopped.
   @doc false
   def handle_call(:membrane_stop, _from, %ElementState{playback_state: :stopped} = state) do
+    debug("Changing playback state from STOPPED to STOPPED, target is STOPPED, state = #{inspect(state)}")
     {:reply, :noop, state}
   end
 
@@ -453,7 +460,9 @@ defmodule Membrane.Element do
   # Callback invoked on incoming stop command if playback state is prepared.
   @doc false
   def handle_call(:membrane_stop, _from, %ElementState{module: module, playback_state: :prepared, internal_state: internal_state} = state) do
+    debug("Changing playback state from PREPARED to STOPPED, target is STOPPED, state = #{inspect(state)}")
     module.handle_stop(internal_state)
+      |> log_callback("Changed playback state from PREPARED to STOPPED, state = #{inspect(state)}")
       |> handle_callback(state, fn(state) -> %{state | playback_state: :stopped} end)
       |> format_callback_response(:reply)
   end
@@ -462,14 +471,19 @@ defmodule Membrane.Element do
   # Callback invoked on incoming stop command if playback state is playing.
   @doc false
   def handle_call(:membrane_stop, _from, %ElementState{module: module, playback_state: :playing, internal_state: internal_state} = state) do
+    debug("Changing playback state from PLAYING to PREPARED, target is STOPPED, state = #{inspect(state)}")
     case module.handle_prepare(:playing, internal_state)
+      |> log_callback("Changed playback state from PLAYING to PREPARED, state = #{inspect(state)}")
       |> handle_callback(state, fn(state) -> %{state | playback_state: :prepared} end) do
       {:ok, state} ->
         module.handle_stop(internal_state)
+        |> log_callback("Changed playback state from PREPARED to STOPPED, state = #{inspect(state)}")
         |> handle_callback(state, fn(state) -> %{state | playback_state: :stopped} end)
         |> format_callback_response(:reply)
 
-      # FIXME handle errors
+      {:error, reason, state} ->
+        {:error, reason, state}
+        |> format_callback_response(:reply)
     end
   end
 
@@ -568,6 +582,12 @@ defmodule Membrane.Element do
 
   defp format_callback_response({:error, _reason, new_state}, :noreply) do
     {:noreply, new_state}
+  end
+
+
+  defp log_callback(result, message) do
+    debug("#{message}, result = #{inspect(result)}")
+    result
   end
 
 

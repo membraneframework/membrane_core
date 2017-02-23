@@ -7,13 +7,13 @@ defmodule Membrane.Pipeline.State do
   @type t :: %Membrane.Pipeline.State{
     internal_state: any,
     module: module,
-    elements_to_pids: %{required(Membrane.Element.name_t) => pid},
-    pids_to_elements: %{required(pid) => Membrane.Element.name_t},
+    children_to_pids: %{required(Membrane.Element.name_t) => pid},
+    pids_to_children: %{required(pid) => Membrane.Element.name_t},
   }
 
   defstruct \
     internal_state: nil,
     module: nil,
-    elements_to_pids: %{},
-    pids_to_elements: %{}
+    children_to_pids: %{},
+    pids_to_children: %{}
 end
