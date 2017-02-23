@@ -154,13 +154,20 @@ defmodule Membrane.Pipeline do
           {:ok, {children_to_pids, pids_to_children}} ->
             case links |> link_children(children_to_pids) do
               :ok ->
-                debug("Initialized: spec = #{inspect(spec)}, internal_state = #{inspect(internal_state)}, children_to_pids = #{inspect(children_to_pids)}")
-                {:ok, %State{
-                  children_to_pids: children_to_pids,
-                  pids_to_children: pids_to_children,
-                  internal_state: internal_state,
-                  module: module,
-                }}
+                case children_to_pids |> set_children_message_bus do
+                  :ok ->
+                    debug("Initialized: spec = #{inspect(spec)}, internal_state = #{inspect(internal_state)}, children_to_pids = #{inspect(children_to_pids)}")
+                    {:ok, %State{
+                      children_to_pids: children_to_pids,
+                      pids_to_children: pids_to_children,
+                      internal_state: internal_state,
+                      module: module,
+                    }}
+
+                  {:error, reason} ->
+                    warn("Failed to initialize pipeline: unable to set message bus for pipeline's children, reason = #{inspect(reason)}")
+                    {:stop, reason}
+                end
 
               {:error, {reason, failed_link}} ->
                 warn("Failed to initialize pipeline: unable to link pipeline's children, reason = #{inspect(reason)}, failed_link = #{inspect(failed_link)}")
@@ -225,8 +232,9 @@ defmodule Membrane.Pipeline do
 
 
   @doc false
-  def handle_info({:membrane_message, %Membrane.Message{} = message}, from, %State{pids_to_children: pids_to_children, module: module, internal_state: internal_state} = state) do
-    case module.handle_message(message, Map.get(pids_to_children, from), internal_state) do
+  def handle_info({:membrane_message, %Membrane.Message{} = message}, %State{pids_to_children: pids_to_children, module: module, internal_state: internal_state} = state) do
+    # FIXME set sender
+    case module.handle_message(message, self(), internal_state) do
       {:ok, new_internal_state} ->
         {:noreply, %{state | internal_state: new_internal_state}}
     end
@@ -289,6 +297,43 @@ defmodule Membrane.Pipeline do
 
       false ->
         {:error, {:unknown_from, link}}
+    end
+  end
+
+
+  # Sets message bus for children.
+  #
+  # On success it returns `:ok`.
+  #
+  # On error it returns `{:error, reason}`.
+  #
+  # Please note that this function is not atomic and in case of error there's
+  # a chance that some of children will have the message bus set.
+  # Links children based on given specification and map for mapping children
+  # names into PIDs.
+  #
+  # On success it returns `:ok`.
+  #
+  # On error it returns `{:error, {reason, failed_link}}`.
+  #
+  # Please note that this function is not atomic and in case of error there's
+  # a chance that some of children will remain linked.
+  defp set_children_message_bus(children_to_pids)
+  when is_map(children_to_pids) do
+    debug("Setting message bus of children: children_to_pids = #{inspect(children_to_pids)}")
+    set_children_message_bus_recurse(children_to_pids |> Map.values)
+  end
+
+
+  defp set_children_message_bus_recurse([]), do: :ok
+
+  defp set_children_message_bus_recurse([child_pid|rest]) do
+    case Membrane.Element.set_message_bus(child_pid, self()) do
+      :ok ->
+        set_children_message_bus_recurse(rest)
+
+      {:error, reason} ->
+        {:error, {reason, child_pid}}
     end
   end
 

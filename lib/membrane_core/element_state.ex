@@ -101,6 +101,33 @@ defmodule Membrane.Element.State do
   end
 
 
+  @spec set_sink_pad_caps(t, Membrane.Pad.name_t, Membrane.Caps.t) :: {:ok, t} | {:error, any}
+  def set_sink_pad_caps(state, sink_pad_name, caps) do
+    case state.sink_pads |> Map.get(sink_pad_name) do
+      nil ->
+        {:error, :unknown_pad}
+
+      pad_state ->
+        new_pad_state = pad_state |> Map.put(:caps, caps)
+        new_sink_pads = state.sink_pads |> Map.put(sink_pad_name, new_pad_state)
+
+        {:ok, %{state | sink_pads: new_sink_pads}}
+    end
+  end
+
+
+  @spec get_sink_pad_caps(t, Membrane.Pad.name_t) :: {:ok, Membrane.Caps.t | nil} | {:error, any}
+  def get_sink_pad_caps(state, sink_pad_name) do
+    case state.sink_pads |> Map.get(sink_pad_name) do
+      nil ->
+        {:error, :unknown_pad}
+
+      %{caps: caps} ->
+        {:ok, caps}
+    end
+  end
+
+
   # Converts list of known pads into map of pad states.
   defp known_pads_to_pads_state(known_pads) do
     known_pads

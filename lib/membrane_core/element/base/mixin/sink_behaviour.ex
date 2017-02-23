@@ -23,6 +23,26 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
 
 
   @doc """
+  Callback that is called when event arrives.
+
+  The arguments are:
+
+  * name of the pad receiving a event,
+  * current caps of this pad,
+  * event,
+  * current element state.
+
+  While implementing these callbacks, please use pattern matching to define
+  what caps are supported. In other words, define one function matching this
+  signature per each caps supported.
+  """
+  @callback handle_event(Membrane.Pad.name_t, Membrane.Caps.t, Membrane.Event.t, any) ::
+    {:ok, any} |
+    {:ok, Membrane.Element.callback_return_commands_t, any} |
+    {:error, any, any}
+
+
+  @doc """
   Callback that defines what sink pads may be ever available for this
   element type.
 
@@ -69,6 +89,16 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
       @behaviour Membrane.Element.Base.Mixin.SinkBehaviour
 
       import Membrane.Element.Base.Mixin.SinkBehaviour, only: [def_known_sink_pads: 1]
+
+      # Default implementations
+
+      @doc false
+      def handle_event(_pad, _caps, _event, state), do: {:ok, state}
+
+
+      defoverridable [
+        handle_event: 4,
+      ]
     end
   end
 end

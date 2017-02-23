@@ -505,12 +505,12 @@ defmodule Membrane.Element do
 
   # Callback invoked on incoming buffer.
   #
-  # If element is playing it will delegate actual processing to handle_buffer/3.
+  # If element is playing it will delegate actual processing to handle_buffer/4.
   #
   # Otherwise it will silently drop the buffer.
   @doc false
   def handle_info({:membrane_buffer, pad, buffer}, %State{module: module, internal_state: internal_state, playback_state: playback_state} = state) do
-    if is_sink?(module) do # FIXME check if target pad exists
+    if is_sink?(module) do
       case playback_state do
         :stopped ->
           warn("Incoming buffer: Error, not started (buffer = #{inspect(buffer)})")
@@ -521,13 +521,56 @@ defmodule Membrane.Element do
           {:noreply, state}
 
         :playing ->
-          module.handle_buffer(pad, %{}, buffer, internal_state) # FIXME caps
-            |> handle_callback(state)
-            |> format_callback_response(:noreply)
+          case state |> State.get_sink_pad_caps(pad) do
+            {:ok, caps} ->
+              module.handle_buffer(pad, caps, buffer, internal_state)
+                |> handle_callback(state)
+                |> format_callback_response(:noreply)
+
+            {:error, reason} ->
+              warn("Failed to get caps for pad #{inspect(pad)} in order to handle buffer #{inspect(buffer)}, reason = #{inspect(reason)}. Check if you have linked with right and existing pads.")
+              throw reason
+          end
       end
 
     else
-      throw :buffer_on_non_sink
+      throw :non_sink
+    end
+  end
+
+
+  # Callback invoked on incoming event.
+  #
+  # If element is playing it will delegate actual processing to handle_event/4.
+  #
+  # Otherwise it will silently drop the event.
+  @doc false
+  def handle_info({:membrane_event, pad, event}, %State{module: module, internal_state: internal_state, playback_state: playback_state} = state) do
+    if is_sink?(module) do
+      case playback_state do
+        :stopped ->
+          warn("Incoming event: Error, not started (event = #{inspect(event)})")
+          {:noreply, state}
+
+        :prepared ->
+          warn("Incoming event: Error, not started (event = #{inspect(event)})")
+          {:noreply, state}
+
+        :playing ->
+          case state |> State.get_sink_pad_caps(pad) do
+            {:ok, caps} ->
+              module.handle_event(pad, caps, event, internal_state)
+                |> handle_callback(state)
+                |> format_callback_response(:noreply)
+
+            {:error, reason} ->
+              warn("Failed to get caps for pad #{inspect(pad)} in order to handle event #{inspect(event)}, reason = #{inspect(reason)}. Check if you have linked with right and existing pads.")
+              throw reason
+          end
+      end
+
+    else
+      throw :non_sink
     end
   end
 
@@ -538,9 +581,16 @@ defmodule Membrane.Element do
   @doc false
   def handle_info({:membrane_caps, pad, caps}, %State{module: module, internal_state: internal_state} = state) do
     debug("Received new caps for pad #{inspect(pad)} to #{inspect(caps)}, state = #{inspect(state)}")
-    module.handle_caps(pad, caps, internal_state)
-      |> handle_callback(state)
-      |> format_callback_response(:noreply)
+    case state |> State.set_sink_pad_caps(pad, caps) do
+      {:ok, new_state} ->
+        module.handle_caps(pad, caps, internal_state)
+          |> handle_callback(new_state)
+          |> format_callback_response(:noreply)
+
+      {:error, reason} ->
+        warn("Failed to get caps for pad #{inspect(pad)} in order to handle caps #{inspect(caps)}, reason = #{inspect(reason)}. Check if you have linked with right and existing pads.")
+        throw reason
+    end
   end
 
 
@@ -635,45 +685,46 @@ defmodule Membrane.Element do
   end
 
 
+  # Error handler for unknown callback return values.
+  defp handle_callback(other, _state, _new_playback_state) do
+    raise """
+    Element callback replies are expected to be one of:
+
+        {:ok, state}
+        {:ok, commands, state}
+        {:error, reason, state}
+
+    where commands is a list where each item is one command in one of the
+    following syntaxes:
+
+        {:send, {pad_name, event_or_buffer}}
+        {:message, message}
+        {:caps, {pad_name, caps}}
+
+    for example:
+
+        {:ok, [{:send, {:source, Membrane.Event.eos()}}], %{key: "val"}}
+
+    but got callback reply #{inspect(other)}.
+
+    This is probably a bug in the element, check if its callbacks return values
+    in the right format.
+    """
+  end
+
+
   defp handle_commands_recurse([], state), do: {:ok, state}
 
-  # Handles command that is supposed to send buffer from the given pad to its
-  # linked peer. # FIXME add match when there's no peer
-  defp handle_commands_recurse([{:send, {pad, %Membrane.Buffer{} = buffer}}|tail], state) do
-    debug("Sending buffer from pad #{inspect(pad)}: #{inspect(buffer)}")
-    # :ok = send_message(head, link_destinations)
-
-    handle_commands_recurse(tail, state)
-  end
-
-  # Handles command that is supposed to send event from the given pad to its
-  # linked peer. # FIXME add match when there's no peer
-  defp handle_commands_recurse([{:send, {pad, %Membrane.Event{} = event}}|tail], state) do
-    debug("Sending event from pad #{inspect(pad)}: #{inspect(event)}")
-    # :ok = send_message(head, link_destinations)
-
-    handle_commands_recurse(tail, state)
-  end
-
-  # Handles command that is supposed to send buffer or event from the
-  # given pad to its linked peer.
-  defp handle_commands_recurse([{:send, {pad, buffer_or_event}}|tail], state) do
-    debug("Sending buffer/event from pad #{inspect(pad)}: #{inspect(buffer_or_event)}")
-    # :ok = send_message(head, link_destinations)
-
-    handle_commands_recurse(tail, state)
-  end
-
-  # Handles command that is supposed to send message from the element if there's
-  # no message bus set.
+  # Handles command that is supposed to broadcast message from the element if
+  # there's no message bus set.
   defp handle_commands_recurse([{:message, %Membrane.Message{} = message}|tail], %State{message_bus: nil} = state) do
     debug("Would emit message but no message bus is set: #{inspect(message)}")
 
     handle_commands_recurse(tail, state)
   end
 
-  # Handles command that is supposed to send message from the element if there's
-  # a message bus.
+  # Handles command that is supposed to broadcast message from the element if
+  # there's a message bus set.
   defp handle_commands_recurse([{:message, %Membrane.Message{} = message}|tail], %State{message_bus: message_bus} = state) do
     debug("Emitting message: #{inspect(message)}")
     send(message_bus, {:membrane_message, message})
@@ -681,10 +732,10 @@ defmodule Membrane.Element do
     handle_commands_recurse(tail, state)
   end
 
-  # Handles command that is informs that caps on given pad were set.
+  # Handles command that informs that caps on given pad were set.
   #
-  # If this pad has a peer it will additionally send Membrane.Event.caps
-  # to it.
+  # If this pad has a peer it will additionally send notification about
+  # new caps to it.
   defp handle_commands_recurse([{:caps, {pad, caps}}|tail], state) do
     debug("Setting caps for pad #{inspect(pad)} to #{inspect(caps)}")
     case state |> State.set_source_pad_caps(pad, caps) do
@@ -698,13 +749,76 @@ defmodule Membrane.Element do
             handle_commands_recurse(tail, new_state)
 
           {:error, reason} ->
-            warn("Failed to set caps for pad #{inspect(pad)} to #{inspect(caps)}, reason = #{inspect(reason)}. This is probably bug in the element.")
+            warn("Failed to set caps for pad #{inspect(pad)} to #{inspect(caps)}, reason = #{inspect(reason)}. This is probably a bug in the element which is trying to send something from non-existent pad.")
             throw reason
         end
 
       {:error, reason} ->
-        warn("Failed to set caps for pad #{inspect(pad)} to #{inspect(caps)}, reason = #{inspect(reason)}. This is probably bug in the element.")
+        warn("Failed to set caps for pad #{inspect(pad)} to #{inspect(caps)}, reason = #{inspect(reason)}. This is probably a bug in the element which is trying to send something from non-existent pad.")
         throw reason
     end
+  end
+
+  # Handles command that is supposed to send buffer from the given pad to its
+  # linked peer.
+  defp handle_commands_recurse([{:send, {pad, %Membrane.Buffer{} = buffer}}|tail], state) do
+    debug("Sending buffer from pad #{inspect(pad)}: #{inspect(buffer)}")
+    case state |> State.get_source_pad_peer(pad) do
+      {:ok, {peer_pid, peer_pad_name}} ->
+        send(peer_pid, {:membrane_buffer, peer_pad_name, buffer})
+        handle_commands_recurse(tail, state)
+
+      {:ok, nil} ->
+        handle_commands_recurse(tail, state)
+
+      {:error, reason} ->
+        warn("Failed to send buffer #{inspect(buffer)} from pad #{inspect(pad)}, reason = #{inspect(reason)}. This is probably a bug in the element which is trying to send something from non-existent pad.")
+        throw reason
+    end
+  end
+
+  # Handles command that is supposed to send event from the given pad to its
+  # linked peer.
+  defp handle_commands_recurse([{:send, {pad, %Membrane.Event{} = event}}|tail], state) do
+    debug("Sending event from pad #{inspect(pad)}: #{inspect(event)}")
+    case state |> State.get_source_pad_peer(pad) do
+      {:ok, {peer_pid, peer_pad_name}} ->
+        send(peer_pid, {:membrane_event, peer_pad_name, event})
+        handle_commands_recurse(tail, state)
+
+      {:ok, nil} ->
+        handle_commands_recurse(tail, state)
+
+      {:error, reason} ->
+        warn("Failed to send event #{inspect(event)} from pad #{inspect(pad)}, reason = #{inspect(reason)}. This is probably a bug in the element which is trying to send something from non-existent pad.")
+        throw reason
+    end
+  end
+
+  # Error handler for unknown commands.
+  defp handle_commands_recurse(other, _state) do
+    raise """
+    Element callback replies are expected to be one of:
+
+        {:ok, state}
+        {:ok, commands, state}
+        {:error, reason, state}
+
+    where commands is a list where each item is one command in one of the
+    following syntaxes:
+
+        {:send, {pad_name, event_or_buffer}}
+        {:message, message}
+        {:caps, {pad_name, caps}}
+
+    for example:
+
+        {:ok, [{:send, {:source, Membrane.Event.eos()}}], %{key: "val"}}
+
+    but got command #{inspect(other)}.
+
+    This is probably a bug in the element, check if its callbacks return values
+    in the right format.
+    """
   end
 end
