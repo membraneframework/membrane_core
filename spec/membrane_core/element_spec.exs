@@ -9,7 +9,7 @@ defmodule Membrane.ElementSpec do
   alias Membrane.Support.Element.TrivialSink
   alias Membrane.Support.Element.TrivialFilter
 
-  alias Membrane.ElementState
+  alias Membrane.Element.State
 
 
   pending ".start_link/3"
@@ -277,7 +277,7 @@ defmodule Membrane.ElementSpec do
       let :message, do: :membrane_play
       let :module, do: TrivialFilter
       let :internal_state, do: %{a: 1}
-      let :state, do: %ElementState{module: module(), playback_state: playback_state(), internal_state: internal_state()}
+      let :state, do: %State{module: module(), playback_state: playback_state(), internal_state: internal_state()}
 
       context "and current playback state is :stopped" do
         let :playback_state, do: :stopped
@@ -317,12 +317,12 @@ defmodule Membrane.ElementSpec do
           end
 
           it "should return {:reply, {:error, reason}, state()} with internal state updated" do
-            {_response, _info, %ElementState{internal_state: new_internal_state}} = described_module().handle_call(message(), self(), state())
+            {_response, _info, %State{internal_state: new_internal_state}} = described_module().handle_call(message(), self(), state())
             expect(new_internal_state).to eq(%{internal_state() | a: 2})
           end
 
           it "should return {:reply, {:error, reason}, state()} with unchanged playback state" do
-            {_response, _info, %ElementState{playback_state: new_playback_state}} = described_module().handle_call(message(), self(), state())
+            {_response, _info, %State{playback_state: new_playback_state}} = described_module().handle_call(message(), self(), state())
             expect(new_playback_state).to eq playback_state()
           end
         end
@@ -457,7 +457,7 @@ defmodule Membrane.ElementSpec do
       let :message, do: :membrane_prepare
       let :module, do: TrivialFilter
       let :internal_state, do: %{}
-      let :state, do: %ElementState{module: module(), playback_state: playback_state(), internal_state: internal_state()}
+      let :state, do: %State{module: module(), playback_state: playback_state(), internal_state: internal_state()}
 
       context "and current playback state is :stopped" do
         let :playback_state, do: :stopped
@@ -565,7 +565,7 @@ defmodule Membrane.ElementSpec do
       let :message, do: :membrane_stop
       let :module, do: TrivialFilter
       let :internal_state, do: %{}
-      let :state, do: %ElementState{module: module(), playback_state: playback_state(), internal_state: internal_state()}
+      let :state, do: %State{module: module(), playback_state: playback_state(), internal_state: internal_state()}
 
       context "and current playback state is :playing" do
         let :playback_state, do: :playing
@@ -674,7 +674,7 @@ defmodule Membrane.ElementSpec do
     context "if message is {:membrane_set_message_bus, pid}" do
       let :new_message_bus, do: self()
       let :message, do: {:membrane_set_message_bus, new_message_bus()}
-      let :state, do: %ElementState{message_bus: message_bus()}
+      let :state, do: %State{message_bus: message_bus()}
 
       context "and current message bus is nil" do
         let :message_bus, do: nil
@@ -696,7 +696,7 @@ defmodule Membrane.ElementSpec do
 
     context "if message is :membrane_get_message_bus" do
       let :message, do: :membrane_get_message_bus
-      let :state, do: %ElementState{message_bus: message_bus()}
+      let :state, do: %State{message_bus: message_bus()}
 
       context "and current message bus is nil" do
         let :message_bus, do: nil
@@ -718,7 +718,7 @@ defmodule Membrane.ElementSpec do
 
     context "if message is :membrane_clear_message_bus" do
       let :message, do: :membrane_clear_message_bus
-      let :state, do: %ElementState{message_bus: message_bus()}
+      let :state, do: %State{message_bus: message_bus()}
 
       context "and current message bus is nil" do
         let :message_bus, do: nil

@@ -1,10 +1,10 @@
-defmodule Membrane.ElementState do
+defmodule Membrane.Element.State do
   @moduledoc false
   # Structure representing state of an element. It is a part of the private API.
   # It does not represent state of elements you construct, it's a state used
   # internally in Membrane.
 
-  @type t :: %Membrane.ElementState{
+  @type t :: %Membrane.Element.State{
     internal_state: any,
     module: module,
     playback_state: :stopped | :prepared | :playing,
