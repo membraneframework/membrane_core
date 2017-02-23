@@ -301,7 +301,7 @@ defmodule Membrane.Element do
                 # TODO check if pads match at all
                 # TODO check if pads are not already linked
                 # FIXME send membrane_link with particular pad combination
-                GenServer.call(server, {:membrane_link, destination}, timeout)
+                GenServer.call(server, {:membrane_link, {server_pad, destination, destination_pad}}, timeout)
 
               !is_source?(server_module) ->
                 warn("Failed to link #{inspect(server)}/#{inspect(server_pad)} -> #{inspect(destination)}/#{inspect(destination_pad)}: #{inspect(server)} (#{server_module}) is not a source element")
@@ -338,28 +338,9 @@ defmodule Membrane.Element do
         # to retreive module from PID in `Membrane.Element.get_module/1`.
         Process.put(:membrane_element_module, module)
 
-        # Determine initial list of source pads
-        source_pads = if is_source?(module) do
-          module.known_source_pads() |> known_pads_to_pads_state
-        else
-          %{}
-        end
-
-        # Determine initial list of sink pads
-        sink_pads = if is_sink?(module) do
-          module.known_sink_pads() |> known_pads_to_pads_state
-        else
-          %{}
-        end
-
         # Return initial state of the process, including element state.
-        {:ok, %State{
-          module: module,
-          playback_state: :stopped,
-          source_pads: source_pads,
-          sink_pads: sink_pads,
-          internal_state: internal_state,
-        }}
+        state = State.new(module, internal_state)
+        {:ok, state}
 
       {:error, reason} ->
         warn("Failed to initialize element: reason = #{inspect(reason)}")
@@ -385,7 +366,7 @@ defmodule Membrane.Element do
     debug("Changing playback state from STOPPED to PREPARED, target is PREPARED, state = #{inspect(state)}")
     module.handle_prepare(:stopped, internal_state)
       |> log_callback("Changed playback state from STOPPED to PREPARED, state = #{inspect(state)}")
-      |> handle_callback(state, fn(state) -> %{state | playback_state: :prepared} end)
+      |> handle_callback(state, :prepared)
       |> format_callback_response(:reply)
   end
 
@@ -404,7 +385,7 @@ defmodule Membrane.Element do
     debug("Changing playback state from PLAYING to PREPARED, target is PREPARED, state = #{inspect(state)}")
     module.handle_prepare(:playing, internal_state)
       |> log_callback("Changed playback state from PLAYING to PREPARED, state = #{inspect(state)}")
-      |> handle_callback(state, fn(state) -> %{state | playback_state: :prepared} end)
+      |> handle_callback(state, :prepared)
       |> format_callback_response(:reply)
   end
 
@@ -415,12 +396,12 @@ defmodule Membrane.Element do
     debug("Changing playback state from STOPPED to PREPARED, target is PLAYING, state = #{inspect(state)}")
     case module.handle_prepare(:stopped, internal_state)
       |> log_callback("Changed playback state from STOPPED to PREPARED, state = #{inspect(state)}")
-      |> handle_callback(state, fn(state) -> %{state | playback_state: :prepared} end) do
+      |> handle_callback(state, :prepared) do
       {:ok, %State{internal_state: internal_state} = state} ->
         debug("Changing playback state from PREPARED to PLAYING, target is PLAYING, state = #{inspect(state)}")
         module.handle_play(internal_state)
         |> log_callback("Changed playback state from PREPARED to PLAYING, state = #{inspect(state)}")
-        |> handle_callback(state, fn(state) -> %{state | playback_state: :playing} end)
+        |> handle_callback(state, :playing)
         |> format_callback_response(:reply)
 
       {:error, reason, state} ->
@@ -436,7 +417,7 @@ defmodule Membrane.Element do
     debug("Changing playback state from PREPARED to PLAYING, target is PLAYING, state = #{inspect(state)}")
     module.handle_play(internal_state)
       |> log_callback("Changed playback state from PREPARED to PLAYING, state = #{inspect(state)}")
-      |> handle_callback(state, fn(state) -> %{state | playback_state: :playing} end)
+      |> handle_callback(state, :playing)
       |> format_callback_response(:reply)
   end
 
@@ -463,7 +444,7 @@ defmodule Membrane.Element do
     debug("Changing playback state from PREPARED to STOPPED, target is STOPPED, state = #{inspect(state)}")
     module.handle_stop(internal_state)
       |> log_callback("Changed playback state from PREPARED to STOPPED, state = #{inspect(state)}")
-      |> handle_callback(state, fn(state) -> %{state | playback_state: :stopped} end)
+      |> handle_callback(state, :stopped)
       |> format_callback_response(:reply)
   end
 
@@ -474,11 +455,11 @@ defmodule Membrane.Element do
     debug("Changing playback state from PLAYING to PREPARED, target is STOPPED, state = #{inspect(state)}")
     case module.handle_prepare(:playing, internal_state)
       |> log_callback("Changed playback state from PLAYING to PREPARED, state = #{inspect(state)}")
-      |> handle_callback(state, fn(state) -> %{state | playback_state: :prepared} end) do
+      |> handle_callback(state, :prepared) do
       {:ok, state} ->
         module.handle_stop(internal_state)
         |> log_callback("Changed playback state from PREPARED to STOPPED, state = #{inspect(state)}")
-        |> handle_callback(state, fn(state) -> %{state | playback_state: :stopped} end)
+        |> handle_callback(state, :stopped)
         |> format_callback_response(:reply)
 
       {:error, reason, state} ->
@@ -511,8 +492,14 @@ defmodule Membrane.Element do
 
   # Callback invoked on incoming link request.
   @doc false
-  def handle_call({:membrane_link, destination}, _from, state) do
-    {:reply, :ok, state} # TODO
+  def handle_call({:membrane_link, {server_pad, destination_pid, destination_pad}}, _from, state) do
+    case state |> State.set_source_pad_peer(server_pad, destination_pid, destination_pad) do
+      {:ok, new_state} ->
+        {:reply, :ok, new_state}
+
+      {:error, reason} ->
+        {:reply, {:error, reason}, state}
+    end
   end
 
 
@@ -535,7 +522,7 @@ defmodule Membrane.Element do
 
         :playing ->
           module.handle_buffer(pad, %{}, buffer, internal_state) # FIXME caps
-            |> handle_callback(state, fn(state) -> state end)
+            |> handle_callback(state)
             |> format_callback_response(:noreply)
       end
 
@@ -545,26 +532,24 @@ defmodule Membrane.Element do
   end
 
 
-  # Callback invoked on other incoming message
+  # Callback invoked on incoming information that caps have changed.
+  #
+  # It will delegate actual processing to handle_caps/3.
   @doc false
-  def handle_info(message, %State{module: module, internal_state: internal_state} = state) do
-    module.handle_other(message, internal_state)
-      |> handle_callback(state, fn(state) -> state end)
+  def handle_info({:membrane_caps, pad, caps}, %State{module: module, internal_state: internal_state} = state) do
+    debug("Received new caps for pad #{inspect(pad)} to #{inspect(caps)}, state = #{inspect(state)}")
+    module.handle_caps(pad, caps, internal_state)
+      |> handle_callback(state)
       |> format_callback_response(:noreply)
   end
 
 
-  # Converts list of known pads into map of pad states
-  # FIXME move to separate module?
-  defp known_pads_to_pads_state(known_pads) do
-    known_pads
-    |> Map.to_list
-    |> Enum.filter(fn({_name, {availability, _caps}}) ->
-      availability == :always
-    end)
-    |> Enum.reduce(%{}, fn({name, {_availability, _caps}}, acc) ->
-      acc |> Map.put(name, %{peer: nil, caps: nil})
-    end)
+  # Callback invoked on other incoming message
+  @doc false
+  def handle_info(message, %State{module: module, internal_state: internal_state} = state) do
+    module.handle_other(message, internal_state)
+      |> handle_callback(state)
+      |> format_callback_response(:noreply)
   end
 
 
@@ -594,9 +579,22 @@ defmodule Membrane.Element do
   # Generic handler that can be used to convert return value from
   # element callback to reply that is accepted by GenServer.handle_*.
   #
+  # Function header.
+  defp handle_callback(result, state, new_playback_state \\ nil)
+
+  # Generic handler that can be used to convert return value from
+  # element callback to reply that is accepted by GenServer.handle_*.
+  #
   # Case when callback returned successfully and requests no further action.
-  defp handle_callback({:ok, new_internal_state}, state, state_fun) do
-    new_state = state_fun.(state)
+  defp handle_callback({:ok, new_internal_state}, state, new_playback_state) do
+    new_state = case new_playback_state do
+      nil ->
+        state
+
+      new_playback_state ->
+        %{state | playback_state: new_playback_state}
+    end
+
     {:ok, %{new_state | internal_state: new_internal_state}}
   end
 
@@ -605,8 +603,15 @@ defmodule Membrane.Element do
   #
   # Case when callback returned successfully and wants to execute some commands
   # in response.
-  defp handle_callback({:ok, commands, new_internal_state}, state, state_fun) do
-    new_state = state_fun.(state)
+  defp handle_callback({:ok, commands, new_internal_state}, state, new_playback_state) do
+    new_state = case new_playback_state do
+      nil ->
+        state
+
+      new_playback_state ->
+        %{state | playback_state: new_playback_state}
+    end
+
     case handle_commands_recurse(commands, %{new_state | internal_state: new_internal_state}) do
       {:ok, new_state} ->
         {:ok, new_state}
@@ -617,9 +622,16 @@ defmodule Membrane.Element do
   # element callback to reply that is accepted by GenServer.handle_info.
   #
   # Case when callback returned failure.
-  defp handle_callback({:error, reason, new_internal_state}, state, state_fun) do
-    warn("Handle callback: Error (reason = #{inspect(reason)})")
-    {:error, reason, %{state | internal_state: new_internal_state}}
+  defp handle_callback({:error, reason, new_internal_state}, state, new_playback_state) do
+    new_state = case new_playback_state do
+      nil ->
+        state
+
+      new_playback_state ->
+        %{state | playback_state: new_playback_state}
+    end
+
+    {:error, reason, %{new_state | internal_state: new_internal_state}}
   end
 
 
@@ -675,8 +687,24 @@ defmodule Membrane.Element do
   # to it.
   defp handle_commands_recurse([{:caps, {pad, caps}}|tail], state) do
     debug("Setting caps for pad #{inspect(pad)} to #{inspect(caps)}")
-    # :ok = send_message(head, link_destinations)
+    case state |> State.set_source_pad_caps(pad, caps) do
+      {:ok, new_state} ->
+        case state |> State.get_source_pad_peer(pad) do
+          {:ok, {peer_pid, peer_pad_name}} ->
+            send(peer_pid, {:membrane_caps, peer_pad_name, caps})
+            handle_commands_recurse(tail, new_state)
 
-    handle_commands_recurse(tail, state)
+          {:ok, nil} ->
+            handle_commands_recurse(tail, new_state)
+
+          {:error, reason} ->
+            warn("Failed to set caps for pad #{inspect(pad)} to #{inspect(caps)}, reason = #{inspect(reason)}. This is probably bug in the element.")
+            throw reason
+        end
+
+      {:error, reason} ->
+        warn("Failed to set caps for pad #{inspect(pad)} to #{inspect(caps)}, reason = #{inspect(reason)}. This is probably bug in the element.")
+        throw reason
+    end
   end
 end
