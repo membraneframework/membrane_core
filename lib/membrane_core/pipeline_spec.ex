@@ -1,4 +1,4 @@
-defmodule Membrane.PipelineTopology do
+defmodule Membrane.Pipeline.Spec do
   @moduledoc """
   Structure representing topology of a pipeline. It can be returned from
   `Membrane.Pipeline.handle_init/1` callback upon pipeline's initialization.
@@ -53,7 +53,7 @@ defmodule Membrane.PipelineTopology do
   @type link_spec_t :: {Membrane.Element.name_t, Membrane.Pad.name_t}
   @type links_spec_t :: %{required(link_spec_t) => link_spec_t} | nil
 
-  @type t :: %Membrane.PipelineTopology{
+  @type t :: %Membrane.Pipeline.Spec{
     children: children_spec_t,
     links: links_spec_t
   }
@@ -61,63 +61,4 @@ defmodule Membrane.PipelineTopology do
   defstruct \
     children: nil,
     links: nil
-
-
-  # Private API
-
-  @doc false
-  # Starts children based on given specification and links them to the current
-  # process in the supervision tree.
-  #
-  # Usually you do not have to call this function, as `Membrane.Pipeline` handles
-  # this for you.
-  #
-  # On success it returns `{:ok, {names_to_pids, pids_to_names}}` where two
-  # values returned are maps that allow to easily map child names to process PIDs
-  # in both ways.
-  #
-  # On error it returns `{:error, reason}`.
-  #
-  # Please note that this function is not atomic and in case of error there's
-  # no guarantee that some of children will remain running.
-  @spec start_children(children_spec_t) ::
-    {:ok, {
-      %{required(Membrane.Element.name_t) => pid},
-      %{required(pid) => Membrane.Element.name_t}}}
-  def start_children(children) when is_map(children) do
-    start_children_recurse(children |> Map.to_list, {%{}, %{}})
-  end
-
-
-  # Recursion that starts children processes, final case
-  defp start_children_recurse([], acc), do: acc
-
-  # Recursion that starts children processes, case when only module is provided
-  defp start_children_recurse([{name, module}|tail], {names_to_pids, pids_to_names}) do
-    case Membrane.Element.start_link(module) do
-      {:ok, pid} ->
-        start_children_recurse(tail, {
-          names_to_pids |> Map.put(name, pid),
-          pids_to_names |> Map.put(pid, name),
-        })
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  # Recursion that starts children processes, case when both module and options
-  # are provided.
-  defp start_children_recurse([{name, {module, options}}|tail], {names_to_pids, pids_to_names}) do
-    case Membrane.Element.start_link(module, options) do
-      {:ok, pid} ->
-        start_children_recurse(tail, {
-          names_to_pids |> Map.put(name, pid),
-          pids_to_names |> Map.put(pid, name),
-        })
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
 end

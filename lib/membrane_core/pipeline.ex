@@ -5,8 +5,8 @@ defmodule Membrane.Pipeline do
 
   use Membrane.Mixins.Log
   use GenServer
-  alias Membrane.PipelineState
-  alias Membrane.PipelineTopology
+  alias Membrane.Pipeline.{State,Spec}
+
 
   # Type that defines possible return values of start/start_link functions.
   @type on_start :: GenServer.on_start
@@ -56,12 +56,12 @@ defmodule Membrane.Pipeline do
   It is supposed to return `{:ok, pipeline_topology, initial_state}`,
   `{:ok, initial_state}` or `{:error, reason}`.
 
-  See `Membrane.PipelineTopology` for more information about how to define
+  See `Membrane.Pipeline.Spec` for more information about how to define
   elements and links in the pipeline.
   """
   @callback handle_init(pipeline_options_t) ::
     {:ok, any} |
-    {:ok, PipelineTopology.t, any} |
+    {:ok, Spec.t, any} |
     {:error, any}
 
 
@@ -140,21 +140,21 @@ defmodule Membrane.Pipeline do
   def init({module, pipeline_options}) do
     case module.handle_init(pipeline_options) do
       {:ok, internal_state} ->
-        {:ok, %PipelineState{
+        {:ok, %State{
           internal_state: internal_state,
           module: module,
         }}
 
-      {:ok, %PipelineTopology{children: nil}, internal_state} ->
-        {:ok, %PipelineState{
+      {:ok, %Spec{children: nil}, internal_state} ->
+        {:ok, %State{
           internal_state: internal_state,
           module: module,
         }}
 
-      {:ok, %PipelineTopology{children: children}, internal_state} ->
-        case children |> PipelineTopology.start_children do
+      {:ok, %Spec{children: children}, internal_state} ->
+        case children |> start_children do
           {:ok, {elements_to_pids, pids_to_elements}} ->
-            {:ok, %PipelineState{
+            {:ok, %State{
               elements_to_pids: elements_to_pids,
               pids_to_elements: pids_to_elements,
               internal_state: internal_state,
@@ -174,7 +174,7 @@ defmodule Membrane.Pipeline do
 
 
   @doc false
-  def handle_call(:membrane_prepare, _from, %PipelineState{elements_to_pids: elements_to_pids} = state) do
+  def handle_call(:membrane_prepare, _from, %State{elements_to_pids: elements_to_pids} = state) do
     case elements_to_pids |> Map.to_list |> call_element(:prepare) do
       :ok ->
         {:reply, :ok, state}
@@ -185,7 +185,7 @@ defmodule Membrane.Pipeline do
 
 
   @doc false
-  def handle_call(:membrane_play, _from, %PipelineState{elements_to_pids: elements_to_pids} = state) do
+  def handle_call(:membrane_play, _from, %State{elements_to_pids: elements_to_pids} = state) do
     case elements_to_pids |> Map.to_list |> call_element(:play) do
       :ok ->
         {:reply, :ok, state}
@@ -196,7 +196,7 @@ defmodule Membrane.Pipeline do
 
 
   @doc false
-  def handle_call(:membrane_stop, _from, %PipelineState{elements_to_pids: elements_to_pids} = state) do
+  def handle_call(:membrane_stop, _from, %State{elements_to_pids: elements_to_pids} = state) do
     case elements_to_pids |> Map.to_list |> call_element(:stop) do
       :ok ->
         {:reply, :ok, state}
@@ -207,7 +207,7 @@ defmodule Membrane.Pipeline do
 
 
   @doc false
-  def handle_info({:membrane_message, %Membrane.Message{} = message}, from, %PipelineState{pids_to_elements: pids_to_elements, module: module, internal_state: internal_state} = state) do
+  def handle_info({:membrane_message, %Membrane.Message{} = message}, from, %State{pids_to_elements: pids_to_elements, module: module, internal_state: internal_state} = state) do
     case module.handle_message(message, Map.get(pids_to_elements, from), internal_state) do
       {:ok, new_internal_state} ->
         {:noreply, %{state | internal_state: new_internal_state}}
@@ -230,6 +230,57 @@ defmodule Membrane.Pipeline do
     end
   end
 
+
+  # Starts children based on given specification and links them to the current
+  # process in the supervision tree.
+  #
+  # Usually you do not have to call this function, as `Membrane.Pipeline` handles
+  # this for you.
+  #
+  # On success it returns `{:ok, {names_to_pids, pids_to_names}}` where two
+  # values returned are maps that allow to easily map child names to process PIDs
+  # in both ways.
+  #
+  # On error it returns `{:error, reason}`.
+  #
+  # Please note that this function is not atomic and in case of error there's
+  # no guarantee that some of children will remain running.
+  defp start_children(children) when is_map(children) do
+    start_children_recurse(children |> Map.to_list, {%{}, %{}})
+  end
+
+
+  # Recursion that starts children processes, final case
+  defp start_children_recurse([], acc), do: acc
+
+  # Recursion that starts children processes, case when only module is provided
+  defp start_children_recurse([{name, module}|tail], {names_to_pids, pids_to_names}) do
+    case Membrane.Element.start_link(module) do
+      {:ok, pid} ->
+        start_children_recurse(tail, {
+          names_to_pids |> Map.put(name, pid),
+          pids_to_names |> Map.put(pid, name),
+        })
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  # Recursion that starts children processes, case when both module and options
+  # are provided.
+  defp start_children_recurse([{name, {module, options}}|tail], {names_to_pids, pids_to_names}) do
+    case Membrane.Element.start_link(module, options) do
+      {:ok, pid} ->
+        start_children_recurse(tail, {
+          names_to_pids |> Map.put(name, pid),
+          pids_to_names |> Map.put(pid, name),
+        })
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
 
 
   defmacro __using__(_) do
