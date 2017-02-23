@@ -148,17 +148,24 @@ defmodule Membrane.Pipeline do
           module: module,
         }}
 
-      {:ok, %Spec{children: children} = spec, internal_state} ->
+      {:ok, %Spec{children: children, links: links} = spec, internal_state} ->
         debug("Initializing: spec = #{inspect(spec)}, internal_state = #{inspect(internal_state)}")
         case children |> start_children do
           {:ok, {children_to_pids, pids_to_children}} ->
-            debug("Initialized: spec = #{inspect(spec)}, internal_state = #{inspect(internal_state)}, children_to_pids = #{inspect(children_to_pids)}")
-            {:ok, %State{
-              children_to_pids: children_to_pids,
-              pids_to_children: pids_to_children,
-              internal_state: internal_state,
-              module: module,
-            }}
+            case links |> link_children(children_to_pids) do
+              :ok ->
+                debug("Initialized: spec = #{inspect(spec)}, internal_state = #{inspect(internal_state)}, children_to_pids = #{inspect(children_to_pids)}")
+                {:ok, %State{
+                  children_to_pids: children_to_pids,
+                  pids_to_children: pids_to_children,
+                  internal_state: internal_state,
+                  module: module,
+                }}
+
+              {:error, {reason, failed_link}} ->
+                warn("Failed to initialize pipeline: unable to link pipeline's children, reason = #{inspect(reason)}, failed_link = #{inspect(failed_link)}")
+                {:stop, reason}
+            end
 
           {:error, reason} ->
             warn("Failed to initialize pipeline: unable to start pipeline's children, reason = #{inspect(reason)}")
@@ -242,11 +249,52 @@ defmodule Membrane.Pipeline do
   end
 
 
+  # Links children based on given specification and map for mapping children
+  # names into PIDs.
+  #
+  # On success it returns `:ok`.
+  #
+  # On error it returns `{:error, {reason, failed_link}}`.
+  #
+  # Please note that this function is not atomic and in case of error there's
+  # a chance that some of children will remain linked.
+  defp link_children(links, children_to_pids)
+  when is_map(links) and is_map(children_to_pids) do
+    debug("Linking children: links = #{inspect(links)}")
+    link_children_recurse(links |> Map.to_list, children_to_pids)
+  end
+
+
+  defp link_children_recurse([], children_to_pids), do: :ok
+
+  defp link_children_recurse([{{from_name, from_pad}, {to_name, to_pad}} = link|rest], children_to_pids) do
+    case children_to_pids |> Map.has_key?(from_name) do
+      true ->
+        case children_to_pids |> Map.has_key?(to_name) do
+          true ->
+            from_pid = children_to_pids |> Map.get(from_name)
+            to_pid = children_to_pids |> Map.get(to_name)
+
+            case Membrane.Element.link({from_pid, from_pad}, {to_pid, to_pad}) do
+              :ok ->
+                link_children_recurse(rest, children_to_pids)
+
+              {:error, reason} ->
+                {:error, {reason, link}}
+            end
+
+          false ->
+            {:error, {:unknown_to, link}}
+        end
+
+      false ->
+        {:error, {:unknown_from, link}}
+    end
+  end
+
+
   # Starts children based on given specification and links them to the current
   # process in the supervision tree.
-  #
-  # Usually you do not have to call this function, as `Membrane.Pipeline` handles
-  # this for you.
   #
   # On success it returns `{:ok, {names_to_pids, pids_to_names}}` where two
   # values returned are maps that allow to easily map child names to process PIDs
@@ -255,7 +303,7 @@ defmodule Membrane.Pipeline do
   # On error it returns `{:error, reason}`.
   #
   # Please note that this function is not atomic and in case of error there's
-  # no guarantee that some of children will remain running.
+  # a chance that some of children will remain running.
   defp start_children(children) when is_map(children) do
     debug("Starting children: children = #{inspect(children)}")
     start_children_recurse(children |> Map.to_list, {%{}, %{}})
