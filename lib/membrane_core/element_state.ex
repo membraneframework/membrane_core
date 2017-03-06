@@ -74,6 +74,33 @@ defmodule Membrane.Element.State do
   end
 
 
+  @spec set_sink_pad_peer(t, Membrane.Pad.name_t, pid, Membrane.Pad.name_t) :: {:ok, t} | {:error, any}
+  def set_sink_pad_peer(state, sink_pad_name, source_pid, source_pad_name) do
+    case state.sink_pads |> Map.get(sink_pad_name) do
+      nil ->
+        {:error, :unknown_pad}
+
+      pad_state ->
+        new_pad_state = pad_state |> Map.put(:peer, {source_pid, source_pad_name})
+        new_sink_pads = state.sink_pads |> Map.put(sink_pad_name, new_pad_state)
+
+        {:ok, %{state | sink_pads: new_sink_pads}}
+    end
+  end
+
+
+  @spec get_sink_pad_peer(t, Membrane.Pad.name_t) :: {:ok, {pid, Membrane.Pad.name_t} | nil} | {:error, any}
+  def get_sink_pad_peer(state, sink_pad_name) do
+    case state.sink_pads |> Map.get(sink_pad_name) do
+      nil ->
+        {:error, :unknown_pad}
+
+      %{peer: peer} ->
+        {:ok, peer}
+    end
+  end
+
+
   @spec set_source_pad_caps(t, Membrane.Pad.name_t, Membrane.Caps.t) :: {:ok, t} | {:error, any}
   def set_source_pad_caps(state, source_pad_name, caps) do
     case state.source_pads |> Map.get(source_pad_name) do
