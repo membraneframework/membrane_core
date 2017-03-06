@@ -301,7 +301,7 @@ defmodule Membrane.Element do
                 # TODO check if pads match at all
                 # TODO check if pads are not already linked
                 # FIXME send membrane_link with particular pad combination
-                GenServer.call(server, {:membrane_link, {server_pad, destination, destination_pad}}, timeout)
+                GenServer.call(server, {:membrane_link_source, {server_pad, destination, destination_pad}, timeout}, timeout)
 
               !is_source?(server_module) ->
                 warn("Failed to link #{inspect(server)}/#{inspect(server_pad)} -> #{inspect(destination)}/#{inspect(destination_pad)}: #{inspect(server)} (#{server_module}) is not a source element")
@@ -492,8 +492,25 @@ defmodule Membrane.Element do
 
   # Callback invoked on incoming link request.
   @doc false
-  def handle_call({:membrane_link, {server_pad, destination_pid, destination_pad}}, _from, state) do
+  def handle_call({:membrane_link_source, {server_pad, destination_pid, destination_pad}, timeout}, _from, state) do
     case state |> State.set_source_pad_peer(server_pad, destination_pid, destination_pad) do
+      {:ok, new_state} ->
+        case GenServer.call(destination_pid, {:membrane_link_sink, {destination_pad, self(), server_pad}}, timeout) do
+          :ok ->
+            {:reply, :ok, new_state}
+          {:error, reason} ->
+            {:reply, {:error, reason}, state}
+        end
+
+      {:error, reason} ->
+        {:reply, {:error, reason}, state}
+    end
+  end
+
+  # Callback invoked on incoming link request on sink element
+  @doc false
+  def handle_call({:membrane_link_sink, {dest_pad, source_pid, source_pad}}, _from, state) do
+    case state |> State.set_sink_pad_peer(dest_pad, source_pid, source_pad) do
       {:ok, new_state} ->
         {:reply, :ok, new_state}
 
@@ -501,7 +518,6 @@ defmodule Membrane.Element do
         {:reply, {:error, reason}, state}
     end
   end
-
 
   # Callback invoked on incoming buffer.
   #
@@ -781,17 +797,17 @@ defmodule Membrane.Element do
   # linked peer.
   defp handle_commands_recurse([{:send, {pad, %Membrane.Event{} = event}}|tail], state) do
     debug("Sending event from pad #{inspect(pad)}: #{inspect(event)}")
-    case state |> State.get_source_pad_peer(pad) do
+    with {:error, reason1} <- state |> State.get_source_pad_peer(pad),
+         {:error, reason2} <- state |> State.get_sink_pad_peer(pad)
+    do
+      warn("Failed to send event #{inspect(event)} from pad #{inspect(pad)}, reason = #{inspect(reason1)}/#{inspect(reason2)}. This is probably a bug in the element which is trying to send something from non-existent pad.")
+      throw :unknown_pad
+    else
       {:ok, {peer_pid, peer_pad_name}} ->
         send(peer_pid, {:membrane_event, peer_pad_name, event})
         handle_commands_recurse(tail, state)
-
       {:ok, nil} ->
         handle_commands_recurse(tail, state)
-
-      {:error, reason} ->
-        warn("Failed to send event #{inspect(event)} from pad #{inspect(pad)}, reason = #{inspect(reason)}. This is probably a bug in the element which is trying to send something from non-existent pad.")
-        throw reason
     end
   end
 
