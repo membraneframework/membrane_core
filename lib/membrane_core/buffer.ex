@@ -2,8 +2,8 @@ defmodule Membrane.Buffer do
   @moduledoc """
   Structure representing a single chunk of data that flows between elements.
 
-  It is just a wrapper around bitstring. In the future they might be some
-  metadata attached to it.
+  It is just a wrapper around bitstring with optionally some metadata
+  attached to it.
 
   Each buffer:
 
@@ -14,8 +14,10 @@ defmodule Membrane.Buffer do
 
   @type t :: %Membrane.Buffer{
     payload: payload_t,
+    metadata: Membrane.Buffer.Metadata.t,
   }
 
   defstruct \
-    payload: nil
+    payload: nil,
+    metadata: Membrane.Buffer.Metadata.new
 end
