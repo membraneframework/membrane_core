@@ -42,6 +42,35 @@ defmodule Membrane.Helper.BitstringSpec do
     :ok
   end
 
+  describe ".split/2" do
+    let :data, do: "abcd"
+
+    context "if length is an integer multiplication of chunk_size" do
+      it "should split data into chunks" do
+        expect(described_module().split(data(), 2)).to eq {:ok, ["ab", "cd"], <<>>}
+      end
+    end
+    context "if length is not an integer multiplication of chunk_size" do
+      it "should split data into chunks and store the rest" do
+        expect(described_module().split(data(), 3)).to eq {:ok, ["abc"], "d"}
+      end
+    end
+  end
+
+  describe ".split!/2" do
+    let :data, do: "abcd"
+
+    context "if length is an integer multiplication of chunk_size" do
+      it "should split data into chunks" do
+        expect(described_module().split!(data(), 2)).to eq ["ab", "cd"]
+      end
+    end
+    context "if length is not an integer multiplication of chunk_size" do
+      it "should split data into chunks and drop the rest" do
+        expect(described_module().split!(data(), 3)).to eq ["abc"]
+      end
+    end
+  end
 
   describe ".split_map/4" do
     let :data, do: "abcd"
