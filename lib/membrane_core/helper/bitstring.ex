@@ -14,7 +14,7 @@ defmodule Membrane.Helper.Bitstring do
   end
 
   @doc """
-    Same as above, but returns only list of chunks, remaining part is not
+    Same as above, but returns only list of chunks, remaining part is being
     cut off
   """
   @spec split!(bitstring, pos_integer) :: [] | [...]
