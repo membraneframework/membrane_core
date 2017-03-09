@@ -1,0 +1,74 @@
+defmodule Membrane.Helper.Enum do
+  @moduledoc """
+  Module containing helper functions for manipulating enums.
+  """
+
+  import Enum
+
+
+  @doc """
+  Works the same way as Enum.zip/1, but does not cut off remaining values.
+  Ie for x = [[1,2],[3,4,5]]:
+    zip(x) == [{1,3},{2,4}]
+    zip_longest(x) == [[1,3],[2,4],[5]]
+  It also returns list of lists, as opposed to tuples
+  """
+  @spec zip_longest([] | [...]) :: [] | [...]
+  def zip_longest(lists) when is_list(lists) do
+    zip_longest_recurse(lists, [])
+  end
+
+  defp zip_longest_recurse(lists, acc) do
+    {lists, zipped} = lists
+      |> reject(&empty?/1)
+      |> map_reduce([], fn [h|t], acc -> {t, [h | acc]} end)
+
+    if zipped |> empty? do
+      reverse acc
+    else
+      zipped = zipped |> reverse
+      zip_longest_recurse(lists, [zipped | acc])
+    end
+  end
+
+
+  @doc """
+    Implementation of Enum.unzip/1 for more-than-two-element tuples. Accepts
+    arguments:
+      - List to be unzipped
+      - Size of each tuple in this list
+    Returns {:ok, result} if there is no error
+    Returns {:error, reason} if encounters a tuple of size different from
+    tuple_size argument
+    As such function is planned to be supplied in Enum module, it should replace
+    this one once it happens
+  """
+  @spec unzip([] | [...], pos_integer) :: {:ok, Tuple.t} | {:error, any}
+  def unzip(list, tuple_size)
+  when is_list(list) and is_integer(tuple_size) and tuple_size >= 2 do
+    unzip_recurse(list |> reverse, tuple_size, 1..tuple_size |> into([], fn _ -> [] end))
+  end
+
+  @doc """
+    Same as above, returns result, throws match error if something goes wrong
+  """
+  @spec unzip!([] | [...], pos_integer) :: Tuple.t
+  def unzip!(list, tuple_size)
+  when is_list(list) and is_integer(tuple_size) and tuple_size >= 2 do
+    {:ok, result} = unzip(list, tuple_size)
+    result
+  end
+
+  defp unzip_recurse([], _tuple_size, acc) do
+    {:ok, acc |> List.to_tuple}
+  end
+  defp unzip_recurse([h|t], tuple_size, acc) when is_tuple(h) do
+    l = h |> Tuple.to_list
+    if tuple_size != l |> length do
+      {:error, "tuple #{inspect h} is not #{inspect tuple_size}-element long"}
+    else
+      unzip_recurse t, tuple_size, zip(l, acc) |> map(fn {t, r} -> [t | r] end)
+    end
+  end
+
+end
