@@ -573,15 +573,16 @@ defmodule Membrane.Element do
           {:noreply, state}
 
         :playing ->
-          case state |> State.get_sink_pad_caps(pad) do
+          with {:error, _reason} <- state |> State.get_sink_pad_caps(pad),
+               {:error, reason} <- state |> State.get_source_pad_caps(pad)
+          do
+            warn("Failed to get caps for pad #{inspect(pad)} in order to handle event #{inspect(event)}, reason = #{inspect(reason)}. Check if you have linked with right and existing pads.")
+            throw reason
+          else
             {:ok, caps} ->
               module.handle_event(pad, caps, event, internal_state)
                 |> handle_callback(state)
                 |> format_callback_response(:noreply)
-
-            {:error, reason} ->
-              warn("Failed to get caps for pad #{inspect(pad)} in order to handle event #{inspect(event)}, reason = #{inspect(reason)}. Check if you have linked with right and existing pads.")
-              throw reason
           end
       end
 
