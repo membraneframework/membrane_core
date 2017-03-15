@@ -8,10 +8,15 @@ defmodule Membrane.Helper.Enum do
 
   @doc """
   Works the same way as Enum.zip/1, but does not cut off remaining values.
-  Ie for x = [[1,2],[3,4,5]]:
-    zip(x) == [{1,3},{2,4}]
-    zip_longest(x) == [[1,3],[2,4],[5]]
-  It also returns list of lists, as opposed to tuples
+
+  ## Examples:
+    iex> x = [[1, 2] ,[3 ,4, 5]]
+    iex> Enum.zip(x)
+    [{1, 3}, {2, 4}]
+    iex> zip_longest(x)
+    [[1, 3], [2, 4], [5]]
+
+  It also returns list of lists, as opposed to tuples.
   """
   @spec zip_longest([] | [...]) :: [] | [...]
   def zip_longest(lists) when is_list(lists) do
@@ -33,15 +38,20 @@ defmodule Membrane.Helper.Enum do
 
 
   @doc """
-    Implementation of Enum.unzip/1 for more-than-two-element tuples. Accepts
-    arguments:
-      - List to be unzipped
-      - Size of each tuple in this list
-    Returns {:ok, result} if there is no error
-    Returns {:error, reason} if encounters a tuple of size different from
-    tuple_size argument
-    As such function is planned to be supplied in Enum module, it should replace
-    this one once it happens
+  Implementation of Enum.unzip/1 for more-than-two-element tuples. Accepts
+  arguments:
+
+    - List to be unzipped,
+
+    - Size of each tuple in this list.
+
+  Returns {:ok, result} if there is no error.
+
+  Returns {:error, reason} if encounters a tuple of size different from
+  tuple_size argument.
+
+  As such function is planned to be supplied in Enum module, it should replace
+  this one once it happens.
   """
   @spec unzip([] | [...], pos_integer) :: {:ok, Tuple.t} | {:error, any}
   def unzip(list, tuple_size)
@@ -50,7 +60,7 @@ defmodule Membrane.Helper.Enum do
   end
 
   @doc """
-    Same as above, returns result, throws match error if something goes wrong
+  Same as above, returns plain result, throws match error if something goes wrong.
   """
   @spec unzip!([] | [...], pos_integer) :: Tuple.t
   def unzip!(list, tuple_size)

@@ -3,8 +3,13 @@ defmodule Membrane.Helper.EnumSpec do
 
   describe ".zip_longest/1" do
     context "in usual case" do
-      it "should zip list of lists into list of tuples" do
-        expect(described_module().zip_longest [[1, 2, 3], [4, 5, 6, 7], [8, 9]]).to eq [[1, 4, 8], [2, 5, 9], [3, 6], [7]]
+      it "should zip list of lists" do
+        expect(described_module().zip_longest [[1, 2, 3], [4, 5, 6, 7], [], [8, 9]]).to eq [[1, 4, 8], [2, 5, 9], [3, 6], [7]]
+      end
+    end
+    context "if list is empty" do
+      it "should return empty list" do
+        expect(described_module().zip_longest []).to eq []
       end
     end
   end
