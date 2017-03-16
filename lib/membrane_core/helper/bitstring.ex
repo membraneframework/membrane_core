@@ -3,6 +3,35 @@ defmodule Membrane.Helper.Bitstring do
   Module containing helper functions for manipulating bitstrings.
   """
 
+  @doc """
+    Splits given bitstring into parts of given size. Returns {:ok, list of
+    bitstrings, remaining bitstrings}
+  """
+  @spec split(bitstring, pos_integer) :: {:ok, [] | [...], bitstring}
+  def split(data, chunk_size)
+  when is_bitstring(data) and is_integer(chunk_size) and chunk_size > 0 do
+    split_recurse(data, chunk_size, [])
+  end
+
+  @doc """
+    Same as above, but returns only list of chunks, remaining part is being
+    cut off
+  """
+  @spec split!(bitstring, pos_integer) :: [] | [...]
+  def split!(data, chunk_size)
+  when is_bitstring(data) and is_integer(chunk_size) and chunk_size > 0 do
+    {:ok, result, _} = split(data, chunk_size)
+    result
+  end
+
+  defp split_recurse(data, chunk_size, acc) do
+    case data do
+      <<chunk::binary-size(chunk_size)>> <> rest ->
+        split_recurse rest, chunk_size, [chunk | acc]
+      rest -> {:ok, acc |> Enum.reverse, rest}
+    end
+  end
+
 
   @doc """
   Splits given bitstring into parts of given size, and calls given function
