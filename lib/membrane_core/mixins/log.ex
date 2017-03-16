@@ -8,18 +8,24 @@ defmodule Membrane.Mixins.Log do
     quote location: :keep do
       require Logger
 
-      defp info(message) do
-        Logger.info("[#{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{message}")
+      defmacro info(message) do
+        quote location: :keep do
+          Logger.info("[#{System.monotonic_time()} #{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{unquote(message)}")
+        end
       end
 
 
-      defp warn(message) do
-        Logger.warn("[#{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{message}")
+      defmacro warn(message) do
+        quote location: :keep do
+          Logger.warn("[#{System.monotonic_time()} #{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{unquote(message)}")
+        end
       end
 
 
-      defp debug(message) do
-        Logger.debug("[#{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{message}")
+      defmacro debug(message) do
+        quote location: :keep do
+          Logger.debug("[#{System.monotonic_time()} #{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{unquote(message)}")
+        end
       end
     end
   end
