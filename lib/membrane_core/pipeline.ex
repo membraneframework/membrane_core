@@ -81,8 +81,7 @@ defmodule Membrane.Pipeline do
   @callback handle_init(pipeline_options_t) ::
     {:ok, any} |
     {:ok, Spec.t, any} |
-    {:play, Spec.t, any} |
-    {:error, any}
+    {:play, Spec.t, any}
 
 
   @doc """
@@ -210,6 +209,20 @@ defmodule Membrane.Pipeline do
           {:error, reason} ->
             {:stop, {:init, reason}}
         end
+
+      other ->
+        raise """
+        Pipeline's handle_init replies are expected to be one of:
+
+            {:ok, state}
+            {:ok, spec, state}
+            {:play, spec, state}
+
+        but got #{inspect(other)}.
+
+        This is probably a bug in your pipeline's code, check return value
+        of #{module}.handle_init/1.
+        """
     end
   end
 
