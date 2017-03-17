@@ -65,8 +65,15 @@ defmodule Membrane.Pipeline do
 
   It will receive pipeline options passed to `start_link/4` or `start/4`.
 
-  It is supposed to return `{:ok, pipeline_topology, initial_state}`,
-  `{:ok, initial_state}` or `{:error, reason}`.
+  It is supposed to return one of:
+
+  * `{:ok, pipeline_topology, initial_state}` - if there are some children,
+    but the pipeline has to remain stopped
+  * `{:ok, initial_state}` - if there are no children but the pipeline has to
+    remain stopped,
+  * `{:play, pipeline_topology, initial_state}` - if there are some children,
+    and the pipeline has to immediately start playing,
+  * `{:error, reason}` - on error.
 
   See `Membrane.Pipeline.Spec` for more information about how to define
   elements and links in the pipeline.
@@ -74,6 +81,7 @@ defmodule Membrane.Pipeline do
   @callback handle_init(pipeline_options_t) ::
     {:ok, any} |
     {:ok, Spec.t, any} |
+    {:play, Spec.t, any} |
     {:error, any}
 
 
@@ -179,40 +187,29 @@ defmodule Membrane.Pipeline do
           module: module,
         }}
 
-      {:ok, %Spec{children: children, links: links} = spec, internal_state} ->
-        debug("Initializing: spec = #{inspect(spec)}, internal_state = #{inspect(internal_state)}")
-        case children |> start_children do
-          {:ok, {children_to_pids, pids_to_children}} ->
-            case links |> link_children(children_to_pids) do
+      {:ok, spec, internal_state} ->
+        case do_init(module, internal_state, spec) do
+          {:ok, state} ->
+            {:ok, state}
+
+          {:error, reason} ->
+            {:stop, {:init, reason}}
+        end
+
+      {:play, spec, internal_state} ->
+        case do_init(module, internal_state, spec) do
+          {:ok, state} ->
+            case do_play(state) do
               :ok ->
-                case children_to_pids |> set_children_message_bus do
-                  :ok ->
-                    debug("Initialized: spec = #{inspect(spec)}, internal_state = #{inspect(internal_state)}, children_to_pids = #{inspect(children_to_pids)}")
-                    {:ok, %State{
-                      children_to_pids: children_to_pids,
-                      pids_to_children: pids_to_children,
-                      internal_state: internal_state,
-                      module: module,
-                    }}
+                {:ok, state}
 
-                  {:error, reason} ->
-                    warn("Failed to initialize pipeline: unable to set message bus for pipeline's children, reason = #{inspect(reason)}")
-                    {:stop, reason}
-                end
-
-              {:error, {reason, failed_link}} ->
-                warn("Failed to initialize pipeline: unable to link pipeline's children, reason = #{inspect(reason)}, failed_link = #{inspect(failed_link)}")
-                {:stop, reason}
+              {:error, reason} ->
+                {:stop, {:play, reason}}
             end
 
           {:error, reason} ->
-            warn("Failed to initialize pipeline: unable to start pipeline's children, reason = #{inspect(reason)}")
-            {:stop, reason}
+            {:stop, {:init, reason}}
         end
-
-      {:error, reason} ->
-        warn("Failed to initialize pipeline: handle_init has failed, reason = #{inspect(reason)}")
-        {:stop, reason}
     end
   end
 
@@ -233,15 +230,12 @@ defmodule Membrane.Pipeline do
 
 
   @doc false
-  def handle_call(:membrane_play, _from, %State{children_to_pids: children_to_pids} = state) do
-    debug("Changing playback state of children to PLAYING, state = #{inspect(state)}")
-    case children_to_pids |> Map.to_list |> call_element(:play) do
+  def handle_call(:membrane_play, _from, state) do
+    case do_play(state) do
       :ok ->
-        debug("Changed playback state of children to PLAYING, state = #{inspect(state)}")
         {:reply, :ok, state}
 
       {:error, reason} ->
-        warn("Unable to change playback state of children to PLAYING, reason = #{inspect(reason)}, state = #{inspect(state)}")
         {:reply, {:error, reason}, state}
     end
   end
@@ -456,6 +450,53 @@ defmodule Membrane.Pipeline do
         })
 
       {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+
+  defp do_init(module, internal_state, %Spec{children: children, links: links} = spec) do
+    debug("Initializing: spec = #{inspect(spec)}, internal_state = #{inspect(internal_state)}")
+    case children |> start_children do
+      {:ok, {children_to_pids, pids_to_children}} ->
+        case links |> link_children(children_to_pids) do
+          :ok ->
+            case children_to_pids |> set_children_message_bus do
+              :ok ->
+                debug("Initialized: spec = #{inspect(spec)}, internal_state = #{inspect(internal_state)}, children_to_pids = #{inspect(children_to_pids)}")
+                {:ok, %State{
+                  children_to_pids: children_to_pids,
+                  pids_to_children: pids_to_children,
+                  internal_state: internal_state,
+                  module: module,
+                }}
+
+              {:error, reason} ->
+                warn("Failed to initialize pipeline: unable to set message bus for pipeline's children, reason = #{inspect(reason)}")
+                {:error, reason}
+            end
+
+          {:error, {reason, failed_link}} ->
+            warn("Failed to initialize pipeline: unable to link pipeline's children, reason = #{inspect(reason)}, failed_link = #{inspect(failed_link)}")
+            {:error, reason}
+        end
+
+      {:error, reason} ->
+        warn("Failed to initialize pipeline: unable to start pipeline's children, reason = #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+
+  defp do_play(%State{children_to_pids: children_to_pids} = state) do
+    debug("Changing playback state of children to PLAYING, state = #{inspect(state)}")
+    case children_to_pids |> Map.to_list |> call_element(:play) do
+      :ok ->
+        debug("Changed playback state of children to PLAYING, state = #{inspect(state)}")
+        :ok
+
+      {:error, reason} ->
+        warn("Unable to change playback state of children to PLAYING, reason = #{inspect(reason)}, state = #{inspect(state)}")
         {:error, reason}
     end
   end
