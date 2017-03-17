@@ -20,6 +20,18 @@ defmodule Membrane.Pipeline do
   @type pipeline_options_t :: struct | nil
 
 
+  # Type that defines a single command that may be returned from handle_*
+  # callbacks.
+  #
+  # If it is `{:forward, {child_name, message}}` it will cause sending
+  # given message to the child.
+  @type callback_return_command_t ::
+    {:forward, {Membrane.Element.name_t, any}}
+
+  # Type that defines list of commands that may be returned from handle_*
+  # callbacks.
+  @type callback_return_commands_t :: [] | [callback_return_command_t]
+
 
   @doc """
   Starts the Pipeline based on given module and links it to the current
@@ -74,6 +86,25 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_message(Membrane.Message.t, Membrane.Element.name_t, any) ::
     {:ok, any}
+
+
+  @doc """
+  Callback invoked when pipeline is receiving message of other kind. It will
+  receive the message and pipeline state.
+
+  If it returns `{:ok, new_state}` it just updates pipeline's state to the new
+  state.
+
+  If it returns `{:ok, command_list, new_state}` it executes given commands.
+
+  If it returns `{:error, reason, new_state}` it indicates that something
+  went wrong, and pipeline was unable to handle callback. Error along with
+  reason will be propagated to the message bus and state will be updated to
+  the new state.
+  """
+  @callback handle_other(any, any) ::
+    {:ok, any} |
+    {:ok, callback_return_commands_t, any}
 
 
 
@@ -241,6 +272,47 @@ defmodule Membrane.Pipeline do
   end
 
 
+  @doc false
+  # Callback invoked on other incoming message
+  def handle_info(message, %State{module: module, internal_state: internal_state} = state) do
+    case module.handle_other(message, internal_state)  do
+      {:ok, new_internal_state} ->
+        {:noreply, %{state | internal_state: new_internal_state}}
+
+      {:ok, commands, new_internal_state} ->
+        case handle_commands_recurse(commands, %{state | internal_state: new_internal_state}) do
+          {:ok, new_state} ->
+            {:noreply, new_state}
+        end
+    end
+  end
+
+
+  defp handle_commands_recurse([], state), do: {:ok, state}
+
+  defp handle_commands_recurse([{:forward, {element_name, message}} = command|tail], %State{children_to_pids: children_to_pids} = state) do
+    case children_to_pids |> Map.get(element_name) do
+      nil ->
+        raise """
+        You have returned invalid pipeline command.
+
+        Your callback has returned command #{inspect(command)} which refers to
+        child named #{inspect(element_name)}. There's no such child in this
+        pipeline. Known children are:
+
+            #{inspect(children_to_pids |> Map.keys)}
+
+        This is probably a bug in your code.
+        """
+
+      pid ->
+        send(pid, message)
+    end
+
+    handle_commands_recurse(tail, state)
+  end
+
+
   defp call_element([], _fun_name), do: :ok
 
   defp call_element([{_name, pid}|tail], fun_name) do
@@ -273,7 +345,7 @@ defmodule Membrane.Pipeline do
   end
 
 
-  defp link_children_recurse([], children_to_pids), do: :ok
+  defp link_children_recurse([], _children_to_pids), do: :ok
 
   defp link_children_recurse([{{from_name, from_pad}, {to_name, to_pad}} = link|rest], children_to_pids) do
     case children_to_pids |> Map.has_key?(from_name) do
@@ -407,9 +479,16 @@ defmodule Membrane.Pipeline do
       end
 
 
+      @doc false
+      def handle_other(_message, state) do
+        {:ok, state}
+      end
+
+
       defoverridable [
         handle_init: 1,
         handle_message: 3,
+        handle_other: 2,
       ]
     end
   end
