@@ -57,4 +57,19 @@ defmodule Membrane.Event do
   def discontinuity(duration \\ nil) do
     %Membrane.Event{type: :discontinuity, payload: %Membrane.Event.Discontinuity.Payload{duration: duration}}
   end
+
+  
+  @doc """
+  Shrothand for creating a generic Underrun event.
+
+  Underrun event means that certain element is willing to consume more buffers
+  but there are none available.
+
+  It makes sense to use this event as an upstream event to notify previous
+  elements in the pipeline that they should generate more buffers.
+  """
+  @spec underrun() :: t
+  def underrun do
+    %Membrane.Event{type: :underrun}
+  end
 end

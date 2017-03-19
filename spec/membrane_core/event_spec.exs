@@ -27,6 +27,19 @@ defmodule Membrane.EventSpec do
   end
 
 
+  describe ".underrun/0" do
+    it "should return a Membrane.Event with type set to :underrun" do
+      %Membrane.Event{type: type} = described_module().underrun
+      expect(type).to be :underrun
+    end
+
+    it "should return a Membrane.Event with payload set to nil" do
+      %Membrane.Event{payload: payload} = described_module().underrun
+      expect(payload).to be_nil()
+    end
+  end
+
+
   describe ".discontinuity/1" do
     let :duration, do: 1234
 
