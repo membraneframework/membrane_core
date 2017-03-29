@@ -365,7 +365,7 @@ defmodule Membrane.Element do
   def handle_call(:membrane_prepare, _from, %State{module: module, playback_state: :stopped, internal_state: internal_state} = state) do
     debug("Changing playback state from STOPPED to PREPARED, target is PREPARED, state = #{inspect(state)}")
     module.handle_prepare(:stopped, internal_state)
-      |> log_callback("Changed playback state from STOPPED to PREPARED, state = #{inspect(state)}")
+      |> log_callback("change playback state from STOPPED to PREPARED, state = #{inspect(state)}")
       |> handle_callback(state, :prepared)
       |> format_callback_response(:reply)
   end
@@ -384,7 +384,7 @@ defmodule Membrane.Element do
   def handle_call(:membrane_prepare, _from, %State{module: module, playback_state: :playing, internal_state: internal_state} = state) do
     debug("Changing playback state from PLAYING to PREPARED, target is PREPARED, state = #{inspect(state)}")
     module.handle_prepare(:playing, internal_state)
-      |> log_callback("Changed playback state from PLAYING to PREPARED, state = #{inspect(state)}")
+      |> log_callback("change playback state from PLAYING to PREPARED, state = #{inspect(state)}")
       |> handle_callback(state, :prepared)
       |> format_callback_response(:reply)
   end
@@ -395,12 +395,12 @@ defmodule Membrane.Element do
   def handle_call(:membrane_play, _from, %State{module: module, playback_state: :stopped, internal_state: internal_state} = state) do
     debug("Changing playback state from STOPPED to PREPARED, target is PLAYING, state = #{inspect(state)}")
     case module.handle_prepare(:stopped, internal_state)
-      |> log_callback("Changed playback state from STOPPED to PREPARED, state = #{inspect(state)}")
+      |> log_callback("change playback state from STOPPED to PREPARED, state = #{inspect(state)}")
       |> handle_callback(state, :prepared) do
       {:ok, %State{internal_state: internal_state} = state} ->
         debug("Changing playback state from PREPARED to PLAYING, target is PLAYING, state = #{inspect(state)}")
         module.handle_play(internal_state)
-        |> log_callback("Changed playback state from PREPARED to PLAYING, state = #{inspect(state)}")
+        |> log_callback("change playback state from PREPARED to PLAYING, state = #{inspect(state)}")
         |> handle_callback(state, :playing)
         |> format_callback_response(:reply)
 
@@ -416,7 +416,7 @@ defmodule Membrane.Element do
   def handle_call(:membrane_play, _from, %State{module: module, playback_state: :prepared, internal_state: internal_state} = state) do
     debug("Changing playback state from PREPARED to PLAYING, target is PLAYING, state = #{inspect(state)}")
     module.handle_play(internal_state)
-      |> log_callback("Changed playback state from PREPARED to PLAYING, state = #{inspect(state)}")
+      |> log_callback("change playback state from PREPARED to PLAYING, state = #{inspect(state)}")
       |> handle_callback(state, :playing)
       |> format_callback_response(:reply)
   end
@@ -443,7 +443,7 @@ defmodule Membrane.Element do
   def handle_call(:membrane_stop, _from, %State{module: module, playback_state: :prepared, internal_state: internal_state} = state) do
     debug("Changing playback state from PREPARED to STOPPED, target is STOPPED, state = #{inspect(state)}")
     module.handle_stop(internal_state)
-      |> log_callback("Changed playback state from PREPARED to STOPPED, state = #{inspect(state)}")
+      |> log_callback("change playback state from PREPARED to STOPPED, state = #{inspect(state)}")
       |> handle_callback(state, :stopped)
       |> format_callback_response(:reply)
   end
@@ -454,11 +454,11 @@ defmodule Membrane.Element do
   def handle_call(:membrane_stop, _from, %State{module: module, playback_state: :playing, internal_state: internal_state} = state) do
     debug("Changing playback state from PLAYING to PREPARED, target is STOPPED, state = #{inspect(state)}")
     case module.handle_prepare(:playing, internal_state)
-      |> log_callback("Changed playback state from PLAYING to PREPARED, state = #{inspect(state)}")
+      |> log_callback("change playback state from PLAYING to PREPARED, state = #{inspect(state)}")
       |> handle_callback(state, :prepared) do
       {:ok, state} ->
         module.handle_stop(internal_state)
-        |> log_callback("Changed playback state from PREPARED to STOPPED, state = #{inspect(state)}")
+        |> log_callback("change playback state from PREPARED to STOPPED, state = #{inspect(state)}")
         |> handle_callback(state, :stopped)
         |> format_callback_response(:reply)
 
@@ -637,8 +637,14 @@ defmodule Membrane.Element do
   end
 
 
+  defp log_callback({:error, _reason, _state} = result, message) do
+    warn("Failed to #{message}, result = #{inspect(result)}")
+    result
+  end
+
+
   defp log_callback(result, message) do
-    debug("#{message}, result = #{inspect(result)}")
+    debug("Succeeded to #{message}, result = #{inspect(result)}")
     result
   end
 
@@ -689,16 +695,8 @@ defmodule Membrane.Element do
   # element callback to reply that is accepted by GenServer.handle_info.
   #
   # Case when callback returned failure.
-  defp handle_callback({:error, reason, new_internal_state}, state, new_playback_state) do
-    new_state = case new_playback_state do
-      nil ->
-        state
-
-      new_playback_state ->
-        %{state | playback_state: new_playback_state}
-    end
-
-    {:error, reason, %{new_state | internal_state: new_internal_state}}
+  defp handle_callback({:error, reason, new_internal_state}, state, _new_playback_state) do
+    {:error, reason, %{state | internal_state: new_internal_state}}
   end
 
 
