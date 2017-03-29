@@ -4,7 +4,7 @@ defmodule Membrane.Buffer.MetadataSpec do
 
   describe ".new/0" do
     it "should return empty map" do
-      expect(described_module.new()).to eq Map.new
+      expect(described_module().new()).to eq Map.new
     end
   end
 
@@ -12,14 +12,14 @@ defmodule Membrane.Buffer.MetadataSpec do
   describe ".update/3" do
     context "when key already exists in meta" do
       let :key,   do: :k
-      let :meta,  do: Metadata.new |> Metadata.put(key, :old_val)
+      let :meta,  do: Metadata.new |> Metadata.put(key(), :old_val)
 
       it "should return map" do
-        expect(described_module.update(meta, key, :new_val)).to be_map()
+        expect(described_module().update(meta(), key(), :new_val)).to be_map()
       end
 
       it "should override old value" do
-        %{k: new_val} = described_module.update(meta, key, :new_val)
+        %{k: new_val} = described_module().update(meta(), key(), :new_val)
         expect(new_val).to eq :new_val
       end
     end
@@ -29,8 +29,8 @@ defmodule Membrane.Buffer.MetadataSpec do
       let :key,   do: :k
 
       it "should keep meta unchanged" do
-        ret = described_module.update(meta, key, :val)
-        expect(ret).to eq meta
+        ret = described_module().update(meta(), key(), :val)
+        expect(ret).to eq meta()
       end
     end
   end
@@ -39,10 +39,10 @@ defmodule Membrane.Buffer.MetadataSpec do
   describe ".has_key?/2" do
     context "when key exists in meta" do
       let :key,  do: :k
-      let :meta, do: Metadata.new |> Metadata.put(key, :old_val)
+      let :meta, do: Metadata.new |> Metadata.put(key(), :old_val)
 
       it "should return true" do
-        expect(described_module.has_key?(meta, key)).to eq true
+        expect(described_module().has_key?(meta(), key())).to be_true()
       end
     end
 
@@ -51,7 +51,7 @@ defmodule Membrane.Buffer.MetadataSpec do
       let :meta, do: Metadata.new
 
       it "should return false" do
-        expect(described_module.has_key?(meta, key)).to eq false
+        expect(described_module().has_key?(meta(), key())).to be_false()
       end
     end
   end
@@ -59,18 +59,18 @@ defmodule Membrane.Buffer.MetadataSpec do
 
   describe ".delete/2" do
     let :key,  do: :k
-    let :meta, do: Metadata.new |> Metadata.put(key, :old_val)
-    
+    let :meta, do: Metadata.new |> Metadata.put(key(), :old_val)
+
     context "when key exists in meta" do
       it "should return map without deleted item" do
-        ret = described_module.delete(meta, key)
+        ret = described_module().delete(meta(), key())
         expect(ret).to be_empty()
       end
     end
 
     context "when key doesn't exist in meta" do
       it "should keep meta unchanged" do
-        expect(described_module.delete(meta, :other_key)).to eq meta
+        expect(described_module().delete(meta(), :other_key)).to eq meta()
       end
     end
   end
@@ -79,20 +79,20 @@ defmodule Membrane.Buffer.MetadataSpec do
   describe ".put/3" do
     context "when given key already exists in meta" do
       let :key,  do: :k
-      let :meta, do: Metadata.new |> Metadata.put(key, :old_val)
+      let :meta, do: Metadata.new |> Metadata.put(key(), :old_val)
 
       it "should override old value" do
-        %{k: new_val} = described_module.put(meta, key, :new_val)
+        %{k: new_val} = described_module().put(meta(), key(), :new_val)
         expect(new_val).to eq :new_val
       end
     end
 
     context "when given key doesn't exist in meta" do
       let :key,  do: :k2
-      let :meta, do: Metadata.new |> Metadata.put(key, :other_val)
+      let :meta, do: Metadata.new |> Metadata.put(key(), :other_val)
 
       it "should add key and value to meta" do
-        %{k: val} = described_module.put(meta, :k, :val)
+        %{k: val} = described_module().put(meta(), :k, :val)
         expect(val).to eq :val
       end
     end
