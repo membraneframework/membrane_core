@@ -11,7 +11,7 @@ defmodule Membrane.Helper.Doc do
   @spec generate_known_pads_docs(Membrane.Pad.known_pads_t) :: String.t
   def generate_known_pads_docs(pads) do
     pads
-    |> Enum.map(fn({name, {availability, caps}}) ->
+    |> Enum.map(fn({name, {availability, mode, caps}}) ->
       caps_docstring = case caps do
         :any ->
           "    * Caps: any\n"
@@ -28,6 +28,7 @@ defmodule Membrane.Helper.Doc do
       """
       * Pad: `#{inspect(name)}`
           * Availability: #{availability}
+          * Mode: #{mode}
       #{caps_docstring}
       """
     end)

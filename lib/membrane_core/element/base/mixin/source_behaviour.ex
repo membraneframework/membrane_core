@@ -8,13 +8,15 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
 
   It should return a map where:
 
-  * key contains pad name. That may be either atom (like `:src`, `:sink`,
-    `:something_else` for pads that are always available, or String for pads
+  * key contains pad name. That may be either atom (like `:source`,
+    `:something_else` for pads that are always available, or string for pads
     that are added dynamically),
-  * value is a tuple where first element of a tuple contains pad availability.
-    That may be only `:always` at the moment,
-  * second element of a tuple contains `:any` or list of caps that can be
-    knownly generated from this pad.
+  * value is a tuple where:
+    * first item of the tuple contains pad availability. It may be set only
+      `:always` at the moment,
+    * second item of the tuple contains pad mode (`:pull` or `:push`),
+    * third item of the tuple contains `:any` or list of caps that can be
+      knownly generated from this pad.
 
   The default name for generic source pad, in elements that just produce some
   buffers is `:source`.

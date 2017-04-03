@@ -4,10 +4,11 @@ defmodule Membrane.Pad do
   alias Membrane.Pad.State
 
   @type name_t         :: atom | String.t
+  @type mode_t         :: :pull | :push
   @type direction_t    :: :source | :sink
   @type availability_t :: :always
   @type known_caps_t   :: :any | [Membrane.Caps.t]
-  @type known_pads_t   :: %{required(name_t) => {availability_t, known_caps_t}}
+  @type known_pads_t   :: %{required(name_t) => {availability_t, mode_t, known_caps_t}}
 
   # Type that defines possible return values of start/start_link functions.
   @type on_start :: GenServer.on_start
@@ -32,12 +33,29 @@ defmodule Membrane.Pad do
   end
 
 
-  @doc false
-  # Activates given pad.
+  @doc """
+  Activates given pad.
+
+  Usually you won't use this manually, as activation is done automatically
+  by the framework upon starting playback.
+  """
   @spec activate(pid, timeout) :: :ok | {:error, any}
   def activate(server, timeout \\ 5000) when is_pid(server) do
     GenServer.call(server, :membrane_activate, timeout)
   end
+
+
+  @doc """
+  Deactivates given pad.
+
+  Usually you won't use this manually, as deactivation is done automatically
+  by the framework upon stopping playback.
+  """
+  @spec deactivate(pid, timeout) :: :ok | {:error, any}
+  def deactivate(server, timeout \\ 5000) when is_pid(server) do
+    GenServer.call(server, :membrane_deactivate, timeout)
+  end
+
 
 
   @doc false
@@ -94,6 +112,23 @@ defmodule Membrane.Pad do
     end
   end
 
+  def handle_call(:membrane_deactivate, _from, %State{active: false} = state) do
+    warn("Trying to deactivate pad that is iactive, state = #{inspect(state)}")
+    {:reply, {:error, :inactive}, state}
+  end
+
+  def handle_call(:membrane_deactivate, _from, %State{active: true, module: module, peer: peer, direction: direction, internal_state: internal_state} = state) do
+    debug("Deactivating pad, state = #{inspect(state)}")
+
+    # TODO check other return values
+    case module.handle_deactivate(peer, direction, internal_state) do
+      {:ok, new_internal_state} ->
+        new_state = %{state | internal_state: new_internal_state, active: false}
+        debug("Succesfully deactivated pad, state = #{inspect(new_state)}")
+        {:reply, :ok, new_state}
+    end
+  end
+
 
   def handle_call({:membrane_link, _peer}, _from, %State{peer: peer} = state)
   when not is_nil(peer) do
@@ -119,9 +154,8 @@ defmodule Membrane.Pad do
     {:reply, {:error, :inactive}, state}
   end
 
-  def handle_call(message, from, %State{active: true, direction: direction, module: module, peer: peer, internal_state: internal_state} = state) do
-    debug("Forwarding call to the pad, message = #{inspect(message)}, from = #{inspect(from)}, state = #{inspect(state)}")
-    case module.handle_call(message, peer, direction, internal_state) do
+  def handle_call(message, from, %State{active: true, parent: parent, direction: direction, module: module, peer: peer, internal_state: internal_state} = state) do
+    case module.handle_call(message, parent, peer, direction, internal_state) do
       {:reply, value, new_internal_state} ->
         # TODO check other return values
         {:reply, value, %{state | internal_state: new_internal_state}}
@@ -135,12 +169,14 @@ defmodule Membrane.Pad do
     {:noreply, state}
   end
 
-  def handle_info(message, %State{active: true, direction: direction, module: module, peer: peer, internal_state: internal_state} = state) do
-    debug("Forwarding other message #{inspect(message)} to the pad, state = #{inspect(state)}")
-    case module.handle_other(message, peer, direction, internal_state) do
+  def handle_info(message, %State{active: true, parent: parent, direction: direction, module: module, peer: peer, internal_state: internal_state} = state) do
+    case module.handle_other(message, parent, peer, direction, internal_state) do
       {:ok, new_internal_state} ->
         # TODO check other return values
         {:noreply, %{state | internal_state: new_internal_state}}
+
+      _ ->
+        IO.puts "ATHER"
     end
   end
 end

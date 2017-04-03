@@ -3,58 +3,20 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
 
 
   @doc """
-  Callback that is called when buffer arrives.
-
-  The arguments are:
-
-  * name of the pad receiving a buffer,
-  * current caps of this pad,
-  * buffer,
-  * current element state.
-
-  While implementing these callbacks, please use pattern matching to define
-  what caps are supported. In other words, define one function matching this
-  signature per each caps supported.
-  """
-  @callback handle_buffer(Membrane.Pad.name_t, Membrane.Caps.t, Membrane.Buffer.t, any) ::
-    {:ok, any} |
-    {:ok, Membrane.Element.callback_return_commands_t, any} |
-    {:error, any, any}
-
-
-  @doc """
-  Callback that is called when event arrives.
-
-  The arguments are:
-
-  * name of the pad receiving a event,
-  * current caps of this pad,
-  * event,
-  * current element state.
-
-  While implementing these callbacks, please use pattern matching to define
-  what caps are supported. In other words, define one function matching this
-  signature per each caps supported.
-  """
-  @callback handle_event(Membrane.Pad.name_t, Membrane.Caps.t, Membrane.Event.t, any) ::
-    {:ok, any} |
-    {:ok, Membrane.Element.callback_return_commands_t, any} |
-    {:error, any, any}
-
-
-  @doc """
   Callback that defines what sink pads may be ever available for this
   element type.
 
   It should return a map where:
 
-  * key contains pad name. That may be either atom (like `:src`, `:sink`,
-    `:something_else` for pads that are always available, or String for pads
+  * key contains pad name. That may be either atom (like `:sink`,
+    `:something_else` for pads that are always available, or string for pads
     that are added dynamically),
-  * value is a tuple where first element of a tuple contains pad availability.
-    That may be only `:always` at the moment,
-  * second element of a tuple contains `:any` or list of caps that can be
-    knownly generated from this pad.
+  * value is a tuple where:
+    * first item of the tuple contains pad availability. It may be set only
+      `:always` at the moment,
+    * second item of the tuple contains pad mode (`:pull` or `:push`),
+    * third item of the tuple contains `:any` or list of caps that can be
+      knownly generated from this pad.
 
   The default name for generic sink pad, in elements that just consume some
   buffers is `:sink`.
@@ -89,16 +51,6 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
       @behaviour Membrane.Element.Base.Mixin.SinkBehaviour
 
       import Membrane.Element.Base.Mixin.SinkBehaviour, only: [def_known_sink_pads: 1]
-
-      # Default implementations
-
-      @doc false
-      def handle_event(_pad, _caps, _event, state), do: {:ok, state}
-
-
-      defoverridable [
-        handle_event: 4,
-      ]
     end
   end
 end

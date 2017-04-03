@@ -4,12 +4,19 @@ defmodule Membrane.Element.State do
   # It does not represent state of elements you construct, it's a state used
   # internally in Membrane.
 
+  use Membrane.Mixins.Log
+  alias Membrane.Pad
+  alias __MODULE__
+
+
   @type t :: %Membrane.Element.State{
     internal_state: any,
     module: module,
-    playback_state: :stopped | :prepared | :playing,
-    source_pads: any, # FIXME
-    sink_pads: any, # FIXME
+    playback_state: Membrane.Element.playback_state_t,
+    source_pads_by_names: %{required(Pad.name_t) => pid},
+    source_pads_by_pids: %{required(pid) => Pad.name_t},
+    sink_pads_by_names: %{required(Pad.name_t) => pid},
+    sink_pads_by_pids: %{required(pid) => Pad.name_t},
     message_bus: pid,
   }
 
@@ -17,153 +24,285 @@ defmodule Membrane.Element.State do
     internal_state: nil,
     module: nil,
     playback_state: :stopped,
-    source_pads: %{},
-    sink_pads: %{},
+    source_pads_by_pids: %{},
+    source_pads_by_names: %{},
+    sink_pads_by_pids: %{},
+    sink_pads_by_names: %{},
     message_bus: nil
 
 
+  @doc """
+  Initializes new state.
+  """
   @spec new(module, any) :: t
   def new(module, internal_state) do
-    # Determine initial list of source pads
-    source_pads = if Membrane.Element.is_source?(module) do
-      module.known_source_pads() |> known_pads_to_pads_state
-    else
-      %{}
-    end
+    # Initialize source pads
+    {source_pads_by_names, source_pads_by_pids} =
+      if Kernel.function_exported?(module, :known_source_pads, 0) do
+        module.known_source_pads() |> spawn_pads(:source)
+      else
+        {%{}, %{}}
+      end
 
-    # Determine initial list of sink pads
-    sink_pads = if Membrane.Element.is_sink?(module) do
-      module.known_sink_pads() |> known_pads_to_pads_state
-    else
-      %{}
-    end
+    # Initialize sink pads
+    {sink_pads_by_names, sink_pads_by_pids} =
+      if Kernel.function_exported?(module, :known_sink_pads, 0) do
+        module.known_sink_pads() |> spawn_pads(:sink)
+      else
+        {%{}, %{}}
+      end
 
     %Membrane.Element.State{
       module: module,
-      source_pads: source_pads,
-      sink_pads: sink_pads,
+      source_pads_by_names: source_pads_by_names,
+      source_pads_by_pids: source_pads_by_pids,
+      sink_pads_by_names: sink_pads_by_names,
+      sink_pads_by_pids: sink_pads_by_pids,
       internal_state: internal_state,
     }
   end
 
 
-  @spec set_source_pad_peer(t, Membrane.Pad.name_t, pid, Membrane.Pad.name_t) :: {:ok, t} | {:error, any}
-  def set_source_pad_peer(state, source_pad_name, destination_pid, destination_pad_name) do
-    case state.source_pads |> Map.get(source_pad_name) do
-      nil ->
-        {:error, :unknown_pad}
-
-      pad_state ->
-        new_pad_state = pad_state |> Map.put(:peer, {destination_pid, destination_pad_name})
-        new_source_pads = state.source_pads |> Map.put(source_pad_name, new_pad_state)
-
-        {:ok, %{state | source_pads: new_source_pads}}
-    end
-  end
-
-
-  @spec get_source_pad_peer(t, Membrane.Pad.name_t) :: {:ok, {pid, Membrane.Pad.name_t} | nil} | {:error, any}
-  def get_source_pad_peer(state, source_pad_name) do
-    case state.source_pads |> Map.get(source_pad_name) do
-      nil ->
-        {:error, :unknown_pad}
-
-      %{peer: peer} ->
-        {:ok, peer}
-    end
-  end
-
-
-  @spec set_sink_pad_peer(t, Membrane.Pad.name_t, pid, Membrane.Pad.name_t) :: {:ok, t} | {:error, any}
-  def set_sink_pad_peer(state, sink_pad_name, source_pid, source_pad_name) do
-    case state.sink_pads |> Map.get(sink_pad_name) do
-      nil ->
-        {:error, :unknown_pad}
-
-      pad_state ->
-        new_pad_state = pad_state |> Map.put(:peer, {source_pid, source_pad_name})
-        new_sink_pads = state.sink_pads |> Map.put(sink_pad_name, new_pad_state)
-
-        {:ok, %{state | sink_pads: new_sink_pads}}
-    end
-  end
-
-
-  @spec get_sink_pad_peer(t, Membrane.Pad.name_t) :: {:ok, {pid, Membrane.Pad.name_t} | nil} | {:error, any}
-  def get_sink_pad_peer(state, sink_pad_name) do
-    case state.sink_pads |> Map.get(sink_pad_name) do
-      nil ->
-        {:error, :unknown_pad}
-
-      %{peer: peer} ->
-        {:ok, peer}
-    end
-  end
-
-
-  @spec set_source_pad_caps(t, Membrane.Pad.name_t, Membrane.Caps.t) :: {:ok, t} | {:error, any}
-  def set_source_pad_caps(state, source_pad_name, caps) do
-    case state.source_pads |> Map.get(source_pad_name) do
-      nil ->
-        {:error, :unknown_pad}
-
-      pad_state ->
-        new_pad_state = pad_state |> Map.put(:caps, caps)
-        new_source_pads = state.source_pads |> Map.put(source_pad_name, new_pad_state)
-
-        {:ok, %{state | source_pads: new_source_pads}}
-    end
-  end
-
-
-  @spec get_source_pad_caps(t, Membrane.Pad.name_t) :: {:ok, Membrane.Caps.t | nil} | {:error, any}
-  def get_source_pad_caps(state, source_pad_name) do
-    case state.source_pads |> Map.get(source_pad_name) do
-      nil ->
-        {:error, :unknown_pad}
-
-      %{caps: caps} ->
-        {:ok, caps}
-    end
-  end
-
-
-  @spec set_sink_pad_caps(t, Membrane.Pad.name_t, Membrane.Caps.t) :: {:ok, t} | {:error, any}
-  def set_sink_pad_caps(state, sink_pad_name, caps) do
-    case state.sink_pads |> Map.get(sink_pad_name) do
-      nil ->
-        {:error, :unknown_pad}
-
-      pad_state ->
-        new_pad_state = pad_state |> Map.put(:caps, caps)
-        new_sink_pads = state.sink_pads |> Map.put(sink_pad_name, new_pad_state)
-
-        {:ok, %{state | sink_pads: new_sink_pads}}
-    end
-  end
-
-
-  @spec get_sink_pad_caps(t, Membrane.Pad.name_t) :: {:ok, Membrane.Caps.t | nil} | {:error, any}
-  def get_sink_pad_caps(state, sink_pad_name) do
-    case state.sink_pads |> Map.get(sink_pad_name) do
-      nil ->
-        {:error, :unknown_pad}
-
-      %{caps: caps} ->
-        {:ok, caps}
-    end
-  end
-
-
-  # Converts list of known pads into map of pad states.
-  defp known_pads_to_pads_state(known_pads) do
+  # Spawns pad processes for pads that are always available builds a map of
+  # pad names => pad PIDs.
+  defp spawn_pads(known_pads, direction) do
     known_pads
     |> Map.to_list
-    |> Enum.filter(fn({_name, {availability, _caps}}) ->
+    |> Enum.filter(fn({_name, {availability, _mode, _caps}}) ->
       availability == :always
     end)
-    |> Enum.reduce(%{}, fn({name, {_availability, _caps}}, acc) ->
-      acc |> Map.put(name, %{peer: nil, caps: nil})
+    |> Enum.reduce({%{}, %{}}, fn({name, {_availability, mode, _caps}}, {acc_by_names, acc_by_pids}) ->
+      pad_module = case mode do
+        :pull -> Pad.Mode.Pull
+        :push -> Pad.Mode.Push
+      end
+
+      {:ok, pid} = Pad.start_link(pad_module, direction)
+
+      {acc_by_names |> Map.put(name, pid), acc_by_pids |> Map.put(pid, name)}
     end)
+  end
+
+
+  @doc """
+  Finds pad name associated with given PID.
+
+  On success returns `{:ok, pad_name}`.
+
+  If pad with given PID is now known, returns `{:error, :unknown_pad}`.
+  """
+  @spec get_pad_name_by_pid(t, Pad.direction_t, pid) ::
+    {:ok, pid} |
+    {:error, any}
+  def get_pad_name_by_pid(state, pad_direction, pad_pid) do
+    case pad_direction do
+      :source ->
+        case state.source_pads_by_pids |> Map.get(pad_pid) do
+          nil ->
+            {:error, :unknown_pad}
+
+          name ->
+            {:ok, name}
+        end
+
+      :sink ->
+        case state.sink_pads_by_pids |> Map.get(pad_pid) do
+          nil ->
+            {:error, :unknown_pad}
+
+          name ->
+            {:ok, name}
+        end
+    end
+  end
+
+
+
+  @doc """
+  Finds pad mode associated with given name.
+
+  On success returns `{:ok, {availability, direction, mode, pid}}`.
+
+  If pad with given name is now known, returns `{:error, :unknown_pad}`.
+  """
+  @spec get_pad_by_name(t, Pad.direction_t, Pad.name_t) ::
+    {:ok, {Membrane.Pad.availability_t, Membrane.Pad.direction_t, Membrane.Pad.mode_t, pid}} |
+    {:error, any}
+  def get_pad_by_name(%State{module: module} = state, pad_direction, pad_name) do
+    case pad_direction do
+      :source ->
+        case state.source_pads_by_names |> Map.get(pad_name) do
+          nil ->
+            {:error, :unknown_pad}
+
+          pid ->
+            {availability, mode, _caps} = module.known_source_pads |> Map.get(pad_name)
+            {:ok, {availability, pad_direction, mode, pid}}
+        end
+
+      :sink ->
+        case state.sink_pads_by_names |> Map.get(pad_name) do
+          nil ->
+            {:error, :unknown_pad}
+
+            pid ->
+              {availability, mode, _caps} = module.known_sink_pads |> Map.get(pad_name)
+              {:ok, {availability, pad_direction, mode, pid}}
+        end
+    end
+  end
+
+
+  @doc """
+  Activates all pads.
+
+  Returns `{:ok, new_state}`.
+  """
+  @spec activate_pads(t) :: :ok | {:error, any}
+  def activate_pads(state) do
+    # TODO add error checking
+    activate_pads_by_pids(state, state.source_pads_by_pids |> Map.keys)
+    activate_pads_by_pids(state, state.sink_pads_by_pids |> Map.keys)
+  end
+
+
+  defp activate_pads_by_pids(state, []), do: {:ok, state}
+
+  defp activate_pads_by_pids(state, [head|tail]) do
+    Pad.activate(head)
+    activate_pads_by_pids(state, tail)
+  end
+
+
+  @doc """
+  Deactivates all pads.
+
+  Returns `{:ok, new_state}`.
+  """
+  @spec deactivate_pads(t) :: :ok | {:error, any}
+  def deactivate_pads(state) do
+    # TODO add error checking
+    deactivate_pads_by_pids(state, state.source_pads_by_pids |> Map.keys)
+    deactivate_pads_by_pids(state, state.sink_pads_by_pids |> Map.keys)
+  end
+
+
+  defp deactivate_pads_by_pids(state, []), do: {:ok, state}
+
+  defp deactivate_pads_by_pids(state, [head|tail]) do
+    Pad.deactivate(head)
+    deactivate_pads_by_pids(state, tail)
+  end
+
+
+  @doc """
+  Changes playback state.
+
+  On success returns `{:ok, new_state}`.
+
+  On failure returns `{:error, {reason, new_state}}`.
+  """
+  @spec change_playback_state(t, Element.playback_state_t, Element.playback_state_t, Element.playback_state_t) ::
+    {:ok, State.t} |
+    {:error, {any, State.t}}
+
+  def change_playback_state(state, old, new, _target) when old == new, do: {:ok, state}
+
+  def change_playback_state(%State{module: module} = state, :stopped = old, :prepared = new, target) do
+    with {:ok, %State{internal_state: internal_state} = state} <- log_playback_state_changing(old, new, target, state),
+         {:ok, {actions, new_internal_state}} <- module.handle_prepare(old, internal_state),
+         {:ok, state} <- module.base_module.handle_actions(actions, %{state | internal_state: new_internal_state}),
+         {:ok, state} <- log_playback_state_changed(old, new, target, %{state | internal_state: new_internal_state, playback_state: new})
+    do
+      {:ok, state}
+
+    else
+      {:error, {reason, state}} ->
+        warn("Failed to change playback state: old = #{inspect(old)}, new = #{inspect(new)}, target = #{inspect(target)}, reason = #{inspect(reason)}")
+        {:error, {reason, state}}
+    end
+  end
+
+  def change_playback_state(%State{module: module} = state, :prepared = old, :playing = new, target) do
+    with {:ok, state} <- log_playback_state_changing(old, new, target, state),
+         {:ok, %State{internal_state: internal_state} = state} <- State.activate_pads(state),
+         {:ok, {actions, new_internal_state}} <- module.handle_play(internal_state),
+         {:ok, state} <- module.base_module.handle_actions(actions, %{state | internal_state: new_internal_state}),
+         {:ok, state} <- log_playback_state_changed(old, new, target, %{state | playback_state: new})
+    do
+     {:ok, state}
+
+    else
+      {:error, {reason, state}} ->
+        warn("Failed to change playback state: old = #{inspect(old)}, new = #{inspect(new)}, target = #{inspect(target)}, reason = #{inspect(reason)}")
+        {:error, {reason, state}}
+    end
+  end
+
+  def change_playback_state(%State{module: module} = state, :playing = old, :prepared = new, target) do
+    with {:ok, state} <- log_playback_state_changing(old, new, target, state),
+         {:ok, %State{internal_state: internal_state} = state} <- State.deactivate_pads(state),
+         {:ok, {actions, new_internal_state}} <- module.handle_prepare(old, internal_state),
+         {:ok, state} <- module.base_module.handle_actions(actions, %{state | internal_state: new_internal_state}),
+         {:ok, state} <- log_playback_state_changed(old, new, target, %{state | playback_state: new})
+    do
+     {:ok, state}
+
+    else
+      {:error, {reason, state}} ->
+        warn("Failed to change playback state: old = #{inspect(old)}, new = #{inspect(new)}, target = #{inspect(target)}, reason = #{inspect(reason)}")
+        {:error, {reason, state}}
+    end
+  end
+
+  def change_playback_state(%State{module: module} = state, :prepared = old, :stopped = new, target) do
+    with {:ok, %State{internal_state: internal_state} = state} <- log_playback_state_changing(old, new, target, state),
+         {:ok, {actions, new_internal_state}} <- module.handle_stop(internal_state),
+         {:ok, state} <- module.base_module.handle_actions(actions, %{state | internal_state: new_internal_state}),
+         {:ok, state} <- log_playback_state_changed(old, new, target, %{state | playback_state: new})
+    do
+     {:ok, state}
+
+    else
+      {:error, {reason, state}} ->
+        warn("Failed to change playback state: old = #{inspect(old)}, new = #{inspect(new)}, target = #{inspect(target)}, reason = #{inspect(reason)}")
+        {:error, {reason, state}}
+    end
+  end
+
+  def change_playback_state(state, :stopped, :playing, :playing) do
+    with {:ok, state} <- State.change_playback_state(state, :stopped, :prepared, :playing),
+         {:ok, state} <- State.change_playback_state(state, :prepared, :playing, :playing)
+    do
+      {:ok, state}
+
+    else
+      {:error, {reason, state}} ->
+        {:error, {reason, state}}
+    end
+  end
+
+  def change_playback_state(state, :playing, :stopped, :stopped) do
+    with {:ok, state} <- State.change_playback_state(state, :playing, :prepared, :stopped),
+         {:ok, state} <- State.change_playback_state(state, :prepared, :stopped, :stopped)
+    do
+      {:ok, state}
+
+    else
+      {:error, {reason, state}} ->
+        {:error, {reason, state}}
+    end
+  end
+
+
+  defp log_playback_state_changing(old, new, target, state) do
+    debug("Changing playback state: old = #{inspect(old)}, new = #{inspect(new)}, target = #{inspect(target)}, state = #{inspect(state)}")
+    {:ok, state}
+  end
+
+
+  defp log_playback_state_changed(old, new, target, state) do
+    debug("Changed playback state: old = #{inspect(old)}, new = #{inspect(new)}, target = #{inspect(target)}, state = #{inspect(state)}")
+    {:ok, state}
   end
 end

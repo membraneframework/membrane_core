@@ -2,7 +2,7 @@ defmodule Membrane.Pad.Mode.Pull do
   @moduledoc false
   # Module contains logic that causes sink pads in the pull mode to actually
   # generate demand for new buffers and forward these buffers to the parent
-  # element's handle_buffer callback so it can consume it.
+  # element's handle_buffer callback so it can consume them.
   #
   # It enters a loop and demands new chunk of data after each call to the
   # handle_buffer callback of the parent element so if element is sink that
@@ -14,92 +14,54 @@ defmodule Membrane.Pad.Mode.Pull do
   use Membrane.Mixins.Log
 
 
-  @doc false
-  def handle_init do
-    {:ok, %{
-      looping: false,
-      active: false,
-    }}
-  end
-
+  # Private API
 
   @doc false
-  def handle_activate(_peer, :source, state) do
-    # Do nothing regarding activation for source pads when in the pull mode.
-    # They only react for incoming calls from sink pads.
-    {:ok, %{state | active: true}}
+  # Received from parent element in reaction to the :demand action.
+  # Returns error if pad is not linked, so demand cannot be satisfied.
+  def handle_call(:membrane_demand, _parent, nil, :sink, state) do
+    debug("Demand on non-linked sink pad")
+    {:reply, {:error, :not_linked}, state}
   end
 
-  def handle_activate(nil, :sink, state) do
-    # Do nothing if we are sink pad but not linked yet. Loop will be started
-    # then upon linking.
-    {:ok, %{state | active: true}}
+  # Received from parent element in reaction to the :demand action.
+  # Forwards demand request to the peer but does not wait for reply.
+  def handle_call(:membrane_demand, _parent, peer, :sink, state) do
+    debug("Demand on sink pad")
+    send(peer, :membrane_demand)
+    {:reply, :ok, state}
   end
 
-  def handle_activate(_peer, :sink, state) do
-    # If we are sink pad and we are linked, start loop.
-    debug("Starting loop")
-    iterate()
-    {:ok, %{state | active: true, looping: true}}
+  # Received from parent element in reaction to the :buffer action.
+  # Returns error if pad is not linked, so send cannot succeed.
+  def handle_call({:membrane_buffer, buffer}, _parent, nil, :source, state) do
+    debug("Buffer on non-linked source pad, buffer = #{inspect(buffer)}")
+    {:reply, {:error, :not_linked}, state}
+  end
+
+  # Received from parent element in reaction to the :buffer action.
+  # Forwards demand request to the peer but does not wait for reply.
+  def handle_call({:membrane_buffer, buffer}, _parent, peer, :source, state) do
+    debug("Buffer on source pad, buffer = #{inspect(buffer)}")
+    send(peer, {:membrane_buffer, buffer})
+    {:reply, :ok, state}
   end
 
 
   @doc false
-  def handle_link(_peer, :sink, %{active: true, looping: false} = state) do
-    # If we are sink pad and we activated but not linked, start loop.
-    debug("Starting loop")
-    iterate()
-    {:ok, %{state | looping: true}}
-  end
-
-  def handle_link(_peer, _direction, state) do
+  # Received at source pads when their peer sink pad got demand request.
+  # Forwards demand request to the parent element but does not wait for reply.
+  def handle_other(:membrane_demand, parent, _peer, :source, state) do
+    debug("Demand on source pad")
+    send(parent, {:membrane_demand, self()})
     {:ok, state}
   end
 
-
-  @doc false
-  def handle_call(:membrane_pull_demand, _peer, :source, state) do
-    # This is the actual loop that responds to new buffers requests from the
-    # subesequent element.
-    debug("Demand: Response")
-
-    # 1. Forward the demand to the parent element
-
-    # {:ok, buffer} = GenServer.call(parent, whatever)
-    buffer = %Membrane.Buffer{} # FIXME
-
-    # 2. Reply
-    {:reply, {:ok, buffer}, state}
-  end
-
-
-  @doc false
-  def handle_other(:membrane_iterate, nil, :sink, state) do
-    # Do nothing if peer is nil, probably we got unliked and there still
-    # were some messages in the queue.
+  # Received at sink pads when their peer source pad got send action.
+  # Forwards data to the parent element but does not wait for reply.
+  def handle_other({:membrane_buffer, buffer}, parent, _peer, :sink, state) do
+    debug("Buffer on sink pad, buffer = #{inspect(buffer)}")
+    send(parent, {:membrane_buffer, self(), buffer})
     {:ok, state}
   end
-
-  def handle_other(:membrane_iterate, peer, :sink, state) do
-    # This is the actual loop that requests new buffers from previous element.
-    debug("Demand: Request")
-
-    # 1. Determine demand from the parent element
-    # element_module.handle_buffer(pad, caps, nil, internal_state)
-
-    # 2. Demand data from the peer
-    {:ok, buffer} = GenServer.call(peer, :membrane_pull_demand) # FIXME
-    debug("Demand: Got #{inspect(buffer)}")
-
-    # 3. Forward data to the parent element
-    # element_module.handle_buffer(pad, caps, buffer, internal_state)
-
-    # 4. Loop
-    iterate()
-
-    {:ok, state}
-  end
-
-
-  defp iterate, do: send(self(), :membrane_iterate)
 end

@@ -8,6 +8,7 @@ defmodule Membrane.Mixins.Log do
     quote location: :keep do
       require Logger
 
+      @doc false
       defmacro info(message) do
         quote location: :keep do
           Logger.info("[#{System.monotonic_time()} #{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{unquote(message)}")
@@ -15,6 +16,7 @@ defmodule Membrane.Mixins.Log do
       end
 
 
+      @doc false
       defmacro warn(message) do
         quote location: :keep do
           Logger.warn("[#{System.monotonic_time()} #{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{unquote(message)}")
@@ -22,6 +24,7 @@ defmodule Membrane.Mixins.Log do
       end
 
 
+      @doc false
       defmacro debug(message) do
         quote location: :keep do
           Logger.debug("[#{System.monotonic_time()} #{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{unquote(message)}")
