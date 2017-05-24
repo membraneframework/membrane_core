@@ -26,4 +26,10 @@ defmodule Membrane.Pad.Mode.Push do
     send(peer, {:membrane_buffer, buffer})
     {:reply, :ok, state}
   end
+
+  def handle_other({:membrane_buffer, buffer}, parent, _peer, :sink, state) do
+    debug "Send on sink pad"
+    send parent, {:membrane_buffer, self(), buffer}
+    {:ok, state}
+  end
 end
