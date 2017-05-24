@@ -17,6 +17,7 @@ defmodule Membrane.Element.State do
     source_pads_by_pids: %{required(pid) => Pad.name_t},
     sink_pads_by_names: %{required(Pad.name_t) => pid},
     sink_pads_by_pids: %{required(pid) => Pad.name_t},
+    sink_pads_pull_buffers: %{required(pid) => any},
     message_bus: pid,
   }
 
@@ -28,6 +29,7 @@ defmodule Membrane.Element.State do
     source_pads_by_names: %{},
     sink_pads_by_pids: %{},
     sink_pads_by_names: %{},
+    sink_pads_pull_buffers: %{},
     message_bus: nil
 
 
@@ -45,7 +47,7 @@ defmodule Membrane.Element.State do
       end
 
     # Initialize sink pads
-    {sink_pads_by_names, sink_pads_by_pids} =
+    {sink_pads_by_names, sink_pads_by_pids, sink_pads_pull_buffers} =
       if Kernel.function_exported?(module, :known_sink_pads, 0) do
         module.known_sink_pads() |> spawn_pads(:sink)
       else
@@ -58,31 +60,48 @@ defmodule Membrane.Element.State do
       source_pads_by_pids: source_pads_by_pids,
       sink_pads_by_names: sink_pads_by_names,
       sink_pads_by_pids: sink_pads_by_pids,
+      sink_pads_pull_buffers: sink_pads_pull_buffers,
       internal_state: internal_state,
     }
   end
 
-
   # Spawns pad processes for pads that are always available builds a map of
   # pad names => pad PIDs.
   defp spawn_pads(known_pads, direction) do
-    known_pads
-    |> Map.to_list
-    |> Enum.filter(fn({_name, {availability, _mode, _caps}}) ->
-      availability == :always
-    end)
-    |> Enum.reduce({%{}, %{}}, fn({name, {_availability, mode, _caps}}, {acc_by_names, acc_by_pids}) ->
-      pad_module = case mode do
-        :pull -> Pad.Mode.Pull
-        :push -> Pad.Mode.Push
-      end
+    pads = known_pads
+      |> Map.to_list
+      |> Enum.filter(fn({_name, {availability, _mode, _caps}}) ->
+        availability == :always
+      end)
+    {by_name, by_pid} = pads
+      |> Enum.reduce({%{}, %{}}, fn({name, {_availability, mode, _caps}}, {acc_by_names, acc_by_pids}) ->
+        pad_module = case mode do
+          :pull -> Pad.Mode.Pull
+          :push -> Pad.Mode.Push
+        end
 
-      {:ok, pid} = Pad.start_link(pad_module, direction)
+        {:ok, pid} = Pad.start_link(pad_module, direction)
 
-      {acc_by_names |> Map.put(name, pid), acc_by_pids |> Map.put(pid, name)}
-    end)
+        {acc_by_names |> Map.put(name, pid), acc_by_pids |> Map.put(pid, name)}
+      end)
+    case direction do
+      :source -> {by_name, by_pid}
+      :sink ->
+        pull_buffers = pads
+          |> Enum.filter(fn {_name, {_av, mode, _caps}} -> mode == :pull end)
+          |> Enum.into(%{}, fn {name, _opts} ->
+            %{^name => pid} = by_name
+            {pid, [queue: IOQueue.new, init_buf_min_size: 0, buf_size: 100]}
+          end)
+        {by_name, by_pid, pull_buffers}
+    end
   end
 
+
+  def get_pad_pull_buffer(state, pad_pid) do
+    with \
+      
+  end
 
   @doc """
   Finds pad name associated with given PID.
