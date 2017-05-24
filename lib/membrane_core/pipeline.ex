@@ -6,6 +6,8 @@ defmodule Membrane.Pipeline do
   use Membrane.Mixins.Log
   use GenServer
   alias Membrane.Pipeline.{State,Spec}
+  alias Membrane.Element
+  alias Membrane.Pad
 
 
   # Type that defines possible return values of start/start_link functions.
@@ -355,27 +357,14 @@ defmodule Membrane.Pipeline do
   defp link_children_recurse([], _children_to_pids), do: :ok
 
   defp link_children_recurse([{{from_name, from_pad}, {to_name, to_pad}} = link|rest], children_to_pids) do
-    case children_to_pids |> Map.has_key?(from_name) do
-      true ->
-        case children_to_pids |> Map.has_key?(to_name) do
-          true ->
-            from_pid = children_to_pids |> Map.get(from_name)
-            to_pid = children_to_pids |> Map.get(to_name)
-
-            case Membrane.Element.link({from_pid, from_pad}, {to_pid, to_pad}) do
-              :ok ->
-                link_children_recurse(rest, children_to_pids)
-
-              {:error, reason} ->
-                {:error, {reason, link}}
-            end
-
-          false ->
-            {:error, {:unknown_to, link}}
-        end
-
-      false ->
-        {:error, {:unknown_from, link}}
+    with \
+      from_pid <- children_to_pids |> Map.get(from_name, {:error, {:unknown_from, link}}),
+      to_pid <- children_to_pids |> Map.get(to_name, {:error, {:unknown_to, link}}),
+      {:ok, {_av, _dir, _mode, source_pid}} <- Element.get_source_pad(from_pid, from_pad),
+      {:ok, {_av, _dir, _mode, sink_pid}} <- Element.get_sink_pad(to_pid, to_pad),
+      :ok <- Pad.link(source_pid, sink_pid)
+    do
+      link_children_recurse(rest, children_to_pids)
     end
   end
 
