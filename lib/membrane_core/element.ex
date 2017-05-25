@@ -7,6 +7,7 @@ defmodule Membrane.Element do
   use Membrane.Mixins.Log
   alias Membrane.Element.State
   alias Membrane.Pad
+  alias Membrane.PullBuffer
 
   # Type that defines possible return values of start/start_link functions.
   @type on_start :: GenServer.on_start
@@ -397,14 +398,6 @@ defmodule Membrane.Element do
     end
   end
 
-  defp handle_demand pad_name, size, %State{module: module, internal_state: internal_state} = state do
-    with \
-      {:ok, {actions, new_internal_state}} <- wrap_internal_return(module.handle_demand(pad_name, size, internal_state))
-    do
-      {:ok, {actions, %{state | internal_state: new_internal_state}}}
-    end
-  end
-
   # Callback invoked on buffer coming from the sink pad to the sink
   @doc false
   def handle_info({:membrane_buffer, pad_pid, :push, buffer}, %State{module: module, internal_state: internal_state} = state) do
@@ -435,10 +428,14 @@ defmodule Membrane.Element do
 
   # Callback invoked on buffer coming from the sink pad to the sink
   @doc false
-  def handle_info({:membrane_buffer, pad_pid, :pull, buffer}, %State{module: module, internal_state: internal_state, source_pads_pull_demands: demands} = state) do
+  def handle_info({:membrane_buffer, pad_pid, :pull, buffer}, %State{module: module, sink_pads_pull_buffers: buffers, source_pads_pull_demands: demands} = state) do
     with \
       {:ok, pad_name} <- State.get_pad_name_by_pid(state, :sink, pad_pid),
-      {:ok, {actions, state}} <- check_and_handle_demands(demands, state),
+      {:ok, pull_buffer} <- State.get_sink_pull_buffer(pad_name, pad_pid),
+      {:ok, {actions, state}} <- check_and_handle_demands(
+          demands,
+          %State{state | sink_pads_pull_buffers: %{buffers | pad_name => pull_buffer |> PullBuffer.store(buffer)}}
+        ),
       {:ok, state} <- module.base_module.handle_actions(actions, state)
     do
       {:noreply, state}
@@ -454,16 +451,6 @@ defmodule Membrane.Element do
 
       other ->
         handle_invalid_callback_return(other)
-    end
-  end
-
-  defp check_and_handle_demands(sources_demands, state, actions \\ [])
-  defp check_and_handle_demands([], state, actions), do: {:ok, {actions, state}}
-  defp check_and_handle_demands([{src_name, src_demand}|rest], state, actions) do
-    with \
-      {:ok, {new_actions, state}} <- handle_demand(src_name, src_demand, state)
-    do
-      check_and_handle_demands rest, state, new_actions ++ actions
     end
   end
 
@@ -489,6 +476,23 @@ defmodule Membrane.Element do
     end
   end
 
+  defp handle_demand pad_name, size, %State{module: module, internal_state: internal_state} = state do
+    with \
+      {:ok, {actions, new_internal_state}} <- wrap_internal_return(module.handle_demand(pad_name, size, internal_state))
+    do
+      {:ok, {actions, %{state | internal_state: new_internal_state}}}
+    end
+  end
+
+  defp check_and_handle_demands(sources_demands, state, actions \\ [])
+  defp check_and_handle_demands([], state, actions), do: {:ok, {actions, state}}
+  defp check_and_handle_demands([{src_name, src_demand}|rest], state, actions) do
+    with \
+      {:ok, {new_actions, state}} <- handle_demand(src_name, src_demand, state)
+    do
+      check_and_handle_demands rest, state, new_actions ++ actions
+    end
+  end
 
   defp handle_invalid_callback_return(return) do
     raise """

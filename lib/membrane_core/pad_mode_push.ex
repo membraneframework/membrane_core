@@ -29,7 +29,7 @@ defmodule Membrane.Pad.Mode.Push do
 
   def handle_other({:membrane_buffer, buffer}, parent, _peer, :sink, state) do
     debug "Send on sink pad"
-    send parent, {:membrane_buffer, self(), buffer}
+    send parent, {:membrane_buffer, self(), :push, buffer}
     {:ok, state}
   end
 end

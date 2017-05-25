@@ -61,7 +61,7 @@ defmodule Membrane.Pad.Mode.Pull do
   # Forwards data to the parent element but does not wait for reply.
   def handle_other({:membrane_buffer, buffer}, parent, _peer, :sink, state) do
     debug("Buffer on sink pad, buffer = #{inspect(buffer)}")
-    send(parent, {:membrane_buffer, self(), buffer})
+    send(parent, {:membrane_buffer, self(), :pull, buffer})
     {:ok, state}
   end
 end
