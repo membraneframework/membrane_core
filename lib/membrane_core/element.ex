@@ -377,6 +377,7 @@ defmodule Membrane.Element do
 
   # Callback invoked on demand request coming from the source pad in the pull mode
   @doc false
+  def handle_info({:membrane_demand, pad_pid}, state), do: handle_info({:membrane_demand, pad_pid, 1}, state)
   def handle_info({:membrane_demand, pad_pid, size}, %State{module: module} = state) do
     with {:ok, pad_name} <- State.get_pad_name_by_pid(state, :source, pad_pid),
          {:ok, {actions, state}} <- handle_demand(pad_name, size, state),
