@@ -7,6 +7,7 @@ defmodule Membrane.Element.State do
   use Membrane.Mixins.Log
   alias Membrane.Pad
   alias __MODULE__
+  alias Membrane.Helper.IOQueue
 
 
   @type t :: %Membrane.Element.State{

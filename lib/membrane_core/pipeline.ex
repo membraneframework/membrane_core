@@ -272,7 +272,7 @@ defmodule Membrane.Pipeline do
 
 
   @doc false
-  def handle_info({:membrane_message, %Membrane.Message{} = message}, %State{pids_to_children: pids_to_children, module: module, internal_state: internal_state} = state) do
+  def handle_info({:membrane_message, %Membrane.Message{} = message}, %State{module: module, internal_state: internal_state} = state) do
     # FIXME set sender
     case module.handle_message(message, self(), internal_state) do
       {:ok, new_internal_state} ->

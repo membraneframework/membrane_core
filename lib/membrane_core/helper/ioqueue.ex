@@ -8,7 +8,7 @@ defmodule Membrane.Helper.IOQueue do
 
   def new, do: %IOQueue{q: @qe.new}
   def new init do
-    new |> push(init)
+    new() |> push(init)
   end
 
   def push(q, binary) when is_binary binary do
@@ -37,6 +37,10 @@ defmodule Membrane.Helper.IOQueue do
       empty -> empty
     end
   end
+  def pop q, bytes do
+    {{t, r}, q} = pop_bytes_r q, bytes
+    {{t, r |> Enum.reverse}, q}
+  end
   defp pop_bytes_r q, bytes, acc \\ [] do
     case pop q, :binary do
       {{:value, b}, new_q} ->
@@ -49,10 +53,6 @@ defmodule Membrane.Helper.IOQueue do
         end
       {:empty, new_q} -> {{:empty, acc}, new_q}
     end
-  end
-  def pop q, bytes do
-    {{t, r}, q} = pop_bytes_r q, bytes
-    {{t, r |> Enum.reverse}, q}
   end
 
   def empty q do
