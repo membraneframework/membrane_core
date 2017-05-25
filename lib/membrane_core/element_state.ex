@@ -15,9 +15,10 @@ defmodule Membrane.Element.State do
     playback_state: Membrane.Element.playback_state_t,
     source_pads_by_names: %{required(Pad.name_t) => pid},
     source_pads_by_pids: %{required(pid) => Pad.name_t},
+    source_pads_pull_demands: %{required(Pad.name_t) => any},
     sink_pads_by_names: %{required(Pad.name_t) => pid},
     sink_pads_by_pids: %{required(pid) => Pad.name_t},
-    sink_pads_pull_buffers: %{required(pid) => any},
+    sink_pads_pull_buffers: %{required(Pad.name_t) => any},
     message_bus: pid,
   }
 
@@ -27,6 +28,7 @@ defmodule Membrane.Element.State do
     playback_state: :stopped,
     source_pads_by_pids: %{},
     source_pads_by_names: %{},
+    source_pads_pull_demands: %{},
     sink_pads_by_pids: %{},
     sink_pads_by_names: %{},
     sink_pads_pull_buffers: %{},
@@ -39,25 +41,22 @@ defmodule Membrane.Element.State do
   @spec new(module, any) :: t
   def new(module, internal_state) do
     # Initialize source pads
-    {source_pads_by_names, source_pads_by_pids} =
+    {source_pads_by_names, source_pads_by_pids, source_pads_pull_demands} =
       if Kernel.function_exported?(module, :known_source_pads, 0) do
-        module.known_source_pads() |> spawn_pads(:source)
-      else
-        {%{}, %{}}
-      end
+        module.known_source_pads else %{}
+      end |> spawn_pads(:source)
 
     # Initialize sink pads
     {sink_pads_by_names, sink_pads_by_pids, sink_pads_pull_buffers} =
       if Kernel.function_exported?(module, :known_sink_pads, 0) do
-        module.known_sink_pads() |> spawn_pads(:sink)
-      else
-        {%{}, %{}}
-      end
+        module.known_sink_pads else %{}
+      end |> spawn_pads(:sink)
 
     %Membrane.Element.State{
       module: module,
       source_pads_by_names: source_pads_by_names,
       source_pads_by_pids: source_pads_by_pids,
+      source_pads_pull_demands: source_pads_pull_demands,
       sink_pads_by_names: sink_pads_by_names,
       sink_pads_by_pids: sink_pads_by_pids,
       sink_pads_pull_buffers: sink_pads_pull_buffers,
@@ -68,39 +67,39 @@ defmodule Membrane.Element.State do
   # Spawns pad processes for pads that are always available builds a map of
   # pad names => pad PIDs.
   defp spawn_pads(known_pads, direction) do
-    pads = known_pads
-      |> Map.to_list
+    known_pads
       |> Enum.filter(fn({_name, {availability, _mode, _caps}}) ->
         availability == :always
       end)
-    {by_name, by_pid} = pads
-      |> Enum.reduce({%{}, %{}}, fn({name, {_availability, mode, _caps}}, {acc_by_names, acc_by_pids}) ->
-        pad_module = case mode do
-          :pull -> Pad.Mode.Pull
-          :push -> Pad.Mode.Push
-        end
+      |> Enum.map(fn {name, {_availability, mode, _caps}} ->
+          pad_module = case mode do
+            :pull -> Pad.Mode.Pull
+            :push -> Pad.Mode.Push
+          end
 
-        {:ok, pid} = Pad.start_link(pad_module, direction)
+          {:ok, pid} = Pad.start_link(pad_module, direction)
 
-        {acc_by_names |> Map.put(name, pid), acc_by_pids |> Map.put(pid, name)}
-      end)
-    case direction do
-      :source -> {by_name, by_pid}
-      :sink ->
-        pull_buffers = pads
-          |> Enum.filter(fn {_name, {_av, mode, _caps}} -> mode == :pull end)
-          |> Enum.into(%{}, fn {name, _opts} ->
-            %{^name => pid} = by_name
-            {pid, [queue: IOQueue.new, init_buf_min_size: 0, buf_size: 100]}
-          end)
-        {by_name, by_pid, pull_buffers}
-    end
+          pull_data = case direction do
+            :source -> %{demand: 0}
+            :sink -> %{queue: IOQueue.new, init_buf_min_size: 0, buf_size: 100}
+          end
+
+          {{name, pid}, {pid, name}, {name, pull_data}}
+        end)
+      |> Membrane.Helper.Enum.unzip!(3)
+      |> case do {by_name, by_pid, pull_data} -> {
+          by_name |> Enum.into(%{}),
+          by_pid |> Enum.into(%{}),
+          pull_data |> Enum.into(%{}),
+        }
+      end
   end
 
-
-  def get_pad_pull_buffer(state, pad_pid) do
-    with \
-      
+  def get_sink_pull_buffer(%{sink_pads_pull_buffers: pull_buffers}, pad_name) do
+    case pull_buffers |> Map.get(pad_name) do
+      nil -> {:error, :unknown_pad}
+      buf -> {:ok, buf}
+    end
   end
 
   @doc """
