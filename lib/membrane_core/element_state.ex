@@ -7,7 +7,7 @@ defmodule Membrane.Element.State do
   use Membrane.Mixins.Log
   alias Membrane.Pad
   alias __MODULE__
-  alias Membrane.Helper.IOQueue
+  alias Membrane.PullBuffer
 
 
   @type t :: %Membrane.Element.State{
@@ -82,7 +82,7 @@ defmodule Membrane.Element.State do
 
           pull_data = case direction do
             :source -> %{demand: 0}
-            :sink -> %{queue: IOQueue.new, init_buf_min_size: 0, buf_size: 100}
+            :sink -> PullBuffer.new(pid, 100)
           end
 
           {{name, pid}, {pid, name}, {name, pull_data}}

@@ -376,10 +376,10 @@ defmodule Membrane.Element do
 
   # Callback invoked on demand request coming from the source pad in the pull mode
   @doc false
-  def handle_info({:membrane_demand, pad_pid}, %State{module: module, internal_state: internal_state} = state) do
+  def handle_info({:membrane_demand, pad_pid, size}, %State{module: module} = state) do
     with {:ok, pad_name} <- State.get_pad_name_by_pid(state, :source, pad_pid),
-         {:ok, {actions, new_internal_state}} <- wrap_internal_return(module.handle_demand(pad_name, internal_state)),
-         {:ok, state} <- module.base_module.handle_actions(actions, %{state | internal_state: new_internal_state})
+         {:ok, {actions, state}} <- handle_demand(pad_name, size, state),
+         {:ok, state} <- module.base_module.handle_actions(actions, state)
     do
       {:noreply, state}
 
@@ -397,15 +397,20 @@ defmodule Membrane.Element do
     end
   end
 
+  defp handle_demand pad_name, size, %State{module: module, internal_state: internal_state} = state do
+    with \
+      {:ok, {actions, new_internal_state}} <- wrap_internal_return(module.handle_demand(pad_name, size, internal_state))
+    do
+      {:ok, {actions, %{state | internal_state: new_internal_state}}}
+    end
+  end
+
   # Callback invoked on buffer coming from the sink pad to the sink
   @doc false
-  def handle_info({:membrane_buffer, pad_pid, buffer}, %State{module: module, internal_state: internal_state} = state) do
+  def handle_info({:membrane_buffer, pad_pid, :push, buffer}, %State{module: module, internal_state: internal_state} = state) do
     write_func = cond do
-      is_sink_module?(module) ->
-        :handle_write
-
-      is_filter_module?(module) ->
-        :handle_process
+      is_sink_module?(module) -> :handle_write
+      is_filter_module?(module) -> :handle_process
     end
 
     with {:ok, pad_name} <- State.get_pad_name_by_pid(state, :sink, pad_pid),
@@ -428,6 +433,39 @@ defmodule Membrane.Element do
     end
   end
 
+  # Callback invoked on buffer coming from the sink pad to the sink
+  @doc false
+  def handle_info({:membrane_buffer, pad_pid, :pull, buffer}, %State{module: module, internal_state: internal_state, source_pads_pull_demands: demands} = state) do
+    with \
+      {:ok, pad_name} <- State.get_pad_name_by_pid(state, :sink, pad_pid),
+      {:ok, {actions, state}} <- check_and_handle_demands(demands, state),
+      {:ok, state} <- module.base_module.handle_actions(actions, state)
+    do
+      {:noreply, state}
+
+    else
+      {:internal, {:error, {reason, new_internal_state}}} ->
+        warn("Failed to handle write, element callback has returned an error: pad_pid = #{inspect(pad_pid)}, reason = #{inspect(reason)}")
+        {:noreply, %{state | internal_state: new_internal_state}}
+
+      {:error, reason} ->
+        warn("Failed to handle write: pad_pid = #{inspect(pad_pid)}, reason = #{inspect(reason)}")
+        {:noreply, state}
+
+      other ->
+        handle_invalid_callback_return(other)
+    end
+  end
+
+  defp check_and_handle_demands(sources_demands, state, actions \\ [])
+  defp check_and_handle_demands([], state, actions), do: {:ok, {actions, state}}
+  defp check_and_handle_demands([{src_name, src_demand}|rest], state, actions) do
+    with \
+      {:ok, {new_actions, state}} <- handle_demand(src_name, src_demand, state)
+    do
+      check_and_handle_demands rest, state, new_actions ++ actions
+    end
+  end
 
   # Callback invoked on other incoming message
   @doc false
