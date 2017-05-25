@@ -431,9 +431,9 @@ defmodule Membrane.Element do
   def handle_info({:membrane_buffer, pad_pid, :pull, buffer}, %State{module: module, sink_pads_pull_buffers: buffers, source_pads_pull_demands: demands} = state) do
     with \
       {:ok, pad_name} <- State.get_pad_name_by_pid(state, :sink, pad_pid),
-      {:ok, pull_buffer} <- State.get_sink_pull_buffer(pad_name, pad_pid),
+      {:ok, pull_buffer} <- State.get_sink_pull_buffer(state, pad_name),
       {:ok, {actions, state}} <- check_and_handle_demands(
-          demands,
+          demands |> Enum.to_list,
           %State{state | sink_pads_pull_buffers: %{buffers | pad_name => pull_buffer |> PullBuffer.store(buffer)}}
         ),
       {:ok, state} <- module.base_module.handle_actions(actions, state)
