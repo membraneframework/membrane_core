@@ -246,9 +246,12 @@ defmodule Membrane.Element.Base.Sink do
     {:ok, State.t} |
     {:error, {any, State.t}}
   def handle_actions([], state), do: {:ok, state}
-
+  
   def handle_actions([{:demand, pad_name}|tail], state) do
-    case Action.handle_demand(pad_name, state) do
+    handle_actions [{:demand, pad_name, 1}|tail], state
+  end
+  def handle_actions([{:demand, pad_name, size}|tail], state) do
+    case Action.handle_demand(pad_name, size, state) do
       {:ok, state} ->
         handle_actions(tail, state)
 

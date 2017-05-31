@@ -16,10 +16,11 @@ defmodule Membrane.Element.State do
     playback_state: Membrane.Element.playback_state_t,
     source_pads_by_names: %{required(Pad.name_t) => pid},
     source_pads_by_pids: %{required(pid) => Pad.name_t},
-    source_pads_pull_demands: %{required(Pad.name_t) => any},
+    source_pads_pull_demands: %{required(Pad.name_t) => integer},
     sink_pads_by_names: %{required(Pad.name_t) => pid},
     sink_pads_by_pids: %{required(pid) => Pad.name_t},
     sink_pads_pull_buffers: %{required(Pad.name_t) => any},
+    sink_pads_self_demands: %{required(Pad.name_t) => non_neg_integer},
     message_bus: pid,
   }
 
@@ -33,6 +34,7 @@ defmodule Membrane.Element.State do
     sink_pads_by_pids: %{},
     sink_pads_by_names: %{},
     sink_pads_pull_buffers: %{},
+    sink_pads_self_demands: %{},
     message_bus: nil
 
 
@@ -48,10 +50,13 @@ defmodule Membrane.Element.State do
       end |> spawn_pads(:source)
 
     # Initialize sink pads
-    {sink_pads_by_names, sink_pads_by_pids, sink_pads_pull_buffers} =
+    {sink_pads_by_names, sink_pads_by_pids, sink_pads_pull_data} =
       if Kernel.function_exported?(module, :known_sink_pads, 0) do
         module.known_sink_pads else %{}
       end |> spawn_pads(:sink)
+
+    sink_pads_pull_buffers = sink_pads_pull_data |> Enum.into(%{}, fn {k, {pb, _}} -> {k, pb} end)
+    sink_pads_self_demands = sink_pads_pull_data |> Enum.into(%{}, fn {k, {_, sd}} -> {k, sd} end)
 
     %Membrane.Element.State{
       module: module,
@@ -61,6 +66,7 @@ defmodule Membrane.Element.State do
       sink_pads_by_names: sink_pads_by_names,
       sink_pads_by_pids: sink_pads_by_pids,
       sink_pads_pull_buffers: sink_pads_pull_buffers,
+      sink_pads_self_demands: sink_pads_self_demands,
       internal_state: internal_state,
     }
   end
@@ -82,7 +88,7 @@ defmodule Membrane.Element.State do
 
           pull_data = case direction do
             :source -> %{demand: 0}
-            :sink -> PullBuffer.new(pid, 100)
+            :sink -> {PullBuffer.new(pid, 100), self_demand: 0}
           end
 
           {{name, pid}, {pid, name}, {name, pull_data}}

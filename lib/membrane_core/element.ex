@@ -377,7 +377,6 @@ defmodule Membrane.Element do
 
   # Callback invoked on demand request coming from the source pad in the pull mode
   @doc false
-  def handle_info({:membrane_demand, pad_pid}, state), do: handle_info({:membrane_demand, pad_pid, 1}, state)
   def handle_info({:membrane_demand, pad_pid, size}, %State{module: module} = state) do
     with {:ok, pad_name} <- State.get_pad_name_by_pid(state, :source, pad_pid),
          {:ok, {actions, state}} <- handle_demand(pad_name, size, state),
@@ -429,14 +428,15 @@ defmodule Membrane.Element do
 
   # Callback invoked on buffer coming from the sink pad to the sink
   @doc false
-  def handle_info({:membrane_buffer, pad_pid, :pull, buffer}, %State{module: module, sink_pads_pull_buffers: buffers, source_pads_pull_demands: demands} = state) do
+  def handle_info({:membrane_buffer, pad_pid, :pull, buffer}, %State{module: module, sink_pads_pull_buffers: buffers} = state) do
     with \
       {:ok, pad_name} <- State.get_pad_name_by_pid(state, :sink, pad_pid),
       {:ok, pull_buffer} <- State.get_sink_pull_buffer(state, pad_name),
-      {:ok, {actions, state}} <- check_and_handle_demands(
-          demands |> Enum.to_list,
-          %State{state | sink_pads_pull_buffers: %{buffers | pad_name => pull_buffer |> PullBuffer.store(buffer)}}
-        ),
+      state <- %State{state | sink_pads_pull_buffers: %{buffers | pad_name => pull_buffer |> PullBuffer.store(buffer)}},
+      {:ok, {actions, state}} <- (cond do
+          is_filter_module? module -> check_and_handle_demands(state)
+          is_sink_module? module -> check_and_handle_write(state, pad_name)
+        end),
       {:ok, state} <- module.base_module.handle_actions(actions, state)
     do
       {:noreply, state}
@@ -477,6 +477,26 @@ defmodule Membrane.Element do
     end
   end
 
+  defp handle_write %State{module: module, internal_state: internal_state, sink_pads_pull_buffers: pull_buffers, sink_pads_self_demands: demands} = state, pad_name do
+    %{^pad_name => demand} = demands
+    %{^pad_name => pb} = pull_buffers
+    {{_, buffers}, npb} = PullBuffer.take pb, demand
+    with \
+      {:ok, {actions, new_internal_state}} <- wrap_internal_return(module.handle_write(pad_name, buffers, internal_state))
+    do
+      {:ok, {actions, %{state | sink_pads_pull_buffers: %{pull_buffers | pad_name => npb}, internal_state: new_internal_state}}}
+    end
+  end
+
+  defp check_and_handle_write(%State{sink_pads_self_demands: demands} = state, pad_name) do
+    %{^pad_name => demand} = demands
+    if demand > 0 do
+      handle_write state, pad_name
+    else
+      {[], state}
+    end
+  end
+
   defp handle_demand pad_name, size, %State{module: module, internal_state: internal_state} = state do
     with \
       {:ok, {actions, new_internal_state}} <- wrap_internal_return(module.handle_demand(pad_name, size, internal_state))
@@ -485,14 +505,19 @@ defmodule Membrane.Element do
     end
   end
 
-  defp check_and_handle_demands(sources_demands, state, actions \\ [])
-  defp check_and_handle_demands([], state, actions), do: {:ok, {actions, state}}
-  defp check_and_handle_demands([{src_name, src_demand}|rest], state, actions) do
+  defp check_and_handle_demands(%State{source_pads_pull_demands: demands} = state) do
+    check_and_handle_demands demands |> Enum.to_list, state, []
+  end
+  defp check_and_handle_demands([], state, actions), do: {:ok, {actions |> Enum.reverse |> List.flatten, state}}
+  defp check_and_handle_demands([{src_name, src_demand}|rest], state, actions) when src_demand > 0 do
     with \
       {:ok, {new_actions, state}} <- handle_demand(src_name, src_demand, state)
     do
-      check_and_handle_demands rest, state, new_actions ++ actions
+      check_and_handle_demands rest, state, [new_actions|actions]
     end
+  end
+  defp check_and_handle_demands([_|rest], state, actions) do
+    check_and_handle_demands rest, state, actions
   end
 
   defp handle_invalid_callback_return(return) do

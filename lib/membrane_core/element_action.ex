@@ -46,20 +46,13 @@ defmodule Membrane.Element.Action do
   end
 
 
-  @spec handle_demand(Pad.name_t, State.t) :: :ok | {:error, any}
-  def handle_demand(pad_name, state) do
+  @spec handle_demand(Pad.name_t, pos_integer, State.t) :: :ok | {:error, any}
+  def handle_demand(pad_name, size, state) do
     debug("Demand: pad_name = #{inspect(pad_name)}")
     case State.get_pad_by_name(state, :sink, pad_name) do
-      {:ok, {_availability, _direction, mode, pid}} ->
+      {:ok, {_availability, _direction, mode, _pid}} ->
         case mode do
-          :pull ->
-            case GenServer.call(pid, :membrane_demand) do
-              :ok ->
-                {:ok, state}
-
-              {:error, reason} ->
-                {:error, reason}
-            end
+          :pull -> send self(), {:membrane_self_demand, pad_name, size}
 
           :push ->
             raise """
