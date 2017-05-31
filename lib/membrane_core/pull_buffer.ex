@@ -34,4 +34,13 @@ defmodule Membrane.PullBuffer do
     take %PullBuffer{pb | init_size: -1}
   end
 
+  def take(%PullBuffer{} = pb, count), do: take(pb, count, [])
+  defp take(%PullBuffer{} = pb, 0, acc), do: {{:value, acc |> Enum.reverse}, pb}
+  defp take(%PullBuffer{} = pb, count, acc) when count > 0 do
+    case take pb do
+      {{:value, v}, npb} -> take npb, count-1, [v|acc]
+      {:empty, npb} -> {{:empty, acc |> Enum.reverse}, npb}
+    end
+  end
+
 end
