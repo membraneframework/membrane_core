@@ -10,8 +10,9 @@ defmodule Membrane.PullBuffer do
 
   @qe Qex
 
-  def new(sink, preferred_size, init_size \\ nil) do
-    %PullBuffer{q: @qe.new, sink: sink, preferred_size: preferred_size, init_size: init_size || preferred_size}
+  def new(sink, preferred_size, init_size \\ 0) do
+    send sink, {:membrane_demand, preferred_size}
+    %PullBuffer{q: @qe.new, sink: sink, preferred_size: preferred_size, init_size: init_size}
   end
 
   def store(%PullBuffer{q: q, current_size: size} = pb, v) do

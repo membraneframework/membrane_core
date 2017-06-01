@@ -457,7 +457,7 @@ defmodule Membrane.Element do
   @doc false
   def handle_info(message, %State{module: module, internal_state: internal_state} = state) do
     with {:ok, {actions, new_internal_state}} <- wrap_internal_return(module.handle_other(message, internal_state)),
-         {:ok, state} <- module.base_module.handle_actions(actions, %{state | internal_state: new_internal_state})
+         {:ok, state} <- module.base_module.handle_actions(actions, :handle_other, %{state | internal_state: new_internal_state})
     do
       {:noreply, state}
 

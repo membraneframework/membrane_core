@@ -236,7 +236,7 @@ defmodule Membrane.Element.State do
   def change_playback_state(%State{module: module} = state, :stopped = old, :prepared = new, target) do
     with {:ok, %State{internal_state: internal_state} = state} <- log_playback_state_changing(old, new, target, state),
          {:ok, {actions, new_internal_state}} <- module.handle_prepare(old, internal_state),
-         {:ok, state} <- module.base_module.handle_actions(actions, %{state | internal_state: new_internal_state}),
+         {:ok, state} <- module.base_module.handle_actions(actions, :handle_prepare, %{state | internal_state: new_internal_state}),
          {:ok, state} <- log_playback_state_changed(old, new, target, %{state | internal_state: new_internal_state, playback_state: new})
     do
       {:ok, state}
@@ -252,7 +252,7 @@ defmodule Membrane.Element.State do
     with {:ok, state} <- log_playback_state_changing(old, new, target, state),
          {:ok, %State{internal_state: internal_state} = state} <- State.activate_pads(state),
          {:ok, {actions, new_internal_state}} <- module.handle_play(internal_state),
-         {:ok, state} <- module.base_module.handle_actions(actions, %{state | internal_state: new_internal_state}),
+         {:ok, state} <- module.base_module.handle_actions(actions, :handle_play, %{state | internal_state: new_internal_state}),
          {:ok, state} <- log_playback_state_changed(old, new, target, %{state | playback_state: new})
     do
      {:ok, state}
@@ -268,7 +268,7 @@ defmodule Membrane.Element.State do
     with {:ok, state} <- log_playback_state_changing(old, new, target, state),
          {:ok, %State{internal_state: internal_state} = state} <- State.deactivate_pads(state),
          {:ok, {actions, new_internal_state}} <- module.handle_prepare(old, internal_state),
-         {:ok, state} <- module.base_module.handle_actions(actions, %{state | internal_state: new_internal_state}),
+         {:ok, state} <- module.base_module.handle_actions(actions, :handle_prepare, %{state | internal_state: new_internal_state}),
          {:ok, state} <- log_playback_state_changed(old, new, target, %{state | playback_state: new})
     do
      {:ok, state}
@@ -283,7 +283,7 @@ defmodule Membrane.Element.State do
   def change_playback_state(%State{module: module} = state, :prepared = old, :stopped = new, target) do
     with {:ok, %State{internal_state: internal_state} = state} <- log_playback_state_changing(old, new, target, state),
          {:ok, {actions, new_internal_state}} <- module.handle_stop(internal_state),
-         {:ok, state} <- module.base_module.handle_actions(actions, %{state | internal_state: new_internal_state}),
+         {:ok, state} <- module.base_module.handle_actions(actions, :handle_stop, %{state | internal_state: new_internal_state}),
          {:ok, state} <- log_playback_state_changed(old, new, target, %{state | playback_state: new})
     do
      {:ok, state}
