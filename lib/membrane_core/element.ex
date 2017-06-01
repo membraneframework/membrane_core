@@ -397,6 +397,14 @@ defmodule Membrane.Element do
     end
   end
 
+  def handle_info({:membrane_self_demand, pad_name, size, callback}, %State{} = state) do
+    with \
+      {:ok, state} <- handle_self_demand(pad_name, size, callback, state)
+    do
+      {:noreply, state}
+    end
+  end
+
   # Callback invoked on buffer coming from the sink pad to the sink
   @doc false
   def handle_info({:membrane_buffer, pad_pid, :push, buffer}, %State{module: module, internal_state: internal_state} = state) do
