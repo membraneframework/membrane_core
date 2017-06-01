@@ -242,45 +242,45 @@ defmodule Membrane.Element.Base.Sink do
   # Private API
 
   @doc false
-  @spec handle_actions(callback_actions_t, State.t) ::
+  @spec handle_actions(callback_actions_t, atom, State.t) ::
     {:ok, State.t} |
     {:error, {any, State.t}}
-  def handle_actions([], state), do: {:ok, state}
-  
-  def handle_actions([{:demand, pad_name}|tail], state) do
-    handle_actions [{:demand, pad_name, 1}|tail], state
+  def handle_actions([], _callback, state), do: {:ok, state}
+
+  def handle_actions([{:demand, pad_name}|tail], callback, state) do
+    handle_actions [{:demand, pad_name, 1}|tail], callback, state
   end
-  def handle_actions([{:demand, pad_name, size}|tail], state) do
-    case Action.handle_demand(pad_name, size, state) do
+  def handle_actions([{:demand, pad_name, size}|tail], callback, state) do
+    case Action.handle_demand(pad_name, size, callback, state) do
       {:ok, state} ->
-        handle_actions(tail, state)
+        handle_actions(tail, callback, state)
 
       {:error, reason} ->
         {:error, {reason, state}}
     end
   end
 
-  def handle_actions([{:event, {pad_name, event}}|tail], state) do
+  def handle_actions([{:event, {pad_name, event}}|tail], callback, state) do
     case Action.handle_event(pad_name, event, state) do
       {:ok, state} ->
-        handle_actions(tail, state)
+        handle_actions(tail, callback, state)
 
       {:error, reason} ->
         {:error, {reason, state}}
     end
   end
 
-  def handle_actions([{:message, message}|tail], state) do
+  def handle_actions([{:message, message}|tail], callback, state) do
     case Action.handle_message(message, state) do
       {:ok, state} ->
-        handle_actions(tail, state)
+        handle_actions(tail, callback, state)
 
       {:error, reason} ->
         {:error, {reason, state}}
     end
   end
 
-  def handle_actions([other|_tail], _state) do
+  def handle_actions([other|_tail], _callback, _state) do
     raise """
     Sinks' callback replies are expected to be one of:
 

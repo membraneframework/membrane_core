@@ -5,6 +5,7 @@ defmodule Membrane.Element.Action do
   use Membrane.Mixins.Log
   alias Membrane.Pad
   alias Membrane.Caps
+  alias Membrane.Element
   alias Membrane.Element.State
 
   @spec handle_buffer(Pad.name_t, Membrane.Buffer.t, State.t) :: :ok
@@ -46,14 +47,19 @@ defmodule Membrane.Element.Action do
   end
 
 
-  @spec handle_demand(Pad.name_t, pos_integer, State.t) :: :ok | {:error, any}
-  def handle_demand(pad_name, size, state) do
+  @spec handle_demand(Pad.name_t, pos_integer, atom, State.t) :: :ok | {:error, any}
+  def handle_demand(pad_name, size, callback, state) do
     debug("Demand: pad_name = #{inspect(pad_name)}")
     case State.get_pad_by_name(state, :sink, pad_name) do
       {:ok, {_availability, _direction, mode, _pid}} ->
         case mode do
-          :pull -> send self(), {:membrane_self_demand, pad_name, size}
-
+          :pull ->
+            case callback do
+              cb when cb in [:handle_write, :handle_process] ->
+                send self(), {:membrane_self_demand, pad_name, size, callback}
+                {:ok, state}
+              _ -> Element.handle_self_demand pad_name, size, callback, state
+            end
           :push ->
             raise """
             Element seems to be buggy.

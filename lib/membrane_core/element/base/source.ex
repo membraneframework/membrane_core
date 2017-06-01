@@ -196,49 +196,49 @@ defmodule Membrane.Element.Base.Source do
   # Private API
 
   @doc false
-  def handle_actions([], state), do: {:ok, state}
+  def handle_actions([], _callback, state), do: {:ok, state}
 
-  def handle_actions([{:buffer, {pad_name, buffer}}|tail], state) do
+  def handle_actions([{:buffer, {pad_name, buffer}}|tail], callback, state) do
     case Action.handle_buffer(pad_name, buffer, state) do
       {:ok, state} ->
-        handle_actions(tail, state)
+        handle_actions(tail, callback, state)
 
       {:error, reason} ->
         {:error, {reason, state}}
     end
   end
 
-  def handle_actions([{:caps, {pad_name, caps}}|tail], state) do
+  def handle_actions([{:caps, {pad_name, caps}}|tail], callback, state) do
     case Action.handle_caps(pad_name, caps, state) do
       {:ok, state} ->
-        handle_actions(tail, state)
+        handle_actions(tail, callback, state)
 
       {:error, reason} ->
         {:error, {reason, state}}
     end
   end
 
-  def handle_actions([{:event, {pad_name, event}}|tail], state) do
+  def handle_actions([{:event, {pad_name, event}}|tail], callback, state) do
     case Action.handle_event(pad_name, event, state) do
       {:ok, state} ->
-        handle_actions(tail, state)
+        handle_actions(tail, callback, state)
 
       {:error, reason} ->
         {:error, {reason, state}}
     end
   end
 
-  def handle_actions([{:message, message}|tail], state) do
+  def handle_actions([{:message, message}|tail], callback, state) do
     case Action.handle_message(message, state) do
       {:ok, state} ->
-        handle_actions(tail, state)
+        handle_actions(tail, callback, state)
 
       {:error, reason} ->
         {:error, {reason, state}}
     end
   end
 
-  def handle_actions([other|_tail], _state) do
+  def handle_actions([other|_tail], _callback, _state) do
     raise """
     Sources' callback replies are expected to be one of:
 
