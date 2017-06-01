@@ -219,6 +219,10 @@ defmodule Membrane.Element.State do
     deactivate_pads_by_pids(state, tail)
   end
 
+  defp activate_sink_pull_buffers %State{sink_pads_pull_buffers: pull_buffers} = state do
+    {:ok, %State{state | sink_pads_pull_buffers: pull_buffers |> Enum.map(fn {k, v} -> {k, v |> PullBuffer.activate} end)}}
+  end
+
 
   @doc """
   Changes playback state.
@@ -252,10 +256,11 @@ defmodule Membrane.Element.State do
     with {:ok, state} <- log_playback_state_changing(old, new, target, state),
          {:ok, %State{internal_state: internal_state} = state} <- State.activate_pads(state),
          {:ok, {actions, new_internal_state}} <- module.handle_play(internal_state),
+         {:ok, state} <- activate_sink_pull_buffers(state),
          {:ok, state} <- module.base_module.handle_actions(actions, :handle_play, %{state | internal_state: new_internal_state}),
          {:ok, state} <- log_playback_state_changed(old, new, target, %{state | playback_state: new})
     do
-     {:ok, state}
+      {:ok, state}
 
     else
       {:error, {reason, state}} ->

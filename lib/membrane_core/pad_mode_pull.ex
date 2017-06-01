@@ -53,7 +53,7 @@ defmodule Membrane.Pad.Mode.Pull do
   # Forwards demand request to the parent element but does not wait for reply.
   def handle_other({:membrane_demand, size}, parent, _peer, :source, state) do
     debug("Demand on source pad")
-    send(parent, {{:membrane_demand, size}, self()})
+    send(parent, {:membrane_demand, self(), size})
     {:ok, state}
   end
 
