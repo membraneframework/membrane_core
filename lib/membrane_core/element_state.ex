@@ -220,7 +220,7 @@ defmodule Membrane.Element.State do
   end
 
   defp activate_sink_pull_buffers %State{sink_pads_pull_buffers: pull_buffers} = state do
-    {:ok, %State{state | sink_pads_pull_buffers: pull_buffers |> Enum.map(fn {k, v} -> {k, v |> PullBuffer.activate} end)}}
+    {:ok, %State{state | sink_pads_pull_buffers: pull_buffers |> Enum.into(%{}, fn {k, v} -> {k, v |> PullBuffer.activate} end)}}
   end
 
 
