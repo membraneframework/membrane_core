@@ -302,6 +302,9 @@ defmodule Membrane.Element.Base.Filter do
     end
   end
 
+  def handle_actions([{:demand, pad_name}|tail], callback, state) do
+    handle_actions [{:demand, pad_name, 1}|tail], callback, state
+  end
   def handle_actions([{:demand, pad_name, size}|tail], callback, state) do
     case Action.handle_demand(pad_name, size, callback, state) do
       {:ok, state} ->
