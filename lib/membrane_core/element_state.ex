@@ -241,8 +241,8 @@ defmodule Membrane.Element.State do
     with {:ok, %State{internal_state: internal_state} = state} <- log_playback_state_changing(old, new, target, state),
          {:ok, {actions, new_internal_state}} <- module.handle_prepare(old, internal_state),
          {:ok, state} <- module.base_module.handle_actions(actions, :handle_prepare, %{state | internal_state: new_internal_state}),
-         {:ok, state} <- log_playback_state_changed(old, new, target, %{state | internal_state: new_internal_state, playback_state: new}),
-         {:ok, state} <- State.activate_pads(state)
+         {:ok, state} <- State.activate_pads(state),
+         {:ok, state} <- log_playback_state_changed(old, new, target, %{state | playback_state: new})
     do
       {:ok, state}
 
