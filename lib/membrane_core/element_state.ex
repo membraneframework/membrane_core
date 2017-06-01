@@ -88,7 +88,7 @@ defmodule Membrane.Element.State do
 
           pull_data = case direction do
             :source -> %{demand: 0}
-            :sink -> {PullBuffer.new(pid, 100), self_demand: 0}
+            :sink -> {PullBuffer.new(pid, 100), 0}
           end
 
           {{name, pid}, {pid, name}, {name, pull_data}}

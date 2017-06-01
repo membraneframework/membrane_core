@@ -19,16 +19,16 @@ defmodule Membrane.Pad.Mode.Pull do
   @doc false
   # Received from parent element in reaction to the :demand action.
   # Returns error if pad is not linked, so demand cannot be satisfied.
-  def handle_call(:membrane_demand, _parent, nil, :sink, state) do
+  def handle_call({:membrane_demand, _size}, _parent, nil, :sink, state) do
     debug("Demand on non-linked sink pad")
     {:reply, {:error, :not_linked}, state}
   end
 
   # Received from parent element in reaction to the :demand action.
   # Forwards demand request to the peer but does not wait for reply.
-  def handle_call(:membrane_demand, _parent, peer, :sink, state) do
+  def handle_call({:membrane_demand, size}, _parent, peer, :sink, state) do
     debug("Demand on sink pad")
-    send(peer, :membrane_demand)
+    send(peer, {:membrane_demand, size})
     {:reply, :ok, state}
   end
 
@@ -51,9 +51,9 @@ defmodule Membrane.Pad.Mode.Pull do
   @doc false
   # Received at source pads when their peer sink pad got demand request.
   # Forwards demand request to the parent element but does not wait for reply.
-  def handle_other(:membrane_demand, parent, _peer, :source, state) do
+  def handle_other({:membrane_demand, size}, parent, _peer, :source, state) do
     debug("Demand on source pad")
-    send(parent, {:membrane_demand, self()})
+    send(parent, {{:membrane_demand, size}, self()})
     {:ok, state}
   end
 
