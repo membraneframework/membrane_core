@@ -238,14 +238,9 @@ defmodule Membrane.Pipeline do
       :membrane_prepare -> :prepare
       :membrane_stop -> :stop
     end
-    debug("Changing playback state of children to #{inspect playback_state}, state = #{inspect(state)}")
     case change_children_playback_state(state, playback_state) do
-      :ok ->
-        debug("Changed playback state of children to #{inspect playback_state}, state = #{inspect(state)}")
-        {:reply, :ok, state}
-      {:error, reason} ->
-        warn("Unable to change playback state of children to #{inspect playback_state}, state = #{inspect(state)}")
-        {:reply, {:error, reason}, state}
+      :ok -> {:reply, :ok, state}
+      {:error, reason} -> {:reply, {:error, reason}, state}
     end
   end
 
