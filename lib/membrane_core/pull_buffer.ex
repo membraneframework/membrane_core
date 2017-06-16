@@ -19,6 +19,10 @@ defmodule Membrane.PullBuffer do
     pb
   end
 
+  def store(%PullBuffer{q: q, current_size: size} = pb, v) when is_list v do
+    %PullBuffer{pb | q: q |> @qe.join(@qe.new v), current_size: size + 1}
+  end
+
   def store(%PullBuffer{q: q, current_size: size} = pb, v) do
     %PullBuffer{pb | q: q |> @qe.push(v), current_size: size + 1}
   end
