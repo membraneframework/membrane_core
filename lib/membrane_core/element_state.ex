@@ -256,7 +256,7 @@ defmodule Membrane.Element.State do
   def change_playback_state(%State{module: module} = state, :prepared = old, :playing = new, target) do
     with {:ok, %State{internal_state: internal_state} = state} <- log_playback_state_changing(old, new, target, state),
          {:ok, {actions, new_internal_state}} <- module.handle_play(internal_state),
-         {:ok, state} <- activate_sink_pull_buffers(state), #FIXME initial demand may not be received, because destination pad may not be activated yet
+         {:ok, state} <- activate_sink_pull_buffers(state),
          {:ok, state} <- module.base_module.handle_actions(actions, :handle_play, %{state | internal_state: new_internal_state}),
          {:ok, state} <- log_playback_state_changed(old, new, target, %{state | playback_state: new})
     do
