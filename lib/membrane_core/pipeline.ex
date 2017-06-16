@@ -195,20 +195,21 @@ defmodule Membrane.Pipeline do
             {:stop, {:init, reason}}
         end
 
-      {:play, spec, internal_state} ->
-        case do_init(module, internal_state, spec) do
-          {:ok, state} ->
-            case do_play(state) do
-              :ok ->
+        {:play, spec, internal_state} ->
+          case do_init(module, internal_state, spec) do
+            {:ok, state} ->
+              with \
+                :ok <- change_children_playback_state(state, :prepare),
+                :ok <- change_children_playback_state(state, :play)
+              do
                 {:ok, state}
+              else
+                err -> {:stop, err}
+              end
 
-              {:error, reason} ->
-                {:stop, {:play, reason}}
-            end
-
-          {:error, reason} ->
-            {:stop, {:init, reason}}
-        end
+            {:error, reason} ->
+              {:stop, {:init, reason}}
+          end
 
       other ->
         raise """
@@ -228,42 +229,20 @@ defmodule Membrane.Pipeline do
 
 
   @doc false
-  def handle_call(:membrane_prepare, _from, %State{children_to_pids: children_to_pids} = state) do
-    debug("Changing playback state of children to PREPARED, state = #{inspect(state)}")
-    case children_to_pids |> Map.to_list |> call_element(:prepare) do
-      :ok ->
-        debug("Changed playback state of children to PREPARED, state = #{inspect(state)}")
-        {:reply, :ok, state}
-
-      {:error, reason} ->
-        warn("Unable to change playback state of children to PREPARED, reason = #{inspect(reason)}, state = #{inspect(state)}")
-        {:reply, {:error, reason}, state}
+  def handle_call(change_playback_state, _from, state)
+  when change_playback_state in [:membrane_play, :membrane_prepare, :membrane_stop] do
+    playback_state = case change_playback_state do
+      :membrane_play -> :play
+      :membrane_prepare -> :prepare
+      :membrane_stop -> :stop
     end
-  end
-
-
-  @doc false
-  def handle_call(:membrane_play, _from, state) do
-    case do_play(state) do
+    debug("Changing playback state of children to #{inspect playback_state}, state = #{inspect(state)}")
+    case change_children_playback_state(state, playback_state) do
       :ok ->
+        debug("Changed playback state of children to #{inspect playback_state}, state = #{inspect(state)}")
         {:reply, :ok, state}
-
       {:error, reason} ->
-        {:reply, {:error, reason}, state}
-    end
-  end
-
-
-  @doc false
-  def handle_call(:membrane_stop, _from, %State{children_to_pids: children_to_pids} = state) do
-    debug("Changing playback state of children to STOPPED, state = #{inspect(state)}")
-    case children_to_pids |> Map.to_list |> call_element(:stop) do
-      :ok ->
-        debug("Changed playback state of children to STOPPED, state = #{inspect(state)}")
-        {:reply, :ok, state}
-
-      {:error, reason} ->
-        warn("Unable to change playback state of children to STOPPED, reason = #{inspect(reason)}, state = #{inspect(state)}")
+        warn("Unable to change playback state of children to #{inspect playback_state}, state = #{inspect(state)}")
         {:reply, {:error, reason}, state}
     end
   end
@@ -501,15 +480,15 @@ defmodule Membrane.Pipeline do
   end
 
 
-  defp do_play(%State{children_to_pids: children_to_pids} = state) do
-    debug("Changing playback state of children to PLAYING, state = #{inspect(state)}")
-    case children_to_pids |> Map.to_list |> call_element(:play) do
+  defp change_children_playback_state(%State{children_to_pids: children_to_pids} = state, playback_state) do
+    debug("Changing playback state of children to #{inspect playback_state}, state = #{inspect(state)}")
+    case children_to_pids |> Map.to_list |> call_element(playback_state) do
       :ok ->
-        debug("Changed playback state of children to PLAYING, state = #{inspect(state)}")
+        debug("Changed playback state of children to #{inspect playback_state}, state = #{inspect(state)}")
         :ok
 
       {:error, reason} ->
-        warn("Unable to change playback state of children to PLAYING, reason = #{inspect(reason)}, state = #{inspect(state)}")
+        warn("Unable to change playback state of children to #{inspect playback_state}, reason = #{inspect(reason)}, state = #{inspect(state)}")
         {:error, reason}
     end
   end
