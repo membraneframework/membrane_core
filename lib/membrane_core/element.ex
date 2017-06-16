@@ -302,7 +302,7 @@ defmodule Membrane.Element do
   def terminate(reason, %State{module: module, playback_state: playback_state, internal_state: internal_state} = state) do
     if playback_state != :stopped do
       warn("Terminating: Attempt to terminate element when it is not stopped, state = #{inspect(state)}")
-      warn("Terminating: Stacktrace = " <> System.stacktrace() |> Exception.format_stacktrace)
+      warn("Terminating: Stacktrace = " <> Exception.format_stacktrace System.stacktrace)
     end
 
     debug("Terminating: reason = #{inspect(reason)}, state = #{inspect(state)}")
