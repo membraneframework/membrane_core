@@ -87,7 +87,7 @@ defmodule Membrane.Element.State do
           {:ok, pid} = Pad.start_link(pad_module, direction)
 
           pull_data = case direction do
-            :source -> %{demand: 0}
+            :source -> 0
             :sink -> {PullBuffer.new(pid, 100), 0}
           end
 

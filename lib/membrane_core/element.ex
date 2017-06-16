@@ -542,7 +542,7 @@ defmodule Membrane.Element do
     if demand > 0 do
       handle_write state, pad_name
     else
-      {[], state}
+      {:ok, state}
     end
   end
 
