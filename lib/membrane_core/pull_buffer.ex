@@ -15,7 +15,7 @@ defmodule Membrane.PullBuffer do
   end
 
   def activate(%PullBuffer{sink: sink, preferred_size: pref_size} = pb) do
-    send sink, {:membrane_demand, pref_size}
+    GenServer.call sink, {:membrane_demand, pref_size}
     pb
   end
 
