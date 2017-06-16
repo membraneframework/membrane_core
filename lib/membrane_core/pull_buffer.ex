@@ -14,8 +14,8 @@ defmodule Membrane.PullBuffer do
     %PullBuffer{q: @qe.new, sink: sink, preferred_size: preferred_size, init_size: init_size}
   end
 
-  def activate(%PullBuffer{sink: sink, preferred_size: pref_size} = pb) do
-    GenServer.call sink, {:membrane_demand, pref_size}
+  def activate(%PullBuffer{preferred_size: pref_size} = pb) do
+    send_demand pb, pref_size
     pb
   end
 
@@ -38,16 +38,16 @@ defmodule Membrane.PullBuffer do
   end
 
   def take(%PullBuffer{} = pb) do
-    {out, %PullBuffer{current_size: size, preferred_size: pref_size, sink: sink} = pb} = do_take pb
+    {out, %PullBuffer{current_size: size, preferred_size: pref_size} = pb} = do_take pb
     if {:value, _} |> match?(out) && size < pref_size do
-      send sink, {:membrane_demand, 1}
+      send_demand pb, 1
     end
     {out, pb}
   end
-  def take(%PullBuffer{current_size: size, preferred_size: pref_size, sink: sink} = pb, count) do
+  def take(%PullBuffer{current_size: size, preferred_size: pref_size} = pb, count) do
     {_, %PullBuffer{current_size: nsize}} = out = take pb, count, []
     if nsize < size && nsize < pref_size do
-      send sink, {:membrane_demand, min(size, pref_size) - nsize}
+      send_demand pb, min(size, pref_size) - nsize
     end
     out
   end
@@ -60,5 +60,10 @@ defmodule Membrane.PullBuffer do
   end
 
   def empty?(%PullBuffer{current_size: size}), do: size == 0
+
+  defp send_demand %PullBuffer{sink: sink}, size do
+    # TODO add error handling
+    :ok = GenServer.call sink, {:membrane_demand, size}
+  end
 
 end
