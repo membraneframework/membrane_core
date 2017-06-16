@@ -546,9 +546,11 @@ defmodule Membrane.Element do
     end
   end
 
-  defp handle_demand pad_name, size, %State{module: module, internal_state: internal_state} = state do
-    {:ok, {actions, new_internal_state}} = wrap_internal_return(module.handle_demand(pad_name, size, internal_state))
-    module.base_module.handle_actions actions, {:handle_demand, pad_name, size}, %State{state | internal_state: new_internal_state}
+  defp handle_demand pad_name, size, %State{module: module, internal_state: internal_state, source_pads_pull_demands: demands} = state do
+    total_size = size + demands[pad_name]
+    state = %State{state | source_pads_pull_demands: %{demands | pad_name => total_size}}
+    {:ok, {actions, new_internal_state}} = wrap_internal_return(module.handle_demand(pad_name, total_size, internal_state))
+    module.base_module.handle_actions actions, {:handle_demand, pad_name, total_size}, %State{state | internal_state: new_internal_state}
   end
 
   defp check_and_handle_demands(%State{source_pads_pull_demands: demands} = state) do
@@ -556,7 +558,7 @@ defmodule Membrane.Element do
   end
   defp check_and_handle_demands([], state), do: {:ok, state}
   defp check_and_handle_demands([{src_name, src_demand}|rest], state) when src_demand > 0 do
-    {:ok, state} = handle_demand(src_name, src_demand, state)
+    {:ok, state} = handle_demand(src_name, 0, state)
     check_and_handle_demands rest, state
   end
   defp check_and_handle_demands([_|rest], state) do
