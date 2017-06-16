@@ -494,23 +494,23 @@ defmodule Membrane.Element do
   #   end
   # end
 
-  def handle_self_demand pad_name, bufsize, callback, %State{module: module, sink_pads_self_demands: demands} = state do
+  def handle_self_demand pad_name, buf_cnt, callback, %State{module: module, sink_pads_self_demands: demands} = state do
     cond do
       module |> is_sink_module? ->
-        state = %State{state | sink_pads_self_demands: demands |> Map.update!(pad_name, & &1+bufsize)}
+        state = %State{state | sink_pads_self_demands: demands |> Map.update!(pad_name, & &1+buf_cnt)}
         handle_write state, pad_name
       module |> is_filter_module? ->
         demand_src = case callback do
           {:handle_demand, src, size} -> {src, size}
           _ -> nil
         end
-        handle_process pad_name, demand_src, bufsize, state
+        handle_process pad_name, demand_src, buf_cnt, state
     end
   end
 
-  defp handle_process pad_name, demand_src, bufsize, %State{module: module, internal_state: internal_state, sink_pads_pull_buffers: pull_buffers} = state do
+  defp handle_process pad_name, demand_src, buf_cnt, %State{module: module, internal_state: internal_state, sink_pads_pull_buffers: pull_buffers} = state do
     %{^pad_name => pb} = pull_buffers
-    {out, npb} = PullBuffer.take pb, bufsize
+    {out, npb} = PullBuffer.take pb, buf_cnt
     state = %State{state | sink_pads_pull_buffers: %{pull_buffers | pad_name => npb}}
     case out do
       {:empty, []}-> {:ok, state}

@@ -8,14 +8,18 @@ defmodule Membrane.Element.Action do
   alias Membrane.Element
   alias Membrane.Element.State
 
-  @spec handle_buffer(Pad.name_t, Membrane.Buffer.t, State.t) :: :ok
-  def handle_buffer(pad_name, buffer, %State{source_pads_pull_demands: demands} = state) do
-    debug("Buffer: pad_name = #{inspect(pad_name)}, buffer = #{inspect(buffer)}")
+  def handle_buffer(pad_name, %Membrane.Buffer{} = buffer, state) do
+    handle_buffer(pad_name, [buffer], state)
+  end
+
+  @spec handle_buffer(Pad.name_t, [Membrane.Buffer.t], State.t) :: :ok
+  def handle_buffer(pad_name, buffers, %State{source_pads_pull_demands: demands} = state) do
+    debug("Buffer: pad_name = #{inspect(pad_name)}, buffers = #{inspect(buffers)}")
     case State.get_pad_by_name(state, :source, pad_name) do
       {:ok, {_availability, _direction, _mode, pid}} ->
-        case GenServer.call(pid, {:membrane_buffer, buffer}) do
+        case GenServer.call(pid, {:membrane_buffer, buffers}) do
           :ok ->
-            state = %State{state | source_pads_pull_demands: demands |> Map.update!(pad_name, & &1 - 1)}
+            state = %State{state | source_pads_pull_demands: demands |> Map.update!(pad_name, & &1 - length buffers)}
             {:ok, state}
 
           {:error, reason} ->
