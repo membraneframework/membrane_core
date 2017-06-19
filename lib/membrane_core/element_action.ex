@@ -21,7 +21,6 @@ defmodule Membrane.Element.Action do
     do
       state = cond do
         mode == :pull -> State.update_pad_data! state, :source, pad_name, :demand, & &1 - length buffers
-          # %State{state | source_pads_pull_demands: demands |> Map.update!(pad_name, & &1 - length buffers)}
         true -> state
       end
       {:ok, state}

@@ -172,15 +172,20 @@ defmodule Membrane.Element.State do
           :source -> state.source_pads_data
           :sink -> state.sink_pads_data
         end
-      |> get_in(pad_name)
+      |> Map.get(pad_name)
       |> case do
         nil -> {:error, :unknown_pad}
         pad_data -> {:ok, pad_data}
       end
   end
-  def get_pad_data(state, pad_direction, pad_name, [_|_] = keys) do
+  def get_pad_data(state, pad_direction, pad_name, keys)
+  when is_list keys do
     with {:ok, pad_data} <- get_pad_data(state, pad_direction, pad_name)
-    do {:ok, pad_data |> get_in(keys)}
+    do
+      cond do
+        keys |> Enum.empty? -> {:ok, pad_data}
+        true -> {:ok, pad_data |> get_in(keys |> Enum.map(&Access.key!/1))}
+      end
     end
   end
   def get_pad_data(state, pad_direction, pad_name, key) do
@@ -197,25 +202,25 @@ defmodule Membrane.Element.State do
   end
 
   def update_pad_data!(state, pad_direction, pad_name, keys \\ [], f)
-  def update_pad_data!(state, pad_direction, pad_name, [_|_] = keys, f)
+  def update_pad_data!(state, pad_direction, pad_name, keys, f)
   when is_list keys do
     map = case pad_direction do
         :source -> :source_pads_data
         :sink -> :sink_pads_data
       end
-    update_in state, [map, pad_name | keys], f
+    update_in state, [map, pad_name | keys] |> Enum.map(&Access.key!/1), f
   end
   def update_pad_data!(state, pad_direction, pad_name, key, f), do:
     update_pad_data!(state, pad_direction, pad_name, [key], f)
 
   def get_update_pad_data!(state, pad_direction, pad_name, keys \\ [], f)
-  def get_update_pad_data!(state, pad_direction, pad_name, [_|_] = keys, f)
+  def get_update_pad_data!(state, pad_direction, pad_name, keys, f)
   when is_list keys do
     map = case pad_direction do
         :source -> :source_pads_data
         :sink -> :sink_pads_data
       end
-    get_and_update_in state, [map, pad_name | keys], f
+    get_and_update_in state, [map, pad_name | keys] |> Enum.map(&Access.key!/1), f
   end
   def get_update_pad_data!(state, pad_direction, pad_name, key, f), do:
     get_update_pad_data!(state, pad_direction, pad_name, [key], f)
@@ -262,8 +267,8 @@ defmodule Membrane.Element.State do
   end
 
   defp fill_sink_pull_buffers %State{sink_pads_by_names: sinks_by_names} = state do
-    state = Enum.reduce_while (sinks_by_names |> Map.keys), state, fn pad_name, st ->
-        update_pad_data! st, pad_name, :sink, :buffer, &PullBuffer.fill/1
+    state = Enum.reduce (sinks_by_names |> Map.keys), state, fn pad_name, st ->
+        update_pad_data! st, :sink, pad_name, :buffer, &PullBuffer.fill/1
       end
     {:ok, state}
     # %State{state | sink_pads_pull_buffers: pull_buffers |> Enum.into(%{}, fn {k, v} -> {k, v |> PullBuffer.fill} end)}
