@@ -415,7 +415,7 @@ defmodule Membrane.Element do
 
     with {:ok, pad_name} <- State.get_pad_name_by_pid(state, :sink, pad_pid),
          {:ok, {actions, new_internal_state}} <- wrap_internal_return(Kernel.apply(module, write_func, [pad_name, buffer, internal_state])),
-         {:ok, state} <- module.base_module.handle_actions(actions, write_func, %{state | internal_state: new_internal_state})
+         {:ok, state} <- handle_actions(actions, write_func, %{state | internal_state: new_internal_state})
     do
       {:noreply, state}
 
@@ -465,7 +465,7 @@ defmodule Membrane.Element do
   @doc false
   def handle_info(message, %State{module: module, internal_state: internal_state} = state) do
     with {:ok, {actions, new_internal_state}} <- wrap_internal_return(module.handle_other(message, internal_state)),
-         {:ok, state} <- module.base_module.handle_actions(actions, :handle_other, %{state | internal_state: new_internal_state})
+         {:ok, state} <- handle_actions(actions, :handle_other, %{state | internal_state: new_internal_state})
     do
       {:noreply, state}
 
@@ -490,7 +490,7 @@ defmodule Membrane.Element do
   #     pb |> PullBuffer.empty? -> {:ok, state}
   #     true ->
   #       {:ok, {actions, state}} = handle_write(state, pad_name)
-  #       module.base_module.handle_actions actions, :handle_write, state
+  #       handle_actions actions, :handle_write, state
   #   end
   # end
 
@@ -516,7 +516,7 @@ defmodule Membrane.Element do
       {:empty, []}-> {:ok, state}
       {_, buffers}->
         {:ok, {actions, new_internal_state}} = wrap_internal_return(module.handle_process(pad_name, demand_src, buffers, internal_state))
-        module.base_module.handle_actions actions, :handle_process, %State{state | internal_state: new_internal_state}
+        handle_actions actions, :handle_process, %State{state | internal_state: new_internal_state}
     end
   end
 
@@ -533,7 +533,7 @@ defmodule Membrane.Element do
           sink_pads_self_demands: demands |> Map.update!(pad_name, & &1 - length buffers),
           internal_state: new_internal_state,
         }
-        module.base_module.handle_actions actions, :handle_write, state
+        handle_actions actions, :handle_write, state
     end
   end
 
@@ -550,7 +550,7 @@ defmodule Membrane.Element do
     total_size = size + demands[pad_name]
     state = %State{state | source_pads_pull_demands: %{demands | pad_name => total_size}}
     {:ok, {actions, new_internal_state}} = wrap_internal_return(module.handle_demand(pad_name, total_size, internal_state))
-    module.base_module.handle_actions actions, {:handle_demand, pad_name, total_size}, %State{state | internal_state: new_internal_state}
+    handle_actions actions, {:handle_demand, pad_name, total_size}, %State{state | internal_state: new_internal_state}
   end
 
   defp check_and_handle_demands(%State{source_pads_pull_demands: demands} = state) do
@@ -563,6 +563,16 @@ defmodule Membrane.Element do
   end
   defp check_and_handle_demands([_|rest], state) do
     check_and_handle_demands rest, state
+  end
+
+
+  def handle_actions(actions, callback, %State{module: module} = state) do
+    Enum.reduce_while(actions, {:ok, state}, fn action, {:ok, st} ->
+      with {:ok, new_st} <- module.base_module.handle_action(action, callback, st)
+      do {:cont, {:ok, new_st}}
+      else {:error, reason} -> {:halt, {:error, {reason, st}}}
+      end
+    end)
   end
 
   defp handle_invalid_callback_return(return) do

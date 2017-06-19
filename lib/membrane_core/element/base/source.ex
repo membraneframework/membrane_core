@@ -196,49 +196,18 @@ defmodule Membrane.Element.Base.Source do
   # Private API
 
   @doc false
-  def handle_actions([], _callback, state), do: {:ok, state}
-
-  def handle_actions([{:buffer, {pad_name, buffer}}|tail], callback, state) do
-    case Action.handle_buffer(pad_name, buffer, state) do
-      {:ok, state} ->
-        handle_actions(tail, callback, state)
-
-      {:error, reason} ->
-        {:error, {reason, state}}
-    end
-  end
-
-  def handle_actions([{:caps, {pad_name, caps}}|tail], callback, state) do
-    case Action.handle_caps(pad_name, caps, state) do
-      {:ok, state} ->
-        handle_actions(tail, callback, state)
-
-      {:error, reason} ->
-        {:error, {reason, state}}
-    end
-  end
-
-  def handle_actions([{:event, {pad_name, event}}|tail], callback, state) do
-    case Action.handle_event(pad_name, event, state) do
-      {:ok, state} ->
-        handle_actions(tail, callback, state)
-
-      {:error, reason} ->
-        {:error, {reason, state}}
-    end
-  end
-
-  def handle_actions([{:message, message}|tail], callback, state) do
-    case Action.handle_message(message, state) do
-      {:ok, state} ->
-        handle_actions(tail, callback, state)
-
-      {:error, reason} ->
-        {:error, {reason, state}}
-    end
-  end
-
-  def handle_actions([other|_tail], _callback, _state) do
+  @spec handle_action(callback_action_t, atom, State.t) ::
+    {:ok, State.t} |
+    {:error, {any, State.t}}
+  def handle_action({:buffer, {pad_name, buffer}}, _cb, state), do:
+    Action.handle_buffer(pad_name, buffer, state)
+  def handle_action({:caps, {pad_name, caps}}, _cb, state), do:
+    Action.handle_caps(pad_name, caps, state)
+  def handle_action({:event, {pad_name, event}}, _cb, state), do:
+    Action.handle_event(pad_name, event, state)
+  def handle_action({:message, message}, _cb, state), do:
+    Action.handle_message(message, state)
+  def handle_action(other, _cb, _state) do
     raise """
     Sources' callback replies are expected to be one of:
 

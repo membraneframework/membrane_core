@@ -15,31 +15,20 @@ defmodule Membrane.Element.Action do
   @spec handle_buffer(Pad.name_t, [Membrane.Buffer.t], State.t) :: :ok
   def handle_buffer(pad_name, buffers, %State{source_pads_pull_demands: demands} = state) do
     debug("Buffer: pad_name = #{inspect(pad_name)}, buffers = #{inspect(buffers)}")
-    case State.get_pad_by_name(state, :source, pad_name) do
-      {:ok, {_availability, _direction, _mode, pid}} ->
-        case GenServer.call(pid, {:membrane_buffer, buffers}) do
-          :ok ->
-            state = %State{state | source_pads_pull_demands: demands |> Map.update!(pad_name, & &1 - length buffers)}
-            {:ok, state}
-
-          {:error, reason} ->
-            {:error, reason}
-        end
-
+    with \
+      {:ok, {_availability, _direction, mode, pid}} <- State.get_pad_by_name(state, :source, pad_name),
+      :ok <- GenServer.call(pid, {:membrane_buffer, buffers})
+    do
+      state = cond do
+        mode == :pull ->
+          %State{state | source_pads_pull_demands: demands |> Map.update!(pad_name, & &1 - length buffers)}
+        true -> state
+      end
+      {:ok, state}
+    else
       {:error, :unknown_pad} ->
-        raise """
-        Element seems to be buggy.
-
-        It has sent the :buffer action specyfying #{inspect(pad_name)} as
-        pad name that is supposed to handle demand.
-
-        Such pad was not found. It either means that it does not exist or
-        it is not a source pad.
-
-        Element state was:
-
-        #{inspect(state, limit: 100000, pretty: true)}
-        """
+        handle_unknown_pad pad_name, :sink, :buffer, state
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -55,46 +44,21 @@ defmodule Membrane.Element.Action do
   @spec handle_demand(Pad.name_t, pos_integer, atom, State.t) :: :ok | {:error, any}
   def handle_demand(pad_name, size, callback, state) do
     debug("Demand: pad_name = #{inspect(pad_name)}")
-    case State.get_pad_by_name(state, :sink, pad_name) do
-      {:ok, {_availability, _direction, mode, _pid}} ->
-        case mode do
-          :pull ->
-            case callback do
-              cb when cb in [:handle_write, :handle_process] ->
-                send self(), {:membrane_self_demand, pad_name, size, callback}
-                {:ok, state}
-              _ -> Element.handle_self_demand pad_name, size, callback, state
-            end
-          :push ->
-            raise """
-            Element seems to be buggy.
-
-            It has sent the :demand action specyfying #{inspect(pad_name)} as
-            pad name that is supposed to handle demand.
-
-            Such pad was found but it is defined as working in the push mode.
-            Demand can be sent upstream only from pads working in the pull mode.
-
-            Element state was:
-
-            #{inspect(state, limit: 100000, pretty: true)}
-            """
-        end
-
+    with \
+      {:ok, {_availability, _direction, mode, _pid}} <- State.get_pad_by_name(state, :sink, pad_name),
+      :pull <- mode
+    do
+      case callback do
+        cb when cb in [:handle_write, :handle_process] ->
+          send self(), {:membrane_self_demand, pad_name, size, callback}
+          {:ok, state}
+        _ -> Element.handle_self_demand pad_name, size, callback, state
+      end
+    else
+      :push ->
+        handle_invalid_pad_mode pad_name, :pull, :demand, state
       {:error, :unknown_pad} ->
-        raise """
-        Element seems to be buggy.
-
-        It has sent the :demand action specyfying #{inspect(pad_name)} as
-        pad name that is supposed to handle demand.
-
-        Such pad was not found. It either means that it does not exist or
-        it is not a sink pad.
-
-        Element state was:
-
-        #{inspect(state, limit: 100000, pretty: true)}
-        """
+        handle_unknown_pad pad_name, :sink, :demand, state
     end
   end
 
@@ -154,5 +118,42 @@ defmodule Membrane.Element.Action do
     debug("Message: message_bus = #{inspect(message_bus)}, message = #{inspect(message)}")
     send(message_bus, {:membrane_message, message})
     {:ok, state}
+  end
+
+  defp handle_invalid_pad_mode(pad_name, expected_mode, action, state) do
+    exp_mode_name = Atom.to_string expected_mode
+    mode_name = case expected_mode do
+      :pull -> "push"
+      :push -> "pull"
+    end
+    action_name = Atom.to_string action
+    raise """
+    Pad "#{inspect pad_name}" is working in invalid mode: #{inspect mode_name}.
+
+    This is probably a bug in element. It requested an action
+    "#{inspect action_name}" on pad "#{inspect pad_name}", but the pad is not
+    working in #{inspect exp_mode_name} mode as it is supposed to.
+
+    Element state was:
+
+    #{inspect(state, limit: 100000, pretty: true)}
+    """
+  end
+
+  defp handle_unknown_pad(pad_name, expected_direction, action, state) do
+    direction_name = Atom.to_string expected_direction
+    action_name = Atom.to_string action
+    raise """
+    Pad "#{inspect pad_name}" has not been found.
+
+    This is probably a bug in element. It requested an action
+    "#{inspect action_name}" on pad "#{inspect pad_name}", but such pad has not
+    been found. It either means that it does not exist,
+    or it is not a #{inspect direction_name} pad.
+
+    Element state was:
+
+    #{inspect(state, limit: 100000, pretty: true)}
+    """
   end
 end

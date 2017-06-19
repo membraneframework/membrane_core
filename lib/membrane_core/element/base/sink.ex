@@ -133,6 +133,8 @@ defmodule Membrane.Element.Base.Sink do
   # callbacks.
   @type callback_action_t ::
     {:demand, Membrane.Pad.name_t} |
+    {:demand, {Membrane.Pad.name_t, pos_integer}} |
+    {:event, {Membrane.Pad.name_t, Membrane.Event.t}} |
     {:message, Membrane.Message.t}
 
   # Type that defines list of actions that may be returned from handle_*
@@ -242,45 +244,18 @@ defmodule Membrane.Element.Base.Sink do
   # Private API
 
   @doc false
-  @spec handle_actions(callback_actions_t, atom, State.t) ::
+  @spec handle_action(callback_action_t, atom, State.t) ::
     {:ok, State.t} |
     {:error, {any, State.t}}
-  def handle_actions([], _callback, state), do: {:ok, state}
-
-  def handle_actions([{:demand, pad_name}|tail], callback, state) do
-    handle_actions [{:demand, pad_name, 1}|tail], callback, state
-  end
-  def handle_actions([{:demand, pad_name, size}|tail], callback, state) do
-    case Action.handle_demand(pad_name, size, callback, state) do
-      {:ok, state} ->
-        handle_actions(tail, callback, state)
-
-      {:error, reason} ->
-        {:error, {reason, state}}
-    end
-  end
-
-  def handle_actions([{:event, {pad_name, event}}|tail], callback, state) do
-    case Action.handle_event(pad_name, event, state) do
-      {:ok, state} ->
-        handle_actions(tail, callback, state)
-
-      {:error, reason} ->
-        {:error, {reason, state}}
-    end
-  end
-
-  def handle_actions([{:message, message}|tail], callback, state) do
-    case Action.handle_message(message, state) do
-      {:ok, state} ->
-        handle_actions(tail, callback, state)
-
-      {:error, reason} ->
-        {:error, {reason, state}}
-    end
-  end
-
-  def handle_actions([other|_tail], _callback, _state) do
+  def handle_action({:demand, {pad_name, size}}, cb, state), do:
+    Action.handle_demand(pad_name, size, cb, state)
+  def handle_action({:demand, pad_name}, cb, state), do:
+    handle_action({:demand, {pad_name, 1}}, cb, state)
+  def handle_action({:event, {pad_name, event}}, _cb, state), do:
+    Action.handle_event(pad_name, event, state)
+  def handle_action({:message, message}, _cb, state), do:
+    Action.handle_message(message, state)
+  def handle_action(other, _cb, _state) do
     raise """
     Sinks' callback replies are expected to be one of:
 
