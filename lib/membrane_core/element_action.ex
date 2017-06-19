@@ -13,15 +13,15 @@ defmodule Membrane.Element.Action do
   end
 
   @spec handle_buffer(Pad.name_t, [Membrane.Buffer.t], State.t) :: :ok
-  def handle_buffer(pad_name, buffers, %State{source_pads_pull_demands: demands} = state) do
+  def handle_buffer(pad_name, buffers, state) do
     debug("Buffer: pad_name = #{inspect(pad_name)}, buffers = #{inspect(buffers)}")
     with \
       {:ok, {_availability, _direction, mode, pid}} <- State.get_pad_by_name(state, :source, pad_name),
       :ok <- GenServer.call(pid, {:membrane_buffer, buffers})
     do
       state = cond do
-        mode == :pull ->
-          %State{state | source_pads_pull_demands: demands |> Map.update!(pad_name, & &1 - length buffers)}
+        mode == :pull -> State.update_pad_data! state, :source, pad_name, :demand, & &1 - length buffers
+          # %State{state | source_pads_pull_demands: demands |> Map.update!(pad_name, & &1 - length buffers)}
         true -> state
       end
       {:ok, state}

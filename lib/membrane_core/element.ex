@@ -435,11 +435,12 @@ defmodule Membrane.Element do
 
   # Callback invoked on buffer coming from the sink pad to the sink
   @doc false
-  def handle_info({:membrane_buffer, pad_pid, :pull, buffer}, %State{module: module, sink_pads_pull_buffers: buffers} = state) do
+  def handle_info({:membrane_buffer, pad_pid, :pull, buffer}, %State{module: module} = state) do
     with \
       {:ok, pad_name} <- State.get_pad_name_by_pid(state, :sink, pad_pid),
-      {:ok, pull_buffer} <- State.get_sink_pull_buffer(state, pad_name),
-      state <- %State{state | sink_pads_pull_buffers: %{buffers | pad_name => pull_buffer |> PullBuffer.store(buffer)}},
+      # {:ok, pull_buffer} <- State.get_sink_pull_buffer(state, pad_name),
+      state <- State.update_pad_data!(state, :sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffer)),
+      # %State{state | sink_pads_pull_buffers: %{buffers | pad_name => pull_buffer |> PullBuffer.store(buffer)}},
       {:ok, state} <- (cond do
           is_filter_module? module -> check_and_handle_demands(state)
           is_sink_module? module -> check_and_handle_write(state, pad_name)
@@ -494,10 +495,11 @@ defmodule Membrane.Element do
   #   end
   # end
 
-  def handle_self_demand pad_name, buf_cnt, callback, %State{module: module, sink_pads_self_demands: demands} = state do
+  def handle_self_demand pad_name, buf_cnt, callback, %State{module: module} = state do
     cond do
       module |> is_sink_module? ->
-        state = %State{state | sink_pads_self_demands: demands |> Map.update!(pad_name, & &1+buf_cnt)}
+        state = State.update_pad_data!(state, :sink, pad_name, :self_demand, & &1+buf_cnt)
+        # state = %State{state | sink_pads_self_demands: demands |> Map.update!(pad_name, & &1+buf_cnt)}
         handle_write state, pad_name
       module |> is_filter_module? ->
         demand_src = case callback do
@@ -508,10 +510,11 @@ defmodule Membrane.Element do
     end
   end
 
-  defp handle_process pad_name, demand_src, buf_cnt, %State{module: module, internal_state: internal_state, sink_pads_pull_buffers: pull_buffers} = state do
-    %{^pad_name => pb} = pull_buffers
-    {out, npb} = PullBuffer.take pb, buf_cnt
-    state = %State{state | sink_pads_pull_buffers: %{pull_buffers | pad_name => npb}}
+  defp handle_process pad_name, demand_src, buf_cnt, %State{module: module, internal_state: internal_state} = state do
+    # %{^pad_name => pb} = pull_buffers
+    # {out, npb} = PullBuffer.take pb, buf_cnt
+    # state = %State{state | sink_pads_pull_buffers: %{pull_buffers | pad_name => npb}}
+    {out, state} = State.get_update_pad_data!(state, :sink, pad_name, :buffer, & &1 |> PullBuffer.take(buf_cnt))
     case out do
       {:empty, []}-> {:ok, state}
       {_, buffers}->
@@ -520,41 +523,48 @@ defmodule Membrane.Element do
     end
   end
 
-  defp handle_write %State{module: module, internal_state: internal_state, sink_pads_pull_buffers: pull_buffers, sink_pads_self_demands: demands} = state, pad_name do
-    %{^pad_name => demand} = demands
-    %{^pad_name => pb} = pull_buffers
-    {out, npb} = PullBuffer.take pb, demand
-    state = %State{state | sink_pads_pull_buffers: %{pull_buffers | pad_name => npb}}
+  defp handle_write %State{module: module, internal_state: internal_state} = state, pad_name do
+    # %{^pad_name => demand} = demands
+    # %{^pad_name => pb} = pull_buffers
+    # {out, npb} = PullBuffer.take pb, demand
+    # state = %State{state | sink_pads_pull_buffers: %{pull_buffers | pad_name => npb}}
+    {out, state} = State.get_update_pad_data!(state, :sink, pad_name, fn %{self_demand: demand, buffer: pb} = data ->
+        {out, npb} = PullBuffer.take pb, demand
+        {out, %{data | buffer: npb}}
+      end)
     case out do
       {:empty, []}-> {:ok, state}
       {_, buffers} ->
         {:ok, {actions, new_internal_state}} = wrap_internal_return(module.handle_write(pad_name, buffers, internal_state))
-        state = %{state |
-          sink_pads_self_demands: demands |> Map.update!(pad_name, & &1 - length buffers),
+        state = %State{state |
+          # sink_pads_self_demands: demands |> Map.update!(pad_name, & &1 - length buffers),
           internal_state: new_internal_state,
-        }
+        } |> State.update_pad_data!(:sink, pad_name, :self_demand, & &1 - length buffers)
         handle_actions actions, :handle_write, state
     end
   end
 
-  defp check_and_handle_write(%State{sink_pads_self_demands: demands} = state, pad_name) do
-    %{^pad_name => demand} = demands
-    if demand > 0 do
+  defp check_and_handle_write(state, pad_name) do
+    # %{^pad_name => demand} = demands
+    # if demand > 0 do
+    if State.get_pad_data! state, :sink, pad_name, :self_demand > 0 do
       handle_write state, pad_name
     else
       {:ok, state}
     end
   end
 
-  defp handle_demand pad_name, size, %State{module: module, internal_state: internal_state, source_pads_pull_demands: demands} = state do
-    total_size = size + demands[pad_name]
-    state = %State{state | source_pads_pull_demands: %{demands | pad_name => total_size}}
+  defp handle_demand pad_name, size, %State{module: module, internal_state: internal_state} = state do
+    # total_size = size + demands[pad_name]
+    # state = %State{state | source_pads_pull_demands: %{demands | pad_name => total_size}}
+    {total_size, state} = State.get_update_pad_data!(state, :source, pad_name, fn demand -> {demand+size, demand+size} end)
     {:ok, {actions, new_internal_state}} = wrap_internal_return(module.handle_demand(pad_name, total_size, internal_state))
     handle_actions actions, {:handle_demand, pad_name, total_size}, %State{state | internal_state: new_internal_state}
   end
 
-  defp check_and_handle_demands(%State{source_pads_pull_demands: demands} = state) do
-    check_and_handle_demands demands |> Enum.to_list, state
+  defp check_and_handle_demands(%State{source_pads_data: source_pads_data} = state) do
+    # check_and_handle_demands demands |> Enum.to_list, state
+    check_and_handle_demands source_pads_data |> Enum.map(& &1.demand), state
   end
   defp check_and_handle_demands([], state), do: {:ok, state}
   defp check_and_handle_demands([{src_name, src_demand}|rest], state) when src_demand > 0 do

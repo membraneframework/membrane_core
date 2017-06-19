@@ -17,11 +17,10 @@ defmodule Membrane.Element.State do
     playback_state: Membrane.Element.playback_state_t,
     source_pads_by_names: %{required(Pad.name_t) => pid},
     source_pads_by_pids: %{required(pid) => Pad.name_t},
-    source_pads_pull_demands: %{required(Pad.name_t) => integer},
     sink_pads_by_names: %{required(Pad.name_t) => pid},
     sink_pads_by_pids: %{required(pid) => Pad.name_t},
-    sink_pads_pull_buffers: %{required(Pad.name_t) => any},
-    sink_pads_self_demands: %{required(Pad.name_t) => non_neg_integer},
+    source_pads_data: %{required(Pad.name_t) => any},
+    sink_pads_data: %{required(Pad.name_t) => any},
     message_bus: pid,
   }
 
@@ -31,11 +30,10 @@ defmodule Membrane.Element.State do
     playback_state: :stopped,
     source_pads_by_pids: %{},
     source_pads_by_names: %{},
-    source_pads_pull_demands: %{},
     sink_pads_by_pids: %{},
     sink_pads_by_names: %{},
-    sink_pads_pull_buffers: %{},
-    sink_pads_self_demands: %{},
+    source_pads_data: %{},
+    sink_pads_data: %{},
     message_bus: nil
 
 
@@ -45,29 +43,25 @@ defmodule Membrane.Element.State do
   @spec new(module, any) :: t
   def new(module, internal_state) do
     # Initialize source pads
-    {source_pads_by_names, source_pads_by_pids, source_pads_pull_demands} =
+    {source_pads_by_names, source_pads_by_pids, source_pads_data} =
       if Kernel.function_exported?(module, :known_source_pads, 0) do
         module.known_source_pads else %{}
       end |> spawn_pads(:source)
 
     # Initialize sink pads
-    {sink_pads_by_names, sink_pads_by_pids, sink_pads_pull_data} =
+    {sink_pads_by_names, sink_pads_by_pids, sink_pads_data} =
       if Kernel.function_exported?(module, :known_sink_pads, 0) do
         module.known_sink_pads else %{}
       end |> spawn_pads(:sink)
-
-    sink_pads_pull_buffers = sink_pads_pull_data |> Enum.into(%{}, fn {k, {pb, _}} -> {k, pb} end)
-    sink_pads_self_demands = sink_pads_pull_data |> Enum.into(%{}, fn {k, {_, sd}} -> {k, sd} end)
 
     %Membrane.Element.State{
       module: module,
       source_pads_by_names: source_pads_by_names,
       source_pads_by_pids: source_pads_by_pids,
-      source_pads_pull_demands: source_pads_pull_demands,
       sink_pads_by_names: sink_pads_by_names,
       sink_pads_by_pids: sink_pads_by_pids,
-      sink_pads_pull_buffers: sink_pads_pull_buffers,
-      sink_pads_self_demands: sink_pads_self_demands,
+      source_pads_data: source_pads_data,
+      sink_pads_data: sink_pads_data,
       internal_state: internal_state,
     }
   end
@@ -87,27 +81,20 @@ defmodule Membrane.Element.State do
 
           {:ok, pid} = Pad.start_link(pad_module, direction)
 
-          pull_data = case direction do
-            :source -> 0
-            :sink -> {PullBuffer.new(pid, 100), 0}
+          data = case direction do
+            :source -> %{demand: 0}
+            :sink -> %{buffer: PullBuffer.new(pid, 100), self_demand: 0}
           end
 
-          {{name, pid}, {pid, name}, {name, pull_data}}
+          {{name, pid}, {pid, name}, {name, data}}
         end)
       |> Membrane.Helper.Enum.unzip!(3)
-      |> case do {by_name, by_pid, pull_data} -> {
+      |> case do {by_name, by_pid, data} -> {
           by_name |> Enum.into(%{}),
           by_pid |> Enum.into(%{}),
-          pull_data |> Enum.into(%{}),
+          data |> Enum.into(%{}),
         }
       end
-  end
-
-  def get_sink_pull_buffer(%{sink_pads_pull_buffers: pull_buffers}, pad_name) do
-    case pull_buffers |> Map.get(pad_name) do
-      nil -> {:error, :unknown_pad}
-      buf -> {:ok, buf}
-    end
   end
 
   @doc """
@@ -179,6 +166,60 @@ defmodule Membrane.Element.State do
   end
 
 
+  def get_pad_data(state, pad_direction, pad_name) do
+    pad_direction
+      |> case do
+          :source -> state.source_pads_data
+          :sink -> state.sink_pads_data
+        end
+      |> get_in(pad_name)
+      |> case do
+        nil -> {:error, :unknown_pad}
+        pad_data -> {:ok, pad_data}
+      end
+  end
+  def get_pad_data(state, pad_direction, pad_name, [_|_] = keys) do
+    with {:ok, pad_data} <- get_pad_data(state, pad_direction, pad_name)
+    do {:ok, pad_data |> get_in(keys)}
+    end
+  end
+  def get_pad_data(state, pad_direction, pad_name, key) do
+    get_pad_data state, pad_direction, pad_name, [key]
+  end
+
+  def get_pad_data!(state, pad_direction, pad_name) do
+    {:ok, pad_data} = get_pad_data state, pad_direction, pad_name
+    pad_data
+  end
+  def get_pad_data!(state, pad_direction, pad_name, keys) do
+    {:ok, pad_data} = get_pad_data state, pad_direction, pad_name, keys
+    pad_data
+  end
+
+  def update_pad_data!(state, pad_direction, pad_name, keys \\ [], f)
+  def update_pad_data!(state, pad_direction, pad_name, [_|_] = keys, f)
+  when is_list keys do
+    map = case pad_direction do
+        :source -> :source_pads_data
+        :sink -> :sink_pads_data
+      end
+    update_in state, [map, pad_name | keys], f
+  end
+  def update_pad_data!(state, pad_direction, pad_name, key, f), do:
+    update_pad_data!(state, pad_direction, pad_name, [key], f)
+
+  def get_update_pad_data!(state, pad_direction, pad_name, keys \\ [], f)
+  def get_update_pad_data!(state, pad_direction, pad_name, [_|_] = keys, f)
+  when is_list keys do
+    map = case pad_direction do
+        :source -> :source_pads_data
+        :sink -> :sink_pads_data
+      end
+    get_and_update_in state, [map, pad_name | keys], f
+  end
+  def get_update_pad_data!(state, pad_direction, pad_name, key, f), do:
+    get_update_pad_data!(state, pad_direction, pad_name, [key], f)
+
   @doc """
   Activates all pads.
 
@@ -220,8 +261,12 @@ defmodule Membrane.Element.State do
     deactivate_pads_by_pids(state, tail)
   end
 
-  defp fill_sink_pull_buffers %State{sink_pads_pull_buffers: pull_buffers} = state do
-    {:ok, %State{state | sink_pads_pull_buffers: pull_buffers |> Enum.into(%{}, fn {k, v} -> {k, v |> PullBuffer.fill} end)}}
+  defp fill_sink_pull_buffers %State{sink_pads_by_names: sinks_by_names} = state do
+    state = Enum.reduce_while (sinks_by_names |> Map.keys), state, fn pad_name, st ->
+        update_pad_data! st, pad_name, :sink, :buffer, &PullBuffer.fill/1
+      end
+    {:ok, state}
+    # %State{state | sink_pads_pull_buffers: pull_buffers |> Enum.into(%{}, fn {k, v} -> {k, v |> PullBuffer.fill} end)}
   end
 
 
