@@ -133,6 +133,9 @@ defmodule Membrane.Element.Base.Filter do
   """
 
   alias Membrane.Element.Action
+  alias Membrane.Element.State
+  alias Membrane.Element
+  alias Membrane.PullBuffer
 
 
   # Type that defines a single action that may be returned from handle_*
@@ -281,18 +284,25 @@ defmodule Membrane.Element.Base.Filter do
   @spec handle_action(callback_action_t, atom, State.t) ::
     {:ok, State.t} |
     {:error, {any, State.t}}
+
   def handle_action({:buffer, {pad_name, buffer}}, _cb, state), do:
     Action.handle_buffer(pad_name, buffer, state)
+
   def handle_action({:caps, {pad_name, caps}}, _cb, state), do:
     Action.handle_caps(pad_name, caps, state)
+
   def handle_action({:demand, {pad_name, size}}, cb, state), do:
     Action.handle_demand(pad_name, size, cb, state)
+
   def handle_action({:demand, pad_name}, cb, state), do:
     handle_action({:demand, {pad_name, 1}}, cb, state)
+
   def handle_action({:event, {pad_name, event}}, _cb, state), do:
     Action.handle_event(pad_name, event, state)
+
   def handle_action({:message, message}, _cb, state), do:
     Action.handle_message(message, state)
+
   def handle_action(other, _cb, _state) do
     raise """
     Filters' callback replies are expected to be one of:
@@ -321,6 +331,45 @@ defmodule Membrane.Element.Base.Filter do
     """
   end
 
+  def handle_self_demand pad_name, buf_cnt, state do
+    handle_process :pull, pad_name, buf_cnt, state
+  end
+
+  def handle_buffer(:push, pad_name, buffer, state), do:
+    handle_process(:push, pad_name, buffer, state)
+
+  def handle_buffer(:pull, pad_name, buffer, state) do
+    state
+      |> State.update_pad_data!(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffer))
+      |> check_and_handle_demands
+  end
+
+  def handle_process(:push, pad_name, buffer, %State{module: module, internal_state: internal_state} = state) do
+    with \
+      {:ok, {actions, new_internal_state}} <- Element.wrap_internal_return(module.handle_process(pad_name, buffer, internal_state)),
+      {:ok, state} <- Element.handle_actions(actions, :handle_process, %State{state | internal_state: new_internal_state})
+    do
+      {:ok, state}
+    end
+  end
+
+  def handle_process(:pull, pad_name, buf_cnt, %State{module: module, internal_state: internal_state} = state) do
+    {out, state} = State.get_update_pad_data!(state, :sink, pad_name, :buffer, & &1 |> PullBuffer.take(buf_cnt))
+    case out do
+      {:empty, []}-> {:ok, state}
+      {_, buffers}->
+        {:ok, {actions, new_internal_state}} = Element.wrap_internal_return(module.handle_process(pad_name, buffers, internal_state))
+        Element.handle_actions actions, :handle_process, %State{state | internal_state: new_internal_state}
+    end
+  end
+
+  defp check_and_handle_demands(%State{source_pads_data: source_pads_data} = state) do
+    source_pads_data
+      |> Enum.map(fn {src, data} -> {src, data.demand} end)
+      |> Enum.reduce({:ok, state}, fn {name, demand}, {:ok, st} ->
+          if demand > 0 do Element.handle_demand name, 0, st else {:ok, st} end
+        end)
+  end
 
   defmacro __using__(_) do
     quote location: :keep do

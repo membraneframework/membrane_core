@@ -7,7 +7,6 @@ defmodule Membrane.Element do
   use Membrane.Mixins.Log
   alias Membrane.Element.State
   alias Membrane.Pad
-  alias Membrane.PullBuffer
   alias Membrane.Helper
 
   # Type that defines possible return values of start/start_link functions.
@@ -383,165 +382,55 @@ defmodule Membrane.Element do
          {:ok, state} <- handle_demand(pad_name, size, state)
     do
       {:noreply, state}
-
-    else
-      {:internal, {:error, {reason, new_internal_state}}} ->
-        warn("Failed to handle demand, element callback has returned an error: pad_pid = #{inspect(pad_pid)}, reason = #{inspect(reason)}")
-        {:noreply, %{state | internal_state: new_internal_state}}
-
-      {:error, reason} ->
-        warn("Failed to handle demand: pad_pid = #{inspect(pad_pid)}, reason = #{inspect(reason)}")
-        {:noreply, state}
-
-      other ->
-        handle_invalid_callback_return(other)
     end
   end
 
-  def handle_info({:membrane_self_demand, pad_name, size, callback}, %State{} = state) do
+  def handle_info({:membrane_self_demand, pad_name, size}, %State{module: module} = state) do
     with \
-      {:ok, state} <- handle_self_demand(pad_name, size, callback, state)
+      {:ok, state} <- module.base_module.handle_self_demand(pad_name, size, state)
     do
       {:noreply, state}
     end
   end
 
-  # Callback invoked on buffer coming from the sink pad to the sink
-  @doc false
-  def handle_info({:membrane_buffer, pad_pid, :push, buffer}, %State{module: module, internal_state: internal_state} = state) do
-    write_func = cond do
-      module |> is_sink_module? -> :handle_write
-      module |> is_filter_module? -> :handle_process
-    end
-
-    with {:ok, pad_name} <- state |> State.get_pad_name_by_pid(:sink, pad_pid),
-         {:ok, {actions, new_internal_state}} <- wrap_internal_return(Kernel.apply(module, write_func, [pad_name, buffer, internal_state])),
-         {:ok, state} <- handle_actions(actions, write_func, %{state | internal_state: new_internal_state})
-    do
-      {:noreply, state}
-
-    else
-      {:internal, {:error, {reason, new_internal_state}}} ->
-        warn("Failed to handle write, element callback has returned an error: pad_pid = #{inspect(pad_pid)}, reason = #{inspect(reason)}")
-        {:noreply, %{state | internal_state: new_internal_state}}
-
-      {:error, reason} ->
-        warn("Failed to handle write: pad_pid = #{inspect(pad_pid)}, reason = #{inspect(reason)}")
-        {:noreply, state}
-
-      other ->
-        handle_invalid_callback_return(other)
-    end
-  end
 
   # Callback invoked on buffer coming from the sink pad to the sink
   @doc false
-  def handle_info({:membrane_buffer, pad_pid, :pull, buffer}, %State{module: module} = state) do
+  def handle_info({:membrane_buffer, pad_pid, mode, buffer}, %State{module: module} = state) do
     with \
       {:ok, pad_name} <- state |> State.get_pad_name_by_pid(:sink, pad_pid),
-      state = state |> State.update_pad_data!(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffer)),
-      {:ok, state} <- (cond do
-          is_filter_module? module -> check_and_handle_demands state
-          is_sink_module? module -> check_and_handle_write state, pad_name
-        end)
+      {:ok, state} <- module.base_module.handle_buffer(mode, pad_name, buffer, state)
     do
       {:noreply, state}
-
-    else
-      {:internal, {:error, {reason, new_internal_state}}} ->
-        warn("Failed to handle write, element callback has returned an error: pad_pid = #{inspect(pad_pid)}, reason = #{inspect(reason)}")
-        {:noreply, %{state | internal_state: new_internal_state}}
-
-      {:error, reason} ->
-        warn("Failed to handle write: pad_pid = #{inspect(pad_pid)}, reason = #{inspect(reason)}")
-        {:noreply, state}
-
-      other ->
-        handle_invalid_callback_return(other)
     end
   end
 
   # Callback invoked on other incoming message
   @doc false
-  def handle_info(message, %State{module: module, internal_state: internal_state} = state) do
-    with {:ok, {actions, new_internal_state}} <- wrap_internal_return(module.handle_other(message, internal_state)),
-         {:ok, state} <- handle_actions(actions, :handle_other, %{state | internal_state: new_internal_state})
-    do
-      {:noreply, state}
+  # def handle_info(message, %State{module: module, internal_state: internal_state} = state) do
+  #   with {:ok, {actions, new_internal_state}} <- wrap_internal_return(module.handle_other(message, internal_state)),
+  #        {:ok, state} <- handle_actions(actions, :handle_other, %{state | internal_state: new_internal_state})
+  #   do
+  #     {:noreply, state}
+  #
+  #   else
+  #     {:internal, {:error, {reason, new_internal_state}}} ->
+  #       warn("Failed to handle other message, element callback has returned an error: message = #{inspect(message)}, reason = #{inspect(reason)}")
+  #       {:noreply, %{state | internal_state: new_internal_state}}
+  #
+  #     {:error, reason} ->
+  #       warn("Failed to handle other message: message = #{inspect(message)}, reason = #{inspect(reason)}")
+  #       {:noreply, state}
+  #
+  #     other ->
+  #       handle_invalid_callback_return(other)
+  #   end
+  # end
 
-    else
-      {:internal, {:error, {reason, new_internal_state}}} ->
-        warn("Failed to handle other message, element callback has returned an error: message = #{inspect(message)}, reason = #{inspect(reason)}")
-        {:noreply, %{state | internal_state: new_internal_state}}
-
-      {:error, reason} ->
-        warn("Failed to handle other message: message = #{inspect(message)}, reason = #{inspect(reason)}")
-        {:noreply, state}
-
-      other ->
-        handle_invalid_callback_return(other)
-    end
-  end
-
-  def handle_self_demand pad_name, buf_cnt, callback, %State{module: module} = state do
-    cond do
-      module |> is_sink_module? ->
-        state = State.update_pad_data!(state, :sink, pad_name, :self_demand, & &1+buf_cnt)
-        handle_write state, pad_name
-      module |> is_filter_module? ->
-        demand_src = case callback do
-          {:handle_demand, src, size} -> {src, size}
-          _ -> nil
-        end
-        handle_process pad_name, demand_src, buf_cnt, state
-    end
-  end
-
-  defp handle_process pad_name, demand_src, buf_cnt, %State{module: module, internal_state: internal_state} = state do
-    {out, state} = State.get_update_pad_data!(state, :sink, pad_name, :buffer, & &1 |> PullBuffer.take(buf_cnt))
-    case out do
-      {:empty, []}-> {:ok, state}
-      {_, buffers}->
-        {:ok, {actions, new_internal_state}} = wrap_internal_return(module.handle_process(pad_name, demand_src, buffers, internal_state))
-        handle_actions actions, :handle_process, %State{state | internal_state: new_internal_state}
-    end
-  end
-
-  defp handle_write %State{module: module, internal_state: internal_state} = state, pad_name do
-    {out, state} = State.get_update_pad_data!(state, :sink, pad_name, fn %{self_demand: demand, buffer: pb} = data ->
-        {out, npb} = PullBuffer.take pb, demand
-        {out, %{data | buffer: npb}}
-      end)
-    case out do
-      {:empty, []}-> {:ok, state}
-      {_, buffers} ->
-        {:ok, {actions, new_internal_state}} = wrap_internal_return(module.handle_write(pad_name, buffers, internal_state))
-        state = %State{state | internal_state: new_internal_state}
-          |> State.update_pad_data!(:sink, pad_name, :self_demand, & &1 - length buffers)
-        handle_actions actions, :handle_write, state
-    end
-  end
-
-  defp check_and_handle_write(state, pad_name) do
-    if State.get_pad_data!(state, :sink, pad_name, :self_demand) > 0 do
-      handle_write state, pad_name
-    else
-      {:ok, state}
-    end
-  end
-
-  defp handle_demand pad_name, size, %State{module: module, internal_state: internal_state} = state do
-    {total_size, state} = State.get_update_pad_data!(state, :source, pad_name, :demand, fn demand -> {demand+size, demand+size} end)
+  def handle_demand(pad_name, size, %State{module: module, internal_state: internal_state} = state) do
+    {total_size, state} = state |> State.get_update_pad_data!(:source, pad_name, :demand, fn demand -> {demand+size, demand+size} end)
     {:ok, {actions, new_internal_state}} = wrap_internal_return(module.handle_demand(pad_name, total_size, internal_state))
-    handle_actions actions, {:handle_demand, pad_name, total_size}, %State{state | internal_state: new_internal_state}
-  end
-
-  defp check_and_handle_demands(%State{source_pads_data: source_pads_data} = state) do
-    source_pads_data
-      |> Enum.map(fn {src, data} -> {src, data.demand} end)
-      |> Enum.reduce({:ok, state}, fn {name, demand}, {:ok, st} ->
-          if demand > 0 do handle_demand name, 0, st else {:ok, st} end
-        end)
+    handle_actions actions, :handle_demand, %State{state | internal_state: new_internal_state}
   end
 
   def handle_actions(actions, callback, %State{module: module} = state) do
@@ -550,27 +439,27 @@ defmodule Membrane.Element do
       end)
   end
 
-  defp handle_invalid_callback_return(return) do
-    raise """
-    Elements' callback replies are expected to be one of:
-
-        {:ok, {actions, state}}
-        {:error, {reason, state}}
-
-    where actions is a list that is specific to base type of the element.
-
-    But got return value of #{inspect(return)} which does not match any of the
-    valid return values.
-
-    This is probably a bug in the element, check if its callbacks return values
-    in the right format.
-    """
-  end
+  # defp handle_invalid_callback_return(return) do
+  #   raise """
+  #   Elements' callback replies are expected to be one of:
+  #
+  #       {:ok, {actions, state}}
+  #       {:error, {reason, state}}
+  #
+  #   where actions is a list that is specific to base type of the element.
+  #
+  #   But got return value of #{inspect(return)} which does not match any of the
+  #   valid return values.
+  #
+  #   This is probably a bug in the element, check if its callbacks return values
+  #   in the right format.
+  #   """
+  # end
 
 
   # Helper function that allows to distinguish potentially failed calls in with
   # clauses that operate on internal element state from others that operate on
   # global element state.
-  defp wrap_internal_return({:ok, info}), do: {:ok, info}
-  defp wrap_internal_return({:error, reason}), do: {:internal, {:error, reason}}
+  def wrap_internal_return({:ok, info}), do: {:ok, info}
+  def wrap_internal_return({:error, reason}), do: {:internal, {:error, reason}}
 end

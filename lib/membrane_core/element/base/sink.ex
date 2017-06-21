@@ -127,6 +127,9 @@ defmodule Membrane.Element.Base.Sink do
   """
 
   alias Membrane.Element.Action
+  alias Membrane.Element
+  alias Membrane.Element.State
+  alias Membrane.PullBuffer
 
 
   # Type that defines a single action that may be returned from handle_*
@@ -247,14 +250,19 @@ defmodule Membrane.Element.Base.Sink do
   @spec handle_action(callback_action_t, atom, State.t) ::
     {:ok, State.t} |
     {:error, {any, State.t}}
+
   def handle_action({:demand, {pad_name, size}}, cb, state), do:
     Action.handle_demand(pad_name, size, cb, state)
+
   def handle_action({:demand, pad_name}, cb, state), do:
     handle_action({:demand, {pad_name, 1}}, cb, state)
+
   def handle_action({:event, {pad_name, event}}, _cb, state), do:
     Action.handle_event(pad_name, event, state)
+
   def handle_action({:message, message}, _cb, state), do:
     Action.handle_message(message, state)
+
   def handle_action(other, _cb, _state) do
     raise """
     Sinks' callback replies are expected to be one of:
@@ -281,6 +289,52 @@ defmodule Membrane.Element.Base.Sink do
     """
   end
 
+  def handle_self_demand pad_name, buf_cnt, state do
+    state
+      |> State.update_pad_data!(:sink, pad_name, :self_demand, & &1 + buf_cnt)
+      |> (&handle_write :pull, pad_name, &1).()
+  end
+
+  def handle_buffer(:push, pad_name, buffer, state), do:
+    handle_write(:push, pad_name, buffer, state)
+
+  def handle_buffer(:pull, pad_name, buffer, state) do
+    state
+      |> State.update_pad_data!(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffer))
+      |> (&check_and_handle_write pad_name, &1).()
+  end
+
+  def handle_write(:push, pad_name, buffer, %State{module: module, internal_state: internal_state} = state) do
+    with \
+      {:ok, {actions, new_internal_state}} <- Element.wrap_internal_return(module.handle_write(pad_name, buffer, internal_state)),
+      {:ok, state} <- Element.handle_actions(actions, :handle_write, %State{state | internal_state: new_internal_state})
+    do
+      {:ok, state}
+    end
+  end
+
+  def handle_write(:pull, pad_name, %State{module: module, internal_state: internal_state} = state) do
+    {out, state} = state |> State.get_update_pad_data!(state, :sink, pad_name, fn %{self_demand: demand, buffer: pb} = data ->
+        {out, npb} = PullBuffer.take pb, demand
+        {out, %{data | buffer: npb}}
+      end)
+    case out do
+      {:empty, []}-> {:ok, state}
+      {_, buffers} ->
+        {:ok, {actions, new_internal_state}} = Element.wrap_internal_return(module.handle_write(pad_name, buffers, internal_state))
+        state = %State{state | internal_state: new_internal_state}
+          |> State.update_pad_data!(:sink, pad_name, :self_demand, & &1 - length buffers)
+        Element.handle_actions actions, :handle_write, state
+    end
+  end
+
+  defp check_and_handle_write(pad_name, state) do
+    if State.get_pad_data!(state, :sink, pad_name, :self_demand) > 0 do
+      handle_write :pull, pad_name, state
+    else
+      {:ok, state}
+    end
+  end
 
   defmacro __using__(_) do
     quote location: :keep do

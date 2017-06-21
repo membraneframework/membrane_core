@@ -5,7 +5,6 @@ defmodule Membrane.Element.Action do
   use Membrane.Mixins.Log
   alias Membrane.Pad
   alias Membrane.Caps
-  alias Membrane.Element
   alias Membrane.Element.State
 
   def handle_buffer(pad_name, %Membrane.Buffer{} = buffer, state) do
@@ -41,7 +40,7 @@ defmodule Membrane.Element.Action do
 
 
   @spec handle_demand(Pad.name_t, pos_integer, atom, State.t) :: :ok | {:error, any}
-  def handle_demand(pad_name, size, callback, state) do
+  def handle_demand(pad_name, size, callback, %State{module: module} = state) do
     debug("Demand: pad_name = #{inspect(pad_name)}")
     with \
       {:ok, {_availability, _direction, mode, _pid}} <- State.get_pad_by_name(state, :sink, pad_name),
@@ -49,9 +48,9 @@ defmodule Membrane.Element.Action do
     do
       case callback do
         cb when cb in [:handle_write, :handle_process] ->
-          send self(), {:membrane_self_demand, pad_name, size, callback}
+          send self(), {:membrane_self_demand, pad_name, size}
           {:ok, state}
-        _ -> Element.handle_self_demand pad_name, size, callback, state
+        _ -> module.base_module.handle_self_demand pad_name, size, state
       end
     else
       :push ->

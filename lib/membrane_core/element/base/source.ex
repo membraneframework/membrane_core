@@ -199,14 +199,19 @@ defmodule Membrane.Element.Base.Source do
   @spec handle_action(callback_action_t, atom, State.t) ::
     {:ok, State.t} |
     {:error, {any, State.t}}
+
   def handle_action({:buffer, {pad_name, buffer}}, _cb, state), do:
     Action.handle_buffer(pad_name, buffer, state)
+
   def handle_action({:caps, {pad_name, caps}}, _cb, state), do:
     Action.handle_caps(pad_name, caps, state)
+
   def handle_action({:event, {pad_name, event}}, _cb, state), do:
     Action.handle_event(pad_name, event, state)
+
   def handle_action({:message, message}, _cb, state), do:
     Action.handle_message(message, state)
+    
   def handle_action(other, _cb, _state) do
     raise """
     Sources' callback replies are expected to be one of:
