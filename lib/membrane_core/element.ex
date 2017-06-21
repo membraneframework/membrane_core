@@ -407,25 +407,13 @@ defmodule Membrane.Element do
 
   # Callback invoked on other incoming message
   @doc false
-  # def handle_info(message, %State{module: module, internal_state: internal_state} = state) do
-  #   with {:ok, {actions, new_internal_state}} <- wrap_internal_return(module.handle_other(message, internal_state)),
-  #        {:ok, state} <- handle_actions(actions, :handle_other, %{state | internal_state: new_internal_state})
-  #   do
-  #     {:noreply, state}
-  #
-  #   else
-  #     {:internal, {:error, {reason, new_internal_state}}} ->
-  #       warn("Failed to handle other message, element callback has returned an error: message = #{inspect(message)}, reason = #{inspect(reason)}")
-  #       {:noreply, %{state | internal_state: new_internal_state}}
-  #
-  #     {:error, reason} ->
-  #       warn("Failed to handle other message: message = #{inspect(message)}, reason = #{inspect(reason)}")
-  #       {:noreply, state}
-  #
-  #     other ->
-  #       handle_invalid_callback_return(other)
-  #   end
-  # end
+  def handle_info(message, state) do
+    with \
+      {:ok, state} <- handle_message(message, state)
+    do
+      {:noreply, state}
+    end
+  end
 
   def handle_demand(pad_name, size, %State{module: module, internal_state: internal_state} = state) do
     {total_size, state} = state |> State.get_update_pad_data!(:source, pad_name, :demand, fn demand -> {demand+size, demand+size} end)
@@ -437,6 +425,15 @@ defmodule Membrane.Element do
     actions |> Helper.Enum.reduce_with(state, fn action, state ->
         module.base_module.handle_action action, callback, state
       end)
+  end
+
+  def handle_message(message, %State{module: module, internal_state: internal_state} = state) do
+    with \
+      {:ok, {actions, new_internal_state}} <- wrap_internal_return(module.handle_other(message, internal_state)),
+      {:ok, state} <- handle_actions(actions, :handle_other, %State{state | internal_state: new_internal_state})
+    do
+      {:ok, state}
+    end
   end
 
   # defp handle_invalid_callback_return(return) do
