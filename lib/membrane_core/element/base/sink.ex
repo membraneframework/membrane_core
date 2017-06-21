@@ -314,7 +314,7 @@ defmodule Membrane.Element.Base.Sink do
   end
 
   def handle_write(:pull, pad_name, %State{module: module, internal_state: internal_state} = state) do
-    {out, state} = state |> State.get_update_pad_data!(state, :sink, pad_name, fn %{self_demand: demand, buffer: pb} = data ->
+    {out, state} = state |> State.get_update_pad_data!(:sink, pad_name, fn %{self_demand: demand, buffer: pb} = data ->
         {out, npb} = PullBuffer.take pb, demand
         {out, %{data | buffer: npb}}
       end)
