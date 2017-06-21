@@ -154,8 +154,8 @@ defmodule Membrane.Pad do
     {:reply, {:error, :inactive}, state}
   end
 
-  def handle_call(message, _from, %State{active: true, parent: parent, direction: direction, module: module, peer: peer, internal_state: internal_state} = state) do
-    case module.handle_call(message, parent, peer, direction, internal_state) do
+  def handle_call(message, _from, %State{active: true, parent: parent, name: name, direction: direction, module: module, peer: peer, internal_state: internal_state} = state) do
+    case module.handle_call(message, parent, name, peer, direction, internal_state) do
       {:reply, value, new_internal_state} ->
         # TODO check other return values
         {:reply, value, %{state | internal_state: new_internal_state}}
@@ -169,8 +169,8 @@ defmodule Membrane.Pad do
     {:noreply, state}
   end
 
-  def handle_info(message, %State{active: true, parent: parent, direction: direction, module: module, peer: peer, internal_state: internal_state} = state) do
-    case module.handle_other(message, parent, peer, direction, internal_state) do
+  def handle_info(message, %State{active: true, parent: parent, name: name, direction: direction, module: module, peer: peer, internal_state: internal_state} = state) do
+    case module.handle_other(message, parent, peer, name, direction, internal_state) do
       {:ok, new_internal_state} ->
         # TODO check other return values
         {:noreply, %{state | internal_state: new_internal_state}}

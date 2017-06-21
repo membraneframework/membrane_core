@@ -12,22 +12,20 @@ defmodule Membrane.Pad.Mode.Pull do
 
   use Membrane.Pad.Mode
   use Membrane.Mixins.Log
-  alias Membrane.Pad.State
-
 
   # Private API
 
   @doc false
   # Received from parent element in reaction to the :demand action.
   # Returns error if pad is not linked, so demand cannot be satisfied.
-  def handle_call({:membrane_demand, _size}, _parent, nil, :sink, state) do
+  def handle_call({:membrane_demand, _size}, _parent, nil, _name, :sink, state) do
     debug("Demand on non-linked sink pad")
     {:reply, {:error, :not_linked}, state}
   end
 
   # Received from parent element in reaction to the :demand action.
   # Forwards demand request to the peer but does not wait for reply.
-  def handle_call({:membrane_demand, size}, _parent, peer, :sink, state) do
+  def handle_call({:membrane_demand, size}, _parent, peer, _name, :sink, state) do
     debug("Demand on sink pad")
     send(peer, {:membrane_demand, size})
     {:reply, :ok, state}
@@ -35,14 +33,14 @@ defmodule Membrane.Pad.Mode.Pull do
 
   # Received from parent element in reaction to the :buffer action.
   # Returns error if pad is not linked, so send cannot succeed.
-  def handle_call({:membrane_buffer, buffer}, _parent, nil, :source, state) do
+  def handle_call({:membrane_buffer, buffer}, _parent, nil, _name, :source, state) do
     debug("Buffer on non-linked source pad, buffer = #{inspect(buffer)}")
     {:reply, {:error, :not_linked}, state}
   end
 
   # Received from parent element in reaction to the :buffer action.
   # Forwards demand request to the peer but does not wait for reply.
-  def handle_call({:membrane_buffer, buffer}, _parent, peer, :source, state) do
+  def handle_call({:membrane_buffer, buffer}, _parent, peer, _name, :source, state) do
     debug("Buffer on source pad, buffer = #{inspect(buffer)}")
     send(peer, {:membrane_buffer, buffer})
     {:reply, :ok, state}
@@ -52,7 +50,7 @@ defmodule Membrane.Pad.Mode.Pull do
   @doc false
   # Received at source pads when their peer sink pad got demand request.
   # Forwards demand request to the parent element but does not wait for reply.
-  def handle_other({:membrane_demand, size}, parent, _peer, :source, %State{name: name} = state) do
+  def handle_other({:membrane_demand, size}, parent, _peer, name, :source, state) do
     debug("Demand on source pad")
     send(parent, {:membrane_demand, name, size})
     {:ok, state}
@@ -60,7 +58,7 @@ defmodule Membrane.Pad.Mode.Pull do
 
   # Received at sink pads when their peer source pad got send action.
   # Forwards data to the parent element but does not wait for reply.
-  def handle_other({:membrane_buffer, buffer}, parent, _peer, :sink, %State{name: name} = state) do
+  def handle_other({:membrane_buffer, buffer}, parent, _peer, name, :sink, name, state) do
     debug("Buffer on sink pad, buffer = #{inspect(buffer)}")
     send(parent, {:membrane_buffer, name, :pull, buffer})
     {:ok, state}
