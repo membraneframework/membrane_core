@@ -7,8 +7,6 @@ defmodule Membrane.Element do
   use Membrane.Mixins.Log
   alias Membrane.Element.State
   alias Membrane.Pad
-  alias Membrane.Helper
-
   # Type that defines possible return values of start/start_link functions.
   @type on_start :: GenServer.on_start
 
@@ -377,9 +375,9 @@ defmodule Membrane.Element do
 
   # Callback invoked on demand request coming from the source pad in the pull mode
   @doc false
-  def handle_info({:membrane_demand, pad_pid, size}, %State{} = state) do
+  def handle_info({:membrane_demand, pad_pid, size}, %State{module: module} = state) do
     with {:ok, pad_name} <- state |> State.get_pad_name_by_pid(:source, pad_pid),
-         {:ok, state} <- handle_demand(pad_name, size, state)
+         {:ok, state} <- module.base_module.handle_demand(pad_name, size, state)
     do
       {:noreply, state}
     end
@@ -407,56 +405,12 @@ defmodule Membrane.Element do
 
   # Callback invoked on other incoming message
   @doc false
-  def handle_info(message, state) do
+  def handle_info(message, %State{module: module} = state) do
     with \
-      {:ok, state} <- handle_message(message, state)
+      {:ok, state} <- module.base_module.handle_message(message, state)
     do
       {:noreply, state}
     end
   end
 
-  def handle_demand(pad_name, size, %State{module: module, internal_state: internal_state} = state) do
-    {total_size, state} = state |> State.get_update_pad_data!(:source, pad_name, :demand, fn demand -> {demand+size, demand+size} end)
-    {:ok, {actions, new_internal_state}} = wrap_internal_return(module.handle_demand(pad_name, total_size, internal_state))
-    handle_actions actions, :handle_demand, %State{state | internal_state: new_internal_state}
-  end
-
-  def handle_actions(actions, callback, %State{module: module} = state) do
-    actions |> Helper.Enum.reduce_with(state, fn action, state ->
-        module.base_module.handle_action action, callback, state
-      end)
-  end
-
-  def handle_message(message, %State{module: module, internal_state: internal_state} = state) do
-    with \
-      {:ok, {actions, new_internal_state}} <- wrap_internal_return(module.handle_other(message, internal_state)),
-      {:ok, state} <- handle_actions(actions, :handle_other, %State{state | internal_state: new_internal_state})
-    do
-      {:ok, state}
-    end
-  end
-
-  # defp handle_invalid_callback_return(return) do
-  #   raise """
-  #   Elements' callback replies are expected to be one of:
-  #
-  #       {:ok, {actions, state}}
-  #       {:error, {reason, state}}
-  #
-  #   where actions is a list that is specific to base type of the element.
-  #
-  #   But got return value of #{inspect(return)} which does not match any of the
-  #   valid return values.
-  #
-  #   This is probably a bug in the element, check if its callbacks return values
-  #   in the right format.
-  #   """
-  # end
-
-
-  # Helper function that allows to distinguish potentially failed calls in with
-  # clauses that operate on internal element state from others that operate on
-  # global element state.
-  def wrap_internal_return({:ok, info}), do: {:ok, info}
-  def wrap_internal_return({:error, reason}), do: {:internal, {:error, reason}}
 end

@@ -72,6 +72,7 @@ defmodule Membrane.Element.Base.Source do
   """
 
   alias Membrane.Element.Action
+  use Membrane.Element.Common
 
 
   # Type that defines a single action that may be returned from handle_*
@@ -211,7 +212,7 @@ defmodule Membrane.Element.Base.Source do
 
   def handle_action({:message, message}, _cb, state), do:
     Action.handle_message(message, state)
-    
+
   def handle_action(other, _cb, _state) do
     raise """
     Sources' callback replies are expected to be one of:

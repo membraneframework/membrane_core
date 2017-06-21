@@ -132,11 +132,9 @@ defmodule Membrane.Element.Base.Filter do
   * `Membrane.Element.Base.Mixin.CommonBehaviour` - for more callbacks.
   """
 
-  alias Membrane.Element.Action
-  alias Membrane.Element.State
-  alias Membrane.Element
+  alias Membrane.Element.{Action, State, Common}
+  use Membrane.Element.Common
   alias Membrane.PullBuffer
-
 
   # Type that defines a single action that may be returned from handle_*
   # callbacks.
@@ -331,7 +329,9 @@ defmodule Membrane.Element.Base.Filter do
     """
   end
 
-  def handle_self_demand pad_name, buf_cnt, state do
+  defdelegate handle_demand(pad_name, size, state), to: Common
+
+  def handle_self_demand(pad_name, buf_cnt, state) do
     handle_process :pull, pad_name, buf_cnt, state
   end
 
@@ -346,8 +346,8 @@ defmodule Membrane.Element.Base.Filter do
 
   def handle_process(:push, pad_name, buffer, %State{module: module, internal_state: internal_state} = state) do
     with \
-      {:ok, {actions, new_internal_state}} <- Element.wrap_internal_return(module.handle_process(pad_name, buffer, internal_state)),
-      {:ok, state} <- Element.handle_actions(actions, :handle_process, %State{state | internal_state: new_internal_state})
+      {:ok, {actions, new_internal_state}} <- Common.wrap_internal_return(module.handle_process(pad_name, buffer, internal_state)),
+      {:ok, state} <- Common.handle_actions(actions, :handle_process, %State{state | internal_state: new_internal_state})
     do
       {:ok, state}
     end
@@ -358,8 +358,8 @@ defmodule Membrane.Element.Base.Filter do
     case out do
       {:empty, []}-> {:ok, state}
       {_, buffers}->
-        {:ok, {actions, new_internal_state}} = Element.wrap_internal_return(module.handle_process(pad_name, buffers, internal_state))
-        Element.handle_actions actions, :handle_process, %State{state | internal_state: new_internal_state}
+        {:ok, {actions, new_internal_state}} = Common.wrap_internal_return(module.handle_process(pad_name, buffers, internal_state))
+        Common.handle_actions actions, :handle_process, %State{state | internal_state: new_internal_state}
     end
   end
 
@@ -367,7 +367,7 @@ defmodule Membrane.Element.Base.Filter do
     source_pads_data
       |> Enum.map(fn {src, data} -> {src, data.demand} end)
       |> Enum.reduce({:ok, state}, fn {name, demand}, {:ok, st} ->
-          if demand > 0 do Element.handle_demand name, 0, st else {:ok, st} end
+          if demand > 0 do Common.handle_demand name, 0, st else {:ok, st} end
         end)
   end
 

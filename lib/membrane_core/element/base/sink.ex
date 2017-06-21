@@ -126,9 +126,8 @@ defmodule Membrane.Element.Base.Sink do
   * `Membrane.Element.Base.Mixin.CommonBehaviour` - for more callbacks.
   """
 
-  alias Membrane.Element.Action
-  alias Membrane.Element
-  alias Membrane.Element.State
+  alias Membrane.Element.{State, Action, Common}
+  use Membrane.Element.Common
   alias Membrane.PullBuffer
 
 
@@ -246,6 +245,8 @@ defmodule Membrane.Element.Base.Sink do
 
   # Private API
 
+  defdelegate handle_demand(pad_name, size, state), to: Common
+
   @doc false
   @spec handle_action(callback_action_t, atom, State.t) ::
     {:ok, State.t} |
@@ -306,8 +307,8 @@ defmodule Membrane.Element.Base.Sink do
 
   def handle_write(:push, pad_name, buffer, %State{module: module, internal_state: internal_state} = state) do
     with \
-      {:ok, {actions, new_internal_state}} <- Element.wrap_internal_return(module.handle_write(pad_name, buffer, internal_state)),
-      {:ok, state} <- Element.handle_actions(actions, :handle_write, %State{state | internal_state: new_internal_state})
+      {:ok, {actions, new_internal_state}} <- Common.wrap_internal_return(module.handle_write(pad_name, buffer, internal_state)),
+      {:ok, state} <- Common.handle_actions(actions, :handle_write, %State{state | internal_state: new_internal_state})
     do
       {:ok, state}
     end
@@ -321,10 +322,10 @@ defmodule Membrane.Element.Base.Sink do
     case out do
       {:empty, []}-> {:ok, state}
       {_, buffers} ->
-        {:ok, {actions, new_internal_state}} = Element.wrap_internal_return(module.handle_write(pad_name, buffers, internal_state))
+        {:ok, {actions, new_internal_state}} = Common.wrap_internal_return(module.handle_write(pad_name, buffers, internal_state))
         state = %State{state | internal_state: new_internal_state}
           |> State.update_pad_data!(:sink, pad_name, :self_demand, & &1 - length buffers)
-        Element.handle_actions actions, :handle_write, state
+        Common.handle_actions actions, :handle_write, state
     end
   end
 
