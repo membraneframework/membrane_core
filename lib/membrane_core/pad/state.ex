@@ -17,16 +17,18 @@ defmodule Membrane.Pad.State do
     module: nil,
     parent: nil,
     peer: nil,
-    active: false
+    active: false,
+    name: nil
 
 
-  @spec new(pid, Membrane.Pad.direction_t, module, any) :: t
-  def new(parent, direction, module, internal_state) do
+  @spec new(pid, Pad.name_t, Membrane.Pad.direction_t, module, any) :: t
+  def new(parent, name, direction, module, internal_state) do
     %Membrane.Pad.State{
       parent: parent,
       direction: direction,
       module: module,
       internal_state: internal_state,
+      name: name
     }
   end
 end

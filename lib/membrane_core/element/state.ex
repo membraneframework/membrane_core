@@ -79,7 +79,7 @@ defmodule Membrane.Element.State do
             :push -> Pad.Mode.Push
           end
 
-          {:ok, pid} = Pad.start_link(pad_module, direction)
+          {:ok, pid} = Pad.start_link(pad_module, name, direction)
 
           data = case direction do
             :source -> %{demand: 0}

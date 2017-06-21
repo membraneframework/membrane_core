@@ -26,10 +26,10 @@ defmodule Membrane.Pad do
   # links it to the current process in the supervision tree.
   #
   # Works similarily to `GenServer.start_link/3` and has the same return values.
-  @spec start_link(module, direction_t, process_options_t) :: on_start
-  def start_link(module, direction, process_options \\ []) do
+  @spec start_link(module, name_t, direction_t, process_options_t) :: on_start
+  def start_link(module, name, direction, process_options \\ []) do
     debug("Start Link: module = #{inspect(module)}, direction = #{inspect(direction)}, process_options = #{inspect(process_options)}")
-    GenServer.start_link(__MODULE__, {self(), direction, module}, process_options)
+    GenServer.start_link(__MODULE__, {self(), name, direction, module}, process_options)
   end
 
 
@@ -77,14 +77,14 @@ defmodule Membrane.Pad do
   # GenServer callbacks
 
   @doc false
-  def init({parent, direction, module}) do
+  def init({parent, name, direction, module}) do
     # Call pad's initialization callback
     case module.handle_init() do
       {:ok, internal_state} ->
         debug("Initialized: internal_state = #{inspect(internal_state)}")
 
         # Return initial state of the process, including pad state.
-        state = State.new(parent, direction, module, internal_state)
+        state = State.new(parent, name, direction, module, internal_state)
         {:ok, state}
 
       {:error, reason} ->

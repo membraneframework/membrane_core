@@ -12,6 +12,7 @@ defmodule Membrane.Pad.Mode.Pull do
 
   use Membrane.Pad.Mode
   use Membrane.Mixins.Log
+  alias Membrane.Pad.State
 
 
   # Private API
@@ -51,17 +52,17 @@ defmodule Membrane.Pad.Mode.Pull do
   @doc false
   # Received at source pads when their peer sink pad got demand request.
   # Forwards demand request to the parent element but does not wait for reply.
-  def handle_other({:membrane_demand, size}, parent, _peer, :source, state) do
+  def handle_other({:membrane_demand, size}, parent, _peer, :source, %State{name: name} = state) do
     debug("Demand on source pad")
-    send(parent, {:membrane_demand, self(), size})
+    send(parent, {:membrane_demand, name, size})
     {:ok, state}
   end
 
   # Received at sink pads when their peer source pad got send action.
   # Forwards data to the parent element but does not wait for reply.
-  def handle_other({:membrane_buffer, buffer}, parent, _peer, :sink, state) do
+  def handle_other({:membrane_buffer, buffer}, parent, _peer, :sink, %State{name: name} = state) do
     debug("Buffer on sink pad, buffer = #{inspect(buffer)}")
-    send(parent, {:membrane_buffer, self(), :pull, buffer})
+    send(parent, {:membrane_buffer, name, :pull, buffer})
     {:ok, state}
   end
 end

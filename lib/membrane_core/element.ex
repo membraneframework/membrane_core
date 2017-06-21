@@ -375,41 +375,32 @@ defmodule Membrane.Element do
 
   # Callback invoked on demand request coming from the source pad in the pull mode
   @doc false
-  def handle_info({:membrane_demand, pad_pid, size}, %State{module: module} = state) do
-    with {:ok, pad_name} <- state |> State.get_pad_name_by_pid(:source, pad_pid),
-         {:ok, state} <- module.base_module.handle_demand(pad_name, size, state)
-    do
-      {:noreply, state}
+  def handle_info({:membrane_demand, pad_name, size}, %State{module: module} = state) do
+    with {:ok, state} <- module.base_module.handle_demand(pad_name, size, state)
+    do {:noreply, state}
     end
   end
 
   def handle_info({:membrane_self_demand, pad_name, size}, %State{module: module} = state) do
-    with \
-      {:ok, state} <- module.base_module.handle_self_demand(pad_name, size, state)
-    do
-      {:noreply, state}
+    with {:ok, state} <- module.base_module.handle_self_demand(pad_name, size, state)
+    do {:noreply, state}
     end
   end
 
 
   # Callback invoked on buffer coming from the sink pad to the sink
   @doc false
-  def handle_info({:membrane_buffer, pad_pid, mode, buffer}, %State{module: module} = state) do
-    with \
-      {:ok, pad_name} <- state |> State.get_pad_name_by_pid(:sink, pad_pid),
-      {:ok, state} <- module.base_module.handle_buffer(mode, pad_name, buffer, state)
-    do
-      {:noreply, state}
+  def handle_info({:membrane_buffer, pad_name, mode, buffer}, %State{module: module} = state) do
+    with {:ok, state} <- module.base_module.handle_buffer(mode, pad_name, buffer, state)
+    do {:noreply, state}
     end
   end
 
   # Callback invoked on other incoming message
   @doc false
   def handle_info(message, %State{module: module} = state) do
-    with \
-      {:ok, state} <- module.base_module.handle_message(message, state)
-    do
-      {:noreply, state}
+    with {:ok, state} <- module.base_module.handle_message(message, state)
+    do {:noreply, state}
     end
   end
 
