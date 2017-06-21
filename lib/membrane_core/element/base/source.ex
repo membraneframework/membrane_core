@@ -71,7 +71,7 @@ defmodule Membrane.Element.Base.Source do
   * `Membrane.Element.Base.Mixin.CommonBehaviour` - for more callbacks.
   """
 
-  alias Membrane.Element.Action
+  alias Membrane.Element.{Action, Common}
   use Membrane.Element.Common
 
 
@@ -195,6 +195,8 @@ defmodule Membrane.Element.Base.Source do
 
 
   # Private API
+
+  defdelegate handle_demand(pad_name, size, state), to: Common
 
   @doc false
   @spec handle_action(callback_action_t, atom, State.t) ::

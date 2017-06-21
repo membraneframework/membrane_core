@@ -245,8 +245,6 @@ defmodule Membrane.Element.Base.Sink do
 
   # Private API
 
-  defdelegate handle_demand(pad_name, size, state), to: Common
-
   @doc false
   @spec handle_action(callback_action_t, atom, State.t) ::
     {:ok, State.t} |
