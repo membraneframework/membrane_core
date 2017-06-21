@@ -314,7 +314,7 @@ defmodule Membrane.Element do
   # Callback invoked on incoming play call.
   @doc false
   def handle_call(:membrane_play, _from, %State{playback_state: playback_state} = state) do
-    case State.change_playback_state(state, playback_state, :playing, :playing) do
+    case state |> State.change_playback_state(playback_state, :playing, :playing) do
       {:ok, state} ->
         {:reply, :ok, state}
 
@@ -326,7 +326,7 @@ defmodule Membrane.Element do
   # Callback invoked on incoming prepare call.
   @doc false
   def handle_call(:membrane_prepare, _from, %State{playback_state: playback_state} = state) do
-    case State.change_playback_state(state, playback_state, :prepared, :prepared) do
+    case state |> State.change_playback_state(playback_state, :prepared, :prepared) do
       {:ok, state} ->
         {:reply, :ok, state}
 
@@ -338,7 +338,7 @@ defmodule Membrane.Element do
   # Callback invoked on incoming stop call.
   @doc false
   def handle_call(:membrane_stop, _from, %State{playback_state: playback_state} = state) do
-    case State.change_playback_state(state, playback_state, :stopped, :stopped) do
+    case state |> State.change_playback_state(playback_state, :stopped, :stopped) do
       {:ok, state} ->
         {:reply, :ok, state}
 
@@ -379,7 +379,7 @@ defmodule Membrane.Element do
   # Callback invoked on demand request coming from the source pad in the pull mode
   @doc false
   def handle_info({:membrane_demand, pad_pid, size}, %State{} = state) do
-    with {:ok, pad_name} <- State.get_pad_name_by_pid(state, :source, pad_pid),
+    with {:ok, pad_name} <- state |> State.get_pad_name_by_pid(:source, pad_pid),
          {:ok, state} <- handle_demand(pad_name, size, state)
     do
       {:noreply, state}
@@ -410,11 +410,11 @@ defmodule Membrane.Element do
   @doc false
   def handle_info({:membrane_buffer, pad_pid, :push, buffer}, %State{module: module, internal_state: internal_state} = state) do
     write_func = cond do
-      is_sink_module?(module) -> :handle_write
-      is_filter_module?(module) -> :handle_process
+      module |> is_sink_module? -> :handle_write
+      module |> is_filter_module? -> :handle_process
     end
 
-    with {:ok, pad_name} <- State.get_pad_name_by_pid(state, :sink, pad_pid),
+    with {:ok, pad_name} <- state |> State.get_pad_name_by_pid(:sink, pad_pid),
          {:ok, {actions, new_internal_state}} <- wrap_internal_return(Kernel.apply(module, write_func, [pad_name, buffer, internal_state])),
          {:ok, state} <- handle_actions(actions, write_func, %{state | internal_state: new_internal_state})
     do
@@ -438,13 +438,11 @@ defmodule Membrane.Element do
   @doc false
   def handle_info({:membrane_buffer, pad_pid, :pull, buffer}, %State{module: module} = state) do
     with \
-      {:ok, pad_name} <- State.get_pad_name_by_pid(state, :sink, pad_pid),
-      # {:ok, pull_buffer} <- State.get_sink_pull_buffer(state, pad_name),
-      state <- State.update_pad_data!(state, :sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffer)),
-      # %State{state | sink_pads_pull_buffers: %{buffers | pad_name => pull_buffer |> PullBuffer.store(buffer)}},
+      {:ok, pad_name} <- state |> State.get_pad_name_by_pid(:sink, pad_pid),
+      state = state |> State.update_pad_data!(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffer)),
       {:ok, state} <- (cond do
-          is_filter_module? module -> check_and_handle_demands(state)
-          is_sink_module? module -> check_and_handle_write(state, pad_name)
+          is_filter_module? module -> check_and_handle_demands state
+          is_sink_module? module -> check_and_handle_write state, pad_name
         end)
     do
       {:noreply, state}
@@ -485,22 +483,10 @@ defmodule Membrane.Element do
     end
   end
 
-  # def handle_self_demand pad_name, size, :handle_write, %State{module: module, sink_pads_self_demands: demands, sink_pads_pull_buffers: pull_buffers} = state do
-  #   %{^pad_name => pb} = pull_buffers
-  #   state = %State{state | sink_pads_self_demands: demands |> Map.update!(pad_name, & &1+size)}
-  #   cond do
-  #     pb |> PullBuffer.empty? -> {:ok, state}
-  #     true ->
-  #       {:ok, {actions, state}} = handle_write(state, pad_name)
-  #       handle_actions actions, :handle_write, state
-  #   end
-  # end
-
   def handle_self_demand pad_name, buf_cnt, callback, %State{module: module} = state do
     cond do
       module |> is_sink_module? ->
         state = State.update_pad_data!(state, :sink, pad_name, :self_demand, & &1+buf_cnt)
-        # state = %State{state | sink_pads_self_demands: demands |> Map.update!(pad_name, & &1+buf_cnt)}
         handle_write state, pad_name
       module |> is_filter_module? ->
         demand_src = case callback do
@@ -530,10 +516,8 @@ defmodule Membrane.Element do
       {:empty, []}-> {:ok, state}
       {_, buffers} ->
         {:ok, {actions, new_internal_state}} = wrap_internal_return(module.handle_write(pad_name, buffers, internal_state))
-        state = %State{state |
-          # sink_pads_self_demands: demands |> Map.update!(pad_name, & &1 - length buffers),
-          internal_state: new_internal_state,
-        } |> State.update_pad_data!(:sink, pad_name, :self_demand, & &1 - length buffers)
+        state = %State{state | internal_state: new_internal_state}
+          |> State.update_pad_data!(:sink, pad_name, :self_demand, & &1 - length buffers)
         handle_actions actions, :handle_write, state
     end
   end
