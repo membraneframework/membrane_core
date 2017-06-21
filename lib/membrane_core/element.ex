@@ -555,16 +555,15 @@ defmodule Membrane.Element do
   defp check_and_handle_demands(%State{source_pads_data: source_pads_data} = state) do
     source_pads_data
       |> Enum.map(fn {src, data} -> {src, data.demand} end)
-      |> Enum.reduce(state, fn {name, demand}, st ->
-          {:ok, st} = if demand > 0 do handle_demand name, 0, st else {:ok, st} end
-          st
+      |> Enum.reduce({:ok, state}, fn {name, demand}, {:ok, st} ->
+          if demand > 0 do handle_demand name, 0, st else {:ok, st} end
         end)
   end
 
   def handle_actions(actions, callback, %State{module: module} = state) do
-    Helper.Enum.reduce_when actions, state, fn action, state ->
+    actions |> Helper.Enum.reduce_with(state, fn action, state ->
         module.base_module.handle_action action, callback, state
-      end
+      end)
   end
 
   defp handle_invalid_callback_return(return) do

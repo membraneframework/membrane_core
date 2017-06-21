@@ -5,7 +5,7 @@ defmodule Membrane.Helper.Enum do
 
   import Enum
 
-  def reduce_when(enum, acc, f) do
+  def reduce_with(enum, acc, f) do
     Enum.reduce_while enum, {:ok, acc}, fn e, {:ok, acc} ->
       with {:ok, new_acc} <- f.(e, acc)
       do {:cont, {:ok, new_acc}}
