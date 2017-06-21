@@ -58,7 +58,7 @@ defmodule Membrane.Pad.Mode.Pull do
 
   # Received at sink pads when their peer source pad got send action.
   # Forwards data to the parent element but does not wait for reply.
-  def handle_other({:membrane_buffer, buffer}, parent, _peer, name, :sink, name, state) do
+  def handle_other({:membrane_buffer, buffer}, parent, _peer, name, :sink, state) do
     debug("Buffer on sink pad, buffer = #{inspect(buffer)}")
     send(parent, {:membrane_buffer, name, :pull, buffer})
     {:ok, state}

@@ -155,7 +155,7 @@ defmodule Membrane.Pad do
   end
 
   def handle_call(message, _from, %State{active: true, parent: parent, name: name, direction: direction, module: module, peer: peer, internal_state: internal_state} = state) do
-    case module.handle_call(message, parent, name, peer, direction, internal_state) do
+    case module.handle_call(message, parent, peer, name, direction, internal_state) do
       {:reply, value, new_internal_state} ->
         # TODO check other return values
         {:reply, value, %{state | internal_state: new_internal_state}}
