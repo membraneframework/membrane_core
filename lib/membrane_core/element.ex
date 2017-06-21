@@ -376,24 +376,18 @@ defmodule Membrane.Element do
   # Callback invoked on demand request coming from the source pad in the pull mode
   @doc false
   def handle_info({:membrane_demand, pad_name, size}, %State{module: module} = state) do
-    with {:ok, state} <- module.base_module.handle_demand(pad_name, size, state)
-    do {:noreply, state}
-    end
+    module.base_module.handle_demand(pad_name, size, state) |> to_noreply_or(state)
   end
 
   def handle_info({:membrane_self_demand, pad_name, size}, %State{module: module} = state) do
-    with {:ok, state} <- module.base_module.handle_self_demand(pad_name, size, state)
-    do {:noreply, state}
-    end
+    module.base_module.handle_self_demand(pad_name, size, state) |> to_noreply_or(state)
   end
 
 
   # Callback invoked on buffer coming from the sink pad to the sink
   @doc false
   def handle_info({:membrane_buffer, pad_name, mode, buffer}, %State{module: module} = state) do
-    with {:ok, state} <- module.base_module.handle_buffer(mode, pad_name, buffer, state)
-    do {:noreply, state}
-    end
+    module.base_module.handle_buffer(mode, pad_name, buffer, state) |> to_noreply_or(state)
   end
 
   # Callback invoked on other incoming message
@@ -403,5 +397,8 @@ defmodule Membrane.Element do
     do {:noreply, state}
     end
   end
+
+  defp to_noreply_or({:ok, new_state}, _), do: {:noreply, new_state}
+  defp to_noreply_or(_, state), do: {:noreply, state}
 
 end

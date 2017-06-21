@@ -305,7 +305,7 @@ defmodule Membrane.Element.Base.Sink do
 
   def handle_write(:push, pad_name, buffer, %State{module: module, internal_state: internal_state} = state) do
     with \
-      {:ok, {actions, new_internal_state}} <- Common.wrap_internal_return(module.handle_write(pad_name, buffer, internal_state)),
+      {:ok, {actions, new_internal_state}} <- module.handle_write(pad_name, buffer, internal_state) |> Common.handle_callback_result,
       {:ok, state} <- Common.handle_actions(actions, :handle_write, %State{state | internal_state: new_internal_state})
     do
       {:ok, state}
@@ -320,7 +320,7 @@ defmodule Membrane.Element.Base.Sink do
     case out do
       {:empty, []}-> {:ok, state}
       {_, buffers} ->
-        {:ok, {actions, new_internal_state}} = Common.wrap_internal_return(module.handle_write(pad_name, buffers, internal_state))
+        {:ok, {actions, new_internal_state}} = module.handle_write(pad_name, buffers, internal_state) |> Common.handle_callback_result
         state = %State{state | internal_state: new_internal_state}
           |> State.update_pad_data!(:sink, pad_name, :self_demand, & &1 - length buffers)
         Common.handle_actions actions, :handle_write, state

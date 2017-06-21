@@ -346,7 +346,7 @@ defmodule Membrane.Element.Base.Filter do
 
   def handle_process(:push, pad_name, buffer, %State{module: module, internal_state: internal_state} = state) do
     with \
-      {:ok, {actions, new_internal_state}} <- Common.wrap_internal_return(module.handle_process(pad_name, buffer, internal_state)),
+      {:ok, {actions, new_internal_state}} <- module.handle_process(pad_name, buffer, internal_state) |> Common.handle_callback_result,
       {:ok, state} <- Common.handle_actions(actions, :handle_process, %State{state | internal_state: new_internal_state})
     do
       {:ok, state}
@@ -358,7 +358,7 @@ defmodule Membrane.Element.Base.Filter do
     case out do
       {:empty, []}-> {:ok, state}
       {_, buffers}->
-        {:ok, {actions, new_internal_state}} = Common.wrap_internal_return(module.handle_process(pad_name, buffers, internal_state))
+        {:ok, {actions, new_internal_state}} = module.handle_process(pad_name, buffers, internal_state) |> Common.handle_callback_result
         Common.handle_actions actions, :handle_process, %State{state | internal_state: new_internal_state}
     end
   end
