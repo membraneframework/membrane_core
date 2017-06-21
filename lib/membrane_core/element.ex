@@ -8,6 +8,7 @@ defmodule Membrane.Element do
   alias Membrane.Element.State
   alias Membrane.Pad
   alias Membrane.PullBuffer
+  alias Membrane.Helper
 
   # Type that defines possible return values of start/start_link functions.
   @type on_start :: GenServer.on_start
@@ -552,25 +553,18 @@ defmodule Membrane.Element do
   end
 
   defp check_and_handle_demands(%State{source_pads_data: source_pads_data} = state) do
-    check_and_handle_demands source_pads_data |> Enum.map(fn {src, data} -> {src, data.demand} end), state
+    source_pads_data
+      |> Enum.map(fn {src, data} -> {src, data.demand} end)
+      |> Enum.reduce(state, fn {name, demand}, st ->
+          {:ok, st} = if demand > 0 do handle_demand name, 0, st else {:ok, st} end
+          st
+        end)
   end
-  defp check_and_handle_demands([], state), do: {:ok, state}
-  defp check_and_handle_demands([{src_name, src_demand}|rest], state) when src_demand > 0 do
-    {:ok, state} = handle_demand(src_name, 0, state)
-    check_and_handle_demands rest, state
-  end
-  defp check_and_handle_demands([_|rest], state) do
-    check_and_handle_demands rest, state
-  end
-
 
   def handle_actions(actions, callback, %State{module: module} = state) do
-    Enum.reduce_while(actions, {:ok, state}, fn action, {:ok, st} ->
-      with {:ok, new_st} <- module.base_module.handle_action(action, callback, st)
-      do {:cont, {:ok, new_st}}
-      else {:error, reason} -> {:halt, {:error, {reason, st}}}
+    Helper.Enum.reduce_when actions, state, fn action, state ->
+        module.base_module.handle_action action, callback, state
       end
-    end)
   end
 
   defp handle_invalid_callback_return(return) do
