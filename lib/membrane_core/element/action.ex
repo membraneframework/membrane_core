@@ -26,7 +26,11 @@ defmodule Membrane.Element.Action do
     else
       {:error, :unknown_pad} ->
         handle_unknown_pad pad_name, :sink, :buffer, state
-      {:error, reason} -> {:error, reason}
+      {:error, reason} -> warnError """
+        Error while sending buffers:
+        #{inspect buffers}
+        to pad: #{inspect pad_name}
+        """, reason
     end
   end
 

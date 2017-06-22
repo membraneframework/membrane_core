@@ -23,11 +23,11 @@ defmodule Membrane.Mixins.Log do
         end
       end
 
-      def warnError(message, reason \\ false) do
+      def warnError(message, reason) do
         warn """
         Encountered an error:
         #{inspect message}
-        #{if reason do "Reason: " <> inspect reason else "" end}
+        Reason: #{inspect reason}
         Stacktrace:
         #{Exception.format_stacktrace System.stacktrace}
         """
@@ -36,7 +36,6 @@ defmodule Membrane.Mixins.Log do
 
       def orWarnError({:ok, value}, _msg), do: {:ok, value}
       def orWarnError({:error, reason}, msg), do: warnError(msg, reason)
-      def orWarnError(other, _msg), do: other
 
 
       @doc false
