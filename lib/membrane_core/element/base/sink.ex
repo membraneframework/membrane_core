@@ -126,8 +126,9 @@ defmodule Membrane.Element.Base.Sink do
   * `Membrane.Element.Base.Mixin.CommonBehaviour` - for more callbacks.
   """
 
-  alias Membrane.Element.{State, Action, Common}
+  use Membrane.Mixins.Log
   use Membrane.Element.Common
+  alias Membrane.Element.{State, Action, Common}
   alias Membrane.PullBuffer
 
 
@@ -292,6 +293,10 @@ defmodule Membrane.Element.Base.Sink do
     state
       |> State.update_pad_data!(:sink, pad_name, :self_demand, & &1 + buf_cnt)
       |> (&handle_write :pull, pad_name, &1).()
+      |> orWarnError("""
+        Demand of size #{inspect buf_cnt} on pad #{inspect pad_name}
+        was raised, and handle_write was called, but an error happened.
+        """)
   end
 
   def handle_buffer(:push, pad_name, buffer, state), do:
@@ -301,18 +306,20 @@ defmodule Membrane.Element.Base.Sink do
     state
       |> State.update_pad_data!(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffer))
       |> (&check_and_handle_write pad_name, &1).()
+      |> orWarnError("""
+        New buffer arrived:
+        #{inspect buffer}
+        and Membrane tried to execute handle_demand and then handle_write
+        for each unsupplied demand, but an error happened.
+        """)
   end
 
-  def handle_write(:push, pad_name, buffer, %State{module: module, internal_state: internal_state} = state) do
-    with \
-      {:ok, {actions, new_internal_state}} <- module.handle_write(pad_name, buffer, internal_state) |> Common.handle_callback_result,
-      {:ok, state} <- Common.handle_actions(actions, :handle_write, %State{state | internal_state: new_internal_state})
-    do
-      {:ok, state}
-    end
+  def handle_write(:push, pad_name, buffer, state) do
+    Common.exec_and_handle_callback(:handle_write, [pad_name, buffer], state)
+      |> orWarnError("Error while handling write")
   end
 
-  def handle_write(:pull, pad_name, %State{module: module, internal_state: internal_state} = state) do
+  def handle_write(:pull, pad_name, state) do
     {out, state} = state |> State.get_update_pad_data!(:sink, pad_name, fn %{self_demand: demand, buffer: pb} = data ->
         {out, npb} = PullBuffer.take pb, demand
         {out, %{data | buffer: npb}}
@@ -320,10 +327,9 @@ defmodule Membrane.Element.Base.Sink do
     case out do
       {:empty, []}-> {:ok, state}
       {_, buffers} ->
-        {:ok, {actions, new_internal_state}} = module.handle_write(pad_name, buffers, internal_state) |> Common.handle_callback_result
-        state = %State{state | internal_state: new_internal_state}
-          |> State.update_pad_data!(:sink, pad_name, :self_demand, & &1 - length buffers)
-        Common.handle_actions actions, :handle_write, state
+        state = state |> State.update_pad_data!(:sink, pad_name, :self_demand, & &1 - length buffers)
+        Common.exec_and_handle_callback(:handle_write, [pad_name, buffers], state)
+          |> orWarnError("Error while handling write")
     end
   end
 

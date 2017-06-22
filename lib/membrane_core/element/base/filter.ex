@@ -132,9 +132,11 @@ defmodule Membrane.Element.Base.Filter do
   * `Membrane.Element.Base.Mixin.CommonBehaviour` - for more callbacks.
   """
 
-  alias Membrane.Element.{Action, State, Common}
+  use Membrane.Mixins.Log
   use Membrane.Element.Common
+  alias Membrane.Element.{Action, State, Common}
   alias Membrane.PullBuffer
+  alias Membrane.Helper
 
   # Type that defines a single action that may be returned from handle_*
   # callbacks.
@@ -332,7 +334,11 @@ defmodule Membrane.Element.Base.Filter do
   defdelegate handle_demand(pad_name, size, state), to: Common
 
   def handle_self_demand(pad_name, buf_cnt, state) do
-    handle_process :pull, pad_name, buf_cnt, state
+    handle_process(:pull, pad_name, buf_cnt, state)
+      |> orWarnError("""
+        Demand of size #{inspect buf_cnt} on sink pad #{inspect pad_name}
+        was raised, and handle_process was called, but an error happened.
+        """)
   end
 
   def handle_buffer(:push, pad_name, buffer, state), do:
@@ -342,32 +348,33 @@ defmodule Membrane.Element.Base.Filter do
     state
       |> State.update_pad_data!(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffer))
       |> check_and_handle_demands
+      |> orWarnError("""
+        New buffer arrived:
+        #{inspect buffer}
+        and Membrane tried to execute handle_demand and then handle_process
+        for each unsupplied demand, but an error happened.
+        """)
   end
 
-  def handle_process(:push, pad_name, buffer, %State{module: module, internal_state: internal_state} = state) do
-    with \
-      {:ok, {actions, new_internal_state}} <- module.handle_process(pad_name, buffer, internal_state) |> Common.handle_callback_result,
-      {:ok, state} <- Common.handle_actions(actions, :handle_process, %State{state | internal_state: new_internal_state})
-    do
-      {:ok, state}
-    end
+  def handle_process(:push, pad_name, buffer, state) do
+    Common.exec_and_handle_callback(:handle_process, [pad_name, buffer], state)
+      |> orWarnError("Error while handling process")
   end
 
-  def handle_process(:pull, pad_name, buf_cnt, %State{module: module, internal_state: internal_state} = state) do
+  def handle_process(:pull, pad_name, buf_cnt, state) do
     {out, state} = State.get_update_pad_data!(state, :sink, pad_name, :buffer, & &1 |> PullBuffer.take(buf_cnt))
     case out do
       {:empty, []}-> {:ok, state}
-      {_, buffers}->
-        {:ok, {actions, new_internal_state}} = module.handle_process(pad_name, buffers, internal_state) |> Common.handle_callback_result
-        Common.handle_actions actions, :handle_process, %State{state | internal_state: new_internal_state}
+      {_, buffers}-> Common.exec_and_handle_callback(:handle_process, [pad_name, buffers], state)
+        |> orWarnError("Error while handling process")
     end
   end
 
   defp check_and_handle_demands(%State{source_pads_data: source_pads_data} = state) do
     source_pads_data
       |> Enum.map(fn {src, data} -> {src, data.demand} end)
-      |> Enum.reduce({:ok, state}, fn {name, demand}, {:ok, st} ->
-          if demand > 0 do Common.handle_demand name, 0, st else {:ok, st} end
+      |> Helper.Enum.reduce_with(state, fn {name, demand}, st ->
+          if demand > 0 do handle_demand name, 0, st else {:ok, st} end
         end)
   end
 
