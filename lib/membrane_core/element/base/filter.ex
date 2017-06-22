@@ -297,16 +297,18 @@ defmodule Membrane.Element.Base.Filter do
     Action.send_caps(pad_name, caps, state)
 
 
-  def handle_action({:demand, {pad_name, src_name}}, cb, state), do:
-    handle_action({:demand, {pad_name, src_name, 1}}, cb, state)
-
-  def handle_action({:demand, pad_name}, {:handle_demand, src_name}, state), do:
+  def handle_action({:demand, pad_name}, {:handle_demand, src_name}, state)
+  when is_atom pad_name do
     handle_action({:demand, {pad_name, src_name}}, :handle_demand, state)
+  end
 
   def handle_action({:demand, {pad_name, size}}, {:handle_demand, src_name}, state)
   when is_integer size do
     handle_action({:demand, {pad_name, src_name, size}}, :handle_demand, state)
   end
+
+  def handle_action({:demand, {pad_name, src_name}}, cb, state), do:
+    handle_action({:demand, {pad_name, src_name, 1}}, cb, state)
 
   def handle_action({:demand, {pad_name, src_name, size}}, {:handle_demand, _src_name}, state), do:
     Action.handle_demand(pad_name, src_name, size, :handle_demand, state)
@@ -352,8 +354,8 @@ defmodule Membrane.Element.Base.Filter do
         """)
   end
 
-  def handle_self_demand(pad_name, buf_cnt, state) do
-    handle_process(:pull, pad_name, buf_cnt, state)
+  def handle_self_demand(pad_name, src_name, buf_cnt, state) do
+    handle_process(:pull, pad_name, src_name, buf_cnt, state)
       |> orWarnError("""
         Demand of size #{inspect buf_cnt} on sink pad #{inspect pad_name}
         was raised, and handle_process was called, but an error happened.
@@ -380,11 +382,11 @@ defmodule Membrane.Element.Base.Filter do
       |> orWarnError("Error while handling process")
   end
 
-  def handle_process(:pull, pad_name, buf_cnt, state) do
+  def handle_process(:pull, pad_name, src_name, buf_cnt, state) do
     {out, state} = State.get_update_pad_data!(state, :sink, pad_name, :buffer, & &1 |> PullBuffer.take(buf_cnt))
     case out do
       {:empty, []}-> {:ok, state}
-      {_, buffers}-> Common.exec_and_handle_callback(:handle_process, [pad_name, buffers], state)
+      {_, buffers}-> Common.exec_and_handle_callback(:handle_process, [pad_name, src_name, buffers], state)
         |> orWarnError("Error while handling process")
     end
   end
