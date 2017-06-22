@@ -73,6 +73,7 @@ defmodule Membrane.Element.Base.Source do
 
   alias Membrane.Element.{Action, Common}
   use Membrane.Element.Common
+  use Membrane.Mixins.Log
 
 
   # Type that defines a single action that may be returned from handle_*
@@ -196,7 +197,13 @@ defmodule Membrane.Element.Base.Source do
 
   # Private API
 
-  defdelegate handle_demand(pad_name, size, state), to: Common
+  def handle_demand(pad_name, size, state) do
+    Common.exec_and_handle_callback(:handle_demand, [pad_name, size], state)
+      |> orWarnError("""
+        Demand arrived from pad #{inspect pad_name}, but error happened while
+        handling it.
+        """)
+  end
 
   @doc false
   @spec handle_action(callback_action_t, atom, State.t) ::
@@ -204,16 +211,10 @@ defmodule Membrane.Element.Base.Source do
     {:error, {any, State.t}}
 
   def handle_action({:buffer, {pad_name, buffer}}, _cb, state), do:
-    Action.handle_buffer(pad_name, buffer, state)
+    Action.send_buffer(pad_name, buffer, state)
 
   def handle_action({:caps, {pad_name, caps}}, _cb, state), do:
-    Action.handle_caps(pad_name, caps, state)
-
-  def handle_action({:event, {pad_name, event}}, _cb, state), do:
-    Action.handle_event(pad_name, event, state)
-
-  def handle_action({:message, message}, _cb, state), do:
-    Action.handle_message(message, state)
+    Action.send_caps(pad_name, caps, state)
 
   def handle_action(other, _cb, _state) do
     raise """

@@ -239,39 +239,6 @@ defmodule Membrane.Element do
     GenServer.call(server, {:membrane_get_pad, :sink, pad_name}, timeout)
   end
 
-
-  @doc """
-  Returns `true` if given module is an element that is a source, `false`
-  otherwise.
-  """
-  @spec is_source_module?(module) :: boolean
-  def is_source_module?(module) do
-    module.base_module == Membrane.Element.Base.Source
-  end
-
-
-  @doc """
-  Returns `true` if given module is an element that is a filter, `false`
-  otherwise.
-  """
-  @spec is_filter_module?(module) :: boolean
-  def is_filter_module?(module) do
-    module.base_module == Membrane.Element.Base.Filter
-  end
-
-
-  @doc """
-  Returns `true` if given module is an element that is a sink, `false`
-  otherwise.
-  """
-  @spec is_sink_module?(module) :: boolean
-  def is_sink_module?(module) do
-    module.base_module == Membrane.Element.Base.Sink
-  end
-
-
-
-
   # Private API
 
   @doc false
@@ -380,9 +347,9 @@ defmodule Membrane.Element do
     module.base_module.handle_demand(pad_name, size, state) |> to_noreply_or(state)
   end
 
-  def handle_info({:membrane_self_demand, pad_name, size}, %State{module: module} = state) do
+  def handle_info({:membrane_self_demand, pad_name, src_name, size}, %State{module: module} = state) do
     debug "Received self demand for pad #{inspect pad_name} of size #{inspect size}"
-    module.base_module.handle_self_demand(pad_name, size, state) |> to_noreply_or(state)
+    module.base_module.handle_self_demand(pad_name, src_name, size, state) |> to_noreply_or(state)
   end
 
 

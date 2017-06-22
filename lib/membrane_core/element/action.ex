@@ -7,24 +7,20 @@ defmodule Membrane.Element.Action do
   alias Membrane.Caps
   alias Membrane.Element.State
 
-  def handle_buffer(pad_name, %Membrane.Buffer{} = buffer, state) do
-    handle_buffer(pad_name, [buffer], state)
+  def send_buffer(pad_name, %Membrane.Buffer{} = buffer, state) do
+    send_buffer(pad_name, [buffer], state)
   end
 
-  @spec handle_buffer(Pad.name_t, [Membrane.Buffer.t], State.t) :: :ok
-  def handle_buffer(pad_name, buffers, state) do
+  @spec send_buffer(Pad.name_t, [Membrane.Buffer.t], State.t) :: :ok
+  def send_buffer(pad_name, buffers, state) do
     debug """
       Sending buffers through pad #{inspect(pad_name)}
       Buffers: #{inspect(buffers)}
       """
     with \
-      {:ok, {_availability, _direction, mode, pid}} <- State.get_pad_by_name(state, :source, pad_name),
+      {:ok, {_availability, _direction, _mode, pid}} <- State.get_pad_by_name(state, :source, pad_name),
       :ok <- GenServer.call(pid, {:membrane_buffer, buffers})
     do
-      state = cond do
-        mode == :pull -> State.update_pad_data! state, :source, pad_name, :demand, & &1 - length buffers
-        true -> state
-      end
       {:ok, state}
     else
       {:error, :unknown_pad} ->
@@ -37,16 +33,16 @@ defmodule Membrane.Element.Action do
   end
 
 
-  @spec handle_caps(Pad.name_t, Caps.t, State.t) :: :ok
-  def handle_caps(pad_name, caps, state) do
+  @spec send_caps(Pad.name_t, Caps.t, State.t) :: :ok
+  def send_caps(pad_name, caps, state) do
     debug("Caps: pad_name = #{inspect(pad_name)}, caps = #{inspect(caps)}")
     # TODO
     {:ok, state}
   end
 
 
-  @spec handle_demand(Pad.name_t, pos_integer, atom, State.t) :: :ok | {:error, any}
-  def handle_demand(pad_name, size, callback, %State{module: module} = state) do
+  @spec handle_demand(Pad.name_t, Pad.name_t, pos_integer, atom, State.t) :: :ok | {:error, any}
+  def handle_demand(pad_name, src_name \\ nil, size, callback, %State{module: module} = state) do
     debug "Sending demand of size #{inspect size} through pad #{inspect(pad_name)}"
     with \
       {:ok, {_availability, _direction, mode, _pid}} <- State.get_pad_by_name(state, :sink, pad_name),
@@ -54,9 +50,9 @@ defmodule Membrane.Element.Action do
     do
       case callback do
         cb when cb in [:handle_write, :handle_process] ->
-          send self(), {:membrane_self_demand, pad_name, size}
+          send self(), {:membrane_self_demand, pad_name, src_name, size}
           {:ok, state}
-        _ -> module.base_module.handle_self_demand pad_name, size, state
+        _ -> module.base_module.handle_self_demand pad_name, src_name, size, state
       end
     else
       :push ->
@@ -67,8 +63,8 @@ defmodule Membrane.Element.Action do
   end
 
 
-  @spec handle_event(Pad.name_t, Membrane.Event.t, State.t) :: :ok
-  def handle_event(pad_name, event, state) do
+  @spec send_event(Pad.name_t, Membrane.Event.t, State.t) :: :ok
+  def send_event(pad_name, event, state) do
     debug """
       Sending event through pad #{inspect(pad_name)}
       Event: #{inspect(event)}
@@ -115,13 +111,13 @@ defmodule Membrane.Element.Action do
   end
 
 
-  @spec handle_message(Membrane.Message.t, State.t) :: :ok
-  def handle_message(%Membrane.Message{} = message, %State{message_bus: nil} = state) do
+  @spec send_message(Membrane.Message.t, State.t) :: :ok
+  def send_message(%Membrane.Message{} = message, %State{message_bus: nil} = state) do
     debug "Dropping #{inspect(message)} as message bus is undefined"
     {:ok, state}
   end
 
-  def handle_message(%Membrane.Message{} = message, %State{message_bus: message_bus} = state) do
+  def send_message(%Membrane.Message{} = message, %State{message_bus: message_bus} = state) do
     debug "Sending message #{inspect(message)} (message bus: #{inspect message_bus})"
     send(message_bus, {:membrane_message, message})
     {:ok, state}

@@ -17,22 +17,21 @@ defmodule Membrane.Element.Common do
         Common.exec_and_handle_callback(:handle_other, [message], state)
           |> Common.orWarnError("Error while handling message")
       end
+
+      def handle_action({:event, {pad_name, event}}, _cb, state), do:
+        Membrane.Element.Action.send_event(pad_name, event, state)
+
+      def handle_action({:message, message}, _cb, state), do:
+        Membrane.Element.Action.send_message(message, state)
+
     end
   end
 
-  def handle_demand(pad_name, size, state) do
-    {total_size, state} = state |> State.get_update_pad_data!(:source, pad_name, :demand, fn demand -> {demand+size, demand+size} end)
-    exec_and_handle_callback(:handle_demand, [pad_name, total_size], state)
-      |> orWarnError("""
-        Demand arrived from pad #{inspect pad_name}, but error happened while
-        handling it.
-        """)
-  end
-
-  def exec_and_handle_callback(cb, args, %State{module: module, internal_state: internal_state} = state) do
+  def exec_and_handle_callback(cb, actions_cb \\ nil, args, %State{module: module, internal_state: internal_state} = state) do
+    actions_cb = actions_cb || cb
     with \
       {:call, {:ok, {actions, new_internal_state}}} <- {:call, apply(module, cb, args ++ [internal_state]) |> handle_callback_result(cb)},
-      {:handle, {:ok, state}} <- {:handle, actions |> module.base_module.handle_actions(cb, %State{state | internal_state: new_internal_state})}
+      {:handle, {:ok, state}} <- {:handle, actions |> module.base_module.handle_actions(actions_cb, %State{state | internal_state: new_internal_state})}
     do {:ok, state}
     else
       {:call, {:error, reason}} -> warnError "Error while executing callback #{inspect cb}", reason
@@ -40,15 +39,14 @@ defmodule Membrane.Element.Common do
     end
   end
 
-  def handle_callback_result(result, cb \\ :"")
+  def handle_callback_result(result, cb \\ "")
   def handle_callback_result({:ok, {actions, new_internal_state}}, _cb)
   when is_list actions
   do {:ok, {actions, new_internal_state}}
   end
   def handle_callback_result({:error, {reason, new_internal_state}}, cb) do
-    cb_name = Atom.to_string cb
     warn """
-     Elements callback #{inspect cb_name} returned an error, reason:
+     Elements callback #{inspect cb} returned an error, reason:
      #{inspect reason}
 
      Elements state: #{inspect new_internal_state}
@@ -59,7 +57,6 @@ defmodule Membrane.Element.Common do
     {:ok, {[], new_internal_state}}
   end
   def handle_callback_result(result, cb) do
-    cb_name = Atom.to_string cb
     raise """
     Elements' callback replies are expected to be one of:
 
@@ -68,7 +65,7 @@ defmodule Membrane.Element.Common do
 
     where actions is a list that is specific to base type of the element.
 
-    Instead, callback #{inspect cb_name} returned value of #{inspect result}
+    Instead, callback #{inspect cb} returned value of #{inspect result}
     which does not match any of the valid return values.
 
     This is probably a bug in the element, check if its callbacks return values

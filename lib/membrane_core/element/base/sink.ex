@@ -257,12 +257,6 @@ defmodule Membrane.Element.Base.Sink do
   def handle_action({:demand, pad_name}, cb, state), do:
     handle_action({:demand, {pad_name, 1}}, cb, state)
 
-  def handle_action({:event, {pad_name, event}}, _cb, state), do:
-    Action.handle_event(pad_name, event, state)
-
-  def handle_action({:message, message}, _cb, state), do:
-    Action.handle_message(message, state)
-
   def handle_action(other, _cb, _state) do
     raise """
     Sinks' callback replies are expected to be one of:
@@ -289,7 +283,7 @@ defmodule Membrane.Element.Base.Sink do
     """
   end
 
-  def handle_self_demand pad_name, buf_cnt, state do
+  def handle_self_demand pad_name, _src_name, buf_cnt, state do
     state
       |> State.update_pad_data!(:sink, pad_name, :self_demand, & &1 + buf_cnt)
       |> (&handle_write :pull, pad_name, &1).()
