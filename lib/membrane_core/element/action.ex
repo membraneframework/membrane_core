@@ -13,7 +13,10 @@ defmodule Membrane.Element.Action do
 
   @spec handle_buffer(Pad.name_t, [Membrane.Buffer.t], State.t) :: :ok
   def handle_buffer(pad_name, buffers, state) do
-    debug("Buffer: pad_name = #{inspect(pad_name)}, buffers = #{inspect(buffers)}")
+    debug """
+      Sending buffers through pad #{inspect(pad_name)}
+      Buffers: #{inspect(buffers)}
+      """
     with \
       {:ok, {_availability, _direction, mode, pid}} <- State.get_pad_by_name(state, :source, pad_name),
       :ok <- GenServer.call(pid, {:membrane_buffer, buffers})
@@ -27,9 +30,8 @@ defmodule Membrane.Element.Action do
       {:error, :unknown_pad} ->
         handle_unknown_pad pad_name, :sink, :buffer, state
       {:error, reason} -> warnError """
-        Error while sending buffers:
-        #{inspect buffers}
-        to pad: #{inspect pad_name}
+        Error while sending buffers to pad: #{inspect pad_name}
+        Buffers: #{inspect buffers}
         """, reason
     end
   end
@@ -45,7 +47,7 @@ defmodule Membrane.Element.Action do
 
   @spec handle_demand(Pad.name_t, pos_integer, atom, State.t) :: :ok | {:error, any}
   def handle_demand(pad_name, size, callback, %State{module: module} = state) do
-    debug("Demand: pad_name = #{inspect(pad_name)}")
+    debug "Sending demand of size #{inspect size} through pad #{inspect(pad_name)}"
     with \
       {:ok, {_availability, _direction, mode, _pid}} <- State.get_pad_by_name(state, :sink, pad_name),
       :pull <- mode
@@ -67,7 +69,10 @@ defmodule Membrane.Element.Action do
 
   @spec handle_event(Pad.name_t, Membrane.Event.t, State.t) :: :ok
   def handle_event(pad_name, event, state) do
-    debug("Event: pad_name = #{inspect(pad_name)}, event = #{inspect(event)}")
+    debug """
+      Sending event through pad #{inspect(pad_name)}
+      Event: #{inspect(event)}
+      """
     {:ok, state}
 
     # TODO add pad handling code
@@ -112,12 +117,12 @@ defmodule Membrane.Element.Action do
 
   @spec handle_message(Membrane.Message.t, State.t) :: :ok
   def handle_message(%Membrane.Message{} = message, %State{message_bus: nil} = state) do
-    debug("Message: message_bus = nil, message = #{inspect(message)}")
+    debug "Dropping #{inspect(message)} as message bus is undefined"
     {:ok, state}
   end
 
   def handle_message(%Membrane.Message{} = message, %State{message_bus: message_bus} = state) do
-    debug("Message: message_bus = #{inspect(message_bus)}, message = #{inspect(message)}")
+    debug "Sending message #{inspect(message)} (message bus: #{inspect message_bus})"
     send(message_bus, {:membrane_message, message})
     {:ok, state}
   end
