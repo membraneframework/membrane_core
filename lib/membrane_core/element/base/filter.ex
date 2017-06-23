@@ -347,11 +347,13 @@ defmodule Membrane.Element.Base.Filter do
 
   def handle_demand(pad_name, size, state) do
     {total_size, state} = state |> State.get_update_pad_data!(:source, pad_name, :demand, fn demand -> {demand+size, demand+size} end)
-    Common.exec_and_handle_callback(:handle_demand, {:handle_demand, pad_name}, [pad_name, total_size], state)
-      |> orWarnError("""
-        Demand arrived from pad #{inspect pad_name}, but error happened while
-        handling it.
-        """)
+    if total_size > 0 do
+      Common.exec_and_handle_callback(:handle_demand, {:handle_demand, pad_name}, [pad_name, total_size], state)
+        |> orWarnError("""
+          Demand arrived from pad #{inspect pad_name}, but error happened while
+          handling it.
+          """)
+    else {:ok, state} end
   end
 
   def handle_self_demand(pad_name, src_name, buf_cnt, state) do
@@ -383,11 +385,18 @@ defmodule Membrane.Element.Base.Filter do
   end
 
   def handle_process(:pull, pad_name, src_name, buf_cnt, state) do
-    {out, state} = State.get_update_pad_data!(state, :sink, pad_name, :buffer, & &1 |> PullBuffer.take(buf_cnt))
-    case out do
-      {:empty, []}-> {:ok, state}
-      {_, buffers}-> Common.exec_and_handle_callback(:handle_process, [pad_name, src_name, buffers], state)
-        |> orWarnError("Error while handling process")
+    with \
+      {{:ok, out}, state} <- state |> State.get_update_pad_data!(:sink, pad_name, :buffer,
+        &case &1 |> PullBuffer.take(buf_cnt) do
+          {:ok, {out, pb}} -> {{:ok, out}, pb}
+          {:error, reason} -> {{:error, reason}, &1}
+        end),
+      {:ok, state} <- (case out do
+          {:empty, []} -> {:ok, state}
+          {_, buffers} -> Common.exec_and_handle_callback(:handle_process, [pad_name, src_name, buffers], state)
+        end)
+    do {:ok, state}
+    else {:error, reason} -> warnError "Error while handling process", reason
     end
   end
 
