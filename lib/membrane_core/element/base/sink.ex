@@ -284,9 +284,9 @@ defmodule Membrane.Element.Base.Sink do
   end
 
   def handle_self_demand pad_name, _src_name, buf_cnt, state do
-    state
-      |> State.update_pad_data!(:sink, pad_name, :self_demand, & &1 + buf_cnt)
-      |> (&handle_write :pull, pad_name, &1).()
+    {:ok, state} = state
+      |> State.update_pad_data!(:sink, pad_name, :self_demand, & {:ok, &1 + buf_cnt})
+    handle_write(:pull, pad_name, state)
       |> orWarnError("""
         Demand of size #{inspect buf_cnt} on pad #{inspect pad_name}
         was raised, and handle_write was called, but an error happened.
@@ -297,9 +297,9 @@ defmodule Membrane.Element.Base.Sink do
     handle_write(:push, pad_name, buffer, state)
 
   def handle_buffer(:pull, pad_name, buffer, state) do
-    state
-      |> State.update_pad_data!(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffer))
-      |> (&check_and_handle_write pad_name, &1).()
+    {:ok, state} = state
+      |> State.update_pad_data!(:sink, pad_name, :buffer, & {:ok, &1 |> PullBuffer.store(buffer)})
+    check_and_handle_write(pad_name, state)
       |> orWarnError("""
         New buffer arrived:
         #{inspect buffer}
@@ -314,16 +314,22 @@ defmodule Membrane.Element.Base.Sink do
   end
 
   def handle_write(:pull, pad_name, state) do
-    {out, state} = state |> State.get_update_pad_data!(:sink, pad_name, fn %{self_demand: demand, buffer: pb} = data ->
-        {:ok, {out, npb}} = PullBuffer.take pb, demand
-        {out, %{data | buffer: npb}}
-      end)
-    case out do
-      {:empty, []}-> {:ok, state}
-      {_, buffers} ->
-        state = state |> State.update_pad_data!(:sink, pad_name, :self_demand, & &1 - length buffers)
-        Common.exec_and_handle_callback(:handle_write, [pad_name, buffers], state)
-          |> orWarnError("Error while handling write")
+    with \
+      {:ok, {out, state}} <- state
+        |> State.get_update_pad_data!(:sink, pad_name, fn %{self_demand: demand, buffer: pb} = data ->
+            with {:ok, {out, npb}} <- PullBuffer.take(pb, demand)
+            do {out, %{data | buffer: npb}}
+            end
+          end),
+      {:ok, state} <- (case out do
+          {:empty, []}-> {:ok, state}
+          {_, buffers} ->
+            {:ok, state} = state
+              |> State.update_pad_data!(:sink, pad_name, :self_demand, & {:ok, &1 - length buffers})
+            Common.exec_and_handle_callback(:handle_write, [pad_name, buffers], state)
+        end)
+    do {:ok, state}
+    else {:error, reason} -> warnError "Error while handling write", reason
     end
   end
 

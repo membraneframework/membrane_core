@@ -288,7 +288,7 @@ defmodule Membrane.Element.Base.Filter do
   def handle_action({:buffer, {pad_name, buffers}}, _cb, state) do
     with {:ok, state} <- Action.send_buffer pad_name, buffers, state
     do
-      state = state |> State.update_pad_data!(:source, pad_name, :demand, & &1 - length buffers)
+      {:ok, state} = state |> State.update_pad_data!(:source, pad_name, :demand, & {:ok, &1 - length buffers})
       {:ok, state}
     end
   end
@@ -346,7 +346,7 @@ defmodule Membrane.Element.Base.Filter do
   end
 
   def handle_demand(pad_name, size, state) do
-    {total_size, state} = state |> State.get_update_pad_data!(:source, pad_name, :demand, fn demand -> {demand+size, demand+size} end)
+    {total_size, {:ok, state}} = state |> State.get_update_pad_data!(:source, pad_name, :demand, fn demand -> {:ok, {demand+size, demand+size}} end)
     if total_size > 0 do
       Common.exec_and_handle_callback(:handle_demand, {:handle_demand, pad_name}, [pad_name, total_size], state)
         |> orWarnError("""
@@ -371,9 +371,9 @@ defmodule Membrane.Element.Base.Filter do
   end
 
   def handle_buffer(:pull, pad_name, buffers, state) do
-    state
-      |> State.update_pad_data!(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffers))
-      |> (&check_and_handle_demands pad_name, buffers, &1).()
+    {:ok, state} = state
+      |> State.update_pad_data!(:sink, pad_name, :buffer, & {:ok, &1 |> PullBuffer.store(buffers)})
+    check_and_handle_demands pad_name, buffers, state
   end
 
   def handle_process(:push, pad_name, buffers, state) do
@@ -383,11 +383,7 @@ defmodule Membrane.Element.Base.Filter do
 
   def handle_process(:pull, pad_name, src_name, buf_cnt, state) do
     with \
-      {{:ok, out}, state} <- state |> State.get_update_pad_data!(:sink, pad_name, :buffer,
-        &case &1 |> PullBuffer.take(buf_cnt) do
-          {:ok, {out, pb}} -> {{:ok, out}, pb}
-          {:error, reason} -> {{:error, reason}, &1}
-        end),
+      {:ok, {out, state}} <- state |> State.get_update_pad_data!(:sink, pad_name, :buffer, & {:ok, &1 |> PullBuffer.take(buf_cnt)}),
       {:ok, state} <- (case out do
           {:empty, []} -> {:ok, state}
           {_, buffers} -> Common.exec_and_handle_callback(:handle_process, [pad_name, src_name, buffers], state)

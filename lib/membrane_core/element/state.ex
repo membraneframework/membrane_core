@@ -9,6 +9,7 @@ defmodule Membrane.Element.State do
   alias __MODULE__
   alias Membrane.PullBuffer
   alias Membrane.Element
+  alias Membrane.Helper
 
 
   @type t :: %Membrane.Element.State{
@@ -208,7 +209,14 @@ defmodule Membrane.Element.State do
         :source -> :source_pads_data
         :sink -> :sink_pads_data
       end
-    update_in state, [map, pad_name | keys] |> Enum.map(&Access.key!/1), f
+    get_and_update_in state, [map, pad_name | keys] |> Enum.map(&Access.key!/1), (&case f.(&1) do
+        {:ok, res} -> {:ok, res}
+        {:error, reason} -> {{:error, reason}, nil}
+      end)
+      |> (case do
+        {:ok, state} -> {:ok, state}
+        {{:error, reason}, _state} -> {:error, reason}
+      end)
   end
   def update_pad_data!(state, pad_direction, pad_name, key, f), do:
     update_pad_data!(state, pad_direction, pad_name, [key], f)
@@ -220,7 +228,14 @@ defmodule Membrane.Element.State do
         :source -> :source_pads_data
         :sink -> :sink_pads_data
       end
-    get_and_update_in state, [map, pad_name | keys] |> Enum.map(&Access.key!/1), f
+    get_and_update_in state, [map, pad_name | keys] |> Enum.map(&Access.key!/1), (&case f.(&1) do
+        {:ok, {out, res}} -> {:ok, {out, res}}
+        {:error, reason} -> {{:error, reason}, nil}
+      end)
+      |> (case do
+        {{:ok, out}, state} -> {:ok, {out, state}}
+        {{:error, reason}, _state} -> {:error, reason}
+      end)
   end
   def get_update_pad_data!(state, pad_direction, pad_name, key, f), do:
     get_update_pad_data!(state, pad_direction, pad_name, [key], f)
@@ -267,14 +282,10 @@ defmodule Membrane.Element.State do
   end
 
   defp fill_sink_pull_buffers %State{sink_pads_by_names: sinks_by_names} = state do
-    state = Enum.reduce (sinks_by_names |> Map.keys), state, fn pad_name, st ->
-        update_pad_data! st, :sink, pad_name, :buffer, fn pb ->
-          {:ok, pb} = PullBuffer.fill pb
-          pb
-        end
+    Helper.Enum.reduce_with (sinks_by_names |> Map.keys), state, fn pad_name, st ->
+        update_pad_data! st, :sink, pad_name, :buffer, &PullBuffer.fill/1
       end
-    {:ok, state}
-    # %State{state | sink_pads_pull_buffers: pull_buffers |> Enum.into(%{}, fn {k, v} -> {k, v |> PullBuffer.fill} end)}
+      |> orWarnError("Unable to fill sink pull buffers")
   end
 
 
