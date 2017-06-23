@@ -109,7 +109,7 @@ defmodule Membrane.PullBuffer do
 
   defp report(msg, %PullBuffer{current_size: size, preferred_size: pref_size}),
   do: debug """
-    PullBuffer: #{inspect msg}
+    PullBuffer: #{msg}
     PullBuffer size: #{inspect size}, PullBuffer preferred size: #{inspect pref_size}
     """
 
