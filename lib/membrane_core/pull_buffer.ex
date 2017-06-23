@@ -25,6 +25,7 @@ defmodule Membrane.PullBuffer do
   end
 
   def fill(%PullBuffer{demand: demand} = pb), do: handle_demand(pb, demand)
+    |> orWarnError("Unable to fill PullBuffer: #{inspect pb}")
 
   def store(%PullBuffer{q: q, current_size: size, preferred_size: pref_size, sink_name: sink} = pb, v) do
     if size >= pref_size do warn """

@@ -268,7 +268,10 @@ defmodule Membrane.Element.State do
 
   defp fill_sink_pull_buffers %State{sink_pads_by_names: sinks_by_names} = state do
     state = Enum.reduce (sinks_by_names |> Map.keys), state, fn pad_name, st ->
-        update_pad_data! st, :sink, pad_name, :buffer, &PullBuffer.fill/1
+        update_pad_data! st, :sink, pad_name, :buffer, fn pb ->
+          {:ok, pb} = PullBuffer.fill pb
+          pb
+        end
       end
     {:ok, state}
     # %State{state | sink_pads_pull_buffers: pull_buffers |> Enum.into(%{}, fn {k, v} -> {k, v |> PullBuffer.fill} end)}
