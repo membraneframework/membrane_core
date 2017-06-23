@@ -364,23 +364,20 @@ defmodule Membrane.Element.Base.Filter do
         """)
   end
 
-  def handle_buffer(:push, pad_name, buffer, state), do:
-    handle_process(:push, pad_name, buffer, state)
-
-  def handle_buffer(:pull, pad_name, buffer, state) do
-    state
-      |> State.update_pad_data!(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffer))
-      |> check_and_handle_demands
-      |> orWarnError("""
-        New buffer arrived:
-        #{inspect buffer}
-        and Membrane tried to execute handle_demand and then handle_process
-        for each unsupplied demand, but an error happened.
-        """)
+  def handle_buffer(:push, pad_name, buffers, state) do
+    with {:ok, state} <- handle_process(:push, pad_name, buffers, state)
+    do check_and_handle_demands pad_name, buffers, state
+    end
   end
 
-  def handle_process(:push, pad_name, buffer, state) do
-    Common.exec_and_handle_callback(:handle_process, [pad_name, buffer], state)
+  def handle_buffer(:pull, pad_name, buffers, state) do
+    state
+      |> State.update_pad_data!(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffers))
+      |> (&check_and_handle_demands pad_name, buffers, &1).()
+  end
+
+  def handle_process(:push, pad_name, buffers, state) do
+    Common.exec_and_handle_callback(:handle_process, [pad_name, buffers], state)
       |> orWarnError("Error while handling process")
   end
 
@@ -400,12 +397,18 @@ defmodule Membrane.Element.Base.Filter do
     end
   end
 
-  defp check_and_handle_demands(%State{source_pads_data: source_pads_data} = state) do
+  defp check_and_handle_demands(pad_name, buffers, %State{source_pads_data: source_pads_data} = state) do
     source_pads_data
       |> Enum.map(fn {src, data} -> {src, data.demand} end)
       |> Helper.Enum.reduce_with(state, fn {name, demand}, st ->
           if demand > 0 do handle_demand name, 0, st else {:ok, st} end
         end)
+      |> orWarnError("""
+        New buffers arrived to pad #{inspect pad_name}:
+        #{inspect buffers}
+        and Membrane tried to execute handle_demand and then handle_process
+        for each unsupplied demand, but an error happened.
+        """)
   end
 
   defmacro __using__(_) do
