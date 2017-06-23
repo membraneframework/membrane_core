@@ -44,6 +44,15 @@ defmodule Membrane.PullBuffer do
     end
   end
 
+  def take(%PullBuffer{} = pb) do
+    {out, pb} = do_take pb
+    packOutWithPb out, pb |> handle_demand(1)
+  end
+  def take(%PullBuffer{current_size: size} = pb, count) when count >= 0 do
+    {out, %PullBuffer{current_size: new_size} = pb} = do_take_many pb, count
+    packOutWithPb out, pb |> handle_demand(size - new_size)
+  end
+
   defp do_take(%PullBuffer{q: q, init_size: init_size, current_size: size} = pb)
   when size > init_size do
     case q |> @qe.pop do
@@ -55,21 +64,14 @@ defmodule Membrane.PullBuffer do
     {:empty, pb}
   end
   defp do_take(%PullBuffer{} = pb) do
-    take %PullBuffer{pb | init_size: -1}
+    do_take %PullBuffer{pb | init_size: -1}
   end
 
-  def take(%PullBuffer{} = pb) do
-    {out, pb} = do_take pb
-    packOutWithPb out, pb |> handle_demand(1)
-  end
-  def take(%PullBuffer{current_size: size} = pb, count) do
-    {out, %PullBuffer{current_size: new_size} = pb} = take pb, count, []
-    packOutWithPb out, pb |> handle_demand(size - new_size)
-  end
-  defp take(%PullBuffer{} = pb, 0, acc), do: {{:value, acc |> Enum.reverse}, pb}
-  defp take(%PullBuffer{} = pb, count, acc) when count > 0 do
+  defp do_take_many(pb, count, acc \\ [])
+  defp do_take_many(%PullBuffer{} = pb, 0, acc), do: {{:value, acc |> Enum.reverse}, pb}
+  defp do_take_many(%PullBuffer{} = pb, count, acc) do
     case do_take pb do
-      {{:value, v}, npb} -> take npb, count-1, [v|acc]
+      {{:value, v}, npb} -> do_take_many npb, count-1, [v|acc]
       {:empty, npb} -> {{:empty, acc |> Enum.reverse}, npb}
     end
   end
