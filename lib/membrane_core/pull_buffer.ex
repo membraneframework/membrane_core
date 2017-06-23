@@ -38,7 +38,7 @@ defmodule Membrane.PullBuffer do
     end
 
     if is_list v do
-      %PullBuffer{pb | q: @qe.join(@qe.new v), current_size: size + length v}
+      %PullBuffer{pb | q: q |> @qe.join(@qe.new v), current_size: size + length v}
     else
       %PullBuffer{pb | q: q |> @qe.push(v), current_size: size + 1}
     end
@@ -58,7 +58,7 @@ defmodule Membrane.PullBuffer do
     take %PullBuffer{pb | init_size: -1}
   end
 
-  def take(%PullBuffer{preferred_size: pref_size} = pb) do
+  def take(%PullBuffer{} = pb) do
     {out, pb} = do_take pb
     packOutWithPb out, pb |> handle_demand(1)
   end
@@ -75,7 +75,7 @@ defmodule Membrane.PullBuffer do
   end
 
   defp packOutWithPb(out, {:ok, pb}), do: {:ok, {out, pb}}
-  defp packOutWithPb(out, {:error, reason}), do: {:error, reason}
+  defp packOutWithPb(_out, {:error, reason}), do: {:error, reason}
 
   def empty?(%PullBuffer{current_size: size}), do: size == 0
 
@@ -96,6 +96,6 @@ defmodule Membrane.PullBuffer do
 
   end
   defp handle_demand(%PullBuffer{demand: demand} = pb, new_demand), do:
-    {:ok, %PullBuffer{demand: demand + new_demand}}
+    {:ok, %PullBuffer{pb | demand: demand + new_demand}}
 
 end
