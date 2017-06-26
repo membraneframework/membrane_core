@@ -41,11 +41,11 @@ defmodule Membrane.PullBuffer do
     end
 
     report "Storing #{inspect (if is_list v do length v else 1 end)} buffers", pb
-    if is_list v do
+    {:ok, if is_list v do
       %PullBuffer{pb | q: q |> @qe.join(@qe.new v), current_size: size + length v}
     else
       %PullBuffer{pb | q: q |> @qe.push(v), current_size: size + 1}
-    end
+    end}
   end
 
   def take(%PullBuffer{current_size: size} = pb, count \\ 1) when count >= 0 do

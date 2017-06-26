@@ -298,7 +298,7 @@ defmodule Membrane.Element.Base.Sink do
 
   def handle_buffer(:pull, pad_name, buffer, state) do
     {:ok, state} = state
-      |> State.update_pad_data!(:sink, pad_name, :buffer, & {:ok, &1 |> PullBuffer.store(buffer)})
+      |> State.update_pad_data!(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffer))
     check_and_handle_write(pad_name, state)
       |> orWarnError("""
         New buffer arrived:
@@ -318,7 +318,7 @@ defmodule Membrane.Element.Base.Sink do
       {:ok, {out, state}} <- state
         |> State.get_update_pad_data!(:sink, pad_name, fn %{self_demand: demand, buffer: pb} = data ->
             with {:ok, {out, npb}} <- PullBuffer.take(pb, demand)
-            do {out, %{data | buffer: npb}}
+            do {:ok, {out, %{data | buffer: npb}}}
             end
           end),
       {:ok, state} <- (case out do
