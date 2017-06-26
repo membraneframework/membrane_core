@@ -54,7 +54,8 @@ defmodule Membrane.Element.Action do
         <- {:sink, State.get_pad_by_name(state, :sink, pad_name)},
       :pull <- mode,
       {:source, {:ok, {_availability, _direction, mode, _pid}}}
-        <- {:source, State.get_pad_by_name(state, :source, src_name)},
+        <- {:source, if src_name != nil do State.get_pad_by_name(state, :source, src_name)
+                    else {:ok, {:always, :source, :pull, nil}} end},
       :pull <- mode
     do
       case callback do
