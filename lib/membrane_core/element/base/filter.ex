@@ -327,7 +327,8 @@ defmodule Membrane.Element.Base.Filter do
   when size < 0 do
     raise """
       Callback #{inspect cb} requested demand of invalid size of #{size}
-      on pad #{inspect pad_name}.
+      on pad #{inspect pad_name}. Demands' sizes should be positive (0-sized
+      demands are ignored).
       """
   end
 
