@@ -386,12 +386,22 @@ defmodule Membrane.Element.Base.Filter do
   def handle_process(:pull, pad_name, src_name, buf_cnt, state) do
     with \
       {:ok, {out, state}} <- state |> State.get_update_pad_data!(:sink, pad_name, :buffer, & &1 |> PullBuffer.take(buf_cnt)),
-      {:ok, state} <- (case out do
-          {:empty, []} -> {:ok, state}
-          {_, buffers} -> Common.exec_and_handle_callback(:handle_process, [pad_name, src_name, buffers], state)
-        end)
-    do {:ok, state}
-    else {:error, reason} -> warnError "Error while handling process", reason
+      {:out, {_, buffers}} <- (if out == {:empty, []} do :empty_pb else {:out, out} end),
+      {:ok, state} <- Common.exec_and_handle_callback(:handle_process, [pad_name, src_name, buffers], state)
+    do
+      if (
+        state
+          |> State.get_pad_data!(:sink, pad_name, :buffer)
+          |> PullBuffer.empty? |> Kernel.!
+        &&
+          state |> State.get_pad_data!(:source, src_name, :demand) > 0
+      ) do
+        send self(), {:membrane_demand, src_name, 0}
+      end
+      {:ok, state}
+    else
+      :empty_pb -> {:ok, state}
+      {:error, reason} -> warnError "Error while handling process", reason
     end
   end
 
