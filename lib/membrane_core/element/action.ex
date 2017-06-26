@@ -18,7 +18,12 @@ defmodule Membrane.Element.Action do
       Buffers: #{inspect(buffers)}
       """
     with \
-      {:ok, {_availability, _direction, _mode, pid}} <- State.get_pad_by_name(state, :source, pad_name),
+      {:ok, {_availability, _direction, mode, pid}} <- State.get_pad_by_name(state, :source, pad_name),
+      {:ok, state} = (case mode do
+          :pull -> state |>
+            State.update_pad_data!(:source, pad_name, :demand, &{:ok, &1 - length buffers})
+          :push -> {:ok, state}
+        end),
       :ok <- GenServer.call(pid, {:membrane_buffer, buffers})
     do
       {:ok, state}

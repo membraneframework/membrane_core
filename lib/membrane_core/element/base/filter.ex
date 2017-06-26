@@ -285,13 +285,8 @@ defmodule Membrane.Element.Base.Filter do
     {:ok, State.t} |
     {:error, {any, State.t}}
 
-  def handle_action({:buffer, {pad_name, buffers}}, _cb, state) do
-    with {:ok, state} <- Action.send_buffer pad_name, buffers, state
-    do
-      {:ok, state} = state |> State.update_pad_data!(:source, pad_name, :demand, & {:ok, &1 - length buffers})
-      {:ok, state}
-    end
-  end
+  def handle_action({:buffer, {pad_name, buffers}}, _cb, state), do:
+    Action.send_buffer pad_name, buffers, state
 
   def handle_action({:caps, {pad_name, caps}}, _cb, state), do:
     Action.send_caps(pad_name, caps, state)
@@ -347,7 +342,7 @@ defmodule Membrane.Element.Base.Filter do
 
   def handle_demand(pad_name, size, state) do
     {:ok, {total_size, state}} = state
-      |> State.get_update_pad_data!(:source, pad_name, :demand, fn demand -> {:ok, {demand+size, demand+size}} end)
+      |> State.get_update_pad_data!(:source, pad_name, :demand, &{:ok, {&1+size, &1+size}})
     if total_size > 0 do
       Common.exec_and_handle_callback(:handle_demand, {:handle_demand, pad_name}, [pad_name, total_size], state)
         |> orWarnError("""

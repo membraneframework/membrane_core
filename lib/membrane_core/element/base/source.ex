@@ -71,7 +71,7 @@ defmodule Membrane.Element.Base.Source do
   * `Membrane.Element.Base.Mixin.CommonBehaviour` - for more callbacks.
   """
 
-  alias Membrane.Element.{Action, Common}
+  alias Membrane.Element.{Action, Common, State}
   use Membrane.Element.Common
   use Membrane.Mixins.Log
 
@@ -198,11 +198,15 @@ defmodule Membrane.Element.Base.Source do
   # Private API
 
   def handle_demand(pad_name, size, state) do
-    Common.exec_and_handle_callback(:handle_demand, [pad_name, size], state)
-      |> orWarnError("""
-        Demand arrived from pad #{inspect pad_name}, but error happened while
-        handling it.
-        """)
+    {:ok, {stored_size, state}} = state
+      |> State.get_update_pad_data!(:source, pad_name, :demand, &{:ok, {&1, &1+size}})
+    if stored_size + size > 0 do
+      Common.exec_and_handle_callback(:handle_demand, [pad_name, size + min(0, stored_size)], state)
+        |> orWarnError("""
+          Demand arrived from pad #{inspect pad_name}, but error happened while
+          handling it.
+          """)
+    else {:ok, state} end
   end
 
   @doc false
