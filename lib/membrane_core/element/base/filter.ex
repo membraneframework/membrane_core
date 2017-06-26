@@ -305,11 +305,23 @@ defmodule Membrane.Element.Base.Filter do
   def handle_action({:demand, {pad_name, src_name}}, cb, state), do:
     handle_action({:demand, {pad_name, src_name, 1}}, cb, state)
 
-  def handle_action({:demand, {pad_name, src_name, size}}, {:handle_demand, _src_name}, state), do:
+  def handle_action({:demand, {pad_name, src_name, size}}, {:handle_demand, _src_name}, state)
+  when size > 0 do
     Action.handle_demand(pad_name, src_name, size, :handle_demand, state)
+  end
 
-  def handle_action({:demand, {pad_name, src_name, size}}, cb, state), do:
+  def handle_action({:demand, {pad_name, src_name, size}}, cb, state)
+  when size > 0 do
     Action.handle_demand(pad_name, src_name, size, cb, state)
+  end
+
+  def handle_demand({:demand, {pad_name, _src_name, size}}, cb, state)
+  when size <= 0 do
+    warn """
+      Ignoring demand of invalid size of #{size} requested by callback #{inspect cb}
+      on pad #{inspect pad_name}.
+      """
+  end
 
 
   def handle_action(other, _cb, _state) do
