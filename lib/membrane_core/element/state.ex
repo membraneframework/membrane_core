@@ -229,7 +229,7 @@ defmodule Membrane.Element.State do
         :sink -> :sink_pads_data
       end
     get_and_update_in(state, [map, pad_name | keys] |> Enum.map(&Access.key!/1), &case f.(&1) do
-        {:ok, {out, res}} -> {:ok, {out, res}}
+        {:ok, {out, res}} -> {{:ok, out}, res}
         {:error, reason} -> {{:error, reason}, nil}
       end)
       |> (case do

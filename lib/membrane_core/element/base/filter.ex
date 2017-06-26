@@ -346,7 +346,8 @@ defmodule Membrane.Element.Base.Filter do
   end
 
   def handle_demand(pad_name, size, state) do
-    {total_size, {:ok, state}} = state |> State.get_update_pad_data!(:source, pad_name, :demand, fn demand -> {:ok, {demand+size, demand+size}} end)
+    {:ok, {total_size, state}} = state
+      |> State.get_update_pad_data!(:source, pad_name, :demand, fn demand -> {:ok, {demand+size, demand+size}} end)
     if total_size > 0 do
       Common.exec_and_handle_callback(:handle_demand, {:handle_demand, pad_name}, [pad_name, total_size], state)
         |> orWarnError("""
