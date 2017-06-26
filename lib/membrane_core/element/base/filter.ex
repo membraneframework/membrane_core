@@ -349,7 +349,13 @@ defmodule Membrane.Element.Base.Filter do
           Demand arrived from pad #{inspect pad_name}, but error happened while
           handling it.
           """)
-    else {:ok, state} end
+    else
+      debug """
+        Demand handler: not executing handle_demand, as demand is not
+        greater than 0
+        """
+      {:ok, state}
+    end
   end
 
   def handle_self_demand(pad_name, src_name, buf_cnt, state) do
