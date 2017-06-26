@@ -50,7 +50,11 @@ defmodule Membrane.Element.Action do
   def handle_demand(pad_name, src_name \\ nil, size, callback, %State{module: module} = state) do
     debug "Sending demand of size #{inspect size} through pad #{inspect(pad_name)}"
     with \
-      {:ok, {_availability, _direction, mode, _pid}} <- State.get_pad_by_name(state, :sink, pad_name),
+      {:sink, {:ok, {_availability, _direction, mode, _pid}}}
+        <- {:sink, State.get_pad_by_name(state, :sink, pad_name)},
+      :pull <- mode,
+      {:source, {:ok, {_availability, _direction, mode, _pid}}}
+        <- {:source, State.get_pad_by_name(state, :source, src_name)},
       :pull <- mode
     do
       case callback do
@@ -62,8 +66,8 @@ defmodule Membrane.Element.Action do
     else
       :push ->
         handle_invalid_pad_mode pad_name, :pull, :demand, state
-      {:error, :unknown_pad} ->
-        handle_unknown_pad pad_name, :sink, :demand, state
+      {direction, {:error, :unknown_pad}} ->
+        handle_unknown_pad pad_name, direction, :demand, state
     end
   end
 
