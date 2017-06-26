@@ -209,7 +209,7 @@ defmodule Membrane.Element.State do
         :source -> :source_pads_data
         :sink -> :sink_pads_data
       end
-    get_and_update_in state, [map, pad_name | keys] |> Enum.map(&Access.key!/1), (&case f.(&1) do
+    get_and_update_in(state, [map, pad_name | keys] |> Enum.map(&Access.key!/1), &case f.(&1) do
         {:ok, res} -> {:ok, res}
         {:error, reason} -> {{:error, reason}, nil}
       end)
@@ -228,7 +228,7 @@ defmodule Membrane.Element.State do
         :source -> :source_pads_data
         :sink -> :sink_pads_data
       end
-    get_and_update_in state, [map, pad_name | keys] |> Enum.map(&Access.key!/1), (&case f.(&1) do
+    get_and_update_in(state, [map, pad_name | keys] |> Enum.map(&Access.key!/1), &case f.(&1) do
         {:ok, {out, res}} -> {:ok, {out, res}}
         {:error, reason} -> {{:error, reason}, nil}
       end)
@@ -281,10 +281,10 @@ defmodule Membrane.Element.State do
     deactivate_pads_by_pids(state, tail)
   end
 
-  defp fill_sink_pull_buffers %State{sink_pads_by_names: sinks_by_names} = state do
-    Helper.Enum.reduce_with (sinks_by_names |> Map.keys), state, fn pad_name, st ->
+  defp fill_sink_pull_buffers(%State{sink_pads_by_names: sinks_by_names} = state) do
+    Helper.Enum.reduce_with(sinks_by_names |> Map.keys, state, fn pad_name, st ->
         update_pad_data! st, :sink, pad_name, :buffer, &PullBuffer.fill/1
-      end
+      end)
       |> orWarnError("Unable to fill sink pull buffers")
   end
 
