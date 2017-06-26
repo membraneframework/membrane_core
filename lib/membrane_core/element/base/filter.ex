@@ -386,7 +386,7 @@ defmodule Membrane.Element.Base.Filter do
   def handle_process(:pull, pad_name, src_name, buf_cnt, state) do
     with \
       {:ok, {out, state}} <- state |> State.get_update_pad_data!(:sink, pad_name, :buffer, & &1 |> PullBuffer.take(buf_cnt)),
-      {:out, {_, buffers}} <- (if out == {:empty, []} do :empty_pb else {:out, out} end),
+      {:out, {_, buffers}} <- (if out == {:empty, []} do {:empty_pb, state} else {:out, out} end),
       {:ok, state} <- Common.exec_and_handle_callback(:handle_process, [pad_name, src_name, buffers], state)
     do
       if (
@@ -396,11 +396,15 @@ defmodule Membrane.Element.Base.Filter do
         &&
           state |> State.get_pad_data!(:source, src_name, :demand) > 0
       ) do
+        debug """
+          handle_process did not produce expected amount of buffers, despite
+          PullBuffer being not empty. Trying executing handle_demand again.
+          """
         send self(), {:membrane_demand, src_name, 0}
       end
       {:ok, state}
     else
-      :empty_pb -> {:ok, state}
+      {:empty_pb, state} -> {:ok, state}
       {:error, reason} -> warnError "Error while handling process", reason
     end
   end
