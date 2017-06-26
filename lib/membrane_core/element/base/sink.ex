@@ -261,13 +261,20 @@ defmodule Membrane.Element.Base.Sink do
     Action.handle_demand(pad_name, size, cb, state)
   end
 
-  def handle_action({:demand, {pad_name, _src_name, size}}, cb, state)
-  when size <= 0 do
-    warn """
-      Ignoring demand of invalid size of #{size} requested by callback #{inspect cb}
+  def handle_action({:demand, {pad_name, _src_name, 0}}, cb, state) do
+    debug """
+      Ignoring demand of size of 0 requested by callback #{inspect cb}
       on pad #{inspect pad_name}.
       """
     {:ok, state}
+  end
+
+  def handle_action({:demand, {pad_name, _src_name, size}}, cb, _state)
+  when size < 0 do
+    raise """
+      Callback #{inspect cb} requested demand of invalid size of #{size}
+      on pad #{inspect pad_name}.
+      """
   end
 
   def handle_action(other, _cb, _state) do
