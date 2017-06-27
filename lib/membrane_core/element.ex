@@ -351,7 +351,8 @@ defmodule Membrane.Element do
   # Callback invoked on demand request coming from the source pad in the pull mode
   @doc false
   def handle_info({:membrane_demand, pad_name, size}, %State{module: module} = state) do
-    debug "Received demand of size #{inspect size} on pad #{inspect pad_name}"
+    demand = if size == 0 do "dumb demand" else "demand of size #{inspect size}" end
+    debug "Received #{demand} on pad #{inspect pad_name}"
     module.base_module.handle_demand(pad_name, size, state) |> to_noreply_or(state)
   end
 
