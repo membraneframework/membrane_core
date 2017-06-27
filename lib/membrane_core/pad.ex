@@ -130,21 +130,23 @@ defmodule Membrane.Pad do
   end
 
 
-  def handle_call({:membrane_link, _peer}, _from, %State{peer: peer} = state)
+  def handle_call({:membrane_link, _peer, _props}, _from, %State{peer: peer} = state)
   when not is_nil(peer) do
     warn("Trying to link pad that is already linked, state = #{inspect(state)}")
     {:reply, {:error, :linked}, state}
   end
 
-  def handle_call({:membrane_link, peer}, _from, %State{peer: nil, direction: direction, module: module, internal_state: internal_state} = state) do
+  def handle_call({:membrane_link, peer, props}, _from,
+    %State{name: name, parent: parent, peer: nil, direction: direction, module: module, internal_state: internal_state} = state)
+  do
     debug("Linking pad, state = #{inspect(state)}")
-
-    # TODO check other return values
-    case module.handle_link(peer, direction, internal_state) do
-      {:ok, new_internal_state} ->
-        new_state = %{state | internal_state: new_internal_state, peer: peer}
-        debug("Succesfully linked pad, state = #{inspect(new_state)}")
-        {:reply, :ok, new_state}
+    with \
+      {:ok, new_internal_state} <- module.handle_link(peer, direction, internal_state),
+      :ok <- GenServer.call(parent, {:membrane_pad_linked, direction, name, props})
+    do
+      new_state = %{state | internal_state: new_internal_state, peer: peer}
+      debug("Succesfully linked pad, state = #{inspect(new_state)}")
+      {:reply, :ok, new_state}
     end
   end
 

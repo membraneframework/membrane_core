@@ -340,6 +340,14 @@ defmodule Membrane.Element do
   end
 
 
+  def handle_call({:membrane_pad_linked, :sink, pad_name, props}, _from, state) do
+    {:ok, state} = state |> State.setup_sink_pullbuffer(pad_name, props |> Map.get(:pull_buffer, %{}))
+    {:reply, :ok, state}
+  end
+  def handle_call({:membrane_pad_linked, :source, _pad_name, _props}, _from, state) do
+    {:reply, :ok, state}
+  end
+
   # Callback invoked on demand request coming from the source pad in the pull mode
   @doc false
   def handle_info({:membrane_demand, pad_name, size}, %State{module: module} = state) do

@@ -14,6 +14,25 @@ defmodule Membrane.Helper.Enum do
     end
   end
 
+  def each_with(enum, f), do: do_each_with(enum |> Enum.to_list, f)
+  defp do_each_with([], _f), do: :ok
+  defp do_each_with([h|t], f) do
+    with :ok <- f.(h)
+    do each_with t, f
+    else {:error, reason} -> {:error, reason}
+    end
+  end
+
+
+  def map_with(enum, f), do: map_with(enum |> Enum.to_list, f, [])
+  defp map_with([], _f, acc), do: {:ok, acc |> Enum.reverse}
+  defp map_with([h|t], f, acc) do
+    with {:ok, res} <- f.(h)
+    do map_reduce_with t, f, [res|acc]
+    else {:error, reason} -> {:error, reason}
+    end
+  end
+
   def map_reduce_with(enum, acc, f), do: map_reduce_with(enum |> Enum.to_list, acc, f, [])
   defp map_reduce_with([], f_acc, _f, acc), do: {:ok, f_acc, acc |> Enum.reverse}
   defp map_reduce_with([h|t], f_acc, f, acc) do

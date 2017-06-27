@@ -84,7 +84,7 @@ defmodule Membrane.Element.State do
 
           data = case direction do
             :source -> %{demand: 0}
-            :sink -> %{buffer: PullBuffer.new(pid, name, 100), self_demand: 0}
+            :sink -> %{buffer: nil, self_demand: 0}
           end
 
           {{name, pid}, {pid, name}, {name, data}}
@@ -96,6 +96,14 @@ defmodule Membrane.Element.State do
           data |> Enum.into(%{}),
         }
       end
+  end
+
+  def setup_sink_pullbuffer(state, pad_name, props) do
+    %{preferred_size: pref_size, init_size: init_size} =
+      %{preferred_size: 10, init_size: 0} |> Map.merge(props |> Enum.into(%{}))
+    {:ok, {_availability, _dir, _mode, pid}} = state |> get_pad_by_name(:sink, pad_name)
+    state |> State.set_pad_data!(
+      :sink, pad_name, :buffer, PullBuffer.new(pid, pad_name, pref_size, init_size))
   end
 
   @doc """
@@ -220,6 +228,9 @@ defmodule Membrane.Element.State do
   end
   def update_pad_data!(state, pad_direction, pad_name, key, f), do:
     update_pad_data!(state, pad_direction, pad_name, [key], f)
+
+  def set_pad_data!(state, pad_direction, pad_name, keys \\ [], v), do:
+    update_pad_data!(state, pad_direction, pad_name, keys, fn _ -> {:ok, v} end)
 
   def get_update_pad_data!(state, pad_direction, pad_name, keys \\ [], f)
   def get_update_pad_data!(state, pad_direction, pad_name, keys, f)

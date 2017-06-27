@@ -8,7 +8,7 @@ defmodule Membrane.Pipeline do
   alias Membrane.Pipeline.{State,Spec}
   alias Membrane.Element
   alias Membrane.Pad
-
+  alias Membrane.Helper
 
   # Type that defines possible return values of start/start_link functions.
   @type on_start :: GenServer.on_start
@@ -324,23 +324,23 @@ defmodule Membrane.Pipeline do
   defp link_children(links, children_to_pids)
   when is_map(links) and is_map(children_to_pids) do
     debug("Linking children: links = #{inspect(links)}")
-    link_children_recurse(links |> Map.to_list, children_to_pids)
+    links |> Helper.Enum.each_with(& do_link_children &1, children_to_pids)
   end
 
 
-  defp link_children_recurse([], _children_to_pids), do: :ok
-
-  defp link_children_recurse([{{from_name, from_pad}, {to_name, to_pad}} = link|rest], children_to_pids) do
+  defp do_link_children({{from_name, from_pad}, {to_name, to_pad, params}} = link, children_to_pids) do
     with \
       {:ok, from_pid} <- children_to_pids |> Map.get(from_name) |> (case do nil -> {:error, {:unknown_from, link}}; v -> {:ok, v} end),
       {:ok, to_pid} <- children_to_pids |> Map.get(to_name) |> (case do nil -> {:error, {:unknown_to, link}}; v -> {:ok, v} end),
       {:ok, {_av, _dir, _mode, source_pid}} <- Element.get_source_pad(from_pid, from_pad),
       {:ok, {_av, _dir, _mode, sink_pid}} <- Element.get_sink_pad(to_pid, to_pad),
-      :ok <- Pad.link(source_pid, sink_pid)
+      :ok <- Pad.link(source_pid, sink_pid, params)
     do
-      link_children_recurse(rest, children_to_pids)
+      :ok
     end
   end
+  defp do_link_children({{from_name, from_pad}, {to_name, to_pad}}, children_to_pids), do:
+    do_link_children({{from_name, from_pad}, {to_name, to_pad, []}}, children_to_pids)
 
 
   # Sets message bus for children.
