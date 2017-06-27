@@ -61,9 +61,9 @@ defmodule Membrane.Pad do
   @doc false
   # Links given pad with peer.
   @spec link(pid, pid, timeout) :: :ok | {:error, any}
-  def link(server, peer, timeout \\ 5000) when is_pid(server) and is_pid(peer) do
-    with :ok <- GenServer.call(server, {:membrane_link, peer}, timeout),
-         :ok <- GenServer.call(peer, {:membrane_link, server}, timeout)
+  def link(server, peer, params, timeout \\ 5000) when is_pid(server) and is_pid(peer) do
+    with :ok <- GenServer.call(server, {:membrane_link, peer, params}, timeout),
+         :ok <- GenServer.call(peer, {:membrane_link, server, params}, timeout)
     do
       :ok
     else
@@ -130,19 +130,19 @@ defmodule Membrane.Pad do
   end
 
 
-  def handle_call({:membrane_link, _peer, _props}, _from, %State{peer: peer} = state)
+  def handle_call({:membrane_link, _peer, _params}, _from, %State{peer: peer} = state)
   when not is_nil(peer) do
     warn("Trying to link pad that is already linked, state = #{inspect(state)}")
     {:reply, {:error, :linked}, state}
   end
 
-  def handle_call({:membrane_link, peer, props}, _from,
+  def handle_call({:membrane_link, peer, params}, _from,
     %State{name: name, parent: parent, peer: nil, direction: direction, module: module, internal_state: internal_state} = state)
   do
     debug("Linking pad, state = #{inspect(state)}")
     with \
       {:ok, new_internal_state} <- module.handle_link(peer, direction, internal_state),
-      :ok <- GenServer.call(parent, {:membrane_pad_linked, direction, name, props})
+      :ok <- GenServer.call(parent, {:membrane_pad_linked, direction, name, params})
     do
       new_state = %{state | internal_state: new_internal_state, peer: peer}
       debug("Succesfully linked pad, state = #{inspect(new_state)}")
