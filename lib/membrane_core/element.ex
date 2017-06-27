@@ -341,7 +341,7 @@ defmodule Membrane.Element do
 
 
   def handle_call({:membrane_pad_linked, :sink, pad_name, props}, _from, state) do
-    {:ok, state} = state |> State.setup_sink_pullbuffer(pad_name, props |> Map.get(:pull_buffer, %{}))
+    {:ok, state} = state |> State.setup_sink_pullbuffer(pad_name, props |> Enum.into(%{}) |> Map.get(:pull_buffer, %{}))
     {:reply, :ok, state}
   end
   def handle_call({:membrane_pad_linked, :source, _pad_name, _props}, _from, state) do
