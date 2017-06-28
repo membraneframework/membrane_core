@@ -478,12 +478,12 @@ defmodule Membrane.Element.Base.Filter do
       def handle_prepare(_previous_playback_state, state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_process(_pad, _demand_src, %Membrane.Buffer{}, state), do: {:ok, {[], state}}
+      def handle_process1(_pad, _demand_src, _buffer, state), do: {:ok, {[], state}}
 
       @doc false
       def handle_process(pad, demand_src, buffers, state) do
         with {:ok, {actions, state}} <- buffers
-          |> Membrane.Helper.Enum.map_reduce_with(state, &handle_process(pad, demand_src, &1, &2))
+          |> Membrane.Helper.Enum.map_reduce_with(state, &handle_process1(pad, demand_src, &1, &2))
         do {:ok, {actions |> List.flatten, state}}
         end
       end
@@ -500,6 +500,7 @@ defmodule Membrane.Element.Base.Filter do
         handle_play: 1,
         handle_prepare: 2,
         handle_process: 4,
+        handle_process1: 4,
         handle_stop: 1,
       ]
     end

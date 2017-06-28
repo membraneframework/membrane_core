@@ -396,11 +396,12 @@ defmodule Membrane.Element.Base.Sink do
       def handle_stop(state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_write(_pad, %Membrane.Buffer{}, state), do: {:ok, {[], state}}
+      def handle_write1(_pad, _buffer, state), do: {:ok, {[], state}}
 
+      @doc false
       def handle_write(pad, buffers, state) do
         with {:ok, {actions, state}} <- buffers
-          |> Membrane.Helper.Enum.map_reduce_with(state, &handle_write(pad, &1, &2))
+          |> Membrane.Helper.Enum.map_reduce_with(state, &handle_write1(pad, &1, &2))
         do {:ok, {actions |> List.flatten, state}}
         end
       end
@@ -414,6 +415,7 @@ defmodule Membrane.Element.Base.Sink do
         handle_prepare: 2,
         handle_stop: 1,
         handle_write: 3,
+        handle_write1: 3,
       ]
     end
   end
