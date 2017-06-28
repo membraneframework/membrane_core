@@ -48,16 +48,24 @@ defmodule Membrane.PullBuffer do
     end}
   end
 
-  def take(%PullBuffer{current_size: size} = pb, count \\ 1) when count >= 0 do
+  def take(%PullBuffer{} = pb) do
+    with \
+      {{:value, v}, pb} <- pb |> do_take,
+      {:ok, pb} <- pb |> handle_demand(1)
+    do {:ok, {{:value, v}, pb}}
+    else
+      {:empty, pb} -> {:ok, {:empty, pb}}
+      other -> other
+    end
+  end
+
+  def take(%PullBuffer{current_size: size} = pb, count) when count >= 0 do
     report "Taking #{inspect count} buffers", pb
-    {out, %PullBuffer{current_size: new_size} = pb} = do_take pb, count
+    {out, %PullBuffer{current_size: new_size} = pb} = do_take pb, count, []
     with {:ok, pb} <- pb |> handle_demand(size - new_size)
     do {:ok, {out, pb}}
     end
   end
-
-  defp do_take(pb, 1), do: do_take(pb)
-  defp do_take(pb, count), do: do_take(pb, count, [])
 
   defp do_take(%PullBuffer{q: q, init_size: init_size, current_size: size} = pb)
   when size > init_size do
