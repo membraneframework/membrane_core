@@ -273,7 +273,15 @@ defmodule Membrane.Element.Base.Source do
       def handle_caps(_pad, state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_demand(_pad, state), do: {:ok, {[], state}}
+      def handle_demand1(_pad, state), do: {:ok, {[], state}}
+
+      @doc false
+      def handle_demand(pad, size, state) do
+        with {:ok, {actions, state}} <- 1..size
+          |> Membrane.Helper.Enum.map_reduce_with(state, fn _, st -> handle_demand1 pad, st end)
+        do {:ok, {actions |> List.flatten, state}}
+        end
+      end
 
       @doc false
       def handle_event(_pad, _event, state), do: {:ok, {[], state}}
@@ -288,20 +296,13 @@ defmodule Membrane.Element.Base.Source do
       def handle_prepare(_previous_playback_state, state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_demand(pad, size, state) do
-        with {:ok, {actions, state}} <- 1..size
-          |> Membrane.Helper.Enum.map_reduce_with(state, fn _, st -> handle_demand1 pad, st end)
-        do {:ok, {actions |> List.flatten, state}}
-        end
-      end
-
-      @doc false
       def handle_stop(state), do: {:ok, {[], state}}
 
 
       defoverridable [
         handle_caps: 2,
-        handle_demand: 2,
+        handle_demand1: 2,
+        handle_demand: 3,
         handle_event: 3,
         handle_other: 2,
         handle_play: 1,
