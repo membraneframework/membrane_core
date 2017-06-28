@@ -478,7 +478,15 @@ defmodule Membrane.Element.Base.Filter do
       def handle_prepare(_previous_playback_state, state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_process(_pad, _buffer, state), do: {:ok, {[], state}}
+      def handle_process(_pad, _demand_src, %Membrane.Buffer{}, state), do: {:ok, {[], state}}
+
+      @doc false
+      def handle_process(pad, demand_src, buffers, state) do
+        with {:ok, {actions, state}} <- buffers
+          |> Membrane.Helper.Enum.map_reduce_with(state, &handle_process(pad, demand_src, &1, &2))
+        do {:ok, {actions |> List.flatten, state}}
+        end
+      end
 
       @doc false
       def handle_stop(state), do: {:ok, {[], state}}

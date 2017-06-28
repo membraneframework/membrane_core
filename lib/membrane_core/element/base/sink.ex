@@ -396,7 +396,14 @@ defmodule Membrane.Element.Base.Sink do
       def handle_stop(state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_write(_pad, _buffer, state), do: {:ok, {[], state}}
+      def handle_write(_pad, %Membrane.Buffer{}, state), do: {:ok, {[], state}}
+
+      def handle_write(pad, buffers, state) do
+        with {:ok, {actions, state}} <- buffers
+          |> Membrane.Helper.Enum.map_reduce_with(state, &handle_write(pad, &1, &2))
+        do {:ok, {actions |> List.flatten, state}}
+        end
+      end
 
 
       defoverridable [
