@@ -24,10 +24,10 @@ defmodule Membrane.Pad.Mode.Pull do
     send peer, message
     {:reply, :ok, state}
   end
-  
+
   @doc false
   def handle_other(message, parent, _peer, _name, _direction, state) do
-    GenServer.call parent, message
+    GenServer.call parent, {message, self()}
     {:ok, state}
   end
   #
