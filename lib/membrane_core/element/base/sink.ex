@@ -354,6 +354,9 @@ defmodule Membrane.Element.Base.Sink do
     end
   end
 
+  def handle_event(mode, :sink, pad_name, event, state), do:
+    Common.handle_event(mode, :sink, pad_name, event, state)
+
   defp check_and_handle_write(pad_name, state) do
     if State.get_pad_data!(state, :sink, pad_name, :self_demand) > 0 do
       handle_write :pull, pad_name, state

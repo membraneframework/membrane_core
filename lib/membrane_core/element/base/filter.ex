@@ -430,6 +430,8 @@ defmodule Membrane.Element.Base.Filter do
     end
   end
 
+  defdelegate handle_event(mode, dir, pad_name, event, state), to: Common
+
   defp check_and_handle_demands(pad_name, buffers, %State{source_pads_data: source_pads_data} = state) do
     source_pads_data
       |> Enum.map(fn {src, data} -> {src, data.demand} end)

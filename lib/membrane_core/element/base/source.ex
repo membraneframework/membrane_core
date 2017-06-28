@@ -253,6 +253,8 @@ defmodule Membrane.Element.Base.Source do
     """
   end
 
+  def handle_event(mode, :source, pad_name, event, state), do:
+    Common.handle_event(mode, :source, pad_name, event, state)
 
   defmacro __using__(_) do
     quote location: :keep do

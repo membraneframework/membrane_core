@@ -3,6 +3,7 @@ defmodule Membrane.Element.Common do
   use Membrane.Mixins.Log
   alias Membrane.Element.State
   alias Membrane.Helper
+  alias Membrane.PullBuffer
 
   defmacro __using__(_) do
     quote do
@@ -25,6 +26,23 @@ defmodule Membrane.Element.Common do
         Membrane.Element.Action.send_message(message, state)
 
     end
+  end
+
+  def handle_event(:pull, :sink, pad_name, event, state) do
+    cond do
+      state |> State.get_pad_data!(:sink, pad_name, :buffer) |> PullBuffer.empty?
+        -> do_handle_event pad_name, event, state
+      true -> state |> State.update_pad_data!(
+        :sink, pad_name, :buffer, & &1 |> PullBuffer.store(:event, event))
+    end
+  end
+
+  def handle_event(_mode, _dir, pad_name, event, state), do:
+    do_handle_event(pad_name, event, state)
+
+  def do_handle_event(pad_name, event, state) do
+    exec_and_handle_callback(:handle_event, [pad_name, event], state)
+      |> orWarnError("Error while handling event")
   end
 
   def exec_and_handle_callback(cb, actions_cb \\ nil, args, %State{module: module, internal_state: internal_state} = state) do

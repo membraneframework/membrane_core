@@ -117,25 +117,16 @@ defmodule Membrane.Element.State do
     {:ok, pid} |
     {:error, any}
   def get_pad_name_by_pid(state, pad_direction, pad_pid) do
-    case pad_direction do
-      :source ->
-        case state.source_pads_by_pids |> Map.get(pad_pid) do
-          nil ->
-            {:error, :unknown_pad}
-
-          name ->
-            {:ok, name}
+    pad_direction
+      |> case do
+          :source -> state.source_pads_by_pids
+          :sink -> state.sink_pads_by_pids
         end
-
-      :sink ->
-        case state.sink_pads_by_pids |> Map.get(pad_pid) do
-          nil ->
-            {:error, :unknown_pad}
-
-          name ->
-            {:ok, name}
+      |> Map.get(pad_pid)
+      |> case do
+          nil -> {:error, :unknown_pad}
+          name -> {:ok, name}
         end
-    end
   end
 
 
@@ -150,30 +141,29 @@ defmodule Membrane.Element.State do
   @spec get_pad_by_name(t, Pad.direction_t, Pad.name_t) ::
     {:ok, {Membrane.Pad.availability_t, Membrane.Pad.direction_t, Membrane.Pad.mode_t, pid}} |
     {:error, any}
-  def get_pad_by_name(%State{module: module} = state, pad_direction, pad_name) do
-    case pad_direction do
-      :source ->
-        case state.source_pads_by_names |> Map.get(pad_name) do
-          nil ->
-            {:error, :unknown_pad}
-
-          pid ->
-            {availability, mode, _caps} = module.known_source_pads |> Map.get(pad_name)
-            {:ok, {availability, pad_direction, mode, pid}}
-        end
-
-      :sink ->
-        case state.sink_pads_by_names |> Map.get(pad_name) do
-          nil ->
-            {:error, :unknown_pad}
-
-            pid ->
-              {availability, mode, _caps} = module.known_sink_pads |> Map.get(pad_name)
-              {:ok, {availability, pad_direction, mode, pid}}
-        end
+  def get_pad_by_name(state, :any, pad_name) do
+    with \
+      {:error, :unknown_pad} <- get_pad_by_name(state, :source, pad_name),
+      {:error, :unknown_pad} <- get_pad_by_name(state, :sink, pad_name)
+    do {:error, :unknown_pad}
+    else {:ok, pad_data} -> {:ok, pad_data}
     end
   end
-
+  def get_pad_by_name(%State{module: module} = state, pad_direction, pad_name) do
+    pad_direction
+      |> case do
+          :source -> {module.known_source_pads, state.source_pads_by_names}
+          :sink -> {module.known_sink_pads, state.sink_pads_by_names}
+        end
+      |> case do {known_pads, pads_by_names} ->
+          {known_pads |> Map.get(pad_name), pads_by_names |> Map.get(pad_name)}
+        end
+      |> case do
+          {nil, nil} -> {:error, :unknown_pad}
+          {{availability, mode, _caps}, pid} ->
+            {:ok, {availability, pad_direction, mode, pid}}
+        end
+  end
 
   def get_pad_data(state, pad_direction, pad_name) do
     pad_direction

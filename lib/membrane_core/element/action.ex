@@ -76,48 +76,21 @@ defmodule Membrane.Element.Action do
   @spec send_event(Pad.name_t, Membrane.Event.t, State.t) :: :ok
   def send_event(pad_name, event, state) do
     debug """
-      Sending event through pad #{inspect(pad_name)}
-      Event: #{inspect(event)}
+      Sending event through pad #{inspect pad_name}
+      Event: #{inspect event}
       """
-    {:ok, state}
-
-    # TODO add pad handling code
-    # case State.get_pad_by_name(state, :source, pad_name) do
-    #   {:ok, {_availability, _direction, _mode, pid}} ->
-    #     case GenServer.call(pid, {:membrane_event, event}) do
-    #       :ok ->
-    #         {:ok, state}
-    #
-    #       {:error, reason} ->
-    #         {:error, reason}
-    #     end
-    #
-    #   {:error, :unknown_pad} ->
-    #     case State.get_pad_by_name(state, :sink, pad_name) do
-    #       {:ok, {_availability, _direction, _mode, pid}} ->
-    #         case GenServer.call(pid, {:membrane_event, event}) do
-    #           :ok ->
-    #             {:ok, state}
-    #
-    #           {:error, reason} ->
-    #             {:error, reason}
-    #         end
-    #
-    #       {:error, :unknown_pad} ->
-    #         raise """
-    #         Element seems to be buggy.
-    #
-    #         It has sent the :event action specyfying #{inspect(pad_name)} as
-    #         pad name that is supposed to handle demand.
-    #
-    #         Such pad was not found.
-    #
-    #         Element state was:
-    #
-    #         #{inspect(state, limit: 100000, pretty: true)}
-    #         """
-    #     end
-    # end
+    with \
+      {:ok, {_availability, _direction, _mode, pid}} <- State.get_pad_by_name(state, :any, pad_name),
+      :ok <- GenServer.call(pid, {:membrane_event, event})
+    do {:ok, state}
+    else
+      {:error, :unknown_pad} ->
+        handle_unknown_pad pad_name, :any, :event, state
+      {:error, reason} -> warnError """
+        Error while sending event to pad: #{inspect pad_name}
+        Event: #{inspect event}
+        """, reason
+    end
   end
 
 
@@ -161,8 +134,10 @@ defmodule Membrane.Element.Action do
 
     This is probably a bug in element. It requested an action
     "#{inspect action_name}" on pad "#{inspect pad_name}", but such pad has not
-    been found. It either means that it does not exist,
-    or it is not a #{inspect direction_name} pad.
+    been found. #{if expected_direction != :any do
+      "It either means that it does not exist, or it is not a
+      #{inspect direction_name} pad."
+    else "" end}
 
     Element state was:
 
