@@ -420,7 +420,8 @@ defmodule Membrane.Element.Base.Filter do
           handle_process did not produce expected amount of buffers, despite
           PullBuffer being not empty. Trying executing handle_demand again.
           """
-        send self(), {:membrane_demand, src_name, 0}
+        {:ok, {_availability, _direction, _mode, pid}} = state |> State.get_pad_by_name(:source, src_name)
+        send pid, {:membrane_demand, 0}
       end
       {:ok, state}
     else

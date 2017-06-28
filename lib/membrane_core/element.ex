@@ -350,7 +350,8 @@ defmodule Membrane.Element do
 
   # Callback invoked on demand request coming from the source pad in the pull mode
   @doc false
-  def handle_info({:membrane_demand, pad_name, size}, %State{module: module} = state) do
+  def handle_call({:membrane_demand, size}, from, %State{module: module} = state) do
+    {:ok, pad_name} = state |> State.get_pad_name_by_pid(:source, from)
     demand = if size == 0 do "dumb demand" else "demand of size #{inspect size}" end
     debug "Received #{demand} on pad #{inspect pad_name}"
     module.base_module.handle_demand(pad_name, size, state) |> to_noreply_or(state)
@@ -364,12 +365,14 @@ defmodule Membrane.Element do
 
   # Callback invoked on buffer coming from the sink pad to the sink
   @doc false
-  def handle_info({:membrane_buffer, pad_name, mode, buffer}, %State{module: module} = state) do
+  def handle_call({:membrane_buffer, buffers}, from, %State{module: module} = state) do
+    {:ok, pad_name} = state |> State.get_pad_name_by_pid(:sink, from)
     debug """
-      Received buffer on pad #{inspect pad_name}
-      Buffer: #{inspect buffer}
+      Received buffers on pad #{inspect pad_name}
+      Buffers: #{inspect buffers}
       """
-    module.base_module.handle_buffer(mode, pad_name, buffer, state) |> to_noreply_or(state)
+    {:ok, {_availability, _direction, mode, _pid}} = State.get_pad_by_name(:sink, pad_name)
+    module.base_module.handle_buffer(mode, pad_name, buffers, state) |> to_noreply_or(state)
   end
 
   # Callback invoked on other incoming message
