@@ -288,6 +288,14 @@ defmodule Membrane.Element.Base.Source do
       def handle_prepare(_previous_playback_state, state), do: {:ok, {[], state}}
 
       @doc false
+      def handle_demand(pad, size, state) do
+        with {:ok, {actions, state}} <- 1..size
+          |> Membrane.Helper.Enum.map_reduce_with(state, fn _, st -> handle_demand1 pad, st end)
+        do {:ok, {actions |> List.flatten, state}}
+        end
+      end
+
+      @doc false
       def handle_stop(state), do: {:ok, {[], state}}
 
 
