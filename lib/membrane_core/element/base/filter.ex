@@ -499,7 +499,7 @@ defmodule Membrane.Element.Base.Filter do
         handle_other: 2,
         handle_play: 1,
         handle_prepare: 2,
-        handle_process: 3,
+        handle_process: 4,
         handle_stop: 1,
       ]
     end

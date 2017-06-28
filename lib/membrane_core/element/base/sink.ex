@@ -413,7 +413,7 @@ defmodule Membrane.Element.Base.Sink do
         handle_play: 1,
         handle_prepare: 2,
         handle_stop: 1,
-        handle_write: 3,
+        handle_write: 4,
       ]
     end
   end
