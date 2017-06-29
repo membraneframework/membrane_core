@@ -6,25 +6,25 @@ defmodule Membrane.Mixins.Log do
 
   defmacro __using__(_) do
     quote location: :keep do
-      require Logger
+      alias Membrane.Logger.Supervisor
 
       defmacro info(message) do
         quote location: :keep do
-          Logger.info("[#{System.monotonic_time()} #{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{unquote(message)}")
+          Supervisor.log(:info,  unquote(message), Membrane.Time.native_monotonic_time, :tag)
         end
       end
 
 
       defmacro warn(message) do
         quote location: :keep do
-          Logger.warn("[#{System.monotonic_time()} #{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{unquote(message)}")
+          # Logger.warn("[#{System.monotonic_time()} #{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{unquote(message)}")
         end
       end
 
 
       defmacro debug(message) do
         quote location: :keep do
-          Logger.debug("[#{System.monotonic_time()} #{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{unquote(message)}")
+          # Logger.debug("[#{System.monotonic_time()} #{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{unquote(message)}")
         end
       end
     end

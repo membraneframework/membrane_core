@@ -79,7 +79,6 @@ defmodule Membrane.Logger.Behaviour do
 
       defoverridable [
         handle_init: 1,
-        handle_log: 5,
         handle_shutdown: 1,
       ]
     end

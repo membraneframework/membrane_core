@@ -19,7 +19,6 @@ defmodule Membrane.Mixfile do
 
   def application do
     [applications: [
-      :logger,
     ], mod: {Membrane, []}]
   end
 
