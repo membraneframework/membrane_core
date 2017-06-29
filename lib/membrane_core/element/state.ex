@@ -116,6 +116,14 @@ defmodule Membrane.Element.State do
   @spec get_pad_name_by_pid(t, Pad.direction_t, pid) ::
     {:ok, pid} |
     {:error, any}
+    def get_pad_name_by_pid(state, :any, pad_name) do
+      with \
+        {:error, :unknown_pad} <- get_pad_name_by_pid(state, :source, pad_name),
+        {:error, :unknown_pad} <- get_pad_name_by_pid(state, :sink, pad_name)
+      do {:error, :unknown_pad}
+      else {:ok, name} -> {:ok, name}
+      end
+    end
   def get_pad_name_by_pid(state, pad_direction, pad_pid) do
     pad_direction
       |> case do
