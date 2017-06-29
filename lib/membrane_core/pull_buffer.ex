@@ -55,10 +55,6 @@ defmodule Membrane.PullBuffer do
       pb | q: (@qe.join q, v |> Enum.map(&{:buffer, &1}) |> @qe.new), current_size: size + length v
     }
   end
-  defp do_store_buffers(%PullBuffer{q: q, current_size: size} = pb, v) do
-    report "Storing one buffer", pb
-    %PullBuffer{pb | q: q |> @qe.push({:buffers, v}), current_size: size + 1}
-  end
 
   def take(%PullBuffer{current_size: size} = pb, count)
   when count >= 0 do
@@ -105,15 +101,19 @@ defmodule Membrane.PullBuffer do
   end
 
   defp join_buffers(output, acc \\ [])
-  defp join_buffers([{:buffer, b} | t], [{:buffers, buffers} | acc]) do
-    join_buffers t, [{:buffers, [b | buffers]} | acc]
-  end
-  defp join_buffers([h|t], [{:buffers, buffers} | acc]) do
-    join_buffers t, [h, {:buffers, buffers |> Enum.reverse} | acc]
-  end
-  defp join_buffers([{:buffer, b}|t], acc) do
+
+  defp join_buffers([{:buffer, b} | t], [{:buffers, buffers} | acc]), do:
+    join_buffers(t, [{:buffers, [b | buffers]} | acc])
+
+  defp join_buffers([h|t], [{:buffers, buffers} | acc]), do:
+    join_buffers(t, [h, {:buffers, buffers |> Enum.reverse} | acc])
+
+  defp join_buffers([{:buffer, b}|t], acc), do:
     join_buffers t, [{:buffers, [b]} | acc]
-  end
+
+  defp join_buffers([], [{:buffers, buffers} | acc]), do:
+    [{:buffers, buffers |> Enum.reverse} | acc] |> Enum.reverse
+
   defp join_buffers([], acc), do: acc |> Enum.reverse
 
 

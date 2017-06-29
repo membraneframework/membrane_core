@@ -345,11 +345,11 @@ defmodule Membrane.Element.Base.Sink do
           end),
       {:out, {_, data}} <- (if out == {:empty, []} do {:empty_pb, state} else {:out, out} end),
       {:ok, state} <- data |> Helper.Enum.reduce_with(state, fn
-          {:buffers, b} ->
-            {:ok, state} = state |>
+          {:buffers, b}, st ->
+            {:ok, st} = st |>
               State.update_pad_data!(:sink, pad_name, :self_demand, & {:ok, &1 - length b})
-            Common.exec_and_handle_callback(:handle_write, [pad_name, b], state)
-          {:event, e} -> Common.exec_and_handle_callback :handle_event, [pad_name, e], state
+            Common.exec_and_handle_callback :handle_write, [pad_name, b], st
+          {:event, e}, st -> Common.exec_and_handle_callback :handle_event, [pad_name, e], st
         end)
     do {:ok, state}
     else
