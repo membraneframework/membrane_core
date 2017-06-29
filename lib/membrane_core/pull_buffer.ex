@@ -27,13 +27,13 @@ defmodule Membrane.PullBuffer do
   def fill(%PullBuffer{} = pb), do: handle_demand(pb, 0)
     |> orWarnError("Unable to fill PullBuffer: #{inspect pb}")
 
-  def store(pb, type \\ :buffer, v)
+  def store(pb, type \\ :buffers, v)
 
   def store(%PullBuffer{q: q} = pb, :event, v) do
     {:ok, %PullBuffer{pb | q: q |> @qe.push({:event, v})}}
   end
 
-  def store(%PullBuffer{q: q, current_size: size, preferred_size: pref_size, sink_name: sink} = pb, :buffer,  %Membrane.Buffer{} = v) do
+  def store(%PullBuffer{current_size: size, preferred_size: pref_size, sink_name: sink} = pb, :buffers, v) do
     if size >= pref_size do warn """
       PullBuffer: received buffers from sink #{inspect sink}, despite
       not requesting them. It is undesirable to send any buffers without demand.
@@ -45,60 +45,77 @@ defmodule Membrane.PullBuffer do
       PullBuffer #{inspect pb}
       """
     end
-
-    report "Storing #{inspect (if is_list v do length v else 1 end)} buffers", pb
-    {:ok, if is_list v do
-      %PullBuffer{pb | q: q |> @qe.join(@qe.new v), current_size: size + length v}
-    else
-      %PullBuffer{pb | q: q |> @qe.push(v), current_size: size + 1}
-    end}
+    {:ok, do_store_buffers(pb, v)}
   end
 
-  def take(%PullBuffer{} = pb) do
-    with \
-      {{:value, v}, pb} <- pb |> do_take,
-      {:ok, pb} <- pb |> handle_demand(1)
-    do {:ok, {{:value, v}, pb |> blockers, pb}}
-    else
-      {:empty, pb} -> {:ok, {:empty, pb |> blockers, pb}}
-      other -> other
-    end
+  defp do_store_buffers(%PullBuffer{q: q, current_size: size} = pb, v)
+  when is_list v do
+    report "Storing #{inspect length v} buffers", pb
+    %PullBuffer{
+      pb | q: (@qe.join q, v |> Enum.map(&{:buffer, &1}) |> @qe.new), current_size: size + length v
+    }
+  end
+  defp do_store_buffers(%PullBuffer{q: q, current_size: size} = pb, v) do
+    report "Storing one buffer", pb
+    %PullBuffer{pb | q: q |> @qe.push({:buffers, v}), current_size: size + 1}
   end
 
-  def take(%PullBuffer{current_size: size} = pb, count) when count >= 0 do
+  def take(%PullBuffer{current_size: size} = pb, count)
+  when count >= 0 do
     report "Taking #{inspect count} buffers", pb
-    {out, %PullBuffer{current_size: new_size} = pb} = do_take pb, count, []
+    {out, %PullBuffer{current_size: new_size} = pb} = do_take pb, count
     with {:ok, pb} <- pb |> handle_demand(size - new_size)
-    do {:ok, {out, pb |> blockers, pb}}
+    do {:ok, {out, pb}}
     end
   end
 
-  defp do_take(%PullBuffer{q: q, init_size: init_size, current_size: size} = pb)
-  when size > init_size do
-    {o, q} = q |> @qe.pop |> case do
-      {{:value, %Membrane.Buffer{} = b}, nq} -> {{:value, b}, nq}
-      {:empty, _} = e -> report "underrun", pb; e
-      _ -> {:empty, q}
+  defp do_take(%PullBuffer{current_size: size, init_size: init_size} = pb, count) do
+    cond do
+      size > init_size -> do_take_r pb, count
+      size < init_size ->
+        report """
+          Forbidden to take buffers, as PullBuffer did not reach initial size
+          of #{inspect init_size}, returning :empty
+          """, pb
+        {:empty, pb}
+      true -> do_take_r %PullBuffer{pb | init_size: -1}, count
     end
-    {o, %PullBuffer{pb | q: q, current_size: max(0, size - 1)}}
   end
-  defp do_take(%PullBuffer{current_size: size, init_size: init_size} = pb)
-  when size < init_size do
-    report """
-      Forbidden to take buffers, as PullBuffer did not reach initial size
-      of #{inspect init_size}, returning :empty
-      """, pb
-    {:empty, pb}
-  end
-  defp do_take(%PullBuffer{} = pb), do: do_take(%PullBuffer{pb | init_size: -1})
 
-  defp do_take(%PullBuffer{} = pb, 0, acc), do: {{:value, acc |> Enum.reverse}, pb}
-  defp do_take(%PullBuffer{} = pb, count, acc) do
-    case do_take pb do
-      {{:buffer, v}, npb} -> do_take npb, count-1, [v|acc]
-      {:empty, npb} -> {{:empty, acc |> Enum.reverse}, npb}
+  defp do_take_r(pb, count, acc \\ [])
+  defp do_take_r(%PullBuffer{} = pb, 0, acc) do
+    pb |> do_take_pop |> (case do
+      {{:value, {:event, e}}, npb} -> do_take_r npb, 0, [{:event, e}|acc]
+      _ -> {{:value, acc |> Enum.reverse |> join_buffers}, pb}
+      end)
+  end
+  defp do_take_r(%PullBuffer{} = pb, count, acc) do
+    pb |> do_take_pop |> (case do
+      {{:value, {:buffer, b}}, npb} -> do_take_r npb, count-1, [{:buffer, b}|acc]
+      {:empty, npb} -> {{:empty, acc |> Enum.reverse |> join_buffers}, npb}
+      {{:value, {:event, e}}, npb} -> do_take_r npb, count, [{:event, e}|acc]
+    end)
+  end
+
+  defp do_take_pop(%PullBuffer{q: q, current_size: size}) do
+    q |> @qe.pop |> case do
+      {{:value, v}, nq} -> {{:value, v}, %PullBuffer{q: nq, current_size: size - 1}}
+      {:empty, nq} -> {:empty, %PullBuffer{q: nq}}
     end
   end
+
+  defp join_buffers(output, acc \\ [])
+  defp join_buffers([{:buffer, b} | t], [{:buffers, buffers} | acc]) do
+    join_buffers t, [{:buffers, [b | buffers]} | acc]
+  end
+  defp join_buffers([h|t], [{:buffers, buffers} | acc]) do
+    join_buffers t, [h, {:buffers, buffers |> Enum.reverse} | acc]
+  end
+  defp join_buffers([{:buffer, b}|t], acc) do
+    join_buffers t, [{:buffers, [b]} | acc]
+  end
+  defp join_buffers([], acc), do: acc |> Enum.reverse
+
 
   def empty?(%PullBuffer{current_size: size, init_size: init_size}), do:
     size == 0 || size < init_size

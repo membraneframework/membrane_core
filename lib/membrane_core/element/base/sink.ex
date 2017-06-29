@@ -130,6 +130,7 @@ defmodule Membrane.Element.Base.Sink do
   use Membrane.Element.Common
   alias Membrane.Element.{State, Action, Common}
   alias Membrane.PullBuffer
+  alias Membrane.Helper
 
 
   # Type that defines a single action that may be returned from handle_*
@@ -342,15 +343,18 @@ defmodule Membrane.Element.Base.Sink do
             do {:ok, {out, %{data | buffer: npb}}}
             end
           end),
-      {:ok, state} <- (case out do
-          {:empty, []}-> {:ok, state}
-          {_, buffers} ->
-            {:ok, state} = state
-              |> State.update_pad_data!(:sink, pad_name, :self_demand, & {:ok, &1 - length buffers})
-            Common.exec_and_handle_callback(:handle_write, [pad_name, buffers], state)
+      {:out, out} <- (if out == {:empty, []} do {:empty_pb, state} else {:out, out} end),
+      {:ok, state} <- out |> Helper.Enum.reduce_with(state, fn
+          {:buffers, b} ->
+            {:ok, state} = state |>
+              State.update_pad_data!(:sink, pad_name, :self_demand, & {:ok, &1 - length b})
+            Common.exec_and_handle_callback(:handle_write, [pad_name, b], state)
+          {:event, e} -> Common.exec_and_handle_callback :handle_event, [pad_name, e], state
         end)
     do {:ok, state}
-    else {:error, reason} -> warnError "Error while handling write", reason
+    else
+      {:empty_pb, state} -> {:ok, state}
+      {:error, reason} -> warnError "Error while handling write", reason
     end
   end
 

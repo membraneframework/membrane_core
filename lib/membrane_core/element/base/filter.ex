@@ -406,8 +406,11 @@ defmodule Membrane.Element.Base.Filter do
   def handle_process(:pull, pad_name, src_name, buf_cnt, state) do
     with \
       {:ok, {out, state}} <- state |> State.get_update_pad_data!(:sink, pad_name, :buffer, & &1 |> PullBuffer.take(buf_cnt)),
-      {:out, {_, buffers}} <- (if out == {:empty, []} do {:empty_pb, state} else {:out, out} end),
-      {:ok, state} <- Common.exec_and_handle_callback(:handle_process, [pad_name, src_name, buffers], state)
+      {:out, out} <- (if out == {:empty, []} do {:empty_pb, state} else {:out, out} end),
+      {:ok, state} <- out |> Helper.Enum.reduce_with(state, fn
+          {:buffers, b} -> Common.exec_and_handle_callback :handle_process, [pad_name, src_name, b], state
+          {:event, e} -> Common.exec_and_handle_callback :handle_event, [pad_name, e], state
+        end)
     do
       if (
         state
