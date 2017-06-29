@@ -112,6 +112,9 @@ defmodule Membrane.PullBuffer do
   defp join_buffers([{:buffer, b}|t], acc), do:
     join_buffers t, [{:buffers, [b]} | acc]
 
+  defp join_buffers([h|t], acc), do:
+    join_buffers(t, [h | acc])
+
   defp join_buffers([], [{:buffers, buffers} | acc]), do:
     [{:buffers, buffers |> Enum.reverse} | acc] |> Enum.reverse
 
