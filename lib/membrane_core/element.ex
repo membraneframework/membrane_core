@@ -375,7 +375,7 @@ defmodule Membrane.Element do
     {:ok, pad_name} = state |> State.get_pad_name_by_pid(:any, from)
     debug """
       Received event on pad #{inspect pad_name}
-      Buffers: #{inspect event}
+      Event: #{inspect event}
       """
     {:ok, {_availability, direction, mode, _pid}} = state |> State.get_pad_by_name(:any, pad_name)
     with {:ok, state} <- module.base_module.handle_event(mode, direction, pad_name, event, state)
