@@ -47,6 +47,7 @@ defmodule Membrane.PullBuffer do
     end
     {:ok, do_store_buffers(pb, v)}
   end
+  def store(pb, :buffers, v), do: store(pb, :buffers, [v])
 
   defp do_store_buffers(%PullBuffer{q: q, current_size: size} = pb, v)
   when is_list v do
