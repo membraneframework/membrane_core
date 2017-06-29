@@ -343,8 +343,8 @@ defmodule Membrane.Element.Base.Sink do
             do {:ok, {out, %{data | buffer: npb}}}
             end
           end),
-      {:out, out} <- (if out == {:empty, []} do {:empty_pb, state} else {:out, out} end),
-      {:ok, state} <- out |> Helper.Enum.reduce_with(state, fn
+      {:out, {_, data}} <- (if out == {:empty, []} do {:empty_pb, state} else {:out, out} end),
+      {:ok, state} <- data |> Helper.Enum.reduce_with(state, fn
           {:buffers, b} ->
             {:ok, state} = state |>
               State.update_pad_data!(:sink, pad_name, :self_demand, & {:ok, &1 - length b})
