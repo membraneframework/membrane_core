@@ -178,11 +178,13 @@ defmodule Membrane.Element.State do
   """
   @spec deactivate_pads(t) :: :ok | {:error, any}
   def deactivate_pads(state) do
-    state.pads.data |> Helper.Enum.each_with(fn {_, %{pid: pid}} -> Pad.activate pid end)
+    state
+      |> State.get_pads_data
+      |> Helper.Enum.each_with(fn {_, %{pid: pid}} -> Pad.activate pid end)
   end
 
   defp fill_sink_pull_buffers(state) do
-  state.pads.data
+  state
     |> State.get_pads_data(:sink)
     |> Map.keys
     |> Helper.Enum.reduce_with(state, fn pad_name, st ->
