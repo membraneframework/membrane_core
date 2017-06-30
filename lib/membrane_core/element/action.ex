@@ -18,10 +18,10 @@ defmodule Membrane.Element.Action do
       Buffers: #{inspect(buffers)}
       """
     with \
-      {:ok, {_availability, _direction, mode, pid}} <- State.get_pad_by_name(state, :source, pad_name),
+      {:ok, %{mode: mode, pid: pid}} <- state |> State.get_pad_data(:source, pad_name),
       {:ok, state} = (case mode do
           :pull -> state |>
-            State.update_pad_data!(:source, pad_name, :demand, &{:ok, &1 - length buffers})
+            State.update_pad_data(:source, pad_name, :demand, &{:ok, &1 - length buffers})
           :push -> {:ok, state}
         end),
       :ok <- GenServer.call(pid, {:membrane_buffer, buffers})
@@ -50,13 +50,12 @@ defmodule Membrane.Element.Action do
   def handle_demand(pad_name, src_name \\ nil, size, callback, %State{module: module} = state) do
     debug "Sending demand of size #{inspect size} through pad #{inspect(pad_name)}"
     with \
-      {:sink, {:ok, {_availability, _direction, mode, _pid}}}
-        <- {:sink, State.get_pad_by_name(state, :sink, pad_name)},
-      :pull <- mode,
-      {:source, {:ok, {_availability, _direction, mode, _pid}}}
-        <- {:source, if src_name != nil do State.get_pad_by_name(state, :source, src_name)
-                    else {:ok, {:always, :source, :pull, nil}} end},
-      :pull <- mode
+      {:sink, {:ok, %{mode: :pull}}} <-
+        {:sink, state |> State.get_pad_data(:sink, pad_name)},
+      {:source, {:ok, %{mode: :pull}}} <- {:source, cond do
+          src_name != nil -> state |> State.get_pad_data(:source, pad_name)
+          true -> {:ok, %{mode: :pull}}
+        end}
     do
       case callback do
         cb when cb in [:handle_write, :handle_process] ->
@@ -65,7 +64,7 @@ defmodule Membrane.Element.Action do
         _ -> module.base_module.handle_self_demand pad_name, src_name, size, state
       end
     else
-      :push ->
+      {_direction, {:ok, %{mode: :push}}} ->
         handle_invalid_pad_mode pad_name, :pull, :demand, state
       {direction, {:error, :unknown_pad}} ->
         handle_unknown_pad pad_name, direction, :demand, state
@@ -80,7 +79,7 @@ defmodule Membrane.Element.Action do
       Event: #{inspect event}
       """
     with \
-      {:ok, {_availability, _direction, _mode, pid}} <- State.get_pad_by_name(state, :any, pad_name),
+      {:ok, %{pid: pid}} <- State.get_pad_data(state, :any, pad_name),
       :ok <- GenServer.call(pid, {:membrane_event, event})
     do {:ok, state}
     else

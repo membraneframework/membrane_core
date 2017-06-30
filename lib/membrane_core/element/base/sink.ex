@@ -307,7 +307,7 @@ defmodule Membrane.Element.Base.Sink do
 
   def handle_self_demand pad_name, _src_name, buf_cnt, state do
     {:ok, state} = state
-      |> State.update_pad_data!(:sink, pad_name, :self_demand, & {:ok, &1 + buf_cnt})
+      |> State.update_pad_data(:sink, pad_name, :self_demand, & {:ok, &1 + buf_cnt})
     handle_write(:pull, pad_name, state)
       |> orWarnError("""
         Demand of size #{inspect buf_cnt} on pad #{inspect pad_name}
@@ -320,7 +320,7 @@ defmodule Membrane.Element.Base.Sink do
 
   def handle_buffer(:pull, pad_name, buffer, state) do
     {:ok, state} = state
-      |> State.update_pad_data!(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffer))
+      |> State.update_pad_data(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffer))
     check_and_handle_write(pad_name, state)
       |> orWarnError("""
         New buffer arrived:
@@ -338,7 +338,7 @@ defmodule Membrane.Element.Base.Sink do
   def handle_write(:pull, pad_name, state) do
     with \
       {:ok, {out, state}} <- state
-        |> State.get_update_pad_data!(:sink, pad_name, fn %{self_demand: demand, buffer: pb} = data ->
+        |> State.get_update_pad_data(:sink, pad_name, fn %{self_demand: demand, buffer: pb} = data ->
             with {:ok, {out, npb}} <- PullBuffer.take(pb, demand)
             do {:ok, {out, %{data | buffer: npb}}}
             end
@@ -347,7 +347,7 @@ defmodule Membrane.Element.Base.Sink do
       {:ok, state} <- data |> Helper.Enum.reduce_with(state, fn
           {:buffers, b}, st ->
             {:ok, st} = st |>
-              State.update_pad_data!(:sink, pad_name, :self_demand, & {:ok, &1 - length b})
+              State.update_pad_data(:sink, pad_name, :self_demand, & {:ok, &1 - length b})
             Common.exec_and_handle_callback :handle_write, [pad_name, b], st
           {:event, e}, st -> Common.exec_and_handle_callback :handle_event, [pad_name, e], st
         end)

@@ -199,7 +199,7 @@ defmodule Membrane.Element.Base.Source do
 
   def handle_demand(pad_name, size, state) do
     {:ok, {stored_size, state}} = state
-      |> State.get_update_pad_data!(:source, pad_name, :demand, &{:ok, {&1, &1+size}})
+      |> State.get_update_pad_data(:source, pad_name, :demand, &{:ok, {&1, &1+size}})
     if stored_size + size > 0 do
       Common.exec_and_handle_callback(:handle_demand, [pad_name, size + min(0, stored_size)], state)
         |> orWarnError("""

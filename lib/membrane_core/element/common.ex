@@ -32,7 +32,7 @@ defmodule Membrane.Element.Common do
     cond do
       state |> State.get_pad_data!(:sink, pad_name, :buffer) |> PullBuffer.empty?
         -> do_handle_event pad_name, event, state
-      true -> state |> State.update_pad_data!(
+      true -> state |> State.update_pad_data(
         :sink, pad_name, :buffer, & &1 |> PullBuffer.store(:event, event))
     end
   end

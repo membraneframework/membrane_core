@@ -363,7 +363,7 @@ defmodule Membrane.Element.Base.Filter do
 
   def handle_demand(pad_name, size, state) do
     {:ok, {total_size, state}} = state
-      |> State.get_update_pad_data!(:source, pad_name, :demand, &{:ok, {&1+size, &1+size}})
+      |> State.get_update_pad_data(:source, pad_name, :demand, &{:ok, {&1+size, &1+size}})
     if total_size > 0 do
       Common.exec_and_handle_callback(:handle_demand, {:handle_demand, pad_name}, [pad_name, total_size], state)
         |> orWarnError("""
@@ -394,7 +394,7 @@ defmodule Membrane.Element.Base.Filter do
 
   def handle_buffer(:pull, pad_name, buffers, state) do
     {:ok, state} = state
-      |> State.update_pad_data!(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffers))
+      |> State.update_pad_data(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffers))
     check_and_handle_demands pad_name, buffers, state
   end
 
@@ -405,7 +405,7 @@ defmodule Membrane.Element.Base.Filter do
 
   def handle_process(:pull, pad_name, src_name, buf_cnt, state) do
     with \
-      {:ok, {out, state}} <- state |> State.get_update_pad_data!(:sink, pad_name, :buffer, & &1 |> PullBuffer.take(buf_cnt)),
+      {:ok, {out, state}} <- state |> State.get_update_pad_data(:sink, pad_name, :buffer, & &1 |> PullBuffer.take(buf_cnt)),
       {:out, {_, data}} <- (if out == {:empty, []} do {:empty_pb, state} else {:out, out} end),
       {:ok, state} <- data |> Helper.Enum.reduce_with(state, fn
           {:buffers, b}, st -> Common.exec_and_handle_callback :handle_process, [pad_name, src_name, b], st
@@ -423,7 +423,7 @@ defmodule Membrane.Element.Base.Filter do
           handle_process did not produce expected amount of buffers, despite
           PullBuffer being not empty. Trying executing handle_demand again.
           """
-        {:ok, {_availability, _direction, _mode, pid}} = state |> State.get_pad_by_name(:source, src_name)
+        %{pid: pid} = state |> State.get_pad_data!(:source, src_name)
         send pid, {:membrane_demand, 0}
       end
       {:ok, state}
@@ -435,8 +435,8 @@ defmodule Membrane.Element.Base.Filter do
 
   defdelegate handle_event(mode, dir, pad_name, event, state), to: Common
 
-  defp check_and_handle_demands(pad_name, buffers, %State{source_pads_data: source_pads_data} = state) do
-    source_pads_data
+  defp check_and_handle_demands(pad_name, buffers, state) do
+    state.pads.data
       |> Enum.map(fn {src, data} -> {src, data.demand} end)
       |> Helper.Enum.reduce_with(state, fn {name, demand}, st ->
           if demand > 0 do handle_demand name, 0, st else {:ok, st} end
