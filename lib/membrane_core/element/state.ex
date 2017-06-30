@@ -160,8 +160,8 @@ defmodule Membrane.Element.State do
   @spec activate_pads(t) :: :ok | {:error, any}
   def activate_pads(state) do
     # TODO add error checking
-    activate_pads_by_pids(state, state.source_pads_by_pids |> Map.keys)
-    activate_pads_by_pids(state, state.sink_pads_by_pids |> Map.keys)
+    activate_pads_by_pids(state, state.pads.data |> Map.keys)
+    activate_pads_by_pids(state, state.pads.data |> Map.keys)
   end
 
 
@@ -181,8 +181,8 @@ defmodule Membrane.Element.State do
   @spec deactivate_pads(t) :: :ok | {:error, any}
   def deactivate_pads(state) do
     # TODO add error checking
-    deactivate_pads_by_pids(state, state.source_pads_by_pids |> Map.keys)
-    deactivate_pads_by_pids(state, state.sink_pads_by_pids |> Map.keys)
+    deactivate_pads_by_pids(state, state.pads.data |> Map.keys)
+    deactivate_pads_by_pids(state, state.pads.data |> Map.keys)
   end
 
 
