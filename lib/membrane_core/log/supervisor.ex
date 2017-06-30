@@ -1,4 +1,4 @@
-defmodule Membrane.Logger.Supervisor do
+defmodule Membrane.Log.Supervisor do
   @moduledoc """
   Module responsible for supervising all loggers. It is also responsible for
   receiving and routing log messages to appropriate loggers.
@@ -95,7 +95,7 @@ defmodule Membrane.Logger.Supervisor do
         worker(Membrane.Logger, [module, options], [id: child_id])
     end)
 
-    router = worker(Membrane.Logger.Router, [loggers, [name: :membrane_log_router]], [id: :membrane_log_router])
+    router = worker(Membrane.Log.Router, [loggers, [name: :membrane_log_router]], [id: :membrane_log_router])
 
     supervise(child_list ++ [router], strategy: :one_for_one)
   end

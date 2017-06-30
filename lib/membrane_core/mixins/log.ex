@@ -6,7 +6,7 @@ defmodule Membrane.Mixins.Log do
 
   defmacro __using__(_) do
     quote location: :keep do
-      alias Membrane.Logger.Router
+      alias Membrane.Log.Router
 
       defmacro log(level, message, tags) do
         config = Application.get_env(:membrane_core, Membrane.Logger, [])

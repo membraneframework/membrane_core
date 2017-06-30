@@ -1,7 +1,8 @@
-defmodule Membrane.Logger.Behaviour do
-  @moduledoc false
+defmodule Membrane.Logger.Base do
+  @moduledoc """
+    This is a base module used by all logger implementations.
+  """
 
-  # This module is a mixin with common routines for loger implementations.
 
 
   @doc """
@@ -66,7 +67,7 @@ defmodule Membrane.Logger.Behaviour do
 
   defmacro __using__(_) do
     quote location: :keep do
-      @behaviour Membrane.Logger.Behaviour
+      @behaviour Membrane.Logger.Base
 
       # Default implementations
 

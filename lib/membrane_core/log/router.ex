@@ -1,7 +1,7 @@
-defmodule Membrane.Logger.Router do
+defmodule Membrane.Log.Router do
   use GenServer
 
-  alias Membrane.Logger.Supervisor
+  alias Membrane.Log.Supervisor
 
 
   @doc """
