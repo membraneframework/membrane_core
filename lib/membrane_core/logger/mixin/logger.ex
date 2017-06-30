@@ -21,10 +21,10 @@ defmodule Membrane.Logger.Behaviour do
   Callback invoked when new log message is received.
 
   Callback delivers 5 arguments:
-  * log level: atom, one of: :debug, :info, :warn, :critical
+  * log level: atom, one of: :debug, :info, :warn
   * message: basic element or list of basic elements
   * timestamp
-  * tag (atom, e.g. module name)
+  * tags (list of atoms, e.g. module name)
   * logger state
 
 

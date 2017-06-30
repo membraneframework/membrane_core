@@ -29,6 +29,19 @@ defmodule Membrane.Logger.Router do
   end
 
 
+  @doc """
+  Converts atom with level to its number representation
+
+  Valid atoms are:
+   - :debug
+   - :info
+   - :warn
+  """
+  @spec level_to_val(atom) :: 0 | 1 | 2
+  def level_to_val(:debug), do: 0
+  def level_to_val(:info), do: 1
+  def level_to_val(:warn), do: 2
+
 
   # PRIVATE API
 
@@ -62,10 +75,4 @@ defmodule Membrane.Logger.Router do
       {:noreply, state}
   end
 
-
-
-  defp level_to_val(:debug), do: 0
-  defp level_to_val(:info), do: 1
-  defp level_to_val(:warn), do: 2
-  defp level_to_val(:critical), do: 3
 end
