@@ -436,7 +436,7 @@ defmodule Membrane.Element.Base.Filter do
   defdelegate handle_event(mode, dir, pad_name, event, state), to: Common
 
   defp check_and_handle_demands(pad_name, buffers, state) do
-    state.pads.data
+    state |> State.get_pads_data(:source)
       |> Enum.map(fn {src, data} -> {src, data.demand} end)
       |> Helper.Enum.reduce_with(state, fn {name, demand}, st ->
           if demand > 0 do handle_demand name, 0, st else {:ok, st} end

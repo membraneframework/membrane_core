@@ -332,8 +332,8 @@ defmodule Membrane.Pipeline do
     with \
       {:ok, from_pid} <- children_to_pids |> Map.get(from_name) |> (case do nil -> {:error, {:unknown_from, link}}; v -> {:ok, v} end),
       {:ok, to_pid} <- children_to_pids |> Map.get(to_name) |> (case do nil -> {:error, {:unknown_to, link}}; v -> {:ok, v} end),
-      {:ok, %{pid: source_pid}} <- Element.get_source_pad(from_pid, from_pad),
-      {:ok, %{pid: sink_pid}} <- Element.get_sink_pad(to_pid, to_pad),
+      {:ok, %{pid: source_pid}} <- Element.pad_info(from_pid, :source, from_pad),
+      {:ok, %{pid: sink_pid}} <- Element.pad_info(to_pid, :sink, to_pad),
       :ok <- Pad.link(source_pid, sink_pid, params)
     do
       :ok

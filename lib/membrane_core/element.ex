@@ -6,7 +6,6 @@ defmodule Membrane.Element do
 
   use Membrane.Mixins.Log
   alias Membrane.Element.State
-  alias Membrane.Pad
   # Type that defines possible return values of start/start_link functions.
   @type on_start :: GenServer.on_start
 
@@ -210,33 +209,8 @@ defmodule Membrane.Element do
   end
 
 
-  @doc """
-  Gets PID of source pad of given name.
-
-  In case of success, returns `{:ok, {availability, direction, mode, pid}}`.
-
-  In case of error, returns `{:error, reason}`.
-  """
-  @spec get_source_pad(pid, Pad.name_t, timeout) ::
-    {:ok, {Pad.availability_t, Pad.direction_t, Pad.mode_t, pid}} |
-    {:error, any}
-  def get_source_pad(server, pad_name, timeout \\ 5000) when is_pid(server) do
-    GenServer.call(server, {:membrane_get_pad, :source, pad_name}, timeout)
-  end
-
-
-  @doc """
-  Gets PID of sink pad of given name.
-
-  In case of success, returns `{:ok, {availability, direction, mode, pid}}`.
-
-  In case of error, returns `{:error, reason}`.
-  """
-  @spec get_sink_pad(pid, Pad.name_t, timeout) ::
-    {:ok, {Pad.availability_t, Pad.direction_t, Pad.mode_t, pid}} |
-    {:error, any}
-  def get_sink_pad(server, pad_name, timeout \\ 5000) when is_pid(server) do
-    GenServer.call(server, {:membrane_get_pad, :sink, pad_name}, timeout)
+  def pad_info(server, direction, pad_name, timeout \\ 5000) when is_pid(server) do
+    GenServer.call(server, {:membrane_get_pad, direction, pad_name}, timeout)
   end
 
   # Private API

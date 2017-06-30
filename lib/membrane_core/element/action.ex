@@ -53,7 +53,7 @@ defmodule Membrane.Element.Action do
       {:sink, {:ok, %{mode: :pull}}} <-
         {:sink, state |> State.get_pad_data(:sink, pad_name)},
       {:source, {:ok, %{mode: :pull}}} <- {:source, cond do
-          src_name != nil -> state |> State.get_pad_data(:source, pad_name)
+          src_name != nil -> state |> State.get_pad_data(:source, src_name)
           true -> {:ok, %{mode: :pull}}
         end}
     do
