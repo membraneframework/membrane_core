@@ -22,13 +22,6 @@ defmodule Membrane.Logger.Supervisor do
   end
 
 
-  @spec log(atom, any, Membane.Time.native_t, atom) :: :ok
-  def log(level, message, timestamp, tag) do
-    fn {_, pid, _, _} ->
-      send pid, {:membrane_log, level, message, timestamp, tag}
-    end |> each_children
-  end
-
   @doc """
   Initializes logger and adds it to the supervision tree.
 
@@ -70,6 +63,24 @@ defmodule Membrane.Logger.Supervisor do
   end
 
 
+  @doc """
+  Iterates through list of children and executes given function on every
+  child except log router.
+
+  Should return :ok.
+  """
+  def each_logger(func) do
+    __MODULE__ |> Supervisor.which_children |> Enum.each(
+      fn {id, _pid, _type, _module} = child ->
+        if id != :membrane_log_router do
+          func.(child)
+        end
+      end
+    )
+    :ok
+  end
+
+
   # Private API
 
   @doc false
@@ -81,17 +92,12 @@ defmodule Membrane.Logger.Supervisor do
         %{module: module, id: child_id} = logger_map
         options = logger_map |> Map.get(:options)
 
-        # TODO do something with :level
-
         worker(Membrane.Logger, [module, options], [id: child_id])
     end)
 
-    supervise(child_list, strategy: :one_for_one)
-  end
+    router = worker(Membrane.Logger.Router, [loggers, [name: :membrane_log_router]], [id: :membrane_log_router])
 
-
-  defp each_children(func) do
-    __MODULE__ |> Supervisor.which_children |> Enum.each(func)
+    supervise(child_list ++ [router], strategy: :one_for_one)
   end
 
 end

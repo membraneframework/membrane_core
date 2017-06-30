@@ -5,7 +5,7 @@ defmodule Membrane do
     import Supervisor.Spec, warn: false
 
     children = [
-      worker(Membrane.Logger.Supervisor, [])
+      supervisor(Membrane.Logger.Supervisor, []),
     ]
 
     opts = [strategy: :one_for_one, name: Membrane]
