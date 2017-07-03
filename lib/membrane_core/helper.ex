@@ -3,12 +3,14 @@ defmodule Membrane.Helper do
   def listify(list) when is_list list do list end
   def listify(non_list) do [non_list] end
 
-  def x ~> f do
-    f.(x)
+  defmacro x ~> f do
+    quote do
+      case unquote x do unquote f end
+    end
   end
 
   def stacktrace, do:
     Process.info(self(), :current_stacktrace)
-      ~> fn {:current_stacktrace, trace} -> trace end
+      ~> ({:current_stacktrace, trace} -> trace)
       |> Exception.format_stacktrace
 end
