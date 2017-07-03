@@ -9,7 +9,7 @@ defmodule Membrane.Element.State do
   alias __MODULE__
   alias Membrane.PullBuffer
   alias Membrane.Element
-  alias Membrane.Helper
+  use Membrane.Helper
 
 
   @type t :: %Membrane.Element.State{
@@ -121,10 +121,9 @@ defmodule Membrane.Element.State do
     end
   end
 
-  def get_pad_data!(state, pad_direction, pad_name, keys \\ []) do
-    {:ok, pad_data} = get_pad_data state, pad_direction, pad_name, keys
-    pad_data
-  end
+  def get_pad_data!(state, pad_direction, pad_name, keys \\ []), do:
+    get_pad_data(state, pad_direction, pad_name, keys)
+      ~> ({:ok, pad_data} -> pad_data)
 
   def update_pad_data(state, pad_direction, pad_name, keys \\ [], f)
   def update_pad_data(state, pad_direction, pad_name, keys, f) do

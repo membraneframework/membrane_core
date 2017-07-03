@@ -1,5 +1,12 @@
 defmodule Membrane.Helper do
 
+  defmacro __using__(_args) do
+    quote do
+      import Membrane.Helper, only: [~>: 2]
+      alias Membrane.Helper
+    end
+  end
+
   def listify(list) when is_list list do list end
   def listify(non_list) do [non_list] end
 
