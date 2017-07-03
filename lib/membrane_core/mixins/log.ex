@@ -24,13 +24,12 @@ defmodule Membrane.Mixins.Log do
       end
 
       def warnError(message, reason) do
-        {:current_stacktrace, trace} = Process.info self(), :current_stacktrace
         warn """
         Encountered an error:
         #{message}
         Reason: #{inspect reason}
         Stacktrace:
-        #{Exception.format_stacktrace trace}
+        #{Membrane.Helper.stacktrace}
         """
         {:error, reason}
       end

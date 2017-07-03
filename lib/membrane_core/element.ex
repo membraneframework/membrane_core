@@ -6,6 +6,7 @@ defmodule Membrane.Element do
 
   use Membrane.Mixins.Log
   alias Membrane.Element.State
+  alias Membrane.Helper
   # Type that defines possible return values of start/start_link functions.
   @type on_start :: GenServer.on_start
 
@@ -241,7 +242,7 @@ defmodule Membrane.Element do
   def terminate(reason, %State{module: module, playback_state: playback_state, internal_state: internal_state} = state) do
     if playback_state != :stopped do
       warn("Terminating: Attempt to terminate element when it is not stopped, state = #{inspect(state)}")
-      warn("Terminating: Stacktrace = " <> Exception.format_stacktrace System.stacktrace)
+      warn("Terminating: Stacktrace = " <> Helper.stacktrace)
     end
 
     debug("Terminating: reason = #{inspect(reason)}, state = #{inspect(state)}")
