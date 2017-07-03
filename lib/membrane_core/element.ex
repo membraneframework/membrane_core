@@ -348,6 +348,17 @@ defmodule Membrane.Element do
     module.base_module.handle_buffer(mode, pad_name, buffers, state) |> to_noreply_or(state)
   end
 
+  # Callback invoked on incoming caps
+  @doc false
+  def handle_info({{:membrane_caps, caps}, from}, %State{module: module} = state) do
+    {:ok, %{name: pad_name, mode: mode}} = state |> State.get_pad_data(:sink, from)
+    debug """
+      Received caps on pad #{inspect pad_name}
+      Caps: #{inspect caps}
+      """
+    module.base_module.handle_caps(mode, pad_name, caps, state) |> to_noreply_or(state)
+  end
+
   # Callback invoked on incoming event
   @doc false
   def handle_info({{:membrane_event, event}, from}, %State{module: module} = state) do

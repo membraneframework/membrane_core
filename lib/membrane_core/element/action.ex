@@ -40,15 +40,28 @@ defmodule Membrane.Element.Action do
 
   @spec send_caps(Pad.name_t, Caps.t, State.t) :: :ok
   def send_caps(pad_name, caps, state) do
-    debug("Caps: pad_name = #{inspect(pad_name)}, caps = #{inspect(caps)}")
-    # TODO
-    {:ok, state}
+    debug """
+      Sending caps through pad #{inspect pad_name}
+      Caps: #{inspect caps}
+      """
+    with \
+      {:ok, %{pid: pid}} <- state |> State.get_pad_data(:source, pad_name),
+      :ok <- GenServer.call(pid, {:membrane_caps, caps})
+    do {:ok, state}
+    else
+      {:error, :unknown_pad} ->
+        handle_unknown_pad pad_name, :source, :event, state
+      {:error, reason} -> warnError """
+        Error while sending caps to pad: #{inspect pad_name}
+        Caps: #{inspect caps}
+        """, reason
+    end
   end
 
 
   @spec handle_demand(Pad.name_t, Pad.name_t, pos_integer, atom, State.t) :: :ok | {:error, any}
   def handle_demand(pad_name, src_name \\ nil, size, callback, %State{module: module} = state) do
-    debug "Sending demand of size #{inspect size} through pad #{inspect(pad_name)}"
+    debug "Sending demand of size #{inspect size} through pad #{inspect pad_name}"
     with \
       {:sink, {:ok, %{mode: :pull}}} <-
         {:sink, state |> State.get_pad_data(:sink, pad_name)},

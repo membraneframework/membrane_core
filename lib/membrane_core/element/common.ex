@@ -28,6 +28,34 @@ defmodule Membrane.Element.Common do
     end
   end
 
+  def handle_caps(:pull, pad_name, caps, state) do
+    cond do
+      state |> State.get_pad_data!(:sink, pad_name, :buffer) |> PullBuffer.empty?
+        -> do_handle_caps pad_name, caps, state
+      true -> state |> State.update_pad_data(
+        :sink, pad_name, :buffer, & &1 |> PullBuffer.store(:caps, caps))
+    end
+  end
+
+  def handle_caps(:push, pad_name, caps, state), do:
+    do_handle_caps(pad_name, caps, state)
+
+  def do_handle_caps(pad_name, caps, state) do
+    accepted_caps = state |> State.get_pad_data!(:sink, pad_name, :accepted_caps)
+    with \
+      :ok <- (if accepted_caps == :any || caps in accepted_caps do :ok else :invalid_caps end),
+      {:ok, state} <- exec_and_handle_callback(:handle_event, [pad_name, caps], state)
+    do {:ok, state}
+    else
+      :invalid_caps ->
+        warnError """
+        Received caps: #{inspect caps} that are not specified in known_sink_pads
+        for pad #{inspect pad_name}. Accepted caps are: #{inspect accepted_caps}
+        """, :invalid_caps
+      {:error, reason} -> warnError "Error while handling caps", reason
+    end
+  end
+
   def handle_event(:pull, :sink, pad_name, event, state) do
     cond do
       state |> State.get_pad_data!(:sink, pad_name, :buffer) |> PullBuffer.empty?

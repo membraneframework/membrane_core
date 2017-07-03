@@ -433,6 +433,7 @@ defmodule Membrane.Element.Base.Filter do
     end
   end
 
+  defdelegate handle_caps(mode, pad_name, caps, state), to: Common
   defdelegate handle_event(mode, dir, pad_name, event, state), to: Common
 
   defp check_and_handle_demands(pad_name, buffers, state) do

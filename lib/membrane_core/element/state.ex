@@ -65,7 +65,7 @@ defmodule Membrane.Element.State do
     known_pads
       |> Enum.filter_map(
         fn {_name, {availability, _mode, _caps}} -> availability == :always end,
-        fn {name, {_availability, mode, _caps}} ->
+        fn {name, {_availability, mode, caps}} ->
           pad_module = case mode do
               :pull -> Pad.Mode.Pull
               :push -> Pad.Mode.Push
@@ -73,7 +73,10 @@ defmodule Membrane.Element.State do
 
           {:ok, pid} = Pad.start_link(pad_module, name, direction)
 
-          data = %{name: name, pid: pid, mode: mode, direction: direction}
+          data = %{
+                name: name, pid: pid, mode: mode,direction: direction,
+                caps: nil, accepted_caps: caps,
+              }
             |> Map.merge(case direction do
                 :source -> %{demand: 0}
                 :sink -> %{buffer: nil, self_demand: 0}

@@ -13,6 +13,8 @@ defmodule Membrane.PullBuffer do
 
   @qe Qex
 
+  @non_buf_types [:event, :caps]
+
   def new(sink, sink_name, preferred_size, init_size \\ 0) do
     %PullBuffer{
       q: @qe.new,
@@ -29,10 +31,6 @@ defmodule Membrane.PullBuffer do
 
   def store(pb, type \\ :buffers, v)
 
-  def store(%PullBuffer{q: q} = pb, :event, v) do
-    {:ok, %PullBuffer{pb | q: q |> @qe.push({:event, v})}}
-  end
-
   def store(%PullBuffer{current_size: size, preferred_size: pref_size, sink_name: sink} = pb, :buffers, v) do
     if size >= pref_size do warn """
       PullBuffer: received buffers from sink #{inspect sink}, despite
@@ -48,6 +46,10 @@ defmodule Membrane.PullBuffer do
     {:ok, do_store_buffers(pb, v)}
   end
   def store(pb, :buffers, v), do: store(pb, :buffers, [v])
+
+  def store(%PullBuffer{q: q} = pb, type, v) when type in @non_buf_types do
+    {:ok, %PullBuffer{pb | q: q |> @qe.push({type, v})}}
+  end
 
   defp do_store_buffers(%PullBuffer{q: q, current_size: size} = pb, v)
   when is_list v do
@@ -82,7 +84,8 @@ defmodule Membrane.PullBuffer do
   defp do_take_r(pb, count, acc \\ [])
   defp do_take_r(%PullBuffer{} = pb, 0, acc) do
     pb |> do_take_pop |> (case do
-      {{:value, {:event, e}}, npb} -> do_take_r npb, 0, [{:event, e}|acc]
+      {{:value, {type, e}}, npb} when type in @non_buf_types ->
+        do_take_r npb, 0, [{type, e}|acc]
       _ -> {{:value, acc |> Enum.reverse |> join_buffers}, pb}
       end)
   end
@@ -90,7 +93,8 @@ defmodule Membrane.PullBuffer do
     pb |> do_take_pop |> (case do
       {{:value, {:buffer, b}}, npb} -> do_take_r npb, count-1, [{:buffer, b}|acc]
       {:empty, npb} -> {{:empty, acc |> Enum.reverse |> join_buffers}, npb}
-      {{:value, {:event, e}}, npb} -> do_take_r npb, count, [{:event, e}|acc]
+      {{:value, {type, e}}, npb} when type in @non_buf_types ->
+        do_take_r npb, count, [{type, e}|acc]
     end)
   end
 
