@@ -14,7 +14,7 @@ defmodule Membrane.Logger do
   # functions.
   @type process_options_t :: GenServer.options
 
-  # Type that defines possible element-specific options passed to
+  # Type that defines possible logger-specific options passed to
   # start/start_link functions.
   @type logger_options_t :: struct | nil
 
@@ -28,7 +28,7 @@ defmodule Membrane.Logger do
   """
   @spec start_link(module, logger_options_t, process_options_t) :: on_start
   def start_link(module, logger_options \\ nil, process_options \\ []) do
-    GenServer.start_link(__MODULE__, {module, logger_options}, process_options)
+    GenServer.start_link(__MODULE__, {module, logger_options}, [name: :logger])
   end
 
 
@@ -69,9 +69,6 @@ defmodule Membrane.Logger do
     # Call logger's initialization callback
     case module.handle_init(options) do
       {:ok, internal_state} ->
-        #TODO logger is ready, log something!
-
-        # Return initial state of the process, including element state.
         state = State.new(module, internal_state)
         {:ok, state}
 
@@ -128,7 +125,7 @@ defmodule Membrane.Logger do
 
 
   # Generic handler that can be used to convert return value from
-  # element callback to reply that is accepted by GenServer.handle_info.
+  # logger callback to reply that is accepted by GenServer.handle_info.
   #
   # Case when callback returned failure.
   defp handle_callback({:error, reason, new_internal_state}, state) do
