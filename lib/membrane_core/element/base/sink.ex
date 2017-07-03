@@ -331,7 +331,8 @@ defmodule Membrane.Element.Base.Sink do
   end
 
   def handle_write(:push, pad_name, buffer, state) do
-    Common.exec_and_handle_callback(:handle_write, [pad_name, buffer], state)
+    params = %{caps: state |> State.get_pad_data(:sink, pad_name, :caps)}
+    Common.exec_and_handle_callback(:handle_write, [pad_name, buffer, params], state)
       |> orWarnError("Error while handling write")
   end
 
@@ -344,12 +345,8 @@ defmodule Membrane.Element.Base.Sink do
             end
           end),
       {:out, {_, data}} <- (if out == {:empty, []} do {:empty_pb, state} else {:out, out} end),
-      {:ok, state} <- data |> Helper.Enum.reduce_with(state, fn
-          {:buffers, b}, st ->
-            {:ok, st} = st |>
-              State.update_pad_data(:sink, pad_name, :self_demand, & {:ok, &1 - length b})
-            Common.exec_and_handle_callback :handle_write, [pad_name, b], st
-          {:event, e}, st -> Common.exec_and_handle_callback :handle_event, [pad_name, e], st
+      {:ok, state} <- data |> Helper.Enum.reduce_with(state, fn v, st ->
+          handle_pullbuffer_output pad_name, v, st
         end)
     do {:ok, state}
     else
@@ -357,6 +354,15 @@ defmodule Membrane.Element.Base.Sink do
       {:error, reason} -> warnError "Error while handling write", reason
     end
   end
+
+  defp handle_pullbuffer_output(pad_name, {:buffers, b}, state) do
+    {:ok, state} = state |>
+      State.update_pad_data(:sink, pad_name, :self_demand, & {:ok, &1 - length b})
+    params = %{caps: state |> State.get_pad_data(:sink, pad_name, :caps)}
+    Common.exec_and_handle_callback :handle_write, [pad_name, b, params], state
+  end
+  defp handle_pullbuffer_output(pad_name, v, state), do:
+    Common.handle_pullbuffer_output(pad_name, v, state)
 
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
 
@@ -405,12 +411,12 @@ defmodule Membrane.Element.Base.Sink do
       def handle_stop(state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_write1(_pad, _buffer, state), do: {:ok, {[], state}}
+      def handle_write1(_pad, _buffer, _params, state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_write(pad, buffers, state) do
+      def handle_write(pad, buffers, params, state) do
         with {:ok, {actions, state}} <- buffers
-          |> Membrane.Helper.Enum.map_reduce_with(state, &handle_write1(pad, &1, &2))
+          |> Membrane.Helper.Enum.map_reduce_with(state, &handle_write1(pad, &1, params, &2))
         do {:ok, {actions |> List.flatten, state}}
         end
       end

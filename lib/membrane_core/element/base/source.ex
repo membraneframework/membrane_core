@@ -201,7 +201,8 @@ defmodule Membrane.Element.Base.Source do
     {:ok, {stored_size, state}} = state
       |> State.get_update_pad_data(:source, pad_name, :demand, &{:ok, {&1, &1+size}})
     if stored_size + size > 0 do
-      Common.exec_and_handle_callback(:handle_demand, [pad_name, size + min(0, stored_size)], state)
+      params = %{caps: state |> State.get_pad_data(:source, pad_name, :caps)}
+      Common.exec_and_handle_callback(:handle_demand, [pad_name, size + min(0, stored_size), params], state)
         |> orWarnError("""
           Demand arrived from pad #{inspect pad_name}, but error happened while
           handling it.
@@ -275,12 +276,12 @@ defmodule Membrane.Element.Base.Source do
       def handle_caps(_pad, state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_demand1(_pad, state), do: {:ok, {[], state}}
+      def handle_demand1(_pad, _params, state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_demand(pad, size, state) do
+      def handle_demand(pad, size, params, state) do
         with {:ok, {actions, state}} <- 1..size
-          |> Membrane.Helper.Enum.map_reduce_with(state, fn _, st -> handle_demand1 pad, st end)
+          |> Membrane.Helper.Enum.map_reduce_with(state, fn _, st -> handle_demand1 pad, params, st end)
         do {:ok, {actions |> List.flatten, state}}
         end
       end

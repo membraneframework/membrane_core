@@ -365,7 +365,8 @@ defmodule Membrane.Element.Base.Filter do
     {:ok, {total_size, state}} = state
       |> State.get_update_pad_data(:source, pad_name, :demand, &{:ok, {&1+size, &1+size}})
     if total_size > 0 do
-      Common.exec_and_handle_callback(:handle_demand, {:handle_demand, pad_name}, [pad_name, total_size], state)
+      params = %{caps: state |> State.get_pad_data(:source, pad_name, :caps)}
+      Common.exec_and_handle_callback(:handle_demand, {:handle_demand, pad_name}, [pad_name, total_size, params], state)
         |> orWarnError("""
           Demand arrived from pad #{inspect pad_name}, but error happened while
           handling it.
@@ -399,7 +400,8 @@ defmodule Membrane.Element.Base.Filter do
   end
 
   def handle_process(:push, pad_name, buffers, state) do
-    Common.exec_and_handle_callback(:handle_process, [pad_name, buffers], state)
+    params = %{caps: state |> State.get_pad_data(:sink, pad_name, :caps)}
+    Common.exec_and_handle_callback(:handle_process, [pad_name, buffers, params], state)
       |> orWarnError("Error while handling process")
   end
 
@@ -407,25 +409,11 @@ defmodule Membrane.Element.Base.Filter do
     with \
       {:ok, {out, state}} <- state |> State.get_update_pad_data(:sink, pad_name, :buffer, & &1 |> PullBuffer.take(buf_cnt)),
       {:out, {_, data}} <- (if out == {:empty, []} do {:empty_pb, state} else {:out, out} end),
-      {:ok, state} <- data |> Helper.Enum.reduce_with(state, fn
-          {:buffers, b}, st -> Common.exec_and_handle_callback :handle_process, [pad_name, src_name, b], st
-          {:event, e}, st -> Common.exec_and_handle_callback :handle_event, [pad_name, e], st
-        end)
+      {:ok, state} <- data |> Helper.Enum.reduce_with(state, fn v, st ->
+        handle_pullbuffer_output pad_name, src_name, v, st
+      end)
     do
-      if (
-        state
-          |> State.get_pad_data!(:sink, pad_name, :buffer)
-          |> PullBuffer.empty? |> Kernel.!
-        &&
-          state |> State.get_pad_data!(:source, src_name, :demand) > 0
-      ) do
-        debug """
-          handle_process did not produce expected amount of buffers, despite
-          PullBuffer being not empty. Trying executing handle_demand again.
-          """
-        %{pid: pid} = state |> State.get_pad_data!(:source, src_name)
-        send pid, {:membrane_demand, 0}
-      end
+      send_dumb_demand_if_demand_positive_and_pullbuffer_nonempty pad_name, src_name, state
       {:ok, state}
     else
       {:empty_pb, state} -> {:ok, state}
@@ -433,13 +421,41 @@ defmodule Membrane.Element.Base.Filter do
     end
   end
 
+  defp handle_pullbuffer_output(pad_name, src_name, {:buffers, b}, state) do
+    params = %{
+        caps: state |> State.get_pad_data(:sink, pad_name, :caps),
+        source: src_name,
+        source_caps: state |> State.get_pad_data(:sink, pad_name, :caps),
+      }
+    Common.exec_and_handle_callback :handle_process, [pad_name, b, params], state
+  end
+  defp handle_pullbuffer_output(pad_name, _src_name, v, state), do:
+    Common.handle_pullbuffer_output(pad_name, v, state)
+
+  defp send_dumb_demand_if_demand_positive_and_pullbuffer_nonempty(pad_name, src_name, state) do
+    if (
+      state
+        |> State.get_pad_data!(:sink, pad_name, :buffer)
+        |> PullBuffer.empty? |> Kernel.!
+      &&
+        state |> State.get_pad_data!(:source, src_name, :demand) > 0
+    ) do
+      debug """
+        handle_process did not produce expected amount of buffers, despite
+        PullBuffer being not empty. Trying executing handle_demand again.
+        """
+      %{pid: pid} = state |> State.get_pad_data!(:source, src_name)
+      send pid, {:membrane_demand, 0}
+    end
+  end
+
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
   defdelegate handle_event(mode, dir, pad_name, event, state), to: Common
 
   defp check_and_handle_demands(pad_name, buffers, state) do
-    state |> State.get_pads_data(:source)
-      |> Enum.map(fn {src, data} -> {src, data.demand} end)
-      |> Helper.Enum.reduce_with(state, fn {name, demand}, st ->
+    state
+      |> State.get_pads_data(:source)
+      |> Helper.Enum.reduce_with(state, fn {name, %{demand: demand}}, st ->
           if demand > 0 do handle_demand name, 0, st else {:ok, st} end
         end)
       |> orWarnError("""
@@ -470,7 +486,7 @@ defmodule Membrane.Element.Base.Filter do
       def handle_caps(_pad, state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_demand(_pad, size, state), do: {:ok, {[], state}}
+      def handle_demand(_pad, _size, _params, state), do: {:ok, {[], state}}
 
       @doc false
       def handle_event(_pad, _event, state), do: {:ok, {[], state}}
@@ -485,12 +501,14 @@ defmodule Membrane.Element.Base.Filter do
       def handle_prepare(_previous_playback_state, state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_process1(_pad, _demand_src, _buffer, state), do: {:ok, {[], state}}
+      def handle_process1(_pad, _buffer, _params, state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_process(pad, demand_src, buffers, state) do
+      def handle_process(pad, buffers, params, state) do
         with {:ok, {actions, state}} <- buffers
-          |> Membrane.Helper.Enum.map_reduce_with(state, &handle_process1(pad, demand_src, &1, &2))
+          |> Membrane.Helper.Enum.map_reduce_with(state, fn b, st ->
+              handle_process1(pad, b, params st)
+            end)
         do {:ok, {actions |> List.flatten, state}}
         end
       end

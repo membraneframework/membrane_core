@@ -47,7 +47,7 @@ defmodule Membrane.Element.Action do
     with \
       {:ok, %{pid: pid}} <- state |> State.get_pad_data(:source, pad_name),
       :ok <- GenServer.call(pid, {:membrane_caps, caps})
-    do {:ok, state}
+    do state |> State.set_pad_data(:source, pad_name, :caps, caps)
     else
       {:error, :unknown_pad} ->
         handle_unknown_pad pad_name, :source, :event, state
