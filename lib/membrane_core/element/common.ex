@@ -50,7 +50,8 @@ defmodule Membrane.Element.Common do
       :invalid_caps ->
         warnError """
         Received caps: #{inspect caps} that are not specified in known_sink_pads
-        for pad #{inspect pad_name}. Accepted caps are: #{inspect accepted_caps}
+        for pad #{inspect pad_name}. Acceptable caps are:
+        #{accepted_caps |> Enum.map(&inspect/1) |> Enum.join(", ")}
         """, :invalid_caps
       {:error, reason} -> warnError "Error while handling caps", reason
     end
