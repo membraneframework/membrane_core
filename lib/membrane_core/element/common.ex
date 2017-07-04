@@ -42,9 +42,10 @@ defmodule Membrane.Element.Common do
 
   def do_handle_caps(pad_name, caps, state) do
     accepted_caps = state |> State.get_pad_data!(:sink, pad_name, :accepted_caps)
+    params = %{caps: state |> State.get_pad_data(:sink, pad_name, :caps)}
     with \
       :ok <- (if accepted_caps == :any || caps in accepted_caps do :ok else :invalid_caps end),
-      {:ok, state} <- exec_and_handle_callback(:handle_event, [pad_name, caps], state)
+      {:ok, state} <- exec_and_handle_callback(:handle_caps, [pad_name, caps, params], state)
     do
       state |> State.set_pad_data(:sink, pad_name, :caps, caps)
     else

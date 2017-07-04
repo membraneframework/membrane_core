@@ -300,7 +300,6 @@ defmodule Membrane.Element.Base.Source do
 
 
       defoverridable [
-        handle_caps: 4,
         handle_demand1: 3,
         handle_demand: 4,
         handle_event: 4,

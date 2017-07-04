@@ -507,7 +507,7 @@ defmodule Membrane.Element.Base.Filter do
       def handle_process(pad, buffers, params, state) do
         with {:ok, {actions, state}} <- buffers
           |> Membrane.Helper.Enum.map_reduce_with(state, fn b, st ->
-              handle_process1(pad, b, params st)
+              handle_process1(pad, b, params, st)
             end)
         do {:ok, {actions |> List.flatten, state}}
         end
