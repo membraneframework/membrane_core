@@ -4,6 +4,26 @@ defmodule Membrane.Helper.Enum do
   """
 
   import Enum
+  use Membrane.Helper
+
+  def chunk_by(enum, chunker, collector) do
+    enum
+      |> Enum.to_list
+      ~> (
+        [] -> []
+        [h|t] -> chunk_by t, chunker, collector, [h]
+        )
+  end
+
+  defp chunk_by([h | t], chunker, collector, [[lh | lt] | acc]) do
+    chunk_by t, chunker, collector, (if chunker.(h, lh)
+      do [[h, lh | lt] | acc]
+      else [[h], [lh | lt] |> Enum.reverse |> collector.() | acc]
+      end)
+  end
+  defp chunk_by([], _chunker, collector, [l | acc]) do
+    [l |> Enum.reverse |> collector.() | acc] |> Enum.reverse
+  end
 
   def reduce_with(enum, acc, f) do
     Enum.reduce_while enum, {:ok, acc}, fn e, {:ok, acc} ->

@@ -1,5 +1,6 @@
 defmodule Membrane.PullBuffer do
   alias Membrane.PullBuffer
+  use Membrane.Helper
   use Membrane.Mixins.Log
 
   defstruct \
@@ -106,25 +107,18 @@ defmodule Membrane.PullBuffer do
     end
   end
 
-  defp join_buffers(output, acc \\ [])
-
-  defp join_buffers([{:buffer, b} | t], [{:buffers, buffers} | acc]), do:
-    join_buffers(t, [{:buffers, [b | buffers]} | acc])
-
-  defp join_buffers([h|t], [{:buffers, buffers} | acc]), do:
-    join_buffers(t, [h, {:buffers, buffers |> Enum.reverse} | acc])
-
-  defp join_buffers([{:buffer, b}|t], acc), do:
-    join_buffers t, [{:buffers, [b]} | acc]
-
-  defp join_buffers([h|t], acc), do:
-    join_buffers(t, [h | acc])
-
-  defp join_buffers([], [{:buffers, buffers} | acc]), do:
-    [{:buffers, buffers |> Enum.reverse} | acc] |> Enum.reverse
-
-  defp join_buffers([], acc), do: acc |> Enum.reverse
-
+  defp join_buffers(output) do
+    output |> Helper.Enum.chunk_by(
+        fn
+          {:buffer, _}, {:buffer, _} -> true
+          _, _ -> false
+        end,
+        fn
+          [{type, v}] when type in @non_buf_types -> v
+          buffers -> {:buffers, buffers |> Enum.map(fn {:buffer, b} -> b end)}
+        end
+      )
+  end
 
   def empty?(%PullBuffer{current_size: size, init_size: init_size}), do:
     size == 0 || size < init_size
