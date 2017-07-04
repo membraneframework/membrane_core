@@ -128,8 +128,17 @@ defmodule Membrane.Logger do
   # logger callback to reply that is accepted by GenServer.handle_info.
   #
   # Case when callback returned failure.
-  defp handle_callback({:error, reason, new_internal_state}, state) do
-    {:error, reason, %{state | internal_state: new_internal_state}}
+  defp handle_callback({:error, reason, new_internal_state}, %{module: module} = state) do
+    content = ["Error occurred while trying to log message. Reason = ", inspect(reason)]
+    case module.handle_log(:warn, content, Membrane.Time.native_monotonic_time, [], new_internal_state) do
+      {:ok, new_internal_state} ->
+        {:ok, %{state | internal_state: new_internal_state}}
+      {:error, reason, new_internal_state} ->
+        {:error, reason, %{state | internal_state: new_internal_state}}
+      _ ->
+        # raise error
+        handle_callback(nil, nil)
+    end
   end
 
 
