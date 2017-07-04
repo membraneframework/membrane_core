@@ -483,13 +483,13 @@ defmodule Membrane.Element.Base.Filter do
       # Default implementations
 
       @doc false
-      def handle_caps(_pad, state), do: {:ok, {[], state}}
+      def handle_caps(_pad, _params, state), do: {:ok, {[], state}}
 
       @doc false
       def handle_demand(_pad, _size, _params, state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_event(_pad, _event, state), do: {:ok, {[], state}}
+      def handle_event(_pad, _event, _params, state), do: {:ok, {[], state}}
 
       @doc false
       def handle_other(_message, state), do: {:ok, {[], state}}
@@ -518,9 +518,9 @@ defmodule Membrane.Element.Base.Filter do
 
 
       defoverridable [
-        handle_caps: 2,
-        handle_demand: 3,
-        handle_event: 3,
+        handle_caps: 3,
+        handle_demand: 4,
+        handle_event: 4,
         handle_other: 2,
         handle_play: 1,
         handle_prepare: 2,
