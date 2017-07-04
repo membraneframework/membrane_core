@@ -48,6 +48,7 @@ defmodule Membrane.PullBuffer do
   def store(pb, :buffers, v), do: store(pb, :buffers, [v])
 
   def store(%PullBuffer{q: q} = pb, type, v) when type in @non_buf_types do
+    report "Storing #{type}", pb
     {:ok, %PullBuffer{pb | q: q |> @qe.push({type, v})}}
   end
 
