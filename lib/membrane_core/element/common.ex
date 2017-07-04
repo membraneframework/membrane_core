@@ -86,12 +86,30 @@ defmodule Membrane.Element.Common do
     actions_cb = actions_cb || cb
     with \
       {:call, {:ok, {actions, new_internal_state}}} <- {:call, apply(module, cb, args ++ [internal_state]) |> handle_callback_result(cb)},
-      {:handle, {:ok, state}} <- {:handle, actions |> module.base_module.handle_actions(actions_cb, %State{state | internal_state: new_internal_state})}
+      {:handle, {:ok, state}} <- {:handle, actions
+          |> join_buffers
+          |> module.base_module.handle_actions(actions_cb, %State{state | internal_state: new_internal_state})
+        }
     do {:ok, state}
     else
       {:call, {:error, reason}} -> warnError "Error while executing callback #{inspect cb}", reason
       {:handle, {:error, reason}} -> warnError "Error while handling actions returned by callback #{inspect cb}", reason
     end
+  end
+
+  defp join_buffers(actions) do
+    actions
+      |> Helper.Enum.chunk_by(
+        fn
+          {pad, {:buffer, _}}, {pad2, {:buffer, _}} when pad == pad2 -> true
+          _, _ -> false
+        end,
+        fn
+          [{pad, {:buffer, _}}|_] = buffers ->
+            {pad, {:buffer, buffers |> Enum.map(fn {_, {:buffer, b}} -> b end)}}
+          [other] -> other
+        end
+      )
   end
 
   def handle_callback_result(result, cb \\ "")
