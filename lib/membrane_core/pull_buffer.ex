@@ -114,7 +114,7 @@ defmodule Membrane.PullBuffer do
           _, _ -> false
         end,
         fn
-          [{type, v}] when type in @non_buf_types -> v
+          [{type, v}] when type in @non_buf_types -> {type, v}
           buffers -> {:buffers, buffers |> Enum.map(fn {:buffer, b} -> b end)}
         end
       )

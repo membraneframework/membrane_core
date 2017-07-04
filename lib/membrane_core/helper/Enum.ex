@@ -10,8 +10,8 @@ defmodule Membrane.Helper.Enum do
     enum
       |> Enum.to_list
       ~> (
+        [h|t] -> chunk_by t, chunker, collector, [[h]]
         [] -> []
-        [h|t] -> chunk_by t, chunker, collector, [h]
         )
   end
 
