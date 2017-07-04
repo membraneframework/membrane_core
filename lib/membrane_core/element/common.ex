@@ -101,12 +101,12 @@ defmodule Membrane.Element.Common do
     actions
       |> Helper.Enum.chunk_by(
         fn
-          {pad, {:buffer, _}}, {pad2, {:buffer, _}} when pad == pad2 -> true
+          {:buffer, {pad, _}}, {:buffer, {pad2, _}} when pad == pad2 -> true
           _, _ -> false
         end,
         fn
-          [{pad, {:buffer, _}}|_] = buffers ->
-            {pad, {:buffer, buffers |> Enum.map(fn {_, {:buffer, b}} -> b end)}}
+          [{:buffer, {pad, _}}|_] = buffers ->
+            {:buffer, {pad, buffers |> Enum.map(fn {_, {_, b}} -> [b] end) |> List.flatten}}
           [other] -> other
         end
       )
