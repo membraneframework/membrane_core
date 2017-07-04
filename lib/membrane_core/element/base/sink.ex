@@ -393,7 +393,7 @@ defmodule Membrane.Element.Base.Sink do
       # Default implementations
 
       @doc false
-      def handle_caps(_pad, _params, state), do: {:ok, {[], state}}
+      def handle_caps(_pad, _caps, _params, state), do: {:ok, {[], state}}
 
       @doc false
       def handle_event(_pad, _event, _params, state), do: {:ok, {[], state}}
@@ -423,7 +423,7 @@ defmodule Membrane.Element.Base.Sink do
 
 
       defoverridable [
-        handle_caps: 3,
+        handle_caps: 4,
         handle_event: 4,
         handle_other: 2,
         handle_play: 1,

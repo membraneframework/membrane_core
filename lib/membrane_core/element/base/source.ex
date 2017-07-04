@@ -273,9 +273,6 @@ defmodule Membrane.Element.Base.Source do
       # Default implementations
 
       @doc false
-      def handle_caps(_pad, _params, state), do: {:ok, {[], state}}
-
-      @doc false
       def handle_demand1(_pad, _params, state), do: {:ok, {[], state}}
 
       @doc false
@@ -303,7 +300,7 @@ defmodule Membrane.Element.Base.Source do
 
 
       defoverridable [
-        handle_caps: 3,
+        handle_caps: 4,
         handle_demand1: 3,
         handle_demand: 4,
         handle_event: 4,
