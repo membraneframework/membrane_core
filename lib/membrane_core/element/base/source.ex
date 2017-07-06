@@ -203,7 +203,7 @@ defmodule Membrane.Element.Base.Source do
     if stored_size + size > 0 do
       params = %{caps: state |> State.get_pad_data(:source, pad_name, :caps)}
       Common.exec_and_handle_callback(:handle_demand, [pad_name, size + min(0, stored_size), params], state)
-        |> orWarnError("""
+        |> or_warn_error("""
           Demand arrived from pad #{inspect pad_name}, but error happened while
           handling it.
           """)

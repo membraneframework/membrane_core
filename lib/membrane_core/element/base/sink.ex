@@ -309,7 +309,7 @@ defmodule Membrane.Element.Base.Sink do
     {:ok, state} = state
       |> State.update_pad_data(:sink, pad_name, :self_demand, & {:ok, &1 + buf_cnt})
     handle_write(:pull, pad_name, state)
-      |> orWarnError("""
+      |> or_warn_error("""
         Demand of size #{inspect buf_cnt} on pad #{inspect pad_name}
         was raised, and handle_write was called, but an error happened.
         """)
@@ -322,7 +322,7 @@ defmodule Membrane.Element.Base.Sink do
     {:ok, state} = state
       |> State.update_pad_data(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffer))
     check_and_handle_write(pad_name, state)
-      |> orWarnError("""
+      |> or_warn_error("""
         New buffer arrived:
         #{inspect buffer}
         and Membrane tried to execute handle_demand and then handle_write
@@ -333,7 +333,7 @@ defmodule Membrane.Element.Base.Sink do
   def handle_write(:push, pad_name, buffer, state) do
     params = %{caps: state |> State.get_pad_data(:sink, pad_name, :caps)}
     Common.exec_and_handle_callback(:handle_write, [pad_name, buffer, params], state)
-      |> orWarnError("Error while handling write")
+      |> or_warn_error("Error while handling write")
   end
 
   def handle_write(:pull, pad_name, state) do
@@ -351,7 +351,7 @@ defmodule Membrane.Element.Base.Sink do
     do {:ok, state}
     else
       {:empty_pb, state} -> {:ok, state}
-      {:error, reason} -> warnError "Error while handling write", reason
+      {:error, reason} -> warn_error "Error while handling write", reason
     end
   end
 

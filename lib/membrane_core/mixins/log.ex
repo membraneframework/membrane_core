@@ -23,7 +23,7 @@ defmodule Membrane.Mixins.Log do
         end
       end
 
-      def warnError(message, reason) do
+      def warn_error(message, reason) do
         warn """
         Encountered an error:
         #{message}
@@ -34,8 +34,8 @@ defmodule Membrane.Mixins.Log do
         {:error, reason}
       end
 
-      def orWarnError({:ok, value}, _msg), do: {:ok, value}
-      def orWarnError({:error, reason}, msg), do: warnError(msg, reason)
+      def or_warn_error({:ok, value}, _msg), do: {:ok, value}
+      def or_warn_error({:error, reason}, msg), do: warn_error(msg, reason)
 
 
       @doc false

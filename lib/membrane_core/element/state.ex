@@ -192,7 +192,7 @@ defmodule Membrane.Element.State do
     |> Helper.Enum.reduce_with(state, fn pad_name, st ->
       update_pad_data st, :sink, pad_name, :buffer, &PullBuffer.fill/1
     end)
-    |> orWarnError("Unable to fill sink pull buffers")
+    |> or_warn_error("Unable to fill sink pull buffers")
 end
 
 

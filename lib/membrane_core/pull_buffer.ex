@@ -28,7 +28,7 @@ defmodule Membrane.PullBuffer do
   end
 
   def fill(%PullBuffer{} = pb), do: handle_demand(pb, 0)
-    |> orWarnError("Unable to fill PullBuffer: #{inspect pb}")
+    |> or_warn_error("Unable to fill PullBuffer: #{inspect pb}")
 
   def store(pb, type \\ :buffers, v)
 
@@ -132,7 +132,7 @@ defmodule Membrane.PullBuffer do
       """, pb
     with :ok <- GenServer.call(sink, {:membrane_demand, demand + new_demand})
     do {:ok, %PullBuffer{pb | demand: 0}}
-    else {:error, reason} -> warnError """
+    else {:error, reason} -> warn_error """
       PullBuffer: unable to send demand of size #{inspect demand + new_demand}
       to sink #{inspect sink_name}
 

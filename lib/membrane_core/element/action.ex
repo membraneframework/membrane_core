@@ -30,7 +30,7 @@ defmodule Membrane.Element.Action do
     else
       {:error, :unknown_pad} ->
         handle_unknown_pad pad_name, :sink, :buffer, state
-      {:error, reason} -> warnError """
+      {:error, reason} -> warn_error """
         Error while sending buffers to pad: #{inspect pad_name}
         Buffers: #{inspect buffers}
         """, reason
@@ -51,7 +51,7 @@ defmodule Membrane.Element.Action do
     else
       {:error, :unknown_pad} ->
         handle_unknown_pad pad_name, :source, :event, state
-      {:error, reason} -> warnError """
+      {:error, reason} -> warn_error """
         Error while sending caps to pad: #{inspect pad_name}
         Caps: #{inspect caps}
         """, reason
@@ -98,7 +98,7 @@ defmodule Membrane.Element.Action do
     else
       {:error, :unknown_pad} ->
         handle_unknown_pad pad_name, :any, :event, state
-      {:error, reason} -> warnError """
+      {:error, reason} -> warn_error """
         Error while sending event to pad: #{inspect pad_name}
         Event: #{inspect event}
         """, reason

@@ -16,7 +16,7 @@ defmodule Membrane.Element.Common do
       def handle_message(message, state) do
         alias Membrane.Element.Common
         Common.exec_and_handle_callback(:handle_other, [message], state)
-          |> Common.orWarnError("Error while handling message")
+          |> Common.or_warn_error("Error while handling message")
       end
 
       def handle_action({:event, {pad_name, event}}, _cb, state), do:
@@ -50,12 +50,12 @@ defmodule Membrane.Element.Common do
       state |> State.set_pad_data(:sink, pad_name, :caps, caps)
     else
       :invalid_caps ->
-        warnError """
+        warn_error """
         Received caps: #{inspect caps} that are not specified in known_sink_pads
         for pad #{inspect pad_name}. Acceptable caps are:
         #{accepted_caps |> Enum.map(&inspect/1) |> Enum.join(", ")}
         """, :invalid_caps
-      {:error, reason} -> warnError "Error while handling caps", reason
+      {:error, reason} -> warn_error "Error while handling caps", reason
     end
   end
 
@@ -74,7 +74,7 @@ defmodule Membrane.Element.Common do
   def do_handle_event(pad_name, event, state) do
     params = %{caps: state |> State.get_pad_data(:sink, pad_name, :caps)}
     exec_and_handle_callback(:handle_event, [pad_name, event, params], state)
-      |> orWarnError("Error while handling event")
+      |> or_warn_error("Error while handling event")
   end
 
   def handle_pullbuffer_output(pad_name, {:event, e}, state), do:
@@ -92,8 +92,8 @@ defmodule Membrane.Element.Common do
         }
     do {:ok, state}
     else
-      {:call, {:error, reason}} -> warnError "Error while executing callback #{inspect cb}", reason
-      {:handle, {:error, reason}} -> warnError "Error while handling actions returned by callback #{inspect cb}", reason
+      {:call, {:error, reason}} -> warn_error "Error while executing callback #{inspect cb}", reason
+      {:handle, {:error, reason}} -> warn_error "Error while handling actions returned by callback #{inspect cb}", reason
     end
   end
 

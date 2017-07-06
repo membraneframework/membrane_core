@@ -367,7 +367,7 @@ defmodule Membrane.Element.Base.Filter do
     if total_size > 0 do
       params = %{caps: state |> State.get_pad_data(:source, pad_name, :caps)}
       Common.exec_and_handle_callback(:handle_demand, {:handle_demand, pad_name}, [pad_name, total_size, params], state)
-        |> orWarnError("""
+        |> or_warn_error("""
           Demand arrived from pad #{inspect pad_name}, but error happened while
           handling it.
           """)
@@ -381,7 +381,7 @@ defmodule Membrane.Element.Base.Filter do
 
   def handle_self_demand(pad_name, src_name, buf_cnt, state) do
     handle_process(:pull, pad_name, src_name, buf_cnt, state)
-      |> orWarnError("""
+      |> or_warn_error("""
         Demand of size #{inspect buf_cnt} on sink pad #{inspect pad_name}
         was raised, and handle_process was called, but an error happened.
         """)
@@ -402,7 +402,7 @@ defmodule Membrane.Element.Base.Filter do
   def handle_process(:push, pad_name, buffers, state) do
     params = %{caps: state |> State.get_pad_data(:sink, pad_name, :caps)}
     Common.exec_and_handle_callback(:handle_process, [pad_name, buffers, params], state)
-      |> orWarnError("Error while handling process")
+      |> or_warn_error("Error while handling process")
   end
 
   def handle_process(:pull, pad_name, src_name, buf_cnt, state) do
@@ -417,7 +417,7 @@ defmodule Membrane.Element.Base.Filter do
       {:ok, state}
     else
       {:empty_pb, state} -> {:ok, state}
-      {:error, reason} -> warnError "Error while handling process", reason
+      {:error, reason} -> warn_error "Error while handling process", reason
     end
   end
 
@@ -458,7 +458,7 @@ defmodule Membrane.Element.Base.Filter do
       |> Helper.Enum.reduce_with(state, fn {name, %{demand: demand}}, st ->
           if demand > 0 do handle_demand name, 0, st else {:ok, st} end
         end)
-      |> orWarnError("""
+      |> or_warn_error("""
         New buffers arrived to pad #{inspect pad_name}:
         #{inspect buffers}
         and Membrane tried to execute handle_demand and then handle_process
