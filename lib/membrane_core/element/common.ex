@@ -2,7 +2,7 @@ defmodule Membrane.Element.Common do
 
   use Membrane.Mixins.Log
   alias Membrane.Element.State
-  alias Membrane.Helper
+  use Membrane.Helper
   alias Membrane.PullBuffer
 
   defmacro __using__(_) do
@@ -110,6 +110,21 @@ defmodule Membrane.Element.Common do
           [other] -> other
         end
       )
+  end
+
+  def reduce_something1_results(inputs, state, f) do
+    with {:ok, {actions, state}} <- inputs
+      |> Membrane.Helper.Enum.map_reduce_with(state,
+        fn i, st -> f.(i, st) ~> (
+            {:ok, {actions, _state}} = ok when is_list actions -> ok
+            {:error, reason} -> {:error, {:internal, reason}}
+            other -> {:error, {:other, other}}
+        ) end)
+    do {:ok, {actions |> List.flatten, state}}
+    else
+      {:error, {{:internal, reason}, st}} -> {:error, {reason, st}}
+      {:error, {{:other, other}, _st}} -> other
+    end
   end
 
   def handle_callback_result(result, cb \\ "")

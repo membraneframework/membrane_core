@@ -505,19 +505,9 @@ defmodule Membrane.Element.Base.Filter do
 
       @doc false
       def handle_process(pad, buffers, params, state) do
-        with {:ok, {actions, state}} <- buffers
-          |> Membrane.Helper.Enum.map_reduce_with(state, fn buf, st ->
-              case handle_process1 pad, buf, params, st do
-                {:ok, {actions, _state}} = ok when is_list actions -> ok
-                {:error, reason} = err -> {:error, {:internal, reason}}
-                other -> {:error, {:other, other}}
-              end
-            end)
-        do {:ok, {actions |> List.flatten, state}}
-        else
-          {:error, {:internal, reason}} -> {:error, reason}
-          {:error, {:other, other}} -> other
-        end
+        buffers |> Common.reduce_something1_results(state, fn b, st ->
+            handle_process1 pad, b, params, st
+          end)
       end
 
       @doc false

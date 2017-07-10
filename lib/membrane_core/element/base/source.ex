@@ -277,19 +277,9 @@ defmodule Membrane.Element.Base.Source do
 
       @doc false
       def handle_demand(pad, size, params, state) do
-        with {:ok, {actions, state}} <- 1..size
-          |> Membrane.Helper.Enum.map_reduce_with(state, fn _, st ->
-              case handle_demand1 pad, params, st do
-                {:ok, {actions, _state}} = ok when is_list actions -> ok
-                {:error, reason} = err -> {:error, {:internal, reason}}
-                other -> {:error, {:other, other}}
-              end
-            end)
-        do {:ok, {actions |> List.flatten, state}}
-        else
-          {:error, {:internal, reason}} -> {:error, reason}
-          {:error, {:other, other}} -> other
-        end
+        1..size |> Common.reduce_something1_results(state, fn _, st ->
+            handle_demand1 pad, params, st
+          end)
       end
 
       @doc false
