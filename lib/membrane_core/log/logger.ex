@@ -18,6 +18,14 @@ defmodule Membrane.Logger do
   # start/start_link functions.
   @type logger_options_t :: struct | nil
 
+  # Type that defines possible tags attached to the message
+  @type tag_t :: atom
+
+  # Type that defines possible messages, witch are passed to logger.
+  @type message_t :: list(message_t) | binary | {:binary, binary}
+
+  # Type that defines possible log levels.
+  @type msg_level_t :: :warn | :debug | :info
 
 
   @doc """
@@ -28,7 +36,7 @@ defmodule Membrane.Logger do
   """
   @spec start_link(module, logger_options_t, process_options_t) :: on_start
   def start_link(module, logger_options \\ nil, process_options \\ []) do
-    GenServer.start_link(__MODULE__, {module, logger_options}, [name: :logger])
+    GenServer.start_link(__MODULE__, {module, logger_options}, process_options)
   end
 
 
@@ -135,9 +143,9 @@ defmodule Membrane.Logger do
         {:ok, %{state | internal_state: new_internal_state}}
       {:error, reason, new_internal_state} ->
         {:error, reason, %{state | internal_state: new_internal_state}}
-      _ ->
+      invalid_callback ->
         # raise error
-        handle_callback(nil, nil)
+        handle_callback(invalid_callback, nil)
     end
   end
 

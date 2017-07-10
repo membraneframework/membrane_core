@@ -4,7 +4,6 @@ defmodule Membrane.Logger.Base do
   """
 
 
-
   @doc """
   Callback invoked when logger is initialized, right after new process is
   spawned.
@@ -14,8 +13,6 @@ defmodule Membrane.Logger.Base do
   @callback handle_init(Membrane.Logger.logger_options_t) ::
     {:ok, any} |
     {:error, any}
-
-
 
 
   @doc """
@@ -44,7 +41,7 @@ defmodule Membrane.Logger.Base do
   went wrong, and logger was unable to handle log. State will be updated to
   the new state.
   """
-  @callback handle_log(atom, any, Membane.Time.native_t, atom, any) :: #FIXME message types
+  @callback handle_log(Membrane.Logger.msg_level_t, Membrane.Logger.message_t, Membane.Time.native_t, list(Membrane.Logger.tag_t), any) ::
     {:ok, any} |
     {:error, any, any}
 

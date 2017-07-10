@@ -9,7 +9,8 @@ defmodule Membrane.Log.Supervisor do
   use Supervisor
   import Supervisor.Spec
 
-  @type child_id_t :: any  # TODO check this
+  @type child_id_t :: term
+
 
   @doc """
   Starts the Supervisor.
@@ -46,9 +47,7 @@ defmodule Membrane.Log.Supervisor do
   Removes logger from the supervision tree
 
   If succesful returns :ok
-  If logger could not be found returns :not_found
-  On other atom errors pass this value
-  on other errors return :unknown_error
+  If logger could not be found, returns corresponding error
   """
   @spec remove_logger(child_id_t) :: atom
   def remove_logger(child_id) do
@@ -56,9 +55,7 @@ defmodule Membrane.Log.Supervisor do
     Supervisor.terminate_child(__MODULE__, child_id)
     case Supervisor.delete_child(__MODULE__, child_id) do
       :ok -> :ok
-      {:error, :not_found} -> :not_found
-      {:error, error} when is_atom(error) -> error
-      _ -> :unknown_error
+      {:error, _err} = error -> error
     end
   end
 
@@ -72,7 +69,7 @@ defmodule Membrane.Log.Supervisor do
   def each_logger(func) do
     __MODULE__ |> Supervisor.which_children |> Enum.each(
       fn {id, _pid, _type, _module} = child ->
-        if id != :membrane_log_router do
+        if id != Membrane.Log.Router do
           func.(child)
         end
       end
@@ -95,7 +92,7 @@ defmodule Membrane.Log.Supervisor do
         worker(Membrane.Logger, [module, options], [id: child_id])
     end)
 
-    router = worker(Membrane.Log.Router, [loggers, [name: :membrane_log_router]], [id: :membrane_log_router])
+    router = worker(Membrane.Log.Router, [loggers, [name: Membrane.Log.Router]], [id: Membrane.Log.Router])
 
     supervise(child_list ++ [router], strategy: :one_for_one)
   end

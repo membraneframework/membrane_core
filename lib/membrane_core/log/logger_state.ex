@@ -13,7 +13,11 @@ defmodule Membrane.Logger.State do
     internal_state: nil,
     module: nil
 
+  @doc """
+  Returns new state and initializes it with given `module` and `internal_state`.
 
+  This function always returns Membrane.Logger.State struct.
+  """
   @spec new(module, any) :: t
   def new(module, internal_state) do
     %Membrane.Logger.State{module: module, internal_state: internal_state}

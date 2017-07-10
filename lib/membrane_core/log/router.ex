@@ -24,7 +24,7 @@ defmodule Membrane.Log.Router do
   """
   @spec send_log(atom, any, Membane.Time.native_t, atom) :: :ok
   def send_log(level, message, timestamp, tags \\ []) do
-    :membrane_log_router |> GenServer.cast({:membrane_log, level, message, timestamp, tags})
+    Membrane.Log.Router |> send({:membrane_log, level, message, timestamp, tags})
     :ok
   end
 
@@ -61,7 +61,7 @@ defmodule Membrane.Log.Router do
   # Forwards log to every logger that has high enough level and has at least one
   # common tag with the message
   @doc false
-  def handle_cast({:membrane_log, log_level, _message, _timestamp, tags} = log, %{loggers: loggers} = state) do
+  def handle_info({:membrane_log, log_level, _message, _timestamp, tags} = log, %{loggers: loggers} = state) do
       fn {id, pid, _type, _module} ->
         logger = loggers |> Map.get(id)
         if (logger.level |> level_to_val) <= (log_level |> level_to_val) do

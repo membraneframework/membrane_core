@@ -41,12 +41,6 @@ defmodule Membrane.Mixins.Log do
           log(:debug, unquote(message), unquote(tags))
         end
       end
-
-      defmacro binary(number) do
-        quote location: :keep do
-          {:binary, unquote(number)}
-        end
-      end
     end
   end
 end
