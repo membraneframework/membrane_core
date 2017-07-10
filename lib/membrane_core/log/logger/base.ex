@@ -1,4 +1,4 @@
-defmodule Membrane.Logger.Base do
+defmodule Membrane.Log.Logger.Base do
   @moduledoc """
     This is a base module used by all logger implementations.
   """
@@ -10,7 +10,7 @@ defmodule Membrane.Logger.Base do
 
   On success it should return `{:ok, initial_logger_state}`.
   """
-  @callback handle_init(Membrane.Logger.logger_options_t) ::
+  @callback handle_init(Membrane.Log.Logger.logger_options_t) ::
     {:ok, any} |
     {:error, any}
 
@@ -27,11 +27,10 @@ defmodule Membrane.Logger.Base do
 
 
   Basic elements are:
-  * atom
-  * charlist
+  * tuple {:binary, some_binary}
   * integer
-  * float
-  * bitstring
+  * String.t
+  * list of basic elements
 
 
   On success, it returns `{:ok, new_state}`. it will just update logger's state
@@ -41,7 +40,7 @@ defmodule Membrane.Logger.Base do
   went wrong, and logger was unable to handle log. State will be updated to
   the new state.
   """
-  @callback handle_log(Membrane.Logger.msg_level_t, Membrane.Logger.message_t, Membane.Time.native_t, list(Membrane.Logger.tag_t), any) ::
+  @callback handle_log(Membrane.Log.Logger.msg_level_t, Membrane.Log.Logger.message_t, Membane.Time.native_t, list(Membrane.Log.Logger.tag_t), any) ::
     {:ok, any} |
     {:error, any, any}
 
@@ -57,7 +56,7 @@ defmodule Membrane.Logger.Base do
 
   defmacro __using__(_) do
     quote location: :keep do
-      @behaviour Membrane.Logger.Base
+      @behaviour Membrane.Log.Logger.Base
 
       # Default implementations
 

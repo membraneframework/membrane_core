@@ -1,10 +1,10 @@
-defmodule Membrane.Logger do
+defmodule Membrane.Log.Logger do
   @moduledoc """
   Module containing functions spawning, shutting down, and handling messages
   sent to logger.
   """
 
-  alias Membrane.Logger.State
+  alias Membrane.Log.Logger.State
 
 
   # Type that defines possible return values of start/start_link functions.
@@ -22,7 +22,7 @@ defmodule Membrane.Logger do
   @type tag_t :: atom
 
   # Type that defines possible messages, witch are passed to logger.
-  @type message_t :: list(message_t) | binary | {:binary, binary}
+  @type message_t :: list(message_t) | String.t | {:binary, binary} | integer
 
   # Type that defines possible log levels.
   @type msg_level_t :: :warn | :debug | :info

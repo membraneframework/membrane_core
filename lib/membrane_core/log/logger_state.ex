@@ -1,10 +1,10 @@
-defmodule Membrane.Logger.State do
+defmodule Membrane.Log.Logger.State do
   @moduledoc false
   # Structure representing state of the logger. It is a part of the private API.
   # It does not represent state of logger you construct, it's a state used
   # internally in Membrane.
 
-  @type t :: %Membrane.Logger.State{
+  @type t :: %Membrane.Log.Logger.State{
     internal_state: any,
     module: module,
   }
@@ -20,7 +20,7 @@ defmodule Membrane.Logger.State do
   """
   @spec new(module, any) :: t
   def new(module, internal_state) do
-    %Membrane.Logger.State{module: module, internal_state: internal_state}
+    %Membrane.Log.Logger.State{module: module, internal_state: internal_state}
   end
 
 end

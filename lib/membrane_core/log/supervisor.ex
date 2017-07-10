@@ -1,6 +1,6 @@
 defmodule Membrane.Log.Supervisor do
   @moduledoc """
-  Module responsible for supervising all loggers. It is also responsible for
+  Module responsible for supervising router_level loggers. It is also responsible for
   receiving and routing log messages to appropriate loggers.
 
   It is spawned upon application boot.
@@ -17,9 +17,9 @@ defmodule Membrane.Log.Supervisor do
 
   Options are passed to `Supervisor.start_link/3`.
   """
-  @spec start_link(Supervisor.options) :: Supervisor.on_start
-  def start_link(options \\ []) do
-    Supervisor.start_link(__MODULE__, nil, options ++ [name: __MODULE__])
+  @spec start_link(Keyword.t, Supervisor.options) :: Supervisor.on_start
+  def start_link(config, options \\ []) do
+    Supervisor.start_link(__MODULE__, config, options ++ [name: __MODULE__])
   end
 
 
@@ -33,7 +33,7 @@ defmodule Membrane.Log.Supervisor do
   """
   @spec add_logger(atom, any, child_id_t) :: :ok | :invalid_module
   def add_logger(module, options, child_id) do
-    child_spec = worker(Membrane.Logger, [module, options], [id: child_id])
+    child_spec = worker(Membrane.Log.Logger, [module, options], [id: child_id])
 
     case Supervisor.start_child(__MODULE__, child_spec) do
       {:ok, _child} -> :ok
@@ -62,16 +62,14 @@ defmodule Membrane.Log.Supervisor do
 
   @doc """
   Iterates through list of children and executes given function on every
-  child except log router.
+  child.
 
   Should return :ok.
   """
   def each_logger(func) do
     __MODULE__ |> Supervisor.which_children |> Enum.each(
-      fn {id, _pid, _type, _module} = child ->
-        if id != Membrane.Log.Router do
-          func.(child)
-        end
+      fn child ->
+        func.(child)
       end
     )
     :ok
@@ -81,20 +79,17 @@ defmodule Membrane.Log.Supervisor do
   # Private API
 
   @doc false
-  def init(nil) do
-    config = Application.get_env(:membrane_core, Membrane.Logger, [])
+  def init(config) do
     loggers = config |> Keyword.get(:loggers, [])
 
     child_list = loggers |> Enum.map(fn logger_map ->
         %{module: module, id: child_id} = logger_map
         options = logger_map |> Map.get(:options)
 
-        worker(Membrane.Logger, [module, options], [id: child_id])
+        worker(Membrane.Log.Logger, [module, options], [id: child_id])
     end)
 
-    router = worker(Membrane.Log.Router, [loggers, [name: Membrane.Log.Router]], [id: Membrane.Log.Router])
-
-    supervise(child_list ++ [router], strategy: :one_for_one)
+    supervise(child_list, strategy: :one_for_one)
   end
 
 end
