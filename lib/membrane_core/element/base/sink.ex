@@ -416,8 +416,17 @@ defmodule Membrane.Element.Base.Sink do
       @doc false
       def handle_write(pad, buffers, params, state) do
         with {:ok, {actions, state}} <- buffers
-          |> Membrane.Helper.Enum.map_reduce_with(state, &handle_write1(pad, &1, params, &2))
+          |> Membrane.Helper.Enum.map_reduce_with(state, fn buf, st ->
+              case handle_write1 pad, buf, params, st do
+                {:ok, {actions, _state}} = ok when is_list actions -> ok
+                {:error, reason} = err -> {:error, {:internal, reason}}
+                other -> {:error, {:other, other}}
+              end
+            end)
         do {:ok, {actions |> List.flatten, state}}
+        else
+          {:error, {:internal, reason}} -> {:error, reason}
+          {:error, {:other, other}} -> other
         end
       end
 
