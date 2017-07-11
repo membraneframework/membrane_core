@@ -5,18 +5,16 @@ defmodule Membrane.Element.State do
   # internally in Membrane.
 
   use Membrane.Mixins.Log
-  alias Membrane.Pad
   alias __MODULE__
   alias Membrane.PullBuffer
   alias Membrane.Element
   use Membrane.Helper
 
-
   @type t :: %Membrane.Element.State{
     internal_state: any,
     module: module,
     playback_state: Membrane.Element.playback_state_t,
-    pads: %{optional(Pad.name_t) => pid},
+    pads: %{optional(Element.pad_name_t) => pid},
     message_bus: pid,
   }
 
@@ -56,44 +54,19 @@ defmodule Membrane.Element.State do
         apply module, known_pads_fun, []
       true -> %{}
     end
-    init_pads known_pads, direction
-  end
-
-  # Spawns pad processes for pads that are always available builds a map of
-  # pad names => pad PIDs.
-  defp init_pads(known_pads, direction) do
     known_pads
-      |> Enum.filter_map(
-        fn {_name, {availability, _mode, _caps}} -> availability == :always end,
-        fn {name, {_availability, mode, caps}} ->
-          pad_module = case mode do
-              :pull -> Pad.Mode.Pull
-              :push -> Pad.Mode.Push
-            end
-
-          {:ok, pid} = Pad.start_link(pad_module, name, direction)
-
-          data = %{
-                name: name, pid: pid, mode: mode,direction: direction,
-                caps: nil, accepted_caps: caps,
-              }
-            |> Map.merge(case direction do
-                :source -> %{demand: 0}
-                :sink -> %{buffer: nil, self_demand: 0}
-              end)
-
-          {name, data}
-        end)
+      |> Enum.flat_map(fn params -> init_pad_data params, direction end)
       |> Enum.into(%{})
   end
 
-  def setup_sink_pullbuffer(state, pad_name, props) do
-    %{preferred_size: pref_size, init_size: init_size} =
-      %{preferred_size: 10, init_size: 0} |> Map.merge(props |> Enum.into(%{}))
-    {:ok, %{pid: pid}} = state |> get_pad_data(:sink, pad_name)
-    state |> State.set_pad_data(
-      :sink, pad_name, :buffer, PullBuffer.new(pid, pad_name, pref_size, init_size))
+  defp init_pad_data({name, {:always, mode, caps}}, direction) do
+    data = %{
+        name: name, pid: nil, mode: mode,direction: direction,
+        caps: nil, accepted_caps: caps,
+      }
+    [{name, data}]
   end
+  defp init_pad_data(_params, _direction), do: []
 
   def get_pads_data(state, direction \\ :any)
   def get_pads_data(state, :any), do: state.pads.data
@@ -160,40 +133,16 @@ defmodule Membrane.Element.State do
     end
   end
 
-  @doc """
-  Activates all pads.
-
-  Returns `:ok`.
-  """
-  @spec activate_pads(t) :: :ok | {:error, any}
-  def activate_pads(state) do
-    state
-      |> State.get_pads_data
-      |> Helper.Enum.each_with(fn {_, %{pid: pid}} -> Pad.activate pid end)
-  end
-
-
-  @doc """
-  Deactivates all pads.
-
-  Returns `:ok`.
-  """
-  @spec deactivate_pads(t) :: :ok | {:error, any}
-  def deactivate_pads(state) do
-    state
-      |> State.get_pads_data
-      |> Helper.Enum.each_with(fn {_, %{pid: pid}} -> Pad.activate pid end)
-  end
 
   defp fill_sink_pull_buffers(state) do
-  state
-    |> State.get_pads_data(:sink)
-    |> Map.keys
-    |> Helper.Enum.reduce_with(state, fn pad_name, st ->
-      update_pad_data st, :sink, pad_name, :buffer, &PullBuffer.fill/1
-    end)
-    |> or_warn_error("Unable to fill sink pull buffers")
-end
+    state
+      |> State.get_pads_data(:sink)
+      |> Map.keys
+      |> Helper.Enum.reduce_with(state, fn pad_name, st ->
+        update_pad_data st, :sink, pad_name, :buffer, &PullBuffer.fill/1
+      end)
+      |> or_warn_error("Unable to fill sink pull buffers")
+  end
 
 
   @doc """
@@ -213,7 +162,6 @@ end
     with {:ok, %State{internal_state: internal_state} = state} <- log_playback_state_changing(old, new, target, state),
          {:ok, {actions, new_internal_state}} <- module.handle_prepare(old, internal_state),
          {:ok, state} <- module.base_module.handle_actions(actions, :handle_prepare, %{state | internal_state: new_internal_state}),
-         :ok <- activate_pads(state),
          {:ok, state} <- log_playback_state_changed(old, new, target, %{state | playback_state: new})
     do
       {:ok, state}
@@ -243,7 +191,6 @@ end
 
   def change_playback_state(%State{module: module} = state, :playing = old, :prepared = new, target) do
     with {:ok, %State{internal_state: internal_state} = state} <- log_playback_state_changing(old, new, target, state),
-         :ok <- deactivate_pads(state),
          {:ok, {actions, new_internal_state}} <- module.handle_prepare(old, internal_state),
          {:ok, state} <- module.base_module.handle_actions(actions, :handle_prepare, %{state | internal_state: new_internal_state}),
          {:ok, state} <- log_playback_state_changed(old, new, target, %{state | playback_state: new})

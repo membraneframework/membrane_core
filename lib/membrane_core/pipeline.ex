@@ -7,8 +7,7 @@ defmodule Membrane.Pipeline do
   use GenServer
   alias Membrane.Pipeline.{State,Spec}
   alias Membrane.Element
-  alias Membrane.Pad
-  alias Membrane.Helper
+  use Membrane.Helper
 
   # Type that defines possible return values of start/start_link functions.
   @type on_start :: GenServer.on_start
@@ -330,11 +329,9 @@ defmodule Membrane.Pipeline do
 
   defp do_link_children({{from_name, from_pad}, {to_name, to_pad, params}} = link, children_to_pids) do
     with \
-      {:ok, from_pid} <- children_to_pids |> Map.get(from_name) |> (case do nil -> {:error, {:unknown_from, link}}; v -> {:ok, v} end),
-      {:ok, to_pid} <- children_to_pids |> Map.get(to_name) |> (case do nil -> {:error, {:unknown_to, link}}; v -> {:ok, v} end),
-      {:ok, %{pid: source_pid}} <- Element.pad_info(from_pid, :source, from_pad),
-      {:ok, %{pid: sink_pid}} <- Element.pad_info(to_pid, :sink, to_pad),
-      :ok <- Pad.link(source_pid, sink_pid, params)
+      {:ok, from_pid} <- children_to_pids |> Map.get(from_name) ~> (nil -> {:error, {:unknown_from, link}}; v -> {:ok, v}),
+      {:ok, to_pid} <- children_to_pids |> Map.get(to_name) ~> (nil -> {:error, {:unknown_to, link}}; v -> {:ok, v}),
+      :ok <- Element.link(from_pid, to_pid, from_pad, to_pad, params)
     do
       :ok
     end

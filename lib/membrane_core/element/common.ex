@@ -77,6 +77,17 @@ defmodule Membrane.Element.Common do
       |> or_warn_error("Error while handling event")
   end
 
+  def handle_link(pad_name, direction, pid, props, state) do
+    state |> State.update_pad_data(direction, pad_name, fn data -> data
+        |> Map.merge(case direction do
+            :sink -> %{buffer: PullBuffer.new(pid, pad_name, props), self_demand: 0}
+            :source -> %{demand: 0}
+          end)
+        |> Map.merge(%{pid: pid})
+        ~> (data -> {:ok, data})
+      end)
+  end
+
   def handle_pullbuffer_output(pad_name, {:event, e}, state), do:
     do_handle_event(pad_name, e, state)
   def handle_pullbuffer_output(pad_name, {:caps, c}, state), do:

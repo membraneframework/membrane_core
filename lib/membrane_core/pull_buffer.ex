@@ -16,13 +16,14 @@ defmodule Membrane.PullBuffer do
 
   @non_buf_types [:event, :caps]
 
-  def new(sink, sink_name, preferred_size, init_size \\ 0) do
+  def new(sink, sink_name, props) do
+    preferred_size = props |> Keyword.get(:preferred_size, 10)
     %PullBuffer{
       q: @qe.new,
       sink: sink,
       sink_name: sink_name,
       preferred_size: preferred_size,
-      init_size: init_size,
+      init_size: props |> Keyword.get(:init_size, 10),
       demand: preferred_size
     }
   end

@@ -6,7 +6,7 @@ defmodule Membrane.Element do
 
   use Membrane.Mixins.Log
   alias Membrane.Element.State
-  alias Membrane.Helper
+  use Membrane.Helper
   # Type that defines possible return values of start/start_link functions.
   @type on_start :: GenServer.on_start
 
@@ -20,6 +20,8 @@ defmodule Membrane.Element do
 
   # Type that defines an element name within a pipeline
   @type name_t :: atom | String.t
+
+  @type pad_name_t :: atom | String.t
 
   # Type that defines an potential playback states
   @type playback_state_t :: :stopped | :prepared | :playing
@@ -125,38 +127,6 @@ defmodule Membrane.Element do
 
 
   @doc """
-  Sends synchronous call to the given element requesting it to get message bus.
-
-  It will wait for reply for amount of time passed as second argument
-  (in milliseconds).
-
-  In case of success, returns `{:ok, pid}`.
-
-  If case of failure, returns `{:error, reason}`
-  """
-  @spec get_message_bus(pid, timeout) :: :ok | {:error, any}
-  def get_message_bus(server, timeout \\ 5000) when is_pid(server) do
-    GenServer.call(server, :membrane_get_message_bus, timeout)
-  end
-
-
-  @doc """
-  Sends synchronous call to the given element requesting it to clear message bus.
-
-  It will wait for reply for amount of time passed as second argument
-  (in milliseconds).
-
-  In case of success, returns `:ok`.
-
-  If case of failure, returns `{:error, reason}`
-  """
-  @spec clear_message_bus(pid, timeout) :: :ok | {:error, any}
-  def clear_message_bus(server, timeout \\ 5000) when is_pid(server) do
-    GenServer.call(server, :membrane_clear_message_bus, timeout)
-  end
-
-
-  @doc """
   Sends synchronous call to the given element requesting it to prepare.
 
   It will wait for reply for amount of time passed as second argument
@@ -209,9 +179,12 @@ defmodule Membrane.Element do
     GenServer.call(server, :membrane_stop, timeout)
   end
 
-
-  def pad_info(server, direction, pad_name, timeout \\ 5000) when is_pid(server) do
-    GenServer.call(server, {:membrane_get_pad, direction, pad_name}, timeout)
+  def link(from_pid, to_pid, from_pad, to_pad, params) do
+    with \
+      :ok <- GenServer.call(from_pid, {:membrane_link, from_pad, :source, to_pid, params}),
+      :ok <- GenServer.call(to_pid, {:membrane_link, to_pad, :sink, from_pid, params})
+    do :ok
+    end
   end
 
   # Private API
@@ -293,40 +266,11 @@ defmodule Membrane.Element do
     {:reply, :ok, %{state | message_bus: message_bus}}
   end
 
-
-  # Callback invoked on incoming get_message_bus command.
-  @doc false
-  def handle_call(:membrane_get_message_bus, _from, %State{message_bus: message_bus} = state) do
-    {:reply, {:ok, message_bus}, state}
-  end
-
-
-  # Callback invoked on incoming clear_message_bus command.
-  @doc false
-  def handle_call(:membrane_clear_message_bus, _from, state) do
-    {:reply, :ok, %{state | message_bus: nil}}
-  end
-
-
-  # Callback invoked on incoming get_pad command.
-  @doc false
-  def handle_call({:membrane_get_pad, pad_direction, pad_name}, _from, state) do
-    {:reply,
-      with {:ok, %{pid: pid, direction: direction, mode: mode, name: name}} <-
-        state |> State.get_pad_data(pad_direction, pad_name)
-      do {:ok, %{pid: pid, direction: direction, mode: mode, name: name}}
-      end,
-      state
-    }
-  end
-
-
-  def handle_call({:membrane_pad_linked, :sink, pad_name, props}, _from, state) do
-    {:ok, state} = state |> State.setup_sink_pullbuffer(pad_name, props |> Enum.into(%{}) |> Map.get(:pull_buffer, %{}))
-    {:reply, :ok, state}
-  end
-  def handle_call({:membrane_pad_linked, :source, _pad_name, _props}, _from, state) do
-    {:reply, :ok, state}
+  def handle_call({:membrane_link, pad_name, direction, pid, props}, _from, %State{module: module} = state) do
+    with {:ok, state} <- module.base_module.handle_link(pad_name, direction, pid, props, state)
+    do {:reply, :ok, state}
+    else {:error, reason} -> {:reply, {:error, reason}, state}
+    end
   end
 
   # Callback invoked on demand request coming from the source pad in the pull mode
