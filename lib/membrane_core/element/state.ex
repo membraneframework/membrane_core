@@ -38,12 +38,9 @@ defmodule Membrane.Element.State do
         handle_known_pads(:known_source_pads, :source, module)
       )
 
-    pad_names_by_pids = pads_data
-      |> Enum.into(%{}, fn {name, %{pid: pid}} -> {pid, name} end)
-
     %Membrane.Element.State{
       module: module,
-      pads: %{data: pads_data, names_by_pids: pad_names_by_pids},
+      pads: %{data: pads_data, names_by_pids: %{}},
       internal_state: internal_state,
     }
   end
@@ -107,7 +104,8 @@ defmodule Membrane.Element.State do
             {:ok, res} -> {:ok, res}
             {:error, reason} -> {{:error, reason}, nil}
           end)
-    do {:ok, state |> Helper.Struct.put_in([:pads, :data, pad_name], pad_data)}
+    do
+      {:ok, state |> do_update_pad_data(pad_name, pad_data)}
     else
       {{:error, reason}, _pd} -> {:error, reason}
       {:error, reason} -> {:error, reason}
@@ -126,11 +124,17 @@ defmodule Membrane.Element.State do
             {:ok, {out, res}} -> {{:ok, out}, res}
             {:error, reason} -> {{:error, reason}, nil}
           end)
-    do {:ok, {out, state |> Helper.Struct.put_in([:pads, :data, pad_name], pad_data)}}
+    do {:ok, {out, state |> do_update_pad_data(pad_name, pad_data)}}
     else
       {{:error, reason}, _pd} -> {:error, reason}
       {:error, reason} -> {:error, reason}
     end
+  end
+
+  defp do_update_pad_data(state, pad_name, pad_data) do
+    state
+      |> Helper.Struct.update_in([:pads, :names_by_pids], & &1 |> Map.put(pad_data.pid, pad_name))
+      |> Helper.Struct.put_in([:pads, :data, pad_name], pad_data)
   end
 
 

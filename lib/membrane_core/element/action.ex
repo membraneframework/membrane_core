@@ -6,6 +6,7 @@ defmodule Membrane.Element.Action do
   alias Membrane.Pad
   alias Membrane.Caps
   alias Membrane.Element.State
+  use Membrane.Helper
 
   def send_buffer(pad_name, %Membrane.Buffer{} = buffer, state) do
     send_buffer(pad_name, [buffer], state)
@@ -24,7 +25,7 @@ defmodule Membrane.Element.Action do
             State.update_pad_data(:source, pad_name, :demand, &{:ok, &1 - length buffers})
           :push -> {:ok, state}
         end),
-      :ok <- GenServer.call(pid, {:membrane_buffer, buffers})
+      :ok <- Helper.send(pid, {:membrane_buffer, buffers})
     do
       {:ok, state}
     else
@@ -46,7 +47,7 @@ defmodule Membrane.Element.Action do
       """
     with \
       {:ok, %{pid: pid}} <- state |> State.get_pad_data(:source, pad_name),
-      :ok <- GenServer.call(pid, {:membrane_caps, caps})
+      :ok <- Helper.send(pid, {:membrane_caps, caps})
     do state |> State.set_pad_data(:source, pad_name, :caps, caps)
     else
       {:error, :unknown_pad} ->
@@ -93,7 +94,7 @@ defmodule Membrane.Element.Action do
       """
     with \
       {:ok, %{pid: pid}} <- State.get_pad_data(state, :any, pad_name),
-      :ok <- GenServer.call(pid, {:membrane_event, event})
+      :ok <- Helper.send(pid, {:membrane_event, event})
     do {:ok, state}
     else
       {:error, :unknown_pad} ->

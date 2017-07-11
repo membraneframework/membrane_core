@@ -445,12 +445,13 @@ defmodule Membrane.Element.Base.Filter do
         PullBuffer being not empty. Trying executing handle_demand again.
         """
       %{pid: pid} = state |> State.get_pad_data!(:source, src_name)
-      send pid, {:membrane_demand, 0}
+      Helper.send self(), {:membrane_demand, 0}, pid
     end
   end
 
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
   defdelegate handle_event(mode, dir, pad_name, event, state), to: Common
+  defdelegate handle_link(pad_name, direction, pid, props, state), to: Common
 
   defp check_and_handle_demands(pad_name, buffers, state) do
     state

@@ -131,7 +131,7 @@ defmodule Membrane.PullBuffer do
       Sending demand of size #{inspect demand + new_demand}
       to sink #{inspect sink_name}
       """, pb
-    with :ok <- GenServer.call(sink, {:membrane_demand, demand + new_demand})
+    with :ok <- Helper.send(sink, {:membrane_demand, demand + new_demand})
     do {:ok, %PullBuffer{pb | demand: 0}}
     else {:error, reason} -> warn_error """
       PullBuffer: unable to send demand of size #{inspect demand + new_demand}

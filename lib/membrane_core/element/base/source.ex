@@ -257,6 +257,9 @@ defmodule Membrane.Element.Base.Source do
   def handle_event(mode, :source, pad_name, event, state), do:
     Common.handle_event(mode, :source, pad_name, event, state)
 
+  def handle_link(pad_name, :source, pid, props, state), do:
+    Common.handle_link(pad_name, :source, pid, props, state)
+
   defmacro __using__(_) do
     quote location: :keep do
       use Membrane.Element.Base.Mixin.CommonBehaviour
