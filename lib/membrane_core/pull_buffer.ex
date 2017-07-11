@@ -79,7 +79,7 @@ defmodule Membrane.PullBuffer do
           Forbidden to take buffers, as PullBuffer did not reach initial size
           of #{inspect init_size}, returning :empty
           """, pb
-        {:empty, pb}
+        {{:empty, []}, pb}
       true -> do_take_r %PullBuffer{pb | init_size: -1}, count
     end
   end
