@@ -365,7 +365,7 @@ defmodule Membrane.Element.Base.Filter do
     {:ok, {total_size, state}} = state
       |> State.get_update_pad_data(:source, pad_name, :demand, &{:ok, {&1+size, &1+size}})
     if total_size > 0 do
-      params = %{caps: state |> State.get_pad_data(:source, pad_name, :caps)}
+      params = %{caps: state |> State.get_pad_data!(:source, pad_name, :caps)}
       Common.exec_and_handle_callback(:handle_demand, {:handle_demand, pad_name}, [pad_name, total_size, params], state)
         |> or_warn_error("""
           Demand arrived from pad #{inspect pad_name}, but error happened while
@@ -400,7 +400,7 @@ defmodule Membrane.Element.Base.Filter do
   end
 
   def handle_process(:push, pad_name, buffers, state) do
-    params = %{caps: state |> State.get_pad_data(:sink, pad_name, :caps)}
+    params = %{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
     Common.exec_and_handle_callback(:handle_process, [pad_name, buffers, params], state)
       |> or_warn_error("Error while handling process")
   end
@@ -423,9 +423,9 @@ defmodule Membrane.Element.Base.Filter do
 
   defp handle_pullbuffer_output(pad_name, src_name, {:buffers, b}, state) do
     params = %{
-        caps: state |> State.get_pad_data(:sink, pad_name, :caps),
+        caps: state |> State.get_pad_data!(:sink, pad_name, :caps),
         source: src_name,
-        source_caps: state |> State.get_pad_data(:sink, pad_name, :caps),
+        source_caps: state |> State.get_pad_data!(:sink, pad_name, :caps),
       }
     Common.exec_and_handle_callback :handle_process, [pad_name, b, params], state
   end

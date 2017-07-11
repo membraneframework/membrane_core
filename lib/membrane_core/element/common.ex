@@ -42,7 +42,7 @@ defmodule Membrane.Element.Common do
 
   def do_handle_caps(pad_name, caps, state) do
     accepted_caps = state |> State.get_pad_data!(:sink, pad_name, :accepted_caps)
-    params = %{caps: state |> State.get_pad_data(:sink, pad_name, :caps)}
+    params = %{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
     with \
       :ok <- (if accepted_caps == :any || caps in accepted_caps do :ok else :invalid_caps end),
       {:ok, state} <- exec_and_handle_callback(:handle_caps, [pad_name, caps, params], state)
@@ -72,7 +72,7 @@ defmodule Membrane.Element.Common do
     do_handle_event(pad_name, event, state)
 
   def do_handle_event(pad_name, event, state) do
-    params = %{caps: state |> State.get_pad_data(:sink, pad_name, :caps)}
+    params = %{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
     exec_and_handle_callback(:handle_event, [pad_name, event, params], state)
       |> or_warn_error("Error while handling event")
   end
