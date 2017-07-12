@@ -67,11 +67,7 @@ defmodule Membrane.Log.Supervisor do
   Should return :ok.
   """
   def each_logger(func) do
-    __MODULE__ |> Supervisor.which_children |> Enum.each(
-      fn child ->
-        func.(child)
-      end
-    )
+    __MODULE__ |> Supervisor.which_children |> Enum.each(func)
     :ok
   end
 

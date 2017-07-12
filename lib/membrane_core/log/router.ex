@@ -59,14 +59,14 @@ defmodule Membrane.Log.Router do
   end
 
 
-  # Forwards log to every logger that has high enough level and has at least one
+  # Forwards log to every logger that has low enough level and has at least one
   # common tag with the message
   @doc false
   def handle_info({:membrane_log, log_level, _message, _timestamp, tags} = log, %{loggers: loggers} = state) do
       fn {id, pid, _type, _module} ->
         logger = loggers |> Map.get(id)
         if (logger.level |> level_to_val) <= (log_level |> level_to_val) do
-          tags = MapSet.new(tags ++ [:all])
+          tags = MapSet.new([:all | tags])
           if logger.tags |> MapSet.intersection(tags) |> Enum.empty? |> Kernel.not do
             send pid, log
           end

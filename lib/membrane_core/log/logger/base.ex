@@ -19,18 +19,11 @@ defmodule Membrane.Log.Logger.Base do
   Callback invoked when new log message is received.
 
   Callback delivers 5 arguments:
-  * log level: atom, one of: :debug, :info, :warn
-  * message: basic element or list of basic elements
+  * atom containing log level
+  * message - in IO list format
   * timestamp
   * tags (list of atoms, e.g. module name)
-  * logger state
-
-
-  Basic elements are:
-  * tuple {:binary, some_binary}
-  * integer
-  * String.t
-  * list of basic elements
+  * internal logger state
 
 
   On success, it returns `{:ok, new_state}`. it will just update logger's state
