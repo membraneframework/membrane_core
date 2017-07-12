@@ -3,6 +3,7 @@ defmodule Membrane.Pipeline do
   Module containing functions for constructing and supervising pipelines.
   """
 
+  use Membrane.Mixins.Playback
   use Membrane.Mixins.Log
   use GenServer
   alias Membrane.Pipeline.{State,Spec}
@@ -115,131 +116,55 @@ defmodule Membrane.Pipeline do
     {:ok, callback_return_commands_t, any}
 
 
-
-  @doc """
-  Sends synchronous call to the given element requesting it to prepare.
-
-  It will wait for reply for amount of time passed as second argument
-  (in milliseconds).
-
-  In case of success, returns `:ok`.
-
-  If any of the child elements has failed to reach desired state it returns
-  `{:error, reason}`. Please note that in such case state of some elements may
-  be already changed.
-  """
-  @spec prepare(pid, timeout) :: :ok | {:error, any}
-  def prepare(server, timeout \\ 5000) when is_pid(server) do
-    GenServer.call(server, :membrane_prepare, timeout)
-  end
-
-
-  @doc """
-  Sends synchronous call to the given element requesting it to start playing.
-
-  It will wait for reply for amount of time passed as second argument
-  (in milliseconds).
-
-  In case of success, returns `:ok`.
-
-  If any of the child elements has failed to reach desired state it returns
-  `{:error, reason}`. Please note that in such case state of some elements may
-  be already changed.
-  """
-  @spec play(pid, timeout) :: :ok | {:error, any}
-  def play(server, timeout \\ 5000) when is_pid(server) do
-    GenServer.call(server, :membrane_play, timeout)
-  end
-
-
-  @doc """
-  Sends synchronous call to the given element requesting it to stop playing.
-
-  It will wait for reply for amount of time passed as second argument
-  (in milliseconds).
-
-  In case of success, returns `:ok`.
-
-  If any of the child elements has failed to reach desired state it returns
-  `{:error, reason}`. Please note that in such case state of some elements may
-  be already changed.
-  """
-  @spec stop(pid, timeout) :: :ok | {:error, any}
-  def stop(server, timeout \\ 5000) when is_pid(server) do
-    GenServer.call(server, :membrane_stop, timeout)
-  end
-
-
   # Private API
 
   @doc false
   def init({module, pipeline_options}) do
-    case module.handle_init(pipeline_options) do
-      {:ok, internal_state} ->
-        {:ok, %State{
-          internal_state: internal_state,
-          module: module,
-        }}
-
-      {:ok, %Spec{children: nil}, internal_state} ->
-        {:ok, %State{
-          internal_state: internal_state,
-          module: module,
-        }}
-
-      {:ok, spec, internal_state} ->
-        case do_init(module, internal_state, spec) do
-          {:ok, state} ->
-            {:ok, state}
-
-          {:error, reason} ->
-            {:stop, {:init, reason}}
-        end
-
-      {:play, spec, internal_state} ->
-        case do_init(module, internal_state, spec) do
-          {:ok, state} ->
-            with \
-              :ok <- change_children_playback_state(state, :prepare),
-              :ok <- change_children_playback_state(state, :play)
-            do
-              {:ok, state}
-            else
-              err -> {:stop, err}
-            end
-
-          {:error, reason} ->
-            {:stop, {:init, reason}}
-        end
-
-      other ->
+    with \
+      [init: {:ok, {spec, internal_state}}] <- [init: module.handle_init(pipeline_options)],
+      {:ok, state} <- do_init(module, internal_state, spec)
+    do {:ok, state}
+    else
+      [init: {:error, reason}] -> warn_error """
+        Pipeline handle_init callback returned an error
+        """, reason
+      [init: other] ->
         raise """
-        Pipeline's handle_init replies are expected to be one of:
-
-            {:ok, state}
-            {:ok, spec, state}
-            {:play, spec, state}
-
+        Pipeline's handle_init replies are expected to be {:ok, spec, state}
         but got #{inspect(other)}.
 
         This is probably a bug in your pipeline's code, check return value
         of #{module}.handle_init/1.
         """
+      {:error, reason} -> warn_error "Error during pipeline initialization", reason
     end
   end
 
-
-  @doc false
-  def handle_call(change_playback_state, _from, state)
-  when change_playback_state in [:membrane_play, :membrane_prepare, :membrane_stop] do
-    playback_state = case change_playback_state do
-      :membrane_play -> :play
-      :membrane_prepare -> :prepare
-      :membrane_stop -> :stop
-    end
-    case change_children_playback_state(state, playback_state) do
-      :ok -> {:reply, :ok, state}
-      {:error, reason} -> {:reply, {:error, reason}, state}
+  defp do_init(module, internal_state, %Spec{children: children, links: links}) do
+    debug """
+      Initializing pipeline
+      children: #{inspect children}
+      links: #{inspect links}
+      """
+    with \
+      {:ok, {children_to_pids, pids_to_children}} <- children |> start_children,
+      :ok <- links |> link_children(children_to_pids),
+      :ok <- children_to_pids |> set_children_message_bus
+    do
+      debug """
+        Initializied pipeline
+        children: #{inspect children}
+        children pids: #{inspect children_to_pids}
+        links: #{inspect links}
+        """
+      {:ok, %State{
+        children_to_pids: children_to_pids,
+        pids_to_children: pids_to_children,
+        internal_state: internal_state,
+        module: module,
+      }}
+    else
+      {:error, reason} -> warn_error "Failed to initialize pipeline", reason
     end
   end
 
@@ -294,21 +219,6 @@ defmodule Membrane.Pipeline do
     handle_commands_recurse(tail, state)
   end
 
-
-  defp call_element([], _fun_name), do: :ok
-
-  defp call_element([{_name, pid}|tail], fun_name) do
-    case Kernel.apply(Membrane.Element, fun_name, [pid]) do
-      :ok ->
-        call_element(tail, fun_name)
-
-      :noop ->
-        call_element(tail, fun_name)
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
 
 
   # Links children based on given specification and map for mapping children
@@ -427,50 +337,17 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  def current_playback_state(state), do: state.playback_state
 
-  defp do_init(module, internal_state, %Spec{children: children, links: links} = spec) do
-    debug("Initializing: spec = #{inspect(spec)}, internal_state = #{inspect(internal_state)}")
-    case children |> start_children do
-      {:ok, {children_to_pids, pids_to_children}} ->
-        case links |> link_children(children_to_pids) do
-          :ok ->
-            case children_to_pids |> set_children_message_bus do
-              :ok ->
-                debug("Initialized: spec = #{inspect(spec)}, internal_state = #{inspect(internal_state)}, children_to_pids = #{inspect(children_to_pids)}")
-                {:ok, %State{
-                  children_to_pids: children_to_pids,
-                  pids_to_children: pids_to_children,
-                  internal_state: internal_state,
-                  module: module,
-                }}
-
-              {:error, reason} ->
-                warn("Failed to initialize pipeline: unable to set message bus for pipeline's children, reason = #{inspect(reason)}")
-                {:error, reason}
-            end
-
-          {:error, {reason, failed_link}} ->
-            warn("Failed to initialize pipeline: unable to link pipeline's children, reason = #{inspect(reason)}, failed_link = #{inspect(failed_link)}")
-            {:error, reason}
-        end
-
-      {:error, reason} ->
-        warn("Failed to initialize pipeline: unable to start pipeline's children, reason = #{inspect(reason)}")
-        {:error, reason}
-    end
-  end
-
-
-  defp change_children_playback_state(%State{children_to_pids: children_to_pids} = state, playback_state) do
-    debug("Changing playback state of children to #{inspect playback_state}, state = #{inspect(state)}")
-    case children_to_pids |> Map.to_list |> call_element(playback_state) do
-      :ok ->
-        debug("Changed playback state of children to #{inspect playback_state}, state = #{inspect(state)}")
-        :ok
-
-      {:error, reason} ->
-        warn("Unable to change playback state of children to #{inspect playback_state}, reason = #{inspect(reason)}, state = #{inspect(state)}")
-        {:error, reason}
+  def handle_playback_state(_old, new, %State{children_to_pids: children_to_pids} = state) do
+    with :ok <- children_to_pids |> Map.values |> Helper.Enum.each_with(
+      fn pid -> Element.change_playback_state(pid, new) end)
+    do
+      debug "Pipeline: changed playback state of children to #{inspect new}"
+      {:ok, %State{state | playback_state: new}}
+    else {:error, reason} -> warn_error """
+      Pipeline: unable to change playback state of children to #{inspect new}
+      """, reason
     end
   end
 

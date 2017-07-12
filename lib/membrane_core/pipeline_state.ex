@@ -6,6 +6,7 @@ defmodule Membrane.Pipeline.State do
 
   @type t :: %Membrane.Pipeline.State{
     internal_state: any,
+    playback_state: Membrane.Mixins.Playback.state_t,
     module: module,
     children_to_pids: %{required(Membrane.Element.name_t) => pid},
     pids_to_children: %{required(pid) => Membrane.Element.name_t},
@@ -15,5 +16,6 @@ defmodule Membrane.Pipeline.State do
     internal_state: nil,
     module: nil,
     children_to_pids: %{},
-    pids_to_children: %{}
+    pids_to_children: %{},
+    playback_state: :stopped
 end

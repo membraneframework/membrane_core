@@ -59,6 +59,6 @@ defmodule Membrane.Pipeline.Spec do
   }
 
   defstruct \
-    children: nil,
-    links: nil
+    children: [],
+    links: []
 end

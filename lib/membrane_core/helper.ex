@@ -3,7 +3,7 @@ defmodule Membrane.Helper do
 
   defmacro __using__(_args) do
     quote do
-      import Membrane.Helper, only: [~>: 2]
+      import Membrane.Helper, only: [~>: 2, ~>>: 2]
       alias Membrane.Helper
     end
   end
@@ -14,6 +14,15 @@ defmodule Membrane.Helper do
   defmacro x ~> f do
     quote do
       case unquote x do unquote f end
+    end
+  end
+
+  defmacro x ~>> f do
+    quote do
+      case unquote x do
+        unquote f
+        _ -> unquote x
+      end
     end
   end
 

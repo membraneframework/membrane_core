@@ -179,6 +179,14 @@ defmodule Membrane.Element do
     GenServer.call(server, :membrane_stop, timeout)
   end
 
+  def change_playback_state(pid, playback_state) do
+    GenServer.call(pid, case playback_state do
+        :stopped -> :membrane_stop
+        :prepared -> :membrane_prepare
+        :playing -> :membrane_play
+      end)
+  end
+
   def link(from_pid, to_pid, from_pad, to_pad, params) do
     with \
       :ok <- GenServer.call(from_pid, {:membrane_link, from_pad, :source, to_pid, params}),
