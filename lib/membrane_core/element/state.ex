@@ -5,15 +5,13 @@ defmodule Membrane.Element.State do
   # internally in Membrane.
 
   use Membrane.Mixins.Log
-  alias __MODULE__
-  alias Membrane.PullBuffer
   alias Membrane.Element
   use Membrane.Helper
 
   @type t :: %Membrane.Element.State{
     internal_state: any,
     module: module,
-    playback_state: Membrane.Element.playback_state_t,
+    playback_state: Membrane.Mixins.Playback.state_t,
     pads: %{optional(Element.pad_name_t) => pid},
     message_bus: pid,
   }
@@ -135,127 +133,5 @@ defmodule Membrane.Element.State do
     state
       |> Helper.Struct.update_in([:pads, :names_by_pids], & &1 |> Map.put(pad_data.pid, pad_name))
       |> Helper.Struct.put_in([:pads, :data, pad_name], pad_data)
-  end
-
-
-  defp fill_sink_pull_buffers(state) do
-    state
-      |> State.get_pads_data(:sink)
-      |> Map.keys
-      |> Helper.Enum.reduce_with(state, fn pad_name, st ->
-        update_pad_data st, :sink, pad_name, :buffer, &PullBuffer.fill/1
-      end)
-      |> or_warn_error("Unable to fill sink pull buffers")
-  end
-
-
-  @doc """
-  Changes playback state.
-
-  On success returns `{:ok, new_state}`.
-
-  On failure returns `{:error, {reason, new_state}}`.
-  """
-  @spec change_playback_state(t, Element.playback_state_t, Element.playback_state_t, Element.playback_state_t) ::
-    {:ok, State.t} |
-    {:error, {any, State.t}}
-
-  def change_playback_state(state, old, new, _target) when old == new, do: {:ok, state}
-
-  def change_playback_state(%State{module: module} = state, :stopped = old, :prepared = new, target) do
-    with {:ok, %State{internal_state: internal_state} = state} <- log_playback_state_changing(old, new, target, state),
-         {:ok, {actions, new_internal_state}} <- module.handle_prepare(old, internal_state),
-         {:ok, state} <- module.base_module.handle_actions(actions, :handle_prepare, %{state | internal_state: new_internal_state}),
-         {:ok, state} <- log_playback_state_changed(old, new, target, %{state | playback_state: new})
-    do
-      {:ok, state}
-
-    else
-      {:error, {reason, state}} ->
-        warn("Failed to change playback state: old = #{inspect(old)}, new = #{inspect(new)}, target = #{inspect(target)}, reason = #{inspect(reason)}")
-        {:error, {reason, state}}
-    end
-  end
-
-  def change_playback_state(%State{module: module} = state, :prepared = old, :playing = new, target) do
-    with {:ok, %State{internal_state: internal_state} = state} <- log_playback_state_changing(old, new, target, state),
-         {:ok, {actions, new_internal_state}} <- module.handle_play(internal_state),
-         {:ok, state} <- fill_sink_pull_buffers(state),
-         {:ok, state} <- module.base_module.handle_actions(actions, :handle_play, %{state | internal_state: new_internal_state}),
-         {:ok, state} <- log_playback_state_changed(old, new, target, %{state | playback_state: new})
-    do
-      {:ok, state}
-
-    else
-      {:error, {reason, state}} ->
-        warn("Failed to change playback state: old = #{inspect(old)}, new = #{inspect(new)}, target = #{inspect(target)}, reason = #{inspect(reason)}")
-        {:error, {reason, state}}
-    end
-  end
-
-  def change_playback_state(%State{module: module} = state, :playing = old, :prepared = new, target) do
-    with {:ok, %State{internal_state: internal_state} = state} <- log_playback_state_changing(old, new, target, state),
-         {:ok, {actions, new_internal_state}} <- module.handle_prepare(old, internal_state),
-         {:ok, state} <- module.base_module.handle_actions(actions, :handle_prepare, %{state | internal_state: new_internal_state}),
-         {:ok, state} <- log_playback_state_changed(old, new, target, %{state | playback_state: new})
-    do
-     {:ok, state}
-
-    else
-      {:error, {reason, state}} ->
-        warn("Failed to change playback state: old = #{inspect(old)}, new = #{inspect(new)}, target = #{inspect(target)}, reason = #{inspect(reason)}")
-        {:error, {reason, state}}
-    end
-  end
-
-  def change_playback_state(%State{module: module} = state, :prepared = old, :stopped = new, target) do
-    with {:ok, %State{internal_state: internal_state} = state} <- log_playback_state_changing(old, new, target, state),
-         {:ok, {actions, new_internal_state}} <- module.handle_stop(internal_state),
-         {:ok, state} <- module.base_module.handle_actions(actions, :handle_stop, %{state | internal_state: new_internal_state}),
-         {:ok, state} <- log_playback_state_changed(old, new, target, %{state | playback_state: new})
-    do
-     {:ok, state}
-
-    else
-      {:error, {reason, state}} ->
-        warn("Failed to change playback state: old = #{inspect(old)}, new = #{inspect(new)}, target = #{inspect(target)}, reason = #{inspect(reason)}")
-        {:error, {reason, state}}
-    end
-  end
-
-  def change_playback_state(state, :stopped, :playing, :playing) do
-    with {:ok, state} <- State.change_playback_state(state, :stopped, :prepared, :playing),
-         {:ok, state} <- State.change_playback_state(state, :prepared, :playing, :playing)
-    do
-      {:ok, state}
-
-    else
-      {:error, {reason, state}} ->
-        {:error, {reason, state}}
-    end
-  end
-
-  def change_playback_state(state, :playing, :stopped, :stopped) do
-    with {:ok, state} <- State.change_playback_state(state, :playing, :prepared, :stopped),
-         {:ok, state} <- State.change_playback_state(state, :prepared, :stopped, :stopped)
-    do
-      {:ok, state}
-
-    else
-      {:error, {reason, state}} ->
-        {:error, {reason, state}}
-    end
-  end
-
-
-  defp log_playback_state_changing(old, new, target, state) do
-    debug("Changing playback state: old = #{inspect(old)}, new = #{inspect(new)}, target = #{inspect(target)}, state = #{inspect(state)}")
-    {:ok, state}
-  end
-
-
-  defp log_playback_state_changed(old, new, target, state) do
-    debug("Changed playback state: old = #{inspect(old)}, new = #{inspect(new)}, target = #{inspect(target)}, state = #{inspect(state)}")
-    {:ok, state}
   end
 end

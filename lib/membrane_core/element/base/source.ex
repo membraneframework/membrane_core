@@ -260,6 +260,8 @@ defmodule Membrane.Element.Base.Source do
   def handle_link(pad_name, :source, pid, props, state), do:
     Common.handle_link(pad_name, :source, pid, props, state)
 
+  defdelegate handle_playback_state(old, new, state), to: Common
+
   defmacro __using__(_) do
     quote location: :keep do
       use Membrane.Element.Base.Mixin.CommonBehaviour

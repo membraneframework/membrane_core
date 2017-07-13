@@ -452,6 +452,7 @@ defmodule Membrane.Element.Base.Filter do
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
   defdelegate handle_event(mode, dir, pad_name, event, state), to: Common
   defdelegate handle_link(pad_name, direction, pid, props, state), to: Common
+  defdelegate handle_playback_state(old, new, state), to: Common
 
   defp check_and_handle_demands(pad_name, buffers, state) do
     state

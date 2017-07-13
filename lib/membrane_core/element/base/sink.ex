@@ -365,6 +365,7 @@ defmodule Membrane.Element.Base.Sink do
     Common.handle_pullbuffer_output(pad_name, v, state)
 
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
+  defdelegate handle_playback_state(old, new, state), to: Common
 
   def handle_event(mode, :sink, pad_name, event, state), do:
     Common.handle_event(mode, :sink, pad_name, event, state)

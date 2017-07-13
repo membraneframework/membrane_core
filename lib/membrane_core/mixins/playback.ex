@@ -1,10 +1,15 @@
 defmodule Membrane.Mixins.Playback do
   use Membrane.Helper
 
-  @type state_t :: atom
+  @type state_t :: :stopped | :prepared | :playing
 
-  @callback current_playback_state(any) :: atom
   @callback handle_playback_state(atom, atom, any) :: {:ok, any} | {:error, any}
+
+  @states %{0 => :stopped, 1 => :prepared, 2 => :playing}
+  @states_pos @states |> Enum.into(%{}, fn {k, v} -> {v, k} end)
+
+  def states, do: @states
+  def states_pos, do: @states_pos
 
   defmacro __using__(_) do
     quote location: :keep do
@@ -20,17 +25,18 @@ defmodule Membrane.Mixins.Playback do
 
       def handle_call({:membrane_change_playback_state, new_state}, _from, state) do
         use Membrane.Helper
-        playback_states = %{0 => :stopped, 1 => :prepared, 2 => :playing}
-        playback_states_pos = playback_states |> Enum.into(%{}, fn {k, v} -> {v, k} end)
+        alias Membrane.Mixins.Playback
 
-        old_state = state |> current_playback_state
+        old_state = state |> Map.get(:playback_state)
         with \
-          {:ok, old_pos} <- playback_states_pos[old_state] ~> (nil -> :invalid_old_playback; v -> {:ok, v}),
-          {:ok, new_pos} <- playback_states_pos[new_state] ~> (nil -> :invalid_new_playback; v -> {:ok, v}),
+          {:ok, old_pos} <- Playback.states_pos[old_state] ~> (nil -> :invalid_old_playback; v -> {:ok, v}),
+          {:ok, new_pos} <- Playback.states_pos[new_state] ~> (nil -> :invalid_new_playback; v -> {:ok, v}),
           {:ok, state} <- old_pos..new_pos
             |> Enum.chunk(2, 1)
             |> Helper.Enum.reduce_with(state, fn [i, j], st ->
-                handle_playback_state playback_states[i], playback_states[j], st
+                handle_playback_state(Playback.states[i], Playback.states[j], st)
+                  ~>> {{:ok, state}, {:ok, state |> Map.put(:playback_state, Playback.states[j])}}
+
               end)
         do {:reply, :ok, state}
         else

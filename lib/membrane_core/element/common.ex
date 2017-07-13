@@ -138,6 +138,30 @@ defmodule Membrane.Element.Common do
     end
   end
 
+
+  def handle_playback_state(:prepared, :playing, state) do
+    with {:ok, state} <- state |> fill_sink_pull_buffers
+    do exec_and_handle_callback :handle_play, [], state
+    end
+  end
+
+  def handle_playback_state(:prepared, :stopped, state), do:
+    exec_and_handle_callback :handle_stop, [], state
+
+  def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing], do:
+    exec_and_handle_callback :handle_prepare, [ps], state
+
+
+  def fill_sink_pull_buffers(state) do
+    state
+      |> State.get_pads_data(:sink)
+      |> Map.keys
+      |> Helper.Enum.reduce_with(state, fn pad_name, st ->
+        State.update_pad_data st, :sink, pad_name, :buffer, &PullBuffer.fill/1
+      end)
+      |> or_warn_error("Unable to fill sink pull buffers")
+  end
+
   def handle_callback_result(result, cb \\ "")
   def handle_callback_result({:ok, {actions, new_internal_state}}, _cb)
   when is_list actions

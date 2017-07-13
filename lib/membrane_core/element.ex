@@ -4,6 +4,7 @@ defmodule Membrane.Element do
   playback of elements.
   """
 
+  use Membrane.Mixins.Playback
   use Membrane.Mixins.Log
   alias Membrane.Element.State
   use Membrane.Helper
@@ -22,9 +23,6 @@ defmodule Membrane.Element do
   @type name_t :: atom | String.t
 
   @type pad_name_t :: atom | String.t
-
-  # Type that defines an potential playback states
-  @type playback_state_t :: :stopped | :prepared | :playing
 
 
 
@@ -179,14 +177,6 @@ defmodule Membrane.Element do
     GenServer.call(server, :membrane_stop, timeout)
   end
 
-  def change_playback_state(pid, playback_state) do
-    GenServer.call(pid, case playback_state do
-        :stopped -> :membrane_stop
-        :prepared -> :membrane_prepare
-        :playing -> :membrane_play
-      end)
-  end
-
   def link(from_pid, to_pid, from_pad, to_pad, params) do
     with \
       :ok <- GenServer.call(from_pid, {:membrane_link, from_pad, :source, to_pid, params}),
@@ -196,6 +186,20 @@ defmodule Membrane.Element do
   end
 
   # Private API
+
+  def handle_playback_state(old, new, %State{module: module} = state) do
+    debug "Changing playback state of element from #{inspect old} to #{inspect new}"
+    with {:ok, state} <- module.base_module.handle_playback_state(old, new, state)
+    do
+      debug "Changed playback state of element from #{inspect old} to #{inspect new}"
+      {:ok, state}
+    else
+      {:error, reason} -> warn_error """
+        Unable to change playback state of element from #{inspect old} to #{inspect new}"
+        """, reason
+    end
+
+  end
 
   @doc false
   def init({module, options}) do
@@ -229,44 +233,6 @@ defmodule Membrane.Element do
     debug("Terminating: reason = #{inspect(reason)}, state = #{inspect(state)}")
     module.handle_shutdown(internal_state)
   end
-
-
-  # Callback invoked on incoming play call.
-  @doc false
-  def handle_call(:membrane_play, _from, %State{playback_state: playback_state} = state) do
-    case state |> State.change_playback_state(playback_state, :playing, :playing) do
-      {:ok, state} ->
-        {:reply, :ok, state}
-
-      {:error, {reason, state}} ->
-        {:reply, {:error, reason}, state}
-    end
-  end
-
-  # Callback invoked on incoming prepare call.
-  @doc false
-  def handle_call(:membrane_prepare, _from, %State{playback_state: playback_state} = state) do
-    case state |> State.change_playback_state(playback_state, :prepared, :prepared) do
-      {:ok, state} ->
-        {:reply, :ok, state}
-
-      {:error, {reason, state}} ->
-        {:reply, {:error, reason}, state}
-    end
-  end
-
-  # Callback invoked on incoming stop call.
-  @doc false
-  def handle_call(:membrane_stop, _from, %State{playback_state: playback_state} = state) do
-    case state |> State.change_playback_state(playback_state, :stopped, :stopped) do
-      {:ok, state} ->
-        {:reply, :ok, state}
-
-      {:error, {reason, state}} ->
-        {:reply, {:error, reason}, state}
-    end
-  end
-
 
   # Callback invoked on incoming set_message_bus command.
   @doc false

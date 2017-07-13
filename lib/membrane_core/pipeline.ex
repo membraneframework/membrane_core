@@ -337,8 +337,6 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  def current_playback_state(state), do: state.playback_state
-
   def handle_playback_state(_old, new, %State{children_to_pids: children_to_pids} = state) do
     with :ok <- children_to_pids |> Map.values |> Helper.Enum.each_with(
       fn pid -> Element.change_playback_state(pid, new) end)
