@@ -332,7 +332,7 @@ defmodule Membrane.Element.Base.Sink do
 
   def handle_write(:push, pad_name, buffer, state) do
     params = %{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
-    Common.exec_and_handle_callback(:handle_write, [pad_name, buffer, params], state)
+    exec_and_handle_callback(:handle_write, [pad_name, buffer, params], state)
       |> or_warn_error("Error while handling write")
   end
 
@@ -359,13 +359,12 @@ defmodule Membrane.Element.Base.Sink do
     {:ok, state} = state |>
       State.update_pad_data(:sink, pad_name, :self_demand, & {:ok, &1 - length b})
     params = %{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
-    Common.exec_and_handle_callback :handle_write, [pad_name, b, params], state
+    exec_and_handle_callback :handle_write, [pad_name, b, params], state
   end
   defp handle_pullbuffer_output(pad_name, v, state), do:
     Common.handle_pullbuffer_output(pad_name, v, state)
 
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
-  defdelegate handle_playback_state(old, new, state), to: Common
 
   def handle_event(mode, :sink, pad_name, event, state), do:
     Common.handle_event(mode, :sink, pad_name, event, state)

@@ -202,7 +202,7 @@ defmodule Membrane.Element.Base.Source do
       |> State.get_update_pad_data(:source, pad_name, :demand, &{:ok, {&1, &1+size}})
     if stored_size + size > 0 do
       params = %{caps: state |> State.get_pad_data!(:source, pad_name, :caps)}
-      Common.exec_and_handle_callback(:handle_demand, [pad_name, size + min(0, stored_size), params], state)
+      exec_and_handle_callback(:handle_demand, [pad_name, size + min(0, stored_size), params], state)
         |> or_warn_error("""
           Demand arrived from pad #{inspect pad_name}, but error happened while
           handling it.
@@ -259,8 +259,6 @@ defmodule Membrane.Element.Base.Source do
 
   def handle_link(pad_name, :source, pid, props, state), do:
     Common.handle_link(pad_name, :source, pid, props, state)
-
-  defdelegate handle_playback_state(old, new, state), to: Common
 
   defmacro __using__(_) do
     quote location: :keep do

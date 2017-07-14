@@ -7,23 +7,34 @@ defmodule Membrane.Element.Common do
 
   defmacro __using__(_) do
     quote do
-      def handle_actions(actions, callback, state) do
-        actions |> Helper.Enum.reduce_with(state, fn action, state ->
-            handle_action action, callback, state
-          end)
-      end
-
-      def handle_message(message, state) do
-        alias Membrane.Element.Common
-        Common.exec_and_handle_callback(:handle_other, [message], state)
-          |> Common.or_warn_error("Error while handling message")
-      end
+      use Membrane.Mixins.CallbackHandler
 
       def handle_action({:event, {pad_name, event}}, _cb, state), do:
         Membrane.Element.Action.send_event(pad_name, event, state)
 
       def handle_action({:message, message}, _cb, state), do:
         Membrane.Element.Action.send_message(message, state)
+
+      def handle_actions(actions, callback, handler_params, state), do:
+        super(actions |> Membrane.Element.Common.join_buffers, callback,
+          handler_params, state)
+
+      def handle_message(message, state) do
+        exec_and_handle_callback(:handle_other, [message], state)
+          |> or_warn_error("Error while handling message")
+      end
+
+      def handle_playback_state(:prepared, :playing, state) do
+        with {:ok, state} <- state |> Membrane.Element.Common.fill_sink_pull_buffers
+        do exec_and_handle_callback :handle_play, [], state
+        end
+      end
+
+      def handle_playback_state(:prepared, :stopped, state), do:
+        exec_and_handle_callback :handle_stop, [], state
+
+      def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing], do:
+        exec_and_handle_callback :handle_prepare, [ps], state
 
     end
   end
@@ -40,12 +51,12 @@ defmodule Membrane.Element.Common do
   def handle_caps(:push, pad_name, caps, state), do:
     do_handle_caps(pad_name, caps, state)
 
-  def do_handle_caps(pad_name, caps, state) do
+  def do_handle_caps(pad_name, caps, %State{module: module} = state) do
     accepted_caps = state |> State.get_pad_data!(:sink, pad_name, :accepted_caps)
     params = %{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
     with \
       :ok <- (if accepted_caps == :any || caps in accepted_caps do :ok else :invalid_caps end),
-      {:ok, state} <- exec_and_handle_callback(:handle_caps, [pad_name, caps, params], state)
+      {:ok, state} <- module.base_module.exec_and_handle_callback(:handle_caps, [pad_name, caps, params], state)
     do
       state |> State.set_pad_data(:sink, pad_name, :caps, caps)
     else
@@ -71,9 +82,9 @@ defmodule Membrane.Element.Common do
   def handle_event(_mode, _dir, pad_name, event, state), do:
     do_handle_event(pad_name, event, state)
 
-  def do_handle_event(pad_name, event, state) do
+  def do_handle_event(pad_name, event, %State{module: module} = state) do
     params = %{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
-    exec_and_handle_callback(:handle_event, [pad_name, event, params], state)
+    module.base_module.exec_and_handle_callback(:handle_event, [pad_name, event, params], state)
       |> or_warn_error("Error while handling event")
   end
 
@@ -93,22 +104,7 @@ defmodule Membrane.Element.Common do
   def handle_pullbuffer_output(pad_name, {:caps, c}, state), do:
     do_handle_caps(pad_name, c, state)
 
-  def exec_and_handle_callback(cb, actions_cb \\ nil, args, %State{module: module, internal_state: internal_state} = state) do
-    actions_cb = actions_cb || cb
-    with \
-      {:call, {:ok, {actions, new_internal_state}}} <- {:call, apply(module, cb, args ++ [internal_state]) |> handle_callback_result(cb)},
-      {:handle, {:ok, state}} <- {:handle, actions
-          |> join_buffers
-          |> module.base_module.handle_actions(actions_cb, %State{state | internal_state: new_internal_state})
-        }
-    do {:ok, state}
-    else
-      {:call, {:error, reason}} -> warn_error "Error while executing callback #{inspect cb}", reason
-      {:handle, {:error, reason}} -> warn_error "Error while handling actions returned by callback #{inspect cb}", reason
-    end
-  end
-
-  defp join_buffers(actions) do
+  def join_buffers(actions) do
     actions
       |> Helper.Enum.chunk_by(
         fn
@@ -139,19 +135,6 @@ defmodule Membrane.Element.Common do
   end
 
 
-  def handle_playback_state(:prepared, :playing, state) do
-    with {:ok, state} <- state |> fill_sink_pull_buffers
-    do exec_and_handle_callback :handle_play, [], state
-    end
-  end
-
-  def handle_playback_state(:prepared, :stopped, state), do:
-    exec_and_handle_callback :handle_stop, [], state
-
-  def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing], do:
-    exec_and_handle_callback :handle_prepare, [ps], state
-
-
   def fill_sink_pull_buffers(state) do
     state
       |> State.get_pads_data(:sink)
@@ -160,40 +143,6 @@ defmodule Membrane.Element.Common do
         State.update_pad_data st, :sink, pad_name, :buffer, &PullBuffer.fill/1
       end)
       |> or_warn_error("Unable to fill sink pull buffers")
-  end
-
-  def handle_callback_result(result, cb \\ "")
-  def handle_callback_result({:ok, {actions, new_internal_state}}, _cb)
-  when is_list actions
-  do {:ok, {actions, new_internal_state}}
-  end
-  def handle_callback_result({:error, {reason, new_internal_state}}, cb) do
-    warn """
-     Elements callback #{inspect cb} returned an error, reason:
-     #{inspect reason}
-
-     Elements state: #{inspect new_internal_state}
-
-     Stacktrace:
-     #{Exception.format_stacktrace System.stacktrace}
-    """
-    {:ok, {[], new_internal_state}}
-  end
-  def handle_callback_result(result, cb) do
-    raise """
-    Elements' callback replies are expected to be one of:
-
-        {:ok, {actions, state}}
-        {:error, {reason, state}}
-
-    where actions is a list that is specific to base type of the element.
-
-    Instead, callback #{inspect cb} returned value of #{inspect result}
-    which does not match any of the valid return values.
-
-    This is probably a bug in the element, check if its callbacks return values
-    are in the right format.
-    """
   end
 
 end

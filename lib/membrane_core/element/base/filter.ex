@@ -366,7 +366,7 @@ defmodule Membrane.Element.Base.Filter do
       |> State.get_update_pad_data(:source, pad_name, :demand, &{:ok, {&1+size, &1+size}})
     if total_size > 0 do
       params = %{caps: state |> State.get_pad_data!(:source, pad_name, :caps)}
-      Common.exec_and_handle_callback(:handle_demand, {:handle_demand, pad_name}, [pad_name, total_size, params], state)
+      exec_and_handle_callback(:handle_demand, {:handle_demand, pad_name}, [pad_name, total_size, params], state)
         |> or_warn_error("""
           Demand arrived from pad #{inspect pad_name}, but error happened while
           handling it.
@@ -401,7 +401,7 @@ defmodule Membrane.Element.Base.Filter do
 
   def handle_process(:push, pad_name, buffers, state) do
     params = %{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
-    Common.exec_and_handle_callback(:handle_process, [pad_name, buffers, params], state)
+    exec_and_handle_callback(:handle_process, [pad_name, buffers, params], state)
       |> or_warn_error("Error while handling process")
   end
 
@@ -427,7 +427,7 @@ defmodule Membrane.Element.Base.Filter do
         source: src_name,
         source_caps: state |> State.get_pad_data!(:sink, pad_name, :caps),
       }
-    Common.exec_and_handle_callback :handle_process, [pad_name, b, params], state
+    exec_and_handle_callback :handle_process, [pad_name, b, params], state
   end
   defp handle_pullbuffer_output(pad_name, _src_name, v, state), do:
     Common.handle_pullbuffer_output(pad_name, v, state)
@@ -452,7 +452,6 @@ defmodule Membrane.Element.Base.Filter do
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
   defdelegate handle_event(mode, dir, pad_name, event, state), to: Common
   defdelegate handle_link(pad_name, direction, pid, props, state), to: Common
-  defdelegate handle_playback_state(old, new, state), to: Common
 
   defp check_and_handle_demands(pad_name, buffers, state) do
     state

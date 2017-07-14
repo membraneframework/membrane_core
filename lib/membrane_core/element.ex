@@ -4,8 +4,9 @@ defmodule Membrane.Element do
   playback of elements.
   """
 
-  use Membrane.Mixins.Playback
   use Membrane.Mixins.Log
+  use Membrane.Mixins.Playback
+  use Membrane.Mixins.CallbackHandler
   alias Membrane.Element.State
   use Membrane.Helper
   # Type that defines possible return values of start/start_link functions.
