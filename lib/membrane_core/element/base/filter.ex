@@ -302,11 +302,6 @@ defmodule Membrane.Element.Base.Filter do
     handle_action({:demand, {pad_name, src_name, size}}, :handle_demand, nil, state)
   end
 
-  def handle_action({:demand, {pad_name, src_name, size}}, :handle_demand, _src_name, state)
-  when size > 0 do
-    Action.handle_demand(pad_name, src_name, size, :handle_demand, state)
-  end
-
   def handle_action({:demand, {pad_name, src_name, size}}, cb, _params, state)
   when size > 0 do
     Action.handle_demand(pad_name, src_name, size, cb, state)
@@ -338,7 +333,7 @@ defmodule Membrane.Element.Base.Filter do
       |> State.get_update_pad_data(:source, pad_name, :demand, &{:ok, {&1+size, &1+size}})
     if total_size > 0 do
       params = %{caps: state |> State.get_pad_data!(:source, pad_name, :caps)}
-      exec_and_handle_callback(:handle_demand, {:handle_demand, pad_name}, [pad_name, total_size, params], state)
+      exec_and_handle_callback(:handle_demand, pad_name, [pad_name, total_size, params], state)
         |> or_warn_error("""
           Demand arrived from pad #{inspect pad_name}, but error happened while
           handling it.
