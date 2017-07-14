@@ -3,6 +3,7 @@ defmodule Membrane.Pipeline do
   Module containing functions for constructing and supervising pipelines.
   """
 
+  use Membrane.Mixins.CallbackHandler
   use Membrane.Mixins.Playback
   use Membrane.Mixins.Log
   use GenServer
@@ -169,124 +170,6 @@ defmodule Membrane.Pipeline do
   end
 
 
-  @doc false
-  def handle_info({:membrane_message, %Membrane.Message{} = message}, %State{module: module, internal_state: internal_state} = state) do
-    # FIXME set sender
-    case module.handle_message(message, self(), internal_state) do
-      {:ok, new_internal_state} ->
-        {:noreply, %{state | internal_state: new_internal_state}}
-    end
-  end
-
-
-  @doc false
-  # Callback invoked on other incoming message
-  def handle_info(message, %State{module: module, internal_state: internal_state} = state) do
-    case module.handle_other(message, internal_state)  do
-      {:ok, new_internal_state} ->
-        {:noreply, %{state | internal_state: new_internal_state}}
-
-      {:ok, commands, new_internal_state} ->
-        case handle_commands_recurse(commands, %{state | internal_state: new_internal_state}) do
-          {:ok, new_state} ->
-            {:noreply, new_state}
-        end
-    end
-  end
-
-
-  defp handle_commands_recurse([], state), do: {:ok, state}
-
-  defp handle_commands_recurse([{:forward, {element_name, message}} = command|tail], %State{children_to_pids: children_to_pids} = state) do
-    case children_to_pids |> Map.get(element_name) do
-      nil ->
-        raise """
-        You have returned invalid pipeline command.
-
-        Your callback has returned command #{inspect(command)} which refers to
-        child named #{inspect(element_name)}. There's no such child in this
-        pipeline. Known children are:
-
-            #{inspect(children_to_pids |> Map.keys)}
-
-        This is probably a bug in your code.
-        """
-
-      pid ->
-        send(pid, message)
-    end
-
-    handle_commands_recurse(tail, state)
-  end
-
-
-
-  # Links children based on given specification and map for mapping children
-  # names into PIDs.
-  #
-  # On success it returns `:ok`.
-  #
-  # On error it returns `{:error, {reason, failed_link}}`.
-  #
-  # Please note that this function is not atomic and in case of error there's
-  # a chance that some of children will remain linked.
-  defp link_children(links, children_to_pids)
-  when is_map(links) and is_map(children_to_pids) do
-    debug("Linking children: links = #{inspect(links)}")
-    links |> Helper.Enum.each_with(& do_link_children &1, children_to_pids)
-  end
-
-
-  defp do_link_children({{from_name, from_pad}, {to_name, to_pad, params}} = link, children_to_pids) do
-    with \
-      {:ok, from_pid} <- children_to_pids |> Map.get(from_name) ~> (nil -> {:error, {:unknown_from, link}}; v -> {:ok, v}),
-      {:ok, to_pid} <- children_to_pids |> Map.get(to_name) ~> (nil -> {:error, {:unknown_to, link}}; v -> {:ok, v}),
-      :ok <- Element.link(from_pid, to_pid, from_pad, to_pad, params)
-    do
-      :ok
-    end
-  end
-  defp do_link_children({{from_name, from_pad}, {to_name, to_pad}}, children_to_pids), do:
-    do_link_children({{from_name, from_pad}, {to_name, to_pad, []}}, children_to_pids)
-
-
-  # Sets message bus for children.
-  #
-  # On success it returns `:ok`.
-  #
-  # On error it returns `{:error, reason}`.
-  #
-  # Please note that this function is not atomic and in case of error there's
-  # a chance that some of children will have the message bus set.
-  # Links children based on given specification and map for mapping children
-  # names into PIDs.
-  #
-  # On success it returns `:ok`.
-  #
-  # On error it returns `{:error, {reason, failed_link}}`.
-  #
-  # Please note that this function is not atomic and in case of error there's
-  # a chance that some of children will remain linked.
-  defp set_children_message_bus(children_to_pids)
-  when is_map(children_to_pids) do
-    debug("Setting message bus of children: children_to_pids = #{inspect(children_to_pids)}")
-    set_children_message_bus_recurse(children_to_pids |> Map.values)
-  end
-
-
-  defp set_children_message_bus_recurse([]), do: :ok
-
-  defp set_children_message_bus_recurse([child_pid|rest]) do
-    case Membrane.Element.set_message_bus(child_pid, self()) do
-      :ok ->
-        set_children_message_bus_recurse(rest)
-
-      {:error, reason} ->
-        {:error, {reason, child_pid}}
-    end
-  end
-
-
   # Starts children based on given specification and links them to the current
   # process in the supervision tree.
   #
@@ -337,6 +220,70 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  # Sets message bus for children.
+  #
+  # On success it returns `:ok`.
+  #
+  # On error it returns `{:error, reason}`.
+  #
+  # Please note that this function is not atomic and in case of error there's
+  # a chance that some of children will have the message bus set.
+  # Links children based on given specification and map for mapping children
+  # names into PIDs.
+  #
+  # On success it returns `:ok`.
+  #
+  # On error it returns `{:error, {reason, failed_link}}`.
+  #
+  # Please note that this function is not atomic and in case of error there's
+  # a chance that some of children will remain linked.
+  defp set_children_message_bus(children_to_pids)
+  when is_map(children_to_pids) do
+    debug("Setting message bus of children: children_to_pids = #{inspect(children_to_pids)}")
+    set_children_message_bus_recurse(children_to_pids |> Map.values)
+  end
+
+
+  defp set_children_message_bus_recurse([]), do: :ok
+
+  defp set_children_message_bus_recurse([child_pid|rest]) do
+    case Membrane.Element.set_message_bus(child_pid, self()) do
+      :ok ->
+        set_children_message_bus_recurse(rest)
+
+      {:error, reason} ->
+        {:error, {reason, child_pid}}
+    end
+  end
+
+  # Links children based on given specification and map for mapping children
+  # names into PIDs.
+  #
+  # On success it returns `:ok`.
+  #
+  # On error it returns `{:error, {reason, failed_link}}`.
+  #
+  # Please note that this function is not atomic and in case of error there's
+  # a chance that some of children will remain linked.
+  defp link_children(links, children_to_pids)
+  when is_map(links) and is_map(children_to_pids) do
+    debug("Linking children: links = #{inspect(links)}")
+    links |> Helper.Enum.each_with(& do_link_children &1, children_to_pids)
+  end
+
+
+  defp do_link_children({{from_name, from_pad}, {to_name, to_pad, params}} = link, children_to_pids) do
+    with \
+      {:ok, from_pid} <- children_to_pids |> Map.get(from_name) ~> (nil -> {:error, {:unknown_from, link}}; v -> {:ok, v}),
+      {:ok, to_pid} <- children_to_pids |> Map.get(to_name) ~> (nil -> {:error, {:unknown_to, link}}; v -> {:ok, v}),
+      :ok <- Element.link(from_pid, to_pid, from_pad, to_pad, params)
+    do
+      :ok
+    end
+  end
+  defp do_link_children({{from_name, from_pad}, {to_name, to_pad}}, children_to_pids), do:
+    do_link_children({{from_name, from_pad}, {to_name, to_pad, []}}, children_to_pids)
+
   def handle_playback_state(_old, new, %State{children_to_pids: children_to_pids} = state) do
     with :ok <- children_to_pids |> Map.values |> Helper.Enum.each_with(
       fn pid -> Element.change_playback_state(pid, new) end)
@@ -349,6 +296,37 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  @doc false
+  def handle_info({:membrane_message, %Membrane.Message{} = message}, state) do
+    # FIXME set sender
+    exec_and_handle_callback(:handle_message, [message, self()], state)
+      |> to_noreply_or(state)
+  end
+
+
+  @doc false
+  # Callback invoked on other incoming message
+  def handle_info(message, state) do
+    exec_and_handle_callback(:handle_other, [message], state)
+      |> to_noreply_or(state)
+  end
+
+  def handle_action({:forward, {element_name, message}}, _cb, _params, state) do
+    with {:ok, pid} <- state |> State.get_child(element_name)
+    do send pid, message
+    else {:error, :unknown_child} -> handle_unknown_child :forward, element_name
+    end
+  end
+
+  defp handle_unknown_child(action, child) do
+    raise """
+      Error executing pipeline action #{inspect action}. Element #{inspect child}
+      has not been found.
+      """
+  end
+
+  defp to_noreply_or({:ok, new_state}, _), do: {:noreply, new_state}
+  defp to_noreply_or(_, state), do: {:noreply, state}
 
   defmacro __using__(_) do
     quote location: :keep do
@@ -364,13 +342,13 @@ defmodule Membrane.Pipeline do
 
       @doc false
       def handle_message(_message, _from, state) do
-        {:ok, state}
+        {:ok, {[], state}}
       end
 
 
       @doc false
       def handle_other(_message, state) do
-        {:ok, state}
+        {:ok, {[], state}}
       end
 
 

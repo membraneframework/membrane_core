@@ -4,6 +4,9 @@ defmodule Membrane.Pipeline.State do
   # It does not represent state of pipelines you construct, it's a state used
   # internally in Membrane.
 
+  use Membrane.Helper
+  alias __MODULE__
+
   @type t :: %Membrane.Pipeline.State{
     internal_state: any,
     playback_state: Membrane.Mixins.Playback.state_t,
@@ -18,4 +21,18 @@ defmodule Membrane.Pipeline.State do
     children_to_pids: %{},
     pids_to_children: %{},
     playback_state: :stopped
+
+
+    def get_child(%State{pids_to_children: pids_to_children}, child)
+    when is_pid(child) do
+      pids_to_children
+        |> Map.get(child)
+        ~> (nil -> {:error, :unknown_child}; v -> {:ok, v})
+    end
+
+    def get_child(%State{children_to_pids: children_to_pids}, child) do
+      children_to_pids
+        |> Map.get(child)
+        ~> (nil -> {:error, :unknown_child}; v -> {:ok, v})
+    end
 end

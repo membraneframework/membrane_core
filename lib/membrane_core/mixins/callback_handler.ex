@@ -27,17 +27,17 @@ defmodule Membrane.Mixins.CallbackHandler do
           """, :invalid_action
       end
 
-      def exec_and_handle_callback(cb, handler_params \\ nil, args, state) do
+      def exec_and_handle_callback(callback, handler_params \\ nil, args, state) do
         internal_state = state |> Map.get(:internal_state)
         module = state |> Map.get(:module)
         with \
-          {:ok, {actions, new_internal_state}} <- apply(module, cb, args ++ [internal_state])
-            |> handle_callback_result(cb)
-            |> or_warn_error("Error while executing callback #{inspect cb}"),
+          {:ok, {actions, new_internal_state}} <- apply(module, callback, args ++ [internal_state])
+            |> handle_callback_result(callback)
+            |> or_warn_error("Error while executing callback #{inspect callback}"),
           state = state |> Map.put(:internal_state, new_internal_state),
           {:ok, state} <- actions
-            |> handle_actions(cb, handler_params, state)
-            |> or_warn_error("Error while handling actions returned by callback #{inspect cb}")
+            |> handle_actions(callback, handler_params, state)
+            |> or_warn_error("Error while handling actions returned by callback #{inspect callback}")
         do
           {:ok, state}
         end
