@@ -123,60 +123,6 @@ defmodule Membrane.Element do
     GenServer.call(server, {:membrane_set_message_bus, message_bus}, timeout)
   end
 
-
-  @doc """
-  Sends synchronous call to the given element requesting it to prepare.
-
-  It will wait for reply for amount of time passed as second argument
-  (in milliseconds).
-
-  In case of success, returns `:ok`.
-
-  If element is already playing, returns `:ok`.
-
-  If element has failed to reach desired state it returns `{:error, reason}`.
-  """
-  @spec prepare(pid, timeout) :: :ok | {:error, any}
-  def prepare(server, timeout \\ 5000) when is_pid(server) do
-    GenServer.call(server, :membrane_prepare, timeout)
-  end
-
-
-  @doc """
-  Sends synchronous call to the given element requesting it to start playing.
-
-  It will wait for reply for amount of time passed as second argument
-  (in milliseconds).
-
-  In case of success, returns `:ok`.
-
-  If element is already playing, returns `:ok`.
-
-  If element has failed to reach desired state it returns `{:error, reason}`.
-  """
-  @spec play(pid, timeout) :: :ok | {:error, any}
-  def play(server, timeout \\ 5000) when is_pid(server) do
-    GenServer.call(server, :membrane_play, timeout)
-  end
-
-
-  @doc """
-  Sends synchronous call to the given element requesting it to stop playing.
-
-  It will wait for reply for amount of time passed as second argument
-  (in milliseconds).
-
-  In case of success, returns `:ok`.
-
-  If element is not playing, returns `:ok`.
-
-  If element has failed to reach desired state it returns `{:error, reason}`.
-  """
-  @spec stop(pid, timeout) :: :ok | {:error, any}
-  def stop(server, timeout \\ 5000) when is_pid(server) do
-    GenServer.call(server, :membrane_stop, timeout)
-  end
-
   def link(from_pid, to_pid, from_pad, to_pad, params) do
     with \
       :ok <- GenServer.call(from_pid, {:membrane_link, from_pad, :source, to_pid, params}),
