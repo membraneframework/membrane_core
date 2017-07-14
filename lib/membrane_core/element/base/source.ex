@@ -221,38 +221,14 @@ defmodule Membrane.Element.Base.Source do
     {:ok, State.t} |
     {:error, {any, State.t}}
 
-  def handle_action({:buffer, {pad_name, buffer}}, _cb, state), do:
+  def handle_action({:buffer, {pad_name, buffer}}, _cb, _params, state), do:
     Action.send_buffer(pad_name, buffer, state)
 
-  def handle_action({:caps, {pad_name, caps}}, _cb, state), do:
+  def handle_action({:caps, {pad_name, caps}}, _params, _cb, state), do:
     Action.send_caps(pad_name, caps, state)
 
-  def handle_action(other, _cb, _state) do
-    raise """
-    Sources' callback replies are expected to be one of:
-
-        {:ok, {actions, state}}
-        {:error, {reason, state}}
-
-    where actions is a list where each item is one action in one of the
-    following syntaxes:
-
-        {:caps, {pad_name, caps}}
-        {:message, message}
-        {:buffer, {pad_name, buffer}}
-
-    for example:
-
-        {:ok, [
-          {:buffer, {:source, %Membrane.Buffer{payload: "demo"}}
-        ], %{key: "val"}}
-
-    but got action #{inspect(other)}.
-
-    This is probably a bug in the element, check if its callbacks return values
-    in the right format.
-    """
-  end
+  def handle_action(action, callback, params, state), do:
+    super(action, callback, params, state)
 
   def handle_event(mode, :source, pad_name, event, state), do:
     Common.handle_event(mode, :source, pad_name, event, state)

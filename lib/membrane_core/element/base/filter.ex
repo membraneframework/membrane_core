@@ -285,37 +285,34 @@ defmodule Membrane.Element.Base.Filter do
     {:ok, State.t} |
     {:error, {any, State.t}}
 
-  def handle_action({:buffer, {pad_name, buffers}}, _cb, state), do:
+  def handle_action({:buffer, {pad_name, buffers}}, _cb, _params, state), do:
     Action.send_buffer pad_name, buffers, state
 
-  def handle_action({:caps, {pad_name, caps}}, _cb, state), do:
+  def handle_action({:caps, {pad_name, caps}}, _cb, _params, state), do:
     Action.send_caps(pad_name, caps, state)
 
 
-  def handle_action({:demand, pad_name}, {:handle_demand, src_name}, state)
+  def handle_action({:demand, pad_name}, :handle_demand, src_name, state)
   when is_atom pad_name do
-    handle_action({:demand, {pad_name, src_name}}, :handle_demand, state)
+    handle_action({:demand, {pad_name, src_name}}, :handle_demand, nil, state)
   end
 
-  def handle_action({:demand, {pad_name, size}}, {:handle_demand, src_name}, state)
+  def handle_action({:demand, {pad_name, size}}, :handle_demand, src_name, state)
   when is_integer size do
-    handle_action({:demand, {pad_name, src_name, size}}, :handle_demand, state)
+    handle_action({:demand, {pad_name, src_name, size}}, :handle_demand, nil, state)
   end
 
-  def handle_action({:demand, {pad_name, src_name}}, cb, state), do:
-    handle_action({:demand, {pad_name, src_name, 1}}, cb, state)
-
-  def handle_action({:demand, {pad_name, src_name, size}}, {:handle_demand, _src_name}, state)
+  def handle_action({:demand, {pad_name, src_name, size}}, :handle_demand, _src_name, state)
   when size > 0 do
     Action.handle_demand(pad_name, src_name, size, :handle_demand, state)
   end
 
-  def handle_action({:demand, {pad_name, src_name, size}}, cb, state)
+  def handle_action({:demand, {pad_name, src_name, size}}, cb, _params, state)
   when size > 0 do
     Action.handle_demand(pad_name, src_name, size, cb, state)
   end
 
-  def handle_action({:demand, {pad_name, _src_name, 0}}, cb, state) do
+  def handle_action({:demand, {pad_name, _src_name, 0}}, cb, _params, state) do
     debug """
       Ignoring demand of size of 0 requested by callback #{inspect cb}
       on pad #{inspect pad_name}.
@@ -323,7 +320,7 @@ defmodule Membrane.Element.Base.Filter do
     {:ok, state}
   end
 
-  def handle_action({:demand, {pad_name, _src_name, size}}, cb, _state)
+  def handle_action({:demand, {pad_name, _src_name, size}}, cb, _params, _state)
   when size < 0 do
     raise """
       Callback #{inspect cb} requested demand of invalid size of #{size}
@@ -333,33 +330,8 @@ defmodule Membrane.Element.Base.Filter do
   end
 
 
-  def handle_action(other, _cb, _state) do
-    raise """
-    Filters' callback replies are expected to be one of:
-
-        {:ok, {actions, state}}
-        {:error, {reason, state}}
-
-    where actions is a list where each item is one action in one of the
-    following syntaxes:
-
-        {:caps, {pad_name, caps}}
-        {:demand, pad_name}
-        {:buffer, {pad_name, buffer}}
-        {:message, message}
-
-    for example:
-
-        {:ok, [
-          {:buffer, {:source, Membrane.Event.eos()}}
-        ], %{key: "val"}}
-
-    but got action #{inspect(other)}.
-
-    This is probably a bug in the element, check if its callbacks return values
-    in the right format.
-    """
-  end
+  def handle_action(action, callback, params, state), do:
+    super(action, callback, params, state)
 
   def handle_demand(pad_name, size, state) do
     {:ok, {total_size, state}} = state

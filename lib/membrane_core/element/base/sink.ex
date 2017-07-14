@@ -252,17 +252,17 @@ defmodule Membrane.Element.Base.Sink do
     {:ok, State.t} |
     {:error, {any, State.t}}
 
-  def handle_action({:demand, pad_name}, cb, state)
+  def handle_action({:demand, pad_name}, cb, params, state)
   when is_atom pad_name do
-    handle_action({:demand, {pad_name, 1}}, cb, state)
+    handle_action({:demand, {pad_name, 1}}, cb, params, state)
   end
 
-  def handle_action({:demand, {pad_name, size}}, cb, state)
+  def handle_action({:demand, {pad_name, size}}, cb, _params, state)
   when size > 0 do
     Action.handle_demand(pad_name, size, cb, state)
   end
 
-  def handle_action({:demand, {pad_name, _src_name, 0}}, cb, state) do
+  def handle_action({:demand, {pad_name, 0}}, cb, _params, state) do
     debug """
       Ignoring demand of size of 0 requested by callback #{inspect cb}
       on pad #{inspect pad_name}.
@@ -270,7 +270,7 @@ defmodule Membrane.Element.Base.Sink do
     {:ok, state}
   end
 
-  def handle_action({:demand, {pad_name, _src_name, size}}, cb, _state)
+  def handle_action({:demand, {pad_name, size}}, cb, _params, _state)
   when size < 0 do
     raise """
       Callback #{inspect cb} requested demand of invalid size of #{size}
@@ -279,31 +279,8 @@ defmodule Membrane.Element.Base.Sink do
       """
   end
 
-  def handle_action(other, _cb, _state) do
-    raise """
-    Sinks' callback replies are expected to be one of:
-
-        {:ok, {actions, state}}
-        {:error, {reason, state}}
-
-    where actions is a list where each item is one action in one of the
-    following syntaxes:
-
-        {:demand, pad_name}
-        {:message, message}
-
-    for example:
-
-        {:ok, [
-          {:demand, :sink}
-        ], %{key: "val"}}
-
-    but got action #{inspect(other)}.
-
-    This is probably a bug in the element, check if its callbacks return values
-    in the right format.
-    """
-  end
+  def handle_action(action, callback, params, state), do:
+    super(action, callback, params, state)
 
   def handle_self_demand pad_name, _src_name, buf_cnt, state do
     {:ok, state} = state
