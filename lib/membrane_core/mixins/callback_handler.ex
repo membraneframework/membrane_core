@@ -2,6 +2,7 @@ defmodule Membrane.Mixins.CallbackHandler do
   use Membrane.Mixins.Log
 
   @callback handle_action(any, atom, any, any) :: {:ok, any} | {:error, any}
+  @callback handle_invalid_action(any, atom, any, [String.t], atom, any) :: {:ok, any} | {:error, any}
 
   defmacro __using__(_args) do
     quote location: :keep do
@@ -14,13 +15,17 @@ defmodule Membrane.Mixins.CallbackHandler do
           end)
       end
 
-      def handle_action(action, callback, _params, state), do:
-        invalid_action(__MODULE__, action, [], callback, state)
+      def handle_action(action, callback, params, state), do:
+        handle_invalid_action(action, callback, params, [], __MODULE__, state)
 
-      def invalid_action(module, action, available_actions, callback, state) do
+      def handle_invalid_action(action, callback, _params, available_actions, module, _state) do
         warn_error """
           #{module} #{inspect callback} callback results are expected to be one of:
-          #{available_actions |> Enum.map(fn a -> "\t#{a}" end) |> Enum.join("\n")}
+          #{available_actions
+              |> List.flatten
+              |> Enum.map(fn a -> "\t#{a}" end)
+              |> Enum.join("\n")
+            }
           but got
           #{inspect action}
           Check if all callbacks return appropriate values.
@@ -74,7 +79,7 @@ defmodule Membrane.Mixins.CallbackHandler do
       defoverridable [
         handle_actions: 4,
         handle_action: 4,
-        invalid_action: 5,
+        handle_invalid_action: 6,
         exec_and_handle_callback: 4,
         handle_callback_result: 2,
       ]

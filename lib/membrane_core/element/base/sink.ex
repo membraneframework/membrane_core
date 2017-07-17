@@ -279,8 +279,13 @@ defmodule Membrane.Element.Base.Sink do
       """
   end
 
-  def handle_action(action, callback, params, state), do:
-    super(action, callback, params, state)
+  def handle_action(action, callback, params, state) do
+    available_actions = [
+        "{:demand, pad_name}",
+        "{:demand, {pad_name, size}}",
+      ] ++ Common.available_actions
+    handle_invalid_action action, callback, params, available_actions, __MODULE__, state
+  end
 
   def handle_self_demand pad_name, _src_name, buf_cnt, state do
     {:ok, state} = state

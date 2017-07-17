@@ -136,7 +136,7 @@ defmodule Membrane.Element.Base.Filter do
   use Membrane.Element.Common
   alias Membrane.Element.{Action, State, Common}
   alias Membrane.PullBuffer
-  alias Membrane.Helper
+  use Membrane.Helper
 
   # Type that defines a single action that may be returned from handle_*
   # callbacks.
@@ -324,9 +324,16 @@ defmodule Membrane.Element.Base.Filter do
       """
   end
 
-
-  def handle_action(action, callback, params, state), do:
-    super(action, callback, params, state)
+  def handle_action(action, callback, params, state) do
+    available_actions = [
+        "{:buffer, {pad_name, buffers}}",
+        "{:caps, {pad_name, caps}}",
+        ["{:demand, pad_name}", "{:demand, {pad_name, size}}"]
+          |> (provided that: callback == :handle_demand, else: []),
+        "{:demand, {pad_name, src_name, size}",
+      ] ++ Common.available_actions
+    handle_invalid_action action, callback, params, available_actions, __MODULE__, state
+  end
 
   def handle_demand(pad_name, size, state) do
     {:ok, {total_size, state}} = state

@@ -39,6 +39,11 @@ defmodule Membrane.Element.Common do
     end
   end
 
+  def available_actions, do: [
+      "{:event, {pad_name, event}}",
+      "{:message, message}",
+    ]
+
   def handle_caps(:pull, pad_name, caps, state) do
     cond do
       state |> State.get_pad_data!(:sink, pad_name, :buffer) |> PullBuffer.empty?

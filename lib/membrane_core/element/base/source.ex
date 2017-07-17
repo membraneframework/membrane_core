@@ -227,8 +227,13 @@ defmodule Membrane.Element.Base.Source do
   def handle_action({:caps, {pad_name, caps}}, _params, _cb, state), do:
     Action.send_caps(pad_name, caps, state)
 
-  def handle_action(action, callback, params, state), do:
-    super(action, callback, params, state)
+    def handle_action(action, callback, params, state) do
+      available_actions = [
+          "{:buffer, {pad_name, buffers}}",
+          "{:caps, {pad_name, caps}}",
+        ] ++ Common.available_actions
+      handle_invalid_action action, callback, params, available_actions, __MODULE__, state
+    end
 
   def handle_event(mode, :source, pad_name, event, state), do:
     Common.handle_event(mode, :source, pad_name, event, state)

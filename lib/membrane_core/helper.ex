@@ -3,7 +3,7 @@ defmodule Membrane.Helper do
 
   defmacro __using__(_args) do
     quote do
-      import Membrane.Helper, only: [~>: 2, ~>>: 2]
+      import Membrane.Helper, only: [~>: 2, ~>>: 2, provided: 2]
       alias Membrane.Helper
     end
   end
@@ -24,6 +24,13 @@ defmodule Membrane.Helper do
         _ -> unquote(x)
       ) end
     end
+  end
+
+  def provided(value, that: condition, else: default) do
+    if condition do value else default end
+  end
+  def provided(value, do: condition, else: default) do
+    if condition do value else default end
   end
 
   def stacktrace, do:

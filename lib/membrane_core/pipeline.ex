@@ -318,6 +318,13 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  def handle_action(action, callback, params, state) do
+    available_actions = [
+        "{:forward, {element_name, message}}",
+      ]
+    handle_invalid_action(action, callback, params, available_actions, __MODULE__, state)
+  end
+
   defp handle_unknown_child(action, child) do
     raise """
       Error executing pipeline action #{inspect action}. Element #{inspect child}
