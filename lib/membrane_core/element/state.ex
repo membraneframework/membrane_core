@@ -54,6 +54,12 @@ defmodule Membrane.Element.State do
       |> Enum.into(%{})
   end
 
+  def add_pad(state, params, direction) do
+    init_pad_data(params, direction)
+      |> Enum.reduce(state, fn {name, data}, st ->
+        st |> set_pad_data(direction, name, data) end)
+  end
+
   defp init_pad_data({name, {:always, mode, caps}}, direction) do
     data = %{
         name: name, pid: nil, mode: mode,direction: direction,
@@ -93,8 +99,19 @@ defmodule Membrane.Element.State do
     get_pad_data(state, pad_direction, pad_name, keys)
       ~> ({:ok, pad_data} -> pad_data)
 
-  def update_pad_data(state, pad_direction, pad_name, keys \\ [], f)
-  def update_pad_data(state, pad_direction, pad_name, keys, f) do
+  def set_pad_data(state, pad_direction, pad_name, keys \\ [], v) do
+    with \
+      {:ok, pad_data} <- get_pad_data(state, pad_direction, pad_name)
+    do
+      pad_data = pad_data |> Helper.Map.put_in(keys, v)
+      {:ok, state |> do_update_pad_data(pad_name, pad_data)}
+    else
+      {{:error, reason}, _pd} -> {:error, reason}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  def update_pad_data(state, pad_direction, pad_name, keys \\ [], f) do
     with \
       {:ok, pad_data} <- get_pad_data(state, pad_direction, pad_name),
       {:ok, pad_data} <- pad_data
@@ -110,11 +127,7 @@ defmodule Membrane.Element.State do
     end
   end
 
-  def set_pad_data(state, pad_direction, pad_name, keys \\ [], v), do:
-    update_pad_data(state, pad_direction, pad_name, keys, fn _ -> {:ok, v} end)
-
-  def get_update_pad_data(state, pad_direction, pad_name, keys \\ [], f)
-  def get_update_pad_data(state, pad_direction, pad_name, keys, f) do
+  def get_update_pad_data(state, pad_direction, pad_name, keys \\ [], f) do
     with \
       {:ok, pad_data} <- get_pad_data(state, pad_direction, pad_name),
       {{:ok, out}, pad_data} <- pad_data
@@ -131,7 +144,7 @@ defmodule Membrane.Element.State do
 
   defp do_update_pad_data(state, pad_name, pad_data) do
     state
-      |> Helper.Struct.update_in([:pads, :names_by_pids], & &1 |> Map.put(pad_data.pid, pad_name))
+      |> Helper.Struct.put_in([:pads, :names_by_pids, pad_data.pid], pad_name)
       |> Helper.Struct.put_in([:pads, :data, pad_name], pad_data)
   end
 end

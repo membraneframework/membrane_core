@@ -149,7 +149,15 @@ defmodule Membrane.Pipeline do
       """
     with \
       {:ok, {children_to_pids, pids_to_children}} <- children |> start_children,
-      :ok <- links |> link_children(children_to_pids),
+      state = %State{
+          children_to_pids: children_to_pids,
+          pids_to_children: pids_to_children,
+          internal_state: internal_state,
+          module: module,
+        },
+      {:ok, links} <- links |> parse_links,
+      {:ok, {links, state}} <- links |> handle_new_pads(state),
+      :ok <- links |> link_children(state),
       :ok <- children_to_pids |> set_children_message_bus
     do
       debug """
@@ -158,12 +166,7 @@ defmodule Membrane.Pipeline do
         children pids: #{inspect children_to_pids}
         links: #{inspect links}
         """
-      {:ok, %State{
-        children_to_pids: children_to_pids,
-        pids_to_children: pids_to_children,
-        internal_state: internal_state,
-        module: module,
-      }}
+      {:ok, state}
     else
       {:error, reason} -> warn_error "Failed to initialize pipeline", reason
     end
@@ -220,69 +223,80 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  # Sets message bus for children.
-  #
-  # On success it returns `:ok`.
-  #
-  # On error it returns `{:error, reason}`.
-  #
-  # Please note that this function is not atomic and in case of error there's
-  # a chance that some of children will have the message bus set.
-  # Links children based on given specification and map for mapping children
-  # names into PIDs.
-  #
-  # On success it returns `:ok`.
-  #
-  # On error it returns `{:error, {reason, failed_link}}`.
-  #
-  # Please note that this function is not atomic and in case of error there's
-  # a chance that some of children will remain linked.
-  defp set_children_message_bus(children_to_pids)
-  when is_map(children_to_pids) do
-    debug("Setting message bus of children: children_to_pids = #{inspect(children_to_pids)}")
-    set_children_message_bus_recurse(children_to_pids |> Map.values)
-  end
+  defp parse_links(links), do: links |> Helper.Enum.map_with(&parse_link/1)
 
-
-  defp set_children_message_bus_recurse([]), do: :ok
-
-  defp set_children_message_bus_recurse([child_pid|rest]) do
-    case Membrane.Element.set_message_bus(child_pid, self()) do
-      :ok ->
-        set_children_message_bus_recurse(rest)
-
-      {:error, reason} ->
-        {:error, {reason, child_pid}}
-    end
-  end
-
-  # Links children based on given specification and map for mapping children
-  # names into PIDs.
-  #
-  # On success it returns `:ok`.
-  #
-  # On error it returns `{:error, {reason, failed_link}}`.
-  #
-  # Please note that this function is not atomic and in case of error there's
-  # a chance that some of children will remain linked.
-  defp link_children(links, children_to_pids)
-  when is_map(links) and is_map(children_to_pids) do
-    debug("Linking children: links = #{inspect(links)}")
-    links |> Helper.Enum.each_with(& do_link_children &1, children_to_pids)
-  end
-
-
-  defp do_link_children({{from_name, from_pad}, {to_name, to_pad, params}} = link, children_to_pids) do
+  defp parse_link(link) do
     with \
-      {:ok, from_pid} <- children_to_pids |> Map.get(from_name) ~> (nil -> {:error, {:unknown_from, link}}; v -> {:ok, v}),
-      {:ok, to_pid} <- children_to_pids |> Map.get(to_name) ~> (nil -> {:error, {:unknown_to, link}}; v -> {:ok, v}),
-      :ok <- Element.link(from_pid, to_pid, from_pad, to_pad, params)
+      {:ok, link} <- link ~> (
+          {{from, from_pad}, {to, to_pad, params}} ->
+            {:ok, %{from: %{element: from, pad: from_pad}, to: %{element: to, pad: to_pad}, params: params}}
+          {{from, from_pad}, {to, to_pad}} ->
+            {:ok, %{from: %{element: from, pad: from_pad}, to: %{element: to, pad: to_pad}, params: []}}
+          link -> {:error, {:invalid_link, link}}
+        ),
+      :ok <- [link.from.pad, link.to.pad] |> Helper.Enum.each_with(&parse_pad/1),
+      do: {:ok, link}
+  end
+
+  defp parse_pad({name, {_availability, _mode, _caps}})
+  when is_atom name or is_binary name do :ok end
+  defp parse_pad(name)
+  when is_atom name or is_binary name do :ok end
+  defp parse_pad(pad), do: {:error, {:invalid_pad_format, pad}}
+
+
+  defp handle_new_pads(links, state) do
+    links |> Helper.Enum.map_reduce_with(state, fn %{from: from, to: to} = link, st ->
+        with \
+          {:ok, {from, st}} <- from |> handle_new_pad(:sink, st),
+          {:ok, {to, st}} <- to |> handle_new_pad(:source, st),
+          do: {:ok, {%{link | from: from, to: to}, st}}
+      end)
+  end
+
+  defp handle_new_pad(%{element: element, pad: {name, params}}, direction,
+    %State{children_pad_nos: pad_nos} = state) do
+    with \
+      {:ok, pid} <- state |> State.get_child(element),
+      no = pad_nos |> Map.get({element, name}, 0),
+      :ok <- pid |> Element.handle_new_pad(direction, {{name, no}, params}),
+    do: {:ok, {%{element: element, pad: name}, %State{state | children_pad_nos: pad_nos |> Map.put({element, name}, no + 1)}}}
+  end
+  defp handle_new_pad(element_pad, _direction, state), do:
+    {:ok, {element_pad, state}}
+
+  # Links children based on given specification and map for mapping children
+  # names into PIDs.
+  #
+  # On success it returns `:ok`.
+  #
+  # On error it returns `{:error, {reason, failed_link}}`.
+  #
+  # Please note that this function is not atomic and in case of error there's
+  # a chance that some of children will remain linked.
+  defp link_children(links, state)
+  when is_map links do
+    debug("Linking children: links = #{inspect(links)}")
+    links |> Helper.Enum.each_with(& do_link_children &1, state)
+  end
+
+  defp do_link_children(%{from: from, to: to, params: params} = link, state) do
+    with \
+      {:ok, from_pid} <- state |> State.get_child(from.element)
+        ~>> {{:error, :unknown_child}, {:error, {:unknown_from, link}}},
+      {:ok, to_pid} <- state |> State.get_child(to.element)
+        ~>> {{:error, :unknown_child}, {:error, {:unknown_to, link}}},
+      :ok <- Element.link(from_pid, to_pid, from.pad, to.pad, params)
     do
       :ok
     end
   end
-  defp do_link_children({{from_name, from_pad}, {to_name, to_pad}}, children_to_pids), do:
-    do_link_children({{from_name, from_pad}, {to_name, to_pad, []}}, children_to_pids)
+
+  defp set_children_message_bus(state) do
+    state.children_to_pids |> Helper.Enum.each_with(fn {_, pid} ->
+        pid |> Element.set_message_bus(self())
+      end)
+  end
 
   def handle_playback_state(_old, new, %State{children_to_pids: children_to_pids} = state) do
     with :ok <- children_to_pids |> Map.values |> Helper.Enum.each_with(

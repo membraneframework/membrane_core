@@ -132,6 +132,10 @@ defmodule Membrane.Element do
     end
   end
 
+  def handle_new_pad(server, direction, pad, timeout \\ 5000) when is_pid server do
+    server |> GenServer.call({:membrane_new_pad, direction, pad}, timeout)
+  end
+
   # Private API
 
   def handle_playback_state(old, new, %State{module: module} = state) do
@@ -179,6 +183,11 @@ defmodule Membrane.Element do
 
     debug("Terminating: reason = #{inspect(reason)}, state = #{inspect(state)}")
     module.handle_shutdown(internal_state)
+  end
+
+  def handle_call({:membrane_new_pad, direction, pad}, _from, state) do
+    debug "adding new pad #{inspect pad}"
+    {:reply, :ok, state |> State.add_pad(pad, direction)}
   end
 
   # Callback invoked on incoming set_message_bus command.
