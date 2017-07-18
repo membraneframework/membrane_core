@@ -38,7 +38,7 @@ defmodule Membrane.Element.State do
 
     %Membrane.Element.State{
       module: module,
-      pads: %{data: pads_data, names_by_pids: %{}},
+      pads: %{data: pads_data, names_by_pids: %{}, new: []},
       internal_state: internal_state,
     }
   end
@@ -56,8 +56,10 @@ defmodule Membrane.Element.State do
 
   def add_pad(state, params, direction) do
     init_pad_data(params, direction)
-      |> Enum.reduce(state, fn {name, data}, st ->
-        st |> set_pad_data(direction, name, data) end)
+      |> Enum.reduce(state, fn {name, data}, st -> st
+        |> set_pad_data(direction, name, data)
+        |> Helper.Struct.update_in([:pads, :new], & [name | &1])
+        end)
   end
 
   defp init_pad_data({name, {:always, mode, caps}}, direction) do

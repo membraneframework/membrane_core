@@ -237,7 +237,7 @@ defmodule Membrane.Pipeline do
       do: {:ok, link}
   end
 
-  defp parse_pad({name, {_availability, _mode, _caps}})
+  defp parse_pad({name, _params})
   when is_atom name or is_binary name do :ok end
   defp parse_pad(name)
   when is_atom name or is_binary name do :ok end
@@ -275,7 +275,11 @@ defmodule Membrane.Pipeline do
   # a chance that some of children will remain linked.
   defp link_children(links, state) do
     debug("Linking children: links = #{inspect(links)}")
-    links |> Helper.Enum.each_with(& do_link_children &1, state)
+    with \
+      :ok <- links |> Helper.Enum.each_with(& do_link_children &1, state),
+      :ok <- state.children_by_pids
+        |> Helper.Enum.each_with(fn {_, pid} -> pid |> Element.handle_linking_finished end),
+      do: :ok
   end
 
   defp do_link_children(%{from: from, to: to, params: params} = link, state) do

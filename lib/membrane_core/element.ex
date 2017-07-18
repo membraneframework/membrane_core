@@ -136,6 +136,10 @@ defmodule Membrane.Element do
     server |> GenServer.call({:membrane_new_pad, direction, pad}, timeout)
   end
 
+  def handle_linking_finished(server, timeout \\ 5000) when is_pid server do
+    server |> GenServer.call(:membrane_linking_finished, timeout)
+  end
+
   # Private API
 
   def handle_playback_state(old, new, %State{module: module} = state) do
@@ -187,7 +191,12 @@ defmodule Membrane.Element do
 
   def handle_call({:membrane_new_pad, direction, pad}, _from, state) do
     debug "adding new pad #{inspect pad}"
+    #TODO: execute handle_pad and pass returned params to State.add_pad
     {:reply, :ok, state |> State.add_pad(pad, direction)}
+  end
+
+  def handle_call(:membrane_linking_finished, _from, state) do
+    #TODO: execute handle_pad_added for each new pad
   end
 
   # Callback invoked on incoming set_message_bus command.
