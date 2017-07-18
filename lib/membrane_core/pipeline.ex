@@ -123,7 +123,8 @@ defmodule Membrane.Pipeline do
   def init({module, pipeline_options}) do
     with \
       [init: {:ok, {spec, internal_state}}] <- [init: module.handle_init(pipeline_options)],
-      {:ok, state} <- do_init(module, internal_state, spec)
+      state = %State{internal_state: internal_state, module: module},
+      {:ok, state} <- do_init(spec, state)
     do {:ok, state}
     else
       [init: {:error, reason}] -> warn_error """
@@ -141,7 +142,7 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  defp do_init(module, internal_state, %Spec{children: children, links: links}) do
+  defp do_init(%Spec{children: children, links: links}, state) do
     debug """
       Initializing pipeline
       children: #{inspect children}
@@ -149,16 +150,14 @@ defmodule Membrane.Pipeline do
       """
     with \
       {:ok, {children_to_pids, pids_to_children}} <- children |> start_children,
-      state = %State{
+      state = %State{state |
           children_to_pids: children_to_pids,
           pids_to_children: pids_to_children,
-          internal_state: internal_state,
-          module: module,
         },
       {:ok, links} <- links |> parse_links,
       {:ok, {links, state}} <- links |> handle_new_pads(state),
       :ok <- links |> link_children(state),
-      :ok <- children_to_pids |> set_children_message_bus
+      :ok <- set_children_message_bus(state)
     do
       debug """
         Initializied pipeline
@@ -274,8 +273,7 @@ defmodule Membrane.Pipeline do
   #
   # Please note that this function is not atomic and in case of error there's
   # a chance that some of children will remain linked.
-  defp link_children(links, state)
-  when is_map links do
+  defp link_children(links, state) do
     debug("Linking children: links = #{inspect(links)}")
     links |> Helper.Enum.each_with(& do_link_children &1, state)
   end

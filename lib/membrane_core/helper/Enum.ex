@@ -48,7 +48,7 @@ defmodule Membrane.Helper.Enum do
   defp map_with([], _f, acc), do: {:ok, acc |> Enum.reverse}
   defp map_with([h|t], f, acc) do
     with {:ok, res} <- f.(h)
-    do map_reduce_with t, f, [res|acc]
+    do map_with t, f, [res|acc]
     else {:error, reason} -> {:error, reason}
     end
   end

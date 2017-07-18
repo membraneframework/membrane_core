@@ -20,6 +20,6 @@ defmodule Membrane.Helper.Struct do
   def get_and_update_in(map, keys, f), do:
     map |> Kernel.get_and_update_in(keys |> map_keys, f)
 
-  defp map_keys(keys), do: keys |> Helper.listify |> Enum.map(&Access.key!/1)
+  defp map_keys(keys), do: keys |> Helper.listify |> Enum.map(& Access.key &1, nil)
 
 end
