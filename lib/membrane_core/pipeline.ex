@@ -247,8 +247,8 @@ defmodule Membrane.Pipeline do
   defp handle_new_pads(links, state) do
     links |> Helper.Enum.map_reduce_with(state, fn %{from: from, to: to} = link, st ->
         with \
-          {:ok, {from, st}} <- from |> handle_new_pad(:sink, st),
-          {:ok, {to, st}} <- to |> handle_new_pad(:source, st),
+          {:ok, {from, st}} <- from |> handle_new_pad(:source, st),
+          {:ok, {to, st}} <- to |> handle_new_pad(:sink, st),
           do: {:ok, {%{link | from: from, to: to}, st}}
       end)
   end

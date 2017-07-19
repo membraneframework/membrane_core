@@ -150,10 +150,10 @@ defmodule Membrane.Element.Common do
       |> or_warn_error("Unable to fill sink pull buffers")
   end
 
-  def handle_new_pad(name, direction, args, %State{module: module} = state) do
+  def handle_new_pad(name, direction, args, %State{module: module, internal_state: internal_state} = state) do
     with \
       {:ok, {{_availability, _mode, _caps} = params, internal_state}} <-
-        apply(module, :handle_new_pad, args)
+        apply(module, :handle_new_pad, args ++ [internal_state])
     do
       state = state
         |> State.add_pad({name, params}, direction)
