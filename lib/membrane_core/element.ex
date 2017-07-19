@@ -189,14 +189,17 @@ defmodule Membrane.Element do
     module.handle_shutdown(internal_state)
   end
 
-  def handle_call({:membrane_new_pad, direction, pad}, _from, state) do
-    debug "adding new pad #{inspect pad}"
-    #TODO: execute handle_pad and pass returned params to State.add_pad
-    {:reply, :ok, state |> State.add_pad(pad, direction)}
+  def handle_call({:membrane_new_pad, direction, {name, params}}, _from, %State{module: module} = state) do
+    debug "adding new pad #{inspect name}"
+    module.base_module.handle_new_pad(name, direction, params, state) |> to_reply(state)
   end
 
-  def handle_call(:membrane_linking_finished, _from, state) do
-    #TODO: execute handle_pad_added for each new pad
+  def handle_call(:membrane_linking_finished, _from, %State{pads: pads, module: module} = state) do
+    with {:ok, state} <- pads.new |> Helper.Enum.reduce_with(state, fn {name, direction}, st ->
+      module.base_module.handle_pad_added name, direction, st end)
+    do {:reply, :ok, state}
+    else {:error, {reason, state}} -> {:reply, {:error, reason}, state}
+    end
   end
 
   # Callback invoked on incoming set_message_bus command.
@@ -273,5 +276,8 @@ defmodule Membrane.Element do
 
   defp to_noreply_or({:ok, new_state}, _), do: {:noreply, new_state}
   defp to_noreply_or(_, state), do: {:noreply, state}
+
+  defp to_reply({:ok, new_state}, _), do: {:reply, :ok, new_state}
+  defp to_reply({:error, reason}, state), do: {:reply, {:error, reason}, state}
 
 end

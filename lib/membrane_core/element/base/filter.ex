@@ -427,6 +427,12 @@ defmodule Membrane.Element.Base.Filter do
   defdelegate handle_event(mode, dir, pad_name, event, state), to: Common
   defdelegate handle_link(pad_name, direction, pid, props, state), to: Common
 
+  def handle_new_pad(name, direction, params, state), do:
+    Common.handle_new_pad(name, direction, [name, direction, params], state)
+
+  def handle_pad_added(name, direction, state), do:
+    Common.handle_pad_added([name, direction], state)
+
   defp check_and_handle_demands(pad_name, buffers, state) do
     state
       |> State.get_pads_data(:source)
@@ -456,6 +462,12 @@ defmodule Membrane.Element.Base.Filter do
 
 
       # Default implementations
+
+      @doc false
+      def handle_new_pad(_pad, _direction, _params, state), do: {:error, :adding_pad_unsupported}
+
+      @doc false
+      def handle_pad_added(_pad, _direction, state), do: {:ok, {[], state}}
 
       @doc false
       def handle_caps(_pad, _caps, _params, state), do: {:ok, {[], state}}
@@ -490,6 +502,8 @@ defmodule Membrane.Element.Base.Filter do
 
 
       defoverridable [
+        handle_new_pad: 4,
+        handle_pad_added: 3,
         handle_caps: 4,
         handle_demand: 4,
         handle_event: 4,

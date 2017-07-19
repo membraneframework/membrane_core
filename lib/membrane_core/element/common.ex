@@ -150,4 +150,26 @@ defmodule Membrane.Element.Common do
       |> or_warn_error("Unable to fill sink pull buffers")
   end
 
+  def handle_new_pad(name, direction, args, %State{module: module} = state) do
+    with \
+      {:ok, {{_availability, _mode, _caps} = params, internal_state}} <-
+        apply(module, :handle_new_pad, args)
+    do
+      state = state
+        |> State.add_pad({name, params}, direction)
+        |> Map.put(:internal_state, internal_state)
+      {:ok, state}
+    else
+      {:error, reason} -> warn_error "handle_new_pad callback returned an error", reason
+      res -> warn_error """
+        handle_new_pad return values are expected to be
+        {:ok, {{availability, mode, caps}, state}} or {:error, reason}
+        but got #{inspect res} instead
+        """, :invalid_handle_new_pad_return
+    end
+  end
+
+  def handle_pad_added(args, %State{module: module} = state), do:
+    module.base_module.exec_and_handle_callback(:handle_pad_added, args, state)
+
 end

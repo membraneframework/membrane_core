@@ -241,6 +241,12 @@ defmodule Membrane.Element.Base.Source do
   def handle_link(pad_name, :source, pid, props, state), do:
     Common.handle_link(pad_name, :source, pid, props, state)
 
+  def handle_new_pad(name, :source, params, state), do:
+    Common.handle_new_pad(name, :source, [name, params], state)
+
+  def handle_pad_added(name, :sink, state), do:
+    Common.handle_pad_added([name], state)
+
   defmacro __using__(_) do
     quote location: :keep do
       use Membrane.Element.Base.Mixin.CommonBehaviour
@@ -255,6 +261,12 @@ defmodule Membrane.Element.Base.Source do
 
 
       # Default implementations
+
+      @doc false
+      def handle_new_pad(_pad, _params, state), do: {:error, :adding_pad_unsupported}
+
+      @doc false
+      def handle_pad_added(_pad, state), do: {:ok, {[], state}}
 
       @doc false
       def handle_demand1(_pad, _params, state), do: {:ok, {[], state}}
@@ -283,6 +295,8 @@ defmodule Membrane.Element.Base.Source do
 
 
       defoverridable [
+        handle_new_pad: 3,
+        handle_pad_added: 2,
         handle_demand1: 3,
         handle_demand: 4,
         handle_event: 4,

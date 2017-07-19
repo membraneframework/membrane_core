@@ -354,6 +354,12 @@ defmodule Membrane.Element.Base.Sink do
   def handle_link(pad_name, :sink, pid, props, state), do:
     Common.handle_link(pad_name, :sink, pid, props, state)
 
+  def handle_new_pad(name, :sink, params, state), do:
+    Common.handle_new_pad(name, :sink, [name, params], state)
+
+  def handle_pad_added(name, :sink, state), do:
+    Common.handle_pad_added([name], state)
+
   defp check_and_handle_write(pad_name, state) do
     if State.get_pad_data!(state, :sink, pad_name, :self_demand) > 0 do
       handle_write :pull, pad_name, state
@@ -376,6 +382,12 @@ defmodule Membrane.Element.Base.Sink do
 
 
       # Default implementations
+
+      @doc false
+      def handle_new_pad(_pad, _params, state), do: {:error, :adding_pad_unsupported}
+
+      @doc false
+      def handle_pad_added(_pad, state), do: {:ok, {[], state}}
 
       @doc false
       def handle_caps(_pad, _caps, _params, state), do: {:ok, {[], state}}
@@ -407,6 +419,8 @@ defmodule Membrane.Element.Base.Sink do
 
 
       defoverridable [
+        handle_new_pad: 3,
+        handle_pad_added: 2,
         handle_caps: 4,
         handle_event: 4,
         handle_other: 2,
