@@ -277,7 +277,7 @@ defmodule Membrane.Pipeline do
     debug("Linking children: links = #{inspect(links)}")
     with \
       :ok <- links |> Helper.Enum.each_with(& do_link_children &1, state),
-      :ok <- state.children_by_pids
+      :ok <- state.children_to_pids
         |> Helper.Enum.each_with(fn {_, pid} -> pid |> Element.handle_linking_finished end),
       do: :ok
   end
