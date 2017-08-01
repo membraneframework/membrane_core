@@ -247,10 +247,6 @@ defmodule Membrane.Element.Base.Sink do
 
   # Private API
 
-  @doc false
-  @spec handle_action(callback_action_t, atom, State.t) ::
-    {:ok, State.t} |
-    {:error, {any, State.t}}
 
   def handle_action({:demand, pad_name}, cb, params, state)
   when is_atom pad_name do

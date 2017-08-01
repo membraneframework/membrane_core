@@ -280,11 +280,6 @@ defmodule Membrane.Element.Base.Filter do
 
   # Private API
 
-  @doc false
-  @spec handle_action(callback_action_t, atom, State.t) ::
-    {:ok, State.t} |
-    {:error, {any, State.t}}
-
   def handle_action({:buffer, {pad_name, buffers}}, _cb, _params, state), do:
     Action.send_buffer pad_name, buffers, state
 

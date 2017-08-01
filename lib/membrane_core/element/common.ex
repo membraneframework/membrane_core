@@ -9,10 +9,10 @@ defmodule Membrane.Element.Common do
     quote do
       use Membrane.Mixins.CallbackHandler
 
-      def handle_action({:event, {pad_name, event}}, _cb, state), do:
+      def handle_action({:event, {pad_name, event}}, _cb, _params, state), do:
         Membrane.Element.Action.send_event(pad_name, event, state)
 
-      def handle_action({:message, message}, _cb, state), do:
+      def handle_action({:message, message}, _cb, _params, state), do:
         Membrane.Element.Action.send_message(message, state)
 
       def handle_actions(actions, callback, handler_params, state), do:

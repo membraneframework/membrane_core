@@ -217,9 +217,6 @@ defmodule Membrane.Element.Base.Source do
   end
 
   @doc false
-  @spec handle_action(callback_action_t, atom, State.t) ::
-    {:ok, State.t} |
-    {:error, {any, State.t}}
 
   def handle_action({:buffer, {pad_name, buffer}}, _cb, _params, state), do:
     Action.send_buffer(pad_name, buffer, state)
