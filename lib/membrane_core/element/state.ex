@@ -55,11 +55,14 @@ defmodule Membrane.Element.State do
   end
 
   def add_pad(state, params, direction) do
-    init_pad_data(params, direction)
+    state = init_pad_data(params, direction)
       |> Enum.reduce(state, fn {name, data}, st -> st
         |> set_pad_data(direction, name, data)
-        |> Helper.Struct.update_in([:pads, :new], & [{name, direction} | &1])
+        ~> ({:ok, st} ->
+            Helper.Struct.update_in(st, [:pads, :new], & [{name, direction} | &1])
+          )
         end)
+    state
   end
 
   defp init_pad_data({name, {:always, mode, caps}}, direction) do
@@ -102,15 +105,15 @@ defmodule Membrane.Element.State do
       ~> ({:ok, pad_data} -> pad_data)
 
   def set_pad_data(state, pad_direction, pad_name, keys \\ [], v) do
-    with \
-      {:ok, pad_data} <- get_pad_data(state, pad_direction, pad_name)
-    do
-      pad_data = pad_data |> Helper.Map.put_in(keys, v)
-      {:ok, state |> do_update_pad_data(pad_name, pad_data)}
-    else
-      {{:error, reason}, _pd} -> {:error, reason}
-      {:error, reason} -> {:error, reason}
-    end
+    pad_data = state
+      |> get_pad_data(pad_direction, pad_name)
+      ~> (
+          {:ok, pad_data} -> pad_data
+          {:error, :unknown_pad} -> %{}
+        )
+      |> Helper.Map.put_in(keys, v)
+
+    {:ok, state |> do_update_pad_data(pad_name, pad_data)}
   end
 
   def update_pad_data(state, pad_direction, pad_name, keys \\ [], f) do

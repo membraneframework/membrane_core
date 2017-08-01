@@ -259,7 +259,7 @@ defmodule Membrane.Pipeline do
       {:ok, pid} <- state |> State.get_child(element),
       no = pad_nos |> Map.get({element, name}, 0),
       :ok <- pid |> Element.handle_new_pad(direction, {{name, no}, params}),
-    do: {:ok, {%{element: element, pad: name}, %State{state | children_pad_nos: pad_nos |> Map.put({element, name}, no + 1)}}}
+    do: {:ok, {%{element: element, pad: {name, no}}, %State{state | children_pad_nos: pad_nos |> Map.put({element, name}, no + 1)}}}
   end
   defp handle_new_pad(element_pad, _direction, state), do:
     {:ok, {element_pad, state}}
