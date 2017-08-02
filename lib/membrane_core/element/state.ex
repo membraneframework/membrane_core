@@ -163,8 +163,8 @@ defmodule Membrane.Element.State do
     with \
       {:ok, state} <- store
         |> Enum.reverse
-        |> Helper.Enum.reduce_with(state, fn {fun, args} -> apply module, fun, args end),
-    do: %State{state | playback_store: []}
+        |> Helper.Enum.reduce_with(state, fn {fun, args}, state -> apply module.base_module, fun, args ++ [state] end),
+    do: {:ok, %State{state | playback_store: []}}
   end
 
 end

@@ -224,7 +224,7 @@ defmodule Membrane.Element do
 
     case state.playback_state do
       :playing -> module.base_module.handle_demand(pad_name, size, state) |> to_noreply_or(state)
-      _ -> {:noreply, state |> State.playback_store_push(:handle_demand, [pad_name, size, state])}
+      _ -> {:noreply, state |> State.playback_store_push(:handle_demand, [pad_name, size])}
     end
   end
 
@@ -238,7 +238,7 @@ defmodule Membrane.Element do
       """
     case state.playback_state do
       :playing -> module.base_module.handle_buffer(mode, pad_name, buffers, state) |> to_noreply_or(state)
-      _ -> {:noreply, state |> State.playback_store_push(:handle_buffer, [mode, pad_name, buffers, state])}
+      _ -> {:noreply, state |> State.playback_store_push(:handle_buffer, [mode, pad_name, buffers])}
     end
   end
 
