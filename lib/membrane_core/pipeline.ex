@@ -120,11 +120,14 @@ defmodule Membrane.Pipeline do
   # Private API
 
   @doc false
+  def init(module) when is_atom module do init {module, nil} end
+
+  @doc false
   def init({module, pipeline_options}) do
     with \
       [init: {:ok, {spec, internal_state}}] <- [init: module.handle_init(pipeline_options)],
       state = %State{internal_state: internal_state, module: module},
-      {:ok, state} <- do_init(spec, state)
+      {:ok, state} <- handle_spec(spec, state)
     do {:ok, state}
     else
       [init: {:error, reason}] -> warn_error """
@@ -142,32 +145,32 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  defp do_init(%Spec{children: children, links: links}, state) do
+  defp handle_spec(%Spec{children: children, links: links}, state) do
     debug """
-      Initializing pipeline
+      Initializing pipeline spec
       children: #{inspect children}
       links: #{inspect links}
       """
     with \
       {:ok, {children_to_pids, pids_to_children}} <- children |> start_children,
       state = %State{state |
-          children_to_pids: children_to_pids,
-          pids_to_children: pids_to_children,
+          pids_to_children: Map.merge(state.pids_to_children, pids_to_children),
+          children_to_pids: Map.merge(state.children_to_pids, children_to_pids, fn _k, v1, v2 -> v2 ++ v1 end),
         },
       {:ok, links} <- links |> parse_links,
       {:ok, {links, state}} <- links |> handle_new_pads(state),
       :ok <- links |> link_children(state),
-      :ok <- set_children_message_bus(state)
+      :ok <- children_to_pids |> Map.values |> List.flatten |> set_children_message_bus
     do
       debug """
-        Initializied pipeline
+        Initializied pipeline spec
         children: #{inspect children}
         children pids: #{inspect children_to_pids}
         links: #{inspect links}
         """
       {:ok, state}
     else
-      {:error, reason} -> warn_error "Failed to initialize pipeline", reason
+      {:error, reason} -> warn_error "Failed to initialize pipeline spec", reason
     end
   end
 
@@ -198,7 +201,7 @@ defmodule Membrane.Pipeline do
     case Membrane.Element.start_link(module, options) do
       {:ok, pid} ->
         start_children_recurse(tail, {
-          names_to_pids |> Map.put(name, pid),
+          names_to_pids |> Map.put(name, [pid]),
           pids_to_names |> Map.put(pid, name),
         })
 
@@ -213,7 +216,7 @@ defmodule Membrane.Pipeline do
     case Membrane.Element.start_link(module) do
       {:ok, pid} ->
         start_children_recurse(tail, {
-          names_to_pids |> Map.put(name, pid),
+          names_to_pids |> Map.put(name, [pid]),
           pids_to_names |> Map.put(pid, name),
         })
 
@@ -294,14 +297,14 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  defp set_children_message_bus(state) do
-    state.children_to_pids |> Helper.Enum.each_with(fn {_, pid} ->
+  defp set_children_message_bus(elements_pids) do
+    elements_pids |> Helper.Enum.each_with(fn pid ->
         pid |> Element.set_message_bus(self())
       end)
   end
 
-  def handle_playback_state(_old, new, %State{children_to_pids: children_to_pids} = state) do
-    with :ok <- children_to_pids |> Map.values |> Helper.Enum.each_with(
+  def handle_playback_state(_old, new, %State{pids_to_children: pids_to_children} = state) do
+    with :ok <- pids_to_children |> Map.keys |> Helper.Enum.each_with(
       fn pid -> Element.change_playback_state(pid, new) end)
     do
       debug "Pipeline: changed playback state of children to #{inspect new}"
@@ -334,9 +337,13 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  def handle_action({:spec, spec = %Spec{}}, _cb, _params, state), do:
+    handle_spec(spec, state)
+
   def handle_action(action, callback, params, state) do
     available_actions = [
         "{:forward, {element_name, message}}",
+        "{:spec, spec}",
       ]
     handle_invalid_action(action, callback, params, available_actions, __MODULE__, state)
   end

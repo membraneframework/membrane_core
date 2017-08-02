@@ -11,7 +11,7 @@ defmodule Membrane.Pipeline.State do
     internal_state: any,
     playback_state: Membrane.Mixins.Playback.state_t,
     module: module,
-    children_to_pids: %{required(Membrane.Element.name_t) => pid},
+    children_to_pids: %{required([Membrane.Element.name_t]) => pid},
     pids_to_children: %{required(pid) => Membrane.Element.name_t},
   }
 
@@ -34,6 +34,6 @@ defmodule Membrane.Pipeline.State do
     def get_child(%State{children_to_pids: children_to_pids}, child) do
       children_to_pids
         |> Map.get(child)
-        ~> (nil -> {:error, :unknown_child}; v -> {:ok, v})
+        ~> (nil -> {:error, :unknown_child}; [h|_t] -> {:ok, h})
     end
 end
