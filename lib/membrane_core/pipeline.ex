@@ -332,7 +332,7 @@ defmodule Membrane.Pipeline do
     with \
       {:ok, state} <- handle_spec(spec, state),
     do: spec.children
-        |> Enum.map(& state.children_to_pids[&1] |> List.first)
+        |> Enum.map(fn {name, _} -> state.children_to_pids[name] |> List.first end)
         |> Helper.Enum.each_with(fn pid -> Element.change_playback_state(pid, :playing) end)
   end
 
