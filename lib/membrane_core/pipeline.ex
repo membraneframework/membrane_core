@@ -155,7 +155,8 @@ defmodule Membrane.Pipeline do
       {:ok, {children_to_pids, pids_to_children}} <- children |> start_children,
       state = %State{state |
           pids_to_children: Map.merge(state.pids_to_children, pids_to_children),
-          children_to_pids: Map.merge(state.children_to_pids, children_to_pids, fn _k, v1, v2 -> v2 ++ v1 end),
+          children_to_pids: Map.merge(
+            state.children_to_pids, children_to_pids, fn _k, v1, v2 -> v2 ++ v1 end),
         },
       {:ok, links} <- links |> parse_links,
       {:ok, {links, state}} <- links |> handle_new_pads(state),
@@ -198,6 +199,7 @@ defmodule Membrane.Pipeline do
   # Recursion that starts children processes, case when both module and options
   # are provided.
   defp start_children_recurse([{name, {module, options}}|tail], {names_to_pids, pids_to_names}) do
+    debug("Starting child: name = #{inspect(name)}, module = #{inspect(module)}")
     case Membrane.Element.start_link(module, options) do
       {:ok, pid} ->
         start_children_recurse(tail, {
@@ -211,19 +213,8 @@ defmodule Membrane.Pipeline do
   end
 
   # Recursion that starts children processes, case when only module is provided
-  defp start_children_recurse([{name, module}|tail], {names_to_pids, pids_to_names}) do
-    debug("Starting child: name = #{inspect(name)}, module = #{inspect(module)}")
-    case Membrane.Element.start_link(module) do
-      {:ok, pid} ->
-        start_children_recurse(tail, {
-          names_to_pids |> Map.put(name, [pid]),
-          pids_to_names |> Map.put(pid, name),
-        })
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
+  defp start_children_recurse([{name, module}|tail], acc), do:
+    start_children_recurse([{name, {module, nil}}|tail], acc)
 
   defp parse_links(links), do: links |> Helper.Enum.map_with(&parse_link/1)
 
@@ -280,8 +271,8 @@ defmodule Membrane.Pipeline do
     debug("Linking children: links = #{inspect(links)}")
     with \
       :ok <- links |> Helper.Enum.each_with(& do_link_children &1, state),
-      :ok <- state.children_to_pids
-        |> Helper.Enum.each_with(fn {_, pid} -> pid |> Element.handle_linking_finished end),
+      :ok <- state.pids_to_children
+        |> Helper.Enum.each_with(fn {pid, _} -> pid |> Element.handle_linking_finished end),
       do: :ok
   end
 
