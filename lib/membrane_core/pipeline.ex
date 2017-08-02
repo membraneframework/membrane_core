@@ -328,8 +328,13 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  def handle_action({:spec, spec = %Spec{}}, _cb, _params, state), do:
-    handle_spec(spec, state)
+  def handle_action({:spec, spec = %Spec{}}, _cb, _params, state) do
+    with \
+      {:ok, state} <- handle_spec(spec, state),
+    do: spec.children
+        |> Enum.map(& state.children_to_pids[&1] |> List.first)
+        |> Helper.Enum.each_with(fn pid -> Element.change_playback_state(pid, :playing) end)
+  end
 
   def handle_action(action, callback, params, state) do
     available_actions = [
