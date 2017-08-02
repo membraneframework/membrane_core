@@ -25,9 +25,10 @@ defmodule Membrane.Element.Common do
       end
 
       def handle_playback_state(:prepared, :playing, state) do
-        with {:ok, state} <- state |> Membrane.Element.Common.fill_sink_pull_buffers
-        do exec_and_handle_callback :handle_play, [], state
-        end
+        with \
+          {:ok, state} <- state |> Membrane.Element.Common.fill_sink_pull_buffers,
+          {:ok, state} <- exec_and_handle_callback(:handle_play, [], state),
+          do: state |> State.playback_store_eval
       end
 
       def handle_playback_state(:prepared, :stopped, state), do:

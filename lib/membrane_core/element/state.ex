@@ -7,8 +7,9 @@ defmodule Membrane.Element.State do
   use Membrane.Mixins.Log
   alias Membrane.Element
   use Membrane.Helper
+  alias __MODULE__
 
-  @type t :: %Membrane.Element.State{
+  @type t :: %State{
     internal_state: any,
     module: module,
     playback_state: Membrane.Mixins.Playback.state_t,
@@ -21,7 +22,8 @@ defmodule Membrane.Element.State do
     module: nil,
     playback_state: :stopped,
     pads: %{},
-    message_bus: nil
+    message_bus: nil,
+    playback_store: []
 
 
   @doc """
@@ -36,7 +38,7 @@ defmodule Membrane.Element.State do
         handle_known_pads(:known_source_pads, :source, module)
       )
 
-    %Membrane.Element.State{
+    %State{
       module: module,
       pads: %{data: pads_data, names_by_pids: %{}, new: []},
       internal_state: internal_state,
@@ -152,4 +154,17 @@ defmodule Membrane.Element.State do
       |> Helper.Struct.put_in([:pads, :names_by_pids, pad_data.pid], pad_name)
       |> Helper.Struct.put_in([:pads, :data, pad_name], pad_data)
   end
+
+  def playback_store_push(%State{playback_store: store} = state, fun, args) do
+    %State{state | playback_store: [{fun, args} | store]}
+  end
+
+  def playback_store_eval(%State{playback_store: store, module: module} = state) do
+    with \
+      {:ok, state} <- store
+        |> Enum.reverse
+        |> Helper.Enum.reduce_with(state, fn {fun, args} -> apply module, fun, args end),
+    do: %State{state | playback_store: []}
+  end
+
 end

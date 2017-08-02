@@ -221,7 +221,11 @@ defmodule Membrane.Element do
     {:ok, %{name: pad_name}} = state |> State.get_pad_data(:source, from)
     demand = if size == 0 do "dumb demand" else "demand of size #{inspect size}" end
     debug "Received #{demand} on pad #{inspect pad_name}"
-    module.base_module.handle_demand(pad_name, size, state) |> to_noreply_or(state)
+
+    case state.playback_state do
+      :playing -> module.base_module.handle_demand(pad_name, size, state) |> to_noreply_or(state)
+      _ -> {:noreply, state |> State.playback_store_push(:handle_demand, [pad_name, size, state])}
+    end
   end
 
   # Callback invoked on buffer coming from the sink pad to the sink
@@ -232,7 +236,10 @@ defmodule Membrane.Element do
       Received buffers on pad #{inspect pad_name}
       Buffers: #{inspect buffers}
       """
-    module.base_module.handle_buffer(mode, pad_name, buffers, state) |> to_noreply_or(state)
+    case state.playback_state do
+      :playing -> module.base_module.handle_buffer(mode, pad_name, buffers, state) |> to_noreply_or(state)
+      _ -> {:noreply, state |> State.playback_store_push(:handle_buffer, [mode, pad_name, buffers, state])}
+    end
   end
 
   # Callback invoked on incoming caps
