@@ -323,7 +323,9 @@ defmodule Membrane.Pipeline do
 
   def handle_action({:forward, {element_name, message}}, _cb, _params, state) do
     with {:ok, pid} <- state |> State.get_child(element_name)
-    do send pid, message
+    do
+      send pid, message
+      {:ok, state}
     else {:error, :unknown_child} -> handle_unknown_child :forward, element_name
     end
   end
@@ -331,9 +333,10 @@ defmodule Membrane.Pipeline do
   def handle_action({:spec, spec = %Spec{}}, _cb, _params, state) do
     with \
       {:ok, state} <- handle_spec(spec, state),
-    do: spec.children
+      :ok <- spec.children
         |> Enum.map(fn {name, _} -> state.children_to_pids[name] |> List.first end)
-        |> Helper.Enum.each_with(fn pid -> Element.change_playback_state(pid, :playing) end)
+        |> Helper.Enum.each_with(fn pid -> Element.change_playback_state(pid, :playing) end),
+    do: {:ok, state}
   end
 
   def handle_action(action, callback, params, state) do
