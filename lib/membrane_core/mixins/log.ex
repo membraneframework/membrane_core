@@ -4,9 +4,11 @@ defmodule Membrane.Mixins.Log do
   modules.
   """
 
+  use Membrane.Helper
+
   @doc false
   defmacro __using__(args) do
-    default_tags = args |> Keyword.get(:tags, [])
+    default_tags = args |> Keyword.get(:tags, []) |> Helper.listify
     quote location: :keep do
       alias Membrane.Log.Router
 

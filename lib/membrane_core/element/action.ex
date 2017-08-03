@@ -2,7 +2,7 @@ defmodule Membrane.Element.Action do
   @moduledoc false
   # Module containing action handlers common for elements of all types.
 
-  use Membrane.Mixins.Log
+  use Membrane.Mixins.Log, tags: :core
   alias Membrane.Pad
   alias Membrane.Caps
   alias Membrane.Element.State

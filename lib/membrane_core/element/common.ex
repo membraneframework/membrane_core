@@ -1,6 +1,6 @@
 defmodule Membrane.Element.Common do
 
-  use Membrane.Mixins.Log
+  use Membrane.Mixins.Log, tags: :core
   alias Membrane.Element.State
   use Membrane.Helper
   alias Membrane.PullBuffer

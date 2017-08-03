@@ -132,7 +132,7 @@ defmodule Membrane.Element.Base.Filter do
   * `Membrane.Element.Base.Mixin.CommonBehaviour` - for more callbacks.
   """
 
-  use Membrane.Mixins.Log
+  use Membrane.Mixins.Log, tags: :core
   use Membrane.Element.Common
   alias Membrane.Element.{Action, State, Common}
   alias Membrane.PullBuffer

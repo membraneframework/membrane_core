@@ -126,7 +126,7 @@ defmodule Membrane.Element.Base.Sink do
   * `Membrane.Element.Base.Mixin.CommonBehaviour` - for more callbacks.
   """
 
-  use Membrane.Mixins.Log
+  use Membrane.Mixins.Log, tags: :core
   use Membrane.Element.Common
   alias Membrane.Element.{State, Action, Common}
   alias Membrane.PullBuffer

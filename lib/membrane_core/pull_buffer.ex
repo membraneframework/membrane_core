@@ -1,7 +1,7 @@
 defmodule Membrane.PullBuffer do
   alias Membrane.PullBuffer
   use Membrane.Helper
-  use Membrane.Mixins.Log
+  use Membrane.Mixins.Log, tags: :core
 
   defstruct \
     sink: nil,

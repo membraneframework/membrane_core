@@ -5,7 +5,7 @@ defmodule Membrane.Pipeline do
 
   use Membrane.Mixins.CallbackHandler
   use Membrane.Mixins.Playback
-  use Membrane.Mixins.Log
+  use Membrane.Mixins.Log, tags: :core
   use GenServer
   alias Membrane.Pipeline.{State,Spec}
   alias Membrane.Element

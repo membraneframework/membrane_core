@@ -73,7 +73,7 @@ defmodule Membrane.Element.Base.Source do
 
   alias Membrane.Element.{Action, Common, State}
   use Membrane.Element.Common
-  use Membrane.Mixins.Log
+  use Membrane.Mixins.Log, tags: :core
 
 
   # Type that defines a single action that may be returned from handle_*

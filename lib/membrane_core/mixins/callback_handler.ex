@@ -1,5 +1,5 @@
 defmodule Membrane.Mixins.CallbackHandler do
-  use Membrane.Mixins.Log
+  use Membrane.Mixins.Log, tags: :core
 
   @callback handle_action(any, atom, any, any) :: {:ok, any} | {:error, any}
   @callback handle_invalid_action(any, atom, any, [String.t], atom, any) :: {:ok, any} | {:error, any}

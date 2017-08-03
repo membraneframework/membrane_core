@@ -4,7 +4,7 @@ defmodule Membrane.Element do
   playback of elements.
   """
 
-  use Membrane.Mixins.Log
+  use Membrane.Mixins.Log, tags: :core
   use Membrane.Mixins.Playback
   use Membrane.Mixins.CallbackHandler
   alias Membrane.Element.State

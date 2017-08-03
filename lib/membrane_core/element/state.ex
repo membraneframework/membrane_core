@@ -4,7 +4,7 @@ defmodule Membrane.Element.State do
   # It does not represent state of elements you construct, it's a state used
   # internally in Membrane.
 
-  use Membrane.Mixins.Log
+  use Membrane.Mixins.Log, tags: :core
   alias Membrane.Element
   use Membrane.Helper
   alias __MODULE__
