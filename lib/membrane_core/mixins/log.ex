@@ -6,20 +6,32 @@ defmodule Membrane.Mixins.Log do
 
   defmacro __using__(_) do
     quote location: :keep do
-      require Logger
+      alias Membrane.Log.Router
 
-      @doc false
-      defmacro info(message) do
+      defmacro log(level, message, tags) do
+        config = Application.get_env(:membrane_core, Membrane.Logger, [])
+        router_level = config |> Keyword.get(:level, :debug)
+        router_level_val = router_level |> Router.level_to_val
+
         quote location: :keep do
-          Logger.info("[#{System.monotonic_time()} #{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{unquote(message)}")
+          level_val = unquote(level) |> Router.level_to_val
+          if level_val >= unquote(router_level_val) do
+            Router.send_log(unquote(level),  unquote(message), Membrane.Time.native_monotonic_time, unquote(tags))
+          end
         end
       end
 
 
-      @doc false
-      defmacro warn(message) do
+      defmacro info(message, tags \\ []) do
         quote location: :keep do
-          Logger.warn("[#{System.monotonic_time()} #{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{unquote(message)}")
+          log(:info, unquote(message), unquote(tags))
+        end
+      end
+
+
+      defmacro warn(message, tags \\ []) do
+        quote location: :keep do
+          log(:warn, unquote(message), unquote(tags))
         end
       end
 
@@ -38,10 +50,9 @@ defmodule Membrane.Mixins.Log do
       def or_warn_error({:error, reason}, msg), do: warn_error(msg, reason)
 
 
-      @doc false
-      defmacro debug(message) do
+      defmacro debug(message, tags \\ []) do
         quote location: :keep do
-          Logger.debug("[#{System.monotonic_time()} #{List.last(String.split(to_string(__MODULE__), ".", parts: 2))} #{inspect(self())}] #{unquote(message)}")
+          log(:debug, unquote(message), unquote(tags))
         end
       end
     end
