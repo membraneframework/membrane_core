@@ -37,6 +37,13 @@ defmodule Membrane.Element.Common do
       def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing], do:
         exec_and_handle_callback :handle_prepare, [ps], state
 
+      def handle_unlink(pad_name, state) do
+        with \
+          {:ok, state} <- exec_and_handle_callback(:handle_pad_removed, [pad_name], state),
+          {:ok, state} <- state |> State.remove_pad_data(:any, pad_name),
+        do: {:ok, state}
+      end
+
     end
   end
 

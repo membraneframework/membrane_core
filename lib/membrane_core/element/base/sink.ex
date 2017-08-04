@@ -386,6 +386,9 @@ defmodule Membrane.Element.Base.Sink do
       def handle_pad_added(_pad, state), do: {:ok, {[], state}}
 
       @doc false
+      def handle_pad_removed(_pad, state), do: {:ok, {[], state}}
+
+      @doc false
       def handle_caps(_pad, _caps, _params, state), do: {:ok, {[], state}}
 
       @doc false

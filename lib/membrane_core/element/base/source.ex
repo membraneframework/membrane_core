@@ -264,6 +264,9 @@ defmodule Membrane.Element.Base.Source do
 
       @doc false
       def handle_pad_added(_pad, state), do: {:ok, {[], state}}
+      
+      @doc false
+      def handle_pad_removed(_pad, state), do: {:ok, {[], state}}
 
       @doc false
       def handle_demand1(_pad, _params, state), do: {:ok, {[], state}}

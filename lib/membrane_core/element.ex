@@ -136,10 +136,6 @@ defmodule Membrane.Element do
     server |> GenServer.call(:membrane_unlink, timeout)
   end
 
-  def handle_unlink(server, pid, timeout \\ 5000) do
-    server |> GenServer.call({:membrane_handle_unlink, pid}, timeout)
-  end
-
   def handle_new_pad(server, direction, pad, timeout \\ 5000) when is_pid server do
     server |> GenServer.call({:membrane_new_pad, direction, pad}, timeout)
   end
@@ -226,21 +222,22 @@ defmodule Membrane.Element do
   def handle_call(:membrane_unlink, _from, %State{playback_state: :stopped} = state) do
     with :ok <- state
       |> State.get_pads_data
-      |> Helper.Enum.each_with(fn {_name, %{pid: pid}} -> handle_unlink pid, self() end),
+      |> Helper.Enum.each_with(fn {_name, %{pid: pid}} -> GenServer.call :membrane_handle_unlink, pid end),
     do: {:reply, :ok, state},
     else: ({:error, reason} -> {:reply, {:error, reason}, state})
   end
 
   def handle_call(:membrane_unlink, _from, state) do
-    warn_error "Unlinking element that is not stopped", :unlink_error
+    warn_error "Tried to unlink element that is not stopped", :unlink_error
     {:reply, {:error, :unlink_error}, state}
   end
 
-  def handle_call({:membrane_handle_unlink, pids}, _from, state) do
-    pids
-      |> Helper.listify
-      |> Helper.Enum.reduce_with(state, fn pid, st -> st |> State.remove_pad_data(:any, pid) end)
-      ~> ({:ok, state} -> {:reply, :ok, state})
+  def handle_call(:membrane_handle_unlink, from, %State{module: module} = state) do
+    {:ok, %{name: pad_name}} = state |> State.get_pad_data(:any, from)
+    with {:ok, state} <- module.base_module.handle_unlink(pad_name, state)
+    do {:reply, :ok, state}
+    else {:error, reason} -> {:reply, {:error, reason}, state}
+    end
   end
 
   # Callback invoked on demand request coming from the source pad in the pull mode
