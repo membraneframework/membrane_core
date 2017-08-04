@@ -103,7 +103,9 @@ defmodule Membrane.PullBuffer do
 
   defp do_take_pop(%PullBuffer{q: q, current_size: size} = pb) do
     q |> @qe.pop |> case do
-      {{:value, v}, nq} -> {{:value, v}, %PullBuffer{pb | q: nq, current_size: size - 1}}
+      {{:value, {:buffer, b}}, nq} ->
+        {{:value, {:buffer, b}}, %PullBuffer{pb | q: nq, current_size: size - 1}}
+      {{:value, v}, nq} -> {{:value, v}, %PullBuffer{pb | q: nq}}
       {:empty, nq} -> {:empty, %PullBuffer{pb | q: nq}}
     end
   end
