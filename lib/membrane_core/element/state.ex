@@ -159,8 +159,9 @@ defmodule Membrane.Element.State do
     with {:ok, %{name: name, pid: pid} = pad_data} <- get_pad_data(state, pad_direction, pad),
     do: state
       |> Helper.Struct.pop_in([:pads, :names_by_pids, pid])
+      ~> ({_, state} -> state)
       |> Helper.Struct.pop_in([:pads, :data, name])
-      ~> (state -> {:ok, {pad_data, state}})
+      ~> ({_, state} -> {:ok, {pad_data, state}})
   end
 
   def remove_pad_data(state, pad_direction, pad) do

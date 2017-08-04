@@ -226,8 +226,9 @@ defmodule Membrane.Element do
   def handle_call(:membrane_unlink, _from, %State{playback_state: :stopped} = state) do
     with :ok <- state
       |> State.get_pads_data
-      |> Helper.Enum.each_with(fn %{pid: pid} -> handle_unlink pid, self() end),
-    do: {:reply, :ok, state}
+      |> Helper.Enum.each_with(fn {_name, %{pid: pid}} -> handle_unlink pid, self() end),
+    do: {:reply, :ok, state},
+    else: ({:error, reason} -> {:reply, {:error, reason}, state})
   end
 
   def handle_call(:membrane_unlink, _from, state) do
@@ -239,6 +240,7 @@ defmodule Membrane.Element do
     pids
       |> Helper.listify
       |> Helper.Enum.reduce_with(state, fn pid, st -> st |> State.remove_pad_data(:any, pid) end)
+      ~> ({:ok, state} -> {:reply, :ok, state})
   end
 
   # Callback invoked on demand request coming from the source pad in the pull mode

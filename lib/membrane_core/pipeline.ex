@@ -341,7 +341,7 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_action({:remove_child, children}, _cb, _params, state) do
-    with {pids, state} <- children
+    with {:ok, {pids, state}} <- children
         |> Helper.listify
         |> Helper.Enum.map_reduce_with(state, fn c, st -> State.pop_child st, c end),
       :ok <- pids |> Helper.Enum.each_with(&Element.stop/1),
