@@ -11,6 +11,9 @@ defmodule Membrane.Helper do
   def listify(list) when is_list list do list end
   def listify(non_list) do [non_list] end
 
+  def wrap_nil(nil, reason), do: {:error, reason}
+  def wrap_nil(v, _), do: {:ok, v}
+
   defmacro x ~> f do
     quote do
       case unquote x do unquote f end

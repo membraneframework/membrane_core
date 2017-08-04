@@ -85,7 +85,7 @@ defmodule Membrane.Element.State do
   def get_pad_data(state, pad_direction, pad_pid, keys \\ [])
   def get_pad_data(state, pad_direction, pad_pid, keys) when is_pid pad_pid do
     with {:ok, pad_name} <-
-      state.pads.names_by_pids |> Helper.Map.get_wrap(pad_pid, :unknown_pad)
+      state.pads.names_by_pids[pad_pid] |> Helper.wrap_nil(:unknown_pad)
     do get_pad_data(state, pad_direction, pad_name, keys)
     end
   end
@@ -106,53 +106,66 @@ defmodule Membrane.Element.State do
     get_pad_data(state, pad_direction, pad_name, keys)
       ~> ({:ok, pad_data} -> pad_data)
 
-  def set_pad_data(state, pad_direction, pad_name, keys \\ [], v) do
+  def set_pad_data(state, pad_direction, pad, keys \\ [], v) do
     pad_data = state
-      |> get_pad_data(pad_direction, pad_name)
+      |> get_pad_data(pad_direction, pad)
       ~> (
           {:ok, pad_data} -> pad_data
           {:error, :unknown_pad} -> %{}
         )
       |> Helper.Map.put_in(keys, v)
 
-    {:ok, state |> do_update_pad_data(pad_name, pad_data)}
+    {:ok, state |> do_update_pad_data(pad_data)}
   end
 
-  def update_pad_data(state, pad_direction, pad_name, keys \\ [], f) do
+  def update_pad_data(state, pad_direction, pad, keys \\ [], f) do
     with \
-      {:ok, pad_data} <- get_pad_data(state, pad_direction, pad_name),
+      {:ok, pad_data} <- get_pad_data(state, pad_direction, pad),
       {:ok, pad_data} <- pad_data
         |> Helper.Map.get_and_update_in(keys, &case f.(&1) do
             {:ok, res} -> {:ok, res}
             {:error, reason} -> {{:error, reason}, nil}
           end)
     do
-      {:ok, state |> do_update_pad_data(pad_name, pad_data)}
+      {:ok, state |> do_update_pad_data(pad_data)}
     else
       {{:error, reason}, _pd} -> {:error, reason}
       {:error, reason} -> {:error, reason}
     end
   end
 
-  def get_update_pad_data(state, pad_direction, pad_name, keys \\ [], f) do
+  def get_update_pad_data(state, pad_direction, pad, keys \\ [], f) do
     with \
-      {:ok, pad_data} <- get_pad_data(state, pad_direction, pad_name),
+      {:ok, pad_data} <- get_pad_data(state, pad_direction, pad),
       {{:ok, out}, pad_data} <- pad_data
         |> Helper.Map.get_and_update_in(keys, &case f.(&1) do
             {:ok, {out, res}} -> {{:ok, out}, res}
             {:error, reason} -> {{:error, reason}, nil}
           end)
-    do {:ok, {out, state |> do_update_pad_data(pad_name, pad_data)}}
+    do {:ok, {out, state |> do_update_pad_data(pad_data)}}
     else
       {{:error, reason}, _pd} -> {:error, reason}
       {:error, reason} -> {:error, reason}
     end
   end
 
-  defp do_update_pad_data(state, pad_name, pad_data) do
+  defp do_update_pad_data(state, pad_data) do
     state
-      |> Helper.Struct.put_in([:pads, :names_by_pids, pad_data.pid], pad_name)
-      |> Helper.Struct.put_in([:pads, :data, pad_name], pad_data)
+      |> Helper.Struct.put_in([:pads, :names_by_pids, pad_data.pid], pad_data.name)
+      |> Helper.Struct.put_in([:pads, :data, pad_data.name], pad_data)
+  end
+
+  def pop_pad_data(state, pad_direction, pad) do
+    with {:ok, %{name: name, pid: pid} = pad_data} <- get_pad_data(state, pad_direction, pad),
+    do: state
+      |> Helper.Struct.pop_in([:pads, :names_by_pids, pid])
+      |> Helper.Struct.pop_in([:pads, :data, name])
+      ~> (state -> {:ok, {pad_data, state}})
+  end
+
+  def remove_pad_data(state, pad_direction, pad) do
+    with {:ok, {_out, state}} <- pop_pad_data(state, pad_direction, pad),
+    do: {:ok, state}
   end
 
   def playback_store_push(%State{playback_store: store} = state, fun, args) do

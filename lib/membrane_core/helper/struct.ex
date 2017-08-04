@@ -1,8 +1,6 @@
 defmodule Membrane.Helper.Struct do
-  import Kernel, except: [get_in: 2, put_in: 2, update_in: 3, get_and_update_in: 3]
+  import Kernel, except: [get_in: 2, put_in: 2, update_in: 3, get_and_update_in: 3, pop_in: 2]
   alias Membrane.Helper
-
-  defdelegate get_wrap(map, key, default), to: Helper.Map
 
   def get_in(map, []), do: map
   def get_in(map, keys), do:
@@ -19,6 +17,9 @@ defmodule Membrane.Helper.Struct do
   def get_and_update_in(map, [], f), do: f.(map)
   def get_and_update_in(map, keys, f), do:
     map |> Kernel.get_and_update_in(keys |> map_keys, f)
+
+  def pop_in(map, []), do: {nil, map}
+  def pop_in(map, keys), do: map |> Kernel.pop_in(keys |> map_keys)
 
   defp map_keys(keys), do: keys |> Helper.listify |> Enum.map(& Access.key &1, nil)
 

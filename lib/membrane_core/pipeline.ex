@@ -334,8 +334,18 @@ defmodule Membrane.Pipeline do
     with \
       {:ok, state} <- handle_spec(spec, state),
       :ok <- spec.children
-        |> Enum.map(fn {name, _} -> state.children_to_pids[name] |> List.first end)
+        |> Enum.map(fn {name, _} -> state |> State.get_child(name) end)
         |> Helper.Enum.each_with(fn pid -> Element.change_playback_state(pid, :playing) end),
+    do: {:ok, state}
+  end
+
+  def handle_action({:remove_child, children}, _cb, _params, state) do
+    with {pids, state} <- children
+        |> Helper.listify
+        |> Helper.Enum.map_reduce_with(state, fn c, st -> State.pop_child st, c end),
+      :ok <- pids |> Helper.Enum.each_with(&Element.stop/1),
+      :ok <- pids |> Helper.Enum.each_with(&Element.unlink/1),
+      :ok <- pids |> Helper.Enum.each_with(&Element.shutdown/1),
     do: {:ok, state}
   end
 
@@ -343,6 +353,7 @@ defmodule Membrane.Pipeline do
     available_actions = [
         "{:forward, {element_name, message}}",
         "{:spec, spec}",
+        "{:remove_child, children}"
       ]
     handle_invalid_action(action, callback, params, available_actions, __MODULE__, state)
   end

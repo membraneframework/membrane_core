@@ -132,6 +132,14 @@ defmodule Membrane.Element do
     end
   end
 
+  def unlink(server, timeout \\ 5000) do
+    server |> GenServer.call(:membrane_unlink, timeout)
+  end
+
+  def handle_unlink(server, pid, timeout \\ 5000) do
+    server |> GenServer.call({:membrane_handle_unlink, pid}, timeout)
+  end
+
   def handle_new_pad(server, direction, pad, timeout \\ 5000) when is_pid server do
     server |> GenServer.call({:membrane_new_pad, direction, pad}, timeout)
   end
@@ -213,6 +221,24 @@ defmodule Membrane.Element do
     do {:reply, :ok, state}
     else {:error, reason} -> {:reply, {:error, reason}, state}
     end
+  end
+
+  def handle_call(:membrane_unlink, _from, %State{playback_state: :stopped} = state) do
+    with :ok <- state
+      |> State.get_pads_data
+      |> Helper.Enum.each_with(fn %{pid: pid} -> handle_unlink pid, self() end),
+    do: {:reply, :ok, state}
+  end
+
+  def handle_call(:membrane_unlink, _from, state) do
+    warn_error "Unlinking element that is not stopped", :unlink_error
+    {:reply, {:error, :unlink_error}, state}
+  end
+
+  def handle_call({:membrane_handle_unlink, pids}, _from, state) do
+    pids
+      |> Helper.listify
+      |> Helper.Enum.reduce_with(state, fn pid, st -> st |> State.remove_pad_data(:any, pid) end)
   end
 
   # Callback invoked on demand request coming from the source pad in the pull mode
