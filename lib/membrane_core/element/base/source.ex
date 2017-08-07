@@ -264,7 +264,7 @@ defmodule Membrane.Element.Base.Source do
 
       @doc false
       def handle_pad_added(_pad, state), do: {:ok, {[], state}}
-      
+
       @doc false
       def handle_pad_removed(_pad, state), do: {:ok, {[], state}}
 
@@ -297,6 +297,7 @@ defmodule Membrane.Element.Base.Source do
       defoverridable [
         handle_new_pad: 3,
         handle_pad_added: 2,
+        handle_pad_removed: 2,
         handle_demand1: 3,
         handle_demand: 4,
         handle_event: 4,

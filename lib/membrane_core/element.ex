@@ -222,7 +222,7 @@ defmodule Membrane.Element do
   def handle_call(:membrane_unlink, _from, %State{playback_state: :stopped} = state) do
     with :ok <- state
       |> State.get_pads_data
-      |> Helper.Enum.each_with(fn {_name, %{pid: pid}} -> GenServer.call :membrane_handle_unlink, pid end),
+      |> Helper.Enum.each_with(fn {_name, %{pid: pid}} -> GenServer.call pid, :membrane_handle_unlink end),
     do: {:reply, :ok, state},
     else: ({:error, reason} -> {:reply, {:error, reason}, state})
   end
@@ -232,7 +232,7 @@ defmodule Membrane.Element do
     {:reply, {:error, :unlink_error}, state}
   end
 
-  def handle_call(:membrane_handle_unlink, from, %State{module: module} = state) do
+  def handle_call(:membrane_handle_unlink, {from, _}, %State{module: module} = state) do
     {:ok, %{name: pad_name}} = state |> State.get_pad_data(:any, from)
     with {:ok, state} <- module.base_module.handle_unlink(pad_name, state)
     do {:reply, :ok, state}

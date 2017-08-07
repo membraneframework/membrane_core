@@ -502,6 +502,7 @@ defmodule Membrane.Element.Base.Filter do
       defoverridable [
         handle_new_pad: 4,
         handle_pad_added: 3,
+        handle_pad_removed: 2,
         handle_caps: 4,
         handle_demand: 4,
         handle_event: 4,
