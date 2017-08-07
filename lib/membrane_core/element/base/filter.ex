@@ -413,14 +413,13 @@ defmodule Membrane.Element.Base.Filter do
         handle_process did not produce expected amount of buffers, despite
         PullBuffer being not empty. Trying executing handle_demand again.
         """
-      %{pid: pid} = state |> State.get_pad_data!(:source, src_name)
-      Helper.send self(), {:membrane_demand, 0}, pid
+      send self(), {:membrane_demand, {0, src_name}}
     end
   end
 
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
   defdelegate handle_event(mode, dir, pad_name, event, state), to: Common
-  defdelegate handle_link(pad_name, direction, pid, props, state), to: Common
+  defdelegate handle_link(pad_name, direction, pid, other_name, props, state), to: Common
 
   def handle_new_pad(name, direction, params, state), do:
     Common.handle_new_pad(name, direction, [name, direction, params], state)

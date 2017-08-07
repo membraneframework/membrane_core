@@ -1,5 +1,5 @@
 defmodule Membrane.Helper do
-  import Kernel, except: [send: 2]
+  import Kernel
 
   defmacro __using__(_args) do
     quote do
@@ -40,9 +40,4 @@ defmodule Membrane.Helper do
     Process.info(self(), :current_stacktrace)
       ~> ({:current_stacktrace, trace} -> trace)
       |> Exception.format_stacktrace
-
-  def send(pid, msg, from \\ self()) do
-    Kernel.send pid, {msg, from}
-    :ok
-  end
 end

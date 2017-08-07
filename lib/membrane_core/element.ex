@@ -126,8 +126,8 @@ defmodule Membrane.Element do
 
   def link(from_pid, to_pid, from_pad, to_pad, params) do
     with \
-      :ok <- GenServer.call(from_pid, {:membrane_link, from_pad, :source, to_pid, params}),
-      :ok <- GenServer.call(to_pid, {:membrane_link, to_pad, :sink, from_pid, params})
+      :ok <- GenServer.call(from_pid, {:membrane_handle_link, from_pad, :source, to_pid, to_pad, params}),
+      :ok <- GenServer.call(to_pid, {:membrane_handle_link, to_pad, :sink, from_pid, from_pad, params})
     do :ok
     end
   end
@@ -212,8 +212,8 @@ defmodule Membrane.Element do
     {:reply, :ok, %{state | message_bus: message_bus}}
   end
 
-  def handle_call({:membrane_link, pad_name, direction, pid, props}, _from, %State{module: module} = state) do
-    with {:ok, state} <- module.base_module.handle_link(pad_name, direction, pid, props, state)
+  def handle_call({:membrane_handle_link, pad_name, direction, pid, other_name, props}, _from, %State{module: module} = state) do
+    with {:ok, state} <- module.base_module.handle_link(pad_name, direction, pid, other_name, props, state)
     do {:reply, :ok, state}
     else {:error, reason} -> {:reply, {:error, reason}, state}
     end
@@ -255,8 +255,8 @@ defmodule Membrane.Element do
 
   # Callback invoked on buffer coming from the sink pad to the sink
   @doc false
-  def handle_info({{:membrane_buffer, buffers}, from}, %State{module: module} = state) do
-    {:ok, %{name: pad_name, mode: mode}} = state |> State.get_pad_data(:sink, from)
+  def handle_info({:membrane_buffer, {buffers, pad_name}}, %State{module: module} = state) do
+    {:ok, %{mode: mode}} = state |> State.get_pad_data(:sink, pad_name)
     debug """
       Received buffers on pad #{inspect pad_name}
       Buffers: #{inspect buffers}
@@ -269,8 +269,8 @@ defmodule Membrane.Element do
 
   # Callback invoked on incoming caps
   @doc false
-  def handle_info({{:membrane_caps, caps}, from}, %State{module: module} = state) do
-    {:ok, %{name: pad_name, mode: mode}} = state |> State.get_pad_data(:sink, from)
+  def handle_info({:membrane_caps, {caps, pad_name}}, %State{module: module} = state) do
+    {:ok, %{mode: mode}} = state |> State.get_pad_data(:sink, pad_name)
     debug """
       Received caps on pad #{inspect pad_name}
       Caps: #{inspect caps}
@@ -280,9 +280,8 @@ defmodule Membrane.Element do
 
   # Callback invoked on incoming event
   @doc false
-  def handle_info({{:membrane_event, event}, from}, %State{module: module} = state) do
-    {:ok, %{name: pad_name, mode: mode, direction: direction}} = state
-      |> State.get_pad_data(:any, from)
+  def handle_info({:membrane_event, {event, pad_name}}, %State{module: module} = state) do
+    {:ok, %{mode: mode, direction: direction}} = state |> State.get_pad_data(:any, pad_name)
     debug """
       Received event on pad #{inspect pad_name}
       Event: #{inspect event}

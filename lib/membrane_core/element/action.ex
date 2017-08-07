@@ -19,14 +19,15 @@ defmodule Membrane.Element.Action do
       Buffers: #{inspect(buffers)}
       """
     with \
-      {:ok, %{mode: mode, pid: pid}} <- state |> State.get_pad_data(:source, pad_name),
+      {:ok, %{mode: mode, pid: pid, other_name: other_name}}
+        <- state |> State.get_pad_data(:source, pad_name),
       {:ok, state} = (case mode do
           :pull -> state |>
             State.update_pad_data(:source, pad_name, :demand, &{:ok, &1 - length buffers})
           :push -> {:ok, state}
-        end),
-      :ok <- Helper.send(pid, {:membrane_buffer, buffers})
+        end)
     do
+      send pid, {:membrane_buffer, {buffers, other_name}}
       {:ok, state}
     else
       {:error, :unknown_pad} ->
@@ -46,9 +47,11 @@ defmodule Membrane.Element.Action do
       Caps: #{inspect caps}
       """
     with \
-      {:ok, %{pid: pid}} <- state |> State.get_pad_data(:source, pad_name),
-      :ok <- Helper.send(pid, {:membrane_caps, caps})
-    do state |> State.set_pad_data(:source, pad_name, :caps, caps)
+      {:ok, %{pid: pid, other_name: other_name}}
+        <- state |> State.get_pad_data(:source, pad_name)
+    do
+      send pid, {:membrane_caps, {caps, other_name}}
+      state |> State.set_pad_data(:source, pad_name, :caps, caps)
     else
       {:error, :unknown_pad} ->
         handle_unknown_pad pad_name, :source, :event, state
@@ -93,9 +96,11 @@ defmodule Membrane.Element.Action do
       Event: #{inspect event}
       """
     with \
-      {:ok, %{pid: pid}} <- State.get_pad_data(state, :any, pad_name),
-      :ok <- Helper.send(pid, {:membrane_event, event})
-    do {:ok, state}
+      {:ok, %{pid: pid, other_name: other_name}}
+        <- State.get_pad_data(state, :any, pad_name)
+    do
+      send pid, {:membrane_event, {event, other_name}}
+      {:ok, state}
     else
       {:error, :unknown_pad} ->
         handle_unknown_pad pad_name, :any, :event, state

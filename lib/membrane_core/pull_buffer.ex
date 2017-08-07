@@ -126,23 +126,15 @@ defmodule Membrane.PullBuffer do
   def empty?(%PullBuffer{current_size: size, init_size: init_size}), do:
     size == 0 || size < init_size
 
-  defp handle_demand(%PullBuffer{sink: sink, sink_name: sink_name,
+  defp handle_demand(%PullBuffer{sink: {other_pid, other_name}, sink_name: sink_name,
     current_size: size, preferred_size: pref_size, demand: demand} = pb, new_demand)
   when size < pref_size and demand + new_demand > 0 do
     report """
       Sending demand of size #{inspect demand + new_demand}
       to sink #{inspect sink_name}
       """, pb
-    with :ok <- Helper.send(sink, {:membrane_demand, demand + new_demand})
-    do {:ok, %PullBuffer{pb | demand: 0}}
-    else {:error, reason} -> warn_error """
-      PullBuffer: unable to send demand of size #{inspect demand + new_demand}
-      to sink #{inspect sink_name}
-
-      PullBuffer #{inspect pb}
-      """, reason
-    end
-
+    send other_pid, {:membrane_demand, {demand + new_demand, other_name}}
+    {:ok, %PullBuffer{pb | demand: 0}}
   end
   defp handle_demand(%PullBuffer{demand: demand} = pb, new_demand), do:
     {:ok, %PullBuffer{pb | demand: demand + new_demand}}
