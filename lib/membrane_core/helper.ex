@@ -35,6 +35,9 @@ defmodule Membrane.Helper do
   def provided(value, do: condition, else: default) do
     if condition do value else default end
   end
+  def provided(value, not: condition, else: default) do
+    if !condition do value else default end
+  end
 
   def stacktrace, do:
     Process.info(self(), :current_stacktrace)

@@ -9,6 +9,8 @@ defmodule Membrane.Element do
   use Membrane.Mixins.CallbackHandler
   alias Membrane.Element.State
   use Membrane.Helper
+  alias Membrane.Element.PlaybackBuffer
+
   # Type that defines possible return values of start/start_link functions.
   @type on_start :: GenServer.on_start
 
@@ -240,54 +242,10 @@ defmodule Membrane.Element do
     end
   end
 
-  # Callback invoked on demand request coming from the source pad in the pull mode
-  @doc false
-  def handle_info({:membrane_demand, {size, pad_name}}, %State{module: module} = state) do
-    {:ok, _} = state |> State.get_pad_data(:source, pad_name)
-    demand = if size == 0 do "dumb demand" else "demand of size #{inspect size}" end
-    debug "Received #{demand} on pad #{inspect pad_name}"
-
-    case state.playback_state do
-      :playing -> module.base_module.handle_demand(pad_name, size, state) |> to_noreply_or(state)
-      _ -> {:noreply, state |> State.playback_store_push(:handle_demand, [pad_name, size])}
-    end
-  end
-  # Callback invoked on buffer coming from the sink pad to the sink
-  @doc false
-  def handle_info({:membrane_buffer, {buffers, pad_name}}, %State{module: module} = state) do
-    {:ok, %{mode: mode}} = state |> State.get_pad_data(:sink, pad_name)
-    debug """
-      Received buffers on pad #{inspect pad_name}
-      Buffers: #{inspect buffers}
-      """
-    case state.playback_state do
-      :playing -> module.base_module.handle_buffer(mode, pad_name, buffers, state) |> to_noreply_or(state)
-      _ -> {:noreply, state |> State.playback_store_push(:handle_buffer, [mode, pad_name, buffers])}
-    end
-  end
-
-  # Callback invoked on incoming caps
-  @doc false
-  def handle_info({:membrane_caps, {caps, pad_name}}, %State{module: module} = state) do
-    {:ok, %{mode: mode}} = state |> State.get_pad_data(:sink, pad_name)
-    debug """
-      Received caps on pad #{inspect pad_name}
-      Caps: #{inspect caps}
-      """
-    module.base_module.handle_caps(mode, pad_name, caps, state) |> to_noreply_or(state)
-  end
-
-  # Callback invoked on incoming event
-  @doc false
-  def handle_info({:membrane_event, {event, pad_name}}, %State{module: module} = state) do
-    {:ok, %{mode: mode, direction: direction}} = state |> State.get_pad_data(:any, pad_name)
-    debug """
-      Received event on pad #{inspect pad_name}
-      Event: #{inspect event}
-      """
-    with {:ok, state} <- module.base_module.handle_event(mode, direction, pad_name, event, state)
-    do {:noreply, state}
-    end
+  def handle_info({type, _args} = msg, state)
+  when type in [:membrane_demand, :membrane_buffer, :membrane_caps, :membrane_event]
+  do
+    msg |> PlaybackBuffer.store(state) |> to_noreply_or(state)
   end
 
   def handle_info({:membrane_self_demand, pad_name, src_name, size}, %State{module: module} = state) do

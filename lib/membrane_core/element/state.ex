@@ -6,6 +6,7 @@ defmodule Membrane.Element.State do
 
   use Membrane.Mixins.Log, tags: :core
   alias Membrane.Element
+  alias Membrane.Element.PlaybackBuffer
   use Membrane.Helper
   alias __MODULE__
 
@@ -23,7 +24,7 @@ defmodule Membrane.Element.State do
     playback_state: :stopped,
     pads: %{},
     message_bus: nil,
-    playback_store: []
+    playback_buffer: nil
 
 
   @doc """
@@ -42,6 +43,7 @@ defmodule Membrane.Element.State do
       module: module,
       pads: %{data: pads_data, names_by_pids: %{}, new: []},
       internal_state: internal_state,
+      playback_buffer: PlaybackBuffer.new
     }
   end
 
@@ -169,18 +171,6 @@ defmodule Membrane.Element.State do
   def remove_pad_data(state, pad_direction, pad) do
     with {:ok, {_out, state}} <- pop_pad_data(state, pad_direction, pad),
     do: {:ok, state}
-  end
-
-  def playback_store_push(%State{playback_store: store} = state, fun, args) do
-    %State{state | playback_store: [{fun, args} | store]}
-  end
-
-  def playback_store_eval(%State{playback_store: store, module: module} = state) do
-    with \
-      {:ok, state} <- store
-        |> Enum.reverse
-        |> Helper.Enum.reduce_with(state, fn {fun, args}, state -> apply module.base_module, fun, args ++ [state] end),
-    do: {:ok, %State{state | playback_store: []}}
   end
 
 end

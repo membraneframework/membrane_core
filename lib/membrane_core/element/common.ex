@@ -28,7 +28,8 @@ defmodule Membrane.Element.Common do
         with \
           {:ok, state} <- state |> Membrane.Element.Common.fill_sink_pull_buffers,
           {:ok, state} <- exec_and_handle_callback(:handle_play, [], state),
-          do: state |> State.playback_store_eval
+          {:ok, state} <- state |> Membrane.Element.PlaybackBuffer.eval,
+          do: {:ok, state}
       end
 
       def handle_playback_state(:prepared, :stopped, state), do:
