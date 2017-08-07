@@ -245,7 +245,12 @@ defmodule Membrane.Element do
   def handle_info({type, _args} = msg, state)
   when type in [:membrane_demand, :membrane_buffer, :membrane_caps, :membrane_event]
   do
-    msg |> PlaybackBuffer.store(state) |> to_noreply_or(state)
+    with {:ok, state} <- msg |> PlaybackBuffer.store(state)
+    do {:noreply, state}
+    else {:error, reason} ->
+      warn_error "Error during handling message #{msg}", reason
+      {:noreply, state}
+    end
   end
 
   def handle_info({:membrane_self_demand, pad_name, src_name, size}, %State{module: module} = state) do
