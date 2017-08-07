@@ -201,8 +201,8 @@ defmodule Membrane.Element do
   def handle_call(:membrane_linking_finished, _from, %State{pads: pads, module: module} = state) do
     with {:ok, state} <- pads.new |> Helper.Enum.reduce_with(state, fn {name, direction}, st ->
       module.base_module.handle_pad_added name, direction, st end)
-    do {:reply, :ok, state}
-    else {:error, {reason, state}} -> {:reply, {:error, reason}, state}
+    do {:reply, :ok, state |> State.clear_new_pads}
+    else {:error, {reason, state}} -> {:reply, {:error, reason}, state |> State.clear_new_pads}
     end
   end
 

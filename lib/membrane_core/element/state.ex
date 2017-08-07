@@ -67,6 +67,8 @@ defmodule Membrane.Element.State do
     state
   end
 
+  def clear_new_pads(state), do: state |> Helper.Struct.put_in([:pads, :new], [])
+
   defp init_pad_data({name, {:always, mode, caps}}, direction) do
     data = %{
         name: name, pid: nil, mode: mode,direction: direction,
