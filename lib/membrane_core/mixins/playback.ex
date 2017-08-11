@@ -29,8 +29,8 @@ defmodule Membrane.Mixins.Playback do
 
         old_state = state |> Map.get(:playback_state)
         with \
-          {:ok, old_pos} <- Playback.states_pos[old_state] ~> (nil -> :invalid_old_playback; v -> {:ok, v}),
-          {:ok, new_pos} <- Playback.states_pos[new_state] ~> (nil -> :invalid_new_playback; v -> {:ok, v}),
+          {:ok, old_pos} <- Playback.states_pos[old_state] |> Helper.wrap_nil(:invalid_old_playback),
+          {:ok, new_pos} <- Playback.states_pos[new_state] |> Helper.wrap_nil(:invalid_new_playback),
           {:ok, state} <- old_pos..new_pos
             |> Enum.chunk(2, 1)
             |> Helper.Enum.reduce_with(state, fn [i, j], st ->
