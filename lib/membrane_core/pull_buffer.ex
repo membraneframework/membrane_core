@@ -23,7 +23,7 @@ defmodule Membrane.PullBuffer do
       sink: sink,
       sink_name: sink_name,
       preferred_size: preferred_size,
-      init_size: props |> Keyword.get(:init_size, 10),
+      init_size: props |> Keyword.get(:init_size, 0),
       demand: preferred_size
     }
   end
