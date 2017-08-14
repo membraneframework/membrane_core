@@ -65,7 +65,7 @@ defmodule Membrane.Element.Action do
 
   @spec handle_demand(Pad.name_t, Pad.name_t, pos_integer, atom, State.t) :: :ok | {:error, any}
   def handle_demand(pad_name, src_name \\ nil, size, callback, %State{module: module} = state) do
-    debug "Sending demand of size #{inspect size} through pad #{inspect pad_name}"
+    debug "Requesting demand of size #{inspect size} on pad #{inspect pad_name}"
     with \
       {:sink, {:ok, %{mode: :pull}}} <-
         {:sink, state |> State.get_pad_data(:sink, pad_name)},
