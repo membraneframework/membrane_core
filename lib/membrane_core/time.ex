@@ -84,12 +84,12 @@ defmodule Membrane.Time do
   """
   @spec system_time() :: t
   def system_time do
-    System.system_time |> nanoseconds
+    System.system_time |> native_units
   end
 
 
   @doc """
-  Converts DateTime to internal Membrane time units.
+  Converts `DateTime` to internal Membrane time units.
 
   Inlined by the compiler.
   """
@@ -106,7 +106,7 @@ defmodule Membrane.Time do
   """
   @spec native_unit(native_t) :: t
   def native_unit(value) when is_integer(value) do
-    value * System.convert_time_unit(1, :native, :nanosecond)
+    value |> System.convert_time_unit(:native, :nanosecond) |> nanoseconds
   end
 
 
@@ -275,7 +275,7 @@ defmodule Membrane.Time do
   end
 
   @doc """
-  Returns time as a `DateTime` struct.
+  Returns time as a `DateTime` struct. TimeZone is set to UTC.
 
   Inlined by the compiler.
   """
