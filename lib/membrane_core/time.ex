@@ -14,6 +14,7 @@ defmodule Membrane.Time do
   @compile {:inline, [
     monotonic_time: 0,
     system_time: 0,
+    from_datetime: 1,
     native_unit: 1,
     native_units: 1,
     nanosecond: 1,
@@ -30,6 +31,7 @@ defmodule Membrane.Time do
     hours: 1,
     day: 1,
     days: 1,
+    to_datetime: 1,
     to_native_units: 1,
     to_nanoseconds: 1,
     to_microseconds: 1,
@@ -83,6 +85,17 @@ defmodule Membrane.Time do
   @spec system_time() :: t
   def system_time do
     System.system_time |> nanoseconds
+  end
+
+
+  @doc """
+  Converts DateTime to internal Membrane time units.
+
+  Inlined by the compiler.
+  """
+  @spec from_datetime(DateTime.t) :: t
+  def from_datetime(value = %DateTime{}) do
+    value |> DateTime.to_unix(:nanosecond) |> nanoseconds
   end
 
 
@@ -259,6 +272,16 @@ defmodule Membrane.Time do
   @spec days(integer) :: t
   def days(value) when is_integer(value) do
     day(value)
+  end
+
+  @doc """
+  Returns time as a `DateTime` struct.
+
+  Inlined by the compiler.
+  """
+  @spec to_datetime(t) :: DateTime.t
+  def to_datetime(value) when is_t(value) do
+     DateTime.from_unix!(value |> nanoseconds, :nanosecond)
   end
 
 
