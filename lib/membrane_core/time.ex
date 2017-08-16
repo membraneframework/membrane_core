@@ -84,7 +84,7 @@ defmodule Membrane.Time do
   """
   @spec system_time() :: t
   def system_time do
-    System.system_time |> nanoseconds
+    System.system_time |> native_units
   end
 
 
@@ -106,7 +106,7 @@ defmodule Membrane.Time do
   """
   @spec native_unit(native_t) :: t
   def native_unit(value) when is_integer(value) do
-    value * System.convert_time_unit(1, :native, :nanosecond)
+    value |> System.convert_time_unit(:native, :nanosecond) |> nanoseconds
   end
 
 
