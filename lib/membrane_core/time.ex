@@ -12,6 +12,11 @@ defmodule Membrane.Time do
   """
 
   @compile {:inline, [
+    monotonic_time: 0,
+    system_time: 0,
+    from_datetime: 1,
+    native_unit: 1,
+    native_units: 1,
     nanosecond: 1,
     nanoseconds: 1,
     microsecond: 1,
@@ -26,33 +31,93 @@ defmodule Membrane.Time do
     hours: 1,
     day: 1,
     days: 1,
+    to_datetime: 1,
+    to_native_units: 1,
+    to_nanoseconds: 1,
+    to_microseconds: 1,
+    to_milliseconds: 1,
+    to_seconds: 1,
+    to_minutes: 1,
+    to_hours: 1,
+    to_days: 1,
   ]}
 
-  @type t :: pos_integer
+  @type t :: integer
   @type native_t :: integer
 
 
   @doc """
-  Returns internal Erlang VM clock resolution.
-
-  It will return integer that tells how many "ticks" the VM is handling
-  within a second.
+  Checks whether value is Membrane.Time.t
   """
-  @spec native_resolution() :: pos_integer
-  def native_resolution do
-    System.convert_time_unit(1, :seconds, :native)
+  @spec is_t(any) :: boolean
+  defmacro is_t(value) do
+    quote do is_integer(unquote value) end
   end
 
 
   @doc """
-  Returns current monotonic time.
-
-  It is a wrapper around `System.monotonic_time/0` made mostly for purpose
-  of mocking such calls in specs.
+  Checks whether value is Membrane.Time.native_t
   """
-  @spec native_monotonic_time() :: native_t
-  def native_monotonic_time do
-    System.monotonic_time()
+  @spec is_native_t(any) :: boolean
+  defmacro is_native_t(value) do
+    quote do is_integer(unquote value) end
+  end
+
+
+  @doc """
+  Returns current monotonic time based on System.monotonic_time/0
+  in internal Membrane time units.
+
+  Inlined by the compiler.
+  """
+  @spec monotonic_time() :: t
+  def monotonic_time do
+    System.monotonic_time |> native_units
+  end
+
+
+  @doc """
+  Returns current POSIX time based on System.system_time/0
+  in internal Membrane time units.
+
+  Inlined by the compiler.
+  """
+  @spec system_time() :: t
+  def system_time do
+    System.system_time |> native_units
+  end
+
+
+  @doc """
+  Converts `DateTime` to internal Membrane time units.
+
+  Inlined by the compiler.
+  """
+  @spec from_datetime(DateTime.t) :: t
+  def from_datetime(value = %DateTime{}) do
+    value |> DateTime.to_unix(:nanosecond) |> nanoseconds
+  end
+
+
+  @doc """
+  Returns given native units in internal Membrane time units.
+
+  Inlined by the compiler.
+  """
+  @spec native_unit(native_t) :: t
+  def native_unit(value) when is_integer(value) do
+    value |> System.convert_time_unit(:native, :nanosecond) |> nanoseconds
+  end
+
+
+  @doc """
+  The same as `native_unit/1`.
+
+  Inlined by the compiler.
+  """
+  @spec native_units(native_t) :: t
+  def native_units(value) when is_integer(value) do
+    native_unit(value)
   end
 
 
@@ -61,8 +126,8 @@ defmodule Membrane.Time do
 
   Inlined by the compiler.
   """
-  @spec nanosecond(pos_integer) :: t
-  def nanosecond(value) when is_integer(value) and value >= 0 do
+  @spec nanosecond(integer) :: t
+  def nanosecond(value) when is_integer(value) do
     value
   end
 
@@ -72,8 +137,8 @@ defmodule Membrane.Time do
 
   Inlined by the compiler.
   """
-  @spec nanoseconds(pos_integer) :: t
-  def nanoseconds(value) when is_integer(value) and value >= 0 do
+  @spec nanoseconds(integer) :: t
+  def nanoseconds(value) when is_integer(value) do
     nanosecond(value)
   end
 
@@ -83,8 +148,8 @@ defmodule Membrane.Time do
 
   Inlined by the compiler.
   """
-  @spec microsecond(pos_integer) :: t
-  def microsecond(value) when is_integer(value) and value >= 0 do
+  @spec microsecond(integer) :: t
+  def microsecond(value) when is_integer(value) do
     value * 1_000
   end
 
@@ -94,8 +159,8 @@ defmodule Membrane.Time do
 
   Inlined by the compiler.
   """
-  @spec microseconds(pos_integer) :: t
-  def microseconds(value) when is_integer(value) and value >= 0 do
+  @spec microseconds(integer) :: t
+  def microseconds(value) when is_integer(value) do
     microsecond(value)
   end
 
@@ -105,8 +170,8 @@ defmodule Membrane.Time do
 
   Inlined by the compiler.
   """
-  @spec millisecond(pos_integer) :: t
-  def millisecond(value) when is_integer(value) and value >= 0 do
+  @spec millisecond(integer) :: t
+  def millisecond(value) when is_integer(value) do
     value * 1_000_000
   end
 
@@ -116,8 +181,8 @@ defmodule Membrane.Time do
 
   Inlined by the compiler.
   """
-  @spec milliseconds(pos_integer) :: t
-  def milliseconds(value) when is_integer(value) and value >= 0 do
+  @spec milliseconds(integer) :: t
+  def milliseconds(value) when is_integer(value) do
     millisecond(value)
   end
 
@@ -127,8 +192,8 @@ defmodule Membrane.Time do
 
   Inlined by the compiler.
   """
-  @spec second(pos_integer) :: t
-  def second(value) when is_integer(value) and value >= 0 do
+  @spec second(integer) :: t
+  def second(value) when is_integer(value) do
     value * 1_000_000_000
   end
 
@@ -138,8 +203,8 @@ defmodule Membrane.Time do
 
   Inlined by the compiler.
   """
-  @spec seconds(pos_integer) :: t
-  def seconds(value) when is_integer(value) and value >= 0 do
+  @spec seconds(integer) :: t
+  def seconds(value) when is_integer(value) do
     second(value)
   end
 
@@ -149,8 +214,8 @@ defmodule Membrane.Time do
 
   Inlined by the compiler.
   """
-  @spec minute(pos_integer) :: t
-  def minute(value) when is_integer(value) and value >= 0 do
+  @spec minute(integer) :: t
+  def minute(value) when is_integer(value) do
     value * 60_000_000_000
   end
 
@@ -160,8 +225,8 @@ defmodule Membrane.Time do
 
   Inlined by the compiler.
   """
-  @spec minutes(pos_integer) :: t
-  def minutes(value) when is_integer(value) and value >= 0 do
+  @spec minutes(integer) :: t
+  def minutes(value) when is_integer(value) do
     minute(value)
   end
 
@@ -171,8 +236,8 @@ defmodule Membrane.Time do
 
   Inlined by the compiler.
   """
-  @spec hour(pos_integer) :: t
-  def hour(value) when is_integer(value) and value >= 0 do
+  @spec hour(integer) :: t
+  def hour(value) when is_integer(value) do
     value * 3_600_000_000_000
   end
 
@@ -182,8 +247,8 @@ defmodule Membrane.Time do
 
   Inlined by the compiler.
   """
-  @spec hours(pos_integer) :: t
-  def hours(value) when is_integer(value) and value >= 0 do
+  @spec hours(integer) :: t
+  def hours(value) when is_integer(value) do
     hour(value)
   end
 
@@ -193,8 +258,8 @@ defmodule Membrane.Time do
 
   Inlined by the compiler.
   """
-  @spec day(pos_integer) :: t
-  def day(value) when is_integer(value) and value >= 0 do
+  @spec day(integer) :: t
+  def day(value) when is_integer(value) do
     value * 86_400_000_000_000
   end
 
@@ -204,8 +269,107 @@ defmodule Membrane.Time do
 
   Inlined by the compiler.
   """
-  @spec days(pos_integer) :: t
-  def days(value) when is_integer(value) and value >= 0 do
+  @spec days(integer) :: t
+  def days(value) when is_integer(value) do
     day(value)
   end
+
+  @doc """
+  Returns time as a `DateTime` struct. TimeZone is set to UTC.
+
+  Inlined by the compiler.
+  """
+  @spec to_datetime(t) :: DateTime.t
+  def to_datetime(value) when is_t(value) do
+     DateTime.from_unix!(value |> nanoseconds, :nanosecond)
+  end
+
+
+  @doc """
+  Returns time in system native units. Rounded using Float.round/2
+
+  Inlined by the compiler.
+  """
+  @spec to_native_units(t) :: native_t
+  def to_native_units(value) when is_t(value) do
+    value / (1 |> native_unit) |> Float.round |> trunc
+  end
+
+
+  @doc """
+  Returns time in nanoseconds. Rounded using Float.round/2
+
+  Inlined by the compiler.
+  """
+  @spec to_nanoseconds(t) :: integer
+  def to_nanoseconds(value) when is_t(value) do
+    value / (1 |> nanosecond) |> Float.round |> trunc
+  end
+
+
+  @doc """
+  Returns time in microseconds. Rounded using Float.round/2
+
+  Inlined by the compiler.
+  """
+  @spec to_microseconds(t) :: integer
+  def to_microseconds(value) when is_t(value) do
+    value / (1 |> microsecond) |> Float.round |> trunc
+  end
+
+
+  @doc """
+  Returns time in milliseconds. Rounded using Float.round/2
+
+  Inlined by the compiler.
+  """
+  @spec to_milliseconds(t) :: integer
+  def to_milliseconds(value) when is_t(value) do
+    value / (1 |> millisecond) |> Float.round |> trunc
+  end
+
+
+  @doc """
+  Returns time in seconds. Rounded using Float.round/2
+
+  Inlined by the compiler.
+  """
+  @spec to_seconds(t) :: integer
+  def to_seconds(value) when is_t(value) do
+    value / (1 |> second) |> Float.round |> trunc
+  end
+
+
+  @doc """
+  Returns time in minutes. Rounded using Float.round/2
+
+  Inlined by the compiler.
+  """
+  @spec to_minutes(t) :: integer
+  def to_minutes(value) when is_t(value) do
+    value / (1 |> minute) |> Float.round |> trunc
+  end
+
+
+  @doc """
+  Returns time in hours. Rounded using Float.round/2
+
+  Inlined by the compiler.
+  """
+  @spec to_hours(t) :: integer
+  def to_hours(value) when is_t(value) do
+    value / (1 |> hour) |> Float.round |> trunc
+  end
+
+
+  @doc """
+  Returns time in days. Rounded using Float.round/2
+
+  Inlined by the compiler.
+  """
+  @spec to_days(t) :: integer
+  def to_days(value) when is_t(value) do
+    value / (1 |> day) |> Float.round |> trunc
+  end
+
 end
