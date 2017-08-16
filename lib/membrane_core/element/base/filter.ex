@@ -289,7 +289,7 @@ defmodule Membrane.Element.Base.Filter do
 
   def handle_action({:demand, pad_name}, :handle_demand, src_name, state)
   when is_atom pad_name do
-    handle_action({:demand, {pad_name, src_name}}, :handle_demand, nil, state)
+    handle_action({:demand, {pad_name, 1}}, :handle_demand, src_name, state)
   end
 
   def handle_action({:demand, {pad_name, size}}, :handle_demand, src_name, state)
