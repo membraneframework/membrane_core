@@ -248,7 +248,7 @@ defmodule Membrane.Element do
     with {:ok, state} <- msg |> PlaybackBuffer.store(state)
     do {:noreply, state}
     else {:error, reason} ->
-      warn_error "Error during handling message #{msg}", reason
+      warn_error "Error during handling message #{inspect msg}", reason
       {:noreply, state}
     end
   end
