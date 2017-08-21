@@ -308,7 +308,8 @@ defmodule Membrane.Element.Base.Filter do
         {:handle_event, %{direction: :sink}} -> :source
         {:handle_event, %{direction: :source}} -> :sink
       end
-    handle_action {:forward, state |> State.get_pads_data(dir)}, cb, params, state
+    pads = state |> State.get_pads_data(dir) |> Map.keys
+    handle_action {:forward, pads}, cb, params, state
   end
 
   def handle_action({:demand, pad_name}, :handle_demand, src_name, state)
@@ -349,6 +350,8 @@ defmodule Membrane.Element.Base.Filter do
         "{:caps, {pad_name, caps}}",
         ["{:demand, pad_name}", "{:demand, {pad_name, size}}"]
           |> (provided that: callback == :handle_demand, else: []),
+        ["{:forward, pads}"]
+          |> (provided that: callback in [:handle_caps, :handle_event], else: []),
         "{:demand, {pad_name, src_name, size}",
       ] ++ Common.available_actions
     handle_invalid_action action, callback, params, available_actions, __MODULE__, state
