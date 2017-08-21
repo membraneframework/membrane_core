@@ -297,7 +297,7 @@ defmodule Membrane.Element.Base.Filter do
   when is_list pads
   do
     pads |> Helper.Enum.reduce_with(state, fn pad, st ->
-      handle_action {:caps, {pad, event}}, :handle_event, params, st end)
+      handle_action {:event, {pad, event}}, :handle_event, params, st end)
   end
 
   def handle_action({:forward, :all}, cb, params, state)
