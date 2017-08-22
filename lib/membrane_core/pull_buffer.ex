@@ -2,6 +2,7 @@ defmodule Membrane.PullBuffer do
   alias Membrane.PullBuffer
   use Membrane.Helper
   use Membrane.Mixins.Log, tags: :core
+  alias Membrane.Buffer
 
   defstruct \
     sink: nil,
@@ -10,13 +11,14 @@ defmodule Membrane.PullBuffer do
     init_size: 0,
     preferred_size: 100,
     current_size: 0,
-    demand: nil
+    demand: nil,
+    mode: nil
 
   @qe Qex
 
   @non_buf_types [:event, :caps]
 
-  def new(sink, sink_name, props) do
+  def new(sink, sink_name, mode, props) do
     preferred_size = props |> Keyword.get(:preferred_size, 10)
     %PullBuffer{
       q: @qe.new,
@@ -24,7 +26,8 @@ defmodule Membrane.PullBuffer do
       sink_name: sink_name,
       preferred_size: preferred_size,
       init_size: props |> Keyword.get(:init_size, 0),
-      demand: preferred_size
+      demand: preferred_size,
+      mode: mode
     }
   end
 
@@ -56,8 +59,8 @@ defmodule Membrane.PullBuffer do
     {:ok, %PullBuffer{pb | q: q |> @qe.push({:non_buffer, type, v})}}
   end
 
-  defp do_store_buffers(%PullBuffer{q: q, current_size: size} = pb, v) do
-    buf_cnt = length v
+  defp do_store_buffers(%PullBuffer{q: q, current_size: size, mode: mode} = pb, v) do
+    buf_cnt = v |> buffers_size(mode)
     report "Storing #{inspect buf_cnt} buffers", pb
     %PullBuffer{
       pb | q: q |> @qe.push({:buffers, v, buf_cnt}), current_size: size + buf_cnt
@@ -73,10 +76,11 @@ defmodule Membrane.PullBuffer do
     end
   end
 
-  defp do_take(%PullBuffer{q: q, current_size: size, init_size: init_size} = pb, count)
+  defp do_take(
+    %PullBuffer{q: q, current_size: size, init_size: init_size, mode: mode} = pb, count)
   when init_size |> is_nil or size > init_size
   do
-    {out, nq} = q |> q_pop(count)
+    {out, nq} = q |> q_pop(count, mode)
     {out, %PullBuffer{pb | q: nq, current_size: max(0, size - count)}}
   end
 
@@ -95,29 +99,51 @@ defmodule Membrane.PullBuffer do
     do_take %PullBuffer{pb | init_size: nil}, count
   end
 
-  defp q_pop(q, count, acc \\ [])
-  defp q_pop(q, count, acc) when count > 0
+  defp q_pop(q, count, mode, acc \\ [])
+  defp q_pop(q, count, mode, acc) when count > 0
   do
     q |> @qe.pop |> (case do
-        {{:value, {:buffers, b, buf_cnt}}, nq} ->
-          q_pop nq, count - buf_cnt, [{:buffers, b}|acc]
+        {{:value, {:buffers, b, buf_cnt}}, nq} when count >= buf_cnt ->
+          q_pop nq, count - buf_cnt, mode, [{:buffers, b}|acc]
+        {{:value, {:buffers, b, buf_cnt}}, nq} when count < buf_cnt ->
+          {b, back} = b |> split_buffers(mode, count)
+          nq = nq |> @qe.push_front({:buffers, back, buf_cnt - count})
+          {{:value, [{:buffers, b}|acc] |> Enum.reverse}, nq}
         {:empty, nq} ->
           {{:empty, acc |> Enum.reverse}, nq}
         {{:value, {:non_buffer, type, e}}, nq} ->
-          q_pop nq, count, [{type, e}|acc]
+          q_pop nq, count, mode, [{type, e}|acc]
       end)
   end
-  defp q_pop(q, count, [{:buffers, b}|acc]) when count < 0
-  do
-    {b, back} = b |> Enum.split(count)
-    nq = q |> @qe.push_front({:buffers, back, -count})
-    {{:value, [{:buffers, b}|acc] |> Enum.reverse}, nq}
-  end
-  defp q_pop(q, 0, acc) do
+  defp q_pop(q, 0, mode, acc) do
     q |> @qe.pop |> (case do
-        {{:value, {:non_buffer, type, e}}, nq} -> q_pop nq, 0, [{type, e}|acc]
+        {{:value, {:non_buffer, type, e}}, nq} -> q_pop nq, 0, mode, [{type, e}|acc]
         _ -> {{:value, acc |> Enum.reverse}, q}
       end)
+  end
+
+  defp buffers_size(buffers, :buffers), do: length(buffers)
+  defp buffers_size(buffers, :bytes), do:
+    buffers |> Enum.reduce(0, fn %Buffer{payload: p}, acc -> acc + byte_size p end)
+
+  defp split_buffers(buffers, :buffers, count), do: buffers |> Enum.split(count)
+  defp split_buffers(buffers, :bytes, count), do:
+    do_split_buffers_bytes(buffers, count, [])
+  defp do_split_buffers_bytes([%Buffer{payload: p} = buf | rest], count, acc)
+  when count >= byte_size p do
+    do_split_buffers_bytes(rest, count - byte_size(p), [buf | acc])
+  end
+  defp do_split_buffers_bytes([%Buffer{payload: p} = buf | rest], count, acc)
+  when count < byte_size buf and count > 0 do
+    <<p1::binary-size(count), p2>> = p
+    acc = [%Buffer{buf | payload: p1} | acc] |> Enum.reverse
+    rest = [%Buffer{buf | payload: p2} | rest]
+    {acc, rest}
+  end
+  defp do_split_buffers_bytes(rest, count, acc)
+  when count == 0 or rest == []
+  do
+    {acc |> Enum.reverse, rest}
   end
 
   def empty?(%PullBuffer{current_size: size, init_size: init_size}), do:
