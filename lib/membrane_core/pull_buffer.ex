@@ -121,7 +121,7 @@ defmodule Membrane.PullBuffer do
   end
 
   def empty?(%PullBuffer{current_size: size, init_size: init_size}), do:
-    size == 0 || size < init_size
+    size == 0 || (init_size != nil && size < init_size)
 
   defp handle_demand(%PullBuffer{sink: {other_pid, other_name}, sink_name: sink_name,
     current_size: size, preferred_size: pref_size, demand: demand} = pb, new_demand)
