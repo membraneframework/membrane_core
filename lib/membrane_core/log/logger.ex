@@ -138,7 +138,7 @@ defmodule Membrane.Log.Logger do
   # Case when callback returned failure.
   defp handle_callback({:error, reason, new_internal_state}, %{module: module} = state) do
     content = ["Error occurred while trying to log message. Reason = ", inspect(reason)]
-    case module.handle_log(:warn, content, Membrane.Time.native_monotonic_time, [], new_internal_state) do
+    case module.handle_log(:warn, content, Membrane.Time.monotonic_time, [], new_internal_state) do
       {:ok, new_internal_state} ->
         {:ok, %{state | internal_state: new_internal_state}}
       {:error, reason, new_internal_state} ->

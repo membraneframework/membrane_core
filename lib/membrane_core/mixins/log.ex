@@ -21,7 +21,7 @@ defmodule Membrane.Mixins.Log do
         quote location: :keep do
           level_val = unquote(level) |> Router.level_to_val
           if level_val >= unquote(router_level_val) do
-            Router.send_log(unquote(level),  unquote(message), Membrane.Time.native_monotonic_time, unquote(tags))
+            Router.send_log(unquote(level),  unquote(message), Membrane.Time.monotonic_time, unquote(tags))
           end
         end
       end

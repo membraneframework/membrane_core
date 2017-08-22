@@ -66,11 +66,13 @@ defmodule Membrane.Element.Common do
     do_handle_caps(pad_name, caps, state)
 
   def do_handle_caps(pad_name, caps, %State{module: module} = state) do
-    accepted_caps = state |> State.get_pad_data!(:sink, pad_name, :accepted_caps)
-    params = %{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
+    %{accepted_caps: accepted_caps, caps: old_caps} =
+      state |> State.get_pad_data!(:sink, pad_name)
+    params = %{caps: old_caps}
     with \
       :ok <- (if accepted_caps == :any || caps in accepted_caps do :ok else :invalid_caps end),
-      {:ok, state} <- module.base_module.exec_and_handle_callback(:handle_caps, [pad_name, caps, params], state)
+      {:ok, state} <- module.base_module.exec_and_handle_callback(
+        :handle_caps, %{caps: caps}, [pad_name, caps, params], state)
     do
       state |> State.set_pad_data(:sink, pad_name, :caps, caps)
     else
@@ -97,9 +99,11 @@ defmodule Membrane.Element.Common do
     do_handle_event(pad_name, event, state)
 
   def do_handle_event(pad_name, event, %State{module: module} = state) do
-    params = %{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
-    module.base_module.exec_and_handle_callback(:handle_event, [pad_name, event, params], state)
-      |> or_warn_error("Error while handling event")
+    %{direction: dir, caps: caps} = state |> State.get_pad_data!(:any, pad_name)
+    params = %{caps: caps}
+    module.base_module.exec_and_handle_callback(
+      :handle_event, %{direction: dir, event: event}, [pad_name, event, params], state)
+        |> or_warn_error("Error while handling event")
   end
 
   def handle_link(pad_name, direction, pid, other_name, props, state) do

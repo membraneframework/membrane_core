@@ -19,7 +19,7 @@ defmodule Membrane.Element.PlaybackBuffer do
   when type in [:membrane_event, :membrane_caps]
   do
     exec(msg, state)
-      |> provided(not: state.playback_buffer |> empty?, else:
+      |> provided(that: state.playback_buffer |> empty?, else:
           state
             |> Helper.Struct.update_in([:playback_buffer, :q], fn q -> q |> @qe.push(msg) end)
             ~> (state -> {:ok, state})

@@ -29,14 +29,20 @@ defmodule Membrane.Helper do
     end
   end
 
-  def provided(value, that: condition, else: default) do
-    if condition do value else default end
+  defmacro provided(value, that: condition, else: default) do
+    quote do
+      if unquote condition do unquote value else unquote default end
+    end
   end
-  def provided(value, do: condition, else: default) do
-    if condition do value else default end
+  defmacro provided(value, do: condition, else: default) do
+    quote do
+      if unquote condition do unquote value else unquote default end
+    end
   end
-  def provided(value, not: condition, else: default) do
-    if !condition do value else default end
+  defmacro provided(value, not: condition, else: default) do
+    quote do
+      if !(unquote condition) do unquote value else unquote default end
+    end
   end
 
   def stacktrace, do:

@@ -286,6 +286,31 @@ defmodule Membrane.Element.Base.Filter do
   def handle_action({:caps, {pad_name, caps}}, _cb, _params, state), do:
     Action.send_caps(pad_name, caps, state)
 
+  def handle_action({:forward, pads}, :handle_caps, %{caps: caps} = params, state)
+  when is_list pads
+  do
+    pads |> Helper.Enum.reduce_with(state, fn pad, st ->
+      handle_action {:caps, {pad, caps}}, :handle_caps, params, st end)
+  end
+
+  def handle_action({:forward, pads}, :handle_event, %{event: event} = params, state)
+  when is_list pads
+  do
+    pads |> Helper.Enum.reduce_with(state, fn pad, st ->
+      handle_action {:event, {pad, event}}, :handle_event, params, st end)
+  end
+
+  def handle_action({:forward, :all}, cb, params, state)
+  when cb in [:handle_caps, :handle_event]
+  do
+    dir = case {cb, params} do
+        {:handle_caps, _} -> :source
+        {:handle_event, %{direction: :sink}} -> :source
+        {:handle_event, %{direction: :source}} -> :sink
+      end
+    pads = state |> State.get_pads_data(dir) |> Map.keys
+    handle_action {:forward, pads}, cb, params, state
+  end
 
   def handle_action({:demand, pad_name}, :handle_demand, src_name, state)
   when is_atom pad_name do
@@ -325,6 +350,8 @@ defmodule Membrane.Element.Base.Filter do
         "{:caps, {pad_name, caps}}",
         ["{:demand, pad_name}", "{:demand, {pad_name, size}}"]
           |> (provided that: callback == :handle_demand, else: []),
+        ["{:forward, pads}"]
+          |> (provided that: callback in [:handle_caps, :handle_event], else: []),
         "{:demand, {pad_name, src_name, size}",
       ] ++ Common.available_actions
     handle_invalid_action action, callback, params, available_actions, __MODULE__, state
@@ -467,13 +494,13 @@ defmodule Membrane.Element.Base.Filter do
       def handle_pad_removed(_pad, state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_caps(_pad, _caps, _params, state), do: {:ok, {[], state}}
+      def handle_caps(_pad, _caps, _params, state), do: {:ok, {[forward: :all], state}}
 
       @doc false
       def handle_demand(_pad, _size, _params, state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_event(_pad, _event, _params, state), do: {:ok, {[], state}}
+      def handle_event(_pad, _event, _params, state), do: {:ok, {[forward: :all], state}}
 
       @doc false
       def handle_other(_message, state), do: {:ok, {[], state}}
