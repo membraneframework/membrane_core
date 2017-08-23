@@ -27,7 +27,7 @@ defmodule Membrane.PullBuffer do
       preferred_size: preferred_size,
       init_size: props |> Keyword.get(:init_size, 0),
       demand: preferred_size,
-      mode: mode
+      mode: mode,
     }
   end
 
@@ -122,12 +122,12 @@ defmodule Membrane.PullBuffer do
       end)
   end
 
-  defp buffers_size(buffers, :buffers), do: length(buffers)
-  defp buffers_size(buffers, :bytes), do:
+  def buffers_size(buffers, :buffers), do: length(buffers)
+  def buffers_size(buffers, :bytes), do:
     buffers |> Enum.reduce(0, fn %Buffer{payload: p}, acc -> acc + byte_size p end)
 
-  defp split_buffers(buffers, :buffers, count), do: buffers |> Enum.split(count)
-  defp split_buffers(buffers, :bytes, count), do:
+  def split_buffers(buffers, :buffers, count), do: buffers |> Enum.split(count)
+  def split_buffers(buffers, :bytes, count), do:
     do_split_buffers_bytes(buffers, count, [])
   defp do_split_buffers_bytes([%Buffer{payload: p} = buf | rest], count, acc)
   when count >= byte_size p do

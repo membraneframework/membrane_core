@@ -71,14 +71,28 @@ defmodule Membrane.Element.State do
 
   def clear_new_pads(state), do: state |> Helper.Struct.put_in([:pads, :new], [])
 
-  defp init_pad_data({name, {:always, mode, caps}}, direction) do
+  defp init_pad_data({name, {:always, :push, caps}}, direction), do:
+    do_init_pad_data(name, :push, caps, direction)
+
+  defp init_pad_data({name, {:always, :pull, caps}}, :source), do:
+    do_init_pad_data(name, :pull, caps, :source, %{other_demand_in: nil})
+
+  defp init_pad_data({name, {:always, {:pull, demand_in: demand_in}, caps}}, :sink), do:
+    do_init_pad_data(name, :pull, caps, :source, %{demand_in: demand_in})
+
+  defp init_pad_data({_name, {availability, _mode, _caps}}, _direction)
+  when availability != :always do [] end
+
+  defp init_pad_data(params, direction), do:
+    raise "Invalid pad config: #{inspect params}, direction: #{inspect direction}"
+
+  defp do_init_pad_data(name, mode, caps, direction, options \\ %{}) do
     data = %{
         name: name, pid: nil, mode: mode, direction: direction,
-        caps: nil, accepted_caps: caps,
+        caps: nil, accepted_caps: caps, options: options,
       }
     [{name, data}]
   end
-  defp init_pad_data(_params, _direction), do: []
 
   def get_pads_data(state, direction \\ :any)
   def get_pads_data(state, :any), do: state.pads.data

@@ -235,11 +235,16 @@ defmodule Membrane.Element do
   end
 
   def handle_call(:membrane_handle_unlink, {from, _}, %State{module: module} = state) do
-    {:ok, %{name: pad_name}} = state |> State.get_pad_data(:any, from)
+    {:ok, %{name: pad_name}} = state |> State.get_pad_data(:any, from) #FIXME: send pad name instead determining it by pid
     with {:ok, state} <- module.base_module.handle_unlink(pad_name, state)
     do {:reply, :ok, state}
     else {:error, reason} -> {:reply, {:error, reason}, state}
     end
+  end
+
+  def handle_call({:membrane_demand_in, {demand_in, pad_name}}, _from, state) do
+    {:ok, state} = state |> State.set_pad_data(:source, pad_name, [:options, :demand_in], demand_in)
+    {:reply, :ok, state}
   end
 
   def handle_info({type, _args} = msg, state)

@@ -361,12 +361,15 @@ defmodule Membrane.Element.Base.Filter do
     {:ok, {total_size, state}} = state
       |> State.get_update_pad_data(:source, pad_name, :demand, &{:ok, {&1+size, &1+size}})
     if total_size > 0 do
-      params = %{caps: state |> State.get_pad_data!(:source, pad_name, :caps)}
-      exec_and_handle_callback(:handle_demand, pad_name, [pad_name, total_size, params], state)
-        |> or_warn_error("""
-          Demand arrived from pad #{inspect pad_name}, but error happened while
-          handling it.
-          """)
+      %{caps: caps, options: %{other_demand_in: demand_in}} =
+          state |> State.get_pad_data!(:source, pad_name)
+      params = %{caps: caps}
+      exec_and_handle_callback(
+        :handle_demand, pad_name, [pad_name, total_size, demand_in, params], state)
+          |> or_warn_error("""
+            Demand arrived from pad #{inspect pad_name}, but error happened while
+            handling it.
+            """)
     else
       debug """
         Demand handler: not executing handle_demand, as demand is not greater than 0
@@ -497,7 +500,7 @@ defmodule Membrane.Element.Base.Filter do
       def handle_caps(_pad, _caps, _params, state), do: {:ok, {[forward: :all], state}}
 
       @doc false
-      def handle_demand(_pad, _size, _params, state), do: {:ok, {[], state}}
+      def handle_demand(_pad, _size, _unit, _params, state), do: {:ok, {[], state}}
 
       @doc false
       def handle_event(_pad, _event, _params, state), do: {:ok, {[forward: :all], state}}
@@ -530,7 +533,7 @@ defmodule Membrane.Element.Base.Filter do
         handle_pad_added: 3,
         handle_pad_removed: 2,
         handle_caps: 4,
-        handle_demand: 4,
+        handle_demand: 5,
         handle_event: 4,
         handle_other: 2,
         handle_play: 1,
