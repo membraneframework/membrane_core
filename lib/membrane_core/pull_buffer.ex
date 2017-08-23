@@ -19,13 +19,13 @@ defmodule Membrane.PullBuffer do
   @non_buf_types [:event, :caps]
 
   def new(sink, sink_name, mode, props) do
-    preferred_size = props |> Keyword.get(:preferred_size, 10)
+    preferred_size = props[:preferred_size] || 10
     %PullBuffer{
       q: @qe.new,
       sink: sink,
       sink_name: sink_name,
       preferred_size: preferred_size,
-      init_size: props |> Keyword.get(:init_size, 0),
+      init_size: props[:init_size] || 0,
       demand: preferred_size,
       mode: mode,
     }
@@ -104,11 +104,11 @@ defmodule Membrane.PullBuffer do
   do
     q |> @qe.pop |> (case do
         {{:value, {:buffers, b, buf_cnt}}, nq} when count >= buf_cnt ->
-          q_pop nq, count - buf_cnt, mode, [{:buffers, b}|acc]
+          q_pop nq, count - buf_cnt, mode, [{:buffers, b, buf_cnt}|acc]
         {{:value, {:buffers, b, buf_cnt}}, nq} when count < buf_cnt ->
           {b, back} = b |> split_buffers(mode, count)
           nq = nq |> @qe.push_front({:buffers, back, buf_cnt - count})
-          {{:value, [{:buffers, b}|acc] |> Enum.reverse}, nq}
+          {{:value, [{:buffers, b, count,}|acc] |> Enum.reverse}, nq}
         {:empty, nq} ->
           {{:empty, acc |> Enum.reverse}, nq}
         {{:value, {:non_buffer, type, e}}, nq} ->
@@ -123,23 +123,30 @@ defmodule Membrane.PullBuffer do
   end
 
   def buffers_size(buffers, :buffers), do: length(buffers)
+
   def buffers_size(buffers, :bytes), do:
     buffers |> Enum.reduce(0, fn %Buffer{payload: p}, acc -> acc + byte_size p end)
 
   def split_buffers(buffers, :buffers, count), do: buffers |> Enum.split(count)
+
   def split_buffers(buffers, :bytes, count), do:
     do_split_buffers_bytes(buffers, count, [])
+
   defp do_split_buffers_bytes([%Buffer{payload: p} = buf | rest], count, acc)
-  when count >= byte_size p do
+  when count >= byte_size(p)
+  do
     do_split_buffers_bytes(rest, count - byte_size(p), [buf | acc])
   end
+
   defp do_split_buffers_bytes([%Buffer{payload: p} = buf | rest], count, acc)
-  when count < byte_size buf and count > 0 do
-    <<p1::binary-size(count), p2>> = p
+  when count < byte_size(p) and count > 0
+  do
+    <<p1::binary-size(count), p2::binary>> = p
     acc = [%Buffer{buf | payload: p1} | acc] |> Enum.reverse
     rest = [%Buffer{buf | payload: p2} | rest]
     {acc, rest}
   end
+
   defp do_split_buffers_bytes(rest, count, acc)
   when count == 0 or rest == []
   do

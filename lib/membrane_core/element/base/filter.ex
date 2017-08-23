@@ -420,7 +420,7 @@ defmodule Membrane.Element.Base.Filter do
     end
   end
 
-  defp handle_pullbuffer_output(pad_name, src_name, {:buffers, b}, state) do
+  defp handle_pullbuffer_output(pad_name, src_name, {:buffers, b, _buf_cnt}, state) do
     params = %{
         caps: state |> State.get_pad_data!(:sink, pad_name, :caps),
         source: src_name,

@@ -333,10 +333,11 @@ defmodule Membrane.Element.Base.Sink do
     end
   end
 
-  defp handle_pullbuffer_output(pad_name, {:buffers, b}, state) do
+  defp handle_pullbuffer_output(pad_name, {:buffers, b, buf_cnt}, state) do
     {:ok, state} = state |>
-      State.update_pad_data(:sink, pad_name, :self_demand, & {:ok, &1 - length b})
+      State.update_pad_data(:sink, pad_name, :self_demand, & {:ok, &1 - buf_cnt})
     params = %{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
+    debug "Executing handle_write with buffers #{inspect b}"
     exec_and_handle_callback :handle_write, [pad_name, b, params], state
   end
   defp handle_pullbuffer_output(pad_name, v, state), do:
