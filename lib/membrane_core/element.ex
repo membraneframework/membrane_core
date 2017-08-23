@@ -243,7 +243,8 @@ defmodule Membrane.Element do
   end
 
   def handle_call({:membrane_demand_in, {demand_in, pad_name}}, _from, state) do
-    {:ok, state} = state |> State.set_pad_data(:source, pad_name, [:options, :demand_in], demand_in)
+    {:ok, state} = state |>
+      State.set_pad_data(:source, pad_name, [:options, :other_demand_in], demand_in)
     {:reply, :ok, state}
   end
 

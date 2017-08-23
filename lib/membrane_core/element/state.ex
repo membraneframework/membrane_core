@@ -78,7 +78,7 @@ defmodule Membrane.Element.State do
     do_init_pad_data(name, :pull, caps, :source, %{other_demand_in: nil})
 
   defp init_pad_data({name, {:always, {:pull, demand_in: demand_in}, caps}}, :sink), do:
-    do_init_pad_data(name, :pull, caps, :source, %{demand_in: demand_in})
+    do_init_pad_data(name, :pull, caps, :sink, %{demand_in: demand_in})
 
   defp init_pad_data({_name, {availability, _mode, _caps}}, _direction)
   when availability != :always do [] end

@@ -20,12 +20,12 @@ defmodule Membrane.Element.Action do
       Buffers: #{inspect(buffers)}
       """
     with \
-      {:ok, %{mode: mode, pid: pid, other_name: other_name, other_demand_in: demand_unit}}
+      {:ok, %{mode: mode, pid: pid, other_name: other_name, options: %{other_demand_in: demand_unit} }}
         <- state |> State.get_pad_data(:source, pad_name),
       {:ok, state} = (case mode do
-          :pull -> state |>
-            State.update_pad_data(
-              :source, pad_name, :demand, &{:ok, &1 - buffers |> PullBuffer.buffers_size(demand_unit)})
+          :pull ->
+            buf_size = PullBuffer.buffers_size buffers, demand_unit
+            state |> State.update_pad_data(:source, pad_name, :demand, &{:ok, &1 - buf_size})
           :push -> {:ok, state}
         end)
     do
