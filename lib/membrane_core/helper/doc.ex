@@ -27,8 +27,8 @@ defmodule Membrane.Helper.Doc do
 
       """
       * Pad: `#{inspect(name)}`
-          * Availability: #{availability}
-          * Mode: #{mode}
+          * Availability: #{inspect availability}
+          * Mode: #{inspect mode}
       #{caps_docstring}
       """
     end)
