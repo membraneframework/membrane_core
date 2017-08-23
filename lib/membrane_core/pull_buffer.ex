@@ -18,8 +18,8 @@ defmodule Membrane.PullBuffer do
 
   @non_buf_types [:event, :caps]
 
-  def new(sink, sink_name, mode, props) do
-    preferred_size = props[:preferred_size] || 10
+  def new(sink, sink_name, mode, props) when mode in [:buffers, :bytes] do
+    preferred_size = props[:preferred_size] || case mode do :buffers -> 10; :bytes -> 65_536 end
     %PullBuffer{
       q: @qe.new,
       sink: sink,
