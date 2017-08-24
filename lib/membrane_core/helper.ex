@@ -3,7 +3,7 @@ defmodule Membrane.Helper do
 
   defmacro __using__(_args) do
     quote do
-      import Membrane.Helper, only: [~>: 2, ~>>: 2, provided: 2]
+      import Membrane.Helper, only: [~>: 2, ~>>: 2, provided: 2, int_part: 2]
       alias Membrane.Helper
     end
   end
@@ -13,6 +13,11 @@ defmodule Membrane.Helper do
 
   def wrap_nil(nil, reason), do: {:error, reason}
   def wrap_nil(v, _), do: {:ok, v}
+
+  def int_part(x, d) when is_integer(x) and is_integer(d) do
+    r = x |> rem(d)
+    x - r
+  end
 
   defmacro x ~> f do
     quote do
