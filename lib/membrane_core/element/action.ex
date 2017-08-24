@@ -6,7 +6,7 @@ defmodule Membrane.Element.Action do
   alias Membrane.Pad
   alias Membrane.Caps
   alias Membrane.Element.State
-  alias Membrane.PullBuffer
+  alias Membrane.Buffer
   use Membrane.Helper
 
   def send_buffer(pad_name, %Membrane.Buffer{} = buffer, state) do
@@ -24,7 +24,7 @@ defmodule Membrane.Element.Action do
         <- state |> State.get_pad_data(:source, pad_name),
       {:ok, state} = (case mode do
           :pull ->
-            buf_size = PullBuffer.buffers_size buffers, demand_unit
+            buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size buffers
             state |> State.update_pad_data(:source, pad_name, :demand, &{:ok, &1 - buf_size})
           :push -> {:ok, state}
         end)
