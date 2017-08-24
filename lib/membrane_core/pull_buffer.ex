@@ -20,7 +20,7 @@ defmodule Membrane.PullBuffer do
 
   def new(sink, sink_name, demand_in, props) do
     metric = Buffer.Metric.from_unit demand_in
-    preferred_size = metric.pull_buffer_preferred_size
+    preferred_size = metric.pullbuffer_preferred_size
     %PullBuffer{
       q: @qe.new,
       sink: sink,

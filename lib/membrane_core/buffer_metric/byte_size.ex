@@ -2,7 +2,7 @@ defmodule Membrane.Buffer.Metric.ByteSize do
   alias Membrane.Buffer
   @behaviour Buffer.Metric
 
-  def pullbuffer_preferred_size, do: 10
+  def pullbuffer_preferred_size, do: 65_536
 
   def buffers_size(buffers), do:
     buffers |> Enum.reduce(0, fn %Buffer{payload: p}, acc -> acc + byte_size p end)
