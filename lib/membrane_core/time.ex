@@ -15,6 +15,7 @@ defmodule Membrane.Time do
     monotonic_time: 0,
     system_time: 0,
     from_datetime: 1,
+    from_iso8601!: 1,
     native_unit: 1,
     native_units: 1,
     nanosecond: 1,
@@ -32,6 +33,7 @@ defmodule Membrane.Time do
     day: 1,
     days: 1,
     to_datetime: 1,
+    to_iso8601: 1,
     to_native_units: 1,
     to_nanoseconds: 1,
     to_microseconds: 1,
@@ -96,6 +98,19 @@ defmodule Membrane.Time do
   @spec from_datetime(DateTime.t) :: t
   def from_datetime(value = %DateTime{}) do
     value |> DateTime.to_unix(:nanosecond) |> nanoseconds
+  end
+
+
+  @doc """
+  Converts iso8601 string to internal Membrane time units.
+  If input is invalid, throws match error.
+
+  Inlined by the compiler.
+  """
+  @spec from_iso8601!(String.t) :: t
+  def from_iso8601!(value) when is_binary(value) do
+    {:ok, datetime, shift} = value |> DateTime.from_iso8601
+    (datetime |> from_datetime) + (shift |> seconds)
   end
 
 
@@ -282,6 +297,16 @@ defmodule Membrane.Time do
   @spec to_datetime(t) :: DateTime.t
   def to_datetime(value) when is_t(value) do
      DateTime.from_unix!(value |> nanoseconds, :nanosecond)
+  end
+
+  @doc """
+  Returns time as a iso8601 string.
+
+  Inlined by the compiler.
+  """
+  @spec to_iso8601(t) :: String.t
+  def to_iso8601(value) when is_t(value) do
+    value |> to_datetime |> DateTime.to_iso8601
   end
 
 
