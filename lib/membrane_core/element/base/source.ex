@@ -272,7 +272,8 @@ defmodule Membrane.Element.Base.Source do
       def handle_pad_removed(_pad, state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_demand1(_pad, _params, state), do: {:ok, {[], state}}
+      def handle_demand1(_pad, _params, state), do:
+        {:error, {:handle_demand_not_implemented, state}}
 
       @doc false
       def handle_demand(pad, size, :buffers, params, state) do
@@ -280,7 +281,8 @@ defmodule Membrane.Element.Base.Source do
             handle_demand1 pad, params, st
           end)
       end
-      def handle_demand(_pad, _size, _unit, _params, state), do: {:ok, {[], state}}
+      def handle_demand(_pad, _size, _unit, _params, state), do:
+        {:error, {:handle_demand_not_implemented, state}}
 
       @doc false
       def handle_event(_pad, _event, _params, state), do: {:ok, {[], state}}
