@@ -6,10 +6,12 @@ defmodule Membrane.Helper.Timer do
   when Time.is_t(time) and (is_nil(min_delay) or Time.is_t(min_delay)) and is_pid(pid)
   do
     time
-      |> Kernel.-(Time.system_time)
       ~> (t -> if is_nil(min_delay) do t else max t, min_delay end)
       |> Time.to_milliseconds
       |> :timer.send_after(pid, msg)
   end
+
+  def send_at(time, min_delay \\ nil, pid \\ self(), msg), do:
+    send_after(time - Time.system_time, min_delay, pid, msg)
 
 end
