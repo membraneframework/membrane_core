@@ -311,90 +311,90 @@ defmodule Membrane.Time do
 
 
   @doc """
-  Returns time in system native units. Rounded using Float.round/2
+  Returns time in system native units. Rounded using Kernel.round/1
 
   Inlined by the compiler.
   """
   @spec to_native_units(t) :: native_t
   def to_native_units(value) when is_t(value) do
-    value / (1 |> native_unit) |> Float.round |> trunc
+    value / (1 |> native_unit) |> round
   end
 
 
   @doc """
-  Returns time in nanoseconds. Rounded using Float.round/2
+  Returns time in nanoseconds. Rounded using Kernel.round/1
 
   Inlined by the compiler.
   """
   @spec to_nanoseconds(t) :: integer
   def to_nanoseconds(value) when is_t(value) do
-    value / (1 |> nanosecond) |> Float.round |> trunc
+    value / (1 |> nanosecond) |> round
   end
 
 
   @doc """
-  Returns time in microseconds. Rounded using Float.round/2
+  Returns time in microseconds. Rounded using Kernel.round/1
 
   Inlined by the compiler.
   """
   @spec to_microseconds(t) :: integer
   def to_microseconds(value) when is_t(value) do
-    value / (1 |> microsecond) |> Float.round |> trunc
+    value / (1 |> microsecond) |> round
   end
 
 
   @doc """
-  Returns time in milliseconds. Rounded using Float.round/2
+  Returns time in milliseconds. Rounded using Kernel.round/1
 
   Inlined by the compiler.
   """
   @spec to_milliseconds(t) :: integer
   def to_milliseconds(value) when is_t(value) do
-    value / (1 |> millisecond) |> Float.round |> trunc
+    value / (1 |> millisecond) |> round
   end
 
 
   @doc """
-  Returns time in seconds. Rounded using Float.round/2
+  Returns time in seconds. Rounded using Kernel.round/1
 
   Inlined by the compiler.
   """
   @spec to_seconds(t) :: integer
   def to_seconds(value) when is_t(value) do
-    value / (1 |> second) |> Float.round |> trunc
+    value / (1 |> second) |> round
   end
 
 
   @doc """
-  Returns time in minutes. Rounded using Float.round/2
+  Returns time in minutes. Rounded using Kernel.round/1
 
   Inlined by the compiler.
   """
   @spec to_minutes(t) :: integer
   def to_minutes(value) when is_t(value) do
-    value / (1 |> minute) |> Float.round |> trunc
+    value / (1 |> minute) |> round
   end
 
 
   @doc """
-  Returns time in hours. Rounded using Float.round/2
+  Returns time in hours. Rounded using Kernel.round/1
 
   Inlined by the compiler.
   """
   @spec to_hours(t) :: integer
   def to_hours(value) when is_t(value) do
-    value / (1 |> hour) |> Float.round |> trunc
+    value / (1 |> hour) |> round
   end
 
 
   @doc """
-  Returns time in days. Rounded using Float.round/2
+  Returns time in days. Rounded using Kernel.round/1
 
   Inlined by the compiler.
   """
   @spec to_days(t) :: integer
   def to_days(value) when is_t(value) do
-    value / (1 |> day) |> Float.round |> trunc
+    value / (1 |> day) |> round
   end
 
 end
