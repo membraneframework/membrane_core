@@ -294,9 +294,16 @@ defmodule Membrane.Pipeline do
       end)
   end
 
-  def handle_playback_state(_old, new, %State{pids_to_children: pids_to_children} = state) do
-    with :ok <- pids_to_children |> Map.keys |> Helper.Enum.each_with(
-      fn pid -> Element.change_playback_state(pid, new) end)
+  def handle_playback_state(old, new, %State{pids_to_children: pids_to_children} = state) do
+    with \
+      :ok <- pids_to_children |> Map.keys |> Helper.Enum.each_with(
+        fn pid -> Element.change_playback_state(pid, new) end),
+      {callback, args} = (case {old, new} do
+          {_, :prepared} -> {:handle_prepare, [old]}
+          {:prepared, :playing} -> {:handle_play, []}
+          {:prepared, :stopped} -> {:handle_stop, []}
+        end),
+      {:ok, state} <- exec_and_handle_callback(callback, args, state)
     do
       debug "Pipeline: changed playback state of children to #{inspect new}"
       {:ok, %State{state | playback_state: new}}
@@ -376,25 +383,29 @@ defmodule Membrane.Pipeline do
       # Default implementations
 
       @doc false
-      def handle_init(_options) do
-        {:ok, %{}}
-      end
-
+      def handle_init(_options), do: {:ok, %{}}
 
       @doc false
-      def handle_message(_message, _from, state) do
-        {:ok, {[], state}}
-      end
-
+      def handle_prepare(_playback_state, state), do: {:ok, {[], state}}
 
       @doc false
-      def handle_other(_message, state) do
-        {:ok, {[], state}}
-      end
+      def handle_play(state), do: {:ok, {[], state}}
+
+      @doc false
+      def handle_stop(state), do: {:ok, {[], state}}
+
+      @doc false
+      def handle_message(_message, _from, state), do: {:ok, {[], state}}
+
+      @doc false
+      def handle_other(_message, state), do: {:ok, {[], state}}
 
 
       defoverridable [
         handle_init: 1,
+        handle_prepare: 2,
+        handle_play: 1,
+        handle_stop: 1,
         handle_message: 3,
         handle_other: 2,
       ]
