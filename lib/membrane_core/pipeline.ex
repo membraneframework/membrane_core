@@ -378,6 +378,7 @@ defmodule Membrane.Pipeline do
 
   defmacro __using__(_) do
     quote location: :keep do
+      alias Membrane.Pipeline
       @behaviour Membrane.Pipeline
 
       # Default implementations
