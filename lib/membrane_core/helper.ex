@@ -3,7 +3,8 @@ defmodule Membrane.Helper do
 
   defmacro __using__(_args) do
     quote do
-      import Membrane.Helper, only: [~>: 2, ~>>: 2, provided: 2, int_part: 2]
+      import Membrane.Helper, only: [
+        ~>: 2, ~>>: 2, provided: 2, int_part: 2, ok: 1, ok: 2, error: 1, error: 2]
       alias Membrane.Helper
     end
   end
@@ -48,6 +49,20 @@ defmodule Membrane.Helper do
     quote do
       if !(unquote condition) do unquote value else unquote default end
     end
+  end
+
+  defmacro ok(v) do
+    quote do {:ok, unquote v} end
+  end
+  defmacro ok(v, state) do
+    quote do {{:ok, unquote v}, unquote state} end
+  end
+
+  defmacro error(reason) do
+    quote do {:error, unquote reason} end
+  end
+  defmacro error(reason, state) do
+    quote do {{:error, unquote reason}, unquote state} end
   end
 
   def stacktrace, do:

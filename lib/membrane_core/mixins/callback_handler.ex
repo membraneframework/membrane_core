@@ -36,11 +36,11 @@ defmodule Membrane.Mixins.CallbackHandler do
         internal_state = state |> Map.get(:internal_state)
         module = state |> Map.get(:module)
         with \
-          {:ok, {actions, new_internal_state}} <- apply(module, callback, args ++ [internal_state])
+          ok(actions, new_internal_state) <- apply(module, callback, args ++ [internal_state])
             |> handle_callback_result(callback)
             |> or_warn_error("Error while executing callback #{inspect callback}"),
           state = state |> Map.put(:internal_state, new_internal_state),
-          {:ok, state} <- actions
+          ok(state) <- actions
             |> handle_actions(callback, handler_params, state)
             |> or_warn_error("Error while handling actions returned by callback #{inspect callback}")
         do

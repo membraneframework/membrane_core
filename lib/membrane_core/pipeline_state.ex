@@ -26,16 +26,16 @@ defmodule Membrane.Pipeline.State do
 
     def get_child(%State{pids_to_children: pids_to_children}, child)
     when is_pid(child) do
-      pids_to_children[child] |> Helper.wrap_nil(:unknown_child)
+      pids_to_children[child] |> Helper.wrap_nil({:unknown_child, child})
     end
 
     def get_child(%State{children_to_pids: children_to_pids}, child) do
-      with {:ok, [pid|_]} <- children_to_pids[child] |> Helper.wrap_nil(:unknown_child),
+      with {:ok, [pid|_]} <- children_to_pids[child] |> Helper.wrap_nil({:unknown_child, child}),
       do: {:ok, pid}
     end
 
     def pop_child(%State{children_to_pids: children_to_pids} = state, child) do
-      with {:ok, pids} <- children_to_pids[child] |> Helper.wrap_nil(:unknown_child)
+      with {:ok, pids} <- children_to_pids[child] |> Helper.wrap_nil({:unknown_child, child})
       do
         {pid, pids} = pids |> List.pop_at(-1)
         state = case pids do
@@ -43,7 +43,7 @@ defmodule Membrane.Pipeline.State do
             _ -> state |> Helper.Struct.put_in([:children_to_pids, child], pids)
           end
         state = state |> Helper.Struct.remove_in([:pids_to_children, pid])
-        {:ok, {pid, state}}
+        ok pid, state
       end
     end
 end

@@ -133,15 +133,18 @@ defmodule Membrane.Pipeline do
       [init: {:error, reason}] -> warn_error """
         Pipeline handle_init callback returned an error
         """, reason
+        error {:pipeline_init, reason}
       [init: other] ->
         raise """
-        Pipeline's handle_init replies are expected to be {:ok, spec, state}
+        Pipeline's handle_init replies are expected to be {:ok, {spec, state}}
         but got #{inspect(other)}.
 
         This is probably a bug in your pipeline's code, check return value
         of #{module}.handle_init/1.
         """
-      {:error, reason} -> warn_error "Error during pipeline initialization", reason
+      {:error, reason} ->
+        warn_error "Error during pipeline initialization", reason
+        error {:pipeline_init, reason}
     end
   end
 
@@ -158,8 +161,8 @@ defmodule Membrane.Pipeline do
           children_to_pids: Map.merge(
             state.children_to_pids, children_to_pids, fn _k, v1, v2 -> v2 ++ v1 end),
         },
-      {:ok, links} <- links |> parse_links,
-      {:ok, {links, state}} <- links |> handle_new_pads(state),
+      ok(links) <- links |> parse_links,
+      ok(links, state) <- links |> handle_new_pads(state),
       :ok <- links |> link_children(state),
       :ok <- children_to_pids |> Map.values |> List.flatten |> set_children_message_bus
     do
@@ -171,7 +174,7 @@ defmodule Membrane.Pipeline do
         """
       {:ok, state}
     else
-      {:error, reason} -> warn_error "Failed to initialize pipeline spec", reason
+      error reason -> warn_error "Failed to initialize pipeline spec", reason
     end
   end
 
@@ -225,10 +228,12 @@ defmodule Membrane.Pipeline do
             {:ok, %{from: %{element: from, pad: from_pad}, to: %{element: to, pad: to_pad}, params: params}}
           {{from, from_pad}, {to, to_pad}} ->
             {:ok, %{from: %{element: from, pad: from_pad}, to: %{element: to, pad: to_pad}, params: []}}
-          link -> {:error, {:invalid_link, link}}
+          _ -> {:error, :invalid_link}
         ),
-      :ok <- [link.from.pad, link.to.pad] |> Helper.Enum.each_with(&parse_pad/1),
-      do: {:ok, link}
+      :ok <- [link.from.pad, link.to.pad] |> Helper.Enum.each_with(&parse_pad/1)
+      do {:ok, link}
+      else error reason -> error {:invalid_link, link, reason}
+      end
   end
 
   defp parse_pad({name, _params})
@@ -247,16 +252,21 @@ defmodule Membrane.Pipeline do
       end)
   end
 
-  defp handle_new_pad(%{element: element, pad: {name, params}}, direction,
+  defp handle_new_pad(%{element: element, pad: {name, params}} = element_pad, direction,
     %State{children_pad_nos: pad_nos} = state) do
     with \
       {:ok, pid} <- state |> State.get_child(element),
       no = pad_nos |> Map.get({element, name}, 0),
-      :ok <- pid |> Element.handle_new_pad(direction, {{name, no}, params}),
-    do: {:ok, {%{element: element, pad: {name, no}}, %State{state | children_pad_nos: pad_nos |> Map.put({element, name}, no + 1)}}}
+      :ok <- pid |> Element.handle_new_pad(direction, {{name, no}, params})
+    do
+      state = %State{state | children_pad_nos: pad_nos |> Map.put({element, name}, no + 1)}
+      ok %{element: element, pad: {name, no}}, state
+    else
+      error reason -> error {:handle_new_pad, element_pad, reason}
+    end
   end
   defp handle_new_pad(element_pad, _direction, state), do:
-    {:ok, {element_pad, state}}
+    ok(element_pad, state)
 
   # Links children based on given specification and map for mapping children
   # names into PIDs.
@@ -278,13 +288,11 @@ defmodule Membrane.Pipeline do
 
   defp do_link_children(%{from: from, to: to, params: params} = link, state) do
     with \
-      {:ok, from_pid} <- state |> State.get_child(from.element)
-        ~>> {{:error, :unknown_child}, {:error, {:unknown_from, link}}},
-      {:ok, to_pid} <- state |> State.get_child(to.element)
-        ~>> {{:error, :unknown_child}, {:error, {:unknown_to, link}}},
+      {:ok, from_pid} <- state |> State.get_child(from.element),
+      {:ok, to_pid} <- state |> State.get_child(to.element),
       :ok <- Element.link(from_pid, to_pid, from.pad, to.pad, params)
-    do
-      :ok
+    do :ok
+    else error reason -> error {:cannot_link, link, reason}
     end
   end
 
@@ -306,10 +314,11 @@ defmodule Membrane.Pipeline do
       {:ok, state} <- exec_and_handle_callback(callback, args, state)
     do
       debug "Pipeline: changed playback state of children to #{inspect new}"
-      {:ok, %State{state | playback_state: new}}
+      ok %State{state | playback_state: new}
     else {:error, reason} -> warn_error """
       Pipeline: unable to change playback state of children to #{inspect new}
       """, reason
+      error {:cannot_handle_playback_state, {old, new}, reason}
     end
   end
 
@@ -353,8 +362,10 @@ defmodule Membrane.Pipeline do
         |> Helper.Enum.map_reduce_with(state, fn c, st -> State.pop_child st, c end),
       :ok <- pids |> Helper.Enum.each_with(&Element.stop/1),
       :ok <- pids |> Helper.Enum.each_with(&Element.unlink/1),
-      :ok <- pids |> Helper.Enum.each_with(&Element.shutdown/1),
-    do: {:ok, state}
+      :ok <- pids |> Helper.Enum.each_with(&Element.shutdown/1)
+    do {:ok, state}
+    else error reason -> error {:cannot_remove_children, children, reason}
+    end
   end
 
   def handle_action(action, callback, params, state) do
