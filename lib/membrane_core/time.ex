@@ -15,6 +15,7 @@ defmodule Membrane.Time do
     monotonic_time: 0,
     system_time: 0,
     from_datetime: 1,
+    from_iso8601!: 1,
     native_unit: 1,
     native_units: 1,
     nanosecond: 1,
@@ -32,6 +33,7 @@ defmodule Membrane.Time do
     day: 1,
     days: 1,
     to_datetime: 1,
+    to_iso8601: 1,
     to_native_units: 1,
     to_nanoseconds: 1,
     to_microseconds: 1,
@@ -96,6 +98,19 @@ defmodule Membrane.Time do
   @spec from_datetime(DateTime.t) :: t
   def from_datetime(value = %DateTime{}) do
     value |> DateTime.to_unix(:nanosecond) |> nanoseconds
+  end
+
+
+  @doc """
+  Converts iso8601 string to internal Membrane time units.
+  If input is invalid, throws match error.
+
+  Inlined by the compiler.
+  """
+  @spec from_iso8601!(String.t) :: t
+  def from_iso8601!(value) when is_binary(value) do
+    {:ok, datetime, shift} = value |> DateTime.from_iso8601
+    (datetime |> from_datetime) + (shift |> seconds)
   end
 
 
@@ -284,92 +299,102 @@ defmodule Membrane.Time do
      DateTime.from_unix!(value |> nanoseconds, :nanosecond)
   end
 
+  @doc """
+  Returns time as a iso8601 string.
+
+  Inlined by the compiler.
+  """
+  @spec to_iso8601(t) :: String.t
+  def to_iso8601(value) when is_t(value) do
+    value |> to_datetime |> DateTime.to_iso8601
+  end
+
 
   @doc """
-  Returns time in system native units. Rounded using Float.round/2
+  Returns time in system native units. Rounded using Kernel.round/1
 
   Inlined by the compiler.
   """
   @spec to_native_units(t) :: native_t
   def to_native_units(value) when is_t(value) do
-    value / (1 |> native_unit) |> Float.round |> trunc
+    value / (1 |> native_unit) |> round
   end
 
 
   @doc """
-  Returns time in nanoseconds. Rounded using Float.round/2
+  Returns time in nanoseconds. Rounded using Kernel.round/1
 
   Inlined by the compiler.
   """
   @spec to_nanoseconds(t) :: integer
   def to_nanoseconds(value) when is_t(value) do
-    value / (1 |> nanosecond) |> Float.round |> trunc
+    value / (1 |> nanosecond) |> round
   end
 
 
   @doc """
-  Returns time in microseconds. Rounded using Float.round/2
+  Returns time in microseconds. Rounded using Kernel.round/1
 
   Inlined by the compiler.
   """
   @spec to_microseconds(t) :: integer
   def to_microseconds(value) when is_t(value) do
-    value / (1 |> microsecond) |> Float.round |> trunc
+    value / (1 |> microsecond) |> round
   end
 
 
   @doc """
-  Returns time in milliseconds. Rounded using Float.round/2
+  Returns time in milliseconds. Rounded using Kernel.round/1
 
   Inlined by the compiler.
   """
   @spec to_milliseconds(t) :: integer
   def to_milliseconds(value) when is_t(value) do
-    value / (1 |> millisecond) |> Float.round |> trunc
+    value / (1 |> millisecond) |> round
   end
 
 
   @doc """
-  Returns time in seconds. Rounded using Float.round/2
+  Returns time in seconds. Rounded using Kernel.round/1
 
   Inlined by the compiler.
   """
   @spec to_seconds(t) :: integer
   def to_seconds(value) when is_t(value) do
-    value / (1 |> second) |> Float.round |> trunc
+    value / (1 |> second) |> round
   end
 
 
   @doc """
-  Returns time in minutes. Rounded using Float.round/2
+  Returns time in minutes. Rounded using Kernel.round/1
 
   Inlined by the compiler.
   """
   @spec to_minutes(t) :: integer
   def to_minutes(value) when is_t(value) do
-    value / (1 |> minute) |> Float.round |> trunc
+    value / (1 |> minute) |> round
   end
 
 
   @doc """
-  Returns time in hours. Rounded using Float.round/2
+  Returns time in hours. Rounded using Kernel.round/1
 
   Inlined by the compiler.
   """
   @spec to_hours(t) :: integer
   def to_hours(value) when is_t(value) do
-    value / (1 |> hour) |> Float.round |> trunc
+    value / (1 |> hour) |> round
   end
 
 
   @doc """
-  Returns time in days. Rounded using Float.round/2
+  Returns time in days. Rounded using Kernel.round/1
 
   Inlined by the compiler.
   """
   @spec to_days(t) :: integer
   def to_days(value) when is_t(value) do
-    value / (1 |> day) |> Float.round |> trunc
+    value / (1 |> day) |> round
   end
 
 end
