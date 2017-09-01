@@ -42,19 +42,30 @@ defmodule Membrane.Mixins.Log do
         end
       end
 
-      defp warn_error(message, reason) do
-        warn """
-        Encountered an error:
-        #{message}
-        Reason: #{inspect reason}
-        Stacktrace:
-        #{Membrane.Helper.stacktrace}
-        """
-        {:error, reason}
+      defmacrop warn_error(message, reason) do
+        quote do
+          use Membrane.Helper
+          warn """
+          Encountered an error:
+          #{unquote message}
+          Reason: #{inspect unquote reason}
+          Stacktrace:
+          #{Helper.stacktrace}
+          """
+          unquote {:error, reason}
+        end
       end
 
-      defp or_warn_error({:ok, value}, _msg), do: {:ok, value}
-      defp or_warn_error({:error, reason}, msg), do: warn_error(msg, reason)
+      defmacrop or_warn_error(v, message) do
+        quote do
+          with {:ok, value} <- unquote v
+          do {:ok, value}
+          else {:error, reason} -> warn_error(unquote(message), reason)
+          end
+        end
+      end
+      # defp or_warn_error({:ok, value}, _msg), do: {:ok, value}
+      # defp or_warn_error({:error, reason}, msg), do: warn_error(msg, reason)
 
 
       @doc false

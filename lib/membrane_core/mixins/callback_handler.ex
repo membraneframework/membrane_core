@@ -57,8 +57,8 @@ defmodule Membrane.Mixins.CallbackHandler do
         end
       end
 
-      def handle_callback_result({:ok, new_internal_state}), do:
-        handle_callback_result({{:ok, []}, new_internal_state})
+      def handle_callback_result({:ok, new_internal_state}, module, cb), do:
+        handle_callback_result({{:ok, []}, new_internal_state}, module, cb)
       def handle_callback_result({{:ok, actions}, new_internal_state}, _module, _cb)
       when is_list actions
       do {{:ok, actions}, new_internal_state}

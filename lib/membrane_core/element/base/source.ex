@@ -71,9 +71,9 @@ defmodule Membrane.Element.Base.Source do
   * `Membrane.Element.Base.Mixin.CommonBehaviour` - for more callbacks.
   """
 
+  use Membrane.Mixins.Log, tags: :core
   alias Membrane.Element.{Action, Common, State}
   use Membrane.Element.Common
-  use Membrane.Mixins.Log, tags: :core
 
 
   # Type that defines a single action that may be returned from handle_*

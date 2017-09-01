@@ -9,6 +9,8 @@ defmodule Membrane.Helper do
     end
   end
 
+  @compile {:inline, listify: 1, wrap_nil: 2, int_part: 2}
+
   def listify(list) when is_list list do list end
   def listify(non_list) do [non_list] end
 
@@ -51,8 +53,12 @@ defmodule Membrane.Helper do
     end
   end
 
-  def stacktrace, do:
-    Process.info(self(), :current_stacktrace)
-      ~> ({:current_stacktrace, trace} -> trace)
-      |> Exception.format_stacktrace
+  defmacro stacktrace do
+    quote do
+      Process.info(self(), :current_stacktrace)
+        ~> ({:current_stacktrace, trace} -> trace)
+        |> Enum.drop(1) #in order to exclude `Process.info/2` call
+        |> Exception.format_stacktrace
+    end
+  end
 end
