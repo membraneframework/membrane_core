@@ -169,7 +169,7 @@ defmodule Membrane.Element.Common do
 
   def handle_new_pad(name, direction, args, %State{module: module, internal_state: internal_state} = state) do
     with \
-      {:ok, {{_availability, _mode, _caps} = params, internal_state}} <-
+      {{:ok, {_availability, _mode, _caps} = params}, internal_state} <-
         apply(module, :handle_new_pad, args ++ [internal_state])
     do
       state = state
