@@ -57,6 +57,8 @@ defmodule Membrane.Mixins.CallbackHandler do
         end
       end
 
+      def handle_callback_result({:ok, new_internal_state}), do:
+        handle_callback_result({{:ok, []}, new_internal_state})
       def handle_callback_result({{:ok, actions}, new_internal_state}, _module, _cb)
       when is_list actions
       do {{:ok, actions}, new_internal_state}
@@ -74,6 +76,7 @@ defmodule Membrane.Mixins.CallbackHandler do
         warn_error """
         Callback replies are expected to be one of:
 
+            {:ok, state}
             {{:ok, actions}, state}
             {{:error, reason}, state}
 
