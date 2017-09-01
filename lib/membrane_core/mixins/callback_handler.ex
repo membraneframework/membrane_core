@@ -72,7 +72,6 @@ defmodule Membrane.Mixins.CallbackHandler do
         {{:ok, []}, new_internal_state}
       end
       def handle_callback_result(result, module, cb) do
-        IO.inspect "CZEGO SIE NIE LOGUJE???"
         warn_error """
         Callback replies are expected to be one of:
 

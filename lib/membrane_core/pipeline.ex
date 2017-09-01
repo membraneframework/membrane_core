@@ -166,7 +166,6 @@ defmodule Membrane.Pipeline do
         },
       {:ok, links} <- links |> parse_links,
       {{:ok, links}, state} <- links |> handle_new_pads(state),
-      IO.puts("handled_new_pads"),
       :ok <- links |> link_children(state),
       :ok <- children_to_pids |> Map.values |> List.flatten |> set_children_message_bus
     do
