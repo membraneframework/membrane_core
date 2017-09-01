@@ -3,9 +3,9 @@ defmodule Membrane.Pipeline do
   Module containing functions for constructing and supervising pipelines.
   """
 
+  use Membrane.Mixins.Log, tags: :core
   use Membrane.Mixins.CallbackHandler
   use Membrane.Mixins.Playback
-  use Membrane.Mixins.Log, tags: :core
   use GenServer
   alias Membrane.Pipeline.{State,Spec}
   alias Membrane.Element
@@ -215,7 +215,7 @@ defmodule Membrane.Pipeline do
         })
 
       {:error, reason} ->
-        {:error, reason}
+        warn_error "Cannot start child #{inspect name}", {:cannot_start_child, name, reason}
     end
   end
 

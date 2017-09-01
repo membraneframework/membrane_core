@@ -178,8 +178,8 @@ defmodule Membrane.Element do
         {:ok, state}
 
       {:error, reason} ->
-        warn("Failed to initialize element: reason = #{inspect(reason)}")
-        {:stop, reason}
+        warn_error "Failed to initialize element", reason
+        {:stop, {:element_init, reason}}
     end
   end
 
