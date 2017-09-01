@@ -6,7 +6,6 @@ defmodule Membrane.Element do
 
   use Membrane.Mixins.Log, tags: :core
   use Membrane.Mixins.Playback
-  use Membrane.Mixins.CallbackHandler
   alias Membrane.Element.State
   use Membrane.Helper
   import Membrane.Helper.GenServer
@@ -194,6 +193,7 @@ defmodule Membrane.Element do
 
     debug("Terminating: reason = #{inspect(reason)}, state = #{inspect(state)}")
     module.handle_shutdown(internal_state)
+    :normal
   end
 
   def handle_call({:membrane_new_pad, direction, {name, params}}, _from, %State{module: module} = state) do

@@ -38,7 +38,7 @@ defmodule Membrane.Mixins.CallbackHandler do
         with \
           {{:ok, actions}, new_internal_state} <- module
             |> apply(callback, args ++ [internal_state])
-            |> handle_callback_result(callback, module),
+            |> handle_callback_result(module, callback),
           state = state |> Map.put(:internal_state, new_internal_state),
           {:ok, state} <- actions
             |> exec_handle_actions(callback, handler_params, state)
@@ -57,18 +57,20 @@ defmodule Membrane.Mixins.CallbackHandler do
         end
       end
 
-      def handle_callback_result({:ok, {actions, new_internal_state}}, _module, _cb)
+      def handle_callback_result({{:ok, actions}, new_internal_state}, _module, _cb)
       when is_list actions
-      do {:ok, {actions, new_internal_state}}
+      do {{:ok, actions}, new_internal_state}
       end
-      def handle_callback_result({:error, {reason, new_internal_state}}, module, cb) do
+      def handle_callback_result({{:error, reason}, new_internal_state}, module, cb) do
+        #TODO: send error to pipeline or do something
         warn_error """
              Callback #{inspect cb} from module #{inspect module} returned an error
              Internal state: #{inspect new_internal_state}
             """, reason
-        {:ok, {[], new_internal_state}}
+        {{:ok, []}, new_internal_state}
       end
       def handle_callback_result(result, module, cb) do
+        IO.inspect "CZEGO SIE NIE LOGUJE???"
         warn_error """
         Callback replies are expected to be one of:
 

@@ -166,6 +166,7 @@ defmodule Membrane.Pipeline do
         },
       {:ok, links} <- links |> parse_links,
       {{:ok, links}, state} <- links |> handle_new_pads(state),
+      IO.puts("handled_new_pads"),
       :ok <- links |> link_children(state),
       :ok <- children_to_pids |> Map.values |> List.flatten |> set_children_message_bus
     do
@@ -252,7 +253,7 @@ defmodule Membrane.Pipeline do
         with \
           {{:ok, from}, st} <- from |> handle_new_pad(:source, st),
           {{:ok, to}, st} <- to |> handle_new_pad(:sink, st),
-          do: {:ok, {%{link | from: from, to: to}, st}}
+          do: {{:ok, %{link | from: from, to: to}}, st}
       end)
   end
 

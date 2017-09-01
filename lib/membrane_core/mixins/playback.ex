@@ -25,7 +25,9 @@ defmodule Membrane.Mixins.Playback do
 
       def handle_call({:membrane_change_playback_state, new_state}, _from, state) do
         use Membrane.Helper
+        import Membrane.Helper.GenServer
         alias Membrane.Mixins.Playback
+
 
         old_state = state |> Map.get(:playback_state)
         with \
@@ -38,23 +40,24 @@ defmodule Membrane.Mixins.Playback do
                   ~>> {{:ok, state}, {:ok, state |> Map.put(:playback_state, Playback.states[j])}}
 
               end)
-        do {:reply, :ok, state}
+        do {:ok, state}
         else
           :invalid_old_playback -> warn_error """
             Cannot change playback state, because current_playback_state callback
             returned invalid playback state: #{inspect old_state}
             """, :invalid_old_playback
-            ~> (err -> {:reply, err, state})
           :invalid_new_playback -> warn_error """
             Cannot change playback state, because passed
             playback state: #{inspect new_state} is invalid
             """, :invalid_new_playback
-            ~> (err -> {:reply, err, state})
-          {:error, {reason, st}} -> warn_error """
+          {{:error, reason}, st} -> warn_error """
             Unable to change playback state from #{inspect old_state} to #{inspect new_state}
             """, reason
-            ~> (err -> {:reply, err, st})
-        end
+            {{:error, reason}, st}
+          {:error, reason} -> warn_error """
+            Unable to change playback state from #{inspect old_state} to #{inspect new_state}
+            """, reason
+        end |> reply(state)
       end
 
       defoverridable [
