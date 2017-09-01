@@ -43,7 +43,7 @@ defmodule Membrane.Pipeline.State do
             _ -> state |> Helper.Struct.put_in([:children_to_pids, child], pids)
           end
         state = state |> Helper.Struct.remove_in([:pids_to_children, pid])
-        ok pid, state
+        {{:ok, pid}, state}
       end
     end
 end

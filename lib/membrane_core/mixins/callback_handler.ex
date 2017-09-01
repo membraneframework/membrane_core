@@ -29,51 +29,60 @@ defmodule Membrane.Mixins.CallbackHandler do
           but got
           #{inspect action}
           Check if all callbacks return appropriate values.
-          """, :invalid_action
+          """, {:invalid_action, action: action, callback: callback, module: module}
       end
 
       def exec_and_handle_callback(callback, handler_params \\ nil, args, state) do
         internal_state = state |> Map.get(:internal_state)
         module = state |> Map.get(:module)
         with \
-          ok(actions, new_internal_state) <- apply(module, callback, args ++ [internal_state])
-            |> handle_callback_result(callback)
-            |> or_warn_error("Error while executing callback #{inspect callback}"),
+          {{:ok, actions}, new_internal_state} <- module
+            |> apply(callback, args ++ [internal_state])
+            |> handle_callback_result(callback, module),
           state = state |> Map.put(:internal_state, new_internal_state),
-          ok(state) <- actions
-            |> handle_actions(callback, handler_params, state)
-            |> or_warn_error("Error while handling actions returned by callback #{inspect callback}")
+          {:ok, state} <- actions
+            |> exec_handle_actions(callback, handler_params, state)
         do
           {:ok, state}
         end
       end
 
-      def handle_callback_result(result, cb \\ "")
-      def handle_callback_result({:ok, {actions, new_internal_state}}, _cb)
+      defp exec_handle_actions(actions, callback, handler_params, state) do
+        with {:ok, state} <- actions |> handle_actions(callback, handler_params, state)
+        do {:ok, state}
+        else {:error, reason} ->
+          warn_error """
+            Error while handling actions returned by callback #{inspect callback}
+            """, {:error_handling_actions, reason}
+        end
+      end
+
+      def handle_callback_result({:ok, {actions, new_internal_state}}, _module, _cb)
       when is_list actions
       do {:ok, {actions, new_internal_state}}
       end
-      def handle_callback_result({:error, {reason, new_internal_state}}, cb) do
+      def handle_callback_result({:error, {reason, new_internal_state}}, module, cb) do
         warn_error """
-             Callback #{inspect cb} returned an error
+             Callback #{inspect cb} from module #{inspect module} returned an error
              Internal state: #{inspect new_internal_state}
             """, reason
         {:ok, {[], new_internal_state}}
       end
-      def handle_callback_result(result, cb) do
-        raise """
+      def handle_callback_result(result, module, cb) do
+        warn_error """
         Callback replies are expected to be one of:
 
-            {:ok, {actions, state}}
-            {:error, {reason, state}}
+            {{:ok, actions}, state}
+            {{:error, reason}, state}
 
         where actions is a list that is specific to base type of the element.
 
-        Instead, callback #{inspect cb} returned value of #{inspect result}
-        which does not match any of the valid return values.
+        Instead, callback #{inspect cb} from module #{inspect module} returned
+        value of #{inspect result} which does not match any of the valid return
+        values.
 
         Check if all callbacks return values are in the right format.
-        """
+        """, {:invalid_callback_result, result: result, module: module, callback: cb}
       end
 
       defoverridable [
@@ -81,7 +90,7 @@ defmodule Membrane.Mixins.CallbackHandler do
         handle_action: 4,
         handle_invalid_action: 6,
         exec_and_handle_callback: 4,
-        handle_callback_result: 2,
+        handle_callback_result: 3,
       ]
 
     end

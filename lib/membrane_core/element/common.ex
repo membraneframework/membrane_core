@@ -142,17 +142,17 @@ defmodule Membrane.Element.Common do
   end
 
   def reduce_something1_results(inputs, state, f) do
-    with ok(actions, state) <- inputs
+    with {{:ok, actions}, state} <- inputs
       |> Membrane.Helper.Enum.map_reduce_with(state,
         fn i, st -> f.(i, st) ~> (
-            ok(actions, _state) = ok when is_list actions -> ok
-            error reason, state -> error {:internal, reason}, state
-            other -> error {:other, other}
+            {{:ok, actions}, _state} = ok when is_list actions -> ok
+            {{:error, reason}, state} -> {{:error, {:internal, reason}}, state}
+            other -> {:error, {:other, other}}
         ) end)
-    do ok actions |> List.flatten, state
+    do {{:ok, actions |> List.flatten}, state}
     else
-      error {:internal, reason}, st -> error reason, st
-      error {:other, other}, _st -> other
+      {{:error, {:internal, reason}}, st} -> {{:error, reason}, st}
+      {{:error, {:other, other}}, _st} -> other
     end
   end
 

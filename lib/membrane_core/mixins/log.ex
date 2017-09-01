@@ -13,7 +13,7 @@ defmodule Membrane.Mixins.Log do
       alias Membrane.Log.Router
 
       @doc false
-      defmacro log(level, message, tags) do
+      defmacrop log(level, message, tags) do
         config = Application.get_env(:membrane_core, Membrane.Logger, [])
         router_level = config |> Keyword.get(:level, :debug)
         router_level_val = router_level |> Router.level_to_val
@@ -27,7 +27,7 @@ defmodule Membrane.Mixins.Log do
       end
 
       @doc false
-      defmacro info(message, tags \\ []) do
+      defmacrop info(message, tags \\ []) do
         default_tags = unquote default_tags
         quote location: :keep do
           log(:info, unquote(message), unquote(tags) ++ unquote(default_tags))
@@ -35,14 +35,14 @@ defmodule Membrane.Mixins.Log do
       end
 
       @doc false
-      defmacro warn(message, tags \\ []) do
+      defmacrop warn(message, tags \\ []) do
         default_tags = unquote default_tags
         quote location: :keep do
           log(:warn, unquote(message), unquote(tags) ++ unquote(default_tags))
         end
       end
 
-      def warn_error(message, reason) do
+      defp warn_error(message, reason) do
         warn """
         Encountered an error:
         #{message}
@@ -53,12 +53,12 @@ defmodule Membrane.Mixins.Log do
         {:error, reason}
       end
 
-      def or_warn_error({:ok, value}, _msg), do: {:ok, value}
-      def or_warn_error({:error, reason}, msg), do: warn_error(msg, reason)
+      defp or_warn_error({:ok, value}, _msg), do: {:ok, value}
+      defp or_warn_error({:error, reason}, msg), do: warn_error(msg, reason)
 
 
       @doc false
-      defmacro debug(message, tags \\ []) do
+      defmacrop debug(message, tags \\ []) do
         default_tags = unquote default_tags
         quote location: :keep do
           log(:debug, unquote(message), unquote(tags) ++ unquote(default_tags))

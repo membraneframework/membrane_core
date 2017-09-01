@@ -9,6 +9,7 @@ defmodule Membrane.Element do
   use Membrane.Mixins.CallbackHandler
   alias Membrane.Element.State
   use Membrane.Helper
+  import Membrane.Helper.GenServer
   alias Membrane.Element.PlaybackBuffer
 
   # Type that defines possible return values of start/start_link functions.
@@ -197,15 +198,14 @@ defmodule Membrane.Element do
 
   def handle_call({:membrane_new_pad, direction, {name, params}}, _from, %State{module: module} = state) do
     debug "adding new pad #{inspect name}"
-    module.base_module.handle_new_pad(name, direction, params, state) |> to_reply(state)
+    module.base_module.handle_new_pad(name, direction, params, state) |> reply(state)
   end
 
   def handle_call(:membrane_linking_finished, _from, %State{pads: pads, module: module} = state) do
     with {:ok, state} <- pads.new |> Helper.Enum.reduce_with(state, fn {name, direction}, st ->
       module.base_module.handle_pad_added name, direction, st end)
-    do {:reply, :ok, state |> State.clear_new_pads}
-    else {:error, {reason, state}} -> {:reply, {:error, reason}, state |> State.clear_new_pads}
-    end
+    do {:ok, state |> State.clear_new_pads}
+  end |> reply(state)
   end
 
   # Callback invoked on incoming set_message_bus command.
@@ -261,7 +261,7 @@ defmodule Membrane.Element do
 
   def handle_info({:membrane_self_demand, pad_name, src_name, size}, %State{module: module} = state) do
     debug "Received self demand for pad #{inspect pad_name} of size #{inspect size}"
-    module.base_module.handle_self_demand(pad_name, src_name, size, state) |> to_noreply_or(state)
+    module.base_module.handle_self_demand(pad_name, src_name, size, state) |> noreply(state)
   end
 
   # Callback invoked on other incoming message
@@ -273,10 +273,5 @@ defmodule Membrane.Element do
     end
   end
 
-  defp to_noreply_or({:ok, new_state}, _), do: {:noreply, new_state}
-  defp to_noreply_or(_, state), do: {:noreply, state}
-
-  defp to_reply({:ok, new_state}, _), do: {:reply, :ok, new_state}
-  defp to_reply({:error, reason}, state), do: {:reply, {:error, reason}, state}
 
 end
