@@ -9,7 +9,7 @@ defmodule Membrane.Element do
   alias Membrane.Element.State
   use Membrane.Helper
   import Membrane.Helper.GenServer
-  alias Membrane.Element.PlaybackBuffer
+  alias Membrane.Element.Pad
 
   # Type that defines possible return values of start/start_link functions.
   @type on_start :: GenServer.on_start
@@ -75,43 +75,6 @@ defmodule Membrane.Element do
 
 
   @doc """
-  Determines module for given process identifier.
-
-  Returns `{:ok, module}` in case of success.
-
-  Returns `{:error, :invalid}` if given pid does not denote element.
-  """
-  @spec get_module(pid) :: {:ok, module} | {:error, any}
-  def get_module(server) when is_pid(server) do
-    {:dictionary, items} = :erlang.process_info(server, :dictionary)
-
-    case items |> List.keyfind(:membrane_module, 0) do
-      nil ->
-        # Seems that given pid is not an element
-        {:error, :invalid}
-
-      {:membrane_module, module} ->
-        {:ok, module}
-    end
-  end
-
-
-  @doc """
-  The same as `get_module/1` but throws error in case of failure.
-  """
-  @spec get_module!(pid) :: module
-  def get_module!(server) when is_pid(server) do
-    case get_module(server) do
-      {:ok, module} ->
-        module
-      {:error, reason} ->
-        throw reason
-    end
-  end
-
-
-
-  @doc """
   Sends synchronous call to the given element requesting it to set message bus.
 
   It will wait for reply for amount of time passed as second argument
@@ -148,35 +111,11 @@ defmodule Membrane.Element do
 
   # Private API
 
-  def handle_playback_state(old, new, %State{module: module} = state) do
-    debug "Changing playback state of element from #{inspect old} to #{inspect new}"
-    with {:ok, state} <- module.base_module.handle_playback_state(old, new, state)
-    do
-      debug "Changed playback state of element from #{inspect old} to #{inspect new}"
-      {:ok, state}
-    else
-      {:error, reason} -> warn_error """
-        Unable to change playback state of element from #{inspect old} to #{inspect new}"
-        """, reason
-    end
-
-  end
-
   @doc false
   def init({module, options}) do
-    # Call element's initialization callback
-    case module.handle_init(options) do
-      {:ok, internal_state} ->
-        debug("Initialized: internal_state = #{inspect(internal_state)}")
-
-        # Store module name in the process dictionary so it can be used
-        # to retreive module from PID in `Membrane.Element.get_module/1`.
-        Process.put(:membrane_module, module)
-
-        # Return initial state of the process, including element state.
-        state = State.new(module, internal_state)
-        {:ok, state}
-
+    with {:ok, state} <- module.base_module.handle_init(module, options)
+    do {:ok, state}
+    else
       {:error, reason} ->
         warn_error "Failed to initialize element", reason
         {:stop, {:element_init, reason}}
@@ -185,92 +124,27 @@ defmodule Membrane.Element do
 
 
   @doc false
-  def terminate(reason, %State{module: module, playback_state: playback_state, internal_state: internal_state} = state) do
-    if playback_state != :stopped do
-      warn("Terminating: Attempt to terminate element when it is not stopped, state = #{inspect(state)}")
-      warn("Terminating: Stacktrace = " <> Helper.stacktrace)
+  def terminate(reason, %State{module: module, playback_state: playback_state} = state) do
+    case playback_state do
+      :stopped ->
+        warn_error """
+        Terminating: Attempt to terminate element when it is not stopped
+        """, reason
+      _ -> debug "Terminating element, reason: #{inspect reason}"
     end
 
-    debug("Terminating: reason = #{inspect(reason)}, state = #{inspect(state)}")
-    module.handle_shutdown(internal_state)
-    :normal
+    module.base_module.handle_shutdown(state)
+    reason
   end
 
-  def handle_call({:membrane_new_pad, direction, {name, params}}, _from, %State{module: module} = state) do
-    debug "adding new pad #{inspect name}"
-    module.base_module.handle_new_pad(name, direction, params, state) |> reply(state)
+  defdelegate handle_playback_state(old, new, state), to: Pad
+
+  def handle_call(message, _from, state) do
+    message |> Pad.handle_message(:call, state) |> reply(state)
   end
 
-  def handle_call(:membrane_linking_finished, _from, %State{pads: pads, module: module} = state) do
-    with {:ok, state} <- pads.new |> Helper.Enum.reduce_with(state, fn {name, direction}, st ->
-      module.base_module.handle_pad_added name, direction, st end)
-    do {:ok, state |> State.clear_new_pads}
-  end |> reply(state)
-  end
-
-  # Callback invoked on incoming set_message_bus command.
-  @doc false
-  def handle_call({:membrane_set_message_bus, message_bus}, _from, state) do
-    {:reply, :ok, %{state | message_bus: message_bus}}
-  end
-
-  def handle_call({:membrane_handle_link, pad_name, direction, pid, other_name, props}, _from, %State{module: module} = state) do
-    with {:ok, state} <- module.base_module.handle_link(pad_name, direction, pid, other_name, props, state)
-    do {:reply, :ok, state}
-    else {:error, reason} -> {:reply, {:error, reason}, state}
-    end
-  end
-
-  def handle_call(:membrane_unlink, _from, %State{playback_state: :stopped} = state) do
-    with :ok <- state
-      |> State.get_pads_data
-      |> Helper.Enum.each_with(fn {_name, %{pid: pid}} -> GenServer.call pid, :membrane_handle_unlink end),
-    do: {:reply, :ok, state},
-    else: ({:error, reason} -> {:reply, {:error, reason}, state})
-  end
-
-  def handle_call(:membrane_unlink, _from, state) do
-    warn_error "Tried to unlink element that is not stopped", :unlink_error
-    {:reply, {:error, :unlink_error}, state}
-  end
-
-  def handle_call(:membrane_handle_unlink, {from, _}, %State{module: module} = state) do
-    {:ok, %{name: pad_name}} = state |> State.get_pad_data(:any, from) #FIXME: send pad name instead determining it by pid
-    with {:ok, state} <- module.base_module.handle_unlink(pad_name, state)
-    do {:reply, :ok, state}
-    else {:error, reason} -> {:reply, {:error, reason}, state}
-    end
-  end
-
-  def handle_call({:membrane_demand_in, {demand_in, pad_name}}, _from, state) do
-    {:ok, state} = state |>
-      State.set_pad_data(:source, pad_name, [:options, :other_demand_in], demand_in)
-    {:reply, :ok, state}
-  end
-
-  def handle_info({type, _args} = msg, state)
-  when type in [:membrane_demand, :membrane_buffer, :membrane_caps, :membrane_event]
-  do
-    with {:ok, state} <- msg |> PlaybackBuffer.store(state)
-    do {:noreply, state}
-    else {:error, reason} ->
-      warn_error "Error during handling message #{inspect msg}", reason
-      {:noreply, state}
-    end
-  end
-
-  def handle_info({:membrane_self_demand, pad_name, src_name, size}, %State{module: module} = state) do
-    debug "Received self demand for pad #{inspect pad_name} of size #{inspect size}"
-    module.base_module.handle_self_demand(pad_name, src_name, size, state) |> noreply(state)
-  end
-
-  # Callback invoked on other incoming message
-  @doc false
-  def handle_info(message, %State{module: module} = state) do
-    debug "Received message: #{inspect message}"
-    with {:ok, state} <- module.base_module.handle_message(message, state)
-    do {:noreply, state}
-    end
+  def handle_info(message, state) do
+    message |> Pad.handle_message(:info, state) |> noreply(state)
   end
 
 

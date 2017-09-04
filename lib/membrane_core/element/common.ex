@@ -8,12 +8,14 @@ defmodule Membrane.Element.Common do
   defmacro __using__(_) do
     quote do
       use Membrane.Mixins.CallbackHandler
+      alias Membrane.Element.{Action, Common, State}
+      use Membrane.Helper
 
       def handle_action({:event, {pad_name, event}}, _cb, _params, state), do:
-        Membrane.Element.Action.send_event(pad_name, event, state)
+        Action.send_event(pad_name, event, state)
 
       def handle_action({:message, message}, _cb, _params, state), do:
-        Membrane.Element.Action.send_message(message, state)
+        Action.send_message(message, state)
 
       def handle_actions(actions, callback, handler_params, state), do:
         super(actions |> Membrane.Element.Common.join_buffers, callback,
@@ -24,11 +26,18 @@ defmodule Membrane.Element.Common do
           |> or_warn_error("Error while handling message")
       end
 
+      def handle_message_bus(message_bus, state), do:
+        {:ok, %{state | message_bus: message_bus}}
+
+      def handle_demand_in(demand_in, pad_name, state) do #TODO: move out of using
+        {:ok, state} = state |>
+          State.set_pad_data(:source, pad_name, [:options, :other_demand_in], demand_in)
+      end
+
       def handle_playback_state(:prepared, :playing, state) do
         with \
-          {:ok, state} <- state |> Membrane.Element.Common.fill_sink_pull_buffers,
+          {:ok, state} <- state |> Common.fill_sink_pull_buffers,
           {:ok, state} <- exec_and_handle_callback(:handle_play, [], state),
-          {:ok, state} <- state |> Membrane.Element.PlaybackBuffer.eval,
           do: {:ok, state}
       end
 
@@ -38,11 +47,38 @@ defmodule Membrane.Element.Common do
       def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing], do:
         exec_and_handle_callback :handle_prepare, [ps], state
 
+      def handle_new_pad(direction, {name, params}, state), do:
+        exec_and_handle_callback name, direction, params, state
+
+      def handle_linking_finished(state) do
+        with {:ok, state} <- state.pads.new
+          |> Helper.Enum.reduce_with(state, fn {name, direction}, st ->
+            handle_pad_added name, direction, st end)
+        do {:ok, state |> State.clear_new_pads}
+        end
+      end
+
       def handle_unlink(pad_name, state) do
         with \
           {:ok, state} <- exec_and_handle_callback(:handle_pad_removed, [pad_name], state),
           {:ok, state} <- state |> State.remove_pad_data(:any, pad_name),
         do: {:ok, state}
+      end
+
+      def unlink(%State{playback_state: :stopped} = state) do
+        state
+          |> State.get_pads_data
+          |> Helper.Enum.each_with(fn {_name, %{pid: pid, other_name: other_name}}
+            -> GenServer.call pid, {:membrane_handle_unlink, other_name} end)
+      end
+      def unlink(_state) do
+        warn_error """
+        Tried to unlink element that is not stopped
+        """, {:unlink, :cannot_unlink_non_stopped_element}
+      end
+
+      def handle_shutdown(%State{module: module, internal_state: internal_state} = state) do
+        module.handle_shutdown(internal_state)
       end
 
     end
