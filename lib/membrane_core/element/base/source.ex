@@ -285,7 +285,7 @@ defmodule Membrane.Element.Base.Source do
         {{:error, :handle_demand_not_implemented}, state}
 
       @doc false
-      def handle_event(_pad, _event, _params, state), do: {{:ok, forward: :all}, state}
+      def handle_event(_pad, _event, _params, state), do: {:ok, state}
 
 
       defoverridable [

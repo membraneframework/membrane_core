@@ -393,7 +393,7 @@ defmodule Membrane.Element.Base.Sink do
       def handle_caps(_pad, _caps, _params, state), do: {:ok, state}
 
       @doc false
-      def handle_event(_pad, _event, _params, state), do: {{:ok, forward: :all}, state}
+      def handle_event(_pad, _event, _params, state), do: {:ok, state}
 
       @doc false
       def handle_write1(_pad, _buffer, _params, state), do: {:ok, state}
