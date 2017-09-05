@@ -42,7 +42,7 @@ defmodule Membrane.Element.PlaybackBuffer do
   def empty?(%PlaybackBuffer{q: q}), do: q |> Enum.empty?
 
   # Callback invoked on demand request coming from the source pad in the pull mode
-  defp exec({:membrane_demand, {size, pad_name}}, %State{module: module} = state) do
+  defp exec({:membrane_demand, [size, pad_name]}, %State{module: module} = state) do
     {:ok, _} = state |> State.get_pad_data(:source, pad_name)
     demand = if size == 0 do "dumb demand" else "demand of size #{inspect size}" end
     debug "Received #{demand} on pad #{inspect pad_name}"
@@ -50,7 +50,7 @@ defmodule Membrane.Element.PlaybackBuffer do
   end
 
   # Callback invoked on buffer coming from the sink pad to the sink
-  defp exec({:membrane_buffer, {buffers, pad_name}}, %State{module: module} = state) do
+  defp exec({:membrane_buffer, [buffers, pad_name]}, %State{module: module} = state) do
     {:ok, %{mode: mode}} = state |> State.get_pad_data(:sink, pad_name)
     debug """
       Received buffers on pad #{inspect pad_name}
@@ -60,7 +60,7 @@ defmodule Membrane.Element.PlaybackBuffer do
   end
 
   # Callback invoked on incoming caps
-  defp exec({:membrane_caps, {caps, pad_name}}, %State{module: module} = state) do
+  defp exec({:membrane_caps, [caps, pad_name]}, %State{module: module} = state) do
     {:ok, %{mode: mode}} = state |> State.get_pad_data(:sink, pad_name)
     debug """
       Received caps on pad #{inspect pad_name}
@@ -70,7 +70,7 @@ defmodule Membrane.Element.PlaybackBuffer do
   end
 
   # Callback invoked on incoming event
-  defp exec({:membrane_event, {event, pad_name}}, %State{module: module} = state) do
+  defp exec({:membrane_event, [event, pad_name]}, %State{module: module} = state) do
     {:ok, %{mode: mode, direction: direction}} = state |> State.get_pad_data(:any, pad_name)
     debug """
       Received event on pad #{inspect pad_name}

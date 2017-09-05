@@ -443,7 +443,7 @@ defmodule Membrane.Element.Base.Filter do
         handle_process did not produce expected amount of buffers, despite
         PullBuffer being not empty. Trying executing handle_demand again.
         """
-      send self(), {:membrane_demand, {0, src_name}}
+      send self(), {:membrane_demand, [0, src_name]}
     end
   end
 

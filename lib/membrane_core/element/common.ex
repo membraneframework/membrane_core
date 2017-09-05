@@ -146,7 +146,7 @@ defmodule Membrane.Element.Common do
     state |> State.update_pad_data(direction, pad_name, fn data -> data
         |> Map.merge(case {direction, data.mode} do
             {:sink, :pull} ->
-              :ok = pid |> GenServer.call({:membrane_demand_in, {data.options.demand_in, other_name}})
+              :ok = pid |> GenServer.call({:membrane_demand_in, [data.options.demand_in, other_name]})
               pb = PullBuffer.new({pid, other_name}, pad_name, data.options.demand_in, props[:pull_buffer] || %{})
               %{buffer: pb, self_demand: 0}
             {:source, :pull} -> %{demand: 0}

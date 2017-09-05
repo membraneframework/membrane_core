@@ -91,8 +91,8 @@ defmodule Membrane.Element do
 
   def link(from_pid, to_pid, from_pad, to_pad, params) do
     with \
-      :ok <- GenServer.call(from_pid, {:membrane_handle_link, from_pad, :source, to_pid, to_pad, params}),
-      :ok <- GenServer.call(to_pid, {:membrane_handle_link, to_pad, :sink, from_pid, from_pad, params})
+      :ok <- GenServer.call(from_pid, {:membrane_handle_link, [from_pad, :source, to_pid, to_pad, params]}),
+      :ok <- GenServer.call(to_pid, {:membrane_handle_link, [to_pad, :sink, from_pid, from_pad, params]})
     do :ok
     end
   end
@@ -102,7 +102,7 @@ defmodule Membrane.Element do
   end
 
   def handle_new_pad(server, direction, pad, timeout \\ 5000) when is_pid server do
-    server |> GenServer.call({:membrane_new_pad, direction, pad}, timeout)
+    server |> GenServer.call({:membrane_new_pad, [direction, pad]}, timeout)
   end
 
   def handle_linking_finished(server, timeout \\ 5000) when is_pid server do

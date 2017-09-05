@@ -133,7 +133,7 @@ defmodule Membrane.PullBuffer do
       Sending demand of size #{inspect demand + new_demand}
       to sink #{inspect sink_name}
       """, pb
-    send other_pid, {:membrane_demand, {demand + new_demand, other_name}}
+    send other_pid, {:membrane_demand, [demand + new_demand, other_name]}
     {:ok, %PullBuffer{pb | demand: 0}}
   end
   defp handle_demand(%PullBuffer{demand: demand} = pb, new_demand), do:

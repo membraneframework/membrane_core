@@ -29,7 +29,7 @@ defmodule Membrane.Element.Action do
           :push -> {:ok, state}
         end)
     do
-      send pid, {:membrane_buffer, {buffers, other_name}}
+      send pid, {:membrane_buffer, [buffers, other_name]}
       {:ok, state}
     else
       {:error, :unknown_pad} ->
@@ -52,7 +52,7 @@ defmodule Membrane.Element.Action do
       {:ok, %{pid: pid, other_name: other_name}}
         <- state |> State.get_pad_data(:source, pad_name)
     do
-      send pid, {:membrane_caps, {caps, other_name}}
+      send pid, {:membrane_caps, [caps, other_name]}
       state |> State.set_pad_data(:source, pad_name, :caps, caps)
     else
       {:error, :unknown_pad} ->
@@ -78,7 +78,7 @@ defmodule Membrane.Element.Action do
     do
       case callback do
         cb when cb in [:handle_write, :handle_process] ->
-          send self(), {:membrane_self_demand, pad_name, src_name, size}
+          send self(), {:membrane_self_demand, [pad_name, src_name, size]}
           {:ok, state}
         _ -> module.base_module.handle_self_demand pad_name, src_name, size, state
       end
@@ -122,7 +122,7 @@ defmodule Membrane.Element.Action do
 
   def send_message(%Membrane.Message{} = message, %State{message_bus: message_bus} = state) do
     debug "Sending message #{inspect(message)} (message bus: #{inspect message_bus})"
-    send(message_bus, {:membrane_message, message})
+    send(message_bus, [:membrane_message, message])
     {:ok, state}
   end
 
