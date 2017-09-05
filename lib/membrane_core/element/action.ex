@@ -101,7 +101,7 @@ defmodule Membrane.Element.Action do
       {:ok, %{pid: pid, other_name: other_name}}
         <- State.get_pad_data(state, :any, pad_name)
     do
-      send pid, {:membrane_event, {event, other_name}}
+      send pid, {:membrane_event, [event, other_name]}
       {:ok, state}
     else
       {:error, :unknown_pad} ->
