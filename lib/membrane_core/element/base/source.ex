@@ -306,11 +306,6 @@ defmodule Membrane.Element.Base.Source do
         handle_pad_removed: 2,
         handle_demand1: 3,
         handle_demand: 5,
-        handle_event: 4,
-        handle_other: 2,
-        handle_play: 1,
-        handle_prepare: 2,
-        handle_stop: 1,
       ]
     end
   end

@@ -504,18 +504,6 @@ defmodule Membrane.Element.Base.Filter do
         {{:error, :handle_demand_not_implemented}, state}
 
       @doc false
-      def handle_event(_pad, _event, _params, state), do: {{:ok, forward: :all}, state}
-
-      @doc false
-      def handle_other(_message, state), do: {:ok, state}
-
-      @doc false
-      def handle_play(state), do: {:ok, state}
-
-      @doc false
-      def handle_prepare(_previous_playback_state, state), do: {:ok, state}
-
-      @doc false
       def handle_process1(_pad, _buffer, _params, state), do: {:ok, state}
 
       @doc false
@@ -525,9 +513,6 @@ defmodule Membrane.Element.Base.Filter do
           end)
       end
 
-      @doc false
-      def handle_stop(state), do: {:ok, state}
-
 
       defoverridable [
         handle_new_pad: 4,
@@ -535,13 +520,8 @@ defmodule Membrane.Element.Base.Filter do
         handle_pad_removed: 2,
         handle_caps: 4,
         handle_demand: 5,
-        handle_event: 4,
-        handle_other: 2,
-        handle_play: 1,
-        handle_prepare: 2,
         handle_process: 4,
         handle_process1: 4,
-        handle_stop: 1,
       ]
     end
   end
