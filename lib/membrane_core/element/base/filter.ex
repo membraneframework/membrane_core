@@ -500,6 +500,9 @@ defmodule Membrane.Element.Base.Filter do
       def handle_caps(_pad, _caps, _params, state), do: {{:ok, forward: :all}, state}
 
       @doc false
+      def handle_event(_pad, _event, _params, state), do: {{:ok, forward: :all}, state}
+
+      @doc false
       def handle_demand(_pad, _size, _unit, _params, state), do:
         {{:error, :handle_demand_not_implemented}, state}
 
@@ -519,6 +522,7 @@ defmodule Membrane.Element.Base.Filter do
         handle_pad_added: 3,
         handle_pad_removed: 2,
         handle_caps: 4,
+        handle_event: 4,
         handle_demand: 5,
         handle_process: 4,
         handle_process1: 4,

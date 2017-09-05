@@ -284,6 +284,9 @@ defmodule Membrane.Element.Base.Source do
       def handle_demand(_pad, _size, _unit, _params, state), do:
         {{:error, :handle_demand_not_implemented}, state}
 
+      @doc false
+      def handle_event(_pad, _event, _params, state), do: {{:ok, forward: :all}, state}
+
 
       defoverridable [
         handle_new_pad: 3,
@@ -291,6 +294,7 @@ defmodule Membrane.Element.Base.Source do
         handle_pad_removed: 2,
         handle_demand1: 3,
         handle_demand: 5,
+        handle_event: 4,
       ]
     end
   end
