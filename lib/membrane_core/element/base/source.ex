@@ -284,21 +284,6 @@ defmodule Membrane.Element.Base.Source do
       def handle_demand(_pad, _size, _unit, _params, state), do:
         {{:error, :handle_demand_not_implemented}, state}
 
-      @doc false
-      def handle_event(_pad, _event, _params, state), do: {:ok, state}
-
-      @doc false
-      def handle_other(_message, state), do: {:ok, state}
-
-      @doc false
-      def handle_play(state), do: {:ok, state}
-
-      @doc false
-      def handle_prepare(_previous_playback_state, state), do: {:ok, state}
-
-      @doc false
-      def handle_stop(state), do: {:ok, state}
-
 
       defoverridable [
         handle_new_pad: 3,
