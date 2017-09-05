@@ -21,6 +21,20 @@ defmodule Membrane.Element.Common do
         super(actions |> Membrane.Element.Common.join_buffers, callback,
           handler_params, state)
 
+      def handle_init(module, options) do
+        with {:ok, internal_state} <- module.handle_init(options)
+        do {:ok, State.new(module, internal_state)}
+        else
+          {:error, reason} -> warn_error """
+              Module #{inspect module} handle_init callback returned an error
+              """, {:element_handle_init, module, reason}
+          other -> warn_error """
+              Module #{inspect module} handle_init callback returned invalid result:
+              #{inspect other} instead of {:ok, state} or {:error, reason}
+            """, {:invalid_callback_result, :handle_init, other}
+        end
+      end
+
       def handle_message(message, state) do
         exec_and_handle_callback(:handle_other, [message], state)
           |> or_warn_error("Error while handling message")

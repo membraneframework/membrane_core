@@ -215,6 +215,7 @@ defmodule Membrane.Pipeline do
         })
 
       {:error, reason} ->
+        :timer.sleep 5000
         warn_error "Cannot start child #{inspect name}", {:cannot_start_child, name, reason}
     end
   end

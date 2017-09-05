@@ -113,8 +113,11 @@ defmodule Membrane.Element do
 
   @doc false
   def init({module, options}) do
+    debug "Element: initializing: #{inspect module}, options: #{inspect options}"
     with {:ok, state} <- module.base_module.handle_init(module, options)
-    do {:ok, state}
+    do
+      debug "Element: initialized: #{inspect module}"
+      {:ok, state}
     else
       {:error, reason} ->
         warn_error "Failed to initialize element", reason
