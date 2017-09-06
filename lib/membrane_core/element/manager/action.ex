@@ -80,7 +80,7 @@ defmodule Membrane.Element.Manager.Action do
         cb when cb in [:handle_write, :handle_process] ->
           send self(), {:membrane_self_demand, [pad_name, src_name, size]}
           {:ok, state}
-        _ -> module.base_module.handle_self_demand pad_name, src_name, size, state
+        _ -> module.manager_module.handle_self_demand pad_name, src_name, size, state
       end
     else
       {_direction, {:ok, %{mode: :push}}} ->

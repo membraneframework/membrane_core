@@ -56,7 +56,7 @@ defmodule Membrane.Element.Manager.Pad do
     forward(:handle_message, other, state)
 
   defp forward(callback, args \\ [], %State{module: module} = state) do
-    apply module.base_module, callback, (args |> Helper.listify) ++ [state]
+    apply module.manager_module, callback, (args |> Helper.listify) ++ [state]
   end
 
 

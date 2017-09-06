@@ -121,7 +121,7 @@ defmodule Membrane.Element.Manager.Common do
     params = %{caps: old_caps}
     with \
       :ok <- (if accepted_caps == :any || caps in accepted_caps do :ok else :invalid_caps end),
-      {:ok, state} <- module.base_module.exec_and_handle_callback(
+      {:ok, state} <- module.manager_module.exec_and_handle_callback(
         :handle_caps, %{caps: caps}, [pad_name, caps, params], state)
     do
       state |> State.set_pad_data(:sink, pad_name, :caps, caps)
@@ -151,7 +151,7 @@ defmodule Membrane.Element.Manager.Common do
   def do_handle_event(pad_name, event, %State{module: module} = state) do
     %{direction: dir, caps: caps} = state |> State.get_pad_data!(:any, pad_name)
     params = %{caps: caps}
-    module.base_module.exec_and_handle_callback(
+    module.manager_module.exec_and_handle_callback(
       :handle_event, %{direction: dir, event: event}, [pad_name, event, params], state)
         |> or_warn_error("Error while handling event")
   end
@@ -237,6 +237,6 @@ defmodule Membrane.Element.Manager.Common do
   end
 
   def handle_pad_added(args, %State{module: module} = state), do:
-    module.base_module.exec_and_handle_callback(:handle_pad_added, args, state)
+    module.manager_module.exec_and_handle_callback(:handle_pad_added, args, state)
 
 end

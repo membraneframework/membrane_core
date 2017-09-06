@@ -46,7 +46,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
     {:ok, _} = state |> State.get_pad_data(:source, pad_name)
     demand = if size == 0 do "dumb demand" else "demand of size #{inspect size}" end
     debug "Received #{demand} on pad #{inspect pad_name}"
-    module.base_module.handle_demand(pad_name, size, state)
+    module.manager_module.handle_demand(pad_name, size, state)
   end
 
   # Callback invoked on buffer coming from the sink pad to the sink
@@ -56,7 +56,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
       Received buffers on pad #{inspect pad_name}
       Buffers: #{inspect buffers}
       """
-    module.base_module.handle_buffer(mode, pad_name, buffers, state)
+    module.manager_module.handle_buffer(mode, pad_name, buffers, state)
   end
 
   # Callback invoked on incoming caps
@@ -66,7 +66,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
       Received caps on pad #{inspect pad_name}
       Caps: #{inspect caps}
       """
-    module.base_module.handle_caps(mode, pad_name, caps, state)
+    module.manager_module.handle_caps(mode, pad_name, caps, state)
   end
 
   # Callback invoked on incoming event
@@ -76,7 +76,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
       Received event on pad #{inspect pad_name}
       Event: #{inspect event}
       """
-    module.base_module.handle_event(mode, direction, pad_name, event, state)
+    module.manager_module.handle_event(mode, direction, pad_name, event, state)
   end
 
 end

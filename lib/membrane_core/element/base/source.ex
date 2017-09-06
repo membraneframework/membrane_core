@@ -7,10 +7,10 @@ defmodule Membrane.Element.Base.Source do
 
 
       @doc """
-      Returns module on which this Element is based.
+      Returns module that manages this element.
       """
-      @spec base_module() :: module
-      def base_module, do: Membrane.Element.Manager.Source
+      @spec manager_module() :: module
+      def manager_module, do: Membrane.Element.Manager.Source
 
 
       # Default implementations

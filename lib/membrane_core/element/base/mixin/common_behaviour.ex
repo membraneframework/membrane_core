@@ -1,5 +1,7 @@
 defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
+  @callback manager_module :: module
+
   @callback handle_init(Membrane.Element.element_options_t) ::
     {:ok, any} |
     {:error, any}

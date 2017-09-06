@@ -112,7 +112,7 @@ defmodule Membrane.Element do
   @doc false
   def init({module, options}) do
     debug "element: initializing: #{inspect module}, options: #{inspect options}"
-    with {:ok, state} <- module.base_module.handle_init(module, options)
+    with {:ok, state} <- module.manager_module.handle_init(module, options)
     do
       debug "element: initialized: #{inspect module}"
       {:ok, state}
@@ -134,7 +134,7 @@ defmodule Membrane.Element do
       _ -> debug "Terminating element, reason: #{inspect reason}"
     end
 
-    module.base_module.handle_shutdown(state)
+    module.manager_module.handle_shutdown(state)
     reason
   end
 
