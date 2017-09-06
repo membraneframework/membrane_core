@@ -1,4 +1,4 @@
-defmodule Membrane.Element.Manager.Base.Source do
+defmodule Membrane.Element.Base.Source do
 
   defmacro __using__(_) do
     quote location: :keep do

@@ -1,4 +1,4 @@
-defmodule Membrane.Element.Manager.Base.Sink do
+defmodule Membrane.Element.Base.Sink do
 
   defmacro __using__(_) do
     quote location: :keep do
