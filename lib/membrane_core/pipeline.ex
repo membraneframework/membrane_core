@@ -195,33 +195,24 @@ defmodule Membrane.Pipeline do
   # Please note that this function is not atomic and in case of error there's
   # a chance that some of children will remain running.
   defp start_children(children) when is_map(children) do
-    debug("Starting children: children = #{inspect(children)}")
-    start_children_recurse(children |> Map.to_list, {%{}, %{}})
+    debug("Starting children: #{inspect children}")
+    children
+      |> Helper.Enum.map_with(&start_child/1)
+      |> Enum.unzip
+      ~> ({names, pids} -> {names |> Map.new, pids |> Map.new})
   end
-
-
-  # Recursion that starts children processes, final case
-  defp start_children_recurse([], acc), do: {:ok, acc}
 
   # Recursion that starts children processes, case when both module and options
   # are provided.
-  defp start_children_recurse([{name, {module, options}}|tail], {names_to_pids, pids_to_names}) do
-    debug("Starting child: name = #{inspect(name)}, module = #{inspect(module)}")
-    case Element.start_link(module, options) do
-      {:ok, pid} ->
-        start_children_recurse(tail, {
-          names_to_pids |> Map.put(name, [pid]),
-          pids_to_names |> Map.put(pid, name),
-        })
-
+  defp start_child({name, {module, options}}) do
+    debug "Pipeline: starting child: name: #{inspect name}, module: #{inspect module}"
+    with {:ok, pid} <- Element.start_link(module, options)
+    do {:ok, {{name, [pid]}, {pid, name}}}
+    else
       {:error, reason} ->
         warn_error "Cannot start child #{inspect name}", {:cannot_start_child, name, reason}
     end
   end
-
-  # Recursion that starts children processes, case when only module is provided
-  defp start_children_recurse([{name, module}|tail], acc), do:
-    start_children_recurse([{name, {module, nil}}|tail], acc)
 
   defp parse_links(links), do: links |> Helper.Enum.map_with(&parse_link/1)
 

@@ -21,13 +21,17 @@ defmodule Membrane.Element do
 
   # Type that defines possible element-specific options passed to
   # start/start_link functions.
-  @type elementoptions_t :: struct | nil
+  @type element_options_t :: struct | nil
 
   # Type that defines an Element.Manager name within a pipeline
   @type name_t :: atom | String.t
 
   @type pad_name_t :: atom | String.t
 
+
+  def is_element(module) do
+    function_exported?(module, :is_membrane_module, 0) and module.is_membrane_module
+  end
 
 
   @doc """
@@ -36,11 +40,9 @@ defmodule Membrane.Element do
 
   Works similarily to `GenServer.start_link/3` and has the same return values.
   """
-  @spec start_link(module, elementoptions_t, process_options_t) :: on_start
-  def start_link(module, elementoptions \\ nil, process_options \\ []) do
-    debug("Start Link: module = #{inspect(module)}, elementoptions = #{inspect(elementoptions)}, process_options = #{inspect(process_options)}")
-    GenServer.start_link(__MODULE__, {module, elementoptions}, process_options)
-  end
+  @spec start_link(module, element_options_t, process_options_t) :: on_start
+  def start_link(module, element_options \\ nil, process_options \\ []), do:
+    do_start(:start_link, module, element_options, process_options)
 
 
   @doc """
@@ -49,10 +51,25 @@ defmodule Membrane.Element do
 
   Works similarily to `GenServer.start/3` and has the same return values.
   """
-  @spec start(module, elementoptions_t, process_options_t) :: on_start
-  def start(module, elementoptions \\ nil, process_options \\ []) do
-    debug("Start: module = #{inspect(module)}, elementoptions = #{inspect(elementoptions)}, process_options = #{inspect(process_options)}")
-    GenServer.start(__MODULE__, {module, elementoptions}, process_options)
+  @spec start(module, element_options_t, process_options_t) :: on_start
+  def start(module, element_options \\ nil, process_options \\ []), do:
+    do_start(:start, module, element_options, process_options)
+
+
+  defp do_start(method, module, element_options, process_options) do
+    with :ok <- (if is_element module do :ok else :not_element end)
+    do
+      debug """
+        Element start link: module: #{inspect module},
+        element options: #{inspect element_options},
+        process options: #{inspect process_options}
+        """
+      apply GenServer, method, [__MODULE__, {module, element_options}, process_options]
+    else
+      :not_element -> warn_error """
+        Cannot start element, passed module #{inspect module} is not a Membrane Element
+        """, {:not_element, module}
+    end
   end
 
 
