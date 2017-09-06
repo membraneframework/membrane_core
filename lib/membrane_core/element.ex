@@ -23,19 +23,21 @@ defmodule Membrane.Element do
   # start/start_link functions.
   @type element_options_t :: struct | nil
 
-  # Type that defines an Element.Manager name within a pipeline
+  # Type that defines an element name within a pipeline
   @type name_t :: atom | String.t
 
   @type pad_name_t :: atom | String.t
 
 
   def is_element(module) do
-    function_exported?(module, :is_membrane_module, 0) and module.is_membrane_module
+    Code.ensure_loaded?(module) and
+    function_exported?(module, :is_membrane_element, 0) and
+    module.is_membrane_element
   end
 
 
   @doc """
-  Starts process for Element.Manager of given module, initialized with given options and
+  Starts process for element of given module, initialized with given options and
   links it to the current process in the supervision tree.
 
   Works similarily to `GenServer.start_link/3` and has the same return values.
@@ -46,7 +48,7 @@ defmodule Membrane.Element do
 
 
   @doc """
-  Starts process for Element.Manager of given module, initialized with given
+  Starts process for element of given module, initialized with given
   elementoptions outside of the supervision tree.
 
   Works similarily to `GenServer.start/3` and has the same return values.
@@ -74,12 +76,12 @@ defmodule Membrane.Element do
 
 
   @doc """
-  Stops given Element.Manager process.
+  Stops given element process.
 
   It will wait for reply for amount of time passed as second argument
   (in milliseconds).
 
-  Will trigger calling `handle_shutdown/2` Element.Manager callback.
+  Will trigger calling `handle_shutdown/2` element callback.
 
   Returns `:ok`.
   """
@@ -92,7 +94,7 @@ defmodule Membrane.Element do
 
 
   @doc """
-  Sends synchronous call to the given Element.Manager requesting it to set message bus.
+  Sends synchronous call to the given element requesting it to set message bus.
 
   It will wait for reply for amount of time passed as second argument
   (in milliseconds).
@@ -128,10 +130,10 @@ defmodule Membrane.Element do
 
   @doc false
   def init({module, options}) do
-    debug "element: initializing: #{inspect module}, options: #{inspect options}"
+    debug "Element: initializing: #{inspect module}, options: #{inspect options}"
     with {:ok, state} <- module.manager_module.handle_init(module, options)
     do
-      debug "element: initialized: #{inspect module}"
+      debug "Element: initialized: #{inspect module}"
       {:ok, state}
     else
       {:error, reason} ->
@@ -146,7 +148,7 @@ defmodule Membrane.Element do
     case playback_state do
       :stopped ->
         warn_error """
-        Terminating: Attempt to terminate Element.Manager when it is not stopped
+        Terminating: Attempt to terminate element when it is not stopped
         """, reason
       _ -> debug "Terminating element, reason: #{inspect reason}"
     end

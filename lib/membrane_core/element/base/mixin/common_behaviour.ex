@@ -1,6 +1,6 @@
 defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
-  @callback is_membrane_module :: true
+  @callback is_membrane_element :: true
 
   @callback manager_module :: module
 
@@ -16,8 +16,10 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
       # Default implementations
 
-      @doc false
-      def is_membrane_module, do: true
+      @doc """
+      Enables to check whether module is membrane element
+      """
+      def is_membrane_element, do: true
 
       @doc false
       def handle_init(_options), do: {:ok, %{}}

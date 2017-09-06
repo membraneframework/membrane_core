@@ -196,10 +196,11 @@ defmodule Membrane.Pipeline do
   # a chance that some of children will remain running.
   defp start_children(children) when is_map(children) do
     debug("Starting children: #{inspect children}")
-    children
-      |> Helper.Enum.map_with(&start_child/1)
-      |> Enum.unzip
-      ~> ({names, pids} -> {names |> Map.new, pids |> Map.new})
+    with {:ok, result} <- children |> Helper.Enum.map_with(&start_child/1)
+    do
+      {names, pids} = result |> Enum.unzip
+      {:ok, {names |> Map.new, pids |> Map.new}}
+    end
   end
 
   # Recursion that starts children processes, case when both module and options
@@ -213,6 +214,7 @@ defmodule Membrane.Pipeline do
         warn_error "Cannot start child #{inspect name}", {:cannot_start_child, name, reason}
     end
   end
+  defp start_child({name, module}), do: start_child({name, {module, nil}})
 
   defp parse_links(links), do: links |> Helper.Enum.map_with(&parse_link/1)
 
