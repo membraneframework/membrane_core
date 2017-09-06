@@ -35,7 +35,7 @@ defmodule Membrane.Element.Base.Sink do
 
       @doc false
       def handle_write(pad, buffers, params, state) do
-        buffers |> Common.reduce_something1_results(state, fn buf, st ->
+        buffers |> Membrane.Element.Manager.Common.reduce_something1_results(state, fn buf, st ->
             handle_write1 pad, buf, params, st
           end)
       end

@@ -40,7 +40,7 @@ defmodule Membrane.Element.Base.Filter do
 
       @doc false
       def handle_process(pad, buffers, params, state) do
-        buffers |> Common.reduce_something1_results(state, fn b, st ->
+        buffers |> Membrane.Element.Manager.Common.reduce_something1_results(state, fn b, st ->
             handle_process1 pad, b, params, st
           end)
       end

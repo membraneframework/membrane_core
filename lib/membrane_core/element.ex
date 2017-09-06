@@ -6,11 +6,11 @@ defmodule Membrane.Element do
 
   use Membrane.Mixins.Log, tags: :core
   use Membrane.Helper
-  use Membrane.Mixins.Playback
   alias Membrane.Element.Manager.State
   import Membrane.Helper.GenServer
   alias Membrane.Element.Manager.Pad
   use GenServer
+  use Membrane.Mixins.Playback
 
   # Type that defines possible return values of start/start_link functions.
   @type on_start :: GenServer.on_start
@@ -39,7 +39,7 @@ defmodule Membrane.Element do
   @spec start_link(module, elementoptions_t, process_options_t) :: on_start
   def start_link(module, elementoptions \\ nil, process_options \\ []) do
     debug("Start Link: module = #{inspect(module)}, elementoptions = #{inspect(elementoptions)}, process_options = #{inspect(process_options)}")
-    GenServer.start_link(Membrane.Element.Manager, {module, elementoptions}, process_options)
+    GenServer.start_link(__MODULE__, {module, elementoptions}, process_options)
   end
 
 

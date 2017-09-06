@@ -30,7 +30,7 @@ defmodule Membrane.Element.Base.Source do
 
       @doc false
       def handle_demand(pad, size, :buffers, params, state) do
-        1..size |> Common.reduce_something1_results(state, fn _, st ->
+        1..size |> Membrane.Element.Manager.Common.reduce_something1_results(state, fn _, st ->
             handle_demand1 pad, params, st
           end)
       end

@@ -1,5 +1,11 @@
 defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
+  @callback handle_init(Membrane.Element.element_options_t) ::
+    {:ok, any} |
+    {:error, any}
+
+  @callback handle_shutdown(any) :: any
+
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Membrane.Element.Base.Mixin.CommonBehaviour

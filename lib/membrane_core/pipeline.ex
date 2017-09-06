@@ -207,7 +207,7 @@ defmodule Membrane.Pipeline do
   # are provided.
   defp start_children_recurse([{name, {module, options}}|tail], {names_to_pids, pids_to_names}) do
     debug("Starting child: name = #{inspect(name)}, module = #{inspect(module)}")
-    case Membrane.Element.start_link(module, options) do
+    case Element.start_link(module, options) do
       {:ok, pid} ->
         start_children_recurse(tail, {
           names_to_pids |> Map.put(name, [pid]),
@@ -215,7 +215,6 @@ defmodule Membrane.Pipeline do
         })
 
       {:error, reason} ->
-        :timer.sleep 5000
         warn_error "Cannot start child #{inspect name}", {:cannot_start_child, name, reason}
     end
   end
