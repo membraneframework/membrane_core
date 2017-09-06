@@ -1,11 +1,11 @@
-defmodule Membrane.Element.Action do
+defmodule Membrane.Element.Manager.Action do
   @moduledoc false
   # Module containing action handlers common for elements of all types.
 
   use Membrane.Mixins.Log, tags: :core
   alias Membrane.Pad
   alias Membrane.Caps
-  alias Membrane.Element.State
+  alias Membrane.Element.Manager.State
   alias Membrane.Buffer
   use Membrane.Helper
 
@@ -136,11 +136,11 @@ defmodule Membrane.Element.Action do
     raise """
     Pad "#{inspect pad_name}" is working in invalid mode: #{inspect mode_name}.
 
-    This is probably a bug in element. It requested an action
+    This is probably a bug in Element.Manager. It requested an action
     "#{inspect action_name}" on pad "#{inspect pad_name}", but the pad is not
     working in #{inspect exp_mode_name} mode as it is supposed to.
 
-    Element state was:
+    Element.Manager state was:
 
     #{inspect(state, limit: 100000, pretty: true)}
     """
@@ -152,14 +152,14 @@ defmodule Membrane.Element.Action do
     raise """
     Pad "#{inspect pad_name}" has not been found.
 
-    This is probably a bug in element. It requested an action
+    This is probably a bug in Element.Manager. It requested an action
     "#{inspect action_name}" on pad "#{inspect pad_name}", but such pad has not
     been found. #{if expected_direction != :any do
       "It either means that it does not exist, or it is not a
       #{inspect direction_name} pad."
     else "" end}
 
-    Element state was:
+    Element.Manager state was:
 
     #{inspect(state, limit: 100000, pretty: true)}
     """

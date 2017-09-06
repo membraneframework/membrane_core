@@ -1,5 +1,5 @@
-defmodule Membrane.Element.Pad do
-  alias Membrane.Element.{State, PlaybackBuffer}
+defmodule Membrane.Element.Manager.Pad do
+  alias Membrane.Element.Manager.{State, PlaybackBuffer}
   use Membrane.Helper
   use Membrane.Mixins.Log, tags: :core
 

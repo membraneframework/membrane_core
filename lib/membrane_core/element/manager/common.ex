@@ -1,14 +1,14 @@
-defmodule Membrane.Element.Common do
+defmodule Membrane.Element.Manager.Common do
 
   use Membrane.Mixins.Log, tags: :core
-  alias Membrane.Element.State
+  alias Membrane.Element.Manager.State
   use Membrane.Helper
   alias Membrane.PullBuffer
 
   defmacro __using__(_) do
     quote do
       use Membrane.Mixins.CallbackHandler
-      alias Membrane.Element.{Action, Common, State}
+      alias Membrane.Element.Manager.{Action, Common, State}
       use Membrane.Helper
 
       def handle_action({:event, {pad_name, event}}, _cb, _params, state), do:
@@ -18,7 +18,7 @@ defmodule Membrane.Element.Common do
         Action.send_message(message, state)
 
       def handle_actions(actions, callback, handler_params, state), do:
-        super(actions |> Membrane.Element.Common.join_buffers, callback,
+        super(actions |> Membrane.Element.Manager.Common.join_buffers, callback,
           handler_params, state)
 
       def handle_init(module, options) do
@@ -27,7 +27,7 @@ defmodule Membrane.Element.Common do
         else
           {:error, reason} -> warn_error """
               Module #{inspect module} handle_init callback returned an error
-              """, {:element_handle_init, module, reason}
+              """, {:elementhandle_init, module, reason}
           other -> warn_error """
               Module #{inspect module} handle_init callback returned invalid result:
               #{inspect other} instead of {:ok, state} or {:error, reason}
@@ -87,7 +87,7 @@ defmodule Membrane.Element.Common do
       end
       def unlink(_state) do
         warn_error """
-        Tried to unlink element that is not stopped
+        Tried to unlink Element.Manager that is not stopped
         """, {:unlink, :cannot_unlink_non_stopped_element}
       end
 

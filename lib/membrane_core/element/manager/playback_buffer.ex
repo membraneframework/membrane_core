@@ -1,6 +1,6 @@
-defmodule Membrane.Element.PlaybackBuffer do
+defmodule Membrane.Element.Manager.PlaybackBuffer do
   alias __MODULE__
-  alias Membrane.Element.State
+  alias Membrane.Element.Manager.State
   use Membrane.Helper
   use Membrane.Mixins.Log, tags: :core
 

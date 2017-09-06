@@ -79,7 +79,7 @@ defmodule Membrane.Mixins.CallbackHandler do
             {{:ok, actions}, state}
             {{:error, reason}, state}
 
-        where actions is a list that is specific to base type of the element.
+        where actions is a list that is specific to #{inspect module}
 
         Instead, callback #{inspect cb} from module #{inspect module} returned
         value of #{inspect result} which does not match any of the valid return

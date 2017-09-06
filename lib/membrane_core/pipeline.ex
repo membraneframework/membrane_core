@@ -89,7 +89,7 @@ defmodule Membrane.Pipeline do
 
 
   @doc """
-  Callback invoked on if any of the child element has sent a message.
+  Callback invoked on if any of the child Element has sent a message.
 
   It will receive message, sender name and state.
 
@@ -257,7 +257,7 @@ defmodule Membrane.Pipeline do
       end)
   end
 
-  defp handle_new_pad(%{element: element, pad: {name, params}} = element_pad, direction,
+  defp handle_new_pad(%{element: element, pad: {name, params}} = elementpad, direction,
     %State{children_pad_nos: pad_nos} = state) do
     with \
       {:ok, pid} <- state |> State.get_child(element),
@@ -267,11 +267,11 @@ defmodule Membrane.Pipeline do
       state = %State{state | children_pad_nos: pad_nos |> Map.put({element, name}, no + 1)}
       {{:ok, %{element: element, pad: {name, no}}}, state}
     else
-      {:error, reason} -> {:error, {:handle_new_pad, element_pad, reason}}
+      {:error, reason} -> {:error, {:handle_new_pad, elementpad, reason}}
     end
   end
-  defp handle_new_pad(element_pad, _direction, state), do:
-    {{:ok, element_pad}, state}
+  defp handle_new_pad(elementpad, _direction, state), do:
+    {{:ok, elementpad}, state}
 
   # Links children based on given specification and map for mapping children
   # names into PIDs.
@@ -345,13 +345,13 @@ defmodule Membrane.Pipeline do
       |> noreply(state)
   end
 
-  def handle_action({:forward, {element_name, message}}, _cb, _params, state) do
-    with {:ok, pid} <- state |> State.get_child(element_name)
+  def handle_action({:forward, {elementname, message}}, _cb, _params, state) do
+    with {:ok, pid} <- state |> State.get_child(elementname)
     do
       send pid, message
       {:ok, state}
     else {:error, reason} ->
-      {:error, {:cannot_forward_message, [element: element_name, message: message], reason}}
+      {:error, {:cannot_forward_message, [element: elementname, message: message], reason}}
     end
   end
 
@@ -379,7 +379,7 @@ defmodule Membrane.Pipeline do
 
   def handle_action(action, callback, params, state) do
     available_actions = [
-        "{:forward, {element_name, message}}",
+        "{:forward, {elementname, message}}",
         "{:spec, spec}",
         "{:remove_child, children}"
       ]
