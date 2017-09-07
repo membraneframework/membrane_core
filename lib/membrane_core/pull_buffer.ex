@@ -5,6 +5,7 @@ defmodule Membrane.PullBuffer do
   alias Membrane.Buffer
 
   defstruct \
+    name: :pull_buffer,
     sink: nil,
     sink_name: nil,
     q: nil,
@@ -18,10 +19,11 @@ defmodule Membrane.PullBuffer do
 
   @non_buf_types [:event, :caps]
 
-  def new(sink, sink_name, demand_in, props) do
+  def new(name, sink, sink_name, demand_in, props) do
     metric = Buffer.Metric.from_unit demand_in
     preferred_size = metric.pullbuffer_preferred_size
     %PullBuffer{
+      name: name,
       q: @qe.new,
       sink: sink,
       sink_name: sink_name,
@@ -33,18 +35,18 @@ defmodule Membrane.PullBuffer do
   end
 
   def fill(%PullBuffer{} = pb), do: handle_demand(pb, 0)
-    |> or_warn_error("Unable to fill PullBuffer: #{inspect pb}")
+    |> or_warn_error("Unable to fill PullBuffer #{pb.name}: #{inspect pb}")
 
   def store(pb, type \\ :buffers, v)
 
-  def store(%PullBuffer{current_size: size, preferred_size: pref_size, sink_name: sink} = pb, :buffers, v)
+  def store(%PullBuffer{current_size: size, preferred_size: pref_size} = pb, :buffers, v)
   when is_list(v)
   do
     if size >= pref_size do warn """
-      PullBuffer: received buffers from sink #{inspect sink}, despite
-      not requesting them. It is undesirable to send any buffers without demand.
-      Unless this is a bug, make sure that doing so is necessary and amount of
-      undemanded buffers is controlled and limited.
+      PullBuffer #{pb.name}: received buffers from sink #{inspect pb.sink_name},
+      despite not requesting them. It is undesirable to send any buffers without
+      demand. Unless this is a bug, make sure that doing so is necessary and
+      amount of undemanded buffers is controlled and limited.
 
       Buffers: #{inspect v}
 
@@ -126,12 +128,12 @@ defmodule Membrane.PullBuffer do
   def empty?(%PullBuffer{current_size: size, init_size: init_size}), do:
     size == 0 || (init_size != nil && size < init_size)
 
-  defp handle_demand(%PullBuffer{sink: {other_pid, other_name}, sink_name: sink_name,
+  defp handle_demand(%PullBuffer{sink: {other_pid, other_name},
     current_size: size, preferred_size: pref_size, demand: demand} = pb, new_demand)
   when size < pref_size and demand + new_demand > 0 do
     report """
       Sending demand of size #{inspect demand + new_demand}
-      to sink #{inspect sink_name}
+      to sink #{inspect pb.sink_name}
       """, pb
     send other_pid, {:membrane_demand, [demand + new_demand, other_name]}
     {:ok, %PullBuffer{pb | demand: 0}}
@@ -139,9 +141,9 @@ defmodule Membrane.PullBuffer do
   defp handle_demand(%PullBuffer{demand: demand} = pb, new_demand), do:
     {:ok, %PullBuffer{pb | demand: demand + new_demand}}
 
-  defp report(msg, %PullBuffer{current_size: size, preferred_size: pref_size}),
+  defp report(msg, %PullBuffer{name: name, current_size: size, preferred_size: pref_size}),
   do: debug """
-    PullBuffer: #{msg}
+    PullBuffer #{name}: #{msg}
     PullBuffer size: #{inspect size}, PullBuffer preferred size: #{inspect pref_size}
     """
 
