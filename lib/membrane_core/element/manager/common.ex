@@ -22,6 +22,7 @@ defmodule Membrane.Element.Manager.Common do
           handler_params, state)
 
       def handle_init(module, options) do
+        use Membrane.Mixins.Log
         with {:ok, internal_state} <- module.handle_init(options)
         do {:ok, State.new(module, internal_state)}
         else
@@ -36,6 +37,7 @@ defmodule Membrane.Element.Manager.Common do
       end
 
       def handle_message(message, state) do
+        use Membrane.Mixins.Log
         exec_and_handle_callback(:handle_other, [message], state)
           |> or_warn_error("Error while handling message")
       end
@@ -86,6 +88,7 @@ defmodule Membrane.Element.Manager.Common do
             -> GenServer.call pid, {:membrane_handle_unlink, other_name} end)
       end
       def unlink(_state) do
+        use Membrane.Mixins.Log
         warn_error """
         Tried to unlink Element.Manager that is not stopped
         """, {:unlink, :cannot_unlink_non_stopped_element}

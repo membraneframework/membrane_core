@@ -27,6 +27,7 @@ defmodule Membrane.Mixins.Playback do
         use Membrane.Helper
         import Membrane.Helper.GenServer
         alias Membrane.Mixins.Playback
+        use Membrane.Mixins.Log
 
 
         old_state = state |> Map.get(:playback_state)

@@ -19,6 +19,7 @@ defmodule Membrane.Mixins.CallbackHandler do
         handle_invalid_action(action, callback, params, [], __MODULE__, state)
 
       def handle_invalid_action(action, callback, _params, available_actions, module, _state) do
+        use Membrane.Mixins.Log
         warn_error """
           #{module} #{inspect callback} callback results are expected to be one of:
           #{available_actions
@@ -48,6 +49,7 @@ defmodule Membrane.Mixins.CallbackHandler do
       end
 
       defp exec_handle_actions(actions, callback, handler_params, state) do
+        use Membrane.Mixins.Log
         with {:ok, state} <- actions |> handle_actions(callback, handler_params, state)
         do {:ok, state}
         else {:error, reason} ->
@@ -64,6 +66,7 @@ defmodule Membrane.Mixins.CallbackHandler do
       do {{:ok, actions}, new_internal_state}
       end
       def handle_callback_result({{:error, reason}, new_internal_state}, module, cb) do
+        use Membrane.Mixins.Log
         #TODO: send error to pipeline or do something
         warn_error """
              Callback #{inspect cb} from module #{inspect module} returned an error
@@ -72,6 +75,7 @@ defmodule Membrane.Mixins.CallbackHandler do
         {{:ok, []}, new_internal_state}
       end
       def handle_callback_result(result, module, cb) do
+        use Membrane.Mixins.Log
         warn_error """
         Callback replies are expected to be one of:
 
