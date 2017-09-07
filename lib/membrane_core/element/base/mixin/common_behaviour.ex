@@ -14,6 +14,8 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
     quote location: :keep do
       @behaviour Membrane.Element.Base.Mixin.CommonBehaviour
 
+      use Membrane.Mixins.Log, tags: :element, import: false
+
       # Default implementations
 
       @doc """
