@@ -82,7 +82,7 @@ defmodule Membrane.Mixins.Log do
           unquote(level),
           unquote(message),
           Membrane.Time.monotonic_time,
-          (unquote(tags) |> Helper.listify) ++ (@logger_default_tags |> List.flatten)
+          (unquote(tags) |> Helper.listify) ++ (@logger_default_tags |> List.flatten |> Enum.ded)
         )
       end
     end
