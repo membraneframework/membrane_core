@@ -24,28 +24,28 @@ defmodule Membrane.Mixins.Log do
   @doc false
   defmacro debug(message, tags \\ []) do
     quote location: :keep do
-      log :debug, unquote(message), unquote(tags)
+      Membrane.Mixins.Log.log :debug, unquote(message), unquote(tags)
     end
   end
 
   @doc false
   defmacro info(message, tags \\ []) do
     quote location: :keep do
-      log :info, unquote(message), unquote(tags)
+      Membrane.Mixins.Log.log :info, unquote(message), unquote(tags)
     end
   end
 
   @doc false
   defmacro warn(message, tags \\ []) do
     quote location: :keep do
-      log :warn, unquote(message), unquote(tags)
+      Membrane.Mixins.Log.log :warn, unquote(message), unquote(tags)
     end
   end
 
   defmacro warn_error(message, reason, tags \\ []) do
     quote do
       use Membrane.Helper
-      warn """
+      Membrane.Mixins.Log.warn """
       Encountered an error:
       #{unquote message}
       Reason: #{inspect unquote reason}
@@ -60,7 +60,8 @@ defmodule Membrane.Mixins.Log do
     quote do
       with {:ok, value} <- unquote v
       do {:ok, value}
-      else {:error, reason} -> warn_error unquote(message), reason, unquote(tags)
+      else {:error, reason} ->
+        Membrane.Mixins.Log.warn_error unquote(message), reason, unquote(tags)
       end
     end
   end

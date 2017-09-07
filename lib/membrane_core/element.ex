@@ -43,8 +43,8 @@ defmodule Membrane.Element do
   Works similarily to `GenServer.start_link/3` and has the same return values.
   """
   @spec start_link(module, element_options_t, process_options_t) :: on_start
-  def start_link(module, element_options \\ nil, process_options \\ []), do:
-    do_start(:start_link, module, element_options, process_options)
+  def start_link(module, name, element_options \\ nil, process_options \\ []), do:
+    do_start(:start_link, module, name, element_options, process_options)
 
 
   @doc """
@@ -54,11 +54,11 @@ defmodule Membrane.Element do
   Works similarily to `GenServer.start/3` and has the same return values.
   """
   @spec start(module, element_options_t, process_options_t) :: on_start
-  def start(module, element_options \\ nil, process_options \\ []), do:
-    do_start(:start, module, element_options, process_options)
+  def start(module, name, element_options \\ nil, process_options \\ []), do:
+    do_start(:start, module, name, element_options, process_options)
 
 
-  defp do_start(method, module, element_options, process_options) do
+  defp do_start(method, module, name, element_options, process_options) do
     with :ok <- (if is_element module do :ok else :not_element end)
     do
       debug """
@@ -66,7 +66,7 @@ defmodule Membrane.Element do
         element options: #{inspect element_options},
         process options: #{inspect process_options}
         """
-      apply GenServer, method, [__MODULE__, {module, element_options}, process_options]
+      apply GenServer, method, [__MODULE__, {module, name, element_options}, process_options]
     else
       :not_element -> warn_error """
         Cannot start element, passed module #{inspect module} is not a Membrane Element
@@ -129,9 +129,9 @@ defmodule Membrane.Element do
   end
 
   @doc false
-  def init({module, options}) do
+  def init({module, name, options}) do
     debug "Element: initializing: #{inspect module}, options: #{inspect options}"
-    with {:ok, state} <- module.manager_module.handle_init(module, options)
+    with {:ok, state} <- module.manager_module.handle_init(module, name, options)
     do
       debug "Element: initialized: #{inspect module}"
       {:ok, state}

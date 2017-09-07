@@ -207,7 +207,7 @@ defmodule Membrane.Pipeline do
   # are provided.
   defp start_child({name, {module, options}}) do
     debug "Pipeline: starting child: name: #{inspect name}, module: #{inspect module}"
-    with {:ok, pid} <- Element.start_link(module, options)
+    with {:ok, pid} <- Element.start_link(module, name, options)
     do {:ok, {{name, [pid]}, {pid, name}}}
     else
       {:error, reason} ->

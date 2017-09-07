@@ -1,6 +1,6 @@
 defmodule Membrane.Element.Manager.Common do
 
-  use Membrane.Mixins.Log, tags: :core
+  use Membrane.Element.Manager.Log
   alias Membrane.Element.Manager.State
   use Membrane.Helper
   alias Membrane.PullBuffer
@@ -21,25 +21,26 @@ defmodule Membrane.Element.Manager.Common do
         super(actions |> Membrane.Element.Manager.Common.join_buffers, callback,
           handler_params, state)
 
-      def handle_init(module, options) do
-        use Membrane.Mixins.Log
+      def handle_init(module, name, options) do
+        use Membrane.Element.Manager.Log
+        state = State.new(module, name)
         with {:ok, internal_state} <- module.handle_init(options)
-        do {:ok, State.new(module, internal_state)}
+        do {:ok, %State{state | internal_state: internal_state}}
         else
           {:error, reason} -> warn_error """
               Module #{inspect module} handle_init callback returned an error
-              """, {:elementhandle_init, module, reason}
+              """, {:elementhandle_init, module, reason}, state
           other -> warn_error """
               Module #{inspect module} handle_init callback returned invalid result:
               #{inspect other} instead of {:ok, state} or {:error, reason}
-            """, {:invalid_callback_result, :handle_init, other}
+            """, {:invalid_callback_result, :handle_init, other}, state
         end
       end
 
       def handle_message(message, state) do
-        use Membrane.Mixins.Log
+        use Membrane.Element.Manager.Log
         exec_and_handle_callback(:handle_other, [message], state)
-          |> or_warn_error("Error while handling message")
+          |> or_warn_error("Error while handling message", state)
       end
 
       def handle_message_bus(message_bus, state), do:
@@ -87,11 +88,11 @@ defmodule Membrane.Element.Manager.Common do
           |> Helper.Enum.each_with(fn {_name, %{pid: pid, other_name: other_name}}
             -> GenServer.call pid, {:membrane_handle_unlink, other_name} end)
       end
-      def unlink(_state) do
-        use Membrane.Mixins.Log
+      def unlink(state) do
+        use Membrane.Element.Manager.Log
         warn_error """
         Tried to unlink Element.Manager that is not stopped
-        """, {:unlink, :cannot_unlink_non_stopped_element}
+        """, {:unlink, :cannot_unlink_non_stopped_element}, state
       end
 
       def handle_shutdown(%State{module: module, internal_state: internal_state} = state) do
@@ -134,8 +135,8 @@ defmodule Membrane.Element.Manager.Common do
         Received caps: #{inspect caps} that are not specified in known_sink_pads
         for pad #{inspect pad_name}. Acceptable caps are:
         #{accepted_caps |> Enum.map(&inspect/1) |> Enum.join(", ")}
-        """, :invalid_caps
-      {:error, reason} -> warn_error "Error while handling caps", reason
+        """, :invalid_caps, state
+      {:error, reason} -> warn_error "Error while handling caps", reason, state
     end
   end
 
@@ -156,7 +157,7 @@ defmodule Membrane.Element.Manager.Common do
     params = %{caps: caps}
     module.manager_module.exec_and_handle_callback(
       :handle_event, %{direction: dir, event: event}, [pad_name, event, params], state)
-        |> or_warn_error("Error while handling event")
+        |> or_warn_error("Error while handling event", state)
   end
 
   def handle_link(pad_name, direction, pid, other_name, props, state) do
@@ -217,7 +218,7 @@ defmodule Membrane.Element.Manager.Common do
       |> Helper.Enum.reduce_with(state, fn pad_name, st ->
         State.update_pad_data st, :sink, pad_name, :buffer, &PullBuffer.fill/1
       end)
-      |> or_warn_error("Unable to fill sink pull buffers")
+      |> or_warn_error("Unable to fill sink pull buffers", state)
   end
 
   def handle_new_pad(name, direction, args, %State{module: module, internal_state: internal_state} = state) do
@@ -230,12 +231,13 @@ defmodule Membrane.Element.Manager.Common do
         |> Map.put(:internal_state, internal_state)
       {:ok, state}
     else
-      {:error, reason} -> warn_error "handle_new_pad callback returned an error", reason
+      {:error, reason} ->
+        warn_error "handle_new_pad callback returned an error", reason, state
       res -> warn_error """
         handle_new_pad return values are expected to be
         {:ok, {{availability, mode, caps}, state}} or {:error, reason}
         but got #{inspect res} instead
-        """, :invalid_handle_new_pad_return
+        """, :invalid_handle_new_pad_return, state
     end
   end
 

@@ -2,7 +2,7 @@ defmodule Membrane.Element.Manager.Action do
   @moduledoc false
   # Module containing action handlers common for elements of all types.
 
-  use Membrane.Mixins.Log, tags: :core
+  use Membrane.Element.Manager.Log
   alias Membrane.Pad
   alias Membrane.Caps
   alias Membrane.Element.Manager.State
@@ -18,7 +18,7 @@ defmodule Membrane.Element.Manager.Action do
     debug """
       Sending buffers through pad #{inspect(pad_name)}
       Buffers: #{inspect(buffers)}
-      """
+      """, state
     with \
       {:ok, %{mode: mode, pid: pid, other_name: other_name, options: %{other_demand_in: demand_unit} }}
         <- state |> State.get_pad_data(:source, pad_name),
@@ -37,7 +37,7 @@ defmodule Membrane.Element.Manager.Action do
       {:error, reason} -> warn_error """
         Error while sending buffers to pad: #{inspect pad_name}
         Buffers: #{inspect buffers}
-        """, reason
+        """, reason, state
     end
   end
 
@@ -47,7 +47,7 @@ defmodule Membrane.Element.Manager.Action do
     debug """
       Sending caps through pad #{inspect pad_name}
       Caps: #{inspect caps}
-      """
+      """, state
     with \
       {:ok, %{pid: pid, other_name: other_name}}
         <- state |> State.get_pad_data(:source, pad_name)
@@ -60,14 +60,14 @@ defmodule Membrane.Element.Manager.Action do
       {:error, reason} -> warn_error """
         Error while sending caps to pad: #{inspect pad_name}
         Caps: #{inspect caps}
-        """, reason
+        """, reason, state
     end
   end
 
 
   @spec handle_demand(Pad.name_t, Pad.name_t, pos_integer, atom, State.t) :: :ok | {:error, any}
   def handle_demand(pad_name, src_name \\ nil, size, callback, %State{module: module} = state) do
-    debug "Requesting demand of size #{inspect size} on pad #{inspect pad_name}"
+    debug "Requesting demand of size #{inspect size} on pad #{inspect pad_name}", state
     with \
       {:sink, {:ok, %{mode: :pull}}} <-
         {:sink, state |> State.get_pad_data(:sink, pad_name)},
@@ -96,7 +96,7 @@ defmodule Membrane.Element.Manager.Action do
     debug """
       Sending event through pad #{inspect pad_name}
       Event: #{inspect event}
-      """
+      """, state
     with \
       {:ok, %{pid: pid, other_name: other_name}}
         <- State.get_pad_data(state, :any, pad_name)
@@ -109,19 +109,19 @@ defmodule Membrane.Element.Manager.Action do
       {:error, reason} -> warn_error """
         Error while sending event to pad: #{inspect pad_name}
         Event: #{inspect event}
-        """, reason
+        """, reason, state
     end
   end
 
 
   @spec send_message(Membrane.Message.t, State.t) :: :ok
   def send_message(%Membrane.Message{} = message, %State{message_bus: nil} = state) do
-    debug "Dropping #{inspect(message)} as message bus is undefined"
+    debug "Dropping #{inspect(message)} as message bus is undefined", state
     {:ok, state}
   end
 
   def send_message(%Membrane.Message{} = message, %State{message_bus: message_bus} = state) do
-    debug "Sending message #{inspect(message)} (message bus: #{inspect message_bus})"
+    debug "Sending message #{inspect(message)} (message bus: #{inspect message_bus})", state
     send(message_bus, [:membrane_message, message])
     {:ok, state}
   end
@@ -140,7 +140,7 @@ defmodule Membrane.Element.Manager.Action do
     "#{inspect action_name}" on pad "#{inspect pad_name}", but the pad is not
     working in #{inspect exp_mode_name} mode as it is supposed to.
 
-    Element.Manager state was:
+    element state was:
 
     #{inspect(state, limit: 100000, pretty: true)}
     """
@@ -152,14 +152,14 @@ defmodule Membrane.Element.Manager.Action do
     raise """
     Pad "#{inspect pad_name}" has not been found.
 
-    This is probably a bug in Element.Manager. It requested an action
+    This is probably a bug in element. It requested an action
     "#{inspect action_name}" on pad "#{inspect pad_name}", but such pad has not
     been found. #{if expected_direction != :any do
       "It either means that it does not exist, or it is not a
       #{inspect direction_name} pad."
     else "" end}
 
-    Element.Manager state was:
+    element state was:
 
     #{inspect(state, limit: 100000, pretty: true)}
     """

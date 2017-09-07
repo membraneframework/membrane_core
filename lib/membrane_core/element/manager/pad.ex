@@ -1,7 +1,7 @@
 defmodule Membrane.Element.Manager.Pad do
   alias Membrane.Element.Manager.{State, PlaybackBuffer}
   use Membrane.Helper
-  use Membrane.Mixins.Log, tags: :core
+  use Membrane.Element.Manager.Log
 
   def handle_message(message, mode, state) do
     with {:ok, state} <- do_handle_message(message, mode, state)
@@ -10,7 +10,9 @@ defmodule Membrane.Element.Manager.Pad do
       {:error, reason} ->
         warn_error """
         Pad: cannot handle message: #{inspect message}, mode: #{inspect mode}
-        """, {:cannot_handle_message, message: message, mode: mode, reason: reason}
+        """,
+        {:cannot_handle_message, message: message, mode: mode, reason: reason},
+        state
     end
   end
 

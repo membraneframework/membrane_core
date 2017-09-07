@@ -2,7 +2,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
   alias __MODULE__
   alias Membrane.Element.Manager.State
   use Membrane.Helper
-  use Membrane.Mixins.Log, tags: :core
+  use Membrane.Element.Manager.Log
 
   defstruct \
     q: nil
@@ -45,7 +45,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
   defp exec({:membrane_demand, [size, pad_name]}, %State{module: module} = state) do
     {:ok, _} = state |> State.get_pad_data(:source, pad_name)
     demand = if size == 0 do "dumb demand" else "demand of size #{inspect size}" end
-    debug "Received #{demand} on pad #{inspect pad_name}"
+    debug "Received #{demand} on pad #{inspect pad_name}", state
     module.manager_module.handle_demand(pad_name, size, state)
   end
 
@@ -55,7 +55,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
     debug """
       Received buffers on pad #{inspect pad_name}
       Buffers: #{inspect buffers}
-      """
+      """, state
     module.manager_module.handle_buffer(mode, pad_name, buffers, state)
   end
 
@@ -65,7 +65,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
     debug """
       Received caps on pad #{inspect pad_name}
       Caps: #{inspect caps}
-      """
+      """, state
     module.manager_module.handle_caps(mode, pad_name, caps, state)
   end
 
@@ -75,7 +75,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
     debug """
       Received event on pad #{inspect pad_name}
       Event: #{inspect event}
-      """
+      """, state
     module.manager_module.handle_event(mode, direction, pad_name, event, state)
   end
 

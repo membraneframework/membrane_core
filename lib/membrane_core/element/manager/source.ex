@@ -71,7 +71,7 @@ defmodule Membrane.Element.Manager.Source do
   * `Membrane.Element.Manager.Base.Mixin.CommonBehaviour` - for more callbacks.
   """
 
-  use Membrane.Mixins.Log, tags: :core
+  use Membrane.Element.Manager.Log
   alias Membrane.Element.Manager.{Action, Common, State}
   use Membrane.Element.Manager.Common
 
@@ -209,12 +209,12 @@ defmodule Membrane.Element.Manager.Source do
           |> or_warn_error("""
             Demand arrived from pad #{inspect pad_name}, but error happened while
             handling it.
-            """)
+            """, state)
     else
       debug """
         Demand handler: not executing handle_demand, as demand is not
         greater than 0
-        """
+        """, state
       {:ok, state}
     end
   end

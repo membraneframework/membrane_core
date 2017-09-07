@@ -126,7 +126,7 @@ defmodule Membrane.Element.Manager.Sink do
   * `Membrane.Element.Manager.Base.Mixin.CommonBehaviour` - for more callbacks.
   """
 
-  use Membrane.Mixins.Log, tags: :core
+  use Membrane.Element.Manager.Log
   use Membrane.Element.Manager.Common
   alias Membrane.Element.Manager.{State, Action, Common}
   alias Membrane.PullBuffer
@@ -262,17 +262,17 @@ defmodule Membrane.Element.Manager.Sink do
     debug """
       Ignoring demand of size of 0 requested by callback #{inspect cb}
       on pad #{inspect pad_name}.
-      """
+      """, state
     {:ok, state}
   end
 
-  def handle_action({:demand, {pad_name, size}}, cb, _params, _state)
+  def handle_action({:demand, {pad_name, size}}, cb, _params, state)
   when size < 0 do
     raise """
       Callback #{inspect cb} requested demand of invalid size of #{size}
       on pad #{inspect pad_name}. Demands' sizes should be positive (0-sized
       demands are ignored).
-      """
+      """, state
   end
 
   def handle_action(action, callback, params, state) do
@@ -290,7 +290,7 @@ defmodule Membrane.Element.Manager.Sink do
       |> or_warn_error("""
         Demand of size #{inspect buf_cnt} on pad #{inspect pad_name}
         was raised, and handle_write was called, but an error happened.
-        """)
+        """, state)
   end
 
   def handle_buffer(:push, pad_name, buffer, state), do:
@@ -305,13 +305,13 @@ defmodule Membrane.Element.Manager.Sink do
         #{inspect buffer}
         and Membrane tried to execute handle_demand and then handle_write
         for each unsupplied demand, but an error happened.
-        """)
+        """, state)
   end
 
   def handle_write(:push, pad_name, buffer, state) do
     params = %{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
     exec_and_handle_callback(:handle_write, [pad_name, buffer, params], state)
-      |> or_warn_error("Error while handling write")
+      |> or_warn_error("Error while handling write", state)
   end
 
   def handle_write(:pull, pad_name, state) do
@@ -329,7 +329,7 @@ defmodule Membrane.Element.Manager.Sink do
     do {:ok, state}
     else
       {:empty_pb, state} -> {:ok, state}
-      {:error, reason} -> warn_error "Error while handling write", reason
+      {:error, reason} -> warn_error "Error while handling write", reason, state
     end
   end
 
@@ -337,7 +337,7 @@ defmodule Membrane.Element.Manager.Sink do
     {:ok, state} = state |>
       State.update_pad_data(:sink, pad_name, :self_demand, & {:ok, &1 - buf_cnt})
     params = %{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
-    debug "Executing handle_write with buffers #{inspect b}"
+    debug "Executing handle_write with buffers #{inspect b}", state
     exec_and_handle_callback :handle_write, [pad_name, b, params], state
   end
   defp handle_pullbuffer_output(pad_name, v, state), do:

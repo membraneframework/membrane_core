@@ -13,6 +13,7 @@ defmodule Membrane.Element.Manager.State do
   @type t :: %State{
     internal_state: any,
     module: module,
+    name: Element.name_t,
     playback_state: Membrane.Mixins.Playback.state_t,
     pads: %{optional(Element.Manager.pad_name_t) => pid},
     message_bus: pid,
@@ -21,6 +22,7 @@ defmodule Membrane.Element.Manager.State do
   defstruct \
     internal_state: nil,
     module: nil,
+    name: nil,
     playback_state: :stopped,
     pads: %{},
     message_bus: nil,
@@ -30,8 +32,8 @@ defmodule Membrane.Element.Manager.State do
   @doc """
   Initializes new state.
   """
-  @spec new(module, any) :: t
-  def new(module, internal_state) do
+  @spec new(module, Element.name_t) :: t
+  def new(module, name) do
     # Initialize source pads
 
     pads_data = Map.merge(
@@ -41,8 +43,9 @@ defmodule Membrane.Element.Manager.State do
 
     %State{
       module: module,
+      name: name,
       pads: %{data: pads_data, names_by_pids: %{}, new: []},
-      internal_state: internal_state,
+      internal_state: nil,
       playback_buffer: PlaybackBuffer.new
     }
   end

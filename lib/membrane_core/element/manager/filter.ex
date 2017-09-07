@@ -132,7 +132,7 @@ defmodule Membrane.Element.Manager.Filter do
   * `Membrane.Element.Manager.Base.Mixin.CommonBehaviour` - for more callbacks.
   """
 
-  use Membrane.Mixins.Log, tags: :core
+  use Membrane.Element.Manager.Log
   use Membrane.Element.Manager.Common
   alias Membrane.Element.Manager.{Action, State, Common}
   alias Membrane.PullBuffer
@@ -331,7 +331,7 @@ defmodule Membrane.Element.Manager.Filter do
     debug """
       Ignoring demand of size of 0 requested by callback #{inspect cb}
       on pad #{inspect pad_name}.
-      """
+      """, state
     {:ok, state}
   end
 
@@ -369,11 +369,11 @@ defmodule Membrane.Element.Manager.Filter do
           |> or_warn_error("""
             Demand arrived from pad #{inspect pad_name}, but error happened while
             handling it.
-            """)
+            """, state)
     else
       debug """
         Demand handler: not executing handle_demand, as demand is not greater than 0
-        """
+        """, state
       {:ok, state}
     end
   end
@@ -383,7 +383,7 @@ defmodule Membrane.Element.Manager.Filter do
       |> or_warn_error("""
         Demand of size #{inspect buf_cnt} on sink pad #{inspect pad_name}
         was raised, and handle_process was called, but an error happened.
-        """)
+        """, state)
   end
 
   def handle_buffer(:push, pad_name, buffers, state) do
@@ -401,7 +401,7 @@ defmodule Membrane.Element.Manager.Filter do
   def handle_process(:push, pad_name, buffers, state) do
     params = %{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
     exec_and_handle_callback(:handle_process, [pad_name, buffers, params], state)
-      |> or_warn_error("Error while handling process")
+      |> or_warn_error("Error while handling process", state)
   end
 
   def handle_process(:pull, pad_name, src_name, buf_cnt, state) do
@@ -416,7 +416,7 @@ defmodule Membrane.Element.Manager.Filter do
       {:ok, state}
     else
       {:empty_pb, state} -> {:ok, state}
-      {:error, reason} -> warn_error "Error while handling process", reason
+      {:error, reason} -> warn_error "Error while handling process", reason, state
     end
   end
 
@@ -442,7 +442,7 @@ defmodule Membrane.Element.Manager.Filter do
       debug """
         handle_process did not produce expected amount of buffers, despite
         PullBuffer being not empty. Trying executing handle_demand again.
-        """
+        """, state
       send self(), {:membrane_demand, [0, src_name]}
     end
   end
@@ -468,7 +468,7 @@ defmodule Membrane.Element.Manager.Filter do
         #{inspect buffers}
         and Membrane tried to execute handle_demand and then handle_process
         for each unsupplied demand, but an error happened.
-        """)
+        """, state)
   end
 
 end
