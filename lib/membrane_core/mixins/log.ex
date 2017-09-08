@@ -9,8 +9,10 @@ defmodule Membrane.Mixins.Log do
 
   @doc false
   defmacro __using__(args) do
-    default_tags = args |> Keyword.get(:tags, []) |> Helper.listify
-    Module.register_attribute __CALLER__.module, :logger_default_tags, accumulate: true
+    passed_tags = args |> Keyword.get(:tags, []) |> Helper.listify
+    previous_tags =
+      Module.get_attribute(__CALLER__.module, :logger_default_tags) || []
+    default_tags = (passed_tags ++ previous_tags) |> Enum.dedup
     Module.put_attribute __CALLER__.module, :logger_default_tags, default_tags
 
     if args |> Keyword.get(:import, true) do
@@ -82,7 +84,7 @@ defmodule Membrane.Mixins.Log do
           unquote(level),
           unquote(message),
           Membrane.Time.monotonic_time,
-          (unquote(tags) |> Helper.listify) ++ (@logger_default_tags |> List.flatten |> Enum.dedup)
+          (unquote(tags) |> Helper.listify) ++ @logger_default_tags
         )
       end
     end
