@@ -24,7 +24,7 @@ defmodule Membrane.Buffer do
     metadata: Buffer.Metadata.new
 
   def print(%Buffer{metadata: metadata, payload: payload}), do: [
-    "%Membrane.Buffer{metadata: ", inspect(metadata), ", payload: ", {:buffer, payload}, "}"
+    "%Membrane.Buffer{metadata: ", inspect(metadata), ", payload: ", {:binary, payload}, "}"
   ]
 
   def print(buffers), do: buffers |> Enum.map(&print/1)
