@@ -23,7 +23,8 @@ defmodule Membrane.Element.Manager.Log do
   defmacro debug(message, state, tags \\ []) do
     quote do
       unquote bring_logger()
-      Log.debug parse(unquote(message), unquote(state)), unquote(tags)
+      tags = append_tags unquote(tags), unquote(state)
+      Log.debug parse(unquote(message), unquote(state)), tags
     end
   end
 
@@ -31,7 +32,8 @@ defmodule Membrane.Element.Manager.Log do
   defmacro info(message, state, tags \\ []) do
     quote do
       unquote bring_logger()
-      Log.info parse(unquote(message), unquote(state)), unquote(tags)
+      tags = append_tags unquote(tags), unquote(state)
+      Log.info parse(unquote(message), unquote(state)), tags
     end
   end
 
@@ -39,21 +41,24 @@ defmodule Membrane.Element.Manager.Log do
   defmacro warn(message, state, tags \\ []) do
     quote do
       unquote bring_logger()
-      Log.warn parse_warn(unquote(message), unquote(state)), unquote(tags)
+      tags = append_tags unquote(tags), unquote(state)
+      Log.warn parse_warn(unquote(message), unquote(state)), tags
     end
   end
 
   defmacro warn_error(message, reason, state, tags \\ []) do
     quote do
       unquote bring_logger()
-      Log.warn_error parse_warn(unquote(message), unquote(state)), unquote(reason), unquote(tags)
+      tags = append_tags unquote(tags), unquote(state)
+      Log.warn_error parse_warn(unquote(message), unquote(state)), unquote(reason), tags
     end
   end
 
   defmacro or_warn_error(v, message, state, tags \\ []) do
     quote do
       unquote bring_logger()
-      Log.or_warn_error unquote(v), parse_warn(unquote(message), unquote(state)), unquote(tags)
+      tags = append_tags unquote(tags), unquote(state)
+      Log.or_warn_error unquote(v), parse_warn(unquote(message), unquote(state)), tags
     end
   end
 
@@ -63,6 +68,10 @@ defmodule Membrane.Element.Manager.Log do
 
   def parse_warn(message, %State{name: name} = state) do
     ["Element #{name}: ", message, "\n", "state: #{inspect state}"]
+  end
+
+  def append_tags(tags, %State{name: name}) do
+    [name | tags]
   end
 
 end
