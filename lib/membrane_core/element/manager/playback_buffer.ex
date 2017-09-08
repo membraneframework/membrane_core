@@ -1,6 +1,7 @@
 defmodule Membrane.Element.Manager.PlaybackBuffer do
   alias __MODULE__
   alias Membrane.Element.Manager.State
+  alias Membrane.Buffer
   use Membrane.Helper
   use Membrane.Element.Manager.Log
 
@@ -52,10 +53,10 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
   # Callback invoked on buffer coming from the sink pad to the sink
   defp exec({:membrane_buffer, [buffers, pad_name]}, %State{module: module} = state) do
     {:ok, %{mode: mode}} = state |> State.get_pad_data(:sink, pad_name)
-    debug """
+    debug ["
       Received buffers on pad #{inspect pad_name}
-      Buffers: #{inspect buffers}
-      """, state
+      Buffers: ", Buffer.print(buffers)
+      ], state
     module.manager_module.handle_buffer(mode, pad_name, buffers, state)
   end
 

@@ -42,16 +42,16 @@ defmodule Membrane.PullBuffer do
   def store(%PullBuffer{current_size: size, preferred_size: pref_size} = pb, :buffers, v)
   when is_list(v)
   do
-    if size >= pref_size do warn """
+    if size >= pref_size do warn ["
       PullBuffer #{pb.name}: received buffers from sink #{inspect pb.sink_name},
       despite not requesting them. It is undesirable to send any buffers without
       demand. Unless this is a bug, make sure that doing so is necessary and
       amount of undemanded buffers is controlled and limited.
 
-      Buffers: #{inspect v}
+      Buffers: ", Buffer.print(v), "
 
       PullBuffer #{inspect pb}
-      """
+      "]
     end
     {:ok, do_store_buffers(pb, v)}
   end

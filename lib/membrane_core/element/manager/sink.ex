@@ -131,6 +131,7 @@ defmodule Membrane.Element.Manager.Sink do
   alias Membrane.Element.Manager.{State, Action, Common}
   alias Membrane.PullBuffer
   alias Membrane.Helper
+  alias Membrane.Buffer
 
 
   # Type that defines a single action that may be returned from handle_*
@@ -300,12 +301,11 @@ defmodule Membrane.Element.Manager.Sink do
     {:ok, state} = state
       |> State.update_pad_data(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffer))
     check_and_handle_write(pad_name, state)
-      |> or_warn_error("""
-        New buffer arrived:
-        #{inspect buffer}
+      |> or_warn_error(["
+        New buffer arrived:", Buffer.print(buffer), "
         and Membrane tried to execute handle_demand and then handle_write
         for each unsupplied demand, but an error happened.
-        """, state)
+        "], state)
   end
 
   def handle_write(:push, pad_name, buffer, state) do

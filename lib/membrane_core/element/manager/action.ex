@@ -15,10 +15,10 @@ defmodule Membrane.Element.Manager.Action do
 
   @spec send_buffer(Pad.name_t, [Membrane.Buffer.t], State.t) :: :ok
   def send_buffer(pad_name, buffers, state) do
-    debug """
-      Sending buffers through pad #{inspect(pad_name)}
-      Buffers: #{inspect(buffers)}
-      """, state
+    debug [
+      "Sending buffers through pad #{inspect pad_name},
+      Buffers: ", Buffer.print(buffers)
+      ], state
     with \
       {:ok, %{mode: mode, pid: pid, other_name: other_name, options: %{other_demand_in: demand_unit} }}
         <- state |> State.get_pad_data(:source, pad_name),
@@ -34,10 +34,10 @@ defmodule Membrane.Element.Manager.Action do
     else
       {:error, :unknown_pad} ->
         handle_unknown_pad pad_name, :sink, :buffer, state
-      {:error, reason} -> warn_error """
+      {:error, reason} -> warn_error ["
         Error while sending buffers to pad: #{inspect pad_name}
-        Buffers: #{inspect buffers}
-        """, reason, state
+        Buffers: ", Buffer.print(buffers)
+        ], reason, state
     end
   end
 

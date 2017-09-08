@@ -10,14 +10,22 @@ defmodule Membrane.Buffer do
   - must contain payload.
   """
 
+  alias __MODULE__
+
   @type payload_t :: bitstring
 
-  @type t :: %Membrane.Buffer{
+  @type t :: %Buffer{
     payload: payload_t,
-    metadata: Membrane.Buffer.Metadata.t,
+    metadata: Buffer.Metadata.t,
   }
 
   defstruct \
     payload: nil,
-    metadata: Membrane.Buffer.Metadata.new
+    metadata: Buffer.Metadata.new
+
+  def print(%Buffer{metadata: metadata, payload: payload}), do: [
+    "%Membrane.Buffer{metadata: ", inspect(metadata), ", payload: ", {:buffer, payload}, "}"
+  ]
+
+  def print(buffers), do: buffers |> Enum.map(&print/1)
 end
