@@ -4,6 +4,8 @@ defmodule Membrane.Mixins.Playback do
   @type state_t :: :stopped | :prepared | :playing
 
   @callback handle_playback_state(atom, atom, any) :: {:ok, any} | {:error, any}
+  @callback playback_warn_error(String.t, any, any) :: {:error, any}
+  @optional_callbacks playback_warn_error: 3
 
   @states %{0 => :stopped, 1 => :prepared, 2 => :playing}
   @states_pos @states |> Enum.into(%{}, fn {k, v} -> {v, k} end)
@@ -14,6 +16,11 @@ defmodule Membrane.Mixins.Playback do
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Membrane.Mixins.Playback
+
+      def playback_warn_error(message, reason, _state) do
+        use Membrane.Mixins.Log
+        warn_error message, reason
+      end
 
       def change_playback_state(pid, new_state) do
         GenServer.call pid, {:membrane_change_playback_state, new_state}
@@ -27,7 +34,6 @@ defmodule Membrane.Mixins.Playback do
         use Membrane.Helper
         import Membrane.Helper.GenServer
         alias Membrane.Mixins.Playback
-        use Membrane.Mixins.Log
 
 
         old_state = state |> Map.get(:playback_state)
@@ -43,25 +49,26 @@ defmodule Membrane.Mixins.Playback do
               end)
         do {:ok, state}
         else
-          :invalid_old_playback -> warn_error """
+          :invalid_old_playback -> playback_warn_error """
             Cannot change playback state, because current_playback_state callback
             returned invalid playback state: #{inspect old_state}
-            """, :invalid_old_playback
-          :invalid_new_playback -> warn_error """
+            """, :invalid_old_playback, state
+          :invalid_new_playback -> playback_warn_error """
             Cannot change playback state, because passed
             playback state: #{inspect new_state} is invalid
-            """, :invalid_new_playback
-          {{:error, reason}, st} -> warn_error """
+            """, :invalid_new_playback, state
+          {{:error, reason}, st} -> playback_warn_error """
             Unable to change playback state from #{inspect old_state} to #{inspect new_state}
-            """, reason
+            """, reason, state
             {{:error, reason}, st}
-          {:error, reason} -> warn_error """
+          {:error, reason} -> playback_warn_error """
             Unable to change playback state from #{inspect old_state} to #{inspect new_state}
-            """, reason
+            """, reason, state
         end |> reply(state)
       end
 
       defoverridable [
+        playback_warn_error: 3,
         play: 1,
         prepare: 1,
         stop: 1,

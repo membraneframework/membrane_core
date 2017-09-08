@@ -3,11 +3,18 @@ defmodule Membrane.Mixins.CallbackHandler do
 
   @callback handle_action(any, atom, any, any) :: {:ok, any} | {:error, any}
   @callback handle_invalid_action(any, atom, any, [String.t], atom, any) :: {:ok, any} | {:error, any}
+  @callback callback_handler_warn_error(String.t, any, any) :: {:error, any}
+  @optional_callbacks callback_handler_warn_error: 3
 
   defmacro __using__(_args) do
     quote location: :keep do
       alias Membrane.Mixins.CallbackHandler
       @behaviour CallbackHandler
+
+      def callback_handler_warn_error(message, reason, _state) do
+        use Membrane.Mixins.Log
+        warn_error message, reason
+      end
 
       def handle_actions(actions, callback, handler_params, state) do
         actions |> Membrane.Helper.Enum.reduce_with(state, fn action, state ->
@@ -18,9 +25,8 @@ defmodule Membrane.Mixins.CallbackHandler do
       def handle_action(action, callback, params, state), do:
         handle_invalid_action(action, callback, params, [], __MODULE__, state)
 
-      def handle_invalid_action(action, callback, _params, available_actions, module, _state) do
-        use Membrane.Mixins.Log
-        warn_error """
+      def handle_invalid_action(action, callback, _params, available_actions, module, state) do
+        callback_handler_warn_error """
           #{module} #{inspect callback} callback results are expected to be one of:
           #{available_actions
               |> List.flatten
@@ -30,7 +36,9 @@ defmodule Membrane.Mixins.CallbackHandler do
           but got
           #{inspect action}
           Check if all callbacks return appropriate values.
-          """, {:invalid_action, action: action, callback: callback, module: module}
+          """,
+          {:invalid_action, action: action, callback: callback, module: module},
+          state
       end
 
       def exec_and_handle_callback(callback, handler_params \\ nil, args, state) do
@@ -39,7 +47,7 @@ defmodule Membrane.Mixins.CallbackHandler do
         with \
           {{:ok, actions}, new_internal_state} <- module
             |> apply(callback, args ++ [internal_state])
-            |> handle_callback_result(module, callback),
+            |> handle_callback_result(module, callback, state),
           state = state |> Map.put(:internal_state, new_internal_state),
           {:ok, state} <- actions
             |> exec_handle_actions(callback, handler_params, state)
@@ -49,34 +57,31 @@ defmodule Membrane.Mixins.CallbackHandler do
       end
 
       defp exec_handle_actions(actions, callback, handler_params, state) do
-        use Membrane.Mixins.Log
         with {:ok, state} <- actions |> handle_actions(callback, handler_params, state)
         do {:ok, state}
         else {:error, reason} ->
-          warn_error """
+          callback_handler_warn_error """
             Error while handling actions returned by callback #{inspect callback}
-            """, {:error_handling_actions, reason}
+            """, {:error_handling_actions, reason}, state
         end
       end
 
-      def handle_callback_result({:ok, new_internal_state}, module, cb), do:
-        handle_callback_result({{:ok, []}, new_internal_state}, module, cb)
-      def handle_callback_result({{:ok, actions}, new_internal_state}, _module, _cb)
+      def handle_callback_result({:ok, new_internal_state}, module, cb, state), do:
+        handle_callback_result({{:ok, []}, new_internal_state}, module, cb, state)
+      def handle_callback_result({{:ok, actions}, new_internal_state}, _module, _cb, _state)
       when is_list actions
       do {{:ok, actions}, new_internal_state}
       end
-      def handle_callback_result({{:error, reason}, new_internal_state}, module, cb) do
-        use Membrane.Mixins.Log
+      def handle_callback_result({{:error, reason}, new_internal_state}, module, cb, state) do
         #TODO: send error to pipeline or do something
-        warn_error """
+        callback_handler_warn_error """
              Callback #{inspect cb} from module #{inspect module} returned an error
              Internal state: #{inspect new_internal_state}
-            """, reason
+            """, reason, state
         {{:ok, []}, new_internal_state}
       end
-      def handle_callback_result(result, module, cb) do
-        use Membrane.Mixins.Log
-        warn_error """
+      def handle_callback_result(result, module, cb, state) do
+        callback_handler_warn_error """
         Callback replies are expected to be one of:
 
             {:ok, state}
@@ -90,15 +95,18 @@ defmodule Membrane.Mixins.CallbackHandler do
         values.
 
         Check if all callbacks return values are in the right format.
-        """, {:invalid_callback_result, result: result, module: module, callback: cb}
+        """,
+        {:invalid_callback_result, result: result, module: module, callback: cb},
+        state
       end
 
       defoverridable [
+        callback_handler_warn_error: 3,
         handle_actions: 4,
         handle_action: 4,
         handle_invalid_action: 6,
         exec_and_handle_callback: 4,
-        handle_callback_result: 3,
+        handle_callback_result: 4,
       ]
 
     end

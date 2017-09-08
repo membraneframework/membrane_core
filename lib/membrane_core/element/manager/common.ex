@@ -21,6 +21,15 @@ defmodule Membrane.Element.Manager.Common do
         super(actions |> Membrane.Element.Manager.Common.join_buffers, callback,
           handler_params, state)
 
+      def callback_handler_warn_error(message, reason, state) do
+        use Membrane.Element.Manager.Log
+        warn_error message, reason, state
+      end
+      def playback_warn_error(message, reason, state) do
+        use Membrane.Element.Manager.Log
+        warn_error message, reason, state
+      end
+
       def handle_init(module, name, options) do
         use Membrane.Element.Manager.Log
         state = State.new(module, name)
