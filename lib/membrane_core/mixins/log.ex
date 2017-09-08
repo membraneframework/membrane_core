@@ -8,8 +8,11 @@ defmodule Membrane.Mixins.Log do
 
   @doc false
   defmacro __using__(args) do
-    default_tags = args |> Keyword.get(:tags, [])
-    Module.register_attribute __CALLER__.module, :logger_default_tags, accumulate: true
+    passed_tags = args |> Keyword.get(:tags, [])
+    passed_tags = if is_list passed_tags do passed_tags else [passed_tags] end
+    previous_tags =
+      Module.get_attribute(__CALLER__.module, :logger_default_tags) || []
+    default_tags = (passed_tags ++ previous_tags) |> Enum.dedup
     Module.put_attribute __CALLER__.module, :logger_default_tags, default_tags
 
     if args |> Keyword.get(:import, true) do
@@ -51,11 +54,15 @@ defmodule Membrane.Mixins.Log do
       alias Membrane.Log.Router
       level_val = unquote(level) |> Router.level_to_val
       if level_val >= unquote(router_level_val) do
+        tags = case unquote tags do
+          t when is_list t -> t
+          t -> [t]
+        end
         Router.send_log(
           unquote(level),
           unquote(message),
           Membrane.Time.native_monotonic_time,
-          ([unquote(tags)] |> List.flatten) ++ (@logger_default_tags |> List.flatten)
+          tags ++ @logger_default_tags
         )
       end
     end
