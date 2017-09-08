@@ -344,15 +344,27 @@ defmodule Membrane.Element.Manager.Filter do
       """
   end
 
+  def handle_action({:self_demand, pad_name}, cb, params, state)
+  when is_atom(pad_name)
+  do
+    handle_action {:self_demand, {pad_name, 1}}, cb, params, state
+  end
+
+  def handle_action({:self_demand, {pad_name, size}}, cb, params, state) do
+    handle_action {:demand, {pad_name, nil, size}}, cb, params, state
+  end
+
   def handle_action(action, callback, params, state) do
     available_actions = [
         "{:buffer, {pad_name, buffers}}",
         "{:caps, {pad_name, caps}}",
         ["{:demand, pad_name}", "{:demand, {pad_name, size}}"]
           |> (provided that: callback == :handle_demand, else: []),
+        "{:demand, {pad_name, src_name, size}",
+        "{:self_demand, pad_name}",
+        "{:self_demand, {pad_name, size}}",
         ["{:forward, pads}"]
           |> (provided that: callback in [:handle_caps, :handle_event], else: []),
-        "{:demand, {pad_name, src_name, size}",
       ] ++ Common.available_actions
     handle_invalid_action action, callback, params, available_actions, __MODULE__, state
   end
@@ -379,7 +391,8 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_self_demand(pad_name, src_name, buf_cnt, state) do
-    handle_process(:pull, pad_name, src_name, buf_cnt, state)
+    {:ok, state} = state |> update_sink_self_demand(pad_name, src_name, & {:ok, &1 + buf_cnt})
+    handle_process_pull(pad_name, src_name, buf_cnt, state)
       |> or_warn_error("""
         Demand of size #{inspect buf_cnt} on sink pad #{inspect pad_name}
         was raised, and handle_process was called, but an error happened.
@@ -387,24 +400,25 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_buffer(:push, pad_name, buffers, state) do
-    with {:ok, state} <- handle_process(:push, pad_name, buffers, state)
-    do check_and_handle_demands pad_name, buffers, state
-    end
+    handle_process_push pad_name, buffers, state
   end
 
   def handle_buffer(:pull, pad_name, buffers, state) do
     {:ok, state} = state
       |> State.update_pad_data(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffers))
-    check_and_handle_demands pad_name, buffers, state
+    with \
+      {:ok, state} <- check_and_handle_process(pad_name, state),
+      {:ok, state} <- check_and_handle_demands(pad_name, state),
+    do: {:ok, state}
   end
 
-  def handle_process(:push, pad_name, buffers, state) do
+  def handle_process_push(pad_name, buffers, state) do
     params = %{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
     exec_and_handle_callback(:handle_process, [pad_name, buffers, params], state)
       |> or_warn_error("Error while handling process", state)
   end
 
-  def handle_process(:pull, pad_name, src_name, buf_cnt, state) do
+  def handle_process_pull(pad_name, src_name, buf_cnt, state) do
     with \
       {:ok, {out, state}} <- state |> State.get_update_pad_data(:sink, pad_name, :buffer, & &1 |> PullBuffer.take(buf_cnt)),
       {:out, {_, data}} <- (if out == {:empty, []} do {:empty_pb, state} else {:out, out} end),
@@ -412,7 +426,8 @@ defmodule Membrane.Element.Manager.Filter do
         handle_pullbuffer_output pad_name, src_name, v, st
       end)
     do
-      send_dumb_demand_if_demand_positive_and_pullbuffer_nonempty pad_name, src_name, state
+      :ok = send_dumb_demand_if_demand_positive_and_pullbuffer_nonempty(
+        pad_name, src_name, state)
       {:ok, state}
     else
       {:empty_pb, state} -> {:ok, state}
@@ -420,7 +435,8 @@ defmodule Membrane.Element.Manager.Filter do
     end
   end
 
-  defp handle_pullbuffer_output(pad_name, src_name, {:buffers, b, _buf_cnt}, state) do
+  defp handle_pullbuffer_output(pad_name, src_name, {:buffers, b, buf_cnt}, state) do
+    {:ok, state} = state |> update_sink_self_demand(pad_name, src_name, & {:ok, &1 - buf_cnt})
     params = %{
         caps: state |> State.get_pad_data!(:sink, pad_name, :caps),
         source: src_name,
@@ -431,7 +447,10 @@ defmodule Membrane.Element.Manager.Filter do
   defp handle_pullbuffer_output(pad_name, _src_name, v, state), do:
     Common.handle_pullbuffer_output(pad_name, v, state)
 
-  defp send_dumb_demand_if_demand_positive_and_pullbuffer_nonempty(pad_name, src_name, state) do
+  defp send_dumb_demand_if_demand_positive_and_pullbuffer_nonempty(
+    _pad_name, nil = _src_name, _state), do: :ok
+  defp send_dumb_demand_if_demand_positive_and_pullbuffer_nonempty(
+    pad_name, src_name, state) do
     if (
       state
         |> State.get_pad_data!(:sink, pad_name, :buffer)
@@ -445,6 +464,7 @@ defmodule Membrane.Element.Manager.Filter do
         """, state
       send self(), {:membrane_demand, [0, src_name]}
     end
+    :ok
   end
 
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
@@ -457,18 +477,31 @@ defmodule Membrane.Element.Manager.Filter do
   def handle_pad_added(name, direction, state), do:
     Common.handle_pad_added([name, direction], state)
 
-  defp check_and_handle_demands(pad_name, buffers, state) do
+  defp check_and_handle_process(pad_name, state) do
+    demand = state |> State.get_pad_data!(:sink, pad_name, :self_demand)
+    if demand > 0 do
+      handle_process_pull pad_name, nil, demand, state
+    else
+      {:ok, state}
+    end
+  end
+
+  defp check_and_handle_demands(pad_name, state) do
     state
       |> State.get_pads_data(:source)
       |> Helper.Enum.reduce_with(state, fn {name, %{demand: demand}}, st ->
           if demand > 0 do handle_demand name, 0, st else {:ok, st} end
         end)
       |> or_warn_error("""
-        New buffers arrived to pad #{inspect pad_name}:
-        #{inspect buffers}
-        and Membrane tried to execute handle_demand and then handle_process
-        for each unsupplied demand, but an error happened.
+        New buffers arrived to pad #{inspect pad_name}, and Membrane tried
+        to execute handle_demand and then handle_process for each unsupplied
+        demand, but an error happened.
         """, state)
   end
+
+  defp update_sink_self_demand(state, pad_name, nil, f), do:
+    state |> State.update_pad_data(:sink, pad_name, :self_demand, f)
+
+  defp update_sink_self_demand(state, _pad_name, _src, _f), do: {:ok, state}
 
 end
