@@ -42,14 +42,29 @@ defmodule Membrane.Helper do
       if unquote condition do unquote value else unquote default end
     end
   end
+  defmacro provided(value, that: condition) do
+    quote do
+      if unquote condition do unquote value else [] end
+    end
+  end
   defmacro provided(value, do: condition, else: default) do
     quote do
       if unquote condition do unquote value else unquote default end
     end
   end
+  defmacro provided(value, do: condition) do
+    quote do
+      if unquote condition do unquote value else [] end
+    end
+  end
   defmacro provided(value, not: condition, else: default) do
     quote do
       if !(unquote condition) do unquote value else unquote default end
+    end
+  end
+  defmacro provided(value, not: condition) do
+    quote do
+      if !(unquote condition) do unquote value else [] end
     end
   end
 

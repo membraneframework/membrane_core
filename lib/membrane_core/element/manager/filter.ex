@@ -359,12 +359,12 @@ defmodule Membrane.Element.Manager.Filter do
         "{:buffer, {pad_name, buffers}}",
         "{:caps, {pad_name, caps}}",
         ["{:demand, pad_name}", "{:demand, {pad_name, size}}"]
-          |> (provided that: callback == :handle_demand, else: []),
+          |> (provided that: callback == :handle_demand),
         "{:demand, {pad_name, src_name, size}",
         "{:self_demand, pad_name}",
         "{:self_demand, {pad_name, size}}",
         ["{:forward, pads}"]
-          |> (provided that: callback in [:handle_caps, :handle_event], else: []),
+          |> (provided that: callback in [:handle_caps, :handle_event]),
       ] ++ Common.available_actions
     handle_invalid_action action, callback, params, available_actions, __MODULE__, state
   end
