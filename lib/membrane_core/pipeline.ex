@@ -404,6 +404,11 @@ defmodule Membrane.Pipeline do
       alias Membrane.Pipeline
       @behaviour Membrane.Pipeline
 
+      @doc """
+      Enables to check whether module is membrane pipeline
+      """
+      def is_membrane_pipeline, do: true
+
       # Default implementations
 
       @doc false
