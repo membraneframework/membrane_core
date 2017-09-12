@@ -109,8 +109,8 @@ defmodule Membrane.Time do
   """
   @spec from_iso8601!(String.t) :: t
   def from_iso8601!(value) when is_binary(value) do
-    {:ok, datetime, shift} = value |> DateTime.from_iso8601
-    (datetime |> from_datetime) + (shift |> seconds)
+    {:ok, datetime, _shift} = value |> DateTime.from_iso8601
+    datetime |> from_datetime
   end
 
 
