@@ -126,7 +126,7 @@ defmodule Membrane.Pipeline do
   @doc false
   def init({module, pipeline_options}) do
     with \
-      [init: {:ok, {spec, internal_state}}] <- [init: module.handle_init(pipeline_options)],
+      [init: {{:ok, spec}, internal_state}] <- [init: module.handle_init(pipeline_options)],
       state = %State{internal_state: internal_state, module: module},
       {:ok, state} <- handle_spec(spec, state)
     do {:ok, state}
