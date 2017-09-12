@@ -69,7 +69,8 @@ defmodule Membrane.Element do
       apply GenServer, method, [__MODULE__, {module, name, element_options}, process_options]
     else
       :not_element -> warn_error """
-        Cannot start element, passed module #{inspect module} is not a Membrane Element
+        Cannot start element, passed module #{inspect module} is not a Membrane Element.
+        Make sure that given module is the right one and it uses Membrane.Element.Base.*
         """, {:not_element, module}
     end
   end

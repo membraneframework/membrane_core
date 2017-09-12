@@ -71,7 +71,8 @@ defmodule Membrane.Pipeline do
       apply GenServer, method, [__MODULE__, {module, pipeline_options}, process_options]
     else
       :not_pipeline -> warn_error """
-        Cannot start pipeline, passed module #{inspect module} is not a Membrane Pipeline
+        Cannot start pipeline, passed module #{inspect module} is not a Membrane Pipeline.
+        Make sure that given module is the right one and it uses Membrane.Pipeline
         """, {:not_pipeline, module}
     end
   end
