@@ -44,8 +44,7 @@ defmodule Membrane.Mixins.Playback do
             |> Enum.chunk(2, 1)
             |> Helper.Enum.reduce_with(state, fn [i, j], st ->
                 handle_playback_state(Playback.states[i], Playback.states[j], st)
-                  ~>> {{:ok, state}, {:ok, state |> Map.put(:playback_state, Playback.states[j])}}
-
+                  ~>> ({:ok, state} -> {:ok, state |> Map.put(:playback_state, Playback.states[j])})
               end)
         do {:ok, state}
         else

@@ -28,12 +28,12 @@ defmodule Membrane.Helper do
     end
   end
 
-  defmacro x ~>> {m, r} do
+  defmacro x ~>> f do
+    default = quote do _ -> unquote(x) end
     quote do
-      case unquote(x) do (
-        unquote(m) -> unquote(r)
-        _ -> unquote(x)
-      ) end
+      case unquote(x) do
+        unquote(f ++ default)
+      end
     end
   end
 
