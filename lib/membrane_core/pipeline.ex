@@ -48,21 +48,36 @@ defmodule Membrane.Pipeline do
   Returns the same values as `GenServer.start_link/3`.
   """
   @spec start_link(module, pipeline_options_t, process_options_t) :: on_start
-  def start_link(module, pipeline_options \\ nil, process_options \\ []) do
-    debug("Start Link: module = #{inspect(module)}, pipeline_options = #{inspect(pipeline_options)}, process_options = #{inspect(process_options)}")
-    GenServer.start_link(__MODULE__, {module, pipeline_options}, process_options)
-  end
+  def start_link(module, pipeline_options \\ nil, process_options \\ []), do:
+    do_start(:start_link, module, pipeline_options, process_options)
 
 
   @doc """
   Does the same as `start_link/3` but starts process outside of supervision tree.
   """
   @spec start(module, pipeline_options_t, process_options_t) :: on_start
-  def start(module, pipeline_options \\ nil, process_options \\ []) do
-    debug("Start: module = #{inspect(module)}, pipeline_options = #{inspect(pipeline_options)}, process_options = #{inspect(process_options)}")
-    GenServer.start(__MODULE__, {module, pipeline_options}, process_options)
+  def start(module, pipeline_options \\ nil, process_options \\ []), do:
+    do_start(:start, module, pipeline_options, process_options)
+
+
+  defp do_start(method, module, pipeline_options, process_options) do
+    with :ok <- (if is_pipeline module do :ok else :not_pipeline end)
+    do
+      debug """
+        Pipeline start link: module: #{inspect module},
+        pipeline options: #{inspect pipeline_options},
+        process options: #{inspect process_options}
+        """
+      apply GenServer, method, [__MODULE__, {module, pipeline_options}, process_options]
+    else
+      :not_pipeline -> warn_error """
+        Cannot start pipeline, passed module #{inspect module} is not a Membrane Pipeline
+        """, {:not_pipeline, module}
+    end
   end
 
+
+  @callback is_membrane_pipeline :: true
 
   @doc """
   Callback invoked on process initialization.
@@ -149,6 +164,12 @@ defmodule Membrane.Pipeline do
         warn_error "Error during pipeline initialization", reason
         {:stop, {:pipeline_init, reason}}
     end
+  end
+
+  def is_pipeline(module) do
+    Code.ensure_loaded?(module) and
+    function_exported?(module, :is_membrane_pipeline, 0) and
+    module.is_membrane_pipeline
   end
 
   defp handle_spec(%Spec{children: children, links: links}, state) do
