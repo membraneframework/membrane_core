@@ -30,14 +30,14 @@ defmodule Membrane.Mixins.Playback do
       def prepare(pid), do: change_playback_state(pid, :prepared)
       def stop(pid), do: change_playback_state(pid, :stopped)
 
-      def handle_call({:membrane_change_playback_state, new_state}, _from, state), do:
-        do_change_playback_state(new_state, state)
+      def handle_call({:membrane_change_playback_state, new_state}, _from, state) do
+        import Membrane.Helper.GenServer
+        do_change_playback_state(new_state, state) |> reply(state)
+      end
 
       def do_change_playback_state(new_state, state) do
         use Membrane.Helper
-        import Membrane.Helper.GenServer
         alias Membrane.Mixins.Playback
-
 
         old_state = state |> Map.get(:playback_state)
         with \
@@ -66,7 +66,7 @@ defmodule Membrane.Mixins.Playback do
           {:error, reason} -> playback_warn_error """
             Unable to change playback state from #{inspect old_state} to #{inspect new_state}
             """, reason, state
-        end |> reply(state)
+        end
       end
 
       defoverridable [

@@ -113,10 +113,9 @@ defmodule Membrane.Element.Manager.Action do
   end
 
   defp handle_event(pad_name, %Event{type: :eos}, state) do
-    if state |> State.get_pad_data!(:any, pad_name, :direction) == :sink do
-      Element.do_change_playback_state :stopped, state
-    else
-      {:ok, state}
+    case state |> State.get_pad_data!(:any, pad_name, :direction) do
+      :source -> Element.do_change_playback_state :stopped, state
+      _ -> {:ok, state}
     end
   end
   defp handle_event(_pad_name, _event, state), do: {:ok, state}
