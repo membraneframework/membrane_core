@@ -3,17 +3,15 @@ defmodule Membrane.Element.Manager.Action do
   # Module containing action handlers common for elements of all types.
 
   use Membrane.Element.Manager.Log
-  alias Membrane.Pad
-  alias Membrane.Caps
+  alias Membrane.{Buffer, Caps, Element, Event, Message, Pad}
   alias Membrane.Element.Manager.State
-  alias Membrane.Buffer
   use Membrane.Helper
 
-  def send_buffer(pad_name, %Membrane.Buffer{} = buffer, state) do
+  def send_buffer(pad_name, %Buffer{} = buffer, state) do
     send_buffer(pad_name, [buffer], state)
   end
 
-  @spec send_buffer(Pad.name_t, [Membrane.Buffer.t], State.t) :: :ok
+  @spec send_buffer(Pad.name_t, [Buffer.t], State.t) :: :ok
   def send_buffer(pad_name, buffers, state) do
     debug [
       "Sending buffers through pad #{inspect pad_name},
@@ -91,7 +89,7 @@ defmodule Membrane.Element.Manager.Action do
   end
 
 
-  @spec send_event(Pad.name_t, Membrane.Event.t, State.t) :: :ok
+  @spec send_event(Pad.name_t, Event.t, State.t) :: :ok
   def send_event(pad_name, event, state) do
     debug """
       Sending event through pad #{inspect pad_name}
@@ -99,7 +97,8 @@ defmodule Membrane.Element.Manager.Action do
       """, state
     with \
       {:ok, %{pid: pid, other_name: other_name}}
-        <- State.get_pad_data(state, :any, pad_name)
+        <- State.get_pad_data(state, :any, pad_name),
+      {:ok, state} <- handle_event(pad_name, event, state)
     do
       send pid, {:membrane_event, [event, other_name]}
       {:ok, state}
@@ -113,14 +112,23 @@ defmodule Membrane.Element.Manager.Action do
     end
   end
 
+  defp handle_event(pad_name, %Event{type: :eos}, state) do
+    if state |> State.get_pad_data!(:any, pad_name, :direction) == :sink do
+      Element.do_change_playback_state :stopped, state
+    else
+      {:ok, state}
+    end
+  end
+  defp handle_event(_pad_name, _event, state), do: {:ok, state}
 
-  @spec send_message(Membrane.Message.t, State.t) :: :ok
-  def send_message(%Membrane.Message{} = message, %State{message_bus: nil} = state) do
+
+  @spec send_message(Message.t, State.t) :: :ok
+  def send_message(%Message{} = message, %State{message_bus: nil} = state) do
     debug "Dropping #{inspect(message)} as message bus is undefined", state
     {:ok, state}
   end
 
-  def send_message(%Membrane.Message{} = message, %State{message_bus: message_bus} = state) do
+  def send_message(%Message{} = message, %State{message_bus: message_bus} = state) do
     debug "Sending message #{inspect(message)} (message bus: #{inspect message_bus})", state
     send(message_bus, [:membrane_message, message])
     {:ok, state}
@@ -133,6 +141,7 @@ defmodule Membrane.Element.Manager.Action do
       :push -> "pull"
     end
     action_name = Atom.to_string action
+    #TODO: return error instead
     raise """
     Pad "#{inspect pad_name}" is working in invalid mode: #{inspect mode_name}.
 
@@ -149,6 +158,7 @@ defmodule Membrane.Element.Manager.Action do
   defp handle_unknown_pad(pad_name, expected_direction, action, state) do
     direction_name = Atom.to_string expected_direction
     action_name = Atom.to_string action
+    #TODO: return error instead
     raise """
     Pad "#{inspect pad_name}" has not been found.
 

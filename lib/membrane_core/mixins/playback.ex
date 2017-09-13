@@ -30,7 +30,10 @@ defmodule Membrane.Mixins.Playback do
       def prepare(pid), do: change_playback_state(pid, :prepared)
       def stop(pid), do: change_playback_state(pid, :stopped)
 
-      def handle_call({:membrane_change_playback_state, new_state}, _from, state) do
+      def handle_call({:membrane_change_playback_state, new_state}, _from, state), do:
+        do_change_playback_state(new_state, state)
+
+      def do_change_playback_state(new_state, state) do
         use Membrane.Helper
         import Membrane.Helper.GenServer
         alias Membrane.Mixins.Playback
