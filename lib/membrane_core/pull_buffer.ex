@@ -26,7 +26,7 @@ defmodule Membrane.PullBuffer do
     default_toilet = %{warn: preferred_size*2, fail: preferred_size*4}
     toilet = case props[:toilet] do
         true -> default_toilet
-        false -> false
+        t when t in [nil, false] -> false
         t -> default_toilet |> Map.merge(t |> Map.new)
       end
     %PullBuffer{
