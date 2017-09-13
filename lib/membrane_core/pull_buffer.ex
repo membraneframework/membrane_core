@@ -13,7 +13,8 @@ defmodule Membrane.PullBuffer do
     preferred_size: 100,
     current_size: 0,
     demand: nil,
-    metric: nil
+    metric: nil,
+    toilet: false
 
   @qe Qex
 
@@ -21,7 +22,13 @@ defmodule Membrane.PullBuffer do
 
   def new(name, sink, sink_name, demand_in, props) do
     metric = Buffer.Metric.from_unit demand_in
-    preferred_size = metric.pullbuffer_preferred_size
+    preferred_size = props[:preferred_size] || metric.pullbuffer_preferred_size
+    default_toilet = %{warn: preferred_size*2, fail: preferred_size*4}
+    toilet = case props[:toilet] do
+        true -> default_toilet
+        false -> false
+        t -> default_toilet |> Map.merge(t |> Map.new)
+      end
     %PullBuffer{
       name: name,
       q: @qe.new,
@@ -31,6 +38,7 @@ defmodule Membrane.PullBuffer do
       init_size: props[:init_size] || 0,
       demand: preferred_size,
       metric: metric,
+      toilet: toilet,
     }
   end
 
@@ -39,14 +47,17 @@ defmodule Membrane.PullBuffer do
 
   def store(pb, type \\ :buffers, v)
 
-  def store(%PullBuffer{current_size: size, preferred_size: pref_size} = pb, :buffers, v)
+  def store(
+    %PullBuffer{current_size: size, preferred_size: pref_size, toilet: false} = pb,
+    :buffers, v)
   when is_list(v)
   do
     if size >= pref_size do warn ["
       PullBuffer #{pb.name}: received buffers from sink #{inspect pb.sink_name},
       despite not requesting them. It is undesirable to send any buffers without
       demand. Unless this is a bug, make sure that doing so is necessary and
-      amount of undemanded buffers is controlled and limited.
+      amount of undemanded buffers is controlled and limited. If linked sink
+      works in push mode, enable toilet in PullBuffer settings.
 
       Buffers: ", Buffer.print(v), "
 
@@ -55,6 +66,31 @@ defmodule Membrane.PullBuffer do
     end
     {:ok, do_store_buffers(pb, v)}
   end
+
+  def store(%PullBuffer{toilet: %{warn: warn_lvl, fail: fail_lvl}} = pb, :buffers, v)
+  when is_list(v)
+  do
+    %PullBuffer{current_size: size} = pb = do_store_buffers pb, v
+    if size >= warn_lvl do
+      warn ["
+        PullBuffer #{pb.name} (toilet): received #{inspect size} buffers,
+        which is above #{if size < fail_lvl do "warn level" else "fail_level" end},
+        from sink #{inspect pb.sink_name} that works in push mode. To have control
+        over amount of buffers being produced, consider using push mode. If this
+        is a normal situation, increase toilet warn/fail level.
+        Buffers: ", Buffer.print(v), "
+
+        PullBuffer #{inspect pb}
+        "]
+    end
+    if size >= fail_lvl do
+      warn_error "PullBuffer #{pb.name} (toilet): failing: to many buffers",
+        {:pull_buffer, toilet: :to_many_buffers}
+    else
+      {:ok, pb}
+    end
+  end
+
   def store(pb, :buffer, v), do: store(pb, :buffers, [v])
 
   def store(%PullBuffer{q: q} = pb, type, v) when type in @non_buf_types do
@@ -128,7 +164,7 @@ defmodule Membrane.PullBuffer do
   def empty?(%PullBuffer{current_size: size, init_size: init_size}), do:
     size == 0 || (init_size != nil && size < init_size)
 
-  defp handle_demand(%PullBuffer{sink: {other_pid, other_name},
+  defp handle_demand(%PullBuffer{toilet: false, sink: {other_pid, other_name},
     current_size: size, preferred_size: pref_size, demand: demand} = pb, new_demand)
   when size < pref_size and demand + new_demand > 0 do
     report """
@@ -138,12 +174,18 @@ defmodule Membrane.PullBuffer do
     send other_pid, {:membrane_demand, [demand + new_demand, other_name]}
     {:ok, %PullBuffer{pb | demand: 0}}
   end
-  defp handle_demand(%PullBuffer{demand: demand} = pb, new_demand), do:
+
+  defp handle_demand(%PullBuffer{toilet: false, demand: demand} = pb, new_demand), do:
     {:ok, %PullBuffer{pb | demand: demand + new_demand}}
 
-  defp report(msg, %PullBuffer{name: name, current_size: size, preferred_size: pref_size}),
+  defp handle_demand(%PullBuffer{toilet: toilet} = pb, _new_demand) when toilet
+  do {:ok, pb}
+  end
+
+  defp report(
+    msg, %PullBuffer{name: name, current_size: size, preferred_size: pref_size, toilet: toilet}),
   do: debug """
-    PullBuffer #{name}: #{msg}
+    PullBuffer #{if toilet do "#{name} (toilet)" else name end}: #{msg}
     PullBuffer size: #{inspect size}, PullBuffer preferred size: #{inspect pref_size}
     """
 
