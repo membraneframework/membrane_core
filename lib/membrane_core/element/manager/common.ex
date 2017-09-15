@@ -73,14 +73,32 @@ defmodule Membrane.Element.Manager.Common do
       def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing], do:
         exec_and_handle_callback :handle_prepare, [ps], state
 
-      def handle_new_pad(direction, {name, params}, state), do:
-        exec_and_handle_callback name, direction, params, state
+      def handle_link(pad_name, pid, other_name, props, state) do
+        state |> State.link_pad(pad_name, fn %{direction: dir, mode: mode} = data -> data
+            |> Map.merge(case {dir, mode} do
+                {:sink, :pull} ->
+                  :ok = pid |> GenServer.call({:membrane_demand_in, [data.options.demand_in, other_name]})
+                  pb = PullBuffer.new(state.name, {pid, other_name}, pad_name, data.options.demand_in, props[:pull_buffer] || %{})
+                  %{buffer: pb, self_demand: 0}
+                {:source, :pull} -> %{demand: 0}
+                {_, :push} -> %{}
+              end)
+            |> Map.merge(%{pid: pid, other_name: other_name})
+          end)
+      end
 
       def handle_linking_finished(state) do
-        with {:ok, state} <- state.pads.new
-          |> Helper.Enum.reduce_with(state, fn {name, direction}, st ->
+        with {:ok, state} <- state.pads.new_dynamic
+          |> Helper.Enum.reduce_with(state, fn name, st ->
+            direction = st |> State.get_pad_data(:any, name, :direction)
             handle_pad_added name, direction, st end)
-        do {:ok, state |> State.clear_new_pads}
+        do
+          if(state.pads.not_linked |> Enum.empty? |> Kernel.!) do
+            warn """
+            Some pads remained unlinked: #{inspect state.pads.not_linked |> Map.keys}
+            """, state
+          end
+          {:ok, state |> State.clear_new_pads}
         end
       end
 
@@ -169,21 +187,6 @@ defmodule Membrane.Element.Manager.Common do
         |> or_warn_error("Error while handling event", state)
   end
 
-  def handle_link(pad_name, direction, pid, other_name, props, state) do
-    state |> State.update_pad_data(direction, pad_name, fn data -> data
-        |> Map.merge(case {direction, data.mode} do
-            {:sink, :pull} ->
-              :ok = pid |> GenServer.call({:membrane_demand_in, [data.options.demand_in, other_name]})
-              pb = PullBuffer.new(state.name, {pid, other_name}, pad_name, data.options.demand_in, props[:pull_buffer] || %{})
-              %{buffer: pb, self_demand: 0}
-            {:source, :pull} -> %{demand: 0}
-            {_, :push} -> %{}
-          end)
-        |> Map.merge(%{pid: pid, other_name: other_name})
-        ~> (data -> {:ok, data})
-      end)
-  end
-
   def handle_pullbuffer_output(pad_name, {:event, e}, state), do:
     do_handle_event(pad_name, e, state)
   def handle_pullbuffer_output(pad_name, {:caps, c}, state), do:
@@ -227,8 +230,8 @@ defmodule Membrane.Element.Manager.Common do
   def fill_sink_pull_buffers(state) do
     state
       |> State.get_pads_data(:sink)
-      |> Map.keys
-      |> Helper.Enum.reduce_with(state, fn pad_name, st ->
+      |> Enum.filter(fn {_, %{mode: mode}} -> mode == :pull end)
+      |> Helper.Enum.reduce_with(state, fn {pad_name, _pad_data}, st ->
         State.update_pad_data st, :sink, pad_name, :buffer, &PullBuffer.fill/1
       end)
       |> or_warn_error("Unable to fill sink pull buffers", state)

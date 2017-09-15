@@ -276,10 +276,10 @@ defmodule Membrane.Pipeline do
     with \
       {:ok, pid} <- state |> State.get_child(element),
       no = pad_nos |> Map.get({element, name}, 0),
-      :ok <- pid |> Element.handle_new_pad(direction, {{name, no}, params})
+      :ok <- pid |> Element.handle_new_pad(direction, {{:dynamic, name, no}, params})
     do
       state = %State{state | children_pad_nos: pad_nos |> Map.put({element, name}, no + 1)}
-      {{:ok, %{element: element, pad: {name, no}}}, state}
+      {{:ok, %{element: element, pad: {:dynamic, name, no}}}, state}
     else
       {:error, reason} -> {:error, {:handle_new_pad, elementpad, reason}}
     end

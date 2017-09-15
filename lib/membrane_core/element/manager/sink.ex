@@ -348,9 +348,6 @@ defmodule Membrane.Element.Manager.Sink do
   def handle_event(mode, :sink, pad_name, event, state), do:
     Common.handle_event(mode, :sink, pad_name, event, state)
 
-  def handle_link(pad_name, :sink, pid, other_name, props, state), do:
-    Common.handle_link(pad_name, :sink, pid, other_name, props, state)
-
   def handle_new_pad(name, :sink, params, state), do:
     Common.handle_new_pad(name, :sink, [name, params], state)
 

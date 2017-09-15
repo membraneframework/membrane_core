@@ -18,11 +18,11 @@ defmodule Membrane.Element.Manager.Action do
       Buffers: ", Buffer.print(buffers)
       ], state
     with \
-      {:ok, %{mode: mode, pid: pid, other_name: other_name, options: %{other_demand_in: demand_unit} }}
+      {:ok, %{mode: mode, pid: pid, other_name: other_name, options: options }}
         <- state |> State.get_pad_data(:source, pad_name),
       {:ok, state} = (case mode do
           :pull ->
-            buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size buffers
+            buf_size = Buffer.Metric.from_unit(options.other_demand_in).buffers_size buffers
             state |> State.update_pad_data(:source, pad_name, :demand, &{:ok, &1 - buf_size})
           :push -> {:ok, state}
         end)

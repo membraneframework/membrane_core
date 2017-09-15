@@ -469,7 +469,6 @@ defmodule Membrane.Element.Manager.Filter do
 
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
   defdelegate handle_event(mode, dir, pad_name, event, state), to: Common
-  defdelegate handle_link(pad_name, direction, pid, other_name, props, state), to: Common
 
   def handle_new_pad(name, direction, params, state), do:
     Common.handle_new_pad(name, direction, [name, direction, params], state)

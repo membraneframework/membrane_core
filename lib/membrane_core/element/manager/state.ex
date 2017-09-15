@@ -44,7 +44,7 @@ defmodule Membrane.Element.Manager.State do
     %State{
       module: module,
       name: name,
-      pads: %{data: pads_data, names_by_pids: %{}, new: []},
+      pads: %{data: %{}, names_by_pids: %{}, new_dynamic: [], not_linked: pads_data},
       internal_state: nil,
       playback_buffer: PlaybackBuffer.new
     }
@@ -62,17 +62,30 @@ defmodule Membrane.Element.Manager.State do
   end
 
   def add_pad(state, params, direction) do
-    state = init_pad_data(params, direction)
-      |> Enum.reduce(state, fn {name, data}, st -> st
-        |> set_pad_data(direction, name, data)
-        ~> ({:ok, st} ->
-            Helper.Struct.update_in(st, [:pads, :new], & [{name, direction} | &1])
-          )
+    init_pad_data(params, direction)
+      |> Enum.reduce(state, fn {name, data}, st ->
+        st |> Helper.Struct.update_in([:pads, :not_linked],
+          & &1 |> Map.put(name, data))
         end)
-    state
   end
 
-  def clear_new_pads(state), do: state |> Helper.Struct.put_in([:pads, :new], [])
+  def link_pad(state, name, f) do
+    with {:ok, data} <-
+      state.pads.not_linked[name] |> Helper.wrap_nil({:error, :unknown_pad})
+    do
+      {:ok, state} = state
+        |> Helper.Struct.update_in([:pads, :not_linked], & &1 |> Map.delete(name))
+        |> set_pad_data(:any, name, f.(data))
+      state = case data.name do
+          {:dynamic, _name, _no} ->
+            state |> Helper.Struct.update_in([:pads, :new_dynamic], & [name | &1])
+          _ -> state
+        end
+      {:ok, state}
+    end
+  end
+
+  def clear_new_pads(state), do: state |> Helper.Struct.put_in([:pads, :new_dynamic], [])
 
   defp init_pad_data({name, {:always, :push, caps}}, direction), do:
     do_init_pad_data(name, :push, caps, direction)
