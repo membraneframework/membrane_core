@@ -84,8 +84,8 @@ defmodule Membrane.PullBuffer do
         "]
     end
     if size >= fail_lvl do
-      warn_error "PullBuffer #{pb.name} (toilet): failing: to many buffers",
-        {:pull_buffer, toilet: :to_many_buffers}
+      warn_error "PullBuffer #{pb.name} (toilet): failing: too many buffers",
+        {:pull_buffer, toilet: :too_many_buffers}
     else
       {:ok, pb}
     end
@@ -117,10 +117,10 @@ defmodule Membrane.PullBuffer do
 
   defp do_take(
     %PullBuffer{q: q, current_size: size, init_size: init_size, metric: metric} = pb, count)
-  when init_size |> is_nil or size > init_size
+  when init_size |> is_nil or size >= init_size
   do
     {out, nq} = q |> q_pop(count, metric)
-    {out, %PullBuffer{pb | q: nq, current_size: max(0, size - count)}}
+    {out, %PullBuffer{pb | q: nq, current_size: max(0, size - count), init_size: nil}}
   end
 
   defp do_take(%PullBuffer{current_size: size, init_size: init_size} = pb, _count)
@@ -131,11 +131,6 @@ defmodule Membrane.PullBuffer do
       of #{inspect init_size}, returning :empty
       """, pb
     {{:empty, []}, pb}
-  end
-  defp do_take(%PullBuffer{current_size: size, init_size: init_size} = pb, count)
-  when size == init_size
-  do
-    do_take %PullBuffer{pb | init_size: nil}, count
   end
 
   defp q_pop(q, count, metric, acc \\ [])
@@ -178,7 +173,7 @@ defmodule Membrane.PullBuffer do
   defp handle_demand(%PullBuffer{toilet: false, demand: demand} = pb, new_demand), do:
     {:ok, %PullBuffer{pb | demand: demand + new_demand}}
 
-  defp handle_demand(%PullBuffer{toilet: toilet} = pb, _new_demand) when toilet
+  defp handle_demand(%PullBuffer{toilet: toilet} = pb, _new_demand) when toilet != false
   do {:ok, pb}
   end
 
