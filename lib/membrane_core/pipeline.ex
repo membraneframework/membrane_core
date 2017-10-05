@@ -345,7 +345,7 @@ defmodule Membrane.Pipeline do
   end
 
   @doc false
-  def handle_info({:membrane_message, %Membrane.Message{} = message}, state) do
+  def handle_info([:membrane_message, %Membrane.Message{} = message], state) do
     # FIXME set sender
     exec_and_handle_callback(:handle_message, [message, self()], state)
       |> noreply(state)
