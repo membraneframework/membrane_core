@@ -33,12 +33,14 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
       ~> (state -> {:ok, state})
   end
 
-  def eval(state) do
+  def eval(%State{playback_state: :playing} = state) do
     with \
       {:ok, state} <- state.playback_buffer.q
         |> Helper.Enum.reduce_with(state, &exec/2),
     do: {:ok, state |> Helper.Struct.put_in([:playback_buffer, :q], @qe.new)}
   end
+
+  def eval(state), do: {:ok, state}
 
   def empty?(%PlaybackBuffer{q: q}), do: q |> Enum.empty?
 

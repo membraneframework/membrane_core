@@ -17,10 +17,11 @@ defmodule Membrane.Element.Manager.Pad do
   end
 
   def handle_playback_state(old, new, state) do
-    with \
-      {:ok, state} <- forward(:handle_playback_state, [old, new], state),
-      {:ok, state} <- state |> PlaybackBuffer.eval,
-    do: {:ok, state}
+    forward :handle_playback_state, [old, new], state
+  end
+
+  def handle_playback_state_changed(_old, _new, state) do
+    state |> PlaybackBuffer.eval
   end
 
   defp do_handle_message({type, args}, :info, state)

@@ -4,8 +4,9 @@ defmodule Membrane.Mixins.Playback do
   @type state_t :: :stopped | :prepared | :playing
 
   @callback handle_playback_state(atom, atom, any) :: {:ok, any} | {:error, any}
+  @callback handle_playback_state_changed(atom, atom, any) :: {:ok, any} | {:error, any}
   @callback playback_warn_error(String.t, any, any) :: {:error, any}
-  @optional_callbacks playback_warn_error: 3
+  @optional_callbacks handle_playback_state_changed: 3, playback_warn_error: 3
 
   @states %{0 => :stopped, 1 => :prepared, 2 => :playing}
   @states_pos @states |> Enum.into(%{}, fn {k, v} -> {v, k} end)
@@ -16,6 +17,9 @@ defmodule Membrane.Mixins.Playback do
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Membrane.Mixins.Playback
+
+
+      def handle_playback_state_changed(_old, _new, state), do: {:ok, state}
 
       def playback_warn_error(message, reason, _state) do
         use Membrane.Mixins.Log
@@ -46,8 +50,11 @@ defmodule Membrane.Mixins.Playback do
           {:ok, state} <- old_pos..new_pos
             |> Enum.chunk(2, 1)
             |> Helper.Enum.reduce_with(state, fn [i, j], st ->
-                handle_playback_state(Playback.states[i], Playback.states[j], st)
-                  ~>> ({:ok, state} -> {:ok, state |> Map.put(:playback_state, Playback.states[j])})
+                with \
+                  {:ok, st} <- handle_playback_state(Playback.states[i], Playback.states[j], st),
+                  st = st |> Map.put(:playback_state, Playback.states[j]),
+                  {:ok, st} <- handle_playback_state_changed(Playback.states[i], Playback.states[j], st),
+                  do: {:ok, st}
               end)
         do {:ok, state}
         else

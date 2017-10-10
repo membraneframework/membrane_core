@@ -159,6 +159,7 @@ defmodule Membrane.Element do
   end
 
   defdelegate handle_playback_state(old, new, state), to: Pad
+  defdelegate handle_playback_state_changed(old, new, state), to: Pad
 
   def handle_call(message, _from, state) do
     message |> Pad.handle_message(:call, state) |> reply(state)
