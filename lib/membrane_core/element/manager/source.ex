@@ -222,19 +222,19 @@ defmodule Membrane.Element.Manager.Source do
 
   @doc false
 
-  def handle_action({:buffer, {pad_name, buffer}}, _cb, _params, state), do:
-    Action.send_buffer(pad_name, buffer, state)
+  def handle_action({:buffer, {pad_name, buffer}}, cb, _params, state), do:
+    Action.send_buffer(pad_name, buffer, cb, state)
 
-  def handle_action({:caps, {pad_name, caps}}, _params, _cb, state), do:
+  def handle_action({:caps, {pad_name, caps}}, _cb, _params, state), do:
     Action.send_caps(pad_name, caps, state)
 
-    def handle_action(action, callback, params, state) do
-      available_actions = [
-          "{:buffer, {pad_name, buffers}}",
-          "{:caps, {pad_name, caps}}",
-        ] ++ Common.available_actions
-      handle_invalid_action action, callback, params, available_actions, __MODULE__, state
-    end
+  def handle_action(action, callback, params, state) do
+    available_actions = [
+        "{:buffer, {pad_name, buffers}}",
+        "{:caps, {pad_name, caps}}",
+      ] ++ Common.available_actions
+    handle_invalid_action action, callback, params, available_actions, __MODULE__, state
+  end
 
   def handle_event(mode, :source, pad_name, event, state) do
     with \

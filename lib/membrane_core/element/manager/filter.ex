@@ -280,8 +280,8 @@ defmodule Membrane.Element.Manager.Filter do
 
   # Private API
 
-  def handle_action({:buffer, {pad_name, buffers}}, _cb, _params, state), do:
-    Action.send_buffer pad_name, buffers, state
+  def handle_action({:buffer, {pad_name, buffers}}, cb, _params, state), do:
+    Action.send_buffer pad_name, buffers, cb, state
 
   def handle_action({:caps, {pad_name, caps}}, _cb, _params, state), do:
     Action.send_caps(pad_name, caps, state)
