@@ -77,6 +77,7 @@ defmodule Membrane.Mixins.Playback do
       end
 
       defoverridable [
+        handle_playback_state_changed: 3,
         playback_warn_error: 3,
         play: 1,
         prepare: 1,

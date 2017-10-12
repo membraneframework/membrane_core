@@ -488,8 +488,8 @@ defmodule Membrane.Element.Manager.Filter do
   defp check_and_handle_demands(pad_name, state) do
     state
       |> State.get_pads_data(:source)
-      |> Helper.Enum.reduce_with(state, fn {name, %{demand: demand}}, st ->
-          if demand > 0 do handle_demand name, 0, st else {:ok, st} end
+      |> Helper.Enum.reduce_with(state, fn {name, _data}, st ->
+          handle_demand name, 0, st
         end)
       |> or_warn_error("""
         New buffers arrived to pad #{inspect pad_name}, and Membrane tried
