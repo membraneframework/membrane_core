@@ -384,7 +384,8 @@ defmodule Membrane.Element.Manager.Filter do
             """, state)
     else
       debug """
-        Demand handler: not executing handle_demand, as demand is not greater than 0
+        Demand handler: not executing handle_demand, as demand is not greater than 0,
+        demand: #{inspect total_size}
         """, state
       {:ok, state}
     end
