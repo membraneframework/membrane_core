@@ -34,6 +34,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
   end
 
   def eval(%State{playback_state: :playing} = state) do
+    debug "evaluating playback buffer", state
     with \
       {:ok, state} <- state.playback_buffer.q
         |> Helper.Enum.reduce_with(state, &exec/2),
