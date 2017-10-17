@@ -52,17 +52,11 @@ defmodule Membrane.PullBuffer do
     :buffers, v)
   when is_list(v)
   do
-    if size >= pref_size do warn ["
+    if size >= pref_size do debug "
       PullBuffer #{pb.name}: received buffers from sink #{inspect pb.sink_name},
-      despite not requesting them. It is undesirable to send any buffers without
-      demand. Unless this is a bug, make sure that doing so is necessary and
-      amount of undemanded buffers is controlled and limited. If linked sink
-      works in push mode, enable toilet in PullBuffer settings.
-
-      Buffers: ", Buffer.print(v), "
-
-      PullBuffer #{inspect pb}
-      "]
+      despite not requesting them. It is probably caused by overestimating demand
+      by previous element.
+      "
     end
     {:ok, do_store_buffers(pb, v)}
   end
