@@ -175,7 +175,7 @@ defmodule Membrane.PullBuffer do
     msg, %PullBuffer{name: name, current_size: size, preferred_size: pref_size, toilet: toilet}),
   do: debug ["
       PullBuffer #{if toilet do "#{name} (toilet)" else name end}: ", msg, "\n",
-      "PullBuffer size: #{inspect size},",
+      "PullBuffer size: #{inspect size}, ",
       if toilet
       do "toilet limits: #{inspect toilet}"
       else "preferred size: #{inspect pref_size}"
