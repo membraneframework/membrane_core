@@ -456,7 +456,7 @@ defmodule Membrane.Element do
     case module.handle_prepare(:playing, internal_state)
       |> log_callback("change playback state from PLAYING to PREPARED, state = #{inspect(state)}")
       |> handle_callback(state, :prepared) do
-      {:ok, state} ->
+      {:ok, %State{internal_state: internal_state} = state} ->
         module.handle_stop(internal_state)
         |> log_callback("change playback state from PREPARED to STOPPED, state = #{inspect(state)}")
         |> handle_callback(state, :stopped)
