@@ -29,8 +29,8 @@ defmodule Membrane.Element.Manager.Pad do
   do {type, args} |> PlaybackBuffer.store(state)
   end
 
-  defp do_handle_message({:membrane_new_pad, args}, :call, state), do:
-    forward(:handle_new_pad, args, state)
+  defp do_handle_message({:membrane_get_pad_full_name, args}, :call, state), do:
+    forward(:get_pad_full_name, args, state)
 
   defp do_handle_message(:membrane_linking_finished, :call, state), do:
     forward(:handle_linking_finished, state)

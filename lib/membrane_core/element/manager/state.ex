@@ -36,78 +36,113 @@ defmodule Membrane.Element.Manager.State do
   def new(module, name) do
     # Initialize source pads
 
-    pads_data = Map.merge(
-        handle_known_pads(:known_sink_pads, :sink, module),
-        handle_known_pads(:known_source_pads, :source, module)
-      )
+    with \
+      {:ok, parsed_src_pads} <- handle_known_pads(:known_source_pads, :source, module),
+      {:ok, parsed_sink_pads} <- handle_known_pads(:known_sink_pads, :sink, module)
+    do
+      [dynamic_pads, static_pads] = [parsed_src_pads, parsed_sink_pads]
+        |> Enum.zip
+        |> Enum.map(fn {sinks, sources} -> Map.merge sinks, sources end)
 
-    %State{
-      module: module,
-      name: name,
-      pads: %{data: %{}, names_by_pids: %{}, new_dynamic: [], not_linked: pads_data},
-      internal_state: nil,
-      playback_buffer: PlaybackBuffer.new
-    }
+      %State{
+        module: module,
+        name: name,
+        pads: %{data: %{}, names_by_pids: %{}, dynamic: dynamic_pads, new_dynamic: [], not_linked: static_pads},
+        internal_state: nil,
+        playback_buffer: PlaybackBuffer.new
+      }
+        ~> (state -> {:ok, state})
+    end
   end
 
   defp handle_known_pads(known_pads_fun, direction, module) do
     known_pads = cond do
-      function_exported? module, known_pads_fun , 0 ->
+      function_exported? module, known_pads_fun, 0 ->
         apply module, known_pads_fun, []
       true -> %{}
     end
-    known_pads
-      |> Enum.flat_map(fn params -> init_pad_data params, direction end)
-      |> Enum.into(%{})
-  end
-
-  def add_pad(state, params, direction) do
-    init_pad_data(params, direction)
-      |> Enum.reduce(state, fn {name, data}, st ->
-        st |> Helper.Struct.update_in([:pads, :not_linked],
-          & &1 |> Map.put(name, data))
-        end)
-  end
-
-  def link_pad(state, name, f) do
-    with {:ok, data} <-
-      state.pads.not_linked[name] |> Helper.wrap_nil({:error, :unknown_pad})
+    with {:ok, parsed_pads}
+      <- known_pads |> Helper.Enum.flat_map_with(fn params -> parse_pad params, direction end)
     do
-      {:ok, state} = state
-        |> Helper.Struct.update_in([:pads, :not_linked], & &1 |> Map.delete(name))
-        |> set_pad_data(:any, name, f.(data))
-      state = case data.name do
-          {:dynamic, _name, _no} ->
-            state |> Helper.Struct.update_in([:pads, :new_dynamic], & [name | &1])
-          _ -> state
-        end
+      {dynamic, static} = parsed_pads |> Enum.split_with(& &1.is_dynamic)
+      {:ok, [dynamic |> Map.new, static |> Map.new]}
+    end
+  end
+
+  def link_pad(state, {:dynamic, name, _no} = full_name, init_f) do
+    with {:ok, data}
+      <- state.pads.dynamic[name] |> Helper.wrap_nil({:error, :unknown_pad})
+    do
+      {:ok, state} = state |> set_pad_data(:any, full_name, init_f.(data |> init_pad_data))
+      state = state |> add_to_new_pads(full_name)
       {:ok, state}
     end
   end
 
+  def link_pad(state, name, f) do
+    with {:ok, data}
+      <- state.pads.not_linked[name] |> Helper.wrap_nil({:error, :unknown_pad})
+    do
+      {:ok, state} = state
+        |> Helper.Struct.update_in([:pads, :not_linked], & &1 |> Map.delete(name))
+        |> set_pad_data(:any, name, f.(data |> init_pad_data))
+      {:ok, state}
+    end
+  end
+
+  defp init_pad_data(params) do
+    params |> Map.merge(%{pid: nil, caps: nil, other_name: nil})
+  end
+
+  defp add_to_new_pads(state, name), do:
+    state |> Helper.Struct.update_in([:pads, :new_dynamic], & [name | &1])
+
   def clear_new_pads(state), do: state |> Helper.Struct.put_in([:pads, :new_dynamic], [])
 
-  defp init_pad_data({name, {:always, :push, caps}}, direction), do:
-    do_init_pad_data(name, :push, caps, direction)
+  defp parse_pad({name, {:always, :push, caps}}, direction), do:
+    do_parse_pad(name, :push, caps, direction)
 
-  defp init_pad_data({name, {:always, :pull, caps}}, :source), do:
-    do_init_pad_data(name, :pull, caps, :source, %{other_demand_in: nil})
+  defp parse_pad({name, {:always, :pull, caps}}, :source), do:
+    do_parse_pad(name, :pull, caps, :source, %{other_demand_in: nil})
 
-  defp init_pad_data({name, {:always, {:pull, demand_in: demand_in}, caps}}, :sink), do:
-    do_init_pad_data(name, :pull, caps, :sink, %{demand_in: demand_in})
+  defp parse_pad({name, {:always, {:pull, demand_in: demand_in}, caps}}, :sink), do:
+    do_parse_pad(name, :pull, caps, :sink, %{demand_in: demand_in})
 
-  defp init_pad_data({_name, {availability, _mode, _caps}}, _direction)
-  when availability != :always do [] end
+  defp parse_pad({_name, {availability, _mode, _caps}}, _direction)
+  when availability != :always
+  do {:ok, []}
+  end
 
-  defp init_pad_data(params, direction), do:
-    raise "Invalid pad config: #{inspect params}, direction: #{inspect direction}"
+  defp parse_pad(params, direction), do:
+    warn_error "Invalid pad config: #{inspect params}, direction: #{inspect direction}",
+      {:invalid_pad_config, params, direction: direction}
 
-  defp do_init_pad_data(name, mode, caps, direction, options \\ %{}) do
-    data = %{
-        name: name, pid: nil, mode: mode, direction: direction,
-        caps: nil, accepted_caps: caps, options: options,
-      }
-    [{name, data}]
+  defp do_parse_pad(name, mode, caps, direction, options \\ %{}) do
+    with {:ok, name: name, is_dynamic: is_dynamic}
+      <- parse_pad_name(name)
+    do
+      parsed_pad = %{
+          name: name, mode: mode, direction: direction,
+          accepted_caps: caps, is_dynamic: is_dynamic, options: options,
+        }
+      parsed_pad = parsed_pad
+        |> Map.merge(if is_dynamic do %{current_id: 0} else %{} end)
+      {:ok, [{name, parsed_pad}]}
+    end
+  end
+
+  defp parse_pad_name({:dynamic, name})
+  when is_atom(name) and not is_nil(name)
+  do {:ok, name: name, is_dynamic: true}
+  end
+
+  defp parse_pad_name(name)
+  when is_atom(name) and not is_nil(name)
+  do {:ok, name: name, is_dynamic: false}
+  end
+
+  defp parse_pad_name(name) do
+    warn_error "invlalid pad name, #{inspect name}", {:invalid_pad_name, name}
   end
 
   def get_pads_data(state, direction \\ :any)

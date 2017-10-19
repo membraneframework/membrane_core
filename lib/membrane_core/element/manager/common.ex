@@ -73,6 +73,11 @@ defmodule Membrane.Element.Manager.Common do
       def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing], do:
         exec_and_handle_callback :handle_prepare, [ps], state
 
+      def get_pad_full_name(pad_name, direction, state) do
+        {:ok, {name, state}} = state |> State.get_update_pad_data(direction, pad_name, :current_id, &{:ok, {&1, &1+1}})
+        {{:ok, name}, state}
+      end
+
       def handle_link(pad_name, pid, other_name, props, state) do
         state |> State.link_pad(pad_name, fn %{direction: dir, mode: mode} = data -> data
             |> Map.merge(case {dir, mode} do
@@ -235,26 +240,6 @@ defmodule Membrane.Element.Manager.Common do
         State.update_pad_data st, :sink, pad_name, :buffer, &PullBuffer.fill/1
       end)
       |> or_warn_error("Unable to fill sink pull buffers", state)
-  end
-
-  def handle_new_pad(name, direction, args, %State{module: module, internal_state: internal_state} = state) do
-    with \
-      {{:ok, {_availability, _mode, _caps} = params}, internal_state} <-
-        apply(module, :handle_new_pad, args ++ [internal_state])
-    do
-      state = state
-        |> State.add_pad({name, params}, direction)
-        |> Map.put(:internal_state, internal_state)
-      {:ok, state}
-    else
-      {:error, reason} ->
-        warn_error "handle_new_pad callback returned an error", reason, state
-      res -> warn_error """
-        handle_new_pad return values are expected to be
-        {:ok, {{availability, mode, caps}, state}} or {:error, reason}
-        but got #{inspect res} instead
-        """, :invalid_handle_new_pad_return, state
-    end
   end
 
   def handle_pad_added(args, %State{module: module} = state), do:

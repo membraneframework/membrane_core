@@ -248,9 +248,6 @@ defmodule Membrane.Element.Manager.Source do
   end
   defp do_handle_event(_pad_name, _event, state), do: {:ok, state}
 
-  def handle_new_pad(name, :source, params, state), do:
-    Common.handle_new_pad(name, :source, [name, params], state)
-
   def handle_pad_added(name, :sink, state), do:
     Common.handle_pad_added([name], state)
 

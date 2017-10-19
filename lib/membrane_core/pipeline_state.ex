@@ -20,7 +20,6 @@ defmodule Membrane.Pipeline.State do
     module: nil,
     children_to_pids: %{},
     pids_to_children: %{},
-    children_pad_nos: %{},
     playback_state: :stopped
 
 

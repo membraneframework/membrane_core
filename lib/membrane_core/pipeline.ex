@@ -187,7 +187,7 @@ defmodule Membrane.Pipeline do
             state.children_to_pids, children_to_pids, fn _k, v1, v2 -> v2 ++ v1 end),
         },
       {:ok, links} <- links |> parse_links,
-      {{:ok, links}, state} <- links |> handle_new_pads(state),
+      {{:ok, links}, state} <- links |> resolve_pads(state),
       :ok <- links |> link_children(state),
       :ok <- children_to_pids |> Map.values |> List.flatten |> set_children_message_bus
     do
@@ -255,37 +255,31 @@ defmodule Membrane.Pipeline do
       end
   end
 
-  defp parse_pad({name, _params})
-  when is_atom name or is_binary name do :ok end
   defp parse_pad(name)
   when is_atom name or is_binary name do :ok end
   defp parse_pad(pad), do: {:error, {:invalid_pad_format, pad}}
 
 
-  defp handle_new_pads(links, state) do
+  defp resolve_pads(links, state) do
     links |> Helper.Enum.map_reduce_with(state, fn %{from: from, to: to} = link, st ->
-        with \
-          {{:ok, from}, st} <- from |> handle_new_pad(:source, st),
-          {{:ok, to}, st} <- to |> handle_new_pad(:sink, st),
-          do: {{:ok, %{link | from: from, to: to}}, st}
+      with \
+        {{:ok, from}, st} <- from |> resolve_pad(:source, st),
+        {{:ok, to}, st} <- to |> resolve_pad(:sink, st),
+        do: {{:ok, %{link | from: from, to: to}}, st}
       end)
   end
 
-  defp handle_new_pad(%{element: element, pad: {name, params}} = elementpad, direction,
-    %State{children_pad_nos: pad_nos} = state) do
+  defp resolve_pad(%{element: element, pad: pad_name} = elementpad, direction, state)
+  do
     with \
       {:ok, pid} <- state |> State.get_child(element),
-      no = pad_nos |> Map.get({element, name}, 0),
-      :ok <- pid |> Element.handle_new_pad(direction, {{:dynamic, name, no}, params})
+      {:ok, pad_name} <- pid |> GenServer.call({:membrane_get_pad_full_name, [pad_name, direction]})
     do
-      state = %State{state | children_pad_nos: pad_nos |> Map.put({element, name}, no + 1)}
-      {{:ok, %{element: element, pad: {:dynamic, name, no}}}, state}
+      {{:ok, %{element: element, pad: pad_name}}, state}
     else
       {:error, reason} -> {:error, {:handle_new_pad, elementpad, reason}}
     end
   end
-  defp handle_new_pad(elementpad, _direction, state), do:
-    {{:ok, elementpad}, state}
 
   # Links children based on given specification and map for mapping children
   # names into PIDs.
