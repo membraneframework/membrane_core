@@ -39,7 +39,6 @@ defmodule Membrane.Element.Base.Sink do
 
 
       defoverridable [
-        handle_new_pad: 3,
         handle_pad_added: 2,
         handle_pad_removed: 2,
         handle_caps: 4,
