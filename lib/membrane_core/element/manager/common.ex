@@ -193,7 +193,7 @@ defmodule Membrane.Element.Manager.Common do
   end
 
   def parse_event(pad_name, %Event{type: :eos}, state) do
-    with %{direction: :sink, eos: false} <- state |> State.get_pad_data(:any, pad_name)
+    with %{direction: :sink, eos: false} <- state |> State.get_pad_data!(:any, pad_name)
     do
       state |> State.set_pad_data(:sink, pad_name, :eos, true)
     else

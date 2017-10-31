@@ -380,7 +380,7 @@ defmodule Membrane.Element.Manager.Filter do
           """, state
         {:ok, state}
 
-      state |> State.get_pad_data(:source, pad_name, :eos) ->
+      state |> State.get_pad_data!(:source, pad_name, :eos) ->
         debug """
           Demand handler: not executing handle_demand, as EoS has already been sent
           """, state
