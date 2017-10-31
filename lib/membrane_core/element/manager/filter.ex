@@ -372,22 +372,29 @@ defmodule Membrane.Element.Manager.Filter do
   def handle_demand(pad_name, size, state) do
     {:ok, {total_size, state}} = state
       |> State.get_update_pad_data(:source, pad_name, :demand, &{:ok, {&1+size, &1+size}})
-    if total_size > 0 do
-      %{caps: caps, options: %{other_demand_in: demand_in}} =
-          state |> State.get_pad_data!(:source, pad_name)
-      params = %{caps: caps}
-      exec_and_handle_callback(
-        :handle_demand, pad_name, [pad_name, total_size, demand_in, params], state)
-          |> or_warn_error("""
-            Demand arrived from pad #{inspect pad_name}, but error happened while
-            handling it.
-            """, state)
-    else
-      debug """
-        Demand handler: not executing handle_demand, as demand is not greater than 0,
-        demand: #{inspect total_size}
-        """, state
-      {:ok, state}
+    cond do
+      total_size <= 0 ->
+        debug """
+          Demand handler: not executing handle_demand, as demand is not greater than 0,
+          demand: #{inspect total_size}
+          """, state
+        {:ok, state}
+
+      state |> State.get_pad_data(:source, pad_name, :eos) ->
+        debug """
+          Demand handler: not executing handle_demand, as EoS has already been sent
+          """, state
+        {:ok, state}
+      true ->
+        %{caps: caps, options: %{other_demand_in: demand_in}} =
+            state |> State.get_pad_data!(:source, pad_name)
+        params = %{caps: caps}
+        exec_and_handle_callback(
+          :handle_demand, pad_name, [pad_name, total_size, demand_in, params], state)
+            |> or_warn_error("""
+              Demand arrived from pad #{inspect pad_name}, but error happened while
+              handling it.
+              """, state)
     end
   end
 
