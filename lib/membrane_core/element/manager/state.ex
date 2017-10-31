@@ -105,7 +105,7 @@ defmodule Membrane.Element.Manager.State do
   defp do_init_pad_data(name, mode, caps, direction, options \\ %{}) do
     data = %{
         name: name, pid: nil, mode: mode, direction: direction,
-        caps: nil, accepted_caps: caps, options: options,
+        caps: nil, accepted_caps: caps, options: options, eos: false,
       }
     [{name, data}]
   end

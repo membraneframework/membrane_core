@@ -3,7 +3,7 @@ defmodule Membrane.Element.Manager.Action do
   # Module containing action handlers common for elements of all types.
 
   use Membrane.Element.Manager.Log
-  alias Membrane.{Buffer, Caps, Element, Event, Message, Pad}
+  alias Membrane.{Buffer, Caps, Event, Message, Pad}
   alias Membrane.Element.Manager.State
   use Membrane.Helper
 
@@ -26,18 +26,22 @@ defmodule Membrane.Element.Manager.Action do
       Buffers: ", Buffer.print(buffers)
       ], state
     with \
-      {:ok, %{mode: mode, pid: pid, other_name: other_name, options: options }}
-        <- state |> State.get_pad_data(:source, pad_name),
+      {:ok, %{mode: mode, pid: pid, other_name: other_name, options: options, eos: false}}
+        <- state |> State.get_pad_data(:source, pad_name)
+    do
       {:ok, state} = (case mode do
           :pull ->
             buf_size = Buffer.Metric.from_unit(options.other_demand_in).buffers_size buffers
             state |> State.update_pad_data(:source, pad_name, :demand, &{:ok, &1 - buf_size})
           :push -> {:ok, state}
         end)
-    do
       send pid, {:membrane_buffer, [buffers, other_name]}
       {:ok, state}
     else
+      {:ok, %{eos: true}} -> warn_error ["
+        Error while sending buffers to pad: #{inspect pad_name}
+        Buffers: ", Buffer.print(buffers)
+        ], :eos_already_sent, state
       {:error, :unknown_pad} ->
         handle_unknown_pad pad_name, :sink, :buffer, state
       {:error, reason} -> warn_error ["
@@ -130,9 +134,12 @@ defmodule Membrane.Element.Manager.Action do
   end
 
   defp handle_event(pad_name, %Event{type: :eos}, state) do
-    case state |> State.get_pad_data!(:any, pad_name, :direction) do
-      :source -> Element.do_change_playback_state :stopped, state
-      _ -> {:ok, state}
+    with %{direction: :source, eos: false} <- state |> State.get_pad_data!(:any, pad_name)
+    do
+      state |> State.set_pad_data(:source, pad_name, :eos, true)
+    else
+      %{direction: :sink} -> {:error, {:cannot_send_eos_through_sink, pad_name}}
+      %{eos: true} -> {:error, {:eos_already_sent, pad_name}}
     end
   end
   defp handle_event(_pad_name, _event, state), do: {:ok, state}

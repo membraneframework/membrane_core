@@ -336,7 +336,7 @@ defmodule Membrane.Pipeline do
       {:ok, state} <- exec_and_handle_callback(callback, args, state)
     do
       debug "Pipeline: changed playback state of children to #{inspect new}"
-      {:ok, %State{state | playback_state: new}}
+      {:ok, state}
     else {:error, reason} -> warn_error """
       Pipeline: unable to change playback state of children to #{inspect new}
       """, reason
@@ -350,7 +350,6 @@ defmodule Membrane.Pipeline do
     exec_and_handle_callback(:handle_message, [message, self()], state)
       |> noreply(state)
   end
-
 
   @doc false
   # Callback invoked on other incoming message
