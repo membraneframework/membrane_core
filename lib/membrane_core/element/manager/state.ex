@@ -90,7 +90,7 @@ defmodule Membrane.Element.Manager.State do
   end
 
   defp init_pad_data(params) do
-    params |> Map.merge(%{pid: nil, caps: nil, other_name: nil})
+    params |> Map.merge(%{pid: nil, caps: nil, other_name: nil, eos: false})
   end
 
   defp add_to_new_pads(state, name), do:
