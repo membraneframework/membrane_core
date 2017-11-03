@@ -6,7 +6,7 @@ defmodule Membrane.Element.Manager.Common do
   alias Membrane.PullBuffer
 
   defmacro __using__(_) do
-    quote do
+    quote location: :keep do
       use Membrane.Mixins.CallbackHandler
       alias Membrane.Element.Manager.{Action, Common, State}
       use Membrane.Helper
@@ -31,14 +31,19 @@ defmodule Membrane.Element.Manager.Common do
       end
 
       def handle_init(module, name, options) do
+        with {:ok, state} <- State.new(module, name)
+        do do_handle_init module, name, options, state
+        end
+      end
+
+      defp do_handle_init(module, name, options, state) do
         use Membrane.Element.Manager.Log
-        state = State.new(module, name)
         with {:ok, internal_state} <- module.handle_init(options)
         do {:ok, %State{state | internal_state: internal_state}}
         else
           {:error, reason} -> warn_error """
               Module #{inspect module} handle_init callback returned an error
-              """, {:elementhandle_init, module, reason}, state
+              """, {:handle_init, module, reason}, state
           other -> warn_error """
               Module #{inspect module} handle_init callback returned invalid result:
               #{inspect other} instead of {:ok, state} or {:error, reason}
@@ -73,9 +78,8 @@ defmodule Membrane.Element.Manager.Common do
       def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing], do:
         exec_and_handle_callback :handle_prepare, [ps], state
 
-      def get_pad_full_name(pad_name, direction, state) do
-        {:ok, {name, state}} = state |> State.get_update_pad_data(direction, pad_name, :current_id, &{:ok, {&1, &1+1}})
-        {{:ok, name}, state}
+      def get_pad_full_name(pad_name, state) do
+        state |> State.resolve_pad_full_name(pad_name)
       end
 
       def handle_link(pad_name, pid, other_name, props, state) do
@@ -88,19 +92,23 @@ defmodule Membrane.Element.Manager.Common do
                 {:source, :pull} -> %{demand: 0}
                 {_, :push} -> %{}
               end)
-            |> Map.merge(%{pid: pid, other_name: other_name})
+            |> Map.merge(%{name: pad_name, pid: pid, other_name: other_name})
           end)
       end
 
       def handle_linking_finished(state) do
         with {:ok, state} <- state.pads.new_dynamic
           |> Helper.Enum.reduce_with(state, fn name, st ->
-            direction = st |> State.get_pad_data(:any, name, :direction)
+            {:ok, direction} = st |> State.get_pad_data(:any, name, :direction)
             handle_pad_added name, direction, st end)
         do
-          if(state.pads.not_linked |> Enum.empty? |> Kernel.!) do
+          static_unlinked = state.pads.not_linked
+            |> Map.values
+            |> Enum.filter(& !&1.is_dynamic)
+            |> Enum.map(& &1.name)
+          if(static_unlinked |> Enum.empty? |> Kernel.!) do
             warn """
-            Some pads remained unlinked: #{inspect state.pads.not_linked |> Map.keys}
+            Some static pads remained unlinked: #{inspect static_unlinked}
             """, state
           end
           {:ok, state |> State.clear_new_pads}

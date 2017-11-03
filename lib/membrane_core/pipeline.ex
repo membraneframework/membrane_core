@@ -263,17 +263,17 @@ defmodule Membrane.Pipeline do
   defp resolve_pads(links, state) do
     links |> Helper.Enum.map_reduce_with(state, fn %{from: from, to: to} = link, st ->
       with \
-        {{:ok, from}, st} <- from |> resolve_pad(:source, st),
-        {{:ok, to}, st} <- to |> resolve_pad(:sink, st),
+        {{:ok, from}, st} <- from |> resolve_pad(st),
+        {{:ok, to}, st} <- to |> resolve_pad(st),
         do: {{:ok, %{link | from: from, to: to}}, st}
       end)
   end
 
-  defp resolve_pad(%{element: element, pad: pad_name} = elementpad, direction, state)
+  defp resolve_pad(%{element: element, pad: pad_name} = elementpad, state)
   do
     with \
       {:ok, pid} <- state |> State.get_child(element),
-      {:ok, pad_name} <- pid |> GenServer.call({:membrane_get_pad_full_name, [pad_name, direction]})
+      {:ok, pad_name} <- pid |> GenServer.call({:membrane_get_pad_full_name, [pad_name]})
     do
       {{:ok, %{element: element, pad: pad_name}}, state}
     else

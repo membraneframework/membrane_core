@@ -4,8 +4,9 @@ defmodule Membrane.Element.Manager.Pad do
   use Membrane.Element.Manager.Log
 
   def handle_message(message, mode, state) do
-    with {:ok, state} <- do_handle_message(message, mode, state)
-    do {:ok, state}
+    res = do_handle_message(message, mode, state)
+    with :ok <- res |> Helper.result_status
+    do res
     else
       {:error, reason} ->
         warn_error """

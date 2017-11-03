@@ -40,14 +40,11 @@ defmodule Membrane.Element.Manager.State do
       {:ok, parsed_src_pads} <- handle_known_pads(:known_source_pads, :source, module),
       {:ok, parsed_sink_pads} <- handle_known_pads(:known_sink_pads, :sink, module)
     do
-      [dynamic_pads, static_pads] = [parsed_src_pads, parsed_sink_pads]
-        |> Enum.zip
-        |> Enum.map(fn {sinks, sources} -> Map.merge sinks, sources end)
 
       %State{
         module: module,
         name: name,
-        pads: %{data: %{}, names_by_pids: %{}, dynamic: dynamic_pads, new_dynamic: [], not_linked: static_pads},
+        pads: %{data: %{}, names_by_pids: %{}, new_dynamic: [], not_linked: Map.merge(parsed_src_pads, parsed_sink_pads)},
         internal_state: nil,
         playback_buffer: PlaybackBuffer.new
       }
@@ -61,17 +58,17 @@ defmodule Membrane.Element.Manager.State do
         apply module, known_pads_fun, []
       true -> %{}
     end
-    with {:ok, parsed_pads}
-      <- known_pads |> Helper.Enum.flat_map_with(fn params -> parse_pad params, direction end)
-    do
-      {dynamic, static} = parsed_pads |> Enum.split_with(& &1.is_dynamic)
-      {:ok, [dynamic |> Map.new, static |> Map.new]}
-    end
+    known_pads
+      |> Helper.Enum.flat_map_with(fn params -> parse_pad params, direction end)
+      ~>> ({:ok, parsed_pads} -> {:ok, parsed_pads |> Map.new})
   end
 
   def link_pad(state, {:dynamic, name, _no} = full_name, init_f) do
+    IO.inspect {:link, state.name, name}
     with {:ok, data}
-      <- state.pads.dynamic[name] |> Helper.wrap_nil({:error, :unknown_pad})
+      <- state.pads.not_linked[name]
+        |> Helper.wrap_nil(:unknown_pad)
+        ~>> (%{is_dynamic: false} -> {:error, :not_dynamic_pad})
     do
       {:ok, state} = state |> set_pad_data(:any, full_name, init_f.(data |> init_pad_data))
       state = state |> add_to_new_pads(full_name)
@@ -81,7 +78,9 @@ defmodule Membrane.Element.Manager.State do
 
   def link_pad(state, name, f) do
     with {:ok, data}
-      <- state.pads.not_linked[name] |> Helper.wrap_nil({:error, :unknown_pad})
+      <- state.pads.not_linked[name]
+        |> Helper.wrap_nil(:unknown_pad)
+        ~>> (%{is_dynamic: true} -> {:error, :not_static_pad})
     do
       {:ok, state} = state
         |> Helper.Struct.update_in([:pads, :not_linked], & &1 |> Map.delete(name))
@@ -145,19 +144,24 @@ defmodule Membrane.Element.Manager.State do
     warn_error "invlalid pad name, #{inspect name}", {:invalid_pad_name, name}
   end
 
+  def resolve_pad_full_name(state, pad_name) do
+    {full_name, state} = state
+      |> Helper.Struct.get_and_update_in([:pads, :not_linked, pad_name], fn
+          nil -> :pop
+          %{is_dynamic: true, current_id: id} = pad_info ->
+            {{:dynamic, pad_name, id}, %{pad_info | current_id: id + 1}}
+          %{is_dynamic: false} = pad_info -> {pad_name, pad_info}
+        end)
+    {full_name |> Helper.wrap_nil(:unknown_pad), state}
+  end
+
   def get_pads_data(state, direction \\ :any)
   def get_pads_data(state, :any), do: state.pads.data
   def get_pads_data(state, direction), do: state.pads.data
     |> Enum.filter(fn {_, %{direction: ^direction}} -> true; _ -> false end)
     |> Enum.into(%{})
 
-  def get_pad_data(state, pad_direction, pad_pid, keys \\ [])
-  def get_pad_data(state, pad_direction, pad_pid, keys) when is_pid pad_pid do
-    with {:ok, pad_name} <-
-      state.pads.names_by_pids[pad_pid] |> Helper.wrap_nil(:unknown_pad)
-    do get_pad_data(state, pad_direction, pad_name, keys)
-    end
-  end
+  def get_pad_data(state, pad_direction, pad_name, keys \\ [])
   def get_pad_data(state, pad_direction, pad_name, []) do
     with %{direction: dir} = data when pad_direction in [:any, dir] <-
       state.pads.data |> Map.get(pad_name)
