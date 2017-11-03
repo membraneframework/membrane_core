@@ -330,7 +330,7 @@ defmodule Membrane.Pipeline do
       {:ok, state} <- exec_and_handle_callback(callback, args, state)
     do
       debug "Pipeline: changed playback state of children to #{inspect new}"
-      {:ok, %State{state | playback_state: new}}
+      {:ok, state}
     else {:error, reason} -> warn_error """
       Pipeline: unable to change playback state of children to #{inspect new}
       """, reason
@@ -344,7 +344,6 @@ defmodule Membrane.Pipeline do
     exec_and_handle_callback(:handle_message, [message, self()], state)
       |> noreply(state)
   end
-
 
   @doc false
   # Callback invoked on other incoming message
@@ -410,19 +409,19 @@ defmodule Membrane.Pipeline do
       def handle_init(_options), do: {:ok, %{}}
 
       @doc false
-      def handle_prepare(_playback_state, state), do: {:ok, {[], state}}
+      def handle_prepare(_playback_state, state), do: {:ok, state}
 
       @doc false
-      def handle_play(state), do: {:ok, {[], state}}
+      def handle_play(state), do: {:ok, state}
 
       @doc false
-      def handle_stop(state), do: {:ok, {[], state}}
+      def handle_stop(state), do: {:ok, state}
 
       @doc false
-      def handle_message(_message, _from, state), do: {:ok, {[], state}}
+      def handle_message(_message, _from, state), do: {:ok, state}
 
       @doc false
-      def handle_other(_message, state), do: {:ok, {[], state}}
+      def handle_other(_message, state), do: {:ok, state}
 
 
       defoverridable [

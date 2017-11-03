@@ -44,6 +44,7 @@ defmodule Membrane.Mixins.Playback do
         alias Membrane.Mixins.Playback
 
         old_state = state |> Map.get(:playback_state)
+
         with \
           {:ok, old_pos} <- Playback.states_pos[old_state] |> Helper.wrap_nil(:invalid_old_playback),
           {:ok, new_pos} <- Playback.states_pos[new_state] |> Helper.wrap_nil(:invalid_new_playback),

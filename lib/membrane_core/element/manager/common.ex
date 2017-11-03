@@ -4,6 +4,7 @@ defmodule Membrane.Element.Manager.Common do
   alias Membrane.Element.Manager.State
   use Membrane.Helper
   alias Membrane.PullBuffer
+  alias Membrane.Event
 
   defmacro __using__(_) do
     quote location: :keep do
@@ -192,12 +193,34 @@ defmodule Membrane.Element.Manager.Common do
   def handle_event(_mode, _dir, pad_name, event, state), do:
     do_handle_event(pad_name, event, state)
 
-  def do_handle_event(pad_name, event, %State{module: module} = state) do
+  def do_handle_event(pad_name, event, state) do
+    with \
+      {:ok, state} <- parse_event(pad_name, event, state),
+      {:ok, state} <- exec_event_handler(pad_name, event, state)
+    do
+      {:ok, state}
+    else
+      {:error, reason} ->
+        warn_error "Error while handling event", {:handle_event, reason}, state
+    end
+  end
+
+  def parse_event(pad_name, %Event{type: :eos}, state) do
+    with %{direction: :sink, eos: false} <- state |> State.get_pad_data!(:any, pad_name)
+    do
+      state |> State.set_pad_data(:sink, pad_name, :eos, true)
+    else
+      %{direction: :source} -> {:error, {:received_eos_through_source, pad_name}}
+      %{eos: true} -> {:error, {:eos_already_received, pad_name}}
+    end
+  end
+  def parse_event(_pad_name, _event, state), do: {:ok, state}
+
+  def exec_event_handler(pad_name, event, %State{module: module} = state) do
     %{direction: dir, caps: caps} = state |> State.get_pad_data!(:any, pad_name)
     params = %{caps: caps}
     module.manager_module.exec_and_handle_callback(
       :handle_event, %{direction: dir, event: event}, [pad_name, event, params], state)
-        |> or_warn_error("Error while handling event", state)
   end
 
   def handle_pullbuffer_output(pad_name, {:event, e}, state), do:
