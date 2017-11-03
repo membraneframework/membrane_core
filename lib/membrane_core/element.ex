@@ -148,10 +148,11 @@ defmodule Membrane.Element do
   def terminate(reason, %State{module: module, playback_state: playback_state} = state) do
     case playback_state do
       :stopped ->
+        debug "Terminating element, reason: #{inspect reason}"
+      _ ->
         warn_error """
         Terminating: Attempt to terminate element when it is not stopped
         """, reason
-      _ -> debug "Terminating element, reason: #{inspect reason}"
     end
 
     module.manager_module.handle_shutdown(state)

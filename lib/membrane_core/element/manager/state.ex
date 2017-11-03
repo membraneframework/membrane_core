@@ -64,7 +64,6 @@ defmodule Membrane.Element.Manager.State do
   end
 
   def link_pad(state, {:dynamic, name, _no} = full_name, init_f) do
-    IO.inspect {:link, state.name, name}
     with {:ok, data}
       <- state.pads.not_linked[name]
         |> Helper.wrap_nil(:unknown_pad)
