@@ -415,19 +415,19 @@ defmodule Membrane.Pipeline do
       def handle_init(_options), do: {:ok, %{}}
 
       @doc false
-      def handle_prepare(_playback_state, state), do: {:ok, {[], state}}
+      def handle_prepare(_playback_state, state), do: {:ok, state}
 
       @doc false
-      def handle_play(state), do: {:ok, {[], state}}
+      def handle_play(state), do: {:ok, state}
 
       @doc false
-      def handle_stop(state), do: {:ok, {[], state}}
+      def handle_stop(state), do: {:ok, state}
 
       @doc false
-      def handle_message(_message, _from, state), do: {:ok, {[], state}}
+      def handle_message(_message, _from, state), do: {:ok, state}
 
       @doc false
-      def handle_other(_message, state), do: {:ok, {[], state}}
+      def handle_other(_message, state), do: {:ok, state}
 
 
       defoverridable [
