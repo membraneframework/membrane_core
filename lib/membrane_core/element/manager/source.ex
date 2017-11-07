@@ -199,8 +199,8 @@ defmodule Membrane.Element.Manager.Source do
   # Private API
 
   def handle_demand(pad_name, size, state) do
-    {:ok, {stored_size, state}} = state
-      |> State.get_update_pad_data(:source, pad_name, :demand, &{:ok, {&1, &1+size}})
+    {{:ok, stored_size}, state} = state
+      |> State.get_update_pad_data(:source, pad_name, :demand, &{{:ok, &1}, &1+size})
 
     cond do
       stored_size + size <= 0 ->

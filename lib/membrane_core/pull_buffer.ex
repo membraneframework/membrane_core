@@ -105,7 +105,7 @@ defmodule Membrane.PullBuffer do
     report "Taking #{inspect count} buffers", pb
     {out, %PullBuffer{current_size: new_size} = pb} = do_take pb, count
     with {:ok, pb} <- pb |> handle_demand(size - new_size)
-    do {:ok, {out, pb}}
+    do {{:ok, out}, pb}
     end
   end
 
