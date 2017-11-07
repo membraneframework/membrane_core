@@ -44,7 +44,11 @@ defmodule Membrane.Element.Manager.State do
       %State{
         module: module,
         name: name,
-        pads: %{data: %{}, names_by_pids: %{}, new_dynamic: [], not_linked: Map.merge(parsed_src_pads, parsed_sink_pads)},
+        pads: %{
+            data: %{},
+            info: Map.merge(parsed_src_pads, parsed_sink_pads),
+            dynamic_currently_linking: [],
+          },
         internal_state: nil,
         playback_buffer: PlaybackBuffer.new
       }
@@ -64,39 +68,41 @@ defmodule Membrane.Element.Manager.State do
   end
 
   def link_pad(state, {:dynamic, name, _no} = full_name, init_f) do
-    IO.inspect {:link, state.name, name}
     with {:ok, data}
-      <- state.pads.not_linked[name]
+      <- state.pads.info[name]
         |> Helper.wrap_nil(:unknown_pad)
         ~>> (%{is_dynamic: false} -> {:error, :not_dynamic_pad})
     do
-      {:ok, state} = state |> set_pad_data(:any, full_name, init_f.(data |> init_pad_data))
-      state = state |> add_to_new_pads(full_name)
+      {:ok, state} = state |> init_pad_data(full_name, data, init_f)
+      state = state |> add_to_currently_linking(full_name)
       {:ok, state}
     end
   end
 
-  def link_pad(state, name, f) do
+  def link_pad(state, name, init_f) do
     with {:ok, data}
-      <- state.pads.not_linked[name]
+      <- state.pads.info[name]
         |> Helper.wrap_nil(:unknown_pad)
         ~>> (%{is_dynamic: true} -> {:error, :not_static_pad})
     do
       {:ok, state} = state
-        |> Helper.Struct.update_in([:pads, :not_linked], & &1 |> Map.delete(name))
-        |> set_pad_data(:any, name, f.(data |> init_pad_data))
+        |> Helper.Struct.update_in([:pads, :info], & &1 |> Map.delete(name))
+        |> init_pad_data(name, data, init_f)
       {:ok, state}
     end
   end
 
-  defp init_pad_data(params) do
-    params |> Map.merge(%{pid: nil, caps: nil, other_name: nil})
+  defp init_pad_data(state, name, params, init_f) do
+    params = params
+      |> Map.merge(%{name: name, pid: nil, caps: nil, other_name: nil, eos: false})
+      |> init_f.()
+    {:ok, state |> Helper.Struct.put_in([:pads, :data, name], params)}
   end
 
-  defp add_to_new_pads(state, name), do:
-    state |> Helper.Struct.update_in([:pads, :new_dynamic], & [name | &1])
+  defp add_to_currently_linking(state, name), do:
+    state |> Helper.Struct.update_in([:pads, :dynamic_currently_linking], & [name | &1])
 
-  def clear_new_pads(state), do: state |> Helper.Struct.put_in([:pads, :new_dynamic], [])
+  def clear_currently_linking(state), do: state |> Helper.Struct.put_in([:pads, :dynamic_currently_linking], [])
 
   defp parse_pad({name, {:always, :push, caps}}, direction), do:
     do_parse_pad(name, :push, caps, direction)
@@ -146,7 +152,7 @@ defmodule Membrane.Element.Manager.State do
 
   def resolve_pad_full_name(state, pad_name) do
     {full_name, state} = state
-      |> Helper.Struct.get_and_update_in([:pads, :not_linked, pad_name], fn
+      |> Helper.Struct.get_and_update_in([:pads, :info, pad_name], fn
           nil -> :pop
           %{is_dynamic: true, current_id: id} = pad_info ->
             {{:dynamic, pad_name, id}, %{pad_info | current_id: id + 1}}
@@ -180,27 +186,22 @@ defmodule Membrane.Element.Manager.State do
       ~> ({:ok, pad_data} -> pad_data)
 
   def set_pad_data(state, pad_direction, pad, keys \\ [], v) do
-    pad_data = state
-      |> get_pad_data(pad_direction, pad)
-      ~> (
-          {:ok, pad_data} -> pad_data
-          {:error, :unknown_pad} -> %{}
-        )
-      |> Helper.Map.put_in(keys, v)
-
-    {:ok, state |> do_update_pad_data(pad_data)}
+    with {:ok, _data} <- state |> get_pad_data(pad_direction, pad)
+    do
+      keys = [:pads, :data, pad] ++ (keys |> Helper.listify)
+      {:ok, state |> Helper.Struct.put_in(keys, v)}
+    end
   end
 
   def update_pad_data(state, pad_direction, pad, keys \\ [], f) do
     with \
-      {:ok, pad_data} <- get_pad_data(state, pad_direction, pad),
-      {:ok, pad_data} <- pad_data
-        |> Helper.Map.get_and_update_in(keys, &case f.(&1) do
-            {:ok, res} -> {:ok, res}
-            {:error, reason} -> {{:error, reason}, nil}
-          end)
+      {:ok, _pad_data} <- state |> get_pad_data(pad_direction, pad)
     do
-      {:ok, state |> do_update_pad_data(pad_data)}
+      keys = [:pads, :data, pad] ++ (keys |> Helper.listify)
+      state |> Helper.Struct.get_and_update_in(keys, &case f.(&1) do
+          {:ok, res} -> {:ok, res}
+          {:error, reason} -> {{:error, reason}, nil}
+        end)
     else
       {{:error, reason}, _pd} -> {:error, reason}
       {:error, reason} -> {:error, reason}
@@ -209,30 +210,22 @@ defmodule Membrane.Element.Manager.State do
 
   def get_update_pad_data(state, pad_direction, pad, keys \\ [], f) do
     with \
-      {:ok, pad_data} <- get_pad_data(state, pad_direction, pad),
-      {{:ok, out}, pad_data} <- pad_data
-        |> Helper.Map.get_and_update_in(keys, &case f.(&1) do
-            {:ok, {out, res}} -> {{:ok, out}, res}
-            {:error, reason} -> {{:error, reason}, nil}
-          end)
-    do {:ok, {out, state |> do_update_pad_data(pad_data)}}
+      {:ok, _pad_data} <- state |> get_pad_data(pad_direction, pad)
+    do
+      keys = [:pads, :data, pad] ++ (keys |> Helper.listify)
+      state |> Helper.Struct.get_and_update_in(keys, &case f.(&1) do
+          {{:ok, out}, res} -> {{:ok, out}, res}
+          {:error, reason} -> {{:error, reason}, nil}
+        end)
     else
       {{:error, reason}, _pd} -> {:error, reason}
       {:error, reason} -> {:error, reason}
     end
   end
 
-  defp do_update_pad_data(state, pad_data) do
-    state
-      |> Helper.Struct.put_in([:pads, :names_by_pids, pad_data.pid], pad_data.name)
-      |> Helper.Struct.put_in([:pads, :data, pad_data.name], pad_data)
-  end
-
   def pop_pad_data(state, pad_direction, pad) do
-    with {:ok, %{name: name, pid: pid} = pad_data} <- get_pad_data(state, pad_direction, pad),
+    with {:ok, %{name: name} = pad_data} <- get_pad_data(state, pad_direction, pad),
     do: state
-      |> Helper.Struct.pop_in([:pads, :names_by_pids, pid])
-      ~> ({_, state} -> state)
       |> Helper.Struct.pop_in([:pads, :data, name])
       ~> ({_, state} -> {:ok, {pad_data, state}})
   end

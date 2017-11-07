@@ -370,8 +370,8 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_demand(pad_name, size, state) do
-    {:ok, {total_size, state}} = state
-      |> State.get_update_pad_data(:source, pad_name, :demand, &{:ok, {&1+size, &1+size}})
+    {{:ok, total_size}, state} = state
+      |> State.get_update_pad_data(:source, pad_name, :demand, &{{:ok, &1+size}, &1+size})
     cond do
       total_size <= 0 ->
         debug """
@@ -428,7 +428,7 @@ defmodule Membrane.Element.Manager.Filter do
 
   def handle_process_pull(pad_name, src_name, buf_cnt, state) do
     with \
-      {:ok, {out, state}} <- state |> State.get_update_pad_data(:sink, pad_name, :buffer, & &1 |> PullBuffer.take(buf_cnt)),
+      {{:ok, out}, state} <- state |> State.get_update_pad_data(:sink, pad_name, :buffer, & &1 |> PullBuffer.take(buf_cnt)),
       {:out, {_, data}} <- (if out == {:empty, []} do {:empty_pb, state} else {:out, out} end),
       {:ok, state} <- data |> Helper.Enum.reduce_with(state, fn v, st ->
         handle_pullbuffer_output pad_name, src_name, v, st

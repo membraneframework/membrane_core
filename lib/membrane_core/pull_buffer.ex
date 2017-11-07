@@ -105,7 +105,7 @@ defmodule Membrane.PullBuffer do
     report "Taking #{inspect count} buffers", pb
     {out, %PullBuffer{current_size: new_size} = pb} = do_take pb, count
     with {:ok, pb} <- pb |> handle_demand(size - new_size)
-    do {:ok, {out, pb}}
+    do {{:ok, out}, pb}
     end
   end
 
@@ -174,7 +174,7 @@ defmodule Membrane.PullBuffer do
   defp report(
     msg, %PullBuffer{name: name, current_size: size, preferred_size: pref_size, toilet: toilet}),
   do: debug ["
-      PullBuffer #{if toilet do "#{name} (toilet)" else name end}: ", msg, "\n",
+      PullBuffer #{if toilet do "#{inspect name} (toilet)" else inspect name end}: ", msg, "\n",
       "PullBuffer size: #{inspect size}, ",
       if toilet
       do "toilet limits: #{inspect toilet}"

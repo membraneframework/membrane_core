@@ -68,7 +68,6 @@ defmodule Membrane.Element.Manager.Common do
 
       def handle_playback_state(:prepared, :playing, state) do
         with \
-          {:ok, state} <- state |> Common.fill_sink_pull_buffers,
           {:ok, state} <- exec_and_handle_callback(:handle_play, [], state),
           do: {:ok, state}
       end
@@ -89,6 +88,7 @@ defmodule Membrane.Element.Manager.Common do
                 {:sink, :pull} ->
                   :ok = pid |> GenServer.call({:membrane_demand_in, [data.options.demand_in, other_name]})
                   pb = PullBuffer.new(state.name, {pid, other_name}, pad_name, data.options.demand_in, props[:pull_buffer] || %{})
+                  {:ok, pb} = pb |> PullBuffer.fill
                   %{buffer: pb, self_demand: 0}
                 {:source, :pull} -> %{demand: 0}
                 {_, :push} -> %{}
@@ -98,12 +98,13 @@ defmodule Membrane.Element.Manager.Common do
       end
 
       def handle_linking_finished(state) do
-        with {:ok, state} <- state.pads.new_dynamic
+        with {:ok, state} <- state.pads.dynamic_currently_linking
           |> Helper.Enum.reduce_with(state, fn name, st ->
             {:ok, direction} = st |> State.get_pad_data(:any, name, :direction)
-            handle_pad_added name, direction, st end)
+            handle_pad_added name, direction, st
+          end)
         do
-          static_unlinked = state.pads.not_linked
+          static_unlinked = state.pads.info
             |> Map.values
             |> Enum.filter(& !&1.is_dynamic)
             |> Enum.map(& &1.name)
@@ -112,7 +113,7 @@ defmodule Membrane.Element.Manager.Common do
             Some static pads remained unlinked: #{inspect static_unlinked}
             """, state
           end
-          {:ok, state |> State.clear_new_pads}
+          {:ok, state |> State.clear_currently_linking}
         end
       end
 
