@@ -47,7 +47,7 @@ defmodule Membrane.Element.Manager.State do
         pads: %{
             data: %{},
             info: Map.merge(parsed_src_pads, parsed_sink_pads),
-            dynamic_currently_linking: %{},
+            dynamic_currently_linking: [],
           },
         internal_state: nil,
         playback_buffer: PlaybackBuffer.new
@@ -96,7 +96,7 @@ defmodule Membrane.Element.Manager.State do
     params = params
       |> Map.merge(%{name: name, pid: nil, caps: nil, other_name: nil, eos: false})
       |> init_f.()
-    state |> Helper.Struct.put_in([:pads, :data, name], params)
+    {:ok, state |> Helper.Struct.put_in([:pads, :data, name], params)}
   end
 
   defp add_to_currently_linking(state, name), do:
@@ -188,7 +188,8 @@ defmodule Membrane.Element.Manager.State do
   def set_pad_data(state, pad_direction, pad, keys \\ [], v) do
     with {:ok, _data} <- state |> get_pad_data(pad_direction, pad)
     do
-      {:ok, state |> Helper.Struct.put_in([:pads, :data, pad] ++ keys, v)}
+      keys = [:pads, :data, pad] ++ (keys |> Helper.listify)
+      {:ok, state |> Helper.Struct.put_in(keys, v)}
     end
   end
 
@@ -196,7 +197,8 @@ defmodule Membrane.Element.Manager.State do
     with \
       {:ok, _pad_data} <- state |> get_pad_data(pad_direction, pad)
     do
-      state |> Helper.Struct.get_and_update_in([:pads, :data, pad] ++ keys, &case f.(&1) do
+      keys = [:pads, :data, pad] ++ (keys |> Helper.listify)
+      state |> Helper.Struct.get_and_update_in(keys, &case f.(&1) do
           {:ok, res} -> {:ok, res}
           {:error, reason} -> {{:error, reason}, nil}
         end)
@@ -210,7 +212,8 @@ defmodule Membrane.Element.Manager.State do
     with \
       {:ok, _pad_data} <- state |> get_pad_data(pad_direction, pad)
     do
-      state |> Helper.Map.get_and_update_in([:pads, :data, pad] ++ keys, &case f.(&1) do
+      keys = [:pads, :data, pad] ++ (keys |> Helper.listify)
+      state |> Helper.Struct.get_and_update_in(keys, &case f.(&1) do
           {{:ok, out}, res} -> {{:ok, out}, res}
           {:error, reason} -> {{:error, reason}, nil}
         end)
