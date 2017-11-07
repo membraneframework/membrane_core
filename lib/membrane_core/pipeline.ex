@@ -3,7 +3,7 @@ defmodule Membrane.Pipeline do
   Module containing functions for constructing and supervising pipelines.
   """
 
-  use Membrane.Mixins.Log
+  use Membrane.Mixins.Log, tags: :core
   use GenServer
   alias Membrane.Pipeline.{State,Spec}
 

@@ -4,7 +4,7 @@ defmodule Membrane.Element do
   playback of elements.
   """
 
-  use Membrane.Mixins.Log
+  use Membrane.Mixins.Log, tags: :core
   alias Membrane.Element.State
 
   # Type that defines possible return values of start/start_link functions.

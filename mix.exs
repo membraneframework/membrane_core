@@ -19,7 +19,6 @@ defmodule Membrane.Mixfile do
 
   def application do
     [applications: [
-      :logger,
     ], mod: {Membrane, []}]
   end
 
@@ -32,7 +31,6 @@ defmodule Membrane.Mixfile do
     [
       {:espec,       "~> 1.1",  only: :test},
       {:excoveralls, "~> 0.6",  only: :test},
-
       {:ex_doc,      "~> 0.14", only: :dev},
     ]
   end
