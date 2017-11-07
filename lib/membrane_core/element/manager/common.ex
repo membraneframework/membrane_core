@@ -68,7 +68,6 @@ defmodule Membrane.Element.Manager.Common do
 
       def handle_playback_state(:prepared, :playing, state) do
         with \
-          {:ok, state} <- state |> Common.fill_sink_pull_buffers,
           {:ok, state} <- exec_and_handle_callback(:handle_play, [], state),
           do: {:ok, state}
       end
@@ -89,6 +88,7 @@ defmodule Membrane.Element.Manager.Common do
                 {:sink, :pull} ->
                   :ok = pid |> GenServer.call({:membrane_demand_in, [data.options.demand_in, other_name]})
                   pb = PullBuffer.new(state.name, {pid, other_name}, pad_name, data.options.demand_in, props[:pull_buffer] || %{})
+                  {:ok, pb} = pb |> PullBuffer.fill
                   %{buffer: pb, self_demand: 0}
                 {:source, :pull} -> %{demand: 0}
                 {_, :push} -> %{}

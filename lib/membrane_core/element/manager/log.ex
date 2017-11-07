@@ -63,15 +63,18 @@ defmodule Membrane.Element.Manager.Log do
   end
 
   def parse(message, %State{name: name}) do
-    ["Element #{name}: ", message]
+    ["Element #{inspect name}: ", message]
   end
 
   def parse_warn(message, %State{name: name} = state) do
-    ["Element #{name}: ", message, "\n", "state: #{inspect state}"]
+    ["Element #{inspect name}: ", message, "\n", "state: #{inspect state}"]
   end
 
   def append_tags(tags, %State{name: name}) do
-    [name | tags]
+    case name do
+      {name, _id} -> [name | tags]
+      _ -> name
+    end
   end
 
 end
