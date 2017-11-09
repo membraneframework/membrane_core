@@ -4,8 +4,9 @@ defmodule Membrane.Element.Manager.Pad do
   use Membrane.Element.Manager.Log
 
   def handle_message(message, mode, state) do
-    with {:ok, state} <- do_handle_message(message, mode, state)
-    do {:ok, state}
+    res = do_handle_message(message, mode, state)
+    with :ok <- res |> Helper.result_status
+    do res
     else
       {:error, reason} ->
         warn_error """
@@ -29,8 +30,8 @@ defmodule Membrane.Element.Manager.Pad do
   do {type, args} |> PlaybackBuffer.store(state)
   end
 
-  defp do_handle_message({:membrane_new_pad, args}, :call, state), do:
-    forward(:handle_new_pad, args, state)
+  defp do_handle_message({:membrane_get_pad_full_name, args}, :call, state), do:
+    forward(:get_pad_full_name, args, state)
 
   defp do_handle_message(:membrane_linking_finished, :call, state), do:
     forward(:handle_linking_finished, state)

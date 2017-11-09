@@ -316,10 +316,10 @@ defmodule Membrane.Element.Manager.Sink do
 
   def handle_write(:pull, pad_name, state) do
     with \
-      {:ok, {out, state}} <- state
+      {{:ok, out}, state} <- state
         |> State.get_update_pad_data(:sink, pad_name, fn %{self_demand: demand, buffer: pb} = data ->
-            with {:ok, {out, npb}} <- PullBuffer.take(pb, demand)
-            do {:ok, {out, %{data | buffer: npb}}}
+            with {{:ok, out}, npb} <- PullBuffer.take(pb, demand)
+            do {{:ok, out}, %{data | buffer: npb}}
             end
           end),
       {:out, {_, data}} <- (if out == {:empty, []} do {:empty_pb, state} else {:out, out} end),
@@ -347,9 +347,6 @@ defmodule Membrane.Element.Manager.Sink do
 
   def handle_event(mode, :sink, pad_name, event, state), do:
     Common.handle_event(mode, :sink, pad_name, event, state)
-
-  def handle_new_pad(name, :sink, params, state), do:
-    Common.handle_new_pad(name, :sink, [name, params], state)
 
   def handle_pad_added(name, :sink, state), do:
     Common.handle_pad_added([name], state)

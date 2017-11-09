@@ -16,9 +16,6 @@ defmodule Membrane.Element.Base.Source do
       # Default implementations
 
       @doc false
-      def handle_new_pad(_pad, _params, state), do: {:error, :adding_pad_unsupported}
-
-      @doc false
       def handle_pad_added(_pad, state), do: {:ok, state}
 
       @doc false
@@ -42,7 +39,6 @@ defmodule Membrane.Element.Base.Source do
 
 
       defoverridable [
-        handle_new_pad: 3,
         handle_pad_added: 2,
         handle_pad_removed: 2,
         handle_demand1: 3,

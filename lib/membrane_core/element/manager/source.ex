@@ -199,8 +199,8 @@ defmodule Membrane.Element.Manager.Source do
   # Private API
 
   def handle_demand(pad_name, size, state) do
-    {:ok, {stored_size, state}} = state
-      |> State.get_update_pad_data(:source, pad_name, :demand, &{:ok, {&1, &1+size}})
+    {{:ok, stored_size}, state} = state
+      |> State.get_update_pad_data(:source, pad_name, :demand, &{{:ok, &1}, &1+size})
 
     cond do
       stored_size + size <= 0 ->
@@ -254,9 +254,6 @@ defmodule Membrane.Element.Manager.Source do
     Element.do_change_playback_state :stopped, state
   end
   defp do_handle_event(_pad_name, _event, state), do: {:ok, state}
-
-  def handle_new_pad(name, :source, params, state), do:
-    Common.handle_new_pad(name, :source, [name, params], state)
 
   def handle_pad_added(name, :sink, state), do:
     Common.handle_pad_added([name], state)

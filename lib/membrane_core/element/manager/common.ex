@@ -7,7 +7,7 @@ defmodule Membrane.Element.Manager.Common do
   alias Membrane.Event
 
   defmacro __using__(_) do
-    quote do
+    quote location: :keep do
       use Membrane.Mixins.CallbackHandler
       alias Membrane.Element.Manager.{Action, Common, State}
       use Membrane.Helper
@@ -32,14 +32,19 @@ defmodule Membrane.Element.Manager.Common do
       end
 
       def handle_init(module, name, options) do
+        with {:ok, state} <- State.new(module, name)
+        do do_handle_init module, name, options, state
+        end
+      end
+
+      defp do_handle_init(module, name, options, state) do
         use Membrane.Element.Manager.Log
-        state = State.new(module, name)
         with {:ok, internal_state} <- module.handle_init(options)
         do {:ok, %State{state | internal_state: internal_state}}
         else
           {:error, reason} -> warn_error """
               Module #{inspect module} handle_init callback returned an error
-              """, {:elementhandle_init, module, reason}, state
+              """, {:handle_init, module, reason}, state
           other -> warn_error """
               Module #{inspect module} handle_init callback returned invalid result:
               #{inspect other} instead of {:ok, state} or {:error, reason}
@@ -63,7 +68,6 @@ defmodule Membrane.Element.Manager.Common do
 
       def handle_playback_state(:prepared, :playing, state) do
         with \
-          {:ok, state} <- state |> Common.fill_sink_pull_buffers,
           {:ok, state} <- exec_and_handle_callback(:handle_play, [], state),
           do: {:ok, state}
       end
@@ -74,32 +78,42 @@ defmodule Membrane.Element.Manager.Common do
       def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing], do:
         exec_and_handle_callback :handle_prepare, [ps], state
 
+      def get_pad_full_name(pad_name, state) do
+        state |> State.resolve_pad_full_name(pad_name)
+      end
+
       def handle_link(pad_name, pid, other_name, props, state) do
         state |> State.link_pad(pad_name, fn %{direction: dir, mode: mode} = data -> data
             |> Map.merge(case {dir, mode} do
                 {:sink, :pull} ->
                   :ok = pid |> GenServer.call({:membrane_demand_in, [data.options.demand_in, other_name]})
                   pb = PullBuffer.new(state.name, {pid, other_name}, pad_name, data.options.demand_in, props[:pull_buffer] || %{})
+                  {:ok, pb} = pb |> PullBuffer.fill
                   %{buffer: pb, self_demand: 0}
                 {:source, :pull} -> %{demand: 0}
                 {_, :push} -> %{}
               end)
-            |> Map.merge(%{pid: pid, other_name: other_name})
+            |> Map.merge(%{name: pad_name, pid: pid, other_name: other_name})
           end)
       end
 
       def handle_linking_finished(state) do
-        with {:ok, state} <- state.pads.new_dynamic
+        with {:ok, state} <- state.pads.dynamic_currently_linking
           |> Helper.Enum.reduce_with(state, fn name, st ->
-            direction = st |> State.get_pad_data(:any, name, :direction)
-            handle_pad_added name, direction, st end)
+            {:ok, direction} = st |> State.get_pad_data(:any, name, :direction)
+            handle_pad_added name, direction, st
+          end)
         do
-          if(state.pads.not_linked |> Enum.empty? |> Kernel.!) do
+          static_unlinked = state.pads.info
+            |> Map.values
+            |> Enum.filter(& !&1.is_dynamic)
+            |> Enum.map(& &1.name)
+          if(static_unlinked |> Enum.empty? |> Kernel.!) do
             warn """
-            Some pads remained unlinked: #{inspect state.pads.not_linked |> Map.keys}
+            Some static pads remained unlinked: #{inspect static_unlinked}
             """, state
           end
-          {:ok, state |> State.clear_new_pads}
+          {:ok, state |> State.clear_currently_linking}
         end
       end
 
@@ -258,26 +272,6 @@ defmodule Membrane.Element.Manager.Common do
         State.update_pad_data st, :sink, pad_name, :buffer, &PullBuffer.fill/1
       end)
       |> or_warn_error("Unable to fill sink pull buffers", state)
-  end
-
-  def handle_new_pad(name, direction, args, %State{module: module, internal_state: internal_state} = state) do
-    with \
-      {{:ok, {_availability, _mode, _caps} = params}, internal_state} <-
-        apply(module, :handle_new_pad, args ++ [internal_state])
-    do
-      state = state
-        |> State.add_pad({name, params}, direction)
-        |> Map.put(:internal_state, internal_state)
-      {:ok, state}
-    else
-      {:error, reason} ->
-        warn_error "handle_new_pad callback returned an error", reason, state
-      res -> warn_error """
-        handle_new_pad return values are expected to be
-        {:ok, {{availability, mode, caps}, state}} or {:error, reason}
-        but got #{inspect res} instead
-        """, :invalid_handle_new_pad_return, state
-    end
   end
 
   def handle_pad_added(args, %State{module: module} = state), do:

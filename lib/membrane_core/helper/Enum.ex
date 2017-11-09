@@ -53,6 +53,15 @@ defmodule Membrane.Helper.Enum do
     end
   end
 
+  def flat_map_with(enum, f), do: flat_map_with(enum |> Enum.to_list, f, [])
+  defp flat_map_with([], _f, acc), do: {:ok, acc |> Enum.reverse}
+  defp flat_map_with([h|t], f, acc) do
+    with {:ok, res} <- f.(h)
+    do flat_map_with t, f, res |> Enum.reverse(acc)
+    else {:error, reason} -> {:error, reason}
+    end
+  end
+
   def map_reduce_with(enum, acc, f), do: map_reduce_with(enum |> Enum.to_list, acc, f, [])
   defp map_reduce_with([], f_acc, _f, acc), do: {{:ok, acc |> Enum.reverse}, f_acc}
   defp map_reduce_with([h|t], f_acc, f, acc) do

@@ -17,9 +17,6 @@ defmodule Membrane.Element.Base.Filter do
       # Default implementations
 
       @doc false
-      def handle_new_pad(_pad, _direction, _params, state), do: {:error, :adding_pad_unsupported}
-
-      @doc false
       def handle_pad_added(_pad, _direction, state), do: {:ok, state}
 
       @doc false
@@ -47,7 +44,6 @@ defmodule Membrane.Element.Base.Filter do
 
 
       defoverridable [
-        handle_new_pad: 4,
         handle_pad_added: 3,
         handle_pad_removed: 2,
         handle_caps: 4,
