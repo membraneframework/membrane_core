@@ -47,13 +47,13 @@ defmodule Membrane.Mixins.Log do
   defmacro warn_error(message, reason, tags \\ []) do
     quote do
       use Membrane.Helper
-      Membrane.Mixins.Log.warn """
-      Encountered an error:
-      #{unquote message}
-      Reason: #{inspect unquote reason}
-      Stacktrace:
-      #{Helper.stacktrace}
-      """, unquote(tags)
+      Membrane.Mixins.Log.warn [
+        "Encountered an error: ", unquote(message), "\n", """
+        Reason: #{inspect unquote reason}
+        Stacktrace:
+        #{Helper.stacktrace}
+        """
+      ], unquote(tags)
       unquote {:error, reason}
     end
   end
