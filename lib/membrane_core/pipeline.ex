@@ -374,10 +374,10 @@ defmodule Membrane.Pipeline do
   end
 
   @doc false
-  def handle_info([:membrane_message, %Membrane.Message{} = message], state) do
-    # FIXME set sender
-    exec_and_handle_callback(:handle_message, [message, self()], state)
-      |> noreply(state)
+  def handle_info([:membrane_message, from, %Membrane.Message{} = message], state) do
+    with {:ok, _} <- state |> State.get_child(from)
+    do exec_and_handle_callback(:handle_message, [message, from], state)
+    end |> noreply(state)
   end
 
   @doc false

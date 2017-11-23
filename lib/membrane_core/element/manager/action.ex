@@ -151,9 +151,9 @@ defmodule Membrane.Element.Manager.Action do
     {:ok, state}
   end
 
-  def send_message(%Message{} = message, %State{message_bus: message_bus} = state) do
+  def send_message(%Message{} = message, %State{message_bus: message_bus, name: name} = state) do
     debug "Sending message #{inspect(message)} (message bus: #{inspect message_bus})", state
-    send(message_bus, [:membrane_message, message])
+    send(message_bus, [:membrane_message, name, message])
     {:ok, state}
   end
 
