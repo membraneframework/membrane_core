@@ -97,7 +97,7 @@ defmodule Membrane.Element.Manager.Action do
     do
       case callback do
         cb when cb in [:handle_write, :handle_process] ->
-          send self(), {:membrane_self_demand, [pad_name, source, size]}
+          send self(), {:membrane_self_demand, [pad_name, source, type, size]}
           {:ok, state}
         _ -> module.manager_module.handle_self_demand pad_name, source, type, size, state
       end
