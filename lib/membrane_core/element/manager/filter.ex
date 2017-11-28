@@ -322,12 +322,12 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_action({:demand, {pad_name, size}}, :handle_demand, src_name, state)
-  when Common.is_pad_name(pad_name) and is_integer(size) and size >= 0 do
+  when Common.is_pad_name(pad_name) and is_integer(size) do
     handle_action({:demand, {pad_name, {:source, src_name}, size}}, :handle_demand, src_name, state)
   end
 
   def handle_action({:demand, {pad_name, {:source, src_name}, size}}, cb, _params, state)
-  when Common.is_pad_name(pad_name) and Common.is_pad_name(src_name) and is_integer(size) and size >= 0 do
+  when Common.is_pad_name(pad_name) and Common.is_pad_name(src_name) and is_integer(size) and size > 0 do
     Action.handle_demand(pad_name, {:source, src_name}, :normal, size, cb, state)
   end
 
