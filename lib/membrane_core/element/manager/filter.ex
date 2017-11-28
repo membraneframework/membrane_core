@@ -348,6 +348,11 @@ defmodule Membrane.Element.Manager.Filter do
       """, :negative_demand, state
   end
 
+  def handle_action({:redemand, src_name}, cb, _params, state)
+  when cb not in [:handle_demand, :handle_process] do
+    Action.handle_redemand(src_name, state)
+  end
+
   def handle_action(action, callback, params, state) do
     available_actions = [
         "{:buffer, {pad_name, buffers}}",
@@ -356,7 +361,9 @@ defmodule Membrane.Element.Manager.Filter do
           |> (provided that: callback == :handle_demand),
         "{:demand, {pad_name, :self, size}",
         "{:demand, {pad_name, {:source, src_name}, size}",
-        ["{:forward, pads}"]
+        "{:redemand, source_name}"
+          |> (provided that: callback not in [:handle_demand, :handle_process]),
+        "{:forward, pads}"
           |> (provided that: callback in [:handle_caps, :handle_event]),
       ] ++ Common.available_actions
     handle_invalid_action action, callback, params, available_actions, __MODULE__, state
@@ -389,6 +396,10 @@ defmodule Membrane.Element.Manager.Filter do
               handling it.
               """, state)
     end
+  end
+
+  def handle_redemand(src_name, state) do
+    handle_demand src_name, 0, state
   end
 
   def handle_self_demand(pad_name, source, :normal, buf_cnt, state) do
