@@ -313,7 +313,7 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_action({:demand, pad_name}, :handle_demand, src_name, state)
-  when is_atom pad_name do
+  when is_atom pad_name do #FIXME: dynamic pads are not atoms
     handle_action({:demand, {pad_name, 1}}, :handle_demand, src_name, state)
   end
 
@@ -322,10 +322,10 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_action({:demand, {pad_name, {:source, src_name}, size}}, cb, _params, state)
-  when is_atom(pad_name) and is_atom(src_name) and is_integer(size) and size > 0 do
+  when is_atom(pad_name) and is_atom(src_name) and is_integer(size) and size >= 0 do
     Action.handle_demand(pad_name, {:source, src_name}, :normal, size, cb, state)
   end
-  
+
   def handle_action({:demand, {pad_name, :self, size}}, cb, _params, state)
   when is_atom(pad_name) and is_integer(size) and size > 0 do
     Action.handle_demand(pad_name, :self, :normal, size, cb, state)
@@ -339,13 +339,13 @@ defmodule Membrane.Element.Manager.Filter do
     {:ok, state}
   end
 
-  def handle_action({:demand, {pad_name, _src_name, size}}, cb, _params, _state)
+  def handle_action({:demand, {pad_name, _src_name, size}}, cb, _params, state)
   when is_integer(size) and size < 0 do
-    raise """
+    warn_error """
       Callback #{inspect cb} requested demand of invalid size of #{size}
       on pad #{inspect pad_name}. Demands' sizes should be positive (0-sized
       demands are ignored).
-      """
+      """, :negative_demand, state
   end
 
   def handle_action(action, callback, params, state) do

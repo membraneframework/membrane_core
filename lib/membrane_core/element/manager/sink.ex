@@ -250,7 +250,7 @@ defmodule Membrane.Element.Manager.Sink do
 
 
   def handle_action({:demand, pad_name}, cb, params, state)
-  when is_atom pad_name do
+  when is_atom pad_name do #FIXME: dynamic pads are not atoms
     handle_action({:demand, {pad_name, 1}}, cb, params, state)
   end
 
