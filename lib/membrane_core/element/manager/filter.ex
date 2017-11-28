@@ -317,14 +317,18 @@ defmodule Membrane.Element.Manager.Filter do
     handle_action({:demand, {pad_name, 1}}, :handle_demand, src_name, state)
   end
 
-  def handle_action({:demand, {pad_name, size}}, :handle_demand, src_name, state)
-  when is_integer size do
-    handle_action({:demand, {pad_name, src_name, size}}, :handle_demand, nil, state)
+  def handle_action({:demand, {pad_name, size}}, :handle_demand, src_name, state) do
+    handle_action({:demand, {pad_name, {:source, src_name}, size}}, :handle_demand, src_name, state)
   end
 
-  def handle_action({:demand, {pad_name, src_name, size}}, cb, _params, state)
-  when size > 0 do
-    Action.handle_demand(pad_name, src_name, size, cb, state)
+  def handle_action({:demand, {pad_name, {:source, src_name}, size}}, cb, _params, state)
+  when is_atom(pad_name) and is_atom(src_name) and is_integer(size) and size > 0 do
+    Action.handle_demand(pad_name, {:source, src_name}, :normal, size, cb, state)
+  end
+  
+  def handle_action({:demand, {pad_name, :self, size}}, cb, _params, state)
+  when is_atom(pad_name) and is_integer(size) and size > 0 do
+    Action.handle_demand(pad_name, :self, :normal, size, cb, state)
   end
 
   def handle_action({:demand, {pad_name, _src_name, 0}}, cb, _params, state) do
@@ -336,22 +340,12 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_action({:demand, {pad_name, _src_name, size}}, cb, _params, _state)
-  when size < 0 do
+  when is_integer(size) and size < 0 do
     raise """
       Callback #{inspect cb} requested demand of invalid size of #{size}
       on pad #{inspect pad_name}. Demands' sizes should be positive (0-sized
       demands are ignored).
       """
-  end
-
-  def handle_action({:self_demand, pad_name}, cb, params, state)
-  when is_atom(pad_name)
-  do
-    handle_action {:self_demand, {pad_name, 1}}, cb, params, state
-  end
-
-  def handle_action({:self_demand, {pad_name, size}}, cb, params, state) do
-    handle_action {:demand, {pad_name, nil, size}}, cb, params, state
   end
 
   def handle_action(action, callback, params, state) do
@@ -360,9 +354,8 @@ defmodule Membrane.Element.Manager.Filter do
         "{:caps, {pad_name, caps}}",
         ["{:demand, pad_name}", "{:demand, {pad_name, size}}"]
           |> (provided that: callback == :handle_demand),
-        "{:demand, {pad_name, src_name, size}",
-        "{:self_demand, pad_name}",
-        "{:self_demand, {pad_name, size}}",
+        "{:demand, {pad_name, :self, size}",
+        "{:demand, {pad_name, {:source, src_name}, size}",
         ["{:forward, pads}"]
           |> (provided that: callback in [:handle_caps, :handle_event]),
       ] ++ Common.available_actions
@@ -398,9 +391,9 @@ defmodule Membrane.Element.Manager.Filter do
     end
   end
 
-  def handle_self_demand(pad_name, src_name, buf_cnt, state) do
-    {:ok, state} = state |> update_sink_self_demand(pad_name, src_name, & {:ok, &1 + buf_cnt})
-    handle_process_pull(pad_name, src_name, buf_cnt, state)
+  def handle_self_demand(pad_name, source, :normal, buf_cnt, state) do
+    {:ok, state} = state |> update_sink_self_demand(pad_name, source, & {:ok, &1 + buf_cnt})
+    handle_process_pull(pad_name, source, buf_cnt, state)
       |> or_warn_error("""
         Demand of size #{inspect buf_cnt} on sink pad #{inspect pad_name}
         was raised, and handle_process was called, but an error happened.
@@ -426,16 +419,16 @@ defmodule Membrane.Element.Manager.Filter do
       |> or_warn_error("Error while handling process", state)
   end
 
-  def handle_process_pull(pad_name, src_name, buf_cnt, state) do
+  def handle_process_pull(pad_name, source, buf_cnt, state) do
     with \
       {{:ok, out}, state} <- state |> State.get_update_pad_data(:sink, pad_name, :buffer, & &1 |> PullBuffer.take(buf_cnt)),
       {:out, {_, data}} <- (if out == {:empty, []} do {:empty_pb, state} else {:out, out} end),
       {:ok, state} <- data |> Helper.Enum.reduce_with(state, fn v, st ->
-        handle_pullbuffer_output pad_name, src_name, v, st
+        handle_pullbuffer_output pad_name, source, v, st
       end)
     do
       :ok = send_dumb_demand_if_demand_positive_and_pullbuffer_nonempty(
-        pad_name, src_name, state)
+        pad_name, source, state)
       {:ok, state}
     else
       {:empty_pb, state} -> {:ok, state}
@@ -443,11 +436,11 @@ defmodule Membrane.Element.Manager.Filter do
     end
   end
 
-  defp handle_pullbuffer_output(pad_name, src_name, {:buffers, b, buf_cnt}, state) do
-    {:ok, state} = state |> update_sink_self_demand(pad_name, src_name, & {:ok, &1 - buf_cnt})
+  defp handle_pullbuffer_output(pad_name, source, {:buffers, b, buf_cnt}, state) do
+    {:ok, state} = state |> update_sink_self_demand(pad_name, source, & {:ok, &1 - buf_cnt})
     params = %{
         caps: state |> State.get_pad_data!(:sink, pad_name, :caps),
-        source: src_name,
+        source: source,
         source_caps: state |> State.get_pad_data!(:sink, pad_name, :caps),
       }
     exec_and_handle_callback :handle_process, [pad_name, b, params], state
@@ -456,9 +449,9 @@ defmodule Membrane.Element.Manager.Filter do
     Common.handle_pullbuffer_output(pad_name, v, state)
 
   defp send_dumb_demand_if_demand_positive_and_pullbuffer_nonempty(
-    _pad_name, nil = _src_name, _state), do: :ok
+    _pad_name, :self, _state), do: :ok
   defp send_dumb_demand_if_demand_positive_and_pullbuffer_nonempty(
-    pad_name, src_name, state) do
+    pad_name, {:source, src_name}, state) do
     if (
       state
         |> State.get_pad_data!(:sink, pad_name, :buffer)
@@ -503,7 +496,7 @@ defmodule Membrane.Element.Manager.Filter do
         """, state)
   end
 
-  defp update_sink_self_demand(state, pad_name, nil, f), do:
+  defp update_sink_self_demand(state, pad_name, :self, f), do:
     state |> State.update_pad_data(:sink, pad_name, :self_demand, f)
 
   defp update_sink_self_demand(state, _pad_name, _src, _f), do: {:ok, state}

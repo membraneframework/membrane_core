@@ -255,8 +255,8 @@ defmodule Membrane.Element.Manager.Sink do
   end
 
   def handle_action({:demand, {pad_name, size}}, cb, _params, state)
-  when size > 0 do
-    Action.handle_demand(pad_name, size, cb, state)
+  when is_integer(size) and size > 0 do
+    Action.handle_demand pad_name, :self, :normal, size, cb, state
   end
 
   def handle_action({:demand, {pad_name, 0}}, cb, _params, state) do
@@ -268,12 +268,25 @@ defmodule Membrane.Element.Manager.Sink do
   end
 
   def handle_action({:demand, {pad_name, size}}, cb, _params, state)
-  when size < 0 do
-    raise """
+  when is_integer(size) and size < 0 do
+    warn_error """
       Callback #{inspect cb} requested demand of invalid size of #{size}
       on pad #{inspect pad_name}. Demands' sizes should be positive (0-sized
       demands are ignored).
-      """, state
+      """, :negative_demand, state
+  end
+
+  def handle_action({:demand, {pad_name, {:set_to, size}}}, cb, _params, state)
+  when is_integer(size) and size >= 0 do
+    Action.handle_demand pad_name, :self, :set, size, cb, state
+  end
+
+  def handle_action({:demand, {pad_name, {:set_to, size}}}, cb, _params, state)
+  when is_integer(size) and size < 0 do
+    warn_error """
+      Callback #{inspect cb} requested to set demand to invalid size of #{size}
+      on pad #{inspect pad_name}. Demands sizes cannot be negative
+      """, :negative_demand, state
   end
 
   def handle_action(action, callback, params, state) do
@@ -284,9 +297,13 @@ defmodule Membrane.Element.Manager.Sink do
     handle_invalid_action action, callback, params, available_actions, __MODULE__, state
   end
 
-  def handle_self_demand pad_name, _src_name, buf_cnt, state do
-    {:ok, state} = state
-      |> State.update_pad_data(:sink, pad_name, :self_demand, & {:ok, &1 + buf_cnt})
+  def handle_self_demand pad_name, :self, type, buf_cnt, state do
+    {:ok, state} = case type do
+        :normal -> state
+          |> State.update_pad_data(:sink, pad_name, :self_demand, & {:ok, &1 + buf_cnt})
+        :set -> state
+          |> State.set_pad_data(:sink, pad_name, :self_demand, buf_cnt)
+      end
     handle_write(:pull, pad_name, state)
       |> or_warn_error("""
         Demand of size #{inspect buf_cnt} on pad #{inspect pad_name}

@@ -75,31 +75,31 @@ defmodule Membrane.Element.Manager.Action do
   end
 
 
-  @spec handle_demand(Pad.name_t, Pad.name_t, pos_integer, atom, State.t) :: :ok | {:error, any}
-  def handle_demand(pad_name, src_name \\ nil, size, callback, state)
+  @spec handle_demand(Pad.name_t, {:source, Pad.name_t} | :self, :normal | :set, pos_integer, atom, State.t) :: :ok | {:error, any}
+  def handle_demand(pad_name, source, type, size, callback, state)
 
-  def handle_demand(_pad_name, _src_name, _size, callback, %State{playback_state: playback} = state)
+  def handle_demand(_pad_name, _source, _type, _size, callback, %State{playback_state: playback} = state)
   when playback != :playing and callback != :handle_play
   do
     warn_error "Demand can only be requested when playing or from handle_play callback",
       {:cannot_handle_demand, playback_state: playback, callback: callback}, state
   end
 
-  def handle_demand(pad_name, src_name, size, callback, %State{module: module} = state) do
+  def handle_demand(pad_name, source, type, size, callback, %State{module: module} = state) do
     debug "Requesting demand of size #{inspect size} on pad #{inspect pad_name}", state
     with \
       {:sink, {:ok, %{mode: :pull}}} <-
         {:sink, state |> State.get_pad_data(:sink, pad_name)},
-      {:source, {:ok, %{mode: :pull}}} <- {:source, cond do
-          src_name != nil -> state |> State.get_pad_data(:source, src_name)
-          true -> {:ok, %{mode: :pull}}
+      {:source, {:ok, %{mode: :pull}}} <- {:source, case source do
+          {:source, src_name} -> state |> State.get_pad_data(:source, src_name)
+          :self -> {:ok, %{mode: :pull}}
         end}
     do
       case callback do
         cb when cb in [:handle_write, :handle_process] ->
-          send self(), {:membrane_self_demand, [pad_name, src_name, size]}
+          send self(), {:membrane_self_demand, [pad_name, source, size]}
           {:ok, state}
-        _ -> module.manager_module.handle_self_demand pad_name, src_name, size, state
+        _ -> module.manager_module.handle_self_demand pad_name, source, type, size, state
       end
     else
       {_direction, {:ok, %{mode: :push}}} ->
