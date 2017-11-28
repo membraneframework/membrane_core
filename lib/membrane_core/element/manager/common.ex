@@ -12,8 +12,10 @@ defmodule Membrane.Element.Manager.Common do
       alias Membrane.Element.Manager.{Action, Common, State}
       use Membrane.Helper
 
-      def handle_action({:event, {pad_name, event}}, _cb, _params, state), do:
+      def handle_action({:event, {pad_name, event}}, _cb, _params, state)
+      when Common.is_pad_name(pad_name) do
         Action.send_event(pad_name, event, state)
+      end
 
       def handle_action({:message, message}, _cb, _params, state), do:
         Action.send_message(message, state)
@@ -142,6 +144,18 @@ defmodule Membrane.Element.Manager.Common do
       end
 
     end
+  end
+
+  defmacro is_pad_name(term) do
+    quote do (
+        (unquote term) |> is_atom
+      ) or (
+        (unquote term) |> is_tuple
+        and (unquote term) |> tuple_size == 3
+        and (unquote term) |> elem(0) == :dynamic
+        and (unquote term) |> elem(1) |> is_atom
+        and (unquote term) |> elem(2) |> is_integer
+    ) end
   end
 
   def available_actions, do: [

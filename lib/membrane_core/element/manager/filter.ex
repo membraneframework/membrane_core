@@ -280,11 +280,15 @@ defmodule Membrane.Element.Manager.Filter do
 
   # Private API
 
-  def handle_action({:buffer, {pad_name, buffers}}, cb, _params, state), do:
+  def handle_action({:buffer, {pad_name, buffers}}, cb, _params, state)
+  when Common.is_pad_name(pad_name) do
     Action.send_buffer pad_name, buffers, cb, state
+  end
 
-  def handle_action({:caps, {pad_name, caps}}, _cb, _params, state), do:
+  def handle_action({:caps, {pad_name, caps}}, _cb, _params, state)
+  when Common.is_pad_name(pad_name) do
     Action.send_caps(pad_name, caps, state)
+  end
 
   def handle_action({:forward, pads}, :handle_caps, %{caps: caps} = params, state)
   when is_list pads
@@ -313,25 +317,27 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_action({:demand, pad_name}, :handle_demand, src_name, state)
-  when is_atom pad_name do #FIXME: dynamic pads are not atoms
+  when Common.is_pad_name(pad_name) do
     handle_action({:demand, {pad_name, 1}}, :handle_demand, src_name, state)
   end
 
-  def handle_action({:demand, {pad_name, size}}, :handle_demand, src_name, state) do
+  def handle_action({:demand, {pad_name, size}}, :handle_demand, src_name, state)
+  when Common.is_pad_name(pad_name) and is_integer(size) and size >= 0 do
     handle_action({:demand, {pad_name, {:source, src_name}, size}}, :handle_demand, src_name, state)
   end
 
   def handle_action({:demand, {pad_name, {:source, src_name}, size}}, cb, _params, state)
-  when is_atom(pad_name) and is_atom(src_name) and is_integer(size) and size >= 0 do
+  when Common.is_pad_name(pad_name) and Common.is_pad_name(src_name) and is_integer(size) and size >= 0 do
     Action.handle_demand(pad_name, {:source, src_name}, :normal, size, cb, state)
   end
 
   def handle_action({:demand, {pad_name, :self, size}}, cb, _params, state)
-  when is_atom(pad_name) and is_integer(size) and size > 0 do
+  when Common.is_pad_name(pad_name) and is_integer(size) and size > 0 do
     Action.handle_demand(pad_name, :self, :normal, size, cb, state)
   end
 
-  def handle_action({:demand, {pad_name, _src_name, 0}}, cb, _params, state) do
+  def handle_action({:demand, {pad_name, _src_name, 0}}, cb, _params, state)
+  when Common.is_pad_name(pad_name) do
     debug """
       Ignoring demand of size of 0 requested by callback #{inspect cb}
       on pad #{inspect pad_name}.
@@ -340,7 +346,7 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_action({:demand, {pad_name, _src_name, size}}, cb, _params, state)
-  when is_integer(size) and size < 0 do
+  when Common.is_pad_name(pad_name) and is_integer(size) and size < 0 do
     warn_error """
       Callback #{inspect cb} requested demand of invalid size of #{size}
       on pad #{inspect pad_name}. Demands' sizes should be positive (0-sized
@@ -349,7 +355,7 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_action({:redemand, src_name}, cb, _params, state)
-  when cb not in [:handle_demand, :handle_process] do
+  when Common.is_pad_name(src_name) and cb not in [:handle_demand, :handle_process] do
     Action.handle_redemand(src_name, state)
   end
 

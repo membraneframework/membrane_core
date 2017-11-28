@@ -198,14 +198,18 @@ defmodule Membrane.Element.Manager.Source do
 
   # Private API
 
-  def handle_action({:buffer, {pad_name, buffer}}, cb, _params, state), do:
+  def handle_action({:buffer, {pad_name, buffer}}, cb, _params, state)
+  when Common.is_pad_name(pad_name) do
     Action.send_buffer(pad_name, buffer, cb, state)
+  end
 
-  def handle_action({:caps, {pad_name, caps}}, _cb, _params, state), do:
+  def handle_action({:caps, {pad_name, caps}}, _cb, _params, state)
+  when Common.is_pad_name(pad_name) do
     Action.send_caps(pad_name, caps, state)
+  end
 
   def handle_action({:redemand, src_name}, cb, _params, state)
-  when cb != :handle_demand do
+  when Common.is_pad_name(src_name) and cb != :handle_demand do
     Action.handle_redemand(src_name, state)
   end
 

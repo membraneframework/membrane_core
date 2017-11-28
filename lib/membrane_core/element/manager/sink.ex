@@ -250,16 +250,17 @@ defmodule Membrane.Element.Manager.Sink do
 
 
   def handle_action({:demand, pad_name}, cb, params, state)
-  when is_atom pad_name do #FIXME: dynamic pads are not atoms
+  when Common.is_pad_name(pad_name) do
     handle_action({:demand, {pad_name, 1}}, cb, params, state)
   end
 
   def handle_action({:demand, {pad_name, size}}, cb, _params, state)
-  when is_integer(size) and size > 0 do
+  when Common.is_pad_name(pad_name) and is_integer(size) and size > 0 do
     Action.handle_demand pad_name, :self, :normal, size, cb, state
   end
 
-  def handle_action({:demand, {pad_name, 0}}, cb, _params, state) do
+  def handle_action({:demand, {pad_name, 0}}, cb, _params, state)
+  when Common.is_pad_name(pad_name) do
     debug """
       Ignoring demand of size of 0 requested by callback #{inspect cb}
       on pad #{inspect pad_name}.
@@ -268,7 +269,7 @@ defmodule Membrane.Element.Manager.Sink do
   end
 
   def handle_action({:demand, {pad_name, size}}, cb, _params, state)
-  when is_integer(size) and size < 0 do
+  when Common.is_pad_name(pad_name) and is_integer(size) and size < 0 do
     warn_error """
       Callback #{inspect cb} requested demand of invalid size of #{size}
       on pad #{inspect pad_name}. Demands' sizes should be positive (0-sized
@@ -277,12 +278,12 @@ defmodule Membrane.Element.Manager.Sink do
   end
 
   def handle_action({:demand, {pad_name, {:set_to, size}}}, cb, _params, state)
-  when is_integer(size) and size >= 0 do
+  when Common.is_pad_name(pad_name) and is_integer(size) and size >= 0 do
     Action.handle_demand pad_name, :self, :set, size, cb, state
   end
 
   def handle_action({:demand, {pad_name, {:set_to, size}}}, cb, _params, state)
-  when is_integer(size) and size < 0 do
+  when Common.is_pad_name(pad_name) and is_integer(size) and size < 0 do
     warn_error """
       Callback #{inspect cb} requested to set demand to invalid size of #{size}
       on pad #{inspect pad_name}. Demands sizes cannot be negative
