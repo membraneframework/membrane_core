@@ -13,6 +13,7 @@ defmodule Membrane.PullBuffer do
     preferred_size: 100,
     current_size: 0,
     demand: nil,
+    min_demand: nil,
     metric: nil,
     toilet: false
 
@@ -23,6 +24,8 @@ defmodule Membrane.PullBuffer do
   def new(name, sink, sink_name, demand_in, props) do
     metric = Buffer.Metric.from_unit demand_in
     preferred_size = props[:preferred_size] || metric.pullbuffer_preferred_size
+    min_demand = props[:min_demand] || preferred_size |> div(4)
+    init_size = props[:init_size] || 0
     default_toilet = %{warn: preferred_size*2, fail: preferred_size*4}
     toilet = case props[:toilet] do
         true -> default_toilet
@@ -35,7 +38,8 @@ defmodule Membrane.PullBuffer do
       sink: sink,
       sink_name: sink_name,
       preferred_size: preferred_size,
-      init_size: props[:init_size] || 0,
+      init_size: init_size,
+      min_demand: min_demand,
       demand: preferred_size,
       metric: metric,
       toilet: toilet,
@@ -153,15 +157,23 @@ defmodule Membrane.PullBuffer do
   def empty?(%PullBuffer{current_size: size, init_size: init_size}), do:
     size == 0 || (init_size != nil && size < init_size)
 
-  defp handle_demand(%PullBuffer{toilet: false, sink: {other_pid, other_name},
-    current_size: size, preferred_size: pref_size, demand: demand} = pb, new_demand)
-  when size < pref_size and demand + new_demand > 0 do
+  defp handle_demand(
+    %PullBuffer{
+      toilet: false,
+      sink: {other_pid, other_name},
+      current_size: size, preferred_size: pref_size,
+      demand: demand,
+      min_demand: min_demand,
+    } = pb,
+    new_demand
+  ) when size < pref_size and demand + new_demand > 0 do
+    to_demand = max demand + new_demand, min_demand
     report """
-      Sending demand of size #{inspect demand + new_demand}
+      Sending demand of size #{inspect to_demand}
       to sink #{inspect pb.sink_name}
       """, pb
-    send other_pid, {:membrane_demand, [demand + new_demand, other_name]}
-    {:ok, %PullBuffer{pb | demand: 0}}
+    send other_pid, {:membrane_demand, [to_demand, other_name]}
+    {:ok, %PullBuffer{pb | demand: demand + new_demand - to_demand}}
   end
 
   defp handle_demand(%PullBuffer{toilet: false, demand: demand} = pb, new_demand), do:

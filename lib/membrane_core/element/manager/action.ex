@@ -97,7 +97,7 @@ defmodule Membrane.Element.Manager.Action do
     do
       case callback do
         cb when cb in [:handle_write, :handle_process] ->
-          send self(), {:membrane_self_demand, [pad_name, source, size]}
+          send self(), {:membrane_self_demand, [pad_name, source, type, size]}
           {:ok, state}
         _ -> module.manager_module.handle_self_demand pad_name, source, type, size, state
       end
@@ -106,6 +106,19 @@ defmodule Membrane.Element.Manager.Action do
         handle_invalid_pad_mode pad_name, :pull, :demand, state
       {direction, {:error, :unknown_pad}} ->
         handle_unknown_pad pad_name, direction, :demand, state
+    end
+  end
+
+  def handle_redemand(src_name, %State{module: module} = state) do
+    with \
+      {:ok, %{mode: :pull}} <- state |> State.get_pad_data(:source, src_name)
+    do
+      module.manager_module.handle_redemand src_name, state
+    else
+      {:ok, %{mode: :push}} ->
+        handle_invalid_pad_mode src_name, :pull, :demand, state
+      {:error, :unknown_pad} ->
+        handle_unknown_pad src_name, :source, :demand, state
     end
   end
 

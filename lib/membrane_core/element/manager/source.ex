@@ -198,6 +198,35 @@ defmodule Membrane.Element.Manager.Source do
 
   # Private API
 
+  def handle_action({:buffer, {pad_name, buffer}}, cb, _params, state)
+  when Common.is_pad_name(pad_name) do
+    Action.send_buffer(pad_name, buffer, cb, state)
+  end
+
+  def handle_action({:caps, {pad_name, caps}}, _cb, _params, state)
+  when Common.is_pad_name(pad_name) do
+    Action.send_caps(pad_name, caps, state)
+  end
+
+  def handle_action({:redemand, src_name}, cb, _params, state)
+  when Common.is_pad_name(src_name) and cb != :handle_demand do
+    Action.handle_redemand(src_name, state)
+  end
+
+  def handle_action(action, callback, params, state) do
+    available_actions = [
+        "{:buffer, {pad_name, buffers}}",
+        "{:caps, {pad_name, caps}}",
+        "{:redemand, source_name}"
+          |> (provided that: callback != :handle_demand),
+      ] ++ Common.available_actions
+    handle_invalid_action action, callback, params, available_actions, __MODULE__, state
+  end
+
+  def handle_redemand(src_name, state) do
+    handle_demand src_name, 0, state
+  end
+
   def handle_demand(pad_name, size, state) do
     {{:ok, stored_size}, state} = state
       |> State.get_update_pad_data(:source, pad_name, :demand, &{{:ok, &1}, &1+size})
@@ -227,21 +256,6 @@ defmodule Membrane.Element.Manager.Source do
     end
   end
 
-  @doc false
-
-  def handle_action({:buffer, {pad_name, buffer}}, cb, _params, state), do:
-    Action.send_buffer(pad_name, buffer, cb, state)
-
-  def handle_action({:caps, {pad_name, caps}}, _cb, _params, state), do:
-    Action.send_caps(pad_name, caps, state)
-
-  def handle_action(action, callback, params, state) do
-    available_actions = [
-        "{:buffer, {pad_name, buffers}}",
-        "{:caps, {pad_name, caps}}",
-      ] ++ Common.available_actions
-    handle_invalid_action action, callback, params, available_actions, __MODULE__, state
-  end
 
   def handle_event(mode, :source, pad_name, event, state) do
     with \
