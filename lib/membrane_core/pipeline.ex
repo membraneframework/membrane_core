@@ -10,7 +10,7 @@ defmodule Membrane.Pipeline do
   alias Membrane.Pipeline.{State,Spec}
   alias Membrane.Element
   use Membrane.Helper
-  import Membrane.Helper.GenServer
+  import Helper.GenServer
 
   # Type that defines possible return values of start/start_link functions.
   @type on_start :: GenServer.on_start
@@ -61,7 +61,7 @@ defmodule Membrane.Pipeline do
 
 
   defp do_start(method, module, pipeline_options, process_options) do
-    with :ok <- (if is_pipeline module do :ok else :not_pipeline end)
+    with :ok <- (if module |> is_pipeline? do :ok else :not_pipeline end)
     do
       debug """
         Pipeline start link: module: #{inspect module},
@@ -137,7 +137,9 @@ defmodule Membrane.Pipeline do
   # Private API
 
   @doc false
-  def init(module) when is_atom module do init {module, nil} end
+  def init(module) when is_atom module do
+    init {module, module |> Module.concat(Options) |> Helper.Module.struct}
+  end
 
   @doc false
   def init({module, pipeline_options}) do
@@ -168,10 +170,8 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  def is_pipeline(module) do
-    Code.ensure_loaded?(module) and
-    function_exported?(module, :is_membrane_pipeline, 0) and
-    module.is_membrane_pipeline
+  def is_pipeline?(module) do
+    module |> Helper.Module.check_behaviour(:is_membrane_pipeline)
   end
 
   defp handle_spec(%Spec{children: children, links: links}, state) do
@@ -221,7 +221,7 @@ defmodule Membrane.Pipeline do
   defp parse_child({name, {module, options}}), do:
     parse_child({name, {module, options, []}})
   defp parse_child({name, module}), do:
-    parse_child({name, {module, nil, []}})
+    parse_child({name, {module, module |> Module.concat(Options) |> Helper.Module.struct}})
   defp parse_child(config), do:
     {:error, invalid_child_config: config}
 

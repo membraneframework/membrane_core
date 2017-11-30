@@ -43,7 +43,9 @@ defmodule Membrane.Element do
   Works similarily to `GenServer.start_link/3` and has the same return values.
   """
   @spec start_link(module, element_options_t, process_options_t) :: on_start
-  def start_link(module, name, element_options \\ nil, process_options \\ []), do:
+  def start_link(module, name), do:
+    start_link(module, name, module |> Module.concat(Options) |> Helper.Module.struct)
+  def start_link(module, name, element_options, process_options \\ []), do:
     do_start(:start_link, module, name, element_options, process_options)
 
 
@@ -54,7 +56,9 @@ defmodule Membrane.Element do
   Works similarily to `GenServer.start/3` and has the same return values.
   """
   @spec start(module, element_options_t, process_options_t) :: on_start
-  def start(module, name, element_options \\ nil, process_options \\ []), do:
+  def start(module, name), do:
+    start(module, name, module |> Module.concat(Options) |> Helper.Module.struct)
+  def start(module, name, element_options, process_options \\ []), do:
     do_start(:start, module, name, element_options, process_options)
 
 
