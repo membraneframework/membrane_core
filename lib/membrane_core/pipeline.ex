@@ -143,9 +143,10 @@ defmodule Membrane.Pipeline do
   def init({module, pipeline_options}) do
     with \
       [init: {{:ok, spec}, internal_state}] <- [init: module.handle_init(pipeline_options)],
-      state = %State{internal_state: internal_state, module: module},
-      {{:ok, _children}, state} <- handle_spec(spec, state)
-    do {:ok, state}
+      state = %State{internal_state: internal_state, module: module}
+    do
+      send self(), [:membrane_pipeline_spec, spec]
+      {:ok, state}
     else
       [init: {:error, reason}] -> warn_error """
         Pipeline handle_init callback returned an error
@@ -191,9 +192,11 @@ defmodule Membrane.Pipeline do
       {:ok, links} <- links |> parse_links,
       {{:ok, links}, state} <- links |> resolve_links(state),
       :ok <- links |> link_children(state),
-      :ok <- children_to_pids |> Map.values |> set_children_message_bus,
-      children_names = children_to_pids |> Map.keys,
-      {:ok, state} <- exec_and_handle_callback(:handle_spec_started, [children_names], state)
+      {children_names, children_pids} = children_to_pids |> Enum.unzip,
+      :ok <- children_pids |> set_children_message_bus,
+      {:ok, state} <- exec_and_handle_callback(:handle_spec_started, [children_names], state),
+      :ok <- children_pids
+        |> Helper.Enum.each_with(&Element.change_playback_state &1, state.playback_state)
     do
       debug """
         Initializied pipeline spec
@@ -374,6 +377,13 @@ defmodule Membrane.Pipeline do
   end
 
   @doc false
+  def handle_info([:membrane_pipeline_spec, spec], state) do
+    with {{:ok, _children}, state} <- spec |> handle_spec(state)
+    do {:ok, state}
+    end |> noreply(state)
+  end
+
+  @doc false
   def handle_info([:membrane_message, from, %Membrane.Message{} = message], state) do
     with {:ok, _} <- state |> State.get_child(from)
     do exec_and_handle_callback(:handle_message, [message, from], state)
@@ -398,12 +408,7 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_action({:spec, spec = %Spec{}}, _cb, _params, state) do
-    with \
-      {{:ok, children}, state} <- handle_spec(spec, state),
-      {:ok, pids} <- children
-        |> Helper.Enum.map_with(fn name -> state |> State.get_child(name) end),
-      :ok <- pids
-        |> Helper.Enum.each_with(fn pid -> Element.change_playback_state(pid, :playing) end),
+    with {{:ok, _children}, state} <- handle_spec(spec, state),
     do: {:ok, state}
   end
 
