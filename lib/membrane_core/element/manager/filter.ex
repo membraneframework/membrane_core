@@ -488,15 +488,15 @@ defmodule Membrane.Element.Manager.Filter do
 
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
   def handle_event(mode, dir, pad_name, event, state) do
-    with {:ok, state} <- parse_event(event, pad_name, state) do
-      Common.handle_event mode, dir, pad_name, event, state
+    with {:ok, state} <- Common.handle_event(mode, dir, pad_name, event, state) do
+      parse_handled_event event, pad_name, state
     end
   end
 
-  def parse_event(%Event{type: :sos}, _pad_name, state) do
+  defp parse_handled_event(%Event{type: :sos}, _pad_name, state) do
     check_and_handle_demands(state)
   end
-  def parse_event(_evt, _pad_name, state) do
+  defp parse_handled_event(_evt, _pad_name, state) do
     {:ok, state}
   end
 
