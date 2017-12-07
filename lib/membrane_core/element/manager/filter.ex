@@ -136,6 +136,7 @@ defmodule Membrane.Element.Manager.Filter do
   use Membrane.Element.Manager.Common
   alias Membrane.Element.Manager.{Action, State, Common}
   alias Membrane.PullBuffer
+  alias Membrane.Event
   use Membrane.Helper
 
   # Type that defines a single action that may be returned from handle_*
@@ -426,7 +427,7 @@ defmodule Membrane.Element.Manager.Filter do
       |> State.update_pad_data(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffers))
     with \
       {:ok, state} <- check_and_handle_process(pad_name, state),
-      {:ok, state} <- check_and_handle_demands(pad_name, state),
+      {:ok, state} <- check_and_handle_demands(state),
     do: {:ok, state}
   end
 
@@ -486,7 +487,18 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
-  defdelegate handle_event(mode, dir, pad_name, event, state), to: Common
+  def handle_event(mode, dir, pad_name, event, state) do
+    with {:ok, state} <- parse_event(event, pad_name, state) do
+      Common.handle_event mode, dir, pad_name, event, state
+    end
+  end
+
+  def parse_event(%Event{type: :sos}, _pad_name, state) do
+    check_and_handle_demands(state)
+  end
+  def parse_event(_evt, _pad_name, state) do
+    {:ok, state}
+  end
 
   def handle_pad_added(name, direction, state), do:
     Common.handle_pad_added([name, direction], state)
@@ -500,16 +512,15 @@ defmodule Membrane.Element.Manager.Filter do
     end
   end
 
-  defp check_and_handle_demands(pad_name, state) do
+  defp check_and_handle_demands(state) do
     state
       |> State.get_pads_data(:source)
       |> Helper.Enum.reduce_with(state, fn {name, _data}, st ->
           handle_demand name, 0, st
         end)
       |> or_warn_error("""
-        New buffers arrived to pad #{inspect pad_name}, and Membrane tried
-        to execute handle_demand and then handle_process for each unsupplied
-        demand, but an error happened.
+        Membrane tried to execute handle_demand and then handle_process
+        for each unsupplied demand, but an error happened.
         """, state)
   end
 
