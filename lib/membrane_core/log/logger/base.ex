@@ -21,7 +21,7 @@ defmodule Membrane.Log.Logger.Base do
   Callback delivers 5 arguments:
   * atom containing log level
   * message - in IO list format
-  * timestamp
+  * time
   * tags (list of atoms, e.g. module name)
   * internal logger state
 
@@ -33,7 +33,7 @@ defmodule Membrane.Log.Logger.Base do
   went wrong, and logger was unable to handle log. State will be updated to
   the new state.
   """
-  @callback handle_log(Membrane.Log.Logger.msg_level_t, Membrane.Log.Logger.message_t, Membane.Time.native_t, list(Membrane.Log.Logger.tag_t), any) ::
+  @callback handle_log(Membrane.Log.Logger.msg_level_t, Membrane.Log.Logger.message_t, String.t, list(Membrane.Log.Logger.tag_t), any) ::
     {:ok, any} |
     {:error, any, any}
 
