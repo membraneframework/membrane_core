@@ -86,6 +86,10 @@ defmodule Membrane.Element.Manager.Common do
 
       def handle_link(pad_name, pid, other_name, props, state) do
         state |> State.link_pad(pad_name, fn %{direction: dir, mode: mode} = data -> data
+            |> Map.merge(case dir do
+                :source -> %{}
+                :sink -> %{sticky_messages: []}
+              end)
             |> Map.merge(case {dir, mode} do
                 {:sink, :pull} ->
                   :ok = pid |> GenServer.call({:membrane_demand_in, [data.options.demand_in, other_name]})

@@ -60,7 +60,15 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
       Received buffers on pad #{inspect pad_name}
       Buffers: ", Buffer.print(buffers)
       ], state
-    module.manager_module.handle_buffer(mode, pad_name, buffers, state)
+    {{:ok, messages}, state} = state
+      |> State.get_update_pad_data(:sink, pad_name, :sticky_messages,
+        &{{:ok, &1 |> Enum.reverse}, []})
+    with \
+      {:ok, state} <- messages
+        |> Helper.Enum.reduce_with(state, fn msg, st -> msg.(st) end)
+    do
+      module.manager_module.handle_buffer(mode, pad_name, buffers, state)
+    end
   end
 
   # Callback invoked on incoming caps
@@ -75,12 +83,20 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
 
   # Callback invoked on incoming event
   defp exec({:membrane_event, [event, pad_name]}, %State{module: module} = state) do
-    {:ok, %{mode: mode, direction: direction}} = state |> State.get_pad_data(:any, pad_name)
-    debug """
-      Received event on pad #{inspect pad_name}
-      Event: #{inspect event}
-      """, state
-    module.manager_module.handle_event(mode, direction, pad_name, event, state)
+    exec = fn state ->
+      {:ok, %{mode: mode, direction: direction}} = state |> State.get_pad_data(:any, pad_name)
+      debug """
+        Received event on pad #{inspect pad_name}
+        Event: #{inspect event}
+        """, state
+      module.manager_module.handle_event(mode, direction, pad_name, event, state)
+    end
+    case event.stick_to do
+      :nothing -> exec.(state)
+      :buffer -> state
+        |> State.update_pad_data(:sink, pad_name, :sticky_messages, &{:ok, [exec | &1]})
+    end
+
   end
 
 end

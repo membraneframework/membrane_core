@@ -19,12 +19,21 @@ defmodule Membrane.Event do
 
   @type t :: %Membrane.Event{
     type: type_t,
-    payload: payload_t
+    payload: payload_t,
+    stick_to: :nothing | :buffer,
   }
 
-  defstruct \
+  defstruct [
     type: nil,
-    payload: nil
+    payload: nil,
+    stick_to: :buffer,
+  ]
+
+
+  @spec sos() :: t
+  def sos() do
+    %Membrane.Event{type: :sos, stick_to: :buffer}
+  end
 
 
   @doc """
@@ -58,7 +67,7 @@ defmodule Membrane.Event do
     %Membrane.Event{type: :discontinuity, payload: %Membrane.Event.Discontinuity.Payload{duration: duration}}
   end
 
-  
+
   @doc """
   Shrothand for creating a generic Underrun event.
 
