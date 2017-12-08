@@ -17,12 +17,6 @@ defmodule Membrane.Element.Base.Filter do
       # Default implementations
 
       @doc false
-      def handle_pad_added(_pad, _direction, state), do: {:ok, state}
-
-      @doc false
-      def handle_pad_removed(_pad, state), do: {:ok, state}
-
-      @doc false
       def handle_caps(_pad, _caps, _params, state), do: {{:ok, forward: :all}, state}
 
       @doc false
@@ -44,8 +38,6 @@ defmodule Membrane.Element.Base.Filter do
 
 
       defoverridable [
-        handle_pad_added: 3,
-        handle_pad_removed: 2,
         handle_caps: 4,
         handle_event: 4,
         handle_demand: 5,

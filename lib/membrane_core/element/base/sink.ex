@@ -16,18 +16,6 @@ defmodule Membrane.Element.Base.Sink do
       # Default implementations
 
       @doc false
-      def handle_pad_added(_pad, state), do: {:ok, state}
-
-      @doc false
-      def handle_pad_removed(_pad, state), do: {:ok, state}
-
-      @doc false
-      def handle_caps(_pad, _caps, _params, state), do: {:ok, state}
-
-      @doc false
-      def handle_event(_pad, _event, _params, state), do: {:ok, state}
-
-      @doc false
       def handle_write1(_pad, _buffer, _params, state), do: {:ok, state}
 
       @doc false
@@ -39,10 +27,6 @@ defmodule Membrane.Element.Base.Sink do
 
 
       defoverridable [
-        handle_pad_added: 2,
-        handle_pad_removed: 2,
-        handle_caps: 4,
-        handle_event: 4,
         handle_write: 4,
         handle_write1: 4,
       ]
