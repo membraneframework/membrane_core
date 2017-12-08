@@ -10,8 +10,10 @@ defmodule Membrane.Element.Manager.State do
   use Membrane.Helper
   alias __MODULE__
 
+  @type internal_state_t :: any
+
   @type t :: %State{
-    internal_state: any,
+    internal_state: internal_state_t,
     module: module,
     name: Element.name_t,
     playback_state: Membrane.Mixins.Playback.state_t,

@@ -1,37 +1,133 @@
 defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   alias Membrane.Mixins.Playback
+  alias Membrane.Element.Manager.State
+
+  # Type that defines a single action that may be returned from handle_*
+  # callbacks.
+  @type callback_action_t ::
+    {:buffer, {Membrane.Pad.name_t, Membrane.Buffer.t}} |
+    {:caps, {Membrane.Pad.name_t, Membrane.Caps.t}} |
+    {:event, {Membrane.Pad.name_t, Membrane.Event.t}} |
+    {:message, Membrane.Message.t}
+
+  # Type that defines list of actions that may be returned from handle_*
+  # callbacks.
+  @type callback_actions_t :: list(callback_action_t)
+
+  # Type that defines all valid return values from callbacks.
+  @type callback_return_t ::
+    {{:ok, callback_actions_t}, State.internal_state_t} |
+    {{:error, any}, State.internal_state_t}
+
 
   @callback is_membrane_element :: true
 
   @callback manager_module :: module
 
-  @type callback_ret_t ::
-    {:ok, any} |
-    {:ok, list(), any} |
-    {:error, any}
-
   @callback handle_init(Membrane.Element.element_options_t) ::
-    {:ok, any} |
-    {:error, any}
+    {:ok, State.internal_state_t} |
+    {:error, State.internal_state_t}
 
-  @callback handle_prepare(Playback.state_t, Playback.state_t) :: callback_ret_t
 
-  @callback handle_play(any) :: callback_ret_t
+  @doc """
+  Callback invoked when Element.Manager is prepared. It will receive the previous
+  Element.Manager state.
 
-  @callback handle_stop(any) :: callback_ret_t
+  Normally this is the place where you will allocate most of the resources
+  used by the Element.Manager. For example, if your Element.Manager opens a file, this is
+  the place to try to actually open it and return error if that has failed.
 
-  @callback handle_other(Membrane.Message.type_t, any) :: callback_ret_t
+  Such resources should be released in `handle_stop/1`.
+  """
+  @callback handle_prepare(Playback.state_t, Playback.state_t) :: callback_return_t
 
-  #TODO pad_t
-  @callback handle_pad_added(any, :sink | :source, any) :: callback_ret_t
 
-  @callback handle_pad_removed(any, any) :: callback_ret_t
+  @doc """
+  Callback invoked when Element.Manager is supposed to start playing. It will receive
+  Element.Manager state.
 
-  @callback handle_caps(any, Membrane.Caps.t, any, any) :: callback_ret_t
+  This is moment when you should start generating buffers if there're any
+  pads in the push mode.
+  """
+  @callback handle_play(State.internal_state_t) :: callback_return_t
 
-  @callback handle_event(any, Membrane.Event.type_t, any, any) :: callback_ret_t
 
-  @callback handle_shutdown(any) :: :ok
+  @doc """
+  Callback invoked when Element.Manager is supposed to stop playing. It will receive
+  Element.Manager state.
+
+  Normally this is the place where you will release most of the resources
+  used by the Element.Manager. For example, if your Element.Manager opens a file, this is
+  the place to close it.
+  """
+  @callback handle_stop(State.internal_state_t) :: callback_return_t
+
+
+  @doc """
+  Callback invoked when Element.Manager is receiving message of other kind.
+
+  The arguments are:
+
+  * message,
+  * current element's sate.
+  """
+  @callback handle_other(Membrane.Message.type_t, State.internal_state_t) :: callback_return_t
+
+  @doc """
+  Callback that is called when new pad has beed added to element.
+
+  The arguments are:
+
+  * name of the pad,
+  * direction of pad,
+  * current internal state.
+  """
+  @callback handle_pad_added(any, :sink | :source, State.internal_state_t) :: callback_return_t
+
+
+  @doc """
+  Callback that is called when some pad of the element has beed removed.
+
+  The arguments are:
+
+  * name of the pad,
+  * current internal state.
+  """
+  @callback handle_pad_removed(any, State.internal_state_t) :: callback_return_t
+
+
+  @doc """
+  Callback invoked when Element.Manager is receiving information about new caps for
+  given pad.
+
+  The arguments are:
+
+  * name of the pad receiving caps,
+  * new caps of this pad,
+  """
+  @callback handle_caps(any, Membrane.Caps.t, any, State.internal_state_t) :: callback_return_t
+
+
+  @doc """
+  Callback that is called when event arrives.
+
+  It will be called for events flowing upstream from the subsequent elements.
+
+  The arguments are:
+
+  * name of the pad receiving a event,
+  * event,
+  * current Element.Manager state.
+  """
+  @callback handle_event(any, Membrane.Event.type_t, any, State.internal_state_t) :: callback_return_t
+
+
+  @doc """
+  Callback invoked when element is shutting down just before process is exiting.
+  It will receive the element state.
+  """
+  @callback handle_shutdown(State.internal_state_t) :: :ok
+
 
   defmacro __using__(_) do
     quote location: :keep do

@@ -46,6 +46,33 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   end
 
 
+  @doc """
+  Callback that is called when buffer should be produced by the source.
+
+  It will be called only for pads in the pull mode, as in their case demand
+  is triggered by the sinks.
+
+  For pads in the push mode, Element.Manager should generate buffers without this
+  callback. Example scenario might be reading a stream over TCP, waiting
+  for incoming packets that will be delivered to the PID of the element,
+  which will result in calling `handle_other/2`, which can return value that
+  contains the `:buffer` action.
+
+  It is safe to use blocking reads in the filter. It will cause limiting
+  throughput of the pipeline to the capability of the source.
+
+  The arguments are:
+
+  * name of the pad receiving a demand request,
+  * requested number of units
+  * unit
+  * params
+  * current element's state.
+  """
+  @callback handle_demand(any, non_neg_integer, Membrane.Buffer.Metric.unit_t, any, any) ::
+    Membrane.Element.Base.Mixin.CommonBehaviour.callback_return_t
+
+
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Membrane.Element.Base.Mixin.SourceBehaviour

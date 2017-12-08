@@ -1,10 +1,24 @@
 defmodule Membrane.Element.Base.Filter do
 
+  @doc """
+  Callback that is called when buffer arrives.
+
+  The arguments are:
+    - name of the pad receiving a buffer,
+    - current caps of this pad,
+    - buffer,
+    - current element state.
+  """
+  @callback handle_process(any, list(Membrane.Buffer.t), any, any) ::
+    Membrane.Element.Base.Mixin.CommonBehaviour.callback_return_t
+
+
   defmacro __using__(_) do
     quote location: :keep do
       use Membrane.Element.Base.Mixin.CommonBehaviour
       use Membrane.Element.Base.Mixin.SourceBehaviour
       use Membrane.Element.Base.Mixin.SinkBehaviour
+      @behaviour Membrane.Element.Base.Filter
 
 
       @doc """
