@@ -136,146 +136,8 @@ defmodule Membrane.Element.Manager.Filter do
   use Membrane.Element.Manager.Common
   alias Membrane.Element.Manager.{Action, State, Common}
   alias Membrane.PullBuffer
+  alias Membrane.Event
   use Membrane.Helper
-
-  # Type that defines a single action that may be returned from handle_*
-  # callbacks.
-  @type callback_action_t ::
-    {:buffer, {Membrane.Pad.name_t, Membrane.Buffer.t}} |
-    {:caps, {Membrane.Pad.name_t, Membrane.Caps.t}} |
-    {:event, {Membrane.Pad.name_t, Membrane.Event.t}} |
-    {:demand, Membrane.Pad.name_t} |
-    {:demand, {Membrane.Pad.name_t, pos_integer}} |
-    {:message, Membrane.Message.t}
-
-  # Type that defines list of actions that may be returned from handle_*
-  # callbacks.
-  @type callback_actions_t :: [] | [callback_action_t]
-
-  # Type that defines all valid return values from callbacks.
-  @type callback_return_t ::
-    {:ok, {callback_actions_t, any}} |
-    {:error, {any, any}}
-
-
-  @doc """
-  Callback invoked when Element.Manager is receiving information about new caps for
-  given pad.
-
-  The arguments are:
-
-  * name of the pad receiving a event,
-  * new caps of this pad,
-  """
-  @callback handle_caps(Membrane.Pad.name_t, any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback that is called when buffer should be produced by the source.
-
-  It will be called only for pads in the pull mode, as in their case demand
-  is triggered by the sinks.
-
-  For pads in the push mode, Element.Manager should generate buffers without this
-  callback. Example scenario might be reading a stream over TCP, waiting
-  for incoming packets that will be delivered to the PID of the element,
-  which will result in calling `handle_other/2`, which can return value that
-  contains the `:buffer` action.
-
-  It is safe to use blocking reads in the filter. It will cause limiting
-  throughput of the pipeline to the capability of the source.
-
-  The arguments are:
-
-  * name of the pad receiving a demand request,
-  * current caps of this pad,
-  * current element's state.
-  """
-  @callback handle_demand(Membrane.Pad.name_t, any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback that is called when event arrives.
-
-  It will be called both for events flowing upstream and downstream.
-
-  The arguments are:
-
-  * name of the pad receiving a event,
-  * current caps of this pad,
-  * event,
-  * current Element.Manager state.
-  """
-  @callback handle_event(Membrane.Pad.name_t, Membrane.Event.t, any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback invoked when Element.Manager is receiving message of other kind.
-
-  The arguments are:
-
-  * message,
-  * current element's sate.
-  """
-  @callback handle_other(any, any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback invoked when Element.Manager is supposed to start playing. It will receive
-  Element.Manager state.
-
-  This is moment when you should start generating buffers if there're any
-  pads in the push mode.
-  """
-  @callback handle_play(any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback invoked when Element.Manager is prepared. It will receive the previous
-  Element.Manager state.
-
-  Normally this is the place where you will allocate most of the resources
-  used by the Element.Manager. For example, if your Element.Manager opens a file, this is
-  the place to try to actually open it and return error if that has failed.
-
-  Such resources should be released in `handle_stop/1`.
-  """
-  @callback handle_prepare(:stopped | :playing, any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback that is called when buffer should be processed by the filter.
-
-  It is safe to use blocking writes in the filter. It will cause limiting
-  throughput of the pipeline to the capability of the filter.
-
-  The arguments are:
-
-  * name of the pad receiving a buffer,
-  * current caps of this pad,
-  * buffer,
-  * current element's state.
-  """
-  @callback handle_process(Membrane.Pad.name_t, Membrane.Buffer.t, any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback invoked when Element.Manager is supposed to stop playing. It will receive
-  Element.Manager state.
-
-  Normally this is the place where you will release most of the resources
-  used by the Element.Manager. For example, if your Element.Manager opens a file, this is
-  the place to close it.
-  """
-  @callback handle_stop(any) ::
-    callback_return_t
 
 
   # Private API
@@ -426,7 +288,7 @@ defmodule Membrane.Element.Manager.Filter do
       |> State.update_pad_data(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffers))
     with \
       {:ok, state} <- check_and_handle_process(pad_name, state),
-      {:ok, state} <- check_and_handle_demands(pad_name, state),
+      {:ok, state} <- check_and_handle_demands(state),
     do: {:ok, state}
   end
 
@@ -486,7 +348,18 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
-  defdelegate handle_event(mode, dir, pad_name, event, state), to: Common
+  def handle_event(mode, dir, pad_name, event, state) do
+    with {:ok, state} <- Common.handle_event(mode, dir, pad_name, event, state) do
+      parse_handled_event event, pad_name, state
+    end
+  end
+
+  defp parse_handled_event(%Event{type: :sos}, _pad_name, state) do
+    check_and_handle_demands(state)
+  end
+  defp parse_handled_event(_evt, _pad_name, state) do
+    {:ok, state}
+  end
 
   def handle_pad_added(name, direction, state), do:
     Common.handle_pad_added([name, direction], state)
@@ -500,16 +373,15 @@ defmodule Membrane.Element.Manager.Filter do
     end
   end
 
-  defp check_and_handle_demands(pad_name, state) do
+  defp check_and_handle_demands(state) do
     state
       |> State.get_pads_data(:source)
       |> Helper.Enum.reduce_with(state, fn {name, _data}, st ->
           handle_demand name, 0, st
         end)
       |> or_warn_error("""
-        New buffers arrived to pad #{inspect pad_name}, and Membrane tried
-        to execute handle_demand and then handle_process for each unsupplied
-        demand, but an error happened.
+        Membrane tried to execute handle_demand and then handle_process
+        for each unsupplied demand, but an error happened.
         """, state)
   end
 

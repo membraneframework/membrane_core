@@ -83,7 +83,7 @@ defmodule Membrane.Mixins.Log do
         Router.send_log(
           unquote(level),
           unquote(message),
-          Membrane.Time.monotonic_time,
+          Membrane.Time.pretty_now,
           (unquote(tags) |> Helper.listify) ++ @logger_default_tags
         )
       end

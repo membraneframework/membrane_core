@@ -99,8 +99,8 @@ defmodule Membrane.Log.Logger do
   #
   # It will delegate actual processing to handle_log/5.
   @doc false
-  def handle_info({:membrane_log, level, content, timestamp, tags}, %State{module: module, internal_state: internal_state} = state) do
-    module.handle_log(level, content, timestamp, tags, internal_state)
+  def handle_info({:membrane_log, level, content, time, tags}, %State{module: module, internal_state: internal_state} = state) do
+    module.handle_log(level, content, time, tags, internal_state)
       |> handle_callback(state)
       |> format_callback_response(:noreply)
   end
