@@ -254,6 +254,17 @@ defmodule Membrane.Element.Manager.Common do
       %{sos: false} -> {{:ok, :ignore}, state}
     end
   end
+  #FIXME: solve it using pipeline messages, not events
+  def parse_event(_pad_name, %Event{type: :dump_state}, state) do
+    IO.puts """
+    state dump for #{inspect state.name} at #{inspect self()}
+    state:
+    #{inspect state}
+    info:
+    #{inspect :erlang.process_info self()}
+    """
+    {{:ok, :handle}, state}
+  end
   def parse_event(_pad_name, _event, state), do: {{:ok, :handle}, state}
 
   def exec_event_handler(pad_name, event, %State{module: module} = state) do
