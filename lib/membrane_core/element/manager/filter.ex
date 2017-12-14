@@ -136,7 +136,6 @@ defmodule Membrane.Element.Manager.Filter do
   use Membrane.Element.Manager.Common
   alias Membrane.Element.Manager.{Action, State, Common}
   alias Membrane.PullBuffer
-  alias Membrane.Event
   use Membrane.Helper
 
   # Type that defines a single action that may be returned from handle_*
@@ -423,12 +422,21 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_buffer(:pull, pad_name, buffers, state) do
-    {:ok, state} = state
-      |> State.update_pad_data(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffers))
-    with \
-      {:ok, state} <- check_and_handle_process(pad_name, state),
-      {:ok, state} <- check_and_handle_demands(state),
-    do: {:ok, state}
+    {{:ok, was_empty?}, state} = state
+      |> State.get_update_pad_data(:sink, pad_name, :buffer, fn pb ->
+        was_empty = pb |> PullBuffer.empty?
+        with {:ok, pb} <- pb |> PullBuffer.store(buffers)
+        do {{:ok, was_empty}, pb}
+        end
+      end)
+    if was_empty? do
+      with \
+        {:ok, state} <- check_and_handle_process(pad_name, state),
+        {:ok, state} <- check_and_handle_demands(state),
+      do: {:ok, state}
+    else
+      {:ok, state}
+    end
   end
 
   def handle_process_push(pad_name, buffers, state) do
@@ -487,18 +495,7 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
-  def handle_event(mode, dir, pad_name, event, state) do
-    with {:ok, state} <- Common.handle_event(mode, dir, pad_name, event, state) do
-      parse_handled_event event, pad_name, state
-    end
-  end
-
-  defp parse_handled_event(%Event{type: :sos}, _pad_name, state) do
-    check_and_handle_demands(state)
-  end
-  defp parse_handled_event(_evt, _pad_name, state) do
-    {:ok, state}
-  end
+  defdelegate handle_event(mode, dir, pad_name, event, state), to: Common
 
   def handle_pad_added(name, direction, state), do:
     Common.handle_pad_added([name, direction], state)
