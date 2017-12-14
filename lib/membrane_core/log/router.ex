@@ -23,9 +23,9 @@ defmodule Membrane.Log.Router do
   This functions assumes that passed log has level equal or greater than global
   level.
   """
-  @spec send_log(atom, any, Membane.Time.native_t, atom) :: :ok
-  def send_log(level, message, timestamp, tags \\ []) do
-    Membrane.Log.Router |> send({:membrane_log, level, message, timestamp, tags})
+  @spec send_log(atom, any, String.t, atom) :: :ok
+  def send_log(level, message, time, tags \\ []) do
+    Membrane.Log.Router |> send({:membrane_log, level, message, time, tags})
     :ok
   end
 
@@ -62,7 +62,7 @@ defmodule Membrane.Log.Router do
   # Forwards log to every logger that has low enough level and has at least one
   # common tag with the message
   @doc false
-  def handle_info({:membrane_log, log_level, _message, _timestamp, tags} = log, %{loggers: loggers} = state) do
+  def handle_info({:membrane_log, log_level, _message, _time, tags} = log, %{loggers: loggers} = state) do
       fn {id, pid, _type, _module} ->
         logger = loggers |> Map.get(id)
         if (logger.level |> level_to_val) <= (log_level |> level_to_val) do

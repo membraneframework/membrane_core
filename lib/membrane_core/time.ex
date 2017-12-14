@@ -12,6 +12,7 @@ defmodule Membrane.Time do
   """
 
   @compile {:inline, [
+    pretty_now: 0,
     monotonic_time: 0,
     system_time: 0,
     from_datetime: 1,
@@ -63,6 +64,16 @@ defmodule Membrane.Time do
   @spec is_native_t(any) :: boolean
   defmacro is_native_t(value) do
     quote do is_integer(unquote value) end
+  end
+
+
+  @doc """
+  Returns current time in pretty format (currently iso8601), as string
+  Uses system_time/0 under the hood.
+  """
+  @spec pretty_now :: String.t
+  def pretty_now do
+    system_time() |> to_iso8601()
   end
 
 
