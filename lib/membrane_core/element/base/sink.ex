@@ -1,13 +1,16 @@
 defmodule Membrane.Element.Base.Sink do
 
   @doc """
-  Callback that is called when buffer arrives.
+  Callback that is called when buffer should be written by the sink.
+
+  It is safe to use blocking writes in the sink. It will cause limiting
+  throughput of the pipeline to the capability of the sink.
 
   The arguments are:
-    - name of the pad receiving a buffer,
-    - current caps of this pad,
-    - buffer,
-    - current element state.
+
+  * name of the pad receiving a buffer,
+  * buffer,
+  * current element's state.
   """
   @callback handle_write(any, list(Membrane.Buffer.t), any, any) ::
     Membrane.Element.Base.Mixin.CommonBehaviour.callback_return_t
