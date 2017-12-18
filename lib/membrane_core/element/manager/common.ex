@@ -11,11 +11,12 @@ defmodule Membrane.Element.Manager.Common do
     quote location: :keep do
       use Membrane.Mixins.CallbackHandler
       alias Membrane.Element.Manager.{Action, Common, State}
+      import Membrane.Element.Pad, only: [is_pad_name: 1]
       alias Membrane.Element.Context
       use Membrane.Helper
 
       def handle_action({:event, {pad_name, event}}, _cb, _params, state)
-      when Common.is_pad_name(pad_name) do
+      when is_pad_name(pad_name) do
         Action.send_event(pad_name, event, state)
       end
 
@@ -158,17 +159,6 @@ defmodule Membrane.Element.Manager.Common do
     end
   end
 
-  defmacro is_pad_name(term) do
-    quote do (
-        (unquote term) |> is_atom
-      ) or (
-        (unquote term) |> is_tuple
-        and (unquote term) |> tuple_size == 3
-        and (unquote term) |> elem(0) == :dynamic
-        and (unquote term) |> elem(1) |> is_atom
-        and (unquote term) |> elem(2) |> is_integer
-    ) end
-  end
 
   def available_actions, do: [
       "{:event, {pad_name, event}}",
@@ -288,7 +278,6 @@ defmodule Membrane.Element.Manager.Common do
         other
     end
   end
-
 
   def fill_sink_pull_buffers(state) do
     state
