@@ -17,7 +17,7 @@ defmodule Membrane.Element.Manager.State do
     module: module,
     name: Element.name_t,
     playback_state: Membrane.Mixins.Playback.state_t,
-    pads: %{optional(Element.Manager.pad_name_t) => pid},
+    pads: %{optional(Element.Pad.name_t) => pid},
     message_bus: pid,
   }
 

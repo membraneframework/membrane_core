@@ -127,140 +127,29 @@ defmodule Membrane.Element.Manager.Sink do
   """
 
   use Membrane.Element.Manager.Log
+  import Membrane.Element.Pad
   use Membrane.Element.Manager.Common
   alias Membrane.Element.Manager.{State, Action, Common}
+  import Membrane.Element.Pad, only: [is_pad_name: 1]
   alias Membrane.PullBuffer
   alias Membrane.Helper
   alias Membrane.Buffer
-
-
-  # Type that defines a single action that may be returned from handle_*
-  # callbacks.
-  @type callback_action_t ::
-    {:demand, Membrane.Pad.name_t} |
-    {:demand, {Membrane.Pad.name_t, pos_integer}} |
-    {:event, {Membrane.Pad.name_t, Membrane.Event.t}} |
-    {:message, Membrane.Message.t}
-
-  # Type that defines list of actions that may be returned from handle_*
-  # callbacks.
-  @type callback_actions_t :: [] | [callback_action_t]
-
-  # Type that defines all valid return values from callbacks that are not
-  # triggered by pads so they cannot indicate demand.
-  @type callback_return_t ::
-    {:ok, {callback_actions_t, any}} |
-    {:error, {any, any}}
-
-
-  @doc """
-  Callback invoked when Element.Manager is receiving information about new caps for
-  given pad.
-
-  The arguments are:
-
-  * name of the pad receiving a event,
-  * new caps of this pad,
-  """
-  @callback handle_caps(Membrane.Pad.name_t, any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback that is called when event arrives.
-
-  It will be called for events flowing downstream from previous elements.
-
-  The arguments are:
-
-  * name of the pad receiving a event,
-  * event,
-  * current Element.Manager state.
-  """
-  @callback handle_event(Membrane.Pad.name_t, Membrane.Event.t, any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback invoked when Element.Manager is receiving message of other kind.
-
-  The arguments are:
-
-  * message,
-  * current element's state.
-  """
-  @callback handle_other(any, any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback invoked when Element.Manager is supposed to start playing. It will receive
-  Element.Manager state.
-
-  This is moment when you should start generating buffers if there're any
-  pads in the push mode.
-  """
-  @callback handle_play(any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback invoked when Element.Manager is prepared. It will receive the previous
-  Element.Manager state.
-
-  Normally this is the place where you will allocate most of the resources
-  used by the Element.Manager. For example, if your Element.Manager opens a file, this is
-  the place to try to actually open it and return error if that has failed.
-
-  Such resources should be released in `handle_stop/1`.
-  """
-  @callback handle_prepare(:stopped | :playing, any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback invoked when Element.Manager is supposed to stop playing. It will receive
-  Element.Manager state.
-
-  Normally this is the place where you will release most of the resources
-  used by the Element.Manager. For example, if your Element.Manager opens a file, this is
-  the place to close it.
-  """
-  @callback handle_stop(any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback that is called when buffer should be written by the sink.
-
-  It is safe to use blocking writes in the sink. It will cause limiting
-  throughput of the pipeline to the capability of the sink.
-
-  The arguments are:
-
-  * name of the pad receiving a buffer,
-  * buffer,
-  * current element's state.
-  """
-  @callback handle_write(Membrane.Pad.name_t, Membrane.Buffer.t, any) ::
-    callback_return_t
-
 
   # Private API
 
 
   def handle_action({:demand, pad_name}, cb, params, state)
-  when Common.is_pad_name(pad_name) do
+  when is_pad_name(pad_name) do
     handle_action({:demand, {pad_name, 1}}, cb, params, state)
   end
 
   def handle_action({:demand, {pad_name, size}}, cb, _params, state)
-  when Common.is_pad_name(pad_name) and is_integer(size) and size > 0 do
+  when is_pad_name(pad_name) and is_integer(size) and size > 0 do
     Action.handle_demand pad_name, :self, :normal, size, cb, state
   end
 
   def handle_action({:demand, {pad_name, 0}}, cb, _params, state)
-  when Common.is_pad_name(pad_name) do
+  when is_pad_name(pad_name) do
     debug """
       Ignoring demand of size of 0 requested by callback #{inspect cb}
       on pad #{inspect pad_name}.
@@ -269,7 +158,7 @@ defmodule Membrane.Element.Manager.Sink do
   end
 
   def handle_action({:demand, {pad_name, size}}, cb, _params, state)
-  when Common.is_pad_name(pad_name) and is_integer(size) and size < 0 do
+  when is_pad_name(pad_name) and is_integer(size) and size < 0 do
     warn_error """
       Callback #{inspect cb} requested demand of invalid size of #{size}
       on pad #{inspect pad_name}. Demands' sizes should be positive (0-sized
@@ -278,12 +167,12 @@ defmodule Membrane.Element.Manager.Sink do
   end
 
   def handle_action({:demand, {pad_name, {:set_to, size}}}, cb, _params, state)
-  when Common.is_pad_name(pad_name) and is_integer(size) and size >= 0 do
+  when is_pad_name(pad_name) and is_integer(size) and size >= 0 do
     Action.handle_demand pad_name, :self, :set, size, cb, state
   end
 
   def handle_action({:demand, {pad_name, {:set_to, size}}}, cb, _params, state)
-  when Common.is_pad_name(pad_name) and is_integer(size) and size < 0 do
+  when is_pad_name(pad_name) and is_integer(size) and size < 0 do
     warn_error """
       Callback #{inspect cb} requested to set demand to invalid size of #{size}
       on pad #{inspect pad_name}. Demands sizes cannot be negative
