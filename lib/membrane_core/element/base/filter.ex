@@ -5,8 +5,8 @@ defmodule Membrane.Element.Base.Filter do
 
   The arguments are:
     - name of the pad receiving a buffer,
-    - current caps of this pad,
     - buffer,
+    - context (`Membrane.Element.Context.Process`)
     - current element state.
   """
   @callback handle_process(any, list(Membrane.Buffer.t), Membrane.Element.Context.Process.t, any) ::

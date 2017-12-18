@@ -9,7 +9,8 @@ defmodule Membrane.Element.Base.Sink do
   The arguments are:
 
   * name of the pad receiving a buffer,
-  * buffer,
+  * list of buffers,
+  * context (`Membrane.Element.Context.Write`)
   * current element's state.
   """
   @callback handle_write(any, list(Membrane.Buffer.t), Membrane.Element.Context.Write.t, any) ::

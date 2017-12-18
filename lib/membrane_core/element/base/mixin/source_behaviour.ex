@@ -47,12 +47,12 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
 
 
   @doc """
-  Callback that is called when buffer should be produced by the source.
+  Callback that is called when buffer should be emitted by the source or filter.
 
   It will be called only for pads in the pull mode, as in their case demand
   is triggered by the sinks.
 
-  For pads in the push mode, Element.Manager should generate buffers without this
+  For pads in the push mode, Elemen should generate buffers without this
   callback. Example scenario might be reading a stream over TCP, waiting
   for incoming packets that will be delivered to the PID of the element,
   which will result in calling `handle_other/2`, which can return value that
@@ -66,10 +66,10 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   * name of the pad receiving a demand request,
   * requested number of units
   * unit
-  * params
+  * context (`Membrane.Element.Context.Demand`)
   * current element's state.
   """
-  @callback handle_demand(any, non_neg_integer, Membrane.Buffer.Metric.unit_t, Membrane.Context.Demand.t, Membrane.Element.Manager.State.internal_state_t) ::
+  @callback handle_demand(Membrane.Element.Pad.name_t, non_neg_integer, Membrane.Buffer.Metric.unit_t, Membrane.Context.Demand.t, Membrane.Element.Manager.State.internal_state_t) ::
     Membrane.Element.Base.Mixin.CommonBehaviour.callback_return_t
 
 
