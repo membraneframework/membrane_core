@@ -256,9 +256,9 @@ defmodule Membrane.Element.Manager.Filter do
       true ->
         %{caps: caps, options: %{other_demand_in: demand_in}} =
             state |> State.get_pad_data!(:source, pad_name)
-        params = %{caps: caps}
+        context = %Context.Demand{caps: caps}
         exec_and_handle_callback(
-          :handle_demand, pad_name, [pad_name, total_size, demand_in, params], state)
+          :handle_demand, pad_name, [pad_name, total_size, demand_in, context], state)
             |> or_warn_error("""
               Demand arrived from pad #{inspect pad_name}, but error happened while
               handling it.
@@ -293,8 +293,8 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_process_push(pad_name, buffers, state) do
-    params = %{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
-    exec_and_handle_callback(:handle_process, [pad_name, buffers, params], state)
+    context = %Context.Process{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
+    exec_and_handle_callback(:handle_process, [pad_name, buffers, context], state)
       |> or_warn_error("Error while handling process", state)
   end
 
@@ -317,12 +317,12 @@ defmodule Membrane.Element.Manager.Filter do
 
   defp handle_pullbuffer_output(pad_name, source, {:buffers, b, buf_cnt}, state) do
     {:ok, state} = state |> update_sink_self_demand(pad_name, source, & {:ok, &1 - buf_cnt})
-    params = %{
+    context = %Context.Process{
         caps: state |> State.get_pad_data!(:sink, pad_name, :caps),
         source: source,
         source_caps: state |> State.get_pad_data!(:sink, pad_name, :caps),
       }
-    exec_and_handle_callback :handle_process, [pad_name, b, params], state
+    exec_and_handle_callback :handle_process, [pad_name, b, context], state
   end
   defp handle_pullbuffer_output(pad_name, _src_name, v, state), do:
     Common.handle_pullbuffer_output(pad_name, v, state)
@@ -361,8 +361,12 @@ defmodule Membrane.Element.Manager.Filter do
     {:ok, state}
   end
 
-  def handle_pad_added(name, direction, state), do:
-    Common.handle_pad_added([name, direction], state)
+  def handle_pad_added(name, direction, state) do
+    context = %Context.PadAdded{
+      direction: direction
+    }
+    Common.handle_pad_added([name, context], state)
+  end
 
   defp check_and_handle_process(pad_name, state) do
     demand = state |> State.get_pad_data!(:sink, pad_name, :self_demand)

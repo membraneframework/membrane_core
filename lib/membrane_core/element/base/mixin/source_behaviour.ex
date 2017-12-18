@@ -69,7 +69,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   * params
   * current element's state.
   """
-  @callback handle_demand(any, non_neg_integer, Membrane.Buffer.Metric.unit_t, any, any) ::
+  @callback handle_demand(any, non_neg_integer, Membrane.Buffer.Metric.unit_t, Membrane.Context.Demand.t, Membrane.Element.Manager.State.internal_state_t) ::
     Membrane.Element.Base.Mixin.CommonBehaviour.callback_return_t
 
 

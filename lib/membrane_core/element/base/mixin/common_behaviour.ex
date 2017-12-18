@@ -1,6 +1,7 @@
 defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   alias Membrane.Mixins.Playback
   alias Membrane.Element.Manager.State
+  alias Membrane.Element.Context
 
   # Type that defines a single action that may be returned from handle_*
   # callbacks.
@@ -82,7 +83,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * direction of pad,
   * current internal state.
   """
-  @callback handle_pad_added(any, :sink | :source, State.internal_state_t) :: callback_return_t
+  @callback handle_pad_added(any, Context.PadAdded.t, State.internal_state_t) :: callback_return_t
 
 
   @doc """
@@ -93,7 +94,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * name of the pad,
   * current internal state.
   """
-  @callback handle_pad_removed(any, State.internal_state_t) :: callback_return_t
+  @callback handle_pad_removed(any, Context.PadRemoved.t, State.internal_state_t) :: callback_return_t
 
 
   @doc """
@@ -105,7 +106,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * name of the pad receiving caps,
   * new caps of this pad,
   """
-  @callback handle_caps(any, Membrane.Caps.t, any, State.internal_state_t) :: callback_return_t
+  @callback handle_caps(any, Membrane.Caps.t, Context.Caps.t, State.internal_state_t) :: callback_return_t
 
 
   @doc """
@@ -158,16 +159,16 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
       def handle_other(_message, state), do: {:ok, state}
 
       @doc false
-      def handle_pad_added(_pad, _direction, state), do: {:ok, state}
+      def handle_pad_added(_pad, _context, state), do: {:ok, state}
 
       @doc false
-      def handle_pad_removed(_pad, state), do: {:ok, state}
+      def handle_pad_removed(_pad, _context, state), do: {:ok, state}
 
       @doc false
-      def handle_caps(_pad, _caps, _params, state), do: {:ok, state}
+      def handle_caps(_pad, _caps, _context, state), do: {:ok, state}
 
       @doc false
-      def handle_event(_pad, _event, _params, state), do: {:ok, state}
+      def handle_event(_pad, _event, _context, state), do: {:ok, state}
 
       @doc false
       def handle_shutdown(_state), do: :ok
@@ -180,7 +181,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
         handle_stop: 1,
         handle_other: 2,
         handle_pad_added: 3,
-        handle_pad_removed: 2,
+        handle_pad_removed: 3,
         handle_caps: 4,
         handle_event: 4,
         handle_shutdown: 1,

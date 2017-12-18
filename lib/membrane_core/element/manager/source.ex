@@ -74,6 +74,7 @@ defmodule Membrane.Element.Manager.Source do
   use Membrane.Element.Manager.Log
   alias Membrane.{Element, Event}
   alias Membrane.Element.Manager.{Action, Common, State}
+  alias Membrane.Element.Context
   use Membrane.Element.Manager.Common
 
 
@@ -128,9 +129,9 @@ defmodule Membrane.Element.Manager.Source do
       true ->
         %{caps: caps, options: %{other_demand_in: demand_in}} =
             state |> State.get_pad_data!(:source, pad_name)
-        params = %{caps: caps}
+        context = %Context.Demand{caps: caps}
         exec_and_handle_callback(
-          :handle_demand, [pad_name, size + min(0, stored_size), demand_in, params], state)
+          :handle_demand, [pad_name, size + min(0, stored_size), demand_in, context], state)
             |> or_warn_error("""
               Demand arrived from pad #{inspect pad_name}, but error happened while
               handling it.
@@ -151,7 +152,11 @@ defmodule Membrane.Element.Manager.Source do
   end
   defp do_handle_event(_pad_name, _event, state), do: {:ok, state}
 
-  def handle_pad_added(name, :sink, state), do:
-    Common.handle_pad_added([name], state)
+  def handle_pad_added(name, :source, state) do
+    context = %Context.PadAdded{
+      direction: :source,
+    }
+    Common.handle_pad_added([name, context], state)
+  end
 
 end
