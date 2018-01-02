@@ -53,6 +53,12 @@ defmodule Membrane.Mixins.CallbackHandler do
             |> exec_handle_actions(callback, handler_params, state)
         do
           {:ok, state}
+        else
+          {{:error, reason}, new_internal_state} ->
+            state = state |> Map.put(:internal_state, new_internal_state)
+            {{:error, reason}, state}
+          {:error, reason} ->
+            {{:error, reason}, state}
         end
       end
 
@@ -78,7 +84,7 @@ defmodule Membrane.Mixins.CallbackHandler do
              Callback #{inspect cb} from module #{inspect module} returned an error
              Internal state: #{inspect new_internal_state}
             """, reason, state
-        {{:ok, []}, new_internal_state}
+        {{:error, reason}, new_internal_state}
       end
       def handle_callback_result(result, module, cb, state) do
         callback_handler_warn_error """

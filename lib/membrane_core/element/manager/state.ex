@@ -19,6 +19,7 @@ defmodule Membrane.Element.Manager.State do
     playback_state: Membrane.Mixins.Playback.state_t,
     pads: %{optional(Element.Pad.name_t) => pid},
     message_bus: pid,
+    playback_buffer: PlaybackBuffer.t
   }
 
   defstruct \

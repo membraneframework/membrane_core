@@ -5,6 +5,10 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
   use Membrane.Helper
   use Membrane.Element.Manager.Log
 
+  @type t :: %Membrane.Element.Manager.PlaybackBuffer{
+    q: Qex.t()
+  }
+
   defstruct \
     q: nil
 
