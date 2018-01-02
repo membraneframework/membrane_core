@@ -10,7 +10,7 @@ defmodule Membrane.Support.Element.TrivialSink do
 
 
   def_known_sink_pads %{
-    :sink => {:always, :any}
+    :sink => {:always, {:pull, demand_in: :buffers}, :any}
   }
 
 

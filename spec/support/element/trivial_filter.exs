@@ -8,16 +8,14 @@ defmodule Membrane.Support.Element.TrivialFilter do
 
   use Membrane.Element.Base.Filter
 
-
   def_known_source_pads %{
-    :source => {:always, :any}
+    :source => {:always, :pull, :any}
   }
 
 
   def_known_sink_pads %{
-    :sink => {:always, :any}
+    :sink => {:always, {:pull, demand_in: :buffers}, :any}
   }
-
 
   def handle_init(_options) do
     {:ok, %{}}

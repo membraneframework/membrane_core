@@ -10,7 +10,7 @@ defmodule Membrane.Support.Element.TrivialSource do
 
 
   def_known_source_pads %{
-    :source => {:always, :any}
+    :source => {:always, :pull, :any}
   }
 
 
