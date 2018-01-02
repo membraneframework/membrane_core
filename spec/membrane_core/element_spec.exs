@@ -194,9 +194,10 @@ defmodule Membrane.ElementSpec do
         end
 
         context "and all callbacks have returned {:ok, state()}" do
+          let :new_internal_state, do: %{key: :new_value}
           before do
             allow(module()).to accept(:handle_play, fn(received_internal_state) -> {:ok, received_internal_state} end)
-            allow(module()).to accept(:handle_prepare, fn(_previous_playback_state, received_internal_state) -> {:ok, received_internal_state} end)
+            allow(module()).to accept(:handle_prepare, fn(_previous_playback_state, _received_internal_state) -> {:ok, new_internal_state()} end)
             allow(module()).to accept(:handle_stop, fn(received_internal_state) -> {:ok, received_internal_state} end)
           end
 
@@ -210,17 +211,19 @@ defmodule Membrane.ElementSpec do
             expect(module()).to accepted(:handle_prepare, [:stopped, internal_state()])
           end
 
-          it "should call handle_play(internal_state) callback on element's module" do
+          it "should call handle_play(internal_state) callback on element's module with state updated by handle_prepare" do
             described_module().handle_call(message(), self(), state())
-            expect(module()).to accepted(:handle_play, [internal_state()])
+            expect(module()).to accepted(:handle_play, [new_internal_state()])
           end
 
-          pending "it should call handle_play(internal_state) callback with internal state updated by handle_prepare"
-
-          pending "should return {:reply, :ok, state()} with internal state updated"
+          it "it return {:reply, :ok, state()} with internal state updated by handle_prepare" do
+            {:reply, :ok, %{internal_state: returned_state}} = described_module().handle_call(message(), self(), state()) 
+            expect(returned_state).to eq(new_internal_state())
+          end
 
           it "should return {:reply, :ok, state()} with playback state set to :playing" do
-            expect(described_module().handle_call(message(), self(), state())).to eq {:reply, :ok, %{state() | playback_state: :playing}}
+            {:reply, :ok, %{playback_state: returned_playback_state}} = described_module().handle_call(message(), self(), state()) 
+            expect(returned_playback_state).to eq(:playing)
           end
         end
       end
@@ -232,8 +235,9 @@ defmodule Membrane.ElementSpec do
         pending "and at least one of the callbacks has returned an error"
 
         context "and all callbacks have returned {:ok, state()}" do
+          let :new_internal_state, do: :new_state
           before do
-            allow(module()).to accept(:handle_play, fn(received_internal_state) -> {:ok, received_internal_state} end)
+            allow(module()).to accept(:handle_play, fn(_state) -> {:ok, new_internal_state()} end)
             allow(module()).to accept(:handle_prepare, fn(_previous_playback_state, received_internal_state) -> {:ok, received_internal_state} end)
             allow(module()).to accept(:handle_stop, fn(received_internal_state) -> {:ok, received_internal_state} end)
           end
@@ -253,10 +257,14 @@ defmodule Membrane.ElementSpec do
             expect(module()).to accepted(:handle_play, [internal_state()])
           end
 
-          pending "should return {:reply, :ok, state()} with internal state updated"
+          it "should return {:reply, :ok, state()} with internal state updated" do
+            {:reply, :ok, %{internal_state: returned_state}} = described_module().handle_call(message(), self(), state()) 
+            expect(returned_state).to eq(new_internal_state())
+          end
 
           it "should return {:reply, :ok, state()} with playback state set to :playing" do
-            expect(described_module().handle_call(message(), self(), state())).to eq {:reply, :ok, %{state() | playback_state: :playing}}
+            {:reply, :ok, %{playback_state: new_playback_state}} = described_module().handle_call(message(), self(), state()) 
+            expect(new_playback_state).to eq(:playing)
           end
         end
       end
@@ -301,9 +309,11 @@ defmodule Membrane.ElementSpec do
         pending "and at least one of the callbacks has returned an error"
 
         context "and all callbacks have returned {:ok, state()}" do
+          let :new_internal_state, do: :new_int_state
+          
           before do
             allow(module()).to accept(:handle_play, fn(received_internal_state) -> {:ok, received_internal_state} end)
-            allow(module()).to accept(:handle_prepare, fn(_previous_playback_state, received_internal_state) -> {:ok, received_internal_state} end)
+            allow(module()).to accept(:handle_prepare, fn(_previous_playback_state, _state) -> {:ok, new_internal_state()} end)
             allow(module()).to accept(:handle_stop, fn(received_internal_state) -> {:ok, received_internal_state} end)
           end
 
@@ -322,10 +332,14 @@ defmodule Membrane.ElementSpec do
             expect(module()).to_not accepted(:handle_play)
           end
 
-          pending "should return {:reply, :ok, state()} with internal state updated"
+          it "should return {:reply, :ok, state()} with internal state updated" do
+            {:reply, :ok, %{internal_state: returned_state}} = described_module().handle_call(message(), self(), state()) 
+            expect(returned_state).to eq(new_internal_state())
+          end
 
           it "should return {:reply, :ok, state()} with playback state set to :prepared" do
-            expect(described_module().handle_call(message(), self(), state())).to eq {:reply, :ok, %{state() | playback_state: :prepared}}
+            {:reply, :ok, %{playback_state: new_playback_state}} = described_module().handle_call(message(), self(), state()) 
+            expect(new_playback_state).to eq(:prepared)
           end
         end
       end
@@ -365,9 +379,10 @@ defmodule Membrane.ElementSpec do
         pending "and at least one of the callbacks has returned an error"
 
         context "and all callbacks have returned {:ok, state()}" do
+          let :new_internal_state, do: :new_satete
           before do
             allow(module()).to accept(:handle_play, fn(received_internal_state) -> {:ok, received_internal_state} end)
-            allow(module()).to accept(:handle_prepare, fn(_previous_playback_state, received_internal_state) -> {:ok, received_internal_state} end)
+            allow(module()).to accept(:handle_prepare, fn(_previous_playback_state, _state) -> {:ok, new_internal_state()} end)
             allow(module()).to accept(:handle_stop, fn(received_internal_state) -> {:ok, received_internal_state} end)
           end
 
@@ -386,10 +401,14 @@ defmodule Membrane.ElementSpec do
             expect(module()).to_not accepted(:handle_play)
           end
 
-          pending "should return {:reply, :ok, state()} with internal state updated"
+          it "should return {:reply, :ok, state()} with internal state updated" do
+            {:reply, :ok, %{internal_state: returned_state}} = described_module().handle_call(message(), self(), state()) 
+            expect(returned_state).to eq(new_internal_state())
+          end
 
           it "should return {:reply, :ok, state()} with playback state set to :prepared" do
-            expect(described_module().handle_call(message(), self(), state())).to eq {:reply, :ok, %{state() | playback_state: :prepared}}
+            {:reply, :ok, %{playback_state: returned_playback_state}} = described_module().handle_call(message(), self(), state()) 
+            expect(returned_playback_state).to eq :prepared
           end
         end
       end
@@ -449,10 +468,12 @@ defmodule Membrane.ElementSpec do
         pending "and at least one of the callbacks has returned an error"
 
         context "and all callbacks have returned {:ok, state()}" do
+          let :new_internal_state, do: %{new: :new}
+
           before do
             allow(module()).to accept(:handle_play, fn(received_internal_state) -> {:ok, received_internal_state} end)
             allow(module()).to accept(:handle_prepare, fn(_previous_playback_state, received_internal_state) -> {:ok, received_internal_state} end)
-            allow(module()).to accept(:handle_stop, fn(received_internal_state) -> {:ok, received_internal_state} end)
+            allow(module()).to accept(:handle_stop, fn(_state) -> {:ok, new_internal_state()} end)
           end
 
           it "should call handle_stop callback on element's module" do
@@ -470,10 +491,14 @@ defmodule Membrane.ElementSpec do
             expect(module()).to_not accepted(:handle_play)
           end
 
-          pending "should return {:reply, :ok, state()} with internal state updated"
+          it "should return {:reply, :ok, state()} with internal state updated" do
+            {:reply, :ok, %{internal_state: returned_state}} = described_module().handle_call(message(), self(), state()) 
+            expect(returned_state).to eq(new_internal_state())
+          end
 
           it "should return {:reply, :ok, state()} with playback state set to :stopped" do
-            expect(described_module().handle_call(message(), self(), state())).to eq {:reply, :ok, %{state() | playback_state: :stopped}}
+            {:reply, :ok, %{playback_state: returned_playback_state}} = described_module().handle_call(message(), self(), state()) 
+            expect(returned_playback_state).to eq(:stopped)
           end
         end
       end
