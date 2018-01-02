@@ -116,14 +116,14 @@ defmodule Membrane.TimeSpec do
 
   describe ".native_resolution/0" do
     it "should return 1 second converted into erlang native units" do
-      expect(described_module().native_resolution).to eq :erlang.convert_time_unit(1, :seconds, :native)
+      expect(1 |> described_module().second |> described_module().native_unit).to eq :erlang.convert_time_unit(1, :seconds, :native)
     end
   end
 
 
-  describe ".native_monotonic_time/0" do
+  describe "monotonic_time/0" do
     it "should return integer" do
-      expect(described_module().native_monotonic_time).to be_integer()
+      expect(described_module().monotonic_time).to be_integer()
     end
   end
 end
