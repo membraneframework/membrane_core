@@ -15,11 +15,29 @@ defmodule Membrane.Support.Element.TrivialSink do
 
 
   def handle_init(_options) do
-    {:ok, %{}}
+    {:ok, %{timer: nil}}
+  end
+
+  def handle_prepare(:stopped, state), do: {:ok, state}
+  def handle_prepare(:playing, %{timer: timer}) do
+    if timer do
+      :timer.cancel(timer)
+    end
+    {:ok, %{timer: nil}}
+  end
+
+  def handle_play state do
+    {:ok, timer} = :timer.send_interval(500, :tick)
+    {:ok, %{state | timer: timer}}
+  end
+
+  def handle_other :tick, state do
+    {{:ok, [{:demand, {:sink, 2}}]}, state}
   end
 
 
-  def handle_buffer(_buffer, state) do
+  def handle_write1 :sink, _buf, _, state do
     {:ok, state}
   end
+
 end

@@ -22,7 +22,13 @@ defmodule Membrane.Support.Element.TrivialFilter do
   end
 
 
-  def handle_buffer(_buffer, state) do
-    {:ok, state}
+  def handle_demand :source, size, _, %Membrane.Element.Context.Demand{}, state do
+    {{:ok, [{:demand, {:sink, size}}]}, state}
   end
+
+  def handle_process1 :sink, %Membrane.Buffer{payload: payload}, _, state do
+    {{:ok, [buffer: {:source, %Membrane.Buffer{payload: payload <> <<255>>}}]}, state}
+  end
+
+
 end

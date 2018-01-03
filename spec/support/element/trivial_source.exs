@@ -15,6 +15,11 @@ defmodule Membrane.Support.Element.TrivialSource do
 
 
   def handle_init(_options) do
-    {:ok, %{}}
+    {:ok, %{cnt: 0}}
+  end
+
+  def handle_demand1 :source, _, %{cnt: cnt} = state do
+    buf = %Membrane.Buffer{payload: cnt |> Integer.digits |> IO.iodata_to_binary}
+    {{:ok, [{:buffer, {:source, buf}}]}, %{state | cnt: cnt+1}}
   end
 end
