@@ -3,6 +3,9 @@ defmodule Membrane.Element.Manager.ActionSpec do
   alias Membrane.Element.Manager.State
   alias Membrane.{Buffer, Event, Message}
 
+  pending ".handle_demand/6"
+  pending ".handle_redemand/2"
+
   describe ".send_buffer/4" do
     let :other_name, do: :other_name
     let! :state, do: %{playback_state: playback_state(), name: :elem_name, __struct__: State, pads: %{data: %{source: %{direction: :source, pid: self(), other_name: other_name(), options: [], eos: false, mode: :push}}}}
