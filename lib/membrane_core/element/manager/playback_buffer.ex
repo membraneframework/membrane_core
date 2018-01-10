@@ -53,7 +53,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
     module.manager_module.handle_demand(pad_name, size, state)
   end
 
-  # Callback invoked on buffer coming from the sink pad to the sink
+  # Callback invoked on buffer coming through the sink pad
   defp exec({:membrane_buffer, [buffers, pad_name]}, %State{module: module} = state) do
     {:ok, %{mode: mode}} = state |> State.get_pad_data(:sink, pad_name)
     debug ["
