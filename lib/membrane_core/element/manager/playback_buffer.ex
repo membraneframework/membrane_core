@@ -1,7 +1,7 @@
 defmodule Membrane.Element.Manager.PlaybackBuffer do
   alias __MODULE__
   alias Membrane.Element.Manager.State
-  alias Membrane.Buffer
+  alias Membrane.{Buffer, Event}
   use Membrane.Helper
   use Membrane.Element.Manager.Log
 
@@ -53,7 +53,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
     module.manager_module.handle_demand(pad_name, size, state)
   end
 
-  # Callback invoked on buffer coming from the sink pad to the sink
+  # Callback invoked on buffer coming through the sink pad
   defp exec({:membrane_buffer, [buffers, pad_name]}, %State{module: module} = state) do
     {:ok, %{mode: mode}} = state |> State.get_pad_data(:sink, pad_name)
     debug ["
@@ -67,6 +67,12 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
       {:ok, state} <- messages
         |> Helper.Enum.reduce_with(state, fn msg, st -> msg.(st) end)
     do
+      {:ok, state} = cond do
+        state |> State.get_pad_data!(:sink, pad_name, :sos) |> Kernel.not ->
+          event = %{Event.sos | payload: :auto_sos}
+          module.manager_module.handle_event(mode, :sink, pad_name, event, state)
+        true -> {:ok, state}
+      end
       module.manager_module.handle_buffer(mode, pad_name, buffers, state)
     end
   end

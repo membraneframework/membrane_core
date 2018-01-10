@@ -21,12 +21,14 @@ defmodule Membrane.Event do
     type: type_t,
     payload: payload_t,
     stick_to: :nothing | :buffer,
+    mode: :sync | :async,
   }
 
   defstruct [
     type: nil,
     payload: nil,
-    stick_to: :buffer,
+    stick_to: :nothing,
+    mode: :sync,
   ]
 
 
