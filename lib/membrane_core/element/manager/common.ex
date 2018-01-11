@@ -110,8 +110,7 @@ defmodule Membrane.Element.Manager.Common do
         with {:ok, state} <- state.pads.dynamic_currently_linking
           |> Helper.Enum.reduce_with(state, fn name, st ->
             {:ok, direction} = st |> State.get_pad_data(:any, name, :direction)
-            context = %Context.PadAdded{direction: direction}
-            handle_pad_added name, context, st
+            handle_pad_added name, direction, st
           end)
         do
           static_unlinked = state.pads.info
