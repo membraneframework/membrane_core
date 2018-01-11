@@ -57,6 +57,10 @@ defmodule Membrane.Element.Manager.Common do
         end
       end
 
+      def handle_event(pad_name, event, state) do
+        Common.handle_event(pad_name, event, state)
+      end
+
       def handle_message(message, state) do
         use Membrane.Element.Manager.Log
         exec_and_handle_callback(:handle_other, [message], state)
@@ -130,7 +134,7 @@ defmodule Membrane.Element.Manager.Common do
         with \
           {:ok, state} <- state |> State.get_pad_data(:sink, pad_name) |> (case do
               {:ok, %{eos: false}} ->
-                Common.do_handle_event pad_name, %{Event.eos | payload: :auto_eos, mode: :async}, state
+                Common.handle_event pad_name, %{Event.eos | payload: :auto_eos, mode: :async}, state
               _ -> {:ok, state}
             end),
           {:ok, caps} <- state |> State.get_pad_data(:any, pad_name, :caps),
@@ -202,20 +206,22 @@ defmodule Membrane.Element.Manager.Common do
     end
   end
 
-  def handle_event(:pull, :sink, pad_name, event, state) do
-    cond do
+  def handle_event(pad_name, event, state) do
+    pad_data = state |> State.get_pad_data!(:any, pad_name)
+    if \
       event.mode == :sync &&
-      state |> State.get_pad_data!(:sink, pad_name, :buffer) |> PullBuffer.empty?
-        -> do_handle_event pad_name, event, state
-      true -> state |> State.update_pad_data(
+      pad_data.mode == :pull &&
+      pad_data.direction == :sink &&
+      pad_data.buffer |> PullBuffer.empty? |> Kernel.not
+    do
+      state |> State.update_pad_data(
         :sink, pad_name, :buffer, & &1 |> PullBuffer.store(:event, event))
+    else
+      do_handle_event pad_name, event, state
     end
   end
 
-  def handle_event(_mode, _dir, pad_name, event, state), do:
-    do_handle_event(pad_name, event, state)
-
-  def do_handle_event(pad_name, event, state) do
+  defp do_handle_event(pad_name, event, state) do
     with \
       {{:ok, :handle}, state} <- parse_event(pad_name, event, state),
       {:ok, state} <- exec_event_handler(pad_name, event, state)
