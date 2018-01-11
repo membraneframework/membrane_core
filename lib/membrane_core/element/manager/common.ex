@@ -4,16 +4,19 @@ defmodule Membrane.Element.Manager.Common do
   alias Membrane.Element.Manager.State
   use Membrane.Helper
   alias Membrane.PullBuffer
+  alias Membrane.Element.Context
   alias Membrane.Event
 
   defmacro __using__(_) do
     quote location: :keep do
       use Membrane.Mixins.CallbackHandler
       alias Membrane.Element.Manager.{Action, Common, State}
+      import Membrane.Element.Pad, only: [is_pad_name: 1]
+      alias Membrane.Element.Context
       use Membrane.Helper
 
       def handle_action({:event, {pad_name, event}}, _cb, _params, state)
-      when Common.is_pad_name(pad_name) do
+      when is_pad_name(pad_name) do
         Action.send_event(pad_name, event, state)
       end
 
@@ -125,9 +128,19 @@ defmodule Membrane.Element.Manager.Common do
 
       def handle_unlink(pad_name, state) do
         with \
-          {:ok, state} <- exec_and_handle_callback(:handle_pad_removed, [pad_name], state),
-          {:ok, state} <- state |> State.remove_pad_data(:any, pad_name),
-        do: {:ok, state}
+          {:ok, state} <- state |> State.get_pad_data(:sink, pad_name) |> (case do
+              {:ok, %{eos: false}} ->
+                Common.do_handle_event pad_name, %{Event.eos | payload: :auto_eos, mode: :async}, state
+              _ -> {:ok, state}
+            end),
+          {:ok, caps} <- state |> State.get_pad_data(:any, pad_name, :caps),
+          {:ok, direction} <- state |> State.get_pad_data(:any, pad_name, :direction),
+          context <- %Context.PadRemoved{direction: direction, caps: caps},
+          {:ok, state} <- exec_and_handle_callback(:handle_pad_removed, [pad_name, context], state),
+          {:ok, state} <- (state |> State.remove_pad_data(:any, pad_name))
+        do
+          {:ok, state}
+        end
       end
 
       def unlink(%State{playback_state: :stopped} = state) do
@@ -150,17 +163,6 @@ defmodule Membrane.Element.Manager.Common do
     end
   end
 
-  defmacro is_pad_name(term) do
-    quote do (
-        (unquote term) |> is_atom
-      ) or (
-        (unquote term) |> is_tuple
-        and (unquote term) |> tuple_size == 3
-        and (unquote term) |> elem(0) == :dynamic
-        and (unquote term) |> elem(1) |> is_atom
-        and (unquote term) |> elem(2) |> is_integer
-    ) end
-  end
 
   def available_actions, do: [
       "{:event, {pad_name, event}}",
@@ -182,11 +184,11 @@ defmodule Membrane.Element.Manager.Common do
   def do_handle_caps(pad_name, caps, %State{module: module} = state) do
     %{accepted_caps: accepted_caps, caps: old_caps} =
       state |> State.get_pad_data!(:sink, pad_name)
-    params = %{caps: old_caps}
+    context = %Context.Caps{old_caps: old_caps}
     with \
       :ok <- (if accepted_caps == :any || caps in accepted_caps do :ok else :invalid_caps end),
       {:ok, state} <- module.manager_module.exec_and_handle_callback(
-        :handle_caps, %{caps: caps}, [pad_name, caps, params], state)
+        :handle_caps, %{caps: caps}, [pad_name, caps, context], state)
     do
       state |> State.set_pad_data(:sink, pad_name, :caps, caps)
     else
@@ -202,6 +204,7 @@ defmodule Membrane.Element.Manager.Common do
 
   def handle_event(:pull, :sink, pad_name, event, state) do
     cond do
+      event.mode == :sync &&
       state |> State.get_pad_data!(:sink, pad_name, :buffer) |> PullBuffer.empty?
         -> do_handle_event pad_name, event, state
       true -> state |> State.update_pad_data(
@@ -214,32 +217,59 @@ defmodule Membrane.Element.Manager.Common do
 
   def do_handle_event(pad_name, event, state) do
     with \
-      {:ok, state} <- parse_event(pad_name, event, state),
+      {{:ok, :handle}, state} <- parse_event(pad_name, event, state),
       {:ok, state} <- exec_event_handler(pad_name, event, state)
     do
       {:ok, state}
     else
+      {{:ok, :ignore}, state} ->
+        debug "ignoring event #{inspect event}", state
+        {:ok, state}
       {:error, reason} ->
         warn_error "Error while handling event", {:handle_event, reason}, state
     end
   end
 
-  def parse_event(pad_name, %Event{type: :eos}, state) do
-    with %{direction: :sink, eos: false} <- state |> State.get_pad_data!(:any, pad_name)
+  def parse_event(pad_name, %Event{type: :sos}, state) do
+    with %{direction: :sink, sos: false} <- state |> State.get_pad_data!(:any, pad_name)
     do
-      state |> State.set_pad_data(:sink, pad_name, :eos, true)
+      {:ok, state} = state |> State.set_pad_data(:sink, pad_name, :sos, true)
+      {{:ok, :handle}, state}
+    else
+      %{direction: :source} -> {:error, {:received_sos_through_source, pad_name}}
+      %{sos: true} -> {:error, {:sos_already_received, pad_name}}
+    end
+  end
+
+  def parse_event(pad_name, %Event{type: :eos}, state) do
+    with %{direction: :sink, sos: true, eos: false} <- state |> State.get_pad_data!(:any, pad_name)
+    do
+      {:ok, state} = state |> State.set_pad_data(:sink, pad_name, :eos, true)
+      {{:ok, :handle}, state}
     else
       %{direction: :source} -> {:error, {:received_eos_through_source, pad_name}}
       %{eos: true} -> {:error, {:eos_already_received, pad_name}}
+      %{sos: false} -> {{:ok, :ignore}, state}
     end
   end
-  def parse_event(_pad_name, _event, state), do: {:ok, state}
+  #FIXME: solve it using pipeline messages, not events
+  def parse_event(_pad_name, %Event{type: :dump_state}, state) do
+    IO.puts """
+    state dump for #{inspect state.name} at #{inspect self()}
+    state:
+    #{inspect state}
+    info:
+    #{inspect :erlang.process_info self()}
+    """
+    {{:ok, :handle}, state}
+  end
+  def parse_event(_pad_name, _event, state), do: {{:ok, :handle}, state}
 
   def exec_event_handler(pad_name, event, %State{module: module} = state) do
     %{direction: dir, caps: caps} = state |> State.get_pad_data!(:any, pad_name)
-    params = %{caps: caps}
+    context = %Context.Event{caps: caps}
     module.manager_module.exec_and_handle_callback(
-      :handle_event, %{direction: dir, event: event}, [pad_name, event, params], state)
+      :handle_event, %{direction: dir, event: event}, [pad_name, event, context], state)
   end
 
   def handle_pullbuffer_output(pad_name, {:event, e}, state), do:

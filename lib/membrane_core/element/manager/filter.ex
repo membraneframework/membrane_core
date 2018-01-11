@@ -134,160 +134,21 @@ defmodule Membrane.Element.Manager.Filter do
 
   use Membrane.Element.Manager.Log
   use Membrane.Element.Manager.Common
+  import Membrane.Element.Pad, only: [is_pad_name: 1]
   alias Membrane.Element.Manager.{Action, State, Common}
   alias Membrane.PullBuffer
-  alias Membrane.Event
   use Membrane.Helper
-
-  # Type that defines a single action that may be returned from handle_*
-  # callbacks.
-  @type callback_action_t ::
-    {:buffer, {Membrane.Pad.name_t, Membrane.Buffer.t}} |
-    {:caps, {Membrane.Pad.name_t, Membrane.Caps.t}} |
-    {:event, {Membrane.Pad.name_t, Membrane.Event.t}} |
-    {:demand, Membrane.Pad.name_t} |
-    {:demand, {Membrane.Pad.name_t, pos_integer}} |
-    {:message, Membrane.Message.t}
-
-  # Type that defines list of actions that may be returned from handle_*
-  # callbacks.
-  @type callback_actions_t :: [] | [callback_action_t]
-
-  # Type that defines all valid return values from callbacks.
-  @type callback_return_t ::
-    {:ok, {callback_actions_t, any}} |
-    {:error, {any, any}}
-
-
-  @doc """
-  Callback invoked when Element.Manager is receiving information about new caps for
-  given pad.
-
-  The arguments are:
-
-  * name of the pad receiving a event,
-  * new caps of this pad,
-  """
-  @callback handle_caps(Membrane.Pad.name_t, any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback that is called when buffer should be produced by the source.
-
-  It will be called only for pads in the pull mode, as in their case demand
-  is triggered by the sinks.
-
-  For pads in the push mode, Element.Manager should generate buffers without this
-  callback. Example scenario might be reading a stream over TCP, waiting
-  for incoming packets that will be delivered to the PID of the element,
-  which will result in calling `handle_other/2`, which can return value that
-  contains the `:buffer` action.
-
-  It is safe to use blocking reads in the filter. It will cause limiting
-  throughput of the pipeline to the capability of the source.
-
-  The arguments are:
-
-  * name of the pad receiving a demand request,
-  * current caps of this pad,
-  * current element's state.
-  """
-  @callback handle_demand(Membrane.Pad.name_t, any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback that is called when event arrives.
-
-  It will be called both for events flowing upstream and downstream.
-
-  The arguments are:
-
-  * name of the pad receiving a event,
-  * current caps of this pad,
-  * event,
-  * current Element.Manager state.
-  """
-  @callback handle_event(Membrane.Pad.name_t, Membrane.Event.t, any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback invoked when Element.Manager is receiving message of other kind.
-
-  The arguments are:
-
-  * message,
-  * current element's sate.
-  """
-  @callback handle_other(any, any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback invoked when Element.Manager is supposed to start playing. It will receive
-  Element.Manager state.
-
-  This is moment when you should start generating buffers if there're any
-  pads in the push mode.
-  """
-  @callback handle_play(any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback invoked when Element.Manager is prepared. It will receive the previous
-  Element.Manager state.
-
-  Normally this is the place where you will allocate most of the resources
-  used by the Element.Manager. For example, if your Element.Manager opens a file, this is
-  the place to try to actually open it and return error if that has failed.
-
-  Such resources should be released in `handle_stop/1`.
-  """
-  @callback handle_prepare(:stopped | :playing, any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback that is called when buffer should be processed by the filter.
-
-  It is safe to use blocking writes in the filter. It will cause limiting
-  throughput of the pipeline to the capability of the filter.
-
-  The arguments are:
-
-  * name of the pad receiving a buffer,
-  * current caps of this pad,
-  * buffer,
-  * current element's state.
-  """
-  @callback handle_process(Membrane.Pad.name_t, Membrane.Buffer.t, any) ::
-    callback_return_t
-
-
-  @doc """
-  Callback invoked when Element.Manager is supposed to stop playing. It will receive
-  Element.Manager state.
-
-  Normally this is the place where you will release most of the resources
-  used by the Element.Manager. For example, if your Element.Manager opens a file, this is
-  the place to close it.
-  """
-  @callback handle_stop(any) ::
-    callback_return_t
 
 
   # Private API
 
   def handle_action({:buffer, {pad_name, buffers}}, cb, _params, state)
-  when Common.is_pad_name(pad_name) do
+  when is_pad_name(pad_name) do
     Action.send_buffer pad_name, buffers, cb, state
   end
 
   def handle_action({:caps, {pad_name, caps}}, _cb, _params, state)
-  when Common.is_pad_name(pad_name) do
+  when is_pad_name(pad_name) do
     Action.send_caps(pad_name, caps, state)
   end
 
@@ -318,27 +179,27 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_action({:demand, pad_name}, :handle_demand, src_name, state)
-  when Common.is_pad_name(pad_name) do
+  when is_pad_name(pad_name) do
     handle_action({:demand, {pad_name, 1}}, :handle_demand, src_name, state)
   end
 
   def handle_action({:demand, {pad_name, size}}, :handle_demand, src_name, state)
-  when Common.is_pad_name(pad_name) and is_integer(size) do
+  when is_pad_name(pad_name) and is_integer(size) do
     handle_action({:demand, {pad_name, {:source, src_name}, size}}, :handle_demand, src_name, state)
   end
 
   def handle_action({:demand, {pad_name, {:source, src_name}, size}}, cb, _params, state)
-  when Common.is_pad_name(pad_name) and Common.is_pad_name(src_name) and is_integer(size) and size > 0 do
+  when is_pad_name(pad_name) and is_pad_name(src_name) and is_integer(size) and size > 0 do
     Action.handle_demand(pad_name, {:source, src_name}, :normal, size, cb, state)
   end
 
   def handle_action({:demand, {pad_name, :self, size}}, cb, _params, state)
-  when Common.is_pad_name(pad_name) and is_integer(size) and size > 0 do
+  when is_pad_name(pad_name) and is_integer(size) and size > 0 do
     Action.handle_demand(pad_name, :self, :normal, size, cb, state)
   end
 
   def handle_action({:demand, {pad_name, _src_name, 0}}, cb, _params, state)
-  when Common.is_pad_name(pad_name) do
+  when is_pad_name(pad_name) do
     debug """
       Ignoring demand of size of 0 requested by callback #{inspect cb}
       on pad #{inspect pad_name}.
@@ -347,7 +208,7 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_action({:demand, {pad_name, _src_name, size}}, cb, _params, state)
-  when Common.is_pad_name(pad_name) and is_integer(size) and size < 0 do
+  when is_pad_name(pad_name) and is_integer(size) and size < 0 do
     warn_error """
       Callback #{inspect cb} requested demand of invalid size of #{size}
       on pad #{inspect pad_name}. Demands' sizes should be positive (0-sized
@@ -356,7 +217,7 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_action({:redemand, src_name}, cb, _params, state)
-  when Common.is_pad_name(src_name) and cb not in [:handle_demand, :handle_process] do
+  when is_pad_name(src_name) and cb not in [:handle_demand, :handle_process] do
     Action.handle_redemand(src_name, state)
   end
 
@@ -395,9 +256,9 @@ defmodule Membrane.Element.Manager.Filter do
       true ->
         %{caps: caps, options: %{other_demand_in: demand_in}} =
             state |> State.get_pad_data!(:source, pad_name)
-        params = %{caps: caps}
+        context = %Context.Demand{caps: caps}
         exec_and_handle_callback(
-          :handle_demand, pad_name, [pad_name, total_size, demand_in, params], state)
+          :handle_demand, pad_name, [pad_name, total_size, demand_in, context], state)
             |> or_warn_error("""
               Demand arrived from pad #{inspect pad_name}, but error happened while
               handling it.
@@ -423,17 +284,26 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_buffer(:pull, pad_name, buffers, state) do
-    {:ok, state} = state
-      |> State.update_pad_data(:sink, pad_name, :buffer, & &1 |> PullBuffer.store(buffers))
-    with \
-      {:ok, state} <- check_and_handle_process(pad_name, state),
-      {:ok, state} <- check_and_handle_demands(state),
-    do: {:ok, state}
+    {{:ok, was_empty?}, state} = state
+      |> State.get_update_pad_data(:sink, pad_name, :buffer, fn pb ->
+        was_empty = pb |> PullBuffer.empty?
+        with {:ok, pb} <- pb |> PullBuffer.store(buffers)
+        do {{:ok, was_empty}, pb}
+        end
+      end)
+    if was_empty? do
+      with \
+        {:ok, state} <- check_and_handle_process(pad_name, state),
+        {:ok, state} <- check_and_handle_demands(state),
+      do: {:ok, state}
+    else
+      {:ok, state}
+    end
   end
 
   def handle_process_push(pad_name, buffers, state) do
-    params = %{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
-    exec_and_handle_callback(:handle_process, [pad_name, buffers, params], state)
+    context = %Context.Process{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
+    exec_and_handle_callback(:handle_process, [pad_name, buffers, context], state)
       |> or_warn_error("Error while handling process", state)
   end
 
@@ -456,12 +326,12 @@ defmodule Membrane.Element.Manager.Filter do
 
   defp handle_pullbuffer_output(pad_name, source, {:buffers, b, buf_cnt}, state) do
     {:ok, state} = state |> update_sink_self_demand(pad_name, source, & {:ok, &1 - buf_cnt})
-    params = %{
+    context = %Context.Process{
         caps: state |> State.get_pad_data!(:sink, pad_name, :caps),
         source: source,
         source_caps: state |> State.get_pad_data!(:sink, pad_name, :caps),
       }
-    exec_and_handle_callback :handle_process, [pad_name, b, params], state
+    exec_and_handle_callback :handle_process, [pad_name, b, context], state
   end
   defp handle_pullbuffer_output(pad_name, _src_name, v, state), do:
     Common.handle_pullbuffer_output(pad_name, v, state)
@@ -487,21 +357,14 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
-  def handle_event(mode, dir, pad_name, event, state) do
-    with {:ok, state} <- Common.handle_event(mode, dir, pad_name, event, state) do
-      parse_handled_event event, pad_name, state
-    end
-  end
+  defdelegate handle_event(mode, dir, pad_name, event, state), to: Common
 
-  defp parse_handled_event(%Event{type: :sos}, _pad_name, state) do
-    check_and_handle_demands(state)
+  def handle_pad_added(name, direction, state) do
+    context = %Context.PadAdded{
+      direction: direction
+    }
+    Common.handle_pad_added([name, context], state)
   end
-  defp parse_handled_event(_evt, _pad_name, state) do
-    {:ok, state}
-  end
-
-  def handle_pad_added(name, direction, state), do:
-    Common.handle_pad_added([name, direction], state)
 
   defp check_and_handle_process(pad_name, state) do
     demand = state |> State.get_pad_data!(:sink, pad_name, :self_demand)

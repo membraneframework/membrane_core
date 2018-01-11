@@ -8,7 +8,7 @@ defmodule Membrane.Element do
   use Membrane.Helper
   alias Membrane.Element.Manager.State
   import Membrane.Helper.GenServer
-  alias Membrane.Element.Manager.Pad
+  alias Membrane.Element.Manager.MessageDispatcher
   use GenServer
   use Membrane.Mixins.Playback
 
@@ -163,15 +163,15 @@ defmodule Membrane.Element do
     reason
   end
 
-  defdelegate handle_playback_state(old, new, state), to: Pad
-  defdelegate handle_playback_state_changed(old, new, state), to: Pad
+  defdelegate handle_playback_state(old, new, state), to: MessageDispatcher
+  defdelegate handle_playback_state_changed(old, new, state), to: MessageDispatcher
 
   def handle_call(message, _from, state) do
-    message |> Pad.handle_message(:call, state) |> reply(state)
+    message |> MessageDispatcher.handle_message(:call, state) |> reply(state)
   end
 
   def handle_info(message, state) do
-    message |> Pad.handle_message(:info, state) |> noreply(state)
+    message |> MessageDispatcher.handle_message(:info, state) |> noreply(state)
   end
 
 

@@ -1,4 +1,4 @@
-defmodule Membrane.Element.Manager.Pad do
+defmodule Membrane.Element.Manager.MessageDispatcher do
   alias Membrane.Element.Manager.{State, PlaybackBuffer}
   use Membrane.Helper
   use Membrane.Element.Manager.Log

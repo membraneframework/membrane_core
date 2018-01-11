@@ -17,7 +17,7 @@ defmodule Membrane.Element.Manager.State do
     module: module,
     name: Element.name_t,
     playback_state: Membrane.Mixins.Playback.state_t,
-    pads: %{optional(Element.Manager.pad_name_t) => pid},
+    pads: %{optional(Element.Pad.name_t) => pid},
     message_bus: pid,
   }
 
@@ -96,7 +96,7 @@ defmodule Membrane.Element.Manager.State do
 
   defp init_pad_data(state, name, params, init_f) do
     params = params
-      |> Map.merge(%{name: name, pid: nil, caps: nil, other_name: nil, eos: false})
+      |> Map.merge(%{name: name, pid: nil, caps: nil, other_name: nil, sos: false, eos: false})
       |> init_f.()
     {:ok, state |> Helper.Struct.put_in([:pads, :data, name], params)}
   end

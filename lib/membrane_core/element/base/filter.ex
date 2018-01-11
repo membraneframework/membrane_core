@@ -5,11 +5,11 @@ defmodule Membrane.Element.Base.Filter do
 
   The arguments are:
     - name of the pad receiving a buffer,
-    - current caps of this pad,
     - buffer,
+    - context (`Membrane.Element.Context.Process`)
     - current element state.
   """
-  @callback handle_process(any, list(Membrane.Buffer.t), any, any) ::
+  @callback handle_process(any, list(Membrane.Buffer.t), Membrane.Element.Context.Process.t, any) ::
     Membrane.Element.Base.Mixin.CommonBehaviour.callback_return_t
 
 
@@ -31,22 +31,22 @@ defmodule Membrane.Element.Base.Filter do
       # Default implementations
 
       @doc false
-      def handle_caps(_pad, _caps, _params, state), do: {{:ok, forward: :all}, state}
+      def handle_caps(_pad, _caps, _context, state), do: {{:ok, forward: :all}, state}
 
       @doc false
-      def handle_event(_pad, _event, _params, state), do: {{:ok, forward: :all}, state}
+      def handle_event(_pad, _event, _context, state), do: {{:ok, forward: :all}, state}
 
       @doc false
-      def handle_demand(_pad, _size, _unit, _params, state), do:
+      def handle_demand(_pad, _size, _unit, _context, state), do:
         {{:error, :handle_demand_not_implemented}, state}
 
       @doc false
-      def handle_process1(_pad, _buffer, _params, state), do: {:ok, state}
+      def handle_process1(_pad, _buffer, _context, state), do: {:ok, state}
 
       @doc false
-      def handle_process(pad, buffers, params, state) do
+      def handle_process(pad, buffers, context, state) do
         buffers |> Membrane.Element.Manager.Common.reduce_something1_results(state, fn b, st ->
-            handle_process1 pad, b, params, st
+            handle_process1 pad, b, context, st
           end)
       end
 

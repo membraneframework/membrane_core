@@ -1,6 +1,7 @@
 defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   alias Membrane.Mixins.Playback
   alias Membrane.Element.Manager.State
+  alias Membrane.Element.Context
 
   # Type that defines a single action that may be returned from handle_*
   # callbacks.
@@ -30,11 +31,11 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
 
   @doc """
-  Callback invoked when Element.Manager is prepared. It will receive the previous
-  Element.Manager state.
+  Callback invoked when Element is prepared. It will receive the previous
+  internal state.
 
   Normally this is the place where you will allocate most of the resources
-  used by the Element.Manager. For example, if your Element.Manager opens a file, this is
+  used by the Element. For example, if your Element opens a file, this is
   the place to try to actually open it and return error if that has failed.
 
   Such resources should be released in `handle_stop/1`.
@@ -43,8 +44,8 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
 
   @doc """
-  Callback invoked when Element.Manager is supposed to start playing. It will receive
-  Element.Manager state.
+  Callback invoked when Element is supposed to start playing. It will receive
+  previous internal state.
 
   This is moment when you should start generating buffers if there're any
   pads in the push mode.
@@ -53,18 +54,18 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
 
   @doc """
-  Callback invoked when Element.Manager is supposed to stop playing. It will receive
-  Element.Manager state.
+  Callback invoked when Element is supposed to stop playing. It will receive
+  previous internal state.
 
   Normally this is the place where you will release most of the resources
-  used by the Element.Manager. For example, if your Element.Manager opens a file, this is
+  used by the Element. For example, if your Element opens a file, this is
   the place to close it.
   """
   @callback handle_stop(State.internal_state_t) :: callback_return_t
 
 
   @doc """
-  Callback invoked when Element.Manager is receiving message of other kind.
+  Callback invoked when Element is receiving message of other kind.
 
   The arguments are:
 
@@ -79,10 +80,10 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   The arguments are:
 
   * name of the pad,
-  * direction of pad,
+  * context (`Membane.Element.Context.PadAdded`),
   * current internal state.
   """
-  @callback handle_pad_added(any, :sink | :source, State.internal_state_t) :: callback_return_t
+  @callback handle_pad_added(Membrane.Element.Pad.name_t, Context.PadAdded.t, State.internal_state_t) :: callback_return_t
 
 
   @doc """
@@ -91,9 +92,10 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   The arguments are:
 
   * name of the pad,
+  * context (`Membrane.Element.Context.PadRemoved`)
   * current internal state.
   """
-  @callback handle_pad_removed(any, State.internal_state_t) :: callback_return_t
+  @callback handle_pad_removed(Membrane.Element.Pad.name_t, Context.PadRemoved.t, State.internal_state_t) :: callback_return_t
 
 
   @doc """
@@ -104,22 +106,23 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   * name of the pad receiving caps,
   * new caps of this pad,
+  * context (`Membrane.Element.Context.Caps`)
+  * current internal state
   """
-  @callback handle_caps(any, Membrane.Caps.t, any, State.internal_state_t) :: callback_return_t
+  @callback handle_caps(Membrane.Element.Pad.name_t, Membrane.Caps.t, Context.Caps.t, State.internal_state_t) :: callback_return_t
 
 
   @doc """
   Callback that is called when event arrives.
 
-  It will be called for events flowing upstream from the subsequent elements.
-
   The arguments are:
 
-  * name of the pad receiving a event,
+  * name of the pad receiving an event,
   * event,
+  * context (`Membrane.Element.Context.Event`)
   * current Element.Manager state.
   """
-  @callback handle_event(any, Membrane.Event.type_t, any, State.internal_state_t) :: callback_return_t
+  @callback handle_event(Membrane.Element.Pad.name_t, Membrane.Event.type_t, Context.Event.t, State.internal_state_t) :: callback_return_t
 
 
   @doc """
@@ -158,16 +161,16 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
       def handle_other(_message, state), do: {:ok, state}
 
       @doc false
-      def handle_pad_added(_pad, _direction, state), do: {:ok, state}
+      def handle_pad_added(_pad, _context, state), do: {:ok, state}
 
       @doc false
-      def handle_pad_removed(_pad, state), do: {:ok, state}
+      def handle_pad_removed(_pad, _context, state), do: {:ok, state}
 
       @doc false
-      def handle_caps(_pad, _caps, _params, state), do: {:ok, state}
+      def handle_caps(_pad, _caps, _context, state), do: {:ok, state}
 
       @doc false
-      def handle_event(_pad, _event, _params, state), do: {:ok, state}
+      def handle_event(_pad, _event, _context, state), do: {:ok, state}
 
       @doc false
       def handle_shutdown(_state), do: :ok
@@ -180,7 +183,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
         handle_stop: 1,
         handle_other: 2,
         handle_pad_added: 3,
-        handle_pad_removed: 2,
+        handle_pad_removed: 3,
         handle_caps: 4,
         handle_event: 4,
         handle_shutdown: 1,

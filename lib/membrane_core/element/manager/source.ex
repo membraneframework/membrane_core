@@ -74,6 +74,8 @@ defmodule Membrane.Element.Manager.Source do
   use Membrane.Element.Manager.Log
   alias Membrane.{Element, Event}
   alias Membrane.Element.Manager.{Action, Common, State}
+  import Membrane.Element.Pad, only: [is_pad_name: 1]
+  alias Membrane.Element.Context
   use Membrane.Element.Manager.Common
 
 
@@ -81,17 +83,17 @@ defmodule Membrane.Element.Manager.Source do
   # Private API
 
   def handle_action({:buffer, {pad_name, buffer}}, cb, _params, state)
-  when Common.is_pad_name(pad_name) do
+  when is_pad_name(pad_name) do
     Action.send_buffer(pad_name, buffer, cb, state)
   end
 
   def handle_action({:caps, {pad_name, caps}}, _cb, _params, state)
-  when Common.is_pad_name(pad_name) do
+  when is_pad_name(pad_name) do
     Action.send_caps(pad_name, caps, state)
   end
 
   def handle_action({:redemand, src_name}, cb, _params, state)
-  when Common.is_pad_name(src_name) and cb != :handle_demand do
+  when is_pad_name(src_name) and cb != :handle_demand do
     Action.handle_redemand(src_name, state)
   end
 
@@ -128,9 +130,9 @@ defmodule Membrane.Element.Manager.Source do
       true ->
         %{caps: caps, options: %{other_demand_in: demand_in}} =
             state |> State.get_pad_data!(:source, pad_name)
-        params = %{caps: caps}
+        context = %Context.Demand{caps: caps}
         exec_and_handle_callback(
-          :handle_demand, [pad_name, size + min(0, stored_size), demand_in, params], state)
+          :handle_demand, [pad_name, size + min(0, stored_size), demand_in, context], state)
             |> or_warn_error("""
               Demand arrived from pad #{inspect pad_name}, but error happened while
               handling it.
@@ -151,7 +153,11 @@ defmodule Membrane.Element.Manager.Source do
   end
   defp do_handle_event(_pad_name, _event, state), do: {:ok, state}
 
-  def handle_pad_added(name, :sink, state), do:
-    Common.handle_pad_added([name], state)
+  def handle_pad_added(name, :source, state) do
+    context = %Context.PadAdded{
+      direction: :source,
+    }
+    Common.handle_pad_added([name, context], state)
+  end
 
 end
