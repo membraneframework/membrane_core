@@ -97,7 +97,7 @@ defmodule Membrane.Element.Manager.State do
 
   defp init_pad_data(state, name, params, init_f) do
     params = params
-      |> Map.merge(%{name: name, pid: nil, caps: nil, other_name: nil, eos: false})
+      |> Map.merge(%{name: name, pid: nil, caps: nil, other_name: nil, sos: false, eos: false})
       |> init_f.()
     {:ok, state |> Helper.Struct.put_in([:pads, :data, name], params)}
   end

@@ -18,7 +18,7 @@ defmodule Membrane.Mixfile do
 
 
   def application do
-    [applications: [
+    [extra_applications: [
     ], mod: {Membrane, []}]
   end
 

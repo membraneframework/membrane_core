@@ -129,6 +129,11 @@ defmodule Membrane.Element.Manager.Common do
 
       def handle_unlink(pad_name, state) do
         with \
+          {:ok, state} <- state |> State.get_pad_data(:sink, pad_name) |> (case do
+              {:ok, %{eos: false}} ->
+                Common.do_handle_event pad_name, %{Event.eos | payload: :auto_eos, mode: :async}, state
+              _ -> {:ok, state}
+            end),
           {:ok, caps} <- state |> State.get_pad_data(:any, pad_name, :caps),
           {:ok, direction} <- state |> State.get_pad_data(:any, pad_name, :direction),
           context <- %Context.PadRemoved{direction: direction, caps: caps},
@@ -200,6 +205,7 @@ defmodule Membrane.Element.Manager.Common do
 
   def handle_event(:pull, :sink, pad_name, event, state) do
     cond do
+      event.mode == :sync &&
       state |> State.get_pad_data!(:sink, pad_name, :buffer) |> PullBuffer.empty?
         -> do_handle_event pad_name, event, state
       true -> state |> State.update_pad_data(
@@ -212,26 +218,53 @@ defmodule Membrane.Element.Manager.Common do
 
   def do_handle_event(pad_name, event, state) do
     with \
-      {:ok, state} <- parse_event(pad_name, event, state),
+      {{:ok, :handle}, state} <- parse_event(pad_name, event, state),
       {:ok, state} <- exec_event_handler(pad_name, event, state)
     do
       {:ok, state}
     else
+      {{:ok, :ignore}, state} ->
+        debug "ignoring event #{inspect event}", state
+        {:ok, state}
       {:error, reason} ->
         warn_error "Error while handling event", {:handle_event, reason}, state
     end
   end
 
-  def parse_event(pad_name, %Event{type: :eos}, state) do
-    with %{direction: :sink, eos: false} <- state |> State.get_pad_data!(:any, pad_name)
+  def parse_event(pad_name, %Event{type: :sos}, state) do
+    with %{direction: :sink, sos: false} <- state |> State.get_pad_data!(:any, pad_name)
     do
-      state |> State.set_pad_data(:sink, pad_name, :eos, true)
+      {:ok, state} = state |> State.set_pad_data(:sink, pad_name, :sos, true)
+      {{:ok, :handle}, state}
+    else
+      %{direction: :source} -> {:error, {:received_sos_through_source, pad_name}}
+      %{sos: true} -> {:error, {:sos_already_received, pad_name}}
+    end
+  end
+
+  def parse_event(pad_name, %Event{type: :eos}, state) do
+    with %{direction: :sink, sos: true, eos: false} <- state |> State.get_pad_data!(:any, pad_name)
+    do
+      {:ok, state} = state |> State.set_pad_data(:sink, pad_name, :eos, true)
+      {{:ok, :handle}, state}
     else
       %{direction: :source} -> {:error, {:received_eos_through_source, pad_name}}
       %{eos: true} -> {:error, {:eos_already_received, pad_name}}
+      %{sos: false} -> {{:ok, :ignore}, state}
     end
   end
-  def parse_event(_pad_name, _event, state), do: {:ok, state}
+  #FIXME: solve it using pipeline messages, not events
+  def parse_event(_pad_name, %Event{type: :dump_state}, state) do
+    IO.puts """
+    state dump for #{inspect state.name} at #{inspect self()}
+    state:
+    #{inspect state}
+    info:
+    #{inspect :erlang.process_info self()}
+    """
+    {{:ok, :handle}, state}
+  end
+  def parse_event(_pad_name, _event, state), do: {{:ok, :handle}, state}
 
   def exec_event_handler(pad_name, event, %State{module: module} = state) do
     %{direction: dir, caps: caps} = state |> State.get_pad_data!(:any, pad_name)
@@ -278,6 +311,7 @@ defmodule Membrane.Element.Manager.Common do
         other
     end
   end
+
 
   def fill_sink_pull_buffers(state) do
     state
