@@ -1,10 +1,26 @@
 defmodule Membrane.Element.Base.Sink do
 
+  @doc """
+  Callback that is called when buffer should be written by the sink.
+
+  It is safe to use blocking writes in the sink. It will cause limiting
+  throughput of the pipeline to the capability of the sink.
+
+  The arguments are:
+
+  * name of the pad receiving a buffer,
+  * buffer,
+  * current element's state.
+  """
+  @callback handle_write(any, list(Membrane.Buffer.t), any, any) ::
+    Membrane.Element.Base.Mixin.CommonBehaviour.callback_return_t
+
+
   defmacro __using__(_) do
     quote location: :keep do
       use Membrane.Element.Base.Mixin.CommonBehaviour
       use Membrane.Element.Base.Mixin.SinkBehaviour
-
+      @behaviour Membrane.Element.Base.Sink
 
       @doc """
       Returns module that manages this element.
@@ -14,18 +30,6 @@ defmodule Membrane.Element.Base.Sink do
 
 
       # Default implementations
-
-      @doc false
-      def handle_pad_added(_pad, state), do: {:ok, state}
-
-      @doc false
-      def handle_pad_removed(_pad, state), do: {:ok, state}
-
-      @doc false
-      def handle_caps(_pad, _caps, _params, state), do: {:ok, state}
-
-      @doc false
-      def handle_event(_pad, _event, _params, state), do: {:ok, state}
 
       @doc false
       def handle_write1(_pad, _buffer, _params, state), do: {:ok, state}
@@ -39,10 +43,6 @@ defmodule Membrane.Element.Base.Sink do
 
 
       defoverridable [
-        handle_pad_added: 2,
-        handle_pad_removed: 2,
-        handle_caps: 4,
-        handle_event: 4,
         handle_write: 4,
         handle_write1: 4,
       ]

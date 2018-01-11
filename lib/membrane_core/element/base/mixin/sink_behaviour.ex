@@ -45,7 +45,6 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
     end
   end
 
-
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Membrane.Element.Base.Mixin.SinkBehaviour

@@ -1,10 +1,24 @@
 defmodule Membrane.Element.Base.Filter do
 
+  @doc """
+  Callback that is called when buffer arrives.
+
+  The arguments are:
+    - name of the pad receiving a buffer,
+    - current caps of this pad,
+    - buffer,
+    - current element state.
+  """
+  @callback handle_process(any, list(Membrane.Buffer.t), any, any) ::
+    Membrane.Element.Base.Mixin.CommonBehaviour.callback_return_t
+
+
   defmacro __using__(_) do
     quote location: :keep do
       use Membrane.Element.Base.Mixin.CommonBehaviour
       use Membrane.Element.Base.Mixin.SourceBehaviour
       use Membrane.Element.Base.Mixin.SinkBehaviour
+      @behaviour Membrane.Element.Base.Filter
 
 
       @doc """
@@ -15,12 +29,6 @@ defmodule Membrane.Element.Base.Filter do
 
 
       # Default implementations
-
-      @doc false
-      def handle_pad_added(_pad, _direction, state), do: {:ok, state}
-
-      @doc false
-      def handle_pad_removed(_pad, state), do: {:ok, state}
 
       @doc false
       def handle_caps(_pad, _caps, _params, state), do: {{:ok, forward: :all}, state}
@@ -44,8 +52,6 @@ defmodule Membrane.Element.Base.Filter do
 
 
       defoverridable [
-        handle_pad_added: 3,
-        handle_pad_removed: 2,
         handle_caps: 4,
         handle_event: 4,
         handle_demand: 5,

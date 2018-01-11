@@ -16,12 +16,6 @@ defmodule Membrane.Element.Base.Source do
       # Default implementations
 
       @doc false
-      def handle_pad_added(_pad, state), do: {:ok, state}
-
-      @doc false
-      def handle_pad_removed(_pad, state), do: {:ok, state}
-
-      @doc false
       def handle_demand1(_pad, _params, state), do:
         {{:error, :handle_demand_not_implemented}, state}
 
@@ -34,16 +28,10 @@ defmodule Membrane.Element.Base.Source do
       def handle_demand(_pad, _size, _unit, _params, state), do:
         {{:error, :handle_demand_not_implemented}, state}
 
-      @doc false
-      def handle_event(_pad, _event, _params, state), do: {:ok, state}
-
 
       defoverridable [
-        handle_pad_added: 2,
-        handle_pad_removed: 2,
         handle_demand1: 3,
         handle_demand: 5,
-        handle_event: 4,
       ]
     end
   end
