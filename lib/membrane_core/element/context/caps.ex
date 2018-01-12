@@ -5,10 +5,10 @@ defmodule Membrane.Element.Context.Caps do
   """
 
   @type t :: %Membrane.Element.Context.Caps{
-    old_caps: Membrane.Caps.t | nil
+    caps: Membrane.Caps.t | nil
   }
 
   defstruct \
-    old_caps: nil
+    caps: nil
 
 end

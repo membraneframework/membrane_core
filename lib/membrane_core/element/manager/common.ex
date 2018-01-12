@@ -188,7 +188,7 @@ defmodule Membrane.Element.Manager.Common do
   def do_handle_caps(pad_name, caps, %State{module: module} = state) do
     %{accepted_caps: accepted_caps, caps: old_caps} =
       state |> State.get_pad_data!(:sink, pad_name)
-    context = %Context.Caps{old_caps: old_caps}
+    context = %Context.Caps{caps: old_caps}
     with \
       :ok <- (if accepted_caps == :any || caps in accepted_caps do :ok else :invalid_caps end),
       {:ok, state} <- module.manager_module.exec_and_handle_callback(
