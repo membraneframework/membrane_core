@@ -2,14 +2,14 @@ defmodule Membrane.Pipeline.SpecSpec do
   use ESpec, async: true
 
   describe "when creating new struct" do
-    it "should have children field set to nil" do
+    it "should have children field set to empty list" do
       %Membrane.Pipeline.Spec{children: children} = struct(described_module())
-      expect(children).to be_nil()
+      expect(children).to eq([])
     end
 
-    it "should have links field set to nil" do
+    it "should have links field set to empty list" do
       %Membrane.Pipeline.Spec{links: links} = struct(described_module())
-      expect(links).to be_nil()
+      expect(links).to eq([])
     end
   end
 

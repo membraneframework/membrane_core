@@ -29,7 +29,9 @@ defmodule Membrane.Helper.Enum do
     Enum.reduce_while enum, {:ok, acc}, fn e, {:ok, acc} ->
       with {:ok, new_acc} <- f.(e, acc)
       do {:cont, {:ok, new_acc}}
-      else {:error, reason} -> {:halt, {:error, {reason, acc}}}
+      else
+        {:error, reason} -> {:halt, {:error, {reason, acc}}}
+        {{:error, reason}, state} -> {:halt, {{:error, reason}, state}}
       end
     end
   end

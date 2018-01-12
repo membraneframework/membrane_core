@@ -13,7 +13,7 @@ defmodule Membrane.Element.Manager.Action do
   when playback != :playing and callback != :handle_play
   do
     warn_error "Buffers can only be sent when playing or from handle_play callback",
-      {:cannot_handle_demand, playback_state: playback, callback: callback}, state
+      {:cannot_send_buffer, playback_state: playback, callback: callback}, state
   end
 
   def send_buffer(pad_name, %Buffer{} = buffer, callback, state) do
@@ -43,7 +43,7 @@ defmodule Membrane.Element.Manager.Action do
         Buffers: ", Buffer.print(buffers)
         ], :eos_already_sent, state
       {:error, :unknown_pad} ->
-        handle_unknown_pad pad_name, :sink, :buffer, state
+        handle_unknown_pad pad_name, :source, :buffer, state
       {:error, reason} -> warn_error ["
         Error while sending buffers to pad: #{inspect pad_name}
         Buffers: ", Buffer.print(buffers)

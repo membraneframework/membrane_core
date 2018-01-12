@@ -26,8 +26,6 @@ defmodule Membrane.Element do
   # Type that defines an element name within a pipeline
   @type name_t :: atom | String.t
 
-  @type pad_name_t :: atom | String.t
-
 
   def is_element(module) do
     Code.ensure_loaded?(module) and
@@ -55,7 +53,7 @@ defmodule Membrane.Element do
 
   Works similarily to `GenServer.start/3` and has the same return values.
   """
-  @spec start(module, element_options_t, process_options_t) :: on_start
+  @spec start(module, name_t) :: on_start
   def start(module, name), do:
     start(module, name, module |> Module.concat(Options) |> Helper.Module.struct)
   def start(module, name, element_options, process_options \\ []), do:
@@ -113,13 +111,19 @@ defmodule Membrane.Element do
     GenServer.call(server, {:membrane_set_message_bus, message_bus}, timeout)
   end
 
-  def link(from_pid, to_pid, from_pad, to_pad, params) do
+  def link(pid, pid, _, _, _) when is_pid(pid) do
+    {:error, :loop}
+  end
+
+  def link(from_pid, to_pid, from_pad, to_pad, params) when is_pid(from_pid) and is_pid(to_pid) do
     with \
       :ok <- GenServer.call(from_pid, {:membrane_handle_link, [from_pad, to_pid, to_pad, params]}),
       :ok <- GenServer.call(to_pid, {:membrane_handle_link, [to_pad, from_pid, from_pad, params]})
     do :ok
     end
   end
+
+  def link(_, _, _, _, _), do: {:error, :invalid_element}
 
   def unlink(server, timeout \\ 5000) do
     server |> GenServer.call(:membrane_unlink, timeout)
