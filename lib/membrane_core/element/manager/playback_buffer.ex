@@ -74,7 +74,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
       {:ok, state} = cond do
         state |> State.get_pad_data!(:sink, pad_name, :sos) |> Kernel.not ->
           event = %{Event.sos | payload: :auto_sos}
-          module.manager_module.handle_event(mode, :sink, pad_name, event, state)
+          module.manager_module.handle_event(pad_name, event, state)
         true -> {:ok, state}
       end
       module.manager_module.handle_buffer(mode, pad_name, buffers, state)
@@ -94,12 +94,12 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
   # Callback invoked on incoming event
   defp exec({:membrane_event, [event, pad_name]}, %State{module: module} = state) do
     exec = fn state ->
-      {:ok, %{mode: mode, direction: direction}} = state |> State.get_pad_data(:any, pad_name)
+      {:ok, _data} = state |> State.get_pad_data(:any, pad_name)
       debug """
         Received event on pad #{inspect pad_name}
         Event: #{inspect event}
         """, state
-      module.manager_module.handle_event(mode, direction, pad_name, event, state)
+      module.manager_module.handle_event(pad_name, event, state)
     end
     case event.stick_to do
       :nothing -> exec.(state)

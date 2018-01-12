@@ -357,7 +357,6 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
-  defdelegate handle_event(mode, dir, pad_name, event, state), to: Common
 
   def handle_pad_added(name, direction, state) do
     context = %Context.PadAdded{

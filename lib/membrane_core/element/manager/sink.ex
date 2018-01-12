@@ -252,15 +252,8 @@ defmodule Membrane.Element.Manager.Sink do
 
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
 
-  def handle_event(mode, :sink, pad_name, event, state), do:
-    Common.handle_event(mode, :sink, pad_name, event, state)
-
-  def handle_pad_added(name, :sink, state) do
-    context = %Context.PadAdded{
-      direction: :sink
-    }
-    Common.handle_pad_added([name, context], state)
-  end
+  def handle_pad_added(name, :sink, state), do:
+    Common.handle_pad_added([name], state)
 
   defp check_and_handle_write(pad_name, state) do
     if State.get_pad_data!(state, :sink, pad_name, :self_demand) > 0 do
