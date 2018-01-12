@@ -111,7 +111,7 @@ defmodule Membrane.Element do
     GenServer.call(server, {:membrane_set_message_bus, message_bus}, timeout)
   end
 
-  def link(from_pid, to_pid, _, _, _) when is_pid(from_pid) and is_pid(to_pid) and from_pid == to_pid do
+  def link(pid, pid, _, _, _) when is_pid(pid) do
     {:error, :loop}
   end
 
