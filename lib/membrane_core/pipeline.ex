@@ -390,6 +390,12 @@ defmodule Membrane.Pipeline do
     end |> noreply(state)
   end
 
+  def handle_info([:membrane_element_error, from, reason], state) do
+    with {:ok, _} <- state |> State.get_child(from)
+    do exec_and_handle_callback(:handle_element_error, [reason, from], state)
+    end |> noreply(state)
+  end
+
   @doc false
   # Callback invoked on other incoming message
   def handle_info(message, state) do
@@ -459,6 +465,10 @@ defmodule Membrane.Pipeline do
 
       @doc false
       def handle_message(_message, _from, state), do: {:ok, state}
+
+      @doc false
+      def handle_element_error(reason, from, state), do:
+        {:error, {:element_error, from, reason}}
 
       @doc false
       def handle_other(_message, state), do: {:ok, state}

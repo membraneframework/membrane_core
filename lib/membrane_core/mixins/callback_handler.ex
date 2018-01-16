@@ -79,12 +79,17 @@ defmodule Membrane.Mixins.CallbackHandler do
       do {{:ok, actions}, new_internal_state}
       end
       def handle_callback_result({{:error, reason}, new_internal_state}, module, cb, state) do
-        #TODO: send error to pipeline or do something
         callback_handler_warn_error """
              Callback #{inspect cb} from module #{inspect module} returned an error
              Internal state: #{inspect new_internal_state}
             """, reason, state
         {{:error, reason}, new_internal_state}
+      end
+      def handle_callback_result({:error, reason}, module, cb, state) do
+        callback_handler_warn_error """
+             Callback #{inspect cb} from module #{inspect module} returned a fatal error
+            """, reason, state
+        {:error, reason}
       end
       def handle_callback_result(result, module, cb, state) do
         callback_handler_warn_error """
@@ -93,6 +98,7 @@ defmodule Membrane.Mixins.CallbackHandler do
             {:ok, state}
             {{:ok, actions}, state}
             {{:error, reason}, state}
+            {:error, reason}
 
         where actions is a list that is specific to #{inspect module}
 

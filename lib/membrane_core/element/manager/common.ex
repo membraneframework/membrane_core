@@ -36,6 +36,20 @@ defmodule Membrane.Element.Manager.Common do
         warn_error message, reason, state
       end
 
+      def handle_callback_result({{:error, reason}, new_internal_state}, module, cb, state) do
+        use Membrane.Element.Manager.Log
+        debug """
+            Callback #{inspect cb} from module #{inspect module} returned an error,
+            reason: #{inspect reason}
+            Forwarding it to pipeline, so that it could handle or propagate it.
+          """, state
+        send(state.message_bus, [:membrane_element_error, state.name, reason])
+        super({:ok, new_internal_state}, module, cb, state)
+      end
+      def handle_callback_result(result, module, cb, state) do
+        super(result, module, cb, state)
+      end
+
       def handle_init(module, name, options) do
         with {:ok, state} <- State.new(module, name)
         do do_handle_init module, name, options, state
