@@ -194,9 +194,9 @@ defmodule Membrane.Pipeline do
       :ok <- links |> link_children(state),
       {children_names, children_pids} = children_to_pids |> Enum.unzip,
       :ok <- children_pids |> set_children_message_bus,
-      {:ok, state} <- exec_and_handle_callback(:handle_spec_started, [children_names], state),
-      :ok <- children_pids
-        |> Helper.Enum.each_with(&Element.change_playback_state &1, state.playback_state)
+      {:ok, state} <- exec_and_handle_callback(:handle_spec_started, [children_names], state)
+      #:ok <- children_pids
+        #|> Helper.Enum.each_with(&Element.change_playback_state &1, state.playback_state)
     do
       debug """
         Initializied pipeline spec
@@ -262,7 +262,8 @@ defmodule Membrane.Pipeline do
   # are provided.
   defp start_child(%{name: name, module: module, options: options}) do
     debug "Pipeline: starting child: name: #{inspect name}, module: #{inspect module}"
-    with {:ok, pid} <- Element.start_link(module, name, options)
+    with {:ok, pid} <- Element.start_link(module, name, options),
+         :ok <- Element.set_controlling_pid(pid, self())
     do {:ok, {{name, pid}, {pid, name}}}
     else
       {:error, reason} ->
@@ -356,25 +357,52 @@ defmodule Membrane.Pipeline do
     end
   end
 
+
+
+  @doc false
   def handle_playback_state(old, new, %State{pids_to_children: pids_to_children} = state) do
-    with \
-      :ok <- pids_to_children |> Map.keys |> Helper.Enum.each_with(
-        fn pid -> Element.change_playback_state(pid, new) end),
-      {callback, args} = (case {old, new} do
-          {_, :prepared} -> {:handle_prepare, [old]}
-          {:prepared, :playing} -> {:handle_play, []}
-          {:prepared, :stopped} -> {:handle_stop, []}
-        end),
-      {:ok, state} <- exec_and_handle_callback(callback, args, state)
-    do
-      debug "Pipeline: changed playback state of children to #{inspect new}"
-      {:ok, state}
-    else {:error, reason} -> warn_error """
-      Pipeline: unable to change playback state of children to #{inspect new}
-      """, reason
-      {:error, {:cannot_handle_playback_state, {old, new}, reason}}
+    children = pids_to_children |> Map.keys
+
+    children |> Enum.each(fn child ->
+      Element.change_playback_state(child, new)
+    end)
+
+    pending_pids = children |> Enum.chunk(1) |> Enum.into(%{}, fn [pid] -> {pid, true} end)
+    {:async, %{state | pending_pids: pending_pids}}
+  end
+
+
+  # todo validate messages
+  @doc false
+  def handle_info({:membrane_playback_state_changed, pid, playback_state}, %{target_playback_state: target_playback_state, playback_state: current_state, pending_pids: pending_pids} = state) do
+    {_, new_pending_pids} = pending_pids |> Map.pop(pid)
+    new_state = %{state | pending_pids: new_pending_pids}
+
+    if new_pending_pids == %{} do
+
+      #FIXME handle_callback
+      ## exec and handle callback
+      #{callback, args} = (case {old, new} do
+        #{_, :prepared} -> {:handle_prepare, [old]}
+        #{:prepared, :playing} -> {:handle_play, []}
+        #{:prepared, :stopped} -> {:handle_stop, []}
+      #end)
+
+      #{:ok, state} <- exec_and_handle_callback(callback, args, state)
+
+      continue_playback_change(new_state) |> noreply(nil)
+    else
+      {:ok, %{state | pending_pids: new_pending_pids}} |> noreply(nil)
     end
   end
+
+
+  #FIXME this should be part of playback mixin
+  def handle_info({:membrane_change_playback_state, new_state}, state) do
+        import Membrane.Helper.GenServer
+        IO.puts "changing pipeline state to #{new_state}"
+        do_change_playback_state(new_state, state) |> noreply(state)
+      end
 
   @doc false
   def handle_info([:membrane_pipeline_spec, spec], state) do

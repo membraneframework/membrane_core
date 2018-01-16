@@ -111,6 +111,23 @@ defmodule Membrane.Element do
     GenServer.call(server, {:membrane_set_message_bus, message_bus}, timeout)
   end
 
+
+  @doc """
+  Sends synchronous call to the given element requesting it to set controlling pid.
+
+  It will wait for reply for amount of time passed as second argument
+  (in milliseconds).
+
+  In case of success, returns `:ok`.
+
+  If case of failure, returns `{:error, reason}`
+  """
+  @spec set_controlling_pid(pid, pid, timeout) :: :ok | {:error, any}
+  def set_controlling_pid(server, controlling_pid, timeout \\ 5000) when is_pid(server) do
+    GenServer.call(server, {:membrane_set_controlling_pid, controlling_pid}, timeout)
+  end
+
+
   def link(from_pid, to_pid, _, _, _) when is_pid(from_pid) and is_pid(to_pid) and from_pid == to_pid do
     {:error, :loop}
   end

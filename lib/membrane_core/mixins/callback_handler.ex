@@ -6,9 +6,11 @@ defmodule Membrane.Mixins.CallbackHandler do
   @callback callback_handler_warn_error(String.t, any, any) :: {:error, any}
   @optional_callbacks callback_handler_warn_error: 3
 
+
   defmacro __using__(_args) do
     quote location: :keep do
       alias Membrane.Mixins.CallbackHandler
+      @allowed_result_atoms [:ok, :async]
       @behaviour CallbackHandler
 
       def callback_handler_warn_error(message, reason, _state) do
@@ -45,14 +47,14 @@ defmodule Membrane.Mixins.CallbackHandler do
         internal_state = state |> Map.get(:internal_state)
         module = state |> Map.get(:module)
         with \
-          {{:ok, actions}, new_internal_state} <- module
+          {{result_atom, actions}, new_internal_state} when result_atom in @allowed_result_atoms <- module
             |> apply(callback, args ++ [internal_state])
             |> handle_callback_result(module, callback, state),
           state = state |> Map.put(:internal_state, new_internal_state),
           {:ok, state} <- actions
             |> exec_handle_actions(callback, handler_params, state)
         do
-          {:ok, state}
+          {result_atom, state}
         else
           {{:error, reason}, new_internal_state} ->
             state = state |> Map.put(:internal_state, new_internal_state)
@@ -72,11 +74,15 @@ defmodule Membrane.Mixins.CallbackHandler do
         end
       end
 
-      def handle_callback_result({:ok, new_internal_state}, module, cb, state), do:
-        handle_callback_result({{:ok, []}, new_internal_state}, module, cb, state)
-      def handle_callback_result({{:ok, actions}, new_internal_state}, _module, _cb, _state)
-      when is_list actions
-      do {{:ok, actions}, new_internal_state}
+      def handle_callback_result({result_atom, new_internal_state}, module, cb, state)
+        when result_atom in @allowed_result_atoms do
+        handle_callback_result({{result_atom, []}, new_internal_state}, module, cb, state)
+      end
+      def handle_callback_result({{result_atom, actions}, new_internal_state}, _module, _cb, _state)
+        when is_list actions \
+        and result_atom in @allowed_result_atoms
+        do
+          {{result_atom, actions}, new_internal_state}
       end
       def handle_callback_result({{:error, reason}, new_internal_state}, module, cb, state) do
         #TODO: send error to pipeline or do something

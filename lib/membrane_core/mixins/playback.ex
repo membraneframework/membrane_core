@@ -27,22 +27,24 @@ defmodule Membrane.Mixins.Playback do
       end
 
       def change_playback_state(pid, new_state) do
-        GenServer.call pid, {:membrane_change_playback_state, new_state}
+        send pid, {:membrane_change_playback_state, new_state}
+        :ok
       end
 
       def play(pid), do: change_playback_state(pid, :playing)
       def prepare(pid), do: change_playback_state(pid, :prepared)
       def stop(pid), do: change_playback_state(pid, :stopped)
 
-      def handle_call({:membrane_change_playback_state, new_state}, _from, state) do
+      def handle_info({:membrane_change_playback_state, new_state}, state) do
         import Membrane.Helper.GenServer
-        do_change_playback_state(new_state, state) |> reply(state)
+        do_change_playback_state(new_state, state) |> noreply(state)
       end
 
       def do_change_playback_state(new_state, state) do
         use Membrane.Helper
         alias Membrane.Mixins.Playback
 
+        state = state |> Map.put(:target_playback_state, new_state)
         old_state = state |> Map.get(:playback_state)
 
         with \
@@ -50,14 +52,22 @@ defmodule Membrane.Mixins.Playback do
           {:ok, new_pos} <- Playback.states_pos[new_state] |> Helper.wrap_nil(:invalid_new_playback),
           {:ok, state} <- old_pos..new_pos
             |> Enum.chunk(2, 1)
-            |> Helper.Enum.reduce_with(state, fn [i, j], st ->
-                with \
-                  {:ok, st} <- handle_playback_state(Playback.states[i], Playback.states[j], st),
-                  st = st |> Map.put(:playback_state, Playback.states[j]),
-                  {:ok, st} <- handle_playback_state_changed(Playback.states[i], Playback.states[j], st),
-                  do: {:ok, st}
-              end)
-        do {:ok, state}
+            |> Enum.reduce_while({:ok, state}, fn ([i,j], {:ok, st}) ->
+              case handle_playback_state(Playback.states[i], Playback.states[j], st) do
+                {:async, st} ->
+                  st =  st |> Map.merge(%{pending_playback_state: Playback.states[j]})
+                  {:halt, {:ok, st}}
+                {:ok, st} ->
+                    st = st |> Map.put(:playback_state, Playback.states[j])
+                    if Map.get(state, :controlling_pid, nil) do
+                      send state.controlling_pid, {:membrane_playback_state_changed, self(), Playback.states[j]}
+                    end
+                    {:ok, st} = handle_playback_state_changed(Playback.states[i], Playback.states[j], st)
+                    {:cont, {:ok, st}}
+              end
+            end)
+        do
+          {:ok, state}
         else
           :invalid_old_playback -> playback_warn_error """
             Cannot change playback state, because current_playback_state callback
@@ -74,6 +84,26 @@ defmodule Membrane.Mixins.Playback do
           {:error, reason} -> playback_warn_error """
             Unable to change playback state from #{inspect old_state} to #{inspect new_state}
             """, reason, state
+        end
+      end
+
+      def continue_playback_change(state) do
+        previous_state = state.playback_state
+
+        state = state
+          |> Map.put(:playback_state, state.pending_playback_state)
+          |> Map.put(:pending_playback_state, nil)
+
+        {:ok, state} = handle_playback_state_changed(previous_state, state.playback_state, state)
+
+        if Map.get(state, :controlling_pid, nil) do
+          send state.controlling_pid, {:membrane_playback_state_changed, self(), state.playback_state}
+        end
+
+        if state.playback_state == state.target_playback_state do
+          {:ok, state}
+        else
+          do_change_playback_state(state.target_playback_state, state)
         end
       end
 

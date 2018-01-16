@@ -19,7 +19,8 @@ defmodule Membrane.Element.Manager.State do
     playback_state: Membrane.Mixins.Playback.state_t,
     pads: %{optional(Element.Pad.name_t) => pid},
     message_bus: pid,
-    playback_buffer: PlaybackBuffer.t
+    playback_buffer: PlaybackBuffer.t,
+    controlling_pid: nil,
   }
 
   defstruct \
@@ -29,6 +30,7 @@ defmodule Membrane.Element.Manager.State do
     playback_state: :stopped,
     pads: %{},
     message_bus: nil,
+    controlling_pid: nil,
     playback_buffer: nil
 
 
@@ -53,6 +55,7 @@ defmodule Membrane.Element.Manager.State do
             dynamic_currently_linking: [],
           },
         internal_state: nil,
+        controlling_pid: nil,
         playback_buffer: PlaybackBuffer.new
       }
         ~> (state -> {:ok, state})

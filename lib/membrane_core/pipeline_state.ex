@@ -13,7 +13,9 @@ defmodule Membrane.Pipeline.State do
     module: module,
     children_to_pids: %{required([Membrane.Element.name_t]) => pid},
     pids_to_children: %{required(pid) => Membrane.Element.name_t},
-    children_ids: %{atom => integer}
+    children_ids: %{atom => integer},
+    target_playback_state: Membrane.Mixins.Playback.state_t,
+    pending_pids: list(pid),
   }
 
   defstruct \
@@ -22,6 +24,8 @@ defmodule Membrane.Pipeline.State do
     children_to_pids: %{},
     pids_to_children: %{},
     playback_state: :stopped,
+    target_playback_state: nil,
+    pending_pids: nil,
     children_ids: %{}
 
 

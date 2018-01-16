@@ -39,6 +39,9 @@ defmodule Membrane.Element.Manager.MessageDispatcher do
   defp do_handle_message({:membrane_set_message_bus, args}, :call, state), do:
     forward(:handle_message_bus, args, state)
 
+  defp do_handle_message({:membrane_set_controlling_pid, args}, :call, state), do:
+    forward(:handle_controlling_pid, args, state)
+
   defp do_handle_message({:membrane_handle_link, args}, :call, state), do:
     forward(:handle_link, args, state)
 

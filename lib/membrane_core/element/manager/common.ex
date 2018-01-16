@@ -27,6 +27,9 @@ defmodule Membrane.Element.Manager.Common do
         super(actions |> Membrane.Element.Manager.Common.join_buffers, callback,
           handler_params, state)
 
+      def handle_action(:change_playback_state, _cb, _params, state), do:
+        Membrane.Element.continue_playback_change state
+
       def callback_handler_warn_error(message, reason, state) do
         use Membrane.Element.Manager.Log
         warn_error message, reason, state
@@ -66,16 +69,17 @@ defmodule Membrane.Element.Manager.Common do
       def handle_message_bus(message_bus, state), do:
         {:ok, %{state | message_bus: message_bus}}
 
+      def handle_controlling_pid(pid, state), do:
+        {:ok, %{state | controlling_pid: pid}}
+
+
       def handle_demand_in(demand_in, pad_name, state) do #TODO: move out of using
         {:ok, state} = state |>
           State.set_pad_data(:source, pad_name, [:options, :other_demand_in], demand_in)
       end
 
-      def handle_playback_state(:prepared, :playing, state) do
-        with \
-          {:ok, state} <- exec_and_handle_callback(:handle_play, [], state),
-          do: {:ok, state}
-      end
+      def handle_playback_state(:prepared, :playing, state), do:
+        exec_and_handle_callback :handle_play, [], state
 
       def handle_playback_state(:prepared, :stopped, state), do:
         exec_and_handle_callback :handle_stop, [], state
