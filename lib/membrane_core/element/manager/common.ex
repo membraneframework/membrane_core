@@ -298,26 +298,6 @@ defmodule Membrane.Element.Manager.Common do
       )
   end
 
-  def reduce_something1_results(inputs, state, f) do
-    use Membrane.Mixins.Log
-    with {{:ok, actions}, state} <- inputs
-      |> Membrane.Helper.Enum.map_reduce_with(state,
-        fn i, st -> f.(i, st) ~> (
-            {:ok, state} -> {{:ok, []}, state}
-            {{:ok, actions}, _state} = ok when is_list actions -> ok
-            {{:error, reason}, state} -> {{:error, {:internal, reason}}, state}
-            other -> {:error, {:other, other}}
-        ) end)
-    do {{:ok, actions |> List.flatten}, state}
-    else
-      {{:error, {:internal, reason}}, st} -> {{:error, reason}, st}
-      {{:error, {:other, other}}, _st} ->
-        warn "Reducing results: invalid callback return: #{inspect other}"
-        other
-    end
-  end
-
-
   def fill_sink_pull_buffers(state) do
     state
       |> State.get_pads_data(:sink)
