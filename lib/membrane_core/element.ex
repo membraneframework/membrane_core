@@ -187,6 +187,11 @@ defmodule Membrane.Element do
   defdelegate handle_playback_state(old, new, state), to: MessageDispatcher
   defdelegate handle_playback_state_changed(old, new, state), to: MessageDispatcher
 
+  def change_playback_state(pid, new_state) do
+    send pid, {:membrane_change_playback_state, new_state}
+    :ok
+  end
+
   def handle_call(message, _from, state) do
     message |> MessageDispatcher.handle_message(:call, state) |> reply(state)
   end

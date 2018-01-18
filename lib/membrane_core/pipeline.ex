@@ -5,8 +5,8 @@ defmodule Membrane.Pipeline do
 
   use Membrane.Mixins.Log, tags: :core
   use Membrane.Mixins.CallbackHandler
-  use Membrane.Mixins.Playback
   use GenServer
+  use Membrane.Mixins.Playback
   alias Membrane.Pipeline.{State,Spec}
   alias Membrane.Element
   use Membrane.Helper
@@ -195,8 +195,6 @@ defmodule Membrane.Pipeline do
       {children_names, children_pids} = children_to_pids |> Enum.unzip,
       :ok <- children_pids |> set_children_message_bus,
       {:ok, state} <- exec_and_handle_callback(:handle_spec_started, [children_names], state)
-      #:ok <- children_pids
-        #|> Helper.Enum.each_with(&Element.change_playback_state &1, state.playback_state)
     do
       debug """
         Initializied pipeline spec
@@ -357,6 +355,10 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  def change_playback_state(pid, new_state) do
+    send pid, {:membrane_change_playback_state, new_state}
+    :ok
+  end
 
 
   @doc false
@@ -397,12 +399,11 @@ defmodule Membrane.Pipeline do
     end
   end
 
-
-  #FIXME this should be part of playback mixin
+  @doc false
   def handle_info({:membrane_change_playback_state, new_state}, state) do
-        import Membrane.Helper.GenServer
-        do_change_playback_state(new_state, state) |> noreply(state)
-      end
+    import Membrane.Helper.GenServer
+    resolve_playback_change(new_state, state) |> noreply(state)
+  end
 
   @doc false
   def handle_info([:membrane_pipeline_spec, spec], state) do

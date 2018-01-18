@@ -6,7 +6,6 @@ defmodule Membrane.Mixins.CallbackHandler do
   @callback callback_handler_warn_error(String.t, any, any) :: {:error, any}
   @optional_callbacks callback_handler_warn_error: 3
 
-
   defmacro __using__(_args) do
     quote location: :keep do
       alias Membrane.Mixins.CallbackHandler
@@ -76,9 +75,8 @@ defmodule Membrane.Mixins.CallbackHandler do
       def handle_callback_result({:ok, new_internal_state}, module, cb, state), do:
         handle_callback_result({{:ok, []}, new_internal_state}, module, cb, state)
       def handle_callback_result({{:ok, actions}, new_internal_state}, _module, _cb, _state)
-        when is_list actions \
-        do
-          {{:ok, actions}, new_internal_state}
+      when is_list actions
+      do {{:ok, actions}, new_internal_state}
       end
       def handle_callback_result({{:error, reason}, new_internal_state}, module, cb, state) do
         #TODO: send error to pipeline or do something

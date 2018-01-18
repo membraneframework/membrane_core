@@ -149,7 +149,7 @@ defmodule Membrane.Element.Manager.Source do
   end
 
   defp do_handle_event(_pad_name, %Event{type: :eos}, state) do
-    Element.do_change_playback_state :stopped, state
+    Element.resolve_playback_change :stopped, state
   end
   defp do_handle_event(_pad_name, _event, state), do: {:ok, state}
 

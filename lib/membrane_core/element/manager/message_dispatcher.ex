@@ -25,6 +25,9 @@ defmodule Membrane.Element.Manager.MessageDispatcher do
     state |> PlaybackBuffer.eval
   end
 
+  defp do_handle_message({:membrane_change_playback_state, new_playback_state}, :info, state), do:
+    Membrane.Element.resolve_playback_change(new_playback_state, state)
+
   defp do_handle_message({type, args}, :info, state)
   when type in [:membrane_demand, :membrane_buffer, :membrane_caps, :membrane_event]
   do {type, args} |> PlaybackBuffer.store(state)
