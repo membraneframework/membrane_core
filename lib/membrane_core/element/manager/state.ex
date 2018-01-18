@@ -21,6 +21,7 @@ defmodule Membrane.Element.Manager.State do
     message_bus: pid,
     playback_buffer: PlaybackBuffer.t,
     controlling_pid: nil,
+    async_state_change: boolean(),
   }
 
   defstruct \
@@ -31,6 +32,7 @@ defmodule Membrane.Element.Manager.State do
     pads: %{},
     message_bus: nil,
     controlling_pid: nil,
+    async_state_change: false,
     playback_buffer: nil
 
 

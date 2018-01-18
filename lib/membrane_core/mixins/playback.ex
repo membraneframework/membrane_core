@@ -52,20 +52,23 @@ defmodule Membrane.Mixins.Playback do
           {:ok, new_pos} <- Playback.states_pos[new_state] |> Helper.wrap_nil(:invalid_new_playback),
           {:ok, state} <- old_pos..new_pos
             |> Enum.chunk(2, 1)
-            |> Enum.reduce_while({:ok, state}, fn ([i,j], {:ok, st}) ->
-              case handle_playback_state(Playback.states[i], Playback.states[j], st) do
-                {:async, st} ->
-                  st =  st |> Map.merge(%{pending_playback_state: Playback.states[j]})
-                  {:halt, {:ok, st}}
-                {:ok, st} ->
-                    st = st |> Map.put(:playback_state, Playback.states[j])
-                    if Map.get(state, :controlling_pid, nil) do
-                      send state.controlling_pid, {:membrane_playback_state_changed, self(), Playback.states[j]}
-                    end
-                    {:ok, st} = handle_playback_state_changed(Playback.states[i], Playback.states[j], st)
-                    {:cont, {:ok, st}}
-              end
-            end)
+            |> Enum.reduce_while({:ok, state}, fn [i, j], {:ok, st} ->
+                with \
+                  {:ok, st} <- handle_playback_state(Playback.states[i], Playback.states[j], st),
+                  {:sync, st} <- get_state_change_mode(st),
+                  st = st |> Map.put(:playback_state, Playback.states[j]),
+                  _ <- if(st.controlling_pid, do: send(st.controlling_pid, {:membrane_playback_state_changed, self(), Playback.states[j]})),
+                  {:ok, st} <- handle_playback_state_changed(Playback.states[i], Playback.states[j], st)
+                do
+                  {:cont, {:ok, st}}
+                else
+                  {:async, st} ->
+                    st =  st |> Map.merge(%{pending_playback_state: Playback.states[j]})
+                    {:halt, {:ok, st}}
+                  err ->
+                    {:halt, err}
+                end
+              end)
         do
           {:ok, state}
         else
@@ -87,10 +90,14 @@ defmodule Membrane.Mixins.Playback do
         end
       end
 
+      defp get_state_change_mode(%{async_state_change: true} = state), do: {:async, state}
+      defp get_state_change_mode(state), do: {:sync, state}
+
       def continue_playback_change(state) do
         previous_state = state.playback_state
 
         state = state
+          |> Map.put(:async_state_change, false)
           |> Map.put(:playback_state, state.pending_playback_state)
           |> Map.put(:pending_playback_state, nil)
 

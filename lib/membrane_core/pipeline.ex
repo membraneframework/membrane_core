@@ -368,7 +368,7 @@ defmodule Membrane.Pipeline do
     end)
 
     pending_pids = children |> Enum.chunk(1) |> Enum.into(%{}, fn [pid] -> {pid, true} end)
-    {:async, %{state | pending_pids: pending_pids}}
+    {:ok, %{state | pending_pids: pending_pids, async_state_change: true}}
   end
 
 
@@ -416,13 +416,6 @@ defmodule Membrane.Pipeline do
     with {:ok, _} <- state |> State.get_child(from)
     do exec_and_handle_callback(:handle_message, [message, from], state)
     end |> noreply(state)
-  end
-
-  @doc false
-  # Callback invoked on other incoming message
-  def handle_info(message, state) do
-    exec_and_handle_callback(:handle_other, [message], state)
-      |> noreply(state)
   end
 
   def handle_action({:forward, {elementname, message}}, _cb, _params, state) do

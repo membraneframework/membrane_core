@@ -27,6 +27,9 @@ defmodule Membrane.Element.Manager.Common do
         super(actions |> Membrane.Element.Manager.Common.join_buffers, callback,
           handler_params, state)
 
+      def handle_action(:async, _cb, _params, state), do:
+        {:ok, %{state | async_state_change: true}}
+
       def handle_action(:change_playback_state, _cb, _params, state), do:
         Membrane.Element.continue_playback_change state
 

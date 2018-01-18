@@ -14,12 +14,14 @@ defmodule Membrane.Pipeline.State do
     children_to_pids: %{required([Membrane.Element.name_t]) => pid},
     pids_to_children: %{required(pid) => Membrane.Element.name_t},
     children_ids: %{atom => integer},
+    async_state_change: boolean(),
     target_playback_state: Membrane.Mixins.Playback.state_t,
     pending_pids: list(pid),
   }
 
   defstruct \
     internal_state: nil,
+    async_state_change: false,
     module: nil,
     children_to_pids: %{},
     pids_to_children: %{},
