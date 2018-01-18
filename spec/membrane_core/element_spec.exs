@@ -145,14 +145,14 @@ defmodule Membrane.ElementSpec do
             expect(module()).to_not accepted(:handle_play)
           end
 
-          it "should return :reply response" do
+          it "should return :stop response" do
             {response, _info, _state} = described_module().handle_info(message(), state())
             expect(response).to eq :stop
           end
 
           it "should return {:error, reason} as a reply info" do
             {_response, info, _state} = described_module().handle_info(message(), state())
-            expect(info).to eq {:error, reason()}
+            expect(info).to be_error_result()
           end
 
           it "should return {:reply, {:error, reason}, state()} with internal state updated" do

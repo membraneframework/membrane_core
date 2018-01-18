@@ -140,24 +140,7 @@ defmodule Membrane.Element.Manager.Source do
     end
   end
 
-
-  def handle_event(mode, :source, pad_name, event, state) do
-    with \
-      {:ok, state} <- Common.handle_event(mode, :source, pad_name, event, state)
-    do do_handle_event pad_name, event, state
-    end
-  end
-
-  defp do_handle_event(_pad_name, %Event{type: :eos}, state) do
-    Element.resolve_playback_change :stopped, state
-  end
-  defp do_handle_event(_pad_name, _event, state), do: {:ok, state}
-
-  def handle_pad_added(name, :source, state) do
-    context = %Context.PadAdded{
-      direction: :source,
-    }
-    Common.handle_pad_added([name, context], state)
-  end
+  def handle_pad_added(name, :sink, state), do:
+    Common.handle_pad_added([name], state)
 
 end
