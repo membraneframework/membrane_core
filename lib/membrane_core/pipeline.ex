@@ -360,7 +360,7 @@ defmodule Membrane.Pipeline do
 
 
   @doc false
-  def handle_playback_state(old, new, %State{pids_to_children: pids_to_children} = state) do
+  def handle_playback_state(_old, new, %State{pids_to_children: pids_to_children} = state) do
     children = pids_to_children |> Map.keys
 
     children |> Enum.each(fn child ->
@@ -374,23 +374,24 @@ defmodule Membrane.Pipeline do
 
   # todo validate messages
   @doc false
-  def handle_info({:membrane_playback_state_changed, pid, playback_state}, %{target_playback_state: target_playback_state, playback_state: current_state, pending_pids: pending_pids} = state) do
+  def handle_info({:membrane_playback_state_changed, pid, new_playback_state}, %{playback_state: current_state, pending_pids: pending_pids} = state) do
     {_, new_pending_pids} = pending_pids |> Map.pop(pid)
     new_state = %{state | pending_pids: new_pending_pids}
 
     if new_pending_pids == %{} do
+      # exec and handle callback
+      {callback, args} = (case {current_state, new_playback_state} do
+        {_, :prepared} -> {:handle_prepare, [current_state]}
+        {:prepared, :playing} -> {:handle_play, []}
+        {:prepared, :stopped} -> {:handle_stop, []}
+      end)
 
-      #FIXME handle_callback
-      ## exec and handle callback
-      #{callback, args} = (case {old, new} do
-        #{_, :prepared} -> {:handle_prepare, [old]}
-        #{:prepared, :playing} -> {:handle_play, []}
-        #{:prepared, :stopped} -> {:handle_stop, []}
-      #end)
-
-      #{:ok, state} <- exec_and_handle_callback(callback, args, state)
-
-      continue_playback_change(new_state) |> noreply(nil)
+      case exec_and_handle_callback(callback, args, new_state) do
+        {:ok, new_state} ->
+          continue_playback_change(new_state) |> noreply(nil)
+        error ->
+          error
+      end
     else
       {:ok, %{state | pending_pids: new_pending_pids}} |> noreply(nil)
     end
@@ -400,7 +401,6 @@ defmodule Membrane.Pipeline do
   #FIXME this should be part of playback mixin
   def handle_info({:membrane_change_playback_state, new_state}, state) do
         import Membrane.Helper.GenServer
-        IO.puts "changing pipeline state to #{new_state}"
         do_change_playback_state(new_state, state) |> noreply(state)
       end
 
@@ -416,6 +416,13 @@ defmodule Membrane.Pipeline do
     with {:ok, _} <- state |> State.get_child(from)
     do exec_and_handle_callback(:handle_message, [message, from], state)
     end |> noreply(state)
+  end
+
+  @doc false
+  # Callback invoked on other incoming message
+  def handle_info(message, state) do
+    exec_and_handle_callback(:handle_other, [message], state)
+      |> noreply(state)
   end
 
   def handle_action({:forward, {elementname, message}}, _cb, _params, state) do

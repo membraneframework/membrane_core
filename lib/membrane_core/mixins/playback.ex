@@ -40,6 +40,8 @@ defmodule Membrane.Mixins.Playback do
         do_change_playback_state(new_state, state) |> noreply(state)
       end
 
+      def do_change_playback_state(new_state, %{playback_state: new_state} = state), do:
+        {:ok, state}
       def do_change_playback_state(new_state, state) do
         use Membrane.Helper
         alias Membrane.Mixins.Playback
