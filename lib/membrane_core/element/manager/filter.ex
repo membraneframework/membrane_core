@@ -303,7 +303,7 @@ defmodule Membrane.Element.Manager.Filter do
 
   def handle_process_push(pad_name, buffers, state) do
     context = %Context.Process{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
-    exec_and_handle_callback(:handle_process, [pad_name, buffers, context], state)
+    exec_handle_process(pad_name, buffers, context, state)
       |> or_warn_error("Error while handling process", state)
   end
 
@@ -331,10 +331,18 @@ defmodule Membrane.Element.Manager.Filter do
         source: source,
         source_caps: state |> State.get_pad_data!(:sink, pad_name, :caps),
       }
-    exec_and_handle_callback :handle_process, [pad_name, b, context], state
+    exec_handle_process(pad_name, b, context, state)
   end
   defp handle_pullbuffer_output(pad_name, _src_name, v, state), do:
     Common.handle_pullbuffer_output(pad_name, v, state)
+
+  defp exec_handle_process(pad_name, buffers, context, state) do
+    exec_and_handle_splittable_callback(
+      :handle_process, :handle_process1,
+      [pad_name, buffers, context],
+      fn -> buffers |> Enum.map(& [pad_name, &1, context]) end,
+      state)
+  end
 
   defp send_dumb_demand_if_demand_positive_and_pullbuffer_nonempty(
     _pad_name, :self, _state), do: :ok

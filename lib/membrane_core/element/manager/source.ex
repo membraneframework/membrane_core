@@ -130,13 +130,27 @@ defmodule Membrane.Element.Manager.Source do
         %{caps: caps, options: %{other_demand_in: demand_in}} =
             state |> State.get_pad_data!(:source, pad_name)
         context = %Context.Demand{caps: caps}
-        exec_and_handle_callback(
-          :handle_demand, [pad_name, size + min(0, stored_size), demand_in, context], state)
-            |> or_warn_error("""
-              Demand arrived from pad #{inspect pad_name}, but error happened while
-              handling it.
-              """, state)
+        exec_handle_demand(pad_name, size + min(0, stored_size), demand_in, context, state)
+          |> or_warn_error("""
+            Demand arrived from pad #{inspect pad_name}, but error happened while
+            handling it.
+            """, state)
     end
+  end
+
+  defp exec_handle_demand(pad_name, size, demand_in = :buffers, context, state) do
+    exec_and_handle_splittable_callback(
+      :handle_demand, :handle_demand1,
+      [pad_name, size, demand_in, context],
+      fn -> Stream.repeatedly(fn -> nil end)
+        |> Stream.take(size)
+        |> Enum.map(fn _ -> [pad_name, context] end)
+      end,
+      state)
+  end
+  defp exec_handle_demand(pad_name, size, demand_in, context, state) do
+    exec_and_handle_callback(
+      :handle_demand, [pad_name, size, demand_in, context], state)
   end
 
   def handle_pad_added(name, :sink, state), do:

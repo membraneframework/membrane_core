@@ -7,6 +7,7 @@ defmodule Membrane.Mixins.CallbackHandler do
   @optional_callbacks callback_handler_warn_error: 3
 
   defmacro __using__(_args) do
+    use Membrane.Helper
     quote location: :keep do
       alias Membrane.Mixins.CallbackHandler
       @behaviour CallbackHandler
@@ -42,11 +43,20 @@ defmodule Membrane.Mixins.CallbackHandler do
       end
 
       def exec_and_handle_callback(callback, handler_params \\ nil, args, state) do
+        result = callback |> exec_callback(args, state)
+        result |> handle_callback(callback, handler_params, state)
+      end
+
+      defp exec_callback(callback, args, state) do
         internal_state = state |> Map.get(:internal_state)
         module = state |> Map.get(:module)
+        module |> apply(callback, args ++ [internal_state])
+      end
+
+      defp handle_callback(result, callback, handler_params, state) do
+        module = state |> Map.get(:module)
         with \
-          {{:ok, actions}, new_internal_state} <- module
-            |> apply(callback, args ++ [internal_state])
+          {{:ok, actions}, new_internal_state} <- result
             |> handle_callback_result(module, callback, state),
           state = state |> Map.put(:internal_state, new_internal_state),
           {:ok, state} <- actions
@@ -59,6 +69,17 @@ defmodule Membrane.Mixins.CallbackHandler do
             {{:error, reason}, state}
           {:error, reason} ->
             {{:error, reason}, state}
+        end
+      end
+
+      def exec_and_handle_splittable_callback(callback, single_callback, handler_params \\ nil, args, split_gen_f, state) do
+        case callback |> exec_callback(args, state) do
+          :split ->
+            split_gen_f.() |> Helper.Enum.reduce_with(state, fn args, state ->
+              exec_and_handle_callback(single_callback, handler_params, args, state)
+            end)
+          result ->
+            result |> handle_callback(callback, handler_params, state)
         end
       end
 

@@ -41,14 +41,11 @@ defmodule Membrane.Element.Base.Filter do
         {{:error, :handle_demand_not_implemented}, state}
 
       @doc false
-      def handle_process1(_pad, _buffer, _context, state), do: {:ok, state}
+      def handle_process1(_pad, _buffer, _context, state), do:
+        {{:error, :handle_process_not_implemented}, state}
 
       @doc false
-      def handle_process(pad, buffers, context, state) do
-        buffers |> Membrane.Element.Manager.Common.reduce_something1_results(state, fn b, st ->
-            handle_process1 pad, b, context, st
-          end)
-      end
+      def handle_process(pad, buffers, context, state), do: :split
 
 
       defoverridable [
