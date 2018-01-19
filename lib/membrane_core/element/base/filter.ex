@@ -45,7 +45,10 @@ defmodule Membrane.Element.Base.Filter do
         {{:error, :handle_process_not_implemented}, state}
 
       @doc false
-      def handle_process(pad, buffers, context, state), do: :split
+      def handle_process(pad, buffers, context, state) do
+        args_list = buffers |> Enum.map(& [pad, &1, context])
+        {{:ok, split: {:handle_process1, args_list}}, state}
+      end
 
 
       defoverridable [

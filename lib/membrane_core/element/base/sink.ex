@@ -37,7 +37,10 @@ defmodule Membrane.Element.Base.Sink do
         {{:error, :handle_write_not_implemented}, state}
 
       @doc false
-      def handle_write(pad, buffers, context, state), do: :split
+      def handle_write(pad, buffers, context, state) do
+        args_list = buffers |> Enum.map(& [pad, &1, context])
+        {{:ok, split: {:handle_write1, args_list}}, state}
+      end
 
 
       defoverridable [

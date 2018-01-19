@@ -215,9 +215,9 @@ defmodule Membrane.Element.Manager.Sink do
         "], state)
   end
 
-  def handle_write(:push, pad_name, buffer, state) do
+  def handle_write(:push, pad_name, buffers, state) do
     context = %Context.Write{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
-    exec_handle_write(pad_name, buffer, context, state)
+    exec_and_handle_callback(:handle_write, [pad_name, buffers, context], state)
       |> or_warn_error("Error while handling write", state)
   end
 
@@ -240,23 +240,15 @@ defmodule Membrane.Element.Manager.Sink do
     end
   end
 
-  defp handle_pullbuffer_output(pad_name, {:buffers, b, buf_cnt}, state) do
+  defp handle_pullbuffer_output(pad_name, {:buffers, buffers, buf_cnt}, state) do
     {:ok, state} = state |>
       State.update_pad_data(:sink, pad_name, :self_demand, & {:ok, &1 - buf_cnt})
-    params = %Context.Write{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
-    debug "Executing handle_write with buffers #{inspect b}", state
-    exec_handle_write(pad_name, b, params, state)
+    context = %Context.Write{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
+    debug "Executing handle_write with buffers #{inspect buffers}", state
+    exec_and_handle_callback(:handle_write, [pad_name, buffers, context], state)
   end
   defp handle_pullbuffer_output(pad_name, v, state), do:
     Common.handle_pullbuffer_output(pad_name, v, state)
-
-  defp exec_handle_write(pad_name, buffers, context, state) do
-    exec_and_handle_splittable_callback(
-      :handle_write, :handle_write1,
-      [pad_name, buffers, context],
-      fn -> buffers |> Enum.map(& [pad_name, &1, context]) end,
-      state)
-  end
 
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
 
