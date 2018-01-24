@@ -21,6 +21,8 @@ defmodule Membrane.Element.Manager.State do
     message_bus: pid,
     playback_buffer: PlaybackBuffer.t,
     controlling_pid: nil,
+    target_playback_state: Membrane.Mixins.Playback.state_t,
+    pending_playback_state: Membrane.Mixins.Playback.state_t,
     async_state_change: boolean(),
   }
 
@@ -33,6 +35,8 @@ defmodule Membrane.Element.Manager.State do
     message_bus: nil,
     controlling_pid: nil,
     async_state_change: false,
+    target_playback_state: nil,
+    pending_playback_state: nil,
     playback_buffer: nil
 
 

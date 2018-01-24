@@ -194,7 +194,9 @@ defmodule Membrane.Pipeline do
       :ok <- links |> link_children(state),
       {children_names, children_pids} = children_to_pids |> Enum.unzip,
       :ok <- children_pids |> set_children_message_bus,
-      {:ok, state} <- exec_and_handle_callback(:handle_spec_started, [children_names], state)
+      {:ok, state} <- exec_and_handle_callback(:handle_spec_started, [children_names], state),
+      :ok <- children_pids
+        |> Helper.Enum.each_with(&Element.change_playback_state &1, state.playback_state)
     do
       debug """
         Initializied pipeline spec
@@ -374,13 +376,24 @@ defmodule Membrane.Pipeline do
   end
 
 
-  # todo validate messages
+  @doc false
+  def handle_info({:membrane_playback_state_changed, _pid, _new_playback_state}, %{pending_pids: pending_pids} = state)
+  when pending_pids == %{} do
+    {:ok, state} |> noreply(nil)
+  end
+
+  @doc false
+  def handle_info({:membrane_playback_state_changed, _pid, new_playback_state}, %{pending_playback_state: pending_state} = state)
+  when new_playback_state != pending_state do
+    {:ok, state} |> noreply(nil)
+  end
+
   @doc false
   def handle_info({:membrane_playback_state_changed, pid, new_playback_state}, %{playback_state: current_state, pending_pids: pending_pids} = state) do
     {_, new_pending_pids} = pending_pids |> Map.pop(pid)
     new_state = %{state | pending_pids: new_pending_pids}
 
-    if new_pending_pids == %{} do
+    if pending_pids[pid] != nil and new_pending_pids == %{} do
       # exec and handle callback
       {callback, args} = (case {current_state, new_playback_state} do
         {_, :prepared} -> {:handle_prepare, [current_state]}

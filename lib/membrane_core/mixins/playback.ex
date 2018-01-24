@@ -31,8 +31,14 @@ defmodule Membrane.Mixins.Playback do
       def prepare(pid), do: change_playback_state(pid, :prepared)
       def stop(pid), do: change_playback_state(pid, :stopped)
 
+
       def resolve_playback_change(new_state, %{playback_state: new_state} = state), do:
         {:ok, state}
+
+      def resolve_playback_change(new_state, %{pending_playback_state: pending_state} = state)
+      when pending_state != nil, do:
+        {:ok, %{state | target_playback_state: new_state}}
+
       def resolve_playback_change(new_state, state) do
         use Membrane.Helper
         alias Membrane.Mixins.Playback

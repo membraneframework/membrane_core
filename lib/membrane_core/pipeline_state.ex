@@ -16,6 +16,7 @@ defmodule Membrane.Pipeline.State do
     children_ids: %{atom => integer},
     async_state_change: boolean(),
     target_playback_state: Membrane.Mixins.Playback.state_t,
+    pending_playback_state: Membrane.Mixins.Playback.state_t,
     pending_pids: list(pid),
   }
 
@@ -27,6 +28,7 @@ defmodule Membrane.Pipeline.State do
     pids_to_children: %{},
     playback_state: :stopped,
     target_playback_state: nil,
+    pending_playback_state: nil,
     pending_pids: nil,
     children_ids: %{}
 
