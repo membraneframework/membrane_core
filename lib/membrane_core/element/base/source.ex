@@ -20,11 +20,7 @@ defmodule Membrane.Element.Base.Source do
         {{:error, :handle_demand_not_implemented}, state}
 
       @doc false
-      def handle_demand(pad, size, :buffers, context, state) do
-        1..size |> Membrane.Element.Manager.Common.reduce_something1_results(state, fn _, st ->
-            handle_demand1 pad, context, st
-          end)
-      end
+      def handle_demand(pad, size, :buffers, context, state), do: :split
       def handle_demand(_pad, _size, _unit, _context, state), do:
         {{:error, :handle_demand_not_implemented}, state}
 

@@ -34,14 +34,10 @@ defmodule Membrane.Element.Base.Sink do
 
       @doc false
       def handle_write1(_pad, _buffer, _context, state), do:
-        {{:error, :handle_demand_not_implemented}, state}
+        {{:error, :handle_write_not_implemented}, state}
 
       @doc false
-      def handle_write(pad, buffers, context, state) do
-        buffers |> Membrane.Element.Manager.Common.reduce_something1_results(state, fn buf, st ->
-            handle_write1 pad, buf, context, st
-          end)
-      end
+      def handle_write(pad, buffers, context, state), do: :split
 
 
       defoverridable [
