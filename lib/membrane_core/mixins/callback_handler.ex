@@ -53,6 +53,13 @@ defmodule Membrane.Mixins.CallbackHandler do
         module |> apply(callback, args ++ [internal_state])
       end
 
+      def exec_and_handle_splitted_callback(callback, original_callback, handler_params \\ nil, args_list, state) do
+        args_list |> Helper.Enum.reduce_with(state, fn args, state ->
+            result = callback |> exec_callback(args |> Helper.listify, state)
+            result |> handle_callback(original_callback, handler_params, state)
+          end)
+      end
+
       defp handle_callback(result, callback, handler_params, state) do
         module = state |> Map.get(:module)
         with \
@@ -69,17 +76,6 @@ defmodule Membrane.Mixins.CallbackHandler do
             {{:error, reason}, state}
           {:error, reason} ->
             {{:error, reason}, state}
-        end
-      end
-
-      def exec_and_handle_splittable_callback(callback, single_callback, handler_params \\ nil, args, split_gen_f, state) do
-        case callback |> exec_callback(args, state) do
-          :split ->
-            split_gen_f.() |> Helper.Enum.reduce_with(state, fn args, state ->
-              exec_and_handle_callback(single_callback, handler_params, args, state)
-            end)
-          result ->
-            result |> handle_callback(callback, handler_params, state)
         end
       end
 

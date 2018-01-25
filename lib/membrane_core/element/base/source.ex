@@ -20,7 +20,12 @@ defmodule Membrane.Element.Base.Source do
         {{:error, :handle_demand_not_implemented}, state}
 
       @doc false
-      def handle_demand(pad, size, :buffers, context, state), do: :split
+      def handle_demand(pad, size, :buffers, context, state) do
+        args_list = Stream.repeatedly(fn -> nil end)
+          |> Stream.take(size)
+          |> Enum.map(fn _ -> [pad, context] end)
+        {{:ok, split: {:handle_demand1, args_list}}, state}
+      end
       def handle_demand(_pad, _size, _unit, _context, state), do:
         {{:error, :handle_demand_not_implemented}, state}
 

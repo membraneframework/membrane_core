@@ -23,6 +23,10 @@ defmodule Membrane.Element.Manager.Common do
       def handle_action({:message, message}, _cb, _params, state), do:
         Action.send_message(message, state)
 
+      def handle_action({:split, {callback, args_list}}, cb, params, state) do
+        exec_and_handle_splitted_callback(callback, cb, params, args_list, state)
+      end
+
       def handle_actions(actions, callback, handler_params, state), do:
         super(actions |> Membrane.Element.Manager.Common.join_buffers, callback,
           handler_params, state)
@@ -178,6 +182,7 @@ defmodule Membrane.Element.Manager.Common do
   def available_actions, do: [
       "{:event, {pad_name, event}}",
       "{:message, message}",
+      "{:split, {callback, args_list}}",
     ]
 
   def handle_caps(:pull, pad_name, caps, state) do
