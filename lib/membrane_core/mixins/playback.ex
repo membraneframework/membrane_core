@@ -56,7 +56,8 @@ defmodule Membrane.Mixins.Playback do
                   {:ok, st} <- handle_playback_state(Playback.states[i], Playback.states[j], st),
                   {:sync, st} <- get_state_change_mode(st),
                   st = st |> Map.put(:playback_state, Playback.states[j]),
-                  _ <- if(st.controlling_pid, do: send(st.controlling_pid, {:membrane_playback_state_changed, self(), Playback.states[j]})),
+                  send(st.controlling_pid, {:membrane_playback_state_changed, self(), Playback.states[j]})
+                    |> provided(that: st.controlling_pid),
                   {:ok, st} <- handle_playback_state_changed(Playback.states[i], Playback.states[j], st)
                 do
                   {:cont, {:ok, st}}
@@ -106,11 +107,7 @@ defmodule Membrane.Mixins.Playback do
           send state.controlling_pid, {:membrane_playback_state_changed, self(), state.playback_state}
         end
 
-        if state.playback_state == state.target_playback_state do
-          {:ok, state}
-        else
-          resolve_playback_change(state.target_playback_state, state)
-        end
+        resolve_playback_change(state.target_playback_state, state)
       end
 
       defoverridable [
@@ -119,6 +116,8 @@ defmodule Membrane.Mixins.Playback do
         play: 1,
         prepare: 1,
         stop: 1,
+        continue_playback_change: 1,
+        resolve_playback_change: 2,
       ]
 
     end

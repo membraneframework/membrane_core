@@ -18,9 +18,10 @@ defmodule Membrane.Pipeline.State do
     target_playback_state: Membrane.Mixins.Playback.state_t,
     pending_playback_state: Membrane.Mixins.Playback.state_t,
     pending_pids: list(pid),
+    terminating: boolean,
   }
 
-  defstruct \
+  defstruct [
     internal_state: nil,
     async_state_change: false,
     module: nil,
@@ -30,7 +31,9 @@ defmodule Membrane.Pipeline.State do
     target_playback_state: nil,
     pending_playback_state: nil,
     pending_pids: nil,
-    children_ids: %{}
+    children_ids: %{},
+    terminating: false,
+  ]
 
 
     #FIXME: rename to get_child_name_by_pid
