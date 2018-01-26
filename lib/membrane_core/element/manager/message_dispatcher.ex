@@ -10,7 +10,7 @@ defmodule Membrane.Element.Manager.MessageDispatcher do
     else
       {:error, reason} ->
         warn_error """
-        Pad: cannot handle message: #{inspect message}, mode: #{inspect mode}
+        MessageDispatcher: cannot handle message: #{inspect message}, mode: #{inspect mode}
         """,
         {:cannot_handle_message, message: message, mode: mode, reason: reason},
         state

@@ -127,6 +127,12 @@ defmodule Membrane.Element do
     GenServer.call(server, {:membrane_set_controlling_pid, controlling_pid}, timeout)
   end
 
+
+  def change_playback_state(pid, new_state) do
+    send pid, {:membrane_change_playback_state, new_state}
+    :ok
+  end
+
   def link(pid, pid, _, _, _) when is_pid(pid) do
     {:error, :loop}
   end
@@ -169,8 +175,8 @@ defmodule Membrane.Element do
 
 
   @doc false
-  def terminate(reason, %State{module: module, playback_state: playback_state} = state) do
-    case playback_state do
+  def terminate(reason, %State{module: module, playback: playback} = state) do
+    case playback.state do
       :stopped ->
         debug "Terminating element, reason: #{inspect reason}"
       _ ->
@@ -185,11 +191,6 @@ defmodule Membrane.Element do
 
   defdelegate handle_playback_state(old, new, state), to: MessageDispatcher
   defdelegate handle_playback_state_changed(old, new, state), to: MessageDispatcher
-
-  def change_playback_state(pid, new_state) do
-    send pid, {:membrane_change_playback_state, new_state}
-    :ok
-  end
 
   def handle_call(message, _from, state) do
     message |> MessageDispatcher.handle_message(:call, state) |> reply(state)

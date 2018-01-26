@@ -4,6 +4,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
   alias Membrane.{Buffer, Event}
   use Membrane.Helper
   use Membrane.Element.Manager.Log
+  alias Membrane.Mixins.Playback
 
   @type t :: %Membrane.Element.Manager.PlaybackBuffer{
     q: Qex.t()
@@ -18,7 +19,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
     %PlaybackBuffer{q: @qe.new}
   end
 
-  def store(msg, %State{playback_state: :playing} = state), do: exec(msg, state)
+  def store(msg, %State{playback: %Playback{state: :playing}} = state), do: exec(msg, state)
 
   def store({type, _args} = msg, state)
   when type in [:membrane_event, :membrane_caps]
@@ -37,7 +38,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
       ~> (state -> {:ok, state})
   end
 
-  def eval(%State{playback_state: :playing} = state) do
+  def eval(%State{playback: %Playback{state: :playing}} = state) do
     debug "evaluating playback buffer", state
     with \
       {:ok, state} <- state.playback_buffer.q
