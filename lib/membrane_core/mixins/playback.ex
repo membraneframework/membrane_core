@@ -48,7 +48,7 @@ defmodule Membrane.Mixins.Playback do
       alias Membrane.Mixins.{Playback, Playbackable}
       @behaviour Playback
 
-      def handle_playback_state_changed(_old, _new, state), do: {:ok, state}
+      def handle_playback_state_changed(_old, _new, playbackable), do: {:ok, playbackable}
 
       def playback_warn_error(message, reason, _state) do
         use Membrane.Mixins.Log
@@ -60,61 +60,61 @@ defmodule Membrane.Mixins.Playback do
       def stop(pid), do: change_playback_state(pid, :stopped)
 
 
-      def resolve_playback_change(new_playback_state, state) do
-        old_playback = state |> Playbackable.get_playback
+      def resolve_playback_change(new_playback_state, playbackable) do
+        old_playback = playbackable |> Playbackable.get_playback
         playback = %Playback{old_playback | target_state: new_playback_state}
-        state = state |> Playbackable.set_playback(playback)
+        playbackable = playbackable |> Playbackable.set_playback(playback)
         if old_playback.pending_state == nil and old_playback.state != new_playback_state do
-          do_resolve_playback_change(playback, state)
+          do_resolve_playback_change(playback, playbackable)
         else
-          {:ok, state}
+          {:ok, playbackable}
         end
       end
 
-      defp do_resolve_playback_change(playback, state) do
+      defp do_resolve_playback_change(playback, playbackable) do
         with \
           {:ok, next_playback_state} <- Playback.next_state(playback.state, playback.target_state),
-          {:ok, state} <- handle_playback_state(playback.state, next_playback_state, state)
+          {:ok, playbackable} <- handle_playback_state(playback.state, next_playback_state, playbackable)
         do
-          {playback, state} = state
+          {playback, playbackable} = playbackable
             |> Playbackable.get_and_update_playback(& %Playback{&1 | pending_state: next_playback_state})
           if playback.async_state_change do
-            {:ok, state}
+            {:ok, playbackable}
           else
-            continue_playback_change(state)
+            continue_playback_change(playbackable)
           end
         else
-          {{:error, reason}, state} -> playback_warn_error """
+          {{:error, reason}, playbackable} -> playback_warn_error """
             Unable to change playback state
             from #{inspect playback.state} to #{inspect playback.target_state}
-            """, reason, state
+            """, reason, playbackable
           {:error, reason} -> playback_warn_error """
             Unable to change playback state
             from #{inspect playback.state} to #{inspect playback.target_state}}
-            """, reason, state
+            """, reason, playbackable
         end
       end
 
-      def suspend_playback_change(state) do
-        {:ok, state |> Playbackable.update_playback(& %{&1 | async_state_change: true})}
+      def suspend_playback_change(playbackable) do
+        {:ok, playbackable |> Playbackable.update_playback(& %{&1 | async_state_change: true})}
       end
 
-      def continue_playback_change(state) do
-        {old_playback, state} = state |> Playbackable.get_and_update_playback(
+      def continue_playback_change(playbackable) do
+        {old_playback, playbackable} = playbackable |> Playbackable.get_and_update_playback(
           & %Playback{&1 |
             async_state_change: false,
             state: &1.pending_state,
             pending_state: nil,
           })
-        with {:ok, state} <-
-          handle_playback_state_changed(old_playback.state, old_playback.pending_state, state)
+        with {:ok, playbackable} <-
+          handle_playback_state_changed(old_playback.state, old_playback.pending_state, playbackable)
         do
-          playback = state |> Playbackable.get_playback
-          controlling_pid = state |> Playbackable.get_controlling_pid
+          playback = playbackable |> Playbackable.get_playback
+          controlling_pid = playbackable |> Playbackable.get_controlling_pid
           if controlling_pid do
             send controlling_pid, {:membrane_playback_state_changed, self(), playback.state}
           end
-          resolve_playback_change(playback.target_state, state)
+          resolve_playback_change(playback.target_state, playbackable)
         end
       end
 

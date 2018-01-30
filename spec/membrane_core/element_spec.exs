@@ -164,7 +164,7 @@ defmodule Membrane.ElementSpec do
 
           it "should return {:reply, {:error, reason}, state()} with unchanged playback state" do
             {_response, _info, %State{playback: new_playback}} = described_module().handle_info(message(), state())
-            expect(new_playback).to eq playback()
+            expect(new_playback.state).to eq playback().state
           end
         end
 

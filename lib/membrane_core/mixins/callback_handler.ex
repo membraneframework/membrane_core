@@ -82,7 +82,7 @@ defmodule Membrane.Mixins.CallbackHandler do
       defp exec_handle_actions(actions, callback, handler_params, state) do
         with {:ok, state} <- actions |> handle_actions(callback, handler_params, state)
         do {:ok, state}
-        else {:error, reason} ->
+        else {{:error, reason}, state} ->
           callback_handler_warn_error """
             Error while handling actions returned by callback #{inspect callback}
             """, {:error_handling_actions, reason}, state

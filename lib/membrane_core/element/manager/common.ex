@@ -42,10 +42,6 @@ defmodule Membrane.Element.Manager.Common do
         use Membrane.Element.Manager.Log
         warn_error message, reason, state
       end
-      def playback_warn_error(message, reason, state) do
-        use Membrane.Element.Manager.Log
-        warn_error message, reason, state
-      end
 
       def handle_init(module, name, options) do
         with {:ok, state} <- State.new(module, name)

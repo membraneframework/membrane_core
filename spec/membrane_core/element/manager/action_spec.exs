@@ -21,23 +21,23 @@ defmodule Membrane.Element.Manager.ActionSpec do
         let :callback, do: :handle_stop
 
         it "should return an error result" do
-          ret = described_module().send_buffer(pad_name(), buffer(), callback(), state())
+          {ret, _state} = described_module().send_buffer(pad_name(), buffer(), callback(), state())
           expect(ret).to be_error_result()
         end
 
         it "should return {:cannot_send_buffer, _} as a reason" do
-          {_, {atom, _}} = described_module().send_buffer(pad_name(), buffer(), callback(), state())
-          expect(atom).to eq(:cannot_send_buffer)
+          {{_error, {main_reason, _reason_details}}, _state} = described_module().send_buffer(pad_name(), buffer(), callback(), state())
+          expect(main_reason).to eq(:cannot_send_buffer)
         end
 
         it "should return keyword list with callback name" do
-          {_, {_, keyword}} = described_module().send_buffer(pad_name(), buffer(), callback(), state())
-          expect(keyword |> Keyword.fetch(:callback)).to eq({:ok, callback()})
+          {{_error, {_main_reason, reason_details}}, _state} = described_module().send_buffer(pad_name(), buffer(), callback(), state())
+          expect(reason_details |> Keyword.fetch(:callback)).to eq({:ok, callback()})
         end
 
         it "should return keyword list with playback state" do
-          {_, {_, keyword}} = described_module().send_buffer(pad_name(), buffer(), callback(), state())
-          expect(keyword |> Keyword.fetch(:playback_state)).to eq({:ok, playback().state})
+          {{_error, {_main_reason, reason_details}}, _state} = described_module().send_buffer(pad_name(), buffer(), callback(), state())
+          expect(reason_details |> Keyword.fetch(:playback_state)).to eq({:ok, playback().state})
         end
       end
 
