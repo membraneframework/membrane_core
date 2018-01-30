@@ -4,16 +4,20 @@ defmodule Membrane.Element.Manager.MessageDispatcher do
   use Membrane.Element.Manager.Log
 
   def handle_message(message, mode, state) do
-    res = do_handle_message(message, mode, state)
-    with :ok <- res |> Helper.result_status
+    with {:ok, res} <- do_handle_message(message, mode, state) |> Helper.result_with_status
     do res
     else
-      {:error, reason} ->
+      {_, {{:error, reason}, state}} ->
+        reason = {:cannot_handle_message, message: message, mode: mode, reason: reason}
         warn_error """
-        Pad: cannot handle message: #{inspect message}, mode: #{inspect mode}
-        """,
-        {:cannot_handle_message, message: message, mode: mode, reason: reason},
-        state
+        MessageDispatcher: cannot handle message: #{inspect message}, mode: #{inspect mode}
+        """, reason, state
+      {_, {:error, reason}} ->
+        reason = {:cannot_handle_message, message: message, mode: mode, reason: reason}
+        warn_error """
+        MessageDispatcher: cannot handle message: #{inspect message}, mode: #{inspect mode}
+        """, reason, state
+        {{:error, reason}, state}
     end
   end
 

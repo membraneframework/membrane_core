@@ -51,14 +51,17 @@ defmodule Membrane.Element.Manager.Log do
       unquote bring_logger()
       tags = append_tags unquote(tags), unquote(state)
       Log.warn_error parse_warn(unquote(message), unquote(state)), unquote(reason), tags
+      unquote {{:error, reason}, state}
     end
   end
 
   defmacro or_warn_error(v, message, state, tags \\ []) do
     quote do
-      unquote bring_logger()
-      tags = append_tags unquote(tags), unquote(state)
-      Log.or_warn_error unquote(v), parse_warn(unquote(message), unquote(state)), tags
+      with {:ok, value} <- unquote v
+      do {:ok, value}
+      else {:error, reason} ->
+        warn_error unquote(message), reason, unquote(state), unquote(tags)
+      end
     end
   end
 

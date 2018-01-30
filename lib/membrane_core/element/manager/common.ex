@@ -31,17 +31,14 @@ defmodule Membrane.Element.Manager.Common do
         super(actions |> Membrane.Element.Manager.Common.join_buffers, callback,
           handler_params, state)
 
-      def handle_action({:playback_change, :suspend}, _cb, _params, state), do:
-        {:ok, %{state | async_state_change: true}}
+      def handle_action({:playback_change, :suspend}, _cb, _params, state) do
+        state |> Membrane.Element.suspend_playback_change
+      end
 
       def handle_action({:playback_change, :resume}, _cb, _params, state), do:
-        Membrane.Element.continue_playback_change state
+        state |> Membrane.Element.continue_playback_change
 
       def callback_handler_warn_error(message, reason, state) do
-        use Membrane.Element.Manager.Log
-        warn_error message, reason, state
-      end
-      def playback_warn_error(message, reason, state) do
         use Membrane.Element.Manager.Log
         warn_error message, reason, state
       end
@@ -158,7 +155,7 @@ defmodule Membrane.Element.Manager.Common do
         end
       end
 
-      def unlink(%State{playback_state: :stopped} = state) do
+      def unlink(%State{playback: %{state: :stopped}} = state) do
         state
           |> State.get_pads_data
           |> Helper.Enum.each_with(fn {_name, %{pid: pid, other_name: other_name}}

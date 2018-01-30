@@ -72,7 +72,6 @@ defmodule Membrane.Element.Manager.Source do
   """
 
   use Membrane.Element.Manager.Log
-  alias Membrane.{Element, Event}
   alias Membrane.Element.Manager.{Action, Common, State}
   import Membrane.Element.Pad, only: [is_pad_name: 1]
   alias Membrane.Element.Context

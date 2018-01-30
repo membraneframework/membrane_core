@@ -1,6 +1,7 @@
 defmodule Membrane.Helper.GenServer do
   use Membrane.Mixins.Log, tags: :core
 
+  def noreply({:ok, new_state}), do: {:noreply, new_state}
   def noreply({:ok, new_state}, _old_state), do: {:noreply, new_state}
   def noreply({{:error, reason}, new_state}, old_state) do
     warn_error """
@@ -15,6 +16,8 @@ defmodule Membrane.Helper.GenServer do
     {:stop, {:error, reason}, old_state}
   end
 
+  def reply({:ok, new_state}), do: {:reply, :ok, new_state}
+  def reply({{:ok, v}, new_state}), do: {:reply, {:ok, v}, new_state}
   def reply({:ok, new_state}, _old_state), do: {:reply, :ok, new_state}
   def reply({{:ok, v}, new_state}, _old_state), do: {:reply, {:ok, v}, new_state}
   def reply({{:error, reason}, new_state}, old_state) do

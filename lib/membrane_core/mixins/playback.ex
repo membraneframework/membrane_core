@@ -1,6 +1,20 @@
 defmodule Membrane.Mixins.Playback do
   use Membrane.Helper
 
+  defstruct [
+    state: :stopped,
+    pending_state: nil,
+    target_state: nil,
+    async_state_change: false,
+  ]
+
+  @type t :: %__MODULE__{
+    state: state_t,
+    pending_state: state_t | nil,
+    target_state: state_t | nil,
+    async_state_change: boolean,
+  }
+
   @type state_t :: :stopped | :prepared | :playing
 
   @callback change_playback_state(pid, atom) :: :ok | {:error, any}
@@ -9,18 +23,32 @@ defmodule Membrane.Mixins.Playback do
   @callback playback_warn_error(String.t, any, any) :: {:error, any}
   @optional_callbacks handle_playback_state_changed: 3, playback_warn_error: 3
 
-  @states %{0 => :stopped, 1 => :prepared, 2 => :playing}
-  @states_pos @states |> Enum.into(%{}, fn {k, v} -> {v, k} end)
+  @states [:stopped, :prepared, :playing]
 
   def states, do: @states
-  def states_pos, do: @states_pos
+  def next_state(current, target) do
+    with \
+      {:ok, curr_pos} <- @states |> Enum.find_index(& &1 == current)
+        |> Helper.wrap_nil(:invalid_current_playback_state),
+      {:ok, target_pos} <-  @states |> Enum.find_index(& &1 == target)
+        |> Helper.wrap_nil(:invalid_target_playback_state)
+    do
+      next_state = cond do
+        curr_pos < target_pos -> @states |> Enum.at(curr_pos + 1)
+        curr_pos > target_pos -> @states |> Enum.at(curr_pos - 1)
+      end
+      {:ok, next_state}
+    end
+  end
 
   defmacro __using__(_) do
+    use Membrane.Helper
+
     quote location: :keep do
-      @behaviour Membrane.Mixins.Playback
+      alias Membrane.Mixins.{Playback, Playbackable}
+      @behaviour Playback
 
-
-      def handle_playback_state_changed(_old, _new, state), do: {:ok, state}
+      def handle_playback_state_changed(_old, _new, playbackable), do: {:ok, playbackable}
 
       def playback_warn_error(message, reason, _state) do
         use Membrane.Mixins.Log
@@ -32,84 +60,61 @@ defmodule Membrane.Mixins.Playback do
       def stop(pid), do: change_playback_state(pid, :stopped)
 
 
-      def resolve_playback_change(new_state, %{playback_state: new_state} = state), do:
-        {:ok, state}
-
-      def resolve_playback_change(new_state, %{pending_playback_state: pending_state} = state)
-      when pending_state != nil, do:
-        {:ok, %{state | target_playback_state: new_state}}
-
-      def resolve_playback_change(new_state, state) do
-        use Membrane.Helper
-        alias Membrane.Mixins.Playback
-
-        state = state |> Map.put(:target_playback_state, new_state)
-        old_state = state |> Map.get(:playback_state)
-
-        with \
-          {:ok, old_pos} <- Playback.states_pos[old_state] |> Helper.wrap_nil(:invalid_old_playback),
-          {:ok, new_pos} <- Playback.states_pos[new_state] |> Helper.wrap_nil(:invalid_new_playback),
-          {:ok, state} <- old_pos..new_pos
-            |> Enum.chunk(2, 1)
-            |> Enum.reduce_while({:ok, state}, fn [i, j], {:ok, st} ->
-                with \
-                  {:ok, st} <- handle_playback_state(Playback.states[i], Playback.states[j], st),
-                  {:sync, st} <- get_state_change_mode(st),
-                  st = st |> Map.put(:playback_state, Playback.states[j]),
-                  _ <- if(st.controlling_pid, do: send(st.controlling_pid, {:membrane_playback_state_changed, self(), Playback.states[j]})),
-                  {:ok, st} <- handle_playback_state_changed(Playback.states[i], Playback.states[j], st)
-                do
-                  {:cont, {:ok, st}}
-                else
-                  {:async, st} ->
-                    st =  st |> Map.merge(%{pending_playback_state: Playback.states[j]})
-                    {:halt, {:ok, st}}
-                  err ->
-                    {:halt, err}
-                end
-              end)
-        do
-          {:ok, state}
+      def resolve_playback_change(new_playback_state, playbackable) do
+        old_playback = playbackable |> Playbackable.get_playback
+        playback = %Playback{old_playback | target_state: new_playback_state}
+        playbackable = playbackable |> Playbackable.set_playback(playback)
+        if old_playback.pending_state == nil and old_playback.state != new_playback_state do
+          do_resolve_playback_change(playback, playbackable)
         else
-          :invalid_old_playback -> playback_warn_error """
-            Cannot change playback state, because current_playback_state callback
-            returned invalid playback state: #{inspect old_state}
-            """, :invalid_old_playback, state
-          :invalid_new_playback -> playback_warn_error """
-            Cannot change playback state, because passed
-            playback state: #{inspect new_state} is invalid
-            """, :invalid_new_playback, state
-          {{:error, reason}, st} -> playback_warn_error """
-            Unable to change playback state from #{inspect old_state} to #{inspect new_state}
-            """, reason, state
-            {{:error, reason}, st}
-          {:error, reason} -> playback_warn_error """
-            Unable to change playback state from #{inspect old_state} to #{inspect new_state}
-            """, reason, state
+          {:ok, playbackable}
         end
       end
 
-      defp get_state_change_mode(%{async_state_change: true} = state), do: {:async, state}
-      defp get_state_change_mode(state), do: {:sync, state}
-
-      def continue_playback_change(state) do
-        previous_state = state.playback_state
-
-        state = state
-          |> Map.put(:async_state_change, false)
-          |> Map.put(:playback_state, state.pending_playback_state)
-          |> Map.put(:pending_playback_state, nil)
-
-        {:ok, state} = handle_playback_state_changed(previous_state, state.playback_state, state)
-
-        if Map.get(state, :controlling_pid, nil) do
-          send state.controlling_pid, {:membrane_playback_state_changed, self(), state.playback_state}
-        end
-
-        if state.playback_state == state.target_playback_state do
-          {:ok, state}
+      defp do_resolve_playback_change(playback, playbackable) do
+        with \
+          {:ok, next_playback_state} <- Playback.next_state(playback.state, playback.target_state),
+          {:ok, playbackable} <- handle_playback_state(playback.state, next_playback_state, playbackable)
+        do
+          {playback, playbackable} = playbackable
+            |> Playbackable.get_and_update_playback(& %Playback{&1 | pending_state: next_playback_state})
+          if playback.async_state_change do
+            {:ok, playbackable}
+          else
+            continue_playback_change(playbackable)
+          end
         else
-          resolve_playback_change(state.target_playback_state, state)
+          {{:error, reason}, playbackable} -> playback_warn_error """
+            Unable to change playback state
+            from #{inspect playback.state} to #{inspect playback.target_state}
+            """, reason, playbackable
+          {:error, reason} -> playback_warn_error """
+            Unable to change playback state
+            from #{inspect playback.state} to #{inspect playback.target_state}}
+            """, reason, playbackable
+        end
+      end
+
+      def suspend_playback_change(playbackable) do
+        {:ok, playbackable |> Playbackable.update_playback(& %{&1 | async_state_change: true})}
+      end
+
+      def continue_playback_change(playbackable) do
+        {old_playback, playbackable} = playbackable |> Playbackable.get_and_update_playback(
+          & %Playback{&1 |
+            async_state_change: false,
+            state: &1.pending_state,
+            pending_state: nil,
+          })
+        with {:ok, playbackable} <-
+          handle_playback_state_changed(old_playback.state, old_playback.pending_state, playbackable)
+        do
+          playback = playbackable |> Playbackable.get_playback
+          controlling_pid = playbackable |> Playbackable.get_controlling_pid
+          if controlling_pid do
+            send controlling_pid, {:membrane_playback_state_changed, self(), playback.state}
+          end
+          resolve_playback_change(playback.target_state, playbackable)
         end
       end
 
@@ -119,6 +124,9 @@ defmodule Membrane.Mixins.Playback do
         play: 1,
         prepare: 1,
         stop: 1,
+        suspend_playback_change: 1,
+        continue_playback_change: 1,
+        resolve_playback_change: 2,
       ]
 
     end

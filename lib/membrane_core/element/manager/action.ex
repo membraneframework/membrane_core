@@ -9,11 +9,11 @@ defmodule Membrane.Element.Manager.Action do
 
   @spec send_buffer(Pad.name_t, atom, [Buffer.t], State.t) :: :ok | {:error, any}
 
-  def send_buffer(_pad_name, _buffer, callback, %State{playback_state: playback} = state)
-  when playback != :playing and callback != :handle_play
+  def send_buffer(_pad_name, _buffer, callback, %State{playback: %{state: playback_state}} = state)
+  when playback_state != :playing and callback != :handle_play
   do
     warn_error "Buffers can only be sent when playing or from handle_play callback",
-      {:cannot_send_buffer, playback_state: playback, callback: callback}, state
+      {:cannot_send_buffer, playback_state: playback_state, callback: callback}, state
   end
 
   def send_buffer(pad_name, %Buffer{} = buffer, callback, state) do
@@ -78,11 +78,11 @@ defmodule Membrane.Element.Manager.Action do
   @spec handle_demand(Pad.name_t, {:source, Pad.name_t} | :self, :normal | :set, pos_integer, atom, State.t) :: :ok | {:error, any}
   def handle_demand(pad_name, source, type, size, callback, state)
 
-  def handle_demand(_pad_name, _source, _type, _size, callback, %State{playback_state: playback} = state)
-  when playback != :playing and callback != :handle_play
+  def handle_demand(_pad_name, _source, _type, _size, callback, %State{playback: %{state: playback_state}} = state)
+  when playback_state != :playing and callback != :handle_play
   do
     warn_error "Demand can only be requested when playing or from handle_play callback",
-      {:cannot_handle_demand, playback_state: playback, callback: callback}, state
+      {:cannot_handle_demand, playback_state: playback_state, callback: callback}, state
   end
 
   def handle_demand(pad_name, source, type, size, callback, %State{module: module} = state) do

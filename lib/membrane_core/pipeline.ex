@@ -77,6 +77,15 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  def change_playback_state(pid, new_state) do
+    send pid, {:membrane_change_playback_state, new_state}
+    :ok
+  end
+
+  def stop_and_terminate(pipeline) do
+    send pipeline, :membrane_stop_and_terminate
+    :ok
+  end
 
   @callback is_membrane_pipeline :: true
 
@@ -196,7 +205,7 @@ defmodule Membrane.Pipeline do
       :ok <- children_pids |> set_children_message_bus,
       {:ok, state} <- exec_and_handle_callback(:handle_spec_started, [children_names], state),
       :ok <- children_pids
-        |> Helper.Enum.each_with(&Element.change_playback_state &1, state.playback_state)
+        |> Helper.Enum.each_with(&Element.change_playback_state &1, state.playback.state)
     do
       debug """
         Initializied pipeline spec
@@ -357,65 +366,94 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  def change_playback_state(pid, new_state) do
-    send pid, {:membrane_change_playback_state, new_state}
-    :ok
+
+  def resolve_playback_change(new_playback, %State{terminating: true} = state) do
+    case {state.playback.state, new_playback} do
+      {:stopped, :stopped} ->
+        send self(), :membrane_stop_and_terminate
+        {:ok, state}
+      {_, :stopped} ->
+        super(new_playback, state)
+      _ ->
+        {:ok, state}
+    end
   end
+  def resolve_playback_change(new_playback, state), do:
+    super(new_playback, state)
 
 
   @doc false
   def handle_playback_state(_old, new, %State{pids_to_children: pids_to_children} = state) do
-    children = pids_to_children |> Map.keys
+    children_pids = pids_to_children |> Map.keys
 
-    children |> Enum.each(fn child ->
+    children_pids |> Enum.each(fn child ->
       Element.change_playback_state(child, new)
     end)
 
-    pending_pids = children |> Enum.chunk(1) |> Enum.into(%{}, fn [pid] -> {pid, true} end)
-    {:ok, %{state | pending_pids: pending_pids, async_state_change: true}}
+    state = %{state | pending_pids: children_pids |> MapSet.new}
+    state |> suspend_playback_change
   end
 
 
   @doc false
-  def handle_info({:membrane_playback_state_changed, _pid, _new_playback_state}, %{pending_pids: pending_pids} = state)
-  when pending_pids == %{} do
-    {:ok, state} |> noreply(nil)
+  def handle_info(
+    {:membrane_playback_state_changed, _pid, _new_playback_state},
+    %State{pending_pids: pending_pids} = state
+  )
+  when pending_pids == %MapSet{} do
+    {:ok, state} |> noreply
   end
 
   @doc false
-  def handle_info({:membrane_playback_state_changed, _pid, new_playback_state}, %{pending_playback_state: pending_state} = state)
-  when new_playback_state != pending_state do
-    {:ok, state} |> noreply(nil)
+  def handle_info(
+    {:membrane_playback_state_changed, _pid, new_playback_state},
+    %State{playback: %Playback{pending_state: pending_playback_state}} = state
+  )
+  when new_playback_state != pending_playback_state do
+    {:ok, state} |> noreply
   end
 
   @doc false
-  def handle_info({:membrane_playback_state_changed, pid, new_playback_state}, %{playback_state: current_state, pending_pids: pending_pids} = state) do
-    {_, new_pending_pids} = pending_pids |> Map.pop(pid)
+  def handle_info(
+    {:membrane_playback_state_changed, pid, new_playback_state},
+    %State{playback: %Playback{state: current_playback_state}, pending_pids: pending_pids} = state
+  ) do
+    new_pending_pids = pending_pids |> MapSet.delete(pid)
     new_state = %{state | pending_pids: new_pending_pids}
 
-    if pending_pids[pid] != nil and new_pending_pids == %{} do
-      # exec and handle callback
-      {callback, args} = (case {current_state, new_playback_state} do
-        {_, :prepared} -> {:handle_prepare, [current_state]}
+    if new_pending_pids != pending_pids and new_pending_pids |> Enum.empty? do
+      {callback, args} = (case {current_playback_state, new_playback_state} do
+        {_, :prepared} -> {:handle_prepare, [current_playback_state]}
         {:prepared, :playing} -> {:handle_play, []}
         {:prepared, :stopped} -> {:handle_stop, []}
       end)
 
-      case exec_and_handle_callback(callback, args, new_state) do
-        {:ok, new_state} ->
-          continue_playback_change(new_state) |> noreply(nil)
-        error ->
-          error
+      with {:ok, new_state} <- exec_and_handle_callback(callback, args, new_state)
+      do
+        continue_playback_change(new_state)
+      else
+        error -> error
       end
     else
-      {:ok, %{state | pending_pids: new_pending_pids}} |> noreply(nil)
+      {:ok, new_state}
     end
+      |> noreply(new_state)
   end
 
   @doc false
   def handle_info({:membrane_change_playback_state, new_state}, state) do
-    import Membrane.Helper.GenServer
     resolve_playback_change(new_state, state) |> noreply(state)
+  end
+
+  @doc false
+  def handle_info(:membrane_stop_and_terminate, state) do
+    case state.playback.state do
+      :stopped ->
+        {:stop, :normal, state}
+      _ ->
+        state = %{state | terminating: true}
+        resolve_playback_change(:stopped, state) |> noreply(state)
+    end
   end
 
   @doc false
