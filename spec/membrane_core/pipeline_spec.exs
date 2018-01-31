@@ -1,6 +1,6 @@
 defmodule Membrane.PipelineSpec do
   use ESpec, async: false
-  alias Membrane.Support.Element.TrivialPipeline 
+  alias Membrane.Support.Element.TrivialPipeline
 
 
   describe ".start_link/3" do
@@ -28,7 +28,7 @@ defmodule Membrane.PipelineSpec do
         {:links, links} = :erlang.process_info(pid, :links)
         expect(length(links)).to eq(1)
       end
-  
+
     end
 
     context "when starting module that is not a pipeline" do
@@ -73,7 +73,7 @@ defmodule Membrane.PipelineSpec do
         {:links, links} = :erlang.process_info(pid, :links)
         expect(length(links)).to eq(0)
       end
-  
+
     end
 
     context "when starting module that is not a pipeline" do
@@ -104,13 +104,13 @@ defmodule Membrane.PipelineSpec do
 
     context "when module is not a pipeline" do
       let :module, do: Membrane.Support.Element.TrivialSource
-      
+
       it "should return false" do
         expect(described_module().is_pipeline?(module())).to be_false()
       end
 
       it "should return false" do
-        expect(described_module().is_pipeline?(Enum)).to be_false() 
+        expect(described_module().is_pipeline?(Enum)).to be_false()
       end
     end
 
@@ -142,7 +142,7 @@ defmodule Membrane.PipelineSpec do
 
     it "should return pipeline that is stopped" do
       {:ok, state} = described_module().init {module(), options()}
-      expect(state.playback_state).to eq(:stopped)
+      expect(state.playback.state).to eq(:stopped)
     end
 
     it "should send a message to initialize children asynchronously" do
@@ -152,7 +152,7 @@ defmodule Membrane.PipelineSpec do
 
     it "should call pipeline's handle_init" do
       described_module().init {module(), options()}
-      expect TrivialPipeline |> to(accepted :handle_init) 
+      expect TrivialPipeline |> to(accepted :handle_init)
     end
 
 
@@ -160,30 +160,30 @@ defmodule Membrane.PipelineSpec do
 
 
   describe ".handle_info/2" do
-    let :module,  do: TrivialPipeline  
+    let :module,  do: TrivialPipeline
     let :options, do: nil
     let! :state,  do: described_module().init({module(), options()}) |> elem(1)
     let :sample_element, do: Membrane.Support.Element.TrivialSource
-    
+
     before do
       allow Membrane.Element |> to(accept(:link, fn a1,a2,a3,a4,a5 -> :meck.passthrough([a1,a2,a3,a4,a5]) end))
       allow sample_element() |> to(accept(:handle_init, fn arg -> :meck.passthrough([arg]) end))
       allow module() |> to(accept(:handle_message, fn arg1, arg2 -> :meck.passthrough([arg1, arg2]) end))
-    end                                                  
-                                                      
+    end
+
     context "when receiving message with pipeline spec" do
       let :init_result, do: TrivialPipeline.handle_init(nil)
       let :spec, do: init_result() |> elem(0) |> elem(1)
-      let :internal_state, do: init_result() |> elem(1) 
+      let :internal_state, do: init_result() |> elem(1)
       let :message, do: [:membrane_pipeline_spec, spec()]
       let :links_number, do: length(spec().links |> Map.keys)
 
-      
+
       it "should return :noreply response" do
         {atom, _state} = described_module().handle_info(message(), state())
         expect(atom).to eq(:noreply)
       end
-      
+
       it "should return new pipeline state" do
         {:noreply, state} = described_module().handle_info(message(), state())
         expect(state.__struct__).to eq(Membrane.Pipeline.State)
@@ -193,7 +193,7 @@ defmodule Membrane.PipelineSpec do
         {:noreply, state} = described_module().handle_info(message(), state())
         expect(state.children_to_pids |> Map.keys |> Enum.sort).to eq(spec().children |> Map.keys |> Enum.sort)
       end
-      
+
       it "should return new pipeline state containing state" do
         {:noreply, state} = described_module().handle_info(message(), state())
         expect(state.internal_state).to eq(internal_state())
@@ -214,11 +214,11 @@ defmodule Membrane.PipelineSpec do
     context "when receiving message from the element" do
       let :child_name, do: :child_name
       let :internal_state, do: :some_internal_state
-      let :state, do: %Membrane.Pipeline.State{pids_to_children: %{ self() => child_name()}, internal_state: internal_state(), module: module()}  
-      let :internal_message, do: %Membrane.Message{}    
+      let :state, do: %Membrane.Pipeline.State{pids_to_children: %{ self() => child_name()}, internal_state: internal_state(), module: module()}
+      let :internal_message, do: %Membrane.Message{}
       let! :message, do: [:membrane_message, child_pid(), internal_message()]
 
-      context "when received from child" do 
+      context "when received from child" do
       let :child_pid, do: self()
 
         it "should return {:noreply, ..} result" do
@@ -238,11 +238,11 @@ defmodule Membrane.PipelineSpec do
       end
 
       context "when received from process that is not a child" do
-        let :child_pid, do: :c.pid(0,212,0)             
+        let :child_pid, do: :c.pid(0,212,0)
 
         it "should return {:stop, _, _}" do
           {atom, _, _} = described_module().handle_info(message(), state())
-          expect(atom).to eq(:stop)       
+          expect(atom).to eq(:stop)
         end
 
         it "should keep state unchanged" do
@@ -259,7 +259,7 @@ defmodule Membrane.PipelineSpec do
           {:stop, {:error, {atom, _pid}} , _} = described_module().handle_info(message(), state())
           expect(atom).to eq(:unknown_child)
         end
-        
+
         it "should include given pid in the reason" do
           {:stop, {:error, {_, pid}} , _} = described_module().handle_info(message(), state())
           expect(pid).to eq(child_pid())
@@ -271,7 +271,7 @@ defmodule Membrane.PipelineSpec do
       let :message, do: :some_message
       let :internal_state, do: :some_internal_state
       let :state, do: %Membrane.Pipeline.State{module: module(), internal_state: internal_state()}
-      
+
       before do
         allow module() |> to(accept(:handle_other, fn arg1, arg2 -> :meck.passthrough([arg1, arg2]) end))
       end
