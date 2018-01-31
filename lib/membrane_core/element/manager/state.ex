@@ -9,6 +9,7 @@ defmodule Membrane.Element.Manager.State do
   alias Membrane.Element.Manager.PlaybackBuffer
   use Membrane.Helper
   alias __MODULE__
+  alias Membrane.Mixins.{Playback, Playbackable}
 
   @type internal_state_t :: any
 
@@ -16,20 +17,29 @@ defmodule Membrane.Element.Manager.State do
     internal_state: internal_state_t,
     module: module,
     name: Element.name_t,
-    playback_state: Membrane.Mixins.Playback.state_t,
+    playback: Playback.t,
     pads: %{optional(Element.Pad.name_t) => pid},
     message_bus: pid,
-    playback_buffer: PlaybackBuffer.t
+    playback_buffer: PlaybackBuffer.t,
+    controlling_pid: nil,
   }
 
-  defstruct \
+  defstruct [
     internal_state: nil,
     module: nil,
     name: nil,
-    playback_state: :stopped,
+    playback: %Playback{},
     pads: %{},
     message_bus: nil,
-    playback_buffer: nil
+    controlling_pid: nil,
+    playback_buffer: nil,
+  ]
+
+
+  defimpl Playbackable, for: __MODULE__ do
+    use Playbackable.Default
+    def get_controlling_pid(%State{controlling_pid: pid}), do: pid
+  end
 
 
   @doc """
@@ -53,6 +63,7 @@ defmodule Membrane.Element.Manager.State do
             dynamic_currently_linking: [],
           },
         internal_state: nil,
+        controlling_pid: nil,
         playback_buffer: PlaybackBuffer.new
       }
         ~> (state -> {:ok, state})

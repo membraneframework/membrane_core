@@ -31,11 +31,14 @@ defmodule Membrane.Element.Manager.Common do
         super(actions |> Membrane.Element.Manager.Common.join_buffers, callback,
           handler_params, state)
 
-      def callback_handler_warn_error(message, reason, state) do
-        use Membrane.Element.Manager.Log
-        warn_error message, reason, state
+      def handle_action({:playback_change, :suspend}, _cb, _params, state) do
+        state |> Membrane.Element.suspend_playback_change
       end
-      def playback_warn_error(message, reason, state) do
+
+      def handle_action({:playback_change, :resume}, _cb, _params, state), do:
+        state |> Membrane.Element.continue_playback_change
+
+      def callback_handler_warn_error(message, reason, state) do
         use Membrane.Element.Manager.Log
         warn_error message, reason, state
       end
@@ -74,16 +77,17 @@ defmodule Membrane.Element.Manager.Common do
       def handle_message_bus(message_bus, state), do:
         {:ok, %{state | message_bus: message_bus}}
 
+      def handle_controlling_pid(pid, state), do:
+        {:ok, %{state | controlling_pid: pid}}
+
+
       def handle_demand_in(demand_in, pad_name, state) do #TODO: move out of using
         {:ok, state} = state |>
           State.set_pad_data(:source, pad_name, [:options, :other_demand_in], demand_in)
       end
 
-      def handle_playback_state(:prepared, :playing, state) do
-        with \
-          {:ok, state} <- exec_and_handle_callback(:handle_play, [], state),
-          do: {:ok, state}
-      end
+      def handle_playback_state(:prepared, :playing, state), do:
+        exec_and_handle_callback :handle_play, [], state
 
       def handle_playback_state(:prepared, :stopped, state), do:
         exec_and_handle_callback :handle_stop, [], state
@@ -151,7 +155,7 @@ defmodule Membrane.Element.Manager.Common do
         end
       end
 
-      def unlink(%State{playback_state: :stopped} = state) do
+      def unlink(%State{playback: %{state: :stopped}} = state) do
         state
           |> State.get_pads_data
           |> Helper.Enum.each_with(fn {_name, %{pid: pid, other_name: other_name}}

@@ -17,10 +17,10 @@ defmodule Membrane.Helper do
   def wrap_nil(nil, reason), do: {:error, reason}
   def wrap_nil(v, _), do: {:ok, v}
 
-  def result_status({:ok, _state}), do: :ok
-  def result_status({{:ok, _res}, _state}), do: :ok
-  def result_status({{:error, reason}, _state}), do: {:error, reason}
-  def result_status({:error, reason}), do: {:error, reason}
+  def result_with_status({:ok, _state} = res), do: {:ok, res}
+  def result_with_status({{:ok, _res}, _state} = res), do: {:ok, res}
+  def result_with_status({{:error, reason}, _state} = res), do: {{:error, reason}, res}
+  def result_with_status({:error, reason} = res), do: {{:error, reason}, res}
 
   def int_part(x, d) when is_integer(x) and is_integer(d) do
     r = x |> rem(d)

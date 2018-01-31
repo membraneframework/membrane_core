@@ -4,16 +4,20 @@ defmodule Membrane.Element.Manager.MessageDispatcher do
   use Membrane.Element.Manager.Log
 
   def handle_message(message, mode, state) do
-    res = do_handle_message(message, mode, state)
-    with :ok <- res |> Helper.result_status
+    with {:ok, res} <- do_handle_message(message, mode, state) |> Helper.result_with_status
     do res
     else
-      {:error, reason} ->
+      {_, {{:error, reason}, state}} ->
+        reason = {:cannot_handle_message, message: message, mode: mode, reason: reason}
         warn_error """
-        Pad: cannot handle message: #{inspect message}, mode: #{inspect mode}
-        """,
-        {:cannot_handle_message, message: message, mode: mode, reason: reason},
-        state
+        MessageDispatcher: cannot handle message: #{inspect message}, mode: #{inspect mode}
+        """, reason, state
+      {_, {:error, reason}} ->
+        reason = {:cannot_handle_message, message: message, mode: mode, reason: reason}
+        warn_error """
+        MessageDispatcher: cannot handle message: #{inspect message}, mode: #{inspect mode}
+        """, reason, state
+        {{:error, reason}, state}
     end
   end
 
@@ -24,6 +28,9 @@ defmodule Membrane.Element.Manager.MessageDispatcher do
   def handle_playback_state_changed(_old, _new, state) do
     state |> PlaybackBuffer.eval
   end
+
+  defp do_handle_message({:membrane_change_playback_state, new_playback_state}, :info, state), do:
+    Membrane.Element.resolve_playback_change(new_playback_state, state)
 
   defp do_handle_message({type, args}, :info, state)
   when type in [:membrane_demand, :membrane_buffer, :membrane_caps, :membrane_event]
@@ -38,6 +45,9 @@ defmodule Membrane.Element.Manager.MessageDispatcher do
 
   defp do_handle_message({:membrane_set_message_bus, args}, :call, state), do:
     forward(:handle_message_bus, args, state)
+
+  defp do_handle_message({:membrane_set_controlling_pid, args}, :call, state), do:
+    forward(:handle_controlling_pid, args, state)
 
   defp do_handle_message({:membrane_handle_link, args}, :call, state), do:
     forward(:handle_link, args, state)

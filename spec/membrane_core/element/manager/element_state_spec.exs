@@ -12,9 +12,9 @@ defmodule Membrane.Element.Manager.StateSpec do
       expect(module).to be_nil()
     end
 
-    it "should have playback_state field set to :stopped" do
-      %State{playback_state: playback_state} = struct(described_module())
-      expect(playback_state).to eq :stopped
+    it "should have playback state set to :stopped" do
+      %State{playback: playback} = struct(described_module())
+      expect(playback.state).to eq :stopped
     end
 
     it "should have source_pads field set to an empty map" do

@@ -36,6 +36,18 @@ defmodule Membrane.Helper.Enum do
     end
   end
 
+  def reduce_while_with(enum, acc, f) do
+    Enum.reduce_while enum, {:ok, acc}, fn e, {:ok, acc} ->
+      with {:ok, {:cont, new_acc}} <- f.(e, acc)
+      do {:cont, {:ok, new_acc}}
+      else
+        {:ok, {:halt, new_acc}} -> {:halt, {:ok, new_acc}}
+        {:error, reason} -> {:halt, {:error, {reason, acc}}}
+        {{:error, reason}, state} -> {:halt, {{:error, reason}, state}}
+      end
+    end
+  end
+
   def each_with(enum, f), do: do_each_with(enum |> Enum.to_list, f)
   defp do_each_with([], _f), do: :ok
   defp do_each_with([h|t], f) do

@@ -6,23 +6,31 @@ defmodule Membrane.Pipeline.State do
 
   use Membrane.Helper
   alias __MODULE__
+  alias Membrane.Mixins.{Playback, Playbackable}
+
+  @derive Playbackable
 
   @type t :: %Membrane.Pipeline.State{
     internal_state: any,
-    playback_state: Membrane.Mixins.Playback.state_t,
+    playback: Playback.t,
     module: module,
     children_to_pids: %{required([Membrane.Element.name_t]) => pid},
     pids_to_children: %{required(pid) => Membrane.Element.name_t},
-    children_ids: %{atom => integer}
+    children_ids: %{atom => integer},
+    pending_pids: list(pid),
+    terminating?: boolean,
   }
 
-  defstruct \
+  defstruct [
     internal_state: nil,
     module: nil,
     children_to_pids: %{},
     pids_to_children: %{},
-    playback_state: :stopped,
-    children_ids: %{}
+    playback: %Playback{},
+    pending_pids: nil,
+    children_ids: %{},
+    terminating?: false,
+  ]
 
 
     #FIXME: rename to get_child_name_by_pid

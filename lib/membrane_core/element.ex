@@ -4,7 +4,8 @@ defmodule Membrane.Element do
   playback of elements.
   """
 
-  use Membrane.Mixins.Log, tags: :core
+  use Membrane.Mixins.Log, import: false, tags: :core
+  use Membrane.Element.Manager.Log, import: false, tags: :core
   use Membrane.Helper
   alias Membrane.Element.Manager.State
   import Membrane.Helper.GenServer
@@ -61,6 +62,7 @@ defmodule Membrane.Element do
 
 
   defp do_start(method, module, name, element_options, process_options) do
+    import Membrane.Mixins.Log
     with :ok <- (if is_element module do :ok else :not_element end)
     do
       debug """
@@ -90,6 +92,7 @@ defmodule Membrane.Element do
   """
   @spec shutdown(pid, timeout) :: :ok
   def shutdown(server, timeout \\ 5000) do
+    import Membrane.Mixins.Log
     debug("Shutdown -> #{inspect(server)}")
     GenServer.stop(server, :normal, timeout)
     :ok
@@ -109,6 +112,28 @@ defmodule Membrane.Element do
   @spec set_message_bus(pid, pid, timeout) :: :ok | {:error, any}
   def set_message_bus(server, message_bus, timeout \\ 5000) when is_pid(server) do
     GenServer.call(server, {:membrane_set_message_bus, message_bus}, timeout)
+  end
+
+
+  @doc """
+  Sends synchronous call to the given element requesting it to set controlling pid.
+
+  It will wait for reply for amount of time passed as second argument
+  (in milliseconds).
+
+  In case of success, returns `:ok`.
+
+  If case of failure, returns `{:error, reason}`
+  """
+  @spec set_controlling_pid(pid, pid, timeout) :: :ok | {:error, any}
+  def set_controlling_pid(server, controlling_pid, timeout \\ 5000) when is_pid(server) do
+    GenServer.call(server, {:membrane_set_controlling_pid, controlling_pid}, timeout)
+  end
+
+
+  def change_playback_state(pid, new_state) do
+    send pid, {:membrane_change_playback_state, new_state}
+    :ok
   end
 
   def link(pid, pid, _, _, _) when is_pid(pid) do
@@ -139,6 +164,7 @@ defmodule Membrane.Element do
 
   @doc false
   def init({module, name, options}) do
+    import Membrane.Mixins.Log
     debug "Element: initializing: #{inspect module}, options: #{inspect options}"
     with {:ok, state} <- module.manager_module.handle_init(module, name, options)
     do
@@ -153,8 +179,9 @@ defmodule Membrane.Element do
 
 
   @doc false
-  def terminate(reason, %State{module: module, playback_state: playback_state} = state) do
-    case playback_state do
+  def terminate(reason, %State{module: module, playback: playback} = state) do
+    import Membrane.Mixins.Log
+    case playback.state do
       :stopped ->
         debug "Terminating element, reason: #{inspect reason}"
       _ ->
@@ -169,6 +196,11 @@ defmodule Membrane.Element do
 
   defdelegate handle_playback_state(old, new, state), to: MessageDispatcher
   defdelegate handle_playback_state_changed(old, new, state), to: MessageDispatcher
+
+  def playback_warn_error(message, reason, state) do
+    import Membrane.Element.Manager.Log
+    warn_error message, reason, state
+  end
 
   def handle_call(message, _from, state) do
     message |> MessageDispatcher.handle_message(:call, state) |> reply(state)
