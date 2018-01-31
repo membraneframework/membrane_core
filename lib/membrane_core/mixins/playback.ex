@@ -4,14 +4,16 @@ defmodule Membrane.Mixins.Playback do
   defstruct [
     state: :stopped,
     pending_state: nil,
-    target_state: nil,
+    target_state: :stopped,
+    target_locked?: false,
     async_state_change: false,
   ]
 
   @type t :: %__MODULE__{
     state: state_t,
     pending_state: state_t | nil,
-    target_state: state_t | nil,
+    target_state: state_t,
+    target_locked?: true,
     async_state_change: boolean,
   }
 
@@ -24,13 +26,14 @@ defmodule Membrane.Mixins.Playback do
   @optional_callbacks handle_playback_state_changed: 3, playback_warn_error: 3
 
   @states [:stopped, :prepared, :playing]
+  @states_positions @states |> Enum.with_index |> Map.new
 
   def states, do: @states
   def next_state(current, target) do
     with \
-      {:ok, curr_pos} <- @states |> Enum.find_index(& &1 == current)
+      {:ok, curr_pos} <- @states_positions[current]
         |> Helper.wrap_nil(:invalid_current_playback_state),
-      {:ok, target_pos} <-  @states |> Enum.find_index(& &1 == target)
+      {:ok, target_pos} <-  @states_positions[target]
         |> Helper.wrap_nil(:invalid_target_playback_state)
     do
       next_state = cond do
@@ -61,10 +64,11 @@ defmodule Membrane.Mixins.Playback do
 
 
       def resolve_playback_change(new_playback_state, playbackable) do
-        old_playback = playbackable |> Playbackable.get_playback
-        playback = %Playback{old_playback | target_state: new_playback_state}
-        playbackable = playbackable |> Playbackable.set_playback(playback)
-        if old_playback.pending_state == nil and old_playback.state != new_playback_state do
+        playbackable = playbackable
+          |> Playbackable.update_playback(& %{&1 | target_state: new_playback_state})
+        playback = playbackable |> Playbackable.get_playback
+
+        if playback.pending_state == nil and playback.state != new_playback_state do
           do_resolve_playback_change(playback, playbackable)
         else
           {:ok, playbackable}
@@ -92,6 +96,28 @@ defmodule Membrane.Mixins.Playback do
             Unable to change playback state
             from #{inspect playback.state} to #{inspect playback.target_state}}
             """, reason, playbackable
+        end
+      end
+
+      def lock_playback_state(new_playback_state \\ nil, playbackable) do
+        playback = playbackable |> Playbackable.get_playback
+        with :ok <- (if playback.target_locked? do {:error, :playback_already_locked} else :ok end)
+        do
+          playbackable |> Playbackable.update_playback(& %Playback{&1 |
+              target_state: new_playback_state || &1.state,
+              target_locked?: true,
+            })
+          resolve_playback_change(new_playback_state, playbackable)
+        end
+      end
+
+      def unlock_playback_state(playbackable) do
+        playback = playbackable |> Playbackable.get_playback
+        with :ok <- (if playback.target_locked? do :ok else {:error, :playback_already_unlocked} end)
+        do
+          playbackable = playbackable
+            |> Playbackable.update_playback(& %Playback{&1 | target_locked?: true})
+          {:ok, playbackable}
         end
       end
 

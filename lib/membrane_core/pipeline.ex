@@ -366,22 +366,6 @@ defmodule Membrane.Pipeline do
     end
   end
 
-
-  def resolve_playback_change(new_playback, %State{terminating: true} = state) do
-    case {state.playback.state, new_playback} do
-      {:stopped, :stopped} ->
-        send self(), :membrane_stop_and_terminate
-        {:ok, state}
-      {_, :stopped} ->
-        super(new_playback, state)
-      _ ->
-        {:ok, state}
-    end
-  end
-  def resolve_playback_change(new_playback, state), do:
-    super(new_playback, state)
-
-
   @doc false
   def handle_playback_state(_old, new, %State{pids_to_children: pids_to_children} = state) do
     children_pids = pids_to_children |> Map.keys
@@ -394,6 +378,12 @@ defmodule Membrane.Pipeline do
     state |> suspend_playback_change
   end
 
+  @doc false
+  def handle_playback_state_changed(_old, :stopped, %State{terminating?: true} = state) do
+    send self(), :membrane_stop_and_terminate
+    {:ok, state}
+  end
+  def handle_playback_state_changed(_old, _new, state), do: {:ok, state}
 
   @doc false
   def handle_info(
@@ -451,8 +441,8 @@ defmodule Membrane.Pipeline do
       :stopped ->
         {:stop, :normal, state}
       _ ->
-        state = %{state | terminating: true}
-        resolve_playback_change(:stopped, state) |> noreply(state)
+        state = %{state | terminating?: true}
+        lock_playback_state(:stopped, state) |> noreply(state)
     end
   end
 
