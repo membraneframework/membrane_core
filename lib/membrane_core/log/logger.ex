@@ -118,8 +118,8 @@ defmodule Membrane.Log.Logger do
     {:reply, {:error, reason}, new_state}
   end
 
-  defp format_callback_response({:error, _reason, new_state}, :noreply) do
-    {:noreply, new_state}
+  defp format_callback_response({:error, reason, new_state}, :noreply) do
+    {:stop, [log_error: reason], new_state}
   end
 
 
@@ -138,7 +138,7 @@ defmodule Membrane.Log.Logger do
   # Case when callback returned failure.
   defp handle_callback({:error, reason, new_internal_state}, %{module: module} = state) do
     content = ["Error occurred while trying to log message. Reason = ", inspect(reason)]
-    case module.handle_log(:warn, content, Membrane.Time.monotonic_time, [], new_internal_state) do
+    case module.handle_log(:warn, content, Membrane.Time.pretty_now, [], new_internal_state) do
       {:ok, new_internal_state} ->
         {:ok, %{state | internal_state: new_internal_state}}
       {:error, reason, new_internal_state} ->
