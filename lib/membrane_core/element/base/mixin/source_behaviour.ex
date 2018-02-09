@@ -31,15 +31,6 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   """
   defmacro def_known_source_pads(source_pads) do
     quote do
-      module_name = String.slice(to_string(__MODULE__),
-        String.length("Elixir."), String.length(to_string(__MODULE__)))
-
-      docstring =
-        "Returns all known source pads for `#{module_name}`.\n\n" <>
-        "They are the following:\n\n" <>
-        Membrane.Helper.Doc.generate_known_pads_docs(unquote(source_pads))
-
-      Module.add_doc(__MODULE__, __ENV__.line + 1, :def, {:known_source_pads, 0}, [], docstring)
       @spec known_source_pads() :: Membrane.Pad.known_pads_t
       def known_source_pads(), do: unquote(source_pads)
     end
