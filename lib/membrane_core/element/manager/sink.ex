@@ -198,7 +198,7 @@ defmodule Membrane.Element.Manager.Sink do
       |> or_warn_error("""
         Demand of size #{inspect buf_cnt} on pad #{inspect pad_name}
         was raised, and handle_write was called, but an error happened.
-        """, state)
+        """)
   end
 
   def handle_buffer(:push, pad_name, buffer, state), do:
@@ -212,13 +212,13 @@ defmodule Membrane.Element.Manager.Sink do
         New buffer arrived:", Buffer.print(buffer), "
         and Membrane tried to execute handle_demand and then handle_write
         for each unsupplied demand, but an error happened.
-        "], state)
+        "])
   end
 
   def handle_write(:push, pad_name, buffers, state) do
     context = %Context.Write{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
     exec_and_handle_callback(:handle_write, [pad_name, buffers, context], state)
-      |> or_warn_error("Error while handling write", state)
+      |> or_warn_error("Error while handling write")
   end
 
   def handle_write(:pull, pad_name, state) do

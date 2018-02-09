@@ -262,7 +262,7 @@ defmodule Membrane.Element.Manager.Filter do
             |> or_warn_error("""
               Demand arrived from pad #{inspect pad_name}, but error happened while
               handling it.
-              """, state)
+              """)
     end
   end
 
@@ -276,7 +276,7 @@ defmodule Membrane.Element.Manager.Filter do
       |> or_warn_error("""
         Demand of size #{inspect buf_cnt} on sink pad #{inspect pad_name}
         was raised, and handle_process was called, but an error happened.
-        """, state)
+        """)
   end
 
   def handle_buffer(:push, pad_name, buffers, state) do
@@ -304,7 +304,7 @@ defmodule Membrane.Element.Manager.Filter do
   def handle_process_push(pad_name, buffers, state) do
     context = %Context.Process{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
     exec_and_handle_callback(:handle_process, [pad_name, buffers, context], state)
-      |> or_warn_error("Error while handling process", state)
+      |> or_warn_error("Error while handling process")
   end
 
   def handle_process_pull(pad_name, source, buf_cnt, state) do
@@ -383,7 +383,7 @@ defmodule Membrane.Element.Manager.Filter do
       |> or_warn_error("""
         Membrane tried to execute handle_demand and then handle_process
         for each unsupplied demand, but an error happened.
-        """, state)
+        """)
   end
 
   defp update_sink_self_demand(state, pad_name, :self, f), do:

@@ -71,7 +71,7 @@ defmodule Membrane.Element.Manager.Common do
       def handle_message(message, state) do
         use Membrane.Element.Manager.Log
         exec_and_handle_callback(:handle_other, [message], state)
-          |> or_warn_error("Error while handling message", state)
+          |> or_warn_error("Error while handling message")
       end
 
       def handle_message_bus(message_bus, state), do:
@@ -314,7 +314,7 @@ defmodule Membrane.Element.Manager.Common do
       |> Helper.Enum.reduce_with(state, fn {pad_name, _pad_data}, st ->
         State.update_pad_data st, :sink, pad_name, :buffer, &PullBuffer.fill/1
       end)
-      |> or_warn_error("Unable to fill sink pull buffers", state)
+      |> or_warn_error("Unable to fill sink pull buffers")
   end
 
   def handle_pad_added(args, %State{module: module} = state), do:

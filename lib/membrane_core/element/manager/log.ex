@@ -55,12 +55,14 @@ defmodule Membrane.Element.Manager.Log do
     end
   end
 
-  defmacro or_warn_error(v, message, state, tags \\ []) do
+  defmacro or_warn_error(v, message, tags \\ []) do
+    use Membrane.Helper
     quote do
-      with {:ok, value} <- unquote v
-      do {:ok, value}
-      else {:error, reason} ->
-        warn_error unquote(message), reason, unquote(state), unquote(tags)
+      with {:ok, res} <- (unquote v) |> Helper.result_with_status
+      do res
+      else
+        {{:error, reason}, state} ->
+          warn_error unquote(message), reason, state, unquote(tags)
       end
     end
   end
