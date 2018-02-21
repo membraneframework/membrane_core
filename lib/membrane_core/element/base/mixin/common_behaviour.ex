@@ -132,11 +132,34 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @callback handle_shutdown(State.internal_state_t) :: :ok
 
 
+  @doc """
+  Macro that defines known options for the element type.
+
+  It automatically generates __MODULE__.Option struct module.
+  """
+  defmacro def_options(options) do
+    quote do
+      @spec options() :: keyword
+      def options(), do: unquote(options)
+
+      defmodule Options do
+        defstruct \
+          unquote(options)
+          |> Enum.map(fn({k,v}) ->
+            {k, v[:default]}
+          end)
+      end
+    end
+  end
+
+
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Membrane.Element.Base.Mixin.CommonBehaviour
 
       use Membrane.Mixins.Log, tags: :element, import: false
+
+      import Membrane.Element.Base.Mixin.CommonBehaviour, only: [def_options: 1]
 
       # Default implementations
 
