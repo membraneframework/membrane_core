@@ -11,16 +11,21 @@ defmodule Membrane.Element.Manager.CapsMatcherSpec do
       let :caps, do: %MockCaps{}
 
       def should_match(spec) do
-        expect(described_module().match(spec, caps())).to be_true()
+        expect(described_module().match?(spec, caps())).to eq(:ok)
       end
 
       def should_not_match(spec) do
-        expect(described_module().match(spec, caps())).to be_false()
+        expect(described_module().match?(spec, caps())).to eq(:invalid_caps)
       end
 
       it "should match empty spec" do
         should_match(%{})
       end
+
+      it "should match with :any as spec" do
+        should_match(:any)
+      end
+
       it "should match proper type" do
         should_match(%{type: MockCaps})
       end
@@ -47,7 +52,7 @@ defmodule Membrane.Element.Manager.CapsMatcherSpec do
         should_not_match(%{string: ["ala", "ma", "kota", "qwerty"]})
       end
 
-      it "should return false for partial match" do
+      it "should fail for partial match", example_tag: true do
         should_not_match(%{type: MapSet, integer: {10, 45}})
         should_not_match(%{type: MockCaps, integer: {10, 35}})
         should_not_match(%{integer: {10, 45}, string: ["none", "shall", "pass"]})
@@ -55,7 +60,7 @@ defmodule Membrane.Element.Manager.CapsMatcherSpec do
         should_not_match(%{type: MockCaps, integer: {10, 35}, string: ["imma", "teh", "mock"]})
       end
 
-      it "should return true when one spec from list matches" do
+      it "should succeed when one spec from list matches" do
         failing = %{type: MapSet, integer: 42, string: "mock"}
         proper = %{type: MockCaps, integer: {10, 50}}
 
