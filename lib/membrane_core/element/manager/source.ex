@@ -135,7 +135,7 @@ defmodule Membrane.Element.Manager.Source do
           |> or_warn_error("""
             Demand arrived from pad #{inspect pad_name}, but error happened while
             handling it.
-            """, state)
+            """)
     end
   end
 
