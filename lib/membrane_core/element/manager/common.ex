@@ -2,6 +2,7 @@ defmodule Membrane.Element.Manager.Common do
 
   use Membrane.Element.Manager.Log
   alias Membrane.Element.Manager.State
+  alias Membrane.Element.Manager.CapsMatcher
   use Membrane.Helper
   alias Membrane.PullBuffer
   alias Membrane.Element.Context
@@ -199,7 +200,7 @@ defmodule Membrane.Element.Manager.Common do
       state |> State.get_pad_data!(:sink, pad_name)
     context = %Context.Caps{caps: old_caps}
     with \
-      :ok <- CapsMatcher.match?(accepted_caps, caps),
+      :ok <- CapsMatcher.match(accepted_caps, caps),
       {:ok, state} <- module.manager_module.exec_and_handle_callback(
         :handle_caps, %{caps: caps}, [pad_name, caps, context], state)
     do
@@ -208,8 +209,8 @@ defmodule Membrane.Element.Manager.Common do
       :invalid_caps ->
         warn_error """
         Received caps: #{inspect caps} that are not specified in known_sink_pads
-        for pad #{inspect pad_name}. Acceptable caps are:
-        #{accepted_caps |> Enum.map(&inspect/1) |> Enum.join(", ")}
+        for pad #{inspect pad_name}. Specs of accepted caps are:
+        #{inspect accepted_caps, pretty: true}
         """, :invalid_caps, state
       {:error, reason} -> warn_error "Error while handling caps", reason, state
     end

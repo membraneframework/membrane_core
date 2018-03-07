@@ -7,16 +7,29 @@ defmodule Membrane.Element.Manager.CapsMatcherSpec do
   use ESpec
 
   describe "match/2" do
+
+    def should_match(spec) do
+      expect(described_module().match(spec, caps())).to eq(:ok)
+    end
+
+    def should_not_match(spec) do
+      expect(described_module().match(spec, caps())).to eq(:invalid_caps)
+    end
+
+    context "given invalid caps" do
+      let :caps, do: :not_caps
+
+      it "should match :any" do
+        should_match(:any)
+      end
+
+      it "shouldn't match regular spec (without crashing)" do
+        should_not_match(%{type: MockCaps})
+      end
+    end
+
     context "given example caps" do
       let :caps, do: %MockCaps{}
-
-      def should_match(spec) do
-        expect(described_module().match?(spec, caps())).to eq(:ok)
-      end
-
-      def should_not_match(spec) do
-        expect(described_module().match?(spec, caps())).to eq(:invalid_caps)
-      end
 
       it "should match empty spec" do
         should_match(%{})
@@ -52,7 +65,7 @@ defmodule Membrane.Element.Manager.CapsMatcherSpec do
         should_not_match(%{string: ["ala", "ma", "kota", "qwerty"]})
       end
 
-      it "should fail for partial match", example_tag: true do
+      it "shouldn't match partially matching caps" do
         should_not_match(%{type: MapSet, integer: {10, 45}})
         should_not_match(%{type: MockCaps, integer: {10, 35}})
         should_not_match(%{integer: {10, 45}, string: ["none", "shall", "pass"]})
@@ -67,6 +80,11 @@ defmodule Membrane.Element.Manager.CapsMatcherSpec do
         should_not_match(failing)
         should_match(proper)
         should_match([failing, proper])
+      end
+
+      it "should raise exception when specs are invalid" do
+        raising_fun = fn -> described_module().match(:not_spec, caps()) end
+        expect(raising_fun).to(raise_exception(ArgumentError))
       end
     end
   end
