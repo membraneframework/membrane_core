@@ -61,7 +61,7 @@ defmodule Membrane.Element.Manager.Log do
       with {:ok, res} <- (unquote v) |> Helper.result_with_status
       do res
       else
-        {{:error, reason}, state} ->
+        {_error, {{:error, reason}, state}} ->
           warn_error unquote(message), reason, state, unquote(tags)
       end
     end
