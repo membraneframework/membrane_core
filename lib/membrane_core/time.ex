@@ -46,6 +46,7 @@ defmodule Membrane.Time do
   ]}
 
   @type t :: integer
+  @type non_neg_t :: non_neg_integer
   @type native_t :: integer
 
 
