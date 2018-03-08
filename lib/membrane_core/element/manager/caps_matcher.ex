@@ -1,36 +1,44 @@
 defmodule Membrane.Element.Manager.CapsMatcher do
-  def any(), do: %{}
+  def validate_specs!({type, keyword_specs}) do
+    caps = type.__struct__
+    caps_keys = caps |> Map.from_struct() |> Map.keys() |> MapSet.new()
+    spec_keys = keyword_specs |> Keyword.keys() |> MapSet.new()
 
-  def match(:any, _), do: :ok
+    if MapSet.subset?(spec_keys, caps_keys) do
+      :ok
+    else
+      invalid_keys = MapSet.difference(spec_keys, caps_keys)
+      raise(ArgumentError, "Specs include invalid keys: #{inspect(invalid_keys)}")
+    end
+  end
+
+  def validate_specs!({_type}), do: :ok
+  def validate_specs!(:any), do: :ok
+  def validate_specs!(specs), do: raise(ArgumentError, "Invalid specs #{inspect(specs)}")
+
+  def match(:any, _), do: true
 
   def match(specs, %_{} = caps) when is_list(specs) do
-    if specs |> Enum.any?(fn spec -> match(spec, caps) end) do
-      :ok
-    else
-      :invalid_caps
-    end
+    specs |> Enum.any?(fn spec -> match(spec, caps) end)
   end
 
-  def match(%{type: type} = spec, %_{} = caps) do
-    with true <- type == caps.__struct__,
-         :ok  <- spec |> Map.delete(:type) |> match(caps)
-    do
-      :ok
-    else
-      _ -> :invalid_caps
-    end
+  def match({type, keyword_specs}, %caps_type{} = caps) do
+    type == caps_type && keyword_specs |> Enum.all?(fn kv -> kv |> match_caps_entry(caps) end)
   end
 
-  def match(%{} = spec, %_{} = caps) do
-    if spec |> Enum.all?(fn {key, spec_value} -> match_value(spec_value, Map.get(caps, key)) end) do
-      :ok
-    else
-      :invalid_caps
-    end
+  def match({type}, %caps_type{}) do
+    type == caps_type
   end
 
-  def match(%{}, _), do: :invalid_caps
-  def match(_, _), do: raise ArgumentError, "Invalid caps spec!"
+  def match(_, _), do: raise(ArgumentError)
+
+  defp match_caps_entry({spec_key, spec_value}, %{} = caps) do
+    with {:ok, caps_value} <- caps |> Map.fetch(spec_key) do
+      match_value(spec_value, caps_value)
+    else
+      _ -> false
+    end
+  end
 
   defp match_value(spec, value) when is_list(spec) do
     value in spec
