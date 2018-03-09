@@ -3,7 +3,7 @@ defmodule MockCaps do
             string: "mock"
 end
 
-defmodule Membrane.Element.Manager.CapsMatcherSpec do
+defmodule Membrane.Caps.MatcherSpec do
   use ESpec
 
   describe "validate_specs!/1" do
@@ -42,13 +42,13 @@ defmodule Membrane.Element.Manager.CapsMatcherSpec do
     end
   end
 
-  describe "match/2" do
+  describe "match?/2" do
     def should_match(spec, caps) do
-      expect(described_module().match(spec, caps)).to(be_true())
+      expect(described_module().match?(spec, caps)).to(be_true())
     end
 
     def should_not_match(spec, caps) do
-      expect(described_module().match(spec, caps)).to(be_false())
+      expect(described_module().match?(spec, caps)).to(be_false())
     end
 
     context "given invalid caps" do
@@ -59,7 +59,7 @@ defmodule Membrane.Element.Manager.CapsMatcherSpec do
       end
 
       it "should raise error for any valid spec" do
-        raising_fun = fn -> described_module().match({MockCaps}, caps()) end
+        raising_fun = fn -> described_module().match?({MockCaps}, caps()) end
         expect(raising_fun).to(raise_exception(ArgumentError))
       end
     end
@@ -123,7 +123,7 @@ defmodule Membrane.Element.Manager.CapsMatcherSpec do
       end
 
       it "should raise exception when specs are invalid" do
-        raising_fun = fn -> described_module().match(:not_spec, caps()) end
+        raising_fun = fn -> described_module().match?(:not_spec, caps()) end
         expect(raising_fun).to(raise_exception(ArgumentError))
       end
     end

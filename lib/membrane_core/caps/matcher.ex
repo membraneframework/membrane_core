@@ -1,4 +1,6 @@
-defmodule Membrane.Element.Manager.CapsMatcher do
+defmodule Membrane.Caps.Matcher do
+  import Kernel, except: [match?: 2]
+
   def validate_specs!({type, keyword_specs}) do
     caps = type.__struct__
     caps_keys = caps |> Map.from_struct() |> Map.keys() |> MapSet.new()
@@ -16,21 +18,21 @@ defmodule Membrane.Element.Manager.CapsMatcher do
   def validate_specs!(:any), do: :ok
   def validate_specs!(specs), do: raise(ArgumentError, "Invalid specs #{inspect(specs)}")
 
-  def match(:any, _), do: true
+  def match?(:any, _), do: true
 
-  def match(specs, %_{} = caps) when is_list(specs) do
-    specs |> Enum.any?(fn spec -> match(spec, caps) end)
+  def match?(specs, %_{} = caps) when is_list(specs) do
+    specs |> Enum.any?(fn spec -> match?(spec, caps) end)
   end
 
-  def match({type, keyword_specs}, %caps_type{} = caps) do
+  def match?({type, keyword_specs}, %caps_type{} = caps) do
     type == caps_type && keyword_specs |> Enum.all?(fn kv -> kv |> match_caps_entry(caps) end)
   end
 
-  def match({type}, %caps_type{}) do
+  def match?({type}, %caps_type{}) do
     type == caps_type
   end
 
-  def match(_, _), do: raise(ArgumentError)
+  def match?(_, _), do: raise(ArgumentError)
 
   defp match_caps_entry({spec_key, spec_value}, %{} = caps) do
     with {:ok, caps_value} <- caps |> Map.fetch(spec_key) do

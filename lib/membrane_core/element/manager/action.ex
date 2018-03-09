@@ -5,7 +5,7 @@ defmodule Membrane.Element.Manager.Action do
   use Membrane.Element.Manager.Log
   alias Membrane.{Buffer, Caps, Event, Message, Pad}
   alias Membrane.Element.Manager.State
-  alias Membrane.Element.Manager.CapsMatcher
+  alias Membrane.Caps
   use Membrane.Helper
 
   @spec send_buffer(Pad.name_t, atom, [Buffer.t], State.t) :: :ok | {:error, any}
@@ -62,12 +62,12 @@ defmodule Membrane.Element.Manager.Action do
     with \
       {:ok, %{accepted_caps: accepted_caps, pid: pid, other_name: other_name}}
         <- state |> State.get_pad_data(:source, pad_name),
-      {:ok, _} <- {CapsMatcher.match(accepted_caps, caps), accepted_caps}
+      {true, _} <- {Caps.Matcher.match?(accepted_caps, caps), accepted_caps}
     do
       send pid, {:membrane_caps, [caps, other_name]}
       state |> State.set_pad_data(:source, pad_name, :caps, caps)
     else
-      {:invalid_caps, accepted_caps} -> warn_error """
+      {false, accepted_caps} -> warn_error """
         Trying to send caps that are not specified in known_source_pads
         Caps being sent: #{inspect caps}
         Allowed caps spec: #{inspect accepted_caps}
