@@ -6,39 +6,43 @@ end
 defmodule Membrane.Caps.MatcherSpec do
   use ESpec
 
-  describe "validate_specs!/1" do
+  describe "validate_specs/1" do
+    def should_be_valid(specs) do
+      expect(described_module().validate_specs(specs)).to(eq(:ok))
+    end
+
+    def should_be_invalid(specs) do
+      expect(described_module().validate_specs(specs)).to(be_error_result())
+    end
+
     it "should succeed when specs have all fields of caps" do
-      expect(described_module().validate_specs!({MockCaps, integer: 1, string: "m"})).to(eq :ok)
+      should_be_valid({MockCaps, integer: 1, string: "m"})
     end
 
     it "should succeed when specs have some fields of caps" do
-      expect(described_module().validate_specs!({MockCaps, integer: 1})).to(eq :ok)
-      expect(described_module().validate_specs!({MockCaps, string: "m"})).to(eq :ok)
+      should_be_valid({MockCaps, integer: 1})
+      should_be_valid({MockCaps, string: "m"})
     end
 
     it "should succeed when specs only specify type" do
-      expect(described_module().validate_specs!({MockCaps})).to(eq :ok)
+      should_be_valid({MockCaps})
     end
 
     it "should succeed when specs are :any" do
-      expect(described_module().validate_specs!(:any)).to(eq :ok)
+      should_be_valid(:any)
     end
 
     it "should fail when specs contain key not present in caps" do
-      some_valid = fn -> described_module().validate_specs!({MockCaps, integer: 1, string: "m", invalid: 42}) end
-      only_invalid = fn -> described_module().validate_specs!({MockCaps, nope: 42}) end
-      expect(some_valid).to(raise_exception(ArgumentError))
-      expect(only_invalid).to(raise_exception(ArgumentError))
+      should_be_invalid({MockCaps, integer: 1, string: "m", invalid: 42})
+      should_be_invalid({MockCaps, nope: 42})
     end
 
     it "should fail when atom other than any is used as specs" do
-      atom_as_spec = fn -> described_module().validate_specs!(:not_spec) end
-      expect(atom_as_spec).to(raise_exception(ArgumentError))
+      should_be_invalid(:not_spec)
     end
 
     it "should fail when empty tuple any is used as specs" do
-      empty_tuple_as_spec = fn -> described_module().validate_specs!({}) end
-      expect(empty_tuple_as_spec).to(raise_exception(ArgumentError))
+      should_be_invalid({})
     end
   end
 
@@ -60,7 +64,7 @@ defmodule Membrane.Caps.MatcherSpec do
 
       it "should raise error for any valid spec" do
         raising_fun = fn -> described_module().match?({MockCaps}, caps()) end
-        expect(raising_fun).to(raise_exception(ArgumentError))
+        expect(raising_fun).to(raise_exception())
       end
     end
 
@@ -124,7 +128,7 @@ defmodule Membrane.Caps.MatcherSpec do
 
       it "should raise exception when specs are invalid" do
         raising_fun = fn -> described_module().match?(:not_spec, caps()) end
-        expect(raising_fun).to(raise_exception(ArgumentError))
+        expect(raising_fun).to(raise_exception())
       end
     end
   end
