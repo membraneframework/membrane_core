@@ -24,7 +24,6 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   """
   @callback known_source_pads() :: Membrane.Pad.known_pads_t()
 
-  # FIXME: Bring back documentation generation or don't mention it in the macro doc
   @doc """
   Macro that defines known source pads for the element type.
 
@@ -33,6 +32,12 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   """
   defmacro def_known_source_pads(source_pads) do
     quote do
+      @doc """
+      Returns all known source pads for #{inspect(__MODULE__)}
+
+      They are the following:
+      #{unquote(source_pads) |> Membrane.Helper.Doc.generate_known_pads_docs()}
+      """
       @spec known_source_pads() :: Membrane.Pad.known_pads_t()
       def known_source_pads(), do: unquote(source_pads)
 

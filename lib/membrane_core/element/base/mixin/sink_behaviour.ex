@@ -24,7 +24,6 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   """
   @callback known_sink_pads() :: Membrane.Pad.known_pads_t()
 
-  # FIXME: Bring back documentation generation or don't mention it in the macro doc
   @doc """
   Macro that defines known sink pads for the element type.
 
@@ -33,6 +32,12 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   """
   defmacro def_known_sink_pads(sink_pads) do
     quote do
+      @doc """
+      Returns all known sink pads for #{inspect(__MODULE__)}
+
+      They are the following:
+      #{unquote(sink_pads) |> Membrane.Helper.Doc.generate_known_pads_docs()}
+      """
       @spec known_sink_pads() :: Membrane.Pad.known_pads_t()
       def known_sink_pads(), do: unquote(sink_pads)
 
