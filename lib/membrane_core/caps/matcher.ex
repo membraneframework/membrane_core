@@ -3,7 +3,7 @@ defmodule Membrane.Caps.Matcher do
 
   alias Membrane.Helper
 
-  @type caps_spec :: {module()} | {module(), keyword()}
+  @type caps_spec :: module() | {module(), keyword()}
   @type caps_specs :: :any | caps_spec() | [caps_spec()]
 
   @doc """
@@ -34,8 +34,7 @@ defmodule Membrane.Caps.Matcher do
     end
   end
 
-  def validate_specs({_type}), do: :ok
-  def validate_specs(:any), do: :ok
+  def validate_specs(specs) when is_atom(spec), do: :ok
   def validate_specs(specs), do: {:error, {:invalid_specs, specs}}
 
   @doc """
@@ -55,16 +54,13 @@ defmodule Membrane.Caps.Matcher do
     type == caps_type && keyword_specs |> Enum.all?(fn kv -> kv |> match_caps_entry(caps) end)
   end
 
-  def match?({type}, %caps_type{}) do
+  def match?(type, %caps_type{}) when is_atom(type) do
     type == caps_type
   end
 
   defp match_caps_entry({spec_key, spec_value}, %{} = caps) do
-    with {:ok, caps_value} <- caps |> Map.fetch(spec_key) do
-      match_value(spec_value, caps_value)
-    else
-      _ -> false
-    end
+    {:ok, caps_value} = caps |> Map.fetch(spec_key)
+    match_value(spec_value, caps_value)
   end
 
   defp match_value(spec, value) when is_list(spec) do

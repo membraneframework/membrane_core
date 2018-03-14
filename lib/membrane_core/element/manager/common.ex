@@ -200,13 +200,13 @@ defmodule Membrane.Element.Manager.Common do
       state |> State.get_pad_data!(:sink, pad_name)
     context = %Context.Caps{caps: old_caps}
     with \
-      true <- Caps.Matcher.match?(accepted_caps, caps),
+      :ok <- if Caps.Matcher.match?(accepted_caps, caps), do: :ok, else: :invalid_caps,
       {:ok, state} <- module.manager_module.exec_and_handle_callback(
         :handle_caps, %{caps: caps}, [pad_name, caps, context], state)
     do
       state |> State.set_pad_data(:sink, pad_name, :caps, caps)
     else
-      false ->
+      :invalid_caps ->
         warn_error """
         Received caps: #{inspect caps} that are not specified in known_sink_pads
         for pad #{inspect pad_name}. Specs of accepted caps are:
