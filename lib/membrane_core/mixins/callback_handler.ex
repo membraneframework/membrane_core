@@ -62,20 +62,15 @@ defmodule Membrane.Mixins.CallbackHandler do
 
       defp handle_callback(result, callback, handler_params, state) do
         module = state |> Map.get(:module)
+        {result, new_internal_state} = result
+          |> handle_callback_result(module, callback, state)
+        state = state |> Map.put(:internal_state, new_internal_state)
         with \
-          {{:ok, actions}, new_internal_state} <- result
-            |> handle_callback_result(module, callback, state),
-          state = state |> Map.put(:internal_state, new_internal_state),
+          {{:ok, actions}, state} <- {result, state},
           {:ok, state} <- actions
             |> exec_handle_actions(callback, handler_params, state)
         do
           {:ok, state}
-        else
-          {{:error, reason}, new_internal_state} ->
-            state = state |> Map.put(:internal_state, new_internal_state)
-            {{:error, reason}, state}
-          {:error, reason} ->
-            {{:error, reason}, state}
         end
       end
 
