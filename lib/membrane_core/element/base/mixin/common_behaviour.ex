@@ -135,20 +135,22 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @doc """
   Macro that defines known options for the element type.
 
-  It automatically generates __MODULE__.Option struct module.
+  It automatically generates appropriate struct.
   """
   defmacro def_options(options) do
     quote do
       @spec options() :: keyword
       def options(), do: unquote(options)
 
-      defmodule Options do
-        defstruct \
-          unquote(options)
-          |> Enum.map(fn({k,v}) ->
-            {k, v[:default]}
+      @enforce_keys unquote(options)
+        |> Enum.flat_map(fn {k, v} ->
+            if v |> Map.new |> Map.has_key?(:default) |> Kernel.not,
+              do: [k], else: []
           end)
-      end
+
+      defstruct unquote(options)
+        |> Enum.map(fn({k, v}) -> {k, v[:default]} end)
+
     end
   end
 

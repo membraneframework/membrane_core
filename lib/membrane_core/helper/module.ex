@@ -7,7 +7,7 @@ defmodule Membrane.Helper.Module do
 
   def struct(module) do
     if module |> loaded_and_function_exported?(:__struct__, 0),
-    do: module.__struct__,
+    do: module.__struct__([]),
     else: nil
   end
 
