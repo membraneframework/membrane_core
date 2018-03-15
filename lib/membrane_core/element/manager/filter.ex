@@ -152,40 +152,28 @@ defmodule Membrane.Element.Manager.Filter do
     Action.send_caps(pad_name, caps, state)
   end
 
-  def handle_action({:forward, pads}, :handle_caps, %{caps: caps} = params, state)
-  when is_list pads
-  do
-    pads |> Helper.Enum.reduce_with(state, fn pad, st ->
-      handle_action {:caps, {pad, caps}}, :handle_caps, params, st end)
-  end
-
-  def handle_action({:forward, pads}, :handle_event, %{event: event} = params, state)
-  when is_list pads
-  do
-    pads |> Helper.Enum.reduce_with(state, fn pad, st ->
-      handle_action {:event, {pad, event}}, :handle_event, params, st end)
-  end
-
-  def handle_action({:forward, :all}, cb, params, state)
+  def handle_action({:forward, data}, cb, params, state)
   when cb in [:handle_caps, :handle_event]
   do
-    dir = case {cb, params} do
-        {:handle_caps, _} -> :source
-        {:handle_event, %{direction: :sink}} -> :source
-        {:handle_event, %{direction: :source}} -> :sink
+    {action, dir} = case {cb, params} do
+        {:handle_buffer, _} -> {:buffer, :source}
+        {:handle_caps, _} -> {:caps, :source}
+        {:handle_event, %{direction: :sink}} -> {:event, :source}
+        {:handle_event, %{direction: :source}} -> {:event, :sink}
       end
     pads = state |> State.get_pads_data(dir) |> Map.keys
-    handle_action {:forward, pads}, cb, params, state
+    pads |> Helper.Enum.reduce_with(state, fn pad, st ->
+      handle_action {action, {pad, data}}, cb, params, st end)
   end
 
-  def handle_action({:demand, pad_name}, :handle_demand, src_name, state)
+  def handle_action({:demand, pad_name}, :handle_demand, params, state)
   when is_pad_name(pad_name) do
-    handle_action({:demand, {pad_name, 1}}, :handle_demand, src_name, state)
+    handle_action({:demand, {pad_name, 1}}, :handle_demand, params, state)
   end
 
-  def handle_action({:demand, {pad_name, size}}, :handle_demand, src_name, state)
+  def handle_action({:demand, {pad_name, size}}, :handle_demand, %{source: src_name} = params, state)
   when is_pad_name(pad_name) and is_integer(size) do
-    handle_action({:demand, {pad_name, {:source, src_name}, size}}, :handle_demand, src_name, state)
+    handle_action({:demand, {pad_name, {:source, src_name}, size}}, :handle_demand, params, state)
   end
 
   def handle_action({:demand, {pad_name, {:source, src_name}, size}}, cb, _params, state)
@@ -258,7 +246,7 @@ defmodule Membrane.Element.Manager.Filter do
             state |> State.get_pad_data!(:source, pad_name)
         context = %Context.Demand{caps: caps}
         exec_and_handle_callback(
-          :handle_demand, pad_name, [pad_name, total_size, demand_in, context], state)
+          :handle_demand, %{source: pad_name}, [pad_name, total_size, demand_in, context], state)
             |> or_warn_error("""
               Demand arrived from pad #{inspect pad_name}, but error happened while
               handling it.

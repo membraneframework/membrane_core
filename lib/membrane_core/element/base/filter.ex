@@ -31,10 +31,10 @@ defmodule Membrane.Element.Base.Filter do
       # Default implementations
 
       @doc false
-      def handle_caps(_pad, _caps, _context, state), do: {{:ok, forward: :all}, state}
+      def handle_caps(_pad, caps, _context, state), do: {{:ok, forward: caps}, state}
 
       @doc false
-      def handle_event(_pad, _event, _context, state), do: {{:ok, forward: :all}, state}
+      def handle_event(_pad, event, _context, state), do: {{:ok, forward: event}, state}
 
       @doc false
       def handle_demand(_pad, _size, _unit, _context, state), do:

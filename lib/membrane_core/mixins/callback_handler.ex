@@ -42,7 +42,9 @@ defmodule Membrane.Mixins.CallbackHandler do
           state
       end
 
-      def exec_and_handle_callback(callback, handler_params \\ nil, args, state) do
+      def exec_and_handle_callback(callback, handler_params \\ %{}, args, state)
+      when is_map(handler_params)
+      do
         result = callback |> exec_callback(args, state)
         result |> handle_callback(callback, handler_params, state)
       end
@@ -53,7 +55,10 @@ defmodule Membrane.Mixins.CallbackHandler do
         module |> apply(callback, args ++ [internal_state])
       end
 
-      def exec_and_handle_splitted_callback(callback, original_callback, handler_params \\ nil, args_list, state) do
+      def exec_and_handle_splitted_callback(
+        callback, original_callback, handler_params \\ %{}, args_list, state
+      ) when is_map(handler_params)
+      do
         args_list |> Helper.Enum.reduce_with(state, fn args, state ->
             result = callback |> exec_callback(args |> Helper.listify, state)
             result |> handle_callback(original_callback, handler_params, state)

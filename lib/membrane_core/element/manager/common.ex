@@ -201,7 +201,7 @@ defmodule Membrane.Element.Manager.Common do
     with \
       :ok <- (if accepted_caps == :any || caps in accepted_caps do :ok else :invalid_caps end),
       {:ok, state} <- module.manager_module.exec_and_handle_callback(
-        :handle_caps, %{caps: caps}, [pad_name, caps, context], state)
+        :handle_caps, [pad_name, caps, context], state)
     do
       state |> State.set_pad_data(:sink, pad_name, :caps, caps)
     else
@@ -284,7 +284,7 @@ defmodule Membrane.Element.Manager.Common do
     %{direction: dir, caps: caps} = state |> State.get_pad_data!(:any, pad_name)
     context = %Context.Event{caps: caps}
     module.manager_module.exec_and_handle_callback(
-      :handle_event, %{direction: dir, event: event}, [pad_name, event, context], state)
+      :handle_event, %{direction: dir}, [pad_name, event, context], state)
   end
 
   def handle_pullbuffer_output(pad_name, {:event, e}, state), do:
