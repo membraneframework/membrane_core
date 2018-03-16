@@ -147,10 +147,13 @@ defmodule Membrane.Pipeline do
 
   @doc false
   def init(module) when is_atom module do
-    init {module, module |> Module.concat(Options) |> Helper.Module.struct}
+    init {module, module |> Helper.Module.struct}
   end
 
-  @doc false
+  def init(%module{} = pipeline_options) do
+    init {module, pipeline_options}
+  end
+
   def init({module, pipeline_options}) do
     with \
       [init: {{:ok, spec}, internal_state}] <- [init: module.handle_init(pipeline_options)],
@@ -220,7 +223,7 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  defp parse_children(children) when is_map(children), do:
+  defp parse_children(children) when is_map(children) or is_list(children), do:
     children |> Helper.Enum.map_with(&parse_child/1)
 
   defp parse_child({name, {module, options, params}})
@@ -229,8 +232,10 @@ defmodule Membrane.Pipeline do
   end
   defp parse_child({name, {module, options}}), do:
     parse_child({name, {module, options, []}})
+  defp parse_child({name, %module{} = options}), do:
+    parse_child({name, {module, options}})
   defp parse_child({name, module}), do:
-    parse_child({name, {module, module |> Module.concat(Options) |> Helper.Module.struct}})
+    parse_child({name, {module, module |> Helper.Module.struct}})
   defp parse_child(config), do:
     {:error, invalid_child_config: config}
 
