@@ -225,34 +225,7 @@ defmodule Membrane.Element.Manager.Filter do
     handle_invalid_action action, callback, params, available_actions, __MODULE__, state
   end
 
-  def handle_demand(pad_name, size, state) do
-    {{:ok, total_size}, state} = state
-      |> State.get_update_pad_data(:source, pad_name, :demand, &{{:ok, &1+size}, &1+size})
-    cond do
-      total_size <= 0 ->
-        debug """
-          Demand handler: not executing handle_demand, as demand is not greater than 0,
-          demand: #{inspect total_size}
-          """, state
-        {:ok, state}
-
-      state |> State.get_pad_data!(:source, pad_name, :eos) ->
-        debug """
-          Demand handler: not executing handle_demand, as EoS has already been sent
-          """, state
-        {:ok, state}
-      true ->
-        %{caps: caps, options: %{other_demand_in: demand_in}} =
-            state |> State.get_pad_data!(:source, pad_name)
-        context = %Context.Demand{caps: caps}
-        exec_and_handle_callback(
-          :handle_demand, %{source: pad_name}, [pad_name, total_size, demand_in, context], state)
-            |> or_warn_error("""
-              Demand arrived from pad #{inspect pad_name}, but error happened while
-              handling it.
-              """)
-    end
-  end
+  defdelegate handle_demand(pad_name, size, state), to: Common
 
   def handle_redemand(src_name, state) do
     handle_demand src_name, 0, state

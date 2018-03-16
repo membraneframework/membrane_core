@@ -320,4 +320,43 @@ defmodule Membrane.Element.Manager.Common do
   def handle_pad_added(args, %State{module: module} = state), do:
     module.manager_module.exec_and_handle_callback(:handle_pad_added, args, state)
 
+  def handle_demand(pad_name, size, %State{module: module} = state) do
+    {{:ok, total_size}, state} = state
+      |> State.get_update_pad_data(:source, pad_name, :demand, &{{:ok, &1+size}, &1+size})
+    if exec_handle_demand?(pad_name, state) do
+      %{caps: caps, options: %{other_demand_in: demand_in}} =
+          state |> State.get_pad_data!(:source, pad_name)
+      context = %Context.Demand{caps: caps}
+      module.manager_module.exec_and_handle_callback(
+        :handle_demand,
+        %{source: pad_name},
+        [pad_name, total_size, demand_in, context],
+        state)
+          |> or_warn_error("""
+            Demand arrived from pad #{inspect pad_name}, but error happened while
+            handling it.
+            """)
+    else
+      {:ok, state}
+    end
+  end
+
+  defp exec_handle_demand?(pad_name, state) do
+    case state |> State.get_pad_data!(:source, pad_name) do
+      %{eos: true} ->
+        debug """
+          Demand handler: not executing handle_demand, as EoS has already been sent
+          """, state
+        false
+      %{demand: demand} when demand <= 0 ->
+        debug """
+          Demand handler: not executing handle_demand, as demand is not greater than 0,
+          demand: #{inspect demand}
+          """, state
+        false
+      _ ->
+        true
+    end
+  end
+
 end
