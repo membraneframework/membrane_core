@@ -59,9 +59,16 @@ defmodule Membrane.Mixins.CallbackHandler do
         callback, original_callback, handler_params \\ %{}, args_list, state
       ) when is_map(handler_params)
       do
-        args_list |> Helper.Enum.reduce_with(state, fn args, state ->
-            result = callback |> exec_callback(args |> Helper.listify, state)
-            result |> handle_callback(original_callback, handler_params, state)
+        split_cont_f = handler_params[:split_cont_f] || fn _ -> true end
+        args_list |> Helper.Enum.reduce_while_with(state, fn args, state ->
+            if split_cont_f.(state) do
+              result = callback |> exec_callback(args |> Helper.listify, state)
+              result
+                |> handle_callback(original_callback, handler_params, state)
+                ~>> ({:ok, state} -> {:ok, {:cont, state}})
+            else
+              {:ok, {:halt, state}}
+            end
           end)
       end
 

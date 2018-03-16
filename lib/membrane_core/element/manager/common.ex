@@ -329,7 +329,7 @@ defmodule Membrane.Element.Manager.Common do
       context = %Context.Demand{caps: caps}
       module.manager_module.exec_and_handle_callback(
         :handle_demand,
-        %{source: pad_name},
+        %{source: pad_name, split_cont_f: & exec_handle_demand?(pad_name, &1)},
         [pad_name, total_size, demand_in, context],
         state)
           |> or_warn_error("""
