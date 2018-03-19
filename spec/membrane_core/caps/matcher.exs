@@ -86,8 +86,9 @@ defmodule Membrane.Caps.MatcherSpec do
       end
 
       it "should match when valid range spec is nested in list" do
-        should_match({MockCaps, integer: one_of([4, range(30,45), 421])}, caps())
+        should_match({MockCaps, integer: one_of([4, range(30, 45), 421])}, caps())
       end
+
       it "shouldn't match invalid type" do
         should_not_match(MapSet, caps())
       end
@@ -104,8 +105,16 @@ defmodule Membrane.Caps.MatcherSpec do
       it "shouldn't match partially matching caps" do
         should_not_match({MapSet, integer: range(10, 45)}, caps())
         should_not_match({MockCaps, integer: range(10, 35)}, caps())
-        should_not_match({MockCaps, integer: range(10, 45), string: one_of(["none", "shall", "pass"])}, caps())
-        should_not_match({MockCaps, integer: range(10, 35), string: one_of(["imma", "teh", "mock"])}, caps())
+
+        should_not_match(
+          {MockCaps, integer: range(10, 45), string: one_of(["none", "shall", "pass"])},
+          caps()
+        )
+
+        should_not_match(
+          {MockCaps, integer: range(10, 35), string: one_of(["imma", "teh", "mock"])},
+          caps()
+        )
       end
 
       it "should succeed when one spec from list matches" do

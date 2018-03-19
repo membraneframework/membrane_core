@@ -27,13 +27,16 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   @doc """
   Macro that defines known source pads for the element type.
 
+  Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
+  without module prefix
+
   It automatically generates documentation from the given definition
   and adds compile-time caps specs validation
   """
   defmacro def_known_source_pads(raw_source_pads) do
     source_pads = raw_source_pads |> Membrane.Helper.Macro.inject_calls([
-      {Membrane.Caps.Matcher, :one_of},
-      {Membrane.Caps.Matcher, :range}
+      {Caps.Matcher, :one_of},
+      {Caps.Matcher, :range}
     ])
 
     quote do
