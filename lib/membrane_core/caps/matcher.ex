@@ -1,10 +1,23 @@
 defmodule Membrane.Caps.Matcher do
   import Kernel, except: [match?: 2]
+  require Record
 
   alias Membrane.Helper
 
   @type caps_spec :: module() | {module(), keyword()}
   @type caps_specs :: :any | caps_spec() | [caps_spec()]
+
+  Record.defrecordp :range_t,__MODULE__.Range, min: 0, max: :infinity
+  Record.defrecordp :in_t, __MODULE__.In, list: []
+
+  def range(min, max) do
+    range_t(min: min, max: max)
+  end
+
+  def one_of(values) when is_list(values) do
+    in_t(list: values)
+  end
+
 
   @doc """
   Function used to make sure caps specs are valid.
@@ -34,7 +47,7 @@ defmodule Membrane.Caps.Matcher do
     end
   end
 
-  def validate_specs(specs) when is_atom(spec), do: :ok
+  def validate_specs(specs) when is_atom(specs), do: :ok
   def validate_specs(specs), do: {:error, {:invalid_specs, specs}}
 
   @doc """
@@ -63,11 +76,11 @@ defmodule Membrane.Caps.Matcher do
     match_value(spec_value, caps_value)
   end
 
-  defp match_value(spec, value) when is_list(spec) do
-    value in spec
+  defp match_value(in_t(list: specs), value) when is_list(specs) do
+    specs |> Enum.any?(fn spec -> match_value(spec, value) end)
   end
 
-  defp match_value({min, max}, value) do
+  defp match_value(range_t(min: min, max: max), value) do
     min <= value && value <= max
   end
 

@@ -200,7 +200,7 @@ defmodule Membrane.Element.Manager.Common do
       state |> State.get_pad_data!(:sink, pad_name)
     context = %Context.Caps{caps: old_caps}
     with \
-      :ok <- if Caps.Matcher.match?(accepted_caps, caps), do: :ok, else: :invalid_caps,
+      :ok <- (if Caps.Matcher.match?(accepted_caps, caps), do: :ok, else: :invalid_caps),
       {:ok, state} <- module.manager_module.exec_and_handle_callback(
         :handle_caps, %{caps: caps}, [pad_name, caps, context], state)
     do

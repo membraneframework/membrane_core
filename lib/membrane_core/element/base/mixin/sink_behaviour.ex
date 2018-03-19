@@ -30,7 +30,12 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   It automatically generates documentation from the given definition
   and adds compile-time caps specs validation
   """
-  defmacro def_known_sink_pads(sink_pads) do
+  defmacro def_known_sink_pads(raw_sink_pads) do
+    sink_pads = raw_sink_pads |> Membrane.Helper.Macro.inject_calls([
+      {Membrane.Caps.Matcher, :one_of},
+      {Membrane.Caps.Matcher, :range}
+    ])
+
     quote do
       @doc """
       Returns all known sink pads for #{inspect(__MODULE__)}

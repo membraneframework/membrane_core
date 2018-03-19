@@ -30,7 +30,12 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   It automatically generates documentation from the given definition
   and adds compile-time caps specs validation
   """
-  defmacro def_known_source_pads(source_pads) do
+  defmacro def_known_source_pads(raw_source_pads) do
+    source_pads = raw_source_pads |> Membrane.Helper.Macro.inject_calls([
+      {Membrane.Caps.Matcher, :one_of},
+      {Membrane.Caps.Matcher, :range}
+    ])
+
     quote do
       @doc """
       Returns all known source pads for #{inspect(__MODULE__)}

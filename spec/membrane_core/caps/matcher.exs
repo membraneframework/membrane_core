@@ -5,6 +5,7 @@ end
 
 defmodule Membrane.Caps.MatcherSpec do
   use ESpec
+  import Membrane.Caps.Matcher, only: [range: 2, one_of: 1]
 
   describe "validate_specs/1" do
     def should_be_valid(specs) do
@@ -25,7 +26,7 @@ defmodule Membrane.Caps.MatcherSpec do
     end
 
     it "should succeed when specs only specify type" do
-      should_be_valid({MockCaps})
+      should_be_valid(MockCaps)
     end
 
     it "should succeed when specs are :any" do
@@ -35,10 +36,6 @@ defmodule Membrane.Caps.MatcherSpec do
     it "should fail when specs contain key not present in caps" do
       should_be_invalid({MockCaps, integer: 1, string: "m", invalid: 42})
       should_be_invalid({MockCaps, nope: 42})
-    end
-
-    it "should fail when atom other than any is used as specs" do
-      should_be_invalid(:not_spec)
     end
 
     it "should fail when empty tuple any is used as specs" do
@@ -63,7 +60,7 @@ defmodule Membrane.Caps.MatcherSpec do
       end
 
       it "should raise error for any valid spec" do
-        raising_fun = fn -> described_module().match?({MockCaps}, caps()) end
+        raising_fun = fn -> described_module().match?(MockCaps, caps()) end
         expect(raising_fun).to(raise_exception())
       end
     end
@@ -76,41 +73,44 @@ defmodule Membrane.Caps.MatcherSpec do
       end
 
       it "should match proper type" do
-        should_match({MockCaps}, caps())
+        should_match(MockCaps, caps())
       end
 
       it "should match value within specified range" do
-        should_match({MockCaps, integer: {10, 50}}, caps())
+        should_match({MockCaps, integer: range(10, 50)}, caps())
       end
 
       it "should match when value is in the specified list" do
-        should_match({MockCaps, integer: [4, 42, 421]}, caps())
-        should_match({MockCaps, string: ["ala", "ma", "kota", "mock"]}, caps())
+        should_match({MockCaps, integer: one_of([4, 42, 421])}, caps())
+        should_match({MockCaps, string: one_of(["ala", "ma", "kota", "mock"])}, caps())
       end
 
+      it "should match when valid range spec is nested in list" do
+        should_match({MockCaps, integer: one_of([4, range(30,45), 421])}, caps())
+      end
       it "shouldn't match invalid type" do
-        should_not_match({MapSet}, caps())
+        should_not_match(MapSet, caps())
       end
 
       it "shouldn't match value outside the specified range" do
-        should_not_match({MockCaps, integer: {10, 40}}, caps())
+        should_not_match({MockCaps, integer: range(10, 40)}, caps())
       end
 
       it "shouldn't match when value is not in the specified list" do
-        should_not_match({MockCaps, integer: [10, 40, 100, 90, 2]}, caps())
-        should_not_match({MockCaps, string: ["ala", "ma", "kota", "qwerty"]}, caps())
+        should_not_match({MockCaps, integer: one_of([10, 40, 100, 90, 2])}, caps())
+        should_not_match({MockCaps, string: one_of(["ala", "ma", "kota", "qwerty"])}, caps())
       end
 
       it "shouldn't match partially matching caps" do
-        should_not_match({MapSet, integer: {10, 45}}, caps())
-        should_not_match({MockCaps, integer: {10, 35}}, caps())
-        should_not_match({MockCaps, integer: {10, 45}, string: ["none", "shall", "pass"]}, caps())
-        should_not_match({MockCaps, integer: {10, 35}, string: ["imma", "teh", "mock"]}, caps())
+        should_not_match({MapSet, integer: range(10, 45)}, caps())
+        should_not_match({MockCaps, integer: range(10, 35)}, caps())
+        should_not_match({MockCaps, integer: range(10, 45), string: one_of(["none", "shall", "pass"])}, caps())
+        should_not_match({MockCaps, integer: range(10, 35), string: one_of(["imma", "teh", "mock"])}, caps())
       end
 
       it "should succeed when one spec from list matches" do
         failing = {MapSet, integer: 42, string: "mock"}
-        proper = {MockCaps, integer: {10, 50}}
+        proper = {MockCaps, integer: range(10, 50)}
 
         should_not_match(failing, caps())
         should_match(proper, caps())
@@ -119,16 +119,11 @@ defmodule Membrane.Caps.MatcherSpec do
 
       it "should fail when none of the specs from list matches" do
         failing = {MapSet, integer: 42, string: "mock"}
-        failing_too = {MockCaps, integer: {10, 30}}
+        failing_too = {MockCaps, integer: range(10, 30)}
 
         should_not_match(failing, caps())
         should_not_match(failing_too, caps())
         should_not_match([failing, failing_too], caps())
-      end
-
-      it "should raise exception when specs are invalid" do
-        raising_fun = fn -> described_module().match?(:not_spec, caps()) end
-        expect(raising_fun).to(raise_exception())
       end
     end
   end
