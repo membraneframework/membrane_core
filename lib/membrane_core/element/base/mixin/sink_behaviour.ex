@@ -1,6 +1,7 @@
 defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   @moduledoc false
 
+  alias Membrane.Caps
 
   @doc """
   Callback that defines what sink pads may be ever available for this
@@ -21,18 +22,46 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   The default name for generic sink pad, in elements that just consume some
   buffers is `:sink`.
   """
-  @callback known_sink_pads() :: Membrane.Pad.known_pads_t
-
+  @callback known_sink_pads() :: Membrane.Pad.known_pads_t()
 
   @doc """
   Macro that defines known sink pads for the element type.
 
-  It automatically generates documentation from the given definition.
+  Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
+  without module prefix
+
+  It automatically generates documentation from the given definition
+  and adds compile-time caps specs validation
   """
-  defmacro def_known_sink_pads(sink_pads) do
+  defmacro def_known_sink_pads(raw_sink_pads) do
+    sink_pads = raw_sink_pads |> Membrane.Helper.Macro.inject_calls([
+      {Caps.Matcher, :one_of},
+      {Caps.Matcher, :range}
+    ])
+
     quote do
-      @spec known_sink_pads() :: Membrane.Pad.known_pads_t
+      @doc """
+      Returns all known sink pads for #{inspect(__MODULE__)}
+
+      They are the following:
+      #{unquote(sink_pads) |> Membrane.Helper.Doc.generate_known_pads_docs()}
+      """
+      @spec known_sink_pads() :: Membrane.Pad.known_pads_t()
       def known_sink_pads(), do: unquote(sink_pads)
+
+      @after_compile {__MODULE__, :__membrane_sink_caps_specs_validation__}
+
+      def __membrane_sink_caps_specs_validation__(env, _bytecode) do
+        pads_list = env.module.known_sink_pads() |> Map.values()
+
+        for {_, _, caps_spec} <- pads_list do
+          with :ok <- caps_spec |> Caps.Matcher.validate_specs() do
+            :ok
+          else
+            {:error, reason} -> raise "Error in sink caps spec: #{inspect(reason)}"
+          end
+        end
+      end
     end
   end
 

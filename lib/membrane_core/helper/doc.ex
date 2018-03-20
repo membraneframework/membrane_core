@@ -14,8 +14,8 @@ defmodule Membrane.Helper.Doc do
     |> Enum.map(fn({name, {availability, mode, caps}}) ->
       caps_docstring = case caps do
         :any ->
-          "    * Caps: any\n"
-        caps ->
+          "    * Caps: `any`\n"
+        caps when is_list(caps) ->
           "    * Caps:\n" <>
           (
             caps
@@ -23,6 +23,9 @@ defmodule Membrane.Helper.Doc do
             |> Enum.map(fn(x) -> "        * `#{x}`" end)
             |> Enum.join("\n")
           )
+        caps ->
+          "    * Caps:\n" <>
+          "      * `#{inspect caps}`\n"
       end
 
       """
