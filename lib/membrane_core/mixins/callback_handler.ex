@@ -128,8 +128,8 @@ defmodule Membrane.Mixins.CallbackHandler do
         # TODO: send error to pipeline or do something
         callback_handler_warn_error(
           """
-           Callback #{inspect(cb)} from module #{inspect(module)} returned an error
-           Internal state: #{inspect(new_internal_state)}
+          Callback #{inspect(cb)} from module #{inspect(module)} returned an error
+          Internal state: #{inspect(new_internal_state)}
           """,
           reason,
           state

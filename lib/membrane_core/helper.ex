@@ -114,7 +114,7 @@ defmodule Membrane.Helper do
 
   defmacro stacktrace do
     quote do
-      # in order to exclude `Process.info/2` call
+      # drop excludes `Process.info/2` call
       Process.info(self(), :current_stacktrace)
       ~> ({:current_stacktrace, trace} -> trace)
       |> Enum.drop(1)

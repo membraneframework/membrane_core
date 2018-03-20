@@ -39,14 +39,14 @@ defmodule Membrane.Element do
   Works similarily to `GenServer.start_link/3` and has the same return values.
   """
   @spec start_link(pid, module, element_options_t, process_options_t) :: on_start
-  def start_link(pipeline, module, name),
-    do:
-      start_link(
-        pipeline,
-        module,
-        name,
-        module |> Module.concat(Options) |> Helper.Module.struct()
-      )
+  def start_link(pipeline, module, name) do
+    start_link(
+      pipeline,
+      module,
+      name,
+      module |> Module.concat(Options) |> Helper.Module.struct()
+    )
+  end
 
   def start_link(pipeline, module, name, element_options, process_options \\ []),
     do: do_start(:start_link, pipeline, module, name, element_options, process_options)
@@ -67,12 +67,7 @@ defmodule Membrane.Element do
   defp do_start(method, pipeline, module, name, element_options, process_options) do
     import Membrane.Mixins.Log
 
-    with :ok <-
-           (if is_element(module) do
-              :ok
-            else
-              :not_element
-            end) do
+    if is_element(module) do
       debug("""
       Element start link: module: #{inspect(module)},
       element options: #{inspect(element_options)},
@@ -85,14 +80,13 @@ defmodule Membrane.Element do
         process_options
       ])
     else
-      :not_element ->
-        warn_error(
-          """
-          Cannot start element, passed module #{inspect(module)} is not a Membrane Element.
-          Make sure that given module is the right one and it uses Membrane.Element.Base.*
-          """,
-          {:not_element, module}
-        )
+      warn_error(
+        """
+        Cannot start element, passed module #{inspect(module)} is not a Membrane Element.
+        Make sure that given module is the right one and it uses Membrane.Element.Base.*
+        """,
+        {:not_element, module}
+      )
     end
   end
 
@@ -227,13 +221,13 @@ defmodule Membrane.Element do
   def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
     import Membrane.Element.Manager.Log
 
-    if reason != :normal,
-      do:
-        warn_error(
-          "Failing becouse of pipeline failure",
-          {:pipeline_failure, reason: reason},
-          state
-        )
+    if reason != :normal do
+      warn_error(
+        "Failing becouse of pipeline failure",
+        {:pipeline_failure, reason: reason},
+        state
+      )
+    end
 
     {:stop, reason, state}
   end

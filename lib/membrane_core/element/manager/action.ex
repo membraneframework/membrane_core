@@ -31,8 +31,10 @@ defmodule Membrane.Element.Manager.Action do
   def send_buffer(pad_name, buffers, _callback, state) do
     debug(
       [
-        "Sending buffers through pad #{inspect(pad_name)},
-      Buffers: ",
+        """
+        Sending buffers through pad #{inspect(pad_name)},
+        Buffers:
+        """,
         Buffer.print(buffers)
       ],
       state
@@ -54,17 +56,33 @@ defmodule Membrane.Element.Manager.Action do
       {:ok, state}
     else
       {:ok, %{eos: true}} ->
-        warn_error(["
-        Error while sending buffers to pad: #{inspect(pad_name)}
-        Buffers: ", Buffer.print(buffers)], :eos_already_sent, state)
+        warn_error(
+          [
+            """
+            Error while sending buffers to pad: #{inspect(pad_name)}
+            Buffers:
+            """,
+            Buffer.print(buffers)
+          ],
+          :eos_already_sent,
+          state
+        )
 
       {:error, :unknown_pad} ->
         handle_unknown_pad(pad_name, :source, :buffer, state)
 
       {:error, reason} ->
-        warn_error(["
-        Error while sending buffers to pad: #{inspect(pad_name)}
-        Buffers: ", Buffer.print(buffers)], reason, state)
+        warn_error(
+          [
+            """
+            Error while sending buffers to pad: #{inspect(pad_name)}
+            Buffers:
+            """,
+            Buffer.print(buffers)
+          ],
+          reason,
+          state
+        )
     end
   end
 
@@ -87,9 +105,9 @@ defmodule Membrane.Element.Manager.Action do
       {false, accepted_caps} ->
         warn_error(
           """
-            Trying to send caps that are not specified in known_source_pads
-            Caps being sent: #{inspect(caps)}
-            Allowed caps spec: #{inspect(accepted_caps)}
+          Trying to send caps that are not specified in known_source_pads
+          Caps being sent: #{inspect(caps)}
+          Allowed caps spec: #{inspect(accepted_caps)}
           """,
           :invalid_caps,
           state
@@ -263,8 +281,8 @@ defmodule Membrane.Element.Manager.Action do
     "#{inspect(action_name)}" on pad "#{inspect(pad_name)}", but such pad has not
     been found. #{
       if expected_direction != :any do
-        "It either means that it does not exist, or it is not a
-  #{inspect(direction_name)} pad."
+        "It either means that it does not exist, or it is not a" <>
+          "#{inspect(direction_name)} pad."
       else
         ""
       end

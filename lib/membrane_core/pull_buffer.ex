@@ -62,11 +62,11 @@ defmodule Membrane.PullBuffer do
       )
       when is_list(v) do
     if size >= pref_size do
-      debug("
+      debug("""
       PullBuffer #{pb.name}: received buffers from sink #{inspect(pb.sink_name)},
       despite not requesting them. It is probably caused by overestimating demand
       by previous element.
-      ")
+      """)
     end
 
     {:ok, do_store_buffers(pb, v)}
@@ -77,25 +77,26 @@ defmodule Membrane.PullBuffer do
     %PullBuffer{current_size: size} = pb = do_store_buffers(pb, v)
 
     if size >= warn_lvl do
+      above_level =
+        if size < fail_lvl do
+          "warn level"
+        else
+          "fail_level"
+        end
+
       warn([
-        "
+        """
         PullBuffer #{pb.name} (toilet): received #{inspect(size)} buffers,
-        which is above #{
-          if size < fail_lvl do
-            "warn level"
-          else
-            "fail_level"
-          end
-        },
-        from sink #{inspect(pb.sink_name)} that works in push mode. To have control
-        over amount of buffers being produced, consider using push mode. If this
-        is a normal situation, increase toilet warn/fail level.
-        Buffers: ",
+        which is above #{above_level}, from sink #{inspect(pb.sink_name)} that works in push mode.
+        To have control over amount of buffers being produced, consider using push mode.
+        If this is a normal situation, increase toilet warn/fail level.
+        Buffers: \
+        """,
         Buffer.print(v),
-        "
+        """
 
         PullBuffer #{inspect(pb)}
-        "
+        """
       ])
     end
 
@@ -229,24 +230,24 @@ defmodule Membrane.PullBuffer do
          current_size: size,
          preferred_size: pref_size,
          toilet: toilet
-       }),
-       do:
-         debug([
-           "
-      PullBuffer #{
-             if toilet do
-               "#{inspect(name)} (toilet)"
-             else
-               inspect(name)
-             end
-           }: ",
-           msg,
-           "\n",
-           "PullBuffer size: #{inspect(size)}, ",
-           if toilet do
-             "toilet limits: #{inspect(toilet)}"
-           else
-             "preferred size: #{inspect(pref_size)}"
-           end
-         ])
+       }) do
+    name_str =
+      if toilet do
+        "#{inspect(name)} (toilet)"
+      else
+        inspect(name)
+      end
+
+    debug([
+      "PullBuffer #{name_str}: ",
+      msg,
+      "\n",
+      "PullBuffer size: #{inspect(size)}, ",
+      if toilet do
+        "toilet limits: #{inspect(toilet)}"
+      else
+        "preferred size: #{inspect(pref_size)}"
+      end
+    ])
+  end
 end

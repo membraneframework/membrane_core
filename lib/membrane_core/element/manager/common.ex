@@ -72,8 +72,8 @@ defmodule Membrane.Element.Manager.Common do
           other ->
             warn_error(
               """
-                Module #{inspect(module)} handle_init callback returned invalid result:
-                #{inspect(other)} instead of {:ok, state} or {:error, reason}
+              Module #{inspect(module)} handle_init callback returned invalid result:
+              #{inspect(other)} instead of {:ok, state} or {:error, reason}
               """,
               {:invalid_callback_result, :handle_init, other},
               state
