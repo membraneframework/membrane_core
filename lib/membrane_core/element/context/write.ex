@@ -5,10 +5,8 @@ defmodule Membrane.Element.Context.Write do
   """
 
   @type t :: %Membrane.Element.Context.Write{
-    caps: Membrane.Caps.t
-  }
+          caps: Membrane.Caps.t()
+        }
 
-  defstruct \
-    caps: nil
-
+  defstruct caps: nil
 end

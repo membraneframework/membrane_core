@@ -77,42 +77,40 @@ defmodule Membrane.Element.Manager.Source do
   alias Membrane.Element.Context
   use Membrane.Element.Manager.Common
 
-
-
   # Private API
 
   def handle_action({:buffer, {pad_name, buffer}}, cb, _params, state)
-  when is_pad_name(pad_name) do
+      when is_pad_name(pad_name) do
     Action.send_buffer(pad_name, buffer, cb, state)
   end
 
   def handle_action({:caps, {pad_name, caps}}, _cb, _params, state)
-  when is_pad_name(pad_name) do
+      when is_pad_name(pad_name) do
     Action.send_caps(pad_name, caps, state)
   end
 
   def handle_action({:redemand, src_name}, cb, _params, state)
-  when is_pad_name(src_name) and cb != :handle_demand do
+      when is_pad_name(src_name) and cb != :handle_demand do
     Action.handle_redemand(src_name, state)
   end
 
   def handle_action(action, callback, params, state) do
-    available_actions = [
+    available_actions =
+      [
         "{:buffer, {pad_name, buffers}}",
         "{:caps, {pad_name, caps}}",
         "{:redemand, source_name}"
-          |> (provided that: callback != :handle_demand),
-      ] ++ Common.available_actions
-    handle_invalid_action action, callback, params, available_actions, __MODULE__, state
+        |> provided(that: callback != :handle_demand)
+      ] ++ Common.available_actions()
+
+    handle_invalid_action(action, callback, params, available_actions, __MODULE__, state)
   end
 
   def handle_redemand(src_name, state) do
-    handle_demand src_name, 0, state
+    handle_demand(src_name, 0, state)
   end
 
   defdelegate handle_demand(pad_name, size, state), to: Common
 
-  def handle_pad_added(name, :sink, state), do:
-    Common.handle_pad_added([name], state)
-
+  def handle_pad_added(name, :sink, state), do: Common.handle_pad_added([name], state)
 end

@@ -1,5 +1,4 @@
 defmodule Membrane.Element.Base.Sink do
-
   @doc """
   Callback that is called when buffer should be written by the sink.
 
@@ -13,9 +12,8 @@ defmodule Membrane.Element.Base.Sink do
   * context (`Membrane.Element.Context.Write`)
   * current element's state.
   """
-  @callback handle_write(any, list(Membrane.Buffer.t), Membrane.Element.Context.Write.t, any) ::
-    Membrane.Element.Base.Mixin.CommonBehaviour.callback_return_t
-
+  @callback handle_write(any, list(Membrane.Buffer.t()), Membrane.Element.Context.Write.t(), any) ::
+              Membrane.Element.Base.Mixin.CommonBehaviour.callback_return_t()
 
   defmacro __using__(_) do
     quote location: :keep do
@@ -29,24 +27,20 @@ defmodule Membrane.Element.Base.Sink do
       @spec manager_module() :: module
       def manager_module, do: Membrane.Element.Manager.Sink
 
-
       # Default implementations
 
       @doc false
-      def handle_write1(_pad, _buffer, _context, state), do:
-        {{:error, :handle_write_not_implemented}, state}
+      def handle_write1(_pad, _buffer, _context, state),
+        do: {{:error, :handle_write_not_implemented}, state}
 
       @doc false
       def handle_write(pad, buffers, context, state) do
-        args_list = buffers |> Enum.map(& [pad, &1, context])
+        args_list = buffers |> Enum.map(&[pad, &1, context])
         {{:ok, split: {:handle_write1, args_list}}, state}
       end
 
-
-      defoverridable [
-        handle_write: 4,
-        handle_write1: 4,
-      ]
+      defoverridable handle_write: 4,
+                     handle_write1: 4
     end
   end
 end

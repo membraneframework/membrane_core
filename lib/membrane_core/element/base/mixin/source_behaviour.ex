@@ -34,10 +34,12 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   and adds compile-time caps specs validation
   """
   defmacro def_known_source_pads(raw_source_pads) do
-    source_pads = raw_source_pads |> Membrane.Helper.Macro.inject_calls([
-      {Caps.Matcher, :one_of},
-      {Caps.Matcher, :range}
-    ])
+    source_pads =
+      raw_source_pads
+      |> Membrane.Helper.Macro.inject_calls([
+        {Caps.Matcher, :one_of},
+        {Caps.Matcher, :range}
+      ])
 
     quote do
       @doc """

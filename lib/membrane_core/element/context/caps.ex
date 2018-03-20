@@ -5,10 +5,8 @@ defmodule Membrane.Element.Context.Caps do
   """
 
   @type t :: %Membrane.Element.Context.Caps{
-    caps: Membrane.Caps.t | nil
-  }
+          caps: Membrane.Caps.t() | nil
+        }
 
-  defstruct \
-    caps: nil
-
+  defstruct caps: nil
 end

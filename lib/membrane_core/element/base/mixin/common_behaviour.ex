@@ -6,10 +6,10 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   # Type that defines a single action that may be returned from handle_*
   # callbacks.
   @type callback_action_t ::
-    {:buffer, {Membrane.Pad.name_t, Membrane.Buffer.t}} |
-    {:caps, {Membrane.Pad.name_t, Membrane.Caps.t}} |
-    {:event, {Membrane.Pad.name_t, Membrane.Event.t}} |
-    {:message, Membrane.Message.t}
+          {:buffer, {Membrane.Pad.name_t(), Membrane.Buffer.t()}}
+          | {:caps, {Membrane.Pad.name_t(), Membrane.Caps.t()}}
+          | {:event, {Membrane.Pad.name_t(), Membrane.Event.t()}}
+          | {:message, Membrane.Message.t()}
 
   # Type that defines list of actions that may be returned from handle_*
   # callbacks.
@@ -17,18 +17,16 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   # Type that defines all valid return values from callbacks.
   @type callback_return_t ::
-    {{:ok, callback_actions_t}, State.internal_state_t} |
-    {{:error, any}, State.internal_state_t}
-
+          {{:ok, callback_actions_t}, State.internal_state_t()}
+          | {{:error, any}, State.internal_state_t()}
 
   @callback is_membrane_element :: true
 
   @callback manager_module :: module
 
-  @callback handle_init(Membrane.Element.element_options_t) ::
-    {:ok, State.internal_state_t} |
-    {:error, State.internal_state_t}
-
+  @callback handle_init(Membrane.Element.element_options_t()) ::
+              {:ok, State.internal_state_t()}
+              | {:error, State.internal_state_t()}
 
   @doc """
   Callback invoked when Element is prepared. It will receive the previous
@@ -40,8 +38,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   Such resources should be released in `handle_stop/1`.
   """
-  @callback handle_prepare(Playback.state_t, Playback.state_t) :: callback_return_t
-
+  @callback handle_prepare(Playback.state_t(), Playback.state_t()) :: callback_return_t
 
   @doc """
   Callback invoked when Element is supposed to start playing. It will receive
@@ -50,8 +47,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   This is moment when you should start generating buffers if there're any
   pads in the push mode.
   """
-  @callback handle_play(State.internal_state_t) :: callback_return_t
-
+  @callback handle_play(State.internal_state_t()) :: callback_return_t
 
   @doc """
   Callback invoked when Element is supposed to stop playing. It will receive
@@ -61,8 +57,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   used by the Element. For example, if your Element opens a file, this is
   the place to close it.
   """
-  @callback handle_stop(State.internal_state_t) :: callback_return_t
-
+  @callback handle_stop(State.internal_state_t()) :: callback_return_t
 
   @doc """
   Callback invoked when Element is receiving message of other kind.
@@ -72,7 +67,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * message,
   * current element's sate.
   """
-  @callback handle_other(Membrane.Message.type_t, State.internal_state_t) :: callback_return_t
+  @callback handle_other(Membrane.Message.type_t(), State.internal_state_t()) :: callback_return_t
 
   @doc """
   Callback that is called when new pad has beed added to element.
@@ -83,8 +78,11 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * context (`Membane.Element.Context.PadAdded`),
   * current internal state.
   """
-  @callback handle_pad_added(Membrane.Element.Pad.name_t, Context.PadAdded.t, State.internal_state_t) :: callback_return_t
-
+  @callback handle_pad_added(
+              Membrane.Element.Pad.name_t(),
+              Context.PadAdded.t(),
+              State.internal_state_t()
+            ) :: callback_return_t
 
   @doc """
   Callback that is called when some pad of the element has beed removed.
@@ -95,8 +93,11 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * context (`Membrane.Element.Context.PadRemoved`)
   * current internal state.
   """
-  @callback handle_pad_removed(Membrane.Element.Pad.name_t, Context.PadRemoved.t, State.internal_state_t) :: callback_return_t
-
+  @callback handle_pad_removed(
+              Membrane.Element.Pad.name_t(),
+              Context.PadRemoved.t(),
+              State.internal_state_t()
+            ) :: callback_return_t
 
   @doc """
   Callback invoked when Element.Manager is receiving information about new caps for
@@ -109,8 +110,12 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * context (`Membrane.Element.Context.Caps`)
   * current internal state
   """
-  @callback handle_caps(Membrane.Element.Pad.name_t, Membrane.Caps.t, Context.Caps.t, State.internal_state_t) :: callback_return_t
-
+  @callback handle_caps(
+              Membrane.Element.Pad.name_t(),
+              Membrane.Caps.t(),
+              Context.Caps.t(),
+              State.internal_state_t()
+            ) :: callback_return_t
 
   @doc """
   Callback that is called when event arrives.
@@ -122,15 +127,18 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * context (`Membrane.Element.Context.Event`)
   * current Element.Manager state.
   """
-  @callback handle_event(Membrane.Element.Pad.name_t, Membrane.Event.type_t, Context.Event.t, State.internal_state_t) :: callback_return_t
-
+  @callback handle_event(
+              Membrane.Element.Pad.name_t(),
+              Membrane.Event.type_t(),
+              Context.Event.t(),
+              State.internal_state_t()
+            ) :: callback_return_t
 
   @doc """
   Callback invoked when element is shutting down just before process is exiting.
   It will receive the element state.
   """
-  @callback handle_shutdown(State.internal_state_t) :: :ok
-
+  @callback handle_shutdown(State.internal_state_t()) :: :ok
 
   @doc """
   Macro that defines known options for the element type.
@@ -143,17 +151,16 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
       def options(), do: unquote(options)
 
       @enforce_keys unquote(options)
-        |> Enum.flat_map(fn {k, v} ->
-            if v |> Map.new |> Map.has_key?(:default) |> Kernel.not,
-              do: [k], else: []
-          end)
+                    |> Enum.flat_map(fn {k, v} ->
+                      if v |> Map.new() |> Map.has_key?(:default) |> Kernel.not(),
+                        do: [k],
+                        else: []
+                    end)
 
       defstruct unquote(options)
-        |> Enum.map(fn({k, v}) -> {k, v[:default]} end)
-
+                |> Enum.map(fn {k, v} -> {k, v[:default]} end)
     end
   end
-
 
   defmacro __using__(_) do
     quote location: :keep do
@@ -200,19 +207,16 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
       @doc false
       def handle_shutdown(_state), do: :ok
 
-
-      defoverridable [
-        handle_init: 1,
-        handle_prepare: 2,
-        handle_play: 1,
-        handle_stop: 1,
-        handle_other: 2,
-        handle_pad_added: 3,
-        handle_pad_removed: 3,
-        handle_caps: 4,
-        handle_event: 4,
-        handle_shutdown: 1,
-      ]
+      defoverridable handle_init: 1,
+                     handle_prepare: 2,
+                     handle_play: 1,
+                     handle_stop: 1,
+                     handle_other: 2,
+                     handle_pad_added: 3,
+                     handle_pad_removed: 3,
+                     handle_caps: 4,
+                     handle_event: 4,
+                     handle_shutdown: 1
     end
   end
 end

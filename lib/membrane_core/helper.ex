@@ -3,16 +3,20 @@ defmodule Membrane.Helper do
 
   defmacro __using__(_args) do
     quote do
-      import Membrane.Helper, only: [
-        ~>: 2, ~>>: 2, provided: 2, int_part: 2]
+      import Membrane.Helper, only: [~>: 2, ~>>: 2, provided: 2, int_part: 2]
       alias Membrane.Helper
     end
   end
 
   @compile {:inline, listify: 1, wrap_nil: 2, int_part: 2}
 
-  def listify(list) when is_list list do list end
-  def listify(non_list) do [non_list] end
+  def listify(list) when is_list(list) do
+    list
+  end
+
+  def listify(non_list) do
+    [non_list]
+  end
 
   def wrap_nil(nil, reason), do: {:error, reason}
   def wrap_nil(v, _), do: {:ok, v}
@@ -29,12 +33,18 @@ defmodule Membrane.Helper do
 
   defmacro x ~> f do
     quote do
-      case unquote x do unquote f end
+      case unquote(x) do
+        unquote(f)
+      end
     end
   end
 
   defmacro x ~>> f do
-    default = quote do _ -> unquote(x) end
+    default =
+      quote do
+        _ -> unquote(x)
+      end
+
     quote do
       case unquote(x) do
         unquote(f ++ default)
@@ -44,41 +54,71 @@ defmodule Membrane.Helper do
 
   defmacro provided(value, that: condition, else: default) do
     quote do
-      if unquote condition do unquote value else unquote default end
+      if unquote(condition) do
+        unquote(value)
+      else
+        unquote(default)
+      end
     end
   end
+
   defmacro provided(value, that: condition) do
     quote do
-      if unquote condition do unquote value else [] end
+      if unquote(condition) do
+        unquote(value)
+      else
+        []
+      end
     end
   end
+
   defmacro provided(value, do: condition, else: default) do
     quote do
-      if unquote condition do unquote value else unquote default end
+      if unquote(condition) do
+        unquote(value)
+      else
+        unquote(default)
+      end
     end
   end
+
   defmacro provided(value, do: condition) do
     quote do
-      if unquote condition do unquote value else [] end
+      if unquote(condition) do
+        unquote(value)
+      else
+        []
+      end
     end
   end
+
   defmacro provided(value, not: condition, else: default) do
     quote do
-      if !(unquote condition) do unquote value else unquote default end
+      if !unquote(condition) do
+        unquote(value)
+      else
+        unquote(default)
+      end
     end
   end
+
   defmacro provided(value, not: condition) do
     quote do
-      if !(unquote condition) do unquote value else [] end
+      if !unquote(condition) do
+        unquote(value)
+      else
+        []
+      end
     end
   end
 
   defmacro stacktrace do
     quote do
+      # in order to exclude `Process.info/2` call
       Process.info(self(), :current_stacktrace)
-        ~> ({:current_stacktrace, trace} -> trace)
-        |> Enum.drop(1) #in order to exclude `Process.info/2` call
-        |> Exception.format_stacktrace
+      ~> ({:current_stacktrace, trace} -> trace)
+      |> Enum.drop(1)
+      |> Exception.format_stacktrace()
     end
   end
 end

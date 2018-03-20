@@ -17,7 +17,6 @@ defmodule Membrane.Buffer.Metadata do
     meta |> Map.put(key, value)
   end
 
-
   @doc """
   Deletes the entry for a specific `key`.
   If the `key` does not exist, returns `meta` unchanged.
@@ -27,7 +26,6 @@ defmodule Membrane.Buffer.Metadata do
     meta |> Map.delete(key)
   end
 
-
   @doc """
   Returns true if the given key exists in the `meta`
   """
@@ -35,7 +33,6 @@ defmodule Membrane.Buffer.Metadata do
   def has_key?(meta, key) do
     meta |> Map.has_key?(key)
   end
-
 
   @doc """
   Updates the entry for a specific `key`.
@@ -46,6 +43,7 @@ defmodule Membrane.Buffer.Metadata do
     case has_key?(meta, key) do
       true ->
         meta |> put(key, value)
+
       false ->
         meta
     end
@@ -56,7 +54,6 @@ defmodule Membrane.Buffer.Metadata do
   """
   @spec new :: t
   def new do
-    Map.new
+    Map.new()
   end
-
 end
