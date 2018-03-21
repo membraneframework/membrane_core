@@ -6,13 +6,11 @@ locals_without_parens = [
 
 [
   inputs: [
-    "{lib,spec,config}/**/*.{ex,exs}",
+    "{lib,config}/**/*.{ex,exs}",
     "mix.exs"
   ],
-  import: [:espec],
   locals_without_parens: locals_without_parens,
   export: [
     locals_without_parens: locals_without_parens
   ]
 ]
-
