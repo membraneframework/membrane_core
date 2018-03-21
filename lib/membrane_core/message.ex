@@ -18,11 +18,10 @@ defmodule Membrane.Message do
   @type payload_t :: struct
 
   @type t :: %Membrane.Message{
-    type: type_t,
-    payload: payload_t
-  }
+          type: type_t,
+          payload: payload_t
+        }
 
-  defstruct \
-    type: nil,
-    payload: nil
+  defstruct type: nil,
+            payload: nil
 end

@@ -5,13 +5,12 @@ defmodule Membrane.Log.Logger.State do
   # internally in Membrane.
 
   @type t :: %Membrane.Log.Logger.State{
-    internal_state: any,
-    module: module,
-  }
+          internal_state: any,
+          module: module
+        }
 
-  defstruct \
-    internal_state: nil,
-    module: nil
+  defstruct internal_state: nil,
+            module: nil
 
   @doc """
   Returns new state and initializes it with given `module` and `internal_state`.
@@ -22,5 +21,4 @@ defmodule Membrane.Log.Logger.State do
   def new(module, internal_state) do
     %Membrane.Log.Logger.State{module: module, internal_state: internal_state}
   end
-
 end

@@ -7,5 +7,4 @@ defmodule Membrane.Buffer.Metric.Count do
   def buffers_size(buffers), do: length(buffers)
 
   def split_buffers(buffers, count), do: buffers |> Enum.split(count)
-
 end

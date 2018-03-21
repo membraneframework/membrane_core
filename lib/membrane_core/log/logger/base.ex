@@ -3,17 +3,15 @@ defmodule Membrane.Log.Logger.Base do
     This is a base module used by all logger implementations.
   """
 
-
   @doc """
   Callback invoked when logger is initialized, right after new process is
   spawned.
 
   On success it should return `{:ok, initial_logger_state}`.
   """
-  @callback handle_init(Membrane.Log.Logger.logger_options_t) ::
-    {:ok, any} |
-    {:error, any}
-
+  @callback handle_init(Membrane.Log.Logger.logger_options_t()) ::
+              {:ok, any}
+              | {:error, any}
 
   @doc """
   Callback invoked when new log message is received.
@@ -33,10 +31,15 @@ defmodule Membrane.Log.Logger.Base do
   went wrong, and logger was unable to handle log. State will be updated to
   the new state.
   """
-  @callback handle_log(Membrane.Log.Logger.msg_level_t, Membrane.Log.Logger.message_t, String.t, list(Membrane.Log.Logger.tag_t), any) ::
-    {:ok, any} |
-    {:error, any, any}
-
+  @callback handle_log(
+              Membrane.Log.Logger.msg_level_t(),
+              Membrane.Log.Logger.message_t(),
+              String.t(),
+              list(Membrane.Log.Logger.tag_t()),
+              any
+            ) ::
+              {:ok, any}
+              | {:error, any, any}
 
   @doc """
   Callback invoked when logger is shutting down just before process is exiting.
@@ -45,7 +48,6 @@ defmodule Membrane.Log.Logger.Base do
   Return value is ignored.
   """
   @callback handle_shutdown(any) :: any
-
 
   defmacro __using__(_) do
     quote location: :keep do
@@ -59,11 +61,8 @@ defmodule Membrane.Log.Logger.Base do
       @doc false
       def handle_shutdown(_state), do: :ok
 
-
-      defoverridable [
-        handle_init: 1,
-        handle_shutdown: 1,
-      ]
+      defoverridable handle_init: 1,
+                     handle_shutdown: 1
     end
   end
 end

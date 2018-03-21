@@ -6,13 +6,12 @@ defmodule Membrane.Log.Logger do
 
   alias Membrane.Log.Logger.State
 
-
   # Type that defines possible return values of start/start_link functions.
-  @type on_start :: GenServer.on_start
+  @type on_start :: GenServer.on_start()
 
   # Type that defines possible process options passed to start/start_link
   # functions.
-  @type process_options_t :: GenServer.options
+  @type process_options_t :: GenServer.options()
 
   # Type that defines possible logger-specific options passed to
   # start/start_link functions.
@@ -22,11 +21,10 @@ defmodule Membrane.Log.Logger do
   @type tag_t :: atom
 
   # Type that defines possible messages, witch are passed to logger.
-  @type message_t :: list(message_t) | String.t | {:binary, binary} | integer
+  @type message_t :: list(message_t) | String.t() | {:binary, binary} | integer
 
   # Type that defines possible log levels.
   @type msg_level_t :: :warn | :debug | :info
-
 
   @doc """
   Starts process for logger of given module, initialized with given options and
@@ -39,7 +37,6 @@ defmodule Membrane.Log.Logger do
     GenServer.start_link(__MODULE__, {module, logger_options}, process_options)
   end
 
-
   @doc """
   Starts process for logger of given module, initialized with given options
   outside of the supervision tree.
@@ -50,7 +47,6 @@ defmodule Membrane.Log.Logger do
   def start(module, logger_options \\ nil, process_options \\ []) do
     GenServer.start(__MODULE__, {module, logger_options}, process_options)
   end
-
 
   @doc """
   Stops given logger process.
@@ -68,8 +64,6 @@ defmodule Membrane.Log.Logger do
     :ok
   end
 
-
-
   # Private API
 
   @doc false
@@ -85,26 +79,24 @@ defmodule Membrane.Log.Logger do
     end
   end
 
-
   @doc false
   def terminate(_reason, %State{module: module, internal_state: internal_state}) do
     # TODO send last message to the logger
     module.handle_shutdown(internal_state)
   end
 
-
-
-
   # Callback invoked on incoming buffer.
   #
   # It will delegate actual processing to handle_log/5.
   @doc false
-  def handle_info({:membrane_log, level, content, time, tags}, %State{module: module, internal_state: internal_state} = state) do
+  def handle_info(
+        {:membrane_log, level, content, time, tags},
+        %State{module: module, internal_state: internal_state} = state
+      ) do
     module.handle_log(level, content, time, tags, internal_state)
-      |> handle_callback(state)
-      |> format_callback_response(:noreply)
+    |> handle_callback(state)
+    |> format_callback_response(:noreply)
   end
-
 
   defp format_callback_response({:ok, new_state}, :reply) do
     {:reply, :ok, new_state}
@@ -122,7 +114,6 @@ defmodule Membrane.Log.Logger do
     {:stop, [log_error: reason], new_state}
   end
 
-
   # Generic handler that can be used to convert return value from
   # logger callback to reply that is accepted by GenServer.handle_*.
   #
@@ -131,24 +122,25 @@ defmodule Membrane.Log.Logger do
     {:ok, %{state | internal_state: new_internal_state}}
   end
 
-
   # Generic handler that can be used to convert return value from
   # logger callback to reply that is accepted by GenServer.handle_info.
   #
   # Case when callback returned failure.
   defp handle_callback({:error, reason, new_internal_state}, %{module: module} = state) do
     content = ["Error occurred while trying to log message. Reason = ", inspect(reason)]
-    case module.handle_log(:warn, content, Membrane.Time.pretty_now, [], new_internal_state) do
+
+    case module.handle_log(:warn, content, Membrane.Time.pretty_now(), [], new_internal_state) do
       {:ok, new_internal_state} ->
         {:ok, %{state | internal_state: new_internal_state}}
+
       {:error, reason, new_internal_state} ->
         {:error, reason, %{state | internal_state: new_internal_state}}
+
       invalid_callback ->
         # raise error
         handle_callback(invalid_callback, nil)
     end
   end
-
 
   # Error handler for unknown callback return values.
   defp handle_callback(other, _state) do
