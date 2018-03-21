@@ -5,6 +5,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   alias Element.Base.Mixin.CommonBehaviour
   @moduledoc false
 
+  alias Membrane.Caps
 
   @doc """
   Callback that defines what source pads may be ever available for this
@@ -25,22 +26,49 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   The default name for generic source pad, in elements that just produce some
   buffers is `:source`.
   """
-  @callback known_source_pads() :: Membrane.Pad.known_pads_t
-
+  @callback known_source_pads() :: Membrane.Pad.known_pads_t()
 
   @doc """
   Macro that defines known source pads for the element type.
 
-  It automatically generates documentation from the given definition.
+  Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
+  without module prefix
+
+  It automatically generates documentation from the given definition
+  and adds compile-time caps specs validation
   """
-  defmacro def_known_source_pads(source_pads) do
+  defmacro def_known_source_pads(raw_source_pads) do
+    source_pads = raw_source_pads |> Membrane.Helper.Macro.inject_calls([
+      {Caps.Matcher, :one_of},
+      {Caps.Matcher, :range}
+    ])
+
     quote do
-      @spec known_source_pads() :: Membrane.Pad.known_pads_t
+      @doc """
+      Returns all known source pads for #{inspect(__MODULE__)}
+
+      They are the following:
+      #{unquote(source_pads) |> Membrane.Helper.Doc.generate_known_pads_docs()}
+      """
+      @spec known_source_pads() :: Membrane.Pad.known_pads_t()
       @impl true
       def known_source_pads(), do: unquote(source_pads)
+
+      @after_compile {__MODULE__, :__membrane_source_caps_specs_validation__}
+
+      def __membrane_source_caps_specs_validation__(env, _bytecode) do
+        pads_list = env.module.known_source_pads() |> Map.values()
+
+        for {_, _, caps_spec} <- pads_list do
+          with :ok <- caps_spec |> Caps.Matcher.validate_specs() do
+            :ok
+          else
+            {:error, reason} -> raise "Error in source caps spec: #{inspect(reason)}"
+          end
+        end
+      end
     end
   end
-
 
   @doc """
   Callback that is called when buffer should be emitted by the source or filter.
