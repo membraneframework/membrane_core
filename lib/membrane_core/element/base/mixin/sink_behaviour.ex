@@ -48,7 +48,7 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
       @after_compile {__MODULE__, :__membrane_sink_caps_specs_validation__}
 
       def __membrane_sink_caps_specs_validation__(env, _bytecode) do
-        pads_list = env.module.known_sink_pads() |> Map.values()
+        pads_list = env.module.known_sink_pads() |> Enum.to_list() |> Keyword.values()
 
         for {_, _, caps_spec} <- pads_list do
           with :ok <- caps_spec |> Caps.Matcher.validate_specs() do
