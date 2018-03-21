@@ -1,4 +1,4 @@
-defmodule Membrane.Element.Manager.ActionSpec do
+defmodule Membrane.Element.Manager.ActionExecSpec do
   use ESpec, async: false
   alias Membrane.Element.Manager.State
   alias Membrane.{Buffer, Event, Message}

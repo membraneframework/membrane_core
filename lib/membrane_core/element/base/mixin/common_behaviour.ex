@@ -1,25 +1,14 @@
 defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
-  alias Membrane.{Buffer, Caps, Element, Message}
-  alias Element.{Pad, Context}
+  alias Membrane.{Element, Message}
+  alias Element.{Action, Context, Pad}
   alias Element.Manager.State
   alias Element.Base.Mixin
-  alias Membrane.Mixins.Playback
+  alias Membrane.Mixins.{Playback, CallbackHandler}
 
-  # Type that defines a single action that may be returned from handle_*
-  # callbacks. Depending on callback there may be different actions available.
-  @type callback_action_t ::
-    {:buffer, {Pad.name_t, Buffer.t}} |
-    {:caps, {Pad.name_t, Caps.t}} |
-    {:event, {Pad.name_t, Event.t}} |
-    {:message, Message.t} |
-    {:demand, {}}
-
-  @type callback_actions_t :: list(callback_action_t)
-
-  # Type that defines all valid return values from callbacks.
-  @type callback_return_t ::
-    {{:ok, callback_actions_t}, State.internal_state_t} |
-    {{:error, any}, State.internal_state_t}
+  @typedoc """
+  Type that defines all valid return values from callbacks.
+  """
+  @type callback_return_t :: CallbackHandler.callback_return_t(Action.t, State.internal_state_t)
 
   @type known_pads_t :: Mixin.SinkBehaviour.known_sink_pads_t | Mixin.SourceBehaviour.known_source_pads_t
 
@@ -29,7 +18,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   @callback handle_init(Element.element_options_t) ::
     {:ok, State.internal_state_t} |
-    {:error, State.internal_state_t}
+    {:error, any}
 
 
   @doc """
@@ -42,7 +31,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   Such resources should be released in `handle_stop/1`.
   """
-  @callback handle_prepare(Playback.state_t, Playback.state_t) :: callback_return_t
+  @callback handle_prepare(Playback.state_t, State.internal_state_t) :: callback_return_t
 
 
   @doc """

@@ -25,7 +25,7 @@ defmodule Membrane.Element do
   @type element_options_t :: struct | nil
 
   # Type that defines an element name within a pipeline
-  @type name_t :: atom | String.t
+  @type name_t :: atom | {atom, non_neg_integer}
 
 
   def is_element(module) do

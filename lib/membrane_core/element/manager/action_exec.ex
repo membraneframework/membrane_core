@@ -1,4 +1,4 @@
-defmodule Membrane.Element.Manager.Action do
+defmodule Membrane.Element.Manager.ActionExec do
   @moduledoc false
   # Module containing action handlers common for elements of all types.
 

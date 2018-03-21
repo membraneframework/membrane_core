@@ -21,6 +21,8 @@ defmodule Membrane.Pipeline.State do
     terminating?: boolean,
   }
 
+  @type internal_state_t :: any
+
   defstruct [
     internal_state: nil,
     module: nil,

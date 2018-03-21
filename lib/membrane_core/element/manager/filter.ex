@@ -135,7 +135,7 @@ defmodule Membrane.Element.Manager.Filter do
   use Membrane.Element.Manager.Log
   use Membrane.Element.Manager.Common
   import Membrane.Element.Pad, only: [is_pad_name: 1]
-  alias Membrane.Element.Manager.{Action, State, Common}
+  alias Membrane.Element.Manager.{ActionExec, State, Common}
   alias Membrane.PullBuffer
   use Membrane.Helper
 
@@ -144,12 +144,12 @@ defmodule Membrane.Element.Manager.Filter do
 
   def handle_action({:buffer, {pad_name, buffers}}, cb, _params, state)
   when is_pad_name(pad_name) do
-    Action.send_buffer pad_name, buffers, cb, state
+    ActionExec.send_buffer pad_name, buffers, cb, state
   end
 
   def handle_action({:caps, {pad_name, caps}}, _cb, _params, state)
   when is_pad_name(pad_name) do
-    Action.send_caps(pad_name, caps, state)
+    ActionExec.send_caps(pad_name, caps, state)
   end
 
   def handle_action({:forward, data}, cb, params, state)
@@ -178,12 +178,12 @@ defmodule Membrane.Element.Manager.Filter do
 
   def handle_action({:demand, {pad_name, {:source, src_name}, size}}, cb, _params, state)
   when is_pad_name(pad_name) and is_pad_name(src_name) and is_integer(size) and size > 0 do
-    Action.handle_demand(pad_name, {:source, src_name}, :normal, size, cb, state)
+    ActionExec.handle_demand(pad_name, {:source, src_name}, :normal, size, cb, state)
   end
 
   def handle_action({:demand, {pad_name, :self, size}}, cb, _params, state)
   when is_pad_name(pad_name) and is_integer(size) and size > 0 do
-    Action.handle_demand(pad_name, :self, :normal, size, cb, state)
+    ActionExec.handle_demand(pad_name, :self, :normal, size, cb, state)
   end
 
   def handle_action({:demand, {pad_name, _src_name, 0}}, cb, _params, state)
@@ -206,24 +206,10 @@ defmodule Membrane.Element.Manager.Filter do
 
   def handle_action({:redemand, src_name}, cb, _params, state)
   when is_pad_name(src_name) and cb not in [:handle_demand, :handle_process] do
-    Action.handle_redemand(src_name, state)
+    ActionExec.handle_redemand(src_name, state)
   end
 
-  def handle_action(action, callback, params, state) do
-    available_actions = [
-        "{:buffer, {pad_name, buffers}}",
-        "{:caps, {pad_name, caps}}",
-        ["{:demand, pad_name}", "{:demand, {pad_name, size}}"]
-          |> (provided that: callback == :handle_demand),
-        "{:demand, {pad_name, :self, size}",
-        "{:demand, {pad_name, {:source, src_name}, size}",
-        "{:redemand, source_name}"
-          |> (provided that: callback not in [:handle_demand, :handle_process]),
-        "{:forward, pads}"
-          |> (provided that: callback in [:handle_caps, :handle_event]),
-      ] ++ Common.available_actions
-    handle_invalid_action action, callback, params, available_actions, __MODULE__, state
-  end
+  defdelegate handle_action(action, callback, params, state), to: Common, as: :handle_invalid_action
 
   defdelegate handle_demand(pad_name, size, state), to: Common
 
