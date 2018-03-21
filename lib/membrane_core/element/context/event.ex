@@ -5,10 +5,8 @@ defmodule Membrane.Element.Context.Event do
   """
 
   @type t :: %Membrane.Element.Context.Event{
-    caps: Membrane.Caps.t
-  }
+          caps: Membrane.Caps.t()
+        }
 
-  defstruct \
-    caps: nil
-
+  defstruct caps: nil
 end

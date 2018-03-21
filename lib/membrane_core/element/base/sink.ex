@@ -36,7 +36,6 @@ defmodule Membrane.Element.Base.Sink do
       @impl true
       def manager_module, do: Membrane.Element.Manager.Sink
 
-
       # Default implementations
 
       @doc false
@@ -47,15 +46,12 @@ defmodule Membrane.Element.Base.Sink do
       @doc false
       @impl true
       def handle_write(pad, buffers, context, state) do
-        args_list = buffers |> Enum.map(& [pad, &1, context])
+        args_list = buffers |> Enum.map(&[pad, &1, context])
         {{:ok, split: {:handle_write1, args_list}}, state}
       end
 
-
-      defoverridable [
-        handle_write: 4,
-        handle_write1: 4,
-      ]
+      defoverridable handle_write: 4,
+                     handle_write1: 4
     end
   end
 end

@@ -25,14 +25,12 @@ defmodule Membrane.Element.Base.Filter do
       use Mixin.SinkBehaviour
       @behaviour unquote(__MODULE__)
 
-
       @doc """
       Returns module that manages this element.
       """
       @spec manager_module() :: module
       @impl true
       def manager_module, do: Membrane.Element.Manager.Filter
-
 
       # Default implementations
 
@@ -57,18 +55,15 @@ defmodule Membrane.Element.Base.Filter do
       @doc false
       @impl true
       def handle_process(pad, buffers, context, state) do
-        args_list = buffers |> Enum.map(& [pad, &1, context])
+        args_list = buffers |> Enum.map(&[pad, &1, context])
         {{:ok, split: {:handle_process1, args_list}}, state}
       end
 
-
-      defoverridable [
-        handle_caps: 4,
-        handle_event: 4,
-        handle_demand: 5,
-        handle_process: 4,
-        handle_process1: 4,
-      ]
+      defoverridable handle_caps: 4,
+                     handle_event: 4,
+                     handle_demand: 5,
+                     handle_process: 4,
+                     handle_process1: 4
     end
   end
 end

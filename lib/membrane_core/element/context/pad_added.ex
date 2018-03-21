@@ -5,10 +5,8 @@ defmodule Membrane.Element.Context.PadAdded do
   """
 
   @type t :: %Membrane.Element.Context.PadAdded{
-    direction: :sink | :source
-  }
+          direction: :sink | :source
+        }
 
-  defstruct \
-    direction: nil
-
+  defstruct direction: nil
 end

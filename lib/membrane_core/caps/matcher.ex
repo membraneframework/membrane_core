@@ -7,8 +7,8 @@ defmodule Membrane.Caps.Matcher do
   @type caps_spec_t :: module() | {module(), keyword()}
   @type caps_specs_t :: :any | caps_spec_t() | [caps_spec_t()]
 
-  Record.defrecordp :range_t,__MODULE__.Range, min: 0, max: :infinity
-  Record.defrecordp :in_t, __MODULE__.In, list: []
+  Record.defrecordp(:range_t, __MODULE__.Range, min: 0, max: :infinity)
+  Record.defrecordp(:in_t, __MODULE__.In, list: [])
 
   def range(min, max) do
     range_t(min: min, max: max)
@@ -17,7 +17,6 @@ defmodule Membrane.Caps.Matcher do
   def one_of(values) when is_list(values) do
     in_t(list: values)
   end
-
 
   @doc """
   Function used to make sure caps specs are valid.

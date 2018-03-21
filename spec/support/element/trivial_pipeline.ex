@@ -7,20 +7,20 @@ defmodule Membrane.Support.Element.TrivialPipeline do
     children = %{
       producer: TrivialSource,
       filter: TrivialFilter,
-      consumer: TrivialSink,
+      consumer: TrivialSink
     }
 
     links = %{
       {:producer, :source} => {:filter, :sink, pull_buffer: %{preferred_size: 10}},
-      {:filter, :source} => {:consumer, :sink, pull_buffer: %{preferred_size: 10, initial_size: 5}}
+      {:filter, :source} =>
+        {:consumer, :sink, pull_buffer: %{preferred_size: 10, initial_size: 5}}
     }
 
     spec = %Pipeline.Spec{
       children: children,
-      links: links,
+      links: links
     }
 
     {{:ok, spec}, nil}
   end
-
 end

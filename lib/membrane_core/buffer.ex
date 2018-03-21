@@ -15,17 +15,21 @@ defmodule Membrane.Buffer do
   @type payload_t :: bitstring
 
   @type t :: %Buffer{
-    payload: payload_t,
-    metadata: Buffer.Metadata.t,
-  }
+          payload: payload_t,
+          metadata: Buffer.Metadata.t()
+        }
 
-  defstruct \
-    payload: nil,
-    metadata: Buffer.Metadata.new
+  defstruct payload: nil,
+            metadata: Buffer.Metadata.new()
 
-  def print(%Buffer{metadata: metadata, payload: payload}), do: [
-    "%Membrane.Buffer{metadata: ", inspect(metadata), ", payload: ", {:binary, payload}, "}"
-  ]
+  def print(%Buffer{metadata: metadata, payload: payload}),
+    do: [
+      "%Membrane.Buffer{metadata: ",
+      inspect(metadata),
+      ", payload: ",
+      {:binary, payload},
+      "}"
+    ]
 
   def print(buffers), do: buffers |> Enum.map(&print/1)
 end

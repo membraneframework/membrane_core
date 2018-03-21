@@ -9,7 +9,7 @@ defmodule Membrane.Helper.Bitstring do
   """
   @spec split(bitstring, pos_integer) :: {:ok, [] | [...], bitstring}
   def split(data, chunk_size)
-  when is_bitstring(data) and is_integer(chunk_size) and chunk_size > 0 do
+      when is_bitstring(data) and is_integer(chunk_size) and chunk_size > 0 do
     split_recurse(data, chunk_size, [])
   end
 
@@ -19,7 +19,7 @@ defmodule Membrane.Helper.Bitstring do
   """
   @spec split!(bitstring, pos_integer) :: [] | [...]
   def split!(data, chunk_size)
-  when is_bitstring(data) and is_integer(chunk_size) and chunk_size > 0 do
+      when is_bitstring(data) and is_integer(chunk_size) and chunk_size > 0 do
     {:ok, result, _} = split(data, chunk_size)
     result
   end
@@ -27,11 +27,12 @@ defmodule Membrane.Helper.Bitstring do
   defp split_recurse(data, chunk_size, acc) do
     case data do
       <<chunk::binary-size(chunk_size)>> <> rest ->
-        split_recurse rest, chunk_size, [chunk | acc]
-      rest -> {:ok, acc |> Enum.reverse, rest}
+        split_recurse(rest, chunk_size, [chunk | acc])
+
+      rest ->
+        {:ok, acc |> Enum.reverse(), rest}
     end
   end
-
 
   @doc """
   Splits given bitstring into parts of given size, and calls given function
@@ -59,31 +60,30 @@ defmodule Membrane.Helper.Bitstring do
   that incoming buffer contains exactly requested amount of samples.
   """
   @spec split_map(bitstring, pos_integer, fun, [] | [...]) ::
-    {:ok, {[] | [...], bitstring}} |
-    {:error, any}
+          {:ok, {[] | [...], bitstring}}
+          | {:error, any}
   def split_map(data, size, process_fun, extra_fun_args \\ [])
-  when is_bitstring(data) and is_integer(size) and size > 0 and
-       is_function(process_fun) and is_list(extra_fun_args) do
+      when is_bitstring(data) and is_integer(size) and size > 0 and is_function(process_fun) and
+             is_list(extra_fun_args) do
     split_map_recurse(data, size, process_fun, extra_fun_args, [])
   end
 
-
   defp split_map_recurse(data, size, process_fun, extra_fun_args, acc)
-  when byte_size(data) >= size do
-    << part :: binary-size(size), rest :: binary >> = data
+       when byte_size(data) >= size do
+    <<part::binary-size(size), rest::binary>> = data
+
     case Kernel.apply(process_fun, [part] ++ extra_fun_args) do
       {:ok, item} ->
-        split_map_recurse(rest, size, process_fun, extra_fun_args, [item|acc])
+        split_map_recurse(rest, size, process_fun, extra_fun_args, [item | acc])
+
       {:error, reason} ->
         {:error, reason}
     end
   end
 
-
   defp split_map_recurse(data, _size, _process_fun, _extra_fun_args, acc) do
-    {:ok, {acc |> Enum.reverse, data}}
+    {:ok, {acc |> Enum.reverse(), data}}
   end
-
 
   @doc """
   Works similarily to `split_map/4` but does not accumulate return values.
@@ -95,26 +95,26 @@ defmodule Membrane.Helper.Bitstring do
   In case of failure, returns `{:error, reason}`.
   """
   @spec split_each(bitstring, pos_integer, fun, [] | [...]) ::
-    {:ok, bitstring} |
-    {:error, any}
+          {:ok, bitstring}
+          | {:error, any}
   def split_each(data, size, process_fun, extra_fun_args \\ [])
-  when is_bitstring(data) and is_integer(size) and size > 0 and
-       is_function(process_fun) and is_list(extra_fun_args)do
+      when is_bitstring(data) and is_integer(size) and size > 0 and is_function(process_fun) and
+             is_list(extra_fun_args) do
     split_each_recurse(data, size, process_fun, extra_fun_args)
   end
 
-
   defp split_each_recurse(data, size, process_fun, extra_fun_args)
-  when byte_size(data) >= size do
-    << part :: binary-size(size), rest :: binary >> = data
+       when byte_size(data) >= size do
+    <<part::binary-size(size), rest::binary>> = data
+
     case Kernel.apply(process_fun, [part] ++ extra_fun_args) do
       :ok ->
         split_each_recurse(rest, size, process_fun, extra_fun_args)
+
       {:error, reason} ->
         {:error, reason}
     end
   end
-
 
   defp split_each_recurse(data, _size, _process_fun, _extra_fun_args) do
     {:ok, data}

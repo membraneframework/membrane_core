@@ -6,5 +6,4 @@ defmodule Membrane.Helper.Binary do
     <<b::binary-size(len), r::binary>> = b
     {b, r}
   end
-
 end

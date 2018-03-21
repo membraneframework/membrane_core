@@ -4,14 +4,12 @@ defmodule Membrane.Element.Context.Process do
   """
 
   @type t :: %Membrane.Element.Context.Process{
-    caps: Membrane.Caps.t,
-    source: nil,
-    source_caps: Membrane.Caps.t,
-  }
+          caps: Membrane.Caps.t(),
+          source: nil,
+          source_caps: Membrane.Caps.t()
+        }
 
-  defstruct \
-  caps: nil,
-  source: nil,
-  source_caps: nil
-
+  defstruct caps: nil,
+            source: nil,
+            source_caps: nil
 end

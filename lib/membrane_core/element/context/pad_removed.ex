@@ -5,12 +5,10 @@ defmodule Membrane.Element.Context.PadRemoved do
   """
 
   @type t :: %Membrane.Element.Context.PadRemoved{
-    direction: :sink | :source,
-    caps: Membrane.Caps.t,
-  }
+          direction: :sink | :source,
+          caps: Membrane.Caps.t()
+        }
 
-  defstruct \
-    direction: nil,
-    caps: nil
-
+  defstruct direction: nil,
+            caps: nil
 end

@@ -25,10 +25,12 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   and adds compile-time caps specs validation
   """
   defmacro def_known_sink_pads(raw_sink_pads) do
-    sink_pads = raw_sink_pads |> Membrane.Helper.Macro.inject_calls([
-      {Caps.Matcher, :one_of},
-      {Caps.Matcher, :range}
-    ])
+    sink_pads =
+      raw_sink_pads
+      |> Membrane.Helper.Macro.inject_calls([
+        {Caps.Matcher, :one_of},
+        {Caps.Matcher, :range}
+      ])
 
     quote do
       @doc """

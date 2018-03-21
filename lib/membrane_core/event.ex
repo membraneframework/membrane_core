@@ -18,25 +18,21 @@ defmodule Membrane.Event do
   @type payload_t :: struct
 
   @type t :: %Membrane.Event{
-    type: type_t,
-    payload: payload_t,
-    stick_to: :nothing | :buffer,
-    mode: :sync | :async,
-  }
+          type: type_t,
+          payload: payload_t,
+          stick_to: :nothing | :buffer,
+          mode: :sync | :async
+        }
 
-  defstruct [
-    type: nil,
-    payload: nil,
-    stick_to: :nothing,
-    mode: :sync,
-  ]
-
+  defstruct type: nil,
+            payload: nil,
+            stick_to: :nothing,
+            mode: :sync
 
   @spec sos() :: t
   def sos() do
     %Membrane.Event{type: :sos, stick_to: :buffer}
   end
-
 
   @doc """
   Shorthand for creating a generic End of Stream event.
@@ -48,7 +44,6 @@ defmodule Membrane.Event do
   def eos() do
     %Membrane.Event{type: :eos}
   end
-
 
   @doc """
   Shorthand for creating a generic Discontinuity event.
@@ -64,11 +59,13 @@ defmodule Membrane.Event do
   See `Membrane.Event.Discontinuity.Payload` for the full description of the
   payload.
   """
-  @spec discontinuity(Membrane.Event.Discontinuity.Payload.duration_t) :: t
+  @spec discontinuity(Membrane.Event.Discontinuity.Payload.duration_t()) :: t
   def discontinuity(duration \\ nil) do
-    %Membrane.Event{type: :discontinuity, payload: %Membrane.Event.Discontinuity.Payload{duration: duration}}
+    %Membrane.Event{
+      type: :discontinuity,
+      payload: %Membrane.Event.Discontinuity.Payload{duration: duration}
+    }
   end
-
 
   @doc """
   Shrothand for creating a generic Underrun event.

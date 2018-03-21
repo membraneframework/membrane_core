@@ -77,8 +77,6 @@ defmodule Membrane.Element.Manager.Source do
   alias Membrane.Element.Context
   use Membrane.Element.Manager.Common
 
-
-
   # Private API
 
   def handle_action({:buffer, {pad_name, buffer}}, cb, _params, state)
@@ -99,12 +97,10 @@ defmodule Membrane.Element.Manager.Source do
   defdelegate handle_action(action, callback, params, state), to: Common, as: :handle_invalid_action
 
   def handle_redemand(src_name, state) do
-    handle_demand src_name, 0, state
+    handle_demand(src_name, 0, state)
   end
 
   defdelegate handle_demand(pad_name, size, state), to: Common
 
-  def handle_pad_added(name, :sink, state), do:
-    Common.handle_pad_added([name], state)
-
+  def handle_pad_added(name, :sink, state), do: Common.handle_pad_added([name], state)
 end

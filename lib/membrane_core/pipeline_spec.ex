@@ -48,17 +48,16 @@ defmodule Membrane.Pipeline.Spec do
   """
 
   @type child_spec_t :: module | {module, struct}
-  @type children_spec_t :: %{required(Membrane.Element.name_t) => child_spec_t} | nil
+  @type children_spec_t :: %{required(Membrane.Element.name_t()) => child_spec_t} | nil
 
-  @type link_spec_t :: {Membrane.Element.name_t, Membrane.Pad.name_t}
+  @type link_spec_t :: {Membrane.Element.name_t(), Membrane.Pad.name_t()}
   @type links_spec_t :: %{required(link_spec_t) => link_spec_t} | nil
 
   @type t :: %Membrane.Pipeline.Spec{
-    children: children_spec_t,
-    links: links_spec_t
-  }
+          children: children_spec_t,
+          links: links_spec_t
+        }
 
-  defstruct \
-    children: [],
-    links: []
+  defstruct children: [],
+            links: []
 end
