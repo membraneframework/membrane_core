@@ -8,7 +8,10 @@ defmodule Membrane.Helper.Doc do
   Converts element's known pads information into human-readable markdown
   description.
   """
-  @spec generate_known_pads_docs(Membrane.Pad.known_pads_t) :: String.t
+
+  alias Membrane.Element.Base.Mixin.CommonBehaviour
+
+  @spec generate_known_pads_docs(CommonBehaviour.known_pads_t) :: String.t
   def generate_known_pads_docs(pads) do
     pads
     |> Enum.map(fn({name, {availability, mode, caps}}) ->

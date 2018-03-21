@@ -2,6 +2,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   alias Membrane.{Buffer, Caps, Element, Message}
   alias Element.{Pad, Context}
   alias Element.Manager.State
+  alias Element.Base.Mixin
   alias Membrane.Mixins.Playback
 
   # Type that defines a single action that may be returned from handle_*
@@ -20,7 +21,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
     {{:ok, callback_actions_t}, State.internal_state_t} |
     {{:error, any}, State.internal_state_t}
 
-  @type known_pads_t :: %{required(Pad.name_t) => ({:always, :push})}
+  @type known_pads_t :: Mixin.SinkBehaviour.known_sink_pads_t | Mixin.SourceBehaviour.known_source_pads_t
 
   @callback is_membrane_element :: true
 

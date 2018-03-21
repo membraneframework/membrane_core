@@ -1,32 +1,22 @@
 defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
+  @moduledoc false
+
   alias Membrane.{Buffer, Context, Element}
   alias Element.Pad
   alias Element.Manager.State
   alias Element.Base.Mixin.CommonBehaviour
-  @moduledoc false
-
   alias Membrane.Caps
+
+  @type known_source_pads_t :: [{Pad.name_t, {:always, :push | {:pull, demand_in: Buffer.Metric.unit_t}, Caps.Matcher.caps_specs_t}}]
 
   @doc """
   Callback that defines what source pads may be ever available for this
   element type.
 
-  It should return a map where:
-
-  * key contains pad name. That may be either atom (like `:source`,
-    `:something_else` for pads that are always available, or string for pads
-    that are added dynamically),
-  * value is a tuple where:
-    * first item of the tuple contains pad availability. It may be set only
-      `:always` at the moment,
-    * second item of the tuple contains pad mode (`:pull` or `:push`),
-    * third item of the tuple contains `:any` or list of caps that can be
-      knownly generated from this pad.
-
   The default name for generic source pad, in elements that just produce some
   buffers is `:source`.
   """
-  @callback known_source_pads() :: Membrane.Pad.known_pads_t()
+  @callback known_source_pads() :: known_source_pads_t()
 
   @doc """
   Macro that defines known source pads for the element type.
@@ -50,7 +40,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
       They are the following:
       #{unquote(source_pads) |> Membrane.Helper.Doc.generate_known_pads_docs()}
       """
-      @spec known_source_pads() :: Membrane.Pad.known_pads_t()
+      @spec known_source_pads() :: unquote(__MODULE__).known_source_pads_t()
       @impl true
       def known_source_pads(), do: unquote(source_pads)
 
