@@ -146,7 +146,7 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
 
   describe ".send_caps/3" do
     let :other_name, do: :other_name
-    let! :state, do: %{playback: playback(), name: :elem_name, __struct__: State, pads: %{data: %{source: %{direction: :source, pid: self(), other_name: other_name(), caps: nil, options: [], eos: false, mode: :push}}}}
+    let! :state, do: %{playback: playback(), name: :elem_name, __struct__: State, pads: %{data: %{source: %{direction: :source, pid: self(), other_name: other_name(), caps: nil, options: [], eos: false, mode: :push, accepted_caps: :any}}}}
     let :pad_name, do: :source
     let :payload, do: <<1,2,3,4,5>>
     let :caps, do: :caps
