@@ -142,12 +142,12 @@ defmodule Membrane.Element.Manager.Filter do
   # Private API
 
   def handle_action({:buffer, {pad_name, buffers}}, cb, _params, state)
-  when is_pad_name(pad_name) do
-    ActionExec.send_buffer pad_name, buffers, cb, state
+      when is_pad_name(pad_name) do
+    ActionExec.send_buffer(pad_name, buffers, cb, state)
   end
 
   def handle_action({:caps, {pad_name, caps}}, _cb, _params, state)
-  when is_pad_name(pad_name) do
+      when is_pad_name(pad_name) do
     ActionExec.send_caps(pad_name, caps, state)
   end
 
@@ -185,12 +185,12 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_action({:demand, {pad_name, {:source, src_name}, size}}, cb, _params, state)
-  when is_pad_name(pad_name) and is_pad_name(src_name) and is_integer(size) and size > 0 do
+      when is_pad_name(pad_name) and is_pad_name(src_name) and is_integer(size) and size > 0 do
     ActionExec.handle_demand(pad_name, {:source, src_name}, :normal, size, cb, state)
   end
 
   def handle_action({:demand, {pad_name, :self, size}}, cb, _params, state)
-  when is_pad_name(pad_name) and is_integer(size) and size > 0 do
+      when is_pad_name(pad_name) and is_integer(size) and size > 0 do
     ActionExec.handle_demand(pad_name, :self, :normal, size, cb, state)
   end
 
@@ -221,11 +221,13 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_action({:redemand, src_name}, cb, _params, state)
-  when is_pad_name(src_name) and cb not in [:handle_demand, :handle_process] do
+      when is_pad_name(src_name) and cb not in [:handle_demand, :handle_process] do
     ActionExec.handle_redemand(src_name, state)
   end
 
-  defdelegate handle_action(action, callback, params, state), to: Common, as: :handle_invalid_action
+  defdelegate handle_action(action, callback, params, state),
+    to: Common,
+    as: :handle_invalid_action
 
   defdelegate handle_demand(pad_name, size, state), to: Common
 

@@ -2,6 +2,7 @@ defmodule Membrane.Element.Base.Filter do
   alias Membrane.{Buffer, Element}
   alias Element.Base.Mixin
   alias Element.{Context, Pad}
+
   @doc """
   Callback that is called when buffer arrives.
 
@@ -11,12 +12,11 @@ defmodule Membrane.Element.Base.Filter do
     - context (`Membrane.Element.Context.Process`)
     - current element state.
   """
-  @callback handle_process(Pad.name_t, list(Buffer.t), Context.Process.t, any) ::
-    Mixin.CommonBehaviour.callback_return_t
+  @callback handle_process(Pad.name_t(), list(Buffer.t()), Context.Process.t(), any) ::
+              Mixin.CommonBehaviour.callback_return_t()
 
-  @callback handle_process1(Pad.name_t, Buffer.t, Context.Process.t, any) ::
-    Mixin.CommonBehaviour.callback_return_t
-
+  @callback handle_process1(Pad.name_t(), Buffer.t(), Context.Process.t(), any) ::
+              Mixin.CommonBehaviour.callback_return_t()
 
   defmacro __using__(_) do
     quote location: :keep do
@@ -44,13 +44,13 @@ defmodule Membrane.Element.Base.Filter do
 
       @doc false
       @impl true
-      def handle_demand(_pad, _size, _unit, _context, state), do:
-        {{:error, :handle_demand_not_implemented}, state}
+      def handle_demand(_pad, _size, _unit, _context, state),
+        do: {{:error, :handle_demand_not_implemented}, state}
 
       @doc false
       @impl true
-      def handle_process1(_pad, _buffer, _context, state), do:
-        {{:error, :handle_process_not_implemented}, state}
+      def handle_process1(_pad, _buffer, _context, state),
+        do: {{:error, :handle_process_not_implemented}, state}
 
       @doc false
       @impl true

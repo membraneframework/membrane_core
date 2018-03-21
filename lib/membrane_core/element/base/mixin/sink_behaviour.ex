@@ -3,8 +3,10 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
 
   alias Membrane.{Buffer, Caps, Element.Pad}
 
-
-  @type known_sink_pads_t :: [{Pad.name_t, {:always, :push | :pull, demand_in: Buffer.Metric.unit_t}, Caps.Matcher.caps_specs_t}]
+  @type known_sink_pads_t :: [
+          {Pad.name_t(), {:always, :push | :pull, demand_in: Buffer.Metric.unit_t()},
+           Caps.Matcher.caps_specs_t()}
+        ]
 
   @doc """
   Callback that defines what sink pads may be ever available for this

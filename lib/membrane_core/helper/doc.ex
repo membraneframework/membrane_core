@@ -10,7 +10,7 @@ defmodule Membrane.Helper.Doc do
 
   alias Membrane.Element.Base.Mixin.CommonBehaviour
 
-  @spec generate_known_pads_docs(CommonBehaviour.known_pads_t) :: String.t
+  @spec generate_known_pads_docs(CommonBehaviour.known_pads_t()) :: String.t()
   def generate_known_pads_docs(pads) do
     pads
     |> Enum.map(fn {name, {availability, mode, caps}} ->

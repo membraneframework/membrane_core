@@ -8,18 +8,19 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @typedoc """
   Type that defines all valid return values from callbacks.
   """
-  @type callback_return_t :: CallbackHandler.callback_return_t(Action.t, State.internal_state_t)
+  @type callback_return_t ::
+          CallbackHandler.callback_return_t(Action.t(), State.internal_state_t())
 
-  @type known_pads_t :: Mixin.SinkBehaviour.known_sink_pads_t | Mixin.SourceBehaviour.known_source_pads_t
+  @type known_pads_t ::
+          Mixin.SinkBehaviour.known_sink_pads_t() | Mixin.SourceBehaviour.known_source_pads_t()
 
   @callback is_membrane_element :: true
 
   @callback manager_module :: module
 
-  @callback handle_init(Element.element_options_t) ::
-    {:ok, State.internal_state_t} |
-    {:error, any}
-
+  @callback handle_init(Element.element_options_t()) ::
+              {:ok, State.internal_state_t()}
+              | {:error, any}
 
   @doc """
   Callback invoked when Element is prepared. It will receive the previous
@@ -31,8 +32,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   Such resources should be released in `handle_stop/1`.
   """
-  @callback handle_prepare(Playback.state_t, State.internal_state_t) :: callback_return_t
-
+  @callback handle_prepare(Playback.state_t(), State.internal_state_t()) :: callback_return_t
 
   @doc """
   Callback invoked when Element is supposed to start playing. It will receive
@@ -61,7 +61,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * message,
   * current element's sate.
   """
-  @callback handle_other(Message.type_t, State.internal_state_t) :: callback_return_t
+  @callback handle_other(Message.type_t(), State.internal_state_t()) :: callback_return_t
 
   @doc """
   Callback that is called when new pad has beed added to element.
@@ -72,8 +72,8 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * context (`Membane.Element.Context.PadAdded`),
   * current internal state.
   """
-  @callback handle_pad_added(Pad.name_t, Context.PadAdded.t, State.internal_state_t) :: callback_return_t
-
+  @callback handle_pad_added(Pad.name_t(), Context.PadAdded.t(), State.internal_state_t()) ::
+              callback_return_t
 
   @doc """
   Callback that is called when some pad of the element has beed removed.
@@ -84,8 +84,8 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * context (`Membrane.Element.Context.PadRemoved`)
   * current internal state.
   """
-  @callback handle_pad_removed(Pad.name_t, Context.PadRemoved.t, State.internal_state_t) :: callback_return_t
-
+  @callback handle_pad_removed(Pad.name_t(), Context.PadRemoved.t(), State.internal_state_t()) ::
+              callback_return_t
 
   @doc """
   Callback invoked when Element.Manager is receiving information about new caps for
@@ -98,8 +98,12 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * context (`Membrane.Element.Context.Caps`)
   * current internal state
   """
-  @callback handle_caps(Pad.name_t, Membrane.Caps.t, Context.Caps.t, State.internal_state_t) :: callback_return_t
-
+  @callback handle_caps(
+              Pad.name_t(),
+              Membrane.Caps.t(),
+              Context.Caps.t(),
+              State.internal_state_t()
+            ) :: callback_return_t
 
   @doc """
   Callback that is called when event arrives.
@@ -111,8 +115,12 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * context (`Membrane.Element.Context.Event`)
   * current Element.Manager state.
   """
-  @callback handle_event(Pad.name_t, Event.type_t, Context.Event.t, State.internal_state_t) :: callback_return_t
-
+  @callback handle_event(
+              Pad.name_t(),
+              Event.type_t(),
+              Context.Event.t(),
+              State.internal_state_t()
+            ) :: callback_return_t
 
   @doc """
   Callback invoked when element is shutting down just before process is exiting.

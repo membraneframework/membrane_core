@@ -23,28 +23,32 @@ defmodule Membrane.Pipeline do
   # start/start_link functions.
   @type pipeline_options_t :: struct | nil
 
-  @type callback_action_t :: {:spec, Spec.t} | {:forward, {Element.name_t, message::any}} | {:remove_child, Element.name_t | [Element.name_t]}
+  @type callback_action_t ::
+          {:spec, Spec.t()}
+          | {:forward, {Element.name_t(), message :: any}}
+          | {:remove_child, Element.name_t() | [Element.name_t()]}
 
-  @type callback_return_t :: CallbackHandler.callback_return_t(callback_action_t, State.internal_state_t)
+  @type callback_return_t ::
+          CallbackHandler.callback_return_t(callback_action_t, State.internal_state_t())
 
   @callback is_membrane_pipeline :: true
 
   @callback handle_init(pipeline_options_t) ::
-    {{:ok, Spec.t}, State.internal_state_t} |
-    {:error, any}
+              {{:ok, Spec.t()}, State.internal_state_t()}
+              | {:error, any}
 
-  @callback handle_prepare(Playback.state_t, State.internal_state_t) :: callback_return_t
+  @callback handle_prepare(Playback.state_t(), State.internal_state_t()) :: callback_return_t
 
-  @callback handle_play(State.internal_state_t) :: callback_return_t
+  @callback handle_play(State.internal_state_t()) :: callback_return_t
 
-  @callback handle_stop(State.internal_state_t) :: callback_return_t
+  @callback handle_stop(State.internal_state_t()) :: callback_return_t
 
-  @callback handle_message(Message.t, Element.name_t, State.internal_state_t) :: callback_action_t
+  @callback handle_message(Message.t(), Element.name_t(), State.internal_state_t()) ::
+              callback_action_t
 
-  @callback handle_other(any, State.internal_state_t) :: callback_return_t
+  @callback handle_other(any, State.internal_state_t()) :: callback_return_t
 
-  @callback handle_spec_started([Element.name_t], State.internal_state_t) :: callback_action_t
-
+  @callback handle_spec_started([Element.name_t()], State.internal_state_t()) :: callback_action_t
 
   @doc """
   Starts the Pipeline based on given module and links it to the current
@@ -102,7 +106,6 @@ defmodule Membrane.Pipeline do
     send(pipeline, :membrane_stop_and_terminate)
     :ok
   end
-
 
   # Private API
 
@@ -503,11 +506,12 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_action(action, callback, params, state) do
-    warn """
-    Pipelines' #{inspect state.module} #{inspect callback} returned invalid
-    action: #{inspect action}. For available actions check Membrane.Pipeline
+    warn("""
+    Pipelines' #{inspect(state.module)} #{inspect(callback)} returned invalid
+    action: #{inspect(action)}. For available actions check Membrane.Pipeline
     callback_action_t type.
-    """
+    """)
+
     super(action, callback, params, state)
   end
 

@@ -2,12 +2,12 @@ defmodule Membrane.Mixins.CallbackHandler do
   use Membrane.Mixins.Log, tags: :core
 
   @type callback_return_t(action_t, internal_state_t) ::
-    {{:ok, internal_state_t}} |
-    {{:ok, [action_t]}, internal_state_t} |
-    {{:error, any}, internal_state_t}
+          {{:ok, internal_state_t}}
+          | {{:ok, [action_t]}, internal_state_t}
+          | {{:error, any}, internal_state_t}
 
   @callback handle_action(any, atom, any, any) :: {:ok, any} | {:error, any}
-  @callback callback_handler_warn_error(String.t, any, any) :: {:error, any}
+  @callback callback_handler_warn_error(String.t(), any, any) :: {:error, any}
   @optional_callbacks callback_handler_warn_error: 3
 
   defmacro __using__(_args) do
@@ -29,8 +29,11 @@ defmodule Membrane.Mixins.CallbackHandler do
         end)
       end
 
-      def handle_action(action, callback, _params, state), do:
-        {{:error, {:invalid_action, action: action, callback: callback, module: state |> Map.get(:module)}}, state}
+      def handle_action(action, callback, _params, state),
+        do:
+          {{:error,
+            {:invalid_action,
+             action: action, callback: callback, module: state |> Map.get(:module)}}, state}
 
       def exec_and_handle_callback(callback, handler_params \\ %{}, args, state)
           when is_map(handler_params) do
@@ -144,14 +147,11 @@ defmodule Membrane.Mixins.CallbackHandler do
         )
       end
 
-      defoverridable [
-        callback_handler_warn_error: 3,
-        handle_actions: 4,
-        handle_action: 4,
-        exec_and_handle_callback: 4,
-        handle_callback_result: 4,
-      ]
-
+      defoverridable callback_handler_warn_error: 3,
+                     handle_actions: 4,
+                     handle_action: 4,
+                     exec_and_handle_callback: 4,
+                     handle_callback_result: 4
     end
   end
 end

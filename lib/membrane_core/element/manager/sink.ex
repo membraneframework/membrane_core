@@ -143,8 +143,8 @@ defmodule Membrane.Element.Manager.Sink do
   end
 
   def handle_action({:demand, {pad_name, size}}, cb, _params, state)
-  when is_pad_name(pad_name) and is_integer(size) and size > 0 do
-    ActionExec.handle_demand pad_name, :self, :normal, size, cb, state
+      when is_pad_name(pad_name) and is_integer(size) and size > 0 do
+    ActionExec.handle_demand(pad_name, :self, :normal, size, cb, state)
   end
 
   def handle_action({:demand, {pad_name, 0}}, cb, _params, state)
@@ -174,8 +174,8 @@ defmodule Membrane.Element.Manager.Sink do
   end
 
   def handle_action({:demand, {pad_name, {:set_to, size}}}, cb, _params, state)
-  when is_pad_name(pad_name) and is_integer(size) and size >= 0 do
-    ActionExec.handle_demand pad_name, :self, :set, size, cb, state
+      when is_pad_name(pad_name) and is_integer(size) and size >= 0 do
+    ActionExec.handle_demand(pad_name, :self, :set, size, cb, state)
   end
 
   def handle_action({:demand, {pad_name, {:set_to, size}}}, cb, _params, state)
@@ -190,7 +190,9 @@ defmodule Membrane.Element.Manager.Sink do
     )
   end
 
-  defdelegate handle_action(action, callback, params, state), to: Common, as: :handle_invalid_action
+  defdelegate handle_action(action, callback, params, state),
+    to: Common,
+    as: :handle_invalid_action
 
   def handle_self_demand(pad_name, :self, type, buf_cnt, state) do
     {:ok, state} =

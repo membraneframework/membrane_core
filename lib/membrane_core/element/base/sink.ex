@@ -16,12 +16,11 @@ defmodule Membrane.Element.Base.Sink do
   * context (`Membrane.Element.Context.Write`)
   * current element's state.
   """
-  @callback handle_write(Pad.name_t, list(Buffer.t), Context.Write.t, any) ::
-    Mixin.CommonBehaviour.callback_return_t
+  @callback handle_write(Pad.name_t(), list(Buffer.t()), Context.Write.t(), any) ::
+              Mixin.CommonBehaviour.callback_return_t()
 
-  @callback handle_write1(Pad.name_t, Buffer.t, Context.Write.t, any) ::
-    Mixin.CommonBehaviour.callback_return_t
-
+  @callback handle_write1(Pad.name_t(), Buffer.t(), Context.Write.t(), any) ::
+              Mixin.CommonBehaviour.callback_return_t()
 
   defmacro __using__(_) do
     quote location: :keep do
@@ -40,8 +39,8 @@ defmodule Membrane.Element.Base.Sink do
 
       @doc false
       @impl true
-      def handle_write1(_pad, _buffer, _context, state), do:
-        {{:error, :handle_write_not_implemented}, state}
+      def handle_write1(_pad, _buffer, _context, state),
+        do: {{:error, :handle_write_not_implemented}, state}
 
       @doc false
       @impl true

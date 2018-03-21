@@ -2,8 +2,10 @@ defmodule Membrane.Element.Base.Source do
   alias Membrane.Element.Base.Mixin
 
   @callback handle_demand1(
-      Pad.name_t, Context.Demand.t, State.internal_state_t
-    ) :: CommonBehaviour.callback_return_t
+              Pad.name_t(),
+              Context.Demand.t(),
+              State.internal_state_t()
+            ) :: CommonBehaviour.callback_return_t()
 
   defmacro __using__(_) do
     quote location: :keep do
@@ -23,8 +25,8 @@ defmodule Membrane.Element.Base.Source do
 
       @doc false
       @impl true
-      def handle_demand1(_pad, _context, state), do:
-        {{:error, :handle_demand_not_implemented}, state}
+      def handle_demand1(_pad, _context, state),
+        do: {{:error, :handle_demand_not_implemented}, state}
 
       @doc false
       @impl true

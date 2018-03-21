@@ -7,7 +7,11 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   alias Element.Base.Mixin.CommonBehaviour
   alias Membrane.Caps
 
-  @type known_source_pads_t :: [{Pad.name_t, {:always, :push | {:pull, demand_in: Buffer.Metric.unit_t}, Caps.Matcher.caps_specs_t}}]
+  @type known_source_pads_t :: [
+          {Pad.name_t(),
+           {:always, :push | {:pull, demand_in: Buffer.Metric.unit_t()},
+            Caps.Matcher.caps_specs_t()}}
+        ]
 
   @doc """
   Callback that defines what source pads may be ever available for this
@@ -86,9 +90,12 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   * current element's state.
   """
   @callback handle_demand(
-      Pad.name_t, non_neg_integer, Buffer.Metric.unit_t,
-      Context.Demand.t, State.internal_state_t
-    ) :: CommonBehaviour.callback_return_t
+              Pad.name_t(),
+              non_neg_integer,
+              Buffer.Metric.unit_t(),
+              Context.Demand.t(),
+              State.internal_state_t()
+            ) :: CommonBehaviour.callback_return_t()
 
   defmacro __using__(_) do
     quote location: :keep do
