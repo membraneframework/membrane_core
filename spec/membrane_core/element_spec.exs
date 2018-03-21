@@ -36,7 +36,7 @@ defmodule Membrane.ElementSpec do
     end
 
     context "if second given PID is not a PID of an element process" do
-      let_ok :server, do: Membrane.Element.start(TrivialSink, %{})
+      let_ok :server, do: Membrane.Element.start(self(), TrivialSink, %{})
       finally do: Process.exit(server(), :kill)
 
       let :destination, do: self()
@@ -68,10 +68,10 @@ defmodule Membrane.ElementSpec do
 
 
     context "if both given PIDs are PIDs of element processes" do
-      let_ok :server, do: Membrane.Element.start(server_module(), %{})
+      let_ok :server, do: Membrane.Element.start(self(), server_module(), %{})
       finally do: Process.exit(server(), :kill)
 
-      let_ok :destination, do: Membrane.Element.start(destination_module(), %{})
+      let_ok :destination, do: Membrane.Element.start(self(), destination_module(), %{})
       finally do: Process.unlink(destination())
 
       context "but first given PID is not a source" do
