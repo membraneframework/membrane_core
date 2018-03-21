@@ -1,4 +1,8 @@
 defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
+  alias Membrane.{Buffer, Context, Element}
+  alias Element.Pad
+  alias Element.Manager.State
+  alias Element.Base.Mixin.CommonBehaviour
   @moduledoc false
 
 
@@ -32,6 +36,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   defmacro def_known_source_pads(source_pads) do
     quote do
       @spec known_source_pads() :: Membrane.Pad.known_pads_t
+      @impl true
       def known_source_pads(), do: unquote(source_pads)
     end
   end
@@ -60,15 +65,16 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   * context (`Membrane.Element.Context.Demand`)
   * current element's state.
   """
-  @callback handle_demand(Membrane.Element.Pad.name_t, non_neg_integer, Membrane.Buffer.Metric.unit_t, Membrane.Context.Demand.t, Membrane.Element.Manager.State.internal_state_t) ::
-    Membrane.Element.Base.Mixin.CommonBehaviour.callback_return_t
-
+  @callback handle_demand(
+      Pad.name_t, non_neg_integer, Buffer.Metric.unit_t,
+      Context.Demand.t, State.internal_state_t
+    ) :: CommonBehaviour.callback_return_t
 
   defmacro __using__(_) do
     quote location: :keep do
-      @behaviour Membrane.Element.Base.Mixin.SourceBehaviour
+      @behaviour unquote(__MODULE__)
 
-      import Membrane.Element.Base.Mixin.SourceBehaviour, only: [def_known_source_pads: 1]
+      import unquote(__MODULE__), only: [def_known_source_pads: 1]
     end
   end
 end

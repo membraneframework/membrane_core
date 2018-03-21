@@ -32,15 +32,16 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   defmacro def_known_sink_pads(sink_pads) do
     quote do
       @spec known_sink_pads() :: Membrane.Pad.known_pads_t
+      @impl true
       def known_sink_pads(), do: unquote(sink_pads)
     end
   end
 
   defmacro __using__(_) do
     quote location: :keep do
-      @behaviour Membrane.Element.Base.Mixin.SinkBehaviour
+      @behaviour unquote(__MODULE__)
 
-      import Membrane.Element.Base.Mixin.SinkBehaviour, only: [def_known_sink_pads: 1]
+      import unquote(__MODULE__), only: [def_known_sink_pads: 1]
     end
   end
 end

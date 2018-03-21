@@ -1,4 +1,7 @@
 defmodule Membrane.Element.Base.Sink do
+  alias Membrane.{Buffer, Element}
+  alias Element.Base.Mixin
+  alias Element.{Context, Pad}
 
   @doc """
   Callback that is called when buffer should be written by the sink.
@@ -13,30 +16,36 @@ defmodule Membrane.Element.Base.Sink do
   * context (`Membrane.Element.Context.Write`)
   * current element's state.
   """
-  @callback handle_write(any, list(Membrane.Buffer.t), Membrane.Element.Context.Write.t, any) ::
-    Membrane.Element.Base.Mixin.CommonBehaviour.callback_return_t
+  @callback handle_write(Pad.name_t, list(Buffer.t), Context.Write.t, any) ::
+    Mixin.CommonBehaviour.callback_return_t
+
+  @callback handle_write1(Pad.name_t, Buffer.t, Context.Write.t, any) ::
+    Mixin.CommonBehaviour.callback_return_t
 
 
   defmacro __using__(_) do
     quote location: :keep do
-      use Membrane.Element.Base.Mixin.CommonBehaviour
-      use Membrane.Element.Base.Mixin.SinkBehaviour
-      @behaviour Membrane.Element.Base.Sink
+      use Mixin.CommonBehaviour
+      use Mixin.SinkBehaviour
+      @behaviour unquote(__MODULE__)
 
       @doc """
       Returns module that manages this element.
       """
       @spec manager_module() :: module
+      @impl true
       def manager_module, do: Membrane.Element.Manager.Sink
 
 
       # Default implementations
 
       @doc false
+      @impl true
       def handle_write1(_pad, _buffer, _context, state), do:
         {{:error, :handle_write_not_implemented}, state}
 
       @doc false
+      @impl true
       def handle_write(pad, buffers, context, state) do
         args_list = buffers |> Enum.map(& [pad, &1, context])
         {{:ok, split: {:handle_write1, args_list}}, state}
