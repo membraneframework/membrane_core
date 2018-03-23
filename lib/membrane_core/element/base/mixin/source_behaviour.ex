@@ -8,9 +8,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   alias Membrane.Caps
 
   @type known_source_pads_t :: [
-          {Pad.name_t(),
-           {:always, :push | {:pull, demand_in: Buffer.Metric.unit_t()},
-            Caps.Matcher.caps_specs_t()}}
+          {Pad.name_t(), {:always, :push | :pull, Caps.Matcher.caps_specs_t()}}
         ]
 
   @doc """
