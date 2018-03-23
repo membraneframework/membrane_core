@@ -236,11 +236,11 @@ defmodule Membrane.Element.Manager.Common do
   def handle_invalid_action(action, callback, _params, state) do
     warn_error(
       """
-        Elements' #{inspect(state.module)} #{inspect(callback)} callback returned
-        invalid action: #{inspect(action)}. For possible actions are check types
-        in Membrane.Element.Action module. Keep in mind that some actions are
-        available in different formats or unavailable for some callbacks,
-        base modules or playback states.
+      Elements' #{inspect(state.module)} #{inspect(callback)} callback returned
+      invalid action: #{inspect(action)}. For possible actions are check types
+      in Membrane.Element.Action module. Keep in mind that some actions are
+      available in different formats or unavailable for some callbacks,
+      base modules or playback states.
       """,
       {:invalid_action, action: action, callback: callback, module: state |> Map.get(:module)},
       state
