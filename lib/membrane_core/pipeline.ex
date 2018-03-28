@@ -8,7 +8,7 @@ defmodule Membrane.Pipeline do
   use GenServer
   use Membrane.Mixins.Playback
   alias Membrane.Pipeline.{State, Spec}
-  alias Membrane.Element
+  alias Membrane.{Element, Message}
   use Membrane.Helper
   import Helper.GenServer
 
@@ -23,16 +23,35 @@ defmodule Membrane.Pipeline do
   # start/start_link functions.
   @type pipeline_options_t :: struct | nil
 
-  # Type that defines a single command that may be returned from handle_*
-  # callbacks.
-  #
-  # If it is `{:forward, {child_name, message}}` it will cause sending
-  # given message to the child.
-  @type callback_return_command_t :: {:forward, {Membrane.Element.name_t(), any}}
+  @type callback_action_t ::
+          {:spec, Spec.t()}
+          | {:forward, {Element.name_t(), message :: any}}
+          | {:remove_child, Element.name_t() | [Element.name_t()]}
 
-  # Type that defines list of commands that may be returned from handle_*
-  # callbacks.
-  @type callback_return_commands_t :: [] | [callback_return_command_t]
+  @type callback_return_t ::
+          CallbackHandler.callback_return_t(callback_action_t, State.internal_state_t())
+
+  @doc """
+  Enables to check whether module is membrane pipeline
+  """
+  @callback is_membrane_pipeline :: true
+
+  @callback handle_init(pipeline_options_t) ::
+              {{:ok, Spec.t()}, State.internal_state_t()}
+              | {:error, any}
+
+  @callback handle_prepare(Playback.state_t(), State.internal_state_t()) :: callback_return_t
+
+  @callback handle_play(State.internal_state_t()) :: callback_return_t
+
+  @callback handle_stop(State.internal_state_t()) :: callback_return_t
+
+  @callback handle_message(Message.t(), Element.name_t(), State.internal_state_t()) ::
+              callback_action_t
+
+  @callback handle_other(any, State.internal_state_t()) :: callback_return_t
+
+  @callback handle_spec_started([Element.name_t()], State.internal_state_t()) :: callback_action_t
 
   @doc """
   Starts the Pipeline based on given module and links it to the current
@@ -90,58 +109,6 @@ defmodule Membrane.Pipeline do
     send(pipeline, :membrane_stop_and_terminate)
     :ok
   end
-
-  @callback is_membrane_pipeline :: true
-
-  @doc """
-  Callback invoked on process initialization.
-
-  It will receive pipeline options passed to `start_link/4` or `start/4`.
-
-  It is supposed to return one of:
-
-  * `{:ok, pipeline_topology, initial_state}` - if there are some children,
-    but the pipeline has to remain stopped
-  * `{:ok, initial_state}` - if there are no children but the pipeline has to
-    remain stopped,
-  * `{:play, pipeline_topology, initial_state}` - if there are some children,
-    and the pipeline has to immediately start playing,
-  * `{:error, reason}` - on error.
-
-  See `Membrane.Pipeline.Spec` for more information about how to define
-  elements and links in the pipeline.
-  """
-  @callback handle_init(pipeline_options_t) ::
-              {:ok, any}
-              | {:ok, Spec.t(), any}
-              | {:play, Spec.t(), any}
-
-  @doc """
-  Callback invoked on if any of the child Element has sent a message.
-
-  It will receive message, sender name and state.
-
-  It is supposed to return `{:ok, state}`.
-  """
-  @callback handle_message(Membrane.Message.t(), Membrane.Element.name_t(), any) :: {:ok, any}
-
-  @doc """
-  Callback invoked when pipeline is receiving message of other kind. It will
-  receive the message and pipeline state.
-
-  If it returns `{:ok, new_state}` it just updates pipeline's state to the new
-  state.
-
-  If it returns `{:ok, command_list, new_state}` it executes given commands.
-
-  If it returns `{:error, reason, new_state}` it indicates that something
-  went wrong, and pipeline was unable to handle callback. Error along with
-  reason will be propagated to the message bus and state will be updated to
-  the new state.
-  """
-  @callback handle_other(any, any) ::
-              {:ok, any}
-              | {:ok, callback_return_commands_t, any}
 
   # Private API
 
@@ -542,13 +509,13 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_action(action, callback, params, state) do
-    available_actions = [
-      "{:forward, {elementname, message}}",
-      "{:spec, spec}",
-      "{:remove_child, children}"
-    ]
+    warn("""
+    Pipelines' #{inspect(state.module)} #{inspect(callback)} returned invalid
+    action: #{inspect(action)}. For available actions check Membrane.Pipeline
+    callback_action_t type.
+    """)
 
-    handle_invalid_action(action, callback, params, available_actions, __MODULE__, state)
+    super(action, callback, params, state)
   end
 
   defmacro __using__(_) do
@@ -556,32 +523,28 @@ defmodule Membrane.Pipeline do
       alias Membrane.Pipeline
       @behaviour Membrane.Pipeline
 
-      @doc """
-      Enables to check whether module is membrane pipeline
-      """
+      @impl true
       def is_membrane_pipeline, do: true
 
-      # Default implementations
-
-      @doc false
+      @impl true
       def handle_init(_options), do: {:ok, %{}}
 
-      @doc false
+      @impl true
       def handle_prepare(_playback_state, state), do: {:ok, state}
 
-      @doc false
+      @impl true
       def handle_play(state), do: {:ok, state}
 
-      @doc false
+      @impl true
       def handle_stop(state), do: {:ok, state}
 
-      @doc false
+      @impl true
       def handle_message(_message, _from, state), do: {:ok, state}
 
-      @doc false
+      @impl true
       def handle_other(_message, state), do: {:ok, state}
 
-      @doc false
+      @impl true
       def handle_spec_started(_new_children, state), do: {:ok, state}
 
       defoverridable handle_init: 1,

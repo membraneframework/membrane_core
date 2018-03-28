@@ -72,7 +72,7 @@ defmodule Membrane.Element.Manager.Source do
   """
 
   use Membrane.Element.Manager.Log
-  alias Membrane.Element.Manager.{Action, Common, State}
+  alias Membrane.Element.Manager.{ActionExec, Common, State}
   import Membrane.Element.Pad, only: [is_pad_name: 1]
   alias Membrane.Element.Context
   use Membrane.Element.Manager.Common
@@ -81,30 +81,22 @@ defmodule Membrane.Element.Manager.Source do
 
   def handle_action({:buffer, {pad_name, buffer}}, cb, _params, state)
       when is_pad_name(pad_name) do
-    Action.send_buffer(pad_name, buffer, cb, state)
+    ActionExec.send_buffer(pad_name, buffer, cb, state)
   end
 
   def handle_action({:caps, {pad_name, caps}}, _cb, _params, state)
       when is_pad_name(pad_name) do
-    Action.send_caps(pad_name, caps, state)
+    ActionExec.send_caps(pad_name, caps, state)
   end
 
   def handle_action({:redemand, src_name}, cb, _params, state)
       when is_pad_name(src_name) and cb != :handle_demand do
-    Action.handle_redemand(src_name, state)
+    ActionExec.handle_redemand(src_name, state)
   end
 
-  def handle_action(action, callback, params, state) do
-    available_actions =
-      [
-        "{:buffer, {pad_name, buffers}}",
-        "{:caps, {pad_name, caps}}",
-        "{:redemand, source_name}"
-        |> provided(that: callback != :handle_demand)
-      ] ++ Common.available_actions()
-
-    handle_invalid_action(action, callback, params, available_actions, __MODULE__, state)
-  end
+  defdelegate handle_action(action, callback, params, state),
+    to: Common,
+    as: :handle_invalid_action
 
   def handle_redemand(src_name, state) do
     handle_demand(src_name, 0, state)

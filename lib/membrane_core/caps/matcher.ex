@@ -4,8 +4,8 @@ defmodule Membrane.Caps.Matcher do
 
   alias Membrane.Helper
 
-  @type caps_spec :: module() | {module(), keyword()}
-  @type caps_specs :: :any | caps_spec() | [caps_spec()]
+  @type caps_spec_t :: module() | {module(), keyword()}
+  @type caps_specs_t :: :any | caps_spec_t() | [caps_spec_t()]
 
   Record.defrecordp(:range_t, __MODULE__.Range, min: 0, max: :infinity)
   Record.defrecordp(:in_t, __MODULE__.In, list: [])
@@ -23,12 +23,12 @@ defmodule Membrane.Caps.Matcher do
 
   In particular, valid caps:
 
-  * Have shape described by caps_specs() type
+  * Have shape described by caps_specs_t() type
   * If they contain keyword list, the keys are present in requested caps type
 
   It returns :ok when caps are valid and {:error, reason} otherwise
   """
-  @spec validate_specs(caps_specs() | any()) :: :ok | {:error, reason :: tuple()}
+  @spec validate_specs(caps_specs_t() | any()) :: :ok | {:error, reason :: tuple()}
   def validate_specs(specs_list) when is_list(specs_list) do
     specs_list |> Helper.Enum.each_with(&validate_specs/1)
   end
@@ -55,7 +55,7 @@ defmodule Membrane.Caps.Matcher do
   When :any is used as specs, caps can by anything (i.e. they can be invalid)
   """
   @spec match?(:any, any()) :: true
-  @spec match?(caps_specs(), struct()) :: boolean()
+  @spec match?(caps_specs_t(), struct()) :: boolean()
   def match?(:any, _), do: true
 
   def match?(specs, %_{} = caps) when is_list(specs) do

@@ -10,22 +10,30 @@ defmodule Membrane.Element.Manager.Common do
   defmacro __using__(_) do
     quote location: :keep do
       use Membrane.Mixins.CallbackHandler
-      alias Membrane.Element.Manager.{Action, Common, State}
+      alias Membrane.Element.Manager.{ActionExec, Common, State}
       import Membrane.Element.Pad, only: [is_pad_name: 1]
       alias Membrane.Element.Context
       use Membrane.Helper
 
       def handle_action({:event, {pad_name, event}}, _cb, _params, state)
           when is_pad_name(pad_name) do
-        Action.send_event(pad_name, event, state)
+        ActionExec.send_event(pad_name, event, state)
       end
 
       def handle_action({:message, message}, _cb, _params, state),
-        do: Action.send_message(message, state)
+        do: ActionExec.send_message(message, state)
 
       def handle_action({:split, {callback, args_list}}, cb, params, state) do
         exec_and_handle_splitted_callback(callback, cb, params, args_list, state)
       end
+
+      def handle_action({:playback_change, :suspend}, cb, _params, state)
+          when cb in [:handle_prepare, :handle_play, :handle_stop] do
+        state |> Membrane.Element.suspend_playback_change()
+      end
+
+      def handle_action({:playback_change, :resume}, _cb, _params, state),
+        do: state |> Membrane.Element.continue_playback_change()
 
       def handle_actions(actions, callback, handler_params, state),
         do:
@@ -35,13 +43,6 @@ defmodule Membrane.Element.Manager.Common do
             handler_params,
             state
           )
-
-      def handle_action({:playback_change, :suspend}, _cb, _params, state) do
-        state |> Membrane.Element.suspend_playback_change()
-      end
-
-      def handle_action({:playback_change, :resume}, _cb, _params, state),
-        do: state |> Membrane.Element.continue_playback_change()
 
       def callback_handler_warn_error(message, reason, state) do
         use Membrane.Element.Manager.Log
@@ -232,12 +233,19 @@ defmodule Membrane.Element.Manager.Common do
     end
   end
 
-  def available_actions,
-    do: [
-      "{:event, {pad_name, event}}",
-      "{:message, message}",
-      "{:split, {callback, args_list}}"
-    ]
+  def handle_invalid_action(action, callback, _params, state) do
+    warn_error(
+      """
+      Elements' #{inspect(state.module)} #{inspect(callback)} callback returned
+      invalid action: #{inspect(action)}. For possible actions are check types
+      in Membrane.Element.Action module. Keep in mind that some actions are
+      available in different formats or unavailable for some callbacks,
+      base modules or playback states.
+      """,
+      {:invalid_action, action: action, callback: callback, module: state |> Map.get(:module)},
+      state
+    )
+  end
 
   def handle_caps(:pull, pad_name, caps, state) do
     cond do

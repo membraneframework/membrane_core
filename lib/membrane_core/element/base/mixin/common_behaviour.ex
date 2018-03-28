@@ -1,32 +1,29 @@
 defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
-  alias Membrane.Mixins.Playback
-  alias Membrane.Element.Manager.State
-  alias Membrane.Element.Context
+  alias Membrane.{Element, Message}
+  alias Element.{Action, Context, Pad}
+  alias Element.Manager.State
+  alias Element.Base.Mixin
+  alias Membrane.Mixins.{Playback, CallbackHandler}
 
-  # Type that defines a single action that may be returned from handle_*
-  # callbacks.
-  @type callback_action_t ::
-          {:buffer, {Membrane.Pad.name_t(), Membrane.Buffer.t()}}
-          | {:caps, {Membrane.Pad.name_t(), Membrane.Caps.t()}}
-          | {:event, {Membrane.Pad.name_t(), Membrane.Event.t()}}
-          | {:message, Membrane.Message.t()}
-
-  # Type that defines list of actions that may be returned from handle_*
-  # callbacks.
-  @type callback_actions_t :: list(callback_action_t)
-
-  # Type that defines all valid return values from callbacks.
+  @typedoc """
+  Type that defines all valid return values from callbacks.
+  """
   @type callback_return_t ::
-          {{:ok, callback_actions_t}, State.internal_state_t()}
-          | {{:error, any}, State.internal_state_t()}
+          CallbackHandler.callback_return_t(Action.t(), State.internal_state_t())
+
+  @type known_pads_t ::
+          Mixin.SinkBehaviour.known_sink_pads_t() | Mixin.SourceBehaviour.known_source_pads_t()
 
   @callback is_membrane_element :: true
 
+  @doc """
+  Returns module that manages this element.
+  """
   @callback manager_module :: module
 
-  @callback handle_init(Membrane.Element.element_options_t()) ::
+  @callback handle_init(Element.element_options_t()) ::
               {:ok, State.internal_state_t()}
-              | {:error, State.internal_state_t()}
+              | {:error, any}
 
   @doc """
   Callback invoked when Element is prepared. It will receive the previous
@@ -38,7 +35,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   Such resources should be released in `handle_stop/1`.
   """
-  @callback handle_prepare(Playback.state_t(), Playback.state_t()) :: callback_return_t
+  @callback handle_prepare(Playback.state_t(), State.internal_state_t()) :: callback_return_t
 
   @doc """
   Callback invoked when Element is supposed to start playing. It will receive
@@ -67,7 +64,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * message,
   * current element's sate.
   """
-  @callback handle_other(Membrane.Message.type_t(), State.internal_state_t()) :: callback_return_t
+  @callback handle_other(Message.type_t(), State.internal_state_t()) :: callback_return_t
 
   @doc """
   Callback that is called when new pad has beed added to element.
@@ -78,11 +75,8 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * context (`Membane.Element.Context.PadAdded`),
   * current internal state.
   """
-  @callback handle_pad_added(
-              Membrane.Element.Pad.name_t(),
-              Context.PadAdded.t(),
-              State.internal_state_t()
-            ) :: callback_return_t
+  @callback handle_pad_added(Pad.name_t(), Context.PadAdded.t(), State.internal_state_t()) ::
+              callback_return_t
 
   @doc """
   Callback that is called when some pad of the element has beed removed.
@@ -93,11 +87,8 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * context (`Membrane.Element.Context.PadRemoved`)
   * current internal state.
   """
-  @callback handle_pad_removed(
-              Membrane.Element.Pad.name_t(),
-              Context.PadRemoved.t(),
-              State.internal_state_t()
-            ) :: callback_return_t
+  @callback handle_pad_removed(Pad.name_t(), Context.PadRemoved.t(), State.internal_state_t()) ::
+              callback_return_t
 
   @doc """
   Callback invoked when Element.Manager is receiving information about new caps for
@@ -111,7 +102,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * current internal state
   """
   @callback handle_caps(
-              Membrane.Element.Pad.name_t(),
+              Pad.name_t(),
               Membrane.Caps.t(),
               Context.Caps.t(),
               State.internal_state_t()
@@ -128,8 +119,8 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * current Element.Manager state.
   """
   @callback handle_event(
-              Membrane.Element.Pad.name_t(),
-              Membrane.Event.type_t(),
+              Pad.name_t(),
+              Event.type_t(),
               Context.Event.t(),
               State.internal_state_t()
             ) :: callback_return_t
@@ -164,47 +155,43 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   defmacro __using__(_) do
     quote location: :keep do
-      @behaviour Membrane.Element.Base.Mixin.CommonBehaviour
+      @behaviour unquote(__MODULE__)
 
       use Membrane.Mixins.Log, tags: :element, import: false
 
-      import Membrane.Element.Base.Mixin.CommonBehaviour, only: [def_options: 1]
+      import unquote(__MODULE__), only: [def_options: 1]
 
-      # Default implementations
-
-      @doc """
-      Enables to check whether module is membrane element
-      """
+      @impl true
       def is_membrane_element, do: true
 
-      @doc false
+      @impl true
       def handle_init(_options), do: {:ok, %{}}
 
-      @doc false
+      @impl true
       def handle_prepare(_previous_playback_state, state), do: {:ok, state}
 
-      @doc false
+      @impl true
       def handle_play(state), do: {:ok, state}
 
-      @doc false
+      @impl true
       def handle_stop(state), do: {:ok, state}
 
-      @doc false
+      @impl true
       def handle_other(_message, state), do: {:ok, state}
 
-      @doc false
+      @impl true
       def handle_pad_added(_pad, _context, state), do: {:ok, state}
 
-      @doc false
+      @impl true
       def handle_pad_removed(_pad, _context, state), do: {:ok, state}
 
-      @doc false
+      @impl true
       def handle_caps(_pad, _caps, _context, state), do: {:ok, state}
 
-      @doc false
+      @impl true
       def handle_event(_pad, _event, _context, state), do: {:ok, state}
 
-      @doc false
+      @impl true
       def handle_shutdown(_state), do: :ok
 
       defoverridable handle_init: 1,

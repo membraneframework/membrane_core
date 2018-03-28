@@ -1,28 +1,24 @@
 defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   @moduledoc false
 
+  alias Membrane.{Buffer, Context, Element}
+  alias Element.Pad
+  alias Element.Manager.State
+  alias Element.Base.Mixin.CommonBehaviour
   alias Membrane.Caps
+
+  @type known_source_pads_t :: [
+          {Pad.name_t(), {:always, :push | :pull, Caps.Matcher.caps_specs_t()}}
+        ]
 
   @doc """
   Callback that defines what source pads may be ever available for this
   element type.
 
-  It should return a map where:
-
-  * key contains pad name. That may be either atom (like `:source`,
-    `:something_else` for pads that are always available, or string for pads
-    that are added dynamically),
-  * value is a tuple where:
-    * first item of the tuple contains pad availability. It may be set only
-      `:always` at the moment,
-    * second item of the tuple contains pad mode (`:pull` or `:push`),
-    * third item of the tuple contains `:any` or list of caps that can be
-      knownly generated from this pad.
-
   The default name for generic source pad, in elements that just produce some
   buffers is `:source`.
   """
-  @callback known_source_pads() :: Membrane.Pad.known_pads_t()
+  @callback known_source_pads() :: known_source_pads_t()
 
   @doc """
   Macro that defines known source pads for the element type.
@@ -48,13 +44,14 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
       They are the following:
       #{unquote(source_pads) |> Membrane.Helper.Doc.generate_known_pads_docs()}
       """
-      @spec known_source_pads() :: Membrane.Pad.known_pads_t()
+      @spec known_source_pads() :: unquote(__MODULE__).known_source_pads_t()
+      @impl true
       def known_source_pads(), do: unquote(source_pads)
 
       @after_compile {__MODULE__, :__membrane_source_caps_specs_validation__}
 
       def __membrane_source_caps_specs_validation__(env, _bytecode) do
-        pads_list = env.module.known_source_pads() |> Map.values()
+        pads_list = env.module.known_source_pads() |> Enum.to_list() |> Keyword.values()
 
         for {_, _, caps_spec} <- pads_list do
           with :ok <- caps_spec |> Caps.Matcher.validate_specs() do
@@ -91,18 +88,18 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   * current element's state.
   """
   @callback handle_demand(
-              Membrane.Element.Pad.name_t(),
+              Pad.name_t(),
               non_neg_integer,
-              Membrane.Buffer.Metric.unit_t(),
-              Membrane.Context.Demand.t(),
-              Membrane.Element.Manager.State.internal_state_t()
-            ) :: Membrane.Element.Base.Mixin.CommonBehaviour.callback_return_t()
+              Buffer.Metric.unit_t(),
+              Context.Demand.t(),
+              State.internal_state_t()
+            ) :: CommonBehaviour.callback_return_t()
 
   defmacro __using__(_) do
     quote location: :keep do
-      @behaviour Membrane.Element.Base.Mixin.SourceBehaviour
+      @behaviour unquote(__MODULE__)
 
-      import Membrane.Element.Base.Mixin.SourceBehaviour, only: [def_known_source_pads: 1]
+      import unquote(__MODULE__), only: [def_known_source_pads: 1]
     end
   end
 end

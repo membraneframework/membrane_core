@@ -1,9 +1,12 @@
 defmodule Membrane.Mixins.CallbackHandler do
   use Membrane.Mixins.Log, tags: :core
 
+  @type callback_return_t(action_t, internal_state_t) ::
+          {{:ok, internal_state_t}}
+          | {{:ok, [action_t]}, internal_state_t}
+          | {{:error, any}, internal_state_t}
+
   @callback handle_action(any, atom, any, any) :: {:ok, any} | {:error, any}
-  @callback handle_invalid_action(any, atom, any, [String.t()], atom, any) ::
-              {:ok, any} | {:error, any}
   @callback callback_handler_warn_error(String.t(), any, any) :: {:error, any}
   @optional_callbacks callback_handler_warn_error: 3
 
@@ -26,27 +29,11 @@ defmodule Membrane.Mixins.CallbackHandler do
         end)
       end
 
-      def handle_action(action, callback, params, state),
-        do: handle_invalid_action(action, callback, params, [], __MODULE__, state)
-
-      def handle_invalid_action(action, callback, _params, available_actions, module, state) do
-        callback_handler_warn_error(
-          """
-          #{module} #{inspect(callback)} callback results are expected to be one of:
-          #{
-            available_actions
-            |> List.flatten()
-            |> Enum.map(fn a -> "\t#{a}" end)
-            |> Enum.join("\n")
-          }
-          but got
-          #{inspect(action)}
-          Check if all callbacks return appropriate values.
-          """,
-          {:invalid_action, action: action, callback: callback, module: module},
-          state
-        )
-      end
+      def handle_action(action, callback, _params, state),
+        do:
+          {{:error,
+            {:invalid_action,
+             action: action, callback: callback, module: state |> Map.get(:module)}}, state}
 
       def exec_and_handle_callback(callback, handler_params \\ %{}, args, state)
           when is_map(handler_params) do
@@ -163,7 +150,6 @@ defmodule Membrane.Mixins.CallbackHandler do
       defoverridable callback_handler_warn_error: 3,
                      handle_actions: 4,
                      handle_action: 4,
-                     handle_invalid_action: 6,
                      exec_and_handle_callback: 4,
                      handle_callback_result: 4
     end
