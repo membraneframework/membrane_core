@@ -14,21 +14,13 @@ defmodule Membrane.Element.Base.Source do
 
       @behaviour unquote(__MODULE__)
 
-      @doc """
-      Returns module that manages this element.
-      """
-      @spec manager_module() :: module
       @impl true
       def manager_module, do: Membrane.Element.Manager.Source
 
-      # Default implementations
-
-      @doc false
       @impl true
       def handle_demand1(_pad, _context, state),
         do: {{:error, :handle_demand_not_implemented}, state}
 
-      @doc false
       @impl true
       def handle_demand(pad, size, :buffers, context, state) do
         args_list =

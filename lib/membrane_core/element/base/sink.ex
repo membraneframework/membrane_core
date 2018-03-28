@@ -28,21 +28,15 @@ defmodule Membrane.Element.Base.Sink do
       use Mixin.SinkBehaviour
       @behaviour unquote(__MODULE__)
 
-      @doc """
-      Returns module that manages this element.
-      """
-      @spec manager_module() :: module
       @impl true
       def manager_module, do: Membrane.Element.Manager.Sink
 
       # Default implementations
 
-      @doc false
       @impl true
       def handle_write1(_pad, _buffer, _context, state),
         do: {{:error, :handle_write_not_implemented}, state}
 
-      @doc false
       @impl true
       def handle_write(pad, buffers, context, state) do
         args_list = buffers |> Enum.map(&[pad, &1, context])

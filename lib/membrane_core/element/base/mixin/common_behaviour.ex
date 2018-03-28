@@ -16,6 +16,9 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   @callback is_membrane_element :: true
 
+  @doc """
+  Returns module that manages this element.
+  """
   @callback manager_module :: module
 
   @callback handle_init(Element.element_options_t()) ::
@@ -158,51 +161,36 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
       import unquote(__MODULE__), only: [def_options: 1]
 
-      # Default implementations
-
-      @doc """
-      Enables to check whether module is membrane element
-      """
       @impl true
       def is_membrane_element, do: true
 
-      @doc false
       @impl true
       def handle_init(_options), do: {:ok, %{}}
 
-      @doc false
       @impl true
       def handle_prepare(_previous_playback_state, state), do: {:ok, state}
 
-      @doc false
       @impl true
       def handle_play(state), do: {:ok, state}
 
-      @doc false
       @impl true
       def handle_stop(state), do: {:ok, state}
 
-      @doc false
       @impl true
       def handle_other(_message, state), do: {:ok, state}
 
-      @doc false
       @impl true
       def handle_pad_added(_pad, _context, state), do: {:ok, state}
 
-      @doc false
       @impl true
       def handle_pad_removed(_pad, _context, state), do: {:ok, state}
 
-      @doc false
       @impl true
       def handle_caps(_pad, _caps, _context, state), do: {:ok, state}
 
-      @doc false
       @impl true
       def handle_event(_pad, _event, _context, state), do: {:ok, state}
 
-      @doc false
       @impl true
       def handle_shutdown(_state), do: :ok
 

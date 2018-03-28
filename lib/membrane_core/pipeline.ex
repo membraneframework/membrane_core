@@ -31,6 +31,9 @@ defmodule Membrane.Pipeline do
   @type callback_return_t ::
           CallbackHandler.callback_return_t(callback_action_t, State.internal_state_t())
 
+  @doc """
+  Enables to check whether module is membrane pipeline
+  """
   @callback is_membrane_pipeline :: true
 
   @callback handle_init(pipeline_options_t) ::
@@ -520,39 +523,27 @@ defmodule Membrane.Pipeline do
       alias Membrane.Pipeline
       @behaviour Membrane.Pipeline
 
-      @doc """
-      Enables to check whether module is membrane pipeline
-      """
       @impl true
       def is_membrane_pipeline, do: true
 
-      # Default implementations
-
-      @doc false
       @impl true
       def handle_init(_options), do: {:ok, %{}}
 
-      @doc false
       @impl true
       def handle_prepare(_playback_state, state), do: {:ok, state}
 
-      @doc false
       @impl true
       def handle_play(state), do: {:ok, state}
 
-      @doc false
       @impl true
       def handle_stop(state), do: {:ok, state}
 
-      @doc false
       @impl true
       def handle_message(_message, _from, state), do: {:ok, state}
 
-      @doc false
       @impl true
       def handle_other(_message, state), do: {:ok, state}
 
-      @doc false
       @impl true
       def handle_spec_started(_new_children, state), do: {:ok, state}
 
