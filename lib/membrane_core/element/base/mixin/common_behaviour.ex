@@ -137,20 +137,41 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   It automatically generates appropriate struct.
   """
   defmacro def_options(options) do
+    {opt_types, escaped_opts} = extract_types(options)
+    opt_typespec = {:%{}, [], Keyword.put(opt_types, :__struct__, __CALLER__.module)}
+    # opt_typespec is equivalent of typespec %__CALLER__.module{key: value, ...}
     quote do
-      @spec options() :: keyword
-      def options(), do: unquote(options)
+      @type t :: unquote(opt_typespec)
 
-      @enforce_keys unquote(options)
-                    |> Enum.flat_map(fn {k, v} ->
-                      if v |> Map.new() |> Map.has_key?(:default) |> Kernel.not(),
-                        do: [k],
-                        else: []
+      @doc """
+      Returns description of options available for this module
+      """
+      @spec options() :: keyword
+      def options(), do: unquote(escaped_opts)
+
+      @enforce_keys unquote(escaped_opts)
+                    |> Enum.reduce([], fn {k, v}, acc ->
+                      if v |> Keyword.has_key?(:default),
+                        do: acc,
+                        else: [k | acc]
                     end)
 
-      defstruct unquote(options)
+      defstruct unquote(escaped_opts)
                 |> Enum.map(fn {k, v} -> {k, v[:default]} end)
     end
+  end
+
+  defp extract_types({:%{}, _, kw}), do: extract_types(kw)
+  defp extract_types(kw) when is_list(kw) do
+    opt_types = kw |> Enum.map(fn {k, v} ->
+      {k, Keyword.get(v, :type, quote do any() end)}
+    end)
+
+    escaped_opts = kw |> Enum.map(fn {k, v} ->
+      {k, Keyword.update(v, :type, "any()", &Macro.to_string(&1))}
+    end)
+
+    {opt_types, escaped_opts}
   end
 
   defmacro __using__(_) do
