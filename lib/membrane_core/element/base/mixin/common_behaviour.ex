@@ -161,11 +161,11 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   defp extract_types({:%{}, _, kw}), do: extract_types(kw)
   defp extract_types(kw) when is_list(kw) do
     opt_types = kw |> Enum.map(fn {k, v} ->
-      {k, Keyword.get(v, :type, quote do any() end)}
+      {k, Keyword.get(v, :spec, quote do any() end)}
     end)
 
     escaped_opts = kw |> Enum.map(fn {k, v} ->
-      {k, Keyword.update(v, :type, "any()", &Macro.to_string/1)}
+      {k, Keyword.update(v, :spec, "any()", &Macro.to_string/1)}
     end)
 
     {opt_types, escaped_opts}
