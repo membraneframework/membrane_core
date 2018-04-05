@@ -138,7 +138,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   defmacro def_options(options) do
     {opt_types, escaped_opts} = extract_types(options)
-    opt_typespec = Keyword.put(opt_types, :__struct__, __CALLER__.module) |> Map.new() |> Macro.escape()
+    opt_typespec = {:%{}, [], Keyword.put(opt_types, :__struct__, __CALLER__.module)}
     # opt_typespec is equivalent of typespec %__CALLER__.module{key: value, ...}
     quote do
       @type t :: unquote(opt_typespec)
