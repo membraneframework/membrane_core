@@ -138,7 +138,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   defmacro def_options(options) do
     {opt_types, escaped_opts} = extract_types(options)
-    opt_typespec = {:%{}, [], Keyword.put(opt_types, :__struct__, __CALLER__.module)}
+    opt_typespec = Keyword.put(opt_types, :__struct__, __CALLER__.module) |> Map.new() |> Macro.escape()
     # opt_typespec is equivalent of typespec %__CALLER__.module{key: value, ...}
     quote do
       @type t :: unquote(opt_typespec)
@@ -150,11 +150,8 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
       def options(), do: unquote(escaped_opts)
 
       @enforce_keys unquote(escaped_opts)
-                    |> Enum.reduce([], fn {k, v}, acc ->
-                      if v |> Keyword.has_key?(:default),
-                        do: acc,
-                        else: [k | acc]
-                    end)
+                    |> Enum.reject(fn {k, v} -> v |> Keyword.has_key?(:default) end)
+                    |> Keyword.keys()
 
       defstruct unquote(escaped_opts)
                 |> Enum.map(fn {k, v} -> {k, v[:default]} end)
@@ -168,7 +165,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
     end)
 
     escaped_opts = kw |> Enum.map(fn {k, v} ->
-      {k, Keyword.update(v, :type, "any()", &Macro.to_string(&1))}
+      {k, Keyword.update(v, :type, "any()", &Macro.to_string/1)}
     end)
 
     {opt_types, escaped_opts}
