@@ -21,7 +21,7 @@ defmodule Membrane.Log.Router do
   This functions assumes that passed log has level equal or greater than global
   level.
   """
-  @spec send_log(atom, any, String.t(), atom) :: :ok
+  @spec send_log(atom, any, String.t(), [atom]) :: :ok
   def send_log(level, message, time, tags \\ []) do
     Membrane.Log.Router |> send({:membrane_log, level, message, time, tags})
     :ok

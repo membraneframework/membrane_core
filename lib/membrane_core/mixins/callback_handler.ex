@@ -2,7 +2,7 @@ defmodule Membrane.Mixins.CallbackHandler do
   use Membrane.Mixins.Log, tags: :core
 
   @type callback_return_t(action_t, internal_state_t) ::
-          {{:ok, internal_state_t}}
+          {:ok, internal_state_t}
           | {{:ok, [action_t]}, internal_state_t}
           | {{:error, any}, internal_state_t}
 
