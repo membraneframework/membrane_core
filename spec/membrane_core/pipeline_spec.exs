@@ -192,7 +192,7 @@ defmodule Membrane.PipelineSpec do
         {:noreply, state} = described_module().handle_info(message(), state())
 
         expect(state.children_to_pids |> Map.keys() |> Enum.sort())
-        |> to(eq(spec().children |> Map.keys() |> Enum.sort()))
+        |> to(eq(spec().children |> Keyword.keys() |> Enum.sort()))
       end
 
       it "should return new pipeline state containing state" do

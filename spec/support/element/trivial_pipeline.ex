@@ -1,19 +1,19 @@
 defmodule Membrane.Support.Element.TrivialPipeline do
-  alias Membrane.Pipeline
   alias Membrane.Support.Element.{TrivialSource, TrivialFilter, TrivialSink}
   use Membrane.Pipeline
 
+  @impl true
   def handle_init(_) do
-    children = %{
+    children = [
       producer: TrivialSource,
       filter: TrivialFilter,
       consumer: TrivialSink
-    }
+    ]
 
     links = %{
-      {:producer, :source} => {:filter, :sink, pull_buffer: %{preferred_size: 10}},
+      {:producer, :source} => {:filter, :sink, pull_buffer: [preferred_size: 10]},
       {:filter, :source} =>
-        {:consumer, :sink, pull_buffer: %{preferred_size: 10, initial_size: 5}}
+        {:consumer, :sink, pull_buffer: [preferred_size: 10, initial_size: 5]}
     }
 
     spec = %Pipeline.Spec{
@@ -21,6 +21,6 @@ defmodule Membrane.Support.Element.TrivialPipeline do
       links: links
     }
 
-    {{:ok, spec}, nil}
+    {{:ok, spec}, %{}}
   end
 end
