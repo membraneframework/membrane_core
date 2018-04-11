@@ -21,8 +21,8 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   @doc """
   Macro that defines known sink pads for the element type.
 
-  Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
-  without module prefix
+  Allows to use `Membrane.Caps.Matcher.one_of/1` and `Membrane.Caps.Matcher.range/2`
+  functions without module prefix
 
   It automatically generates documentation from the given definition
   and adds compile-time caps specs validation
