@@ -1,6 +1,6 @@
 defmodule Membrane.Caps.Matcher do
   @moduledoc """
-  Module that allows to specify allowed caps and verify that they match specification.
+  Module that allows to specify valid caps and verify that they match specification.
 
   Caps specifications (specs) should be in one of the formats:
 
@@ -28,10 +28,10 @@ defmodule Membrane.Caps.Matcher do
   @type caps_spec_t :: module() | {module(), keyword()}
   @type caps_specs_t :: :any | caps_spec_t() | [caps_spec_t()]
 
-  @opaque range_spec_t :: record(:range_t, min: any, max: any)
+  @opaque range_spec_t :: {__MODULE__.Range, any, any}
   Record.defrecordp(:range_t, __MODULE__.Range, min: 0, max: :infinity)
 
-  @opaque list_spec_t :: record(:in_t, list: list())
+  @opaque list_spec_t :: {__MODULE__.In, list()}
   Record.defrecordp(:in_t, __MODULE__.In, list: [])
 
   @doc """

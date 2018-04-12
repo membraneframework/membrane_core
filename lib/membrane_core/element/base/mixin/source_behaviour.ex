@@ -1,5 +1,9 @@
 defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
-  @moduledoc false
+  @moduledoc """
+  Module defining behaviour for source elements.
+
+  When used, declares behaviour implementation and imports macros.
+  """
 
   alias Membrane.{Buffer, Context, Element}
   alias Element.Pad

@@ -1,5 +1,9 @@
 defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
-  @moduledoc false
+  @moduledoc """
+  Module defining behaviour for sink elements.
+
+  When used, declares behaviour implementation and imports macros.
+  """
 
   alias Membrane.{Buffer, Caps, Element.Pad}
 
