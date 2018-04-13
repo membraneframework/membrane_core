@@ -8,7 +8,7 @@ This package provides core of the Membrane multimedia framework.
 Add the following line to your `deps` in `mix.exs`.  Run `mix deps.get`.
 
 ```elixir
-{:membrane_core, git: "git@bitbucket.org:radiokit/membrane-core.git"}
+{:membrane_core, git: "git@github.com:membraneframework/membrane-core.git"}
 ```
 
 Then add the following line to your `applications` in `mix.exs`.
