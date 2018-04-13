@@ -153,6 +153,14 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
     keyword:
       quote do
         keyword()
+      end,
+    struct:
+      quote do
+        struct()
+      end,
+    caps:
+      quote do
+        struct()
       end
   }
 
@@ -206,8 +214,6 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
     end
   end
 
-  defp extract_specs({:%{}, _, kw}), do: extract_specs(kw)
-
   defp extract_specs(kw) when is_list(kw) do
     with_default_specs =
       kw
@@ -217,9 +223,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
             any()
           end
 
-        default_val =
-          @default_quoted_specs
-          |> Map.get(v[:type], quoted_any)
+        default_val = @default_quoted_specs |> Map.get(v[:type], quoted_any)
 
         {k, v |> Keyword.put_new(:spec, default_val)}
       end)

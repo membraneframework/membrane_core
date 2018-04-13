@@ -93,12 +93,12 @@ defmodule Membrane.PipelineSpec do
   end
 
 
-  describe ".is_pipeline?/1" do
+  describe ".pipeline?/1" do
     context "when module is a pipeline" do
       let :module, do: TrivialPipeline
 
       it "should return true" do
-        expect(described_module().is_pipeline?(module())).to be_true()
+        expect(described_module().pipeline?(module())).to be_true()
       end
     end
 
@@ -106,11 +106,11 @@ defmodule Membrane.PipelineSpec do
       let :module, do: Membrane.Support.Element.TrivialSource
 
       it "should return false" do
-        expect(described_module().is_pipeline?(module())).to be_false()
+        expect(described_module().pipeline?(module())).to be_false()
       end
 
       it "should return false" do
-        expect(described_module().is_pipeline?(Enum)).to be_false()
+        expect(described_module().pipeline?(Enum)).to be_false()
       end
     end
 
