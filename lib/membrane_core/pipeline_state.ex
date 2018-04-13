@@ -65,7 +65,7 @@ defmodule Membrane.Pipeline.State do
     )
   end
 
-  def is_dynamic?(state, child) do
+  def dynamic?(state, child) do
     state.children_ids[child] != nil
   end
 

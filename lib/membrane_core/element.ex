@@ -27,9 +27,8 @@ defmodule Membrane.Element do
   # Type that defines an element name within a pipeline
   @type name_t :: atom | {atom, non_neg_integer}
 
-  def is_element(module) do
-    Code.ensure_loaded?(module) and function_exported?(module, :is_membrane_element, 0) and
-      module.is_membrane_element
+  def element?(module) do
+    module |> Helper.Module.check_behaviour(:membrane_element?)
   end
 
   @doc """
@@ -67,7 +66,7 @@ defmodule Membrane.Element do
   defp do_start(method, pipeline, module, name, element_options, process_options) do
     import Membrane.Mixins.Log
 
-    if is_element(module) do
+    if element?(module) do
       debug("""
       Element start link: module: #{inspect(module)},
       element options: #{inspect(element_options)},

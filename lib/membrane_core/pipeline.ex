@@ -34,7 +34,7 @@ defmodule Membrane.Pipeline do
   @doc """
   Enables to check whether module is membrane pipeline
   """
-  @callback is_membrane_pipeline :: true
+  @callback membrane_pipeline? :: true
 
   @callback handle_init(pipeline_options_t) ::
               {{:ok, Spec.t()}, State.internal_state_t()}
@@ -76,7 +76,7 @@ defmodule Membrane.Pipeline do
 
   defp do_start(method, module, pipeline_options, process_options) do
     with :ok <-
-           (if module |> is_pipeline? do
+           (if module |> pipeline? do
               :ok
             else
               :not_pipeline
@@ -159,8 +159,8 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  def is_pipeline?(module) do
-    module |> Helper.Module.check_behaviour(:is_membrane_pipeline)
+  def pipeline?(module) do
+    module |> Helper.Module.check_behaviour(:membrane_pipeline?)
   end
 
   defp handle_spec(%Spec{children: children, links: links}, state) do
@@ -316,7 +316,7 @@ defmodule Membrane.Pipeline do
   defp resolve_link(%{element: element, pad: pad_name} = elementpad, state) do
     element =
       cond do
-        state |> State.is_dynamic?(element) ->
+        state |> State.dynamic?(element) ->
           {:ok, last_id} = state |> State.get_last_child_id(element)
           {element, last_id}
 
@@ -524,7 +524,7 @@ defmodule Membrane.Pipeline do
       @behaviour Membrane.Pipeline
 
       @impl true
-      def is_membrane_pipeline, do: true
+      def membrane_pipeline?, do: true
 
       @impl true
       def handle_init(_options), do: {:ok, %{}}
