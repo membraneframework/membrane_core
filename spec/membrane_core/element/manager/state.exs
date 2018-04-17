@@ -15,27 +15,27 @@ defmodule Membrane.Element.Manager.StateSpec do
 
     it "should return State struct" do
       {:ok, struct} = described_module().new(module(), name())
-      expect(struct.__struct__) |> to(eq(described_module()))
+      expect(struct.__struct__) |> to(eq described_module())
     end
 
     it "should initialize empty playback buffer" do
       {:ok, struct} = described_module().new(module(), name())
-      expect(struct.playback_buffer) |> to(eq(Membrane.Element.Manager.PlaybackBuffer.new()))
+      expect(struct.playback_buffer) |> to(eq Membrane.Element.Manager.PlaybackBuffer.new())
     end
 
     it "should return stopped playback state" do
       {:ok, struct} = described_module().new(module(), name())
-      expect(struct.playback.state) |> to(eq(:stopped))
+      expect(struct.playback.state) |> to(eq :stopped)
     end
 
     it "should return state containing element's name" do
       {:ok, struct} = described_module().new(module(), name())
-      expect(struct.name) |> to(eq(name()))
+      expect(struct.name) |> to(eq name())
     end
 
     it "should return state containing element's module" do
       {:ok, struct} = described_module().new(module(), name())
-      expect(struct.module) |> to(eq(module()))
+      expect(struct.module) |> to(eq module())
     end
 
     it "should initialize pads list" do
@@ -43,7 +43,7 @@ defmodule Membrane.Element.Manager.StateSpec do
       expect(struct.pads) |> to(be_truthy())
     end
 
-    pending("pads list should contain proper values")
+    pending "pads list should contain proper values"
   end
 
   describe ".link_pad/3" do
@@ -70,12 +70,12 @@ defmodule Membrane.Element.Manager.StateSpec do
 
       it "should remove given pad from pads.info" do
         {:ok, new_state} = described_module().link_pad(state(), pad_name(), func())
-        expect(new_state.pads.info[pad_name()]) |> to(eq(nil))
+        expect(new_state.pads.info[pad_name()]) |> to(eq nil)
       end
 
       it "should not modify state except pads list" do
         {:ok, new_state} = described_module().link_pad(state(), pad_name(), func())
-        expect(%{new_state | pads: nil}) |> to(eq(%{state() | pads: nil}))
+        expect(%{new_state | pads: nil}) |> to(eq %{state() | pads: nil})
       end
 
       it "should add pad to the 'pads.data' list" do

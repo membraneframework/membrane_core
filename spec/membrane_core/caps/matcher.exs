@@ -9,7 +9,7 @@ defmodule Membrane.Caps.MatcherSpec do
 
   describe "validate_specs/1" do
     def should_be_valid(specs) do
-      expect(described_module().validate_specs(specs)) |> to(eq(:ok))
+      expect(described_module().validate_specs(specs)) |> to(eq :ok)
     end
 
     def should_be_invalid(specs) do

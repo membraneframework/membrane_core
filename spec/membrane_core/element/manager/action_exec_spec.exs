@@ -4,8 +4,8 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
   alias Membrane.{Buffer, Event, Message}
   alias Membrane.Mixins.Playback
 
-  pending(".handle_demand/6")
-  pending(".handle_redemand/2")
+  pending ".handle_demand/6"
+  pending ".handle_redemand/2"
 
   describe ".send_buffer/4" do
     let :other_name, do: :other_name
@@ -50,14 +50,14 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
           {{_error, {main_reason, _reason_details}}, _state} =
             described_module().send_buffer(pad_name(), buffer(), callback(), state())
 
-          expect(main_reason) |> to(eq(:cannot_send_buffer))
+          expect(main_reason) |> to(eq :cannot_send_buffer)
         end
 
         it "should return keyword list with callback name" do
           {{_error, {_main_reason, reason_details}}, _state} =
             described_module().send_buffer(pad_name(), buffer(), callback(), state())
 
-          expect(reason_details |> Keyword.fetch(:callback)) |> to(eq({:ok, callback()}))
+          expect(reason_details |> Keyword.fetch(:callback)) |> to(eq {:ok, callback()})
         end
 
         it "should return keyword list with playback state" do
@@ -65,7 +65,7 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
             described_module().send_buffer(pad_name(), buffer(), callback(), state())
 
           expect(reason_details |> Keyword.fetch(:playback_state))
-          |> to(eq({:ok, playback().state}))
+          |> to(eq {:ok, playback().state})
         end
       end
 
@@ -78,7 +78,7 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
           it "should raise RuntimeError" do
             expect(fn ->
               described_module().send_buffer(invalid_pad_name(), buffer(), callback(), state())
-            end).to(raise_exception(RuntimeError))
+            end).to(raise_exception RuntimeError)
           end
         end
 
@@ -92,7 +92,7 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
             {:ok, new_state} =
               described_module().send_buffer(pad_name(), buffer(), callback(), state())
 
-            expect(new_state) |> to(eq(state()))
+            expect(new_state) |> to(eq state())
           end
 
           it "should send {:membrane_buffer, _} message to pid()" do
@@ -114,7 +114,7 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
         it "should raise RuntimeError" do
           expect(fn ->
             described_module().send_buffer(invalid_pad_name(), buffer(), callback(), state())
-          end).to(raise_exception(RuntimeError))
+          end).to(raise_exception RuntimeError)
         end
       end
 
@@ -128,7 +128,7 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
           {:ok, new_state} =
             described_module().send_buffer(pad_name(), buffer(), callback(), state())
 
-          expect(new_state) |> to(eq(state()))
+          expect(new_state) |> to(eq state())
         end
 
         it "should send {:membrane_buffer, _} message to pid()" do
@@ -174,7 +174,7 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
 
         it "should raise RuntimeError" do
           expect(fn -> described_module().send_event(invalid_pad_name(), event(), state()) end)
-          |> to(raise_exception(RuntimeError))
+          |> to(raise_exception RuntimeError)
         end
       end
 
@@ -186,7 +186,7 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
 
         it "should keep element's state unchanged" do
           {:ok, new_state} = described_module().send_event(pad_name(), event(), state())
-          expect(new_state) |> to(eq(state()))
+          expect(new_state) |> to(eq state())
         end
 
         context "and event is special" do
@@ -238,7 +238,7 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
 
         it "should raise RuntimeError" do
           expect(fn -> described_module().send_caps(invalid_pad_name(), caps(), state()) end)
-          |> to(raise_exception(RuntimeError))
+          |> to(raise_exception RuntimeError)
         end
       end
 
@@ -254,7 +254,7 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
           expected_state = %{state() | pads: expected_pads}
 
           {:ok, new_state} = described_module().send_caps(pad_name(), caps(), state())
-          expect(new_state) |> to(eq(expected_state))
+          expect(new_state) |> to(eq expected_state)
         end
 
         context "and event is special" do
@@ -284,7 +284,7 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
       end
 
       it "should keep element's state unchanged" do
-        expect(described_module().send_message(message(), state()) |> elem(1)) |> to(eq(state()))
+        expect(described_module().send_message(message(), state()) |> elem(1)) |> to(eq state())
       end
 
       context "and message is special" do
@@ -306,7 +306,7 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
       end
 
       it "should keep element's state unchanged" do
-        expect(described_module().send_message(message(), state()) |> elem(1)) |> to(eq(state()))
+        expect(described_module().send_message(message(), state()) |> elem(1)) |> to(eq state())
       end
 
       context "and message is special" do

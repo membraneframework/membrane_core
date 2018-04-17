@@ -26,7 +26,7 @@ defmodule Membrane.PipelineSpec do
       it "should return pid of the process that is linked in the supervision tree" do
         {:ok, pid} = described_module().start_link(module(), options(), process_options())
         {:links, links} = :erlang.process_info(pid, :links)
-        expect(length(links)) |> to(eq(1))
+        expect(length(links)) |> to(eq 1)
       end
     end
 
@@ -71,7 +71,7 @@ defmodule Membrane.PipelineSpec do
       it "should return pid of the process that is  not linked in the supervision tree" do
         {:ok, pid} = described_module().start(module(), options(), process_options())
         {:links, links} = :erlang.process_info(pid, :links)
-        expect(length(links)) |> to(eq(0))
+        expect(length(links)) |> to(eq 0)
       end
     end
 
@@ -129,17 +129,17 @@ defmodule Membrane.PipelineSpec do
 
     it "should return {:ok, %Pipeline.State{}} tuple" do
       {:ok, state} = described_module().init({module(), options()})
-      expect(state.__struct__) |> to(eq(Membrane.Pipeline.State))
+      expect(state.__struct__) |> to(eq Membrane.Pipeline.State)
     end
 
     it "should return state containing correct module" do
       {:ok, state} = described_module().init({module(), options()})
-      expect(state.module) |> to(eq(TrivialPipeline))
+      expect(state.module) |> to(eq TrivialPipeline)
     end
 
     it "should return pipeline that is stopped" do
       {:ok, state} = described_module().init({module(), options()})
-      expect(state.playback.state) |> to(eq(:stopped))
+      expect(state.playback.state) |> to(eq :stopped)
     end
 
     it "should send a message to initialize children asynchronously" do
@@ -180,24 +180,24 @@ defmodule Membrane.PipelineSpec do
 
       it "should return :noreply response" do
         {atom, _state} = described_module().handle_info(message(), state())
-        expect(atom) |> to(eq(:noreply))
+        expect(atom) |> to(eq :noreply)
       end
 
       it "should return new pipeline state" do
         {:noreply, state} = described_module().handle_info(message(), state())
-        expect(state.__struct__) |> to(eq(Membrane.Pipeline.State))
+        expect(state.__struct__) |> to(eq Membrane.Pipeline.State)
       end
 
       it "should return new pipeline state containing map with pids for every child" do
         {:noreply, state} = described_module().handle_info(message(), state())
 
         expect(state.children_to_pids |> Map.keys() |> Enum.sort())
-        |> to(eq(spec().children |> Keyword.keys() |> Enum.sort()))
+        |> to(eq spec().children |> Keyword.keys() |> Enum.sort())
       end
 
       it "should return new pipeline state containing state" do
         {:noreply, state} = described_module().handle_info(message(), state())
-        expect(state.internal_state) |> to(eq(internal_state()))
+        expect(state.internal_state) |> to(eq internal_state())
       end
 
       it "should call element's handle_init" do
@@ -230,7 +230,7 @@ defmodule Membrane.PipelineSpec do
 
         it "should return {:noreply, ..} result" do
           {atom, _} = described_module().handle_info(message(), state())
-          expect(atom) |> to(eq(:noreply))
+          expect(atom) |> to(eq :noreply)
         end
 
         it "should invoke handle_message from pipeline module with correct arguments" do
@@ -242,7 +242,7 @@ defmodule Membrane.PipelineSpec do
 
         it "should keep state unchanged" do
           {:noreply, new_state} = described_module().handle_info(message(), state())
-          expect(new_state) |> to(eq(state()))
+          expect(new_state) |> to(eq state())
         end
       end
 
@@ -251,12 +251,12 @@ defmodule Membrane.PipelineSpec do
 
         it "should return {:stop, _, _}" do
           {atom, _, _} = described_module().handle_info(message(), state())
-          expect(atom) |> to(eq(:stop))
+          expect(atom) |> to(eq :stop)
         end
 
         it "should keep state unchanged" do
           {:stop, _, new_state} = described_module().handle_info(message(), state())
-          expect(new_state) |> to(eq(state()))
+          expect(new_state) |> to(eq state())
         end
 
         it "should return error tuple" do
@@ -266,12 +266,12 @@ defmodule Membrane.PipelineSpec do
 
         it "should return :unknown_child as a reason" do
           {:stop, {:error, {atom, _pid}}, _} = described_module().handle_info(message(), state())
-          expect(atom) |> to(eq(:unknown_child))
+          expect(atom) |> to(eq :unknown_child)
         end
 
         it "should include given pid in the reason" do
           {:stop, {:error, {_, pid}}, _} = described_module().handle_info(message(), state())
-          expect(pid) |> to(eq(child_pid()))
+          expect(pid) |> to(eq child_pid())
         end
       end
     end
@@ -288,12 +288,12 @@ defmodule Membrane.PipelineSpec do
 
       it "should return {:noreply, ..} tuple" do
         {atom, _} = described_module().handle_info(message(), state())
-        expect(atom) |> to(eq(:noreply))
+        expect(atom) |> to(eq :noreply)
       end
 
       it "should keep state unchanged" do
         {:noreply, new_state} = described_module().handle_info(message(), state())
-        expect(new_state) |> to(eq(state()))
+        expect(new_state) |> to(eq state())
       end
 
       it "should invoke handle_other callback from the pipeline module" do
@@ -303,5 +303,5 @@ defmodule Membrane.PipelineSpec do
     end
   end
 
-  pending("changing playback state -> handle_call?")
+  pending "changing playback state -> handle_call?"
 end

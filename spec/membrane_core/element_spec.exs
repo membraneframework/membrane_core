@@ -13,10 +13,10 @@ defmodule Membrane.ElementSpec do
 
   alias Membrane.Mixins.Playback
 
-  pending(".start_link/3")
-  pending(".start/3")
-  pending(".get_message_bus/2")
-  pending(".clear_message_bus/2")
+  pending ".start_link/3"
+  pending ".start/3"
+  pending ".get_message_bus/2"
+  pending ".clear_message_bus/2"
 
   describe ".link/5" do
     context "if first given PID is not a PID of an element process" do
@@ -181,7 +181,7 @@ defmodule Membrane.ElementSpec do
             {_response, _info, %State{internal_state: new_internal_state}} =
               described_module().handle_info(message(), state())
 
-            expect(new_internal_state) |> to(eq(%{internal_state() | a: 2}))
+            expect(new_internal_state) |> to(eq %{internal_state() | a: 2})
           end
 
           it "should return {:reply, {:error, reason}, state()} with unchanged playback state" do
@@ -275,14 +275,14 @@ defmodule Membrane.ElementSpec do
             {:noreply, %{internal_state: returned_state}} =
               described_module().handle_info(message(), state())
 
-            expect(returned_state) |> to(eq(new_internal_state()))
+            expect(returned_state) |> to(eq new_internal_state())
           end
 
           it "should return {:reply, :ok, state()} with playback state set to :playing" do
             {:noreply, %{playback: returned_playback}} =
               described_module().handle_info(message(), state())
 
-            expect(returned_playback.state) |> to(eq(:playing))
+            expect(returned_playback.state) |> to(eq :playing)
           end
         end
       end
@@ -290,7 +290,7 @@ defmodule Membrane.ElementSpec do
       context "and current playback state is :prepared" do
         let :playback, do: %Playback{state: :prepared}
 
-        pending("and at least one of the callbacks has returned an error")
+        pending "and at least one of the callbacks has returned an error"
 
         context "and all callbacks have returned {:ok, state()}" do
           let :new_internal_state, do: :new_state
@@ -330,14 +330,14 @@ defmodule Membrane.ElementSpec do
             {:noreply, %{internal_state: returned_state}} =
               described_module().handle_info(message(), state())
 
-            expect(returned_state) |> to(eq(new_internal_state()))
+            expect(returned_state) |> to(eq new_internal_state())
           end
 
           it "should return {:reply, :ok, state()} with playback state set to :playing" do
             {:noreply, %{playback: new_playback}} =
               described_module().handle_info(message(), state())
 
-            expect(new_playback.state) |> to(eq(:playing))
+            expect(new_playback.state) |> to(eq :playing)
           end
         end
       end
@@ -376,7 +376,7 @@ defmodule Membrane.ElementSpec do
           expect(module()) |> to_not(accepted(:handle_play))
         end
 
-        pending("should return {:reply, :noop, state()} with unmodified state")
+        pending "should return {:reply, :noop, state()} with unmodified state"
       end
     end
 
@@ -391,7 +391,7 @@ defmodule Membrane.ElementSpec do
       context "and current playback state is :stopped" do
         let :playback, do: %Playback{state: :stopped}
 
-        pending("and at least one of the callbacks has returned an error")
+        pending "and at least one of the callbacks has returned an error"
 
         context "and all callbacks have returned {:ok, state()}" do
           let :new_internal_state, do: :new_int_state
@@ -435,14 +435,14 @@ defmodule Membrane.ElementSpec do
             {:noreply, %{internal_state: returned_state}} =
               described_module().handle_info(message(), state())
 
-            expect(returned_state) |> to(eq(new_internal_state()))
+            expect(returned_state) |> to(eq new_internal_state())
           end
 
           it "should return {:reply, :ok, state()} with playback state set to :prepared" do
             {:noreply, %{playback: new_playback}} =
               described_module().handle_info(message(), state())
 
-            expect(new_playback.state) |> to(eq(:prepared))
+            expect(new_playback.state) |> to(eq :prepared)
           end
         end
       end
@@ -481,13 +481,13 @@ defmodule Membrane.ElementSpec do
           expect(module()) |> to_not(accepted(:handle_play))
         end
 
-        pending("should return {:reply, :noop, state()} with unmodified state")
+        pending "should return {:reply, :noop, state()} with unmodified state"
       end
 
       context "and current playback state is :playing" do
         let :playback, do: %Playback{state: :playing}
 
-        pending("and at least one of the callbacks has returned an error")
+        pending "and at least one of the callbacks has returned an error"
 
         context "and all callbacks have returned {:ok, state()}" do
           let :new_internal_state, do: :new_satete
@@ -532,7 +532,7 @@ defmodule Membrane.ElementSpec do
             {:noreply, %{internal_state: returned_state}} =
               described_module().handle_info(message(), state())
 
-            expect(returned_state) |> to(eq(new_internal_state()))
+            expect(returned_state) |> to(eq new_internal_state())
           end
 
           it "should return {:reply, :ok, state()} with playback state set to :prepared" do
@@ -556,7 +556,7 @@ defmodule Membrane.ElementSpec do
       context "and current playback state is :playing" do
         let :playback, do: %Playback{state: :playing}
 
-        pending("and at least one of the callbacks has returned an error")
+        pending "and at least one of the callbacks has returned an error"
 
         context "and all callbacks have returned {:ok, state()}" do
           let :new_internal_state, do: %{value: :new_value}
@@ -596,14 +596,14 @@ defmodule Membrane.ElementSpec do
             {:noreply, %{internal_state: returned_state}} =
               described_module().handle_info(message(), state())
 
-            expect(returned_state) |> to(eq(new_internal_state()))
+            expect(returned_state) |> to(eq new_internal_state())
           end
 
           it "should return {:reply, :ok, state()} with playback state set to :stopped" do
             {:noreply, %{playback: returned_playback}} =
               described_module().handle_info(message(), state())
 
-            expect(returned_playback.state) |> to(eq(:stopped))
+            expect(returned_playback.state) |> to(eq :stopped)
           end
         end
       end
@@ -611,7 +611,7 @@ defmodule Membrane.ElementSpec do
       context "and current playback state is :prepared" do
         let :playback, do: %Playback{state: :prepared}
 
-        pending("and at least one of the callbacks has returned an error")
+        pending "and at least one of the callbacks has returned an error"
 
         context "and all callbacks have returned {:ok, state()}" do
           let :new_internal_state, do: %{new: :new}
@@ -651,14 +651,14 @@ defmodule Membrane.ElementSpec do
             {:noreply, %{internal_state: returned_state}} =
               described_module().handle_info(message(), state())
 
-            expect(returned_state) |> to(eq(new_internal_state()))
+            expect(returned_state) |> to(eq new_internal_state())
           end
 
           it "should return {:reply, :ok, state()} with playback state set to :stopped" do
             {:noreply, %{playback: returned_playback}} =
               described_module().handle_info(message(), state())
 
-            expect(returned_playback.state) |> to(eq(:stopped))
+            expect(returned_playback.state) |> to(eq :stopped)
           end
         end
       end
@@ -701,7 +701,7 @@ defmodule Membrane.ElementSpec do
           {:noreply, %{playback: returned_playback}} =
             described_module().handle_info(message(), state())
 
-          expect(returned_playback.state) |> to(eq(:stopped))
+          expect(returned_playback.state) |> to(eq :stopped)
         end
       end
     end
