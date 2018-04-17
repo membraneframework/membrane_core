@@ -9,11 +9,11 @@ defmodule Membrane.Caps.MatcherSpec do
 
   describe "validate_specs/1" do
     def should_be_valid(specs) do
-      expect(described_module().validate_specs(specs)).to(eq(:ok))
+      expect(described_module().validate_specs(specs)) |> to(eq :ok)
     end
 
     def should_be_invalid(specs) do
-      expect(described_module().validate_specs(specs)).to(be_error_result())
+      expect(described_module().validate_specs(specs)) |> to(be_error_result())
     end
 
     it "should succeed when specs have all fields of caps" do
@@ -45,11 +45,11 @@ defmodule Membrane.Caps.MatcherSpec do
 
   describe "match?/2" do
     def should_match(spec, caps) do
-      expect(described_module().match?(spec, caps)).to(be_true())
+      expect(described_module().match?(spec, caps)) |> to(be_true())
     end
 
     def should_not_match(spec, caps) do
-      expect(described_module().match?(spec, caps)).to(be_false())
+      expect(described_module().match?(spec, caps)) |> to(be_false())
     end
 
     context "given invalid caps" do
@@ -61,7 +61,7 @@ defmodule Membrane.Caps.MatcherSpec do
 
       it "should raise error for any valid spec" do
         raising_fun = fn -> described_module().match?(MockCaps, caps()) end
-        expect(raising_fun).to(raise_exception())
+        expect(raising_fun) |> to(raise_exception())
       end
     end
 
