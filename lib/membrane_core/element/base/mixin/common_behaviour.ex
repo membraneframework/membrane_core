@@ -1,4 +1,10 @@
 defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
+  @moduledoc """
+  Module defining behaviour common to all elements.
+
+  When used declares behaviour implementation, provides default callback definitions
+  and imports macros.
+  """
   alias Membrane.{Element, Message}
   alias Element.{Action, Context, Pad}
   alias Element.Manager.State
@@ -14,7 +20,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @type known_pads_t ::
           Mixin.SinkBehaviour.known_sink_pads_t() | Mixin.SourceBehaviour.known_source_pads_t()
 
-  @callback is_membrane_element :: true
+  @callback membrane_element? :: true
 
   @doc """
   Returns module that manages this element.
@@ -131,26 +137,108 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_shutdown(State.internal_state_t()) :: :ok
 
+  @default_quoted_specs %{
+    atom:
+      quote do
+        atom()
+      end,
+    boolean:
+      quote do
+        boolean()
+      end,
+    string:
+      quote do
+        String.t()
+      end,
+    keyword:
+      quote do
+        keyword()
+      end,
+    struct:
+      quote do
+        struct()
+      end,
+    caps:
+      quote do
+        struct()
+      end
+  }
+
   @doc """
   Macro that defines known options for the element type.
 
   It automatically generates appropriate struct.
+
+  `def_options/1` should receive keyword list, where each key is option name and
+  is described by another keyword list with following fields:
+
+    * `type:` atom, used for parsing
+    * `spec:` typespec for value in struct. If ommitted, for types:
+      `#{inspect(Map.keys(@default_quoted_specs))}` the default typespec is provided.
+      For others typespec is set to `t:any/0`
+    * `default:` default value for option. If not present, value for this option
+      will have to be provided each time options struct is created
+    * `description:` string describing an option. It will be present in value returned by `options/0`
+      and in typedoc for the struct.
   """
   defmacro def_options(options) do
+    {opt_specs, escaped_opts} = extract_specs(options)
+    opt_typespec_ast = {:%{}, [], Keyword.put(opt_specs, :__struct__, __CALLER__.module)}
+    # opt_typespec_ast is equivalent of typespec %__CALLER__.module{key: value, ...}
+    typedoc =
+      options
+      |> Enum.map_join("\n", fn {k, v} ->
+        "* `#{Atom.to_string(k)}`: #{Keyword.get(v, :description, "\n")}"
+        |> String.trim()
+      end)
+
     quote do
+      @typedoc """
+      Struct containing options for `#{inspect(__MODULE__)}`
+      #{unquote(typedoc)}
+      """
+      @type t :: unquote(opt_typespec_ast)
+
+      @doc """
+      Returns description of options available for this module
+      """
       @spec options() :: keyword
-      def options(), do: unquote(options)
+      def options(), do: unquote(escaped_opts)
 
-      @enforce_keys unquote(options)
-                    |> Enum.flat_map(fn {k, v} ->
-                      if v |> Map.new() |> Map.has_key?(:default) |> Kernel.not(),
-                        do: [k],
-                        else: []
-                    end)
+      @enforce_keys unquote(escaped_opts)
+                    |> Enum.reject(fn {k, v} -> v |> Keyword.has_key?(:default) end)
+                    |> Keyword.keys()
 
-      defstruct unquote(options)
+      defstruct unquote(escaped_opts)
                 |> Enum.map(fn {k, v} -> {k, v[:default]} end)
     end
+  end
+
+  defp extract_specs(kw) when is_list(kw) do
+    with_default_specs =
+      kw
+      |> Enum.map(fn {k, v} ->
+        quoted_any =
+          quote do
+            any()
+          end
+
+        default_val = @default_quoted_specs |> Map.get(v[:type], quoted_any)
+
+        {k, v |> Keyword.put_new(:spec, default_val)}
+      end)
+
+    opt_typespecs =
+      with_default_specs
+      |> Enum.map(fn {k, v} -> {k, v[:spec]} end)
+
+    escaped_opts =
+      with_default_specs
+      |> Enum.map(fn {k, v} ->
+        {k, v |> Keyword.update!(:spec, &Macro.to_string/1)}
+      end)
+
+    {opt_typespecs, escaped_opts}
   end
 
   defmacro __using__(_) do
@@ -164,7 +252,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
       import unquote(__MODULE__), only: [def_options: 1]
 
       @impl true
-      def is_membrane_element, do: true
+      def membrane_element?, do: true
 
       @impl true
       def handle_init(_options), do: {:ok, %{}}
