@@ -47,11 +47,11 @@ defmodule Membrane.Pipeline do
   @callback handle_stop(State.internal_state_t()) :: callback_return_t
 
   @callback handle_message(Message.t(), Element.name_t(), State.internal_state_t()) ::
-              callback_action_t
+              callback_return_t
 
   @callback handle_other(any, State.internal_state_t()) :: callback_return_t
 
-  @callback handle_spec_started([Element.name_t()], State.internal_state_t()) :: callback_action_t
+  @callback handle_spec_started([Element.name_t()], State.internal_state_t()) :: callback_return_t
 
   @doc """
   Starts the Pipeline based on given module and links it to the current
@@ -527,7 +527,7 @@ defmodule Membrane.Pipeline do
       def membrane_pipeline?, do: true
 
       @impl true
-      def handle_init(_options), do: {:ok, %{}}
+      def handle_init(_options), do: {{:ok, %Spec{}}, %{}}
 
       @impl true
       def handle_prepare(_playback_state, state), do: {:ok, state}
