@@ -163,7 +163,8 @@ defmodule Membrane.PullBuffer do
   defp q_pop(q, count, metric, acc \\ [])
 
   defp q_pop(q, count, metric, acc) when count > 0 do
-    q |> @qe.pop
+    q
+    |> @qe.pop
     |> case do
       {{:value, {:buffers, b, buf_cnt}}, nq} when count >= buf_cnt ->
         q_pop(nq, count - buf_cnt, metric, [{:buffers, b, buf_cnt} | acc])
@@ -182,7 +183,8 @@ defmodule Membrane.PullBuffer do
   end
 
   defp q_pop(q, 0, metric, acc) do
-    q |> @qe.pop
+    q
+    |> @qe.pop
     |> case do
       {{:value, {:non_buffer, type, e}}, nq} -> q_pop(nq, 0, metric, [{type, e} | acc])
       _ -> {{:value, acc |> Enum.reverse()}, q}

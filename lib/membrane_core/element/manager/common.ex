@@ -185,7 +185,8 @@ defmodule Membrane.Element.Manager.Common do
 
       def handle_unlink(pad_name, state) do
         with {:ok, state} <-
-               state |> State.get_pad_data(:sink, pad_name)
+               state
+               |> State.get_pad_data(:sink, pad_name)
                |> (case do
                      {:ok, %{eos: false}} ->
                        Common.handle_event(
