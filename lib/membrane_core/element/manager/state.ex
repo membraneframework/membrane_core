@@ -78,19 +78,25 @@ defmodule Membrane.Element.Manager.State do
     ~>> ({:ok, parsed_pads} -> {:ok, parsed_pads |> Map.new()})
   end
 
-  def link_pad(state, {:dynamic, name, _no} = full_name, init_f) do
-    with {:ok, data} <-
+  def link_pad(state, {:dynamic, name, _no} = full_name, direction, init_f) do
+    with {:ok, %{direction: ^direction} = data} <-
            state.pads.info[name]
            |> Helper.wrap_nil(:unknown_pad)
            ~>> (%{is_dynamic: false} -> {:error, :not_dynamic_pad}) do
       {:ok, state} = state |> init_pad_data(full_name, data, init_f)
       state = state |> add_to_currently_linking(full_name)
       {:ok, state}
+    else
+      {:ok, %{direction: actual_direction}} ->
+        {:error, {:invalid_pad_direction, [expected: direction, actual: actual_direction]}}
+
+      error ->
+        error
     end
   end
 
-  def link_pad(state, name, init_f) do
-    with {:ok, data} <-
+  def link_pad(state, name, direction, init_f) do
+    with {:ok, %{direction: ^direction} = data} <-
            state.pads.info[name]
            |> Helper.wrap_nil(:unknown_pad)
            ~>> (%{is_dynamic: true} -> {:error, :not_static_pad}) do
@@ -100,6 +106,18 @@ defmodule Membrane.Element.Manager.State do
         |> init_pad_data(name, data, init_f)
 
       {:ok, state}
+    else
+      {:ok, %{direction: actual_direction}} ->
+        {:error, {:invalid_pad_direction, [expected: direction, actual: actual_direction]}}
+
+      {:error, :unknown_pad} ->
+        case get_pad_data(state, name, direction) do
+          {:ok, _} -> {:error, :already_linked}
+          _ -> {:error, :unknown_pad}
+        end
+
+      error ->
+        error
     end
   end
 

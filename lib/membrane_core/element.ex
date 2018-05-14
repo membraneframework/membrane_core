@@ -148,9 +148,15 @@ defmodule Membrane.Element do
 
   def link(from_pid, to_pid, from_pad, to_pad, params) when is_pid(from_pid) and is_pid(to_pid) do
     with :ok <-
-           GenServer.call(from_pid, {:membrane_handle_link, [from_pad, to_pid, to_pad, params]}),
+           GenServer.call(
+             from_pid,
+             {:membrane_handle_link, [from_pad, :source, to_pid, to_pad, params]}
+           ),
          :ok <-
-           GenServer.call(to_pid, {:membrane_handle_link, [to_pad, from_pid, from_pad, params]}) do
+           GenServer.call(
+             to_pid,
+             {:membrane_handle_link, [to_pad, :sink, from_pid, from_pad, params]}
+           ) do
       :ok
     end
   end

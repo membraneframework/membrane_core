@@ -117,9 +117,9 @@ defmodule Membrane.Element.Manager.Common do
         state |> State.resolve_pad_full_name(pad_name)
       end
 
-      def handle_link(pad_name, pid, other_name, props, state) do
+      def handle_link(pad_name, pad_direction, pid, other_name, props, state) do
         state
-        |> State.link_pad(pad_name, fn %{direction: dir, mode: mode} = data ->
+        |> State.link_pad(pad_name, pad_direction, fn %{direction: dir, mode: mode} = data ->
           data
           |> Map.merge(
             case dir do
@@ -185,7 +185,8 @@ defmodule Membrane.Element.Manager.Common do
 
       def handle_unlink(pad_name, state) do
         with {:ok, state} <-
-               state |> State.get_pad_data(:sink, pad_name)
+               state
+               |> State.get_pad_data(:sink, pad_name)
                |> (case do
                      {:ok, %{eos: false}} ->
                        Common.handle_event(
