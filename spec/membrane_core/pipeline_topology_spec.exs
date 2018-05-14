@@ -9,7 +9,7 @@ defmodule Membrane.Pipeline.SpecSpec do
 
     it "should have links field set to empty list" do
       %Membrane.Pipeline.Spec{links: links} = struct(described_module())
-      expect(links) |> to(eq [])
+      expect(links) |> to(eq %{})
     end
   end
 
