@@ -1,10 +1,8 @@
 defmodule Membrane.Helper do
-  import Kernel
-
   defmacro __using__(_args) do
     quote do
-      import Membrane.Helper, only: [~>: 2, ~>>: 2, provided: 2, int_part: 2]
-      alias Membrane.Helper
+      import unquote(__MODULE__), only: [~>: 2, ~>>: 2, provided: 2, int_part: 2]
+      alias unquote(__MODULE__)
     end
   end
 
@@ -31,15 +29,21 @@ defmodule Membrane.Helper do
     x - r
   end
 
-  defmacro x ~> f do
+  defmacro x ~> match_clauses when is_list(match_clauses) do
     quote do
       case unquote(x) do
-        unquote(f)
+        unquote(match_clauses)
       end
     end
   end
 
-  defmacro x ~>> f do
+  defmacro x ~> lambda do
+    quote do
+      unquote({:&, [], [lambda]}).(unquote(x))
+    end
+  end
+
+  defmacro x ~>> match_clauses do
     default =
       quote do
         _ -> unquote(x)
@@ -47,7 +51,7 @@ defmodule Membrane.Helper do
 
     quote do
       case unquote(x) do
-        unquote(f ++ default)
+        unquote(match_clauses ++ default)
       end
     end
   end

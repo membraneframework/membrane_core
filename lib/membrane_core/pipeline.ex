@@ -47,11 +47,11 @@ defmodule Membrane.Pipeline do
   @callback handle_stop(State.internal_state_t()) :: callback_return_t
 
   @callback handle_message(Message.t(), Element.name_t(), State.internal_state_t()) ::
-              callback_action_t
+              callback_return_t
 
   @callback handle_other(any, State.internal_state_t()) :: callback_return_t
 
-  @callback handle_spec_started([Element.name_t()], State.internal_state_t()) :: callback_action_t
+  @callback handle_spec_started([Element.name_t()], State.internal_state_t()) :: callback_return_t
 
   @doc """
   Starts the Pipeline based on given module and links it to the current
@@ -205,29 +205,31 @@ defmodule Membrane.Pipeline do
   defp parse_children(children) when is_map(children) or is_list(children),
     do: children |> Helper.Enum.map_with(&parse_child/1)
 
-  defp parse_child({name, {module, options, params}})
-       when is_atom(name) and is_atom(module) and is_list(params) do
+  defp parse_child({name, {%module{} = options, params}})
+       when is_atom(name) and is_list(params) do
     {:ok, %{name: name, module: module, options: options, params: params}}
   end
 
-  defp parse_child({name, {module, options}}), do: parse_child({name, {module, options, []}})
-  defp parse_child({name, %module{} = options}), do: parse_child({name, {module, options}})
+  defp parse_child({name, {module, params}})
+       when is_atom(name) and is_atom(module) and is_list(params) do
+    options = module |> Helper.Module.struct()
+    {:ok, %{name: name, module: module, options: options, params: params}}
+  end
 
-  defp parse_child({name, module}),
-    do: parse_child({name, {module, module |> Helper.Module.struct()}})
+  defp parse_child({name, module}) when is_atom(name) do
+    parse_child({name, {module, []}})
+  end
 
   defp parse_child(config), do: {:error, invalid_child_config: config}
 
   defp resolve_children(children, state), do: children |> Enum.map_reduce(state, &resolve_child/2)
 
   defp resolve_child(%{name: name, params: params} = child, state) do
-    cond do
-      params |> Keyword.get(:indexed) ->
-        {id, state} = state |> State.get_increase_child_id(name)
-        {%{child | name: {name, id}}, state}
-
-      true ->
-        {child, state}
+    if params |> Keyword.get(:indexed) do
+      {id, state} = state |> State.get_increase_child_id(name)
+      {%{child | name: {name, id}}, state}
+    else
+      {child, state}
     end
   end
 
@@ -315,13 +317,11 @@ defmodule Membrane.Pipeline do
 
   defp resolve_link(%{element: element, pad: pad_name} = elementpad, state) do
     element =
-      cond do
-        state |> State.dynamic?(element) ->
-          {:ok, last_id} = state |> State.get_last_child_id(element)
-          {element, last_id}
-
-        true ->
-          element
+      if state |> State.dynamic?(element) do
+        {:ok, last_id} = state |> State.get_last_child_id(element)
+        {element, last_id}
+      else
+        element
       end
 
     with {:ok, pid} <- state |> State.get_child(element),
@@ -527,7 +527,7 @@ defmodule Membrane.Pipeline do
       def membrane_pipeline?, do: true
 
       @impl true
-      def handle_init(_options), do: {:ok, %{}}
+      def handle_init(_options), do: {{:ok, %Spec{}}, %{}}
 
       @impl true
       def handle_prepare(_playback_state, state), do: {:ok, state}
