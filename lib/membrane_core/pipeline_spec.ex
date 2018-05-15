@@ -21,13 +21,15 @@ defmodule Membrane.Pipeline.Spec do
         other_element: Element.Using.Default.Options
       ]
 
-  When defining children, some additional parameters can be provided using tuple
-  keyword list:
+  When defining children, some additional parameters can be provided by wrapping
+  child definition with a tuple and putting keyword list of parameters at the end:
 
       [
         first_element: {Element.Bare, indexed: true},
         second_element: {%Element{opt_a: 42}, indexed: true}
       ]
+
+  Available params are described in `t:child_property_t/0`
 
   ## Links
 
@@ -36,7 +38,7 @@ defmodule Membrane.Pipeline.Spec do
 
   You have to set it to a map, where both keys and values are tuples of
   `{element_name, pad_name}`. Values can also have additional options passed by
-  keyword list at the end (See `t:link_option_t/0`.
+  keyword list at the end (See `t:link_option_t/0`).
   Element names have to match names given to the `:children` field.
 
   Once it's done, pipeline will ensure that links are present.
@@ -64,6 +66,11 @@ defmodule Membrane.Pipeline.Spec do
   """
   @type children_spec_t :: [{Membrane.Element.name_t(), child_spec_t}]
 
+  @typedoc """
+  Options available when linking elements in the pipeline
+
+  `:pull_buffer` allows to configure Buffer between elements. See `t:Membrane.PullBuffer.props_t/0`
+  """
   @type link_option_t :: {:pull_buffer, Membrane.PullBuffer.props_t()}
 
   @type link_from_spec_t :: {Membrane.Element.name_t(), Membrane.Pad.name_t()}
