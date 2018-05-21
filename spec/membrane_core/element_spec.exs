@@ -73,21 +73,21 @@ defmodule Membrane.ElementSpec do
       finally do: Process.exit(server(), :kill)
 
       let_ok :destination, do: Membrane.Element.start(self(), destination_module(), %{})
-      finally do: Process.unlink(destination())
+      finally do: Process.exit(destination(), :kill)
 
       context "but first given PID is not a source" do
         let :server_module, do: TrivialSink
         let :destination_module, do: TrivialSink
 
         it "should return an error result" do
-          expect(described_module().link(server(), destination(), :source, :sink, []))
+          expect(described_module().link(server(), destination(), :sink, :sink, []))
           |> to(be_error_result())
         end
 
-        it "should return :invalid_direction as a reason" do
-          {:error, val} = described_module().link(server(), destination(), :source, :sink, [])
+        it "should return :invalid_pad_direction as a reason" do
+          {:error, val} = described_module().link(server(), destination(), :sink, :sink, [])
           {:handle_call, {:cannot_handle_message, [message: _, mode: _, reason: reason]}} = val
-          expect(reason) |> to(eq :unknown_pad)
+          expect(reason) |> to(eq {:invalid_pad_direction, [expected: :source, actual: :sink]})
         end
       end
 
@@ -96,8 +96,32 @@ defmodule Membrane.ElementSpec do
         let :destination_module, do: TrivialSource
 
         it "should return an error result" do
-          expect(described_module().link(server(), destination(), :source, :sink, []))
+          expect(described_module().link(server(), destination(), :source, :source, []))
           |> to(be_error_result())
+        end
+
+        it "should return :invalid_pad_direction as a reason" do
+          {_, val} = described_module().link(server(), destination(), :source, :source, [])
+
+          {:handle_call, {:cannot_handle_message, keyword_list}} = val
+          reason = keyword_list |> Keyword.get(:reason)
+          expect(reason) |> to(eq {:invalid_pad_direction, [expected: :sink, actual: :source]})
+        end
+      end
+
+      context "but incorrect pad name is given" do
+        let :server_module, do: TrivialSource
+        let :destination_module, do: TrivialSink
+
+        it "should return an error result" do
+          expect(described_module().link(server(), destination(), :s, :s, []))
+          |> to(be_error_result())
+        end
+
+        it "should return :unknown_pad as a reason" do
+          {_, val} = described_module().link(server(), destination(), :s, :s, [])
+          {:handle_call, {:cannot_handle_message, keyword_list}} = val
+          expect(keyword_list |> Keyword.get(:reason)) |> to(eq :unknown_pad)
         end
       end
 
@@ -105,9 +129,20 @@ defmodule Membrane.ElementSpec do
         let :server_module, do: TrivialSource
         let :destination_module, do: TrivialSink
 
-        # TODO check if pads are present
-        # TODO check if pads match at all
-        # TODO check if pads are not already linked
+        context "but pads are already linked" do
+          before do: :ok = described_module().link(server(), destination(), :source, :sink, [])
+
+          it "should return an error result" do
+            expect(described_module().link(server(), destination(), :source, :sink, []))
+            |> to(be_error_result())
+          end
+
+          it "should return :already_linked as a reason" do
+            {_, val} = described_module().link(server(), destination(), :source, :sink, [])
+            {:handle_call, {:cannot_handle_message, keyword_list}} = val
+            expect(keyword_list |> Keyword.get(:reason)) |> to(eq :already_linked)
+          end
+        end
       end
     end
   end

@@ -4,9 +4,6 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
   alias Membrane.{Buffer, Event, Message}
   alias Membrane.Mixins.Playback
 
-  pending ".handle_demand/6"
-  pending ".handle_redemand/2"
-
   describe ".send_buffer/4" do
     let :other_name, do: :other_name
 
@@ -317,6 +314,173 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
           target = [:membrane_message, name(), message()]
           assert_receive ^target
         end
+      end
+    end
+  end
+
+  describe ".handle_demand" do
+    let :callback, do: :handle_event
+    let :source, do: :self
+    let :pad_name, do: :sink
+    let :size, do: 1
+    let :type, do: :normal
+    let :sink_mode, do: :pull
+    let :playback_state, do: :playing
+    let :element_module, do: FakeElementModule
+    let :manager_module, do: FakeManagerModule
+
+    let :state,
+      do: %{
+        __struct__: State,
+        module: element_module(),
+        name: :test_name,
+        playback_state: playback_state(),
+        pads: %{
+          data: %{
+            sink: %{
+              direction: :sink,
+              mode: sink_mode(),
+              pid: self()
+            }
+          }
+        }
+      }
+
+    context "when sink pad is not in a pull mode" do
+      let :sink_mode, do: :push
+
+      it "should raise RuntimeError" do
+        expect(fn ->
+          described_module().handle_demand(
+            pad_name(),
+            source(),
+            type(),
+            size(),
+            callback(),
+            state()
+          )
+        end)
+        |> to(raise_exception(RuntimeError))
+      end
+    end
+
+    context "when source doesn't exist in the given state" do
+      let :source, do: {:source, :non_existing_pad}
+
+      it "should raise RuntimeError" do
+        expect(fn ->
+          described_module().handle_demand(
+            pad_name(),
+            source(),
+            type(),
+            size(),
+            callback(),
+            state()
+          )
+        end)
+        |> to(raise_exception(RuntimeError))
+      end
+    end
+
+    context "when callback is 'handle_write'" do
+      let :callback, do: :handle_write
+
+      it "should send appropriate message to 'self()'" do
+        described_module().handle_demand(
+          pad_name(),
+          source(),
+          type(),
+          size(),
+          callback(),
+          state()
+        )
+
+        assert_received {:membrane_self_demand, _}
+      end
+    end
+
+    context "when callback is other than 'handle_write' or 'handle_process'" do
+      before do: allow(element_module() |> to(accept :manager_module, fn -> manager_module() end))
+
+      before do:
+               allow(
+                 manager_module()
+                 |> to(
+                   accept :handle_self_demand, fn _, _, _, _, _ ->
+                     send(self(), :handle_self_demand_called)
+                   end
+                 )
+               )
+
+      it "should call handle_self_demand method of the given manager" do
+        described_module().handle_demand(
+          pad_name(),
+          source(),
+          type(),
+          size(),
+          callback(),
+          state()
+        )
+
+        assert_received :handle_self_demand_called
+      end
+    end
+  end
+
+  describe ".handle_redemand" do
+    let :pad_name, do: :source
+    let :pad_direction, do: :source
+    let :pad_mode, do: :pull
+    let :element_module, do: FakeElementModule
+    let :manager_module, do: FakeManagerModule
+
+    let :state,
+      do: %{
+        __struct__: State,
+        module: element_module(),
+        pads: %{
+          data: %{
+            source: %{
+              direction: pad_direction(),
+              pid: self(),
+              mode: pad_mode()
+            }
+          }
+        }
+      }
+
+    context "if pad doesn't exist in the element" do
+      it "should return an error result with :unknown_pad reason" do
+        expect(fn -> described_module().handle_redemand(:invalid_pad_name, state()) end)
+        |> to(raise_exception(RuntimeError))
+      end
+    end
+
+    context "if pad works in a push mode" do
+      let :pad_mode, do: :push
+
+      it "should raise RuntimeError" do
+        expect(fn -> described_module().handle_redemand(pad_name(), state()) end)
+        |> to(raise_exception(RuntimeError))
+      end
+    end
+
+    context "if given pad works in a pull mode" do
+      let :pad_mode, do: :pull
+
+      before do: allow(element_module() |> to(accept :manager_module, fn -> manager_module() end))
+
+      before do:
+               allow(
+                 manager_module()
+                 |> to(
+                   accept :handle_redemand, fn _, _ -> send(self(), :handle_redemand_called) end
+                 )
+               )
+
+      it "should call handle_redemand method of the given module" do
+        described_module().handle_redemand(pad_name(), state())
+        assert_received :handle_redemand_called
       end
     end
   end
