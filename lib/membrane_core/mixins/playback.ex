@@ -11,7 +11,7 @@ defmodule Membrane.Mixins.Playback do
           state: state_t,
           pending_state: state_t | nil,
           target_state: state_t,
-          target_locked?: true,
+          target_locked?: boolean,
           async_state_change: boolean
         }
 
