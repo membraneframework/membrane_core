@@ -221,7 +221,7 @@ defmodule Membrane.Element.Manager.Common do
 
         warn_error(
           """
-          Tried to unlink Element.Manager that is not stopped
+          Tried to unlink Element that is not stopped
           """,
           {:unlink, :cannot_unlink_non_stopped_element},
           state
@@ -230,6 +230,13 @@ defmodule Membrane.Element.Manager.Common do
 
       def handle_shutdown(%State{module: module, internal_state: internal_state} = state) do
         module.handle_shutdown(internal_state)
+      end
+
+      def handle_pad_added(name, direction, %State{module: module} = state) do
+        context = %Context.PadAdded{
+          direction: direction
+        }
+        module.manager_module.exec_and_handle_callback(:handle_pad_added, [name, context], state)
       end
     end
   end
@@ -399,9 +406,6 @@ defmodule Membrane.Element.Manager.Common do
     end)
     |> or_warn_error("Unable to fill sink pull buffers")
   end
-
-  def handle_pad_added(args, %State{module: module} = state),
-    do: module.manager_module.exec_and_handle_callback(:handle_pad_added, args, state)
 
   def handle_demand(pad_name, size, %State{module: module} = state) do
     {{:ok, total_size}, state} =
