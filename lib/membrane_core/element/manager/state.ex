@@ -10,7 +10,8 @@ defmodule Membrane.Element.Manager.State do
   use Membrane.Helper
   alias __MODULE__
   alias Membrane.Mixins.{Playback, Playbackable}
-  use Membrane.Element.Pad
+  alias Membrane.Element.Pad
+  require Pad
 
   @type internal_state_t :: any
 
@@ -120,17 +121,17 @@ defmodule Membrane.Element.Manager.State do
     do: state |> Helper.Struct.put_in([:pads, :dynamic_currently_linking], [])
 
   defp parse_pad({name, {availability, :push, caps}}, direction)
-       when is_atom(name) and availability in Pad.availabilities() do
+       when is_atom(name) and Pad.is_availability(availability) do
     do_parse_pad(name, availability, :push, caps, direction)
   end
 
   defp parse_pad({name, {availability, :pull, caps}}, :source)
-       when is_atom(name) and availability in Pad.availabilities() do
+       when is_atom(name) and Pad.is_availability(availability) do
     do_parse_pad(name, availability, :pull, caps, :source, %{other_demand_in: nil})
   end
 
   defp parse_pad({name, {availability, {:pull, demand_in: demand_in}, caps}}, :sink)
-       when is_atom(name) and availability in Pad.availabilities() do
+       when is_atom(name) and Pad.is_availability(availability) do
     do_parse_pad(name, availability, :pull, caps, :sink, %{demand_in: demand_in})
   end
 
@@ -149,10 +150,10 @@ defmodule Membrane.Element.Manager.State do
         direction: direction,
         accepted_caps: caps,
         availability: availability,
-        options: options,
+        options: options
       }
       |> Map.merge(
-        if availability |> Pad.availability_dynamic?() do
+        if availability |> Pad.availability_mode() == :dynamic do
           %{current_id: 0, is_dynamic: true}
         else
           %{is_dynamic: false}
