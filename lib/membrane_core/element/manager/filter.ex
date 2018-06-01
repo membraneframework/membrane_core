@@ -152,10 +152,10 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_action({:forward, data}, cb, params, state)
-      when cb in [:handle_caps, :handle_event] do
+      when cb in [:handle_caps, :handle_event, :handle_process] do
     {action, dir} =
       case {cb, params} do
-        {:handle_buffer, _} -> {:buffer, :source}
+        {:handle_process, _} -> {:buffer, :source}
         {:handle_caps, _} -> {:caps, :source}
         {:handle_event, %{direction: :sink}} -> {:event, :source}
         {:handle_event, %{direction: :source}} -> {:event, :sink}
