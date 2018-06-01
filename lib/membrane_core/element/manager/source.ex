@@ -103,6 +103,4 @@ defmodule Membrane.Element.Manager.Source do
   end
 
   defdelegate handle_demand(pad_name, size, state), to: Common
-
-  def handle_pad_added(name, :sink, state), do: Common.handle_pad_added([name], state)
 end

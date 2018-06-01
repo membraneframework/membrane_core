@@ -41,7 +41,7 @@ defmodule Membrane.Element.Manager.State do
   @doc """
   Initializes new state.
   """
-  @spec new(module, Element.name_t()) :: t
+  @spec new(module, Element.name_t()) :: {:ok, t} | {:error, any}
   def new(module, name) do
     # Initialize source pads
 

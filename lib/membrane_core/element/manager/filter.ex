@@ -347,14 +347,6 @@ defmodule Membrane.Element.Manager.Filter do
 
   defdelegate handle_caps(mode, pad_name, caps, state), to: Common
 
-  def handle_pad_added(name, direction, state) do
-    context = %Context.PadAdded{
-      direction: direction
-    }
-
-    Common.handle_pad_added([name, context], state)
-  end
-
   defp check_and_handle_process(pad_name, state) do
     demand = state |> State.get_pad_data!(:sink, pad_name, :self_demand)
 

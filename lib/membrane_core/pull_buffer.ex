@@ -4,6 +4,24 @@ defmodule Membrane.PullBuffer do
   use Membrane.Mixins.Log, tags: :core
   alias Membrane.Buffer
 
+  @qe Qex
+
+  @non_buf_types [:event, :caps]
+
+  @type t :: %__MODULE__{
+          name: Membrane.Element.name_t(),
+          sink: {pid(), Membrane.Element.name_t()},
+          sink_name: Membrane.Pad.name_t(),
+          q: @qe.t(),
+          init_size: non_neg_integer(),
+          preferred_size: pos_integer(),
+          current_size: non_neg_integer(),
+          demand: non_neg_integer(),
+          min_demand: pos_integer(),
+          metric: module(),
+          toilet: boolean()
+        }
+
   defstruct name: :pull_buffer,
             sink: nil,
             sink_name: nil,
@@ -16,10 +34,24 @@ defmodule Membrane.PullBuffer do
             metric: nil,
             toilet: false
 
-  @qe Qex
+  @typedoc """
+  Properties that can be passed when creating new PullBuffer
+  """
+  @type prop_t ::
+          {:preffered_size, pos_integer()}
+          | {:min_demand, pos_integer()}
+          | {:init_size, non_neg_integer()}
+          | {:toilet, boolean()}
 
-  @non_buf_types [:event, :caps]
+  @type props_t :: [prop_t()]
 
+  @spec new(
+          Membrane.Element.name_t(),
+          {pid, Membrane.Element.name_t()},
+          Membrane.Pad.name_t(),
+          Membrane.Buffer.Metric.unit_t(),
+          props_t
+        ) :: t()
   def new(name, sink, sink_name, demand_in, props) do
     metric = Buffer.Metric.from_unit(demand_in)
     preferred_size = props[:preferred_size] || metric.pullbuffer_preferred_size
@@ -48,11 +80,13 @@ defmodule Membrane.PullBuffer do
     }
   end
 
+  @spec fill(t()) :: {:ok, t()}
   def fill(%PullBuffer{} = pb),
     do:
       handle_demand(pb, 0)
       |> or_warn_error("Unable to fill PullBuffer #{pb.name}: #{inspect(pb)}")
 
+  @spec store(t(), atom(), any()) :: {:ok, t()} | {:error, any()}
   def store(pb, type \\ :buffers, v)
 
   def store(
@@ -191,6 +225,7 @@ defmodule Membrane.PullBuffer do
     end
   end
 
+  @spec empty?(t()) :: boolean()
   def empty?(%PullBuffer{current_size: size, init_size: init_size}),
     do: size == 0 || (init_size != nil && size < init_size)
 

@@ -70,7 +70,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   * message,
   * current element's sate.
   """
-  @callback handle_other(Message.type_t(), State.internal_state_t()) :: callback_return_t
+  @callback handle_other(any(), State.internal_state_t()) :: callback_return_t
 
   @doc """
   Callback that is called when new pad has beed added to element.
