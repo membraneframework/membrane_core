@@ -5,7 +5,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   When used declares behaviour implementation, provides default callback definitions
   and imports macros.
   """
-  alias Membrane.{Element, Message}
+  alias Membrane.Element
   alias Element.{Action, Context, Pad}
   alias Element.Manager.State
   alias Element.Base.Mixin
