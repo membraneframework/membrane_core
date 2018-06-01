@@ -26,10 +26,10 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   Macro that defines known sink pads for the element type.
 
   Allows to use `Membrane.Caps.Matcher.one_of/1` and `Membrane.Caps.Matcher.range/2`
-  functions without module prefix
+  functions without module prefix.
 
   It automatically generates documentation from the given definition
-  and adds compile-time caps specs validation
+  and adds compile-time caps specs validation.
   """
   defmacro def_known_sink_pads(raw_sink_pads) do
     sink_pads =
@@ -66,11 +66,25 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
     end
   end
 
+  @doc """
+  Callback invoked when Element.Manager is receiving information about new caps for
+  given pad. In filters those caps are forwarded through all source pads by default.
+  """
+  @callback handle_caps(
+              Pad.name_t(),
+              Membrane.Caps.t(),
+              Context.Caps.t(),
+              State.internal_state_t()
+            ) :: CommonBehaviour.callback_return_t()
+
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 
       import unquote(__MODULE__), only: [def_known_sink_pads: 1]
+
+      @impl true
+      def handle_caps(_pad, _caps, _context, state), do: {:ok, state}
     end
   end
 end

@@ -28,10 +28,10 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   Macro that defines known source pads for the element type.
 
   Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
-  without module prefix
+  without module prefix.
 
   It automatically generates documentation from the given definition
-  and adds compile-time caps specs validation
+  and adds compile-time caps specs validation.
   """
   defmacro def_known_source_pads(raw_source_pads) do
     source_pads =
@@ -69,19 +69,16 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   end
 
   @doc """
-  Callback that is called when buffer should be emitted by the source or filter.
+  Callback that is called when buffers should be emitted by the source or filter.
 
   It will be called only for pads in the pull mode, as in their case demand
   is triggered by the sinks.
 
-  For pads in the push mode, Elemen should generate buffers without this
+  For pads in the push mode, element should generate buffers without this
   callback. Example scenario might be reading a stream over TCP, waiting
   for incoming packets that will be delivered to the PID of the element,
   which will result in calling `handle_other/2`, which can return value that
   contains the `:buffer` action.
-
-  It is safe to use blocking reads in the filter. It will cause limiting
-  throughput of the pipeline to the capability of the source.
 
   The arguments are:
 

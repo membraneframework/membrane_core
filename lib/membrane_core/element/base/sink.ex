@@ -6,9 +6,6 @@ defmodule Membrane.Element.Base.Sink do
   @doc """
   Callback that is called when buffer should be written by the sink.
 
-  It is safe to use blocking writes in the sink. It will cause limiting
-  throughput of the pipeline to the capability of the sink.
-
   The arguments are:
 
   * name of the pad receiving a buffer,

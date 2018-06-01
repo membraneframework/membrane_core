@@ -4,6 +4,9 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   When used declares behaviour implementation, provides default callback definitions
   and imports macros.
+
+  For actions that can be returned by each callback, see `Membrane.Element.Action`
+  module.
   """
   alias Membrane.{Element, Message}
   alias Element.{Action, Context, Pad}
@@ -20,6 +23,10 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @type known_pads_t ::
           Mixin.SinkBehaviour.known_sink_pads_t() | Mixin.SourceBehaviour.known_source_pads_t()
 
+
+  @doc """
+  Used to determine if a module is membrane element.
+  """
   @callback membrane_element? :: true
 
   @doc """
@@ -27,102 +34,73 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback manager_module :: module
 
+
+  @doc """
+  Callback invoked on initialization of element process. It should parse options
+  and initialize element internal state. Internally it is invoked inside
+  GenServer's `init` callback.
+  """
   @callback handle_init(Element.element_options_t()) ::
               {:ok, State.internal_state_t()}
               | {:error, any}
 
   @doc """
-  Callback invoked when Element is prepared. It will receive the previous
-  internal state.
+  Callback invoked when Element is prepared. It receives the previous playback
+  state (`:stopped` or `:playing`).
 
-  Normally this is the place where you will allocate most of the resources
-  used by the Element. For example, if your Element opens a file, this is
-  the place to try to actually open it and return error if that has failed.
-
+  If the prevoius playback state is `:stopped`, then usually most resources
+  used by the element are allocated here. For example, if element opens a file,
+  this is the place to try to actually open it and return error if that has failed.
   Such resources should be released in `handle_stop/1`.
+
+  If the previous playback state is `:playing`, then all resources allocated
+  in `handle_play/1` callback should be released here, and no more buffers or
+  demands should be sent.
   """
   @callback handle_prepare(Playback.state_t(), State.internal_state_t()) :: callback_return_t
 
   @doc """
-  Callback invoked when Element is supposed to start playing. It will receive
-  previous internal state.
+  Callback invoked when Element is supposed to start playing.
 
-  This is moment when you should start generating buffers if there're any
-  pads in the push mode.
+  This is moment when initial demands are sent and first buffers are generated
+  if there are any pads in the push mode.
   """
   @callback handle_play(State.internal_state_t()) :: callback_return_t
 
   @doc """
-  Callback invoked when Element is supposed to stop playing. It will receive
-  previous internal state.
+  Callback invoked when element is supposed to stop.
 
-  Normally this is the place where you will release most of the resources
-  used by the Element. For example, if your Element opens a file, this is
-  the place to close it.
+  Usually this is the place for releasing all remaining resources
+  used by the element. For example, if element opens a file in `handle_prepare/1`,
+  this is the place to close it.
   """
   @callback handle_stop(State.internal_state_t()) :: callback_return_t
 
   @doc """
-  Callback invoked when Element is receiving message of other kind.
-
-  The arguments are:
-
-  * message,
-  * current element's sate.
+  Callback invoked when Element is receiving messages that are not recognized
+  as internal membrane messages. Useful for receiving ticks from timer, data
+  sent from NIFs or other stuff.
   """
   @callback handle_other(any(), State.internal_state_t()) :: callback_return_t
 
   @doc """
-  Callback that is called when new pad has beed added to element.
-
-  The arguments are:
-
-  * name of the pad,
-  * context (`Membane.Element.Context.PadAdded`),
-  * current internal state.
+  Callback that is called when new pad has beed added to element. Executed
+  ONLY for dynamic pads.
   """
   @callback handle_pad_added(Pad.name_t(), Context.PadAdded.t(), State.internal_state_t()) ::
               callback_return_t
 
   @doc """
-  Callback that is called when some pad of the element has beed removed.
-
-  The arguments are:
-
-  * name of the pad,
-  * context (`Membrane.Element.Context.PadRemoved`)
-  * current internal state.
+  Callback that is called when some pad of the element has beed removed. Executed
+  ONLY for dynamic pads.
   """
   @callback handle_pad_removed(Pad.name_t(), Context.PadRemoved.t(), State.internal_state_t()) ::
               callback_return_t
 
   @doc """
-  Callback invoked when Element.Manager is receiving information about new caps for
-  given pad.
-
-  The arguments are:
-
-  * name of the pad receiving caps,
-  * new caps of this pad,
-  * context (`Membrane.Element.Context.Caps`)
-  * current internal state
-  """
-  @callback handle_caps(
-              Pad.name_t(),
-              Membrane.Caps.t(),
-              Context.Caps.t(),
-              State.internal_state_t()
-            ) :: callback_return_t
-
-  @doc """
-  Callback that is called when event arrives.
-
-  The arguments are:
-
-  * name of the pad receiving an event,
-  * event,
-  * context (`Membrane.Element.Context.Event`)
-  * current Element.Manager state.
+  Callback that is called when event arrives. Events may arrive from both sinks
+  and sources. In filters by default event is forwarded to all sources or sinks,
+  respectively.
   """
   @callback handle_event(
               Pad.name_t(),
@@ -133,7 +111,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   @doc """
   Callback invoked when element is shutting down just before process is exiting.
-  It will receive the element state.
+  Internally called in GenServer`s `termintate` callback.
   """
   @callback handle_shutdown(State.internal_state_t()) :: :ok
 
@@ -274,9 +252,6 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
       @impl true
       def handle_pad_removed(_pad, _context, state), do: {:ok, state}
-
-      @impl true
-      def handle_caps(_pad, _caps, _context, state), do: {:ok, state}
 
       @impl true
       def handle_event(_pad, _event, _context, state), do: {:ok, state}
