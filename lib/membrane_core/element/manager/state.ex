@@ -78,28 +78,40 @@ defmodule Membrane.Element.Manager.State do
     ~>> ({:ok, parsed_pads} -> {:ok, parsed_pads |> Map.new()})
   end
 
-  def link_pad(state, {:dynamic, name, _no} = full_name, init_f) do
-    with {:ok, data} <-
-           state.pads.info[name]
-           |> Helper.wrap_nil(:unknown_pad)
-           ~>> (%{is_dynamic: false} -> {:error, :not_dynamic_pad}) do
+  def link_pad(state, {:dynamic, name, _no} = full_name, direction, init_f) do
+    with %{direction: ^direction, is_dynamic: true} = data <- state.pads.info[name] do
       {:ok, state} = state |> init_pad_data(full_name, data, init_f)
       state = state |> add_to_currently_linking(full_name)
       {:ok, state}
+    else
+      %{direction: actual_direction} ->
+        {:error, {:invalid_pad_direction, [expected: direction, actual: actual_direction]}}
+
+      %{is_dynamic: false} ->
+        {:error, :not_dynamic_pad}
+
+      nil ->
+        {:error, :unknown_pad}
     end
   end
 
-  def link_pad(state, name, init_f) do
-    with {:ok, data} <-
-           state.pads.info[name]
-           |> Helper.wrap_nil(:unknown_pad)
-           ~>> (%{is_dynamic: true} -> {:error, :not_static_pad}) do
-      {:ok, state} =
-        state
-        |> Helper.Struct.update_in([:pads, :info], &(&1 |> Map.delete(name)))
-        |> init_pad_data(name, data, init_f)
+  def link_pad(state, name, direction, init_f) do
+    with %{direction: ^direction, is_dynamic: false} = data <- state.pads.info[name] do
+      state
+      |> Helper.Struct.update_in([:pads, :info], &(&1 |> Map.delete(name)))
+      |> init_pad_data(name, data, init_f)
+    else
+      %{direction: actual_direction} ->
+        {:error, {:invalid_pad_direction, [expected: direction, actual: actual_direction]}}
 
-      {:ok, state}
+      %{is_dynamic: true} ->
+        {:error, :not_static_pad}
+
+      nil ->
+        case get_pad_data(state, name, direction) do
+          {:ok, _} -> {:error, :already_linked}
+          _ -> {:error, :unknown_pad}
+        end
     end
   end
 
