@@ -3,17 +3,17 @@ defmodule Membrane.Element.Action do
   This module contains type specifications of actions that can be returned
   from element callbacks. Returning actions is a way of element interaction with
   other elements and parts of framework. Each action may be returned by any
-  callback (despite `handle_init` and `handle_terminate`, as they do not return
-  any actions) unless explicitly stated.
+  callback (except for `handle_init` and `handle_terminate`, as they do not return
+  any actions) unless otherwise explicitly stated.
   """
 
   @typedoc """
-  Causes sending a message to the pipeline.
+  Sends a message to the pipeline.
   """
   @type message_t :: {:message, Message.t()}
 
   @typedoc """
-  Causes sending an event through a pad (sink or source).
+  Sends an event through a pad (sink or source).
 
   Forbidden when playback state is stopped.
   """
@@ -40,23 +40,23 @@ defmodule Membrane.Element.Action do
   @type split_t :: {:split, {callback_name :: atom, args_list :: [[any]]}}
 
   @typedoc """
-  Causes sending caps through a pad (it must be source pad). Sended caps
-  must fit constraints on the pad.
+  Sends caps through a pad (it must be source pad). Sended caps must fit
+  constraints on the pad.
 
   Forbidden when playback state is stopped.
   """
   @type caps_t :: {:caps, {Pad.name_t(), Caps.t()}}
 
   @typedoc """
-  Causes sending buffers through a pad (it must be source pad).
+  Sends buffers through a pad (it must be source pad).
 
   Allowed only when playback state is playing.
   """
   @type buffer_t :: {:buffer, {Pad.name_t(), Buffer.t() | [Buffer.t()]}}
 
   @typedoc """
-  Causes making a demand on a pad (it must be sink pad in pull mode). It does NOT
-  cause _sending_ demand through the pad, but just _requesting_ some amount of data
+  Makes a demand on a pad (it must be sink pad in pull mode). It does NOT
+  entail _sending_ demand through the pad, but just _requesting_ some amount of data
   from `PullBuffer`, which _sends_ demands automatically when it runs out of data.
   Pad is guaranteed not to receive more data than demanded.
 
@@ -64,8 +64,8 @@ defmodule Membrane.Element.Action do
   behave differently:
 
   In sinks:
-  - Payload `{pad, size}` causes extending demand on given pad by given size.
-  - Payload `{pad, {:set_to, size}}` earses current demand and sets it to given size.
+  - Payload `{pad, size}` increases demand on given pad by given size.
+  - Payload `{pad, {:set_to, size}}` erases current demand and sets it to given size.
 
   In filters:
   - Payload `{pad, size}` is only allowed from `handle_demand` callback. It overrides
@@ -88,7 +88,7 @@ defmodule Membrane.Element.Action do
   @type demand_common_payload_t :: Pad.name_t() | {Pad.name_t(), size :: non_neg_integer}
 
   @typedoc """
-  Causes executing `handle_demand` callback with given pad (which must be a source
+  Executes `handle_demand` callback with given pad (which must be a source
   pad in pull mode) if this demand is greater than 0.
 
   Useful when demand could not have been supplied when previous call to
@@ -100,12 +100,14 @@ defmodule Membrane.Element.Action do
   @type redemand_t :: {:redemand, Pad.name_t()}
 
   @typedoc """
-  Causes sending buffers/caps/event to all source pads of element (or to sink
-  pads when event occurs on the source pad). Used by default implementations
-  of `handle_caps` and `handle_event` callbacks in filter.
+  Sends buffers/caps/event to all source pads of element (or to sink pads when
+  event occurs on the source pad). Used by default implementations of `handle_caps`
+  and `handle_event` callbacks in filter.
 
-  Allowed only in filters and from `handle_process`, `handle_caps` and `handle_event`
-  callbacks, and when playback state is valid for buffer, caps or event action
+  Allowed only when _all_ below conditions are met:
+  - element is filter,
+  - callback is `handle_process`, `handle_caps` or `handle_event`,
+  - playback state is valid for sending buffer, caps or event action
   respectively.
 
   Keep in mind that `handle_process` can only forward buffers, `handle_caps` - caps
@@ -114,7 +116,7 @@ defmodule Membrane.Element.Action do
   @type forward_t :: {:forward, Buffer.t() | [Buffer.t()] | Caps.t() | Event.t()}
 
   @typedoc """
-  Causes suspending/resuming change of playback state.
+  Suspends/resumes change of playback state.
 
   - `playback_change: :suspend` may be returned only from `handle_prepare`,
   `handle_play` and `handle_stop callbacks`, and defers playback state change
