@@ -15,7 +15,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   alias Membrane.Caps
 
   @type known_source_pads_t :: [
-          {Pad.name_t(), {:always, :push | :pull, Caps.Matcher.caps_specs_t()}}
+          {Pad.name_t(), {Pad.availability_t(), :push | :pull, Caps.Matcher.caps_specs_t()}}
         ]
 
   @doc """
@@ -26,6 +26,43 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   buffers is `:source`.
   """
   @callback known_source_pads() :: known_source_pads_t()
+
+  @doc """
+  Callback that is called when buffers should be emitted by the source or filter.
+
+  It will be called only for source pads in the pull mode, as in their case demand
+  is triggered by the sinks of the subsequent elements.
+
+  In source elements, appropriate amount of data should be sent here. If it happens
+  not to be yet available, element should store unsupplied demand and supply it
+  when possible.
+
+  In filter elements, this callback should usually return `:demand` action with
+  size sufficient (at least approximately) for supplying incoming demand. This
+  will result with calling `c:Membrane.Element.Base.Filter.handle_process/4` or
+  `c:Membrane.Element.Base.Sink.handle_write/4`, which is to supply
+  the demand. If it does not, or does only partially,
+  `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` is called
+  again, until there is any data available on the sink pad.
+
+  For sources in the push mode, element should generate buffers without this
+  callback.
+
+  The arguments are:
+
+  * name of the pad receiving a demand request,
+  * requested number of units
+  * unit
+  * context (`Membrane.Element.Context.Demand`)
+  * current element's state.
+  """
+  @callback handle_demand(
+              Pad.name_t(),
+              non_neg_integer,
+              Buffer.Metric.unit_t(),
+              Context.Demand.t(),
+              State.internal_state_t()
+            ) :: CommonBehaviour.callback_return_t()
 
   @doc """
   Macro that defines known source pads for the element type.
@@ -70,41 +107,6 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
       end
     end
   end
-
-  @doc """
-  Callback that is called when buffers should be emitted by the source or filter.
-
-  It will be called only for source pads in the pull mode, as in their case demand
-  is triggered by the sinks of the subsequent elements.
-
-  In source elements, appropriate amount of data should be sent here. If it happens
-  not to be yet available, element should store unsupplied demand and supply it
-  when possible.
-
-  In filter elements, this callback should usually return `:demand` action with
-  size sufficient (at least approximately) for supplying incoming demand. This
-  will result with calling `handle_process` / `handle_write`, which is to supply
-  the demand. If it does not, or does only partially, `handle_demand` is called
-  again, until there is any data available on the sink pad.
-
-  For sources in the push mode, element should generate buffers without this
-  callback.
-
-  The arguments are:
-
-  * name of the pad receiving a demand request,
-  * requested number of units
-  * unit
-  * context (`Membrane.Element.Context.Demand`)
-  * current element's state.
-  """
-  @callback handle_demand(
-              Pad.name_t(),
-              non_neg_integer,
-              Buffer.Metric.unit_t(),
-              Context.Demand.t(),
-              State.internal_state_t()
-            ) :: CommonBehaviour.callback_return_t()
 
   defmacro __using__(_) do
     quote location: :keep do

@@ -95,7 +95,8 @@ defmodule Membrane.Element do
   It will wait for reply for amount of time passed as second argument
   (in milliseconds).
 
-  Will trigger calling `handle_shutdown/2` element callback.
+  Will trigger calling `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_shutdown/1`
+  callback.
 
   Returns `:ok`.
   """

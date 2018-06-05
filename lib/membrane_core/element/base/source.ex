@@ -3,24 +3,35 @@ defmodule Membrane.Element.Base.Source do
   Module defining behaviour for sources - elements producing data.
 
   Behaviours for filters are specified, besides this place, in modules
-  `Membrane.Element.Base.Mixin.{CommonBehaviour, SourceBehaviour}`
+  `Membrane.Element.Base.Mixin.CommonBehaviour`,
+  `Membrane.Element.Base.Mixin.SourceBehaviour`.
 
   Source elements can define only source pads. Job of a usual source is to produce
   some data (read from soundcard, download through HTTP, etc.) and send it through
   such pad. If the pad works in pull mode, then element is also responsible for
   receiving demands, and send buffers only if they have previously been demanded
-  (for more details, see `Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand`
+  (for more details, see `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5`
   callback).
   Sources, like all elements, can of course have multiple pads if needed to
   provide more complex solutions.
   """
 
   alias Membrane.Element.Base.Mixin
+  alias Element.Manager.State
 
+  @doc """
+  Callback that is called when buffers should be emitted by the source.
+  In contrast to `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5`,
+  size is not passed, but should always be considered to equal 1.
+
+  Called by default implementation of
+  `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5`, check documentation
+  for that callback for more information.
+  """
   @callback handle_demand1(
-              Pad.name_t(),
-              Context.Demand.t(),
-              State.internal_state_t()
+              pad :: Pad.name_t(),
+              context :: Context.Demand.t(),
+              state :: State.internal_state_t()
             ) :: CommonBehaviour.callback_return_t()
 
   defmacro __using__(_) do

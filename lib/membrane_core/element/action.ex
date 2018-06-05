@@ -1,10 +1,13 @@
 defmodule Membrane.Element.Action do
   @moduledoc """
   This module contains type specifications of actions that can be returned
-  from element callbacks. Returning actions is a way of element interaction with
+  from element callbacks.
+
+  Returning actions is a way of element interaction with
   other elements and parts of framework. Each action may be returned by any
-  callback (except for `handle_init` and `handle_terminate`, as they do not return
-  any actions) unless otherwise explicitly stated.
+  callback (except for `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_init`
+  and `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_terminate`, as they
+  do not return any actions) unless otherwise explicitly stated.
   """
 
   @typedoc """
@@ -35,7 +38,8 @@ defmodule Membrane.Element.Action do
 
   Useful when a long action is to be undertaken, and partial results need to
   be returned before entire process finishes (e.g. default implementation of
-  `handle_process` uses split action to invoke `handle_process1` with each buffer)
+  `c:Membrane.Element.Base.Filter.handle_process/4` uses split action to invoke
+  `c:Membrane.Element.Base.Filter.handle_process1/4` with each buffer)
   """
   @type split_t :: {:split, {callback_name :: atom, args_list :: [[any]]}}
 
@@ -56,11 +60,13 @@ defmodule Membrane.Element.Action do
 
   @typedoc """
   Makes a demand on a pad (it must be sink pad in pull mode). It does NOT
-  entail _sending_ demand through the pad, but just _requesting_ some amount of data
-  from `PullBuffer`, which _sends_ demands automatically when it runs out of data.
-  If there is any data available at the pad, the data is passed to `handle_process`
-  / `handle_write` callback. This callback is guaranteed not to receive more data
-  than demanded.
+  entail _sending_ demand through the pad, but just _requesting_ some amount
+  of data from `Membrane.PullBuffer`, which _sends_ demands automatically when it
+  runs out of data.
+  If there is any data available at the pad, the data is passed to
+  `c:Membrane.Element.Base.Filter.handle_process/4`
+  or `c:Membrane.Element.Base.Sink.handle_write/4` callback. Invoked callback is
+  guaranteed not to receive more data than demanded.
 
   Depending on element type and callback, it may contain different payloads or
   behave differently:
@@ -70,7 +76,8 @@ defmodule Membrane.Element.Action do
   - Payload `{pad, {:set_to, size}}` erases current demand and sets it to given size.
 
   In filters:
-  - Payload `{pad, size}` is only allowed from `handle_demand` callback. It overrides
+  - Payload `{pad, size}` is only allowed from
+  `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` callback. It overrides
   current demand.
   - Payload `{pad, {{:source, demanding_source_pad}, size}}` can be returned from
   any callback. `demanding_source_pad` is a pad which is to receive demanded
@@ -90,12 +97,14 @@ defmodule Membrane.Element.Action do
   @type demand_common_payload_t :: Pad.name_t() | {Pad.name_t(), size :: non_neg_integer}
 
   @typedoc """
-  Executes `handle_demand` callback with given pad (which must be a source
-  pad in pull mode) if this demand is greater than 0.
+  Executes `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` callback with
+  given pad (which must be a source pad in pull mode) if this demand is greater
+  than 0.
 
   Useful when demand could not have been supplied when previous call to
-  `handle_demand` happened, but some element-specific circumstances changed and
-  it might be possible to supply it (at least partially).
+  `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` happened, but some
+  element-specific circumstances changed and it might be possible to supply
+  it (at least partially).
 
   Allowed only when playback state is playing.
   """
@@ -103,26 +112,32 @@ defmodule Membrane.Element.Action do
 
   @typedoc """
   Sends buffers/caps/event to all source pads of element (or to sink pads when
-  event occurs on the source pad). Used by default implementations of `handle_caps`
-  and `handle_event` callbacks in filter.
+  event occurs on the source pad). Used by default implementations of
+  `c:Membrane.Element.Base.Mixin.SinkBehaviour.handle_caps/4` and
+  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_event/4` callbacks in filter.
 
   Allowed only when _all_ below conditions are met:
   - element is filter,
-  - callback is `handle_process`, `handle_caps` or `handle_event`,
+  - callback is `c:Membrane.Element.Base.Filter.handle_process/4`,
+  `c:Membrane.Element.Base.Mixin.SinkBehaviour.handle_caps/4`
+  or `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_event/4`,
   - playback state is valid for sending buffer, caps or event action
   respectively.
 
-  Keep in mind that `handle_process` can only forward buffers, `handle_caps` - caps
-  and `handle_event` - events.
+  Keep in mind that `c:Membrane.Element.Base.Filter.handle_process/4` can only
+  forward buffers, `c:Membrane.Element.Base.Mixin.SinkBehaviour.handle_caps/4` - caps
+  and `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_event/4` - events.
   """
   @type forward_t :: {:forward, Buffer.t() | [Buffer.t()] | Caps.t() | Event.t()}
 
   @typedoc """
   Suspends/resumes change of playback state.
 
-  - `playback_change: :suspend` may be returned only from `handle_prepare`,
-  `handle_play` and `handle_stop callbacks`, and defers playback state change
-  until `playback_change: :resume` is returned.
+  - `playback_change: :suspend` may be returned only from
+  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_prepare/2`,
+  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_play/1` and
+  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_stop/1` callbacks,
+  and defers playback state change until `playback_change: :resume` is returned.
   - `playback_change: :resume` may be returned from any callback, only when
   playback state change is suspended, and causes it to finish.
 

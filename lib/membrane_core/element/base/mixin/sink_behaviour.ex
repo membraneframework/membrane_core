@@ -12,7 +12,7 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
 
   @type known_sink_pads_t :: [
           {Pad.name_t(),
-           {:always, {:push | :pull, demand_in: Buffer.Metric.unit_t()},
+           {Pad.availability_t(), {:push | :pull, demand_in: Buffer.Metric.unit_t()},
             Caps.Matcher.caps_specs_t()}}
         ]
 
@@ -24,6 +24,17 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   buffers is `:sink`.
   """
   @callback known_sink_pads() :: known_sink_pads_t()
+
+  @doc """
+  Callback invoked when Element.Manager is receiving information about new caps for
+  given pad. In filters those caps are forwarded through all source pads by default.
+  """
+  @callback handle_caps(
+              Pad.name_t(),
+              Membrane.Caps.t(),
+              Context.Caps.t(),
+              State.internal_state_t()
+            ) :: CommonBehaviour.callback_return_t()
 
   @doc """
   Macro that defines known sink pads for the element type.
@@ -69,17 +80,6 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
     end
   end
 
-  @doc """
-  Callback invoked when Element.Manager is receiving information about new caps for
-  given pad. In filters those caps are forwarded through all source pads by default.
-  """
-  @callback handle_caps(
-              Pad.name_t(),
-              Membrane.Caps.t(),
-              Context.Caps.t(),
-              State.internal_state_t()
-            ) :: CommonBehaviour.callback_return_t()
-
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
@@ -88,6 +88,8 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
 
       @impl true
       def handle_caps(_pad, _caps, _context, state), do: {:ok, state}
+
+      defoverridable handle_caps: 4
     end
   end
 end

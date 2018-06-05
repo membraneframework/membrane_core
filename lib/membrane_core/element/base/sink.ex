@@ -3,13 +3,14 @@ defmodule Membrane.Element.Base.Sink do
   Module defining behaviour for sinks - elements consuming data.
 
   Behaviours for filters are specified, besides this place, in modules
-  `Membrane.Element.Base.Mixin.{CommonBehaviour, SinkBehaviour}`
+  `Membrane.Element.Base.Mixin.CommonBehaviour`,
+  and `Membrane.Element.Base.Mixin.SinkBehaviour`.
 
   Sink elements can define only sink pads. Job of a usual sink is to receive some
   data on such pad and consume it (write to a soundcard, send through TCP etc.).
   If the pad works in pull mode, which is the most common case, then element is
   also responsible for requesting demands when it is able and willing to consume
-  data (for more details, see `Membrane.Element.Action.demand_t`).
+  data (for more details, see `t:Membrane.Element.Action.demand_t/0`).
   Sinks, like all elements, can of course have multiple pads if needed to
   provide more complex solutions.
   """
@@ -17,6 +18,7 @@ defmodule Membrane.Element.Base.Sink do
   alias Membrane.{Buffer, Element}
   alias Element.Base.Mixin
   alias Element.{Context, Pad}
+  alias Element.Manager.State
 
   @doc """
   Callback that is called when buffer should be written by the sink.
@@ -25,19 +27,26 @@ defmodule Membrane.Element.Base.Sink do
   `:demand` action from any callback).
 
   For pads in push mode it is invoked when buffers arrive.
-
-  The arguments are:
-
-  * name of the pad receiving a buffer,
-  * list of buffers,
-  * context (`Membrane.Element.Context.Write`)
-  * current element's state.
   """
-  @callback handle_write(Pad.name_t(), list(Buffer.t()), Context.Write.t(), any) ::
-              Mixin.CommonBehaviour.callback_return_t()
+  @callback handle_write(
+              pad :: Pad.name_t(),
+              buffers :: list(Buffer.t()),
+              context :: Context.Write.t(),
+              state :: State.internal_state_t()
+            ) :: Mixin.CommonBehaviour.callback_return_t()
 
-  @callback handle_write1(Pad.name_t(), Buffer.t(), Context.Write.t(), any) ::
-              Mixin.CommonBehaviour.callback_return_t()
+  @doc """
+  Callback that is called when buffer should be written by the sink. In contrast
+  to `c:handle_write/4`, it is passed only a single buffer.
+
+  Called by default implementation of `c:handle_write/4`.
+  """
+  @callback handle_write1(
+              pad :: Pad.name_t(),
+              buffer :: Buffer.t(),
+              context :: Context.Write.t(),
+              state :: State.internal_state_t()
+            ) :: Mixin.CommonBehaviour.callback_return_t()
 
   defmacro __using__(_) do
     quote location: :keep do
@@ -47,8 +56,6 @@ defmodule Membrane.Element.Base.Sink do
 
       @impl true
       def manager_module, do: Membrane.Element.Manager.Sink
-
-      # Default implementations
 
       @impl true
       def handle_write1(_pad, _buffer, _context, state),

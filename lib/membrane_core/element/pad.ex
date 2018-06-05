@@ -40,7 +40,7 @@ defmodule Membrane.Element.Pad do
   - `:on_request` - a dynamic pad, instance of which is created every time it is
   linked to another pad. Thus linking the pad with _k_ other pads, creates _k_
   instances of the pad, and links each with another pad.
-  For information on static/dynamic pad modes, see `availability_mode_t`.
+  For information on static/dynamic pad modes, see `t:availability_mode_t/0`.
   """
   def_type_from_list availability_t :: @availabilities
 
@@ -77,7 +77,7 @@ defmodule Membrane.Element.Pad do
   previously demanded, so that no undemanded data can arrive.
 
   Linking pads with different modes is possible, but only in case of source pad
-  working in push mode, and sink in pull mode. Moreover, and toilet mode of
+  working in push mode, and sink in pull mode. Moreover, toilet mode of
   `Membrane.PullBuffer` has to be enabled then.
 
   For more information on transfering data and demands, see docs for element
