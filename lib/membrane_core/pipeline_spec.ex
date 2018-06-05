@@ -46,7 +46,7 @@ defmodule Membrane.Pipeline.Spec do
   Sample definition:
 
       %{
-        {:source,     :source} => {:converter,  :sink, pull_buffer: [init_size: 42]},
+        {:source,     :source} => {:converter,  :sink, pull_buffer: [preferred_size: 20_000]},
         {:converter,  :source} => {:aggregator, :sink},
         {:aggregator, :source} => {:converter,  :sink},
       }
