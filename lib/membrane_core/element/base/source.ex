@@ -1,4 +1,20 @@
 defmodule Membrane.Element.Base.Source do
+  @moduledoc """
+  Module defining behaviour for sources - elements producing data.
+
+  Behaviours for filters are specified, besides this place, in modules
+  `Membrane.Element.Base.Mixin.{CommonBehaviour, SourceBehaviour}`
+
+  Source elements can define only source pads. Job of a usual source is to produce
+  some data (read from soundcard, download through HTTP, etc.) and send it through
+  such pad. If the pad works in pull mode, then element is also responsible for
+  receiving demands, and send buffers only if they have previously been demanded
+  (for more details, see `Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand`
+  callback).
+  Sources, like all elements, can of course have multiple pads if needed to
+  provide more complex solutions.
+  """
+
   alias Membrane.Element.Base.Mixin
 
   @callback handle_demand1(

@@ -236,6 +236,7 @@ defmodule Membrane.Element.Manager.Common do
         context = %Context.PadAdded{
           direction: direction
         }
+
         module.manager_module.exec_and_handle_callback(:handle_pad_added, [name, context], state)
       end
     end

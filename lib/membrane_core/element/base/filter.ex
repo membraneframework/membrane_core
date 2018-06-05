@@ -1,14 +1,35 @@
 defmodule Membrane.Element.Base.Filter do
+  @moduledoc """
+  Module defining behaviour for filters - elements processing data.
+
+  Behaviours for filters are specified, besides this place, in modules
+  `Membrane.Element.Base.Mixin.{CommonBehaviour, SourceBehaviour, SinkBehaviour}`
+
+  Filters can have both sink and source pads. Job of a usual filter is to
+  receive some data on a sink pad, process the data and send it through the
+  source pad. If these pads work in pull mode, which is the most common case,
+  then filter is also responsible for receiving demands on the source pad and
+  requesting them on the sink pad (for more details, see
+  `Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand` callback).
+  Filters, like all elements, can of course have multiple pads if needed to
+  provide more complex solutions.
+  """
+
   alias Membrane.{Buffer, Element}
   alias Element.Base.Mixin
   alias Element.{Context, Pad}
 
   @doc """
-  Callback that is called when buffer arrives.
+  Callback that is to process buffers.
+
+  For pads in pull mode it is called when buffers have been demanded (by returning
+  `:demand` action from any callback).
+
+  For pads in push mode it is invoked when buffers arrive.
 
   The arguments are:
     - name of the pad receiving a buffer,
-    - buffer,
+    - list of buffers,
     - context (`Membrane.Element.Context.Process`)
     - current element state.
   """

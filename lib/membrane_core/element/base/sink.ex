@@ -1,10 +1,30 @@
 defmodule Membrane.Element.Base.Sink do
+  @moduledoc """
+  Module defining behaviour for sinks - elements consuming data.
+
+  Behaviours for filters are specified, besides this place, in modules
+  `Membrane.Element.Base.Mixin.{CommonBehaviour, SinkBehaviour}`
+
+  Sink elements can define only sink pads. Job of a usual sink is to receive some
+  data on such pad and consume it (write to a soundcard, send through TCP etc.).
+  If the pad works in pull mode, which is the most common case, then element is
+  also responsible for requesting demands when it is able and willing to consume
+  data (for more details, see `Membrane.Element.Action.demand_t`).
+  Sinks, like all elements, can of course have multiple pads if needed to
+  provide more complex solutions.
+  """
+
   alias Membrane.{Buffer, Element}
   alias Element.Base.Mixin
   alias Element.{Context, Pad}
 
   @doc """
   Callback that is called when buffer should be written by the sink.
+
+  For pads in pull mode it is called when buffers have been demanded (by returning
+  `:demand` action from any callback).
+
+  For pads in push mode it is invoked when buffers arrive.
 
   The arguments are:
 

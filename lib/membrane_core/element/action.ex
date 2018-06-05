@@ -58,7 +58,9 @@ defmodule Membrane.Element.Action do
   Makes a demand on a pad (it must be sink pad in pull mode). It does NOT
   entail _sending_ demand through the pad, but just _requesting_ some amount of data
   from `PullBuffer`, which _sends_ demands automatically when it runs out of data.
-  Pad is guaranteed not to receive more data than demanded.
+  If there is any data available at the pad, the data is passed to `handle_process`
+  / `handle_write` callback. This callback is guaranteed not to receive more data
+  than demanded.
 
   Depending on element type and callback, it may contain different payloads or
   behave differently:

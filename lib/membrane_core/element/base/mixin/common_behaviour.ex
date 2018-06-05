@@ -5,8 +5,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   When used declares behaviour implementation, provides default callback definitions
   and imports macros.
 
-  For actions that can be returned by each callback, see `Membrane.Element.Action`
-  module.
+  For more information on implementing elements, see `Membrane.Element.Base`.
   """
   alias Membrane.Element
   alias Element.{Action, Context, Pad}
@@ -23,7 +22,6 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @type known_pads_t ::
           Mixin.SinkBehaviour.known_sink_pads_t() | Mixin.SourceBehaviour.known_source_pads_t()
 
-
   @doc """
   Used to determine if a module is membrane element.
   """
@@ -33,7 +31,6 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   Returns module that manages this element.
   """
   @callback manager_module :: module
-
 
   @doc """
   Callback invoked on initialization of element process. It should parse options

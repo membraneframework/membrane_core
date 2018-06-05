@@ -1,8 +1,11 @@
 defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   @moduledoc """
-  Module defining behaviour for source elements.
+  Module defining behaviour for source and filter elements.
 
-  When used, declares behaviour implementation and imports macros.
+  When used declares behaviour implementation, provides default callback definitions
+  and imports macros.
+
+  For more information on implementing elements, see `Membrane.Element.Base`.
   """
 
   alias Membrane.{Buffer, Context, Element}
@@ -71,14 +74,21 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   @doc """
   Callback that is called when buffers should be emitted by the source or filter.
 
-  It will be called only for pads in the pull mode, as in their case demand
-  is triggered by the sinks.
+  It will be called only for source pads in the pull mode, as in their case demand
+  is triggered by the sinks of the subsequent elements.
 
-  For pads in the push mode, element should generate buffers without this
-  callback. Example scenario might be reading a stream over TCP, waiting
-  for incoming packets that will be delivered to the PID of the element,
-  which will result in calling `handle_other/2`, which can return value that
-  contains the `:buffer` action.
+  In source elements, appropriate amount of data should be sent here. If it happens
+  not to be yet available, element should store unsupplied demand and supply it
+  when possible.
+
+  In filter elements, this callback should usually return `:demand` action with
+  size sufficient (at least approximately) for supplying incoming demand. This
+  will result with calling `handle_process` / `handle_write`, which is to supply
+  the demand. If it does not, or does only partially, `handle_demand` is called
+  again, until there is any data available on the sink pad.
+
+  For sources in the push mode, element should generate buffers without this
+  callback.
 
   The arguments are:
 
