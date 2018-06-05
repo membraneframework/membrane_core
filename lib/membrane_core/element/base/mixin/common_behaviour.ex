@@ -8,7 +8,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   For actions that can be returned by each callback, see `Membrane.Element.Action`
   module.
   """
-  alias Membrane.{Element, Message}
+  alias Membrane.Element
   alias Element.{Action, Context, Pad}
   alias Element.Manager.State
   alias Element.Base.Mixin
