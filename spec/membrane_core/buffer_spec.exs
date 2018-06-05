@@ -7,9 +7,9 @@ defmodule Membrane.BufferSpec do
       expect(payload) |> to(be_nil())
     end
 
-    it "should have metadata field set to empty Metadata structure" do
+    it "should have metadata field set to empty map" do
       %Membrane.Buffer{metadata: metadata} = struct(described_module())
-      expect(metadata) |> to(eq Membrane.Buffer.Metadata.new())
+      expect(metadata) |> to(eq %{})
     end
   end
 end
