@@ -28,7 +28,7 @@ To set up a pipeline you need to create a module, use Membrane.Pipeline, and imp
 ```elixir
 defmodule MyPipeline do
   use Membrane.Pipeline
-  
+
   def handle_init(_args) do
     children = %{}
     links = %{}
@@ -44,9 +44,9 @@ Currently our Pipeline is valid, although empty. Let's add some elements:
 ```elixir
 defmodule MyPipeline do
   use Membrane.Pipeline
-  
+
   alias Membrane.Element.{File, Mad, PulseAudio}
-  
+
   def handle_init(_args) do
     children = %{
       file_source: {File.Source, File.Source.Options{location: "my_file.mp3"}},
@@ -109,11 +109,10 @@ Demands in sinks are implied by element itself. Unlike demands in filters, they 
 ### PullBuffer
 
 To provide efficient and flexible soultion, demand system bases on PullBuffer, which is a buffer on each sink pad working in pull mode. At startup, PullBuffer requests demand of its `preferred_size`. Than, on demand, it returns demanded contents, and requests another demand, of size of taken buffers. This way it tries to maintain enough level of available buffers.
-PullBuffer has also another parameter - `init_size`. Setting it prevents taking buffers from PullBuffer, until it reaches `init_size`. This can help preventing underruns, but also may cause delay, that is why it defaults to 0.
 PullBuffer offers also a `toilet` mode. It is necessary when linking sources working in push mode to sinks in pull mode. Such sink sends buffers to PullBuffer without demand (pisses), and source just gets that buffer on demand (enables flush ;) Toilet mode has `warn` and `fail` levels, that when exceeded cause respectively emitting warning or stopping entire pipeline.
 All PullBuffer options are configurable on pad link, for example:
 ```elixir
-{:file_source, :source} => {:pulse_sink, :sink, pull_buffer: [preferred_size: 65535, init_size: 2048]}
+{:file_source, :source} => {:pulse_sink, :sink, pull_buffer: [preferred_size: 65535]}
 ```
 or
 ```elixir
@@ -152,4 +151,3 @@ HTML documentation will be built into `doc/` directory.
 
 * Marcin Lewandowski
 * Mateusz Front
-
