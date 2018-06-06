@@ -73,4 +73,3 @@ HTML documentation will be built into `doc/` directory.
 
 * Marcin Lewandowski
 * Mateusz Front
-
