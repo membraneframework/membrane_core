@@ -1,4 +1,8 @@
 defmodule Membrane.Buffer.Metric.Count do
+  @moduledoc """
+    Implementation of `b:Membrane.Buffer.Metric` for the `:buffers` unit
+  """
+
   alias Membrane.Buffer
   @behaviour Buffer.Metric
 

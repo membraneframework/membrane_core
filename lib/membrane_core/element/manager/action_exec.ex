@@ -181,6 +181,7 @@ defmodule Membrane.Element.Manager.ActionExec do
     end
   end
 
+  @spec handle_redemand(Pad.name_t(), State.t()) :: {:ok, State.t()} | no_return()
   def handle_redemand(src_name, %State{module: module} = state) do
     with {:ok, %{mode: :pull}} <- state |> State.get_pad_data(:source, src_name) do
       module.manager_module.handle_redemand(src_name, state)

@@ -1,6 +1,16 @@
 defmodule Membrane.Helper.Retry do
+  @moduledoc """
+  Contains function retrying given action until it returns a successful result
+  """
   alias Membrane.Time
 
+  @type retry_option :: {:times, non_neg_integer()} | {:duration, Time.t()} | {:delay, Time.t()}
+
+  @doc """
+  Calls `fun` until function `arbiter` decides to stop
+  """
+  @spec retry(fun :: fun(), arbiter :: (any() -> :retry | :finish), params :: [retry_option()]) ::
+          any()
   def retry(fun, arbiter, params) do
     times = params |> Keyword.get(:times, :infinity)
     duration = params |> Keyword.get(:duration, :infinity)

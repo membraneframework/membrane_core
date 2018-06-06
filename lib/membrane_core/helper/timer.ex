@@ -1,4 +1,7 @@
 defmodule Membrane.Helper.Timer do
+  @moduledoc """
+  Useful helpers for sending messages at the specified time
+  """
   use Membrane.Helper
   require Membrane.Time, as: Time
 

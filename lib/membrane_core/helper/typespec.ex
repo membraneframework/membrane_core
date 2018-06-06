@@ -1,4 +1,7 @@
 defmodule Membrane.Helper.Typespec do
+  @moduledoc """
+  Contains helper macro generating typespec from list
+  """
   defmacro def_type_from_list(type) do
     {:::, _, [{name, _, _}, list]} = type
 

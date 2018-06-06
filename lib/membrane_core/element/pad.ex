@@ -1,4 +1,7 @@
 defmodule Membrane.Element.Pad do
+  @moduledoc """
+  Module that represents Pad
+  """
   @type name_t :: atom | {:dynamic, atom, non_neg_integer}
 
   defmacro is_pad_name(term) do

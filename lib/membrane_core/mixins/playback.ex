@@ -1,4 +1,11 @@
 defmodule Membrane.Mixins.Playback do
+  @moduledoc """
+  Behaviour for modules that have playback state, i.e. elements and pipelines
+
+  There are three playback states: :stopped, :prepared and :playing.
+  Playback state always changes only one step at once in this order, and can
+  be handled by `handle_prepare/2`, `handle_play/1` and `handle_stop/1` callbacks
+  """
   use Membrane.Helper
 
   defstruct state: :stopped,
