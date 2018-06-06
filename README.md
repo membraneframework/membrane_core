@@ -1,9 +1,19 @@
-# Membrane Multimedia Framework: Core
+# Membrane Multimedia Framework
+
+Multimedia processing framework that focuses on reliability, concurrency and scalability.
+
+An easy to use abstraction layer for assembling mostly server-side applications that have to consume, produce or process multimedia streams.
+
+It puts reliability over amount of features.
+
+It is written in Elixir + C with outstanding Erlang VM underneath that gives us a rock solid and battle tested foundation.
+
+# Membrane Core
 
 This package provides core of the Membrane multimedia framework.
 
 
-# Installation
+## Installation
 
 Add the following line to your `deps` in `mix.exs`.  Run `mix deps.get`.
 
@@ -21,55 +31,16 @@ Then add the following line to your `applications` in `mix.exs`.
 
 To get familiar with basic concepts and build your first application using Membrane Framework, visit [Membrane Guide](TODO).
 
-API documentation is available on [HexDocs](https://hexdocs.pm/membraneframework)
-
-To set up a pipeline you need to create a module, use Membrane.Pipeline, and implement handle_init/1 callback
+API documentation is available on [HexDocs](https://hexdocs.pm/membrane_core)
 
 # Support and questions
 
 If you have any problems with Membrane Framework feel free to contact us on the [mailing list](https://groups.google.com/forum/#!forum/membrane-framework)
 
-```elixir
-defmodule MyPipeline do
-  use Membrane.Pipeline
-  
-  alias Membrane.Element.{File, Mad, PulseAudio}
-  
-  def handle_init(_args) do
-    children = %{
-      file_source: {File.Source, File.Source.Options{location: "my_file.mp3"}},
-      decoder: Mad.Decoder,
-      pulse_sink: {PulseAudio.Sink, PulseAudio.Sink.Options{ringbuffer_size_elements: 8192}},
-    }
-    links = %{
-      {:file_source, :source} => {:mad, :sink},
-      {:mad, :source} => {:pulse_sink, :sink}
-    }
-    spec = %Pipeline.Spec{children: children, links: links}
-    state = %{}
-    {{:ok, spec}, state}
-  end
-end
-```
-
-# Building documentation
-
-Fetch the dependencies first:
-
-```sh
-mix deps.get
-```
-
-then you can generate documentation:
-
-```sh
-mix docs
-```
-
-HTML documentation will be built into `doc/` directory.
 
 
-# Authors
+# Copyright and License
 
-* Marcin Lewandowski
-* Mateusz Front
+Copyright 2018, Software Mansion
+
+Licensed under the [Apache License, Version 2.0](LICENSE)

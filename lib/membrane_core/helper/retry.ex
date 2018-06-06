@@ -1,6 +1,6 @@
 defmodule Membrane.Helper.Retry do
   @moduledoc """
-  Contains function retrying given action until it returns a successful result
+  Helper for handling scenarios when some action should be repeated until it succeeds
   """
   alias Membrane.Time
 

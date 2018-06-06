@@ -1,10 +1,10 @@
 defmodule Membrane.PullBuffer do
   @moduledoc """
-  Buffer that is attached to the pad when working in a `:pull` mode.
+  Buffer that is attached to the `:sink` pad when working in a `:pull` mode.
 
   It stores `Membrane.Buffer`, `Membrane.Event` and `Membrane.Caps` structs and
-  ensures that the flow of data in the pipeline is fluent and without any
-  discontinuities.
+  prevents the situation when the data in a stream contains the discontinuities.
+  It also guarantees that element won't be flooded with the incoming data.
   """
   alias Membrane.PullBuffer
   use Membrane.Helper
