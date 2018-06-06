@@ -1,4 +1,8 @@
 defmodule Membrane.Buffer.Metric.ByteSize do
+  @moduledoc """
+  Implementation of `Membrane.Buffer.Metric` for the `:bytes` unit
+  """
+
   alias Membrane.Buffer
   @behaviour Buffer.Metric
 

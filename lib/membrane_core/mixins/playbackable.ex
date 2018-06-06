@@ -1,4 +1,11 @@
 defprotocol Membrane.Mixins.Playbackable do
+  @moduledoc """
+  Protocol that has to be adopted by modules that use `Membrane.Mixins.Playback`.
+
+  Modules that adopt `Membrane.Mixing.Playback` behaviour have to store their
+  playback state and controlling pid. `Membrane.Mixins.Playbackable` is used as
+  an abstraction that allows to access those values.
+  """
   alias Membrane.Mixins.Playback
 
   @spec get_playback(__MODULE__.t()) :: Playback.t()
@@ -19,6 +26,12 @@ defprotocol Membrane.Mixins.Playbackable do
 end
 
 defmodule Membrane.Mixins.Playbackable.Default do
+  @moduledoc """
+  The default implementation for `Membrane.Mixins.Playbackable`.
+  Assumes that `playbackable` is a map and stores `playback` and
+  `controlling_pid` inside it.
+  """
+
   defmacro __using__(_) do
     quote location: :keep do
       def get_playback(%{playback: playback}), do: playback

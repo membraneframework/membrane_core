@@ -69,9 +69,13 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
   # Callback invoked on buffer coming through the sink pad
   defp exec({:membrane_buffer, [buffers, pad_name]}, %State{module: module} = state) do
     {:ok, %{mode: mode}} = state |> State.get_pad_data(:sink, pad_name)
-    debug(["
+
+    debug(
+      ["
       Received buffers on pad #{inspect(pad_name)}
-      Buffers: ", Buffer.print(buffers)], state)
+      Buffers: ", Buffer.print(buffers)],
+      state
+    )
 
     {{:ok, messages}, state} =
       state

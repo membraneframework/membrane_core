@@ -1,4 +1,7 @@
 defmodule Membrane.Log.Router do
+  @moduledoc """
+  Defines a router that dispatches logs to instances of `Membrane.Log.Logger.Base`
+  """
   use GenServer
 
   alias Membrane.Log.Supervisor

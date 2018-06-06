@@ -1,4 +1,7 @@
 defmodule Membrane.Helper.Struct do
+  @moduledoc """
+  A set of functions for easier manipulation on structs
+  """
   import Kernel, except: [get_in: 2, put_in: 2, update_in: 3, get_and_update_in: 3, pop_in: 2]
   use Membrane.Helper
 

@@ -1,4 +1,10 @@
 defmodule Membrane.Mixins.CallbackHandler do
+  @moduledoc """
+  Behaviour for module that delegates its job to the other module via callbacks.
+  It also delivers the default implementation of logic that handles the results
+  of callbacks.
+  """
+
   use Membrane.Mixins.Log, tags: :core
 
   @type callback_return_t(action_t, internal_state_t) ::

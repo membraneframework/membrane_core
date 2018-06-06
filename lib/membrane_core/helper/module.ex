@@ -1,4 +1,8 @@
 defmodule Membrane.Helper.Module do
+  @moduledoc """
+  A set of functions for easier manipulation on modules
+  """
+
   def check_behaviour(module, fun) do
     module |> loaded_and_function_exported?(fun, 0) and module |> apply(fun, [])
   end
