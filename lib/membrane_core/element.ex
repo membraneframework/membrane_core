@@ -2,7 +2,8 @@ defmodule Membrane.Element do
   @moduledoc """
   Module containing functions spawning, shutting down, inspecting and controlling
   playback of elements. These functions are usually called by `Membrane.Pipeline`,
-  and SHOULD NOT BE CALLED FROM ELSEWHERE.
+  and can be called from elsewhere only if there is a really good reason for
+  doing so.
   """
 
   use Membrane.Mixins.Log, import: false, tags: :core
