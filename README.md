@@ -29,7 +29,7 @@ Then add the following line to your `applications` in `mix.exs`.
 
 # Getting started
 
-To get familiar with basic concepts and build your first application using Membrane Framework, visit [Membrane Guide](TODO).
+To get familiar with basic concepts and build your first application using Membrane Framework, visit [Membrane Guide](https://membraneframework.org/guide).
 
 API documentation is available on [HexDocs](https://hexdocs.pm/membrane_core)
 
