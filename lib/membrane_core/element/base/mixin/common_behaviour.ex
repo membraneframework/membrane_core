@@ -48,7 +48,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
               | {:error, any}
 
   @doc """
-  Callback invoked when Element is prepared. It receives the previous playback
+  Callback invoked when element is prepared. It receives the previous playback
   state (`:stopped` or `:playing`).
 
   If the prevoius playback state is `:stopped`, then usually most resources
@@ -66,7 +66,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
             ) :: callback_return_t
 
   @doc """
-  Callback invoked when Element is supposed to start playing.
+  Callback invoked when element is supposed to start playing.
 
   This is moment when initial demands are sent and first buffers are generated
   if there are any pads in the push mode.
@@ -83,9 +83,10 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @callback handle_stop(state :: internal_state_t) :: callback_return_t
 
   @doc """
-  Callback invoked when Element is receiving messages that are not recognized
-  as internal membrane messages. Useful for receiving ticks from timer, data
-  sent from NIFs or other stuff.
+  Callback invoked when element receives a message that is not recognized
+  as an internal membrane message.
+
+  Useful for receiving ticks from timer, data sent from NIFs or other stuff.
   """
   @callback handle_other(message :: any(), state :: internal_state_t) :: callback_return_t
 

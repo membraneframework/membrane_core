@@ -1,11 +1,13 @@
 defmodule Membrane.Element do
   @moduledoc """
   Module containing functions spawning, shutting down, inspecting and controlling
-  playback of elements.
+  playback of elements. These functions are usually called by `Membrane.Pipeline`,
+  and SHOULD NOT BE CALLED FROM ELSEWHERE.
   """
 
   use Membrane.Mixins.Log, import: false, tags: :core
   use Membrane.Element.Manager.Log, import: false, tags: :core
+  alias Membrane.Element.Pad
   use Membrane.Helper
   alias Membrane.Element.Manager.State
   import Membrane.Helper.GenServer
@@ -13,31 +15,32 @@ defmodule Membrane.Element do
   use GenServer
   use Membrane.Mixins.Playback
 
-  # Type that defines possible return values of start/start_link functions.
-  @type on_start :: GenServer.on_start()
-
-  # Type that defines possible process options passed to start/start_link
-  # functions.
-  @type process_options_t :: GenServer.options()
-
-  # Type that defines possible element-specific options passed to
-  # start/start_link functions.
+  @typedoc """
+  Defines options that can be passed to `start/5` / `start_link/5` and received
+  in `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_init/1` callback.
+  """
   @type element_options_t :: struct | nil
 
-  # Type that defines an element name within a pipeline
+  @typedoc """
+  Type that defines an element name by which it is identified.
+  """
   @type name_t :: atom | {atom, non_neg_integer}
 
+
+  @doc """
+  Checks whether module is an element.
+  """
   def element?(module) do
     module |> Helper.Module.check_behaviour(:membrane_element?)
   end
 
   @doc """
-  Starts process for element of given module, initialized with given options and
-  links it to the current process in the supervision tree.
+  Works similarly to `start_link/5`, but passes element struct (with default values)
+  as element options.
 
-  Works similarily to `GenServer.start_link/3` and has the same return values.
+  If element does not define struct, `nil` is passed.
   """
-  @spec start_link(pid, module, element_options_t, process_options_t) :: on_start
+  @spec start_link(pid, module, name_t) :: GenServer.on_start()
   def start_link(pipeline, module, name) do
     start_link(
       pipeline,
@@ -47,19 +50,28 @@ defmodule Membrane.Element do
     )
   end
 
+  @doc """
+  Starts process for element of given module, initialized with given options and
+  links it to the current process in the supervision tree.
+
+  Calls `GenServer.start_link/3` underneath.
+  """
+  @spec start_link(pid, module, name_t, element_options_t, GenServer.options()) ::
+          GenServer.on_start()
   def start_link(pipeline, module, name, element_options, process_options \\ []),
     do: do_start(:start_link, pipeline, module, name, element_options, process_options)
 
   @doc """
-  Starts process for element of given module, initialized with given
-  elementoptions outside of the supervision tree.
-
-  Works similarily to `GenServer.start/3` and has the same return values.
+  Works similarly to `start_link/3`, but does not link to the current process.
   """
-  @spec start(pid, module, name_t) :: on_start
+  @spec start(pid, module, name_t) :: GenServer.on_start()
   def start(pipeline, module, name),
     do: start(pipeline, module, name, module |> Module.concat(Options) |> Helper.Module.struct())
 
+  @doc """
+  Works similarly to `start_link/5`, but does not link to the current process.
+  """
+  @spec start(pid, module, name_t, element_options_t, GenServer.options()) :: GenServer.on_start()
   def start(pipeline, module, name, element_options, process_options \\ []),
     do: do_start(:start, pipeline, module, name, element_options, process_options)
 
@@ -97,8 +109,6 @@ defmodule Membrane.Element do
 
   Will trigger calling `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_shutdown/1`
   callback.
-
-  Returns `:ok`.
   """
   @spec shutdown(pid, timeout) :: :ok
   def shutdown(server, timeout \\ 5000) do
@@ -113,10 +123,6 @@ defmodule Membrane.Element do
 
   It will wait for reply for amount of time passed as second argument
   (in milliseconds).
-
-  In case of success, returns `:ok`.
-
-  If case of failure, returns `{:error, reason}`
   """
   @spec set_message_bus(pid, pid, timeout) :: :ok | {:error, any}
   def set_message_bus(server, message_bus, timeout \\ 5000) when is_pid(server) do
@@ -128,21 +134,28 @@ defmodule Membrane.Element do
 
   It will wait for reply for amount of time passed as second argument
   (in milliseconds).
-
-  In case of success, returns `:ok`.
-
-  If case of failure, returns `{:error, reason}`
   """
   @spec set_controlling_pid(pid, pid, timeout) :: :ok | {:error, any}
   def set_controlling_pid(server, controlling_pid, timeout \\ 5000) when is_pid(server) do
     GenServer.call(server, {:membrane_set_controlling_pid, controlling_pid}, timeout)
   end
 
+  @impl Playback
   def change_playback_state(pid, new_state) do
     send(pid, {:membrane_change_playback_state, new_state})
     :ok
   end
 
+  @doc """
+  Sends synchronous calls to two elements, telling them to link with each other.
+  """
+  @spec link(
+          from_element :: pid,
+          to_element :: pid,
+          from_pad :: Pad.name_t(),
+          to_pad :: Pad.name_t(),
+          params :: list
+        ) :: :ok | {:error, any}
   def link(pid, pid, _, _, _) when is_pid(pid) do
     {:error, :loop}
   end
@@ -164,19 +177,29 @@ defmodule Membrane.Element do
 
   def link(_, _, _, _, _), do: {:error, :invalid_element}
 
+  @doc """
+  Sends synchronous call to element, telling it to unlink all its pads.
+  """
   def unlink(server, timeout \\ 5000) do
     server |> GenServer.call(:membrane_unlink, timeout)
   end
 
+  @doc """
+  Sends synchronous call to element, requesting it to create a new instance of
+  `:on_request` pad.
+  """
   def handle_new_pad(server, direction, pad, timeout \\ 5000) when is_pid(server) do
     server |> GenServer.call({:membrane_new_pad, [direction, pad]}, timeout)
   end
 
+  @doc """
+  Sends synchronous call to element, informing it that linking has finished.
+  """
   def handle_linking_finished(server, timeout \\ 5000) when is_pid(server) do
     server |> GenServer.call(:membrane_linking_finished, timeout)
   end
 
-  @doc false
+  @impl GenServer
   def init({pipeline, module, name, options}) do
     import Membrane.Mixins.Log
     Process.monitor(pipeline)
@@ -192,7 +215,7 @@ defmodule Membrane.Element do
     end
   end
 
-  @doc false
+  @impl GenServer
   def terminate(reason, %State{module: module, playback: playback} = state) do
     import Membrane.Mixins.Log
 
@@ -212,18 +235,24 @@ defmodule Membrane.Element do
     module.manager_module.handle_shutdown(state)
   end
 
+  @impl Playback
   defdelegate handle_playback_state(old, new, state), to: MessageDispatcher
+
+  @impl Playback
   defdelegate handle_playback_state_changed(old, new, state), to: MessageDispatcher
 
+  @impl Playback
   def playback_warn_error(message, reason, state) do
     import Membrane.Element.Manager.Log
     warn_error(message, reason, state)
   end
 
+  @impl GenServer
   def handle_call(message, _from, state) do
     message |> MessageDispatcher.handle_message(:call, state) |> reply(state)
   end
 
+  @impl GenServer
   def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
     import Membrane.Element.Manager.Log
 

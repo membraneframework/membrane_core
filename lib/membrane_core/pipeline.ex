@@ -3,7 +3,7 @@ defmodule Membrane.Pipeline do
   Module containing functions for constructing and supervising pipelines.
 
   Pipelines are units that make it possible to instantiate, link and manage
-  elements in convenient way (actually elements should alwats be used inside
+  elements in convenient way (actually elements should always be used inside
   a pipeline). Linking elements together enables them to pass data to one another,
   and process it in different ways.
   """
