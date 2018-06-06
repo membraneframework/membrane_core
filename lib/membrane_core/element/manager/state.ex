@@ -10,6 +10,8 @@ defmodule Membrane.Element.Manager.State do
   use Membrane.Helper
   alias __MODULE__
   alias Membrane.Mixins.{Playback, Playbackable}
+  alias Membrane.Element.Pad
+  require Pad
 
   @type internal_state_t :: any
 
@@ -130,18 +132,19 @@ defmodule Membrane.Element.Manager.State do
   def clear_currently_linking(state),
     do: state |> Helper.Struct.put_in([:pads, :dynamic_currently_linking], [])
 
-  defp parse_pad({name, {:always, :push, caps}}, direction),
-    do: do_parse_pad(name, :push, caps, direction)
+  defp parse_pad({name, {availability, :push, caps}}, direction)
+       when is_atom(name) and Pad.is_availability(availability) do
+    do_parse_pad(name, availability, :push, caps, direction)
+  end
 
-  defp parse_pad({name, {:always, :pull, caps}}, :source),
-    do: do_parse_pad(name, :pull, caps, :source, %{other_demand_in: nil})
+  defp parse_pad({name, {availability, :pull, caps}}, :source)
+       when is_atom(name) and Pad.is_availability(availability) do
+    do_parse_pad(name, availability, :pull, caps, :source, %{other_demand_in: nil})
+  end
 
-  defp parse_pad({name, {:always, {:pull, demand_in: demand_in}, caps}}, :sink),
-    do: do_parse_pad(name, :pull, caps, :sink, %{demand_in: demand_in})
-
-  defp parse_pad({_name, {availability, _mode, _caps}}, _direction)
-       when availability != :always do
-    {:ok, []}
+  defp parse_pad({name, {availability, {:pull, demand_in: demand_in}, caps}}, :sink)
+       when is_atom(name) and Pad.is_availability(availability) do
+    do_parse_pad(name, availability, :pull, caps, :sink, %{demand_in: demand_in})
   end
 
   defp parse_pad(params, direction),
@@ -151,43 +154,25 @@ defmodule Membrane.Element.Manager.State do
         {:invalid_pad_config, params, direction: direction}
       )
 
-  defp do_parse_pad(name, mode, caps, direction, options \\ %{}) do
-    with {:ok, name: name, is_dynamic: is_dynamic} <- parse_pad_name(name) do
-      parsed_pad = %{
+  defp do_parse_pad(name, availability, mode, caps, direction, options \\ %{}) do
+    parsed_pad =
+      %{
         name: name,
         mode: mode,
         direction: direction,
         accepted_caps: caps,
-        is_dynamic: is_dynamic,
+        availability: availability,
         options: options
       }
+      |> Map.merge(
+        if availability |> Pad.availability_mode() == :dynamic do
+          %{current_id: 0, is_dynamic: true}
+        else
+          %{is_dynamic: false}
+        end
+      )
 
-      parsed_pad =
-        parsed_pad
-        |> Map.merge(
-          if is_dynamic do
-            %{current_id: 0}
-          else
-            %{}
-          end
-        )
-
-      {:ok, [{name, parsed_pad}]}
-    end
-  end
-
-  defp parse_pad_name({:dynamic, name})
-       when is_atom(name) and not is_nil(name) do
-    {:ok, name: name, is_dynamic: true}
-  end
-
-  defp parse_pad_name(name)
-       when is_atom(name) and not is_nil(name) do
-    {:ok, name: name, is_dynamic: false}
-  end
-
-  defp parse_pad_name(name) do
-    warn_error("invlalid pad name, #{inspect(name)}", {:invalid_pad_name, name})
+    {:ok, [{name, parsed_pad}]}
   end
 
   def resolve_pad_full_name(state, pad_name) do
