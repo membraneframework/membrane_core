@@ -11,7 +11,7 @@ defmodule Membrane.Mixfile do
       package: package(),
       name: "Membrane Core",
       source_url: link(),
-      homepage_url: "https://membraneframework.org",
+      docs: docs(),
       preferred_cli_env: [
         espec: :test,
         coveralls: :test,
@@ -35,11 +35,21 @@ defmodule Membrane.Mixfile do
     "https://github.com/membraneframework/membrane-core"
   end
 
+  defp docs do
+    [
+      main: "readme",
+      extras: ["README.md"]
+    ]
+  end
+
   defp package do
     [
       maintainers: ["Membrane Team"],
       licenses: ["Apache 2.0"],
-      links: %{"GitHub" => link()}
+      links: %{
+        "GitHub" => link(),
+        "Membrane Framework Homepage" => "https://membraneframework.org"
+      }
     ]
   end
 
