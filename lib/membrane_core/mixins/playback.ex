@@ -49,8 +49,9 @@ defmodule Membrane.Mixins.Playback do
     use Membrane.Helper
 
     quote location: :keep do
-      alias Membrane.Mixins.{Playback, Playbackable}
-      @behaviour Playback
+      alias Membrane.Mixins.Playbackable
+      alias unquote(__MODULE__)
+      @behaviour unquote(__MODULE__)
 
       def handle_playback_state_changed(_old, _new, playbackable), do: {:ok, playbackable}
 
@@ -59,10 +60,16 @@ defmodule Membrane.Mixins.Playback do
         warn_error(message, reason)
       end
 
+      @doc false
       def play(pid), do: change_playback_state(pid, :playing)
+
+      @doc false
       def prepare(pid), do: change_playback_state(pid, :prepared)
+
+      @doc false
       def stop(pid), do: change_playback_state(pid, :stopped)
 
+      @doc false
       def resolve_playback_change(new_playback_state, playbackable) do
         playbackable =
           playbackable
@@ -116,6 +123,7 @@ defmodule Membrane.Mixins.Playback do
         end
       end
 
+      @doc false
       def lock_playback_state(new_playback_state \\ nil, playbackable) do
         playback = playbackable |> Playbackable.get_playback()
 
@@ -134,6 +142,7 @@ defmodule Membrane.Mixins.Playback do
         end
       end
 
+      @doc false
       def unlock_playback_state(playbackable) do
         playback = playbackable |> Playbackable.get_playback()
 
@@ -151,10 +160,12 @@ defmodule Membrane.Mixins.Playback do
         end
       end
 
+      @doc false
       def suspend_playback_change(playbackable) do
         {:ok, playbackable |> Playbackable.update_playback(&%{&1 | async_state_change: true})}
       end
 
+      @doc false
       def continue_playback_change(playbackable) do
         {old_playback, playbackable} =
           playbackable
