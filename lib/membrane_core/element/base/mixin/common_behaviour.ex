@@ -9,16 +9,22 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   alias Membrane.Element
   alias Element.{Action, Context, Pad}
-  alias Element.Manager.State
   alias Element.Base.Mixin
   alias Membrane.Mixins.{Playback, CallbackHandler}
 
   @typedoc """
-  Type that defines all valid return values from callbacks.
+  Type of user-managed state of element.
   """
-  @type callback_return_t ::
-          CallbackHandler.callback_return_t(Action.t(), State.internal_state_t())
+  @type internal_state_t :: map | struct
 
+  @typedoc """
+  Type that defines all valid return values from most callbacks.
+  """
+  @type callback_return_t :: CallbackHandler.callback_return_t(Action.t(), internal_state_t)
+
+  @typedoc """
+  Describes how pads should be declared in element.
+  """
   @type known_pads_t ::
           Mixin.SinkBehaviour.known_sink_pads_t() | Mixin.SourceBehaviour.known_source_pads_t()
 
@@ -38,7 +44,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   `c:GenServer.init/1` callback.
   """
   @callback handle_init(options :: Element.element_options_t()) ::
-              {:ok, State.internal_state_t()}
+              {:ok, internal_state_t}
               | {:error, any}
 
   @doc """
@@ -56,7 +62,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_prepare(
               previous_playback_state :: Playback.state_t(),
-              state :: State.internal_state_t()
+              state :: internal_state_t
             ) :: callback_return_t
 
   @doc """
@@ -65,7 +71,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   This is moment when initial demands are sent and first buffers are generated
   if there are any pads in the push mode.
   """
-  @callback handle_play(state :: State.internal_state_t()) :: callback_return_t
+  @callback handle_play(state :: internal_state_t) :: callback_return_t
 
   @doc """
   Callback invoked when element is supposed to stop.
@@ -74,14 +80,14 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   used by the element. For example, if element opens a file in `c:handle_prepare/1`,
   this is the place to close it.
   """
-  @callback handle_stop(state :: State.internal_state_t()) :: callback_return_t
+  @callback handle_stop(state :: internal_state_t) :: callback_return_t
 
   @doc """
   Callback invoked when Element is receiving messages that are not recognized
   as internal membrane messages. Useful for receiving ticks from timer, data
   sent from NIFs or other stuff.
   """
-  @callback handle_other(message :: any(), state :: State.internal_state_t()) :: callback_return_t
+  @callback handle_other(message :: any(), state :: internal_state_t) :: callback_return_t
 
   @doc """
   Callback that is called when new pad has beed added to element. Executed
@@ -90,7 +96,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @callback handle_pad_added(
               pad :: Pad.name_t(),
               context :: Context.PadAdded.t(),
-              state :: State.internal_state_t()
+              state :: internal_state_t
             ) :: callback_return_t
 
   @doc """
@@ -100,7 +106,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @callback handle_pad_removed(
               pad :: Pad.name_t(),
               context :: Context.PadRemoved.t(),
-              state :: State.internal_state_t()
+              state :: internal_state_t
             ) :: callback_return_t
 
   @doc """
@@ -112,14 +118,14 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
               pad :: Pad.name_t(),
               event :: Event.type_t(),
               context :: Context.Event.t(),
-              state :: State.internal_state_t()
+              state :: internal_state_t
             ) :: callback_return_t
 
   @doc """
   Callback invoked when element is shutting down just before process is exiting.
   Internally called in `c:GenServer.termintate/2` callback.
   """
-  @callback handle_shutdown(state :: State.internal_state_t()) :: :ok
+  @callback handle_shutdown(state :: internal_state_t) :: :ok
 
   @default_quoted_specs %{
     atom:

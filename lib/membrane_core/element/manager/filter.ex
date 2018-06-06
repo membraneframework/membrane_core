@@ -1,8 +1,7 @@
 defmodule Membrane.Element.Manager.Filter do
-  @moduledoc """
-  Module responsible for managing filter elements - executing callbacks and
-  handling actions.
-  """
+  @moduledoc false
+  # Module responsible for managing filter elements - executing callbacks and
+  # handling actions.
 
   use Membrane.Element.Manager.Log
   use Membrane.Element.Manager.Common

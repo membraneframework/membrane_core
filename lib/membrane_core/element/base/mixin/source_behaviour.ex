@@ -10,7 +10,6 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
 
   alias Membrane.{Buffer, Context, Element}
   alias Element.Pad
-  alias Element.Manager.State
   alias Element.Base.Mixin.CommonBehaviour
   alias Membrane.Caps
 
@@ -47,21 +46,13 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
 
   For sources in the push mode, element should generate buffers without this
   callback.
-
-  The arguments are:
-
-  * name of the pad receiving a demand request,
-  * requested number of units
-  * unit
-  * context (`Membrane.Element.Context.Demand`)
-  * current element's state.
   """
   @callback handle_demand(
-              Pad.name_t(),
-              non_neg_integer,
-              Buffer.Metric.unit_t(),
-              Context.Demand.t(),
-              State.internal_state_t()
+              pad :: Pad.name_t(),
+              size :: non_neg_integer,
+              unit :: Buffer.Metric.unit_t(),
+              context :: Context.Demand.t(),
+              state :: CommonBehaviour.internal_state_t()
             ) :: CommonBehaviour.callback_return_t()
 
   @doc """

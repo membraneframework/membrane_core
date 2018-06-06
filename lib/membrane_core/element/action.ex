@@ -7,7 +7,7 @@ defmodule Membrane.Element.Action do
   other elements and parts of framework. Each action may be returned by any
   callback (except for `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_init`
   and `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_terminate`, as they
-  do not return any actions) unless otherwise explicitly stated.
+  do not return any actions) unless explicitly stated otherwise.
   """
 
   @typedoc """

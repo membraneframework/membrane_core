@@ -9,6 +9,7 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   """
 
   alias Membrane.{Buffer, Caps, Element.Pad}
+  alias Membrane.Element.Base.Mixin.CommonBehaviour
 
   @type known_sink_pads_t :: [
           {Pad.name_t(),
@@ -26,14 +27,14 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   @callback known_sink_pads() :: known_sink_pads_t()
 
   @doc """
-  Callback invoked when Element.Manager is receiving information about new caps for
+  Callback invoked when Element is receiving information about new caps for
   given pad. In filters those caps are forwarded through all source pads by default.
   """
   @callback handle_caps(
-              Pad.name_t(),
-              Membrane.Caps.t(),
-              Context.Caps.t(),
-              State.internal_state_t()
+              pad :: Pad.name_t(),
+              caps :: Membrane.Caps.t(),
+              context :: Context.Caps.t(),
+              state :: CommonBehaviour.internal_state_t()
             ) :: CommonBehaviour.callback_return_t()
 
   @doc """
