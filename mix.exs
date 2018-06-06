@@ -4,13 +4,14 @@ defmodule Membrane.Mixfile do
   def project do
     [
       app: :membrane_core,
-      version: "0.0.1",
+      version: "0.1.0",
       elixir: "~> 1.6",
       elixirc_paths: elixirc_paths(Mix.env()),
       description: "Membrane Multimedia Framework (Core)",
       package: package(),
       name: "Membrane Core",
-      source_url: "https://github.com/membraneframework/membrane-core",
+      source_url: link(),
+      homepage_url: "https://membraneframework.org",
       preferred_cli_env: [
         espec: :test,
         coveralls: :test,
@@ -30,19 +31,24 @@ defmodule Membrane.Mixfile do
   defp elixirc_paths(:test), do: ["lib", "spec/support"]
   defp elixirc_paths(_), do: ["lib"]
 
+  defp link do
+    "https://github.com/membraneframework/membrane-core"
+  end
+
   defp package do
     [
       maintainers: ["Membrane Team"],
-      licenses: ["Apache 2.0"]
+      licenses: ["Apache 2.0"],
+      links: %{"GitHub" => link()}
     ]
   end
 
   defp deps do
     [
-      {:espec, "~> 1.1", only: :test},
-      {:excoveralls, "~> 0.6", only: :test},
+      {:ex_doc, "~> 0.18", only: :dev, runtime: false},
+      {:espec, "~> 1.5", only: :test},
+      {:excoveralls, "~> 0.8", only: :test},
       {:qex, "~> 0.3"},
-      {:ex_doc, "~> 0.14", only: :dev}
     ]
   end
 end
