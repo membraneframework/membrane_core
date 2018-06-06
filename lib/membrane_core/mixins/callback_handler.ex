@@ -14,14 +14,16 @@ defmodule Membrane.Mixins.CallbackHandler do
     use Membrane.Helper
 
     quote location: :keep do
-      alias Membrane.Mixins.CallbackHandler
-      @behaviour CallbackHandler
+      alias unquote(__MODULE__)
+      @behaviour unquote(__MODULE__)
 
+      @impl unquote(__MODULE__)
       def callback_handler_warn_error(message, reason, _state) do
         use Membrane.Mixins.Log
         warn_error(message, reason)
       end
 
+      @doc false
       def handle_actions(actions, callback, handler_params, state) do
         actions
         |> Membrane.Helper.Enum.reduce_with(state, fn action, state ->
@@ -29,12 +31,14 @@ defmodule Membrane.Mixins.CallbackHandler do
         end)
       end
 
+      @impl unquote(__MODULE__)
       def handle_action(action, callback, _params, state),
         do:
           {{:error,
             {:invalid_action,
              action: action, callback: callback, module: state |> Map.get(:module)}}, state}
 
+      @doc false
       def exec_and_handle_callback(callback, handler_params \\ %{}, args, state)
           when is_map(handler_params) do
         result = callback |> exec_callback(args, state)
@@ -47,6 +51,7 @@ defmodule Membrane.Mixins.CallbackHandler do
         module |> apply(callback, args ++ [internal_state])
       end
 
+      @doc false
       def exec_and_handle_splitted_callback(
             callback,
             original_callback,
@@ -103,6 +108,7 @@ defmodule Membrane.Mixins.CallbackHandler do
         end
       end
 
+      @doc false
       def handle_callback_result({:ok, new_internal_state}, module, cb, state),
         do: handle_callback_result({{:ok, []}, new_internal_state}, module, cb, state)
 

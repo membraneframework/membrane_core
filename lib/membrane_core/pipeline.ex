@@ -1,6 +1,11 @@
 defmodule Membrane.Pipeline do
   @moduledoc """
   Module containing functions for constructing and supervising pipelines.
+
+  Pipelines are units that make it possible to instantiate, link and manage
+  elements in convenient way (actually elements should always be used inside
+  a pipeline). Linking elements together enables them to pass data to one another,
+  and process it in different ways.
   """
 
   use Membrane.Mixins.Log, tags: :core
@@ -12,65 +17,132 @@ defmodule Membrane.Pipeline do
   use Membrane.Helper
   import Helper.GenServer
 
-  # Type that defines possible return values of start/start_link functions.
-  @type on_start :: GenServer.on_start()
+  @typedoc """
+  Defines options that can be passed to `start/3` / `start_link/3` and received
+  in `c:handle_init/1` callback.
+  """
+  @type pipeline_options_t :: any
 
-  # Type that defines possible process options passed to start/start_link
-  # functions.
-  @type process_options_t :: GenServer.options()
+  @typedoc """
+  Action that sends a message to element identified by name.
+  """
+  @type forward_action_t :: {:forward, {Element.name_t(), Message.t()}}
 
-  # Type that defines possible pipeline-specific options passed to
-  # start/start_link functions.
-  @type pipeline_options_t :: struct | nil
+  @typedoc """
+  Action that instantiates elements and links them according to `Membrane.Pipeline.Spec`.
 
-  @type callback_action_t ::
-          {:spec, Spec.t()}
-          | {:forward, {Element.name_t(), message :: any}}
-          | {:remove_child, Element.name_t() | [Element.name_t()]}
+  Elements playback state is changed to the current pipeline state.
+  `c:handle_spec_started` callback is executed once it happes.
+  """
+  @type spec_action_t :: {:spec, Spec.t()}
 
-  @type callback_return_t ::
-          CallbackHandler.callback_return_t(callback_action_t, State.internal_state_t())
+  @typedoc """
+  Action that stops, unlinks and removes specified child/children from pipeline.
+  """
+  @type remove_child_action_t :: {:remove_child, Element.name_t() | [Element.name_t()]}
+
+  @typedoc """
+  Type describing actions that can be returned from pipeline callbacks.
+
+  Returning actions is a way of pipeline interaction with its elements and
+  other parts of framework.
+  """
+  @type action_t :: forward_action_t | spec_action_t | remove_child_action_t
+
+  @typedoc """
+  Type that defines all valid return values from most callbacks.
+  """
+  @type callback_return_t :: CallbackHandler.callback_return_t(action_t, State.internal_state_t())
 
   @doc """
   Enables to check whether module is membrane pipeline
   """
   @callback membrane_pipeline? :: true
 
-  @callback handle_init(pipeline_options_t) ::
+  @doc """
+  Callback invoked on initialization of pipeline process. It should parse options
+  and initialize element internal state. Internally it is invoked inside
+  `c:GenServer.init/1` callback.
+  """
+  @callback handle_init(options :: pipeline_options_t) ::
               {{:ok, Spec.t()}, State.internal_state_t()}
               | {:error, any}
 
-  @callback handle_prepare(Playback.state_t(), State.internal_state_t()) :: callback_return_t
+  @doc """
+  Callback invoked when pipeline is in `:prepared` state, i.e. all its elements
+  are in this state. It receives the previous playback state (`:stopped` or
+  `:playing`).
+  """
+  @callback handle_prepare(
+              previous_playback_state :: Playback.state_t(),
+              state :: State.internal_state_t()
+            ) :: callback_return_t
 
-  @callback handle_play(State.internal_state_t()) :: callback_return_t
+  @doc """
+  Callback invoked when pipeline is in `:playing` state, i.e. all its elements
+  are in this state.
+  """
+  @callback handle_play(state :: State.internal_state_t()) :: callback_return_t
 
-  @callback handle_stop(State.internal_state_t()) :: callback_return_t
+  @doc """
+  Callback invoked when pipeline is in `:playing` state, i.e. all its elements
+  are in this state.
+  """
+  @callback handle_stop(state :: State.internal_state_t()) :: callback_return_t
 
-  @callback handle_message(Message.t(), Element.name_t(), State.internal_state_t()) ::
+  @doc """
+  Callback invoked when message incomes from an element.
+  """
+  @callback handle_message(
+              message :: Message.t(),
+              element :: Element.name_t(),
+              state :: State.internal_state_t()
+            ) :: callback_return_t
+
+  @doc """
+  Callback invoked when pipeline receives a message that is not recognized
+  as an internal membrane message.
+
+  Useful for receiving ticks from timer, data sent from NIFs or other stuff.
+  """
+  @callback handle_other(message :: any, state :: State.internal_state_t()) :: callback_return_t
+
+  @doc """
+  Callback invoked when `Membrane.Pipeline.Spec` is linked and in the same playback
+  state as pipeline.
+
+  Spec can be started from `c:handle_init/1` callback or as `t:spec_action_t/0`
+  action.
+  """
+  @callback handle_spec_started(elements :: [Element.name_t()], state :: State.internal_state_t()) ::
               callback_return_t
-
-  @callback handle_other(any, State.internal_state_t()) :: callback_return_t
-
-  @callback handle_spec_started([Element.name_t()], State.internal_state_t()) :: callback_return_t
 
   @doc """
   Starts the Pipeline based on given module and links it to the current
   process.
 
-  Pipeline options are passed to module's handle_init callback.
+  Pipeline options are passed to module's `c:handle_init/1` callback.
 
   Process options are internally passed to `GenServer.start_link/3`.
 
   Returns the same values as `GenServer.start_link/3`.
   """
-  @spec start_link(module, pipeline_options_t, process_options_t) :: on_start
+  @spec start_link(
+          module,
+          pipeline_options :: pipeline_options_t,
+          process_options :: GenServer.options()
+        ) :: GenServer.on_start()
   def start_link(module, pipeline_options \\ nil, process_options \\ []),
     do: do_start(:start_link, module, pipeline_options, process_options)
 
   @doc """
   Does the same as `start_link/3` but starts process outside of supervision tree.
   """
-  @spec start(module, pipeline_options_t, process_options_t) :: on_start
+  @spec start(
+          module,
+          pipeline_options :: pipeline_options_t,
+          process_options :: GenServer.options()
+        ) :: GenServer.on_start()
   def start(module, pipeline_options \\ nil, process_options \\ []),
     do: do_start(:start, module, pipeline_options, process_options)
 
@@ -100,19 +172,19 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  @impl Playback
   def change_playback_state(pid, new_state) do
     send(pid, {:membrane_change_playback_state, new_state})
     :ok
   end
 
+  @spec stop_and_terminate(pipeline :: module) :: :ok
   def stop_and_terminate(pipeline) do
     send(pipeline, :membrane_stop_and_terminate)
     :ok
   end
 
-  # Private API
-
-  @doc false
+  @impl GenServer
   def init(module) when is_atom(module) do
     init({module, module |> Helper.Module.struct()})
   end
@@ -159,6 +231,10 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  @doc """
+  Checks whether module is a pipeline.
+  """
+  @spec pipeline?(module) :: boolean
   def pipeline?(module) do
     module |> Helper.Module.check_behaviour(:membrane_pipeline?)
   end
@@ -373,7 +449,7 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  @doc false
+  @impl Playback
   def handle_playback_state(_old, new, %State{pids_to_children: pids_to_children} = state) do
     children_pids = pids_to_children |> Map.keys()
 
@@ -386,7 +462,7 @@ defmodule Membrane.Pipeline do
     state |> suspend_playback_change
   end
 
-  @doc false
+  @impl Playback
   def handle_playback_state_changed(_old, :stopped, %State{terminating?: true} = state) do
     send(self(), :membrane_stop_and_terminate)
     {:ok, state}
@@ -394,7 +470,7 @@ defmodule Membrane.Pipeline do
 
   def handle_playback_state_changed(_old, _new, state), do: {:ok, state}
 
-  @doc false
+  @impl GenServer
   def handle_info(
         {:membrane_playback_state_changed, _pid, _new_playback_state},
         %State{pending_pids: pending_pids} = state
@@ -403,7 +479,6 @@ defmodule Membrane.Pipeline do
     {:ok, state} |> noreply
   end
 
-  @doc false
   def handle_info(
         {:membrane_playback_state_changed, _pid, new_playback_state},
         %State{playback: %Playback{pending_state: pending_playback_state}} = state
@@ -412,7 +487,6 @@ defmodule Membrane.Pipeline do
     {:ok, state} |> noreply
   end
 
-  @doc false
   def handle_info(
         {:membrane_playback_state_changed, pid, new_playback_state},
         %State{playback: %Playback{state: current_playback_state}, pending_pids: pending_pids} =
@@ -440,12 +514,10 @@ defmodule Membrane.Pipeline do
     |> noreply(new_state)
   end
 
-  @doc false
   def handle_info({:membrane_change_playback_state, new_state}, state) do
     resolve_playback_change(new_state, state) |> noreply(state)
   end
 
-  @doc false
   def handle_info(:membrane_stop_and_terminate, state) do
     case state.playback.state do
       :stopped ->
@@ -457,7 +529,6 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  @doc false
   def handle_info([:membrane_pipeline_spec, spec], state) do
     with {{:ok, _children}, state} <- spec |> handle_spec(state) do
       {:ok, state}
@@ -465,21 +536,19 @@ defmodule Membrane.Pipeline do
     |> noreply(state)
   end
 
-  @doc false
-  def handle_info([:membrane_message, from, %Membrane.Message{} = message], state) do
+  def handle_info([:membrane_message, from, %Message{} = message], state) do
     with {:ok, _} <- state |> State.get_child(from) do
       exec_and_handle_callback(:handle_message, [message, from], state)
     end
     |> noreply(state)
   end
 
-  @doc false
-  # Callback invoked on other incoming message
   def handle_info(message, state) do
     exec_and_handle_callback(:handle_other, [message], state)
     |> noreply(state)
   end
 
+  @impl CallbackHandler
   def handle_action({:forward, {elementname, message}}, _cb, _params, state) do
     with {:ok, pid} <- state |> State.get_child(elementname) do
       send(pid, message)
@@ -511,8 +580,8 @@ defmodule Membrane.Pipeline do
   def handle_action(action, callback, params, state) do
     warn("""
     Pipelines' #{inspect(state.module)} #{inspect(callback)} returned invalid
-    action: #{inspect(action)}. For available actions check Membrane.Pipeline
-    callback_action_t type.
+    action: #{inspect(action)}. For available actions check
+    Membrane.Pipeline.action_t type.
     """)
 
     super(action, callback, params, state)

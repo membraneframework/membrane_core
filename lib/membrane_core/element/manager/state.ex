@@ -6,17 +6,16 @@ defmodule Membrane.Element.Manager.State do
 
   use Membrane.Mixins.Log, tags: :core
   alias Membrane.Element
-  alias Membrane.Element.Manager.PlaybackBuffer
+  alias Element.Manager.PlaybackBuffer
+  alias Element.Pad
+  alias Element.Base.Mixin.CommonBehaviour
   use Membrane.Helper
   alias __MODULE__
   alias Membrane.Mixins.{Playback, Playbackable}
-  alias Membrane.Element.Pad
   require Pad
 
-  @type internal_state_t :: any
-
   @type t :: %State{
-          internal_state: internal_state_t,
+          internal_state: CommonBehaviour.internal_state_t(),
           module: module,
           name: Element.name_t(),
           playback: Playback.t(),

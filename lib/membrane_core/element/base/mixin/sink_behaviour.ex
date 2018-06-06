@@ -1,15 +1,19 @@
 defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   @moduledoc """
-  Module defining behaviour for sink elements.
+  Module defining behaviour for sink and filter elements.
 
-  When used, declares behaviour implementation and imports macros.
+  When used declares behaviour implementation, provides default callback definitions
+  and imports macros.
+
+  For more information on implementing elements, see `Membrane.Element.Base`.
   """
 
   alias Membrane.{Buffer, Caps, Element.Pad}
+  alias Membrane.Element.Base.Mixin.CommonBehaviour
 
   @type known_sink_pads_t :: [
           {Pad.name_t(),
-           {:always, {:push | :pull, demand_in: Buffer.Metric.unit_t()},
+           {Pad.availability_t(), {:push | :pull, demand_in: Buffer.Metric.unit_t()},
             Caps.Matcher.caps_specs_t()}}
         ]
 
@@ -23,13 +27,24 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   @callback known_sink_pads() :: known_sink_pads_t()
 
   @doc """
+  Callback invoked when Element is receiving information about new caps for
+  given pad. In filters those caps are forwarded through all source pads by default.
+  """
+  @callback handle_caps(
+              pad :: Pad.name_t(),
+              caps :: Membrane.Caps.t(),
+              context :: Context.Caps.t(),
+              state :: CommonBehaviour.internal_state_t()
+            ) :: CommonBehaviour.callback_return_t()
+
+  @doc """
   Macro that defines known sink pads for the element type.
 
   Allows to use `Membrane.Caps.Matcher.one_of/1` and `Membrane.Caps.Matcher.range/2`
-  functions without module prefix
+  functions without module prefix.
 
   It automatically generates documentation from the given definition
-  and adds compile-time caps specs validation
+  and adds compile-time caps specs validation.
   """
   defmacro def_known_sink_pads(raw_sink_pads) do
     sink_pads =
@@ -71,6 +86,11 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
       @behaviour unquote(__MODULE__)
 
       import unquote(__MODULE__), only: [def_known_sink_pads: 1]
+
+      @impl true
+      def handle_caps(_pad, _caps, _context, state), do: {:ok, state}
+
+      defoverridable handle_caps: 4
     end
   end
 end
