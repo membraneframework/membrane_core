@@ -1,5 +1,7 @@
 # Membrane Multimedia Framework
 
+[![Build Status](https://travis-ci.com/membraneframework/membrane-core.svg?branch=master)](https://travis-ci.com/membraneframework/membrane-core)
+
 Multimedia processing framework that focuses on reliability, concurrency and scalability.
 
 An easy to use abstraction layer for assembling mostly server-side applications that have to consume, produce or process multimedia streams.
