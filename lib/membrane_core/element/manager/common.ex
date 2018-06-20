@@ -1,4 +1,12 @@
 defmodule Membrane.Element.Manager.Common do
+  @moduledoc """
+  Implementation of some functionalities common for all `Membrane.Element.Manager`s.
+
+  Key features:
+  * handling actions with events, messages, split requests and playback changes
+  * handling incoming events, caps and messages, element initializations, playback changes and executing element's callbacks
+  * linking and unlinking pads
+  """
   use Membrane.Element.Manager.Log
   alias Membrane.Element.Manager.State
   alias Membrane.Caps
@@ -221,7 +229,7 @@ defmodule Membrane.Element.Manager.Common do
 
         warn_error(
           """
-          Tried to unlink Element.Manager that is not stopped
+          Tried to unlink Element that is not stopped
           """,
           {:unlink, :cannot_unlink_non_stopped_element},
           state
@@ -230,6 +238,14 @@ defmodule Membrane.Element.Manager.Common do
 
       def handle_shutdown(%State{module: module, internal_state: internal_state} = state) do
         module.handle_shutdown(internal_state)
+      end
+
+      def handle_pad_added(name, direction, %State{module: module} = state) do
+        context = %Context.PadAdded{
+          direction: direction
+        }
+
+        module.manager_module.exec_and_handle_callback(:handle_pad_added, [name, context], state)
       end
     end
   end
@@ -318,7 +334,7 @@ defmodule Membrane.Element.Manager.Common do
     end
   end
 
-  def parse_event(pad_name, %Event{type: :sos}, state) do
+  defp parse_event(pad_name, %Event{type: :sos}, state) do
     with %{direction: :sink, sos: false} <- state |> State.get_pad_data!(:any, pad_name) do
       {:ok, state} = state |> State.set_pad_data(:sink, pad_name, :sos, true)
       {{:ok, :handle}, state}
@@ -328,7 +344,7 @@ defmodule Membrane.Element.Manager.Common do
     end
   end
 
-  def parse_event(pad_name, %Event{type: :eos}, state) do
+  defp parse_event(pad_name, %Event{type: :eos}, state) do
     with %{direction: :sink, sos: true, eos: false} <-
            state |> State.get_pad_data!(:any, pad_name) do
       {:ok, state} = state |> State.set_pad_data(:sink, pad_name, :eos, true)
@@ -341,7 +357,7 @@ defmodule Membrane.Element.Manager.Common do
   end
 
   # FIXME: solve it using pipeline messages, not events
-  def parse_event(_pad_name, %Event{type: :dump_state}, state) do
+  defp parse_event(_pad_name, %Event{type: :dump_state}, state) do
     IO.puts("""
     state dump for #{inspect(state.name)} at #{inspect(self())}
     state:
@@ -353,7 +369,7 @@ defmodule Membrane.Element.Manager.Common do
     {{:ok, :handle}, state}
   end
 
-  def parse_event(_pad_name, _event, state), do: {{:ok, :handle}, state}
+  defp parse_event(_pad_name, _event, state), do: {{:ok, :handle}, state}
 
   def exec_event_handler(pad_name, event, %State{module: module} = state) do
     %{direction: dir, caps: caps} = state |> State.get_pad_data!(:any, pad_name)
@@ -399,9 +415,6 @@ defmodule Membrane.Element.Manager.Common do
     end)
     |> or_warn_error("Unable to fill sink pull buffers")
   end
-
-  def handle_pad_added(args, %State{module: module} = state),
-    do: module.manager_module.exec_and_handle_callback(:handle_pad_added, args, state)
 
   def handle_demand(pad_name, size, %State{module: module} = state) do
     {{:ok, total_size}, state} =

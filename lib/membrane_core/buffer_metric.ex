@@ -1,4 +1,8 @@
 defmodule Membrane.Buffer.Metric do
+  @moduledoc """
+  Specifies API for metrics that analyze data in terms of a given unit
+  """
+
   alias Membrane.Buffer
   alias __MODULE__
 

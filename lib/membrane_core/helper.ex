@@ -1,4 +1,8 @@
 defmodule Membrane.Helper do
+  @moduledoc """
+  Module containing various helper functions that improve code readability
+  """
+
   defmacro __using__(_args) do
     quote do
       import unquote(__MODULE__), only: [~>: 2, ~>>: 2, provided: 2, int_part: 2]

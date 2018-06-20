@@ -1,14 +1,37 @@
 defmodule Membrane.PullBuffer do
+  @moduledoc """
+  Buffer that is attached to the `:sink` pad when working in a `:pull` mode.
+
+  It stores `Membrane.Buffer`, `Membrane.Event` and `Membrane.Caps` structs and
+  prevents the situation when the data in a stream contains the discontinuities.
+  It also guarantees that element won't be flooded with the incoming data.
+  """
   alias Membrane.PullBuffer
   use Membrane.Helper
   use Membrane.Mixins.Log, tags: :core
   alias Membrane.Buffer
 
+  @qe Qex
+
+  @non_buf_types [:event, :caps]
+
+  @type t :: %__MODULE__{
+          name: Membrane.Element.name_t(),
+          sink: {pid(), Membrane.Element.name_t()},
+          sink_name: Membrane.Pad.name_t(),
+          q: @qe.t(),
+          preferred_size: pos_integer(),
+          current_size: non_neg_integer(),
+          demand: non_neg_integer(),
+          min_demand: pos_integer(),
+          metric: module(),
+          toilet: boolean()
+        }
+
   defstruct name: :pull_buffer,
             sink: nil,
             sink_name: nil,
             q: nil,
-            init_size: 0,
             preferred_size: 100,
             current_size: 0,
             demand: nil,
@@ -16,15 +39,27 @@ defmodule Membrane.PullBuffer do
             metric: nil,
             toilet: false
 
-  @qe Qex
+  @typedoc """
+  Properties that can be passed when creating new PullBuffer
+  """
+  @type prop_t ::
+          {:preffered_size, pos_integer()}
+          | {:min_demand, pos_integer()}
+          | {:toilet, boolean()}
 
-  @non_buf_types [:event, :caps]
+  @type props_t :: [prop_t()]
 
+  @spec new(
+          Membrane.Element.name_t(),
+          {pid, Membrane.Element.name_t()},
+          Membrane.Pad.name_t(),
+          Membrane.Buffer.Metric.unit_t(),
+          props_t
+        ) :: t()
   def new(name, sink, sink_name, demand_in, props) do
     metric = Buffer.Metric.from_unit(demand_in)
     preferred_size = props[:preferred_size] || metric.pullbuffer_preferred_size
     min_demand = props[:min_demand] || preferred_size |> div(4)
-    init_size = props[:init_size] || 0
     default_toilet = %{warn: preferred_size * 2, fail: preferred_size * 4}
 
     toilet =
@@ -40,7 +75,6 @@ defmodule Membrane.PullBuffer do
       sink: sink,
       sink_name: sink_name,
       preferred_size: preferred_size,
-      init_size: init_size,
       min_demand: min_demand,
       demand: preferred_size,
       metric: metric,
@@ -48,11 +82,13 @@ defmodule Membrane.PullBuffer do
     }
   end
 
+  @spec fill(t()) :: {:ok, t()}
   def fill(%PullBuffer{} = pb),
     do:
       handle_demand(pb, 0)
       |> or_warn_error("Unable to fill PullBuffer #{pb.name}: #{inspect(pb)}")
 
+  @spec store(t(), atom(), any()) :: {:ok, t()} | {:error, any()}
   def store(pb, type \\ :buffers, v)
 
   def store(
@@ -128,8 +164,7 @@ defmodule Membrane.PullBuffer do
     }
   end
 
-  def take(%PullBuffer{current_size: size} = pb, count)
-      when count >= 0 do
+  def take(%PullBuffer{current_size: size} = pb, count) when count >= 0 do
     report("Taking #{inspect(count)} buffers", pb)
     {out, %PullBuffer{current_size: new_size} = pb} = do_take(pb, count)
 
@@ -138,26 +173,9 @@ defmodule Membrane.PullBuffer do
     end
   end
 
-  defp do_take(
-         %PullBuffer{q: q, current_size: size, init_size: init_size, metric: metric} = pb,
-         count
-       )
-       when init_size |> is_nil or size >= init_size do
+  defp do_take(%PullBuffer{q: q, current_size: size, metric: metric} = pb, count) do
     {out, nq} = q |> q_pop(count, metric)
-    {out, %PullBuffer{pb | q: nq, current_size: max(0, size - count), init_size: nil}}
-  end
-
-  defp do_take(%PullBuffer{current_size: size, init_size: init_size} = pb, _count)
-       when size < init_size do
-    report(
-      """
-      Forbidden to take buffers, as PullBuffer did not reach initial size
-      of #{inspect(init_size)}, returning :empty
-      """,
-      pb
-    )
-
-    {{:empty, []}, pb}
+    {out, %PullBuffer{pb | q: nq, current_size: max(0, size - count)}}
   end
 
   defp q_pop(q, count, metric, acc \\ [])
@@ -191,8 +209,8 @@ defmodule Membrane.PullBuffer do
     end
   end
 
-  def empty?(%PullBuffer{current_size: size, init_size: init_size}),
-    do: size == 0 || (init_size != nil && size < init_size)
+  @spec empty?(t()) :: boolean()
+  def empty?(%PullBuffer{current_size: size}), do: size == 0
 
   defp handle_demand(
          %PullBuffer{
