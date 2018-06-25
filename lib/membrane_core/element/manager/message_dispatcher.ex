@@ -1,7 +1,8 @@
 defmodule Membrane.Element.Manager.MessageDispatcher do
-  alias Membrane.Element.Manager.{State, PlaybackBuffer}
+  alias Membrane.Element
+  alias Element.Manager.{Common, PlaybackBuffer}
+  use Element.Manager.Log
   use Membrane.Helper
-  use Membrane.Element.Manager.Log
 
   def handle_message(message, mode, state) do
     with {:ok, res} <- do_handle_message(message, mode, state) |> Helper.result_with_status() do
@@ -42,7 +43,7 @@ defmodule Membrane.Element.Manager.MessageDispatcher do
   end
 
   defp do_handle_message({:membrane_change_playback_state, new_playback_state}, :info, state),
-    do: Membrane.Element.resolve_playback_change(new_playback_state, state)
+    do: Element.resolve_playback_change(new_playback_state, state)
 
   defp do_handle_message({type, args}, :info, state)
        when type in [:membrane_demand, :membrane_buffer, :membrane_caps, :membrane_event] do
@@ -79,7 +80,7 @@ defmodule Membrane.Element.Manager.MessageDispatcher do
 
   defp do_handle_message(other, :info, state), do: forward(:handle_message, other, state)
 
-  defp forward(callback, args \\ [], %State{module: module} = state) do
-    apply(module.manager_module, callback, (args |> Helper.listify()) ++ [state])
+  defp forward(callback, args \\ [], state) do
+    apply(Common, callback, (args |> Helper.listify()) ++ [state])
   end
 end

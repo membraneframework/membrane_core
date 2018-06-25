@@ -7,261 +7,407 @@ defmodule Membrane.Element.Manager.Common do
   * handling incoming events, caps and messages, element initializations, playback changes and executing element's callbacks
   * linking and unlinking pads
   """
-  use Membrane.Element.Manager.Log
-  alias Membrane.Element.Manager.State
-  alias Membrane.Caps
+
+  alias Membrane.{Buffer, Caps, Element, Event, PullBuffer}
+  alias Element.Context
+  alias Element.Manager.{ActionExec, State}
+  import Element.Pad, only: [is_pad_name: 1]
+  use Element.Manager.Log
   use Membrane.Helper
-  alias Membrane.PullBuffer
-  alias Membrane.Element.Context
-  alias Membrane.Event
+  use Membrane.Mixins.CallbackHandler
 
-  defmacro __using__(_) do
-    quote location: :keep do
-      use Membrane.Mixins.CallbackHandler
-      alias Membrane.Element.Manager.{ActionExec, Common, State}
-      import Membrane.Element.Pad, only: [is_pad_name: 1]
-      alias Membrane.Element.Context
-      use Membrane.Helper
-
-      def handle_action({:event, {pad_name, event}}, _cb, _params, state)
-          when is_pad_name(pad_name) do
-        ActionExec.send_event(pad_name, event, state)
-      end
-
-      def handle_action({:message, message}, _cb, _params, state),
-        do: ActionExec.send_message(message, state)
-
-      def handle_action({:split, {callback, args_list}}, cb, params, state) do
-        exec_and_handle_splitted_callback(callback, cb, params, args_list, state)
-      end
-
-      def handle_action({:playback_change, :suspend}, cb, _params, state)
-          when cb in [:handle_prepare, :handle_play, :handle_stop] do
-        state |> Membrane.Element.suspend_playback_change()
-      end
-
-      def handle_action({:playback_change, :resume}, _cb, _params, state),
-        do: state |> Membrane.Element.continue_playback_change()
-
-      def handle_actions(actions, callback, handler_params, state),
-        do:
-          super(
-            actions |> Membrane.Element.Manager.Common.join_buffers(),
-            callback,
-            handler_params,
-            state
-          )
-
-      def callback_handler_warn_error(message, reason, state) do
-        use Membrane.Element.Manager.Log
-        warn_error(message, reason, state)
-      end
-
-      def handle_init(module, name, options) do
-        with {:ok, state} <- State.new(module, name) do
-          do_handle_init(module, name, options, state)
-        end
-      end
-
-      defp do_handle_init(module, name, options, state) do
-        use Membrane.Element.Manager.Log
-
-        with {:ok, internal_state} <- module.handle_init(options) do
-          {:ok, %State{state | internal_state: internal_state}}
-        else
-          {:error, reason} ->
-            warn_error(
-              """
-              Module #{inspect(module)} handle_init callback returned an error
-              """,
-              {:handle_init, module, reason},
-              state
-            )
-
-          other ->
-            warn_error(
-              """
-              Module #{inspect(module)} handle_init callback returned invalid result:
-              #{inspect(other)} instead of {:ok, state} or {:error, reason}
-              """,
-              {:invalid_callback_result, :handle_init, other},
-              state
-            )
-        end
-      end
-
-      def handle_event(pad_name, event, state) do
-        Common.handle_event(pad_name, event, state)
-      end
-
-      def handle_message(message, state) do
-        use Membrane.Element.Manager.Log
-
-        exec_and_handle_callback(:handle_other, [message], state)
-        |> or_warn_error("Error while handling message")
-      end
-
-      def handle_message_bus(message_bus, state), do: {:ok, %{state | message_bus: message_bus}}
-
-      def handle_controlling_pid(pid, state), do: {:ok, %{state | controlling_pid: pid}}
-
-      # TODO: move out of using
-      def handle_demand_in(demand_in, pad_name, state) do
-        {:ok, state} =
-          state
-          |> State.set_pad_data(:source, pad_name, [:options, :other_demand_in], demand_in)
-      end
-
-      def handle_playback_state(:prepared, :playing, state),
-        do: exec_and_handle_callback(:handle_play, [], state)
-
-      def handle_playback_state(:prepared, :stopped, state),
-        do: exec_and_handle_callback(:handle_stop, [], state)
-
-      def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing],
-        do: exec_and_handle_callback(:handle_prepare, [ps], state)
-
-      def get_pad_full_name(pad_name, state) do
-        state |> State.resolve_pad_full_name(pad_name)
-      end
-
-      def handle_link(pad_name, pad_direction, pid, other_name, props, state) do
-        state
-        |> State.link_pad(pad_name, pad_direction, fn %{direction: dir, mode: mode} = data ->
-          data
-          |> Map.merge(
-            case dir do
-              :source -> %{}
-              :sink -> %{sticky_messages: []}
-            end
-          )
-          |> Map.merge(
-            case {dir, mode} do
-              {:sink, :pull} ->
-                :ok =
-                  pid
-                  |> GenServer.call({:membrane_demand_in, [data.options.demand_in, other_name]})
-
-                pb =
-                  PullBuffer.new(
-                    state.name,
-                    {pid, other_name},
-                    pad_name,
-                    data.options.demand_in,
-                    props[:pull_buffer] || %{}
-                  )
-
-                {:ok, pb} = pb |> PullBuffer.fill()
-                %{buffer: pb, self_demand: 0}
-
-              {:source, :pull} ->
-                %{demand: 0}
-
-              {_, :push} ->
-                %{}
-            end
-          )
-          |> Map.merge(%{name: pad_name, pid: pid, other_name: other_name})
-        end)
-      end
-
-      def handle_linking_finished(state) do
-        with {:ok, state} <-
-               state.pads.dynamic_currently_linking
-               |> Helper.Enum.reduce_with(state, fn name, st ->
-                 {:ok, direction} = st |> State.get_pad_data(:any, name, :direction)
-                 handle_pad_added(name, direction, st)
-               end) do
-          static_unlinked =
-            state.pads.info
-            |> Map.values()
-            |> Enum.filter(&(!&1.is_dynamic))
-            |> Enum.map(& &1.name)
-
-          if(static_unlinked |> Enum.empty?() |> Kernel.!()) do
-            warn(
-              """
-              Some static pads remained unlinked: #{inspect(static_unlinked)}
-              """,
-              state
-            )
-          end
-
-          {:ok, state |> State.clear_currently_linking()}
-        end
-      end
-
-      def handle_unlink(pad_name, state) do
-        with {:ok, state} <-
-               state
-               |> State.get_pad_data(:sink, pad_name)
-               |> (case do
-                     {:ok, %{eos: false}} ->
-                       Common.handle_event(
-                         pad_name,
-                         %{Event.eos() | payload: :auto_eos, mode: :async},
-                         state
-                       )
-
-                     _ ->
-                       {:ok, state}
-                   end),
-             {:ok, caps} <- state |> State.get_pad_data(:any, pad_name, :caps),
-             {:ok, direction} <- state |> State.get_pad_data(:any, pad_name, :direction),
-             context <- %Context.PadRemoved{direction: direction, caps: caps},
-             {:ok, state} <-
-               exec_and_handle_callback(:handle_pad_removed, [pad_name, context], state),
-             {:ok, state} <- state |> State.remove_pad_data(:any, pad_name) do
-          {:ok, state}
-        end
-      end
-
-      def unlink(%State{playback: %{state: :stopped}} = state) do
-        state
-        |> State.get_pads_data()
-        |> Helper.Enum.each_with(fn {_name, %{pid: pid, other_name: other_name}} ->
-          GenServer.call(pid, {:membrane_handle_unlink, other_name})
-        end)
-      end
-
-      def unlink(state) do
-        use Membrane.Element.Manager.Log
-
-        warn_error(
-          """
-          Tried to unlink Element that is not stopped
-          """,
-          {:unlink, :cannot_unlink_non_stopped_element},
-          state
-        )
-      end
-
-      def handle_shutdown(%State{module: module, internal_state: internal_state} = state) do
-        module.handle_shutdown(internal_state)
-      end
-
-      def handle_pad_added(name, direction, %State{module: module} = state) do
-        context = %Context.PadAdded{
-          direction: direction
-        }
-
-        module.manager_module.exec_and_handle_callback(:handle_pad_added, [name, context], state)
-      end
-    end
+  def handle_action({:event, {pad_name, event}}, _cb, _params, state)
+      when is_pad_name(pad_name) do
+    ActionExec.send_event(pad_name, event, state)
   end
 
-  def handle_invalid_action(action, callback, _params, state) do
+  def handle_action({:message, message}, _cb, _params, state),
+    do: ActionExec.send_message(message, state)
+
+  def handle_action({:split, {callback, args_list}}, cb, params, state) do
+    exec_and_handle_splitted_callback(callback, cb, params, args_list, state)
+  end
+
+  def handle_action({:playback_change, :suspend}, cb, _params, state)
+      when cb in [:handle_prepare, :handle_play, :handle_stop] do
+    state |> Element.suspend_playback_change()
+  end
+
+  def handle_action({:playback_change, :resume}, _cb, _params, state),
+    do: state |> Element.continue_playback_change()
+
+  def handle_action({:buffer, {pad_name, buffers}}, cb, _params, %State{type: type} = state)
+      when type in [:source, :filter] and is_pad_name(pad_name) do
+    ActionExec.send_buffer(pad_name, buffers, cb, state)
+  end
+
+  def handle_action({:caps, {pad_name, caps}}, _cb, _params, %State{type: type} = state)
+      when type in [:source, :filter] and is_pad_name(pad_name) do
+    ActionExec.send_caps(pad_name, caps, state)
+  end
+
+  def handle_action({:redemand, src_name}, cb, _params, %State{type: type} = state)
+      when type in [:source, :filter] and is_pad_name(src_name) and
+             cb not in [:handle_demand, :handle_process] do
+    ActionExec.handle_redemand(src_name, state)
+  end
+
+  def handle_action({:forward, data}, cb, params, %State{type: :filter} = state)
+      when cb in [:handle_caps, :handle_event, :handle_process] do
+    {action, dir} =
+      case {cb, params} do
+        {:handle_process, _} -> {:buffer, :source}
+        {:handle_caps, _} -> {:caps, :source}
+        {:handle_event, %{direction: :sink}} -> {:event, :source}
+        {:handle_event, %{direction: :source}} -> {:event, :sink}
+      end
+
+    pads = state |> State.get_pads_data(dir) |> Map.keys()
+
+    pads
+    |> Helper.Enum.reduce_with(state, fn pad, st ->
+      handle_action({action, {pad, data}}, cb, params, st)
+    end)
+  end
+
+  def handle_action({:demand, pad_name}, :handle_demand, params, %State{type: :filter} = state)
+      when is_pad_name(pad_name) do
+    handle_action({:demand, {pad_name, 1}}, :handle_demand, params, state)
+  end
+
+  def handle_action(
+        {:demand, {pad_name, size}},
+        :handle_demand,
+        %{source: src_name} = params,
+        %State{type: :filter} = state
+      )
+      when is_pad_name(pad_name) and is_integer(size) do
+    handle_action({:demand, {pad_name, {:source, src_name}, size}}, :handle_demand, params, state)
+  end
+
+  def handle_action(
+        {:demand, {pad_name, {:source, src_name}, size}},
+        cb,
+        _params,
+        %State{type: :filter} = state
+      )
+      when is_pad_name(pad_name) and is_pad_name(src_name) and is_integer(size) and size > 0 do
+    ActionExec.handle_demand(pad_name, {:source, src_name}, :normal, size, cb, state)
+  end
+
+  def handle_action(
+        {:demand, {pad_name, :self, size}},
+        cb,
+        _params,
+        %State{type: :filter} = state
+      )
+      when is_pad_name(pad_name) and is_integer(size) and size > 0 do
+    ActionExec.handle_demand(pad_name, :self, :normal, size, cb, state)
+  end
+
+  def handle_action(
+        {:demand, {pad_name, _src_name, 0}},
+        cb,
+        _params,
+        %State{type: :filter} = state
+      )
+      when is_pad_name(pad_name) do
+    debug(
+      """
+      Ignoring demand of size of 0 requested by callback #{inspect(cb)}
+      on pad #{inspect(pad_name)}.
+      """,
+      state
+    )
+
+    {:ok, state}
+  end
+
+  def handle_action(
+        {:demand, {pad_name, _src_name, size}},
+        cb,
+        _params,
+        %State{type: :filter} = state
+      )
+      when is_pad_name(pad_name) and is_integer(size) and size < 0 do
+    warn_error(
+      """
+      Callback #{inspect(cb)} requested demand of invalid size of #{size}
+      on pad #{inspect(pad_name)}. Demands' sizes should be positive (0-sized
+      demands are ignored).
+      """,
+      :negative_demand,
+      state
+    )
+  end
+
+  def handle_action({:demand, pad_name}, cb, params, %State{type: :sink} = state)
+      when is_pad_name(pad_name) do
+    handle_action({:demand, {pad_name, 1}}, cb, params, state)
+  end
+
+  def handle_action({:demand, {pad_name, size}}, cb, _params, %State{type: :sink} = state)
+      when is_pad_name(pad_name) and is_integer(size) and size > 0 do
+    ActionExec.handle_demand(pad_name, :self, :normal, size, cb, state)
+  end
+
+  def handle_action({:demand, {pad_name, 0}}, cb, _params, %State{type: :sink} = state)
+      when is_pad_name(pad_name) do
+    debug(
+      """
+      Ignoring demand of size of 0 requested by callback #{inspect(cb)}
+      on pad #{inspect(pad_name)}.
+      """,
+      state
+    )
+
+    {:ok, state}
+  end
+
+  def handle_action({:demand, {pad_name, size}}, cb, _params, %State{type: :sink} = state)
+      when is_pad_name(pad_name) and is_integer(size) and size < 0 do
+    warn_error(
+      """
+      Callback #{inspect(cb)} requested demand of invalid size of #{size}
+      on pad #{inspect(pad_name)}. Demands' sizes should be positive (0-sized
+      demands are ignored).
+      """,
+      :negative_demand,
+      state
+    )
+  end
+
+  def handle_action(
+        {:demand, {pad_name, {:set_to, size}}},
+        cb,
+        _params,
+        %State{type: :sink} = state
+      )
+      when is_pad_name(pad_name) and is_integer(size) and size >= 0 do
+    ActionExec.handle_demand(pad_name, :self, :set, size, cb, state)
+  end
+
+  def handle_action(
+        {:demand, {pad_name, {:set_to, size}}},
+        cb,
+        _params,
+        %State{type: :sink} = state
+      )
+      when is_pad_name(pad_name) and is_integer(size) and size < 0 do
+    warn_error(
+      """
+      Callback #{inspect(cb)} requested to set demand to invalid size of #{size}
+      on pad #{inspect(pad_name)}. Demands sizes cannot be negative
+      """,
+      :negative_demand,
+      state
+    )
+  end
+
+  def handle_action(action, callback, _params, state) do
     warn_error(
       """
       Elements' #{inspect(state.module)} #{inspect(callback)} callback returned
       invalid action: #{inspect(action)}. For possible actions are check types
       in Membrane.Element.Action module. Keep in mind that some actions are
       available in different formats or unavailable for some callbacks,
-      base modules or playback states.
+      element types, playback states or under some other conditions.
       """,
       {:invalid_action, action: action, callback: callback, module: state |> Map.get(:module)},
       state
     )
+  end
+
+  def handle_actions(actions, callback, handler_params, state),
+    do:
+      super(
+        actions |> join_buffers(),
+        callback,
+        handler_params,
+        state
+      )
+
+  def callback_handler_warn_error(message, reason, state) do
+    warn_error(message, reason, state)
+  end
+
+  def handle_init(module, name, options) do
+    with {:ok, state} <- State.new(module, name) do
+      do_handle_init(module, options, state)
+    end
+  end
+
+  defp do_handle_init(module, options, state) do
+    with {:ok, internal_state} <- module.handle_init(options) do
+      {:ok, %State{state | internal_state: internal_state}}
+    else
+      {:error, reason} ->
+        warn_error(
+          """
+          Module #{inspect(module)} handle_init callback returned an error
+          """,
+          {:handle_init, module, reason},
+          state
+        )
+
+      other ->
+        warn_error(
+          """
+          Module #{inspect(module)} handle_init callback returned invalid result:
+          #{inspect(other)} instead of {:ok, state} or {:error, reason}
+          """,
+          {:invalid_callback_result, :handle_init, other},
+          state
+        )
+    end
+  end
+
+  def handle_message(message, state) do
+    exec_and_handle_callback(:handle_other, [message], state)
+    |> or_warn_error("Error while handling message")
+  end
+
+  def handle_message_bus(message_bus, state), do: {:ok, %{state | message_bus: message_bus}}
+
+  def handle_controlling_pid(pid, state), do: {:ok, %{state | controlling_pid: pid}}
+
+  def handle_demand_in(demand_in, pad_name, state) do
+    state
+    |> State.set_pad_data(:source, pad_name, [:options, :other_demand_in], demand_in)
+  end
+
+  def handle_playback_state(:prepared, :playing, state),
+    do: exec_and_handle_callback(:handle_play, [], state)
+
+  def handle_playback_state(:prepared, :stopped, state),
+    do: exec_and_handle_callback(:handle_stop, [], state)
+
+  def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing],
+    do: exec_and_handle_callback(:handle_prepare, [ps], state)
+
+  def get_pad_full_name(pad_name, state) do
+    state |> State.resolve_pad_full_name(pad_name)
+  end
+
+  def handle_link(pad_name, pad_direction, pid, other_name, props, state) do
+    state
+    |> State.link_pad(pad_name, pad_direction, fn %{direction: dir, mode: mode} = data ->
+      data
+      |> Map.merge(
+        case dir do
+          :source -> %{}
+          :sink -> %{sticky_messages: []}
+        end
+      )
+      |> Map.merge(
+        case {dir, mode} do
+          {:sink, :pull} ->
+            :ok =
+              pid
+              |> GenServer.call({:membrane_demand_in, [data.options.demand_in, other_name]})
+
+            pb =
+              PullBuffer.new(
+                state.name,
+                {pid, other_name},
+                pad_name,
+                data.options.demand_in,
+                props[:pull_buffer] || %{}
+              )
+
+            {:ok, pb} = pb |> PullBuffer.fill()
+            %{buffer: pb, self_demand: 0}
+
+          {:source, :pull} ->
+            %{demand: 0}
+
+          {_, :push} ->
+            %{}
+        end
+      )
+      |> Map.merge(%{name: pad_name, pid: pid, other_name: other_name})
+    end)
+  end
+
+  def handle_linking_finished(state) do
+    with {:ok, state} <-
+           state.pads.dynamic_currently_linking
+           |> Helper.Enum.reduce_with(state, fn name, st ->
+             {:ok, direction} = st |> State.get_pad_data(:any, name, :direction)
+             handle_pad_added(name, direction, st)
+           end) do
+      static_unlinked =
+        state.pads.info
+        |> Map.values()
+        |> Enum.filter(&(!&1.is_dynamic))
+        |> Enum.map(& &1.name)
+
+      if(static_unlinked |> Enum.empty?() |> Kernel.!()) do
+        warn(
+          """
+          Some static pads remained unlinked: #{inspect(static_unlinked)}
+          """,
+          state
+        )
+      end
+
+      {:ok, state |> State.clear_currently_linking()}
+    end
+  end
+
+  def handle_unlink(pad_name, state) do
+    with {:ok, state} <-
+           state
+           |> State.get_pad_data(:sink, pad_name)
+           |> (case do
+                 {:ok, %{eos: false}} ->
+                   handle_event(
+                     pad_name,
+                     %{Event.eos() | payload: :auto_eos, mode: :async},
+                     state
+                   )
+
+                 _ ->
+                   {:ok, state}
+               end),
+         {:ok, caps} <- state |> State.get_pad_data(:any, pad_name, :caps),
+         {:ok, direction} <- state |> State.get_pad_data(:any, pad_name, :direction),
+         context <- %Context.PadRemoved{direction: direction, caps: caps},
+         {:ok, state} <-
+           exec_and_handle_callback(:handle_pad_removed, [pad_name, context], state),
+         {:ok, state} <- state |> State.remove_pad_data(:any, pad_name) do
+      {:ok, state}
+    end
+  end
+
+  def unlink(%State{playback: %{state: :stopped}} = state) do
+    state
+    |> State.get_pads_data()
+    |> Helper.Enum.each_with(fn {_name, %{pid: pid, other_name: other_name}} ->
+      GenServer.call(pid, {:membrane_handle_unlink, other_name})
+    end)
+  end
+
+  def unlink(state) do
+    warn_error(
+      """
+      Tried to unlink Element that is not stopped
+      """,
+      {:unlink, :cannot_unlink_non_stopped_element},
+      state
+    )
+  end
+
+  def handle_shutdown(%State{module: module, internal_state: internal_state}) do
+    module.handle_shutdown(internal_state)
+  end
+
+  def handle_pad_added(name, direction, state) do
+    context = %Context.PadAdded{
+      direction: direction
+    }
+
+    exec_and_handle_callback(:handle_pad_added, [name, context], state)
   end
 
   def handle_caps(:pull, pad_name, caps, state) do
@@ -277,7 +423,7 @@ defmodule Membrane.Element.Manager.Common do
 
   def handle_caps(:push, pad_name, caps, state), do: do_handle_caps(pad_name, caps, state)
 
-  def do_handle_caps(pad_name, caps, %State{module: module} = state) do
+  def do_handle_caps(pad_name, caps, state) do
     %{accepted_caps: accepted_caps, caps: old_caps} =
       state |> State.get_pad_data!(:sink, pad_name)
 
@@ -285,7 +431,7 @@ defmodule Membrane.Element.Manager.Common do
 
     with :ok <- if(Caps.Matcher.match?(accepted_caps, caps), do: :ok, else: :invalid_caps),
          {:ok, state} <-
-           module.manager_module.exec_and_handle_callback(
+           exec_and_handle_callback(
              :handle_caps,
              [pad_name, caps, context],
              state
@@ -371,11 +517,11 @@ defmodule Membrane.Element.Manager.Common do
 
   defp parse_event(_pad_name, _event, state), do: {{:ok, :handle}, state}
 
-  def exec_event_handler(pad_name, event, %State{module: module} = state) do
+  def exec_event_handler(pad_name, event, state) do
     %{direction: dir, caps: caps} = state |> State.get_pad_data!(:any, pad_name)
     context = %Context.Event{caps: caps}
 
-    module.manager_module.exec_and_handle_callback(
+    exec_and_handle_callback(
       :handle_event,
       %{direction: dir},
       [pad_name, event, context],
@@ -383,13 +529,45 @@ defmodule Membrane.Element.Manager.Common do
     )
   end
 
-  def handle_pullbuffer_output(pad_name, {:event, e}, state),
+  defp handle_pullbuffer_output(pad_name, _source, {:event, e}, state),
     do: do_handle_event(pad_name, e, state)
 
-  def handle_pullbuffer_output(pad_name, {:caps, c}, state),
+  defp handle_pullbuffer_output(pad_name, _source, {:caps, c}, state),
     do: do_handle_caps(pad_name, c, state)
 
-  def join_buffers(actions) do
+  defp handle_pullbuffer_output(
+         pad_name,
+         _source,
+         {:buffers, buffers, buf_cnt},
+         %State{type: :sink} = state
+       ) do
+    {:ok, state} =
+      state
+      |> State.update_pad_data(:sink, pad_name, :self_demand, &{:ok, &1 - buf_cnt})
+
+    context = %Context.Write{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
+    debug("Executing handle_write with buffers #{inspect(buffers)}", state)
+    exec_and_handle_callback(:handle_write, [pad_name, buffers, context], state)
+  end
+
+  defp handle_pullbuffer_output(
+         pad_name,
+         source,
+         {:buffers, buffers, buf_cnt},
+         %State{type: :filter} = state
+       ) do
+    {:ok, state} = state |> update_sink_self_demand(pad_name, source, &{:ok, &1 - buf_cnt})
+
+    context = %Context.Process{
+      caps: state |> State.get_pad_data!(:sink, pad_name, :caps),
+      source: source,
+      source_caps: state |> State.get_pad_data!(:sink, pad_name, :caps)
+    }
+
+    exec_and_handle_callback(:handle_process, [pad_name, buffers, context], state)
+  end
+
+  defp join_buffers(actions) do
     actions
     |> Helper.Enum.chunk_by(
       fn
@@ -416,7 +594,11 @@ defmodule Membrane.Element.Manager.Common do
     |> or_warn_error("Unable to fill sink pull buffers")
   end
 
-  def handle_demand(pad_name, size, %State{module: module} = state) do
+  def handle_redemand(src_name, state) do
+    handle_demand(src_name, 0, state)
+  end
+
+  def handle_demand(pad_name, size, state) do
     {{:ok, total_size}, state} =
       state
       |> State.get_update_pad_data(:source, pad_name, :demand, &{{:ok, &1 + size}, &1 + size})
@@ -427,7 +609,7 @@ defmodule Membrane.Element.Manager.Common do
 
       context = %Context.Demand{caps: caps}
 
-      module.manager_module.exec_and_handle_callback(
+      exec_and_handle_callback(
         :handle_demand,
         %{source: pad_name, split_cont_f: &exec_handle_demand?(pad_name, &1)},
         [pad_name, total_size, demand_in, context],
@@ -467,6 +649,205 @@ defmodule Membrane.Element.Manager.Common do
 
       _ ->
         true
+    end
+  end
+
+  def handle_self_demand(pad_name, source, :normal, buf_cnt, %State{type: :filter} = state) do
+    {:ok, state} = state |> update_sink_self_demand(pad_name, source, &{:ok, &1 + buf_cnt})
+
+    handle_process_pull(pad_name, source, buf_cnt, state)
+    |> or_warn_error("""
+    Demand of size #{inspect(buf_cnt)} on sink pad #{inspect(pad_name)}
+    was raised, and handle_process was called, but an error happened.
+    """)
+  end
+
+  def handle_self_demand(pad_name, :self, type, buf_cnt, %State{type: :sink} = state) do
+    {:ok, state} =
+      case type do
+        :normal ->
+          state
+          |> State.update_pad_data(:sink, pad_name, :self_demand, &{:ok, &1 + buf_cnt})
+
+        :set ->
+          state
+          |> State.set_pad_data(:sink, pad_name, :self_demand, buf_cnt)
+      end
+
+    handle_write(:pull, pad_name, state)
+    |> or_warn_error("""
+    Demand of size #{inspect(buf_cnt)} on pad #{inspect(pad_name)}
+    was raised, and handle_write was called, but an error happened.
+    """)
+  end
+
+  def handle_buffer(:push, pad_name, buffers, %State{type: :filter} = state) do
+    handle_process_push(pad_name, buffers, state)
+  end
+
+  def handle_buffer(:pull, pad_name, buffers, %State{type: :filter} = state) do
+    {{:ok, was_empty?}, state} =
+      state
+      |> State.get_update_pad_data(:sink, pad_name, :buffer, fn pb ->
+        was_empty = pb |> PullBuffer.empty?()
+
+        with {:ok, pb} <- pb |> PullBuffer.store(buffers) do
+          {{:ok, was_empty}, pb}
+        end
+      end)
+
+    if was_empty? do
+      with {:ok, state} <- check_and_handle_process(pad_name, state),
+           {:ok, state} <- check_and_handle_demands(state),
+           do: {:ok, state}
+    else
+      {:ok, state}
+    end
+  end
+
+  def handle_buffer(:push, pad_name, buffer, %State{type: :sink} = state),
+    do: handle_write(:push, pad_name, buffer, state)
+
+  def handle_buffer(:pull, pad_name, buffer, %State{type: :sink} = state) do
+    {:ok, state} =
+      state
+      |> State.update_pad_data(:sink, pad_name, :buffer, &(&1 |> PullBuffer.store(buffer)))
+
+    check_and_handle_write(pad_name, state)
+    |> or_warn_error(["
+        New buffer arrived:", Buffer.print(buffer), "
+        and Membrane tried to execute handle_demand and then handle_write
+        for each unsupplied demand, but an error happened.
+        "])
+  end
+
+  def handle_process_push(pad_name, buffers, state) do
+    context = %Context.Process{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
+
+    exec_and_handle_callback(:handle_process, [pad_name, buffers, context], state)
+    |> or_warn_error("Error while handling process")
+  end
+
+  def handle_process_pull(pad_name, source, buf_cnt, state) do
+    with {{:ok, out}, state} <-
+           state
+           |> State.get_update_pad_data(
+             :sink,
+             pad_name,
+             :buffer,
+             &(&1 |> PullBuffer.take(buf_cnt))
+           ),
+         {:out, {_, data}} <-
+           (if out == {:empty, []} do
+              {:empty_pb, state}
+            else
+              {:out, out}
+            end),
+         {:ok, state} <-
+           data
+           |> Helper.Enum.reduce_with(state, fn v, st ->
+             handle_pullbuffer_output(pad_name, source, v, st)
+           end) do
+      :ok = send_dumb_demand_if_demand_positive_and_pullbuffer_nonempty(pad_name, source, state)
+      {:ok, state}
+    else
+      {:empty_pb, state} -> {:ok, state}
+      {:error, reason} -> warn_error("Error while handling process", reason, state)
+    end
+  end
+
+  def handle_write(:push, pad_name, buffers, state) do
+    context = %Context.Write{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
+
+    exec_and_handle_callback(:handle_write, [pad_name, buffers, context], state)
+    |> or_warn_error("Error while handling write")
+  end
+
+  def handle_write(:pull, pad_name, state) do
+    with {{:ok, out}, state} <-
+           state
+           |> State.get_update_pad_data(:sink, pad_name, fn %{self_demand: demand, buffer: pb} =
+                                                              data ->
+             with {{:ok, out}, npb} <- PullBuffer.take(pb, demand) do
+               {{:ok, out}, %{data | buffer: npb}}
+             end
+           end),
+         {:out, {_, data}} <-
+           (if out == {:empty, []} do
+              {:empty_pb, state}
+            else
+              {:out, out}
+            end),
+         {:ok, state} <-
+           data
+           |> Helper.Enum.reduce_with(state, fn v, st ->
+             handle_pullbuffer_output(pad_name, :self, v, st)
+           end) do
+      {:ok, state}
+    else
+      {:empty_pb, state} -> {:ok, state}
+      {:error, reason} -> warn_error("Error while handling write", reason, state)
+    end
+  end
+
+  defp send_dumb_demand_if_demand_positive_and_pullbuffer_nonempty(_pad_name, :self, _state),
+    do: :ok
+
+  defp send_dumb_demand_if_demand_positive_and_pullbuffer_nonempty(
+         pad_name,
+         {:source, src_name},
+         state
+       ) do
+    if state
+       |> State.get_pad_data!(:sink, pad_name, :buffer)
+       |> PullBuffer.empty?()
+       |> Kernel.!() && state |> State.get_pad_data!(:source, src_name, :demand) > 0 do
+      debug(
+        """
+        handle_process did not produce expected amount of buffers, despite
+        PullBuffer being not empty. Trying executing handle_demand again.
+        """,
+        state
+      )
+
+      send(self(), {:membrane_demand, [0, src_name]})
+    end
+
+    :ok
+  end
+
+  defp check_and_handle_process(pad_name, state) do
+    demand = state |> State.get_pad_data!(:sink, pad_name, :self_demand)
+
+    if demand > 0 do
+      handle_process_pull(pad_name, nil, demand, state)
+    else
+      {:ok, state}
+    end
+  end
+
+  defp check_and_handle_demands(state) do
+    state
+    |> State.get_pads_data(:source)
+    |> Helper.Enum.reduce_with(state, fn {name, _data}, st ->
+      handle_demand(name, 0, st)
+    end)
+    |> or_warn_error("""
+    Membrane tried to execute handle_demand and then handle_process
+    for each unsupplied demand, but an error happened.
+    """)
+  end
+
+  defp update_sink_self_demand(state, pad_name, :self, f),
+    do: state |> State.update_pad_data(:sink, pad_name, :self_demand, f)
+
+  defp update_sink_self_demand(state, _pad_name, _src, _f), do: {:ok, state}
+
+  defp check_and_handle_write(pad_name, state) do
+    if State.get_pad_data!(state, :sink, pad_name, :self_demand) > 0 do
+      handle_write(:pull, pad_name, state)
+    else
+      {:ok, state}
     end
   end
 end

@@ -57,7 +57,7 @@ defmodule Membrane.Element.Base.Filter do
       @behaviour unquote(__MODULE__)
 
       @impl true
-      def manager_module, do: Membrane.Element.Manager.Filter
+      def membrane_element_type, do: :filter
 
       @impl true
       def handle_caps(_pad, caps, _context, state), do: {{:ok, forward: caps}, state}

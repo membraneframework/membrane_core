@@ -10,13 +10,14 @@ defmodule Membrane.Element.Manager.State do
   alias Element.Pad
   alias Element.Base.Mixin.CommonBehaviour
   use Membrane.Helper
-  alias __MODULE__
+  alias __MODULE__, as: ThisModule
   alias Membrane.Mixins.{Playback, Playbackable}
   require Pad
 
-  @type t :: %State{
+  @type t :: %__MODULE__{
           internal_state: CommonBehaviour.internal_state_t(),
           module: module,
+          type: Element.type_t(),
           name: Element.name_t(),
           playback: Playback.t(),
           pads: %{optional(Element.Pad.name_t()) => pid},
@@ -27,6 +28,7 @@ defmodule Membrane.Element.Manager.State do
 
   defstruct internal_state: nil,
             module: nil,
+            type: nil,
             name: nil,
             playback: %Playback{},
             pads: %{},
@@ -36,7 +38,7 @@ defmodule Membrane.Element.Manager.State do
 
   defimpl Playbackable, for: __MODULE__ do
     use Playbackable.Default
-    def get_controlling_pid(%State{controlling_pid: pid}), do: pid
+    def get_controlling_pid(%ThisModule{controlling_pid: pid}), do: pid
   end
 
   @doc """
@@ -44,12 +46,11 @@ defmodule Membrane.Element.Manager.State do
   """
   @spec new(module, Element.name_t()) :: {:ok, t} | {:error, any}
   def new(module, name) do
-    # Initialize source pads
-
     with {:ok, parsed_src_pads} <- handle_known_pads(:known_source_pads, :source, module),
          {:ok, parsed_sink_pads} <- handle_known_pads(:known_sink_pads, :sink, module) do
-      %State{
+      %__MODULE__{
         module: module,
+        type: module.membrane_element_type(),
         name: name,
         pads: %{
           data: %{},

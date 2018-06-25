@@ -54,7 +54,7 @@ defmodule Membrane.Element.Base.Sink do
       @behaviour unquote(__MODULE__)
 
       @impl true
-      def manager_module, do: Membrane.Element.Manager.Sink
+      def membrane_element_type, do: :sink
 
       @impl true
       def handle_write1(_pad, _buffer, _context, state),

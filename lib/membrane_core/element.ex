@@ -6,13 +6,13 @@ defmodule Membrane.Element do
   doing so.
   """
 
-  use Membrane.Mixins.Log, import: false, tags: :core
-  use Membrane.Element.Manager.Log, import: false, tags: :core
-  alias Membrane.Element.Pad
-  use Membrane.Helper
-  alias Membrane.Element.Manager.State
+  alias Membrane.Element
+  alias Element.Pad
+  alias Element.Manager.{Common, MessageDispatcher, State}
   import Membrane.Helper.GenServer
-  alias Membrane.Element.Manager.MessageDispatcher
+  use Element.Manager.Log, import: false, tags: :core
+  use Membrane.Mixins.Log, import: false, tags: :core
+  use Membrane.Helper
   use GenServer
   use Membrane.Mixins.Playback
 
@@ -27,6 +27,13 @@ defmodule Membrane.Element do
   """
   @type name_t :: atom | {atom, non_neg_integer}
 
+  @typedoc """
+  Defines possible element types:
+  - source, producing buffers
+  - filter, processing buffers
+  - sink, consuming buffers
+  """
+  @type type_t :: :source | :filter | :sink
 
   @doc """
   Checks whether module is an element.
@@ -206,7 +213,7 @@ defmodule Membrane.Element do
     Process.monitor(pipeline)
     debug("Element: initializing: #{inspect(module)}, options: #{inspect(options)}")
 
-    with {:ok, state} <- module.manager_module.handle_init(module, name, options) do
+    with {:ok, state} <- Common.handle_init(module, name, options) do
       debug("Element: initialized: #{inspect(module)}")
       {:ok, state}
     else
@@ -217,7 +224,7 @@ defmodule Membrane.Element do
   end
 
   @impl GenServer
-  def terminate(reason, %State{module: module, playback: playback} = state) do
+  def terminate(reason, %State{playback: playback} = state) do
     import Membrane.Mixins.Log
 
     case playback.state do
@@ -233,7 +240,7 @@ defmodule Membrane.Element do
         )
     end
 
-    module.manager_module.handle_shutdown(state)
+    Common.handle_shutdown(state)
   end
 
   @impl Playback

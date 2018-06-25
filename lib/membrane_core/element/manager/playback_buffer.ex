@@ -1,12 +1,11 @@
 defmodule Membrane.Element.Manager.PlaybackBuffer do
-  alias __MODULE__
-  alias Membrane.Element.Manager.State
-  alias Membrane.{Buffer, Event}
-  use Membrane.Helper
-  use Membrane.Element.Manager.Log
   alias Membrane.Mixins.Playback
+  alias Membrane.{Buffer, Element, Event}
+  alias Element.Manager.{Common, State}
+  use Element.Manager.Log
+  use Membrane.Helper
 
-  @type t :: %Membrane.Element.Manager.PlaybackBuffer{
+  @type t :: %__MODULE__{
           q: Qex.t()
         }
 
@@ -15,7 +14,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
   @qe Qex
 
   def new do
-    %PlaybackBuffer{q: @qe.new}
+    %__MODULE__{q: @qe.new}
   end
 
   def store(msg, %State{playback: %Playback{state: :playing}} = state), do: exec(msg, state)
@@ -49,10 +48,10 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
 
   def eval(state), do: {:ok, state}
 
-  def empty?(%PlaybackBuffer{q: q}), do: q |> Enum.empty?()
+  def empty?(%__MODULE__{q: q}), do: q |> Enum.empty?()
 
   # Callback invoked on demand request coming from the source pad in the pull mode
-  defp exec({:membrane_demand, [size, pad_name]}, %State{module: module} = state) do
+  defp exec({:membrane_demand, [size, pad_name]}, state) do
     {:ok, _} = state |> State.get_pad_data(:source, pad_name)
 
     demand =
@@ -63,11 +62,11 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
       end
 
     debug("Received #{demand} on pad #{inspect(pad_name)}", state)
-    module.manager_module.handle_demand(pad_name, size, state)
+    Common.handle_demand(pad_name, size, state)
   end
 
   # Callback invoked on buffer coming through the sink pad
-  defp exec({:membrane_buffer, [buffers, pad_name]}, %State{module: module} = state) do
+  defp exec({:membrane_buffer, [buffers, pad_name]}, state) do
     {:ok, %{mode: mode}} = state |> State.get_pad_data(:sink, pad_name)
 
     debug(
@@ -93,18 +92,18 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
         cond do
           state |> State.get_pad_data!(:sink, pad_name, :sos) |> Kernel.not() ->
             event = %{Event.sos() | payload: :auto_sos}
-            module.manager_module.handle_event(pad_name, event, state)
+            Common.handle_event(pad_name, event, state)
 
           true ->
             {:ok, state}
         end
 
-      module.manager_module.handle_buffer(mode, pad_name, buffers, state)
+      Common.handle_buffer(mode, pad_name, buffers, state)
     end
   end
 
   # Callback invoked on incoming caps
-  defp exec({:membrane_caps, [caps, pad_name]}, %State{module: module} = state) do
+  defp exec({:membrane_caps, [caps, pad_name]}, state) do
     {:ok, %{mode: mode}} = state |> State.get_pad_data(:sink, pad_name)
 
     debug(
@@ -115,11 +114,11 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
       state
     )
 
-    module.manager_module.handle_caps(mode, pad_name, caps, state)
+    Common.handle_caps(mode, pad_name, caps, state)
   end
 
   # Callback invoked on incoming event
-  defp exec({:membrane_event, [event, pad_name]}, %State{module: module} = state) do
+  defp exec({:membrane_event, [event, pad_name]}, state) do
     exec = fn state ->
       {:ok, _data} = state |> State.get_pad_data(:any, pad_name)
 
@@ -131,7 +130,7 @@ defmodule Membrane.Element.Manager.PlaybackBuffer do
         state
       )
 
-      module.manager_module.handle_event(pad_name, event, state)
+      Common.handle_event(pad_name, event, state)
     end
 
     case event.stick_to do

@@ -2,10 +2,9 @@ defmodule Membrane.Element.Manager.ActionExec do
   @moduledoc false
   # Module containing action handlers common for elements of all types.
 
-  use Membrane.Element.Manager.Log
-  alias Membrane.{Buffer, Caps, Event, Message, Pad}
-  alias Membrane.Element.Manager.State
-  alias Membrane.Caps
+  alias Membrane.{Buffer, Caps, Element, Event, Message, Pad}
+  alias Element.Manager.{Common, State}
+  use Element.Manager.Log
   use Membrane.Helper
 
   @spec send_buffer(Pad.name_t(), atom, [Buffer.t()], State.t()) :: :ok | {:error, any}
@@ -154,7 +153,7 @@ defmodule Membrane.Element.Manager.ActionExec do
     )
   end
 
-  def handle_demand(pad_name, source, type, size, callback, %State{module: module} = state) do
+  def handle_demand(pad_name, source, type, size, callback, state) do
     debug("Requesting demand of size #{inspect(size)} on pad #{inspect(pad_name)}", state)
 
     with {:sink, {:ok, %{mode: :pull}}} <- {:sink, state |> State.get_pad_data(:sink, pad_name)},
@@ -170,7 +169,7 @@ defmodule Membrane.Element.Manager.ActionExec do
           {:ok, state}
 
         _ ->
-          module.manager_module.handle_self_demand(pad_name, source, type, size, state)
+          Common.handle_self_demand(pad_name, source, type, size, state)
       end
     else
       {_direction, {:ok, %{mode: :push}}} ->
@@ -182,9 +181,9 @@ defmodule Membrane.Element.Manager.ActionExec do
   end
 
   @spec handle_redemand(Pad.name_t(), State.t()) :: {:ok, State.t()} | no_return()
-  def handle_redemand(src_name, %State{module: module} = state) do
+  def handle_redemand(src_name, state) do
     with {:ok, %{mode: :pull}} <- state |> State.get_pad_data(:source, src_name) do
-      module.manager_module.handle_redemand(src_name, state)
+      Common.handle_redemand(src_name, state)
     else
       {:ok, %{mode: :push}} ->
         handle_invalid_pad_mode(src_name, :pull, :demand, state)

@@ -41,7 +41,7 @@ defmodule Membrane.Element.Base.Source do
       @behaviour unquote(__MODULE__)
 
       @impl true
-      def manager_module, do: Membrane.Element.Manager.Source
+      def membrane_element_type, do: :source
 
       @impl true
       def handle_demand1(_pad, _context, state),

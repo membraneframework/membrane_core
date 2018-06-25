@@ -36,7 +36,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @doc """
   Returns module that manages this element.
   """
-  @callback manager_module :: module
+  @callback membrane_element_type :: Element.type_t()
 
   @doc """
   Callback invoked on initialization of element process. It should parse options
