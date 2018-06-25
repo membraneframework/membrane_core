@@ -43,7 +43,7 @@ defmodule Membrane.PullBuffer do
   Properties that can be passed when creating new PullBuffer
   """
   @type prop_t ::
-          {:preffered_size, pos_integer()}
+          {:prefered_size, pos_integer()}
           | {:min_demand, pos_integer()}
           | {:toilet, boolean()}
 
