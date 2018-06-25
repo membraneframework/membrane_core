@@ -8,8 +8,9 @@ defmodule Membrane.Element.Manager.ActionExec do
   alias Membrane.Caps
   use Membrane.Helper
 
-  @spec send_buffer(Pad.name_t(), atom, [Buffer.t()], State.t()) :: :ok | {:error, any}
+  @type return_t :: {:ok | {:error, reason :: any()}, State.t()}
 
+  @spec send_buffer(Pad.name_t(), [Buffer.t()], atom, State.t()) :: return_t()
   def send_buffer(
         _pad_name,
         _buffer,
@@ -86,7 +87,7 @@ defmodule Membrane.Element.Manager.ActionExec do
     end
   end
 
-  @spec send_caps(Pad.name_t(), Caps.t(), State.t()) :: :ok
+  @spec send_caps(Pad.name_t(), Caps.t(), State.t()) :: return_t()
   def send_caps(pad_name, caps, state) do
     debug(
       """
@@ -135,7 +136,7 @@ defmodule Membrane.Element.Manager.ActionExec do
           pos_integer,
           atom,
           State.t()
-        ) :: :ok | {:error, any}
+        ) :: {:ok | {:error, any}, State.t()}
   def handle_demand(pad_name, source, type, size, callback, state)
 
   def handle_demand(
@@ -194,7 +195,7 @@ defmodule Membrane.Element.Manager.ActionExec do
     end
   end
 
-  @spec send_event(Pad.name_t(), Event.t(), State.t()) :: :ok
+  @spec send_event(Pad.name_t(), Event.t(), State.t()) :: return_t()
   def send_event(pad_name, event, state) do
     debug(
       """
@@ -235,7 +236,7 @@ defmodule Membrane.Element.Manager.ActionExec do
 
   defp handle_event(_pad_name, _event, state), do: {:ok, state}
 
-  @spec send_message(Message.t(), State.t()) :: :ok
+  @spec send_message(Message.t(), State.t()) :: return_t()
   def send_message(%Message{} = message, %State{message_bus: nil} = state) do
     debug("Dropping #{inspect(message)} as message bus is undefined", state)
     {:ok, state}

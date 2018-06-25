@@ -15,7 +15,7 @@ defmodule Membrane.Event do
   """
 
   @type type_t :: atom
-  @type payload_t :: struct
+  @type payload_t :: struct | nil
 
   @type t :: %Membrane.Event{
           type: type_t,
