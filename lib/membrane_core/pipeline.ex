@@ -260,7 +260,13 @@ defmodule Membrane.Pipeline do
          :ok <- links |> link_children(state),
          {children_names, children_pids} = children_to_pids |> Enum.unzip(),
          :ok <- children_pids |> set_children_message_bus,
-         {:ok, state} <- exec_and_handle_callback(:handle_spec_started, [children_names], state),
+         {:ok, state} <-
+           CallbackHandler.exec_and_handle_callback(
+             :handle_spec_started,
+             __MODULE__,
+             [children_names],
+             state
+           ),
          :ok <-
            children_pids
            |> Helper.Enum.each_with(&Element.change_playback_state(&1, state.playback.state)) do
@@ -503,7 +509,8 @@ defmodule Membrane.Pipeline do
           {:prepared, :stopped} -> {:handle_stop, []}
         end
 
-      with {:ok, new_state} <- exec_and_handle_callback(callback, args, new_state) do
+      with {:ok, new_state} <-
+             CallbackHandler.exec_and_handle_callback(callback, __MODULE__, args, new_state) do
         continue_playback_change(new_state)
       else
         error -> error
@@ -538,13 +545,18 @@ defmodule Membrane.Pipeline do
 
   def handle_info([:membrane_message, from, %Message{} = message], state) do
     with {:ok, _} <- state |> State.get_child(from) do
-      exec_and_handle_callback(:handle_message, [message, from], state)
+      CallbackHandler.exec_and_handle_callback(
+        :handle_message,
+        __MODULE__,
+        [message, from],
+        state
+      )
     end
     |> noreply(state)
   end
 
   def handle_info(message, state) do
-    exec_and_handle_callback(:handle_other, [message], state)
+    CallbackHandler.exec_and_handle_callback(:handle_other, __MODULE__, [message], state)
     |> noreply(state)
   end
 
@@ -577,14 +589,15 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  def handle_action(action, callback, params, state) do
-    warn("""
-    Pipelines' #{inspect(state.module)} #{inspect(callback)} returned invalid
-    action: #{inspect(action)}. For available actions check
-    Membrane.Pipeline.action_t type.
-    """)
-
-    super(action, callback, params, state)
+  def handle_action(action, callback, _params, state) do
+    warn_error(
+      """
+      Pipelines' #{inspect(state.module)} #{inspect(callback)} returned invalid
+      action: #{inspect(action)}. For available actions check
+      Membrane.Pipeline.action_t type.
+      """,
+      {:invalid_action, action: action, callback: callback, module: state |> Map.get(:module)}
+    )
   end
 
   defmacro __using__(_) do

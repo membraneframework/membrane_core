@@ -1,11 +1,250 @@
-defmodule Membrane.Element.Manager.ActionExec do
+defmodule Membrane.Element.Manager.ActionHandler do
   @moduledoc false
   # Module containing action handlers common for elements of all types.
 
   alias Membrane.{Buffer, Caps, Element, Event, Message, Pad}
   alias Element.Manager.{Common, State}
+  import Element.Pad, only: [is_pad_name: 1]
   use Element.Manager.Log
   use Membrane.Helper
+  use Membrane.Mixins.CallbackHandler
+
+  @impl CallbackHandler
+  def handle_action({:event, {pad_name, event}}, _cb, _params, state)
+      when is_pad_name(pad_name) do
+    send_event(pad_name, event, state)
+  end
+
+  def handle_action({:message, message}, _cb, _params, state),
+    do: send_message(message, state)
+
+  def handle_action({:split, {callback, args_list}}, cb, params, state) do
+    CallbackHandler.exec_and_handle_splitted_callback(
+      callback,
+      cb,
+      __MODULE__,
+      params,
+      args_list,
+      state
+    )
+  end
+
+  def handle_action({:playback_change, :suspend}, cb, _params, state)
+      when cb in [:handle_prepare, :handle_play, :handle_stop] do
+    state |> Element.suspend_playback_change()
+  end
+
+  def handle_action({:playback_change, :resume}, _cb, _params, state),
+    do: state |> Element.continue_playback_change()
+
+  def handle_action({:buffer, {pad_name, buffers}}, cb, _params, %State{type: type} = state)
+      when type in [:source, :filter] and is_pad_name(pad_name) do
+    send_buffer(pad_name, buffers, cb, state)
+  end
+
+  def handle_action({:caps, {pad_name, caps}}, _cb, _params, %State{type: type} = state)
+      when type in [:source, :filter] and is_pad_name(pad_name) do
+    send_caps(pad_name, caps, state)
+  end
+
+  def handle_action({:redemand, src_name}, cb, _params, %State{type: type} = state)
+      when type in [:source, :filter] and is_pad_name(src_name) and
+             cb not in [:handle_demand, :handle_process] do
+    handle_redemand(src_name, state)
+  end
+
+  def handle_action({:forward, data}, cb, params, %State{type: :filter} = state)
+      when cb in [:handle_caps, :handle_event, :handle_process] do
+    {action, dir} =
+      case {cb, params} do
+        {:handle_process, _} -> {:buffer, :source}
+        {:handle_caps, _} -> {:caps, :source}
+        {:handle_event, %{direction: :sink}} -> {:event, :source}
+        {:handle_event, %{direction: :source}} -> {:event, :sink}
+      end
+
+    pads = state |> State.get_pads_data(dir) |> Map.keys()
+
+    pads
+    |> Helper.Enum.reduce_with(state, fn pad, st ->
+      handle_action({action, {pad, data}}, cb, params, st)
+    end)
+  end
+
+  def handle_action({:demand, pad_name}, :handle_demand, params, %State{type: :filter} = state)
+      when is_pad_name(pad_name) do
+    handle_action({:demand, {pad_name, 1}}, :handle_demand, params, state)
+  end
+
+  def handle_action(
+        {:demand, {pad_name, size}},
+        :handle_demand,
+        %{source: src_name} = params,
+        %State{type: :filter} = state
+      )
+      when is_pad_name(pad_name) and is_integer(size) do
+    handle_action({:demand, {pad_name, {:source, src_name}, size}}, :handle_demand, params, state)
+  end
+
+  def handle_action(
+        {:demand, {pad_name, {:source, src_name}, size}},
+        cb,
+        _params,
+        %State{type: :filter} = state
+      )
+      when is_pad_name(pad_name) and is_pad_name(src_name) and is_integer(size) and size > 0 do
+    handle_demand(pad_name, {:source, src_name}, :normal, size, cb, state)
+  end
+
+  def handle_action(
+        {:demand, {pad_name, :self, size}},
+        cb,
+        _params,
+        %State{type: :filter} = state
+      )
+      when is_pad_name(pad_name) and is_integer(size) and size > 0 do
+    handle_demand(pad_name, :self, :normal, size, cb, state)
+  end
+
+  def handle_action(
+        {:demand, {pad_name, _src_name, 0}},
+        cb,
+        _params,
+        %State{type: :filter} = state
+      )
+      when is_pad_name(pad_name) do
+    debug(
+      """
+      Ignoring demand of size of 0 requested by callback #{inspect(cb)}
+      on pad #{inspect(pad_name)}.
+      """,
+      state
+    )
+
+    {:ok, state}
+  end
+
+  def handle_action(
+        {:demand, {pad_name, _src_name, size}},
+        cb,
+        _params,
+        %State{type: :filter} = state
+      )
+      when is_pad_name(pad_name) and is_integer(size) and size < 0 do
+    warn_error(
+      """
+      Callback #{inspect(cb)} requested demand of invalid size of #{size}
+      on pad #{inspect(pad_name)}. Demands' sizes should be positive (0-sized
+      demands are ignored).
+      """,
+      :negative_demand,
+      state
+    )
+  end
+
+  def handle_action({:demand, pad_name}, cb, params, %State{type: :sink} = state)
+      when is_pad_name(pad_name) do
+    handle_action({:demand, {pad_name, 1}}, cb, params, state)
+  end
+
+  def handle_action({:demand, {pad_name, size}}, cb, _params, %State{type: :sink} = state)
+      when is_pad_name(pad_name) and is_integer(size) and size > 0 do
+    handle_demand(pad_name, :self, :normal, size, cb, state)
+  end
+
+  def handle_action({:demand, {pad_name, 0}}, cb, _params, %State{type: :sink} = state)
+      when is_pad_name(pad_name) do
+    debug(
+      """
+      Ignoring demand of size of 0 requested by callback #{inspect(cb)}
+      on pad #{inspect(pad_name)}.
+      """,
+      state
+    )
+
+    {:ok, state}
+  end
+
+  def handle_action({:demand, {pad_name, size}}, cb, _params, %State{type: :sink} = state)
+      when is_pad_name(pad_name) and is_integer(size) and size < 0 do
+    warn_error(
+      """
+      Callback #{inspect(cb)} requested demand of invalid size of #{size}
+      on pad #{inspect(pad_name)}. Demands' sizes should be positive (0-sized
+      demands are ignored).
+      """,
+      :negative_demand,
+      state
+    )
+  end
+
+  def handle_action(
+        {:demand, {pad_name, {:set_to, size}}},
+        cb,
+        _params,
+        %State{type: :sink} = state
+      )
+      when is_pad_name(pad_name) and is_integer(size) and size >= 0 do
+    handle_demand(pad_name, :self, :set, size, cb, state)
+  end
+
+  def handle_action(
+        {:demand, {pad_name, {:set_to, size}}},
+        cb,
+        _params,
+        %State{type: :sink} = state
+      )
+      when is_pad_name(pad_name) and is_integer(size) and size < 0 do
+    warn_error(
+      """
+      Callback #{inspect(cb)} requested to set demand to invalid size of #{size}
+      on pad #{inspect(pad_name)}. Demands sizes cannot be negative
+      """,
+      :negative_demand,
+      state
+    )
+  end
+
+  def handle_action(action, callback, _params, state) do
+    warn_error(
+      """
+      Elements' #{inspect(state.module)} #{inspect(callback)} callback returned
+      invalid action: #{inspect(action)}. For possible actions are check types
+      in Membrane.Element.Action module. Keep in mind that some actions are
+      available in different formats or unavailable for some callbacks,
+      element types, playback states or under some other conditions.
+      """,
+      {:invalid_action, action: action, callback: callback, module: state |> Map.get(:module)},
+      state
+    )
+  end
+
+  @impl CallbackHandler
+  def handle_actions(actions, callback, handler_params, state),
+    do:
+      super(
+        actions |> join_buffers(),
+        callback,
+        handler_params,
+        state
+      )
+
+  defp join_buffers(actions) do
+    actions
+    |> Helper.Enum.chunk_by(
+      fn
+        {:buffer, {pad, _}}, {:buffer, {pad2, _}} when pad == pad2 -> true
+        _, _ -> false
+      end,
+      fn
+        [{:buffer, {pad, _}} | _] = buffers ->
+          {:buffer, {pad, buffers |> Enum.map(fn {_, {_, b}} -> [b] end) |> List.flatten()}}
+
+        [other] ->
+          other
+      end
+    )
+  end
 
   @spec send_buffer(Pad.name_t(), atom, [Buffer.t()], State.t()) :: :ok | {:error, any}
 

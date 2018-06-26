@@ -9,223 +9,11 @@ defmodule Membrane.Element.Manager.Common do
   """
 
   alias Membrane.{Buffer, Caps, Element, Event, PullBuffer}
+  alias Membrane.Mixins.CallbackHandler
   alias Element.Context
-  alias Element.Manager.{ActionExec, State}
-  import Element.Pad, only: [is_pad_name: 1]
+  alias Element.Manager.{ActionHandler, State}
   use Element.Manager.Log
   use Membrane.Helper
-  use Membrane.Mixins.CallbackHandler
-
-  def handle_action({:event, {pad_name, event}}, _cb, _params, state)
-      when is_pad_name(pad_name) do
-    ActionExec.send_event(pad_name, event, state)
-  end
-
-  def handle_action({:message, message}, _cb, _params, state),
-    do: ActionExec.send_message(message, state)
-
-  def handle_action({:split, {callback, args_list}}, cb, params, state) do
-    exec_and_handle_splitted_callback(callback, cb, params, args_list, state)
-  end
-
-  def handle_action({:playback_change, :suspend}, cb, _params, state)
-      when cb in [:handle_prepare, :handle_play, :handle_stop] do
-    state |> Element.suspend_playback_change()
-  end
-
-  def handle_action({:playback_change, :resume}, _cb, _params, state),
-    do: state |> Element.continue_playback_change()
-
-  def handle_action({:buffer, {pad_name, buffers}}, cb, _params, %State{type: type} = state)
-      when type in [:source, :filter] and is_pad_name(pad_name) do
-    ActionExec.send_buffer(pad_name, buffers, cb, state)
-  end
-
-  def handle_action({:caps, {pad_name, caps}}, _cb, _params, %State{type: type} = state)
-      when type in [:source, :filter] and is_pad_name(pad_name) do
-    ActionExec.send_caps(pad_name, caps, state)
-  end
-
-  def handle_action({:redemand, src_name}, cb, _params, %State{type: type} = state)
-      when type in [:source, :filter] and is_pad_name(src_name) and
-             cb not in [:handle_demand, :handle_process] do
-    ActionExec.handle_redemand(src_name, state)
-  end
-
-  def handle_action({:forward, data}, cb, params, %State{type: :filter} = state)
-      when cb in [:handle_caps, :handle_event, :handle_process] do
-    {action, dir} =
-      case {cb, params} do
-        {:handle_process, _} -> {:buffer, :source}
-        {:handle_caps, _} -> {:caps, :source}
-        {:handle_event, %{direction: :sink}} -> {:event, :source}
-        {:handle_event, %{direction: :source}} -> {:event, :sink}
-      end
-
-    pads = state |> State.get_pads_data(dir) |> Map.keys()
-
-    pads
-    |> Helper.Enum.reduce_with(state, fn pad, st ->
-      handle_action({action, {pad, data}}, cb, params, st)
-    end)
-  end
-
-  def handle_action({:demand, pad_name}, :handle_demand, params, %State{type: :filter} = state)
-      when is_pad_name(pad_name) do
-    handle_action({:demand, {pad_name, 1}}, :handle_demand, params, state)
-  end
-
-  def handle_action(
-        {:demand, {pad_name, size}},
-        :handle_demand,
-        %{source: src_name} = params,
-        %State{type: :filter} = state
-      )
-      when is_pad_name(pad_name) and is_integer(size) do
-    handle_action({:demand, {pad_name, {:source, src_name}, size}}, :handle_demand, params, state)
-  end
-
-  def handle_action(
-        {:demand, {pad_name, {:source, src_name}, size}},
-        cb,
-        _params,
-        %State{type: :filter} = state
-      )
-      when is_pad_name(pad_name) and is_pad_name(src_name) and is_integer(size) and size > 0 do
-    ActionExec.handle_demand(pad_name, {:source, src_name}, :normal, size, cb, state)
-  end
-
-  def handle_action(
-        {:demand, {pad_name, :self, size}},
-        cb,
-        _params,
-        %State{type: :filter} = state
-      )
-      when is_pad_name(pad_name) and is_integer(size) and size > 0 do
-    ActionExec.handle_demand(pad_name, :self, :normal, size, cb, state)
-  end
-
-  def handle_action(
-        {:demand, {pad_name, _src_name, 0}},
-        cb,
-        _params,
-        %State{type: :filter} = state
-      )
-      when is_pad_name(pad_name) do
-    debug(
-      """
-      Ignoring demand of size of 0 requested by callback #{inspect(cb)}
-      on pad #{inspect(pad_name)}.
-      """,
-      state
-    )
-
-    {:ok, state}
-  end
-
-  def handle_action(
-        {:demand, {pad_name, _src_name, size}},
-        cb,
-        _params,
-        %State{type: :filter} = state
-      )
-      when is_pad_name(pad_name) and is_integer(size) and size < 0 do
-    warn_error(
-      """
-      Callback #{inspect(cb)} requested demand of invalid size of #{size}
-      on pad #{inspect(pad_name)}. Demands' sizes should be positive (0-sized
-      demands are ignored).
-      """,
-      :negative_demand,
-      state
-    )
-  end
-
-  def handle_action({:demand, pad_name}, cb, params, %State{type: :sink} = state)
-      when is_pad_name(pad_name) do
-    handle_action({:demand, {pad_name, 1}}, cb, params, state)
-  end
-
-  def handle_action({:demand, {pad_name, size}}, cb, _params, %State{type: :sink} = state)
-      when is_pad_name(pad_name) and is_integer(size) and size > 0 do
-    ActionExec.handle_demand(pad_name, :self, :normal, size, cb, state)
-  end
-
-  def handle_action({:demand, {pad_name, 0}}, cb, _params, %State{type: :sink} = state)
-      when is_pad_name(pad_name) do
-    debug(
-      """
-      Ignoring demand of size of 0 requested by callback #{inspect(cb)}
-      on pad #{inspect(pad_name)}.
-      """,
-      state
-    )
-
-    {:ok, state}
-  end
-
-  def handle_action({:demand, {pad_name, size}}, cb, _params, %State{type: :sink} = state)
-      when is_pad_name(pad_name) and is_integer(size) and size < 0 do
-    warn_error(
-      """
-      Callback #{inspect(cb)} requested demand of invalid size of #{size}
-      on pad #{inspect(pad_name)}. Demands' sizes should be positive (0-sized
-      demands are ignored).
-      """,
-      :negative_demand,
-      state
-    )
-  end
-
-  def handle_action(
-        {:demand, {pad_name, {:set_to, size}}},
-        cb,
-        _params,
-        %State{type: :sink} = state
-      )
-      when is_pad_name(pad_name) and is_integer(size) and size >= 0 do
-    ActionExec.handle_demand(pad_name, :self, :set, size, cb, state)
-  end
-
-  def handle_action(
-        {:demand, {pad_name, {:set_to, size}}},
-        cb,
-        _params,
-        %State{type: :sink} = state
-      )
-      when is_pad_name(pad_name) and is_integer(size) and size < 0 do
-    warn_error(
-      """
-      Callback #{inspect(cb)} requested to set demand to invalid size of #{size}
-      on pad #{inspect(pad_name)}. Demands sizes cannot be negative
-      """,
-      :negative_demand,
-      state
-    )
-  end
-
-  def handle_action(action, callback, _params, state) do
-    warn_error(
-      """
-      Elements' #{inspect(state.module)} #{inspect(callback)} callback returned
-      invalid action: #{inspect(action)}. For possible actions are check types
-      in Membrane.Element.Action module. Keep in mind that some actions are
-      available in different formats or unavailable for some callbacks,
-      element types, playback states or under some other conditions.
-      """,
-      {:invalid_action, action: action, callback: callback, module: state |> Map.get(:module)},
-      state
-    )
-  end
-
-  def handle_actions(actions, callback, handler_params, state),
-    do:
-      super(
-        actions |> join_buffers(),
-        callback,
-        handler_params,
-        state
-      )
 
   def callback_handler_warn_error(message, reason, state) do
     warn_error(message, reason, state)
@@ -263,7 +51,7 @@ defmodule Membrane.Element.Manager.Common do
   end
 
   def handle_message(message, state) do
-    exec_and_handle_callback(:handle_other, [message], state)
+    CallbackHandler.exec_and_handle_callback(:handle_other, ActionHandler, [message], state)
     |> or_warn_error("Error while handling message")
   end
 
@@ -277,13 +65,13 @@ defmodule Membrane.Element.Manager.Common do
   end
 
   def handle_playback_state(:prepared, :playing, state),
-    do: exec_and_handle_callback(:handle_play, [], state)
+    do: CallbackHandler.exec_and_handle_callback(:handle_play, ActionHandler, [], state)
 
   def handle_playback_state(:prepared, :stopped, state),
-    do: exec_and_handle_callback(:handle_stop, [], state)
+    do: CallbackHandler.exec_and_handle_callback(:handle_stop, ActionHandler, [], state)
 
   def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing],
-    do: exec_and_handle_callback(:handle_prepare, [ps], state)
+    do: CallbackHandler.exec_and_handle_callback(:handle_prepare, ActionHandler, [ps], state)
 
   def get_pad_full_name(pad_name, state) do
     state |> State.resolve_pad_full_name(pad_name)
@@ -374,7 +162,12 @@ defmodule Membrane.Element.Manager.Common do
          {:ok, direction} <- state |> State.get_pad_data(:any, pad_name, :direction),
          context <- %Context.PadRemoved{direction: direction, caps: caps},
          {:ok, state} <-
-           exec_and_handle_callback(:handle_pad_removed, [pad_name, context], state),
+           CallbackHandler.exec_and_handle_callback(
+             :handle_pad_removed,
+             ActionHandler,
+             [pad_name, context],
+             state
+           ),
          {:ok, state} <- state |> State.remove_pad_data(:any, pad_name) do
       {:ok, state}
     end
@@ -407,7 +200,12 @@ defmodule Membrane.Element.Manager.Common do
       direction: direction
     }
 
-    exec_and_handle_callback(:handle_pad_added, [name, context], state)
+    CallbackHandler.exec_and_handle_callback(
+      :handle_pad_added,
+      ActionHandler,
+      [name, context],
+      state
+    )
   end
 
   def handle_caps(:pull, pad_name, caps, state) do
@@ -431,8 +229,9 @@ defmodule Membrane.Element.Manager.Common do
 
     with :ok <- if(Caps.Matcher.match?(accepted_caps, caps), do: :ok, else: :invalid_caps),
          {:ok, state} <-
-           exec_and_handle_callback(
+           CallbackHandler.exec_and_handle_callback(
              :handle_caps,
+             ActionHandler,
              [pad_name, caps, context],
              state
            ) do
@@ -521,8 +320,9 @@ defmodule Membrane.Element.Manager.Common do
     %{direction: dir, caps: caps} = state |> State.get_pad_data!(:any, pad_name)
     context = %Context.Event{caps: caps}
 
-    exec_and_handle_callback(
+    CallbackHandler.exec_and_handle_callback(
       :handle_event,
+      ActionHandler,
       %{direction: dir},
       [pad_name, event, context],
       state
@@ -547,7 +347,13 @@ defmodule Membrane.Element.Manager.Common do
 
     context = %Context.Write{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
     debug("Executing handle_write with buffers #{inspect(buffers)}", state)
-    exec_and_handle_callback(:handle_write, [pad_name, buffers, context], state)
+
+    CallbackHandler.exec_and_handle_callback(
+      :handle_write,
+      ActionHandler,
+      [pad_name, buffers, context],
+      state
+    )
   end
 
   defp handle_pullbuffer_output(
@@ -564,23 +370,11 @@ defmodule Membrane.Element.Manager.Common do
       source_caps: state |> State.get_pad_data!(:sink, pad_name, :caps)
     }
 
-    exec_and_handle_callback(:handle_process, [pad_name, buffers, context], state)
-  end
-
-  defp join_buffers(actions) do
-    actions
-    |> Helper.Enum.chunk_by(
-      fn
-        {:buffer, {pad, _}}, {:buffer, {pad2, _}} when pad == pad2 -> true
-        _, _ -> false
-      end,
-      fn
-        [{:buffer, {pad, _}} | _] = buffers ->
-          {:buffer, {pad, buffers |> Enum.map(fn {_, {_, b}} -> [b] end) |> List.flatten()}}
-
-        [other] ->
-          other
-      end
+    CallbackHandler.exec_and_handle_callback(
+      :handle_process,
+      ActionHandler,
+      [pad_name, buffers, context],
+      state
     )
   end
 
@@ -609,8 +403,9 @@ defmodule Membrane.Element.Manager.Common do
 
       context = %Context.Demand{caps: caps}
 
-      exec_and_handle_callback(
+      CallbackHandler.exec_and_handle_callback(
         :handle_demand,
+        ActionHandler,
         %{source: pad_name, split_cont_f: &exec_handle_demand?(pad_name, &1)},
         [pad_name, total_size, demand_in, context],
         state
@@ -724,7 +519,12 @@ defmodule Membrane.Element.Manager.Common do
   def handle_process_push(pad_name, buffers, state) do
     context = %Context.Process{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
 
-    exec_and_handle_callback(:handle_process, [pad_name, buffers, context], state)
+    CallbackHandler.exec_and_handle_callback(
+      :handle_process,
+      ActionHandler,
+      [pad_name, buffers, context],
+      state
+    )
     |> or_warn_error("Error while handling process")
   end
 
@@ -759,7 +559,12 @@ defmodule Membrane.Element.Manager.Common do
   def handle_write(:push, pad_name, buffers, state) do
     context = %Context.Write{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
 
-    exec_and_handle_callback(:handle_write, [pad_name, buffers, context], state)
+    CallbackHandler.exec_and_handle_callback(
+      :handle_write,
+      ActionHandler,
+      [pad_name, buffers, context],
+      state
+    )
     |> or_warn_error("Error while handling write")
   end
 
