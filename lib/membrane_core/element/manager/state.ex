@@ -66,12 +66,10 @@ defmodule Membrane.Element.Manager.State do
 
   defp handle_known_pads(known_pads_fun, direction, module) do
     known_pads =
-      cond do
-        function_exported?(module, known_pads_fun, 0) ->
-          apply(module, known_pads_fun, [])
-
-        true ->
-          %{}
+      if function_exported?(module, known_pads_fun, 0) do
+        apply(module, known_pads_fun, [])
+      else
+        %{}
       end
 
     known_pads

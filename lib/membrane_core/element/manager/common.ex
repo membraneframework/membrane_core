@@ -97,7 +97,8 @@ defmodule Membrane.Element.Manager.Common do
       def handle_message(message, state) do
         use Membrane.Element.Manager.Log
 
-        exec_and_handle_callback(:handle_other, [message], state)
+        ctx = %Membrane.Element.Context.Other{}
+        exec_and_handle_callback(:handle_other, [ctx, message], state)
         |> or_warn_error("Error while handling message")
       end
 
@@ -112,14 +113,20 @@ defmodule Membrane.Element.Manager.Common do
           |> State.set_pad_data(:source, pad_name, [:options, :other_demand_in], demand_in)
       end
 
-      def handle_playback_state(:prepared, :playing, state),
-        do: exec_and_handle_callback(:handle_play, [], state)
+      def handle_playback_state(:prepared, :playing, state) do
+        ctx = %Membrane.Element.Context.Play{}
+        exec_and_handle_callback(:handle_play, [ctx], state)
+      end
 
-      def handle_playback_state(:prepared, :stopped, state),
-        do: exec_and_handle_callback(:handle_stop, [], state)
+      def handle_playback_state(:prepared, :stopped, state) do
+        ctx = %Membrane.Element.Context.Stop{}
+        exec_and_handle_callback(:handle_stop, [ctx], state)
+      end
 
-      def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing],
-        do: exec_and_handle_callback(:handle_prepare, [ps], state)
+      def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing] do
+        ctx = %Membrane.Element.Context.Prepare{}
+        exec_and_handle_callback(:handle_prepare, [ps, ctx], state)
+      end
 
       def get_pad_full_name(pad_name, state) do
         state |> State.resolve_pad_full_name(pad_name)

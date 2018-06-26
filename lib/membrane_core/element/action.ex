@@ -134,9 +134,9 @@ defmodule Membrane.Element.Action do
   Suspends/resumes change of playback state.
 
   - `playback_change: :suspend` may be returned only from
-  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_prepare/2`,
-  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_play/1` and
-  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_stop/1` callbacks,
+  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_prepare/3`,
+  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_play/2` and
+  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_stop/2` callbacks,
   and defers playback state change until `playback_change: :resume` is returned.
   - `playback_change: :resume` may be returned from any callback, only when
   playback state change is suspended, and causes it to finish.
