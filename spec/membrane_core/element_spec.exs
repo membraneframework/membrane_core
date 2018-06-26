@@ -15,8 +15,6 @@ defmodule Membrane.ElementSpec do
 
   pending ".start_link/3"
   pending ".start/3"
-  pending ".get_message_bus/2"
-  pending ".clear_message_bus/2"
 
   describe ".link/5" do
     context "if first given PID is not a PID of an element process" do
@@ -763,52 +761,6 @@ defmodule Membrane.ElementSpec do
         it "should return {:reply, :ok, state()} with message bus set to the new message bus" do
           expect(described_module().handle_call(message(), self(), state()))
           |> to(eq {:reply, :ok, %{state() | message_bus: new_message_bus()}})
-        end
-      end
-    end
-
-    xcontext "if message is :membrane_get_message_bus" do
-      let :message, do: :membrane_get_message_bus
-      let :state, do: %State{module: TrivialFilter, message_bus: message_bus()}
-
-      context "and current message bus is nil" do
-        let :message_bus, do: nil
-
-        it "should return {:reply, {:ok, nil}, state()} with unmodified state" do
-          expect(described_module().handle_info(message(), state()))
-          |> to(eq {:reply, {:ok, nil}, state()})
-        end
-      end
-
-      context "and current message bus is not nil" do
-        let :message_bus, do: self()
-
-        it "should return {:reply, {:ok, pid}, state()} with unmodified state" do
-          expect(described_module().handle_info(message(), state()))
-          |> to(eq {:reply, {:ok, message_bus()}, state()})
-        end
-      end
-    end
-
-    xcontext "if message is :membrane_clear_message_bus" do
-      let :message, do: :membrane_clear_message_bus
-      let :state, do: %State{module: TrivialFilter, message_bus: message_bus()}
-
-      context "and current message bus is nil" do
-        let :message_bus, do: nil
-
-        it "should return {:reply, :ok, state()} with message bus set to nil" do
-          expect(described_module().handle_info(message(), state()))
-          |> to(eq {:reply, :ok, %{state() | message_bus: nil}})
-        end
-      end
-
-      context "and current message bus is not nil" do
-        let :message_bus, do: self()
-
-        it "should return {:reply, :ok, state()} with message bus set to nil" do
-          expect(described_module().handle_info(message(), state()))
-          |> to(eq {:reply, :ok, %{state() | message_bus: nil}})
         end
       end
     end

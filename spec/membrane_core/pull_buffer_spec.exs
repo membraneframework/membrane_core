@@ -1,5 +1,5 @@
 defmodule Membrane.PullBufferSpec do
-  use ESpec, async: false
+  use ESpec, async: true
 
   describe ".new/5" do
     let :name, do: :name
@@ -59,21 +59,11 @@ defmodule Membrane.PullBufferSpec do
       let :toilet, do: true
 
       it "should do nothing" do
+        :lib.flush_receive()
+
         expect(described_module().fill(pb())) |> to(eq {:ok, pb()})
         refute_received {:membrane_demand, _}
       end
-    end
-
-    context "when pullbuffer is full" do
-      let :current_size, do: pref_size()
-
-      it "should do nothing" do
-        described_module().fill(pb())
-        refute_received {:membrane_demand, _}
-      end
-    end
-
-    xcontext "when pullbuffer isn't full, but contains some elements" do
     end
 
     context "when pullbuffer is empty" do
@@ -195,15 +185,15 @@ defmodule Membrane.PullBufferSpec do
 
     context "when there are not enough buffers" do
       let :to_take, do: 10
-      #it "should return tuple {:ok, {:empty, buffers}}" do
-      #  {result, _new_pb} = described_module().take(pb(), to_take())
-      #  expect(result) |> to(eq {:ok, {:empty, [buffers1(), buffers2()]}})
-      #end
+      it "should return tuple {:ok, {:empty, buffers}}" do
+        {result, _new_pb} = described_module().take(pb(), to_take())
+        expect(result) |> to(eq {:ok, {:empty, [buffers1(), buffers2()]}})
+      end
 
-      #it "should set `current_size` to 0" do
-      #  {_, %{current_size: new_size}} = described_module().take(pb(), to_take())
-      #  expect(new_size) |> to(eq 0)
-      #end
+      it "should set `current_size` to 0" do
+        {_, %{current_size: new_size}} = described_module().take(pb(), to_take())
+        expect(new_size) |> to(eq 0)
+      end
 
       it "should generate demand" do
         described_module().take(pb(), to_take())
