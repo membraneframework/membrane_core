@@ -92,7 +92,7 @@ defmodule Membrane.Element.Manager.ActionHandler do
         _params,
         %State{type: :filter} = state
       )
-      when is_pad_name(pad_name) and is_pad_name(src_name) and is_integer(size) and size > 0 do
+      when is_pad_name(pad_name) and is_pad_name(src_name) and is_integer(size) do
     handle_demand(pad_name, {:source, src_name}, :normal, size, cb, state)
   end
 
@@ -102,44 +102,8 @@ defmodule Membrane.Element.Manager.ActionHandler do
         _params,
         %State{type: :filter} = state
       )
-      when is_pad_name(pad_name) and is_integer(size) and size > 0 do
+      when is_pad_name(pad_name) and is_integer(size) do
     handle_demand(pad_name, :self, :normal, size, cb, state)
-  end
-
-  def handle_action(
-        {:demand, {pad_name, _src_name, 0}},
-        cb,
-        _params,
-        %State{type: :filter} = state
-      )
-      when is_pad_name(pad_name) do
-    debug(
-      """
-      Ignoring demand of size of 0 requested by callback #{inspect(cb)}
-      on pad #{inspect(pad_name)}.
-      """,
-      state
-    )
-
-    {:ok, state}
-  end
-
-  def handle_action(
-        {:demand, {pad_name, _src_name, size}},
-        cb,
-        _params,
-        %State{type: :filter} = state
-      )
-      when is_pad_name(pad_name) and is_integer(size) and size < 0 do
-    warn_error(
-      """
-      Callback #{inspect(cb)} requested demand of invalid size of #{size}
-      on pad #{inspect(pad_name)}. Demands' sizes should be positive (0-sized
-      demands are ignored).
-      """,
-      :negative_demand,
-      state
-    )
   end
 
   def handle_action({:demand, pad_name}, cb, params, %State{type: :sink} = state)
@@ -148,61 +112,18 @@ defmodule Membrane.Element.Manager.ActionHandler do
   end
 
   def handle_action({:demand, {pad_name, size}}, cb, _params, %State{type: :sink} = state)
-      when is_pad_name(pad_name) and is_integer(size) and size > 0 do
+      when is_pad_name(pad_name) and is_integer(size) do
     handle_demand(pad_name, :self, :normal, size, cb, state)
   end
 
-  def handle_action({:demand, {pad_name, 0}}, cb, _params, %State{type: :sink} = state)
-      when is_pad_name(pad_name) do
-    debug(
-      """
-      Ignoring demand of size of 0 requested by callback #{inspect(cb)}
-      on pad #{inspect(pad_name)}.
-      """,
-      state
-    )
-
-    {:ok, state}
-  end
-
-  def handle_action({:demand, {pad_name, size}}, cb, _params, %State{type: :sink} = state)
-      when is_pad_name(pad_name) and is_integer(size) and size < 0 do
-    warn_error(
-      """
-      Callback #{inspect(cb)} requested demand of invalid size of #{size}
-      on pad #{inspect(pad_name)}. Demands' sizes should be positive (0-sized
-      demands are ignored).
-      """,
-      :negative_demand,
-      state
-    )
-  end
-
   def handle_action(
         {:demand, {pad_name, {:set_to, size}}},
         cb,
         _params,
         %State{type: :sink} = state
       )
-      when is_pad_name(pad_name) and is_integer(size) and size >= 0 do
+      when is_pad_name(pad_name) and is_integer(size) do
     handle_demand(pad_name, :self, :set, size, cb, state)
-  end
-
-  def handle_action(
-        {:demand, {pad_name, {:set_to, size}}},
-        cb,
-        _params,
-        %State{type: :sink} = state
-      )
-      when is_pad_name(pad_name) and is_integer(size) and size < 0 do
-    warn_error(
-      """
-      Callback #{inspect(cb)} requested to set demand to invalid size of #{size}
-      on pad #{inspect(pad_name)}. Demands sizes cannot be negative
-      """,
-      :negative_demand,
-      state
-    )
   end
 
   def handle_action(action, callback, _params, state) do
@@ -247,7 +168,6 @@ defmodule Membrane.Element.Manager.ActionHandler do
   end
 
   @spec send_buffer(Pad.name_t(), atom, [Buffer.t()], State.t()) :: :ok | {:error, any}
-
   def send_buffer(
         _pad_name,
         _buffer,
@@ -392,6 +312,31 @@ defmodule Membrane.Element.Manager.ActionHandler do
     )
   end
 
+  def handle_demand(pad_name, _source, _type, 0, callback, state) do
+    debug(
+      """
+      Ignoring demand of size of 0 requested by callback #{inspect(callback)}
+      on pad #{inspect(pad_name)}.
+      """,
+      state
+    )
+
+    {:ok, state}
+  end
+
+  def handle_demand(pad_name, _source, _type, size, callback, state)
+      when size < 0 do
+    warn_error(
+      """
+      Callback #{inspect(callback)} requested demand of invalid size of #{size}
+      on pad #{inspect(pad_name)}. Demands' sizes should be positive (0-sized
+      demands are ignored).
+      """,
+      :negative_demand,
+      state
+    )
+  end
+
   def handle_demand(pad_name, source, type, size, callback, state) do
     debug("Requesting demand of size #{inspect(size)} on pad #{inspect(pad_name)}", state)
 
@@ -485,51 +430,44 @@ defmodule Membrane.Element.Manager.ActionHandler do
     {:ok, state}
   end
 
-  defp handle_invalid_pad_mode(pad_name, expected_mode, action, state) do
-    exp_mode_name = Atom.to_string(expected_mode)
-
-    mode_name =
+  defp handle_invalid_pad_mode(pad_name, expected_mode, action_name, state) do
+    mode =
       case expected_mode do
-        :pull -> "push"
-        :push -> "pull"
+        :pull -> :push
+        :push -> :pull
       end
 
-    action_name = Atom.to_string(action)
-    # TODO: return error instead
-    raise """
-    Pad "#{inspect(pad_name)}" is working in invalid mode: #{inspect(mode_name)}.
+    warn_error(
+      """
+      Pad "#{inspect(pad_name)}" is working in invalid mode: #{inspect(mode)}.
 
-    This is probably a bug in Element.Manager. It requested an action
-    "#{inspect(action_name)}" on pad "#{inspect(pad_name)}", but the pad is not
-    working in #{inspect(exp_mode_name)} mode as it is supposed to.
-
-    element state was:
-
-    #{inspect(state, limit: 100_000, pretty: true)}
-    """
+      This is probably a bug in element. It requested an action
+      "#{inspect(action_name)}" on pad "#{inspect(pad_name)}", but the pad is not
+      working in #{inspect(expected_mode)} mode as it is supposed to.
+      """,
+      {:invalid_pad_mode, pad_name, mode},
+      state
+    )
   end
 
-  defp handle_unknown_pad(pad_name, expected_direction, action, state) do
-    direction_name = Atom.to_string(expected_direction)
-    action_name = Atom.to_string(action)
-    # TODO: return error instead
-    raise """
-    Pad "#{inspect(pad_name)}" has not been found.
+  defp handle_unknown_pad(pad_name, expected_direction, action_name, state) do
+    warn_error(
+      """
+      Pad "#{inspect(pad_name)}" has not been found.
 
-    This is probably a bug in element. It requested an action
-    "#{inspect(action_name)}" on pad "#{inspect(pad_name)}", but such pad has not
-    been found. #{
-      if expected_direction != :any do
-        "It either means that it does not exist, or it is not a" <>
-          "#{inspect(direction_name)} pad."
-      else
-        ""
-      end
-    }
-
-    element state was:
-
-    #{inspect(state, limit: 100_000, pretty: true)}
-    """
+      This is probably a bug in element. It requested an action
+      "#{inspect(action_name)}" on pad "#{inspect(pad_name)}", but such pad has not
+      been found. #{
+        if expected_direction != :any do
+          "It either means that it does not exist, or it is not a" <>
+            "#{inspect(expected_direction)} pad."
+        else
+          ""
+        end
+      }
+      """,
+      {:unknown_pad, pad_name},
+      state
+    )
   end
 end

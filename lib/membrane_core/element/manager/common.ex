@@ -15,10 +15,6 @@ defmodule Membrane.Element.Manager.Common do
   use Element.Manager.Log
   use Membrane.Helper
 
-  def callback_handler_warn_error(message, reason, state) do
-    warn_error(message, reason, state)
-  end
-
   def handle_init(module, name, options) do
     with {:ok, state} <- State.new(module, name) do
       do_handle_init(module, options, state)
