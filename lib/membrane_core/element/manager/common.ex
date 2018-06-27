@@ -12,7 +12,7 @@ defmodule Membrane.Element.Manager.Common do
   alias Membrane.Caps
   use Membrane.Helper
   alias Membrane.PullBuffer
-  alias Membrane.Element.Context
+  alias Membrane.Element.CallbackContext
   alias Membrane.Event
 
   defmacro __using__(_) do
@@ -20,7 +20,7 @@ defmodule Membrane.Element.Manager.Common do
       use Membrane.Mixins.CallbackHandler
       alias Membrane.Element.Manager.{ActionExec, Common, State}
       import Membrane.Element.Pad, only: [is_pad_name: 1]
-      alias Membrane.Element.Context
+      alias Membrane.Element.CallbackContext
       use Membrane.Helper
 
       def handle_action({:event, {pad_name, event}}, _cb, _params, state)
@@ -97,7 +97,7 @@ defmodule Membrane.Element.Manager.Common do
       def handle_message(message, state) do
         use Membrane.Element.Manager.Log
 
-        ctx = %Membrane.Element.Context.Other{}
+        ctx = %CallbackContext.Other{}
         exec_and_handle_callback(:handle_other, [ctx, message], state)
         |> or_warn_error("Error while handling message")
       end
@@ -114,17 +114,17 @@ defmodule Membrane.Element.Manager.Common do
       end
 
       def handle_playback_state(:prepared, :playing, state) do
-        ctx = %Membrane.Element.Context.Play{}
+        ctx = %CallbackContext.Play{}
         exec_and_handle_callback(:handle_play, [ctx], state)
       end
 
       def handle_playback_state(:prepared, :stopped, state) do
-        ctx = %Membrane.Element.Context.Stop{}
+        ctx = %CallbackContext.Stop{}
         exec_and_handle_callback(:handle_stop, [ctx], state)
       end
 
       def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing] do
-        ctx = %Membrane.Element.Context.Prepare{}
+        ctx = %CallbackContext.Prepare{}
         exec_and_handle_callback(:handle_prepare, [ps, ctx], state)
       end
 
@@ -215,7 +215,7 @@ defmodule Membrane.Element.Manager.Common do
                    end),
              {:ok, caps} <- state |> State.get_pad_data(:any, pad_name, :caps),
              {:ok, direction} <- state |> State.get_pad_data(:any, pad_name, :direction),
-             context <- %Context.PadRemoved{direction: direction, caps: caps},
+             context <- %CallbackContext.PadRemoved{direction: direction, caps: caps},
              {:ok, state} <-
                exec_and_handle_callback(:handle_pad_removed, [pad_name, context], state),
              {:ok, state} <- state |> State.remove_pad_data(:any, pad_name) do
@@ -248,7 +248,7 @@ defmodule Membrane.Element.Manager.Common do
       end
 
       def handle_pad_added(name, direction, %State{module: module} = state) do
-        context = %Context.PadAdded{
+        context = %CallbackContext.PadAdded{
           direction: direction
         }
 
@@ -288,7 +288,7 @@ defmodule Membrane.Element.Manager.Common do
     %{accepted_caps: accepted_caps, caps: old_caps} =
       state |> State.get_pad_data!(:sink, pad_name)
 
-    context = %Context.Caps{caps: old_caps}
+    context = %CallbackContext.Caps{caps: old_caps}
 
     with :ok <- if(Caps.Matcher.match?(accepted_caps, caps), do: :ok, else: :invalid_caps),
          {:ok, state} <-
@@ -380,7 +380,7 @@ defmodule Membrane.Element.Manager.Common do
 
   def exec_event_handler(pad_name, event, %State{module: module} = state) do
     %{direction: dir, caps: caps} = state |> State.get_pad_data!(:any, pad_name)
-    context = %Context.Event{caps: caps}
+    context = %CallbackContext.Event{caps: caps}
 
     module.manager_module.exec_and_handle_callback(
       :handle_event,
@@ -432,7 +432,7 @@ defmodule Membrane.Element.Manager.Common do
       %{caps: caps, options: %{other_demand_in: demand_in}} =
         state |> State.get_pad_data!(:source, pad_name)
 
-      context = %Context.Demand{caps: caps}
+      context = %CallbackContext.Demand{caps: caps}
 
       module.manager_module.exec_and_handle_callback(
         :handle_demand,

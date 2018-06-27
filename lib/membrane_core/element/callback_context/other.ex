@@ -1,4 +1,4 @@
-defmodule Membrane.Element.Context.Other do
+defmodule Membrane.Element.CallbackContext.Other do
   @moduledoc """
   Structure representing a context that is passed to the callback when
   element receives unrecognized message.

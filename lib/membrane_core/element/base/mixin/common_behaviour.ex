@@ -239,7 +239,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
       use Membrane.Mixins.Log, tags: :element, import: false
 
-      alias Membrane.Element.Context, as: Ctx
+      alias Membrane.Element.CallbackContext, as: Ctx
 
       import unquote(__MODULE__), only: [def_options: 1]
 

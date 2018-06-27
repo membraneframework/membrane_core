@@ -1,10 +1,10 @@
-defmodule Membrane.Element.Context.PadAdded do
+defmodule Membrane.Element.CallbackContext.PadAdded do
   @moduledoc """
   Structure representing a context that is passed to the element when
   when new pad added is created
   """
 
-  @type t :: %Membrane.Element.Context.PadAdded{
+  @type t :: %Membrane.Element.CallbackContext.PadAdded{
           direction: :sink | :source
         }
 

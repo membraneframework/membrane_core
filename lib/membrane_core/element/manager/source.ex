@@ -6,7 +6,6 @@ defmodule Membrane.Element.Manager.Source do
   use Membrane.Element.Manager.Log
   alias Membrane.Element.Manager.{ActionExec, Common, State}
   import Membrane.Element.Pad, only: [is_pad_name: 1]
-  alias Membrane.Element.Context
   use Membrane.Element.Manager.Common
 
   # Private API

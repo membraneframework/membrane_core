@@ -7,7 +7,6 @@ defmodule Membrane.Element.Manager.Sink do
   use Membrane.Element.Manager.Common
   alias Membrane.Element.Manager.{State, ActionExec, Common}
   import Membrane.Element.Pad, only: [is_pad_name: 1]
-  alias Membrane.Element.Context
   alias Membrane.PullBuffer
   alias Membrane.Helper
   alias Membrane.Buffer
@@ -107,7 +106,7 @@ defmodule Membrane.Element.Manager.Sink do
   end
 
   def handle_write(:push, pad_name, buffers, state) do
-    context = %Context.Write{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
+    context = %CallbackContext.Write{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
 
     exec_and_handle_callback(:handle_write, [pad_name, buffers, context], state)
     |> or_warn_error("Error while handling write")
@@ -145,7 +144,7 @@ defmodule Membrane.Element.Manager.Sink do
       state
       |> State.update_pad_data(:sink, pad_name, :self_demand, &{:ok, &1 - buf_cnt})
 
-    context = %Context.Write{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
+    context = %CallbackContext.Write{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
     debug("Executing handle_write with buffers #{inspect(buffers)}", state)
     exec_and_handle_callback(:handle_write, [pad_name, buffers, context], state)
   end

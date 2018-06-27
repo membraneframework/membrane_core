@@ -1,10 +1,10 @@
-defmodule Membrane.Element.Context.Demand do
+defmodule Membrane.Element.CallbackContext.Write do
   @moduledoc """
   Structure representing a context that is passed to the element
-  when processing incoming demand.
+  when new buffer arrives to the sink.
   """
 
-  @type t :: %Membrane.Element.Context.Demand{
+  @type t :: %Membrane.Element.CallbackContext.Write{
           caps: Membrane.Caps.t()
         }
 
