@@ -14,7 +14,7 @@ defmodule Membrane.Element do
   use Membrane.Mixins.Log, import: false, tags: :core
   use Membrane.Helper
   use GenServer
-  use Membrane.Mixins.Playback
+  use Membrane.Core.Mixins.Playback
 
   @typedoc """
   Defines options that can be passed to `start/5` / `start_link/5` and received

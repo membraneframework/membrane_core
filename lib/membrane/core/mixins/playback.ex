@@ -1,4 +1,4 @@
-defmodule Membrane.Mixins.Playback do
+defmodule Membrane.Core.Mixins.Playback do
   @moduledoc """
   Behaviour for modules that have playback state, i.e. elements and pipelines
 
@@ -56,7 +56,7 @@ defmodule Membrane.Mixins.Playback do
     use Membrane.Helper
 
     quote location: :keep do
-      alias Membrane.Mixins.Playbackable
+      alias Membrane.Core.Mixins.Playbackable
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
 

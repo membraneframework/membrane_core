@@ -1,4 +1,4 @@
-defmodule Membrane.Mixins.CallbackHandler do
+defmodule Membrane.Core.Mixins.CallbackHandler do
   @moduledoc """
   Behaviour for module that delegates its job to the other module via callbacks.
   It also delivers the default implementation of logic that handles the results
@@ -81,7 +81,7 @@ defmodule Membrane.Mixins.CallbackHandler do
            result
            |> parse_callback_result(module, callback),
          state = state |> Map.put(:internal_state, new_internal_state),
-         {:ok, actions} <- result,
+         {{:ok, actions}, state} <- {result, state},
          {:ok, state} <-
            actions
            |> exec_handle_actions(callback, handler_module, handler_params, state) do

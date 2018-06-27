@@ -1,8 +1,8 @@
-defmodule Membrane.Core.Element.ActionExecSpec do
+defmodule Membrane.Core.Element.ActionHandlerSpec do
   use ESpec, async: false
   alias Membrane.Core.Element.State
   alias Membrane.{Buffer, Event, Message}
-  alias Membrane.Mixins.Playback
+  alias Membrane.Core.Mixins.Playback
 
   pending ".handle_demand/6"
   pending ".handle_redemand/2"
@@ -76,9 +76,10 @@ defmodule Membrane.Core.Element.ActionExecSpec do
           let :invalid_pad_name, do: :invalid_pad_name
 
           it "should raise RuntimeError" do
-            expect(fn ->
+            expect(
               described_module().send_buffer(invalid_pad_name(), buffer(), callback(), state())
-            end).to(raise_exception RuntimeError)
+            )
+            |> to(eq {{:error, {:unknown_pad, invalid_pad_name()}}, state()})
           end
         end
 
@@ -112,9 +113,10 @@ defmodule Membrane.Core.Element.ActionExecSpec do
         let :invalid_pad_name, do: :invalid_pad_name
 
         it "should raise RuntimeError" do
-          expect(fn ->
+          expect(
             described_module().send_buffer(invalid_pad_name(), buffer(), callback(), state())
-          end).to(raise_exception RuntimeError)
+          )
+          |> to(eq {{:error, {:unknown_pad, invalid_pad_name()}}, state()})
         end
       end
 
@@ -173,8 +175,8 @@ defmodule Membrane.Core.Element.ActionExecSpec do
         let :invalid_pad_name, do: :invalid_pad_name
 
         it "should raise RuntimeError" do
-          expect(fn -> described_module().send_event(invalid_pad_name(), event(), state()) end)
-          |> to(raise_exception RuntimeError)
+          expect(described_module().send_event(invalid_pad_name(), event(), state()))
+          |> to(eq {{:error, {:unknown_pad, invalid_pad_name()}}, state()})
         end
       end
 
@@ -237,8 +239,8 @@ defmodule Membrane.Core.Element.ActionExecSpec do
         let :invalid_pad_name, do: :invalid_pad_name
 
         it "should raise RuntimeError" do
-          expect(fn -> described_module().send_caps(invalid_pad_name(), caps(), state()) end)
-          |> to(raise_exception RuntimeError)
+          expect(described_module().send_caps(invalid_pad_name(), caps(), state()))
+          |> to(eq {{:error, {:unknown_pad, invalid_pad_name()}}, state()})
         end
       end
 

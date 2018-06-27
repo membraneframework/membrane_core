@@ -11,7 +11,7 @@ defmodule Membrane.ElementSpec do
 
   alias Membrane.Core.Element.State
 
-  alias Membrane.Mixins.Playback
+  alias Membrane.Core.Mixins.Playback
 
   pending ".start_link/3"
   pending ".start/3"

@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.Common do
   """
 
   alias Membrane.{Buffer, Caps, Core, Element, Event}
-  alias Membrane.Mixins.CallbackHandler
+  alias Membrane.Core.Mixins.CallbackHandler
   alias Core.PullBuffer
   alias Element.Context
   alias Core.Element.{ActionHandler, State}

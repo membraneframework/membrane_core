@@ -10,7 +10,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   alias Membrane.Element
   alias Element.{Action, Context, Pad}
   alias Element.Base.Mixin
-  alias Membrane.Mixins.{Playback, CallbackHandler}
+  alias Membrane.Core.Mixins.{Playback, CallbackHandler}
 
   @typedoc """
   Type of user-managed state of element.

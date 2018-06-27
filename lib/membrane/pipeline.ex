@@ -9,9 +9,9 @@ defmodule Membrane.Pipeline do
   """
 
   use Membrane.Mixins.Log, tags: :core
-  use Membrane.Mixins.CallbackHandler
+  use Membrane.Core.Mixins.CallbackHandler
   use GenServer
-  use Membrane.Mixins.Playback
+  use Membrane.Core.Mixins.Playback
   alias Membrane.Pipeline.{State, Spec}
   alias Membrane.{Element, Message}
   use Membrane.Helper

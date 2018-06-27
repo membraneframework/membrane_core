@@ -6,7 +6,7 @@ defmodule Membrane.Pipeline.State do
 
   use Membrane.Helper
   alias __MODULE__
-  alias Membrane.Mixins.{Playback, Playbackable}
+  alias Membrane.Core.Mixins.{Playback, Playbackable}
 
   @derive Playbackable
 

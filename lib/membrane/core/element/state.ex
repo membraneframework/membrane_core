@@ -11,7 +11,7 @@ defmodule Membrane.Core.Element.State do
   alias Element.Base.Mixin.CommonBehaviour
   use Membrane.Helper
   alias __MODULE__, as: ThisModule
-  alias Membrane.Mixins.{Playback, Playbackable}
+  alias Membrane.Core.Mixins.{Playback, Playbackable}
   require Pad
 
   @type t :: %__MODULE__{
