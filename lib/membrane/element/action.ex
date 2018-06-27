@@ -61,7 +61,7 @@ defmodule Membrane.Element.Action do
   @typedoc """
   Makes a demand on a pad (it must be sink pad in pull mode). It does NOT
   entail _sending_ demand through the pad, but just _requesting_ some amount
-  of data from `Membrane.PullBuffer`, which _sends_ demands automatically when it
+  of data from `Membrane.Core.PullBuffer`, which _sends_ demands automatically when it
   runs out of data.
   If there is any data available at the pad, the data is passed to
   `c:Membrane.Element.Base.Filter.handle_process/4`

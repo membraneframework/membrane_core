@@ -77,7 +77,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
       Returns all known source pads for #{inspect(__MODULE__)}
 
       They are the following:
-      #{unquote(source_pads) |> Membrane.Helper.Doc.generate_known_pads_docs()}
+      #{unquote(source_pads) |> Membrane.Core.Helper.Doc.generate_known_pads_docs()}
       """
       @spec known_source_pads() :: unquote(__MODULE__).known_source_pads_t()
       @impl true

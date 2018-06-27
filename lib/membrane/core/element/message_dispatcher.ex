@@ -1,7 +1,7 @@
-defmodule Membrane.Element.Manager.MessageDispatcher do
-  alias Membrane.Element
-  alias Element.Manager.{Common, PlaybackBuffer}
-  use Element.Manager.Log
+defmodule Membrane.Core.Element.MessageDispatcher do
+  alias Membrane.{Core, Element}
+  alias Core.Element.{Common, PlaybackBuffer}
+  use Core.Element.Log
   use Membrane.Helper
 
   def handle_message(message, mode, state) do

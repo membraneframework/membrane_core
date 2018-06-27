@@ -1,6 +1,6 @@
-defmodule Membrane.Element.Manager.Common do
+defmodule Membrane.Core.Element.Common do
   @moduledoc """
-  Implementation of some functionalities common for all `Membrane.Element.Manager`s.
+  Implementation of some functionalities common for all `Membrane.Core.Element`s.
 
   Key features:
   * handling actions with events, messages, split requests and playback changes
@@ -8,11 +8,12 @@ defmodule Membrane.Element.Manager.Common do
   * linking and unlinking pads
   """
 
-  alias Membrane.{Buffer, Caps, Element, Event, PullBuffer}
+  alias Membrane.{Buffer, Caps, Core, Element, Event}
   alias Membrane.Mixins.CallbackHandler
+  alias Core.PullBuffer
   alias Element.Context
-  alias Element.Manager.{ActionHandler, State}
-  use Element.Manager.Log
+  alias Core.Element.{ActionHandler, State}
+  use Core.Element.Log
   use Membrane.Helper
 
   def handle_init(module, name, options) do

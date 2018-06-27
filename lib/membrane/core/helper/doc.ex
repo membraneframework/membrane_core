@@ -1,4 +1,4 @@
-defmodule Membrane.Helper.Doc do
+defmodule Membrane.Core.Helper.Doc do
   @moduledoc """
   Module containing helper functions for generating documentation.
   """

@@ -1,5 +1,5 @@
-defmodule Membrane.Element.Manager.Log do
-  alias Membrane.Element.Manager.State
+defmodule Membrane.Core.Element.Log do
+  alias Membrane.Core.Element.State
   alias Membrane.Mixins.Log
 
   defmacro __using__(args) do
@@ -9,7 +9,7 @@ defmodule Membrane.Element.Manager.Log do
 
       unquote do
         if args |> Keyword.get(:import, true) do
-          quote do: import(Membrane.Element.Manager.Log)
+          quote do: import(Membrane.Core.Element.Log)
         end
       end
     end

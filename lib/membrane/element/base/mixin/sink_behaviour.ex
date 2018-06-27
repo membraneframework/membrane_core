@@ -59,7 +59,7 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
       Returns all known sink pads for #{inspect(__MODULE__)}
 
       They are the following:
-      #{unquote(sink_pads) |> Membrane.Helper.Doc.generate_known_pads_docs()}
+      #{unquote(sink_pads) |> Membrane.Core.Helper.Doc.generate_known_pads_docs()}
       """
       @spec known_sink_pads() :: unquote(__MODULE__).known_sink_pads_t
       @impl true

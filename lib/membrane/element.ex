@@ -6,11 +6,11 @@ defmodule Membrane.Element do
   doing so.
   """
 
-  alias Membrane.Element
-  alias Element.Pad
-  alias Element.Manager.{Common, MessageDispatcher, State}
+  alias __MODULE__.Pad
+  alias Membrane.Core
+  alias Core.Element.{Common, MessageDispatcher, State}
   import Membrane.Helper.GenServer
-  use Element.Manager.Log, import: false, tags: :core
+  use Core.Element.Log, import: false, tags: :core
   use Membrane.Mixins.Log, import: false, tags: :core
   use Membrane.Helper
   use GenServer
@@ -251,7 +251,7 @@ defmodule Membrane.Element do
 
   @impl Playback
   def playback_warn_error(message, reason, state) do
-    import Membrane.Element.Manager.Log
+    import Membrane.Core.Element.Log
     warn_error(message, reason, state)
   end
 
@@ -262,7 +262,7 @@ defmodule Membrane.Element do
 
   @impl GenServer
   def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
-    import Membrane.Element.Manager.Log
+    import Membrane.Core.Element.Log
 
     if reason != :normal do
       warn_error(

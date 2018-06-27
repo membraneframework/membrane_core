@@ -1,6 +1,6 @@
-defmodule Membrane.Element.Manager.ActionExecSpec do
+defmodule Membrane.Core.Element.ActionExecSpec do
   use ESpec, async: false
-  alias Membrane.Element.Manager.State
+  alias Membrane.Core.Element.State
   alias Membrane.{Buffer, Event, Message}
   alias Membrane.Mixins.Playback
 

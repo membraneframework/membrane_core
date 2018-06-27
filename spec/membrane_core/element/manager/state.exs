@@ -1,7 +1,7 @@
 defmodule MockModule do
 end
 
-defmodule Membrane.Element.Manager.StateSpec do
+defmodule Membrane.Core.Element.StateSpec do
   use ESpec, async: false
   alias Membrane.Support.Element.TrivialFilter
 
@@ -20,7 +20,7 @@ defmodule Membrane.Element.Manager.StateSpec do
 
     it "should initialize empty playback buffer" do
       {:ok, struct} = described_module().new(module(), name())
-      expect(struct.playback_buffer) |> to(eq Membrane.Element.Manager.PlaybackBuffer.new())
+      expect(struct.playback_buffer) |> to(eq Membrane.Core.Element.PlaybackBuffer.new())
     end
 
     it "should return stopped playback state" do

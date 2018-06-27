@@ -9,7 +9,7 @@ defmodule Membrane.ElementSpec do
   alias Membrane.Support.Element.TrivialSink
   alias Membrane.Support.Element.TrivialFilter
 
-  alias Membrane.Element.Manager.State
+  alias Membrane.Core.Element.State
 
   alias Membrane.Mixins.Playback
 
@@ -122,7 +122,7 @@ defmodule Membrane.ElementSpec do
         do: %State{
           module: module(),
           playback: playback(),
-          playback_buffer: Membrane.Element.Manager.PlaybackBuffer.new(),
+          playback_buffer: Membrane.Core.Element.PlaybackBuffer.new(),
           internal_state: internal_state()
         }
 

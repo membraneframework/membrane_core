@@ -1,12 +1,12 @@
-defmodule Membrane.Element.Manager.State do
+defmodule Membrane.Core.Element.State do
   @moduledoc false
-  # Structure representing state of an Element.Manager. It is a part of the private API.
+  # Structure representing state of an Core.Element. It is a part of the private API.
   # It does not represent state of elements you construct, it's a state used
   # internally in Membrane.
 
   use Membrane.Mixins.Log, tags: :core
-  alias Membrane.Element
-  alias Element.Manager.PlaybackBuffer
+  alias Membrane.{Core, Element}
+  alias Core.Element.PlaybackBuffer
   alias Element.Pad
   alias Element.Base.Mixin.CommonBehaviour
   use Membrane.Helper

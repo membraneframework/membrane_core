@@ -1,6 +1,6 @@
-defmodule Membrane.Element.Manager.StateSpec do
+defmodule Membrane.Core.Element.StateSpec do
   use ESpec, async: true
-  alias Membrane.Element.Manager.State
+  alias Membrane.Core.Element.State
 
   describe "when creating new struct" do
     it "should have internal_state field set to nil" do

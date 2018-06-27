@@ -1,11 +1,11 @@
-defmodule Membrane.Element.Manager.ActionHandler do
+defmodule Membrane.Core.Element.ActionHandler do
   @moduledoc false
   # Module containing action handlers common for elements of all types.
 
-  alias Membrane.{Buffer, Caps, Element, Event, Message, Pad}
-  alias Element.Manager.{Common, State}
+  alias Membrane.{Buffer, Caps, Core, Element, Event, Message, Pad}
+  alias Core.Element.{Common, State}
   import Element.Pad, only: [is_pad_name: 1]
-  use Element.Manager.Log
+  use Core.Element.Log
   use Membrane.Helper
   use Membrane.Mixins.CallbackHandler
 

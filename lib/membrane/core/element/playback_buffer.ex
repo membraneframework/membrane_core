@@ -1,8 +1,8 @@
-defmodule Membrane.Element.Manager.PlaybackBuffer do
+defmodule Membrane.Core.Element.PlaybackBuffer do
   alias Membrane.Mixins.Playback
-  alias Membrane.{Buffer, Element, Event}
-  alias Element.Manager.{Common, State}
-  use Element.Manager.Log
+  alias Membrane.{Buffer, Core, Event}
+  alias Core.Element.{Common, State}
+  use Core.Element.Log
   use Membrane.Helper
 
   @type t :: %__MODULE__{

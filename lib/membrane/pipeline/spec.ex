@@ -69,9 +69,9 @@ defmodule Membrane.Pipeline.Spec do
   @typedoc """
   Options available when linking elements in the pipeline
 
-  `:pull_buffer` allows to configure Buffer between elements. See `t:Membrane.PullBuffer.props_t/0`
+  `:pull_buffer` allows to configure Buffer between elements. See `t:Membrane.Core.PullBuffer.props_t/0`
   """
-  @type link_option_t :: {:pull_buffer, Membrane.PullBuffer.props_t()}
+  @type link_option_t :: {:pull_buffer, Membrane.Core.PullBuffer.props_t()}
 
   @type link_from_spec_t :: {Membrane.Element.name_t(), Membrane.Pad.name_t()}
 

@@ -1,4 +1,4 @@
-defmodule Membrane.PullBuffer do
+defmodule Membrane.Core.PullBuffer do
   @moduledoc """
   Buffer that is attached to the `:sink` pad when working in a `:pull` mode.
 
@@ -6,10 +6,9 @@ defmodule Membrane.PullBuffer do
   prevents the situation when the data in a stream contains the discontinuities.
   It also guarantees that element won't be flooded with the incoming data.
   """
-  alias Membrane.PullBuffer
+  alias Membrane.Buffer
   use Membrane.Helper
   use Membrane.Mixins.Log, tags: :core
-  alias Membrane.Buffer
 
   @qe Qex
 
@@ -69,7 +68,7 @@ defmodule Membrane.PullBuffer do
         t -> default_toilet |> Map.merge(t |> Map.new())
       end
 
-    %PullBuffer{
+    %__MODULE__{
       name: name,
       q: @qe.new,
       sink: sink,
@@ -83,7 +82,7 @@ defmodule Membrane.PullBuffer do
   end
 
   @spec fill(t()) :: {:ok, t()}
-  def fill(%PullBuffer{} = pb),
+  def fill(%__MODULE__{} = pb),
     do:
       handle_demand(pb, 0)
       |> or_warn_error("Unable to fill PullBuffer #{pb.name}: #{inspect(pb)}")
@@ -92,7 +91,7 @@ defmodule Membrane.PullBuffer do
   def store(pb, type \\ :buffers, v)
 
   def store(
-        %PullBuffer{current_size: size, preferred_size: pref_size, toilet: false} = pb,
+        %__MODULE__{current_size: size, preferred_size: pref_size, toilet: false} = pb,
         :buffers,
         v
       )
@@ -108,9 +107,9 @@ defmodule Membrane.PullBuffer do
     {:ok, do_store_buffers(pb, v)}
   end
 
-  def store(%PullBuffer{toilet: %{warn: warn_lvl, fail: fail_lvl}} = pb, :buffers, v)
+  def store(%__MODULE__{toilet: %{warn: warn_lvl, fail: fail_lvl}} = pb, :buffers, v)
       when is_list(v) do
-    %PullBuffer{current_size: size} = pb = do_store_buffers(pb, v)
+    %__MODULE__{current_size: size} = pb = do_store_buffers(pb, v)
 
     if size >= warn_lvl do
       above_level =
@@ -148,34 +147,34 @@ defmodule Membrane.PullBuffer do
 
   def store(pb, :buffer, v), do: store(pb, :buffers, [v])
 
-  def store(%PullBuffer{q: q} = pb, type, v) when type in @non_buf_types do
+  def store(%__MODULE__{q: q} = pb, type, v) when type in @non_buf_types do
     report("Storing #{type}", pb)
-    {:ok, %PullBuffer{pb | q: q |> @qe.push({:non_buffer, type, v})}}
+    {:ok, %__MODULE__{pb | q: q |> @qe.push({:non_buffer, type, v})}}
   end
 
-  defp do_store_buffers(%PullBuffer{q: q, current_size: size, metric: metric} = pb, v) do
+  defp do_store_buffers(%__MODULE__{q: q, current_size: size, metric: metric} = pb, v) do
     buf_cnt = v |> metric.buffers_size
     report("Storing #{inspect(buf_cnt)} buffers", pb)
 
-    %PullBuffer{
+    %__MODULE__{
       pb
       | q: q |> @qe.push({:buffers, v, buf_cnt}),
         current_size: size + buf_cnt
     }
   end
 
-  def take(%PullBuffer{current_size: size} = pb, count) when count >= 0 do
+  def take(%__MODULE__{current_size: size} = pb, count) when count >= 0 do
     report("Taking #{inspect(count)} buffers", pb)
-    {out, %PullBuffer{current_size: new_size} = pb} = do_take(pb, count)
+    {out, %__MODULE__{current_size: new_size} = pb} = do_take(pb, count)
 
     with {:ok, pb} <- pb |> handle_demand(size - new_size) do
       {{:ok, out}, pb}
     end
   end
 
-  defp do_take(%PullBuffer{q: q, current_size: size, metric: metric} = pb, count) do
+  defp do_take(%__MODULE__{q: q, current_size: size, metric: metric} = pb, count) do
     {out, nq} = q |> q_pop(count, metric)
-    {out, %PullBuffer{pb | q: nq, current_size: max(0, size - count)}}
+    {out, %__MODULE__{pb | q: nq, current_size: max(0, size - count)}}
   end
 
   defp q_pop(q, count, metric, acc \\ [])
@@ -210,10 +209,10 @@ defmodule Membrane.PullBuffer do
   end
 
   @spec empty?(t()) :: boolean()
-  def empty?(%PullBuffer{current_size: size}), do: size == 0
+  def empty?(%__MODULE__{current_size: size}), do: size == 0
 
   defp handle_demand(
-         %PullBuffer{
+         %__MODULE__{
            toilet: false,
            sink: {other_pid, other_name},
            current_size: size,
@@ -235,17 +234,17 @@ defmodule Membrane.PullBuffer do
     )
 
     send(other_pid, {:membrane_demand, [to_demand, other_name]})
-    {:ok, %PullBuffer{pb | demand: demand + new_demand - to_demand}}
+    {:ok, %__MODULE__{pb | demand: demand + new_demand - to_demand}}
   end
 
-  defp handle_demand(%PullBuffer{toilet: false, demand: demand} = pb, new_demand),
-    do: {:ok, %PullBuffer{pb | demand: demand + new_demand}}
+  defp handle_demand(%__MODULE__{toilet: false, demand: demand} = pb, new_demand),
+    do: {:ok, %__MODULE__{pb | demand: demand + new_demand}}
 
-  defp handle_demand(%PullBuffer{toilet: toilet} = pb, _new_demand) when toilet != false do
+  defp handle_demand(%__MODULE__{toilet: toilet} = pb, _new_demand) when toilet != false do
     {:ok, pb}
   end
 
-  defp report(msg, %PullBuffer{
+  defp report(msg, %__MODULE__{
          name: name,
          current_size: size,
          preferred_size: pref_size,
