@@ -10,7 +10,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   alias Membrane.Element
   alias Element.{Action, Context, Pad}
   alias Element.Base.Mixin
-  alias Membrane.Core.Mixins.{Playback, CallbackHandler}
+  alias Membrane.Core.{Playback, CallbackHandler}
 
   @typedoc """
   Type of user-managed state of element.
@@ -236,7 +236,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 
-      use Membrane.Mixins.Log, tags: :element, import: false
+      use Membrane.Log, tags: :element, import: false
 
       alias Membrane.Element.Context, as: Ctx
 

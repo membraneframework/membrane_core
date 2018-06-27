@@ -8,7 +8,7 @@ defmodule Membrane.Core.PullBuffer do
   """
   alias Membrane.Buffer
   use Membrane.Helper
-  use Membrane.Mixins.Log, tags: :core
+  use Membrane.Log, tags: :core
 
   @qe Qex
 

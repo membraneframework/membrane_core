@@ -1,11 +1,11 @@
 defmodule Membrane.Core.Element.Log do
   alias Membrane.Core.Element.State
-  alias Membrane.Mixins.Log
+  alias Membrane.Log
 
   defmacro __using__(args) do
     quote location: :keep do
-      use Membrane.Mixins.Log, tags: :core, import: false
-      use Membrane.Mixins.Log, unquote(args |> Keyword.put(:import, false))
+      use Membrane.Log, tags: :core, import: false
+      use Membrane.Log, unquote(args |> Keyword.put(:import, false))
 
       unquote do
         if args |> Keyword.get(:import, true) do
@@ -17,7 +17,7 @@ defmodule Membrane.Core.Element.Log do
 
   defmacrop bring_logger do
     quote do
-      use Membrane.Mixins.Log, tags: :core, import: false
+      use Membrane.Log, tags: :core, import: false
     end
   end
 

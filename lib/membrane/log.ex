@@ -1,4 +1,4 @@
-defmodule Membrane.Mixins.Log do
+defmodule Membrane.Log do
   @moduledoc """
   Mixin for logging using simple functions such as info/1, debug/1 in other
   modules.
@@ -16,7 +16,7 @@ defmodule Membrane.Mixins.Log do
 
     if args |> Keyword.get(:import, true) do
       quote location: :keep do
-        import Membrane.Mixins.Log
+        import Membrane.Log
       end
     end
   end
@@ -24,21 +24,21 @@ defmodule Membrane.Mixins.Log do
   @doc false
   defmacro debug(message, tags \\ []) do
     quote location: :keep do
-      Membrane.Mixins.Log.log(:debug, unquote(message), unquote(tags))
+      Membrane.Log.log(:debug, unquote(message), unquote(tags))
     end
   end
 
   @doc false
   defmacro info(message, tags \\ []) do
     quote location: :keep do
-      Membrane.Mixins.Log.log(:info, unquote(message), unquote(tags))
+      Membrane.Log.log(:info, unquote(message), unquote(tags))
     end
   end
 
   @doc false
   defmacro warn(message, tags \\ []) do
     quote location: :keep do
-      Membrane.Mixins.Log.log(:warn, unquote(message), unquote(tags))
+      Membrane.Log.log(:warn, unquote(message), unquote(tags))
     end
   end
 
@@ -46,7 +46,7 @@ defmodule Membrane.Mixins.Log do
     quote do
       use Membrane.Helper
 
-      Membrane.Mixins.Log.warn(
+      Membrane.Log.warn(
         [
           "Encountered an error: ",
           unquote(message),
@@ -70,7 +70,7 @@ defmodule Membrane.Mixins.Log do
         {:ok, value}
       else
         {:error, reason} ->
-          Membrane.Mixins.Log.warn_error(unquote(message), reason, unquote(tags))
+          Membrane.Log.warn_error(unquote(message), reason, unquote(tags))
       end
     end
   end

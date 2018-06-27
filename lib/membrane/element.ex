@@ -11,10 +11,10 @@ defmodule Membrane.Element do
   alias Core.Element.{Common, MessageDispatcher, State}
   import Membrane.Helper.GenServer
   use Core.Element.Log, import: false, tags: :core
-  use Membrane.Mixins.Log, import: false, tags: :core
+  use Membrane.Log, import: false, tags: :core
   use Membrane.Helper
   use GenServer
-  use Membrane.Core.Mixins.Playback
+  use Membrane.Core.Playback
 
   @typedoc """
   Defines options that can be passed to `start/5` / `start_link/5` and received
@@ -84,7 +84,7 @@ defmodule Membrane.Element do
     do: do_start(:start, pipeline, module, name, element_options, process_options)
 
   defp do_start(method, pipeline, module, name, element_options, process_options) do
-    import Membrane.Mixins.Log
+    import Membrane.Log
 
     if element?(module) do
       debug("""
@@ -120,7 +120,7 @@ defmodule Membrane.Element do
   """
   @spec shutdown(pid, timeout) :: :ok
   def shutdown(server, timeout \\ 5000) do
-    import Membrane.Mixins.Log
+    import Membrane.Log
     debug("Shutdown -> #{inspect(server)}")
     GenServer.stop(server, :normal, timeout)
     :ok
@@ -209,7 +209,7 @@ defmodule Membrane.Element do
 
   @impl GenServer
   def init({pipeline, module, name, options}) do
-    import Membrane.Mixins.Log
+    import Membrane.Log
     Process.monitor(pipeline)
     debug("Element: initializing: #{inspect(module)}, options: #{inspect(options)}")
 
@@ -225,7 +225,7 @@ defmodule Membrane.Element do
 
   @impl GenServer
   def terminate(reason, %State{playback: playback} = state) do
-    import Membrane.Mixins.Log
+    import Membrane.Log
 
     case playback.state do
       :stopped ->

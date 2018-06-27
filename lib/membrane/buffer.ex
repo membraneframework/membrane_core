@@ -23,7 +23,7 @@ defmodule Membrane.Buffer do
 
   @doc """
   Converts buffer/buffers to the format in which they can be logged with
-  `Membrane.Mixins.Log`.
+  `Membrane.Log`.
   """
   def print(%Buffer{metadata: metadata, payload: payload}),
     do: [

@@ -1,5 +1,5 @@
 defmodule Membrane.Core.Element.PlaybackBuffer do
-  alias Membrane.Core.Mixins.Playback
+  alias Membrane.Core.Playback
   alias Membrane.{Buffer, Core, Event}
   alias Core.Element.{Common, State}
   use Core.Element.Log

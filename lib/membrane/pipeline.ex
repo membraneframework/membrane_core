@@ -8,10 +8,10 @@ defmodule Membrane.Pipeline do
   and process it in different ways.
   """
 
-  use Membrane.Mixins.Log, tags: :core
-  use Membrane.Core.Mixins.CallbackHandler
+  use Membrane.Log, tags: :core
+  use Membrane.Core.CallbackHandler
   use GenServer
-  use Membrane.Core.Mixins.Playback
+  use Membrane.Core.Playback
   alias Membrane.Pipeline.{State, Spec}
   alias Membrane.{Element, Message}
   use Membrane.Helper

@@ -7,7 +7,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   import Element.Pad, only: [is_pad_name: 1]
   use Core.Element.Log
   use Membrane.Helper
-  use Membrane.Core.Mixins.CallbackHandler
+  use Membrane.Core.CallbackHandler
 
   @impl CallbackHandler
   def handle_action({:event, {pad_name, event}}, _cb, _params, state)

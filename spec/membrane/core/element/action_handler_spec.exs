@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
   use ESpec, async: false
   alias Membrane.Core.Element.State
   alias Membrane.{Buffer, Event, Message}
-  alias Membrane.Core.Mixins.Playback
+  alias Membrane.Core.Playback
 
   pending ".handle_demand/6"
   pending ".handle_redemand/2"

@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Mixins.Playback do
+defmodule Membrane.Core.Playback do
   @moduledoc """
   Behaviour for modules that have playback state, i.e. elements and pipelines
 
@@ -56,14 +56,14 @@ defmodule Membrane.Core.Mixins.Playback do
     use Membrane.Helper
 
     quote location: :keep do
-      alias Membrane.Core.Mixins.Playbackable
+      alias Membrane.Core.Playbackable
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
 
       def handle_playback_state_changed(_old, _new, playbackable), do: {:ok, playbackable}
 
       def playback_warn_error(message, reason, _state) do
-        use Membrane.Mixins.Log
+        use Membrane.Log
         warn_error(message, reason)
       end
 

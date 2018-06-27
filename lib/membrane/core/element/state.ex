@@ -4,14 +4,14 @@ defmodule Membrane.Core.Element.State do
   # It does not represent state of elements you construct, it's a state used
   # internally in Membrane.
 
-  use Membrane.Mixins.Log, tags: :core
+  use Membrane.Log, tags: :core
   alias Membrane.{Core, Element}
   alias Core.Element.PlaybackBuffer
   alias Element.Pad
   alias Element.Base.Mixin.CommonBehaviour
   use Membrane.Helper
   alias __MODULE__, as: ThisModule
-  alias Membrane.Core.Mixins.{Playback, Playbackable}
+  alias Membrane.Core.{Playback, Playbackable}
   require Pad
 
   @type t :: %__MODULE__{
