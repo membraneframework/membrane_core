@@ -10,6 +10,7 @@ defmodule Membrane.ElementSpec do
   alias Membrane.Support.Element.TrivialFilter
 
   alias Membrane.Element.Manager.State
+  alias Membrane.Element.CallbackContext
 
   alias Membrane.Mixins.Playback
 
@@ -117,9 +118,9 @@ defmodule Membrane.ElementSpec do
       let :message, do: {:membrane_change_playback_state, :playing}
       let :module, do: TrivialSource
       let :internal_state, do: %{a: 1}
-      let :ctx_prepare, do: %Membrane.Element.Context.Prepare{}
-      let :ctx_play, do: %Membrane.Element.Context.Play{}
-      let :ctx_stop, do: %Membrane.Element.Context.Stop{}
+      let :ctx_prepare, do: %CallbackContext.Prepare{}
+      let :ctx_play, do: %CallbackContext.Play{}
+      let :ctx_stop, do: %CallbackContext.Stop{}
 
       let :state,
         do: %State{
@@ -390,7 +391,7 @@ defmodule Membrane.ElementSpec do
 
       let :state,
         do: %State{module: module(), playback: playback(), internal_state: internal_state()}
-      let :ctx_prepare, do: %Membrane.Element.Context.Prepare{}
+      let :ctx_prepare, do: %CallbackContext.Prepare{}
 
       context "and current playback state is :stopped" do
         let :playback, do: %Playback{state: :stopped}
@@ -490,7 +491,7 @@ defmodule Membrane.ElementSpec do
 
       context "and current playback state is :playing" do
         let :playback, do: %Playback{state: :playing}
-        let :ctx_prepare, do: %Membrane.Element.Context.Prepare{}
+        let :ctx_prepare, do: %CallbackContext.Prepare{}
 
         pending "and at least one of the callbacks has returned an error"
 
@@ -553,8 +554,8 @@ defmodule Membrane.ElementSpec do
       let :message, do: {:membrane_change_playback_state, :stopped}
       let :module, do: TrivialFilter
       let :internal_state, do: %{}
-      let :ctx_prepare, do: %Membrane.Element.Context.Prepare{}
-      let :ctx_stop, do: %Membrane.Element.Context.Stop{}
+      let :ctx_prepare, do: %CallbackContext.Prepare{}
+      let :ctx_stop, do: %CallbackContext.Stop{}
 
       let :state,
         do: %State{module: module(), playback: playback(), internal_state: internal_state()}

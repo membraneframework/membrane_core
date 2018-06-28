@@ -98,7 +98,7 @@ defmodule Membrane.Element.Manager.Common do
         use Membrane.Element.Manager.Log
 
         ctx = %CallbackContext.Other{}
-        exec_and_handle_callback(:handle_other, [ctx, message], state)
+        exec_and_handle_callback(:handle_other, [message, ctx], state)
         |> or_warn_error("Error while handling message")
       end
 
@@ -288,7 +288,7 @@ defmodule Membrane.Element.Manager.Common do
     %{accepted_caps: accepted_caps, caps: old_caps} =
       state |> State.get_pad_data!(:sink, pad_name)
 
-    context = %CallbackContext.Caps{caps: old_caps}
+    context = CallbackContext.Caps.from_state(state, caps: old_caps)
 
     with :ok <- if(Caps.Matcher.match?(accepted_caps, caps), do: :ok, else: :invalid_caps),
          {:ok, state} <-

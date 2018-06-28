@@ -62,7 +62,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_prepare(
               previous_playback_state :: Playback.state_t(),
-              context :: Element.Context.Prepare.t(),
+              context :: Element.CallbackContext.Prepare.t(),
               state :: internal_state_t
             ) :: callback_return_t
 
@@ -72,7 +72,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   This is moment when initial demands are sent and first buffers are generated
   if there are any pads in the push mode.
   """
-  @callback handle_play(context :: Element.Context.Play.t(), state :: internal_state_t) :: callback_return_t
+  @callback handle_play(context :: Element.CallbackContext.Play.t(), state :: internal_state_t) :: callback_return_t
 
   @doc """
   Callback invoked when element is supposed to stop.
@@ -81,7 +81,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   used by the element. For example, if element opens a file in `c:handle_prepare/3`,
   this is the place to close it.
   """
-  @callback handle_stop(context :: Element.Context.Stop.t(), state :: internal_state_t) :: callback_return_t
+  @callback handle_stop(context :: Element.CallbackContext.Stop.t(), state :: internal_state_t) :: callback_return_t
 
   @doc """
   Callback invoked when element receives a message that is not recognized
@@ -89,7 +89,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   Useful for receiving ticks from timer, data sent from NIFs or other stuff.
   """
-  @callback handle_other(message :: any(), context :: Element.Context.Stop.t(), state :: internal_state_t) :: callback_return_t
+  @callback handle_other(message :: any(), context :: Element.CallbackContext.Stop.t(), state :: internal_state_t) :: callback_return_t
 
   @doc """
   Callback that is called when new pad has beed added to element. Executed
