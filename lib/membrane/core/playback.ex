@@ -62,9 +62,10 @@ defmodule Membrane.Core.Playback do
 
       def handle_playback_state_changed(_old, _new, playbackable), do: {:ok, playbackable}
 
-      def playback_warn_error(message, reason, _state) do
+      def playback_warn_error(message, reason, state) do
         use Membrane.Log
         warn_error(message, reason)
+        {{:error, reason}, state}
       end
 
       @doc false
@@ -92,8 +93,8 @@ defmodule Membrane.Core.Playback do
       end
 
       defp do_resolve_playback_change(playback, playbackable) do
-        with {:ok, next_playback_state} <-
-               Playback.next_state(playback.state, playback.target_state),
+        with {{:ok, next_playback_state}, playbackable} <-
+               {Playback.next_state(playback.state, playback.target_state), playbackable},
              {:ok, playbackable} <-
                handle_playback_state(playback.state, next_playback_state, playbackable) do
           {playback, playbackable} =
@@ -113,16 +114,6 @@ defmodule Membrane.Core.Playback do
               """
               Unable to change playback state
               from #{inspect(playback.state)} to #{inspect(playback.target_state)}
-              """,
-              reason,
-              playbackable
-            )
-
-          {:error, reason} ->
-            playback_warn_error(
-              """
-              Unable to change playback state
-              from #{inspect(playback.state)} to #{inspect(playback.target_state)}}
               """,
               reason,
               playbackable

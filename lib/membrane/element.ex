@@ -8,10 +8,9 @@ defmodule Membrane.Element do
 
   alias __MODULE__.Pad
   alias Membrane.Core
-  alias Core.Element.{Common, MessageDispatcher, State}
+  alias Core.Element.{MessageDispatcher, State}
   import Membrane.Helper.GenServer
-  use Core.Element.Log, import: false, tags: :core
-  use Membrane.Log, import: false, tags: :core
+  use Membrane.Log, tags: :core
   use Membrane.Helper
   use GenServer
   use Membrane.Core.Playback
@@ -84,8 +83,6 @@ defmodule Membrane.Element do
     do: do_start(:start, pipeline, module, name, element_options, process_options)
 
   defp do_start(method, pipeline, module, name, element_options, process_options) do
-    import Membrane.Log
-
     if element?(module) do
       debug("""
       Element start link: module: #{inspect(module)},
@@ -209,50 +206,39 @@ defmodule Membrane.Element do
 
   @impl GenServer
   def init({pipeline, module, name, options}) do
-    import Membrane.Log
     Process.monitor(pipeline)
-    debug("Element: initializing: #{inspect(module)}, options: #{inspect(options)}")
+    state = State.new(module, name)
 
-    with {:ok, state} <- Common.handle_init(module, name, options) do
-      debug("Element: initialized: #{inspect(module)}")
+    with {:ok, state} <-
+           MessageDispatcher.handle_message(
+             {:membrane_init, options},
+             :other,
+             state
+           ) do
       {:ok, state}
     else
-      {:error, reason} ->
-        warn_error("Failed to initialize element", reason)
-        {:stop, {:element_init, reason}}
+      {{:error, reason}, _state} -> {:stop, {:element_init, reason}}
     end
   end
 
   @impl GenServer
-  def terminate(reason, %State{playback: playback} = state) do
-    import Membrane.Log
-
-    case playback.state do
-      :stopped ->
-        debug("Terminating element, reason: #{inspect(reason)}")
-
-      _ ->
-        warn_error(
-          """
-          Terminating: Attempt to terminate element when it is not stopped
-          """,
-          reason
-        )
-    end
-
-    Common.handle_shutdown(state)
+  def terminate(reason, state) do
+    {:ok, _state} = MessageDispatcher.handle_message({:membrane_shutdown, reason}, :other, state)
+    :ok
   end
 
   @impl Playback
-  defdelegate handle_playback_state(old, new, state), to: MessageDispatcher
+  def handle_playback_state(old, new, state) do
+    MessageDispatcher.handle_message({:membrane_change_playback_state, [old, new]}, :other, state)
+  end
 
   @impl Playback
-  defdelegate handle_playback_state_changed(old, new, state), to: MessageDispatcher
-
-  @impl Playback
-  def playback_warn_error(message, reason, state) do
-    import Membrane.Core.Element.Log
-    warn_error(message, reason, state)
+  def handle_playback_state_changed(old, new, state) do
+    MessageDispatcher.handle_message(
+      {:membrane_playback_state_changed, [old, new]},
+      :other,
+      state
+    )
   end
 
   @impl GenServer
@@ -262,20 +248,14 @@ defmodule Membrane.Element do
 
   @impl GenServer
   def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
-    import Membrane.Core.Element.Log
-
-    if reason != :normal do
-      warn_error(
-        "Failing becouse of pipeline failure",
-        {:pipeline_failure, reason: reason},
-        state
-      )
-    end
+    {:ok, state} =
+      MessageDispatcher.handle_message({:membrane_pipeline_down, reason}, :info, state)
 
     {:stop, reason, state}
   end
 
   def handle_info(message, state) do
+    # IO.inspect message
     message |> MessageDispatcher.handle_message(:info, state) |> noreply(state)
   end
 end

@@ -12,71 +12,17 @@ defmodule Membrane.Core.Element.Common do
   alias Membrane.Core.CallbackHandler
   alias Core.PullBuffer
   alias Element.Context
-  alias Core.Element.{ActionHandler, State}
+  alias Core.Element.{ActionHandler, PadsController, State}
   use Core.Element.Log
   use Membrane.Helper
 
-  def handle_init(module, name, options) do
-    with {:ok, state} <- State.new(module, name) do
-      do_handle_init(module, options, state)
-    end
-  end
-
-  defp do_handle_init(module, options, state) do
-    with {:ok, internal_state} <- module.handle_init(options) do
-      {:ok, %State{state | internal_state: internal_state}}
-    else
-      {:error, reason} ->
-        warn_error(
-          """
-          Module #{inspect(module)} handle_init callback returned an error
-          """,
-          {:handle_init, module, reason},
-          state
-        )
-
-      other ->
-        warn_error(
-          """
-          Module #{inspect(module)} handle_init callback returned invalid result:
-          #{inspect(other)} instead of {:ok, state} or {:error, reason}
-          """,
-          {:invalid_callback_result, :handle_init, other},
-          state
-        )
-    end
-  end
-
-  def handle_message(message, state) do
-    CallbackHandler.exec_and_handle_callback(:handle_other, ActionHandler, [message], state)
-    |> or_warn_error("Error while handling message")
-  end
-
-  def handle_message_bus(message_bus, state), do: {:ok, %{state | message_bus: message_bus}}
-
-  def handle_controlling_pid(pid, state), do: {:ok, %{state | controlling_pid: pid}}
-
-  def handle_demand_in(demand_in, pad_name, state) do
-    state
-    |> State.set_pad_data(:source, pad_name, [:options, :other_demand_in], demand_in)
-  end
-
-  def handle_playback_state(:prepared, :playing, state),
-    do: CallbackHandler.exec_and_handle_callback(:handle_play, ActionHandler, [], state)
-
-  def handle_playback_state(:prepared, :stopped, state),
-    do: CallbackHandler.exec_and_handle_callback(:handle_stop, ActionHandler, [], state)
-
-  def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing],
-    do: CallbackHandler.exec_and_handle_callback(:handle_prepare, ActionHandler, [ps], state)
-
   def get_pad_full_name(pad_name, state) do
-    state |> State.resolve_pad_full_name(pad_name)
+    state |> PadsController.resolve_pad_full_name(pad_name)
   end
 
   def handle_link(pad_name, pad_direction, pid, other_name, props, state) do
     state
-    |> State.link_pad(pad_name, pad_direction, fn %{direction: dir, mode: mode} = data ->
+    |> PadsController.link_pad(pad_name, pad_direction, fn %{direction: dir, mode: mode} = data ->
       data
       |> Map.merge(
         case dir do
@@ -118,7 +64,7 @@ defmodule Membrane.Core.Element.Common do
     with {:ok, state} <-
            state.pads.dynamic_currently_linking
            |> Helper.Enum.reduce_with(state, fn name, st ->
-             {:ok, direction} = st |> State.get_pad_data(:any, name, :direction)
+             {:ok, direction} = st |> PadsController.get_pad_data(:any, name, :direction)
              handle_pad_added(name, direction, st)
            end) do
       static_unlinked =
@@ -136,14 +82,14 @@ defmodule Membrane.Core.Element.Common do
         )
       end
 
-      {:ok, state |> State.clear_currently_linking()}
+      {:ok, state |> PadsController.clear_currently_linking()}
     end
   end
 
   def handle_unlink(pad_name, state) do
     with {:ok, state} <-
            state
-           |> State.get_pad_data(:sink, pad_name)
+           |> PadsController.get_pad_data(:sink, pad_name)
            |> (case do
                  {:ok, %{eos: false}} ->
                    handle_event(
@@ -155,8 +101,8 @@ defmodule Membrane.Core.Element.Common do
                  _ ->
                    {:ok, state}
                end),
-         {:ok, caps} <- state |> State.get_pad_data(:any, pad_name, :caps),
-         {:ok, direction} <- state |> State.get_pad_data(:any, pad_name, :direction),
+         {:ok, caps} <- state |> PadsController.get_pad_data(:any, pad_name, :caps),
+         {:ok, direction} <- state |> PadsController.get_pad_data(:any, pad_name, :direction),
          context <- %Context.PadRemoved{direction: direction, caps: caps},
          {:ok, state} <-
            CallbackHandler.exec_and_handle_callback(
@@ -165,14 +111,14 @@ defmodule Membrane.Core.Element.Common do
              [pad_name, context],
              state
            ),
-         {:ok, state} <- state |> State.remove_pad_data(:any, pad_name) do
+         {:ok, state} <- state |> PadsController.remove_pad_data(:any, pad_name) do
       {:ok, state}
     end
   end
 
   def unlink(%State{playback: %{state: :stopped}} = state) do
     state
-    |> State.get_pads_data()
+    |> PadsController.get_pads_data()
     |> Helper.Enum.each_with(fn {_name, %{pid: pid, other_name: other_name}} ->
       GenServer.call(pid, {:membrane_handle_unlink, other_name})
     end)
@@ -186,10 +132,6 @@ defmodule Membrane.Core.Element.Common do
       {:unlink, :cannot_unlink_non_stopped_element},
       state
     )
-  end
-
-  def handle_shutdown(%State{module: module, internal_state: internal_state}) do
-    module.handle_shutdown(internal_state)
   end
 
   def handle_pad_added(name, direction, state) do
@@ -207,12 +149,17 @@ defmodule Membrane.Core.Element.Common do
 
   def handle_caps(:pull, pad_name, caps, state) do
     cond do
-      state |> State.get_pad_data!(:sink, pad_name, :buffer) |> PullBuffer.empty?() ->
+      state |> PadsController.get_pad_data!(:sink, pad_name, :buffer) |> PullBuffer.empty?() ->
         do_handle_caps(pad_name, caps, state)
 
       true ->
         state
-        |> State.update_pad_data(:sink, pad_name, :buffer, &(&1 |> PullBuffer.store(:caps, caps)))
+        |> PadsController.update_pad_data(
+          :sink,
+          pad_name,
+          :buffer,
+          &(&1 |> PullBuffer.store(:caps, caps))
+        )
     end
   end
 
@@ -220,7 +167,7 @@ defmodule Membrane.Core.Element.Common do
 
   def do_handle_caps(pad_name, caps, state) do
     %{accepted_caps: accepted_caps, caps: old_caps} =
-      state |> State.get_pad_data!(:sink, pad_name)
+      state |> PadsController.get_pad_data!(:sink, pad_name)
 
     context = %Context.Caps{caps: old_caps}
 
@@ -232,7 +179,7 @@ defmodule Membrane.Core.Element.Common do
              [pad_name, caps, context],
              state
            ) do
-      state |> State.set_pad_data(:sink, pad_name, :caps, caps)
+      state |> PadsController.set_pad_data(:sink, pad_name, :caps, caps)
     else
       :invalid_caps ->
         warn_error(
@@ -251,12 +198,17 @@ defmodule Membrane.Core.Element.Common do
   end
 
   def handle_event(pad_name, event, state) do
-    pad_data = state |> State.get_pad_data!(:any, pad_name)
+    pad_data = state |> PadsController.get_pad_data!(:any, pad_name)
 
     if event.mode == :sync && pad_data.mode == :pull && pad_data.direction == :sink &&
          pad_data.buffer |> PullBuffer.empty?() |> Kernel.not() do
       state
-      |> State.update_pad_data(:sink, pad_name, :buffer, &(&1 |> PullBuffer.store(:event, event)))
+      |> PadsController.update_pad_data(
+        :sink,
+        pad_name,
+        :buffer,
+        &(&1 |> PullBuffer.store(:event, event))
+      )
     else
       do_handle_event(pad_name, event, state)
     end
@@ -277,8 +229,8 @@ defmodule Membrane.Core.Element.Common do
   end
 
   defp parse_event(pad_name, %Event{type: :sos}, state) do
-    with %{direction: :sink, sos: false} <- state |> State.get_pad_data!(:any, pad_name) do
-      {:ok, state} = state |> State.set_pad_data(:sink, pad_name, :sos, true)
+    with %{direction: :sink, sos: false} <- state |> PadsController.get_pad_data!(:any, pad_name) do
+      {:ok, state} = state |> PadsController.set_pad_data(:sink, pad_name, :sos, true)
       {{:ok, :handle}, state}
     else
       %{direction: :source} -> {:error, {:received_sos_through_source, pad_name}}
@@ -288,8 +240,8 @@ defmodule Membrane.Core.Element.Common do
 
   defp parse_event(pad_name, %Event{type: :eos}, state) do
     with %{direction: :sink, sos: true, eos: false} <-
-           state |> State.get_pad_data!(:any, pad_name) do
-      {:ok, state} = state |> State.set_pad_data(:sink, pad_name, :eos, true)
+           state |> PadsController.get_pad_data!(:any, pad_name) do
+      {:ok, state} = state |> PadsController.set_pad_data(:sink, pad_name, :eos, true)
       {{:ok, :handle}, state}
     else
       %{direction: :source} -> {:error, {:received_eos_through_source, pad_name}}
@@ -314,7 +266,7 @@ defmodule Membrane.Core.Element.Common do
   defp parse_event(_pad_name, _event, state), do: {{:ok, :handle}, state}
 
   def exec_event_handler(pad_name, event, state) do
-    %{direction: dir, caps: caps} = state |> State.get_pad_data!(:any, pad_name)
+    %{direction: dir, caps: caps} = state |> PadsController.get_pad_data!(:any, pad_name)
     context = %Context.Event{caps: caps}
 
     CallbackHandler.exec_and_handle_callback(
@@ -340,9 +292,9 @@ defmodule Membrane.Core.Element.Common do
        ) do
     {:ok, state} =
       state
-      |> State.update_pad_data(:sink, pad_name, :self_demand, &{:ok, &1 - buf_cnt})
+      |> PadsController.update_pad_data(:sink, pad_name, :self_demand, &{:ok, &1 - buf_cnt})
 
-    context = %Context.Write{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
+    context = %Context.Write{caps: state |> PadsController.get_pad_data!(:sink, pad_name, :caps)}
     debug("Executing handle_write with buffers #{inspect(buffers)}", state)
 
     CallbackHandler.exec_and_handle_callback(
@@ -362,9 +314,9 @@ defmodule Membrane.Core.Element.Common do
     {:ok, state} = state |> update_sink_self_demand(pad_name, source, &{:ok, &1 - buf_cnt})
 
     context = %Context.Process{
-      caps: state |> State.get_pad_data!(:sink, pad_name, :caps),
+      caps: state |> PadsController.get_pad_data!(:sink, pad_name, :caps),
       source: source,
-      source_caps: state |> State.get_pad_data!(:sink, pad_name, :caps)
+      source_caps: state |> PadsController.get_pad_data!(:sink, pad_name, :caps)
     }
 
     CallbackHandler.exec_and_handle_callback(
@@ -377,10 +329,10 @@ defmodule Membrane.Core.Element.Common do
 
   def fill_sink_pull_buffers(state) do
     state
-    |> State.get_pads_data(:sink)
+    |> PadsController.get_pads_data(:sink)
     |> Enum.filter(fn {_, %{mode: mode}} -> mode == :pull end)
     |> Helper.Enum.reduce_with(state, fn {pad_name, _pad_data}, st ->
-      State.update_pad_data(st, :sink, pad_name, :buffer, &PullBuffer.fill/1)
+      PadsController.update_pad_data(st, :sink, pad_name, :buffer, &PullBuffer.fill/1)
     end)
     |> or_warn_error("Unable to fill sink pull buffers")
   end
@@ -392,11 +344,16 @@ defmodule Membrane.Core.Element.Common do
   def handle_demand(pad_name, size, state) do
     {{:ok, total_size}, state} =
       state
-      |> State.get_update_pad_data(:source, pad_name, :demand, &{{:ok, &1 + size}, &1 + size})
+      |> PadsController.get_update_pad_data(
+        :source,
+        pad_name,
+        :demand,
+        &{{:ok, &1 + size}, &1 + size}
+      )
 
     if exec_handle_demand?(pad_name, state) do
       %{caps: caps, options: %{other_demand_in: demand_in}} =
-        state |> State.get_pad_data!(:source, pad_name)
+        state |> PadsController.get_pad_data!(:source, pad_name)
 
       context = %Context.Demand{caps: caps}
 
@@ -417,7 +374,7 @@ defmodule Membrane.Core.Element.Common do
   end
 
   defp exec_handle_demand?(pad_name, state) do
-    case state |> State.get_pad_data!(:source, pad_name) do
+    case state |> PadsController.get_pad_data!(:source, pad_name) do
       %{eos: true} ->
         debug(
           """
@@ -459,11 +416,11 @@ defmodule Membrane.Core.Element.Common do
       case type do
         :normal ->
           state
-          |> State.update_pad_data(:sink, pad_name, :self_demand, &{:ok, &1 + buf_cnt})
+          |> PadsController.update_pad_data(:sink, pad_name, :self_demand, &{:ok, &1 + buf_cnt})
 
         :set ->
           state
-          |> State.set_pad_data(:sink, pad_name, :self_demand, buf_cnt)
+          |> PadsController.set_pad_data(:sink, pad_name, :self_demand, buf_cnt)
       end
 
     handle_write(:pull, pad_name, state)
@@ -480,7 +437,7 @@ defmodule Membrane.Core.Element.Common do
   def handle_buffer(:pull, pad_name, buffers, %State{type: :filter} = state) do
     {{:ok, was_empty?}, state} =
       state
-      |> State.get_update_pad_data(:sink, pad_name, :buffer, fn pb ->
+      |> PadsController.get_update_pad_data(:sink, pad_name, :buffer, fn pb ->
         was_empty = pb |> PullBuffer.empty?()
 
         with {:ok, pb} <- pb |> PullBuffer.store(buffers) do
@@ -503,7 +460,12 @@ defmodule Membrane.Core.Element.Common do
   def handle_buffer(:pull, pad_name, buffer, %State{type: :sink} = state) do
     {:ok, state} =
       state
-      |> State.update_pad_data(:sink, pad_name, :buffer, &(&1 |> PullBuffer.store(buffer)))
+      |> PadsController.update_pad_data(
+        :sink,
+        pad_name,
+        :buffer,
+        &(&1 |> PullBuffer.store(buffer))
+      )
 
     check_and_handle_write(pad_name, state)
     |> or_warn_error(["
@@ -514,7 +476,9 @@ defmodule Membrane.Core.Element.Common do
   end
 
   def handle_process_push(pad_name, buffers, state) do
-    context = %Context.Process{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
+    context = %Context.Process{
+      caps: state |> PadsController.get_pad_data!(:sink, pad_name, :caps)
+    }
 
     CallbackHandler.exec_and_handle_callback(
       :handle_process,
@@ -528,7 +492,7 @@ defmodule Membrane.Core.Element.Common do
   def handle_process_pull(pad_name, source, buf_cnt, state) do
     with {{:ok, out}, state} <-
            state
-           |> State.get_update_pad_data(
+           |> PadsController.get_update_pad_data(
              :sink,
              pad_name,
              :buffer,
@@ -554,7 +518,7 @@ defmodule Membrane.Core.Element.Common do
   end
 
   def handle_write(:push, pad_name, buffers, state) do
-    context = %Context.Write{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
+    context = %Context.Write{caps: state |> PadsController.get_pad_data!(:sink, pad_name, :caps)}
 
     CallbackHandler.exec_and_handle_callback(
       :handle_write,
@@ -568,8 +532,10 @@ defmodule Membrane.Core.Element.Common do
   def handle_write(:pull, pad_name, state) do
     with {{:ok, out}, state} <-
            state
-           |> State.get_update_pad_data(:sink, pad_name, fn %{self_demand: demand, buffer: pb} =
-                                                              data ->
+           |> PadsController.get_update_pad_data(:sink, pad_name, fn %{
+                                                                       self_demand: demand,
+                                                                       buffer: pb
+                                                                     } = data ->
              with {{:ok, out}, npb} <- PullBuffer.take(pb, demand) do
                {{:ok, out}, %{data | buffer: npb}}
              end
@@ -601,9 +567,9 @@ defmodule Membrane.Core.Element.Common do
          state
        ) do
     if state
-       |> State.get_pad_data!(:sink, pad_name, :buffer)
+       |> PadsController.get_pad_data!(:sink, pad_name, :buffer)
        |> PullBuffer.empty?()
-       |> Kernel.!() && state |> State.get_pad_data!(:source, src_name, :demand) > 0 do
+       |> Kernel.!() && state |> PadsController.get_pad_data!(:source, src_name, :demand) > 0 do
       debug(
         """
         handle_process did not produce expected amount of buffers, despite
@@ -619,7 +585,7 @@ defmodule Membrane.Core.Element.Common do
   end
 
   defp check_and_handle_process(pad_name, state) do
-    demand = state |> State.get_pad_data!(:sink, pad_name, :self_demand)
+    demand = state |> PadsController.get_pad_data!(:sink, pad_name, :self_demand)
 
     if demand > 0 do
       handle_process_pull(pad_name, nil, demand, state)
@@ -630,7 +596,7 @@ defmodule Membrane.Core.Element.Common do
 
   defp check_and_handle_demands(state) do
     state
-    |> State.get_pads_data(:source)
+    |> PadsController.get_pads_data(:source)
     |> Helper.Enum.reduce_with(state, fn {name, _data}, st ->
       handle_demand(name, 0, st)
     end)
@@ -641,12 +607,12 @@ defmodule Membrane.Core.Element.Common do
   end
 
   defp update_sink_self_demand(state, pad_name, :self, f),
-    do: state |> State.update_pad_data(:sink, pad_name, :self_demand, f)
+    do: state |> PadsController.update_pad_data(:sink, pad_name, :self_demand, f)
 
   defp update_sink_self_demand(state, _pad_name, _src, _f), do: {:ok, state}
 
   defp check_and_handle_write(pad_name, state) do
-    if State.get_pad_data!(state, :sink, pad_name, :self_demand) > 0 do
+    if PadsController.get_pad_data!(state, :sink, pad_name, :self_demand) > 0 do
       handle_write(:pull, pad_name, state)
     else
       {:ok, state}

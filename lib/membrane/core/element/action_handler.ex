@@ -3,7 +3,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   # Module containing action handlers common for elements of all types.
 
   alias Membrane.{Buffer, Caps, Core, Element, Event, Message, Pad}
-  alias Core.Element.{Common, State}
+  alias Core.Element.{Common, PadsController, State}
   import Element.Pad, only: [is_pad_name: 1]
   use Core.Element.Log
   use Membrane.Helper
@@ -63,7 +63,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         {:handle_event, %{direction: :source}} -> {:event, :sink}
       end
 
-    pads = state |> State.get_pads_data(dir) |> Map.keys()
+    pads = state |> PadsController.get_pads_data(dir) |> Map.keys()
 
     pads
     |> Helper.Enum.reduce_with(state, fn pad, st ->
@@ -167,7 +167,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
   end
 
-  @spec send_buffer(Pad.name_t(), atom, [Buffer.t()], State.t()) :: :ok | {:error, any}
+  @spec send_buffer(Pad.name_t(), atom, [Buffer.t()], PadsController.t()) :: :ok | {:error, any}
   def send_buffer(
         _pad_name,
         _buffer,
@@ -199,12 +199,14 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
 
     with {:ok, %{mode: mode, pid: pid, other_name: other_name, options: options, eos: false}} <-
-           state |> State.get_pad_data(:source, pad_name) do
+           state |> PadsController.get_pad_data(:source, pad_name) do
       {:ok, state} =
         case mode do
           :pull ->
             buf_size = Buffer.Metric.from_unit(options.other_demand_in).buffers_size(buffers)
-            state |> State.update_pad_data(:source, pad_name, :demand, &{:ok, &1 - buf_size})
+
+            state
+            |> PadsController.update_pad_data(:source, pad_name, :demand, &{:ok, &1 - buf_size})
 
           :push ->
             {:ok, state}
@@ -244,7 +246,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec send_caps(Pad.name_t(), Caps.t(), State.t()) :: :ok
+  @spec send_caps(Pad.name_t(), Caps.t(), PadsController.t()) :: :ok
   def send_caps(pad_name, caps, state) do
     debug(
       """
@@ -255,10 +257,10 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
 
     with {:ok, %{accepted_caps: accepted_caps, pid: pid, other_name: other_name}} <-
-           state |> State.get_pad_data(:source, pad_name),
+           state |> PadsController.get_pad_data(:source, pad_name),
          {true, _} <- {Caps.Matcher.match?(accepted_caps, caps), accepted_caps} do
       send(pid, {:membrane_caps, [caps, other_name]})
-      state |> State.set_pad_data(:source, pad_name, :caps, caps)
+      state |> PadsController.set_pad_data(:source, pad_name, :caps, caps)
     else
       {false, accepted_caps} ->
         warn_error(
@@ -292,7 +294,7 @@ defmodule Membrane.Core.Element.ActionHandler do
           :normal | :set,
           pos_integer,
           atom,
-          State.t()
+          PadsController.t()
         ) :: :ok | {:error, any}
   def handle_demand(pad_name, source, type, size, callback, state)
 
@@ -340,11 +342,12 @@ defmodule Membrane.Core.Element.ActionHandler do
   def handle_demand(pad_name, source, type, size, callback, state) do
     debug("Requesting demand of size #{inspect(size)} on pad #{inspect(pad_name)}", state)
 
-    with {:sink, {:ok, %{mode: :pull}}} <- {:sink, state |> State.get_pad_data(:sink, pad_name)},
+    with {:sink, {:ok, %{mode: :pull}}} <-
+           {:sink, state |> PadsController.get_pad_data(:sink, pad_name)},
          {:source, {:ok, %{mode: :pull}}} <-
            {:source,
             case source do
-              {:source, src_name} -> state |> State.get_pad_data(:source, src_name)
+              {:source, src_name} -> state |> PadsController.get_pad_data(:source, src_name)
               :self -> {:ok, %{mode: :pull}}
             end} do
       case callback do
@@ -364,9 +367,10 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec handle_redemand(Pad.name_t(), State.t()) :: {:ok, State.t()} | no_return()
+  @spec handle_redemand(Pad.name_t(), PadsController.t()) ::
+          {:ok, PadsController.t()} | no_return()
   def handle_redemand(src_name, state) do
-    with {:ok, %{mode: :pull}} <- state |> State.get_pad_data(:source, src_name) do
+    with {:ok, %{mode: :pull}} <- state |> PadsController.get_pad_data(:source, src_name) do
       Common.handle_redemand(src_name, state)
     else
       {:ok, %{mode: :push}} ->
@@ -377,7 +381,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec send_event(Pad.name_t(), Event.t(), State.t()) :: :ok
+  @spec send_event(Pad.name_t(), Event.t(), PadsController.t()) :: :ok
   def send_event(pad_name, event, state) do
     debug(
       """
@@ -387,7 +391,8 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     )
 
-    with {:ok, %{pid: pid, other_name: other_name}} <- State.get_pad_data(state, :any, pad_name),
+    with {:ok, %{pid: pid, other_name: other_name}} <-
+           PadsController.get_pad_data(state, :any, pad_name),
          {:ok, state} <- handle_event(pad_name, event, state) do
       send(pid, {:membrane_event, [event, other_name]})
       {:ok, state}
@@ -408,8 +413,9 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp handle_event(pad_name, %Event{type: :eos}, state) do
-    with %{direction: :source, eos: false} <- state |> State.get_pad_data!(:any, pad_name) do
-      state |> State.set_pad_data(:source, pad_name, :eos, true)
+    with %{direction: :source, eos: false} <-
+           state |> PadsController.get_pad_data!(:any, pad_name) do
+      state |> PadsController.set_pad_data(:source, pad_name, :eos, true)
     else
       %{direction: :sink} -> {:error, {:cannot_send_eos_through_sink, pad_name}}
       %{eos: true} -> {:error, {:eos_already_sent, pad_name}}
@@ -418,7 +424,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp handle_event(_pad_name, _event, state), do: {:ok, state}
 
-  @spec send_message(Message.t(), State.t()) :: :ok
+  @spec send_message(Message.t(), PadsController.t()) :: :ok
   def send_message(%Message{} = message, %State{message_bus: nil} = state) do
     debug("Dropping #{inspect(message)} as message bus is undefined", state)
     {:ok, state}
