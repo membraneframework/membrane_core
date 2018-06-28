@@ -1,13 +1,13 @@
 defmodule Membrane.Core.Element.LifecycleController do
   alias Membrane.Core
   alias Core.CallbackHandler
-  alias Core.Element.{ActionHandler, PadsController, State}
+  alias Core.Element.{ActionHandler, PadController, PadModel, State}
   use Core.Element.Log
 
   def handle_init(options, %State{module: module} = state) do
     debug("Initializing element: #{inspect(module)}, options: #{inspect(options)}", state)
 
-    with {:ok, state} <- PadsController.init_pads(state),
+    with {:ok, state} <- PadController.init_pads(state),
          {:ok, state} <- do_handle_init(module, options, state) do
       debug("Element initialized: #{inspect(module)}", state)
       {:ok, state}
@@ -86,8 +86,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   def handle_controlling_pid(pid, state), do: {:ok, %{state | controlling_pid: pid}}
 
   def handle_demand_in(demand_in, pad_name, state) do
-    state
-    |> PadsController.set_pad_data(:source, pad_name, [:options, :other_demand_in], demand_in)
+    PadModel.set_data(:source, pad_name, [:options, :other_demand_in], demand_in, state)
   end
 
   def handle_playback_state(:prepared, :playing, state),

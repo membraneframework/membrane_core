@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Element.PadsControllerSpec do
+defmodule Membrane.Core.Element.PadControllerSpec do
   use ESpec, async: false
   alias Membrane.Support.Element.TrivialFilter
   alias Membrane.Core.Element.State

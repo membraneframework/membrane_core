@@ -1,6 +1,6 @@
 defmodule Membrane.Core.Element.MessageDispatcher do
   alias Membrane.{Core, Element}
-  alias Core.Element.{Common, LifecycleController, PlaybackBuffer}
+  alias Core.Element.{Common, LifecycleController, PadController, PlaybackBuffer}
   use Core.Element.Log
   use Membrane.Helper
 
@@ -70,21 +70,25 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     {type, args} |> PlaybackBuffer.store(state)
   end
 
-  defp do_handle_message({:membrane_get_pad_full_name, args}, :call, state),
-    do: forward(:get_pad_full_name, args, state)
+  defp do_handle_message({:membrane_get_pad_full_name, pad_name}, :call, state),
+    do: PadController.get_pad_full_name(pad_name, state)
 
   defp do_handle_message(:membrane_linking_finished, :call, state),
-    do: forward(:handle_linking_finished, state)
+    do: PadController.handle_linking_finished(state)
 
-  defp do_handle_message({:membrane_handle_link, args}, :call, state),
-    do: forward(:handle_link, args, state)
+  defp do_handle_message(
+         {:membrane_handle_link, [pad_name, pad_direction, pid, other_name, props]},
+         :call,
+         state
+       ),
+       do: PadController.handle_link(pad_name, pad_direction, pid, other_name, props, state)
+
+  defp do_handle_message({:membrane_handle_unlink, pad_name}, :call, state),
+    do: PadController.handle_unlink(pad_name, state)
 
   defp do_handle_message(:membrane_unlink, :call, state) do
     with :ok <- forward(:unlink, state), do: {:ok, state}
   end
-
-  defp do_handle_message({:membrane_handle_unlink, args}, :call, state),
-    do: forward(:handle_unlink, args, state)
 
   defp do_handle_message({:membrane_self_demand, args}, :info, state),
     do: forward(:handle_self_demand, args, state)

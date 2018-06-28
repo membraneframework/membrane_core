@@ -407,7 +407,7 @@ defmodule Membrane.Pipeline do
       end
 
     with {:ok, pid} <- state |> State.get_child(element),
-         {:ok, pad_name} <- pid |> GenServer.call({:membrane_get_pad_full_name, [pad_name]}) do
+         {:ok, pad_name} <- pid |> GenServer.call({:membrane_get_pad_full_name, pad_name}) do
       {{:ok, %{element: element, pad: pad_name}}, state}
     else
       {:error, reason} -> {:error, {:resolve_link, elementpad, reason}}
