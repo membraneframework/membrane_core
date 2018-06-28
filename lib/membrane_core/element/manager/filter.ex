@@ -141,7 +141,8 @@ defmodule Membrane.Element.Manager.Filter do
   end
 
   def handle_process_push(pad_name, buffers, state) do
-    context = %CallbackContext.Process{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
+    caps = state |> State.get_pad_data!(:sink, pad_name, :caps)
+    context = CallbackContext.construct!(:handle_process, state, caps: caps)
 
     exec_and_handle_callback(:handle_process, [pad_name, buffers, context], state)
     |> or_warn_error("Error while handling process")
@@ -178,11 +179,13 @@ defmodule Membrane.Element.Manager.Filter do
   defp handle_pullbuffer_output(pad_name, source, {:buffers, buffers, buf_cnt}, state) do
     {:ok, state} = state |> update_sink_self_demand(pad_name, source, &{:ok, &1 - buf_cnt})
 
-    context = %CallbackContext.Process{
+    context_entries = [
       caps: state |> State.get_pad_data!(:sink, pad_name, :caps),
       source: source,
       source_caps: state |> State.get_pad_data!(:sink, pad_name, :caps)
-    }
+    ]
+
+    context = CallbackContext.construct!(:handle_process, state, context_entries)
 
     exec_and_handle_callback(:handle_process, [pad_name, buffers, context], state)
   end

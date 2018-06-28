@@ -6,8 +6,8 @@ defmodule Membrane.Element.CallbackContext.Other do
   @behaviour Membrane.Element.CallbackContext
 
   @type t :: %__MODULE__{
-          playback_state: Membrane.Mixins.Playback.state_t(),
-  }
+          playback_state: Membrane.Mixins.Playback.state_t()
+        }
 
   defstruct playback_state: nil
 

@@ -17,8 +17,9 @@ defmodule Membrane.Element.CallbackContext do
     :handle_write => Ctx.Write
   }
 
-  def construct!(callback, state, entries) do
+  def construct!(callback, state, entries \\ []) do
     ctx_module = @context_mapping |> Map.get(callback)
+
     if ctx_module != nil do
       ctx_module.from_state(state, entries)
     else

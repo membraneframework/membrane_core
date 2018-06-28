@@ -106,7 +106,8 @@ defmodule Membrane.Element.Manager.Sink do
   end
 
   def handle_write(:push, pad_name, buffers, state) do
-    context = %CallbackContext.Write{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
+    caps = state |> State.get_pad_data!(:sink, pad_name, :caps)
+    context = CallbackContext.construct!(:handle_write, state, caps: caps)
 
     exec_and_handle_callback(:handle_write, [pad_name, buffers, context], state)
     |> or_warn_error("Error while handling write")
@@ -144,7 +145,8 @@ defmodule Membrane.Element.Manager.Sink do
       state
       |> State.update_pad_data(:sink, pad_name, :self_demand, &{:ok, &1 - buf_cnt})
 
-    context = %CallbackContext.Write{caps: state |> State.get_pad_data!(:sink, pad_name, :caps)}
+    caps = state |> State.get_pad_data!(:sink, pad_name, :caps)
+    context = CallbackContext.construct!(:handle_write, state, caps: caps)
     debug("Executing handle_write with buffers #{inspect(buffers)}", state)
     exec_and_handle_callback(:handle_write, [pad_name, buffers, context], state)
   end
