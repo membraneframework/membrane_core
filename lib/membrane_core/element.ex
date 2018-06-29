@@ -27,7 +27,6 @@ defmodule Membrane.Element do
   """
   @type name_t :: atom | {atom, non_neg_integer}
 
-
   @doc """
   Checks whether module is an element.
   """

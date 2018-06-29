@@ -58,7 +58,7 @@ defmodule Membrane.Mixfile do
       {:ex_doc, "~> 0.18", only: :dev, runtime: false},
       {:espec, "~> 1.5", only: :test},
       {:excoveralls, "~> 0.8", only: :test},
-      {:qex, "~> 0.3"},
+      {:qex, "~> 0.3"}
     ]
   end
 end

@@ -185,6 +185,7 @@ defmodule Membrane.PullBufferSpec do
 
     context "when there are not enough buffers" do
       let :to_take, do: 10
+
       it "should return tuple {:ok, {:empty, buffers}}" do
         {result, _new_pb} = described_module().take(pb(), to_take())
         expect(result) |> to(eq {:ok, {:empty, [buffers1(), buffers2()]}})
@@ -212,7 +213,7 @@ defmodule Membrane.PullBufferSpec do
           expect(result) |> to(eq {:value, [buffers1()]})
 
           list = new_q |> Enum.into([])
-          exp_list = Qex.new |> Qex.push(buffers2()) |> Enum.into([])
+          exp_list = Qex.new() |> Qex.push(buffers2()) |> Enum.into([])
 
           expect(list) |> to(eq exp_list)
           assert_received {:membrane_demand, _}
@@ -229,14 +230,12 @@ defmodule Membrane.PullBufferSpec do
           expect(result) |> to(eq {:value, [buffers1(), exp_buf2]})
 
           list = new_q |> Enum.into([])
-          exp_list = Qex.new |> Qex.push(exp_rest) |> Enum.into([])
+          exp_list = Qex.new() |> Qex.push(exp_rest) |> Enum.into([])
 
           expect(list) |> to(eq exp_list)
           assert_received {:membrane_demand, _}
         end
       end
-      
     end
   end
 end
-
