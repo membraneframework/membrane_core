@@ -5,12 +5,90 @@ defmodule Membrane.Helper do
 
   defmacro __using__(_args) do
     quote do
-      import unquote(__MODULE__), only: [~>: 2, ~>>: 2, provided: 2, int_part: 2]
+      import unquote(__MODULE__),
+        only: [withl: 1, withl: 2, ~>: 2, ~>>: 2, provided: 2, int_part: 2]
+
       alias unquote(__MODULE__)
     end
   end
 
   @compile {:inline, listify: 1, wrap_nil: 2, int_part: 2}
+
+  @doc """
+  A labeled version of the `with` macro.
+
+  Helps to determine in `else` block which `with clause` did not match.
+  Therefore `else` block is always required. Due to the Elixir syntax requirements,
+  all clauses have to be labeled.
+
+  Sample usage:
+  ```
+  def withl_example(x, y) do
+    withl a: true <- x > 0,
+          b: false <- y |> rem(2) == 0 do
+      {x, y}
+    else
+      a: false -> {:error, :x}
+      b: true -> {:error, :y}
+    end
+  end
+  ```
+  """
+  @spec withl(keyword(with_clause :: term), do: code_block :: term(), else: match_clauses :: term) ::
+          term
+  defmacro withl(with_clauses, do: block, else: else_clauses) do
+    do_withl(with_clauses, block, else_clauses)
+  end
+
+  @doc """
+  Works like `withl/2`, but allows shorter syntax.
+
+  Sample usage:
+  ```
+  def withl_example(x, y) do
+    withl a: true <- x > 0,
+          b: false <- y |> rem(2) == 0,
+          do: {x, y},
+          else: (a: false -> {:error, :x}; b: true -> {:error, :y})
+  end
+  ```
+
+  For more details and more verbose and readable syntax, check docs for `withl/2`.
+  """
+  @spec withl(
+          keyword :: [
+            {key :: atom(), with_clause :: term}
+            | {:do, code_block :: term}
+            | {:else, match_clauses :: term}
+          ]
+        ) :: term
+  defmacro withl(keyword) do
+    {{:else, else_clauses}, keyword} = keyword |> List.pop_at(-1)
+    {{:do, block}, keyword} = keyword |> List.pop_at(-1)
+    with_clauses = keyword
+    do_withl(with_clauses, block, else_clauses)
+  end
+
+  defp do_withl(with_clauses, block, else_clauses) do
+    with_clauses =
+      with_clauses
+      |> Enum.map(fn
+        {label, {:<-, meta, [{:when, guard_meta, [left, guard]}, right]}} ->
+          {:<-, meta, [{:when, guard_meta, [[{label, left}], guard]}, [{label, right}]]}
+
+        {label, {:<-, meta, [left, right]}} ->
+          {:<-, meta, [[{label, left}], [{label, right}]]}
+
+        {label, expr} ->
+          [{label, expr}]
+      end)
+
+    args = with_clauses ++ [[do: block, else: else_clauses]]
+
+    quote do
+      with unquote_splicing(args)
+    end
+  end
 
   def listify(list) when is_list(list) do
     list
