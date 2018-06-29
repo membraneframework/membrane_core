@@ -405,11 +405,7 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
       before do:
                allow(
                  manager_module()
-                 |> to(
-                   accept :handle_self_demand, fn _, _, _, _, _ ->
-                     send(self(), :handle_self_demand_called)
-                   end
-                 )
+                 |> to(accept :handle_self_demand, fn _, _, _, _, _ -> :ok end)
                )
 
       it "should call handle_self_demand method of the given manager" do
@@ -422,7 +418,7 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
           state()
         )
 
-        assert_received :handle_self_demand_called
+        expect(element_module() |> to(accepted(:manager_module, :any, count: 1)))
       end
     end
   end
@@ -473,14 +469,12 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
       before do:
                allow(
                  manager_module()
-                 |> to(
-                   accept :handle_redemand, fn _, _ -> send(self(), :handle_redemand_called) end
-                 )
+                 |> to(accept :handle_redemand, fn _, _ -> :ok end)
                )
 
       it "should call handle_redemand method of the given module" do
         described_module().handle_redemand(pad_name(), state())
-        assert_received :handle_redemand_called
+        expect(manager_module() |> to(accepted(:handle_redemand, :any, count: 1)))
       end
     end
   end
