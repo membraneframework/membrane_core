@@ -23,15 +23,17 @@ defmodule Membrane.Helper do
 
   Sample usage:
   ```
-  def withl_example(x, y) do
-    withl a: true <- x > 0,
-          b: false <- y |> rem(2) == 0 do
-      {x, y}
-    else
-      a: false -> {:error, :x}
-      b: true -> {:error, :y}
-    end
-  end
+  iex> use Membrane.Helper
+  iex> x = 1
+  iex> y = 2
+  iex> withl a: true <- x > 0,
+  ...>       b: false <- y |> rem(2) == 0 do
+  ...>   {x, y}
+  ...> else
+  ...>   a: false -> {:error, :x}
+  ...>   b: true -> {:error, :y}
+  ...> end
+  {:error, :y}
   ```
   """
   @spec withl(keyword(with_clause :: term), do: code_block :: term(), else: match_clauses :: term) ::
@@ -45,12 +47,14 @@ defmodule Membrane.Helper do
 
   Sample usage:
   ```
-  def withl_example(x, y) do
-    withl a: true <- x > 0,
-          b: false <- y |> rem(2) == 0,
-          do: {x, y},
-          else: (a: false -> {:error, :x}; b: true -> {:error, :y})
-  end
+  iex> use Membrane.Helper
+  iex> x = 1
+  iex> y = 2
+  iex> withl a: true <- x > 0,
+  ...>       b: false <- y |> rem(2) == 0,
+  ...>       do: {x, y},
+  ...>       else: (a: false -> {:error, :x}; b: true -> {:error, :y})
+  {:error, :y}
   ```
 
   For more details and more verbose and readable syntax, check docs for `withl/2`.
