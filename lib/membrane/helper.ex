@@ -21,19 +21,22 @@ defmodule Membrane.Helper do
   Therefore `else` block is always required. Due to the Elixir syntax requirements,
   all clauses have to be labeled.
 
+  Labels also make it possible to access results of already succeeded matches
+  from else clauses. That is why labels have to be known at the compile time.
+
   Sample usage:
   ```
   iex> use Membrane.Helper
-  iex> x = 1
-  iex> y = 2
-  iex> withl a: true <- x > 0,
-  ...>       b: false <- y |> rem(2) == 0 do
-  ...>   {x, y}
+  iex> list = [-1, 3, 2]
+  iex> binary = <<1,2>>
+  iex> withl max: i when i > 0 <- list |> Enum.max(),
+  ...>       bin: <<b::binary-size(i), _::binary>> <- binary do
+  ...>   {list, b}
   ...> else
-  ...>   a: false -> {:error, :x}
-  ...>   b: true -> {:error, :y}
+  ...>   max: i -> {:error, :invalid_maximum, i}
+  ...>   bin: b -> {:error, :binary_too_short, b, i}
   ...> end
-  {:error, :y}
+  {:error, :binary_too_short, <<1,2>>, 3}
   ```
   """
   @spec withl(keyword(with_clause :: term), do: code_block :: term(), else: match_clauses :: term) ::
@@ -74,24 +77,28 @@ defmodule Membrane.Helper do
   end
 
   defp do_withl(with_clauses, block, else_clauses) do
-    with_clauses =
-      with_clauses
-      |> Enum.map(fn
-        {label, {:<-, meta, [{:when, guard_meta, [left, guard]}, right]}} ->
-          {:<-, meta, [{:when, guard_meta, [[{label, left}], guard]}, [{label, right}]]}
-
-        {label, {:<-, meta, [left, right]}} ->
-          {:<-, meta, [[{label, left}], [{label, right}]]}
-
-        {label, expr} ->
-          [{label, expr}]
+    else_clauses =
+      else_clauses
+      |> Enum.map(fn {:->, meta, [[[{label, left}]], right]} ->
+        {label, {:->, meta, [[left], right]}}
       end)
+      |> Enum.group_by(fn {k, _v} -> k end, fn {_k, v} -> v end)
 
-    args = with_clauses ++ [[do: block, else: else_clauses]]
+    with_clauses
+    |> Enum.reverse()
+    |> Enum.reduce(block, fn {label, clause}, acc ->
+      else_block =
+        case else_clauses[label] do
+          nil -> []
+          clauses -> [else: clauses]
+        end
 
-    quote do
-      with unquote_splicing(args)
-    end
+      args = [clause, [do: acc] ++ else_block]
+
+      quote do
+        with unquote_splicing(args)
+      end
+    end)
   end
 
   def listify(list) when is_list(list) do
