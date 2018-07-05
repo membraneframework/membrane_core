@@ -4,6 +4,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   alias Core.Element.{ActionHandler, PadController, PadModel, State}
   require PadModel
   use Core.Element.Log
+  use Membrane.Helper
 
   def handle_init(options, %State{module: module} = state) do
     debug("Initializing element: #{inspect(module)}, options: #{inspect(options)}", state)
@@ -105,4 +106,24 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing],
     do: CallbackHandler.exec_and_handle_callback(:handle_prepare, ActionHandler, [ps], state)
+
+  def unlink(%State{playback: %{state: :stopped}} = state) do
+    with :ok <-
+           state.pads.data
+           |> Helper.Enum.each_with(fn {_name, %{pid: pid, other_name: other_name}} ->
+             GenServer.call(pid, {:membrane_handle_unlink, other_name})
+           end) do
+      {:ok, state}
+    end
+  end
+
+  def unlink(state) do
+    warn_error(
+      """
+      Tried to unlink Element that is not stopped
+      """,
+      {:unlink, :cannot_unlink_non_stopped_element},
+      state
+    )
+  end
 end

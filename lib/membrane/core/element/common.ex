@@ -17,23 +17,6 @@ defmodule Membrane.Core.Element.Common do
   use Core.Element.Log
   use Membrane.Helper
 
-  def unlink(%State{playback: %{state: :stopped}} = state) do
-    state.pads.data
-    |> Helper.Enum.each_with(fn {_name, %{pid: pid, other_name: other_name}} ->
-      GenServer.call(pid, {:membrane_handle_unlink, other_name})
-    end)
-  end
-
-  def unlink(state) do
-    warn_error(
-      """
-      Tried to unlink Element that is not stopped
-      """,
-      {:unlink, :cannot_unlink_non_stopped_element},
-      state
-    )
-  end
-
   def handle_caps(:pull, pad_name, caps, state) do
     PadModel.assert_data!(pad_name, %{direction: :sink}, state)
 

@@ -65,6 +65,9 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   defp do_handle_message({:membrane_demand_in, [demand_in, pad_name]}, :call, state),
     do: LifecycleController.handle_demand_in(demand_in, pad_name, state)
 
+  defp do_handle_message(:membrane_unlink, :call, state),
+    do: LifecycleController.unlink(state)
+
   defp do_handle_message({type, args}, :info, state)
        when type in [:membrane_demand, :membrane_buffer, :membrane_caps, :membrane_event] do
     {type, args} |> PlaybackBuffer.store(state)
@@ -86,17 +89,13 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   defp do_handle_message({:membrane_handle_unlink, pad_name}, :call, state),
     do: PadController.handle_unlink(pad_name, state)
 
-  defp do_handle_message(:membrane_unlink, :call, state) do
-    with :ok <- forward(:unlink, state), do: {:ok, state}
-  end
-
   defp do_handle_message({:membrane_self_demand, args}, :info, state),
     do: forward(:handle_self_demand, args, state)
 
   defp do_handle_message(other, :info, state),
     do: LifecycleController.handle_message(other, state)
 
-  defp forward(callback, args \\ [], state) do
+  defp forward(callback, args, state) do
     apply(Common, callback, (args |> Helper.listify()) ++ [state])
   end
 end
