@@ -48,11 +48,11 @@ defmodule Membrane.Log do
 
       Membrane.Log.warn(
         [
-          "Encountered an error: ",
+          "Encountered an error.\n",
+          "Reason: #{inspect(unquote(reason))}\n",
           unquote(message),
           "\n",
           """
-          Reason: #{inspect(unquote(reason))}
           Stacktrace:
           #{Helper.stacktrace()}
           """

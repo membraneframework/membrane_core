@@ -4,21 +4,55 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   alias Membrane.{Buffer, Caps, Core, Element, Event, Message, Pad}
   alias Core.Element.{Common, PadModel, State}
+  require PadModel
   import Element.Pad, only: [is_pad_name: 1]
   use Core.Element.Log
   use Membrane.Helper
   use Membrane.Core.CallbackHandler
 
   @impl CallbackHandler
-  def handle_action({:event, {pad_name, event}}, _cb, _params, state)
-      when is_pad_name(pad_name) do
+  def handle_action(action, callback, params, state) do
+    with {:ok, state} <- do_handle_action(action, callback, params, state) do
+      {:ok, state}
+    else
+      {{:error, :invalid_action}, state} ->
+        warn_error(
+          """
+          Elements' #{inspect(state.module)} #{inspect(callback)} callback returned
+          invalid action: #{inspect(action)}. For possible actions are check types
+          in Membrane.Element.Action module. Keep in mind that some actions are
+          available in different formats or unavailable for some callbacks,
+          element types, playback states or under some other conditions.
+          """,
+          {:invalid_action,
+           action: action, callback: callback, module: state |> Map.get(:module)},
+          state
+        )
+
+      {{:error, reason}, state} ->
+        warn_error(
+          """
+          Encountered an error while processing action #{action}.
+          This is probably a bug in element, which passed invalid arguments to the
+          action, such as a pad with invalid direction. For more details, see the
+          reason section.
+          """,
+          {:cannot_handle_action,
+           action: action, callback: callback, module: state |> Map.get(:module), reason: reason},
+          state
+        )
+    end
+  end
+
+  defp do_handle_action({:event, {pad_name, event}}, _cb, _params, state)
+       when is_pad_name(pad_name) do
     send_event(pad_name, event, state)
   end
 
-  def handle_action({:message, message}, _cb, _params, state),
+  defp do_handle_action({:message, message}, _cb, _params, state),
     do: send_message(message, state)
 
-  def handle_action({:split, {callback, args_list}}, cb, params, state) do
+  defp do_handle_action({:split, {callback, args_list}}, cb, params, state) do
     CallbackHandler.exec_and_handle_splitted_callback(
       callback,
       cb,
@@ -29,32 +63,32 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
   end
 
-  def handle_action({:playback_change, :suspend}, cb, _params, state)
-      when cb in [:handle_prepare, :handle_play, :handle_stop] do
+  defp do_handle_action({:playback_change, :suspend}, cb, _params, state)
+       when cb in [:handle_prepare, :handle_play, :handle_stop] do
     state |> Element.suspend_playback_change()
   end
 
-  def handle_action({:playback_change, :resume}, _cb, _params, state),
+  defp do_handle_action({:playback_change, :resume}, _cb, _params, state),
     do: state |> Element.continue_playback_change()
 
-  def handle_action({:buffer, {pad_name, buffers}}, cb, _params, %State{type: type} = state)
-      when type in [:source, :filter] and is_pad_name(pad_name) do
+  defp do_handle_action({:buffer, {pad_name, buffers}}, cb, _params, %State{type: type} = state)
+       when type in [:source, :filter] and is_pad_name(pad_name) do
     send_buffer(pad_name, buffers, cb, state)
   end
 
-  def handle_action({:caps, {pad_name, caps}}, _cb, _params, %State{type: type} = state)
-      when type in [:source, :filter] and is_pad_name(pad_name) do
+  defp do_handle_action({:caps, {pad_name, caps}}, _cb, _params, %State{type: type} = state)
+       when type in [:source, :filter] and is_pad_name(pad_name) do
     send_caps(pad_name, caps, state)
   end
 
-  def handle_action({:redemand, src_name}, cb, _params, %State{type: type} = state)
-      when type in [:source, :filter] and is_pad_name(src_name) and
-             cb not in [:handle_demand, :handle_process] do
+  defp do_handle_action({:redemand, src_name}, cb, _params, %State{type: type} = state)
+       when type in [:source, :filter] and is_pad_name(src_name) and
+              cb not in [:handle_demand, :handle_process] do
     handle_redemand(src_name, state)
   end
 
-  def handle_action({:forward, data}, cb, params, %State{type: :filter} = state)
-      when cb in [:handle_caps, :handle_event, :handle_process] do
+  defp do_handle_action({:forward, data}, cb, params, %State{type: :filter} = state)
+       when cb in [:handle_caps, :handle_event, :handle_process] do
     {action, dir} =
       case {cb, params} do
         {:handle_process, _} -> {:buffer, :source}
@@ -63,7 +97,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         {:handle_event, %{direction: :source}} -> {:event, :sink}
       end
 
-    pads = PadModel.get_data(dir, state) |> Map.keys()
+    pads = PadModel.filter_data(%{direction: dir}, state) |> Map.keys()
 
     pads
     |> Helper.Enum.reduce_with(state, fn pad, st ->
@@ -71,84 +105,79 @@ defmodule Membrane.Core.Element.ActionHandler do
     end)
   end
 
-  def handle_action({:demand, pad_name}, :handle_demand, params, %State{type: :filter} = state)
-      when is_pad_name(pad_name) do
+  defp do_handle_action(
+         {:demand, pad_name},
+         :handle_demand,
+         params,
+         %State{type: :filter} = state
+       )
+       when is_pad_name(pad_name) do
     handle_action({:demand, {pad_name, 1}}, :handle_demand, params, state)
   end
 
-  def handle_action(
-        {:demand, {pad_name, size}},
-        :handle_demand,
-        %{source: src_name} = params,
-        %State{type: :filter} = state
-      )
-      when is_pad_name(pad_name) and is_integer(size) do
+  defp do_handle_action(
+         {:demand, {pad_name, size}},
+         :handle_demand,
+         %{source: src_name} = params,
+         %State{type: :filter} = state
+       )
+       when is_pad_name(pad_name) and is_integer(size) do
     handle_action({:demand, {pad_name, {:source, src_name}, size}}, :handle_demand, params, state)
   end
 
-  def handle_action(
-        {:demand, {pad_name, {:source, src_name}, size}},
-        cb,
-        _params,
-        %State{type: :filter} = state
-      )
-      when is_pad_name(pad_name) and is_pad_name(src_name) and is_integer(size) do
+  defp do_handle_action(
+         {:demand, {pad_name, {:source, src_name}, size}},
+         cb,
+         _params,
+         %State{type: :filter} = state
+       )
+       when is_pad_name(pad_name) and is_pad_name(src_name) and is_integer(size) do
     handle_demand(pad_name, {:source, src_name}, :normal, size, cb, state)
   end
 
-  def handle_action(
-        {:demand, {pad_name, :self, size}},
-        cb,
-        _params,
-        %State{type: :filter} = state
-      )
-      when is_pad_name(pad_name) and is_integer(size) do
+  defp do_handle_action(
+         {:demand, {pad_name, :self, size}},
+         cb,
+         _params,
+         %State{type: :filter} = state
+       )
+       when is_pad_name(pad_name) and is_integer(size) do
     handle_demand(pad_name, :self, :normal, size, cb, state)
   end
 
-  def handle_action({:demand, pad_name}, cb, params, %State{type: :sink} = state)
-      when is_pad_name(pad_name) do
+  defp do_handle_action({:demand, pad_name}, cb, params, %State{type: :sink} = state)
+       when is_pad_name(pad_name) do
     handle_action({:demand, {pad_name, 1}}, cb, params, state)
   end
 
-  def handle_action({:demand, {pad_name, size}}, cb, _params, %State{type: :sink} = state)
-      when is_pad_name(pad_name) and is_integer(size) do
+  defp do_handle_action({:demand, {pad_name, size}}, cb, _params, %State{type: :sink} = state)
+       when is_pad_name(pad_name) and is_integer(size) do
     handle_demand(pad_name, :self, :normal, size, cb, state)
   end
 
-  def handle_action(
-        {:demand, {pad_name, {:set_to, size}}},
-        cb,
-        _params,
-        %State{type: :sink} = state
-      )
-      when is_pad_name(pad_name) and is_integer(size) do
+  defp do_handle_action(
+         {:demand, {pad_name, {:set_to, size}}},
+         cb,
+         _params,
+         %State{type: :sink} = state
+       )
+       when is_pad_name(pad_name) and is_integer(size) do
     handle_demand(pad_name, :self, :set, size, cb, state)
   end
 
-  def handle_action(action, callback, _params, state) do
-    warn_error(
-      """
-      Elements' #{inspect(state.module)} #{inspect(callback)} callback returned
-      invalid action: #{inspect(action)}. For possible actions are check types
-      in Membrane.Element.Action module. Keep in mind that some actions are
-      available in different formats or unavailable for some callbacks,
-      element types, playback states or under some other conditions.
-      """,
-      {:invalid_action, action: action, callback: callback, module: state |> Map.get(:module)},
-      state
-    )
+  defp do_handle_action(_action, _callback, _params, state) do
+    {{:error, :invalid_action}, state}
   end
 
   @impl CallbackHandler
-  def handle_actions(actions, callback, handler_params, state),
-    do:
-      super(
-        actions |> join_buffers(),
-        callback,
-        handler_params,
-        state
-      )
+  def handle_actions(actions, callback, handler_params, state) do
+    super(
+      actions |> join_buffers(),
+      callback,
+      handler_params,
+      state
+    )
+  end
 
   defp join_buffers(actions) do
     actions
@@ -198,51 +227,34 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     )
 
-    with {:ok, %{mode: mode, pid: pid, other_name: other_name, options: options, eos: false}} <-
-           PadModel.get_data(:source, pad_name, state) do
-      {:ok, state} =
-        case mode do
-          :pull ->
-            buf_size = Buffer.Metric.from_unit(options.other_demand_in).buffers_size(buffers)
+    with :ok <- PadModel.assert_data(pad_name, %{direction: :source, eos: false}, state) do
+      %{mode: mode, pid: pid, other_name: other_name, options: options} =
+        PadModel.get_data!(pad_name, state)
 
-            PadModel.update_data(:source, pad_name, :demand, &{:ok, &1 - buf_size}, state)
-
-          :push ->
-            {:ok, state}
-        end
-
+      state = handle_buffer(pad_name, mode, options, buffers, state)
       send(pid, {:membrane_buffer, [buffers, other_name]})
       {:ok, state}
     else
-      {:ok, %{eos: true}} ->
-        warn_error(
-          [
-            """
-            Error while sending buffers to pad: #{inspect(pad_name)}
-            Buffers:
-            """,
-            Buffer.print(buffers)
-          ],
-          :eos_already_sent,
-          state
-        )
-
-      {:error, :unknown_pad} ->
-        handle_unknown_pad(pad_name, :source, :buffer, state)
-
-      {:error, reason} ->
-        warn_error(
-          [
-            """
-            Error while sending buffers to pad: #{inspect(pad_name)}
-            Buffers:
-            """,
-            Buffer.print(buffers)
-          ],
-          reason,
-          state
-        )
+      {:error, reason} -> handle_pad_error(reason, state)
     end
+  end
+
+  defp handle_buffer(pad_name, :pull, options, buffers, state) do
+    buf_size = Buffer.Metric.from_unit(options.other_demand_in).buffers_size(buffers)
+
+    {:ok, state} =
+      PadModel.update_data(
+        pad_name,
+        :demand,
+        &{:ok, &1 - buf_size},
+        state
+      )
+
+    state
+  end
+
+  defp handle_buffer(_pad_name, :push, _options, _buffers, state) do
+    state
   end
 
   @spec send_caps(Pad.name_t(), Caps.t(), State.t()) :: :ok
@@ -255,16 +267,23 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     )
 
-    with {:ok, %{accepted_caps: accepted_caps, pid: pid, other_name: other_name}} <-
-           PadModel.get_data(:source, pad_name, state),
-         {true, _} <- {Caps.Matcher.match?(accepted_caps, caps), accepted_caps} do
+    withl pad: :ok <- PadModel.assert_data(pad_name, %{direction: :source}, state),
+          do: accepted_caps = PadModel.get_data!(pad_name, :accepted_caps, state),
+          caps: true <- Caps.Matcher.match?(accepted_caps, caps) do
+      {{:ok, %{pid: pid, other_name: other_name}}, state} =
+        PadModel.get_and_update_data(
+          pad_name,
+          fn data -> {{:ok, data}, %{data | caps: caps}} end,
+          state
+        )
+
       send(pid, {:membrane_caps, [caps, other_name]})
-      PadModel.set_data(:source, pad_name, :caps, caps, state)
+      {:ok, state}
     else
-      {false, accepted_caps} ->
+      caps: false ->
         warn_error(
           """
-          Trying to send caps that are not specified in known_source_pads
+          Trying to send caps that do not match the specification
           Caps being sent: #{inspect(caps)}
           Allowed caps spec: #{inspect(accepted_caps)}
           """,
@@ -272,18 +291,8 @@ defmodule Membrane.Core.Element.ActionHandler do
           state
         )
 
-      {:error, :unknown_pad} ->
-        handle_unknown_pad(pad_name, :source, :event, state)
-
-      {:error, reason} ->
-        warn_error(
-          """
-          Error while sending caps to pad: #{inspect(pad_name)}
-          Caps: #{inspect(caps)}
-          """,
-          reason,
-          state
-        )
+      pad: {:error, reason} ->
+        handle_pad_error(reason, state)
     end
   end
 
@@ -341,40 +350,33 @@ defmodule Membrane.Core.Element.ActionHandler do
   def handle_demand(pad_name, source, type, size, callback, state) do
     debug("Requesting demand of size #{inspect(size)} on pad #{inspect(pad_name)}", state)
 
-    with {:sink, {:ok, %{mode: :pull}}} <- {:sink, PadModel.get_data(:sink, pad_name, state)},
-         {:source, {:ok, %{mode: :pull}}} <-
-           {:source,
-            case source do
-              {:source, src_name} -> PadModel.get_data(:source, src_name, state)
-              :self -> {:ok, %{mode: :pull}}
-            end} do
-      case callback do
-        cb when cb in [:handle_write, :handle_process] ->
-          send(self(), {:membrane_self_demand, [pad_name, source, type, size]})
-          {:ok, state}
+    sink_assertion = PadModel.assert_data(pad_name, %{direction: :sink, mode: :pull}, state)
 
-        _ ->
-          Common.handle_self_demand(pad_name, source, type, size, state)
+    source_assertion =
+      case source do
+        {:source, src_name} -> PadModel.assert_data(src_name, %{direction: :source}, state)
+        :self -> :ok
+      end
+
+    with :ok <- sink_assertion,
+         :ok <- source_assertion do
+      if callback in [:handle_write, :handle_process] do
+        send(self(), {:membrane_self_demand, [pad_name, source, type, size]})
+        {:ok, state}
+      else
+        Common.handle_self_demand(pad_name, source, type, size, state)
       end
     else
-      {_direction, {:ok, %{mode: :push}}} ->
-        handle_invalid_pad_mode(pad_name, :pull, :demand, state)
-
-      {direction, {:error, :unknown_pad}} ->
-        handle_unknown_pad(pad_name, direction, :demand, state)
+      {:error, reason} -> handle_pad_error(reason, state)
     end
   end
 
   @spec handle_redemand(Pad.name_t(), State.t()) :: {:ok, State.t()} | no_return()
   def handle_redemand(src_name, state) do
-    with {:ok, %{mode: :pull}} <- PadModel.get_data(:source, src_name, state) do
+    with :ok <- PadModel.assert_data(src_name, %{direction: :source, mode: :pull}, state) do
       Common.handle_redemand(src_name, state)
     else
-      {:ok, %{mode: :push}} ->
-        handle_invalid_pad_mode(src_name, :pull, :demand, state)
-
-      {:error, :unknown_pad} ->
-        handle_unknown_pad(src_name, :source, :demand, state)
+      {:error, reason} -> handle_pad_error(reason, state)
     end
   end
 
@@ -388,32 +390,22 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     )
 
-    with {:ok, %{pid: pid, other_name: other_name}} <- PadModel.get_data(:any, pad_name, state),
-         {:ok, state} <- handle_event(pad_name, event, state) do
+    withl pad: {:ok, %{pid: pid, other_name: other_name}} <- PadModel.get_data(pad_name, state),
+          handler: {:ok, state} <- handle_event(pad_name, event, state) do
       send(pid, {:membrane_event, [event, other_name]})
       {:ok, state}
     else
-      {:error, :unknown_pad} ->
-        handle_unknown_pad(pad_name, :any, :event, state)
-
-      {:error, reason} ->
-        warn_error(
-          """
-          Error while sending event to pad: #{inspect(pad_name)}
-          Event: #{inspect(event)}
-          """,
-          reason,
-          state
-        )
+      pad: {:error, reason} -> handle_pad_error(reason, state)
+      handler: {{:error, reason}, state} -> {{:error, reason}, state}
     end
   end
 
   defp handle_event(pad_name, %Event{type: :eos}, state) do
-    with %{direction: :source, eos: false} <- PadModel.get_data!(:any, pad_name, state) do
-      PadModel.set_data(:source, pad_name, :eos, true, state)
+    with %{direction: :source, eos: false} <- PadModel.get_data(pad_name, state) do
+      PadModel.set_data(pad_name, :eos, true, state)
     else
-      %{direction: :sink} -> {:error, {:cannot_send_eos_through_sink, pad_name}}
-      %{eos: true} -> {:error, {:eos_already_sent, pad_name}}
+      %{direction: :sink} -> {{:error, {:cannot_send_eos_through_sink, pad_name}}, state}
+      %{eos: true} -> {{:error, {:eos_already_sent, pad_name}}, state}
     end
   end
 
@@ -431,43 +423,30 @@ defmodule Membrane.Core.Element.ActionHandler do
     {:ok, state}
   end
 
-  defp handle_invalid_pad_mode(pad_name, expected_mode, action_name, state) do
-    mode =
-      case expected_mode do
-        :pull -> :push
-        :push -> :pull
-      end
-
+  defp handle_pad_error({:unknown_pad, pad} = reason, state) do
     warn_error(
       """
-      Pad "#{inspect(pad_name)}" is working in invalid mode: #{inspect(mode)}.
+      Pad "#{inspect(pad)}" has not been found.
 
       This is probably a bug in element. It requested an action
-      "#{inspect(action_name)}" on pad "#{inspect(pad_name)}", but the pad is not
-      working in #{inspect(expected_mode)} mode as it is supposed to.
+      on a non-existent pad "#{inspect(pad)}".
       """,
-      {:invalid_pad_mode, pad_name, mode},
+      reason,
       state
     )
   end
 
-  defp handle_unknown_pad(pad_name, expected_direction, action_name, state) do
+  defp handle_pad_error(
+         {:invalid_pad_data, name: name, pattern: pattern, data: data} = reason,
+         state
+       ) do
     warn_error(
       """
-      Pad "#{inspect(pad_name)}" has not been found.
-
-      This is probably a bug in element. It requested an action
-      "#{inspect(action_name)}" on pad "#{inspect(pad_name)}", but such pad has not
-      been found. #{
-        if expected_direction != :any do
-          "It either means that it does not exist, or it is not a" <>
-            "#{inspect(expected_direction)} pad."
-        else
-          ""
-        end
-      }
+      Properties of pad #{inspect(name)} do not match the pattern:
+      #{inspect(pattern)}
+      Pad properties: #{inspect(data)}
       """,
-      {:unknown_pad, pad_name},
+      reason,
       state
     )
   end

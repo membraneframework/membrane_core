@@ -106,7 +106,7 @@ defmodule Membrane.Core.Element.PadController do
 
   def handle_unlink(pad_name, state) do
     with {:ok, state} <-
-           PadModel.get_data(:sink, pad_name, state)
+           PadModel.get_data(pad_name, %{direction: :sink}, state)
            |> (case do
                  {:ok, %{eos: false}} ->
                    Common.handle_event(
@@ -119,7 +119,7 @@ defmodule Membrane.Core.Element.PadController do
                    {:ok, state}
                end),
          {:ok, state} <- handle_pad_removed(pad_name, state),
-         {:ok, state} <- PadModel.remove_data(:any, pad_name, state) do
+         {:ok, state} <- PadModel.delete_data(pad_name, state) do
       {:ok, state}
     end
   end
@@ -170,7 +170,7 @@ defmodule Membrane.Core.Element.PadController do
         {:error, :not_static_pad}
 
       nil ->
-        case PadModel.get_data(name, direction, state) do
+        case PadModel.get_data(direction, %{direction: name}, state) do
           {:ok, _} -> {:error, :already_linked}
           _ -> {:error, :unknown_pad}
         end
@@ -233,7 +233,7 @@ defmodule Membrane.Core.Element.PadController do
 
   defp handle_pad_added(name, state) do
     context = %Context.PadAdded{
-      direction: PadModel.get_data!(:any, name, :direction, state)
+      direction: PadModel.get_data!(name, :direction, state)
     }
 
     CallbackHandler.exec_and_handle_callback(
@@ -245,7 +245,7 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp handle_pad_removed(name, state) do
-    %{caps: caps, direction: direction} = PadModel.get_data!(:any, name, state)
+    %{caps: caps, direction: direction} = PadModel.get_data!(name, %{}, state)
     context = %Context.PadRemoved{direction: direction, caps: caps}
 
     CallbackHandler.exec_and_handle_callback(

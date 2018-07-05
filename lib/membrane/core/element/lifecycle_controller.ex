@@ -2,6 +2,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   alias Membrane.Core
   alias Core.CallbackHandler
   alias Core.Element.{ActionHandler, PadController, PadModel, State}
+  require PadModel
   use Core.Element.Log
 
   def handle_init(options, %State{module: module} = state) do
@@ -86,7 +87,14 @@ defmodule Membrane.Core.Element.LifecycleController do
   def handle_controlling_pid(pid, state), do: {:ok, %{state | controlling_pid: pid}}
 
   def handle_demand_in(demand_in, pad_name, state) do
-    PadModel.set_data(:source, pad_name, [:options, :other_demand_in], demand_in, state)
+    PadModel.assert_data!(pad_name, %{direction: :source}, state)
+
+    PadModel.set_data(
+      pad_name,
+      [:options, :other_demand_in],
+      demand_in,
+      state
+    )
   end
 
   def handle_playback_state(:prepared, :playing, state),

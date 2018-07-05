@@ -2,6 +2,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   alias Membrane.Core.Playback
   alias Membrane.{Buffer, Core, Event}
   alias Core.Element.{Common, PadModel, State}
+  require PadModel
   use Core.Element.Log
   use Membrane.Helper
 
@@ -52,7 +53,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   # Callback invoked on demand request coming from the source pad in the pull mode
   defp exec({:membrane_demand, [size, pad_name]}, state) do
-    {:ok, _} = PadModel.get_data(:source, pad_name, state)
+    {:ok, _} = PadModel.get_data(pad_name, %{direction: :source}, state)
 
     demand =
       if size == 0 do
@@ -67,7 +68,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   # Callback invoked on buffer coming through the sink pad
   defp exec({:membrane_buffer, [buffers, pad_name]}, state) do
-    {:ok, %{mode: mode}} = PadModel.get_data(:sink, pad_name, state)
+    PadModel.assert_data!(pad_name, %{direction: :sink}, state)
 
     debug(
       ["
@@ -76,21 +77,16 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
       state
     )
 
-    {{:ok, messages}, state} =
-      PadModel.get_update_data(
-        :sink,
-        pad_name,
-        :sticky_messages,
-        &{{:ok, &1 |> Enum.reverse()}, []},
-        state
-      )
+    %{sticky_messages: messages, mode: mode} = PadModel.get_data!(pad_name, state)
+    {:ok, state} = PadModel.set_data(pad_name, :sticky_messages, [], state)
 
     with {:ok, state} <-
            messages
+           |> Enum.reverse()
            |> Helper.Enum.reduce_with(state, fn msg, st -> msg.(st) end) do
       {:ok, state} =
         cond do
-          PadModel.get_data!(:sink, pad_name, :sos, state) |> Kernel.not() ->
+          PadModel.get_data!(pad_name, :sos, state) |> Kernel.not() ->
             event = %{Event.sos() | payload: :auto_sos}
             Common.handle_event(pad_name, event, state)
 
@@ -104,7 +100,8 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   # Callback invoked on incoming caps
   defp exec({:membrane_caps, [caps, pad_name]}, state) do
-    {:ok, %{mode: mode}} = PadModel.get_data(:sink, pad_name, state)
+    PadModel.assert_data!(pad_name, %{direction: :sink}, state)
+    mode = PadModel.get_data!(pad_name, :mode, state)
 
     debug(
       """
@@ -120,7 +117,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   # Callback invoked on incoming event
   defp exec({:membrane_event, [event, pad_name]}, state) do
     exec = fn state ->
-      {:ok, _data} = PadModel.get_data(:any, pad_name, state)
+      {:ok, _data} = PadModel.get_data(pad_name, state)
 
       debug(
         """
@@ -138,7 +135,12 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
         exec.(state)
 
       :buffer ->
-        PadModel.update_data(:sink, pad_name, :sticky_messages, &{:ok, [exec | &1]}, state)
+        PadModel.update_data(
+          pad_name,
+          :sticky_messages,
+          &{:ok, [exec | &1]},
+          state
+        )
     end
   end
 end
