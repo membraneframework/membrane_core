@@ -8,64 +8,13 @@ defmodule Membrane.Core.Element.Common do
   * linking and unlinking pads
   """
 
-  alias Membrane.{Buffer, Caps, Core, Element, Event}
-  alias Membrane.Core.CallbackHandler
-  alias Core.PullBuffer
+  alias Membrane.{Buffer, Core, Element, Event}
+  alias Core.{CallbackHandler, PullBuffer}
   alias Element.Context
-  alias Core.Element.{ActionHandler, PadModel, State}
+  alias Core.Element.{ActionHandler, CapsController, PadModel, State}
   require PadModel
   use Core.Element.Log
   use Membrane.Helper
-
-  def handle_caps(:pull, pad_name, caps, state) do
-    PadModel.assert_data!(pad_name, %{direction: :sink}, state)
-
-    cond do
-      PadModel.get_data!(pad_name, :buffer, state) |> PullBuffer.empty?() ->
-        do_handle_caps(pad_name, caps, state)
-
-      true ->
-        PadModel.update_data(
-          pad_name,
-          :buffer,
-          &(&1 |> PullBuffer.store(:caps, caps)),
-          state
-        )
-    end
-  end
-
-  def handle_caps(:push, pad_name, caps, state), do: do_handle_caps(pad_name, caps, state)
-
-  def do_handle_caps(pad_name, caps, state) do
-    %{accepted_caps: accepted_caps, caps: old_caps} = PadModel.get_data!(pad_name, state)
-
-    context = %Context.Caps{caps: old_caps}
-
-    with :ok <- if(Caps.Matcher.match?(accepted_caps, caps), do: :ok, else: :invalid_caps),
-         {:ok, state} <-
-           CallbackHandler.exec_and_handle_callback(
-             :handle_caps,
-             ActionHandler,
-             [pad_name, caps, context],
-             state
-           ) do
-      PadModel.set_data(pad_name, :caps, caps, state)
-    else
-      :invalid_caps ->
-        warn_error(
-          """
-          Received caps: #{inspect(caps)} that are not specified in known_sink_pads
-          for pad #{inspect(pad_name)}. Specs of accepted caps are:
-          #{inspect(accepted_caps, pretty: true)}
-          """,
-          :invalid_caps,
-          state
-        )
-
-      {:error, reason} ->
-        warn_error("Error while handling caps", reason, state)
-    end
-  end
 
   def handle_event(pad_name, event, state) do
     pad_data = PadModel.get_data!(pad_name, state)
@@ -150,7 +99,7 @@ defmodule Membrane.Core.Element.Common do
     do: do_handle_event(pad_name, e, state)
 
   defp handle_pullbuffer_output(pad_name, _source, {:caps, c}, state),
-    do: do_handle_caps(pad_name, c, state)
+    do: CapsController.exec_handle_caps(pad_name, c, state)
 
   defp handle_pullbuffer_output(
          pad_name,

@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Element.PlaybackBuffer do
   alias Membrane.Core.Playback
   alias Membrane.{Buffer, Core, Event}
-  alias Core.Element.{Common, PadModel, State}
+  alias Core.Element.{CapsController, Common, PadModel, State}
   require PadModel
   use Core.Element.Log
   use Membrane.Helper
@@ -101,7 +101,6 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   # Callback invoked on incoming caps
   defp exec({:membrane_caps, [caps, pad_name]}, state) do
     PadModel.assert_data!(pad_name, %{direction: :sink}, state)
-    mode = PadModel.get_data!(pad_name, :mode, state)
 
     debug(
       """
@@ -111,7 +110,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
       state
     )
 
-    Common.handle_caps(mode, pad_name, caps, state)
+    CapsController.handle_caps(pad_name, caps, state)
   end
 
   # Callback invoked on incoming event
