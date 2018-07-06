@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Element.PlaybackBuffer do
   alias Membrane.Core.Playback
   alias Membrane.{Buffer, Core, Event}
-  alias Core.Element.{CapsController, Common, PadModel, State}
+  alias Core.Element.{CapsController, EventController, Common, PadModel, State}
   require PadModel
   use Core.Element.Log
   use Membrane.Helper
@@ -88,7 +88,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
         cond do
           PadModel.get_data!(pad_name, :sos, state) |> Kernel.not() ->
             event = %{Event.sos() | payload: :auto_sos}
-            Common.handle_event(pad_name, event, state)
+            EventController.handle_event(pad_name, event, state)
 
           true ->
             {:ok, state}
@@ -115,29 +115,29 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   # Callback invoked on incoming event
   defp exec({:membrane_event, [event, pad_name]}, state) do
-    exec = fn state ->
-      {:ok, _data} = PadModel.get_data(pad_name, state)
+    PadModel.assert_instance!(pad_name, state)
 
-      debug(
-        """
-        Received event on pad #{inspect(pad_name)}
-        Event: #{inspect(event)}
-        """,
-        state
-      )
+    debug(
+      """
+      Received event on pad #{inspect(pad_name)}
+      Event: #{inspect(event)}
+      """,
+      state
+    )
 
-      Common.handle_event(pad_name, event, state)
+    do_exec = fn state ->
+      EventController.handle_event(pad_name, event, state)
     end
 
     case event.stick_to do
       :nothing ->
-        exec.(state)
+        do_exec.(state)
 
       :buffer ->
         PadModel.update_data(
           pad_name,
           :sticky_messages,
-          &{:ok, [exec | &1]},
+          &{:ok, [do_exec | &1]},
           state
         )
     end

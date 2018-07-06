@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Element.PadController do
   alias Membrane.{Core, Event}
   alias Core.{CallbackHandler, PullBuffer}
-  alias Core.Element.{Common, PadModel, State}
+  alias Core.Element.{EventController, PadModel, State}
   alias Membrane.Element.{Context, Pad}
   require Pad
   use Core.Element.Log
@@ -109,7 +109,7 @@ defmodule Membrane.Core.Element.PadController do
            PadModel.get_data(pad_name, %{direction: :sink}, state)
            |> (case do
                  {:ok, %{eos: false}} ->
-                   Common.handle_event(
+                   EventController.handle_event(
                      pad_name,
                      %{Event.eos() | payload: :auto_eos, mode: :async},
                      state
