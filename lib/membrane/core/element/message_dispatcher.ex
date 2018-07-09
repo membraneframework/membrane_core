@@ -1,6 +1,6 @@
 defmodule Membrane.Core.Element.MessageDispatcher do
   alias Membrane.{Core, Element}
-  alias Core.Element.{DemandHandler, LifecycleController, PadController, PlaybackBuffer}
+  alias Core.Element.{OwnDemandHandler, LifecycleController, PadController, PlaybackBuffer}
   use Core.Element.Log
   use Membrane.Helper
 
@@ -89,8 +89,8 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   defp do_handle_message({:membrane_handle_unlink, pad_name}, :call, state),
     do: PadController.handle_unlink(pad_name, state)
 
-  defp do_handle_message({:membrane_self_demand, [pad_name, source, type, size]}, :info, state),
-    do: DemandHandler.handle_self_demand(pad_name, source, type, size, state)
+  defp do_handle_message({:membrane_own_demand, [pad_name, source, type, size]}, :info, state),
+    do: OwnDemandHandler.handle_own_demand(pad_name, source, type, size, state)
 
   defp do_handle_message(other, :info, state),
     do: LifecycleController.handle_message(other, state)

@@ -11,7 +11,7 @@ defmodule Membrane.Core.Element.BufferController do
   alias Membrane.{Core, Element}
   alias Core.{CallbackHandler, PullBuffer}
   alias Element.Context
-  alias Core.Element.{ActionHandler, DemandHandler, PadModel, State}
+  alias Core.Element.{ActionHandler, OwnDemandHandler, PadModel, State}
   require PadModel
   use Core.Element.Log
   use Membrane.Helper
@@ -77,7 +77,7 @@ defmodule Membrane.Core.Element.BufferController do
       )
 
     if was_empty? do
-      DemandHandler.check_and_handle_demands(pad_name, state)
+      OwnDemandHandler.check_and_handle_demands(pad_name, state)
     else
       {:ok, state}
     end

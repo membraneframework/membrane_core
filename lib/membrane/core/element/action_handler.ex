@@ -3,7 +3,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   # Module containing action handlers common for elements of all types.
 
   alias Membrane.{Buffer, Caps, Core, Element, Event, Message, Pad}
-  alias Core.Element.{DemandController, DemandHandler, PadModel, State}
+  alias Core.Element.{DemandController, OwnDemandHandler, PadModel, State}
   require PadModel
   import Element.Pad, only: [is_pad_name: 1]
   use Core.Element.Log
@@ -361,10 +361,10 @@ defmodule Membrane.Core.Element.ActionHandler do
     with :ok <- sink_assertion,
          :ok <- source_assertion do
       if callback in [:handle_write, :handle_process] do
-        send(self(), {:membrane_self_demand, [pad_name, source, type, size]})
+        send(self(), {:membrane_own_demand, [pad_name, source, type, size]})
         {:ok, state}
       else
-        DemandHandler.handle_self_demand(pad_name, source, type, size, state)
+        OwnDemandHandler.handle_own_demand(pad_name, source, type, size, state)
       end
     else
       {:error, reason} -> handle_pad_error(reason, state)
