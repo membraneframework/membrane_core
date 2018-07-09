@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Element.LifecycleController do
   alias Membrane.Core
   alias Core.CallbackHandler
-  alias Core.Element.{ActionHandler, PadController, PadModel, State}
+  alias Core.Element.{ActionHandler, PadSpecHandler, PadModel, State}
   require PadModel
   use Core.Element.Log
   use Membrane.Helper
@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   def handle_init(options, %State{module: module} = state) do
     debug("Initializing element: #{inspect(module)}, options: #{inspect(options)}", state)
 
-    with {:ok, state} <- PadController.init_pads(state),
+    with {:ok, state} <- PadSpecHandler.init_pads(state),
          {:ok, state} <- do_handle_init(module, options, state) do
       debug("Element initialized: #{inspect(module)}", state)
       {:ok, state}

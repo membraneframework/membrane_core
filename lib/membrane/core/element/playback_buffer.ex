@@ -1,7 +1,16 @@
 defmodule Membrane.Core.Element.PlaybackBuffer do
   alias Membrane.Core.Playback
   alias Membrane.{Buffer, Core, Event}
-  alias Core.Element.{BufferController, CapsController, DemandController, EventController, PadModel, State}
+
+  alias Core.Element.{
+    BufferController,
+    CapsController,
+    DemandController,
+    EventController,
+    PadModel,
+    State
+  }
+
   require PadModel
   use Core.Element.Log
   use Membrane.Helper

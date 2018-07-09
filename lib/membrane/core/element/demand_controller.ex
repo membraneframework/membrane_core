@@ -1,20 +1,11 @@
 defmodule Membrane.Core.Element.DemandController do
   alias Membrane.{Core, Element}
-  alias Core.{CallbackHandler, PullBuffer}
+  alias Core.CallbackHandler
   alias Element.Context
   alias Core.Element.{ActionHandler, PadModel}
   require PadModel
   use Core.Element.Log
   use Membrane.Helper
-
-  def fill_sink_pull_buffers(state) do
-    PadModel.filter_data(%{direction: :sink}, state)
-    |> Enum.filter(fn {_, %{mode: mode}} -> mode == :pull end)
-    |> Helper.Enum.reduce_with(state, fn {pad_name, _pad_data}, st ->
-      PadModel.update_data(pad_name, :buffer, &PullBuffer.fill/1, st)
-    end)
-    |> or_warn_error("Unable to fill sink pull buffers")
-  end
 
   def handle_redemand(src_name, state) do
     handle_demand(src_name, 0, state)

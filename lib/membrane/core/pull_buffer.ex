@@ -79,13 +79,11 @@ defmodule Membrane.Core.PullBuffer do
       metric: metric,
       toilet: toilet
     }
+    |> fill()
   end
 
-  @spec fill(t()) :: {:ok, t()}
-  def fill(%__MODULE__{} = pb),
-    do:
-      handle_demand(pb, 0)
-      |> or_warn_error("Unable to fill PullBuffer #{pb.name}: #{inspect(pb)}")
+  @spec fill(t()) :: t()
+  defp fill(%__MODULE__{} = pb), do: handle_demand(pb, 0)
 
   @spec store(t(), atom(), any()) :: {:ok, t()} | {:error, any()}
   def store(pb, type \\ :buffers, v)
@@ -166,10 +164,8 @@ defmodule Membrane.Core.PullBuffer do
   def take(%__MODULE__{current_size: size} = pb, count) when count >= 0 do
     report("Taking #{inspect(count)} buffers", pb)
     {out, %__MODULE__{current_size: new_size} = pb} = do_take(pb, count)
-
-    with {:ok, pb} <- pb |> handle_demand(size - new_size) do
-      {{:ok, out}, pb}
-    end
+    pb = pb |> handle_demand(size - new_size)
+    {{:ok, out}, pb}
   end
 
   defp do_take(%__MODULE__{q: q, current_size: size, metric: metric} = pb, count) do
@@ -234,14 +230,14 @@ defmodule Membrane.Core.PullBuffer do
     )
 
     send(other_pid, {:membrane_demand, [to_demand, other_name]})
-    {:ok, %__MODULE__{pb | demand: demand + new_demand - to_demand}}
+    %__MODULE__{pb | demand: demand + new_demand - to_demand}
   end
 
   defp handle_demand(%__MODULE__{toilet: false, demand: demand} = pb, new_demand),
-    do: {:ok, %__MODULE__{pb | demand: demand + new_demand}}
+    do: %__MODULE__{pb | demand: demand + new_demand}
 
   defp handle_demand(%__MODULE__{toilet: toilet} = pb, _new_demand) when toilet != false do
-    {:ok, pb}
+    pb
   end
 
   defp report(msg, %__MODULE__{
