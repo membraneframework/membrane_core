@@ -3,7 +3,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   # Module containing action handlers common for elements of all types.
 
   alias Membrane.{Buffer, Caps, Core, Element, Event, Message, Pad}
-  alias Core.Element.{Common, PadModel, State}
+  alias Core.Element.{DemandController, DemandHandler, PadModel, State}
   require PadModel
   import Element.Pad, only: [is_pad_name: 1]
   use Core.Element.Log
@@ -132,7 +132,7 @@ defmodule Membrane.Core.Element.ActionHandler do
          %State{type: :filter} = state
        )
        when is_pad_name(pad_name) and is_pad_name(src_name) and is_integer(size) do
-    handle_demand(pad_name, {:source, src_name}, :normal, size, cb, state)
+    handle_demand(pad_name, {:source, src_name}, :set, size, cb, state)
   end
 
   defp do_handle_action(
@@ -142,7 +142,7 @@ defmodule Membrane.Core.Element.ActionHandler do
          %State{type: :filter} = state
        )
        when is_pad_name(pad_name) and is_integer(size) do
-    handle_demand(pad_name, :self, :normal, size, cb, state)
+    handle_demand(pad_name, :self, :set, size, cb, state)
   end
 
   defp do_handle_action({:demand, pad_name}, cb, params, %State{type: :sink} = state)
@@ -152,7 +152,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp do_handle_action({:demand, {pad_name, size}}, cb, _params, %State{type: :sink} = state)
        when is_pad_name(pad_name) and is_integer(size) do
-    handle_demand(pad_name, :self, :normal, size, cb, state)
+    handle_demand(pad_name, :self, :increase, size, cb, state)
   end
 
   defp do_handle_action(
@@ -364,7 +364,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         send(self(), {:membrane_self_demand, [pad_name, source, type, size]})
         {:ok, state}
       else
-        Common.handle_self_demand(pad_name, source, type, size, state)
+        DemandHandler.handle_self_demand(pad_name, source, type, size, state)
       end
     else
       {:error, reason} -> handle_pad_error(reason, state)
@@ -374,7 +374,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec handle_redemand(Pad.name_t(), State.t()) :: {:ok, State.t()} | no_return()
   def handle_redemand(src_name, state) do
     with :ok <- PadModel.assert_data(src_name, %{direction: :source, mode: :pull}, state) do
-      Common.handle_redemand(src_name, state)
+      DemandController.handle_redemand(src_name, state)
     else
       {:error, reason} -> handle_pad_error(reason, state)
     end

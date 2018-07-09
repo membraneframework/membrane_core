@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Element.PlaybackBuffer do
   alias Membrane.Core.Playback
   alias Membrane.{Buffer, Core, Event}
-  alias Core.Element.{CapsController, EventController, Common, PadModel, State}
+  alias Core.Element.{BufferController, CapsController, DemandController, EventController, PadModel, State}
   require PadModel
   use Core.Element.Log
   use Membrane.Helper
@@ -63,7 +63,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
       end
 
     debug("Received #{demand} on pad #{inspect(pad_name)}", state)
-    Common.handle_demand(pad_name, size, state)
+    DemandController.handle_demand(pad_name, size, state)
   end
 
   # Callback invoked on buffer coming through the sink pad
@@ -77,8 +77,8 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
       state
     )
 
-    %{sticky_messages: messages, mode: mode} = PadModel.get_data!(pad_name, state)
-    {:ok, state} = PadModel.set_data(pad_name, :sticky_messages, [], state)
+    {{:ok, messages}, state} =
+      PadModel.get_and_update_data(pad_name, :sticky_messages, &{{:ok, []}, &1}, state)
 
     with {:ok, state} <-
            messages
@@ -94,7 +94,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
             {:ok, state}
         end
 
-      Common.handle_buffer(mode, pad_name, buffers, state)
+      BufferController.handle_buffer(pad_name, buffers, state)
     end
   end
 
