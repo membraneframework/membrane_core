@@ -32,7 +32,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       {{:error, reason}, state} ->
         warn_error(
           """
-          Encountered an error while processing action #{action}.
+          Encountered an error while processing action #{inspect(action)}.
           This is probably a bug in element, which passed invalid arguments to the
           action, such as a pad with invalid direction. For more details, see the
           reason section.
@@ -196,14 +196,15 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
   end
 
-  @spec send_buffer(Pad.name_t(), atom, [Buffer.t()], State.t()) :: :ok | {:error, any}
-  def send_buffer(
-        _pad_name,
-        _buffer,
-        callback,
-        %State{playback: %{state: playback_state}} = state
-      )
-      when playback_state != :playing and callback != :handle_play do
+  @spec send_buffer(Pad.name_t(), atom, [Buffer.t()], State.t()) ::
+          {{:ok | {:error, any}}, State.t()}
+  defp send_buffer(
+         _pad_name,
+         _buffer,
+         callback,
+         %State{playback: %{state: playback_state}} = state
+       )
+       when playback_state != :playing and callback != :handle_play do
     warn_error(
       "Buffers can only be sent when playing or from handle_play callback",
       {:cannot_send_buffer, playback_state: playback_state, callback: callback},
@@ -211,11 +212,11 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
   end
 
-  def send_buffer(pad_name, %Buffer{} = buffer, callback, state) do
+  defp send_buffer(pad_name, %Buffer{} = buffer, callback, state) do
     send_buffer(pad_name, [buffer], callback, state)
   end
 
-  def send_buffer(pad_name, buffers, _callback, state) do
+  defp send_buffer(pad_name, buffers, _callback, state) do
     debug(
       [
         """
@@ -257,8 +258,8 @@ defmodule Membrane.Core.Element.ActionHandler do
     state
   end
 
-  @spec send_caps(Pad.name_t(), Caps.t(), State.t()) :: :ok
-  def send_caps(pad_name, caps, state) do
+  @spec send_caps(Pad.name_t(), Caps.t(), State.t()) :: {{:ok | {:error, any}}, State.t()}
+  defp send_caps(pad_name, caps, state) do
     debug(
       """
       Sending caps through pad #{inspect(pad_name)}
@@ -299,22 +300,22 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec handle_demand(
           Pad.name_t(),
           {:source, Pad.name_t()} | :self,
-          :normal | :set,
-          pos_integer,
-          atom,
+          type :: :normal | :set,
+          size :: pos_integer,
+          callback :: atom,
           State.t()
-        ) :: :ok | {:error, any}
-  def handle_demand(pad_name, source, type, size, callback, state)
+        ) :: {{:ok | {:error, any}}, State.t()}
+  defp handle_demand(pad_name, source, type, size, callback, state)
 
-  def handle_demand(
-        _pad_name,
-        _source,
-        _type,
-        _size,
-        callback,
-        %State{playback: %{state: playback_state}} = state
-      )
-      when playback_state != :playing and callback != :handle_play do
+  defp handle_demand(
+         _pad_name,
+         _source,
+         _type,
+         _size,
+         callback,
+         %State{playback: %{state: playback_state}} = state
+       )
+       when playback_state != :playing and callback != :handle_play do
     warn_error(
       "Demand can only be requested when playing or from handle_play callback",
       {:cannot_handle_demand, playback_state: playback_state, callback: callback},
@@ -322,7 +323,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
   end
 
-  def handle_demand(pad_name, _source, _type, 0, callback, state) do
+  defp handle_demand(pad_name, _source, _type, 0, callback, state) do
     debug(
       """
       Ignoring demand of size of 0 requested by callback #{inspect(callback)}
@@ -334,8 +335,8 @@ defmodule Membrane.Core.Element.ActionHandler do
     {:ok, state}
   end
 
-  def handle_demand(pad_name, _source, _type, size, callback, state)
-      when size < 0 do
+  defp handle_demand(pad_name, _source, _type, size, callback, state)
+       when size < 0 do
     warn_error(
       """
       Callback #{inspect(callback)} requested demand of invalid size of #{size}
@@ -347,7 +348,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
   end
 
-  def handle_demand(pad_name, source, type, size, callback, state) do
+  defp handle_demand(pad_name, source, type, size, callback, state) do
     debug("Requesting demand of size #{inspect(size)} on pad #{inspect(pad_name)}", state)
 
     sink_assertion = PadModel.assert_data(pad_name, %{direction: :sink, mode: :pull}, state)
@@ -371,8 +372,8 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec handle_redemand(Pad.name_t(), State.t()) :: {:ok, State.t()} | no_return()
-  def handle_redemand(src_name, state) do
+  @spec handle_redemand(Pad.name_t(), State.t()) :: {{:ok | {:error, any}}, State.t()}
+  defp handle_redemand(src_name, state) do
     with :ok <- PadModel.assert_data(src_name, %{direction: :source, mode: :pull}, state) do
       DemandController.handle_redemand(src_name, state)
     else
@@ -380,8 +381,8 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec send_event(Pad.name_t(), Event.t(), State.t()) :: :ok
-  def send_event(pad_name, event, state) do
+  @spec send_event(Pad.name_t(), Event.t(), State.t()) :: {{:ok | {:error, any}}, State.t()}
+  defp send_event(pad_name, event, state) do
     debug(
       """
       Sending event through pad #{inspect(pad_name)}
@@ -411,13 +412,13 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp handle_event(_pad_name, _event, state), do: {:ok, state}
 
-  @spec send_message(Message.t(), State.t()) :: :ok
-  def send_message(%Message{} = message, %State{message_bus: nil} = state) do
+  @spec send_message(Message.t(), State.t()) :: {:ok, State.t()}
+  defp send_message(%Message{} = message, %State{message_bus: nil} = state) do
     debug("Dropping #{inspect(message)} as message bus is undefined", state)
     {:ok, state}
   end
 
-  def send_message(%Message{} = message, %State{message_bus: message_bus, name: name} = state) do
+  defp send_message(%Message{} = message, %State{message_bus: message_bus, name: name} = state) do
     debug("Sending message #{inspect(message)} (message bus: #{inspect(message_bus)})", state)
     send(message_bus, [:membrane_message, name, message])
     {:ok, state}

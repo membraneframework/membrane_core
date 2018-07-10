@@ -4,15 +4,16 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
   alias Membrane.{Buffer, Event, Message}
   alias Membrane.Core.Playback
 
-  pending ".handle_demand/6"
-  pending ".handle_redemand/2"
+  pending "handle demand"
+  pending "handle redemand"
 
-  describe ".send_buffer/4" do
+  describe "handle buffer" do
     let :other_name, do: :other_name
 
     let! :state,
       do: %{
         playback: playback(),
+        type: :filter,
         name: :elem_name,
         __struct__: State,
         pads: %{
@@ -41,28 +42,50 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
 
         it "should return an error result" do
           {ret, _state} =
-            described_module().send_buffer(pad_name(), buffer(), callback(), state())
+            described_module().handle_action(
+              {:buffer, {pad_name(), buffer()}},
+              callback(),
+              %{},
+              state()
+            )
 
           expect(ret) |> to(be_error_result())
         end
 
         it "should return {:cannot_send_buffer, _} as a reason" do
           {{_error, {main_reason, _reason_details}}, _state} =
-            described_module().send_buffer(pad_name(), buffer(), callback(), state())
+            described_module().handle_action(
+              {:buffer, {pad_name(), buffer()}},
+              callback(),
+              %{},
+              state()
+            )
 
-          expect(main_reason) |> to(eq :cannot_send_buffer)
+          expect(main_reason) |> to(eq :cannot_handle_action)
         end
 
         it "should return keyword list with callback name" do
           {{_error, {_main_reason, reason_details}}, _state} =
-            described_module().send_buffer(pad_name(), buffer(), callback(), state())
+            described_module().handle_action(
+              {:buffer, {pad_name(), buffer()}},
+              callback(),
+              %{},
+              state()
+            )
 
           expect(reason_details |> Keyword.fetch(:callback)) |> to(eq {:ok, callback()})
         end
 
         it "should return keyword list with playback state" do
-          {{_error, {_main_reason, reason_details}}, _state} =
-            described_module().send_buffer(pad_name(), buffer(), callback(), state())
+          {{:error, {_main_reason, reason_details}}, _state} =
+            described_module().handle_action(
+              {:buffer, {pad_name(), buffer()}},
+              callback(),
+              %{},
+              state()
+            )
+
+          {:ok, {_main_reason, reason_details}} = reason_details |> Keyword.fetch(:reason)
 
           expect(reason_details |> Keyword.fetch(:playback_state))
           |> to(eq {:ok, playback().state})
@@ -72,32 +95,39 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       context "and callback is 'handle_play'" do
         let :callback, do: :handle_play
 
-        context "but pad doesn't exist in the element" do
-          let :invalid_pad_name, do: :invalid_pad_name
-
-          it "should raise RuntimeError" do
-            expect(
-              described_module().send_buffer(invalid_pad_name(), buffer(), callback(), state())
-            )
-            |> to(eq {{:error, {:unknown_pad, invalid_pad_name()}}, state()})
-          end
-        end
-
         context "and pad exists in element" do
           it "should return an ok result" do
-            expect(described_module().send_buffer(pad_name(), buffer(), callback(), state()))
+            expect(
+              described_module().handle_action(
+                {:buffer, {pad_name(), buffer()}},
+                callback(),
+                %{},
+                state()
+              )
+            )
             |> to(be_ok_result())
           end
 
           it "should keep element's state unchanged" do
             {:ok, new_state} =
-              described_module().send_buffer(pad_name(), buffer(), callback(), state())
+              described_module().handle_action(
+                {:buffer, {pad_name(), buffer()}},
+                callback(),
+                %{},
+                state()
+              )
 
             expect(new_state) |> to(eq state())
           end
 
           it "should send {:membrane_buffer, _} message to pid()" do
-            described_module().send_buffer(pad_name(), buffer(), callback(), state())
+            described_module().handle_action(
+              {:buffer, {pad_name(), buffer()}},
+              callback(),
+              %{},
+              state()
+            )
+
             target = {:membrane_buffer, [[buffer()], other_name()]}
             assert_receive ^target
           end
@@ -112,29 +142,57 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       context "but pad doesn't exist in the element" do
         let :invalid_pad_name, do: :invalid_pad_name
 
-        it "should raise RuntimeError" do
-          expect(
-            described_module().send_buffer(invalid_pad_name(), buffer(), callback(), state())
-          )
-          |> to(eq {{:error, {:unknown_pad, invalid_pad_name()}}, state()})
+        it "should return error" do
+          {{:error, {main_reason, reason_details}}, state} =
+            described_module().handle_action(
+              {:buffer, {invalid_pad_name(), buffer()}},
+              callback(),
+              %{},
+              state()
+            )
+
+          expect(main_reason) |> to(eq :cannot_handle_action)
+
+          expect(reason_details |> Keyword.get(:reason))
+          |> to(eq {:unknown_pad, :invalid_pad_name})
+
+          expect(state) |> to(eq state())
         end
       end
 
       context "and pad exists in element" do
         it "should return an ok result" do
-          expect(described_module().send_buffer(pad_name(), buffer(), callback(), state()))
+          expect(
+            described_module().handle_action(
+              {:buffer, {pad_name(), buffer()}},
+              callback(),
+              %{},
+              state()
+            )
+          )
           |> to(be_ok_result())
         end
 
         it "should keep element's state unchanged" do
           {:ok, new_state} =
-            described_module().send_buffer(pad_name(), buffer(), callback(), state())
+            described_module().handle_action(
+              {:buffer, {pad_name(), buffer()}},
+              callback(),
+              %{},
+              state()
+            )
 
           expect(new_state) |> to(eq state())
         end
 
         it "should send {:membrane_buffer, _} message to pid()" do
-          described_module().send_buffer(pad_name(), buffer(), callback(), state())
+          described_module().handle_action(
+            {:buffer, {pad_name(), buffer()}},
+            callback(),
+            %{},
+            state()
+          )
+
           target = {:membrane_buffer, [[buffer()], other_name()]}
           assert_receive ^target
         end
@@ -142,13 +200,14 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     end
   end
 
-  describe ".send_event/3" do
+  describe "handle event" do
     let :other_name, do: :other_name
 
     let! :state,
       do: %{
         playback: playback(),
         name: :elem_name,
+        type: :filter,
         __struct__: State,
         pads: %{
           data: %{
@@ -174,20 +233,36 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       context "but pad doesn't exist in the element" do
         let :invalid_pad_name, do: :invalid_pad_name
 
-        it "should raise RuntimeError" do
-          expect(described_module().send_event(invalid_pad_name(), event(), state()))
-          |> to(eq {{:error, {:unknown_pad, invalid_pad_name()}}, state()})
+        it "should return error" do
+          {{:error, {main_reason, reason_details}}, state} =
+            described_module().handle_action(
+              {:caps, {invalid_pad_name(), event()}},
+              nil,
+              %{},
+              state()
+            )
+
+          expect(main_reason) |> to(eq :cannot_handle_action)
+
+          expect(reason_details |> Keyword.get(:reason))
+          |> to(eq {:unknown_pad, :invalid_pad_name})
+
+          expect(state) |> to(eq state())
         end
       end
 
       context "and pad exists in element" do
         it "should return an ok result" do
-          expect(described_module().send_event(pad_name(), event(), state()))
+          expect(
+            described_module().handle_action({:event, {pad_name(), event()}}, nil, %{}, state())
+          )
           |> to(be_ok_result())
         end
 
         it "should keep element's state unchanged" do
-          {:ok, new_state} = described_module().send_event(pad_name(), event(), state())
+          {:ok, new_state} =
+            described_module().handle_action({:event, {pad_name(), event()}}, nil, %{}, state())
+
           expect(new_state) |> to(eq state())
         end
 
@@ -195,7 +270,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           let :payload, do: "special payload"
 
           it "should send {:membrane_event, _} message to self()" do
-            described_module().send_event(pad_name(), event(), state())
+            described_module().handle_action({:event, {pad_name(), event()}}, nil, %{}, state())
             target = {:membrane_event, [event(), other_name()]}
             assert_receive ^target
           end
@@ -204,13 +279,14 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     end
   end
 
-  describe ".send_caps/3" do
+  describe "handle caps" do
     let :other_name, do: :other_name
 
     let! :state,
       do: %{
         playback: playback(),
         name: :elem_name,
+        type: :filter,
         __struct__: State,
         pads: %{
           data: %{
@@ -238,15 +314,30 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       context "but pad doesn't exist in the element" do
         let :invalid_pad_name, do: :invalid_pad_name
 
-        it "should raise RuntimeError" do
-          expect(described_module().send_caps(invalid_pad_name(), caps(), state()))
-          |> to(eq {{:error, {:unknown_pad, invalid_pad_name()}}, state()})
+        it "should return error" do
+          {{:error, {main_reason, reason_details}}, state} =
+            described_module().handle_action(
+              {:caps, {invalid_pad_name(), caps()}},
+              nil,
+              %{},
+              state()
+            )
+
+          expect(main_reason) |> to(eq :cannot_handle_action)
+
+          expect(reason_details |> Keyword.get(:reason))
+          |> to(eq {:unknown_pad, :invalid_pad_name})
+
+          expect(state) |> to(eq state())
         end
       end
 
       context "and pad exists in element" do
         it "should return an ok result" do
-          expect(described_module().send_caps(pad_name(), caps(), state())) |> to(be_ok_result())
+          expect(
+            described_module().handle_action({:caps, {pad_name(), caps()}}, nil, %{}, state())
+          )
+          |> to(be_ok_result())
         end
 
         it "should should return new state with updated caps" do
@@ -255,7 +346,9 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           expected_pads = %{state().pads | data: updated_data}
           expected_state = %{state() | pads: expected_pads}
 
-          {:ok, new_state} = described_module().send_caps(pad_name(), caps(), state())
+          {:ok, new_state} =
+            described_module().handle_action({:caps, {pad_name(), caps()}}, nil, %{}, state())
+
           expect(new_state) |> to(eq expected_state)
         end
 
@@ -263,7 +356,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           let :payload, do: "special payload"
 
           it "should send {:membrane_event, _} message to self()" do
-            described_module().send_caps(pad_name(), caps(), state())
+            described_module().handle_action({:caps, {pad_name(), caps()}}, nil, %{}, state())
             target = {:membrane_caps, [caps(), other_name()]}
             assert_receive ^target
           end
@@ -272,7 +365,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     end
   end
 
-  describe ".send_message/2" do
+  describe "handle message" do
     let :name, do: :some_name
     let :state, do: %State{message_bus: message_bus(), name: name()}
     let :payload, do: "some message"
@@ -282,18 +375,23 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       let :message_bus, do: nil
 
       it "should return an ok result" do
-        expect(described_module().send_message(message(), state())) |> to(be_ok_result())
+        expect(described_module().handle_action({:message, message()}, nil, %{}, state()))
+        |> to(be_ok_result())
       end
 
       it "should keep element's state unchanged" do
-        expect(described_module().send_message(message(), state()) |> elem(1)) |> to(eq state())
+        expect(
+          described_module().handle_action({:message, message()}, nil, %{}, state())
+          |> elem(1)
+        )
+        |> to(eq state())
       end
 
       context "and message is special" do
         let :payload, do: "some special payload 1"
 
         it "should not receive :membrane_message" do
-          described_module().send_message(message(), state())
+          described_module().handle_action({:message, message()}, nil, %{}, state())
           target = [:membrane_message, name(), message()]
           refute_receive ^target
         end
@@ -304,18 +402,23 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       let :message_bus, do: self()
 
       it "should return an ok result" do
-        expect(described_module().send_message(message(), state())) |> to(be_ok_result())
+        expect(described_module().handle_action({:message, message()}, nil, %{}, state()))
+        |> to(be_ok_result())
       end
 
       it "should keep element's state unchanged" do
-        expect(described_module().send_message(message(), state()) |> elem(1)) |> to(eq state())
+        expect(
+          described_module().handle_action({:message, message()}, nil, %{}, state())
+          |> elem(1)
+        )
+        |> to(eq state())
       end
 
       context "and message is special" do
         let :payload, do: "some special payload 2"
 
         it "should receive {:membrane_message, _}" do
-          described_module().send_message(message(), state())
+          described_module().handle_action({:message, message()}, nil, %{}, state())
           target = [:membrane_message, name(), message()]
           assert_receive ^target
         end
