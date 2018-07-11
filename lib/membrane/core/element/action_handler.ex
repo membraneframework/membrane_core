@@ -197,8 +197,8 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
   end
 
-  @spec send_buffer(Pad.name_t(), atom, [Buffer.t()], State.t()) ::
-          {{:ok | {:error, any}}, State.t()}
+  @spec send_buffer(Pad.name_t(), [Buffer.t()] | Buffer.t(), callback :: atom, State.t()) ::
+          State.stateful_maybe_t()
   defp send_buffer(
          _pad_name,
          _buffer,
@@ -259,8 +259,8 @@ defmodule Membrane.Core.Element.ActionHandler do
     state
   end
 
-  @spec send_caps(Pad.name_t(), Caps.t(), State.t()) :: {{:ok | {:error, any}}, State.t()}
-  defp send_caps(pad_name, caps, state) do
+  @spec send_caps(Pad.name_t(), Caps.t(), State.t()) :: State.stateful_maybe_t()
+  def send_caps(pad_name, caps, state) do
     debug(
       """
       Sending caps through pad #{inspect(pad_name)}
@@ -301,11 +301,11 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec handle_demand(
           Pad.name_t(),
           {:source, Pad.name_t()} | :self,
-          type :: :normal | :set,
+          type :: :increase | :set,
           size :: pos_integer,
           callback :: atom,
           State.t()
-        ) :: {{:ok | {:error, any}}, State.t()}
+        ) :: State.stateful_maybe_t()
   defp handle_demand(pad_name, source, type, size, callback, state)
 
   defp handle_demand(
@@ -373,7 +373,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec handle_redemand(Pad.name_t(), State.t()) :: {{:ok | {:error, any}}, State.t()}
+  @spec handle_redemand(Pad.name_t(), State.t()) :: State.stateful_maybe_t()
   defp handle_redemand(src_name, state) do
     with :ok <- PadModel.assert_data(src_name, %{direction: :source, mode: :pull}, state) do
       DemandController.handle_redemand(src_name, state)
@@ -382,7 +382,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec send_event(Pad.name_t(), Event.t(), State.t()) :: {{:ok | {:error, any}}, State.t()}
+  @spec send_event(Pad.name_t(), Event.t(), State.t()) :: State.stateful_maybe_t()
   defp send_event(pad_name, event, state) do
     debug(
       """
@@ -403,7 +403,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp handle_event(pad_name, %Event{type: :eos}, state) do
-    with %{direction: :source, eos: false} <- PadModel.get_data(pad_name, state) do
+    with %{direction: :source, eos: false} <- PadModel.get_data!(pad_name, state) do
       PadModel.set_data(pad_name, :eos, true, state)
     else
       %{direction: :sink} -> {{:error, {:cannot_send_eos_through_sink, pad_name}}, state}
