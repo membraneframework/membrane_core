@@ -3,7 +3,8 @@ defmodule Membrane.Core.Element.ActionHandler do
   # Module containing action handlers common for elements of all types.
 
   alias Membrane.{Buffer, Caps, Core, Element, Event, Message, Pad}
-  alias Core.Element.{DemandController, OwnDemandHandler, PadModel, State}
+  alias Core.Element.{DemandController, LifecycleController, OwnDemandHandler, PadModel, State}
+  alias Core.PlaybackHandler
   require PadModel
   import Element.Pad, only: [is_pad_name: 1]
   use Core.Element.Log
@@ -65,11 +66,11 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp do_handle_action({:playback_change, :suspend}, cb, _params, state)
        when cb in [:handle_prepare, :handle_play, :handle_stop] do
-    state |> Element.suspend_playback_change()
+    PlaybackHandler.suspend_playback_change(state)
   end
 
   defp do_handle_action({:playback_change, :resume}, _cb, _params, state),
-    do: state |> Element.continue_playback_change()
+    do: PlaybackHandler.continue_playback_change(LifecycleController, state)
 
   defp do_handle_action({:buffer, {pad_name, buffers}}, cb, _params, %State{type: type} = state)
        when type in [:source, :filter] and is_pad_name(pad_name) do

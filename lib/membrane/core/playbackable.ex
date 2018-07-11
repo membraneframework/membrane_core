@@ -38,13 +38,10 @@ defmodule Membrane.Core.Playbackable.Default do
 
       def set_playback(playbackable, playback), do: %{playbackable | playback: playback}
 
-      def update_playback(playbackable, f),
-        do: playbackable |> set_playback(playbackable |> get_playback |> f.())
+      def update_playback(playbackable, f), do: playbackable |> Map.update!(:playback, f)
 
-      def get_and_update_playback(playbackable, update_f) do
-        playback = playbackable |> get_playback
-        {playback, playbackable |> set_playback(playback |> update_f.())}
-      end
+      def get_and_update_playback(playbackable, f),
+        do: playbackable |> Map.get_and_update!(:playback, f)
 
       def get_controlling_pid(playbackable), do: nil
 

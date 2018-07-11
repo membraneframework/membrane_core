@@ -13,7 +13,7 @@ defmodule Membrane.Element do
   use Membrane.Log, tags: :core
   use Membrane.Helper
   use GenServer
-  use Membrane.Core.Playback
+  use Membrane.Core.PlaybackRequestor
 
   @typedoc """
   Defines options that can be passed to `start/5` / `start_link/5` and received
@@ -145,12 +145,6 @@ defmodule Membrane.Element do
     GenServer.call(server, {:membrane_set_controlling_pid, controlling_pid}, timeout)
   end
 
-  @impl Playback
-  def change_playback_state(pid, new_state) do
-    send(pid, {:membrane_change_playback_state, new_state})
-    :ok
-  end
-
   @doc """
   Sends synchronous calls to two elements, telling them to link with each other.
   """
@@ -225,20 +219,6 @@ defmodule Membrane.Element do
   def terminate(reason, state) do
     {:ok, _state} = MessageDispatcher.handle_message({:membrane_shutdown, reason}, :other, state)
     :ok
-  end
-
-  @impl Playback
-  def handle_playback_state(old, new, state) do
-    MessageDispatcher.handle_message({:membrane_change_playback_state, [old, new]}, :other, state)
-  end
-
-  @impl Playback
-  def handle_playback_state_changed(old, new, state) do
-    MessageDispatcher.handle_message(
-      {:membrane_playback_state_changed, [old, new]},
-      :other,
-      state
-    )
   end
 
   @impl GenServer

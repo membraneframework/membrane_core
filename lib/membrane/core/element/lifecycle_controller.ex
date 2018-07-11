@@ -1,8 +1,9 @@
 defmodule Membrane.Core.Element.LifecycleController do
   alias Membrane.Core
   alias Core.CallbackHandler
-  alias Core.Element.{ActionHandler, PadSpecHandler, PadModel, State}
+  alias Core.Element.{ActionHandler, PadSpecHandler, PadModel, PlaybackBuffer, State}
   require PadModel
+  use Core.PlaybackHandler
   use Core.Element.Log
   use Membrane.Helper
 
@@ -98,14 +99,25 @@ defmodule Membrane.Core.Element.LifecycleController do
     )
   end
 
-  def handle_playback_state(:prepared, :playing, state),
-    do: CallbackHandler.exec_and_handle_callback(:handle_play, ActionHandler, [], state)
+  @impl PlaybackHandler
+  def handle_playback_state(:prepared, :playing, state) do
+    CallbackHandler.exec_and_handle_callback(:handle_play, ActionHandler, [], state)
+  end
 
-  def handle_playback_state(:prepared, :stopped, state),
-    do: CallbackHandler.exec_and_handle_callback(:handle_stop, ActionHandler, [], state)
+  @impl PlaybackHandler
+  def handle_playback_state(:prepared, :stopped, state) do
+    CallbackHandler.exec_and_handle_callback(:handle_stop, ActionHandler, [], state)
+  end
 
-  def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing],
-    do: CallbackHandler.exec_and_handle_callback(:handle_prepare, ActionHandler, [ps], state)
+  @impl PlaybackHandler
+  def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing] do
+    CallbackHandler.exec_and_handle_callback(:handle_prepare, ActionHandler, [ps], state)
+  end
+
+  @impl PlaybackHandler
+  def handle_playback_state_changed(_old, _new, state) do
+    PlaybackBuffer.eval(state)
+  end
 
   def unlink(%State{playback: %{state: :stopped}} = state) do
     with :ok <-

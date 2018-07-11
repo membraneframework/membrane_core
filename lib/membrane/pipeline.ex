@@ -8,14 +8,16 @@ defmodule Membrane.Pipeline do
   and process it in different ways.
   """
 
+  alias __MODULE__.{State, Spec}
+  alias Membrane.{Core, Element, Message}
+  alias Core.Playback
+  use Membrane.Helper
+  import Helper.GenServer
   use Membrane.Log, tags: :core
   use Membrane.Core.CallbackHandler
   use GenServer
-  use Membrane.Core.Playback
-  alias Membrane.Pipeline.{State, Spec}
-  alias Membrane.{Element, Message}
-  use Membrane.Helper
-  import Helper.GenServer
+  use Membrane.Core.PlaybackHandler
+  use Membrane.Core.PlaybackRequestor
 
   @typedoc """
   Defines options that can be passed to `start/3` / `start_link/3` and received
@@ -170,12 +172,6 @@ defmodule Membrane.Pipeline do
           {:not_pipeline, module}
         )
     end
-  end
-
-  @impl Playback
-  def change_playback_state(pid, new_state) do
-    send(pid, {:membrane_change_playback_state, new_state})
-    :ok
   end
 
   @spec stop_and_terminate(pipeline :: module) :: :ok
@@ -455,7 +451,7 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  @impl Playback
+  @impl PlaybackHandler
   def handle_playback_state(_old, new, %State{pids_to_children: pids_to_children} = state) do
     children_pids = pids_to_children |> Map.keys()
 
@@ -465,10 +461,10 @@ defmodule Membrane.Pipeline do
     end)
 
     state = %{state | pending_pids: children_pids |> MapSet.new()}
-    state |> suspend_playback_change
+    PlaybackHandler.suspend_playback_change(state)
   end
 
-  @impl Playback
+  @impl PlaybackHandler
   def handle_playback_state_changed(_old, :stopped, %State{terminating?: true} = state) do
     send(self(), :membrane_stop_and_terminate)
     {:ok, state}
@@ -511,7 +507,7 @@ defmodule Membrane.Pipeline do
 
       with {:ok, new_state} <-
              CallbackHandler.exec_and_handle_callback(callback, __MODULE__, args, new_state) do
-        continue_playback_change(new_state)
+        PlaybackHandler.continue_playback_change(__MODULE__, new_state)
       else
         error -> error
       end
@@ -522,7 +518,7 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_info({:membrane_change_playback_state, new_state}, state) do
-    resolve_playback_change(new_state, state) |> noreply(state)
+    PlaybackHandler.change_playback_state(new_state, __MODULE__, state) |> noreply(state)
   end
 
   def handle_info(:membrane_stop_and_terminate, state) do
@@ -532,7 +528,9 @@ defmodule Membrane.Pipeline do
 
       _ ->
         state = %{state | terminating?: true}
-        lock_playback_state(:stopped, state) |> noreply(state)
+
+        PlaybackHandler.change_and_lock_playback_state(:stopped, __MODULE__, state)
+        |> noreply(state)
     end
   end
 
