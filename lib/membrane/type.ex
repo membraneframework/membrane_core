@@ -1,9 +1,6 @@
 defmodule Membrane.Type do
-  @type ok_t :: :ok
-  @type ok_t(value) :: {:ok, value}
-  @type error_t :: {:error, reason :: any}
-  @type try_t :: ok_t | error_t
-  @type try_t(value) :: ok_t(value) | error_t
+  @type try_t :: :ok | {:error, reason :: any}
+  @type try_t(value) :: {:ok, value} | {:error, reason :: any}
 
   @type stateful_t(value, state) :: {value, state}
 
