@@ -1,23 +1,34 @@
 defmodule Membrane.Core.PlaybackHandler do
-  @moduledoc """
-  Behaviour for modules that have playback state, i.e. elements and pipelines
+  @moduledoc false
+  # Behaviour for modules that have playback state, i.e. elements and pipelines
+  #
+  # There are three playback states: :stopped, :prepared and :playing.
+  # Playback state always changes only one step at once in this order, and can
+  # be handled by `handle_prepare/2`, `handle_play/1` and `handle_stop/1` callbacks
 
-  There are three playback states: :stopped, :prepared and :playing.
-  Playback state always changes only one step at once in this order, and can
-  be handled by `handle_prepare/2`, `handle_play/1` and `handle_stop/1` callbacks
-  """
   alias Membrane.Core.{Playback, Playbackable}
   use Membrane.Helper
 
   @type handler_return_t :: {:ok | {:error, any()}, Playbackable.t()}
 
+  @doc """
+  Callback invoked when playback state is going to be changed.
+  """
   @callback handle_playback_state(Playback.state_t(), Playback.state_t(), Playbackable.t()) ::
               handler_return_t
+
+  @doc """
+  Callback invoked when playback state has changed.
+  """
   @callback handle_playback_state_changed(
               Playback.state_t(),
               Playback.state_t(),
               Playbackable.t()
             ) :: handler_return_t
+
+  @doc """
+  Callback that is to notify controller that playback state has changed.
+  """
   @callback notify_controller(:playback_changed, Playback.state_t(), pid) :: :ok
 
   @states [:stopped, :prepared, :playing]

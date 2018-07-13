@@ -1,15 +1,24 @@
 defmodule Membrane.Core.Element.MessageDispatcher do
+  @moduledoc false
+  # Module handling messages incoming to element and dispatching them to controllers.
+
   alias Membrane.Core
-  alias Core.Element.{OwnDemandHandler, LifecycleController, PadController, PlaybackBuffer}
+  alias Core.Element.{DemandHandler, LifecycleController, PadController, PlaybackBuffer}
   alias Core.PlaybackHandler
   use Core.Element.Log
   use Membrane.Helper
 
+  @type message_t :: {atom, args :: Keyword.t()}
+
+  @doc """
+  Parses message incoming to element and forwards it to proper controller.
+  """
+  @spec handle_message(message_t, :info | :call | :other, State.t()) :: State.stateful_try_t()
   def handle_message(message, mode, state) do
     with {:ok, res} <- do_handle_message(message, mode, state) |> Helper.result_with_status() do
       res
     else
-      {_, {{:error, reason}, state}} ->
+      {_error, {{:error, reason}, state}} ->
         reason = {:cannot_handle_message, message: message, mode: mode, reason: reason}
 
         warn_error(
@@ -19,22 +28,10 @@ defmodule Membrane.Core.Element.MessageDispatcher do
           reason,
           state
         )
-
-      {_, {:error, reason}} ->
-        reason = {:cannot_handle_message, message: message, mode: mode, reason: reason}
-
-        warn_error(
-          """
-          MessageDispatcher: cannot handle message: #{inspect(message)}, mode: #{inspect(mode)}
-          """,
-          reason,
-          state
-        )
-
-        {{:error, reason}, state}
     end
   end
 
+  @spec do_handle_message(message_t, :info | :call | :other, State.t()) :: State.stateful_try_t()
   defp do_handle_message({:membrane_init, options}, :other, state) do
     LifecycleController.handle_init(options, state)
   end
@@ -96,8 +93,8 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     PadController.handle_unlink(pad_name, state)
   end
 
-  defp do_handle_message({:membrane_own_demand, [pad_name, source, type, size]}, :info, state) do
-    OwnDemandHandler.handle_own_demand(pad_name, source, type, size, state)
+  defp do_handle_message({:membrane_demand, [pad_name, source, type, size]}, :info, state) do
+    DemandHandler.handle_demand(pad_name, source, type, size, state)
   end
 
   defp do_handle_message(other, :info, state) do

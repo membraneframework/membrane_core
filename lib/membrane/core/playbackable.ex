@@ -1,11 +1,11 @@
 defprotocol Membrane.Core.Playbackable do
-  @moduledoc """
-  Protocol that has to be adopted by modules that use `Membrane.Core.Playback`.
+  @moduledoc false
+  # Protocol that has to be adopted by modules that use `Membrane.Core.Playback`.
+  #
+  # Modules that adopt `Membrane.Core.PlaybackHandler` behaviour have to store their
+  # playback state and controlling pid. `Membrane.Core.Playbackable` is used as
+  # an abstraction that allows to access those values.
 
-  Modules that adopt `Membrane.Mixing.Playback` behaviour have to store their
-  playback state and controlling pid. `Membrane.Core.Playbackable` is used as
-  an abstraction that allows to access those values.
-  """
   alias Membrane.Core.Playback
 
   @spec get_playback(__MODULE__.t()) :: Playback.t()
@@ -26,11 +26,10 @@ defprotocol Membrane.Core.Playbackable do
 end
 
 defmodule Membrane.Core.Playbackable.Default do
-  @moduledoc """
-  The default implementation for `Membrane.Core.Playbackable`.
-  Assumes that `playbackable` is a map and stores `playback` and
-  `controlling_pid` inside it.
-  """
+  @moduledoc false
+  # The default implementation for `Membrane.Core.Playbackable`.
+  # Assumes that `playbackable` is a map and stores `playback` and
+  # `controlling_pid` inside it.
 
   defmacro __using__(_) do
     quote location: :keep do

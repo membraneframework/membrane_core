@@ -16,7 +16,9 @@ defmodule Membrane.Element.Base.Source do
   provide more complex solutions.
   """
 
-  alias Membrane.Element.Base.Mixin
+  alias Membrane.Element
+  alias Element.Base.Mixin
+  alias Element.Context
 
   @doc """
   Callback that is called when buffers should be emitted by the source.
@@ -30,7 +32,7 @@ defmodule Membrane.Element.Base.Source do
   @callback handle_demand1(
               pad :: Pad.name_t(),
               context :: Context.Demand.t(),
-              state :: Mixin.CommonBehaviour.internal_state_t()
+              state :: Element.state_t()
             ) :: Mixin.CommonBehaviour.callback_return_t()
 
   defmacro __using__(_) do

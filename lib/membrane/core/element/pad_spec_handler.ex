@@ -1,17 +1,29 @@
 defmodule Membrane.Core.Element.PadSpecHandler do
-  alias Membrane.Element.Pad
-  alias Membrane.Core
+  @moduledoc false
+  # Module parsing pads specifications in elements.
+
+  alias Membrane.Element
+  alias Element.Pad
+  alias Membrane.{Caps, Core}
   alias Core.Element.State
   require Pad
   use Membrane.Helper
   use Core.Element.Log
 
+  @typep parsed_pad_t ::
+           {Pad.name_t(), Pad.availability_t(), Pad.mode_t(), Caps.Matcher.caps_specs_t(),
+            Pad.direction_t(), map}
+
+  @doc """
+  Initializes pads info basing on element's pads specifications.
+  """
+  @spec init_pads(State.t()) :: State.stateful_try_t()
   def init_pads(%State{module: module} = state) do
-    with {:ok, parsed_src_pads} <- handle_known_pads(:known_source_pads, :source, module),
-         {:ok, parsed_sink_pads} <- handle_known_pads(:known_sink_pads, :sink, module) do
+    with {:ok, soruce_pads_info} <- handle_known_pads(:known_source_pads, :source, module),
+         {:ok, sink_pads_info} <- handle_known_pads(:known_sink_pads, :sink, module) do
       pads = %{
         data: %{},
-        info: Map.merge(parsed_src_pads, parsed_sink_pads),
+        info: Map.merge(soruce_pads_info, sink_pads_info),
         dynamic_currently_linking: []
       }
 
@@ -21,6 +33,9 @@ defmodule Membrane.Core.Element.PadSpecHandler do
     end
   end
 
+  @spec handle_known_pads(atom, Pad.direction_t(), module) ::
+          {:ok, %{Pad.name_t() => PadModel.pad_info_t()}}
+          | {:error, {:invalid_pad_config, details :: Keyword.t()}}
   defp handle_known_pads(known_pads_fun, direction, module) do
     known_pads =
       if function_exported?(module, known_pads_fun, 0) do
@@ -39,6 +54,8 @@ defmodule Membrane.Core.Element.PadSpecHandler do
     end
   end
 
+  @spec parse_pad(Element.pad_specs_t(), Pad.direction_t()) ::
+          {:ok, parsed_pad_t} | {:error, {:invalid_pad_config, details :: Keyword.t()}}
   defp parse_pad({name, {availability, :push, caps}}, direction)
        when is_atom(name) and Pad.is_availability(availability) do
     {:ok, {name, availability, :push, caps, direction, %{}}}
@@ -57,6 +74,7 @@ defmodule Membrane.Core.Element.PadSpecHandler do
   defp parse_pad(params, direction),
     do: {:error, {:invalid_pad_config, params, direction: direction}}
 
+  @spec init_pad_info(parsed_pad_t) :: PadModel.pad_info_t()
   defp init_pad_info({name, availability, mode, caps, direction, options}) do
     %{
       name: name,

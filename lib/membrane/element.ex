@@ -7,7 +7,7 @@ defmodule Membrane.Element do
   """
 
   alias __MODULE__.Pad
-  alias Membrane.Core
+  alias Membrane.{Buffer, Caps, Core}
   alias Core.Element.{MessageDispatcher, State}
   import Membrane.Helper.GenServer
   use Membrane.Log, tags: :core
@@ -19,7 +19,7 @@ defmodule Membrane.Element do
   Defines options that can be passed to `start/5` / `start_link/5` and received
   in `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_init/1` callback.
   """
-  @type element_options_t :: struct | nil
+  @type options_t :: struct | nil
 
   @typedoc """
   Type that defines an element name by which it is identified.
@@ -33,6 +33,30 @@ defmodule Membrane.Element do
   - sink, consuming buffers
   """
   @type type_t :: :source | :filter | :sink
+
+  @typedoc """
+  Describes how a pad should be declared in element.
+  """
+  @type pad_specs_t :: source_pad_specs_t | sink_pad_specs_t
+
+  @typedoc """
+  Type of user-managed state of element.
+  """
+  @type state_t :: map | struct
+
+  @typedoc """
+  Describes how a source pad should be declared in element.
+  """
+  @type source_pad_specs_t ::
+          {Pad.name_t(), {Pad.availability_t(), :push | :pull, Caps.Matcher.caps_specs_t()}}
+
+  @typedoc """
+  Describes how a sink pad should be declared in element.
+  """
+  @type sink_pad_specs_t ::
+          {Pad.name_t(),
+           {Pad.availability_t(), {:push | :pull, demand_in: Buffer.Metric.unit_t()},
+            Caps.Matcher.caps_specs_t()}}
 
   @doc """
   Checks whether module is an element.
@@ -63,8 +87,7 @@ defmodule Membrane.Element do
 
   Calls `GenServer.start_link/3` underneath.
   """
-  @spec start_link(pid, module, name_t, element_options_t, GenServer.options()) ::
-          GenServer.on_start()
+  @spec start_link(pid, module, name_t, options_t, GenServer.options()) :: GenServer.on_start()
   def start_link(pipeline, module, name, element_options, process_options \\ []),
     do: do_start(:start_link, pipeline, module, name, element_options, process_options)
 
@@ -78,7 +101,7 @@ defmodule Membrane.Element do
   @doc """
   Works similarly to `start_link/5`, but does not link to the current process.
   """
-  @spec start(pid, module, name_t, element_options_t, GenServer.options()) :: GenServer.on_start()
+  @spec start(pid, module, name_t, options_t, GenServer.options()) :: GenServer.on_start()
   def start(pipeline, module, name, element_options, process_options \\ []),
     do: do_start(:start, pipeline, module, name, element_options, process_options)
 

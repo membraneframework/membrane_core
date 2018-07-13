@@ -1,6 +1,11 @@
 defmodule Membrane.Core.Element.PlaybackBuffer do
-  alias Membrane.Core.Playback
+  @moduledoc false
+  # Buffer for storing messages that cannot be handled in current playback state.
+  # Allows to avoid race conditions when one element changes playback state
+  # before another does.
+
   alias Membrane.{Buffer, Core, Event}
+  alias Core.Playback
 
   alias Core.Element.{
     BufferController,
@@ -19,14 +24,22 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
           q: Qex.t()
         }
 
+  @type message_t ::
+          {:membrane_demand | :membrane_buffer | :membrane_caps | :membrane_event, args :: list}
+
   defstruct q: nil
 
   @qe Qex
 
+  @spec new() :: t
   def new do
     %__MODULE__{q: @qe.new}
   end
 
+  @doc """
+  Stores message if it cannot be handled yet.
+  """
+  @spec store(message_t, State.t()) :: State.stateful_try_t()
   def store(msg, %State{playback: %Playback{state: :playing}} = state), do: exec(msg, state)
 
   def store({type, _args} = msg, state)
@@ -47,6 +60,11 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     ~> (state -> {:ok, state})
   end
 
+  @doc """
+  Handles messages from buffer and passes them to proper controller, until they
+  can be handled in current playback state.
+  """
+  @spec eval(State.t()) :: State.stateful_try_t()
   def eval(%State{playback: %Playback{state: :playing}} = state) do
     debug("evaluating playback buffer", state)
 
@@ -58,11 +76,13 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   def eval(state), do: {:ok, state}
 
-  def empty?(%__MODULE__{q: q}), do: q |> Enum.empty?()
+  @spec empty?(t) :: boolean
+  defp empty?(%__MODULE__{q: q}), do: q |> Enum.empty?()
 
+  @spec exec(message_t, State.t()) :: State.stateful_try_t()
   # Callback invoked on demand request coming from the source pad in the pull mode
   defp exec({:membrane_demand, [size, pad_name]}, state) do
-    {:ok, _} = PadModel.get_data(pad_name, %{direction: :source}, state)
+    PadModel.assert_data!(pad_name, %{direction: :source}, state)
 
     demand =
       if size == 0 do
@@ -86,8 +106,8 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
       state
     )
 
-    {{:ok, messages}, state} =
-      PadModel.get_and_update_data(pad_name, :sticky_messages, &{{:ok, []}, &1}, state)
+    {messages, state} =
+      PadModel.get_and_update_data!(pad_name, :sticky_messages, &{&1, []}, state)
 
     with {:ok, state} <-
            messages
@@ -143,12 +163,13 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
         do_exec.(state)
 
       :buffer ->
-        PadModel.update_data(
+        PadModel.update_data!(
           pad_name,
           :sticky_messages,
-          &{:ok, [do_exec | &1]},
+          &[do_exec | &1],
           state
         )
+        ~> (state -> {:ok, state})
     end
   end
 end

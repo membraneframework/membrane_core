@@ -8,18 +8,17 @@ defmodule Membrane.Core.Element.State do
   alias Membrane.{Core, Element, Type}
   alias Core.Element.PlaybackBuffer
   alias Element.Pad
-  alias Element.Base.Mixin.CommonBehaviour
   use Membrane.Helper
   alias __MODULE__, as: ThisModule
   alias Membrane.Core.{Playback, Playbackable}
   require Pad
 
   @type stateful_t(value) :: Type.stateful_t(value, t)
-  @type stateful_maybe_t :: Type.stateful_maybe_t(t)
-  @type stateful_maybe_t(value) :: Type.stateful_maybe_t(value, t)
+  @type stateful_try_t :: Type.stateful_try_t(t)
+  @type stateful_try_t(value) :: Type.stateful_try_t(value, t)
 
   @type t :: %__MODULE__{
-          internal_state: CommonBehaviour.internal_state_t() | nil,
+          internal_state: Element.state_t() | nil,
           module: module,
           type: Element.type_t(),
           name: Element.name_t(),

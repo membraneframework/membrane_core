@@ -1,4 +1,8 @@
 defmodule Membrane.Core.PlaybackRequestor do
+  @moduledoc false
+  # Behaviour for modules that send playback change requests to processes.
+  # `Membrane.Core.PlaybackRequestor` can be used for handling such requests.
+
   alias Membrane.Core.Playback
 
   @callback change_playback_state(pid, Playback.state_t()) :: :ok

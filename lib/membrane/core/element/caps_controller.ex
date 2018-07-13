@@ -1,4 +1,7 @@
 defmodule Membrane.Core.Element.CapsController do
+  @moduledoc false
+  # Module handling caps infoming through sink pads.
+
   alias Membrane.{Caps, Core, Element}
   alias Core.{CallbackHandler, PullBuffer}
   alias Core.Element.{ActionHandler, PadModel}
@@ -6,6 +9,10 @@ defmodule Membrane.Core.Element.CapsController do
   require PadModel
   use Core.Element.Log
 
+  @doc """
+  Handles incoming caps: either stores them in PullBuffer, or executes element callback.
+  """
+  @spec handle_caps(Pad.name_t(), Caps.t(), State.t()) :: State.stateful_try_t()
   def handle_caps(pad_name, caps, state) do
     PadModel.assert_data!(pad_name, %{direction: :sink}, state)
     data = PadModel.get_data!(pad_name, state)
@@ -22,6 +29,7 @@ defmodule Membrane.Core.Element.CapsController do
     end
   end
 
+  @spec exec_handle_caps(Pad.name_t(), Caps.t(), State.t()) :: State.stateful_try_t()
   def exec_handle_caps(pad_name, caps, state) do
     %{accepted_caps: accepted_caps, caps: old_caps} = PadModel.get_data!(pad_name, state)
 
@@ -35,7 +43,7 @@ defmodule Membrane.Core.Element.CapsController do
              [pad_name, caps, context],
              state
            ) do
-      PadModel.set_data(pad_name, :caps, caps, state)
+      {:ok, PadModel.set_data!(pad_name, :caps, caps, state)}
     else
       :invalid_caps ->
         warn_error(

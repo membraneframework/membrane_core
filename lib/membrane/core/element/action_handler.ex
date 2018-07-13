@@ -1,10 +1,11 @@
 defmodule Membrane.Core.Element.ActionHandler do
   @moduledoc false
-  # Module containing action handlers common for elements of all types.
+  # Module validating and executing actions returned by element's callbacks.
 
   alias Membrane.{Buffer, Caps, Core, Element, Event, Message, Pad}
-  alias Core.Element.{DemandController, LifecycleController, OwnDemandHandler, PadModel, State}
+  alias Core.Element.{DemandController, LifecycleController, DemandHandler, PadModel, State}
   alias Core.PlaybackHandler
+  alias Element.{Action, Pad}
   require PadModel
   import Element.Pad, only: [is_pad_name: 1]
   use Core.Element.Log
@@ -45,6 +46,8 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
+  @spec do_handle_action(Action.t(), callback :: atom, params :: map, State.t()) ::
+          State.stateful_try_t()
   defp do_handle_action({:event, {pad_name, event}}, _cb, _params, state)
        when is_pad_name(pad_name) do
     send_event(pad_name, event, state)
@@ -198,7 +201,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @spec send_buffer(Pad.name_t(), [Buffer.t()] | Buffer.t(), callback :: atom, State.t()) ::
-          State.stateful_maybe_t()
+          State.stateful_try_t()
   defp send_buffer(
          _pad_name,
          _buffer,
@@ -241,25 +244,24 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
+  @spec handle_buffer(Pad.name_t(), Pad.mode_t(), map, [Buffer.t()] | Buffer.t(), State.t()) ::
+          State.t()
   defp handle_buffer(pad_name, :pull, options, buffers, state) do
     buf_size = Buffer.Metric.from_unit(options.other_demand_in).buffers_size(buffers)
 
-    {:ok, state} =
-      PadModel.update_data(
-        pad_name,
-        :demand,
-        &{:ok, &1 - buf_size},
-        state
-      )
-
-    state
+    PadModel.update_data!(
+      pad_name,
+      :demand,
+      &(&1 - buf_size),
+      state
+    )
   end
 
   defp handle_buffer(_pad_name, :push, _options, _buffers, state) do
     state
   end
 
-  @spec send_caps(Pad.name_t(), Caps.t(), State.t()) :: State.stateful_maybe_t()
+  @spec send_caps(Pad.name_t(), Caps.t(), State.t()) :: State.stateful_try_t()
   def send_caps(pad_name, caps, state) do
     debug(
       """
@@ -272,10 +274,10 @@ defmodule Membrane.Core.Element.ActionHandler do
     withl pad: :ok <- PadModel.assert_data(pad_name, %{direction: :source}, state),
           do: accepted_caps = PadModel.get_data!(pad_name, :accepted_caps, state),
           caps: true <- Caps.Matcher.match?(accepted_caps, caps) do
-      {{:ok, %{pid: pid, other_name: other_name}}, state} =
-        PadModel.get_and_update_data(
+      {%{pid: pid, other_name: other_name}, state} =
+        PadModel.get_and_update_data!(
           pad_name,
-          fn data -> {{:ok, data}, %{data | caps: caps}} end,
+          fn data -> %{data | caps: caps} ~> {&1, &1} end,
           state
         )
 
@@ -305,7 +307,7 @@ defmodule Membrane.Core.Element.ActionHandler do
           size :: pos_integer,
           callback :: atom,
           State.t()
-        ) :: State.stateful_maybe_t()
+        ) :: State.stateful_try_t()
   defp handle_demand(pad_name, source, type, size, callback, state)
 
   defp handle_demand(
@@ -363,26 +365,26 @@ defmodule Membrane.Core.Element.ActionHandler do
     with :ok <- sink_assertion,
          :ok <- source_assertion do
       if callback in [:handle_write, :handle_process] do
-        send(self(), {:membrane_own_demand, [pad_name, source, type, size]})
+        send(self(), {:membrane_demand, [pad_name, source, type, size]})
         {:ok, state}
       else
-        OwnDemandHandler.handle_own_demand(pad_name, source, type, size, state)
+        DemandHandler.handle_demand(pad_name, source, type, size, state)
       end
     else
       {:error, reason} -> handle_pad_error(reason, state)
     end
   end
 
-  @spec handle_redemand(Pad.name_t(), State.t()) :: State.stateful_maybe_t()
+  @spec handle_redemand(Pad.name_t(), State.t()) :: State.stateful_try_t()
   defp handle_redemand(src_name, state) do
     with :ok <- PadModel.assert_data(src_name, %{direction: :source, mode: :pull}, state) do
-      DemandController.handle_redemand(src_name, state)
+      DemandController.handle_demand(src_name, 0, state)
     else
       {:error, reason} -> handle_pad_error(reason, state)
     end
   end
 
-  @spec send_event(Pad.name_t(), Event.t(), State.t()) :: State.stateful_maybe_t()
+  @spec send_event(Pad.name_t(), Event.t(), State.t()) :: State.stateful_try_t()
   defp send_event(pad_name, event, state) do
     debug(
       """
@@ -402,9 +404,10 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
+  @spec handle_event(Pad.name_t(), Event.t(), State.t()) :: State.stateful_try_t()
   defp handle_event(pad_name, %Event{type: :eos}, state) do
     with %{direction: :source, eos: false} <- PadModel.get_data!(pad_name, state) do
-      PadModel.set_data(pad_name, :eos, true, state)
+      {:ok, PadModel.set_data!(pad_name, :eos, true, state)}
     else
       %{direction: :sink} -> {{:error, {:cannot_send_eos_through_sink, pad_name}}, state}
       %{eos: true} -> {{:error, {:eos_already_sent, pad_name}}, state}
@@ -425,6 +428,8 @@ defmodule Membrane.Core.Element.ActionHandler do
     {:ok, state}
   end
 
+  @spec handle_pad_error({reason :: atom, details :: any}, State.t()) ::
+          {{:error, reason :: any}, State.t()}
   defp handle_pad_error({:unknown_pad, pad} = reason, state) do
     warn_error(
       """

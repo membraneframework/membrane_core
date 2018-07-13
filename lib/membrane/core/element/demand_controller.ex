@@ -1,4 +1,7 @@
 defmodule Membrane.Core.Element.DemandController do
+  @moduledoc false
+  # Module handling demands incoming through source pads.
+
   alias Membrane.{Core, Element}
   alias Core.CallbackHandler
   alias Element.Context
@@ -7,16 +10,16 @@ defmodule Membrane.Core.Element.DemandController do
   use Core.Element.Log
   use Membrane.Helper
 
-  def handle_redemand(src_name, state) do
-    handle_demand(src_name, 0, state)
-  end
-
+  @doc """
+  Updates demand and executes `handle_demand` callback.
+  """
+  @spec handle_demand(Pad.name_t(), non_neg_integer, State.t()) :: State.stateful_try_t()
   def handle_demand(pad_name, size, state) do
-    {{:ok, total_size}, state} =
-      PadModel.get_and_update_data(
+    {total_size, state} =
+      PadModel.get_and_update_data!(
         pad_name,
         :demand,
-        &{{:ok, &1 + size}, &1 + size},
+        fn demand -> (demand + size) ~> {&1, &1} end,
         state
       )
 
@@ -41,6 +44,7 @@ defmodule Membrane.Core.Element.DemandController do
     end
   end
 
+  @spec exec_handle_demand?(Pad.name_t(), State.t()) :: boolean
   defp exec_handle_demand?(pad_name, state) do
     case PadModel.get_data!(pad_name, state) do
       %{eos: true} ->

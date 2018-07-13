@@ -33,7 +33,7 @@ defmodule Membrane.Element.Base.Filter do
               pad :: Pad.name_t(),
               buffers :: list(Buffer.t()),
               context :: Context.Process.t(),
-              state :: Mixin.CommonBehaviour.internal_state_t()
+              state :: Element.state_t()
             ) :: Mixin.CommonBehaviour.callback_return_t()
 
   @doc """
@@ -46,7 +46,7 @@ defmodule Membrane.Element.Base.Filter do
               pad :: Pad.name_t(),
               buffer :: Buffer.t(),
               context :: Context.Process.t(),
-              state :: Mixin.CommonBehaviour.internal_state_t()
+              state :: Element.state_t()
             ) :: Mixin.CommonBehaviour.callback_return_t()
 
   defmacro __using__(_) do

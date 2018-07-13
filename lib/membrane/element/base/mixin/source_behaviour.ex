@@ -8,14 +8,9 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   For more information on implementing elements, see `Membrane.Element.Base`.
   """
 
-  alias Membrane.{Buffer, Context, Element}
-  alias Element.Pad
+  alias Membrane.{Buffer, Caps, Element}
+  alias Element.{Context, Pad}
   alias Element.Base.Mixin.CommonBehaviour
-  alias Membrane.Caps
-
-  @type known_source_pads_t :: [
-          {Pad.name_t(), {Pad.availability_t(), :push | :pull, Caps.Matcher.caps_specs_t()}}
-        ]
 
   @doc """
   Callback that defines what source pads may be ever available for this
@@ -24,7 +19,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   The default name for generic source pad, in elements that just produce some
   buffers is `:source`.
   """
-  @callback known_source_pads() :: known_source_pads_t()
+  @callback known_source_pads() :: [Element.source_pad_specs_t()]
 
   @doc """
   Callback that is called when buffers should be emitted by the source or filter.
@@ -52,7 +47,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
               size :: non_neg_integer,
               unit :: Buffer.Metric.unit_t(),
               context :: Context.Demand.t(),
-              state :: CommonBehaviour.internal_state_t()
+              state :: Element.state_t()
             ) :: CommonBehaviour.callback_return_t()
 
   @doc """

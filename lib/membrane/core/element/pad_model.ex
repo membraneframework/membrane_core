@@ -1,6 +1,17 @@
 defmodule Membrane.Core.Element.PadModel do
+  @moduledoc false
+  # Utility functions for veryfying and manipulating pads and their data.
+
+  alias Membrane.Element.Pad
   use Membrane.Helper
 
+  @type pad_data_t :: map
+  @type pad_info_t :: map
+  @type pads_t :: %{data: pad_data_t, info: pad_info_t, dynamic_currently_linking: [Pad.name_t()]}
+
+  @type unknown_pad_error_t :: {:error, {:unknown_pad, Pad.name_t()}}
+
+  @spec assert_instance(Pad.name_t(), State.t()) :: :ok | unknown_pad_error_t
   def assert_instance(pad_name, state) do
     with true <- state.pads.data |> Map.has_key?(pad_name) do
       :ok
@@ -9,10 +20,13 @@ defmodule Membrane.Core.Element.PadModel do
     end
   end
 
+  @spec assert_instance!(Pad.name_t(), State.t()) :: :ok
   def assert_instance!(pad_name, state) do
     :ok = assert_instance(pad_name, state)
   end
 
+  @spec assert_data(Pad.name_t(), pattern :: term, State.t()) ::
+          :ok | {:error, {:invalid_pad_data, details :: Keyword.t()}}
   defmacro assert_data(pad_name, pattern, state) do
     quote do
       with {:ok, data} <- unquote(__MODULE__).get_data(unquote(pad_name), unquote(state)) do
@@ -26,12 +40,14 @@ defmodule Membrane.Core.Element.PadModel do
     end
   end
 
+  @spec assert_data!(Pad.name_t(), pattern :: term, State.t()) :: :ok
   defmacro assert_data!(pad_name, pattern, state) do
     quote do
       :ok = unquote(__MODULE__).assert_data(unquote(pad_name), unquote(pattern), unquote(state))
     end
   end
 
+  @spec filter_names_by_data(constraints :: map, State.t()) :: [Pad.name_t()]
   def filter_names_by_data(constraints \\ %{}, state)
 
   def filter_names_by_data(constraints, state) when constraints == %{} do
@@ -44,6 +60,7 @@ defmodule Membrane.Core.Element.PadModel do
     |> Keyword.keys()
   end
 
+  @spec filter_data(constraints :: map, State.t()) :: [Pad.data_t()]
   def filter_data(constraints \\ %{}, state)
 
   def filter_data(constraints, state) when constraints == %{} do
@@ -56,6 +73,8 @@ defmodule Membrane.Core.Element.PadModel do
     |> Map.new()
   end
 
+  @spec get_data(Pad.name_t(), keys :: [atom], State.t()) ::
+          {:ok, pad_data_t | any} | unknown_pad_error_t
   def get_data(pad_name, keys \\ [], state) do
     with :ok <- assert_instance(pad_name, state) do
       state
@@ -64,69 +83,119 @@ defmodule Membrane.Core.Element.PadModel do
     end
   end
 
+  @spec get_data!(Pad.name_t(), keys :: [atom], State.t()) :: pad_data_t | any
   def get_data!(pad_name, keys \\ [], state) do
     get_data(pad_name, keys, state)
     ~> ({:ok, pad_data} -> pad_data)
   end
 
+  @spec set_data(Pad.name_t(), keys :: [atom], State.t()) ::
+          State.stateful_t(:ok | unknown_pad_error_t)
   def set_data(pad_name, keys \\ [], v, state) do
-    with :ok <- assert_instance(pad_name, state) do
+    with {:ok, state} <- {assert_instance(pad_name, state), state} do
       state
       |> Helper.Struct.put_in(data_keys(pad_name, keys), v)
       ~> {:ok, &1}
     end
   end
 
+  @spec set_data!(Pad.name_t(), keys :: [atom], State.t()) ::
+          State.stateful_t(:ok | unknown_pad_error_t)
+  def set_data!(pad_name, keys \\ [], v, state) do
+    set_data(pad_name, keys, v, state)
+    ~> ({:ok, state} -> state)
+  end
+
+  @spec update_data(Pad.name_t(), keys :: [atom], (data -> {:ok | error, data}), State.t()) ::
+          State.stateful_t(:ok | error | unknown_pad_error_t)
+        when data: pad_data_t | any, error: {:error, reason :: any}
   def update_data(pad_name, keys \\ [], f, state) do
-    with :ok <- assert_instance(pad_name, state) do
-      state
-      |> Helper.Struct.get_and_update_in(
-        data_keys(pad_name, keys),
-        &case f.(&1) do
-          {:ok, res} -> {:ok, res}
-          {:error, reason} -> {{:error, reason}, nil}
-        end
-      )
+    with {:ok, state} <- {assert_instance(pad_name, state), state},
+         {:ok, state} <-
+           state
+           |> Helper.Struct.get_and_update_in(data_keys(pad_name, keys), f) do
+      {:ok, state}
     else
-      {{:error, reason}, _pd} -> {:error, reason}
-      {:error, reason} -> {:error, reason}
+      {{:error, reason}, state} -> {{:error, reason}, state}
     end
   end
 
+  @spec update_data!(Pad.name_t(), keys :: [atom], (data -> data), State.t()) :: State.t()
+        when data: pad_data_t | any
+  def update_data!(pad_name, keys \\ [], f, state) do
+    :ok = assert_instance(pad_name, state)
+
+    state
+    |> Helper.Struct.update_in(data_keys(pad_name, keys), f)
+  end
+
+  @spec get_and_update_data(
+          Pad.name_t(),
+          keys :: [atom],
+          (data -> {success | error, data}),
+          State.t()
+        ) :: State.stateful_t(success | error | unknown_pad_error_t)
+        when data: pad_data_t | any, success: {:ok, data}, error: {:error, reason :: any}
   def get_and_update_data(pad_name, keys \\ [], f, state) do
-    with :ok <- assert_instance(pad_name, state) do
-      state
-      |> Helper.Struct.get_and_update_in(
-        data_keys(pad_name, keys),
-        &case f.(&1) do
-          {{:ok, out}, res} -> {{:ok, out}, res}
-          {:error, reason} -> {{:error, reason}, nil}
-        end
-      )
+    with {:ok, state} <- {assert_instance(pad_name, state), state},
+         {{:ok, out}, state} <-
+           state
+           |> Helper.Struct.get_and_update_in(data_keys(pad_name, keys), f) do
+      {{:ok, out}, state}
     else
-      {{:error, reason}, _pd} -> {:error, reason}
-      {:error, reason} -> {:error, reason}
+      {{:error, reason}, state} -> {{:error, reason}, state}
     end
   end
 
+  @spec get_and_update_data!(
+          Pad.name_t(),
+          keys :: [atom],
+          (data -> {data, data}),
+          State.t()
+        ) :: State.stateful_t(data)
+        when data: pad_data_t | any
+  def get_and_update_data!(pad_name, keys \\ [], f, state) do
+    :ok = assert_instance(pad_name, state)
+
+    state
+    |> Helper.Struct.get_and_update_in(data_keys(pad_name, keys), f)
+  end
+
+  @spec pop_data(Pad.name_t(), State.t()) ::
+          State.stateful_t({:ok, pad_data_t | any} | unknown_pad_error_t)
   def pop_data(pad_name, state) do
-    with :ok <- assert_instance(pad_name, state) do
+    with {:ok, state} <- {assert_instance(pad_name, state), state} do
       state
       |> Helper.Struct.pop_in(data_keys(pad_name))
       ~> {:ok, &1}
     end
   end
 
+  @spec pop_data!(Pad.name_t(), State.t()) :: State.stateful_t(pad_data_t | any)
+  def pop_data!(pad_name, state) do
+    pop_data(pad_name, state)
+    ~> ({{:ok, pad_data}, state} -> {pad_data, state})
+  end
+
+  @spec delete_data(Pad.name_t(), State.t()) :: State.stateful_t(:ok | unknown_pad_error_t)
   def delete_data(pad_name, state) do
     with {:ok, {_out, state}} <- pop_data(pad_name, state) do
       {:ok, state}
     end
   end
 
+  @spec delete_data(Pad.name_t(), State.t()) :: State.t()
+  def delete_data!(pad_name, state) do
+    delete_data(pad_name, state)
+    ~> ({:ok, state} -> state)
+  end
+
+  @spec constraints_met?(pad_data_t, map) :: boolean
   defp constraints_met?(data, constraints) do
     constraints |> Enum.all?(fn {k, v} -> data[k] === v end)
   end
 
+  @spec data_keys(Pad.name_t(), [atom]) :: [atom]
   defp data_keys(pad_name, keys \\ []) do
     [:pads, :data, pad_name | Helper.listify(keys)]
   end

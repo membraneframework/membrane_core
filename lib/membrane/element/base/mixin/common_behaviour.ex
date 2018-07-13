@@ -7,26 +7,14 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   For more information on implementing elements, see `Membrane.Element.Base`.
   """
-  alias Membrane.Element
+  alias Membrane.{Action, Core, Element, Event}
+  alias Core.{Playback, CallbackHandler}
   alias Element.{Action, Context, Pad}
-  alias Element.Base.Mixin
-  alias Membrane.Core.{Playback, CallbackHandler}
-
-  @typedoc """
-  Type of user-managed state of element.
-  """
-  @type internal_state_t :: map | struct
 
   @typedoc """
   Type that defines all valid return values from most callbacks.
   """
-  @type callback_return_t :: CallbackHandler.callback_return_t(Action.t(), internal_state_t)
-
-  @typedoc """
-  Describes how pads should be declared in element.
-  """
-  @type known_pads_t ::
-          Mixin.SinkBehaviour.known_sink_pads_t() | Mixin.SourceBehaviour.known_source_pads_t()
+  @type callback_return_t :: CallbackHandler.callback_return_t(Action.t(), Element.state_t())
 
   @doc """
   Used to determine if a module is membrane element.
@@ -34,7 +22,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @callback membrane_element? :: true
 
   @doc """
-  Returns module that manages this element.
+  Determines whether element is a source, a filter or a sink.
   """
   @callback membrane_element_type :: Element.type_t()
 
@@ -43,8 +31,8 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   and initialize element internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
   """
-  @callback handle_init(options :: Element.element_options_t()) ::
-              {:ok, internal_state_t}
+  @callback handle_init(options :: Element.options_t()) ::
+              {:ok, Element.state_t()}
               | {:error, any}
 
   @doc """
@@ -62,7 +50,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_prepare(
               previous_playback_state :: Playback.state_t(),
-              state :: internal_state_t
+              state :: Element.state_t()
             ) :: callback_return_t
 
   @doc """
@@ -71,7 +59,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   This is moment when initial demands are sent and first buffers are generated
   if there are any pads in the push mode.
   """
-  @callback handle_play(state :: internal_state_t) :: callback_return_t
+  @callback handle_play(state :: Element.state_t()) :: callback_return_t
 
   @doc """
   Callback invoked when element is supposed to stop.
@@ -80,7 +68,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   used by the element. For example, if element opens a file in `c:handle_prepare/1`,
   this is the place to close it.
   """
-  @callback handle_stop(state :: internal_state_t) :: callback_return_t
+  @callback handle_stop(state :: Element.state_t()) :: callback_return_t
 
   @doc """
   Callback invoked when element receives a message that is not recognized
@@ -88,7 +76,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   Useful for receiving ticks from timer, data sent from NIFs or other stuff.
   """
-  @callback handle_other(message :: any(), state :: internal_state_t) :: callback_return_t
+  @callback handle_other(message :: any(), state :: Element.state_t()) :: callback_return_t
 
   @doc """
   Callback that is called when new pad has beed added to element. Executed
@@ -97,7 +85,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @callback handle_pad_added(
               pad :: Pad.name_t(),
               context :: Context.PadAdded.t(),
-              state :: internal_state_t
+              state :: Element.state_t()
             ) :: callback_return_t
 
   @doc """
@@ -107,7 +95,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @callback handle_pad_removed(
               pad :: Pad.name_t(),
               context :: Context.PadRemoved.t(),
-              state :: internal_state_t
+              state :: Element.state_t()
             ) :: callback_return_t
 
   @doc """
@@ -119,14 +107,14 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
               pad :: Pad.name_t(),
               event :: Event.type_t(),
               context :: Context.Event.t(),
-              state :: internal_state_t
+              state :: Element.state_t()
             ) :: callback_return_t
 
   @doc """
   Callback invoked when element is shutting down just before process is exiting.
   Internally called in `c:GenServer.termintate/2` callback.
   """
-  @callback handle_shutdown(state :: internal_state_t) :: :ok
+  @callback handle_shutdown(state :: Element.state_t()) :: :ok
 
   @default_quoted_specs %{
     atom:

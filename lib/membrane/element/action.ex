@@ -10,6 +10,9 @@ defmodule Membrane.Element.Action do
   do not return any actions) unless explicitly stated otherwise.
   """
 
+  alias Membrane.{Buffer, Caps, Event, Message}
+  alias Membrane.Element.Pad
+
   @typedoc """
   Sends a message to the pipeline.
   """

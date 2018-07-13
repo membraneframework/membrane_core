@@ -8,14 +8,9 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   For more information on implementing elements, see `Membrane.Element.Base`.
   """
 
-  alias Membrane.{Buffer, Caps, Element.Pad}
-  alias Membrane.Element.Base.Mixin.CommonBehaviour
-
-  @type known_sink_pads_t :: [
-          {Pad.name_t(),
-           {Pad.availability_t(), {:push | :pull, demand_in: Buffer.Metric.unit_t()},
-            Caps.Matcher.caps_specs_t()}}
-        ]
+  alias Membrane.{Caps, Element}
+  alias Element.{Context, Pad}
+  alias Element.Base.Mixin.CommonBehaviour
 
   @doc """
   Callback that defines what sink pads may be ever available for this
@@ -24,7 +19,7 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   The default name for generic sink pad, in elements that just consume some
   buffers is `:sink`.
   """
-  @callback known_sink_pads() :: known_sink_pads_t()
+  @callback known_sink_pads() :: [Element.sink_pad_specs_t()]
 
   @doc """
   Callback invoked when Element is receiving information about new caps for
@@ -34,7 +29,7 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
               pad :: Pad.name_t(),
               caps :: Membrane.Caps.t(),
               context :: Context.Caps.t(),
-              state :: CommonBehaviour.internal_state_t()
+              state :: Element.state_t()
             ) :: CommonBehaviour.callback_return_t()
 
   @doc """

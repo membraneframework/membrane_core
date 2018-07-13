@@ -1,5 +1,8 @@
 defmodule Membrane.Core.Element.PadController do
-  alias Membrane.{Core, Event}
+  @moduledoc false
+  # Module handling linking and unlinking pads.
+
+  alias Membrane.{Core, Event, Type}
   alias Core.{CallbackHandler, PullBuffer}
   alias Core.Element.{EventController, PadModel}
   alias Membrane.Element.{Context, Pad}
@@ -8,6 +11,11 @@ defmodule Membrane.Core.Element.PadController do
   use Core.Element.Log
   use Membrane.Helper
 
+  @doc """
+  Verifies linked pad, initializes it's data.
+  """
+  @spec handle_link(Pad.name_t(), Pad.direction_t(), pid, Pad.name_t(), Keyword.t(), State.t()) ::
+          State.stateful_try_t()
   def handle_link(pad_name, direction, pid, other_name, props, state) do
     with :ok <- validate_pad_being_linked(pad_name, direction, state) do
       info = state.pads.info[pad_name]
@@ -28,6 +36,13 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
+  @doc """
+  Performs checks and executes 'handle_new_pad' callback.
+
+  This can be done only at the end of linking, because before there is no guarantee
+  that the pad has been linked in the other element.
+  """
+  @spec handle_linking_finished(State.t()) :: State.stateful_try_t()
   def handle_linking_finished(state) do
     with {:ok, state} <-
            state.pads.dynamic_currently_linking
@@ -51,6 +66,10 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
+  @doc """
+  Executes `handle_pad_removed` callback for dynamic pads and removes pad data.
+  """
+  @spec handle_unlink(Pad.name_t(), State.t()) :: State.stateful_try_t()
   def handle_unlink(pad_name, state) do
     PadModel.assert_data!(pad_name, %{direction: :sink}, state)
 
@@ -61,6 +80,11 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
+  @doc """
+  Returns pad full name. Full name differs from short name for dynamic pads, for
+  which it includes pad id.
+  """
+  @spec get_pad_full_name(Pad.name_t(), State.t()) :: State.stateful_try_t(Pad.name_t())
   def get_pad_full_name(pad_name, state) do
     {full_name, state} =
       state
@@ -78,6 +102,7 @@ defmodule Membrane.Core.Element.PadController do
     {full_name |> Helper.wrap_nil(:unknown_pad), state}
   end
 
+  @spec validate_pad_being_linked(Pad.name_t(), Pad.direction_t(), State.t()) :: Type.try_t()
   defp validate_pad_being_linked(pad_name, direction, state) do
     info = state.pads.info[pad_name]
 
@@ -101,6 +126,14 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
+  @spec init_pad_data(
+          Pad.name_t(),
+          pid,
+          Pad.name_t(),
+          props :: Keyword.t(),
+          PadModel.pad_info_t(),
+          State.t()
+        ) :: State.t()
   defp init_pad_data(name, pid, other_name, props, info, state) do
     data =
       info
@@ -118,9 +151,12 @@ defmodule Membrane.Core.Element.PadController do
     state |> Helper.Struct.put_in([:pads, :data, name], data)
   end
 
+  @spec init_pad_direction_data(PadModel.pad_data_t(), Keyword.t(), State.t()) ::
+          PadModel.pad_data_t()
   defp init_pad_direction_data(%{direction: :sink}, _props, _state), do: %{sticky_messages: []}
   defp init_pad_direction_data(%{direction: :source}, _props, _state), do: %{}
 
+  @spec init_pad_mode_data(PadModel.pad_data_t(), Keyword.t(), State.t()) :: PadModel.pad_data_t()
   defp init_pad_mode_data(%{mode: :pull, direction: :sink} = data, props, state) do
     %{name: name, pid: pid, other_name: other_name, options: options} = data
 
@@ -137,19 +173,24 @@ defmodule Membrane.Core.Element.PadController do
         props[:pull_buffer] || %{}
       )
 
-    %{buffer: pb, own_demand: 0}
+    %{buffer: pb, demand: 0}
   end
 
+  @spec init_pad_mode_data(PadModel.pad_data_t(), Keyword.t(), State.t()) :: PadModel.pad_data_t()
   defp init_pad_mode_data(%{mode: :pull, direction: :source}, _props, _state), do: %{demand: 0}
 
+  @spec init_pad_mode_data(PadModel.pad_data_t(), Keyword.t(), State.t()) :: PadModel.pad_data_t()
   defp init_pad_mode_data(%{mode: :push}, _props, _state), do: %{}
 
+  @spec add_to_currently_linking(Pad.name_t(), State.t()) :: State.t()
   defp add_to_currently_linking(name, state),
     do: state |> Helper.Struct.update_in([:pads, :dynamic_currently_linking], &[name | &1])
 
+  @spec add_to_currently_linking(Pad.name_t(), State.t()) :: State.t()
   defp clear_currently_linking(state),
     do: state |> Helper.Struct.put_in([:pads, :dynamic_currently_linking], [])
 
+  @spec generate_eos_if_not_received(Pad.name_t(), State.t()) :: State.stateful_try_t()
   defp generate_eos_if_not_received(pad_name, state) do
     if PadModel.get_data!(pad_name, :eos, state) do
       EventController.handle_event(
@@ -162,6 +203,7 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
+  @spec handle_pad_added(Pad.name_t(), State.t()) :: State.stateful_try_t()
   defp handle_pad_added(name, state) do
     context = %Context.PadAdded{
       direction: PadModel.get_data!(name, :direction, state)
@@ -175,15 +217,22 @@ defmodule Membrane.Core.Element.PadController do
     )
   end
 
+  @spec handle_pad_removed(Pad.name_t(), State.t()) :: State.t()
   defp handle_pad_removed(name, state) do
-    %{caps: caps, direction: direction} = PadModel.get_data!(name, %{}, state)
-    context = %Context.PadRemoved{direction: direction, caps: caps}
+    %{caps: caps, direction: direction, availability: availability} =
+      PadModel.get_data!(name, state)
 
-    CallbackHandler.exec_and_handle_callback(
-      :handle_pad_removed,
-      ActionHandler,
-      [name, context],
-      state
-    )
+    if availability |> Pad.availability_mode() == :dynamic do
+      context = %Context.PadRemoved{direction: direction, caps: caps}
+
+      CallbackHandler.exec_and_handle_callback(
+        :handle_pad_removed,
+        ActionHandler,
+        [name, context],
+        state
+      )
+    else
+      {:ok, state}
+    end
   end
 end
