@@ -8,6 +8,9 @@ defmodule Membrane.Helper.GenServer do
   def noreply({:ok, new_state}, _old_state), do: {:noreply, new_state}
 
   def noreply({{:error, reason}, new_state}, old_state) do
+    abc = 10
+    warn(abc)
+
     warn_error(
       """
       Terminating GenServer, old state: #{inspect(old_state)}, new state: #{inspect(new_state)}

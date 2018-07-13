@@ -4,8 +4,8 @@ defmodule Membrane.Core.Element.EventController do
 
   alias Membrane.{Core, Element, Event}
   alias Core.{CallbackHandler, PullBuffer}
-  alias Core.Element.{ActionHandler, PadModel}
-  alias Element.Context
+  alias Core.Element.{ActionHandler, PadModel, State}
+  alias Element.{Context, Pad}
   require PadModel
   use Core.Element.Log
   use Membrane.Helper
@@ -32,60 +32,25 @@ defmodule Membrane.Core.Element.EventController do
     end
   end
 
-  @spec do_handle_event(Pad.name_t(), Event.t(), State.t()) ::
-          State.stateful_try_t(:handle | :ignore)
-  defp do_handle_event(pad_name, %Event{type: :sos}, state) do
-    with %{direction: :sink, sos: false} <- PadModel.get_data!(pad_name, state) do
-      state = PadModel.set_data!(pad_name, :sos, true, state)
-      {{:ok, :handle}, state}
-    else
-      %{direction: :source} -> {:error, {:received_sos_through_source, pad_name}}
-      %{sos: true} -> {:error, {:sos_already_received, pad_name}}
-    end
-  end
-
-  defp do_handle_event(pad_name, %Event{type: :eos}, state) do
-    with %{direction: :sink, sos: true, eos: false} <- PadModel.get_data!(pad_name, state) do
-      state = PadModel.set_data!(pad_name, :eos, true, state)
-      {{:ok, :handle}, state}
-    else
-      %{direction: :source} -> {:error, {:received_eos_through_source, pad_name}}
-      %{eos: true} -> {:error, {:eos_already_received, pad_name}}
-      %{sos: false} -> {{:ok, :ignore}, state}
-    end
-  end
-
-  # FIXME: solve it using pipeline messages, not events
-  defp do_handle_event(_pad_name, %Event{type: :dump_state}, state) do
-    IO.puts("""
-    state dump for #{inspect(state.name)} at #{inspect(self())}
-    state:
-    #{inspect(state)}
-    info:
-    #{inspect(:erlang.process_info(self()))}
-    """)
-
-    {{:ok, :handle}, state}
-  end
-
-  defp do_handle_event(_pad_name, _event, state), do: {{:ok, :handle}, state}
-
-  @spec handle_event(Pad.name_t(), Event.t(), State.t()) :: State.stateful_try_t()
+  @spec exec_handle_event(Pad.name_t(), Event.t(), State.t()) :: State.stateful_try_t()
   def exec_handle_event(pad_name, event, state) do
-    with {{:ok, :handle}, state} <- do_handle_event(pad_name, event, state),
-         {:ok, state} <- do_exec_handle_event(pad_name, event, state) do
+    withl handle: {{:ok, :handle}, state} <- handle_special_event(pad_name, event, state),
+          exec: {:ok, state} <- do_exec_handle_event(pad_name, event, state) do
       {:ok, state}
     else
-      {{:ok, :ignore}, state} ->
+      handle: {{:ok, :ignore}, state} ->
         debug("ignoring event #{inspect(event)}", state)
         {:ok, state}
 
-      {:error, reason} ->
+      handle: {{:error, reason}, state} ->
+        warn_error("Error while handling event", {:handle_event, reason}, state)
+
+      exec: {{:error, reason}, state} ->
         warn_error("Error while handling event", {:handle_event, reason}, state)
     end
   end
 
-  @spec handle_event(Pad.name_t(), Event.t(), State.t()) :: State.stateful_try_t()
+  @spec do_exec_handle_event(Pad.name_t(), Event.t(), State.t()) :: State.stateful_try_t()
   defp do_exec_handle_event(pad_name, event, state) do
     data = PadModel.get_data!(pad_name, state)
     context = %Context.Event{caps: data.caps}
@@ -98,4 +63,42 @@ defmodule Membrane.Core.Element.EventController do
       state
     )
   end
+
+  @spec handle_special_event(Pad.name_t(), Event.t(), State.t()) ::
+          State.stateful_try_t(:handle | :ignore)
+  defp handle_special_event(pad_name, %Event{type: :sos}, state) do
+    with %{direction: :sink, sos: false} <- PadModel.get_data!(pad_name, state) do
+      state = PadModel.set_data!(pad_name, :sos, true, state)
+      {{:ok, :handle}, state}
+    else
+      %{direction: :source} -> {:error, {:received_sos_through_source, pad_name}}
+      %{sos: true} -> {:error, {:sos_already_received, pad_name}}
+    end
+  end
+
+  defp handle_special_event(pad_name, %Event{type: :eos}, state) do
+    with %{direction: :sink, sos: true, eos: false} <- PadModel.get_data!(pad_name, state) do
+      state = PadModel.set_data!(pad_name, :eos, true, state)
+      {{:ok, :handle}, state}
+    else
+      %{direction: :source} -> {:error, {:received_eos_through_source, pad_name}}
+      %{eos: true} -> {:error, {:eos_already_received, pad_name}}
+      %{sos: false} -> {{:ok, :ignore}, state}
+    end
+  end
+
+  # FIXME: solve it using pipeline messages, not events
+  defp handle_special_event(_pad_name, %Event{type: :dump_state}, state) do
+    IO.puts("""
+    state dump for #{inspect(state.name)} at #{inspect(self())}
+    state:
+    #{inspect(state)}
+    info:
+    #{inspect(:erlang.process_info(self()))}
+    """)
+
+    {{:ok, :handle}, state}
+  end
+
+  defp handle_special_event(_pad_name, _event, state), do: {{:ok, :handle}, state}
 end

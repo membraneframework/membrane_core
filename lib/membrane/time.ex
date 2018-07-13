@@ -53,22 +53,12 @@ defmodule Membrane.Time do
   @doc """
   Checks whether value is Membrane.Time.t
   """
-  @spec is_t(any) :: boolean
-  defmacro is_t(value) do
-    quote do
-      is_integer(unquote(value))
-    end
-  end
+  defguard is_t(value) when is_integer(value)
 
   @doc """
   Checks whether value is Membrane.Time.native_t
   """
-  @spec is_native_t(any) :: boolean
-  defmacro is_native_t(value) do
-    quote do
-      is_integer(unquote(value))
-    end
-  end
+  defguard is_native_t(value) when is_integer(value)
 
   @doc """
   Returns current time in pretty format (currently iso8601), as string

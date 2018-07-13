@@ -17,8 +17,9 @@ defprotocol Membrane.Core.Playbackable do
   @spec update_playback(__MODULE__.t(), (Playback.t() -> Playback.t())) :: __MODULE__.t()
   def update_playback(playbackable, playback)
 
-  @spec get_and_update_playback(__MODULE__.t(), (Playback.t() -> Playback.t())) ::
-          {Playback.t(), __MODULE__.t()}
+  @spec get_and_update_playback(__MODULE__.t(), (Playback.t() -> {ret, Playback.t()})) ::
+          {ret, __MODULE__.t()}
+        when ret: Playback.t() | any
   def get_and_update_playback(playbackable, update_f)
 
   @spec get_controlling_pid(__MODULE__.t()) :: pid | nil

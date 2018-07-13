@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.{Core, Event, Type}
   alias Core.{CallbackHandler, PullBuffer}
-  alias Core.Element.{EventController, PadModel}
+  alias Core.Element.{EventController, PadModel, State}
   alias Membrane.Element.{Context, Pad}
   require Pad
   require PadModel
@@ -176,17 +176,15 @@ defmodule Membrane.Core.Element.PadController do
     %{buffer: pb, demand: 0}
   end
 
-  @spec init_pad_mode_data(PadModel.pad_data_t(), Keyword.t(), State.t()) :: PadModel.pad_data_t()
   defp init_pad_mode_data(%{mode: :pull, direction: :source}, _props, _state), do: %{demand: 0}
 
-  @spec init_pad_mode_data(PadModel.pad_data_t(), Keyword.t(), State.t()) :: PadModel.pad_data_t()
   defp init_pad_mode_data(%{mode: :push}, _props, _state), do: %{}
 
   @spec add_to_currently_linking(Pad.name_t(), State.t()) :: State.t()
   defp add_to_currently_linking(name, state),
     do: state |> Helper.Struct.update_in([:pads, :dynamic_currently_linking], &[name | &1])
 
-  @spec add_to_currently_linking(Pad.name_t(), State.t()) :: State.t()
+  @spec clear_currently_linking(State.t()) :: State.t()
   defp clear_currently_linking(state),
     do: state |> Helper.Struct.put_in([:pads, :dynamic_currently_linking], [])
 
@@ -217,7 +215,7 @@ defmodule Membrane.Core.Element.PadController do
     )
   end
 
-  @spec handle_pad_removed(Pad.name_t(), State.t()) :: State.t()
+  @spec handle_pad_removed(Pad.name_t(), State.t()) :: State.stateful_try_t()
   defp handle_pad_removed(name, state) do
     %{caps: caps, direction: direction, availability: availability} =
       PadModel.get_data!(name, state)

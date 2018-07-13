@@ -6,7 +6,7 @@ defmodule Membrane.Core.Element.State do
 
   use Membrane.Log, tags: :core
   alias Membrane.{Core, Element, Type}
-  alias Core.Element.PlaybackBuffer
+  alias Core.Element.{PadModel, PlaybackBuffer}
   alias Element.Pad
   use Membrane.Helper
   alias __MODULE__, as: ThisModule
@@ -18,15 +18,15 @@ defmodule Membrane.Core.Element.State do
   @type stateful_try_t(value) :: Type.stateful_try_t(value, t)
 
   @type t :: %__MODULE__{
-          internal_state: Element.state_t() | nil,
           module: module,
           type: Element.type_t(),
           name: Element.name_t(),
-          playback: Playback.t(),
-          pads: %{optional(Element.Pad.name_t()) => pid},
+          internal_state: Element.state_t() | nil,
+          pads: %{optional(Element.Pad.name_t()) => PadModel.pads_t()} | nil,
           message_bus: pid | nil,
-          playback_buffer: PlaybackBuffer.t(),
-          controlling_pid: pid | nil
+          controlling_pid: pid | nil,
+          playback: Playback.t(),
+          playback_buffer: PlaybackBuffer.t()
         }
 
   defstruct [
@@ -53,7 +53,7 @@ defmodule Membrane.Core.Element.State do
   def new(module, name) do
     %__MODULE__{
       module: module,
-      type: module.membrane_element_type(),
+      type: apply(module, :membrane_element_type, []),
       name: name,
       internal_state: nil,
       pads: nil,

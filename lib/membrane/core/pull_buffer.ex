@@ -17,7 +17,7 @@ defmodule Membrane.Core.PullBuffer do
   @type t :: %__MODULE__{
           name: Membrane.Element.name_t(),
           sink: {pid(), Membrane.Element.name_t()},
-          sink_name: Membrane.Pad.name_t(),
+          sink_name: Membrane.Element.Pad.name_t(),
           q: @qe.t(),
           preferred_size: pos_integer(),
           current_size: non_neg_integer(),
@@ -49,9 +49,9 @@ defmodule Membrane.Core.PullBuffer do
   @type props_t :: [prop_t()]
 
   @spec new(
-          Membrane.Element.name_t(),
+          Membrane.Element.Pad.name_t(),
           {pid, Membrane.Element.name_t()},
-          Membrane.Pad.name_t(),
+          Membrane.Element.Pad.name_t(),
           Membrane.Buffer.Metric.unit_t(),
           props_t
         ) :: t()

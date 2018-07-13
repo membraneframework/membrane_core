@@ -51,12 +51,6 @@ defmodule Membrane.Element.Pad do
   @type mode_t :: :push | :pull
 
   @typedoc """
-  Type defining possible caps that can be set on the pad. To link two pads,
-  they need to have some common caps.
-  """
-  @type caps_t :: Membrane.Element.Caps.Matcher.caps_spec_t()
-
-  @typedoc """
   Defines possible pad availabilities:
   - `:always` - a static pad, which can remain unlinked in `stopped` state only.
   - `:on_request` - a dynamic pad, instance of which is created every time it is
@@ -87,7 +81,7 @@ defmodule Membrane.Element.Pad do
   @doc """
   Returns pad availability mode by name.
   """
-  @spec availability_mode_by_name(name_t) :: mode_t
+  @spec availability_mode_by_name(name_t) :: availability_mode_t
   def availability_mode_by_name({:dynamic, _name, _id}), do: :dynamic
   def availability_mode_by_name(name) when is_atom(name), do: :static
 

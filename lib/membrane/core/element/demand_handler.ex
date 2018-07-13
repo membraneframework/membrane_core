@@ -76,6 +76,8 @@ defmodule Membrane.Core.Element.DemandHandler do
     end
   end
 
+  @spec supply_demand(Pad.name_t(), {:source, Pad.name_t()} | :self, pos_integer, State.t()) ::
+          State.stateful_try_t()
   defp supply_demand(pad_name, source, size, state) do
     pb_output =
       PadModel.get_and_update_data(
@@ -102,6 +104,8 @@ defmodule Membrane.Core.Element.DemandHandler do
     end
   end
 
+  @spec send_dumb_demand_if_needed({:source, Pad.name_t()} | :self, :empty | :value, State.t()) ::
+          :ok
   defp send_dumb_demand_if_needed(:self, _pb_status, _state),
     do: :ok
 
@@ -125,6 +129,12 @@ defmodule Membrane.Core.Element.DemandHandler do
     :ok
   end
 
+  @spec handle_pullbuffer_output(
+          Pad.name_t(),
+          {:source, Pad.name_t()} | :self,
+          [{:event | :caps, any} | {:buffers, list, pos_integer}],
+          State.t()
+        ) :: State.stateful_try_t()
   defp handle_pullbuffer_output(pad_name, source, data, state) do
     data
     |> Helper.Enum.reduce_with(state, fn v, state ->
@@ -132,6 +142,12 @@ defmodule Membrane.Core.Element.DemandHandler do
     end)
   end
 
+  @spec do_handle_pullbuffer_output(
+          Pad.name_t(),
+          {:source, Pad.name_t()} | :self,
+          {:event | :caps, any} | {:buffers, list, pos_integer},
+          State.t()
+        ) :: State.stateful_try_t()
   defp do_handle_pullbuffer_output(pad_name, _source, {:event, e}, state),
     do: EventController.exec_handle_event(pad_name, e, state)
 
@@ -149,11 +165,19 @@ defmodule Membrane.Core.Element.DemandHandler do
     BufferController.exec_buffer_handler(pad_name, source, buffers, state)
   end
 
+  @spec set_sink_demand(Pad.name_t(), {:source, Pad.name_t()} | :self, non_neg_integer, State.t()) ::
+          State.t()
   defp set_sink_demand(pad_name, :self, size, state),
     do: PadModel.set_data!(pad_name, :demand, size, state)
 
   defp set_sink_demand(_pad_name, _src, _f, state), do: state
 
+  @spec set_sink_demand(
+          Pad.name_t(),
+          {:source, Pad.name_t()} | :self,
+          (non_neg_integer -> non_neg_integer),
+          State.t()
+        ) :: State.t()
   defp update_sink_demand(pad_name, :self, f, state),
     do: PadModel.update_data!(pad_name, :demand, f, state)
 

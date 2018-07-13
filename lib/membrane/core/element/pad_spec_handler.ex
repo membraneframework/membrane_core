@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.PadSpecHandler do
   alias Membrane.Element
   alias Element.Pad
   alias Membrane.{Caps, Core}
-  alias Core.Element.State
+  alias Core.Element.{PadModel, State}
   require Pad
   use Membrane.Helper
   use Core.Element.Log

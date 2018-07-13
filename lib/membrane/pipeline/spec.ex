@@ -73,11 +73,11 @@ defmodule Membrane.Pipeline.Spec do
   """
   @type link_option_t :: {:pull_buffer, Membrane.Core.PullBuffer.props_t()}
 
-  @type link_from_spec_t :: {Membrane.Element.name_t(), Membrane.Pad.name_t()}
+  @type link_from_spec_t :: {Membrane.Element.name_t(), Membrane.Element.Pad.name_t()}
 
   @type link_to_spec_t ::
-          {Membrane.Element.name_t(), Membrane.Pad.name_t()}
-          | {Membrane.Element.name_t(), Membrane.Pad.name_t(), [link_option_t]}
+          {Membrane.Element.name_t(), Membrane.Element.Pad.name_t()}
+          | {Membrane.Element.name_t(), Membrane.Element.Pad.name_t(), [link_option_t]}
 
   @typedoc """
   Map describing links between elements

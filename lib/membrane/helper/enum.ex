@@ -161,7 +161,7 @@ defmodule Membrane.Helper.Enum do
   As such function is planned to be supplied in Enum module, it should replace
   this one once it happens.
   """
-  @spec unzip([] | [...], pos_integer) :: {:ok, Tuple.t()} | {:error, any}
+  @spec unzip([] | [...], pos_integer) :: {:ok, tuple} | {:error, any}
   def unzip(list, tuple_size)
       when is_list(list) and is_integer(tuple_size) and tuple_size >= 2 do
     unzip_recurse(list |> reverse, tuple_size, 1..tuple_size |> into([], fn _ -> [] end))
@@ -170,7 +170,7 @@ defmodule Membrane.Helper.Enum do
   @doc """
   Same as above, returns plain result, throws match error if something goes wrong.
   """
-  @spec unzip!([] | [...], pos_integer) :: Tuple.t()
+  @spec unzip!([] | [...], pos_integer) :: tuple
   def unzip!(list, tuple_size)
       when is_list(list) and is_integer(tuple_size) and tuple_size >= 2 do
     {:ok, result} = unzip(list, tuple_size)

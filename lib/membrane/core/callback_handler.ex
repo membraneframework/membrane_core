@@ -1,14 +1,18 @@
 defmodule Membrane.Core.CallbackHandler do
-  @moduledoc """
-  Behaviour for module that delegates its job to the other module via callbacks.
-  It also delivers the default implementation of logic that handles the results
-  of callbacks.
-  """
+  @moduledoc false
+  # Behaviour for module that delegates its job to the other module via callbacks.
+  # It delivers implementation of executing callbacks and results parsing their
+  # results.
 
+  alias Membrane.Type
   use Membrane.Helper
   use Membrane.Log, tags: :core
 
-  @type state_t :: %{module: module, internal_state: internal_state_t}
+  @type state_t :: %{
+          :module => module,
+          :internal_state => internal_state_t,
+          optional(atom) => any
+        }
 
   @type internal_state_t :: any
 
@@ -89,7 +93,7 @@ defmodule Membrane.Core.CallbackHandler do
     end)
   end
 
-  @spec exec_callback(callback :: atom, args :: list, state_t) :: callback_return_t
+  @spec exec_callback(callback :: atom, args :: list, state_t) :: callback_return_t | any
   defp exec_callback(callback, args, state) do
     internal_state = state |> Map.get(:internal_state)
     module = state |> Map.get(:module)

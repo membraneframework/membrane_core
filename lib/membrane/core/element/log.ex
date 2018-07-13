@@ -79,7 +79,7 @@ defmodule Membrane.Core.Element.Log do
     ["Element #{inspect(name)}: ", message, "\n", "state: #{inspect(state)}"]
   end
 
-  @spec append_tags(Logger.tag_t(), State.t()) :: State.t()
+  @spec append_tags([Logger.tag_t()], State.t()) :: State.t()
   def append_tags(tags, %State{name: name}) do
     case name do
       {name, _id} -> [name | tags]

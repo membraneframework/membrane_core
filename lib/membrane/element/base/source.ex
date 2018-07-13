@@ -18,7 +18,7 @@ defmodule Membrane.Element.Base.Source do
 
   alias Membrane.Element
   alias Element.Base.Mixin
-  alias Element.Context
+  alias Element.{Context, Pad}
 
   @doc """
   Callback that is called when buffers should be emitted by the source.

@@ -4,10 +4,11 @@ defmodule Membrane.Core.Element.CapsController do
 
   alias Membrane.{Caps, Core, Element}
   alias Core.{CallbackHandler, PullBuffer}
-  alias Core.Element.{ActionHandler, PadModel}
-  alias Element.Context
+  alias Core.Element.{ActionHandler, PadModel, State}
+  alias Element.{Context, Pad}
   require PadModel
   use Core.Element.Log
+  use Membrane.Helper
 
   @doc """
   Handles incoming caps: either stores them in PullBuffer, or executes element callback.
@@ -35,17 +36,18 @@ defmodule Membrane.Core.Element.CapsController do
 
     context = %Context.Caps{caps: old_caps}
 
-    with :ok <- if(Caps.Matcher.match?(accepted_caps, caps), do: :ok, else: :invalid_caps),
-         {:ok, state} <-
-           CallbackHandler.exec_and_handle_callback(
-             :handle_caps,
-             ActionHandler,
-             [pad_name, caps, context],
-             state
-           ) do
+    withl match: true <- Caps.Matcher.match?(accepted_caps, caps),
+          callback:
+            {:ok, state} <-
+              CallbackHandler.exec_and_handle_callback(
+                :handle_caps,
+                ActionHandler,
+                [pad_name, caps, context],
+                state
+              ) do
       {:ok, PadModel.set_data!(pad_name, :caps, caps, state)}
     else
-      :invalid_caps ->
+      match: false ->
         warn_error(
           """
           Received caps: #{inspect(caps)} that are not specified in known_sink_pads
@@ -56,7 +58,7 @@ defmodule Membrane.Core.Element.CapsController do
           state
         )
 
-      {:error, reason} ->
+      callback: {{:error, reason}, state} ->
         warn_error("Error while handling caps", reason, state)
     end
   end

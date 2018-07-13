@@ -6,6 +6,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   alias Membrane.{Core, Element}
   alias Core.CallbackHandler
   alias Core.Element.{ActionHandler, PadSpecHandler, PadModel, PlaybackBuffer, State}
+  alias Element.Pad
   require PadModel
   use Core.PlaybackHandler
   use Core.Element.Log
@@ -14,7 +15,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   @doc """
   Performs initialization tasks and executes `handle_init` callback.
   """
-  @spec handle_init(Element.options_t(), State_t) :: State.stateful_try_t()
+  @spec handle_init(Element.options_t(), State.t()) :: State.stateful_try_t()
   def handle_init(options, %State{module: module} = state) do
     debug("Initializing element: #{inspect(module)}, options: #{inspect(options)}", state)
 
@@ -23,12 +24,12 @@ defmodule Membrane.Core.Element.LifecycleController do
       debug("Element initialized: #{inspect(module)}", state)
       {:ok, state}
     else
-      {{:error, reason}, _state} ->
+      {{:error, reason}, state} ->
         warn_error("Failed to initialize element", reason, state)
     end
   end
 
-  @spec exec_init_handler(module, Element.options_t(), State_t) :: State.stateful_try_t()
+  @spec exec_init_handler(module, Element.options_t(), State.t()) :: State.stateful_try_t()
   defp exec_init_handler(module, options, state) do
     with {:ok, internal_state} <- module.handle_init(options) do
       {:ok, %State{state | internal_state: internal_state}}

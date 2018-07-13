@@ -3,12 +3,12 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   # Module handling messages incoming to element and dispatching them to controllers.
 
   alias Membrane.Core
-  alias Core.Element.{DemandHandler, LifecycleController, PadController, PlaybackBuffer}
+  alias Core.Element.{DemandHandler, LifecycleController, PadController, PlaybackBuffer, State}
   alias Core.PlaybackHandler
   use Core.Element.Log
   use Membrane.Helper
 
-  @type message_t :: {atom, args :: Keyword.t()}
+  @type message_t :: {atom, args :: any | list}
 
   @doc """
   Parses message incoming to element and forwards it to proper controller.
