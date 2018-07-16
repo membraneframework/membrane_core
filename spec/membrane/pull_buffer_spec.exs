@@ -1,4 +1,6 @@
-defmodule Membrane.PullBufferSpec do
+defmodule PullBufferSpec do
+  alias Membrane.Core.PullBuffer
+  alias Membrane.Buffer
   use ESpec, async: true
 
   describe ".new/5" do
@@ -9,7 +11,7 @@ defmodule Membrane.PullBufferSpec do
     let :min_demand, do: 10
     let :toilet, do: false
     let :demand_in, do: :bytes
-    let :expected_metric, do: Membrane.Buffer.Metric.from_unit(demand_in())
+    let :expected_metric, do: Buffer.Metric.from_unit(demand_in())
 
     let :props,
       do: [
@@ -21,7 +23,7 @@ defmodule Membrane.PullBufferSpec do
     it "should return PullBuffer struct" do
       expect(described_module().new(name(), sink(), sink_name(), demand_in(), props()))
       |> to(
-        eq(%Membrane.PullBuffer{
+        eq(%PullBuffer{
           name: name(),
           sink: sink(),
           sink_name: sink_name(),
@@ -46,7 +48,7 @@ defmodule Membrane.PullBufferSpec do
     let :current_size, do: 0
 
     let :pb,
-      do: %Membrane.PullBuffer{
+      do: %PullBuffer{
         toilet: toilet(),
         preferred_size: pref_size(),
         sink: {sink_pid(), sink_name()},
@@ -84,9 +86,9 @@ defmodule Membrane.PullBufferSpec do
     let :current_size, do: 0
 
     let :pb,
-      do: %Membrane.PullBuffer{
+      do: %PullBuffer{
         current_size: current_size(),
-        metric: Membrane.Buffer.Metric.Count,
+        metric: Buffer.Metric.Count,
         q: Qex.new()
       }
 
@@ -97,7 +99,7 @@ defmodule Membrane.PullBufferSpec do
     end
 
     context "when pull buffer contains some buffers" do
-      let :buffer, do: %Membrane.Buffer{payload: <<1, 2, 3>>}
+      let :buffer, do: %Buffer{payload: <<1, 2, 3>>}
       let :not_empty_pb, do: described_module().store(pb(), :buffers, [buffer()]) |> elem(1)
 
       it "should return false" do
@@ -109,10 +111,10 @@ defmodule Membrane.PullBufferSpec do
   describe ".store/3" do
     let :current_size, do: 10
     let :q, do: Qex.new() |> Qex.push({:buffers, [], 3})
-    let :metric, do: Membrane.Buffer.Metric.Count
+    let :metric, do: Buffer.Metric.Count
 
     let :pb,
-      do: %Membrane.PullBuffer{
+      do: %PullBuffer{
         current_size: current_size(),
         metric: metric(),
         q: q()
@@ -121,7 +123,7 @@ defmodule Membrane.PullBufferSpec do
     context "when `type` is :buffers" do
       let :type, do: :buffers
       let :payload, do: <<1, 2, 3>>
-      let :v, do: [%Membrane.Buffer{payload: payload()}]
+      let :v, do: [%Buffer{payload: payload()}]
 
       context "when metric is `Count`" do
         it "should increment `current_size`" do
@@ -131,7 +133,7 @@ defmodule Membrane.PullBufferSpec do
       end
 
       context "when metric is `ByteSize`" do
-        let :metric, do: Membrane.Buffer.Metric.ByteSize
+        let :metric, do: Buffer.Metric.ByteSize
 
         it "should add payload size to `current_size`" do
           {:ok, %{current_size: new_current_size}} = described_module().store(pb(), type(), v())
@@ -171,10 +173,10 @@ defmodule Membrane.PullBufferSpec do
     let :q, do: Qex.new() |> Qex.push(buffers1()) |> Qex.push(buffers2())
     let :current_size, do: 6
     let :sink_name, do: :sink_name
-    let :metric, do: Membrane.Buffer.Metric.Count
+    let :metric, do: Buffer.Metric.Count
 
     let :pb,
-      do: %Membrane.PullBuffer{
+      do: %PullBuffer{
         current_size: current_size(),
         demand: 0,
         min_demand: 0,
