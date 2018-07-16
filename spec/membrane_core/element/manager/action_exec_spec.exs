@@ -78,7 +78,8 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
           it "should raise RuntimeError" do
             expect(fn ->
               described_module().send_buffer(invalid_pad_name(), buffer(), callback(), state())
-            end).to(raise_exception RuntimeError)
+            end)
+            |> to(raise_exception RuntimeError)
           end
         end
 
@@ -114,7 +115,8 @@ defmodule Membrane.Element.Manager.ActionExecSpec do
         it "should raise RuntimeError" do
           expect(fn ->
             described_module().send_buffer(invalid_pad_name(), buffer(), callback(), state())
-          end).to(raise_exception RuntimeError)
+          end)
+          |> to(raise_exception RuntimeError)
         end
       end
 
