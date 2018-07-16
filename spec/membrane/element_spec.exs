@@ -166,23 +166,27 @@ defmodule Membrane.ElementSpec do
           let :reason, do: :whatever
 
           before do
-            allow(module()).to(
-              accept(:handle_play, fn received_internal_state ->
-                {:ok, received_internal_state}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_play, fn received_internal_state ->
+                      {:ok, received_internal_state}
+                    end)
+                  )
 
-            allow(module()).to(
-              accept(:handle_prepare, fn _previous_playback_state, received_internal_state ->
-                {{:error, reason()}, %{received_internal_state | a: 2}}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_prepare, fn _previous_playback_state,
+                                               received_internal_state ->
+                      {{:error, reason()}, %{received_internal_state | a: 2}}
+                    end)
+                  )
 
-            allow(module()).to(
-              accept(:handle_stop, fn received_internal_state ->
-                {:ok, received_internal_state}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_stop, fn received_internal_state ->
+                      {:ok, received_internal_state}
+                    end)
+                  )
           end
 
           it "should not call handle_stop callback on element's module" do
@@ -229,23 +233,26 @@ defmodule Membrane.ElementSpec do
           let :reason, do: :whatever
 
           before do
-            allow(module()).to(
-              accept(:handle_play, fn received_internal_state ->
-                {:error, reason(), %{received_internal_state | a: 3}}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_play, fn received_internal_state ->
+                      {:error, reason(), %{received_internal_state | a: 3}}
+                    end)
+                  )
 
-            allow(module()).to(
-              accept(:handle_prepare, fn _previous_playback_state, internal_state ->
-                {:ok, %{internal_state | a: 2}}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_prepare, fn _previous_playback_state, internal_state ->
+                      {:ok, %{internal_state | a: 2}}
+                    end)
+                  )
 
-            allow(module()).to(
-              accept(:handle_stop, fn received_internal_state ->
-                {:ok, received_internal_state}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_stop, fn received_internal_state ->
+                      {:ok, received_internal_state}
+                    end)
+                  )
           end
 
           it "should not call handle_stop callback on element's module" do
@@ -270,23 +277,27 @@ defmodule Membrane.ElementSpec do
           let :new_internal_state, do: %{key: :new_value}
 
           before do
-            allow(module()).to(
-              accept(:handle_play, fn received_internal_state ->
-                {:ok, received_internal_state}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_play, fn received_internal_state ->
+                      {:ok, received_internal_state}
+                    end)
+                  )
 
-            allow(module()).to(
-              accept(:handle_prepare, fn _previous_playback_state, _received_internal_state ->
-                {:ok, new_internal_state()}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_prepare, fn _previous_playback_state,
+                                               _received_internal_state ->
+                      {:ok, new_internal_state()}
+                    end)
+                  )
 
-            allow(module()).to(
-              accept(:handle_stop, fn received_internal_state ->
-                {:ok, received_internal_state}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_stop, fn received_internal_state ->
+                      {:ok, received_internal_state}
+                    end)
+                  )
           end
 
           it "should not call handle_stop callback on element's module" do
@@ -329,19 +340,23 @@ defmodule Membrane.ElementSpec do
           let :new_internal_state, do: :new_state
 
           before do
-            allow(module()).to(accept(:handle_play, fn _state -> {:ok, new_internal_state()} end))
+            allow module()
+                  |> to(accept(:handle_play, fn _state -> {:ok, new_internal_state()} end))
 
-            allow(module()).to(
-              accept(:handle_prepare, fn _previous_playback_state, received_internal_state ->
-                {:ok, received_internal_state}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_prepare, fn _previous_playback_state,
+                                               received_internal_state ->
+                      {:ok, received_internal_state}
+                    end)
+                  )
 
-            allow(module()).to(
-              accept(:handle_stop, fn received_internal_state ->
-                {:ok, received_internal_state}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_stop, fn received_internal_state ->
+                      {:ok, received_internal_state}
+                    end)
+                  )
           end
 
           it "should not call handle_stop callback on element's module" do
@@ -379,19 +394,26 @@ defmodule Membrane.ElementSpec do
         let :playback, do: %Playback{state: :playing}
 
         before do
-          allow(module()).to(
-            accept(:handle_play, fn received_internal_state -> {:ok, received_internal_state} end)
-          )
+          allow module()
+                |> to(
+                  accept(:handle_play, fn received_internal_state ->
+                    {:ok, received_internal_state}
+                  end)
+                )
 
-          allow(module()).to(
-            accept(:handle_prepare, fn _previous_playback_state, received_internal_state ->
-              {:ok, received_internal_state}
-            end)
-          )
+          allow module()
+                |> to(
+                  accept(:handle_prepare, fn _previous_playback_state, received_internal_state ->
+                    {:ok, received_internal_state}
+                  end)
+                )
 
-          allow(module()).to(
-            accept(:handle_stop, fn received_internal_state -> {:ok, received_internal_state} end)
-          )
+          allow module()
+                |> to(
+                  accept(:handle_stop, fn received_internal_state ->
+                    {:ok, received_internal_state}
+                  end)
+                )
         end
 
         it "should not call handle_stop callback on element's module" do
@@ -430,23 +452,26 @@ defmodule Membrane.ElementSpec do
           let :new_internal_state, do: :new_int_state
 
           before do
-            allow(module()).to(
-              accept(:handle_play, fn received_internal_state ->
-                {:ok, received_internal_state}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_play, fn received_internal_state ->
+                      {:ok, received_internal_state}
+                    end)
+                  )
 
-            allow(module()).to(
-              accept(:handle_prepare, fn _previous_playback_state, _state ->
-                {:ok, new_internal_state()}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_prepare, fn _previous_playback_state, _state ->
+                      {:ok, new_internal_state()}
+                    end)
+                  )
 
-            allow(module()).to(
-              accept(:handle_stop, fn received_internal_state ->
-                {:ok, received_internal_state}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_stop, fn received_internal_state ->
+                      {:ok, received_internal_state}
+                    end)
+                  )
           end
 
           it "should not call handle_stop callback on element's module" do
@@ -484,19 +509,26 @@ defmodule Membrane.ElementSpec do
         let :playback, do: %Playback{state: :prepared}
 
         before do
-          allow(module()).to(
-            accept(:handle_play, fn received_internal_state -> {:ok, received_internal_state} end)
-          )
+          allow module()
+                |> to(
+                  accept(:handle_play, fn received_internal_state ->
+                    {:ok, received_internal_state}
+                  end)
+                )
 
-          allow(module()).to(
-            accept(:handle_prepare, fn _previous_playback_state, received_internal_state ->
-              {:ok, received_internal_state}
-            end)
-          )
+          allow module()
+                |> to(
+                  accept(:handle_prepare, fn _previous_playback_state, received_internal_state ->
+                    {:ok, received_internal_state}
+                  end)
+                )
 
-          allow(module()).to(
-            accept(:handle_stop, fn received_internal_state -> {:ok, received_internal_state} end)
-          )
+          allow module()
+                |> to(
+                  accept(:handle_stop, fn received_internal_state ->
+                    {:ok, received_internal_state}
+                  end)
+                )
         end
 
         it "should not call handle_stop callback on element's module" do
@@ -526,23 +558,26 @@ defmodule Membrane.ElementSpec do
           let :new_internal_state, do: :new_satete
 
           before do
-            allow(module()).to(
-              accept(:handle_play, fn received_internal_state ->
-                {:ok, received_internal_state}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_play, fn received_internal_state ->
+                      {:ok, received_internal_state}
+                    end)
+                  )
 
-            allow(module()).to(
-              accept(:handle_prepare, fn _previous_playback_state, _state ->
-                {:ok, new_internal_state()}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_prepare, fn _previous_playback_state, _state ->
+                      {:ok, new_internal_state()}
+                    end)
+                  )
 
-            allow(module()).to(
-              accept(:handle_stop, fn received_internal_state ->
-                {:ok, received_internal_state}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_stop, fn received_internal_state ->
+                      {:ok, received_internal_state}
+                    end)
+                  )
           end
 
           it "should not call handle_stop callback on element's module" do
@@ -595,19 +630,22 @@ defmodule Membrane.ElementSpec do
           let :new_internal_state, do: %{value: :new_value}
 
           before do
-            allow(module()).to(
-              accept(:handle_play, fn received_internal_state ->
-                {:ok, received_internal_state}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_play, fn received_internal_state ->
+                      {:ok, received_internal_state}
+                    end)
+                  )
 
-            allow(module()).to(
-              accept(:handle_prepare, fn _previous_playback_state, received_internal_state ->
-                {:ok, received_internal_state}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_prepare, fn _previous_playback_state,
+                                               received_internal_state ->
+                      {:ok, received_internal_state}
+                    end)
+                  )
 
-            allow(module()).to(accept(:handle_stop, fn _ -> {:ok, new_internal_state()} end))
+            allow module() |> to(accept(:handle_stop, fn _ -> {:ok, new_internal_state()} end))
           end
 
           it "should call handle_stop callback on element's module" do
@@ -650,19 +688,23 @@ defmodule Membrane.ElementSpec do
           let :new_internal_state, do: %{new: :new}
 
           before do
-            allow(module()).to(
-              accept(:handle_play, fn received_internal_state ->
-                {:ok, received_internal_state}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_play, fn received_internal_state ->
+                      {:ok, received_internal_state}
+                    end)
+                  )
 
-            allow(module()).to(
-              accept(:handle_prepare, fn _previous_playback_state, received_internal_state ->
-                {:ok, received_internal_state}
-              end)
-            )
+            allow module()
+                  |> to(
+                    accept(:handle_prepare, fn _previous_playback_state,
+                                               received_internal_state ->
+                      {:ok, received_internal_state}
+                    end)
+                  )
 
-            allow(module()).to(accept(:handle_stop, fn _state -> {:ok, new_internal_state()} end))
+            allow module()
+                  |> to(accept(:handle_stop, fn _state -> {:ok, new_internal_state()} end))
           end
 
           it "should call handle_stop callback on element's module" do
@@ -700,19 +742,26 @@ defmodule Membrane.ElementSpec do
         let :playback, do: %Playback{state: :stopped}
 
         before do
-          allow(module()).to(
-            accept(:handle_play, fn received_internal_state -> {:ok, received_internal_state} end)
-          )
+          allow module()
+                |> to(
+                  accept(:handle_play, fn received_internal_state ->
+                    {:ok, received_internal_state}
+                  end)
+                )
 
-          allow(module()).to(
-            accept(:handle_prepare, fn _previous_playback_state, received_internal_state ->
-              {:ok, received_internal_state}
-            end)
-          )
+          allow module()
+                |> to(
+                  accept(:handle_prepare, fn _previous_playback_state, received_internal_state ->
+                    {:ok, received_internal_state}
+                  end)
+                )
 
-          allow(module()).to(
-            accept(:handle_stop, fn received_internal_state -> {:ok, received_internal_state} end)
-          )
+          allow module()
+                |> to(
+                  accept(:handle_stop, fn received_internal_state ->
+                    {:ok, received_internal_state}
+                  end)
+                )
         end
 
         it "should not call handle_stop callback on element's module" do

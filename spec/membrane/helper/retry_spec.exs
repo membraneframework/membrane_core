@@ -8,7 +8,9 @@ defmodule Membrane.Helper.RetrySpec do
     let :params, do: [times: times(), delay: delay()]
 
     context "when arbiter returns :finish" do
-      before do: allow(TestModule).to(accept(:func, fn -> :ok end))
+      before do
+        allow TestModule |> to(accept(:func, fn -> :ok end))
+      end
 
       let :arbiter, do: fn _ -> :finish end
 
@@ -19,7 +21,10 @@ defmodule Membrane.Helper.RetrySpec do
     end
 
     context "when arbiter returns :retry" do
-      before do: allow(TestModule).to(accept(:func, fn -> :ok end))
+      before do
+        allow TestModule |> to(accept(:func, fn -> :ok end))
+      end
+
       let :arbiter, do: fn _ -> :retry end
 
       it "should call func `times() + 1` times" do

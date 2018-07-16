@@ -508,13 +508,10 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     end
 
     context "when callback is other than 'handle_write' or 'handle_process'" do
-      before do: allow(element_module() |> to(accept :manager_module, fn -> manager_module() end))
-
-      before do:
-               allow(
-                 manager_module()
-                 |> to(accept :handle_self_demand, fn _, _, _, _, _ -> :ok end)
-               )
+      before do
+        allow element_module() |> to(accept :manager_module, fn -> manager_module() end)
+        allow manager_module() |> to(accept :handle_self_demand, fn _, _, _, _, _ -> :ok end)
+      end
 
       it "should call handle_self_demand method of the given manager" do
         described_module().handle_demand(
@@ -572,13 +569,10 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     context "if given pad works in a pull mode" do
       let :pad_mode, do: :pull
 
-      before do: allow(element_module() |> to(accept :manager_module, fn -> manager_module() end))
-
-      before do:
-               allow(
-                 manager_module()
-                 |> to(accept :handle_redemand, fn _, _ -> :ok end)
-               )
+      before do
+        allow element_module() |> to(accept :manager_module, fn -> manager_module() end)
+        allow manager_module() |> to(accept :handle_redemand, fn _, _ -> :ok end)
+      end
 
       it "should call handle_redemand method of the given module" do
         described_module().handle_redemand(pad_name(), state())
