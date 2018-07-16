@@ -53,7 +53,7 @@ defmodule Membrane.Core.Element.PadController do
         |> Enum.filter(&(&1.availability |> Pad.availability_mode() == :dynamic))
         |> Enum.map(& &1.name)
 
-      if(static_unlinked |> Enum.empty?() |> Kernel.!()) do
+      if static_unlinked |> Enum.empty?() |> Kernel.!() do
         warn(
           """
           Some static pads remained unlinked: #{inspect(static_unlinked)}
@@ -119,7 +119,7 @@ defmodule Membrane.Core.Element.PadController do
          {:invalid_pad_availability_mode, expected: expected_av_mode, actual: actual_av_mode}}
 
       info.direction != direction ->
-        {:error, {:invalid_pad_direction, expected: info.direction, actual: direction}}
+        {:error, {:invalid_pad_direction, expected: direction, actual: info.direction}}
 
       true ->
         :ok

@@ -1,12 +1,21 @@
-defmodule PullBufferSpec do
+defmodule Membrane.Core.PullBufferSpec do
   alias Membrane.Core.PullBuffer
   alias Membrane.Buffer
   use ESpec, async: true
 
+  def flush do
+    receive do
+      _ -> flush()
+    after
+      10 -> nil
+    end
+  end
+
   describe ".new/5" do
     let :name, do: :name
-    let :sink, do: :sink
-    let :sink_name, do: :sink_name
+    let :sink, do: {self(), sink_elem_name()}
+    let :sink_elem_name, do: :sink_elem_name
+    let :sink_name, do: :sink_pad_name
     let :preferred_size, do: 100
     let :min_demand, do: 10
     let :toilet, do: false
@@ -20,14 +29,14 @@ defmodule PullBufferSpec do
         toilet: toilet()
       ]
 
-    it "should return PullBuffer struct" do
+    it "should return PullBuffer struct and send demand message" do
       expect(described_module().new(name(), sink(), sink_name(), demand_in(), props()))
       |> to(
         eq(%PullBuffer{
           name: name(),
           sink: sink(),
           sink_name: sink_name(),
-          demand: preferred_size(),
+          demand: 0,
           preferred_size: preferred_size(),
           min_demand: min_demand(),
           toilet: toilet(),
@@ -35,49 +44,33 @@ defmodule PullBufferSpec do
           q: Qex.new()
         })
       )
+
+      expected_list = [preferred_size(), sink_elem_name()]
+      assert_received {:membrane_demand, ^expected_list}
     end
-  end
 
-  describe ".fill/1" do
-    let :toilet, do: false
-    let :demand, do: 10
-    let :pref_size, do: 50
-    let :sink_pid, do: self()
-    let :sink_name, do: :name
-    let :sink, do: {sink_pid(), sink_name()}
-    let :current_size, do: 0
+    context "if toilet is not false" do
+      let :toilet, do: %{warn: 100, fail: 200}
 
-    let :pb,
-      do: %PullBuffer{
-        toilet: toilet(),
-        preferred_size: pref_size(),
-        sink: {sink_pid(), sink_name()},
-        demand: demand(),
-        min_demand: 10,
-        current_size: current_size()
-      }
+      it "should not send the demand" do
+        flush()
 
-    context "when toilet is not false" do
-      let :toilet, do: true
+        expect(described_module().new(name(), sink(), sink_name(), demand_in(), props()))
+        |> to(
+          eq(%PullBuffer{
+            name: name(),
+            sink: sink(),
+            sink_name: sink_name(),
+            demand: preferred_size(),
+            preferred_size: preferred_size(),
+            min_demand: min_demand(),
+            toilet: toilet(),
+            metric: expected_metric(),
+            q: Qex.new()
+          })
+        )
 
-      it "should do nothing" do
-        :lib.flush_receive()
-
-        expect(described_module().fill(pb())) |> to(eq {:ok, pb()})
         refute_received {:membrane_demand, _}
-      end
-    end
-
-    context "when pullbuffer is empty" do
-      let :demand, do: pref_size()
-      let :current_size, do: 0
-
-      it "should send :membrane_demand message and update `demand`" do
-        {:ok, new_pb} = described_module().fill(pb())
-        expect(new_pb.demand) |> to(eq 0)
-        expected_list = [demand(), sink_name()]
-
-        assert_received {:membrane_demand, ^expected_list}
       end
     end
   end
