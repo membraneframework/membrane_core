@@ -11,6 +11,7 @@ defmodule Membrane.Pipeline do
   alias __MODULE__.{State, Spec}
   alias Membrane.{Core, Element, Message}
   alias Core.Playback
+  require Element.Pad
   use Membrane.Helper
   import Helper.GenServer
   use Membrane.Log, tags: :core
@@ -370,19 +371,18 @@ defmodule Membrane.Pipeline do
              _ ->
                {:error, :invalid_link}
            ),
-         :ok <- [link.from.pad, link.to.pad] |> Helper.Enum.each_with(&parse_pad/1) do
+         :ok <- [link.from.pad, link.to.pad] |> Helper.Enum.each_with(&validate_pad/1) do
       {:ok, link}
     else
       {:error, reason} -> {:error, {:invalid_link, link, reason}}
     end
   end
 
-  defp parse_pad(name)
-       when is_atom(name or is_binary(name)) do
+  defp validate_pad(name) when Element.Pad.is_class_name(name) do
     :ok
   end
 
-  defp parse_pad(pad), do: {:error, {:invalid_pad_format, pad}}
+  defp validate_pad(pad), do: {:error, {:invalid_pad_format, pad}}
 
   defp resolve_links(links, state) do
     links
@@ -393,7 +393,7 @@ defmodule Membrane.Pipeline do
     end)
   end
 
-  defp resolve_link(%{element: element, pad: pad_name} = elementpad, state) do
+  defp resolve_link(%{element: element, pad: pad_class} = elementpad, state) do
     element =
       if state |> State.dynamic?(element) do
         {:ok, last_id} = state |> State.get_last_child_id(element)
@@ -403,7 +403,7 @@ defmodule Membrane.Pipeline do
       end
 
     with {:ok, pid} <- state |> State.get_child(element),
-         {:ok, pad_name} <- pid |> GenServer.call({:membrane_get_pad_full_name, pad_name}) do
+         {:ok, pad_name} <- pid |> GenServer.call({:membrane_get_pad_name, pad_class}) do
       {{:ok, %{element: element, pad: pad_name}}, state}
     else
       {:error, reason} -> {:error, {:resolve_link, elementpad, reason}}

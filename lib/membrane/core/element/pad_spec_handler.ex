@@ -11,7 +11,7 @@ defmodule Membrane.Core.Element.PadSpecHandler do
   use Core.Element.Log
 
   @typep parsed_pad_t ::
-           {Pad.name_t(), Pad.availability_t(), Pad.mode_t(), Caps.Matcher.caps_specs_t(),
+           {Pad.class_name_t(), Pad.availability_t(), Pad.mode_t(), Caps.Matcher.caps_specs_t(),
             Pad.direction_t(), map}
 
   @doc """
@@ -48,7 +48,7 @@ defmodule Membrane.Core.Element.PadSpecHandler do
       pads =
         pads
         |> Enum.map(&init_pad_info/1)
-        |> Map.new(&{&1.name, &1})
+        |> Map.new(&{&1.class_name, &1})
 
       {:ok, pads}
     end
@@ -56,28 +56,28 @@ defmodule Membrane.Core.Element.PadSpecHandler do
 
   @spec parse_pad(Element.pad_specs_t(), Pad.direction_t()) ::
           {:ok, parsed_pad_t} | {:error, {:invalid_pad_config, details :: Keyword.t()}}
-  defp parse_pad({name, {availability, :push, caps}}, direction)
-       when is_atom(name) and Pad.is_availability(availability) do
-    {:ok, {name, availability, :push, caps, direction, %{}}}
+  defp parse_pad({class_name, {availability, :push, caps}}, direction)
+       when Pad.is_class_name(class_name) and Pad.is_availability(availability) do
+    {:ok, {class_name, availability, :push, caps, direction, %{}}}
   end
 
-  defp parse_pad({name, {availability, :pull, caps}}, :source)
-       when is_atom(name) and Pad.is_availability(availability) do
-    {:ok, {name, availability, :pull, caps, :source, %{other_demand_in: nil}}}
+  defp parse_pad({class_name, {availability, :pull, caps}}, :source)
+       when Pad.is_class_name(class_name) and Pad.is_availability(availability) do
+    {:ok, {class_name, availability, :pull, caps, :source, %{other_demand_in: nil}}}
   end
 
-  defp parse_pad({name, {availability, {:pull, demand_in: demand_in}, caps}}, :sink)
-       when is_atom(name) and Pad.is_availability(availability) do
-    {:ok, {name, availability, :pull, caps, :sink, %{demand_in: demand_in}}}
+  defp parse_pad({class_name, {availability, {:pull, demand_in: demand_in}, caps}}, :sink)
+       when Pad.is_class_name(class_name) and Pad.is_availability(availability) do
+    {:ok, {class_name, availability, :pull, caps, :sink, %{demand_in: demand_in}}}
   end
 
   defp parse_pad(params, direction),
     do: {:error, {:invalid_pad_config, params, direction: direction}}
 
   @spec init_pad_info(parsed_pad_t) :: PadModel.pad_info_t()
-  defp init_pad_info({name, availability, mode, caps, direction, options}) do
+  defp init_pad_info({class_name, availability, mode, caps, direction, options}) do
     %{
-      name: name,
+      class_name: class_name,
       mode: mode,
       direction: direction,
       accepted_caps: caps,

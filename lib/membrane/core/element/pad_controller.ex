@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.{Core, Event, Type}
   alias Core.{CallbackHandler, PullBuffer}
-  alias Core.Element.{EventController, PadModel, State}
+  alias Core.Element.{ActionHandler, EventController, PadModel, State}
   alias Membrane.Element.{Context, Pad}
   require Pad
   require PadModel
@@ -18,11 +18,11 @@ defmodule Membrane.Core.Element.PadController do
           State.stateful_try_t()
   def handle_link(pad_name, direction, pid, other_name, props, state) do
     with :ok <- validate_pad_being_linked(pad_name, direction, state) do
-      info = state.pads.info[pad_name]
+      info = state.pads.info[pad_name |> Pad.class_name()]
       state = init_pad_data(pad_name, pid, other_name, props, info, state)
 
       state =
-        case Pad.availability_mode_by_name(pad_name) do
+        case info.availability |> Pad.availability_mode() do
           :static ->
             state |> Helper.Struct.update_in([:pads, :info], &(&1 |> Map.delete(pad_name)))
 
@@ -50,8 +50,8 @@ defmodule Membrane.Core.Element.PadController do
       static_unlinked =
         state.pads.info
         |> Map.values()
-        |> Enum.filter(&(&1.availability |> Pad.availability_mode() == :dynamic))
-        |> Enum.map(& &1.name)
+        |> Enum.filter(&(&1.availability |> Pad.availability_mode() == :static))
+        |> Enum.map(& &1.class_name)
 
       if(static_unlinked |> Enum.empty?() |> Kernel.!()) do
         warn(
@@ -84,8 +84,8 @@ defmodule Membrane.Core.Element.PadController do
   Returns pad full name. Full name differs from short name for dynamic pads, for
   which it includes pad id.
   """
-  @spec get_pad_full_name(Pad.name_t(), State.t()) :: State.stateful_try_t(Pad.name_t())
-  def get_pad_full_name(pad_name, state) do
+  @spec get_pad_name(Pad.class_name_t(), State.t()) :: State.stateful_try_t(Pad.name_t())
+  def get_pad_name(pad_name, state) do
     {full_name, state} =
       state
       |> Helper.Struct.get_and_update_in([:pads, :info, pad_name], fn
@@ -104,7 +104,7 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec validate_pad_being_linked(Pad.name_t(), Pad.direction_t(), State.t()) :: Type.try_t()
   defp validate_pad_being_linked(pad_name, direction, state) do
-    info = state.pads.info[pad_name]
+    info = state.pads.info[pad_name |> Pad.class_name()]
 
     cond do
       info == nil ->
@@ -190,7 +190,7 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec generate_eos_if_not_received(Pad.name_t(), State.t()) :: State.stateful_try_t()
   defp generate_eos_if_not_received(pad_name, state) do
-    if PadModel.get_data!(pad_name, :eos, state) do
+    if not PadModel.get_data!(pad_name, :eos, state) do
       EventController.handle_event(
         pad_name,
         %{Event.eos() | payload: :auto_eos, mode: :async},

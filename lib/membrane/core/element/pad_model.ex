@@ -6,8 +6,8 @@ defmodule Membrane.Core.Element.PadModel do
   alias Membrane.Core.Element.State
   use Membrane.Helper
 
-  @type pad_data_t :: map
-  @type pad_info_t :: map
+  @type pad_data_t :: %{optional(Pad.name_t) => Pad.class_name_t}
+  @type pad_info_t :: %{optional(Pad.class_name_t) => Pad.class_name_t}
   @type pads_t :: %{data: pad_data_t, info: pad_info_t, dynamic_currently_linking: [Pad.name_t()]}
 
   @type unknown_pad_error_t :: {:error, {:unknown_pad, Pad.name_t()}}

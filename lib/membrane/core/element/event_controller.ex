@@ -71,8 +71,8 @@ defmodule Membrane.Core.Element.EventController do
       state = PadModel.set_data!(pad_name, :sos, true, state)
       {{:ok, :handle}, state}
     else
-      %{direction: :source} -> {:error, {:received_sos_through_source, pad_name}}
-      %{sos: true} -> {:error, {:sos_already_received, pad_name}}
+      %{direction: :source} -> {{:error, {:received_sos_through_source, pad_name}}, state}
+      %{sos: true} -> {{:ok, :ignore}, state} #{{:error, {:sos_already_received, pad_name}}, state}
     end
   end
 
@@ -81,8 +81,8 @@ defmodule Membrane.Core.Element.EventController do
       state = PadModel.set_data!(pad_name, :eos, true, state)
       {{:ok, :handle}, state}
     else
-      %{direction: :source} -> {:error, {:received_eos_through_source, pad_name}}
-      %{eos: true} -> {:error, {:eos_already_received, pad_name}}
+      %{direction: :source} -> {{:error, {:received_eos_through_source, pad_name}}, state}
+      %{eos: true} -> {{:error, {:eos_already_received, pad_name}}, state}
       %{sos: false} -> {{:ok, :ignore}, state}
     end
   end

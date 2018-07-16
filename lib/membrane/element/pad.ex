@@ -20,6 +20,8 @@ defmodule Membrane.Element.Pad do
   """
   @type name_t :: atom | {:dynamic, atom, non_neg_integer}
 
+  @type class_name_t :: atom
+
   @typedoc """
   Defines possible pad directions:
   - `:source` - data can only be sent through such pad,
@@ -73,6 +75,8 @@ defmodule Membrane.Element.Pad do
                   (term |> is_tuple and term |> tuple_size == 3 and term |> elem(0) == :dynamic and
                      term |> elem(1) |> is_atom and term |> elem(2) |> is_integer)
 
+  defguard is_class_name(term) when is_atom(term)
+
   defguard is_availability(term) when term in @availabilities
 
   defguard is_availability_dynamic(availability) when availability == :on_request
@@ -92,4 +96,8 @@ defmodule Membrane.Element.Pad do
   def availability_mode(:always), do: :static
 
   def availability_mode(:on_request), do: :dynamic
+
+  @spec class_name(name_t) :: class_name_t
+  def class_name({:dynamic, class_name, _id}) when is_atom(class_name), do: class_name
+  def class_name(class_name) when is_atom(class_name), do: class_name
 end

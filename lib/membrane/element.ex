@@ -48,13 +48,13 @@ defmodule Membrane.Element do
   Describes how a source pad should be declared in element.
   """
   @type source_pad_specs_t ::
-          {Pad.name_t(), {Pad.availability_t(), :push | :pull, Caps.Matcher.caps_specs_t()}}
+          {Pad.class_name_t(), {Pad.availability_t(), :push | :pull, Caps.Matcher.caps_specs_t()}}
 
   @typedoc """
   Describes how a sink pad should be declared in element.
   """
   @type sink_pad_specs_t ::
-          {Pad.name_t(),
+          {Pad.class_name_t(),
            {Pad.availability_t(), {:push | :pull, demand_in: Buffer.Metric.unit_t()},
             Caps.Matcher.caps_specs_t()}}
 
