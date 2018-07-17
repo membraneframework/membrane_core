@@ -18,6 +18,6 @@ defmodule Membrane.Element.CallbackContext.PadRemoved do
   @impl true
   def from_state(state, entries) do
     common = [playback_state: state.playback.state]
-    struct!(__MODULE__, entries ++ common)
+    struct!(__MODULE__, Enum.concat(entries, common))
   end
 end

@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.PadController do
   alias Membrane.{Core, Event, Type}
   alias Core.{CallbackHandler, PullBuffer}
   alias Core.Element.{EventController, PadModel, State}
-  alias Membrane.Element.{Context, Pad}
+  alias Membrane.Element.Pad
   require Pad
   require PadModel
   use Core.Element.Log
@@ -53,7 +53,7 @@ defmodule Membrane.Core.Element.PadController do
         |> Enum.filter(&(&1.availability |> Pad.availability_mode() == :dynamic))
         |> Enum.map(& &1.name)
 
-      if(static_unlinked |> Enum.empty?() |> Kernel.!()) do
+      if static_unlinked |> Enum.empty?() |> Kernel.!() do
         warn(
           """
           Some static pads remained unlinked: #{inspect(static_unlinked)}
@@ -203,14 +203,11 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec handle_pad_added(Pad.name_t(), State.t()) :: State.stateful_try_t()
   defp handle_pad_added(name, state) do
-    context = %Context.PadAdded{
-      direction: PadModel.get_data!(name, :direction, state)
-    }
-
     CallbackHandler.exec_and_handle_callback(
       :handle_pad_added,
       ActionHandler,
-      [name, context],
+      [name],
+      [direction: PadModel.get_data!(name, :direction, state)],
       state
     )
   end
@@ -221,12 +218,11 @@ defmodule Membrane.Core.Element.PadController do
       PadModel.get_data!(name, state)
 
     if availability |> Pad.availability_mode() == :dynamic do
-      context = %Context.PadRemoved{direction: direction, caps: caps}
-
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_removed,
         ActionHandler,
-        [name, context],
+        [name],
+        [direction: direction, caps: caps],
         state
       )
     else
