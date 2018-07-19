@@ -9,7 +9,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   """
 
   alias Membrane.{Buffer, Caps, Element}
-  alias Element.{Context, Pad}
+  alias Element.{CallbackContext, Pad}
   alias Element.Base.Mixin.CommonBehaviour
 
   @doc """
@@ -46,7 +46,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
               pad :: Pad.name_t(),
               size :: non_neg_integer,
               unit :: Buffer.Metric.unit_t(),
-              context :: Context.Demand.t(),
+              context :: CallbackContext.Demand.t(),
               state :: Element.state_t()
             ) :: CommonBehaviour.callback_return_t()
 

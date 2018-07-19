@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.CapsController do
   alias Membrane.{Caps, Core, Element}
   alias Core.{CallbackHandler, PullBuffer}
   alias Core.Element.{ActionHandler, PadModel, State}
-  alias Element.{Context, Pad}
+  alias Element.{CallbackContext, Pad}
   require PadModel
   use Core.Element.Log
   use Membrane.Helper
@@ -34,7 +34,7 @@ defmodule Membrane.Core.Element.CapsController do
   def exec_handle_caps(pad_name, caps, state) do
     %{accepted_caps: accepted_caps, caps: old_caps} = PadModel.get_data!(pad_name, state)
 
-    context = %Context.Caps{caps: old_caps}
+    context = CallbackContext.Caps.from_state(state, caps: old_caps)
 
     withl match: true <- Caps.Matcher.match?(accepted_caps, caps),
           callback:

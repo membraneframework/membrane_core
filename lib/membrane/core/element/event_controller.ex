@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.EventController do
   alias Membrane.{Core, Element, Event}
   alias Core.{CallbackHandler, PullBuffer}
   alias Core.Element.{ActionHandler, PadModel, State}
-  alias Element.{Context, Pad}
+  alias Element.{CallbackContext, Pad}
   require PadModel
   use Core.Element.Log
   use Membrane.Helper
@@ -53,7 +53,7 @@ defmodule Membrane.Core.Element.EventController do
   @spec do_exec_handle_event(Pad.name_t(), Event.t(), State.t()) :: State.stateful_try_t()
   defp do_exec_handle_event(pad_name, event, state) do
     data = PadModel.get_data!(pad_name, state)
-    context = %Context.Event{caps: data.caps}
+    context = CallbackContext.Event.from_state(state, caps: data.caps)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_event,

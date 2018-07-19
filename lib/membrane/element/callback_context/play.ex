@@ -10,7 +10,7 @@ defmodule Membrane.Element.CallbackContext.Play do
   defstruct []
 
   @impl true
-  def from_state(_state, entries) do
+  def from_state(_state, entries \\ []) do
     struct!(__MODULE__, entries)
   end
 end

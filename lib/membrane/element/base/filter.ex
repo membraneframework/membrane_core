@@ -19,7 +19,7 @@ defmodule Membrane.Element.Base.Filter do
 
   alias Membrane.{Buffer, Element}
   alias Element.Base.Mixin
-  alias Element.{Context, Pad}
+  alias Element.{CallbackContext, Pad}
 
   @doc """
   Callback that is to process buffers.
@@ -32,7 +32,7 @@ defmodule Membrane.Element.Base.Filter do
   @callback handle_process(
               pad :: Pad.name_t(),
               buffers :: list(Buffer.t()),
-              context :: Context.Process.t(),
+              context :: CallbackContext.Process.t(),
               state :: Element.state_t()
             ) :: Mixin.CommonBehaviour.callback_return_t()
 
@@ -45,7 +45,7 @@ defmodule Membrane.Element.Base.Filter do
   @callback handle_process1(
               pad :: Pad.name_t(),
               buffer :: Buffer.t(),
-              context :: Context.Process.t(),
+              context :: CallbackContext.Process.t(),
               state :: Element.state_t()
             ) :: Mixin.CommonBehaviour.callback_return_t()
 

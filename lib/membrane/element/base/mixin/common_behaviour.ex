@@ -9,7 +9,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   alias Membrane.{Action, Core, Element, Event}
   alias Core.{Playback, CallbackHandler}
-  alias Element.{Action, Context, Pad}
+  alias Element.{Action, CallbackContext, Pad}
 
   @typedoc """
   Type that defines all valid return values from most callbacks.
@@ -50,7 +50,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_prepare(
               previous_playback_state :: Playback.state_t(),
-              context :: Element.CallbackContext.Prepare.t(),
+              context :: CallbackContext.Prepare.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -60,7 +60,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   This is moment when initial demands are sent and first buffers are generated
   if there are any pads in the push mode.
   """
-  @callback handle_play(context :: Element.CallbackContext.Play.t(), state :: Element.state_t()) ::
+  @callback handle_play(context :: CallbackContext.Play.t(), state :: Element.state_t()) ::
               callback_return_t
 
   @doc """
@@ -70,7 +70,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   used by the element. For example, if element opens a file in `c:handle_prepare/3`,
   this is the place to close it.
   """
-  @callback handle_stop(context :: Element.CallbackContext.Stop.t(), state :: Element.state_t()) ::
+  @callback handle_stop(context :: CallbackContext.Stop.t(), state :: Element.state_t()) ::
               callback_return_t
 
   @doc """
@@ -81,7 +81,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_other(
               message :: any(),
-              context :: Element.CallbackContext.Stop.t(),
+              context :: CallbackContext.Stop.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -91,7 +91,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_pad_added(
               pad :: Pad.name_t(),
-              context :: Context.PadAdded.t(),
+              context :: CallbackContext.PadAdded.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -101,7 +101,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_pad_removed(
               pad :: Pad.name_t(),
-              context :: Context.PadRemoved.t(),
+              context :: CallbackContext.PadRemoved.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -113,7 +113,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @callback handle_event(
               pad :: Pad.name_t(),
               event :: Event.type_t(),
-              context :: Context.Event.t(),
+              context :: CallbackContext.Event.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 

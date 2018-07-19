@@ -6,7 +6,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   alias Membrane.{Core, Element}
   alias Core.CallbackHandler
   alias Core.Element.{ActionHandler, PadSpecHandler, PadModel, PlaybackBuffer, State}
-  alias Element.Pad
+  alias Element.{CallbackContext, Pad}
   require PadModel
   use Core.PlaybackHandler
   use Core.Element.Log
@@ -97,7 +97,9 @@ defmodule Membrane.Core.Element.LifecycleController do
   """
   @spec handle_message(message :: any, State.t()) :: State.stateful_try_t()
   def handle_message(message, state) do
-    CallbackHandler.exec_and_handle_callback(:handle_other, ActionHandler, [message], state)
+    ctx = CallbackContext.Other.from_state(state)
+
+    CallbackHandler.exec_and_handle_callback(:handle_other, ActionHandler, [message, ctx], state)
     |> or_warn_error("Error while handling message")
   end
 
@@ -127,17 +129,20 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @impl PlaybackHandler
   def handle_playback_state(:prepared, :playing, state) do
-    CallbackHandler.exec_and_handle_callback(:handle_play, ActionHandler, [], state)
+    ctx = CallbackContext.Play.from_state(state)
+    CallbackHandler.exec_and_handle_callback(:handle_play, ActionHandler, [ctx], state)
   end
 
   @impl PlaybackHandler
   def handle_playback_state(:prepared, :stopped, state) do
-    CallbackHandler.exec_and_handle_callback(:handle_stop, ActionHandler, [], state)
+    ctx = CallbackContext.Stop.from_state(state)
+    CallbackHandler.exec_and_handle_callback(:handle_stop, ActionHandler, [ctx], state)
   end
 
   @impl PlaybackHandler
   def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing] do
-    CallbackHandler.exec_and_handle_callback(:handle_prepare, ActionHandler, [ps], state)
+    ctx = CallbackContext.Prepare.from_state(state)
+    CallbackHandler.exec_and_handle_callback(:handle_prepare, ActionHandler, [ps, ctx], state)
   end
 
   @impl PlaybackHandler

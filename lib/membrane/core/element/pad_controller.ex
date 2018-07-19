@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.PadController do
   alias Membrane.{Core, Event, Type}
   alias Core.{CallbackHandler, PullBuffer}
   alias Core.Element.{EventController, PadModel, State}
-  alias Membrane.Element.{Context, Pad}
+  alias Membrane.Element.{CallbackContext, Pad}
   require Pad
   require PadModel
   use Core.Element.Log
@@ -203,9 +203,11 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec handle_pad_added(Pad.name_t(), State.t()) :: State.stateful_try_t()
   defp handle_pad_added(name, state) do
-    context = %Context.PadAdded{
-      direction: PadModel.get_data!(name, :direction, state)
-    }
+    context =
+      CallbackContext.PadAdded.from_state(
+        state,
+        direction: PadModel.get_data!(name, :direction, state)
+      )
 
     CallbackHandler.exec_and_handle_callback(
       :handle_pad_added,
@@ -221,7 +223,7 @@ defmodule Membrane.Core.Element.PadController do
       PadModel.get_data!(name, state)
 
     if availability |> Pad.availability_mode() == :dynamic do
-      context = %Context.PadRemoved{direction: direction, caps: caps}
+      context = CallbackContext.PadRemoved.from_state(state, direction: direction, caps: caps)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_removed,
