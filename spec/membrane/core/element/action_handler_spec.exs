@@ -2,12 +2,9 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
   use ESpec, async: false
   alias Membrane.Core.Element.State
   alias Membrane.{Buffer, Event, Message}
-  alias Membrane.Core.Playback
+  alias Membrane.Core.{Playback, Element}
 
-  pending "handle demand"
-  pending "handle redemand"
-
-  describe "handle buffer" do
+  describe "handle_action for buffer" do
     let :other_name, do: :other_name
 
     let! :state,
@@ -200,7 +197,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     end
   end
 
-  describe "handle event" do
+  describe "handle_action for event" do
     let :other_name, do: :other_name
 
     let! :state,
@@ -279,7 +276,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     end
   end
 
-  describe "handle caps" do
+  describe "handle_action for caps" do
     let :other_name, do: :other_name
 
     let! :state,
@@ -365,7 +362,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     end
   end
 
-  describe "handle message" do
+  describe "handle_action for message" do
     let :name, do: :some_name
     let :state, do: %State{message_bus: message_bus(), name: name()}
     let :payload, do: "some message"
@@ -422,6 +419,166 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           target = [:membrane_message, name(), message()]
           assert_receive ^target
         end
+      end
+    end
+  end
+
+  describe "handle_action for demand" do
+    let :action, do: {:demand, {pad_name(), source(), size()}}
+    let :callback, do: :handle_event
+    let :source, do: :self
+    let :pad_name, do: :sink
+    let :size, do: 1
+    let :type, do: :normal
+    let :sink_mode, do: :pull
+    let :element_type, do: :filter
+    let :playback_state, do: :playing
+    let :element_module, do: FakeElementModule
+    let :handler_module, do: Element.DemandHandler
+
+    let :state,
+      do: %{
+        __struct__: State,
+        module: element_module(),
+        name: :test_name,
+        type: element_type(),
+        playback_state: playback_state(),
+        pads: %{
+          data: %{
+            sink: %{
+              direction: :sink,
+              mode: sink_mode(),
+              pid: self()
+            }
+          }
+        }
+      }
+
+    context "when sink pad is not in a pull mode" do
+      let :sink_mode, do: :push
+
+      it "should return an error with proper reason" do
+        result = described_module().handle_action(action(), callback(), %{}, state())
+        expect(result) |> to(match_pattern {{:error, {:cannot_handle_action, _}}, _})
+        {{:error, {:cannot_handle_action, details}}, _} = result
+        expect(details[:reason]) |> to(match_pattern {:invalid_pad_data, _})
+      end
+    end
+
+    context "when source doesn't exist in the given state" do
+      let :non_existing_pad, do: :non_existing_pad
+      let :source, do: {:source, non_existing_pad()}
+
+      it "should raise RuntimeError" do
+        result =
+          described_module().handle_action(
+            action(),
+            callback(),
+            %{},
+            state()
+          )
+
+        expect(result) |> to(match_pattern {{:error, {:cannot_handle_action, _}}, _})
+        {{:error, {:cannot_handle_action, details}}, _} = result
+        expect(details[:reason]) |> to(eq {:unknown_pad, non_existing_pad()})
+      end
+    end
+
+    context "when callback is 'handle_write'" do
+      let :callback, do: :handle_write
+
+      it "should send appropriate message to 'self()'" do
+        result =
+          described_module().handle_action(
+            action(),
+            callback(),
+            %{},
+            state()
+          )
+
+        expect(result) |> to(be_ok_result())
+        assert_received {:membrane_demand, _}
+      end
+    end
+
+    context "when callback is other than 'handle_write' or 'handle_process'" do
+      before do
+        allow handler_module()
+              |> to(accept :handle_demand, fn _, _, _, _, state -> {:ok, state} end)
+      end
+
+      it "should call handle_demand from DemandHandler module" do
+        described_module().handle_action(
+          action(),
+          callback(),
+          %{},
+          state()
+        )
+
+        expect(handler_module() |> to(accepted(:handle_demand, :any, count: 1)))
+      end
+    end
+  end
+
+  describe "handle_action for redemand" do
+    let :action, do: {:redemand, pad_name()}
+
+    let :pad_name, do: :source
+    let :pad_direction, do: :source
+    let :pad_mode, do: :pull
+    let :element_module, do: FakeElementModule
+    let :controller_module, do: Element.DemandController
+
+    let :state,
+      do: %{
+        __struct__: State,
+        module: element_module(),
+        name: :test_name,
+        type: :source,
+        pads: %{
+          data: %{
+            source: %{
+              direction: pad_direction(),
+              pid: self(),
+              mode: pad_mode()
+            }
+          }
+        }
+      }
+
+    context "if pad doesn't exist in the element" do
+      let :pad_name, do: :invalid_pad_name
+
+      it "should return an error result with :unknown_pad reason" do
+        result = described_module().handle_action(action(), nil, %{}, state())
+        expect(result) |> to(match_pattern {{:error, {:cannot_handle_action, _}}, _})
+        {{:error, {:cannot_handle_action, details}}, _} = result
+        expect(details[:reason]) |> to(eq {:unknown_pad, :invalid_pad_name})
+      end
+    end
+
+    context "if pad works in a push mode" do
+      let :pad_mode, do: :push
+
+      it "should return an error" do
+        result = described_module().handle_action(action(), nil, %{}, state())
+        expect(result) |> to(match_pattern {{:error, {:cannot_handle_action, _}}, _})
+        {{:error, {:cannot_handle_action, details}}, _} = result
+        expect(details[:reason]) |> to(match_pattern {:invalid_pad_data, _})
+      end
+    end
+
+    context "if given pad works in a pull mode" do
+      let :pad_mode, do: :pull
+
+      before do
+        allow controller_module() |> to(accept :handle_demand, fn _, 0, state -> {:ok, state} end)
+      end
+
+      it "should call handle_redemand method of the given module" do
+        res = described_module().handle_action(action(), :handle_write, %{}, state())
+        expect(res |> to(eq {:ok, state()}))
+        expect(controller_module() |> to(accepted(:handle_demand, :any, count: 1)))
       end
     end
   end

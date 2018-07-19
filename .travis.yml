@@ -5,6 +5,6 @@ otp_release:
   - 20.0
 sudo: false
 script:
-  - mix format --check-formatted
+  - MIX_ENV=test mix format --check-formatted
   - mix test
   - mix espec
