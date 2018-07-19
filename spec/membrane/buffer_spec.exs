@@ -4,7 +4,7 @@ defmodule Membrane.BufferSpec do
   describe "when creating new struct" do
     it "should have payload field set to nil" do
       %Membrane.Buffer{payload: payload} = struct(described_module())
-      expect(payload) |> to(be_nil())
+      expect(payload) |> to(be_nil)
     end
 
     it "should have metadata field set to empty map" do

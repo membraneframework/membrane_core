@@ -4,7 +4,7 @@ defmodule Membrane.Payload.Binary do
   """
 
   @type t :: %__MODULE__{
-          data: bitstring()
+          data: binary()
         }
 
   @enforce_keys :data
@@ -31,5 +31,15 @@ defimpl Membrane.Payload, for: Membrane.Payload.Binary do
   def split_at(%Binary{data: data}, at_pos) do
     <<part1::binary-size(at_pos), part2::binary>> = data
     {part1, part2}
+  end
+
+  @spec from_binary(binary()) :: Binary.t()
+  def from_binary(bin) do
+    %Binary{data: bin}
+  end
+
+  @spec to_binary(Binary.t()) :: binary()
+  def to_binary(%Binary{data: data}) do
+    data
   end
 end
