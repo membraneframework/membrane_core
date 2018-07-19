@@ -16,7 +16,7 @@ defmodule Membrane.Buffer.Metric.ByteSizeSpec do
   end
 
   describe ".split_buffers/2" do
-    context "when splitting is redundant" do
+    context "when splitting of payload is redundant" do
       let :count, do: byte_size(pay1())
 
       it "should extract only first buffer" do
