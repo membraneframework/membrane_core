@@ -97,7 +97,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   """
   @spec handle_message(message :: any, State.t()) :: State.stateful_try_t()
   def handle_message(message, state) do
-    CallbackHandler.exec_and_handle_callback(:handle_other, ActionHandler, [message], [], state)
+    CallbackHandler.exec_and_handle_callback(:handle_other, ActionHandler, [message], state)
     |> or_warn_error("Error while handling message")
   end
 
@@ -127,17 +127,17 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @impl PlaybackHandler
   def handle_playback_state(:prepared, :playing, state) do
-    CallbackHandler.exec_and_handle_callback(:handle_play, ActionHandler, [], [], state)
+    CallbackHandler.exec_and_handle_callback(:handle_play, ActionHandler, [], state)
   end
 
   @impl PlaybackHandler
   def handle_playback_state(:prepared, :stopped, state) do
-    CallbackHandler.exec_and_handle_callback(:handle_stop, ActionHandler, [], [], state)
+    CallbackHandler.exec_and_handle_callback(:handle_stop, ActionHandler, [], state)
   end
 
   @impl PlaybackHandler
   def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing] do
-    CallbackHandler.exec_and_handle_callback(:handle_prepare, ActionHandler, [ps], [], state)
+    CallbackHandler.exec_and_handle_callback(:handle_prepare, ActionHandler, [ps], state)
   end
 
   @impl PlaybackHandler

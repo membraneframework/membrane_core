@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.BufferController do
 
   alias Membrane.{Buffer, Core, Element}
   alias Core.{CallbackHandler, PullBuffer}
-  alias Element.Pad
+  alias Element.{Context, Pad}
   alias Core.Element.{ActionHandler, DemandHandler, PadModel, State}
   require PadModel
   use Core.Element.Log
@@ -36,7 +36,7 @@ defmodule Membrane.Core.Element.BufferController do
           State.t()
         ) :: State.stateful_try_t()
   def exec_buffer_handler(pad_name, source, buffers, %State{type: :filter} = state) do
-    ctx_entries = [
+    context = %Context.Process{
       caps: PadModel.get_data!(pad_name, :caps, state),
       source: source,
       source_caps:
@@ -44,24 +44,26 @@ defmodule Membrane.Core.Element.BufferController do
           {:source, src_name} -> PadModel.get_data!(src_name, :caps, state)
           _ -> nil
         end
-    ]
+    }
 
     CallbackHandler.exec_and_handle_callback(
       :handle_process,
       ActionHandler,
-      [pad_name, buffers],
-      ctx_entries,
+      [pad_name, buffers, context],
       state
     )
     |> or_warn_error("Error while handling process")
   end
 
   def exec_buffer_handler(pad_name, _source, buffers, %State{type: :sink} = state) do
+    context = %Context.Write{
+      caps: PadModel.get_data!(pad_name, :caps, state)
+    }
+
     CallbackHandler.exec_and_handle_callback(
       :handle_write,
       ActionHandler,
-      [pad_name, buffers],
-      [caps: PadModel.get_data!(pad_name, :caps, state)],
+      [pad_name, buffers, context],
       state
     )
     |> or_warn_error("Error while handling write")

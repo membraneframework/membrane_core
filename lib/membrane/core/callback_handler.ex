@@ -5,7 +5,6 @@ defmodule Membrane.Core.CallbackHandler do
   # results.
 
   alias Membrane.Type
-  alias Membrane.Element.CallbackContext
   use Membrane.Helper
   use Membrane.Log, tags: :core
 
@@ -50,34 +49,14 @@ defmodule Membrane.Core.CallbackHandler do
 
   @spec exec_and_handle_callback(
           callback :: atom,
-          handler :: module | {module, handler_params_t},
+          module,
+          handler_params_t,
           args :: list,
-          context :: Enum.t() | nil,
           state_t
         ) :: Type.stateful_try_t(state_t)
-  def exec_and_handle_callback(callback, handler_module, args, ctx_entries \\ nil, state)
-
-  def exec_and_handle_callback(callback, handler_module, args, ctx_entries, state)
-      when is_atom(handler_module) and is_list(args) do
-    exec_and_handle_callback(callback, {handler_module, %{}}, args, ctx_entries, state)
-  end
-
-  def exec_and_handle_callback(callback, {handler_module, handler_params}, args, nil, state)
-      when is_map(handler_params) and is_list(args) do
+  def exec_and_handle_callback(callback, handler_module, handler_params \\ %{}, args, state)
+      when is_map(handler_params) do
     result = callback |> exec_callback(args, state)
-    result |> handle_callback_result(callback, handler_module, handler_params, state)
-  end
-
-  def exec_and_handle_callback(
-        callback,
-        {handler_module, handler_params},
-        args,
-        ctx_entries,
-        state
-      )
-      when is_map(handler_params) and is_list(args) do
-    ctx = CallbackContext.construct!(callback, state, ctx_entries)
-    result = callback |> exec_callback(args ++ [ctx], state)
     result |> handle_callback_result(callback, handler_module, handler_params, state)
   end
 

@@ -5,7 +5,7 @@ defmodule Membrane.Element.CallbackContext do
   """
   alias Membrane.Element.CallbackContext, as: Ctx
 
-  @callback from_state(Membrane.Element.Manager.State.t(), Enum.t()) :: struct()
+  @callback from_state(Membrane.Element.Manager.State.t(), keyword()) :: struct()
 
   @context_mapping %{
     :handle_prepare => Ctx.Prepare,
@@ -40,7 +40,7 @@ defmodule Membrane.Element.CallbackContext do
   @spec construct!(
           context :: callback_t(),
           state :: Membrane.Element.Manager.State.t(),
-          entries :: Enum.t()
+          entries :: keyword()
         ) :: struct()
   def construct!(callback, state, entries \\ []) do
     ctx_module = @context_mapping |> Map.get(callback)

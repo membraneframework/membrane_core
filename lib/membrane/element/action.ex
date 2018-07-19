@@ -36,7 +36,7 @@ defmodule Membrane.Element.Action do
   Return value of each execution of sub-callback can be any valid return value
   of the original callback (this also means sub-callback can return any action
   valid for the original callback, unless expliciltly stated). Returned actions
-  are executed immediately (they are NOT accumulated and executed after all
+  are executed immediately (their are NOT accumulated and executed after all
   sub-callback executions are finished).
 
   Useful when a long action is to be undertaken, and partial results need to
