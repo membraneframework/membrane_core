@@ -172,14 +172,15 @@ defmodule Membrane.ElementSpec do
           before do
             allow module()
                   |> to(
-                    accept(:handle_play, fn received_internal_state ->
+                    accept(:handle_play, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_prepare, fn _previous_playback_state,
+                    accept(:handle_prepare, fn _,
+                                               _previous_playback_state,
                                                received_internal_state ->
                       {{:error, reason()}, %{received_internal_state | a: 2}}
                     end)
@@ -187,7 +188,7 @@ defmodule Membrane.ElementSpec do
 
             allow module()
                   |> to(
-                    accept(:handle_stop, fn received_internal_state ->
+                    accept(:handle_stop, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
@@ -241,21 +242,21 @@ defmodule Membrane.ElementSpec do
           before do
             allow module()
                   |> to(
-                    accept(:handle_play, fn received_internal_state ->
+                    accept(:handle_play, fn _, received_internal_state ->
                       {:error, reason(), %{received_internal_state | a: 3}}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_prepare, fn _previous_playback_state, internal_state ->
+                    accept(:handle_prepare, fn _, _previous_playback_state, internal_state ->
                       {:ok, %{internal_state | a: 2}}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_stop, fn received_internal_state ->
+                    accept(:handle_stop, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
@@ -289,14 +290,15 @@ defmodule Membrane.ElementSpec do
           before do
             allow module()
                   |> to(
-                    accept(:handle_play, fn received_internal_state ->
+                    accept(:handle_play, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_prepare, fn _previous_playback_state,
+                    accept(:handle_prepare, fn _,
+                                               _previous_playback_state,
                                                _received_internal_state ->
                       {:ok, new_internal_state()}
                     end)
@@ -304,7 +306,7 @@ defmodule Membrane.ElementSpec do
 
             allow module()
                   |> to(
-                    accept(:handle_stop, fn received_internal_state ->
+                    accept(:handle_stop, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
@@ -353,11 +355,12 @@ defmodule Membrane.ElementSpec do
 
           before do
             allow module()
-                  |> to(accept(:handle_play, fn _state -> {:ok, new_internal_state()} end))
+                  |> to(accept(:handle_play, fn _, _state -> {:ok, new_internal_state()} end))
 
             allow module()
                   |> to(
-                    accept(:handle_prepare, fn _previous_playback_state,
+                    accept(:handle_prepare, fn _,
+                                               _previous_playback_state,
                                                received_internal_state ->
                       {:ok, received_internal_state}
                     end)
@@ -365,7 +368,7 @@ defmodule Membrane.ElementSpec do
 
             allow module()
                   |> to(
-                    accept(:handle_stop, fn received_internal_state ->
+                    accept(:handle_stop, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
@@ -408,21 +411,23 @@ defmodule Membrane.ElementSpec do
         before do
           allow module()
                 |> to(
-                  accept(:handle_play, fn received_internal_state ->
+                  accept(:handle_play, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
 
           allow module()
                 |> to(
-                  accept(:handle_prepare, fn _previous_playback_state, received_internal_state ->
+                  accept(:handle_prepare, fn _,
+                                             _previous_playback_state,
+                                             received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
 
           allow module()
                 |> to(
-                  accept(:handle_stop, fn received_internal_state ->
+                  accept(:handle_stop, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
@@ -468,21 +473,21 @@ defmodule Membrane.ElementSpec do
           before do
             allow module()
                   |> to(
-                    accept(:handle_play, fn received_internal_state ->
+                    accept(:handle_play, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_prepare, fn _previous_playback_state, _state ->
+                    accept(:handle_prepare, fn _, _previous_playback_state, _state ->
                       {:ok, new_internal_state()}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_stop, fn received_internal_state ->
+                    accept(:handle_stop, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
@@ -527,21 +532,23 @@ defmodule Membrane.ElementSpec do
         before do
           allow module()
                 |> to(
-                  accept(:handle_play, fn received_internal_state ->
+                  accept(:handle_play, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
 
           allow module()
                 |> to(
-                  accept(:handle_prepare, fn _previous_playback_state, received_internal_state ->
+                  accept(:handle_prepare, fn _,
+                                             _previous_playback_state,
+                                             received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
 
           allow module()
                 |> to(
-                  accept(:handle_stop, fn received_internal_state ->
+                  accept(:handle_stop, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
@@ -577,21 +584,21 @@ defmodule Membrane.ElementSpec do
           before do
             allow module()
                   |> to(
-                    accept(:handle_play, fn received_internal_state ->
+                    accept(:handle_play, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_prepare, fn _previous_playback_state, _state ->
+                    accept(:handle_prepare, fn _, _previous_playback_state, _state ->
                       {:ok, new_internal_state()}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_stop, fn received_internal_state ->
+                    accept(:handle_stop, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
@@ -652,20 +659,21 @@ defmodule Membrane.ElementSpec do
           before do
             allow module()
                   |> to(
-                    accept(:handle_play, fn received_internal_state ->
+                    accept(:handle_play, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_prepare, fn _previous_playback_state,
+                    accept(:handle_prepare, fn _,
+                                               _previous_playback_state,
                                                received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
-            allow module() |> to(accept(:handle_stop, fn _ -> {:ok, new_internal_state()} end))
+            allow module() |> to(accept(:handle_stop, fn _, _ -> {:ok, new_internal_state()} end))
           end
 
           it "should call handle_stop callback on element's module" do
@@ -712,21 +720,22 @@ defmodule Membrane.ElementSpec do
           before do
             allow module()
                   |> to(
-                    accept(:handle_play, fn received_internal_state ->
+                    accept(:handle_play, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_prepare, fn _previous_playback_state,
+                    accept(:handle_prepare, fn _,
+                                               _previous_playback_state,
                                                received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
             allow module()
-                  |> to(accept(:handle_stop, fn _state -> {:ok, new_internal_state()} end))
+                  |> to(accept(:handle_stop, fn _, _state -> {:ok, new_internal_state()} end))
           end
 
           it "should call handle_stop callback on element's module" do
@@ -766,21 +775,23 @@ defmodule Membrane.ElementSpec do
         before do
           allow module()
                 |> to(
-                  accept(:handle_play, fn received_internal_state ->
+                  accept(:handle_play, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
 
           allow module()
                 |> to(
-                  accept(:handle_prepare, fn _previous_playback_state, received_internal_state ->
+                  accept(:handle_prepare, fn _,
+                                             _previous_playback_state,
+                                             received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
 
           allow module()
                 |> to(
-                  accept(:handle_stop, fn received_internal_state ->
+                  accept(:handle_stop, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
