@@ -12,6 +12,4 @@ defmodule Membrane.Pipeline.SpecSpec do
       expect(links) |> to(eq %{})
     end
   end
-
-  pending ".start_children/1"
 end

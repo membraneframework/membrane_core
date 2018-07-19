@@ -105,7 +105,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
     pads
     |> Helper.Enum.reduce_with(state, fn pad, st ->
-      handle_action({action, {pad, data}}, cb, params, st)
+      do_handle_action({action, {pad, data}}, cb, params, st)
     end)
   end
 
@@ -116,7 +116,7 @@ defmodule Membrane.Core.Element.ActionHandler do
          %State{type: :filter} = state
        )
        when is_pad_name(pad_name) do
-    handle_action({:demand, {pad_name, 1}}, :handle_demand, params, state)
+    do_handle_action({:demand, {pad_name, 1}}, :handle_demand, params, state)
   end
 
   defp do_handle_action(
@@ -126,7 +126,12 @@ defmodule Membrane.Core.Element.ActionHandler do
          %State{type: :filter} = state
        )
        when is_pad_name(pad_name) and is_integer(size) do
-    handle_action({:demand, {pad_name, {:source, src_name}, size}}, :handle_demand, params, state)
+    do_handle_action(
+      {:demand, {pad_name, {:source, src_name}, size}},
+      :handle_demand,
+      params,
+      state
+    )
   end
 
   defp do_handle_action(
@@ -151,7 +156,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp do_handle_action({:demand, pad_name}, cb, params, %State{type: :sink} = state)
        when is_pad_name(pad_name) do
-    handle_action({:demand, {pad_name, 1}}, cb, params, state)
+    do_handle_action({:demand, {pad_name, 1}}, cb, params, state)
   end
 
   defp do_handle_action({:demand, {pad_name, size}}, cb, _params, %State{type: :sink} = state)
