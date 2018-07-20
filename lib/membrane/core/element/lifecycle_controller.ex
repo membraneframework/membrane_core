@@ -7,6 +7,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   alias Core.CallbackHandler
   alias Core.Element.{ActionHandler, PadSpecHandler, PadModel, PlaybackBuffer, State}
   alias Element.{CallbackContext, Pad}
+  require CallbackContext.{Other, Play, Prepare, Stop}
   require PadModel
   use Core.PlaybackHandler
   use Core.Element.Log

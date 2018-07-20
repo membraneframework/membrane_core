@@ -6,6 +6,7 @@ defmodule Membrane.Core.Element.DemandController do
   alias Core.CallbackHandler
   alias Element.{CallbackContext, Pad}
   alias Core.Element.{ActionHandler, PadModel, State}
+  require CallbackContext.Demand
   require PadModel
   use Core.Element.Log
   use Membrane.Helper

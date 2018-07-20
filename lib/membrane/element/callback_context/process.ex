@@ -5,7 +5,7 @@ defmodule Membrane.Element.CallbackContext.Process do
   @behaviour Membrane.Element.CallbackContext
 
   @type t :: %Membrane.Element.CallbackContext.Process{
-          playback_state: Membrane.Mixins.Playback.state_t(),
+          playback_state: Membrane.Core.Playback.state_t(),
           caps: Membrane.Caps.t(),
           source: nil,
           source_caps: Membrane.Caps.t()
@@ -17,8 +17,12 @@ defmodule Membrane.Element.CallbackContext.Process do
             source_caps: nil
 
   @impl true
-  def from_state(state, entries) do
-    common = [playback_state: state.playback.state]
-    struct!(__MODULE__, entries ++ common)
+  defmacro from_state(state, entries) do
+    quote do
+      %unquote(__MODULE__){
+        unquote_splicing(entries),
+        playback_state: unquote(state).playback.state
+      }
+    end
   end
 end

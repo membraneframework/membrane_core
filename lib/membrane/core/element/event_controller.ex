@@ -6,6 +6,7 @@ defmodule Membrane.Core.Element.EventController do
   alias Core.{CallbackHandler, PullBuffer}
   alias Core.Element.{ActionHandler, PadModel, State}
   alias Element.{CallbackContext, Pad}
+  require CallbackContext.Event
   require PadModel
   use Core.Element.Log
   use Membrane.Helper

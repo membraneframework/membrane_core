@@ -5,7 +5,7 @@ defmodule Membrane.Element.CallbackContext do
   """
   alias Membrane.Element.CallbackContext, as: Ctx
 
-  @callback from_state(Membrane.Element.Manager.State.t(), keyword()) :: struct()
+  @macrocallback from_state(Membrane.Core.Element.State.t(), keyword()) :: Macro.t()
 
   @context_mapping %{
     :handle_prepare => Ctx.Prepare,
@@ -39,7 +39,7 @@ defmodule Membrane.Element.CallbackContext do
   """
   @spec construct!(
           context :: callback_t(),
-          state :: Membrane.Element.Manager.State.t(),
+          state :: Membrane.Core.Element.State.t(),
           entries :: keyword()
         ) :: struct()
   def construct!(callback, state, entries \\ []) do

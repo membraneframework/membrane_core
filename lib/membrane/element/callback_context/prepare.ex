@@ -10,7 +10,11 @@ defmodule Membrane.Element.CallbackContext.Prepare do
   defstruct []
 
   @impl true
-  def from_state(_state, entries \\ []) do
-    struct!(__MODULE__, entries)
+  defmacro from_state(_state, entries \\ []) do
+    quote do
+      %unquote(__MODULE__){
+        unquote_splicing(entries)
+      }
+    end
   end
 end
