@@ -17,7 +17,7 @@ defmodule Membrane.Element.Base.Sink do
 
   alias Membrane.{Buffer, Element}
   alias Element.Base.Mixin
-  alias Element.{Context, Pad}
+  alias Element.{CallbackContext, Pad}
 
   @doc """
   Callback that is called when buffer should be written by the sink.
@@ -30,7 +30,7 @@ defmodule Membrane.Element.Base.Sink do
   @callback handle_write(
               pad :: Pad.name_t(),
               buffers :: list(Buffer.t()),
-              context :: Context.Write.t(),
+              context :: CallbackContext.Write.t(),
               state :: Element.state_t()
             ) :: Mixin.CommonBehaviour.callback_return_t()
 
@@ -43,7 +43,7 @@ defmodule Membrane.Element.Base.Sink do
   @callback handle_write1(
               pad :: Pad.name_t(),
               buffer :: Buffer.t(),
-              context :: Context.Write.t(),
+              context :: CallbackContext.Write.t(),
               state :: Element.state_t()
             ) :: Mixin.CommonBehaviour.callback_return_t()
 

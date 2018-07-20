@@ -9,7 +9,7 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   """
 
   alias Membrane.{Caps, Element}
-  alias Element.{Context, Pad}
+  alias Element.{CallbackContext, Pad}
   alias Element.Base.Mixin.CommonBehaviour
 
   @doc """
@@ -28,7 +28,7 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   @callback handle_caps(
               pad :: Pad.name_t(),
               caps :: Membrane.Caps.t(),
-              context :: Context.Caps.t(),
+              context :: CallbackContext.Caps.t(),
               state :: Element.state_t()
             ) :: CommonBehaviour.callback_return_t()
 

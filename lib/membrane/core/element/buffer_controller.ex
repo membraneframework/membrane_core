@@ -4,8 +4,9 @@ defmodule Membrane.Core.Element.BufferController do
 
   alias Membrane.{Buffer, Core, Element}
   alias Core.{CallbackHandler, PullBuffer}
-  alias Element.{Context, Pad}
+  alias Element.{CallbackContext, Pad}
   alias Core.Element.{ActionHandler, DemandHandler, PadModel, State}
+  require CallbackContext.{Process, Write}
   require PadModel
   use Core.Element.Log
   use Membrane.Helper
@@ -36,15 +37,17 @@ defmodule Membrane.Core.Element.BufferController do
           State.t()
         ) :: State.stateful_try_t()
   def exec_buffer_handler(pad_name, source, buffers, %State{type: :filter} = state) do
-    context = %Context.Process{
-      caps: PadModel.get_data!(pad_name, :caps, state),
-      source: source,
-      source_caps:
-        case source do
-          {:source, src_name} -> PadModel.get_data!(src_name, :caps, state)
-          _ -> nil
-        end
-    }
+    context =
+      CallbackContext.Process.from_state(
+        state,
+        caps: PadModel.get_data!(pad_name, :caps, state),
+        source: source,
+        source_caps:
+          case source do
+            {:source, src_name} -> PadModel.get_data!(src_name, :caps, state)
+            _ -> nil
+          end
+      )
 
     CallbackHandler.exec_and_handle_callback(
       :handle_process,
@@ -56,9 +59,8 @@ defmodule Membrane.Core.Element.BufferController do
   end
 
   def exec_buffer_handler(pad_name, _source, buffers, %State{type: :sink} = state) do
-    context = %Context.Write{
-      caps: PadModel.get_data!(pad_name, :caps, state)
-    }
+    context =
+      CallbackContext.Write.from_state(state, caps: PadModel.get_data!(pad_name, :caps, state))
 
     CallbackHandler.exec_and_handle_callback(
       :handle_write,

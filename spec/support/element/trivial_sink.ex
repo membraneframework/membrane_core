@@ -15,9 +15,9 @@ defmodule Membrane.Support.Element.TrivialSink do
   end
 
   @impl true
-  def handle_prepare(:stopped, state), do: {:ok, state}
+  def handle_prepare(:stopped, %Ctx.Prepare{}, state), do: {:ok, state}
 
-  def handle_prepare(:playing, %{timer: timer}) do
+  def handle_prepare(:playing, %Ctx.Prepare{}, %{timer: timer}) do
     if timer do
       :timer.cancel(timer)
     end
@@ -26,13 +26,13 @@ defmodule Membrane.Support.Element.TrivialSink do
   end
 
   @impl true
-  def handle_play(state) do
+  def handle_play(%Ctx.Play{}, state) do
     {:ok, timer} = :timer.send_interval(500, :tick)
     {:ok, %{state | timer: timer}}
   end
 
   @impl true
-  def handle_other(:tick, state) do
+  def handle_other(:tick, %Ctx.Other{}, state) do
     {{:ok, demand: {:sink, 2}}, state}
   end
 

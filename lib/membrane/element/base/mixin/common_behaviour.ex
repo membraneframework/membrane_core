@@ -9,7 +9,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   alias Membrane.{Action, Core, Element, Event}
   alias Core.{Playback, CallbackHandler}
-  alias Element.{Action, Context, Pad}
+  alias Element.{Action, CallbackContext, Pad}
 
   @typedoc """
   Type that defines all valid return values from most callbacks.
@@ -45,11 +45,12 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   Such resources should be released in `c:handle_stop/1`.
 
   If the previous playback state is `:playing`, then all resources allocated
-  in `c:handle_play/1` callback should be released here, and no more buffers or
+  in `c:handle_play/2` callback should be released here, and no more buffers or
   demands should be sent.
   """
   @callback handle_prepare(
               previous_playback_state :: Playback.state_t(),
+              context :: CallbackContext.Prepare.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -59,16 +60,18 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   This is moment when initial demands are sent and first buffers are generated
   if there are any pads in the push mode.
   """
-  @callback handle_play(state :: Element.state_t()) :: callback_return_t
+  @callback handle_play(context :: CallbackContext.Play.t(), state :: Element.state_t()) ::
+              callback_return_t
 
   @doc """
   Callback invoked when element is supposed to stop.
 
   Usually this is the place for releasing all remaining resources
-  used by the element. For example, if element opens a file in `c:handle_prepare/1`,
+  used by the element. For example, if element opens a file in `c:handle_prepare/3`,
   this is the place to close it.
   """
-  @callback handle_stop(state :: Element.state_t()) :: callback_return_t
+  @callback handle_stop(context :: CallbackContext.Stop.t(), state :: Element.state_t()) ::
+              callback_return_t
 
   @doc """
   Callback invoked when element receives a message that is not recognized
@@ -76,7 +79,11 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   Useful for receiving ticks from timer, data sent from NIFs or other stuff.
   """
-  @callback handle_other(message :: any(), state :: Element.state_t()) :: callback_return_t
+  @callback handle_other(
+              message :: any(),
+              context :: CallbackContext.Stop.t(),
+              state :: Element.state_t()
+            ) :: callback_return_t
 
   @doc """
   Callback that is called when new pad has beed added to element. Executed
@@ -84,7 +91,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_pad_added(
               pad :: Pad.name_t(),
-              context :: Context.PadAdded.t(),
+              context :: CallbackContext.PadAdded.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -94,7 +101,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_pad_removed(
               pad :: Pad.name_t(),
-              context :: Context.PadRemoved.t(),
+              context :: CallbackContext.PadRemoved.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -106,7 +113,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @callback handle_event(
               pad :: Pad.name_t(),
               event :: Event.type_t(),
-              context :: Context.Event.t(),
+              context :: CallbackContext.Event.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -226,7 +233,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
       use Membrane.Log, tags: :element, import: false
 
-      alias Membrane.Element.Context, as: Ctx
+      alias Membrane.Element.CallbackContext, as: Ctx
 
       import unquote(__MODULE__), only: [def_options: 1]
 
@@ -237,16 +244,16 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
       def handle_init(_options), do: {:ok, %{}}
 
       @impl true
-      def handle_prepare(_previous_playback_state, state), do: {:ok, state}
+      def handle_prepare(_previous_playback_state, _context, state), do: {:ok, state}
 
       @impl true
-      def handle_play(state), do: {:ok, state}
+      def handle_play(_context, state), do: {:ok, state}
 
       @impl true
-      def handle_stop(state), do: {:ok, state}
+      def handle_stop(_context, state), do: {:ok, state}
 
       @impl true
-      def handle_other(_message, state), do: {:ok, state}
+      def handle_other(_message, _context, state), do: {:ok, state}
 
       @impl true
       def handle_pad_added(_pad, _context, state), do: {:ok, state}
@@ -261,10 +268,10 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
       def handle_shutdown(_state), do: :ok
 
       defoverridable handle_init: 1,
-                     handle_prepare: 2,
-                     handle_play: 1,
-                     handle_stop: 1,
-                     handle_other: 2,
+                     handle_prepare: 3,
+                     handle_play: 2,
+                     handle_stop: 2,
+                     handle_other: 3,
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
                      handle_event: 4,

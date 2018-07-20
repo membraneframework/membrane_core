@@ -36,7 +36,7 @@ defmodule Membrane.Element.Action do
   Return value of each execution of sub-callback can be any valid return value
   of the original callback (this also means sub-callback can return any action
   valid for the original callback, unless expliciltly stated). Returned actions
-  are executed immediately (their are NOT accumulated and executed after all
+  are executed immediately (they are NOT accumulated and executed after all
   sub-callback executions are finished).
 
   Useful when a long action is to be undertaken, and partial results need to
@@ -137,9 +137,9 @@ defmodule Membrane.Element.Action do
   Suspends/resumes change of playback state.
 
   - `playback_change: :suspend` may be returned only from
-  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_prepare/2`,
-  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_play/1` and
-  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_stop/1` callbacks,
+  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_prepare/3`,
+  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_play/2` and
+  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_stop/2` callbacks,
   and defers playback state change until `playback_change: :resume` is returned.
   - `playback_change: :resume` may be returned from any callback, only when
   playback state change is suspended, and causes it to finish.

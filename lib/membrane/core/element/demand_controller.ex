@@ -4,8 +4,9 @@ defmodule Membrane.Core.Element.DemandController do
 
   alias Membrane.{Core, Element}
   alias Core.CallbackHandler
-  alias Element.{Context, Pad}
+  alias Element.{CallbackContext, Pad}
   alias Core.Element.{ActionHandler, PadModel, State}
+  require CallbackContext.Demand
   require PadModel
   use Core.Element.Log
   use Membrane.Helper
@@ -26,7 +27,7 @@ defmodule Membrane.Core.Element.DemandController do
     if exec_handle_demand?(pad_name, state) do
       %{caps: caps, options: %{other_demand_in: demand_in}} = PadModel.get_data!(pad_name, state)
 
-      context = %Context.Demand{caps: caps}
+      context = CallbackContext.Demand.from_state(state, caps: caps)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_demand,
