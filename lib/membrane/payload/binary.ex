@@ -33,11 +33,6 @@ defimpl Membrane.Payload, for: Membrane.Payload.Binary do
     {part1, part2}
   end
 
-  @spec from_binary(binary()) :: Binary.t()
-  def from_binary(bin) do
-    %Binary{data: bin}
-  end
-
   @spec to_binary(Binary.t()) :: binary()
   def to_binary(%Binary{data: data}) do
     data
