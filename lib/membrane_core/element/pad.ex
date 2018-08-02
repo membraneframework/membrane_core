@@ -11,7 +11,7 @@ defmodule Membrane.Element.Pad do
   """
 
   use Membrane.Helper
-  import Helper.Typespec
+  use Helper.Typespec
 
   @typedoc """
   Defines the term by which the pad is identified.
@@ -32,8 +32,6 @@ defmodule Membrane.Element.Pad do
   """
   @type direction_t :: :source | :sink
 
-  @availabilities [:always, :on_request]
-
   @typedoc """
   Defines possible pad availabilities:
   - `:always` - a static pad, which can remain unlinked in `stopped` state only.
@@ -42,9 +40,9 @@ defmodule Membrane.Element.Pad do
   instances of the pad, and links each with another pad.
   For information on static/dynamic pad modes, see `t:availability_mode_t/0`.
   """
-  def_type_from_list availability_t :: @availabilities
+  @list_type availability_t :: [:always, :on_request]
 
-  defguard is_availability(term) when term in @availabilities
+  defguard is_availability(term) when term in @availability_t
 
   @typedoc """
   Type describing pad availability modes:
