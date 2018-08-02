@@ -11,9 +11,7 @@ defmodule Membrane.Element.Pad do
   """
 
   use Membrane.Helper
-  import Helper.Typespec
-
-  @availabilities [:always, :on_request]
+  use Helper.Typespec
 
   @typedoc """
   Defines the term by which the pad is identified.
@@ -57,7 +55,7 @@ defmodule Membrane.Element.Pad do
   linked to another pad. Thus linking the pad with _k_ other pads, creates _k_
   instances of the pad, and links each with another pad.
   """
-  def_type_from_list availability_t :: @availabilities
+  @list_type availability_t :: [:always, :on_request]
 
   @typedoc """
   Type describing pad modes:
@@ -73,7 +71,7 @@ defmodule Membrane.Element.Pad do
                   (term |> is_tuple and term |> tuple_size == 3 and term |> elem(0) == :dynamic and
                      term |> elem(1) |> is_atom and term |> elem(2) |> is_integer)
 
-  defguard is_availability(term) when term in @availabilities
+  defguard is_availability(term) when term in @availability_t
 
   defguard is_availability_dynamic(availability) when availability == :on_request
   defguard is_availability_static(availability) when availability == :always
