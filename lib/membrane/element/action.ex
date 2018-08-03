@@ -82,10 +82,10 @@ defmodule Membrane.Element.Action do
   - Payload `{pad, size}` is only allowed from
   `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` callback. It overrides
   current demand.
-  - Payload `{pad, {{:source, demanding_source_pad}, size}}` can be returned from
+  - Payload `{pad, {:source, demanding_source_pad}, size}` can be returned from
   any callback. `demanding_source_pad` is a pad which is to receive demanded
   buffers after they are processed.
-  - Payload `{pad, {:self, size}}` makes demand act as if element was a sink,
+  - Payload `{pad, :self, size}` makes demand act as if element was a sink,
   that is extends demand on a given pad. Buffers received as a result of the
   demand should be consumed by element itself or sent through a pad in `push` mode.
 
