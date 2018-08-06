@@ -65,6 +65,11 @@ defmodule Membrane.Element.Manager.Filter do
     ActionExec.handle_demand(pad_name, :self, :normal, size, cb, state)
   end
 
+  def handle_action({:demand, {pad_name, :self, {:set_to, size}}}, cb, _params, state)
+      when is_pad_name(pad_name) and is_integer(size) and size > 0 do
+    ActionExec.handle_demand(pad_name, :self, :set, size, cb, state)
+  end
+
   def handle_action({:demand, {pad_name, _src_name, 0}}, cb, _params, state)
       when is_pad_name(pad_name) do
     debug(
@@ -115,6 +120,17 @@ defmodule Membrane.Element.Manager.Filter do
     was raised, and handle_process was called, but an error happened.
     """)
   end
+
+  def handle_self_demand(pad_name, source, :set, buf_cnt, state) do
+    {:ok, state} = state |> update_sink_self_demand(pad_name, source, fn _ -> {:ok, buf_cnt} end)
+
+    handle_process_pull(pad_name, source, buf_cnt, state)
+    |> or_warn_error("""
+    Demand of size #{inspect(buf_cnt)} on sink pad #{inspect(pad_name)}
+    was raised, and handle_process was called, but an error happened.
+    """)
+  end
+
 
   def handle_buffer(:push, pad_name, buffers, state) do
     handle_process_push(pad_name, buffers, state)
@@ -222,7 +238,7 @@ defmodule Membrane.Element.Manager.Filter do
     demand = state |> State.get_pad_data!(:sink, pad_name, :self_demand)
 
     if demand > 0 do
-      handle_process_pull(pad_name, nil, demand, state)
+      handle_process_pull(pad_name, :self, demand, state)
     else
       {:ok, state}
     end
@@ -245,3 +261,4 @@ defmodule Membrane.Element.Manager.Filter do
 
   defp update_sink_self_demand(state, _pad_name, _src, _f), do: {:ok, state}
 end
+
