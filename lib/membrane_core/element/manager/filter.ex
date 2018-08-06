@@ -246,6 +246,7 @@ defmodule Membrane.Element.Manager.Filter do
   defp check_and_handle_demands(state) do
     state
     |> State.get_pads_data(:source)
+    |> Enum.filter(fn {_name, %{mode: mode}} -> mode == :pull end)
     |> Helper.Enum.reduce_with(state, fn {name, _data}, st ->
       handle_demand(name, 0, st)
     end)
