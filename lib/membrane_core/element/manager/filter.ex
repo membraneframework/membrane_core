@@ -131,7 +131,6 @@ defmodule Membrane.Element.Manager.Filter do
     """)
   end
 
-
   def handle_buffer(:push, pad_name, buffers, state) do
     handle_process_push(pad_name, buffers, state)
   end
@@ -261,4 +260,3 @@ defmodule Membrane.Element.Manager.Filter do
 
   defp update_sink_self_demand(state, _pad_name, _src, _f), do: {:ok, state}
 end
-
