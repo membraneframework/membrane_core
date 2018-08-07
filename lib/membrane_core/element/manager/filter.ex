@@ -134,6 +134,16 @@ defmodule Membrane.Element.Manager.Filter do
     """)
   end
 
+  def handle_self_demand(pad_name, source, :set, buf_cnt, state) do
+    {:ok, state} = state |> update_sink_self_demand(pad_name, source, fn _ -> {:ok, buf_cnt} end)
+
+    handle_process_pull(pad_name, source, buf_cnt, state)
+    |> or_warn_error("""
+    Demand of size #{inspect(buf_cnt)} on sink pad #{inspect(pad_name)}
+    was raised, and handle_process was called, but an error happened.
+    """)
+  end
+
   def handle_buffer(:push, pad_name, buffers, state) do
     handle_process_push(pad_name, buffers, state)
   end
