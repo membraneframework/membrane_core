@@ -14,13 +14,11 @@ defmodule Membrane.Buffer do
 
   @type t :: %Buffer{
           payload: Payload.t(),
-          type: :binary | :shm | :pointer,
           metadata: metadata_t
         }
 
   @enforce_keys [:payload]
   defstruct payload: nil,
-            type: :binary,
             metadata: Map.new()
 
   @doc """

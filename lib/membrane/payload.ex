@@ -1,11 +1,15 @@
 defprotocol Membrane.Payload do
   @moduledoc """
+  This protocol describes actions common to all payload types.
+
+  The most basic payload type is simply a binary for which `#{__MODULE__}`
+  is implemented by the Membrane Core.
   """
 
   @type t :: struct()
 
   @doc """
-  Returns total size of paload in bytes
+  Returns total size of payload in bytes
   """
   @spec size(payload :: t()) :: non_neg_integer()
   def size(payload)

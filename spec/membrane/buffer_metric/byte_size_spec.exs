@@ -30,7 +30,7 @@ defmodule Membrane.Buffer.Metric.ByteSizeSpec do
       let :buffers, do: [buf1()]
 
       context "and split position is greater than buffer size" do
-        it "should return list with buffer and an empty one" do
+        it "should return a list with the buffer and an empty one" do
           {buf, rest} = described_module().split_buffers(buffers(), byte_size(pay1()) + 10)
           expect(buf) |> to(eq [buf1()])
           expect(rest) |> to(eq [])
@@ -38,7 +38,7 @@ defmodule Membrane.Buffer.Metric.ByteSizeSpec do
       end
 
       context "and split position is 0" do
-        it "should return empty list and list with buffer" do
+        it "should return an empty list and a list with the buffer" do
           {buf, rest} = described_module().split_buffers(buffers(), 0)
           expect(buf) |> to(eq [])
           expect(rest) |> to(eq [buf1()])
