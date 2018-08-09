@@ -23,7 +23,7 @@ defmodule Membrane.Caps.Matcher do
   import Kernel, except: [match?: 2]
   require Record
 
-  alias Membrane.Helper
+  alias Bunch
 
   @type caps_spec_t :: module() | {module(), keyword()}
   @type caps_specs_t :: :any | caps_spec_t() | [caps_spec_t()]
@@ -62,7 +62,7 @@ defmodule Membrane.Caps.Matcher do
   """
   @spec validate_specs(caps_specs_t() | any()) :: :ok | {:error, reason :: tuple()}
   def validate_specs(specs_list) when is_list(specs_list) do
-    specs_list |> Helper.Enum.each_with(&validate_specs/1)
+    specs_list |> Bunch.Enum.each_with(&validate_specs/1)
   end
 
   def validate_specs({type, keyword_specs}) do

@@ -11,8 +11,8 @@ defmodule Membrane.Pipeline do
   alias __MODULE__.{State, Spec}
   alias Membrane.{Core, Element, Message}
   alias Core.Playback
-  use Membrane.Helper
-  import Helper.GenServer
+  use Bunch
+  import Membrane.Helper.GenServer
   use Membrane.Log, tags: :core
   use Membrane.Core.CallbackHandler
   use GenServer
@@ -182,7 +182,7 @@ defmodule Membrane.Pipeline do
 
   @impl GenServer
   def init(module) when is_atom(module) do
-    init({module, module |> Helper.Module.struct()})
+    init({module, module |> Bunch.Module.struct()})
   end
 
   def init(%module{} = pipeline_options) do
@@ -232,7 +232,7 @@ defmodule Membrane.Pipeline do
   """
   @spec pipeline?(module) :: boolean
   def pipeline?(module) do
-    module |> Helper.Module.check_behaviour(:membrane_pipeline?)
+    module |> Bunch.Module.check_behaviour(:membrane_pipeline?)
   end
 
   defp handle_spec(%Spec{children: children, links: links}, state) do
@@ -265,7 +265,7 @@ defmodule Membrane.Pipeline do
            ),
          :ok <-
            children_pids
-           |> Helper.Enum.each_with(&Element.change_playback_state(&1, state.playback.state)) do
+           |> Bunch.Enum.each_with(&Element.change_playback_state(&1, state.playback.state)) do
       debug("""
       Initializied pipeline spec
       children: #{inspect(children)}
@@ -281,7 +281,7 @@ defmodule Membrane.Pipeline do
   end
 
   defp parse_children(children) when is_map(children) or is_list(children),
-    do: children |> Helper.Enum.map_with(&parse_child/1)
+    do: children |> Bunch.Enum.map_with(&parse_child/1)
 
   defp parse_child({name, {%module{} = options, params}})
        when is_atom(name) and is_list(params) do
@@ -290,7 +290,7 @@ defmodule Membrane.Pipeline do
 
   defp parse_child({name, {module, params}})
        when is_atom(name) and is_atom(module) and is_list(params) do
-    options = module |> Helper.Module.struct()
+    options = module |> Bunch.Module.struct()
     {:ok, %{name: name, module: module, options: options, params: params}}
   end
 
@@ -325,7 +325,7 @@ defmodule Membrane.Pipeline do
   defp start_children(children) do
     debug("Starting children: #{inspect(children)}")
 
-    with {:ok, result} <- children |> Helper.Enum.map_with(&start_child/1) do
+    with {:ok, result} <- children |> Bunch.Enum.map_with(&start_child/1) do
       {names, pids} = result |> Enum.unzip()
       {:ok, {names |> Map.new(), pids |> Map.new()}}
     end
@@ -345,7 +345,7 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  defp parse_links(links), do: links |> Helper.Enum.map_with(&parse_link/1)
+  defp parse_links(links), do: links |> Bunch.Enum.map_with(&parse_link/1)
 
   defp parse_link(link) do
     with {:ok, link} <-
@@ -370,7 +370,7 @@ defmodule Membrane.Pipeline do
              _ ->
                {:error, :invalid_link}
            ),
-         :ok <- [link.from.pad, link.to.pad] |> Helper.Enum.each_with(&parse_pad/1) do
+         :ok <- [link.from.pad, link.to.pad] |> Bunch.Enum.each_with(&parse_pad/1) do
       {:ok, link}
     else
       {:error, reason} -> {:error, {:invalid_link, link, reason}}
@@ -386,7 +386,7 @@ defmodule Membrane.Pipeline do
 
   defp resolve_links(links, state) do
     links
-    |> Helper.Enum.map_reduce_with(state, fn %{from: from, to: to} = link, st ->
+    |> Bunch.Enum.map_reduce_with(state, fn %{from: from, to: to} = link, st ->
       with {{:ok, from}, st} <- from |> resolve_link(st),
            {{:ok, to}, st} <- to |> resolve_link(st),
            do: {{:ok, %{link | from: from, to: to}}, st}
@@ -422,10 +422,10 @@ defmodule Membrane.Pipeline do
   defp link_children(links, state) do
     debug("Linking children: links = #{inspect(links)}")
 
-    with :ok <- links |> Helper.Enum.each_with(&do_link_children(&1, state)),
+    with :ok <- links |> Bunch.Enum.each_with(&do_link_children(&1, state)),
          :ok <-
            state.pids_to_children
-           |> Helper.Enum.each_with(fn {pid, _} -> pid |> Element.handle_linking_finished() end),
+           |> Bunch.Enum.each_with(fn {pid, _} -> pid |> Element.handle_linking_finished() end),
          do: :ok
   end
 
@@ -442,7 +442,7 @@ defmodule Membrane.Pipeline do
   defp set_children_message_bus(elements_pids) do
     with :ok <-
            elements_pids
-           |> Helper.Enum.each_with(fn pid ->
+           |> Bunch.Enum.each_with(fn pid ->
              pid |> Element.set_message_bus(self())
            end) do
       :ok
@@ -576,11 +576,11 @@ defmodule Membrane.Pipeline do
   def handle_action({:remove_child, children}, _cb, _params, state) do
     with {{:ok, pids}, state} <-
            children
-           |> Helper.listify()
-           |> Helper.Enum.map_reduce_with(state, fn c, st -> State.pop_child(st, c) end),
-         :ok <- pids |> Helper.Enum.each_with(&Element.stop/1),
-         :ok <- pids |> Helper.Enum.each_with(&Element.unlink/1),
-         :ok <- pids |> Helper.Enum.each_with(&Element.shutdown/1) do
+           |> Bunch.listify()
+           |> Bunch.Enum.map_reduce_with(state, fn c, st -> State.pop_child(st, c) end),
+         :ok <- pids |> Bunch.Enum.each_with(&Element.stop/1),
+         :ok <- pids |> Bunch.Enum.each_with(&Element.unlink/1),
+         :ok <- pids |> Bunch.Enum.each_with(&Element.shutdown/1) do
       {:ok, state}
     else
       {:error, reason} -> {:error, {:cannot_remove_children, children, reason}}

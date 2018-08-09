@@ -11,7 +11,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   require PadModel
   use Core.PlaybackHandler
   use Core.Element.Log
-  use Membrane.Helper
+  use Bunch
 
   @doc """
   Performs initialization tasks and executes `handle_init` callback.
@@ -158,7 +158,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   def unlink(%State{playback: %{state: :stopped}} = state) do
     with :ok <-
            state.pads.data
-           |> Helper.Enum.each_with(fn {_name, %{pid: pid, other_name: other_name}} ->
+           |> Bunch.Enum.each_with(fn {_name, %{pid: pid, other_name: other_name}} ->
              GenServer.call(pid, {:membrane_handle_unlink, other_name})
            end) do
       {:ok, state}

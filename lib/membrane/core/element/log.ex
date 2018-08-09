@@ -58,10 +58,10 @@ defmodule Membrane.Core.Element.Log do
   end
 
   defmacro or_warn_error(v, message, tags \\ []) do
-    use Membrane.Helper
+    use Bunch
 
     quote do
-      with {:ok, res} <- unquote(v) |> Helper.result_with_status() do
+      with {:ok, res} <- unquote(v) |> Bunch.result_with_status() do
         res
       else
         {_error, {{:error, reason}, state}} ->

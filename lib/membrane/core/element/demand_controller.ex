@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.DemandController do
   require CallbackContext.Demand
   require PadModel
   use Core.Element.Log
-  use Membrane.Helper
+  use Bunch
 
   @doc """
   Updates demand and executes `handle_demand` callback.

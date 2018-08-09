@@ -11,7 +11,7 @@ defmodule Membrane.Element do
   alias Core.Element.{MessageDispatcher, State}
   import Membrane.Helper.GenServer
   use Membrane.Log, tags: :core
-  use Membrane.Helper
+  use Bunch
   use GenServer
   use Membrane.Core.PlaybackRequestor
 
@@ -62,7 +62,7 @@ defmodule Membrane.Element do
   Checks whether module is an element.
   """
   def element?(module) do
-    module |> Helper.Module.check_behaviour(:membrane_element?)
+    module |> Bunch.Module.check_behaviour(:membrane_element?)
   end
 
   @doc """
@@ -77,7 +77,7 @@ defmodule Membrane.Element do
       pipeline,
       module,
       name,
-      module |> Module.concat(Options) |> Helper.Module.struct()
+      module |> Module.concat(Options) |> Bunch.Module.struct()
     )
   end
 
@@ -96,7 +96,7 @@ defmodule Membrane.Element do
   """
   @spec start(pid, module, name_t) :: GenServer.on_start()
   def start(pipeline, module, name),
-    do: start(pipeline, module, name, module |> Module.concat(Options) |> Helper.Module.struct())
+    do: start(pipeline, module, name, module |> Module.concat(Options) |> Bunch.Module.struct())
 
   @doc """
   Works similarly to `start_link/5`, but does not link to the current process.

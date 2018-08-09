@@ -6,7 +6,7 @@ defmodule Membrane.Core.Playback do
   Playback state always changes only one step at once in this order, and can
   be handled by `handle_prepare`, `handle_play` and `handle_stop` callbacks.
   """
-  use Membrane.Helper
+  use Bunch
 
   defstruct state: :stopped,
             pending_state: nil,

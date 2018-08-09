@@ -17,7 +17,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   require PadModel
   use Core.Element.Log
-  use Membrane.Helper
+  use Bunch
 
   @doc """
   Gets given amount of data from given sink pad's PullBuffer, passes it to proper
@@ -64,7 +64,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     |> case do
       {:ok, %State{type: :filter} = state} ->
         PadModel.filter_names_by_data(%{direction: :source}, state)
-        |> Helper.Enum.reduce_with(state, fn name, st ->
+        |> Bunch.Enum.reduce_with(state, fn name, st ->
           DemandController.handle_demand(name, 0, st)
         end)
 
@@ -137,7 +137,7 @@ defmodule Membrane.Core.Element.DemandHandler do
         ) :: State.stateful_try_t()
   defp handle_pullbuffer_output(pad_name, source, data, state) do
     data
-    |> Helper.Enum.reduce_with(state, fn v, state ->
+    |> Bunch.Enum.reduce_with(state, fn v, state ->
       do_handle_pullbuffer_output(pad_name, source, v, state)
     end)
   end

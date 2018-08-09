@@ -44,7 +44,7 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   defmacro def_known_sink_pads(raw_sink_pads) do
     sink_pads =
       raw_sink_pads
-      |> Membrane.Helper.Macro.inject_calls([
+      |> Bunch.Macro.inject_calls([
         {Caps.Matcher, :one_of},
         {Caps.Matcher, :range}
       ])

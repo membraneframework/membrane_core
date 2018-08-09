@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.BufferController do
   require CallbackContext.{Process, Write}
   require PadModel
   use Core.Element.Log
-  use Membrane.Helper
+  use Bunch
 
   @doc """
   Handles incoming buffer: either stores it in PullBuffer, or executes element's

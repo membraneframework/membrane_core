@@ -7,7 +7,7 @@ defmodule Membrane.Core.PlaybackHandler do
   # be handled by `handle_prepare/2`, `handle_play/1` and `handle_stop/1` callbacks
 
   alias Membrane.Core.{Playback, Playbackable}
-  use Membrane.Helper
+  use Bunch
 
   @type handler_return_t :: {:ok | {:error, any()}, Playbackable.t()}
 
@@ -157,10 +157,10 @@ defmodule Membrane.Core.PlaybackHandler do
   defp next_state(current, target) do
     with {:ok, curr_pos} <-
            @states_positions[current]
-           |> Helper.wrap_nil(:invalid_current_playback_state),
+           |> Bunch.wrap_nil(:invalid_current_playback_state),
          {:ok, target_pos} <-
            @states_positions[target]
-           |> Helper.wrap_nil(:invalid_target_playback_state) do
+           |> Bunch.wrap_nil(:invalid_target_playback_state) do
       next_state =
         cond do
           curr_pos < target_pos -> @states |> Enum.at(curr_pos + 1)

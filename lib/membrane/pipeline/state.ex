@@ -4,7 +4,7 @@ defmodule Membrane.Pipeline.State do
   # It does not represent state of pipelines you construct, it's a state used
   # internally in Membrane.
 
-  use Membrane.Helper
+  use Bunch
   alias __MODULE__
   alias Membrane.Core.{Playback, Playbackable}
 
@@ -35,18 +35,18 @@ defmodule Membrane.Pipeline.State do
   # FIXME: rename to get_child_name_by_pid
   def get_child(%State{pids_to_children: pids_to_children}, child)
       when is_pid(child) do
-    pids_to_children[child] |> Helper.wrap_nil({:unknown_child, child})
+    pids_to_children[child] |> Bunch.wrap_nil({:unknown_child, child})
   end
 
   def get_child(%State{children_to_pids: children_to_pids}, child) do
-    with {:ok, pid} <- children_to_pids[child] |> Helper.wrap_nil({:unknown_child, child}),
+    with {:ok, pid} <- children_to_pids[child] |> Bunch.wrap_nil({:unknown_child, child}),
          do: {:ok, pid}
   end
 
   def pop_child(state, child) do
     {pid, children_to_pids} = state.children_to_pids |> Map.pop(child)
 
-    with {:ok, pid} <- pid |> Helper.wrap_nil({:unknown_child, child}) do
+    with {:ok, pid} <- pid |> Bunch.wrap_nil({:unknown_child, child}) do
       state = %State{
         state
         | children_to_pids: children_to_pids,
@@ -59,7 +59,7 @@ defmodule Membrane.Pipeline.State do
 
   def get_increase_child_id(state, child) do
     state
-    |> Helper.Struct.get_and_update_in(
+    |> Bunch.Struct.get_and_update_in(
       [:children_ids, child],
       &((&1 || 0) ~> (id -> {id, id + 1}))
     )
@@ -70,7 +70,7 @@ defmodule Membrane.Pipeline.State do
   end
 
   def get_last_child_id(state, child) do
-    with {:ok, id} <- state.children_ids[child] |> Helper.wrap_nil(:not_dynamic) do
+    with {:ok, id} <- state.children_ids[child] |> Bunch.wrap_nil(:not_dynamic) do
       {:ok, id - 1}
     end
   end

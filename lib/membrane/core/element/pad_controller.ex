@@ -10,7 +10,7 @@ defmodule Membrane.Core.Element.PadController do
   require Pad
   require PadModel
   use Core.Element.Log
-  use Membrane.Helper
+  use Bunch
 
   @doc """
   Verifies linked pad, initializes it's data.
@@ -25,7 +25,7 @@ defmodule Membrane.Core.Element.PadController do
       state =
         case Pad.availability_mode_by_name(pad_name) do
           :static ->
-            state |> Helper.Struct.update_in([:pads, :info], &(&1 |> Map.delete(pad_name)))
+            state |> Bunch.Struct.update_in([:pads, :info], &(&1 |> Map.delete(pad_name)))
 
           :dynamic ->
             add_to_currently_linking(pad_name, state)
@@ -47,7 +47,7 @@ defmodule Membrane.Core.Element.PadController do
   def handle_linking_finished(state) do
     with {:ok, state} <-
            state.pads.dynamic_currently_linking
-           |> Helper.Enum.reduce_with(state, &handle_pad_added/2) do
+           |> Bunch.Enum.reduce_with(state, &handle_pad_added/2) do
       static_unlinked =
         state.pads.info
         |> Map.values()
@@ -89,7 +89,7 @@ defmodule Membrane.Core.Element.PadController do
   def get_pad_full_name(pad_name, state) do
     {full_name, state} =
       state
-      |> Helper.Struct.get_and_update_in([:pads, :info, pad_name], fn
+      |> Bunch.Struct.get_and_update_in([:pads, :info, pad_name], fn
         nil ->
           :pop
 
@@ -100,7 +100,7 @@ defmodule Membrane.Core.Element.PadController do
           {pad_name, pad_info}
       end)
 
-    {full_name |> Helper.wrap_nil(:unknown_pad), state}
+    {full_name |> Bunch.wrap_nil(:unknown_pad), state}
   end
 
   @spec validate_pad_being_linked(Pad.name_t(), Pad.direction_t(), State.t()) :: Type.try_t()
@@ -149,7 +149,7 @@ defmodule Membrane.Core.Element.PadController do
 
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
     data = data |> Map.merge(init_pad_mode_data(data, props, state))
-    state |> Helper.Struct.put_in([:pads, :data, name], data)
+    state |> Bunch.Struct.put_in([:pads, :data, name], data)
   end
 
   @spec init_pad_direction_data(PadModel.pad_data_t(), Keyword.t(), State.t()) ::
@@ -183,11 +183,11 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec add_to_currently_linking(Pad.name_t(), State.t()) :: State.t()
   defp add_to_currently_linking(name, state),
-    do: state |> Helper.Struct.update_in([:pads, :dynamic_currently_linking], &[name | &1])
+    do: state |> Bunch.Struct.update_in([:pads, :dynamic_currently_linking], &[name | &1])
 
   @spec clear_currently_linking(State.t()) :: State.t()
   defp clear_currently_linking(state),
-    do: state |> Helper.Struct.put_in([:pads, :dynamic_currently_linking], [])
+    do: state |> Bunch.Struct.put_in([:pads, :dynamic_currently_linking], [])
 
   @spec generate_eos_if_not_received(Pad.name_t(), State.t()) :: State.stateful_try_t()
   defp generate_eos_if_not_received(pad_name, state) do

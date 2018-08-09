@@ -18,7 +18,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   require PadModel
   use Core.Element.Log
-  use Membrane.Helper
+  use Bunch
 
   @type t :: %__MODULE__{
           q: Qex.t()
@@ -49,14 +49,14 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
       that: state.playback_buffer |> empty?,
       else:
         state
-        |> Helper.Struct.update_in([:playback_buffer, :q], fn q -> q |> @qe.push(msg) end)
+        |> Bunch.Struct.update_in([:playback_buffer, :q], fn q -> q |> @qe.push(msg) end)
         ~> (state -> {:ok, state})
     )
   end
 
   def store(msg, state) do
     state
-    |> Helper.Struct.update_in([:playback_buffer, :q], fn q -> q |> @qe.push(msg) end)
+    |> Bunch.Struct.update_in([:playback_buffer, :q], fn q -> q |> @qe.push(msg) end)
     ~> (state -> {:ok, state})
   end
 
@@ -70,8 +70,8 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
     with {:ok, state} <-
            state.playback_buffer.q
-           |> Helper.Enum.reduce_with(state, &exec/2),
-         do: {:ok, state |> Helper.Struct.put_in([:playback_buffer, :q], @qe.new)}
+           |> Bunch.Enum.reduce_with(state, &exec/2),
+         do: {:ok, state |> Bunch.Struct.put_in([:playback_buffer, :q], @qe.new)}
   end
 
   def eval(state), do: {:ok, state}
@@ -112,7 +112,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     with {:ok, state} <-
            messages
            |> Enum.reverse()
-           |> Helper.Enum.reduce_with(state, fn msg, st -> msg.(st) end) do
+           |> Bunch.Enum.reduce_with(state, fn msg, st -> msg.(st) end) do
       {:ok, state} =
         cond do
           PadModel.get_data!(pad_name, :sos, state) |> Kernel.not() ->

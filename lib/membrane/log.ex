@@ -4,11 +4,11 @@ defmodule Membrane.Log do
   modules.
   """
 
-  use Membrane.Helper
+  use Bunch
   alias Membrane.Log.Router
 
   defmacro __using__(args) do
-    passed_tags = args |> Keyword.get(:tags, []) |> Helper.listify()
+    passed_tags = args |> Keyword.get(:tags, []) |> Bunch.listify()
     previous_tags = Module.get_attribute(__CALLER__.module, :logger_default_tags) || []
     default_tags = (passed_tags ++ previous_tags) |> Enum.dedup()
     Module.put_attribute(__CALLER__.module, :logger_default_tags, default_tags)
@@ -35,7 +35,7 @@ defmodule Membrane.Log do
   defmacro warn_error(message, reason, tags \\ []) do
     message =
       quote do
-        use Membrane.Helper
+        use Bunch
 
         [
           "Encountered an error.\n",
@@ -44,7 +44,7 @@ defmodule Membrane.Log do
           "\n",
           """
           Stacktrace:
-          #{Helper.stacktrace()}
+          #{Bunch.stacktrace()}
           """
         ]
       end
@@ -78,13 +78,13 @@ defmodule Membrane.Log do
     send_code =
       quote do
         alias Membrane.Log.Router
-        use Membrane.Helper
+        use Bunch
 
         Router.send_log(
           unquote(level),
           unquote(message),
           Membrane.Time.pretty_now(),
-          (unquote(tags) |> Helper.listify()) ++ @logger_default_tags
+          (unquote(tags) |> Bunch.listify()) ++ @logger_default_tags
         )
       end
 
