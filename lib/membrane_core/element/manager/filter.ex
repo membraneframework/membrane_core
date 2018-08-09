@@ -65,6 +65,11 @@ defmodule Membrane.Element.Manager.Filter do
     ActionExec.handle_demand(pad_name, :self, :normal, size, cb, state)
   end
 
+  def handle_action({:demand, {pad_name, :self, {:set_to, size}}}, cb, _params, state)
+      when is_pad_name(pad_name) and is_integer(size) and size >= 0 do
+    ActionExec.handle_demand(pad_name, :self, :set, size, cb, state)
+  end
+
   def handle_action({:demand, {pad_name, _src_name, 0}}, cb, _params, state)
       when is_pad_name(pad_name) do
     debug(
@@ -106,8 +111,21 @@ defmodule Membrane.Element.Manager.Filter do
     handle_demand(src_name, 0, state)
   end
 
-  def handle_self_demand(pad_name, source, :normal, buf_cnt, state) do
-    {:ok, state} = state |> update_sink_self_demand(pad_name, source, &{:ok, &1 + buf_cnt})
+  @spec handle_self_demand(any(), any(), :normal | :set, any(), any()) ::
+          {:error | :ok | {:error, any()} | {:ok, any()}, any()}
+  def handle_self_demand(pad_name, source, type, buf_cnt, state) do
+    update_demand_func = fn prev_demand ->
+      new_demand =
+        if type == :normal do
+          prev_demand + buf_cnt
+        else
+          buf_cnt
+        end
+
+      {:ok, new_demand}
+    end
+
+    {:ok, state} = state |> update_sink_self_demand(pad_name, source, update_demand_func)
 
     handle_process_pull(pad_name, source, buf_cnt, state)
     |> or_warn_error("""
@@ -222,7 +240,7 @@ defmodule Membrane.Element.Manager.Filter do
     demand = state |> State.get_pad_data!(:sink, pad_name, :self_demand)
 
     if demand > 0 do
-      handle_process_pull(pad_name, nil, demand, state)
+      handle_process_pull(pad_name, :self, demand, state)
     else
       {:ok, state}
     end
@@ -231,6 +249,7 @@ defmodule Membrane.Element.Manager.Filter do
   defp check_and_handle_demands(state) do
     state
     |> State.get_pads_data(:source)
+    |> Enum.filter(fn {_name, %{mode: mode}} -> mode == :pull end)
     |> Helper.Enum.reduce_with(state, fn {name, _data}, st ->
       handle_demand(name, 0, st)
     end)

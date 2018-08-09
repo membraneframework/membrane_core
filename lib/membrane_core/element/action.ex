@@ -82,9 +82,11 @@ defmodule Membrane.Element.Action do
   - Payload `{pad, {{:source, demanding_source_pad}, size}}` can be returned from
   any callback. `demanding_source_pad` is a pad which is to receive demanded
   buffers after they are processed.
-  - Payload `{pad, {:self, size}}` makes demand act as if element was a sink,
+  - Payload `{pad, :self, size}` makes demand act as if element was a sink,
   that is extends demand on a given pad. Buffers received as a result of the
   demand should be consumed by element itself or sent through a pad in `push` mode.
+  - Payload `{pad, :self, {:set_to, size}}` do almost the same as the previous
+  one, but it sets a demand on a given pad (not extends the previous demand).
 
   Allowed only when playback state is playing.
   """
@@ -92,7 +94,8 @@ defmodule Membrane.Element.Action do
           {:demand, demand_common_payload_t | demand_filter_payload_t | demand_sink_payload_t}
 
   @type demand_filter_payload_t ::
-          {Pad.name_t(), {:source, Pad.name_t()} | :self, size :: non_neg_integer}
+          {Pad.name_t(), {:source, Pad.name_t()} | :self,
+           size :: non_neg_integer | {:set_to, size :: non_neg_integer}}
   @type demand_sink_payload_t :: {Pad.name_t(), {:set_to, size :: non_neg_integer}}
   @type demand_common_payload_t :: Pad.name_t() | {Pad.name_t(), size :: non_neg_integer}
 
