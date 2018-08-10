@@ -44,7 +44,7 @@ defmodule Membrane.Core.Element.PadSpecHandler do
         %{}
       end
 
-    with {:ok, pads} <- known_pads |> Bunch.Enum.map_with(&parse_pad(&1, direction)) do
+    with {:ok, pads} <- known_pads |> Bunch.Enum.try_map(&parse_pad(&1, direction)) do
       pads =
         pads
         |> Enum.map(&init_pad_info/1)

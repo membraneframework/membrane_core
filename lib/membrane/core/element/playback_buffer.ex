@@ -70,7 +70,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
     with {:ok, state} <-
            state.playback_buffer.q
-           |> Bunch.Enum.reduce_with(state, &exec/2),
+           |> Bunch.Enum.try_reduce(state, &exec/2),
          do: {:ok, state |> Bunch.Struct.put_in([:playback_buffer, :q], @qe.new)}
   end
 
@@ -112,7 +112,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     with {:ok, state} <-
            messages
            |> Enum.reverse()
-           |> Bunch.Enum.reduce_with(state, fn msg, st -> msg.(st) end) do
+           |> Bunch.Enum.try_reduce(state, fn msg, st -> msg.(st) end) do
       {:ok, state} =
         cond do
           PadModel.get_data!(pad_name, :sos, state) |> Kernel.not() ->

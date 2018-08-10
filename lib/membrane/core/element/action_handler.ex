@@ -104,7 +104,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     pads = PadModel.filter_data(%{direction: dir}, state) |> Map.keys()
 
     pads
-    |> Bunch.Enum.reduce_with(state, fn pad, st ->
+    |> Bunch.Enum.try_reduce(state, fn pad, st ->
       do_handle_action({action, {pad, data}}, cb, params, st)
     end)
   end

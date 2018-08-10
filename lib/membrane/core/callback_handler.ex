@@ -38,7 +38,7 @@ defmodule Membrane.Core.CallbackHandler do
       @impl unquote(__MODULE__)
       def handle_actions(actions, callback, handler_params, state) do
         actions
-        |> Bunch.Enum.reduce_with(state, fn action, state ->
+        |> Bunch.Enum.try_reduce(state, fn action, state ->
           handle_action(action, callback, handler_params, state)
         end)
       end
@@ -80,15 +80,15 @@ defmodule Membrane.Core.CallbackHandler do
     split_cont_f = handler_params[:split_cont_f] || fn _ -> true end
 
     args_list
-    |> Bunch.Enum.reduce_while_with(state, fn args, state ->
+    |> Bunch.Enum.try_reduce_while(state, fn args, state ->
       if split_cont_f.(state) do
         result = callback |> exec_callback(args |> Bunch.listify(), state)
 
         result
         |> handle_callback_result(original_callback, handler_module, handler_params, state)
-        ~>> ({:ok, state} -> {:ok, {:cont, state}})
+        ~>> ({:ok, state} -> {{:ok, :cont}, state})
       else
-        {:ok, {:halt, state}}
+        {{:ok, :halt}, state}
       end
     end)
   end

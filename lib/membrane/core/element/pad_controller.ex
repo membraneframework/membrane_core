@@ -47,7 +47,7 @@ defmodule Membrane.Core.Element.PadController do
   def handle_linking_finished(state) do
     with {:ok, state} <-
            state.pads.dynamic_currently_linking
-           |> Bunch.Enum.reduce_with(state, &handle_pad_added/2) do
+           |> Bunch.Enum.try_reduce(state, &handle_pad_added/2) do
       static_unlinked =
         state.pads.info
         |> Map.values()
