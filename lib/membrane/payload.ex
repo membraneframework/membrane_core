@@ -19,11 +19,9 @@ defprotocol Membrane.Payload do
 
   `at_pos` has to be greater than 0 and smaller than the size of payload. This guarantees
   returned payloads are never empty.
-
-  When such conditions are not met, the function should raise.
   """
-  @spec split_at!(payload :: t(), at_pos :: pos_integer()) :: {t(), t()}
-  def split_at!(payload, at_pos)
+  @spec split_at(payload :: t(), at_pos :: pos_integer()) :: {t(), t()}
+  def split_at(payload, at_pos)
 
   @doc """
   Converts payload into binary
@@ -44,8 +42,8 @@ defimpl Membrane.Payload, for: BitString do
     data |> byte_size()
   end
 
-  @spec split_at!(binary(), pos_integer) :: {binary(), binary()}
-  def split_at!(data, at_pos) when 0 < at_pos and at_pos < byte_size(data) do
+  @spec split_at(binary(), pos_integer) :: {binary(), binary()}
+  def split_at(data, at_pos) when 0 < at_pos and at_pos < byte_size(data) do
     <<part1::binary-size(at_pos), part2::binary>> = data
     {part1, part2}
   end
