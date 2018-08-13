@@ -16,13 +16,33 @@ defmodule Membrane.Buffer.Metric.ByteSizeSpec do
   end
 
   describe ".split_buffers/2" do
-    context "when splitting of payload is redundant" do
+    context "when split position matches size of first buffer" do
       let :count, do: byte_size(pay1())
 
       it "should extract only first buffer" do
         {buf, rest} = described_module().split_buffers(buffers(), count())
         expect(buf) |> to(eq [buf1()])
         expect(rest) |> to(eq [buf2()])
+      end
+    end
+
+    context "when there is only one buffer" do
+      let :buffers, do: [buf1()]
+
+      context "and split position is greater than buffer size" do
+        it "should return a list with the buffer and an empty one" do
+          {buf, rest} = described_module().split_buffers(buffers(), byte_size(pay1()) + 10)
+          expect(buf) |> to(eq [buf1()])
+          expect(rest) |> to(eq [])
+        end
+      end
+
+      context "and split position is 0" do
+        it "should return an empty list and a list with the buffer" do
+          {buf, rest} = described_module().split_buffers(buffers(), 0)
+          expect(buf) |> to(eq [])
+          expect(rest) |> to(eq [buf1()])
+        end
       end
     end
 

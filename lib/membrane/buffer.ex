@@ -8,12 +8,12 @@ defmodule Membrane.Buffer do
   """
 
   alias __MODULE__
+  alias Membrane.Payload
 
-  @type payload_t :: bitstring
   @type metadata_t :: map
 
   @type t :: %Buffer{
-          payload: payload_t,
+          payload: Payload.t(),
           metadata: metadata_t
         }
 
