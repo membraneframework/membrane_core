@@ -17,8 +17,8 @@ defprotocol Membrane.Payload do
   @doc """
   Splits the payload at given position (1st part has the size equal to `at_pos` argument)
 
-  `at_pos` has to be greater than 0 and smaller than the size of payload. This guarantees
-  returned payloads are never empty.
+  `at_pos` has to be greater than 0 and smaller than the size of payload, otherwise
+  an error is raised. This guarantees returned payloads are never empty.
   """
   @spec split_at(payload :: t(), at_pos :: pos_integer()) :: {t(), t()}
   def split_at(payload, at_pos)
