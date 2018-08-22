@@ -1,8 +1,10 @@
 language: elixir
 elixir:
   - 1.6
+  - 1.7
 otp_release:
   - 20.0
+  - 21.0
 sudo: false
 script:
   - MIX_ENV=test mix format --check-formatted
