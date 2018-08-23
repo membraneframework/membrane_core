@@ -24,6 +24,12 @@ defprotocol Membrane.Payload do
   def split_at(payload, at_pos)
 
   @doc """
+  Concatenates the contents of two payloads.
+  """
+  @spec concat(left :: t(), right :: t()) :: t()
+  def concat(left, right)
+
+  @doc """
   Converts payload into binary
   """
   @spec to_binary(t()) :: binary()
@@ -46,6 +52,11 @@ defimpl Membrane.Payload, for: BitString do
   def split_at(data, at_pos) when 0 < at_pos and at_pos < byte_size(data) do
     <<part1::binary-size(at_pos), part2::binary>> = data
     {part1, part2}
+  end
+
+  @spec concat(left :: binary(), right :: binary()) :: binary()
+  def concat(left, right) do
+    left <> right
   end
 
   @spec to_binary(binary()) :: binary()
