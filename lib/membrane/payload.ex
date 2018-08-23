@@ -9,6 +9,18 @@ defprotocol Membrane.Payload do
   @type t :: any()
 
   @doc """
+  Creates an empty payload of the same type as provided payload
+  """
+  @spec empty_of_type(payload :: t()) :: t()
+  def empty_of_type(payload)
+
+  @doc """
+  Creates a new payload of the same type as provided payload, initialized with given binary
+  """
+  @spec new_of_type(payload :: t(), binary()) :: t()
+  def new_of_type(payload, data)
+
+  @doc """
   Returns total size of payload in bytes
   """
   @spec size(payload :: t()) :: non_neg_integer()
@@ -43,6 +55,12 @@ defprotocol Membrane.Payload do
 end
 
 defimpl Membrane.Payload, for: BitString do
+  @spec empty_of_type(payload :: binary()) :: binary()
+  def empty_of_type(_payload), do: <<>>
+
+  @spec new_of_type(payload :: binary(), binary()) :: binary()
+  def new_of_type(_payload, data), do: data
+
   @spec size(payload :: binary()) :: pos_integer
   def size(data) when is_binary(data) do
     data |> byte_size()
