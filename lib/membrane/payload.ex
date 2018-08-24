@@ -43,6 +43,12 @@ defprotocol Membrane.Payload do
   def concat(left, right)
 
   @doc """
+  Drops first `n` bytes of payload.
+  """
+  @spec drop(payload :: t(), n :: non_neg_integer()) :: t()
+  def drop(payload, n)
+
+  @doc """
   Converts payload into binary
   """
   @spec to_binary(t()) :: binary()
@@ -98,6 +104,12 @@ defimpl Membrane.Payload, for: BitString do
   @spec concat(left :: binary(), right :: binary()) :: binary()
   def concat(left, right) do
     left <> right
+  end
+
+  @spec drop(payload :: binary(), bytes :: non_neg_integer()) :: binary()
+  def drop(payload, bytes) do
+    <<_dropped::binary-size(bytes), rest::binary>> = payload
+    rest
   end
 
   @spec to_binary(binary()) :: binary()
