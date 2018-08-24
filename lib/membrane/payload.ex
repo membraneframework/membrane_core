@@ -7,18 +7,19 @@ defprotocol Membrane.Payload do
   """
 
   @type t :: any()
+  @type type_t :: atom()
 
   @doc """
-  Creates an empty payload of the same type as provided payload
+  Creates an empty payload of the provided type
   """
-  @spec empty_of_type(payload :: t()) :: t()
-  def empty_of_type(payload)
+  @spec empty_of_type(type_t()) :: t()
+  defdelegate empty_of_type(type), to: __MODULE__.Util
 
   @doc """
-  Creates a new payload of the same type as provided payload, initialized with given binary
+  Creates a new payload of the provided type initialized with given binary
   """
-  @spec new_of_type(payload :: t(), binary()) :: t()
-  def new_of_type(payload, data)
+  @spec new_of_type(type_t(), binary()) :: t()
+  defdelegate new_of_type(type, data), to: __MODULE__.Util
 
   @doc """
   Returns total size of payload in bytes
@@ -50,17 +51,39 @@ defprotocol Membrane.Payload do
   @doc """
   Returns an atom describing type of the payload.
   """
-  @spec type(t()) :: atom()
+  @spec type(t()) :: type_t()
   def type(payload)
 end
 
+defmodule Membrane.Payload.Util do
+  def empty_of_type(:binary) do
+    <<>>
+  end
+
+  def empty_of_type(type) do
+    get_module(type).empty()
+  end
+
+  def new_of_type(:binary, data) do
+    data
+  end
+
+  def new_of_type(type, data) do
+    get_module(type).new(data)
+  end
+
+  defp get_module(type) do
+    module =
+      type
+      |> to_string()
+      |> String.capitalize()
+      |> String.to_atom()
+
+    Module.concat(Membrane.Payload, module)
+  end
+end
+
 defimpl Membrane.Payload, for: BitString do
-  @spec empty_of_type(payload :: binary()) :: binary()
-  def empty_of_type(_payload), do: <<>>
-
-  @spec new_of_type(payload :: binary(), binary()) :: binary()
-  def new_of_type(_payload, data), do: data
-
   @spec size(payload :: binary()) :: pos_integer
   def size(data) when is_binary(data) do
     data |> byte_size()
