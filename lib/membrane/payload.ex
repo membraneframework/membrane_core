@@ -62,6 +62,10 @@ defprotocol Membrane.Payload do
 end
 
 defmodule Membrane.Payload.Util do
+  @moduledoc false
+  # A little hack to provide implemetation of some functions
+  # for each module implementing Payload protocol
+
   def empty_of_type(:binary) do
     <<>>
   end
