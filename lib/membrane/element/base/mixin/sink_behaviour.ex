@@ -56,7 +56,7 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
       They are the following:
       #{unquote(sink_pads) |> Membrane.Core.Helper.Doc.generate_known_pads_docs()}
       """
-      @spec known_sink_pads() :: unquote(__MODULE__).known_sink_pads_t
+      @spec known_sink_pads() :: [Membrane.Element.sink_pad_specs_t()]
       @impl true
       def known_sink_pads(), do: unquote(sink_pads)
 
