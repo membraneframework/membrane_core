@@ -6,20 +6,36 @@ defprotocol Membrane.Payload do
   is implemented by the Membrane Core.
   """
 
+  defmodule Behaviour do
+    @moduledoc """
+    Behaviour that should be implemented by every module that has
+    `Membrane.Payload` protocol implemetation.
+    """
+
+    @doc """
+    Creates an empty payload
+    """
+    @callback empty() :: Membrane.Payload.t()
+
+    @doc """
+    Creates a new payload initialized with the given binary
+    """
+    @callback new(binary()) :: Membrane.Payload.t()
+  end
+
   @type t :: any()
-  @type type_t :: atom()
 
   @doc """
-  Creates an empty payload of the provided type
+  Creates an empty payload of the same type
   """
-  @spec empty_of_type(type_t()) :: t()
-  defdelegate empty_of_type(type), to: __MODULE__.Util
+  @spec empty(payload :: t()) :: t()
+  def empty(payload)
 
   @doc """
-  Creates a new payload of the provided type initialized with given binary
+  Creates a new payload of the same type initialized with given binary
   """
-  @spec new_of_type(type_t(), binary()) :: t()
-  defdelegate new_of_type(type, data), to: __MODULE__.Util
+  @spec new(payload :: t(), binary()) :: t()
+  def new(payload, data)
 
   @doc """
   Returns total size of payload in bytes
@@ -55,72 +71,74 @@ defprotocol Membrane.Payload do
   def to_binary(payload)
 
   @doc """
-  Returns an atom describing type of the payload.
+  Returns a module defining this type of payload.
   """
-  @spec type(t()) :: type_t()
-  def type(payload)
+  @spec module(t()) :: module()
+  def module(payload)
 end
 
-defmodule Membrane.Payload.Util do
-  @moduledoc false
-  # A little hack to provide implemetation of some functions
-  # for each module implementing Payload protocol
+defmodule Membrane.Payload.Common do
+  @moduledoc """
+  Module that should be `use`d in every `Membrane.Payload` protocol implemetation
+  """
+  defmacro __using__(_) do
+    quote do
+      alias Membrane.Payload
 
-  def empty_of_type(:binary) do
-    <<>>
-  end
+      @compile {:inline, empty: 0, empty: 1, new: 1, new: 2, module: 1}
 
-  def empty_of_type(type) do
-    get_module(type).empty()
-  end
-
-  def new_of_type(:binary, data) do
-    data
-  end
-
-  def new_of_type(type, data) do
-    get_module(type).new(data)
-  end
-
-  defp get_module(type) do
-    module =
-      type
-      |> to_string()
-      |> String.capitalize()
-      |> String.to_atom()
-
-    Module.concat(Membrane.Payload, module)
+      @impl Payload
+      def module(_), do: __MODULE__
+    end
   end
 end
 
 defimpl Membrane.Payload, for: BitString do
+  use Membrane.Payload.Common
+  @behaviour Payload.Behaviour
+
+  @impl Payload.Behaviour
+  def empty(), do: <<>>
+
+  @impl Payload.Behaviour
+  def new(data), do: data
+
+  @impl Payload
+  def empty(_payload), do: empty()
+
+  @impl Payload
+  def new(_payload, data), do: new(data)
+
+  @impl Payload
   @spec size(payload :: binary()) :: pos_integer
-  def size(data) when is_binary(data) do
-    data |> byte_size()
+  def size(payload) when is_binary(payload) do
+    payload |> byte_size()
   end
 
+  @impl Payload
   @spec split_at(binary(), pos_integer) :: {binary(), binary()}
-  def split_at(data, at_pos) when 0 < at_pos and at_pos < byte_size(data) do
-    <<part1::binary-size(at_pos), part2::binary>> = data
+  def split_at(payload, at_pos)
+      when is_binary(payload) and 0 < at_pos and at_pos < byte_size(payload) do
+    <<part1::binary-size(at_pos), part2::binary>> = payload
     {part1, part2}
   end
 
+  @impl Payload
   @spec concat(left :: binary(), right :: binary()) :: binary()
-  def concat(left, right) do
-    left <> right
+  def concat(left, right) when is_binary(left) do
+    left <> Payload.to_binary(right)
   end
 
+  @impl Payload
   @spec drop(payload :: binary(), bytes :: non_neg_integer()) :: binary()
-  def drop(payload, bytes) do
+  def drop(payload, bytes) when is_binary(payload) do
     <<_dropped::binary-size(bytes), rest::binary>> = payload
     rest
   end
 
+  @impl Payload
   @spec to_binary(binary()) :: binary()
-  def to_binary(data) when is_binary(data) do
-    data
+  def to_binary(payload) when is_binary(payload) do
+    payload
   end
-
-  @spec type(binary()) :: :binary
-  def type(_), do: :binary
 end
