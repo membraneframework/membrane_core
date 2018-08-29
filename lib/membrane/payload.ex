@@ -71,51 +71,49 @@ defprotocol Membrane.Payload do
   def to_binary(payload)
 
   @doc """
-  Returns a module defining this type of payload.
+  Returns a module responsible for this type of payload
+  and implementing `Membrane.Payload.Behaviour`
   """
   @spec module(t()) :: module()
   def module(payload)
 end
 
-defmodule Membrane.Payload.Common do
+defmodule Membrane.Payload.Binary do
   @moduledoc """
-  Module that should be `use`d in every `Membrane.Payload` protocol implemetation
+  `Membrane.Payload.Behaviour` implementation for binary payload.
+  Complements `Membrane.Payload` protocol implementation.
   """
-  defmacro __using__(_) do
-    quote do
-      alias Membrane.Payload
+  @behaviour Membrane.Payload.Behaviour
 
-      @compile {:inline, empty: 0, empty: 1, new: 1, new: 2, module: 1}
+  @impl true
+  def empty(), do: <<>>
 
-      @impl Payload
-      def module(_), do: __MODULE__
-    end
+  @impl true
+  def new(data) when is_binary(data) do
+    data
   end
 end
 
 defimpl Membrane.Payload, for: BitString do
-  use Membrane.Payload.Common
-  @behaviour Payload.Behaviour
+  alias Membrane.Payload
 
-  @impl Payload.Behaviour
-  def empty(), do: <<>>
+  @compile {:inline, empty: 1, new: 2, module: 1}
 
-  @impl Payload.Behaviour
-  def new(data), do: data
+  @impl true
+  def empty(_payload), do: <<>>
 
-  @impl Payload
-  def empty(_payload), do: empty()
+  @impl true
+  def new(payload, data) when is_binary(payload) and is_binary(data) do
+    data
+  end
 
-  @impl Payload
-  def new(_payload, data), do: new(data)
-
-  @impl Payload
+  @impl true
   @spec size(payload :: binary()) :: pos_integer
   def size(payload) when is_binary(payload) do
     payload |> byte_size()
   end
 
-  @impl Payload
+  @impl true
   @spec split_at(binary(), pos_integer) :: {binary(), binary()}
   def split_at(payload, at_pos)
       when is_binary(payload) and 0 < at_pos and at_pos < byte_size(payload) do
@@ -123,22 +121,26 @@ defimpl Membrane.Payload, for: BitString do
     {part1, part2}
   end
 
-  @impl Payload
+  @impl true
   @spec concat(left :: binary(), right :: binary()) :: binary()
   def concat(left, right) when is_binary(left) do
     left <> Payload.to_binary(right)
   end
 
-  @impl Payload
+  @impl true
   @spec drop(payload :: binary(), bytes :: non_neg_integer()) :: binary()
   def drop(payload, bytes) when is_binary(payload) do
     <<_dropped::binary-size(bytes), rest::binary>> = payload
     rest
   end
 
-  @impl Payload
+  @impl true
   @spec to_binary(binary()) :: binary()
   def to_binary(payload) when is_binary(payload) do
     payload
   end
+
+  @impl true
+  @spec module(binary()) :: module()
+  def module(_), do: Payload.Binary
 end
