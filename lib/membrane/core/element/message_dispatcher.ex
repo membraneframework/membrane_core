@@ -15,7 +15,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   """
   @spec handle_message(message_t, :info | :call | :other, State.t()) :: State.stateful_try_t()
   def handle_message(message, mode, state) do
-    with {:ok, res} <- do_handle_message(message, mode, state) |> Bunch.result_with_status() do
+    with {:ok, res} <- do_handle_message(message, mode, state) |> Bunch.stateful_try_with_status() do
       res
     else
       {_error, {{:error, reason}, state}} ->

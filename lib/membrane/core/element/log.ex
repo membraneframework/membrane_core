@@ -61,7 +61,7 @@ defmodule Membrane.Core.Element.Log do
     use Bunch
 
     quote do
-      with {:ok, res} <- unquote(v) |> Bunch.result_with_status() do
+      with {:ok, res} <- unquote(v) |> Bunch.stateful_try_with_status() do
         res
       else
         {_error, {{:error, reason}, state}} ->

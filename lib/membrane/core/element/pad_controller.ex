@@ -100,7 +100,7 @@ defmodule Membrane.Core.Element.PadController do
           {pad_name, pad_info}
       end)
 
-    {full_name |> Bunch.wrap_nil(:unknown_pad), state}
+    {full_name |> Bunch.error_if_nil(:unknown_pad), state}
   end
 
   @spec validate_pad_being_linked(Pad.name_t(), Pad.direction_t(), State.t()) :: Type.try_t()
