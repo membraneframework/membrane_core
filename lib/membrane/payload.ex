@@ -123,8 +123,8 @@ defimpl Membrane.Payload, for: BitString do
 
   @impl true
   @spec concat(left :: binary(), right :: binary()) :: binary()
-  def concat(left, right) when is_binary(left) do
-    left <> Payload.to_binary(right)
+  def concat(left, right) when is_binary(left) and is_binary(right) do
+    left <> right
   end
 
   @impl true
