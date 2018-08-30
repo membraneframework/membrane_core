@@ -68,6 +68,8 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     LifecycleController.unlink(state)
   end
 
+  # Sent by `Membrane.Core.Element.ActionHandler.handle_demand`, check there for
+  # more information
   defp do_handle_message({:membrane_handle_demand, [pad_name, source, type, size]}, :info, state) do
     DemandHandler.handle_demand(pad_name, source, type, size, state)
   end

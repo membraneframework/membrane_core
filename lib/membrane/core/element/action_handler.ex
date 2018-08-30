@@ -370,6 +370,13 @@ defmodule Membrane.Core.Element.ActionHandler do
     with :ok <- sink_assertion,
          :ok <- source_assertion do
       if callback in [:handle_write, :handle_process] do
+        # Handling demand results in execution of handle_write/handle_process,
+        # wherefore demand returned by one of these callbacks may lead to
+        # emergence of a loop. This, in turn, could result in consuming entire
+        # contents of PullBuffer before accepting any messages from other
+        # processes. As such situation is unwanted, a message to self is sent here
+        # to make it possible for messages already enqueued in mailbox to be
+        # received before the demand is handled.
         send(self(), {:membrane_handle_demand, [pad_name, source, type, size]})
         {:ok, state}
       else
