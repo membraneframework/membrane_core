@@ -370,7 +370,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     with :ok <- sink_assertion,
          :ok <- source_assertion do
       if callback in [:handle_write, :handle_process] do
-        send(self(), {:membrane_demand, [pad_name, source, type, size]})
+        send(self(), {:membrane_handle_demand, [pad_name, source, type, size]})
         {:ok, state}
       else
         DemandHandler.handle_demand(pad_name, source, type, size, state)
