@@ -26,18 +26,6 @@ defprotocol Membrane.Payload do
   @type t :: any()
 
   @doc """
-  Creates an empty payload of the same type
-  """
-  @spec empty(payload :: t()) :: t()
-  def empty(payload)
-
-  @doc """
-  Creates a new payload of the same type initialized with given binary
-  """
-  @spec new(payload :: t(), binary()) :: t()
-  def new(payload, data)
-
-  @doc """
   Returns total size of payload in bytes
   """
   @spec size(payload :: t()) :: non_neg_integer()
@@ -97,15 +85,7 @@ end
 defimpl Membrane.Payload, for: BitString do
   alias Membrane.Payload
 
-  @compile {:inline, empty: 1, new: 2, module: 1}
-
-  @impl true
-  def empty(_payload), do: <<>>
-
-  @impl true
-  def new(payload, data) when is_binary(payload) and is_binary(data) do
-    data
-  end
+  @compile {:inline, module: 1}
 
   @impl true
   @spec size(payload :: binary()) :: pos_integer
