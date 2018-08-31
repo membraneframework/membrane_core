@@ -7,7 +7,7 @@ defmodule Membrane.Core.Element.PadSpecHandler do
   alias Membrane.{Caps, Core}
   alias Core.Element.{PadModel, State}
   require Pad
-  use Membrane.Helper
+  use Bunch
   use Core.Element.Log
 
   @typep parsed_pad_t ::
@@ -44,7 +44,7 @@ defmodule Membrane.Core.Element.PadSpecHandler do
         %{}
       end
 
-    with {:ok, pads} <- known_pads |> Helper.Enum.map_with(&parse_pad(&1, direction)) do
+    with {:ok, pads} <- known_pads |> Bunch.Enum.try_map(&parse_pad(&1, direction)) do
       pads =
         pads
         |> Enum.map(&init_pad_info/1)

@@ -10,8 +10,8 @@ defmodule Membrane.Element.Pad do
   Each link can only consist of exactly two pads.
   """
 
-  use Membrane.Helper
-  use Helper.Typespec
+  use Bunch
+  use Bunch.Typespec
 
   @typedoc """
   Defines the term by which the pad is identified.

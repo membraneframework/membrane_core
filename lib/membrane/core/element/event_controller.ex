@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.EventController do
   require CallbackContext.Event
   require PadModel
   use Core.Element.Log
-  use Membrane.Helper
+  use Bunch
 
   @doc """
   Handles incoming event: either stores it in PullBuffer, or executes element callback.

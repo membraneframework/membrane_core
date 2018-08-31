@@ -7,7 +7,7 @@ defmodule Membrane.Core.PullBuffer do
   It also guarantees that element won't be flooded with the incoming data.
   """
   alias Membrane.Buffer
-  use Membrane.Helper
+  use Bunch
   use Membrane.Log, tags: :core
 
   @qe Qex

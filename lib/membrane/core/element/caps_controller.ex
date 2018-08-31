@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.CapsController do
   require CallbackContext.Caps
   require PadModel
   use Core.Element.Log
-  use Membrane.Helper
+  use Bunch
 
   @doc """
   Handles incoming caps: either stores them in PullBuffer, or executes element callback.

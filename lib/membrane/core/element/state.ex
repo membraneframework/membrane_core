@@ -8,7 +8,7 @@ defmodule Membrane.Core.Element.State do
   alias Membrane.{Core, Element, Type}
   alias Core.Element.{PadModel, PlaybackBuffer}
   alias Element.Pad
-  use Membrane.Helper
+  use Bunch
   alias __MODULE__, as: ThisModule
   alias Membrane.Core.{Playback, Playbackable}
   require Pad

@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.PadModel do
 
   alias Membrane.Element.Pad
   alias Membrane.Core.Element.State
-  use Membrane.Helper
+  use Bunch
 
   @type pad_data_t :: map
   @type pad_info_t :: map
@@ -76,7 +76,7 @@ defmodule Membrane.Core.Element.PadModel do
   def get_data(pad_name, keys \\ [], state) do
     with :ok <- assert_instance(pad_name, state) do
       state
-      |> Helper.Struct.get_in(data_keys(pad_name, keys))
+      |> Bunch.Struct.get_in(data_keys(pad_name, keys))
       ~> {:ok, &1}
     end
   end
@@ -92,7 +92,7 @@ defmodule Membrane.Core.Element.PadModel do
   def set_data(pad_name, keys \\ [], v, state) do
     with {:ok, state} <- {assert_instance(pad_name, state), state} do
       state
-      |> Helper.Struct.put_in(data_keys(pad_name, keys), v)
+      |> Bunch.Struct.put_in(data_keys(pad_name, keys), v)
       ~> {:ok, &1}
     end
   end
@@ -111,7 +111,7 @@ defmodule Membrane.Core.Element.PadModel do
     with {:ok, state} <- {assert_instance(pad_name, state), state},
          {:ok, state} <-
            state
-           |> Helper.Struct.get_and_update_in(data_keys(pad_name, keys), f) do
+           |> Bunch.Struct.get_and_update_in(data_keys(pad_name, keys), f) do
       {:ok, state}
     else
       {{:error, reason}, state} -> {{:error, reason}, state}
@@ -124,7 +124,7 @@ defmodule Membrane.Core.Element.PadModel do
     :ok = assert_instance(pad_name, state)
 
     state
-    |> Helper.Struct.update_in(data_keys(pad_name, keys), f)
+    |> Bunch.Struct.update_in(data_keys(pad_name, keys), f)
   end
 
   @spec get_and_update_data(
@@ -138,7 +138,7 @@ defmodule Membrane.Core.Element.PadModel do
     with {:ok, state} <- {assert_instance(pad_name, state), state},
          {{:ok, out}, state} <-
            state
-           |> Helper.Struct.get_and_update_in(data_keys(pad_name, keys), f) do
+           |> Bunch.Struct.get_and_update_in(data_keys(pad_name, keys), f) do
       {{:ok, out}, state}
     else
       {{:error, reason}, state} -> {{:error, reason}, state}
@@ -156,7 +156,7 @@ defmodule Membrane.Core.Element.PadModel do
     :ok = assert_instance(pad_name, state)
 
     state
-    |> Helper.Struct.get_and_update_in(data_keys(pad_name, keys), f)
+    |> Bunch.Struct.get_and_update_in(data_keys(pad_name, keys), f)
   end
 
   @spec pop_data(Pad.name_t(), State.t()) ::
@@ -164,7 +164,7 @@ defmodule Membrane.Core.Element.PadModel do
   def pop_data(pad_name, state) do
     with {:ok, state} <- {assert_instance(pad_name, state), state} do
       state
-      |> Helper.Struct.pop_in(data_keys(pad_name))
+      |> Bunch.Struct.pop_in(data_keys(pad_name))
       ~> {:ok, &1}
     end
   end
@@ -195,6 +195,6 @@ defmodule Membrane.Core.Element.PadModel do
 
   @spec data_keys(Pad.name_t(), keys :: atom | [atom]) :: [atom]
   defp data_keys(pad_name, keys \\ []) do
-    [:pads, :data, pad_name | Helper.listify(keys)]
+    [:pads, :data, pad_name | Bunch.listify(keys)]
   end
 end

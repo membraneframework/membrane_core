@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   require PadModel
   import Element.Pad, only: [is_pad_name: 1]
   use Core.Element.Log
-  use Membrane.Helper
+  use Bunch
   use Membrane.Core.CallbackHandler
 
   @impl CallbackHandler
@@ -104,7 +104,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     pads = PadModel.filter_data(%{direction: dir}, state) |> Map.keys()
 
     pads
-    |> Helper.Enum.reduce_with(state, fn pad, st ->
+    |> Bunch.Enum.try_reduce(state, fn pad, st ->
       do_handle_action({action, {pad, data}}, cb, params, st)
     end)
   end
@@ -190,9 +190,9 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp join_buffers(actions) do
     actions
-    |> Helper.Enum.chunk_by(
+    |> Bunch.Enum.chunk_by_prev(
       fn
-        {:buffer, {pad, _}}, {:buffer, {pad2, _}} when pad == pad2 -> true
+        {:buffer, {pad, _}}, {:buffer, {pad, _}} -> true
         _, _ -> false
       end,
       fn
