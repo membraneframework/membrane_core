@@ -5,9 +5,10 @@ defmodule Membrane.Core.Element.State do
   # internally in Membrane.
 
   use Membrane.Log, tags: :core
-  alias Membrane.{Core, Element, Type}
+  alias Membrane.{Core, Element}
   alias Core.Element.{PadModel, PlaybackBuffer}
   alias Element.Pad
+  alias Bunch.Type
   use Bunch
   alias __MODULE__, as: ThisModule
   alias Membrane.Core.{Playback, Playbackable}

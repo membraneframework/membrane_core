@@ -4,7 +4,7 @@ defmodule Membrane.Core.CallbackHandler do
   # It delivers implementation of executing callbacks and results parsing their
   # results.
 
-  alias Membrane.Type
+  alias Bunch.Type
   use Bunch
   use Membrane.Log, tags: :core
 

@@ -2,10 +2,11 @@ defmodule Membrane.Core.Element.PadController do
   @moduledoc false
   # Module handling linking and unlinking pads.
 
-  alias Membrane.{Core, Event, Type}
+  alias Membrane.{Core, Event}
   alias Core.{CallbackHandler, PullBuffer}
   alias Core.Element.{EventController, PadModel, State}
   alias Membrane.Element.{CallbackContext, Pad}
+  alias Bunch.Type
   require CallbackContext.{PadAdded, PadRemoved}
   require Pad
   require PadModel
