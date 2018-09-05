@@ -1,5 +1,5 @@
 %{
-  "bunch": {:hex, :bunch, "0.1.0", "fa11126382c659ed28e203a32f13e50c82c7db0b52b3ad47d54c4615eeef1d9e", [:mix], [], "hexpm"},
+  "bunch": {:hex, :bunch, "0.1.1", "6a010c8d7a9e52294a359cfe2fc669ce0472f7cb467c85a432994a3314732a0b", [:mix], [], "hexpm"},
   "certifi": {:hex, :certifi, "2.3.1", "d0f424232390bf47d82da8478022301c561cf6445b5b5fb6a84d49a9e76d2639", [:rebar3], [{:parse_trans, "3.2.0", [hex: :parse_trans, repo: "hexpm", optional: false]}], "hexpm"},
   "earmark": {:hex, :earmark, "1.2.6", "b6da42b3831458d3ecc57314dff3051b080b9b2be88c2e5aa41cd642a5b044ed", [:mix], [], "hexpm"},
   "espec": {:hex, :espec, "1.6.0", "9c8256a8779b636ef6b861c03e569a631bcc2486f6621e755b3cce00d1426cab", [:mix], [{:meck, "0.8.11", [hex: :meck, repo: "hexpm", optional: false]}], "hexpm"},
