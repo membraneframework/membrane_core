@@ -28,21 +28,20 @@ defmodule Membrane.Core.Element.DemandHandler do
   @spec handle_demand(
           Pad.name_t(),
           {:source, Pad.name_t()} | :self,
-          :set | :increase,
           pos_integer,
           State.t()
         ) :: State.stateful_try_t()
-  def handle_demand(pad_name, source, :set, size, state) do
+  def handle_demand(pad_name, source, size, state) when is_integer(size) do
     state = set_sink_demand(pad_name, source, size, state)
     supply_demand(pad_name, source, size, state)
   end
 
-  def handle_demand(pad_name, :self, :increase, size, state) do
+  def handle_demand(pad_name, :self, size_fun, state) when is_function(size_fun) do
     {total_size, state} =
       PadModel.get_and_update_data!(
         pad_name,
         :demand,
-        fn demand -> (demand + size) ~> {&1, &1} end,
+        fn demand -> size_fun.(demand) ~> {&1, &1} end,
         state
       )
 
