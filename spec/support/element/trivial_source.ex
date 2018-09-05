@@ -7,7 +7,7 @@ defmodule Membrane.Support.Element.TrivialSource do
 
   use Membrane.Element.Base.Source
 
-  def_known_source_pads source: {:always, :pull, :any}
+  def_source_pads source: {:always, :pull, :any}
 
   @impl true
   def handle_init(_options) do

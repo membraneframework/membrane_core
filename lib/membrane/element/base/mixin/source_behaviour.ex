@@ -59,7 +59,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   It automatically generates documentation from the given definition
   and adds compile-time caps specs validation.
   """
-  defmacro def_known_source_pads(raw_source_pads) do
+  defmacro def_source_pads(raw_source_pads) do
     source_pads =
       raw_source_pads
       |> Bunch.Macro.inject_calls([
@@ -98,7 +98,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 
-      import unquote(__MODULE__), only: [def_known_source_pads: 1]
+      import unquote(__MODULE__), only: [def_source_pads: 1]
     end
   end
 end

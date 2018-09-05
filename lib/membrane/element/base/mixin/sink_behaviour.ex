@@ -41,7 +41,7 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   It automatically generates documentation from the given definition
   and adds compile-time caps specs validation.
   """
-  defmacro def_known_sink_pads(raw_sink_pads) do
+  defmacro def_sink_pads(raw_sink_pads) do
     sink_pads =
       raw_sink_pads
       |> Bunch.Macro.inject_calls([
@@ -80,7 +80,7 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 
-      import unquote(__MODULE__), only: [def_known_sink_pads: 1]
+      import unquote(__MODULE__), only: [def_sink_pads: 1]
 
       @impl true
       def handle_caps(_pad, _caps, _context, state), do: {:ok, state}

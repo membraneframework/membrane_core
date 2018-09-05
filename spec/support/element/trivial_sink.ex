@@ -7,7 +7,7 @@ defmodule Membrane.Support.Element.TrivialSink do
 
   use Membrane.Element.Base.Sink
 
-  def_known_sink_pads sink: {:always, {:pull, demand_in: :buffers}, :any}
+  def_sink_pads sink: {:always, {:pull, demand_in: :buffers}, :any}
 
   @impl true
   def handle_init(_options) do
