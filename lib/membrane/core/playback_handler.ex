@@ -4,7 +4,7 @@ defmodule Membrane.Core.PlaybackHandler do
   #
   # There are three playback states: :stopped, :prepared and :playing.
   # Playback state always changes only one step at once in this order, and can
-  # be handled by `handle_prepare/2`, `handle_play/1` and `handle_stop/1` callbacks
+  # be handled by `handle_prepare/2`, `handle_play/2` and `handle_stop/2` callbacks
 
   alias Membrane.Core.{Playback, Playbackable}
   use Bunch

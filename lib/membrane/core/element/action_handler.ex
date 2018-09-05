@@ -68,7 +68,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp do_handle_action({:playback_change, :suspend}, cb, _params, state)
-       when cb in [:handle_prepare, :handle_play, :handle_stop] do
+       when cb in [:handle_prepare_to_play, :handle_prepare_to_stop, :handle_play, :handle_stop] do
     PlaybackHandler.suspend_playback_change(state)
   end
 

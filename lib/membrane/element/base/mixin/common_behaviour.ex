@@ -36,20 +36,26 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
               | {:error, any}
 
   @doc """
-  Callback invoked when element is prepared. It receives the previous playback
-  state (`:stopped` or `:playing`).
+  Callback invoked when element goes to `:prepared` state from state `:stopped` and should get
+  ready to enter `:playing` state.
 
-  If the prevoius playback state is `:stopped`, then usually most resources
-  used by the element are allocated here. For example, if element opens a file,
-  this is the place to try to actually open it and return error if that has failed.
-  Such resources should be released in `c:handle_stop/1`.
+  Usually most resources used by the element are allocated here.
+  For example, if element opens a file, this is the place to try to actually open it
+  and return error if that has failed. Such resources should be released in `c:handle_stop/1`.
+  """
+  @callback handle_prepare_to_play(
+              context :: CallbackContext.Prepare.t(),
+              state :: Element.state_t()
+            ) :: callback_return_t
 
-  If the previous playback state is `:playing`, then all resources allocated
-  in `c:handle_play/2` callback should be released here, and no more buffers or
+  @doc """
+  Callback invoked when element goes to `:prepared` state from state `:playing` and should get
+  ready to enter `:stopped` state.
+
+  All resources allocated in `c:handle_play/2` callback should be released here, and no more buffers or
   demands should be sent.
   """
-  @callback handle_prepare(
-              previous_playback_state :: Playback.state_t(),
+  @callback handle_prepare_to_stop(
               context :: CallbackContext.Prepare.t(),
               state :: Element.state_t()
             ) :: callback_return_t
@@ -244,7 +250,10 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
       def handle_init(_options), do: {:ok, %{}}
 
       @impl true
-      def handle_prepare(_previous_playback_state, _context, state), do: {:ok, state}
+      def handle_prepare_to_play(_context, state), do: {:ok, state}
+
+      @impl true
+      def handle_prepare_to_stop(_context, state), do: {:ok, state}
 
       @impl true
       def handle_play(_context, state), do: {:ok, state}
@@ -268,7 +277,8 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
       def handle_shutdown(_state), do: :ok
 
       defoverridable handle_init: 1,
-                     handle_prepare: 3,
+                     handle_prepare_to_play: 2,
+                     handle_prepare_to_stop: 2,
                      handle_play: 2,
                      handle_stop: 2,
                      handle_other: 3,
