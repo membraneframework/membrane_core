@@ -180,12 +180,24 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_actions(actions, callback, handler_params, state) do
-    super(
-      actions |> join_buffers(),
-      callback,
-      handler_params,
-      state
-    )
+    actions_after_redemand =
+      actions
+      |> Enum.drop_while(fn
+        {:redemand, _} -> false
+        _ -> true
+      end)
+      |> Enum.drop(1)
+
+    if actions_after_redemand != [] do
+      {{:error, :actions_after_redemand}, state}
+    else
+      super(
+        actions |> join_buffers(),
+        callback,
+        handler_params,
+        state
+      )
+    end
   end
 
   defp join_buffers(actions) do
