@@ -8,7 +8,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   For more information on implementing elements, see `Membrane.Element.Base`.
   """
   alias Membrane.{Action, Core, Element, Event}
-  alias Core.{Playback, CallbackHandler}
+  alias Core.CallbackHandler
   alias Element.{Action, CallbackContext, Pad}
 
   @typedoc """

@@ -34,7 +34,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   In filter elements, this callback should usually return `:demand` action with
   size sufficient (at least approximately) for supplying incoming demand. This
   will result with calling `c:Membrane.Element.Base.Filter.handle_process/4` or
-  `c:Membrane.Element.Base.Sink.handle_write/4`, which is to supply
+  `c:Membrane.Element.Base.Sink.handle_write_list/4`, which is to supply
   the demand. If it does not, or does only partially,
   `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` is called
   again, until there is any data available on the sink pad.

@@ -68,7 +68,7 @@ defmodule Membrane.Element.Action do
   runs out of data.
   If there is any data available at the pad, the data is passed to
   `c:Membrane.Element.Base.Filter.handle_process/4`
-  or `c:Membrane.Element.Base.Sink.handle_write/4` callback. Invoked callback is
+  or `c:Membrane.Element.Base.Sink.handle_write_list/4` callback. Invoked callback is
   guaranteed not to receive more data than demanded.
 
   Depending on element type and callback, it may contain different payloads or

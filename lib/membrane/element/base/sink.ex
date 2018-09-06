@@ -27,7 +27,7 @@ defmodule Membrane.Element.Base.Sink do
 
   For pads in push mode it is invoked when buffers arrive.
   """
-  @callback handle_write(
+  @callback handle_write_list(
               pad :: Pad.name_t(),
               buffers :: list(Buffer.t()),
               context :: CallbackContext.Write.t(),
@@ -36,11 +36,11 @@ defmodule Membrane.Element.Base.Sink do
 
   @doc """
   Callback that is called when buffer should be written by the sink. In contrast
-  to `c:handle_write/4`, it is passed only a single buffer.
+  to `c:handle_write_list/4`, it is passed only a single buffer.
 
-  Called by default implementation of `c:handle_write/4`.
+  Called by default implementation of `c:handle_write_list/4`.
   """
-  @callback handle_write1(
+  @callback handle_write(
               pad :: Pad.name_t(),
               buffer :: Buffer.t(),
               context :: CallbackContext.Write.t(),
@@ -57,17 +57,17 @@ defmodule Membrane.Element.Base.Sink do
       def membrane_element_type, do: :sink
 
       @impl true
-      def handle_write1(_pad, _buffer, _context, state),
+      def handle_write(_pad, _buffer, _context, state),
         do: {{:error, :handle_write_not_implemented}, state}
 
       @impl true
-      def handle_write(pad, buffers, context, state) do
+      def handle_write_list(pad, buffers, context, state) do
         args_list = buffers |> Enum.map(&[pad, &1, context])
-        {{:ok, split: {:handle_write1, args_list}}, state}
+        {{:ok, split: {:handle_write, args_list}}, state}
       end
 
-      defoverridable handle_write: 4,
-                     handle_write1: 4
+      defoverridable handle_write_list: 4,
+                     handle_write: 4
     end
   end
 end

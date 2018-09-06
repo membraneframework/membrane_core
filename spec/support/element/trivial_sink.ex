@@ -37,7 +37,7 @@ defmodule Membrane.Support.Element.TrivialSink do
   end
 
   @impl true
-  def handle_write1(:sink, _buf, %Ctx.Write{}, state) do
+  def handle_write(:sink, _buf, %Ctx.Write{}, state) do
     {:ok, state}
   end
 end

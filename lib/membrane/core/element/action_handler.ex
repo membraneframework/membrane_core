@@ -369,8 +369,8 @@ defmodule Membrane.Core.Element.ActionHandler do
 
     with :ok <- sink_assertion,
          :ok <- source_assertion do
-      if callback in [:handle_write, :handle_process] do
-        # Handling demand results in execution of handle_write/handle_process,
+      if callback in [:handle_write_list, :handle_process] do
+        # Handling demand results in execution of handle_write_list/handle_process,
         # wherefore demand returned by one of these callbacks may lead to
         # emergence of a loop. This, in turn, could result in consuming entire
         # contents of PullBuffer before accepting any messages from other

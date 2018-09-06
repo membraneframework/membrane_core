@@ -484,8 +484,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       end
     end
 
-    context "when callback is 'handle_write'" do
-      let :callback, do: :handle_write
+    context "when callback is 'handle_write_list'" do
+      let :callback, do: :handle_write_list
 
       it "should send appropriate message to 'self()'" do
         result =
@@ -501,7 +501,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       end
     end
 
-    context "when callback is other than 'handle_write' or 'handle_process'" do
+    context "when callback is other than 'handle_write_list' or 'handle_process'" do
       before do
         allow handler_module()
               |> to(accept :handle_demand, fn _, _, _, _, state -> {:ok, state} end)
@@ -576,7 +576,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       end
 
       it "should call handle_redemand method of the given module" do
-        res = described_module().handle_action(action(), :handle_write, %{}, state())
+        res = described_module().handle_action(action(), :handle_write_list, %{}, state())
         expect(res |> to(eq {:ok, state()}))
         expect(controller_module() |> to(accepted(:handle_demand, :any, count: 1)))
       end
