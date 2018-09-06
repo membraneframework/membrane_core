@@ -6,6 +6,7 @@ defmodule Membrane.Support.Element.TrivialSource do
   """
 
   use Membrane.Element.Base.Source
+  use Bunch
 
   def_source_pads source: {:always, :pull, :any}
 
@@ -15,8 +16,14 @@ defmodule Membrane.Support.Element.TrivialSource do
   end
 
   @impl true
-  def handle_demand1(:source, %Ctx.Demand{}, %{cnt: cnt} = state) do
-    buf = %Membrane.Buffer{payload: cnt |> Integer.digits() |> IO.iodata_to_binary()}
-    {{:ok, buffer: {:source, buf}}, %{state | cnt: cnt + 1}}
+  def handle_demand(:source, size, :buffers, %Ctx.Demand{}, %{cnt: cnt} = state) do
+    buffers =
+      1..size
+      |> Enum.map(fn cnt ->
+        {:buffer,
+         {:source, %Membrane.Buffer{payload: cnt |> Integer.digits() |> IO.iodata_to_binary()}}}
+      end)
+
+    {{:ok, buffers}, %{state | cnt: cnt + size}}
   end
 end
