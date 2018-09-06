@@ -117,7 +117,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     if pb_status != :empty && PadModel.get_data!(src_name, :demand, state) > 0 do
       debug(
         """
-        handle_process did not produce expected amount of buffers, despite
+        handle_process_list did not produce expected amount of buffers, despite
         PullBuffer being not empty. Trying executing handle_demand again.
         """,
         state

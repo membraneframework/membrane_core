@@ -22,7 +22,7 @@ defmodule Membrane.Support.Element.TrivialFilter do
   end
 
   @impl true
-  def handle_process1(:sink, %Membrane.Buffer{payload: payload}, %Ctx.Process{}, state) do
+  def handle_process(:sink, %Membrane.Buffer{payload: payload}, %Ctx.Process{}, state) do
     {{:ok, buffer: {:source, %Membrane.Buffer{payload: payload <> <<255>>}}}, state}
   end
 end

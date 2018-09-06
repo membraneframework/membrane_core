@@ -501,7 +501,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       end
     end
 
-    context "when callback is other than 'handle_write_list' or 'handle_process'" do
+    context "when callback is other than 'handle_write_list' or 'handle_process_list'" do
       before do
         allow handler_module()
               |> to(accept :handle_demand, fn _, _, _, _, state -> {:ok, state} end)

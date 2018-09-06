@@ -50,7 +50,7 @@ defmodule Membrane.Core.Element.BufferController do
       )
 
     CallbackHandler.exec_and_handle_callback(
-      :handle_process,
+      :handle_process_list,
       ActionHandler,
       [pad_name, buffers, context],
       state

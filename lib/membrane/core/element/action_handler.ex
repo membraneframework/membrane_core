@@ -87,15 +87,15 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp do_handle_action({:redemand, src_name}, cb, _params, %State{type: type} = state)
        when type in [:source, :filter] and is_pad_name(src_name) and
-              cb not in [:handle_demand, :handle_process] do
+              cb not in [:handle_demand, :handle_process_list] do
     handle_redemand(src_name, state)
   end
 
   defp do_handle_action({:forward, data}, cb, params, %State{type: :filter} = state)
-       when cb in [:handle_caps, :handle_event, :handle_process] do
+       when cb in [:handle_caps, :handle_event, :handle_process_list] do
     {action, dir} =
       case {cb, params} do
-        {:handle_process, _} -> {:buffer, :source}
+        {:handle_process_list, _} -> {:buffer, :source}
         {:handle_caps, _} -> {:caps, :source}
         {:handle_event, %{direction: :sink}} -> {:event, :source}
         {:handle_event, %{direction: :source}} -> {:event, :sink}
@@ -369,8 +369,8 @@ defmodule Membrane.Core.Element.ActionHandler do
 
     with :ok <- sink_assertion,
          :ok <- source_assertion do
-      if callback in [:handle_write_list, :handle_process] do
-        # Handling demand results in execution of handle_write_list/handle_process,
+      if callback in [:handle_write_list, :handle_process_list] do
+        # Handling demand results in execution of handle_write_list/handle_process_list,
         # wherefore demand returned by one of these callbacks may lead to
         # emergence of a loop. This, in turn, could result in consuming entire
         # contents of PullBuffer before accepting any messages from other
