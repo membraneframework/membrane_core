@@ -1,10 +1,9 @@
 defmodule Membrane.Core.Playback do
   @moduledoc """
-  Behaviour for modules that have playback state, i.e. elements and pipelines
+  This module defines available playback states and struct that is held
+  internally by every module having playback state.
 
   There are three playback states: :stopped, :prepared and :playing.
-  Playback state always changes only one step at once in this order, and can
-  be handled by `handle_stopped_to_prepared`, `handle_playing_to_prepared`, `handle_prepared_to_playing` and `handle_prepared_to_stopped` callbacks.
   """
   use Bunch
 

@@ -4,7 +4,8 @@ defmodule Membrane.Core.PlaybackHandler do
   #
   # There are three playback states: :stopped, :prepared and :playing.
   # Playback state always changes only one step at once in this order, and can
-  # be handled by `handle_prepare/2`, `handle_prepared_to_playing/2` and `handle_prepared_to_stopped/2` callbacks
+  # be handled by `handle_stopped_to_prepared`, `handle_playing_to_prepared`,
+  # `handle_prepared_to_playing` and `handle_prepared_to_stopped` callbacks.
 
   alias Membrane.Core.{Playback, Playbackable}
   use Bunch
@@ -55,6 +56,16 @@ defmodule Membrane.Core.PlaybackHandler do
       defoverridable unquote(__MODULE__)
     end
   end
+
+  @doc """
+  Returns callback name for transition between playback states
+  """
+  @spec state_change_callback(prev_state :: Playback.state_t(), next_state :: Playback.state_t()) ::
+          atom()
+  def state_change_callback(:stopped, :prepared), do: :handle_stopped_to_prepared
+  def state_change_callback(:playing, :prepared), do: :handle_playing_to_prepared
+  def state_change_callback(:prepared, :playing), do: :handle_prepared_to_playing
+  def state_change_callback(:prepared, :stopped), do: :handle_prepared_to_stopped
 
   def change_playback_state(new_playback_state, handler, playbackable) do
     {playback, playbackable} =

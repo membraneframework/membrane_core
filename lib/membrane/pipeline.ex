@@ -500,16 +500,10 @@ defmodule Membrane.Pipeline do
     new_state = %{state | pending_pids: new_pending_pids}
 
     if new_pending_pids != pending_pids and new_pending_pids |> Enum.empty?() do
-      {callback, args} =
-        case {current_playback_state, new_playback_state} do
-          {:stopped, :prepared} -> {:handle_stopped_to_prepared, []}
-          {:playing, :prepared} -> {:handle_playing_to_prepared, []}
-          {:prepared, :playing} -> {:handle_prepared_to_playing, []}
-          {:prepared, :stopped} -> {:handle_prepared_to_stopped, []}
-        end
+      callback = PlaybackHandler.state_change_callback(current_playback_state, new_playback_state)
 
       with {:ok, new_state} <-
-             CallbackHandler.exec_and_handle_callback(callback, __MODULE__, args, new_state) do
+             CallbackHandler.exec_and_handle_callback(callback, __MODULE__, [], new_state) do
         PlaybackHandler.continue_playback_change(__MODULE__, new_state)
       else
         error -> error
