@@ -19,7 +19,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   The default name for generic source pad, in elements that just produce some
   buffers is `:source`.
   """
-  @callback known_source_pads() :: [Element.source_pad_specs_t()]
+  @callback membrane_source_pads() :: [Element.source_pad_specs_t()]
 
   @doc """
   Callback that is called when buffers should be emitted by the source or filter.
@@ -74,14 +74,14 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
       They are the following:
       #{unquote(source_pads) |> Membrane.Core.Helper.Doc.generate_known_pads_docs()}
       """
-      @spec known_source_pads() :: [Membrane.Element.source_pad_specs_t()]
+      @spec membrane_source_pads() :: [Membrane.Element.source_pad_specs_t()]
       @impl true
-      def known_source_pads(), do: unquote(source_pads)
+      def membrane_source_pads(), do: unquote(source_pads)
 
       @after_compile {__MODULE__, :__membrane_source_caps_specs_validation__}
 
       def __membrane_source_caps_specs_validation__(env, _bytecode) do
-        pads_list = env.module.known_source_pads() |> Enum.to_list() |> Keyword.values()
+        pads_list = env.module.membrane_source_pads() |> Enum.to_list() |> Keyword.values()
 
         for {_, _, caps_spec} <- pads_list do
           with :ok <- caps_spec |> Caps.Matcher.validate_specs() do

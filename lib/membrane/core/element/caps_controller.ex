@@ -51,7 +51,7 @@ defmodule Membrane.Core.Element.CapsController do
       match: false ->
         warn_error(
           """
-          Received caps: #{inspect(caps)} that are not specified in known_sink_pads
+          Received caps: #{inspect(caps)} that are not specified in membrane_sink_pads
           for pad #{inspect(pad_name)}. Specs of accepted caps are:
           #{inspect(accepted_caps, pretty: true)}
           """,
