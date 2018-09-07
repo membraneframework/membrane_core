@@ -301,13 +301,8 @@ defmodule Membrane.Pipeline do
 
   defp resolve_children(children, state), do: children |> Enum.map_reduce(state, &resolve_child/2)
 
-  defp resolve_child(%{name: name, params: params} = child, state) do
-    if params |> Keyword.get(:indexed) do
-      {id, state} = state |> State.get_increase_child_id(name)
-      {%{child | name: {name, id}}, state}
-    else
-      {child, state}
-    end
+  defp resolve_child(child, state) do
+    {child, state}
   end
 
   # Starts children based on given specification and links them to the current

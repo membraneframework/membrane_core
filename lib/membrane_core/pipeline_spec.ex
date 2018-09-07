@@ -21,16 +21,6 @@ defmodule Membrane.Pipeline.Spec do
         other_element: Element.Using.Default.Options
       ]
 
-  When defining children, some additional parameters can be provided by wrapping
-  child definition with a tuple and putting keyword list of parameters at the end:
-
-      [
-        first_element: {Element.Bare, indexed: true},
-        second_element: {%Element{opt_a: 42}, indexed: true}
-      ]
-
-  Available params are described in `t:child_property_t/0`
-
   ## Links
 
   Links that should be made when the pipeline starts, and children are spawned
@@ -54,12 +44,9 @@ defmodule Membrane.Pipeline.Spec do
 
   @typedoc """
   Properties for child definition in pipeline children specs
-
-  `index: true` allows to # TODO
   """
-  @type child_property_t :: {:indexed, boolean()}
   @type child_spec_t ::
-          module | struct | {module, [child_property_t]} | {struct, [child_property_t]}
+          module | struct
 
   @typedoc """
   Description of all the children elements inside the pipeline
