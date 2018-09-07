@@ -1,5 +1,7 @@
 # Membrane Multimedia Framework
 
+[![Hex.pm](https://img.shields.io/hexpm/v/membrane_core.svg)](https://hex.pm/packages/membrane_core)
+[![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_core/)
 [![Build Status](https://travis-ci.com/membraneframework/membrane-core.svg?branch=master)](https://travis-ci.com/membraneframework/membrane-core)
 
 > Membrane Framework - if you asked me what it is, I have no idea. _- Jose Valim_
