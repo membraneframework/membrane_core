@@ -34,8 +34,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     context "when element is not in a 'playing' state" do
       let :playback, do: %Playback{state: :prepared}
 
-      context "and callback is not 'handle_play'" do
-        let :callback, do: :handle_stop
+      context "and callback is not 'handle_prepared_to_playing'" do
+        let :callback, do: :handle_prepared_to_stopped
 
         it "should return an error result" do
           {ret, _state} =
@@ -89,8 +89,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         end
       end
 
-      context "and callback is 'handle_play'" do
-        let :callback, do: :handle_play
+      context "and callback is 'handle_prepared_to_playing'" do
+        let :callback, do: :handle_prepared_to_playing
 
         context "and pad exists in element" do
           it "should return an ok result" do

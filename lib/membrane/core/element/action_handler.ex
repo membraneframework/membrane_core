@@ -68,7 +68,12 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp do_handle_action({:playback_change, :suspend}, cb, _params, state)
-       when cb in [:handle_prepare_to_play, :handle_prepare_to_stop, :handle_play, :handle_stop] do
+       when cb in [
+              :handle_stopped_to_prepared,
+              :handle_playing_to_prepared,
+              :handle_prepared_to_playing,
+              :handle_prepared_to_stopped
+            ] do
     PlaybackHandler.suspend_playback_change(state)
   end
 
@@ -225,9 +230,9 @@ defmodule Membrane.Core.Element.ActionHandler do
          callback,
          %State{playback: %{state: playback_state}} = state
        )
-       when playback_state != :playing and callback != :handle_play do
+       when playback_state != :playing and callback != :handle_prepared_to_playing do
     warn_error(
-      "Buffers can only be sent when playing or from handle_play callback",
+      "Buffers can only be sent when playing or from handle_prepared_to_playing callback",
       {:cannot_send_buffer, playback_state: playback_state, callback: callback},
       state
     )
@@ -335,9 +340,9 @@ defmodule Membrane.Core.Element.ActionHandler do
          callback,
          %State{playback: %{state: playback_state}} = state
        )
-       when playback_state != :playing and callback != :handle_play do
+       when playback_state != :playing and callback != :handle_prepared_to_playing do
     warn_error(
-      "Demand can only be requested when playing or from handle_play callback",
+      "Demand can only be requested when playing or from handle_prepared_to_playing callback",
       {:cannot_handle_demand, playback_state: playback_state, callback: callback},
       state
     )

@@ -131,25 +131,49 @@ defmodule Membrane.Core.Element.LifecycleController do
   @impl PlaybackHandler
   def handle_playback_state(:prepared, :playing, state) do
     ctx = CallbackContext.Play.from_state(state)
-    CallbackHandler.exec_and_handle_callback(:handle_play, ActionHandler, [ctx], state)
+
+    CallbackHandler.exec_and_handle_callback(
+      :handle_prepared_to_playing,
+      ActionHandler,
+      [ctx],
+      state
+    )
   end
 
   @impl PlaybackHandler
   def handle_playback_state(:prepared, :stopped, state) do
     ctx = CallbackContext.Stop.from_state(state)
-    CallbackHandler.exec_and_handle_callback(:handle_stop, ActionHandler, [ctx], state)
+
+    CallbackHandler.exec_and_handle_callback(
+      :handle_prepared_to_stopped,
+      ActionHandler,
+      [ctx],
+      state
+    )
   end
 
   @impl PlaybackHandler
   def handle_playback_state(:stopped, :prepared, state) do
     ctx = CallbackContext.Prepare.from_state(state)
-    CallbackHandler.exec_and_handle_callback(:handle_prepare_to_play, ActionHandler, [ctx], state)
+
+    CallbackHandler.exec_and_handle_callback(
+      :handle_stopped_to_prepared,
+      ActionHandler,
+      [ctx],
+      state
+    )
   end
 
   @impl PlaybackHandler
   def handle_playback_state(:playing, :prepared, state) do
     ctx = CallbackContext.Prepare.from_state(state)
-    CallbackHandler.exec_and_handle_callback(:handle_prepare_to_stop, ActionHandler, [ctx], state)
+
+    CallbackHandler.exec_and_handle_callback(
+      :handle_playing_to_prepared,
+      ActionHandler,
+      [ctx],
+      state
+    )
   end
 
   @impl PlaybackHandler

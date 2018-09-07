@@ -166,47 +166,47 @@ defmodule Membrane.ElementSpec do
       context "and current playback state is :stopped" do
         let :playback, do: %Playback{state: :stopped}
 
-        context "and handle_prepare_to_play callback has returned an error" do
+        context "and handle_stopped_to_prepared callback has returned an error" do
           let :reason, do: :whatever
 
           before do
             allow module()
                   |> to(
-                    accept(:handle_play, fn _ctx, received_internal_state ->
+                    accept(:handle_prepared_to_playing, fn _ctx, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_prepare_to_play, fn _ctx, received_internal_state ->
+                    accept(:handle_stopped_to_prepared, fn _ctx, received_internal_state ->
                       {{:error, reason()}, %{received_internal_state | a: 2}}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_stop, fn _ctx, received_internal_state ->
+                    accept(:handle_prepared_to_stopped, fn _ctx, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
           end
 
-          it "should not call handle_stop callback on element's module" do
+          it "should not call handle_prepared_to_stopped callback on element's module" do
             described_module().handle_info(message(), state())
-            expect(module()) |> to_not(accepted(:handle_stop))
+            expect(module()) |> to_not(accepted(:handle_prepared_to_stopped))
           end
 
-          it "should call handle_prepare_to_play(ctx_prepare, internal_state) callback on element's module" do
+          it "should call handle_stopped_to_prepared(ctx_prepare, internal_state) callback on element's module" do
             described_module().handle_info(message(), state())
 
             expect(module())
-            |> to(accepted(:handle_prepare_to_play, [ctx_prepare(), internal_state()]))
+            |> to(accepted(:handle_stopped_to_prepared, [ctx_prepare(), internal_state()]))
           end
 
-          it "should not call handle_play(ctx_play, internal_state) callback on element's module" do
+          it "should not call handle_prepared_to_playing(ctx_play, internal_state) callback on element's module" do
             described_module().handle_info(message(), state())
-            expect(module()) |> to_not(accepted(:handle_play))
+            expect(module()) |> to_not(accepted(:handle_prepared_to_playing))
           end
 
           it "should return :stop response" do
@@ -234,49 +234,49 @@ defmodule Membrane.ElementSpec do
           end
         end
 
-        context "and handle_play callback has returned an error" do
+        context "and handle_prepared_to_playing callback has returned an error" do
           let :reason, do: :whatever
 
           before do
             allow module()
                   |> to(
-                    accept(:handle_play, fn _, received_internal_state ->
+                    accept(:handle_prepared_to_playing, fn _, received_internal_state ->
                       {:error, reason(), %{received_internal_state | a: 3}}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_prepare_to_play, fn _ctx, internal_state ->
+                    accept(:handle_stopped_to_prepared, fn _ctx, internal_state ->
                       {:ok, %{internal_state | a: 2}}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_stop, fn _, received_internal_state ->
+                    accept(:handle_prepared_to_stopped, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
           end
 
-          it "should not call handle_stop callback on element's module" do
+          it "should not call handle_prepared_to_stopped callback on element's module" do
             described_module().handle_info(message(), state())
-            expect(module()) |> to_not(accepted(:handle_stop))
+            expect(module()) |> to_not(accepted(:handle_prepared_to_stopped))
           end
 
-          it "should call handle_prepare_to_play(ctx_prepare, internal_state) callback on element's module" do
+          it "should call handle_stopped_to_prepared(ctx_prepare, internal_state) callback on element's module" do
             described_module().handle_info(message(), state())
 
             expect(module())
-            |> to(accepted(:handle_prepare_to_play, [ctx_prepare(), internal_state()]))
+            |> to(accepted(:handle_stopped_to_prepared, [ctx_prepare(), internal_state()]))
           end
 
-          it "should call handle_play(ctx_play, internal_state) callback on element's module with internal state updated by previous handle_prepare_to_play call" do
+          it "should call handle_prepared_to_playing(ctx_play, internal_state) callback on element's module with internal state updated by previous handle_stopped_to_prepared call" do
             described_module().handle_info(message(), state())
 
             expect(module())
-            |> to(accepted(:handle_play, [ctx_play(), %{internal_state() | a: 2}]))
+            |> to(accepted(:handle_prepared_to_playing, [ctx_play(), %{internal_state() | a: 2}]))
           end
         end
 
@@ -286,44 +286,46 @@ defmodule Membrane.ElementSpec do
           before do
             allow module()
                   |> to(
-                    accept(:handle_play, fn _, received_internal_state ->
+                    accept(:handle_prepared_to_playing, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_prepare_to_play, fn _, _received_internal_state ->
+                    accept(:handle_stopped_to_prepared, fn _, _received_internal_state ->
                       {:ok, new_internal_state()}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_stop, fn _, received_internal_state ->
+                    accept(:handle_prepared_to_stopped, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
           end
 
-          it "should not call handle_stop callback on element's module" do
+          it "should not call handle_prepared_to_stopped callback on element's module" do
             described_module().handle_info(message(), state())
-            expect(module()) |> to_not(accepted(:handle_stop))
+            expect(module()) |> to_not(accepted(:handle_prepared_to_stopped))
           end
 
-          it "should call handle_prepare_to_play(_ctx, internal_state) callback on element's module" do
+          it "should call handle_stopped_to_prepared(_ctx, internal_state) callback on element's module" do
             described_module().handle_info(message(), state())
 
             expect(module())
-            |> to(accepted(:handle_prepare_to_play, [ctx_prepare(), internal_state()]))
+            |> to(accepted(:handle_stopped_to_prepared, [ctx_prepare(), internal_state()]))
           end
 
-          it "should call handle_play(ctx_play, internal_state) callback on element's module with state updated by handle_prepare_to_play" do
+          it "should call handle_prepared_to_playing(ctx_play, internal_state) callback on element's module with state updated by handle_stopped_to_prepared" do
             described_module().handle_info(message(), state())
-            expect(module()) |> to(accepted(:handle_play, [ctx_play(), new_internal_state()]))
+
+            expect(module())
+            |> to(accepted(:handle_prepared_to_playing, [ctx_play(), new_internal_state()]))
           end
 
-          it "it return {:reply, :ok, state()} with internal state updated by handle_prepare_to_play" do
+          it "it return {:reply, :ok, state()} with internal state updated by handle_stopped_to_prepared" do
             {:noreply, %{internal_state: returned_state}} =
               described_module().handle_info(message(), state())
 
@@ -349,48 +351,54 @@ defmodule Membrane.ElementSpec do
 
           before do
             allow module()
-                  |> to(accept(:handle_play, fn _, _state -> {:ok, new_internal_state()} end))
+                  |> to(
+                    accept(:handle_prepared_to_playing, fn _, _state ->
+                      {:ok, new_internal_state()}
+                    end)
+                  )
 
             allow module()
                   |> to(
-                    accept(:handle_prepare_to_play, fn _, received_internal_state ->
+                    accept(:handle_stopped_to_prepared, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_prepare_to_stop, fn _, received_internal_state ->
+                    accept(:handle_playing_to_prepared, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_stop, fn _, received_internal_state ->
+                    accept(:handle_prepared_to_stopped, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
           end
 
-          it "should not call handle_stop callback on element's module" do
+          it "should not call handle_prepared_to_stopped callback on element's module" do
             described_module().handle_info(message(), state())
-            expect(module()) |> to_not(accepted(:handle_stop))
+            expect(module()) |> to_not(accepted(:handle_prepared_to_stopped))
           end
 
-          it "should not call handle_prepare_to_play callback on element's module" do
+          it "should not call handle_stopped_to_prepared callback on element's module" do
             described_module().handle_info(message(), state())
-            expect(module()) |> to_not(accepted(:handle_prepare_to_play))
+            expect(module()) |> to_not(accepted(:handle_stopped_to_prepared))
           end
 
-          it "should not call handle_prepare_to_stop callback on element's module" do
+          it "should not call handle_playing_to_prepared callback on element's module" do
             described_module().handle_info(message(), state())
-            expect(module()) |> to_not(accepted(:handle_prepare_to_stop))
+            expect(module()) |> to_not(accepted(:handle_playing_to_prepared))
           end
 
-          it "should call handle_play(ctx_play, internal_state) callback on element's module" do
+          it "should call handle_prepared_to_playing(ctx_play, internal_state) callback on element's module" do
             described_module().handle_info(message(), state())
-            expect(module()) |> to(accepted(:handle_play, [ctx_play(), internal_state()]))
+
+            expect(module())
+            |> to(accepted(:handle_prepared_to_playing, [ctx_play(), internal_state()]))
           end
 
           it "should return {:reply, :ok, state()} with internal state updated" do
@@ -415,51 +423,51 @@ defmodule Membrane.ElementSpec do
         before do
           allow module()
                 |> to(
-                  accept(:handle_play, fn _, received_internal_state ->
+                  accept(:handle_prepared_to_playing, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
 
           allow module()
                 |> to(
-                  accept(:handle_prepare_to_play, fn _, received_internal_state ->
+                  accept(:handle_stopped_to_prepared, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
 
           allow module()
                 |> to(
-                  accept(:handle_prepare_to_stop, fn _, received_internal_state ->
+                  accept(:handle_playing_to_prepared, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
 
           allow module()
                 |> to(
-                  accept(:handle_stop, fn _, received_internal_state ->
+                  accept(:handle_prepared_to_stopped, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
         end
 
-        it "should not call handle_stop callback on element's module" do
+        it "should not call handle_prepared_to_stopped callback on element's module" do
           described_module().handle_info(message(), state())
-          expect(module()) |> to_not(accepted(:handle_stop))
+          expect(module()) |> to_not(accepted(:handle_prepared_to_stopped))
         end
 
-        it "should not call handle_prepare_to_play callback on element's module" do
+        it "should not call handle_stopped_to_prepared callback on element's module" do
           described_module().handle_info(message(), state())
-          expect(module()) |> to_not(accepted(:handle_prepare_to_play))
+          expect(module()) |> to_not(accepted(:handle_stopped_to_prepared))
         end
 
-        it "should not call handle_prepare_to_stop callback on element's module" do
+        it "should not call handle_playing_to_prepared callback on element's module" do
           described_module().handle_info(message(), state())
-          expect(module()) |> to_not(accepted(:handle_prepare_to_stop))
+          expect(module()) |> to_not(accepted(:handle_playing_to_prepared))
         end
 
-        it "should not call handle_play callback on element's module" do
+        it "should not call handle_prepared_to_playing callback on element's module" do
           described_module().handle_info(message(), state())
-          expect(module()) |> to_not(accepted(:handle_play))
+          expect(module()) |> to_not(accepted(:handle_prepared_to_playing))
         end
 
         pending "should return {:reply, :noop, state()} with unmodified state"
@@ -487,41 +495,41 @@ defmodule Membrane.ElementSpec do
           before do
             allow module()
                   |> to(
-                    accept(:handle_play, fn _, received_internal_state ->
+                    accept(:handle_prepared_to_playing, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_prepare_to_play, fn _, _state ->
+                    accept(:handle_stopped_to_prepared, fn _, _state ->
                       {:ok, new_internal_state()}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_stop, fn _, received_internal_state ->
+                    accept(:handle_prepared_to_stopped, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
           end
 
-          it "should not call handle_stop callback on element's module" do
+          it "should not call handle_prepared_to_stopped callback on element's module" do
             described_module().handle_info(message(), state())
-            expect(module()) |> to_not(accepted(:handle_stop))
+            expect(module()) |> to_not(accepted(:handle_prepared_to_stopped))
           end
 
-          it "should call handle_prepare_to_stop(ctx_prepare, internal_state) callback on element's module" do
+          it "should call handle_playing_to_prepared(ctx_prepare, internal_state) callback on element's module" do
             described_module().handle_info(message(), state())
 
             expect(module())
-            |> to(accepted(:handle_prepare_to_play, [ctx_prepare(), internal_state()]))
+            |> to(accepted(:handle_stopped_to_prepared, [ctx_prepare(), internal_state()]))
           end
 
-          it "should not call handle_play callback on element's module" do
+          it "should not call handle_prepared_to_playing callback on element's module" do
             described_module().handle_info(message(), state())
-            expect(module()) |> to_not(accepted(:handle_play))
+            expect(module()) |> to_not(accepted(:handle_prepared_to_playing))
           end
 
           it "should return {:reply, :ok, state()} with internal state updated" do
@@ -546,51 +554,51 @@ defmodule Membrane.ElementSpec do
         before do
           allow module()
                 |> to(
-                  accept(:handle_play, fn _, received_internal_state ->
+                  accept(:handle_prepared_to_playing, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
 
           allow module()
                 |> to(
-                  accept(:handle_prepare_to_play, fn _, received_internal_state ->
+                  accept(:handle_stopped_to_prepared, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
 
           allow module()
                 |> to(
-                  accept(:handle_prepare_to_stop, fn _, received_internal_state ->
+                  accept(:handle_playing_to_prepared, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
 
           allow module()
                 |> to(
-                  accept(:handle_stop, fn _, received_internal_state ->
+                  accept(:handle_prepared_to_stopped, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
         end
 
-        it "should not call handle_stop callback on element's module" do
+        it "should not call handle_prepared_to_stopped callback on element's module" do
           described_module().handle_info(message(), state())
-          expect(module()) |> to_not(accepted(:handle_stop))
+          expect(module()) |> to_not(accepted(:handle_prepared_to_stopped))
         end
 
-        it "should not call handle_prepare_to_play callback on element's module" do
+        it "should not call handle_stopped_to_prepared callback on element's module" do
           described_module().handle_info(message(), state())
-          expect(module()) |> to_not(accepted(:handle_prepare_to_play))
+          expect(module()) |> to_not(accepted(:handle_stopped_to_prepared))
         end
 
-        it "should not call handle_prepare_to_stop callback on element's module" do
+        it "should not call handle_playing_to_prepared callback on element's module" do
           described_module().handle_info(message(), state())
-          expect(module()) |> to_not(accepted(:handle_prepare_to_stop))
+          expect(module()) |> to_not(accepted(:handle_playing_to_prepared))
         end
 
-        it "should not call handle_play callback on element's module" do
+        it "should not call handle_prepared_to_playing callback on element's module" do
           described_module().handle_info(message(), state())
-          expect(module()) |> to_not(accepted(:handle_play))
+          expect(module()) |> to_not(accepted(:handle_prepared_to_playing))
         end
 
         pending "should return {:reply, :noop, state()} with unmodified state"
@@ -608,41 +616,41 @@ defmodule Membrane.ElementSpec do
           before do
             allow module()
                   |> to(
-                    accept(:handle_play, fn _, received_internal_state ->
+                    accept(:handle_prepared_to_playing, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_prepare_to_stop, fn _, _state ->
+                    accept(:handle_playing_to_prepared, fn _, _state ->
                       {:ok, new_internal_state()}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_stop, fn _, received_internal_state ->
+                    accept(:handle_prepared_to_stopped, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
           end
 
-          it "should not call handle_stop callback on element's module" do
+          it "should not call handle_prepared_to_stopped callback on element's module" do
             described_module().handle_info(message(), state())
-            expect(module()) |> to_not(accepted(:handle_stop))
+            expect(module()) |> to_not(accepted(:handle_prepared_to_stopped))
           end
 
-          it "should call handle_prepare_to_stop(ctx_prepare, internal_state) callback on element's module" do
+          it "should call handle_playing_to_prepared(ctx_prepare, internal_state) callback on element's module" do
             described_module().handle_info(message(), state())
 
             expect(module())
-            |> to(accepted(:handle_prepare_to_stop, [ctx_prepare(), internal_state()]))
+            |> to(accepted(:handle_playing_to_prepared, [ctx_prepare(), internal_state()]))
           end
 
-          it "should not call handle_play callback on element's module" do
+          it "should not call handle_prepared_to_playing callback on element's module" do
             described_module().handle_info(message(), state())
-            expect(module()) |> to_not(accepted(:handle_play))
+            expect(module()) |> to_not(accepted(:handle_prepared_to_playing))
           end
 
           it "should return {:reply, :ok, state()} with internal state updated" do
@@ -683,39 +691,44 @@ defmodule Membrane.ElementSpec do
           before do
             allow module()
                   |> to(
-                    accept(:handle_play, fn _, received_internal_state ->
+                    accept(:handle_prepared_to_playing, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_prepare_to_stop, fn _, received_internal_state ->
+                    accept(:handle_playing_to_prepared, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
-            allow module() |> to(accept(:handle_stop, fn _, _ -> {:ok, new_internal_state()} end))
+            allow module()
+                  |> to(
+                    accept(:handle_prepared_to_stopped, fn _, _ -> {:ok, new_internal_state()} end)
+                  )
           end
 
-          it "should call handle_stop callback on element's module" do
-            described_module().handle_info(message(), state())
-            expect(module()) |> to(accepted(:handle_stop, [ctx_stop(), internal_state()]))
-          end
-
-          it "should call handle_prepare_to_stop(:playing, internal_state) callback on element's module" do
+          it "should call handle_prepared_to_stopped callback on element's module" do
             described_module().handle_info(message(), state())
 
             expect(module())
-            |> to(accepted(:handle_prepare_to_stop, [ctx_prepare(), internal_state()]))
+            |> to(accepted(:handle_prepared_to_stopped, [ctx_stop(), internal_state()]))
           end
 
-          it "should not call handle_play callback on element's module" do
+          it "should call handle_playing_to_prepared(:playing, internal_state) callback on element's module" do
             described_module().handle_info(message(), state())
-            expect(module()) |> to_not(accepted(:handle_play))
+
+            expect(module())
+            |> to(accepted(:handle_playing_to_prepared, [ctx_prepare(), internal_state()]))
           end
 
-          it "should return {:reply, :ok, state()} with internal state updated by handle_stop" do
+          it "should not call handle_prepared_to_playing callback on element's module" do
+            described_module().handle_info(message(), state())
+            expect(module()) |> to_not(accepted(:handle_prepared_to_playing))
+          end
+
+          it "should return {:reply, :ok, state()} with internal state updated by handle_prepared_to_stopped" do
             {:noreply, %{internal_state: returned_state}} =
               described_module().handle_info(message(), state())
 
@@ -742,43 +755,49 @@ defmodule Membrane.ElementSpec do
           before do
             allow module()
                   |> to(
-                    accept(:handle_play, fn _, received_internal_state ->
+                    accept(:handle_prepared_to_playing, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_prepare_to_play, fn _, received_internal_state ->
+                    accept(:handle_stopped_to_prepared, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
             allow module()
                   |> to(
-                    accept(:handle_prepare_to_stop, fn _, received_internal_state ->
+                    accept(:handle_playing_to_prepared, fn _, received_internal_state ->
                       {:ok, received_internal_state}
                     end)
                   )
 
             allow module()
-                  |> to(accept(:handle_stop, fn _, _state -> {:ok, new_internal_state()} end))
+                  |> to(
+                    accept(:handle_prepared_to_stopped, fn _, _state ->
+                      {:ok, new_internal_state()}
+                    end)
+                  )
           end
 
-          it "should call handle_stop callback on element's module" do
+          it "should call handle_prepared_to_stopped callback on element's module" do
             described_module().handle_info(message(), state())
-            expect(module()) |> to(accepted(:handle_stop, [ctx_stop(), internal_state()]))
+
+            expect(module())
+            |> to(accepted(:handle_prepared_to_stopped, [ctx_stop(), internal_state()]))
           end
 
-          it "should not call handle_prepare_to_{play,stop} callbacks on element's module" do
+          it "should not call handle_stopped_to_prepared and handle_playing_to_prepared callbacks on element's module" do
             described_module().handle_info(message(), state())
-            expect(module()) |> to_not(accepted(:handle_prepare_to_play))
-            expect(module()) |> to_not(accepted(:handle_prepare_to_stop))
+            expect(module()) |> to_not(accepted(:handle_stopped_to_prepared))
+            expect(module()) |> to_not(accepted(:handle_playing_to_prepared))
           end
 
-          it "should not call handle_play callback on element's module" do
+          it "should not call handle_prepared_to_playing callback on element's module" do
             described_module().handle_info(message(), state())
-            expect(module()) |> to_not(accepted(:handle_play))
+            expect(module()) |> to_not(accepted(:handle_prepared_to_playing))
           end
 
           it "should return {:reply, :ok, state()} with internal state updated" do
@@ -803,47 +822,47 @@ defmodule Membrane.ElementSpec do
         before do
           allow module()
                 |> to(
-                  accept(:handle_play, fn _, received_internal_state ->
+                  accept(:handle_prepared_to_playing, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
 
           allow module()
                 |> to(
-                  accept(:handle_prepare_to_play, fn _, received_internal_state ->
+                  accept(:handle_stopped_to_prepared, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
 
           allow module()
                 |> to(
-                  accept(:handle_prepare_to_stop, fn _, received_internal_state ->
+                  accept(:handle_playing_to_prepared, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
 
           allow module()
                 |> to(
-                  accept(:handle_stop, fn _, received_internal_state ->
+                  accept(:handle_prepared_to_stopped, fn _, received_internal_state ->
                     {:ok, received_internal_state}
                   end)
                 )
         end
 
-        it "should not call handle_stop callback on element's module" do
+        it "should not call handle_prepared_to_stopped callback on element's module" do
           described_module().handle_info(message(), state())
-          expect(module()) |> to_not(accepted(:handle_stop))
+          expect(module()) |> to_not(accepted(:handle_prepared_to_stopped))
         end
 
-        it "should not call handle_prepare_to_{play,stop} callback on element's module" do
+        it "should not call handle_stopped_to_prepared and handle_playing_to_prepared callbacks on element's module" do
           described_module().handle_info(message(), state())
-          expect(module()) |> to_not(accepted(:handle_prepare_to_play))
-          expect(module()) |> to_not(accepted(:handle_prepare_to_stop))
+          expect(module()) |> to_not(accepted(:handle_stopped_to_prepared))
+          expect(module()) |> to_not(accepted(:handle_playing_to_prepared))
         end
 
-        it "should not call handle_play callback on element's module" do
+        it "should not call handle_prepared_to_playing callback on element's module" do
           described_module().handle_info(message(), state())
-          expect(module()) |> to_not(accepted(:handle_play))
+          expect(module()) |> to_not(accepted(:handle_prepared_to_playing))
         end
 
         it "should return {:reply, state()} with unmodified playback state" do

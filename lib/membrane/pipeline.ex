@@ -74,25 +74,25 @@ defmodule Membrane.Pipeline do
   Callback invoked when pipeline transtion from `:stopped` to `:prepared` state has finished,
   that is all of its elements are prepared to enter `:playing` state.
   """
-  @callback handle_prepare_to_play(state :: State.internal_state_t()) :: callback_return_t
+  @callback handle_stopped_to_prepared(state :: State.internal_state_t()) :: callback_return_t
 
   @doc """
   Callback invoked when pipeline transtion from `:playing` to `:prepared` state has finished,
   that is all of its elements are prepared to be stopped.
   """
-  @callback handle_prepare_to_stop(state :: State.internal_state_t()) :: callback_return_t
+  @callback handle_playing_to_prepared(state :: State.internal_state_t()) :: callback_return_t
 
   @doc """
   Callback invoked when pipeline is in `:playing` state, i.e. all its elements
   are in this state.
   """
-  @callback handle_play(state :: State.internal_state_t()) :: callback_return_t
+  @callback handle_prepared_to_playing(state :: State.internal_state_t()) :: callback_return_t
 
   @doc """
   Callback invoked when pipeline is in `:playing` state, i.e. all its elements
   are in this state.
   """
-  @callback handle_stop(state :: State.internal_state_t()) :: callback_return_t
+  @callback handle_prepared_to_stopped(state :: State.internal_state_t()) :: callback_return_t
 
   @doc """
   Callback invoked when message incomes from an element.
@@ -502,10 +502,10 @@ defmodule Membrane.Pipeline do
     if new_pending_pids != pending_pids and new_pending_pids |> Enum.empty?() do
       {callback, args} =
         case {current_playback_state, new_playback_state} do
-          {:stopped, :prepared} -> {:handle_prepare_to_play, []}
-          {:playing, :prepared} -> {:handle_prepare_to_stop, []}
-          {:prepared, :playing} -> {:handle_play, []}
-          {:prepared, :stopped} -> {:handle_stop, []}
+          {:stopped, :prepared} -> {:handle_stopped_to_prepared, []}
+          {:playing, :prepared} -> {:handle_playing_to_prepared, []}
+          {:prepared, :playing} -> {:handle_prepared_to_playing, []}
+          {:prepared, :stopped} -> {:handle_prepared_to_stopped, []}
         end
 
       with {:ok, new_state} <-
@@ -613,16 +613,16 @@ defmodule Membrane.Pipeline do
       def handle_init(_options), do: {{:ok, %Spec{}}, %{}}
 
       @impl true
-      def handle_prepare_to_play(state), do: {:ok, state}
+      def handle_stopped_to_prepared(state), do: {:ok, state}
 
       @impl true
-      def handle_prepare_to_stop(state), do: {:ok, state}
+      def handle_playing_to_prepared(state), do: {:ok, state}
 
       @impl true
-      def handle_play(state), do: {:ok, state}
+      def handle_prepared_to_playing(state), do: {:ok, state}
 
       @impl true
-      def handle_stop(state), do: {:ok, state}
+      def handle_prepared_to_stopped(state), do: {:ok, state}
 
       @impl true
       def handle_message(_message, _from, state), do: {:ok, state}
@@ -634,10 +634,10 @@ defmodule Membrane.Pipeline do
       def handle_spec_started(_new_children, state), do: {:ok, state}
 
       defoverridable handle_init: 1,
-                     handle_prepare_to_play: 1,
-                     handle_prepare_to_stop: 1,
-                     handle_play: 1,
-                     handle_stop: 1,
+                     handle_stopped_to_prepared: 1,
+                     handle_playing_to_prepared: 1,
+                     handle_prepared_to_playing: 1,
+                     handle_prepared_to_stopped: 1,
                      handle_message: 3,
                      handle_other: 2,
                      handle_spec_started: 2

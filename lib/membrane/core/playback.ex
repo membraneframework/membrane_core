@@ -4,7 +4,7 @@ defmodule Membrane.Core.Playback do
 
   There are three playback states: :stopped, :prepared and :playing.
   Playback state always changes only one step at once in this order, and can
-  be handled by `handle_prepare_to_play`, `handle_prepare_to_stop`, `handle_play` and `handle_stop` callbacks.
+  be handled by `handle_stopped_to_prepared`, `handle_playing_to_prepared`, `handle_prepared_to_playing` and `handle_prepared_to_stopped` callbacks.
   """
   use Bunch
 
