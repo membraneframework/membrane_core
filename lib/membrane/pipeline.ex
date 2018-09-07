@@ -282,12 +282,24 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  defp child_name?(name) when is_atom(name), do: true
+
+  defp child_name?({name_atom, name_id})
+       when is_atom(name_atom) and is_integer(name_id) and name_id >= 0,
+       do: true
+
+  defp child_name?(_name), do: false
+
   defp parse_children(children) when is_map(children) or is_list(children),
     do: children |> Bunch.Enum.try_map(&parse_child/1)
 
-  defp parse_child({name, {%module{} = options, params}})
-       when is_atom(name) and is_list(params) do
-    {:ok, %{name: name, module: module, options: options, params: params}}
+  defp parse_child({name, {%module{} = options, params}} = config)
+       when is_list(params) do
+    if child_name?(name) do
+      {:ok, %{name: name, module: module, options: options, params: params}}
+    else
+      {:error, invalid_child_config: config}
+    end
   end
 
   defp parse_child({name, {module, params}})
@@ -296,7 +308,7 @@ defmodule Membrane.Pipeline do
     {:ok, %{name: name, module: module, options: options, params: params}}
   end
 
-  defp parse_child({name, module}) when is_atom(name) do
+  defp parse_child({name, module}) do
     parse_child({name, {module, []}})
   end
 
