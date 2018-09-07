@@ -86,7 +86,7 @@ defmodule Membrane.PullBuffer do
   def fill(%PullBuffer{} = pb),
     do:
       handle_demand(pb, 0)
-      |> or_warn_error("Unable to fill PullBuffer #{pb.name}: #{inspect(pb)}")
+      |> or_warn_error("Unable to fill PullBuffer #{inspect(pb.name)}: #{inspect(pb)}")
 
   @spec store(t(), atom(), any()) :: {:ok, t()} | {:error, any()}
   def store(pb, type \\ :buffers, v)
@@ -99,7 +99,7 @@ defmodule Membrane.PullBuffer do
       when is_list(v) do
     if size >= pref_size do
       debug("""
-      PullBuffer #{pb.name}: received buffers from sink #{inspect(pb.sink_name)},
+      PullBuffer #{inspect(pb.name)}: received buffers from sink #{inspect(pb.sink_name)},
       despite not requesting them. It is probably caused by overestimating demand
       by previous element.
       """)
@@ -122,7 +122,7 @@ defmodule Membrane.PullBuffer do
 
       warn([
         """
-        PullBuffer #{pb.name} (toilet): received #{inspect(size)} buffers,
+        PullBuffer #{inspect(pb.name)} (toilet): received #{inspect(size)} buffers,
         which is above #{above_level}, from sink #{inspect(pb.sink_name)} that works in push mode.
         To have control over amount of buffers being produced, consider using push mode.
         If this is a normal situation, increase toilet warn/fail level.
@@ -138,7 +138,7 @@ defmodule Membrane.PullBuffer do
 
     if size >= fail_lvl do
       warn_error(
-        "PullBuffer #{pb.name} (toilet): failing: too many buffers",
+        "PullBuffer #{inspect(pb.name)} (toilet): failing: too many buffers",
         {:pull_buffer, toilet: :too_many_buffers}
       )
     else

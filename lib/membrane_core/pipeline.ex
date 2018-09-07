@@ -16,6 +16,7 @@ defmodule Membrane.Pipeline do
   alias Membrane.{Element, Message}
   use Membrane.Helper
   import Helper.GenServer
+  require Membrane.Element
 
   @typedoc """
   Defines options that can be passed to `start/3` / `start_link/3` and received
@@ -282,17 +283,17 @@ defmodule Membrane.Pipeline do
     do: children |> Helper.Enum.map_with(&parse_child/1)
 
   defp parse_child({name, {%module{} = options, params}})
-       when is_atom(name) and is_list(params) do
+       when Element.is_element_name(name) and is_list(params) do
     {:ok, %{name: name, module: module, options: options, params: params}}
   end
 
   defp parse_child({name, {module, params}})
-       when is_atom(name) and is_atom(module) and is_list(params) do
+       when Element.is_element_name(name) and is_atom(module) and is_list(params) do
     options = module |> Helper.Module.struct()
     {:ok, %{name: name, module: module, options: options, params: params}}
   end
 
-  defp parse_child({name, module}) when is_atom(name) do
+  defp parse_child({name, module}) do
     parse_child({name, {module, []}})
   end
 
