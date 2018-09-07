@@ -497,7 +497,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           )
 
         expect(result) |> to(be_ok_result())
-        assert_received {:membrane_handle_demand, _}
+        assert_received {:membrane_invoke_handle_demand, _}
       end
     end
 

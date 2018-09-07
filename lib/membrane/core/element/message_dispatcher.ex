@@ -70,7 +70,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
 
   # Sent by `Membrane.Core.Element.ActionHandler.handle_demand`, check there for
   # more information
-  defp do_handle_message({:membrane_handle_demand, [pad_name, source, size]}, :info, state) do
+  defp do_handle_message({:membrane_invoke_handle_demand, [pad_name, source, size]}, :info, state) do
     DemandHandler.handle_demand(pad_name, source, size, state)
   end
 

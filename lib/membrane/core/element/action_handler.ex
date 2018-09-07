@@ -377,7 +377,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         # processes. As such situation is unwanted, a message to self is sent here
         # to make it possible for messages already enqueued in mailbox to be
         # received before the demand is handled.
-        send(self(), {:membrane_handle_demand, [pad_name, source, size]})
+        send(self(), {:membrane_invoke_handle_demand, [pad_name, source, size]})
         {:ok, state}
       else
         DemandHandler.handle_demand(pad_name, source, size, state)
