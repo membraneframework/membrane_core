@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.com/membraneframework/membrane-core.svg?branch=master)](https://travis-ci.com/membraneframework/membrane-core)
 
+> Membrane Framework - if you asked me what it is, I have no idea. _- Jose Valim_
+
 Multimedia processing framework that focuses on reliability, concurrency and scalability.
 
 An easy to use abstraction layer for assembling mostly server-side applications that have to consume, produce or process multimedia streams.
