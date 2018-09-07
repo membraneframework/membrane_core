@@ -57,9 +57,7 @@ defmodule Membrane.Pipeline.Spec do
 
   `index: true` allows to # TODO
   """
-  @type child_property_t :: {:indexed, boolean()}
-  @type child_spec_t ::
-          module | struct | {module, [child_property_t]} | {struct, [child_property_t]}
+  @type child_spec_t :: module | struct
 
   @typedoc """
   Description of all the children elements inside the pipeline
