@@ -45,8 +45,7 @@ defmodule Membrane.Pipeline.Spec do
   @typedoc """
   Properties for child definition in pipeline children specs
   """
-  @type child_spec_t ::
-          module | struct
+  @type child_spec_t :: module | struct
 
   @typedoc """
   Description of all the children elements inside the pipeline
