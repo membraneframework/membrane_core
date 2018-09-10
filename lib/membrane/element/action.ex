@@ -41,8 +41,8 @@ defmodule Membrane.Element.Action do
 
   Useful when a long action is to be undertaken, and partial results need to
   be returned before entire process finishes (e.g. default implementation of
-  `c:Membrane.Element.Base.Filter.handle_process/4` uses split action to invoke
-  `c:Membrane.Element.Base.Filter.handle_process1/4` with each buffer)
+  `c:Membrane.Element.Base.Filter.handle_process_list/4` uses split action to invoke
+  `c:Membrane.Element.Base.Filter.handle_process/4` with each buffer)
   """
   @type split_t :: {:split, {callback_name :: atom, args_list :: [[any]]}}
 
@@ -67,8 +67,8 @@ defmodule Membrane.Element.Action do
   of data from `Membrane.Core.PullBuffer`, which _sends_ demands automatically when it
   runs out of data.
   If there is any data available at the pad, the data is passed to
-  `c:Membrane.Element.Base.Filter.handle_process/4`
-  or `c:Membrane.Element.Base.Sink.handle_write/4` callback. Invoked callback is
+  `c:Membrane.Element.Base.Filter.handle_process_list/4`
+  or `c:Membrane.Element.Base.Sink.handle_write_list/4` callback. Invoked callback is
   guaranteed not to receive more data than demanded.
 
   Depending on element type and callback, it may contain different payloads or
@@ -121,13 +121,13 @@ defmodule Membrane.Element.Action do
 
   Allowed only when _all_ below conditions are met:
   - element is filter,
-  - callback is `c:Membrane.Element.Base.Filter.handle_process/4`,
+  - callback is `c:Membrane.Element.Base.Filter.handle_process_list/4`,
   `c:Membrane.Element.Base.Mixin.SinkBehaviour.handle_caps/4`
   or `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_event/4`,
   - playback state is valid for sending buffer, caps or event action
   respectively.
 
-  Keep in mind that `c:Membrane.Element.Base.Filter.handle_process/4` can only
+  Keep in mind that `c:Membrane.Element.Base.Filter.handle_process_list/4` can only
   forward buffers, `c:Membrane.Element.Base.Mixin.SinkBehaviour.handle_caps/4` - caps
   and `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_event/4` - events.
   """
@@ -137,9 +137,10 @@ defmodule Membrane.Element.Action do
   Suspends/resumes change of playback state.
 
   - `playback_change: :suspend` may be returned only from
-  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_prepare/3`,
-  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_play/2` and
-  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_stop/2` callbacks,
+  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_stopped_to_prepared/2`,
+  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_playing_to_prepared/2`,
+  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_prepared_to_playing/2` and
+  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_prepared_to_stopped/2` callbacks,
   and defers playback state change until `playback_change: :resume` is returned.
   - `playback_change: :resume` may be returned from any callback, only when
   playback state change is suspended, and causes it to finish.

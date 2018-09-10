@@ -7,7 +7,7 @@ defmodule Membrane.Support.Element.TrivialSink do
 
   use Membrane.Element.Base.Sink
 
-  def_known_sink_pads sink: {:always, {:pull, demand_in: :buffers}, :any}
+  def_sink_pads sink: {:always, {:pull, demand_in: :buffers}, :any}
 
   @impl true
   def handle_init(_options) do
@@ -15,9 +15,9 @@ defmodule Membrane.Support.Element.TrivialSink do
   end
 
   @impl true
-  def handle_prepare(:stopped, %Ctx.Prepare{}, state), do: {:ok, state}
+  def handle_stopped_to_prepared(%Ctx.PlaybackChange{}, state), do: {:ok, state}
 
-  def handle_prepare(:playing, %Ctx.Prepare{}, %{timer: timer}) do
+  def handle_playing_to_prepared(%Ctx.PlaybackChange{}, %{timer: timer}) do
     if timer do
       :timer.cancel(timer)
     end
@@ -26,7 +26,7 @@ defmodule Membrane.Support.Element.TrivialSink do
   end
 
   @impl true
-  def handle_play(%Ctx.Play{}, state) do
+  def handle_prepared_to_playing(%Ctx.PlaybackChange{}, state) do
     {:ok, timer} = :timer.send_interval(500, :tick)
     {:ok, %{state | timer: timer}}
   end
@@ -37,7 +37,7 @@ defmodule Membrane.Support.Element.TrivialSink do
   end
 
   @impl true
-  def handle_write1(:sink, _buf, %Ctx.Write{}, state) do
+  def handle_write(:sink, _buf, %Ctx.Write{}, state) do
     {:ok, state}
   end
 end

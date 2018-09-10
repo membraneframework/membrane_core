@@ -16,8 +16,8 @@ defmodule Membrane.Caps.Matcher do
       Checks on the values from list are performed recursivly i.e. it can contain another `range/2`,
       for example `Matcher.one_of([0, Matcher.range(2, 4), Matcher.range(10, 20)])`
 
-  If the specs are defined inside of `Membrane.Element.Base.Mixin.SinkBehaviour.def_known_sink_pads/1` and
-  `Membrane.Element.Base.Mixin.SourceBehaviour.def_known_source_pads/1` module name can be ommitted from
+  If the specs are defined inside of `Membrane.Element.Base.Mixin.SinkBehaviour.def_sink_pads/1` and
+  `Membrane.Element.Base.Mixin.SourceBehaviour.def_source_pads/1` module name can be ommitted from
   `range/2` and `one_of/1` calls.
   """
   import Kernel, except: [match?: 2]

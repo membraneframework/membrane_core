@@ -19,8 +19,8 @@ defmodule Membrane.Core.Element.PadSpecHandler do
   """
   @spec init_pads(State.t()) :: State.stateful_try_t()
   def init_pads(%State{module: module} = state) do
-    with {:ok, soruce_pads_info} <- handle_known_pads(:known_source_pads, :source, module),
-         {:ok, sink_pads_info} <- handle_known_pads(:known_sink_pads, :sink, module) do
+    with {:ok, soruce_pads_info} <- handle_known_pads(:membrane_source_pads, :source, module),
+         {:ok, sink_pads_info} <- handle_known_pads(:membrane_sink_pads, :sink, module) do
       pads = %{
         data: %{},
         info: Map.merge(soruce_pads_info, sink_pads_info),

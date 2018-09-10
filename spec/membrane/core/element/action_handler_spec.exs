@@ -34,8 +34,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     context "when element is not in a 'playing' state" do
       let :playback, do: %Playback{state: :prepared}
 
-      context "and callback is not 'handle_play'" do
-        let :callback, do: :handle_stop
+      context "and callback is not 'handle_prepared_to_playing'" do
+        let :callback, do: :handle_prepared_to_stopped
 
         it "should return an error result" do
           {ret, _state} =
@@ -89,8 +89,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         end
       end
 
-      context "and callback is 'handle_play'" do
-        let :callback, do: :handle_play
+      context "and callback is 'handle_prepared_to_playing'" do
+        let :callback, do: :handle_prepared_to_playing
 
         context "and pad exists in element" do
           it "should return an ok result" do
@@ -484,8 +484,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       end
     end
 
-    context "when callback is 'handle_write'" do
-      let :callback, do: :handle_write
+    context "when callback is 'handle_write_list'" do
+      let :callback, do: :handle_write_list
 
       it "should send appropriate message to 'self()'" do
         result =
@@ -501,7 +501,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       end
     end
 
-    context "when callback is other than 'handle_write' or 'handle_process'" do
+    context "when callback is other than 'handle_write_list' or 'handle_process_list'" do
       before do
         allow handler_module()
               |> to(accept :handle_demand, fn _, _, _, _, state -> {:ok, state} end)
@@ -576,9 +576,83 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       end
 
       it "should call handle_redemand method of the given module" do
-        res = described_module().handle_action(action(), :handle_write, %{}, state())
+        res = described_module().handle_action(action(), :handle_write_list, %{}, state())
         expect(res |> to(eq {:ok, state()}))
         expect(controller_module() |> to(accepted(:handle_demand, :any, count: 1)))
+      end
+    end
+  end
+
+  describe "handle_actions" do
+    let :pad_name, do: :source
+    let :pad_direction, do: :source
+    let :pad_mode, do: :pull
+    let :element_module, do: FakeElementModule
+    let :controller_module, do: Element.DemandController
+    let :message_a, do: %Message{payload: :a}
+    let :message_b, do: %Message{payload: :b}
+
+    let :state,
+      do: %{
+        __struct__: State,
+        message_bus: self(),
+        module: element_module(),
+        name: :test_name,
+        type: :source,
+        pads: %{
+          data: %{
+            demand: 0,
+            source: %{
+              direction: pad_direction(),
+              pid: self(),
+              mode: pad_mode()
+            }
+          }
+        }
+      }
+
+    before do
+      allow controller_module() |> to(accept :handle_demand, fn _, 0, state -> {:ok, state} end)
+    end
+
+    context "if :redemand is the last action" do
+      let :actions, do: [message: message_a(), message: message_b(), redemand: :source]
+
+      fit "should handle all actions" do
+        res = described_module().handle_actions(actions(), nil, %{}, state())
+        expect(res |> to(eq {:ok, state()}))
+        msg_a = [:membrane_message, :test_name, message_a()]
+        msg_b = [:membrane_message, :test_name, message_b()]
+        assert_received(^msg_a)
+        assert_received(^msg_b)
+        expect(controller_module() |> to(accepted(:handle_demand, :any, count: 1)))
+      end
+    end
+
+    context "if :redemand is not the last action" do
+      let :actions, do: [redemand: :source, message: message_a(), message: message_b()]
+
+      fit "should return an error" do
+        res = described_module().handle_actions(actions(), nil, %{}, state())
+        expect(res |> to(eq {{:error, :actions_after_redemand}, state()}))
+        msg_a = [:membrane_message, :test_name, message_a()]
+        msg_b = [:membrane_message, :test_name, message_b()]
+        refute_received(^msg_a)
+        refute_received(^msg_b)
+        expect(controller_module() |> to(accepted(:handle_demand, :any, count: 0)))
+      end
+    end
+
+    context "if actions don't contain :redemand" do
+      let :actions, do: [message: message_a(), message: message_b()]
+
+      fit "should handle all actions" do
+        res = described_module().handle_actions(actions(), nil, %{}, state())
+        expect(res |> to(eq {:ok, state()}))
+        msg_a = [:membrane_message, :test_name, message_a()]
+        msg_b = [:membrane_message, :test_name, message_b()]
+        assert_received(^msg_a)
+        assert_received(^msg_b)
       end
     end
   end

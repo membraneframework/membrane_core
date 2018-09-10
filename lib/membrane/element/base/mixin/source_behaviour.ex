@@ -19,7 +19,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   The default name for generic source pad, in elements that just produce some
   buffers is `:source`.
   """
-  @callback known_source_pads() :: [Element.source_pad_specs_t()]
+  @callback membrane_source_pads() :: [Element.source_pad_specs_t()]
 
   @doc """
   Callback that is called when buffers should be emitted by the source or filter.
@@ -33,8 +33,8 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
 
   In filter elements, this callback should usually return `:demand` action with
   size sufficient (at least approximately) for supplying incoming demand. This
-  will result with calling `c:Membrane.Element.Base.Filter.handle_process/4` or
-  `c:Membrane.Element.Base.Sink.handle_write/4`, which is to supply
+  will result with calling `c:Membrane.Element.Base.Filter.handle_process_list/4` or
+  `c:Membrane.Element.Base.Sink.handle_write_list/4`, which is to supply
   the demand. If it does not, or does only partially,
   `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` is called
   again, until there is any data available on the sink pad.
@@ -59,7 +59,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   It automatically generates documentation from the given definition
   and adds compile-time caps specs validation.
   """
-  defmacro def_known_source_pads(raw_source_pads) do
+  defmacro def_source_pads(raw_source_pads) do
     source_pads =
       raw_source_pads
       |> Bunch.Macro.inject_calls([
@@ -74,14 +74,14 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
       They are the following:
       #{unquote(source_pads) |> Membrane.Core.Helper.Doc.generate_known_pads_docs()}
       """
-      @spec known_source_pads() :: [Membrane.Element.source_pad_specs_t()]
+      @spec membrane_source_pads() :: [Membrane.Element.source_pad_specs_t()]
       @impl true
-      def known_source_pads(), do: unquote(source_pads)
+      def membrane_source_pads(), do: unquote(source_pads)
 
       @after_compile {__MODULE__, :__membrane_source_caps_specs_validation__}
 
       def __membrane_source_caps_specs_validation__(env, _bytecode) do
-        pads_list = env.module.known_source_pads() |> Enum.to_list() |> Keyword.values()
+        pads_list = env.module.membrane_source_pads() |> Enum.to_list() |> Keyword.values()
 
         for {_, _, caps_spec} <- pads_list do
           with :ok <- caps_spec |> Caps.Matcher.validate_specs() do
@@ -98,7 +98,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 
-      import unquote(__MODULE__), only: [def_known_source_pads: 1]
+      import unquote(__MODULE__), only: [def_source_pads: 1]
     end
   end
 end

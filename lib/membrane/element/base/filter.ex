@@ -29,7 +29,7 @@ defmodule Membrane.Element.Base.Filter do
 
   For pads in push mode it is invoked when buffers arrive.
   """
-  @callback handle_process(
+  @callback handle_process_list(
               pad :: Pad.name_t(),
               buffers :: list(Buffer.t()),
               context :: CallbackContext.Process.t(),
@@ -37,12 +37,12 @@ defmodule Membrane.Element.Base.Filter do
             ) :: Mixin.CommonBehaviour.callback_return_t()
 
   @doc """
-  Callback that is to process buffers. In contrast to `c:handle_process/4`, it is
+  Callback that is to process buffers. In contrast to `c:handle_process_list/4`, it is
   passed only a single buffer.
 
-  Called by default implementation of `c:handle_process/4`.
+  Called by default implementation of `c:handle_process_list/4`.
   """
-  @callback handle_process1(
+  @callback handle_process(
               pad :: Pad.name_t(),
               buffer :: Buffer.t(),
               context :: CallbackContext.Process.t(),
@@ -70,20 +70,20 @@ defmodule Membrane.Element.Base.Filter do
         do: {{:error, :handle_demand_not_implemented}, state}
 
       @impl true
-      def handle_process1(_pad, _buffer, _context, state),
+      def handle_process(_pad, _buffer, _context, state),
         do: {{:error, :handle_process_not_implemented}, state}
 
       @impl true
-      def handle_process(pad, buffers, context, state) do
+      def handle_process_list(pad, buffers, context, state) do
         args_list = buffers |> Enum.map(&[pad, &1, context])
-        {{:ok, split: {:handle_process1, args_list}}, state}
+        {{:ok, split: {:handle_process, args_list}}, state}
       end
 
       defoverridable handle_caps: 4,
                      handle_event: 4,
                      handle_demand: 5,
-                     handle_process: 4,
-                     handle_process1: 4
+                     handle_process_list: 4,
+                     handle_process: 4
     end
   end
 end

@@ -8,7 +8,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   For more information on implementing elements, see `Membrane.Element.Base`.
   """
   alias Membrane.{Action, Core, Element, Event}
-  alias Core.{Playback, CallbackHandler}
+  alias Core.CallbackHandler
   alias Element.{Action, CallbackContext, Pad}
 
   @typedoc """
@@ -36,42 +36,52 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
               | {:error, any}
 
   @doc """
-  Callback invoked when element is prepared. It receives the previous playback
-  state (`:stopped` or `:playing`).
+  Callback invoked when element goes to `:prepared` state from state `:stopped` and should get
+  ready to enter `:playing` state.
 
-  If the prevoius playback state is `:stopped`, then usually most resources
-  used by the element are allocated here. For example, if element opens a file,
-  this is the place to try to actually open it and return error if that has failed.
-  Such resources should be released in `c:handle_stop/1`.
-
-  If the previous playback state is `:playing`, then all resources allocated
-  in `c:handle_play/2` callback should be released here, and no more buffers or
-  demands should be sent.
+  Usually most resources used by the element are allocated here.
+  For example, if element opens a file, this is the place to try to actually open it
+  and return error if that has failed. Such resources should be released in `c:handle_prepared_to_stopped/1`.
   """
-  @callback handle_prepare(
-              previous_playback_state :: Playback.state_t(),
+  @callback handle_stopped_to_prepared(
               context :: CallbackContext.Prepare.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
   @doc """
-  Callback invoked when element is supposed to start playing.
+  Callback invoked when element goes to `:prepared` state from state `:playing` and should get
+  ready to enter `:stopped` state.
+
+  All resources allocated in `c:handle_prepared_to_playing/2` callback should be released here, and no more buffers or
+  demands should be sent.
+  """
+  @callback handle_playing_to_prepared(
+              context :: CallbackContext.Prepare.t(),
+              state :: Element.state_t()
+            ) :: callback_return_t
+
+  @doc """
+  Callback invoked when element is supposed to start playing (goes from state `:prepared` to `:playing`).
 
   This is moment when initial demands are sent and first buffers are generated
   if there are any pads in the push mode.
   """
-  @callback handle_play(context :: CallbackContext.Play.t(), state :: Element.state_t()) ::
-              callback_return_t
+  @callback handle_prepared_to_playing(
+              context :: CallbackContext.Play.t(),
+              state :: Element.state_t()
+            ) :: callback_return_t
 
   @doc """
-  Callback invoked when element is supposed to stop.
+  Callback invoked when element is supposed to stop (goes from state `:prepared` to `:stopped`).
 
   Usually this is the place for releasing all remaining resources
-  used by the element. For example, if element opens a file in `c:handle_prepare/3`,
+  used by the element. For example, if element opens a file in `c:handle_stopped_to_prepared/2`,
   this is the place to close it.
   """
-  @callback handle_stop(context :: CallbackContext.Stop.t(), state :: Element.state_t()) ::
-              callback_return_t
+  @callback handle_prepared_to_stopped(
+              context :: CallbackContext.Stop.t(),
+              state :: Element.state_t()
+            ) :: callback_return_t
 
   @doc """
   Callback invoked when element receives a message that is not recognized
@@ -244,13 +254,16 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
       def handle_init(_options), do: {:ok, %{}}
 
       @impl true
-      def handle_prepare(_previous_playback_state, _context, state), do: {:ok, state}
+      def handle_stopped_to_prepared(_context, state), do: {:ok, state}
 
       @impl true
-      def handle_play(_context, state), do: {:ok, state}
+      def handle_playing_to_prepared(_context, state), do: {:ok, state}
 
       @impl true
-      def handle_stop(_context, state), do: {:ok, state}
+      def handle_prepared_to_playing(_context, state), do: {:ok, state}
+
+      @impl true
+      def handle_prepared_to_stopped(_context, state), do: {:ok, state}
 
       @impl true
       def handle_other(_message, _context, state), do: {:ok, state}
@@ -268,9 +281,10 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
       def handle_shutdown(_state), do: :ok
 
       defoverridable handle_init: 1,
-                     handle_prepare: 3,
-                     handle_play: 2,
-                     handle_stop: 2,
+                     handle_stopped_to_prepared: 2,
+                     handle_playing_to_prepared: 2,
+                     handle_prepared_to_playing: 2,
+                     handle_prepared_to_stopped: 2,
                      handle_other: 3,
                      handle_pad_added: 3,
                      handle_pad_removed: 3,

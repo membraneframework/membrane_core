@@ -1,7 +1,7 @@
-defmodule Membrane.Element.CallbackContext.Play do
+defmodule Membrane.Element.CallbackContext.PlaybackChange do
   @moduledoc """
   Structure representing a context that is passed to the callback of the element
-  when it goes into `:playing` state.
+  when it changes playback state
   """
   @behaviour Membrane.Element.CallbackContext
 

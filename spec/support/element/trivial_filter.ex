@@ -7,9 +7,9 @@ defmodule Membrane.Support.Element.TrivialFilter do
 
   use Membrane.Element.Base.Filter
 
-  def_known_source_pads source: {:always, :pull, :any}
+  def_source_pads source: {:always, :pull, :any}
 
-  def_known_sink_pads sink: {:always, {:pull, demand_in: :buffers}, :any}
+  def_sink_pads sink: {:always, {:pull, demand_in: :buffers}, :any}
 
   @impl true
   def handle_init(_options) do
@@ -22,7 +22,7 @@ defmodule Membrane.Support.Element.TrivialFilter do
   end
 
   @impl true
-  def handle_process1(:sink, %Membrane.Buffer{payload: payload}, %Ctx.Process{}, state) do
+  def handle_process(:sink, %Membrane.Buffer{payload: payload}, %Ctx.Process{}, state) do
     {{:ok, buffer: {:source, %Membrane.Buffer{payload: payload <> <<255>>}}}, state}
   end
 end

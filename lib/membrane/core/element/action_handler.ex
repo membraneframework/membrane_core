@@ -68,7 +68,12 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp do_handle_action({:playback_change, :suspend}, cb, _params, state)
-       when cb in [:handle_prepare, :handle_play, :handle_stop] do
+       when cb in [
+              :handle_stopped_to_prepared,
+              :handle_playing_to_prepared,
+              :handle_prepared_to_playing,
+              :handle_prepared_to_stopped
+            ] do
     PlaybackHandler.suspend_playback_change(state)
   end
 
@@ -87,15 +92,15 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp do_handle_action({:redemand, src_name}, cb, _params, %State{type: type} = state)
        when type in [:source, :filter] and is_pad_name(src_name) and
-              cb not in [:handle_demand, :handle_process] do
+              cb not in [:handle_demand, :handle_process_list] do
     handle_redemand(src_name, state)
   end
 
   defp do_handle_action({:forward, data}, cb, params, %State{type: :filter} = state)
-       when cb in [:handle_caps, :handle_event, :handle_process] do
+       when cb in [:handle_caps, :handle_event, :handle_process_list] do
     {action, dir} =
       case {cb, params} do
-        {:handle_process, _} -> {:buffer, :source}
+        {:handle_process_list, _} -> {:buffer, :source}
         {:handle_caps, _} -> {:caps, :source}
         {:handle_event, %{direction: :sink}} -> {:event, :source}
         {:handle_event, %{direction: :source}} -> {:event, :sink}
@@ -180,12 +185,24 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_actions(actions, callback, handler_params, state) do
-    super(
-      actions |> join_buffers(),
-      callback,
-      handler_params,
-      state
-    )
+    actions_after_redemand =
+      actions
+      |> Enum.drop_while(fn
+        {:redemand, _} -> false
+        _ -> true
+      end)
+      |> Enum.drop(1)
+
+    if actions_after_redemand != [] do
+      {{:error, :actions_after_redemand}, state}
+    else
+      super(
+        actions |> join_buffers(),
+        callback,
+        handler_params,
+        state
+      )
+    end
   end
 
   defp join_buffers(actions) do
@@ -213,9 +230,9 @@ defmodule Membrane.Core.Element.ActionHandler do
          callback,
          %State{playback: %{state: playback_state}} = state
        )
-       when playback_state != :playing and callback != :handle_play do
+       when playback_state != :playing and callback != :handle_prepared_to_playing do
     warn_error(
-      "Buffers can only be sent when playing or from handle_play callback",
+      "Buffers can only be sent when playing or from handle_prepared_to_playing callback",
       {:cannot_send_buffer, playback_state: playback_state, callback: callback},
       state
     )
@@ -323,9 +340,9 @@ defmodule Membrane.Core.Element.ActionHandler do
          callback,
          %State{playback: %{state: playback_state}} = state
        )
-       when playback_state != :playing and callback != :handle_play do
+       when playback_state != :playing and callback != :handle_prepared_to_playing do
     warn_error(
-      "Demand can only be requested when playing or from handle_play callback",
+      "Demand can only be requested when playing or from handle_prepared_to_playing callback",
       {:cannot_handle_demand, playback_state: playback_state, callback: callback},
       state
     )
@@ -369,8 +386,8 @@ defmodule Membrane.Core.Element.ActionHandler do
 
     with :ok <- sink_assertion,
          :ok <- source_assertion do
-      if callback in [:handle_write, :handle_process] do
-        # Handling demand results in execution of handle_write/handle_process,
+      if callback in [:handle_write_list, :handle_process_list] do
+        # Handling demand results in execution of handle_write_list/handle_process_list,
         # wherefore demand returned by one of these callbacks may lead to
         # emergence of a loop. This, in turn, could result in consuming entire
         # contents of PullBuffer before accepting any messages from other

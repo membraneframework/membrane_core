@@ -28,7 +28,7 @@ defmodule Membrane.Core.Element.BufferController do
   end
 
   @doc """
-  Executes `handle_process` or `handle_write` callback.
+  Executes `handle_process` or `handle_write_list` callback.
   """
   @spec exec_buffer_handler(
           Pad.name_t(),
@@ -50,7 +50,7 @@ defmodule Membrane.Core.Element.BufferController do
       )
 
     CallbackHandler.exec_and_handle_callback(
-      :handle_process,
+      :handle_process_list,
       ActionHandler,
       [pad_name, buffers, context],
       state
@@ -63,7 +63,7 @@ defmodule Membrane.Core.Element.BufferController do
       CallbackContext.Write.from_state(state, caps: PadModel.get_data!(pad_name, :caps, state))
 
     CallbackHandler.exec_and_handle_callback(
-      :handle_write,
+      :handle_write_list,
       ActionHandler,
       [pad_name, buffers, context],
       state

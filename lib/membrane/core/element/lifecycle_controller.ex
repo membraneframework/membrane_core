@@ -7,7 +7,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   alias Core.CallbackHandler
   alias Core.Element.{ActionHandler, PadSpecHandler, PadModel, PlaybackBuffer, State}
   alias Element.{CallbackContext, Pad}
-  require CallbackContext.{Other, Play, Prepare, Stop}
+  require CallbackContext.{Other, PlaybackChange}
   require PadModel
   use Core.PlaybackHandler
   use Core.Element.Log
@@ -129,21 +129,16 @@ defmodule Membrane.Core.Element.LifecycleController do
   end
 
   @impl PlaybackHandler
-  def handle_playback_state(:prepared, :playing, state) do
-    ctx = CallbackContext.Play.from_state(state)
-    CallbackHandler.exec_and_handle_callback(:handle_play, ActionHandler, [ctx], state)
-  end
+  def handle_playback_state(old_playback_state, new_playback_state, state) do
+    ctx = CallbackContext.PlaybackChange.from_state(state)
+    callback = PlaybackHandler.state_change_callback(old_playback_state, new_playback_state)
 
-  @impl PlaybackHandler
-  def handle_playback_state(:prepared, :stopped, state) do
-    ctx = CallbackContext.Stop.from_state(state)
-    CallbackHandler.exec_and_handle_callback(:handle_stop, ActionHandler, [ctx], state)
-  end
-
-  @impl PlaybackHandler
-  def handle_playback_state(ps, :prepared, state) when ps in [:stopped, :playing] do
-    ctx = CallbackContext.Prepare.from_state(state)
-    CallbackHandler.exec_and_handle_callback(:handle_prepare, ActionHandler, [ps, ctx], state)
+    CallbackHandler.exec_and_handle_callback(
+      callback,
+      ActionHandler,
+      [ctx],
+      state
+    )
   end
 
   @impl PlaybackHandler
