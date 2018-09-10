@@ -151,7 +151,7 @@ defmodule Membrane.ElementSpec do
       let :message, do: {:membrane_change_playback_state, :playing}
       let :module, do: TrivialSource
       let :internal_state, do: %{a: 1}
-      let :ctx_plb_change, do: %CallbackContext.PlaybackChange{}
+      let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
 
       let :state,
         do: %State{
@@ -199,7 +199,9 @@ defmodule Membrane.ElementSpec do
             described_module().handle_info(message(), state())
 
             expect(module())
-            |> to(accepted(:handle_stopped_to_prepared, [ctx_plb_change(), internal_state()]))
+            |> to(
+              accepted(:handle_stopped_to_prepared, [ctx_playback_change(), internal_state()])
+            )
           end
 
           it "should not call handle_prepared_to_playing(ctx, internal_state) callback on element's module" do
@@ -267,7 +269,9 @@ defmodule Membrane.ElementSpec do
             described_module().handle_info(message(), state())
 
             expect(module())
-            |> to(accepted(:handle_stopped_to_prepared, [ctx_plb_change(), internal_state()]))
+            |> to(
+              accepted(:handle_stopped_to_prepared, [ctx_playback_change(), internal_state()])
+            )
           end
 
           it "should call handle_prepared_to_playing(ctx, internal_state) callback on element's module with internal state updated by previous handle_stopped_to_prepared call" do
@@ -276,7 +280,7 @@ defmodule Membrane.ElementSpec do
             expect(module())
             |> to(
               accepted(:handle_prepared_to_playing, [
-                ctx_plb_change(),
+                ctx_playback_change(),
                 %{internal_state() | a: 2}
               ])
             )
@@ -318,14 +322,18 @@ defmodule Membrane.ElementSpec do
             described_module().handle_info(message(), state())
 
             expect(module())
-            |> to(accepted(:handle_stopped_to_prepared, [ctx_plb_change(), internal_state()]))
+            |> to(
+              accepted(:handle_stopped_to_prepared, [ctx_playback_change(), internal_state()])
+            )
           end
 
           it "should call handle_prepared_to_playing(ctx, internal_state) callback on element's module with state updated by handle_stopped_to_prepared" do
             described_module().handle_info(message(), state())
 
             expect(module())
-            |> to(accepted(:handle_prepared_to_playing, [ctx_plb_change(), new_internal_state()]))
+            |> to(
+              accepted(:handle_prepared_to_playing, [ctx_playback_change(), new_internal_state()])
+            )
           end
 
           it "it return {:reply, :ok, state()} with internal state updated by handle_stopped_to_prepared" do
@@ -401,7 +409,9 @@ defmodule Membrane.ElementSpec do
             described_module().handle_info(message(), state())
 
             expect(module())
-            |> to(accepted(:handle_prepared_to_playing, [ctx_plb_change(), internal_state()]))
+            |> to(
+              accepted(:handle_prepared_to_playing, [ctx_playback_change(), internal_state()])
+            )
           end
 
           it "should return {:reply, :ok, state()} with internal state updated" do
@@ -485,7 +495,7 @@ defmodule Membrane.ElementSpec do
       let :state,
         do: %State{module: module(), playback: playback(), internal_state: internal_state()}
 
-      let :ctx_plb_change, do: %CallbackContext.PlaybackChange{}
+      let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
 
       context "and current playback state is :stopped" do
         let :playback, do: %Playback{state: :stopped}
@@ -527,7 +537,9 @@ defmodule Membrane.ElementSpec do
             described_module().handle_info(message(), state())
 
             expect(module())
-            |> to(accepted(:handle_stopped_to_prepared, [ctx_plb_change(), internal_state()]))
+            |> to(
+              accepted(:handle_stopped_to_prepared, [ctx_playback_change(), internal_state()])
+            )
           end
 
           it "should not call handle_prepared_to_playing callback on element's module" do
@@ -609,7 +621,7 @@ defmodule Membrane.ElementSpec do
 
       context "and current playback state is :playing" do
         let :playback, do: %Playback{state: :playing}
-        let :ctx_plb_change, do: %CallbackContext.PlaybackChange{}
+        let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
 
         pending "and at least one of the callbacks has returned an error"
 
@@ -648,7 +660,9 @@ defmodule Membrane.ElementSpec do
             described_module().handle_info(message(), state())
 
             expect(module())
-            |> to(accepted(:handle_playing_to_prepared, [ctx_plb_change(), internal_state()]))
+            |> to(
+              accepted(:handle_playing_to_prepared, [ctx_playback_change(), internal_state()])
+            )
           end
 
           it "should not call handle_prepared_to_playing callback on element's module" do
@@ -677,7 +691,7 @@ defmodule Membrane.ElementSpec do
       let :message, do: {:membrane_change_playback_state, :stopped}
       let :module, do: TrivialFilter
       let :internal_state, do: %{}
-      let :ctx_plb_change, do: %CallbackContext.PlaybackChange{}
+      let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
 
       let :state,
         do: %State{module: module(), playback: playback(), internal_state: internal_state()}
@@ -715,14 +729,18 @@ defmodule Membrane.ElementSpec do
             described_module().handle_info(message(), state())
 
             expect(module())
-            |> to(accepted(:handle_prepared_to_stopped, [ctx_plb_change(), internal_state()]))
+            |> to(
+              accepted(:handle_prepared_to_stopped, [ctx_playback_change(), internal_state()])
+            )
           end
 
           it "should call handle_playing_to_prepared(:playing, internal_state) callback on element's module" do
             described_module().handle_info(message(), state())
 
             expect(module())
-            |> to(accepted(:handle_playing_to_prepared, [ctx_plb_change(), internal_state()]))
+            |> to(
+              accepted(:handle_playing_to_prepared, [ctx_playback_change(), internal_state()])
+            )
           end
 
           it "should not call handle_prepared_to_playing callback on element's module" do
@@ -788,7 +806,9 @@ defmodule Membrane.ElementSpec do
             described_module().handle_info(message(), state())
 
             expect(module())
-            |> to(accepted(:handle_prepared_to_stopped, [ctx_plb_change(), internal_state()]))
+            |> to(
+              accepted(:handle_prepared_to_stopped, [ctx_playback_change(), internal_state()])
+            )
           end
 
           it "should not call handle_stopped_to_prepared and handle_playing_to_prepared callbacks on element's module" do
