@@ -34,7 +34,7 @@ defmodule Membrane.Core.Element.PadSpecHandler do
   end
 
   @spec handle_known_pads(atom, Pad.direction_t(), module) ::
-          {:ok, %{Pad.name_t() => PadModel.pad_info_t()}}
+          {:ok, PadModel.pads_info_t()}
           | {:error, {:invalid_pad_config, details :: Keyword.t()}}
   defp handle_known_pads(known_pads_fun, direction, module) do
     known_pads =
