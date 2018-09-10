@@ -30,6 +30,10 @@ defmodule Membrane.Pipeline.State do
             pending_pids: nil,
             terminating?: false
 
+  def get_children(%State{pids_to_children: pids_to_children}) do
+    pids_to_children |> Map.values()
+  end
+
   # FIXME: rename to get_child_name_by_pid
   def get_child(%State{pids_to_children: pids_to_children}, child)
       when is_pid(child) do
