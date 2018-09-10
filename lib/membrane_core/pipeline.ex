@@ -248,7 +248,7 @@ defmodule Membrane.Pipeline do
     """)
 
     with {:ok, children} <- children |> parse_children,
-         # TODO: add dedup_children veryfying that there are no duplicate children
+         :ok <- children |> check_if_children_names_unique(state),
          {:ok, {children_to_pids, pids_to_children}} <- children |> start_children,
          state = %State{
            state
@@ -297,6 +297,17 @@ defmodule Membrane.Pipeline do
   end
 
   defp parse_child(config), do: {:error, invalid_child_config: config}
+
+  defp check_if_children_names_unique(children, state) do
+    names = (children |> Enum.map(& &1.name)) ++ State.get_children(state)
+    uniq_names = names |> Enum.uniq()
+
+    if uniq_names == names do
+      :ok
+    else
+      {:error, {:duplicate_element_names, (names -- uniq_names) |> Enum.uniq()}}
+    end
+  end
 
   # Starts children based on given specification and links them to the current
   # process in the supervision tree.
