@@ -16,7 +16,6 @@ defmodule Membrane.Pipeline.State do
           module: module,
           children_to_pids: %{required([Membrane.Element.name_t()]) => pid},
           pids_to_children: %{required(pid) => Membrane.Element.name_t()},
-          children_ids: %{atom => integer},
           pending_pids: list(pid),
           terminating?: boolean
         }
@@ -29,7 +28,6 @@ defmodule Membrane.Pipeline.State do
             pids_to_children: %{},
             playback: %Playback{},
             pending_pids: nil,
-            children_ids: %{},
             terminating?: false
 
   # FIXME: rename to get_child_name_by_pid
@@ -54,24 +52,6 @@ defmodule Membrane.Pipeline.State do
       }
 
       {{:ok, pid}, state}
-    end
-  end
-
-  def get_increase_child_id(state, child) do
-    state
-    |> Bunch.Struct.get_and_update_in(
-      [:children_ids, child],
-      &((&1 || 0) ~> (id -> {id, id + 1}))
-    )
-  end
-
-  def dynamic?(state, child) do
-    state.children_ids[child] != nil
-  end
-
-  def get_last_child_id(state, child) do
-    with {:ok, id} <- state.children_ids[child] |> Bunch.error_if_nil(:not_dynamic) do
-      {:ok, id - 1}
     end
   end
 end
