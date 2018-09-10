@@ -249,7 +249,6 @@ defmodule Membrane.Pipeline do
 
     with {:ok, children} <- children |> parse_children,
          # TODO: add dedup_children veryfying that there are no duplicate children
-         {children, state} = children |> resolve_children(state),
          {:ok, {children_to_pids, pids_to_children}} <- children |> start_children,
          state = %State{
            state
@@ -298,12 +297,6 @@ defmodule Membrane.Pipeline do
   end
 
   defp parse_child(config), do: {:error, invalid_child_config: config}
-
-  defp resolve_children(children, state), do: children |> Enum.map_reduce(state, &resolve_child/2)
-
-  defp resolve_child(child, state) do
-    {child, state}
-  end
 
   # Starts children based on given specification and links them to the current
   # process in the supervision tree.
@@ -388,14 +381,6 @@ defmodule Membrane.Pipeline do
   end
 
   defp resolve_link(%{element: element, pad: pad_name} = elementpad, state) do
-    element =
-      if state |> State.dynamic?(element) do
-        {:ok, last_id} = state |> State.get_last_child_id(element)
-        {element, last_id}
-      else
-        element
-      end
-
     with {:ok, pid} <- state |> State.get_child(element),
          {:ok, pad_name} <- pid |> GenServer.call({:membrane_get_pad_full_name, [pad_name]}) do
       {{:ok, %{element: element, pad: pad_name}}, state}
