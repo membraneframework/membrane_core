@@ -27,16 +27,15 @@ defmodule Membrane.Core.Element.DemandHandler do
   """
   @spec handle_demand(
           Pad.name_t(),
-          {:source, Pad.name_t()} | :self,
           pos_integer,
           State.t()
         ) :: State.stateful_try_t()
-  def handle_demand(pad_name, source, size, state) when is_integer(size) do
-    state = set_sink_demand(pad_name, source, size, state)
-    supply_demand(pad_name, source, size, state)
+  def handle_demand(pad_name, size, state) when is_integer(size) do
+    state = PadModel.set_data!(pad_name, :demand, size, state)
+    supply_demand(pad_name, size, state)
   end
 
-  def handle_demand(pad_name, :self, size_fun, state) when is_function(size_fun) do
+  def handle_demand(pad_name, size_fun, state) when is_function(size_fun) do
     {total_size, state} =
       PadModel.get_and_update_data!(
         pad_name,
@@ -45,7 +44,7 @@ defmodule Membrane.Core.Element.DemandHandler do
         state
       )
 
-    supply_demand(pad_name, :self, total_size, state)
+    supply_demand(pad_name, total_size, state)
   end
 
   @doc """
@@ -56,7 +55,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     demand = PadModel.get_data!(pad_name, :demand, state)
 
     if demand > 0 do
-      supply_demand(pad_name, :self, demand, state)
+      supply_demand(pad_name, demand, state)
     else
       {:ok, state}
     end
@@ -75,9 +74,8 @@ defmodule Membrane.Core.Element.DemandHandler do
     end
   end
 
-  @spec supply_demand(Pad.name_t(), {:source, Pad.name_t()} | :self, pos_integer, State.t()) ::
-          State.stateful_try_t()
-  defp supply_demand(pad_name, source, size, state) do
+  @spec supply_demand(Pad.name_t(), pos_integer, State.t()) :: State.stateful_try_t()
+  defp supply_demand(pad_name, size, state) do
     pb_output =
       PadModel.get_and_update_data(
         pad_name,
@@ -86,16 +84,14 @@ defmodule Membrane.Core.Element.DemandHandler do
         state
       )
 
-    with {{:ok, {pb_status, data}}, state} <- pb_output,
-         {:ok, state} <- handle_pullbuffer_output(pad_name, source, data, state) do
-      :ok = send_dumb_demand_if_needed(source, pb_status, state)
+    with {{:ok, {_pb_status, data}}, state} <- pb_output,
+         {:ok, state} <- handle_pullbuffer_output(pad_name, data, state) do
       {:ok, state}
     else
       {{:error, reason}, state} ->
         warn_error(
           """
-          Error while supplying demand on pad #{inspect(pad_name)} requested by
-          #{inspect(source)} of size #{inspect(size)}
+          Error while supplying demand on pad #{inspect(pad_name)} of size #{inspect(size)}
           """,
           {:supply_demand, reason},
           state
@@ -103,82 +99,36 @@ defmodule Membrane.Core.Element.DemandHandler do
     end
   end
 
-  @spec send_dumb_demand_if_needed({:source, Pad.name_t()} | :self, :empty | :value, State.t()) ::
-          :ok
-  defp send_dumb_demand_if_needed(:self, _pb_status, _state),
-    do: :ok
-
-  defp send_dumb_demand_if_needed(
-         {:source, src_name},
-         pb_status,
-         state
-       ) do
-    if pb_status != :empty && PadModel.get_data!(src_name, :demand, state) > 0 do
-      debug(
-        """
-        handle_process_list did not produce expected amount of buffers, despite
-        PullBuffer being not empty. Trying executing handle_demand again.
-        """,
-        state
-      )
-
-      send(self(), {:membrane_demand, [0, src_name]})
-    end
-
-    :ok
-  end
-
   @spec handle_pullbuffer_output(
           Pad.name_t(),
-          {:source, Pad.name_t()} | :self,
           [{:event | :caps, any} | {:buffers, list, pos_integer}],
           State.t()
         ) :: State.stateful_try_t()
-  defp handle_pullbuffer_output(pad_name, source, data, state) do
+  defp handle_pullbuffer_output(pad_name, data, state) do
     data
     |> Bunch.Enum.try_reduce(state, fn v, state ->
-      do_handle_pullbuffer_output(pad_name, source, v, state)
+      do_handle_pullbuffer_output(pad_name, v, state)
     end)
   end
 
   @spec do_handle_pullbuffer_output(
           Pad.name_t(),
-          {:source, Pad.name_t()} | :self,
           {:event | :caps, any} | {:buffers, list, pos_integer},
           State.t()
         ) :: State.stateful_try_t()
-  defp do_handle_pullbuffer_output(pad_name, _source, {:event, e}, state),
+  defp do_handle_pullbuffer_output(pad_name, {:event, e}, state),
     do: EventController.exec_handle_event(pad_name, e, state)
 
-  defp do_handle_pullbuffer_output(pad_name, _source, {:caps, c}, state),
+  defp do_handle_pullbuffer_output(pad_name, {:caps, c}, state),
     do: CapsController.exec_handle_caps(pad_name, c, state)
 
   defp do_handle_pullbuffer_output(
          pad_name,
-         source,
          {:buffers, buffers, size},
          state
        ) do
-    state = update_sink_demand(pad_name, source, &(&1 - size), state)
+    state = PadModel.update_data!(pad_name, :demand, &(&1 - size), state)
 
-    BufferController.exec_buffer_handler(pad_name, source, buffers, state)
+    BufferController.exec_buffer_handler(pad_name, buffers, state)
   end
-
-  @spec set_sink_demand(Pad.name_t(), {:source, Pad.name_t()} | :self, non_neg_integer, State.t()) ::
-          State.t()
-  defp set_sink_demand(pad_name, :self, size, state),
-    do: PadModel.set_data!(pad_name, :demand, size, state)
-
-  defp set_sink_demand(_pad_name, _src, _f, state), do: state
-
-  @spec set_sink_demand(
-          Pad.name_t(),
-          {:source, Pad.name_t()} | :self,
-          (non_neg_integer -> non_neg_integer),
-          State.t()
-        ) :: State.t()
-  defp update_sink_demand(pad_name, :self, f, state),
-    do: PadModel.update_data!(pad_name, :demand, f, state)
-
-  defp update_sink_demand(_pad_name, _src, _f, state), do: state
 end

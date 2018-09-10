@@ -424,9 +424,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
   end
 
   describe "handle_action for demand" do
-    let :action, do: {:demand, {pad_name(), source(), size()}}
+    let :action, do: {:demand, {pad_name(), size()}}
     let :callback, do: :handle_event
-    let :source, do: :self
     let :pad_name, do: :sink
     let :size, do: 1
     let :type, do: :normal
@@ -465,25 +464,6 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       end
     end
 
-    context "when source doesn't exist in the given state" do
-      let :non_existing_pad, do: :non_existing_pad
-      let :source, do: {:source, non_existing_pad()}
-
-      it "should raise RuntimeError" do
-        result =
-          described_module().handle_action(
-            action(),
-            callback(),
-            %{},
-            state()
-          )
-
-        expect(result) |> to(match_pattern {{:error, {:cannot_handle_action, _}}, _})
-        {{:error, {:cannot_handle_action, details}}, _} = result
-        expect(details[:reason]) |> to(eq {:unknown_pad, non_existing_pad()})
-      end
-    end
-
     context "when callback is 'handle_write_list'" do
       let :callback, do: :handle_write_list
 
@@ -504,7 +484,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     context "when callback is other than 'handle_write_list' or 'handle_process_list'" do
       before do
         allow handler_module()
-              |> to(accept :handle_demand, fn _, _, _, state -> {:ok, state} end)
+              |> to(accept :handle_demand, fn _, _, state -> {:ok, state} end)
       end
 
       it "should call handle_demand from DemandHandler module" do

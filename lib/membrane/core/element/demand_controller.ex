@@ -32,7 +32,7 @@ defmodule Membrane.Core.Element.DemandController do
       CallbackHandler.exec_and_handle_callback(
         :handle_demand,
         ActionHandler,
-        %{source: pad_name, split_cont_f: &exec_handle_demand?(pad_name, &1)},
+        %{split_cont_f: &exec_handle_demand?(pad_name, &1)},
         [pad_name, total_size, demand_in, context],
         state
       )

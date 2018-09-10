@@ -23,7 +23,7 @@ defmodule Membrane.Core.Element.BufferController do
 
     case PadModel.get_data!(pad_name, :mode, state) do
       :pull -> handle_buffer_pull(pad_name, buffers, state)
-      :push -> exec_buffer_handler(pad_name, nil, buffers, state)
+      :push -> exec_buffer_handler(pad_name, buffers, state)
     end
   end
 
@@ -32,22 +32,12 @@ defmodule Membrane.Core.Element.BufferController do
   """
   @spec exec_buffer_handler(
           Pad.name_t(),
-          {:source, Pad.name_t()} | :self | nil,
           [Buffer.t()] | Buffer.t(),
           State.t()
         ) :: State.stateful_try_t()
-  def exec_buffer_handler(pad_name, source, buffers, %State{type: :filter} = state) do
+  def exec_buffer_handler(pad_name, buffers, %State{type: :filter} = state) do
     context =
-      CallbackContext.Process.from_state(
-        state,
-        caps: PadModel.get_data!(pad_name, :caps, state),
-        source: source,
-        source_caps:
-          case source do
-            {:source, src_name} -> PadModel.get_data!(src_name, :caps, state)
-            _ -> nil
-          end
-      )
+      CallbackContext.Process.from_state(state, caps: PadModel.get_data!(pad_name, :caps, state))
 
     CallbackHandler.exec_and_handle_callback(
       :handle_process_list,
@@ -58,7 +48,7 @@ defmodule Membrane.Core.Element.BufferController do
     |> or_warn_error("Error while handling process")
   end
 
-  def exec_buffer_handler(pad_name, _source, buffers, %State{type: :sink} = state) do
+  def exec_buffer_handler(pad_name, buffers, %State{type: :sink} = state) do
     context =
       CallbackContext.Write.from_state(state, caps: PadModel.get_data!(pad_name, :caps, state))
 
