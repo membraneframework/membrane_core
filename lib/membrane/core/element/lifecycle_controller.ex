@@ -7,7 +7,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   alias Core.CallbackHandler
   alias Core.Element.{ActionHandler, PadSpecHandler, PadModel, PlaybackBuffer, State}
   alias Element.{CallbackContext, Pad}
-  require CallbackContext.{Other, StateChange}
+  require CallbackContext.{Other, PlaybackChange}
   require PadModel
   use Core.PlaybackHandler
   use Core.Element.Log
@@ -130,7 +130,7 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @impl PlaybackHandler
   def handle_playback_state(old_playback_state, new_playback_state, state) do
-    ctx = CallbackContext.StateChange.from_state(state)
+    ctx = CallbackContext.PlaybackChange.from_state(state)
     callback = PlaybackHandler.state_change_callback(old_playback_state, new_playback_state)
 
     CallbackHandler.exec_and_handle_callback(
