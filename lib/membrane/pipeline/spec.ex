@@ -62,7 +62,9 @@ defmodule Membrane.Pipeline.Spec do
   @typedoc """
   Description of all the children elements inside the pipeline
   """
-  @type children_spec_t :: [{Membrane.Element.name_t(), child_spec_t}]
+  @type children_spec_t ::
+          [{Membrane.Element.name_t(), child_spec_t}]
+          | %{Membrane.Element.name_t() => child_spec_t}
 
   @typedoc """
   Options available when linking elements in the pipeline
