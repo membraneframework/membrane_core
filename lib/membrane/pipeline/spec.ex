@@ -52,11 +52,6 @@ defmodule Membrane.Pipeline.Spec do
       }
   """
 
-  @typedoc """
-  Properties for child definition in pipeline children specs
-
-  `index: true` allows to # TODO
-  """
   @type child_spec_t :: module | struct
 
   @typedoc """
