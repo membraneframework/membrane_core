@@ -10,7 +10,9 @@ defmodule Membrane.Pipeline do
 
   alias __MODULE__.{State, Spec}
   alias Membrane.{Core, Element, Message}
+  alias Element.Pad
   alias Core.Playback
+  alias Bunch.Type
   import Membrane.Helper.GenServer
   require Element
   use Bunch
@@ -56,6 +58,13 @@ defmodule Membrane.Pipeline do
   Type that defines all valid return values from most callbacks.
   """
   @type callback_return_t :: CallbackHandler.callback_return_t(action_t, State.internal_state_t())
+
+  @typep parsed_child_t :: %{name: Element.name_t(), module: module, options: Keyword.t()}
+  @typep parsed_link_t :: %{
+           from: %{element: Element.name_t(), pad: Pad.name_t()},
+           to: %{element: Element.name_t(), pad: Pad.name_t()},
+           params: [Spec.link_option_t()]
+         }
 
   @doc """
   Enables to check whether module is membrane pipeline
@@ -234,16 +243,17 @@ defmodule Membrane.Pipeline do
     module |> Bunch.Module.check_behaviour(:membrane_pipeline?)
   end
 
-  defp handle_spec(%Spec{children: children, links: links}, state) do
+  @spec handle_spec(Spec.t(), State.t()) :: Type.stateful_try_t([Element.name_t()], State.t())
+  defp handle_spec(%Spec{children: children_spec, links: links}, state) do
     debug("""
     Initializing pipeline spec
-    children: #{inspect(children)}
+    children: #{inspect(children_spec)}
     links: #{inspect(links)}
     """)
 
-    with {{:ok, children}, state} <- {children |> parse_children, state},
-         {:ok, state} <- {children |> check_if_children_names_unique(state), state},
-         {{:ok, children}, state} <- {children |> start_children, state},
+    with {{:ok, parsed_children}, state} <- {children_spec |> parse_children, state},
+         {:ok, state} <- {parsed_children |> check_if_children_names_unique(state), state},
+         {{:ok, children}, state} <- {parsed_children |> start_children, state},
          {:ok, state} <- children |> add_children(state),
          {{:ok, links}, state} <- {links |> parse_links, state},
          {{:ok, links}, state} <- links |> resolve_links(state),
@@ -270,6 +280,7 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  @spec parse_children(Spec.children_spec_t() | any) :: Type.try_t(parsed_child_t)
   defp parse_children(children) when is_map(children) or is_list(children),
     do: children |> Bunch.Enum.try_map(&parse_child/1)
 
@@ -286,6 +297,7 @@ defmodule Membrane.Pipeline do
 
   defp parse_child(config), do: {:error, invalid_child_config: config}
 
+  @spec check_if_children_names_unique([parsed_child_t], State.t()) :: Type.try_t()
   defp check_if_children_names_unique(children, state) do
     children
     |> Enum.map(& &1.name)
@@ -302,6 +314,7 @@ defmodule Membrane.Pipeline do
   #
   # Please note that this function is not atomic and in case of error there's
   # a chance that some of children will remain running.
+  @spec start_children([parsed_child_t]) :: Type.try_t([State.child_t()])
   defp start_children(children) do
     debug("Starting children: #{inspect(children)}")
 
@@ -322,6 +335,7 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  @spec add_children([parsed_child_t], State.t()) :: Type.stateful_try_t(State.t())
   defp add_children(children, state) do
     children
     |> Bunch.Enum.try_reduce(state, fn {name, pid}, state ->
@@ -329,6 +343,7 @@ defmodule Membrane.Pipeline do
     end)
   end
 
+  @spec parse_links(Spec.links_spec_t() | any) :: Type.try_t([parsed_link_t])
   defp parse_links(links), do: links |> Bunch.Enum.try_map(&parse_link/1)
 
   defp parse_link({{from, from_pad}, {to, to_pad, params}}) do
@@ -357,12 +372,15 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  @spec parse_pad(atom | any) :: Type.try_t()
   defp parse_pad(name) when is_atom(name) do
     :ok
   end
 
   defp parse_pad(pad), do: {:error, {:invalid_pad_format, pad}}
 
+  @spec resolve_links([parsed_link_t], State.t()) ::
+          Type.stateful_try_t([parsed_link_t], State.t())
   defp resolve_links(links, state) do
     links
     |> Bunch.Enum.try_map_reduce(state, fn %{from: from, to: to} = link, st ->
@@ -384,12 +402,9 @@ defmodule Membrane.Pipeline do
   # Links children based on given specification and map for mapping children
   # names into PIDs.
   #
-  # On success it returns `:ok`.
-  #
-  # On error it returns `{:error, {reason, failed_link}}`.
-  #
   # Please note that this function is not atomic and in case of error there's
   # a chance that some of children will remain linked.
+  @spec link_children([parsed_link_t], State.t()) :: Type.try_t()
   defp link_children(links, state) do
     debug("Linking children: links = #{inspect(links)}")
 
@@ -411,6 +426,7 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  @spec set_children_message_bus([pid]) :: Type.try_t()
   defp set_children_message_bus(elements_pids) do
     with :ok <-
            elements_pids
@@ -423,6 +439,7 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  @spec exec_handle_spec_started([Element.name_t()], State.t()) :: Type.stateful_try_t(State.t())
   defp exec_handle_spec_started(children_names, state) do
     CallbackHandler.exec_and_handle_callback(
       :handle_spec_started,

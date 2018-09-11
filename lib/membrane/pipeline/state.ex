@@ -21,6 +21,7 @@ defmodule Membrane.Pipeline.State do
         }
 
   @type internal_state_t :: map | struct
+  @type child_t :: {Element.name_t(), pid}
   @type children_t :: %{Element.name_t() => pid}
 
   defstruct internal_state: nil,
