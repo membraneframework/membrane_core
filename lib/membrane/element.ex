@@ -55,7 +55,7 @@ defmodule Membrane.Element do
   """
   @type sink_pad_specs_t ::
           {Pad.name_t(),
-           {Pad.availability_t(), {:push | :pull, demand_in: Buffer.Metric.unit_t()},
+           {Pad.availability_t(), :push | {:pull, demand_in: Buffer.Metric.unit_t()},
             Caps.Matcher.caps_specs_t()}}
 
   @doc """
