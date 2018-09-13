@@ -4,74 +4,65 @@ defmodule Membrane.Pipeline.State do
   # It does not represent state of pipelines you construct, it's a state used
   # internally in Membrane.
 
-  use Bunch
-  alias __MODULE__
   alias Membrane.Core.{Playback, Playbackable}
+  alias Membrane.Element
+  alias Bunch.Type
+  use Bunch
 
   @derive Playbackable
 
-  @type t :: %Membrane.Pipeline.State{
-          internal_state: any,
+  @type t :: %__MODULE__{
+          internal_state: internal_state_t | nil,
           playback: Playback.t(),
           module: module,
-          children_to_pids: %{required([Membrane.Element.name_t()]) => pid},
-          pids_to_children: %{required(pid) => Membrane.Element.name_t()},
-          children_ids: %{atom => integer},
+          children: children_t,
           pending_pids: list(pid),
           terminating?: boolean
         }
 
-  @type internal_state_t :: any
+  @type internal_state_t :: map | struct
+  @type child_t :: {Element.name_t(), pid}
+  @type children_t :: %{Element.name_t() => pid}
 
   defstruct internal_state: nil,
             module: nil,
-            children_to_pids: %{},
-            pids_to_children: %{},
+            children: %{},
             playback: %Playback{},
             pending_pids: nil,
-            children_ids: %{},
             terminating?: false
 
-  # FIXME: rename to get_child_name_by_pid
-  def get_child(%State{pids_to_children: pids_to_children}, child)
-      when is_pid(child) do
-    pids_to_children[child] |> Bunch.error_if_nil({:unknown_child, child})
+  @spec add_child(t, Element.name_t(), pid) :: Type.stateful_try_t(t)
+  def add_child(%__MODULE__{children: children} = state, child, pid) do
+    if not Map.has_key?(children, child) do
+      {:ok, %__MODULE__{state | children: children |> Map.put(child, pid)}}
+    else
+      {{:error, {:duplicate_child, child}}, state}
+    end
   end
 
-  def get_child(%State{children_to_pids: children_to_pids}, child) do
-    with {:ok, pid} <- children_to_pids[child] |> Bunch.error_if_nil({:unknown_child, child}),
+  @spec get_child_pid(t, Element.name_t()) :: Type.try_t(pid)
+  def get_child_pid(%__MODULE__{children: children}, child) do
+    with {:ok, pid} <- children[child] |> Bunch.error_if_nil({:unknown_child, child}),
          do: {:ok, pid}
   end
 
-  def pop_child(state, child) do
-    {pid, children_to_pids} = state.children_to_pids |> Map.pop(child)
+  @spec pop_child(t, Element.name_t()) :: Type.stateful_try_t(pid, t)
+  def pop_child(%__MODULE__{children: children} = state, child) do
+    {pid, children} = children |> Map.pop(child)
 
     with {:ok, pid} <- pid |> Bunch.error_if_nil({:unknown_child, child}) do
-      state = %State{
-        state
-        | children_to_pids: children_to_pids,
-          pids_to_children: state.pids_to_children |> Map.delete(pid)
-      }
-
+      state = %__MODULE__{state | children: children}
       {{:ok, pid}, state}
     end
   end
 
-  def get_increase_child_id(state, child) do
-    state
-    |> Bunch.Struct.get_and_update_in(
-      [:children_ids, child],
-      &((&1 || 0) ~> (id -> {id, id + 1}))
-    )
+  @spec get_children_names(t) :: [Element.name_t()]
+  def get_children_names(%__MODULE__{children: children}) do
+    children |> Map.keys()
   end
 
-  def dynamic?(state, child) do
-    state.children_ids[child] != nil
-  end
-
-  def get_last_child_id(state, child) do
-    with {:ok, id} <- state.children_ids[child] |> Bunch.error_if_nil(:not_dynamic) do
-      {:ok, id - 1}
-    end
+  @spec get_children(t) :: children_t
+  def get_children(%__MODULE__{children: children}) do
+    children
   end
 end

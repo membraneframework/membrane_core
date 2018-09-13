@@ -52,32 +52,31 @@ defmodule Membrane.Pipeline.Spec do
       }
   """
 
-  @typedoc """
-  Properties for child definition in pipeline children specs
+  alias Membrane.Element
+  alias Membrane.Core.PullBuffer
+  alias Element.Pad
 
-  `index: true` allows to # TODO
-  """
-  @type child_property_t :: {:indexed, boolean()}
-  @type child_spec_t ::
-          module | struct | {module, [child_property_t]} | {struct, [child_property_t]}
+  @type child_spec_t :: module | struct
 
   @typedoc """
   Description of all the children elements inside the pipeline
   """
-  @type children_spec_t :: [{Membrane.Element.name_t(), child_spec_t}]
+  @type children_spec_t ::
+          [{Membrane.Element.name_t(), child_spec_t}]
+          | %{Membrane.Element.name_t() => child_spec_t}
 
   @typedoc """
   Options available when linking elements in the pipeline
 
   `:pull_buffer` allows to configure Buffer between elements. See `t:Membrane.Core.PullBuffer.props_t/0`
   """
-  @type link_option_t :: {:pull_buffer, Membrane.Core.PullBuffer.props_t()}
+  @type link_option_t :: {:pull_buffer, PullBuffer.props_t()}
 
-  @type link_from_spec_t :: {Membrane.Element.name_t(), Membrane.Element.Pad.name_t()}
+  @type link_from_spec_t :: {Element.name_t(), Pad.name_t()}
 
   @type link_to_spec_t ::
-          {Membrane.Element.name_t(), Membrane.Element.Pad.name_t()}
-          | {Membrane.Element.name_t(), Membrane.Element.Pad.name_t(), [link_option_t]}
+          {Element.name_t(), Pad.name_t()}
+          | {Element.name_t(), Element.Pad.name_t(), [link_option_t]}
 
   @typedoc """
   Map describing links between elements
@@ -87,7 +86,7 @@ defmodule Membrane.Pipeline.Spec do
   @typedoc """
   Struct used when launching a pipeline
   """
-  @type t :: %Membrane.Pipeline.Spec{
+  @type t :: %__MODULE__{
           children: children_spec_t,
           links: links_spec_t
         }

@@ -10,9 +10,12 @@ defmodule Membrane.Pipeline do
 
   alias __MODULE__.{State, Spec}
   alias Membrane.{Core, Element, Message}
+  alias Element.Pad
   alias Core.Playback
-  use Bunch
+  alias Bunch.Type
   import Membrane.Helper.GenServer
+  require Element
+  use Bunch
   use Membrane.Log, tags: :core
   use Membrane.Core.CallbackHandler
   use GenServer
@@ -55,6 +58,13 @@ defmodule Membrane.Pipeline do
   Type that defines all valid return values from most callbacks.
   """
   @type callback_return_t :: CallbackHandler.callback_return_t(action_t, State.internal_state_t())
+
+  @typep parsed_child_t :: %{name: Element.name_t(), module: module, options: Keyword.t()}
+  @typep parsed_link_t :: %{
+           from: %{element: Element.name_t(), pad: Pad.name_t()},
+           to: %{element: Element.name_t(), pad: Pad.name_t()},
+           params: [Spec.link_option_t()]
+         }
 
   @doc """
   Enables to check whether module is membrane pipeline
@@ -192,12 +202,12 @@ defmodule Membrane.Pipeline do
   end
 
   def init({module, pipeline_options}) do
-    with [init: {{:ok, spec}, internal_state}] <- [init: module.handle_init(pipeline_options)],
-         state = %State{internal_state: internal_state, module: module} do
+    with {{:ok, spec}, internal_state} <- module.handle_init(pipeline_options) do
+      state = %State{internal_state: internal_state, module: module}
       send(self(), [:membrane_pipeline_spec, spec])
       {:ok, state}
     else
-      [init: {:error, reason}] ->
+      {:error, reason} ->
         warn_error(
           """
           Pipeline handle_init callback returned an error
@@ -207,7 +217,7 @@ defmodule Membrane.Pipeline do
 
         {:stop, {:pipeline_init, reason}}
 
-      [init: other] ->
+      other ->
         reason = {:handle_init_invalid_return, other}
 
         warn_error(
@@ -222,10 +232,6 @@ defmodule Membrane.Pipeline do
         )
 
         {:stop, {:pipeline_init, reason}}
-
-      {:error, reason} ->
-        warn_error("Error during pipeline initialization", reason)
-        {:stop, {:pipeline_init, reason}}
     end
   end
 
@@ -237,100 +243,82 @@ defmodule Membrane.Pipeline do
     module |> Bunch.Module.check_behaviour(:membrane_pipeline?)
   end
 
-  defp handle_spec(%Spec{children: children, links: links}, state) do
+  @spec handle_spec(Spec.t(), State.t()) :: Type.stateful_try_t([Element.name_t()], State.t())
+  defp handle_spec(%Spec{children: children_spec, links: links}, state) do
     debug("""
     Initializing pipeline spec
-    children: #{inspect(children)}
+    children: #{inspect(children_spec)}
     links: #{inspect(links)}
     """)
 
-    with {:ok, children} <- children |> parse_children,
-         # TODO: add dedup_children veryfying that there are no duplicate children
-         {children, state} = children |> resolve_children(state),
-         {:ok, {children_to_pids, pids_to_children}} <- children |> start_children,
-         state = %State{
-           state
-           | pids_to_children: Map.merge(state.pids_to_children, pids_to_children),
-             children_to_pids: Map.merge(state.children_to_pids, children_to_pids)
-         },
-         {:ok, links} <- links |> parse_links,
+    with {{:ok, parsed_children}, state} <- {children_spec |> parse_children, state},
+         {:ok, state} <- {parsed_children |> check_if_children_names_unique(state), state},
+         {{:ok, children}, state} <- {parsed_children |> start_children, state},
+         {:ok, state} <- children |> add_children(state),
+         {{:ok, links}, state} <- {links |> parse_links, state},
          {{:ok, links}, state} <- links |> resolve_links(state),
-         :ok <- links |> link_children(state),
-         {children_names, children_pids} = children_to_pids |> Enum.unzip(),
-         :ok <- children_pids |> set_children_message_bus,
-         {:ok, state} <-
-           CallbackHandler.exec_and_handle_callback(
-             :handle_spec_started,
-             __MODULE__,
-             [children_names],
-             state
-           ),
-         :ok <-
-           children_pids
-           |> Bunch.Enum.try_each(&Element.change_playback_state(&1, state.playback.state)) do
+         {:ok, state} <- {links |> link_children(state), state},
+         {children_names, children_pids} = children |> Enum.unzip(),
+         {:ok, state} <- {children_pids |> set_children_message_bus, state},
+         {:ok, state} <- exec_handle_spec_started(children_names, state) do
+      children_pids
+      |> Enum.each(&Element.change_playback_state(&1, state.playback.state))
+
       debug("""
       Initializied pipeline spec
       children: #{inspect(children)}
-      children pids: #{inspect(children_to_pids)}
+      children pids: #{inspect(children)}
       links: #{inspect(links)}
       """)
 
       {{:ok, children_names}, state}
     else
-      {:error, reason} ->
-        warn_error("Failed to initialize pipeline spec", {:cannot_handle_spec, reason})
+      {{:error, reason}, state} ->
+        reason = {:cannot_handle_spec, reason}
+        warn_error("Failed to initialize pipeline spec", reason)
+        {{:error, reason}, state}
     end
   end
 
+  @spec parse_children(Spec.children_spec_t() | any) :: Type.try_t(parsed_child_t)
   defp parse_children(children) when is_map(children) or is_list(children),
     do: children |> Bunch.Enum.try_map(&parse_child/1)
 
-  defp parse_child({name, {%module{} = options, params}})
-       when is_atom(name) and is_list(params) do
-    {:ok, %{name: name, module: module, options: options, params: params}}
+  defp parse_child({name, %module{} = options})
+       when Element.is_element_name(name) do
+    {:ok, %{name: name, module: module, options: options}}
   end
 
-  defp parse_child({name, {module, params}})
-       when is_atom(name) and is_atom(module) and is_list(params) do
+  defp parse_child({name, module})
+       when Element.is_element_name(name) and is_atom(module) do
     options = module |> Bunch.Module.struct()
-    {:ok, %{name: name, module: module, options: options, params: params}}
-  end
-
-  defp parse_child({name, module}) when is_atom(name) do
-    parse_child({name, {module, []}})
+    {:ok, %{name: name, module: module, options: options}}
   end
 
   defp parse_child(config), do: {:error, invalid_child_config: config}
 
-  defp resolve_children(children, state), do: children |> Enum.map_reduce(state, &resolve_child/2)
-
-  defp resolve_child(%{name: name, params: params} = child, state) do
-    if params |> Keyword.get(:indexed) do
-      {id, state} = state |> State.get_increase_child_id(name)
-      {%{child | name: {name, id}}, state}
-    else
-      {child, state}
-    end
+  @spec check_if_children_names_unique([parsed_child_t], State.t()) :: Type.try_t()
+  defp check_if_children_names_unique(children, state) do
+    children
+    |> Enum.map(& &1.name)
+    ~> (&1 ++ State.get_children_names(state))
+    |> Bunch.Enum.duplicates()
+    ~> (
+      [] -> :ok
+      duplicates -> {:error, {:duplicate_element_names, duplicates}}
+    )
   end
 
   # Starts children based on given specification and links them to the current
   # process in the supervision tree.
   #
-  # On success it returns `{:ok, {names_to_pids, pids_to_names}}` where two
-  # values returned are maps that allow to easily map child names to process PIDs
-  # in both ways.
-  #
-  # On error it returns `{:error, reason}`.
-  #
   # Please note that this function is not atomic and in case of error there's
   # a chance that some of children will remain running.
+  @spec start_children([parsed_child_t]) :: Type.try_t([State.child_t()])
   defp start_children(children) do
     debug("Starting children: #{inspect(children)}")
 
-    with {:ok, result} <- children |> Bunch.Enum.try_map(&start_child/1) do
-      {names, pids} = result |> Enum.unzip()
-      {:ok, {names |> Map.new(), pids |> Map.new()}}
-    end
+    children |> Bunch.Enum.try_map(&start_child/1)
   end
 
   # Recursion that starts children processes, case when both module and options
@@ -340,52 +328,59 @@ defmodule Membrane.Pipeline do
 
     with {:ok, pid} <- Element.start_link(self(), module, name, options),
          :ok <- Element.set_controlling_pid(pid, self()) do
-      {:ok, {{name, pid}, {pid, name}}}
+      {:ok, {name, pid}}
     else
       {:error, reason} ->
         warn_error("Cannot start child #{inspect(name)}", {:cannot_start_child, name, reason})
     end
   end
 
+  @spec add_children([parsed_child_t], State.t()) :: Type.stateful_try_t(State.t())
+  defp add_children(children, state) do
+    children
+    |> Bunch.Enum.try_reduce(state, fn {name, pid}, state ->
+      state |> State.add_child(name, pid)
+    end)
+  end
+
+  @spec parse_links(Spec.links_spec_t() | any) :: Type.try_t([parsed_link_t])
   defp parse_links(links), do: links |> Bunch.Enum.try_map(&parse_link/1)
 
+  defp parse_link({{from, from_pad}, {to, to_pad, params}}) do
+    do_parse_link(from, from_pad, to, to_pad, params)
+  end
+
+  defp parse_link({{from, from_pad}, {to, to_pad}}) do
+    do_parse_link(from, from_pad, to, to_pad, [])
+  end
+
   defp parse_link(link) do
-    with {:ok, link} <-
-           link
-           ~> (
-             {{from, from_pad}, {to, to_pad, params}} ->
-               {:ok,
-                %{
-                  from: %{element: from, pad: from_pad},
-                  to: %{element: to, pad: to_pad},
-                  params: params
-                }}
+    {:error, {:invalid_link, link}}
+  end
 
-             {{from, from_pad}, {to, to_pad}} ->
-               {:ok,
-                %{
-                  from: %{element: from, pad: from_pad},
-                  to: %{element: to, pad: to_pad},
-                  params: []
-                }}
+  defp do_parse_link(from, from_pad, to, to_pad, params) do
+    link = %{
+      from: %{element: from, pad: from_pad},
+      to: %{element: to, pad: to_pad},
+      params: params
+    }
 
-             _ ->
-               {:error, :invalid_link}
-           ),
-         :ok <- [link.from.pad, link.to.pad] |> Bunch.Enum.try_each(&parse_pad/1) do
+    with :ok <- [from_pad, to_pad] |> Bunch.Enum.try_each(&parse_pad/1) do
       {:ok, link}
     else
       {:error, reason} -> {:error, {:invalid_link, link, reason}}
     end
   end
 
-  defp parse_pad(name)
-       when is_atom(name or is_binary(name)) do
+  @spec parse_pad(atom | any) :: Type.try_t()
+  defp parse_pad(name) when is_atom(name) do
     :ok
   end
 
   defp parse_pad(pad), do: {:error, {:invalid_pad_format, pad}}
 
+  @spec resolve_links([parsed_link_t], State.t()) ::
+          Type.stateful_try_t([parsed_link_t], State.t())
   defp resolve_links(links, state) do
     links
     |> Bunch.Enum.try_map_reduce(state, fn %{from: from, to: to} = link, st ->
@@ -396,15 +391,7 @@ defmodule Membrane.Pipeline do
   end
 
   defp resolve_link(%{element: element, pad: pad_name} = elementpad, state) do
-    element =
-      if state |> State.dynamic?(element) do
-        {:ok, last_id} = state |> State.get_last_child_id(element)
-        {element, last_id}
-      else
-        element
-      end
-
-    with {:ok, pid} <- state |> State.get_child(element),
+    with {:ok, pid} <- state |> State.get_child_pid(element),
          {:ok, pad_name} <- pid |> GenServer.call({:membrane_get_pad_full_name, pad_name}) do
       {{:ok, %{element: element, pad: pad_name}}, state}
     else
@@ -415,25 +402,23 @@ defmodule Membrane.Pipeline do
   # Links children based on given specification and map for mapping children
   # names into PIDs.
   #
-  # On success it returns `:ok`.
-  #
-  # On error it returns `{:error, {reason, failed_link}}`.
-  #
   # Please note that this function is not atomic and in case of error there's
   # a chance that some of children will remain linked.
+  @spec link_children([parsed_link_t], State.t()) :: Type.try_t()
   defp link_children(links, state) do
     debug("Linking children: links = #{inspect(links)}")
 
     with :ok <- links |> Bunch.Enum.try_each(&do_link_children(&1, state)),
          :ok <-
-           state.pids_to_children
-           |> Bunch.Enum.try_each(fn {pid, _} -> pid |> Element.handle_linking_finished() end),
+           state
+           |> State.get_children()
+           |> Bunch.Enum.try_each(fn {_pid, pid} -> pid |> Element.handle_linking_finished() end),
          do: :ok
   end
 
   defp do_link_children(%{from: from, to: to, params: params} = link, state) do
-    with {:ok, from_pid} <- state |> State.get_child(from.element),
-         {:ok, to_pid} <- state |> State.get_child(to.element),
+    with {:ok, from_pid} <- state |> State.get_child_pid(from.element),
+         {:ok, to_pid} <- state |> State.get_child_pid(to.element),
          :ok <- Element.link(from_pid, to_pid, from.pad, to.pad, params) do
       :ok
     else
@@ -441,6 +426,7 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  @spec set_children_message_bus([pid]) :: Type.try_t()
   defp set_children_message_bus(elements_pids) do
     with :ok <-
            elements_pids
@@ -453,13 +439,23 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  @spec exec_handle_spec_started([Element.name_t()], State.t()) :: Type.stateful_try_t(State.t())
+  defp exec_handle_spec_started(children_names, state) do
+    CallbackHandler.exec_and_handle_callback(
+      :handle_spec_started,
+      __MODULE__,
+      [children_names],
+      state
+    )
+  end
+
   @impl PlaybackHandler
-  def handle_playback_state(_old, new, %State{pids_to_children: pids_to_children} = state) do
-    children_pids = pids_to_children |> Map.keys()
+  def handle_playback_state(_old, new, state) do
+    children_pids = state |> State.get_children() |> Map.values()
 
     children_pids
-    |> Enum.each(fn child ->
-      Element.change_playback_state(child, new)
+    |> Enum.each(fn pid ->
+      Element.change_playback_state(pid, new)
     end)
 
     state = %{state | pending_pids: children_pids |> MapSet.new()}
@@ -539,7 +535,7 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_info([:membrane_message, from, %Message{} = message], state) do
-    with {:ok, _} <- state |> State.get_child(from) do
+    with {:ok, _} <- state |> State.get_child_pid(from) do
       CallbackHandler.exec_and_handle_callback(
         :handle_message,
         __MODULE__,
@@ -557,12 +553,13 @@ defmodule Membrane.Pipeline do
 
   @impl CallbackHandler
   def handle_action({:forward, {elementname, message}}, _cb, _params, state) do
-    with {:ok, pid} <- state |> State.get_child(elementname) do
+    with {:ok, pid} <- state |> State.get_child_pid(elementname) do
       send(pid, message)
       {:ok, state}
     else
       {:error, reason} ->
-        {:error, {:cannot_forward_message, [element: elementname, message: message], reason}}
+        {{:error, {:cannot_forward_message, [element: elementname, message: message], reason}},
+         state}
     end
   end
 
@@ -571,28 +568,35 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_action({:remove_child, children}, _cb, _params, state) do
-    with {{:ok, pids}, state} <-
-           children
-           |> Bunch.listify()
-           |> Bunch.Enum.try_map_reduce(state, fn c, st -> State.pop_child(st, c) end),
-         :ok <- pids |> Bunch.Enum.try_each(&Element.stop/1),
-         :ok <- pids |> Bunch.Enum.try_each(&Element.unlink/1),
-         :ok <- pids |> Bunch.Enum.try_each(&Element.shutdown/1) do
+    withl pop:
+            {{:ok, pids}, state} <-
+              children
+              |> Bunch.listify()
+              |> Bunch.Enum.try_map_reduce(state, fn c, st -> State.pop_child(st, c) end),
+          rem: :ok <- pids |> Bunch.Enum.try_each(&Element.stop/1),
+          rem: :ok <- pids |> Bunch.Enum.try_each(&Element.unlink/1),
+          rem: :ok <- pids |> Bunch.Enum.try_each(&Element.shutdown/1) do
       {:ok, state}
     else
-      {:error, reason} -> {:error, {:cannot_remove_children, children, reason}}
+      pop: {{:error, reason}, _state} -> {{:error, reason}, state}
+      rem: {:error, reason} -> {{:error, {:cannot_remove_children, children, reason}}, state}
     end
   end
 
   def handle_action(action, callback, _params, state) do
+    reason =
+      {:invalid_action, action: action, callback: callback, module: state |> Map.get(:module)}
+
     warn_error(
       """
       Pipelines' #{inspect(state.module)} #{inspect(callback)} returned invalid
       action: #{inspect(action)}. For available actions check
       Membrane.Pipeline.action_t type.
       """,
-      {:invalid_action, action: action, callback: callback, module: state |> Map.get(:module)}
+      reason
     )
+
+    {{:error, reason}, state}
   end
 
   defmacro __using__(_) do
