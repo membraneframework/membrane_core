@@ -11,7 +11,7 @@ defmodule Membrane.Pipeline.State do
   @derive Playbackable
 
   @type t :: %Membrane.Pipeline.State{
-          internal_state: any,
+          internal_state: internal_state_t,
           playback: Playback.t(),
           module: module,
           children_to_pids: %{required([Membrane.Element.name_t()]) => pid},

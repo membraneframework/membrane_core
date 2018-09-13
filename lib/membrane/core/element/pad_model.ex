@@ -4,6 +4,7 @@ defmodule Membrane.Core.Element.PadModel do
 
   alias Membrane.Element.Pad
   alias Membrane.Core.Element.State
+  alias Membrane.Core.PullBuffer
   use Bunch
 
   @type pad_data_t :: %{

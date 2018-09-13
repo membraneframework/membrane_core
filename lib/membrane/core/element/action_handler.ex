@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   alias Membrane.{Buffer, Caps, Core, Element, Event, Message}
   alias Core.Element.{DemandController, LifecycleController, DemandHandler, PadModel, State}
-  alias Core.PlaybackHandler
+  alias Core.{PlaybackHandler, PullBuffer}
   alias Element.{Action, Pad}
   require PadModel
   import Element.Pad, only: [is_pad_name: 1]
@@ -92,9 +92,17 @@ defmodule Membrane.Core.Element.ActionHandler do
     send_caps(pad_name, caps, state)
   end
 
+  defp do_handle_action({:redemand, src_names}, cb, _params, state)
+       when is_list(src_names) do
+    src_names
+    |> Bunch.Enum.try_reduce(state, fn src_name, state ->
+      do_handle_action({:redemand, src_name}, cb, %{}, state)
+    end)
+  end
+
   defp do_handle_action({:redemand, src_name}, cb, _params, %State{type: type} = state)
        when type in [:source, :filter] and is_pad_name(src_name) and
-              cb not in [:handle_demand, :handle_process_list] do
+              cb not in [:handle_process_list] do
     handle_redemand(src_name, state)
   end
 
@@ -153,6 +161,13 @@ defmodule Membrane.Core.Element.ActionHandler do
     if actions_after_redemand != [] do
       {{:error, :actions_after_redemand}, state}
     else
+      state =
+        if callback == :handle_demand do
+          %{state | handler_state: %{}}
+        else
+          state
+        end
+
       super(
         actions |> join_buffers(),
         callback,
@@ -330,6 +345,12 @@ defmodule Membrane.Core.Element.ActionHandler do
     sink_assertion = PadModel.assert_data(pad_name, %{direction: :sink, mode: :pull}, state)
 
     with :ok <- sink_assertion do
+      handler_state =
+        state.handler_state
+        |> Map.update(:demanded_pads, [pad_name], fn lst -> [pad_name | lst] end)
+
+      state = %{state | handler_state: handler_state}
+
       if callback in [:handle_write_list, :handle_process_list] do
         # Handling demand results in execution of handle_write_list/handle_process_list,
         # wherefore demand returned by one of these callbacks may lead to
@@ -351,7 +372,23 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec handle_redemand(Pad.name_t(), State.t()) :: State.stateful_try_t()
   defp handle_redemand(src_name, state) do
     with :ok <- PadModel.assert_data(src_name, %{direction: :source, mode: :pull}, state) do
-      DemandController.handle_demand(src_name, 0, state)
+      pads_to_check = state.handler_state |> Map.get(:demanded_pads, [])
+      state = %{state | handler_state: %{}}
+
+      can_demand_be_supplied =
+        pads_to_check
+        |> Enum.any?(fn pad ->
+          pad
+          |> PadModel.get_data!(:buffer, state)
+          |> PullBuffer.empty?()
+          |> Kernel.not()
+        end)
+
+      if can_demand_be_supplied and PadModel.get_data!(src_name, :demand, state) > 0 do
+        DemandController.handle_demand(src_name, 0, state)
+      end
+
+      {:ok, state}
     else
       {:error, reason} -> handle_pad_error(reason, state)
     end
