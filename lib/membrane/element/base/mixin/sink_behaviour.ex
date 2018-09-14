@@ -18,6 +18,8 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
 
   The default name for generic sink pad, in elements that just consume some
   buffers is `:sink`.
+
+  Generated automatically by `def_sink_pads/1` macro.
   """
   @callback membrane_sink_pads() :: [Element.sink_pad_specs_t()]
 

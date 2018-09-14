@@ -153,9 +153,11 @@ defmodule Membrane.Core.Element.PadController do
     state |> Bunch.Struct.put_in([:pads, :data, name], data)
   end
 
+  @spec init_pad_direction_data(map(), Keyword.t(), State.t()) :: map()
   defp init_pad_direction_data(%{direction: :sink}, _props, _state), do: %{sticky_messages: []}
   defp init_pad_direction_data(%{direction: :source}, _props, _state), do: %{}
 
+  @spec init_pad_mode_data(map(), Keyword.t(), State.t()) :: map()
   defp init_pad_mode_data(%{mode: :pull, direction: :sink} = data, props, state) do
     %{name: name, pid: pid, other_name: other_name, options: options} = data
 

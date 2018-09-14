@@ -18,6 +18,8 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
 
   The default name for generic source pad, in elements that just produce some
   buffers is `:source`.
+
+  Generated automatically by `def_source_pads/1` macro.
   """
   @callback membrane_source_pads() :: [Element.source_pad_specs_t()]
 
