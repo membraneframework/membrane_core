@@ -251,7 +251,8 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
       def membrane_element?, do: true
 
       @impl true
-      def handle_init(_options), do: {:ok, %{}}
+      def handle_init(%opt_struct{} = options), do: {:ok, options |> Map.from_struct()}
+      def handle_init(options), do: {:ok, options}
 
       @impl true
       def handle_stopped_to_prepared(_context, state), do: {:ok, state}
