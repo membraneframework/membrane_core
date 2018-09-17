@@ -477,14 +477,17 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           )
 
         expect(result) |> to(be_ok_result())
-        assert_received {:membrane_invoke_handle_demand, _}
+        assert_received {:membrane_invoke_supply_demand, _}
       end
     end
 
     context "when callback is other than 'handle_write_list' or 'handle_process_list'" do
       before do
         allow handler_module()
-              |> to(accept :handle_demand, fn _, _, state -> {:ok, state} end)
+              |> to(accept :update_demand, fn _, _, state -> {:ok, state} end)
+
+        allow handler_module()
+              |> to(accept :supply_demand, fn _, state -> {:ok, state} end)
       end
 
       it "should call handle_demand from DemandHandler module" do
@@ -495,7 +498,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           state()
         )
 
-        expect(handler_module() |> to(accepted(:handle_demand, :any, count: 1)))
+        expect(handler_module() |> to(accepted(:update_demand, :any, count: 1)))
+        expect(handler_module() |> to(accepted(:supply_demand, :any, count: 1)))
       end
     end
   end
@@ -598,7 +602,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     context "if :redemand is the last action" do
       let :actions, do: [message: message_a(), message: message_b(), redemand: :source]
 
-      fit "should handle all actions" do
+      it "should handle all actions" do
         res = described_module().handle_actions(actions(), nil, %{}, state())
         expect(res |> to(eq {:ok, state()}))
         msg_a = [:membrane_message, :test_name, message_a()]
@@ -612,7 +616,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     context "if :redemand is not the last action" do
       let :actions, do: [redemand: :source, message: message_a(), message: message_b()]
 
-      fit "should return an error" do
+      it "should return an error" do
         res = described_module().handle_actions(actions(), nil, %{}, state())
         expect(res |> to(eq {{:error, :actions_after_redemand}, state()}))
         msg_a = [:membrane_message, :test_name, message_a()]
@@ -626,7 +630,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     context "if actions don't contain :redemand" do
       let :actions, do: [message: message_a(), message: message_b()]
 
-      fit "should handle all actions" do
+      it "should handle all actions" do
         res = described_module().handle_actions(actions(), nil, %{}, state())
         expect(res |> to(eq {:ok, state()}))
         msg_a = [:membrane_message, :test_name, message_a()]

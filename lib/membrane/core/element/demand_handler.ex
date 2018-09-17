@@ -20,45 +20,59 @@ defmodule Membrane.Core.Element.DemandHandler do
   use Bunch
 
   @doc """
-  Gets given amount of data from given sink pad's PullBuffer, passes it to proper
-  controller, and checks if source demand has been suppplied. If not, than demand
-  is assumed to be underestimated, and a zero-sized demand is sent to handle it
-  again.
+  Updates demand on the given sink pad that should be supplied by future calls
+  to `supply_demand/2` or `check_and_supply_demands/2`.
   """
-  @spec handle_demand(
+  @spec update_demand(
           Pad.name_t(),
           pos_integer,
           State.t()
         ) :: State.stateful_try_t()
-  def handle_demand(pad_name, size, state) when is_integer(size) do
+  def update_demand(pad_name, size, state) when is_integer(size) do
     state = PadModel.set_data!(pad_name, :demand, size, state)
-    supply_demand(pad_name, size, state)
+    {:ok, state}
   end
 
-  def handle_demand(pad_name, size_fun, state) when is_function(size_fun) do
-    {total_size, state} =
-      PadModel.get_and_update_data!(
+  def update_demand(pad_name, size_fun, state) when is_function(size_fun) do
+    state =
+      PadModel.update_data!(
         pad_name,
         :demand,
-        fn demand -> size_fun.(demand) ~> {&1, &1} end,
+        fn demand -> size_fun.(demand) ~> {:ok, &1} end,
         state
       )
 
-    supply_demand(pad_name, total_size, state)
+    {:ok, state}
+  end
+
+  @doc """
+  Based on the demand on given pad takes buffers, passes it to proper
+  controller and checks if source demand has been suppplied.
+  """
+  @spec supply_demand(
+          Pad.name_t(),
+          State.t()
+        ) :: State.stateful_try_t()
+  def supply_demand(pad_name, state) do
+    total_size = PadModel.get_data!(pad_name, :demand, state)
+    do_supply_demand(pad_name, total_size, state)
   end
 
   @doc """
   Handles demands requested on given sink pad, if there are any.
   """
-  @spec check_and_handle_demands(Pad.name_t(), State.t()) :: State.stateful_try_t()
-  def check_and_handle_demands(pad_name, state) do
+  @spec check_and_supply_demands(Pad.name_t(), State.t()) :: State.stateful_try_t()
+  def check_and_supply_demands(pad_name, state) do
     demand = PadModel.get_data!(pad_name, :demand, state)
 
-    if demand > 0 do
-      supply_demand(pad_name, demand, state)
-    else
-      {:ok, state}
-    end
+    supply_demand_res =
+      if demand > 0 do
+        do_supply_demand(pad_name, demand, state)
+      else
+        {:ok, state}
+      end
+
+    supply_demand_res
     |> case do
       {:ok, %State{type: :filter} = state} ->
         PadModel.filter_names_by_data(%{direction: :source}, state)
@@ -74,8 +88,8 @@ defmodule Membrane.Core.Element.DemandHandler do
     end
   end
 
-  @spec supply_demand(Pad.name_t(), pos_integer, State.t()) :: State.stateful_try_t()
-  defp supply_demand(pad_name, size, state) do
+  @spec do_supply_demand(Pad.name_t(), pos_integer, State.t()) :: State.stateful_try_t()
+  defp do_supply_demand(pad_name, size, state) do
     pb_output =
       PadModel.get_and_update_data(
         pad_name,
@@ -93,7 +107,7 @@ defmodule Membrane.Core.Element.DemandHandler do
           """
           Error while supplying demand on pad #{inspect(pad_name)} of size #{inspect(size)}
           """,
-          {:supply_demand, reason},
+          {:do_supply_demand, reason},
           state
         )
     end

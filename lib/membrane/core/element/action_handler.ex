@@ -161,13 +161,6 @@ defmodule Membrane.Core.Element.ActionHandler do
     if actions_after_redemand != [] do
       {{:error, :actions_after_redemand}, state}
     else
-      state =
-        if callback == :handle_demand do
-          %{state | handler_state: %{}}
-        else
-          state
-        end
-
       super(
         actions |> join_buffers(),
         callback,
@@ -344,13 +337,8 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp handle_demand(pad_name, size, callback, state) do
     sink_assertion = PadModel.assert_data(pad_name, %{direction: :sink, mode: :pull}, state)
 
-    with :ok <- sink_assertion do
-      handler_state =
-        state.handler_state
-        |> Map.update(:demanded_pads, [pad_name], fn lst -> [pad_name | lst] end)
-
-      state = %{state | handler_state: handler_state}
-
+    with :ok <- sink_assertion,
+         {:ok, state} <- DemandHandler.update_demand(pad_name, size, state) do
       if callback in [:handle_write_list, :handle_process_list] do
         # Handling demand results in execution of handle_write_list/handle_process_list,
         # wherefore demand returned by one of these callbacks may lead to
@@ -359,10 +347,10 @@ defmodule Membrane.Core.Element.ActionHandler do
         # processes. As such situation is unwanted, a message to self is sent here
         # to make it possible for messages already enqueued in mailbox to be
         # received before the demand is handled.
-        send(self(), {:membrane_invoke_handle_demand, [pad_name, size]})
+        send(self(), {:membrane_invoke_supply_demand, pad_name})
         {:ok, state}
       else
-        DemandHandler.handle_demand(pad_name, size, state)
+        DemandHandler.supply_demand(pad_name, state)
       end
     else
       {:error, reason} -> handle_pad_error(reason, state)
@@ -370,13 +358,18 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @spec handle_redemand(Pad.name_t(), State.t()) :: State.stateful_try_t()
-  defp handle_redemand(src_name, state) do
+  defp handle_redemand(src_name, %{type: :source} = state) do
     with :ok <- PadModel.assert_data(src_name, %{direction: :source, mode: :pull}, state) do
-      pads_to_check = state.handler_state |> Map.get(:demanded_pads, [])
-      state = %{state | handler_state: %{}}
+      DemandController.handle_demand(src_name, 0, state)
+    else
+      {:error, reason} -> handle_pad_error(reason, state)
+    end
+  end
 
+  defp handle_redemand(src_name, %{type: :filter} = state) do
+    with :ok <- PadModel.assert_data(src_name, %{direction: :source, mode: :pull}, state) do
       can_demand_be_supplied =
-        pads_to_check
+        PadModel.filter_names_by_data(%{direction: :sink}, state)
         |> Enum.any?(fn pad ->
           pad
           |> PadModel.get_data!(:buffer, state)
@@ -384,11 +377,11 @@ defmodule Membrane.Core.Element.ActionHandler do
           |> Kernel.not()
         end)
 
-      if can_demand_be_supplied and PadModel.get_data!(src_name, :demand, state) > 0 do
+      if can_demand_be_supplied do
         DemandController.handle_demand(src_name, 0, state)
+      else
+        {:ok, state}
       end
-
-      {:ok, state}
     else
       {:error, reason} -> handle_pad_error(reason, state)
     end

@@ -80,7 +80,7 @@ defmodule Membrane.Core.Element.BufferController do
              state
            ) do
       if was_empty? do
-        DemandHandler.check_and_handle_demands(pad_name, state)
+        DemandHandler.check_and_supply_demands(pad_name, state)
       else
         {:ok, state}
       end

@@ -12,7 +12,7 @@ defmodule Membrane.Core.Element.DemandController do
   use Bunch
 
   @doc """
-  Updates demand and executes `handle_demand` callback.
+  Handles demand coming on a source pad. Updates demand value and executes `handle_demand` callback.
   """
   @spec handle_demand(Pad.name_t(), non_neg_integer, State.t()) :: State.stateful_try_t()
   def handle_demand(pad_name, size, state) do
