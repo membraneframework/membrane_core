@@ -12,14 +12,9 @@ defmodule Membrane.Pipeline.StateSpec do
       expect(module) |> to(be_nil())
     end
 
-    it "should have children_to_pids field set to an empty map" do
-      %Membrane.Pipeline.State{children_to_pids: children_to_pids} = struct(described_module())
-      expect(children_to_pids) |> to(eq %{})
-    end
-
-    it "should have pids_to_children field set to an empty map" do
-      %Membrane.Pipeline.State{pids_to_children: pids_to_children} = struct(described_module())
-      expect(pids_to_children) |> to(eq %{})
+    it "should have children field set to an empty map" do
+      %Membrane.Pipeline.State{children: children} = struct(described_module())
+      expect(children) |> to(eq %{})
     end
   end
 end

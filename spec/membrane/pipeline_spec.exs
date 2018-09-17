@@ -191,7 +191,7 @@ defmodule Membrane.PipelineSpec do
       it "should return new pipeline state containing map with pids for every child" do
         {:noreply, state} = described_module().handle_info(message(), state())
 
-        expect(state.children_to_pids |> Map.keys() |> Enum.sort())
+        expect(state.children |> Map.keys() |> Enum.sort())
         |> to(eq spec().children |> Keyword.keys() |> Enum.sort())
       end
 
@@ -217,13 +217,13 @@ defmodule Membrane.PipelineSpec do
 
       let :state,
         do: %Membrane.Pipeline.State{
-          pids_to_children: %{self() => child_name()},
+          children: %{child_name() => self()},
           internal_state: internal_state(),
           module: module()
         }
 
       let :internal_message, do: %Membrane.Message{}
-      let! :message, do: [:membrane_message, child_pid(), internal_message()]
+      let! :message, do: [:membrane_message, child_name(), internal_message()]
 
       context "when received from child" do
         let :child_pid, do: self()
@@ -237,7 +237,7 @@ defmodule Membrane.PipelineSpec do
           described_module().handle_info(message(), state())
 
           expect(module())
-          |> to(accepted(:handle_message, [internal_message(), child_pid(), internal_state()]))
+          |> to(accepted(:handle_message, [internal_message(), child_name(), internal_state()]))
         end
 
         it "should keep state unchanged" do
@@ -247,7 +247,8 @@ defmodule Membrane.PipelineSpec do
       end
 
       context "when received from process that is not a child" do
-        let :child_pid, do: :c.pid(0, 212, 0)
+        let :invalid_child_name, do: :not_a_child_name
+        let! :message, do: [:membrane_message, invalid_child_name(), internal_message()]
 
         it "should return {:stop, _, _}" do
           {atom, _, _} = described_module().handle_info(message(), state())
@@ -269,9 +270,11 @@ defmodule Membrane.PipelineSpec do
           expect(atom) |> to(eq :unknown_child)
         end
 
-        it "should include given pid in the reason" do
-          {:stop, {:error, {_, pid}}, _} = described_module().handle_info(message(), state())
-          expect(pid) |> to(eq child_pid())
+        it "should include given name in the reason" do
+          {:stop, {:error, {_reason, name}}, _state} =
+            described_module().handle_info(message(), state())
+
+          expect(name) |> to(eq invalid_child_name())
         end
       end
     end

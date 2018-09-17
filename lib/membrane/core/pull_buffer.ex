@@ -96,7 +96,7 @@ defmodule Membrane.Core.PullBuffer do
       when is_list(v) do
     if size >= pref_size do
       debug("""
-      PullBuffer #{pb.name}: received buffers from sink #{inspect(pb.sink_name)},
+      PullBuffer #{inspect(pb.name)}: received buffers from sink #{inspect(pb.sink_name)},
       despite not requesting them. It is probably caused by overestimating demand
       by previous element.
       """)
@@ -119,7 +119,7 @@ defmodule Membrane.Core.PullBuffer do
 
       warn([
         """
-        PullBuffer #{pb.name} (toilet): received #{inspect(size)} buffers,
+        PullBuffer #{inspect(pb.name)} (toilet): received #{inspect(size)} buffers,
         which is above #{above_level}, from sink #{inspect(pb.sink_name)} that works in push mode.
         To have control over amount of buffers being produced, consider using push mode.
         If this is a normal situation, increase toilet warn/fail level.
@@ -135,7 +135,7 @@ defmodule Membrane.Core.PullBuffer do
 
     if size >= fail_lvl do
       warn_error(
-        "PullBuffer #{pb.name} (toilet): failing: too many buffers",
+        "PullBuffer #{inspect(pb.name)} (toilet): failing: too many buffers",
         {:pull_buffer, toilet: :too_many_buffers}
       )
     else

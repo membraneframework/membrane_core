@@ -44,7 +44,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   and return error if that has failed. Such resources should be released in `c:handle_prepared_to_stopped/1`.
   """
   @callback handle_stopped_to_prepared(
-              context :: CallbackContext.Prepare.t(),
+              context :: CallbackContext.PlaybackChange.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -56,7 +56,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   demands should be sent.
   """
   @callback handle_playing_to_prepared(
-              context :: CallbackContext.Prepare.t(),
+              context :: CallbackContext.PlaybackChange.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -67,7 +67,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   if there are any pads in the push mode.
   """
   @callback handle_prepared_to_playing(
-              context :: CallbackContext.Play.t(),
+              context :: CallbackContext.PlaybackChange.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -79,7 +79,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   this is the place to close it.
   """
   @callback handle_prepared_to_stopped(
-              context :: CallbackContext.Stop.t(),
+              context :: CallbackContext.PlaybackChange.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -91,7 +91,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_other(
               message :: any(),
-              context :: CallbackContext.Stop.t(),
+              context :: CallbackContext.Other.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
