@@ -92,11 +92,11 @@ defmodule Membrane.Core.Element.ActionHandler do
     send_caps(pad_name, caps, state)
   end
 
-  defp do_handle_action({:redemand, src_names}, cb, _params, state)
+  defp do_handle_action({:redemand, src_names}, cb, params, state)
        when is_list(src_names) do
     src_names
     |> Bunch.Enum.try_reduce(state, fn src_name, state ->
-      do_handle_action({:redemand, src_name}, cb, %{}, state)
+      do_handle_action({:redemand, src_name}, cb, params, state)
     end)
   end
 
