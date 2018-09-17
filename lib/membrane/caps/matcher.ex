@@ -28,26 +28,52 @@ defmodule Membrane.Caps.Matcher do
   @type caps_spec_t :: module() | {module(), keyword()}
   @type caps_specs_t :: :any | caps_spec_t() | [caps_spec_t()]
 
-  @opaque range_spec_t :: {__MODULE__.Range, any, any}
-  Record.defrecordp(:range_t, __MODULE__.Range, min: 0, max: :infinity)
+  defmodule Range do
+    @enforce_keys [:min, :max]
+    defstruct @enforce_keys
 
-  @opaque list_spec_t :: {__MODULE__.In, list()}
-  Record.defrecordp(:in_t, __MODULE__.In, list: [])
+    @type t :: %__MODULE__{min: any, max: any}
+  end
+
+  defimpl Inspect, for: Range do
+    import Inspect.Algebra
+
+    @impl true
+    def inspect(%Range{min: min, max: max}, opts) do
+      concat(["range(", to_doc(min, opts), ", ", to_doc(max, opts), ")"])
+    end
+  end
+
+  defmodule OneOf do
+    @enforce_keys [:list]
+    defstruct @enforce_keys
+
+    @type t :: %__MODULE__{list: list()}
+  end
+
+  defimpl Inspect, for: OneOf do
+    import Inspect.Algebra
+
+    @impl true
+    def inspect(%OneOf{list: list}, opts) do
+      concat(["in(", to_doc(list, opts), ")"])
+    end
+  end
 
   @doc """
   Returns opaque `t:range_spec_t/0` that specifies range of valid values for caps field
   """
-  @spec range(any, any) :: range_spec_t
+  @spec range(any, any) :: Range.t()
   def range(min, max) do
-    range_t(min: min, max: max)
+    %Range{min: min, max: max}
   end
 
   @doc """
   Returns opaque `t:list_spec_t/0` that specifies list of valid values for caps field
   """
-  @spec one_of(list()) :: list_spec_t
+  @spec one_of(list()) :: OneOf.t()
   def one_of(values) when is_list(values) do
-    in_t(list: values)
+    %OneOf{list: values}
   end
 
   @doc """
@@ -107,11 +133,11 @@ defmodule Membrane.Caps.Matcher do
     match_value(spec_value, caps_value)
   end
 
-  defp match_value(in_t(list: specs), value) when is_list(specs) do
+  defp match_value(%OneOf{list: specs}, value) when is_list(specs) do
     specs |> Enum.any?(fn spec -> match_value(spec, value) end)
   end
 
-  defp match_value(range_t(min: min, max: max), value) do
+  defp match_value(%Range{min: min, max: max}, value) do
     min <= value && value <= max
   end
 
