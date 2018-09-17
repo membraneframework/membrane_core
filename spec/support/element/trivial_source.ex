@@ -8,7 +8,7 @@ defmodule Membrane.Support.Element.TrivialSource do
   use Membrane.Element.Base.Source
   use Bunch
 
-  def_source_pads source: {:always, :pull, :any}
+  def_source_pads source: [caps: :any]
 
   @impl true
   def handle_init(_options) do

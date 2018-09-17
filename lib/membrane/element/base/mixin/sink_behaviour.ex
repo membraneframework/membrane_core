@@ -14,15 +14,6 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   alias Element.Base.Mixin.CommonBehaviour
 
   @doc """
-  Callback that defines what sink pads may be ever available for this
-  element type.
-
-  The default name for generic sink pad, in elements that just consume some
-  buffers is `:sink`.
-  """
-  @callback membrane_sink_pads() :: [Element.sink_pad_specs_t()]
-
-  @doc """
   Callback invoked when Element is receiving information about new caps for
   given pad. In filters those caps are forwarded through all source pads by default.
   """

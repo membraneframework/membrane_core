@@ -2,90 +2,35 @@ defmodule Membrane.Core.Element.PadSpecHandler do
   @moduledoc false
   # Module parsing pads specifications in elements.
 
-  alias Membrane.Element
+  alias Membrane.{Core, Element}
   alias Element.Pad
-  alias Membrane.{Caps, Core}
-  alias Core.Element.{PadModel, State}
+  alias Core.Element.{PadModel, PadsSpecsParser, State}
   require Pad
   use Bunch
   use Core.Element.Log
 
-  @typep parsed_pad_t ::
-           {Pad.name_t(), Pad.availability_t(), Pad.mode_t(), Caps.Matcher.caps_specs_t(),
-            Pad.direction_t(), map}
-
   @doc """
   Initializes pads info basing on element's pads specifications.
   """
-  @spec init_pads(State.t()) :: State.stateful_try_t()
+  @spec init_pads(State.t()) :: State.t()
   def init_pads(%State{module: module} = state) do
-    with {:ok, soruce_pads_info} <- handle_known_pads(:membrane_source_pads, :source, module),
-         {:ok, sink_pads_info} <- handle_known_pads(:membrane_sink_pads, :sink, module) do
-      pads = %{
-        data: %{},
-        info: Map.merge(soruce_pads_info, sink_pads_info),
-        dynamic_currently_linking: []
-      }
-
-      {:ok, %State{state | pads: pads}}
-    else
-      {:error, reason} -> warn_error("Error parsing pads", reason, state)
-    end
-  end
-
-  @spec handle_known_pads(atom, Pad.direction_t(), module) ::
-          {:ok, %{Pad.name_t() => PadModel.pad_info_t()}}
-          | {:error, {:invalid_pad_config, details :: Keyword.t()}}
-  defp handle_known_pads(known_pads_fun, direction, module) do
-    known_pads =
-      if function_exported?(module, known_pads_fun, 0) do
-        apply(module, known_pads_fun, [])
-      else
-        %{}
-      end
-
-    with {:ok, pads} <- known_pads |> Bunch.Enum.try_map(&parse_pad(&1, direction)) do
-      pads =
-        pads
-        |> Enum.map(&init_pad_info/1)
-        |> Map.new(&{&1.name, &1})
-
-      {:ok, pads}
-    end
-  end
-
-  @spec parse_pad(Element.pad_specs_t(), Pad.direction_t()) ::
-          {:ok, parsed_pad_t} | {:error, {:invalid_pad_config, details :: Keyword.t()}}
-  defp parse_pad({name, {availability, :push, caps}}, direction)
-       when is_atom(name) and Pad.is_availability(availability) do
-    {:ok, {name, availability, :push, caps, direction, %{}}}
-  end
-
-  defp parse_pad({name, {availability, :pull, caps}}, :source)
-       when is_atom(name) and Pad.is_availability(availability) do
-    {:ok, {name, availability, :pull, caps, :source, %{other_demand_in: nil}}}
-  end
-
-  defp parse_pad({name, {availability, {:pull, demand_in: demand_in}, caps}}, :sink)
-       when is_atom(name) and Pad.is_availability(availability) do
-    {:ok, {name, availability, :pull, caps, :sink, %{demand_in: demand_in}}}
-  end
-
-  defp parse_pad(params, direction),
-    do: {:error, {:invalid_pad_config, params, direction: direction}}
-
-  @spec init_pad_info(parsed_pad_t) :: PadModel.pad_info_t()
-  defp init_pad_info({name, availability, mode, caps, direction, options}) do
-    %{
-      name: name,
-      mode: mode,
-      direction: direction,
-      accepted_caps: caps,
-      availability: availability,
-      options: options
+    pads = %{
+      data: %{},
+      info: module.membrane_pads() |> Enum.map(&init_pad_info/1) |> Map.new(&{&1.name, &1}),
+      dynamic_currently_linking: []
     }
+
+    %State{state | pads: pads}
+  end
+
+  @spec init_pad_info({Pad.name_t(), PadsSpecsParser.parsed_pad_specs_t()}) ::
+          PadModel.pad_info_t()
+  defp init_pad_info({name, specs}) do
+    specs
+    |> Map.put(:name, name)
+    |> Bunch.Map.move!(:caps, :accepted_caps)
     |> Map.merge(
-      case availability |> Pad.availability_mode() do
+      case specs.availability |> Pad.availability_mode() do
         :dynamic -> %{current_id: 0}
         :static -> %{}
       end

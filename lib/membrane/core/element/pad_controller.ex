@@ -160,18 +160,18 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec init_pad_mode_data(PadModel.pad_data_t(), Keyword.t(), State.t()) :: PadModel.pad_data_t()
   defp init_pad_mode_data(%{mode: :pull, direction: :sink} = data, props, state) do
-    %{name: name, pid: pid, other_name: other_name, options: options} = data
+    %{name: name, pid: pid, other_name: other_name, demand_in: demand_in} = data
 
     :ok =
       pid
-      |> GenServer.call({:membrane_demand_in, [options.demand_in, other_name]})
+      |> GenServer.call({:membrane_demand_in, [demand_in, other_name]})
 
     pb =
       PullBuffer.new(
         state.name,
         {pid, other_name},
         name,
-        options.demand_in,
+        demand_in,
         props[:pull_buffer] || %{}
       )
 

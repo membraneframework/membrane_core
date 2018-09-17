@@ -17,6 +17,11 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @type callback_return_t :: CallbackHandler.callback_return_t(Action.t(), Element.state_t())
 
   @doc """
+  Callback returning specification of pads exported by the element.
+  """
+  @callback membrane_pads() :: [Element.sink_pad_specs_t()]
+
+  @doc """
   Used to determine if a module is membrane element.
   """
   @callback membrane_element? :: true

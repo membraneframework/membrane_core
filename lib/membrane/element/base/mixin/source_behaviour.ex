@@ -14,15 +14,6 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   alias Element.Base.Mixin.CommonBehaviour
 
   @doc """
-  Callback that defines what source pads may be ever available for this
-  element type.
-
-  The default name for generic source pad, in elements that just produce some
-  buffers is `:source`.
-  """
-  @callback membrane_source_pads() :: [Element.source_pad_specs_t()]
-
-  @doc """
   Callback that is called when buffers should be emitted by the source or filter.
 
   It will be called only for source pads in the pull mode, as in their case demand

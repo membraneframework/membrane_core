@@ -5,19 +5,20 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
   """
   alias Membrane.{Buffer, Caps, Element}
   alias Element.Pad
+  alias Bunch.Type
   use Bunch
 
   @type parsed_pad_specs_t :: %{
           availability: Pad.availability_t(),
-          mode: Pad.Mode.t(),
+          mode: Pad.mode_t(),
           caps: Caps.Matcher.caps_specs_t(),
-          demand_in: Buffer.unit_t()
+          demand_in: Buffer.Metric.unit_t()
         }
 
   @doc """
   Generates `membrane_{direction}_pads/0` function, along with docs and typespecs.
 
-  Pads specifications are parsed with `parse_pads_specs!/3`, and docs are
+  Pads specifications are parsed with `parse_pads_specs!/4`, and docs are
   generated with `generate_docs_from_pads_specs/1`.
   """
   @spec def_pads(Macro.t(), Pad.direction_t()) :: Macro.t()
@@ -31,30 +32,32 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
         {Caps.Matcher, :range}
       ])
 
-    attr_name = fun_name = :"membrane_#{direction}_pads"
-    spec_name = :"#{direction}_pad_specs_t"
-
     quote do
-      Module.put_attribute(
-        __MODULE__,
-        unquote(attr_name),
-        unquote(specs) |> unquote(__MODULE__).parse_pads_specs!(unquote(direction), __ENV__)
-      )
+      already_parsed = __MODULE__ |> Module.get_attribute(:membrane_pads) || []
+
+      @membrane_pads unquote(specs)
+                     |> unquote(__MODULE__).parse_pads_specs!(
+                       already_parsed,
+                       unquote(direction),
+                       __ENV__
+                     )
+                     |> Kernel.++(already_parsed)
 
       @doc """
-      Returns #{unquote(direction)} pads specification for `#{inspect(__MODULE__)}`
+      Returns pads specification for `#{inspect(__MODULE__)}`
 
       They are the following:
-      #{
-        unquote(specs)
-        |> unquote(__MODULE__).parse_pads_specs!(unquote(direction), __ENV__)
-        |> unquote(__MODULE__).generate_docs_from_pads_specs()
-      }
+        #{@membrane_pads |> unquote(__MODULE__).generate_docs_from_pads_specs()}
       """
-      @spec unquote(fun_name)() :: [Membrane.Element.unquote(spec_name)()]
+      if __MODULE__ |> Module.defines?({:membrane_pads, 0}) do
+        __MODULE__ |> Module.make_overridable(membrane_pads: 0)
+      else
+        @spec membrane_pads() :: [Membrane.Element.pad_specs_t()]
+      end
+
       @impl true
-      def unquote(fun_name)() do
-        Kernel.@(unquote(Macro.var(attr_name, nil)))
+      def membrane_pads() do
+        @membrane_pads
       end
     end
   end
@@ -63,12 +66,15 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
   Parses pads specifications defined with `Membrane.Element.Base.Mixin.SourceBehaviour.def_source_pads/1`
   or `Membrane.Element.Base.Mixin.SinkBehaviour.def_sink_pads/1`.
   """
-  @spec parse_pads_specs!([Element.pad_specs_t()], Pad.direction_t(), Macro.Env.t()) ::
-          parsed_pad_specs_t
-  def parse_pads_specs!(specs, direction, env) do
-    with true <- specs |> Keyword.keyword?() or {:error, {:pads_not_a_keyword, specs}},
-         {:ok, specs} <- specs |> Bunch.Enum.try_map(&parse_pad_specs(&1, direction)) do
-      specs |> Map.new()
+  @spec parse_pads_specs!(
+          specs :: [Element.pad_specs_t()],
+          already_parsed :: [{Pad.name_t(), parsed_pad_specs_t}],
+          direction :: Pad.direction_t(),
+          declaration_env :: Macro.Env.t()
+        ) :: parsed_pad_specs_t | no_return
+  def parse_pads_specs!(specs, already_parsed, direction, env) do
+    with {:ok, specs} <- parse_pads_specs(specs, already_parsed, direction) do
+      specs
     else
       {:error, reason} ->
         raise CompileError,
@@ -78,6 +84,23 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
           Error parsing pads specs defined in #{inspect(env.module)}.def_#{direction}_pads/1,
           reason: #{inspect(reason)}
           """
+    end
+  end
+
+  @spec parse_pads_specs(
+          specs :: [Element.pad_specs_t()],
+          already_parsed :: [{Pad.name_t(), parsed_pad_specs_t}],
+          direction :: Pad.direction_t()
+        ) :: Type.try_t(parsed_pad_specs_t)
+  defp parse_pads_specs(specs, already_parsed, direction) do
+    withl keyword: true <- specs |> Keyword.keyword?(),
+          dups: [] <- (specs ++ already_parsed) |> Keyword.keys() |> Bunch.Enum.duplicates(),
+          parse: {:ok, specs} <- specs |> Bunch.Enum.try_map(&parse_pad_specs(&1, direction)) do
+      specs |> Bunch.TupleList.map_values(&Map.put(&1, :direction, direction)) ~> {:ok, &1}
+    else
+      keyword: false -> {:error, {:pads_not_a_keyword, specs}}
+      dups: dups -> {:error, {:duplicate_pad_names, dups}}
+      parse: {:error, reason} -> {:error, reason}
     end
   end
 
@@ -102,7 +125,7 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
   end
 
   @doc """
-  Generates docs describing pads, based no pads specification.
+  Generates docs describing pads, based on pads specification.
   """
   @spec generate_docs_from_pads_specs(parsed_pad_specs_t) :: String.t()
   def generate_docs_from_pads_specs(pads_specs) do
@@ -120,7 +143,7 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
         "* #{k |> to_string() |> String.replace("_", " ")}: #{generate_pad_property_doc(k, v)}"
       end)
       |> Enum.join("\n")
-      |> indent()
+      |> indent(2)
     }
     """
   end
@@ -149,7 +172,10 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
     "`#{inspect(v)}`"
   end
 
-  defp indent(string) do
-    string |> String.split("\n") |> Enum.map(&"  #{&1}") |> Enum.join("\n")
+  defp indent(string, size \\ 1) do
+    string
+    |> String.split("\n")
+    |> Enum.map(&(String.duplicate("  ", size) <> &1))
+    |> Enum.join("\n")
   end
 end
