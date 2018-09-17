@@ -1,10 +1,11 @@
 defmodule Membrane.Integration.TestingSource do
   use Membrane.Element.Base.Source
   alias Membrane.Buffer
+  use Bunch
 
   def_source_pads source: {:always, :pull, :any}
 
-  def_options buffer_generator: [
+  def_options actions_generator: [
                 type: :function,
                 spec: (non_neg_integer, non_neg_integer -> [Membrane.Action.t()]),
                 default: &__MODULE__.default_buf_gen/2
@@ -23,17 +24,18 @@ defmodule Membrane.Integration.TestingSource do
         _ctx,
         %{cnt: cnt} = state
       ) do
-    actions = state.buffer_generator.(cnt, size)
+    {actions, cnt} = state.actions_generator.(cnt, size)
 
-    {{:ok, actions}, %{state | cnt: cnt + length(actions)}}
+    {{:ok, actions}, %{state | cnt: cnt}}
   end
 
   def default_buf_gen(cnt, size) do
     cnt..(size + cnt - 1)
     |> Enum.map(fn cnt ->
-      buf = %Buffer{payload: <<cnt>>}
+      buf = %Buffer{payload: <<cnt :: 16>>}
 
       {:buffer, {:source, buf}}
     end)
+    ~> {&1, cnt + size}
   end
 end
