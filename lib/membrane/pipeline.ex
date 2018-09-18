@@ -15,6 +15,7 @@ defmodule Membrane.Pipeline do
   alias Bunch.Type
   import Membrane.Helper.GenServer
   require Element
+  require Pad
   use Bunch
   use Membrane.Log, tags: :core
   use Membrane.Core.CallbackHandler
@@ -365,19 +366,19 @@ defmodule Membrane.Pipeline do
       params: params
     }
 
-    with :ok <- [from_pad, to_pad] |> Bunch.Enum.try_each(&parse_pad/1) do
+    with :ok <- [from_pad, to_pad] |> Bunch.Enum.try_each(&validate_pad_name/1) do
       {:ok, link}
     else
       {:error, reason} -> {:error, {:invalid_link, link, reason}}
     end
   end
 
-  @spec parse_pad(atom | any) :: Type.try_t()
-  defp parse_pad(name) when is_atom(name) do
+  @spec validate_pad_name(atom | any) :: Type.try_t()
+  defp validate_pad_name(name) when Pad.is_pad_name(name) do
     :ok
   end
 
-  defp parse_pad(pad), do: {:error, {:invalid_pad_format, pad}}
+  defp validate_pad_name(pad), do: {:error, {:invalid_pad_format, pad}}
 
   @spec resolve_links([parsed_link_t], State.t()) ::
           Type.stateful_try_t([parsed_link_t], State.t())
@@ -392,7 +393,7 @@ defmodule Membrane.Pipeline do
 
   defp resolve_link(%{element: element, pad: pad_name} = elementpad, state) do
     with {:ok, pid} <- state |> State.get_child_pid(element),
-         {:ok, pad_name} <- pid |> GenServer.call({:membrane_get_pad_full_name, pad_name}) do
+         {:ok, pad_name} <- pid |> GenServer.call({:membrane_get_pad_ref, pad_name}) do
       {{:ok, %{element: element, pad: pad_name}}, state}
     else
       {:error, reason} -> {:error, {:resolve_link, elementpad, reason}}

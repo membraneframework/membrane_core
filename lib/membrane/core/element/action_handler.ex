@@ -7,7 +7,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   alias Core.{PlaybackHandler, PullBuffer}
   alias Element.{Action, Pad}
   require PadModel
-  import Element.Pad, only: [is_pad_name: 1]
+  import Element.Pad, only: [is_pad_ref: 1]
   use Core.Element.Log
   use Bunch
   use Membrane.Core.CallbackHandler
@@ -51,7 +51,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec do_handle_action(Action.t(), callback :: atom, params :: map, State.t()) ::
           State.stateful_try_t()
   defp do_handle_action({:event, {pad_name, event}}, _cb, _params, state)
-       when is_pad_name(pad_name) do
+       when is_pad_ref(pad_name) do
     send_event(pad_name, event, state)
   end
 
@@ -83,12 +83,12 @@ defmodule Membrane.Core.Element.ActionHandler do
     do: PlaybackHandler.continue_playback_change(LifecycleController, state)
 
   defp do_handle_action({:buffer, {pad_name, buffers}}, cb, _params, %State{type: type} = state)
-       when type in [:source, :filter] and is_pad_name(pad_name) do
+       when type in [:source, :filter] and is_pad_ref(pad_name) do
     send_buffer(pad_name, buffers, cb, state)
   end
 
   defp do_handle_action({:caps, {pad_name, caps}}, _cb, _params, %State{type: type} = state)
-       when type in [:source, :filter] and is_pad_name(pad_name) do
+       when type in [:source, :filter] and is_pad_ref(pad_name) do
     send_caps(pad_name, caps, state)
   end
 
@@ -101,7 +101,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp do_handle_action({:redemand, src_name}, cb, _params, %State{type: type} = state)
-       when type in [:source, :filter] and is_pad_name(src_name) and
+       when type in [:source, :filter] and is_pad_ref(src_name) and
               cb not in [:handle_process_list] do
     handle_redemand(src_name, state)
   end
@@ -130,7 +130,7 @@ defmodule Membrane.Core.Element.ActionHandler do
          params,
          %State{type: type} = state
        )
-       when is_pad_name(pad_name) and type in [:sink, :filter] do
+       when is_pad_ref(pad_name) and type in [:sink, :filter] do
     do_handle_action({:demand, {pad_name, 1}}, cb, params, state)
   end
 
@@ -140,7 +140,7 @@ defmodule Membrane.Core.Element.ActionHandler do
          _params,
          %State{type: type} = state
        )
-       when is_pad_name(pad_name) and is_demand_size(size) and type in [:sink, :filter] do
+       when is_pad_ref(pad_name) and is_demand_size(size) and type in [:sink, :filter] do
     handle_demand(pad_name, size, cb, state)
   end
 

@@ -24,7 +24,7 @@ defmodule Membrane.Core.Element.PadController do
       state = init_pad_data(pad_name, pid, other_name, props, info, state)
 
       state =
-        case Pad.availability_mode_by_name(pad_name) do
+        case Pad.availability_mode_by_ref(pad_name) do
           :static ->
             state |> Bunch.Struct.update_in([:pads, :info], &(&1 |> Map.delete(pad_name)))
 
@@ -83,11 +83,13 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   @doc """
-  Returns pad full name. Full name differs from short name for dynamic pads, for
-  which it includes pad id.
+  Returns a pad reference - a term uniquely identifying pad instance.
+
+  In case of static pad it will be just its name, for dynamic it will return
+  tuple containing name and id.
   """
-  @spec get_pad_full_name(Pad.name_t(), State.t()) :: State.stateful_try_t(Pad.name_t())
-  def get_pad_full_name(pad_name, state) do
+  @spec get_pad_ref(Pad.name_t(), State.t()) :: State.stateful_try_t(Pad.name_t())
+  def get_pad_ref(pad_name, state) do
     {full_name, state} =
       state
       |> Bunch.Struct.get_and_update_in([:pads, :info, pad_name], fn
@@ -116,7 +118,7 @@ defmodule Membrane.Core.Element.PadController do
         end
 
       (actual_av_mode = Pad.availability_mode(info.availability)) !=
-          (expected_av_mode = Pad.availability_mode_by_name(pad_name)) ->
+          (expected_av_mode = Pad.availability_mode_by_ref(pad_name)) ->
         {:error,
          {:invalid_pad_availability_mode, expected: expected_av_mode, actual: actual_av_mode}}
 
