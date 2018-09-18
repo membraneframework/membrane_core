@@ -289,7 +289,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec handle_demand(
           Pad.name_t(),
-          size :: pos_integer | (non_neg_integer() -> pos_integer()),
+          size :: pos_integer | (pos_integer() -> non_neg_integer()),
           callback :: atom,
           State.t()
         ) :: State.stateful_try_t()

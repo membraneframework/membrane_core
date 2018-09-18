@@ -34,20 +34,25 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   def update_demand(pad_name, size_fun, state) when is_function(size_fun) do
-    state =
-      PadModel.update_data!(
-        pad_name,
-        :demand,
-        fn demand -> size_fun.(demand) ~> {:ok, &1} end,
-        state
-      )
+    PadModel.update_data(
+      pad_name,
+      :demand,
+      fn demand ->
+        new_demand = size_fun.(demand)
 
-    {:ok, state}
+        if new_demand < 0 do
+          {:error, :negative_demand}
+        else
+          {:ok, new_demand}
+        end
+      end,
+      state
+    )
   end
 
   @doc """
-  Based on the demand on given pad takes buffers, passes it to proper
-  controller and checks if source demand has been suppplied.
+  Based on the demand on given pad takes buffers and passes it to proper
+  controller.
   """
   @spec supply_demand(
           Pad.name_t(),
@@ -59,7 +64,10 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @doc """
-  Handles demands requested on given sink pad, if there are any.
+  Supplies the demand requested on the given sink pad, if there are any.
+
+  In filters also triggers `handle_demand` callback when there is unsupplied demand
+  on source pads
   """
   @spec check_and_supply_demands(Pad.name_t(), State.t()) :: State.stateful_try_t()
   def check_and_supply_demands(pad_name, state) do
@@ -72,13 +80,21 @@ defmodule Membrane.Core.Element.DemandHandler do
         {:ok, state}
       end
 
-    supply_demand_res
-    |> case do
+    case supply_demand_res do
       {:ok, %State{type: :filter} = state} ->
-        PadModel.filter_names_by_data(%{direction: :source}, state)
-        |> Bunch.Enum.try_reduce(state, fn name, st ->
-          DemandController.handle_demand(name, 0, st)
-        end)
+        is_pullbuffer_empty =
+          pad_name
+          |> PadModel.get_data!(:buffer, state)
+          |> PullBuffer.empty?()
+
+        if is_pullbuffer_empty do
+          {:ok, state}
+        else
+          PadModel.filter_names_by_data(%{direction: :source}, state)
+          |> Bunch.Enum.try_reduce(state, fn name, st ->
+            DemandController.handle_demand(name, 0, st)
+          end)
+        end
 
       {:ok, %State{type: :sink} = state} ->
         {:ok, state}

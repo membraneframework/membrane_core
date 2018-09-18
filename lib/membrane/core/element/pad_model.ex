@@ -17,7 +17,7 @@ defmodule Membrane.Core.Element.PadModel do
             optional(:demand_in) => Membrane.Buffer.Metric.unit_t(),
             optional(:other_demand_in) => Membrane.Buffer.Metric.unit_t()
           },
-          optional(:current_id) => 0,
+          optional(:current_id) => non_neg_integer,
           required(:name) => Pad.name_t(),
           required(:pid) => pid,
           required(:other_name) => Pad.name_t(),
@@ -41,7 +41,7 @@ defmodule Membrane.Core.Element.PadModel do
             optional(:demand_in) => Membrane.Buffer.Metric.unit_t(),
             optional(:other_demand_in) => Membrane.Buffer.Metric.unit_t()
           },
-          optional(:current_id) => 0
+          optional(:current_id) => non_neg_integer
         }
 
   @type pads_info_t :: %{Pad.name_t() => pad_info_t}
