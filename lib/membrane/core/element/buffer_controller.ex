@@ -16,14 +16,13 @@ defmodule Membrane.Core.Element.BufferController do
   callback. Also calls `Membrane.Core.Element.DemandHandler.check_and_handle_demands/2`
   to check if there are any unsupplied demands.
   """
-  @spec handle_buffer(Pad.name_t(), [Buffer.t()] | Buffer.t(), State.t()) ::
-          State.stateful_try_t()
-  def handle_buffer(pad_name, buffers, state) do
-    PadModel.assert_data!(pad_name, %{direction: :sink}, state)
+  @spec handle_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.stateful_try_t()
+  def handle_buffer(pad_ref, buffers, state) do
+    PadModel.assert_data!(pad_ref, %{direction: :sink}, state)
 
-    case PadModel.get_data!(pad_name, :mode, state) do
-      :pull -> handle_buffer_pull(pad_name, buffers, state)
-      :push -> exec_buffer_handler(pad_name, buffers, state)
+    case PadModel.get_data!(pad_ref, :mode, state) do
+      :pull -> handle_buffer_pull(pad_ref, buffers, state)
+      :push -> exec_buffer_handler(pad_ref, buffers, state)
     end
   end
 
@@ -31,44 +30,44 @@ defmodule Membrane.Core.Element.BufferController do
   Executes `handle_process` or `handle_write_list` callback.
   """
   @spec exec_buffer_handler(
-          Pad.name_t(),
+          Pad.ref_t(),
           [Buffer.t()] | Buffer.t(),
           State.t()
         ) :: State.stateful_try_t()
-  def exec_buffer_handler(pad_name, buffers, %State{type: :filter} = state) do
+  def exec_buffer_handler(pad_ref, buffers, %State{type: :filter} = state) do
     context =
-      CallbackContext.Process.from_state(state, caps: PadModel.get_data!(pad_name, :caps, state))
+      CallbackContext.Process.from_state(state, caps: PadModel.get_data!(pad_ref, :caps, state))
 
     CallbackHandler.exec_and_handle_callback(
       :handle_process_list,
       ActionHandler,
-      [pad_name, buffers, context],
+      [pad_ref, buffers, context],
       state
     )
     |> or_warn_error("Error while handling process")
   end
 
-  def exec_buffer_handler(pad_name, buffers, %State{type: :sink} = state) do
+  def exec_buffer_handler(pad_ref, buffers, %State{type: :sink} = state) do
     context =
-      CallbackContext.Write.from_state(state, caps: PadModel.get_data!(pad_name, :caps, state))
+      CallbackContext.Write.from_state(state, caps: PadModel.get_data!(pad_ref, :caps, state))
 
     CallbackHandler.exec_and_handle_callback(
       :handle_write_list,
       ActionHandler,
-      [pad_name, buffers, context],
+      [pad_ref, buffers, context],
       state
     )
     |> or_warn_error("Error while handling write")
   end
 
-  @spec handle_buffer_pull(Pad.name_t(), [Buffer.t()] | Buffer.t(), State.t()) ::
+  @spec handle_buffer_pull(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) ::
           State.stateful_try_t()
-  defp handle_buffer_pull(pad_name, buffers, state) do
-    PadModel.assert_data!(pad_name, %{direction: :sink}, state)
+  defp handle_buffer_pull(pad_ref, buffers, state) do
+    PadModel.assert_data!(pad_ref, %{direction: :sink}, state)
 
     with {{:ok, was_empty?}, state} <-
            PadModel.get_and_update_data!(
-             pad_name,
+             pad_ref,
              :buffer,
              fn pb ->
                was_empty? = pb |> PullBuffer.empty?()
@@ -80,7 +79,7 @@ defmodule Membrane.Core.Element.BufferController do
              state
            ) do
       if was_empty? do
-        DemandHandler.check_and_supply_demands(pad_name, state)
+        DemandHandler.check_and_supply_demands(pad_ref, state)
       else
         {:ok, state}
       end

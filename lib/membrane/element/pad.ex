@@ -84,7 +84,7 @@ defmodule Membrane.Element.Pad do
   defguard is_availability_static(availability) when availability == :always
 
   @doc """
-  Returns pad availability mode by name.
+  Returns pad availability mode by ref.
   """
   @spec availability_mode_by_ref(ref_t) :: availability_mode_t
   def availability_mode_by_ref({:dynamic, _name, _id}), do: :dynamic
@@ -100,6 +100,6 @@ defmodule Membrane.Element.Pad do
   @doc """
   Returns the name for the given pad reference
   """
-  def pad_name_by_ref({:dynamic, name, _id}) when is_pad_name(name), do: name
-  def pad_name_by_ref(name) when is_pad_name(name), do: name
+  def name_by_ref({:dynamic, name, _id}) when is_pad_name(name), do: name
+  def name_by_ref(name) when is_pad_name(name), do: name
 end

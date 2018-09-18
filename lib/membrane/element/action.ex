@@ -23,7 +23,7 @@ defmodule Membrane.Element.Action do
 
   Forbidden when playback state is stopped.
   """
-  @type event_t :: {:event, {Pad.name_t(), Event.t()}}
+  @type event_t :: {:event, {Pad.ref_t(), Event.t()}}
 
   @typedoc """
   Allows to split callback execution into multiple applications of another callback
@@ -52,14 +52,14 @@ defmodule Membrane.Element.Action do
 
   Forbidden when playback state is stopped.
   """
-  @type caps_t :: {:caps, {Pad.name_t(), Caps.t()}}
+  @type caps_t :: {:caps, {Pad.ref_t(), Caps.t()}}
 
   @typedoc """
   Sends buffers through a pad (it must be source pad).
 
   Allowed only when playback state is playing.
   """
-  @type buffer_t :: {:buffer, {Pad.name_t(), Buffer.t() | [Buffer.t()]}}
+  @type buffer_t :: {:buffer, {Pad.ref_t(), Buffer.t() | [Buffer.t()]}}
 
   @typedoc """
   Makes a demand on a pad (it must be sink pad in pull mode). It does NOT
@@ -95,9 +95,9 @@ defmodule Membrane.Element.Action do
           {:demand, demand_common_payload_t | demand_filter_payload_t | demand_sink_payload_t}
 
   @type demand_filter_payload_t ::
-          {Pad.name_t(), {:source, Pad.name_t()} | :self, size :: non_neg_integer}
-  @type demand_sink_payload_t :: {Pad.name_t(), {:set_to, size :: non_neg_integer}}
-  @type demand_common_payload_t :: Pad.name_t() | {Pad.name_t(), size :: non_neg_integer}
+          {Pad.ref_t(), {:source, Pad.ref_t()} | :self, size :: non_neg_integer}
+  @type demand_sink_payload_t :: {Pad.ref_t(), {:set_to, size :: non_neg_integer}}
+  @type demand_common_payload_t :: Pad.ref_t() | {Pad.ref_t(), size :: non_neg_integer}
 
   @typedoc """
   Executes `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` callback with
@@ -111,7 +111,7 @@ defmodule Membrane.Element.Action do
 
   Allowed only when playback state is playing.
   """
-  @type redemand_t :: {:redemand, Pad.name_t()}
+  @type redemand_t :: {:redemand, Pad.ref_t()}
 
   @typedoc """
   Sends buffers/caps/event to all source pads of element (or to sink pads when

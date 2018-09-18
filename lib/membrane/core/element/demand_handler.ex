@@ -24,19 +24,19 @@ defmodule Membrane.Core.Element.DemandHandler do
   to `supply_demand/2` or `check_and_supply_demands/2`.
   """
   @spec update_demand(
-          Pad.name_t(),
+          Pad.ref_t(),
           pos_integer,
           State.t()
         ) :: State.stateful_try_t()
-  def update_demand(pad_name, size, state) when is_integer(size) do
-    state = PadModel.set_data!(pad_name, :demand, size, state)
+  def update_demand(pad_ref, size, state) when is_integer(size) do
+    state = PadModel.set_data!(pad_ref, :demand, size, state)
     {:ok, state}
   end
 
-  def update_demand(pad_name, size_fun, state) when is_function(size_fun) do
+  def update_demand(pad_ref, size_fun, state) when is_function(size_fun) do
     state =
       PadModel.update_data!(
-        pad_name,
+        pad_ref,
         :demand,
         fn demand -> size_fun.(demand) ~> {:ok, &1} end,
         state
@@ -50,24 +50,24 @@ defmodule Membrane.Core.Element.DemandHandler do
   controller and checks if source demand has been suppplied.
   """
   @spec supply_demand(
-          Pad.name_t(),
+          Pad.ref_t(),
           State.t()
         ) :: State.stateful_try_t()
-  def supply_demand(pad_name, state) do
-    total_size = PadModel.get_data!(pad_name, :demand, state)
-    do_supply_demand(pad_name, total_size, state)
+  def supply_demand(pad_ref, state) do
+    total_size = PadModel.get_data!(pad_ref, :demand, state)
+    do_supply_demand(pad_ref, total_size, state)
   end
 
   @doc """
   Handles demands requested on given sink pad, if there are any.
   """
-  @spec check_and_supply_demands(Pad.name_t(), State.t()) :: State.stateful_try_t()
-  def check_and_supply_demands(pad_name, state) do
-    demand = PadModel.get_data!(pad_name, :demand, state)
+  @spec check_and_supply_demands(Pad.ref_t(), State.t()) :: State.stateful_try_t()
+  def check_and_supply_demands(pad_ref, state) do
+    demand = PadModel.get_data!(pad_ref, :demand, state)
 
     supply_demand_res =
       if demand > 0 do
-        do_supply_demand(pad_name, demand, state)
+        do_supply_demand(pad_ref, demand, state)
       else
         {:ok, state}
       end
@@ -75,9 +75,9 @@ defmodule Membrane.Core.Element.DemandHandler do
     supply_demand_res
     |> case do
       {:ok, %State{type: :filter} = state} ->
-        PadModel.filter_names_by_data(%{direction: :source}, state)
-        |> Bunch.Enum.try_reduce(state, fn name, st ->
-          DemandController.handle_demand(name, 0, st)
+        PadModel.filter_refs_by_data(%{direction: :source}, state)
+        |> Bunch.Enum.try_reduce(state, fn ref, st ->
+          DemandController.handle_demand(ref, 0, st)
         end)
 
       {:ok, %State{type: :sink} = state} ->
@@ -88,24 +88,24 @@ defmodule Membrane.Core.Element.DemandHandler do
     end
   end
 
-  @spec do_supply_demand(Pad.name_t(), pos_integer, State.t()) :: State.stateful_try_t()
-  defp do_supply_demand(pad_name, size, state) do
+  @spec do_supply_demand(Pad.ref_t(), pos_integer, State.t()) :: State.stateful_try_t()
+  defp do_supply_demand(pad_ref, size, state) do
     pb_output =
       PadModel.get_and_update_data(
-        pad_name,
+        pad_ref,
         :buffer,
         &(&1 |> PullBuffer.take(size)),
         state
       )
 
     with {{:ok, {_pb_status, data}}, state} <- pb_output,
-         {:ok, state} <- handle_pullbuffer_output(pad_name, data, state) do
+         {:ok, state} <- handle_pullbuffer_output(pad_ref, data, state) do
       {:ok, state}
     else
       {{:error, reason}, state} ->
         warn_error(
           """
-          Error while supplying demand on pad #{inspect(pad_name)} of size #{inspect(size)}
+          Error while supplying demand on pad #{inspect(pad_ref)} of size #{inspect(size)}
           """,
           {:do_supply_demand, reason},
           state
@@ -114,35 +114,35 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @spec handle_pullbuffer_output(
-          Pad.name_t(),
+          Pad.ref_t(),
           [{:event | :caps, any} | {:buffers, list, pos_integer}],
           State.t()
         ) :: State.stateful_try_t()
-  defp handle_pullbuffer_output(pad_name, data, state) do
+  defp handle_pullbuffer_output(pad_ref, data, state) do
     data
     |> Bunch.Enum.try_reduce(state, fn v, state ->
-      do_handle_pullbuffer_output(pad_name, v, state)
+      do_handle_pullbuffer_output(pad_ref, v, state)
     end)
   end
 
   @spec do_handle_pullbuffer_output(
-          Pad.name_t(),
+          Pad.ref_t(),
           {:event | :caps, any} | {:buffers, list, pos_integer},
           State.t()
         ) :: State.stateful_try_t()
-  defp do_handle_pullbuffer_output(pad_name, {:event, e}, state),
-    do: EventController.exec_handle_event(pad_name, e, state)
+  defp do_handle_pullbuffer_output(pad_ref, {:event, e}, state),
+    do: EventController.exec_handle_event(pad_ref, e, state)
 
-  defp do_handle_pullbuffer_output(pad_name, {:caps, c}, state),
-    do: CapsController.exec_handle_caps(pad_name, c, state)
+  defp do_handle_pullbuffer_output(pad_ref, {:caps, c}, state),
+    do: CapsController.exec_handle_caps(pad_ref, c, state)
 
   defp do_handle_pullbuffer_output(
-         pad_name,
+         pad_ref,
          {:buffers, buffers, size},
          state
        ) do
-    state = PadModel.update_data!(pad_name, :demand, &(&1 - size), state)
+    state = PadModel.update_data!(pad_ref, :demand, &(&1 - size), state)
 
-    BufferController.exec_buffer_handler(pad_name, buffers, state)
+    BufferController.exec_buffer_handler(pad_ref, buffers, state)
   end
 end

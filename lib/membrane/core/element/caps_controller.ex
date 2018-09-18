@@ -14,26 +14,26 @@ defmodule Membrane.Core.Element.CapsController do
   @doc """
   Handles incoming caps: either stores them in PullBuffer, or executes element callback.
   """
-  @spec handle_caps(Pad.name_t(), Caps.t(), State.t()) :: State.stateful_try_t()
-  def handle_caps(pad_name, caps, state) do
-    PadModel.assert_data!(pad_name, %{direction: :sink}, state)
-    data = PadModel.get_data!(pad_name, state)
+  @spec handle_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.stateful_try_t()
+  def handle_caps(pad_ref, caps, state) do
+    PadModel.assert_data!(pad_ref, %{direction: :sink}, state)
+    data = PadModel.get_data!(pad_ref, state)
 
     if data.mode == :pull and not (data.buffer |> PullBuffer.empty?()) do
       PadModel.update_data(
-        pad_name,
+        pad_ref,
         :buffer,
         &(&1 |> PullBuffer.store(:caps, caps)),
         state
       )
     else
-      exec_handle_caps(pad_name, caps, state)
+      exec_handle_caps(pad_ref, caps, state)
     end
   end
 
-  @spec exec_handle_caps(Pad.name_t(), Caps.t(), State.t()) :: State.stateful_try_t()
-  def exec_handle_caps(pad_name, caps, state) do
-    %{accepted_caps: accepted_caps, caps: old_caps} = PadModel.get_data!(pad_name, state)
+  @spec exec_handle_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.stateful_try_t()
+  def exec_handle_caps(pad_ref, caps, state) do
+    %{accepted_caps: accepted_caps, caps: old_caps} = PadModel.get_data!(pad_ref, state)
 
     context = CallbackContext.Caps.from_state(state, caps: old_caps)
 
@@ -43,16 +43,16 @@ defmodule Membrane.Core.Element.CapsController do
               CallbackHandler.exec_and_handle_callback(
                 :handle_caps,
                 ActionHandler,
-                [pad_name, caps, context],
+                [pad_ref, caps, context],
                 state
               ) do
-      {:ok, PadModel.set_data!(pad_name, :caps, caps, state)}
+      {:ok, PadModel.set_data!(pad_ref, :caps, caps, state)}
     else
       match: false ->
         warn_error(
           """
           Received caps: #{inspect(caps)} that are not specified in def_sink_pads
-          for pad #{inspect(pad_name)}. Specs of accepted caps are:
+          for pad #{inspect(pad_ref)}. Specs of accepted caps are:
           #{inspect(accepted_caps, pretty: true)}
           """,
           :invalid_caps,

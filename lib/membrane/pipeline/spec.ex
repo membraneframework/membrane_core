@@ -76,7 +76,7 @@ defmodule Membrane.Pipeline.Spec do
 
   @type link_to_spec_t ::
           {Element.name_t(), Pad.name_t()}
-          | {Element.name_t(), Element.Pad.name_t(), [link_option_t]}
+          | {Element.name_t(), Pad.name_t(), [link_option_t]}
 
   @typedoc """
   Map describing links between elements

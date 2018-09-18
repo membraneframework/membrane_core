@@ -14,30 +14,30 @@ defmodule Membrane.Core.Element.DemandController do
   @doc """
   Handles demand coming on a source pad. Updates demand value and executes `handle_demand` callback.
   """
-  @spec handle_demand(Pad.name_t(), non_neg_integer, State.t()) :: State.stateful_try_t()
-  def handle_demand(pad_name, size, state) do
+  @spec handle_demand(Pad.ref_t(), non_neg_integer, State.t()) :: State.stateful_try_t()
+  def handle_demand(pad_ref, size, state) do
     {total_size, state} =
       PadModel.get_and_update_data!(
-        pad_name,
+        pad_ref,
         :demand,
         fn demand -> (demand + size) ~> {&1, &1} end,
         state
       )
 
-    if exec_handle_demand?(pad_name, state) do
-      %{caps: caps, options: %{other_demand_in: demand_in}} = PadModel.get_data!(pad_name, state)
+    if exec_handle_demand?(pad_ref, state) do
+      %{caps: caps, options: %{other_demand_in: demand_in}} = PadModel.get_data!(pad_ref, state)
 
       context = CallbackContext.Demand.from_state(state, caps: caps, incoming_demand: size)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_demand,
         ActionHandler,
-        %{split_cont_f: &exec_handle_demand?(pad_name, &1)},
-        [pad_name, total_size, demand_in, context],
+        %{split_cont_f: &exec_handle_demand?(pad_ref, &1)},
+        [pad_ref, total_size, demand_in, context],
         state
       )
       |> or_warn_error("""
-      Demand arrived from pad #{inspect(pad_name)}, but error happened while
+      Demand arrived from pad #{inspect(pad_ref)}, but error happened while
       handling it.
       """)
     else
@@ -45,9 +45,9 @@ defmodule Membrane.Core.Element.DemandController do
     end
   end
 
-  @spec exec_handle_demand?(Pad.name_t(), State.t()) :: boolean
-  defp exec_handle_demand?(pad_name, state) do
-    case PadModel.get_data!(pad_name, state) do
+  @spec exec_handle_demand?(Pad.ref_t(), State.t()) :: boolean
+  defp exec_handle_demand?(pad_ref, state) do
+    case PadModel.get_data!(pad_ref, state) do
       %{eos: true} ->
         debug(
           """
