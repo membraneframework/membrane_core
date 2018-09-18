@@ -66,6 +66,11 @@ defmodule Membrane.Pipeline do
            to: %{element: Element.name_t(), pad: Pad.name_t()},
            params: [Spec.link_option_t()]
          }
+  @typep resolved_link_t :: %{
+           from: %{element: Element.name_t(), pad: Pad.ref_t()},
+           to: %{element: Element.name_t(), pad: Pad.ref_t()},
+           params: [Spec.link_option_t()]
+         }
 
   @doc """
   Enables to check whether module is membrane pipeline
@@ -381,7 +386,7 @@ defmodule Membrane.Pipeline do
   defp validate_pad_name(pad), do: {:error, {:invalid_pad_format, pad}}
 
   @spec resolve_links([parsed_link_t], State.t()) ::
-          Type.stateful_try_t([parsed_link_t], State.t())
+          Type.stateful_try_t([resolved_link_t], State.t())
   defp resolve_links(links, state) do
     links
     |> Bunch.Enum.try_map_reduce(state, fn %{from: from, to: to} = link, st ->
@@ -393,8 +398,8 @@ defmodule Membrane.Pipeline do
 
   defp resolve_link(%{element: element, pad: pad_name} = elementpad, state) do
     with {:ok, pid} <- state |> State.get_child_pid(element),
-         {:ok, pad_name} <- pid |> GenServer.call({:membrane_get_pad_ref, pad_name}) do
-      {{:ok, %{element: element, pad: pad_name}}, state}
+         {:ok, pad_ref} <- pid |> GenServer.call({:membrane_get_pad_ref, pad_name}) do
+      {{:ok, %{element: element, pad: pad_ref}}, state}
     else
       {:error, reason} -> {:error, {:resolve_link, elementpad, reason}}
     end
@@ -405,7 +410,7 @@ defmodule Membrane.Pipeline do
   #
   # Please note that this function is not atomic and in case of error there's
   # a chance that some of children will remain linked.
-  @spec link_children([parsed_link_t], State.t()) :: Type.try_t()
+  @spec link_children([resolved_link_t], State.t()) :: Type.try_t()
   defp link_children(links, state) do
     debug("Linking children: links = #{inspect(links)}")
 

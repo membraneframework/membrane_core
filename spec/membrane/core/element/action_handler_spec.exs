@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
   alias Membrane.Core.{Playback, Element}
 
   describe "handle_action for buffer" do
-    let :other_name, do: :other_name
+    let :other_ref, do: :other_ref
 
     let! :state,
       do: %{
@@ -18,7 +18,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
             source: %{
               direction: :source,
               pid: self(),
-              other_name: other_name(),
+              other_ref: other_ref(),
               options: [],
               eos: false,
               mode: :push
@@ -125,7 +125,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
               state()
             )
 
-            target = {:membrane_buffer, [[buffer()], other_name()]}
+            target = {:membrane_buffer, [[buffer()], other_ref()]}
             assert_receive ^target
           end
         end
@@ -190,7 +190,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
             state()
           )
 
-          target = {:membrane_buffer, [[buffer()], other_name()]}
+          target = {:membrane_buffer, [[buffer()], other_ref()]}
           assert_receive ^target
         end
       end
@@ -198,7 +198,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
   end
 
   describe "handle_action for event" do
-    let :other_name, do: :other_name
+    let :other_ref, do: :other_ref
 
     let! :state,
       do: %{
@@ -211,7 +211,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
             source: %{
               direction: :source,
               pid: self(),
-              other_name: other_name(),
+              other_ref: other_ref(),
               options: [],
               eos: false,
               mode: :push
@@ -268,7 +268,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
 
           it "should send {:membrane_event, _} message to self()" do
             described_module().handle_action({:event, {pad_name(), event()}}, nil, %{}, state())
-            target = {:membrane_event, [event(), other_name()]}
+            target = {:membrane_event, [event(), other_ref()]}
             assert_receive ^target
           end
         end
@@ -277,7 +277,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
   end
 
   describe "handle_action for caps" do
-    let :other_name, do: :other_name
+    let :other_ref, do: :other_ref
 
     let! :state,
       do: %{
@@ -290,7 +290,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
             source: %{
               direction: :source,
               pid: self(),
-              other_name: other_name(),
+              other_ref: other_ref(),
               caps: nil,
               options: [],
               eos: false,
@@ -354,7 +354,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
 
           it "should send {:membrane_event, _} message to self()" do
             described_module().handle_action({:caps, {pad_name(), caps()}}, nil, %{}, state())
-            target = {:membrane_caps, [caps(), other_name()]}
+            target = {:membrane_caps, [caps(), other_ref()]}
             assert_receive ^target
           end
         end

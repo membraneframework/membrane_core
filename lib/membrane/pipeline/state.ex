@@ -14,9 +14,9 @@ defmodule Membrane.Pipeline.State do
   @type t :: %__MODULE__{
           internal_state: internal_state_t | nil,
           playback: Playback.t(),
-          module: module,
+          module: module | nil,
           children: children_t,
-          pending_pids: list(pid),
+          pending_pids: MapSet.t(pid),
           terminating?: boolean
         }
 
@@ -28,7 +28,7 @@ defmodule Membrane.Pipeline.State do
             module: nil,
             children: %{},
             playback: %Playback{},
-            pending_pids: nil,
+            pending_pids: MapSet.new(),
             terminating?: false
 
   @spec add_child(t, Element.name_t(), pid) :: Type.stateful_try_t(t)

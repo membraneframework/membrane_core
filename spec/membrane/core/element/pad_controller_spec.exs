@@ -15,7 +15,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
     context "when pad name is present in the element" do
       let :pad_name, do: :source
       let :direction, do: :source
-      let :other_name, do: :other_sink
+      let :other_ref, do: :other_sink
       let :props, do: %{}
 
       it "should return an ok result" do
@@ -24,7 +24,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
             pad_name(),
             direction(),
             self(),
-            other_name(),
+            other_ref(),
             props(),
             state()
           )
@@ -38,7 +38,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
             pad_name(),
             direction(),
             self(),
-            other_name(),
+            other_ref(),
             props(),
             state()
           )
@@ -52,7 +52,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
             pad_name(),
             direction(),
             self(),
-            other_name(),
+            other_ref(),
             props(),
             state()
           )
@@ -66,7 +66,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
             pad_name(),
             direction(),
             self(),
-            other_name(),
+            other_ref(),
             props(),
             state()
           )
@@ -78,7 +78,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
     context "when pad name is not present in the element" do
       let :pad_name, do: :invalid_name
       let :direction, do: :source
-      let :other_name, do: :other_sink
+      let :other_ref, do: :other_sink
       let :props, do: %{}
 
       it "should return an error result" do
@@ -87,7 +87,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
             pad_name(),
             direction(),
             self(),
-            other_name(),
+            other_ref(),
             props(),
             state()
           )
