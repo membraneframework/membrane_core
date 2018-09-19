@@ -19,7 +19,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
               direction: :source,
               pid: self(),
               other_ref: other_ref(),
-              options: [],
+              other_demand_in: :bytes,
               eos: false,
               mode: :push
             }
@@ -212,7 +212,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
               direction: :source,
               pid: self(),
               other_ref: other_ref(),
-              options: [],
+              other_demand_in: :bytes,
               eos: false,
               mode: :push
             }
@@ -292,7 +292,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
               pid: self(),
               other_ref: other_ref(),
               caps: nil,
-              options: [],
+              other_demand_in: :bytes,
               eos: false,
               mode: :push,
               accepted_caps: :any

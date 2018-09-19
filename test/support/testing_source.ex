@@ -3,7 +3,7 @@ defmodule Membrane.Integration.TestingSource do
   alias Membrane.Buffer
   use Bunch
 
-  def_source_pads source: {:always, :pull, :any}
+  def_source_pads source: [caps: :any]
 
   def_options actions_generator: [
                 type: :function,
@@ -32,7 +32,7 @@ defmodule Membrane.Integration.TestingSource do
   def default_buf_gen(cnt, size) do
     cnt..(size + cnt - 1)
     |> Enum.map(fn cnt ->
-      buf = %Buffer{payload: <<cnt :: 16>>}
+      buf = %Buffer{payload: <<cnt::16>>}
 
       {:buffer, {:source, buf}}
     end)

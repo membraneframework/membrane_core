@@ -8,8 +8,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
     let :name, do: :element_name
 
     let! :state do
-      {:ok, state} = State.new(module(), name()) |> PadSpecHandler.init_pads()
-      state
+      State.new(module(), name()) |> PadSpecHandler.init_pads()
     end
 
     context "when pad name is present in the element" do

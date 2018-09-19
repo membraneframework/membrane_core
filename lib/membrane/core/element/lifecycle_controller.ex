@@ -20,8 +20,9 @@ defmodule Membrane.Core.Element.LifecycleController do
   def handle_init(options, %State{module: module} = state) do
     debug("Initializing element: #{inspect(module)}, options: #{inspect(options)}", state)
 
-    with {:ok, state} <- PadSpecHandler.init_pads(state),
-         {:ok, state} <- exec_init_handler(module, options, state) do
+    state = PadSpecHandler.init_pads(state)
+
+    with {:ok, state} <- exec_init_handler(module, options, state) do
       debug("Element initialized: #{inspect(module)}", state)
       {:ok, state}
     else
@@ -120,7 +121,7 @@ defmodule Membrane.Core.Element.LifecycleController do
     state =
       PadModel.set_data!(
         pad_ref,
-        [:options, :other_demand_in],
+        [:other_demand_in],
         demand_in,
         state
       )

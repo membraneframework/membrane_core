@@ -25,7 +25,7 @@ defmodule Membrane.Core.Element.DemandController do
       )
 
     if exec_handle_demand?(pad_ref, state) do
-      %{caps: caps, options: %{other_demand_in: demand_in}} = PadModel.get_data!(pad_ref, state)
+      %{caps: caps, other_demand_in: unit} = PadModel.get_data!(pad_ref, state)
 
       context = CallbackContext.Demand.from_state(state, caps: caps, incoming_demand: size)
 
@@ -33,7 +33,7 @@ defmodule Membrane.Core.Element.DemandController do
         :handle_demand,
         ActionHandler,
         %{split_cont_f: &exec_handle_demand?(pad_ref, &1)},
-        [pad_ref, total_size, demand_in, context],
+        [pad_ref, total_size, unit, context],
         state
       )
       |> or_warn_error("""

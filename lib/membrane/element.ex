@@ -40,23 +40,28 @@ defmodule Membrane.Element do
   @type pad_specs_t :: source_pad_specs_t | sink_pad_specs_t
 
   @typedoc """
-  Type of user-managed state of element.
-  """
-  @type state_t :: map | struct
-
-  @typedoc """
   Describes how a source pad should be declared in element.
   """
-  @type source_pad_specs_t ::
-          {Pad.name_t(), {Pad.availability_t(), :push | :pull, Caps.Matcher.caps_specs_t()}}
+  @type source_pad_specs_t :: {Pad.name_t(), [common_pad_option_t]}
 
   @typedoc """
   Describes how a sink pad should be declared in element.
   """
   @type sink_pad_specs_t ::
-          {Pad.name_t(),
-           {Pad.availability_t(), :push | {:pull, demand_in: Buffer.Metric.unit_t()},
-            Caps.Matcher.caps_specs_t()}}
+          {Pad.name_t(), [common_pad_option_t | {:demand_in, Buffer.Metric.unit_t()}]}
+
+  @typedoc """
+  Pad options used in `t:pad_specs_t/0`
+  """
+  @type common_pad_option_t ::
+          {:availability, Pad.availability_t()}
+          | {:mode, Pad.mode_t()}
+          | {:caps, Caps.Matcher.caps_specs_t()}
+
+  @typedoc """
+  Type of user-managed state of element.
+  """
+  @type state_t :: map | struct
 
   @doc """
   Chechs whether the given term is a valid element name

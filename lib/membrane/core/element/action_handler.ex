@@ -220,10 +220,10 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
 
     with :ok <- PadModel.assert_data(pad_ref, %{direction: :source, eos: false}, state) do
-      %{mode: mode, pid: pid, other_ref: other_ref, options: options} =
+      %{mode: mode, pid: pid, other_ref: other_ref, other_demand_in: other_demand_in} =
         PadModel.get_data!(pad_ref, state)
 
-      state = handle_buffer(pad_ref, mode, options, buffers, state)
+      state = handle_buffer(pad_ref, mode, other_demand_in, buffers, state)
       send(pid, {:membrane_buffer, [buffers, other_ref]})
       {:ok, state}
     else
@@ -231,10 +231,15 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec handle_buffer(Pad.ref_t(), Pad.mode_t(), map, [Buffer.t()] | Buffer.t(), State.t()) ::
+  @spec handle_buffer(
+          Pad.ref_t(),
+          Pad.mode_t(),
+          Buffer.Metric.unit_t(),
+          [Buffer.t()] | Buffer.t(),
           State.t()
-  defp handle_buffer(pad_ref, :pull, options, buffers, state) do
-    buf_size = Buffer.Metric.from_unit(options.other_demand_in).buffers_size(buffers)
+        ) :: State.t()
+  defp handle_buffer(pad_ref, :pull, other_demand_in, buffers, state) do
+    buf_size = Buffer.Metric.from_unit(other_demand_in).buffers_size(buffers)
 
     PadModel.update_data!(
       pad_ref,
@@ -289,7 +294,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec handle_demand(
           Pad.ref_t(),
-          size :: pos_integer | (non_neg_integer() -> pos_integer()),
+          size :: pos_integer | (pos_integer() -> non_neg_integer()),
           callback :: atom,
           State.t()
         ) :: State.stateful_try_t()
