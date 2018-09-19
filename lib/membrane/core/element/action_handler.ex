@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   alias Membrane.{Buffer, Caps, Core, Element, Event, Message}
   alias Core.Element.{DemandController, LifecycleController, DemandHandler, PadModel, State}
-  alias Core.PlaybackHandler
+  alias Core.{PlaybackHandler, PullBuffer}
   alias Element.{Action, Pad}
   require PadModel
   import Element.Pad, only: [is_pad_name: 1]
@@ -45,6 +45,8 @@ defmodule Membrane.Core.Element.ActionHandler do
         )
     end
   end
+
+  defguardp is_demand_size(size) when is_integer(size) or is_function(size)
 
   @spec do_handle_action(Action.t(), callback :: atom, params :: map, State.t()) ::
           State.stateful_try_t()
@@ -90,9 +92,17 @@ defmodule Membrane.Core.Element.ActionHandler do
     send_caps(pad_name, caps, state)
   end
 
+  defp do_handle_action({:redemand, src_names}, cb, params, state)
+       when is_list(src_names) do
+    src_names
+    |> Bunch.Enum.try_reduce(state, fn src_name, state ->
+      do_handle_action({:redemand, src_name}, cb, params, state)
+    end)
+  end
+
   defp do_handle_action({:redemand, src_name}, cb, _params, %State{type: type} = state)
        when type in [:source, :filter] and is_pad_name(src_name) and
-              cb not in [:handle_demand, :handle_process_list] do
+              cb not in [:handle_process_list] do
     handle_redemand(src_name, state)
   end
 
@@ -116,67 +126,22 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp do_handle_action(
          {:demand, pad_name},
-         :handle_demand,
+         cb,
          params,
-         %State{type: :filter} = state
+         %State{type: type} = state
        )
-       when is_pad_name(pad_name) do
-    do_handle_action({:demand, {pad_name, 1}}, :handle_demand, params, state)
+       when is_pad_name(pad_name) and type in [:sink, :filter] do
+    do_handle_action({:demand, {pad_name, 1}}, cb, params, state)
   end
 
   defp do_handle_action(
          {:demand, {pad_name, size}},
-         :handle_demand,
-         %{source: src_name} = params,
-         %State{type: :filter} = state
-       )
-       when is_pad_name(pad_name) and is_integer(size) do
-    do_handle_action(
-      {:demand, {pad_name, {:source, src_name}, size}},
-      :handle_demand,
-      params,
-      state
-    )
-  end
-
-  defp do_handle_action(
-         {:demand, {pad_name, {:source, src_name}, size}},
          cb,
          _params,
-         %State{type: :filter} = state
+         %State{type: type} = state
        )
-       when is_pad_name(pad_name) and is_pad_name(src_name) and is_integer(size) do
-    handle_demand(pad_name, {:source, src_name}, :set, size, cb, state)
-  end
-
-  defp do_handle_action(
-         {:demand, {pad_name, :self, size}},
-         cb,
-         _params,
-         %State{type: :filter} = state
-       )
-       when is_pad_name(pad_name) and is_integer(size) do
-    handle_demand(pad_name, :self, :set, size, cb, state)
-  end
-
-  defp do_handle_action({:demand, pad_name}, cb, params, %State{type: :sink} = state)
-       when is_pad_name(pad_name) do
-    do_handle_action({:demand, {pad_name, 1}}, cb, params, state)
-  end
-
-  defp do_handle_action({:demand, {pad_name, size}}, cb, _params, %State{type: :sink} = state)
-       when is_pad_name(pad_name) and is_integer(size) do
-    handle_demand(pad_name, :self, :increase, size, cb, state)
-  end
-
-  defp do_handle_action(
-         {:demand, {pad_name, {:set_to, size}}},
-         cb,
-         _params,
-         %State{type: :sink} = state
-       )
-       when is_pad_name(pad_name) and is_integer(size) do
-    handle_demand(pad_name, :self, :set, size, cb, state)
+       when is_pad_name(pad_name) and is_demand_size(size) and type in [:sink, :filter] do
+    handle_demand(pad_name, size, cb, state)
   end
 
   defp do_handle_action(_action, _callback, _params, state) do
@@ -324,18 +289,14 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec handle_demand(
           Pad.name_t(),
-          {:source, Pad.name_t()} | :self,
-          type :: :increase | :set,
-          size :: pos_integer,
+          size :: pos_integer | (pos_integer() -> non_neg_integer()),
           callback :: atom,
           State.t()
         ) :: State.stateful_try_t()
-  defp handle_demand(pad_name, source, type, size, callback, state)
+  defp handle_demand(pad_name, size, callback, state)
 
   defp handle_demand(
          _pad_name,
-         _source,
-         _type,
          _size,
          callback,
          %State{playback: %{state: playback_state}} = state
@@ -348,7 +309,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
   end
 
-  defp handle_demand(pad_name, _source, _type, 0, callback, state) do
+  defp handle_demand(pad_name, 0, callback, state) do
     debug(
       """
       Ignoring demand of size of 0 requested by callback #{inspect(callback)}
@@ -360,8 +321,8 @@ defmodule Membrane.Core.Element.ActionHandler do
     {:ok, state}
   end
 
-  defp handle_demand(pad_name, _source, _type, size, callback, state)
-       when size < 0 do
+  defp handle_demand(pad_name, size, callback, state)
+       when is_integer(size) and size < 0 do
     warn_error(
       """
       Callback #{inspect(callback)} requested demand of invalid size of #{size}
@@ -373,19 +334,11 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
   end
 
-  defp handle_demand(pad_name, source, type, size, callback, state) do
-    debug("Requesting demand of size #{inspect(size)} on pad #{inspect(pad_name)}", state)
-
+  defp handle_demand(pad_name, size, callback, state) do
     sink_assertion = PadModel.assert_data(pad_name, %{direction: :sink, mode: :pull}, state)
 
-    source_assertion =
-      case source do
-        {:source, src_name} -> PadModel.assert_data(src_name, %{direction: :source}, state)
-        :self -> :ok
-      end
-
     with :ok <- sink_assertion,
-         :ok <- source_assertion do
+         {:ok, state} <- DemandHandler.update_demand(pad_name, size, state) do
       if callback in [:handle_write_list, :handle_process_list] do
         # Handling demand results in execution of handle_write_list/handle_process_list,
         # wherefore demand returned by one of these callbacks may lead to
@@ -394,10 +347,10 @@ defmodule Membrane.Core.Element.ActionHandler do
         # processes. As such situation is unwanted, a message to self is sent here
         # to make it possible for messages already enqueued in mailbox to be
         # received before the demand is handled.
-        send(self(), {:membrane_handle_demand, [pad_name, source, type, size]})
+        send(self(), {:membrane_invoke_supply_demand, pad_name})
         {:ok, state}
       else
-        DemandHandler.handle_demand(pad_name, source, type, size, state)
+        DemandHandler.supply_demand(pad_name, state)
       end
     else
       {:error, reason} -> handle_pad_error(reason, state)
@@ -405,9 +358,30 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @spec handle_redemand(Pad.name_t(), State.t()) :: State.stateful_try_t()
-  defp handle_redemand(src_name, state) do
+  defp handle_redemand(src_name, %{type: :source} = state) do
     with :ok <- PadModel.assert_data(src_name, %{direction: :source, mode: :pull}, state) do
       DemandController.handle_demand(src_name, 0, state)
+    else
+      {:error, reason} -> handle_pad_error(reason, state)
+    end
+  end
+
+  defp handle_redemand(src_name, %{type: :filter} = state) do
+    with :ok <- PadModel.assert_data(src_name, %{direction: :source, mode: :pull}, state) do
+      can_demand_be_supplied =
+        PadModel.filter_names_by_data(%{direction: :sink}, state)
+        |> Enum.any?(fn pad ->
+          pad
+          |> PadModel.get_data!(:buffer, state)
+          |> PullBuffer.empty?()
+          |> Kernel.not()
+        end)
+
+      if can_demand_be_supplied do
+        DemandController.handle_demand(src_name, 0, state)
+      else
+        {:ok, state}
+      end
     else
       {:error, reason} -> handle_pad_error(reason, state)
     end

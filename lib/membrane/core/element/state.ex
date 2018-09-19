@@ -23,7 +23,7 @@ defmodule Membrane.Core.Element.State do
           type: Element.type_t(),
           name: Element.name_t(),
           internal_state: Element.state_t() | nil,
-          pads: %{optional(Element.Pad.name_t()) => PadModel.pads_t()} | nil,
+          pads: PadModel.pads_t() | nil,
           message_bus: pid | nil,
           controlling_pid: pid | nil,
           playback: Playback.t(),

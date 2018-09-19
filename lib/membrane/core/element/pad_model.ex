@@ -4,11 +4,53 @@ defmodule Membrane.Core.Element.PadModel do
 
   alias Membrane.Element.Pad
   alias Membrane.Core.Element.State
+  alias Membrane.Core.PullBuffer
   use Bunch
 
-  @type pad_data_t :: map
-  @type pad_info_t :: map
-  @type pads_t :: %{data: pad_data_t, info: pad_info_t, dynamic_currently_linking: [Pad.name_t()]}
+  @type pad_data_t :: %{
+          required(:accepted_caps) => any,
+          required(:availability) => Pad.availability_t(),
+          required(:direction) => Pad.direction_t(),
+          required(:mode) => Pad.mode_t(),
+          required(:name) => Pad.name_t(),
+          required(:options) => %{
+            optional(:demand_in) => Membrane.Buffer.Metric.unit_t(),
+            optional(:other_demand_in) => Membrane.Buffer.Metric.unit_t()
+          },
+          optional(:current_id) => non_neg_integer,
+          required(:name) => Pad.name_t(),
+          required(:pid) => pid,
+          required(:other_name) => Pad.name_t(),
+          required(:caps) => Membrane.Caps.t(),
+          required(:sos) => boolean(),
+          required(:eos) => boolean(),
+          optional(:sticky_messages) => [Membrane.Event.t()],
+          optional(:buffer) => PullBuffer.t(),
+          optional(:demand) => integer()
+        }
+
+  @type pads_data_t :: %{Pad.name_t() => pad_info_t}
+
+  @type pad_info_t :: %{
+          required(:accepted_caps) => any,
+          required(:availability) => Pad.availability_t(),
+          required(:direction) => Pad.direction_t(),
+          required(:mode) => Pad.mode_t(),
+          required(:name) => Pad.name_t(),
+          required(:options) => %{
+            optional(:demand_in) => Membrane.Buffer.Metric.unit_t(),
+            optional(:other_demand_in) => Membrane.Buffer.Metric.unit_t()
+          },
+          optional(:current_id) => non_neg_integer
+        }
+
+  @type pads_info_t :: %{Pad.name_t() => pad_info_t}
+
+  @type pads_t :: %{
+          data: pads_data_t,
+          info: pads_info_t,
+          dynamic_currently_linking: [Pad.name_t()]
+        }
 
   @type unknown_pad_error_t :: {:error, {:unknown_pad, Pad.name_t()}}
 

@@ -12,7 +12,7 @@ defmodule Membrane.Core.Element.DemandController do
   use Bunch
 
   @doc """
-  Updates demand and executes `handle_demand` callback.
+  Handles demand coming on a source pad. Updates demand value and executes `handle_demand` callback.
   """
   @spec handle_demand(Pad.name_t(), non_neg_integer, State.t()) :: State.stateful_try_t()
   def handle_demand(pad_name, size, state) do
@@ -27,12 +27,12 @@ defmodule Membrane.Core.Element.DemandController do
     if exec_handle_demand?(pad_name, state) do
       %{caps: caps, options: %{other_demand_in: demand_in}} = PadModel.get_data!(pad_name, state)
 
-      context = CallbackContext.Demand.from_state(state, caps: caps)
+      context = CallbackContext.Demand.from_state(state, caps: caps, incoming_demand: size)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_demand,
         ActionHandler,
-        %{source: pad_name, split_cont_f: &exec_handle_demand?(pad_name, &1)},
+        %{split_cont_f: &exec_handle_demand?(pad_name, &1)},
         [pad_name, total_size, demand_in, context],
         state
       )

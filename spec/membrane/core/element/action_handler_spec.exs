@@ -424,9 +424,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
   end
 
   describe "handle_action for demand" do
-    let :action, do: {:demand, {pad_name(), source(), size()}}
+    let :action, do: {:demand, {pad_name(), size()}}
     let :callback, do: :handle_event
-    let :source, do: :self
     let :pad_name, do: :sink
     let :size, do: 1
     let :type, do: :normal
@@ -465,25 +464,6 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       end
     end
 
-    context "when source doesn't exist in the given state" do
-      let :non_existing_pad, do: :non_existing_pad
-      let :source, do: {:source, non_existing_pad()}
-
-      it "should raise RuntimeError" do
-        result =
-          described_module().handle_action(
-            action(),
-            callback(),
-            %{},
-            state()
-          )
-
-        expect(result) |> to(match_pattern {{:error, {:cannot_handle_action, _}}, _})
-        {{:error, {:cannot_handle_action, details}}, _} = result
-        expect(details[:reason]) |> to(eq {:unknown_pad, non_existing_pad()})
-      end
-    end
-
     context "when callback is 'handle_write_list'" do
       let :callback, do: :handle_write_list
 
@@ -497,14 +477,17 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           )
 
         expect(result) |> to(be_ok_result())
-        assert_received {:membrane_handle_demand, _}
+        assert_received {:membrane_invoke_supply_demand, _}
       end
     end
 
     context "when callback is other than 'handle_write_list' or 'handle_process_list'" do
       before do
         allow handler_module()
-              |> to(accept :handle_demand, fn _, _, _, _, state -> {:ok, state} end)
+              |> to(accept :update_demand, fn _, _, state -> {:ok, state} end)
+
+        allow handler_module()
+              |> to(accept :supply_demand, fn _, state -> {:ok, state} end)
       end
 
       it "should call handle_demand from DemandHandler module" do
@@ -515,7 +498,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           state()
         )
 
-        expect(handler_module() |> to(accepted(:handle_demand, :any, count: 1)))
+        expect(handler_module() |> to(accepted(:update_demand, :any, count: 1)))
+        expect(handler_module() |> to(accepted(:supply_demand, :any, count: 1)))
       end
     end
   end
@@ -618,7 +602,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     context "if :redemand is the last action" do
       let :actions, do: [message: message_a(), message: message_b(), redemand: :source]
 
-      fit "should handle all actions" do
+      it "should handle all actions" do
         res = described_module().handle_actions(actions(), nil, %{}, state())
         expect(res |> to(eq {:ok, state()}))
         msg_a = [:membrane_message, :test_name, message_a()]
@@ -632,7 +616,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     context "if :redemand is not the last action" do
       let :actions, do: [redemand: :source, message: message_a(), message: message_b()]
 
-      fit "should return an error" do
+      it "should return an error" do
         res = described_module().handle_actions(actions(), nil, %{}, state())
         expect(res |> to(eq {{:error, :actions_after_redemand}, state()}))
         msg_a = [:membrane_message, :test_name, message_a()]
@@ -646,7 +630,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     context "if actions don't contain :redemand" do
       let :actions, do: [message: message_a(), message: message_b()]
 
-      fit "should handle all actions" do
+      it "should handle all actions" do
         res = described_module().handle_actions(actions(), nil, %{}, state())
         expect(res |> to(eq {:ok, state()}))
         msg_a = [:membrane_message, :test_name, message_a()]
