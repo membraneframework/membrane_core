@@ -2,9 +2,9 @@ defmodule Membrane.Integration.TestingFilter do
   use Membrane.Element.Base.Filter
   alias Membrane.Buffer
 
-  def_source_pads source: {:always, :pull, :any}
+  def_source_pads source: [caps: :any]
 
-  def_sink_pads sink: {:always, {:pull, demand_in: :buffers}, :any}
+  def_sink_pads sink: [demand_in: :buffers, caps: :any]
 
   def_options demand_generator: [
                 type: :function,
@@ -16,6 +16,7 @@ defmodule Membrane.Integration.TestingFilter do
   def handle_init(opts) do
     {:ok, opts}
   end
+
   @impl true
   def handle_demand(:source, size, _, _ctx, state) do
     {{:ok, demand: {:sink, state.demand_generator.(size)}, redemand: :source}, state}

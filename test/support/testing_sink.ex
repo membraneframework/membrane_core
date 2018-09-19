@@ -1,11 +1,11 @@
 defmodule Membrane.Integration.TestingSink do
   use Membrane.Element.Base.Sink
 
-  def_sink_pads sink: {:always, {:pull, demand_in: :buffers}, :any}
+  def_sink_pads sink: [demand_in: :buffers, caps: :any]
 
   def_options target: [
-    type: :pid,
-  ]
+                type: :pid
+              ]
 
   @impl true
   def handle_init(opts) do

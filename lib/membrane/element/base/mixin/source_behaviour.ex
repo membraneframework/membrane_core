@@ -8,20 +8,10 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   For more information on implementing elements, see `Membrane.Element.Base`.
   """
 
-  alias Membrane.{Buffer, Caps, Element}
+  alias Membrane.{Buffer, Element}
+  alias Membrane.Core.Element.PadsSpecsParser
   alias Element.{CallbackContext, Pad}
   alias Element.Base.Mixin.CommonBehaviour
-
-  @doc """
-  Callback that defines what source pads may be ever available for this
-  element type.
-
-  The default name for generic source pad, in elements that just produce some
-  buffers is `:source`.
-
-  Generated automatically by `def_source_pads/1` macro.
-  """
-  @callback membrane_source_pads() :: [Element.source_pad_specs_t()]
 
   @doc """
   Callback that is called when buffers should be emitted by the source or filter.
@@ -61,39 +51,8 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   It automatically generates documentation from the given definition
   and adds compile-time caps specs validation.
   """
-  defmacro def_source_pads(raw_source_pads) do
-    source_pads =
-      raw_source_pads
-      |> Bunch.Macro.inject_calls([
-        {Caps.Matcher, :one_of},
-        {Caps.Matcher, :range}
-      ])
-
-    quote do
-      @doc """
-      Returns all known source pads for #{inspect(__MODULE__)}
-
-      They are the following:
-      #{unquote(source_pads) |> Membrane.Core.Helper.Doc.generate_known_pads_docs()}
-      """
-      @spec membrane_source_pads() :: [Membrane.Element.source_pad_specs_t()]
-      @impl true
-      def membrane_source_pads(), do: unquote(source_pads)
-
-      @after_compile {__MODULE__, :__membrane_source_caps_specs_validation__}
-
-      def __membrane_source_caps_specs_validation__(env, _bytecode) do
-        pads_list = env.module.membrane_source_pads() |> Enum.to_list() |> Keyword.values()
-
-        for {_, _, caps_spec} <- pads_list do
-          with :ok <- caps_spec |> Caps.Matcher.validate_specs() do
-            :ok
-          else
-            {:error, reason} -> raise "Error in source caps spec: #{inspect(reason)}"
-          end
-        end
-      end
-    end
+  defmacro def_source_pads(pads) do
+    PadsSpecsParser.def_pads(pads, :source)
   end
 
   defmacro __using__(_) do

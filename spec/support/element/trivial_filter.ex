@@ -7,9 +7,9 @@ defmodule Membrane.Support.Element.TrivialFilter do
 
   use Membrane.Element.Base.Filter
 
-  def_source_pads source: {:always, :pull, :any}
+  def_source_pads source: [caps: :any]
 
-  def_sink_pads sink: {:always, {:pull, demand_in: :buffers}, :any}
+  def_sink_pads sink: [caps: :any, demand_in: :buffers]
 
   @impl true
   def handle_init(_options) do
