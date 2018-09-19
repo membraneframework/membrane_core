@@ -10,13 +10,13 @@ defmodule Membrane.Element.Action do
   do not return any actions) unless explicitly stated otherwise.
   """
 
-  alias Membrane.{Buffer, Caps, Event, Message}
+  alias Membrane.{Buffer, Caps, Event, Notification}
   alias Membrane.Element.Pad
 
   @typedoc """
-  Sends a message to the pipeline.
+  Sends a message to the watcher.
   """
-  @type message_t :: {:message, Message.t()}
+  @type notify_t :: {:notify, Notification.t()}
 
   @typedoc """
   Sends an event through a pad (sink or source).
@@ -157,7 +157,7 @@ defmodule Membrane.Element.Action do
   """
   @type t ::
           event_t
-          | message_t
+          | notify_t
           | split_t
           | caps_t
           | buffer_t

@@ -9,7 +9,7 @@ defmodule Membrane.Pipeline do
   """
 
   alias __MODULE__.{State, Spec}
-  alias Membrane.{Core, Element, Message}
+  alias Membrane.{Core, Element, Notification}
   alias Element.Pad
   alias Core.Playback
   alias Bunch.Type
@@ -32,7 +32,7 @@ defmodule Membrane.Pipeline do
   @typedoc """
   Action that sends a message to element identified by name.
   """
-  @type forward_action_t :: {:forward, {Element.name_t(), Message.t()}}
+  @type forward_action_t :: {:forward, {Element.name_t(), Notification.t()}}
 
   @typedoc """
   Action that instantiates elements and links them according to `Membrane.Pipeline.Spec`.
@@ -111,10 +111,10 @@ defmodule Membrane.Pipeline do
   @callback handle_prepared_to_stopped(state :: State.internal_state_t()) :: callback_return_t
 
   @doc """
-  Callback invoked when message incomes from an element.
+  Callback invoked when a notification incomes from an element.
   """
-  @callback handle_message(
-              message :: Message.t(),
+  @callback handle_notification(
+              notification :: Notification.t(),
               element :: Element.name_t(),
               state :: State.internal_state_t()
             ) :: callback_return_t
@@ -265,7 +265,7 @@ defmodule Membrane.Pipeline do
          {{:ok, links}, state} <- links |> resolve_links(state),
          {:ok, state} <- {links |> link_children(state), state},
          {children_names, children_pids} = children |> Enum.unzip(),
-         {:ok, state} <- {children_pids |> set_children_message_bus, state},
+         {:ok, state} <- {children_pids |> set_children_watcher, state},
          {:ok, state} <- exec_handle_spec_started(children_names, state) do
       children_pids
       |> Enum.each(&Element.change_playback_state(&1, state.playback.state))
@@ -432,16 +432,16 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  @spec set_children_message_bus([pid]) :: Type.try_t()
-  defp set_children_message_bus(elements_pids) do
+  @spec set_children_watcher([pid]) :: Type.try_t()
+  defp set_children_watcher(elements_pids) do
     with :ok <-
            elements_pids
            |> Bunch.Enum.try_each(fn pid ->
-             pid |> Element.set_message_bus(self())
+             pid |> Element.set_watcher(self())
            end) do
       :ok
     else
-      {:error, reason} -> {:error, {:cannot_set_message_bus, reason}}
+      {:error, reason} -> {:error, {:cannot_set_watcher, reason}}
     end
   end
 
@@ -540,12 +540,12 @@ defmodule Membrane.Pipeline do
     |> noreply(state)
   end
 
-  def handle_info([:membrane_message, from, %Message{} = message], state) do
+  def handle_info([:membrane_notification, from, notification], state) do
     with {:ok, _} <- state |> State.get_child_pid(from) do
       CallbackHandler.exec_and_handle_callback(
-        :handle_message,
+        :handle_notification,
         __MODULE__,
-        [message, from],
+        [notification, from],
         state
       )
     end
@@ -629,7 +629,7 @@ defmodule Membrane.Pipeline do
       def handle_prepared_to_stopped(state), do: {:ok, state}
 
       @impl true
-      def handle_message(_message, _from, state), do: {:ok, state}
+      def handle_notification(_notification, _from, state), do: {:ok, state}
 
       @impl true
       def handle_other(_message, state), do: {:ok, state}
@@ -642,7 +642,7 @@ defmodule Membrane.Pipeline do
                      handle_playing_to_prepared: 1,
                      handle_prepared_to_playing: 1,
                      handle_prepared_to_stopped: 1,
-                     handle_message: 3,
+                     handle_notification: 3,
                      handle_other: 2,
                      handle_spec_started: 2
     end

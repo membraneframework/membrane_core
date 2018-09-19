@@ -52,8 +52,8 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     PlaybackHandler.change_playback_state(new_playback_state, LifecycleController, state)
   end
 
-  defp do_handle_message({:membrane_set_message_bus, message_bus}, :call, state) do
-    LifecycleController.handle_message_bus(message_bus, state)
+  defp do_handle_message({:membrane_set_watcher, watcher}, :call, state) do
+    LifecycleController.handle_watcher(watcher, state)
   end
 
   defp do_handle_message({:membrane_set_controlling_pid, pid}, :call, state) do
@@ -101,6 +101,6 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   end
 
   defp do_handle_message(other, :info, state) do
-    LifecycleController.handle_message(other, state)
+    LifecycleController.handle_other(other, state)
   end
 end

@@ -213,6 +213,7 @@ defmodule Membrane.PipelineSpec do
 
     context "when receiving message from the element" do
       let :child_name, do: :child_name
+      let :current_child_name, do: child_name()
       let :internal_state, do: :some_internal_state
 
       let :state,
@@ -222,59 +223,64 @@ defmodule Membrane.PipelineSpec do
           module: module()
         }
 
-      let :internal_message, do: %Membrane.Message{}
-      let! :message, do: [:membrane_message, child_name(), internal_message()]
+      let :notification, do: :notification
+
+      let :notification_message,
+        do: [:membrane_notification, current_child_name(), notification()]
 
       context "when received from child" do
         let :child_pid, do: self()
 
         it "should return {:noreply, ..} result" do
-          {atom, _} = described_module().handle_info(message(), state())
+          {atom, _} = described_module().handle_info(notification_message(), state())
           expect(atom) |> to(eq :noreply)
         end
 
         it "should invoke handle_message from pipeline module with correct arguments" do
-          described_module().handle_info(message(), state())
+          described_module().handle_info(notification_message(), state())
 
           expect(module())
-          |> to(accepted(:handle_message, [internal_message(), child_name(), internal_state()]))
+          |> to(accepted(:handle_notification, [notification(), child_name(), internal_state()]))
         end
 
         it "should keep state unchanged" do
-          {:noreply, new_state} = described_module().handle_info(message(), state())
+          {:noreply, new_state} = described_module().handle_info(notification_message(), state())
           expect(new_state) |> to(eq state())
         end
       end
 
       context "when received from process that is not a child" do
-        let :invalid_child_name, do: :not_a_child_name
-        let! :message, do: [:membrane_message, invalid_child_name(), internal_message()]
+        let :current_child_name, do: :not_a_child_name
 
         it "should return {:stop, _, _}" do
-          {atom, _, _} = described_module().handle_info(message(), state())
+          {atom, _, _} = described_module().handle_info(notification_message(), state())
           expect(atom) |> to(eq :stop)
         end
 
         it "should keep state unchanged" do
-          {:stop, _, new_state} = described_module().handle_info(message(), state())
+          {:stop, _, new_state} = described_module().handle_info(notification_message(), state())
           expect(new_state) |> to(eq state())
         end
 
         it "should return error tuple" do
-          {:stop, error_tuple, _} = described_module().handle_info(message(), state())
+          {:stop, error_tuple, _} =
+            described_module().handle_info(notification_message(), state())
+
           expect(error_tuple) |> to(be_error_result())
         end
 
         it "should return :unknown_child as a reason" do
-          {:stop, {:error, {atom, _pid}}, _} = described_module().handle_info(message(), state())
+          {:stop, {:error, {atom, _pid}}, _} =
+            described_module().handle_info(notification_message(), state())
+
           expect(atom) |> to(eq :unknown_child)
         end
 
         it "should include given name in the reason" do
           {:stop, {:error, {_reason, name}}, _state} =
-            described_module().handle_info(message(), state())
+            described_module().handle_info(notification_message(), state())
 
-          expect(name) |> to(eq invalid_child_name())
+          expect(name) |> to(eq current_child_name())
         end
       end
     end

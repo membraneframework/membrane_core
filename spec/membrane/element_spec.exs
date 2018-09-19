@@ -898,26 +898,26 @@ defmodule Membrane.ElementSpec do
   end
 
   describe "handle_info/3" do
-    context "if message is {:membrane_set_message_bus, pid}" do
-      let :new_message_bus, do: self()
-      let :message, do: {:membrane_set_message_bus, new_message_bus()}
-      let :state, do: %State{module: TrivialFilter, message_bus: message_bus()}
+    context "if message is {:membrane_set_watcher, pid}" do
+      let :new_watcher, do: self()
+      let :message, do: {:membrane_set_watcher, new_watcher()}
+      let :state, do: %State{module: TrivialFilter, watcher: watcher()}
 
-      context "and current message bus is nil" do
-        let :message_bus, do: nil
+      context "and current watcher is nil" do
+        let :watcher, do: nil
 
-        it "should return {:noreply, :state()} with message bus set to the new message bus" do
+        it "should return {:noreply, :state()} with watcher set to the new watcher" do
           expect(described_module().handle_call(message(), self(), state()))
-          |> to(eq {:reply, :ok, %{state() | message_bus: new_message_bus()}})
+          |> to(eq {:reply, :ok, %{state() | watcher: new_watcher()}})
         end
       end
 
-      context "and current message bus is set to the same message bus as requested" do
-        let :message_bus, do: new_message_bus()
+      context "and current watcher is set to the same watcher as requested" do
+        let :watcher, do: new_watcher()
 
-        it "should return {:reply, :ok, state()} with message bus set to the new message bus" do
+        it "should return {:reply, :ok, state()} with watcher set to the new watcher" do
           expect(described_module().handle_call(message(), self(), state()))
-          |> to(eq {:reply, :ok, %{state() | message_bus: new_message_bus()}})
+          |> to(eq {:reply, :ok, %{state() | watcher: new_watcher()}})
         end
       end
     end

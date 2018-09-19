@@ -24,7 +24,7 @@ defmodule Membrane.Core.Element.State do
           name: Element.name_t(),
           internal_state: Element.state_t() | nil,
           pads: PadModel.pads_t() | nil,
-          message_bus: pid | nil,
+          watcher: pid | nil,
           controlling_pid: pid | nil,
           playback: Playback.t(),
           playback_buffer: PlaybackBuffer.t()
@@ -36,7 +36,7 @@ defmodule Membrane.Core.Element.State do
     :name,
     :internal_state,
     :pads,
-    :message_bus,
+    :watcher,
     :controlling_pid,
     :playback,
     :playback_buffer
@@ -58,7 +58,7 @@ defmodule Membrane.Core.Element.State do
       name: name,
       internal_state: nil,
       pads: nil,
-      message_bus: nil,
+      watcher: nil,
       controlling_pid: nil,
       playback: %Playback{},
       playback_buffer: PlaybackBuffer.new()

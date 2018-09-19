@@ -160,14 +160,14 @@ defmodule Membrane.Element do
   end
 
   @doc """
-  Sends synchronous call to the given element requesting it to set message bus.
+  Sends synchronous call to the given element requesting it to set watcher.
 
   It will wait for reply for amount of time passed as second argument
   (in milliseconds).
   """
-  @spec set_message_bus(pid, pid, timeout) :: :ok | {:error, any}
-  def set_message_bus(server, message_bus, timeout \\ 5000) when is_pid(server) do
-    GenServer.call(server, {:membrane_set_message_bus, message_bus}, timeout)
+  @spec set_watcher(pid, pid, timeout) :: :ok | {:error, any}
+  def set_watcher(server, watcher, timeout \\ 5000) when is_pid(server) do
+    GenServer.call(server, {:membrane_set_watcher, watcher}, timeout)
   end
 
   @doc """
@@ -271,7 +271,6 @@ defmodule Membrane.Element do
   end
 
   def handle_info(message, state) do
-    # IO.inspect message
     message |> MessageDispatcher.handle_message(:info, state) |> noreply(state)
   end
 end

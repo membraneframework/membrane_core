@@ -95,18 +95,18 @@ defmodule Membrane.Core.Element.LifecycleController do
   end
 
   @doc """
-  Handles message incoming from pipeline.
+  Handles custom messages incoming to element.
   """
-  @spec handle_message(message :: any, State.t()) :: State.stateful_try_t()
-  def handle_message(message, state) do
+  @spec handle_other(message :: any, State.t()) :: State.stateful_try_t()
+  def handle_other(message, state) do
     ctx = CallbackContext.Other.from_state(state)
 
     CallbackHandler.exec_and_handle_callback(:handle_other, ActionHandler, [message, ctx], state)
     |> or_warn_error("Error while handling message")
   end
 
-  @spec handle_message_bus(pid, State.t()) :: {:ok, State.t()}
-  def handle_message_bus(message_bus, state), do: {:ok, %{state | message_bus: message_bus}}
+  @spec handle_watcher(pid, State.t()) :: {:ok, State.t()}
+  def handle_watcher(watcher, state), do: {:ok, %{state | watcher: watcher}}
 
   @spec handle_controlling_pid(pid, State.t()) :: {:ok, State.t()}
   def handle_controlling_pid(pid, state), do: {:ok, %{state | controlling_pid: pid}}
