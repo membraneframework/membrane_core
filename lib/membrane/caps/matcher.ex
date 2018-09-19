@@ -29,11 +29,12 @@ defmodule Membrane.Caps.Matcher do
   @type caps_specs_t :: :any | caps_spec_t() | [caps_spec_t()]
 
   defmodule Range do
+    @moduledoc false
     @enforce_keys [:min, :max]
     defstruct @enforce_keys
-
-    @type t :: %__MODULE__{min: any, max: any}
   end
+
+  @opaque range_t :: %Range{min: any, max: any}
 
   defimpl Inspect, for: Range do
     import Inspect.Algebra
@@ -45,11 +46,12 @@ defmodule Membrane.Caps.Matcher do
   end
 
   defmodule OneOf do
+    @moduledoc false
     @enforce_keys [:list]
     defstruct @enforce_keys
-
-    @type t :: %__MODULE__{list: list()}
   end
+
+  @opaque one_of_t :: %OneOf{list: list()}
 
   defimpl Inspect, for: OneOf do
     import Inspect.Algebra
@@ -61,17 +63,17 @@ defmodule Membrane.Caps.Matcher do
   end
 
   @doc """
-  Returns opaque `t:range_spec_t/0` that specifies range of valid values for caps field
+  Returns opaque specification of range of valid values for caps field.
   """
-  @spec range(any, any) :: Range.t()
+  @spec range(any, any) :: range_t()
   def range(min, max) do
     %Range{min: min, max: max}
   end
 
   @doc """
-  Returns opaque `t:list_spec_t/0` that specifies list of valid values for caps field
+  Returns opaque specification of list of valid values for caps field.
   """
-  @spec one_of(list()) :: OneOf.t()
+  @spec one_of(list()) :: one_of_t()
   def one_of(values) when is_list(values) do
     %OneOf{list: values}
   end
