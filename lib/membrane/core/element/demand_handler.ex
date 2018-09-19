@@ -51,8 +51,8 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @doc """
-  Based on the demand on given pad takes buffers and passes it to proper
-  controller.
+  Based on the demand on the given pad takes PullBuffer contents
+  and passes it to proper controllers.
   """
   @spec supply_demand(
           Pad.name_t(),
@@ -64,7 +64,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @doc """
-  Supplies the demand requested on the given sink pad, if there are any.
+  Supplies the demand requested on the given sink pad, if there is any.
 
   In filters also triggers `handle_demand` callback when there is unsupplied demand
   on source pads
