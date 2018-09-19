@@ -3,7 +3,7 @@ defmodule Membrane.Element.PadSpec do
   import Membrane.Element.Pad
 
   describe ".is_pad_ref/1" do
-    context "when correct pad name is given" do
+    context "when correct pad ref is given" do
       let :pad_ref_1, do: :some_pad
       let :pad_ref_2, do: {:dynamic, :some_atom, 3}
 
@@ -16,7 +16,7 @@ defmodule Membrane.Element.PadSpec do
       end
     end
 
-    context "when incorrect pad name is given" do
+    context "when incorrect pad ref is given" do
       let :pad_ref_1, do: "string"
       let :pad_ref_2, do: {:tuple_with_atom}
       let :pad_ref_3, do: {"tuple with sting"}

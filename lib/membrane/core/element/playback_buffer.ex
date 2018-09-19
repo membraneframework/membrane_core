@@ -81,8 +81,8 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   @spec exec(message_t, State.t()) :: State.stateful_try_t()
   # Callback invoked on demand request coming from the source pad in the pull mode
-  defp exec({:membrane_demand, [size, pad_name]}, state) do
-    PadModel.assert_data!(pad_name, %{direction: :source}, state)
+  defp exec({:membrane_demand, [size, pad_ref]}, state) do
+    PadModel.assert_data!(pad_ref, %{direction: :source}, state)
 
     demand =
       if size == 0 do
@@ -91,23 +91,22 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
         "demand of size #{inspect(size)}"
       end
 
-    debug("Received #{demand} on pad #{inspect(pad_name)}", state)
-    DemandController.handle_demand(pad_name, size, state)
+    debug("Received #{demand} on pad #{inspect(pad_ref)}", state)
+    DemandController.handle_demand(pad_ref, size, state)
   end
 
   # Callback invoked on buffer coming through the sink pad
-  defp exec({:membrane_buffer, [buffers, pad_name]}, state) do
-    PadModel.assert_data!(pad_name, %{direction: :sink}, state)
+  defp exec({:membrane_buffer, [buffers, pad_ref]}, state) do
+    PadModel.assert_data!(pad_ref, %{direction: :sink}, state)
 
     debug(
       ["
-      Received buffers on pad #{inspect(pad_name)}
+      Received buffers on pad #{inspect(pad_ref)}
       Buffers: ", Buffer.print(buffers)],
       state
     )
 
-    {messages, state} =
-      PadModel.get_and_update_data!(pad_name, :sticky_messages, &{&1, []}, state)
+    {messages, state} = PadModel.get_and_update_data!(pad_ref, :sticky_messages, &{&1, []}, state)
 
     with {:ok, state} <-
            messages
@@ -115,47 +114,47 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
            |> Bunch.Enum.try_reduce(state, fn msg, st -> msg.(st) end) do
       {:ok, state} =
         cond do
-          PadModel.get_data!(pad_name, :sos, state) |> Kernel.not() ->
+          PadModel.get_data!(pad_ref, :sos, state) |> Kernel.not() ->
             event = %{Event.sos() | payload: :auto_sos}
-            EventController.handle_event(pad_name, event, state)
+            EventController.handle_event(pad_ref, event, state)
 
           true ->
             {:ok, state}
         end
 
-      BufferController.handle_buffer(pad_name, buffers, state)
+      BufferController.handle_buffer(pad_ref, buffers, state)
     end
   end
 
   # Callback invoked on incoming caps
-  defp exec({:membrane_caps, [caps, pad_name]}, state) do
-    PadModel.assert_data!(pad_name, %{direction: :sink}, state)
+  defp exec({:membrane_caps, [caps, pad_ref]}, state) do
+    PadModel.assert_data!(pad_ref, %{direction: :sink}, state)
 
     debug(
       """
-      Received caps on pad #{inspect(pad_name)}
+      Received caps on pad #{inspect(pad_ref)}
       Caps: #{inspect(caps)}
       """,
       state
     )
 
-    CapsController.handle_caps(pad_name, caps, state)
+    CapsController.handle_caps(pad_ref, caps, state)
   end
 
   # Callback invoked on incoming event
-  defp exec({:membrane_event, [event, pad_name]}, state) do
-    PadModel.assert_instance!(pad_name, state)
+  defp exec({:membrane_event, [event, pad_ref]}, state) do
+    PadModel.assert_instance!(pad_ref, state)
 
     debug(
       """
-      Received event on pad #{inspect(pad_name)}
+      Received event on pad #{inspect(pad_ref)}
       Event: #{inspect(event)}
       """,
       state
     )
 
     do_exec = fn state ->
-      EventController.handle_event(pad_name, event, state)
+      EventController.handle_event(pad_ref, event, state)
     end
 
     case event.stick_to do
@@ -164,7 +163,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
       :buffer ->
         PadModel.update_data!(
-          pad_name,
+          pad_ref,
           :sticky_messages,
           &[do_exec | &1],
           state

@@ -27,7 +27,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         }
       }
 
-    let :pad_name, do: :source
+    let :pad_ref, do: :source
     let :payload, do: <<1, 2, 3, 4, 5>>
     let :buffer, do: %Buffer{payload: payload()}
 
@@ -40,7 +40,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         it "should return an error result" do
           {ret, _state} =
             described_module().handle_action(
-              {:buffer, {pad_name(), buffer()}},
+              {:buffer, {pad_ref(), buffer()}},
               callback(),
               %{},
               state()
@@ -52,7 +52,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         it "should return {:cannot_send_buffer, _} as a reason" do
           {{_error, {main_reason, _reason_details}}, _state} =
             described_module().handle_action(
-              {:buffer, {pad_name(), buffer()}},
+              {:buffer, {pad_ref(), buffer()}},
               callback(),
               %{},
               state()
@@ -64,7 +64,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         it "should return keyword list with callback name" do
           {{_error, {_main_reason, reason_details}}, _state} =
             described_module().handle_action(
-              {:buffer, {pad_name(), buffer()}},
+              {:buffer, {pad_ref(), buffer()}},
               callback(),
               %{},
               state()
@@ -76,7 +76,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         it "should return keyword list with playback state" do
           {{:error, {_main_reason, reason_details}}, _state} =
             described_module().handle_action(
-              {:buffer, {pad_name(), buffer()}},
+              {:buffer, {pad_ref(), buffer()}},
               callback(),
               %{},
               state()
@@ -96,7 +96,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           it "should return an ok result" do
             expect(
               described_module().handle_action(
-                {:buffer, {pad_name(), buffer()}},
+                {:buffer, {pad_ref(), buffer()}},
                 callback(),
                 %{},
                 state()
@@ -108,7 +108,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           it "should keep element's state unchanged" do
             {:ok, new_state} =
               described_module().handle_action(
-                {:buffer, {pad_name(), buffer()}},
+                {:buffer, {pad_ref(), buffer()}},
                 callback(),
                 %{},
                 state()
@@ -119,7 +119,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
 
           it "should send {:membrane_buffer, _} message to pid()" do
             described_module().handle_action(
-              {:buffer, {pad_name(), buffer()}},
+              {:buffer, {pad_ref(), buffer()}},
               callback(),
               %{},
               state()
@@ -137,12 +137,12 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       let :callback, do: :any
 
       context "but pad doesn't exist in the element" do
-        let :invalid_pad_name, do: :invalid_pad_name
+        let :invalid_pad_ref, do: :invalid_pad_ref
 
         it "should return error" do
           {{:error, {main_reason, reason_details}}, state} =
             described_module().handle_action(
-              {:buffer, {invalid_pad_name(), buffer()}},
+              {:buffer, {invalid_pad_ref(), buffer()}},
               callback(),
               %{},
               state()
@@ -151,7 +151,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           expect(main_reason) |> to(eq :cannot_handle_action)
 
           expect(reason_details |> Keyword.get(:reason))
-          |> to(eq {:unknown_pad, :invalid_pad_name})
+          |> to(eq {:unknown_pad, :invalid_pad_ref})
 
           expect(state) |> to(eq state())
         end
@@ -161,7 +161,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         it "should return an ok result" do
           expect(
             described_module().handle_action(
-              {:buffer, {pad_name(), buffer()}},
+              {:buffer, {pad_ref(), buffer()}},
               callback(),
               %{},
               state()
@@ -173,7 +173,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         it "should keep element's state unchanged" do
           {:ok, new_state} =
             described_module().handle_action(
-              {:buffer, {pad_name(), buffer()}},
+              {:buffer, {pad_ref(), buffer()}},
               callback(),
               %{},
               state()
@@ -184,7 +184,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
 
         it "should send {:membrane_buffer, _} message to pid()" do
           described_module().handle_action(
-            {:buffer, {pad_name(), buffer()}},
+            {:buffer, {pad_ref(), buffer()}},
             callback(),
             %{},
             state()
@@ -220,7 +220,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         }
       }
 
-    let :pad_name, do: :source
+    let :pad_ref, do: :source
     let :payload, do: <<1, 2, 3, 4, 5>>
     let :event, do: %Event{payload: payload()}
 
@@ -228,12 +228,12 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       let :playback, do: %Playback{state: :playing}
 
       context "but pad doesn't exist in the element" do
-        let :invalid_pad_name, do: :invalid_pad_name
+        let :invalid_pad_ref, do: :invalid_pad_ref
 
         it "should return error" do
           {{:error, {main_reason, reason_details}}, state} =
             described_module().handle_action(
-              {:caps, {invalid_pad_name(), event()}},
+              {:caps, {invalid_pad_ref(), event()}},
               nil,
               %{},
               state()
@@ -242,7 +242,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           expect(main_reason) |> to(eq :cannot_handle_action)
 
           expect(reason_details |> Keyword.get(:reason))
-          |> to(eq {:unknown_pad, :invalid_pad_name})
+          |> to(eq {:unknown_pad, :invalid_pad_ref})
 
           expect(state) |> to(eq state())
         end
@@ -251,14 +251,14 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       context "and pad exists in element" do
         it "should return an ok result" do
           expect(
-            described_module().handle_action({:event, {pad_name(), event()}}, nil, %{}, state())
+            described_module().handle_action({:event, {pad_ref(), event()}}, nil, %{}, state())
           )
           |> to(be_ok_result())
         end
 
         it "should keep element's state unchanged" do
           {:ok, new_state} =
-            described_module().handle_action({:event, {pad_name(), event()}}, nil, %{}, state())
+            described_module().handle_action({:event, {pad_ref(), event()}}, nil, %{}, state())
 
           expect(new_state) |> to(eq state())
         end
@@ -267,7 +267,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           let :payload, do: "special payload"
 
           it "should send {:membrane_event, _} message to self()" do
-            described_module().handle_action({:event, {pad_name(), event()}}, nil, %{}, state())
+            described_module().handle_action({:event, {pad_ref(), event()}}, nil, %{}, state())
             target = {:membrane_event, [event(), other_ref()]}
             assert_receive ^target
           end
@@ -301,7 +301,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         }
       }
 
-    let :pad_name, do: :source
+    let :pad_ref, do: :source
     let :payload, do: <<1, 2, 3, 4, 5>>
     let :caps, do: :caps
 
@@ -309,12 +309,12 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       let :playback, do: %Playback{state: :playing}
 
       context "but pad doesn't exist in the element" do
-        let :invalid_pad_name, do: :invalid_pad_name
+        let :invalid_pad_ref, do: :invalid_pad_ref
 
         it "should return error" do
           {{:error, {main_reason, reason_details}}, state} =
             described_module().handle_action(
-              {:caps, {invalid_pad_name(), caps()}},
+              {:caps, {invalid_pad_ref(), caps()}},
               nil,
               %{},
               state()
@@ -323,7 +323,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           expect(main_reason) |> to(eq :cannot_handle_action)
 
           expect(reason_details |> Keyword.get(:reason))
-          |> to(eq {:unknown_pad, :invalid_pad_name})
+          |> to(eq {:unknown_pad, :invalid_pad_ref})
 
           expect(state) |> to(eq state())
         end
@@ -332,7 +332,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       context "and pad exists in element" do
         it "should return an ok result" do
           expect(
-            described_module().handle_action({:caps, {pad_name(), caps()}}, nil, %{}, state())
+            described_module().handle_action({:caps, {pad_ref(), caps()}}, nil, %{}, state())
           )
           |> to(be_ok_result())
         end
@@ -344,7 +344,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           expected_state = %{state() | pads: expected_pads}
 
           {:ok, new_state} =
-            described_module().handle_action({:caps, {pad_name(), caps()}}, nil, %{}, state())
+            described_module().handle_action({:caps, {pad_ref(), caps()}}, nil, %{}, state())
 
           expect(new_state) |> to(eq expected_state)
         end
@@ -353,7 +353,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           let :payload, do: "special payload"
 
           it "should send {:membrane_event, _} message to self()" do
-            described_module().handle_action({:caps, {pad_name(), caps()}}, nil, %{}, state())
+            described_module().handle_action({:caps, {pad_ref(), caps()}}, nil, %{}, state())
             target = {:membrane_caps, [caps(), other_ref()]}
             assert_receive ^target
           end
@@ -424,9 +424,9 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
   end
 
   describe "handle_action for demand" do
-    let :action, do: {:demand, {pad_name(), size()}}
+    let :action, do: {:demand, {pad_ref(), size()}}
     let :callback, do: :handle_event
-    let :pad_name, do: :sink
+    let :pad_ref, do: :sink
     let :size, do: 1
     let :type, do: :normal
     let :sink_mode, do: :pull
@@ -505,9 +505,9 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
   end
 
   describe "handle_action for redemand" do
-    let :action, do: {:redemand, pad_name()}
+    let :action, do: {:redemand, pad_ref()}
 
-    let :pad_name, do: :source
+    let :pad_ref, do: :source
     let :pad_direction, do: :source
     let :pad_mode, do: :pull
     let :element_module, do: FakeElementModule
@@ -531,13 +531,13 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       }
 
     context "if pad doesn't exist in the element" do
-      let :pad_name, do: :invalid_pad_name
+      let :pad_ref, do: :invalid_pad_ref
 
       it "should return an error result with :unknown_pad reason" do
         result = described_module().handle_action(action(), nil, %{}, state())
         expect(result) |> to(match_pattern {{:error, {:cannot_handle_action, _}}, _})
         {{:error, {:cannot_handle_action, details}}, _} = result
-        expect(details[:reason]) |> to(eq {:unknown_pad, :invalid_pad_name})
+        expect(details[:reason]) |> to(eq {:unknown_pad, :invalid_pad_ref})
       end
     end
 
@@ -568,7 +568,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
   end
 
   describe "handle_actions" do
-    let :pad_name, do: :source
+    let :pad_ref, do: :source
     let :pad_direction, do: :source
     let :pad_mode, do: :pull
     let :element_module, do: FakeElementModule
