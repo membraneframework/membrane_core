@@ -30,7 +30,7 @@ defmodule Membrane.Mixfile do
     [extra_applications: [], mod: {Membrane, []}]
   end
 
-  defp elixirc_paths(:test), do: ["lib", "spec/support"]
+  defp elixirc_paths(:test), do: ["lib", "spec/support", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
   defp link do

@@ -7,10 +7,11 @@ defmodule Membrane.Element.CallbackContext.Demand do
 
   @type t :: %Membrane.Element.CallbackContext.Demand{
           playback_state: Membrane.Core.Playback.state_t(),
-          caps: Membrane.Caps.t()
+          caps: Membrane.Caps.t(),
+          incoming_demand: non_neg_integer()
         }
 
-  defstruct playback_state: nil, caps: nil
+  defstruct playback_state: nil, caps: nil, incoming_demand: nil
 
   @impl true
   defmacro from_state(state, entries) do
