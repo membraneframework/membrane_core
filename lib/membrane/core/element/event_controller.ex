@@ -1,6 +1,6 @@
 defmodule Membrane.Core.Element.EventController do
   @moduledoc false
-  # Module handling events infoming through input pads.
+  # Module handling events incoming through input pads.
 
   alias Membrane.{Core, Element, Event}
   alias Core.{CallbackHandler, PullBuffer}
