@@ -50,7 +50,7 @@ defmodule Membrane.Core.PullBuffer do
 
   @spec new(
           Membrane.Element.name_t(),
-          {pid, Membrane.Element.name_t()},
+          demand_pid :: pid,
           Membrane.Element.Pad.ref_t(),
           Membrane.Buffer.Metric.unit_t(),
           props_t

@@ -294,7 +294,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec handle_demand(
           Pad.ref_t(),
-          size :: pos_integer | (pos_integer() -> non_neg_integer()),
+          Action.demand_size_t(),
           callback :: atom,
           State.t()
         ) :: State.stateful_try_t()
@@ -342,7 +342,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp handle_demand(pad_ref, size, callback, state) do
     sink_assertion = PadModel.assert_data(pad_ref, %{direction: :sink, mode: :pull}, state)
 
-    with :ok <- sink_assertion,
+    with {:ok, state} <- {sink_assertion, state},
          {:ok, state} <- DemandHandler.update_demand(pad_ref, size, state) do
       if callback in [:handle_write_list, :handle_process_list] do
         # Handling demand results in execution of handle_write_list/handle_process_list,
@@ -358,7 +358,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         DemandHandler.supply_demand(pad_ref, state)
       end
     else
-      {:error, reason} -> handle_pad_error(reason, state)
+      {{:error, reason}, state} -> handle_pad_error(reason, state)
     end
   end
 
