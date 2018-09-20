@@ -1,7 +1,7 @@
 defmodule Membrane.Integration.TestingSink do
   use Membrane.Element.Base.Sink
 
-  def_sink_pads sink: [demand_in: :buffers, caps: :any]
+  def_input_pads input: [demand_in: :buffers, caps: :any]
 
   def_options target: [
                 type: :pid
@@ -14,11 +14,11 @@ defmodule Membrane.Integration.TestingSink do
 
   @impl true
   def handle_other({:make_demand, size}, _ctx, state) do
-    {{:ok, demand: {:sink, size}}, state}
+    {{:ok, demand: {:input, size}}, state}
   end
 
   @impl true
-  def handle_write(:sink, buf, _ctx, state) do
+  def handle_write(:input, buf, _ctx, state) do
     send(state.target, buf.payload)
     {:ok, state}
   end

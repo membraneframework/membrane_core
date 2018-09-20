@@ -7,9 +7,9 @@ defmodule Membrane.Support.Element.TrivialFilter do
 
   use Membrane.Element.Base.Filter
 
-  def_source_pads source: [caps: :any]
+  def_output_pads output: [caps: :any]
 
-  def_sink_pads sink: [caps: :any, demand_in: :buffers]
+  def_input_pads input: [caps: :any, demand_in: :buffers]
 
   @impl true
   def handle_init(_options) do
@@ -17,12 +17,12 @@ defmodule Membrane.Support.Element.TrivialFilter do
   end
 
   @impl true
-  def handle_demand(:source, size, _, %Ctx.Demand{}, state) do
-    {{:ok, demand: {:sink, size}}, state}
+  def handle_demand(:output, size, _, %Ctx.Demand{}, state) do
+    {{:ok, demand: {:input, size}}, state}
   end
 
   @impl true
-  def handle_process(:sink, %Membrane.Buffer{payload: payload}, %Ctx.Process{}, state) do
-    {{:ok, buffer: {:source, %Membrane.Buffer{payload: payload <> <<255>>}}}, state}
+  def handle_process(:input, %Membrane.Buffer{payload: payload}, %Ctx.Process{}, state) do
+    {{:ok, buffer: {:output, %Membrane.Buffer{payload: payload <> <<255>>}}}, state}
   end
 end
