@@ -7,7 +7,7 @@ defmodule Membrane.Element.CallbackContext.PadRemoved do
 
   @type t :: %Membrane.Element.CallbackContext.PadRemoved{
           playback_state: Membrane.Core.Playback.state_t(),
-          direction: :sink | :source,
+          direction: :input | :output,
           caps: Membrane.Caps.t()
         }
 

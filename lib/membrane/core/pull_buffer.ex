@@ -1,6 +1,6 @@
 defmodule Membrane.Core.PullBuffer do
   @moduledoc """
-  Buffer that is attached to the `:sink` pad when working in a `:pull` mode.
+  Buffer that is attached to the `:input` pad when working in a `:pull` mode.
 
   It stores `Membrane.Buffer`, `Membrane.Event` and `Membrane.Caps` structs and
   prevents the situation when the data in a stream contains the discontinuities.
@@ -17,7 +17,7 @@ defmodule Membrane.Core.PullBuffer do
   @type t :: %__MODULE__{
           name: Membrane.Element.name_t(),
           sink: {pid(), Membrane.Element.name_t()},
-          sink_ref: Membrane.Element.Pad.ref_t(),
+          input_ref: Membrane.Element.Pad.ref_t(),
           q: @qe.t(),
           preferred_size: pos_integer(),
           current_size: non_neg_integer(),
@@ -29,7 +29,7 @@ defmodule Membrane.Core.PullBuffer do
 
   defstruct name: :pull_buffer,
             sink: nil,
-            sink_ref: nil,
+            input_ref: nil,
             q: nil,
             preferred_size: 100,
             current_size: 0,
@@ -55,7 +55,7 @@ defmodule Membrane.Core.PullBuffer do
           Membrane.Buffer.Metric.unit_t(),
           props_t
         ) :: t()
-  def new(name, sink, sink_ref, demand_in, props) do
+  def new(name, sink, input_ref, demand_in, props) do
     metric = Buffer.Metric.from_unit(demand_in)
     preferred_size = props[:preferred_size] || metric.pullbuffer_preferred_size
     min_demand = props[:min_demand] || preferred_size |> div(4)
@@ -72,7 +72,7 @@ defmodule Membrane.Core.PullBuffer do
       name: name,
       q: @qe.new,
       sink: sink,
-      sink_ref: sink_ref,
+      input_ref: input_ref,
       preferred_size: preferred_size,
       min_demand: min_demand,
       demand: preferred_size,
@@ -96,7 +96,7 @@ defmodule Membrane.Core.PullBuffer do
       when is_list(v) do
     if size >= pref_size do
       debug("""
-      PullBuffer #{inspect(pb.name)}: received buffers from sink #{inspect(pb.sink_ref)},
+      PullBuffer #{inspect(pb.name)}: received buffers from input #{inspect(pb.input_ref)},
       despite not requesting them. It is probably caused by overestimating demand
       by previous element.
       """)
@@ -120,7 +120,7 @@ defmodule Membrane.Core.PullBuffer do
       warn([
         """
         PullBuffer #{inspect(pb.name)} (toilet): received #{inspect(size)} buffers,
-        which is above #{above_level}, from sink #{inspect(pb.sink_ref)} that works in push mode.
+        which is above #{above_level}, from input #{inspect(pb.input_ref)} that works in push mode.
         To have control over amount of buffers being produced, consider using push mode.
         If this is a normal situation, increase toilet warn/fail level.
         Buffers: \
@@ -224,7 +224,7 @@ defmodule Membrane.Core.PullBuffer do
     report(
       """
       Sending demand of size #{inspect(to_demand)}
-      to sink #{inspect(pb.sink_ref)}
+      to input #{inspect(pb.input_ref)}
       """,
       pb
     )

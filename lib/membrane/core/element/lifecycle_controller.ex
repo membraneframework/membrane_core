@@ -116,7 +116,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   """
   @spec handle_demand_in(demand_in :: atom, Pad.ref_t(), State.t()) :: {:ok, State.t()}
   def handle_demand_in(demand_in, pad_ref, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :source}, state)
+    PadModel.assert_data!(pad_ref, %{direction: :output}, state)
 
     state =
       PadModel.set_data!(

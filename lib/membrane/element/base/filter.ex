@@ -7,11 +7,11 @@ defmodule Membrane.Element.Base.Filter do
   `Membrane.Element.Base.Mixin.SourceBehaviour`,
   and `Membrane.Element.Base.Mixin.SinkBehaviour`.
 
-  Filters can have both sink and source pads. Job of a usual filter is to
-  receive some data on a sink pad, process the data and send it through the
-  source pad. If these pads work in pull mode, which is the most common case,
-  then filter is also responsible for receiving demands on the source pad and
-  requesting them on the sink pad (for more details, see
+  Filters can have both input and output pads. Job of a usual filter is to
+  receive some data on a input pad, process the data and send it through the
+  output pad. If these pads work in pull mode, which is the most common case,
+  then filter is also responsible for receiving demands on the output pad and
+  requesting them on the input pad (for more details, see
   `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` callback).
   Filters, like all elements, can of course have multiple pads if needed to
   provide more complex solutions.

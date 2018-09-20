@@ -63,8 +63,8 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
   end
 
   @doc """
-  Parses pads specifications defined with `Membrane.Element.Base.Mixin.SourceBehaviour.def_source_pads/1`
-  or `Membrane.Element.Base.Mixin.SinkBehaviour.def_sink_pads/1`.
+  Parses pads specifications defined with `Membrane.Element.Base.Mixin.SourceBehaviour.def_output_pads/1`
+  or `Membrane.Element.Base.Mixin.SinkBehaviour.def_input_pads/1`.
   """
   @spec parse_pads_specs!(
           specs :: [Element.pad_specs_t()],
@@ -114,7 +114,7 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
                 mode: [in: [:pull, :push], default: :pull],
                 demand_in: [
                   in: [:buffers, :bytes],
-                  require_if: &(&1.mode == :pull and direction == :sink)
+                  require_if: &(&1.mode == :pull and direction == :input)
                 ]
               ) do
       {:ok, {name, config}}

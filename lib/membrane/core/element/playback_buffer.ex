@@ -80,9 +80,9 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   defp empty?(%__MODULE__{q: q}), do: q |> Enum.empty?()
 
   @spec exec(message_t, State.t()) :: State.stateful_try_t()
-  # Callback invoked on demand request coming from the source pad in the pull mode
+  # Callback invoked on demand request coming from the output pad in the pull mode
   defp exec({:membrane_demand, [size, pad_ref]}, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :source}, state)
+    PadModel.assert_data!(pad_ref, %{direction: :output}, state)
 
     demand =
       if size == 0 do
@@ -95,9 +95,9 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     DemandController.handle_demand(pad_ref, size, state)
   end
 
-  # Callback invoked on buffer coming through the sink pad
+  # Callback invoked on buffer coming through the input pad
   defp exec({:membrane_buffer, [buffers, pad_ref]}, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :sink}, state)
+    PadModel.assert_data!(pad_ref, %{direction: :input}, state)
 
     debug(
       ["
@@ -128,7 +128,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   # Callback invoked on incoming caps
   defp exec({:membrane_caps, [caps, pad_ref]}, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :sink}, state)
+    PadModel.assert_data!(pad_ref, %{direction: :input}, state)
 
     debug(
       """

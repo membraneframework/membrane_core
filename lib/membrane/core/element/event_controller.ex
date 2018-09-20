@@ -1,6 +1,6 @@
 defmodule Membrane.Core.Element.EventController do
   @moduledoc false
-  # Module handling events infoming through sink pads.
+  # Module handling events infoming through input pads.
 
   alias Membrane.{Core, Element, Event}
   alias Core.{CallbackHandler, PullBuffer}
@@ -20,7 +20,7 @@ defmodule Membrane.Core.Element.EventController do
   def handle_event(pad_ref, event, state) do
     pad_data = PadModel.get_data!(pad_ref, state)
 
-    if event.mode == :sync && pad_data.mode == :pull && pad_data.direction == :sink &&
+    if event.mode == :sync && pad_data.mode == :pull && pad_data.direction == :input &&
          pad_data.buffer |> PullBuffer.empty?() |> Kernel.not() do
       PadModel.update_data(
         pad_ref,
@@ -68,21 +68,21 @@ defmodule Membrane.Core.Element.EventController do
   @spec handle_special_event(Pad.ref_t(), Event.t(), State.t()) ::
           State.stateful_try_t(:handle | :ignore)
   defp handle_special_event(pad_ref, %Event{type: :sos}, state) do
-    with %{direction: :sink, sos: false} <- PadModel.get_data!(pad_ref, state) do
+    with %{direction: :input, sos: false} <- PadModel.get_data!(pad_ref, state) do
       state = PadModel.set_data!(pad_ref, :sos, true, state)
       {{:ok, :handle}, state}
     else
-      %{direction: :source} -> {{:error, {:received_sos_through_source, pad_ref}}, state}
+      %{direction: :output} -> {{:error, {:received_sos_through_output, pad_ref}}, state}
       %{sos: true} -> {{:error, {:sos_already_received, pad_ref}}, state}
     end
   end
 
   defp handle_special_event(pad_ref, %Event{type: :eos}, state) do
-    with %{direction: :sink, sos: true, eos: false} <- PadModel.get_data!(pad_ref, state) do
+    with %{direction: :input, sos: true, eos: false} <- PadModel.get_data!(pad_ref, state) do
       state = PadModel.set_data!(pad_ref, :eos, true, state)
       {{:ok, :handle}, state}
     else
-      %{direction: :source} -> {{:error, {:received_eos_through_source, pad_ref}}, state}
+      %{direction: :output} -> {{:error, {:received_eos_through_output, pad_ref}}, state}
       %{eos: true} -> {{:error, {:eos_already_received, pad_ref}}, state}
       %{sos: false} -> {{:ok, :ignore}, state}
     end
