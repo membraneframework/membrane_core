@@ -64,9 +64,9 @@ defmodule Membrane.Integration.DemandsTest do
         |> Enum.map(fn cnt ->
           buf = %Buffer{payload: <<cnt :: 16>>}
 
-          {:buffer, {:output, buf}}
+          {:buffer, {:out, buf}}
         end)
-        |> Enum.concat([redemand: :output])
+        |> Enum.concat([redemand: :out])
         ~> {&1, cnt + 4}
       end
 

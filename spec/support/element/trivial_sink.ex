@@ -7,7 +7,7 @@ defmodule Membrane.Support.Element.TrivialSink do
 
   use Membrane.Element.Base.Sink
 
-  def_input_pads input: [caps: :any, demand_in: :buffers]
+  def_input_pads in: [caps: :any, demand_in: :buffers]
 
   @impl true
   def handle_init(_options) do
@@ -33,11 +33,11 @@ defmodule Membrane.Support.Element.TrivialSink do
 
   @impl true
   def handle_other(:tick, %Ctx.Other{}, state) do
-    {{:ok, demand: {:input, 2}}, state}
+    {{:ok, demand: {:in, 2}}, state}
   end
 
   @impl true
-  def handle_write(:input, _buf, %Ctx.Write{}, state) do
+  def handle_write(:in, _buf, %Ctx.Write{}, state) do
     {:ok, state}
   end
 end
