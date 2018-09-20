@@ -4,8 +4,9 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   alias Membrane.{Buffer, Caps, Core, Element, Event, Notification}
   alias Core.Element.{DemandController, LifecycleController, DemandHandler, PadModel, State}
-  alias Core.{PlaybackHandler, PullBuffer}
+  alias Core.{Message, PlaybackHandler, PullBuffer}
   alias Element.{Action, Pad}
+  require Message
   require PadModel
   import Element.Pad, only: [is_pad_ref: 1]
   use Core.Element.Log
@@ -224,7 +225,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         PadModel.get_data!(pad_ref, state)
 
       state = handle_buffer(pad_ref, mode, other_demand_in, buffers, state)
-      send(pid, {:membrane_buffer, [buffers, other_ref]})
+      Message.send(pid, :buffer, [buffers, other_ref])
       {:ok, state}
     else
       {:error, reason} -> handle_pad_error(reason, state)
@@ -273,7 +274,7 @@ defmodule Membrane.Core.Element.ActionHandler do
           state
         )
 
-      send(pid, {:membrane_caps, [caps, other_ref]})
+      Message.send(pid, :caps, [caps, other_ref])
       {:ok, state}
     else
       caps: false ->
@@ -352,7 +353,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         # processes. As such situation is unwanted, a message to self is sent here
         # to make it possible for messages already enqueued in mailbox to be
         # received before the demand is handled.
-        send(self(), {:membrane_invoke_supply_demand, pad_ref})
+        Message.self(:invoke_supply_demand, pad_ref)
         {:ok, state}
       else
         DemandHandler.supply_demand(pad_ref, state)
@@ -404,7 +405,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
     withl pad: {:ok, %{pid: pid, other_ref: other_ref}} <- PadModel.get_data(pad_ref, state),
           handler: {:ok, state} <- handle_event(pad_ref, event, state) do
-      send(pid, {:membrane_event, [event, other_ref]})
+      Message.send(pid, :event, [event, other_ref])
       {:ok, state}
     else
       pad: {:error, reason} -> handle_pad_error(reason, state)
@@ -432,7 +433,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp send_notification(notification, %State{watcher: watcher, name: name} = state) do
     debug("Sending notification #{inspect(notification)} (watcher: #{inspect(watcher)})", state)
-    send(watcher, [:membrane_notification, name, notification])
+    Message.send(watcher, :notification, [name, notification])
     {:ok, state}
   end
 

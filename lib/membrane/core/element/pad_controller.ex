@@ -3,11 +3,12 @@ defmodule Membrane.Core.Element.PadController do
   # Module handling linking and unlinking pads.
 
   alias Membrane.{Core, Event}
-  alias Core.{CallbackHandler, PullBuffer}
+  alias Core.{CallbackHandler, Message, PullBuffer}
   alias Core.Element.{EventController, PadModel, State}
   alias Membrane.Element.{CallbackContext, Pad}
   alias Bunch.Type
   require CallbackContext.{PadAdded, PadRemoved}
+  require Message
   require Pad
   require PadModel
   use Core.Element.Log
@@ -167,7 +168,7 @@ defmodule Membrane.Core.Element.PadController do
 
     :ok =
       pid
-      |> GenServer.call({:membrane_demand_in, [demand_in, other_ref]})
+      |> Message.call(:demand_in, [demand_in, other_ref])
 
     pb =
       PullBuffer.new(

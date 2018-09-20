@@ -11,10 +11,11 @@ defmodule Membrane.Pipeline do
   alias __MODULE__.{State, Spec}
   alias Membrane.{Core, Element, Notification}
   alias Element.Pad
-  alias Core.Playback
+  alias Core.{Message, Playback}
   alias Bunch.Type
   import Membrane.Helper.GenServer
   require Element
+  require Message
   require Pad
   use Bunch
   use Membrane.Log, tags: :core
@@ -194,7 +195,7 @@ defmodule Membrane.Pipeline do
 
   @spec stop_and_terminate(pipeline :: module) :: :ok
   def stop_and_terminate(pipeline) do
-    send(pipeline, :membrane_stop_and_terminate)
+    Message.send(pipeline, :stop_and_terminate)
     :ok
   end
 
@@ -210,7 +211,7 @@ defmodule Membrane.Pipeline do
   def init({module, pipeline_options}) do
     with {{:ok, spec}, internal_state} <- module.handle_init(pipeline_options) do
       state = %State{internal_state: internal_state, module: module}
-      send(self(), [:membrane_pipeline_spec, spec])
+      Message.self(:pipeline_spec, spec)
       {:ok, state}
     else
       {:error, reason} ->
@@ -398,7 +399,7 @@ defmodule Membrane.Pipeline do
 
   defp resolve_link(%{element: element, pad: pad_name} = elementpad, state) do
     with {:ok, pid} <- state |> State.get_child_pid(element),
-         {:ok, pad_ref} <- pid |> GenServer.call({:membrane_get_pad_ref, pad_name}) do
+         {:ok, pad_ref} <- pid |> Message.call(:get_pad_ref, pad_name) do
       {{:ok, %{element: element, pad: pad_ref}}, state}
     else
       {:error, reason} -> {:error, {:resolve_link, elementpad, reason}}
@@ -470,7 +471,7 @@ defmodule Membrane.Pipeline do
 
   @impl PlaybackHandler
   def handle_playback_state_changed(_old, :stopped, %State{terminating?: true} = state) do
-    send(self(), :membrane_stop_and_terminate)
+    Message.self(:stop_and_terminate)
     {:ok, state}
   end
 
@@ -478,7 +479,7 @@ defmodule Membrane.Pipeline do
 
   @impl GenServer
   def handle_info(
-        {:membrane_playback_state_changed, _pid, _new_playback_state},
+        Message.new(:playback_state_changed, [_pid, _new_playback_state]),
         %State{pending_pids: pending_pids} = state
       )
       when pending_pids == %MapSet{} do
@@ -486,7 +487,7 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_info(
-        {:membrane_playback_state_changed, _pid, new_playback_state},
+        Message.new(:playback_state_changed, [_pid, new_playback_state]),
         %State{playback: %Playback{pending_state: pending_playback_state}} = state
       )
       when new_playback_state != pending_playback_state do
@@ -494,7 +495,7 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_info(
-        {:membrane_playback_state_changed, pid, new_playback_state},
+        Message.new(:playback_state_changed, [pid, new_playback_state]),
         %State{playback: %Playback{state: current_playback_state}, pending_pids: pending_pids} =
           state
       ) do
@@ -516,11 +517,11 @@ defmodule Membrane.Pipeline do
     |> noreply(new_state)
   end
 
-  def handle_info({:membrane_change_playback_state, new_state}, state) do
+  def handle_info(Message.new(:change_playback_state, new_state), state) do
     PlaybackHandler.change_playback_state(new_state, __MODULE__, state) |> noreply(state)
   end
 
-  def handle_info(:membrane_stop_and_terminate, state) do
+  def handle_info(Message.new(:stop_and_terminate), state) do
     case state.playback.state do
       :stopped ->
         {:stop, :normal, state}
@@ -533,14 +534,14 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  def handle_info([:membrane_pipeline_spec, spec], state) do
+  def handle_info(Message.new(:pipeline_spec, spec), state) do
     with {{:ok, _children}, state} <- spec |> handle_spec(state) do
       {:ok, state}
     end
     |> noreply(state)
   end
 
-  def handle_info([:membrane_notification, from, notification], state) do
+  def handle_info(Message.new(:notification, [from, notification]), state) do
     with {:ok, _} <- state |> State.get_child_pid(from) do
       CallbackHandler.exec_and_handle_callback(
         :handle_notification,

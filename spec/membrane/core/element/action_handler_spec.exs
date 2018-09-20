@@ -1,8 +1,9 @@
 defmodule Membrane.Core.Element.ActionHandlerSpec do
   use ESpec, async: false
-  alias Membrane.Core.Element.State
   alias Membrane.{Buffer, Event}
-  alias Membrane.Core.{Playback, Element}
+  alias Membrane.Core.{Element, Message, Playback}
+  alias Element.State
+  require Message
 
   describe "handle_action for buffer" do
     let :other_ref, do: :other_ref
@@ -117,7 +118,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
             expect(new_state) |> to(eq state())
           end
 
-          it "should send {:membrane_buffer, _} message to pid()" do
+          it "should send Message.new(:buffer, _) message to pid()" do
             described_module().handle_action(
               {:buffer, {pad_ref(), buffer()}},
               callback(),
@@ -125,7 +126,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
               state()
             )
 
-            target = {:membrane_buffer, [[buffer()], other_ref()]}
+            target = Message.new(:buffer, [[buffer()], other_ref()])
             assert_receive ^target
           end
         end
@@ -182,7 +183,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           expect(new_state) |> to(eq state())
         end
 
-        it "should send {:membrane_buffer, _} message to pid()" do
+        it "should send Message.new(:buffer, _) message to pid()" do
           described_module().handle_action(
             {:buffer, {pad_ref(), buffer()}},
             callback(),
@@ -190,7 +191,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
             state()
           )
 
-          target = {:membrane_buffer, [[buffer()], other_ref()]}
+          target = Message.new(:buffer, [[buffer()], other_ref()])
           assert_receive ^target
         end
       end
@@ -266,9 +267,9 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         context "and event is special" do
           let :payload, do: "special payload"
 
-          it "should send {:membrane_event, _} message to self()" do
+          it "should send Message.new(:event, _) message to self()" do
             described_module().handle_action({:event, {pad_ref(), event()}}, nil, %{}, state())
-            target = {:membrane_event, [event(), other_ref()]}
+            target = Message.new(:event, [event(), other_ref()])
             assert_receive ^target
           end
         end
@@ -352,9 +353,9 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         context "and event is special" do
           let :payload, do: "special payload"
 
-          it "should send {:membrane_event, _} message to self()" do
+          it "should send Message.new(:event, _) message to self()" do
             described_module().handle_action({:caps, {pad_ref(), caps()}}, nil, %{}, state())
-            target = {:membrane_caps, [caps(), other_ref()]}
+            target = Message.new(:caps, [caps(), other_ref()])
             assert_receive ^target
           end
         end
@@ -375,7 +376,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         expect(result) |> to(be_ok_result())
         {:ok, state} = result
         expect(state) |> to(eq state())
-        message = [:membrane_notification, name(), notification()]
+        message = Message.new(:notification, [name(), notification()])
         refute_receive ^message
       end
     end
@@ -388,7 +389,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         expect(result) |> to(be_ok_result())
         {:ok, state} = result
         expect(state) |> to(eq state())
-        message = [:membrane_notification, name(), notification()]
+        message = Message.new(:notification, [name(), notification()])
         assert_receive ^message
       end
     end
@@ -448,7 +449,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           )
 
         expect(result) |> to(be_ok_result())
-        assert_received {:membrane_invoke_supply_demand, _}
+        assert_received Message.new(:invoke_supply_demand, _)
       end
     end
 
@@ -577,8 +578,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       it "should handle all actions" do
         res = described_module().handle_actions(actions(), nil, %{}, state())
         expect(res |> to(eq {:ok, state()}))
-        msg_a = [:membrane_notification, :test_name, notification_a()]
-        msg_b = [:membrane_notification, :test_name, notification_b()]
+        msg_a = Message.new(:notification, [:test_name, notification_a()])
+        msg_b = Message.new(:notification, [:test_name, notification_b()])
         assert_received(^msg_a)
         assert_received(^msg_b)
         expect(controller_module() |> to(accepted(:handle_demand, :any, count: 1)))
@@ -592,8 +593,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       it "should return an error" do
         res = described_module().handle_actions(actions(), nil, %{}, state())
         expect(res |> to(eq {{:error, :actions_after_redemand}, state()}))
-        msg_a = [:membrane_notification, :test_name, notification_a()]
-        msg_b = [:membrane_notification, :test_name, notification_b()]
+        msg_a = Message.new(:notification, [:test_name, notification_a()])
+        msg_b = Message.new(:notification, [:test_name, notification_b()])
         refute_received(^msg_a)
         refute_received(^msg_b)
         expect(controller_module() |> to(accepted(:handle_demand, :any, count: 0)))
@@ -606,8 +607,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       it "should handle all actions" do
         res = described_module().handle_actions(actions(), nil, %{}, state())
         expect(res |> to(eq {:ok, state()}))
-        msg_a = [:membrane_notification, :test_name, notification_a()]
-        msg_b = [:membrane_notification, :test_name, notification_b()]
+        msg_a = Message.new(:notification, [:test_name, notification_a()])
+        msg_b = Message.new(:notification, [:test_name, notification_b()])
         assert_received(^msg_a)
         assert_received(^msg_b)
       end

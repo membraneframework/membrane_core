@@ -24,8 +24,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
           q: Qex.t()
         }
 
-  @type message_t ::
-          {:membrane_demand | :membrane_buffer | :membrane_caps | :membrane_event, args :: list}
+  @type message_t :: {:demand | :buffer | :caps | :event, args :: list}
 
   defstruct q: nil
 
@@ -43,7 +42,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   def store(msg, %State{playback: %Playback{state: :playing}} = state), do: exec(msg, state)
 
   def store({type, _args} = msg, state)
-      when type in [:membrane_event, :membrane_caps] do
+      when type in [:event, :caps] do
     exec(msg, state)
     |> provided(
       that: state.playback_buffer |> empty?,
@@ -81,7 +80,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   @spec exec(message_t, State.t()) :: State.stateful_try_t()
   # Callback invoked on demand request coming from the source pad in the pull mode
-  defp exec({:membrane_demand, [size, pad_ref]}, state) do
+  defp exec({:demand, [size, pad_ref]}, state) do
     PadModel.assert_data!(pad_ref, %{direction: :source}, state)
 
     demand =
@@ -96,7 +95,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   end
 
   # Callback invoked on buffer coming through the sink pad
-  defp exec({:membrane_buffer, [buffers, pad_ref]}, state) do
+  defp exec({:buffer, [buffers, pad_ref]}, state) do
     PadModel.assert_data!(pad_ref, %{direction: :sink}, state)
 
     debug(
@@ -127,7 +126,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   end
 
   # Callback invoked on incoming caps
-  defp exec({:membrane_caps, [caps, pad_ref]}, state) do
+  defp exec({:caps, [caps, pad_ref]}, state) do
     PadModel.assert_data!(pad_ref, %{direction: :sink}, state)
 
     debug(
@@ -142,7 +141,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   end
 
   # Callback invoked on incoming event
-  defp exec({:membrane_event, [event, pad_ref]}, state) do
+  defp exec({:event, [event, pad_ref]}, state) do
     PadModel.assert_instance!(pad_ref, state)
 
     debug(

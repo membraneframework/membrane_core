@@ -4,10 +4,11 @@ defmodule Membrane.Core.Element.LifecycleController do
   # and similar stuff.
 
   alias Membrane.{Core, Element}
-  alias Core.CallbackHandler
+  alias Core.{CallbackHandler, Message}
   alias Core.Element.{ActionHandler, PadSpecHandler, PadModel, PlaybackBuffer, State}
   alias Element.{CallbackContext, Pad}
   require CallbackContext.{Other, PlaybackChange}
+  require Message
   require PadModel
   use Core.PlaybackHandler
   use Core.Element.Log
@@ -155,7 +156,7 @@ defmodule Membrane.Core.Element.LifecycleController do
     with :ok <-
            state.pads.data
            |> Bunch.Enum.try_each(fn {_name, %{pid: pid, other_name: other_name}} ->
-             GenServer.call(pid, {:membrane_handle_unlink, other_name})
+             Message.call(pid, :handle_unlink, other_name)
            end) do
       {:ok, state}
     end

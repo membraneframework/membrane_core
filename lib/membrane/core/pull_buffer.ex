@@ -7,6 +7,8 @@ defmodule Membrane.Core.PullBuffer do
   It also guarantees that element won't be flooded with the incoming data.
   """
   alias Membrane.Buffer
+  alias Membrane.Core.Message
+  require Message
   use Bunch
   use Membrane.Log, tags: :core
 
@@ -229,7 +231,7 @@ defmodule Membrane.Core.PullBuffer do
       pb
     )
 
-    send(other_pid, {:membrane_demand, [to_demand, other_ref]})
+    Message.send(other_pid, :demand, [to_demand, other_ref])
     %__MODULE__{pb | demand: demand + new_demand - to_demand}
   end
 

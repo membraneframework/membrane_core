@@ -1,6 +1,8 @@
 defmodule Membrane.PipelineSpec do
   use ESpec, async: false
   alias Membrane.Support.Element.TrivialPipeline
+  alias Membrane.Core.Message
+  require Message
 
   describe ".start_link/3" do
     context "when starting `TrivialPipeline`" do
@@ -144,7 +146,7 @@ defmodule Membrane.PipelineSpec do
 
     it "should send a message to initialize children asynchronously" do
       described_module().init({module(), options()})
-      assert_received [:membrane_pipeline_spec, _]
+      assert_received Message.new(:pipeline_spec, _)
     end
 
     it "should call pipeline's handle_init" do
@@ -175,7 +177,7 @@ defmodule Membrane.PipelineSpec do
       let :init_result, do: TrivialPipeline.handle_init(nil)
       let :spec, do: init_result() |> elem(0) |> elem(1)
       let :internal_state, do: init_result() |> elem(1)
-      let :message, do: [:membrane_pipeline_spec, spec()]
+      let :message, do: Message.new(:pipeline_spec, spec())
       let :links_number, do: length(spec().links |> Map.keys())
 
       it "should return :noreply response" do
@@ -226,7 +228,7 @@ defmodule Membrane.PipelineSpec do
       let :notification, do: :notification
 
       let :notification_message,
-        do: [:membrane_notification, current_child_name(), notification()]
+        do: Message.new(:notification, [current_child_name(), notification()])
 
       context "when received from child" do
         let :child_pid, do: self()
