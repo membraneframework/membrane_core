@@ -163,7 +163,7 @@ defmodule Membrane.Core.Element.PadController do
   defp init_pad_direction_data(%{direction: :source}, _props, _state), do: %{}
 
   defp init_pad_mode_data(%{mode: :pull, direction: :sink} = data, props, state) do
-    %{name: name, pid: pid, other_ref: other_ref, demand_in: demand_in} = data
+    %{pid: pid, other_ref: other_ref, demand_in: demand_in} = data
 
     :ok =
       pid
@@ -172,8 +172,8 @@ defmodule Membrane.Core.Element.PadController do
     pb =
       PullBuffer.new(
         state.name,
-        {pid, other_ref},
-        name,
+        pid,
+        other_ref,
         demand_in,
         props[:pull_buffer] || %{}
       )
