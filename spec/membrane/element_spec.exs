@@ -23,12 +23,12 @@ defmodule Membrane.ElementSpec do
       let :destination, do: :destination
 
       it "should return an error result" do
-        expect(described_module().link(server(), destination(), :out, :in, []))
+        expect(described_module().link(server(), destination(), :output, :input, []))
         |> to(be_error_result())
       end
 
       it "should return :invalid_element as a reason" do
-        {:error, reason} = described_module().link(server(), destination(), :out, :in, [])
+        {:error, reason} = described_module().link(server(), destination(), :output, :input, [])
         expect(reason) |> to(eq :invalid_element)
       end
     end
@@ -40,13 +40,13 @@ defmodule Membrane.ElementSpec do
       let :destination, do: self()
 
       it "should return an error result" do
-        expect(described_module().link(server(), destination(), :out, :in, []))
+        expect(described_module().link(server(), destination(), :output, :input, []))
         |> to(be_error_result())
       end
 
       it "should return :unknown_pad as a reason" do
         {:error, {:handle_call, {:cannot_handle_message, [message: _, mode: _, reason: reason]}}} =
-          described_module().link(server(), destination(), :out, :in, [])
+          described_module().link(server(), destination(), :output, :input, [])
 
         expect(reason) |> to(eq :unknown_pad)
       end
@@ -57,12 +57,12 @@ defmodule Membrane.ElementSpec do
       let :destination, do: self()
 
       it "should return an error result" do
-        expect(described_module().link(server(), destination(), :out, :in, []))
+        expect(described_module().link(server(), destination(), :output, :input, []))
         |> to(be_error_result())
       end
 
       it "should return :loop as a reason" do
-        {:error, reason} = described_module().link(server(), destination(), :out, :in, [])
+        {:error, reason} = described_module().link(server(), destination(), :output, :input, [])
         expect(reason) |> to(eq :loop)
       end
     end
@@ -79,12 +79,12 @@ defmodule Membrane.ElementSpec do
         let :destination_module, do: TrivialSink
 
         it "should return an error result" do
-          expect(described_module().link(server(), destination(), :in, :in, []))
+          expect(described_module().link(server(), destination(), :input, :input, []))
           |> to(be_error_result())
         end
 
         it "should return :invalid_pad_direction as a reason" do
-          {:error, val} = described_module().link(server(), destination(), :in, :in, [])
+          {:error, val} = described_module().link(server(), destination(), :input, :input, [])
           {:handle_call, {:cannot_handle_message, [message: _, mode: _, reason: reason]}} = val
           expect(reason) |> to(eq {:invalid_pad_direction, [expected: :output, actual: :input]})
         end
@@ -95,12 +95,12 @@ defmodule Membrane.ElementSpec do
         let :destination_module, do: TrivialSource
 
         it "should return an error result" do
-          expect(described_module().link(server(), destination(), :out, :out, []))
+          expect(described_module().link(server(), destination(), :output, :output, []))
           |> to(be_error_result())
         end
 
         it "should return :invalid_pad_direction as a reason" do
-          {_, val} = described_module().link(server(), destination(), :out, :out, [])
+          {_, val} = described_module().link(server(), destination(), :output, :output, [])
 
           {:handle_call, {:cannot_handle_message, keyword_list}} = val
           reason = keyword_list |> Keyword.get(:reason)
@@ -129,15 +129,15 @@ defmodule Membrane.ElementSpec do
         let :destination_module, do: TrivialSink
 
         context "but pads are already linked" do
-          before do: :ok = described_module().link(server(), destination(), :out, :in, [])
+          before do: :ok = described_module().link(server(), destination(), :output, :input, [])
 
           it "should return an error result" do
-            expect(described_module().link(server(), destination(), :out, :in, []))
+            expect(described_module().link(server(), destination(), :output, :input, []))
             |> to(be_error_result())
           end
 
           it "should return :already_linked as a reason" do
-            {_, val} = described_module().link(server(), destination(), :out, :in, [])
+            {_, val} = described_module().link(server(), destination(), :output, :input, [])
             {:handle_call, {:cannot_handle_message, keyword_list}} = val
             expect(keyword_list |> Keyword.get(:reason)) |> to(eq :already_linked)
           end

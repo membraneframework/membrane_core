@@ -14,14 +14,13 @@ defmodule Membrane.Core.PullBufferSpec do
 
   describe ".new/5" do
     let :name, do: :name
-    let :sink, do: {self(), sink_elem_name()}
-    let :sink_elem_name, do: :sink_elem_name
+    let :demand_pid, do: self()
     let :input_ref, do: :input_pad_ref
     let :preferred_size, do: 100
     let :min_demand, do: 10
     let :toilet, do: false
-    let :demand_in, do: :bytes
-    let :expected_metric, do: Buffer.Metric.from_unit(demand_in())
+    let :demand_unit, do: :bytes
+    let :expected_metric, do: Buffer.Metric.from_unit(demand_unit())
 
     let :props,
       do: [
@@ -31,11 +30,11 @@ defmodule Membrane.Core.PullBufferSpec do
       ]
 
     it "should return PullBuffer struct and send demand message" do
-      expect(described_module().new(name(), sink(), input_ref(), demand_in(), props()))
+      expect(described_module().new(name(), demand_pid(), input_ref(), demand_unit(), props()))
       |> to(
         eq(%PullBuffer{
           name: name(),
-          sink: sink(),
+          demand_pid: demand_pid(),
           input_ref: input_ref(),
           demand: 0,
           preferred_size: preferred_size(),
@@ -46,7 +45,7 @@ defmodule Membrane.Core.PullBufferSpec do
         })
       )
 
-      expected_list = [preferred_size(), sink_elem_name()]
+      expected_list = [preferred_size(), input_ref()]
       assert_received {:membrane_demand, ^expected_list}
     end
 
@@ -56,11 +55,11 @@ defmodule Membrane.Core.PullBufferSpec do
       it "should not send the demand" do
         flush()
 
-        expect(described_module().new(name(), sink(), input_ref(), demand_in(), props()))
+        expect(described_module().new(name(), demand_pid(), input_ref(), demand_unit(), props()))
         |> to(
           eq(%PullBuffer{
             name: name(),
-            sink: sink(),
+            demand_pid: demand_pid(),
             input_ref: input_ref(),
             demand: preferred_size(),
             preferred_size: preferred_size(),
@@ -174,7 +173,8 @@ defmodule Membrane.Core.PullBufferSpec do
         current_size: current_size(),
         demand: 0,
         min_demand: 0,
-        sink: {self(), input_ref()},
+        demand_pid: self(),
+        input_ref: input_ref(),
         metric: metric(),
         q: q()
       }

@@ -16,18 +16,16 @@ defmodule Membrane.Core.Element.PadSpecHandler do
   def init_pads(%State{module: module} = state) do
     pads = %{
       data: %{},
-      info: module.membrane_pads() |> Enum.map(&init_pad_info/1) |> Map.new(&{&1.name, &1}),
+      info: module.membrane_pads() |> Bunch.TupleList.map_values(&init_pad_info/1) |> Map.new(),
       dynamic_currently_linking: []
     }
 
     %State{state | pads: pads}
   end
 
-  @spec init_pad_info({Pad.name_t(), PadsSpecsParser.parsed_pad_specs_t()}) ::
-          PadModel.pad_info_t()
-  defp init_pad_info({name, specs}) do
+  @spec init_pad_info(PadsSpecsParser.parsed_pad_specs_t()) :: PadModel.pad_info_t()
+  defp init_pad_info(specs) do
     specs
-    |> Map.put(:name, name)
     |> Bunch.Map.move!(:caps, :accepted_caps)
     |> Map.merge(
       case specs.availability |> Pad.availability_mode() do

@@ -12,10 +12,9 @@ defmodule Membrane.Core.Element.PadModel do
           required(:availability) => Pad.availability_t(),
           required(:direction) => Pad.direction_t(),
           required(:mode) => Pad.mode_t(),
-          required(:name) => Pad.name_t(),
           required(:options) => %{
-            optional(:demand_in) => Membrane.Buffer.Metric.unit_t(),
-            optional(:other_demand_in) => Membrane.Buffer.Metric.unit_t()
+            optional(:demand_unit) => Membrane.Buffer.Metric.unit_t(),
+            optional(:other_demand_unit) => Membrane.Buffer.Metric.unit_t()
           },
           optional(:current_id) => non_neg_integer,
           required(:pid) => pid,
@@ -35,10 +34,9 @@ defmodule Membrane.Core.Element.PadModel do
           required(:availability) => Pad.availability_t(),
           required(:direction) => Pad.direction_t(),
           required(:mode) => Pad.mode_t(),
-          required(:name) => Pad.name_t(),
           required(:options) => %{
-            optional(:demand_in) => Membrane.Buffer.Metric.unit_t(),
-            optional(:other_demand_in) => Membrane.Buffer.Metric.unit_t()
+            optional(:demand_unit) => Membrane.Buffer.Metric.unit_t(),
+            optional(:other_demand_unit) => Membrane.Buffer.Metric.unit_t()
           },
           optional(:current_id) => non_neg_integer
         }
