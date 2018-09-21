@@ -9,7 +9,7 @@ defmodule Membrane.Support.Element.TrivialFilter do
 
   def_output_pads output: [caps: :any]
 
-  def_input_pads input: [caps: :any, demand_in: :buffers]
+  def_input_pads input: [caps: :any, demand_unit: :buffers]
 
   @impl true
   def handle_init(_options) do

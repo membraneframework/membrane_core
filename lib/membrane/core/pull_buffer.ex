@@ -55,8 +55,8 @@ defmodule Membrane.Core.PullBuffer do
           Membrane.Buffer.Metric.unit_t(),
           props_t
         ) :: t()
-  def new(name, demand_pid, input_ref, demand_in, props) do
-    metric = Buffer.Metric.from_unit(demand_in)
+  def new(name, demand_pid, input_ref, demand_unit, props) do
+    metric = Buffer.Metric.from_unit(demand_unit)
     preferred_size = props[:preferred_size] || metric.pullbuffer_preferred_size
     min_demand = props[:min_demand] || preferred_size |> div(4)
     default_toilet = %{warn: preferred_size * 2, fail: preferred_size * 4}

@@ -163,18 +163,18 @@ defmodule Membrane.Core.Element.PadController do
   defp init_pad_direction_data(%{direction: :output}, _props, _state), do: %{}
 
   defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, props, state) do
-    %{pid: pid, other_ref: other_ref, demand_in: demand_in} = data
+    %{pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
 
     :ok =
       pid
-      |> GenServer.call({:membrane_demand_in, [demand_in, other_ref]})
+      |> GenServer.call({:membrane_demand_unit, [demand_unit, other_ref]})
 
     pb =
       PullBuffer.new(
         state.name,
         pid,
         other_ref,
-        demand_in,
+        demand_unit,
         props[:pull_buffer] || %{}
       )
 

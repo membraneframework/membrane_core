@@ -114,15 +114,15 @@ defmodule Membrane.Core.Element.LifecycleController do
   @doc """
   Stores demand unit of subsequent element pad.
   """
-  @spec handle_demand_in(demand_in :: atom, Pad.ref_t(), State.t()) :: {:ok, State.t()}
-  def handle_demand_in(demand_in, pad_ref, state) do
+  @spec handle_demand_unit(demand_unit :: atom, Pad.ref_t(), State.t()) :: {:ok, State.t()}
+  def handle_demand_unit(demand_unit, pad_ref, state) do
     PadModel.assert_data!(pad_ref, %{direction: :output}, state)
 
     state =
       PadModel.set_data!(
         pad_ref,
-        [:other_demand_in],
-        demand_in,
+        [:other_demand_unit],
+        demand_unit,
         state
       )
 

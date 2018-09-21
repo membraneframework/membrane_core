@@ -48,7 +48,7 @@ defmodule Membrane.Element do
   Describes how a input pad should be declared in element.
   """
   @type input_pad_specs_t ::
-          {Pad.name_t(), [common_pad_option_t | {:demand_in, Buffer.Metric.unit_t()}]}
+          {Pad.name_t(), [common_pad_option_t | {:demand_unit, Buffer.Metric.unit_t()}]}
 
   @typedoc """
   Pad options used in `t:pad_specs_t/0`

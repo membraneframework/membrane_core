@@ -4,7 +4,7 @@ defmodule Membrane.Integration.TestingFilter do
 
   def_output_pads output: [caps: :any]
 
-  def_input_pads input: [demand_in: :buffers, caps: :any]
+  def_input_pads input: [demand_unit: :buffers, caps: :any]
 
   def_options demand_generator: [
                 type: :function,

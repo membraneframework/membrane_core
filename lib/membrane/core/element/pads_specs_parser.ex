@@ -12,7 +12,7 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
           availability: Pad.availability_t(),
           mode: Pad.mode_t(),
           caps: Caps.Matcher.caps_specs_t(),
-          demand_in: Buffer.Metric.unit_t()
+          demand_unit: Buffer.Metric.unit_t()
         }
 
   @doc """
@@ -112,7 +112,7 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
                 availability: [in: [:always, :on_request], default: :always],
                 caps: [validate: &Caps.Matcher.validate_specs/1],
                 mode: [in: [:pull, :push], default: :pull],
-                demand_in: [
+                demand_unit: [
                   in: [:buffers, :bytes],
                   require_if: &(&1.mode == :pull and direction == :input)
                 ]

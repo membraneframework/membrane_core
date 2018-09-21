@@ -220,10 +220,10 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
 
     with :ok <- PadModel.assert_data(pad_ref, %{direction: :output, eos: false}, state) do
-      %{mode: mode, pid: pid, other_ref: other_ref, other_demand_in: other_demand_in} =
+      %{mode: mode, pid: pid, other_ref: other_ref, other_demand_unit: other_demand_unit} =
         PadModel.get_data!(pad_ref, state)
 
-      state = handle_buffer(pad_ref, mode, other_demand_in, buffers, state)
+      state = handle_buffer(pad_ref, mode, other_demand_unit, buffers, state)
       send(pid, {:membrane_buffer, [buffers, other_ref]})
       {:ok, state}
     else
@@ -238,8 +238,8 @@ defmodule Membrane.Core.Element.ActionHandler do
           [Buffer.t()] | Buffer.t(),
           State.t()
         ) :: State.t()
-  defp handle_buffer(pad_ref, :pull, other_demand_in, buffers, state) do
-    buf_size = Buffer.Metric.from_unit(other_demand_in).buffers_size(buffers)
+  defp handle_buffer(pad_ref, :pull, other_demand_unit, buffers, state) do
+    buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
 
     PadModel.update_data!(
       pad_ref,

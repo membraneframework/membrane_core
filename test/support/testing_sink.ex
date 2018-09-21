@@ -1,7 +1,7 @@
 defmodule Membrane.Integration.TestingSink do
   use Membrane.Element.Base.Sink
 
-  def_input_pads input: [demand_in: :buffers, caps: :any]
+  def_input_pads input: [demand_unit: :buffers, caps: :any]
 
   def_options target: [
                 type: :pid

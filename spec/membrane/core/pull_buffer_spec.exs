@@ -18,8 +18,8 @@ defmodule Membrane.Core.PullBufferSpec do
     let :preferred_size, do: 100
     let :min_demand, do: 10
     let :toilet, do: false
-    let :demand_in, do: :bytes
-    let :expected_metric, do: Buffer.Metric.from_unit(demand_in())
+    let :demand_unit, do: :bytes
+    let :expected_metric, do: Buffer.Metric.from_unit(demand_unit())
 
     let :props,
       do: [
@@ -29,7 +29,7 @@ defmodule Membrane.Core.PullBufferSpec do
       ]
 
     it "should return PullBuffer struct and send demand message" do
-      expect(described_module().new(name(), demand_pid(), input_ref(), demand_in(), props()))
+      expect(described_module().new(name(), demand_pid(), input_ref(), demand_unit(), props()))
       |> to(
         eq(%PullBuffer{
           name: name(),
@@ -54,7 +54,7 @@ defmodule Membrane.Core.PullBufferSpec do
       it "should not send the demand" do
         flush()
 
-        expect(described_module().new(name(), demand_pid(), input_ref(), demand_in(), props()))
+        expect(described_module().new(name(), demand_pid(), input_ref(), demand_unit(), props()))
         |> to(
           eq(%PullBuffer{
             name: name(),
