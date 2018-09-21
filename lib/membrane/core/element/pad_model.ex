@@ -21,8 +21,8 @@ defmodule Membrane.Core.Element.PadModel do
           required(:pid) => pid,
           required(:other_ref) => Pad.ref_t(),
           required(:caps) => Membrane.Caps.t(),
-          required(:sos) => boolean(),
-          required(:eos) => boolean(),
+          required(:start_of_stream) => boolean(),
+          required(:end_of_stream) => boolean(),
           optional(:sticky_messages) => [Membrane.Event.t()],
           optional(:buffer) => PullBuffer.t(),
           optional(:demand) => integer()

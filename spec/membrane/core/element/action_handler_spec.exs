@@ -1,7 +1,8 @@
 defmodule Membrane.Core.Element.ActionHandlerSpec do
   use ESpec, async: false
+  alias Membrane.Support.TestingEvent
   alias Membrane.Core.Element.State
-  alias Membrane.{Buffer, Event, Message}
+  alias Membrane.{Buffer, Message}
   alias Membrane.Core.{Playback, Element}
 
   describe "handle_action for buffer" do
@@ -20,7 +21,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
               pid: self(),
               other_ref: other_ref(),
               other_demand_in: :bytes,
-              eos: false,
+              end_of_stream: false,
               mode: :push
             }
           }
@@ -213,7 +214,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
               pid: self(),
               other_ref: other_ref(),
               other_demand_in: :bytes,
-              eos: false,
+              end_of_stream: false,
               mode: :push
             }
           }
@@ -222,7 +223,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
 
     let :pad_ref, do: :out
     let :payload, do: <<1, 2, 3, 4, 5>>
-    let :event, do: %Event{payload: payload()}
+    let :event, do: %TestingEvent{}
 
     context "when element is in a 'playing' state" do
       let :playback, do: %Playback{state: :playing}
@@ -293,7 +294,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
               other_ref: other_ref(),
               caps: nil,
               other_demand_in: :bytes,
-              eos: false,
+              end_of_stream: false,
               mode: :push,
               accepted_caps: :any
             }
