@@ -28,7 +28,7 @@ defmodule Membrane.Element.Base.Sink do
   For pads in push mode it is invoked when buffers arrive.
   """
   @callback handle_write_list(
-              pad :: Pad.name_t(),
+              pad :: Pad.ref_t(),
               buffers :: list(Buffer.t()),
               context :: CallbackContext.Write.t(),
               state :: Element.state_t()
@@ -41,7 +41,7 @@ defmodule Membrane.Element.Base.Sink do
   Called by default implementation of `c:handle_write_list/4`.
   """
   @callback handle_write(
-              pad :: Pad.name_t(),
+              pad :: Pad.ref_t(),
               buffer :: Buffer.t(),
               context :: CallbackContext.Write.t(),
               state :: Element.state_t()

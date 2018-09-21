@@ -60,8 +60,8 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     LifecycleController.handle_controlling_pid(pid, state)
   end
 
-  defp do_handle_message({:membrane_demand_in, [demand_in, pad_name]}, :call, state) do
-    LifecycleController.handle_demand_in(demand_in, pad_name, state)
+  defp do_handle_message({:membrane_demand_in, [demand_in, pad_ref]}, :call, state) do
+    LifecycleController.handle_demand_in(demand_in, pad_ref, state)
   end
 
   defp do_handle_message(:membrane_unlink, :call, state) do
@@ -70,8 +70,8 @@ defmodule Membrane.Core.Element.MessageDispatcher do
 
   # Sent by `Membrane.Core.Element.ActionHandler.handle_demand`, check there for
   # more information
-  defp do_handle_message({:membrane_invoke_supply_demand, pad_name}, :info, state) do
-    DemandHandler.supply_demand(pad_name, state)
+  defp do_handle_message({:membrane_invoke_supply_demand, pad_ref}, :info, state) do
+    DemandHandler.supply_demand(pad_ref, state)
   end
 
   # incoming demands, buffers, caps, events from other element
@@ -80,8 +80,8 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     {type, args} |> PlaybackBuffer.store(state)
   end
 
-  defp do_handle_message({:membrane_get_pad_full_name, pad_name}, :call, state) do
-    PadController.get_pad_full_name(pad_name, state)
+  defp do_handle_message({:membrane_get_pad_ref, pad_name}, :call, state) do
+    PadController.get_pad_ref(pad_name, state)
   end
 
   defp do_handle_message(:membrane_linking_finished, :call, state) do
@@ -89,15 +89,15 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   end
 
   defp do_handle_message(
-         {:membrane_handle_link, [pad_name, pad_direction, pid, other_name, props]},
+         {:membrane_handle_link, [pad_ref, pad_direction, pid, other_ref, props]},
          :call,
          state
        ) do
-    PadController.handle_link(pad_name, pad_direction, pid, other_name, props, state)
+    PadController.handle_link(pad_ref, pad_direction, pid, other_ref, props, state)
   end
 
-  defp do_handle_message({:membrane_handle_unlink, pad_name}, :call, state) do
-    PadController.handle_unlink(pad_name, state)
+  defp do_handle_message({:membrane_handle_unlink, pad_ref}, :call, state) do
+    PadController.handle_unlink(pad_ref, state)
   end
 
   defp do_handle_message(other, :info, state) do

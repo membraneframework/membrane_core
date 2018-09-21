@@ -30,7 +30,7 @@ defmodule Membrane.Element.Base.Filter do
   For pads in push mode it is invoked when buffers arrive.
   """
   @callback handle_process_list(
-              pad :: Pad.name_t(),
+              pad :: Pad.ref_t(),
               buffers :: list(Buffer.t()),
               context :: CallbackContext.Process.t(),
               state :: Element.state_t()
@@ -43,7 +43,7 @@ defmodule Membrane.Element.Base.Filter do
   Called by default implementation of `c:handle_process_list/4`.
   """
   @callback handle_process(
-              pad :: Pad.name_t(),
+              pad :: Pad.ref_t(),
               buffer :: Buffer.t(),
               context :: CallbackContext.Process.t(),
               state :: Element.state_t()

@@ -14,9 +14,14 @@ defmodule Membrane.Element.Pad do
   use Bunch.Typespec
 
   @typedoc """
-  Defines the term by which the pad is identified.
+  Defines the term by which the pad instance is identified.
   """
-  @type name_t :: atom | {:dynamic, atom, non_neg_integer}
+  @type ref_t :: atom | {:dynamic, atom, non_neg_integer}
+
+  @typedoc """
+  Defines the name of pad or group of dynamic pads
+  """
+  @type name_t :: atom
 
   @typedoc """
   Defines possible pad directions:
@@ -66,10 +71,12 @@ defmodule Membrane.Element.Pad do
   """
   @type availability_mode_t :: :static | :dynamic
 
-  defguard is_pad_name(term)
+  defguard is_pad_ref(term)
            when term |> is_atom or
                   (term |> is_tuple and term |> tuple_size == 3 and term |> elem(0) == :dynamic and
                      term |> elem(1) |> is_atom and term |> elem(2) |> is_integer)
+
+  defguard is_pad_name(term) when is_atom(term)
 
   defguard is_availability(term) when term in @availability_t
 
@@ -77,17 +84,22 @@ defmodule Membrane.Element.Pad do
   defguard is_availability_static(availability) when availability == :always
 
   @doc """
-  Returns pad availability mode by name.
+  Returns pad availability mode based on pad reference.
   """
-  @spec availability_mode_by_name(name_t) :: availability_mode_t
-  def availability_mode_by_name({:dynamic, _name, _id}), do: :dynamic
-  def availability_mode_by_name(name) when is_atom(name), do: :static
+  @spec availability_mode_by_ref(ref_t) :: availability_mode_t
+  def availability_mode_by_ref({:dynamic, _name, _id}), do: :dynamic
+  def availability_mode_by_ref(ref) when is_atom(ref), do: :static
 
   @doc """
   Returns pad availability mode for given availability.
   """
   @spec availability_mode(availability_t) :: availability_mode_t
   def availability_mode(:always), do: :static
-
   def availability_mode(:on_request), do: :dynamic
+
+  @doc """
+  Returns the name for the given pad reference
+  """
+  def name_by_ref({:dynamic, name, _id}) when is_pad_name(name), do: name
+  def name_by_ref(ref) when is_pad_name(ref), do: ref
 end

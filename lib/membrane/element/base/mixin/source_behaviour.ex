@@ -35,7 +35,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   callback.
   """
   @callback handle_demand(
-              pad :: Pad.name_t(),
+              pad :: Pad.ref_t(),
               size :: non_neg_integer,
               unit :: Buffer.Metric.unit_t(),
               context :: CallbackContext.Demand.t(),

@@ -11,19 +11,20 @@ defmodule Membrane.Core.Element.PadControllerSpec do
       State.new(module(), name()) |> PadSpecHandler.init_pads()
     end
 
-    context "when pad name is present in the element" do
+    context "when pad is present in the element" do
+      let :pad_ref, do: :source
       let :pad_name, do: :source
       let :direction, do: :source
-      let :other_name, do: :other_sink
+      let :other_ref, do: :other_sink
       let :props, do: %{}
 
       it "should return an ok result" do
         expect(
           described_module().handle_link(
-            pad_name(),
+            pad_ref(),
             direction(),
             self(),
-            other_name(),
+            other_ref(),
             props(),
             state()
           )
@@ -34,10 +35,10 @@ defmodule Membrane.Core.Element.PadControllerSpec do
       it "should remove given pad from pads.info" do
         {:ok, new_state} =
           described_module().handle_link(
-            pad_name(),
+            pad_ref(),
             direction(),
             self(),
-            other_name(),
+            other_ref(),
             props(),
             state()
           )
@@ -48,10 +49,10 @@ defmodule Membrane.Core.Element.PadControllerSpec do
       it "should not modify state except pads list" do
         {:ok, new_state} =
           described_module().handle_link(
-            pad_name(),
+            pad_ref(),
             direction(),
             self(),
-            other_name(),
+            other_ref(),
             props(),
             state()
           )
@@ -62,31 +63,31 @@ defmodule Membrane.Core.Element.PadControllerSpec do
       it "should add pad to the 'pads.data' list" do
         {:ok, new_state} =
           described_module().handle_link(
-            pad_name(),
+            pad_ref(),
             direction(),
             self(),
-            other_name(),
+            other_ref(),
             props(),
             state()
           )
 
-        expect(PadModel.assert_instance(pad_name(), new_state)) |> to(eq :ok)
+        expect(PadModel.assert_instance(pad_ref(), new_state)) |> to(eq :ok)
       end
     end
 
-    context "when pad name is not present in the element" do
-      let :pad_name, do: :invalid_name
+    context "when pad is not present in the element" do
+      let :pad_ref, do: :invalid_ref
       let :direction, do: :source
-      let :other_name, do: :other_sink
+      let :other_ref, do: :other_sink
       let :props, do: %{}
 
       it "should return an error result" do
         {result, _state} =
           described_module().handle_link(
-            pad_name(),
+            pad_ref(),
             direction(),
             self(),
-            other_name(),
+            other_ref(),
             props(),
             state()
           )

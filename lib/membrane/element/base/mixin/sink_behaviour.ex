@@ -18,7 +18,7 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   given pad. In filters those caps are forwarded through all source pads by default.
   """
   @callback handle_caps(
-              pad :: Pad.name_t(),
+              pad :: Pad.ref_t(),
               caps :: Membrane.Caps.t(),
               context :: CallbackContext.Caps.t(),
               state :: Element.state_t()

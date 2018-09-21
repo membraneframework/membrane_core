@@ -108,7 +108,7 @@ defmodule Membrane.ElementSpec do
         end
       end
 
-      context "but incorrect pad name is given" do
+      context "but incorrect pad ref is given" do
         let :server_module, do: TrivialSource
         let :destination_module, do: TrivialSink
 

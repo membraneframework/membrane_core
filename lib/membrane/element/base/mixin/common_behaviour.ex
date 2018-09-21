@@ -110,7 +110,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   ONLY for dynamic pads.
   """
   @callback handle_pad_added(
-              pad :: Pad.name_t(),
+              pad :: Pad.ref_t(),
               context :: CallbackContext.PadAdded.t(),
               state :: Element.state_t()
             ) :: callback_return_t
@@ -120,7 +120,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   ONLY for dynamic pads.
   """
   @callback handle_pad_removed(
-              pad :: Pad.name_t(),
+              pad :: Pad.ref_t(),
               context :: CallbackContext.PadRemoved.t(),
               state :: Element.state_t()
             ) :: callback_return_t
@@ -131,7 +131,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   respectively.
   """
   @callback handle_event(
-              pad :: Pad.name_t(),
+              pad :: Pad.ref_t(),
               event :: Event.type_t(),
               context :: CallbackContext.Event.t(),
               state :: Element.state_t()
