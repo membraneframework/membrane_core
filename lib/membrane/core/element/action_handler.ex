@@ -92,18 +92,18 @@ defmodule Membrane.Core.Element.ActionHandler do
     send_caps(pad_ref, caps, state)
   end
 
-  defp do_handle_action({:redemand, src_refs}, cb, params, state)
-       when is_list(src_refs) do
-    src_refs
-    |> Bunch.Enum.try_reduce(state, fn src_ref, state ->
-      do_handle_action({:redemand, src_ref}, cb, params, state)
+  defp do_handle_action({:redemand, out_refs}, cb, params, state)
+       when is_list(out_refs) do
+    out_refs
+    |> Bunch.Enum.try_reduce(state, fn out_ref, state ->
+      do_handle_action({:redemand, out_ref}, cb, params, state)
     end)
   end
 
-  defp do_handle_action({:redemand, src_ref}, cb, _params, %State{type: type} = state)
-       when type in [:source, :filter] and is_pad_ref(src_ref) and
+  defp do_handle_action({:redemand, out_ref}, cb, _params, %State{type: type} = state)
+       when type in [:source, :filter] and is_pad_ref(out_ref) and
               cb not in [:handle_process_list] do
-    handle_redemand(src_ref, state)
+    handle_redemand(out_ref, state)
   end
 
   defp do_handle_action({:forward, data}, cb, params, %State{type: :filter} = state)
@@ -363,16 +363,16 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @spec handle_redemand(Pad.ref_t(), State.t()) :: State.stateful_try_t()
-  defp handle_redemand(src_ref, %{type: :source} = state) do
-    with :ok <- PadModel.assert_data(src_ref, %{direction: :output, mode: :pull}, state) do
-      DemandController.handle_demand(src_ref, 0, state)
+  defp handle_redemand(out_ref, %{type: :source} = state) do
+    with :ok <- PadModel.assert_data(out_ref, %{direction: :output, mode: :pull}, state) do
+      DemandController.handle_demand(out_ref, 0, state)
     else
       {:error, reason} -> handle_pad_error(reason, state)
     end
   end
 
-  defp handle_redemand(src_ref, %{type: :filter} = state) do
-    with :ok <- PadModel.assert_data(src_ref, %{direction: :output, mode: :pull}, state) do
+  defp handle_redemand(out_ref, %{type: :filter} = state) do
+    with :ok <- PadModel.assert_data(out_ref, %{direction: :output, mode: :pull}, state) do
       can_demand_be_supplied =
         PadModel.filter_refs_by_data(%{direction: :input}, state)
         |> Enum.any?(fn pad ->
@@ -383,7 +383,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         end)
 
       if can_demand_be_supplied do
-        DemandController.handle_demand(src_ref, 0, state)
+        DemandController.handle_demand(out_ref, 0, state)
       else
         {:ok, state}
       end
