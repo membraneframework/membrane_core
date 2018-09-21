@@ -14,7 +14,7 @@ defmodule Membrane.Pipeline.State do
   @type t :: %__MODULE__{
           internal_state: internal_state_t | nil,
           playback: Playback.t(),
-          module: module | nil,
+          module: module,
           children: children_t,
           pending_pids: MapSet.t(pid),
           terminating?: boolean

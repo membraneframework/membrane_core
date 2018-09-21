@@ -71,33 +71,13 @@ defmodule Membrane.Element.Action do
   or `c:Membrane.Element.Base.Sink.handle_write_list/4` callback. Invoked callback is
   guaranteed not to receive more data than demanded.
 
-  Depending on element type and callback, it may contain different payloads or
-  behave differently:
-
-  In sinks:
-  - Payload `{pad, size}` increases demand on given pad by given size.
-  - Payload `{pad, {:set_to, size}}` erases current demand and sets it to given size.
-
-  In filters:
-  - Payload `{pad, size}` is only allowed from
-  `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` callback. It overrides
-  current demand.
-  - Payload `{pad, {:output, demanding_output_pad}, size}` can be returned from
-  any callback. `demanding_output_pad` is a pad which is to receive demanded
-  buffers after they are processed.
-  - Payload `{pad, :self, size}` makes demand act as if element was a sink,
-  that is extends demand on a given pad. Buffers received as a result of the
-  demand should be consumed by element itself or sent through a pad in `push` mode.
+  Demand size can be either a non-negative integer, that overrides existing demand,
+  or a function that is passed current demand, and is to return the new demand.
 
   Allowed only when playback state is playing.
   """
-  @type demand_t ::
-          {:demand, demand_common_payload_t | demand_filter_payload_t | demand_sink_payload_t}
-
-  @type demand_filter_payload_t ::
-          {Pad.ref_t(), {:output, Pad.ref_t()} | :self, size :: non_neg_integer}
-  @type demand_sink_payload_t :: {Pad.ref_t(), {:set_to, size :: non_neg_integer}}
-  @type demand_common_payload_t :: Pad.ref_t() | {Pad.ref_t(), size :: non_neg_integer}
+  @type demand_t :: {:demand, {Pad.ref_t(), demand_size_t}}
+  @type demand_size_t :: pos_integer | (pos_integer() -> non_neg_integer())
 
   @typedoc """
   Executes `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` callback with
