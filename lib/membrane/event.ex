@@ -18,5 +18,5 @@ defmodule Membrane.Event do
 
   defdelegate sticky?(event), to: EventProtocol
 
-  defdelegate synchronized?(event), to: EventProtocol
+  defdelegate async?(event), to: EventProtocol
 end

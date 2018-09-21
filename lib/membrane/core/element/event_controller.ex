@@ -20,7 +20,7 @@ defmodule Membrane.Core.Element.EventController do
   def handle_event(pad_ref, event, state) do
     pad_data = PadModel.get_data!(pad_ref, state)
 
-    if event |> Event.synchronized?() && pad_data.mode == :pull && pad_data.direction == :input &&
+    if not Event.async?(event) && pad_data.mode == :pull && pad_data.direction == :input &&
          pad_data.buffer |> PullBuffer.empty?() |> Kernel.not() do
       PadModel.update_data(
         pad_ref,

@@ -19,15 +19,15 @@ defprotocol Membrane.EventProtocol do
   def sticky?(_event)
 
   @doc """
-  Determines whether event is synchronized with buffers. Defaults to true.
+  Determines whether event is synchronized with buffers (sync) or not (async).
+  Defaults to false (sync).
 
-  Buffers and synchronized events are always received in the same order they are
-  sent. Non-synchronized events skip buffers waiting in internal buffers
-  (such as `Membrane.PullBuffer`) and are handled first. In other words,
-  they have priority over buffers.
+  Buffers and sync events are always received in the same order they are
+  sent. Async events are handled before any enqueued buffers that are waiting to
+  be processed (e.g. in `Membrane.PullBuffer`).
   """
-  @spec synchronized?(t) :: boolean
-  def synchronized?(_event)
+  @spec async?(t) :: boolean
+  def async?(_event)
 end
 
 defmodule Membrane.EventProtocol.DefaultImpl do
@@ -42,9 +42,9 @@ defmodule Membrane.EventProtocol.DefaultImpl do
       def sticky?(_event), do: false
 
       @impl true
-      def synchronized?(_event), do: true
+      def async?(_event), do: false
 
-      defoverridable synchronized?: 1, sticky?: 1
+      defoverridable async?: 1, sticky?: 1
     end
   end
 end
