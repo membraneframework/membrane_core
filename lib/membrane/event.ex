@@ -12,6 +12,10 @@ defmodule Membrane.Event do
 
   @type t :: EventProtocol.t()
 
+  def event?(event) do
+    EventProtocol.impl_for(event) != nil
+  end
+
   defdelegate sticky?(event), to: EventProtocol
 
   defdelegate synchronized?(event), to: EventProtocol

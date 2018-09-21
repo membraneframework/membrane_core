@@ -402,11 +402,13 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     )
 
-    withl pad: {:ok, %{pid: pid, other_ref: other_ref}} <- PadModel.get_data(pad_ref, state),
+    withl event: true <- event |> Event.event?(),
+          pad: {:ok, %{pid: pid, other_ref: other_ref}} <- PadModel.get_data(pad_ref, state),
           handler: {:ok, state} <- handle_event(pad_ref, event, state) do
       send(pid, {:membrane_event, [event, other_ref]})
       {:ok, state}
     else
+      event: false -> {{:error, {:invalid_event, event}}, state}
       pad: {:error, reason} -> handle_pad_error(reason, state)
       handler: {{:error, reason}, state} -> {{:error, reason}, state}
     end
