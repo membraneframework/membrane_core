@@ -3,7 +3,7 @@ defmodule Membrane.Integration.TestingSource do
   alias Membrane.Buffer
   use Bunch
 
-  def_output_pads out: [caps: :any]
+  def_output_pads output: [caps: :any]
 
   def_options actions_generator: [
                 type: :function,
@@ -18,7 +18,7 @@ defmodule Membrane.Integration.TestingSource do
 
   @impl true
   def handle_demand(
-        :out,
+        :output,
         size,
         :buffers,
         _ctx,
@@ -34,7 +34,7 @@ defmodule Membrane.Integration.TestingSource do
     |> Enum.map(fn cnt ->
       buf = %Buffer{payload: <<cnt::16>>}
 
-      {:buffer, {:out, buf}}
+      {:buffer, {:output, buf}}
     end)
     ~> {&1, cnt + size}
   end

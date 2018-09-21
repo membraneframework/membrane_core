@@ -8,7 +8,7 @@ defmodule Membrane.Support.Element.TrivialSource do
   use Membrane.Element.Base.Source
   use Bunch
 
-  def_output_pads out: [caps: :any]
+  def_output_pads output: [caps: :any]
 
   @impl true
   def handle_init(_options) do
@@ -16,12 +16,12 @@ defmodule Membrane.Support.Element.TrivialSource do
   end
 
   @impl true
-  def handle_demand(:out, size, :buffers, %Ctx.Demand{}, %{cnt: cnt} = state) do
+  def handle_demand(:output, size, :buffers, %Ctx.Demand{}, %{cnt: cnt} = state) do
     buffers =
       1..size
       |> Enum.map(fn cnt ->
         {:buffer,
-         {:out, %Membrane.Buffer{payload: cnt |> Integer.digits() |> IO.iodata_to_binary()}}}
+         {:output, %Membrane.Buffer{payload: cnt |> Integer.digits() |> IO.iodata_to_binary()}}}
       end)
 
     {{:ok, buffers}, %{state | cnt: cnt + size}}
