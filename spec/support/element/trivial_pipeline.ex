@@ -11,8 +11,8 @@ defmodule Membrane.Support.Element.TrivialPipeline do
     ]
 
     links = %{
-      {:producer, :source} => {:filter, :sink, pull_buffer: [preferred_size: 10]},
-      {:filter, :source} => {:consumer, :sink, pull_buffer: [preferred_size: 10]}
+      {:producer, :output} => {:filter, :input, pull_buffer: [preferred_size: 10]},
+      {:filter, :output} => {:consumer, :input, pull_buffer: [preferred_size: 10]}
     }
 
     spec = %Pipeline.Spec{

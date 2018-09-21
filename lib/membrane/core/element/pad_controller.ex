@@ -77,7 +77,7 @@ defmodule Membrane.Core.Element.PadController do
   """
   @spec handle_unlink(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   def handle_unlink(pad_ref, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :sink}, state)
+    PadModel.assert_data!(pad_ref, %{direction: :input}, state)
 
     with {:ok, state} <- generate_eos_if_not_received(pad_ref, state),
          {:ok, state} <- handle_pad_removed(pad_ref, state),
@@ -159,29 +159,29 @@ defmodule Membrane.Core.Element.PadController do
     state |> Bunch.Struct.put_in([:pads, :data, ref], data)
   end
 
-  defp init_pad_direction_data(%{direction: :sink}, _props, _state), do: %{sticky_messages: []}
-  defp init_pad_direction_data(%{direction: :source}, _props, _state), do: %{}
+  defp init_pad_direction_data(%{direction: :input}, _props, _state), do: %{sticky_messages: []}
+  defp init_pad_direction_data(%{direction: :output}, _props, _state), do: %{}
 
-  defp init_pad_mode_data(%{mode: :pull, direction: :sink} = data, props, state) do
-    %{pid: pid, other_ref: other_ref, demand_in: demand_in} = data
+  defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, props, state) do
+    %{pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
 
     :ok =
       pid
-      |> GenServer.call({:membrane_demand_in, [demand_in, other_ref]})
+      |> GenServer.call({:membrane_demand_unit, [demand_unit, other_ref]})
 
     pb =
       PullBuffer.new(
         state.name,
         pid,
         other_ref,
-        demand_in,
+        demand_unit,
         props[:pull_buffer] || %{}
       )
 
     %{buffer: pb, demand: 0}
   end
 
-  defp init_pad_mode_data(%{mode: :pull, direction: :source}, _props, _state), do: %{demand: 0}
+  defp init_pad_mode_data(%{mode: :pull, direction: :output}, _props, _state), do: %{demand: 0}
 
   defp init_pad_mode_data(%{mode: :push}, _props, _state), do: %{}
 

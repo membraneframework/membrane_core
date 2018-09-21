@@ -64,8 +64,8 @@ espec_locals_without_parens = [
 ]
 
 locals_without_parens = [
-  def_source_pads: 1,
-  def_sink_pads: 1,
+  def_output_pads: 1,
+  def_input_pads: 1,
   def_options: 1,
   def_type_from_list: 1
 ] ++ espec_locals_without_parens

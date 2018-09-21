@@ -12,7 +12,7 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
           availability: Pad.availability_t(),
           mode: Pad.mode_t(),
           caps: Caps.Matcher.caps_specs_t(),
-          demand_in: Buffer.Metric.unit_t()
+          demand_unit: Buffer.Metric.unit_t()
         }
 
   @doc """
@@ -63,8 +63,8 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
   end
 
   @doc """
-  Parses pads specifications defined with `Membrane.Element.Base.Mixin.SourceBehaviour.def_source_pads/1`
-  or `Membrane.Element.Base.Mixin.SinkBehaviour.def_sink_pads/1`.
+  Parses pads specifications defined with `Membrane.Element.Base.Mixin.SourceBehaviour.def_output_pads/1`
+  or `Membrane.Element.Base.Mixin.SinkBehaviour.def_input_pads/1`.
   """
   @spec parse_pads_specs!(
           specs :: [Element.pad_specs_t()],
@@ -112,9 +112,9 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
                 availability: [in: [:always, :on_request], default: :always],
                 caps: [validate: &Caps.Matcher.validate_specs/1],
                 mode: [in: [:pull, :push], default: :pull],
-                demand_in: [
+                demand_unit: [
                   in: [:buffers, :bytes],
-                  require_if: &(&1.mode == :pull and direction == :sink)
+                  require_if: &(&1.mode == :pull and direction == :input)
                 ]
               ) do
       {:ok, {name, config}}

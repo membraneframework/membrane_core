@@ -19,7 +19,7 @@ defmodule Membrane.Element.Action do
   @type message_t :: {:message, Message.t()}
 
   @typedoc """
-  Sends an event through a pad (sink or source).
+  Sends an event through a pad (input or output).
 
   Forbidden when playback state is stopped.
   """
@@ -47,7 +47,7 @@ defmodule Membrane.Element.Action do
   @type split_t :: {:split, {callback_name :: atom, args_list :: [[any]]}}
 
   @typedoc """
-  Sends caps through a pad (it must be source pad). Sended caps must fit
+  Sends caps through a pad (it must be output pad). Sended caps must fit
   constraints on the pad.
 
   Forbidden when playback state is stopped.
@@ -55,14 +55,14 @@ defmodule Membrane.Element.Action do
   @type caps_t :: {:caps, {Pad.ref_t(), Caps.t()}}
 
   @typedoc """
-  Sends buffers through a pad (it must be source pad).
+  Sends buffers through a pad (it must be output pad).
 
   Allowed only when playback state is playing.
   """
   @type buffer_t :: {:buffer, {Pad.ref_t(), Buffer.t() | [Buffer.t()]}}
 
   @typedoc """
-  Makes a demand on a pad (it must be sink pad in pull mode). It does NOT
+  Makes a demand on a pad (it must be input pad in pull mode). It does NOT
   entail _sending_ demand through the pad, but just _requesting_ some amount
   of data from `Membrane.Core.PullBuffer`, which _sends_ demands automatically when it
   runs out of data.
@@ -81,7 +81,7 @@ defmodule Membrane.Element.Action do
 
   @typedoc """
   Executes `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` callback with
-  given pad (which must be a source pad in pull mode) if this demand is greater
+  given pad (which must be a output pad in pull mode) if this demand is greater
   than 0.
 
   Useful when demand could not have been supplied when previous call to
@@ -94,8 +94,8 @@ defmodule Membrane.Element.Action do
   @type redemand_t :: {:redemand, Pad.ref_t()}
 
   @typedoc """
-  Sends buffers/caps/event to all source pads of element (or to sink pads when
-  event occurs on the source pad). Used by default implementations of
+  Sends buffers/caps/event to all output pads of element (or to input pads when
+  event occurs on the output pad). Used by default implementations of
   `c:Membrane.Element.Base.Mixin.SinkBehaviour.handle_caps/4` and
   `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_event/4` callbacks in filter.
 

@@ -1,6 +1,6 @@
 defmodule Membrane.Core.Element.CapsController do
   @moduledoc false
-  # Module handling caps infoming through sink pads.
+  # Module handling caps received on input pads.
 
   alias Membrane.{Caps, Core, Element}
   alias Core.{CallbackHandler, PullBuffer}
@@ -16,7 +16,7 @@ defmodule Membrane.Core.Element.CapsController do
   """
   @spec handle_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.stateful_try_t()
   def handle_caps(pad_ref, caps, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :sink}, state)
+    PadModel.assert_data!(pad_ref, %{direction: :input}, state)
     data = PadModel.get_data!(pad_ref, state)
 
     if data.mode == :pull and not (data.buffer |> PullBuffer.empty?()) do
@@ -51,7 +51,7 @@ defmodule Membrane.Core.Element.CapsController do
       match: false ->
         warn_error(
           """
-          Received caps: #{inspect(caps)} that are not specified in def_sink_pads
+          Received caps: #{inspect(caps)} that are not specified in def_input_pads
           for pad #{inspect(pad_ref)}. Specs of accepted caps are:
           #{inspect(accepted_caps, pretty: true)}
           """,

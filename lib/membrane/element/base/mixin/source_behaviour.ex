@@ -16,8 +16,8 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   @doc """
   Callback that is called when buffers should be emitted by the source or filter.
 
-  It will be called only for source pads in the pull mode, as in their case demand
-  is triggered by the sinks of the subsequent elements.
+  It will be called only for output pads in the pull mode, as in their case demand
+  is triggered by the input pad of the subsequent element.
 
   In source elements, appropriate amount of data should be sent here. If it happens
   not to be yet available, element should store unsupplied demand and supply it
@@ -29,9 +29,9 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   `c:Membrane.Element.Base.Sink.handle_write_list/4`, which is to supply
   the demand. If it does not, or does only partially,
   `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` is called
-  again, until there is any data available on the sink pad.
+  again, until there is any data available on the input pad.
 
-  For sources in the push mode, element should generate buffers without this
+  For output pads in the push mode, element should generate buffers without this
   callback.
   """
   @callback handle_demand(
@@ -43,7 +43,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
             ) :: CommonBehaviour.callback_return_t()
 
   @doc """
-  Macro that defines known source pads for the element type.
+  Macro that defines known output pads for the element type.
 
   Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
   without module prefix.
@@ -51,15 +51,15 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   It automatically generates documentation from the given definition
   and adds compile-time caps specs validation.
   """
-  defmacro def_source_pads(pads) do
-    PadsSpecsParser.def_pads(pads, :source)
+  defmacro def_output_pads(pads) do
+    PadsSpecsParser.def_pads(pads, :output)
   end
 
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 
-      import unquote(__MODULE__), only: [def_source_pads: 1]
+      import unquote(__MODULE__), only: [def_output_pads: 1]
     end
   end
 end
