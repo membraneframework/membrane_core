@@ -114,9 +114,8 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
            |> Bunch.Enum.try_reduce(state, fn msg, st -> msg.(st) end) do
       {:ok, state} =
         cond do
-          PadModel.get_data!(pad_ref, :sos, state) |> Kernel.not() ->
-            event = %{Event.sos() | payload: :auto_sos}
-            EventController.handle_event(pad_ref, event, state)
+          PadModel.get_data!(pad_ref, :start_of_stream, state) |> Kernel.not() ->
+            EventController.handle_event(pad_ref, %Event.StartOfStream{}, state)
 
           true ->
             {:ok, state}
@@ -157,18 +156,16 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
       EventController.handle_event(pad_ref, event, state)
     end
 
-    case event.stick_to do
-      :nothing ->
-        do_exec.(state)
-
-      :buffer ->
-        PadModel.update_data!(
-          pad_ref,
-          :sticky_messages,
-          &[do_exec | &1],
-          state
-        )
-        ~> (state -> {:ok, state})
+    if event |> Event.sticky?() do
+      PadModel.update_data!(
+        pad_ref,
+        :sticky_messages,
+        &[do_exec | &1],
+        state
+      )
+      ~> {:ok, &1}
+    else
+      do_exec.(state)
     end
   end
 end

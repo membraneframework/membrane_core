@@ -132,7 +132,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_event(
               pad :: Pad.ref_t(),
-              event :: Event.type_t(),
+              event :: Event.t(),
               context :: CallbackContext.Event.t(),
               state :: Element.state_t()
             ) :: callback_return_t

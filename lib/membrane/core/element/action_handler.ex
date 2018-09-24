@@ -219,7 +219,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     )
 
-    with :ok <- PadModel.assert_data(pad_ref, %{direction: :output, eos: false}, state) do
+    with :ok <- PadModel.assert_data(pad_ref, %{direction: :output, end_of_stream: false}, state) do
       %{mode: mode, pid: pid, other_ref: other_ref, other_demand_unit: other_demand_unit} =
         PadModel.get_data!(pad_ref, state)
 
@@ -402,23 +402,28 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     )
 
-    withl pad: {:ok, %{pid: pid, other_ref: other_ref}} <- PadModel.get_data(pad_ref, state),
+    withl event: true <- event |> Event.event?(),
+          pad: {:ok, %{pid: pid, other_ref: other_ref}} <- PadModel.get_data(pad_ref, state),
           handler: {:ok, state} <- handle_event(pad_ref, event, state) do
       send(pid, {:membrane_event, [event, other_ref]})
       {:ok, state}
     else
+      event: false -> {{:error, {:invalid_event, event}}, state}
       pad: {:error, reason} -> handle_pad_error(reason, state)
       handler: {{:error, reason}, state} -> {{:error, reason}, state}
     end
   end
 
   @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
-  defp handle_event(pad_ref, %Event{type: :eos}, state) do
-    with %{direction: :output, eos: false} <- PadModel.get_data!(pad_ref, state) do
-      {:ok, PadModel.set_data!(pad_ref, :eos, true, state)}
+  defp handle_event(pad_ref, %Event.EndOfStream{}, state) do
+    with %{direction: :output, end_of_stream: false} <- PadModel.get_data!(pad_ref, state) do
+      {:ok, PadModel.set_data!(pad_ref, :end_of_stream, true, state)}
     else
-      %{direction: :input} -> {{:error, {:cannot_send_eos_through_input, pad_ref}}, state}
-      %{eos: true} -> {{:error, {:eos_already_sent, pad_ref}}, state}
+      %{direction: :input} ->
+        {{:error, {:cannot_send_end_of_stream_through_input, pad_ref}}, state}
+
+      %{end_of_stream: true} ->
+        {{:error, {:end_of_stream_already_sent, pad_ref}}, state}
     end
   end
 

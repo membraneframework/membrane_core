@@ -150,8 +150,8 @@ defmodule Membrane.Core.Element.PadController do
         pid: pid,
         other_ref: other_ref,
         caps: nil,
-        sos: false,
-        eos: false
+        start_of_stream: false,
+        end_of_stream: false
       })
 
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
@@ -195,14 +195,10 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec generate_eos_if_not_received(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   defp generate_eos_if_not_received(pad_ref, state) do
-    if PadModel.get_data!(pad_ref, :eos, state) do
+    if PadModel.get_data!(pad_ref, :end_of_stream, state) do
       {:ok, state}
     else
-      EventController.handle_event(
-        pad_ref,
-        %{Event.eos() | payload: :auto_eos, mode: :async},
-        state
-      )
+      EventController.exec_handle_event(pad_ref, %Event.EndOfStream{}, state)
     end
   end
 
