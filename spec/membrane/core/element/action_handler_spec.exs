@@ -481,28 +481,6 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         assert_received {:membrane_invoke_supply_demand, _}
       end
     end
-
-    context "when callback is other than 'handle_write_list' or 'handle_process_list'" do
-      before do
-        allow handler_module()
-              |> to(accept :update_demand, fn _, _, state -> {:ok, state} end)
-
-        allow handler_module()
-              |> to(accept :supply_demand, fn _, state -> {:ok, state} end)
-      end
-
-      it "should call handle_demand from DemandHandler module" do
-        described_module().handle_action(
-          action(),
-          callback(),
-          %{},
-          state()
-        )
-
-        expect(handler_module() |> to(accepted(:update_demand, :any, count: 1)))
-        expect(handler_module() |> to(accepted(:supply_demand, :any, count: 1)))
-      end
-    end
   end
 
   describe "handle_action for redemand" do
@@ -525,7 +503,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
             output: %{
               direction: pad_direction(),
               pid: self(),
-              mode: pad_mode()
+              mode: pad_mode(),
+              invoke_redemand: false
             }
           }
         }
@@ -556,14 +535,15 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     context "if given pad works in a pull mode" do
       let :pad_mode, do: :pull
 
-      before do
-        allow controller_module() |> to(accept :handle_demand, fn _, 0, state -> {:ok, state} end)
-      end
-
-      it "should call handle_redemand method of the given module" do
+      it "should set invoke_redemand in pad's data" do
         res = described_module().handle_action(action(), :handle_write_list, %{}, state())
-        expect(res |> to(eq {:ok, state()}))
-        expect(controller_module() |> to(accepted(:handle_demand, :any, count: 1)))
+
+        expected_state =
+          Bunch.Struct.update_in(state(), [:pads, :data, :output, :invoke_redemand], fn _ ->
+            true
+          end)
+
+        expect(res |> to(eq {:ok, expected_state}))
       end
     end
   end
@@ -586,11 +566,11 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         type: :source,
         pads: %{
           data: %{
-            demand: 0,
             output: %{
               direction: pad_direction(),
               pid: self(),
-              mode: pad_mode()
+              mode: pad_mode(),
+              invoke_redemand: false
             }
           }
         }
@@ -600,7 +580,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       allow controller_module() |> to(accept :handle_demand, fn _, 0, state -> {:ok, state} end)
     end
 
-    context "if :redemand is the last action" do
+    context "if actions contain :redemand" do
       let :actions, do: [message: message_a(), message: message_b(), redemand: :output]
 
       it "should handle all actions" do

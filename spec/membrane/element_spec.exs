@@ -158,7 +158,8 @@ defmodule Membrane.ElementSpec do
           module: module(),
           playback: playback(),
           playback_buffer: Membrane.Core.Element.PlaybackBuffer.new(),
-          internal_state: internal_state()
+          internal_state: internal_state(),
+          pads: %{data: %{}}
         }
 
       context "and current playback state is :stopped" do
@@ -493,7 +494,12 @@ defmodule Membrane.ElementSpec do
       let :internal_state, do: %{}
 
       let :state,
-        do: %State{module: module(), playback: playback(), internal_state: internal_state()}
+        do: %State{
+          module: module(),
+          playback: playback(),
+          internal_state: internal_state(),
+          pads: %{data: %{}}
+        }
 
       let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
 
@@ -694,7 +700,12 @@ defmodule Membrane.ElementSpec do
       let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
 
       let :state,
-        do: %State{module: module(), playback: playback(), internal_state: internal_state()}
+        do: %State{
+          module: module(),
+          playback: playback(),
+          internal_state: internal_state(),
+          pads: %{data: %{}}
+        }
 
       context "and current playback state is :playing" do
         let :playback, do: %Playback{state: :playing}

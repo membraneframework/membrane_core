@@ -9,7 +9,6 @@ defmodule Membrane.Core.Element.DemandHandler do
   alias Core.Element.{
     BufferController,
     CapsController,
-    DemandController,
     EventController,
     PadModel,
     State
@@ -73,34 +72,10 @@ defmodule Membrane.Core.Element.DemandHandler do
   def check_and_supply_demands(pad_ref, state) do
     demand = PadModel.get_data!(pad_ref, :demand, state)
 
-    supply_demand_res =
-      if demand > 0 do
-        do_supply_demand(pad_ref, demand, state)
-      else
-        {:ok, state}
-      end
-
-    case supply_demand_res do
-      {:ok, %State{type: :filter} = state} ->
-        is_pullbuffer_empty =
-          pad_ref
-          |> PadModel.get_data!(:buffer, state)
-          |> PullBuffer.empty?()
-
-        if is_pullbuffer_empty do
-          {:ok, state}
-        else
-          PadModel.filter_refs_by_data(%{direction: :output}, state)
-          |> Bunch.Enum.try_reduce(state, fn ref, st ->
-            DemandController.handle_demand(ref, 0, st)
-          end)
-        end
-
-      {:ok, %State{type: :sink} = state} ->
-        {:ok, state}
-
-      {{:error, reason}, state} ->
-        {{:error, reason}, state}
+    if demand > 0 do
+      do_supply_demand(pad_ref, demand, state)
+    else
+      {:ok, state}
     end
   end
 

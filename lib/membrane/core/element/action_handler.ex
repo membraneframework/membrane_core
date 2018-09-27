@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   alias Membrane.{Buffer, Caps, Core, Element, Event, Message}
   alias Core.Element.{DemandController, LifecycleController, DemandHandler, PadModel, State}
-  alias Core.{PlaybackHandler, PullBuffer}
+  alias Core.PlaybackHandler
   alias Element.{Action, Pad}
   require PadModel
   import Element.Pad, only: [is_pad_ref: 1]
@@ -63,7 +63,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       callback,
       cb,
       __MODULE__,
-      params,
+      params |> Map.merge(%{skip_invoking_redemands: true}),
       args_list,
       state
     )
@@ -102,7 +102,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp do_handle_action({:redemand, out_ref}, cb, _params, %State{type: type} = state)
        when type in [:source, :filter] and is_pad_ref(out_ref) and
-              cb not in [:handle_process_list] do
+              {type, cb} != {:filter, :handle_demand} do
     handle_redemand(out_ref, state)
   end
 
@@ -161,12 +161,13 @@ defmodule Membrane.Core.Element.ActionHandler do
     if actions_after_redemand != [] do
       {{:error, :actions_after_redemand}, state}
     else
-      super(
-        actions |> join_buffers(),
-        callback,
-        handler_params,
-        state
-      )
+      case super(actions |> join_buffers(), callback, handler_params, state) do
+        {:ok, state} ->
+          invoke_redemands(state, handler_params)
+
+        {:error, reason} ->
+          {:error, reason}
+      end
     end
   end
 
@@ -339,54 +340,35 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
   end
 
-  defp handle_demand(pad_ref, size, callback, state) do
+  defp handle_demand(pad_ref, size, _callback, state) do
     input_assertion = PadModel.assert_data(pad_ref, %{direction: :input, mode: :pull}, state)
 
     with {:ok, state} <- {input_assertion, state},
          {:ok, state} <- DemandHandler.update_demand(pad_ref, size, state) do
-      if callback in [:handle_write_list, :handle_process_list] do
-        # Handling demand results in execution of handle_write_list/handle_process_list,
-        # wherefore demand returned by one of these callbacks may lead to
-        # emergence of a loop. This, in turn, could result in consuming entire
-        # contents of PullBuffer before accepting any messages from other
-        # processes. As such situation is unwanted, a message to self is sent here
-        # to make it possible for messages already enqueued in mailbox to be
-        # received before the demand is handled.
-        send(self(), {:membrane_invoke_supply_demand, pad_ref})
-        {:ok, state}
-      else
-        DemandHandler.supply_demand(pad_ref, state)
-      end
+      # Invoking :handle_demand callback can result in execution of :handle_write_list
+      # or :handle_event, etc. In case when the current callback is handling part of
+      # the list returned from the pullbuffer it can lead to changing order of the data
+      # (new chunks could be taken from the pull buffer and processed too early).
+      # Therefore, it is safer to always invoke :handle_demand asynchronously, because it
+      # will be guaranteed that the processing of the current data will be finished.
+      send(self(), {:membrane_invoke_supply_demand, pad_ref})
+      {:ok, state}
     else
       {{:error, reason}, state} -> handle_pad_error(reason, state)
     end
   end
 
   @spec handle_redemand(Pad.ref_t(), State.t()) :: State.stateful_try_t()
-  defp handle_redemand(out_ref, %{type: :source} = state) do
-    with :ok <- PadModel.assert_data(out_ref, %{direction: :output, mode: :pull}, state) do
-      DemandController.handle_demand(out_ref, 0, state)
-    else
-      {:error, reason} -> handle_pad_error(reason, state)
-    end
-  end
-
-  defp handle_redemand(out_ref, %{type: :filter} = state) do
-    with :ok <- PadModel.assert_data(out_ref, %{direction: :output, mode: :pull}, state) do
-      can_demand_be_supplied =
-        PadModel.filter_refs_by_data(%{direction: :input}, state)
-        |> Enum.any?(fn pad ->
-          pad
-          |> PadModel.get_data!(:buffer, state)
-          |> PullBuffer.empty?()
-          |> Kernel.not()
-        end)
-
-      if can_demand_be_supplied do
-        DemandController.handle_demand(out_ref, 0, state)
-      else
-        {:ok, state}
-      end
+  defp handle_redemand(out_ref, %{type: type} = state) when type in [:source, :filter] do
+    with :ok <- PadModel.assert_data(out_ref, %{direction: :output, mode: :pull}, state),
+         {:ok, state} <-
+           PadModel.set_data(
+             out_ref,
+             :invoke_redemand,
+             true,
+             state
+           ) do
+      {:ok, state}
     else
       {:error, reason} -> handle_pad_error(reason, state)
     end
@@ -438,6 +420,35 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp send_message(%Message{} = message, %State{message_bus: message_bus, name: name} = state) do
     debug("Sending message #{inspect(message)} (message bus: #{inspect(message_bus)})", state)
     send(message_bus, [:membrane_message, name, message])
+    {:ok, state}
+  end
+
+  @spec invoke_redemands(State.t(), CallbackHandler.handler_params_t()) :: State.stateful_try_t()
+  defp invoke_redemands(%State{} = state, %{skip_invoking_redemands: true}), do: {:ok, state}
+
+  defp invoke_redemands(%State{} = state, _params) do
+    state =
+      PadModel.filter_refs_by_data(%{direction: :output}, state)
+      |> Enum.reduce(
+        state,
+        fn pad_ref, state ->
+          {invoke_redemand?, state} =
+            PadModel.get_and_update_data!(
+              pad_ref,
+              :invoke_redemand,
+              fn val -> {val, false} end,
+              state
+            )
+
+          if invoke_redemand? do
+            {:ok, state} = DemandController.handle_demand(pad_ref, 0, state)
+            state
+          else
+            state
+          end
+        end
+      )
+
     {:ok, state}
   end
 
