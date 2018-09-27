@@ -58,17 +58,16 @@ defmodule Membrane.Integration.DemandsTest do
   test "Pipeline with source not generating enough buffers" do
     alias Membrane.Buffer
 
-    actions_gen =
-      fn cnt, _size ->
-        cnt..(4 + cnt - 1)
-        |> Enum.map(fn cnt ->
-          buf = %Buffer{payload: <<cnt :: 16>>}
+    actions_gen = fn cnt, _size ->
+      cnt..(4 + cnt - 1)
+      |> Enum.map(fn cnt ->
+        buf = %Buffer{payload: <<cnt::16>>}
 
-          {:buffer, {:output, buf}}
-        end)
-        |> Enum.concat([redemand: :output])
-        ~> {&1, cnt + 4}
-      end
+        {:buffer, {:output, buf}}
+      end)
+      |> Enum.concat(redemand: :output)
+      ~> {&1, cnt + 4}
+    end
 
     assert {:ok, pid} =
              Pipeline.start_link(TestingPipeline, %{
