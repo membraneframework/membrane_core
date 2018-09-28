@@ -580,7 +580,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
       allow controller_module() |> to(accept :handle_demand, fn _, 0, state -> {:ok, state} end)
     end
 
-    context "if actions contain :redemand" do
+    context "if :redemand is the last action" do
       let :actions, do: [message: message_a(), message: message_b(), redemand: :output]
 
       it "should handle all actions" do

@@ -427,29 +427,22 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp invoke_redemands(%State{} = state, %{skip_invoking_redemands: true}), do: {:ok, state}
 
   defp invoke_redemands(%State{} = state, _params) do
-    state =
-      PadModel.filter_refs_by_data(%{direction: :output}, state)
-      |> Enum.reduce(
-        state,
-        fn pad_ref, state ->
-          {invoke_redemand?, state} =
-            PadModel.get_and_update_data!(
-              pad_ref,
-              :invoke_redemand,
-              fn val -> {val, false} end,
-              state
-            )
+    PadModel.filter_refs_by_data(%{direction: :output}, state)
+    |> Bunch.Enum.try_reduce(state, fn pad_ref, state ->
+      {invoke_redemand?, state} =
+        PadModel.get_and_update_data!(
+          pad_ref,
+          :invoke_redemand,
+          fn val -> {val, false} end,
+          state
+        )
 
-          if invoke_redemand? do
-            {:ok, state} = DemandController.handle_demand(pad_ref, 0, state)
-            state
-          else
-            state
-          end
-        end
-      )
-
-    {:ok, state}
+      if invoke_redemand? do
+        DemandController.handle_demand(pad_ref, 0, state)
+      else
+        {:ok, state}
+      end
+    end)
   end
 
   @spec handle_pad_error({reason :: atom, details :: any}, State.t()) ::
