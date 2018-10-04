@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.EventController do
   @moduledoc false
   # Module handling events incoming through input pads.
 
-  alias Membrane.{Core, Element, Event}
+  alias Membrane.{Core, Element, Event, Message}
   alias Core.{CallbackHandler, PullBuffer}
   alias Core.Element.{ActionHandler, PadModel, State}
   alias Element.{CallbackContext, Pad}
@@ -36,7 +36,8 @@ defmodule Membrane.Core.Element.EventController do
   @spec exec_handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
   def exec_handle_event(pad_ref, event, state) do
     withl handle: {{:ok, :handle}, state} <- handle_special_event(pad_ref, event, state),
-          exec: {:ok, state} <- do_exec_handle_event(pad_ref, event, state) do
+          exec: {:ok, state} <- do_exec_handle_event(pad_ref, event, state),
+          exec: {:ok, state} <- post_callback_exec(event, state) do
       {:ok, state}
     else
       handle: {{:ok, :ignore}, state} ->
@@ -98,4 +99,15 @@ defmodule Membrane.Core.Element.EventController do
   end
 
   defp handle_special_event(_pad_ref, _event, state), do: {{:ok, :handle}, state}
+
+  defp post_callback_exec(%Event.EndOfStream{}, %{type: :sink} = state) do
+    ActionHandler.handle_action(
+      {:message, %Message{type: :end_of_stream}},
+      :handle_event,
+      %{},
+      state
+    )
+  end
+
+  defp post_callback_exec(_event, state), do: {:ok, state}
 end
