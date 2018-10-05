@@ -165,8 +165,8 @@ defmodule Membrane.Core.Element.ActionHandler do
         {:ok, state} ->
           invoke_redemands(state, handler_params)
 
-        {:error, reason} ->
-          {:error, reason}
+        {{:error, reason}, state} ->
+          {{:error, reason}, state}
       end
     end
   end
