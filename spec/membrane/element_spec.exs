@@ -154,12 +154,10 @@ defmodule Membrane.ElementSpec do
       let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
 
       let :state,
-        do: %State{
-          module: module(),
-          playback: playback(),
-          playback_buffer: Membrane.Core.Element.PlaybackBuffer.new(),
-          internal_state: internal_state(),
-          pads: %{data: %{}}
+        do: %{
+          State.new(module(), :name)
+          | playback: playback(),
+            internal_state: internal_state()
         }
 
       context "and current playback state is :stopped" do
@@ -494,12 +492,7 @@ defmodule Membrane.ElementSpec do
       let :internal_state, do: %{}
 
       let :state,
-        do: %State{
-          module: module(),
-          playback: playback(),
-          internal_state: internal_state(),
-          pads: %{data: %{}}
-        }
+        do: %{State.new(module(), :name) | playback: playback(), internal_state: internal_state()}
 
       let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
 
@@ -700,12 +693,7 @@ defmodule Membrane.ElementSpec do
       let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
 
       let :state,
-        do: %State{
-          module: module(),
-          playback: playback(),
-          internal_state: internal_state(),
-          pads: %{data: %{}}
-        }
+        do: %{State.new(module(), :name) | playback: playback(), internal_state: internal_state()}
 
       context "and current playback state is :playing" do
         let :playback, do: %Playback{state: :playing}
@@ -912,7 +900,7 @@ defmodule Membrane.ElementSpec do
     context "if message is {:membrane_set_message_bus, pid}" do
       let :new_message_bus, do: self()
       let :message, do: {:membrane_set_message_bus, new_message_bus()}
-      let :state, do: %State{module: TrivialFilter, message_bus: message_bus()}
+      let :state, do: %{State.new(TrivialFilter, :name) | message_bus: message_bus()}
 
       context "and current message bus is nil" do
         let :message_bus, do: nil

@@ -27,7 +27,8 @@ defmodule Membrane.Core.Element.State do
           message_bus: pid | nil,
           controlling_pid: pid | nil,
           playback: Playback.t(),
-          playback_buffer: PlaybackBuffer.t()
+          playback_buffer: PlaybackBuffer.t(),
+          delayed_demands: %{{Pad.ref_t(), :supply | :redemand} => :sync | :async}
         }
 
   defstruct [
@@ -39,7 +40,8 @@ defmodule Membrane.Core.Element.State do
     :message_bus,
     :controlling_pid,
     :playback,
-    :playback_buffer
+    :playback_buffer,
+    :delayed_demands
   ]
 
   defimpl Playbackable, for: __MODULE__ do
@@ -61,7 +63,8 @@ defmodule Membrane.Core.Element.State do
       message_bus: nil,
       controlling_pid: nil,
       playback: %Playback{},
-      playback_buffer: PlaybackBuffer.new()
+      playback_buffer: PlaybackBuffer.new(),
+      delayed_demands: %{}
     }
   end
 end

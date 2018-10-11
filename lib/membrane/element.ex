@@ -271,7 +271,6 @@ defmodule Membrane.Element do
   end
 
   def handle_info(message, state) do
-    # IO.inspect message
     message |> MessageDispatcher.handle_message(:info, state) |> noreply(state)
   end
 end

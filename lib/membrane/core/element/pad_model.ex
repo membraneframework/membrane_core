@@ -22,7 +22,6 @@ defmodule Membrane.Core.Element.PadModel do
           required(:caps) => Membrane.Caps.t(),
           required(:start_of_stream) => boolean(),
           required(:end_of_stream) => boolean(),
-          required(:invoke_redemand) => boolean(),
           optional(:sticky_messages) => [Membrane.Event.t()],
           optional(:buffer) => PullBuffer.t(),
           optional(:demand) => integer()

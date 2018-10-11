@@ -16,6 +16,8 @@ defmodule Membrane.Core.Element.DemandController do
   """
   @spec handle_demand(Pad.ref_t(), non_neg_integer, State.t()) :: State.stateful_try_t()
   def handle_demand(pad_ref, size, state) do
+    PadModel.assert_data(pad_ref, %{direction: :output}, state)
+
     {total_size, state} =
       PadModel.get_and_update_data!(
         pad_ref,
