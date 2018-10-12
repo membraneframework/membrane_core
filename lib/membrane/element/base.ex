@@ -6,16 +6,16 @@ defmodule Membrane.Element.Base do
   Elements are units that produce, process or consume data. They can be linked
   with `Membrane.Pipeline`, and thus form a pipeline able to perform complex data
   processing. Each element defines a set of pads, through which it can be linked
-  with other elements. During playback, pads can either send (source pads) or
-  receive (sink pads) data. For more information on pads, see
+  with other elements. During playback, pads can either send (output pads) or
+  receive (input pads) data. For more information on pads, see
   `Membrane.Element.Pad`.
 
   To implement an element, one of base modules (`Membrane.Element.Base.Source`,
   `Membrane.Element.Base.Filter`, `Membrane.Element.Base.Sink`)
   has to be `use`d, depending on the element type:
-  - source, producing buffers (contain only source pads),
-  - filter, processing buffers (contain both sink and source pads),
-  - sink, consuming buffers (contain only sink pads).
+  - source, producing buffers (contain only output pads),
+  - filter, processing buffers (contain both input and output pads),
+  - sink, consuming buffers (contain only input pads).
   For more information on each element type, check documentation for appropriate
   base module.
 

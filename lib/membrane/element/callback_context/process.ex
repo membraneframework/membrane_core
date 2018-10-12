@@ -7,14 +7,14 @@ defmodule Membrane.Element.CallbackContext.Process do
   @type t :: %Membrane.Element.CallbackContext.Process{
           playback_state: Membrane.Core.Playback.state_t(),
           caps: Membrane.Caps.t(),
-          source: nil,
-          source_caps: Membrane.Caps.t()
+          output_pad: nil,
+          output_pad_caps: Membrane.Caps.t()
         }
 
   defstruct playback_state: nil,
             caps: nil,
-            source: nil,
-            source_caps: nil
+            output_pad: nil,
+            output_pad_caps: nil
 
   @impl true
   defmacro from_state(state, entries) do

@@ -56,8 +56,8 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     LifecycleController.handle_controlling_pid(pid, state)
   end
 
-  defp do_handle_message(Message.new(:demand_in, [demand_in, pad_ref]), :call, state) do
-    LifecycleController.handle_demand_in(demand_in, pad_ref, state)
+  defp do_handle_message(Message.new(:demand_unit, [demand_unit, pad_ref]), :call, state) do
+    LifecycleController.handle_demand_unit(demand_unit, pad_ref, state)
   end
 
   defp do_handle_message(Message.new(:unlink), :call, state) do

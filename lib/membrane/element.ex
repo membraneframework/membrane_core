@@ -39,18 +39,18 @@ defmodule Membrane.Element do
   @typedoc """
   Describes how a pad should be declared in element.
   """
-  @type pad_specs_t :: source_pad_specs_t | sink_pad_specs_t
+  @type pad_specs_t :: output_pad_specs_t | input_pad_specs_t
 
   @typedoc """
-  Describes how a source pad should be declared in element.
+  Describes how a output pad should be declared in element.
   """
-  @type source_pad_specs_t :: {Pad.name_t(), [common_pad_option_t]}
+  @type output_pad_specs_t :: {Pad.name_t(), [common_pad_option_t]}
 
   @typedoc """
-  Describes how a sink pad should be declared in element.
+  Describes how a input pad should be declared in element.
   """
-  @type sink_pad_specs_t ::
-          {Pad.name_t(), [common_pad_option_t | {:demand_in, Buffer.Metric.unit_t()}]}
+  @type input_pad_specs_t ::
+          {Pad.name_t(), [common_pad_option_t | {:demand_unit, Buffer.Metric.unit_t()}]}
 
   @typedoc """
   Pad options used in `t:pad_specs_t/0`
@@ -198,8 +198,8 @@ defmodule Membrane.Element do
   end
 
   def link(from_pid, to_pid, from_pad, to_pad, params) when is_pid(from_pid) and is_pid(to_pid) do
-    with :ok <- Message.call(from_pid, :handle_link, [from_pad, :source, to_pid, to_pad, params]),
-         :ok <- Message.call(to_pid, :handle_link, [to_pad, :sink, from_pid, from_pad, params]) do
+    with :ok <- Message.call(from_pid, :handle_link, [from_pad, :output, to_pid, to_pad, params]),
+         :ok <- Message.call(to_pid, :handle_link, [to_pad, :input, from_pid, from_pad, params]) do
       :ok
     end
   end

@@ -1,6 +1,6 @@
 defmodule Membrane.Core.Element.EventController do
   @moduledoc false
-  # Module handling events infoming through sink pads.
+  # Module handling events incoming through input pads.
 
   alias Membrane.{Core, Element, Event}
   alias Core.{CallbackHandler, PullBuffer}
@@ -13,14 +13,14 @@ defmodule Membrane.Core.Element.EventController do
 
   @doc """
   Handles incoming event: either stores it in PullBuffer, or executes element callback.
-  Extra checks and tasks required by special events such as `:sos` or `:eos`
-  are performed.
+  Extra checks and tasks required by special events such as `:start_of_stream`
+  or `:end_of_stream` are performed.
   """
   @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
   def handle_event(pad_ref, event, state) do
     pad_data = PadModel.get_data!(pad_ref, state)
 
-    if event.mode == :sync && pad_data.mode == :pull && pad_data.direction == :sink &&
+    if not Event.async?(event) && pad_data.mode == :pull && pad_data.direction == :input &&
          pad_data.buffer |> PullBuffer.empty?() |> Kernel.not() do
       PadModel.update_data(
         pad_ref,
@@ -67,38 +67,34 @@ defmodule Membrane.Core.Element.EventController do
 
   @spec handle_special_event(Pad.ref_t(), Event.t(), State.t()) ::
           State.stateful_try_t(:handle | :ignore)
-  defp handle_special_event(pad_ref, %Event{type: :sos}, state) do
-    with %{direction: :sink, sos: false} <- PadModel.get_data!(pad_ref, state) do
-      state = PadModel.set_data!(pad_ref, :sos, true, state)
+  defp handle_special_event(pad_ref, %Event.StartOfStream{}, state) do
+    with %{direction: :input, start_of_stream: false} <- PadModel.get_data!(pad_ref, state) do
+      state = PadModel.set_data!(pad_ref, :start_of_stream, true, state)
       {{:ok, :handle}, state}
     else
-      %{direction: :source} -> {{:error, {:received_sos_through_source, pad_ref}}, state}
-      %{sos: true} -> {{:error, {:sos_already_received, pad_ref}}, state}
+      %{direction: :output} ->
+        {{:error, {:received_start_of_stream_through_output, pad_ref}}, state}
+
+      %{start_of_stream: true} ->
+        {{:error, {:start_of_stream_already_received, pad_ref}}, state}
     end
   end
 
-  defp handle_special_event(pad_ref, %Event{type: :eos}, state) do
-    with %{direction: :sink, sos: true, eos: false} <- PadModel.get_data!(pad_ref, state) do
-      state = PadModel.set_data!(pad_ref, :eos, true, state)
+  defp handle_special_event(pad_ref, %Event.EndOfStream{}, state) do
+    with %{direction: :input, start_of_stream: true, end_of_stream: false} <-
+           PadModel.get_data!(pad_ref, state) do
+      state = PadModel.set_data!(pad_ref, :end_of_stream, true, state)
       {{:ok, :handle}, state}
     else
-      %{direction: :source} -> {{:error, {:received_eos_through_source, pad_ref}}, state}
-      %{eos: true} -> {{:error, {:eos_already_received, pad_ref}}, state}
-      %{sos: false} -> {{:ok, :ignore}, state}
+      %{direction: :output} ->
+        {{:error, {:received_end_of_stream_through_output, pad_ref}}, state}
+
+      %{end_of_stream: true} ->
+        {{:error, {:end_of_stream_already_received, pad_ref}}, state}
+
+      %{start_of_stream: false} ->
+        {{:ok, :ignore}, state}
     end
-  end
-
-  # FIXME: solve it using pipeline messages, not events
-  defp handle_special_event(_pad_ref, %Event{type: :dump_state}, state) do
-    IO.puts("""
-    state dump for #{inspect(state.name)} at #{inspect(self())}
-    state:
-    #{inspect(state)}
-    info:
-    #{inspect(:erlang.process_info(self()))}
-    """)
-
-    {{:ok, :handle}, state}
   end
 
   defp handle_special_event(_pad_ref, _event, state), do: {{:ok, :handle}, state}

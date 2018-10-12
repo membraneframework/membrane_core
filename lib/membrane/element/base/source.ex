@@ -7,7 +7,7 @@ defmodule Membrane.Element.Base.Source do
   `Membrane.Element.Base.Mixin.CommonBehaviour` and
   `Membrane.Element.Base.Mixin.SourceBehaviour`.
 
-  Source elements can define only source pads. Job of a usual source is to produce
+  Source elements can define only output pads. Job of a usual source is to produce
   some data (read from soundcard, download through HTTP, etc.) and send it through
   such pad. If the pad works in pull mode, then element is also responsible for
   receiving demands and send buffers only if they have previously been demanded

@@ -1,5 +1,6 @@
 defmodule Membrane.Core.PullBufferSpec do
   alias Membrane.Core.{PullBuffer, Message}
+  alias Membrane.Support.TestingEvent
   require Message
   alias Membrane.Buffer
   use ESpec, async: true
@@ -14,14 +15,13 @@ defmodule Membrane.Core.PullBufferSpec do
 
   describe ".new/5" do
     let :name, do: :name
-    let :sink, do: {self(), sink_elem_name()}
-    let :sink_elem_name, do: :sink_elem_name
-    let :sink_ref, do: :sink_pad_ref
+    let :demand_pid, do: self()
+    let :input_ref, do: :input_pad_ref
     let :preferred_size, do: 100
     let :min_demand, do: 10
     let :toilet, do: false
-    let :demand_in, do: :bytes
-    let :expected_metric, do: Buffer.Metric.from_unit(demand_in())
+    let :demand_unit, do: :bytes
+    let :expected_metric, do: Buffer.Metric.from_unit(demand_unit())
 
     let :props,
       do: [
@@ -31,12 +31,12 @@ defmodule Membrane.Core.PullBufferSpec do
       ]
 
     it "should return PullBuffer struct and send demand message" do
-      expect(described_module().new(name(), sink(), sink_ref(), demand_in(), props()))
+      expect(described_module().new(name(), demand_pid(), input_ref(), demand_unit(), props()))
       |> to(
         eq(%PullBuffer{
           name: name(),
-          sink: sink(),
-          sink_ref: sink_ref(),
+          demand_pid: demand_pid(),
+          input_ref: input_ref(),
           demand: 0,
           preferred_size: preferred_size(),
           min_demand: min_demand(),
@@ -46,7 +46,7 @@ defmodule Membrane.Core.PullBufferSpec do
         })
       )
 
-      expected_list = [preferred_size(), sink_elem_name()]
+      expected_list = [preferred_size(), input_ref()]
       assert_received Message.new(:demand, ^expected_list)
     end
 
@@ -56,12 +56,12 @@ defmodule Membrane.Core.PullBufferSpec do
       it "should not send the demand" do
         flush()
 
-        expect(described_module().new(name(), sink(), sink_ref(), demand_in(), props()))
+        expect(described_module().new(name(), demand_pid(), input_ref(), demand_unit(), props()))
         |> to(
           eq(%PullBuffer{
             name: name(),
-            sink: sink(),
-            sink_ref: sink_ref(),
+            demand_pid: demand_pid(),
+            input_ref: input_ref(),
             demand: preferred_size(),
             preferred_size: preferred_size(),
             min_demand: min_demand(),
@@ -145,7 +145,7 @@ defmodule Membrane.Core.PullBufferSpec do
 
     context "when `type` is :event" do
       let :type, do: :event
-      let :v, do: %Membrane.Event{type: :some_type, payload: :some_payload}
+      let :v, do: %TestingEvent{}
 
       it "should append event to the queue" do
         {:ok, %{q: new_q}} = described_module().store(pb(), type(), v())
@@ -166,7 +166,7 @@ defmodule Membrane.Core.PullBufferSpec do
     let :buffers2, do: {:buffers, [:b4, :b5, :b6], 3}
     let :q, do: Qex.new() |> Qex.push(buffers1()) |> Qex.push(buffers2())
     let :current_size, do: 6
-    let :sink_ref, do: :sink_ref
+    let :input_ref, do: :input_ref
     let :metric, do: Buffer.Metric.Count
 
     let :pb,
@@ -174,7 +174,8 @@ defmodule Membrane.Core.PullBufferSpec do
         current_size: current_size(),
         demand: 0,
         min_demand: 0,
-        sink: {self(), sink_ref()},
+        demand_pid: self(),
+        input_ref: input_ref(),
         metric: metric(),
         q: q()
       }
@@ -194,7 +195,7 @@ defmodule Membrane.Core.PullBufferSpec do
 
       it "should generate demand" do
         described_module().take(pb(), to_take())
-        expected_list = [current_size(), sink_ref()]
+        expected_list = [current_size(), input_ref()]
 
         assert_received Message.new(:demand, ^expected_list)
       end

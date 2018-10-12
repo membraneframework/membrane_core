@@ -79,9 +79,9 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   defp empty?(%__MODULE__{q: q}), do: q |> Enum.empty?()
 
   @spec exec(message_t, State.t()) :: State.stateful_try_t()
-  # Callback invoked on demand request coming from the source pad in the pull mode
+  # Callback invoked on demand request coming from the output pad in the pull mode
   defp exec({:demand, [size, pad_ref]}, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :source}, state)
+    PadModel.assert_data!(pad_ref, %{direction: :output}, state)
 
     demand =
       if size == 0 do
@@ -94,9 +94,9 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     DemandController.handle_demand(pad_ref, size, state)
   end
 
-  # Callback invoked on buffer coming through the sink pad
+  # Callback invoked on buffer coming through the input pad
   defp exec({:buffer, [buffers, pad_ref]}, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :sink}, state)
+    PadModel.assert_data!(pad_ref, %{direction: :input}, state)
 
     debug(
       ["
@@ -113,9 +113,8 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
            |> Bunch.Enum.try_reduce(state, fn msg, st -> msg.(st) end) do
       {:ok, state} =
         cond do
-          PadModel.get_data!(pad_ref, :sos, state) |> Kernel.not() ->
-            event = %{Event.sos() | payload: :auto_sos}
-            EventController.handle_event(pad_ref, event, state)
+          PadModel.get_data!(pad_ref, :start_of_stream, state) |> Kernel.not() ->
+            EventController.handle_event(pad_ref, %Event.StartOfStream{}, state)
 
           true ->
             {:ok, state}
@@ -127,7 +126,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   # Callback invoked on incoming caps
   defp exec({:caps, [caps, pad_ref]}, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :sink}, state)
+    PadModel.assert_data!(pad_ref, %{direction: :input}, state)
 
     debug(
       """
@@ -156,18 +155,16 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
       EventController.handle_event(pad_ref, event, state)
     end
 
-    case event.stick_to do
-      :nothing ->
-        do_exec.(state)
-
-      :buffer ->
-        PadModel.update_data!(
-          pad_ref,
-          :sticky_messages,
-          &[do_exec | &1],
-          state
-        )
-        ~> (state -> {:ok, state})
+    if event |> Event.sticky?() do
+      PadModel.update_data!(
+        pad_ref,
+        :sticky_messages,
+        &[do_exec | &1],
+        state
+      )
+      ~> {:ok, &1}
+    else
+      do_exec.(state)
     end
   end
 end

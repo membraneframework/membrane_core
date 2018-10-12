@@ -1,6 +1,6 @@
 defmodule Membrane.Core.Element.BufferController do
   @moduledoc false
-  # Module handling buffers incoming through sink pads.
+  # Module handling buffers incoming through input pads.
 
   alias Membrane.{Buffer, Core, Element}
   alias Core.{CallbackHandler, PullBuffer}
@@ -18,7 +18,7 @@ defmodule Membrane.Core.Element.BufferController do
   """
   @spec handle_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.stateful_try_t()
   def handle_buffer(pad_ref, buffers, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :sink}, state)
+    PadModel.assert_data!(pad_ref, %{direction: :input}, state)
 
     case PadModel.get_data!(pad_ref, :mode, state) do
       :pull -> handle_buffer_pull(pad_ref, buffers, state)
@@ -63,7 +63,7 @@ defmodule Membrane.Core.Element.BufferController do
   @spec handle_buffer_pull(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) ::
           State.stateful_try_t()
   defp handle_buffer_pull(pad_ref, buffers, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :sink}, state)
+    PadModel.assert_data!(pad_ref, %{direction: :input}, state)
 
     with {{:ok, was_empty?}, state} <-
            PadModel.get_and_update_data!(

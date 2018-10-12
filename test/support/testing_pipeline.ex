@@ -10,8 +10,8 @@ defmodule Membrane.Integration.TestingPipeline do
     ]
 
     links = %{
-      {:source, :source} => {:filter, :sink, pull_buffer: [preferred_size: 50]},
-      {:filter, :source} => {:sink, :sink, pull_buffer: [preferred_size: 50]}
+      {:source, :output} => {:filter, :input, pull_buffer: [preferred_size: 50]},
+      {:filter, :output} => {:sink, :input, pull_buffer: [preferred_size: 50]}
     }
 
     spec = %Pipeline.Spec{

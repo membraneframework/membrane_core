@@ -1,6 +1,6 @@
 defmodule Membrane.Core.Element.DemandController do
   @moduledoc false
-  # Module handling demands incoming through source pads.
+  # Module handling demands incoming through output pads.
 
   alias Membrane.{Core, Element}
   alias Core.CallbackHandler
@@ -12,7 +12,7 @@ defmodule Membrane.Core.Element.DemandController do
   use Bunch
 
   @doc """
-  Handles demand coming on a source pad. Updates demand value and executes `handle_demand` callback.
+  Handles demand coming on a output pad. Updates demand value and executes `handle_demand` callback.
   """
   @spec handle_demand(Pad.ref_t(), non_neg_integer, State.t()) :: State.stateful_try_t()
   def handle_demand(pad_ref, size, state) do
@@ -25,7 +25,7 @@ defmodule Membrane.Core.Element.DemandController do
       )
 
     if exec_handle_demand?(pad_ref, state) do
-      %{caps: caps, other_demand_in: unit} = PadModel.get_data!(pad_ref, state)
+      %{caps: caps, other_demand_unit: unit} = PadModel.get_data!(pad_ref, state)
 
       context = CallbackContext.Demand.from_state(state, caps: caps, incoming_demand: size)
 
@@ -48,10 +48,10 @@ defmodule Membrane.Core.Element.DemandController do
   @spec exec_handle_demand?(Pad.ref_t(), State.t()) :: boolean
   defp exec_handle_demand?(pad_ref, state) do
     case PadModel.get_data!(pad_ref, state) do
-      %{eos: true} ->
+      %{end_of_stream: true} ->
         debug(
           """
-          Demand handler: not executing handle_demand, as EoS has already been sent
+          Demand controller: not executing handle_demand as EndOfStream has already been sent
           """,
           state
         )
@@ -61,7 +61,7 @@ defmodule Membrane.Core.Element.DemandController do
       %{demand: demand} when demand <= 0 ->
         debug(
           """
-          Demand handler: not executing handle_demand, as demand is not greater than 0,
+          Demand controller: not executing handle_demand as demand is not greater than 0,
           demand: #{inspect(demand)}
           """,
           state

@@ -60,7 +60,7 @@ defmodule Membrane.Core.Element.PadController do
           end
         end)
 
-      if static_unlinked |> Enum.empty?() |> Kernel.!() do
+      if not Enum.empty?(static_unlinked) do
         warn(
           """
           Some static pads remained unlinked: #{inspect(static_unlinked)}
@@ -78,7 +78,7 @@ defmodule Membrane.Core.Element.PadController do
   """
   @spec handle_unlink(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   def handle_unlink(pad_ref, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :sink}, state)
+    PadModel.assert_data!(pad_ref, %{direction: :input}, state)
 
     with {:ok, state} <- generate_eos_if_not_received(pad_ref, state),
          {:ok, state} <- handle_pad_removed(pad_ref, state),
@@ -113,19 +113,20 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec validate_pad_being_linked(Pad.ref_t(), Pad.direction_t(), State.t()) :: Type.try_t()
   defp validate_pad_being_linked(pad_ref, direction, state) do
-    info = state.pads.info[pad_ref]
+    info = state.pads.info[pad_ref |> Pad.name_by_ref()]
 
     cond do
-      info == nil ->
-        case PadModel.assert_instance(pad_ref, state) do
-          :ok -> {:error, :already_linked}
-          _ -> {:error, :unknown_pad}
-        end
+      :ok == PadModel.assert_instance(pad_ref, state) ->
+        {:error, :already_linked}
 
-      (actual_av_mode = Pad.availability_mode(info.availability)) !=
-          (expected_av_mode = Pad.availability_mode_by_ref(pad_ref)) ->
+      info == nil ->
+        {:error, :unknown_pad}
+
+      Pad.availability_mode_by_ref(pad_ref) != Pad.availability_mode(info.availability) ->
         {:error,
-         {:invalid_pad_availability_mode, expected: expected_av_mode, actual: actual_av_mode}}
+         {:invalid_pad_availability_mode,
+          expected: Pad.availability_mode_by_ref(pad_ref),
+          actual: Pad.availability_mode(info.availability)}}
 
       info.direction != direction ->
         {:error, {:invalid_pad_direction, expected: direction, actual: info.direction}}
@@ -147,12 +148,11 @@ defmodule Membrane.Core.Element.PadController do
     data =
       info
       |> Map.merge(%{
-        ref: ref,
         pid: pid,
         other_ref: other_ref,
         caps: nil,
-        sos: false,
-        eos: false
+        start_of_stream: false,
+        end_of_stream: false
       })
 
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
@@ -160,29 +160,29 @@ defmodule Membrane.Core.Element.PadController do
     state |> Bunch.Struct.put_in([:pads, :data, ref], data)
   end
 
-  defp init_pad_direction_data(%{direction: :sink}, _props, _state), do: %{sticky_messages: []}
-  defp init_pad_direction_data(%{direction: :source}, _props, _state), do: %{}
+  defp init_pad_direction_data(%{direction: :input}, _props, _state), do: %{sticky_messages: []}
+  defp init_pad_direction_data(%{direction: :output}, _props, _state), do: %{}
 
-  defp init_pad_mode_data(%{mode: :pull, direction: :sink} = data, props, state) do
-    %{name: name, pid: pid, other_ref: other_ref, demand_in: demand_in} = data
+  defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, props, state) do
+    %{pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
 
     :ok =
       pid
-      |> Message.call(:demand_in, [demand_in, other_ref])
+      |> Message.call(:demand_unit, [demand_unit, other_ref])
 
     pb =
       PullBuffer.new(
         state.name,
-        {pid, other_ref},
-        name,
-        demand_in,
+        pid,
+        other_ref,
+        demand_unit,
         props[:pull_buffer] || %{}
       )
 
     %{buffer: pb, demand: 0}
   end
 
-  defp init_pad_mode_data(%{mode: :pull, direction: :source}, _props, _state), do: %{demand: 0}
+  defp init_pad_mode_data(%{mode: :pull, direction: :output}, _props, _state), do: %{demand: 0}
 
   defp init_pad_mode_data(%{mode: :push}, _props, _state), do: %{}
 
@@ -196,14 +196,10 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec generate_eos_if_not_received(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   defp generate_eos_if_not_received(pad_ref, state) do
-    if not PadModel.get_data!(pad_ref, :eos, state) do
-      EventController.handle_event(
-        pad_ref,
-        %{Event.eos() | payload: :auto_eos, mode: :async},
-        state
-      )
-    else
+    if PadModel.get_data!(pad_ref, :end_of_stream, state) do
       {:ok, state}
+    else
+      EventController.exec_handle_event(pad_ref, %Event.EndOfStream{}, state)
     end
   end
 

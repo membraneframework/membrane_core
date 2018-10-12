@@ -19,7 +19,7 @@ defmodule Membrane.Element.Action do
   @type notify_t :: {:notify, Notification.t()}
 
   @typedoc """
-  Sends an event through a pad (sink or source).
+  Sends an event through a pad (input or output).
 
   Forbidden when playback state is stopped.
   """
@@ -47,7 +47,7 @@ defmodule Membrane.Element.Action do
   @type split_t :: {:split, {callback_name :: atom, args_list :: [[any]]}}
 
   @typedoc """
-  Sends caps through a pad (it must be source pad). Sended caps must fit
+  Sends caps through a pad (it must be output pad). Sended caps must fit
   constraints on the pad.
 
   Forbidden when playback state is stopped.
@@ -55,14 +55,14 @@ defmodule Membrane.Element.Action do
   @type caps_t :: {:caps, {Pad.ref_t(), Caps.t()}}
 
   @typedoc """
-  Sends buffers through a pad (it must be source pad).
+  Sends buffers through a pad (it must be output pad).
 
   Allowed only when playback state is playing.
   """
   @type buffer_t :: {:buffer, {Pad.ref_t(), Buffer.t() | [Buffer.t()]}}
 
   @typedoc """
-  Makes a demand on a pad (it must be sink pad in pull mode). It does NOT
+  Makes a demand on a pad (it must be input pad in pull mode). It does NOT
   entail _sending_ demand through the pad, but just _requesting_ some amount
   of data from `Membrane.Core.PullBuffer`, which _sends_ demands automatically when it
   runs out of data.
@@ -71,37 +71,17 @@ defmodule Membrane.Element.Action do
   or `c:Membrane.Element.Base.Sink.handle_write_list/4` callback. Invoked callback is
   guaranteed not to receive more data than demanded.
 
-  Depending on element type and callback, it may contain different payloads or
-  behave differently:
-
-  In sinks:
-  - Payload `{pad, size}` increases demand on given pad by given size.
-  - Payload `{pad, {:set_to, size}}` erases current demand and sets it to given size.
-
-  In filters:
-  - Payload `{pad, size}` is only allowed from
-  `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` callback. It overrides
-  current demand.
-  - Payload `{pad, {:source, demanding_source_pad}, size}` can be returned from
-  any callback. `demanding_source_pad` is a pad which is to receive demanded
-  buffers after they are processed.
-  - Payload `{pad, :self, size}` makes demand act as if element was a sink,
-  that is extends demand on a given pad. Buffers received as a result of the
-  demand should be consumed by element itself or sent through a pad in `push` mode.
+  Demand size can be either a non-negative integer, that overrides existing demand,
+  or a function that is passed current demand, and is to return the new demand.
 
   Allowed only when playback state is playing.
   """
-  @type demand_t ::
-          {:demand, demand_common_payload_t | demand_filter_payload_t | demand_sink_payload_t}
-
-  @type demand_filter_payload_t ::
-          {Pad.ref_t(), {:source, Pad.ref_t()} | :self, size :: non_neg_integer}
-  @type demand_sink_payload_t :: {Pad.ref_t(), {:set_to, size :: non_neg_integer}}
-  @type demand_common_payload_t :: Pad.ref_t() | {Pad.ref_t(), size :: non_neg_integer}
+  @type demand_t :: {:demand, {Pad.ref_t(), demand_size_t}}
+  @type demand_size_t :: pos_integer | (pos_integer() -> non_neg_integer())
 
   @typedoc """
   Executes `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` callback with
-  given pad (which must be a source pad in pull mode) if this demand is greater
+  given pad (which must be a output pad in pull mode) if this demand is greater
   than 0.
 
   Useful when demand could not have been supplied when previous call to
@@ -114,8 +94,8 @@ defmodule Membrane.Element.Action do
   @type redemand_t :: {:redemand, Pad.ref_t()}
 
   @typedoc """
-  Sends buffers/caps/event to all source pads of element (or to sink pads when
-  event occurs on the source pad). Used by default implementations of
+  Sends buffers/caps/event to all output pads of element (or to input pads when
+  event occurs on the output pad). Used by default implementations of
   `c:Membrane.Element.Base.Mixin.SinkBehaviour.handle_caps/4` and
   `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_event/4` callbacks in filter.
 

@@ -7,7 +7,7 @@ defmodule Membrane.Element.CallbackContext.PadAdded do
 
   @type t :: %Membrane.Element.CallbackContext.PadAdded{
           playback_state: Membrane.Core.Playback.state_t(),
-          direction: :sink | :source
+          direction: :input | :output
         }
 
   defstruct playback_state: nil, direction: nil

@@ -93,28 +93,28 @@ defmodule Membrane.Core.Element.ActionHandler do
     send_caps(pad_ref, caps, state)
   end
 
-  defp do_handle_action({:redemand, src_refs}, cb, params, state)
-       when is_list(src_refs) do
-    src_refs
-    |> Bunch.Enum.try_reduce(state, fn src_ref, state ->
-      do_handle_action({:redemand, src_ref}, cb, params, state)
+  defp do_handle_action({:redemand, out_refs}, cb, params, state)
+       when is_list(out_refs) do
+    out_refs
+    |> Bunch.Enum.try_reduce(state, fn out_ref, state ->
+      do_handle_action({:redemand, out_ref}, cb, params, state)
     end)
   end
 
-  defp do_handle_action({:redemand, src_ref}, cb, _params, %State{type: type} = state)
-       when type in [:source, :filter] and is_pad_ref(src_ref) and
+  defp do_handle_action({:redemand, out_ref}, cb, _params, %State{type: type} = state)
+       when type in [:source, :filter] and is_pad_ref(out_ref) and
               cb not in [:handle_process_list] do
-    handle_redemand(src_ref, state)
+    handle_redemand(out_ref, state)
   end
 
   defp do_handle_action({:forward, data}, cb, params, %State{type: :filter} = state)
        when cb in [:handle_caps, :handle_event, :handle_process_list] do
     {action, dir} =
       case {cb, params} do
-        {:handle_process_list, _} -> {:buffer, :source}
-        {:handle_caps, _} -> {:caps, :source}
-        {:handle_event, %{direction: :sink}} -> {:event, :source}
-        {:handle_event, %{direction: :source}} -> {:event, :sink}
+        {:handle_process_list, _} -> {:buffer, :output}
+        {:handle_caps, _} -> {:caps, :output}
+        {:handle_event, %{direction: :input}} -> {:event, :output}
+        {:handle_event, %{direction: :output}} -> {:event, :input}
       end
 
     pads = PadModel.filter_data(%{direction: dir}, state) |> Map.keys()
@@ -220,11 +220,11 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     )
 
-    with :ok <- PadModel.assert_data(pad_ref, %{direction: :source, eos: false}, state) do
-      %{mode: mode, pid: pid, other_ref: other_ref, other_demand_in: other_demand_in} =
+    with :ok <- PadModel.assert_data(pad_ref, %{direction: :output, end_of_stream: false}, state) do
+      %{mode: mode, pid: pid, other_ref: other_ref, other_demand_unit: other_demand_unit} =
         PadModel.get_data!(pad_ref, state)
 
-      state = handle_buffer(pad_ref, mode, other_demand_in, buffers, state)
+      state = handle_buffer(pad_ref, mode, other_demand_unit, buffers, state)
       Message.send(pid, :buffer, [buffers, other_ref])
       {:ok, state}
     else
@@ -239,8 +239,8 @@ defmodule Membrane.Core.Element.ActionHandler do
           [Buffer.t()] | Buffer.t(),
           State.t()
         ) :: State.t()
-  defp handle_buffer(pad_ref, :pull, other_demand_in, buffers, state) do
-    buf_size = Buffer.Metric.from_unit(other_demand_in).buffers_size(buffers)
+  defp handle_buffer(pad_ref, :pull, other_demand_unit, buffers, state) do
+    buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
 
     PadModel.update_data!(
       pad_ref,
@@ -264,7 +264,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     )
 
-    withl pad: :ok <- PadModel.assert_data(pad_ref, %{direction: :source}, state),
+    withl pad: :ok <- PadModel.assert_data(pad_ref, %{direction: :output}, state),
           do: accepted_caps = PadModel.get_data!(pad_ref, :accepted_caps, state),
           caps: true <- Caps.Matcher.match?(accepted_caps, caps) do
       {%{pid: pid, other_ref: other_ref}, state} =
@@ -295,7 +295,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec handle_demand(
           Pad.ref_t(),
-          size :: pos_integer | (pos_integer() -> non_neg_integer()),
+          Action.demand_size_t(),
           callback :: atom,
           State.t()
         ) :: State.stateful_try_t()
@@ -341,9 +341,9 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp handle_demand(pad_ref, size, callback, state) do
-    sink_assertion = PadModel.assert_data(pad_ref, %{direction: :sink, mode: :pull}, state)
+    input_assertion = PadModel.assert_data(pad_ref, %{direction: :input, mode: :pull}, state)
 
-    with :ok <- sink_assertion,
+    with {:ok, state} <- {input_assertion, state},
          {:ok, state} <- DemandHandler.update_demand(pad_ref, size, state) do
       if callback in [:handle_write_list, :handle_process_list] do
         # Handling demand results in execution of handle_write_list/handle_process_list,
@@ -359,23 +359,23 @@ defmodule Membrane.Core.Element.ActionHandler do
         DemandHandler.supply_demand(pad_ref, state)
       end
     else
-      {:error, reason} -> handle_pad_error(reason, state)
+      {{:error, reason}, state} -> handle_pad_error(reason, state)
     end
   end
 
   @spec handle_redemand(Pad.ref_t(), State.t()) :: State.stateful_try_t()
-  defp handle_redemand(src_ref, %{type: :source} = state) do
-    with :ok <- PadModel.assert_data(src_ref, %{direction: :source, mode: :pull}, state) do
-      DemandController.handle_demand(src_ref, 0, state)
+  defp handle_redemand(out_ref, %{type: :source} = state) do
+    with :ok <- PadModel.assert_data(out_ref, %{direction: :output, mode: :pull}, state) do
+      DemandController.handle_demand(out_ref, 0, state)
     else
       {:error, reason} -> handle_pad_error(reason, state)
     end
   end
 
-  defp handle_redemand(src_ref, %{type: :filter} = state) do
-    with :ok <- PadModel.assert_data(src_ref, %{direction: :source, mode: :pull}, state) do
+  defp handle_redemand(out_ref, %{type: :filter} = state) do
+    with :ok <- PadModel.assert_data(out_ref, %{direction: :output, mode: :pull}, state) do
       can_demand_be_supplied =
-        PadModel.filter_refs_by_data(%{direction: :sink}, state)
+        PadModel.filter_refs_by_data(%{direction: :input}, state)
         |> Enum.any?(fn pad ->
           pad
           |> PadModel.get_data!(:buffer, state)
@@ -384,7 +384,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         end)
 
       if can_demand_be_supplied do
-        DemandController.handle_demand(src_ref, 0, state)
+        DemandController.handle_demand(out_ref, 0, state)
       else
         {:ok, state}
       end
@@ -403,23 +403,28 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     )
 
-    withl pad: {:ok, %{pid: pid, other_ref: other_ref}} <- PadModel.get_data(pad_ref, state),
+    withl event: true <- event |> Event.event?(),
+          pad: {:ok, %{pid: pid, other_ref: other_ref}} <- PadModel.get_data(pad_ref, state),
           handler: {:ok, state} <- handle_event(pad_ref, event, state) do
       Message.send(pid, :event, [event, other_ref])
       {:ok, state}
     else
+      event: false -> {{:error, {:invalid_event, event}}, state}
       pad: {:error, reason} -> handle_pad_error(reason, state)
       handler: {{:error, reason}, state} -> {{:error, reason}, state}
     end
   end
 
   @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
-  defp handle_event(pad_ref, %Event{type: :eos}, state) do
-    with %{direction: :source, eos: false} <- PadModel.get_data!(pad_ref, state) do
-      {:ok, PadModel.set_data!(pad_ref, :eos, true, state)}
+  defp handle_event(pad_ref, %Event.EndOfStream{}, state) do
+    with %{direction: :output, end_of_stream: false} <- PadModel.get_data!(pad_ref, state) do
+      {:ok, PadModel.set_data!(pad_ref, :end_of_stream, true, state)}
     else
-      %{direction: :sink} -> {{:error, {:cannot_send_eos_through_sink, pad_ref}}, state}
-      %{eos: true} -> {{:error, {:eos_already_sent, pad_ref}}, state}
+      %{direction: :input} ->
+        {{:error, {:cannot_send_end_of_stream_through_input, pad_ref}}, state}
+
+      %{end_of_stream: true} ->
+        {{:error, {:end_of_stream_already_sent, pad_ref}}, state}
     end
   end
 

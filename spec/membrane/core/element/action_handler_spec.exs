@@ -1,8 +1,9 @@
 defmodule Membrane.Core.Element.ActionHandlerSpec do
   use ESpec, async: false
-  alias Membrane.{Buffer, Event}
+  alias Membrane.Buffer
   alias Membrane.Core.{Element, Message, Playback}
   alias Element.State
+  alias Membrane.Support.TestingEvent
   require Message
 
   describe "handle_action for buffer" do
@@ -16,19 +17,19 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         __struct__: State,
         pads: %{
           data: %{
-            source: %{
-              direction: :source,
+            output: %{
+              direction: :output,
               pid: self(),
               other_ref: other_ref(),
-              other_demand_in: :bytes,
-              eos: false,
+              other_demand_unit: :bytes,
+              end_of_stream: false,
               mode: :push
             }
           }
         }
       }
 
-    let :pad_ref, do: :source
+    let :pad_ref, do: :output
     let :payload, do: <<1, 2, 3, 4, 5>>
     let :buffer, do: %Buffer{payload: payload()}
 
@@ -209,21 +210,21 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         __struct__: State,
         pads: %{
           data: %{
-            source: %{
-              direction: :source,
+            output: %{
+              direction: :output,
               pid: self(),
               other_ref: other_ref(),
-              other_demand_in: :bytes,
-              eos: false,
+              other_demand_unit: :bytes,
+              end_of_stream: false,
               mode: :push
             }
           }
         }
       }
 
-    let :pad_ref, do: :source
+    let :pad_ref, do: :output
     let :payload, do: <<1, 2, 3, 4, 5>>
-    let :event, do: %Event{payload: payload()}
+    let :event, do: %TestingEvent{}
 
     context "when element is in a 'playing' state" do
       let :playback, do: %Playback{state: :playing}
@@ -288,13 +289,13 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         __struct__: State,
         pads: %{
           data: %{
-            source: %{
-              direction: :source,
+            output: %{
+              direction: :output,
               pid: self(),
               other_ref: other_ref(),
               caps: nil,
-              other_demand_in: :bytes,
-              eos: false,
+              other_demand_unit: :bytes,
+              end_of_stream: false,
               mode: :push,
               accepted_caps: :any
             }
@@ -302,7 +303,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         }
       }
 
-    let :pad_ref, do: :source
+    let :pad_ref, do: :output
     let :payload, do: <<1, 2, 3, 4, 5>>
     let :caps, do: :caps
 
@@ -339,8 +340,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         end
 
         it "should should return new state with updated caps" do
-          updated_source = %{state().pads.data.source | caps: caps()}
-          updated_data = %{state().pads.data | source: updated_source}
+          updated_output = %{state().pads.data.output | caps: caps()}
+          updated_data = %{state().pads.data | output: updated_output}
           expected_pads = %{state().pads | data: updated_data}
           expected_state = %{state() | pads: expected_pads}
 
@@ -398,10 +399,10 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
   describe "handle_action for demand" do
     let :action, do: {:demand, {pad_ref(), size()}}
     let :callback, do: :handle_event
-    let :pad_ref, do: :sink
+    let :pad_ref, do: :input
     let :size, do: 1
     let :type, do: :normal
-    let :sink_mode, do: :pull
+    let :mode, do: :pull
     let :element_type, do: :filter
     let :playback_state, do: :playing
     let :element_module, do: FakeElementModule
@@ -416,17 +417,17 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         playback_state: playback_state(),
         pads: %{
           data: %{
-            sink: %{
-              direction: :sink,
-              mode: sink_mode(),
+            input: %{
+              direction: :input,
+              mode: mode(),
               pid: self()
             }
           }
         }
       }
 
-    context "when sink pad is not in a pull mode" do
-      let :sink_mode, do: :push
+    context "when input pad is not in a pull mode" do
+      let :mode, do: :push
 
       it "should return an error with proper reason" do
         result = described_module().handle_action(action(), callback(), %{}, state())
@@ -479,8 +480,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
   describe "handle_action for redemand" do
     let :action, do: {:redemand, pad_ref()}
 
-    let :pad_ref, do: :source
-    let :pad_direction, do: :source
+    let :pad_ref, do: :output
+    let :pad_direction, do: :output
     let :pad_mode, do: :pull
     let :element_module, do: FakeElementModule
     let :controller_module, do: Element.DemandController
@@ -493,7 +494,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         type: :source,
         pads: %{
           data: %{
-            source: %{
+            output: %{
               direction: pad_direction(),
               pid: self(),
               mode: pad_mode()
@@ -540,8 +541,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
   end
 
   describe "handle_actions" do
-    let :pad_ref, do: :source
-    let :pad_direction, do: :source
+    let :pad_ref, do: :output
+    let :pad_direction, do: :output
     let :pad_mode, do: :pull
     let :element_module, do: FakeElementModule
     let :controller_module, do: Element.DemandController
@@ -558,7 +559,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         pads: %{
           data: %{
             demand: 0,
-            source: %{
+            output: %{
               direction: pad_direction(),
               pid: self(),
               mode: pad_mode()
@@ -573,7 +574,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
 
     context "if :redemand is the last action" do
       let :actions,
-        do: [notify: notification_a(), notify: notification_b(), redemand: :source]
+        do: [notify: notification_a(), notify: notification_b(), redemand: :output]
 
       it "should handle all actions" do
         res = described_module().handle_actions(actions(), nil, %{}, state())
@@ -588,7 +589,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
 
     context "if :redemand is not the last action" do
       let :actions,
-        do: [redemand: :source, notification: notification_a(), notification: notification_b()]
+        do: [redemand: :output, notification: notification_a(), notification: notification_b()]
 
       it "should return an error" do
         res = described_module().handle_actions(actions(), nil, %{}, state())

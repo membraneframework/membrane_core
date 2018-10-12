@@ -25,27 +25,27 @@ defmodule Membrane.Element.Pad do
 
   @typedoc """
   Defines possible pad directions:
-  - `:source` - data can only be sent through such pad,
-  - `:sink` - data can only be received through such pad.
+  - `:output` - data can only be sent through such pad,
+  - `:input` - data can only be received through such pad.
 
   One cannot link two pads with the same direction.
   """
-  @type direction_t :: :source | :sink
+  @type direction_t :: :output | :input
 
   @typedoc """
   Type describing possible pad modes. They are strictly related to pad directions:
-  - `:push` source pad - element can send data through such pad whenever it wants.
-  - `:push` sink pad - element has to deal with data whenever it comes through
+  - `:push` output pad - element can send data through such pad whenever it wants.
+  - `:push` input pad - element has to deal with data whenever it comes through
   such pad, and do it fast enough not to let data accumulate on such pad, what
   may lead to overflow of element process erlang queue, which is highly unwanted.
-  - `:pull` source pad - element can send data through such pad only if it have
+  - `:pull` output pad - element can send data through such pad only if it have
   already received demand on the pad. Sending small, limited amount of
   undemanded data is supported and handled by `Membrane.Core.PullBuffer`.
-  - `:pull` sink pad - element receives through such pad only data that it has
+  - `:pull` input pad - element receives through such pad only data that it has
   previously demanded, so that no undemanded data can arrive.
 
-  Linking pads with different modes is possible, but only in case of source pad
-  working in push mode, and sink in pull mode. Moreover, toilet mode of
+  Linking pads with different modes is possible, but only in case of output pad
+  working in push mode, and input in pull mode. Moreover, toilet mode of
   `Membrane.Core.PullBuffer` has to be enabled then.
 
   For more information on transfering data and demands, see docs for element

@@ -1,6 +1,6 @@
 defmodule Membrane.Core.Element.DemandHandler do
   @moduledoc false
-  # Module handling demands requested on source pads.
+  # Module handling demands requested on output pads.
 
   alias Membrane.Core
   alias Membrane.Element.Pad
@@ -20,7 +20,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   use Bunch
 
   @doc """
-  Updates demand on the given sink pad that should be supplied by future calls
+  Updates demand on the given input pad that should be supplied by future calls
   to `supply_demand/2` or `check_and_supply_demands/2`.
   """
   @spec update_demand(
@@ -64,10 +64,10 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @doc """
-  Supplies the demand requested on the given sink pad, if there is any.
+  Supplies the demand requested on the given input pad, if there is any.
 
   In filters also triggers `handle_demand` callback when there is unsupplied demand
-  on source pads
+  on output pads
   """
   @spec check_and_supply_demands(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   def check_and_supply_demands(pad_ref, state) do
@@ -90,7 +90,7 @@ defmodule Membrane.Core.Element.DemandHandler do
         if is_pullbuffer_empty do
           {:ok, state}
         else
-          PadModel.filter_refs_by_data(%{direction: :source}, state)
+          PadModel.filter_refs_by_data(%{direction: :output}, state)
           |> Bunch.Enum.try_reduce(state, fn ref, st ->
             DemandController.handle_demand(ref, 0, st)
           end)

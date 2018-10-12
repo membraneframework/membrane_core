@@ -12,10 +12,10 @@ defmodule Membrane.Core.Element.PadControllerSpec do
     end
 
     context "when pad is present in the element" do
-      let :pad_ref, do: :source
-      let :pad_name, do: :source
-      let :direction, do: :source
-      let :other_ref, do: :other_sink
+      let :pad_ref, do: :output
+      let :pad_name, do: :output
+      let :direction, do: :output
+      let :other_ref, do: :other_input
       let :props, do: %{}
 
       it "should return an ok result" do
@@ -77,8 +77,8 @@ defmodule Membrane.Core.Element.PadControllerSpec do
 
     context "when pad is not present in the element" do
       let :pad_ref, do: :invalid_ref
-      let :direction, do: :source
-      let :other_ref, do: :other_sink
+      let :direction, do: :output
+      let :other_ref, do: :other_input
       let :props, do: %{}
 
       it "should return an error result" do

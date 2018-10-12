@@ -103,7 +103,7 @@ defmodule Membrane.Time do
 
   @doc """
   Converts iso8601 string to internal Membrane time units.
-  If input is invalid, throws match error.
+  If `value` is invalid, throws match error.
 
   Inlined by the compiler.
   """

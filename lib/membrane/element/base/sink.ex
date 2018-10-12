@@ -6,7 +6,7 @@ defmodule Membrane.Element.Base.Sink do
   `Membrane.Element.Base.Mixin.CommonBehaviour`,
   and `Membrane.Element.Base.Mixin.SinkBehaviour`.
 
-  Sink elements can define only sink pads. Job of a usual sink is to receive some
+  Sink elements can define only input pads. Job of a usual sink is to receive some
   data on such pad and consume it (write to a soundcard, send through TCP etc.).
   If the pad works in pull mode, which is the most common case, then element is
   also responsible for requesting demands when it is able and willing to consume
