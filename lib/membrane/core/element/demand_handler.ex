@@ -54,7 +54,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   Delays supplying demand until all current processing is finished.
 
   This is necessary due to the case when one requests a demand action while previous
-  demand is being supplied. This could lead to a situation when buffers are taken
+  demand is being supplied. This could lead to a situation where buffers are taken
   from PullBuffer and passed to callbacks, while buffers being currently supplied
   have not been processed yet, and therefore to changing order of buffers.
 
@@ -92,6 +92,10 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   def handle_delayed_demands(%State{delayed_demands: del_dem} = state) do
+    # Taking random element of `:delayed_demands` is done to keep data flow
+    # balanced among pads, i.e. to prevent situation when demands requested by
+    # one pad are supplied right away while another one is waiting for buffers
+    # potentially for a long time.
     [{{pad_ref, action}, mode}] = del_dem |> Enum.take_random(1)
     state = %State{state | delayed_demands: del_dem |> Map.delete({pad_ref, action})}
 

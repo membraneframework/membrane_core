@@ -13,7 +13,8 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   @doc """
   Parses message incoming to element and forwards it to proper controller.
   """
-  @spec handle_message(message_t, :info | :call | :other, State.t()) :: State.stateful_try_t()
+  @spec handle_message(message_t, :info | :call | :other, State.t()) ::
+          State.stateful_try_t() | State.statefu_try_t(any)
   def handle_message(message, mode, state) do
     withl handle:
             {:ok, {res, state}} <-
