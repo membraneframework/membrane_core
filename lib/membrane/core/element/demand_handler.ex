@@ -9,6 +9,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   alias Core.Element.{
     BufferController,
     CapsController,
+    DemandController,
     EventController,
     PadModel,
     State
@@ -50,6 +51,73 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @doc """
+  Delays supplying demand until all current processing is finished.
+
+  This is necessary due to the case when one requests a demand action while previous
+  demand is being supplied. This could lead to a situation where buffers are taken
+  from PullBuffer and passed to callbacks, while buffers being currently supplied
+  have not been processed yet, and therefore to changing order of buffers.
+
+  Async mode is supported to handle the case when buffers are passed to
+  handle_process/handle_write, then demand is requested, handle_process/handle_write
+  is called, another demand is requested and so on. In such scenario a message
+  is sent to self, and demand is supplied upon receiving it. This enables buffers
+  waiting in mailbox to be received in the meantime.
+  """
+  @spec delay_supply(Pad.ref_t(), :sync | :async, State.t()) :: State.t()
+  def delay_supply(pad_ref, :async, state) do
+    state
+    |> Bunch.Struct.put_in([:delayed_demands, {pad_ref, :supply}], :async)
+  end
+
+  def delay_supply(pad_ref, :sync, state) do
+    state
+    |> Map.update!(:delayed_demands, &Map.put_new(&1, {pad_ref, :supply}, :sync))
+  end
+
+  @doc """
+  Delays executing redemand until all current processing is finished.
+
+  Works similar to `delay_supply/3`, but only `:sync` mode is supported. See
+  doc for `delay_supply/3` for more info.
+  """
+  @spec delay_redemand(Pad.ref_t(), State.t()) :: State.t()
+  def delay_redemand(pad_ref, state) do
+    state
+    |> Bunch.Struct.put_in([:delayed_demands, {pad_ref, :redemand}], :sync)
+  end
+
+  def handle_delayed_demands(%State{delayed_demands: del_dem} = state) when del_dem == %{} do
+    {:ok, state}
+  end
+
+  def handle_delayed_demands(%State{delayed_demands: del_dem} = state) do
+    # Taking random element of `:delayed_demands` is done to keep data flow
+    # balanced among pads, i.e. to prevent situation where demands requested by
+    # one pad are supplied right away while another one is waiting for buffers
+    # potentially for a long time.
+    [{{pad_ref, action}, mode}] = del_dem |> Enum.take_random(1)
+    state = %State{state | delayed_demands: del_dem |> Map.delete({pad_ref, action})}
+
+    res =
+      case {action, mode} do
+        {:supply, :sync} ->
+          supply_demand(pad_ref, state)
+
+        {:supply, :async} ->
+          send(self(), {:membrane_invoke_supply_demand, pad_ref})
+          {:ok, state}
+
+        {:redemand, :sync} ->
+          DemandController.handle_demand(pad_ref, 0, state)
+      end
+
+    with {:ok, state} <- res do
+      handle_delayed_demands(state)
+    end
+  end
+
+  @doc """
   Based on the demand on the given pad takes PullBuffer contents
   and passes it to proper controllers.
   """
@@ -60,23 +128,6 @@ defmodule Membrane.Core.Element.DemandHandler do
   def supply_demand(pad_ref, state) do
     total_size = PadModel.get_data!(pad_ref, :demand, state)
     do_supply_demand(pad_ref, total_size, state)
-  end
-
-  @doc """
-  Supplies the demand requested on the given input pad, if there is any.
-
-  In filters also triggers `handle_demand` callback when there is unsupplied demand
-  on output pads
-  """
-  @spec check_and_supply_demands(Pad.ref_t(), State.t()) :: State.stateful_try_t()
-  def check_and_supply_demands(pad_ref, state) do
-    demand = PadModel.get_data!(pad_ref, :demand, state)
-
-    if demand > 0 do
-      do_supply_demand(pad_ref, demand, state)
-    else
-      {:ok, state}
-    end
   end
 
   @spec do_supply_demand(Pad.ref_t(), pos_integer, State.t()) :: State.stateful_try_t()
@@ -122,10 +173,10 @@ defmodule Membrane.Core.Element.DemandHandler do
           State.t()
         ) :: State.stateful_try_t()
   defp do_handle_pullbuffer_output(pad_ref, {:event, e}, state),
-    do: EventController.exec_handle_event(pad_ref, e, state)
+    do: EventController.exec_handle_event(pad_ref, e, %{supplying_demand?: true}, state)
 
   defp do_handle_pullbuffer_output(pad_ref, {:caps, c}, state),
-    do: CapsController.exec_handle_caps(pad_ref, c, state)
+    do: CapsController.exec_handle_caps(pad_ref, c, %{supplying_demand?: true}, state)
 
   defp do_handle_pullbuffer_output(
          pad_ref,
@@ -134,6 +185,6 @@ defmodule Membrane.Core.Element.DemandHandler do
        ) do
     state = PadModel.update_data!(pad_ref, :demand, &(&1 - size), state)
 
-    BufferController.exec_buffer_handler(pad_ref, buffers, state)
+    BufferController.exec_buffer_handler(pad_ref, buffers, %{supplying_demand?: true}, state)
   end
 end

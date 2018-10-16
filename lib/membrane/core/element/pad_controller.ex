@@ -150,7 +150,6 @@ defmodule Membrane.Core.Element.PadController do
         pid: pid,
         other_ref: other_ref,
         caps: nil,
-        invoke_redemand: false,
         start_of_stream: false,
         end_of_stream: false
       })
