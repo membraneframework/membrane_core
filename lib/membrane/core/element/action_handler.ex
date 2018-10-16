@@ -136,12 +136,12 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp do_handle_action(
          {:demand, {pad_ref, size}},
-         _cb,
+         cb,
          params,
          %State{type: type} = state
        )
        when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter] do
-    supply_demand(pad_ref, size, params[:supplying_demand?] || false, state)
+    supply_demand(pad_ref, size, cb, params[:supplying_demand?] || false, state)
   end
 
   defp do_handle_action(_action, _callback, _params, state) do
@@ -291,14 +291,15 @@ defmodule Membrane.Core.Element.ActionHandler do
           Pad.ref_t(),
           Action.demand_size_t(),
           callback :: atom,
+          currently_supplying? :: boolean,
           State.t()
         ) :: State.stateful_try_t()
-  defp supply_demand(pad_ref, size, callback, state)
 
   defp supply_demand(
          _pad_ref,
          _size,
          callback,
+         _currently_supplying?,
          %State{playback: %{state: playback_state}} = state
        )
        when playback_state != :playing and callback != :handle_prepared_to_playing do
@@ -309,7 +310,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
   end
 
-  defp supply_demand(pad_ref, 0, callback, state) do
+  defp supply_demand(pad_ref, 0, callback, _currently_supplying?, state) do
     debug(
       """
       Ignoring demand of size of 0 requested by callback #{inspect(callback)}
@@ -321,7 +322,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     {:ok, state}
   end
 
-  defp supply_demand(pad_ref, size, callback, state)
+  defp supply_demand(pad_ref, size, callback, _currently_supplying?, state)
        when is_integer(size) and size < 0 do
     warn_error(
       """
@@ -334,7 +335,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
   end
 
-  defp supply_demand(pad_ref, size, currently_supplying?, state) do
+  defp supply_demand(pad_ref, size, _callback, currently_supplying?, state) do
     input_assertion = PadModel.assert_data(pad_ref, %{direction: :input, mode: :pull}, state)
 
     with {:ok, state} <- {input_assertion, state},

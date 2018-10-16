@@ -560,8 +560,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
               output: %{
                 direction: pad_direction(),
                 pid: self(),
-                mode: pad_mode(),
-                invoke_redemand: false
+                mode: pad_mode()
               }
             }
           }
