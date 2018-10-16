@@ -1,18 +1,11 @@
 defmodule Membrane.ElementSpec do
   use ESpec, async: false
 
-  require Membrane.Support.Element.TrivialSource
-  require Membrane.Support.Element.TrivialSink
-  require Membrane.Support.Element.TrivialFilter
-
-  alias Membrane.Support.Element.TrivialSource
-  alias Membrane.Support.Element.TrivialSink
-  alias Membrane.Support.Element.TrivialFilter
-
+  alias Membrane.Support.Element.{TrivialFilter, TrivialSink, TrivialSource}
   alias Membrane.Element.CallbackContext
+  alias Membrane.Core.{Message, Playback}
   alias Membrane.Core.Element.State
-
-  alias Membrane.Core.Playback
+  require Message
 
   pending ".start_link/3"
   pending ".start/3"
@@ -147,8 +140,8 @@ defmodule Membrane.ElementSpec do
   end
 
   describe ".handle_info/3" do
-    context "if message is :membrane_play" do
-      let :message, do: {:membrane_change_playback_state, :playing}
+    context "change playback state to playing" do
+      let :message, do: Message.new(:change_playback_state, :playing)
       let :module, do: TrivialSource
       let :internal_state, do: %{a: 1}
       let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
@@ -487,8 +480,8 @@ defmodule Membrane.ElementSpec do
       end
     end
 
-    context "if message is :membrane_prepare" do
-      let :message, do: {:membrane_change_playback_state, :prepared}
+    context "change playback state to prepared" do
+      let :message, do: Message.new(:change_playback_state, :prepared)
       let :module, do: TrivialFilter
       let :internal_state, do: %{}
 
@@ -687,8 +680,8 @@ defmodule Membrane.ElementSpec do
       end
     end
 
-    context "if message is :membrane_stop" do
-      let :message, do: {:membrane_change_playback_state, :stopped}
+    context "change playback state to stopped" do
+      let :message, do: Message.new(:change_playback_state, :stopped)
       let :module, do: TrivialFilter
       let :internal_state, do: %{}
       let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
@@ -898,26 +891,26 @@ defmodule Membrane.ElementSpec do
   end
 
   describe "handle_info/3" do
-    context "if message is {:membrane_set_message_bus, pid}" do
-      let :new_message_bus, do: self()
-      let :message, do: {:membrane_set_message_bus, new_message_bus()}
-      let :state, do: %State{module: TrivialFilter, message_bus: message_bus()}
+    context "if message is Message.new(:set_watcher, pid)" do
+      let :new_watcher, do: self()
+      let :message, do: Message.new(:set_watcher, new_watcher())
+      let :state, do: %State{module: TrivialFilter, watcher: watcher()}
 
-      context "and current message bus is nil" do
-        let :message_bus, do: nil
+      context "and current watcher is nil" do
+        let :watcher, do: nil
 
-        it "should return {:noreply, :state()} with message bus set to the new message bus" do
+        it "should return {:noreply, :state()} with watcher set to the new watcher" do
           expect(described_module().handle_call(message(), self(), state()))
-          |> to(eq {:reply, :ok, %{state() | message_bus: new_message_bus()}})
+          |> to(eq {:reply, :ok, %{state() | watcher: new_watcher()}})
         end
       end
 
-      context "and current message bus is set to the same message bus as requested" do
-        let :message_bus, do: new_message_bus()
+      context "and current watcher is set to the same watcher as requested" do
+        let :watcher, do: new_watcher()
 
-        it "should return {:reply, :ok, state()} with message bus set to the new message bus" do
+        it "should return {:reply, :ok, state()} with watcher set to the new watcher" do
           expect(described_module().handle_call(message(), self(), state()))
-          |> to(eq {:reply, :ok, %{state() | message_bus: new_message_bus()}})
+          |> to(eq {:reply, :ok, %{state() | watcher: new_watcher()}})
         end
       end
     end

@@ -49,7 +49,9 @@ defmodule Membrane.Core.PlaybackHandler do
 
       @impl unquote(__MODULE__)
       def notify_controller(:playback_changed, playback_state, controlling_pid) do
-        send(controlling_pid, {:membrane_playback_state_changed, self(), playback_state})
+        alias Membrane.Core.Message
+        require Message
+        Message.send(controlling_pid, :playback_state_changed, [self(), playback_state])
         :ok
       end
 

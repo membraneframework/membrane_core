@@ -2,10 +2,11 @@ defmodule Membrane.Core.Element.ActionHandler do
   @moduledoc false
   # Module validating and executing actions returned by element's callbacks.
 
-  alias Membrane.{Buffer, Caps, Core, Element, Event, Message}
+  alias Membrane.{Buffer, Caps, Core, Element, Event, Notification}
   alias Core.Element.{DemandController, LifecycleController, DemandHandler, PadModel, State}
-  alias Core.{PlaybackHandler, PullBuffer}
+  alias Core.{Message, PlaybackHandler, PullBuffer}
   alias Element.{Action, Pad}
+  require Message
   require PadModel
   import Element.Pad, only: [is_pad_ref: 1]
   use Core.Element.Log
@@ -55,8 +56,8 @@ defmodule Membrane.Core.Element.ActionHandler do
     send_event(pad_ref, event, state)
   end
 
-  defp do_handle_action({:message, message}, _cb, _params, state),
-    do: send_message(message, state)
+  defp do_handle_action({:notify, notification}, _cb, _params, state),
+    do: send_notification(notification, state)
 
   defp do_handle_action({:split, {callback, args_list}}, cb, params, state) do
     CallbackHandler.exec_and_handle_splitted_callback(
@@ -224,7 +225,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         PadModel.get_data!(pad_ref, state)
 
       state = handle_buffer(pad_ref, mode, other_demand_unit, buffers, state)
-      send(pid, {:membrane_buffer, [buffers, other_ref]})
+      Message.send(pid, :buffer, [buffers, other_ref])
       {:ok, state}
     else
       {:error, reason} -> handle_pad_error(reason, state)
@@ -273,7 +274,7 @@ defmodule Membrane.Core.Element.ActionHandler do
           state
         )
 
-      send(pid, {:membrane_caps, [caps, other_ref]})
+      Message.send(pid, :caps, [caps, other_ref])
       {:ok, state}
     else
       caps: false ->
@@ -352,7 +353,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         # processes. As such situation is unwanted, a message to self is sent here
         # to make it possible for messages already enqueued in mailbox to be
         # received before the demand is handled.
-        send(self(), {:membrane_invoke_supply_demand, pad_ref})
+        Message.self(:invoke_supply_demand, pad_ref)
         {:ok, state}
       else
         DemandHandler.supply_demand(pad_ref, state)
@@ -405,7 +406,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     withl event: true <- event |> Event.event?(),
           pad: {:ok, %{pid: pid, other_ref: other_ref}} <- PadModel.get_data(pad_ref, state),
           handler: {:ok, state} <- handle_event(pad_ref, event, state) do
-      send(pid, {:membrane_event, [event, other_ref]})
+      Message.send(pid, :event, [event, other_ref])
       {:ok, state}
     else
       event: false -> {{:error, {:invalid_event, event}}, state}
@@ -429,15 +430,15 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp handle_event(_pad_ref, _event, state), do: {:ok, state}
 
-  @spec send_message(Message.t(), State.t()) :: {:ok, State.t()}
-  defp send_message(%Message{} = message, %State{message_bus: nil} = state) do
-    debug("Dropping #{inspect(message)} as message bus is undefined", state)
+  @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}
+  defp send_notification(notification, %State{watcher: nil} = state) do
+    debug("Dropping notification #{inspect(notification)} as watcher is undefined", state)
     {:ok, state}
   end
 
-  defp send_message(%Message{} = message, %State{message_bus: message_bus, name: name} = state) do
-    debug("Sending message #{inspect(message)} (message bus: #{inspect(message_bus)})", state)
-    send(message_bus, [:membrane_message, name, message])
+  defp send_notification(notification, %State{watcher: watcher, name: name} = state) do
+    debug("Sending notification #{inspect(notification)} (watcher: #{inspect(watcher)})", state)
+    Message.send(watcher, :notification, [name, notification])
     {:ok, state}
   end
 
