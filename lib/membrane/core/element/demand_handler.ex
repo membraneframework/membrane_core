@@ -93,7 +93,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   def handle_delayed_demands(%State{delayed_demands: del_dem} = state) do
     # Taking random element of `:delayed_demands` is done to keep data flow
-    # balanced among pads, i.e. to prevent situation when demands requested by
+    # balanced among pads, i.e. to prevent situation where demands requested by
     # one pad are supplied right away while another one is waiting for buffers
     # potentially for a long time.
     [{{pad_ref, action}, mode}] = del_dem |> Enum.take_random(1)

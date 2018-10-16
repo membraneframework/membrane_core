@@ -14,7 +14,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   Parses message incoming to element and forwards it to proper controller.
   """
   @spec handle_message(message_t, :info | :call | :other, State.t()) ::
-          State.stateful_try_t() | State.statefu_try_t(any)
+          State.stateful_try_t() | State.stateful_try_t(any)
   def handle_message(message, mode, state) do
     withl handle:
             {:ok, {res, state}} <-
@@ -31,7 +31,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   end
 
   @spec do_handle_message(message_t, :info | :call | :other, State.t()) ::
-          State.stateful_try_t() | State.statefu_try_t(any)
+          State.stateful_try_t() | State.stateful_try_t(any)
   defp do_handle_message({:membrane_init, options}, :other, state) do
     LifecycleController.handle_init(options, state)
   end
