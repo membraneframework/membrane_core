@@ -9,7 +9,9 @@ defmodule Membrane.Element do
   alias __MODULE__.Pad
   alias Membrane.{Buffer, Caps, Core}
   alias Core.Element.{MessageDispatcher, State}
+  alias Core.Message
   import Membrane.Helper.GenServer
+  require Message
   use Membrane.Log, tags: :core
   use Bunch
   use GenServer
@@ -160,14 +162,14 @@ defmodule Membrane.Element do
   end
 
   @doc """
-  Sends synchronous call to the given element requesting it to set message bus.
+  Sends synchronous call to the given element requesting it to set watcher.
 
   It will wait for reply for amount of time passed as second argument
   (in milliseconds).
   """
-  @spec set_message_bus(pid, pid, timeout) :: :ok | {:error, any}
-  def set_message_bus(server, message_bus, timeout \\ 5000) when is_pid(server) do
-    GenServer.call(server, {:membrane_set_message_bus, message_bus}, timeout)
+  @spec set_watcher(pid, pid, timeout) :: :ok | {:error, any}
+  def set_watcher(server, watcher, timeout \\ 5000) when is_pid(server) do
+    Message.call(server, :set_watcher, watcher, timeout)
   end
 
   @doc """
@@ -178,7 +180,7 @@ defmodule Membrane.Element do
   """
   @spec set_controlling_pid(pid, pid, timeout) :: :ok | {:error, any}
   def set_controlling_pid(server, controlling_pid, timeout \\ 5000) when is_pid(server) do
-    GenServer.call(server, {:membrane_set_controlling_pid, controlling_pid}, timeout)
+    Message.call(server, :set_controlling_pid, controlling_pid, timeout)
   end
 
   @doc """
@@ -196,16 +198,8 @@ defmodule Membrane.Element do
   end
 
   def link(from_pid, to_pid, from_pad, to_pad, params) when is_pid(from_pid) and is_pid(to_pid) do
-    with :ok <-
-           GenServer.call(
-             from_pid,
-             {:membrane_handle_link, [from_pad, :output, to_pid, to_pad, params]}
-           ),
-         :ok <-
-           GenServer.call(
-             to_pid,
-             {:membrane_handle_link, [to_pad, :input, from_pid, from_pad, params]}
-           ) do
+    with :ok <- Message.call(from_pid, :handle_link, [from_pad, :output, to_pid, to_pad, params]),
+         :ok <- Message.call(to_pid, :handle_link, [to_pad, :input, from_pid, from_pad, params]) do
       :ok
     end
   end
@@ -216,7 +210,7 @@ defmodule Membrane.Element do
   Sends synchronous call to element, telling it to unlink all its pads.
   """
   def unlink(server, timeout \\ 5000) do
-    server |> GenServer.call(:membrane_unlink, timeout)
+    server |> Message.call(:unlink, [], timeout)
   end
 
   @doc """
@@ -224,14 +218,14 @@ defmodule Membrane.Element do
   `:on_request` pad.
   """
   def handle_new_pad(server, direction, pad, timeout \\ 5000) when is_pid(server) do
-    server |> GenServer.call({:membrane_new_pad, [direction, pad]}, timeout)
+    server |> Message.call(:new_pad, [direction, pad], timeout)
   end
 
   @doc """
   Sends synchronous call to element, informing it that linking has finished.
   """
   def handle_linking_finished(server, timeout \\ 5000) when is_pid(server) do
-    server |> GenServer.call(:membrane_linking_finished, timeout)
+    server |> Message.call(:linking_finished, [], timeout)
   end
 
   @impl GenServer
@@ -241,7 +235,7 @@ defmodule Membrane.Element do
 
     with {:ok, state} <-
            MessageDispatcher.handle_message(
-             {:membrane_init, options},
+             Message.new(:init, options),
              :other,
              state
            ) do
@@ -253,7 +247,9 @@ defmodule Membrane.Element do
 
   @impl GenServer
   def terminate(reason, state) do
-    {:ok, _state} = MessageDispatcher.handle_message({:membrane_shutdown, reason}, :other, state)
+    {:ok, _state} =
+      MessageDispatcher.handle_message(Message.new(:shutdown, reason), :other, state)
+
     :ok
   end
 
@@ -265,7 +261,7 @@ defmodule Membrane.Element do
   @impl GenServer
   def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
     {:ok, state} =
-      MessageDispatcher.handle_message({:membrane_pipeline_down, reason}, :info, state)
+      MessageDispatcher.handle_message(Message.new(:pipeline_down, reason), :info, state)
 
     {:stop, reason, state}
   end

@@ -17,7 +17,7 @@ defmodule Membrane.Core.Element.StateSpec do
              name: :name,
              internal_state: nil,
              pads: nil,
-             message_bus: nil,
+             watcher: nil,
              controlling_pid: nil,
              playback: %Playback{},
              playback_buffer: PlaybackBuffer.new(),

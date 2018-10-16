@@ -34,7 +34,9 @@ defmodule Membrane.Core.PlaybackRequestor do
 
       @impl unquote(__MODULE__)
       def change_playback_state(pid, new_state) do
-        send(pid, {:membrane_change_playback_state, new_state})
+        alias Membrane.Core.Message
+        require Message
+        Message.send(pid, :change_playback_state, new_state)
         :ok
       end
 

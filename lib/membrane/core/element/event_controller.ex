@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.EventController do
   @moduledoc false
   # Module handling events incoming through input pads.
 
-  alias Membrane.{Core, Element, Event, Message}
+  alias Membrane.{Core, Element, Event}
   alias Core.{CallbackHandler, PullBuffer}
   alias Core.Element.{ActionHandler, PadModel, State}
   alias Element.{CallbackContext, Pad}
@@ -104,7 +104,7 @@ defmodule Membrane.Core.Element.EventController do
 
   defp post_callback_exec(%Event.EndOfStream{}, %{type: :sink} = state) do
     ActionHandler.handle_action(
-      {:message, %Message{type: :end_of_stream}},
+      {:notification, :end_of_stream},
       :handle_event,
       %{},
       state

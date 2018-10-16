@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   alias Membrane.Core
   alias Membrane.Element.Pad
-  alias Core.PullBuffer
+  alias Core.{Message, PullBuffer}
 
   alias Core.Element.{
     BufferController,
@@ -15,6 +15,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     State
   }
 
+  require Message
   require PadModel
   use Core.Element.Log
   use Bunch
@@ -105,7 +106,7 @@ defmodule Membrane.Core.Element.DemandHandler do
           supply_demand(pad_ref, state)
 
         {:supply, :async} ->
-          send(self(), {:membrane_invoke_supply_demand, pad_ref})
+          Message.self(:invoke_supply_demand, pad_ref)
           {:ok, state}
 
         {:redemand, :sync} ->

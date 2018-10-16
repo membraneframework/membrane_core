@@ -1,6 +1,7 @@
 defmodule Membrane.Core.PullBufferSpec do
+  alias Membrane.Core.{PullBuffer, Message}
   alias Membrane.Support.TestingEvent
-  alias Membrane.Core.PullBuffer
+  require Message
   alias Membrane.Buffer
   use ESpec, async: true
 
@@ -46,7 +47,7 @@ defmodule Membrane.Core.PullBufferSpec do
       )
 
       expected_list = [preferred_size(), input_ref()]
-      assert_received {:membrane_demand, ^expected_list}
+      assert_received Message.new(:demand, ^expected_list)
     end
 
     context "if toilet is not false" do
@@ -70,7 +71,7 @@ defmodule Membrane.Core.PullBufferSpec do
           })
         )
 
-        refute_received {:membrane_demand, _}
+        refute_received Message.new(:demand, _)
       end
     end
   end
@@ -196,7 +197,7 @@ defmodule Membrane.Core.PullBufferSpec do
         described_module().take(pb(), to_take())
         expected_list = [current_size(), input_ref()]
 
-        assert_received {:membrane_demand, ^expected_list}
+        assert_received Message.new(:demand, ^expected_list)
       end
     end
 
@@ -212,7 +213,7 @@ defmodule Membrane.Core.PullBufferSpec do
           exp_list = Qex.new() |> Qex.push(buffers2()) |> Enum.into([])
 
           expect(list) |> to(eq exp_list)
-          assert_received {:membrane_demand, _}
+          assert_received Message.new(:demand, _)
         end
       end
 
@@ -229,7 +230,7 @@ defmodule Membrane.Core.PullBufferSpec do
           exp_list = Qex.new() |> Qex.push(exp_rest) |> Enum.into([])
 
           expect(list) |> to(eq exp_list)
-          assert_received {:membrane_demand, _}
+          assert_received Message.new(:demand, _)
         end
       end
     end

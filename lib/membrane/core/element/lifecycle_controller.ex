@@ -4,10 +4,11 @@ defmodule Membrane.Core.Element.LifecycleController do
   # and similar stuff.
 
   alias Membrane.{Core, Element}
-  alias Core.CallbackHandler
+  alias Core.{CallbackHandler, Message}
   alias Core.Element.{ActionHandler, PadSpecHandler, PadModel, PlaybackBuffer, State}
   alias Element.{CallbackContext, Pad}
   require CallbackContext.{Other, PlaybackChange}
+  require Message
   require PadModel
   use Core.PlaybackHandler
   use Core.Element.Log
@@ -95,18 +96,18 @@ defmodule Membrane.Core.Element.LifecycleController do
   end
 
   @doc """
-  Handles message incoming from pipeline.
+  Handles custom messages incoming to element.
   """
-  @spec handle_message(message :: any, State.t()) :: State.stateful_try_t()
-  def handle_message(message, state) do
+  @spec handle_other(message :: any, State.t()) :: State.stateful_try_t()
+  def handle_other(message, state) do
     ctx = CallbackContext.Other.from_state(state)
 
     CallbackHandler.exec_and_handle_callback(:handle_other, ActionHandler, [message, ctx], state)
     |> or_warn_error("Error while handling message")
   end
 
-  @spec handle_message_bus(pid, State.t()) :: {:ok, State.t()}
-  def handle_message_bus(message_bus, state), do: {:ok, %{state | message_bus: message_bus}}
+  @spec handle_watcher(pid, State.t()) :: {:ok, State.t()}
+  def handle_watcher(watcher, state), do: {:ok, %{state | watcher: watcher}}
 
   @spec handle_controlling_pid(pid, State.t()) :: {:ok, State.t()}
   def handle_controlling_pid(pid, state), do: {:ok, %{state | controlling_pid: pid}}
@@ -155,7 +156,7 @@ defmodule Membrane.Core.Element.LifecycleController do
     with :ok <-
            state.pads.data
            |> Bunch.Enum.try_each(fn {_name, %{pid: pid, other_name: other_name}} ->
-             GenServer.call(pid, {:membrane_handle_unlink, other_name})
+             Message.call(pid, :handle_unlink, other_name)
            end) do
       {:ok, state}
     end

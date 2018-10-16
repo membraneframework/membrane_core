@@ -1,10 +1,11 @@
 defmodule Membrane.Core.Element.ActionHandlerSpec do
   use ESpec, async: false
+  alias Membrane.Buffer
+  alias Membrane.Core.{Element, Message, Playback}
+  alias Element.State
   alias Membrane.Support.TestingEvent
-  alias Membrane.Core.Element.State
-  alias Membrane.{Buffer, Message}
-  alias Membrane.Core.{Playback, Element}
   alias Membrane.Support.Element.{TrivialFilter, TrivialSource}
+  require Message
 
   describe "handle_action for buffer" do
     let :other_ref, do: :other_ref
@@ -119,7 +120,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
             expect(new_state) |> to(eq state())
           end
 
-          it "should send {:membrane_buffer, _} message to pid()" do
+          it "should send Message.new(:buffer, _) message to pid()" do
             described_module().handle_action(
               {:buffer, {pad_ref(), buffer()}},
               callback(),
@@ -127,7 +128,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
               state()
             )
 
-            target = {:membrane_buffer, [[buffer()], other_ref()]}
+            target = Message.new(:buffer, [[buffer()], other_ref()])
             assert_receive ^target
           end
         end
@@ -184,7 +185,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
           expect(new_state) |> to(eq state())
         end
 
-        it "should send {:membrane_buffer, _} message to pid()" do
+        it "should send Message.new(:buffer, _) message to pid()" do
           described_module().handle_action(
             {:buffer, {pad_ref(), buffer()}},
             callback(),
@@ -192,7 +193,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
             state()
           )
 
-          target = {:membrane_buffer, [[buffer()], other_ref()]}
+          target = Message.new(:buffer, [[buffer()], other_ref()])
           assert_receive ^target
         end
       end
@@ -267,9 +268,9 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         context "and event is special" do
           let :payload, do: "special payload"
 
-          it "should send {:membrane_event, _} message to self()" do
+          it "should send Message.new(:event, _) message to self()" do
             described_module().handle_action({:event, {pad_ref(), event()}}, nil, %{}, state())
-            target = {:membrane_event, [event(), other_ref()]}
+            target = Message.new(:event, [event(), other_ref()])
             assert_receive ^target
           end
         end
@@ -352,9 +353,9 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         context "and event is special" do
           let :payload, do: "special payload"
 
-          it "should send {:membrane_event, _} message to self()" do
+          it "should send Message.new(:event, _) message to self()" do
             described_module().handle_action({:caps, {pad_ref(), caps()}}, nil, %{}, state())
-            target = {:membrane_caps, [caps(), other_ref()]}
+            target = Message.new(:caps, [caps(), other_ref()])
             assert_receive ^target
           end
         end
@@ -362,121 +363,34 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     end
   end
 
-  describe "handle_action for message" do
+  describe "handle_action for notification" do
     let :name, do: :some_name
-    let :state, do: %{State.new(TrivialFilter, name()) | message_bus: message_bus()}
-    let :payload, do: "some message"
-    let :message, do: %Message{payload: payload()}
+    let :state, do: %{State.new(TrivialFilter, name()) | watcher: watcher()}
+    let :notification, do: "some notification"
 
-    context "when message_bus is nil" do
-      let :message_bus, do: nil
+    context "when watcher is nil" do
+      let :watcher, do: nil
 
-      it "should return an ok result" do
-        expect(described_module().handle_action({:message, message()}, nil, %{}, state()))
-        |> to(be_ok_result())
-      end
-
-      it "should keep element's state unchanged" do
-        expect(
-          described_module().handle_action({:message, message()}, nil, %{}, state())
-          |> elem(1)
-        )
-        |> to(eq state())
-      end
-
-      context "and message is special" do
-        let :payload, do: "some special payload 1"
-
-        it "should not receive :membrane_message" do
-          described_module().handle_action({:message, message()}, nil, %{}, state())
-          target = [:membrane_message, name(), message()]
-          refute_receive ^target
-        end
-      end
-    end
-
-    context "when message_bus is not nil" do
-      let :message_bus, do: self()
-
-      it "should return an ok result" do
-        expect(described_module().handle_action({:message, message()}, nil, %{}, state()))
-        |> to(be_ok_result())
-      end
-
-      it "should keep element's state unchanged" do
-        expect(
-          described_module().handle_action({:message, message()}, nil, %{}, state())
-          |> elem(1)
-        )
-        |> to(eq state())
-      end
-
-      context "and message is special" do
-        let :payload, do: "some special payload 2"
-
-        it "should receive {:membrane_message, _}" do
-          described_module().handle_action({:message, message()}, nil, %{}, state())
-          target = [:membrane_message, name(), message()]
-          assert_receive ^target
-        end
-      end
-    end
-  end
-
-  describe "handle_action for demand" do
-    let :action, do: {:demand, {pad_ref(), size()}}
-    let :callback, do: :handle_event
-    let :pad_ref, do: :input
-    let :size, do: 1
-    let :type, do: :normal
-    let :mode, do: :pull
-    let :element_type, do: :filter
-    let :playback_state, do: :playing
-    let :element_module, do: TrivialFilter
-    let :handler_module, do: Element.DemandHandler
-
-    let :state,
-      do: %{
-        State.new(element_module(), :test_name)
-        | type: element_type(),
-          playback: %Playback{state: :playing},
-          pads: %{
-            data: %{
-              input: %{
-                direction: :input,
-                mode: mode(),
-                pid: self()
-              }
-            }
-          }
-      }
-
-    context "when input pad is not in a pull mode" do
-      let :mode, do: :push
-
-      it "should return an error with proper reason" do
-        result = described_module().handle_action(action(), callback(), %{}, state())
-        expect(result) |> to(match_pattern {{:error, {:cannot_handle_action, _}}, _})
-        {{:error, {:cannot_handle_action, details}}, _} = result
-        expect(details[:reason]) |> to(match_pattern {:invalid_pad_data, _})
-      end
-    end
-
-    context "when callback is 'handle_write_list'" do
-      let :callback, do: :handle_write_list
-
-      it "should delay demand supply in async mode" do
-        result =
-          described_module().handle_action(
-            action(),
-            callback(),
-            %{supplying_demand?: true},
-            state()
-          )
-
+      it "should return an ok result, keep element state unchanged and not receive notification" do
+        result = described_module().handle_action({:notify, notification()}, nil, %{}, state())
         expect(result) |> to(be_ok_result())
         {:ok, state} = result
-        expect(state.delayed_demands) |> to(eq %{{pad_ref(), :supply} => :async})
+        expect(state) |> to(eq state())
+        message = Message.new(:notification, [name(), notification()])
+        refute_receive ^message
+      end
+    end
+
+    context "when watcher is not nil" do
+      let :watcher, do: self()
+
+      it "should return an ok result, keep element state unchanged and receive notification" do
+        result = described_module().handle_action({:notify, notification()}, nil, %{}, state())
+        expect(result) |> to(be_ok_result())
+        {:ok, state} = result
+        expect(state) |> to(eq state())
+        message = Message.new(:notification, [name(), notification()])
+        assert_receive ^message
       end
     end
   end
@@ -547,13 +461,13 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     let :pad_mode, do: :pull
     let :element_module, do: TrivialSource
     let :controller_module, do: Element.DemandController
-    let :message_a, do: %Message{payload: :a}
-    let :message_b, do: %Message{payload: :b}
+    let :notification_a, do: :a
+    let :notification_b, do: :b
 
     let :state,
       do: %{
         State.new(element_module(), :test_name)
-        | message_bus: self(),
+        | watcher: self(),
           type: :source,
           pads: %{
             data: %{
@@ -571,13 +485,14 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     end
 
     context "if :redemand is the last action" do
-      let :actions, do: [message: message_a(), message: message_b(), redemand: :output]
+      let :actions,
+        do: [notify: notification_a(), notify: notification_b(), redemand: :output]
 
       it "should handle all actions" do
         res = described_module().handle_actions(actions(), nil, %{}, state())
         expect(res |> to(be_ok_result()))
-        msg_a = [:membrane_message, :test_name, message_a()]
-        msg_b = [:membrane_message, :test_name, message_b()]
+        msg_a = Message.new(:notification, [:test_name, notification_a()])
+        msg_b = Message.new(:notification, [:test_name, notification_b()])
         assert_received(^msg_a)
         assert_received(^msg_b)
         {:ok, state} = res
@@ -586,13 +501,14 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     end
 
     context "if :redemand is not the last action" do
-      let :actions, do: [redemand: :output, message: message_a(), message: message_b()]
+      let :actions,
+        do: [redemand: :output, notification: notification_a(), notification: notification_b()]
 
       it "should return an error" do
         res = described_module().handle_actions(actions(), nil, %{}, state())
         expect(res |> to(eq {{:error, :actions_after_redemand}, state()}))
-        msg_a = [:membrane_message, :test_name, message_a()]
-        msg_b = [:membrane_message, :test_name, message_b()]
+        msg_a = Message.new(:notification, [:test_name, notification_a()])
+        msg_b = Message.new(:notification, [:test_name, notification_b()])
         refute_received(^msg_a)
         refute_received(^msg_b)
         expect(controller_module() |> to(accepted(:handle_demand, :any, count: 0)))
@@ -600,13 +516,13 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     end
 
     context "if actions don't contain :redemand" do
-      let :actions, do: [message: message_a(), message: message_b()]
+      let :actions, do: [notify: notification_a(), notify: notification_b()]
 
       it "should handle all actions" do
         res = described_module().handle_actions(actions(), nil, %{}, state())
         expect(res |> to(eq {:ok, state()}))
-        msg_a = [:membrane_message, :test_name, message_a()]
-        msg_b = [:membrane_message, :test_name, message_b()]
+        msg_a = Message.new(:notification, [:test_name, notification_a()])
+        msg_b = Message.new(:notification, [:test_name, notification_b()])
         assert_received(^msg_a)
         assert_received(^msg_b)
       end
