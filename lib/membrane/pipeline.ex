@@ -193,7 +193,7 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  @spec stop_and_terminate(pipeline :: module) :: :ok
+  @spec stop_and_terminate(pipeline :: pid) :: :ok
   def stop_and_terminate(pipeline) do
     Message.send(pipeline, :stop_and_terminate)
     :ok
