@@ -5,6 +5,7 @@ defmodule Membrane.ElementSpec do
   alias Membrane.Element.CallbackContext
   alias Membrane.Core.{Message, Playback}
   alias Membrane.Core.Element.State
+  require CallbackContext.PlaybackChange
   require Message
 
   pending ".start_link/3"
@@ -144,14 +145,14 @@ defmodule Membrane.ElementSpec do
       let :message, do: Message.new(:change_playback_state, :playing)
       let :module, do: TrivialSource
       let :internal_state, do: %{a: 1}
-      let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
+      let :ctx_playback_change, do: state() |> CallbackContext.PlaybackChange.from_state()
 
       let :state,
-        do: %State{
-          module: module(),
-          playback: playback(),
-          playback_buffer: Membrane.Core.Element.PlaybackBuffer.new(),
-          internal_state: internal_state()
+        do: %{
+          State.new(module(), :name)
+          | playback: playback(),
+            playback_buffer: Membrane.Core.Element.PlaybackBuffer.new(),
+            internal_state: internal_state()
         }
 
       context "and current playback state is :stopped" do
@@ -266,18 +267,6 @@ defmodule Membrane.ElementSpec do
               accepted(:handle_stopped_to_prepared, [ctx_playback_change(), internal_state()])
             )
           end
-
-          it "should call handle_prepared_to_playing(ctx, internal_state) callback on element's module with internal state updated by previous handle_stopped_to_prepared call" do
-            described_module().handle_info(message(), state())
-
-            expect(module())
-            |> to(
-              accepted(:handle_prepared_to_playing, [
-                ctx_playback_change(),
-                %{internal_state() | a: 2}
-              ])
-            )
-          end
         end
 
         context "and all callbacks have returned {:ok, state()}" do
@@ -317,15 +306,6 @@ defmodule Membrane.ElementSpec do
             expect(module())
             |> to(
               accepted(:handle_stopped_to_prepared, [ctx_playback_change(), internal_state()])
-            )
-          end
-
-          it "should call handle_prepared_to_playing(ctx, internal_state) callback on element's module with state updated by handle_stopped_to_prepared" do
-            described_module().handle_info(message(), state())
-
-            expect(module())
-            |> to(
-              accepted(:handle_prepared_to_playing, [ctx_playback_change(), new_internal_state()])
             )
           end
 
@@ -486,9 +466,9 @@ defmodule Membrane.ElementSpec do
       let :internal_state, do: %{}
 
       let :state,
-        do: %State{module: module(), playback: playback(), internal_state: internal_state()}
+        do: %{State.new(module(), :name) | playback: playback(), internal_state: internal_state()}
 
-      let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
+      let :ctx_playback_change, do: state() |> CallbackContext.PlaybackChange.from_state()
 
       context "and current playback state is :stopped" do
         let :playback, do: %Playback{state: :stopped}
@@ -614,7 +594,7 @@ defmodule Membrane.ElementSpec do
 
       context "and current playback state is :playing" do
         let :playback, do: %Playback{state: :playing}
-        let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
+        let :ctx_playback_change, do: state() |> CallbackContext.PlaybackChange.from_state()
 
         pending "and at least one of the callbacks has returned an error"
 
@@ -684,10 +664,10 @@ defmodule Membrane.ElementSpec do
       let :message, do: Message.new(:change_playback_state, :stopped)
       let :module, do: TrivialFilter
       let :internal_state, do: %{}
-      let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
+      let :ctx_playback_change, do: state() |> CallbackContext.PlaybackChange.from_state()
 
       let :state,
-        do: %State{module: module(), playback: playback(), internal_state: internal_state()}
+        do: %{State.new(module(), :name) | playback: playback(), internal_state: internal_state()}
 
       context "and current playback state is :playing" do
         let :playback, do: %Playback{state: :playing}
@@ -716,15 +696,6 @@ defmodule Membrane.ElementSpec do
                   |> to(
                     accept(:handle_prepared_to_stopped, fn _, _ -> {:ok, new_internal_state()} end)
                   )
-          end
-
-          it "should call handle_prepared_to_stopped callback on element's module" do
-            described_module().handle_info(message(), state())
-
-            expect(module())
-            |> to(
-              accepted(:handle_prepared_to_stopped, [ctx_playback_change(), internal_state()])
-            )
           end
 
           it "should call handle_playing_to_prepared(:playing, internal_state) callback on element's module" do
@@ -894,7 +865,7 @@ defmodule Membrane.ElementSpec do
     context "if message is Message.new(:set_watcher, pid)" do
       let :new_watcher, do: self()
       let :message, do: Message.new(:set_watcher, new_watcher())
-      let :state, do: %State{module: TrivialFilter, watcher: watcher()}
+      let :state, do: %{State.new(TrivialFilter, :name) | watcher: watcher()}
 
       context "and current watcher is nil" do
         let :watcher, do: nil

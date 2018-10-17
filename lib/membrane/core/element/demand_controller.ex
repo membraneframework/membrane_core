@@ -48,7 +48,7 @@ defmodule Membrane.Core.Element.DemandController do
   @spec exec_handle_demand?(Pad.ref_t(), State.t()) :: boolean
   defp exec_handle_demand?(pad_ref, state) do
     case PadModel.get_data!(pad_ref, state) do
-      %{end_of_stream: true} ->
+      %{end_of_stream?: true} ->
         debug(
           """
           Demand controller: not executing handle_demand as EndOfStream has already been sent

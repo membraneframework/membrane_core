@@ -113,7 +113,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
            |> Bunch.Enum.try_reduce(state, fn msg, st -> msg.(st) end) do
       {:ok, state} =
         cond do
-          PadModel.get_data!(pad_ref, :start_of_stream, state) |> Kernel.not() ->
+          PadModel.get_data!(pad_ref, :start_of_stream?, state) |> Kernel.not() ->
             EventController.handle_event(pad_ref, %Event.StartOfStream{}, state)
 
           true ->

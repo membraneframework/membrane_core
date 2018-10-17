@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   alias Membrane.{Core, Element}
   alias Core.{CallbackHandler, Message}
-  alias Core.Element.{ActionHandler, PadSpecHandler, PadModel, PlaybackBuffer, State}
+  alias Core.Element.{ActionHandler, PadModel, PlaybackBuffer, State}
   alias Element.{CallbackContext, Pad}
   require CallbackContext.{Other, PlaybackChange}
   require Message
@@ -20,8 +20,6 @@ defmodule Membrane.Core.Element.LifecycleController do
   @spec handle_init(Element.options_t(), State.t()) :: State.stateful_try_t()
   def handle_init(options, %State{module: module} = state) do
     debug("Initializing element: #{inspect(module)}, options: #{inspect(options)}", state)
-
-    state = PadSpecHandler.init_pads(state)
 
     with {:ok, state} <- exec_init_handler(module, options, state) do
       debug("Element initialized: #{inspect(module)}", state)

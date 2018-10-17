@@ -4,30 +4,9 @@ defmodule Membrane.Core.Element.PadModel do
 
   alias Membrane.Element.Pad
   alias Membrane.Core.Element.State
-  alias Membrane.Core.PullBuffer
   use Bunch
 
-  @type pad_data_t :: %{
-          required(:accepted_caps) => any,
-          required(:availability) => Pad.availability_t(),
-          required(:direction) => Pad.direction_t(),
-          required(:mode) => Pad.mode_t(),
-          required(:options) => %{
-            optional(:demand_unit) => Membrane.Buffer.Metric.unit_t(),
-            optional(:other_demand_unit) => Membrane.Buffer.Metric.unit_t()
-          },
-          optional(:current_id) => non_neg_integer,
-          required(:pid) => pid,
-          required(:other_ref) => Pad.ref_t(),
-          required(:caps) => Membrane.Caps.t(),
-          required(:start_of_stream) => boolean(),
-          required(:end_of_stream) => boolean(),
-          optional(:sticky_messages) => [Membrane.Event.t()],
-          optional(:buffer) => PullBuffer.t(),
-          optional(:demand) => integer()
-        }
-
-  @type pads_data_t :: %{Pad.ref_t() => pad_data_t}
+  @type pads_data_t :: %{Pad.ref_t() => Pad.Data.t()}
 
   @type pad_info_t :: %{
           required(:accepted_caps) => any,
@@ -97,7 +76,7 @@ defmodule Membrane.Core.Element.PadModel do
     |> Keyword.keys()
   end
 
-  @spec filter_data(constraints :: map, State.t()) :: %{atom => pad_data_t}
+  @spec filter_data(constraints :: map, State.t()) :: %{atom => Pad.Data.t()}
   def filter_data(constraints \\ %{}, state)
 
   def filter_data(constraints, state) when constraints == %{} do
@@ -111,7 +90,7 @@ defmodule Membrane.Core.Element.PadModel do
   end
 
   @spec get_data(Pad.ref_t(), keys :: atom | [atom], State.t()) ::
-          {:ok, pad_data_t | any} | unknown_pad_error_t
+          {:ok, Pad.Data.t() | any} | unknown_pad_error_t
   def get_data(pad_ref, keys \\ [], state) do
     with :ok <- assert_instance(pad_ref, state) do
       state
@@ -120,7 +99,7 @@ defmodule Membrane.Core.Element.PadModel do
     end
   end
 
-  @spec get_data!(Pad.ref_t(), keys :: atom | [atom], State.t()) :: pad_data_t | any
+  @spec get_data!(Pad.ref_t(), keys :: atom | [atom], State.t()) :: Pad.Data.t() | any
   def get_data!(pad_ref, keys \\ [], state) do
     {:ok, pad_data} = get_data(pad_ref, keys, state)
     pad_data
@@ -145,7 +124,7 @@ defmodule Membrane.Core.Element.PadModel do
 
   @spec update_data(Pad.ref_t(), keys :: atom | [atom], (data -> {:ok | error, data}), State.t()) ::
           State.stateful_t(:ok | error | unknown_pad_error_t)
-        when data: pad_data_t | any, error: {:error, reason :: any}
+        when data: Pad.Data.t() | any, error: {:error, reason :: any}
   def update_data(pad_ref, keys \\ [], f, state) do
     with {:ok, state} <- {assert_instance(pad_ref, state), state},
          {:ok, state} <-
@@ -158,7 +137,7 @@ defmodule Membrane.Core.Element.PadModel do
   end
 
   @spec update_data!(Pad.ref_t(), keys :: atom | [atom], (data -> data), State.t()) :: State.t()
-        when data: pad_data_t | any
+        when data: Pad.Data.t() | any
   def update_data!(pad_ref, keys \\ [], f, state) do
     :ok = assert_instance(pad_ref, state)
 
@@ -172,7 +151,7 @@ defmodule Membrane.Core.Element.PadModel do
           (data -> {success | error, data}),
           State.t()
         ) :: State.stateful_t(success | error | unknown_pad_error_t)
-        when data: pad_data_t | any, success: {:ok, data}, error: {:error, reason :: any}
+        when data: Pad.Data.t() | any, success: {:ok, data}, error: {:error, reason :: any}
   def get_and_update_data(pad_ref, keys \\ [], f, state) do
     with {:ok, state} <- {assert_instance(pad_ref, state), state},
          {{:ok, out}, state} <-
@@ -190,7 +169,7 @@ defmodule Membrane.Core.Element.PadModel do
           (data -> {data, data}),
           State.t()
         ) :: State.stateful_t(data)
-        when data: pad_data_t | any
+        when data: Pad.Data.t() | any
   def get_and_update_data!(pad_ref, keys \\ [], f, state) do
     :ok = assert_instance(pad_ref, state)
 
@@ -199,7 +178,7 @@ defmodule Membrane.Core.Element.PadModel do
   end
 
   @spec pop_data(Pad.ref_t(), State.t()) ::
-          State.stateful_t({:ok, pad_data_t | any} | unknown_pad_error_t)
+          State.stateful_t({:ok, Pad.Data.t() | any} | unknown_pad_error_t)
   def pop_data(pad_ref, state) do
     with {:ok, state} <- {assert_instance(pad_ref, state), state} do
       state
@@ -208,7 +187,7 @@ defmodule Membrane.Core.Element.PadModel do
     end
   end
 
-  @spec pop_data!(Pad.ref_t(), State.t()) :: State.stateful_t(pad_data_t | any)
+  @spec pop_data!(Pad.ref_t(), State.t()) :: State.stateful_t(Pad.Data.t() | any)
   def pop_data!(pad_ref, state) do
     {{:ok, pad_data}, state} = pop_data(pad_ref, state)
     {pad_data, state}
@@ -227,7 +206,7 @@ defmodule Membrane.Core.Element.PadModel do
     state
   end
 
-  @spec constraints_met?(pad_data_t, map) :: boolean
+  @spec constraints_met?(Pad.Data.t(), map) :: boolean
   defp constraints_met?(data, constraints) do
     constraints |> Enum.all?(fn {k, v} -> data[k] === v end)
   end

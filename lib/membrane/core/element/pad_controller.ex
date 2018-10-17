@@ -151,12 +151,13 @@ defmodule Membrane.Core.Element.PadController do
         pid: pid,
         other_ref: other_ref,
         caps: nil,
-        start_of_stream: false,
-        end_of_stream: false
+        start_of_stream?: false,
+        end_of_stream?: false
       })
 
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
     data = data |> Map.merge(init_pad_mode_data(data, props, state))
+    data = %Pad.Data{} |> Map.merge(data)
     state |> Bunch.Struct.put_in([:pads, :data, ref], data)
   end
 
@@ -196,7 +197,7 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec generate_eos_if_not_received(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   defp generate_eos_if_not_received(pad_ref, state) do
-    if PadModel.get_data!(pad_ref, :end_of_stream, state) do
+    if PadModel.get_data!(pad_ref, :end_of_stream?, state) do
       {:ok, state}
     else
       EventController.exec_handle_event(pad_ref, %Event.EndOfStream{}, state)

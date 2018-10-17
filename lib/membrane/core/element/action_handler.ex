@@ -220,7 +220,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     )
 
-    with :ok <- PadModel.assert_data(pad_ref, %{direction: :output, end_of_stream: false}, state) do
+    with :ok <- PadModel.assert_data(pad_ref, %{direction: :output, end_of_stream?: false}, state) do
       %{mode: mode, pid: pid, other_ref: other_ref, other_demand_unit: other_demand_unit} =
         PadModel.get_data!(pad_ref, state)
 
@@ -417,13 +417,13 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
   defp handle_event(pad_ref, %Event.EndOfStream{}, state) do
-    with %{direction: :output, end_of_stream: false} <- PadModel.get_data!(pad_ref, state) do
-      {:ok, PadModel.set_data!(pad_ref, :end_of_stream, true, state)}
+    with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(pad_ref, state) do
+      {:ok, PadModel.set_data!(pad_ref, :end_of_stream?, true, state)}
     else
       %{direction: :input} ->
         {{:error, {:cannot_send_end_of_stream_through_input, pad_ref}}, state}
 
-      %{end_of_stream: true} ->
+      %{end_of_stream?: true} ->
         {{:error, {:end_of_stream_already_sent, pad_ref}}, state}
     end
   end
