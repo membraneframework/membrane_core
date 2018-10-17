@@ -286,6 +286,13 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
       def handle_pad_removed(_pad, _context, state), do: {:ok, state}
 
       @impl true
+      def handle_event(pad, %Event.StartOfStream{}, _context, state),
+        do: {{:ok, notify: {:start_of_stream, pad}}, state}
+
+      @impl true
+      def handle_event(pad, %Event.EndOfStream{}, _context, state),
+        do: {{:ok, notify: {:end_of_stream, pad}}, state}
+
       def handle_event(_pad, _event, _context, state), do: {:ok, state}
 
       @impl true

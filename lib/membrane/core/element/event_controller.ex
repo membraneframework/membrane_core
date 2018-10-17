@@ -37,8 +37,7 @@ defmodule Membrane.Core.Element.EventController do
           State.stateful_try_t()
   def exec_handle_event(pad_ref, event, params \\ %{}, state) do
     withl handle: {{:ok, :handle}, state} <- handle_special_event(pad_ref, event, state),
-          exec: {:ok, state} <- do_exec_handle_event(pad_ref, event, params, state),
-          exec: {:ok, state} <- post_callback_exec(event, state) do
+          exec: {:ok, state} <- do_exec_handle_event(pad_ref, event, params, state) do
       {:ok, state}
     else
       handle: {{:ok, :ignore}, state} ->
@@ -101,15 +100,4 @@ defmodule Membrane.Core.Element.EventController do
   end
 
   defp handle_special_event(_pad_ref, _event, state), do: {{:ok, :handle}, state}
-
-  defp post_callback_exec(%Event.EndOfStream{}, %{type: :sink} = state) do
-    ActionHandler.handle_action(
-      {:notification, :end_of_stream},
-      :handle_event,
-      %{},
-      state
-    )
-  end
-
-  defp post_callback_exec(_event, state), do: {:ok, state}
 end
