@@ -72,7 +72,7 @@ locals_without_parens = [
 
 [
   inputs: [
-    "{lib,spec,config}/**/*.{ex,exs}",
+    "{lib,spec,test,config}/**/*.{ex,exs}",
     "mix.exs"
   ],
   locals_without_parens: locals_without_parens,

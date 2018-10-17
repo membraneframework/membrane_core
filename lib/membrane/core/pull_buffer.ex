@@ -3,7 +3,7 @@ defmodule Membrane.Core.PullBuffer do
   Buffer that is attached to the `:input` pad when working in a `:pull` mode.
 
   It stores `Membrane.Buffer`, `Membrane.Event` and `Membrane.Caps` structs and
-  prevents the situation when the data in a stream contains the discontinuities.
+  prevents the situation where the data in a stream contains the discontinuities.
   It also guarantees that element won't be flooded with the incoming data.
   """
   alias Membrane.Buffer

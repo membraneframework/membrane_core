@@ -31,8 +31,9 @@ defmodule Membrane.Core.Element.CapsController do
     end
   end
 
-  @spec exec_handle_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.stateful_try_t()
-  def exec_handle_caps(pad_ref, caps, state) do
+  @spec exec_handle_caps(Pad.ref_t(), Caps.t(), params :: map, State.t()) ::
+          State.stateful_try_t()
+  def exec_handle_caps(pad_ref, caps, params \\ %{}, state) do
     %{accepted_caps: accepted_caps, caps: old_caps} = PadModel.get_data!(pad_ref, state)
 
     context = CallbackContext.Caps.from_state(state, caps: old_caps)
@@ -43,6 +44,7 @@ defmodule Membrane.Core.Element.CapsController do
               CallbackHandler.exec_and_handle_callback(
                 :handle_caps,
                 ActionHandler,
+                params,
                 [pad_ref, caps, context],
                 state
               ) do
