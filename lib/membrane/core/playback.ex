@@ -5,7 +5,7 @@ defmodule Membrane.Core.Playback do
 
   There are three playback states: :stopped, :prepared and :playing.
   """
-  use Bunch
+  use Bunch.Access
 
   defstruct state: :stopped,
             pending_state: nil,

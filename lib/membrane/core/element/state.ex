@@ -12,7 +12,7 @@ defmodule Membrane.Core.Element.State do
   alias Bunch.Type
   alias __MODULE__, as: ThisModule
   require Pad
-  use Bunch
+  use Bunch.Access
 
   @type stateful_t(value) :: Type.stateful_t(value, t)
   @type stateful_try_t :: Type.stateful_try_t(t)

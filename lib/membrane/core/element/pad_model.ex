@@ -94,7 +94,7 @@ defmodule Membrane.Core.Element.PadModel do
   def get_data(pad_ref, keys \\ [], state) do
     with :ok <- assert_instance(pad_ref, state) do
       state
-      |> Bunch.Struct.get_in(data_keys(pad_ref, keys))
+      |> Bunch.Access.get_in(data_keys(pad_ref, keys))
       ~> {:ok, &1}
     end
   end
@@ -110,7 +110,7 @@ defmodule Membrane.Core.Element.PadModel do
   def set_data(pad_ref, keys \\ [], v, state) do
     with {:ok, state} <- {assert_instance(pad_ref, state), state} do
       state
-      |> Bunch.Struct.put_in(data_keys(pad_ref, keys), v)
+      |> Bunch.Access.put_in(data_keys(pad_ref, keys), v)
       ~> {:ok, &1}
     end
   end
@@ -129,7 +129,7 @@ defmodule Membrane.Core.Element.PadModel do
     with {:ok, state} <- {assert_instance(pad_ref, state), state},
          {:ok, state} <-
            state
-           |> Bunch.Struct.get_and_update_in(data_keys(pad_ref, keys), f) do
+           |> Bunch.Access.get_and_update_in(data_keys(pad_ref, keys), f) do
       {:ok, state}
     else
       {{:error, reason}, state} -> {{:error, reason}, state}
@@ -142,7 +142,7 @@ defmodule Membrane.Core.Element.PadModel do
     :ok = assert_instance(pad_ref, state)
 
     state
-    |> Bunch.Struct.update_in(data_keys(pad_ref, keys), f)
+    |> Bunch.Access.update_in(data_keys(pad_ref, keys), f)
   end
 
   @spec get_and_update_data(
@@ -156,7 +156,7 @@ defmodule Membrane.Core.Element.PadModel do
     with {:ok, state} <- {assert_instance(pad_ref, state), state},
          {{:ok, out}, state} <-
            state
-           |> Bunch.Struct.get_and_update_in(data_keys(pad_ref, keys), f) do
+           |> Bunch.Access.get_and_update_in(data_keys(pad_ref, keys), f) do
       {{:ok, out}, state}
     else
       {{:error, reason}, state} -> {{:error, reason}, state}
@@ -174,7 +174,7 @@ defmodule Membrane.Core.Element.PadModel do
     :ok = assert_instance(pad_ref, state)
 
     state
-    |> Bunch.Struct.get_and_update_in(data_keys(pad_ref, keys), f)
+    |> Bunch.Access.get_and_update_in(data_keys(pad_ref, keys), f)
   end
 
   @spec pop_data(Pad.ref_t(), State.t()) ::
@@ -182,7 +182,7 @@ defmodule Membrane.Core.Element.PadModel do
   def pop_data(pad_ref, state) do
     with {:ok, state} <- {assert_instance(pad_ref, state), state} do
       state
-      |> Bunch.Struct.pop_in(data_keys(pad_ref))
+      |> Bunch.Access.pop_in(data_keys(pad_ref))
       ~> {:ok, &1}
     end
   end

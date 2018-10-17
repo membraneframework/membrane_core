@@ -28,7 +28,7 @@ defmodule Membrane.Core.Element.PadController do
       state =
         case Pad.availability_mode_by_ref(pad_ref) do
           :static ->
-            state |> Bunch.Struct.update_in([:pads, :info], &(&1 |> Map.delete(pad_name)))
+            state |> Bunch.Access.update_in([:pads, :info], &(&1 |> Map.delete(pad_name)))
 
           :dynamic ->
             add_to_currently_linking(pad_ref, state)
@@ -97,7 +97,7 @@ defmodule Membrane.Core.Element.PadController do
   def get_pad_ref(pad_name, state) do
     {pad_ref, state} =
       state
-      |> Bunch.Struct.get_and_update_in([:pads, :info, pad_name], fn
+      |> Bunch.Access.get_and_update_in([:pads, :info, pad_name], fn
         nil ->
           :pop
 
@@ -158,7 +158,7 @@ defmodule Membrane.Core.Element.PadController do
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
     data = data |> Map.merge(init_pad_mode_data(data, props, state))
     data = %Pad.Data{} |> Map.merge(data)
-    state |> Bunch.Struct.put_in([:pads, :data, ref], data)
+    state |> Bunch.Access.put_in([:pads, :data, ref], data)
   end
 
   defp init_pad_direction_data(%{direction: :input}, _props, _state), do: %{sticky_messages: []}
@@ -189,11 +189,11 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec add_to_currently_linking(Pad.ref_t(), State.t()) :: State.t()
   defp add_to_currently_linking(ref, state),
-    do: state |> Bunch.Struct.update_in([:pads, :dynamic_currently_linking], &[ref | &1])
+    do: state |> Bunch.Access.update_in([:pads, :dynamic_currently_linking], &[ref | &1])
 
   @spec clear_currently_linking(State.t()) :: State.t()
   defp clear_currently_linking(state),
-    do: state |> Bunch.Struct.put_in([:pads, :dynamic_currently_linking], [])
+    do: state |> Bunch.Access.put_in([:pads, :dynamic_currently_linking], [])
 
   @spec generate_eos_if_not_received(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   defp generate_eos_if_not_received(pad_ref, state) do
