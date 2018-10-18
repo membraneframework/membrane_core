@@ -20,7 +20,8 @@ defmodule Membrane.Core.Element.StateSpec do
              watcher: nil,
              controlling_pid: nil,
              playback: %Playback{},
-             playback_buffer: PlaybackBuffer.new()
+             playback_buffer: PlaybackBuffer.new(),
+             delayed_demands: %{}
            )
       )
     end

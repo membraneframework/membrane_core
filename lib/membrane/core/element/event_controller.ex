@@ -33,10 +33,11 @@ defmodule Membrane.Core.Element.EventController do
     end
   end
 
-  @spec exec_handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
-  def exec_handle_event(pad_ref, event, state) do
+  @spec exec_handle_event(Pad.ref_t(), Event.t(), params :: map, State.t()) ::
+          State.stateful_try_t()
+  def exec_handle_event(pad_ref, event, params \\ %{}, state) do
     withl handle: {{:ok, :handle}, state} <- handle_special_event(pad_ref, event, state),
-          exec: {:ok, state} <- do_exec_handle_event(pad_ref, event, state) do
+          exec: {:ok, state} <- do_exec_handle_event(pad_ref, event, params, state) do
       {:ok, state}
     else
       handle: {{:ok, :ignore}, state} ->
@@ -51,15 +52,16 @@ defmodule Membrane.Core.Element.EventController do
     end
   end
 
-  @spec do_exec_handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
-  defp do_exec_handle_event(pad_ref, event, state) do
+  @spec do_exec_handle_event(Pad.ref_t(), Event.t(), params :: map, State.t()) ::
+          State.stateful_try_t()
+  defp do_exec_handle_event(pad_ref, event, params, state) do
     data = PadModel.get_data!(pad_ref, state)
     context = CallbackContext.Event.from_state(state, caps: data.caps)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_event,
       ActionHandler,
-      %{direction: data.direction},
+      params |> Map.merge(%{direction: data.direction}),
       [pad_ref, event, context],
       state
     )

@@ -32,28 +32,33 @@ defmodule Membrane.Core.Element.BufferController do
   @spec exec_buffer_handler(
           Pad.ref_t(),
           [Buffer.t()] | Buffer.t(),
+          params :: map,
           State.t()
         ) :: State.stateful_try_t()
-  def exec_buffer_handler(pad_ref, buffers, %State{type: :filter} = state) do
+  def exec_buffer_handler(pad_ref, buffers, params \\ %{}, state)
+
+  def exec_buffer_handler(pad_ref, buffers, params, %State{type: :filter} = state) do
     context =
       CallbackContext.Process.from_state(state, caps: PadModel.get_data!(pad_ref, :caps, state))
 
     CallbackHandler.exec_and_handle_callback(
       :handle_process_list,
       ActionHandler,
+      params,
       [pad_ref, buffers, context],
       state
     )
     |> or_warn_error("Error while handling process")
   end
 
-  def exec_buffer_handler(pad_ref, buffers, %State{type: :sink} = state) do
+  def exec_buffer_handler(pad_ref, buffers, params, %State{type: :sink} = state) do
     context =
       CallbackContext.Write.from_state(state, caps: PadModel.get_data!(pad_ref, :caps, state))
 
     CallbackHandler.exec_and_handle_callback(
       :handle_write_list,
       ActionHandler,
+      params,
       [pad_ref, buffers, context],
       state
     )
@@ -79,7 +84,7 @@ defmodule Membrane.Core.Element.BufferController do
              state
            ) do
       if was_empty? do
-        DemandHandler.check_and_supply_demands(pad_ref, state)
+        DemandHandler.supply_demand(pad_ref, state)
       else
         {:ok, state}
       end

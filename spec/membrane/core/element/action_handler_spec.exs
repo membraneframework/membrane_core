@@ -4,6 +4,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
   alias Membrane.Core.{Element, Message, Playback}
   alias Element.State
   alias Membrane.Support.TestingEvent
+  alias Membrane.Support.Element.{TrivialFilter, TrivialSource}
   require Message
 
   describe "handle_action for buffer" do
@@ -11,22 +12,22 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
 
     let! :state,
       do: %{
-        playback: playback(),
-        type: :filter,
-        name: :elem_name,
-        __struct__: State,
-        pads: %{
-          data: %{
-            output: %{
-              direction: :output,
-              pid: self(),
-              other_ref: other_ref(),
-              other_demand_unit: :bytes,
-              end_of_stream?: false,
-              mode: :push
+        State.new(TrivialFilter, :elem_name)
+        | playback: playback(),
+          type: :filter,
+          name: :elem_name,
+          pads: %{
+            data: %{
+              output: %{
+                direction: :output,
+                pid: self(),
+                other_ref: other_ref(),
+                other_demand_unit: :bytes,
+                end_of_stream?: false,
+                mode: :push
+              }
             }
           }
-        }
       }
 
     let :pad_ref, do: :output
@@ -204,22 +205,21 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
 
     let! :state,
       do: %{
-        playback: playback(),
-        name: :elem_name,
-        type: :filter,
-        __struct__: State,
-        pads: %{
-          data: %{
-            output: %{
-              direction: :output,
-              pid: self(),
-              other_ref: other_ref(),
-              other_demand_unit: :bytes,
-              end_of_stream?: false,
-              mode: :push
+        State.new(TrivialFilter, :elem_name)
+        | playback: playback(),
+          type: :filter,
+          pads: %{
+            data: %{
+              output: %{
+                direction: :output,
+                pid: self(),
+                other_ref: other_ref(),
+                other_demand_unit: :bytes,
+                end_of_stream?: false,
+                mode: :push
+              }
             }
           }
-        }
       }
 
     let :pad_ref, do: :output
@@ -283,24 +283,23 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
 
     let! :state,
       do: %{
-        playback: playback(),
-        name: :elem_name,
-        type: :filter,
-        __struct__: State,
-        pads: %{
-          data: %{
-            output: %{
-              direction: :output,
-              pid: self(),
-              other_ref: other_ref(),
-              caps: nil,
-              other_demand_unit: :bytes,
-              end_of_stream?: false,
-              mode: :push,
-              accepted_caps: :any
+        State.new(TrivialFilter, :elem_name)
+        | playback: playback(),
+          type: :filter,
+          pads: %{
+            data: %{
+              output: %{
+                direction: :output,
+                pid: self(),
+                other_ref: other_ref(),
+                caps: nil,
+                other_demand_unit: :bytes,
+                end_of_stream?: false,
+                mode: :push,
+                accepted_caps: :any
+              }
             }
           }
-        }
       }
 
     let :pad_ref, do: :output
@@ -366,7 +365,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
 
   describe "handle_action for notification" do
     let :name, do: :some_name
-    let :state, do: %State{watcher: watcher(), name: name()}
+    let :state, do: %{State.new(TrivialFilter, name()) | watcher: watcher()}
     let :notification, do: "some notification"
 
     context "when watcher is nil" do
@@ -396,111 +395,28 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     end
   end
 
-  describe "handle_action for demand" do
-    let :action, do: {:demand, {pad_ref(), size()}}
-    let :callback, do: :handle_event
-    let :pad_ref, do: :input
-    let :size, do: 1
-    let :type, do: :normal
-    let :mode, do: :pull
-    let :element_type, do: :filter
-    let :playback_state, do: :playing
-    let :element_module, do: FakeElementModule
-    let :handler_module, do: Element.DemandHandler
-
-    let :state,
-      do: %{
-        __struct__: State,
-        module: element_module(),
-        name: :test_name,
-        type: element_type(),
-        playback_state: playback_state(),
-        pads: %{
-          data: %{
-            input: %{
-              direction: :input,
-              mode: mode(),
-              pid: self()
-            }
-          }
-        }
-      }
-
-    context "when input pad is not in a pull mode" do
-      let :mode, do: :push
-
-      it "should return an error with proper reason" do
-        result = described_module().handle_action(action(), callback(), %{}, state())
-        expect(result) |> to(match_pattern {{:error, {:cannot_handle_action, _}}, _})
-        {{:error, {:cannot_handle_action, details}}, _} = result
-        expect(details[:reason]) |> to(match_pattern {:invalid_pad_data, _})
-      end
-    end
-
-    context "when callback is 'handle_write_list'" do
-      let :callback, do: :handle_write_list
-
-      it "should send appropriate message to 'self()'" do
-        result =
-          described_module().handle_action(
-            action(),
-            callback(),
-            %{},
-            state()
-          )
-
-        expect(result) |> to(be_ok_result())
-        assert_received Message.new(:invoke_supply_demand, _)
-      end
-    end
-
-    context "when callback is other than 'handle_write_list' or 'handle_process_list'" do
-      before do
-        allow handler_module()
-              |> to(accept :update_demand, fn _, _, state -> {:ok, state} end)
-
-        allow handler_module()
-              |> to(accept :supply_demand, fn _, state -> {:ok, state} end)
-      end
-
-      it "should call handle_demand from DemandHandler module" do
-        described_module().handle_action(
-          action(),
-          callback(),
-          %{},
-          state()
-        )
-
-        expect(handler_module() |> to(accepted(:update_demand, :any, count: 1)))
-        expect(handler_module() |> to(accepted(:supply_demand, :any, count: 1)))
-      end
-    end
-  end
-
   describe "handle_action for redemand" do
     let :action, do: {:redemand, pad_ref()}
 
     let :pad_ref, do: :output
     let :pad_direction, do: :output
     let :pad_mode, do: :pull
-    let :element_module, do: FakeElementModule
+    let :element_module, do: TrivialSource
     let :controller_module, do: Element.DemandController
 
     let :state,
       do: %{
-        __struct__: State,
-        module: element_module(),
-        name: :test_name,
-        type: :source,
-        pads: %{
-          data: %{
-            output: %{
-              direction: pad_direction(),
-              pid: self(),
-              mode: pad_mode()
+        State.new(element_module(), :test_name)
+        | type: :source,
+          pads: %{
+            data: %{
+              output: %{
+                direction: pad_direction(),
+                pid: self(),
+                mode: pad_mode()
+              }
             }
           }
-        }
       }
 
     context "if pad doesn't exist in the element" do
@@ -528,14 +444,13 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     context "if given pad works in a pull mode" do
       let :pad_mode, do: :pull
 
-      before do
-        allow controller_module() |> to(accept :handle_demand, fn _, 0, state -> {:ok, state} end)
-      end
-
-      it "should call handle_redemand method of the given module" do
+      it "should delay redemand" do
         res = described_module().handle_action(action(), :handle_write_list, %{}, state())
-        expect(res |> to(eq {:ok, state()}))
-        expect(controller_module() |> to(accepted(:handle_demand, :any, count: 1)))
+
+        expected_state =
+          Bunch.Struct.put_in(state(), [:delayed_demands, {:output, :redemand}], :sync)
+
+        expect(res |> to(eq {:ok, expected_state}))
       end
     end
   end
@@ -544,28 +459,25 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     let :pad_ref, do: :output
     let :pad_direction, do: :output
     let :pad_mode, do: :pull
-    let :element_module, do: FakeElementModule
+    let :element_module, do: TrivialSource
     let :controller_module, do: Element.DemandController
     let :notification_a, do: :a
     let :notification_b, do: :b
 
     let :state,
       do: %{
-        __struct__: State,
-        watcher: self(),
-        module: element_module(),
-        name: :test_name,
-        type: :source,
-        pads: %{
-          data: %{
-            demand: 0,
-            output: %{
-              direction: pad_direction(),
-              pid: self(),
-              mode: pad_mode()
+        State.new(element_module(), :test_name)
+        | watcher: self(),
+          type: :source,
+          pads: %{
+            data: %{
+              output: %{
+                direction: pad_direction(),
+                pid: self(),
+                mode: pad_mode()
+              }
             }
           }
-        }
       }
 
     before do
@@ -578,12 +490,13 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
 
       it "should handle all actions" do
         res = described_module().handle_actions(actions(), nil, %{}, state())
-        expect(res |> to(eq {:ok, state()}))
+        expect(res |> to(be_ok_result()))
         msg_a = Message.new(:notification, [:test_name, notification_a()])
         msg_b = Message.new(:notification, [:test_name, notification_b()])
         assert_received(^msg_a)
         assert_received(^msg_b)
-        expect(controller_module() |> to(accepted(:handle_demand, :any, count: 1)))
+        {:ok, state} = res
+        expect(state.delayed_demands) |> to(eq %{{pad_ref(), :redemand} => :sync})
       end
     end
 

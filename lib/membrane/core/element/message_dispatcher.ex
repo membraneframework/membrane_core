@@ -12,26 +12,25 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   @doc """
   Parses message incoming to element and forwards it to proper controller.
   """
-  @spec handle_message(Message.t(), :info | :call | :other, State.t()) :: State.stateful_try_t()
+  @spec handle_message(Message.t(), :info | :call | :other, State.t()) ::
+          State.stateful_try_t() | State.stateful_try_t(any)
   def handle_message(message, mode, state) do
-    with {:ok, res} <- do_handle_message(message, mode, state) |> Bunch.stateful_try_with_status() do
-      res
+    withl handle:
+            {:ok, {res, state}} <-
+              do_handle_message(message, mode, state) |> Bunch.stateful_try_with_status(),
+          demands: {:ok, state} <- DemandHandler.handle_delayed_demands(state) do
+      {res, state}
     else
-      {_error, {{:error, reason}, state}} ->
-        reason = {:cannot_handle_message, message: message, mode: mode, reason: reason}
+      handle: {_error, {{:error, reason}, state}} ->
+        handle_message_error(message, mode, reason, state)
 
-        warn_error(
-          """
-          MessageDispatcher: cannot handle message: #{inspect(message)}, mode: #{inspect(mode)}
-          """,
-          reason,
-          state
-        )
+      demands: {{:error, reason}, state} ->
+        handle_message_error(message, mode, reason, state)
     end
   end
 
   @spec do_handle_message(Message.t(), :info | :call | :other, State.t()) ::
-          State.stateful_try_t()
+          State.stateful_try_t() | State.stateful_try_t(any)
   defp do_handle_message(Message.new(:init, options), :other, state) do
     LifecycleController.handle_init(options, state)
   end
@@ -106,5 +105,17 @@ defmodule Membrane.Core.Element.MessageDispatcher do
 
   defp do_handle_message(message, mode, state) do
     {{:error, {:invalid_message, message, mode: mode}}, state}
+  end
+
+  defp handle_message_error(message, mode, reason, state) do
+    reason = {:cannot_handle_message, message: message, mode: mode, reason: reason}
+
+    warn_error(
+      """
+      MessageDispatcher: cannot handle message: #{inspect(message)}, mode: #{inspect(mode)}
+      """,
+      reason,
+      state
+    )
   end
 end

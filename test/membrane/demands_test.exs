@@ -4,8 +4,20 @@ defmodule Membrane.Integration.DemandsTest do
   alias Membrane.Integration.{TestingFilter, TestingSource, TestingSink, TestingPipeline}
   alias Membrane.Pipeline
 
+  # Asserts that message equal to pattern will be received within 200ms
+  # In contrast to assert_receive, it also checks if it the first message in the mailbox
+  def assert_message(pattern) do
+    receive do
+      msg ->
+        assert msg == pattern
+    after
+      200 ->
+        assert false, "no messages in the mailbox, expected: #{inspect(pattern)}"
+    end
+  end
+
   def test_pipeline(pid) do
-    pattern_gen = fn i -> <<i :: 16>> <> <<255>> end
+    pattern_gen = fn i -> <<i::16>> <> <<255>> end
     assert Pipeline.play(pid) == :ok
     assert_receive :playing, 2000
     demand = 500
@@ -14,7 +26,7 @@ defmodule Membrane.Integration.DemandsTest do
     0..(demand - 1)
     |> Enum.each(fn i ->
       pattern = pattern_gen.(i)
-      assert_receive ^pattern
+      assert_message(pattern)
     end)
 
     pattern = pattern_gen.(demand)
@@ -24,8 +36,9 @@ defmodule Membrane.Integration.DemandsTest do
     demand..(2 * demand - 1)
     |> Enum.each(fn i ->
       pattern = pattern_gen.(i)
-      assert_receive ^pattern
+      assert_message(pattern)
     end)
+
     assert Pipeline.stop(pid) == :ok
   end
 
@@ -58,17 +71,16 @@ defmodule Membrane.Integration.DemandsTest do
   test "Pipeline with source not generating enough buffers" do
     alias Membrane.Buffer
 
-    actions_gen =
-      fn cnt, _size ->
-        cnt..(4 + cnt - 1)
-        |> Enum.map(fn cnt ->
-          buf = %Buffer{payload: <<cnt :: 16>>}
+    actions_gen = fn cnt, _size ->
+      cnt..(4 + cnt - 1)
+      |> Enum.map(fn cnt ->
+        buf = %Buffer{payload: <<cnt::16>>}
 
-          {:buffer, {:output, buf}}
-        end)
-        |> Enum.concat([redemand: :output])
-        ~> {&1, cnt + 4}
-      end
+        {:buffer, {:output, buf}}
+      end)
+      |> Enum.concat(redemand: :output)
+      ~> {&1, cnt + 4}
+    end
 
     assert {:ok, pid} =
              Pipeline.start_link(TestingPipeline, %{
