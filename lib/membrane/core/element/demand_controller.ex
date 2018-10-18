@@ -27,9 +27,9 @@ defmodule Membrane.Core.Element.DemandController do
       )
 
     if exec_handle_demand?(pad_ref, state) do
-      %{caps: caps, other_demand_unit: unit} = PadModel.get_data!(pad_ref, state)
+      %{other_demand_unit: unit} = PadModel.get_data!(pad_ref, state)
 
-      context = CallbackContext.Demand.from_state(state, caps: caps, incoming_demand: size)
+      context = CallbackContext.Demand.from_state(state, incoming_demand: size)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_demand,

@@ -4,6 +4,5 @@ defmodule Membrane.Element.CallbackContext.PadRemoved do
   when new pad added is created
   """
   use Membrane.Element.CallbackContext,
-    caps: Membrane.Caps.t(),
     direction: :input | :output
 end

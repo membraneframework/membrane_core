@@ -4,6 +4,5 @@ defmodule Membrane.Element.CallbackContext.Demand do
   when processing incoming demand.
   """
   use Membrane.Element.CallbackContext,
-    caps: Membrane.Caps.t(),
     incoming_demand: non_neg_integer()
 end

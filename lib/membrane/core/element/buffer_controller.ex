@@ -38,8 +38,7 @@ defmodule Membrane.Core.Element.BufferController do
   def exec_buffer_handler(pad_ref, buffers, params \\ %{}, state)
 
   def exec_buffer_handler(pad_ref, buffers, params, %State{type: :filter} = state) do
-    context =
-      CallbackContext.Process.from_state(state, caps: PadModel.get_data!(pad_ref, :caps, state))
+    context = CallbackContext.Process.from_state(state)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_process_list,
@@ -52,8 +51,7 @@ defmodule Membrane.Core.Element.BufferController do
   end
 
   def exec_buffer_handler(pad_ref, buffers, params, %State{type: :sink} = state) do
-    context =
-      CallbackContext.Write.from_state(state, caps: PadModel.get_data!(pad_ref, :caps, state))
+    context = CallbackContext.Write.from_state(state)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_write_list,

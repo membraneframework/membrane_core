@@ -222,11 +222,10 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec handle_pad_removed(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   defp handle_pad_removed(ref, state) do
-    %{caps: caps, direction: direction, availability: availability} =
-      PadModel.get_data!(ref, state)
+    %{direction: direction, availability: availability} = PadModel.get_data!(ref, state)
 
     if availability |> Pad.availability_mode() == :dynamic do
-      context = CallbackContext.PadRemoved.from_state(state, direction: direction, caps: caps)
+      context = CallbackContext.PadRemoved.from_state(state, direction: direction)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_removed,

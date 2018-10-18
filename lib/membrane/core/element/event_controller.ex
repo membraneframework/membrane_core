@@ -56,7 +56,7 @@ defmodule Membrane.Core.Element.EventController do
           State.stateful_try_t()
   defp do_exec_handle_event(pad_ref, event, params, state) do
     data = PadModel.get_data!(pad_ref, state)
-    context = CallbackContext.Event.from_state(state, caps: data.caps)
+    context = CallbackContext.Event.from_state(state)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_event,
