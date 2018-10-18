@@ -3,9 +3,13 @@ defmodule Membrane.Element.CallbackContext do
   Parent module for all contexts passed to callbacks
   """
 
+  alias Membrane.Element.Pad
+  alias Membrane.Core
+  alias Core.Playback
+  alias Core.Element.State
   use Bunch
 
-  @macrocallback from_state(Membrane.Core.Element.State.t(), keyword()) :: Macro.t()
+  @macrocallback from_state(State.t(), keyword()) :: Macro.t()
 
   defmacro __using__(fields) do
     quote do
@@ -21,8 +25,8 @@ defmodule Membrane.Element.CallbackContext do
 
       @type t :: %__MODULE__{
               unquote_splicing(fields),
-              pads: %{Pad.ref_t() => Membrane.Element.Pad.Data.t()},
-              playback_state: Membrane.Core.Playback.state_t()
+              pads: %{Pad.ref_t() => Pad.Data.t()},
+              playback_state: Playback.state_t()
             }
 
       defstruct fields_names ++ default_fields_names

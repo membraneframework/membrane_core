@@ -12,6 +12,10 @@ defmodule Membrane.Element.Pad.Data do
   Other fields in the struct ARE NOT PART OF THE PUBLIC API and should not be
   accessed or relied on.
   """
+  alias Membrane.Element.Pad
+  alias Membrane.{Buffer, Caps, Core, Event}
+  alias Buffer.Metric
+  alias Core.PullBuffer
   use Bunch.Access
 
   @type t :: %__MODULE__{
@@ -19,15 +23,15 @@ defmodule Membrane.Element.Pad.Data do
           availability: Pad.availability_t(),
           direction: Pad.direction_t(),
           mode: Pad.mode_t(),
-          demand_unit: Membrane.Buffer.Metric.unit_t(),
-          other_demand_unit: Membrane.Buffer.Metric.unit_t(),
+          demand_unit: Metric.unit_t(),
+          other_demand_unit: Metric.unit_t(),
           current_id: non_neg_integer,
           pid: pid,
           other_ref: Pad.ref_t(),
-          caps: Membrane.Caps.t() | nil,
+          caps: Caps.t() | nil,
           start_of_stream?: boolean(),
           end_of_stream?: boolean(),
-          sticky_messages: [Membrane.Event.t()],
+          sticky_messages: [Event.t()],
           buffer: PullBuffer.t(),
           demand: integer()
         }
