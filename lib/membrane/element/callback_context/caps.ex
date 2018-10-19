@@ -3,9 +3,21 @@ defmodule Membrane.Element.CallbackContext.Caps do
   Structure representing a context that is passed to the element when receiving
   information about new caps for given pad.
 
-  The `pads[pad].caps` field is set to the old caps and has the same value as
-  the `old_caps` field.
+  The `old_caps` field contains caps previously present on the pad, and is equal
+  to `pads[pad].caps` field.
   """
+  alias Membrane.Core.Element.PadModel
+
   use Membrane.Element.CallbackContext,
     old_caps: Membrane.Caps.t()
+
+  @impl true
+  defmacro from_state(state, pad: pad) do
+    old_caps =
+      quote do
+        unquote(pad) |> PadModel.get_data!(:caps, unquote(state))
+      end
+
+    super(state, old_caps: old_caps)
+  end
 end

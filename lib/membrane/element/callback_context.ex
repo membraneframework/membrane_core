@@ -1,6 +1,9 @@
 defmodule Membrane.Element.CallbackContext do
   @moduledoc """
-  Parent module for all contexts passed to callbacks
+  Parent module for all contexts passed to callbacks.
+
+  The idea of context is to provide access to commonly used information without
+  holding it in elements state. Context differs depending on callback.
   """
 
   alias Membrane.Element.Pad
@@ -13,15 +16,8 @@ defmodule Membrane.Element.CallbackContext do
 
   defmacro __using__(fields) do
     quote do
-      @behaviour unquote(__MODULE__)
-
       default_fields_names = [:pads, :playback_state]
       fields_names = unquote(fields |> Keyword.keys())
-
-      @enforce_keys Module.get_attribute(__MODULE__, :enforce_keys)
-                    ~> (&1 || fields_names)
-                    |> Bunch.listify()
-                    ~> (&1 ++ default_fields_names)
 
       @type t :: %__MODULE__{
               unquote_splicing(fields),
@@ -29,18 +25,27 @@ defmodule Membrane.Element.CallbackContext do
               playback_state: Playback.state_t()
             }
 
+      @behaviour unquote(__MODULE__)
+
+      @enforce_keys Module.get_attribute(__MODULE__, :enforce_keys)
+                    ~> (&1 || fields_names)
+                    |> Bunch.listify()
+                    ~> (&1 ++ default_fields_names)
+
       defstruct fields_names ++ default_fields_names
 
       @impl true
-      defmacro from_state(state, entries \\ []) do
+      defmacro from_state(state, args \\ []) do
         quote do
           %unquote(__MODULE__){
-            unquote_splicing(entries),
+            unquote_splicing(args),
             playback_state: unquote(state).playback.state,
             pads: unquote(state).pads.data
           }
         end
       end
+
+      defoverridable unquote(__MODULE__)
     end
   end
 end
