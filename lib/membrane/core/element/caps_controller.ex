@@ -34,9 +34,9 @@ defmodule Membrane.Core.Element.CapsController do
   @spec exec_handle_caps(Pad.ref_t(), Caps.t(), params :: map, State.t()) ::
           State.stateful_try_t()
   def exec_handle_caps(pad_ref, caps, params \\ %{}, state) do
-    %{accepted_caps: accepted_caps} = PadModel.get_data!(pad_ref, state)
+    %{caps: old_caps, accepted_caps: accepted_caps} = PadModel.get_data!(pad_ref, state)
 
-    context = CallbackContext.Caps.from_state(state)
+    context = CallbackContext.Caps.from_state(state, old_caps: old_caps)
 
     withl match: true <- Caps.Matcher.match?(accepted_caps, caps),
           callback:
