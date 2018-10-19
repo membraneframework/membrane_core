@@ -15,7 +15,9 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
 
   @doc """
   Callback invoked when Element is receiving information about new caps for
-  given pad. In filters those caps are forwarded through all output pads by default.
+  given pad.
+
+  In filters those caps are forwarded through all output pads by default.
   """
   @callback handle_caps(
               pad :: Pad.ref_t(),
