@@ -3,8 +3,8 @@ defmodule Membrane.Core.Element.ActionHandler do
   # Module validating and executing actions returned by element's callbacks.
 
   alias Membrane.{Buffer, Caps, Core, Element, Event, Notification}
-  alias Core.Element.{DemandController, LifecycleController, DemandHandler, PadModel, State}
-  alias Core.{Message, PlaybackHandler, PullBuffer}
+  alias Core.Element.{DemandHandler, LifecycleController, PadModel, State}
+  alias Core.{Message, PlaybackHandler}
   alias Element.{Action, Pad}
   require Message
   require PadModel
@@ -64,7 +64,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       callback,
       cb,
       __MODULE__,
-      params,
+      params |> Map.merge(%{skip_invoking_redemands: true}),
       args_list,
       state
     )
@@ -103,7 +103,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp do_handle_action({:redemand, out_ref}, cb, _params, %State{type: type} = state)
        when type in [:source, :filter] and is_pad_ref(out_ref) and
-              cb not in [:handle_process_list] do
+              {type, cb} != {:filter, :handle_demand} do
     handle_redemand(out_ref, state)
   end
 
@@ -138,11 +138,11 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp do_handle_action(
          {:demand, {pad_ref, size}},
          cb,
-         _params,
+         params,
          %State{type: type} = state
        )
        when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter] do
-    handle_demand(pad_ref, size, cb, state)
+    supply_demand(pad_ref, size, cb, params[:supplying_demand?] || false, state)
   end
 
   defp do_handle_action(_action, _callback, _params, state) do
@@ -162,12 +162,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     if actions_after_redemand != [] do
       {{:error, :actions_after_redemand}, state}
     else
-      super(
-        actions |> join_buffers(),
-        callback,
-        handler_params,
-        state
-      )
+      super(actions |> join_buffers(), callback, handler_params, state)
     end
   end
 
@@ -293,29 +288,30 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec handle_demand(
+  @spec supply_demand(
           Pad.ref_t(),
           Action.demand_size_t(),
           callback :: atom,
+          currently_supplying? :: boolean,
           State.t()
         ) :: State.stateful_try_t()
-  defp handle_demand(pad_ref, size, callback, state)
 
-  defp handle_demand(
+  defp supply_demand(
          _pad_ref,
          _size,
          callback,
+         _currently_supplying?,
          %State{playback: %{state: playback_state}} = state
        )
        when playback_state != :playing and callback != :handle_prepared_to_playing do
     warn_error(
       "Demand can only be requested when playing or from handle_prepared_to_playing callback",
-      {:cannot_handle_demand, playback_state: playback_state, callback: callback},
+      {:cannot_supply_demand, playback_state: playback_state, callback: callback},
       state
     )
   end
 
-  defp handle_demand(pad_ref, 0, callback, state) do
+  defp supply_demand(pad_ref, 0, callback, _currently_supplying?, state) do
     debug(
       """
       Ignoring demand of size of 0 requested by callback #{inspect(callback)}
@@ -327,7 +323,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     {:ok, state}
   end
 
-  defp handle_demand(pad_ref, size, callback, state)
+  defp supply_demand(pad_ref, size, callback, _currently_supplying?, state)
        when is_integer(size) and size < 0 do
     warn_error(
       """
@@ -340,54 +336,25 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
   end
 
-  defp handle_demand(pad_ref, size, callback, state) do
+  defp supply_demand(pad_ref, size, _callback, currently_supplying?, state) do
     input_assertion = PadModel.assert_data(pad_ref, %{direction: :input, mode: :pull}, state)
 
     with {:ok, state} <- {input_assertion, state},
          {:ok, state} <- DemandHandler.update_demand(pad_ref, size, state) do
-      if callback in [:handle_write_list, :handle_process_list] do
-        # Handling demand results in execution of handle_write_list/handle_process_list,
-        # wherefore demand returned by one of these callbacks may lead to
-        # emergence of a loop. This, in turn, could result in consuming entire
-        # contents of PullBuffer before accepting any messages from other
-        # processes. As such situation is unwanted, a message to self is sent here
-        # to make it possible for messages already enqueued in mailbox to be
-        # received before the demand is handled.
-        Message.self(:invoke_supply_demand, pad_ref)
-        {:ok, state}
-      else
-        DemandHandler.supply_demand(pad_ref, state)
-      end
+      supply_mode = if currently_supplying?, do: :async, else: :sync
+      state = DemandHandler.delay_supply(pad_ref, supply_mode, state)
+
+      {:ok, state}
     else
       {{:error, reason}, state} -> handle_pad_error(reason, state)
     end
   end
 
   @spec handle_redemand(Pad.ref_t(), State.t()) :: State.stateful_try_t()
-  defp handle_redemand(out_ref, %{type: :source} = state) do
+  defp handle_redemand(out_ref, %{type: type} = state) when type in [:source, :filter] do
     with :ok <- PadModel.assert_data(out_ref, %{direction: :output, mode: :pull}, state) do
-      DemandController.handle_demand(out_ref, 0, state)
-    else
-      {:error, reason} -> handle_pad_error(reason, state)
-    end
-  end
-
-  defp handle_redemand(out_ref, %{type: :filter} = state) do
-    with :ok <- PadModel.assert_data(out_ref, %{direction: :output, mode: :pull}, state) do
-      can_demand_be_supplied =
-        PadModel.filter_refs_by_data(%{direction: :input}, state)
-        |> Enum.any?(fn pad ->
-          pad
-          |> PadModel.get_data!(:buffer, state)
-          |> PullBuffer.empty?()
-          |> Kernel.not()
-        end)
-
-      if can_demand_be_supplied do
-        DemandController.handle_demand(out_ref, 0, state)
-      else
-        {:ok, state}
-      end
+      state = DemandHandler.delay_redemand(out_ref, state)
+      {:ok, state}
     else
       {:error, reason} -> handle_pad_error(reason, state)
     end

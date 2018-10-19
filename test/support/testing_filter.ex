@@ -19,12 +19,12 @@ defmodule Membrane.Integration.TestingFilter do
 
   @impl true
   def handle_demand(:output, size, _, _ctx, state) do
-    {{:ok, demand: {:input, state.demand_generator.(size)}, redemand: :output}, state}
+    {{:ok, demand: {:input, state.demand_generator.(size)}}, state}
   end
 
   @impl true
   def handle_process(:input, %Buffer{payload: payload}, _, state) do
-    {{:ok, buffer: {:output, %Buffer{payload: payload <> <<255>>}}}, state}
+    {{:ok, buffer: {:output, %Buffer{payload: payload <> <<255>>}}, redemand: :output}, state}
   end
 
   def default_demand_generator(demand), do: demand

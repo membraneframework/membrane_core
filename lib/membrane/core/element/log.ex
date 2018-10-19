@@ -1,4 +1,5 @@
 defmodule Membrane.Core.Element.Log do
+  @moduledoc false
   alias Membrane.Core.Element.State
   alias Membrane.Log
   alias Membrane.Log.Logger

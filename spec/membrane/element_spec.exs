@@ -147,11 +147,10 @@ defmodule Membrane.ElementSpec do
       let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
 
       let :state,
-        do: %State{
-          module: module(),
-          playback: playback(),
-          playback_buffer: Membrane.Core.Element.PlaybackBuffer.new(),
-          internal_state: internal_state()
+        do: %{
+          State.new(module(), :name)
+          | playback: playback(),
+            internal_state: internal_state()
         }
 
       context "and current playback state is :stopped" do
@@ -486,7 +485,7 @@ defmodule Membrane.ElementSpec do
       let :internal_state, do: %{}
 
       let :state,
-        do: %State{module: module(), playback: playback(), internal_state: internal_state()}
+        do: %{State.new(module(), :name) | playback: playback(), internal_state: internal_state()}
 
       let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
 
@@ -687,7 +686,7 @@ defmodule Membrane.ElementSpec do
       let :ctx_playback_change, do: %CallbackContext.PlaybackChange{}
 
       let :state,
-        do: %State{module: module(), playback: playback(), internal_state: internal_state()}
+        do: %{State.new(module(), :name) | playback: playback(), internal_state: internal_state()}
 
       context "and current playback state is :playing" do
         let :playback, do: %Playback{state: :playing}
@@ -894,7 +893,7 @@ defmodule Membrane.ElementSpec do
     context "if message is Message.new(:set_watcher, pid)" do
       let :new_watcher, do: self()
       let :message, do: Message.new(:set_watcher, new_watcher())
-      let :state, do: %State{module: TrivialFilter, watcher: watcher()}
+      let :state, do: %{State.new(TrivialFilter, :name) | watcher: watcher()}
 
       context "and current watcher is nil" do
         let :watcher, do: nil

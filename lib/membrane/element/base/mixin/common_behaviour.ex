@@ -126,9 +126,14 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
             ) :: callback_return_t
 
   @doc """
-  Callback that is called when event arrives. Events may arrive from both sinks
-  and sources. In filters by default event is forwarded to all sources or sinks,
-  respectively.
+  Callback that is called when event arrives.
+
+  Events may arrive from both sinks and sources. In filters by default event is
+  forwarded to all sources or sinks, respectively. If event is either
+  `Membrane.Event.StartOfStream` or `Membrane.Event.EndOfStream`, notification
+  is sent, to notify the pipeline that data processing is started or finished.
+  This behaviour can be overriden, e.g. by sending end of stream notification
+  after elements internal buffers become empty.
   """
   @callback handle_event(
               pad :: Pad.ref_t(),
@@ -286,6 +291,13 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
       def handle_pad_removed(_pad, _context, state), do: {:ok, state}
 
       @impl true
+      def handle_event(pad, %Event.StartOfStream{}, _context, state),
+        do: {{:ok, notify: {:start_of_stream, pad}}, state}
+
+      @impl true
+      def handle_event(pad, %Event.EndOfStream{}, _context, state),
+        do: {{:ok, notify: {:end_of_stream, pad}}, state}
+
       def handle_event(_pad, _event, _context, state), do: {:ok, state}
 
       @impl true
