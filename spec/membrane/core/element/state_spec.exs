@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.StateSpec do
   use ESpec, async: true
   alias Membrane.Support.Element.TrivialFilter
   alias Membrane.Core.Playback
-  alias Membrane.Core.Element.PlaybackBuffer
+  alias Membrane.Core.Element.{PadSpecHandler, PlaybackBuffer}
 
   describe "new/2" do
     it "should create proper state" do
@@ -16,7 +16,7 @@ defmodule Membrane.Core.Element.StateSpec do
              type: :filter,
              name: :name,
              internal_state: nil,
-             pads: nil,
+             pads: PadSpecHandler.init_pads(state).pads,
              watcher: nil,
              controlling_pid: nil,
              playback: %Playback{},

@@ -6,13 +6,13 @@ defmodule Membrane.Core.Element.State do
 
   use Membrane.Log, tags: :core
   alias Membrane.{Core, Element}
-  alias Core.Element.{PadModel, PlaybackBuffer}
+  alias Core.{Playback, Playbackable}
+  alias Core.Element.{PadModel, PadSpecHandler, PlaybackBuffer}
   alias Element.Pad
   alias Bunch.Type
-  use Bunch
   alias __MODULE__, as: ThisModule
-  alias Membrane.Core.{Playback, Playbackable}
   require Pad
+  use Bunch.Access
 
   @type stateful_t(value) :: Type.stateful_t(value, t)
   @type stateful_try_t :: Type.stateful_try_t(t)
@@ -66,5 +66,6 @@ defmodule Membrane.Core.Element.State do
       playback_buffer: PlaybackBuffer.new(),
       delayed_demands: %{}
     }
+    |> PadSpecHandler.init_pads()
   end
 end

@@ -23,7 +23,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
                 pid: self(),
                 other_ref: other_ref(),
                 other_demand_unit: :bytes,
-                end_of_stream: false,
+                end_of_stream?: false,
                 mode: :push
               }
             }
@@ -215,7 +215,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
                 pid: self(),
                 other_ref: other_ref(),
                 other_demand_unit: :bytes,
-                end_of_stream: false,
+                end_of_stream?: false,
                 mode: :push
               }
             }
@@ -294,7 +294,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
                 other_ref: other_ref(),
                 caps: nil,
                 other_demand_unit: :bytes,
-                end_of_stream: false,
+                end_of_stream?: false,
                 mode: :push,
                 accepted_caps: :any
               }

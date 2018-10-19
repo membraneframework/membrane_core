@@ -56,7 +56,7 @@ defmodule Membrane.Core.Element.EventController do
           State.stateful_try_t()
   defp do_exec_handle_event(pad_ref, event, params, state) do
     data = PadModel.get_data!(pad_ref, state)
-    context = CallbackContext.Event.from_state(state, caps: data.caps)
+    context = CallbackContext.Event.from_state(state)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_event,
@@ -70,31 +70,31 @@ defmodule Membrane.Core.Element.EventController do
   @spec handle_special_event(Pad.ref_t(), Event.t(), State.t()) ::
           State.stateful_try_t(:handle | :ignore)
   defp handle_special_event(pad_ref, %Event.StartOfStream{}, state) do
-    with %{direction: :input, start_of_stream: false} <- PadModel.get_data!(pad_ref, state) do
-      state = PadModel.set_data!(pad_ref, :start_of_stream, true, state)
+    with %{direction: :input, start_of_stream?: false} <- PadModel.get_data!(pad_ref, state) do
+      state = PadModel.set_data!(pad_ref, :start_of_stream?, true, state)
       {{:ok, :handle}, state}
     else
       %{direction: :output} ->
         {{:error, {:received_start_of_stream_through_output, pad_ref}}, state}
 
-      %{start_of_stream: true} ->
+      %{start_of_stream?: true} ->
         {{:error, {:start_of_stream_already_received, pad_ref}}, state}
     end
   end
 
   defp handle_special_event(pad_ref, %Event.EndOfStream{}, state) do
-    with %{direction: :input, start_of_stream: true, end_of_stream: false} <-
+    with %{direction: :input, start_of_stream?: true, end_of_stream?: false} <-
            PadModel.get_data!(pad_ref, state) do
-      state = PadModel.set_data!(pad_ref, :end_of_stream, true, state)
+      state = PadModel.set_data!(pad_ref, :end_of_stream?, true, state)
       {{:ok, :handle}, state}
     else
       %{direction: :output} ->
         {{:error, {:received_end_of_stream_through_output, pad_ref}}, state}
 
-      %{end_of_stream: true} ->
+      %{end_of_stream?: true} ->
         {{:error, {:end_of_stream_already_received, pad_ref}}, state}
 
-      %{start_of_stream: false} ->
+      %{start_of_stream?: false} ->
         {{:ok, :ignore}, state}
     end
   end

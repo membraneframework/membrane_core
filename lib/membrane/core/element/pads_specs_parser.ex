@@ -9,10 +9,11 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
   use Bunch
 
   @type parsed_pad_specs_t :: %{
-          availability: Pad.availability_t(),
-          mode: Pad.mode_t(),
-          caps: Caps.Matcher.caps_specs_t(),
-          demand_unit: Buffer.Metric.unit_t()
+          :availability => Pad.availability_t(),
+          :mode => Pad.mode_t(),
+          :caps => Caps.Matcher.caps_specs_t(),
+          optional(:demand_unit) => Buffer.Metric.unit_t(),
+          :direction => Pad.direction_t()
         }
 
   @doc """
@@ -52,10 +53,9 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
       if __MODULE__ |> Module.defines?({:membrane_pads, 0}) do
         __MODULE__ |> Module.make_overridable(membrane_pads: 0)
       else
-        @spec membrane_pads() :: [Membrane.Element.pad_specs_t()]
+        @impl true
       end
 
-      @impl true
       def membrane_pads() do
         @membrane_pads
       end

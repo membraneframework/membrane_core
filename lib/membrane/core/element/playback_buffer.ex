@@ -19,6 +19,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   require PadModel
   use Core.Element.Log
   use Bunch
+  use Bunch.Access
 
   @type t :: %__MODULE__{
           q: Qex.t()
@@ -48,14 +49,14 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
       that: state.playback_buffer |> empty?,
       else:
         state
-        |> Bunch.Struct.update_in([:playback_buffer, :q], fn q -> q |> @qe.push(msg) end)
+        |> Bunch.Access.update_in([:playback_buffer, :q], fn q -> q |> @qe.push(msg) end)
         ~> (state -> {:ok, state})
     )
   end
 
   def store(msg, state) do
     state
-    |> Bunch.Struct.update_in([:playback_buffer, :q], fn q -> q |> @qe.push(msg) end)
+    |> Bunch.Access.update_in([:playback_buffer, :q], fn q -> q |> @qe.push(msg) end)
     ~> (state -> {:ok, state})
   end
 
@@ -70,7 +71,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     with {:ok, state} <-
            state.playback_buffer.q
            |> Bunch.Enum.try_reduce(state, &exec/2),
-         do: {:ok, state |> Bunch.Struct.put_in([:playback_buffer, :q], @qe.new)}
+         do: {:ok, state |> Bunch.Access.put_in([:playback_buffer, :q], @qe.new)}
   end
 
   def eval(state), do: {:ok, state}
@@ -113,7 +114,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
            |> Bunch.Enum.try_reduce(state, fn msg, st -> msg.(st) end) do
       {:ok, state} =
         cond do
-          PadModel.get_data!(pad_ref, :start_of_stream, state) |> Kernel.not() ->
+          PadModel.get_data!(pad_ref, :start_of_stream?, state) |> Kernel.not() ->
             EventController.handle_event(pad_ref, %Event.StartOfStream{}, state)
 
           true ->
