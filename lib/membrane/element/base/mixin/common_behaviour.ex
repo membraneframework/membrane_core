@@ -199,8 +199,19 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
     typedoc =
       options
       |> Enum.map_join("\n", fn {k, v} ->
-        "* `#{Atom.to_string(k)}`: #{Keyword.get(v, :description, "\n")}"
-        |> String.trim()
+        desc =
+          v
+          |> Keyword.get(:description, "")
+          |> String.trim()
+
+        tail =
+          if Keyword.has_key?(v, :default) do
+            "\n\n  Defaults to `#{inspect(v[:default])}`"
+          else
+            ""
+          end
+
+        "* `#{Atom.to_string(k)}`: #{desc}" <> tail
       end)
 
     quote do
