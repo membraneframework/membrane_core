@@ -204,14 +204,14 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
           |> Keyword.get(:description, "")
           |> String.trim()
 
-        tail =
+        default_val_desc =
           if Keyword.has_key?(v, :default) do
             "\n\n  Defaults to `#{inspect(v[:default])}`"
           else
             ""
           end
 
-        "* `#{Atom.to_string(k)}`: #{desc}" <> tail
+        "* `#{Atom.to_string(k)}`: #{desc}#{default_val_desc}"
       end)
 
     quote do
