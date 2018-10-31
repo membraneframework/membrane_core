@@ -197,8 +197,8 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
     opt_typespec_ast = {:%{}, [], Keyword.put(opt_specs, :__struct__, __CALLER__.module)}
     # opt_typespec_ast is equivalent of typespec %__CALLER__.module{key: value, ...}
     typedoc =
-      options
-      |> Enum.map_join("\n", fn {k, v} ->
+      escaped_opts
+      |> Enum.map(fn {k, v} ->
         desc =
           v
           |> Keyword.get(:description, "")
@@ -206,12 +206,21 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
         default_val_desc =
           if Keyword.has_key?(v, :default) do
-            "\n\n  Defaults to `#{inspect(v[:default])}`"
+            quote do
+              "\n\n  Defaults to `#{inspect(unquote(v)[:default])}`"
+            end
           else
             ""
           end
 
-        "* `#{Atom.to_string(k)}`: #{desc}#{default_val_desc}"
+        quote do
+          "* `#{Atom.to_string(unquote(k))}`: #{unquote(desc)}#{unquote(default_val_desc)}"
+        end
+      end)
+      |> Enum.reduce(fn x, acc ->
+        quote do
+          unquote(x) <> "\n" <> unquote(acc)
+        end
       end)
 
     quote do
