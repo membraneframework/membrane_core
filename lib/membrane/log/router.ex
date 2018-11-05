@@ -11,8 +11,8 @@ defmodule Membrane.Log.Router do
 
   Options are passed to `Supervisor.start_link/3`.
   """
-  @spec start_link(any, GenServer.options()) :: GenServer.on_start()
-  def start_link(config, process_options \\ []) do
+  @spec start_link({any, GenServer.options()}) :: GenServer.on_start()
+  def start_link({config, process_options}) do
     loggers = config |> Keyword.get(:loggers, [])
     GenServer.start_link(__MODULE__, loggers, process_options)
   end
