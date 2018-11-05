@@ -1,7 +1,7 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "0.2.0-dev"
+  @version "0.2.0"
 
   def project do
     [
@@ -62,7 +62,7 @@ defmodule Membrane.Mixfile do
       {:espec, "~> 1.6", only: :test},
       {:excoveralls, "~> 0.8", only: :test},
       {:qex, "~> 0.3"},
-      {:bunch, github: "membraneframework/bunch"}
+      {:bunch, "~> 0.1.2"}
     ]
   end
 end
