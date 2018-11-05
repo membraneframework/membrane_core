@@ -91,14 +91,16 @@ defmodule Membrane.Log do
     cond do
       not is_atom(level) ->
         quote location: :keep do
-          if level_val >= unquote(router_level_val) do
+          alias Membrane.Log.Router
+
+          if Router.level_to_val(level) >= unquote(router_level_val) do
             unquote(send_code)
           end
 
           :ok
         end
 
-      level |> Router.level_to_val() >= 1 ->
+      level |> Router.level_to_val() >= router_level_val ->
         quote location: :keep do
           unquote(send_code)
           :ok
