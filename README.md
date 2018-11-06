@@ -4,7 +4,7 @@
 [![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_core/)
 [![Build Status](https://travis-ci.com/membraneframework/membrane-core.svg?branch=master)](https://travis-ci.com/membraneframework/membrane-core)
 
-> Membrane Framework - if you asked me what it is, I have no idea. _- Jose Valim_
+> Membrane Framework - if you asked me what it is, I have no idea. _- Jose Valim in [ElixirConf 2018 Keynote](https://www.youtube.com/watch?v=m7TWMFtDwHg&feature=youtu.be&t=11m18s)_
 
 Multimedia processing framework that focuses on reliability, concurrency and scalability.
 
