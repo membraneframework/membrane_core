@@ -62,7 +62,9 @@ defmodule Membrane.Element.Action do
   @type buffer_t :: {:buffer, {Pad.ref_t(), Buffer.t() | [Buffer.t()]}}
 
   @typedoc """
-  Makes a demand on a pad (it must be input pad in pull mode). It does NOT
+  Makes a demand on a pad.
+
+  The pad must be input one and work in pull mode. This action does NOT
   entail _sending_ demand through the pad, but just _requesting_ some amount
   of data from `Membrane.Core.PullBuffer`, which _sends_ demands automatically when it
   runs out of data.
@@ -81,8 +83,9 @@ defmodule Membrane.Element.Action do
 
   @typedoc """
   Executes `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` callback with
-  given pad (which must be a output pad in pull mode) if this demand is greater
-  than 0.
+  given pad if its demand is greater than 0.
+
+  The pad must be output one and work in pull mode.
 
   ## Redemand in Sources
 
@@ -114,7 +117,9 @@ defmodule Membrane.Element.Action do
 
   @typedoc """
   Sends buffers/caps/event to all output pads of element (or to input pads when
-  event occurs on the output pad). Used by default implementations of
+  event occurs on the output pad).
+
+  Used by default implementations of
   `c:Membrane.Element.Base.Mixin.SinkBehaviour.handle_caps/4` and
   `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_event/4` callbacks in filter.
 
@@ -151,6 +156,7 @@ defmodule Membrane.Element.Action do
 
   @typedoc """
   Type that defines a single action that may be returned from element callbacks.
+
   Depending on element type, callback, current playback state and other
   circumstances there may be different actions available.
   """
