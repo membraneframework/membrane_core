@@ -64,18 +64,16 @@ defmodule Membrane.Core.Element.LifecycleController do
         reason,
         %State{module: module, internal_state: internal_state, playback: playback} = state
       ) do
-    case playback.state do
-      :stopped ->
-        debug("Terminating element, reason: #{inspect(reason)}", state)
-
-      _ ->
-        warn_error(
-          """
-          Terminating: Attempt to terminate element when it is not stopped
-          """,
-          reason,
-          state
-        )
+    if playback.state == :stopped && !playback.pending_state do
+      debug("Terminating element, reason: #{inspect(reason)}", state)
+    else
+      warn_error(
+        """
+        Terminating: Attempt to terminate element when it is not stopped
+        """,
+        reason,
+        state
+      )
     end
 
     :ok = module.handle_shutdown(internal_state)
@@ -84,11 +82,13 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @spec handle_pipeline_down(reason :: any, State.t()) :: {:ok, State.t()}
   def handle_pipeline_down(reason, state) do
-    warn_error(
-      "Shutting down because of pipeline failure",
-      {:pipeline_failure, reason: reason},
-      state
-    )
+    if reason != :normal do
+      warn_error(
+        "Shutting down because of pipeline failure",
+        {:pipeline_failure, reason: reason},
+        state
+      )
+    end
 
     handle_shutdown(reason, state)
   end
