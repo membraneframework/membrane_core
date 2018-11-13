@@ -19,6 +19,18 @@ defmodule Membrane.Caps.Matcher do
   If the specs are defined inside of `Membrane.Element.Base.Mixin.SinkBehaviour.def_input_pads/1` and
   `Membrane.Element.Base.Mixin.SourceBehaviour.def_output_pads/1` module name can be ommitted from
   `range/2` and `one_of/1` calls.
+
+  ## Example
+
+  Below is a pad definition with an example of specs for caps matcher:
+
+      alias Membrane.Caps.Video.Raw
+
+      def_input_pads input: [
+                   demand_unit: :buffers,
+                   caps: {Raw, format: one_of([:I420, :I422]), aligned: true}
+                 ]
+
   """
   import Kernel, except: [match?: 2]
   require Record
