@@ -22,4 +22,6 @@ defmodule Membrane.Core.Playback do
         }
 
   @type state_t :: :stopped | :prepared | :playing
+
+  defguard is_playback_state(atom) when atom in [:stopped, :prepared, :playing]
 end
