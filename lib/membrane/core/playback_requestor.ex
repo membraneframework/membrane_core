@@ -12,22 +12,19 @@ defmodule Membrane.Core.PlaybackRequestor do
       @behaviour unquote(__MODULE__)
 
       @doc """
-      Alias for `change_playback_state(pid, :playing)`.
-      See `c:#{__MODULE__}.change_playback_state/2`.
+      Changes playback state to `:playing`.
       """
       @spec play(pid) :: :ok
       def play(pid), do: change_playback_state(pid, :playing)
 
       @doc """
-      Alias for `change_playback_state(pid, :prepared)`.
-      See `c:#{__MODULE__}.change_playback_state/2`.
+      Changes playback state to `:prepared`.
       """
       @spec prepare(pid) :: :ok
       def prepare(pid), do: change_playback_state(pid, :prepared)
 
       @doc """
-      Alias for `change_playback_state(pid, :stopped)`.
-      See `c:#{__MODULE__}.change_playback_state/2`.
+      Changes playback state to `:stopped`.
       """
       @spec stop(pid) :: :ok
       def stop(pid), do: change_playback_state(pid, :stopped)

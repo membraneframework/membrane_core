@@ -3,7 +3,7 @@ defmodule Membrane.Core.Playback do
   This module defines available playback states and struct that is held
   internally by every module having playback state.
 
-  There are three playback states: :stopped, :prepared and :playing.
+  There are three playback states: `:stopped`, `:prepared` and `:playing`.
   """
   use Bunch.Access
 
