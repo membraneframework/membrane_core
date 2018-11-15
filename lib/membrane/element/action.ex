@@ -47,15 +47,18 @@ defmodule Membrane.Element.Action do
   @type split_t :: {:split, {callback_name :: atom, args_list :: [[any]]}}
 
   @typedoc """
-  Sends caps through a pad (it must be output pad). Sended caps must fit
-  constraints on the pad.
+  Sends caps through a pad.
+
+  The pad must have output direction. Sent caps must fit constraints on the pad.
 
   Forbidden when playback state is stopped.
   """
   @type caps_t :: {:caps, {Pad.ref_t(), Caps.t()}}
 
   @typedoc """
-  Sends buffers through a pad (it must be output pad).
+  Sends buffers through a pad.
+
+  The pad must have output direction.
 
   Allowed only when playback state is playing.
   """
@@ -82,10 +85,10 @@ defmodule Membrane.Element.Action do
   @type demand_size_t :: pos_integer | (pos_integer() -> non_neg_integer())
 
   @typedoc """
-  Executes `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` callback with
-  given pad if its demand is greater than 0.
+  Executes `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` callback
+  for the given pad if its demand is greater than 0.
 
-  The pad must be output one and work in pull mode.
+  The pad must have output direction and work in pull mode.
 
   ## Redemand in Sources
 
@@ -93,13 +96,13 @@ defmodule Membrane.Element.Action do
   The element doesn't need to generate the whole demand synchronously at `handle_demand`
   or store current demand size in its state, but it can just generate one buffer
   and return `:redemand` action.
-  If there is still one or more buffers to produce, returning `:redemand` will
-  trigger the next invocation of `handle_demand`. Element will produce next buffer
-  and call `:redemand` again.
-  If there are no more buffers demanded, `handle_demand` won't be invoked and the
-  loop will end.
+  If there is still one or more buffers to produce, returning `:redemand` triggers
+  the next invocation of `handle_demand`. The element is to produce next buffer
+  and call `:redemand` again then.
+  If there are no more buffers demanded, `handle_demand` is not invoked and the
+  loop ends.
   One more advantage of the approach with `:redemand` action is that produced buffers
-  will be sent one after another in separate messages and this could possibly improve
+  are sent one after another in separate messages and this can possibly improve
   the latency.
 
   ## Redemand in Filters
