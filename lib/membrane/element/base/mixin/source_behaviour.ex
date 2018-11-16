@@ -14,25 +14,21 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   alias Element.Base.Mixin.CommonBehaviour
 
   @doc """
-  Callback that is called when buffers should be emitted by the source or filter.
+  Callback called when buffers should be emitted by a source or filter.
 
-  It will be called only for output pads in the pull mode, as in their case demand
+  It is called only for output pads in the pull mode, as in their case demand
   is triggered by the input pad of the subsequent element.
 
-  In source elements, appropriate amount of data should be sent here. If it happens
-  not to be yet available, element should store unsupplied demand and supply it
-  when possible.
+  In sources, appropriate amount of data should be sent here.
 
-  In filter elements, this callback should usually return `:demand` action with
-  size sufficient (at least approximately) for supplying incoming demand. This
-  will result in calling `c:Membrane.Element.Base.Filter.handle_process_list/4` or
-  `c:Membrane.Element.Base.Sink.handle_write_list/4`, which is to supply
-  the demand. If it does not, or does only partially,
-  `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` is called
-  again, until there is any data available on the input pad.
+  In filters, this callback should usually return `:demand` action with
+  size sufficient for supplying incoming demand. This will result in calling
+  `c:Membrane.Element.Base.Filter.handle_process_list/4`, which is to supply
+  the demand.
 
-  For output pads in the push mode, element should generate buffers without this
-  callback.
+  If a source is unable to produce enough buffers, or a filter underestimated
+  returned demand, the `:redemand` action should be used (see
+  `t:Membrane.Element.Action.redemand_t/0`).
   """
   @callback handle_demand(
               pad :: Pad.ref_t(),

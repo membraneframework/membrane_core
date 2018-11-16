@@ -47,22 +47,27 @@ defmodule Membrane.Element.Action do
   @type split_t :: {:split, {callback_name :: atom, args_list :: [[any]]}}
 
   @typedoc """
-  Sends caps through a pad (it must be output pad). Sended caps must fit
-  constraints on the pad.
+  Sends caps through a pad.
+
+  The pad must have output direction. Sent caps must fit constraints on the pad.
 
   Forbidden when playback state is stopped.
   """
   @type caps_t :: {:caps, {Pad.ref_t(), Caps.t()}}
 
   @typedoc """
-  Sends buffers through a pad (it must be output pad).
+  Sends buffers through a pad.
+
+  The pad must have output direction.
 
   Allowed only when playback state is playing.
   """
   @type buffer_t :: {:buffer, {Pad.ref_t(), Buffer.t() | [Buffer.t()]}}
 
   @typedoc """
-  Makes a demand on a pad (it must be input pad in pull mode). It does NOT
+  Makes a demand on a pad.
+
+  The pad must have input direction and work in pull mode. This action does NOT
   entail _sending_ demand through the pad, but just _requesting_ some amount
   of data from `Membrane.Core.PullBuffer`, which _sends_ demands automatically when it
   runs out of data.
@@ -80,22 +85,44 @@ defmodule Membrane.Element.Action do
   @type demand_size_t :: pos_integer | (pos_integer() -> non_neg_integer())
 
   @typedoc """
-  Executes `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` callback with
-  given pad (which must be a output pad in pull mode) if this demand is greater
-  than 0.
+  Executes `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` callback
+  for the given pad if its demand is greater than 0.
 
-  Useful when demand could not have been supplied when previous call to
-  `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` happened, but some
-  element-specific circumstances changed and it might be possible to supply
-  it (at least partially).
+  The pad must have output direction and work in pull mode.
 
+  ## Redemand in Sources
+
+  In case of Sources, `:redemand` is just a helper that simplifies element's code.
+  The element doesn't need to generate the whole demand synchronously at `handle_demand`
+  or store current demand size in its state, but it can just generate one buffer
+  and return `:redemand` action.
+  If there is still one or more buffers to produce, returning `:redemand` triggers
+  the next invocation of `handle_demand`. In such case, the element is to produce
+  next buffer and call `:redemand` again.
+  If there are no more buffers demanded, `handle_demand` is not invoked and
+  the loop ends.
+  One more advantage of the approach with `:redemand` action is that produced buffers
+  are sent one after another in separate messages and this can possibly improve
+  the latency.
+
+  ## Redemand in Filters
+
+  Redemand in Filters is useful in a situation where not the entire demand of
+  output pad has been satisfied and there is a need to send a demand for additional
+  buffers through the input pad.
+  A typical example of this situation is a parser that has not demanded enough
+  bytes to parse the whole frame.
+
+  ## Usage limitations
   Allowed only when playback state is playing.
   """
   @type redemand_t :: {:redemand, Pad.ref_t()}
 
   @typedoc """
   Sends buffers/caps/event to all output pads of element (or to input pads when
-  event occurs on the output pad). Used by default implementations of
+  event occurs on the output pad).
+
+  Used by default implementations of
   `c:Membrane.Element.Base.Mixin.SinkBehaviour.handle_caps/4` and
   `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_event/4` callbacks in filter.
 
@@ -132,6 +159,7 @@ defmodule Membrane.Element.Action do
 
   @typedoc """
   Type that defines a single action that may be returned from element callbacks.
+
   Depending on element type, callback, current playback state and other
   circumstances there may be different actions available.
   """
