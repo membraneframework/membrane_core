@@ -67,7 +67,7 @@ defmodule Membrane.Element.Action do
   @typedoc """
   Makes a demand on a pad.
 
-  The pad must be input one and work in pull mode. This action does NOT
+  The pad must have input direction and work in pull mode. This action does NOT
   entail _sending_ demand through the pad, but just _requesting_ some amount
   of data from `Membrane.Core.PullBuffer`, which _sends_ demands automatically when it
   runs out of data.
@@ -97,10 +97,10 @@ defmodule Membrane.Element.Action do
   or store current demand size in its state, but it can just generate one buffer
   and return `:redemand` action.
   If there is still one or more buffers to produce, returning `:redemand` triggers
-  the next invocation of `handle_demand`. The element is to produce next buffer
-  and call `:redemand` again then.
-  If there are no more buffers demanded, `handle_demand` is not invoked and the
-  loop ends.
+  the next invocation of `handle_demand`. In such case, the element is to produce
+  next buffer and call `:redemand` again.
+  If there are no more buffers demanded, `handle_demand` is not invoked and
+  the loop ends.
   One more advantage of the approach with `:redemand` action is that produced buffers
   are sent one after another in separate messages and this can possibly improve
   the latency.
