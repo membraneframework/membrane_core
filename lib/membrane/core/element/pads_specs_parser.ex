@@ -1,8 +1,7 @@
 defmodule Membrane.Core.Element.PadsSpecsParser do
-  @moduledoc """
-  Functions parsing element pads specifications, generating functions and docs
-  based on them.
-  """
+  @moduledoc false
+  # Functions parsing element pads specifications, generating functions and docs
+  # based on them.
   alias Membrane.{Buffer, Caps, Element}
   alias Element.Pad
   alias Bunch.Type
@@ -16,12 +15,10 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
           :direction => Pad.direction_t()
         }
 
-  @doc """
-  Generates `membrane_{direction}_pads/0` function, along with docs and typespecs.
-
-  Pads specifications are parsed with `parse_pads_specs!/4`, and docs are
-  generated with `generate_docs_from_pads_specs/1`.
-  """
+  # Generates `membrane_{direction}_pads/0` function, along with docs and typespecs.
+  #
+  # Pads specifications are parsed with `parse_pads_specs!/4`, and docs are
+  # generated with `generate_docs_from_pads_specs/1`.
   @spec def_pads(Macro.t(), Pad.direction_t()) :: Macro.t()
   def def_pads(raw_specs, direction) do
     Code.ensure_loaded(Caps.Matcher)
@@ -62,10 +59,8 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
     end
   end
 
-  @doc """
-  Parses pads specifications defined with `Membrane.Element.Base.Mixin.SourceBehaviour.def_output_pads/1`
-  or `Membrane.Element.Base.Mixin.SinkBehaviour.def_input_pads/1`.
-  """
+  # Parses pads specifications defined with `Membrane.Element.Base.Mixin.SourceBehaviour.def_output_pads/1`
+  # or `Membrane.Element.Base.Mixin.SinkBehaviour.def_input_pads/1`.
   @spec parse_pads_specs!(
           specs :: [Element.pad_specs_t()],
           already_parsed :: [{Pad.name_t(), parsed_pad_specs_t}],
@@ -124,9 +119,7 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
     end
   end
 
-  @doc """
-  Generates docs describing pads, based on pads specification.
-  """
+  # Generates docs describing pads, based on pads specification.
   @spec generate_docs_from_pads_specs(parsed_pad_specs_t) :: String.t()
   def generate_docs_from_pads_specs(pads_specs) do
     pads_specs
