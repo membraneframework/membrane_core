@@ -34,6 +34,14 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
 
   It automatically generates documentation from the given definition
   and adds compile-time caps specs validation.
+
+  The definition of pads should be a keyword list with pad name as key and
+  another keyword list as a value. The inner list may contain the following entries:
+  * `availability:` `t:Membrane.Element.Pad.availability_t/0` - defaults to `:always`,
+  * `mode:` `t:Membrane.Element.Pad.mode_t/0`, defaults to `:pull`,
+  * `demand_unit:` `t:Membrane.Buffer.Metric.unit_t/0`, required if mode is set to `pull`,
+  * `caps:` `t:Membrane.Caps.Matcher.caps_specs_t/0` - always required, should contain the specification
+    of allowed caps. See `Membrane.Caps.Matcher` for details on how to define it.
   """
   defmacro def_input_pads(pads) do
     PadsSpecsParser.def_pads(pads, :input)

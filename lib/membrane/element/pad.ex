@@ -10,6 +10,7 @@ defmodule Membrane.Element.Pad do
   Each link can only consist of exactly two pads.
   """
 
+  alias Membrane.{Buffer, Caps}
   use Bunch
   use Bunch.Typespec
 
@@ -24,7 +25,8 @@ defmodule Membrane.Element.Pad do
   @type name_t :: atom
 
   @typedoc """
-  Defines possible pad directions:
+  Defines possible pad directions.
+
   - `:output` - data can only be sent through such pad,
   - `:input` - data can only be received through such pad.
 
@@ -33,7 +35,9 @@ defmodule Membrane.Element.Pad do
   @type direction_t :: :output | :input
 
   @typedoc """
-  Type describing possible pad modes. They are strictly related to pad directions:
+  Describes how an element sends and receives data.
+  Modes are strictly related to pad directions:
+
   - `:push` output pad - element can send data through such pad whenever it wants.
   - `:push` input pad - element has to deal with data whenever it comes through
   such pad, and do it fast enough not to let data accumulate on such pad, what
@@ -54,7 +58,8 @@ defmodule Membrane.Element.Pad do
   @type mode_t :: :push | :pull
 
   @typedoc """
-  Defines possible pad availabilities:
+  Values used when defining pad availability:
+
   - `:always` - a static pad, which can remain unlinked in `stopped` state only.
   - `:on_request` - a dynamic pad, instance of which is created every time it is
   linked to another pad. Thus linking the pad with _k_ other pads, creates _k_
@@ -63,13 +68,49 @@ defmodule Membrane.Element.Pad do
   @list_type availability_t :: [:always, :on_request]
 
   @typedoc """
-  Type describing pad modes:
+  Type describing availability mode of a created pad:
+
   - `:static` - there always exist exactly one instance of such pad.
   - `:dynamic` - multiple instances of such pad may be created and removed (which
   entails executing `handle_pad_added` and `handle_pad_removed` callbacks,
   respectively).
   """
   @type availability_mode_t :: :static | :dynamic
+
+  @typedoc """
+  Describes how a pad should be declared in element.
+  """
+  @type spec_t :: output_spec_t | input_spec_t
+
+  @typedoc """
+  Describes how an output pad should be declared inside an element.
+  """
+  @type output_spec_t :: {name_t(), [common_spec_options_t]}
+
+  @typedoc """
+  Describes how an input pad should be declared inside an element.
+  """
+  @type input_spec_t ::
+          {name_t(), [common_spec_options_t | {:demand_unit, Buffer.Metric.unit_t()}]}
+
+  @typedoc """
+  Pad options used in `t:spec_t/0`
+  """
+  @type common_spec_options_t ::
+          {:availability, availability_t()}
+          | {:mode, mode_t()}
+          | {:caps, Caps.Matcher.caps_specs_t()}
+
+  @typedoc """
+  Type describing a pad. Contains data parsed from `t:spec_t/0`
+  """
+  @type description_t :: %{
+          :availability => availability_t(),
+          :mode => mode_t(),
+          :caps => Caps.Matcher.caps_specs_t(),
+          optional(:demand_unit) => Buffer.Metric.unit_t(),
+          :direction => direction_t()
+        }
 
   defguard is_pad_ref(term)
            when term |> is_atom or
