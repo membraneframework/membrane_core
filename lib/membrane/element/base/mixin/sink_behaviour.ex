@@ -27,7 +27,7 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
             ) :: CommonBehaviour.callback_return_t()
 
   @doc """
-  Macro that defines input pads for the element type.
+  Macro that defines input pads for the element.
 
   Allows to use `Membrane.Caps.Matcher.one_of/1` and `Membrane.Caps.Matcher.range/2`
   functions without module prefix.

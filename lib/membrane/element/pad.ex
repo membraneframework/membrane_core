@@ -25,7 +25,7 @@ defmodule Membrane.Element.Pad do
   @type name_t :: atom
 
   @typedoc """
-  Defines possible pad directions.
+  Defines possible pad directions:
 
   - `:output` - data can only be sent through such pad,
   - `:input` - data can only be received through such pad.

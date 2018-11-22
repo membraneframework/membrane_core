@@ -43,7 +43,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
             ) :: CommonBehaviour.callback_return_t()
 
   @doc """
-  Macro that defines output pads for the element type.
+  Macro that defines output pads for the element.
 
   Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
   without module prefix.
