@@ -39,13 +39,15 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
             ) :: CommonBehaviour.callback_return_t()
 
   @doc """
-  Macro that defines known output pads for the element type.
+  Macro that defines output pads for the element.
 
   Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
   without module prefix.
 
   It automatically generates documentation from the given definition
   and adds compile-time caps specs validation.
+
+  The type `t:Membrane.Element.Pad.output_spec_t/0` describes how the definition of pads should look.
   """
   defmacro def_output_pads(pads) do
     PadsSpecsParser.def_pads(pads, :output)

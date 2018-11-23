@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.PadSpecHandler do
 
   alias Membrane.{Core, Element}
   alias Element.Pad
-  alias Core.Element.{PadModel, PadsSpecsParser, State}
+  alias Core.Element.{PadModel, State}
   require Pad
   use Bunch
   use Core.Element.Log
@@ -23,7 +23,7 @@ defmodule Membrane.Core.Element.PadSpecHandler do
     %State{state | pads: pads}
   end
 
-  @spec init_pad_info(PadsSpecsParser.parsed_pad_specs_t()) :: PadModel.pad_info_t()
+  @spec init_pad_info(Pad.description_t()) :: PadModel.pad_info_t()
   defp init_pad_info(specs) do
     specs
     |> Bunch.Map.move!(:caps, :accepted_caps)

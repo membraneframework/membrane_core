@@ -1,13 +1,15 @@
 defmodule Membrane.Element do
   @moduledoc """
   Module containing functions spawning, shutting down, inspecting and controlling
-  playback of elements. These functions are usually called by `Membrane.Pipeline`,
+  playback of elements.
+
+  These functions are usually called by `Membrane.Pipeline`,
   and can be called from elsewhere only if there is a really good reason for
   doing so.
   """
 
   alias __MODULE__.Pad
-  alias Membrane.{Buffer, Caps, Core}
+  alias Membrane.Core
   alias Core.Element.{MessageDispatcher, State}
   alias Core.Message
   import Membrane.Helper.GenServer
@@ -35,30 +37,6 @@ defmodule Membrane.Element do
   - sink, consuming buffers
   """
   @type type_t :: :source | :filter | :sink
-
-  @typedoc """
-  Describes how a pad should be declared in element.
-  """
-  @type pad_specs_t :: output_pad_specs_t | input_pad_specs_t
-
-  @typedoc """
-  Describes how a output pad should be declared in element.
-  """
-  @type output_pad_specs_t :: {Pad.name_t(), [common_pad_option_t]}
-
-  @typedoc """
-  Describes how a input pad should be declared in element.
-  """
-  @type input_pad_specs_t ::
-          {Pad.name_t(), [common_pad_option_t | {:demand_unit, Buffer.Metric.unit_t()}]}
-
-  @typedoc """
-  Pad options used in `t:pad_specs_t/0`
-  """
-  @type common_pad_option_t ::
-          {:availability, Pad.availability_t()}
-          | {:mode, Pad.mode_t()}
-          | {:caps, Caps.Matcher.caps_specs_t()}
 
   @typedoc """
   Type of user-managed state of element.
