@@ -47,7 +47,7 @@ defmodule Membrane.Integration.DemandsTest do
              Pipeline.start_link(TestingPipeline, %{
                source: TestingSource,
                filter: TestingFilter,
-               sink: %TestingSink{target: self()},
+               sink: %TestingSink{target: self(), autodemand: false},
                target: self()
              })
 
@@ -61,7 +61,7 @@ defmodule Membrane.Integration.DemandsTest do
              Pipeline.start_link(TestingPipeline, %{
                source: TestingSource,
                filter: %TestingFilter{demand_generator: filter_demand_gen},
-               sink: %TestingSink{target: self()},
+               sink: %TestingSink{target: self(), autodemand: false},
                target: self()
              })
 
@@ -86,7 +86,7 @@ defmodule Membrane.Integration.DemandsTest do
              Pipeline.start_link(TestingPipeline, %{
                source: %TestingSource{actions_generator: actions_gen},
                filter: TestingFilter,
-               sink: %TestingSink{target: self()},
+               sink: %TestingSink{target: self(), autodemand: false},
                target: self()
              })
 
