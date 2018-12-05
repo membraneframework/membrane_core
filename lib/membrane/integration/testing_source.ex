@@ -1,4 +1,9 @@
 defmodule Membrane.Integration.TestingSource do
+  @moduledoc """
+  Testing Element for suplying data based on generator function passed through options.
+
+  Generator function must take two arguments (`counter` and `size`) and return buffer with payload of size `size`.
+  """
   use Membrane.Element.Base.Source
   alias Membrane.Buffer
   use Bunch

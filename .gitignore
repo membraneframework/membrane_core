@@ -127,6 +127,7 @@ tags
 !.vscode/launch.json
 !.vscode/extensions.json
 .history
+.vscode/settings.json
 
 ### Windows ###
 # Windows thumbnail cache files

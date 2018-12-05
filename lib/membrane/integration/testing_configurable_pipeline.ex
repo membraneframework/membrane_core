@@ -11,6 +11,15 @@ defmodule Membrane.Integration.TestingConfigurablePipeline do
   Shortcut for building arguments for starting `TestingConfigurablePipeline`.
 
   Works only when using standard `input` and `output` pad names.
+
+  ## Examples
+
+      iex> TestingConfigurablePipeline.build_pipeline([el1: MembraneElement1, el2: MembraneElement2], :my_pid)
+      %{
+        elements: [el1: MembraneElement1, el2: MembraneElement2],
+        links: %{{:output, :el1} => {:input, :el2}},
+        test_process: :my_pid
+      }
   """
 
   @spec build_pipeline(elements :: Spec.children_spec_t(), pid()) :: map()

@@ -1,6 +1,6 @@
 defmodule Membrane.Element.TestingDataSource do
   @moduledoc """
-  Testing Element for suplying data from Enumerable.
+  Testing Element for suplying data from Enumerable passed through options.
   """
   use Membrane.Element.Base.Source
 

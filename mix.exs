@@ -19,8 +19,7 @@ defmodule Membrane.Mixfile do
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.post": :test,
-        "coveralls.html": :test,
-        docs: :test
+        "coveralls.html": :test
       ],
       test_coverage: [tool: ExCoveralls, test_task: "espec"],
       deps: deps()
@@ -53,15 +52,13 @@ defmodule Membrane.Mixfile do
       links: %{
         "GitHub" => link(),
         "Membrane Framework Homepage" => "https://membraneframework.org"
-      },
-      files: ~w(lib .formatter.exs mix.exs README* readme* LICENSE*
-                license* CHANGELOG* changelog* src test/support)
+      }
     ]
   end
 
   defp deps do
     [
-      {:ex_doc, "~> 0.19", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.19", only: :dev, runtime: false},
       {:espec, "~> 1.6", only: :test},
       {:excoveralls, "~> 0.8", only: :test},
       {:qex, "~> 0.3"},
