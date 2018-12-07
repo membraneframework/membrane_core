@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.{Core, Event}
   alias Core.{CallbackHandler, Message, PullBuffer}
-  alias Core.Element.{EventController, PadModel, State}
+  alias Core.Element.{ActionHandler, EventController, PadModel, State}
   alias Membrane.Element.{CallbackContext, Pad}
   alias Bunch.Type
   require CallbackContext.{PadAdded, PadRemoved}
