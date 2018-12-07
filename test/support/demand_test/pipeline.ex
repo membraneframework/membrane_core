@@ -1,4 +1,4 @@
-defmodule Membrane.Integration.TestingPipeline do
+defmodule Membrane.DemandTest.Pipeline do
   use Membrane.Pipeline
 
   @impl true

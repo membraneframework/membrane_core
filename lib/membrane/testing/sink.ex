@@ -1,7 +1,8 @@
-defmodule Membrane.Integration.TestingSink do
+defmodule Membrane.Testing.Sink do
   @moduledoc """
-  Sink Element that will send every buffer it receive to pid passed as argument.
+  Sink Element that will send every buffer it receives to pid passed as argument.
   """
+
   use Membrane.Element.Base.Sink
 
   def_input_pads input: [demand_unit: :buffers, caps: :any]
@@ -14,7 +15,7 @@ defmodule Membrane.Integration.TestingSink do
                 type: :boolean,
                 default: true,
                 description:
-                  "If true element will automatically place demands, otherwise it will be triggered by `:make_demand` message."
+                  "If true element will automatically place demands. If it is set to false demand has to be triggered manually by sending `:make_demand` message."
               ]
 
   @impl true
@@ -35,7 +36,7 @@ defmodule Membrane.Integration.TestingSink do
 
   @impl true
   def handle_write(:input, buf, _ctx, state) do
-    send(state.target, buf.payload)
+    send(state.target, buf)
 
     case state do
       %{autodemand: false} -> {:ok, state}

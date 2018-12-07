@@ -1,6 +1,6 @@
 defmodule Membrane.Core.Element.ActionHandlerTest do
   use ExUnit.Case, async: false
-  alias Membrane.Integration.TestingFilter
+  alias Membrane.DemandTest.Filter
   alias Membrane.Core.{Element, Playback}
   alias Element.State
 
@@ -8,7 +8,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
   setup do
     state = %{
-      State.new(TestingFilter, :test_name)
+      State.new(Filter, :test_name)
       | watcher: self(),
         type: :filter,
         pads: %{

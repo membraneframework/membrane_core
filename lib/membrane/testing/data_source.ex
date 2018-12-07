@@ -1,13 +1,15 @@
-defmodule Membrane.Element.TestingDataSource do
+defmodule Membrane.Testing.DataSource do
   @moduledoc """
-  Testing Element for suplying data from Enumerable passed through options.
+  Testing Element for supplying data from list passed through options.
   """
+
   use Membrane.Element.Base.Source
 
   alias Membrane.{Buffer, Event}
 
   def_options data: [
-                type: :buffers
+                type: :payloads,
+                spec: [Membrane.Payload.t()]
               ]
 
   def_output_pads output: [

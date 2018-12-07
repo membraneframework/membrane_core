@@ -1,4 +1,4 @@
-defmodule Membrane.Integration.TestingFilter do
+defmodule Membrane.DemandTest.Filter do
   use Membrane.Element.Base.Filter
   alias Membrane.Buffer
 

@@ -1,4 +1,4 @@
-defmodule Membrane.Support.TestingEvent do
+defmodule Membrane.Testing.Event do
   @derive Membrane.EventProtocol
   defstruct []
 end
