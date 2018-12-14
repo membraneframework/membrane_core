@@ -199,23 +199,27 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
     typedoc =
       escaped_opts
       |> Enum.map(fn {k, v} ->
-        desc =
-          v
-          |> Keyword.get(:description, "")
-          |> String.trim()
+        desc = v |> Keyword.get(:description, "")
 
         default_val_desc =
           if Keyword.has_key?(v, :default) do
             quote do
-              "\n\n  Defaults to `#{inspect(unquote(v)[:default])}`"
+              "Defaults to `#{inspect(unquote(v)[:default])}`"
             end
           else
             ""
           end
 
-        quote do
-          "* `#{Atom.to_string(unquote(k))}`: #{unquote(desc)}#{unquote(default_val_desc)}"
-        end
+        format_option_docs(
+          quote do
+            """
+            `#{Atom.to_string(unquote(k))}` - \
+            #{String.trim(unquote(desc))}
+
+            #{unquote(default_val_desc)}
+            """
+          end
+        )
       end)
       |> Enum.reduce(fn x, acc ->
         quote do
@@ -226,6 +230,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
     quote do
       @typedoc """
       Struct containing options for `#{inspect(__MODULE__)}`
+
       #{unquote(typedoc)}
       """
       @type t :: unquote(opt_typespec_ast)
@@ -242,6 +247,15 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
       defstruct unquote(escaped_opts)
                 |> Enum.map(fn {k, v} -> {k, v[:default]} end)
+    end
+  end
+
+  defp format_option_docs(docs) do
+    quote do
+      unquote(docs)
+      |> String.trim()
+      |> String.replace("\n\n", "\n\n  ")
+      |> String.replace_prefix("", "* ")
     end
   end
 
