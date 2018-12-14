@@ -189,6 +189,8 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
       For others typespec is set to `t:any/0`
     * `default:` default value for option. If not present, value for this option
       will have to be provided each time options struct is created
+    * `default_formatter:` function converting value provided as `default` to string.
+      Used upon creating documentation instead of `inspect/1`
     * `description:` string describing an option. It will be present in value returned by `options/0`
       and in typedoc for the struct.
   """
@@ -203,8 +205,11 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
         default_val_desc =
           if Keyword.has_key?(v, :default) do
+            default_formatter =
+              v |> Keyword.get(:default_formatter, quote(do: &"`#{inspect(&1)}`"))
+
             quote do
-              "Defaults to `#{inspect(unquote(v)[:default])}`"
+              "Defaults to #{unquote(default_formatter).(unquote(v)[:default])}"
             end
           else
             ""

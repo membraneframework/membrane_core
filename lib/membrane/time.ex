@@ -61,6 +61,34 @@ defmodule Membrane.Time do
   defguard is_native_t(value) when is_integer(value)
 
   @doc """
+  Returns duration as a string with unit. Chosen unit is the biggest possible one
+  that doesn't involve precission loss.
+
+  ## Examples
+
+      iex> 10 |> #{inspect(__MODULE__)}.milliseconds() |> #{inspect(__MODULE__)}.pretty_duration()
+      "10 ms"
+      iex> 60_000_000 |> #{inspect(__MODULE__)}.microseconds() |> #{inspect(__MODULE__)}.pretty_duration()
+      "1 min"
+
+  """
+  @spec pretty_duration(t) :: String.t()
+  def pretty_duration(time) when is_t(time) do
+    [ns: 1000, us: 1000, ms: 1000, s: 60, min: 60, h: 24]
+    |> Enum.reduce_while(time, fn {unit, divisor}, time ->
+      if time |> rem(divisor) == 0 do
+        {:cont, time |> div(divisor)}
+      else
+        {:halt, {time, unit}}
+      end
+    end)
+    |> case do
+      {time, unit} -> "#{time} #{unit}"
+      time -> "#{time} d"
+    end
+  end
+
+  @doc """
   Returns current time in pretty format (currently iso8601), as string
   Uses system_time/0 under the hood.
   """
