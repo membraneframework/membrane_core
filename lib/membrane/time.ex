@@ -61,31 +61,24 @@ defmodule Membrane.Time do
   defguard is_native_t(value) when is_integer(value)
 
   @doc """
-  Returns duration as a string with unit. Chosen unit is the biggest possible one
+  Returns duration as a string with unit. Chosen unit is the biggest possible
   that doesn't involve precission loss.
 
   ## Examples
-
-      iex> 10 |> #{inspect(__MODULE__)}.milliseconds() |> #{inspect(__MODULE__)}.pretty_duration()
+      iex> import #{inspect(__MODULE__)}
+      iex> 10 |> milliseconds() |> pretty_duration()
       "10 ms"
-      iex> 60_000_000 |> #{inspect(__MODULE__)}.microseconds() |> #{inspect(__MODULE__)}.pretty_duration()
+      iex> 60_000_000 |> microseconds() |> pretty_duration()
       "1 min"
+      iex> 2 |> nanoseconds() |> pretty_duration()
+      "2 ns"
 
   """
   @spec pretty_duration(t) :: String.t()
   def pretty_duration(time) when is_t(time) do
-    [ns: 1000, us: 1000, ms: 1000, s: 60, min: 60, h: 24]
-    |> Enum.reduce_while(time, fn {unit, divisor}, time ->
-      if time |> rem(divisor) == 0 do
-        {:cont, time |> div(divisor)}
-      else
-        {:halt, {time, unit}}
-      end
-    end)
-    |> case do
-      {time, unit} -> "#{time} #{unit}"
-      time -> "#{time} d"
-    end
+    {unit, divisor} = units() |> Enum.find(fn {_unit, divisor} -> time |> rem(divisor) == 0 end)
+
+    "#{time |> div(divisor)} #{unit}"
   end
 
   @doc """
@@ -399,5 +392,18 @@ defmodule Membrane.Time do
   @spec to_days(t) :: integer
   def to_days(value) when is_t(value) do
     (value / (1 |> day)) |> round
+  end
+
+  @spec units() :: Keyword.t(t)
+  defp units() do
+    [
+      d: 1 |> day(),
+      h: 1 |> hour(),
+      min: 1 |> minute(),
+      s: 1 |> second(),
+      ms: 1 |> millisecond(),
+      us: 1 |> microsecond(),
+      ns: 1 |> nanosecond()
+    ]
   end
 end
