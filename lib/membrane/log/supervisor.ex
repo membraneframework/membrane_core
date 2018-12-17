@@ -24,7 +24,7 @@ defmodule Membrane.Log.Supervisor do
   @doc """
   Initializes logger and adds it to the supervision tree.
 
-  As argumets, it expects module name, logger options and process/logger id
+  As arguments, it expects module name, logger options and process/logger id
 
   If successful returns :ok
   On error returns :invalid_module
@@ -42,7 +42,7 @@ defmodule Membrane.Log.Supervisor do
   @doc """
   Removes logger from the supervision tree
 
-  If succesful returns :ok
+  If successful returns :ok
   If logger could not be found, returns corresponding error
   """
   @spec remove_logger(child_id_t) :: atom

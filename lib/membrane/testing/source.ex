@@ -13,8 +13,10 @@ defmodule Membrane.Testing.Source do
                 type: :function,
                 spec: (non_neg_integer, non_neg_integer -> [Membrane.Action.t()]),
                 default: &__MODULE__.default_buf_gen/2,
-                description:
-                  "Action generator takes two arguments. First is counter which is incremented by 1 every call and second argument represents size of demand."
+                description: """
+                Function invoked each time `handle_demand` is invoked. It is an action generator that takes two arguments.
+                First argument is counter which is incremented by 1 every call and second argument represents size of demand.
+                """
               ]
 
   @impl true

@@ -1,6 +1,6 @@
 defmodule Membrane.Testing.Sink do
   @moduledoc """
-  Sink Element that will send every buffer it receives to pid passed as argument.
+  Sink Element that will send every buffer it receives to the pid passed as argument.
   """
 
   use Membrane.Element.Base.Sink
@@ -14,8 +14,10 @@ defmodule Membrane.Testing.Sink do
               autodemand: [
                 type: :boolean,
                 default: true,
-                description:
-                  "If true element will automatically place demands. If it is set to false demand has to be triggered manually by sending `:make_demand` message."
+                description: """
+                If true element will automatically make demands.
+                If it is set to false demand has to be triggered manually by sending `:make_demand` message.
+                """
               ]
 
   @impl true

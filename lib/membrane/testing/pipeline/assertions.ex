@@ -1,6 +1,6 @@
 defmodule Membrane.Testing.Pipeline.Assertions do
   @doc """
-  Asserts that a message matching `pattern` was or is going to be received
+  Asserts that a message sent from `Membrane.Testing.Pipeline` matching `pattern` was or is going to be received
   within the `timeout` period, specified in milliseconds.
 
   The `pattern` argument must be a match pattern. Flunks with `failure_message`

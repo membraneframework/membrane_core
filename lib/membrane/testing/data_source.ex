@@ -9,7 +9,8 @@ defmodule Membrane.Testing.DataSource do
 
   def_options data: [
                 type: :payloads,
-                spec: [Membrane.Payload.t()]
+                spec: [Membrane.Payload.t()],
+                description: "List of payloads that will be sent through `:output` pad."
               ]
 
   def_output_pads output: [

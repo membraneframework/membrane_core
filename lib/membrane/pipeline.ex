@@ -39,7 +39,7 @@ defmodule Membrane.Pipeline do
   Action that instantiates elements and links them according to `Membrane.Pipeline.Spec`.
 
   Elements playback state is changed to the current pipeline state.
-  `c:handle_spec_started` callback is executed once it happes.
+  `c:handle_spec_started` callback is executed once it happens.
   """
   @type spec_action_t :: {:spec, Spec.t()}
 
@@ -88,13 +88,13 @@ defmodule Membrane.Pipeline do
               | {:error, any}
 
   @doc """
-  Callback invoked when pipeline transtion from `:stopped` to `:prepared` state has finished,
+  Callback invoked when pipeline transition from `:stopped` to `:prepared` state has finished,
   that is all of its elements are prepared to enter `:playing` state.
   """
   @callback handle_stopped_to_prepared(state :: State.internal_state_t()) :: callback_return_t
 
   @doc """
-  Callback invoked when pipeline transtion from `:playing` to `:prepared` state has finished,
+  Callback invoked when pipeline transition from `:playing` to `:prepared` state has finished,
   that is all of its elements are prepared to be stopped.
   """
   @callback handle_playing_to_prepared(state :: State.internal_state_t()) :: callback_return_t
@@ -272,7 +272,7 @@ defmodule Membrane.Pipeline do
       |> Enum.each(&Element.change_playback_state(&1, state.playback.state))
 
       debug("""
-      Initializied pipeline spec
+      Initialized pipeline spec
       children: #{inspect(children)}
       children pids: #{inspect(children)}
       links: #{inspect(links)}
