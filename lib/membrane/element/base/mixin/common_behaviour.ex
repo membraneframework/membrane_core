@@ -157,7 +157,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
     keyword: [spec: quote_expr(keyword)],
     struct: [spec: quote_expr(struct)],
     caps: [spec: quote_expr(struct)],
-    time: [spec: quote_expr(Time.t()), inspector: &Time.pretty_duration/1]
+    time: [spec: quote_expr(Time.t()), inspector: &Time.to_code_str/1]
   }
 
   @doc """
@@ -194,11 +194,11 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
               v
               |> Keyword.get(
                 :inspector,
-                @default_types_params[v[:type]][:inspector] || quote(do: &"`#{inspect(&1)}`")
+                @default_types_params[v[:type]][:inspector] || quote(do: &inspect/1)
               )
 
             quote do
-              "Defaults to #{unquote(inspector).(unquote(v)[:default])}"
+              "Defaults to `#{unquote(inspector).(unquote(v)[:default])}`"
             end
           else
             ""

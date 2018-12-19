@@ -50,6 +50,16 @@ defmodule Membrane.Time do
   @type non_neg_t :: non_neg_integer
   @type native_t :: integer
 
+  @units %{
+    days: :d,
+    hours: :h,
+    minutes: :min,
+    seconds: :s,
+    milliseconds: :ms,
+    microseconds: :us,
+    nanoseconds: :ns
+  }
+
   @doc """
   Checks whether value is Membrane.Time.t
   """
@@ -65,6 +75,7 @@ defmodule Membrane.Time do
   that doesn't involve precission loss.
 
   ## Examples
+
       iex> import #{inspect(__MODULE__)}
       iex> 10 |> milliseconds() |> pretty_duration()
       "10 ms"
@@ -76,9 +87,41 @@ defmodule Membrane.Time do
   """
   @spec pretty_duration(t) :: String.t()
   def pretty_duration(time) when is_t(time) do
-    {unit, divisor} = units() |> Enum.find(fn {_unit, divisor} -> time |> rem(divisor) == 0 end)
+    {time, unit} = time |> best_unit()
 
-    "#{time |> div(divisor)} #{unit}"
+    "#{time} #{@units[unit]}"
+  end
+
+  @doc """
+  Returns quoted code producing given amount time. Chosen unit is the biggest possible
+  that doesn't involve precission loss.
+
+  ## Examples
+
+      iex> import #{inspect(__MODULE__)}
+      iex> 10 |> milliseconds() |> to_code() |> Macro.to_string()
+      quote do 10 |> Membrane.Time.milliseconds() end |> Macro.to_string()
+      iex> 60_000_000 |> microseconds() |> to_code() |> Macro.to_string()
+      quote do 1 |> Membrane.Time.minutes() end |> Macro.to_string()
+      iex> 2 |> nanoseconds() |> to_code() |> Macro.to_string()
+      quote do 2 |> #{inspect(__MODULE__)}.nanoseconds() end |> Macro.to_string()
+
+  """
+  @spec pretty_duration(t) :: Macro.t()
+  def to_code(time) when is_t(time) do
+    {time, unit} = time |> best_unit()
+
+    quote do
+      unquote(time) |> unquote(__MODULE__).unquote(unit)()
+    end
+  end
+
+  @doc """
+  Returns string representation of result of `to_code/1`.
+  """
+  @spec pretty_duration(t) :: Macro.t()
+  def to_code_str(time) when is_t(time) do
+    time |> to_code() |> Macro.to_string()
   end
 
   @doc """
@@ -397,13 +440,19 @@ defmodule Membrane.Time do
   @spec units() :: Keyword.t(t)
   defp units() do
     [
-      d: 1 |> day(),
-      h: 1 |> hour(),
-      min: 1 |> minute(),
-      s: 1 |> second(),
-      ms: 1 |> millisecond(),
-      us: 1 |> microsecond(),
-      ns: 1 |> nanosecond()
+      days: 1 |> day(),
+      hours: 1 |> hour(),
+      minutes: 1 |> minute(),
+      seconds: 1 |> second(),
+      milliseconds: 1 |> millisecond(),
+      microseconds: 1 |> microsecond(),
+      nanoseconds: 1 |> nanosecond()
     ]
+  end
+
+  defp best_unit(time) do
+    {unit, divisor} = units() |> Enum.find(fn {_unit, divisor} -> time |> rem(divisor) == 0 end)
+
+    {time |> div(divisor), unit}
   end
 end
