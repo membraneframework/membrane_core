@@ -63,7 +63,7 @@ defmodule Membrane.Mixfile do
       {:excoveralls, "~> 0.8", only: :test},
       {:qex, "~> 0.3"},
       # {:bunch, "~> 0.1.2"}
-      {:bunch, path: "../bunch"}
+      {:bunch, github: "membraneframework/bunch"}
     ]
   end
 end
