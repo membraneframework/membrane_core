@@ -50,14 +50,14 @@ defmodule Membrane.Time do
   @type non_neg_t :: non_neg_integer
   @type native_t :: integer
 
-  @units %{
-    days: :d,
-    hours: :h,
-    minutes: :min,
-    seconds: :s,
-    milliseconds: :ms,
-    microseconds: :us,
-    nanoseconds: :ns
+  @units_abbreviations %{
+    days: "d",
+    hours: "h",
+    minutes: "min",
+    seconds: "s",
+    milliseconds: "ms",
+    microseconds: "us",
+    nanoseconds: "ns"
   }
 
   @doc """
@@ -89,7 +89,7 @@ defmodule Membrane.Time do
   def pretty_duration(time) when is_t(time) do
     {time, unit} = time |> best_unit()
 
-    "#{time} #{@units[unit]}"
+    "#{time} #{@units_abbreviations[unit]}"
   end
 
   @doc """
@@ -107,7 +107,7 @@ defmodule Membrane.Time do
       quote do 2 |> #{inspect(__MODULE__)}.nanoseconds() end |> Macro.to_string()
 
   """
-  @spec pretty_duration(t) :: Macro.t()
+  @spec to_code(t) :: Macro.t()
   def to_code(time) when is_t(time) do
     {time, unit} = time |> best_unit()
 
