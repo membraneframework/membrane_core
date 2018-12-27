@@ -1,7 +1,8 @@
 defmodule Membrane.Testing.Pipeline do
   @moduledoc """
   This Pipeline was created to reduce testing boilerplate and ease communication with it's elements.
-  It also provides utility for receiving messages when `Pipeline` playback state changes and notifications it receives.
+  It also provides utility for receiving messages when `Pipeline` playback state changes
+  and notifications it receives.
 
   ## Starting Pipeline
 
@@ -11,11 +12,13 @@ defmodule Membrane.Testing.Pipeline do
    - Links between those elements
 
   When creating pipelines for tests the only essential part is the list of elements.
-  In most cases during the tests elements are linked in a way that `:output` pad is linked to `:input` pad of subsequent element.
+  In most cases during the tests elements are linked in a way that
+  `:output` pad is linked to `:input` pad of subsequent element.
   So we only need to pass a list of elements and links can be generated automatically.
 
-  To start a testing pipeline you need to build `Membrane.Testing.Pipeline.Options` struct and
-  pass to to `Membrane.Testing.Pipeline.start_link/2`.
+  To start a testing pipeline you need to build `Membrane.Testing.Pipeline.Options` struct
+  and pass to to `Membrane.Testing.Pipeline.start_link/2`.
+
   ```
   options = %Membrane.Testing.Pipeline.Options {
     elements: [
@@ -43,8 +46,9 @@ defmodule Membrane.Testing.Pipeline do
   }
   ```
 
-  First, you need to configure which callbacks invocation you want to know about.
-  You can do that by putting their names into `monitored_callbacks` field of `Options` struct.
+  First, you need to configure which callbacks are to be monitored by putting their names
+  into `monitored_callbacks` field of `Options` struct. Check `t:Membrane.Testing.Pipeline.Options.pipeline_callback/0`
+  for list of available callback names.
   You also need to pass a `PID` of the process that will receive messages.
 
   ```
@@ -76,13 +80,17 @@ defmodule Membrane.Testing.Pipeline do
     See `t:pipeline_callback/0` for available callbacks.
 
     ##  Test Process
-    `pid` of process that shall receive messages about Pipeline playback state and notifications.
+    `pid` of process that shall receive messages when Pipeline invokes playback state change callback
+    and receives notification.
 
     ## Elements
     List of element specs.
 
     ## Links
-    If links is not present or set to nil it will be populated automatically based on elements order using default pad names.
+    Map describing links between elements.
+
+    If links are not present or set to nil they will be populated automatically based on elements order
+    using default pad names.
     """
 
     @enforce_keys [:elements]

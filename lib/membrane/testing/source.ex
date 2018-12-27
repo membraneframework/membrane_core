@@ -14,8 +14,10 @@ defmodule Membrane.Testing.Source do
                 spec: (non_neg_integer, non_neg_integer -> [Membrane.Action.t()]),
                 default: &__MODULE__.default_buf_gen/2,
                 description: """
-                Function invoked each time `handle_demand` is invoked. It is an action generator that takes two arguments.
-                First argument is counter which is incremented by 1 every call and second argument represents size of demand.
+                Function invoked each time `handle_demand` is invoked.
+                It is an action generator that takes two arguments.
+                First argument is counter which is incremented by 1 every call
+                and second argument represents size of demand.
                 """
               ]
 
