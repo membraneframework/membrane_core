@@ -1,8 +1,8 @@
 defmodule Membrane.Integration.DemandsTest do
   use ExUnit.Case, async: false
   use Bunch
-  alias Membrane.DemandTest
-  alias DemandTest.Filter
+  alias Membrane.Support.DemandsTest
+  alias DemandsTest.Filter
   alias Membrane.Buffer
   alias Membrane.Testing.{Source, Sink}
   alias Membrane.Pipeline
@@ -47,7 +47,7 @@ defmodule Membrane.Integration.DemandsTest do
 
   test "Regular pipeline with proper demands" do
     assert {:ok, pid} =
-             Pipeline.start_link(DemandTest.Pipeline, %{
+             Pipeline.start_link(DemandsTest.Pipeline, %{
                source: Source,
                filter: Filter,
                sink: %Sink{target: self(), autodemand: false},
@@ -61,7 +61,7 @@ defmodule Membrane.Integration.DemandsTest do
     filter_demand_gen = fn _ -> 2 end
 
     assert {:ok, pid} =
-             Pipeline.start_link(DemandTest.Pipeline, %{
+             Pipeline.start_link(DemandsTest.Pipeline, %{
                source: Source,
                filter: %Filter{demand_generator: filter_demand_gen},
                sink: %Sink{target: self(), autodemand: false},
@@ -86,7 +86,7 @@ defmodule Membrane.Integration.DemandsTest do
     end
 
     assert {:ok, pid} =
-             Pipeline.start_link(DemandTest.Pipeline, %{
+             Pipeline.start_link(DemandsTest.Pipeline, %{
                source: %Source{actions_generator: actions_gen},
                filter: Filter,
                sink: %Sink{target: self(), autodemand: false},

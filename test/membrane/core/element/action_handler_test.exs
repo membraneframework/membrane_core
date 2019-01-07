@@ -1,8 +1,8 @@
 defmodule Membrane.Core.Element.ActionHandlerTest do
   use ExUnit.Case, async: false
-  alias Membrane.DemandTest.Filter
   alias Membrane.Core.{Element, Playback}
   alias Element.State
+  alias Membrane.Support.DemandsTest.Filter
 
   @module Membrane.Core.Element.ActionHandler
 
