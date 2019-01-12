@@ -7,9 +7,11 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   For more information on implementing elements, see `Membrane.Element.Base`.
   """
-  alias Membrane.{Action, Core, Element, Event}
+  alias Membrane.{Action, Core, Element, Event, Time}
   alias Core.CallbackHandler
   alias Element.{Action, CallbackContext, Pad}
+
+  use Bunch
 
   @typedoc """
   Type that defines all valid return values from most callbacks.
@@ -148,31 +150,14 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_shutdown(state :: Element.state_t()) :: :ok
 
-  @default_quoted_specs %{
-    atom:
-      quote do
-        atom()
-      end,
-    boolean:
-      quote do
-        boolean()
-      end,
-    string:
-      quote do
-        String.t()
-      end,
-    keyword:
-      quote do
-        keyword()
-      end,
-    struct:
-      quote do
-        struct()
-      end,
-    caps:
-      quote do
-        struct()
-      end
+  @default_types_params %{
+    atom: [spec: quote_expr(atom)],
+    boolean: [spec: quote_expr(boolean)],
+    string: [spec: quote_expr(String.t())],
+    keyword: [spec: quote_expr(keyword)],
+    struct: [spec: quote_expr(struct)],
+    caps: [spec: quote_expr(struct)],
+    time: [spec: quote_expr(Time.t()), inspector: &Time.to_code_str/1]
   }
 
   @doc """
@@ -185,10 +170,12 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
     * `type:` atom, used for parsing
     * `spec:` typespec for value in struct. If ommitted, for types:
-      `#{inspect(Map.keys(@default_quoted_specs))}` the default typespec is provided.
+      `#{inspect(Map.keys(@default_types_params))}` the default typespec is provided.
       For others typespec is set to `t:any/0`
     * `default:` default value for option. If not present, value for this option
       will have to be provided each time options struct is created
+    * `inspector:` function converting fields' value to a string. Used when
+      creating documentation instead of `inspect/1`
     * `description:` string describing an option. It will be present in value returned by `options/0`
       and in typedoc for the struct.
   """
@@ -199,23 +186,34 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
     typedoc =
       escaped_opts
       |> Enum.map(fn {k, v} ->
-        desc =
-          v
-          |> Keyword.get(:description, "")
-          |> String.trim()
+        desc = v |> Keyword.get(:description, "")
 
         default_val_desc =
           if Keyword.has_key?(v, :default) do
+            inspector =
+              v
+              |> Keyword.get(
+                :inspector,
+                @default_types_params[v[:type]][:inspector] || quote(do: &inspect/1)
+              )
+
             quote do
-              "\n\n  Defaults to `#{inspect(unquote(v)[:default])}`"
+              "Defaults to `#{unquote(inspector).(unquote(v)[:default])}`"
             end
           else
             ""
           end
 
-        quote do
-          "* `#{Atom.to_string(unquote(k))}`: #{unquote(desc)}#{unquote(default_val_desc)}"
-        end
+        format_option_docs(
+          quote do
+            """
+            `#{Atom.to_string(unquote(k))}` - \
+            #{String.trim(unquote(desc))}
+
+            #{unquote(default_val_desc)}
+            """
+          end
+        )
       end)
       |> Enum.reduce(fn x, acc ->
         quote do
@@ -226,6 +224,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
     quote do
       @typedoc """
       Struct containing options for `#{inspect(__MODULE__)}`
+
       #{unquote(typedoc)}
       """
       @type t :: unquote(opt_typespec_ast)
@@ -245,16 +244,20 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
     end
   end
 
+  defp format_option_docs(docs) do
+    quote do
+      unquote(docs)
+      |> String.trim()
+      |> String.replace("\n\n", "\n\n  ")
+      |> String.replace_prefix("", "* ")
+    end
+  end
+
   defp extract_specs(kw) when is_list(kw) do
     with_default_specs =
       kw
       |> Enum.map(fn {k, v} ->
-        quoted_any =
-          quote do
-            any()
-          end
-
-        default_val = @default_quoted_specs |> Map.get(v[:type], quoted_any)
+        default_val = @default_types_params[v[:type]][:spec] || quote_expr(any)
 
         {k, v |> Keyword.put_new(:spec, default_val)}
       end)

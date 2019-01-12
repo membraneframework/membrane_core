@@ -112,7 +112,7 @@ defmodule Membrane.Pipeline do
   @callback handle_prepared_to_stopped(state :: State.internal_state_t()) :: callback_return_t
 
   @doc """
-  Callback invoked when a notification incomes from an element.
+  Callback invoked when a notification comes in from an element.
   """
   @callback handle_notification(
               notification :: Notification.t(),
