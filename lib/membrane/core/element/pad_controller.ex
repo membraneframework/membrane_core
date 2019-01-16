@@ -76,15 +76,24 @@ defmodule Membrane.Core.Element.PadController do
   @doc """
   Handles situation where pad has been unlinked (e.g. when connected element has been removed from pipline)
 
-  Sends an EoS if unlinked pad was an input.
-  Executes `handle_pad_removed` and removes pad data callback if the pad was dynamic.
+  Removes pad data.
+  Signals an EoS (via handle_event) to the element if unlinked pad was an input.
+  Executes `handle_pad_removed` callback if the pad was dynamic.
   """
   @spec handle_unlink(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   def handle_unlink(pad_ref, state) do
     availability_mode =
       pad_ref |> PadModel.get_data!(:availability, state) |> Pad.availability_mode()
 
-    do_handle_unlink(availability_mode, pad_ref, state)
+    with {:ok, state} <- generate_eos_if_needed(pad_ref, state),
+         {:ok, state} <-
+           (case availability_mode do
+              :dynamic -> handle_pad_removed(pad_ref, state)
+              :static -> {:ok, state}
+            end),
+         {:ok, state} <- PadModel.delete_data(pad_ref, state) do
+      {:ok, state}
+    end
   end
 
   @doc """
@@ -109,22 +118,6 @@ defmodule Membrane.Core.Element.PadController do
       end)
 
     {pad_ref |> Bunch.error_if_nil(:unknown_pad), state}
-  end
-
-  @spec do_handle_unlink(Pad.availability_t(), Pad.ref_t(), State.t()) :: Type.try_t(State.t())
-  defp do_handle_unlink(:dynamic, pad_ref, state) do
-    with {:ok, state} <- generate_eos_if_needed(pad_ref, state),
-         {:ok, state} <- handle_pad_removed(pad_ref, state),
-         {:ok, state} <- PadModel.delete_data(pad_ref, state) do
-      {:ok, state}
-    end
-  end
-
-  defp do_handle_unlink(:static, pad_ref, state) do
-    with {:ok, state} <- generate_eos_if_needed(pad_ref, state) do
-      # TODO: some changes in pad data should be considered
-      {:ok, state}
-    end
   end
 
   @spec validate_pad_being_linked(Pad.ref_t(), Pad.direction_t(), State.t()) :: Type.try_t()

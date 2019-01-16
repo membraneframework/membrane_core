@@ -2,6 +2,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
   use ESpec, async: false
   alias Membrane.Support.Element.{DynamicFilter, TrivialFilter}
   alias Membrane.Core.Element.{PadModel, PadSpecHandler, State}
+  alias Membrane.Event.EndOfStream
 
   describe ".link_pad/6" do
     let :module, do: TrivialFilter
@@ -120,6 +121,13 @@ defmodule Membrane.Core.Element.PadControllerSpec do
       state |> Bunch.Access.update_in([:pads, :data], &(&1 |> Map.put(pad_ref(), data)))
     end
 
+    before do
+      allow module()
+            |> to(accept(:handle_event, fn _, %EndOfStream{}, _, state -> {:ok, state} end))
+
+      allow module() |> to(accept(:handle_pad_removed, fn _, _, state -> {:ok, state} end))
+    end
+
     context "for element with static output pad" do
       let :module, do: TrivialFilter
       let :pad_name, do: :output
@@ -144,6 +152,8 @@ defmodule Membrane.Core.Element.PadControllerSpec do
       let :direction, do: :input
 
       it "should unlink that pad and set end_of_stream" do
+        expect(state().pads.data[pad_ref()]) |> not_to(eq nil)
+
         {result, state} =
           described_module().handle_unlink(
             pad_ref(),
@@ -151,7 +161,8 @@ defmodule Membrane.Core.Element.PadControllerSpec do
           )
 
         expect(result) |> to(eq :ok)
-        expect(state.pads.data[pad_ref()].end_of_stream?) |> to(be_true())
+        expect(module() |> to(accepted(:handle_event)))
+        expect(state.pads.data[pad_ref()]) |> to(be_nil())
       end
     end
 
@@ -176,9 +187,9 @@ defmodule Membrane.Core.Element.PadControllerSpec do
           )
 
         expect(result) |> to(eq :ok)
+        expect(module() |> to(accepted(:handle_event)))
+        expect(module() |> to(accepted(:handle_pad_removed)))
         expect(state.pads.data[pad_ref()]) |> to(be_nil())
-        ref = pad_ref()
-        assert_received {:pad_removed, ^ref}
       end
     end
   end
