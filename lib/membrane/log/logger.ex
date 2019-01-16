@@ -30,7 +30,7 @@ defmodule Membrane.Log.Logger do
   Starts process for logger of given module, initialized with given options and
   links it to the current process in the supervision tree.
 
-  Works similarily to `GenServer.start_link/3` and has the same return values.
+  Works similarly to `GenServer.start_link/3` and has the same return values.
   """
   @spec start_link(module, logger_options_t, process_options_t) :: on_start
   def start_link(module, logger_options \\ nil, process_options \\ []) do
@@ -41,7 +41,7 @@ defmodule Membrane.Log.Logger do
   Starts process for logger of given module, initialized with given options
   outside of the supervision tree.
 
-  Works similarily to `GenServer.start/3` and has the same return values.
+  Works similarly to `GenServer.start/3` and has the same return values.
   """
   @spec start(module, logger_options_t, process_options_t) :: on_start
   def start(module, logger_options \\ nil, process_options \\ []) do

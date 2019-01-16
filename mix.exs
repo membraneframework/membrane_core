@@ -62,6 +62,7 @@ defmodule Membrane.Mixfile do
       {:espec, "~> 1.6", only: :test},
       {:excoveralls, "~> 0.8", only: :test},
       {:qex, "~> 0.3"},
+      {:dialyxir, "~> 1.0.0-rc.4", only: [:dev], runtime: false},
       {:bunch, "~> 0.2.0"}
     ]
   end

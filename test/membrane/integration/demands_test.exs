@@ -1,7 +1,10 @@
 defmodule Membrane.Integration.DemandsTest do
   use ExUnit.Case, async: false
   use Bunch
-  alias Membrane.Integration.{TestingFilter, TestingSource, TestingSink, TestingPipeline}
+  alias Membrane.Support.DemandsTest
+  alias DemandsTest.Filter
+  alias Membrane.Buffer
+  alias Membrane.Testing.{Source, Sink}
   alias Membrane.Pipeline
 
   # Asserts that message equal to pattern will be received within 200ms
@@ -17,7 +20,7 @@ defmodule Membrane.Integration.DemandsTest do
   end
 
   def test_pipeline(pid) do
-    pattern_gen = fn i -> <<i::16>> <> <<255>> end
+    pattern_gen = fn i -> %Buffer{payload: <<i::16>> <> <<255>>} end
     assert Pipeline.play(pid) == :ok
     assert_receive :playing, 2000
     demand = 500
@@ -44,10 +47,10 @@ defmodule Membrane.Integration.DemandsTest do
 
   test "Regular pipeline with proper demands" do
     assert {:ok, pid} =
-             Pipeline.start_link(TestingPipeline, %{
-               source: TestingSource,
-               filter: TestingFilter,
-               sink: %TestingSink{target: self()},
+             Pipeline.start_link(DemandsTest.Pipeline, %{
+               source: Source,
+               filter: Filter,
+               sink: %Sink{target: self(), autodemand: false},
                target: self()
              })
 
@@ -58,10 +61,10 @@ defmodule Membrane.Integration.DemandsTest do
     filter_demand_gen = fn _ -> 2 end
 
     assert {:ok, pid} =
-             Pipeline.start_link(TestingPipeline, %{
-               source: TestingSource,
-               filter: %TestingFilter{demand_generator: filter_demand_gen},
-               sink: %TestingSink{target: self()},
+             Pipeline.start_link(DemandsTest.Pipeline, %{
+               source: Source,
+               filter: %Filter{demand_generator: filter_demand_gen},
+               sink: %Sink{target: self(), autodemand: false},
                target: self()
              })
 
@@ -83,10 +86,10 @@ defmodule Membrane.Integration.DemandsTest do
     end
 
     assert {:ok, pid} =
-             Pipeline.start_link(TestingPipeline, %{
-               source: %TestingSource{actions_generator: actions_gen},
-               filter: TestingFilter,
-               sink: %TestingSink{target: self()},
+             Pipeline.start_link(DemandsTest.Pipeline, %{
+               source: %Source{actions_generator: actions_gen},
+               filter: Filter,
+               sink: %Sink{target: self(), autodemand: false},
                target: self()
              })
 

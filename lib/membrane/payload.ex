@@ -9,7 +9,7 @@ defprotocol Membrane.Payload do
   defmodule Behaviour do
     @moduledoc """
     Behaviour that should be implemented by every module that has
-    `Membrane.Payload` protocol implemetation.
+    `Membrane.Payload` protocol implementation.
     """
 
     @doc """

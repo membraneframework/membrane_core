@@ -1,4 +1,8 @@
-defmodule Membrane.Integration.TestingSource do
+defmodule Membrane.Testing.Source do
+  @moduledoc """
+  Testing Element for supplying data based on generator function passed through options.
+  """
+
   use Membrane.Element.Base.Source
   alias Membrane.Buffer
   use Bunch
@@ -8,7 +12,13 @@ defmodule Membrane.Integration.TestingSource do
   def_options actions_generator: [
                 type: :function,
                 spec: (non_neg_integer, non_neg_integer -> [Membrane.Action.t()]),
-                default: &__MODULE__.default_buf_gen/2
+                default: &__MODULE__.default_buf_gen/2,
+                description: """
+                Function invoked each time `handle_demand` is invoked.
+                It is an action generator that takes two arguments.
+                First argument is counter which is incremented by 1 every call
+                and second argument represents size of demand.
+                """
               ]
 
   @impl true
@@ -17,13 +27,7 @@ defmodule Membrane.Integration.TestingSource do
   end
 
   @impl true
-  def handle_demand(
-        :output,
-        size,
-        :buffers,
-        _ctx,
-        %{cnt: cnt} = state
-      ) do
+  def handle_demand(:output, size, :buffers, _ctx, %{cnt: cnt} = state) do
     {actions, cnt} = state.actions_generator.(cnt, size)
 
     {{:ok, actions}, %{state | cnt: cnt}}

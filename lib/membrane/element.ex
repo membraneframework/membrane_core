@@ -44,7 +44,7 @@ defmodule Membrane.Element do
   @type state_t :: map | struct
 
   @doc """
-  Chechs whether the given term is a valid element name
+  Checks whether the given term is a valid element name
   """
   defguard is_element_name(term)
            when is_atom(term) or

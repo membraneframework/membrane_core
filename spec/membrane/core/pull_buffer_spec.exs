@@ -1,6 +1,6 @@
 defmodule Membrane.Core.PullBufferSpec do
   alias Membrane.Core.{PullBuffer, Message}
-  alias Membrane.Support.TestingEvent
+  alias Membrane.Testing.Event
   require Message
   alias Membrane.Buffer
   use ESpec, async: true
@@ -145,7 +145,7 @@ defmodule Membrane.Core.PullBufferSpec do
 
     context "when `type` is :event" do
       let :type, do: :event
-      let :v, do: %TestingEvent{}
+      let :v, do: %Event{}
 
       it "should append event to the queue" do
         {:ok, %{q: new_q}} = described_module().store(pb(), type(), v())

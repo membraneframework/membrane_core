@@ -13,11 +13,11 @@ defmodule Membrane.Caps.Matcher do
     * By a raw value for the field (e.g. `:s24le`)
     * Using `range/2` for values comparable with `Kernel.<=/2` and `Kernel.>=/2` (e.g. `Matcher.range(0, 255)`)
     * With `one_of/1` and a list of valid values (e.g `Matcher.one_of([:u8, :s16le, :s32le])`)
-      Checks on the values from list are performed recursivly i.e. it can contain another `range/2`,
+      Checks on the values from list are performed recursively i.e. it can contain another `range/2`,
       for example `Matcher.one_of([0, Matcher.range(2, 4), Matcher.range(10, 20)])`
 
   If the specs are defined inside of `Membrane.Element.Base.Mixin.SinkBehaviour.def_input_pads/1` and
-  `Membrane.Element.Base.Mixin.SourceBehaviour.def_output_pads/1` module name can be ommitted from
+  `Membrane.Element.Base.Mixin.SourceBehaviour.def_output_pads/1` module name can be omitted from
   `range/2` and `one_of/1` calls.
 
   ## Example

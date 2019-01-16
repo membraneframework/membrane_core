@@ -3,7 +3,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
   alias Membrane.Buffer
   alias Membrane.Core.{Element, Message, Playback}
   alias Element.State
-  alias Membrane.Support.TestingEvent
+  alias Membrane.Testing.Event
   alias Membrane.Support.Element.{TrivialFilter, TrivialSource}
   require Message
 
@@ -224,7 +224,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
 
     let :pad_ref, do: :output
     let :payload, do: <<1, 2, 3, 4, 5>>
-    let :event, do: %TestingEvent{}
+    let :event, do: %Event{}
 
     context "when element is in a 'playing' state" do
       let :playback, do: %Playback{state: :playing}
