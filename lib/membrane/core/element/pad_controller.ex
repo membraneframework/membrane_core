@@ -82,15 +82,8 @@ defmodule Membrane.Core.Element.PadController do
   """
   @spec handle_unlink(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   def handle_unlink(pad_ref, state) do
-    availability_mode =
-      pad_ref |> PadModel.get_data!(:availability, state) |> Pad.availability_mode()
-
     with {:ok, state} <- generate_eos_if_needed(pad_ref, state),
-         {:ok, state} <-
-           (case availability_mode do
-              :dynamic -> handle_pad_removed(pad_ref, state)
-              :static -> {:ok, state}
-            end),
+         {:ok, state} <- handle_pad_removed(pad_ref, state),
          {:ok, state} <- PadModel.delete_data(pad_ref, state) do
       {:ok, state}
     end
