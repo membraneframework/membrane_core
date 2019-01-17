@@ -3,7 +3,7 @@ defmodule Membrane.Pipeline.Spec do
   Structure representing topology of a pipeline.
 
   It can be returned from
-  `Membrane.Pipeline.handle_init/1` callback upon pipeline's initialization.
+  `c:Membrane.Pipeline.handle_init/1` callback upon pipeline's initialization.
   It will define a topology of children and links that build the pipeline.
 
   ## Children
