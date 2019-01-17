@@ -153,8 +153,8 @@ defmodule Membrane.Core.Element.LifecycleController do
   def unlink(%State{playback: %{state: :stopped}} = state) do
     with :ok <-
            state.pads.data
-           |> Bunch.Enum.try_each(fn {_name, %{pid: pid, other_name: other_name}} ->
-             Message.call(pid, :handle_unlink, other_name)
+           |> Bunch.Enum.try_each(fn {_name, %{pid: pid, other_ref: other_ref}} ->
+             Message.call(pid, :handle_unlink, other_ref)
            end) do
       {:ok, state}
     end

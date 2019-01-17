@@ -74,13 +74,15 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   @doc """
-  Executes `handle_pad_removed` callback for dynamic pads and removes pad data.
+  Handles situation where pad has been unlinked (e.g. when connected element has been removed from pipline)
+
+  Removes pad data.
+  Signals an EoS (via handle_event) to the element if unlinked pad was an input.
+  Executes `handle_pad_removed` callback if the pad was dynamic.
   """
   @spec handle_unlink(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   def handle_unlink(pad_ref, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :input}, state)
-
-    with {:ok, state} <- generate_eos_if_not_received(pad_ref, state),
+    with {:ok, state} <- generate_eos_if_needed(pad_ref, state),
          {:ok, state} <- handle_pad_removed(pad_ref, state),
          {:ok, state} <- PadModel.delete_data(pad_ref, state) do
       {:ok, state}
@@ -195,12 +197,15 @@ defmodule Membrane.Core.Element.PadController do
   defp clear_currently_linking(state),
     do: state |> Bunch.Access.put_in([:pads, :dynamic_currently_linking], [])
 
-  @spec generate_eos_if_not_received(Pad.ref_t(), State.t()) :: State.stateful_try_t()
-  defp generate_eos_if_not_received(pad_ref, state) do
-    if PadModel.get_data!(pad_ref, :end_of_stream?, state) do
-      {:ok, state}
-    else
+  @spec generate_eos_if_needed(Pad.ref_t(), State.t()) :: State.stateful_try_t()
+  defp generate_eos_if_needed(pad_ref, state) do
+    direction = PadModel.get_data!(pad_ref, :direction, state)
+    eos? = PadModel.get_data!(pad_ref, :end_of_stream?, state)
+
+    if direction == :input and not eos? do
       EventController.exec_handle_event(pad_ref, %Event.EndOfStream{}, state)
+    else
+      {:ok, state}
     end
   end
 
