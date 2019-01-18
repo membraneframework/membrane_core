@@ -68,24 +68,17 @@ defmodule Membrane.Core.Element.BufferController do
   defp handle_buffer_pull(pad_ref, buffers, state) do
     PadModel.assert_data!(pad_ref, %{direction: :input}, state)
 
-    with {{:ok, was_empty?}, state} <-
-           PadModel.get_and_update_data!(
-             pad_ref,
-             :buffer,
-             fn pb ->
-               was_empty? = pb |> PullBuffer.empty?()
+    with {:ok, old_pb} <- PadModel.get_data(pad_ref, :buffer, state),
+         {:ok, pb} <- old_pb |> PullBuffer.store(buffers) do
+      state = PadModel.set_data!(pad_ref, :buffer, pb, state)
 
-               pb
-               |> PullBuffer.store(buffers)
-               ~>> ({:ok, pb} -> {{:ok, was_empty?}, pb})
-             end,
-             state
-           ) do
-      if was_empty? do
+      if old_pb |> PullBuffer.empty?() do
         DemandHandler.supply_demand(pad_ref, state)
       else
         {:ok, state}
       end
+    else
+      {:error, reason} -> {{:error, reason}, state}
     end
   end
 end

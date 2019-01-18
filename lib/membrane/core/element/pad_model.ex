@@ -115,8 +115,7 @@ defmodule Membrane.Core.Element.PadModel do
     end
   end
 
-  @spec set_data!(Pad.ref_t(), keys :: atom | [atom], State.t()) ::
-          State.stateful_t(:ok | unknown_pad_error_t)
+  @spec set_data!(Pad.ref_t(), keys :: atom | [atom], State.t()) :: State.t()
   def set_data!(pad_ref, keys \\ [], v, state) do
     {:ok, state} = set_data(pad_ref, keys, v, state)
     state
