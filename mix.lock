@@ -1,5 +1,5 @@
 %{
-  "bunch": {:hex, :bunch, "0.2.0", "dd9b1bc4603582c1fc3e27aaeb9c74181395ba67d3cfd7dbde9a41cc7383f954", [:mix], [], "hexpm"},
+  "bunch": {:hex, :bunch, "0.3.0", "acfb1b96b3f0ea2f12193ac2e3406d17e85be99f29ffe9cb49592775fc9bfbde", [:mix], [], "hexpm"},
   "certifi": {:hex, :certifi, "2.4.2", "75424ff0f3baaccfd34b1214184b6ef616d89e420b258bb0a5ea7d7bc628f7f0", [:rebar3], [{:parse_trans, "~>3.3", [hex: :parse_trans, repo: "hexpm", optional: false]}], "hexpm"},
   "dialyxir": {:hex, :dialyxir, "1.0.0-rc.4", "71b42f5ee1b7628f3e3a6565f4617dfb02d127a0499ab3e72750455e986df001", [:mix], [{:erlex, "~> 0.1", [hex: :erlex, repo: "hexpm", optional: false]}], "hexpm"},
   "earmark": {:hex, :earmark, "1.3.1", "73812f447f7a42358d3ba79283cfa3075a7580a3a2ed457616d6517ac3738cb9", [:mix], [], "hexpm"},
