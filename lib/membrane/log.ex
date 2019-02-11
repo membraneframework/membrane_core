@@ -10,7 +10,7 @@ defmodule Membrane.Log do
   defmacro __using__(args) do
     passed_tags = args |> Keyword.get(:tags, []) |> Bunch.listify()
     previous_tags = Module.get_attribute(__CALLER__.module, :logger_default_tags) || []
-    default_tags = (passed_tags ++ previous_tags) |> Enum.dedup()
+    default_tags = (passed_tags ++ previous_tags) |> Enum.uniq()
     Module.put_attribute(__CALLER__.module, :logger_default_tags, default_tags)
 
     if args |> Keyword.get(:import, true) do
@@ -21,21 +21,21 @@ defmodule Membrane.Log do
   end
 
   defmacro debug(message, tags \\ []) do
-    do_log(:debug, message, tags)
+    do_log(:debug, message, tags, __CALLER__)
   end
 
   defmacro info(message, tags \\ []) do
-    do_log(:info, message, tags)
+    do_log(:info, message, tags, __CALLER__)
   end
 
   defmacro warn(message, tags \\ []) do
-    do_log(:warn, message, tags)
+    do_log(:warn, message, tags, __CALLER__)
   end
 
   defmacro warn_error(message, reason, tags \\ []) do
     message =
       quote do
-        use Bunch
+        require Bunch
 
         [
           "Encountered an error.\n",
@@ -50,7 +50,7 @@ defmodule Membrane.Log do
       end
 
     quote location: :keep do
-      unquote(do_log(:warn, message, tags))
+      unquote(do_log(:warn, message, tags, __CALLER__))
       unquote({:error, reason})
     end
   end
@@ -67,32 +67,34 @@ defmodule Membrane.Log do
   end
 
   defmacro log(level, message, tags \\ []) do
-    do_log(level, message, tags)
+    do_log(level, message, tags, __CALLER__)
   end
 
-  defp do_log(level, message, tags) do
+  defp do_log(level, message, tags, caller) do
     config = Application.get_env(:membrane_core, Membrane.Logger, [])
     router_level = config |> Keyword.get(:level, :debug)
     router_level_val = router_level |> Router.level_to_val()
 
+    default_tags =
+      if caller.module do
+        quote_expr(@logger_default_tags)
+      else
+        quote_expr([])
+      end
+
     send_code =
       quote do
-        alias Membrane.Log.Router
-        use Bunch
-
         Router.send_log(
           unquote(level),
           unquote(message),
           Membrane.Time.pretty_now(),
-          (unquote(tags) |> Bunch.listify()) ++ @logger_default_tags
+          (unquote(tags) |> Bunch.listify()) ++ unquote(default_tags)
         )
       end
 
     cond do
       not is_atom(level) ->
         quote location: :keep do
-          alias Membrane.Log.Router
-
           if Router.level_to_val(level) >= unquote(router_level_val) do
             unquote(send_code)
           end
@@ -108,6 +110,7 @@ defmodule Membrane.Log do
 
       true ->
         quote location: :keep, bind_quoted: [message: message, tags: tags] do
+          :ok
         end
     end
   end
