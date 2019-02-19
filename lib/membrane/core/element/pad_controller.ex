@@ -152,6 +152,7 @@ defmodule Membrane.Core.Element.PadController do
       |> Map.merge(%{
         pid: pid,
         other_ref: other_ref,
+        opts: props[:pad],
         caps: nil,
         start_of_stream?: false,
         end_of_stream?: false
@@ -179,7 +180,7 @@ defmodule Membrane.Core.Element.PadController do
         pid,
         other_ref,
         demand_unit,
-        props[:pull_buffer] || %{}
+        props[:buffer] || %{}
       )
 
     %{buffer: pb, demand: 0}
@@ -217,10 +218,12 @@ defmodule Membrane.Core.Element.PadController do
         direction: PadModel.get_data!(ref, :direction, state)
       )
 
+    pad_opts = PadModel.get_data!(ref, :opts, state)
+
     CallbackHandler.exec_and_handle_callback(
       :handle_pad_added,
       ActionHandler,
-      [ref, context],
+      [ref, pad_opts, context],
       state
     )
   end

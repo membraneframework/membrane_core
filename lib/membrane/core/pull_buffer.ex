@@ -47,6 +47,8 @@ defmodule Membrane.Core.PullBuffer do
           {:preferred_size, pos_integer()}
           | {:min_demand, pos_integer()}
           | {:toilet, boolean()}
+          | {:warn_size, pos_integer()}
+          | {:fail_size, pos_integer()}
 
   @type props_t :: [prop_t()]
 
@@ -61,13 +63,15 @@ defmodule Membrane.Core.PullBuffer do
     metric = Buffer.Metric.from_unit(demand_unit)
     preferred_size = props[:preferred_size] || metric.pullbuffer_preferred_size
     min_demand = props[:min_demand] || preferred_size |> div(4)
-    default_toilet = %{warn: preferred_size * 2, fail: preferred_size * 4}
 
     toilet =
-      case props[:toilet] do
-        true -> default_toilet
-        t when t in [nil, false] -> false
-        t -> default_toilet |> Map.merge(t |> Map.new())
+      if props[:toilet] do
+        %{
+          warn: props[:warn_size] || preferred_size * 2,
+          fail: props[:fail_size] || preferred_size * 4
+        }
+      else
+        false
       end
 
     %__MODULE__{
