@@ -50,7 +50,6 @@ defmodule Membrane.Core.PullBuffer do
   @type prop_t ::
           {:preferred_size, pos_integer()}
           | {:min_demand, pos_integer()}
-          | {:toilet, boolean()}
           | {:warn_size, pos_integer()}
           | {:fail_size, pos_integer()}
 
