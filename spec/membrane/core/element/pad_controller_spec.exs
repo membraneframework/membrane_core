@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
   alias Membrane.Core.Element.{PadModel, PadSpecHandler, State}
   alias Membrane.Event.EndOfStream
 
-  describe ".link_pad/6" do
+  describe ".link_pad/7" do
     let :module, do: TrivialFilter
     let :name, do: :element_name
 
@@ -17,29 +17,34 @@ defmodule Membrane.Core.Element.PadControllerSpec do
       let :pad_name, do: :output
       let :direction, do: :output
       let :other_ref, do: :other_input
+      let :other_info, do: nil
       let :props, do: %{}
 
-      it "should return an ok result" do
+      it "should return an ok result with pad info" do
+        pad_info = state().pads.info.output
+
         expect(
           described_module().handle_link(
             pad_ref(),
             direction(),
             self(),
             other_ref(),
+            other_info(),
             props(),
             state()
           )
         )
-        |> to(be_ok_result())
+        |> to(match_pattern {{:ok, ^pad_info}, _})
       end
 
       it "should remove given pad from pads.info" do
-        {:ok, new_state} =
+        {{:ok, _info}, new_state} =
           described_module().handle_link(
             pad_ref(),
             direction(),
             self(),
             other_ref(),
+            other_info(),
             props(),
             state()
           )
@@ -48,12 +53,13 @@ defmodule Membrane.Core.Element.PadControllerSpec do
       end
 
       it "should not modify state except pads list" do
-        {:ok, new_state} =
+        {{:ok, _info}, new_state} =
           described_module().handle_link(
             pad_ref(),
             direction(),
             self(),
             other_ref(),
+            other_info(),
             props(),
             state()
           )
@@ -62,12 +68,13 @@ defmodule Membrane.Core.Element.PadControllerSpec do
       end
 
       it "should add pad to the 'pads.data' list" do
-        {:ok, new_state} =
+        {{:ok, _info}, new_state} =
           described_module().handle_link(
             pad_ref(),
             direction(),
             self(),
             other_ref(),
+            other_info(),
             props(),
             state()
           )
@@ -80,6 +87,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
       let :pad_ref, do: :invalid_ref
       let :direction, do: :output
       let :other_ref, do: :other_input
+      let :other_info, do: nil
       let :props, do: %{}
 
       it "should return an error result" do
@@ -89,6 +97,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
             direction(),
             self(),
             other_ref(),
+            other_info(),
             props(),
             state()
           )

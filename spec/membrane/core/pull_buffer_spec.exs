@@ -16,8 +16,10 @@ defmodule Membrane.Core.PullBufferSpec do
   describe ".new/5" do
     let :name, do: :name
     let :demand_pid, do: self()
-    let :input_ref, do: :input_pad_ref
+    let :linked_output_ref, do: :output_pad_ref
     let :preferred_size, do: 100
+    let :warn_size, do: 200
+    let :fail_size, do: 400
     let :min_demand, do: 10
     let :toilet, do: false
     let :demand_unit, do: :bytes
@@ -27,16 +29,20 @@ defmodule Membrane.Core.PullBufferSpec do
       do: [
         preferred_size: preferred_size(),
         min_demand: min_demand(),
-        toilet: toilet()
+        toilet: toilet(),
+        warn_size: warn_size(),
+        fail_size: fail_size()
       ]
 
     it "should return PullBuffer struct and send demand message" do
-      expect(described_module().new(name(), demand_pid(), input_ref(), demand_unit(), props()))
+      expect(
+        described_module().new(name(), demand_pid(), linked_output_ref(), demand_unit(), props())
+      )
       |> to(
         eq(%PullBuffer{
           name: name(),
           demand_pid: demand_pid(),
-          input_ref: input_ref(),
+          linked_output_ref: linked_output_ref(),
           demand: 0,
           preferred_size: preferred_size(),
           min_demand: min_demand(),
@@ -46,26 +52,34 @@ defmodule Membrane.Core.PullBufferSpec do
         })
       )
 
-      expected_list = [preferred_size(), input_ref()]
+      expected_list = [preferred_size(), linked_output_ref()]
       assert_received Message.new(:demand, ^expected_list)
     end
 
     context "if toilet is not false" do
-      let :toilet, do: %{warn: 100, fail: 200}
+      let :toilet, do: true
 
       it "should not send the demand" do
         flush()
 
-        expect(described_module().new(name(), demand_pid(), input_ref(), demand_unit(), props()))
+        expect(
+          described_module().new(
+            name(),
+            demand_pid(),
+            linked_output_ref(),
+            demand_unit(),
+            props()
+          )
+        )
         |> to(
           eq(%PullBuffer{
             name: name(),
             demand_pid: demand_pid(),
-            input_ref: input_ref(),
+            linked_output_ref: linked_output_ref(),
             demand: preferred_size(),
             preferred_size: preferred_size(),
             min_demand: min_demand(),
-            toilet: toilet(),
+            toilet: %{warn: warn_size(), fail: fail_size()},
             metric: expected_metric(),
             q: Qex.new()
           })
@@ -166,7 +180,7 @@ defmodule Membrane.Core.PullBufferSpec do
     let :buffers2, do: {:buffers, [:b4, :b5, :b6], 3}
     let :q, do: Qex.new() |> Qex.push(buffers1()) |> Qex.push(buffers2())
     let :current_size, do: 6
-    let :input_ref, do: :input_ref
+    let :linked_output_ref, do: :linked_output_ref
     let :metric, do: Buffer.Metric.Count
 
     let :pb,
@@ -175,7 +189,7 @@ defmodule Membrane.Core.PullBufferSpec do
         demand: 0,
         min_demand: 0,
         demand_pid: self(),
-        input_ref: input_ref(),
+        linked_output_ref: linked_output_ref(),
         metric: metric(),
         q: q()
       }
@@ -195,7 +209,7 @@ defmodule Membrane.Core.PullBufferSpec do
 
       it "should generate demand" do
         described_module().take(pb(), to_take())
-        expected_list = [current_size(), input_ref()]
+        expected_list = [current_size(), linked_output_ref()]
 
         assert_received Message.new(:demand, ^expected_list)
       end

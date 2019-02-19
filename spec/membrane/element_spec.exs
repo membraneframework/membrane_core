@@ -1,100 +1,114 @@
 defmodule Membrane.ElementSpec do
   use ESpec, async: false
 
-  alias Membrane.Support.Element.{TrivialFilter, TrivialSink, TrivialSource}
-  alias Membrane.Element.CallbackContext
   alias Membrane.Core.{Message, Playback}
   alias Membrane.Core.Element.State
+  alias Membrane.Element.CallbackContext
+  alias Membrane.Pipeline.Link
+  alias Membrane.Pipeline.Link.Endpoint
+  alias Membrane.Support.Element.{TrivialFilter, TrivialSink, TrivialSource}
+
   require CallbackContext.PlaybackChange
   require Message
 
   pending ".start_link/3"
   pending ".start/3"
 
-  describe ".link/5" do
+  let :from_pad, do: :output
+  let :to_pad, do: :input
+
+  let :link_struct,
+    do: %Link{
+      from: %Endpoint{element: :a, pad_name: from_pad(), pad_ref: from_pad(), pid: from_pid()},
+      to: %Endpoint{element: :b, pad_name: to_pad(), pad_ref: to_pad(), pid: to_pid()}
+    }
+
+  describe ".link/1" do
     context "if first given PID is not a PID of an element process" do
-      let :server, do: self()
-      let :destination, do: :destination
+      let :from_pid, do: self()
+      let :to_pid, do: :destination
 
       it "should return an error result" do
-        expect(described_module().link(server(), destination(), :output, :input, []))
+        expect(described_module().link(link_struct()))
         |> to(be_error_result())
       end
 
       it "should return :invalid_element as a reason" do
-        {:error, reason} = described_module().link(server(), destination(), :output, :input, [])
+        {:error, reason} = described_module().link(link_struct())
         expect(reason) |> to(eq :invalid_element)
       end
     end
 
     context "if second given PID is not a PID of an element process" do
-      let_ok :server, do: Membrane.Element.start(self(), TrivialSink, %{})
-      finally do: Process.exit(server(), :kill)
+      let_ok :from_pid, do: Membrane.Element.start(self(), TrivialSink, %{})
+      finally do: Process.exit(from_pid(), :kill)
 
-      let :destination, do: self()
+      let :to_pid, do: self()
 
       it "should return an error result" do
-        expect(described_module().link(server(), destination(), :output, :input, []))
+        expect(described_module().link(link_struct()))
         |> to(be_error_result())
       end
 
       it "should return :unknown_pad as a reason" do
         {:error, {:handle_call, {:cannot_handle_message, [message: _, mode: _, reason: reason]}}} =
-          described_module().link(server(), destination(), :output, :input, [])
+          described_module().link(link_struct())
 
         expect(reason) |> to(eq :unknown_pad)
       end
     end
 
     context "if both given PIDs are equal" do
-      let :server, do: self()
-      let :destination, do: self()
+      let :from_pid, do: self()
+      let :to_pid, do: self()
 
       it "should return an error result" do
-        expect(described_module().link(server(), destination(), :output, :input, []))
+        expect(described_module().link(link_struct()))
         |> to(be_error_result())
       end
 
       it "should return :loop as a reason" do
-        {:error, reason} = described_module().link(server(), destination(), :output, :input, [])
+        {:error, reason} = described_module().link(link_struct())
         expect(reason) |> to(eq :loop)
       end
     end
 
     context "if both given PIDs are PIDs of element processes" do
-      let_ok :server, do: Membrane.Element.start(self(), server_module(), %{})
-      finally do: Process.exit(server(), :kill)
+      let_ok :from_pid, do: Membrane.Element.start(self(), from_module(), %{})
+      finally do: Process.exit(from_pid(), :kill)
 
-      let_ok :destination, do: Membrane.Element.start(self(), destination_module(), %{})
-      finally do: Process.exit(destination(), :kill)
+      let_ok :to_pid, do: Membrane.Element.start(self(), to_module(), %{})
+      finally do: Process.exit(to_pid(), :kill)
 
       context "but first given PID is not a source" do
-        let :server_module, do: TrivialSink
-        let :destination_module, do: TrivialSink
+        let :from_module, do: TrivialSink
+        let :to_module, do: TrivialSink
+        let :from_pad, do: :input
 
         it "should return an error result" do
-          expect(described_module().link(server(), destination(), :input, :input, []))
+          expect(described_module().link(link_struct()))
           |> to(be_error_result())
         end
 
-        it "should return :invalid_pad_direction as a reason" do
-          {:error, val} = described_module().link(server(), destination(), :input, :input, [])
+        fit "should return :invalid_pad_direction as a reason" do
+          {:error, val} = described_module().link(link_struct())
           {:handle_call, {:cannot_handle_message, [message: _, mode: _, reason: reason]}} = val
           expect(reason) |> to(eq {:invalid_pad_direction, [expected: :output, actual: :input]})
         end
       end
 
       context "but second given PID is not a sink" do
-        let :server_module, do: TrivialSource
-        let :destination_module, do: TrivialSource
+        let :from_module, do: TrivialSource
+        let :to_module, do: TrivialSource
+        let :to_pad, do: :output
 
         it "should return an error result" do
-          expect(described_module().link(server(), destination(), :output, :output, []))
+          expect(described_module().link(link_struct()))
           |> to(be_error_result())
         end
 
         it "should return :invalid_pad_direction as a reason" do
-          {_, val} = described_module().link(server(), destination(), :output, :output, [])
+          {_, val} = described_module().link(link_struct())
 
           {:handle_call, {:cannot_handle_message, keyword_list}} = val
           reason = keyword_list |> Keyword.get(:reason)
@@ -103,35 +117,37 @@ defmodule Membrane.ElementSpec do
       end
 
       context "but incorrect pad ref is given" do
-        let :server_module, do: TrivialSource
-        let :destination_module, do: TrivialSink
+        let :from_module, do: TrivialSource
+        let :to_module, do: TrivialSink
+        let :from_pad, do: :s
+        let :to_pad, do: :s
 
         it "should return an error result" do
-          expect(described_module().link(server(), destination(), :s, :s, []))
+          expect(described_module().link(link_struct()))
           |> to(be_error_result())
         end
 
         it "should return :unknown_pad as a reason" do
-          {_, val} = described_module().link(server(), destination(), :s, :s, [])
+          {_, val} = described_module().link(link_struct())
           {:handle_call, {:cannot_handle_message, keyword_list}} = val
           expect(keyword_list |> Keyword.get(:reason)) |> to(eq :unknown_pad)
         end
       end
 
       context "and first given PID is a source and second given PID is a sink" do
-        let :server_module, do: TrivialSource
-        let :destination_module, do: TrivialSink
+        let :from_module, do: TrivialSource
+        let :to_module, do: TrivialSink
 
         context "but pads are already linked" do
-          before do: :ok = described_module().link(server(), destination(), :output, :input, [])
+          before do: :ok = described_module().link(link_struct())
 
           it "should return an error result" do
-            expect(described_module().link(server(), destination(), :output, :input, []))
+            expect(described_module().link(link_struct()))
             |> to(be_error_result())
           end
 
           it "should return :already_linked as a reason" do
-            {_, val} = described_module().link(server(), destination(), :output, :input, [])
+            {_, val} = described_module().link(link_struct())
             {:handle_call, {:cannot_handle_message, keyword_list}} = val
             expect(keyword_list |> Keyword.get(:reason)) |> to(eq :already_linked)
           end
