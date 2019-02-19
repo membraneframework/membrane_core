@@ -84,13 +84,11 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   end
 
   defp do_handle_message(
-         Message.new(:handle_link, [pad_ref, pad_direction, pid, other_ref, props]),
+         Message.new(:handle_link, [pad_ref, pad_direction, pid, other_ref, other_info, props]),
          :call,
          state
        ) do
-    res = PadController.handle_link(pad_ref, pad_direction, pid, other_ref, props, state)
-    IO.inspect(res)
-    res
+    PadController.handle_link(pad_ref, pad_direction, pid, other_ref, other_info, props, state)
   end
 
   defp do_handle_message(Message.new(:handle_unlink, pad_ref), :call, state) do

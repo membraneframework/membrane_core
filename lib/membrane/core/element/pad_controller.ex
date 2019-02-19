@@ -17,13 +17,21 @@ defmodule Membrane.Core.Element.PadController do
   @doc """
   Verifies linked pad, initializes it's data.
   """
-  @spec handle_link(Pad.ref_t(), Pad.direction_t(), pid, Pad.ref_t(), Keyword.t(), State.t()) ::
+  @spec handle_link(
+          Pad.ref_t(),
+          Pad.direction_t(),
+          pid,
+          Pad.ref_t(),
+          Pad.Model.info_t(),
+          Keyword.t(),
+          State.t()
+        ) ::
           State.stateful_try_t()
-  def handle_link(pad_ref, direction, pid, other_ref, props, state) do
+  def handle_link(pad_ref, direction, pid, other_ref, other_info, props, state) do
     with :ok <- validate_pad_being_linked(pad_ref, direction, state) do
       pad_name = pad_ref |> Pad.name_by_ref()
       info = state.pads.info[pad_name]
-      state = init_pad_data(pad_ref, pid, other_ref, props, info, state)
+      state = init_pad_data(info, pad_ref, pid, other_ref, other_info, props, state)
 
       state =
         case Pad.availability_mode_by_ref(pad_ref) do
@@ -34,7 +42,7 @@ defmodule Membrane.Core.Element.PadController do
             add_to_currently_linking(pad_ref, state)
         end
 
-      {:ok, state}
+      {{:ok, info}, state}
     else
       {:error, reason} -> {{:error, reason}, state}
     end
@@ -139,14 +147,15 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   @spec init_pad_data(
+          PadModel.pad_info_t(),
           Pad.ref_t(),
           pid,
           Pad.ref_t(),
-          props :: Keyword.t(),
           PadModel.pad_info_t(),
+          props :: Keyword.t(),
           State.t()
         ) :: State.t()
-  defp init_pad_data(ref, pid, other_ref, props, info, state) do
+  defp init_pad_data(info, ref, pid, other_ref, other_info, props, state) do
     data =
       info
       |> Map.merge(%{
@@ -159,7 +168,7 @@ defmodule Membrane.Core.Element.PadController do
       })
 
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
-    data = data |> Map.merge(init_pad_mode_data(data, props, state))
+    data = data |> Map.merge(init_pad_mode_data(data, other_info, props, state))
     data = %Pad.Data{} |> Map.merge(data)
     state |> Bunch.Access.put_in([:pads, :data, ref], data)
   end
@@ -167,12 +176,19 @@ defmodule Membrane.Core.Element.PadController do
   defp init_pad_direction_data(%{direction: :input}, _props, _state), do: %{sticky_messages: []}
   defp init_pad_direction_data(%{direction: :output}, _props, _state), do: %{}
 
-  defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, props, state) do
+  defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, other_info, props, state) do
     %{pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
 
     :ok =
       pid
       |> Message.call(:demand_unit, [demand_unit, other_ref])
+
+    buffer_props = (props[:buffer] || %{}) |> Map.new()
+
+    buffer_props =
+      if other_info.mode == :push do
+        buffer_props |> Map.put(:toilet, true)
+      end
 
     pb =
       PullBuffer.new(
@@ -180,15 +196,16 @@ defmodule Membrane.Core.Element.PadController do
         pid,
         other_ref,
         demand_unit,
-        props[:buffer] || %{}
+        buffer_props
       )
 
     %{buffer: pb, demand: 0}
   end
 
-  defp init_pad_mode_data(%{mode: :pull, direction: :output}, _props, _state), do: %{demand: 0}
+  defp init_pad_mode_data(%{mode: :pull, direction: :output}, _other_info, _props, _state),
+    do: %{demand: 0}
 
-  defp init_pad_mode_data(%{mode: :push}, _props, _state), do: %{}
+  defp init_pad_mode_data(%{mode: :push}, _other_info, _props, _state), do: %{}
 
   @spec add_to_currently_linking(Pad.ref_t(), State.t()) :: State.t()
   defp add_to_currently_linking(ref, state),

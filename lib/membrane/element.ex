@@ -172,20 +172,22 @@ defmodule Membrane.Element do
 
   def link(%Link{from: %Endpoint{pid: from_pid} = from, to: %Endpoint{pid: to_pid} = to})
       when is_pid(from_pid) and is_pid(to_pid) do
-    with :ok <-
+    with {:ok, pad_from_info} <-
            Message.call(from_pid, :handle_link, [
              from.pad_ref,
              :output,
              to_pid,
              to.pad_ref,
+             nil,
              from.opts
            ]),
-         :ok <-
+         {:ok, _pad_to_info} <-
            Message.call(to_pid, :handle_link, [
              to.pad_ref,
              :input,
              from_pid,
              from.pad_ref,
+             pad_from_info,
              to.opts
            ]) do
       :ok

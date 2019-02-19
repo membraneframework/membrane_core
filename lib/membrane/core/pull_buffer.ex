@@ -8,6 +8,8 @@ defmodule Membrane.Core.PullBuffer do
   """
   alias Membrane.Buffer
   alias Membrane.Core.Message
+  alias Membrane.Element
+  alias Membrane.Element.Pad
   require Message
   use Bunch
   use Membrane.Log, tags: :core
@@ -16,22 +18,24 @@ defmodule Membrane.Core.PullBuffer do
 
   @non_buf_types [:event, :caps]
 
+  @typep toilet_t() :: boolean() | %{:warn => pos_integer, :fail => pos_integer}
+
   @type t :: %__MODULE__{
-          name: Membrane.Element.name_t(),
+          name: Element.name_t(),
           demand_pid: pid(),
-          input_ref: Membrane.Element.Pad.ref_t(),
+          linked_output_ref: Pad.ref_t(),
           q: @qe.t(),
           preferred_size: pos_integer(),
           current_size: non_neg_integer(),
           demand: non_neg_integer(),
           min_demand: pos_integer(),
           metric: module(),
-          toilet: boolean()
+          toilet: toilet_t()
         }
 
   defstruct name: :pull_buffer,
             demand_pid: nil,
-            input_ref: nil,
+            linked_output_ref: nil,
             q: nil,
             preferred_size: 100,
             current_size: 0,
@@ -52,14 +56,9 @@ defmodule Membrane.Core.PullBuffer do
 
   @type props_t :: [prop_t()]
 
-  @spec new(
-          Membrane.Element.name_t(),
-          demand_pid :: pid,
-          Membrane.Element.Pad.ref_t(),
-          Membrane.Buffer.Metric.unit_t(),
-          props_t
-        ) :: t()
-  def new(name, demand_pid, input_ref, demand_unit, props) do
+  @spec new(Element.name_t(), demand_pid :: pid, Pad.ref_t(), Buffer.Metric.unit_t(), props_t) ::
+          t()
+  def new(name, demand_pid, linked_output_ref, demand_unit, props) do
     metric = Buffer.Metric.from_unit(demand_unit)
     preferred_size = props[:preferred_size] || metric.pullbuffer_preferred_size
     min_demand = props[:min_demand] || preferred_size |> div(4)
@@ -78,7 +77,7 @@ defmodule Membrane.Core.PullBuffer do
       name: name,
       q: @qe.new,
       demand_pid: demand_pid,
-      input_ref: input_ref,
+      linked_output_ref: linked_output_ref,
       preferred_size: preferred_size,
       min_demand: min_demand,
       demand: preferred_size,
@@ -102,7 +101,7 @@ defmodule Membrane.Core.PullBuffer do
       when is_list(v) do
     if size >= pref_size do
       debug("""
-      PullBuffer #{inspect(pb.name)}: received buffers from input #{inspect(pb.input_ref)},
+      PullBuffer #{inspect(pb.name)}: received buffers from pad #{inspect(pb.linked_output_ref)},
       despite not requesting them. It is probably caused by overestimating demand
       by previous element.
       """)
@@ -126,7 +125,7 @@ defmodule Membrane.Core.PullBuffer do
       warn([
         """
         PullBuffer #{inspect(pb.name)} (toilet): received #{inspect(size)} buffers,
-        which is above #{above_level}, from input #{inspect(pb.input_ref)} that works in push mode.
+        which is above #{above_level}, from output #{inspect(pb.linked_output_ref)} that works in push mode.
         To have control over amount of buffers being produced, consider using push mode.
         If this is a normal situation, increase toilet warn/fail level.
         Buffers: \
@@ -217,7 +216,7 @@ defmodule Membrane.Core.PullBuffer do
          %__MODULE__{
            toilet: false,
            demand_pid: demand_pid,
-           input_ref: input_ref,
+           linked_output_ref: linked_output_ref,
            current_size: size,
            preferred_size: pref_size,
            demand: demand,
@@ -231,12 +230,12 @@ defmodule Membrane.Core.PullBuffer do
     report(
       """
       Sending demand of size #{inspect(to_demand)}
-      to input #{inspect(pb.input_ref)}
+      to input #{inspect(pb.linked_output_ref)}
       """,
       pb
     )
 
-    Message.send(demand_pid, :demand, [to_demand, input_ref])
+    Message.send(demand_pid, :demand, [to_demand, linked_output_ref])
     %__MODULE__{pb | demand: demand + new_demand - to_demand}
   end
 

@@ -9,10 +9,10 @@ defmodule Membrane.Pipeline.Link do
 
   @type t() :: %__MODULE__{from: Endpoint.t(), to: Endpoint.t()}
 
-  @typep resolved_t :: %__MODULE__{
-           from: Endpoint.resolved_t(),
-           to: Endpoint.resolved_t()
-         }
+  @type resolved_t :: %__MODULE__{
+          from: Endpoint.resolved_t(),
+          to: Endpoint.resolved_t()
+        }
 
   defmodule Endpoint do
     @moduledoc false
