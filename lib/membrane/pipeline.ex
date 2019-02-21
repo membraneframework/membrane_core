@@ -277,10 +277,11 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  @spec parse_children(Spec.children_spec_t() | any) :: Type.try_t(parsed_child_t)
+  @spec parse_children(Spec.children_spec_t() | any) :: Type.try_t([parsed_child_t])
   defp parse_children(children) when is_map(children) or is_list(children),
     do: children |> Bunch.Enum.try_map(&parse_child/1)
 
+  @spec parse_child(any) :: Type.try_t(parsed_child_t)
   defp parse_child({name, %module{} = options})
        when Element.is_element_name(name) do
     {:ok, %{name: name, module: module, options: options}}
@@ -344,7 +345,7 @@ defmodule Membrane.Pipeline do
   defp parse_links(links), do: links |> Bunch.Enum.try_map(&Link.parse/1)
 
   @spec resolve_links([Link.t()], State.t()) ::
-          Type.stateful_try_t([Link.resolved_t()], State.t())
+          Type.try_t([Link.resolved_t()])
   defp resolve_links(links, state) do
     links
     |> Bunch.Enum.try_map(fn %{from: from, to: to} = link ->

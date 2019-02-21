@@ -4,14 +4,15 @@ defmodule Membrane.Testing.Source do
   """
 
   use Membrane.Element.Base.Source
-  alias Membrane.Buffer
   use Bunch
+  alias Membrane.Buffer
+  alias Membrane.Element.Action
 
   def_output_pads output: [caps: :any]
 
   def_options actions_generator: [
                 type: :function,
-                spec: (non_neg_integer, non_neg_integer -> [Membrane.Action.t()]),
+                spec: (non_neg_integer, non_neg_integer -> [Action.t()]),
                 default: &__MODULE__.default_buf_gen/2,
                 description: """
                 Function invoked each time `handle_demand` is invoked.

@@ -22,7 +22,7 @@ defmodule Membrane.Core.Element.PadController do
           Pad.direction_t(),
           pid,
           Pad.ref_t(),
-          Pad.Model.info_t(),
+          PadModel.pad_info_t(),
           Keyword.t(),
           State.t()
         ) ::
@@ -176,6 +176,12 @@ defmodule Membrane.Core.Element.PadController do
   defp init_pad_direction_data(%{direction: :input}, _props, _state), do: %{sticky_messages: []}
   defp init_pad_direction_data(%{direction: :output}, _props, _state), do: %{}
 
+  @spec init_pad_mode_data(
+          map(),
+          PadModel.pad_info_t(),
+          props :: Keyword.t(),
+          State.t()
+        ) :: map()
   defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, other_info, props, state) do
     %{pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
 
@@ -183,11 +189,13 @@ defmodule Membrane.Core.Element.PadController do
       pid
       |> Message.call(:demand_unit, [demand_unit, other_ref])
 
-    buffer_props = (props[:buffer] || %{}) |> Map.new()
+    buffer_props = props[:buffer] || Keyword.new()
 
     buffer_props =
       if other_info.mode == :push do
-        buffer_props |> Map.put(:toilet, true)
+        buffer_props |> Keyword.put_new(:toilet, true)
+      else
+        buffer_props
       end
 
     pb =

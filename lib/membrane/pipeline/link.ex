@@ -2,6 +2,8 @@ defmodule Membrane.Pipeline.Link do
   @moduledoc false
 
   alias Membrane.Element.Pad
+  alias Membrane.Pipeline
+  alias __MODULE__.Endpoint
   require Pad
 
   @enforce_keys [:from, :to]
@@ -19,6 +21,7 @@ defmodule Membrane.Pipeline.Link do
 
     alias Membrane.Element
     alias Membrane.Element.Pad
+    alias Membrane.Pipeline
 
     @enforce_keys [:element, :pad_name]
     defstruct element: nil, pad_name: nil, pad_ref: nil, pid: nil, opts: []
@@ -39,7 +42,7 @@ defmodule Membrane.Pipeline.Link do
             opts: keyword()
           }
 
-    @spec parse(Pipeline.link_spec_t() | any()) :: {:ok, t()} | {:error, any()}
+    @spec parse(Pipeline.Spec.link_endpoint_spec_t() | any()) :: {:ok, t()} | {:error, any()}
     def parse({elem, pad_name}) do
       %__MODULE__{element: elem, pad_name: pad_name, opts: []} |> validate()
     end
@@ -61,7 +64,7 @@ defmodule Membrane.Pipeline.Link do
     end
   end
 
-  @spec parse(Pipeline.links_spec_t() | any()) :: {:ok, t()} | {:error, any()}
+  @spec parse(Pipeline.Spec.links_spec_t()) :: {:ok, t()} | {:error, any()}
   def parse({from, to}) do
     with {:ok, from} <- Endpoint.parse(from),
          {:ok, to} <- Endpoint.parse(to) do

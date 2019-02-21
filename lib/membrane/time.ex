@@ -121,7 +121,7 @@ defmodule Membrane.Time do
   @doc """
   Returns string representation of result of `to_code/1`.
   """
-  @spec pretty_duration(t) :: Macro.t()
+  @spec to_code_str(t) :: Macro.t()
   def to_code_str(time) when is_t(time) do
     time |> to_code() |> Macro.to_string()
   end

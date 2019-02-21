@@ -126,8 +126,7 @@ defmodule Membrane.Caps.Matcher do
 
   When `:any` is used as specs, caps can by anything (i.e. they can be invalid)
   """
-  @spec match?(:any, any()) :: true
-  @spec match?(caps_specs_t(), struct()) :: boolean()
+  @spec match?(caps_specs_t(), struct() | any()) :: boolean()
   def match?(:any, _), do: true
 
   def match?(specs, %_{} = caps) when is_list(specs) do
