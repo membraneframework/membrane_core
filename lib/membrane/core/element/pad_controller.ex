@@ -28,9 +28,10 @@ defmodule Membrane.Core.Element.PadController do
         ) ::
           State.stateful_try_t()
   def handle_link(pad_ref, direction, pid, other_ref, other_info, props, state) do
-    with :ok <- validate_pad_being_linked(pad_ref, direction, state) do
-      pad_name = pad_ref |> Pad.name_by_ref()
-      info = state.pads.info[pad_name]
+    with pad_name = pad_ref |> Pad.name_by_ref(),
+         info = state.pads.info[pad_name],
+         :ok <- validate_pad_being_linked(pad_ref, direction, info, state),
+         :ok <- validate_dir_and_mode(info, other_info) do
       state = init_pad_data(info, pad_ref, pid, other_ref, other_info, props, state)
 
       state =
@@ -121,10 +122,13 @@ defmodule Membrane.Core.Element.PadController do
     {pad_ref |> Bunch.error_if_nil(:unknown_pad), state}
   end
 
-  @spec validate_pad_being_linked(Pad.ref_t(), Pad.direction_t(), State.t()) :: Type.try_t()
-  defp validate_pad_being_linked(pad_ref, direction, state) do
-    info = state.pads.info[pad_ref |> Pad.name_by_ref()]
-
+  @spec validate_pad_being_linked(
+          Pad.ref_t(),
+          Pad.direction_t(),
+          PadModel.pad_info_t(),
+          State.t()
+        ) :: Type.try_t()
+  defp validate_pad_being_linked(pad_ref, direction, info, state) do
     cond do
       :ok == PadModel.assert_instance(pad_ref, state) ->
         {:error, :already_linked}
@@ -144,6 +148,23 @@ defmodule Membrane.Core.Element.PadController do
       true ->
         :ok
     end
+  end
+
+  @spec validate_dir_and_mode(info :: PadModel.pad_info_t(), other_info :: PadModel.pad_info_t()) ::
+          boolean()
+  def validate_dir_and_mode(%{direction: :output, mode: :pull}, %{direction: :input, mode: :push}) do
+    {:error, {:cannot_connect, :pull_output, :to, :push_input}}
+  end
+
+  def validate_dir_and_mode(
+        %{direction: :input, mode: :push} = this,
+        %{direction: :output, mode: :pull} = that
+      ) do
+    validate_dir_and_mode(that, this)
+  end
+
+  def validate_dir_and_mode(_, _) do
+    :ok
   end
 
   @spec init_pad_data(
