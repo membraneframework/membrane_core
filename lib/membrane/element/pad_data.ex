@@ -3,11 +3,13 @@ defmodule Membrane.Element.Pad.Data do
   Struct describing current pad state.
 
   The public fields are:
-    - `caps` - `Membrane.Caps` on the pad (may be `nil` if not yet set)
-    - `start_of_stream?` - flag determining whether `Membrane.Event.StartOfStream`
-      has been received on the pad
-    - `end_of_stream?` - flag determining whether `Membrane.Event.EndOfStream`
-      has been received on the pad
+    - `:caps` - the last `Membrane.Caps` sent (output) or received (input) on the pad.
+      May be `nil` if not yet set.
+    - `:start_of_stream?` - flag determining whether `Membrane.Event.StartOfStream`
+      has been received (or sent) on the pad
+    - `:end_of_stream?` - flag determining whether `Membrane.Event.EndOfStream`
+      has been received (or sent) on the pad
+    - `:opts` - options passed in `Membrane.Pipeline.Spec` when linking pad
 
   Other fields in the struct ARE NOT PART OF THE PUBLIC API and should not be
   accessed or relied on.
@@ -23,17 +25,17 @@ defmodule Membrane.Element.Pad.Data do
           availability: Pad.availability_t(),
           direction: Pad.direction_t(),
           mode: Pad.mode_t(),
-          demand_unit: Metric.unit_t(),
-          other_demand_unit: Metric.unit_t(),
-          current_id: non_neg_integer,
+          demand_unit: Metric.unit_t() | nil,
+          other_demand_unit: Metric.unit_t() | nil,
+          current_id: non_neg_integer | nil,
           pid: pid,
           other_ref: Pad.ref_t(),
           caps: Caps.t() | nil,
           start_of_stream?: boolean(),
           end_of_stream?: boolean(),
           sticky_messages: [Event.t()],
-          buffer: PullBuffer.t(),
-          demand: integer(),
+          buffer: PullBuffer.t() | nil,
+          demand: integer() | nil,
           opts: any()
         }
 
