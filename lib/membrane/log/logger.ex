@@ -96,26 +96,7 @@ defmodule Membrane.Log.Logger do
       ) do
     module.handle_log(level, content, time, tags, internal_state)
     |> handle_callback(state)
-    |> format_callback_response(:noreply)
-  end
-
-  # Function is not private to prevent dialyzer from complaining about
-  # unused clauses
-  @doc false
-  def format_callback_response({:ok, new_state}, :reply) do
-    {:reply, :ok, new_state}
-  end
-
-  def format_callback_response({:ok, new_state}, :noreply) do
-    {:noreply, new_state}
-  end
-
-  def format_callback_response({:error, reason, new_state}, :reply) do
-    {:reply, {:error, reason}, new_state}
-  end
-
-  def format_callback_response({:error, reason, new_state}, :noreply) do
-    {:stop, [log_error: reason], new_state}
+    |> Membrane.Helper.GenServer.noreply()
   end
 
   # Generic handler that can be used to convert return value from
@@ -138,7 +119,7 @@ defmodule Membrane.Log.Logger do
         {:ok, %{state | internal_state: new_internal_state}}
 
       {:error, reason, new_internal_state} ->
-        {:error, reason, %{state | internal_state: new_internal_state}}
+        {{:error, reason}, %{state | internal_state: new_internal_state}}
 
       invalid_callback ->
         raise """
