@@ -192,7 +192,7 @@ defmodule Membrane.Core.Element.PadModel do
     {pad_data, state}
   end
 
-  @spec delete_data(Pad.ref_t(), State.t()) :: {:ok, State.t()} | {unknown_pad_error_t, State.t()}
+  @spec delete_data(Pad.ref_t(), State.t()) :: State.stateful_t(:ok | unknown_pad_error_t)
   def delete_data(pad_ref, state) do
     with {{:ok, _out}, state} <- pop_data(pad_ref, state) do
       {:ok, state}

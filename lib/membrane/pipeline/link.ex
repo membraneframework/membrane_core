@@ -19,6 +19,7 @@ defmodule Membrane.Pipeline.Link do
   defmodule Endpoint do
     @moduledoc false
 
+    alias Membrane.Core.PullBuffer
     alias Membrane.Element
     alias Membrane.Element.Pad
     alias Membrane.Pipeline
@@ -26,12 +27,15 @@ defmodule Membrane.Pipeline.Link do
     @enforce_keys [:element, :pad_name]
     defstruct element: nil, pad_name: nil, pad_ref: nil, pid: nil, opts: []
 
+    @valid_opt_keys [:pad, :buffer]
+    @type opts_t :: [{:pad, keyword() | map()} | {:buffer, PullBuffer.props_t()}]
+
     @type t() :: %__MODULE__{
             element: Element.name_t(),
             pad_name: Pad.name_t(),
             pad_ref: Pad.ref_t() | nil,
             pid: pid() | nil,
-            opts: keyword()
+            opts: opts_t()
           }
 
     @type resolved_t() :: %__MODULE__{
@@ -39,27 +43,43 @@ defmodule Membrane.Pipeline.Link do
             pad_name: Pad.name_t(),
             pad_ref: Pad.ref_t(),
             pid: pid(),
-            opts: keyword()
+            opts: opts_t()
           }
 
     @spec parse(Pipeline.Spec.link_endpoint_spec_t() | any()) :: {:ok, t()} | {:error, any()}
     def parse({elem, pad_name}) do
-      %__MODULE__{element: elem, pad_name: pad_name, opts: []} |> validate()
+      parse({elem, pad_name, []})
     end
 
     def parse({elem, pad_name, opts}) when is_list(opts) do
-      %__MODULE__{element: elem, pad_name: pad_name, opts: opts} |> validate()
+      with :ok <- validate_pad_name(pad_name),
+           :ok <- validate_opts(opts) do
+        {:ok, %__MODULE__{element: elem, pad_name: pad_name, opts: opts}}
+      end
     end
 
     def parse(endpoint) do
       {:error, {:invalid_endpoint, endpoint}}
     end
 
-    defp validate(%__MODULE__{pad_name: pad} = endpoint) do
+    defp validate_pad_name(pad) do
       if Pad.is_pad_name(pad) do
-        {:ok, endpoint}
+        :ok
       else
         {:error, {:invalid_pad_format, pad}}
+      end
+    end
+
+    defp validate_opts(opts) do
+      if Keyword.keyword?(opts) do
+        opts
+        |> Keyword.keys()
+        |> Bunch.Enum.try_each(fn
+          key when key in @valid_opt_keys -> :ok
+          invalid_key -> {:error, {:invalid_opts_key, invalid_key}}
+        end)
+      else
+        {:error, {:invalid_opts, opts}}
       end
     end
   end

@@ -12,8 +12,8 @@ defmodule Membrane.Pipeline.LinkTest do
     assert Endpoint.parse({{:source, 42}, :input}) ==
              {:ok, %Endpoint{element: {:source, 42}, pad_name: :input, opts: []}}
 
-    assert Endpoint.parse({:source, :input, opt: true}) ==
-             {:ok, %Endpoint{element: :source, pad_name: :input, opts: [opt: true]}}
+    assert Endpoint.parse({:source, :input, pad: [mute: true]}) ==
+             {:ok, %Endpoint{element: :source, pad_name: :input, opts: [pad: [mute: true]]}}
 
     assert Endpoint.parse({:source}) ==
              {:error, {:invalid_endpoint, {:source}}}
@@ -34,7 +34,7 @@ defmodule Membrane.Pipeline.LinkTest do
 
   test "Link parsing" do
     valid_end = {:source, :input}
-    valid_end_opt = {:source, :input, opt: true}
+    valid_end_opt = {:source, :input, pad: [mute: true]}
     invalid_end = {:source}
     invalid_pad = {:source, 42}
 

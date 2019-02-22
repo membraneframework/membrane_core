@@ -18,8 +18,6 @@ defmodule Membrane.Core.PullBuffer do
 
   @non_buf_types [:event, :caps]
 
-  @typep toilet_t() :: boolean() | %{:warn => pos_integer, :fail => pos_integer}
-
   @type t :: %__MODULE__{
           name: Element.name_t(),
           demand_pid: pid(),
@@ -30,7 +28,7 @@ defmodule Membrane.Core.PullBuffer do
           demand: non_neg_integer(),
           min_demand: pos_integer(),
           metric: module(),
-          toilet: toilet_t()
+          toilet: %{:warn => pos_integer, :fail => pos_integer}
         }
 
   defstruct name: :pull_buffer,
@@ -65,7 +63,7 @@ defmodule Membrane.Core.PullBuffer do
           | {:warn_size, pos_integer()}
           | {:fail_size, pos_integer()}
 
-  @type props_t :: [prop_t()]
+  @type props_t :: [prop_t() | {:toilet, true}]
 
   @spec new(Element.name_t(), demand_pid :: pid, Pad.ref_t(), Buffer.Metric.unit_t(), props_t) ::
           t()
