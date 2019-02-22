@@ -33,7 +33,8 @@ defmodule Membrane.Element.Pad.Data do
           end_of_stream?: boolean(),
           sticky_messages: [Event.t()],
           buffer: PullBuffer.t(),
-          demand: integer()
+          demand: integer(),
+          opts: any()
         }
 
   defstruct [
@@ -51,6 +52,7 @@ defmodule Membrane.Element.Pad.Data do
     :end_of_stream?,
     :sticky_messages,
     :buffer,
-    :demand
+    :demand,
+    :opts
   ]
 end

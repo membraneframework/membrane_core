@@ -19,7 +19,6 @@ defmodule Membrane.Pipeline.Link do
   defmodule Endpoint do
     @moduledoc false
 
-    alias Membrane.Core.PullBuffer
     alias Membrane.Element
     alias Membrane.Element.Pad
     alias Membrane.Pipeline
@@ -28,14 +27,13 @@ defmodule Membrane.Pipeline.Link do
     defstruct element: nil, pad_name: nil, pad_ref: nil, pid: nil, opts: []
 
     @valid_opt_keys [:pad, :buffer]
-    @type opts_t :: [{:pad, keyword() | map()} | {:buffer, PullBuffer.props_t()}]
 
     @type t() :: %__MODULE__{
             element: Element.name_t(),
             pad_name: Pad.name_t(),
             pad_ref: Pad.ref_t() | nil,
             pid: pid() | nil,
-            opts: opts_t()
+            opts: Pipeline.Spec.endpoint_options_t()
           }
 
     @type resolved_t() :: %__MODULE__{
@@ -43,7 +41,7 @@ defmodule Membrane.Pipeline.Link do
             pad_name: Pad.name_t(),
             pad_ref: Pad.ref_t(),
             pid: pid(),
-            opts: opts_t()
+            opts: Pipeline.Spec.endpoint_options_t()
           }
 
     @spec parse(Pipeline.Spec.link_endpoint_spec_t() | any()) :: {:ok, t()} | {:error, any()}

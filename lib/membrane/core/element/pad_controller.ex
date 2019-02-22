@@ -190,7 +190,7 @@ defmodule Membrane.Core.Element.PadController do
 
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
     data = data |> Map.merge(init_pad_mode_data(data, other_info, props, state))
-    data = %Pad.Data{} |> Map.merge(data)
+    data = struct!(Pad.Data, data)
     state |> Bunch.Access.put_in([:pads, :data, ref], data)
   end
 
