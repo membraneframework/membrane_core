@@ -90,7 +90,7 @@ defmodule Membrane.ElementSpec do
           |> to(be_error_result())
         end
 
-        fit "should return :invalid_pad_direction as a reason" do
+        it "should return :invalid_pad_direction as a reason" do
           {:error, val} = described_module().link(link_struct())
           {:handle_call, {:cannot_handle_message, [message: _, mode: _, reason: reason]}} = val
           expect(reason) |> to(eq {:invalid_pad_direction, [expected: :output, actual: :input]})

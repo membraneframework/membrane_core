@@ -22,7 +22,7 @@ defmodule Membrane.Core.Element.PadController do
           Pad.direction_t(),
           pid,
           Pad.ref_t(),
-          PadModel.pad_info_t(),
+          PadModel.pad_info_t() | nil,
           Keyword.t(),
           State.t()
         ) ::
@@ -151,7 +151,7 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   @spec validate_dir_and_mode(info :: PadModel.pad_info_t(), other_info :: PadModel.pad_info_t()) ::
-          boolean()
+          Type.try_t()
   def validate_dir_and_mode(%{direction: :output, mode: :pull}, %{direction: :input, mode: :push}) do
     {:error, {:cannot_connect, :pull_output, :to, :push_input}}
   end
