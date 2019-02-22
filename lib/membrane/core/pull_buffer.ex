@@ -128,28 +128,22 @@ defmodule Membrane.Core.PullBuffer do
         if size < fail_lvl do
           "warn level"
         else
-          "fail_level"
+          "fail level"
         end
 
       warn([
         """
-        PullBuffer #{inspect(pb.name)} (toilet): received #{inspect(size)} buffers,
+        PullBuffer #{inspect(pb.name)} (toilet) has buffers of size #{inspect(size)},
         which is above #{above_level}, from output #{inspect(pb.linked_output_ref)} that works in push mode.
-        To have control over amount of buffers being produced, consider using push mode.
-        If this is a normal situation, increase toilet warn/fail level.
-        Buffers: \
-        """,
-        Buffer.print(v),
-        """
-
-        PullBuffer #{inspect(pb)}
+        To have control over amount of buffers being produced, consider using pull mode.
+        If this is a normal situation, increase warn/fail size in buffer options.
         """
       ])
     end
 
     if size >= fail_lvl do
       warn_error(
-        "PullBuffer #{inspect(pb.name)} (toilet): failing: too many buffers",
+        "PullBuffer #{inspect(pb.name)} (toilet): failing: too much data",
         {:pull_buffer, toilet: :too_many_buffers}
       )
     else
