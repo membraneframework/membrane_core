@@ -128,7 +128,7 @@ defmodule Membrane.Time do
 
   @doc """
   Returns current time in pretty format (currently iso8601), as string
-  Uses system_time/0 under the hood.
+  Uses `system_time/0` under the hood.
   """
   @spec pretty_now :: String.t()
   def pretty_now do
@@ -136,7 +136,7 @@ defmodule Membrane.Time do
   end
 
   @doc """
-  Returns current monotonic time based on System.monotonic_time/0
+  Returns current monotonic time based on `System.monotonic_time/0`
   in internal Membrane time units.
 
   Inlined by the compiler.
@@ -158,10 +158,10 @@ defmodule Membrane.Time do
   end
 
   @doc """
-  Returns current Erlang VM system time based on System.system_time/0
+  Returns current Erlang VM system time based on `System.system_time/0`
   in internal Membrane time units.
 
-  It is the VM view of the os_time/0. They may not match in case of time warps.
+  It is the VM view of the `os_time/0`. They may not match in case of time warps.
   It is not monotonic.
 
   Inlined by the compiler.
@@ -172,7 +172,7 @@ defmodule Membrane.Time do
   end
 
   @doc """
-  Returns current time of Erlang VM based on System.system_time/0
+  Returns current time of Erlang VM based on `System.system_time/0`
   in internal Membrane time units.
 
   Inlined by the compiler.
