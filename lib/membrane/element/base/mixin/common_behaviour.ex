@@ -53,7 +53,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   Usually most resources used by the element are allocated here.
   For example, if element opens a file, this is the place to try to actually open it
-  and return error if that has failed. Such resources should be released in `c:handle_prepared_to_stopped/1`.
+  and return error if that has failed. Such resources should be released in `c:handle_prepared_to_stopped/2`.
   """
   @callback handle_stopped_to_prepared(
               context :: CallbackContext.PlaybackChange.t(),
