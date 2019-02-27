@@ -79,7 +79,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
             state()
           )
 
-        expect(PadModel.assert_instance(pad_ref(), new_state)) |> to(eq :ok)
+        expect(PadModel.assert_instance(new_state, pad_ref())) |> to(eq :ok)
       end
     end
 

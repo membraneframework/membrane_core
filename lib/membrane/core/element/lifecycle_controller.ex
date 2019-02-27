@@ -115,17 +115,11 @@ defmodule Membrane.Core.Element.LifecycleController do
   """
   @spec handle_demand_unit(demand_unit :: atom, Pad.ref_t(), State.t()) :: {:ok, State.t()}
   def handle_demand_unit(demand_unit, pad_ref, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :output}, state)
+    PadModel.assert_data!(state, pad_ref, %{direction: :output})
 
-    state =
-      PadModel.set_data!(
-        pad_ref,
-        [:other_demand_unit],
-        demand_unit,
-        state
-      )
-
-    {:ok, state}
+    state
+    |> PadModel.set_data!(pad_ref, [:other_demand_unit], demand_unit)
+    ~> {:ok, &1}
   end
 
   @impl PlaybackHandler

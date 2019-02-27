@@ -28,8 +28,8 @@ defmodule Membrane.Core.Element.PadModel do
 
   @type unknown_pad_error_t :: {:error, {:unknown_pad, Pad.name_t()}}
 
-  @spec assert_instance(Pad.ref_t(), State.t()) :: :ok | unknown_pad_error_t
-  def assert_instance(pad_ref, state) do
+  @spec assert_instance(State.t(), Pad.ref_t()) :: :ok | unknown_pad_error_t
+  def assert_instance(state, pad_ref) do
     if state.pads.data |> Map.has_key?(pad_ref) do
       :ok
     else
@@ -37,14 +37,14 @@ defmodule Membrane.Core.Element.PadModel do
     end
   end
 
-  @spec assert_instance!(Pad.ref_t(), State.t()) :: :ok
-  def assert_instance!(pad_ref, state) do
-    :ok = assert_instance(pad_ref, state)
+  @spec assert_instance!(State.t(), Pad.ref_t()) :: :ok
+  def assert_instance!(state, pad_ref) do
+    :ok = assert_instance(state, pad_ref)
   end
 
-  defmacro assert_data(pad_ref, pattern, state) do
+  defmacro assert_data(state, pad_ref, pattern) do
     quote do
-      with {:ok, data} <- unquote(__MODULE__).get_data(unquote(pad_ref), unquote(state)) do
+      with {:ok, data} <- unquote(__MODULE__).get_data(unquote(state), unquote(pad_ref)) do
         if match?(unquote(pattern), data) do
           :ok
         else
@@ -55,75 +55,75 @@ defmodule Membrane.Core.Element.PadModel do
     end
   end
 
-  defmacro assert_data!(pad_ref, pattern, state) do
+  defmacro assert_data!(state, pad_ref, pattern) do
     quote do
-      :ok = unquote(__MODULE__).assert_data(unquote(pad_ref), unquote(pattern), unquote(state))
+      :ok = unquote(__MODULE__).assert_data(unquote(state), unquote(pad_ref), unquote(pattern))
     end
   end
 
-  @spec filter_refs_by_data(constraints :: map, State.t()) :: [Pad.ref_t()]
-  def filter_refs_by_data(constraints \\ %{}, state)
+  @spec filter_refs_by_data(State.t(), constraints :: map) :: [Pad.ref_t()]
+  def filter_refs_by_data(state, constraints \\ %{})
 
-  def filter_refs_by_data(constraints, state) when constraints == %{} do
+  def filter_refs_by_data(state, constraints) when constraints == %{} do
     state.pads.data |> Map.keys()
   end
 
-  def filter_refs_by_data(constraints, state) do
+  def filter_refs_by_data(state, constraints) do
     state.pads.data
     |> Enum.filter(fn {_name, data} -> data |> constraints_met?(constraints) end)
     |> Keyword.keys()
   end
 
-  @spec filter_data(constraints :: map, State.t()) :: %{atom => Pad.Data.t()}
-  def filter_data(constraints \\ %{}, state)
+  @spec filter_data(State.t(), constraints :: map) :: %{atom => Pad.Data.t()}
+  def filter_data(state, constraints \\ %{})
 
-  def filter_data(constraints, state) when constraints == %{} do
+  def filter_data(state, constraints) when constraints == %{} do
     state.pads.data
   end
 
-  def filter_data(constraints, state) do
+  def filter_data(state, constraints) do
     state.pads.data
     |> Enum.filter(fn {_name, data} -> data |> constraints_met?(constraints) end)
     |> Map.new()
   end
 
-  @spec get_data(Pad.ref_t(), keys :: atom | [atom], State.t()) ::
+  @spec get_data(State.t(), Pad.ref_t(), keys :: atom | [atom]) ::
           {:ok, Pad.Data.t() | any} | unknown_pad_error_t
-  def get_data(pad_ref, keys \\ [], state) do
-    with :ok <- assert_instance(pad_ref, state) do
+  def get_data(state, pad_ref, keys \\ []) do
+    with :ok <- assert_instance(state, pad_ref) do
       state
       |> Bunch.Access.get_in(data_keys(pad_ref, keys))
       ~> {:ok, &1}
     end
   end
 
-  @spec get_data!(Pad.ref_t(), keys :: atom | [atom], State.t()) :: Pad.Data.t() | any
-  def get_data!(pad_ref, keys \\ [], state) do
-    {:ok, pad_data} = get_data(pad_ref, keys, state)
+  @spec get_data!(State.t(), Pad.ref_t(), keys :: atom | [atom]) :: Pad.Data.t() | any
+  def get_data!(state, pad_ref, keys \\ []) do
+    {:ok, pad_data} = get_data(state, pad_ref, keys)
     pad_data
   end
 
-  @spec set_data(Pad.ref_t(), keys :: atom | [atom], State.t()) ::
+  @spec set_data(State.t(), Pad.ref_t(), keys :: atom | [atom]) ::
           State.stateful_t(:ok | unknown_pad_error_t)
-  def set_data(pad_ref, keys \\ [], v, state) do
-    with {:ok, state} <- {assert_instance(pad_ref, state), state} do
+  def set_data(state, pad_ref, keys \\ [], v) do
+    with {:ok, state} <- {assert_instance(state, pad_ref), state} do
       state
       |> Bunch.Access.put_in(data_keys(pad_ref, keys), v)
       ~> {:ok, &1}
     end
   end
 
-  @spec set_data!(Pad.ref_t(), keys :: atom | [atom], State.t()) :: State.t()
-  def set_data!(pad_ref, keys \\ [], v, state) do
-    {:ok, state} = set_data(pad_ref, keys, v, state)
+  @spec set_data!(State.t(), Pad.ref_t(), keys :: atom | [atom]) :: State.t()
+  def set_data!(state, pad_ref, keys \\ [], v) do
+    {:ok, state} = set_data(state, pad_ref, keys, v)
     state
   end
 
-  @spec update_data(Pad.ref_t(), keys :: atom | [atom], (data -> {:ok | error, data}), State.t()) ::
+  @spec update_data(State.t(), Pad.ref_t(), keys :: atom | [atom], (data -> {:ok | error, data})) ::
           State.stateful_t(:ok | error | unknown_pad_error_t)
         when data: Pad.Data.t() | any, error: {:error, reason :: any}
-  def update_data(pad_ref, keys \\ [], f, state) do
-    with {:ok, state} <- {assert_instance(pad_ref, state), state},
+  def update_data(state, pad_ref, keys \\ [], f) do
+    with {:ok, state} <- {assert_instance(state, pad_ref), state},
          {:ok, state} <-
            state
            |> Bunch.Access.get_and_update_in(data_keys(pad_ref, keys), f) do
@@ -133,24 +133,24 @@ defmodule Membrane.Core.Element.PadModel do
     end
   end
 
-  @spec update_data!(Pad.ref_t(), keys :: atom | [atom], (data -> data), State.t()) :: State.t()
+  @spec update_data!(State.t(), Pad.ref_t(), keys :: atom | [atom], (data -> data)) :: State.t()
         when data: Pad.Data.t() | any
-  def update_data!(pad_ref, keys \\ [], f, state) do
-    :ok = assert_instance(pad_ref, state)
+  def update_data!(state, pad_ref, keys \\ [], f) do
+    :ok = assert_instance(state, pad_ref)
 
     state
     |> Bunch.Access.update_in(data_keys(pad_ref, keys), f)
   end
 
   @spec get_and_update_data(
+          State.t(),
           Pad.ref_t(),
           keys :: atom | [atom],
-          (data -> {success | error, data}),
-          State.t()
+          (data -> {success | error, data})
         ) :: State.stateful_t(success | error | unknown_pad_error_t)
         when data: Pad.Data.t() | any, success: {:ok, data}, error: {:error, reason :: any}
-  def get_and_update_data(pad_ref, keys \\ [], f, state) do
-    with {:ok, state} <- {assert_instance(pad_ref, state), state},
+  def get_and_update_data(state, pad_ref, keys \\ [], f) do
+    with {:ok, state} <- {assert_instance(state, pad_ref), state},
          {{:ok, out}, state} <-
            state
            |> Bunch.Access.get_and_update_in(data_keys(pad_ref, keys), f) do
@@ -161,23 +161,23 @@ defmodule Membrane.Core.Element.PadModel do
   end
 
   @spec get_and_update_data!(
+          State.t(),
           Pad.ref_t(),
           keys :: atom | [atom],
-          (data -> {data, data}),
-          State.t()
+          (data -> {data, data})
         ) :: State.stateful_t(data)
         when data: Pad.Data.t() | any
-  def get_and_update_data!(pad_ref, keys \\ [], f, state) do
-    :ok = assert_instance(pad_ref, state)
+  def get_and_update_data!(state, pad_ref, keys \\ [], f) do
+    :ok = assert_instance(state, pad_ref)
 
     state
     |> Bunch.Access.get_and_update_in(data_keys(pad_ref, keys), f)
   end
 
-  @spec pop_data(Pad.ref_t(), State.t()) ::
+  @spec pop_data(State.t(), Pad.ref_t()) ::
           State.stateful_t({:ok, Pad.Data.t()} | unknown_pad_error_t)
-  def pop_data(pad_ref, state) do
-    with {:ok, state} <- {assert_instance(pad_ref, state), state} do
+  def pop_data(state, pad_ref) do
+    with {:ok, state} <- {assert_instance(state, pad_ref), state} do
       {data, state} =
         state
         |> Bunch.Access.pop_in(data_keys(pad_ref))
@@ -186,22 +186,22 @@ defmodule Membrane.Core.Element.PadModel do
     end
   end
 
-  @spec pop_data!(Pad.ref_t(), State.t()) :: State.stateful_t(Pad.Data.t())
-  def pop_data!(pad_ref, state) do
-    {{:ok, pad_data}, state} = pop_data(pad_ref, state)
+  @spec pop_data!(State.t(), Pad.ref_t()) :: State.stateful_t(Pad.Data.t())
+  def pop_data!(state, pad_ref) do
+    {{:ok, pad_data}, state} = pop_data(state, pad_ref)
     {pad_data, state}
   end
 
-  @spec delete_data(Pad.ref_t(), State.t()) :: State.stateful_t(:ok | unknown_pad_error_t)
-  def delete_data(pad_ref, state) do
-    with {{:ok, _out}, state} <- pop_data(pad_ref, state) do
+  @spec delete_data(State.t(), Pad.ref_t()) :: State.stateful_t(:ok | unknown_pad_error_t)
+  def delete_data(state, pad_ref) do
+    with {{:ok, _out}, state} <- pop_data(state, pad_ref) do
       {:ok, state}
     end
   end
 
-  @spec delete_data!(Pad.ref_t(), State.t()) :: State.t()
-  def delete_data!(pad_ref, state) do
-    {:ok, state} = delete_data(pad_ref, state)
+  @spec delete_data!(State.t(), Pad.ref_t()) :: State.t()
+  def delete_data!(state, pad_ref) do
+    {:ok, state} = delete_data(state, pad_ref)
     state
   end
 

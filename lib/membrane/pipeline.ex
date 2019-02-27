@@ -344,8 +344,7 @@ defmodule Membrane.Pipeline do
   @spec parse_links(Spec.links_spec_t() | any) :: Type.try_t([Link.t()])
   defp parse_links(links), do: links |> Bunch.Enum.try_map(&Link.parse/1)
 
-  @spec resolve_links([Link.t()], State.t()) ::
-          Type.try_t([Link.resolved_t()])
+  @spec resolve_links([Link.t()], State.t()) :: Type.try_t([Link.resolved_t()])
   defp resolve_links(links, state) do
     links
     |> Bunch.Enum.try_map(fn %{from: from, to: to} = link ->

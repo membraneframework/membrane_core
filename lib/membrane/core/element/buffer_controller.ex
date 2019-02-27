@@ -18,9 +18,9 @@ defmodule Membrane.Core.Element.BufferController do
   """
   @spec handle_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.stateful_try_t()
   def handle_buffer(pad_ref, buffers, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :input}, state)
+    PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
-    case PadModel.get_data!(pad_ref, :mode, state) do
+    case PadModel.get_data!(state, pad_ref, :mode) do
       :pull -> handle_buffer_pull(pad_ref, buffers, state)
       :push -> exec_buffer_handler(pad_ref, buffers, state)
     end
@@ -66,11 +66,11 @@ defmodule Membrane.Core.Element.BufferController do
   @spec handle_buffer_pull(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) ::
           State.stateful_try_t()
   defp handle_buffer_pull(pad_ref, buffers, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :input}, state)
+    PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
-    with {:ok, old_pb} <- PadModel.get_data(pad_ref, :buffer, state),
+    with {:ok, old_pb} <- PadModel.get_data(state, pad_ref, :buffer),
          {:ok, pb} <- old_pb |> InputBuffer.store(buffers) do
-      state = PadModel.set_data!(pad_ref, :buffer, pb, state)
+      state = PadModel.set_data!(state, pad_ref, :buffer, pb)
 
       if old_pb |> InputBuffer.empty?() do
         DemandHandler.supply_demand(pad_ref, state)
