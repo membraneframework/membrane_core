@@ -114,10 +114,10 @@ defmodule Membrane.Core.PlaybackHandler do
   end
 
   def lock_target_state(playbackable) do
-    if not Playbackable.get_playback(playbackable).target_locked? do
-      {:ok, switch_target_lock(playbackable)}
-    else
+    if Playbackable.get_playback(playbackable).target_locked? do
       {{:error, :playback_already_locked}, playbackable}
+    else
+      {:ok, switch_target_lock(playbackable)}
     end
   end
 

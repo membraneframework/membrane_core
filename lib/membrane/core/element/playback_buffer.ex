@@ -47,15 +47,17 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     if state.playback_buffer |> empty? do
       exec(msg, state)
     else
-      state
-      |> Bunch.Access.update_in([:playback_buffer, :q], fn q -> q |> @qe.push(msg) end)
-      ~> (state -> {:ok, state})
+      do_store(msg, state)
     end
   end
 
   def store(msg, state) do
+    do_store(msg, state)
+  end
+
+  defp do_store(msg, state) do
     state
-    |> Bunch.Access.update_in([:playback_buffer, :q], fn q -> q |> @qe.push(msg) end)
+    |> Bunch.Access.update_in([:playback_buffer, :q], &@qe.push(&1, msg))
     ~> (state -> {:ok, state})
   end
 
@@ -112,12 +114,10 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
            |> Enum.reverse()
            |> Bunch.Enum.try_reduce(state, fn msg, st -> msg.(st) end) do
       {:ok, state} =
-        cond do
-          PadModel.get_data!(pad_ref, :start_of_stream?, state) |> Kernel.not() ->
-            EventController.handle_event(pad_ref, %Event.StartOfStream{}, state)
-
-          true ->
-            {:ok, state}
+        if PadModel.get_data!(pad_ref, :start_of_stream?, state) do
+          {:ok, state}
+        else
+          EventController.handle_event(pad_ref, %Event.StartOfStream{}, state)
         end
 
       BufferController.handle_buffer(pad_ref, buffers, state)

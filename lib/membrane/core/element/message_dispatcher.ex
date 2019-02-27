@@ -17,7 +17,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   def handle_message(message, mode, state) do
     withl handle:
             {:ok, {res, state}} <-
-              do_handle_message(message, mode, state) |> Bunch.stateful_try_with_status(),
+              message |> do_handle_message(mode, state) |> Bunch.stateful_try_with_status(),
           demands: {:ok, state} <- DemandHandler.handle_delayed_demands(state) do
       {res, state}
     else

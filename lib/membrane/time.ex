@@ -189,7 +189,7 @@ defmodule Membrane.Time do
   Inlined by the compiler.
   """
   @spec from_datetime(DateTime.t()) :: t
-  def from_datetime(value = %DateTime{}) do
+  def from_datetime(%DateTime{} = value) do
     value |> DateTime.to_unix(:nanosecond) |> nanoseconds
   end
 
