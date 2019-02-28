@@ -44,14 +44,13 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   def store({type, _args} = msg, state)
       when type in [:event, :caps] do
-    exec(msg, state)
-    |> provided(
-      that: state.playback_buffer |> empty?,
-      else:
-        state
-        |> Bunch.Access.update_in([:playback_buffer, :q], fn q -> q |> @qe.push(msg) end)
-        ~> (state -> {:ok, state})
-    )
+    if state.playback_buffer |> empty? do
+      exec(msg, state)
+    else
+      state
+      |> Bunch.Access.update_in([:playback_buffer, :q], fn q -> q |> @qe.push(msg) end)
+      ~> (state -> {:ok, state})
+    end
   end
 
   def store(msg, state) do

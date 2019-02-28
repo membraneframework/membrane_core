@@ -83,7 +83,7 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
     withl keyword: true <- specs |> Keyword.keyword?(),
           dups: [] <- (specs ++ already_parsed) |> Keyword.keys() |> Bunch.Enum.duplicates(),
           parse: {:ok, specs} <- specs |> Bunch.Enum.try_map(&parse_pad_specs(&1, direction)) do
-      specs |> Bunch.TupleList.map_values(&Map.put(&1, :direction, direction)) ~> {:ok, &1}
+      specs |> Bunch.KVList.map_values(&Map.put(&1, :direction, direction)) ~> {:ok, &1}
     else
       keyword: false -> {:error, {:pads_not_a_keyword, specs}}
       dups: dups -> {:error, {:duplicate_pad_names, dups}}

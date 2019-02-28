@@ -35,7 +35,7 @@ defmodule Membrane.Log do
   defmacro warn_error(message, reason, tags \\ []) do
     message =
       quote do
-        require Bunch
+        require Bunch.Code
 
         [
           "Encountered an error.\n",
@@ -44,7 +44,7 @@ defmodule Membrane.Log do
           "\n",
           """
           Stacktrace:
-          #{Bunch.stacktrace()}
+          #{Bunch.Code.stacktrace()}
           """
         ]
       end
