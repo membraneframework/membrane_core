@@ -1,4 +1,8 @@
 defmodule Membrane.Testing.Pipeline.Assertions do
+  @moduledoc """
+  Assertions that can be used with `Membrane.Testing.Pipeline` in tests
+  """
+
   @doc """
   Asserts that a message sent from `Membrane.Testing.Pipeline` matching `pattern` was or is going to be received
   within the `timeout` period, specified in milliseconds.

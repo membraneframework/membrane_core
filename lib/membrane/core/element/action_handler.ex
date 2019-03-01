@@ -117,7 +117,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         {:handle_event, %{direction: :output}} -> {:event, :input}
       end
 
-    pads = PadModel.filter_data(state, %{direction: dir}) |> Map.keys()
+    pads = state |> PadModel.filter_data(%{direction: dir}) |> Map.keys()
 
     pads
     |> Bunch.Enum.try_reduce(state, fn pad, st ->

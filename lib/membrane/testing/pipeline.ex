@@ -124,7 +124,8 @@ defmodule Membrane.Testing.Pipeline do
   """
   @spec populate_links(elements :: Spec.children_spec_t()) :: Spec.links_spec_t()
   def populate_links(elements) do
-    Enum.chunk_every(elements, 2, 1, :discard)
+    elements
+    |> Enum.chunk_every(2, 1, :discard)
     |> Enum.map(fn [{output_name, _}, {input_name, _}] ->
       {{output_name, :output}, {input_name, :input}}
     end)

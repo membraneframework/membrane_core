@@ -168,19 +168,21 @@ defmodule Membrane.Core.PlaybackHandler do
   end
 
   defp next_state(current, target) do
-    with {:ok, curr_pos} <-
-           @states_positions[current]
-           |> Bunch.error_if_nil(:invalid_current_playback_state),
-         {:ok, target_pos} <-
-           @states_positions[target]
-           |> Bunch.error_if_nil(:invalid_target_playback_state) do
+    withl curr: curr_pos when curr_pos != nil <- @states_positions[current],
+          target: target_pos when target_pos != nil <- @states_positions[target],
+          diff: true <- curr_pos != target_pos do
       next_state =
-        cond do
-          curr_pos < target_pos -> @states |> Enum.at(curr_pos + 1)
-          curr_pos > target_pos -> @states |> Enum.at(curr_pos - 1)
+        if curr_pos < target_pos do
+          @states |> Enum.at(curr_pos + 1)
+        else
+          @states |> Enum.at(curr_pos - 1)
         end
 
       {:ok, next_state}
+    else
+      curr: _ -> {:error, :invalid_current_playback_state}
+      target: _ -> {:error, :invalid_target_playback_state}
+      diff: _ -> {:error, :target_and_current_states_equal}
     end
   end
 end

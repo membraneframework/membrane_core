@@ -1,4 +1,5 @@
 defmodule Membrane.Support.DemandsTest.Filter do
+  @moduledoc false
   use Membrane.Element.Base.Filter
   alias Membrane.Buffer
 

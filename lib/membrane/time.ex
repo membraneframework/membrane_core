@@ -392,7 +392,7 @@ defmodule Membrane.Time do
   """
   @spec to_native_units(t) :: native_t
   def to_native_units(value) when is_t(value) do
-    (value / (1 |> native_unit)) |> round
+    round(value / (1 |> native_unit))
   end
 
   @doc """
@@ -402,7 +402,7 @@ defmodule Membrane.Time do
   """
   @spec to_nanoseconds(t) :: integer
   def to_nanoseconds(value) when is_t(value) do
-    (value / (1 |> nanosecond)) |> round
+    round(value / (1 |> nanosecond))
   end
 
   @doc """
@@ -412,7 +412,7 @@ defmodule Membrane.Time do
   """
   @spec to_microseconds(t) :: integer
   def to_microseconds(value) when is_t(value) do
-    (value / (1 |> microsecond)) |> round
+    round(value / (1 |> microsecond))
   end
 
   @doc """
@@ -422,7 +422,7 @@ defmodule Membrane.Time do
   """
   @spec to_milliseconds(t) :: integer
   def to_milliseconds(value) when is_t(value) do
-    (value / (1 |> millisecond)) |> round
+    round(value / (1 |> millisecond))
   end
 
   @doc """
@@ -432,7 +432,7 @@ defmodule Membrane.Time do
   """
   @spec to_seconds(t) :: integer
   def to_seconds(value) when is_t(value) do
-    (value / (1 |> second)) |> round
+    round(value / (1 |> second))
   end
 
   @doc """
@@ -442,7 +442,7 @@ defmodule Membrane.Time do
   """
   @spec to_minutes(t) :: integer
   def to_minutes(value) when is_t(value) do
-    (value / (1 |> minute)) |> round
+    round(value / (1 |> minute))
   end
 
   @doc """
@@ -452,7 +452,7 @@ defmodule Membrane.Time do
   """
   @spec to_hours(t) :: integer
   def to_hours(value) when is_t(value) do
-    (value / (1 |> hour)) |> round
+    round(value / (1 |> hour))
   end
 
   @doc """
@@ -462,7 +462,7 @@ defmodule Membrane.Time do
   """
   @spec to_days(t) :: integer
   def to_days(value) when is_t(value) do
-    (value / (1 |> day)) |> round
+    round(value / (1 |> day))
   end
 
   @spec units() :: Keyword.t(t)

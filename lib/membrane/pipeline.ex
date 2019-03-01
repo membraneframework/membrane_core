@@ -299,7 +299,7 @@ defmodule Membrane.Pipeline do
   defp check_if_children_names_unique(children, state) do
     children
     |> Enum.map(& &1.name)
-    ~> (&1 ++ State.get_children_names(state))
+    |> Kernel.++(State.get_children_names(state))
     |> Bunch.Enum.duplicates()
     ~> (
       [] -> :ok

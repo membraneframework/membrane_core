@@ -82,7 +82,6 @@ defmodule Membrane.Log.Logger do
 
   @impl true
   def terminate(_reason, %State{module: module, internal_state: internal_state}) do
-    # TODO send last message to the logger
     module.handle_shutdown(internal_state)
   end
 
@@ -94,7 +93,8 @@ defmodule Membrane.Log.Logger do
         {:membrane_log, level, content, time, tags},
         %State{module: module, internal_state: internal_state} = state
       ) do
-    module.handle_log(level, content, time, tags, internal_state)
+    level
+    |> module.handle_log(content, time, tags, internal_state)
     |> handle_callback(state)
     |> Membrane.Helper.GenServer.noreply()
   end

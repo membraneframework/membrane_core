@@ -1,6 +1,10 @@
 defmodule Membrane do
+  @moduledoc """
+  Core Membrane application supervising the needed processes.
+  """
   use Application
 
+  @impl true
   def start(_type, _args) do
     logger_config = Application.get_env(:membrane_core, Membrane.Logger, [])
 
