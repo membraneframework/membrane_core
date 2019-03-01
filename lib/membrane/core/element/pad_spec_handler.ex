@@ -16,7 +16,7 @@ defmodule Membrane.Core.Element.PadSpecHandler do
   def init_pads(%State{module: module} = state) do
     pads = %{
       data: %{},
-      info: module.membrane_pads() |> Bunch.TupleList.map_values(&init_pad_info/1) |> Map.new(),
+      info: module.membrane_pads() |> Bunch.KVList.map_values(&init_pad_info/1) |> Map.new(),
       dynamic_currently_linking: []
     }
 
