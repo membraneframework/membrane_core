@@ -8,7 +8,7 @@ defmodule Membrane.Testing.Source do
   alias Membrane.Buffer
   alias Membrane.Element.Action
 
-  def_output_pads output: [caps: :any]
+  def_output_pad :output, caps: :any
 
   def_options actions_generator: [
                 type: :function,

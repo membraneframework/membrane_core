@@ -7,7 +7,7 @@ defmodule Membrane.Support.Element.TrivialSink do
 
   use Membrane.Element.Base.Sink
 
-  def_input_pads input: [caps: :any, demand_unit: :buffers]
+  def_input_pad :input, caps: :any, demand_unit: :buffers
 
   @impl true
   def handle_init(_options) do

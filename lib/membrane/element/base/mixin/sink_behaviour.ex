@@ -37,15 +37,20 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
 
   The type `t:Membrane.Element.Pad.input_spec_t/0` describes how the definition of pads should look.
   """
+  @deprecated "Use def_input_pad/2 for each pad instead"
   defmacro def_input_pads(pads) do
     PadsSpecsParser.def_pads(pads, :input)
+  end
+
+  defmacro def_input_pad(name, spec) do
+    PadsSpecsParser.def_pad(name, :input, spec)
   end
 
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 
-      import unquote(__MODULE__), only: [def_input_pads: 1]
+      import unquote(__MODULE__), only: [def_input_pads: 1, def_input_pad: 2]
 
       @impl true
       def handle_caps(_pad, _caps, _context, state), do: {:ok, state}

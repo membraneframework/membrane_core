@@ -8,9 +8,9 @@ defmodule Membrane.Support.Element.DynamicFilter do
   use Bunch
   use Membrane.Element.Base.Filter
 
-  def_output_pads output: [caps: :any]
+  def_output_pad :output, caps: :any
 
-  def_input_pads input: [caps: :any, availability: :on_request, demand_unit: :buffers]
+  def_input_pad :input, caps: :any, availability: :on_request, demand_unit: :buffers
 
   def_options pid: [type: :pid]
 

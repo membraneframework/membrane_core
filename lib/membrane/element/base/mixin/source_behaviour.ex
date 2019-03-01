@@ -49,15 +49,20 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
 
   The type `t:Membrane.Element.Pad.output_spec_t/0` describes how the definition of pads should look.
   """
+  @deprecated "Use def_output_pad/2 for each pad instead"
   defmacro def_output_pads(pads) do
     PadsSpecsParser.def_pads(pads, :output)
+  end
+
+  defmacro def_output_pad(name, spec) do
+    PadsSpecsParser.def_pad(name, :output, spec)
   end
 
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 
-      import unquote(__MODULE__), only: [def_output_pads: 1]
+      import unquote(__MODULE__), only: [def_output_pads: 1, def_output_pad: 2]
     end
   end
 end
