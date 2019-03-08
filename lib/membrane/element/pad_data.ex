@@ -3,8 +3,8 @@ defmodule Membrane.Element.Pad.Data do
   Struct describing current pad state.
 
   The public fields are:
-    - `:caps` - the last `Membrane.Caps` sent (output) or received (input) on the pad.
-      May be `nil` if not yet set.
+    - `:caps` - the most recent `Membrane.Caps` that have been sent (output) or received (input)
+      on the pad. May be `nil` if not yet set.
     - `:start_of_stream?` - flag determining whether `Membrane.Event.StartOfStream`
       has been received (or sent) on the pad
     - `:end_of_stream?` - flag determining whether `Membrane.Event.EndOfStream`
@@ -17,7 +17,7 @@ defmodule Membrane.Element.Pad.Data do
   alias Membrane.Element.Pad
   alias Membrane.{Buffer, Caps, Core, Event}
   alias Buffer.Metric
-  alias Core.PullBuffer
+  alias Core.InputBuffer
   use Bunch.Access
 
   @type t :: %__MODULE__{
@@ -34,7 +34,7 @@ defmodule Membrane.Element.Pad.Data do
           start_of_stream?: boolean(),
           end_of_stream?: boolean(),
           sticky_messages: [Event.t()],
-          buffer: PullBuffer.t() | nil,
+          buffer: InputBuffer.t() | nil,
           demand: integer() | nil,
           opts: any()
         }

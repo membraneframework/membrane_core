@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   alias Membrane.Core
   alias Membrane.Element.Pad
-  alias Core.{Message, PullBuffer}
+  alias Core.{Message, InputBuffer}
 
   alias Core.Element.{
     BufferController,
@@ -56,7 +56,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   This is necessary due to the case when one requests a demand action while previous
   demand is being supplied. This could lead to a situation where buffers are taken
-  from PullBuffer and passed to callbacks, while buffers being currently supplied
+  from InputBuffer and passed to callbacks, while buffers being currently supplied
   have not been processed yet, and therefore to changing order of buffers.
 
   Async mode is supported to handle the case when buffers are passed to
@@ -119,7 +119,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @doc """
-  Based on the demand on the given pad takes PullBuffer contents
+  Based on the demand on the given pad takes InputBuffer contents
   and passes it to proper controllers.
   """
   @spec supply_demand(
@@ -137,7 +137,7 @@ defmodule Membrane.Core.Element.DemandHandler do
       PadModel.get_and_update_data(
         pad_ref,
         :buffer,
-        &(&1 |> PullBuffer.take(size)),
+        &(&1 |> InputBuffer.take(size)),
         state
       )
 

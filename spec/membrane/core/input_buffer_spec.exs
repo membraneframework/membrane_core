@@ -1,5 +1,5 @@
-defmodule Membrane.Core.PullBufferSpec do
-  alias Membrane.Core.{PullBuffer, Message}
+defmodule Membrane.Core.InputBufferSpec do
+  alias Membrane.Core.{InputBuffer, Message}
   alias Membrane.Testing.Event
   require Message
   alias Membrane.Buffer
@@ -29,17 +29,23 @@ defmodule Membrane.Core.PullBufferSpec do
       do: [
         preferred_size: preferred_size(),
         min_demand: min_demand(),
-        toilet: toilet(),
         warn_size: warn_size(),
         fail_size: fail_size()
       ]
 
-    it "should return PullBuffer struct and send demand message" do
+    it "should return InputBuffer struct and send demand message" do
       expect(
-        described_module().new(name(), demand_pid(), linked_output_ref(), demand_unit(), props())
+        described_module().new(
+          name(),
+          demand_pid(),
+          linked_output_ref(),
+          demand_unit(),
+          toilet(),
+          props()
+        )
       )
       |> to(
-        eq(%PullBuffer{
+        eq(%InputBuffer{
           name: name(),
           demand_pid: demand_pid(),
           linked_output_ref: linked_output_ref(),
@@ -68,11 +74,12 @@ defmodule Membrane.Core.PullBufferSpec do
             demand_pid(),
             linked_output_ref(),
             demand_unit(),
+            toilet(),
             props()
           )
         )
         |> to(
-          eq(%PullBuffer{
+          eq(%InputBuffer{
             name: name(),
             demand_pid: demand_pid(),
             linked_output_ref: linked_output_ref(),
@@ -94,7 +101,7 @@ defmodule Membrane.Core.PullBufferSpec do
     let :current_size, do: 0
 
     let :pb,
-      do: %PullBuffer{
+      do: %InputBuffer{
         current_size: current_size(),
         metric: Buffer.Metric.Count,
         q: Qex.new()
@@ -122,7 +129,7 @@ defmodule Membrane.Core.PullBufferSpec do
     let :metric, do: Buffer.Metric.Count
 
     let :pb,
-      do: %PullBuffer{
+      do: %InputBuffer{
         current_size: current_size(),
         metric: metric(),
         q: q()
@@ -184,7 +191,7 @@ defmodule Membrane.Core.PullBufferSpec do
     let :metric, do: Buffer.Metric.Count
 
     let :pb,
-      do: %PullBuffer{
+      do: %InputBuffer{
         current_size: current_size(),
         demand: 0,
         min_demand: 0,

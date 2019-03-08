@@ -12,10 +12,10 @@ defmodule Membrane.Element.CallbackContext.Caps do
     old_caps: Membrane.Caps.t()
 
   @impl true
-  defmacro from_state(state, opts) do
+  defmacro from_state(state, args) do
     old_caps =
       quote do
-        unquote(opts[:pad]) |> PadModel.get_data!(:caps, unquote(state))
+        unquote(args[:pad]) |> PadModel.get_data!(:caps, unquote(state))
       end
 
     super(state, old_caps: old_caps)

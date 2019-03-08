@@ -46,7 +46,7 @@ defmodule Membrane.Pipeline.Spec do
   """
 
   alias Membrane.Element
-  alias Membrane.Core.PullBuffer
+  alias Membrane.Core.InputBuffer
   alias Element.Pad
 
   @type child_spec_t :: module | struct
@@ -62,12 +62,12 @@ defmodule Membrane.Pipeline.Spec do
   Options passed to the element when linking its pad with different one.
 
   The allowed options are:
-  * `:buffer` - keywoed allowing to configure PullBuffer between elements. Valid only for input pads.
-    See `t:Membrane.Core.PullBuffer.props_t/0` for configurable properties.
+  * `:buffer` - keywoed allowing to configure `Membrane.Core.InputBuffer` between elements. Valid only for input pads.
+    See `t:Membrane.Core.InputBuffer.props_t/0` for configurable properties.
   * `:pad` - any element-specific options that will be available in `Membrane.Element.Pad.Data` struct.
   """
   @type endpoint_options_t :: [
-          {:buffer, PullBuffer.props_t()} | {:pad, element_specific_opts :: any()}
+          {:buffer, InputBuffer.props_t()} | {:pad, element_specific_opts :: any()}
         ]
 
   @typedoc """

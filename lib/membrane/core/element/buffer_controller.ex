@@ -3,7 +3,7 @@ defmodule Membrane.Core.Element.BufferController do
   # Module handling buffers incoming through input pads.
 
   alias Membrane.{Buffer, Core, Element}
-  alias Core.{CallbackHandler, PullBuffer}
+  alias Core.{CallbackHandler, InputBuffer}
   alias Element.{CallbackContext, Pad}
   alias Core.Element.{ActionHandler, DemandHandler, PadModel, State}
   require CallbackContext.{Process, Write}
@@ -12,7 +12,7 @@ defmodule Membrane.Core.Element.BufferController do
   use Bunch
 
   @doc """
-  Handles incoming buffer: either stores it in PullBuffer, or executes element's
+  Handles incoming buffer: either stores it in InputBuffer, or executes element's
   callback. Also calls `Membrane.Core.Element.DemandHandler.check_and_handle_demands/2`
   to check if there are any unsupplied demands.
   """
@@ -69,10 +69,10 @@ defmodule Membrane.Core.Element.BufferController do
     PadModel.assert_data!(pad_ref, %{direction: :input}, state)
 
     with {:ok, old_pb} <- PadModel.get_data(pad_ref, :buffer, state),
-         {:ok, pb} <- old_pb |> PullBuffer.store(buffers) do
+         {:ok, pb} <- old_pb |> InputBuffer.store(buffers) do
       state = PadModel.set_data!(pad_ref, :buffer, pb, state)
 
-      if old_pb |> PullBuffer.empty?() do
+      if old_pb |> InputBuffer.empty?() do
         DemandHandler.supply_demand(pad_ref, state)
       else
         {:ok, state}

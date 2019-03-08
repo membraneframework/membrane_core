@@ -3,7 +3,7 @@ defmodule Membrane.Core.Element.EventController do
   # Module handling events incoming through input pads.
 
   alias Membrane.{Core, Element, Event}
-  alias Core.{CallbackHandler, PullBuffer}
+  alias Core.{CallbackHandler, InputBuffer}
   alias Core.Element.{ActionHandler, PadModel, State}
   alias Element.{CallbackContext, Pad}
   require CallbackContext.Event
@@ -12,7 +12,7 @@ defmodule Membrane.Core.Element.EventController do
   use Bunch
 
   @doc """
-  Handles incoming event: either stores it in PullBuffer, or executes element callback.
+  Handles incoming event: either stores it in InputBuffer, or executes element callback.
   Extra checks and tasks required by special events such as `:start_of_stream`
   or `:end_of_stream` are performed.
   """
@@ -21,11 +21,11 @@ defmodule Membrane.Core.Element.EventController do
     pad_data = PadModel.get_data!(pad_ref, state)
 
     if not Event.async?(event) && pad_data.mode == :pull && pad_data.direction == :input &&
-         pad_data.buffer |> PullBuffer.empty?() |> Kernel.not() do
+         pad_data.buffer |> InputBuffer.empty?() |> Kernel.not() do
       PadModel.update_data(
         pad_ref,
         :buffer,
-        &(&1 |> PullBuffer.store(:event, event)),
+        &(&1 |> InputBuffer.store(:event, event)),
         state
       )
     else

@@ -3,7 +3,7 @@ defmodule Membrane.Core.Element.PadController do
   # Module handling linking and unlinking pads.
 
   alias Membrane.{Core, Event}
-  alias Core.{CallbackHandler, Message, PullBuffer}
+  alias Core.{CallbackHandler, Message, InputBuffer}
   alias Core.Element.{ActionHandler, EventController, PadModel, State}
   alias Membrane.Element.{CallbackContext, Pad}
   alias Bunch.Type
@@ -28,9 +28,10 @@ defmodule Membrane.Core.Element.PadController do
         ) ::
           State.stateful_try_t()
   def handle_link(pad_ref, direction, pid, other_ref, other_info, props, state) do
-    with pad_name = pad_ref |> Pad.name_by_ref(),
-         info = state.pads.info[pad_name],
-         :ok <- validate_pad_being_linked(pad_ref, direction, info, state),
+    pad_name = pad_ref |> Pad.name_by_ref()
+    info = state.pads.info[pad_name]
+
+    with :ok <- validate_pad_being_linked(pad_ref, direction, info, state),
          :ok <- validate_dir_and_mode(info, other_info) do
       state = init_pad_data(info, pad_ref, pid, other_ref, other_info, props, state)
 
@@ -152,18 +153,18 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec validate_dir_and_mode(info :: PadModel.pad_info_t(), other_info :: PadModel.pad_info_t()) ::
           Type.try_t()
-  def validate_dir_and_mode(%{direction: :output, mode: :pull}, %{direction: :input, mode: :push}) do
+  def validate_dir_and_mode(this, that) do
+    with :ok <- do_validate_dm(this, that),
+         :ok <- do_validate_dm(that, this) do
+      :ok
+    end
+  end
+
+  defp do_validate_dm(%{direction: :output, mode: :pull}, %{direction: :input, mode: :push}) do
     {:error, {:cannot_connect, :pull_output, :to, :push_input}}
   end
 
-  def validate_dir_and_mode(
-        %{direction: :input, mode: :push} = this,
-        %{direction: :output, mode: :pull} = that
-      ) do
-    validate_dir_and_mode(that, this)
-  end
-
-  def validate_dir_and_mode(_, _) do
+  defp do_validate_dm(_, _) do
     :ok
   end
 
@@ -212,19 +213,15 @@ defmodule Membrane.Core.Element.PadController do
 
     buffer_props = props[:buffer] || Keyword.new()
 
-    buffer_props =
-      if other_info.mode == :push do
-        buffer_props |> Keyword.put_new(:toilet, true)
-      else
-        buffer_props
-      end
+    enable_toilet? = other_info.mode == :push
 
     pb =
-      PullBuffer.new(
+      InputBuffer.new(
         state.name,
         pid,
         other_ref,
         demand_unit,
+        enable_toilet?,
         buffer_props
       )
 
