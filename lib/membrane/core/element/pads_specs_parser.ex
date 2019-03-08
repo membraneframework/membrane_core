@@ -3,10 +3,13 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
   # Functions parsing element pads specifications, generating functions and docs
   # based on them.
   alias Membrane.{Caps, Element}
+  alias Membrane.Core.Element.OptionsSpecParser
   alias Element.Pad
   alias Bunch.Type
   use Bunch
 
+  @spec def_pads([{Pad.name_t(), raw_spec :: Macro.t()}], Pad.direction_t()) ::
+          Macro.t()
   def def_pads(pads, direction) do
     pads
     |> Enum.reduce(
@@ -23,9 +26,8 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
     )
   end
 
-  # Generates `membrane_pads/0` function, along with docs and typespecs.
   @spec def_pad(Pad.name_t(), Pad.direction_t(), Macro.t()) :: Macro.t()
-  def def_pad(name, direction, raw_specs) do
+  def def_pad(pad_name, direction, raw_specs) do
     Code.ensure_loaded(Caps.Matcher)
 
     specs =
@@ -35,36 +37,66 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
         {Caps.Matcher, :range}
       ])
 
+    {pad_opts_type_name, pad_opts_typedef, pad_opts_parser_fun} =
+      OptionsSpecParser.def_pad_options(pad_name, specs[:options])
+
+    nspecs = specs |> Keyword.put(:options, pad_opts_type_name)
+
     quote do
       if Module.get_attribute(__MODULE__, :membrane_pad) == nil do
         Module.register_attribute(__MODULE__, :membrane_pad, accumulate: true)
+        Module.register_attribute(__MODULE__, :membrane_pad_opts_parser_clauses, accumulate: true)
         @before_compile {unquote(__MODULE__), :generate_membrane_pads}
       end
 
       @membrane_pad unquote(__MODULE__).parse_pad_specs!(
-                      {unquote(name), unquote(specs)},
+                      {unquote(pad_name), unquote(nspecs)},
                       unquote(direction),
                       __ENV__
                     )
+      @membrane_pad_opts_parser_clauses Macro.escape(unquote(pad_opts_parser_fun))
+      unquote(pad_opts_typedef)
     end
   end
 
+  # Generates `membrane_pads/0` function, along with docs and typespecs.
   defmacro generate_membrane_pads(env) do
     :ok = validate_pads!(Module.get_attribute(env.module, :membrane_pad), env)
 
+    alias Membrane.Element.Pad
+
+    pad_opts_parser_fun =
+      env.module
+      |> Module.get_attribute(:membrane_pad_opts_parser_clauses)
+      |> Enum.reduce(
+        quote do
+        end,
+        fn new_clause, acc ->
+          quote do
+            unquote(acc)
+            unquote(new_clause)
+          end
+        end
+      )
+
     quote do
       @doc """
-      Returns pads specification for `#{inspect(__MODULE__)}`
-
-      They are the following:
-        #{@membrane_pad |> unquote(__MODULE__).generate_docs_from_pads_specs()}
+      Returns pads descriptions for `#{inspect(__MODULE__)}`
       """
-      @spec membrane_pads() :: [
-              {Membrane.Element.Pad.name_t(), Membrane.Element.Pad.description_t()}
-            ]
+      @spec membrane_pads() :: [{unquote(Pad).name_t(), unquote(Pad).description_t()}]
       def membrane_pads() do
         @membrane_pad
       end
+
+      unquote(pad_opts_parser_fun)
+
+      @moduledoc """
+      #{@moduledoc}
+
+      ## Pads
+
+      #{@membrane_pad |> unquote(__MODULE__).generate_docs_from_pads_specs()}
+      """
     end
   end
 
@@ -107,14 +139,16 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
     withl spec: {name, config} when is_atom(name) and is_list(config) <- spec,
           config:
             {:ok, config} <-
-              Bunch.Config.parse(config,
+              config
+              |> Bunch.Config.parse(
                 availability: [in: [:always, :on_request], default: :always],
                 caps: [validate: &Caps.Matcher.validate_specs/1],
                 mode: [in: [:pull, :push], default: :pull],
                 demand_unit: [
                   in: [:buffers, :bytes],
                   require_if: &(&1.mode == :pull and direction == :input)
-                ]
+                ],
+                options: [default: nil]
               ) do
       {:ok, {name, Map.put(config, :direction, direction)}}
     else
@@ -133,14 +167,19 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
 
   defp generate_docs_from_pad_specs({name, config}) do
     """
-    * Pad `#{inspect(name)}`
+    ### `#{inspect(name)}`
     #{
       config
       |> Enum.map(fn {k, v} ->
-        "* #{k |> to_string() |> String.replace("_", " ")}: #{generate_pad_property_doc(k, v)}"
+        {
+          k |> to_string() |> String.replace("_", " "),
+          generate_pad_property_doc(k, v)
+        }
       end)
-      |> Enum.join("\n")
-      |> indent(2)
+      |> Enum.reject(fn {_, v} -> v == "" end)
+      |> Enum.map_join("\n", fn {k, v} ->
+        "* #{k}: #{v}"
+      end)
     }
     """
   end
@@ -163,6 +202,14 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
       docs -> docs |> Enum.map(&"\n* #{&1}") |> Enum.join()
     )
     |> indent()
+  end
+
+  defp generate_pad_property_doc(:options, nil) do
+    ""
+  end
+
+  defp generate_pad_property_doc(:options, name) do
+    "see `t:#{to_string(name)}/0`"
   end
 
   defp generate_pad_property_doc(_k, v) do

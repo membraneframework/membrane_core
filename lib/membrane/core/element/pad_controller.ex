@@ -31,7 +31,8 @@ defmodule Membrane.Core.Element.PadController do
     info = state.pads.info[pad_name]
 
     with :ok <- validate_pad_being_linked(pad_ref, direction, info, state),
-         :ok <- validate_dir_and_mode(info, other_info) do
+         :ok <- validate_dir_and_mode(info, other_info),
+         {:ok, props} <- parse_link_props(props, pad_name, state) do
       state = init_pad_data(info, pad_ref, pid, other_ref, other_info, props, state)
 
       state =
@@ -165,6 +166,15 @@ defmodule Membrane.Core.Element.PadController do
 
   defp do_validate_dm(_, _) do
     :ok
+  end
+
+  @spec parse_link_props(Keyword.t(), Pad.name_t(), State.t()) :: Type.try_t()
+  defp parse_link_props(props, pad_name, state) do
+    with {:ok, pad_props} <- state.module.membrane_parse_pad_options(pad_name, props[:pad]),
+         # TODO: buffer_props parsing
+         {:ok, buffer_props} <- {:ok, props[:buffer]} do
+      {:ok, [pad: pad_props, buffer: buffer_props]}
+    end
   end
 
   @spec init_pad_data(
