@@ -129,7 +129,12 @@ defmodule Membrane.Core.Element.OptionsSpecParser do
       |> Enum.map(&generate_opt_doc/1)
       |> Enum.reduce(fn x, acc ->
         quote do
-          unquote(x) <> "\n" <> unquote(acc)
+          """
+          #{unquote(x)}
+
+          ---
+          #{unquote(acc)}
+          """
         end
       end)
 
@@ -162,25 +167,14 @@ defmodule Membrane.Core.Element.OptionsSpecParser do
         ""
       end
 
-    format_option_docs(
-      quote do
-        """
-        #{unquote(header)}
-
-        #{String.trim(unquote(desc))}
-
-        #{unquote(default_val_desc)}
-        """
-      end
-    )
-  end
-
-  defp format_option_docs(docs) do
     quote do
-      unquote(docs)
-      |> String.trim()
-      |> String.replace("\n\n", "\n\n  ")
-      |> String.replace_prefix("", "* ")
+      """
+      ### #{unquote(header)}
+
+      #{String.trim(unquote(desc))}
+
+      #{unquote(default_val_desc)}
+      """
     end
   end
 
