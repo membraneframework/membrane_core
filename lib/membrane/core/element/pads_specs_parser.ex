@@ -8,8 +8,7 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
   alias Bunch.Type
   use Bunch
 
-  @spec def_pads([{Pad.name_t(), raw_spec :: Macro.t()}], Pad.direction_t()) ::
-          Macro.t()
+  @spec def_pads([{Pad.name_t(), raw_spec :: Macro.t()}], Pad.direction_t()) :: Macro.t()
   def def_pads(pads, direction) do
     pads
     |> Enum.reduce(

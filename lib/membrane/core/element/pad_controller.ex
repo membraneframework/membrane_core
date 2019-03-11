@@ -192,7 +192,7 @@ defmodule Membrane.Core.Element.PadController do
       |> Map.merge(%{
         pid: pid,
         other_ref: other_ref,
-        opts: props[:pad],
+        options: props[:pad],
         caps: nil,
         start_of_stream?: false,
         end_of_stream?: false

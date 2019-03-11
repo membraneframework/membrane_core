@@ -36,7 +36,7 @@ defmodule Membrane.Element.Pad.Data do
           sticky_messages: [Event.t()],
           buffer: InputBuffer.t() | nil,
           demand: integer() | nil,
-          opts: any()
+          options: Keyword.t()
         }
 
   defstruct [
@@ -55,6 +55,6 @@ defmodule Membrane.Element.Pad.Data do
     :sticky_messages,
     :buffer,
     :demand,
-    :opts
+    :options
   ]
 end

@@ -126,7 +126,9 @@ defmodule Membrane.Core.Element.OptionsSpecParser do
       escaped_opts
       |> Enum.map(&generate_opt_doc/1)
       |> Enum.reduce(fn x, acc ->
-        unquote(x) <> "\n" <> unquote(acc)
+        quote do
+          unquote(x) <> "\n" <> unquote(acc)
+        end
       end)
 
     {typedoc, opt_typespecs, escaped_opts}
