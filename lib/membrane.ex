@@ -1,7 +1,5 @@
 defmodule Membrane do
-  @moduledoc """
-  Core Membrane application supervising the needed processes.
-  """
+  @moduledoc false
   use Application
 
   @impl true
