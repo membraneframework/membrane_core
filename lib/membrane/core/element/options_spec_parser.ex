@@ -112,7 +112,9 @@ defmodule Membrane.Core.Element.OptionsSpecParser do
       quote do
         @doc false
         def membrane_parse_pad_options(unquote(pad_name), options) do
-          Bunch.Config.parse(options, unquote(bunch_field_specs))
+          options
+          |> List.wrap()
+          |> Bunch.Config.parse(unquote(bunch_field_specs))
         end
       end
 

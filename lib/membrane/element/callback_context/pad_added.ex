@@ -5,5 +5,5 @@ defmodule Membrane.Element.CallbackContext.PadAdded do
   """
   use Membrane.Element.CallbackContext,
     direction: :input | :output,
-    opts: any()
+    options: Keyword.t()
 end

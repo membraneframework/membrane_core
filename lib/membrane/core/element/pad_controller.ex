@@ -264,13 +264,13 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec handle_pad_added(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   defp handle_pad_added(ref, state) do
-    pad_opts = PadModel.get_data!(state, ref, :opts)
+    pad_opts = PadModel.get_data!(state, ref, :options)
 
     context =
       CallbackContext.PadAdded.from_state(
         state,
         direction: PadModel.get_data!(state, ref, :direction),
-        opts: pad_opts
+        options: pad_opts
       )
 
     CallbackHandler.exec_and_handle_callback(
