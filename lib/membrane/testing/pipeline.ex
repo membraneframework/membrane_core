@@ -147,17 +147,6 @@ defmodule Membrane.Testing.Pipeline do
     :ok
   end
 
-  @doc """
-  Starts the Testing Pipeline and links it to the current process.
-
-  Proxy for `Membrane.Pipeline.start_link/3`.
-  """
-  @spec start_link(pipeline_options :: Options.t(), process_options :: GenServer.options()) ::
-          GenServer.on_start()
-  def start_link(%Options{} = options, process_options \\ []) do
-    Membrane.Pipeline.start_link(__MODULE__, options, process_options)
-  end
-
   @impl true
   def handle_init(options)
 
