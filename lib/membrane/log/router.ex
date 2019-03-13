@@ -38,7 +38,7 @@ defmodule Membrane.Log.Router do
    - :info
    - :warn
   """
-  @spec level_to_val(:debug | :info | :warn) :: 0 | 1 | 2
+  @spec level_to_val(Membrane.Log.level_t()) :: 0 | 1 | 2
   def level_to_val(:debug), do: 0
   def level_to_val(:info), do: 1
   def level_to_val(:warn), do: 2
