@@ -183,8 +183,9 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  # TODO: create better doc or remove entierly
-  @doc false
+  @doc """
+  Changes pipeline's playback state to `:stopped` and terminates its process
+  """
   @spec stop_and_terminate(pipeline :: pid) :: :ok
   def stop_and_terminate(pipeline) do
     Message.send(pipeline, :stop_and_terminate)
@@ -595,8 +596,28 @@ defmodule Membrane.Pipeline do
         Pipeline.start(__MODULE__, pipeline_options, process_options)
       end
 
-      defdelegate play(pid), to: Pipeline
-      defdelegate prepare(pid), to: Pipeline
+      @doc """
+      Changes playback state of pipeline to `:playing`
+
+      A proxy for `Membrane.Pipeline.play/1`
+      """
+      @spec play(pid()) :: :ok
+      defdelegate play(pipeline), to: Pipeline
+
+      @doc """
+      Changes playback state to `:prepared`.
+
+      A proxy for `Membrane.Pipeline.prepare/1`
+      """
+      @spec prepare(pid) :: :ok
+      defdelegate prepare(pipeline), to: Pipeline
+
+      @doc """
+      Changes playback state to `:stopped`.
+
+      A proxy for `Membrane.Pipeline.stop/1`
+      """
+      @spec stop(pid) :: :ok
       defdelegate stop(pid), to: Pipeline
 
       @impl true
