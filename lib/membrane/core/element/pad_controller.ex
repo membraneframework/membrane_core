@@ -25,8 +25,7 @@ defmodule Membrane.Core.Element.PadController do
           PadModel.pad_info_t() | nil,
           Keyword.t(),
           State.t()
-        ) ::
-          State.stateful_try_t()
+        ) :: State.stateful_try_t()
   def handle_link(pad_ref, direction, pid, other_ref, other_info, props, state) do
     pad_name = pad_ref |> Pad.name_by_ref()
     info = state.pads.info[pad_name]
@@ -94,7 +93,7 @@ defmodule Membrane.Core.Element.PadController do
   def handle_unlink(pad_ref, state) do
     with {:ok, state} <- generate_eos_if_needed(pad_ref, state),
          {:ok, state} <- handle_pad_removed(pad_ref, state),
-         {:ok, state} <- PadModel.delete_data(pad_ref, state) do
+         {:ok, state} <- PadModel.delete_data(state, pad_ref) do
       {:ok, state}
     end
   end
@@ -131,7 +130,7 @@ defmodule Membrane.Core.Element.PadController do
         ) :: Type.try_t()
   defp validate_pad_being_linked(pad_ref, direction, info, state) do
     cond do
-      :ok == PadModel.assert_instance(pad_ref, state) ->
+      :ok == PadModel.assert_instance(state, pad_ref) ->
         {:error, :already_linked}
 
       info == nil ->
@@ -243,8 +242,8 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec generate_eos_if_needed(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   defp generate_eos_if_needed(pad_ref, state) do
-    direction = PadModel.get_data!(pad_ref, :direction, state)
-    eos? = PadModel.get_data!(pad_ref, :end_of_stream?, state)
+    direction = PadModel.get_data!(state, pad_ref, :direction)
+    eos? = PadModel.get_data!(state, pad_ref, :end_of_stream?)
 
     if direction == :input and not eos? do
       EventController.exec_handle_event(pad_ref, %Event.EndOfStream{}, state)
@@ -255,12 +254,12 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec handle_pad_added(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   defp handle_pad_added(ref, state) do
-    pad_opts = PadModel.get_data!(ref, :opts, state)
+    pad_opts = PadModel.get_data!(state, ref, :opts)
 
     context =
       CallbackContext.PadAdded.from_state(
         state,
-        direction: PadModel.get_data!(ref, :direction, state),
+        direction: PadModel.get_data!(state, ref, :direction),
         opts: pad_opts
       )
 
@@ -274,7 +273,7 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec handle_pad_removed(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   defp handle_pad_removed(ref, state) do
-    %{direction: direction, availability: availability} = PadModel.get_data!(ref, state)
+    %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
 
     if availability |> Pad.availability_mode() == :dynamic do
       context = CallbackContext.PadRemoved.from_state(state, direction: direction)

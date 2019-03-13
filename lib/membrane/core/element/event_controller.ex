@@ -18,16 +18,11 @@ defmodule Membrane.Core.Element.EventController do
   """
   @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
   def handle_event(pad_ref, event, state) do
-    pad_data = PadModel.get_data!(pad_ref, state)
+    pad_data = PadModel.get_data!(state, pad_ref)
 
     if not Event.async?(event) && pad_data.mode == :pull && pad_data.direction == :input &&
          pad_data.buffer |> InputBuffer.empty?() |> Kernel.not() do
-      PadModel.update_data(
-        pad_ref,
-        :buffer,
-        &(&1 |> InputBuffer.store(:event, event)),
-        state
-      )
+      state |> PadModel.update_data(pad_ref, :buffer, &(&1 |> InputBuffer.store(:event, event)))
     else
       exec_handle_event(pad_ref, event, state)
     end
@@ -55,7 +50,7 @@ defmodule Membrane.Core.Element.EventController do
   @spec do_exec_handle_event(Pad.ref_t(), Event.t(), params :: map, State.t()) ::
           State.stateful_try_t()
   defp do_exec_handle_event(pad_ref, event, params, state) do
-    data = PadModel.get_data!(pad_ref, state)
+    data = PadModel.get_data!(state, pad_ref)
     context = CallbackContext.Event.from_state(state)
 
     CallbackHandler.exec_and_handle_callback(
@@ -70,9 +65,10 @@ defmodule Membrane.Core.Element.EventController do
   @spec handle_special_event(Pad.ref_t(), Event.t(), State.t()) ::
           State.stateful_try_t(:handle | :ignore)
   defp handle_special_event(pad_ref, %Event.StartOfStream{}, state) do
-    with %{direction: :input, start_of_stream?: false} <- PadModel.get_data!(pad_ref, state) do
-      state = PadModel.set_data!(pad_ref, :start_of_stream?, true, state)
-      {{:ok, :handle}, state}
+    with %{direction: :input, start_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
+      state
+      |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
+      ~> {{:ok, :handle}, &1}
     else
       %{direction: :output} ->
         {{:error, {:received_start_of_stream_through_output, pad_ref}}, state}
@@ -84,9 +80,10 @@ defmodule Membrane.Core.Element.EventController do
 
   defp handle_special_event(pad_ref, %Event.EndOfStream{}, state) do
     with %{direction: :input, start_of_stream?: true, end_of_stream?: false} <-
-           PadModel.get_data!(pad_ref, state) do
-      state = PadModel.set_data!(pad_ref, :end_of_stream?, true, state)
-      {{:ok, :handle}, state}
+           PadModel.get_data!(state, pad_ref) do
+      state
+      |> PadModel.set_data!(pad_ref, :end_of_stream?, true)
+      ~> {{:ok, :handle}, &1}
     else
       %{direction: :output} ->
         {{:error, {:received_end_of_stream_through_output, pad_ref}}, state}

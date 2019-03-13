@@ -30,12 +30,13 @@ defmodule Membrane.Core.Element.DemandHandler do
           State.t()
         ) :: State.stateful_try_t()
   def update_demand(pad_ref, size, state) when is_integer(size) do
-    state = PadModel.set_data!(pad_ref, :demand, size, state)
+    state = PadModel.set_data!(state, pad_ref, :demand, size)
     {:ok, state}
   end
 
   def update_demand(pad_ref, size_fun, state) when is_function(size_fun) do
     PadModel.update_data(
+      state,
       pad_ref,
       :demand,
       fn demand ->
@@ -46,8 +47,7 @@ defmodule Membrane.Core.Element.DemandHandler do
         else
           {:ok, new_demand}
         end
-      end,
-      state
+      end
     )
   end
 
@@ -127,19 +127,14 @@ defmodule Membrane.Core.Element.DemandHandler do
           State.t()
         ) :: State.stateful_try_t()
   def supply_demand(pad_ref, state) do
-    total_size = PadModel.get_data!(pad_ref, :demand, state)
+    total_size = PadModel.get_data!(state, pad_ref, :demand)
     do_supply_demand(pad_ref, total_size, state)
   end
 
   @spec do_supply_demand(Pad.ref_t(), pos_integer, State.t()) :: State.stateful_try_t()
   defp do_supply_demand(pad_ref, size, state) do
     pb_output =
-      PadModel.get_and_update_data(
-        pad_ref,
-        :buffer,
-        &(&1 |> InputBuffer.take(size)),
-        state
-      )
+      state |> PadModel.get_and_update_data(pad_ref, :buffer, &(&1 |> InputBuffer.take(size)))
 
     with {{:ok, {_pb_status, data}}, state} <- pb_output,
          {:ok, state} <- handle_pullbuffer_output(pad_ref, data, state) do
@@ -184,7 +179,7 @@ defmodule Membrane.Core.Element.DemandHandler do
          {:buffers, buffers, size},
          state
        ) do
-    state = PadModel.update_data!(pad_ref, :demand, &(&1 - size), state)
+    state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - size))
 
     BufferController.exec_buffer_handler(pad_ref, buffers, %{supplying_demand?: true}, state)
   end

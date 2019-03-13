@@ -16,16 +16,11 @@ defmodule Membrane.Core.Element.CapsController do
   """
   @spec handle_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.stateful_try_t()
   def handle_caps(pad_ref, caps, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :input}, state)
-    data = PadModel.get_data!(pad_ref, state)
+    PadModel.assert_data!(state, pad_ref, %{direction: :input})
+    data = PadModel.get_data!(state, pad_ref)
 
     if data.mode == :pull and not (data.buffer |> InputBuffer.empty?()) do
-      PadModel.update_data(
-        pad_ref,
-        :buffer,
-        &(&1 |> InputBuffer.store(:caps, caps)),
-        state
-      )
+      state |> PadModel.update_data(pad_ref, :buffer, &(&1 |> InputBuffer.store(:caps, caps)))
     else
       exec_handle_caps(pad_ref, caps, state)
     end
@@ -34,7 +29,7 @@ defmodule Membrane.Core.Element.CapsController do
   @spec exec_handle_caps(Pad.ref_t(), Caps.t(), params :: map, State.t()) ::
           State.stateful_try_t()
   def exec_handle_caps(pad_ref, caps, params \\ %{}, state) do
-    %{accepted_caps: accepted_caps} = PadModel.get_data!(pad_ref, state)
+    %{accepted_caps: accepted_caps} = PadModel.get_data!(state, pad_ref)
 
     context = CallbackContext.Caps.from_state(state, pad: pad_ref)
 
@@ -48,7 +43,7 @@ defmodule Membrane.Core.Element.CapsController do
                 [pad_ref, caps, context],
                 state
               ) do
-      {:ok, PadModel.set_data!(pad_ref, :caps, caps, state)}
+      {:ok, PadModel.set_data!(state, pad_ref, :caps, caps)}
     else
       match: false ->
         warn_error(

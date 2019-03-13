@@ -33,10 +33,10 @@ defmodule Membrane.Pipeline.State do
 
   @spec add_child(t, Element.name_t(), pid) :: Type.stateful_try_t(t)
   def add_child(%__MODULE__{children: children} = state, child, pid) do
-    if not Map.has_key?(children, child) do
-      {:ok, %__MODULE__{state | children: children |> Map.put(child, pid)}}
-    else
+    if Map.has_key?(children, child) do
       {{:error, {:duplicate_child, child}}, state}
+    else
+      {:ok, %__MODULE__{state | children: children |> Map.put(child, pid)}}
     end
   end
 

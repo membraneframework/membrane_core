@@ -299,7 +299,7 @@ defmodule Membrane.Pipeline do
   defp check_if_children_names_unique(children, state) do
     children
     |> Enum.map(& &1.name)
-    ~> (&1 ++ State.get_children_names(state))
+    |> Kernel.++(State.get_children_names(state))
     |> Bunch.Enum.duplicates()
     ~> (
       [] -> :ok
@@ -344,8 +344,7 @@ defmodule Membrane.Pipeline do
   @spec parse_links(Spec.links_spec_t() | any) :: Type.try_t([Link.t()])
   defp parse_links(links), do: links |> Bunch.Enum.try_map(&Link.parse/1)
 
-  @spec resolve_links([Link.t()], State.t()) ::
-          Type.try_t([Link.resolved_t()])
+  @spec resolve_links([Link.t()], State.t()) :: Type.try_t([Link.resolved_t()])
   defp resolve_links(links, state) do
     links
     |> Bunch.Enum.try_map(fn %{from: from, to: to} = link ->

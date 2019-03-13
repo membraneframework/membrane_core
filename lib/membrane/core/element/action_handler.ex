@@ -117,7 +117,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         {:handle_event, %{direction: :output}} -> {:event, :input}
       end
 
-    pads = PadModel.filter_data(%{direction: dir}, state) |> Map.keys()
+    pads = state |> PadModel.filter_data(%{direction: dir}) |> Map.keys()
 
     pads
     |> Bunch.Enum.try_reduce(state, fn pad, st ->
@@ -215,9 +215,9 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     )
 
-    with :ok <- PadModel.assert_data(pad_ref, %{direction: :output, end_of_stream?: false}, state) do
+    with :ok <- PadModel.assert_data(state, pad_ref, %{direction: :output, end_of_stream?: false}) do
       %{mode: mode, pid: pid, other_ref: other_ref, other_demand_unit: other_demand_unit} =
-        PadModel.get_data!(pad_ref, state)
+        PadModel.get_data!(state, pad_ref)
 
       state = handle_buffer(pad_ref, mode, other_demand_unit, buffers, state)
       Message.send(pid, :buffer, [buffers, other_ref])
@@ -237,12 +237,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp handle_buffer(pad_ref, :pull, other_demand_unit, buffers, state) do
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
 
-    PadModel.update_data!(
-      pad_ref,
-      :demand,
-      &(&1 - buf_size),
-      state
-    )
+    state |> PadModel.update_data!(pad_ref, :demand, &(&1 - buf_size))
   end
 
   defp handle_buffer(_pad_ref, :push, _options, _buffers, state) do
@@ -259,15 +254,12 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     )
 
-    withl pad: :ok <- PadModel.assert_data(pad_ref, %{direction: :output}, state),
-          do: accepted_caps = PadModel.get_data!(pad_ref, :accepted_caps, state),
+    withl pad: :ok <- PadModel.assert_data(state, pad_ref, %{direction: :output}),
+          do: accepted_caps = PadModel.get_data!(state, pad_ref, :accepted_caps),
           caps: true <- Caps.Matcher.match?(accepted_caps, caps) do
       {%{pid: pid, other_ref: other_ref}, state} =
-        PadModel.get_and_update_data!(
-          pad_ref,
-          fn data -> %{data | caps: caps} ~> {&1, &1} end,
-          state
-        )
+        state
+        |> PadModel.get_and_update_data!(pad_ref, fn data -> %{data | caps: caps} ~> {&1, &1} end)
 
       Message.send(pid, :caps, [caps, other_ref])
       {:ok, state}
@@ -337,7 +329,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp supply_demand(pad_ref, size, _callback, currently_supplying?, state) do
-    input_assertion = PadModel.assert_data(pad_ref, %{direction: :input, mode: :pull}, state)
+    input_assertion = PadModel.assert_data(state, pad_ref, %{direction: :input, mode: :pull})
 
     with {:ok, state} <- {input_assertion, state},
          {:ok, state} <- DemandHandler.update_demand(pad_ref, size, state) do
@@ -352,7 +344,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec handle_redemand(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   defp handle_redemand(out_ref, %{type: type} = state) when type in [:source, :filter] do
-    with :ok <- PadModel.assert_data(out_ref, %{direction: :output, mode: :pull}, state) do
+    with :ok <- PadModel.assert_data(state, out_ref, %{direction: :output, mode: :pull}) do
       state = DemandHandler.delay_redemand(out_ref, state)
       {:ok, state}
     else
@@ -371,7 +363,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
 
     withl event: true <- event |> Event.event?(),
-          pad: {:ok, %{pid: pid, other_ref: other_ref}} <- PadModel.get_data(pad_ref, state),
+          pad: {:ok, %{pid: pid, other_ref: other_ref}} <- PadModel.get_data(state, pad_ref),
           handler: {:ok, state} <- handle_event(pad_ref, event, state) do
       Message.send(pid, :event, [event, other_ref])
       {:ok, state}
@@ -384,8 +376,8 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
   defp handle_event(pad_ref, %Event.EndOfStream{}, state) do
-    with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(pad_ref, state) do
-      {:ok, PadModel.set_data!(pad_ref, :end_of_stream?, true, state)}
+    with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
+      {:ok, PadModel.set_data!(state, pad_ref, :end_of_stream?, true)}
     else
       %{direction: :input} ->
         {{:error, {:cannot_send_end_of_stream_through_input, pad_ref}}, state}

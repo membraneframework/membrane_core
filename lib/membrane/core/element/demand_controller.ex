@@ -16,18 +16,16 @@ defmodule Membrane.Core.Element.DemandController do
   """
   @spec handle_demand(Pad.ref_t(), non_neg_integer, State.t()) :: State.stateful_try_t()
   def handle_demand(pad_ref, size, state) do
-    PadModel.assert_data(pad_ref, %{direction: :output}, state)
+    PadModel.assert_data(state, pad_ref, %{direction: :output})
 
     {total_size, state} =
-      PadModel.get_and_update_data!(
-        pad_ref,
-        :demand,
-        fn demand -> (demand + size) ~> {&1, &1} end,
-        state
-      )
+      state
+      |> PadModel.get_and_update_data!(pad_ref, :demand, fn demand ->
+        (demand + size) ~> {&1, &1}
+      end)
 
     if exec_handle_demand?(pad_ref, state) do
-      %{other_demand_unit: unit} = PadModel.get_data!(pad_ref, state)
+      %{other_demand_unit: unit} = PadModel.get_data!(state, pad_ref)
 
       context = CallbackContext.Demand.from_state(state, incoming_demand: size)
 
@@ -49,7 +47,7 @@ defmodule Membrane.Core.Element.DemandController do
 
   @spec exec_handle_demand?(Pad.ref_t(), State.t()) :: boolean
   defp exec_handle_demand?(pad_ref, state) do
-    case PadModel.get_data!(pad_ref, state) do
+    case PadModel.get_data!(state, pad_ref) do
       %{end_of_stream?: true} ->
         debug(
           """

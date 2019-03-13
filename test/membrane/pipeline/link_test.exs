@@ -15,11 +15,9 @@ defmodule Membrane.Pipeline.LinkTest do
     assert Endpoint.parse({:source, :input, pad: [mute: true]}) ==
              {:ok, %Endpoint{element: :source, pad_name: :input, opts: [pad: [mute: true]]}}
 
-    assert Endpoint.parse({:source}) ==
-             {:error, {:invalid_endpoint, {:source}}}
+    assert Endpoint.parse({:source}) == {:error, {:invalid_endpoint, {:source}}}
 
-    assert Endpoint.parse({:source, 42}) ==
-             {:error, {:invalid_pad_format, 42}}
+    assert Endpoint.parse({:source, 42}) == {:error, {:invalid_pad_format, 42}}
   end
 
   def test_valid_link(raw_from, raw_to) do

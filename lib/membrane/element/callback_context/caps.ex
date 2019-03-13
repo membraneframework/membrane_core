@@ -15,7 +15,7 @@ defmodule Membrane.Element.CallbackContext.Caps do
   defmacro from_state(state, args) do
     old_caps =
       quote do
-        unquote(args[:pad]) |> PadModel.get_data!(:caps, unquote(state))
+        unquote(state) |> PadModel.get_data!(unquote(args[:pad]), :caps)
       end
 
     super(state, old_caps: old_caps)

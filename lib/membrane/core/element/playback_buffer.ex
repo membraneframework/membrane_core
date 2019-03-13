@@ -47,15 +47,17 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     if state.playback_buffer |> empty? do
       exec(msg, state)
     else
-      state
-      |> Bunch.Access.update_in([:playback_buffer, :q], fn q -> q |> @qe.push(msg) end)
-      ~> (state -> {:ok, state})
+      do_store(msg, state)
     end
   end
 
   def store(msg, state) do
+    do_store(msg, state)
+  end
+
+  defp do_store(msg, state) do
     state
-    |> Bunch.Access.update_in([:playback_buffer, :q], fn q -> q |> @qe.push(msg) end)
+    |> Bunch.Access.update_in([:playback_buffer, :q], &@qe.push(&1, msg))
     ~> (state -> {:ok, state})
   end
 
@@ -81,7 +83,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   @spec exec(message_t, State.t()) :: State.stateful_try_t()
   # Callback invoked on demand request coming from the output pad in the pull mode
   defp exec({:demand, [size, pad_ref]}, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :output}, state)
+    PadModel.assert_data!(state, pad_ref, %{direction: :output})
 
     demand =
       if size == 0 do
@@ -96,7 +98,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   # Callback invoked on buffer coming through the input pad
   defp exec({:buffer, [buffers, pad_ref]}, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :input}, state)
+    PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
     debug(
       ["
@@ -105,19 +107,17 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
       state
     )
 
-    {messages, state} = PadModel.get_and_update_data!(pad_ref, :sticky_messages, &{&1, []}, state)
+    {messages, state} = PadModel.get_and_update_data!(state, pad_ref, :sticky_messages, &{&1, []})
 
     with {:ok, state} <-
            messages
            |> Enum.reverse()
            |> Bunch.Enum.try_reduce(state, fn msg, st -> msg.(st) end) do
       {:ok, state} =
-        cond do
-          PadModel.get_data!(pad_ref, :start_of_stream?, state) |> Kernel.not() ->
-            EventController.handle_event(pad_ref, %Event.StartOfStream{}, state)
-
-          true ->
-            {:ok, state}
+        if PadModel.get_data!(state, pad_ref, :start_of_stream?) do
+          {:ok, state}
+        else
+          EventController.handle_event(pad_ref, %Event.StartOfStream{}, state)
         end
 
       BufferController.handle_buffer(pad_ref, buffers, state)
@@ -126,7 +126,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   # Callback invoked on incoming caps
   defp exec({:caps, [caps, pad_ref]}, state) do
-    PadModel.assert_data!(pad_ref, %{direction: :input}, state)
+    PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
     debug(
       """
@@ -141,7 +141,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   # Callback invoked on incoming event
   defp exec({:event, [event, pad_ref]}, state) do
-    PadModel.assert_instance!(pad_ref, state)
+    PadModel.assert_instance!(state, pad_ref)
 
     debug(
       """
@@ -156,12 +156,8 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     end
 
     if event |> Event.sticky?() do
-      PadModel.update_data!(
-        pad_ref,
-        :sticky_messages,
-        &[do_exec | &1],
-        state
-      )
+      state
+      |> PadModel.update_data!(pad_ref, :sticky_messages, &[do_exec | &1])
       ~> {:ok, &1}
     else
       do_exec.(state)

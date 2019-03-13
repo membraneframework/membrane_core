@@ -38,47 +38,50 @@ defmodule Membrane.Log.Router do
    - :info
    - :warn
   """
-  @spec level_to_val(atom) :: 0 | 1 | 2
+  @spec level_to_val(Membrane.Log.level_t()) :: 0 | 1 | 2
   def level_to_val(:debug), do: 0
   def level_to_val(:info), do: 1
   def level_to_val(:warn), do: 2
 
   # PRIVATE API
 
-  @doc false
+  @impl true
   def init(loggers) do
     loggers =
       loggers
-      |> Enum.map(fn %{id: id} = logger_map ->
+      |> Enum.into(%{}, fn %{id: id} = logger_map ->
         level = logger_map |> Map.get(:level, :debug)
         tags = logger_map |> Map.get(:tags, [:all]) |> MapSet.new()
         {id, %{level: level, tags: tags}}
       end)
-      |> Enum.into(%{})
 
     {:ok, %{loggers: loggers}}
   end
 
   # Forwards log to every logger that has low enough level and has at least one
   # common tag with the message
-  @doc false
+  @impl true
   def handle_info(
         {:membrane_log, log_level, _message, _time, tags} = log,
         %{loggers: loggers} = state
       ) do
-    fn {id, pid, _type, _module} ->
+    Supervisor.each_logger(fn {id, pid, _type, _module} ->
       logger = loggers |> Map.get(id)
 
-      if logger.level |> level_to_val <= log_level |> level_to_val do
-        tags = MapSet.new([:all | tags])
-
-        if logger.tags |> MapSet.intersection(tags) |> Enum.empty?() |> Kernel.not() do
-          send(pid, log)
-        end
+      if logger |> accepts_level?(log_level) and logger |> accepts_any_tag?(tags) do
+        send(pid, log)
       end
-    end
-    |> Supervisor.each_logger()
+    end)
 
     {:noreply, state}
+  end
+
+  defp accepts_level?(%{level: logger_lvl}, lvl) do
+    level_to_val(logger_lvl) <= level_to_val(lvl)
+  end
+
+  defp accepts_any_tag?(%{tags: logger_tags}, tags) do
+    tags = MapSet.new([:all | tags])
+    not MapSet.disjoint?(logger_tags, tags)
   end
 end

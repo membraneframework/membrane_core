@@ -7,6 +7,8 @@ defmodule Membrane.Log do
   use Bunch
   alias Membrane.Log.Router
 
+  @type level_t :: :debug | :info | :warn
+
   defmacro __using__(args) do
     passed_tags = args |> Keyword.get(:tags, []) |> Bunch.listify()
     previous_tags = Module.get_attribute(__CALLER__.module, :logger_default_tags) || []

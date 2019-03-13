@@ -1,4 +1,5 @@
 defmodule Membrane.Support.DemandsTest.Pipeline do
+  @moduledoc false
   use Membrane.Pipeline
 
   @impl true

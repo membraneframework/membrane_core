@@ -59,7 +59,7 @@ defmodule Membrane.Mixfile do
   defp deps do
     [
       {:ex_doc, "~> 0.19", only: :dev, runtime: false},
-      {:espec, "~> 1.6", only: :test},
+      {:espec, "~> 1.7", only: :test},
       {:excoveralls, "~> 0.8", only: :test},
       {:qex, "~> 0.3"},
       {:dialyxir, "~> 1.0.0-rc.4", only: [:dev], runtime: false},
