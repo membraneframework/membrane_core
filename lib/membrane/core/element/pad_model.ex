@@ -13,10 +13,8 @@ defmodule Membrane.Core.Element.PadModel do
           required(:availability) => Pad.availability_t(),
           required(:direction) => Pad.direction_t(),
           required(:mode) => Pad.mode_t(),
-          required(:options) => %{
-            optional(:demand_unit) => Membrane.Buffer.Metric.unit_t(),
-            optional(:other_demand_unit) => Membrane.Buffer.Metric.unit_t()
-          },
+          optional(:demand_unit) => Membrane.Buffer.Metric.unit_t(),
+          optional(:other_demand_unit) => Membrane.Buffer.Metric.unit_t(),
           optional(:current_id) => non_neg_integer
         }
 
@@ -177,16 +175,18 @@ defmodule Membrane.Core.Element.PadModel do
   end
 
   @spec pop_data(Pad.ref_t(), State.t()) ::
-          State.stateful_t({:ok, Pad.Data.t() | any} | unknown_pad_error_t)
+          State.stateful_t({:ok, Pad.Data.t()} | unknown_pad_error_t)
   def pop_data(pad_ref, state) do
     with {:ok, state} <- {assert_instance(pad_ref, state), state} do
-      state
-      |> Bunch.Access.pop_in(data_keys(pad_ref))
-      ~> {:ok, &1}
+      {data, state} =
+        state
+        |> Bunch.Access.pop_in(data_keys(pad_ref))
+
+      {{:ok, data}, state}
     end
   end
 
-  @spec pop_data!(Pad.ref_t(), State.t()) :: State.stateful_t(Pad.Data.t() | any)
+  @spec pop_data!(Pad.ref_t(), State.t()) :: State.stateful_t(Pad.Data.t())
   def pop_data!(pad_ref, state) do
     {{:ok, pad_data}, state} = pop_data(pad_ref, state)
     {pad_data, state}
@@ -194,7 +194,7 @@ defmodule Membrane.Core.Element.PadModel do
 
   @spec delete_data(Pad.ref_t(), State.t()) :: State.stateful_t(:ok | unknown_pad_error_t)
   def delete_data(pad_ref, state) do
-    with {:ok, {_out, state}} <- pop_data(pad_ref, state) do
+    with {{:ok, _out}, state} <- pop_data(pad_ref, state) do
       {:ok, state}
     end
   end

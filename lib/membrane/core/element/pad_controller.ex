@@ -3,7 +3,7 @@ defmodule Membrane.Core.Element.PadController do
   # Module handling linking and unlinking pads.
 
   alias Membrane.{Core, Event}
-  alias Core.{CallbackHandler, Message, PullBuffer}
+  alias Core.{CallbackHandler, Message, InputBuffer}
   alias Core.Element.{ActionHandler, EventController, PadModel, State}
   alias Membrane.Element.{CallbackContext, Pad}
   alias Bunch.Type
@@ -17,13 +17,23 @@ defmodule Membrane.Core.Element.PadController do
   @doc """
   Verifies linked pad, initializes it's data.
   """
-  @spec handle_link(Pad.ref_t(), Pad.direction_t(), pid, Pad.ref_t(), Keyword.t(), State.t()) ::
+  @spec handle_link(
+          Pad.ref_t(),
+          Pad.direction_t(),
+          pid,
+          Pad.ref_t(),
+          PadModel.pad_info_t() | nil,
+          Keyword.t(),
+          State.t()
+        ) ::
           State.stateful_try_t()
-  def handle_link(pad_ref, direction, pid, other_ref, props, state) do
-    with :ok <- validate_pad_being_linked(pad_ref, direction, state) do
-      pad_name = pad_ref |> Pad.name_by_ref()
-      info = state.pads.info[pad_name]
-      state = init_pad_data(pad_ref, pid, other_ref, props, info, state)
+  def handle_link(pad_ref, direction, pid, other_ref, other_info, props, state) do
+    pad_name = pad_ref |> Pad.name_by_ref()
+    info = state.pads.info[pad_name]
+
+    with :ok <- validate_pad_being_linked(pad_ref, direction, info, state),
+         :ok <- validate_dir_and_mode(info, other_info) do
+      state = init_pad_data(info, pad_ref, pid, other_ref, other_info, props, state)
 
       state =
         case Pad.availability_mode_by_ref(pad_ref) do
@@ -34,7 +44,7 @@ defmodule Membrane.Core.Element.PadController do
             add_to_currently_linking(pad_ref, state)
         end
 
-      {:ok, state}
+      {{:ok, info}, state}
     else
       {:error, reason} -> {{:error, reason}, state}
     end
@@ -113,10 +123,13 @@ defmodule Membrane.Core.Element.PadController do
     {pad_ref |> Bunch.error_if_nil(:unknown_pad), state}
   end
 
-  @spec validate_pad_being_linked(Pad.ref_t(), Pad.direction_t(), State.t()) :: Type.try_t()
-  defp validate_pad_being_linked(pad_ref, direction, state) do
-    info = state.pads.info[pad_ref |> Pad.name_by_ref()]
-
+  @spec validate_pad_being_linked(
+          Pad.ref_t(),
+          Pad.direction_t(),
+          PadModel.pad_info_t(),
+          State.t()
+        ) :: Type.try_t()
+  defp validate_pad_being_linked(pad_ref, direction, info, state) do
     cond do
       :ok == PadModel.assert_instance(pad_ref, state) ->
         {:error, :already_linked}
@@ -138,56 +151,87 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
+  @spec validate_dir_and_mode(info :: PadModel.pad_info_t(), other_info :: PadModel.pad_info_t()) ::
+          Type.try_t()
+  def validate_dir_and_mode(this, that) do
+    with :ok <- do_validate_dm(this, that),
+         :ok <- do_validate_dm(that, this) do
+      :ok
+    end
+  end
+
+  defp do_validate_dm(%{direction: :output, mode: :pull}, %{direction: :input, mode: :push}) do
+    {:error, {:cannot_connect, :pull_output, :to, :push_input}}
+  end
+
+  defp do_validate_dm(_, _) do
+    :ok
+  end
+
   @spec init_pad_data(
+          PadModel.pad_info_t(),
           Pad.ref_t(),
           pid,
           Pad.ref_t(),
-          props :: Keyword.t(),
           PadModel.pad_info_t(),
+          props :: Keyword.t(),
           State.t()
         ) :: State.t()
-  defp init_pad_data(ref, pid, other_ref, props, info, state) do
+  defp init_pad_data(info, ref, pid, other_ref, other_info, props, state) do
     data =
       info
       |> Map.merge(%{
         pid: pid,
         other_ref: other_ref,
+        opts: props[:pad],
         caps: nil,
         start_of_stream?: false,
         end_of_stream?: false
       })
 
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
-    data = data |> Map.merge(init_pad_mode_data(data, props, state))
-    data = %Pad.Data{} |> Map.merge(data)
+    data = data |> Map.merge(init_pad_mode_data(data, other_info, props, state))
+    data = struct!(Pad.Data, data)
     state |> Bunch.Access.put_in([:pads, :data, ref], data)
   end
 
   defp init_pad_direction_data(%{direction: :input}, _props, _state), do: %{sticky_messages: []}
   defp init_pad_direction_data(%{direction: :output}, _props, _state), do: %{}
 
-  defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, props, state) do
+  @spec init_pad_mode_data(
+          map(),
+          PadModel.pad_info_t(),
+          props :: Keyword.t(),
+          State.t()
+        ) :: map()
+  defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, other_info, props, state) do
     %{pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
 
     :ok =
       pid
       |> Message.call(:demand_unit, [demand_unit, other_ref])
 
+    buffer_props = props[:buffer] || Keyword.new()
+
+    enable_toilet? = other_info.mode == :push
+
     pb =
-      PullBuffer.new(
+      InputBuffer.new(
         state.name,
         pid,
         other_ref,
         demand_unit,
-        props[:pull_buffer] || %{}
+        enable_toilet?,
+        buffer_props
       )
 
     %{buffer: pb, demand: 0}
   end
 
-  defp init_pad_mode_data(%{mode: :pull, direction: :output}, _props, _state), do: %{demand: 0}
+  defp init_pad_mode_data(%{mode: :pull, direction: :output}, _other_info, _props, _state),
+    do: %{demand: 0}
 
-  defp init_pad_mode_data(%{mode: :push}, _props, _state), do: %{}
+  defp init_pad_mode_data(%{mode: :push}, _other_info, _props, _state), do: %{}
 
   @spec add_to_currently_linking(Pad.ref_t(), State.t()) :: State.t()
   defp add_to_currently_linking(ref, state),
@@ -211,10 +255,13 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec handle_pad_added(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   defp handle_pad_added(ref, state) do
+    pad_opts = PadModel.get_data!(ref, :opts, state)
+
     context =
       CallbackContext.PadAdded.from_state(
         state,
-        direction: PadModel.get_data!(ref, :direction, state)
+        direction: PadModel.get_data!(ref, :direction, state),
+        opts: pad_opts
       )
 
     CallbackHandler.exec_and_handle_callback(

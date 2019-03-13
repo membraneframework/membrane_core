@@ -69,7 +69,7 @@ defmodule Membrane.Element.Action do
 
   The pad must have input direction and work in pull mode. This action does NOT
   entail _sending_ demand through the pad, but just _requesting_ some amount
-  of data from `Membrane.Core.PullBuffer`, which _sends_ demands automatically when it
+  of data from `Membrane.Core.InputBuffer`, which _sends_ demands automatically when it
   runs out of data.
   If there is any data available at the pad, the data is passed to
   `c:Membrane.Element.Base.Filter.handle_process_list/4`

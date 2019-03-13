@@ -24,7 +24,7 @@ defprotocol Membrane.EventProtocol do
 
   Buffers and sync events are always received in the same order they are
   sent. Async events are handled before any enqueued buffers that are waiting to
-  be processed (e.g. in `Membrane.PullBuffer`).
+  be processed (e.g. in `Membrane.InputBuffer`).
   """
   @spec async?(t) :: boolean
   def async?(_event)

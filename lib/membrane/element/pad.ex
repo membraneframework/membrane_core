@@ -44,13 +44,13 @@ defmodule Membrane.Element.Pad do
   may lead to overflow of element process erlang queue, which is highly unwanted.
   - `:pull` output pad - element can send data through such pad only if it have
   already received demand on the pad. Sending small, limited amount of
-  undemanded data is supported and handled by `Membrane.Core.PullBuffer`.
+  undemanded data is supported and handled by `Membrane.Core.InputBuffer`.
   - `:pull` input pad - element receives through such pad only data that it has
   previously demanded, so that no undemanded data can arrive.
 
   Linking pads with different modes is possible, but only in case of output pad
   working in push mode, and input in pull mode. Moreover, toilet mode of
-  `Membrane.Core.PullBuffer` has to be enabled then.
+  `Membrane.Core.InputBuffer` has to be enabled then.
 
   For more information on transfering data and demands, see docs for element
   callbacks in `Membrane.Element.Base.*`.

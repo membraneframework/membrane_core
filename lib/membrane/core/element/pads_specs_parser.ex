@@ -58,7 +58,7 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
           already_parsed :: [{Pad.name_t(), Pad.description_t()}],
           direction :: Pad.direction_t(),
           declaration_env :: Macro.Env.t()
-        ) :: Pad.description_t() | no_return
+        ) :: [{Pad.name_t(), Pad.description_t()}]
   def parse_pads_specs!(specs, already_parsed, direction, env) do
     with {:ok, specs} <- parse_pads_specs(specs, already_parsed, direction) do
       specs
@@ -78,7 +78,7 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
           specs :: [Pad.spec_t()],
           already_parsed :: [{Pad.name_t(), Pad.description_t()}],
           direction :: Pad.direction_t()
-        ) :: Type.try_t(Pad.description_t())
+        ) :: Type.try_t([{Pad.name_t(), Pad.description_t()}])
   defp parse_pads_specs(specs, already_parsed, direction) do
     withl keyword: true <- specs |> Keyword.keyword?(),
           dups: [] <- (specs ++ already_parsed) |> Keyword.keys() |> Bunch.Enum.duplicates(),
@@ -91,6 +91,8 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
     end
   end
 
+  @spec parse_pad_specs(Pad.spec_t(), Pad.direction_t()) ::
+          Type.try_t({Pad.name_t(), Pad.description_t()})
   defp parse_pad_specs(spec, direction) do
     withl spec: {name, config} when is_atom(name) and is_list(config) <- spec,
           config:

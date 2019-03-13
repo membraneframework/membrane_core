@@ -5,6 +5,7 @@ defmodule Membrane.Log.Logger do
   """
 
   alias Membrane.Log.Logger.State
+  use GenServer
 
   # Type that defines possible return values of start/start_link functions.
   @type on_start :: GenServer.on_start()
@@ -66,7 +67,7 @@ defmodule Membrane.Log.Logger do
 
   # Private API
 
-  @doc false
+  @impl true
   def init({module, options}) do
     # Call logger's initialization callback
     case module.handle_init(options) do
@@ -79,7 +80,7 @@ defmodule Membrane.Log.Logger do
     end
   end
 
-  @doc false
+  @impl true
   def terminate(_reason, %State{module: module, internal_state: internal_state}) do
     # TODO send last message to the logger
     module.handle_shutdown(internal_state)
@@ -88,30 +89,14 @@ defmodule Membrane.Log.Logger do
   # Callback invoked on incoming buffer.
   #
   # It will delegate actual processing to handle_log/5.
-  @doc false
+  @impl true
   def handle_info(
         {:membrane_log, level, content, time, tags},
         %State{module: module, internal_state: internal_state} = state
       ) do
     module.handle_log(level, content, time, tags, internal_state)
     |> handle_callback(state)
-    |> format_callback_response(:noreply)
-  end
-
-  defp format_callback_response({:ok, new_state}, :reply) do
-    {:reply, :ok, new_state}
-  end
-
-  defp format_callback_response({:ok, new_state}, :noreply) do
-    {:noreply, new_state}
-  end
-
-  defp format_callback_response({:error, reason, new_state}, :reply) do
-    {:reply, {:error, reason}, new_state}
-  end
-
-  defp format_callback_response({:error, reason, new_state}, :noreply) do
-    {:stop, [log_error: reason], new_state}
+    |> Membrane.Helper.GenServer.noreply()
   end
 
   # Generic handler that can be used to convert return value from
@@ -134,30 +119,15 @@ defmodule Membrane.Log.Logger do
         {:ok, %{state | internal_state: new_internal_state}}
 
       {:error, reason, new_internal_state} ->
-        {:error, reason, %{state | internal_state: new_internal_state}}
+        {{:error, reason}, %{state | internal_state: new_internal_state}}
 
       invalid_callback ->
-        # raise error
-        handle_callback(invalid_callback, nil)
+        raise """
+        Logger callback replies are expected to be one of:
+          {:ok, state}
+          {:error, reason, state}
+        but got callback reply #{inspect(invalid_callback)}.
+        """
     end
-  end
-
-  # Error handler for unknown callback return values.
-  defp handle_callback(other, _state) do
-    raise """
-    Logger callback replies are expected to be one of:
-
-        {:ok, state}
-        {:error, reason, state}
-
-    for example:
-
-        {:ok, %{key: "val"}}
-
-    but got callback reply #{inspect(other)}.
-
-    This is probably a bug in the logger, check if its callbacks return values
-    in the right format.
-    """
   end
 end

@@ -4,5 +4,6 @@ defmodule Membrane.Element.CallbackContext.PadAdded do
   when new pad added is created
   """
   use Membrane.Element.CallbackContext,
-    direction: :input | :output
+    direction: :input | :output,
+    opts: any()
 end

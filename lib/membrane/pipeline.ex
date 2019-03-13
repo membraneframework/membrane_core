@@ -8,7 +8,7 @@ defmodule Membrane.Pipeline do
   and process it in different ways.
   """
 
-  alias __MODULE__.{State, Spec}
+  alias __MODULE__.{Link, State, Spec}
   alias Membrane.{Core, Element, Notification}
   alias Element.Pad
   alias Core.{Message, Playback}
@@ -62,16 +62,6 @@ defmodule Membrane.Pipeline do
   @type callback_return_t :: CallbackHandler.callback_return_t(action_t, State.internal_state_t())
 
   @typep parsed_child_t :: %{name: Element.name_t(), module: module, options: Keyword.t()}
-  @typep parsed_link_t :: %{
-           from: %{element: Element.name_t(), pad: Pad.name_t()},
-           to: %{element: Element.name_t(), pad: Pad.name_t()},
-           params: [Spec.link_option_t()]
-         }
-  @typep resolved_link_t :: %{
-           from: %{element: Element.name_t(), pad: Pad.ref_t()},
-           to: %{element: Element.name_t(), pad: Pad.ref_t()},
-           params: [Spec.link_option_t()]
-         }
 
   @doc """
   Enables to check whether module is membrane pipeline
@@ -263,7 +253,7 @@ defmodule Membrane.Pipeline do
          {{:ok, children}, state} <- {parsed_children |> start_children, state},
          {:ok, state} <- children |> add_children(state),
          {{:ok, links}, state} <- {links |> parse_links, state},
-         {{:ok, links}, state} <- links |> resolve_links(state),
+         {{:ok, links}, state} <- {links |> resolve_links(state), state},
          {:ok, state} <- {links |> link_children(state), state},
          {children_names, children_pids} = children |> Enum.unzip(),
          {:ok, state} <- {children_pids |> set_children_watcher, state},
@@ -287,10 +277,11 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  @spec parse_children(Spec.children_spec_t() | any) :: Type.try_t(parsed_child_t)
+  @spec parse_children(Spec.children_spec_t() | any) :: Type.try_t([parsed_child_t])
   defp parse_children(children) when is_map(children) or is_list(children),
     do: children |> Bunch.Enum.try_map(&parse_child/1)
 
+  @spec parse_child(any) :: Type.try_t(parsed_child_t)
   defp parse_child({name, %module{} = options})
        when Element.is_element_name(name) do
     {:ok, %{name: name, module: module, options: options}}
@@ -350,59 +341,26 @@ defmodule Membrane.Pipeline do
     end)
   end
 
-  @spec parse_links(Spec.links_spec_t() | any) :: Type.try_t([parsed_link_t])
-  defp parse_links(links), do: links |> Bunch.Enum.try_map(&parse_link/1)
+  @spec parse_links(Spec.links_spec_t() | any) :: Type.try_t([Link.t()])
+  defp parse_links(links), do: links |> Bunch.Enum.try_map(&Link.parse/1)
 
-  defp parse_link({{from, from_pad}, {to, to_pad, params}}) do
-    do_parse_link(from, from_pad, to, to_pad, params)
-  end
-
-  defp parse_link({{from, from_pad}, {to, to_pad}}) do
-    do_parse_link(from, from_pad, to, to_pad, [])
-  end
-
-  defp parse_link(link) do
-    {:error, {:invalid_link, link}}
-  end
-
-  defp do_parse_link(from, from_pad, to, to_pad, params) do
-    link = %{
-      from: %{element: from, pad: from_pad},
-      to: %{element: to, pad: to_pad},
-      params: params
-    }
-
-    with :ok <- [from_pad, to_pad] |> Bunch.Enum.try_each(&validate_pad_name/1) do
-      {:ok, link}
-    else
-      {:error, reason} -> {:error, {:invalid_link, link, reason}}
-    end
-  end
-
-  @spec validate_pad_name(atom | any) :: Type.try_t()
-  defp validate_pad_name(name) when Pad.is_pad_name(name) do
-    :ok
-  end
-
-  defp validate_pad_name(pad), do: {:error, {:invalid_pad_format, pad}}
-
-  @spec resolve_links([parsed_link_t], State.t()) ::
-          Type.stateful_try_t([resolved_link_t], State.t())
+  @spec resolve_links([Link.t()], State.t()) ::
+          Type.try_t([Link.resolved_t()])
   defp resolve_links(links, state) do
     links
-    |> Bunch.Enum.try_map_reduce(state, fn %{from: from, to: to} = link, st ->
-      with {{:ok, from}, st} <- from |> resolve_link(st),
-           {{:ok, to}, st} <- to |> resolve_link(st),
-           do: {{:ok, %{link | from: from, to: to}}, st}
+    |> Bunch.Enum.try_map(fn %{from: from, to: to} = link ->
+      with {:ok, from} <- from |> resolve_link(state),
+           {:ok, to} <- to |> resolve_link(state),
+           do: {:ok, %{link | from: from, to: to}}
     end)
   end
 
-  defp resolve_link(%{element: element, pad: pad_name} = elementpad, state) do
+  defp resolve_link(%{element: element, pad_name: pad_name} = endpoint, state) do
     with {:ok, pid} <- state |> State.get_child_pid(element),
          {:ok, pad_ref} <- pid |> Message.call(:get_pad_ref, pad_name) do
-      {{:ok, %{element: element, pad: pad_ref}}, state}
+      {:ok, %{endpoint | pid: pid, pad_ref: pad_ref}}
     else
-      {:error, reason} -> {:error, {:resolve_link, elementpad, reason}}
+      {:error, reason} -> {:error, {:resolve_link, endpoint, reason}}
     end
   end
 
@@ -411,11 +369,11 @@ defmodule Membrane.Pipeline do
   #
   # Please note that this function is not atomic and in case of error there's
   # a chance that some of children will remain linked.
-  @spec link_children([resolved_link_t], State.t()) :: Type.try_t()
+  @spec link_children([Link.resolved_t()], State.t()) :: Type.try_t()
   defp link_children(links, state) do
     debug("Linking children: links = #{inspect(links)}")
 
-    with :ok <- links |> Bunch.Enum.try_each(&do_link_children(&1, state)),
+    with :ok <- links |> Bunch.Enum.try_each(&do_link_children/1),
          :ok <-
            state
            |> State.get_children()
@@ -423,10 +381,8 @@ defmodule Membrane.Pipeline do
          do: :ok
   end
 
-  defp do_link_children(%{from: from, to: to, params: params} = link, state) do
-    with {:ok, from_pid} <- state |> State.get_child_pid(from.element),
-         {:ok, to_pid} <- state |> State.get_child_pid(to.element),
-         :ok <- Element.link(from_pid, to_pid, from.pad, to.pad, params) do
+  defp do_link_children(link) do
+    with :ok <- Element.link(link) do
       :ok
     else
       {:error, reason} -> {:error, {:cannot_link, link, reason}}

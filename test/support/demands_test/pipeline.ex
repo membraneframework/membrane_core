@@ -10,8 +10,8 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
     ]
 
     links = %{
-      {:source, :output} => {:filter, :input, pull_buffer: [preferred_size: 50]},
-      {:filter, :output} => {:sink, :input, pull_buffer: [preferred_size: 50]}
+      {:source, :output} => {:filter, :input, buffer: [preferred_size: 50]},
+      {:filter, :output} => {:sink, :input, buffer: [preferred_size: 50]}
     }
 
     spec = %Pipeline.Spec{

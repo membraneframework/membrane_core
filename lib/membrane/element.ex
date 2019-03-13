@@ -8,8 +8,9 @@ defmodule Membrane.Element do
   doing so.
   """
 
-  alias __MODULE__.Pad
   alias Membrane.Core
+  alias Membrane.Pipeline.Link
+  alias Link.Endpoint
   alias Core.Element.{MessageDispatcher, State}
   alias Core.Message
   import Membrane.Helper.GenServer
@@ -164,25 +165,36 @@ defmodule Membrane.Element do
   @doc """
   Sends synchronous calls to two elements, telling them to link with each other.
   """
-  @spec link(
-          from_element :: pid,
-          to_element :: pid,
-          from_pad :: Pad.name_t(),
-          to_pad :: Pad.name_t(),
-          params :: list
-        ) :: :ok | {:error, any}
-  def link(pid, pid, _, _, _) when is_pid(pid) do
+  @spec link(link_spec :: %Link{}) :: :ok | {:error, any}
+  def link(%Link{from: %Endpoint{pid: pid}, to: %Endpoint{pid: pid}}) when is_pid(pid) do
     {:error, :loop}
   end
 
-  def link(from_pid, to_pid, from_pad, to_pad, params) when is_pid(from_pid) and is_pid(to_pid) do
-    with :ok <- Message.call(from_pid, :handle_link, [from_pad, :output, to_pid, to_pad, params]),
-         :ok <- Message.call(to_pid, :handle_link, [to_pad, :input, from_pid, from_pad, params]) do
+  def link(%Link{from: %Endpoint{pid: from_pid} = from, to: %Endpoint{pid: to_pid} = to})
+      when is_pid(from_pid) and is_pid(to_pid) do
+    with {:ok, pad_from_info} <-
+           Message.call(from_pid, :handle_link, [
+             from.pad_ref,
+             :output,
+             to_pid,
+             to.pad_ref,
+             nil,
+             from.opts
+           ]),
+         {:ok, _pad_to_info} <-
+           Message.call(to_pid, :handle_link, [
+             to.pad_ref,
+             :input,
+             from_pid,
+             from.pad_ref,
+             pad_from_info,
+             to.opts
+           ]) do
       :ok
     end
   end
 
-  def link(_, _, _, _, _), do: {:error, :invalid_element}
+  def link(_), do: {:error, :invalid_element}
 
   @doc """
   Sends synchronous call to element, telling it to unlink all its pads.

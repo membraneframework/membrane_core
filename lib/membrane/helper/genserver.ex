@@ -1,7 +1,6 @@
 defmodule Membrane.Helper.GenServer do
-  @moduledoc """
-  Functions useful for constructing return values for GenServer based modules
-  """
+  @moduledoc false
+
   use Membrane.Log, tags: :core
 
   def noreply({:ok, new_state}), do: {:noreply, new_state}
