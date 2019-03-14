@@ -25,6 +25,23 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
     )
   end
 
+  @spec def_pad_docs(Pad.direction_t()) :: String.t()
+  def def_pad_docs(direction) do
+    dir_str = direction |> to_string()
+
+    """
+    Macro that defines #{dir_str} pad for the element.
+
+    Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
+    without module prefix.
+
+    It automatically generates documentation from the given definition
+    and adds compile-time caps specs validation.
+
+    The type `t:Membrane.Element.Pad.#{dir_str}_spec_t/0` describes how the definition of pads should look.
+    """
+  end
+
   @spec def_pad(Pad.name_t(), Pad.direction_t(), Macro.t()) :: Macro.t()
   def def_pad(pad_name, direction, raw_specs) do
     Code.ensure_loaded(Caps.Matcher)
@@ -165,22 +182,37 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
   end
 
   defp generate_docs_from_pad_specs({name, config}) do
-    """
+    {pad_opts, config} = config |> Map.pop(:options)
+
+    pad_doc = """
     ### `#{inspect(name)}`
     #{
       config
+      |> Enum.filter(fn {_, v} -> v end)
       |> Enum.map(fn {k, v} ->
         {
-          k |> to_string() |> String.replace("_", " "),
+          k |> to_string() |> String.replace("_", "&nbsp;"),
           generate_pad_property_doc(k, v)
         }
       end)
-      |> Enum.reject(fn {_, v} -> v == "" end)
       |> Enum.map_join("\n", fn {k, v} ->
-        "* #{k}: #{v}"
+        "#{k} | #{v}"
       end)
     }
     """
+
+    options_doc =
+      if pad_opts do
+        """
+        #{String.duplicate("&nbsp;", 4)}Options
+
+        #{pad_opts}
+        """
+      else
+        ""
+      end
+
+    pad_doc <> options_doc
   end
 
   defp generate_pad_property_doc(:caps, caps) do
@@ -189,22 +221,19 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
     |> Enum.map(fn
       {module, params} ->
         params_doc =
-          params |> Enum.map(fn {k, v} -> "`#{k}`:&nbsp;`#{inspect(v)}`" end) |> Enum.join(", ")
+          params
+          |> Enum.map(fn {k, v} -> String.duplicate("&nbsp;", 4) <> "`#{k}: #{inspect(v)}`" end)
+          |> Enum.join(",<br />")
 
-        "`#{inspect(module)}`, params: #{params_doc}"
+        "`#{inspect(module)}`, restrictions:<br />#{params_doc}"
 
       module ->
         "`#{inspect(module)}`"
     end)
     ~> (
       [doc] -> doc
-      docs -> docs |> Enum.map(&"\n* #{&1}") |> Enum.join()
+      docs -> docs |> Enum.join(",<br />")
     )
-    |> indent()
-  end
-
-  defp generate_pad_property_doc(:options, nil) do
-    ""
   end
 
   defp generate_pad_property_doc(:options, name) do
@@ -215,7 +244,8 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
     "`#{inspect(v)}`"
   end
 
-  defp indent(string, size \\ 1) do
+  # TODO: Extract to different module
+  def indent(string, size \\ 1) do
     string
     |> String.split("\n")
     |> Enum.map(&(String.duplicate("  ", size) <> &1))

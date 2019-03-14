@@ -39,10 +39,6 @@ defmodule Membrane.Core.Element.OptionsSpecParser do
     quote do
       @typedoc """
       Struct containing options for `#{inspect(__MODULE__)}`
-
-      ## Description:
-
-      #{unquote(typedoc)}
       """
       @type t :: unquote(opt_typespec_ast)
 
@@ -51,7 +47,9 @@ defmodule Membrane.Core.Element.OptionsSpecParser do
 
       ## Element options
 
-      See documentation for struct `t:#{inspect(__MODULE__)}.t/0`
+      Passed via struct `t:#{inspect(__MODULE__)}.t/0`
+
+      #{unquote(typedoc)}
       """
 
       @doc """
@@ -98,10 +96,6 @@ defmodule Membrane.Core.Element.OptionsSpecParser do
       quote do
         @typedoc """
         Options for pad `#{inspect(unquote(pad_name))}`
-
-        ## Description:
-
-        #{unquote(typedoc)}
         """
         @type unquote(Macro.var(pad_opts_type_name, nil)) :: unquote(opt_typespecs)
       end
@@ -118,36 +112,30 @@ defmodule Membrane.Core.Element.OptionsSpecParser do
         end
       end
 
-    {pad_opts_type_name, type_definiton, parser_fun_ast}
+    {typedoc, type_definiton, parser_fun_ast}
   end
 
   defp parse_opts(options) do
     {opt_typespecs, escaped_opts} = extract_typespecs(options)
 
-    typedoc =
+    description =
       escaped_opts
-      |> Enum.map(&generate_opt_doc/1)
+      |> Enum.map(&generate_opt_doc(&1))
       |> Enum.reduce(fn x, acc ->
         quote do
           """
           #{unquote(x)}
 
-          ---
           #{unquote(acc)}
           """
         end
       end)
 
-    {typedoc, opt_typespecs, escaped_opts}
+    {description, opt_typespecs, escaped_opts}
   end
 
   defp generate_opt_doc({opt_name, opt_definition}) do
-    header =
-      if Keyword.has_key?(opt_definition, :default) do
-        "`#{Atom.to_string(opt_name)}`"
-      else
-        "`#{Atom.to_string(opt_name)}` - Required"
-      end
+    header = "* `#{Atom.to_string(opt_name)}`"
 
     desc = opt_definition |> Keyword.get(:description, "")
 
@@ -161,19 +149,19 @@ defmodule Membrane.Core.Element.OptionsSpecParser do
           )
 
         quote do
-          "Defaults to `#{unquote(inspector).(unquote(opt_definition)[:default])}`"
+          "Default value: `#{unquote(inspector).(unquote(opt_definition)[:default])}`"
         end
       else
-        ""
+        quote_expr("**Required**")
       end
 
     quote do
       """
-      ### #{unquote(header)}
+      #{unquote(header)}
 
-      #{String.trim(unquote(desc))}
+      #{unquote(default_val_desc) |> Membrane.Core.Element.PadsSpecsParser.indent()}
 
-      #{unquote(default_val_desc)}
+      #{String.trim(unquote(desc)) |> Membrane.Core.Element.PadsSpecsParser.indent()}
       """
     end
   end
@@ -196,7 +184,7 @@ defmodule Membrane.Core.Element.OptionsSpecParser do
     escaped_opts =
       with_default_specs
       |> Enum.map(fn {k, v} ->
-        {k, v |> Keyword.delete(:spec)}
+        {k, v |> Keyword.put(:spec, Macro.to_string(v[:spec]))}
       end)
 
     {opt_typespecs, escaped_opts}
