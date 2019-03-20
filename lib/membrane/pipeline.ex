@@ -620,6 +620,14 @@ defmodule Membrane.Pipeline do
       @spec stop(pid) :: :ok
       defdelegate stop(pid), to: Pipeline
 
+      @doc """
+      Changes pipeline's playback state to `:stopped` and terminates its process.
+
+      A proxy for `Membrane.Pipeline.stop_and_terminate/1`
+      """
+      @spec stop_and_terminate(pid) :: :ok
+      defdelegate stop_and_terminate(pipeline), to: Pipeline
+
       @impl true
       def membrane_pipeline?, do: true
 
