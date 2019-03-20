@@ -41,7 +41,34 @@ defmodule Membrane.Mixfile do
     [
       main: "readme",
       extras: ["README.md"],
-      source_ref: "v#{@version}"
+      source_ref: "master",
+      nest_modules_by_prefix: [
+        Membrane.Pipeline,
+        Membrane.Element,
+        Membrane.Element.CallbackContext,
+        Membrane.Payload,
+        Membrane.Buffer,
+        Membrane.Caps,
+        Membrane.Event,
+        Membrane.EventProtocol,
+        Membrane.Log,
+        Membrane.Testing
+      ],
+      groups_for_modules: [
+        Pipeline: [~r/^Membrane.Pipeline.*/],
+        Element: [
+          ~r/^Membrane.Element$/,
+          ~r/^Membrane.Element(?!\.CallbackContext)\..*/,
+          ~r/^Membrane.Core.InputBuffer/
+        ],
+        "Callback contexts": [~r/^Membrane.Element.CallbackContext.*/],
+        Communication: [
+          ~r/^Membrane.(Buffer|Payload|Caps|Event|Notification).*/
+        ],
+        Logging: [~r/^Membrane.Log.*/],
+        Testing: [~r/^Membrane.Testing.*/],
+        Utils: [~r/^Membrane.(Time|Helper).*/]
+      ]
     ]
   end
 

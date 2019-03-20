@@ -12,6 +12,8 @@ defmodule Membrane.Core.PlaybackRequestor do
       @behaviour unquote(__MODULE__)
       require Membrane.Core.Playback
 
+      @type playback_state_t :: :stopped | :prepared | :playing
+
       @doc """
       Changes playback state to `:playing`.
 
@@ -40,7 +42,7 @@ defmodule Membrane.Core.PlaybackRequestor do
       @doc """
       Changes the playback state to the `new_state`.
       """
-      @spec change_playback_state(pid, Playback.state_t()) :: :ok
+      @spec change_playback_state(pid, playback_state_t()) :: :ok
       def change_playback_state(pid, new_state)
           when Membrane.Core.Playback.is_playback_state(new_state) do
         alias Membrane.Core.Message
