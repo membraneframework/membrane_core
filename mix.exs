@@ -61,8 +61,8 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane.Element(?!\.CallbackContext)\..*/,
           ~r/^Membrane.Core.InputBuffer/
         ],
-        "Callback Contexts": [~r/^Membrane.Element.CallbackContext.*/],
-        "Element communication": [
+        "Callback contexts": [~r/^Membrane.Element.CallbackContext.*/],
+        Communication: [
           ~r/^Membrane.(Buffer|Payload|Caps|Event|Notification).*/
         ],
         Logging: [~r/^Membrane.Log.*/],
