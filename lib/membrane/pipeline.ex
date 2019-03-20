@@ -183,6 +183,9 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  @doc """
+  Changes pipeline's playback state to `:stopped` and terminates its process
+  """
   @spec stop_and_terminate(pipeline :: pid) :: :ok
   def stop_and_terminate(pipeline) do
     Message.send(pipeline, :stop_and_terminate)
@@ -563,14 +566,73 @@ defmodule Membrane.Pipeline do
 
   defmacro __using__(_) do
     quote location: :keep do
-      alias Membrane.Pipeline
-      @behaviour Membrane.Pipeline
+      alias unquote(__MODULE__)
+      @behaviour unquote(__MODULE__)
+
+      @doc """
+      Starts the pipeline `#{inspect(__MODULE__)}` and links it to the current process.
+
+      A proxy for `Membrane.Pipeline.start_link/3`
+      """
+      @spec start_link(
+              pipeline_options :: Pipeline.pipeline_options_t(),
+              process_options :: GenServer.options()
+            ) :: GenServer.on_start()
+      def start_link(pipeline_options \\ nil, process_options \\ []) do
+        Pipeline.start_link(__MODULE__, pipeline_options, process_options)
+      end
+
+      @doc """
+      Starts the pipeline `#{inspect(__MODULE__)}` without linking it
+      to the current process.
+
+      A proxy for `Membrane.Pipeline.start/3`
+      """
+      @spec start(
+              pipeline_options :: Pipeline.pipeline_options_t(),
+              process_options :: GenServer.options()
+            ) :: GenServer.on_start()
+      def start(pipeline_options \\ nil, process_options \\ []) do
+        Pipeline.start(__MODULE__, pipeline_options, process_options)
+      end
+
+      @doc """
+      Changes playback state of pipeline to `:playing`
+
+      A proxy for `Membrane.Pipeline.play/1`
+      """
+      @spec play(pid()) :: :ok
+      defdelegate play(pipeline), to: Pipeline
+
+      @doc """
+      Changes playback state to `:prepared`.
+
+      A proxy for `Membrane.Pipeline.prepare/1`
+      """
+      @spec prepare(pid) :: :ok
+      defdelegate prepare(pipeline), to: Pipeline
+
+      @doc """
+      Changes playback state to `:stopped`.
+
+      A proxy for `Membrane.Pipeline.stop/1`
+      """
+      @spec stop(pid) :: :ok
+      defdelegate stop(pid), to: Pipeline
+
+      @doc """
+      Changes pipeline's playback state to `:stopped` and terminates its process.
+
+      A proxy for `Membrane.Pipeline.stop_and_terminate/1`
+      """
+      @spec stop_and_terminate(pid) :: :ok
+      defdelegate stop_and_terminate(pipeline), to: Pipeline
 
       @impl true
       def membrane_pipeline?, do: true
 
       @impl true
-      def handle_init(_options), do: {{:ok, %Spec{}}, %{}}
+      def handle_init(_options), do: {{:ok, %Pipeline.Spec{}}, %{}}
 
       @impl true
       def handle_stopped_to_prepared(state), do: {:ok, state}
@@ -593,7 +655,12 @@ defmodule Membrane.Pipeline do
       @impl true
       def handle_spec_started(_new_children, state), do: {:ok, state}
 
-      defoverridable handle_init: 1,
+      defoverridable start: 2,
+                     start_link: 2,
+                     play: 1,
+                     prepare: 1,
+                     stop: 1,
+                     handle_init: 1,
                      handle_stopped_to_prepared: 1,
                      handle_playing_to_prepared: 1,
                      handle_prepared_to_playing: 1,
