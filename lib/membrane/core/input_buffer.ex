@@ -64,6 +64,21 @@ defmodule Membrane.Core.InputBuffer do
           | {:fail_size, pos_integer()}
         ]
 
+  @spec parse_props(keyword()) :: {:error, reason :: any()} | {:ok, props_t()}
+  def parse_props(input) do
+    with input <- input |> List.wrap(),
+         {:ok, parsed} <-
+           input
+           |> Bunch.Config.parse(
+             preferred_size: [default: nil],
+             min_demand: [default: nil],
+             warn_size: [default: nil],
+             fail_size: [default: nil]
+           ) do
+      {:ok, Enum.to_list(parsed)}
+    end
+  end
+
   @spec new(
           Element.name_t(),
           demand_pid :: pid,

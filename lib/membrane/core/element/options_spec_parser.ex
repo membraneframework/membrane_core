@@ -2,6 +2,7 @@ defmodule Membrane.Core.Element.OptionsSpecParser do
   @moduledoc false
 
   alias Membrane.Time
+  alias Membrane.Element.Pad
 
   use Bunch
 
@@ -15,6 +16,7 @@ defmodule Membrane.Core.Element.OptionsSpecParser do
     time: [spec: quote_expr(Time.t()), inspector: &Time.to_code_str/1]
   }
 
+  @spec options_doc() :: String.t()
   def options_doc do
     """
     Options are defined by a keyword list, where each key is an option name and
@@ -32,6 +34,7 @@ defmodule Membrane.Core.Element.OptionsSpecParser do
     """
   end
 
+  @spec def_options(module(), nil | Keyword.t()) :: Macro.t()
   def def_options(module, options) do
     {typedoc, opt_typespecs, escaped_opts} = parse_opts(options)
     opt_typespec_ast = {:%{}, [], Keyword.put(opt_typespecs, :__struct__, module)}
@@ -67,6 +70,7 @@ defmodule Membrane.Core.Element.OptionsSpecParser do
     end
   end
 
+  @spec def_pad_options(Pad.name_t(), nil | Keyword.t()) :: {Macro.t(), Macro.t(), Macro.t()}
   def def_pad_options(pad_name, nil) do
     no_code =
       quote do
@@ -159,9 +163,9 @@ defmodule Membrane.Core.Element.OptionsSpecParser do
       """
       #{unquote(header)}
 
-      #{unquote(default_val_desc) |> Membrane.Core.Element.PadsSpecsParser.indent()}
+      #{unquote(default_val_desc) |> Bunch.Markdown.indent()}
 
-      #{String.trim(unquote(desc)) |> Membrane.Core.Element.PadsSpecsParser.indent()}
+      #{unquote(desc) |> String.trim() |> Bunch.Markdown.indent()}
       """
     end
   end

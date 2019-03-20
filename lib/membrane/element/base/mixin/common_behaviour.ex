@@ -152,9 +152,9 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   @callback handle_shutdown(state :: Element.state_t()) :: :ok
 
   @doc """
-  Macro that defines options that parametrize element.
+  Macro defining options that parametrize element.
 
-  It automatically generates appropriate struct.
+  It automatically generates appropriate struct and documentation.
 
   #{OptionsSpecParser.options_doc()}
   """

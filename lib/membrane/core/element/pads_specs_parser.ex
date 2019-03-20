@@ -204,7 +204,7 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
     options_doc =
       if pad_opts do
         """
-        #{String.duplicate("&nbsp;", 4)}Options
+        #{Bunch.Markdown.hard_indent("Options", 4)}
 
         #{pad_opts}
         """
@@ -222,7 +222,7 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
       {module, params} ->
         params_doc =
           params
-          |> Enum.map(fn {k, v} -> String.duplicate("&nbsp;", 4) <> "`#{k}: #{inspect(v)}`" end)
+          |> Enum.map(fn {k, v} -> Bunch.Markdown.hard_indent("`#{k}: #{inspect(v)}`") end)
           |> Enum.join(",<br />")
 
         "`#{inspect(module)}`, restrictions:<br />#{params_doc}"
@@ -242,13 +242,5 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
 
   defp generate_pad_property_doc(_k, v) do
     "`#{inspect(v)}`"
-  end
-
-  # TODO: Extract to different module
-  def indent(string, size \\ 1) do
-    string
-    |> String.split("\n")
-    |> Enum.map(&(String.duplicate("  ", size) <> &1))
-    |> Enum.join("\n")
   end
 end
