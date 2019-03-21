@@ -9,7 +9,7 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   """
 
   alias Membrane.Element
-  alias Membrane.Core.Element.PadsSpecsParser
+  alias Membrane.Core.Element.PadsSpecs
   alias Element.{CallbackContext, Pad}
   alias Element.Base.Mixin.CommonBehaviour
 
@@ -33,12 +33,12 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   """
   @deprecated "Use def_input_pad/2 for each pad instead"
   defmacro def_input_pads(pads) do
-    PadsSpecsParser.def_pads(pads, :input)
+    PadsSpecs.def_pads(pads, :input)
   end
 
-  @doc PadsSpecsParser.def_pad_docs(:input)
+  @doc PadsSpecs.def_pad_docs(:input)
   defmacro def_input_pad(name, spec) do
-    PadsSpecsParser.def_pad(name, :input, spec)
+    PadsSpecs.def_pad(name, :input, spec)
   end
 
   defmacro __using__(_) do

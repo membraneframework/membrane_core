@@ -1,9 +1,9 @@
-defmodule Membrane.Core.Element.PadsSpecsParser do
+defmodule Membrane.Core.Element.PadsSpecs do
   @moduledoc false
   # Functions parsing element pads specifications, generating functions and docs
   # based on them.
   alias Membrane.{Caps, Element}
-  alias Membrane.Core.Element.OptionsSpecParser
+  alias Membrane.Core.Element.OptionsSpecs
   alias Element.Pad
   alias Bunch.Type
   use Bunch
@@ -54,7 +54,7 @@ defmodule Membrane.Core.Element.PadsSpecsParser do
       ])
 
     {pad_opts_type_name, pad_opts_typedef, pad_opts_parser_fun} =
-      OptionsSpecParser.def_pad_options(pad_name, specs[:options])
+      OptionsSpecs.def_pad_options(pad_name, specs[:options])
 
     nspecs = specs |> Keyword.put(:options, pad_opts_type_name)
 

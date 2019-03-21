@@ -9,7 +9,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   """
 
   alias Membrane.{Buffer, Element}
-  alias Membrane.Core.Element.PadsSpecsParser
+  alias Membrane.Core.Element.PadsSpecs
   alias Element.{CallbackContext, Pad}
   alias Element.Base.Mixin.CommonBehaviour
 
@@ -45,12 +45,12 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   """
   @deprecated "Use `def_output_pad/2 for each pad instead"
   defmacro def_output_pads(pads) do
-    PadsSpecsParser.def_pads(pads, :output)
+    PadsSpecs.def_pads(pads, :output)
   end
 
-  @doc PadsSpecsParser.def_pad_docs(:output)
+  @doc PadsSpecs.def_pad_docs(:output)
   defmacro def_output_pad(name, spec) do
-    PadsSpecsParser.def_pad(name, :output, spec)
+    PadsSpecs.def_pad(name, :output, spec)
   end
 
   defmacro __using__(_) do

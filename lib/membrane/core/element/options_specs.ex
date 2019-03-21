@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Element.OptionsSpecParser do
+defmodule Membrane.Core.Element.OptionsSpecs do
   @moduledoc false
 
   alias Membrane.Time
@@ -24,8 +24,8 @@ defmodule Membrane.Core.Element.OptionsSpecParser do
 
       * `type:` atom, used for parsing
       * `spec:` typespec for value in struct. If ommitted, for types:
-        `#{inspect(Map.keys(@default_types_params))}` the default typespec is provided.
-        For others typespec is set to `t:any/0`
+        `#{inspect(Map.keys(@default_types_params))}` the default typespec is provided,
+        for others typespec is set to `t:any/0`
       * `default:` default value for option. If not present, value for this option
         will have to be provided each time options struct is created
       * `inspector:` function converting fields' value to a string. Used when

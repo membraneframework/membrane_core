@@ -9,7 +9,7 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   alias Membrane.{Action, Core, Element, Event}
   alias Core.CallbackHandler
-  alias Core.Element.OptionsSpecParser
+  alias Core.Element.OptionsSpecs
   alias Element.{Action, CallbackContext, Pad}
 
   use Bunch
@@ -156,10 +156,10 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   It automatically generates appropriate struct and documentation.
 
-  #{OptionsSpecParser.options_doc()}
+  #{OptionsSpecs.options_doc()}
   """
   defmacro def_options(options) do
-    OptionsSpecParser.def_options(__CALLER__.module, options)
+    OptionsSpecs.def_options(__CALLER__.module, options)
   end
 
   defmacro __using__(_) do
