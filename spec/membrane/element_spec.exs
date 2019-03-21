@@ -3,7 +3,7 @@ defmodule Membrane.ElementSpec do
 
   alias Membrane.Core.{Message, Playback}
   alias Membrane.Core.Element.State
-  alias Membrane.Element.CallbackContext
+  alias Membrane.Element.{CallbackContext, LinkError}
   alias Membrane.Pipeline.Link
   alias Membrane.Pipeline.Link.Endpoint
   alias Membrane.Support.Element.{TrivialFilter, TrivialSink, TrivialSource}
@@ -23,19 +23,26 @@ defmodule Membrane.ElementSpec do
       to: %Endpoint{element: :b, pad_name: to_pad(), pad_ref: to_pad(), pid: to_pid()}
     }
 
+  defmacrop catch_exit(call) do
+    quote do
+      try do
+        capture_log(fn -> unquote(call) end)
+      catch
+        :exit, {{exception, _}, _} -> exception
+      end
+    end
+  end
+
   describe ".link/1" do
+    let :tested_call, do: fn -> described_module().link(link_struct()) end
+
     context "if first given PID is not a PID of an element process" do
       let :from_pid, do: self()
       let :to_pid, do: :destination
 
-      it "should return an error result" do
-        expect(described_module().link(link_struct()))
-        |> to(be_error_result())
-      end
-
-      it "should return :invalid_element as a reason" do
-        {:error, reason} = described_module().link(link_struct())
-        expect(reason) |> to(eq :invalid_element)
+      it "should raise an exception" do
+        expect(fn -> described_module().link(link_struct()) end)
+        |> to(raise_exception(LinkError))
       end
     end
 
@@ -45,16 +52,9 @@ defmodule Membrane.ElementSpec do
 
       let :to_pid, do: self()
 
-      it "should return an error result" do
-        expect(described_module().link(link_struct()))
-        |> to(be_error_result())
-      end
-
-      it "should return :unknown_pad as a reason" do
-        {:error, {:handle_call, {:cannot_handle_message, [message: _, mode: _, reason: reason]}}} =
-          described_module().link(link_struct())
-
-        expect(reason) |> to(eq :unknown_pad)
+      it "should raise an exception" do
+        expect(catch_exit(described_module().link(link_struct())))
+        |> to(match_pattern %LinkError{})
       end
     end
 
@@ -62,14 +62,9 @@ defmodule Membrane.ElementSpec do
       let :from_pid, do: self()
       let :to_pid, do: self()
 
-      it "should return an error result" do
-        expect(described_module().link(link_struct()))
-        |> to(be_error_result())
-      end
-
-      it "should return :loop as a reason" do
-        {:error, reason} = described_module().link(link_struct())
-        expect(reason) |> to(eq :loop)
+      it "should raise an exception" do
+        expect(fn -> described_module().link(link_struct()) end)
+        |> to(raise_exception(LinkError))
       end
     end
 
@@ -85,15 +80,9 @@ defmodule Membrane.ElementSpec do
         let :to_module, do: TrivialSink
         let :from_pad, do: :input
 
-        it "should return an error result" do
-          expect(described_module().link(link_struct()))
-          |> to(be_error_result())
-        end
-
-        it "should return :invalid_pad_direction as a reason" do
-          {:error, val} = described_module().link(link_struct())
-          {:handle_call, {:cannot_handle_message, [message: _, mode: _, reason: reason]}} = val
-          expect(reason) |> to(eq {:invalid_pad_direction, [expected: :output, actual: :input]})
+        it "should raise an exception" do
+          expect(catch_exit(described_module().link(link_struct())))
+          |> to(match_pattern %LinkError{})
         end
       end
 
@@ -102,17 +91,9 @@ defmodule Membrane.ElementSpec do
         let :to_module, do: TrivialSource
         let :to_pad, do: :output
 
-        it "should return an error result" do
-          expect(described_module().link(link_struct()))
-          |> to(be_error_result())
-        end
-
-        it "should return :invalid_pad_direction as a reason" do
-          {_, val} = described_module().link(link_struct())
-
-          {:handle_call, {:cannot_handle_message, keyword_list}} = val
-          reason = keyword_list |> Keyword.get(:reason)
-          expect(reason) |> to(eq {:invalid_pad_direction, [expected: :input, actual: :output]})
+        it "should raise an exception" do
+          expect(catch_exit(described_module().link(link_struct())))
+          |> to(match_pattern %LinkError{})
         end
       end
 
@@ -122,15 +103,9 @@ defmodule Membrane.ElementSpec do
         let :from_pad, do: :s
         let :to_pad, do: :s
 
-        it "should return an error result" do
-          expect(described_module().link(link_struct()))
-          |> to(be_error_result())
-        end
-
-        it "should return :unknown_pad as a reason" do
-          {_, val} = described_module().link(link_struct())
-          {:handle_call, {:cannot_handle_message, keyword_list}} = val
-          expect(keyword_list |> Keyword.get(:reason)) |> to(eq :unknown_pad)
+        it "should raise an exception" do
+          expect(catch_exit(described_module().link(link_struct())))
+          |> to(match_pattern %LinkError{})
         end
       end
 
@@ -141,15 +116,9 @@ defmodule Membrane.ElementSpec do
         context "but pads are already linked" do
           before do: :ok = described_module().link(link_struct())
 
-          it "should return an error result" do
-            expect(described_module().link(link_struct()))
-            |> to(be_error_result())
-          end
-
-          it "should return :already_linked as a reason" do
-            {_, val} = described_module().link(link_struct())
-            {:handle_call, {:cannot_handle_message, keyword_list}} = val
-            expect(keyword_list |> Keyword.get(:reason)) |> to(eq :already_linked)
+          it "should raise an exception" do
+            expect(catch_exit(described_module().link(link_struct())))
+            |> to(match_pattern %LinkError{})
           end
         end
       end

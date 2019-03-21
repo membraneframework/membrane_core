@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.PadController do
   alias Membrane.{Core, Event}
   alias Core.{CallbackHandler, Message, InputBuffer}
   alias Core.Element.{ActionHandler, EventController, PadModel, State}
-  alias Membrane.Element.{CallbackContext, Pad}
+  alias Membrane.Element.{CallbackContext, LinkError, Pad}
   require CallbackContext.{PadAdded, PadRemoved}
   require Message
   require Pad
@@ -45,7 +45,7 @@ defmodule Membrane.Core.Element.PadController do
 
       {{:ok, info}, state}
     else
-      {:error, reason} -> raise "Linking error: #{inspect(reason)}"
+      {:error, reason} -> raise LinkError, "#{inspect(reason)}"
     end
   end
 
@@ -131,20 +131,20 @@ defmodule Membrane.Core.Element.PadController do
   defp validate_pad_being_linked!(pad_ref, direction, info, state) do
     cond do
       :ok == PadModel.assert_instance(state, pad_ref) ->
-        raise "Pad #{inspect(pad_ref)} has already been linked!"
+        raise LinkError, "Pad #{inspect(pad_ref)} has already been linked!"
 
       info == nil ->
-        raise "Unknown pad #{inspect(pad_ref)}"
+        raise LinkError, "Unknown pad #{inspect(pad_ref)}"
 
       Pad.availability_mode_by_ref(pad_ref) != Pad.availability_mode(info.availability) ->
-        raise """
+        raise LinkError, """
         Invalid pad availability mode:
           expected: #{inspect(Pad.availability_mode_by_ref(pad_ref))},
           actual: #{inspect(Pad.availability_mode(info.availability))}
         """
 
       info.direction != direction ->
-        raise """
+        raise LinkError, """
         Invalid pad direction:
           expected: #{inspect(direction)},
           actual: #{inspect(info.direction)}
@@ -170,7 +170,7 @@ defmodule Membrane.Core.Element.PadController do
          {from, %{direction: :output, mode: :pull}},
          {to, %{direction: :input, mode: :push}}
        ) do
-    raise "Cannot connect pull output #{inspect(from)} to push input #{inspect(to)}"
+    raise LinkError, "Cannot connect pull output #{inspect(from)} to push input #{inspect(to)}"
   end
 
   defp do_validate_dm(_, _) do
@@ -185,10 +185,10 @@ defmodule Membrane.Core.Element.PadController do
           pad_props
 
         {:error, {:config_field, {:key_not_found, key}}} ->
-          raise "Missing option #{inspect(key)} for pad #{inspect(pad_name)}"
+          raise LinkError, "Missing option #{inspect(key)} for pad #{inspect(pad_name)}"
 
         {:error, {:config_invalid_keys, keys}} ->
-          raise "Invalid keys in options of pad #{inspect(pad_name)}: #{inspect(keys)}"
+          raise LinkError, "Invalid keys in options of pad #{inspect(pad_name)}: #{inspect(keys)}"
       end
 
     buffer_props =
@@ -197,7 +197,8 @@ defmodule Membrane.Core.Element.PadController do
           buffer_props
 
         {:error, {:config_invalid_keys, keys}} ->
-          raise "Invalid keys in buffer options of pad #{inspect(pad_name)}: #{inspect(keys)}"
+          raise LinkError,
+                "Invalid keys in buffer options of pad #{inspect(pad_name)}: #{inspect(keys)}"
       end
 
     [pad: pad_props, buffer: buffer_props]
