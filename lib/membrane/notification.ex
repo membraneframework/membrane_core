@@ -1,3 +1,14 @@
 defmodule Membrane.Notification do
+  @moduledoc """
+  A notification is a message sent from `Membrane.Element` to a `Membrane.Pipeline`
+  via action `t:Membrane.Element.Action.notify_t/0` returned from any callback.
+
+  A notification can be handled in Pipeline with callback
+  `c:Membrane.Pipeline.handle_notification/3`
+
+  The example of a notification is tuple `{:end_of_stream, pad_ref}` that, by default,
+  is sent when handling `Membrane.Event.EndOfStream` event
+  """
+
   @type t :: any
 end
