@@ -45,15 +45,17 @@ defmodule Membrane.Core.Element.OptionsSpecs do
       """
       @type t :: %unquote(module){unquote_splicing(opt_typespecs)}
 
-      @moduledoc """
-      #{@moduledoc}
+      if @moduledoc != false do
+        @moduledoc """
+        #{@moduledoc}
 
-      ## Element options
+        ## Element options
 
-      Passed via struct `t:#{inspect(__MODULE__)}.t/0`
+        Passed via struct `t:#{inspect(__MODULE__)}.t/0`
 
-      #{unquote(typedoc)}
-      """
+        #{unquote(typedoc)}
+        """
+      end
 
       @doc """
       Returns description of options available for this module
@@ -96,11 +98,11 @@ defmodule Membrane.Core.Element.OptionsSpecs do
 
   def generate_opts_doc(escaped_opts) do
     escaped_opts
-    |> Enum.map(&generate_opt_doc(&1))
-    |> Enum.reduce(fn x, acc ->
+    |> Enum.map(&generate_opt_doc/1)
+    |> Enum.reduce(fn opt_doc, acc ->
       quote do
         """
-        #{unquote(x)}
+        #{unquote(opt_doc)}
 
         #{unquote(acc)}
         """
@@ -143,22 +145,22 @@ defmodule Membrane.Core.Element.OptionsSpecs do
   defp parse_opts(kw) when is_list(kw) do
     with_default_specs =
       kw
-      |> Enum.map(fn {k, v} ->
+      |> Bunch.KVList.map_values(fn v ->
         default_val = @default_types_params[v[:type]][:spec] || quote_expr(any)
 
-        {k, v |> Keyword.put_new(:spec, default_val)}
+        v |> Keyword.put_new(:spec, default_val)
       end)
 
     # Actual AST with typespec for the option
     opt_typespecs =
       with_default_specs
-      |> Enum.map(fn {k, v} -> {k, v[:spec]} end)
+      |> Bunch.KVList.map_values(fn v -> v[:spec] end)
 
     # Options without typespec
     escaped_opts =
       with_default_specs
-      |> Enum.map(fn {k, v} ->
-        {k, v |> Keyword.put(:spec, Macro.to_string(v[:spec]))}
+      |> Bunch.KVList.map_values(fn v ->
+        v |> Keyword.put(:spec, Macro.to_string(v[:spec]))
       end)
 
     {opt_typespecs, escaped_opts}

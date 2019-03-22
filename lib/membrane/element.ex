@@ -165,7 +165,7 @@ defmodule Membrane.Element do
   """
   @spec link(link_spec :: %Link{}) :: :ok | {:error, any}
   def link(%Link{from: %Endpoint{pid: pid}, to: %Endpoint{pid: pid}}) when is_pid(pid) do
-    raise LinkError, "Cannot link element with itself!"
+    raise LinkError, "Cannot link element with itself"
   end
 
   def link(%Link{from: %Endpoint{pid: from_pid} = from, to: %Endpoint{pid: to_pid} = to})

@@ -25,12 +25,13 @@ defmodule Membrane.Core.Element.PadsSpecs do
     )
   end
 
+  @doc """
+  Returns documentation string common for both input and output pads
+  """
   @spec def_pad_docs(Pad.direction_t()) :: String.t()
   def def_pad_docs(direction) do
-    dir_str = direction |> to_string()
-
     """
-    Macro that defines #{dir_str} pad for the element.
+    Macro that defines #{direction} pad for the element.
 
     Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
     without module prefix.
@@ -38,10 +39,13 @@ defmodule Membrane.Core.Element.PadsSpecs do
     It automatically generates documentation from the given definition
     and adds compile-time caps specs validation.
 
-    The type `t:Membrane.Element.Pad.#{dir_str}_spec_t/0` describes how the definition of pads should look.
+    The type `t:Membrane.Element.Pad.#{direction}_spec_t/0` describes how the definition of pads should look.
     """
   end
 
+  @doc """
+  Returns AST inserted into element's module defining a pad
+  """
   @spec def_pad(Pad.name_t(), Pad.direction_t(), Macro.t()) :: Macro.t()
   def def_pad(pad_name, direction, raw_specs) do
     Code.ensure_loaded(Caps.Matcher)
@@ -72,7 +76,9 @@ defmodule Membrane.Core.Element.PadsSpecs do
     end
   end
 
-  # Generates `membrane_pads/0` function, along with docs and typespecs.
+  @doc """
+  Generates `membrane_pads/0` function, along with docs and typespecs.
+  """
   defmacro generate_membrane_pads(env) do
     pads = Module.get_attribute(env.module, :membrane_pad)
     :ok = validate_pads!(pads, env)
@@ -89,13 +95,15 @@ defmodule Membrane.Core.Element.PadsSpecs do
         @membrane_pad
       end
 
-      @moduledoc """
-      #{@moduledoc}
+      if @moduledoc != false do
+        @moduledoc """
+        #{@moduledoc}
 
-      ## Pads
+        ## Pads
 
-      #{unquote(pads_docs)}
-      """
+        #{unquote(pads_docs)}
+        """
+      end
     end
   end
 
@@ -156,7 +164,9 @@ defmodule Membrane.Core.Element.PadsSpecs do
     end
   end
 
-  # Generates docs describing pads, based on pads specification.
+  @doc """
+  Generates docs describing pads based on pads specification.
+  """
   @spec generate_docs_from_pads_specs([{Pad.name_t(), Pad.description_t()}]) :: Macro.t()
   def generate_docs_from_pads_specs(pads_specs) do
     pads_specs

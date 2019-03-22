@@ -66,9 +66,9 @@ defmodule Membrane.Core.InputBuffer do
 
   @spec parse_props(keyword()) :: {:error, reason :: any()} | {:ok, props_t()}
   def parse_props(input) do
-    with input <- input |> List.wrap(),
-         {:ok, parsed} <-
+    with {:ok, parsed} <-
            input
+           |> List.wrap()
            |> Bunch.Config.parse(
              preferred_size: [default: nil],
              min_demand: [default: nil],

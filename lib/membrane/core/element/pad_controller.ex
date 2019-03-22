@@ -30,8 +30,8 @@ defmodule Membrane.Core.Element.PadController do
     info = state.pads.info[pad_name]
 
     with :ok <- validate_pad_being_linked!(pad_ref, direction, info, state),
-         :ok <- validate_dir_and_mode!({pad_ref, info}, {other_ref, other_info}),
-         props <- parse_link_props!(props, pad_name, state) do
+         :ok <- validate_dir_and_mode!({pad_ref, info}, {other_ref, other_info}) do
+      props = parse_link_props!(props, pad_name, state)
       state = init_pad_data(info, pad_ref, pid, other_ref, other_info, props, state)
 
       state =
@@ -131,7 +131,7 @@ defmodule Membrane.Core.Element.PadController do
   defp validate_pad_being_linked!(pad_ref, direction, info, state) do
     cond do
       :ok == PadModel.assert_instance(state, pad_ref) ->
-        raise LinkError, "Pad #{inspect(pad_ref)} has already been linked!"
+        raise LinkError, "Pad #{inspect(pad_ref)} has already been linked"
 
       info == nil ->
         raise LinkError, "Unknown pad #{inspect(pad_ref)}"
@@ -191,7 +191,7 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp parse_pad_props!(pad_name, nil, _props) do
-    raise LinkError, "Pad #{inspect(pad_name)} does not define any options!"
+    raise LinkError, "Pad #{inspect(pad_name)} does not define any options"
   end
 
   defp parse_pad_props!(pad_name, options_spec, props) do
