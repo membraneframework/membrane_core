@@ -36,14 +36,14 @@ defmodule Membrane.Core.Element.OptionsSpecs do
 
   @spec def_options(module(), nil | Keyword.t()) :: Macro.t()
   def def_options(module, options) do
-    {typedoc, opt_typespecs, escaped_opts} = parse_opts(options)
-    opt_typespec_ast = {:%{}, [], Keyword.put(opt_typespecs, :__struct__, module)}
-    # opt_typespec_ast is equivalent of typespec %__CALLER__.module{key: value, ...}
+    {opt_typespecs, escaped_opts} = parse_opts(options)
+    typedoc = generate_opts_doc(escaped_opts)
+
     quote do
       @typedoc """
       Struct containing options for `#{inspect(__MODULE__)}`
       """
-      @type t :: unquote(opt_typespec_ast)
+      @type t :: %unquote(module){unquote_splicing(opt_typespecs)}
 
       @moduledoc """
       #{@moduledoc}
@@ -70,30 +70,17 @@ defmodule Membrane.Core.Element.OptionsSpecs do
     end
   end
 
-  @spec def_pad_options(Pad.name_t(), nil | Keyword.t()) :: {Macro.t(), Macro.t(), Macro.t()}
-  def def_pad_options(pad_name, nil) do
+  @spec def_pad_options(Pad.name_t(), nil | Keyword.t()) :: {Macro.t(), Macro.t()}
+  def def_pad_options(_pad_name, nil) do
     no_code =
       quote do
       end
 
-    clauses =
-      quote do
-        @doc false
-        def membrane_parse_pad_options(unquote(pad_name), nil) do
-          {:ok, nil}
-        end
-
-        @doc false
-        def membrane_parse_pad_options(unquote(pad_name), _) do
-          {:error, {:options_not_defined, unquote(pad_name)}}
-        end
-      end
-
-    {nil, no_code, clauses}
+    {nil, no_code}
   end
 
   def def_pad_options(pad_name, options) do
-    {typedoc, opt_typespecs, escaped_opts} = parse_opts(options)
+    {opt_typespecs, escaped_opts} = parse_opts(options)
     pad_opts_type_name = "#{pad_name}_pad_opts_t" |> String.to_atom()
 
     type_definiton =
@@ -104,38 +91,21 @@ defmodule Membrane.Core.Element.OptionsSpecs do
         @type unquote(Macro.var(pad_opts_type_name, nil)) :: unquote(opt_typespecs)
       end
 
-    bunch_field_specs = escaped_opts |> Bunch.KVList.map_values(&Keyword.take(&1, [:default]))
-
-    parser_fun_ast =
-      quote do
-        @doc false
-        def membrane_parse_pad_options(unquote(pad_name), options) do
-          options
-          |> List.wrap()
-          |> Bunch.Config.parse(unquote(bunch_field_specs))
-        end
-      end
-
-    {typedoc, type_definiton, parser_fun_ast}
+    {escaped_opts, type_definiton}
   end
 
-  defp parse_opts(options) do
-    {opt_typespecs, escaped_opts} = extract_typespecs(options)
+  def generate_opts_doc(escaped_opts) do
+    escaped_opts
+    |> Enum.map(&generate_opt_doc(&1))
+    |> Enum.reduce(fn x, acc ->
+      quote do
+        """
+        #{unquote(x)}
 
-    description =
-      escaped_opts
-      |> Enum.map(&generate_opt_doc(&1))
-      |> Enum.reduce(fn x, acc ->
-        quote do
-          """
-          #{unquote(x)}
-
-          #{unquote(acc)}
-          """
-        end
-      end)
-
-    {description, opt_typespecs, escaped_opts}
+        #{unquote(acc)}
+        """
+      end
+    end)
   end
 
   defp generate_opt_doc({opt_name, opt_definition}) do
@@ -156,7 +126,7 @@ defmodule Membrane.Core.Element.OptionsSpecs do
           "Default value: `#{unquote(inspector).(unquote(opt_definition)[:default])}`"
         end
       else
-        quote_expr("**Required**")
+        quote_expr("***Required***")
       end
 
     quote do
@@ -170,7 +140,7 @@ defmodule Membrane.Core.Element.OptionsSpecs do
     end
   end
 
-  defp extract_typespecs(kw) when is_list(kw) do
+  defp parse_opts(kw) when is_list(kw) do
     with_default_specs =
       kw
       |> Enum.map(fn {k, v} ->

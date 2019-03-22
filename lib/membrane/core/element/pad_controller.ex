@@ -179,29 +179,45 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec parse_link_props!(Keyword.t(), Pad.name_t(), State.t()) :: Keyword.t()
   defp parse_link_props!(props, pad_name, state) do
-    pad_props =
-      case state.module.membrane_parse_pad_options(pad_name, props[:pad]) do
-        {:ok, pad_props} ->
-          pad_props
+    opts_spec = state.module.membrane_pads()[pad_name].options
 
-        {:error, {:config_field, {:key_not_found, key}}} ->
-          raise LinkError, "Missing option #{inspect(key)} for pad #{inspect(pad_name)}"
-
-        {:error, {:config_invalid_keys, keys}} ->
-          raise LinkError, "Invalid keys in options of pad #{inspect(pad_name)}: #{inspect(keys)}"
-      end
-
-    buffer_props =
-      case InputBuffer.parse_props(props[:buffer]) do
-        {:ok, buffer_props} ->
-          buffer_props
-
-        {:error, {:config_invalid_keys, keys}} ->
-          raise LinkError,
-                "Invalid keys in buffer options of pad #{inspect(pad_name)}: #{inspect(keys)}"
-      end
-
+    pad_props = parse_pad_props!(pad_name, opts_spec, props[:pad])
+    buffer_props = parse_buffer_props!(pad_name, props[:buffer])
     [pad: pad_props, buffer: buffer_props]
+  end
+
+  defp parse_pad_props!(_pad_name, nil, nil) do
+    {:ok, nil}
+  end
+
+  defp parse_pad_props!(pad_name, nil, _props) do
+    raise LinkError, "Pad #{inspect(pad_name)} does not define any options!"
+  end
+
+  defp parse_pad_props!(pad_name, options_spec, props) do
+    bunch_field_specs = options_spec |> Bunch.KVList.map_values(&Keyword.take(&1, [:default]))
+
+    case props |> List.wrap() |> Bunch.Config.parse(bunch_field_specs) do
+      {:ok, pad_props} ->
+        pad_props
+
+      {:error, {:config_field, {:key_not_found, key}}} ->
+        raise LinkError, "Missing option #{inspect(key)} for pad #{inspect(pad_name)}"
+
+      {:error, {:config_invalid_keys, keys}} ->
+        raise LinkError, "Invalid keys in options of pad #{inspect(pad_name)} - #{inspect(keys)}"
+    end
+  end
+
+  defp parse_buffer_props!(pad_name, props) do
+    case InputBuffer.parse_props(props) do
+      {:ok, buffer_props} ->
+        buffer_props
+
+      {:error, {:config_invalid_keys, keys}} ->
+        raise LinkError,
+              "Invalid keys in buffer options of pad #{inspect(pad_name)}: #{inspect(keys)}"
+    end
   end
 
   @spec init_pad_data(

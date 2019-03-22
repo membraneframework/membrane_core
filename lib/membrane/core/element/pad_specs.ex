@@ -53,47 +53,32 @@ defmodule Membrane.Core.Element.PadsSpecs do
         {Caps.Matcher, :range}
       ])
 
-    {pad_opts_type_name, pad_opts_typedef, pad_opts_parser_fun} =
-      OptionsSpecs.def_pad_options(pad_name, specs[:options])
+    {escaped_pad_opts, pad_opts_typedef} = OptionsSpecs.def_pad_options(pad_name, specs[:options])
 
-    nspecs = specs |> Keyword.put(:options, pad_opts_type_name)
+    specs = specs |> Keyword.put(:options, escaped_pad_opts)
 
     quote do
       if Module.get_attribute(__MODULE__, :membrane_pad) == nil do
         Module.register_attribute(__MODULE__, :membrane_pad, accumulate: true)
-        Module.register_attribute(__MODULE__, :membrane_pad_opts_parser_clauses, accumulate: true)
         @before_compile {unquote(__MODULE__), :generate_membrane_pads}
       end
 
       @membrane_pad unquote(__MODULE__).parse_pad_specs!(
-                      {unquote(pad_name), unquote(nspecs)},
+                      {unquote(pad_name), unquote(specs)},
                       unquote(direction),
                       __ENV__
                     )
-      @membrane_pad_opts_parser_clauses Macro.escape(unquote(pad_opts_parser_fun))
       unquote(pad_opts_typedef)
     end
   end
 
   # Generates `membrane_pads/0` function, along with docs and typespecs.
   defmacro generate_membrane_pads(env) do
-    :ok = validate_pads!(Module.get_attribute(env.module, :membrane_pad), env)
+    pads = Module.get_attribute(env.module, :membrane_pad)
+    :ok = validate_pads!(pads, env)
+    pads_docs = generate_docs_from_pads_specs(pads)
 
     alias Membrane.Element.Pad
-
-    pad_opts_parser_fun =
-      env.module
-      |> Module.get_attribute(:membrane_pad_opts_parser_clauses)
-      |> Enum.reduce(
-        quote do
-        end,
-        fn new_clause, acc ->
-          quote do
-            unquote(acc)
-            unquote(new_clause)
-          end
-        end
-      )
 
     quote do
       @doc """
@@ -104,14 +89,12 @@ defmodule Membrane.Core.Element.PadsSpecs do
         @membrane_pad
       end
 
-      unquote(pad_opts_parser_fun)
-
       @moduledoc """
       #{@moduledoc}
 
       ## Pads
 
-      #{@membrane_pad |> unquote(__MODULE__).generate_docs_from_pads_specs()}
+      #{unquote(pads_docs)}
       """
     end
   end
@@ -174,45 +157,56 @@ defmodule Membrane.Core.Element.PadsSpecs do
   end
 
   # Generates docs describing pads, based on pads specification.
-  @spec generate_docs_from_pads_specs(Pad.description_t()) :: String.t()
+  @spec generate_docs_from_pads_specs([{Pad.name_t(), Pad.description_t()}]) :: Macro.t()
   def generate_docs_from_pads_specs(pads_specs) do
     pads_specs
+    |> Enum.sort_by(fn {_, config} -> config[:direction] end)
     |> Enum.map(&generate_docs_from_pad_specs/1)
-    |> Enum.join("\n")
+    |> Enum.reduce(fn x, acc ->
+      quote do
+        """
+        #{unquote(acc)}
+        #{unquote(x)}
+        """
+      end
+    end)
   end
 
   defp generate_docs_from_pad_specs({name, config}) do
     {pad_opts, config} = config |> Map.pop(:options)
 
-    pad_doc = """
-    ### `#{inspect(name)}`
-    #{
+    config_doc =
       config
-      |> Enum.filter(fn {_, v} -> v end)
       |> Enum.map(fn {k, v} ->
         {
-          k |> to_string() |> String.replace("_", "&nbsp;"),
+          k |> to_string() |> String.replace("_", "&nbsp;") |> String.capitalize(),
           generate_pad_property_doc(k, v)
         }
       end)
       |> Enum.map_join("\n", fn {k, v} ->
         "#{k} | #{v}"
       end)
-    }
-    """
 
     options_doc =
-      if pad_opts do
-        """
-        #{Bunch.Markdown.hard_indent("Options", 4)}
+      if pad_opts != nil do
+        quote do
+          """
+          #{Bunch.Markdown.hard_indent("Options", 4)}
 
-        #{pad_opts}
-        """
+          #{unquote(OptionsSpecs.generate_opts_doc(pad_opts))}
+          """
+        end
       else
-        ""
+        quote_expr("")
       end
 
-    pad_doc <> options_doc
+    quote do
+      """
+      ### `#{inspect(unquote(name))}`
+
+      #{unquote(config_doc)}
+      """ <> unquote(options_doc)
+    end
   end
 
   defp generate_pad_property_doc(:caps, caps) do
@@ -234,10 +228,6 @@ defmodule Membrane.Core.Element.PadsSpecs do
       [doc] -> doc
       docs -> docs |> Enum.join(",<br />")
     )
-  end
-
-  defp generate_pad_property_doc(:options, name) do
-    "see `t:#{to_string(name)}/0`"
   end
 
   defp generate_pad_property_doc(_k, v) do
