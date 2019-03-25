@@ -143,26 +143,17 @@ defmodule Membrane.Core.Element.OptionsSpecs do
   end
 
   defp parse_opts(kw) when is_list(kw) do
-    with_default_specs =
+    # AST of typespec for keyword list containing options
+    opt_typespecs =
       kw
       |> Bunch.KVList.map_values(fn v ->
         default_val = @default_types_params[v[:type]][:spec] || quote_expr(any)
 
-        v |> Keyword.put_new(:spec, default_val)
+        v[:spec] || default_val
       end)
 
-    # Actual AST with typespec for the option
-    opt_typespecs =
-      with_default_specs
-      |> Bunch.KVList.map_values(fn v -> v[:spec] end)
+    opts_without_typespecs = kw |> Bunch.KVList.map_values(&Keyword.delete(&1, :spec))
 
-    # Options without typespec
-    escaped_opts =
-      with_default_specs
-      |> Bunch.KVList.map_values(fn v ->
-        v |> Keyword.put(:spec, Macro.to_string(v[:spec]))
-      end)
-
-    {opt_typespecs, escaped_opts}
+    {opt_typespecs, opts_without_typespecs}
   end
 end
