@@ -1,7 +1,8 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "0.3.0-dev"
+  @version "0.3.0"
+  @source_ref "v#{@version}"
 
   def project do
     [
@@ -41,7 +42,7 @@ defmodule Membrane.Mixfile do
     [
       main: "readme",
       extras: ["README.md"],
-      source_ref: "master",
+      source_ref: @source_ref,
       nest_modules_by_prefix: [
         Membrane.Pipeline,
         Membrane.Element,
