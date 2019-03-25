@@ -109,7 +109,8 @@ defmodule Membrane.Element.Pad do
           :mode => mode_t(),
           :caps => Caps.Matcher.caps_specs_t(),
           optional(:demand_unit) => Buffer.Metric.unit_t(),
-          :direction => direction_t()
+          :direction => direction_t(),
+          :options => nil | Keyword.t()
         }
 
   defguard is_pad_ref(term)

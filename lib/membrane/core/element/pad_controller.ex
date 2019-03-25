@@ -5,8 +5,7 @@ defmodule Membrane.Core.Element.PadController do
   alias Membrane.{Core, Event}
   alias Core.{CallbackHandler, Message, InputBuffer}
   alias Core.Element.{ActionHandler, EventController, PadModel, State}
-  alias Membrane.Element.{CallbackContext, Pad}
-  alias Bunch.Type
+  alias Membrane.Element.{CallbackContext, LinkError, Pad}
   require CallbackContext.{PadAdded, PadRemoved}
   require Message
   require Pad
@@ -25,13 +24,14 @@ defmodule Membrane.Core.Element.PadController do
           PadModel.pad_info_t() | nil,
           Keyword.t(),
           State.t()
-        ) :: State.stateful_try_t()
+        ) :: State.stateful_try_t(PadModel.pad_info_t())
   def handle_link(pad_ref, direction, pid, other_ref, other_info, props, state) do
     pad_name = pad_ref |> Pad.name_by_ref()
     info = state.pads.info[pad_name]
 
-    with :ok <- validate_pad_being_linked(pad_ref, direction, info, state),
-         :ok <- validate_dir_and_mode(info, other_info) do
+    with :ok <- validate_pad_being_linked!(pad_ref, direction, info, state),
+         :ok <- validate_dir_and_mode!({pad_ref, info}, {other_ref, other_info}) do
+      props = parse_link_props!(props, pad_name, state)
       state = init_pad_data(info, pad_ref, pid, other_ref, other_info, props, state)
 
       state =
@@ -45,7 +45,7 @@ defmodule Membrane.Core.Element.PadController do
 
       {{:ok, info}, state}
     else
-      {:error, reason} -> {{:error, reason}, state}
+      {:error, reason} -> raise LinkError, "#{inspect(reason)}"
     end
   end
 
@@ -122,49 +122,102 @@ defmodule Membrane.Core.Element.PadController do
     {pad_ref |> Bunch.error_if_nil(:unknown_pad), state}
   end
 
-  @spec validate_pad_being_linked(
+  @spec validate_pad_being_linked!(
           Pad.ref_t(),
           Pad.direction_t(),
           PadModel.pad_info_t(),
           State.t()
-        ) :: Type.try_t()
-  defp validate_pad_being_linked(pad_ref, direction, info, state) do
+        ) :: :ok
+  defp validate_pad_being_linked!(pad_ref, direction, info, state) do
     cond do
       :ok == PadModel.assert_instance(state, pad_ref) ->
-        {:error, :already_linked}
+        raise LinkError, "Pad #{inspect(pad_ref)} has already been linked"
 
       info == nil ->
-        {:error, :unknown_pad}
+        raise LinkError, "Unknown pad #{inspect(pad_ref)}"
 
       Pad.availability_mode_by_ref(pad_ref) != Pad.availability_mode(info.availability) ->
-        {:error,
-         {:invalid_pad_availability_mode,
-          expected: Pad.availability_mode_by_ref(pad_ref),
-          actual: Pad.availability_mode(info.availability)}}
+        raise LinkError, """
+        Invalid pad availability mode:
+          expected: #{inspect(Pad.availability_mode_by_ref(pad_ref))},
+          actual: #{inspect(Pad.availability_mode(info.availability))}
+        """
 
       info.direction != direction ->
-        {:error, {:invalid_pad_direction, expected: direction, actual: info.direction}}
+        raise LinkError, """
+        Invalid pad direction:
+          expected: #{inspect(direction)},
+          actual: #{inspect(info.direction)}
+        """
 
       true ->
         :ok
     end
   end
 
-  @spec validate_dir_and_mode(info :: PadModel.pad_info_t(), other_info :: PadModel.pad_info_t()) ::
-          Type.try_t()
-  def validate_dir_and_mode(this, that) do
+  @spec validate_dir_and_mode!(
+          {Pad.ref_t(), info :: PadModel.pad_info_t()},
+          {Pad.ref_t(), other_info :: PadModel.pad_info_t()}
+        ) :: :ok
+  def validate_dir_and_mode!(this, that) do
     with :ok <- do_validate_dm(this, that),
          :ok <- do_validate_dm(that, this) do
       :ok
     end
   end
 
-  defp do_validate_dm(%{direction: :output, mode: :pull}, %{direction: :input, mode: :push}) do
-    {:error, {:cannot_connect, :pull_output, :to, :push_input}}
+  defp do_validate_dm(
+         {from, %{direction: :output, mode: :pull}},
+         {to, %{direction: :input, mode: :push}}
+       ) do
+    raise LinkError, "Cannot connect pull output #{inspect(from)} to push input #{inspect(to)}"
   end
 
   defp do_validate_dm(_, _) do
     :ok
+  end
+
+  @spec parse_link_props!(Keyword.t(), Pad.name_t(), State.t()) :: Keyword.t()
+  defp parse_link_props!(props, pad_name, state) do
+    opts_spec = state.module.membrane_pads()[pad_name].options
+
+    pad_props = parse_pad_props!(pad_name, opts_spec, props[:pad])
+    buffer_props = parse_buffer_props!(pad_name, props[:buffer])
+    [pad: pad_props, buffer: buffer_props]
+  end
+
+  defp parse_pad_props!(_pad_name, nil, nil) do
+    {:ok, nil}
+  end
+
+  defp parse_pad_props!(pad_name, nil, _props) do
+    raise LinkError, "Pad #{inspect(pad_name)} does not define any options"
+  end
+
+  defp parse_pad_props!(pad_name, options_spec, props) do
+    bunch_field_specs = options_spec |> Bunch.KVList.map_values(&Keyword.take(&1, [:default]))
+
+    case props |> List.wrap() |> Bunch.Config.parse(bunch_field_specs) do
+      {:ok, pad_props} ->
+        pad_props
+
+      {:error, {:config_field, {:key_not_found, key}}} ->
+        raise LinkError, "Missing option #{inspect(key)} for pad #{inspect(pad_name)}"
+
+      {:error, {:config_invalid_keys, keys}} ->
+        raise LinkError, "Invalid keys in options of pad #{inspect(pad_name)} - #{inspect(keys)}"
+    end
+  end
+
+  defp parse_buffer_props!(pad_name, props) do
+    case InputBuffer.parse_props(props) do
+      {:ok, buffer_props} ->
+        buffer_props
+
+      {:error, {:config_invalid_keys, keys}} ->
+        raise LinkError,
+              "Invalid keys in buffer options of pad #{inspect(pad_name)}: #{inspect(keys)}"
+    end
   end
 
   @spec init_pad_data(
@@ -182,7 +235,7 @@ defmodule Membrane.Core.Element.PadController do
       |> Map.merge(%{
         pid: pid,
         other_ref: other_ref,
-        opts: props[:pad],
+        options: props[:pad],
         caps: nil,
         start_of_stream?: false,
         end_of_stream?: false
@@ -254,13 +307,13 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec handle_pad_added(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   defp handle_pad_added(ref, state) do
-    pad_opts = PadModel.get_data!(state, ref, :opts)
+    pad_opts = PadModel.get_data!(state, ref, :options)
 
     context =
       CallbackContext.PadAdded.from_state(
         state,
         direction: PadModel.get_data!(state, ref, :direction),
-        opts: pad_opts
+        options: pad_opts
       )
 
     CallbackHandler.exec_and_handle_callback(

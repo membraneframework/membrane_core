@@ -7,8 +7,9 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
 
   For more information on implementing elements, see `Membrane.Element.Base`.
   """
-  alias Membrane.{Action, Core, Element, Event, Time}
+  alias Membrane.{Action, Core, Element, Event}
   alias Core.CallbackHandler
+  alias Core.Element.OptionsSpecs
   alias Element.{Action, CallbackContext, Pad}
 
   use Bunch
@@ -150,129 +151,15 @@ defmodule Membrane.Element.Base.Mixin.CommonBehaviour do
   """
   @callback handle_shutdown(state :: Element.state_t()) :: :ok
 
-  @default_types_params %{
-    atom: [spec: quote_expr(atom)],
-    boolean: [spec: quote_expr(boolean)],
-    string: [spec: quote_expr(String.t())],
-    keyword: [spec: quote_expr(keyword)],
-    struct: [spec: quote_expr(struct)],
-    caps: [spec: quote_expr(struct)],
-    time: [spec: quote_expr(Time.t()), inspector: &Time.to_code_str/1]
-  }
-
   @doc """
-  Macro that defines options that parametrize element.
+  Macro defining options that parametrize element.
 
-  It automatically generates appropriate struct.
+  It automatically generates appropriate struct and documentation.
 
-  `def_options/1` should receive keyword list, where each key is option name and
-  is described by another keyword list with following fields:
-
-    * `type:` atom, used for parsing
-    * `spec:` typespec for value in struct. If ommitted, for types:
-      `#{inspect(Map.keys(@default_types_params))}` the default typespec is provided.
-      For others typespec is set to `t:any/0`
-    * `default:` default value for option. If not present, value for this option
-      will have to be provided each time options struct is created
-    * `inspector:` function converting fields' value to a string. Used when
-      creating documentation instead of `inspect/1`
-    * `description:` string describing an option. It will be present in value returned by `options/0`
-      and in typedoc for the struct.
+  #{OptionsSpecs.options_doc()}
   """
   defmacro def_options(options) do
-    {opt_specs, escaped_opts} = extract_specs(options)
-    opt_typespec_ast = {:%{}, [], Keyword.put(opt_specs, :__struct__, __CALLER__.module)}
-    # opt_typespec_ast is equivalent of typespec %__CALLER__.module{key: value, ...}
-    typedoc =
-      escaped_opts
-      |> Enum.map(fn {k, v} ->
-        desc = v |> Keyword.get(:description, "")
-
-        default_val_desc =
-          if Keyword.has_key?(v, :default) do
-            inspector =
-              v
-              |> Keyword.get(
-                :inspector,
-                @default_types_params[v[:type]][:inspector] || quote(do: &inspect/1)
-              )
-
-            quote do
-              "Defaults to `#{unquote(inspector).(unquote(v)[:default])}`"
-            end
-          else
-            ""
-          end
-
-        format_option_docs(
-          quote do
-            """
-            `#{Atom.to_string(unquote(k))}` - \
-            #{String.trim(unquote(desc))}
-
-            #{unquote(default_val_desc)}
-            """
-          end
-        )
-      end)
-      |> Enum.reduce(fn x, acc ->
-        quote do
-          unquote(x) <> "\n" <> unquote(acc)
-        end
-      end)
-
-    quote do
-      @typedoc """
-      Struct containing options for `#{inspect(__MODULE__)}`
-
-      #{unquote(typedoc)}
-      """
-      @type t :: unquote(opt_typespec_ast)
-
-      @doc """
-      Returns description of options available for this module
-      """
-      @spec options() :: keyword
-      def options(), do: unquote(escaped_opts)
-
-      @enforce_keys unquote(escaped_opts)
-                    |> Enum.reject(fn {k, v} -> v |> Keyword.has_key?(:default) end)
-                    |> Keyword.keys()
-
-      defstruct unquote(escaped_opts)
-                |> Enum.map(fn {k, v} -> {k, v[:default]} end)
-    end
-  end
-
-  defp format_option_docs(docs) do
-    quote do
-      unquote(docs)
-      |> String.trim()
-      |> String.replace("\n\n", "\n\n  ")
-      |> String.replace_prefix("", "* ")
-    end
-  end
-
-  defp extract_specs(kw) when is_list(kw) do
-    with_default_specs =
-      kw
-      |> Enum.map(fn {k, v} ->
-        default_val = @default_types_params[v[:type]][:spec] || quote_expr(any)
-
-        {k, v |> Keyword.put_new(:spec, default_val)}
-      end)
-
-    opt_typespecs =
-      with_default_specs
-      |> Enum.map(fn {k, v} -> {k, v[:spec]} end)
-
-    escaped_opts =
-      with_default_specs
-      |> Enum.map(fn {k, v} ->
-        {k, v |> Keyword.update!(:spec, &Macro.to_string/1)}
-      end)
-
-    {opt_typespecs, escaped_opts}
+    OptionsSpecs.def_options(__CALLER__.module, options)
   end
 
   defmacro __using__(_) do

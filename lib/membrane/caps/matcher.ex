@@ -70,7 +70,7 @@ defmodule Membrane.Caps.Matcher do
 
     @impl true
     def inspect(%OneOf{list: list}, opts) do
-      concat(["in(", to_doc(list, opts), ")"])
+      concat(["one_of(", to_doc(list, opts), ")"])
     end
   end
 

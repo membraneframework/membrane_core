@@ -7,15 +7,13 @@ defmodule Membrane.Testing.DataSource do
 
   alias Membrane.{Buffer, Event}
 
+  def_output_pad :output, caps: :any
+
   def_options data: [
                 type: :payloads,
                 spec: [Membrane.Payload.t()],
                 description: "List of payloads that will be sent through `:output` pad."
               ]
-
-  def_output_pads output: [
-                    caps: :any
-                  ]
 
   @impl true
   def handle_init(%__MODULE__{data: data}) do

@@ -67,6 +67,8 @@ locals_without_parens =
   [
     def_output_pads: 1,
     def_input_pads: 1,
+    def_output_pad: 2,
+    def_input_pad: 2,
     def_options: 1,
     def_type_from_list: 1,
     assert_receive_message: 3

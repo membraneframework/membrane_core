@@ -13,6 +13,7 @@ defmodule Membrane.Element do
   alias Link.Endpoint
   alias Core.Element.{MessageDispatcher, State}
   alias Core.Message
+  alias Membrane.Element.LinkError
   import Membrane.Helper.GenServer
   require Message
   use Membrane.Log, tags: :core
@@ -113,13 +114,10 @@ defmodule Membrane.Element do
         process_options
       ])
     else
-      warn_error(
-        """
-        Cannot start element, passed module #{inspect(module)} is not a Membrane Element.
-        Make sure that given module is the right one and it uses Membrane.Element.Base.*
-        """,
-        {:not_element, module}
-      )
+      raise """
+      Cannot start element, passed module #{inspect(module)} is not a Membrane Element.
+      Make sure that given module is the right one and it uses Membrane.Element.Base.*
+      """
     end
   end
 
@@ -167,7 +165,7 @@ defmodule Membrane.Element do
   """
   @spec link(link_spec :: %Link{}) :: :ok | {:error, any}
   def link(%Link{from: %Endpoint{pid: pid}, to: %Endpoint{pid: pid}}) when is_pid(pid) do
-    {:error, :loop}
+    raise LinkError, "Cannot link element with itself"
   end
 
   def link(%Link{from: %Endpoint{pid: from_pid} = from, to: %Endpoint{pid: to_pid} = to})
@@ -194,7 +192,12 @@ defmodule Membrane.Element do
     end
   end
 
-  def link(_), do: {:error, :invalid_element}
+  def link(link) do
+    raise LinkError, """
+    Invalid link - one of pids is invalid.
+    #{inspect(link, pretty: true)}
+    """
+  end
 
   @doc """
   Sends synchronous call to element, telling it to unlink all its pads.

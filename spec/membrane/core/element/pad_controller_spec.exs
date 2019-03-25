@@ -90,8 +90,8 @@ defmodule Membrane.Core.Element.PadControllerSpec do
       let :other_info, do: nil
       let :props, do: %{}
 
-      it "should return an error result" do
-        {result, _state} =
+      it "should raise an exception" do
+        call = fn ->
           described_module().handle_link(
             pad_ref(),
             direction(),
@@ -101,8 +101,9 @@ defmodule Membrane.Core.Element.PadControllerSpec do
             props(),
             state()
           )
+        end
 
-        expect(result) |> to(be_error_result())
+        expect(call) |> to(raise_exception(Membrane.Element.LinkError))
       end
     end
   end
