@@ -100,6 +100,7 @@ defmodule Membrane.Element.Pad do
           {:availability, availability_t()}
           | {:mode, mode_t()}
           | {:caps, Caps.Matcher.caps_specs_t()}
+          | {:options, Keyword.t()}
 
   @typedoc """
   Type describing a pad. Contains data parsed from `t:spec_t/0`
