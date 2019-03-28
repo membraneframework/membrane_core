@@ -16,8 +16,8 @@ defmodule Membrane.Caps.Matcher do
       Checks on the values from list are performed recursively i.e. it can contain another `range/2`,
       for example `Matcher.one_of([0, Matcher.range(2, 4), Matcher.range(10, 20)])`
 
-  If the specs are defined inside of `Membrane.Element.Base.Mixin.SinkBehaviour.def_input_pads/1` and
-  `Membrane.Element.Base.Mixin.SourceBehaviour.def_output_pads/1` module name can be omitted from
+  If the specs are defined inside of `Membrane.Element.Base.Mixin.SinkBehaviour.def_input_pad/2` and
+  `Membrane.Element.Base.Mixin.SourceBehaviour.def_output_pad/2` module name can be omitted from
   `range/2` and `one_of/1` calls.
 
   ## Example
@@ -26,10 +26,9 @@ defmodule Membrane.Caps.Matcher do
 
       alias Membrane.Caps.Video.Raw
 
-      def_input_pads input: [
-                   demand_unit: :buffers,
-                   caps: {Raw, format: one_of([:I420, :I422]), aligned: true}
-                 ]
+      def_input_pad :input,
+        demand_unit: :buffers,
+        caps: {Raw, format: one_of([:I420, :I422]), aligned: true}
 
   """
   import Kernel, except: [match?: 2]

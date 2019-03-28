@@ -2,7 +2,7 @@ defmodule Membrane.Element.Base.Sink do
   @moduledoc """
   Module defining behaviour for sinks - elements consuming data.
 
-  Behaviours for filters are specified, besides this place, in modules
+  Behaviours for sinks are specified, besides this place, in modules
   `Membrane.Element.Base.Mixin.CommonBehaviour`,
   and `Membrane.Element.Base.Mixin.SinkBehaviour`.
 

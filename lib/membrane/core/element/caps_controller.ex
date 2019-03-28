@@ -48,7 +48,7 @@ defmodule Membrane.Core.Element.CapsController do
       match: false ->
         warn_error(
           """
-          Received caps: #{inspect(caps)} that are not specified in def_input_pads
+          Received caps: #{inspect(caps)} that are not specified in def_input_pad
           for pad #{inspect(pad_ref)}. Specs of accepted caps are:
           #{inspect(accepted_caps, pretty: true)}
           """,
