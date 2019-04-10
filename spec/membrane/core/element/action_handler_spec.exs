@@ -34,7 +34,25 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     let :payload, do: <<1, 2, 3, 4, 5>>
     let :buffer, do: %Buffer{payload: payload()}
 
-    context "when element is not in a 'playing' state" do
+    context "when element is in 'stopped' state" do
+      let :playback, do: %Playback{state: :stopped}
+
+      it "should return an error" do
+        result =
+          described_module().handle_action(
+            {:buffer, {pad_ref(), buffer()}},
+            :handle_other,
+            %{},
+            state()
+          )
+
+        expect(result) |> to(match_pattern {{:error, {:cannot_handle_action, _}}, _})
+        {{:error, {:cannot_handle_action, details}}, _} = result
+        expect(details[:reason]) |> to(eq :element_stopped)
+      end
+    end
+
+    context "when element is in 'prepared' state" do
       let :playback, do: %Playback{state: :prepared}
 
       context "and callback is not 'handle_prepared_to_playing'" do
@@ -226,6 +244,19 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     let :payload, do: <<1, 2, 3, 4, 5>>
     let :event, do: %Event{}
 
+    context "when element is in 'stopped' state" do
+      let :playback, do: %Playback{state: :stopped}
+
+      it "should return an error" do
+        result =
+          described_module().handle_action({:event, {pad_ref(), event()}}, nil, %{}, state())
+
+        expect(result) |> to(match_pattern {{:error, {:cannot_handle_action, _}}, _})
+        {{:error, {:cannot_handle_action, details}}, _} = result
+        expect(details[:reason]) |> to(eq :element_stopped)
+      end
+    end
+
     context "when element is in a 'playing' state" do
       let :playback, do: %Playback{state: :playing}
 
@@ -235,7 +266,7 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
         it "should return error" do
           {{:error, {main_reason, reason_details}}, state} =
             described_module().handle_action(
-              {:caps, {invalid_pad_ref(), event()}},
+              {:event, {invalid_pad_ref(), event()}},
               nil,
               %{},
               state()
@@ -305,6 +336,17 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     let :pad_ref, do: :output
     let :payload, do: <<1, 2, 3, 4, 5>>
     let :caps, do: :caps
+
+    context "when element is in 'stopped' state" do
+      let :playback, do: %Playback{state: :stopped}
+
+      it "should return an error" do
+        result = described_module().handle_action({:caps, {pad_ref(), caps()}}, nil, %{}, state())
+        expect(result) |> to(match_pattern {{:error, {:cannot_handle_action, _}}, _})
+        {{:error, {:cannot_handle_action, details}}, _} = result
+        expect(details[:reason]) |> to(eq :element_stopped)
+      end
+    end
 
     context "when element is in a 'playing' state" do
       let :playback, do: %Playback{state: :playing}
@@ -405,9 +447,10 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     let :controller_module, do: Element.DemandController
 
     let :state,
-      do: %{
+      do:
         State.new(element_module(), :test_name)
-        | type: :source,
+        |> Map.merge(%{
+          type: :source,
           pads: %{
             data: %{
               output: %{
@@ -416,41 +459,57 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
                 mode: pad_mode()
               }
             }
-          }
-      }
+          },
+          playback: playback()
+        })
 
-    context "if pad doesn't exist in the element" do
-      let :pad_ref, do: :invalid_pad_ref
-
-      it "should return an error result with :unknown_pad reason" do
-        result = described_module().handle_action(action(), nil, %{}, state())
-        expect(result) |> to(match_pattern {{:error, {:cannot_handle_action, _}}, _})
-        {{:error, {:cannot_handle_action, details}}, _} = result
-        expect(details[:reason]) |> to(eq {:unknown_pad, :invalid_pad_ref})
-      end
-    end
-
-    context "if pad works in a push mode" do
-      let :pad_mode, do: :push
+    context "when element is in 'stopped' state" do
+      let :playback, do: %Playback{state: :stopped}
 
       it "should return an error" do
         result = described_module().handle_action(action(), nil, %{}, state())
         expect(result) |> to(match_pattern {{:error, {:cannot_handle_action, _}}, _})
         {{:error, {:cannot_handle_action, details}}, _} = result
-        expect(details[:reason]) |> to(match_pattern {:invalid_pad_data, _})
+        expect(details[:reason]) |> to(eq :element_stopped)
       end
     end
 
-    context "if given pad works in a pull mode" do
-      let :pad_mode, do: :pull
+    context "when in 'playing' state" do
+      let :playback, do: %Playback{state: :playing}
 
-      it "should delay redemand" do
-        res = described_module().handle_action(action(), :handle_write_list, %{}, state())
+      context "if pad doesn't exist in the element" do
+        let :pad_ref, do: :invalid_pad_ref
 
-        expected_state =
-          Bunch.Struct.put_in(state(), [:delayed_demands, {:output, :redemand}], :sync)
+        it "should return an error result with :unknown_pad reason" do
+          result = described_module().handle_action(action(), nil, %{}, state())
+          expect(result) |> to(match_pattern {{:error, {:cannot_handle_action, _}}, _})
+          {{:error, {:cannot_handle_action, details}}, _} = result
+          expect(details[:reason]) |> to(eq {:unknown_pad, :invalid_pad_ref})
+        end
+      end
 
-        expect(res |> to(eq {:ok, expected_state}))
+      context "if pad works in a push mode" do
+        let :pad_mode, do: :push
+
+        it "should return an error" do
+          result = described_module().handle_action(action(), nil, %{}, state())
+          expect(result) |> to(match_pattern {{:error, {:cannot_handle_action, _}}, _})
+          {{:error, {:cannot_handle_action, details}}, _} = result
+          expect(details[:reason]) |> to(match_pattern {:invalid_pad_data, _})
+        end
+      end
+
+      context "if given pad works in a pull mode" do
+        let :pad_mode, do: :pull
+
+        it "should delay redemand" do
+          res = described_module().handle_action(action(), :handle_write_list, %{}, state())
+
+          expected_state =
+            Bunch.Struct.put_in(state(), [:delayed_demands, {:output, :redemand}], :sync)
+
+          expect(res |> to(eq {:ok, expected_state}))
+        end
       end
     end
   end
@@ -465,9 +524,10 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
     let :notification_b, do: :b
 
     let :state,
-      do: %{
+      do:
         State.new(element_module(), :test_name)
-        | watcher: self(),
+        |> Map.merge(%{
+          watcher: self(),
           type: :source,
           pads: %{
             data: %{
@@ -478,7 +538,8 @@ defmodule Membrane.Core.Element.ActionHandlerSpec do
               }
             }
           }
-      }
+        })
+        |> Bunch.Struct.put_in([:playback, :state], :playing)
 
     before do
       allow controller_module() |> to(accept :handle_demand, fn _, 0, state -> {:ok, state} end)

@@ -41,7 +41,7 @@ defmodule Membrane.Core.Element.ActionHandler do
           reason section.
           """,
           {:cannot_handle_action,
-           action: action, callback: callback, module: state |> Map.get(:module), reason: reason},
+           reason: reason, action: action, callback: callback, module: state |> Map.get(:module)},
           state
         )
     end
@@ -51,6 +51,11 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec do_handle_action(Action.t(), callback :: atom, params :: map, State.t()) ::
           State.stateful_try_t()
+  defp do_handle_action({action, _}, _cb, _params, %State{playback: %{state: :stopped}} = state)
+       when action in [:buffer, :event, :caps, :demand, :redemand, :forward] do
+    {{:error, :element_stopped}, state}
+  end
+
   defp do_handle_action({:event, {pad_ref, event}}, _cb, _params, state)
        when is_pad_ref(pad_ref) do
     send_event(pad_ref, event, state)
