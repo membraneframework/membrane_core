@@ -17,7 +17,12 @@ defmodule Membrane.Element.Pad do
   @typedoc """
   Defines the term by which the pad instance is identified.
   """
-  @type ref_t :: atom | {:dynamic, atom, non_neg_integer}
+  @type ref_t :: atom | {:dynamic, atom, dynamic_id_t}
+
+  @typedoc """
+  Possible id of dynamic pad
+  """
+  @type dynamic_id_t :: non_neg_integer
 
   @typedoc """
   Defines the name of pad or group of dynamic pads
@@ -125,13 +130,6 @@ defmodule Membrane.Element.Pad do
 
   defguard is_availability_dynamic(availability) when availability == :on_request
   defguard is_availability_static(availability) when availability == :always
-
-  @doc """
-  Returns pad availability mode based on pad reference.
-  """
-  @spec availability_mode_by_ref(ref_t) :: availability_mode_t
-  def availability_mode_by_ref({:dynamic, _name, _id}), do: :dynamic
-  def availability_mode_by_ref(ref) when is_atom(ref), do: :static
 
   @doc """
   Returns pad availability mode for given availability.

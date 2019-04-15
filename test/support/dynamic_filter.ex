@@ -16,32 +16,31 @@ defmodule Membrane.Support.Element.DynamicFilter do
 
   @impl true
   def handle_init(_options) do
-    {:ok, %{pads: MapSet.new()}}
+    {:ok, %{}}
   end
 
   @impl true
-  def handle_pad_added({:dynamic, :input, id}, _ctx, state) do
-    {:ok, %{state | pads: state.pads |> MapSet.put(id)}}
+  def handle_pad_added({:dynamic, :input, _id} = ref, _ctx, state) do
+    {:ok, state |> Map.put(:last_pad_addded, ref)}
   end
 
   @impl true
-  def handle_pad_removed({:dynamic, :input, id}, _ctx, state) do
-    {:ok, %{state | pads: state.pads |> MapSet.delete(id)}}
+  def handle_pad_removed({:dynamic, :input, _id} = ref, _ctx, state) do
+    {:ok, state |> Map.put(:last_pad_removed, ref)}
   end
 
   @impl true
-  def handle_demand(_ref, size, _, %Ctx.Demand{}, state) do
-    demand =
-      state.in
-      |> Enum.sort()
-      |> Enum.take(1)
-      ~>> ([id] -> [demand: {{:dynamic, :input, id}, size}])
-
-    {{:ok, demand}, state}
+  def handle_demand(_ref, size, _, _ctx, state) do
+    {{:ok, demand: {{:dynamic, :input, 0}, size}}, state}
   end
 
   @impl true
   def handle_process(_ref, %Membrane.Buffer{payload: _payload}, %Ctx.Process{}, state) do
     {:ok, state}
+  end
+
+  @impl true
+  def handle_event(ref, event, _ctx, state) do
+    {:ok, state |> Map.put(:last_event, {ref, event})}
   end
 end

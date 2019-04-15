@@ -25,4 +25,9 @@ defmodule Membrane.Support.Element.TrivialFilter do
   def handle_process(:input, %Membrane.Buffer{payload: payload}, %Ctx.Process{}, state) do
     {{:ok, buffer: {:output, %Membrane.Buffer{payload: payload <> <<255>>}}}, state}
   end
+
+  @impl true
+  def handle_event(ref, event, _ctx, state) do
+    {:ok, state |> Map.put(:last_event, {ref, event})}
+  end
 end
