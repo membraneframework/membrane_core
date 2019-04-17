@@ -11,26 +11,28 @@ defmodule Membrane.PipelineTest do
   setup_all :state
 
   describe "handle_action spec" do
-    test "should return error if duplicate elements exist in spec", %{state: state} do
-      assert {{:error, {:cannot_handle_spec, {:duplicate_element_names, [:a]}}}, _state} =
-               @module.handle_action(
-                 {:spec, %Spec{children: [a: :child1, a: :child2]}},
-                 nil,
-                 [],
-                 state
-               )
+    test "should raise if duplicate elements exist in spec", %{state: state} do
+      assert_raise Membrane.PipelineError, ~r/.*[Dd]uplicate.*\[:a\]/, fn ->
+        @module.handle_action(
+          {:spec, %Spec{children: [a: :child1, a: :child2]}},
+          nil,
+          [],
+          state
+        )
+      end
     end
 
-    test "should return error if trying to spawn element with already taken name", %{state: state} do
+    test "should raise if trying to spawn element with already taken name", %{state: state} do
       state = %State{state | children: %{a: self()}}
 
-      assert {{:error, {:cannot_handle_spec, {:duplicate_element_names, [:a]}}}, _state} =
-               @module.handle_action(
-                 {:spec, %Spec{children: [a: :child]}},
-                 nil,
-                 [],
-                 state
-               )
+      assert_raise Membrane.PipelineError, ~r/.*[Dd]uplicate.*\[:a\]/, fn ->
+        @module.handle_action(
+          {:spec, %Spec{children: [a: :child]}},
+          nil,
+          [],
+          state
+        )
+      end
     end
   end
 end
