@@ -347,6 +347,9 @@ defmodule Membrane.Pipeline do
       {:error, {:unknown_child, child}} ->
         raise PipelineError, "Child #{inspect(child)} does not exist"
 
+      {:error, {:cannot_handle_message, :unknown_pad, _ctx}} ->
+        raise PipelineError, "Child #{inspect(element)} does not have pad #{inspect(pad_name)}"
+
       {:error, reason} ->
         raise PipelineError, """
         Error resolving pad #{inspect(pad_name)} of element #{inspect(element)}, \
