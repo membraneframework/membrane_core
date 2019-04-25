@@ -212,7 +212,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     send_buffer(pad_ref, [buffer], callback, state)
   end
 
-  defp send_buffer(pad_ref, buffers, _callback, state) do
+  defp send_buffer(pad_ref, buffers, _callback, state) when is_list(buffers) do
     debug(
       [
         """
@@ -224,7 +224,8 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     )
 
-    with :ok <- PadModel.assert_data(state, pad_ref, %{direction: :output, end_of_stream?: false}) do
+    with true <- Enum.all?(buffers, &match?(%Buffer{}, &1)),
+         :ok <- PadModel.assert_data(state, pad_ref, %{direction: :output, end_of_stream?: false}) do
       %{mode: mode, pid: pid, other_ref: other_ref, other_demand_unit: other_demand_unit} =
         PadModel.get_data!(state, pad_ref)
 
@@ -232,15 +233,20 @@ defmodule Membrane.Core.Element.ActionHandler do
       Message.send(pid, :buffer, [buffers, other_ref])
       {:ok, state}
     else
+      false -> {{:error, {:invalid_buffers, buffers}}, state}
       {:error, reason} -> handle_pad_error(reason, state)
     end
+  end
+
+  defp send_buffer(_pad_ref, invalid_value, _callback, state) do
+    {{:error, {:invalid_buffers, invalid_value}}, state}
   end
 
   @spec handle_buffer(
           Pad.ref_t(),
           Pad.mode_t(),
           Buffer.Metric.unit_t(),
-          [Buffer.t()] | Buffer.t(),
+          [Buffer.t()],
           State.t()
         ) :: State.t()
   defp handle_buffer(pad_ref, :pull, other_demand_unit, buffers, state) do
