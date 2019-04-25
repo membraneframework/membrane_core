@@ -204,6 +204,10 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
   end
 
+  defp send_buffer(_pad_ref, [], _callback, state) do
+    {:ok, state}
+  end
+
   defp send_buffer(pad_ref, %Buffer{} = buffer, callback, state) do
     send_buffer(pad_ref, [buffer], callback, state)
   end
