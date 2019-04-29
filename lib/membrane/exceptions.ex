@@ -97,7 +97,7 @@ defmodule Membrane.ActionError do
     """
     Trying to send caps that do not match the specification
     Caps being sent: #{inspect(caps, pretty: true)}
-    Allowed caps spec: #{inspect(accepted_caps, pretty: true)}
+    Allowed caps spec: #{inspect(accepted_caps, pretty: true)}\
     """
   end
 

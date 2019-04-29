@@ -133,16 +133,19 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_actions(actions, callback, handler_params, state) do
-    actions_after_redemand =
+    {redemand, actions_after_redemand} =
       actions
       |> Enum.drop_while(fn
         {:redemand, _} -> false
         _ -> true
       end)
-      |> Enum.drop(1)
+      |> Enum.split(1)
 
     if actions_after_redemand != [] do
-      {{:error, :actions_after_redemand}, state}
+      raise ActionError,
+        reason: :actions_after_redemand,
+        action: redemand |> Enum.at(0),
+        callback: {state[:module], callback}
     else
       super(actions |> join_buffers(), callback, handler_params, state)
     end
@@ -188,12 +191,15 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp send_buffer(pad_ref, buffers, _callback, state) when is_list(buffers) do
     debug("Sending #{length(buffers)} buffer(s) through pad #{inspect(pad_ref)}", state)
 
-    with :ok <-
-           Bunch.Enum.try_each(buffers, fn
-             %Buffer{} -> :ok
-             value -> {:error, {:invalid_buffer, value}}
-           end),
-         :ok <- PadModel.assert_data(state, pad_ref, %{direction: :output, end_of_stream?: false}) do
+    withl buffers:
+            :ok <-
+              Bunch.Enum.try_each(buffers, fn
+                %Buffer{} -> :ok
+                value -> {:error, value}
+              end),
+          data: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
+          dir: %{direction: :output} <- pad_data,
+          eos: %{end_of_stream?: false} <- pad_data do
       %{mode: mode, pid: pid, other_ref: other_ref, other_demand_unit: other_demand_unit} =
         PadModel.get_data!(state, pad_ref)
 
@@ -201,7 +207,10 @@ defmodule Membrane.Core.Element.ActionHandler do
       Message.send(pid, :buffer, [buffers, other_ref])
       {:ok, state}
     else
-      {:error, reason} -> {{:error, reason}, state}
+      buffers: {:error, buf} -> {{:error, {:invalid_buffer, buf}}, state}
+      data: {:error, reason} -> {{:error, reason}, state}
+      dir: %{direction: dir} -> {{:error, {:invalid_pad_dir, dir}}, state}
+      eos: %{end_of_stream?: true} -> {{:error, {:eos_sent, pad_ref}}, state}
     end
   end
 
@@ -236,7 +245,8 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     )
 
-    withl pad: :ok <- PadModel.assert_data(state, pad_ref, %{direction: :output}),
+    withl pad: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
+          direction: %{direction: :output} <- pad_data,
           do: accepted_caps = PadModel.get_data!(state, pad_ref, :accepted_caps),
           caps: true <- Caps.Matcher.match?(accepted_caps, caps) do
       {%{pid: pid, other_ref: other_ref}, state} =
@@ -246,8 +256,9 @@ defmodule Membrane.Core.Element.ActionHandler do
       Message.send(pid, :caps, [caps, other_ref])
       {:ok, state}
     else
-      caps: false -> {{:error, {:invalid_caps, caps, accepted_caps}}, state}
       pad: {:error, reason} -> {{:error, reason}, state}
+      direction: %{direction: dir} -> {{:error, {:invalid_pad_dir, pad_ref, dir}}, state}
+      caps: false -> {{:error, {:invalid_caps, caps, accepted_caps}}, state}
     end
   end
 
