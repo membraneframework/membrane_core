@@ -113,11 +113,8 @@ defmodule Membrane.Core.InputBuffer do
       metric: metric,
       toilet: toilet
     }
-    |> fill()
+    |> handle_demand()
   end
-
-  @spec fill(t()) :: t()
-  defp fill(%__MODULE__{} = input_buf), do: handle_demand(input_buf, 0)
 
   @spec store(t(), atom(), any()) :: {:ok, t()} | {:error, any()}
   def store(input_buf, type \\ :buffers, v)
@@ -194,7 +191,8 @@ defmodule Membrane.Core.InputBuffer do
   def take(%__MODULE__{current_size: size} = input_buf, count) when count >= 0 do
     report("Taking #{inspect(count)} buffers", input_buf)
     {out, %__MODULE__{current_size: new_size} = input_buf} = do_take(input_buf, count)
-    input_buf = input_buf |> handle_demand(size - new_size)
+    input_buf = input_buf |> Bunch.Struct.update_in(:demand, &(&1 + size - new_size))
+    input_buf = input_buf |> handle_demand()
     {{:ok, out}, input_buf}
   end
 
@@ -246,11 +244,10 @@ defmodule Membrane.Core.InputBuffer do
            preferred_size: pref_size,
            demand: demand,
            min_demand: min_demand
-         } = input_buf,
-         new_demand
+         } = input_buf
        )
-       when size < pref_size and demand + new_demand > 0 do
-    to_demand = max(demand + new_demand, min_demand)
+       when size < pref_size and demand > 0 do
+    to_demand = max(demand, min_demand)
 
     report(
       """
@@ -261,13 +258,10 @@ defmodule Membrane.Core.InputBuffer do
     )
 
     Message.send(demand_pid, :demand, [to_demand, linked_output_ref])
-    %__MODULE__{input_buf | demand: demand + new_demand - to_demand}
+    %__MODULE__{input_buf | demand: demand - to_demand}
   end
 
-  defp handle_demand(%__MODULE__{toilet: false, demand: demand} = input_buf, new_demand),
-    do: %__MODULE__{input_buf | demand: demand + new_demand}
-
-  defp handle_demand(%__MODULE__{toilet: toilet} = input_buf, _new_demand) when toilet != false do
+  defp handle_demand(input_buf) do
     input_buf
   end
 
