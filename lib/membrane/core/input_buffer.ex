@@ -117,31 +117,33 @@ defmodule Membrane.Core.InputBuffer do
   end
 
   @spec fill(t()) :: t()
-  defp fill(%__MODULE__{} = pb), do: handle_demand(pb, 0)
+  defp fill(%__MODULE__{} = input_buf), do: handle_demand(input_buf, 0)
 
   @spec store(t(), atom(), any()) :: {:ok, t()} | {:error, any()}
-  def store(pb, type \\ :buffers, v)
+  def store(input_buf, type \\ :buffers, v)
 
   def store(
-        %__MODULE__{current_size: size, preferred_size: pref_size, toilet: false} = pb,
+        %__MODULE__{current_size: size, preferred_size: pref_size, toilet: false} = input_buf,
         :buffers,
         v
       )
       when is_list(v) do
     if size >= pref_size do
       debug("""
-      InputBuffer #{inspect(pb.name)}: received buffers from pad #{inspect(pb.linked_output_ref)},
+      InputBuffer #{inspect(input_buf.name)}: received buffers from pad #{
+        inspect(input_buf.linked_output_ref)
+      },
       despite not requesting them. It is probably caused by overestimating demand
       by previous element.
       """)
     end
 
-    {:ok, do_store_buffers(pb, v)}
+    {:ok, do_store_buffers(input_buf, v)}
   end
 
-  def store(%__MODULE__{toilet: %{warn: warn_lvl, fail: fail_lvl}} = pb, :buffers, v)
+  def store(%__MODULE__{toilet: %{warn: warn_lvl, fail: fail_lvl}} = input_buf, :buffers, v)
       when is_list(v) do
-    %__MODULE__{current_size: size} = pb = do_store_buffers(pb, v)
+    %__MODULE__{current_size: size} = input_buf = do_store_buffers(input_buf, v)
 
     if size >= warn_lvl do
       above_level =
@@ -153,8 +155,8 @@ defmodule Membrane.Core.InputBuffer do
 
       warn([
         """
-        InputBuffer #{inspect(pb.name)} (toilet) has buffers of size #{inspect(size)},
-        which is above #{above_level}, from output #{inspect(pb.linked_output_ref)} that works in push mode.
+        InputBuffer #{inspect(input_buf.name)} (toilet) has buffers of size #{inspect(size)},
+        which is above #{above_level}, from output #{inspect(input_buf.linked_output_ref)} that works in push mode.
         To have control over amount of buffers being produced, consider using pull mode.
         If this is a normal situation, increase warn/fail size in buffer options.
         """
@@ -163,42 +165,42 @@ defmodule Membrane.Core.InputBuffer do
 
     if size >= fail_lvl do
       warn_error(
-        "InputBuffer #{inspect(pb.name)} (toilet): failing: too much data",
+        "InputBuffer #{inspect(input_buf.name)} (toilet): failing: too much data",
         {:pull_buffer, toilet: :too_many_buffers}
       )
     else
-      {:ok, pb}
+      {:ok, input_buf}
     end
   end
 
-  def store(pb, :buffer, v), do: store(pb, :buffers, [v])
+  def store(input_buf, :buffer, v), do: store(input_buf, :buffers, [v])
 
-  def store(%__MODULE__{q: q} = pb, type, v) when type in @non_buf_types do
-    report("Storing #{type}", pb)
-    {:ok, %__MODULE__{pb | q: q |> @qe.push({:non_buffer, type, v})}}
+  def store(%__MODULE__{q: q} = input_buf, type, v) when type in @non_buf_types do
+    report("Storing #{type}", input_buf)
+    {:ok, %__MODULE__{input_buf | q: q |> @qe.push({:non_buffer, type, v})}}
   end
 
-  defp do_store_buffers(%__MODULE__{q: q, current_size: size, metric: metric} = pb, v) do
+  defp do_store_buffers(%__MODULE__{q: q, current_size: size, metric: metric} = input_buf, v) do
     buf_cnt = v |> metric.buffers_size
-    report("Storing #{inspect(buf_cnt)} buffers", pb)
+    report("Storing #{inspect(buf_cnt)} buffers", input_buf)
 
     %__MODULE__{
-      pb
+      input_buf
       | q: q |> @qe.push({:buffers, v, buf_cnt}),
         current_size: size + buf_cnt
     }
   end
 
-  def take(%__MODULE__{current_size: size} = pb, count) when count >= 0 do
-    report("Taking #{inspect(count)} buffers", pb)
-    {out, %__MODULE__{current_size: new_size} = pb} = do_take(pb, count)
-    pb = pb |> handle_demand(size - new_size)
-    {{:ok, out}, pb}
+  def take(%__MODULE__{current_size: size} = input_buf, count) when count >= 0 do
+    report("Taking #{inspect(count)} buffers", input_buf)
+    {out, %__MODULE__{current_size: new_size} = input_buf} = do_take(input_buf, count)
+    input_buf = input_buf |> handle_demand(size - new_size)
+    {{:ok, out}, input_buf}
   end
 
-  defp do_take(%__MODULE__{q: q, current_size: size, metric: metric} = pb, count) do
+  defp do_take(%__MODULE__{q: q, current_size: size, metric: metric} = input_buf, count) do
     {out, nq} = q |> q_pop(count, metric)
-    {out, %__MODULE__{pb | q: nq, current_size: max(0, size - count)}}
+    {out, %__MODULE__{input_buf | q: nq, current_size: max(0, size - count)}}
   end
 
   defp q_pop(q, count, metric, acc \\ [])
@@ -244,7 +246,7 @@ defmodule Membrane.Core.InputBuffer do
            preferred_size: pref_size,
            demand: demand,
            min_demand: min_demand
-         } = pb,
+         } = input_buf,
          new_demand
        )
        when size < pref_size and demand + new_demand > 0 do
@@ -253,20 +255,20 @@ defmodule Membrane.Core.InputBuffer do
     report(
       """
       Sending demand of size #{inspect(to_demand)}
-      to input #{inspect(pb.linked_output_ref)}
+      to input #{inspect(input_buf.linked_output_ref)}
       """,
-      pb
+      input_buf
     )
 
     Message.send(demand_pid, :demand, [to_demand, linked_output_ref])
-    %__MODULE__{pb | demand: demand + new_demand - to_demand}
+    %__MODULE__{input_buf | demand: demand + new_demand - to_demand}
   end
 
-  defp handle_demand(%__MODULE__{toilet: false, demand: demand} = pb, new_demand),
-    do: %__MODULE__{pb | demand: demand + new_demand}
+  defp handle_demand(%__MODULE__{toilet: false, demand: demand} = input_buf, new_demand),
+    do: %__MODULE__{input_buf | demand: demand + new_demand}
 
-  defp handle_demand(%__MODULE__{toilet: toilet} = pb, _new_demand) when toilet != false do
-    pb
+  defp handle_demand(%__MODULE__{toilet: toilet} = input_buf, _new_demand) when toilet != false do
+    input_buf
   end
 
   defp report(msg, %__MODULE__{
