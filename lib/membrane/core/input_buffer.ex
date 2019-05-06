@@ -20,8 +20,6 @@ defmodule Membrane.Core.InputBuffer do
 
   @type t :: %__MODULE__{
           name: Element.name_t(),
-          demand_pid: pid(),
-          linked_output_ref: Pad.ref_t(),
           q: @qe.t(),
           preferred_size: pos_integer(),
           current_size: non_neg_integer(),
@@ -32,8 +30,6 @@ defmodule Membrane.Core.InputBuffer do
         }
 
   defstruct name: :pull_buffer,
-            demand_pid: nil,
-            linked_output_ref: nil,
             q: nil,
             preferred_size: 100,
             current_size: 0,
@@ -81,13 +77,11 @@ defmodule Membrane.Core.InputBuffer do
 
   @spec new(
           Element.name_t(),
-          demand_pid :: pid,
-          Pad.ref_t(),
           Buffer.Metric.unit_t(),
           enable_toilet? :: boolean(),
           props_t
         ) :: t()
-  def new(name, demand_pid, linked_output_ref, demand_unit, enable_toilet?, props) do
+  def new(name, demand_unit, enable_toilet?, props) do
     metric = Buffer.Metric.from_unit(demand_unit)
     preferred_size = props[:preferred_size] || metric.pullbuffer_preferred_size
     min_demand = props[:min_demand] || preferred_size |> div(4)
@@ -105,15 +99,12 @@ defmodule Membrane.Core.InputBuffer do
     %__MODULE__{
       name: name,
       q: @qe.new,
-      demand_pid: demand_pid,
-      linked_output_ref: linked_output_ref,
       preferred_size: preferred_size,
       min_demand: min_demand,
       demand: preferred_size,
       metric: metric,
       toilet: toilet
     }
-    |> handle_demand()
   end
 
   @spec store(t(), atom(), any()) :: {:ok, t()} | {:error, any()}
@@ -127,11 +118,8 @@ defmodule Membrane.Core.InputBuffer do
       when is_list(v) do
     if size >= pref_size do
       debug("""
-      InputBuffer #{inspect(input_buf.name)}: received buffers from pad #{
-        inspect(input_buf.linked_output_ref)
-      },
-      despite not requesting them. It is probably caused by overestimating demand
-      by previous element.
+      InputBuffer #{inspect(input_buf.name)}: received buffers despite not requesting them.
+      It is probably caused by overestimating demand by previous element.
       """)
     end
 
@@ -192,7 +180,6 @@ defmodule Membrane.Core.InputBuffer do
     report("Taking #{inspect(count)} buffers", input_buf)
     {out, %__MODULE__{current_size: new_size} = input_buf} = do_take(input_buf, count)
     input_buf = input_buf |> Bunch.Struct.update_in(:demand, &(&1 + size - new_size))
-    input_buf = input_buf |> handle_demand()
     {{:ok, out}, input_buf}
   end
 
@@ -235,24 +222,25 @@ defmodule Membrane.Core.InputBuffer do
   @spec empty?(t()) :: boolean()
   def empty?(%__MODULE__{current_size: size}), do: size == 0
 
-  defp handle_demand(
-         %__MODULE__{
-           toilet: false,
-           demand_pid: demand_pid,
-           linked_output_ref: linked_output_ref,
-           current_size: size,
-           preferred_size: pref_size,
-           demand: demand,
-           min_demand: min_demand
-         } = input_buf
-       )
-       when size < pref_size and demand > 0 do
+  @spec send_demands(t(), pid(), Pad.ref_t()) :: t()
+  def send_demands(
+        %__MODULE__{
+          toilet: false,
+          current_size: size,
+          preferred_size: pref_size,
+          demand: demand,
+          min_demand: min_demand
+        } = input_buf,
+        demand_pid,
+        linked_output_ref
+      )
+      when size < pref_size and demand > 0 do
     to_demand = max(demand, min_demand)
 
     report(
       """
       Sending demand of size #{inspect(to_demand)}
-      to input #{inspect(input_buf.linked_output_ref)}
+      to input #{inspect(linked_output_ref)}
       """,
       input_buf
     )
@@ -261,7 +249,7 @@ defmodule Membrane.Core.InputBuffer do
     %__MODULE__{input_buf | demand: demand - to_demand}
   end
 
-  defp handle_demand(input_buf) do
+  def send_demands(input_buf, _demand_pid, _linked_output_ref) do
     input_buf
   end
 

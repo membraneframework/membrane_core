@@ -133,10 +133,12 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   @spec do_supply_demand(Pad.ref_t(), pos_integer, State.t()) :: State.stateful_try_t()
   defp do_supply_demand(pad_ref, size, state) do
-    buffer_output =
-      state |> PadModel.get_and_update_data(pad_ref, :buffer, &(&1 |> InputBuffer.take(size)))
+    pad_data = state |> PadModel.get_data!(pad_ref)
+    {buffer_output, new_buffer} = pad_data.buffer |> InputBuffer.take(size)
 
-    with {{:ok, {_buffer_status, data}}, state} <- buffer_output,
+    with {:ok, {_buffer_status, data}} <- buffer_output,
+         new_buffer = new_buffer |> InputBuffer.send_demands(pad_data.pid, pad_data.other_ref),
+         state = state |> PadModel.set_data!(pad_ref, :buffer, new_buffer),
          {:ok, state} <- handle_pullbuffer_output(pad_ref, data, state) do
       {:ok, state}
     else

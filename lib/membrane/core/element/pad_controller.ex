@@ -270,12 +270,11 @@ defmodule Membrane.Core.Element.PadController do
     input_buf =
       InputBuffer.new(
         state.name,
-        pid,
-        other_ref,
         demand_unit,
         enable_toilet?,
         buffer_props
       )
+      |> InputBuffer.send_demands(pid, other_ref)
 
     %{buffer: input_buf, demand: 0}
   end

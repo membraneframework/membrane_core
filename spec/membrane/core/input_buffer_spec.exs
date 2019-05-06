@@ -13,10 +13,8 @@ defmodule Membrane.Core.InputBufferSpec do
     end
   end
 
-  describe ".new/5" do
+  describe ".new/3" do
     let :name, do: :name
-    let :demand_pid, do: self()
-    let :linked_output_ref, do: :output_pad_ref
     let :preferred_size, do: 100
     let :warn_size, do: 200
     let :fail_size, do: 400
@@ -37,8 +35,6 @@ defmodule Membrane.Core.InputBufferSpec do
       expect(
         described_module().new(
           name(),
-          demand_pid(),
-          linked_output_ref(),
           demand_unit(),
           toilet(),
           props()
@@ -47,9 +43,7 @@ defmodule Membrane.Core.InputBufferSpec do
       |> to(
         eq(%InputBuffer{
           name: name(),
-          demand_pid: demand_pid(),
-          linked_output_ref: linked_output_ref(),
-          demand: 0,
+          demand: preferred_size(),
           preferred_size: preferred_size(),
           min_demand: min_demand(),
           toilet: toilet(),
@@ -57,9 +51,6 @@ defmodule Membrane.Core.InputBufferSpec do
           q: Qex.new()
         })
       )
-
-      expected_list = [preferred_size(), linked_output_ref()]
-      assert_received Message.new(:demand, ^expected_list)
     end
 
     context "if toilet is not false" do
@@ -71,8 +62,6 @@ defmodule Membrane.Core.InputBufferSpec do
         expect(
           described_module().new(
             name(),
-            demand_pid(),
-            linked_output_ref(),
             demand_unit(),
             toilet(),
             props()
@@ -81,8 +70,6 @@ defmodule Membrane.Core.InputBufferSpec do
         |> to(
           eq(%InputBuffer{
             name: name(),
-            demand_pid: demand_pid(),
-            linked_output_ref: linked_output_ref(),
             demand: preferred_size(),
             preferred_size: preferred_size(),
             min_demand: min_demand(),
@@ -91,8 +78,6 @@ defmodule Membrane.Core.InputBufferSpec do
             q: Qex.new()
           })
         )
-
-        refute_received Message.new(:demand, _)
       end
     end
   end
@@ -201,8 +186,6 @@ defmodule Membrane.Core.InputBufferSpec do
         current_size: current_size(),
         demand: 0,
         min_demand: 0,
-        demand_pid: self(),
-        linked_output_ref: linked_output_ref(),
         metric: metric(),
         q: q()
       }
@@ -219,13 +202,6 @@ defmodule Membrane.Core.InputBufferSpec do
         {_, %{current_size: new_size}} = described_module().take(input_buf(), to_take())
         expect(new_size) |> to(eq 0)
       end
-
-      it "should generate demand" do
-        described_module().take(input_buf(), to_take())
-        expected_list = [current_size(), linked_output_ref()]
-
-        assert_received Message.new(:demand, ^expected_list)
-      end
     end
 
     context "when there are enough buffers" do
@@ -240,7 +216,6 @@ defmodule Membrane.Core.InputBufferSpec do
           exp_list = Qex.new() |> Qex.push(buffers2()) |> Enum.into([])
 
           expect(list) |> to(eq exp_list)
-          assert_received Message.new(:demand, _)
         end
       end
 
@@ -257,7 +232,6 @@ defmodule Membrane.Core.InputBufferSpec do
           exp_list = Qex.new() |> Qex.push(exp_rest) |> Enum.into([])
 
           expect(list) |> to(eq exp_list)
-          assert_received Message.new(:demand, _)
         end
       end
     end
