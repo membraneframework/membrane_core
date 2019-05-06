@@ -87,7 +87,7 @@ defmodule Membrane.Integration.DemandsTest do
 
     assert {:ok, pid} =
              Pipeline.start_link(DemandsTest.Pipeline, %{
-               source: %Source{actions_generator: actions_gen},
+               source: %Source{output: actions_gen},
                filter: Filter,
                sink: %Sink{target: self(), autodemand: false},
                target: self()

@@ -7,31 +7,41 @@ defmodule Membrane.Testing.Source do
   use Bunch
   alias Membrane.Buffer
   alias Membrane.Element.Action
+  alias Membrane.Event.EndOfStream
+  require Bunch.Code
 
   def_output_pad :output, caps: :any
 
-  def_options actions_generator: [
-                type: :function,
-                spec: (non_neg_integer, non_neg_integer -> [Action.t()]),
+  def_options output: [
+                spec: (non_neg_integer, non_neg_integer -> [Action.t()]) | Enum.t(),
                 default: &__MODULE__.default_buf_gen/2,
                 description: """
-                Function invoked each time `handle_demand` is invoked.
-                It is an action generator that takes two arguments.
-                First argument is counter which is incremented by 1 every call
-                and second argument represents size of demand.
+                If `output` is an enumerable with `Membrane.Payload.t()` then
+                buffer containing those payloads will be sent through the
+                `:output` pad.
+
+                If `output` is a function then it will be invoked each time
+                `handle_demand` is invoked. It is an action generator that takes
+                two arguments. First argument is counter which is incremented by
+                1 every call and second argument represents size of demand.
                 """
               ]
 
   @impl true
-  def handle_init(opts) do
-    {:ok, opts |> Map.merge(%{cnt: 0})}
+  def handle_init(%{output: output} = opts) do
+    opts = Map.from_struct(opts)
+
+    if is_function(output) do
+      {:ok, opts |> Map.merge(%{cnt: 0})}
+    else
+      {:ok, opts}
+    end
   end
 
   @impl true
-  def handle_demand(:output, size, :buffers, _ctx, %{cnt: cnt} = state) do
-    {actions, cnt} = state.actions_generator.(cnt, size)
-
-    {{:ok, actions}, %{state | cnt: cnt}}
+  def handle_demand(:output, size, :buffers, _ctx, state) do
+    {actions, state} = get_actions(state, size)
+    {{:ok, actions}, state}
   end
 
   def default_buf_gen(cnt, size) do
@@ -42,5 +52,24 @@ defmodule Membrane.Testing.Source do
       {:buffer, {:output, buf}}
     end)
     ~> {&1, cnt + size}
+  end
+
+  defp get_actions(%{cnt: cnt, output: actions_generator} = state, size)
+       when is_function(actions_generator) do
+    {actions, cnt} = actions_generator.(cnt, size)
+    {actions, %{state | cnt: cnt}}
+  end
+
+  defp get_actions(%{output: output} = state, size) do
+    {payloads, output} = Enum.split(output, size)
+    buffers = Enum.map(payloads, &%Buffer{payload: &1})
+
+    actions =
+      case output do
+        [] -> [buffer: {:output, buffers}, event: {:output, %EndOfStream{}}]
+        _ -> [buffer: {:output, buffers}]
+      end
+
+    {actions, %{state | output: output}}
   end
 end
