@@ -40,16 +40,11 @@ defmodule Membrane.Testing.Pipeline do
 
   ```
   options = %Membrane.Testing.Pipeline.Options {
-    monitored_callbacks: [:handle_prepared_to_playing],
     test_process: pid
     ...
   }
   ```
-
-  First, you need to configure which callbacks are to be monitored by putting their names
-  into `monitored_callbacks` field of `Options` struct. Check `t:Membrane.Testing.Pipeline.Options.pipeline_callback/0`
-  for list of available callback names.
-  You also need to pass a `PID` of the process that will receive messages.
+  You need to pass a `PID` of the process that will receive messages.
 
   ```
   import Membrane.Testing.Pipeline.Assertions
@@ -68,16 +63,12 @@ defmodule Membrane.Testing.Pipeline do
 
   use Membrane.Pipeline
 
-  alias Membrane.Element
+  alias Membrane.{Buffer, Element}
   alias Membrane.Pipeline.Spec
 
   defmodule Options do
     @moduledoc """
     Structure representing `options` passed to testing pipeline.
-
-    ## Monitored Callbacks
-    A message will be sent to `test process` if the invoked callback is in the list of monitored callbacks.
-    See `t:pipeline_callback/0` for available callbacks.
 
     ##  Test Process
     `pid` of process that shall receive messages when Pipeline invokes playback state change callback
@@ -94,20 +85,9 @@ defmodule Membrane.Testing.Pipeline do
     """
 
     @enforce_keys [:elements]
-    defstruct @enforce_keys ++ [:monitored_callbacks, :links, :test_process]
-
-    @typedoc """
-    Defines supported callback names.
-    """
-    @type pipeline_callback ::
-            :handle_notification
-            | :handle_playing_to_prepared
-            | :handle_prepared_to_playing
-            | :handle_prepared_to_stopped
-            | :handle_stopped_to_prepared
+    defstruct @enforce_keys ++ [:links, :test_process]
 
     @type t :: %__MODULE__{
-            monitored_callbacks: pipeline_callback() | nil,
             test_process: pid() | nil,
             elements: Spec.children_spec_t(),
             links: Spec.links_spec_t() | nil
@@ -148,15 +128,6 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_init(options)
-
-  def handle_init(%Options{test_process: nil, monitored_callbacks: list})
-      when is_list(list) and length(list) > 0,
-      do: {:error, :no_pid_when_monitoring}
-
-  def handle_init(%Options{monitored_callbacks: nil} = options),
-    do: handle_init(%Options{options | monitored_callbacks: []})
-
   def handle_init(%Options{links: nil, elements: elements} = options) do
     new_links = populate_links(elements)
     handle_init(%Options{options | links: new_links})
@@ -170,7 +141,7 @@ defmodule Membrane.Testing.Pipeline do
       links: links
     }
 
-    new_state = Map.take(args, [:monitored_callbacks, :test_process])
+    new_state = Map.take(args, [:test_process])
     {{:ok, spec}, new_state}
   end
 
@@ -191,8 +162,14 @@ defmodule Membrane.Testing.Pipeline do
     do: notify_parent(:handle_prepared_to_stopped, state)
 
   @impl true
-  def handle_notification(notification, from, state),
-    do: notify_parent({:handle_notification, {notification, from}}, state)
+  def handle_notification(%Buffer{} = buffer, element, state) do
+    notify_parent({:buffer, element, buffer}, state)
+  end
+
+  def handle_notification(notification, from, state) do
+    # last clause
+    notify_parent({:handle_notification, {notification, from}}, state)
+  end
 
   @impl true
   def handle_other({:for_element, element, message}, state) do
@@ -202,15 +179,8 @@ defmodule Membrane.Testing.Pipeline do
   def handle_other(message, state),
     do: notify_parent({:handle_other, message}, state)
 
-  defp get_callback_name(name) when is_atom(name), do: name
-  defp get_callback_name({name, _}), do: name
-
-  defp notify_parent(message, state) do
-    %{test_process: parent, monitored_callbacks: monitored_callbacks} = state
-
-    if get_callback_name(message) in monitored_callbacks do
-      send(parent, {__MODULE__, message})
-    end
+  defp notify_parent(message, %{test_process: parent} = state) do
+    send(parent, {__MODULE__, self(), message})
 
     {:ok, state}
   end

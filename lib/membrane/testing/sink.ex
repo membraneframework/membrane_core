@@ -7,11 +7,7 @@ defmodule Membrane.Testing.Sink do
 
   def_input_pad :input, demand_unit: :buffers, caps: :any
 
-  def_options target: [
-                type: :pid,
-                description: "PID of process that will receive incoming buffers."
-              ],
-              autodemand: [
+  def_options autodemand: [
                 type: :boolean,
                 default: true,
                 description: """
@@ -38,11 +34,9 @@ defmodule Membrane.Testing.Sink do
 
   @impl true
   def handle_write(:input, buf, _ctx, state) do
-    send(state.target, buf)
-
     case state do
-      %{autodemand: false} -> {:ok, state}
-      %{autodemand: true} -> {{:ok, demand: :input}, state}
+      %{autodemand: false} -> {{:ok, notify: buf}, state}
+      %{autodemand: true} -> {{:ok, demand: :input, notify: buf}, state}
     end
   end
 end

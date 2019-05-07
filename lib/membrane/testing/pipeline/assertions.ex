@@ -3,29 +3,51 @@ defmodule Membrane.Testing.Pipeline.Assertions do
   Assertions that can be used with `Membrane.Testing.Pipeline` in tests
   """
 
-  @doc """
-  Asserts that a message sent from `Membrane.Testing.Pipeline` matching `pattern` was or is going to be received
-  within the `timeout` period, specified in milliseconds.
+  # Used by ExUnit.Assertions.assert_receive/3
+  import ExUnit.Assertions, only: [flunk: 1]
 
-  The `pattern` argument must be a match pattern. Flunks with `failure_message`
-  if a message matching `pattern` is not received.
-
-  For example to wait for message indicating `handle_prepared_to_playing` callback
-  was called:
-
-      assert_receive_message :handle_prepared_to_playing
-  """
-  defmacro assert_receive_message(
+  defmacro assert_received_message(
+             pid,
              pattern,
-             timeout \\ Application.fetch_env!(:ex_unit, :assert_receive_timeout),
              failure_message \\ nil
            ) do
-    import ExUnit.Assertions, only: [assert_receive: 3]
+    import ExUnit.Assertions
 
     quote do
-      assert_receive {Membrane.Testing.Pipeline, unquote(pattern)},
-                     unquote(timeout),
+      assert_receive {Membrane.Testing.Pipeline, ^unquote(pid), unquote(pattern)},
+                     20000,
                      unquote(failure_message)
+    end
+  end
+
+  def assert_pipeline_notified(pipeline_pid, element_name, message) do
+    assert_received_message(pipeline_pid, {^element_name, ^message})
+  end
+
+  def assert_pipeline_playback_changed(
+        pipeline_pid,
+        previous_playback_state,
+        current_playback_state
+      ) do
+    callback_name =
+      Membrane.Core.PlaybackHandler.state_change_callback(
+        previous_playback_state,
+        current_playback_state
+      )
+
+    assert_received_message(pipeline_pid, ^callback_name)
+  end
+
+  def assert_pipeline_received(pipeline_pid, message) do
+    assert_received_message(pipeline_pid, {:handle_other, ^message})
+  end
+
+  defmacro assert_sink_processed_buffer(pipeline_pid, sink_name, pattern) do
+    quote do
+      assert_received_message(
+        unquote(pipeline_pid),
+        {:buffer, unquote(sink_name), unquote(pattern)}
+      )
     end
   end
 end
