@@ -1,6 +1,7 @@
 %{
   "bunch": {:hex, :bunch, "1.1.0", "bf9ca22c788ad4f486afb4d6d5e1211ab09cbee473c5cf370e6e550b1df4bc4b", [:mix], [], "hexpm"},
   "certifi": {:hex, :certifi, "2.5.1", "867ce347f7c7d78563450a18a6a28a8090331e77fa02380b4a21962a65d36ee5", [:rebar3], [{:parse_trans, "~>3.3", [hex: :parse_trans, repo: "hexpm", optional: false]}], "hexpm"},
+  "coerce": {:hex, :coerce, "1.0.1", "211c27386315dc2894ac11bc1f413a0e38505d808153367bd5c6e75a4003d096", [:mix], [], "hexpm"},
   "dialyxir": {:hex, :dialyxir, "1.0.0-rc.4", "71b42f5ee1b7628f3e3a6565f4617dfb02d127a0499ab3e72750455e986df001", [:mix], [{:erlex, "~> 0.1", [hex: :erlex, repo: "hexpm", optional: false]}], "hexpm"},
   "earmark": {:hex, :earmark, "1.3.2", "b840562ea3d67795ffbb5bd88940b1bed0ed9fa32834915125ea7d02e35888a5", [:mix], [], "hexpm"},
   "erlex": {:hex, :erlex, "0.2.1", "cee02918660807cbba9a7229cae9b42d1c6143b768c781fa6cee1eaf03ad860b", [:mix], [], "hexpm"},
@@ -18,8 +19,10 @@
   "metrics": {:hex, :metrics, "1.0.1", "25f094dea2cda98213cecc3aeff09e940299d950904393b2a29d191c346a8486", [:rebar3], [], "hexpm"},
   "mimerl": {:hex, :mimerl, "1.2.0", "67e2d3f571088d5cfd3e550c383094b47159f3eee8ffa08e64106cdf5e981be3", [:rebar3], [], "hexpm"},
   "nimble_parsec": {:hex, :nimble_parsec, "0.5.0", "90e2eca3d0266e5c53f8fbe0079694740b9c91b6747f2b7e3c5d21966bba8300", [:mix], [], "hexpm"},
+  "numbers": {:hex, :numbers, "5.1.1", "1277dbee5dc73b0e1608bd6d318bd8338cbcba5b68cade65f24e4bb402676b5c", [:mix], [{:coerce, "~> 1.0", [hex: :coerce, repo: "hexpm", optional: false]}, {:decimal, "~> 1.5", [hex: :decimal, repo: "hexpm", optional: true]}], "hexpm"},
   "parse_trans": {:hex, :parse_trans, "3.3.0", "09765507a3c7590a784615cfd421d101aec25098d50b89d7aa1d66646bc571c1", [:rebar3], [], "hexpm"},
   "qex": {:hex, :qex, "0.5.0", "5a3a9becf67d4006377c4c247ffdaaa8ae5b3634a0caadb788dc24d6125068f4", [:mix], [], "hexpm"},
+  "ratio": {:hex, :ratio, "2.2.2", "c26013b9af7d03cf451bbe11608046e4c9d06e127f5e387668ae97163e75a6dd", [:mix], [{:numbers, "~> 5.1.0", [hex: :numbers, repo: "hexpm", optional: false]}], "hexpm"},
   "ssl_verify_fun": {:hex, :ssl_verify_fun, "1.1.4", "f0eafff810d2041e93f915ef59899c923f4568f4585904d010387ed74988e77b", [:make, :mix, :rebar3], [], "hexpm"},
   "unicode_util_compat": {:hex, :unicode_util_compat, "0.4.1", "d869e4c68901dd9531385bb0c8c40444ebf624e60b6962d95952775cac5e90cd", [:rebar3], [], "hexpm"},
 }
