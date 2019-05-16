@@ -1,9 +1,11 @@
 defmodule Membrane.Core.Element.PadControllerTest do
   use ExUnit.Case, async: true
-  alias Membrane.Support.Element.{DynamicFilter, TrivialFilter}
+  alias Membrane.Support.Element.{DynamicFilter, TrivialFilter, TrivialSink}
   alias Membrane.Core.Element.{PadModel, PadSpecHandler, State}
+  alias Membrane.Core.Message
   alias Membrane.Element.{LinkError, Pad}
   alias Membrane.Event.EndOfStream
+  require Message
 
   @module Membrane.Core.Element.PadController
 
@@ -12,6 +14,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
     |> State.new(name)
     |> PadSpecHandler.init_pads()
     |> Bunch.Access.put_in(:internal_state, %{})
+    |> Bunch.Access.put_in(:watcher, self())
   end
 
   describe ".handle_link/7" do
@@ -113,10 +116,10 @@ defmodule Membrane.Core.Element.PadControllerTest do
     end
 
     test "for static input pad" do
-      state = prepare_static_state(TrivialFilter, :input)
+      state = prepare_static_state(TrivialSink, :input)
       assert state.pads.data |> Map.has_key?(:input)
       assert {:ok, new_state} = @module.handle_unlink(:input, state)
-      assert new_state.internal_state.last_event == {:input, %EndOfStream{}}
+      assert_received Message.new(:notification, [:element, {:end_of_stream, :input}])
       refute new_state.pads.data |> Map.has_key?(:input)
     end
 
