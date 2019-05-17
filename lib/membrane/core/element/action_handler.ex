@@ -206,7 +206,7 @@ defmodule Membrane.Core.Element.ActionHandler do
           dir: %{direction: :output} <- pad_data,
           eos: %{end_of_stream?: false} <- pad_data do
       %{mode: mode, pid: pid, other_ref: other_ref, other_demand_unit: other_demand_unit} =
-        PadModel.get_data!(state, pad_ref)
+        pad_data
 
       state = handle_buffer(pad_ref, mode, other_demand_unit, buffers, state)
       Message.send(pid, :buffer, [buffers, other_ref])
@@ -252,18 +252,17 @@ defmodule Membrane.Core.Element.ActionHandler do
 
     withl pad: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
           direction: %{direction: :output} <- pad_data,
-          do: accepted_caps = PadModel.get_data!(state, pad_ref, :accepted_caps),
-          caps: true <- Caps.Matcher.match?(accepted_caps, caps) do
-      {%{pid: pid, other_ref: other_ref}, state} =
-        state
-        |> PadModel.get_and_update_data!(pad_ref, fn data -> %{data | caps: caps} ~> {&1, &1} end)
+          caps: true <- Caps.Matcher.match?(pad_data.accepted_caps, caps) do
+      %{pid: pid, other_ref: other_ref} = pad_data
+
+      state = state |> PadModel.set_data!(pad_ref, :caps, caps)
 
       Message.send(pid, :caps, [caps, other_ref])
       {:ok, state}
     else
       pad: {:error, reason} -> {{:error, reason}, state}
       direction: %{direction: dir} -> {{:error, {:invalid_pad_dir, pad_ref, dir}}, state}
-      caps: false -> {{:error, {:invalid_caps, caps, accepted_caps}}, state}
+      caps: false -> {{:error, {:invalid_caps, caps, pad_data.accepted_caps}}, state}
     end
   end
 
