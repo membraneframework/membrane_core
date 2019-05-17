@@ -63,7 +63,7 @@ defmodule Membrane.Testing.Pipeline do
 
   use Membrane.Pipeline
 
-  alias Membrane.{Buffer, Element}
+  alias Membrane.Element
   alias Membrane.Pipeline.Spec
 
   defmodule Options do
@@ -162,12 +162,7 @@ defmodule Membrane.Testing.Pipeline do
     do: notify_parent(:handle_prepared_to_stopped, state)
 
   @impl true
-  def handle_notification(%Buffer{} = buffer, element, state) do
-    notify_parent({:buffer, element, buffer}, state)
-  end
-
   def handle_notification(notification, from, state) do
-    # last clause
     notify_parent({:handle_notification, {notification, from}}, state)
   end
 

@@ -1,0 +1,165 @@
+defmodule Membrane.Testing.Assertions do
+  @moduledoc """
+  Assertions that can be used with `Membrane.Testing.Pipeline` in tests.
+
+  All of assertions defined in this module work only in conjunction with
+  `Membrane.Testing.Pipeline`.
+  """
+  require ExUnit.Assertions
+
+  # Customowy assert receive, zeby zrobic dobry ui
+
+  @doc false
+  defmacro assert_message_receive(
+             pid,
+             pattern,
+             failure_message \\ nil,
+             # configure timeout
+             timeout \\ 2000
+           ) do
+    quote do
+      import ExUnit.Assertions
+
+      ExUnit.Assertions.assert_receive(
+        {Membrane.Testing.Pipeline, ^unquote(pid), unquote(pattern)},
+        unquote(timeout),
+        unquote(failure_message)
+      )
+    end
+  end
+
+  @doc false
+  defmacro assert_message_received(
+             pid,
+             pattern,
+             failure_message \\ nil
+           ) do
+    assert_message_receive(pid, pattern, failure_message, 0)
+  end
+
+  @doc """
+  Asserts that pipeline got a notification from specific element.
+  """
+  def assert_pipeline_notified(pipeline_pid, element_name, notification) do
+    quote do
+      assert_message_received(
+        unquote(pipeline_pid),
+        {:handle_notification, {unquote(notification), ^unquote(element_name)}}
+      )
+    end
+  end
+
+  # TODO fix me
+  @doc """
+  Asserts that pipeline's playback state changed from one to another.
+
+       assert_pipeline_playback_changed(pipeline_pid, :prepared, :playing)
+  """
+  def assert_pipeline_playback_changed(
+        pipeline_pid,
+        previous_playback_state,
+        current_playback_state
+      ) do
+    callback_name =
+      Membrane.Core.PlaybackHandler.state_change_callback(
+        previous_playback_state,
+        current_playback_state
+      )
+
+    assert_message_receive(pipeline_pid, ^callback_name)
+  end
+
+  # TODO make this use macros
+  defmacro assert_pipeline_received(pipeline_pid, message) do
+    quote do
+      assert_message_received(unquote(pipeline_pid), {:handle_other, unquote(message)})
+    end
+  end
+
+  @doc """
+  Asserts that `Membrane.Testing.Sink` received an event.
+
+  When a `Membrane.Testing.Sink` is part of `Membrane.Testing.Pipeline` you can
+  assert wether it received an event matching a provided pattern.
+
+      {:ok, pid} = Membrane.Testing.Pipeline.start_link(%Membrane.Testing.Pipeline.Options{
+        elements: [
+          ....,
+          the_sink: %Membrane.Testing.Sink{}
+        ]
+      })
+
+      assert_sink_received_event(pid, :the_sink, %Discontinuity{})
+  """
+  defmacro assert_sink_received_event(pipeline_pid, sink_name, event) do
+    quote do
+      assert_message_received(
+        unquote(pipeline_pid),
+        {:handle_notification, {{:event, unquote(event)}, ^unquote(sink_name)}}
+      )
+    end
+  end
+
+  @doc """
+  Asserts that `Membrane.Testing.Sink` received a buffer.
+
+  When a `Membrane.Testing.Sink` is part of `Membrane.Testing.Pipeline` you can
+  assert wether it received a buffer matching a provided pattern.
+
+      {:ok, pid} = Membrane.Testing.Pipeline.start_link(%Membrane.Testing.Pipeline.Options{
+        elements: [
+          ....,
+          the_sink: %Membrane.Testing.Sink{}
+        ]
+      })
+
+  You can match for exact value:
+
+      assert_sink_processed_buffer(pid, :the_sink ,%Membrane.Buffer{payload: ^specific_payload})
+
+  You can also use pattern to extract data from the buffer:
+
+      assert_sink_processed_buffer(pid, :sink, %Buffer{payload: <<data::16>> <> <<255>>})
+      do_something(data)
+  """
+  defmacro assert_sink_processed_buffer(pipeline_pid, sink_name, pattern) do
+    quote do
+      assert_message_receive(
+        unquote(pipeline_pid),
+        {:handle_notification, {{:buffer, unquote(pattern)}, unquote(sink_name)}}
+      )
+    end
+  end
+
+  @doc """
+  Asserts that `Membrane.Testing.Pipeline` received or is going to receive
+  `:start_of_stream` from specific element within the `timeout` period specified
+  in milliseconds.
+
+      assert_start_of_stream(pipeline_pid, :an_element)
+  """
+  def assert_start_of_stream(pipeline_pid, element_name, timeout) do
+    assert_message_receive(
+      pipeline_pid,
+      {:handle_notification, {{:start_of_stream, :input}, ^element_name}},
+      nil,
+      timeout
+    )
+  end
+
+  @doc """
+  Asserts that `Membrane.Testing.Pipeline` received or is going to receive
+  `:end_of_stream` from specific element within the `timeout` period specified
+  in milliseconds.
+
+      assert_end_of_stream(pipeline_pid, :an_element)
+  """
+  def assert_end_of_stream(pipeline_pid, element_name, timeout) do
+    assert_message_receive(
+      pipeline_pid,
+      {:handle_notification, {{:end_of_stream, :input}, ^element_name}},
+      nil,
+      timeout
+    )
+  end
+end

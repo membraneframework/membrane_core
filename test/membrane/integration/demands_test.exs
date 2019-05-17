@@ -5,8 +5,8 @@ defmodule Membrane.Integration.DemandsTest do
   alias DemandsTest.Filter
   alias Membrane.Buffer
   alias Membrane.Testing.{Source, Sink, Pipeline}
-  import Pipeline.Assertions
-  # alias Membrane.Pipeline
+  import Membrane.Testing.Assertions
+  import ExUnit.Assertions
 
   # Asserts that message equal to pattern will be received within 200ms
   # In contrast to assert_receive, it also checks if it the first message in the mailbox

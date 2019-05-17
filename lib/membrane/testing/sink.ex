@@ -1,11 +1,29 @@
 defmodule Membrane.Testing.Sink do
   @moduledoc """
-  Sink Element that will send every buffer it receives to the pid passed as argument.
+  Sink Element that allows asserting on buffers it receives.
+
+
+      alias Membrane.Testing
+      {:ok, pid} = Testing.Pipeline.start_link(Testing.Pipeline.Options{
+        elements: [
+          ...,
+          sink: %Testing.Sink{}
+        ]
+      })
+
+    # TODO example assertions
+
+      assert_end_of_stream(pid, :sink)
+      assert_sink_processed_buffer(pid, :sink ,%Membrane.Buffer{payload: 255})
+
+    For all supported assertions check `Membrane.Testing.Assertions`.
   """
 
   use Membrane.Element.Base.Sink
 
-  def_input_pad :input, demand_unit: :buffers, caps: :any
+  def_input_pad :input,
+    demand_unit: :buffers,
+    caps: :any
 
   def_options autodemand: [
                 type: :boolean,
@@ -28,6 +46,11 @@ defmodule Membrane.Testing.Sink do
   def handle_prepared_to_playing(_context, state), do: {:ok, state}
 
   @impl true
+  def handle_event(:input, event, _context, state) do
+    {{:ok, notify: {:event, event}}, state}
+  end
+
+  @impl true
   def handle_other({:make_demand, size}, _ctx, %{autodemand: false} = state) do
     {{:ok, demand: {:input, size}}, state}
   end
@@ -35,8 +58,8 @@ defmodule Membrane.Testing.Sink do
   @impl true
   def handle_write(:input, buf, _ctx, state) do
     case state do
-      %{autodemand: false} -> {{:ok, notify: buf}, state}
-      %{autodemand: true} -> {{:ok, demand: :input, notify: buf}, state}
+      %{autodemand: false} -> {{:ok, notify: {:buffer, buf}}, state}
+      %{autodemand: true} -> {{:ok, demand: :input, notify: {:buffer, buf}}, state}
     end
   end
 end
