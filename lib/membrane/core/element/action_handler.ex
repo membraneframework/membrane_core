@@ -3,7 +3,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   # Module validating and executing actions returned by element's callbacks.
 
   alias Membrane.{Buffer, Caps, Core, Element, Event, Notification}
-  alias Core.Element.{DemandHandler, LifecycleController, PadModel, State}
+  alias Core.Element.{DemandHandler, LifecycleController, PadModel, State, TimerController}
   alias Core.{Message, PlaybackHandler}
   alias Element.{Action, Pad}
   require Message
@@ -143,6 +143,18 @@ defmodule Membrane.Core.Element.ActionHandler do
        )
        when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter] do
     supply_demand(pad_ref, size, cb, params[:supplying_demand?] || false, state)
+  end
+
+  defp do_handle_action({:timer, {id, interval, clock}}, _cb, _params, state) do
+    TimerController.start_timer(interval, clock, id, state)
+  end
+
+  defp do_handle_action({:timer, {interval, clock}}, cb, params, state) do
+    do_handle_action({:timer, {interval, clock, make_ref()}}, cb, params, state)
+  end
+
+  defp do_handle_action({:untimer, ref}, _cb, _params, state) do
+    TimerController.stop_timer(ref, state)
   end
 
   defp do_handle_action(_action, _callback, _params, state) do

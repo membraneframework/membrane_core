@@ -6,7 +6,7 @@ defmodule Membrane.Core.Element.State do
 
   use Membrane.Log, tags: :core
   alias Membrane.{Core, Element}
-  alias Core.{Playback, Playbackable}
+  alias Core.{Playback, Playbackable, Timer}
   alias Core.Element.{PadModel, PadSpecHandler, PlaybackBuffer}
   alias Element.Pad
   alias Bunch.Type
@@ -28,7 +28,8 @@ defmodule Membrane.Core.Element.State do
           controlling_pid: pid | nil,
           playback: Playback.t(),
           playback_buffer: PlaybackBuffer.t(),
-          delayed_demands: %{{Pad.ref_t(), :supply | :redemand} => :sync | :async}
+          delayed_demands: %{{Pad.ref_t(), :supply | :redemand} => :sync | :async},
+          timers: %{Timer.id_t() => Timer.t()}
         }
 
   defstruct [
@@ -41,7 +42,9 @@ defmodule Membrane.Core.Element.State do
     :controlling_pid,
     :playback,
     :playback_buffer,
-    :delayed_demands
+    :delayed_demands,
+    :timers,
+    :clocks
   ]
 
   defimpl Playbackable, for: __MODULE__ do
@@ -64,7 +67,9 @@ defmodule Membrane.Core.Element.State do
       controlling_pid: nil,
       playback: %Playback{},
       playback_buffer: PlaybackBuffer.new(),
-      delayed_demands: %{}
+      delayed_demands: %{},
+      timers: %{},
+      clocks: %{}
     }
     |> PadSpecHandler.init_pads()
   end

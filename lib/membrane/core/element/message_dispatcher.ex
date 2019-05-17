@@ -3,7 +3,16 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   # Module handling messages incoming to element and dispatching them to controllers.
 
   alias Membrane.Core
-  alias Core.Element.{DemandHandler, LifecycleController, PadController, PlaybackBuffer, State}
+
+  alias Core.Element.{
+    DemandHandler,
+    LifecycleController,
+    PadController,
+    PlaybackBuffer,
+    State,
+    TimerController
+  }
+
   alias Core.{Message, PlaybackHandler}
   require Message
   use Core.Element.Log
@@ -93,6 +102,14 @@ defmodule Membrane.Core.Element.MessageDispatcher do
 
   defp do_handle_message(Message.new(:handle_unlink, pad_ref), :call, state) do
     PadController.handle_unlink(pad_ref, state)
+  end
+
+  defp do_handle_message(Message.new(:timer_tick, timer_id), :info, state) do
+    TimerController.handle_tick(timer_id, state)
+  end
+
+  defp do_handle_message(Message.new(:clock_update, [clock, ratio]), :info, state) do
+    TimerController.handle_clock_update(clock, ratio, state)
   end
 
   defp do_handle_message(Message.new(_, _) = message, mode, state) do
