@@ -551,6 +551,22 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert new_state.delayed_demands[{:output, :redemand}] == :sync
     end
 
+    test "when two :redemand actions are last", %{state: state} do
+      result =
+        @module.handle_actions(
+          [notify: :a, notify: :b, redemand: :output, redemand: :output],
+          :handle_other,
+          %{},
+          state
+        )
+
+      assert_received Message.new(:notification, [:elem_name, :a])
+      assert_received Message.new(:notification, [:elem_name, :b])
+      assert {:ok, new_state} = result
+      assert %{new_state | delayed_demands: %{}} == state
+      assert new_state.delayed_demands[{:output, :redemand}] == :sync
+    end
+
     test "when :redemand is not the last action", %{state: state} do
       assert_raise ActionError, ~r/[Rr]edemand.*last/, fn ->
         @module.handle_actions(

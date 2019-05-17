@@ -133,21 +133,26 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_actions(actions, callback, handler_params, state) do
-    {redemand, actions_after_redemand} =
+    {redemands, actions_after_redemands} =
       actions
       |> Enum.drop_while(fn
         {:redemand, _} -> false
         _ -> true
       end)
-      |> Enum.split(1)
+      |> Enum.split_while(fn
+        {:redemand, _} -> true
+        _ -> false
+      end)
 
-    if actions_after_redemand != [] do
-      raise ActionError,
-        reason: :actions_after_redemand,
-        action: redemand |> Enum.at(0),
-        callback: {state[:module], callback}
-    else
-      super(actions |> join_buffers(), callback, handler_params, state)
+    case {redemands, actions_after_redemands} do
+      {_, []} ->
+        super(actions |> join_buffers(), callback, handler_params, state)
+
+      {[redemand | _], _} ->
+        raise ActionError,
+          reason: :actions_after_redemand,
+          action: redemand,
+          callback: {state.module, callback}
     end
   end
 
