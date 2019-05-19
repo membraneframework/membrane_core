@@ -11,12 +11,17 @@ defmodule Membrane.Testing.Sink do
         ]
       })
 
-    # TODO example assertions
+  For example if you want to wait till ` Membrane.Event.EndOfStream ` reaches
+  the Testing Sink.
 
       assert_end_of_stream(pid, :sink)
+
+  Asserting that `Membrane.Testing.Sink` element processed a buffer that matches
+  a specific pattern can be achieved with a following expression.
+
       assert_sink_processed_buffer(pid, :sink ,%Membrane.Buffer{payload: 255})
 
-    For all supported assertions check `Membrane.Testing.Assertions`.
+  For all supported assertions check `Membrane.Testing.Assertions`.
   """
 
   use Membrane.Element.Base.Sink
