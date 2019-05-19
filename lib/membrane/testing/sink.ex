@@ -2,7 +2,6 @@ defmodule Membrane.Testing.Sink do
   @moduledoc """
   Sink Element that allows asserting on buffers it receives.
 
-
       alias Membrane.Testing
       {:ok, pid} = Testing.Pipeline.start_link(Testing.Pipeline.Options{
         elements: [
@@ -11,17 +10,11 @@ defmodule Membrane.Testing.Sink do
         ]
       })
 
-  For example if you want to wait till ` Membrane.Event.EndOfStream ` reaches
-  the Testing Sink.
-
-      assert_end_of_stream(pid, :sink)
-
   Asserting that `Membrane.Testing.Sink` element processed a buffer that matches
-  a specific pattern can be achieved with a following expression.
+  a specific pattern can be achieved using
+  `Membrane.Testing.Assertions.assert_sink_processed_buffer/3`.
 
       assert_sink_processed_buffer(pid, :sink ,%Membrane.Buffer{payload: 255})
-
-  For all supported assertions check `Membrane.Testing.Assertions`.
   """
 
   use Membrane.Element.Base.Sink
