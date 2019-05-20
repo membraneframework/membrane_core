@@ -35,13 +35,20 @@ defmodule Membrane.Testing.Assertions do
   @doc """
   Asserts that pipeline got a notification from specific element.
   """
-  defmacro assert_pipeline_notified(pipeline_pid, element_name, notification) do
+  defmacro assert_pipeline_notified(
+             pipeline_pid,
+             element_name,
+             notification,
+             timeout \\ @default_timeout
+           ) do
     quote do
       element_name_value = unquote(element_name)
 
       assert_message_receive(
         unquote(pipeline_pid),
-        {:handle_notification, {unquote(notification), ^element_name_value}}
+        {:handle_notification, {unquote(notification), ^element_name_value}},
+        nil,
+        unquote(timeout)
       )
     end
   end
@@ -66,7 +73,8 @@ defmodule Membrane.Testing.Assertions do
   def assert_pipeline_playback_changed(
         pipeline_pid,
         previous_playback_state,
-        current_playback_state
+        current_playback_state,
+        timeout \\ @default_timeout
       ) do
     valid_changes = [
       {:stopped, :prepared},
@@ -82,7 +90,7 @@ defmodule Membrane.Testing.Assertions do
           current_playback_state
         )
 
-      assert_message_receive(pipeline_pid, ^callback_name)
+      assert_message_receive(pipeline_pid, ^callback_name, nil, timeout)
     else
       transitions =
         Enum.map(valid_changes, fn {from, to} ->
@@ -103,9 +111,14 @@ defmodule Membrane.Testing.Assertions do
 
   Such message would normally handled by `c:Membrane.Pipeline.handle_other/2`
   """
-  defmacro assert_pipeline_received(pipeline_pid, message) do
+  defmacro assert_pipeline_receive(pipeline_pid, message, timeout \\ @default_timeout) do
     quote do
-      assert_message_receive(unquote(pipeline_pid), {:handle_other, unquote(message)})
+      assert_message_receive(
+        unquote(pipeline_pid),
+        {:handle_other, unquote(message)},
+        nil,
+        unquote(timeout)
+      )
     end
   end
 
@@ -131,6 +144,7 @@ defmodule Membrane.Testing.Assertions do
       assert_message_receive(
         unquote(pipeline_pid),
         {:handle_notification, {{:event, unquote(event)}, ^element_name_value}},
+        nil,
         unquote(timeout)
       )
     end
@@ -170,6 +184,7 @@ defmodule Membrane.Testing.Assertions do
       assert_message_receive(
         unquote(pipeline_pid),
         {:handle_notification, {{:buffer, unquote(pattern)}, ^element_name_value}},
+        nil,
         unquote(timeout)
       )
     end
