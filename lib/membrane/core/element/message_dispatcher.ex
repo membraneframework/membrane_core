@@ -75,8 +75,8 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     {type, args} |> PlaybackBuffer.store(state)
   end
 
-  defp do_handle_message(Message.new(:get_pad_ref, pad_name), :call, state) do
-    PadController.get_pad_ref(pad_name, state)
+  defp do_handle_message(Message.new(:get_pad_ref, [pad_name, id]), :call, state) do
+    PadController.get_pad_ref(pad_name, id, state)
   end
 
   defp do_handle_message(Message.new(:linking_finished), :call, state) do

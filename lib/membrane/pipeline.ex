@@ -339,9 +339,9 @@ defmodule Membrane.Pipeline do
     end)
   end
 
-  defp resolve_link(%{element: element, pad_name: pad_name} = endpoint, state) do
+  defp resolve_link(%{element: element, pad_name: pad_name, id: id} = endpoint, state) do
     with {:ok, pid} <- state |> State.get_child_pid(element),
-         {:ok, pad_ref} <- pid |> Message.call(:get_pad_ref, pad_name) do
+         {:ok, pad_ref} <- pid |> Message.call(:get_pad_ref, [pad_name, id]) do
       %{endpoint | pid: pid, pad_ref: pad_ref}
     else
       {:error, {:unknown_child, child}} ->
