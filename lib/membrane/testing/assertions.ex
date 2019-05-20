@@ -7,8 +7,6 @@ defmodule Membrane.Testing.Assertions do
   """
   require ExUnit.Assertions
 
-  # Customowy assert receive, zeby zrobic dobry ui
-
   @doc false
   defmacro assert_message_receive(
              pid,
@@ -40,7 +38,7 @@ defmodule Membrane.Testing.Assertions do
   @doc """
   Asserts that pipeline got a notification from specific element.
   """
-  def assert_pipeline_notified(pipeline_pid, element_name, notification) do
+  defmacro assert_pipeline_notified(pipeline_pid, element_name, notification) do
     quote do
       assert_message_received(
         unquote(pipeline_pid),
@@ -49,7 +47,6 @@ defmodule Membrane.Testing.Assertions do
     end
   end
 
-  # TODO fix me
   @doc """
   Asserts that pipeline's playback state changed from one to another.
 
@@ -69,7 +66,6 @@ defmodule Membrane.Testing.Assertions do
     assert_message_receive(pipeline_pid, ^callback_name)
   end
 
-  # TODO make this use macros
   defmacro assert_pipeline_received(pipeline_pid, message) do
     quote do
       assert_message_received(unquote(pipeline_pid), {:handle_other, unquote(message)})
