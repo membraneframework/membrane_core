@@ -50,6 +50,18 @@ defmodule Membrane.Testing.Assertions do
   @doc """
   Asserts that pipeline's playback state changed from one to another.
 
+  Supplied change must be a valid one. Currently playback has 3
+  `t:Membrane.Pipeline.playback_state_t/0`, namely:
+
+   - `:stopped`
+   - `:prepared`
+   - `:playing`
+
+   those states must change in a sequence so change from `:stopped` to
+   `:prepared` is a valid one but from `:stopped` to `:
+   prepared` is not.
+
+
        assert_pipeline_playback_changed(pipeline_pid, :prepared, :playing)
   """
   def assert_pipeline_playback_changed(
@@ -57,15 +69,40 @@ defmodule Membrane.Testing.Assertions do
         previous_playback_state,
         current_playback_state
       ) do
-    callback_name =
-      Membrane.Core.PlaybackHandler.state_change_callback(
-        previous_playback_state,
-        current_playback_state
-      )
+    valid_changes = [
+      {:stopped, :prepared},
+      {:playing, :prepared},
+      {:prepared, :playing},
+      {:prepared, :stopped}
+    ]
 
-    assert_message_receive(pipeline_pid, ^callback_name)
+    if({previous_playback_state, current_playback_state} in valid_changes) do
+      callback_name =
+        Membrane.Core.PlaybackHandler.state_change_callback(
+          previous_playback_state,
+          current_playback_state
+        )
+
+      assert_message_receive(pipeline_pid, ^callback_name)
+    else
+      transitions =
+        Enum.map(valid_changes, fn {from, to} ->
+          "  " <> to_string(from) <> " -> " <> to_string(to) <> "\n"
+        end)
+
+      raise """
+      Transition from #{previous_playback_state} to #{current_playback_state} is not valid.
+      Valid transitions are:
+      #{transitions}
+      """
+    end
   end
 
+  @doc """
+  Asserts that pipeline received a message from another process.
+
+  Such message would normally handled by `c:Membrane.Pipeline.handle_other/2`
+  """
   defmacro assert_pipeline_received(pipeline_pid, message) do
     quote do
       assert_message_received(unquote(pipeline_pid), {:handle_other, unquote(message)})
