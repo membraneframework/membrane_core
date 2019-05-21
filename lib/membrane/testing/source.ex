@@ -13,7 +13,7 @@ defmodule Membrane.Testing.Source do
   def_output_pad :output, caps: :any
 
   def_options output: [
-                spec: (non_neg_integer, non_neg_integer -> [Action.t()]) | Enum.t(),
+                spec: (non_neg_integer, non_neg_integer -> {[Action.t()], integer()}) | Enum.t(),
                 default: &__MODULE__.default_buf_gen/2,
                 description: """
                 If `output` is an enumerable with `Membrane.Payload.t()` then
@@ -22,8 +22,8 @@ defmodule Membrane.Testing.Source do
 
                 If `output` is a function then it will be invoked each time
                 `handle_demand` is invoked. It is an action generator that takes
-                two arguments. First argument is counter which is incremented by
-                1 every call and second argument represents size of demand.
+                two arguments. The first argument is counter which is incremented by
+                1 every call and second argument represents the size of demand.
                 """
               ]
 
@@ -44,6 +44,7 @@ defmodule Membrane.Testing.Source do
     {{:ok, actions}, state}
   end
 
+  @spec default_buf_gen(integer(), integer()) :: {[Action.t()], integer()}
   def default_buf_gen(cnt, size) do
     cnt..(size + cnt - 1)
     |> Enum.map(fn cnt ->
