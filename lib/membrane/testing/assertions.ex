@@ -16,8 +16,8 @@ defmodule Membrane.Testing.Assertions do
   defmacro assert_message_receive(
              pid,
              pattern,
-             failure_message \\ nil,
-             timeout \\ @default_timeout
+             timeout \\ @default_timeout,
+             failure_message \\ nil
            ) do
     quote do
       import ExUnit.Assertions
@@ -47,7 +47,6 @@ defmodule Membrane.Testing.Assertions do
       assert_message_receive(
         unquote(pipeline_pid),
         {:handle_notification, {unquote(notification), ^element_name_value}},
-        nil,
         unquote(timeout)
       )
     end
@@ -65,7 +64,7 @@ defmodule Membrane.Testing.Assertions do
 
    those states must change in a sequence so change from `:stopped` to
    `:prepared` is a valid one but from `:stopped` to `:
-   prepared` is not.
+   playing` is not.
 
 
        assert_pipeline_playback_changed(pipeline_pid, :prepared, :playing)
@@ -90,7 +89,7 @@ defmodule Membrane.Testing.Assertions do
           current_playback_state
         )
 
-      assert_message_receive(pipeline_pid, ^callback_name, nil, timeout)
+      assert_message_receive(pipeline_pid, ^callback_name, timeout, nil)
     else
       transitions =
         Enum.map(valid_changes, fn {from, to} ->
@@ -111,12 +110,11 @@ defmodule Membrane.Testing.Assertions do
 
   Such message would normally handled by `c:Membrane.Pipeline.handle_other/2`
   """
-  defmacro assert_pipeline_receive(pipeline_pid, message, timeout \\ @default_timeout) do
+  defmacro assert_pipeline_receive(pipeline_pid, message_pattern, timeout \\ @default_timeout) do
     quote do
       assert_message_receive(
         unquote(pipeline_pid),
-        {:handle_other, unquote(message)},
-        nil,
+        {:handle_other, unquote(message_pattern)},
         unquote(timeout)
       )
     end
@@ -144,7 +142,6 @@ defmodule Membrane.Testing.Assertions do
       assert_message_receive(
         unquote(pipeline_pid),
         {:handle_notification, {{:event, unquote(event)}, ^element_name_value}},
-        nil,
         unquote(timeout)
       )
     end
@@ -184,7 +181,6 @@ defmodule Membrane.Testing.Assertions do
       assert_message_receive(
         unquote(pipeline_pid),
         {:handle_notification, {{:buffer, unquote(pattern)}, ^element_name_value}},
-        nil,
         unquote(timeout)
       )
     end
@@ -206,7 +202,6 @@ defmodule Membrane.Testing.Assertions do
     assert_message_receive(
       pipeline_pid,
       {:handle_notification, {{:start_of_stream, ^pad}, ^element_name}},
-      nil,
       timeout
     )
   end
@@ -222,7 +217,6 @@ defmodule Membrane.Testing.Assertions do
     assert_message_receive(
       pipeline_pid,
       {:handle_notification, {{:end_of_stream, ^pad}, ^element_name}},
-      nil,
       timeout
     )
   end

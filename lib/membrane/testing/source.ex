@@ -18,7 +18,7 @@ defmodule Membrane.Testing.Source do
                 description: """
                 If `output` is an enumerable with `Membrane.Payload.t()` then
                 buffer containing those payloads will be sent through the
-                `:output` pad.
+                `:output` pad and followed by `Membrane.Event.EndOfStream`.
 
                 If `output` is a function then it will be invoked each time
                 `handle_demand` is invoked. It is an action generator that takes
@@ -28,7 +28,7 @@ defmodule Membrane.Testing.Source do
               ]
 
   @impl true
-  def handle_init(%{output: output} = opts) do
+  def handle_init(%__MODULE__{output: output} = opts) do
     opts = Map.from_struct(opts)
 
     if is_function(output) do
