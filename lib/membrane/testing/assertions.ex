@@ -75,8 +75,8 @@ defmodule Membrane.Testing.Assertions do
   """
   defmacro assert_pipeline_playback_changed(
              pipeline_pid,
-             previous_playback_state,
-             current_playback_state,
+             previous_state,
+             current_state,
              timeout \\ @default_timeout
            ) do
     valid_changes = [
@@ -86,24 +86,11 @@ defmodule Membrane.Testing.Assertions do
       {:prepared, :stopped}
     ]
 
-    if({previous_playback_state, current_playback_state} in valid_changes) do
-      callback =
-        Membrane.Core.PlaybackHandler.state_change_callback(
-          previous_playback_state,
-          current_playback_state
-        )
+    is_previous_ignored = match?({:_, _, _}, previous_state)
+    is_current_ignored = match?({:_, _, _}, current_state)
+    are_arguments_values = !is_previous_ignored and !is_current_ignored
 
-      quote do
-        unquote(
-          assert_message_receive(
-            pipeline_pid,
-            callback,
-            timeout,
-            nil
-          )
-        )
-      end
-    else
+    if(are_arguments_values and {previous_state, current_state} not in valid_changes) do
       transitions =
         Enum.map(valid_changes, fn {from, to} ->
           "  " <> to_string(from) <> " -> " <> to_string(to)
@@ -111,7 +98,7 @@ defmodule Membrane.Testing.Assertions do
         |> Enum.join("\n")
 
       message = """
-      Transition from #{previous_playback_state} to #{current_playback_state} is not valid.
+      Transition from #{previous_state} to #{current_state} is not valid.
       Valid transitions are:
       #{transitions}
       """
@@ -119,6 +106,13 @@ defmodule Membrane.Testing.Assertions do
       quote do
         flunk(unquote(message))
       end
+    else
+      pattern =
+        quote do
+          {:playback_state_changed, unquote(previous_state), unquote(current_state)}
+        end
+
+      assert_message_receive(pipeline_pid, pattern, timeout, nil)
     end
   end
 
@@ -129,15 +123,11 @@ defmodule Membrane.Testing.Assertions do
   Such a message would normally handled by `c:Membrane.Pipeline.handle_other/2`
   """
   defmacro assert_pipeline_receive(pipeline_pid, message_pattern, timeout \\ @default_timeout) do
-    quote do
-      unquote(
-        assert_message_receive(
-          pipeline_pid,
-          {:handle_other, message_pattern},
-          timeout
-        )
-      )
-    end
+    assert_message_receive(
+      pipeline_pid,
+      {:handle_other, message_pattern},
+      timeout
+    )
   end
 
   @doc """

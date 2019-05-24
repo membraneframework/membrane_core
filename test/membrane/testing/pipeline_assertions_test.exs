@@ -50,7 +50,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
     test "raises an error if invalid arguments are provided" do
       pattern =
         """
-        \\s*Transition from stopped to playing is not valid.\
+        \\s*Transition from stopped to playing is not valid\.\
         \\s*Valid transitions are:\
         \\s*stopped -> prepared\
         \\s*prepared -> playing\
@@ -66,6 +66,28 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
           assert_pipeline_playback_changed(self(), :stopped, :playing)
         end
       )
+    end
+
+    test "allows for wildcard as first argument", %{state: state} do
+      Pipeline.handle_prepared_to_stopped(state)
+      assert_pipeline_playback_changed(self(), _, :stopped)
+    end
+
+    test "allows for wildcard as second argument", %{state: state} do
+      Pipeline.handle_playing_to_prepared(state)
+      assert_pipeline_playback_changed(self(), :playing, _)
+    end
+
+    test "when using wildcard as first argument flunks if state hasn't change" do
+      assert_raise(ExUnit.AssertionError, fn ->
+        assert_pipeline_playback_changed(self(), _, :stopped, 0)
+      end)
+    end
+
+    test "when using wildcard as second argument flunks if state hasn't change" do
+      assert_raise(ExUnit.AssertionError, fn ->
+        assert_pipeline_playback_changed(self(), :prepared, _, 0)
+      end)
     end
   end
 
@@ -135,8 +157,6 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
     test "flunks when :end_of_stream is not handled by the pipeline" do
       assert_raise ExUnit.AssertionError, fn ->
         assert_end_of_stream(self(), :sink, :input, 0)
-        |> Macro.to_string()
-        |> IO.puts()
       end
     end
   end

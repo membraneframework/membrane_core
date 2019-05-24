@@ -169,23 +169,23 @@ defmodule Membrane.Testing.Pipeline do
 
   @impl true
   def handle_stopped_to_prepared(state),
-    do: notify_parent(:handle_stopped_to_prepared, state)
-
-  @impl true
-  def handle_playing_to_prepared(state),
-    do: notify_parent(:handle_playing_to_prepared, state)
+    do: notify_playback_state_changed(:stopped, :prepared, state)
 
   @impl true
   def handle_prepared_to_playing(state),
-    do: notify_parent(:handle_prepared_to_playing, state)
+    do: notify_playback_state_changed(:prepared, :playing, state)
+
+  @impl true
+  def handle_playing_to_prepared(state),
+    do: notify_playback_state_changed(:playing, :prepared, state)
 
   @impl true
   def handle_prepared_to_stopped(state),
-    do: notify_parent(:handle_prepared_to_stopped, state)
+    do: notify_playback_state_changed(:prepared, :stopped, state)
 
   @impl true
   def handle_notification(notification, from, state) do
-    notify_parent({:handle_notification, {notification, from}}, state)
+    notify_test_process({:handle_notification, {notification, from}}, state)
   end
 
   @impl true
@@ -194,10 +194,14 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   def handle_other(message, state),
-    do: notify_parent({:handle_other, message}, state)
+    do: notify_test_process({:handle_other, message}, state)
 
-  defp notify_parent(message, %{test_process: parent} = state) do
-    send(parent, {__MODULE__, self(), message})
+  defp notify_playback_state_changed(previous, current, state) do
+    notify_test_process({:playback_state_changed, previous, current}, state)
+  end
+
+  defp notify_test_process(message, %{test_process: test_process} = state) do
+    send(test_process, {__MODULE__, self(), message})
 
     {:ok, state}
   end
