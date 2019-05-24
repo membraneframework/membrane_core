@@ -39,17 +39,29 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
       end
     end
 
+    test "flunks when state change does not match given one", %{state: state} do
+      Pipeline.handle_prepared_to_stopped(state)
+
+      assert_raise ExUnit.AssertionError, fn ->
+        assert_pipeline_playback_changed(self(), :stopped, :prepared, 0)
+      end
+    end
+
     test "raises an error if invalid arguments are provided" do
-      assert_raise(
-        RuntimeError,
+      pattern =
         """
-        Transition from stopped to playing is not valid.
-        Valid transitions are:
-          stopped -> prepared
-          prepared -> playing
-          playing -> prepared
-          prepared -> stopped
-        """,
+        \\s*Transition from stopped to playing is not valid.\
+        \\s*Valid transitions are:\
+        \\s*stopped -> prepared\
+        \\s*prepared -> playing\
+        \\s*playing -> prepared\
+        \\s*prepared -> stopped\s*
+        """
+        |> Regex.compile!()
+
+      assert_raise(
+        ExUnit.AssertionError,
+        pattern,
         fn ->
           assert_pipeline_playback_changed(self(), :stopped, :playing)
         end
@@ -123,6 +135,8 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
     test "flunks when :end_of_stream is not handled by the pipeline" do
       assert_raise ExUnit.AssertionError, fn ->
         assert_end_of_stream(self(), :sink, :input, 0)
+        |> Macro.to_string()
+        |> IO.puts()
       end
     end
   end

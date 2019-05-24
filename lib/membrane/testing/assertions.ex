@@ -10,19 +10,14 @@ defmodule Membrane.Testing.Assertions do
 
   @default_timeout 2000
 
-  # Note: pattern value_x = unquote(x) is used to workaround allowing both
-  # Note: both function, value and variable to be passed as an argument.
-
-  @doc false
-  defmacro assert_message_receive(
-             pid,
-             pattern,
-             timeout \\ @default_timeout,
-             failure_message \\ nil
-           ) do
+  defp assert_message_receive(
+         pid,
+         pattern,
+         timeout \\ @default_timeout,
+         failure_message \\ nil
+       ) do
     quote do
       import ExUnit.Assertions
-
       pid_value = unquote(pid)
 
       assert_receive(
@@ -46,10 +41,16 @@ defmodule Membrane.Testing.Assertions do
     quote do
       element_name_value = unquote(element_name)
 
-      assert_message_receive(
-        unquote(pipeline_pid),
-        {:handle_notification, {unquote(notification), ^element_name_value}},
-        unquote(timeout)
+      unquote(
+        assert_message_receive(
+          pipeline_pid,
+          {:handle_notification,
+           {notification,
+            quote do
+              ^element_name_value
+            end}},
+          timeout
+        )
       )
     end
   end
@@ -72,12 +73,12 @@ defmodule Membrane.Testing.Assertions do
 
        assert_pipeline_playback_changed(pipeline_pid, :prepared, :playing)
   """
-  def assert_pipeline_playback_changed(
-        pipeline_pid,
-        previous_playback_state,
-        current_playback_state,
-        timeout \\ @default_timeout
-      ) do
+  defmacro assert_pipeline_playback_changed(
+             pipeline_pid,
+             previous_playback_state,
+             current_playback_state,
+             timeout \\ @default_timeout
+           ) do
     valid_changes = [
       {:stopped, :prepared},
       {:prepared, :playing},
@@ -86,13 +87,22 @@ defmodule Membrane.Testing.Assertions do
     ]
 
     if({previous_playback_state, current_playback_state} in valid_changes) do
-      callback_name =
+      callback =
         Membrane.Core.PlaybackHandler.state_change_callback(
           previous_playback_state,
           current_playback_state
         )
 
-      assert_message_receive(pipeline_pid, ^callback_name, timeout, nil)
+      quote do
+        unquote(
+          assert_message_receive(
+            pipeline_pid,
+            callback,
+            timeout,
+            nil
+          )
+        )
+      end
     else
       transitions =
         Enum.map(valid_changes, fn {from, to} ->
@@ -100,11 +110,15 @@ defmodule Membrane.Testing.Assertions do
         end)
         |> Enum.join("\n")
 
-      raise """
+      message = """
       Transition from #{previous_playback_state} to #{current_playback_state} is not valid.
       Valid transitions are:
       #{transitions}
       """
+
+      quote do
+        flunk(unquote(message))
+      end
     end
   end
 
@@ -116,10 +130,12 @@ defmodule Membrane.Testing.Assertions do
   """
   defmacro assert_pipeline_receive(pipeline_pid, message_pattern, timeout \\ @default_timeout) do
     quote do
-      assert_message_receive(
-        unquote(pipeline_pid),
-        {:handle_other, unquote(message_pattern)},
-        unquote(timeout)
+      unquote(
+        assert_message_receive(
+          pipeline_pid,
+          {:handle_other, message_pattern},
+          timeout
+        )
       )
     end
   end
@@ -144,10 +160,16 @@ defmodule Membrane.Testing.Assertions do
     quote do
       element_name_value = unquote(sink_name)
 
-      assert_message_receive(
-        unquote(pipeline_pid),
-        {:handle_notification, {{:event, unquote(event)}, ^element_name_value}},
-        unquote(timeout)
+      unquote(
+        assert_message_receive(
+          pipeline_pid,
+          {:handle_notification,
+           {{:event, event},
+            quote do
+              ^element_name_value
+            end}},
+          timeout
+        )
       )
     end
   end
@@ -184,10 +206,16 @@ defmodule Membrane.Testing.Assertions do
     quote do
       element_name_value = unquote(sink_name)
 
-      assert_message_receive(
-        unquote(pipeline_pid),
-        {:handle_notification, {{:buffer, unquote(pattern)}, ^element_name_value}},
-        unquote(timeout)
+      unquote(
+        assert_message_receive(
+          pipeline_pid,
+          {:handle_notification,
+           {{:buffer, pattern},
+            quote do
+              ^element_name_value
+            end}},
+          timeout
+        )
       )
     end
   end
@@ -205,9 +233,10 @@ defmodule Membrane.Testing.Assertions do
         pad \\ :input,
         timeout \\ @default_timeout
       ) do
-    assert_message_receive(
+    assert_pipeline_notified(
       pipeline_pid,
-      {:handle_notification, {{:start_of_stream, ^pad}, ^element_name}},
+      element_name,
+      {:start_of_stream, ^pad},
       timeout
     )
   end
@@ -219,10 +248,16 @@ defmodule Membrane.Testing.Assertions do
 
       assert_end_of_stream(pipeline_pid, :an_element)
   """
-  def assert_end_of_stream(pipeline_pid, element_name, pad \\ :input, timeout \\ @default_timeout) do
-    assert_message_receive(
+  def assert_end_of_stream(
+        pipeline_pid,
+        element_name,
+        pad \\ :input,
+        timeout \\ @default_timeout
+      ) do
+    assert_pipeline_notified(
       pipeline_pid,
-      {:handle_notification, {{:end_of_stream, ^pad}, ^element_name}},
+      element_name,
+      {:end_of_stream, ^pad},
       timeout
     )
   end
