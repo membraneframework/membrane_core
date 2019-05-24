@@ -121,16 +121,16 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
     end
   end
 
-  describe "assert_sink_processed_buffer" do
+  describe "assert_sink_buffer" do
     test "does not flunk when buffer is handled", %{state: state} do
       buffer = %Membrane.Buffer{payload: 255}
       Pipeline.handle_notification({:buffer, buffer}, :sink, state)
-      assert_sink_processed_buffer(self(), :sink, ^buffer)
+      assert_sink_buffer(self(), :sink, ^buffer)
     end
 
     test "flunks when buffer is not handled" do
       assert_raise ExUnit.AssertionError, fn ->
-        assert_sink_processed_buffer(self(), :sink, _, 0)
+        assert_sink_buffer(self(), :sink, _, 0)
       end
     end
   end

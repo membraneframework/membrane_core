@@ -55,23 +55,20 @@ defmodule Membrane.Testing.Assertions do
     end
   end
 
+  # TODO: Link to playback state docs.
+  # https://github.com/membraneframework/membrane-core/issues/165
   @doc """
   Asserts that pipeline's playback state changed or will change from one to
   another within the specified `timeout` period.
 
-  Supplied change must be a valid one. Currently playback has 3
-  `t:Membrane.Pipeline.playback_state_t/0`, namely:
+  Assertion can be either made by providing state before and after change as
+  atoms:
 
-   - `:stopped`
-   - `:prepared`
-   - `:playing`
+         assert_pipeline_playback_changed(pipeline_pid, :prepared, :playing)
 
-   those states must change in a sequence so change from `:stopped` to
-   `:prepared` is a valid one but from `:stopped` to `:
-   playing` is not.
+  Or by using using an `_` to assert on change from any state to other:
 
-
-       assert_pipeline_playback_changed(pipeline_pid, :prepared, :playing)
+        assert_pipeline_playback_changed(pipeline_pid, _, :playing)
   """
   defmacro assert_pipeline_playback_changed(
              pipeline_pid,
@@ -120,7 +117,7 @@ defmodule Membrane.Testing.Assertions do
   Asserts that pipeline received or will receive a message from another process
   within the specified `timeout` period.
 
-  Such a message would normally handled by `c:Membrane.Pipeline.handle_other/2`
+  Such a message would normally be handled by `c:Membrane.Pipeline.handle_other/2`
   """
   defmacro assert_pipeline_receive(pipeline_pid, message_pattern, timeout \\ @default_timeout) do
     assert_message_receive(
@@ -180,14 +177,14 @@ defmodule Membrane.Testing.Assertions do
 
   You can match for exact value:
 
-      assert_sink_processed_buffer(pid, :the_sink ,%Membrane.Buffer{payload: ^specific_payload})
+      assert_sink_buffer(pid, :the_sink ,%Membrane.Buffer{payload: ^specific_payload})
 
   You can also use pattern to extract data from the buffer:
 
-      assert_sink_processed_buffer(pid, :sink, %Buffer{payload: <<data::16>> <> <<255>>})
+      assert_sink_buffer(pid, :sink, %Buffer{payload: <<data::16>> <> <<255>>})
       do_something(data)
   """
-  defmacro assert_sink_processed_buffer(
+  defmacro assert_sink_buffer(
              pipeline_pid,
              sink_name,
              pattern,

@@ -68,7 +68,7 @@ defmodule Membrane.Testing.Pipeline do
   We can also assert that the `Membrane.Testing.Sink` processed a specific
   buffer.
 
-      assert_sink_processed_buffer(pipeline, :sink ,%Membrane.Buffer{payload: 1})
+      assert_sink_buffer(pipeline, :sink ,%Membrane.Buffer{payload: 1})
 
   ## Assertions
 
@@ -84,7 +84,7 @@ defmodule Membrane.Testing.Pipeline do
 
   use Membrane.Pipeline
 
-  alias Membrane.Element
+  alias Membrane.{Element, Pipeline}
   alias Membrane.Pipeline.Spec
 
   defmodule Options do
@@ -113,6 +113,17 @@ defmodule Membrane.Testing.Pipeline do
             elements: Spec.children_spec_t(),
             links: Spec.links_spec_t() | nil
           }
+  end
+
+  def start_link(pipeline_options \\ nil, process_options \\ [])
+
+  def start_link(%Options{test_process: nil} = pipeline_options, process_options) do
+    pipeline_options = %Options{pipeline_options | test_process: self()}
+    Pipeline.start_link(__MODULE__, pipeline_options, process_options)
+  end
+
+  def start_link(pipeline_options, process_options) do
+    Pipeline.start_link(__MODULE__, pipeline_options, process_options)
   end
 
   @doc """

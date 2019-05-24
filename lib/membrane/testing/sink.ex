@@ -12,9 +12,9 @@ defmodule Membrane.Testing.Sink do
 
   Asserting that `Membrane.Testing.Sink` element processed a buffer that matches
   a specific pattern can be achieved using
-  `Membrane.Testing.Assertions.assert_sink_processed_buffer/3`.
+  `Membrane.Testing.Assertions.assert_sink_buffer/3`.
 
-      assert_sink_processed_buffer(pid, :sink ,%Membrane.Buffer{payload: 255})
+      assert_sink_buffer(pid, :sink ,%Membrane.Buffer{payload: 255})
   """
 
   use Membrane.Element.Base.Sink

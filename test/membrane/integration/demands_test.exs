@@ -12,7 +12,7 @@ defmodule Membrane.Integration.DemandsTest do
   # In contrast to assert_receive, it also checks if it the first message in the mailbox
   def assert_buffers_received(range, pid) do
     Enum.each(range, fn i ->
-      assert_sink_processed_buffer(pid, :sink, %Buffer{payload: <<^i::16>> <> <<255>>})
+      assert_sink_buffer(pid, :sink, %Buffer{payload: <<^i::16>> <> <<255>>})
     end)
   end
 
