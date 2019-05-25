@@ -115,16 +115,18 @@ defmodule Membrane.Testing.Pipeline do
           }
   end
 
-  def start_link(pipeline_options \\ nil, process_options \\ [])
-
-  def start_link(%Options{test_process: nil} = pipeline_options, process_options) do
-    pipeline_options = %Options{pipeline_options | test_process: self()}
-    Pipeline.start_link(__MODULE__, pipeline_options, process_options)
+  def start_link(pipeline_options \\ nil, process_options \\ []) do
+    Pipeline.start_link(__MODULE__, default_options(pipeline_options), process_options)
   end
 
-  def start_link(pipeline_options, process_options) do
-    Pipeline.start_link(__MODULE__, pipeline_options, process_options)
+  def start(pipeline_options \\ nil, process_options \\ []) do
+    Pipeline.start(__MODULE__, default_options(pipeline_options), process_options)
   end
+
+  defp default_options(%Options{test_process: nil} = options),
+    do: %Options{options | test_process: self()}
+
+  defp default_options(default), do: default
 
   @doc """
   Links subsequent elements using default pads (linking `:input` to `:output` of

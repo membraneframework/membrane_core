@@ -49,8 +49,7 @@ defmodule Membrane.Integration.DemandsTest do
                  source: Source,
                  filter: Filter,
                  sink: %Sink{autodemand: false}
-               ],
-               test_process: self()
+               ]
              })
 
     test_pipeline(pid)
@@ -65,8 +64,7 @@ defmodule Membrane.Integration.DemandsTest do
                  source: Source,
                  filter: %Filter{demand_generator: filter_demand_gen},
                  sink: %Sink{autodemand: false}
-               ],
-               test_process: self()
+               ]
              })
 
     test_pipeline(pid)
@@ -92,8 +90,7 @@ defmodule Membrane.Integration.DemandsTest do
                  source: %Source{output: actions_gen},
                  filter: Filter,
                  sink: %Sink{autodemand: false}
-               ],
-               test_process: self()
+               ]
              })
 
     test_pipeline(pid)

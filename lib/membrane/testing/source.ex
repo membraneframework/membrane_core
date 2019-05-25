@@ -8,12 +8,11 @@ defmodule Membrane.Testing.Source do
   alias Membrane.Buffer
   alias Membrane.Element.Action
   alias Membrane.Event.EndOfStream
-  require Bunch.Code
 
   def_output_pad :output, caps: :any
 
   def_options output: [
-                spec: (non_neg_integer, non_neg_integer -> {[Action.t()], integer()}) | Enum.t(),
+                spec: (any(), non_neg_integer -> {[Action.t()], integer()}) | Enum.t(),
                 default: &__MODULE__.default_buf_gen/2,
                 description: """
                 If `output` is an enumerable with `Membrane.Payload.t()` then
