@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   @moduledoc false
   # Module validating and executing actions returned by element's callbacks.
 
-  alias Membrane.{Buffer, Caps, Core, Element, Event, Notification}
+  alias Membrane.{Buffer, Caps, Core, Element, Event, Notification, Sync}
   alias Core.Element.{DemandHandler, LifecycleController, PadModel, State, TimerController}
   alias Core.{Message, PlaybackHandler}
   alias Element.{Action, Pad}
@@ -157,25 +157,47 @@ defmodule Membrane.Core.Element.ActionHandler do
     TimerController.stop_timer(ref, state)
   end
 
+  defp do_handle_action({:sync, sync}, _cb, _params, state) do
+    :ok = Sync.ready(sync)
+    {:ok, state}
+  end
+
   defp do_handle_action(_action, _callback, _params, state) do
     {{:error, :invalid_action}, state}
   end
 
   @impl CallbackHandler
   def handle_actions(actions, callback, handler_params, state) do
-    actions_after_redemand =
-      actions
-      |> Enum.drop_while(fn
-        {:redemand, _} -> false
-        _ -> true
-      end)
-      |> Enum.drop(1)
+    with {{:ok, actions}, state} <- do_handle_actions(actions, callback, handler_params, state) do
+      actions_after_redemand =
+        actions
+        |> Enum.drop_while(fn
+          {:redemand, _} -> false
+          _ -> true
+        end)
+        |> Enum.drop(1)
 
-    if actions_after_redemand != [] do
-      {{:error, :actions_after_redemand}, state}
-    else
-      super(actions |> join_buffers(), callback, handler_params, state)
+      if actions_after_redemand != [] do
+        {{:error, :actions_after_redemand}, state}
+      else
+        super(actions |> join_buffers(), callback, handler_params, state)
+      end
     end
+  end
+
+  defp do_handle_actions(actions, :handle_sync, %{sync: sync}, state) do
+    {delay, actions} =
+      case actions do
+        [sync_delay: delay] ++ actions -> {delay, actions}
+        actions -> {0, actions}
+      end
+
+    :ok = Sync.sync(sync, delay: delay)
+    {{:ok, actions}, state}
+  end
+
+  defp do_handle_actions(actions, _callback, _handler_params, state) do
+    {{:ok, actions}, state}
   end
 
   defp join_buffers(actions) do

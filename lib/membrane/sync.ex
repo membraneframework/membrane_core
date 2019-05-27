@@ -1,6 +1,8 @@
 defmodule Membrane.Sync do
   use Bunch
   use GenServer
+  require Membrane.Core.Message
+  alias Membrane.Core.Message
   alias Membrane.Time
 
   def start_link(options \\ []) do
@@ -8,16 +10,16 @@ defmodule Membrane.Sync do
   end
 
   def register(sync) do
-    GenServer.call(sync, :register)
+    Message.call(sync, :sync_register)
   end
 
   def ready(sync) do
-    GenServer.call(sync, :ready)
+    Message.call(sync, :sync_ready)
   end
 
   def sync(sync, options \\ []) do
     delay = options |> Keyword.get(:delay, 0)
-    GenServer.call(sync, {:sync, delay})
+    Message.call(sync, :sync, delay)
   end
 
   @impl true
@@ -26,7 +28,7 @@ defmodule Membrane.Sync do
   end
 
   @impl true
-  def handle_call(:register, {pid, _ref}, %{state: :registration} = state) do
+  def handle_call(Message.new(:sync_register), {pid, _ref}, %{state: :registration} = state) do
     if not Map.has_key?(state.syncees, pid) do
       state =
         state
@@ -39,13 +41,13 @@ defmodule Membrane.Sync do
   end
 
   @impl true
-  def handle_call(:ready, {pid, _ref}, %{state: :waiting} = state) do
+  def handle_call(Message.new(:sync_ready), {pid, _ref}, %{state: :waiting} = state) do
     case update_level(pid, %{name: :ready}, [:registered], state) do
       {:ok, state} ->
         unless all_syncees_level?(state.syncees, [:ready, :sync]) do
           {:reply, :ok, state}
         else
-          state.syncees |> Map.keys() |> Enum.each(&send(&1, {:ready, self()}))
+          state.syncees |> Map.keys() |> Enum.each(&Message.send(&1, :sync, self()))
           {:reply, :ok, state}
         end
 
@@ -55,7 +57,7 @@ defmodule Membrane.Sync do
   end
 
   @impl true
-  def handle_call({:sync, delay}, {pid, _ref} = from, %{state: :waiting} = state) do
+  def handle_call(Message.new(:sync, delay), {pid, _ref} = from, %{state: :waiting} = state) do
     case update_level(pid, %{name: :sync, from: from}, [:registered, :ready], state) do
       {:ok, state} ->
         state =
@@ -77,9 +79,9 @@ defmodule Membrane.Sync do
   end
 
   @impl true
-  def handle_call(request, from, %{state: :registration} = state)
-      when request in [:sync, :ready] do
-    handle_call(request, from, %{state | state: :waiting})
+  def handle_call(Message.new(request) = message, from, %{state: :registration} = state)
+      when request in [:sync, :sync_ready] do
+    handle_call(message, from, %{state | state: :waiting})
   end
 
   @impl true
