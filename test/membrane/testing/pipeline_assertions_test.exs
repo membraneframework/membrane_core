@@ -107,16 +107,16 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
     end
   end
 
-  describe "assert_sink_received_event" do
+  describe "assert_sink_event" do
     test "does not flunk when event is handled", %{state: state} do
       event = %Membrane.Event.Discontinuity{}
       Pipeline.handle_notification({:event, event}, :sink, state)
-      assert_sink_received_event(self(), :sink, ^event)
+      assert_sink_event(self(), :sink, ^event)
     end
 
     test "flunks when event is not handled" do
       assert_raise ExUnit.AssertionError, fn ->
-        assert_sink_received_event(self(), :sink, _, 0)
+        assert_sink_event(self(), :sink, _, 0)
       end
     end
   end

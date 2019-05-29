@@ -141,9 +141,9 @@ defmodule Membrane.Testing.Assertions do
         ]
       })
 
-      assert_sink_received_event(pid, :the_sink, %Discontinuity{})
+      assert_sink_event(pid, :the_sink, %Discontinuity{})
   """
-  defmacro assert_sink_received_event(pipeline_pid, sink_name, event, timeout \\ @default_timeout) do
+  defmacro assert_sink_event(pipeline_pid, sink_name, event, timeout \\ @default_timeout) do
     quote do
       element_name_value = unquote(sink_name)
 
