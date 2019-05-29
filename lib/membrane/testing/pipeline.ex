@@ -115,11 +115,11 @@ defmodule Membrane.Testing.Pipeline do
           }
   end
 
-  def start_link(pipeline_options \\ nil, process_options \\ []) do
+  def start_link(pipeline_options, process_options \\ []) do
     Pipeline.start_link(__MODULE__, default_options(pipeline_options), process_options)
   end
 
-  def start(pipeline_options \\ nil, process_options \\ []) do
+  def start(pipeline_options, process_options \\ []) do
     Pipeline.start(__MODULE__, default_options(pipeline_options), process_options)
   end
 
