@@ -1,6 +1,14 @@
 defmodule Membrane.Testing.Sink do
   @moduledoc """
-  Sink Element that allows asserting on buffers it receives.
+  Sink Element that notifies the pipeline about buffers and events it receives.
+
+  By default `Sink` will demand buffers automatically, but you can override that
+  behaviour by using `autodemand` option. If set to false no automatic demands
+  shall be made. Demands can be then triggered by sending `{:make_demand, size}`
+  message.
+
+  This element can be used in conjunction with `Membrane.Testing.Pipeline` to
+  enable asserting on buffers and events it receives.
 
       alias Membrane.Testing
       {:ok, pid} = Testing.Pipeline.start_link(Testing.Pipeline.Options{
@@ -15,9 +23,12 @@ defmodule Membrane.Testing.Sink do
   `Membrane.Testing.Assertions.assert_sink_buffer/3`.
 
       assert_sink_buffer(pid, :sink ,%Membrane.Buffer{payload: 255})
+
   """
 
   use Membrane.Element.Base.Sink
+
+  alias Membrane.Event
 
   def_input_pad :input,
     demand_unit: :buffers,
@@ -44,6 +55,12 @@ defmodule Membrane.Testing.Sink do
   def handle_prepared_to_playing(_context, state), do: {:ok, state}
 
   @impl true
+  def handle_event(pad, %Event.StartOfStream{}, _context, state),
+    do: {{:ok, notify: {:start_of_stream, pad}}, state}
+
+  def handle_event(pad, %Event.EndOfStream{}, _context, state),
+    do: {{:ok, notify: {:end_of_stream, pad}}, state}
+
   def handle_event(:input, event, _context, state) do
     {{:ok, notify: {:event, event}}, state}
   end
