@@ -87,7 +87,7 @@ defmodule Membrane.Testing.Assertions do
     is_current_ignored = match?({:_, _, _}, current_state)
     are_arguments_values = !is_previous_ignored and !is_current_ignored
 
-    if(are_arguments_values and {previous_state, current_state} not in valid_changes) do
+    if are_arguments_values and {previous_state, current_state} not in valid_changes do
       transitions =
         Enum.map(valid_changes, fn {from, to} ->
           "  " <> to_string(from) <> " -> " <> to_string(to)

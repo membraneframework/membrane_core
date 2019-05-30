@@ -74,6 +74,8 @@ defmodule Membrane.Integration.DemandsTest do
     alias Membrane.Buffer
 
     actions_gen = fn cnt, _size ->
+      cnt = cnt || 0
+
       cnt..(4 + cnt - 1)
       |> Enum.map(fn cnt ->
         buf = %Buffer{payload: <<cnt::16>>}

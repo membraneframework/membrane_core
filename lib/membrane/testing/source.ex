@@ -4,7 +4,6 @@ defmodule Membrane.Testing.Source do
   """
 
   use Membrane.Element.Base.Source
-  use Bunch
   alias Membrane.Buffer
   alias Membrane.Element.Action
   alias Membrane.Event.EndOfStream
@@ -12,7 +11,7 @@ defmodule Membrane.Testing.Source do
   def_output_pad :output, caps: :any
 
   def_options output: [
-                spec: (any(), non_neg_integer -> {[Action.t()], integer()}) | Enum.t(),
+                spec: (any(), non_neg_integer -> {[Action.t()], any()}) | Enum.t(),
                 default: &__MODULE__.default_buf_gen/2,
                 description: """
                 If `output` is an enumerable with `Membrane.Payload.t()` then
@@ -21,8 +20,12 @@ defmodule Membrane.Testing.Source do
 
                 If `output` is a function then it will be invoked each time
                 `handle_demand` is invoked. It is an action generator that takes
-                two arguments. The first argument is counter which is incremented by
-                1 every call and second argument represents the size of demand.
+                two arguments. The first argument is the state that is initially
+                set to nil. The second one defines size of the demand. Such
+                function should return `{actions, next_state}` where `actions`
+                is a list of actions that will be returned from
+                `handle_demand/4` and `next_state` is the value that will be
+                used for the next call.
                 """
               ]
 
@@ -31,7 +34,7 @@ defmodule Membrane.Testing.Source do
     opts = Map.from_struct(opts)
 
     if is_function(output) do
-      {:ok, opts |> Map.merge(%{cnt: 0})}
+      {:ok, opts |> Map.merge(%{generator_state: nil})}
     else
       {:ok, opts}
     end
@@ -43,21 +46,24 @@ defmodule Membrane.Testing.Source do
     {{:ok, actions}, state}
   end
 
-  @spec default_buf_gen(integer(), integer()) :: {[Action.t()], integer()}
-  def default_buf_gen(cnt, size) do
-    cnt..(size + cnt - 1)
-    |> Enum.map(fn cnt ->
-      buf = %Buffer{payload: <<cnt::16>>}
+  @spec default_buf_gen(integer() | nil, integer()) :: {[Action.t()], integer()}
+  def default_buf_gen(nil, size), do: default_buf_gen(0, size)
 
-      {:buffer, {:output, buf}}
-    end)
-    ~> {&1, cnt + size}
+  def default_buf_gen(generator_state, size) do
+    buffers =
+      generator_state..(size + generator_state - 1)
+      |> Enum.map(fn generator_state ->
+        %Buffer{payload: <<generator_state::16>>}
+      end)
+
+    action = [buffer: {:output, buffers}]
+    {action, generator_state + size}
   end
 
-  defp get_actions(%{cnt: cnt, output: actions_generator} = state, size)
+  defp get_actions(%{generator_state: generator_state, output: actions_generator} = state, size)
        when is_function(actions_generator) do
-    {actions, cnt} = actions_generator.(cnt, size)
-    {actions, %{state | cnt: cnt}}
+    {actions, generator_state} = actions_generator.(generator_state, size)
+    {actions, %{state | generator_state: generator_state}}
   end
 
   defp get_actions(%{output: output} = state, size) do
