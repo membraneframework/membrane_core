@@ -8,22 +8,25 @@ defmodule Membrane.Testing.Source do
   alias Membrane.Element.Action
   alias Membrane.Event.EndOfStream
 
+  @type generator :: {(any(), non_neg_integer -> {[Action.t()], any()}), any()}
+
   def_output_pad :output, caps: :any
 
   def_options output: [
-                spec: (any(), non_neg_integer -> {[Action.t()], any()}) | Enum.t(),
-                default: &__MODULE__.default_buf_gen/2,
+                spec: generator | Enum.t(),
+                default: {0, &__MODULE__.default_buf_gen/2},
                 description: """
                 If `output` is an enumerable with `Membrane.Payload.t()` then
                 buffer containing those payloads will be sent through the
                 `:output` pad and followed by `Membrane.Event.EndOfStream`.
 
-                If `output` is a function then it will be invoked each time
-                `handle_demand` is invoked. It is an action generator that takes
-                two arguments. The first argument is the state that is initially
-                set to nil. The second one defines size of the demand. Such
-                function should return `{actions, next_state}` where `actions`
-                is a list of actions that will be returned from
+                If `output` is a `{initial_state, function}` tuple then the
+                the function will be invoked each time `handle_demand` is called.
+                It is an action generator that takes two arguments.
+                The first argument is the state that is initially set to
+                `initial_state`. The second one defines the size of the demand.
+                Such function should return `{actions, next_state}` where
+                `actions` is a list of actions that will be returned from
                 `handle_demand/4` and `next_state` is the value that will be
                 used for the next call.
                 """
@@ -33,10 +36,12 @@ defmodule Membrane.Testing.Source do
   def handle_init(%__MODULE__{output: output} = opts) do
     opts = Map.from_struct(opts)
 
-    if is_function(output) do
-      {:ok, opts |> Map.merge(%{generator_state: nil})}
-    else
-      {:ok, opts}
+    case output do
+      {initial_state, generator} when is_function(generator) ->
+        {:ok, opts |> Map.merge(%{generator_state: initial_state, output: generator})}
+
+      _enumerable_output ->
+        {:ok, opts}
     end
   end
 
@@ -46,9 +51,7 @@ defmodule Membrane.Testing.Source do
     {{:ok, actions}, state}
   end
 
-  @spec default_buf_gen(integer() | nil, integer()) :: {[Action.t()], integer()}
-  def default_buf_gen(nil, size), do: default_buf_gen(0, size)
-
+  @spec default_buf_gen(integer(), integer()) :: {[Action.t()], integer()}
   def default_buf_gen(generator_state, size) do
     buffers =
       generator_state..(size + generator_state - 1)

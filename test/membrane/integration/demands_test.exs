@@ -74,8 +74,6 @@ defmodule Membrane.Integration.DemandsTest do
     alias Membrane.Buffer
 
     actions_gen = fn cnt, _size ->
-      cnt = cnt || 0
-
       cnt..(4 + cnt - 1)
       |> Enum.map(fn cnt ->
         buf = %Buffer{payload: <<cnt::16>>}
@@ -89,7 +87,7 @@ defmodule Membrane.Integration.DemandsTest do
     assert {:ok, pid} =
              Pipeline.start_link(%Pipeline.Options{
                elements: [
-                 source: %Source{output: actions_gen},
+                 source: %Source{output: {0, actions_gen}},
                  filter: Filter,
                  sink: %Sink{autodemand: false}
                ]

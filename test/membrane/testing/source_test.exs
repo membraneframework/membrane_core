@@ -6,7 +6,7 @@ defmodule Membrane.Testing.SourceTest do
   test "Source when Initializing has cnt field in state equal to 0 if `:output` is a function" do
     output = fn _, _ -> nil end
 
-    assert Source.handle_init(%Source{output: output}) ==
+    assert Source.handle_init(%Source{output: {nil, output}}) ==
              {:ok, %{output: output, generator_state: nil}}
   end
 
