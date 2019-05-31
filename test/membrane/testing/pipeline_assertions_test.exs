@@ -91,7 +91,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
     end
   end
 
-  describe "assert_pipeline_received" do
+  describe "assert_pipeline_receive" do
     test "does not flunk when pipeline receives the message", %{state: state} do
       message = "I am important message"
       Pipeline.handle_other(message, state)
@@ -103,6 +103,22 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
 
       assert_raise ExUnit.AssertionError, fn ->
         assert_pipeline_receive(self(), ^message, 0)
+      end
+    end
+  end
+
+  describe "refute_pipeline_receive" do
+    test "does not flunk when pipeline does not receive message" do
+      message = "I am important message"
+      refute_pipeline_receive(self(), ^message, 0)
+    end
+
+    test "flunks when pipeline receives message", %{state: state} do
+      message = "I am important message"
+      Pipeline.handle_other(message, state)
+
+      assert_raise ExUnit.AssertionError, fn ->
+        refute_pipeline_receive(self(), ^message)
       end
     end
   end
@@ -121,6 +137,21 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
     end
   end
 
+  describe "refute_sink_event" do
+    test "flunks when event is handled", %{state: state} do
+      event = %Membrane.Event.Discontinuity{}
+      Pipeline.handle_notification({:event, event}, :sink, state)
+
+      assert_raise ExUnit.AssertionError, fn ->
+        refute_sink_event(self(), :sink, ^event, 0)
+      end
+    end
+
+    test "does not flunk when event is not handled" do
+      refute_sink_event(self(), :sink, %Membrane.Event.Discontinuity{}, 0)
+    end
+  end
+
   describe "assert_sink_buffer" do
     test "does not flunk when buffer is handled", %{state: state} do
       buffer = %Membrane.Buffer{payload: 255}
@@ -132,6 +163,21 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
       assert_raise ExUnit.AssertionError, fn ->
         assert_sink_buffer(self(), :sink, _, 0)
       end
+    end
+  end
+
+  describe "refute_sink_buffer" do
+    test "flunks when buffer is handled", %{state: state} do
+      buffer = %Membrane.Buffer{payload: 255}
+      Pipeline.handle_notification({:buffer, buffer}, :sink, state)
+
+      assert_raise ExUnit.AssertionError, fn ->
+        refute_sink_buffer(self(), :sink, ^buffer, 0)
+      end
+    end
+
+    test "does not flunk when event is not handled" do
+      refute_sink_buffer(self(), :sink, %Membrane.Buffer{payload: 10}, 0)
     end
   end
 

@@ -1,15 +1,13 @@
 defmodule Membrane.Integration.DemandsTest do
   use ExUnit.Case, async: false
   use Bunch
+  alias Membrane.Buffer
   alias Membrane.Support.DemandsTest
   alias DemandsTest.Filter
-  alias Membrane.Buffer
-  alias Membrane.Testing.{Source, Sink, Pipeline}
-  import Membrane.Testing.Assertions
+  alias Membrane.Testing.{Pipeline, Source, Sink}
   import ExUnit.Assertions
+  import Membrane.Testing.Assertions
 
-  # Asserts that message equal to pattern will be received within 200ms
-  # In contrast to assert_receive, it also checks if it the first message in the mailbox
   def assert_buffers_received(range, pid) do
     Enum.each(range, fn i ->
       assert_sink_buffer(pid, :sink, %Buffer{payload: <<^i::16>> <> <<255>>})
@@ -20,11 +18,7 @@ defmodule Membrane.Integration.DemandsTest do
     pattern_gen = fn i -> %Buffer{payload: <<i::16>> <> <<255>>} end
     assert Pipeline.play(pid) == :ok
 
-    assert_pipeline_playback_changed(
-      pid,
-      :prepared,
-      :playing
-    )
+    assert_pipeline_playback_changed(pid, :prepared, :playing)
 
     demand = 500
     Pipeline.message_child(pid, :sink, {:make_demand, demand})
@@ -33,7 +27,7 @@ defmodule Membrane.Integration.DemandsTest do
     |> assert_buffers_received(pid)
 
     pattern = pattern_gen.(demand)
-    refute_receive ^pattern
+    refute_sink_buffer(pid, :sink, ^pattern, 0)
     Pipeline.message_child(pid, :sink, {:make_demand, demand})
 
     demand..(2 * demand - 1)

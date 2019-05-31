@@ -1,6 +1,26 @@
 defmodule Membrane.Testing.Source do
   @moduledoc """
-  Testing Element for supplying data based on generator function passed through options.
+  Testing Element for supplying data based on generator function passed through
+  options.
+
+  ## Example usage
+
+  As mentioned earlier you can use this element in one of two ways, providing
+  either a generator function or an `Enumerable.t`.
+
+  ```
+  %Sink{output: [0xA1, 0xB2, 0xC3, 0xD4]}
+  ```
+
+  In order to specify `Membrane.Testing.Sink` with generator function you need
+  to provide initial state and function that matches `t:generator/0` type.
+  ```
+  generator_function = fn state, size ->
+    #generate some buffers
+    {actions, state + 1}
+  end
+  %Sink{output: {1, generator_function}}
+  ```
   """
 
   use Membrane.Element.Base.Source
@@ -8,12 +28,12 @@ defmodule Membrane.Testing.Source do
   alias Membrane.Element.Action
   alias Membrane.Event.EndOfStream
 
-  @type generator :: {(any(), non_neg_integer -> {[Action.t()], any()}), any()}
+  @type generator :: (any(), non_neg_integer -> {[Action.t()], any()})
 
   def_output_pad :output, caps: :any
 
   def_options output: [
-                spec: generator | Enum.t(),
+                spec: {initial_state :: any(), generator} | Enum.t(),
                 default: {0, &__MODULE__.default_buf_gen/2},
                 description: """
                 If `output` is an enumerable with `Membrane.Payload.t()` then

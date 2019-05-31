@@ -3,24 +3,18 @@ defmodule Membrane.Testing.Assertions do
   This module contains a set of assertion functions and macros.
 
   These assertions will work ONLY in conjunction with
-  `Membrane.Testing.Pipeline` and ONLY when pid of the process executing
-  those functions and macros is an argument of said pipeline.
+  `Membrane.Testing.Pipeline` and ONLY when pid of tested pipeline is provided
+  as an argument to these assertions.
   """
-  require ExUnit.Assertions
 
   @default_timeout 2000
 
-  defp assert_message_receive(
-         pid,
-         pattern,
-         timeout \\ @default_timeout,
-         failure_message \\ nil
-       ) do
+  defp base_assert(assertion, pid, pattern, timeout, failure_message) do
     quote do
       import ExUnit.Assertions
       pid_value = unquote(pid)
 
-      assert_receive(
+      unquote(assertion)(
         {Membrane.Testing.Pipeline, ^pid_value, unquote(pattern)},
         unquote(timeout),
         unquote(failure_message)
@@ -28,14 +22,26 @@ defmodule Membrane.Testing.Assertions do
     end
   end
 
+  defp assert_message_receive(pid, pattern, timeout, failure_message \\ nil) do
+    base_assert(:assert_receive, pid, pattern, timeout, failure_message)
+  end
+
+  defp refute_message_receive(pid, pattern, timeout, failure_message \\ nil) do
+    base_assert(:refute_receive, pid, pattern, timeout, failure_message)
+  end
+
   @doc """
-  Asserts that pipeline received or will receive a notification from specific
-  element within the specified `timeout` period.
+  Asserts that pipeline received or will receive a notification from the element
+  with name `element_name` within the `timeout` period specified in milliseconds.
+
+  The `notification_pattern` must be a match pattern.
+
+      assert_pipeline_notified(pipeline, :element_name, :hi)
   """
   defmacro assert_pipeline_notified(
-             pipeline_pid,
+             pipeline,
              element_name,
-             notification,
+             notification_pattern,
              timeout \\ @default_timeout
            ) do
     quote do
@@ -43,9 +49,9 @@ defmodule Membrane.Testing.Assertions do
 
       unquote(
         assert_message_receive(
-          pipeline_pid,
+          pipeline,
           {:handle_notification,
-           {notification,
+           {notification_pattern,
             quote do
               ^element_name_value
             end}},
@@ -58,20 +64,21 @@ defmodule Membrane.Testing.Assertions do
   # TODO: Link to playback state docs.
   # https://github.com/membraneframework/membrane-core/issues/165
   @doc """
-  Asserts that pipeline's playback state changed or will change from one to
-  another within the specified `timeout` period.
+  Asserts that pipeline's playback state changed or will change from
+  `previous_state` to `current_state` within the `timeout` period specified in
+   milliseconds.
 
-  Assertion can be either made by providing state before and after change as
+  Assertion can be either made by providing state before and after the change as
   atoms:
 
-         assert_pipeline_playback_changed(pipeline_pid, :prepared, :playing)
+         assert_pipeline_playback_changed(pipeline, :prepared, :playing)
 
-  Or by using using an `_` to assert on change from any state to other:
+  Or by using an `_` to assert on change from any state to other:
 
-        assert_pipeline_playback_changed(pipeline_pid, _, :playing)
+        assert_pipeline_playback_changed(pipeline, _, :playing)
   """
   defmacro assert_pipeline_playback_changed(
-             pipeline_pid,
+             pipeline,
              previous_state,
              current_state,
              timeout \\ @default_timeout
@@ -109,47 +116,80 @@ defmodule Membrane.Testing.Assertions do
           {:playback_state_changed, unquote(previous_state), unquote(current_state)}
         end
 
-      assert_message_receive(pipeline_pid, pattern, timeout, nil)
+      assert_message_receive(pipeline, pattern, timeout, nil)
     end
   end
 
   @doc """
-  Asserts that pipeline received or will receive a message from another process
-  within the specified `timeout` period.
+  Asserts that pipeline received or will receive a message matching
+  `message_pattern` from another process within the `timeout` period specified
+  in milliseconds.
 
-  Such a message would normally be handled by `c:Membrane.Pipeline.handle_other/2`
+  The `message_pattern` must be a match pattern.
+
+      assert_pipeline_receive(pid, :tick)
+
+  Such call would flunk if the message `:tick` has not been handled by
+  `c:Membrane.Pipeline.handle_other/2` within the `timeout`.
   """
-  defmacro assert_pipeline_receive(pipeline_pid, message_pattern, timeout \\ @default_timeout) do
-    assert_message_receive(
-      pipeline_pid,
-      {:handle_other, message_pattern},
-      timeout
-    )
+  defmacro assert_pipeline_receive(pipeline, message_pattern, timeout \\ @default_timeout) do
+    prove_pipeline_receive(&assert_message_receive/3, pipeline, message_pattern, timeout)
   end
 
   @doc """
-  Asserts that `Membrane.Testing.Sink` received or will receive an event within
-  the `timeout` period specified in milliseconds.
+  Asserts that pipeline has not received and will not receive a message from
+  another process matching `message_pattern` within the `timeout` period
+  specified in milliseconds.
+
+  The `message_pattern` must be a match pattern.
+
+
+      refute_pipeline_receive(pid, :tick)
+
+
+  Such call would flunk if the message `:tick` has been handled by
+  `c:Membrane.Pipeline.handle_other/2`.
+  """
+  defmacro refute_pipeline_receive(pipeline, message_pattern, timeout \\ @default_timeout) do
+    prove_pipeline_receive(&refute_message_receive/3, pipeline, message_pattern, timeout)
+  end
+
+  defp prove_pipeline_receive(assertion, pipeline, message_pattern, timeout) do
+    assertion.(pipeline, {:handle_other, message_pattern}, timeout)
+  end
+
+  @doc """
+  Asserts that `Membrane.Testing.Sink` with name `sink_name` received or will
+  receive an event within the `timeout` period specified in milliseconds.
 
   When a `Membrane.Testing.Sink` is part of `Membrane.Testing.Pipeline` you can
   assert whether it received an event matching a provided pattern.
 
-      {:ok, pid} = Membrane.Testing.Pipeline.start_link(%Membrane.Testing.Pipeline.Options{
-        elements: [
-          ....,
-          the_sink: %Membrane.Testing.Sink{}
-        ]
-      })
-
       assert_sink_event(pid, :the_sink, %Discontinuity{})
   """
-  defmacro assert_sink_event(pipeline_pid, sink_name, event, timeout \\ @default_timeout) do
+  defmacro assert_sink_event(pipeline, sink_name, event, timeout \\ @default_timeout) do
+    prove_sink_event(&assert_message_receive/3, pipeline, sink_name, event, timeout)
+  end
+
+  @doc """
+  Asserts that `Membrane.Testing.Sink` has not received and will not receive
+  event matching provided pattern within the `timeout` period specified in
+  milliseconds.
+
+      refute_sink_event(pid, :the_sink, %Discontinuity{})
+  """
+
+  defmacro refute_sink_event(pipeline, sink_name, event, timeout \\ @default_timeout) do
+    prove_sink_event(&refute_message_receive/3, pipeline, sink_name, event, timeout)
+  end
+
+  defp prove_sink_event(assertion, pipeline, sink_name, event, timeout) do
     quote do
       element_name_value = unquote(sink_name)
 
       unquote(
-        assert_message_receive(
-          pipeline_pid,
+        assertion.(
+          pipeline,
           {:handle_notification,
            {{:event, event},
             quote do
@@ -162,10 +202,11 @@ defmodule Membrane.Testing.Assertions do
   end
 
   @doc """
-  Asserts that `Membrane.Testing.Sink` received or will receive a buffer within
-  the `timeout` period specified in milliseconds.
+  Asserts that `Membrane.Testing.Sink` with name `sink_name` received or will
+  receive a buffer matching `pattern` within the `timeout` period specified in
+  milliseconds.
 
-  When a `Membrane.Testing.Sink` is a part of `Membrane.Testing.Pipeline` you
+  When the `Membrane.Testing.Sink` is a part of `Membrane.Testing.Pipeline` you
   can assert whether it received a buffer matching provided pattern.
 
       {:ok, pid} = Membrane.Testing.Pipeline.start_link(%Membrane.Testing.Pipeline.Options{
@@ -184,18 +225,34 @@ defmodule Membrane.Testing.Assertions do
       assert_sink_buffer(pid, :sink, %Buffer{payload: <<data::16>> <> <<255>>})
       do_something(data)
   """
-  defmacro assert_sink_buffer(
-             pipeline_pid,
-             sink_name,
-             pattern,
-             timeout \\ @default_timeout
-           ) do
+  defmacro assert_sink_buffer(pipeline, sink_name, pattern, timeout \\ @default_timeout) do
+    prove_sink_buffer(&assert_message_receive/3, pipeline, sink_name, pattern, timeout)
+  end
+
+  @doc """
+  Asserts that `Membrane.Testing.Sink` with name `sink_name` has not received
+  and will not receive a buffer matching `buffer_pattern` within the `timeout`
+  period specified in milliseconds.
+
+  Similarly as in the `assert_sink_buffer/4` `the_sink` needs to be part of a
+  `Membrane.Testing.Pipeline`.
+
+      refute_sink_buffer(pipeline, :the_sink, %Buffer{payload: <<0xA1, 0xB2>>})
+
+  Such expression will flunk if `the_sink` received or will receive a buffer
+  with payload `<<0xA1, 0xB2>>`.
+  """
+  defmacro refute_sink_buffer(pipeline, sink_name, pattern, timeout \\ @default_timeout) do
+    prove_sink_buffer(&refute_message_receive/3, pipeline, sink_name, pattern, timeout)
+  end
+
+  defp prove_sink_buffer(assertion, pipeline, sink_name, pattern, timeout) do
     quote do
       element_name_value = unquote(sink_name)
 
       unquote(
-        assert_message_receive(
-          pipeline_pid,
+        assertion.(
+          pipeline,
           {:handle_notification,
            {{:buffer, pattern},
             quote do
@@ -209,43 +266,23 @@ defmodule Membrane.Testing.Assertions do
 
   @doc """
   Asserts that `Membrane.Testing.Pipeline` received or is going to receive
-  `:start_of_stream` from a specific element within the `timeout` period
-  specified in milliseconds.
+  `:start_of_stream` from the element with element `element_name` within the
+  `timeout` period specified in milliseconds.
 
-      assert_start_of_stream(pipeline_pid, :an_element)
+      assert_start_of_stream(pipeline, :an_element)
   """
-  def assert_start_of_stream(
-        pipeline_pid,
-        element_name,
-        pad \\ :input,
-        timeout \\ @default_timeout
-      ) do
-    assert_pipeline_notified(
-      pipeline_pid,
-      element_name,
-      {:start_of_stream, ^pad},
-      timeout
-    )
+  def assert_start_of_stream(pipeline, element_name, pad \\ :input, timeout \\ @default_timeout) do
+    assert_pipeline_notified(pipeline, element_name, {:start_of_stream, ^pad}, timeout)
   end
 
   @doc """
   Asserts that `Membrane.Testing.Pipeline` received or is going to receive
-  `:end_of_stream` from a specific element within the `timeout` period specified
-  in milliseconds.
+  `:end_of_stream` from the element with name `element_name` within the `timeout`
+  period specified in milliseconds.
 
-      assert_end_of_stream(pipeline_pid, :an_element)
+      assert_end_of_stream(pipeline, :an_element)
   """
-  def assert_end_of_stream(
-        pipeline_pid,
-        element_name,
-        pad \\ :input,
-        timeout \\ @default_timeout
-      ) do
-    assert_pipeline_notified(
-      pipeline_pid,
-      element_name,
-      {:end_of_stream, ^pad},
-      timeout
-    )
+  def assert_end_of_stream(pipeline, element_name, pad \\ :input, timeout \\ @default_timeout) do
+    assert_pipeline_notified(pipeline, element_name, {:end_of_stream, ^pad}, timeout)
   end
 end
