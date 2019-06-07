@@ -9,7 +9,7 @@ defmodule Membrane.Testing.Assertions do
 
   @default_timeout 2000
 
-  defp base_assert(assertion, pid, pattern, timeout, failure_message) do
+  defp do_assert_receive_from_pipeline(assertion, pid, pattern, timeout, failure_message) do
     quote do
       import ExUnit.Assertions
       pid_value = unquote(pid)
@@ -22,12 +22,12 @@ defmodule Membrane.Testing.Assertions do
     end
   end
 
-  defp assert_message_receive(pid, pattern, timeout, failure_message \\ nil) do
-    base_assert(:assert_receive, pid, pattern, timeout, failure_message)
+  defp assert_receive_from_pipeline(pid, pattern, timeout, failure_message \\ nil) do
+    do_assert_receive_from_pipeline(:assert_receive, pid, pattern, timeout, failure_message)
   end
 
-  defp refute_message_receive(pid, pattern, timeout, failure_message \\ nil) do
-    base_assert(:refute_receive, pid, pattern, timeout, failure_message)
+  defp refute_receive_from_pipeline(pid, pattern, timeout, failure_message \\ nil) do
+    do_assert_receive_from_pipeline(:refute_receive, pid, pattern, timeout, failure_message)
   end
 
   @doc """
@@ -48,7 +48,7 @@ defmodule Membrane.Testing.Assertions do
       element_name_value = unquote(element_name)
 
       unquote(
-        assert_message_receive(
+        assert_receive_from_pipeline(
           pipeline,
           {:handle_notification,
            {notification_pattern,
@@ -116,7 +116,7 @@ defmodule Membrane.Testing.Assertions do
           {:playback_state_changed, unquote(previous_state), unquote(current_state)}
         end
 
-      assert_message_receive(pipeline, pattern, timeout, nil)
+      assert_receive_from_pipeline(pipeline, pattern, timeout, nil)
     end
   end
 
@@ -133,7 +133,7 @@ defmodule Membrane.Testing.Assertions do
   `c:Membrane.Pipeline.handle_other/2` within the `timeout`.
   """
   defmacro assert_pipeline_receive(pipeline, message_pattern, timeout \\ @default_timeout) do
-    prove_pipeline_receive(&assert_message_receive/3, pipeline, message_pattern, timeout)
+    do_pipeline_receive(&assert_receive_from_pipeline/3, pipeline, message_pattern, timeout)
   end
 
   @doc """
@@ -151,10 +151,10 @@ defmodule Membrane.Testing.Assertions do
   `c:Membrane.Pipeline.handle_other/2`.
   """
   defmacro refute_pipeline_receive(pipeline, message_pattern, timeout \\ @default_timeout) do
-    prove_pipeline_receive(&refute_message_receive/3, pipeline, message_pattern, timeout)
+    do_pipeline_receive(&refute_receive_from_pipeline/3, pipeline, message_pattern, timeout)
   end
 
-  defp prove_pipeline_receive(assertion, pipeline, message_pattern, timeout) do
+  defp do_pipeline_receive(assertion, pipeline, message_pattern, timeout) do
     assertion.(pipeline, {:handle_other, message_pattern}, timeout)
   end
 
@@ -168,7 +168,7 @@ defmodule Membrane.Testing.Assertions do
       assert_sink_event(pid, :the_sink, %Discontinuity{})
   """
   defmacro assert_sink_event(pipeline, sink_name, event, timeout \\ @default_timeout) do
-    prove_sink_event(&assert_message_receive/3, pipeline, sink_name, event, timeout)
+    do_sink_event(&assert_receive_from_pipeline/3, pipeline, sink_name, event, timeout)
   end
 
   @doc """
@@ -180,10 +180,10 @@ defmodule Membrane.Testing.Assertions do
   """
 
   defmacro refute_sink_event(pipeline, sink_name, event, timeout \\ @default_timeout) do
-    prove_sink_event(&refute_message_receive/3, pipeline, sink_name, event, timeout)
+    do_sink_event(&refute_receive_from_pipeline/3, pipeline, sink_name, event, timeout)
   end
 
-  defp prove_sink_event(assertion, pipeline, sink_name, event, timeout) do
+  defp do_sink_event(assertion, pipeline, sink_name, event, timeout) do
     quote do
       element_name_value = unquote(sink_name)
 
@@ -226,7 +226,7 @@ defmodule Membrane.Testing.Assertions do
       do_something(data)
   """
   defmacro assert_sink_buffer(pipeline, sink_name, pattern, timeout \\ @default_timeout) do
-    prove_sink_buffer(&assert_message_receive/3, pipeline, sink_name, pattern, timeout)
+    do_sink_buffer(&assert_receive_from_pipeline/3, pipeline, sink_name, pattern, timeout)
   end
 
   @doc """
@@ -243,10 +243,10 @@ defmodule Membrane.Testing.Assertions do
   with payload `<<0xA1, 0xB2>>`.
   """
   defmacro refute_sink_buffer(pipeline, sink_name, pattern, timeout \\ @default_timeout) do
-    prove_sink_buffer(&refute_message_receive/3, pipeline, sink_name, pattern, timeout)
+    do_sink_buffer(&refute_receive_from_pipeline/3, pipeline, sink_name, pattern, timeout)
   end
 
-  defp prove_sink_buffer(assertion, pipeline, sink_name, pattern, timeout) do
+  defp do_sink_buffer(assertion, pipeline, sink_name, pattern, timeout) do
     quote do
       element_name_value = unquote(sink_name)
 
