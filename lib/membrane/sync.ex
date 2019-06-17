@@ -10,16 +10,18 @@ defmodule Membrane.Sync do
   end
 
   def register(sync) do
-    Message.call(sync, :sync_register)
+    ref = make_ref()
+    :ok = Message.call(sync, :sync_register, ref)
+    {ref, sync}
   end
 
-  def ready(sync) do
-    Message.call(sync, :sync_ready)
+  def ready({ref, sync}) do
+    Message.call(sync, :sync_ready, ref)
   end
 
-  def sync(sync, options \\ []) do
+  def sync({ref, sync}, options \\ []) do
     delay = options |> Keyword.get(:delay, 0)
-    Message.call(sync, :sync, delay)
+    Message.call(sync, :sync, [ref, delay])
   end
 
   @impl true
@@ -28,26 +30,24 @@ defmodule Membrane.Sync do
   end
 
   @impl true
-  def handle_call(Message.new(:sync_register), {pid, _ref}, %{state: :registration} = state) do
-    if not Map.has_key?(state.syncees, pid) do
-      state =
-        state
-        |> put_in([:syncees, pid], %{level: %{name: :registered}, delay: nil})
-
-      {:reply, :ok, state}
-    else
-      {:reply, {:error, :exists}, state}
-    end
+  def handle_call(Message.new(:sync_register, ref), _from, %{state: :registration} = state) do
+    state = state |> put_in([:syncees, ref], %{level: %{name: :registered}, delay: nil})
+    {:reply, :ok, state}
   end
 
   @impl true
-  def handle_call(Message.new(:sync_ready), {pid, _ref}, %{state: :waiting} = state) do
-    case update_level(pid, %{name: :ready}, [:registered], state) do
+  def handle_call(Message.new(:sync_ready, ref), {pid, _} = _from, %{state: :waiting} = state) do
+    case update_level(ref, %{name: :ready, pid: pid}, [:registered], state) do
       {:ok, state} ->
         unless all_syncees_level?(state.syncees, [:ready, :sync]) do
           {:reply, :ok, state}
         else
-          state.syncees |> Map.keys() |> Enum.each(&Message.send(&1, :sync, self()))
+          state.syncees
+          |> Enum.each(fn
+            {ref, %{level: %{name: :ready, pid: pid}}} -> Message.send(pid, :sync, {ref, self()})
+            _ -> :ok
+          end)
+
           {:reply, :ok, state}
         end
 
@@ -57,12 +57,12 @@ defmodule Membrane.Sync do
   end
 
   @impl true
-  def handle_call(Message.new(:sync, delay), {pid, _ref} = from, %{state: :waiting} = state) do
-    case update_level(pid, %{name: :sync, from: from}, [:registered, :ready], state) do
+  def handle_call(Message.new(:sync, [ref, delay]), from, %{state: :waiting} = state) do
+    case update_level(ref, %{name: :sync, from: from}, [:registered, :ready], state) do
       {:ok, state} ->
         state =
           state
-          |> put_in([:syncees, pid, :delay], delay)
+          |> put_in([:syncees, ref, :delay], delay)
           |> Map.update!(:max_delay, &max(&1, delay))
 
         unless all_syncees_level?(state.syncees, [:sync]) do
@@ -79,7 +79,7 @@ defmodule Membrane.Sync do
   end
 
   @impl true
-  def handle_call(Message.new(request) = message, from, %{state: :registration} = state)
+  def handle_call(Message.new(request, _ref) = message, from, %{state: :registration} = state)
       when request in [:sync, :sync_ready] do
     handle_call(message, from, %{state | state: :waiting})
   end
@@ -90,15 +90,15 @@ defmodule Membrane.Sync do
     {:noreply, state}
   end
 
-  defp update_level(pid, new_level, supported_levels, state) do
-    syncee = state.syncees[pid]
+  defp update_level(ref, new_level, supported_levels, state) do
+    syncee = state.syncees[ref]
 
     cond do
       syncee |> is_nil ->
         {{:error, :not_found}, state}
 
       syncee.level.name in supported_levels ->
-        {:ok, state |> put_in([:syncees, pid, :level], new_level)}
+        {:ok, state |> put_in([:syncees, ref, :level], new_level)}
 
       true ->
         {{:error, invalid_level: syncee.level.name}, state}

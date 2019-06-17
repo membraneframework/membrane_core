@@ -13,11 +13,13 @@ defmodule Membrane.Element.CallbackContext.Caps do
 
   @impl true
   defmacro from_state(state, args) do
+    {pad, args} = args |> Keyword.pop(:pad)
+
     old_caps =
       quote do
-        unquote(state) |> PadModel.get_data!(unquote(args[:pad]), :caps)
+        unquote(state) |> PadModel.get_data!(unquote(pad), :caps)
       end
 
-    super(state, old_caps: old_caps)
+    super(state, args ++ [old_caps: old_caps])
   end
 end

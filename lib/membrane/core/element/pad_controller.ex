@@ -312,8 +312,8 @@ defmodule Membrane.Core.Element.PadController do
     pad_opts = PadModel.get_data!(state, ref, :options)
 
     context =
-      CallbackContext.PadAdded.from_state(
-        state,
+      &CallbackContext.PadAdded.from_state(
+        &1,
         direction: PadModel.get_data!(state, ref, :direction),
         options: pad_opts
       )
@@ -321,7 +321,8 @@ defmodule Membrane.Core.Element.PadController do
     CallbackHandler.exec_and_handle_callback(
       :handle_pad_added,
       ActionHandler,
-      [ref, context],
+      %{context: context},
+      [ref],
       state
     )
   end
@@ -331,12 +332,13 @@ defmodule Membrane.Core.Element.PadController do
     %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
 
     if availability |> Pad.availability_mode() == :dynamic do
-      context = CallbackContext.PadRemoved.from_state(state, direction: direction)
+      context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_removed,
         ActionHandler,
-        [ref, context],
+        %{context: context},
+        [ref],
         state
       )
     else

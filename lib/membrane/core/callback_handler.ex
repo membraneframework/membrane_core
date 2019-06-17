@@ -54,9 +54,15 @@ defmodule Membrane.Core.CallbackHandler do
           args :: list,
           state_t
         ) :: Type.stateful_try_t(state_t)
-  def exec_and_handle_callback(callback, handler_module, handler_params \\ %{}, args, state)
+  def exec_and_handle_callback(
+        callback,
+        handler_module,
+        handler_params \\ %{},
+        args,
+        state
+      )
       when is_map(handler_params) do
-    result = callback |> exec_callback(args, state)
+    result = callback |> exec_callback(args, handler_params, state)
     result |> handle_callback_result(callback, handler_module, handler_params, state)
   end
 
@@ -77,12 +83,12 @@ defmodule Membrane.Core.CallbackHandler do
         state
       )
       when is_map(handler_params) do
-    split_cont_f = handler_params[:split_cont_f] || fn _ -> true end
+    split_cont_f = handler_params |> Map.get(:split_cont_f, fn _ -> true end)
 
     args_list
     |> Bunch.Enum.try_reduce_while(state, fn args, state ->
       if split_cont_f.(state) do
-        result = callback |> exec_callback(args |> Bunch.listify(), state)
+        result = callback |> exec_callback(args |> Bunch.listify(), handler_params, state)
 
         result
         |> handle_callback_result(original_callback, handler_module, handler_params, state)
@@ -93,11 +99,24 @@ defmodule Membrane.Core.CallbackHandler do
     end)
   end
 
-  @spec exec_callback(callback :: atom, args :: list, state_t) :: callback_return_t | any
-  defp exec_callback(callback, args, state) do
-    internal_state = state |> Map.get(:internal_state)
-    module = state |> Map.get(:module)
-    module |> apply(callback, args ++ [internal_state])
+  @spec exec_callback(callback :: atom, args :: list, handler_params_t, state_t) ::
+          callback_return_t | any
+  defp exec_callback(callback, args, handler_params, state) do
+    module = state |> Map.fetch!(:module)
+
+    args =
+      case handler_params |> Map.fetch(:context) do
+        :error -> args
+        {:ok, f} -> args ++ [f.(state)]
+      end
+
+    args =
+      case handler_params |> Map.fetch(:state) do
+        {:ok, false} -> args
+        _ -> args ++ [state |> Map.fetch!(:internal_state)]
+      end
+
+    module |> apply(callback, args)
   end
 
   @spec handle_callback_result(

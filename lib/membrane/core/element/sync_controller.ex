@@ -9,15 +9,16 @@ defmodule Membrane.Core.Element.SyncController do
            CallbackHandler.exec_and_handle_callback(
              :handle_sync,
              ActionHandler,
-             %{sync: sync},
-             [sync, CallbackContext.Other.from_state(state)],
+             %{context: &CallbackContext.Other.from_state/1, sync: sync},
+             [sync],
              state
            ),
          {:ok, state} <-
            CallbackHandler.exec_and_handle_callback(
              :handle_synced,
              ActionHandler,
-             [sync, CallbackContext.Other.from_state(state)],
+             %{context: &CallbackContext.Other.from_state/1},
+             [sync],
              state
            ) do
       {:ok, state}

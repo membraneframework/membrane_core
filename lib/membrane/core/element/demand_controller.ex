@@ -27,13 +27,13 @@ defmodule Membrane.Core.Element.DemandController do
     if exec_handle_demand?(pad_ref, state) do
       %{other_demand_unit: unit} = PadModel.get_data!(state, pad_ref)
 
-      context = CallbackContext.Demand.from_state(state, incoming_demand: size)
+      context = &CallbackContext.Demand.from_state(&1, incoming_demand: size)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_demand,
         ActionHandler,
-        %{split_cont_f: &exec_handle_demand?(pad_ref, &1)},
-        [pad_ref, total_size, unit, context],
+        %{split_cont_f: &exec_handle_demand?(pad_ref, &1), context: context},
+        [pad_ref, total_size, unit],
         state
       )
       |> or_warn_error("""

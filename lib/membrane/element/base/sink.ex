@@ -61,8 +61,8 @@ defmodule Membrane.Element.Base.Sink do
         do: {{:error, :handle_write_not_implemented}, state}
 
       @impl true
-      def handle_write_list(pad, buffers, context, state) do
-        args_list = buffers |> Enum.map(&[pad, &1, context])
+      def handle_write_list(pad, buffers, _context, state) do
+        args_list = buffers |> Enum.map(&[pad, &1])
         {{:ok, split: {:handle_write, args_list}}, state}
       end
 

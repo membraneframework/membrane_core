@@ -31,7 +31,7 @@ defmodule Membrane.Core.Element.CapsController do
   def exec_handle_caps(pad_ref, caps, params \\ %{}, state) do
     %{accepted_caps: accepted_caps} = PadModel.get_data!(state, pad_ref)
 
-    context = CallbackContext.Caps.from_state(state, pad: pad_ref)
+    context = &CallbackContext.Caps.from_state(&1, pad: pad_ref)
 
     withl match: true <- Caps.Matcher.match?(accepted_caps, caps),
           callback:
@@ -39,8 +39,8 @@ defmodule Membrane.Core.Element.CapsController do
               CallbackHandler.exec_and_handle_callback(
                 :handle_caps,
                 ActionHandler,
-                params,
-                [pad_ref, caps, context],
+                %{context: context} |> Map.merge(params),
+                [pad_ref, caps],
                 state
               ) do
       {:ok, PadModel.set_data!(state, pad_ref, :caps, caps)}

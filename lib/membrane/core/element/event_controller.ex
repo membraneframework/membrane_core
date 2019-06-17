@@ -51,13 +51,13 @@ defmodule Membrane.Core.Element.EventController do
           State.stateful_try_t()
   defp do_exec_handle_event(pad_ref, event, params, state) do
     data = PadModel.get_data!(state, pad_ref)
-    context = CallbackContext.Event.from_state(state)
+    context = &CallbackContext.Event.from_state/1
 
     CallbackHandler.exec_and_handle_callback(
       :handle_event,
       ActionHandler,
-      params |> Map.merge(%{direction: data.direction}),
-      [pad_ref, event, context],
+      %{context: context, direction: data.direction} |> Map.merge(params),
+      [pad_ref, event],
       state
     )
   end

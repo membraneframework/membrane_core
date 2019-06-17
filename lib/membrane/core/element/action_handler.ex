@@ -51,6 +51,10 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec do_handle_action(Action.t(), callback :: atom, params :: map, State.t()) ::
           State.stateful_try_t()
+  defp do_handle_action(_action, :handle_init, _params, state) do
+    {{:error, :invalid_action}, state}
+  end
+
   defp do_handle_action({:event, {pad_ref, event}}, _cb, _params, state)
        when is_pad_ref(pad_ref) do
     send_event(pad_ref, event, state)

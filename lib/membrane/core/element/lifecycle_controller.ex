@@ -21,38 +21,19 @@ defmodule Membrane.Core.Element.LifecycleController do
   def handle_init(options, %State{module: module} = state) do
     debug("Initializing element: #{inspect(module)}, options: #{inspect(options)}", state)
 
-    with {:ok, state} <- exec_init_handler(module, options, state) do
+    with {:ok, state} <-
+           CallbackHandler.exec_and_handle_callback(
+             :handle_init,
+             ActionHandler,
+             %{state: false},
+             [options],
+             state
+           ) do
       debug("Element initialized: #{inspect(module)}", state)
       {:ok, state}
     else
       {{:error, reason}, state} ->
         warn_error("Failed to initialize element", reason, state)
-    end
-  end
-
-  @spec exec_init_handler(module, Element.options_t(), State.t()) :: State.stateful_try_t()
-  defp exec_init_handler(module, options, state) do
-    with {:ok, internal_state} <- module.handle_init(options) do
-      {:ok, %State{state | internal_state: internal_state}}
-    else
-      {:error, reason} ->
-        warn_error(
-          """
-          Module #{inspect(module)} handle_init callback returned an error
-          """,
-          {:handle_init, module, reason},
-          state
-        )
-
-      other ->
-        warn_error(
-          """
-          Module #{inspect(module)} handle_init callback returned invalid result:
-          #{inspect(other)} instead of {:ok, state} or {:error, reason}
-          """,
-          {:invalid_callback_result, :handle_init, other},
-          state
-        )
     end
   end
 
@@ -98,9 +79,15 @@ defmodule Membrane.Core.Element.LifecycleController do
   """
   @spec handle_other(message :: any, State.t()) :: State.stateful_try_t()
   def handle_other(message, state) do
-    ctx = CallbackContext.Other.from_state(state)
+    context = &CallbackContext.Other.from_state/1
 
-    CallbackHandler.exec_and_handle_callback(:handle_other, ActionHandler, [message, ctx], state)
+    CallbackHandler.exec_and_handle_callback(
+      :handle_other,
+      ActionHandler,
+      %{context: context},
+      [message],
+      state
+    )
     |> or_warn_error("Error while handling message")
   end
 
@@ -124,13 +111,14 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @impl PlaybackHandler
   def handle_playback_state(old_playback_state, new_playback_state, state) do
-    ctx = CallbackContext.PlaybackChange.from_state(state)
+    context = &CallbackContext.PlaybackChange.from_state/1
     callback = PlaybackHandler.state_change_callback(old_playback_state, new_playback_state)
 
     CallbackHandler.exec_and_handle_callback(
       callback,
       ActionHandler,
-      [ctx],
+      %{context: context},
+      [],
       state
     )
   end
