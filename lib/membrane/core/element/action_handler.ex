@@ -51,7 +51,8 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec do_handle_action(Action.t(), callback :: atom, params :: map, State.t()) ::
           State.stateful_try_t()
-  defp do_handle_action(_action, :handle_init, _params, state) do
+  defp do_handle_action({action, _}, :handle_init, _params, state)
+       when action not in [:latency] do
     {{:error, :invalid_action}, state}
   end
 
@@ -162,8 +163,11 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp do_handle_action({:sync, sync}, _cb, _params, state) do
-    :ok = Sync.ready(sync)
-    {:ok, state}
+    {Sync.sync(sync, state.latency), state}
+  end
+
+  defp do_handle_action({:latency, latency}, _cb, _params, state) do
+    {:ok, %State{state | latency: latency}}
   end
 
   defp do_handle_action(_action, _callback, _params, state) do
@@ -172,36 +176,19 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_actions(actions, callback, handler_params, state) do
-    with {{:ok, actions}, state} <- do_handle_actions(actions, callback, handler_params, state) do
-      actions_after_redemand =
-        actions
-        |> Enum.drop_while(fn
-          {:redemand, _} -> false
-          _ -> true
-        end)
-        |> Enum.drop(1)
+    actions_after_redemand =
+      actions
+      |> Enum.drop_while(fn
+        {:redemand, _} -> false
+        _ -> true
+      end)
+      |> Enum.drop(1)
 
-      if actions_after_redemand != [] do
-        {{:error, :actions_after_redemand}, state}
-      else
-        super(actions |> join_buffers(), callback, handler_params, state)
-      end
+    if actions_after_redemand != [] do
+      {{:error, :actions_after_redemand}, state}
+    else
+      super(actions |> join_buffers(), callback, handler_params, state)
     end
-  end
-
-  defp do_handle_actions(actions, :handle_sync, %{sync: sync}, state) do
-    {delay, actions} =
-      case actions do
-        [sync_delay: delay] ++ actions -> {delay, actions}
-        actions -> {0, actions}
-      end
-
-    :ok = Sync.sync(sync, delay: delay)
-    {{:ok, actions}, state}
-  end
-
-  defp do_handle_actions(actions, _callback, _handler_params, state) do
-    {{:ok, actions}, state}
   end
 
   defp join_buffers(actions) do

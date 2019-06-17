@@ -117,6 +117,10 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     SyncController.handle_sync(sync, state)
   end
 
+  defp do_handle_message(Message.new(:set_stream_sync, sync), :call, state) do
+    {:ok, %State{state | stream_sync: sync}}
+  end
+
   defp do_handle_message(Message.new(_, _) = message, mode, state) do
     {{:error, {:invalid_message, message, mode: mode}}, state}
   end

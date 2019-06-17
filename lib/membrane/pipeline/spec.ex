@@ -91,5 +91,6 @@ defmodule Membrane.Pipeline.Spec do
         }
 
   defstruct children: [],
-            links: %{}
+            links: %{},
+            stream_sync: []
 end

@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.EventController do
   @moduledoc false
   # Module handling events incoming through input pads.
 
-  alias Membrane.{Core, Element, Event}
+  alias Membrane.{Core, Element, Event, Sync}
   alias Core.{CallbackHandler, InputBuffer}
   alias Core.Element.{ActionHandler, PadModel, State}
   alias Element.{CallbackContext, Pad}
@@ -31,8 +31,9 @@ defmodule Membrane.Core.Element.EventController do
   @spec exec_handle_event(Pad.ref_t(), Event.t(), params :: map, State.t()) ::
           State.stateful_try_t()
   def exec_handle_event(pad_ref, event, params \\ %{}, state) do
-    withl handle: {{:ok, :handle}, state} <- handle_special_event(pad_ref, event, state),
-          exec: {:ok, state} <- do_exec_handle_event(pad_ref, event, params, state) do
+    withl do: {:ok, state} <- check_sync(event, state),
+          handle: {{:ok, :handle}, state} <- handle_special_event(pad_ref, event, state),
+          do: {:ok, state} <- do_exec_handle_event(pad_ref, event, params, state) do
       {:ok, state}
     else
       handle: {{:ok, :ignore}, state} ->
@@ -42,7 +43,7 @@ defmodule Membrane.Core.Element.EventController do
       handle: {{:error, reason}, state} ->
         warn_error("Error while handling event", {:handle_event, reason}, state)
 
-      exec: {{:error, reason}, state} ->
+      do: {:error, reason} ->
         warn_error("Error while handling event", {:handle_event, reason}, state)
     end
   end
@@ -60,6 +61,15 @@ defmodule Membrane.Core.Element.EventController do
       [pad_ref, event],
       state
     )
+  end
+
+  defp check_sync(%Event.StartOfStream{}, state) do
+    :ok = Sync.sync(state.stream_sync)
+    {:ok, state}
+  end
+
+  defp check_sync(_event, state) do
+    {:ok, state}
   end
 
   @spec handle_special_event(Pad.ref_t(), Event.t(), State.t()) ::

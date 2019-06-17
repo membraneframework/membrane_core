@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.State do
   # internally in Membrane.
 
   use Membrane.Log, tags: :core
-  alias Membrane.{Core, Element}
+  alias Membrane.{Core, Element, Sync}
   alias Core.{Playback, Playbackable, Timer}
   alias Core.Element.{PadModel, PadSpecHandler, PlaybackBuffer}
   alias Element.Pad
@@ -44,7 +44,9 @@ defmodule Membrane.Core.Element.State do
     :playback_buffer,
     :delayed_demands,
     :timers,
-    :clocks
+    :clocks,
+    :stream_sync,
+    :latency
   ]
 
   defimpl Playbackable, for: __MODULE__ do
@@ -69,7 +71,9 @@ defmodule Membrane.Core.Element.State do
       playback_buffer: PlaybackBuffer.new(),
       delayed_demands: %{},
       timers: %{},
-      clocks: %{}
+      clocks: %{},
+      stream_sync: Sync.always(),
+      latency: 0
     }
     |> PadSpecHandler.init_pads()
   end

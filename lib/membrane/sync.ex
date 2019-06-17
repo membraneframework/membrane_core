@@ -5,9 +5,18 @@ defmodule Membrane.Sync do
   alias Membrane.Core.Message
   alias Membrane.Time
 
+  @always :membrane_sync_always
+
   def start_link(options \\ []) do
     GenServer.start_link(__MODULE__, %{}, options)
   end
+
+  def start_link!(options \\ []) do
+    {:ok, pid} = start_link(options)
+    pid
+  end
+
+  def register(@always), do: @always
 
   def register(sync) do
     ref = make_ref()
@@ -15,14 +24,23 @@ defmodule Membrane.Sync do
     {ref, sync}
   end
 
+  def ready(@always) do
+    Message.send(self(), :sync, @always)
+    :ok
+  end
+
   def ready({ref, sync}) do
     Message.call(sync, :sync_ready, ref)
   end
+
+  def sync(@always), do: :ok
 
   def sync({ref, sync}, options \\ []) do
     delay = options |> Keyword.get(:delay, 0)
     Message.call(sync, :sync, [ref, delay])
   end
+
+  def always(), do: @always
 
   @impl true
   def init(_opts) do
@@ -39,17 +57,15 @@ defmodule Membrane.Sync do
   def handle_call(Message.new(:sync_ready, ref), {pid, _} = _from, %{state: :waiting} = state) do
     case update_level(ref, %{name: :ready, pid: pid}, [:registered], state) do
       {:ok, state} ->
-        unless all_syncees_level?(state.syncees, [:ready, :sync]) do
-          {:reply, :ok, state}
-        else
+        if all_syncees_level?(state.syncees, [:ready, :sync]) do
           state.syncees
           |> Enum.each(fn
             {ref, %{level: %{name: :ready, pid: pid}}} -> Message.send(pid, :sync, {ref, self()})
             _ -> :ok
           end)
-
-          {:reply, :ok, state}
         end
+
+        {:reply, :ok, state}
 
       {error, state} ->
         {:reply, error, state}

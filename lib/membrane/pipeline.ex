@@ -9,7 +9,7 @@ defmodule Membrane.Pipeline do
   """
 
   alias __MODULE__.{Link, State, Spec}
-  alias Membrane.{Core, Element, Notification}
+  alias Membrane.{Core, Element, Notification, Sync}
   alias Element.Pad
   alias Core.{Message, Playback}
   alias Bunch.Type
@@ -244,7 +244,7 @@ defmodule Membrane.Pipeline do
   end
 
   @spec handle_spec(Spec.t(), State.t()) :: Type.stateful_try_t([Element.name_t()], State.t())
-  defp handle_spec(%Spec{children: children_spec, links: links}, state) do
+  defp handle_spec(%Spec{children: children_spec, links: links, stream_sync: stream_sync}, state) do
     debug("""
     Initializing pipeline spec
     children: #{inspect(children_spec)}
@@ -260,6 +260,7 @@ defmodule Membrane.Pipeline do
          {:ok, state} <- {links |> link_children(state), state},
          {children_names, children_pids} = children |> Enum.unzip(),
          {:ok, state} <- {children_pids |> set_children_watcher, state},
+         {:ok, state} <- set_children_stream_sync(stream_sync, state),
          {:ok, state} <- exec_handle_spec_started(children_names, state) do
       children_pids
       |> Enum.each(&Element.change_playback_state(&1, state.playback.state))
@@ -322,8 +323,6 @@ defmodule Membrane.Pipeline do
     children |> Bunch.Enum.try_map(&start_child/1)
   end
 
-  # Recursion that starts children processes, case when both module and options
-  # are provided.
   defp start_child(%{name: name, module: module, options: options}) do
     debug("Pipeline: starting child: name: #{inspect(name)}, module: #{inspect(module)}")
 
@@ -402,6 +401,26 @@ defmodule Membrane.Pipeline do
     else
       {:error, reason} -> {:error, {:cannot_set_watcher, reason}}
     end
+  end
+
+  defp set_children_stream_sync(stream_sync, state) do
+    %State{children: children} = state
+
+    stream_sync
+    |> Enum.each(fn stream_sync ->
+      {sync, elements} =
+        case stream_sync do
+          {sync, elements} -> {sync, elements}
+          elements -> {Sync.start_link!(), elements}
+        end
+
+      children
+      |> Map.take(elements)
+      |> Map.values()
+      |> Enum.each(&Message.call(&1, :set_stream_sync, Sync.register(sync)))
+    end)
+
+    {:ok, state}
   end
 
   @spec exec_handle_spec_started([Element.name_t()], State.t()) :: Type.stateful_try_t(State.t())
