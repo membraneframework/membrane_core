@@ -3,7 +3,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   # Module handling element initialization, termination, playback state changes
   # and similar stuff.
 
-  alias Membrane.{Core, Element}
+  alias Membrane.{Core, Element, Sync}
   alias Core.{CallbackHandler, Message}
   alias Core.Element.{ActionHandler, PadModel, PlaybackBuffer, State}
   alias Element.{CallbackContext, Pad}
@@ -124,7 +124,14 @@ defmodule Membrane.Core.Element.LifecycleController do
   end
 
   @impl PlaybackHandler
-  def handle_playback_state_changed(_old, _new, state) do
+  def handle_playback_state_changed(old, new, state) do
+    :ok =
+      case {old, new} do
+        {:prepared, :playing} -> Sync.ready(state.stream_sync)
+        {:playing, :prepared} -> Sync.unready(state.stream_sync)
+        _ -> :ok
+      end
+
     PlaybackBuffer.eval(state)
   end
 

@@ -7,27 +7,32 @@ defmodule Membrane.Sync do
 
   @always :membrane_sync_always
 
-  def start_link(options \\ []) do
-    GenServer.start_link(__MODULE__, %{}, options)
+  def start_link(options \\ [], gen_server_options \\ []) do
+    GenServer.start_link(__MODULE__, options, gen_server_options)
   end
 
-  def start_link!(options \\ []) do
-    {:ok, pid} = start_link(options)
+  def start_link!(options \\ [], gen_server_options \\ []) do
+    {:ok, pid} = start_link(options, gen_server_options)
     pid
   end
 
-  def register(@always), do: @always
+  def register(sync, pid \\ self())
 
-  def register(sync) do
+  def register(@always, _pid), do: @always
+
+  def register(sync, pid) do
     ref = make_ref()
-    :ok = Message.call(sync, :sync_register, ref)
+    :ok = Message.call(sync, :sync_register, [ref, pid])
     {ref, sync}
   end
 
-  def ready(@always) do
-    Message.send(self(), :sync, @always)
-    :ok
+  def unready(@always), do: :ok
+
+  def unready({ref, sync}) do
+    Message.call(sync, :sync_unready, ref)
   end
+
+  def ready(@always), do: :ok
 
   def ready({ref, sync}) do
     Message.call(sync, :sync_ready, ref)
@@ -36,58 +41,64 @@ defmodule Membrane.Sync do
   def sync(@always), do: :ok
 
   def sync({ref, sync}, options \\ []) do
-    delay = options |> Keyword.get(:delay, 0)
-    Message.call(sync, :sync, [ref, delay])
+    latency = options |> Keyword.get(:latency, 0)
+    Message.call(sync, :sync, [ref, latency])
   end
 
   def always(), do: @always
 
   @impl true
-  def init(_opts) do
-    {:ok, %{state: :registration, syncees: %{}, max_delay: 0}}
+  def init(opts) do
+    {:ok,
+     %{
+       state: :registration,
+       syncees: %{},
+       syncees_pids: %{},
+       empty_exit?: opts |> Keyword.get(:empty_exit?, false)
+     }}
   end
 
   @impl true
-  def handle_call(Message.new(:sync_register, ref), _from, %{state: :registration} = state) do
-    state = state |> put_in([:syncees, ref], %{level: %{name: :registered}, delay: nil})
+  def handle_call(Message.new(:sync_register, [ref, pid]), _from, %{state: :registration} = state) do
+    Process.monitor(pid)
+
+    state =
+      state
+      |> put_in([:syncees, ref], %{level: %{name: :registered}, latency: 0})
+      |> put_in([:syncees_pids, pid], ref)
+
     {:reply, :ok, state}
   end
 
   @impl true
-  def handle_call(Message.new(:sync_ready, ref), {pid, _} = _from, %{state: :waiting} = state) do
-    case update_level(ref, %{name: :ready, pid: pid}, [:registered], state) do
-      {:ok, state} ->
-        if all_syncees_level?(state.syncees, [:ready, :sync]) do
-          state.syncees
-          |> Enum.each(fn
-            {ref, %{level: %{name: :ready, pid: pid}}} -> Message.send(pid, :sync, {ref, self()})
-            _ -> :ok
-          end)
-        end
-
-        {:reply, :ok, state}
-
-      {error, state} ->
-        {:reply, error, state}
+  def handle_call(Message.new(:sync_ready, ref), _from, %{state: :waiting} = state) do
+    case update_level(ref, %{name: :ready}, [:registered], state) do
+      {:ok, state} -> {:reply, :ok, state}
+      {{:error, reason}, state} -> {:reply, {:error, reason}, state}
     end
   end
 
   @impl true
-  def handle_call(Message.new(:sync, [ref, delay]), from, %{state: :waiting} = state) do
-    case update_level(ref, %{name: :sync, from: from}, [:registered, :ready], state) do
-      {:ok, state} ->
-        state =
-          state
-          |> put_in([:syncees, ref, :delay], delay)
-          |> Map.update!(:max_delay, &max(&1, delay))
+  def handle_call(Message.new(:sync_unready, ref), _from, state) do
+    case update_level(ref, %{name: :registered}, [:registered, :ready], state) do
+      {:ok, %{state: :registration} = state} ->
+        state = state |> check_and_handle_sync()
+        {:reply, :ok, state}
 
-        unless all_syncees_level?(state.syncees, [:sync]) do
-          {:noreply, state}
-        else
-          send_sync_replies(state.syncees, state.max_delay)
-          state = reset_syncees(state)
-          {:noreply, state}
-        end
+      {:ok, state} ->
+        {:reply, :ok, state}
+
+      {{:error, reason}, state} ->
+        {:reply, {:error, reason}, state}
+    end
+  end
+
+  @impl true
+  def handle_call(Message.new(:sync, [ref, latency]), from, %{state: :waiting} = state) do
+    case update_level(ref, %{name: :sync, from: from}, [:ready], state) do
+      {:ok, state} ->
+        state = state |> put_in([:syncees, ref, :latency], latency) |> check_and_handle_sync()
+        {:noreply, state}
 
       {error, state} ->
         {:reply, error, state}
@@ -106,6 +117,19 @@ defmodule Membrane.Sync do
     {:noreply, state}
   end
 
+  @impl true
+  def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
+    {ref, state} = state |> pop_in([:syncees_pids, pid])
+    state = state |> Bunch.Access.delete_in([:syncees, ref]) |> check_and_handle_sync()
+
+    if state.empty_exit? and state.syncees |> Enum.empty?() do
+      IO.inspect(:exiting)
+      {:stop, :normal, state}
+    else
+      {:noreply, state}
+    end
+  end
+
   defp update_level(ref, new_level, supported_levels, state) do
     syncee = state.syncees[ref]
 
@@ -121,16 +145,29 @@ defmodule Membrane.Sync do
     end
   end
 
+  defp check_and_handle_sync(state) do
+    unless all_syncees_level?(state.syncees, [:sync, :registered]) do
+      state
+    else
+      send_sync_replies(state.syncees)
+      state = reset_syncees(state)
+      %{state | state: :registration}
+    end
+  end
+
   defp all_syncees_level?(syncees, levels) do
     syncees |> Map.values() |> Enum.all?(&(&1.level.name in levels))
   end
 
-  defp send_sync_replies(syncees, max_delay) do
+  defp send_sync_replies(syncees) do
+    max_latency = syncees |> Map.values() |> Enum.map(& &1.latency) |> Enum.max(fn -> 0 end)
+
     syncees
     |> Map.values()
-    |> Enum.group_by(& &1.delay, & &1.level.from)
-    |> Enum.each(fn {delay, from} ->
-      time = (max_delay - delay) |> Time.to_milliseconds()
+    |> Enum.filter(&(&1.level.name == :sync))
+    |> Enum.group_by(& &1.latency, & &1.level.from)
+    |> Enum.each(fn {latency, from} ->
+      time = (max_latency - latency) |> Time.to_milliseconds()
       Process.send_after(self(), {:reply, from}, time)
     end)
   end

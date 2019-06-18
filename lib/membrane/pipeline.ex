@@ -411,13 +411,13 @@ defmodule Membrane.Pipeline do
       {sync, elements} =
         case stream_sync do
           {sync, elements} -> {sync, elements}
-          elements -> {Sync.start_link!(), elements}
+          elements -> {Sync.start_link!(empty_exit?: true), elements}
         end
 
       children
       |> Map.take(elements)
       |> Map.values()
-      |> Enum.each(&Message.call(&1, :set_stream_sync, Sync.register(sync)))
+      |> Enum.each(&Message.call(&1, :set_stream_sync, Sync.register(sync, &1)))
     end)
 
     {:ok, state}
