@@ -160,30 +160,50 @@ defmodule Membrane.Testing.Assertions do
 
   @doc """
   Asserts that `Membrane.Testing.Sink` with name `sink_name` received or will
-  receive an event within the `timeout` period specified in milliseconds.
+  receive caps matching `pattern` within the `timeout` period specified in
+  milliseconds.
 
-  When a `Membrane.Testing.Sink` is part of `Membrane.Testing.Pipeline` you can
-  assert whether it received an event matching a provided pattern.
+  When the `Membrane.Testing.Sink` is a part of `Membrane.Testing.Pipeline` you
+  can assert whether it received caps matching provided pattern.
 
-      assert_sink_event(pid, :the_sink, %Discontinuity{})
+      {:ok, pid} = Membrane.Testing.Pipeline.start_link(%Membrane.Testing.Pipeline.Options{
+        elements: [
+          ....,
+          the_sink: %Membrane.Testing.Sink{}
+        ]
+      })
+
+  You can match for exact value:
+
+      assert_sink_caps(pid, :the_sink , %Caps{prop: ^value})
+
+  You can also use pattern to extract data from the caps:
+
+      assert_sink_caps(pid, :the_sink , %Caps{prop: value})
+      do_something(value)
   """
-  defmacro assert_sink_event(pipeline, sink_name, event, timeout \\ @default_timeout) do
-    do_sink_event(&assert_receive_from_pipeline/3, pipeline, sink_name, event, timeout)
+  defmacro assert_sink_caps(pipeline, element_name, caps_pattern, timeout \\ @default_timeout) do
+    do_sink_caps(&assert_receive_from_pipeline/3, pipeline, element_name, caps_pattern, timeout)
   end
 
   @doc """
-  Asserts that `Membrane.Testing.Sink` has not received and will not receive
-  event matching provided pattern within the `timeout` period specified in
-  milliseconds.
+  Asserts that `Membrane.Testing.Sink` with name `sink_name` has not received
+  and will not receive caps matching `caps_pattern` within the `timeout`
+  period specified in milliseconds.
 
-      refute_sink_event(pid, :the_sink, %Discontinuity{})
+  Similarly as in the `assert_sink_caps/4` `the_sink` needs to be part of a
+  `Membrane.Testing.Pipeline`.
+
+      refute_sink_caps(pipeline, :the_sink, %Caps{prop: ^val})
+
+  Such expression will flunk if `the_sink` received or will receive caps with
+  property equal to value of `val` variable.
   """
-
-  defmacro refute_sink_event(pipeline, sink_name, event, timeout \\ @default_timeout) do
-    do_sink_event(&refute_receive_from_pipeline/3, pipeline, sink_name, event, timeout)
+  defmacro refute_sink_caps(pipeline, element_name, caps_pattern, timeout \\ @default_timeout) do
+    do_sink_caps(&refute_receive_from_pipeline/3, pipeline, element_name, caps_pattern, timeout)
   end
 
-  defp do_sink_event(assertion, pipeline, sink_name, event, timeout) do
+  defp do_sink_caps(assertion, pipeline, sink_name, caps, timeout) do
     quote do
       element_name_value = unquote(sink_name)
 
@@ -191,7 +211,9 @@ defmodule Membrane.Testing.Assertions do
         assertion.(
           pipeline,
           {:handle_notification,
-           {{:event, event},
+           {quote do
+              {:caps, :input, unquote(caps)}
+            end,
             quote do
               ^element_name_value
             end}},
@@ -255,6 +277,49 @@ defmodule Membrane.Testing.Assertions do
           pipeline,
           {:handle_notification,
            {{:buffer, pattern},
+            quote do
+              ^element_name_value
+            end}},
+          timeout
+        )
+      )
+    end
+  end
+
+  @doc """
+  Asserts that `Membrane.Testing.Sink` with name `sink_name` received or will
+  receive an event within the `timeout` period specified in milliseconds.
+
+  When a `Membrane.Testing.Sink` is part of `Membrane.Testing.Pipeline` you can
+  assert whether it received an event matching a provided pattern.
+
+      assert_sink_event(pid, :the_sink, %Discontinuity{})
+  """
+  defmacro assert_sink_event(pipeline, sink_name, event, timeout \\ @default_timeout) do
+    do_sink_event(&assert_receive_from_pipeline/3, pipeline, sink_name, event, timeout)
+  end
+
+  @doc """
+  Asserts that `Membrane.Testing.Sink` has not received and will not receive
+  event matching provided pattern within the `timeout` period specified in
+  milliseconds.
+
+      refute_sink_event(pid, :the_sink, %Discontinuity{})
+  """
+
+  defmacro refute_sink_event(pipeline, sink_name, event, timeout \\ @default_timeout) do
+    do_sink_event(&refute_receive_from_pipeline/3, pipeline, sink_name, event, timeout)
+  end
+
+  defp do_sink_event(assertion, pipeline, sink_name, event, timeout) do
+    quote do
+      element_name_value = unquote(sink_name)
+
+      unquote(
+        assertion.(
+          pipeline,
+          {:handle_notification,
+           {{:event, event},
             quote do
               ^element_name_value
             end}},

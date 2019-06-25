@@ -66,6 +66,10 @@ defmodule Membrane.Testing.Sink do
   end
 
   @impl true
+  def handle_caps(pad, caps, _context, state),
+    do: {{:ok, notify: {:caps, pad, caps}}, state}
+
+  @impl true
   def handle_other({:make_demand, size}, _ctx, %{autodemand: false} = state) do
     {{:ok, demand: {:input, size}}, state}
   end
