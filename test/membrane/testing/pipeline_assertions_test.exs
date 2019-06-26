@@ -56,9 +56,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
       assert_pipeline_playback_changed(self(), ^prev_state, ^current_state)
     end
 
-    test "flunks when state is not change when patterns are provided", %{
-      state: state
-    } do
+    test "flunks when state is not change when patterns are provided" do
       assert_raise ExUnit.AssertionError, fn ->
         prev_state = :prepared
         current_state = :stopped
