@@ -47,6 +47,37 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
       end
     end
 
+    test "supports pattern as argument", %{
+      state: state
+    } do
+      Pipeline.handle_prepared_to_stopped(state)
+      prev_state = :prepared
+      current_state = :stopped
+      assert_pipeline_playback_changed(self(), ^prev_state, ^current_state)
+    end
+
+    test "flunks when state is not change when patterns are provided", %{
+      state: state
+    } do
+      assert_raise ExUnit.AssertionError, fn ->
+        prev_state = :prepared
+        current_state = :stopped
+        assert_pipeline_playback_changed(self(), ^prev_state, ^current_state, 0)
+      end
+    end
+
+    test "flunks when state change does not match provided pattern", %{
+      state: state
+    } do
+      Pipeline.handle_stopped_to_prepared(state)
+
+      assert_raise ExUnit.AssertionError, fn ->
+        prev_state = :prepared
+        current_state = :stopped
+        assert_pipeline_playback_changed(self(), ^prev_state, ^current_state, 0)
+      end
+    end
+
     test "raises an error if invalid arguments are provided" do
       pattern =
         """

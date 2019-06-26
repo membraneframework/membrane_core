@@ -66,7 +66,9 @@ defmodule Membrane.Testing.Assertions do
   @doc """
   Asserts that pipeline's playback state changed or will change from
   `previous_state` to `current_state` within the `timeout` period specified in
-   milliseconds.
+  milliseconds.
+
+  The `prev_state` and `current_state` must be match patterns.
 
   Assertion can be either made by providing state before and after the change as
   atoms:
@@ -90,9 +92,7 @@ defmodule Membrane.Testing.Assertions do
       {:prepared, :stopped}
     ]
 
-    is_previous_ignored = match?({:_, _, _}, previous_state)
-    is_current_ignored = match?({:_, _, _}, current_state)
-    are_arguments_values = !is_previous_ignored and !is_current_ignored
+    are_arguments_values = is_atom(previous_state) and is_atom(current_state)
 
     if are_arguments_values and {previous_state, current_state} not in valid_changes do
       transitions =
