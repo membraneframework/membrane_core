@@ -16,8 +16,10 @@ defmodule Membrane.Core.InputBuffer do
 
   @qe Qex
 
-  @typep non_buf_type_t() :: :event | :caps
   @non_buf_types [:event, :caps]
+
+  @type output_value_t :: {:event | :caps, any} | {:buffers, list, pos_integer}
+  @type output_t :: {:empty | :value, [output_value_t]}
 
   @type t :: %__MODULE__{
           name: Element.name_t(),
@@ -180,8 +182,7 @@ defmodule Membrane.Core.InputBuffer do
     }
   end
 
-  @spec take_and_demand(t(), non_neg_integer(), pid(), Pad.ref_t()) ::
-          {{:ok, q_pop_ok_res_t()}, t()}
+  @spec take_and_demand(t(), non_neg_integer(), pid(), Pad.ref_t()) :: {{:ok, output_t()}, t()}
   def take_and_demand(%__MODULE__{current_size: size} = input_buf, count, demand_pid, demand_pad)
       when count >= 0 do
     report("Taking #{inspect(count)} buffers", input_buf)
@@ -199,9 +200,6 @@ defmodule Membrane.Core.InputBuffer do
     {out, nq} = q |> q_pop(count, metric)
     {out, %__MODULE__{input_buf | q: nq, current_size: max(0, size - count)}}
   end
-
-  @typep q_pop_value_t :: {:buffers | non_buf_type_t(), any()}
-  @typep q_pop_ok_res_t :: {{:empty | :value, [q_pop_value_t()]}, Qex.t()}
 
   defp q_pop(q, count, metric, acc \\ [])
 

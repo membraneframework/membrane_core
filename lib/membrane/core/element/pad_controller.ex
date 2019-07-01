@@ -277,7 +277,7 @@ defmodule Membrane.Core.Element.PadController do
         buffer_props
       )
 
-    %{buffer: input_buf, demand: 0}
+    %{input_buf: input_buf, demand: 0}
   end
 
   defp init_pad_mode_data(%{mode: :pull, direction: :output}, _other_info, _props, _state),

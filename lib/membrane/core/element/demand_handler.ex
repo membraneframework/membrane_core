@@ -136,11 +136,11 @@ defmodule Membrane.Core.Element.DemandHandler do
     pad_data = state |> PadModel.get_data!(pad_ref)
 
     {input_buf_output, new_input_buf} =
-      pad_data.buffer |> InputBuffer.take_and_demand(size, pad_data.pid, pad_data.other_ref)
+      pad_data.input_buf |> InputBuffer.take_and_demand(size, pad_data.pid, pad_data.other_ref)
 
     with {:ok, {_buffer_status, data}} <- input_buf_output,
-         state = state |> PadModel.set_data!(pad_ref, :buffer, new_input_buf),
-         {:ok, state} <- handle_pullbuffer_output(pad_ref, data, state) do
+         state = state |> PadModel.set_data!(pad_ref, :input_buf, new_input_buf),
+         {:ok, state} <- handle_input_buf_output(pad_ref, data, state) do
       {:ok, state}
     else
       {{:error, reason}, state} ->
@@ -154,30 +154,30 @@ defmodule Membrane.Core.Element.DemandHandler do
     end
   end
 
-  @spec handle_pullbuffer_output(
+  @spec handle_input_buf_output(
           Pad.ref_t(),
-          [{:event | :caps, any} | {:buffers, list, pos_integer}],
+          [InputBuffer.output_value_t()],
           State.t()
         ) :: State.stateful_try_t()
-  defp handle_pullbuffer_output(pad_ref, data, state) do
+  defp handle_input_buf_output(pad_ref, data, state) do
     data
     |> Bunch.Enum.try_reduce(state, fn v, state ->
-      do_handle_pullbuffer_output(pad_ref, v, state)
+      do_handle_input_buf_output(pad_ref, v, state)
     end)
   end
 
-  @spec do_handle_pullbuffer_output(
+  @spec do_handle_input_buf_output(
           Pad.ref_t(),
-          {:event | :caps, any} | {:buffers, list, pos_integer},
+          InputBuffer.output_value_t(),
           State.t()
         ) :: State.stateful_try_t()
-  defp do_handle_pullbuffer_output(pad_ref, {:event, e}, state),
+  defp do_handle_input_buf_output(pad_ref, {:event, e}, state),
     do: EventController.exec_handle_event(pad_ref, e, %{supplying_demand?: true}, state)
 
-  defp do_handle_pullbuffer_output(pad_ref, {:caps, c}, state),
+  defp do_handle_input_buf_output(pad_ref, {:caps, c}, state),
     do: CapsController.exec_handle_caps(pad_ref, c, %{supplying_demand?: true}, state)
 
-  defp do_handle_pullbuffer_output(
+  defp do_handle_input_buf_output(
          pad_ref,
          {:buffers, buffers, size},
          state

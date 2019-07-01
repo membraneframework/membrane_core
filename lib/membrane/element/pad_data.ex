@@ -34,7 +34,7 @@ defmodule Membrane.Element.Pad.Data do
           start_of_stream?: boolean(),
           end_of_stream?: boolean(),
           sticky_messages: [Event.t()],
-          buffer: InputBuffer.t() | nil,
+          input_buf: InputBuffer.t() | nil,
           demand: integer() | nil,
           options: Keyword.t()
         }
@@ -53,7 +53,7 @@ defmodule Membrane.Element.Pad.Data do
     :start_of_stream?,
     :end_of_stream?,
     :sticky_messages,
-    :buffer,
+    :input_buf,
     :demand,
     :options
   ]
