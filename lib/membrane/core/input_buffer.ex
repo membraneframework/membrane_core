@@ -16,6 +16,7 @@ defmodule Membrane.Core.InputBuffer do
 
   @qe Qex
 
+  @typep non_buf_type_t() :: :event | :caps
   @non_buf_types [:event, :caps]
 
   @type t :: %__MODULE__{
@@ -75,13 +76,15 @@ defmodule Membrane.Core.InputBuffer do
     end
   end
 
-  @spec new(
+  @spec init(
           Element.name_t(),
           Buffer.Metric.unit_t(),
           enable_toilet? :: boolean(),
+          pid(),
+          Pad.ref_t(),
           props_t
         ) :: t()
-  def new(name, demand_unit, enable_toilet?, props) do
+  def init(name, demand_unit, enable_toilet?, demand_pid, demand_pad, props) do
     metric = Buffer.Metric.from_unit(demand_unit)
     preferred_size = props[:preferred_size] || metric.pullbuffer_preferred_size
     min_demand = props[:min_demand] || preferred_size |> div(4)
@@ -105,6 +108,7 @@ defmodule Membrane.Core.InputBuffer do
       metric: metric,
       toilet: toilet
     }
+    |> send_demands(demand_pid, demand_pad)
   end
 
   @spec store(t(), atom(), any()) :: {:ok, t()} | {:error, any()}
@@ -176,10 +180,18 @@ defmodule Membrane.Core.InputBuffer do
     }
   end
 
-  def take(%__MODULE__{current_size: size} = input_buf, count) when count >= 0 do
+  @spec take_and_demand(t(), non_neg_integer(), pid(), Pad.ref_t()) ::
+          {{:ok, q_pop_ok_res_t()}, t()}
+  def take_and_demand(%__MODULE__{current_size: size} = input_buf, count, demand_pid, demand_pad)
+      when count >= 0 do
     report("Taking #{inspect(count)} buffers", input_buf)
     {out, %__MODULE__{current_size: new_size} = input_buf} = do_take(input_buf, count)
-    input_buf = input_buf |> Bunch.Struct.update_in(:demand, &(&1 + size - new_size))
+
+    input_buf =
+      input_buf
+      |> Bunch.Struct.update_in(:demand, &(&1 + size - new_size))
+      |> send_demands(demand_pid, demand_pad)
+
     {{:ok, out}, input_buf}
   end
 
@@ -187,6 +199,9 @@ defmodule Membrane.Core.InputBuffer do
     {out, nq} = q |> q_pop(count, metric)
     {out, %__MODULE__{input_buf | q: nq, current_size: max(0, size - count)}}
   end
+
+  @typep q_pop_value_t :: {:buffers | non_buf_type_t(), any()}
+  @typep q_pop_ok_res_t :: {{:empty | :value, [q_pop_value_t()]}, Qex.t()}
 
   defp q_pop(q, count, metric, acc \\ [])
 
@@ -219,22 +234,19 @@ defmodule Membrane.Core.InputBuffer do
     end
   end
 
-  @spec empty?(t()) :: boolean()
-  def empty?(%__MODULE__{current_size: size}), do: size == 0
-
   @spec send_demands(t(), pid(), Pad.ref_t()) :: t()
-  def send_demands(
-        %__MODULE__{
-          toilet: false,
-          current_size: size,
-          preferred_size: pref_size,
-          demand: demand,
-          min_demand: min_demand
-        } = input_buf,
-        demand_pid,
-        linked_output_ref
-      )
-      when size < pref_size and demand > 0 do
+  defp send_demands(
+         %__MODULE__{
+           toilet: false,
+           current_size: size,
+           preferred_size: pref_size,
+           demand: demand,
+           min_demand: min_demand
+         } = input_buf,
+         demand_pid,
+         linked_output_ref
+       )
+       when size < pref_size and demand > 0 do
     to_demand = max(demand, min_demand)
 
     report(
@@ -249,7 +261,7 @@ defmodule Membrane.Core.InputBuffer do
     %__MODULE__{input_buf | demand: demand - to_demand}
   end
 
-  def send_demands(input_buf, _demand_pid, _linked_output_ref) do
+  defp send_demands(input_buf, _demand_pid, _linked_output_ref) do
     input_buf
   end
 
@@ -278,4 +290,7 @@ defmodule Membrane.Core.InputBuffer do
       end
     ])
   end
+
+  @spec empty?(t()) :: boolean()
+  def empty?(%__MODULE__{current_size: size}), do: size == 0
 end

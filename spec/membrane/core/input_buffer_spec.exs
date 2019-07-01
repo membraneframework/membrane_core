@@ -13,7 +13,7 @@ defmodule Membrane.Core.InputBufferSpec do
     end
   end
 
-  describe ".new/3" do
+  describe ".init/6" do
     let :name, do: :name
     let :preferred_size, do: 100
     let :warn_size, do: 200
@@ -21,6 +21,8 @@ defmodule Membrane.Core.InputBufferSpec do
     let :min_demand, do: 10
     let :toilet, do: false
     let :demand_unit, do: :bytes
+    let :demand_pid, do: self()
+    let :linked_output_ref, do: :output_pad_ref
     let :expected_metric, do: Buffer.Metric.from_unit(demand_unit())
 
     let :props,
@@ -33,17 +35,19 @@ defmodule Membrane.Core.InputBufferSpec do
 
     it "should return InputBuffer struct and send demand message" do
       expect(
-        described_module().new(
+        described_module().init(
           name(),
           demand_unit(),
           toilet(),
+          demand_pid(),
+          linked_output_ref(),
           props()
         )
       )
       |> to(
         eq(%InputBuffer{
           name: name(),
-          demand: preferred_size(),
+          demand: 0,
           preferred_size: preferred_size(),
           min_demand: min_demand(),
           toilet: toilet(),
@@ -51,6 +55,9 @@ defmodule Membrane.Core.InputBufferSpec do
           q: Qex.new()
         })
       )
+
+      expected_list = [preferred_size(), linked_output_ref()]
+      assert_received Message.new(:demand, ^expected_list)
     end
 
     context "if toilet is not false" do
@@ -60,10 +67,12 @@ defmodule Membrane.Core.InputBufferSpec do
         flush()
 
         expect(
-          described_module().new(
+          described_module().init(
             name(),
             demand_unit(),
             toilet(),
+            demand_pid(),
+            linked_output_ref(),
             props()
           )
         )
@@ -78,6 +87,8 @@ defmodule Membrane.Core.InputBufferSpec do
             q: Qex.new()
           })
         )
+
+        refute_received Message.new(:demand, _)
       end
     end
   end
@@ -173,11 +184,12 @@ defmodule Membrane.Core.InputBufferSpec do
     end
   end
 
-  describe ".take/2" do
+  describe ".take_and_demand/4" do
     let :buffers1, do: {:buffers, [:b1, :b2, :b3], 3}
     let :buffers2, do: {:buffers, [:b4, :b5, :b6], 3}
     let :q, do: Qex.new() |> Qex.push(buffers1()) |> Qex.push(buffers2())
     let :current_size, do: 6
+    let :demand_pid, do: self()
     let :linked_output_ref, do: :linked_output_ref
     let :metric, do: Buffer.Metric.Count
 
@@ -194,13 +206,39 @@ defmodule Membrane.Core.InputBufferSpec do
       let :to_take, do: 10
 
       it "should return tuple {:ok, {:empty, buffers}}" do
-        {result, _new_input_buf} = described_module().take(input_buf(), to_take())
+        {result, _new_input_buf} =
+          described_module().take_and_demand(
+            input_buf(),
+            to_take(),
+            demand_pid(),
+            linked_output_ref()
+          )
+
         expect(result) |> to(eq {:ok, {:empty, [buffers1(), buffers2()]}})
       end
 
       it "should set `current_size` to 0" do
-        {_, %{current_size: new_size}} = described_module().take(input_buf(), to_take())
+        {_, %{current_size: new_size}} =
+          described_module().take_and_demand(
+            input_buf(),
+            to_take(),
+            demand_pid(),
+            linked_output_ref()
+          )
+
         expect(new_size) |> to(eq 0)
+      end
+
+      it "should generate demand" do
+        described_module().take_and_demand(
+          input_buf(),
+          to_take(),
+          demand_pid(),
+          linked_output_ref()
+        )
+
+        expected_list = [current_size(), linked_output_ref()]
+        assert_received Message.new(:demand, ^expected_list)
       end
     end
 
@@ -209,13 +247,21 @@ defmodule Membrane.Core.InputBufferSpec do
         let :to_take, do: 3
 
         it "should return `to_take` buffers from the queue" do
-          {{:ok, result}, %{q: new_q}} = described_module().take(input_buf(), to_take())
+          {{:ok, result}, %{q: new_q}} =
+            described_module().take_and_demand(
+              input_buf(),
+              to_take(),
+              demand_pid(),
+              linked_output_ref()
+            )
+
           expect(result) |> to(eq {:value, [buffers1()]})
 
           list = new_q |> Enum.into([])
           exp_list = Qex.new() |> Qex.push(buffers2()) |> Enum.into([])
 
           expect(list) |> to(eq exp_list)
+          assert_received Message.new(:demand, _)
         end
       end
 
@@ -223,7 +269,14 @@ defmodule Membrane.Core.InputBufferSpec do
         let :to_take, do: 4
 
         it "should return `to_take` buffers from the queue" do
-          {{:ok, result}, %{q: new_q}} = described_module().take(input_buf(), to_take())
+          {{:ok, result}, %{q: new_q}} =
+            described_module().take_and_demand(
+              input_buf(),
+              to_take(),
+              demand_pid(),
+              linked_output_ref()
+            )
+
           exp_buf2 = {:buffers, [:b4], 1}
           exp_rest = {:buffers, [:b5, :b6], 2}
           expect(result) |> to(eq {:value, [buffers1(), exp_buf2]})
@@ -232,6 +285,7 @@ defmodule Membrane.Core.InputBufferSpec do
           exp_list = Qex.new() |> Qex.push(exp_rest) |> Enum.into([])
 
           expect(list) |> to(eq exp_list)
+          assert_received Message.new(:demand, _)
         end
       end
     end

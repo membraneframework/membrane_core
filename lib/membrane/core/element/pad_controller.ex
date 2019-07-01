@@ -268,13 +268,14 @@ defmodule Membrane.Core.Element.PadController do
     enable_toilet? = other_info.mode == :push
 
     input_buf =
-      InputBuffer.new(
+      InputBuffer.init(
         state.name,
         demand_unit,
         enable_toilet?,
+        pid,
+        other_ref,
         buffer_props
       )
-      |> InputBuffer.send_demands(pid, other_ref)
 
     %{buffer: input_buf, demand: 0}
   end
