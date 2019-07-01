@@ -19,7 +19,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       {:ok, state}
     else
       {{:error, reason}, state} ->
-        raise ActionError, reason: reason, action: action, callback: {state[:module], callback}
+        raise ActionError, reason: reason, action: action, callback: {state.module, callback}
     end
   end
 

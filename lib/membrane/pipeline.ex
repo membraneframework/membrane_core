@@ -231,12 +231,13 @@ defmodule Membrane.Pipeline do
     links: #{inspect(links)}
     """)
 
-    with {parsed_children, state} <- {children_spec |> parse_children, state},
-         {:ok, state} <- {parsed_children |> check_if_children_names_unique(state), state},
-         {children, state} <- {parsed_children |> start_children, state},
+    parsed_children = children_spec |> parse_children
+
+    with {:ok, state} <- {parsed_children |> check_if_children_names_unique(state), state},
+         children = parsed_children |> start_children,
          {:ok, state} <- children |> add_children(state),
          {{:ok, links}, state} <- {links |> parse_links, state},
-         {links, state} <- {links |> resolve_links(state), state},
+         links = links |> resolve_links(state),
          {:ok, state} <- {links |> link_children(state), state},
          {children_names, children_pids} = children |> Enum.unzip(),
          {:ok, state} <- {children_pids |> set_children_watcher, state},
