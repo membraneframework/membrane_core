@@ -175,7 +175,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad doesn't exist in the element", %{state: state} do
       state = state |> set_playback_state(:playing)
 
-      assert_raise ActionError, ~r/[Pp]ad :invalid_pad_ref/, fn ->
+      assert_raise ActionError, ~r/pad :invalid_pad_ref/i, fn ->
         @module.handle_action(
           buffer_action(:invalid_pad_ref),
           :handle_other,
@@ -191,7 +191,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         |> set_playback_state(:playing)
         |> PadModel.set_data!(:output, :end_of_stream?, true)
 
-      assert_raise ActionError, ~r/[eE]nd ?of ?[sS]tream.*sent.*:output/, fn ->
+      assert_raise ActionError, ~r/end ?of ?stream.*sent.*:output/i, fn ->
         @module.handle_action(
           buffer_action(:output),
           :handle_other,
@@ -204,7 +204,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "with invalid buffer(s)", %{state: state} do
       state = state |> set_playback_state(:playing)
 
-      assert_raise ActionError, ~r/[Ii]nvalid buffer.*:not_a_buffer/, fn ->
+      assert_raise ActionError, ~r/invalid buffer.*:not_a_buffer/i, fn ->
         @module.handle_action(
           {:buffer, {:output, :not_a_buffer}},
           :handle_other,
@@ -215,7 +215,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
       refute_received Message.new(:buffer, [_, :other_ref])
 
-      assert_raise ActionError, ~r/[Ii]nvalid buffer.*:not_a_buffer/, fn ->
+      assert_raise ActionError, ~r/invalid buffer.*:not_a_buffer/i, fn ->
         @module.handle_action(
           {:buffer, {:output, [@mock_buffer, :not_a_buffer]}},
           :handle_other,
@@ -278,7 +278,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad doesn't exist in the element", %{state: state} do
       state = state |> set_playback_state(:playing)
 
-      assert_raise ActionError, ~r/[Pp]ad :invalid_pad_ref/, fn ->
+      assert_raise ActionError, ~r/pad :invalid_pad_ref/i, fn ->
         @module.handle_action(
           event_action(:invalid_pad_ref),
           :handle_other,
@@ -291,7 +291,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "with invalid event", %{state: state} do
       state = state |> set_playback_state(:playing)
 
-      assert_raise ActionError, ~r/[Ii]nvalid event.*:not_an_event/, fn ->
+      assert_raise ActionError, ~r/invalid event.*:not_an_event/i, fn ->
         @module.handle_action(
           {:event, {:output, :not_an_event}},
           :handle_other,
@@ -307,7 +307,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         |> set_playback_state(:playing)
         |> PadModel.set_data!(:output, :end_of_stream?, true)
 
-      assert_raise ActionError, ~r/[eE]nd ?of ?[sS]tream.*sent.*:output/, fn ->
+      assert_raise ActionError, ~r/end ?of ?stream.*sent.*:output/i, fn ->
         @module.handle_action(
           event_action(:output),
           :handle_other,
@@ -331,7 +331,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
   end
 
-  @mock_caps %Membrane.Caps.Mock{value: 42}
+  @mock_caps %Membrane.Caps.Mock{integer: 42}
   defp caps_action(pad), do: {:caps, {pad, @mock_caps}}
 
   describe "handling :caps action" do
@@ -351,7 +351,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad doesn't exist in the element", %{state: state} do
       state = state |> set_playback_state(:playing)
 
-      assert_raise ActionError, ~r/[Pp]ad :invalid_pad_ref/, fn ->
+      assert_raise ActionError, ~r/pad :invalid_pad_ref/i, fn ->
         @module.handle_action(
           caps_action(:invalid_pad_ref),
           :handle_other,
@@ -365,7 +365,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       state =
         state
         |> set_playback_state(:playing)
-        |> PadModel.set_data!(:output, :accepted_caps, {Membrane.Caps.Mock, [value: 42]})
+        |> PadModel.set_data!(:output, :accepted_caps, {Membrane.Caps.Mock, [integer: 42]})
 
       result =
         @module.handle_action(
@@ -383,9 +383,9 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       state =
         state
         |> set_playback_state(:playing)
-        |> PadModel.set_data!(:output, :accepted_caps, {Membrane.Caps.Mock, [value: 2]})
+        |> PadModel.set_data!(:output, :accepted_caps, {Membrane.Caps.Mock, [integer: 2]})
 
-      assert_raise ActionError, ~r/caps.*(don't|do not) match.*value: 2/s, fn ->
+      assert_raise ActionError, ~r/caps.*(don't|do not) match.*integer: 2/s, fn ->
         @module.handle_action(
           caps_action(:output),
           :handle_other,
@@ -466,7 +466,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad doesn't exist in the element", %{state: state} do
       state = state |> set_playback_state(:playing)
 
-      assert_raise ActionError, ~r/[Pp]ad :invalid_pad_ref/, fn ->
+      assert_raise ActionError, ~r/pad :invalid_pad_ref/i, fn ->
         @module.handle_action(
           {:redemand, :invalid_pad_ref},
           :handle_other,
@@ -479,7 +479,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad works in push mode", %{state: state} do
       state = state |> set_playback_state(:playing)
 
-      assert_raise ActionError, ~r/[Pp]ad :output.*:push mode/, fn ->
+      assert_raise ActionError, ~r/pad :output.*:push mode/i, fn ->
         @module.handle_action(
           {:redemand, :output},
           :handle_other,
@@ -568,7 +568,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
 
     test "when :redemand is not the last action", %{state: state} do
-      assert_raise ActionError, ~r/[Rr]edemand.*last/, fn ->
+      assert_raise ActionError, ~r/redemand.*last/i, fn ->
         @module.handle_actions(
           [redemand: :output, notify: :a, notify: :b],
           :handle_other,

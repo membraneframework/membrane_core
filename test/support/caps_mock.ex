@@ -1,3 +1,4 @@
 defmodule Membrane.Caps.Mock do
-  defstruct [:value]
+  defstruct integer: 42,
+            string: "mock"
 end
