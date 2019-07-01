@@ -233,30 +233,27 @@ defmodule Membrane.Pipeline do
 
     parsed_children = children_spec |> parse_children
 
-    with {:ok, state} <- {parsed_children |> check_if_children_names_unique(state), state},
-         children = parsed_children |> start_children,
-         {:ok, state} <- children |> add_children(state),
-         {{:ok, links}, state} <- {links |> parse_links, state},
-         links = links |> resolve_links(state),
-         {:ok, state} <- {links |> link_children(state), state},
-         {children_names, children_pids} = children |> Enum.unzip(),
-         {:ok, state} <- {children_pids |> set_children_watcher, state},
-         {:ok, state} <- exec_handle_spec_started(children_names, state) do
-      children_pids
-      |> Enum.each(&Element.change_playback_state(&1, state.playback.state))
+    {:ok, state} = {parsed_children |> check_if_children_names_unique(state), state}
+    children = parsed_children |> start_children
+    {:ok, state} = children |> add_children(state)
+    {{:ok, links}, state} = {links |> parse_links, state}
+    links = links |> resolve_links(state)
+    {:ok, state} = {links |> link_children(state), state}
+    {children_names, children_pids} = children |> Enum.unzip()
+    {:ok, state} = {children_pids |> set_children_watcher, state}
+    {:ok, state} = exec_handle_spec_started(children_names, state)
 
-      debug("""
-      Initialized pipeline spec
-      children: #{inspect(children)}
-      children pids: #{inspect(children)}
-      links: #{inspect(links)}
-      """)
+    children_pids
+    |> Enum.each(&Element.change_playback_state(&1, state.playback.state))
 
-      {{:ok, children_names}, state}
-    else
-      {{:error, reason}, _state} ->
-        raise PipelineError, "Failed to initialize pipeline spec #{inspect(reason)}"
-    end
+    debug("""
+    Initialized pipeline spec
+    children: #{inspect(children)}
+    children pids: #{inspect(children)}
+    links: #{inspect(links)}
+    """)
+
+    {{:ok, children_names}, state}
   end
 
   @spec parse_children(Spec.children_spec_t() | any) :: [parsed_child_t]
@@ -378,26 +375,33 @@ defmodule Membrane.Pipeline do
 
   @spec set_children_watcher([pid]) :: :ok
   defp set_children_watcher(elements_pids) do
-    with :ok <-
-           elements_pids
-           |> Bunch.Enum.try_each(fn pid ->
-             pid |> Element.set_watcher(self())
-           end) do
-      :ok
-    else
-      {:error, reason} ->
-        raise PipelineError, "Cannot set watcher, reason: #{inspect(reason)}"
-    end
+    elements_pids
+    |> Enum.each(fn pid ->
+      :ok = pid |> Element.set_watcher(self())
+    end)
+
+    :ok
   end
 
-  @spec exec_handle_spec_started([Element.name_t()], State.t()) :: Type.stateful_try_t(State.t())
+  @spec exec_handle_spec_started([Element.name_t()], State.t()) :: {:ok, State.t()}
   defp exec_handle_spec_started(children_names, state) do
-    CallbackHandler.exec_and_handle_callback(
-      :handle_spec_started,
-      __MODULE__,
-      [children_names],
-      state
-    )
+    callback_res =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_spec_started,
+        __MODULE__,
+        [children_names],
+        state
+      )
+
+    with {:ok, _} <- callback_res do
+      callback_res
+    else
+      {{:error, reason}, state} ->
+        raise PipelineError, """
+        Callback :handle_spec_started failed with reason: #{inspect(reason)}
+        Pipeline state: #{inspect(state, pretty: true)}
+        """
+    end
   end
 
   @impl PlaybackHandler
