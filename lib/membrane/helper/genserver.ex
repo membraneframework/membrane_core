@@ -42,7 +42,7 @@ defmodule Membrane.Helper.GenServer do
       reason
     )
 
-    {:reply, {:error, {:handle_call, reason}}, new_state}
+    {:reply, {:error, reason}, new_state}
   end
 
   def reply({:error, reason}, old_state) do
@@ -53,6 +53,6 @@ defmodule Membrane.Helper.GenServer do
       reason
     )
 
-    {:reply, {:error, {:handle_call, reason}}, old_state}
+    {:reply, {:error, reason}, old_state}
   end
 end

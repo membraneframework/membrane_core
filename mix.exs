@@ -11,6 +11,9 @@ defmodule Membrane.Mixfile do
       elixir: "~> 1.7",
       elixirc_paths: elixirc_paths(Mix.env()),
       description: "Membrane Multimedia Framework (Core)",
+      dialyzer: [
+        flags: [:error_handling, :underspecs]
+      ],
       package: package(),
       name: "Membrane Core",
       source_url: link(),

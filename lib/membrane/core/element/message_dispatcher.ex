@@ -108,7 +108,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   end
 
   defp handle_message_error(message, mode, reason, state) do
-    reason = {:cannot_handle_message, message: message, mode: mode, reason: reason}
+    reason = {:cannot_handle_message, reason, message: message, mode: mode}
 
     warn_error(
       """
