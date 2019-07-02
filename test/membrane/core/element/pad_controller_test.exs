@@ -3,7 +3,8 @@ defmodule Membrane.Core.Element.PadControllerTest do
   alias Membrane.Support.Element.{DynamicFilter, TrivialFilter, TrivialSink}
   alias Membrane.Core.Element.{PadModel, PadSpecHandler, State}
   alias Membrane.Core.Message
-  alias Membrane.Element.{LinkError, Pad}
+  alias Membrane.Element.Pad
+  alias Membrane.ElementLinkError
   alias Membrane.Event.EndOfStream
   require Message
 
@@ -40,7 +41,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
     test "when pad is does not exist in the element" do
       state = prepare_state(TrivialFilter)
 
-      assert_raise LinkError, fn ->
+      assert_raise ElementLinkError, fn ->
         @module.handle_link(
           :invalid_pad_ref,
           :output,

@@ -11,11 +11,11 @@ defmodule Membrane.Core.Element.TimerController do
 
   def start_timer(interval, clock, id, state) do
     with false <- state.timers |> Map.has_key?(id) do
-      state = state |> Bunch.Access.update_in([:clocks, clock], &add_clock(&1, clock, id))
+      state = state |> Bunch.Access.update_in([:timers_clocks, clock], &add_clock(&1, clock, id))
 
       timer =
         %__MODULE__{interval: interval, clock: clock, init_time: Time.monotonic_time()}
-        |> tick(id, state.clocks)
+        |> tick(id, state.timers_clocks)
 
       state = state |> Bunch.Access.put_in([:timers, id], timer)
 
@@ -33,12 +33,12 @@ defmodule Membrane.Core.Element.TimerController do
 
       {clock_timers, state} =
         state
-        |> Bunch.Access.get_updated_in([:clocks, timer.clock, :timers], &MapSet.delete(&1, timer))
+        |> Bunch.Access.get_updated_in([:timers_clocks, timer.clock, :timers], &MapSet.delete(&1, timer))
 
       state =
         if clock_timers |> Enum.empty?() do
           send(timer.clock, Message.new(:clock_unsubscribe, self()))
-          state |> Bunch.Access.delete_in([:clocks, timer.clock])
+          state |> Bunch.Access.delete_in([:timers_clocks, timer.clock])
         else
           state
         end
@@ -62,7 +62,7 @@ defmodule Membrane.Core.Element.TimerController do
              state
            ) do
       state =
-        state |> Bunch.Access.update_in([:timers, timer_id], &tick(&1, timer_id, state.clocks))
+        state |> Bunch.Access.update_in([:timers, timer_id], &tick(&1, timer_id, state.timers_clocks))
 
       {:ok, state}
     end
@@ -70,8 +70,8 @@ defmodule Membrane.Core.Element.TimerController do
 
   def handle_clock_update(clock, ratio, state) do
     state =
-      if state.clocks[clock] do
-        state |> Bunch.Access.update_in([:clocks, clock], &%{&1 | ratio: ratio})
+      if state.timers_clocks[clock] do
+        state |> Bunch.Access.update_in([:timers_clocks, clock], &%{&1 | ratio: ratio})
       else
         state
       end
@@ -88,7 +88,7 @@ defmodule Membrane.Core.Element.TimerController do
     clock_data |> Map.update!(:timers, &MapSet.put(&1, timer_id))
   end
 
-  defp tick(timer, timer_id, clocks) do
+  defp tick(timer, timer_id, timers_clocks) do
     use Ratio
 
     %__MODULE__{
@@ -98,7 +98,7 @@ defmodule Membrane.Core.Element.TimerController do
       clock: clock
     } = timer
 
-    %{^clock => %{ratio: ratio}} = clocks
+    %{^clock => %{ratio: ratio}} = timers_clocks
 
     time_passed = time_passed + interval
     time = (init_time + ratio * time_passed) |> Ratio.floor() |> Time.to_milliseconds()

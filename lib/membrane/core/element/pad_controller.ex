@@ -2,10 +2,10 @@ defmodule Membrane.Core.Element.PadController do
   @moduledoc false
   # Module handling linking and unlinking pads.
 
-  alias Membrane.{Core, Event}
+  alias Membrane.{Core, Event, ElementLinkError}
   alias Core.{CallbackHandler, Message, InputBuffer}
   alias Core.Element.{ActionHandler, EventController, PadModel, State}
-  alias Membrane.Element.{CallbackContext, LinkError, Pad}
+  alias Membrane.Element.{CallbackContext, Pad}
   require CallbackContext.{PadAdded, PadRemoved}
   require Message
   require Pad
@@ -45,7 +45,7 @@ defmodule Membrane.Core.Element.PadController do
 
       {{:ok, info}, state}
     else
-      {:error, reason} -> raise LinkError, "#{inspect(reason)}"
+      {:error, reason} -> raise ElementLinkError, "#{inspect(reason)}"
     end
   end
 
@@ -140,13 +140,13 @@ defmodule Membrane.Core.Element.PadController do
   defp validate_pad_being_linked!(pad_ref, direction, info, state) do
     cond do
       :ok == PadModel.assert_instance(state, pad_ref) ->
-        raise LinkError, "Pad #{inspect(pad_ref)} has already been linked"
+        raise ElementLinkError, "Pad #{inspect(pad_ref)} has already been linked"
 
       info == nil ->
-        raise LinkError, "Unknown pad #{inspect(pad_ref)}"
+        raise ElementLinkError, "Unknown pad #{inspect(pad_ref)}"
 
       info.direction != direction ->
-        raise LinkError, """
+        raise ElementLinkError, """
         Invalid pad direction:
           expected: #{inspect(direction)},
           actual: #{inspect(info.direction)}
@@ -172,7 +172,8 @@ defmodule Membrane.Core.Element.PadController do
          {from, %{direction: :output, mode: :pull}},
          {to, %{direction: :input, mode: :push}}
        ) do
-    raise LinkError, "Cannot connect pull output #{inspect(from)} to push input #{inspect(to)}"
+    raise ElementLinkError,
+          "Cannot connect pull output #{inspect(from)} to push input #{inspect(to)}"
   end
 
   defp do_validate_dm(_, _) do
@@ -193,7 +194,7 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp parse_pad_props!(pad_name, nil, _props) do
-    raise LinkError, "Pad #{inspect(pad_name)} does not define any options"
+    raise ElementLinkError, "Pad #{inspect(pad_name)} does not define any options"
   end
 
   defp parse_pad_props!(pad_name, options_spec, props) do
@@ -204,10 +205,11 @@ defmodule Membrane.Core.Element.PadController do
         pad_props
 
       {:error, {:config_field, {:key_not_found, key}}} ->
-        raise LinkError, "Missing option #{inspect(key)} for pad #{inspect(pad_name)}"
+        raise ElementLinkError, "Missing option #{inspect(key)} for pad #{inspect(pad_name)}"
 
       {:error, {:config_invalid_keys, keys}} ->
-        raise LinkError, "Invalid keys in options of pad #{inspect(pad_name)} - #{inspect(keys)}"
+        raise ElementLinkError,
+              "Invalid keys in options of pad #{inspect(pad_name)} - #{inspect(keys)}"
     end
   end
 
@@ -217,7 +219,7 @@ defmodule Membrane.Core.Element.PadController do
         buffer_props
 
       {:error, {:config_invalid_keys, keys}} ->
-        raise LinkError,
+        raise ElementLinkError,
               "Invalid keys in buffer options of pad #{inspect(pad_name)}: #{inspect(keys)}"
     end
   end

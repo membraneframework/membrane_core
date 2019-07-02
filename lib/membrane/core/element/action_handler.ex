@@ -2,7 +2,18 @@ defmodule Membrane.Core.Element.ActionHandler do
   @moduledoc false
   # Module validating and executing actions returned by element's callbacks.
 
-  alias Membrane.{Buffer, Caps, Core, Element, Event, Notification, Sync}
+  alias Membrane.{
+    ActionError,
+    Buffer,
+    Caps,
+    CallbackError,
+    Core,
+    Element,
+    Event,
+    Notification,
+    Sync
+  }
+
   alias Core.Element.{DemandHandler, LifecycleController, PadModel, State, TimerController}
   alias Core.{Message, PlaybackHandler}
   alias Element.{Action, Pad}
@@ -18,32 +29,8 @@ defmodule Membrane.Core.Element.ActionHandler do
     with {:ok, state} <- do_handle_action(action, callback, params, state) do
       {:ok, state}
     else
-      {{:error, :invalid_action}, state} ->
-        warn_error(
-          """
-          Elements' #{inspect(state.module)} #{inspect(callback)} callback returned
-          invalid action: #{inspect(action)}. For possible actions are check types
-          in Membrane.Element.Action module. Keep in mind that some actions are
-          available in different formats or unavailable for some callbacks,
-          element types, playback states or under some other conditions.
-          """,
-          {:invalid_action,
-           action: action, callback: callback, module: state |> Map.get(:module)},
-          state
-        )
-
       {{:error, reason}, state} ->
-        warn_error(
-          """
-          Encountered an error while processing action #{inspect(action)}.
-          This is probably a bug in element, which passed invalid arguments to the
-          action, such as a pad with invalid direction. For more details, see the
-          reason section.
-          """,
-          {:cannot_handle_action,
-           action: action, callback: callback, module: state |> Map.get(:module), reason: reason},
-          state
-        )
+        raise ActionError, reason: reason, action: action, callback: {state.module, callback}
     end
   end
 
@@ -54,6 +41,12 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp do_handle_action({action, _}, :handle_init, _params, state)
        when action not in [:latency] do
     {{:error, :invalid_action}, state}
+  end
+
+  defp do_handle_action({action, _}, cb, _params, %State{playback: %{state: :stopped}} = state)
+       when action in [:buffer, :event, :caps, :demand, :redemand, :forward] and
+              cb != :handle_stopped_to_prepared do
+    {{:error, {:playback_state, :stopped}}, state}
   end
 
   defp do_handle_action({:event, {pad_ref, event}}, _cb, _params, state)
@@ -154,8 +147,8 @@ defmodule Membrane.Core.Element.ActionHandler do
     TimerController.start_timer(interval, clock, id, state)
   end
 
-  defp do_handle_action({:timer, {interval, clock}}, cb, params, state) do
-    do_handle_action({:timer, {interval, clock, make_ref()}}, cb, params, state)
+  defp do_handle_action({:timer, {id, interval}}, cb, params, state) do
+    do_handle_action({:timer, {id, interval, state.pipeline_clock}}, cb, params, state)
   end
 
   defp do_handle_action({:untimer, ref}, _cb, _params, state) do
@@ -170,24 +163,32 @@ defmodule Membrane.Core.Element.ActionHandler do
     {:ok, %State{state | latency: latency}}
   end
 
-  defp do_handle_action(_action, _callback, _params, state) do
-    {{:error, :invalid_action}, state}
+  defp do_handle_action(action, callback, _params, state) do
+    raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
   end
 
   @impl CallbackHandler
   def handle_actions(actions, callback, handler_params, state) do
-    actions_after_redemand =
+    {redemands, actions_after_redemands} =
       actions
       |> Enum.drop_while(fn
         {:redemand, _} -> false
         _ -> true
       end)
-      |> Enum.drop(1)
+      |> Enum.split_while(fn
+        {:redemand, _} -> true
+        _ -> false
+      end)
 
-    if actions_after_redemand != [] do
-      {{:error, :actions_after_redemand}, state}
-    else
-      super(actions |> join_buffers(), callback, handler_params, state)
+    case {redemands, actions_after_redemands} do
+      {_, []} ->
+        super(actions |> join_buffers(), callback, handler_params, state)
+
+      {[redemand | _], _} ->
+        raise ActionError,
+          reason: :actions_after_redemand,
+          action: redemand,
+          callback: {state.module, callback}
     end
   end
 
@@ -217,46 +218,52 @@ defmodule Membrane.Core.Element.ActionHandler do
          %State{playback: %{state: playback_state}} = state
        )
        when playback_state != :playing and callback != :handle_prepared_to_playing do
-    warn_error(
-      "Buffers can only be sent when playing or from handle_prepared_to_playing callback",
-      {:cannot_send_buffer, playback_state: playback_state, callback: callback},
-      state
-    )
+    {{:error, {:playback_state, playback_state}}, state}
+  end
+
+  defp send_buffer(_pad_ref, [], _callback, state) do
+    {:ok, state}
   end
 
   defp send_buffer(pad_ref, %Buffer{} = buffer, callback, state) do
     send_buffer(pad_ref, [buffer], callback, state)
   end
 
-  defp send_buffer(pad_ref, buffers, _callback, state) do
-    debug(
-      [
-        """
-        Sending buffers through pad #{inspect(pad_ref)},
-        Buffers:
-        """,
-        Buffer.print(buffers)
-      ],
-      state
-    )
+  defp send_buffer(pad_ref, buffers, _callback, state) when is_list(buffers) do
+    debug("Sending #{length(buffers)} buffer(s) through pad #{inspect(pad_ref)}", state)
 
-    with :ok <- PadModel.assert_data(state, pad_ref, %{direction: :output, end_of_stream?: false}) do
+    withl buffers:
+            :ok <-
+              Bunch.Enum.try_each(buffers, fn
+                %Buffer{} -> :ok
+                value -> {:error, value}
+              end),
+          data: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
+          dir: %{direction: :output} <- pad_data,
+          eos: %{end_of_stream?: false} <- pad_data do
       %{mode: mode, pid: pid, other_ref: other_ref, other_demand_unit: other_demand_unit} =
-        PadModel.get_data!(state, pad_ref)
+        pad_data
 
       state = handle_buffer(pad_ref, mode, other_demand_unit, buffers, state)
       Message.send(pid, :buffer, [buffers, other_ref])
       {:ok, state}
     else
-      {:error, reason} -> handle_pad_error(reason, state)
+      buffers: {:error, buf} -> {{:error, {:invalid_buffer, buf}}, state}
+      data: {:error, reason} -> {{:error, reason}, state}
+      dir: %{direction: dir} -> {{:error, {:invalid_pad_dir, dir}}, state}
+      eos: %{end_of_stream?: true} -> {{:error, {:eos_sent, pad_ref}}, state}
     end
+  end
+
+  defp send_buffer(_pad_ref, invalid_value, _callback, state) do
+    {{:error, {:invalid_buffer, invalid_value}}, state}
   end
 
   @spec handle_buffer(
           Pad.ref_t(),
           Pad.mode_t(),
           Buffer.Metric.unit_t(),
-          [Buffer.t()] | Buffer.t(),
+          [Buffer.t()],
           State.t()
         ) :: State.t()
   defp handle_buffer(pad_ref, :pull, other_demand_unit, buffers, state) do
@@ -279,29 +286,19 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     )
 
-    withl pad: :ok <- PadModel.assert_data(state, pad_ref, %{direction: :output}),
-          do: accepted_caps = PadModel.get_data!(state, pad_ref, :accepted_caps),
-          caps: true <- Caps.Matcher.match?(accepted_caps, caps) do
-      {%{pid: pid, other_ref: other_ref}, state} =
-        state
-        |> PadModel.get_and_update_data!(pad_ref, fn data -> %{data | caps: caps} ~> {&1, &1} end)
+    withl pad: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
+          direction: %{direction: :output} <- pad_data,
+          caps: true <- Caps.Matcher.match?(pad_data.accepted_caps, caps) do
+      %{pid: pid, other_ref: other_ref} = pad_data
+
+      state = state |> PadModel.set_data!(pad_ref, :caps, caps)
 
       Message.send(pid, :caps, [caps, other_ref])
       {:ok, state}
     else
-      caps: false ->
-        warn_error(
-          """
-          Trying to send caps that do not match the specification
-          Caps being sent: #{inspect(caps)}
-          Allowed caps spec: #{inspect(accepted_caps)}
-          """,
-          :invalid_caps,
-          state
-        )
-
-      pad: {:error, reason} ->
-        handle_pad_error(reason, state)
+      pad: {:error, reason} -> {{:error, reason}, state}
+      direction: %{direction: dir} -> {{:error, {:invalid_pad_dir, pad_ref, dir}}, state}
+      caps: false -> {{:error, {:invalid_caps, caps, pad_data.accepted_caps}}, state}
     end
   end
 
@@ -321,11 +318,7 @@ defmodule Membrane.Core.Element.ActionHandler do
          %State{playback: %{state: playback_state}} = state
        )
        when playback_state != :playing and callback != :handle_prepared_to_playing do
-    warn_error(
-      "Demand can only be requested when playing or from handle_prepared_to_playing callback",
-      {:cannot_supply_demand, playback_state: playback_state, callback: callback},
-      state
-    )
+    {{:error, {:playback_state, playback_state}}, state}
   end
 
   defp supply_demand(pad_ref, 0, callback, _currently_supplying?, state) do
@@ -340,40 +333,39 @@ defmodule Membrane.Core.Element.ActionHandler do
     {:ok, state}
   end
 
-  defp supply_demand(pad_ref, size, callback, _currently_supplying?, state)
+  defp supply_demand(_pad_ref, size, _callback, _currently_supplying?, state)
        when is_integer(size) and size < 0 do
-    warn_error(
-      """
-      Callback #{inspect(callback)} requested demand of invalid size of #{size}
-      on pad #{inspect(pad_ref)}. Demands' sizes should be positive (0-sized
-      demands are ignored).
-      """,
-      :negative_demand,
-      state
-    )
+    {{:error, :negative_demand}, state}
   end
 
   defp supply_demand(pad_ref, size, _callback, currently_supplying?, state) do
-    input_assertion = PadModel.assert_data(state, pad_ref, %{direction: :input, mode: :pull})
-
-    with {:ok, state} <- {input_assertion, state},
-         {:ok, state} <- DemandHandler.update_demand(pad_ref, size, state) do
+    withl data: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
+          dir: %{direction: :input} <- pad_data,
+          mode: %{mode: :pull} <- pad_data,
+          update: {:ok, state} <- DemandHandler.update_demand(pad_ref, size, state) do
       supply_mode = if currently_supplying?, do: :async, else: :sync
       state = DemandHandler.delay_supply(pad_ref, supply_mode, state)
 
       {:ok, state}
     else
-      {{:error, reason}, state} -> handle_pad_error(reason, state)
+      data: {:error, reason} -> {{:error, reason}, state}
+      dir: %{direction: dir} -> {{:error, {:invalid_pad_dir, pad_ref, dir}}, state}
+      mode: %{mode: mode} -> {{:error, {:invalid_pad_mode, pad_ref, mode}}, state}
+      update: {{:error, reason}, state} -> {{:error, reason}, state}
     end
   end
 
   @spec handle_redemand(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   defp handle_redemand(out_ref, %{type: type} = state) when type in [:source, :filter] do
-    with :ok <- PadModel.assert_data(state, out_ref, %{direction: :output, mode: :pull}) do
+    withl data: {:ok, pad_data} <- PadModel.get_data(state, out_ref),
+          dir: %{direction: :output} <- pad_data,
+          mode: %{mode: :pull} <- pad_data do
       state = DemandHandler.delay_redemand(out_ref, state)
       {:ok, state}
     else
-      {:error, reason} -> handle_pad_error(reason, state)
+      data: {:error, reason} -> {{:error, reason}, state}
+      dir: %{direction: dir} -> {{:error, {:invalid_pad_dir, out_ref, dir}}, state}
+      mode: %{mode: mode} -> {{:error, {:invalid_pad_mode, out_ref, mode}}, state}
     end
   end
 
@@ -394,7 +386,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       {:ok, state}
     else
       event: false -> {{:error, {:invalid_event, event}}, state}
-      pad: {:error, reason} -> handle_pad_error(reason, state)
+      pad: {:error, reason} -> {{:error, reason}, state}
       handler: {{:error, reason}, state} -> {{:error, reason}, state}
     end
   end
@@ -405,10 +397,10 @@ defmodule Membrane.Core.Element.ActionHandler do
       {:ok, PadModel.set_data!(state, pad_ref, :end_of_stream?, true)}
     else
       %{direction: :input} ->
-        {{:error, {:cannot_send_end_of_stream_through_input, pad_ref}}, state}
+        {{:error, {:invalid_pad_dir, pad_ref, :input}}, state}
 
       %{end_of_stream?: true} ->
-        {{:error, {:end_of_stream_already_sent, pad_ref}}, state}
+        {{:error, {:eos_sent, pad_ref}}, state}
     end
   end
 
@@ -424,35 +416,5 @@ defmodule Membrane.Core.Element.ActionHandler do
     debug("Sending notification #{inspect(notification)} (watcher: #{inspect(watcher)})", state)
     Message.send(watcher, :notification, [name, notification])
     {:ok, state}
-  end
-
-  @spec handle_pad_error({reason :: atom, details :: any}, State.t()) ::
-          {{:error, reason :: any}, State.t()}
-  defp handle_pad_error({:unknown_pad, pad} = reason, state) do
-    warn_error(
-      """
-      Pad "#{inspect(pad)}" has not been found.
-
-      This is probably a bug in element. It requested an action
-      on a non-existent pad "#{inspect(pad)}".
-      """,
-      reason,
-      state
-    )
-  end
-
-  defp handle_pad_error(
-         {:invalid_pad_data, ref: ref, pattern: pattern, data: data} = reason,
-         state
-       ) do
-    warn_error(
-      """
-      Properties of pad #{inspect(ref)} do not match the pattern:
-      #{inspect(pattern)}
-      Pad properties: #{inspect(data)}
-      """,
-      reason,
-      state
-    )
   end
 end

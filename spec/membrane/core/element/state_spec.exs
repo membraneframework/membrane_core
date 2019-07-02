@@ -23,7 +23,7 @@ defmodule Membrane.Core.Element.StateSpec do
              playback_buffer: PlaybackBuffer.new(),
              delayed_demands: %{},
              timers: %{},
-             clocks: %{}
+             timers_clocks: %{}
            )
       )
     end

@@ -8,7 +8,6 @@ defmodule Membrane.Element.CallbackContext do
 
   alias Membrane.Element.Pad
   alias Membrane.Core
-  alias Core.Playback
   alias Core.Element.State
   use Bunch
 
@@ -16,13 +15,13 @@ defmodule Membrane.Element.CallbackContext do
 
   defmacro __using__(fields) do
     quote do
-      default_fields_names = [:pads, :playback_state]
+      default_fields_names = [:pads, :playback_state, :clock, :pipeline_clock]
       fields_names = unquote(fields |> Keyword.keys())
 
       @type t :: %__MODULE__{
               unquote_splicing(fields),
               pads: %{Pad.ref_t() => Pad.Data.t()},
-              playback_state: Playback.state_t()
+              playback_state: Membrane.Element.playback_state_t()
             }
 
       @behaviour unquote(__MODULE__)
@@ -37,10 +36,14 @@ defmodule Membrane.Element.CallbackContext do
       @impl true
       defmacro from_state(state, args \\ []) do
         quote do
+          state = unquote(state)
+
           %unquote(__MODULE__){
             unquote_splicing(args),
-            playback_state: unquote(state).playback.state,
-            pads: unquote(state).pads.data
+            playback_state: state.playback.state,
+            pads: state.pads.data,
+            clock: state.clock,
+            pipeline_clock: state.pipeline_clock
           }
         end
       end

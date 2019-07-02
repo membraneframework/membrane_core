@@ -29,7 +29,9 @@ defmodule Membrane.Pipeline.State do
             children: %{},
             playback: %Playback{},
             pending_pids: MapSet.new(),
-            terminating?: false
+            terminating?: false,
+            clock_provider: %{clock: nil, provider: nil, choice: :auto},
+            clock_proxy: nil
 
   @spec add_child(t, Element.name_t(), pid) :: Type.stateful_try_t(t)
   def add_child(%__MODULE__{children: children} = state, child, pid) do
@@ -40,10 +42,9 @@ defmodule Membrane.Pipeline.State do
     end
   end
 
-  @spec get_child_pid(t, Element.name_t()) :: Type.try_t(pid)
-  def get_child_pid(%__MODULE__{children: children}, child) do
-    with {:ok, pid} <- children[child] |> Bunch.error_if_nil({:unknown_child, child}),
-         do: {:ok, pid}
+  # @spec get_child_pid(t, Element.name_t()) :: Type.try_t(pid)
+  def get_child_data(%__MODULE__{children: children}, child) do
+    children[child] |> Bunch.error_if_nil({:unknown_child, child})
   end
 
   @spec pop_child(t, Element.name_t()) :: Type.stateful_try_t(pid, t)

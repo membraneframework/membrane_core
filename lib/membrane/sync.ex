@@ -123,7 +123,6 @@ defmodule Membrane.Sync do
     state = state |> Bunch.Access.delete_in([:syncees, ref]) |> check_and_handle_sync()
 
     if state.empty_exit? and state.syncees |> Enum.empty?() do
-      IO.inspect(:exiting)
       {:stop, :normal, state}
     else
       {:noreply, state}

@@ -109,7 +109,11 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     TimerController.handle_tick(timer_id, state)
   end
 
-  defp do_handle_message(Message.new(:clock_update, [clock, ratio]), :info, state) do
+  defp do_handle_message(Message.new(:clock, clock), :call, state) do
+    {:ok, %State{state | clock: clock}}
+  end
+
+  defp do_handle_message({:membrane_clock_ratio, clock, ratio}, :info, state) do
     TimerController.handle_clock_update(clock, ratio, state)
   end
 
@@ -134,7 +138,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   end
 
   defp handle_message_error(message, mode, reason, state) do
-    reason = {:cannot_handle_message, message: message, mode: mode, reason: reason}
+    reason = {:cannot_handle_message, reason, message: message, mode: mode}
 
     warn_error(
       """

@@ -44,7 +44,9 @@ defmodule Membrane.Core.Element.State do
     :playback_buffer,
     :delayed_demands,
     :timers,
-    :clocks,
+    :timers_clocks,
+    :pipeline_clock,
+    :clock,
     :stream_sync,
     :latency
   ]
@@ -57,8 +59,8 @@ defmodule Membrane.Core.Element.State do
   @doc """
   Initializes new state.
   """
-  @spec new(module, Element.name_t()) :: t
-  def new(module, name) do
+  # @spec new(module, Element.name_t()) :: t
+  def new(module, name, clock) do
     %__MODULE__{
       module: module,
       type: apply(module, :membrane_element_type, []),
@@ -71,7 +73,9 @@ defmodule Membrane.Core.Element.State do
       playback_buffer: PlaybackBuffer.new(),
       delayed_demands: %{},
       timers: %{},
-      clocks: %{},
+      timers_clocks: %{},
+      pipeline_clock: clock,
+      clock: nil,
       stream_sync: Sync.always(),
       latency: 0
     }
