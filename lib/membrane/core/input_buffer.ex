@@ -103,7 +103,7 @@ defmodule Membrane.Core.InputBuffer do
 
     %__MODULE__{
       name: name,
-      q: @qe.new,
+      q: @qe.new(),
       preferred_size: preferred_size,
       min_demand: min_demand,
       demand: preferred_size,
