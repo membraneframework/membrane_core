@@ -13,16 +13,16 @@ defmodule Membrane.Core.InputBufferSpec do
     end
   end
 
-  describe ".new/5" do
+  describe ".init/6" do
     let :name, do: :name
-    let :demand_pid, do: self()
-    let :linked_output_ref, do: :output_pad_ref
     let :preferred_size, do: 100
     let :warn_size, do: 200
     let :fail_size, do: 400
     let :min_demand, do: 10
     let :toilet, do: false
     let :demand_unit, do: :bytes
+    let :demand_pid, do: self()
+    let :linked_output_ref, do: :output_pad_ref
     let :expected_metric, do: Buffer.Metric.from_unit(demand_unit())
 
     let :props,
@@ -35,20 +35,18 @@ defmodule Membrane.Core.InputBufferSpec do
 
     it "should return InputBuffer struct and send demand message" do
       expect(
-        described_module().new(
+        described_module().init(
           name(),
-          demand_pid(),
-          linked_output_ref(),
           demand_unit(),
           toilet(),
+          demand_pid(),
+          linked_output_ref(),
           props()
         )
       )
       |> to(
         eq(%InputBuffer{
           name: name(),
-          demand_pid: demand_pid(),
-          linked_output_ref: linked_output_ref(),
           demand: 0,
           preferred_size: preferred_size(),
           min_demand: min_demand(),
@@ -69,20 +67,18 @@ defmodule Membrane.Core.InputBufferSpec do
         flush()
 
         expect(
-          described_module().new(
+          described_module().init(
             name(),
-            demand_pid(),
-            linked_output_ref(),
             demand_unit(),
             toilet(),
+            demand_pid(),
+            linked_output_ref(),
             props()
           )
         )
         |> to(
           eq(%InputBuffer{
             name: name(),
-            demand_pid: demand_pid(),
-            linked_output_ref: linked_output_ref(),
             demand: preferred_size(),
             preferred_size: preferred_size(),
             min_demand: min_demand(),
@@ -100,7 +96,7 @@ defmodule Membrane.Core.InputBufferSpec do
   describe ".empty?/1" do
     let :current_size, do: 0
 
-    let :pb,
+    let :input_buf,
       do: %InputBuffer{
         current_size: current_size(),
         metric: Buffer.Metric.Count,
@@ -109,16 +105,18 @@ defmodule Membrane.Core.InputBufferSpec do
 
     context "when pull buffer is empty" do
       it "should return true" do
-        expect(described_module().empty?(pb())) |> to(eq true)
+        expect(described_module().empty?(input_buf())) |> to(eq true)
       end
     end
 
     context "when pull buffer contains some buffers" do
       let :buffer, do: %Buffer{payload: <<1, 2, 3>>}
-      let :not_empty_pb, do: described_module().store(pb(), :buffers, [buffer()]) |> elem(1)
+
+      let :not_empty_input_buf,
+        do: described_module().store(input_buf(), :buffers, [buffer()]) |> elem(1)
 
       it "should return false" do
-        expect(described_module().empty?(not_empty_pb())) |> to(eq false)
+        expect(described_module().empty?(not_empty_input_buf())) |> to(eq false)
       end
     end
   end
@@ -128,7 +126,7 @@ defmodule Membrane.Core.InputBufferSpec do
     let :q, do: Qex.new() |> Qex.push({:buffers, [], 3})
     let :metric, do: Buffer.Metric.Count
 
-    let :pb,
+    let :input_buf,
       do: %InputBuffer{
         current_size: current_size(),
         metric: metric(),
@@ -142,7 +140,9 @@ defmodule Membrane.Core.InputBufferSpec do
 
       context "when metric is `Count`" do
         it "should increment `current_size`" do
-          {:ok, %{current_size: new_current_size}} = described_module().store(pb(), type(), v())
+          {:ok, %{current_size: new_current_size}} =
+            described_module().store(input_buf(), type(), v())
+
           expect(new_current_size) |> to(eq(current_size() + 1))
         end
       end
@@ -151,13 +151,15 @@ defmodule Membrane.Core.InputBufferSpec do
         let :metric, do: Buffer.Metric.ByteSize
 
         it "should add payload size to `current_size`" do
-          {:ok, %{current_size: new_current_size}} = described_module().store(pb(), type(), v())
+          {:ok, %{current_size: new_current_size}} =
+            described_module().store(input_buf(), type(), v())
+
           expect(new_current_size) |> to(eq(current_size() + byte_size(payload())))
         end
       end
 
       it "should append buffer to the queue" do
-        {:ok, %{q: new_q}} = described_module().store(pb(), type(), v())
+        {:ok, %{q: new_q}} = described_module().store(input_buf(), type(), v())
         {{:value, last_elem}, remaining_q} = new_q |> Qex.pop_back()
         expect(remaining_q) |> to(eq q())
         expect(last_elem) |> to(eq {:buffers, v(), 1})
@@ -169,34 +171,33 @@ defmodule Membrane.Core.InputBufferSpec do
       let :v, do: %Event{}
 
       it "should append event to the queue" do
-        {:ok, %{q: new_q}} = described_module().store(pb(), type(), v())
+        {:ok, %{q: new_q}} = described_module().store(input_buf(), type(), v())
         {{:value, last_elem}, remaining_q} = new_q |> Qex.pop_back()
         expect(remaining_q) |> to(eq q())
         expect(last_elem) |> to(eq {:non_buffer, :event, v()})
       end
 
       it "should keep other fields unchanged" do
-        {:ok, new_pb} = described_module().store(pb(), type(), v())
-        expect(%{new_pb | q: q()}) |> to(eq pb())
+        {:ok, new_input_buf} = described_module().store(input_buf(), type(), v())
+        expect(%{new_input_buf | q: q()}) |> to(eq input_buf())
       end
     end
   end
 
-  describe ".take/2" do
+  describe ".take_and_demand/4" do
     let :buffers1, do: {:buffers, [:b1, :b2, :b3], 3}
     let :buffers2, do: {:buffers, [:b4, :b5, :b6], 3}
     let :q, do: Qex.new() |> Qex.push(buffers1()) |> Qex.push(buffers2())
     let :current_size, do: 6
+    let :demand_pid, do: self()
     let :linked_output_ref, do: :linked_output_ref
     let :metric, do: Buffer.Metric.Count
 
-    let :pb,
+    let :input_buf,
       do: %InputBuffer{
         current_size: current_size(),
         demand: 0,
         min_demand: 0,
-        demand_pid: self(),
-        linked_output_ref: linked_output_ref(),
         metric: metric(),
         q: q()
       }
@@ -205,19 +206,38 @@ defmodule Membrane.Core.InputBufferSpec do
       let :to_take, do: 10
 
       it "should return tuple {:ok, {:empty, buffers}}" do
-        {result, _new_pb} = described_module().take(pb(), to_take())
+        {result, _new_input_buf} =
+          described_module().take_and_demand(
+            input_buf(),
+            to_take(),
+            demand_pid(),
+            linked_output_ref()
+          )
+
         expect(result) |> to(eq {:ok, {:empty, [buffers1(), buffers2()]}})
       end
 
       it "should set `current_size` to 0" do
-        {_, %{current_size: new_size}} = described_module().take(pb(), to_take())
+        {_, %{current_size: new_size}} =
+          described_module().take_and_demand(
+            input_buf(),
+            to_take(),
+            demand_pid(),
+            linked_output_ref()
+          )
+
         expect(new_size) |> to(eq 0)
       end
 
       it "should generate demand" do
-        described_module().take(pb(), to_take())
-        expected_list = [current_size(), linked_output_ref()]
+        described_module().take_and_demand(
+          input_buf(),
+          to_take(),
+          demand_pid(),
+          linked_output_ref()
+        )
 
+        expected_list = [current_size(), linked_output_ref()]
         assert_received Message.new(:demand, ^expected_list)
       end
     end
@@ -227,7 +247,14 @@ defmodule Membrane.Core.InputBufferSpec do
         let :to_take, do: 3
 
         it "should return `to_take` buffers from the queue" do
-          {{:ok, result}, %{q: new_q}} = described_module().take(pb(), to_take())
+          {{:ok, result}, %{q: new_q}} =
+            described_module().take_and_demand(
+              input_buf(),
+              to_take(),
+              demand_pid(),
+              linked_output_ref()
+            )
+
           expect(result) |> to(eq {:value, [buffers1()]})
 
           list = new_q |> Enum.into([])
@@ -242,7 +269,14 @@ defmodule Membrane.Core.InputBufferSpec do
         let :to_take, do: 4
 
         it "should return `to_take` buffers from the queue" do
-          {{:ok, result}, %{q: new_q}} = described_module().take(pb(), to_take())
+          {{:ok, result}, %{q: new_q}} =
+            described_module().take_and_demand(
+              input_buf(),
+              to_take(),
+              demand_pid(),
+              linked_output_ref()
+            )
+
           exp_buf2 = {:buffers, [:b4], 1}
           exp_rest = {:buffers, [:b5, :b6], 2}
           expect(result) |> to(eq {:value, [buffers1(), exp_buf2]})
