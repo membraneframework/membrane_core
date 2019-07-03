@@ -32,7 +32,7 @@ defmodule Membrane.Core.InputBuffer do
           toilet: %{:warn => pos_integer, :fail => pos_integer}
         }
 
-  defstruct name: :pull_buffer,
+  defstruct name: :input_buf,
             q: nil,
             preferred_size: 100,
             current_size: 0,
@@ -47,7 +47,7 @@ defmodule Membrane.Core.InputBuffer do
   Available options are:
     * `:preffered_size` - size which will be the 'target' for InputBuffer - it will make demands
       trying to grow to this size. Its default value depends on the set `#{inspect(Buffer.Metric)}` and is
-      obtained via `c:#{inspect(Buffer.Metric)}.pullbuffer_preferred_size/0`
+      obtained via `c:#{inspect(Buffer.Metric)}.input_buf_preferred_size/0`
     * `:min_demand` - the minimal size of a demand that can be sent to the linked output pad.
       This prevents from excessive message passing between elements. Defaults to a quarter of
       preferred size.
@@ -88,7 +88,7 @@ defmodule Membrane.Core.InputBuffer do
         ) :: t()
   def init(name, demand_unit, enable_toilet?, demand_pid, demand_pad, props) do
     metric = Buffer.Metric.from_unit(demand_unit)
-    preferred_size = props[:preferred_size] || metric.pullbuffer_preferred_size
+    preferred_size = props[:preferred_size] || metric.input_buf_preferred_size
     min_demand = props[:min_demand] || preferred_size |> div(4)
 
     toilet =
@@ -157,7 +157,7 @@ defmodule Membrane.Core.InputBuffer do
     if size >= fail_lvl do
       warn_error(
         "InputBuffer #{inspect(input_buf.name)} (toilet): failing: too much data",
-        {:pull_buffer, toilet: :too_many_buffers}
+        {:input_buf, toilet: :too_many_buffers}
       )
     else
       {:ok, input_buf}
