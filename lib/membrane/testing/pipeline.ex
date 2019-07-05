@@ -106,12 +106,13 @@ defmodule Membrane.Testing.Pipeline do
     """
 
     @enforce_keys [:elements]
-    defstruct @enforce_keys ++ [:links, :test_process]
+    defstruct @enforce_keys ++ [:links, :test_process, :custom_pipeline]
 
     @type t :: %__MODULE__{
             test_process: pid() | nil,
             elements: Spec.children_spec_t(),
-            links: Spec.links_spec_t() | nil
+            links: Spec.links_spec_t() | nil,
+            custom_pipeline: module() | nil
           }
   end
 
@@ -176,38 +177,83 @@ defmodule Membrane.Testing.Pipeline do
       links: links
     }
 
-    new_state = Map.take(args, [:test_process])
+    new_state = Map.take(args, [:test_process, :custom_pipeline])
+
+    new_state =
+      Map.put(new_state, :custom_pipeline_state, pipeline_eval(:handle_init, [], new_state, nil))
+
     {{:ok, spec}, new_state}
   end
 
-  @impl true
-  def handle_stopped_to_prepared(state),
-    do: notify_playback_state_changed(:stopped, :prepared, state)
+  defp pipeline_eval(:handle_init, _args, %{custom_pipeline: nil} = _state, _result),
+    do: nil
+
+  defp pipeline_eval(_function, _args, %{custom_pipeline: nil} = _state, result),
+    do: result
+
+  defp pipeline_eval(function, args, %{custom_pipeline: pipeline} = state, result) do
+    result_custom = apply(pipeline, function, args ++ state[:custom_pipeline_state])
+    combine_results(result, result_custom)
+  end
+
+  defp combine_actions(l, r) do
+    case {l, r} do
+      {l, :ok} -> l
+      {:ok, r} -> r
+      {{:ok, actions_l}, {:ok, actions_r}} -> {:ok, actions_l ++ actions_r}
+      {{:ok, _actions_l}, r} -> r
+      {l, {:ok, _actions_r}} -> l
+      {l, _r} -> l
+    end
+  end
+
+  defp combine_results({actions_l, state_l}, {actions_r, state_r}),
+    do: {combine_actions(actions_l, actions_r), Map.put(state_l, :custom_pipeline_state, state_r)}
 
   @impl true
-  def handle_prepared_to_playing(state),
-    do: notify_playback_state_changed(:prepared, :playing, state)
+  def handle_stopped_to_prepared(state) do
+    result = notify_playback_state_changed(:stopped, :prepared, state)
+    pipeline_eval(:handle_stopped_to_prepared, [], state, result)
+  end
 
   @impl true
-  def handle_playing_to_prepared(state),
-    do: notify_playback_state_changed(:playing, :prepared, state)
+  def handle_prepared_to_playing(state) do
+    result = notify_playback_state_changed(:prepared, :playing, state)
+    pipeline_eval(:handle_prepared_to_playing, [], state, result)
+  end
 
   @impl true
-  def handle_prepared_to_stopped(state),
-    do: notify_playback_state_changed(:prepared, :stopped, state)
+  def handle_playing_to_prepared(state) do
+    result = notify_playback_state_changed(:playing, :prepared, state)
+    pipeline_eval(:handle_playing_to_prepared, [], state, result)
+  end
+
+  @impl true
+  def handle_prepared_to_stopped(state) do
+    result = notify_playback_state_changed(:prepared, :stopped, state)
+    pipeline_eval(:handle_prepared_to_stopped, [], state, result)
+  end
 
   @impl true
   def handle_notification(notification, from, state) do
-    notify_test_process({:handle_notification, {notification, from}}, state)
+    result = notify_test_process({:handle_notification, {notification, from}}, state)
+    pipeline_eval(:handle_notification, [notification, from], state, result)
   end
 
   @impl true
+  def handle_spec_started(elements, state),
+    do: pipeline_eval(:handle_spec_started, [elements], state, {:ok, state})
+
+  @impl true
   def handle_other({:for_element, element, message}, state) do
-    {{:ok, forward: {element, message}}, state}
+    result = {{:ok, forward: {element, message}}, state}
+    pipeline_eval(:handle_other, [{:for_element, element, message}], state, result)
   end
 
-  def handle_other(message, state),
-    do: notify_test_process({:handle_other, message}, state)
+  def handle_other(message, state) do
+    result = notify_test_process({:handle_other, message}, state)
+    pipeline_eval(:handle_other, [message], state, result)
+  end
 
   defp notify_playback_state_changed(previous, current, state) do
     notify_test_process({:playback_state_changed, previous, current}, state)
