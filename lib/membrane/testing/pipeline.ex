@@ -45,6 +45,19 @@ defmodule Membrane.Testing.Pipeline do
     }
     ```
 
+  You can also pass custom pipeline module, by using `:module` field of
+  `Membrane.Testing.Pipeline.Options` struct. Every callback of module will be executed before callbacks of Testing.Pipeline.
+
+  ```
+  options = %Membrane.Testing.Pipeline.Options {
+    elements: [
+      el1: MembraneElement1,
+      el2: MembraneElement2,
+      ],
+      module: Your.Module
+    }
+    ```
+
   See `Membrane.Testing.Pipeline.Options` for available options.
 
   ## Example usage
@@ -101,18 +114,21 @@ defmodule Membrane.Testing.Pipeline do
     ## Links
     Map describing links between elements.
 
+    ## Module
+    Pipeline Module with custom callbacks.
+
     If links are not present or set to nil they will be populated automatically
     based on elements order using default pad names.
     """
 
     @enforce_keys [:elements]
-    defstruct @enforce_keys ++ [:links, :test_process, :custom_pipeline]
+    defstruct @enforce_keys ++ [:links, :test_process, :module]
 
     @type t :: %__MODULE__{
             test_process: pid() | nil,
             elements: Spec.children_spec_t(),
             links: Spec.links_spec_t() | nil,
-            custom_pipeline: module() | nil
+            module: module() | nil
           }
   end
 
@@ -177,12 +193,12 @@ defmodule Membrane.Testing.Pipeline do
       links: links
     }
 
-    new_state = Map.take(args, [:test_process, :custom_pipeline])
+    new_state = Map.take(args, [:test_process, :module])
 
     new_state =
       Map.put(
         new_state,
-        :custom_pipeline_state,
+        :module_state,
         pipeline_eval(:handle_init, args, nil, nil, new_state)
       )
 
@@ -201,7 +217,7 @@ defmodule Membrane.Testing.Pipeline do
          _custom_args,
          _function,
          _args,
-         %{custom_pipeline: nil} = _state
+         %{module: nil} = _state
        ),
        do: nil
 
@@ -210,10 +226,10 @@ defmodule Membrane.Testing.Pipeline do
          custom_args,
          _function,
          _args,
-         %{custom_pipeline: pipeline} = _state
+         %{module: module} = _state
        ) do
     with _custom_result = {{:ok, _spec}, state} <-
-           apply(pipeline, :handle_init, custom_args)
+           apply(module, :handle_init, custom_args)
            |> wrap_result,
          do: state
   end
@@ -223,7 +239,7 @@ defmodule Membrane.Testing.Pipeline do
          _custom_args,
          function,
          args,
-         %{custom_pipeline: nil} = _state
+         %{module: nil} = _state
        ),
        do: apply(function, args)
 
@@ -232,10 +248,10 @@ defmodule Membrane.Testing.Pipeline do
          custom_args,
          function,
          args,
-         %{custom_pipeline: pipeline} = state
+         %{module: module} = state
        ) do
     with custom_result = {{:ok, _actions}, _state} <-
-           apply(pipeline, custom_function, custom_args ++ state[:custom_pipeline_state])
+           apply(module, custom_function, custom_args ++ state[:custom_pipeline_state])
            |> wrap_result do
       result = apply(function, args)
       combine_results(custom_result, result)

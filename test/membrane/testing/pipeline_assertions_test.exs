@@ -7,7 +7,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
   # Note: so compiler can find the errors.
 
   setup do
-    [state: %{test_process: self(), custom_pipeline: nil}]
+    [state: %{test_process: self(), module: nil}]
   end
 
   describe "assert_pipeline_notified" do
