@@ -1,13 +1,14 @@
 defmodule Membrane.Testing.PipelineAssertionsTest do
   use ExUnit.Case
   alias Membrane.Testing.Pipeline
+  alias Membrane.Testing.Pipeline.State
   import Membrane.Testing.Assertions
 
   # Note: Most of tests in this file are just to force compile valid macro invocations
   # Note: so compiler can find the errors.
 
   setup do
-    [state: %{test_process: self(), module: nil}]
+    [state: %State{test_process: self(), module: nil}]
   end
 
   describe "assert_pipeline_notified" do
