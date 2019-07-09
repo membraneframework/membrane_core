@@ -360,7 +360,7 @@ defmodule Membrane.Pipeline do
         {:ok, state}
 
       clock_provider ->
-        Message.send(state.clock_proxy, :proxy_to, clock_provider.clock)
+        Clock.proxy_for(state.clock_proxy, clock_provider.clock)
         {:ok, %State{state | clock_provider: clock_provider}}
     end
   end
