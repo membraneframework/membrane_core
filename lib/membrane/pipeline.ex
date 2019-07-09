@@ -250,9 +250,9 @@ defmodule Membrane.Pipeline do
     {:ok, links} = links |> parse_links
     links = links |> resolve_links(state)
     :ok = links |> link_children(state)
+    :ok = set_children_stream_sync(children, links, stream_sync)
     {children_names, children_data} = children |> Enum.unzip()
     :ok = children_data |> set_children_watcher
-    {:ok, state} = set_children_stream_sync(stream_sync, state)
     {:ok, state} = exec_handle_spec_started(children_names, state)
 
     children_data
@@ -465,24 +465,34 @@ defmodule Membrane.Pipeline do
     :ok = children_data |> Bunch.Enum.try_each(&Element.set_watcher(&1.pid, self()))
   end
 
-  defp set_children_stream_sync(stream_sync, state) do
-    %State{children: children} = state
+  defp set_children_stream_sync(children, links, stream_sync) do
+    children = children |> Map.new()
 
-    stream_sync
-    |> Enum.each(fn stream_sync ->
+    unless stream_sync do
+      [
+        children
+        |> Map.keys()
+        |> Enum.reject(fn cn -> links |> Enum.any?(&(&1.from.element == cn)) end)
+      ]
+    else
+      stream_sync
+    end
+    |> Enum.each(fn sync_group ->
       {sync, elements} =
-        case stream_sync do
+        case sync_group do
           {sync, elements} -> {sync, elements}
           elements -> {Sync.start_link!(empty_exit?: true), elements}
         end
 
-      children
-      |> Map.take(elements)
-      |> Map.values()
-      |> Enum.each(&Message.call(&1.pid, :set_stream_sync, Sync.register(sync, &1.pid)))
+      with {elements, []} <- elements |> Enum.map(&children[&1]) |> Enum.split_with(& &1) do
+        elements
+        |> Enum.each(&Message.call(&1.pid, :set_stream_sync, Sync.register(sync, &1.pid)))
+      else
+        {_children, unknown} ->
+          raise PipelineError,
+                "Cannot apply sync - unknown elements: #{unknown |> Enum.join(", ")}"
+      end
     end)
-
-    {:ok, state}
   end
 
   @spec exec_handle_spec_started([Element.name_t()], State.t()) :: {:ok, State.t()}
