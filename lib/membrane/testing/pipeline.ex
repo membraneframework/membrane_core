@@ -46,7 +46,8 @@ defmodule Membrane.Testing.Pipeline do
     ```
 
   You can also pass a custom pipeline module, by using `:module` field of
-  `Membrane.Testing.Pipeline.Options` struct. Every callback of the module will be executed before the callbacks of Testing.Pipeline.
+  `Membrane.Testing.Pipeline.Options` struct. Every callback of the module
+  will be executed before the callbacks of Testing.Pipeline.
 
   ```
   options = %Membrane.Testing.Pipeline.Options {
@@ -153,7 +154,7 @@ defmodule Membrane.Testing.Pipeline do
     @type t :: %__MODULE__{
             test_process: pid() | nil,
             module: module() | nil,
-            custom_pipeline_state: list() | map() | nil
+            custom_pipeline_state: any
           }
   end
 
@@ -219,13 +220,7 @@ defmodule Membrane.Testing.Pipeline do
     }
 
     new_state = %State{test_process: args.test_process, module: args.module}
-
-    new_state = %State{
-      new_state
-      | custom_pipeline_state: eval(:handle_init, args, nil, nil, new_state)
-    }
-
-    {{:ok, spec}, new_state}
+    eval(:handle_init, args, {{:ok, spec}, new_state})
   end
 
   defp wrap_result({:ok, state}),
@@ -234,34 +229,39 @@ defmodule Membrane.Testing.Pipeline do
   defp wrap_result({{_, _}, _} = result),
     do: result
 
-  defp eval(
-         custom_function,
-         custom_args,
-         function,
-         args,
-         state
-       )
+  defp eval(custom_function, custom_args, function, state)
 
-  defp eval(:handle_init, _, _, _, %{module: nil}),
-    do: nil
+  defp eval(_, _, function, %State{module: nil}),
+    do: function.()
 
-  defp eval(:handle_init, custom_args, _, _, %State{module: module}) do
-    {{:ok, _spec}, state} = apply(module, :handle_init, custom_args) |> wrap_result
-    state
-  end
-
-  defp eval(_, _, function, args, %State{module: nil}),
-    do: apply(function, args)
-
-  defp eval(custom_function, custom_args, function, args, %State{module: module} = state) do
+  defp eval(custom_function, custom_args, function, %State{module: module} = state) do
     with custom_result = {{:ok, _actions}, _state} <-
            apply(module, custom_function, custom_args ++ [state.custom_pipeline_state])
            |> wrap_result do
-      result = apply(function, args)
+      result = function.()
       combine_results(custom_result, result)
     end
   end
 
+  defp eval(custom_function, custom_args, result)
+
+  defp eval(_, _, {_, %State{module: nil}} = result),
+    do: result
+
+  defp eval(:handle_init, custom_args, {_, %State{module: module}} = result) do
+    {{:ok, _spec}, custom_state} = apply(module, :handle_init, custom_args) |> wrap_result
+    combine_results({{:ok, []}, custom_state}, result)
+  end
+
+  defp eval(custom_function, custom_args, {_, %State{module: module} = state} = result) do
+    with custom_result = {{:ok, _actions}, _state} <-
+           apply(module, custom_function, custom_args ++ [state.custom_pipeline_state])
+           |> wrap_result,
+         do: combine_results(custom_result, result)
+  end
+
+  @spec combine_actions({:ok, list()}, :ok | {:ok, list()} | {:error, any}) ::
+          :ok | {:ok, list()} | {:error, any}
   defp combine_actions(l, r) do
     case {l, r} do
       {l, :ok} -> l
@@ -281,8 +281,7 @@ defmodule Membrane.Testing.Pipeline do
       eval(
         :handle_stopped_to_prepared,
         [],
-        &notify_playback_state_changed/3,
-        [:stopped, :prepared, state],
+        fn -> notify_playback_state_changed(:stopped, :prepared, state) end,
         state
       )
 
@@ -292,8 +291,7 @@ defmodule Membrane.Testing.Pipeline do
       eval(
         :handle_prepared_to_playing,
         [],
-        &notify_playback_state_changed/3,
-        [:prepared, :playing, state],
+        fn -> notify_playback_state_changed(:prepared, :playing, state) end,
         state
       )
 
@@ -303,8 +301,7 @@ defmodule Membrane.Testing.Pipeline do
       eval(
         :handle_playing_to_prepared,
         [],
-        &notify_playback_state_changed/3,
-        [:playing, :prepared, state],
+        fn -> notify_playback_state_changed(:playing, :prepared, state) end,
         state
       )
 
@@ -314,8 +311,7 @@ defmodule Membrane.Testing.Pipeline do
       eval(
         :handle_prepared_to_stopped,
         [],
-        &notify_playback_state_changed/3,
-        [:prepared, :stopped, state],
+        fn -> notify_playback_state_changed(:prepared, :stopped, state) end,
         state
       )
 
@@ -325,8 +321,7 @@ defmodule Membrane.Testing.Pipeline do
       eval(
         :handle_notification,
         [notification, from],
-        &notify_test_process/2,
-        [{:handle_notification, {notification, from}}, state],
+        fn -> notify_test_process({:handle_notification, {notification, from}}, state) end,
         state
       )
 
@@ -336,13 +331,8 @@ defmodule Membrane.Testing.Pipeline do
       eval(
         :handle_spec_started,
         [elements],
-        &do_nothing/2,
-        [:ok, state],
-        state
+        {:ok, state}
       )
-
-  defp do_nothing(actions, %State{} = state),
-    do: {actions, state}
 
   @impl true
   def handle_other({:for_element, element, message}, %State{} = state),
@@ -350,9 +340,7 @@ defmodule Membrane.Testing.Pipeline do
       eval(
         :handle_other,
         [{:for_element, element, message}],
-        &do_nothing/2,
-        [{:ok, forward: {element, message}}, state],
-        state
+        {{:ok, forward: {element, message}}, state}
       )
 
   def handle_other(message, %State{} = state),
@@ -360,8 +348,7 @@ defmodule Membrane.Testing.Pipeline do
       eval(
         :handle_other,
         [message],
-        &notify_test_process/2,
-        [{:handle_other, message}, state],
+        fn -> notify_test_process({:handle_other, message}, state) end,
         state
       )
 
