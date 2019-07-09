@@ -31,8 +31,8 @@ defmodule Membrane.Core.Element.EventController do
   @spec exec_handle_event(Pad.ref_t(), Event.t(), params :: map, State.t()) ::
           State.stateful_try_t()
   def exec_handle_event(pad_ref, event, params \\ %{}, state) do
-    withl do: {:ok, state} <- check_sync(event, state),
-          handle: {{:ok, :handle}, state} <- handle_special_event(pad_ref, event, state),
+    withl handle: {{:ok, :handle}, state} <- handle_special_event(pad_ref, event, state),
+          do: {:ok, state} <- check_sync(event, state),
           do: {:ok, state} <- do_exec_handle_event(pad_ref, event, params, state) do
       {:ok, state}
     else
@@ -64,7 +64,13 @@ defmodule Membrane.Core.Element.EventController do
   end
 
   defp check_sync(%Event.StartOfStream{}, state) do
-    :ok = Sync.sync(state.stream_sync)
+    if state.pads.data
+       |> Map.values()
+       |> Enum.filter(&(&1.direction == :input))
+       |> Enum.all?(& &1.start_of_stream?) do
+      :ok = Sync.sync(state.stream_sync)
+    end
+
     {:ok, state}
   end
 
