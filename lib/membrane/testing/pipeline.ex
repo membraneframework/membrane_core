@@ -265,16 +265,14 @@ defmodule Membrane.Testing.Pipeline do
   defp combine_actions(l, r) do
     case {l, r} do
       {l, :ok} -> l
-      {:ok, r} -> r
       {{:ok, actions_l}, {:ok, actions_r}} -> {:ok, actions_l ++ actions_r}
-      {{:ok, _actions_l}, r} -> r
-      {l, {:ok, _actions_r}} -> l
-      {l, _r} -> l
+      {_l, r} -> r
     end
   end
 
-  defp combine_results({actions_l, state_l}, {actions_r, state_r}) do
-    {combine_actions(actions_l, actions_r), Map.put(state_l, :custom_pipeline_state, state_r)}
+  defp combine_results({custom_actions, custom_state}, {actions, state}) do
+    {combine_actions(custom_actions, actions),
+     Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
   @impl true
