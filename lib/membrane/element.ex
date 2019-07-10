@@ -13,7 +13,7 @@ defmodule Membrane.Element do
   alias Link.Endpoint
   alias Core.Element.{MessageDispatcher, State}
   alias Core.Message
-  alias Membrane.Element.LinkError
+  alias Membrane.ElementLinkError
   import Membrane.Helper.GenServer
   require Message
   use Membrane.Log, tags: :core
@@ -144,7 +144,7 @@ defmodule Membrane.Element do
   It will wait for reply for amount of time passed as second argument
   (in milliseconds).
   """
-  @spec set_watcher(pid, pid, timeout) :: :ok | {:error, any}
+  @spec set_watcher(pid, pid, timeout) :: :ok
   def set_watcher(server, watcher, timeout \\ 5000) when is_pid(server) do
     Message.call(server, :set_watcher, watcher, timeout)
   end
@@ -163,9 +163,9 @@ defmodule Membrane.Element do
   @doc """
   Sends synchronous calls to two elements, telling them to link with each other.
   """
-  @spec link(link_spec :: %Link{}) :: :ok | {:error, any}
+  @spec link(link_spec :: %Link{}) :: :ok
   def link(%Link{from: %Endpoint{pid: pid}, to: %Endpoint{pid: pid}}) when is_pid(pid) do
-    raise LinkError, "Cannot link element with itself"
+    raise ElementLinkError, "Cannot link element with itself"
   end
 
   def link(%Link{from: %Endpoint{pid: from_pid} = from, to: %Endpoint{pid: to_pid} = to})
@@ -193,7 +193,7 @@ defmodule Membrane.Element do
   end
 
   def link(link) do
-    raise LinkError, """
+    raise ElementLinkError, """
     Invalid link - one of pids is invalid.
     #{inspect(link, pretty: true)}
     """

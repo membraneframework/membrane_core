@@ -8,7 +8,6 @@ defmodule Membrane.Element.CallbackContext do
 
   alias Membrane.Element.Pad
   alias Membrane.Core
-  alias Core.Playback
   alias Core.Element.State
   use Bunch
 
@@ -22,7 +21,7 @@ defmodule Membrane.Element.CallbackContext do
       @type t :: %__MODULE__{
               unquote_splicing(fields),
               pads: %{Pad.ref_t() => Pad.Data.t()},
-              playback_state: Playback.state_t()
+              playback_state: Membrane.Element.playback_state_t()
             }
 
       @behaviour unquote(__MODULE__)

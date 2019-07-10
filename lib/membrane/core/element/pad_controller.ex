@@ -2,10 +2,10 @@ defmodule Membrane.Core.Element.PadController do
   @moduledoc false
   # Module handling linking and unlinking pads.
 
-  alias Membrane.{Core, Event}
+  alias Membrane.{Core, Event, ElementLinkError}
   alias Core.{CallbackHandler, Message, InputBuffer}
   alias Core.Element.{ActionHandler, EventController, PadModel, State}
-  alias Membrane.Element.{CallbackContext, LinkError, Pad}
+  alias Membrane.Element.{CallbackContext, Pad}
   require CallbackContext.{PadAdded, PadRemoved}
   require Message
   require Pad
@@ -35,7 +35,7 @@ defmodule Membrane.Core.Element.PadController do
       state = init_pad_data(info, pad_ref, pid, other_ref, other_info, props, state)
 
       state =
-        case Pad.availability_mode_by_ref(pad_ref) do
+        case Pad.availability_mode(info.availability) do
           :static ->
             state |> Bunch.Access.update_in([:pads, :info], &(&1 |> Map.delete(pad_name)))
 
@@ -45,7 +45,7 @@ defmodule Membrane.Core.Element.PadController do
 
       {{:ok, info}, state}
     else
-      {:error, reason} -> raise LinkError, "#{inspect(reason)}"
+      {:error, reason} -> raise ElementLinkError, "#{inspect(reason)}"
     end
   end
 
@@ -104,22 +104,31 @@ defmodule Membrane.Core.Element.PadController do
   In case of static pad it will be just its name, for dynamic it will return
   tuple containing name and id.
   """
-  @spec get_pad_ref(Pad.name_t(), State.t()) :: State.stateful_try_t(Pad.ref_t())
-  def get_pad_ref(pad_name, state) do
-    {pad_ref, state} =
-      state
-      |> Bunch.Access.get_and_update_in([:pads, :info, pad_name], fn
-        nil ->
-          :pop
+  @spec get_pad_ref(Pad.name_t(), Pad.dynamic_id_t() | nil, State.t()) ::
+          State.stateful_try_t(Pad.ref_t())
+  def get_pad_ref(pad_name, id, state) do
+    case state.pads.info[pad_name] do
+      nil ->
+        {{:error, :unknown_pad}, state}
 
-        %{availability: av, current_id: id} = pad_info when Pad.is_availability_dynamic(av) ->
-          {{:dynamic, pad_name, id}, %{pad_info | current_id: id + 1}}
+      %{availability: av} = pad_info when Pad.is_availability_dynamic(av) ->
+        {pad_ref, pad_info} = get_dynamic_pad_ref(pad_name, id, pad_info)
+        state |> Bunch.Access.put_in([:pads, :info, pad_name], pad_info) ~> {{:ok, pad_ref}, &1}
 
-        %{availability: av} = pad_info when Pad.is_availability_static(av) ->
-          {pad_name, pad_info}
-      end)
+      %{availability: av} when Pad.is_availability_static(av) and id == nil ->
+        {{:ok, pad_name}, state}
 
-    {pad_ref |> Bunch.error_if_nil(:unknown_pad), state}
+      %{availability: av} when Pad.is_availability_static(av) and id != nil ->
+        {{:error, :id_on_static_pad}, state}
+    end
+  end
+
+  defp get_dynamic_pad_ref(pad_name, nil, %{current_id: id} = pad_info) do
+    {{:dynamic, pad_name, id}, %{pad_info | current_id: id + 1}}
+  end
+
+  defp get_dynamic_pad_ref(pad_name, id, %{current_id: old_id} = pad_info) do
+    {{:dynamic, pad_name, id}, %{pad_info | current_id: max(id, old_id) + 1}}
   end
 
   @spec validate_pad_being_linked!(
@@ -131,20 +140,13 @@ defmodule Membrane.Core.Element.PadController do
   defp validate_pad_being_linked!(pad_ref, direction, info, state) do
     cond do
       :ok == PadModel.assert_instance(state, pad_ref) ->
-        raise LinkError, "Pad #{inspect(pad_ref)} has already been linked"
+        raise ElementLinkError, "Pad #{inspect(pad_ref)} has already been linked"
 
       info == nil ->
-        raise LinkError, "Unknown pad #{inspect(pad_ref)}"
-
-      Pad.availability_mode_by_ref(pad_ref) != Pad.availability_mode(info.availability) ->
-        raise LinkError, """
-        Invalid pad availability mode:
-          expected: #{inspect(Pad.availability_mode_by_ref(pad_ref))},
-          actual: #{inspect(Pad.availability_mode(info.availability))}
-        """
+        raise ElementLinkError, "Unknown pad #{inspect(pad_ref)}"
 
       info.direction != direction ->
-        raise LinkError, """
+        raise ElementLinkError, """
         Invalid pad direction:
           expected: #{inspect(direction)},
           actual: #{inspect(info.direction)}
@@ -170,7 +172,8 @@ defmodule Membrane.Core.Element.PadController do
          {from, %{direction: :output, mode: :pull}},
          {to, %{direction: :input, mode: :push}}
        ) do
-    raise LinkError, "Cannot connect pull output #{inspect(from)} to push input #{inspect(to)}"
+    raise ElementLinkError,
+          "Cannot connect pull output #{inspect(from)} to push input #{inspect(to)}"
   end
 
   defp do_validate_dm(_, _) do
@@ -191,7 +194,7 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp parse_pad_props!(pad_name, nil, _props) do
-    raise LinkError, "Pad #{inspect(pad_name)} does not define any options"
+    raise ElementLinkError, "Pad #{inspect(pad_name)} does not define any options"
   end
 
   defp parse_pad_props!(pad_name, options_spec, props) do
@@ -202,10 +205,11 @@ defmodule Membrane.Core.Element.PadController do
         pad_props
 
       {:error, {:config_field, {:key_not_found, key}}} ->
-        raise LinkError, "Missing option #{inspect(key)} for pad #{inspect(pad_name)}"
+        raise ElementLinkError, "Missing option #{inspect(key)} for pad #{inspect(pad_name)}"
 
       {:error, {:config_invalid_keys, keys}} ->
-        raise LinkError, "Invalid keys in options of pad #{inspect(pad_name)} - #{inspect(keys)}"
+        raise ElementLinkError,
+              "Invalid keys in options of pad #{inspect(pad_name)} - #{inspect(keys)}"
     end
   end
 
@@ -215,7 +219,7 @@ defmodule Membrane.Core.Element.PadController do
         buffer_props
 
       {:error, {:config_invalid_keys, keys}} ->
-        raise LinkError,
+        raise ElementLinkError,
               "Invalid keys in buffer options of pad #{inspect(pad_name)}: #{inspect(keys)}"
     end
   end
@@ -267,17 +271,17 @@ defmodule Membrane.Core.Element.PadController do
 
     enable_toilet? = other_info.mode == :push
 
-    pb =
-      InputBuffer.new(
+    input_buf =
+      InputBuffer.init(
         state.name,
-        pid,
-        other_ref,
         demand_unit,
         enable_toilet?,
+        pid,
+        other_ref,
         buffer_props
       )
 
-    %{buffer: pb, demand: 0}
+    %{input_buf: input_buf, demand: 0}
   end
 
   defp init_pad_mode_data(%{mode: :pull, direction: :output}, _other_info, _props, _state),

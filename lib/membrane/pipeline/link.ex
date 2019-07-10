@@ -24,13 +24,14 @@ defmodule Membrane.Pipeline.Link do
     alias Membrane.Pipeline
 
     @enforce_keys [:element, :pad_name]
-    defstruct element: nil, pad_name: nil, pad_ref: nil, pid: nil, opts: []
+    defstruct element: nil, pad_name: nil, id: nil, pad_ref: nil, pid: nil, opts: []
 
     @valid_opt_keys [:pad, :buffer]
 
     @type t() :: %__MODULE__{
             element: Element.name_t(),
             pad_name: Pad.name_t(),
+            id: Pad.dynamic_id_t() | nil,
             pad_ref: Pad.ref_t() | nil,
             pid: pid() | nil,
             opts: Pipeline.Spec.endpoint_options_t()
@@ -39,6 +40,7 @@ defmodule Membrane.Pipeline.Link do
     @type resolved_t() :: %__MODULE__{
             element: Element.name_t(),
             pad_name: Pad.name_t(),
+            id: Pad.dynamic_id_t() | nil,
             pad_ref: Pad.ref_t(),
             pid: pid(),
             opts: Pipeline.Spec.endpoint_options_t()
@@ -46,13 +48,21 @@ defmodule Membrane.Pipeline.Link do
 
     @spec parse(Pipeline.Spec.link_endpoint_spec_t() | any()) :: {:ok, t()} | {:error, any()}
     def parse({elem, pad_name}) do
-      parse({elem, pad_name, []})
+      parse({elem, pad_name, nil, []})
     end
 
     def parse({elem, pad_name, opts}) when is_list(opts) do
+      parse({elem, pad_name, nil, opts})
+    end
+
+    def parse({elem, pad_name, id}) when not is_list(id) do
+      parse({elem, pad_name, id, []})
+    end
+
+    def parse({elem, pad_name, id, opts}) when is_list(opts) do
       with :ok <- validate_pad_name(pad_name),
            :ok <- validate_opts(opts) do
-        {:ok, %__MODULE__{element: elem, pad_name: pad_name, opts: opts}}
+        {:ok, %__MODULE__{element: elem, pad_name: pad_name, id: id, opts: opts}}
       end
     end
 
