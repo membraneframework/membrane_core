@@ -1,4 +1,21 @@
 defmodule Membrane.Sync do
+  @moduledoc """
+  Sync allows to synchronize multiple processes, so that they performed their jobs
+  at the same time.
+
+  The flow of usage goes as follows:
+  - Processes register themselves in Sync, using `register/2`.
+  - When a process is ready to synchronize, it invokes `ready/1`. When a process
+  is ready, it is assumed it is going to invoke `sync/2` approximately at the same
+  time as all other ready processes.
+  - If a process becomes no longer ready, it should invoke `unready/1`.
+  - Once a process needs to sync, it invokes `sync/2`, which results in blocking
+  until all ready processes invoke `sync/2`.
+  - Once all the ready processes invoke `sync/2`, the calls return, and they become
+  registered again.
+  - Once a process exits, it is automatically unregistered.
+
+  """
   use Bunch
   use GenServer
   require Membrane.Core.Message
@@ -7,6 +24,20 @@ defmodule Membrane.Sync do
 
   @always :membrane_sync_always
 
+  @type t :: pid | :membrane_sync_always
+  @type ref_t :: {reference, pid} | :membrane_sync_always
+  @type level_t :: :registered | :ready
+  @type result_t :: :ok | {:error, :not_found | [invalid_level: level_t]}
+
+  @doc """
+  Starts a Sync process linked to the current process.
+
+  ## Options
+  - :empty_exit? - if true, Sync automatically exits when all syncees exit;
+    defaults to false
+
+  """
+  @spec start_link([empty_exit?: boolean], GenServer.options()) :: GenServer.on_start()
   def start_link(options \\ [], gen_server_options \\ []) do
     GenServer.start_link(__MODULE__, options, gen_server_options)
   end
@@ -16,6 +47,7 @@ defmodule Membrane.Sync do
     pid
   end
 
+  @spec register(t, pid) :: ref_t
   def register(sync, pid \\ self())
 
   def register(@always, _pid), do: @always
@@ -26,18 +58,21 @@ defmodule Membrane.Sync do
     {ref, sync}
   end
 
+  @spec unready(ref_t) :: result_t
   def unready(@always), do: :ok
 
   def unready({ref, sync}) do
     Message.call(sync, :sync_unready, ref)
   end
 
+  @spec ready(ref_t) :: result_t
   def ready(@always), do: :ok
 
   def ready({ref, sync}) do
     Message.call(sync, :sync_ready, ref)
   end
 
+  @spec sync(ref_t) :: result_t
   def sync(@always), do: :ok
 
   def sync({ref, sync}, options \\ []) do
