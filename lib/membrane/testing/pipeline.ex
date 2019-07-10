@@ -118,18 +118,22 @@ defmodule Membrane.Testing.Pipeline do
     ## Module
     Pipeline Module with custom callbacks.
 
+    ## Custom Args
+    Arguments for Module's `handle_init` callback.
+
     If links are not present or set to nil they will be populated automatically
     based on elements order using default pad names.
     """
 
     @enforce_keys [:elements]
-    defstruct @enforce_keys ++ [:links, :test_process, :module]
+    defstruct @enforce_keys ++ [:links, :test_process, :module, :custom_args]
 
     @type t :: %__MODULE__{
             test_process: pid() | nil,
             elements: Spec.children_spec_t(),
             links: Spec.links_spec_t() | nil,
-            module: module() | nil
+            module: module() | nil,
+            custom_args: Pipeline.pipeline_options_t() | nil
           }
   end
 
@@ -166,11 +170,6 @@ defmodule Membrane.Testing.Pipeline do
     Pipeline.start(__MODULE__, default_options(pipeline_options), process_options)
   end
 
-  defp default_options(%Options{test_process: nil} = options),
-    do: %Options{options | test_process: self()}
-
-  defp default_options(default), do: default
-
   @doc """
   Links subsequent elements using default pads (linking `:input` to `:output` of
   previous element).
@@ -206,73 +205,24 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_init(%Options{links: nil, elements: elements} = options) do
-    new_links = populate_links(elements)
+  def handle_init(%Options{links: nil, module: nil} = options) do
+    new_links = populate_links(options.elements)
     handle_init(%Options{options | links: new_links})
   end
 
-  def handle_init(args) do
-    %Options{elements: elements, links: links} = args
-
+  def handle_init(%Options{module: nil} = options) do
     spec = %Membrane.Pipeline.Spec{
-      children: elements,
-      links: links
+      children: options.elements,
+      links: options.links
     }
 
-    new_state = %State{test_process: args.test_process, module: args.module}
-    eval(:handle_init, args, {{:ok, spec}, new_state})
+    new_state = %State{test_process: options.test_process, module: nil}
+    {{:ok, spec}, new_state}
   end
 
-  defp wrap_result({:ok, state}),
-    do: {{:ok, []}, state}
-
-  defp wrap_result({{_, _}, _} = result),
-    do: result
-
-  defp eval(custom_function, custom_args, function, state)
-
-  defp eval(_, _, function, %State{module: nil}),
-    do: function.()
-
-  defp eval(custom_function, custom_args, function, %State{module: module} = state) do
-    with custom_result = {{:ok, _actions}, _state} <-
-           apply(module, custom_function, custom_args ++ [state.custom_pipeline_state])
-           |> wrap_result do
-      result = function.()
-      combine_results(custom_result, result)
-    end
-  end
-
-  defp eval(custom_function, custom_args, result)
-
-  defp eval(_, _, {_, %State{module: nil}} = result),
-    do: result
-
-  defp eval(:handle_init, custom_args, {_, %State{module: module}} = result) do
-    {{:ok, _spec}, custom_state} = apply(module, :handle_init, custom_args) |> wrap_result
-    combine_results({{:ok, []}, custom_state}, result)
-  end
-
-  defp eval(custom_function, custom_args, {_, %State{module: module} = state} = result) do
-    with custom_result = {{:ok, _actions}, _state} <-
-           apply(module, custom_function, custom_args ++ [state.custom_pipeline_state])
-           |> wrap_result,
-         do: combine_results(custom_result, result)
-  end
-
-  @spec combine_actions({:ok, list()}, :ok | {:ok, list()} | {:error, any}) ::
-          :ok | {:ok, list()} | {:error, any}
-  defp combine_actions(l, r) do
-    case {l, r} do
-      {l, :ok} -> l
-      {{:ok, actions_l}, {:ok, actions_r}} -> {:ok, actions_l ++ actions_r}
-      {_l, r} -> r
-    end
-  end
-
-  defp combine_results({custom_actions, custom_state}, {actions, state}) do
-    {combine_actions(custom_actions, actions),
-     Map.put(state, :custom_pipeline_state, custom_state)}
+  def handle_init(options) do
+    new_state = %State{test_process: options.test_process, module: options.module}
+    eval(:handle_init, options.custom_args, {:ok, new_state})
   end
 
   @impl true
@@ -352,6 +302,37 @@ defmodule Membrane.Testing.Pipeline do
         state
       )
 
+  defp default_options(%Options{test_process: nil} = options),
+    do: %Options{options | test_process: self()}
+
+  defp default_options(default), do: default
+
+  defp eval(custom_function, custom_args, function, state)
+
+  defp eval(_, _, function, %State{module: nil}),
+    do: function.()
+
+  defp eval(custom_function, custom_args, function, %State{module: module} = state) do
+    with custom_result = {{:ok, _actions}, _state} <-
+           apply(module, custom_function, custom_args ++ [state.custom_pipeline_state])
+           |> wrap_result do
+      result = function.()
+      combine_results(custom_result, result)
+    end
+  end
+
+  defp eval(custom_function, custom_args, result)
+
+  defp eval(_, _, {_, %State{module: nil}} = result),
+    do: result
+
+  defp eval(custom_function, custom_args, {_, %State{module: module} = state} = result) do
+    with custom_result = {{:ok, _actions}, _state} <-
+           apply(module, custom_function, custom_args ++ [state.custom_pipeline_state])
+           |> wrap_result,
+         do: combine_results(custom_result, result)
+  end
+
   defp notify_playback_state_changed(previous, current, %State{} = state) do
     notify_test_process({:playback_state_changed, previous, current}, state)
   end
@@ -360,5 +341,24 @@ defmodule Membrane.Testing.Pipeline do
     send(test_process, {__MODULE__, self(), message})
 
     {:ok, state}
+  end
+
+  defp wrap_result({:ok, state}),
+    do: {{:ok, []}, state}
+
+  defp wrap_result({{_, _}, _} = result),
+    do: result
+
+  defp combine_results({custom_actions, custom_state}, {actions, state}) do
+    {combine_actions(custom_actions, actions),
+     Map.put(state, :custom_pipeline_state, custom_state)}
+  end
+
+  defp combine_actions(l, r) do
+    case {l, r} do
+      {l, :ok} -> l
+      {{:ok, actions_l}, {:ok, actions_r}} -> {:ok, actions_l ++ actions_r}
+      {_l, r} -> r
+    end
   end
 end
