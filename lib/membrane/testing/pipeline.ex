@@ -125,12 +125,11 @@ defmodule Membrane.Testing.Pipeline do
     based on elements order using default pad names.
     """
 
-    @enforce_keys [:elements]
-    defstruct @enforce_keys ++ [:links, :test_process, :module, :custom_args]
+    defstruct [:elements, :links, :test_process, :module, :custom_args]
 
     @type t :: %__MODULE__{
             test_process: pid() | nil,
-            elements: Spec.children_spec_t(),
+            elements: Spec.children_spec_t() | nil,
             links: Spec.links_spec_t() | nil,
             module: module() | nil,
             custom_args: Pipeline.pipeline_options_t() | nil
@@ -220,7 +219,7 @@ defmodule Membrane.Testing.Pipeline do
     {{:ok, spec}, new_state}
   end
 
-  def handle_init(options) do
+  def handle_init(%Options{links: nil, elements: nil} = options) do
     new_state = %State{test_process: options.test_process, module: options.module}
     eval(:handle_init, options.custom_args, {:ok, new_state})
   end
@@ -325,6 +324,12 @@ defmodule Membrane.Testing.Pipeline do
 
   defp eval(_, _, {_, %State{module: nil}} = result),
     do: result
+
+  defp eval(:handle_init, custom_args, {_, %State{module: module}} = result) do
+    with custom_result = {{:ok, _}, _} <-
+           apply(module, :handle_init, [custom_args]) |> wrap_result,
+         do: combine_results(custom_result, result)
+  end
 
   defp eval(custom_function, custom_args, {_, %State{module: module} = state} = result) do
     with custom_result = {{:ok, _actions}, _state} <-
