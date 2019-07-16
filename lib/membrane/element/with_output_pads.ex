@@ -11,7 +11,7 @@ defmodule Membrane.Element.WithOutputPads do
   alias Membrane.{Buffer, Element}
   alias Membrane.Core.Element.PadsSpecs
   alias Element.{CallbackContext, Pad}
-  alias Element.Base.Mixin.CommonBehaviour
+  alias Element.Base
 
   @doc """
   Callback called when buffers should be emitted by a source or filter.

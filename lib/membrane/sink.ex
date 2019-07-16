@@ -3,8 +3,8 @@ defmodule Membrane.Sink do
   Module defining behaviour for sinks - elements consuming data.
 
   Behaviours for sinks are specified, besides this place, in modules
-  `Membrane.Element.Base.Mixin.CommonBehaviour`,
-  and `Membrane.Element.Base.Mixin.SinkBehaviour`.
+  `Membrane.Element.Base`,
+  and `Membrane.Element.WithInputPads`.
 
   Sink elements can define only input pads. Job of a usual sink is to receive some
   data on such pad and consume it (write to a soundcard, send through TCP etc.).
@@ -31,7 +31,7 @@ defmodule Membrane.Sink do
               buffers :: list(Buffer.t()),
               context :: CallbackContext.Write.t(),
               state :: Element.state_t()
-            ) :: Mixin.CommonBehaviour.callback_return_t()
+            ) :: Membrane.Element.Base.callback_return_t()
 
   @doc """
   Callback that is called when buffer should be written by the sink. In contrast
@@ -44,7 +44,7 @@ defmodule Membrane.Sink do
               buffer :: Buffer.t(),
               context :: CallbackContext.Write.t(),
               state :: Element.state_t()
-            ) :: Mixin.CommonBehaviour.callback_return_t()
+            ) :: Membrane.Element.Base.callback_return_t()
 
   defmacro __using__(_) do
     quote location: :keep do

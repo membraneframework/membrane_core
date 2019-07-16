@@ -4,14 +4,14 @@ defmodule Membrane.Source do
   appropriate behaviours implementation and provides default callbacks implementation.
 
   Behaviours for sources are specified in modules
-  `Membrane.Element.Base.Mixin.CommonBehaviour` and
-  `Membrane.Element.Base.Mixin.SourceBehaviour`.
+  `Membrane.Element.Base` and
+  `Membrane.Element.WithOutputPads`.
 
   Source elements can define only output pads. Job of a usual source is to produce
   some data (read from soundcard, download through HTTP, etc.) and send it through
   such pad. If the pad works in pull mode, then element is also responsible for
   receiving demands and send buffers only if they have previously been demanded
-  (for more details, see `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5`
+  (for more details, see `c:Membrane.Element.WithOutputPads.handle_demand/5`
   callback).
   Sources, like all elements, can of course have multiple pads if needed to
   provide more complex solutions.

@@ -3,16 +3,16 @@ defmodule Membrane.Filter do
   Module defining behaviour for filters - elements processing data.
 
   Behaviours for filters are specified, besides this place, in modules
-  `Membrane.Element.Base.Mixin.CommonBehaviour`,
-  `Membrane.Element.Base.Mixin.SourceBehaviour`,
-  and `Membrane.Element.Base.Mixin.SinkBehaviour`.
+  `Membrane.Element.Base`,
+  `Membrane.Element.WithOutputPads`,
+  and `Membrane.Element.WithInputPads`.
 
   Filters can have both input and output pads. Job of a usual filter is to
   receive some data on a input pad, process the data and send it through the
   output pad. If these pads work in pull mode, which is the most common case,
   then filter is also responsible for receiving demands on the output pad and
   requesting them on the input pad (for more details, see
-  `c:Membrane.Element.Base.Mixin.SourceBehaviour.handle_demand/5` callback).
+  `c:Membrane.Element.WithOutputPads.handle_demand/5` callback).
   Filters, like all elements, can of course have multiple pads if needed to
   provide more complex solutions.
   """
@@ -33,7 +33,7 @@ defmodule Membrane.Filter do
               buffers :: list(Buffer.t()),
               context :: CallbackContext.Process.t(),
               state :: Element.state_t()
-            ) :: Mixin.CommonBehaviour.callback_return_t()
+            ) :: Membrane.Element.Base.callback_return_t()
 
   @doc """
   Callback that is to process buffers. In contrast to `c:handle_process_list/4`, it is
@@ -46,7 +46,7 @@ defmodule Membrane.Filter do
               buffer :: Buffer.t(),
               context :: CallbackContext.Process.t(),
               state :: Element.state_t()
-            ) :: Mixin.CommonBehaviour.callback_return_t()
+            ) :: Membrane.Element.Base.callback_return_t()
 
   defmacro __using__(_) do
     quote location: :keep do
