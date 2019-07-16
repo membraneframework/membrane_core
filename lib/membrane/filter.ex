@@ -50,7 +50,7 @@ defmodule Membrane.Filter do
 
   defmacro __using__(_) do
     quote location: :keep do
-      use Membrane.Element
+      use Membrane.Element.Base
       use Membrane.Element.WithOutputPads
       use Membrane.Element.WithInputPads
       @behaviour unquote(__MODULE__)
