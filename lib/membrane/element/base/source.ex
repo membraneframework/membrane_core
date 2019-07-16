@@ -1,4 +1,4 @@
-defmodule Membrane.Element.Base.Source do
+defmodule Membrane.Source do
   @moduledoc """
   Module that should be used in sources - elements producing data. Declares
   appropriate behaviours implementation and provides default callbacks implementation.
@@ -17,13 +17,10 @@ defmodule Membrane.Element.Base.Source do
   provide more complex solutions.
   """
 
-  alias Membrane.Element
-  alias Element.Base.Mixin
-
   defmacro __using__(_) do
     quote location: :keep do
-      use Mixin.CommonBehaviour
-      use Mixin.SourceBehaviour
+      use Membrane.Element
+      use Membrane.Element.WithOutputPads
 
       @impl true
       def membrane_element_type, do: :source

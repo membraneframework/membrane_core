@@ -1,4 +1,4 @@
-defmodule Membrane.Element.Base.Filter do
+defmodule Membrane.Filter do
   @moduledoc """
   Module defining behaviour for filters - elements processing data.
 
@@ -18,7 +18,6 @@ defmodule Membrane.Element.Base.Filter do
   """
 
   alias Membrane.{Buffer, Element}
-  alias Element.Base.Mixin
   alias Element.{CallbackContext, Pad}
 
   @doc """
@@ -51,9 +50,9 @@ defmodule Membrane.Element.Base.Filter do
 
   defmacro __using__(_) do
     quote location: :keep do
-      use Mixin.CommonBehaviour
-      use Mixin.SourceBehaviour
-      use Mixin.SinkBehaviour
+      use Membrane.Element
+      use Membrane.Element.WithOutputPads
+      use Membrane.Element.WithInputPads
       @behaviour unquote(__MODULE__)
 
       @impl true

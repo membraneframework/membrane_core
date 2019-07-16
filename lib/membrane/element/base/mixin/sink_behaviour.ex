@@ -1,4 +1,4 @@
-defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
+defmodule Membrane.Element.WithInputPads do
   @moduledoc """
   Module defining behaviour for sink and filter elements.
 

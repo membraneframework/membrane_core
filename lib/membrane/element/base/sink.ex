@@ -1,4 +1,4 @@
-defmodule Membrane.Element.Base.Sink do
+defmodule Membrane.Sink do
   @moduledoc """
   Module defining behaviour for sinks - elements consuming data.
 
@@ -16,7 +16,6 @@ defmodule Membrane.Element.Base.Sink do
   """
 
   alias Membrane.{Buffer, Element}
-  alias Element.Base.Mixin
   alias Element.{CallbackContext, Pad}
 
   @doc """
@@ -49,8 +48,8 @@ defmodule Membrane.Element.Base.Sink do
 
   defmacro __using__(_) do
     quote location: :keep do
-      use Mixin.CommonBehaviour
-      use Mixin.SinkBehaviour
+      use Membrane.Element
+      use Membrane.Element.WithInputPads
       @behaviour unquote(__MODULE__)
 
       @impl true

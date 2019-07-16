@@ -3,7 +3,7 @@ defmodule Membrane.Support.Element.TrivialFilter do
   This is the most basic filter. It does nothing, but is used in specs.
   """
 
-  use Membrane.Element.Base.Filter
+  use Membrane.Filter
 
   def_output_pad :output, caps: :any
 

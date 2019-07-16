@@ -1,4 +1,4 @@
-defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
+defmodule Membrane.Element.WithOutputPads do
   @moduledoc """
   Module defining behaviour for source and filter elements.
 
