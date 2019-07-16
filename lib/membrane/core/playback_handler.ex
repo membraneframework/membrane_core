@@ -77,7 +77,7 @@ defmodule Membrane.Core.PlaybackHandler do
         %Playback{} = p -> %Playback{p | target_state: new_playback_state} ~> {&1, &1}
       end)
 
-    if playback.pending_state == nil and playback.state != new_playback_state do
+    if playback.pending_state == nil and playback.state != playback.target_state do
       do_change_playback_state(playback, handler, playbackable)
     else
       {:ok, playbackable}
