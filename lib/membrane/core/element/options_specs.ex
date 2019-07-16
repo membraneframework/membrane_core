@@ -102,9 +102,9 @@ defmodule Membrane.Core.Element.OptionsSpecs do
     |> Enum.reduce(fn opt_doc, acc ->
       quote do
         """
-        #{unquote(opt_doc)}
-
         #{unquote(acc)}
+
+        #{unquote(opt_doc)}
         """
       end
     end)

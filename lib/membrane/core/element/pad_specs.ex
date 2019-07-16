@@ -80,7 +80,7 @@ defmodule Membrane.Core.Element.PadsSpecs do
   Generates `membrane_pads/0` function, along with docs and typespecs.
   """
   defmacro generate_membrane_pads(env) do
-    pads = Module.get_attribute(env.module, :membrane_pad)
+    pads = Module.get_attribute(env.module, :membrane_pad) |> Enum.reverse()
     :ok = validate_pads!(pads, env)
     pads_docs = generate_docs_from_pads_specs(pads)
 
@@ -92,7 +92,7 @@ defmodule Membrane.Core.Element.PadsSpecs do
       """
       @spec membrane_pads() :: [{unquote(Pad).name_t(), unquote(Pad).description_t()}]
       def membrane_pads() do
-        @membrane_pad
+        unquote(pads |> Macro.escape())
       end
 
       if @moduledoc != false do
