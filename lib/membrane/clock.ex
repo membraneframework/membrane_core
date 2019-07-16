@@ -37,9 +37,13 @@ defmodule Membrane.Clock do
     clock
   end
 
-  def subscribe(clock) do
-    Message.send(clock, :clock_subscribe, self())
+  def subscribe(clock, pid \\ self()) do
+    Message.send(clock, :clock_subscribe, pid)
     :ok
+  end
+
+  def unsubscribe(clock, pid \\ self()) do
+    Message.send(clock, :clock_unsubscribe, pid)
   end
 
   def proxy_for(clock, clock_to_proxy_for) do
