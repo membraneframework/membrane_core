@@ -62,16 +62,16 @@ defmodule Membrane.Core.Element.PadsSpecs do
     specs = specs |> Keyword.put(:options, escaped_pad_opts)
 
     quote do
-      if Module.get_attribute(__MODULE__, :membrane_pad) == nil do
-        Module.register_attribute(__MODULE__, :membrane_pad, accumulate: true)
+      if Module.get_attribute(__MODULE__, :membrane_pads) == nil do
+        Module.register_attribute(__MODULE__, :membrane_pads, accumulate: true)
         @before_compile {unquote(__MODULE__), :generate_membrane_pads}
       end
 
-      @membrane_pad unquote(__MODULE__).parse_pad_specs!(
-                      {unquote(pad_name), unquote(specs)},
-                      unquote(direction),
-                      __ENV__
-                    )
+      @membrane_pads unquote(__MODULE__).parse_pad_specs!(
+                       {unquote(pad_name), unquote(specs)},
+                       unquote(direction),
+                       __ENV__
+                     )
       unquote(pad_opts_typedef)
     end
   end
@@ -80,7 +80,7 @@ defmodule Membrane.Core.Element.PadsSpecs do
   Generates `membrane_pads/0` function, along with docs and typespecs.
   """
   defmacro generate_membrane_pads(env) do
-    pads = Module.get_attribute(env.module, :membrane_pad)
+    pads = Module.get_attribute(env.module, :membrane_pads) |> Enum.reverse()
     :ok = validate_pads!(pads, env)
     pads_docs = generate_docs_from_pads_specs(pads)
 
@@ -92,7 +92,7 @@ defmodule Membrane.Core.Element.PadsSpecs do
       """
       @spec membrane_pads() :: [{unquote(Pad).name_t(), unquote(Pad).description_t()}]
       def membrane_pads() do
-        @membrane_pad
+        unquote(pads |> Macro.escape())
       end
 
       if @moduledoc != false do
