@@ -2,7 +2,7 @@
 
 [![Hex.pm](https://img.shields.io/hexpm/v/membrane_core.svg)](https://hex.pm/packages/membrane_core)
 [![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_core/)
-[![Build Status](https://travis-ci.com/membraneframework/membrane-core.svg?branch=master)](https://travis-ci.com/membraneframework/membrane-core)
+[![CircleCI](https://circleci.com/gh/membraneframework/membrane-core.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane-core)
 
 > Membrane Framework - if you asked me what it is, I have no idea. _- Jose Valim in [ElixirConf 2018 Keynote](https://www.youtube.com/watch?v=m7TWMFtDwHg&feature=youtu.be&t=11m18s)_
 
