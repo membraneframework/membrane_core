@@ -11,7 +11,6 @@ defmodule Membrane.Element.WithInputPads do
   alias Membrane.Element
   alias Membrane.Core.Element.PadsSpecs
   alias Element.{CallbackContext, Pad}
-  alias Element.Base
 
   @doc """
   Callback invoked when Element is receiving information about new caps for
