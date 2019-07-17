@@ -10,7 +10,6 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     PadController,
     PlaybackBuffer,
     State,
-    SyncController,
     TimerController
   }
 
@@ -115,10 +114,6 @@ defmodule Membrane.Core.Element.MessageDispatcher do
 
   defp do_handle_message({:membrane_clock_ratio, clock, ratio}, :info, state) do
     TimerController.handle_clock_update(clock, ratio, state)
-  end
-
-  defp do_handle_message(Message.new(:sync, sync), :info, state) do
-    SyncController.handle_sync(sync, state)
   end
 
   defp do_handle_message(Message.new(:set_stream_sync, sync), :call, state) do

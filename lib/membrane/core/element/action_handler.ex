@@ -10,8 +10,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     Core,
     Element,
     Event,
-    Notification,
-    Sync
+    Notification
   }
 
   alias Core.Element.{DemandHandler, LifecycleController, PadModel, State, TimerController}
@@ -153,10 +152,6 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp do_handle_action({:untimer, ref}, _cb, _params, state) do
     TimerController.stop_timer(ref, state)
-  end
-
-  defp do_handle_action({:sync, sync}, _cb, _params, state) do
-    {Sync.sync(sync, state.latency), state}
   end
 
   defp do_handle_action({:latency, latency}, _cb, _params, state) do
