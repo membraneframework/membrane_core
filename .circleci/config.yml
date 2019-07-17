@@ -12,4 +12,7 @@ jobs:
       - checkout
       - run: mix deps.get
       - run: mix format --check-formatted
+      - run: mix compile --force --warnings-as-errors
       - run: mix test
+      - run: mix espec
+      - run: MIX_ENV=dev mix docs && ! mix docs 2>&1 | grep -q "warning:"
