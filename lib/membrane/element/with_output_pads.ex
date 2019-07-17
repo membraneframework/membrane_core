@@ -11,7 +11,6 @@ defmodule Membrane.Element.WithOutputPads do
   alias Membrane.{Buffer, Element}
   alias Membrane.Core.Element.PadsSpecs
   alias Element.{CallbackContext, Pad}
-  alias Element.Base
 
   @doc """
   Callback called when buffers should be emitted by a source or filter.
@@ -23,7 +22,7 @@ defmodule Membrane.Element.WithOutputPads do
 
   In filters, this callback should usually return `:demand` action with
   size sufficient for supplying incoming demand. This will result in calling
-  `c:Membrane.Element.Base.Filter.handle_process_list/4`, which is to supply
+  `c:Membrane.Filter.handle_process_list/4`, which is to supply
   the demand.
 
   If a source is unable to produce enough buffers, or a filter underestimated
