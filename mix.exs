@@ -61,6 +61,9 @@ defmodule Membrane.Mixfile do
       groups_for_modules: [
         Pipeline: [~r/^Membrane.Pipeline.*/],
         Element: [
+          ~r/^Membrane.Filter$/,
+          ~r/^Membrane.Sink$/,
+          ~r/^Membrane.Source$/,
           ~r/^Membrane.Element$/,
           ~r/^Membrane.Element(?!\.CallbackContext)\..*/,
           ~r/^Membrane.Core.InputBuffer/

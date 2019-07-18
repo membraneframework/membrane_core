@@ -6,7 +6,7 @@ defmodule Membrane.Support.Element.DynamicFilter do
   """
 
   use Bunch
-  use Membrane.Element.Base.Filter
+  use Membrane.Filter
 
   def_output_pad :output, caps: :any
 

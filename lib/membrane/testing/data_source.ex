@@ -3,7 +3,7 @@ defmodule Membrane.Testing.DataSource do
   Testing Element for supplying data from list passed through options.
   """
 
-  use Membrane.Element.Base.Source
+  use Membrane.Source
 
   alias Membrane.{Buffer, Event}
 

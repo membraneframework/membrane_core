@@ -1,4 +1,4 @@
-defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
+defmodule Membrane.Element.WithOutputPads do
   @moduledoc """
   Module defining behaviour for source and filter elements.
 
@@ -11,7 +11,6 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
   alias Membrane.{Buffer, Element}
   alias Membrane.Core.Element.PadsSpecs
   alias Element.{CallbackContext, Pad}
-  alias Element.Base.Mixin.CommonBehaviour
 
   @doc """
   Callback called when buffers should be emitted by a source or filter.
@@ -23,7 +22,7 @@ defmodule Membrane.Element.Base.Mixin.SourceBehaviour do
 
   In filters, this callback should usually return `:demand` action with
   size sufficient for supplying incoming demand. This will result in calling
-  `c:Membrane.Element.Base.Filter.handle_process_list/4`, which is to supply
+  `c:Membrane.Filter.handle_process_list/4`, which is to supply
   the demand.
 
   If a source is unable to produce enough buffers, or a filter underestimated

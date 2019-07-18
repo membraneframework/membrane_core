@@ -3,7 +3,7 @@ defmodule Membrane.Support.Element.TrivialSink do
   This is the most basic sink. It does nothing, but is used in specs.
   """
 
-  use Membrane.Element.Base.Sink
+  use Membrane.Sink
 
   def_input_pad :input, caps: :any, demand_unit: :buffers
 end
