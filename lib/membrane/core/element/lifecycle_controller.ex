@@ -134,6 +134,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   @impl PlaybackHandler
   def handle_playback_state_changed(_old, :stopped, %State{terminating: true} = state) do
     unlink(state.pads.data)
+    Message.send(state.watcher, :shutdown_ready, state.name)
     {:ok, state}
   end
 
