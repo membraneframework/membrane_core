@@ -68,8 +68,8 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     LifecycleController.handle_demand_unit(demand_unit, pad_ref, state)
   end
 
-  defp do_handle_message(Message.new(:unlink), :call, state) do
-    LifecycleController.unlink(state)
+  defp do_handle_message(Message.new(:prepare_shutdown), :info, state) do
+    LifecycleController.prepare_shutdown(state)
   end
 
   # Sent by `Membrane.Core.Element.ActionHandler.handle_demand`, check there for
@@ -100,7 +100,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     PadController.handle_link(pad_ref, pad_direction, pid, other_ref, other_info, props, state)
   end
 
-  defp do_handle_message(Message.new(:handle_unlink, pad_ref), :call, state) do
+  defp do_handle_message(Message.new(:handle_unlink, pad_ref), :info, state) do
     PadController.handle_unlink(pad_ref, state)
   end
 

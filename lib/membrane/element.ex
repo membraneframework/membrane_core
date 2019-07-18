@@ -177,13 +177,6 @@ defmodule Membrane.Element do
   end
 
   @doc """
-  Sends synchronous call to element, telling it to unlink all its pads.
-  """
-  def unlink(server, timeout \\ 5000) do
-    server |> Message.call(:unlink, [], timeout)
-  end
-
-  @doc """
   Sends synchronous call to element, requesting it to create a new instance of
   `:on_request` pad.
   """

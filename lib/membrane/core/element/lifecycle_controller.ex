@@ -4,12 +4,13 @@ defmodule Membrane.Core.Element.LifecycleController do
   # and similar stuff.
 
   alias Membrane.{Core, Element, Sync}
-  alias Core.{CallbackHandler, Message}
+  alias Core.{CallbackHandler, Message, Playback}
   alias Core.Element.{ActionHandler, PadModel, PlaybackBuffer, State}
   alias Element.{CallbackContext, Pad}
   require CallbackContext.{Other, PlaybackChange}
   require Message
   require PadModel
+  require Playback
   use Core.PlaybackHandler
   use Core.Element.Log
   use Bunch
@@ -41,22 +42,17 @@ defmodule Membrane.Core.Element.LifecycleController do
   Performs shutdown checks and executes `handle_shutdown` callback.
   """
   @spec handle_shutdown(reason :: any, State.t()) :: {:ok, State.t()}
-  def handle_shutdown(
-        reason,
-        %State{module: module, internal_state: internal_state, playback: playback} = state
-      ) do
-    if playback.state == :stopped && !playback.pending_state do
+  def handle_shutdown(reason, state) do
+    if state.terminating == :ready do
       debug("Terminating element, reason: #{inspect(reason)}", state)
     else
-      warn_error(
-        """
-        Terminating: Attempt to terminate element when it is not stopped
-        """,
-        reason,
+      warn(
+        "Terminating element possibly not prepared for termination. Reason: #{inspect(reason)}",
         state
       )
     end
 
+    %State{module: module, internal_state: internal_state} = state
     :ok = module.handle_shutdown(internal_state)
     {:ok, state}
   end
@@ -125,6 +121,10 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @impl PlaybackHandler
   def handle_playback_state_changed(old, new, state) do
+    if new == :stopped and state.terminating == true do
+      :ok = unlink(state.pads.data)
+    end
+
     :ok =
       case {old, new} do
         {:prepared, :playing} -> Sync.ready(state.stream_sync)
@@ -136,26 +136,24 @@ defmodule Membrane.Core.Element.LifecycleController do
   end
 
   @doc """
-  Unlinks all element's pads.
+  Locks on stopped state and unlinks all element's pads.
   """
-  @spec unlink(State.t()) :: State.stateful_try_t()
-  def unlink(%State{playback: %{state: :stopped}} = state) do
-    with :ok <-
-           state.pads.data
-           |> Bunch.Enum.try_each(fn {_name, %{pid: pid, other_ref: other_ref}} ->
-             Message.call(pid, :handle_unlink, other_ref)
-           end) do
-      {:ok, state}
+  @spec prepare_shutdown(State.t()) :: State.stateful_try_t()
+  def prepare_shutdown(state) do
+    if state.playback.state == :stopped and state.playback |> Playback.stable?() do
+      {_result, state} = PlaybackHandler.lock_target_state(state)
+      unlink(state.pads.data)
+      Message.send(state.watcher, :shutdown_ready, state.name)
+      {:ok, %State{state | terminating: :ready}}
+    else
+      state = %State{state | terminating: true}
+      PlaybackHandler.change_and_lock_playback_state(:stopped, __MODULE__, state)
     end
   end
 
-  def unlink(state) do
-    warn_error(
-      """
-      Tried to unlink Element that is not stopped
-      """,
-      {:unlink, :cannot_unlink_non_stopped_element},
-      state
-    )
+  defp unlink(pads_data) do
+    pads_data
+    |> Map.values()
+    |> Enum.each(&Message.send(&1.pid, :handle_unlink, &1.other_ref))
   end
 end

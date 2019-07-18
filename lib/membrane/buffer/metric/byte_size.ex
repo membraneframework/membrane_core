@@ -7,11 +7,14 @@ defmodule Membrane.Buffer.Metric.ByteSize do
   alias Membrane.Payload
   @behaviour Buffer.Metric
 
-  def pullbuffer_preferred_size, do: 65_536
+  @impl true
+  def input_buf_preferred_size, do: 65_536
 
+  @impl true
   def buffers_size(buffers),
     do: buffers |> Enum.reduce(0, fn %Buffer{payload: p}, acc -> acc + Payload.size(p) end)
 
+  @impl true
   def split_buffers(buffers, count), do: do_split_buffers(buffers, count, [])
 
   defp do_split_buffers(buffers, at_pos, acc) when at_pos == 0 or buffers == [] do

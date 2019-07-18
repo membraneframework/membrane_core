@@ -29,7 +29,8 @@ defmodule Membrane.Core.Element.State do
           playback: Playback.t(),
           playback_buffer: PlaybackBuffer.t(),
           delayed_demands: %{{Pad.ref_t(), :supply | :redemand} => :sync | :async},
-          timers: %{Timer.id_t() => Timer.t()}
+          timers: %{Timer.id_t() => Timer.t()},
+          terminating: boolean | :ready
         }
 
   defstruct [
@@ -47,7 +48,8 @@ defmodule Membrane.Core.Element.State do
     :pipeline_clock,
     :clock,
     :stream_sync,
-    :latency
+    :latency,
+    :terminating
   ]
 
   defimpl Playbackable, for: __MODULE__ do
@@ -75,7 +77,8 @@ defmodule Membrane.Core.Element.State do
       pipeline_clock: clock,
       clock: nil,
       stream_sync: Sync.always(),
-      latency: 0
+      latency: 0,
+      terminating: false
     }
     |> PadSpecHandler.init_pads()
   end
