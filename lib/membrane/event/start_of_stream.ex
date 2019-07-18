@@ -4,7 +4,7 @@ defmodule Membrane.Event.StartOfStream do
 
   This event means that first buffers have been sent and will arrive to the
   pad right away after handling the event.
-  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_event/4` by default sends
+  `c:Membrane.Element.Base.handle_event/4` by default sends
   notification to pipeline when this event is handled.
   """
   defstruct []

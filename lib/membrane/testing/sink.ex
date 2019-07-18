@@ -3,7 +3,7 @@ defmodule Membrane.Testing.Sink do
   Sink Element that will send every buffer it receives to the pid passed as argument.
   """
 
-  use Membrane.Element.Base.Sink
+  use Membrane.Sink
 
   def_input_pad :input, demand_unit: :buffers, caps: :any
 

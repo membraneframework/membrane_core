@@ -23,7 +23,7 @@ defmodule Membrane.Element do
 
   @typedoc """
   Defines options that can be passed to `start/5` / `start_link/5` and received
-  in `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_init/1` callback.
+  in `c:Membrane.Element.Base.handle_init/1` callback.
   """
   @type options_t :: struct | nil
 
@@ -127,7 +127,7 @@ defmodule Membrane.Element do
   It will wait for reply for amount of time passed as second argument
   (in milliseconds).
 
-  Will trigger calling `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_shutdown/1`
+  Will trigger calling `c:Membrane.Element.Base.handle_shutdown/1`
   callback.
   """
   @spec shutdown(pid, timeout) :: :ok

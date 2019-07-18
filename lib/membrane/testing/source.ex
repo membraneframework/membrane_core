@@ -3,7 +3,7 @@ defmodule Membrane.Testing.Source do
   Testing Element for supplying data based on generator function passed through options.
   """
 
-  use Membrane.Element.Base.Source
+  use Membrane.Source
   use Bunch
   alias Membrane.Buffer
   alias Membrane.Element.Action
