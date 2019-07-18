@@ -503,7 +503,9 @@ defmodule Membrane.Pipeline do
 
   def handle_info(Message.new(:shutdown_ready, child), state) do
     {{:ok, pid}, state} = State.pop_child(state, child)
+
     {Element.shutdown(pid), state}
+    |> noreply(state)
   end
 
   def handle_info(message, state) do
