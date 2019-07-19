@@ -1,9 +1,9 @@
-defmodule Membrane.ElementSpec do
+defmodule Membrane.Core.ElementSpec do
   use ESpec, async: false
 
   alias Membrane.Core.{Message, Playback}
   alias Membrane.Core.Element.State
-  alias Membrane.Element.{CallbackContext, ElementLinkError}
+  alias Membrane.Element.CallbackContext
   alias Membrane.ElementLinkError
   alias Membrane.Pipeline.Link
   alias Membrane.Pipeline.Link.Endpoint
@@ -24,8 +24,20 @@ defmodule Membrane.ElementSpec do
       to: %Endpoint{element: :b, pad_name: to_pad(), pad_ref: to_pad(), pid: to_pid()}
     }
 
+  def start_element(module) do
+    described_module().start_link(%{
+      module: module,
+      name: :name,
+      user_options: %{},
+      pipeline: self(),
+      clock: nil
+    })
+  end
+
   defmacrop catch_exit(call) do
     quote do
+      Process.flag(:trap_exit, true)
+
       try do
         capture_log(fn -> unquote(call) end)
       catch
@@ -48,8 +60,17 @@ defmodule Membrane.ElementSpec do
     end
 
     context "if second given PID is not a PID of an element process" do
-      let_ok :from_pid, do: Membrane.Element.start(self(), TrivialSink, %{})
-      finally do: Process.exit(from_pid(), :kill)
+      let_ok :from_pid,
+        do:
+          Membrane.Core.Element.start(%{
+            module: TrivialSink,
+            name: :name,
+            user_options: %{},
+            pipeline: self(),
+            clock: nil
+          })
+
+      # finally do: Process.exit(from_pid(), :kill)
 
       let :to_pid, do: self()
 
@@ -70,10 +91,10 @@ defmodule Membrane.ElementSpec do
     end
 
     context "if both given PIDs are PIDs of element processes" do
-      let_ok :from_pid, do: Membrane.Element.start(self(), from_module(), %{})
+      let_ok :from_pid, do: start_element(from_module())
       finally do: Process.exit(from_pid(), :kill)
 
-      let_ok :to_pid, do: Membrane.Element.start(self(), to_module(), %{})
+      let_ok :to_pid, do: start_element(to_module())
       finally do: Process.exit(to_pid(), :kill)
 
       context "but first given PID is not a source" do
@@ -135,7 +156,7 @@ defmodule Membrane.ElementSpec do
 
       let :state,
         do: %{
-          State.new(module(), :name)
+          State.new(%{module: module(), name: :name, clock: nil})
           | playback: playback(),
             playback_buffer: Membrane.Core.Element.PlaybackBuffer.new(),
             internal_state: internal_state()
@@ -452,7 +473,11 @@ defmodule Membrane.ElementSpec do
       let :internal_state, do: %{}
 
       let :state,
-        do: %{State.new(module(), :name) | playback: playback(), internal_state: internal_state()}
+        do: %{
+          State.new(%{module: module(), name: :name, clock: nil})
+          | playback: playback(),
+            internal_state: internal_state()
+        }
 
       let :ctx_playback_change, do: state() |> CallbackContext.PlaybackChange.from_state()
 
@@ -653,7 +678,11 @@ defmodule Membrane.ElementSpec do
       let :ctx_playback_change, do: state() |> CallbackContext.PlaybackChange.from_state()
 
       let :state,
-        do: %{State.new(module(), :name) | playback: playback(), internal_state: internal_state()}
+        do: %{
+          State.new(%{module: module(), name: :name, clock: nil})
+          | playback: playback(),
+            internal_state: internal_state()
+        }
 
       context "and current playback state is :playing" do
         let :playback, do: %Playback{state: :playing}
@@ -851,7 +880,9 @@ defmodule Membrane.ElementSpec do
     context "if message is Message.new(:set_watcher, pid)" do
       let :new_watcher, do: self()
       let :message, do: Message.new(:set_watcher, new_watcher())
-      let :state, do: %{State.new(TrivialFilter, :name) | watcher: watcher()}
+
+      let :state,
+        do: %{State.new(%{module: TrivialFilter, name: :name, clock: nil}) | watcher: watcher()}
 
       context "and current watcher is nil" do
         let :watcher, do: nil

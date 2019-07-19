@@ -73,8 +73,8 @@ defmodule Membrane.Filter do
         do: {{:error, :handle_process_not_implemented}, state}
 
       @impl true
-      def handle_process_list(pad, buffers, context, state) do
-        args_list = buffers |> Enum.map(&[pad, &1, context])
+      def handle_process_list(pad, buffers, _context, state) do
+        args_list = buffers |> Enum.map(&[pad, &1])
         {{:ok, split: {:handle_process, args_list}}, state}
       end
 

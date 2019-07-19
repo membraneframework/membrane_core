@@ -256,7 +256,7 @@ defmodule Membrane.Pipeline do
     {:ok, state} = exec_handle_spec_started(children_names, state)
 
     children_data
-    |> Enum.each(&Element.change_playback_state(&1.pid, state.playback.state))
+    |> Enum.each(&Core.Element.change_playback_state(&1.pid, state.playback.state))
 
     debug("""
     Initialized pipeline spec
@@ -317,8 +317,15 @@ defmodule Membrane.Pipeline do
   defp start_child(%{name: name, module: module, options: options}, pipeline_clock) do
     debug("Pipeline: starting child: name: #{inspect(name)}, module: #{inspect(module)}")
 
-    with {:ok, pid} <- Element.start_link(self(), module, name, options, pipeline_clock),
-         :ok <- Element.set_controlling_pid(pid, self()),
+    with {:ok, pid} <-
+           Core.Element.start_link(%{
+             module: module,
+             name: name,
+             pipeline: self(),
+             user_options: options,
+             clock: pipeline_clock
+           }),
+         :ok <- Message.call(pid, :set_controlling_pid, self()),
          {:ok, clock} <- setup_clock(module, pid) do
       {name, %{pid: pid, clock: clock}}
     else
@@ -450,19 +457,19 @@ defmodule Membrane.Pipeline do
   defp link_children(links, state) do
     debug("Linking children: links = #{inspect(links)}")
 
-    with :ok <- links |> Bunch.Enum.try_each(&Element.link/1),
+    with :ok <- links |> Bunch.Enum.try_each(&Core.Element.link/1),
          :ok <-
            state
            |> State.get_children()
            |> Bunch.Enum.try_each(fn {_name, %{pid: pid}} ->
-             pid |> Element.handle_linking_finished()
+             pid |> Message.call(:linking_finished, [])
            end),
          do: :ok
   end
 
   @spec set_children_watcher([pid]) :: :ok
   defp set_children_watcher(children_data) do
-    :ok = children_data |> Bunch.Enum.try_each(&Element.set_watcher(&1.pid, self()))
+    :ok = children_data |> Bunch.Enum.try_each(&Message.call(&1.pid, :set_watcher, self()))
   end
 
   defp set_children_stream_sync(children, links, stream_sync) do
@@ -522,7 +529,7 @@ defmodule Membrane.Pipeline do
 
     children_pids
     |> Enum.each(fn pid ->
-      Element.change_playback_state(pid, new)
+      Core.Element.change_playback_state(pid, new)
     end)
 
     state = %{state | pending_pids: children_pids |> MapSet.new()}
@@ -615,12 +622,22 @@ defmodule Membrane.Pipeline do
 
   def handle_info(Message.new(:shutdown_ready, child), state) do
     {{:ok, pid}, state} = State.pop_child(state, child)
-    {Element.shutdown(pid), state}
+    {Core.Element.shutdown(pid), state}
   end
 
   def handle_info(message, state) do
     CallbackHandler.exec_and_handle_callback(:handle_other, __MODULE__, [message], state)
     |> noreply(state)
+  end
+
+  @impl CallbackHandler
+  def handle_actions(%Spec{} = spec, :handle_init, params, state) do
+    super([spec: spec], :handle_init, params, state)
+  end
+
+  @impl CallbackHandler
+  def handle_actions(actions, callback, params, state) do
+    super(actions, callback, params, state)
   end
 
   @impl CallbackHandler

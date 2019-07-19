@@ -36,7 +36,8 @@ defmodule Membrane.Core.CallbackHandler do
       @behaviour unquote(__MODULE__)
 
       @impl unquote(__MODULE__)
-      def handle_actions(actions, callback, handler_params, state) do
+      def handle_actions(actions, callback, handler_params, state)
+          when is_list(actions) do
         actions
         |> Bunch.Enum.try_reduce(state, fn action, state ->
           handle_action(action, callback, handler_params, state)
@@ -161,8 +162,7 @@ defmodule Membrane.Core.CallbackHandler do
   defp parse_callback_result({:ok, new_internal_state}, module, cb),
     do: parse_callback_result({{:ok, []}, new_internal_state}, module, cb)
 
-  defp parse_callback_result({{:ok, actions}, new_internal_state}, _module, _cb)
-       when is_list(actions) do
+  defp parse_callback_result({{:ok, actions}, new_internal_state}, _module, _cb) do
     {:ok, {{:ok, actions}, new_internal_state}}
   end
 

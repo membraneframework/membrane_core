@@ -57,8 +57,7 @@ defmodule Membrane.Element.Pad do
   working in push mode, and input in pull mode. Moreover, toilet mode of
   `Membrane.Core.InputBuffer` has to be enabled then.
 
-  For more information on transfering data and demands, see docs for element
-  callbacks in `Membrane.Element.Base.*`.
+  For more information on transfering data and demands, see `Membrane.{Source, Filter, Sink}`.
   """
   @type mode_t :: :push | :pull
 

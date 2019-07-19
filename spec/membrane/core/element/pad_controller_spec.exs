@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
     let :name, do: :element_name
 
     let! :state do
-      State.new(module(), name()) |> PadSpecHandler.init_pads()
+      State.new(%{module: module(), name: name(), clock: nil}) |> PadSpecHandler.init_pads()
     end
 
     context "when pad is present in the element" do
@@ -120,7 +120,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
 
     let! :state do
       {pad_info, state} =
-        State.new(module(), name())
+        State.new(%{module: module(), name: name(), clock: nil})
         |> PadSpecHandler.init_pads()
         |> Bunch.Access.get_and_update_in(
           [:pads, :info],
