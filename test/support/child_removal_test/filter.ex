@@ -2,18 +2,20 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   @moduledoc false
   use Membrane.Element.Base.Filter
 
-  def_output_pad :output, caps: :any#, availability: :on_request
+  # , availability: :on_request
+  def_output_pad :output, caps: :any
 
-  def_input_pad :input, demand_unit: :buffers, caps: :any#, availability: :on_request
+  # , availability: :on_request
+  def_input_pad :input, demand_unit: :buffers, caps: :any
 
   def_options demand_generator: [
                 type: :function,
                 spec: (pos_integer -> non_neg_integer),
                 default: &__MODULE__.default_demand_generator/1
               ],
-    target: [type: :pid],
-    playing_delay: [type: :integer, default: 0],
-    ref: [type: :any, default: nil]
+              target: [type: :pid],
+              playing_delay: [type: :integer, default: 0],
+              ref: [type: :any, default: nil]
 
   @impl true
   def handle_init(%{target: t, ref: ref} = opts) do
@@ -25,6 +27,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   def handle_prepared_to_playing(_ctx, %{playing_delay: 0} = state) do
     {:ok, state}
   end
+
   def handle_prepared_to_playing(_ctx, %{playing_delay: time} = state) do
     :timer.send_after(time, self(), :resume_after_wait)
     {{:ok, playback_change: :suspend}, state}

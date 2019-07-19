@@ -17,8 +17,8 @@ defmodule Membrane.Integration.ChildRemovalTest do
              })
 
     [filter_pid1, filter_pid2] =
-    [1, 2]
-    |> Enum.map(&get_filter_pid/1)
+      [1, 2]
+      |> Enum.map(&get_filter_pid/1)
 
     send(pid, {:remove_child, :filter1})
 
@@ -36,9 +36,10 @@ defmodule Membrane.Integration.ChildRemovalTest do
                sink: %Sink{target: self(), autodemand: false},
                target: self()
              })
+
     [filter_pid1, filter_pid2] =
-    [1, 2]
-    |> Enum.map(&get_filter_pid/1)
+      [1, 2]
+      |> Enum.map(&get_filter_pid/1)
 
     assert Pipeline.play(pid) == :ok
     assert_receive :playing
@@ -65,18 +66,23 @@ defmodule Membrane.Integration.ChildRemovalTest do
              Pipeline.start_link(ChildRemovalTest.Pipeline, %{
                source: Source,
                filter1: %Filter{target: self(), ref: 1},
-               filter2: %Filter{target: self(), playing_delay: 300, ref: 2},
+               filter2: %Filter{
+                 target: self(),
+                 playing_delay: prepared_to_playing_delay(),
+                 ref: 2
+               },
                sink: %Sink{target: self(), autodemand: false},
                target: self()
              })
+
     [filter_pid1, filter_pid2] =
-    [1, 2]
-    |> Enum.map(&get_filter_pid/1)
+      [1, 2]
+      |> Enum.map(&get_filter_pid/1)
 
     assert Pipeline.play(pid) == :ok
-    wait_for_state_change()
+    wait_for_neighbours_state_change()
     send(pid, {:child_msg, :sink, {:make_demand, 30}})
-    wait_for_buffer()
+    wait_for_buffer_fillup()
 
     send(pid, {:remove_child, :filter1})
 
@@ -95,14 +101,15 @@ defmodule Membrane.Integration.ChildRemovalTest do
     assert_receive {:DOWN, _, :process, ^pid, :normal}
   end
 
-  defp wait_for_buffer, do: :timer.sleep(100)
-
-  defp wait_for_state_change, do: :timer.sleep(100)
-
   defp get_filter_pid(ref) do
     assert_receive {:filter_pid, ^ref, pid}
     Process.monitor(pid)
     pid
   end
 
+  defp prepared_to_playing_delay, do: 300
+
+  defp wait_for_buffer_fillup, do: :timer.sleep(round(prepared_to_playing_delay() / 3))
+
+  defp wait_for_neighbours_state_change, do: :timer.sleep(round(prepared_to_playing_delay() / 3))
 end
