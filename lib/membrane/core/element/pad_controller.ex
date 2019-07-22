@@ -92,8 +92,8 @@ defmodule Membrane.Core.Element.PadController do
   """
   @spec handle_unlink(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   def handle_unlink(pad_ref, state) do
-    with {:ok, state} <- generate_eos_if_needed(pad_ref, state),
-         {:ok, state} <- maybe_flush_playback_buffer(pad_ref, state),
+    with {:ok, state} <- maybe_flush_playback_buffer(pad_ref, state),
+         {:ok, state} <- generate_eos_if_needed(pad_ref, state),
          {:ok, state} <- handle_pad_removed(pad_ref, state),
          {:ok, state} <- PadModel.delete_data(state, pad_ref) do
       {:ok, state}
@@ -353,7 +353,8 @@ defmodule Membrane.Core.Element.PadController do
 
     case direction do
       :input ->
-        {:ok, %{state | playback_buffer: PlaybackBuffer.new()}}
+        new_playback_buf = PlaybackBuffer.flush_for_pad(state.playback_buffer, pad_ref)
+        {:ok, %{state | playback_buffer: new_playback_buf}}
 
       _ ->
         {:ok, state}

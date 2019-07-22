@@ -77,6 +77,16 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   def eval(state), do: {:ok, state}
 
+  def flush_for_pad(%__MODULE__{q: q} = buf, pad_ref) do
+    q
+    |> Enum.filter(fn
+      {_, [_, ^pad_ref]} -> false
+      e -> e
+    end)
+    |> Enum.into(%@qe{})
+    ~> %{buf | q: &1}
+  end
+
   @spec empty?(t) :: boolean
   defp empty?(%__MODULE__{q: q}), do: q |> Enum.empty?()
 
