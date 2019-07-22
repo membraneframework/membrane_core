@@ -23,7 +23,7 @@ defmodule Membrane.Testing.Source do
   ```
   """
 
-  use Membrane.Element.Base.Source
+  use Membrane.Source
   alias Membrane.Buffer
   alias Membrane.Element.Action
   alias Membrane.Event.EndOfStream

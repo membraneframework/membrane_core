@@ -26,7 +26,7 @@ defmodule Membrane.Testing.Sink do
 
   """
 
-  use Membrane.Element.Base.Sink
+  use Membrane.Sink
 
   alias Membrane.Event
 

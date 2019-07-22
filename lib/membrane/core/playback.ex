@@ -20,4 +20,7 @@ defmodule Membrane.Core.Playback do
   @type state_t :: :stopped | :prepared | :playing
 
   defguard is_playback_state(atom) when atom in [:stopped, :prepared, :playing]
+
+  def stable?(%__MODULE__{state: state, pending_state: nil, target_state: state}), do: true
+  def stable?(%__MODULE__{}), do: false
 end

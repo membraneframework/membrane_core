@@ -18,10 +18,11 @@ defmodule Membrane.Core.InputBuffer do
 
   @non_buf_types [:event, :caps]
 
+  @type output_value_t :: {:event | :caps, any} | {:buffers, list, pos_integer}
+  @type output_t :: {:empty | :value, [output_value_t]}
+
   @type t :: %__MODULE__{
           name: Element.name_t(),
-          demand_pid: pid(),
-          linked_output_ref: Pad.ref_t(),
           q: @qe.t(),
           preferred_size: pos_integer(),
           current_size: non_neg_integer(),
@@ -31,9 +32,7 @@ defmodule Membrane.Core.InputBuffer do
           toilet: %{:warn => pos_integer, :fail => pos_integer}
         }
 
-  defstruct name: :pull_buffer,
-            demand_pid: nil,
-            linked_output_ref: nil,
+  defstruct name: :input_buf,
             q: nil,
             preferred_size: 100,
             current_size: 0,
@@ -48,7 +47,7 @@ defmodule Membrane.Core.InputBuffer do
   Available options are:
     * `:preffered_size` - size which will be the 'target' for InputBuffer - it will make demands
       trying to grow to this size. Its default value depends on the set `#{inspect(Buffer.Metric)}` and is
-      obtained via `c:#{inspect(Buffer.Metric)}.pullbuffer_preferred_size/0`
+      obtained via `c:#{inspect(Buffer.Metric)}.input_buf_preferred_size/0`
     * `:min_demand` - the minimal size of a demand that can be sent to the linked output pad.
       This prevents from excessive message passing between elements. Defaults to a quarter of
       preferred size.
@@ -79,17 +78,17 @@ defmodule Membrane.Core.InputBuffer do
     end
   end
 
-  @spec new(
+  @spec init(
           Element.name_t(),
-          demand_pid :: pid,
-          Pad.ref_t(),
           Buffer.Metric.unit_t(),
           enable_toilet? :: boolean(),
+          pid(),
+          Pad.ref_t(),
           props_t
         ) :: t()
-  def new(name, demand_pid, linked_output_ref, demand_unit, enable_toilet?, props) do
+  def init(name, demand_unit, enable_toilet?, demand_pid, demand_pad, props) do
     metric = Buffer.Metric.from_unit(demand_unit)
-    preferred_size = props[:preferred_size] || metric.pullbuffer_preferred_size
+    preferred_size = props[:preferred_size] || metric.input_buf_preferred_size
     min_demand = props[:min_demand] || preferred_size |> div(4)
 
     toilet =
@@ -104,44 +103,38 @@ defmodule Membrane.Core.InputBuffer do
 
     %__MODULE__{
       name: name,
-      q: @qe.new,
-      demand_pid: demand_pid,
-      linked_output_ref: linked_output_ref,
+      q: @qe.new(),
       preferred_size: preferred_size,
       min_demand: min_demand,
       demand: preferred_size,
       metric: metric,
       toilet: toilet
     }
-    |> fill()
+    |> send_demands(demand_pid, demand_pad)
   end
 
-  @spec fill(t()) :: t()
-  defp fill(%__MODULE__{} = pb), do: handle_demand(pb, 0)
-
   @spec store(t(), atom(), any()) :: {:ok, t()} | {:error, any()}
-  def store(pb, type \\ :buffers, v)
+  def store(input_buf, type \\ :buffers, v)
 
   def store(
-        %__MODULE__{current_size: size, preferred_size: pref_size, toilet: false} = pb,
+        %__MODULE__{current_size: size, preferred_size: pref_size, toilet: false} = input_buf,
         :buffers,
         v
       )
       when is_list(v) do
     if size >= pref_size do
       debug("""
-      InputBuffer #{inspect(pb.name)}: received buffers from pad #{inspect(pb.linked_output_ref)},
-      despite not requesting them. It is probably caused by overestimating demand
-      by previous element.
+      InputBuffer #{inspect(input_buf.name)}: received buffers despite not requesting them.
+      It is probably caused by overestimating demand by previous element.
       """)
     end
 
-    {:ok, do_store_buffers(pb, v)}
+    {:ok, do_store_buffers(input_buf, v)}
   end
 
-  def store(%__MODULE__{toilet: %{warn: warn_lvl, fail: fail_lvl}} = pb, :buffers, v)
+  def store(%__MODULE__{toilet: %{warn: warn_lvl, fail: fail_lvl}} = input_buf, :buffers, v)
       when is_list(v) do
-    %__MODULE__{current_size: size} = pb = do_store_buffers(pb, v)
+    %__MODULE__{current_size: size} = input_buf = do_store_buffers(input_buf, v)
 
     if size >= warn_lvl do
       above_level =
@@ -153,8 +146,8 @@ defmodule Membrane.Core.InputBuffer do
 
       warn([
         """
-        InputBuffer #{inspect(pb.name)} (toilet) has buffers of size #{inspect(size)},
-        which is above #{above_level}, from output #{inspect(pb.linked_output_ref)} that works in push mode.
+        InputBuffer #{inspect(input_buf.name)} (toilet) has buffers of size #{inspect(size)},
+        which is above #{above_level}, from output #{inspect(input_buf.linked_output_ref)} that works in push mode.
         To have control over amount of buffers being produced, consider using pull mode.
         If this is a normal situation, increase warn/fail size in buffer options.
         """
@@ -163,42 +156,49 @@ defmodule Membrane.Core.InputBuffer do
 
     if size >= fail_lvl do
       warn_error(
-        "InputBuffer #{inspect(pb.name)} (toilet): failing: too much data",
-        {:pull_buffer, toilet: :too_many_buffers}
+        "InputBuffer #{inspect(input_buf.name)} (toilet): failing: too much data",
+        {:input_buf, toilet: :too_many_buffers}
       )
     else
-      {:ok, pb}
+      {:ok, input_buf}
     end
   end
 
-  def store(pb, :buffer, v), do: store(pb, :buffers, [v])
+  def store(input_buf, :buffer, v), do: store(input_buf, :buffers, [v])
 
-  def store(%__MODULE__{q: q} = pb, type, v) when type in @non_buf_types do
-    report("Storing #{type}", pb)
-    {:ok, %__MODULE__{pb | q: q |> @qe.push({:non_buffer, type, v})}}
+  def store(%__MODULE__{q: q} = input_buf, type, v) when type in @non_buf_types do
+    report("Storing #{type}", input_buf)
+    {:ok, %__MODULE__{input_buf | q: q |> @qe.push({:non_buffer, type, v})}}
   end
 
-  defp do_store_buffers(%__MODULE__{q: q, current_size: size, metric: metric} = pb, v) do
+  defp do_store_buffers(%__MODULE__{q: q, current_size: size, metric: metric} = input_buf, v) do
     buf_cnt = v |> metric.buffers_size
-    report("Storing #{inspect(buf_cnt)} buffers", pb)
+    report("Storing #{inspect(buf_cnt)} buffers", input_buf)
 
     %__MODULE__{
-      pb
+      input_buf
       | q: q |> @qe.push({:buffers, v, buf_cnt}),
         current_size: size + buf_cnt
     }
   end
 
-  def take(%__MODULE__{current_size: size} = pb, count) when count >= 0 do
-    report("Taking #{inspect(count)} buffers", pb)
-    {out, %__MODULE__{current_size: new_size} = pb} = do_take(pb, count)
-    pb = pb |> handle_demand(size - new_size)
-    {{:ok, out}, pb}
+  @spec take_and_demand(t(), non_neg_integer(), pid(), Pad.ref_t()) :: {{:ok, output_t()}, t()}
+  def take_and_demand(%__MODULE__{current_size: size} = input_buf, count, demand_pid, demand_pad)
+      when count >= 0 do
+    report("Taking #{inspect(count)} buffers", input_buf)
+    {out, %__MODULE__{current_size: new_size} = input_buf} = do_take(input_buf, count)
+
+    input_buf =
+      input_buf
+      |> Bunch.Struct.update_in(:demand, &(&1 + size - new_size))
+      |> send_demands(demand_pid, demand_pad)
+
+    {{:ok, out}, input_buf}
   end
 
-  defp do_take(%__MODULE__{q: q, current_size: size, metric: metric} = pb, count) do
+  defp do_take(%__MODULE__{q: q, current_size: size, metric: metric} = input_buf, count) do
     {out, nq} = q |> q_pop(count, metric)
-    {out, %__MODULE__{pb | q: nq, current_size: max(0, size - count)}}
+    {out, %__MODULE__{input_buf | q: nq, current_size: max(0, size - count)}}
   end
 
   defp q_pop(q, count, metric, acc \\ [])
@@ -232,41 +232,35 @@ defmodule Membrane.Core.InputBuffer do
     end
   end
 
-  @spec empty?(t()) :: boolean()
-  def empty?(%__MODULE__{current_size: size}), do: size == 0
-
-  defp handle_demand(
+  @spec send_demands(t(), pid(), Pad.ref_t()) :: t()
+  defp send_demands(
          %__MODULE__{
            toilet: false,
-           demand_pid: demand_pid,
-           linked_output_ref: linked_output_ref,
            current_size: size,
            preferred_size: pref_size,
            demand: demand,
            min_demand: min_demand
-         } = pb,
-         new_demand
+         } = input_buf,
+         demand_pid,
+         linked_output_ref
        )
-       when size < pref_size and demand + new_demand > 0 do
-    to_demand = max(demand + new_demand, min_demand)
+       when size < pref_size and demand > 0 do
+    to_demand = max(demand, min_demand)
 
     report(
       """
       Sending demand of size #{inspect(to_demand)}
-      to input #{inspect(pb.linked_output_ref)}
+      to input #{inspect(linked_output_ref)}
       """,
-      pb
+      input_buf
     )
 
     Message.send(demand_pid, :demand, [to_demand, linked_output_ref])
-    %__MODULE__{pb | demand: demand + new_demand - to_demand}
+    %__MODULE__{input_buf | demand: demand - to_demand}
   end
 
-  defp handle_demand(%__MODULE__{toilet: false, demand: demand} = pb, new_demand),
-    do: %__MODULE__{pb | demand: demand + new_demand}
-
-  defp handle_demand(%__MODULE__{toilet: toilet} = pb, _new_demand) when toilet != false do
-    pb
+  defp send_demands(input_buf, _demand_pid, _linked_output_ref) do
+    input_buf
   end
 
   defp report(msg, %__MODULE__{
@@ -294,4 +288,7 @@ defmodule Membrane.Core.InputBuffer do
       end
     ])
   end
+
+  @spec empty?(t()) :: boolean()
+  def empty?(%__MODULE__{current_size: size}), do: size == 0
 end

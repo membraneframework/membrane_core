@@ -1,4 +1,4 @@
-defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
+defmodule Membrane.Element.WithInputPads do
   @moduledoc """
   Module defining behaviour for sink and filter elements.
 
@@ -11,7 +11,6 @@ defmodule Membrane.Element.Base.Mixin.SinkBehaviour do
   alias Membrane.Element
   alias Membrane.Core.Element.PadsSpecs
   alias Element.{CallbackContext, Pad}
-  alias Element.Base.Mixin.CommonBehaviour
 
   @doc """
   Callback invoked when Element is receiving information about new caps for

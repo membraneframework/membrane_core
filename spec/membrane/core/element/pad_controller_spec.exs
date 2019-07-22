@@ -103,7 +103,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
           )
         end
 
-        expect(call) |> to(raise_exception(Membrane.Element.LinkError))
+        expect(call) |> to(raise_exception(Membrane.ElementLinkError))
       end
     end
   end

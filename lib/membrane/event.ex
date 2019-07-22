@@ -4,7 +4,7 @@ defmodule Membrane.Event do
 
   Events can flow either downstream or upstream - they can be sent with
   `t:Membrane.Element.Action.event_t/0`, and can be handled in
-  `c:Membrane.Element.Base.Mixin.CommonBehaviour.handle_event/4`. Each event is
+  `c:Membrane.Element.Base.handle_event/4`. Each event is
   to implement `Membrane.EventProtocol`, which allows to configure its behaviour.
   """
 

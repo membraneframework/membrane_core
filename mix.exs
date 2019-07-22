@@ -1,7 +1,7 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "0.3.0"
+  @version "0.3.1"
   @source_ref "v#{@version}"
 
   def project do
@@ -11,6 +11,9 @@ defmodule Membrane.Mixfile do
       elixir: "~> 1.7",
       elixirc_paths: elixirc_paths(Mix.env()),
       description: "Membrane Multimedia Framework (Core)",
+      dialyzer: [
+        flags: [:error_handling, :underspecs]
+      ],
       package: package(),
       name: "Membrane Core",
       source_url: link(),
@@ -58,6 +61,9 @@ defmodule Membrane.Mixfile do
       groups_for_modules: [
         Pipeline: [~r/^Membrane.Pipeline.*/],
         Element: [
+          ~r/^Membrane.Filter$/,
+          ~r/^Membrane.Sink$/,
+          ~r/^Membrane.Source$/,
           ~r/^Membrane.Element$/,
           ~r/^Membrane.Element(?!\.CallbackContext)\..*/,
           ~r/^Membrane.Core.InputBuffer/

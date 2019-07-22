@@ -28,7 +28,8 @@ defmodule Membrane.Core.Element.State do
           controlling_pid: pid | nil,
           playback: Playback.t(),
           playback_buffer: PlaybackBuffer.t(),
-          delayed_demands: %{{Pad.ref_t(), :supply | :redemand} => :sync | :async}
+          delayed_demands: %{{Pad.ref_t(), :supply | :redemand} => :sync | :async},
+          terminating: boolean | :ready
         }
 
   defstruct [
@@ -41,7 +42,8 @@ defmodule Membrane.Core.Element.State do
     :controlling_pid,
     :playback,
     :playback_buffer,
-    :delayed_demands
+    :delayed_demands,
+    :terminating
   ]
 
   defimpl Playbackable, for: __MODULE__ do
@@ -64,7 +66,8 @@ defmodule Membrane.Core.Element.State do
       controlling_pid: nil,
       playback: %Playback{},
       playback_buffer: PlaybackBuffer.new(),
-      delayed_demands: %{}
+      delayed_demands: %{},
+      terminating: false
     }
     |> PadSpecHandler.init_pads()
   end
