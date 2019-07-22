@@ -15,8 +15,8 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
 
     links =
       %{
-        {:source, :output} => {:filter1, :input, buffer: [preferred_size: 10]},
-        {:filter1, :output} => {:filter2, :input, buffer: [preferred_size: 10]},
+        {:source, :output} => {:filter1, :input1, buffer: [preferred_size: 10]},
+        {:filter1, :output} => {:filter2, :input1, buffer: [preferred_size: 10]},
         {:filter2, :output} => {:sink, :input, buffer: [preferred_size: 10]}
       }
       |> maybe_add_extra_source_link(opts)

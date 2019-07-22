@@ -9,7 +9,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   def_output_pad :output, caps: :any
 
   # , availability: :on_request
-  def_input_pad :input, demand_unit: :buffers, caps: :any
+  def_input_pad :input1, demand_unit: :buffers, caps: :any
 
   def_input_pad :input2, demand_unit: :buffers, caps: :any
 
@@ -25,7 +25,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
               sof_sent?: [type: :boolean, default: false],
               input1_deactivated: [type: :boolean, default: false]
 
-  def deactivate_demands_on_input(pid) do
+  def deactivate_demands_on_input1(pid) do
     send(pid, {:deactivate_input1, self()})
 
     receive do
@@ -70,7 +70,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   end
 
   @impl true
-  def handle_process(:input, buf, _, %{target: t} = state) do
+  def handle_process(:input1, buf, _, %{target: t} = state) do
     send(t, :buffer_in_filter)
     {{:ok, buffer: {:output, buf}}, state}
   end
@@ -102,16 +102,16 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   defp get_demands(%{two_input_pads: true} = state, size),
     do: [
-      demand: {:input, state.demand_generator.(size)},
+      demand: {:input1, state.demand_generator.(size)},
       demand: {:input2, state.demand_generator.(size)}
     ]
 
   defp get_demands(state, size),
-    do: [demand: {:input, state.demand_generator.(size)}]
+    do: [demand: {:input1, state.demand_generator.(size)}]
 
   defp maybe_deactivate_input1(demands, %{input1_deactivated: true}) do
     demands
-    |> Enum.filter(fn {:demand, {i, _}} -> i != :input end)
+    |> Enum.filter(fn {:demand, {i, _}} -> i != :input1 end)
   end
 
   defp maybe_deactivate_input1(demands, _) do

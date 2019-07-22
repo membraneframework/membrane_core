@@ -85,7 +85,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
     wait_for_neighbours_state_change()
     send(pid, {:child_msg, :sink, {:make_demand, 30}})
     wait_for_buffer_fillup()
-    Filter.deactivate_demands_on_input(filter_pid2)
+    Filter.deactivate_demands_on_input1(filter_pid2)
 
     send(pid, {:remove_child, :filter1})
 
@@ -122,7 +122,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
     wait_for_neighbours_state_change()
     send(pid, {:child_msg, :sink, {:make_demand, 30}})
     wait_for_buffer_fillup()
-    Filter.deactivate_demands_on_input(filter_pid2)
+    Filter.deactivate_demands_on_input1(filter_pid2)
 
     send(pid, {:remove_child, :filter1})
 
