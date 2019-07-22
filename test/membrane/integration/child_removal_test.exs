@@ -88,6 +88,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
     assert_receive :element_shutting_down
     assert_pid_dead(filter_pid1)
+    assert_pid_alive(filter_pid2)
 
     stop_pipeline(pid)
   end
@@ -99,6 +100,11 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
   defp assert_pid_dead(pid) do
     assert_receive {:DOWN, _, :process, ^pid, :normal}
+  end
+
+  defp assert_pid_alive(pid) do
+    refute_receive {:DOWN, _, :process, ^pid, _}
+    assert Process.alive?(pid)
   end
 
   defp get_filter_pid(ref) do
