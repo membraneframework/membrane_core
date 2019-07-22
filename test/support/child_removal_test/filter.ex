@@ -22,7 +22,17 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
               playing_delay: [type: :integer, default: 0],
               ref: [type: :any, default: nil],
               two_input_pads: [type: :boolean, default: false],
-              sof_sent?: [type: :boolean, default: false]
+              sof_sent?: [type: :boolean, default: false],
+              input1_deactivated: [type: :boolean, default: false]
+
+  def deactivate_demands_on_input(pid) do
+    send(pid, {:deactivate_input1, self()})
+
+    receive do
+      :input1_deactivated ->
+        :ok
+    end
+  end
 
   @impl true
   def handle_init(%{target: t, ref: ref} = opts) do
@@ -45,9 +55,17 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
     {{:ok, playback_change: :resume}, state}
   end
 
+  def handle_other({:deactivate_input1, caller}, _ctx, state) do
+    send(caller, :input1_deactivated)
+    {:ok, %{state | input1_deactivated: true}}
+  end
+
   @impl true
   def handle_demand(:output, size, _, _ctx, state) do
-    demands = get_demands(state, size)
+    demands =
+      get_demands(state, size)
+      |> maybe_deactivate_input1(state)
+
     {{:ok, demands}, state}
   end
 
@@ -90,4 +108,13 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   defp get_demands(state, size),
     do: [demand: {:input, state.demand_generator.(size)}]
+
+  defp maybe_deactivate_input1(demands, %{input1_deactivated: true}) do
+    demands
+    |> Enum.filter(fn {:demand, {i, _}} -> i != :input end)
+  end
+
+  defp maybe_deactivate_input1(demands, _) do
+    demands
+  end
 end
