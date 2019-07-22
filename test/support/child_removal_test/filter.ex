@@ -1,5 +1,19 @@
 defmodule Membrane.Support.ChildRemovalTest.Filter do
-  @moduledoc false
+  @moduledoc """
+  Module used in tests for elements removing.
+
+  It allows to:
+  * slow down the moment of switching between :prepared and :playing states.
+  * deactivate demands on `input1` (useful when you want to delete element
+    that is connected to this pad.
+  * not send doubled `%Membrane.Event.StartOfStream{}` element
+    (useful when you have two sources in a pipeline)
+  * send demands and buffers from two input pads to one output pad.
+
+
+  Should be used along with `Membrane.Support.ChildRemovalTest.Pipeline` as they
+  share names (i.e. input_pads: `input1` and `input2`) and exchanged messages' formats.
+  """
 
   alias Membrane.Event.StartOfStream
 

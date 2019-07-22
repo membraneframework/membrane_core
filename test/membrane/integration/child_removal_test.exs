@@ -59,9 +59,12 @@ defmodule Membrane.Integration.ChildRemovalTest do
   end
 
   @doc """
-  In this scenario we make filter2 switch between preapre and playing state slowly
-  so that it has to store incoming buffers in PlaybackBuffer. When the filter1 dies,
-  and filter2 tries to actually enter playing it SHOULD NOT have any buffers there yet.
+  In this scenario we make `filter2` switch between preapre and playing state slowly
+  so that it has to store incoming buffers in PlaybackBuffer. When the `filter1` dies,
+  and `filter2` tries to actually enter playing it SHOULD NOT have any buffers there yet.
+
+  source -- filter1 -- [input1] filter2 -- sink
+
   """
   test "When PlaybackBuffer is evaluated there is no buffers from removed element" do
     assert {:ok, pid} =
@@ -96,6 +99,17 @@ defmodule Membrane.Integration.ChildRemovalTest do
     stop_pipeline(pid)
   end
 
+  @doc """
+  In this scenario we have two sources. One of them (`source`) is pushing data to filter1 and the other one
+  (`extra_source`) straight to `filter_2`. Filter module knows it has to only push ONE start of stream event.
+  The test ensures that when we flush buffers from PlaybacBuffer we only flush buffers that came from the deleted
+  element.
+
+  source -- filter1 -- [input1] filter2 -- sink
+                               [input2]
+                                  /
+                 extra_source ___/
+  """
   test "When PlaybackBuffer is evaluated elements from the other than deleted elements remain untouched" do
     source_buf_gen = get_named_buf_gen(:source)
     extra_source_buf_gen = get_named_buf_gen(:extra_source)
@@ -137,6 +151,10 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
     stop_pipeline(pid)
   end
+
+  #############
+  ## HELPERS ##
+  #############
 
   defp stop_pipeline(pid) do
     assert Pipeline.stop(pid) == :ok

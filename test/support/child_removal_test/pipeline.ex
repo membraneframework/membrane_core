@@ -1,5 +1,19 @@
 defmodule Membrane.Support.ChildRemovalTest.Pipeline do
-  @moduledoc false
+  @moduledoc """
+  Module used in tests for elements removing.
+
+  This module allows to build two pipelines:
+  * Simple one, with two filters
+      source -- filter1 -- [input1] filter2 -- sink
+  * Pipeline with two sources (if `extra_source` key is provided in opts).
+      source -- filter1 -- [input1] filter2 -- sink
+                                    [input2]
+                                     /
+                    extra_source ___/
+
+  Should be used along with `Membrane.Support.ChildRemovalTest.Pipeline` as they
+  share names (i.e. input_pads: `input1` and `input2`) and exchanged messages' formats.
+  """
   use Membrane.Pipeline
 
   @impl true
