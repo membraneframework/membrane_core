@@ -3,7 +3,7 @@ defmodule Membrane.Testing.SinkTest do
 
   alias Membrane.Testing.Sink
 
-  describe "Handle write " do
+  describe "Handle write" do
     test "demands when autodemand is true" do
       buffer = %Membrane.Buffer{payload: 123}
 

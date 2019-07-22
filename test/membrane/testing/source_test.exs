@@ -3,11 +3,11 @@ defmodule Membrane.Testing.SourceTest do
   alias Membrane.Testing.Source
   alias Membrane.Buffer
 
-  test "Source when Initializing has cnt field in state equal to 0 if `:output` is a function" do
-    output = fn _, _ -> nil end
+  test "Source initializes buffer generator and its state properly" do
+    generator = fn _, _ -> nil end
 
-    assert Source.handle_init(%Source{output: {nil, output}}) ==
-             {:ok, %{output: output, generator_state: nil}}
+    assert Source.handle_init(%Source{output: {:abc, generator}}) ==
+             {:ok, %{output: generator, generator_state: :abc}}
   end
 
   describe "Source when handling demand" do
