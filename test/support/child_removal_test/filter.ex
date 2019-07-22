@@ -1,5 +1,8 @@
 defmodule Membrane.Support.ChildRemovalTest.Filter do
   @moduledoc false
+
+  alias Membrane.Event.StartOfStream
+
   use Membrane.Element.Base.Filter
 
   # , availability: :on_request
@@ -8,6 +11,8 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   # , availability: :on_request
   def_input_pad :input, demand_unit: :buffers, caps: :any
 
+  def_input_pad :input2, demand_unit: :buffers, caps: :any
+
   def_options demand_generator: [
                 type: :function,
                 spec: (pos_integer -> non_neg_integer),
@@ -15,7 +20,9 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
               ],
               target: [type: :pid],
               playing_delay: [type: :integer, default: 0],
-              ref: [type: :any, default: nil]
+              ref: [type: :any, default: nil],
+              two_input_pads: [type: :boolean, default: false],
+              sof_sent?: [type: :boolean, default: false]
 
   @impl true
   def handle_init(%{target: t, ref: ref} = opts) do
@@ -40,13 +47,31 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   @impl true
   def handle_demand(:output, size, _, _ctx, state) do
-    {{:ok, demand: {:input, state.demand_generator.(size)}}, state}
+    demands = get_demands(state, size)
+    {{:ok, demands}, state}
   end
 
   @impl true
   def handle_process(:input, buf, _, %{target: t} = state) do
     send(t, :buffer_in_filter)
-    {{:ok, buffer: {:output, buf}, redemand: :output}, state}
+    {{:ok, buffer: {:output, buf}}, state}
+  end
+
+  def handle_process(:input2, buf, _, state) do
+    {{:ok, buffer: {:output, buf}}, state}
+  end
+
+  @impl true
+  def handle_event(_pad, %StartOfStream{} = ev, _ctx, %{sof_sent?: false} = state) do
+    {{:ok, forward: ev}, %{state | sof_sent?: true}}
+  end
+
+  def handle_event(_pad, %StartOfStream{}, _ctx, %{sof_sent?: true} = state) do
+    {:ok, state}
+  end
+
+  def handle_event(_pad, event, _ctx, state) do
+    {{:ok, forward: event}, state}
   end
 
   @impl true
@@ -56,4 +81,13 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   end
 
   def default_demand_generator(demand), do: demand
+
+  defp get_demands(%{two_input_pads: true} = state, size),
+    do: [
+      demand: {:input, state.demand_generator.(size)},
+      demand: {:input2, state.demand_generator.(size)}
+    ]
+
+  defp get_demands(state, size),
+    do: [demand: {:input, state.demand_generator.(size)}]
 end
