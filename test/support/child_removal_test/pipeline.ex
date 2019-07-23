@@ -16,6 +16,12 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
   """
   use Membrane.Pipeline
 
+  alias Membrane.Support.ChildRemovalTest.Filter
+
+  def remove_child(pid, child_name) do
+    send(pid, {:remove_child, child_name})
+  end
+
   @impl true
   def handle_init(opts) do
     children =
@@ -26,6 +32,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
         sink: opts.sink
       ]
       |> maybe_add_extra_source(opts)
+      |> add_refs()
 
     links =
       %{
@@ -85,4 +92,16 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
   defp maybe_add_extra_source_link(links, _) do
     links
   end
+
+  defp add_refs(children) do
+    children
+    |> Enum.map(fn {name, opts_or_mod} -> {name, to_struct(opts_or_mod)} end)
+    |> Enum.map(fn
+      {name, %Filter{} = opts} -> {name, %{opts | ref: name}}
+      e -> e
+    end)
+  end
+
+  defp to_struct(%{} = opts), do: opts
+  defp to_struct(module) when is_atom(module), do: struct(module)
 end

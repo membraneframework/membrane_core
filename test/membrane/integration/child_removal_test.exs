@@ -1,30 +1,31 @@
 defmodule Membrane.Integration.ChildRemovalTest do
   use ExUnit.Case, async: false
   use Bunch
+
   alias Membrane.Support.ChildRemovalTest
+  alias Membrane.Testing
+
   alias Membrane.Core.Element.PlaybackBuffer
   alias Membrane.Buffer
-  alias ChildRemovalTest.Filter
-  alias Membrane.Testing.{Source, Sink}
   alias Membrane.Pipeline
 
   test "Element can be removed when pipeline is in stopped state" do
     assert {:ok, pid} =
              Pipeline.start_link(ChildRemovalTest.Pipeline, %{
-               source: Source,
-               filter1: %Filter{target: self(), ref: 1},
-               filter2: %Filter{target: self(), ref: 2},
-               sink: %Sink{autodemand: false},
+               source: Testing.Source,
+               filter1: %ChildRemovalTest.Filter{target: self()},
+               filter2: %ChildRemovalTest.Filter{target: self()},
+               sink: Testing.Sink,
                target: self()
              })
 
     [filter_pid1, filter_pid2] =
-      [1, 2]
+      [:filter1, :filter2]
       |> Enum.map(&get_filter_pid/1)
 
-    send(pid, {:remove_child, :filter1})
+    ChildRemovalTest.Pipeline.remove_child(pid, :filter1)
 
-    assert_receive :element_shutting_down
+    assert_receive {:element_shutting_down, ^filter_pid1}
     assert_pid_dead(filter_pid1)
     assert Process.alive?(filter_pid2)
   end
@@ -32,26 +33,23 @@ defmodule Membrane.Integration.ChildRemovalTest do
   test "Element can be removed when pipeline is in playing state" do
     assert {:ok, pid} =
              Pipeline.start_link(ChildRemovalTest.Pipeline, %{
-               source: Source,
-               filter1: %Filter{target: self(), ref: 1},
-               filter2: %Filter{target: self(), ref: 2},
-               sink: %Sink{autodemand: false},
+               source: Testing.Source,
+               filter1: %ChildRemovalTest.Filter{target: self()},
+               filter2: %ChildRemovalTest.Filter{target: self()},
+               sink: Testing.Sink,
                target: self()
              })
 
     [filter_pid1, filter_pid2] =
-      [1, 2]
+      [:filter1, :filter2]
       |> Enum.map(&get_filter_pid/1)
 
     assert Pipeline.play(pid) == :ok
     assert_receive :playing
 
-    send(pid, {:child_msg, :sink, {:make_demand, 10}})
-    assert_receive :buffer_in_filter
+    ChildRemovalTest.Pipeline.remove_child(pid, :filter1)
 
-    send(pid, {:remove_child, :filter1})
-
-    assert_receive :element_shutting_down
+    assert_receive {:element_shutting_down, ^filter_pid1}
     assert_pid_dead(filter_pid1)
     assert Process.alive?(filter_pid2)
 
@@ -69,30 +67,29 @@ defmodule Membrane.Integration.ChildRemovalTest do
   test "When PlaybackBuffer is evaluated there is no buffers from removed element" do
     assert {:ok, pid} =
              Pipeline.start_link(ChildRemovalTest.Pipeline, %{
-               source: Source,
-               filter1: %Filter{target: self(), ref: 1},
-               filter2: %Filter{
+               source: Testing.Source,
+               filter1: %ChildRemovalTest.Filter{target: self(), ref: 1},
+               filter2: %ChildRemovalTest.Filter{
                  target: self(),
                  playing_delay: prepared_to_playing_delay(),
                  ref: 2
                },
-               sink: %Sink{autodemand: false},
+               sink: Testing.Sink,
                target: self()
              })
 
     [filter_pid1, filter_pid2] =
-      [1, 2]
+      [:filter1, :filter2]
       |> Enum.map(&get_filter_pid/1)
 
     assert Pipeline.play(pid) == :ok
-    wait_for_neighbours_state_change()
-    send(pid, {:child_msg, :sink, {:make_demand, 30}})
+    wait_for_playing(filter_pid1)
     wait_for_buffer_fillup()
-    Filter.deactivate_demands_on_input1(filter_pid2)
+    ChildRemovalTest.Filter.deactivate_demands_on_input1(filter_pid2)
 
-    send(pid, {:remove_child, :filter1})
+    ChildRemovalTest.Pipeline.remove_child(pid, :filter1)
 
-    assert_receive :element_shutting_down
+    assert_receive {:element_shutting_down, ^filter_pid1}
     assert_pid_dead(filter_pid1)
     assert_pid_alive(filter_pid2)
 
@@ -101,7 +98,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
   @doc """
   In this scenario we have two sources. One of them (`source`) is pushing data to filter1 and the other one
-  (`extra_source`) straight to `filter_2`. Filter module knows it has to only push ONE start of stream event.
+  (`extra_source`) straight to `filter_2`. ChildRemovalTest.Filter module knows it has to only push ONE start of stream event.
   The test ensures that when we flush buffers from PlaybacBuffer we only flush buffers that came from the deleted
   element.
 
@@ -116,31 +113,29 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
     assert {:ok, pid} =
              Pipeline.start_link(ChildRemovalTest.Pipeline, %{
-               source: %Source{output: {0, source_buf_gen}},
-               extra_source: %Source{output: {0, extra_source_buf_gen}},
-               filter1: %Filter{target: self(), ref: 1},
-               filter2: %Filter{
+               source: %Testing.Source{output: {0, source_buf_gen}},
+               extra_source: %Testing.Source{output: {0, extra_source_buf_gen}},
+               filter1: %ChildRemovalTest.Filter{target: self()},
+               filter2: %ChildRemovalTest.Filter{
                  target: self(),
-                 playing_delay: prepared_to_playing_delay(),
-                 ref: 2
+                 playing_delay: prepared_to_playing_delay()
                },
-               sink: %Sink{autodemand: false},
+               sink: Testing.Sink,
                target: self()
              })
 
     [filter_pid1, filter_pid2] =
-      [1, 2]
+      [:filter1, :filter2]
       |> Enum.map(&get_filter_pid/1)
 
     assert Pipeline.play(pid) == :ok
-    wait_for_neighbours_state_change()
-    send(pid, {:child_msg, :sink, {:make_demand, 30}})
+    wait_for_playing(filter_pid1)
     wait_for_buffer_fillup()
-    Filter.deactivate_demands_on_input1(filter_pid2)
+    ChildRemovalTest.Filter.deactivate_demands_on_input1(filter_pid2)
 
-    send(pid, {:remove_child, :filter1})
+    ChildRemovalTest.Pipeline.remove_child(pid, :filter1)
 
-    assert_receive :element_shutting_down
+    assert_receive {:element_shutting_down, ^filter_pid1}
     assert_pid_dead(filter_pid1)
 
     %PlaybackBuffer{q: q} = :sys.get_state(filter_pid2).playback_buffer
@@ -180,8 +175,6 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
   defp wait_for_buffer_fillup, do: :timer.sleep(round(prepared_to_playing_delay() / 3))
 
-  defp wait_for_neighbours_state_change, do: :timer.sleep(round(prepared_to_playing_delay() / 3))
-
   defp get_named_buf_gen(name) do
     fn cnt, size ->
       cnt..(size + cnt - 1)
@@ -204,4 +197,8 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
   defp buffer_with_name?([list, _pad], name),
     do: Enum.all?(list, fn %Buffer{metadata: %{source_name: name2}} -> name == name2 end)
+
+  defp wait_for_playing(el_pid) do
+    assert_receive {:playing, ^el_pid}
+  end
 end

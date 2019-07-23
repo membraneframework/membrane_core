@@ -9,6 +9,8 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   * not send doubled `%Membrane.Event.StartOfStream{}` element
     (useful when you have two sources in a pipeline)
   * send demands and buffers from two input pads to one output pad.
+  * sends to pid specified in options as `target` its pid at init and
+    some other messages informing about playback state changes for example.
 
 
   Should be used along with `Membrane.Support.ChildRemovalTest.Pipeline` as they
@@ -56,6 +58,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   @impl true
   def handle_prepared_to_playing(_ctx, %{playing_delay: 0} = state) do
+    send(state.target, {:playing, self()})
     {:ok, state}
   end
 
@@ -84,12 +87,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   end
 
   @impl true
-  def handle_process(:input1, buf, _, %{target: t} = state) do
-    send(t, :buffer_in_filter)
-    {{:ok, buffer: {:output, buf}}, state}
-  end
-
-  def handle_process(:input2, buf, _, state) do
+  def handle_process(_pad, buf, _, %{target: t} = state) do
     {{:ok, buffer: {:output, buf}}, state}
   end
 
@@ -108,7 +106,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   @impl true
   def handle_shutdown(%{target: pid}) do
-    send(pid, :element_shutting_down)
+    send(pid, {:element_shutting_down, self()})
     :ok
   end
 
