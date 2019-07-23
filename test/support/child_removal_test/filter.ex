@@ -21,10 +21,8 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   use Membrane.Filter
 
-  # , availability: :on_request
   def_output_pad :output, caps: :any
 
-  # , availability: :on_request
   def_input_pad :input1, demand_unit: :buffers, caps: :any
 
   def_input_pad :input2, demand_unit: :buffers, caps: :any

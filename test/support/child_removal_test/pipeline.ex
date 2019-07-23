@@ -61,7 +61,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
 
   @impl true
   def handle_prepared_to_playing(%{target: target} = state) do
-    send(target, :playing)
+    send(target, {:playing, self()})
     {:ok, state}
   end
 
