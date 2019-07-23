@@ -85,7 +85,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   end
 
   @impl true
-  def handle_process(_pad, buf, _, %{target: t} = state) do
+  def handle_process(_pad, buf, _, state) do
     {{:ok, buffer: {:output, buf}}, state}
   end
 
