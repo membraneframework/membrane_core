@@ -14,7 +14,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
                source: Source,
                filter1: %Filter{target: self(), ref: 1},
                filter2: %Filter{target: self(), ref: 2},
-               sink: %Sink{target: self(), autodemand: false},
+               sink: %Sink{autodemand: false},
                target: self()
              })
 
@@ -35,7 +35,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
                source: Source,
                filter1: %Filter{target: self(), ref: 1},
                filter2: %Filter{target: self(), ref: 2},
-               sink: %Sink{target: self(), autodemand: false},
+               sink: %Sink{autodemand: false},
                target: self()
              })
 
@@ -76,7 +76,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
                  playing_delay: prepared_to_playing_delay(),
                  ref: 2
                },
-               sink: %Sink{target: self(), autodemand: false},
+               sink: %Sink{autodemand: false},
                target: self()
              })
 
@@ -116,15 +116,15 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
     assert {:ok, pid} =
              Pipeline.start_link(ChildRemovalTest.Pipeline, %{
-               source: %Source{actions_generator: source_buf_gen},
-               extra_source: %Source{actions_generator: extra_source_buf_gen},
+               source: %Source{output: {0, source_buf_gen}},
+               extra_source: %Source{output: {0, extra_source_buf_gen}},
                filter1: %Filter{target: self(), ref: 1},
                filter2: %Filter{
                  target: self(),
                  playing_delay: prepared_to_playing_delay(),
                  ref: 2
                },
-               sink: %Sink{target: self(), autodemand: false},
+               sink: %Sink{autodemand: false},
                target: self()
              })
 
