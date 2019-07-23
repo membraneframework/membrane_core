@@ -631,7 +631,11 @@ defmodule Membrane.Pipeline do
       @impl true
       def handle_spec_started(_new_children, state), do: {:ok, state}
 
-      defoverridable start: 2,
+      defoverridable start: 0,
+                     start: 1,
+                     start: 2,
+                     start_link: 0,
+                     start_link: 1,
                      start_link: 2,
                      play: 1,
                      prepare: 1,

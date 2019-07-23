@@ -1,17 +1,40 @@
 defmodule Membrane.Testing.Sink do
   @moduledoc """
-  Sink Element that will send every buffer it receives to the pid passed as argument.
+  Sink Element that notifies the pipeline about buffers and events it receives.
+
+  By default `Sink` will demand buffers automatically, but you can override that
+  behaviour by using `autodemand` option. If set to false no automatic demands
+  shall be made. Demands can be then triggered by sending `{:make_demand, size}`
+  message.
+
+  This element can be used in conjunction with `Membrane.Testing.Pipeline` to
+  enable asserting on buffers and events it receives.
+
+      alias Membrane.Testing
+      {:ok, pid} = Testing.Pipeline.start_link(Testing.Pipeline.Options{
+        elements: [
+          ...,
+          sink: %Testing.Sink{}
+        ]
+      })
+
+  Asserting that `Membrane.Testing.Sink` element processed a buffer that matches
+  a specific pattern can be achieved using
+  `Membrane.Testing.Assertions.assert_sink_buffer/3`.
+
+      assert_sink_buffer(pid, :sink ,%Membrane.Buffer{payload: 255})
+
   """
 
   use Membrane.Sink
 
-  def_input_pad :input, demand_unit: :buffers, caps: :any
+  alias Membrane.Event
 
-  def_options target: [
-                type: :pid,
-                description: "PID of process that will receive incoming buffers."
-              ],
-              autodemand: [
+  def_input_pad :input,
+    demand_unit: :buffers,
+    caps: :any
+
+  def_options autodemand: [
                 type: :boolean,
                 default: true,
                 description: """
@@ -32,17 +55,30 @@ defmodule Membrane.Testing.Sink do
   def handle_prepared_to_playing(_context, state), do: {:ok, state}
 
   @impl true
+  def handle_event(pad, %Event.StartOfStream{}, _context, state),
+    do: {{:ok, notify: {:start_of_stream, pad}}, state}
+
+  def handle_event(pad, %Event.EndOfStream{}, _context, state),
+    do: {{:ok, notify: {:end_of_stream, pad}}, state}
+
+  def handle_event(:input, event, _context, state) do
+    {{:ok, notify: {:event, event}}, state}
+  end
+
+  @impl true
+  def handle_caps(pad, caps, _context, state),
+    do: {{:ok, notify: {:caps, pad, caps}}, state}
+
+  @impl true
   def handle_other({:make_demand, size}, _ctx, %{autodemand: false} = state) do
     {{:ok, demand: {:input, size}}, state}
   end
 
   @impl true
   def handle_write(:input, buf, _ctx, state) do
-    send(state.target, buf)
-
     case state do
-      %{autodemand: false} -> {:ok, state}
-      %{autodemand: true} -> {{:ok, demand: :input}, state}
+      %{autodemand: false} -> {{:ok, notify: {:buffer, buf}}, state}
+      %{autodemand: true} -> {{:ok, demand: :input, notify: {:buffer, buf}}, state}
     end
   end
 end

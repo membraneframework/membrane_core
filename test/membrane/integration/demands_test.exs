@@ -1,57 +1,49 @@
 defmodule Membrane.Integration.DemandsTest do
   use ExUnit.Case, async: false
   use Bunch
+  alias Membrane.Buffer
   alias Membrane.Support.DemandsTest
   alias DemandsTest.Filter
-  alias Membrane.Buffer
-  alias Membrane.Testing.{Source, Sink}
-  alias Membrane.Pipeline
+  alias Membrane.Testing.{Pipeline, Source, Sink}
+  import ExUnit.Assertions
+  import Membrane.Testing.Assertions
 
-  # Asserts that message equal to pattern will be received within 200ms
-  # In contrast to assert_receive, it also checks if it the first message in the mailbox
-  def assert_message(pattern) do
-    receive do
-      msg ->
-        assert msg == pattern
-    after
-      200 ->
-        assert false, "no messages in the mailbox, expected: #{inspect(pattern)}"
-    end
+  def assert_buffers_received(range, pid) do
+    Enum.each(range, fn i ->
+      assert_sink_buffer(pid, :sink, %Buffer{payload: <<^i::16>> <> <<255>>})
+    end)
   end
 
   def test_pipeline(pid) do
     pattern_gen = fn i -> %Buffer{payload: <<i::16>> <> <<255>>} end
     assert Pipeline.play(pid) == :ok
-    assert_receive :playing, 2000
+
+    assert_pipeline_playback_changed(pid, :prepared, :playing)
+
     demand = 500
-    send(pid, {:child_msg, :sink, {:make_demand, demand}})
+    Pipeline.message_child(pid, :sink, {:make_demand, demand})
 
     0..(demand - 1)
-    |> Enum.each(fn i ->
-      pattern = pattern_gen.(i)
-      assert_message(pattern)
-    end)
+    |> assert_buffers_received(pid)
 
     pattern = pattern_gen.(demand)
-    refute_receive ^pattern
-    send(pid, {:child_msg, :sink, {:make_demand, demand}})
+    refute_sink_buffer(pid, :sink, ^pattern, 0)
+    Pipeline.message_child(pid, :sink, {:make_demand, demand})
 
     demand..(2 * demand - 1)
-    |> Enum.each(fn i ->
-      pattern = pattern_gen.(i)
-      assert_message(pattern)
-    end)
+    |> assert_buffers_received(pid)
 
     assert Pipeline.stop(pid) == :ok
   end
 
   test "Regular pipeline with proper demands" do
     assert {:ok, pid} =
-             Pipeline.start_link(DemandsTest.Pipeline, %{
-               source: Source,
-               filter: Filter,
-               sink: %Sink{target: self(), autodemand: false},
-               target: self()
+             Pipeline.start_link(%Pipeline.Options{
+               elements: [
+                 source: Source,
+                 filter: Filter,
+                 sink: %Sink{autodemand: false}
+               ]
              })
 
     test_pipeline(pid)
@@ -61,11 +53,12 @@ defmodule Membrane.Integration.DemandsTest do
     filter_demand_gen = fn _ -> 2 end
 
     assert {:ok, pid} =
-             Pipeline.start_link(DemandsTest.Pipeline, %{
-               source: Source,
-               filter: %Filter{demand_generator: filter_demand_gen},
-               sink: %Sink{target: self(), autodemand: false},
-               target: self()
+             Pipeline.start_link(%Pipeline.Options{
+               elements: [
+                 source: Source,
+                 filter: %Filter{demand_generator: filter_demand_gen},
+                 sink: %Sink{autodemand: false}
+               ]
              })
 
     test_pipeline(pid)
@@ -86,11 +79,12 @@ defmodule Membrane.Integration.DemandsTest do
     end
 
     assert {:ok, pid} =
-             Pipeline.start_link(DemandsTest.Pipeline, %{
-               source: %Source{actions_generator: actions_gen},
-               filter: Filter,
-               sink: %Sink{target: self(), autodemand: false},
-               target: self()
+             Pipeline.start_link(%Pipeline.Options{
+               elements: [
+                 source: %Source{output: {0, actions_gen}},
+                 filter: Filter,
+                 sink: %Sink{autodemand: false}
+               ]
              })
 
     test_pipeline(pid)
