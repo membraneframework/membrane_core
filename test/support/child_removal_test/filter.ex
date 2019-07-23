@@ -4,8 +4,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   It allows to:
   * slow down the moment of switching between :prepared and :playing states.
-  * deactivate demands on `input1` (useful when you want to delete element
-    that is connected to this pad.
+  * using dynamic pads
   * not send doubled `%Membrane.Event.StartOfStream{}` element
     (useful when you have two sources in a pipeline)
   * send demands and buffers from two input pads to one output pad.
@@ -23,9 +22,9 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   def_output_pad :output, caps: :any
 
-  def_input_pad :input1, demand_unit: :buffers, caps: :any
+  def_input_pad :input1, demand_unit: :buffers, caps: :any, availability: :on_request
 
-  def_input_pad :input2, demand_unit: :buffers, caps: :any
+  def_input_pad :input2, demand_unit: :buffers, caps: :any, availability: :on_request
 
   def_options demand_generator: [
                 type: :function,
@@ -35,23 +34,24 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
               target: [type: :pid],
               playing_delay: [type: :integer, default: 0],
               ref: [type: :any, default: nil],
-              two_input_pads: [type: :boolean, default: false],
-              sof_sent?: [type: :boolean, default: false],
-              input1_deactivated: [type: :boolean, default: false]
-
-  def deactivate_demands_on_input1(pid) do
-    send(pid, {:deactivate_input1, self()})
-
-    receive do
-      :input1_deactivated ->
-        :ok
-    end
-  end
+              sof_sent?: [type: :boolean, default: false]
 
   @impl true
   def handle_init(%{target: t, ref: ref} = opts) do
     send(t, {:filter_pid, ref, self()})
-    {:ok, opts}
+    {:ok, Map.put(opts, :pads, MapSet.new())}
+  end
+
+  @impl true
+  def handle_pad_added(pad, _ctx, state) do
+    new_pads = MapSet.put(state.pads, pad)
+    {:ok, %{state | pads: new_pads}}
+  end
+
+  @impl true
+  def handle_pad_removed(pad, _ctx, state) do
+    new_pads = MapSet.delete(state.pads, pad)
+    {:ok, %{state | pads: new_pads}}
   end
 
   @impl true
@@ -70,16 +70,11 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
     {{:ok, playback_change: :resume}, state}
   end
 
-  def handle_other({:deactivate_input1, caller}, _ctx, state) do
-    send(caller, :input1_deactivated)
-    {:ok, %{state | input1_deactivated: true}}
-  end
-
   @impl true
   def handle_demand(:output, size, _, _ctx, state) do
     demands =
-      get_demands(state, size)
-      |> maybe_deactivate_input1(state)
+      state.pads
+      |> Enum.map(fn pad -> {:demand, {pad, state.demand_generator.(size)}} end)
 
     {{:ok, demands}, state}
   end
@@ -109,22 +104,4 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   end
 
   def default_demand_generator(demand), do: demand
-
-  defp get_demands(%{two_input_pads: true} = state, size),
-    do: [
-      demand: {:input1, state.demand_generator.(size)},
-      demand: {:input2, state.demand_generator.(size)}
-    ]
-
-  defp get_demands(state, size),
-    do: [demand: {:input1, state.demand_generator.(size)}]
-
-  defp maybe_deactivate_input1(demands, %{input1_deactivated: true}) do
-    demands
-    |> Enum.filter(fn {:demand, {i, _}} -> i != :input1 end)
-  end
-
-  defp maybe_deactivate_input1(demands, _) do
-    demands
-  end
 end

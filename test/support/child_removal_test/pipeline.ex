@@ -11,6 +11,9 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
                                      /
                     extra_source ___/
 
+  This pipeline also makes children aware of their names. They can reach their
+  name by accessing field `ref` in their opts.
+
   Should be used along with `Membrane.Support.ChildRemovalTest.Pipeline` as they
   share names (i.e. input_pads: `input1` and `input2`) and exchanged messages' formats.
   """
@@ -71,19 +74,10 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
     {:ok, state}
   end
 
-  defp maybe_add_extra_source(children, %{extra_source: source}) do
-    Keyword.update(
-      children,
-      :filter2,
-      nil,
-      fn f -> %{f | two_input_pads: true} end
-    ) ++
-      [extra_source: source]
-  end
+  defp maybe_add_extra_source(children, %{extra_source: source}),
+    do: [{:extra_source, source} | children]
 
-  defp maybe_add_extra_source(children, _) do
-    children
-  end
+  defp maybe_add_extra_source(children, _), do: children
 
   defp maybe_add_extra_source_link(links, %{extra_source: _}) do
     Map.put(links, {:extra_source, :output}, {:filter2, :input2, buffer: [preferred_size: 10]})

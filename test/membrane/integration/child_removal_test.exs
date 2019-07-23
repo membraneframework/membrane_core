@@ -87,7 +87,6 @@ defmodule Membrane.Integration.ChildRemovalTest do
     assert Pipeline.play(pipeline_pid) == :ok
     wait_for_playing(filter_pid1)
     wait_for_buffer_fillup(filter_pid2, [:input1])
-    ChildRemovalTest.Filter.deactivate_demands_on_input1(filter_pid2)
 
     ChildRemovalTest.Pipeline.remove_child(pipeline_pid, :filter1)
 
@@ -133,7 +132,6 @@ defmodule Membrane.Integration.ChildRemovalTest do
     assert Pipeline.play(pipeline_pid) == :ok
     wait_for_playing(filter_pid1)
     wait_for_buffer_fillup(filter_pid2, [:input1, :input2])
-    ChildRemovalTest.Filter.deactivate_demands_on_input1(filter_pid2)
 
     ChildRemovalTest.Pipeline.remove_child(pipeline_pid, :filter1)
 
