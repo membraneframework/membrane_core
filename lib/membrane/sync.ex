@@ -86,7 +86,7 @@ defmodule Membrane.Sync do
   def init(opts) do
     {:ok,
      %{
-       state: :registration,
+       state: :init,
        syncees: %{},
        syncees_pids: %{},
        empty_exit?: opts |> Keyword.get(:empty_exit?, false)
@@ -94,7 +94,7 @@ defmodule Membrane.Sync do
   end
 
   @impl true
-  def handle_call(Message.new(:sync_register, [ref, pid]), _from, %{state: :registration} = state) do
+  def handle_call(Message.new(:sync_register, [ref, pid]), _from, state) do
     Process.monitor(pid)
 
     state =
@@ -116,7 +116,7 @@ defmodule Membrane.Sync do
   @impl true
   def handle_call(Message.new(:sync_unready, ref), _from, state) do
     case update_level(ref, %{name: :registered}, [:registered, :ready], state) do
-      {:ok, %{state: :registration} = state} ->
+      {:ok, %{state: :waiting} = state} ->
         state = state |> check_and_handle_sync()
         {:reply, :ok, state}
 
@@ -141,7 +141,7 @@ defmodule Membrane.Sync do
   end
 
   @impl true
-  def handle_call(Message.new(request, _ref) = message, from, %{state: :registration} = state)
+  def handle_call(Message.new(request, _ref) = message, from, %{state: :init} = state)
       when request in [:sync, :sync_ready] do
     handle_call(message, from, %{state | state: :waiting})
   end
@@ -185,7 +185,7 @@ defmodule Membrane.Sync do
     else
       send_sync_replies(state.syncees)
       state = reset_syncees(state)
-      %{state | state: :registration}
+      %{state | state: :init}
     end
   end
 
