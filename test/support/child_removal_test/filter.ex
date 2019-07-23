@@ -17,7 +17,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   alias Membrane.Event.StartOfStream
 
-  use Membrane.Element.Base.Filter
+  use Membrane.Filter
 
   # , availability: :on_request
   def_output_pad :output, caps: :any
