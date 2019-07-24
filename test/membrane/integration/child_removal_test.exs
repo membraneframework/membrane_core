@@ -180,7 +180,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
   defp wait_for_buffer_fillup(el_pid, for_pads, timeout \\ 5) do
     1..10
     |> Enum.take_while(fn _ ->
-      :timer.sleep(timeout)
+      Process.sleep(timeout)
 
       %PlaybackBuffer{q: q} = :sys.get_state(el_pid).playback_buffer
 
