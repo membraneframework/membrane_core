@@ -111,7 +111,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
                                   /
                  extra_source ___/
   """
-  test "When PlaybackBuffer is evaluated elements from the other than deleted elements remain untouched" do
+  test "When element is removed data sent from it is removed from neighbours' playback buffer, other data remain untouched" do
     source_buf_gen = get_named_buf_gen(:source)
     extra_source_buf_gen = get_named_buf_gen(:extra_source)
 
