@@ -15,7 +15,9 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     PadModel,
     State
   }
+  alias Membrane.Core.Message
 
+  require Message
   require PadModel
   use Core.Element.Log
   use Bunch
@@ -42,7 +44,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   @spec store(message_t, State.t()) :: State.stateful_try_t()
   def store(msg, %State{playback: %Playback{state: :playing}} = state), do: exec(msg, state)
 
-  def store({type, _args} = msg, state)
+  def store(Message.new(type, _args, _opts) = msg, state)
       when type in [:event, :caps] do
     if state.playback_buffer |> empty? do
       exec(msg, state)
@@ -92,7 +94,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   @spec exec(message_t, State.t()) :: State.stateful_try_t()
   # Callback invoked on demand request coming from the output pad in the pull mode
-  defp exec({:demand, [size, pad_ref]}, state) do
+  defp exec(Message.new(:demand, [size, pad_ref], _opts), state) do
     PadModel.assert_data!(state, pad_ref, %{direction: :output})
 
     demand =
@@ -107,7 +109,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   end
 
   # Callback invoked on buffer coming through the input pad
-  defp exec({:buffer, [buffers, pad_ref]}, state) do
+  defp exec(Message.new(:buffer, [buffers, pad_ref], _opts), state) do
     PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
     debug(
@@ -135,7 +137,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   end
 
   # Callback invoked on incoming caps
-  defp exec({:caps, [caps, pad_ref]}, state) do
+  defp exec(Message.new(:caps, [caps, pad_ref], _opts), state) do
     PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
     debug(
@@ -150,7 +152,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   end
 
   # Callback invoked on incoming event
-  defp exec({:event, [event, pad_ref]}, state) do
+  defp exec(Message.new(:event, [event, pad_ref], _opts), state) do
     PadModel.assert_instance!(state, pad_ref)
 
     debug(

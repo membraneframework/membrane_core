@@ -9,6 +9,9 @@ defmodule Membrane.Integration.ChildRemovalTest do
   alias Membrane.Buffer
   alias Membrane.Pipeline
 
+  alias Membrane.Core.Message
+  require Message
+
   test "Element can be removed when pipeline is in stopped state" do
     assert {:ok, pipeline_pid} =
              Pipeline.start_link(ChildRemovalTest.Pipeline, %{
@@ -183,8 +186,8 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
       pads_in_buffer =
         q
-        |> Enum.filter(fn {type, _} -> type == :buffer end)
-        |> Enum.map(fn {_, [_, pad]} -> pad end)
+        |> Enum.filter(fn Message.new(type, _, _) -> type == :buffer end)
+        |> Enum.map(fn Message.new(_, _, opts) -> Keyword.get(opts, :from_pad) end)
         |> Enum.dedup()
         |> Enum.sort()
 
@@ -209,12 +212,12 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
   defp all_buffers_from?(q, source) do
     q
-    |> Enum.filter(fn {el_name, _} -> el_name == :buffer end)
-    |> Enum.map(fn {:buffer, buf} -> buf end)
+    |> Enum.filter(fn Message.new(el_name, _, _) -> el_name == :buffer end)
+    |> Enum.map(fn Message.new(:buffer, arg, _opts) -> arg end)
     |> Enum.all?(&buffer_with_name?(&1, source))
   end
 
-  defp buffer_with_name?([%Buffer{metadata: %{source_name: name}}, _pad], name), do: true
+  defp buffer_with_name?([%Buffer{metadata: %{source_name: name}}], name), do: true
 
   defp buffer_with_name?([list, _pad], name),
     do: Enum.all?(list, fn %Buffer{metadata: %{source_name: name2}} -> name == name2 end)

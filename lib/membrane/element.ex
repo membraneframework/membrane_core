@@ -146,7 +146,7 @@ defmodule Membrane.Element do
   """
   @spec set_watcher(pid, pid, timeout) :: :ok
   def set_watcher(server, watcher, timeout \\ 5000) when is_pid(server) do
-    Message.call(server, :set_watcher, watcher, timeout)
+    Message.call(server, :set_watcher, watcher, [], timeout)
   end
 
   @doc """
@@ -157,7 +157,7 @@ defmodule Membrane.Element do
   """
   @spec set_controlling_pid(pid, pid, timeout) :: :ok | {:error, any}
   def set_controlling_pid(server, controlling_pid, timeout \\ 5000) when is_pid(server) do
-    Message.call(server, :set_controlling_pid, controlling_pid, timeout)
+    Message.call(server, :set_controlling_pid, controlling_pid, [], timeout)
   end
 
   @doc """
@@ -204,14 +204,14 @@ defmodule Membrane.Element do
   `:on_request` pad.
   """
   def handle_new_pad(server, direction, pad, timeout \\ 5000) when is_pid(server) do
-    server |> Message.call(:new_pad, [direction, pad], timeout)
+    server |> Message.call(:new_pad, [direction, pad], [], timeout)
   end
 
   @doc """
   Sends synchronous call to element, informing it that linking has finished.
   """
   def handle_linking_finished(server, timeout \\ 5000) when is_pid(server) do
-    server |> Message.call(:linking_finished, [], timeout)
+    server |> Message.call(:linking_finished, [], [], timeout)
   end
 
   @impl GenServer
