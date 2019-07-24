@@ -220,8 +220,13 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   def handle_init(%Options{links: nil, elements: nil} = options) do
-    new_state = %State{test_process: options.test_process, module: options.module}
-    eval(:handle_init, options.custom_args, {:ok, new_state})
+    new_state = %State{
+      test_process: options.test_process,
+      module: options.module,
+      custom_pipeline_state: options.custom_args
+    }
+
+    eval(:handle_init, [], fn -> {:ok, new_state} end, new_state)
   end
 
   @impl true
@@ -280,7 +285,8 @@ defmodule Membrane.Testing.Pipeline do
       eval(
         :handle_spec_started,
         [elements],
-        {:ok, state}
+        fn -> {:ok, state} end,
+        state
       )
 
   @impl true
@@ -289,7 +295,8 @@ defmodule Membrane.Testing.Pipeline do
       eval(
         :handle_other,
         [{:for_element, element, message}],
-        {{:ok, forward: {element, message}}, state}
+        fn -> {{:ok, forward: {element, message}}, state} end,
+        state
       )
 
   def handle_other(message, %State{} = state),
@@ -318,24 +325,6 @@ defmodule Membrane.Testing.Pipeline do
       result = function.()
       combine_results(custom_result, result)
     end
-  end
-
-  defp eval(custom_function, custom_args, result)
-
-  defp eval(_, _, {_, %State{module: nil}} = result),
-    do: result
-
-  defp eval(:handle_init, custom_args, {_, %State{module: module}} = result) do
-    with custom_result = {{:ok, _}, _} <-
-           apply(module, :handle_init, [custom_args]) |> wrap_result,
-         do: combine_results(custom_result, result)
-  end
-
-  defp eval(custom_function, custom_args, {_, %State{module: module} = state} = result) do
-    with custom_result = {{:ok, _actions}, _state} <-
-           apply(module, custom_function, custom_args ++ [state.custom_pipeline_state])
-           |> wrap_result,
-         do: combine_results(custom_result, result)
   end
 
   defp notify_playback_state_changed(previous, current, %State{} = state) do
