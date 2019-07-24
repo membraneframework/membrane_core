@@ -321,7 +321,7 @@ defmodule Membrane.Testing.Pipeline do
   defp eval(custom_function, custom_args, function, %State{module: module} = state) do
     with custom_result = {{:ok, _actions}, _state} <-
            apply(module, custom_function, custom_args ++ [state.custom_pipeline_state])
-           |> wrap_result do
+           |> unify_result do
       result = function.()
       combine_results(custom_result, result)
     end
@@ -337,10 +337,10 @@ defmodule Membrane.Testing.Pipeline do
     {:ok, state}
   end
 
-  defp wrap_result({:ok, state}),
+  defp unify_result({:ok, state}),
     do: {{:ok, []}, state}
 
-  defp wrap_result({{_, _}, _} = result),
+  defp unify_result({{_, _}, _} = result),
     do: result
 
   defp combine_results({custom_actions, custom_state}, {actions, state}) do
