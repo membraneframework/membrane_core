@@ -85,6 +85,17 @@ defmodule Membrane.Testing.Assertions do
              current_state,
              timeout \\ @default_timeout
            ) do
+    with :ok <- validate_playback_change(previous_state, current_state) do
+      pattern =
+        quote do: {:playback_state_changed, unquote(previous_state), unquote(current_state)}
+
+      assert_receive_from_pipeline(pipeline, pattern, timeout, nil)
+    else
+      {:error, flunk} -> flunk
+    end
+  end
+
+  defp validate_playback_change(previous_state, current_state) do
     valid_changes = [
       {:stopped, :prepared},
       {:prepared, :playing},
@@ -107,16 +118,10 @@ defmodule Membrane.Testing.Assertions do
       #{transitions}
       """
 
-      quote do
-        flunk(unquote(message))
-      end
+      flunk = quote do: flunk(unquote(message))
+      {:error, flunk}
     else
-      pattern =
-        quote do
-          {:playback_state_changed, unquote(previous_state), unquote(current_state)}
-        end
-
-      assert_receive_from_pipeline(pipeline, pattern, timeout, nil)
+      :ok
     end
   end
 

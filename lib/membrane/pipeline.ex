@@ -501,6 +501,11 @@ defmodule Membrane.Pipeline do
     |> noreply(state)
   end
 
+  def handle_info(Message.new(:shutdown_ready, child), state) do
+    {{:ok, pid}, state} = State.pop_child(state, child)
+    {Element.shutdown(pid), state}
+  end
+
   def handle_info(message, state) do
     CallbackHandler.exec_and_handle_callback(:handle_other, __MODULE__, [message], state)
     |> noreply(state)
@@ -523,19 +528,12 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_action({:remove_child, children}, _cb, _params, state) do
-    withl pop:
-            {{:ok, pids}, state} <-
-              children
-              |> Bunch.listify()
-              |> Bunch.Enum.try_map_reduce(state, fn c, st -> State.pop_child(st, c) end),
-          rem: :ok <- pids |> Bunch.Enum.try_each(&Element.stop/1),
-          rem: :ok <- pids |> Bunch.Enum.try_each(&Element.unlink/1),
-          rem: :ok <- pids |> Bunch.Enum.try_each(&Element.shutdown/1) do
-      {:ok, state}
-    else
-      pop: {{:error, reason}, _state} -> {{:error, reason}, state}
-      rem: {:error, reason} -> {{:error, {:cannot_remove_children, children, reason}}, state}
+    with {:ok, pids} <-
+           children |> Bunch.listify() |> Bunch.Enum.try_map(&State.get_child_pid(state, &1)) do
+      pids |> Enum.each(&Message.send(&1, :prepare_shutdown))
+      :ok
     end
+    ~> {&1, state}
   end
 
   def handle_action(action, callback, _params, state) do

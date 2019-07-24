@@ -23,12 +23,13 @@ defmodule Membrane.Testing.Source do
   ```
   """
 
-  use Membrane.Element.Base.Source
+  use Membrane.Source
   alias Membrane.Buffer
   alias Membrane.Element.Action
   alias Membrane.Event.EndOfStream
 
-  @type generator :: (any(), non_neg_integer -> {[Action.t()], any()})
+  @type generator ::
+          (state :: any(), buffers_cnt :: pos_integer -> {[Action.t()], state :: any()})
 
   def_output_pad :output, caps: :any
 

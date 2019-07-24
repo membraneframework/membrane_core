@@ -1,8 +1,8 @@
 defmodule Membrane.Testing.Pipeline do
   @moduledoc """
   This Pipeline was created to reduce testing boilerplate and ease communication
-  with its elements. It also provides utility for receiving messages when
-  `Pipeline` playback state changes and notifications it receives.
+  with its elements. It also provides a utility for informing testing process about
+  playback state changes and received notifications.
 
   When you want a build Pipeline to test your elements you need three things:
    - Pipeline Module
@@ -61,9 +61,19 @@ defmodule Membrane.Testing.Pipeline do
 
   See `Membrane.Testing.Pipeline.Options` for available options.
 
+  ## Assertions
+
+  This pipeline is designed to work with `Membrane.Testing.Assertions`. Check
+  them out or see example below for more details.
+
+  ## Messaging children
+
+  You can send messages to children using their names specified in the elements
+  list. Please check `message_child/3` for more details.
+
   ## Example usage
 
-  Once options are created we can start the pipeline.
+  Firstly, we can start the pipeline providing its options:
 
       options = %Membrane.Testing.Pipeline.Options {
         elements: [
@@ -75,24 +85,15 @@ defmodule Membrane.Testing.Pipeline do
       {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
 
 
-  We can now wait till the end of the stream reaches the sink element.
+  We can now wait till the end of the stream reaches the sink element (don't forget
+  to import `Membrane.Testing.Assertions`):
 
       assert_end_of_stream(pipeline, :sink)
 
   We can also assert that the `Membrane.Testing.Sink` processed a specific
-  buffer.
+  buffer:
 
-      assert_sink_buffer(pipeline, :sink ,%Membrane.Buffer{payload: 1})
-
-  ## Assertions
-
-  Using this module enables usage of various assertions which are described in
-  detail in `Membrane.Testing.Assertions`.
-
-  ## Messaging children
-
-  You can send messages to children using their names specified in the elements
-  list. Please check `message_child/3` for more details.
+      assert_sink_buffer(pipeline, :sink, %Membrane.Buffer{payload: 1})
 
   """
 

@@ -57,7 +57,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
       assert_pipeline_playback_changed(self(), ^prev_state, ^current_state)
     end
 
-    test "flunks when state is not change when patterns are provided" do
+    test "flunks when state is not changed when patterns are provided" do
       assert_raise ExUnit.AssertionError, fn ->
         prev_state = :prepared
         current_state = :stopped
@@ -108,13 +108,13 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
       assert_pipeline_playback_changed(self(), :playing, _)
     end
 
-    test "when using wildcard as first argument flunks if state hasn't change" do
+    test "when using wildcard as first argument flunks if state hasn't changed" do
       assert_raise(ExUnit.AssertionError, fn ->
         assert_pipeline_playback_changed(self(), _, :stopped, 0)
       end)
     end
 
-    test "when using wildcard as second argument flunks if state hasn't change" do
+    test "when using wildcard as second argument flunks if state hasn't changed" do
       assert_raise(ExUnit.AssertionError, fn ->
         assert_pipeline_playback_changed(self(), :prepared, _, 0)
       end)
@@ -122,14 +122,14 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
   end
 
   describe "assert_pipeline_receive" do
-    test "does not flunk when pipeline receives the message", %{state: state} do
-      message = "I am important message"
+    test "does not flunk when pipeline receives a message", %{state: state} do
+      message = "I am an important message"
       Pipeline.handle_other(message, state)
       assert_pipeline_receive(self(), ^message)
     end
 
-    test "flunks when pipeline does not receive the message" do
-      message = "I am important message"
+    test "flunks when pipeline does not receive a message" do
+      message = "I am an important message"
 
       assert_raise ExUnit.AssertionError, fn ->
         assert_pipeline_receive(self(), ^message, 0)
@@ -139,12 +139,12 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
 
   describe "refute_pipeline_receive" do
     test "does not flunk when pipeline does not receive message" do
-      message = "I am important message"
+      message = "I am an important message"
       refute_pipeline_receive(self(), ^message, 0)
     end
 
     test "flunks when pipeline receives message", %{state: state} do
-      message = "I am important message"
+      message = "I am an important message"
       Pipeline.handle_other(message, state)
 
       assert_raise ExUnit.AssertionError, fn ->
