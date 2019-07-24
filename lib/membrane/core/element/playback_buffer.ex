@@ -15,6 +15,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     PadModel,
     State
   }
+
   alias Membrane.Core.Message
 
   require Message
@@ -80,11 +81,11 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   def eval(state), do: {:ok, state}
 
   def flush_for_pad(%__MODULE__{q: q} = buf, pad_ref) do
+    alias Membrane.Core.Message
+    require Message
+
     q
-    |> Enum.filter(fn
-      {_, [_, ^pad_ref]} -> false
-      e -> e
-    end)
+    |> Enum.filter(fn msg -> Message.from_pad(msg) != pad_ref end)
     |> Enum.into(%@qe{})
     ~> %{buf | q: &1}
   end
@@ -94,7 +95,8 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   @spec exec(message_t, State.t()) :: State.stateful_try_t()
   # Callback invoked on demand request coming from the output pad in the pull mode
-  defp exec(Message.new(:demand, [size, pad_ref], _opts), state) do
+  defp exec(Message.new(:demand, [size], _opts) = msg, state) do
+    pad_ref = Message.from_pad(msg)
     PadModel.assert_data!(state, pad_ref, %{direction: :output})
 
     demand =
@@ -109,7 +111,8 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   end
 
   # Callback invoked on buffer coming through the input pad
-  defp exec(Message.new(:buffer, [buffers, pad_ref], _opts), state) do
+  defp exec(Message.new(:buffer, [buffers], _opts) = msg, state) do
+    pad_ref = Message.from_pad(msg)
     PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
     debug(
@@ -137,7 +140,8 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   end
 
   # Callback invoked on incoming caps
-  defp exec(Message.new(:caps, [caps, pad_ref], _opts), state) do
+  defp exec(Message.new(:caps, [caps], _opts) = msg, state) do
+    pad_ref = Message.from_pad(msg)
     PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
     debug(
@@ -152,7 +156,8 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   end
 
   # Callback invoked on incoming event
-  defp exec(Message.new(:event, [event, pad_ref], _opts), state) do
+  defp exec(Message.new(:event, [event], _opts) = msg, state) do
+    pad_ref = Message.from_pad(msg)
     PadModel.assert_instance!(state, pad_ref)
 
     debug(

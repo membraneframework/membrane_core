@@ -31,4 +31,6 @@ defmodule Membrane.Core.Message do
   def call(pid, type, args \\ [], opts \\ [], timeout \\ 5000) do
     GenServer.call(pid, message(type: type, args: args, opts: opts), timeout)
   end
+
+  def from_pad(message(opts: opts)), do: Keyword.get(opts, :from_pad)
 end
