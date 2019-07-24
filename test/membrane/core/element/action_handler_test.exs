@@ -155,7 +155,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         )
 
       assert result == {:ok, state}
-      assert_received Message.new(:buffer, [[@mock_buffer]], from_pad: :other_ref)
+      assert_received Message.new(:buffer, [@mock_buffer], from_pad: :other_ref)
     end
 
     test "when element is playing", %{state: state} do
@@ -170,7 +170,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         )
 
       assert result == {:ok, state}
-      assert_received Message.new(:buffer, [[@mock_buffer]], from_pad: :other_ref)
+      assert_received Message.new(:buffer, [@mock_buffer], from_pad: :other_ref)
     end
 
     test "when pad doesn't exist in the element", %{state: state} do
@@ -273,7 +273,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         )
 
       assert result == {:ok, state |> PadModel.set_data!(:output, :end_of_stream?, true)}
-      assert_received Message.new(:event, [@mock_event], from_pad: :other_ref)
+      assert_received Message.new(:event, @mock_event, from_pad: :other_ref)
     end
 
     test "when pad doesn't exist in the element", %{state: state} do
@@ -377,7 +377,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         )
 
       assert result == {:ok, state |> PadModel.set_data!(:output, :caps, @mock_caps)}
-      assert_received Message.new(:caps, [@mock_caps], from_pad: :other_ref)
+      assert_received Message.new(:caps, @mock_caps, from_pad: :other_ref)
     end
 
     test "when caps doesn't match specs", %{state: state} do
@@ -395,7 +395,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         )
       end
 
-      refute_received Message.new(:caps, [@mock_caps, :other_ref])
+      refute_received Message.new(:caps, @mock_caps, from_pad: :other_ref)
     end
 
     test "invalid pad direction", %{state: state} do
@@ -410,7 +410,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         )
       end
 
-      refute_received Message.new(:caps, [@mock_caps, :other_ref])
+      refute_received Message.new(:caps, @mock_caps, from_pad: :other_ref)
     end
   end
 

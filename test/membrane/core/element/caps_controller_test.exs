@@ -35,7 +35,7 @@ defmodule Membrane.Core.Element.CapsControllerTest do
       }
       |> Bunch.Struct.put_in([:playback, :state], :playing)
 
-    assert_received Message.new(:demand, [10], from_pad: :some_pad)
+    assert_received Message.new(:demand, 10, from_pad: :some_pad)
     [state: state]
   end
 

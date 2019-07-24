@@ -217,7 +217,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
     |> Enum.all?(&buffer_with_name?(&1, source))
   end
 
-  defp buffer_with_name?([list], name),
+  defp buffer_with_name?(list, name),
     do: Enum.all?(list, fn %Buffer{metadata: %{source_name: name2}} -> name == name2 end)
 
   defp wait_for_playing(el_pid) do
