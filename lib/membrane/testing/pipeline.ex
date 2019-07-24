@@ -45,6 +45,20 @@ defmodule Membrane.Testing.Pipeline do
     }
     ```
 
+  You can also pass a custom pipeline module, by using `:module` field of
+  `Membrane.Testing.Pipeline.Options` struct. Every callback of the module
+  will be executed before the callbacks of Testing.Pipeline.
+
+  ```
+  options = %Membrane.Testing.Pipeline.Options {
+    elements: [
+      el1: MembraneElement1,
+      el2: MembraneElement2,
+      ],
+      module: Your.Module
+    }
+    ```
+
   See `Membrane.Testing.Pipeline.Options` for available options.
 
   ## Assertions
@@ -102,17 +116,49 @@ defmodule Membrane.Testing.Pipeline do
     ## Links
     Map describing links between elements.
 
+    ## Module
+    Pipeline Module with custom callbacks.
+
+    ## Custom Args
+    Arguments for Module's `handle_init` callback.
+
     If links are not present or set to nil they will be populated automatically
     based on elements order using default pad names.
     """
 
-    @enforce_keys [:elements]
-    defstruct @enforce_keys ++ [:links, :test_process]
+    defstruct [:elements, :links, :test_process, :module, :custom_args]
 
     @type t :: %__MODULE__{
             test_process: pid() | nil,
-            elements: Spec.children_spec_t(),
-            links: Spec.links_spec_t() | nil
+            elements: Spec.children_spec_t() | nil,
+            links: Spec.links_spec_t() | nil,
+            module: module() | nil,
+            custom_args: Pipeline.pipeline_options_t() | nil
+          }
+  end
+
+  defmodule State do
+    @moduledoc """
+    Structure representing `state`.
+
+    ##  Test Process
+    `pid` of process that shall receive messages when Pipeline invokes playback
+    state change callback and receives notification.
+
+    ## Module
+    Pipeline Module with custom callbacks.
+
+    ## Custom Pipeline State
+    State of the pipeline defined by Module.
+    """
+
+    @enforce_keys [:test_process, :module]
+    defstruct @enforce_keys ++ [:custom_pipeline_state]
+
+    @type t :: %__MODULE__{
+            test_process: pid() | nil,
+            module: module() | nil,
+            custom_pipeline_state: any
           }
   end
 
@@ -123,11 +169,6 @@ defmodule Membrane.Testing.Pipeline do
   def start(pipeline_options, process_options \\ []) do
     Pipeline.start(__MODULE__, default_options(pipeline_options), process_options)
   end
-
-  defp default_options(%Options{test_process: nil} = options),
-    do: %Options{options | test_process: self()}
-
-  defp default_options(default), do: default
 
   @doc """
   Links subsequent elements using default pads (linking `:input` to `:output` of
@@ -164,59 +205,155 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_init(%Options{links: nil, elements: elements} = options) do
-    new_links = populate_links(elements)
+  def handle_init(%Options{links: nil, module: nil} = options) do
+    new_links = populate_links(options.elements)
     handle_init(%Options{options | links: new_links})
   end
 
-  def handle_init(args) do
-    %Options{elements: elements, links: links} = args
-
+  def handle_init(%Options{module: nil} = options) do
     spec = %Membrane.Pipeline.Spec{
-      children: elements,
-      links: links
+      children: options.elements,
+      links: options.links
     }
 
-    new_state = Map.take(args, [:test_process])
+    new_state = %State{test_process: options.test_process, module: nil}
     {{:ok, spec}, new_state}
   end
 
-  @impl true
-  def handle_stopped_to_prepared(state),
-    do: notify_playback_state_changed(:stopped, :prepared, state)
+  def handle_init(%Options{links: nil, elements: nil} = options) do
+    new_state = %State{
+      test_process: options.test_process,
+      module: options.module,
+      custom_pipeline_state: options.custom_args
+    }
 
-  @impl true
-  def handle_prepared_to_playing(state),
-    do: notify_playback_state_changed(:prepared, :playing, state)
-
-  @impl true
-  def handle_playing_to_prepared(state),
-    do: notify_playback_state_changed(:playing, :prepared, state)
-
-  @impl true
-  def handle_prepared_to_stopped(state),
-    do: notify_playback_state_changed(:prepared, :stopped, state)
-
-  @impl true
-  def handle_notification(notification, from, state) do
-    notify_test_process({:handle_notification, {notification, from}}, state)
+    eval(:handle_init, [], fn -> {:ok, new_state} end, new_state)
   end
 
   @impl true
-  def handle_other({:for_element, element, message}, state) do
-    {{:ok, forward: {element, message}}, state}
+  def handle_stopped_to_prepared(%State{} = state),
+    do:
+      eval(
+        :handle_stopped_to_prepared,
+        [],
+        fn -> notify_playback_state_changed(:stopped, :prepared, state) end,
+        state
+      )
+
+  @impl true
+  def handle_prepared_to_playing(%State{} = state),
+    do:
+      eval(
+        :handle_prepared_to_playing,
+        [],
+        fn -> notify_playback_state_changed(:prepared, :playing, state) end,
+        state
+      )
+
+  @impl true
+  def handle_playing_to_prepared(%State{} = state),
+    do:
+      eval(
+        :handle_playing_to_prepared,
+        [],
+        fn -> notify_playback_state_changed(:playing, :prepared, state) end,
+        state
+      )
+
+  @impl true
+  def handle_prepared_to_stopped(%State{} = state),
+    do:
+      eval(
+        :handle_prepared_to_stopped,
+        [],
+        fn -> notify_playback_state_changed(:prepared, :stopped, state) end,
+        state
+      )
+
+  @impl true
+  def handle_notification(notification, from, %State{} = state),
+    do:
+      eval(
+        :handle_notification,
+        [notification, from],
+        fn -> notify_test_process({:handle_notification, {notification, from}}, state) end,
+        state
+      )
+
+  @impl true
+  def handle_spec_started(elements, %State{} = state),
+    do:
+      eval(
+        :handle_spec_started,
+        [elements],
+        fn -> {:ok, state} end,
+        state
+      )
+
+  @impl true
+  def handle_other({:for_element, element, message}, %State{} = state),
+    do:
+      eval(
+        :handle_other,
+        [{:for_element, element, message}],
+        fn -> {{:ok, forward: {element, message}}, state} end,
+        state
+      )
+
+  def handle_other(message, %State{} = state),
+    do:
+      eval(
+        :handle_other,
+        [message],
+        fn -> notify_test_process({:handle_other, message}, state) end,
+        state
+      )
+
+  defp default_options(%Options{test_process: nil} = options),
+    do: %Options{options | test_process: self()}
+
+  defp default_options(default), do: default
+
+  defp eval(custom_function, custom_args, function, state)
+
+  defp eval(_, _, function, %State{module: nil}),
+    do: function.()
+
+  defp eval(custom_function, custom_args, function, %State{module: module} = state) do
+    with custom_result = {{:ok, _actions}, _state} <-
+           apply(module, custom_function, custom_args ++ [state.custom_pipeline_state])
+           |> unify_result do
+      result = function.()
+      combine_results(custom_result, result)
+    end
   end
 
-  def handle_other(message, state),
-    do: notify_test_process({:handle_other, message}, state)
-
-  defp notify_playback_state_changed(previous, current, state) do
+  defp notify_playback_state_changed(previous, current, %State{} = state) do
     notify_test_process({:playback_state_changed, previous, current}, state)
   end
 
-  defp notify_test_process(message, %{test_process: test_process} = state) do
+  defp notify_test_process(message, %State{test_process: test_process} = state) do
     send(test_process, {__MODULE__, self(), message})
 
     {:ok, state}
+  end
+
+  defp unify_result({:ok, state}),
+    do: {{:ok, []}, state}
+
+  defp unify_result({{_, _}, _} = result),
+    do: result
+
+  defp combine_results({custom_actions, custom_state}, {actions, state}) do
+    {combine_actions(custom_actions, actions),
+     Map.put(state, :custom_pipeline_state, custom_state)}
+  end
+
+  defp combine_actions(l, r) do
+    case {l, r} do
+      {l, :ok} -> l
+      {{:ok, actions_l}, {:ok, actions_r}} -> {:ok, actions_l ++ actions_r}
+      {_l, r} -> r
+    end
   end
 end
