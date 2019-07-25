@@ -95,7 +95,7 @@ defmodule Membrane.Testing.Source do
 
     actions =
       case output do
-        [] -> [buffer: {:output, buffers}, event: {:output, %EndOfStream{}}]
+        [] -> [buffer: {:output, buffers}, end_of_stream: :output]
         _ -> [buffer: {:output, buffers}]
       end
 

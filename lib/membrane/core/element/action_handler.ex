@@ -28,7 +28,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec do_handle_action(Action.t(), callback :: atom, params :: map, State.t()) ::
           State.stateful_try_t()
   defp do_handle_action({action, _}, cb, _params, %State{playback: %{state: :stopped}} = state)
-       when action in [:buffer, :event, :caps, :demand, :redemand, :forward] and
+       when action in [:buffer, :event, :caps, :demand, :redemand, :forward, :end_of_stream] and
               cb != :handle_stopped_to_prepared do
     {{:error, {:playback_state, :stopped}}, state}
   end
@@ -125,6 +125,16 @@ defmodule Membrane.Core.Element.ActionHandler do
        )
        when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter] do
     supply_demand(pad_ref, size, cb, params[:supplying_demand?] || false, state)
+  end
+
+  defp do_handle_action(
+         {:end_of_stream, pad_ref},
+         _cb,
+         _params,
+         %State{type: type} = state
+       )
+       when is_pad_ref(pad_ref) and type != :sink do
+    send_event(pad_ref, %Event.EndOfStream{}, state)
   end
 
   defp do_handle_action(action, callback, _params, state) do
