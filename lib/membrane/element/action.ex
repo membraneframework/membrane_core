@@ -158,6 +158,14 @@ defmodule Membrane.Element.Action do
   @type playback_change_t :: {:playback_change, :suspend | :resume}
 
   @typedoc """
+  Sends EndOfStream event through a pad (output) that triggers
+  callback `end_of_stream/3` at the receiver element.
+
+  Forbidden when playback state is stopped.
+  """
+  @type end_of_stream_t :: {:end_of_stream, Pad.ref_t()}
+
+  @typedoc """
   Type that defines a single action that may be returned from element callbacks.
 
   Depending on element type, callback, current playback state and other
@@ -173,4 +181,5 @@ defmodule Membrane.Element.Action do
           | redemand_t
           | forward_t
           | playback_change_t
+          | end_of_stream_t
 end

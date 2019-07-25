@@ -190,9 +190,8 @@ defmodule Membrane.Element.Base do
   @callback handle_shutdown(reason, state :: Element.state_t()) :: :ok
             when reason: :normal | :shutdown | {:shutdown, any}
 
-  # TODO docs
-  # TODO do we need to pass event and context here?
   @doc """
+  Callback invoked when element receives `Membrane.Event.StartOfStream` event.
   """
   @callback handle_start_of_stream(
               pad :: Pad.ref_t(),
@@ -200,9 +199,9 @@ defmodule Membrane.Element.Base do
               state :: Element.state_t()
             ) :: callback_return_t
 
-  # TODO docs
-  # TODO do we need to pass event and context here?
   @doc """
+  Callback invoked when element receives `Membrane.Event.EndOfStream` event
+  emitted when action `end_of_stream` is returned.
   """
   @callback handle_end_of_stream(
               pad :: Pad.ref_t(),
