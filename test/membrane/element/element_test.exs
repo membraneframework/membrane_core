@@ -29,28 +29,22 @@ defmodule Membrane.Element.ElementTest do
     end
 
     @impl true
-    def handle_event(_, _ = event, _, state) do
+    def handle_end_of_stream(_pad, _context, state) do
+      send(state.target, {:callback_called, :handle_end_of_stream})
+      {:ok, state}
+    end
+
+    @impl true
+    def handle_event(_, _, _, state) do
       send(state.target, {:callback_called, :handle_event})
       {:ok, state}
     end
 
     @impl true
-    def handle_demand(_, _, _, _ctx, state) do
-      {:ok, state}
-    end
-  end
+    def handle_demand(_, size, _, _ctx, state), do: {{:ok, demand: {:input, size}}, state}
 
-  setup do
-    {:ok, pipeline} =
-      Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-        elements: [
-          source: Testing.Source,
-          filter: %TestFilter{target: self()},
-          sink: Testing.Sink
-        ]
-      })
-
-    [pipeline: pipeline]
+    @impl true
+    def handle_process(_pad, _buffer, _context, state), do: {:ok, state}
   end
 
   describe "Start of stream" do
@@ -72,6 +66,35 @@ defmodule Membrane.Element.ElementTest do
       assert_pipeline_playback_changed(pipeline, _, :playing)
 
       TestFilter.assert_callback_called(:handle_start_of_stream)
+    end
+
+    test "does not trigger calling callback handle_event/3", %{pipeline: pipeline} do
+      Pipeline.play(pipeline)
+      assert_pipeline_playback_changed(pipeline, _, :playing)
+
+      TestFilter.refute_callback_called(:handle_event)
+    end
+  end
+
+  describe "End of stream" do
+    setup do
+      {:ok, pipeline} =
+        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+          elements: [
+            source: %Testing.Source{output: ['some payload']},
+            filter: %TestFilter{target: self()},
+            sink: Testing.Sink
+          ]
+        })
+
+      [pipeline: pipeline]
+    end
+
+    test "causes handle_end_of_stream/3 to be called", %{pipeline: pipeline} do
+      Pipeline.play(pipeline)
+      assert_pipeline_playback_changed(pipeline, _, :playing)
+
+      TestFilter.assert_callback_called(:handle_end_of_stream)
     end
 
     test "does not trigger calling callback handle_event/3", %{pipeline: pipeline} do

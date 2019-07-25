@@ -171,7 +171,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
           )
 
         expect(result) |> to(eq :ok)
-        expect(module() |> to(accepted(:handle_event)))
+        expect(module() |> to(accepted(:handle_end_of_stream)))
         expect(state.pads.data[pad_ref()]) |> to(be_nil())
       end
     end
@@ -197,7 +197,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
           )
 
         expect(result) |> to(eq :ok)
-        expect(module() |> to(accepted(:handle_event)))
+        expect(module() |> to(accepted(:handle_end_of_stream)))
         expect(module() |> to(accepted(:handle_pad_removed)))
         expect(state.pads.data[pad_ref()]) |> to(be_nil())
       end

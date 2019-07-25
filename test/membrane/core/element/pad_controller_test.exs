@@ -5,7 +5,6 @@ defmodule Membrane.Core.Element.PadControllerTest do
   alias Membrane.Core.Message
   alias Membrane.Element.Pad
   alias Membrane.ElementLinkError
-  alias Membrane.Event.EndOfStream
   require Message
 
   @module Membrane.Core.Element.PadController
@@ -129,7 +128,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
       state = prepare_dynamic_state(DynamicFilter, :input, pad_ref)
       assert state.pads.data |> Map.has_key?(pad_ref)
       assert {:ok, new_state} = @module.handle_unlink(pad_ref, state)
-      assert new_state.internal_state.last_event == {pad_ref, %EndOfStream{}}
+      assert new_state.internal_state[:last_event] == nil
       assert new_state.internal_state.last_pad_removed == pad_ref
       refute new_state.pads.data |> Map.has_key?(pad_ref)
     end
