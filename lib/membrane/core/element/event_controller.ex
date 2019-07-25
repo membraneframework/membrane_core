@@ -54,12 +54,13 @@ defmodule Membrane.Core.Element.EventController do
 
   @spec do_exec_handle_event(Pad.ref_t(), Event.t(), params :: map, State.t()) ::
           State.stateful_try_t()
-  defp do_exec_handle_event(pad_ref, %Event.StartOfStream{}, params, state) do
+  defp do_exec_handle_event(pad_ref, event, params, state)
+       when event in [%Event.StartOfStream{}, %Event.EndOfStream{}] do
     data = PadModel.get_data!(state, pad_ref)
     context = CallbackContext.Event.from_state(state)
 
     CallbackHandler.exec_and_handle_callback(
-      :handle_start_of_stream,
+      stream_event_to_callback(event),
       ActionHandler,
       params |> Map.merge(%{direction: data.direction}),
       [pad_ref, context],
@@ -117,4 +118,7 @@ defmodule Membrane.Core.Element.EventController do
   defp handle_special_event(_pad_ref, _event, state), do: {{:ok, :handle}, state}
 
   defp buffers_before_event_present?(pad_data), do: not InputBuffer.empty?(pad_data.input_buf)
+
+  defp stream_event_to_callback(%Event.StartOfStream{}), do: :handle_start_of_stream
+  defp stream_event_to_callback(%Event.EndOfStream{}), do: :handle_end_of_stream
 end
