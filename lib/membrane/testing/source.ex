@@ -26,7 +26,6 @@ defmodule Membrane.Testing.Source do
   use Membrane.Source
   alias Membrane.Buffer
   alias Membrane.Element.Action
-  alias Membrane.Event.EndOfStream
 
   @type generator ::
           (state :: any(), buffers_cnt :: pos_integer -> {[Action.t()], state :: any()})

@@ -37,11 +37,10 @@ defmodule Membrane.Testing.SourceTest do
 
       assert [
                {:buffer, {:output, [buffer]}},
-               {:event, {:output, event}}
+               {:end_of_stream, :output}
              ] = actions
 
       assert %Buffer{payload: payload} == buffer
-      assert event = %Membrane.Event.EndOfStream{}
     end
   end
 end
