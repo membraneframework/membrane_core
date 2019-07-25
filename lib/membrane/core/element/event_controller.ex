@@ -21,7 +21,7 @@ defmodule Membrane.Core.Element.EventController do
     pad_data = PadModel.get_data!(state, pad_ref)
 
     if not Event.async?(event) && pad_data.mode == :pull && pad_data.direction == :input &&
-         pad_data.input_buf |> InputBuffer.empty?() |> Kernel.not() do
+         buffers_before_event_present?(pad_data) do
       state
       |> PadModel.update_data(pad_ref, :input_buf, &(&1 |> InputBuffer.store(:event, event)))
     else
@@ -98,4 +98,6 @@ defmodule Membrane.Core.Element.EventController do
   end
 
   defp handle_special_event(_pad_ref, _event, state), do: {{:ok, :handle}, state}
+
+  defp buffers_before_event_present?(pad_data), do: not InputBuffer.empty?(pad_data.input_buf)
 end
