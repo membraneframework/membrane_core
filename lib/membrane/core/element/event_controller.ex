@@ -11,6 +11,10 @@ defmodule Membrane.Core.Element.EventController do
   use Core.Element.Log
   use Bunch
 
+  def handle_start_of_stream(pad_ref, state) do
+    handle_event(pad_ref, %Event.StartOfStream{}, state)
+  end
+
   @doc """
   Handles incoming event: either stores it in InputBuffer, or executes element callback.
   Extra checks and tasks required by special events such as `:start_of_stream`
@@ -50,6 +54,19 @@ defmodule Membrane.Core.Element.EventController do
 
   @spec do_exec_handle_event(Pad.ref_t(), Event.t(), params :: map, State.t()) ::
           State.stateful_try_t()
+  defp do_exec_handle_event(pad_ref, %Event.StartOfStream{}, params, state) do
+    data = PadModel.get_data!(state, pad_ref)
+    context = CallbackContext.Event.from_state(state)
+
+    CallbackHandler.exec_and_handle_callback(
+      :handle_start_of_stream,
+      ActionHandler,
+      params |> Map.merge(%{direction: data.direction}),
+      [pad_ref, context],
+      state
+    )
+  end
+
   defp do_exec_handle_event(pad_ref, event, params, state) do
     data = PadModel.get_data!(state, pad_ref)
     context = CallbackContext.Event.from_state(state)

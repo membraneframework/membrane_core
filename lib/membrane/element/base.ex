@@ -190,6 +190,16 @@ defmodule Membrane.Element.Base do
   @callback handle_shutdown(reason, state :: Element.state_t()) :: :ok
             when reason: :normal | :shutdown | {:shutdown, any}
 
+  # TODO docs
+  # TODO do we need to pass event and context here?
+  @doc """
+  """
+  @callback handle_start_of_stream(
+              pad :: Pad.ref_t(),
+              context :: CallbackContext.Event.t(),
+              state :: Element.state_t()
+            ) :: callback_return_t
+
   @doc """
   Macro defining options that parametrize element.
 
@@ -240,10 +250,6 @@ defmodule Membrane.Element.Base do
       def handle_pad_removed(_pad, _context, state), do: {:ok, state}
 
       @impl true
-      def handle_event(pad, %Event.StartOfStream{}, _context, state),
-        do: {{:ok, notify: {:start_of_stream, pad}}, state}
-
-      @impl true
       def handle_event(pad, %Event.EndOfStream{}, _context, state),
         do: {{:ok, notify: {:end_of_stream, pad}}, state}
 
@@ -251,6 +257,11 @@ defmodule Membrane.Element.Base do
 
       @impl true
       def handle_shutdown(_reason, _state), do: :ok
+
+      @impl true
+      def handle_start_of_stream(pad, _context, state),
+        do: {{:ok, notify: {:start_of_stream, pad}}, state}
+
 
       defoverridable handle_init: 1,
                      handle_stopped_to_prepared: 2,
@@ -261,7 +272,8 @@ defmodule Membrane.Element.Base do
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
                      handle_event: 4,
-                     handle_shutdown: 2
+                     handle_shutdown: 2,
+                     handle_start_of_stream: 3
     end
   end
 end

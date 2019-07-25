@@ -5,7 +5,6 @@ defmodule Membrane.Element.ElementTest do
 
   alias Membrane.Pipeline
   alias Membrane.Testing
-  alias Membrane.Event.{StartOfStream, EndOfStream}
 
   defmodule TestFilter do
     use Membrane.Filter
@@ -30,7 +29,7 @@ defmodule Membrane.Element.ElementTest do
     end
 
     @impl true
-    def handle_event(_, _, _, state) do
+    def handle_event(_, _ = event, _, state) do
       send(state.target, {:callback_called, :handle_event})
       {:ok, state}
     end
