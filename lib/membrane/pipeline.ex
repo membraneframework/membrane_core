@@ -129,6 +129,16 @@ defmodule Membrane.Pipeline do
               callback_return_t
 
   @doc """
+  Callback invoked when pipeline is shutting down.
+  Internally called in `c:GenServer.terminate/2` callback.
+
+  Useful for any cleanup required.
+  """
+
+  @callback handle_shutdown(reason, state :: State.internal_state_t()) :: :ok
+            when reason: :normal | :shutdown | {:shutdown, any}
+
+  @doc """
   Starts the Pipeline based on given module and links it to the current
   process.
 
@@ -511,6 +521,12 @@ defmodule Membrane.Pipeline do
     |> noreply(state)
   end
 
+  @impl GenServer
+  def terminate(reason, state) do
+    CallbackHandler.exec_and_handle_callback(:handle_shutdown, __MODULE__, [reason], state)
+    :ok
+  end
+
   @impl CallbackHandler
   def handle_action({:forward, {elementname, message}}, _cb, _params, state) do
     with {:ok, pid} <- state |> State.get_child_pid(elementname) do
@@ -631,6 +647,9 @@ defmodule Membrane.Pipeline do
       @impl true
       def handle_spec_started(_new_children, state), do: {:ok, state}
 
+      @impl true
+      def handle_shutdown(_reason, _state), do: :ok
+
       defoverridable start: 0,
                      start: 1,
                      start: 2,
@@ -647,7 +666,8 @@ defmodule Membrane.Pipeline do
                      handle_prepared_to_stopped: 1,
                      handle_notification: 3,
                      handle_other: 2,
-                     handle_spec_started: 2
+                     handle_spec_started: 2,
+                     handle_shutdown: 2
     end
   end
 end
