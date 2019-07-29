@@ -255,7 +255,7 @@ defmodule Membrane.Core.InputBuffer do
       input_buf
     )
 
-    Message.send(demand_pid, :demand, to_demand, from_pad: linked_output_ref)
+    Message.send(demand_pid, :demand, to_demand, for_pad: linked_output_ref)
     %__MODULE__{input_buf | demand: demand - to_demand}
   end
 

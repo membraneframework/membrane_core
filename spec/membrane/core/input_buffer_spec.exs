@@ -58,7 +58,7 @@ defmodule Membrane.Core.InputBufferSpec do
 
       pad_ref = linked_output_ref()
       expected_size = preferred_size()
-      assert_received Message.new(:demand, ^expected_size, from_pad: ^pad_ref)
+      assert_received Message.new(:demand, ^expected_size, for_pad: ^pad_ref)
     end
 
     context "if toilet is not false" do
@@ -240,7 +240,7 @@ defmodule Membrane.Core.InputBufferSpec do
 
         expected_size = current_size()
         pad_ref = linked_output_ref()
-        assert_received Message.new(:demand, ^expected_size, from_pad: ^pad_ref)
+        assert_received Message.new(:demand, ^expected_size, for_pad: ^pad_ref)
       end
     end
 

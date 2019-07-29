@@ -187,7 +187,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
       pads_in_buffer =
         q
         |> Enum.filter(fn Message.new(type, _, _) -> type == :buffer end)
-        |> Enum.map(fn Message.new(_, _, opts) -> Keyword.get(opts, :from_pad) end)
+        |> Enum.map(fn Message.new(_, _, opts) -> Keyword.get(opts, :for_pad) end)
         |> Enum.dedup()
         |> Enum.sort()
 
