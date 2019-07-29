@@ -10,7 +10,7 @@ defmodule Membrane.Core.BinTest do
     use Membrane.Bin
 
     def_options filter1: [type: :atom],
-      filter2: [type: :atom]
+                filter2: [type: :atom]
 
     def_input_pad :input, demand_unit: :buffers, caps: :any
 
@@ -55,14 +55,14 @@ defmodule Membrane.Core.BinTest do
     def_input_pad :input, demand_unit: :buffers, caps: :any
 
     def_options demand_generator: [
-      type: :function,
-      spec: (pos_integer -> non_neg_integer),
-        default: &__MODULE__.default_demand_generator/1
-    ],
-      target: [type: :pid],
-      playing_delay: [type: :integer, default: 0],
-      ref: [type: :any, default: nil],
-      sof_sent?: [type: :boolean, default: false]
+                  type: :function,
+                  spec: (pos_integer -> non_neg_integer),
+                  default: &__MODULE__.default_demand_generator/1
+                ],
+                target: [type: :pid],
+                playing_delay: [type: :integer, default: 0],
+                ref: [type: :any, default: nil],
+                sof_sent?: [type: :boolean, default: false]
 
     @impl true
     def handle_init(%{target: t, ref: ref} = opts) do
@@ -144,7 +144,6 @@ defmodule Membrane.Core.BinTest do
           test_bin: %TestBin{
             filter1: %TestFilter{target: self()},
             filter2: %TestFilter{target: self()}
-
           },
           sink: Testing.Sink
         ]

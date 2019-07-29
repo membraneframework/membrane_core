@@ -4,6 +4,7 @@ defmodule Membrane.Core.Element.PadModel do
 
   alias Membrane.Element.Pad
   alias Membrane.Core.Element.State
+  alias Membrane.Bin.State
   use Bunch
 
   @type pads_data_t :: %{Pad.ref_t() => Pad.Data.t()}

@@ -1,28 +1,28 @@
-defmodule Membrane.Pipeline do
-  @moduledoc """
-  Module containing functions for constructing and supervising pipelines.
+defmodule Membrane.Bin.Pipeline do
+  # TODO move this to Membrane.Bin later!!! No need to keep it in different module probably
+  # At least rename it
 
-  Pipelines are units that make it possible to instantiate, link and manage
-  elements in convenient way (actually elements should always be used inside
-  a pipeline). Linking elements together enables them to pass data to one another,
-  and process it in different ways.
-  """
-
-  alias __MODULE__.{Link, State, Spec}
+  alias Membrane.Pipeline.Link
+  alias Membrane.Bin
+  alias Membrane.Bin.{State, Spec}
   alias Membrane.{CallbackError, Core, Element, Notification, PipelineError}
   alias Element.Pad
   alias Core.{Message, Playback}
   alias Bunch.Type
+  alias Membrane.Core.Element.PadController
+  alias Membrane.Core.Element.PadSpecHandler
+  alias Membrane.Core.Element.PadModel
   import Membrane.Helper.GenServer
   require Element
-  require Membrane.PlaybackState
   require Message
   require Pad
+  require Membrane.Bin
   use Bunch
   use Membrane.Log, tags: :core
   use Membrane.Core.CallbackHandler
   use GenServer
   use Membrane.Core.PlaybackHandler
+  # use Membrane.Core.PlaybackRequestor
 
   @typedoc """
   Defines options that can be passed to `start/3` / `start_link/3` and received
@@ -119,22 +119,6 @@ defmodule Membrane.Pipeline do
   @callback handle_other(message :: any, state :: State.internal_state_t()) :: callback_return_t
 
   @doc """
-  Callback invoked when pipeline's element receives start_of_stream event.
-  """
-  @callback handle_element_start_of_stream(
-              {Element.name_t(), Pad.t()},
-              state :: State.internal_state_t()
-            ) :: callback_return_t
-
-  @doc """
-  Callback invoked when pipeline's element receives end_of_stream event.
-  """
-  @callback handle_element_end_of_stream(
-              {Element.name_t(), Pad.t()},
-              state :: State.internal_state_t()
-            ) :: callback_return_t
-
-  @doc """
   Callback invoked when `Membrane.Pipeline.Spec` is linked and in the same playback
   state as pipeline.
 
@@ -143,16 +127,6 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_spec_started(elements :: [Element.name_t()], state :: State.internal_state_t()) ::
               callback_return_t
-
-  @doc """
-  Callback invoked when pipeline is shutting down.
-  Internally called in `c:GenServer.terminate/2` callback.
-
-  Useful for any cleanup required.
-  """
-
-  @callback handle_shutdown(reason, state :: State.internal_state_t()) :: :ok
-            when reason: :normal | :shutdown | {:shutdown, any}
 
   @doc """
   Starts the Pipeline based on given module and links it to the current
@@ -165,47 +139,25 @@ defmodule Membrane.Pipeline do
   Returns the same values as `GenServer.start_link/3`.
   """
   @spec start_link(
+          atom,
           module,
           pipeline_options :: pipeline_options_t,
           process_options :: GenServer.options()
         ) :: GenServer.on_start()
-  def start_link(module, pipeline_options \\ nil, process_options \\ []),
-    do: do_start(:start_link, module, pipeline_options, process_options)
+  def start_link(my_name, module, pipeline_options \\ nil, process_options \\ []),
+    do: do_start(:start_link, my_name, module, pipeline_options, process_options)
 
-  @doc """
-  Does the same as `start_link/3` but starts process outside of supervision tree.
-  """
-  @spec start(
-          module,
-          pipeline_options :: pipeline_options_t,
-          process_options :: GenServer.options()
-        ) :: GenServer.on_start()
-  def start(module, pipeline_options \\ nil, process_options \\ []),
-    do: do_start(:start, module, pipeline_options, process_options)
-
-  defp do_start(method, module, pipeline_options, process_options) do
+  defp do_start(method, my_name, module, pipeline_options, process_options) do
     with :ok <-
-           (if module |> pipeline? do
+           (if module |> bin? do
               :ok
             else
-              :not_pipeline
+              :not_bin
             end) do
-      debug("""
-      Pipeline start link: module: #{inspect(module)},
-      pipeline options: #{inspect(pipeline_options)},
-      process options: #{inspect(process_options)}
-      """)
-
-      apply(GenServer, method, [__MODULE__, {module, pipeline_options}, process_options])
+      apply(GenServer, method, [__MODULE__, {my_name, module, pipeline_options}, process_options])
     else
-      :not_pipeline ->
-        warn_error(
-          """
-          Cannot start pipeline, passed module #{inspect(module)} is not a Membrane Pipeline.
-          Make sure that given module is the right one and it uses Membrane.Pipeline
-          """,
-          {:not_pipeline, module}
-        )
+      :not_bin ->
+        {:not_bin, module}
     end
   end
 
@@ -218,54 +170,19 @@ defmodule Membrane.Pipeline do
     :ok
   end
 
-  @doc """
-  Changes playback state to `:playing`.
-
-  An alias for `change_playback_state/2` with proper state.
-  """
-  @spec play(pid) :: :ok
-  def play(pid), do: change_playback_state(pid, :playing)
-
-  @doc """
-  Changes playback state to `:prepared`.
-
-  An alias for `change_playback_state/2` with proper state.
-  """
-  @spec prepare(pid) :: :ok
-  def prepare(pid), do: change_playback_state(pid, :prepared)
-
-  @doc """
-  Changes playback state to `:stopped`.
-
-  An alias for `change_playback_state/2` with proper state.
-  """
-  @spec stop(pid) :: :ok
-  def stop(pid), do: change_playback_state(pid, :stopped)
-
-  @spec change_playback_state(pid, Membrane.PlaybackState.t()) :: :ok
-  defp change_playback_state(pid, new_state)
-       when Membrane.PlaybackState.is_playback_state(new_state) do
-    alias Membrane.Core.Message
-    require Message
-    Message.send(pid, :change_playback_state, new_state)
-    :ok
-  end
-
   @impl GenServer
-  def init(module) when is_atom(module) do
-    init({module, module |> Bunch.Module.struct()})
-  end
-
-  def init(%module{} = pipeline_options) do
-    init({module, pipeline_options})
-  end
-
-  def init({module, pipeline_options}) do
-    IO.puts("Pipeline pid is #{inspect(self())}")
-
+  def init({my_name, module, pipeline_options}) do
     with {{:ok, spec}, internal_state} <- module.handle_init(pipeline_options) do
-      state = %State{internal_state: internal_state, module: module}
-      Message.self(:pipeline_spec, spec)
+      state =
+        %State{
+          internal_state: internal_state,
+          bin_options: pipeline_options,
+          module: module,
+          name: my_name
+        }
+        |> PadSpecHandler.init_pads()
+
+      Message.self(:bin_spec, spec)
       {:ok, state}
     else
       {:error, reason} ->
@@ -279,33 +196,35 @@ defmodule Membrane.Pipeline do
   @doc """
   Checks whether module is a pipeline.
   """
-  @spec pipeline?(module) :: boolean
-  def pipeline?(module) do
-    module |> Bunch.Module.check_behaviour(:membrane_pipeline?)
+  @spec bin?(module) :: boolean
+  def bin?(module) do
+    module |> Bunch.Module.check_behaviour(:membrane_bin?)
   end
 
   @spec handle_spec(Spec.t(), State.t()) :: Type.stateful_try_t([Element.name_t()], State.t())
   defp handle_spec(%Spec{children: children_spec, links: links}, state) do
     debug("""
-    Initializing pipeline spec
+    Initializing bin spec
     children: #{inspect(children_spec)}
     links: #{inspect(links)}
     """)
+
+    %State{name: bin_name, bin_options: bin_opts, module: bin_module} = state
 
     parsed_children = children_spec |> parse_children
 
     {:ok, state} = {parsed_children |> check_if_children_names_unique(state), state}
     children = parsed_children |> start_children
     {:ok, state} = children |> add_children(state)
-    {{:ok, links}, state} = {links |> parse_links, state}
-    links = links |> resolve_links(state)
+    {{:ok, links}, state} = {links |> IO.inspect(label: "links") |> parse_links, state}
+    {links, state} = links |> resolve_links(state)
     {:ok, state} = {links |> link_children(state), state}
     {children_names, children_pids} = children |> Enum.unzip()
     {:ok, state} = {children_pids |> set_children_watcher, state}
     {:ok, state} = exec_handle_spec_started(children_names, state)
 
     children_pids
-    |> Enum.each(&change_playback_state(&1, state.playback.state))
+    |> Enum.each(&Element.change_playback_state(&1, state.playback.state))
 
     debug("""
     Initialized pipeline spec
@@ -315,6 +234,24 @@ defmodule Membrane.Pipeline do
     """)
 
     {{:ok, children_names}, state}
+  end
+
+  # TODO maybe don't add it as a child but just act as if it was a child
+  defp add_bin_as_child(children, bin_name, opts), do: [{bin_name, opts} | children]
+
+  defp replace_this_bin(links, bin_name, module) when is_map(links) do
+    links
+    |> Enum.map(fn {k, v} ->
+      {replace_this_bin(k, bin_name, module), replace_this_bin(v, bin_name, module)}
+    end)
+  end
+
+  defp replace_this_bin(link, bin_name, module) when is_tuple(link) do
+    if elem(link, 0) == Bin.this_bin_marker() do
+      put_elem(link, 0, bin_name)
+    else
+      link
+    end
   end
 
   @spec parse_children(Spec.children_spec_t() | any) :: [parsed_child_t]
@@ -363,41 +300,13 @@ defmodule Membrane.Pipeline do
     children |> Enum.map(&start_child/1)
   end
 
-  defp start_child(%{module: module} = spec) do
-    case child_type(module) do
-      :bin ->
-        start_child_bin(spec)
-
-      :element ->
-        start_child_element(spec)
-    end
-  end
-
-  # TODO maybe a better common module for children of pipeline
-  defp child_type(module) do
-    if module |> Bunch.Module.check_behaviour(:membrane_bin?) do
-      :bin
-    else
-      :element
-    end
-  end
-
   # Recursion that starts children processes, case when both module and options
   # are provided.
-  defp start_child_element(%{name: name, module: module, options: options}) do
+  defp start_child(%{name: name, module: module, options: options}) do
+    debug("Pipeline: starting child: name: #{inspect(name)}, module: #{inspect(module)}")
+
     with {:ok, pid} <- Element.start_link(self(), module, name, options),
          :ok <- Element.set_controlling_pid(pid, self()) do
-      {name, pid}
-    else
-      {:error, reason} ->
-        raise PipelineError,
-              "Cannot start child #{inspect(name)}, \
-              reason: #{inspect(reason, pretty: true)}"
-    end
-  end
-
-  defp start_child_bin(%{name: name, module: module, options: options}) do
-    with {:ok, pid} <- Membrane.Bin.start_link(name, module, options, []) do
       {name, pid}
     else
       {:error, reason} ->
@@ -420,16 +329,38 @@ defmodule Membrane.Pipeline do
 
   @spec resolve_links([Link.t()], State.t()) :: [Link.resolved_t()]
   defp resolve_links(links, state) do
+    # TODO simplify, don't reduce state seperately
+    new_state =
+      links
+      |> Enum.reduce(state, fn %{from: from, to: to}, s0 ->
+        {_, s1} = from |> resolve_link(s0)
+        {_, s2} = to |> resolve_link(s1)
+        s2
+      end)
+
     links
     |> Enum.map(fn %{from: from, to: to} = link ->
-      %{link | from: from |> resolve_link(state), to: to |> resolve_link(state)}
+      {from, _} = from |> resolve_link(state)
+      {to, _} = to |> resolve_link(state)
+      %{link | from: from, to: to}
     end)
+    ~> {&1, new_state}
+  end
+
+  defp resolve_link(
+         %{element: Bin.this_bin_marker(), pad_name: pad_name, id: id} = endpoint,
+         %{module: bin_mod} = state
+       ) do
+    # TODO implement unhappy path
+    private_bin = bin_mod.get_corresponding_private_pad(pad_name)
+    {{:ok, pad_ref}, state} = PadController.get_pad_ref(private_bin, id, state)
+    {%{endpoint | pid: self(), pad_ref: pad_ref, pad_name: private_bin}, state}
   end
 
   defp resolve_link(%{element: element, pad_name: pad_name, id: id} = endpoint, state) do
     with {:ok, pid} <- state |> State.get_child_pid(element),
          {:ok, pad_ref} <- pid |> Message.call(:get_pad_ref, [pad_name, id]) do
-      %{endpoint | pid: pid, pad_ref: pad_ref}
+      {%{endpoint | pid: pid, pad_ref: pad_ref}, state}
     else
       {:error, {:unknown_child, child}} ->
         raise PipelineError, "Child #{inspect(child)} does not exist"
@@ -452,14 +383,53 @@ defmodule Membrane.Pipeline do
   # a chance that some of children will remain linked.
   @spec link_children([Link.resolved_t()], State.t()) :: Type.try_t()
   defp link_children(links, state) do
-    with :ok <- links |> Bunch.Enum.try_each(&Element.link/1),
+    debug("Linking children: links = #{inspect(links)}")
+
+    with :ok <- links |> Bunch.Enum.try_each(&link(&1, state)),
          :ok <-
            state
            |> State.get_children()
            |> Bunch.Enum.try_each(fn {_pid, pid} -> pid |> Element.handle_linking_finished() end),
          do: :ok
+  end
 
+  defp link(
+         %Link{from: %Link.Endpoint{pid: from_pid} = from, to: %Link.Endpoint{pid: to_pid} = to},
+         state
+       ) do
+    from_args = [
+      from.pad_ref,
+      :output,
+      to_pid,
+      to.pad_ref,
+      nil,
+      from.opts
+    ]
+
+    {:ok, pad_from_info} = handle_link(from.pid, from_args, state)
+
+    to_args = [
+      to.pad_ref,
+      :input,
+      from_pid,
+      from.pad_ref,
+      pad_from_info,
+      to.opts
+    ]
+
+    handle_link(to.pid, to_args, state)
     :ok
+  end
+
+  defp handle_link(pid, args, state) do
+    case self() do
+      ^pid ->
+        {{:ok, _spec} = res, _el_state} = apply(PadController, :handle_link, args ++ [state])
+        res
+
+      _ ->
+        Message.call(pid, :handle_link, args)
+    end
   end
 
   @spec set_children_watcher([pid]) :: :ok
@@ -498,7 +468,9 @@ defmodule Membrane.Pipeline do
     children_pids = state |> State.get_children() |> Map.values()
 
     children_pids
-    |> Enum.each(&change_playback_state(&1, new))
+    |> Enum.each(fn pid ->
+      Element.change_playback_state(pid, new)
+    end)
 
     state = %{state | pending_pids: children_pids |> MapSet.new()}
     PlaybackHandler.suspend_playback_change(state)
@@ -569,7 +541,7 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  def handle_info(Message.new(:pipeline_spec, spec), state) do
+  def handle_info(Message.new(:bin_spec, spec), state) do
     with {{:ok, _children}, state} <- spec |> handle_spec(state) do
       {:ok, state}
     end
@@ -590,20 +562,33 @@ defmodule Membrane.Pipeline do
 
   def handle_info(Message.new(:shutdown_ready, child), state) do
     {{:ok, pid}, state} = State.pop_child(state, child)
-
     {Element.shutdown(pid), state}
-    |> noreply(state)
   end
 
-  def handle_info(Message.new(cb, [element_name, pad_ref]), state)
-      when cb in [:handle_start_of_stream, :handle_end_of_stream] do
-    CallbackHandler.exec_and_handle_callback(
-      to_parent_sm_callback(cb),
-      __MODULE__,
-      [{element_name, pad_ref}],
+  def handle_info(Message.new(:demand_unit, [demand_unit, pad_ref]) = msg, state) do
+    {:ok, state} |> noreply(state)
+  end
+
+  # TODO what for dynamic pads? Should we maybe send the whole pad struct in the field `for_pad`?
+  def handle_info(Message.new(type, args, for_pad: pad) = msg, %{module: module} = state) do
+    IO.puts("got message #{inspect(msg)} for pad: #{inspect(pad)}")
+
+    dist_pad =
+      pad
+      |> module.get_corresponding_private_pad()
+
+    {{:ok, dist_pad_ref}, state} =
+      dist_pad
+      |> PadController.get_pad_ref(nil, state)
+
+    IO.puts("state is #{inspect(state)} pad: #{inspect(dist_pad_ref)}")
+
+    %{pid: dist_pid} =
       state
-    )
-    |> noreply(state)
+      |> PadModel.get_data(dist_pad_ref)
+
+    Message.send(dist_pid, type, args, for_pad: dist_pad)
+    {:ok, state} |> noreply()
   end
 
   def handle_info(message, state) do
@@ -611,10 +596,42 @@ defmodule Membrane.Pipeline do
     |> noreply(state)
   end
 
-  @impl GenServer
-  def terminate(reason, state) do
-    CallbackHandler.exec_and_handle_callback(:handle_shutdown, __MODULE__, [reason], state)
-    :ok
+  def handle_call(Message.new(:get_pad_ref, [pad_name, id]), from, state) do
+    PadController.get_pad_ref(pad_name, id, state) |> reply()
+  end
+
+  def handle_call(
+        Message.new(:handle_link, [pad_ref, pad_direction, pid, other_ref, other_info, props]),
+        from,
+        state
+      ) do
+    {pid, _} = from
+    IO.puts("got handle_link from #{inspect(pid)} (pad_ref: #{inspect(pad_ref)})")
+
+    PadController.handle_link(pad_ref, pad_direction, pid, other_ref, other_info, props, state)
+    |> reply()
+  end
+
+  def handle_call(Message.new(:linking_finished), _, state) do
+    PadController.handle_linking_finished(state)
+    |> reply()
+  end
+
+  def handle_call(Message.new(:set_watcher, watcher), _, state) do
+    {:ok, %{state | watcher: watcher}} |> reply()
+  end
+
+  # TODO remove this function
+  defp get_opposite_to_this_bin_endpoint_name({end1, end2}) do
+    if elem(end1, 0) == Bin.this_bin_marker() do
+      elem(end2, 0)
+    else
+      if elem(end2, 0) == Bin.this_bin_marker() do
+        elem(end1, 0)
+      else
+        nil
+      end
+    end
   end
 
   @impl CallbackHandler
@@ -646,40 +663,10 @@ defmodule Membrane.Pipeline do
     raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
   end
 
-  defp to_parent_sm_callback(:handle_start_of_stream), do: :handle_element_start_of_stream
-  defp to_parent_sm_callback(:handle_end_of_stream), do: :handle_element_end_of_stream
-
   defmacro __using__(_) do
     quote location: :keep do
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
-
-      @doc """
-      Starts the pipeline `#{inspect(__MODULE__)}` and links it to the current process.
-
-      A proxy for `Membrane.Pipeline.start_link/3`
-      """
-      @spec start_link(
-              pipeline_options :: Pipeline.pipeline_options_t(),
-              process_options :: GenServer.options()
-            ) :: GenServer.on_start()
-      def start_link(pipeline_options \\ nil, process_options \\ []) do
-        Pipeline.start_link(__MODULE__, pipeline_options, process_options)
-      end
-
-      @doc """
-      Starts the pipeline `#{inspect(__MODULE__)}` without linking it
-      to the current process.
-
-      A proxy for `Membrane.Pipeline.start/3`
-      """
-      @spec start(
-              pipeline_options :: Pipeline.pipeline_options_t(),
-              process_options :: GenServer.options()
-            ) :: GenServer.on_start()
-      def start(pipeline_options \\ nil, process_options \\ []) do
-        Pipeline.start(__MODULE__, pipeline_options, process_options)
-      end
 
       @doc """
       Changes playback state of pipeline to `:playing`
@@ -740,15 +727,6 @@ defmodule Membrane.Pipeline do
       @impl true
       def handle_spec_started(_new_children, state), do: {:ok, state}
 
-      @impl true
-      def handle_shutdown(_reason, _state), do: :ok
-
-      @impl true
-      def handle_element_start_of_stream({_element, _pad}, state), do: {:ok, state}
-
-      @impl true
-      def handle_element_end_of_stream({_element, _pad}, state), do: {:ok, state}
-
       defoverridable start: 0,
                      start: 1,
                      start: 2,
@@ -765,10 +743,7 @@ defmodule Membrane.Pipeline do
                      handle_prepared_to_stopped: 1,
                      handle_notification: 3,
                      handle_other: 2,
-                     handle_spec_started: 2,
-                     handle_shutdown: 2,
-                     handle_element_start_of_stream: 2,
-                     handle_element_end_of_stream: 2
+                     handle_spec_started: 2
     end
   end
 end

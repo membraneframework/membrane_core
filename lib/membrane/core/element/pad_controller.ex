@@ -70,12 +70,13 @@ defmodule Membrane.Core.Element.PadController do
         end)
 
       if not Enum.empty?(static_unlinked) do
-        warn(
-          """
-          Some static pads remained unlinked: #{inspect(static_unlinked)}
-          """,
-          state
-        )
+        # TODO log more generally (?)
+        # warn(
+        #  """
+        #  Some static pads remained unlinked: #{inspect(static_unlinked)}
+        #  """,
+        #  state
+        # )
       end
 
       {:ok, clear_currently_linking(state)}
@@ -115,6 +116,7 @@ defmodule Membrane.Core.Element.PadController do
 
       %{availability: av} = pad_info when Pad.is_availability_dynamic(av) ->
         {pad_ref, pad_info} = get_dynamic_pad_ref(pad_name, id, pad_info)
+        IO.puts("putting in data [pads]")
         state |> Bunch.Access.put_in([:pads, :info, pad_name], pad_info) ~> {{:ok, pad_ref}, &1}
 
       %{availability: av} when Pad.is_availability_static(av) and id == nil ->
