@@ -11,15 +11,10 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
                                      /
                     extra_source ___/
 
-  This pipeline also makes children aware of their names. They can reach their
-  name by accessing field `ref` in their opts.
-
   Should be used along with `Membrane.Support.ChildRemovalTest.Pipeline` as they
   share names (i.e. input_pads: `input1` and `input2`) and exchanged messages' formats.
   """
   use Membrane.Pipeline
-
-  alias Membrane.Support.ChildRemovalTest.Filter
 
   def remove_child(pid, child_name) do
     send(pid, {:remove_child, child_name})
@@ -35,7 +30,6 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
         sink: opts.sink
       ]
       |> maybe_add_extra_source(opts)
-      |> add_refs()
 
     links =
       %{
@@ -63,8 +57,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
   end
 
   @impl true
-  def handle_prepared_to_playing(%{target: target} = state) do
-    #send(target, {:playing, self()})
+  def handle_prepared_to_playing(state) do
     {:ok, state}
   end
 
@@ -78,8 +71,9 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
     send(target, {:playing, element})
     {:ok, state}
   end
-  def handle_notification(n, el, st) do
-    {:ok, st}
+
+  def handle_notification(_, _, state) do
+    {:ok, state}
   end
 
   defp maybe_add_extra_source(children, %{extra_source: source}),
@@ -94,16 +88,4 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
   defp maybe_add_extra_source_link(links, _) do
     links
   end
-
-  defp add_refs(children) do
-    children
-    |> Enum.map(fn {name, opts_or_mod} -> {name, to_struct(opts_or_mod)} end)
-    |> Enum.map(fn
-      {name, %Filter{} = opts} -> {name, %{opts | ref: name}}
-      e -> e
-    end)
-  end
-
-  defp to_struct(%{} = opts), do: opts
-  defp to_struct(module) when is_atom(module), do: struct(module)
 end

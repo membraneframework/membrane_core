@@ -16,8 +16,8 @@ defmodule Membrane.Integration.ChildRemovalTest do
     assert {:ok, pipeline_pid} =
              Pipeline.start_link(ChildRemovalTest.Pipeline, %{
                source: Testing.Source,
-               filter1: %ChildRemovalTest.Filter{target: self()},
-               filter2: %ChildRemovalTest.Filter{target: self()},
+               filter1: ChildRemovalTest.Filter,
+               filter2: ChildRemovalTest.Filter,
                sink: Testing.Sink,
                target: self()
              })
@@ -28,7 +28,6 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
     ChildRemovalTest.Pipeline.remove_child(pipeline_pid, :filter1)
 
-    assert_receive {:element_shutting_down, ^filter_pid1}
     assert_pid_dead(filter_pid1)
     assert Process.alive?(filter_pid2)
   end
@@ -37,8 +36,8 @@ defmodule Membrane.Integration.ChildRemovalTest do
     assert {:ok, pipeline_pid} =
              Pipeline.start_link(ChildRemovalTest.Pipeline, %{
                source: Testing.Source,
-               filter1: %ChildRemovalTest.Filter{target: self()},
-               filter2: %ChildRemovalTest.Filter{target: self()},
+               filter1: ChildRemovalTest.Filter,
+               filter2: ChildRemovalTest.Filter,
                sink: Testing.Sink,
                target: self()
              })
@@ -53,7 +52,6 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
     ChildRemovalTest.Pipeline.remove_child(pipeline_pid, :filter1)
 
-    assert_receive {:element_shutting_down, ^filter_pid1}
     assert_pid_dead(filter_pid1)
     assert Process.alive?(filter_pid2)
 
@@ -72,11 +70,9 @@ defmodule Membrane.Integration.ChildRemovalTest do
     assert {:ok, pipeline_pid} =
              Pipeline.start_link(ChildRemovalTest.Pipeline, %{
                source: Testing.Source,
-               filter1: %ChildRemovalTest.Filter{target: self(), ref: 1},
+               filter1: ChildRemovalTest.Filter,
                filter2: %ChildRemovalTest.Filter{
-                 target: self(),
-                 playing_delay: prepared_to_playing_delay(),
-                 ref: 2
+                 playing_delay: prepared_to_playing_delay()
                },
                sink: Testing.Sink,
                target: self()
@@ -92,7 +88,6 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
     ChildRemovalTest.Pipeline.remove_child(pipeline_pid, :filter1)
 
-    assert_receive {:element_shutting_down, ^filter_pid1}
     assert_pid_dead(filter_pid1)
     assert_pid_alive(filter_pid2)
 
@@ -118,9 +113,8 @@ defmodule Membrane.Integration.ChildRemovalTest do
              Pipeline.start_link(ChildRemovalTest.Pipeline, %{
                source: %Testing.Source{output: {0, source_buf_gen}},
                extra_source: %Testing.Source{output: {0, extra_source_buf_gen}},
-               filter1: %ChildRemovalTest.Filter{target: self()},
+               filter1: ChildRemovalTest.Filter,
                filter2: %ChildRemovalTest.Filter{
-                 target: self(),
                  playing_delay: prepared_to_playing_delay()
                },
                sink: Testing.Sink,
@@ -137,7 +131,6 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
     ChildRemovalTest.Pipeline.remove_child(pipeline_pid, :filter1)
 
-    assert_receive {:element_shutting_down, ^filter_pid1}
     assert_pid_dead(filter_pid1)
 
     %PlaybackBuffer{q: q} = :sys.get_state(filter_pid2).playback_buffer

@@ -30,13 +30,11 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
                 spec: (pos_integer -> non_neg_integer),
                 default: &__MODULE__.default_demand_generator/1
               ],
-              target: [type: :pid],
               playing_delay: [type: :integer, default: 0],
-              ref: [type: :any, default: nil],
               sof_sent?: [type: :boolean, default: false]
 
   @impl true
-  def handle_init(%{target: t, ref: ref} = opts) do
+  def handle_init(opts) do
     {:ok, Map.put(opts, :pads, MapSet.new())}
   end
 
@@ -54,7 +52,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   @impl true
   def handle_prepared_to_playing(_ctx, %{playing_delay: 0} = state) do
-    #send(state.target, {:playing, self()})
+    # send(state.target, {:playing, self()})
     {{:ok, notify: :playing}, state}
   end
 
@@ -93,12 +91,6 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   def handle_event(_pad, event, _ctx, state) do
     {{:ok, forward: event}, state}
-  end
-
-  @impl true
-  def handle_shutdown(%{target: pid}) do
-    send(pid, {:element_shutting_down, self()})
-    :ok
   end
 
   def default_demand_generator(demand), do: demand
