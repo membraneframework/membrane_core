@@ -37,7 +37,6 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   @impl true
   def handle_init(%{target: t, ref: ref} = opts) do
-    send(t, {:filter_pid, ref, self()})
     {:ok, Map.put(opts, :pads, MapSet.new())}
   end
 

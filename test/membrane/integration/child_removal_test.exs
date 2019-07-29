@@ -24,7 +24,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
     [filter_pid1, filter_pid2] =
       [:filter1, :filter2]
-      |> Enum.map(&get_filter_pid/1)
+      |> Enum.map(&get_filter_pid(&1, pipeline_pid))
 
     ChildRemovalTest.Pipeline.remove_child(pipeline_pid, :filter1)
 
@@ -45,7 +45,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
     [filter_pid1, filter_pid2] =
       [:filter1, :filter2]
-      |> Enum.map(&get_filter_pid/1)
+      |> Enum.map(&get_filter_pid(&1, pipeline_pid))
 
     assert Pipeline.play(pipeline_pid) == :ok
     assert_receive {:playing, ^pipeline_pid}
@@ -85,7 +85,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
     [filter_pid1, filter_pid2] =
       [:filter1, :filter2]
-      |> Enum.map(&get_filter_pid/1)
+      |> Enum.map(&get_filter_pid(&1, pipeline_pid))
 
     assert Pipeline.play(pipeline_pid) == :ok
     wait_for_playing(filter_pid1)
@@ -130,7 +130,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
     [filter_pid1, filter_pid2] =
       [:filter1, :filter2]
-      |> Enum.map(&get_filter_pid/1)
+      |> Enum.map(&get_filter_pid(&1, pipeline_pid))
 
     assert Pipeline.play(pipeline_pid) == :ok
     wait_for_playing(filter_pid1)
@@ -168,8 +168,9 @@ defmodule Membrane.Integration.ChildRemovalTest do
     assert Process.alive?(pid)
   end
 
-  defp get_filter_pid(ref) do
-    assert_receive {:filter_pid, ^ref, pid}
+  defp get_filter_pid(ref, pipeline_pid) do
+    state = :sys.get_state(pipeline_pid)
+    pid = state.children[ref]
     Process.monitor(pid)
     pid
   end
