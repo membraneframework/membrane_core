@@ -48,9 +48,8 @@ defmodule Membrane.Integration.ChildRemovalTest do
       |> Enum.map(&get_filter_pid(&1, pipeline_pid))
 
     assert Pipeline.play(pipeline_pid) == :ok
-    assert_receive {:playing, ^pipeline_pid}
-    assert_receive {:playing, ^filter_pid1}
-    assert_receive {:playing, ^filter_pid2}
+    assert_receive {:playing, :filter1}
+    assert_receive {:playing, :filter2}
 
     ChildRemovalTest.Pipeline.remove_child(pipeline_pid, :filter1)
 
@@ -88,7 +87,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
       |> Enum.map(&get_filter_pid(&1, pipeline_pid))
 
     assert Pipeline.play(pipeline_pid) == :ok
-    wait_for_playing(filter_pid1)
+    wait_for_playing(:filter1)
     wait_for_buffer_fillup(filter_pid2, [:input1])
 
     ChildRemovalTest.Pipeline.remove_child(pipeline_pid, :filter1)
@@ -133,7 +132,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
       |> Enum.map(&get_filter_pid(&1, pipeline_pid))
 
     assert Pipeline.play(pipeline_pid) == :ok
-    wait_for_playing(filter_pid1)
+    wait_for_playing(:filter1)
     wait_for_buffer_fillup(filter_pid2, [:input1, :input2])
 
     ChildRemovalTest.Pipeline.remove_child(pipeline_pid, :filter1)
@@ -221,7 +220,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
   defp buffer_with_name?(list, name),
     do: Enum.all?(list, fn %Buffer{metadata: %{source_name: name2}} -> name == name2 end)
 
-  defp wait_for_playing(el_pid) do
-    assert_receive {:playing, ^el_pid}
+  defp wait_for_playing(el) do
+    assert_receive {:playing, ^el}
   end
 end
