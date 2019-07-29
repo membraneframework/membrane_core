@@ -4,7 +4,6 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   It allows to:
   * slow down the moment of switching between :prepared and :playing states.
-  * using dynamic pads
   * not send doubled `%Membrane.Event.StartOfStream{}` event
     (useful when you have two sources in a pipeline)
   * send demands and buffers from two input pads to one output pad.
