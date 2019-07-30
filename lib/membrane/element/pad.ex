@@ -27,7 +27,7 @@ defmodule Membrane.Element.Pad do
   @typedoc """
   Defines the name of pad or group of dynamic pads
   """
-  @type name_t :: atom
+  @type name_t :: atom | {:private, atom}
 
   @typedoc """
   Defines possible pad directions:
@@ -124,7 +124,9 @@ defmodule Membrane.Element.Pad do
                   (term |> is_tuple and term |> tuple_size == 3 and term |> elem(0) == :dynamic and
                      term |> elem(1) |> is_atom and term |> elem(2) |> is_integer)
 
-  defguard is_pad_name(term) when is_atom(term)
+  defguard is_pad_name(term)
+           when is_atom(term) or
+                  (tuple_size(term) == 2 and elem(term, 0) == :private and is_atom(elem(term, 1)))
 
   defguard is_availability(term) when term in @availability_t
 

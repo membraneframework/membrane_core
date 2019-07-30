@@ -7,6 +7,7 @@ defmodule Membrane.Core.Element.PadsSpecs do
   alias Element.Pad
   alias Bunch.Type
   use Bunch
+  require Membrane.Element.Pad
 
   @spec def_pads([{Pad.name_t(), raw_spec :: Macro.t()}], Pad.direction_t()) :: Macro.t()
   def def_pads(pads, direction) do
@@ -143,7 +144,7 @@ defmodule Membrane.Core.Element.PadsSpecs do
   @spec parse_pad_specs(Pad.spec_t(), Pad.direction_t()) ::
           Type.try_t({Pad.name_t(), Pad.description_t()})
   def parse_pad_specs(spec, direction) do
-    withl spec: {name, config} when is_atom(name) and is_list(config) <- spec,
+    withl spec: {name, config} when Pad.is_pad_name(name) and is_list(config) <- spec,
           config:
             {:ok, config} <-
               config
