@@ -186,8 +186,11 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec parse_link_props!(Keyword.t(), Pad.name_t(), State.t()) :: Keyword.t()
   defp parse_link_props!(props, pad_name, state) do
-    opts_spec = state.module.membrane_pads()[pad_name].options
+    {_, pad} =
+      state.module.membrane_pads()
+      |> Enum.find(fn {k, _} -> k == pad_name end)
 
+    opts_spec = pad.options
     pad_props = parse_pad_props!(pad_name, opts_spec, props[:pad])
     buffer_props = parse_buffer_props!(pad_name, props[:buffer])
     [pad: pad_props, buffer: buffer_props]
@@ -267,9 +270,7 @@ defmodule Membrane.Core.Element.PadController do
   defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, other_info, props, state) do
     %{pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
 
-    :ok =
-      pid
-      |> Message.call(:demand_unit, [demand_unit, other_ref])
+    Message.send(pid, :demand_unit, [demand_unit, other_ref])
 
     buffer_props = props[:buffer] || Keyword.new()
 
