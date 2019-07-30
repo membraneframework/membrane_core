@@ -5,6 +5,7 @@ defmodule Membrane.Bin do
 
   alias Membrane.Core.Message
   alias Membrane.Element
+  alias Membrane.Core.Element.PadsSpecs
 
   require Message
 
@@ -29,23 +30,33 @@ defmodule Membrane.Bin do
     end
   end
 
+  # TODO establish options for the private pads
+  defmacro def_input_pad(name, spec) do
+    input = PadsSpecs.def_pad(name, :input, spec)
+    output = PadsSpecs.def_pad({:private, name}, :output, caps: :any)
+
+    quote do
+      unquote(input)
+      unquote(output)
+    end
+  end
+
+  defmacro def_output_pad(name, spec) do
+    output = PadsSpecs.def_pad(name, :output, spec)
+    input = PadsSpecs.def_pad({:private, name}, :input, caps: :any, demand_unit: :buffers)
+
+    quote do
+      unquote(output)
+      unquote(input)
+    end
+  end
+
   defmacro __using__(_) do
     quote do
       @behaviour unquote(__MODULE__)
 
       import Membrane.Element.Base, only: [def_options: 1]
-      import Membrane.Element.WithInputPads, only: [def_input_pad: 2]
-      import Membrane.Element.WithOutputPads, only: [def_output_pad: 2]
-
-      defmacro def_input_pad(name, spec) do
-        PadsSpecs.def_pad(name, :input, spec)
-        PadsSpecs.def_pad({:private, name}, :output, spec)
-      end
-
-      defmacro def_output_pad(name, spec) do
-        PadsSpecs.def_pad(name, :output, spec)
-        PadsSpecs.def_pad({:private, name}, :input, spec)
-      end
+      import unquote(__MODULE__), only: [def_input_pad: 2, def_output_pad: 2]
 
       @impl true
       def membrane_bin?, do: true
