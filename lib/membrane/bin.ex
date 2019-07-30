@@ -31,6 +31,7 @@ defmodule Membrane.Bin do
   end
 
   # TODO establish options for the private pads
+  # * push or pull mode?
   defmacro def_input_pad(name, spec) do
     input = PadsSpecs.def_pad(name, :input, spec)
     output = PadsSpecs.def_pad({:private, name}, :output, caps: :any)
@@ -38,6 +39,13 @@ defmodule Membrane.Bin do
     quote do
       unquote(input)
       unquote(output)
+
+      if Module.get_attribute(__MODULE__, :bin_pads_pairs) == nil do
+        Module.register_attribute(__MODULE__, :bin_pads_pairs, accumulate: true)
+        @before_compile {unquote(__MODULE__), :generate_bin_pairs}
+      end
+
+      @bin_pads_pairs {unquote(name), {:private, unquote(name)}}
     end
   end
 
@@ -48,6 +56,27 @@ defmodule Membrane.Bin do
     quote do
       unquote(output)
       unquote(input)
+
+      if Module.get_attribute(__MODULE__, :bin_pads_pairs) == nil do
+        Module.register_attribute(__MODULE__, :bin_pads_pairs, accumulate: true)
+        @before_compile {unquote(__MODULE__), :generate_bin_pairs}
+      end
+
+      @bin_pads_pairs {{:private, unquote(name)}, unquote(name)}
+    end
+  end
+
+  defmacro generate_bin_pairs(env) do
+    pad_pairs = Module.get_attribute(env.module, :bin_pads_pairs)
+    # TODO make it logged
+    IO.puts("private pid mapping is #{inspect(pad_pairs)}")
+
+    for {p1, p2} <- pad_pairs do
+      quote do
+        # TODO do we need both ways?
+        def get_corresponding_private_pad(unquote(p1)), do: unquote(p2)
+        def get_corresponding_private_pad(unquote(p2)), do: unquote(p1)
+      end
     end
   end
 
