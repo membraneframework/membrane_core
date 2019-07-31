@@ -261,8 +261,6 @@ defmodule Membrane.Pipeline do
   end
 
   def init({module, pipeline_options}) do
-    IO.puts("Pipeline pid is #{inspect(self())}")
-
     with {{:ok, spec}, internal_state} <- module.handle_init(pipeline_options) do
       state = %State{internal_state: internal_state, module: module}
       Message.self(:pipeline_spec, spec)
@@ -313,6 +311,8 @@ defmodule Membrane.Pipeline do
     children pids: #{inspect(children)}
     links: #{inspect(links)}
     """)
+
+    for child <- children_pids, do: Message.send(child, :continue_initialization)
 
     {{:ok, children_names}, state}
   end

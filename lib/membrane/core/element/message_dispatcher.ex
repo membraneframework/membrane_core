@@ -95,6 +95,12 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     PadController.handle_unlink(pad_ref, state)
   end
 
+  # Elements ignore a message about continuing initialization
+  # TODO maybe don't send it to all of the children?
+  defp do_handle_message(Message.new(:continue_initialization), :info, state) do
+    {:ok, state}
+  end
+
   defp do_handle_message(Message.new(_, _) = message, mode, state) do
     {{:error, {:invalid_message, message, mode: mode}}, state}
   end

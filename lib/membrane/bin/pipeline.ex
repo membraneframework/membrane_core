@@ -183,7 +183,6 @@ defmodule Membrane.Bin.Pipeline do
         |> PadSpecHandler.init_pads()
 
       handle_spec(spec, state)
-      {:ok, state}
     else
       {:error, reason} ->
         raise CallbackError, kind: :error, callback: {module, :handle_init}, reason: reason
@@ -216,26 +215,7 @@ defmodule Membrane.Bin.Pipeline do
     {:ok, state} = {parsed_children |> check_if_children_names_unique(state), state}
     children = parsed_children |> start_children
     {:ok, state} = children |> add_children(state)
-    # =========== sync ?
-    {{:ok, links}, state} = {links |> parse_links, state}
-    {links, state} = links |> resolve_links(state)
-    {:ok, state} = links |> link_children(state)
-    {children_names, children_pids} = children |> Enum.unzip()
-    {:ok, state} = {children_pids |> set_children_watcher, state}
-    {:ok, state} = exec_handle_spec_started(children_names, state)
-
-    children_pids
-    |> Enum.each(&Element.change_playback_state(&1, state.playback.state))
-
-    debug("""
-    Initialized pipeline spec
-    children: #{inspect(children)}
-    children pids: #{inspect(children)}
-    links: #{inspect(links)}
-    """)
-    # Inform children that linking is over
-
-    {{:ok, children_names}, state}
+    {:ok, %{state | links: links}}
   end
 
   defp replace_this_bin(links, bin_name, module) when is_map(links) do
@@ -423,7 +403,6 @@ defmodule Membrane.Bin.Pipeline do
   defp handle_link(pid, args, state) do
     case self() do
       ^pid ->
-        IO.puts "Linking bin itself"
         {{:ok, _spec} = res, state} = apply(PadController, :handle_link, args ++ [state])
         {:ok, state} = PadController.handle_linking_finished(state)
         {res, state}
@@ -571,10 +550,32 @@ defmodule Membrane.Bin.Pipeline do
     {:ok, state} |> noreply(state)
   end
 
+  def handle_info(Message.new(:continue_initialization), state) do
+    %State{children: children, links: links} = state
+
+    {{:ok, links}, state} = {links |> parse_links, state}
+    {links, state} = links |> resolve_links(state)
+    {:ok, state} = links |> link_children(state)
+    {children_names, children_pids} = children |> Enum.unzip()
+    {:ok, state} = {children_pids |> set_children_watcher, state}
+    {:ok, state} = exec_handle_spec_started(children_names, state)
+
+    children_pids
+    |> Enum.each(&Element.change_playback_state(&1, state.playback.state))
+
+    debug("""
+    Initialized pipeline spec
+    children: #{inspect(children)}
+    children pids: #{inspect(children)}
+    links: #{inspect(links)}
+    """)
+
+    {{:ok, children_names}, state}
+    |> noreply()
+  end
+
   # TODO what for dynamic pads? Should we maybe send the whole pad struct in the field `for_pad`?
   def handle_info(Message.new(type, args, for_pad: pad) = msg, %{module: module} = state) do
-    IO.puts("got message #{inspect(msg)} for pad: #{inspect(pad)}")
-
     dist_pad =
       pad
       |> module.get_corresponding_private_pad()
@@ -606,7 +607,6 @@ defmodule Membrane.Bin.Pipeline do
         state
       ) do
     {pid, _} = from
-    IO.puts("got handle_link from #{inspect(pid)} (pad_ref: #{inspect(pad_ref)})")
 
     {{:ok, _info}, state} =
       PadController.handle_link(pad_ref, pad_direction, pid, other_ref, other_info, props, state)

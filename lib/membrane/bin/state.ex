@@ -34,7 +34,8 @@ defmodule Membrane.Bin.State do
             name: nil,
             bin_options: nil,
             pads: nil,
-            watcher: nil
+            watcher: nil,
+            links: nil
 
   @spec add_child(t, Element.name_t(), pid) :: Type.stateful_try_t(t)
   def add_child(%__MODULE__{children: children} = state, child, pid) do
