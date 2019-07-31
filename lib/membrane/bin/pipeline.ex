@@ -182,7 +182,7 @@ defmodule Membrane.Bin.Pipeline do
         }
         |> PadSpecHandler.init_pads()
 
-      Message.self(:bin_spec, spec)
+      handle_spec(spec, state)
       {:ok, state}
     else
       {:error, reason} ->
@@ -216,9 +216,10 @@ defmodule Membrane.Bin.Pipeline do
     {:ok, state} = {parsed_children |> check_if_children_names_unique(state), state}
     children = parsed_children |> start_children
     {:ok, state} = children |> add_children(state)
-    {{:ok, links}, state} = {links |> IO.inspect(label: "links") |> parse_links, state}
+    # =========== sync ?
+    {{:ok, links}, state} = {links |> parse_links, state}
     {links, state} = links |> resolve_links(state)
-    {:ok, state} = {links |> link_children(state), state}
+    {:ok, state} = links |> link_children(state)
     {children_names, children_pids} = children |> Enum.unzip()
     {:ok, state} = {children_pids |> set_children_watcher, state}
     {:ok, state} = exec_handle_spec_started(children_names, state)
@@ -232,12 +233,10 @@ defmodule Membrane.Bin.Pipeline do
     children pids: #{inspect(children)}
     links: #{inspect(links)}
     """)
+    # Inform children that linking is over
 
     {{:ok, children_names}, state}
   end
-
-  # TODO maybe don't add it as a child but just act as if it was a child
-  defp add_bin_as_child(children, bin_name, opts), do: [{bin_name, opts} | children]
 
   defp replace_this_bin(links, bin_name, module) when is_map(links) do
     links
@@ -385,12 +384,12 @@ defmodule Membrane.Bin.Pipeline do
   defp link_children(links, state) do
     debug("Linking children: links = #{inspect(links)}")
 
-    with :ok <- links |> Bunch.Enum.try_each(&link(&1, state)),
+    with {:ok, state} <- links |> Bunch.Enum.try_reduce_while(state, &link/2),
          :ok <-
            state
            |> State.get_children()
            |> Bunch.Enum.try_each(fn {_pid, pid} -> pid |> Element.handle_linking_finished() end),
-         do: :ok
+         do: {:ok, state}
   end
 
   defp link(
@@ -406,7 +405,7 @@ defmodule Membrane.Bin.Pipeline do
       from.opts
     ]
 
-    {:ok, pad_from_info} = handle_link(from.pid, from_args, state)
+    {{:ok, pad_from_info}, state} = handle_link(from.pid, from_args, state)
 
     to_args = [
       to.pad_ref,
@@ -417,18 +416,21 @@ defmodule Membrane.Bin.Pipeline do
       to.opts
     ]
 
-    handle_link(to.pid, to_args, state)
-    :ok
+    {_, state} = handle_link(to.pid, to_args, state)
+    {{:ok, :cont}, state}
   end
 
   defp handle_link(pid, args, state) do
     case self() do
       ^pid ->
-        {{:ok, _spec} = res, _el_state} = apply(PadController, :handle_link, args ++ [state])
-        res
+        IO.puts "Linking bin itself"
+        {{:ok, _spec} = res, state} = apply(PadController, :handle_link, args ++ [state])
+        {:ok, state} = PadController.handle_linking_finished(state)
+        {res, state}
 
       _ ->
-        Message.call(pid, :handle_link, args)
+        res = Message.call(pid, :handle_link, args)
+        {res, state}
     end
   end
 
@@ -581,8 +583,6 @@ defmodule Membrane.Bin.Pipeline do
       dist_pad
       |> PadController.get_pad_ref(nil, state)
 
-    IO.puts("state is #{inspect(state)} pad: #{inspect(dist_pad_ref)}")
-
     %{pid: dist_pid} =
       state
       |> PadModel.get_data(dist_pad_ref)
@@ -608,7 +608,10 @@ defmodule Membrane.Bin.Pipeline do
     {pid, _} = from
     IO.puts("got handle_link from #{inspect(pid)} (pad_ref: #{inspect(pad_ref)})")
 
-    PadController.handle_link(pad_ref, pad_direction, pid, other_ref, other_info, props, state)
+    {{:ok, _info}, state} =
+      PadController.handle_link(pad_ref, pad_direction, pid, other_ref, other_info, props, state)
+
+    PadController.handle_linking_finished(state)
     |> reply()
   end
 
