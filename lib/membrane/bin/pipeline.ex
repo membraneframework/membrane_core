@@ -570,7 +570,7 @@ defmodule Membrane.Bin.Pipeline do
     links: #{inspect(links)}
     """)
 
-    {{:ok, children_names}, state}
+    {:ok, state}
     |> noreply()
   end
 
@@ -580,13 +580,9 @@ defmodule Membrane.Bin.Pipeline do
       pad
       |> module.get_corresponding_private_pad()
 
-    {{:ok, dist_pad_ref}, state} =
-      dist_pad
-      |> PadController.get_pad_ref(nil, state)
-
-    %{pid: dist_pid} =
+    {:ok, %{pid: dist_pid}} =
       state
-      |> PadModel.get_data(dist_pad_ref)
+      |> PadModel.get_data(dist_pad)
 
     Message.send(dist_pid, type, args, for_pad: dist_pad)
     {:ok, state} |> noreply()
