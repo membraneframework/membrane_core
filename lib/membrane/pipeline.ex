@@ -397,7 +397,8 @@ defmodule Membrane.Pipeline do
   end
 
   defp start_child_bin(%{name: name, module: module, options: options}) do
-    with {:ok, pid} <- Membrane.Bin.start_link(name, module, options, []) do
+    with {:ok, pid} <- Membrane.Bin.start_link(name, module, options, []),
+         :ok <- Membrane.Bin.set_controlling_pid(pid, self()) do
       {name, pid}
     else
       {:error, reason} ->

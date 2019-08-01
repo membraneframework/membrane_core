@@ -7,10 +7,9 @@ defmodule Membrane.Bin.State do
   alias Membrane.Core.{Playback, Playbackable}
   alias Membrane.Element
   alias Bunch.Type
+  alias __MODULE__, as: ThisModule
   use Bunch
   use Bunch.Access
-
-  @derive Playbackable
 
   @type t :: %__MODULE__{
           internal_state: internal_state_t | nil,
@@ -35,7 +34,13 @@ defmodule Membrane.Bin.State do
             bin_options: nil,
             pads: nil,
             watcher: nil,
-            links: nil
+            links: nil,
+            controlling_pid: nil
+
+  defimpl Playbackable, for: __MODULE__ do
+    use Playbackable.Default
+    def get_controlling_pid(%ThisModule{controlling_pid: pid}), do: pid
+  end
 
   @spec add_child(t, Element.name_t(), pid) :: Type.stateful_try_t(t)
   def add_child(%__MODULE__{children: children} = state, child, pid) do

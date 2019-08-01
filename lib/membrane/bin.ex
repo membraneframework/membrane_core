@@ -24,6 +24,10 @@ defmodule Membrane.Bin do
     module |> Bunch.Module.check_behaviour(:membrane_bin?)
   end
 
+  def set_controlling_pid(server, controlling_pid, timeout \\ 5000) do
+    Message.call(server, :set_controlling_pid, controlling_pid, [], timeout)
+  end
+
   defmacro this_bin_marker do
     quote do
       {unquote(__MODULE__), :this_bin}

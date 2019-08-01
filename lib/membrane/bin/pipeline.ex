@@ -597,6 +597,11 @@ defmodule Membrane.Bin.Pipeline do
     PadController.get_pad_ref(pad_name, id, state) |> reply()
   end
 
+  def handle_call(Message.new(:set_controlling_pid, pid), _, state) do
+    {:ok, %{state | controlling_pid: pid}}
+    |> reply()
+  end
+
   def handle_call(
         Message.new(:handle_link, [pad_ref, pad_direction, pid, other_ref, other_info, props]),
         from,
