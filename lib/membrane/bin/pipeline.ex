@@ -609,10 +609,12 @@ defmodule Membrane.Bin.Pipeline do
       ) do
     {pid, _} = from
 
-    {{:ok, _info}, state} =
+    {{:ok, info}, state} =
       PadController.handle_link(pad_ref, pad_direction, pid, other_ref, other_info, props, state)
 
-    PadController.handle_linking_finished(state)
+    {:ok, new_state} = PadController.handle_linking_finished(state)
+
+    {{:ok, info}, new_state}
     |> reply()
   end
 
