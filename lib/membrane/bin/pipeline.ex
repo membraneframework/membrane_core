@@ -182,7 +182,8 @@ defmodule Membrane.Bin.Pipeline do
         }
         |> PadSpecHandler.init_pads()
 
-      handle_spec(spec, state)
+      Message.self(:bin_spec, spec)
+      {:ok, state}
     else
       {:error, reason} ->
         raise CallbackError, kind: :error, callback: {module, :handle_init}, reason: reason
@@ -215,7 +216,25 @@ defmodule Membrane.Bin.Pipeline do
     {:ok, state} = {parsed_children |> check_if_children_names_unique(state), state}
     children = parsed_children |> start_children
     {:ok, state} = children |> add_children(state)
-    {:ok, %{state | links: links}}
+
+    {{:ok, links}, state} = {links |> parse_links, state}
+    {links, state} = links |> resolve_links(state)
+    {:ok, state} = links |> link_children(state)
+    {children_names, children_pids} = children |> Enum.unzip()
+    {:ok, state} = {children_pids |> set_children_watcher, state}
+    {:ok, state} = exec_handle_spec_started(children_names, state)
+
+    children_pids
+    |> Enum.each(&Element.change_playback_state(&1, state.playback.state))
+
+    debug("""
+    Initialized pipeline spec
+    children: #{inspect(children)}
+    children pids: #{inspect(children)}
+    links: #{inspect(links)}
+    """)
+
+    {{:ok, children_names}, state}
   end
 
   defp replace_this_bin(links, bin_name, module) when is_map(links) do
@@ -369,7 +388,7 @@ defmodule Membrane.Bin.Pipeline do
            state
            |> State.get_children()
            |> Bunch.Enum.try_each(fn {_pid, pid} -> pid |> Element.handle_linking_finished() end),
-         do: {:ok, state}
+    do: {:ok, state}
   end
 
   defp link(
@@ -472,6 +491,13 @@ defmodule Membrane.Bin.Pipeline do
       )
       when pending_pids == %MapSet{} do
     {:ok, state} |> noreply
+  end
+  
+  def handle_info(Message.new(:bin_spec, spec), state) do
+    with {{:ok, _children}, state} <- spec |> handle_spec(state) do
+      {:ok, state}
+    end
+    |> noreply(state)
   end
 
   def handle_info(

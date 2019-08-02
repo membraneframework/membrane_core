@@ -312,8 +312,6 @@ defmodule Membrane.Pipeline do
     links: #{inspect(links)}
     """)
 
-    for child <- children_pids, do: Message.send(child, :continue_initialization)
-
     {{:ok, children_names}, state}
   end
 
