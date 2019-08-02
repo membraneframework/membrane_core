@@ -127,7 +127,7 @@ defmodule Membrane.Element do
   It will wait for reply for amount of time passed as second argument
   (in milliseconds).
 
-  Will trigger calling `c:Membrane.Element.Base.handle_shutdown/1`
+  Will trigger calling the `c:Membrane.Element.Base.handle_shutdown/2`
   callback.
   """
   @spec shutdown(pid, timeout) :: :ok

@@ -72,7 +72,7 @@ defmodule Membrane.Core.Element.LifecycleController do
     end
 
     %State{module: module, internal_state: internal_state} = state
-    :ok = module.handle_shutdown(internal_state)
+    :ok = module.handle_shutdown(reason, internal_state)
     {:ok, state}
   end
 
