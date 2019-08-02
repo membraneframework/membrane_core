@@ -185,9 +185,10 @@ defmodule Membrane.Element.Base do
 
   @doc """
   Callback invoked when element is shutting down just before process is exiting.
-  Internally called in `c:GenServer.termintate/2` callback.
+  Internally called in `c:GenServer.terminate/2` callback.
   """
-  @callback handle_shutdown(state :: Element.state_t()) :: :ok
+  @callback handle_shutdown(reason, state :: Element.state_t()) :: :ok
+            when reason: :normal | :shutdown | {:shutdown, any}
 
   @doc """
   Macro defining options that parametrize element.
@@ -249,7 +250,7 @@ defmodule Membrane.Element.Base do
       def handle_event(_pad, _event, _context, state), do: {:ok, state}
 
       @impl true
-      def handle_shutdown(_state), do: :ok
+      def handle_shutdown(_reason, _state), do: :ok
 
       defoverridable handle_init: 1,
                      handle_stopped_to_prepared: 2,
@@ -260,7 +261,7 @@ defmodule Membrane.Element.Base do
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
                      handle_event: 4,
-                     handle_shutdown: 1
+                     handle_shutdown: 2
     end
   end
 end
