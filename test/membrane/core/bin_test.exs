@@ -50,6 +50,81 @@ defmodule Membrane.Core.BinTest do
     def handle_notification(msg, _ctx, state), do: {{:ok, notify: msg}, state}
   end
 
+  defmodule TestSinkBin do
+    use Membrane.Bin
+
+    def_options filter: [type: :atom],
+                sink: [type: :atom]
+
+    def_input_pad :input, demand_unit: :buffers, caps: :any
+
+    @impl true
+    def handle_init(opts) do
+      children = [
+        filter: opts.filter,
+        sink: opts.sink
+      ]
+
+      links = %{
+        {this_bin(), :input} => {:filter, :input, buffer: [preferred_size: 10]},
+        {:filter, :output} => {:sink, :input, buffer: [preferred_size: 10]}
+      }
+
+      spec = %Membrane.Bin.Spec{
+        children: children,
+        links: links
+      }
+
+      state = %{}
+
+      {{:ok, spec}, state}
+    end
+
+    def handle_spec_started(elements, state), do: {:ok, state}
+
+    def handle_stopped_to_prepared(state), do: {:ok, state}
+
+    def handle_prepared_to_playing(state), do: {:ok, state}
+
+    def handle_notification(msg, _ctx, state), do: {{:ok, notify: msg}, state}
+  end
+
+  defmodule TestPadlessBin do
+    use Membrane.Bin
+
+    def_options source: [type: :atom],
+                sink: [type: :atom]
+
+    @impl true
+    def handle_init(opts) do
+      children = [
+        source: opts.source,
+        sink: opts.sink
+      ]
+
+      links = %{
+        {:source, :output} => {:sink, :input, buffer: [preferred_size: 10]}
+      }
+
+      spec = %Membrane.Bin.Spec{
+        children: children,
+        links: links
+      }
+
+      state = %{}
+
+      {{:ok, spec}, state}
+    end
+
+    def handle_spec_started(elements, state), do: {:ok, state}
+
+    def handle_stopped_to_prepared(state), do: {:ok, state}
+
+    def handle_prepared_to_playing(state), do: {:ok, state}
+
+    def handle_notification(msg, _ctx, state), do: {{:ok, notify: msg}, state}
+  end
+
   defmodule TestFilter do
     alias Membrane.Event.StartOfStream
 
@@ -205,6 +280,63 @@ defmodule Membrane.Core.BinTest do
       |> Enum.each(fn b -> assert_sink_buffer(pipeline, :sink, %Membrane.Buffer{payload: ^b}) end)
 
       assert_end_of_stream(pipeline, :sink)
+    end
+
+    test "when pipeline has only one element being a padless bin" do
+      buffers = ['a', 'b', 'c']
+
+      {:ok, pipeline} =
+        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+          elements: [
+            test_bin: %TestPadlessBin{
+              source: %Testing.Source{output: buffers},
+              sink: Testing.Sink
+            }
+          ]
+        })
+
+      Testing.Pipeline.play(pipeline) == :ok
+
+      assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
+      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+
+      assert_start_of_stream(pipeline, :test_bin)
+
+      buffers
+      |> Enum.each(fn b ->
+        assert_sink_buffer(pipeline, :test_bin, %Membrane.Buffer{payload: ^b})
+      end)
+
+      assert_end_of_stream(pipeline, :test_bin)
+    end
+
+    test "when bin is a sink bin" do
+      buffers = ['a', 'b', 'c']
+
+      {:ok, pipeline} =
+        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+          elements: [
+            source: %Testing.Source{output: buffers},
+            test_bin: %TestSinkBin{
+              filter: TestFilter,
+              sink: Testing.Sink
+            }
+          ]
+        })
+
+      Testing.Pipeline.play(pipeline) == :ok
+
+      assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
+      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+
+      assert_start_of_stream(pipeline, :test_bin)
+
+      buffers
+      |> Enum.each(fn b ->
+        assert_sink_buffer(pipeline, :test_bin, %Membrane.Buffer{payload: ^b})
+      end)
+
+      assert_end_of_stream(pipeline, :test_bin)
     end
   end
 
