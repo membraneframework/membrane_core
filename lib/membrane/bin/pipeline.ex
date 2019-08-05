@@ -172,13 +172,16 @@ defmodule Membrane.Bin.Pipeline do
 
   @impl GenServer
   def init({my_name, module, pipeline_options}) do
+    IO.puts("Starting bin #{inspect(my_name)}. (#{inspect(self())})")
+
     with {{:ok, spec}, internal_state} <- module.handle_init(pipeline_options) do
       state =
         %State{
           internal_state: internal_state,
           bin_options: pipeline_options,
           module: module,
-          name: my_name
+          name: my_name,
+          linking_buffer: Bin.LinkingBuffer.new()
         }
         |> PadSpecHandler.init_pads()
 
@@ -235,21 +238,6 @@ defmodule Membrane.Bin.Pipeline do
     """)
 
     {{:ok, children_names}, state}
-  end
-
-  defp replace_this_bin(links, bin_name, module) when is_map(links) do
-    links
-    |> Enum.map(fn {k, v} ->
-      {replace_this_bin(k, bin_name, module), replace_this_bin(v, bin_name, module)}
-    end)
-  end
-
-  defp replace_this_bin(link, bin_name, module) when is_tuple(link) do
-    if elem(link, 0) == Bin.this_bin_marker() do
-      put_elem(link, 0, bin_name)
-    else
-      link
-    end
   end
 
   @spec parse_children(Spec.children_spec_t() | any) :: [parsed_child_t]
@@ -388,7 +376,7 @@ defmodule Membrane.Bin.Pipeline do
            state
            |> State.get_children()
            |> Bunch.Enum.try_each(fn {_pid, pid} -> pid |> Element.handle_linking_finished() end),
-    do: {:ok, state}
+         do: {:ok, state}
   end
 
   defp link(
@@ -406,6 +394,14 @@ defmodule Membrane.Bin.Pipeline do
 
     {{:ok, pad_from_info}, state} = handle_link(from.pid, from_args, state)
 
+    state =
+      if from.pid == self() do
+        Bin.LinkingBuffer.eval_for_pad(state.linking_buffer, from.pad_ref, state)
+        ~> %{state | linking_buffer: &1}
+      else
+        state
+      end
+
     to_args = [
       to.pad_ref,
       :input,
@@ -416,6 +412,15 @@ defmodule Membrane.Bin.Pipeline do
     ]
 
     {_, state} = handle_link(to.pid, to_args, state)
+
+    state =
+      if to.pid == self() do
+        Bin.LinkingBuffer.eval_for_pad(state.linking_buffer, to.pad_ref, state)
+        ~> %{state | linking_buffer: &1}
+      else
+        state
+      end
+
     {{:ok, :cont}, state}
   end
 
@@ -492,7 +497,7 @@ defmodule Membrane.Bin.Pipeline do
       when pending_pids == %MapSet{} do
     {:ok, state} |> noreply
   end
-  
+
   def handle_info(Message.new(:bin_spec, spec), state) do
     with {{:ok, _children}, state} <- spec |> handle_spec(state) do
       {:ok, state}
@@ -601,17 +606,17 @@ defmodule Membrane.Bin.Pipeline do
   end
 
   # TODO what for dynamic pads? Should we maybe send the whole pad struct in the field `for_pad`?
-  def handle_info(Message.new(type, args, for_pad: pad) = msg, %{module: module} = state) do
-    dist_pad =
+  # TODO don't match on keyword list
+  def handle_info(Message.new(type, args, for_pad: pad) = msg, state) do
+    %{module: module, linking_buffer: buf} = state
+
+    outgoing_pad =
       pad
       |> module.get_corresponding_private_pad()
 
-    {:ok, %{pid: dist_pid}} =
-      state
-      |> PadModel.get_data(dist_pad)
+    new_buf = Bin.LinkingBuffer.store_or_send(buf, msg, outgoing_pad, state)
 
-    Message.send(dist_pid, type, args, for_pad: dist_pad)
-    {:ok, state} |> noreply()
+    {:ok, %{state | linking_buffer: new_buf}} |> noreply()
   end
 
   def handle_info(message, state) do
@@ -638,7 +643,8 @@ defmodule Membrane.Bin.Pipeline do
 
     {:ok, new_state} = PadController.handle_linking_finished(state)
 
-    {{:ok, info}, new_state}
+    Bin.LinkingBuffer.eval_for_pad(state.linking_buffer, pad_ref, state)
+    ~> {{:ok, info}, %{state | linking_buffer: &1}}
     |> reply()
   end
 

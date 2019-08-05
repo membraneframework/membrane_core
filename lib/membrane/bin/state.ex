@@ -35,7 +35,8 @@ defmodule Membrane.Bin.State do
             pads: nil,
             watcher: nil,
             links: nil,
-            controlling_pid: nil
+            controlling_pid: nil,
+            linking_buffer: nil
 
   defimpl Playbackable, for: __MODULE__ do
     use Playbackable.Default
