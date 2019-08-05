@@ -91,6 +91,10 @@ defmodule Membrane.Bin do
       import Membrane.Element.Base, only: [def_options: 1]
       import unquote(__MODULE__), only: [def_input_pad: 2, def_output_pad: 2]
 
+      require Membrane.Core.Element.PadsSpecs
+
+      Membrane.Core.Element.PadsSpecs.ensure_default_membrane_pads()
+
       @impl true
       def membrane_bin?, do: true
 

@@ -77,11 +77,17 @@ defmodule Membrane.Core.Element.PadsSpecs do
     end
   end
 
+  defmacro ensure_default_membrane_pads do
+    quote do
+      @before_compile {unquote(__MODULE__), :generate_membrane_pads}
+    end
+  end
+
   @doc """
   Generates `membrane_pads/0` function, along with docs and typespecs.
   """
   defmacro generate_membrane_pads(env) do
-    pads = Module.get_attribute(env.module, :membrane_pads) |> Enum.reverse()
+    pads = Module.get_attribute(env.module, :membrane_pads) |> nil_to([]) |> Enum.reverse()
     :ok = validate_pads!(pads, env)
     pads_docs = generate_docs_from_pads_specs(pads)
 
@@ -107,6 +113,9 @@ defmodule Membrane.Core.Element.PadsSpecs do
       end
     end
   end
+
+  defp nil_to(nil, val_if_nil), do: val_if_nil
+  defp nil_to(val, _), do: val
 
   @spec validate_pads!(
           pads :: [{Pad.name_t(), Pad.description_t()}],
@@ -169,6 +178,14 @@ defmodule Membrane.Core.Element.PadsSpecs do
   Generates docs describing pads based on pads specification.
   """
   @spec generate_docs_from_pads_specs([{Pad.name_t(), Pad.description_t()}]) :: Macro.t()
+  def generate_docs_from_pads_specs([]) do
+    quote do
+      """
+      There are no pads.
+      """
+    end
+  end
+
   def generate_docs_from_pads_specs(pads_specs) do
     pads_specs
     |> Enum.sort_by(fn {_, config} -> config[:direction] end)
