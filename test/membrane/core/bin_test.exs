@@ -46,6 +46,8 @@ defmodule Membrane.Core.BinTest do
     def handle_stopped_to_prepared(state), do: {:ok, state}
 
     def handle_prepared_to_playing(state), do: {:ok, state}
+
+    def handle_notification(msg, _ctx, state), do: {{:ok, notify: msg}, state}
   end
 
   defmodule TestFilter do
@@ -59,6 +61,9 @@ defmodule Membrane.Core.BinTest do
 
     @impl true
     def handle_init(opts), do: {:ok, opts}
+
+    @impl true
+    def handle_other({:notify_parent, notif}, _ctx, state), do: {{:ok, notify: notif}, state}
 
     @impl true
     def handle_prepared_to_playing(_ctx, state), do: {:ok, state}
@@ -201,5 +206,48 @@ defmodule Membrane.Core.BinTest do
 
       assert_end_of_stream(pipeline, :sink)
     end
+  end
+
+  describe "Events passing in pipeline" do
+    test "notifications are handled by bin as if it's a pipeline" do
+      {:ok, pipeline} =
+        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+          elements: [
+            source: Testing.Source,
+            test_bin: %TestBin{
+              filter1: TestFilter,
+              filter2: TestFilter
+            },
+            sink: %Testing.Sink{autodemand: false}
+          ]
+        })
+
+      Testing.Pipeline.play(pipeline) == :ok
+
+      assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
+      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+
+      {:ok, filter1_pid} = get_child_pid(pipeline, [:test_bin, :filter1])
+
+      send(filter1_pid, {:notify_parent, :some_example_notification})
+
+      # As this test's implementation of bin only passes notifications up
+      assert_pipeline_notified(pipeline, :test_bin, :some_example_notification)
+    end
+  end
+
+  # TODO move to some test utils?
+  defp get_child_pid(last_child_pid, []) when is_pid(last_child_pid) do
+    {:ok, last_child_pid}
+  end
+
+  defp get_child_pid(last_child_pid, [child | children]) when is_pid(last_child_pid) do
+    state = :sys.get_state(last_child_pid)
+    child_pid = state.children[child]
+    get_child_pid(child_pid, children)
+  end
+
+  defp get_child_pid(_, _) do
+    {:error, :child_was_not_found}
   end
 end
