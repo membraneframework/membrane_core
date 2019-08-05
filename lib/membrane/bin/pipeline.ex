@@ -172,8 +172,6 @@ defmodule Membrane.Bin.Pipeline do
 
   @impl GenServer
   def init({my_name, module, pipeline_options}) do
-    IO.puts("Starting bin #{inspect(my_name)}. (#{inspect(self())})")
-
     with {{:ok, spec}, internal_state} <- module.handle_init(pipeline_options) do
       state =
         %State{
@@ -726,8 +724,24 @@ defmodule Membrane.Bin.Pipeline do
     ~> {&1, state}
   end
 
+  def handle_action({:notify, notification}, _cb, _params, state) do
+    send_notification(notification, state)
+  end
+
   def handle_action(action, callback, _params, state) do
     raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
+  end
+
+  @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}
+  defp send_notification(notification, %State{watcher: nil} = state) do
+    debug("Dropping notification #{inspect(notification)} as watcher is undefined", state)
+    {:ok, state}
+  end
+
+  defp send_notification(notification, %State{watcher: watcher, name: name} = state) do
+    debug("Sending notification #{inspect(notification)} (watcher: #{inspect(watcher)})", state)
+    Message.send(watcher, :notification, [name, notification])
+    {:ok, state}
   end
 
   defmacro __using__(_) do
