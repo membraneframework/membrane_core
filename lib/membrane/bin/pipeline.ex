@@ -286,13 +286,44 @@ defmodule Membrane.Bin.Pipeline do
     children |> Enum.map(&start_child/1)
   end
 
+  defp start_child(%{module: module} = spec) do
+    case child_type(module) do
+      :bin ->
+        start_child_bin(spec)
+
+      :element ->
+        start_child_element(spec)
+    end
+  end
+
+  # TODO maybe a better common module for children of pipeline
+  defp child_type(module) do
+    if module |> Bunch.Module.check_behaviour(:membrane_bin?) do
+      :bin
+    else
+      :element
+    end
+  end
+
   # Recursion that starts children processes, case when both module and options
   # are provided.
-  defp start_child(%{name: name, module: module, options: options}) do
+  defp start_child_element(%{name: name, module: module, options: options}) do
     debug("Pipeline: starting child: name: #{inspect(name)}, module: #{inspect(module)}")
 
     with {:ok, pid} <- Element.start_link(self(), module, name, options),
          :ok <- Element.set_controlling_pid(pid, self()) do
+      {name, pid}
+    else
+      {:error, reason} ->
+        raise PipelineError,
+              "Cannot start child #{inspect(name)}, \
+              reason: #{inspect(reason, pretty: true)}"
+    end
+  end
+
+  defp start_child_bin(%{name: name, module: module, options: options}) do
+    with {:ok, pid} <- Membrane.Bin.start_link(name, module, options, []),
+         :ok <- Membrane.Bin.set_controlling_pid(pid, self()) do
       {name, pid}
     else
       {:error, reason} ->
