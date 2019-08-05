@@ -12,6 +12,13 @@ defmodule Membrane.Core.PlaybackRequestor do
       @behaviour unquote(__MODULE__)
       require Membrane.Core.Playback
 
+      @typedoc """
+      Defines possible playback states.
+
+       - `:stopped` - Idle. No resources should be initialized nor allocated.
+       - `:prepared` - Ready for processing data. All necessary resources should be allocated and initialized.
+       - `:playing` - Data is being processed.
+      """
       @type playback_state_t :: :stopped | :prepared | :playing
 
       @doc """
