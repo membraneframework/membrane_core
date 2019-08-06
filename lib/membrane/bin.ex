@@ -8,7 +8,7 @@ defmodule Membrane.Bin do
   alias Membrane.Pipeline.Link
   alias Membrane.Bin
   alias Membrane.Bin.{State, Spec, LinkingBuffer}
-  alias Membrane.{CallbackError, Core, Element, Notification, PipelineError}
+  alias Membrane.{CallbackError, Core, Element, Notification, BinError}
   alias Element.Pad
   alias Core.{Message, Playback}
   alias Bunch.Type
@@ -17,6 +17,7 @@ defmodule Membrane.Bin do
   alias Membrane.Core.Element.PadModel
 
   import Membrane.Helper.GenServer
+  alias Membrane.Core.ParentUtils
 
   require Element
   require Message
@@ -28,6 +29,7 @@ defmodule Membrane.Bin do
   use Membrane.Core.CallbackHandler
   use GenServer
   use Membrane.Core.PlaybackHandler
+  use Membrane.Core.PlaybackRequestor
 
   defmodule Spec do
     defstruct children: [],
@@ -70,8 +72,6 @@ defmodule Membrane.Bin do
   Type that defines all valid return values from most callbacks.
   """
   @type callback_return_t :: CallbackHandler.callback_return_t(action_t, State.internal_state_t())
-
-  @typep parsed_child_t :: %{name: Element.name_t(), module: module, options: Keyword.t()}
 
   @doc """
   Enables to check whether module is membrane pipeline
@@ -137,6 +137,11 @@ defmodule Membrane.Bin do
   """
   @callback handle_spec_started(elements :: [Element.name_t()], state :: State.internal_state_t()) ::
               callback_return_t
+
+  defguard is_bin_name(term)
+           when is_atom(term) or
+                  (is_tuple(term) and tuple_size(term) == 2 and is_atom(elem(term, 0)) and
+                     is_integer(elem(term, 1)) and elem(term, 1) >= 0)
 
   defmacro this_bin_marker do
     quote do
@@ -290,10 +295,10 @@ defmodule Membrane.Bin do
 
     %State{name: bin_name, bin_options: bin_opts, module: bin_module} = state
 
-    parsed_children = children_spec |> parse_children
+    parsed_children = children_spec |> ParentUtils.parse_children()
 
-    {:ok, state} = {parsed_children |> check_if_children_names_unique(state), state}
-    children = parsed_children |> start_children
+    {:ok, state} = {parsed_children |> ParentUtils.check_if_children_names_unique(state), state}
+    children = parsed_children |> ParentUtils.start_children()
     {:ok, state} = children |> add_children(state)
 
     {{:ok, links}, state} = {links |> parse_links, state}
@@ -304,10 +309,10 @@ defmodule Membrane.Bin do
     {:ok, state} = exec_handle_spec_started(children_names, state)
 
     children_pids
-    |> Enum.each(&Element.change_playback_state(&1, state.playback.state))
+    |> Enum.each(&change_playback_state(&1, state.playback.state))
 
     debug("""
-    Initialized pipeline spec
+    Initialized bin spec
     children: #{inspect(children)}
     children pids: #{inspect(children)}
     links: #{inspect(links)}
@@ -316,100 +321,13 @@ defmodule Membrane.Bin do
     {{:ok, children_names}, state}
   end
 
-  @spec parse_children(Spec.children_spec_t() | any) :: [parsed_child_t]
-  defp parse_children(children) when is_map(children) or is_list(children),
-    do: children |> Enum.map(&parse_child/1)
-
-  defp parse_child({name, %module{} = options})
-       when Element.is_element_name(name) do
-    %{name: name, module: module, options: options}
-  end
-
-  defp parse_child({name, module})
-       when Element.is_element_name(name) and is_atom(module) do
-    options = module |> Bunch.Module.struct()
-    %{name: name, module: module, options: options}
-  end
-
-  defp parse_child(config) do
-    raise PipelineError, "Invalid children config: #{inspect(config, pretty: true)}"
-  end
-
-  @spec check_if_children_names_unique([parsed_child_t], State.t()) :: Type.try_t()
-  defp check_if_children_names_unique(children, state) do
-    children
-    |> Enum.map(& &1.name)
-    |> Kernel.++(State.get_children_names(state))
-    |> Bunch.Enum.duplicates()
-    ~> (
-      [] ->
-        :ok
-
-      duplicates ->
-        raise PipelineError, "Duplicated names in children specification: #{inspect(duplicates)}"
-    )
-  end
-
   # Starts children based on given specification and links them to the current
   # process in the supervision tree.
   #
   # Please note that this function is not atomic and in case of error there's
   # a chance that some of children will remain running.
-  @spec start_children([parsed_child_t]) :: [State.child_t()]
-  defp start_children(children) do
-    debug("Starting children: #{inspect(children)}")
 
-    children |> Enum.map(&start_child/1)
-  end
-
-  defp start_child(%{module: module} = spec) do
-    case child_type(module) do
-      :bin ->
-        start_child_bin(spec)
-
-      :element ->
-        start_child_element(spec)
-    end
-  end
-
-  # TODO maybe a better common module for children of pipeline
-  defp child_type(module) do
-    if module |> Bunch.Module.check_behaviour(:membrane_bin?) do
-      :bin
-    else
-      :element
-    end
-  end
-
-  # Recursion that starts children processes, case when both module and options
-  # are provided.
-  defp start_child_element(%{name: name, module: module, options: options}) do
-    debug("Pipeline: starting child: name: #{inspect(name)}, module: #{inspect(module)}")
-
-    with {:ok, pid} <- Element.start_link(self(), module, name, options),
-         :ok <- Element.set_controlling_pid(pid, self()) do
-      {name, pid}
-    else
-      {:error, reason} ->
-        raise PipelineError,
-              "Cannot start child #{inspect(name)}, \
-              reason: #{inspect(reason, pretty: true)}"
-    end
-  end
-
-  defp start_child_bin(%{name: name, module: module, options: options}) do
-    with {:ok, pid} <- start_link(name, module, options, []),
-         :ok <- set_controlling_pid(pid, self()) do
-      {name, pid}
-    else
-      {:error, reason} ->
-        raise PipelineError,
-              "Cannot start child #{inspect(name)}, \
-              reason: #{inspect(reason, pretty: true)}"
-    end
-  end
-
-  @spec add_children([parsed_child_t], State.t()) :: Type.stateful_try_t(State.t())
+  @spec add_children([ParentUtils.parsed_child_t()], State.t()) :: Type.stateful_try_t(State.t())
   defp add_children(children, state) do
     children
     |> Bunch.Enum.try_reduce(state, fn {name, pid}, state ->
@@ -456,13 +374,13 @@ defmodule Membrane.Bin do
       {%{endpoint | pid: pid, pad_ref: pad_ref}, state}
     else
       {:error, {:unknown_child, child}} ->
-        raise PipelineError, "Child #{inspect(child)} does not exist"
+        raise BinError, "Child #{inspect(child)} does not exist"
 
       {:error, {:cannot_handle_message, :unknown_pad, _ctx}} ->
-        raise PipelineError, "Child #{inspect(element)} does not have pad #{inspect(pad_name)}"
+        raise BinError, "Child #{inspect(element)} does not have pad #{inspect(pad_name)}"
 
       {:error, reason} ->
-        raise PipelineError, """
+        raise BinError, """
         Error resolving pad #{inspect(pad_name)} of element #{inspect(element)}, \
         reason: #{inspect(reason, pretty: true)}\
         """
@@ -568,7 +486,7 @@ defmodule Membrane.Bin do
       callback_res
     else
       {{:error, reason}, state} ->
-        raise PipelineError, """
+        raise BinError, """
         Callback :handle_spec_started failed with reason: #{inspect(reason)}
         Pipeline state: #{inspect(state, pretty: true)}
         """

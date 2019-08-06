@@ -13,6 +13,7 @@ defmodule Membrane.Pipeline do
   alias Element.Pad
   alias Core.{Message, Playback}
   alias Bunch.Type
+  alias Membrane.Core.ParentUtils
   import Membrane.Helper.GenServer
   require Element
   require Membrane.PlaybackState
@@ -290,10 +291,10 @@ defmodule Membrane.Pipeline do
     links: #{inspect(links)}
     """)
 
-    parsed_children = children_spec |> parse_children
+    parsed_children = children_spec |> ParentUtils.parse_children()
 
-    {:ok, state} = {parsed_children |> check_if_children_names_unique(state), state}
-    children = parsed_children |> start_children
+    {:ok, state} = {parsed_children |> ParentUtils.check_if_children_names_unique(state), state}
+    children = parsed_children |> ParentUtils.start_children()
     {:ok, state} = children |> add_children(state)
     {{:ok, links}, state} = {links |> parse_links, state}
     links = links |> resolve_links(state)
@@ -313,97 +314,6 @@ defmodule Membrane.Pipeline do
     """)
 
     {{:ok, children_names}, state}
-  end
-
-  @spec parse_children(Spec.children_spec_t() | any) :: [parsed_child_t]
-  defp parse_children(children) when is_map(children) or is_list(children),
-    do: children |> Enum.map(&parse_child/1)
-
-  defp parse_child({name, %module{} = options})
-       when Element.is_element_name(name) do
-    %{name: name, module: module, options: options}
-  end
-
-  defp parse_child({name, module})
-       when Element.is_element_name(name) and is_atom(module) do
-    options = module |> Bunch.Module.struct()
-    %{name: name, module: module, options: options}
-  end
-
-  defp parse_child(config) do
-    raise PipelineError, "Invalid children config: #{inspect(config, pretty: true)}"
-  end
-
-  @spec check_if_children_names_unique([parsed_child_t], State.t()) :: Type.try_t()
-  defp check_if_children_names_unique(children, state) do
-    children
-    |> Enum.map(& &1.name)
-    |> Kernel.++(State.get_children_names(state))
-    |> Bunch.Enum.duplicates()
-    ~> (
-      [] ->
-        :ok
-
-      duplicates ->
-        raise PipelineError, "Duplicated names in children specification: #{inspect(duplicates)}"
-    )
-  end
-
-  # Starts children based on given specification and links them to the current
-  # process in the supervision tree.
-  #
-  # Please note that this function is not atomic and in case of error there's
-  # a chance that some of children will remain running.
-  @spec start_children([parsed_child_t]) :: [State.child_t()]
-  defp start_children(children) do
-    debug("Starting children: #{inspect(children)}")
-
-    children |> Enum.map(&start_child/1)
-  end
-
-  defp start_child(%{module: module} = spec) do
-    case child_type(module) do
-      :bin ->
-        start_child_bin(spec)
-
-      :element ->
-        start_child_element(spec)
-    end
-  end
-
-  # TODO maybe a better common module for children of pipeline
-  defp child_type(module) do
-    if module |> Bunch.Module.check_behaviour(:membrane_bin?) do
-      :bin
-    else
-      :element
-    end
-  end
-
-  # Recursion that starts children processes, case when both module and options
-  # are provided.
-  defp start_child_element(%{name: name, module: module, options: options}) do
-    with {:ok, pid} <- Element.start_link(self(), module, name, options),
-         :ok <- Element.set_controlling_pid(pid, self()) do
-      {name, pid}
-    else
-      {:error, reason} ->
-        raise PipelineError,
-              "Cannot start child #{inspect(name)}, \
-              reason: #{inspect(reason, pretty: true)}"
-    end
-  end
-
-  defp start_child_bin(%{name: name, module: module, options: options}) do
-    with {:ok, pid} <- Membrane.Bin.start_link(name, module, options, []),
-         :ok <- Membrane.Bin.set_controlling_pid(pid, self()) do
-      {name, pid}
-    else
-      {:error, reason} ->
-        raise PipelineError,
-              "Cannot start child #{inspect(name)}, \
-              reason: #{inspect(reason, pretty: true)}"
-    end
   end
 
   @spec add_children([parsed_child_t], State.t()) :: Type.stateful_try_t(State.t())
