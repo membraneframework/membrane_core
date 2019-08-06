@@ -190,8 +190,6 @@ defmodule Membrane.Bin do
 
   defmacro generate_bin_pairs(env) do
     pad_pairs = Module.get_attribute(env.module, :bin_pads_pairs)
-    # TODO make it logged
-    IO.puts("private pid mapping is #{inspect(pad_pairs)}")
 
     for {p1, p2} <- pad_pairs do
       quote do
