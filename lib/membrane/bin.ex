@@ -99,8 +99,10 @@ defmodule Membrane.Bin do
   end
 
   defmacro __using__(_) do
-    quote do
-      @behaviour unquote(__MODULE__)
+    quote location: :keep do
+      # @behaviour unquote(__MODULE__) 
+      # TODO remove after we join this module with Bin.Pipeline and uncomment behaviour line
+      use Membrane.Bin.Pipeline
 
       import Membrane.Element.Base, only: [def_options: 1]
       import unquote(__MODULE__), only: [def_input_pad: 2, def_output_pad: 2]

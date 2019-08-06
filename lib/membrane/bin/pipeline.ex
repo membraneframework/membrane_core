@@ -66,7 +66,7 @@ defmodule Membrane.Bin.Pipeline do
   @doc """
   Enables to check whether module is membrane pipeline
   """
-  @callback membrane_pipeline? :: true
+  @callback membrane_bin? :: true
 
   @doc """
   Callback invoked on initialization of pipeline process. It should parse options
@@ -582,13 +582,6 @@ defmodule Membrane.Bin.Pipeline do
     end
   end
 
-  def handle_info(Message.new(:bin_spec, spec), state) do
-    with {{:ok, _children}, state} <- spec |> handle_spec(state) do
-      {:ok, state}
-    end
-    |> noreply(state)
-  end
-
   def handle_info(Message.new(:notification, [from, notification]), state) do
     with {:ok, _} <- state |> State.get_child_pid(from) do
       CallbackHandler.exec_and_handle_callback(
@@ -749,43 +742,8 @@ defmodule Membrane.Bin.Pipeline do
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
 
-      @doc """
-      Changes playback state of pipeline to `:playing`
-
-      A proxy for `Membrane.Pipeline.play/1`
-      """
-      @spec play(pid()) :: :ok
-      defdelegate play(pipeline), to: Pipeline
-
-      @doc """
-      Changes playback state to `:prepared`.
-
-      A proxy for `Membrane.Pipeline.prepare/1`
-      """
-      @spec prepare(pid) :: :ok
-      defdelegate prepare(pipeline), to: Pipeline
-
-      @doc """
-      Changes playback state to `:stopped`.
-
-      A proxy for `Membrane.Pipeline.stop/1`
-      """
-      @spec stop(pid) :: :ok
-      defdelegate stop(pid), to: Pipeline
-
-      @doc """
-      Changes pipeline's playback state to `:stopped` and terminates its process.
-
-      A proxy for `Membrane.Pipeline.stop_and_terminate/1`
-      """
-      @spec stop_and_terminate(pid) :: :ok
-      defdelegate stop_and_terminate(pipeline), to: Pipeline
-
       @impl true
-      def membrane_pipeline?, do: true
-
-      @impl true
-      def handle_init(_options), do: {{:ok, %Pipeline.Spec{}}, %{}}
+      def handle_init(_options), do: {{:ok, %Bin.Spec{}}, %{}}
 
       @impl true
       def handle_stopped_to_prepared(state), do: {:ok, state}
@@ -800,7 +758,8 @@ defmodule Membrane.Bin.Pipeline do
       def handle_prepared_to_stopped(state), do: {:ok, state}
 
       @impl true
-      def handle_notification(_notification, _from, state), do: {:ok, state}
+      def handle_notification(notification, _from, state),
+        do: {{:ok, notify: notification}, state}
 
       @impl true
       def handle_other(_message, state), do: {:ok, state}
@@ -808,16 +767,7 @@ defmodule Membrane.Bin.Pipeline do
       @impl true
       def handle_spec_started(_new_children, state), do: {:ok, state}
 
-      defoverridable start: 0,
-                     start: 1,
-                     start: 2,
-                     start_link: 0,
-                     start_link: 1,
-                     start_link: 2,
-                     play: 1,
-                     prepare: 1,
-                     stop: 1,
-                     handle_init: 1,
+      defoverridable handle_init: 1,
                      handle_stopped_to_prepared: 1,
                      handle_playing_to_prepared: 1,
                      handle_prepared_to_playing: 1,

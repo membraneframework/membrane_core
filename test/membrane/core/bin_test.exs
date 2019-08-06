@@ -4,7 +4,6 @@ defmodule Membrane.Core.BinTest do
   # TODO extract common part from Test bin modules (maybe create a bin in testing/ dir
   # TODO extract common part of sending and asserting receiving buffers
 
-  alias Membrane.Bin
   alias Membrane.Testing
 
   import Membrane.Testing.Assertions
@@ -41,16 +40,6 @@ defmodule Membrane.Core.BinTest do
 
       {{:ok, spec}, state}
     end
-
-    def handle_spec_started(elements, state) do
-      {:ok, state}
-    end
-
-    def handle_stopped_to_prepared(state), do: {:ok, state}
-
-    def handle_prepared_to_playing(state), do: {:ok, state}
-
-    def handle_notification(msg, _ctx, state), do: {{:ok, notify: msg}, state}
   end
 
   defmodule TestDynamicPadBin do
@@ -86,17 +75,7 @@ defmodule Membrane.Core.BinTest do
       {{:ok, spec}, state}
     end
 
-    def handle_spec_started(elements, state) do
-      {:ok, state}
-    end
-
-    def handle_stopped_to_prepared(state), do: {:ok, state}
-
-    def handle_prepared_to_playing(state), do: {:ok, state}
-
-    def handle_notification(msg, _ctx, state), do: {{:ok, notify: msg}, state}
-
-    def handle_pad_added(pad_ref, _ctx, state), do: {:ok, state}
+    def handle_pad_added(_pad_ref, _ctx, state), do: {:ok, state}
   end
 
   defmodule TestSinkBin do
@@ -128,14 +107,6 @@ defmodule Membrane.Core.BinTest do
 
       {{:ok, spec}, state}
     end
-
-    def handle_spec_started(elements, state), do: {:ok, state}
-
-    def handle_stopped_to_prepared(state), do: {:ok, state}
-
-    def handle_prepared_to_playing(state), do: {:ok, state}
-
-    def handle_notification(msg, _ctx, state), do: {{:ok, notify: msg}, state}
   end
 
   defmodule TestPadlessBin do
@@ -164,19 +135,9 @@ defmodule Membrane.Core.BinTest do
 
       {{:ok, spec}, state}
     end
-
-    def handle_spec_started(elements, state), do: {:ok, state}
-
-    def handle_stopped_to_prepared(state), do: {:ok, state}
-
-    def handle_prepared_to_playing(state), do: {:ok, state}
-
-    def handle_notification(msg, _ctx, state), do: {{:ok, notify: msg}, state}
   end
 
   defmodule TestFilter do
-    alias Membrane.Event.StartOfStream
-
     use Membrane.Filter
 
     def_output_pad :output, caps: :any
@@ -221,7 +182,7 @@ defmodule Membrane.Core.BinTest do
           ]
         })
 
-      Testing.Pipeline.play(pipeline) == :ok
+      :ok = Testing.Pipeline.play(pipeline)
 
       assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
       assert_pipeline_playback_changed(pipeline, :prepared, :playing)
@@ -253,7 +214,7 @@ defmodule Membrane.Core.BinTest do
           ]
         })
 
-      Testing.Pipeline.play(pipeline) == :ok
+      :ok = Testing.Pipeline.play(pipeline)
 
       assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
       assert_pipeline_playback_changed(pipeline, :prepared, :playing)
@@ -284,7 +245,7 @@ defmodule Membrane.Core.BinTest do
           ]
         })
 
-      Testing.Pipeline.play(pipeline) == :ok
+      :ok = Testing.Pipeline.play(pipeline)
 
       assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
       assert_pipeline_playback_changed(pipeline, :prepared, :playing)
@@ -318,7 +279,7 @@ defmodule Membrane.Core.BinTest do
           ]
         })
 
-      Testing.Pipeline.play(pipeline) == :ok
+      :ok = Testing.Pipeline.play(pipeline)
 
       assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
       assert_pipeline_playback_changed(pipeline, :prepared, :playing)
@@ -344,7 +305,7 @@ defmodule Membrane.Core.BinTest do
           ]
         })
 
-      Testing.Pipeline.play(pipeline) == :ok
+      :ok = Testing.Pipeline.play(pipeline)
 
       assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
       assert_pipeline_playback_changed(pipeline, :prepared, :playing)
@@ -373,7 +334,7 @@ defmodule Membrane.Core.BinTest do
           ]
         })
 
-      Testing.Pipeline.play(pipeline) == :ok
+      :ok = Testing.Pipeline.play(pipeline)
 
       assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
       assert_pipeline_playback_changed(pipeline, :prepared, :playing)
@@ -403,7 +364,7 @@ defmodule Membrane.Core.BinTest do
           ]
         })
 
-      Testing.Pipeline.play(pipeline) == :ok
+      :ok = Testing.Pipeline.play(pipeline)
 
       assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
       assert_pipeline_playback_changed(pipeline, :prepared, :playing)
@@ -433,7 +394,7 @@ defmodule Membrane.Core.BinTest do
           ]
         })
 
-      Testing.Pipeline.play(pipeline) == :ok
+      :ok = Testing.Pipeline.play(pipeline)
 
       assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
       assert_pipeline_playback_changed(pipeline, :prepared, :playing)
