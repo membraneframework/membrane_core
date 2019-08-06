@@ -157,7 +157,6 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
   defp assert_pid_alive(pid) do
     refute_receive {:DOWN, _, :process, ^pid, _}
-    assert Process.alive?(pid)
   end
 
   defp get_filter_pid(ref, pipeline_pid) do
