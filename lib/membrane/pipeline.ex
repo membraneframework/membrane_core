@@ -26,7 +26,6 @@ defmodule Membrane.Pipeline do
   use GenServer
   use Membrane.Core.PlaybackHandler
 
-  
   defmodule Spec do
     use Membrane.Core.ParentSpec
   end
@@ -320,14 +319,6 @@ defmodule Membrane.Pipeline do
     """)
 
     {{:ok, children_names}, state}
-  end
-
-  @spec add_children([parsed_child_t], State.t()) :: Type.stateful_try_t(State.t())
-  defp add_children(children, state) do
-    children
-    |> Bunch.Enum.try_reduce(state, fn {name, pid}, state ->
-      state |> ParentState.add_child(name, pid)
-    end)
   end
 
   @spec parse_links(Spec.links_spec_t() | any) :: Type.try_t([Link.t()])
