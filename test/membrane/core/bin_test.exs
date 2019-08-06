@@ -1,6 +1,9 @@
 defmodule Membrane.Core.BinTest do
   use ExUnit.Case, async: true
 
+  # TODO extract common part from Test bin modules (maybe create a bin in testing/ dir
+  # TODO extract common part of sending and asserting receiving buffers
+
   alias Membrane.Bin
   alias Membrane.Testing
 
@@ -48,6 +51,52 @@ defmodule Membrane.Core.BinTest do
     def handle_prepared_to_playing(state), do: {:ok, state}
 
     def handle_notification(msg, _ctx, state), do: {{:ok, notify: msg}, state}
+  end
+
+  defmodule TestDynamicPadBin do
+    use Membrane.Bin
+
+    def_options filter1: [type: :atom],
+                filter2: [type: :atom]
+
+    def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :on_request
+
+    def_output_pad :output, caps: :any, availability: :on_request
+
+    @impl true
+    def handle_init(opts) do
+      children = [
+        filter1: opts.filter1,
+        filter2: opts.filter2
+      ]
+
+      links = %{
+        {this_bin(), :input} => {:filter1, :input, buffer: [preferred_size: 10]},
+        {:filter1, :output} => {:filter2, :input, buffer: [preferred_size: 10]},
+        {:filter2, :output} => {this_bin(), :output, buffer: [preferred_size: 10]}
+      }
+
+      spec = %Membrane.Bin.Spec{
+        children: children,
+        links: links
+      }
+
+      state = %{}
+
+      {{:ok, spec}, state}
+    end
+
+    def handle_spec_started(elements, state) do
+      {:ok, state}
+    end
+
+    def handle_stopped_to_prepared(state), do: {:ok, state}
+
+    def handle_prepared_to_playing(state), do: {:ok, state}
+
+    def handle_notification(msg, _ctx, state), do: {{:ok, notify: msg}, state}
+
+    def handle_pad_added(pad_ref, _ctx, state), do: {:ok, state}
   end
 
   defmodule TestSinkBin do
@@ -365,6 +414,36 @@ defmodule Membrane.Core.BinTest do
 
       # As this test's implementation of bin only passes notifications up
       assert_pipeline_notified(pipeline, :test_bin, :some_example_notification)
+    end
+  end
+
+  describe "Dynamic pads" do
+    test "allow bin to be started and work properly" do
+      buffers = ['a', 'b', 'c']
+
+      {:ok, pipeline} =
+        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+          elements: [
+            source: %Testing.Source{output: buffers},
+            test_bin: %TestDynamicPadBin{
+              filter1: TestFilter,
+              filter2: TestFilter
+            },
+            sink: Testing.Sink
+          ]
+        })
+
+      Testing.Pipeline.play(pipeline) == :ok
+
+      assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
+      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+
+      assert_start_of_stream(pipeline, :sink)
+
+      buffers
+      |> Enum.each(fn b -> assert_sink_buffer(pipeline, :sink, %Membrane.Buffer{payload: ^b}) end)
+
+      assert_end_of_stream(pipeline, :sink)
     end
   end
 
