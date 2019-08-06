@@ -13,7 +13,7 @@ defmodule Membrane.Bin do
   alias Core.{Message, Playback}
   alias Bunch.Type
   alias Membrane.Core.Element.PadController
-  alias Membrane.Core.Element.PadSpecHandler
+  alias Membrane.Core.PadSpecHandler
   alias Membrane.Core.Element.PadModel
 
   import Membrane.Helper.GenServer

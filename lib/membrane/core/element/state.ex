@@ -6,8 +6,9 @@ defmodule Membrane.Core.Element.State do
 
   use Membrane.Log, tags: :core
   alias Membrane.{Core, Element}
+  alias Core.PadSpecHandler
   alias Core.{Playback, Playbackable}
-  alias Core.Element.{PadModel, PadSpecHandler, PlaybackBuffer}
+  alias Core.Element.{PadModel, PlaybackBuffer}
   alias Element.Pad
   alias Bunch.Type
   alias __MODULE__, as: ThisModule
