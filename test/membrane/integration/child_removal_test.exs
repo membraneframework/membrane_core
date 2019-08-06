@@ -168,7 +168,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
   defp prepared_to_playing_delay, do: 300
 
-  # Checks if there is at least one buffer element for each pad specified in `for_pads`
+  # Checks if there is at least one item in the playback buffer for each pad specified in `for_pads`
   defp wait_for_buffer_fillup(el_pid, for_pads, timeout \\ 5) do
     1..10
     |> Enum.take_while(fn _ ->
