@@ -4,6 +4,7 @@ defmodule Membrane.Core.ParentUtils do
   alias Membrane.Element
   alias Membrane.Bin
   alias Membrane.ParentError
+  alias Membrane.Core.ParentState
 
   require Element
   require Bin
@@ -57,6 +58,15 @@ defmodule Membrane.Core.ParentUtils do
     debug("Starting children: #{inspect(children)}")
 
     children |> Enum.map(&start_child/1)
+  end
+
+  @spec add_children([ParentUtils.parsed_child_t()], Bin.State.t() | Pipeline.State.t()) ::
+          Type.stateful_try_t(State.t())
+  def add_children(children, state) do
+    children
+    |> Bunch.Enum.try_reduce(state, fn {name, pid}, state ->
+      state |> ParentState.add_child(name, pid)
+    end)
   end
 
   defp start_child(%{module: module} = spec) do

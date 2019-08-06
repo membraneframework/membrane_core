@@ -14,6 +14,7 @@ defmodule Membrane.Pipeline do
   alias Core.{Message, Playback}
   alias Bunch.Type
   alias Membrane.Core.ParentUtils
+  alias Membrane.Core.ParentState
   import Membrane.Helper.GenServer
   require Element
   require Membrane.PlaybackState
@@ -295,7 +296,7 @@ defmodule Membrane.Pipeline do
 
     {:ok, state} = {parsed_children |> ParentUtils.check_if_children_names_unique(state), state}
     children = parsed_children |> ParentUtils.start_children()
-    {:ok, state} = children |> add_children(state)
+    {:ok, state} = children |> ParentUtils.add_children(state)
     {{:ok, links}, state} = {links |> parse_links, state}
     links = links |> resolve_links(state)
     {:ok, state} = {links |> link_children(state), state}
@@ -320,7 +321,7 @@ defmodule Membrane.Pipeline do
   defp add_children(children, state) do
     children
     |> Bunch.Enum.try_reduce(state, fn {name, pid}, state ->
-      state |> State.add_child(name, pid)
+      state |> ParentState.add_child(name, pid)
     end)
   end
 
@@ -336,7 +337,7 @@ defmodule Membrane.Pipeline do
   end
 
   defp resolve_link(%{element: element, pad_name: pad_name, id: id} = endpoint, state) do
-    with {:ok, pid} <- state |> State.get_child_pid(element),
+    with {:ok, pid} <- state |> ParentState.get_child_pid(element),
          {:ok, pad_ref} <- pid |> Message.call(:get_pad_ref, [pad_name, id]) do
       %{endpoint | pid: pid, pad_ref: pad_ref}
     else
@@ -364,7 +365,7 @@ defmodule Membrane.Pipeline do
     with :ok <- links |> Bunch.Enum.try_each(&Element.link/1),
          :ok <-
            state
-           |> State.get_children()
+           |> ParentState.get_children()
            |> Bunch.Enum.try_each(fn {_pid, pid} -> pid |> Element.handle_linking_finished() end),
          do: :ok
 
@@ -404,7 +405,7 @@ defmodule Membrane.Pipeline do
 
   @impl PlaybackHandler
   def handle_playback_state(_old, new, state) do
-    children_pids = state |> State.get_children() |> Map.values()
+    children_pids = state |> ParentState.get_children() |> Map.values()
 
     children_pids
     |> Enum.each(&change_playback_state(&1, new))
@@ -486,7 +487,7 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_info(Message.new(:notification, [from, notification]), state) do
-    with {:ok, _} <- state |> State.get_child_pid(from) do
+    with {:ok, _} <- state |> ParentState.get_child_pid(from) do
       CallbackHandler.exec_and_handle_callback(
         :handle_notification,
         __MODULE__,
@@ -498,7 +499,7 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_info(Message.new(:shutdown_ready, child), state) do
-    {{:ok, pid}, state} = State.pop_child(state, child)
+    {{:ok, pid}, state} = ParentState.pop_child(state, child)
 
     {Element.shutdown(pid), state}
     |> noreply(state)
@@ -528,7 +529,7 @@ defmodule Membrane.Pipeline do
 
   @impl CallbackHandler
   def handle_action({:forward, {elementname, message}}, _cb, _params, state) do
-    with {:ok, pid} <- state |> State.get_child_pid(elementname) do
+    with {:ok, pid} <- state |> ParentState.get_child_pid(elementname) do
       send(pid, message)
       {:ok, state}
     else
@@ -544,7 +545,9 @@ defmodule Membrane.Pipeline do
 
   def handle_action({:remove_child, children}, _cb, _params, state) do
     with {:ok, pids} <-
-           children |> Bunch.listify() |> Bunch.Enum.try_map(&State.get_child_pid(state, &1)) do
+           children
+           |> Bunch.listify()
+           |> Bunch.Enum.try_map(&ParentState.get_child_pid(state, &1)) do
       pids |> Enum.each(&Message.send(&1, :prepare_shutdown))
       :ok
     end

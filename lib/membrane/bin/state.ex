@@ -43,38 +43,7 @@ defmodule Membrane.Bin.State do
     def get_controlling_pid(%ThisModule{controlling_pid: pid}), do: pid
   end
 
-  @spec add_child(t, Element.name_t(), pid) :: Type.stateful_try_t(t)
-  def add_child(%__MODULE__{children: children} = state, child, pid) do
-    if Map.has_key?(children, child) do
-      {{:error, {:duplicate_child, child}}, state}
-    else
-      {:ok, %__MODULE__{state | children: children |> Map.put(child, pid)}}
-    end
-  end
-
-  @spec get_child_pid(t, Element.name_t()) :: Type.try_t(pid)
-  def get_child_pid(%__MODULE__{children: children}, child) do
-    with {:ok, pid} <- children[child] |> Bunch.error_if_nil({:unknown_child, child}),
-         do: {:ok, pid}
-  end
-
-  @spec pop_child(t, Element.name_t()) :: Type.stateful_try_t(pid, t)
-  def pop_child(%__MODULE__{children: children} = state, child) do
-    {pid, children} = children |> Map.pop(child)
-
-    with {:ok, pid} <- pid |> Bunch.error_if_nil({:unknown_child, child}) do
-      state = %__MODULE__{state | children: children}
-      {{:ok, pid}, state}
-    end
-  end
-
-  @spec get_children_names(t) :: [Element.name_t()]
-  def get_children_names(%__MODULE__{children: children}) do
-    children |> Map.keys()
-  end
-
-  @spec get_children(t) :: children_t
-  def get_children(%__MODULE__{children: children}) do
-    children
+  defimpl Membrane.Core.ParentState, for: __MODULE__ do
+    use Membrane.Core.ParentState.Default
   end
 end
