@@ -37,8 +37,9 @@ defmodule Membrane.Bin do
   # TODO establish options for the private pads
   # * push or pull mode?
   defmacro def_input_pad(name, spec) do
+    availability = Keyword.get(spec, :availability, :always)
     input = PadsSpecs.def_pad(name, :input, spec)
-    output = PadsSpecs.def_pad({:private, name}, :output, caps: :any)
+    output = PadsSpecs.def_pad({:private, name}, :output, caps: :any, availability: availability)
 
     quote do
       unquote(input)
@@ -54,8 +55,15 @@ defmodule Membrane.Bin do
   end
 
   defmacro def_output_pad(name, spec) do
+    availability = Keyword.get(spec, :availability, :always)
     output = PadsSpecs.def_pad(name, :output, spec)
-    input = PadsSpecs.def_pad({:private, name}, :input, caps: :any, demand_unit: :buffers)
+
+    input =
+      PadsSpecs.def_pad({:private, name}, :input,
+        caps: :any,
+        demand_unit: :buffers,
+        availability: availability
+      )
 
     quote do
       unquote(output)
@@ -78,6 +86,12 @@ defmodule Membrane.Bin do
     for {p1, p2} <- pad_pairs do
       quote do
         # TODO do we need both ways?
+        def get_corresponding_private_pad({:dynamic, unquote(p1), id}),
+          do: {:dynamic, unquote(p2), id}
+
+        def get_corresponding_private_pad({:dynamic, unquote(p2), id}),
+          do: {:dynamic, unquote(p1), id}
+
         def get_corresponding_private_pad(unquote(p1)), do: unquote(p2)
         def get_corresponding_private_pad(unquote(p2)), do: unquote(p1)
       end
