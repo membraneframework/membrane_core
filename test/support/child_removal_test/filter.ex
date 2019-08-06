@@ -51,7 +51,6 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   @impl true
   def handle_prepared_to_playing(_ctx, %{playing_delay: 0} = state) do
-    # send(state.target, {:playing, self()})
     {{:ok, notify: :playing}, state}
   end
 
