@@ -305,7 +305,7 @@ defmodule Membrane.Pipeline do
     links = links |> resolve_links(state)
     {:ok, state} = {links |> link_children(state), state}
     {children_names, children_pids} = children |> Enum.unzip()
-    {:ok, state} = {children_pids |> set_children_watcher, state}
+    {:ok, state} = {children_pids |> ParentUtils.set_children_watcher(), state}
     {:ok, state} = exec_handle_spec_started(children_names, state)
 
     children_pids
@@ -364,16 +364,6 @@ defmodule Membrane.Pipeline do
            |> ParentState.get_children()
            |> Bunch.Enum.try_each(fn {_pid, pid} -> pid |> Element.handle_linking_finished() end),
          do: :ok
-
-    :ok
-  end
-
-  @spec set_children_watcher([pid]) :: :ok
-  defp set_children_watcher(elements_pids) do
-    elements_pids
-    |> Enum.each(fn pid ->
-      :ok = pid |> Element.set_watcher(self())
-    end)
 
     :ok
   end

@@ -305,7 +305,7 @@ defmodule Membrane.Bin do
     {links, state} = links |> resolve_links(state)
     {:ok, state} = links |> link_children(state)
     {children_names, children_pids} = children |> Enum.unzip()
-    {:ok, state} = {children_pids |> set_children_watcher, state}
+    {:ok, state} = {children_pids |> ParentUtils.set_children_watcher(), state}
     {:ok, state} = exec_handle_spec_started(children_names, state)
 
     children_pids
@@ -454,16 +454,6 @@ defmodule Membrane.Bin do
     end
   end
 
-  @spec set_children_watcher([pid]) :: :ok
-  defp set_children_watcher(elements_pids) do
-    elements_pids
-    |> Enum.each(fn pid ->
-      :ok = pid |> Element.set_watcher(self())
-    end)
-
-    :ok
-  end
-
   @spec exec_handle_spec_started([Element.name_t()], State.t()) :: {:ok, State.t()}
   defp exec_handle_spec_started(children_names, state) do
     callback_res =
@@ -598,7 +588,7 @@ defmodule Membrane.Bin do
     {links, state} = links |> resolve_links(state)
     {:ok, state} = links |> link_children(state)
     {children_names, children_pids} = children |> Enum.unzip()
-    {:ok, state} = {children_pids |> set_children_watcher, state}
+    {:ok, state} = {children_pids |> ParentUtils.set_children_watcher(), state}
     {:ok, state} = exec_handle_spec_started(children_names, state)
 
     children_pids

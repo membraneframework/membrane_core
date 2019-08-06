@@ -138,17 +138,6 @@ defmodule Membrane.Element do
   end
 
   @doc """
-  Sends synchronous call to the given element requesting it to set watcher.
-
-  It will wait for reply for amount of time passed as second argument
-  (in milliseconds).
-  """
-  @spec set_watcher(pid, pid, timeout) :: :ok
-  def set_watcher(server, watcher, timeout \\ 5000) when is_pid(server) do
-    Message.call(server, :set_watcher, watcher, [], timeout)
-  end
-
-  @doc """
   Sends synchronous call to the given element requesting it to set controlling pid.
 
   It will wait for reply for amount of time passed as second argument

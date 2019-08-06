@@ -5,9 +5,11 @@ defmodule Membrane.Core.ParentUtils do
   alias Membrane.Bin
   alias Membrane.ParentError
   alias Membrane.Core.ParentState
+  alias Membrane.Core.Message
 
   require Element
   require Bin
+  require Message
 
   import Membrane.Log
 
@@ -113,5 +115,17 @@ defmodule Membrane.Core.ParentUtils do
               "Cannot start child #{inspect(name)}, \
               reason: #{inspect(reason, pretty: true)}"
     end
+  end
+
+  @spec set_children_watcher([pid]) :: :ok
+  def set_children_watcher(elements_pids) do
+    elements_pids
+    |> Enum.each(fn pid ->
+      :ok = set_watcher(pid, self())
+    end)
+  end
+
+  defp set_watcher(server, watcher, timeout \\ 5000) when is_pid(server) do
+    Message.call(server, :set_watcher, watcher, [], timeout)
   end
 end
