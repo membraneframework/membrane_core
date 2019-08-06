@@ -33,8 +33,7 @@ defmodule Membrane.Bin do
   use Membrane.Core.PlaybackRequestor
 
   defmodule Spec do
-    defstruct children: [],
-              links: %{}
+    use Membrane.Core.ParentSpec
   end
 
   @typedoc """
