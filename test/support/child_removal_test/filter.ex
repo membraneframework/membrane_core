@@ -30,8 +30,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
                 spec: (pos_integer -> non_neg_integer),
                 default: &__MODULE__.default_demand_generator/1
               ],
-              playing_delay: [type: :integer, default: 0],
-              sof_sent?: [type: :boolean, default: false]
+              playing_delay: [type: :integer, default: 0]
 
   @impl true
   def handle_init(opts) do
@@ -81,12 +80,12 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   end
 
   @impl true
-  def handle_event(_pad, %StartOfStream{} = ev, _ctx, %{sof_sent?: false} = state) do
-    {{:ok, forward: ev}, %{state | sof_sent?: true}}
-  end
-
-  def handle_event(_pad, %StartOfStream{}, _ctx, %{sof_sent?: true} = state) do
-    {:ok, state}
+  def handle_event(pad, %StartOfStream{} = ev, ctx, state) do
+    if not ctx.pads[pad].start_of_stream? do
+      {{:ok, forward: ev}, %{state | sof_sent?: true}}
+    else
+      {:ok, state}
+    end
   end
 
   def handle_event(_pad, event, _ctx, state) do
