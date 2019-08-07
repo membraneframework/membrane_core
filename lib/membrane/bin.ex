@@ -193,15 +193,20 @@ defmodule Membrane.Bin do
     for {p1, p2} <- pad_pairs do
       quote do
         def get_corresponding_private_pad({:dynamic, unquote(p1), id}),
-          do: {:dynamic, unquote(p2), id}
+          do: {:ok, {:dynamic, unquote(p2), id}}
 
         def get_corresponding_private_pad({:dynamic, unquote(p2), id}),
-          do: {:dynamic, unquote(p1), id}
+          do: {:ok, {:dynamic, unquote(p1), id}}
 
-        def get_corresponding_private_pad(unquote(p1)), do: unquote(p2)
-        def get_corresponding_private_pad(unquote(p2)), do: unquote(p1)
+        def get_corresponding_private_pad(unquote(p1)), do: {:ok, unquote(p2)}
+        def get_corresponding_private_pad(unquote(p2)), do: {:ok, unquote(p1)}
       end
-    end
+    end ++
+      [
+        quote do
+          def get_corresponding_private_pad(_), do: {:error, :unknown_pad}
+        end
+      ]
   end
 
   @doc """
@@ -340,12 +345,16 @@ defmodule Membrane.Bin do
 
   defp resolve_link(
          %{element: this_bin_marker(), pad_name: pad_name, id: id} = endpoint,
-         %{module: bin_mod} = state
+         %{module: bin_mod, name: name} = state
        ) do
-    # TODO implement unhappy path
-    private_bin = bin_mod.get_corresponding_private_pad(pad_name)
-    {{:ok, pad_ref}, state} = PadController.get_pad_ref(private_bin, id, state)
-    {%{endpoint | pid: self(), pad_ref: pad_ref, pad_name: private_bin}, state}
+    with {:ok, private_bin} <- bin_mod.get_corresponding_private_pad(pad_name),
+         {{:ok, pad_ref}, state} <- PadController.get_pad_ref(private_bin, id, state) do
+      new_endpoint = %{endpoint | pid: self(), pad_ref: pad_ref, pad_name: private_bin}
+      {new_endpoint, state}
+    else
+      {:error, :unknown_pad} ->
+        raise BinError, "Bin #{inspect(name)} does not have pad #{inspect(pad_name)}"
+    end
   end
 
   defp resolve_link(%{element: element, pad_name: pad_name, id: id} = endpoint, state) do
@@ -574,7 +583,7 @@ defmodule Membrane.Bin do
       when type in [:demand, :caps, :buffer, :event] do
     %{module: module, linking_buffer: buf} = state
 
-    outgoing_pad =
+    {:ok, outgoing_pad} =
       pad
       |> module.get_corresponding_private_pad()
 
