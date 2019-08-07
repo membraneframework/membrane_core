@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Element.PadControllerSpec do
+defmodule Membrane.Core.PadControllerSpec do
   use ESpec, async: false
   alias Membrane.Support.Element.{DynamicFilter, TrivialFilter}
   alias Membrane.Core.Element.{PadModel, PadSpecHandler, State}
@@ -106,7 +106,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
           )
         end
 
-        expect(call) |> to(raise_exception(Membrane.ElementLinkError))
+        expect(call) |> to(raise_exception(Membrane.LinkError))
       end
     end
   end

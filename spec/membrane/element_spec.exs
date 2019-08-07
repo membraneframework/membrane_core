@@ -3,8 +3,8 @@ defmodule Membrane.ElementSpec do
 
   alias Membrane.Core.{Message, Playback}
   alias Membrane.Core.Element.State
-  alias Membrane.Element.{CallbackContext, ElementLinkError}
-  alias Membrane.ElementLinkError
+  alias Membrane.Element.{CallbackContext, LinkError}
+  alias Membrane.LinkError
   alias Membrane.Pipeline.Link
   alias Membrane.Pipeline.Link.Endpoint
   alias Membrane.Support.Element.{TrivialFilter, TrivialSink, TrivialSource}
@@ -43,7 +43,7 @@ defmodule Membrane.ElementSpec do
 
       it "should raise an exception" do
         expect(fn -> described_module().link(link_struct()) end)
-        |> to(raise_exception(ElementLinkError))
+        |> to(raise_exception(LinkError))
       end
     end
 
@@ -55,7 +55,7 @@ defmodule Membrane.ElementSpec do
 
       it "should raise an exception" do
         expect(catch_exit(described_module().link(link_struct())))
-        |> to(match_pattern %ElementLinkError{})
+        |> to(match_pattern %LinkError{})
       end
     end
 
@@ -65,7 +65,7 @@ defmodule Membrane.ElementSpec do
 
       it "should raise an exception" do
         expect(fn -> described_module().link(link_struct()) end)
-        |> to(raise_exception(ElementLinkError))
+        |> to(raise_exception(LinkError))
       end
     end
 
@@ -83,7 +83,7 @@ defmodule Membrane.ElementSpec do
 
         it "should raise an exception" do
           expect(catch_exit(described_module().link(link_struct())))
-          |> to(match_pattern %ElementLinkError{})
+          |> to(match_pattern %LinkError{})
         end
       end
 
@@ -94,7 +94,7 @@ defmodule Membrane.ElementSpec do
 
         it "should raise an exception" do
           expect(catch_exit(described_module().link(link_struct())))
-          |> to(match_pattern %ElementLinkError{})
+          |> to(match_pattern %LinkError{})
         end
       end
 
@@ -106,7 +106,7 @@ defmodule Membrane.ElementSpec do
 
         it "should raise an exception" do
           expect(catch_exit(described_module().link(link_struct())))
-          |> to(match_pattern %ElementLinkError{})
+          |> to(match_pattern %LinkError{})
         end
       end
 
@@ -119,7 +119,7 @@ defmodule Membrane.ElementSpec do
 
           it "should raise an exception" do
             expect(catch_exit(described_module().link(link_struct())))
-            |> to(match_pattern %ElementLinkError{})
+            |> to(match_pattern %LinkError{})
           end
         end
       end

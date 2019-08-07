@@ -3,7 +3,8 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   # Module handling messages incoming to element and dispatching them to controllers.
 
   alias Membrane.Core
-  alias Core.Element.{DemandHandler, LifecycleController, PadController, PlaybackBuffer, State}
+  alias Core.PadController
+  alias Core.Element.{DemandHandler, LifecycleController, PlaybackBuffer, State}
   alias Core.{Message, PlaybackHandler}
   require Message
   use Core.Element.Log

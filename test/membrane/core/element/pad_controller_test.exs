@@ -1,13 +1,14 @@
-defmodule Membrane.Core.Element.PadControllerTest do
+defmodule Membrane.Core.PadControllerTest do
   use ExUnit.Case, async: true
   alias Membrane.Support.Element.{DynamicFilter, TrivialFilter, TrivialSink}
   alias Membrane.Core.Element.{PadModel, State}
   alias Membrane.Core.{Message, Playbackable}
   alias Membrane.Element.Pad
-  alias Membrane.ElementLinkError
+  alias Membrane.LinkError
+  alias Membrane.Event.EndOfStream
   require Message
 
-  @module Membrane.Core.Element.PadController
+  @module Membrane.Core.PadController
 
   defp prepare_state(elem_module, name \\ :element, playback_state \\ :stopped) do
     elem_module
@@ -41,7 +42,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
     test "when pad is does not exist in the element" do
       state = prepare_state(TrivialFilter)
 
-      assert_raise ElementLinkError, fn ->
+      assert_raise LinkError, fn ->
         @module.handle_link(
           :invalid_pad_ref,
           :output,

@@ -12,7 +12,7 @@ defmodule Membrane.Bin do
   alias Element.Pad
   alias Core.{Message, Playback}
   alias Bunch.Type
-  alias Membrane.Core.Element.PadController
+  alias Membrane.Core.PadController
   alias Membrane.Core.PadSpecHandler
   alias Membrane.Core.ParentUtils
   alias Membrane.Core.ParentState

@@ -122,6 +122,6 @@ defmodule Membrane.ActionError do
   end
 end
 
-defmodule Membrane.ElementLinkError do
+defmodule Membrane.LinkError do
   defexception [:message]
 end
