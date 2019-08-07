@@ -209,7 +209,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         pad_data
 
       state = handle_buffer(pad_ref, mode, other_demand_unit, buffers, state)
-      Message.send(pid, :buffer, [buffers, other_ref])
+      Message.send(pid, :buffer, buffers, for_pad: other_ref)
       {:ok, state}
     else
       buffers: {:error, buf} -> {{:error, {:invalid_buffer, buf}}, state}
@@ -257,7 +257,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
       state = state |> PadModel.set_data!(pad_ref, :caps, caps)
 
-      Message.send(pid, :caps, [caps, other_ref])
+      Message.send(pid, :caps, caps, for_pad: other_ref)
       {:ok, state}
     else
       pad: {:error, reason} -> {{:error, reason}, state}
@@ -346,7 +346,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     withl event: true <- event |> Event.event?(),
           pad: {:ok, %{pid: pid, other_ref: other_ref}} <- PadModel.get_data(state, pad_ref),
           handler: {:ok, state} <- handle_event(pad_ref, event, state) do
-      Message.send(pid, :event, [event, other_ref])
+      Message.send(pid, :event, event, for_pad: other_ref)
       {:ok, state}
     else
       event: false -> {{:error, {:invalid_event, event}}, state}

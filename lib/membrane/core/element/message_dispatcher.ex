@@ -70,9 +70,9 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   end
 
   # incoming demands, buffers, caps, events from other element
-  defp do_handle_message(Message.new(type, args), :info, state)
+  defp do_handle_message(Message.new(type, _args, _opts) = msg, :info, state)
        when type in [:demand, :buffer, :caps, :event] do
-    {type, args} |> PlaybackBuffer.store(state)
+    msg |> PlaybackBuffer.store(state)
   end
 
   defp do_handle_message(Message.new(:get_pad_ref, [pad_name, id]), :call, state) do
