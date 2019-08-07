@@ -6,7 +6,6 @@ defmodule Membrane.Pipeline.State do
 
   alias Membrane.Core.{Playback, Playbackable}
   alias Membrane.Element
-  alias Bunch.Type
   use Bunch
 
   @derive Playbackable

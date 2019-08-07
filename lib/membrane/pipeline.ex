@@ -90,8 +90,6 @@ defmodule Membrane.Pipeline do
   @type callback_return_t ::
           CallbackHandler.callback_return_t(ParentAction.t(), State.internal_state_t())
 
-  @typep parsed_child_t :: %{name: Element.name_t(), module: module, options: Keyword.t()}
-
   @doc """
   Enables to check whether module is membrane pipeline
   """

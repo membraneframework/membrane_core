@@ -6,7 +6,6 @@ defmodule Membrane.Bin.State do
 
   alias Membrane.Core.{Playback, Playbackable}
   alias Membrane.Element
-  alias Bunch.Type
   alias __MODULE__, as: ThisModule
   use Bunch
   use Bunch.Access

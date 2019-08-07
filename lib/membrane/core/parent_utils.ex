@@ -11,7 +11,7 @@ defmodule Membrane.Core.ParentUtils do
   require Bin
   require Message
 
-  import Membrane.Log
+  use Membrane.Log, tags: :core
 
   @type child_name_t :: Element.name_t() | Bin.name_t()
   @typep parsed_child_t :: %{name: child_name_t(), module: module, options: Keyword.t()}

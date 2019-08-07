@@ -14,7 +14,6 @@ defmodule Membrane.Bin do
   alias Bunch.Type
   alias Membrane.Core.Element.PadController
   alias Membrane.Core.PadSpecHandler
-  alias Membrane.Core.Element.PadModel
   alias Membrane.Core.ParentUtils
   alias Membrane.Core.ParentState
   alias Membrane.Core.ParentAction
@@ -291,8 +290,6 @@ defmodule Membrane.Bin do
     children: #{inspect(children_spec)}
     links: #{inspect(links)}
     """)
-
-    %State{name: bin_name, bin_options: bin_opts, module: bin_module} = state
 
     parsed_children = children_spec |> ParentUtils.parse_children()
 
@@ -576,7 +573,8 @@ defmodule Membrane.Bin do
     {Element.shutdown(pid), state}
   end
 
-  def handle_info(Message.new(:demand_unit, [demand_unit, pad_ref]) = msg, state) do
+  def handle_info(Message.new(:demand_unit, [_demand_unit, _pad_ref]), state) do
+    # TODO
     {:ok, state} |> noreply(state)
   end
 
@@ -604,9 +602,8 @@ defmodule Membrane.Bin do
     |> noreply()
   end
 
-  # TODO what for dynamic pads? Should we maybe send the whole pad struct in the field `for_pad`?
-  # TODO don't match on keyword list
-  def handle_info(Message.new(type, args, for_pad: pad) = msg, state) do
+  def handle_info(Message.new(type, _args, for_pad: pad) = msg, state)
+      when type in [:demand, :caps, :buffer, :event] do
     %{module: module, linking_buffer: buf} = state
 
     outgoing_pad =
@@ -623,7 +620,8 @@ defmodule Membrane.Bin do
     |> noreply(state)
   end
 
-  def handle_call(Message.new(:get_pad_ref, [pad_name, id]), from, state) do
+  @impl GenServer
+  def handle_call(Message.new(:get_pad_ref, [pad_name, id]), _from, state) do
     PadController.get_pad_ref(pad_name, id, state) |> reply()
   end
 
@@ -634,7 +632,7 @@ defmodule Membrane.Bin do
 
   def handle_call(
         Message.new(:handle_link, [pad_ref, pad_direction, pid, other_ref, other_info, props]),
-        from,
+        _from,
         state
       ) do
     {{:ok, info}, state} =
@@ -642,8 +640,8 @@ defmodule Membrane.Bin do
 
     {:ok, new_state} = PadController.handle_linking_finished(state)
 
-    LinkingBuffer.eval_for_pad(state.linking_buffer, pad_ref, state)
-    ~> {{:ok, info}, %{state | linking_buffer: &1}}
+    LinkingBuffer.eval_for_pad(state.linking_buffer, pad_ref, new_state)
+    ~> {{:ok, info}, %{new_state | linking_buffer: &1}}
     |> reply()
   end
 
@@ -687,10 +685,6 @@ defmodule Membrane.Bin do
     debug("Sending notification #{inspect(notification)} (watcher: #{inspect(watcher)})", state)
     Message.send(watcher, :notification, [name, notification])
     {:ok, state}
-  end
-
-  def bin?(module) do
-    module |> Bunch.Module.check_behaviour(:membrane_bin?)
   end
 
   def set_controlling_pid(server, controlling_pid, timeout \\ 5000) do

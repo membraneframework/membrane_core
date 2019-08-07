@@ -79,7 +79,10 @@ defmodule Membrane.Core.Element.PadsSpecs do
 
   defmacro ensure_default_membrane_pads do
     quote do
-      @before_compile {unquote(__MODULE__), :generate_membrane_pads}
+      if Module.get_attribute(__MODULE__, :membrane_pads) == nil do
+        Module.register_attribute(__MODULE__, :membrane_pads, accumulate: true)
+        @before_compile {unquote(__MODULE__), :generate_membrane_pads}
+      end
     end
   end
 
