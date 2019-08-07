@@ -1,32 +1,40 @@
 defmodule Membrane.Core.ParentAction do
+  @moduledoc """
+  This module consists of common for bin and pipeline types and functions connected to actions.
+  """
   alias Membrane.CallbackError
   alias Membrane.Core.ParentState
   alias Membrane.Core.Message
+  alias Membrane.Notification
+  alias Membrane.Pipeline
+  alias Membrane.Bin
+  alias Membrane.Core.ParentUtils
 
   use Bunch
 
   @typedoc """
   Action that sends a message to element identified by name.
   """
-  @type forward_action_t :: {:forward, {Element.name_t(), Notification.t()}}
+  @type forward_action_t :: {:forward, {ParentUtils.child_name_t(), Notification.t()}}
 
   @typedoc """
-  Action that instantiates elements and links them according to `Membrane.Pipeline.Spec`.
+  Action that instantiates elements and links them according to `Membrane.Core.ParentSpec`.
 
-  Elements playback state is changed to the current pipeline state.
+  Children's playback state is changed to the current parent state.
   `c:handle_spec_started` callback is executed once it happens.
   """
-  @type spec_action_t :: {:spec, Spec.t()}
+  @type spec_action_t :: {:spec, Pipeline.Spec.t() | Bin.Spec.t()}
 
   @typedoc """
-  Action that stops, unlinks and removes specified child/children from pipeline.
+  Action that stops, unlinks and removes specified child/children from their parent.
   """
-  @type remove_child_action_t :: {:remove_child, Element.name_t() | [Element.name_t()]}
+  @type remove_child_action_t ::
+          {:remove_child, ParentUtils.child_name_t() | [ParentUtils.child_name_t()]}
 
   @typedoc """
-  Type describing actions that can be returned from pipeline callbacks.
+  Type describing actions that can be returned from parent callbacks.
 
-  Returning actions is a way of pipeline interaction with its elements and
+  Returning actions is a way of pipeline/bin interaction with its elements and
   other parts of framework.
   """
   @type t :: forward_action_t | spec_action_t | remove_child_action_t

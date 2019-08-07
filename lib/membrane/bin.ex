@@ -34,6 +34,26 @@ defmodule Membrane.Bin do
   use Membrane.Core.PlaybackRequestor
 
   defmodule Spec do
+    @moduledoc """
+    This module serves the same purpose as `Membrane.Pipeline.Spec`.
+
+    ## Bin links
+
+    For bins boundries there are special links allowed. User should define links
+    between bin's input and first child's input (input-input type) and first
+    child's output and bin output (output-output type). In this case, callback module
+    creator should name endpoint of the bin with macro `this_bin()`
+
+    Sample definition:
+
+    ```
+    %{
+    {this_bin(), :input} => {:filter1, :input, buffer: [preferred_size: 10]},
+    {:filter1, :output} => {:filter2, :input, buffer: [preferred_size: 10]},
+    {:filter2, :output} => {this_bin(), :output, buffer: [preferred_size: 10]}
+    }
+    ```
+    """
     use Membrane.Core.ParentSpec
   end
 
@@ -50,12 +70,12 @@ defmodule Membrane.Bin do
           CallbackHandler.callback_return_t(ParentAction.t(), State.internal_state_t())
 
   @doc """
-  Enables to check whether module is membrane pipeline
+  Enables to check whether module is membrane bin
   """
   @callback membrane_bin? :: true
 
   @doc """
-  Callback invoked on initialization of pipeline process. It should parse options
+  Callback invoked on initialization of bin process. It should parse options
   and initialize element internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
   """
@@ -64,25 +84,25 @@ defmodule Membrane.Bin do
               | {:error, any}
 
   @doc """
-  Callback invoked when pipeline transition from `:stopped` to `:prepared` state has finished,
+  Callback invoked when bin transition from `:stopped` to `:prepared` state has finished,
   that is all of its elements are prepared to enter `:playing` state.
   """
   @callback handle_stopped_to_prepared(state :: State.internal_state_t()) :: callback_return_t
 
   @doc """
-  Callback invoked when pipeline transition from `:playing` to `:prepared` state has finished,
+  Callback invoked when bin transition from `:playing` to `:prepared` state has finished,
   that is all of its elements are prepared to be stopped.
   """
   @callback handle_playing_to_prepared(state :: State.internal_state_t()) :: callback_return_t
 
   @doc """
-  Callback invoked when pipeline is in `:playing` state, i.e. all its elements
+  Callback invoked when bin is in `:playing` state, i.e. all its elements
   are in this state.
   """
   @callback handle_prepared_to_playing(state :: State.internal_state_t()) :: callback_return_t
 
   @doc """
-  Callback invoked when pipeline is in `:playing` state, i.e. all its elements
+  Callback invoked when bin is in `:playing` state, i.e. all its elements
   are in this state.
   """
   @callback handle_prepared_to_stopped(state :: State.internal_state_t()) :: callback_return_t
@@ -92,12 +112,12 @@ defmodule Membrane.Bin do
   """
   @callback handle_notification(
               notification :: Notification.t(),
-              element :: Element.name_t(),
+              element :: ParentUtils.child_name_t(),
               state :: State.internal_state_t()
             ) :: callback_return_t
 
   @doc """
-  Callback invoked when pipeline receives a message that is not recognized
+  Callback invoked when bin receives a message that is not recognized
   as an internal membrane message.
 
   Useful for receiving ticks from timer, data sent from NIFs or other stuff.
@@ -105,13 +125,16 @@ defmodule Membrane.Bin do
   @callback handle_other(message :: any, state :: State.internal_state_t()) :: callback_return_t
 
   @doc """
-  Callback invoked when `Membrane.Pipeline.Spec` is linked and in the same playback
-  state as pipeline.
+  Callback invoked when `Membrane.Bin.Spec` is linked and in the same playback
+  state as bin.
 
   Spec can be started from `c:handle_init/1` callback or as `t:Membrane.Core.ParentAction.spec_action_t/0`
   action.
   """
-  @callback handle_spec_started(elements :: [Element.name_t()], state :: State.internal_state_t()) ::
+  @callback handle_spec_started(
+              elements :: [ParentUtils.child_name_t()],
+              state :: State.internal_state_t()
+            ) ::
               callback_return_t
 
   defguard is_bin_name(term)
@@ -188,10 +211,10 @@ defmodule Membrane.Bin do
   end
 
   @doc """
-  Starts the Pipeline based on given module and links it to the current
+  Starts the Bin based on given module and links it to the current
   process.
 
-  Pipeline options are passed to module's `c:handle_init/1` callback.
+  Bin options are passed to module's `c:handle_init/1` callback.
 
   Process options are internally passed to `GenServer.start_link/3`.
 
@@ -221,11 +244,11 @@ defmodule Membrane.Bin do
   end
 
   @doc """
-  Changes pipeline's playback state to `:stopped` and terminates its process
+  Changes bin's playback state to `:stopped` and terminates its process
   """
-  @spec stop_and_terminate(pipeline :: pid) :: :ok
-  def stop_and_terminate(pipeline) do
-    Message.send(pipeline, :stop_and_terminate)
+  @spec stop_and_terminate(bin :: pid) :: :ok
+  def stop_and_terminate(bin) do
+    Message.send(bin, :stop_and_terminate)
     :ok
   end
 
@@ -254,7 +277,7 @@ defmodule Membrane.Bin do
   end
 
   @doc """
-  Checks whether module is a pipeline.
+  Checks whether module is a bin.
   """
   @spec bin?(module) :: boolean
   def bin?(module) do
@@ -571,7 +594,7 @@ defmodule Membrane.Bin do
     |> Enum.each(&Element.change_playback_state(&1, state.playback.state))
 
     debug("""
-    Initialized pipeline spec
+    Initialized bin spec
     children: #{inspect(children)}
     children pids: #{inspect(children)}
     links: #{inspect(links)}
