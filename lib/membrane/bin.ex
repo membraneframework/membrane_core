@@ -730,11 +730,6 @@ defmodule Membrane.Bin do
       # TODO think of something better to represent this bin
       defp this_bin, do: unquote(__MODULE__).this_bin_marker()
 
-      def membrane_element?, do: true
-
-      # TODO bin can be of any type
-      def membrane_element_type, do: :filter
-
       @impl true
       def handle_init(_options), do: {{:ok, %Bin.Spec{}}, %{}}
 
