@@ -7,8 +7,6 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   * not send doubled `%Membrane.Event.StartOfStream{}` event
     (useful when you have two sources in a pipeline)
   * send demands and buffers from two input pads to one output pad.
-  * sends to pid specified in options as `target` its pid at init and
-    some other messages informing about playback state changes for example.
 
 
   Should be used along with `Membrane.Support.ChildRemovalTest.Pipeline` as they
@@ -61,7 +59,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   @impl true
   def handle_other(:resume_after_wait, _ctx, state) do
-    {{:ok, playback_change: :resume}, state}
+    {{:ok, playback_change: :resume, notify: :playing}, state}
   end
 
   @impl true

@@ -44,7 +44,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
       links: links
     }
 
-    {{:ok, spec}, %{target: opts.target}}
+    {{:ok, spec}, %{}}
   end
 
   @impl true
@@ -54,21 +54,6 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
 
   def handle_other({:remove_child, name}, state) do
     {{:ok, remove_child: name}, state}
-  end
-
-  @impl true
-  def handle_prepared_to_stopped(%{target: t} = state) do
-    send(t, :pipeline_stopped)
-    {:ok, state}
-  end
-
-  def handle_notification(:playing, element, %{target: target} = state) do
-    send(target, {:playing, element})
-    {:ok, state}
-  end
-
-  def handle_notification(_, _, state) do
-    {:ok, state}
   end
 
   defp maybe_add_extra_source(children, %{extra_source: source}),
