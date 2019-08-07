@@ -48,13 +48,12 @@ defmodule Membrane.Testing.Pipeline do
   You can also pass a custom pipeline module, by using `:module` field of
   `Membrane.Testing.Pipeline.Options` struct. Every callback of the module
   will be executed before the callbacks of Testing.Pipeline.
+  Passed module has to return a proper spec. There should be no elements
+  nor links specified in options passed to test pipeline as that would
+  result in a failure.
 
   ```
   options = %Membrane.Testing.Pipeline.Options {
-    elements: [
-      el1: MembraneElement1,
-      el2: MembraneElement2,
-      ],
       module: Your.Module
     }
     ```
