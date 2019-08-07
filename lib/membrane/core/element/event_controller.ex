@@ -3,8 +3,8 @@ defmodule Membrane.Core.Element.EventController do
   # Module handling events incoming through input pads.
 
   alias Membrane.{Core, Element, Event}
-  alias Core.{CallbackHandler, InputBuffer, Message}
-  alias Core.Element.{ActionHandler, PadModel, State}
+  alias Core.{CallbackHandler, InputBuffer, Message, PadModel}
+  alias Core.Element.{ActionHandler, State}
   alias Element.{CallbackContext, Pad}
   require CallbackContext.Event
   require CallbackContext.StreamManagement

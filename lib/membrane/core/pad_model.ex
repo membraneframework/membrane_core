@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Element.PadModel do
+defmodule Membrane.Core.PadModel do
   @moduledoc false
   # Utility functions for veryfying and manipulating pads and their data.
 

@@ -4,8 +4,8 @@ defmodule Membrane.Core.Element.LifecycleController do
   # and similar stuff.
 
   alias Membrane.{Core, Element}
-  alias Core.{CallbackHandler, Message, Playback}
-  alias Core.Element.{ActionHandler, PadModel, PlaybackBuffer, State}
+  alias Core.{CallbackHandler, Message, Playback, PadModel}
+  alias Core.Element.{ActionHandler, PlaybackBuffer, State}
   alias Element.{CallbackContext, Pad}
   require CallbackContext.{Other, PlaybackChange}
   require Message

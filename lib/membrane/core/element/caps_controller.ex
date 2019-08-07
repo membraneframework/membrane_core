@@ -3,8 +3,8 @@ defmodule Membrane.Core.Element.CapsController do
   # Module handling caps received on input pads.
 
   alias Membrane.{Caps, Core, Element}
-  alias Core.{CallbackHandler, InputBuffer}
-  alias Core.Element.{ActionHandler, PadModel, State}
+  alias Core.{CallbackHandler, InputBuffer, PadModel}
+  alias Core.Element.{ActionHandler, State}
   alias Element.{CallbackContext, Pad}
   require CallbackContext.Caps
   require PadModel

@@ -6,13 +6,13 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   alias Membrane.{Buffer, Core, Event}
   alias Core.Playback
+  alias Core.PadModel
 
   alias Core.Element.{
     BufferController,
     CapsController,
     DemandController,
     EventController,
-    PadModel,
     State
   }
 

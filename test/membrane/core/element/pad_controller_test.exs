@@ -1,8 +1,8 @@
 defmodule Membrane.Core.PadControllerTest do
   use ExUnit.Case, async: true
   alias Membrane.Support.Element.{DynamicFilter, TrivialFilter, TrivialSink}
-  alias Membrane.Core.Element.{PadModel, State}
-  alias Membrane.Core.{Message, Playbackable}
+  alias Membrane.Core.Element.State
+  alias Membrane.Core.{Message, Playbackable, PadModel, PadSpecHandler}
   alias Membrane.LinkError
   alias Membrane.Event.EndOfStream
   require Message
