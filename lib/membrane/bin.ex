@@ -683,7 +683,6 @@ defmodule Membrane.Bin do
       @impl true
       def membrane_bin?, do: true
 
-      # TODO think of something better to represent this bin
       defp this_bin, do: unquote(__MODULE__).this_bin_marker()
 
       @impl true
