@@ -51,11 +51,8 @@ defmodule Membrane.Filter do
   defmacro __using__(_) do
     quote location: :keep do
       use Membrane.Element.Base
-      use Membrane.Element.WithOutputPads
-      use Membrane.Element.WithInputPads
-
-      alias Membrane.Event.EndOfStream
-
+      use Membrane.WithOutputPads
+      use Membrane.WithInputPads
       @behaviour unquote(__MODULE__)
 
       @impl true

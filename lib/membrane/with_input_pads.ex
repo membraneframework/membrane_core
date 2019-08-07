@@ -1,4 +1,4 @@
-defmodule Membrane.Element.WithInputPads do
+defmodule Membrane.WithInputPads do
   @moduledoc """
   Module defining behaviour for sink and filter elements.
 

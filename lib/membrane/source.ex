@@ -20,7 +20,7 @@ defmodule Membrane.Source do
   defmacro __using__(_) do
     quote location: :keep do
       use Membrane.Element.Base
-      use Membrane.Element.WithOutputPads
+      use Membrane.WithOutputPads
 
       @impl true
       def membrane_element_type, do: :source

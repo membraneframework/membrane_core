@@ -1,4 +1,4 @@
-defmodule Membrane.Element.WithOutputPads do
+defmodule Membrane.WithOutputPads do
   @moduledoc """
   Module defining behaviour for source and filter elements.
 
