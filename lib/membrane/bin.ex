@@ -192,7 +192,6 @@ defmodule Membrane.Bin do
 
     for {p1, p2} <- pad_pairs do
       quote do
-        # TODO do we need both ways?
         def get_corresponding_private_pad({:dynamic, unquote(p1), id}),
           do: {:dynamic, unquote(p2), id}
 
