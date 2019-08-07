@@ -323,22 +323,19 @@ defmodule Membrane.Bin do
 
   @spec resolve_links([Link.t()], State.t()) :: [Link.resolved_t()]
   defp resolve_links(links, state) do
-    # TODO simplify, don't reduce state seperately
-    new_state =
+    {new_links, new_state} =
       links
-      |> Enum.reduce(state, fn %{from: from, to: to}, s0 ->
-        {_, s1} = from |> resolve_link(s0)
-        {_, s2} = to |> resolve_link(s1)
-        s2
-      end)
+      |> Enum.reduce(
+        {[], state},
+        fn link, {links_acc, state_acc} ->
+          {from, s1} = link.from |> resolve_link(state_acc)
+          {to, s2} = link.to |> resolve_link(s1)
+          new_link = %{link | from: from, to: to}
+          {[new_link | links_acc], s2}
+        end
+      )
 
-    links
-    |> Enum.map(fn %{from: from, to: to} = link ->
-      {from, _} = from |> resolve_link(state)
-      {to, _} = to |> resolve_link(state)
-      %{link | from: from, to: to}
-    end)
-    ~> {&1, new_state}
+    {new_links, new_state}
   end
 
   defp resolve_link(
