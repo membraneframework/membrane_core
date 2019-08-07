@@ -1,6 +1,6 @@
 defmodule Membrane.Bin do
   alias Membrane.Element
-  alias Membrane.Core.Element.PadsSpecs
+  alias Membrane.Core.PadsSpecs
   alias Membrane.Pipeline.Link
   alias Membrane.Bin
   alias Membrane.Bin.{State, Spec, LinkingBuffer}
@@ -676,9 +676,9 @@ defmodule Membrane.Bin do
       import Membrane.Element.Base, only: [def_options: 1]
       import unquote(__MODULE__), only: [def_input_pad: 2, def_output_pad: 2]
 
-      require Membrane.Core.Element.PadsSpecs
+      require Membrane.Core.PadsSpecs
 
-      Membrane.Core.Element.PadsSpecs.ensure_default_membrane_pads()
+      Membrane.Core.PadsSpecs.ensure_default_membrane_pads()
 
       @impl true
       def membrane_bin?, do: true
