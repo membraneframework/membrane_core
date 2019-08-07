@@ -1,5 +1,4 @@
 defmodule Membrane.Core.Playback do
-  @moduledoc "Here would be some docs"
   # TODO: reject me if this gets rejected
   # This module defines available playback states and struct that is held
   # internally by every module having playback state.
@@ -12,7 +11,6 @@ defmodule Membrane.Core.Playback do
             target_locked?: false,
             async_state_change: false
 
-  @typedoc false
   @type t :: %__MODULE__{
           state: PlaybackState.t(),
           pending_state: PlaybackState.t() | nil,
@@ -21,7 +19,6 @@ defmodule Membrane.Core.Playback do
           async_state_change: boolean
         }
 
-  @doc false
   def stable?(%__MODULE__{state: state, pending_state: nil, target_state: state}), do: true
   def stable?(%__MODULE__{}), do: false
 end
