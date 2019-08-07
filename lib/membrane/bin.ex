@@ -578,30 +578,6 @@ defmodule Membrane.Bin do
     {:ok, state} |> noreply(state)
   end
 
-  def handle_info(Message.new(:continue_initialization), state) do
-    %State{children: children, links: links} = state
-
-    {{:ok, links}, state} = {links |> parse_links, state}
-    {links, state} = links |> resolve_links(state)
-    {:ok, state} = links |> link_children(state)
-    {children_names, children_pids} = children |> Enum.unzip()
-    {:ok, state} = {children_pids |> ParentUtils.set_children_watcher(), state}
-    {:ok, state} = exec_handle_spec_started(children_names, state)
-
-    children_pids
-    |> Enum.each(&Element.change_playback_state(&1, state.playback.state))
-
-    debug("""
-    Initialized bin spec
-    children: #{inspect(children)}
-    children pids: #{inspect(children)}
-    links: #{inspect(links)}
-    """)
-
-    {:ok, state}
-    |> noreply()
-  end
-
   def handle_info(Message.new(type, _args, for_pad: pad) = msg, state)
       when type in [:demand, :caps, :buffer, :event] do
     %{module: module, linking_buffer: buf} = state
