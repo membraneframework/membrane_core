@@ -1,8 +1,4 @@
 defmodule Membrane.Bin do
-  @callback membrane_bin?() :: true
-  # TODO
-  @callback handle_init(opts :: any) :: {{:ok, __MODULE__.Spec.t()}, state :: any}
-
   alias Membrane.Element
   alias Membrane.Core.Element.PadsSpecs
   alias Membrane.Pipeline.Link
