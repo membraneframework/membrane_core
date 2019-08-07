@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.State do
   alias Core.PadSpecHandler
   alias Core.{Playback, Playbackable}
   alias Core.Element.{PadModel, PlaybackBuffer}
-  alias Element.Pad
+  alias Core.Pad
   alias Bunch.Type
   alias __MODULE__, as: ThisModule
   require Pad

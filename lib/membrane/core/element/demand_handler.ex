@@ -3,7 +3,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   # Module handling demands requested on output pads.
 
   alias Membrane.Core
-  alias Membrane.Element.Pad
+  alias Membrane.Core.Pad
   alias Core.{Message, InputBuffer}
 
   alias Core.Element.{

@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.PadModel do
   @moduledoc false
   # Utility functions for veryfying and manipulating pads and their data.
 
-  alias Membrane.Element.Pad
+  alias Membrane.Core.Pad
   alias Membrane.Core.Element.State
   alias Membrane.Bin.State
   use Bunch

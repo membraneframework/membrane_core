@@ -3,7 +3,6 @@ defmodule Membrane.Core.PadControllerTest do
   alias Membrane.Support.Element.{DynamicFilter, TrivialFilter, TrivialSink}
   alias Membrane.Core.Element.{PadModel, State}
   alias Membrane.Core.{Message, Playbackable}
-  alias Membrane.Element.Pad
   alias Membrane.LinkError
   alias Membrane.Event.EndOfStream
   require Message

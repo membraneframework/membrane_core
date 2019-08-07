@@ -4,7 +4,7 @@ defmodule Membrane.Core.PadSpecHandler do
 
   alias Membrane.Bin
   alias Membrane.{Core, Element}
-  alias Element.Pad
+  alias Core.Pad
   alias Core.Element
   alias Core.Element.{PadModel}
   require Pad

@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.CapsControllerTest do
   alias Membrane.Caps.Mock, as: MockCaps
   alias Membrane.Core.{InputBuffer, Message}
   alias Membrane.Core.Element.{PadModel, State}
-  alias Membrane.Element.Pad.Data
+  alias Membrane.Core.Pad.Data
   alias Membrane.Support.DemandsTest.Filter
 
   require Message

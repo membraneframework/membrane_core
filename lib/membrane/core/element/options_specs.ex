@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.OptionsSpecs do
   @moduledoc false
 
   alias Membrane.Time
-  alias Membrane.Element.Pad
+  alias Membrane.Core.Pad
 
   use Bunch
 

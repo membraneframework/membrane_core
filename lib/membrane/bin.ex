@@ -5,7 +5,7 @@ defmodule Membrane.Bin do
   alias Membrane.Bin
   alias Membrane.Bin.{State, Spec, LinkingBuffer}
   alias Membrane.{CallbackError, Core, Element, Notification, BinError}
-  alias Element.Pad
+  alias Core.Pad
   alias Core.{Message, Playback}
   alias Bunch.Type
   alias Membrane.Core.PadController

@@ -2,7 +2,7 @@ defmodule Membrane.Core.ParentSpec do
   defmacro __using__(_) do
     quote do
       alias Membrane.Core.InputBuffer
-      alias Element.Pad
+      alias Core.Pad
       alias Membrane.Core.ParentUtils
 
       @type child_spec_t :: module | struct

@@ -9,7 +9,7 @@ defmodule Membrane.Core.InputBuffer do
   alias Membrane.Buffer
   alias Membrane.Core.Message
   alias Membrane.Element
-  alias Membrane.Element.Pad
+  alias Membrane.Core.Pad
   require Message
   use Bunch
   use Membrane.Log, tags: :core

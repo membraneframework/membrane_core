@@ -10,7 +10,7 @@ defmodule Membrane.Pipeline do
 
   alias __MODULE__.{Link, State, Spec}
   alias Membrane.{CallbackError, Core, Element, Notification, PipelineError}
-  alias Element.Pad
+  alias Core.Pad
   alias Core.{Message, Playback}
   alias Bunch.Type
   alias Membrane.Core.ParentUtils
