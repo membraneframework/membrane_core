@@ -15,6 +15,7 @@ defmodule Membrane.Pipeline do
   alias Bunch.Type
   import Membrane.Helper.GenServer
   require Element
+  require Membrane.PlaybackState
   require Message
   require Pad
   use Bunch
@@ -22,7 +23,6 @@ defmodule Membrane.Pipeline do
   use Membrane.Core.CallbackHandler
   use GenServer
   use Membrane.Core.PlaybackHandler
-  use Membrane.Core.PlaybackRequestor
 
   @typedoc """
   Defines options that can be passed to `start/3` / `start_link/3` and received
@@ -192,6 +192,39 @@ defmodule Membrane.Pipeline do
     :ok
   end
 
+  @doc """
+  Changes playback state to `:playing`.
+
+  An alias for `change_playback_state/2` with proper state.
+  """
+  @spec play(pid) :: :ok
+  def play(pid), do: change_playback_state(pid, :playing)
+
+  @doc """
+  Changes playback state to `:prepared`.
+
+  An alias for `change_playback_state/2` with proper state.
+  """
+  @spec prepare(pid) :: :ok
+  def prepare(pid), do: change_playback_state(pid, :prepared)
+
+  @doc """
+  Changes playback state to `:stopped`.
+
+  An alias for `change_playback_state/2` with proper state.
+  """
+  @spec stop(pid) :: :ok
+  def stop(pid), do: change_playback_state(pid, :stopped)
+
+  @spec change_playback_state(pid, Membrane.PlaybackState.t()) :: :ok
+  defp change_playback_state(pid, new_state)
+       when Membrane.PlaybackState.is_playback_state(new_state) do
+    alias Membrane.Core.Message
+    require Message
+    Message.send(pid, :change_playback_state, new_state)
+    :ok
+  end
+
   @impl GenServer
   def init(module) when is_atom(module) do
     init({module, module |> Bunch.Module.struct()})
@@ -244,7 +277,7 @@ defmodule Membrane.Pipeline do
     {:ok, state} = exec_handle_spec_started(children_names, state)
 
     children_pids
-    |> Enum.each(&Element.change_playback_state(&1, state.playback.state))
+    |> Enum.each(&change_playback_state(&1, state.playback.state))
 
     debug("""
     Initialized pipeline spec
@@ -409,9 +442,7 @@ defmodule Membrane.Pipeline do
     children_pids = state |> State.get_children() |> Map.values()
 
     children_pids
-    |> Enum.each(fn pid ->
-      Element.change_playback_state(pid, new)
-    end)
+    |> Enum.each(&change_playback_state(&1, new))
 
     state = %{state | pending_pids: children_pids |> MapSet.new()}
     PlaybackHandler.suspend_playback_change(state)

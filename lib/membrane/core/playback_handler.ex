@@ -8,6 +8,7 @@ defmodule Membrane.Core.PlaybackHandler do
   # `handle_prepared_to_playing` and `handle_prepared_to_stopped` callbacks.
 
   alias Membrane.Core.{Playback, Playbackable}
+  alias Membrane.PlaybackState
   use Bunch
 
   @type handler_return_t :: {:ok | {:error, any()}, Playbackable.t()}
@@ -15,22 +16,22 @@ defmodule Membrane.Core.PlaybackHandler do
   @doc """
   Callback invoked when playback state is going to be changed.
   """
-  @callback handle_playback_state(Playback.state_t(), Playback.state_t(), Playbackable.t()) ::
+  @callback handle_playback_state(PlaybackState.t(), PlaybackState.t(), Playbackable.t()) ::
               handler_return_t
 
   @doc """
   Callback invoked when playback state has changed.
   """
   @callback handle_playback_state_changed(
-              Playback.state_t(),
-              Playback.state_t(),
+              PlaybackState.t(),
+              PlaybackState.t(),
               Playbackable.t()
             ) :: handler_return_t
 
   @doc """
   Callback that is to notify controller that playback state has changed.
   """
-  @callback notify_controller(:playback_changed, Playback.state_t(), pid) :: :ok
+  @callback notify_controller(:playback_changed, PlaybackState.t(), pid) :: :ok
 
   @states [:stopped, :prepared, :playing]
   @states_positions @states |> Enum.with_index() |> Map.new()
@@ -62,8 +63,11 @@ defmodule Membrane.Core.PlaybackHandler do
   @doc """
   Returns callback name for transition between playback states
   """
-  @spec state_change_callback(prev_state :: Playback.state_t(), next_state :: Playback.state_t()) ::
-          atom()
+  @spec state_change_callback(prev_state :: PlaybackState.t(), next_state :: PlaybackState.t()) ::
+          :handle_playing_to_prepared
+          | :handle_prepared_to_playing
+          | :handle_prepared_to_stopped
+          | :handle_stopped_to_prepared
   def state_change_callback(:stopped, :prepared), do: :handle_stopped_to_prepared
   def state_change_callback(:playing, :prepared), do: :handle_playing_to_prepared
   def state_change_callback(:prepared, :playing), do: :handle_prepared_to_playing
