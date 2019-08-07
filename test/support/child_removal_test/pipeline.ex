@@ -57,11 +57,6 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
   end
 
   @impl true
-  def handle_prepared_to_playing(state) do
-    {:ok, state}
-  end
-
-  @impl true
   def handle_prepared_to_stopped(%{target: t} = state) do
     send(t, :pipeline_stopped)
     {:ok, state}
