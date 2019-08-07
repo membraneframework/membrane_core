@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.StateSpec do
   use ESpec, async: true
   alias Membrane.Support.Element.TrivialFilter
   alias Membrane.Core.Playback
-  alias Membrane.Core.Element.{PadSpecHandler, PlaybackBuffer}
+  alias Membrane.Core.{PadSpecHandler, Element.PlaybackBuffer}
 
   describe "new/2" do
     it "should create proper state" do
