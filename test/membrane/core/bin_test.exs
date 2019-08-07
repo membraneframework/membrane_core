@@ -163,7 +163,7 @@ defmodule Membrane.Core.BinTest do
     def handle_event(_pad, event, _ctx, state), do: {{:ok, forward: event}, state}
 
     @impl true
-    def handle_shutdown(_), do: :ok
+    def handle_shutdown(_reason, _state), do: :ok
   end
 
   describe "Starting and transmitting buffers" do
