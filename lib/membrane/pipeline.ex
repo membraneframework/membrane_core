@@ -15,6 +15,7 @@ defmodule Membrane.Pipeline do
   alias Bunch.Type
   alias Membrane.Core.ParentUtils
   alias Membrane.Core.ParentState
+  alias Membrane.Core.ParentAction
   import Membrane.Helper.GenServer
   require Element
   require Membrane.PlaybackState
@@ -37,35 +38,10 @@ defmodule Membrane.Pipeline do
   @type pipeline_options_t :: any
 
   @typedoc """
-  Action that sends a message to element identified by name.
-  """
-  @type forward_action_t :: {:forward, {Element.name_t(), Notification.t()}}
-
-  @typedoc """
-  Action that instantiates elements and links them according to `Membrane.Pipeline.Spec`.
-
-  Elements playback state is changed to the current pipeline state.
-  `c:handle_spec_started` callback is executed once it happens.
-  """
-  @type spec_action_t :: {:spec, Spec.t()}
-
-  @typedoc """
-  Action that stops, unlinks and removes specified child/children from pipeline.
-  """
-  @type remove_child_action_t :: {:remove_child, Element.name_t() | [Element.name_t()]}
-
-  @typedoc """
-  Type describing actions that can be returned from pipeline callbacks.
-
-  Returning actions is a way of pipeline interaction with its elements and
-  other parts of framework.
-  """
-  @type action_t :: forward_action_t | spec_action_t | remove_child_action_t
-
-  @typedoc """
   Type that defines all valid return values from most callbacks.
   """
-  @type callback_return_t :: CallbackHandler.callback_return_t(action_t, State.internal_state_t())
+  @type callback_return_t ::
+          CallbackHandler.callback_return_t(ParentAction.t(), State.internal_state_t())
 
   @typep parsed_child_t :: %{name: Element.name_t(), module: module, options: Keyword.t()}
 
@@ -515,14 +491,7 @@ defmodule Membrane.Pipeline do
 
   @impl CallbackHandler
   def handle_action({:forward, {elementname, message}}, _cb, _params, state) do
-    with {:ok, pid} <- state |> ParentState.get_child_pid(elementname) do
-      send(pid, message)
-      {:ok, state}
-    else
-      {:error, reason} ->
-        {{:error, {:cannot_forward_message, [element: elementname, message: message], reason}},
-         state}
-    end
+    ParentAction.handle_forward(elementname, message, state)
   end
 
   def handle_action({:spec, spec = %Spec{}}, _cb, _params, state) do
@@ -530,18 +499,11 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_action({:remove_child, children}, _cb, _params, state) do
-    with {:ok, pids} <-
-           children
-           |> Bunch.listify()
-           |> Bunch.Enum.try_map(&ParentState.get_child_pid(state, &1)) do
-      pids |> Enum.each(&Message.send(&1, :prepare_shutdown))
-      :ok
-    end
-    ~> {&1, state}
+    ParentAction.handle_remove_child(children, state)
   end
 
   def handle_action(action, callback, _params, state) do
-    raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
+    ParentAction.handle_unknown_action(action, callback, state.module)
   end
 
   defp to_parent_sm_callback(:handle_start_of_stream), do: :handle_element_start_of_stream

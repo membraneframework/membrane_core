@@ -17,6 +17,7 @@ defmodule Membrane.Bin do
   alias Membrane.Core.Element.PadModel
   alias Membrane.Core.ParentUtils
   alias Membrane.Core.ParentState
+  alias Membrane.Core.ParentAction
 
   import Membrane.Helper.GenServer
 
@@ -40,38 +41,13 @@ defmodule Membrane.Bin do
   Defines options that can be passed to `start/3` / `start_link/3` and received
   in `c:handle_init/1` callback.
   """
-  @type pipeline_options_t :: any
-
-  @typedoc """
-  Action that sends a message to element identified by name.
-  """
-  @type forward_action_t :: {:forward, {Element.name_t(), Notification.t()}}
-
-  @typedoc """
-  Action that instantiates elements and links them according to `Membrane.Pipeline.Spec`.
-
-  Elements playback state is changed to the current pipeline state.
-  `c:handle_spec_started` callback is executed once it happens.
-  """
-  @type spec_action_t :: {:spec, Spec.t()}
-
-  @typedoc """
-  Action that stops, unlinks and removes specified child/children from pipeline.
-  """
-  @type remove_child_action_t :: {:remove_child, Element.name_t() | [Element.name_t()]}
-
-  @typedoc """
-  Type describing actions that can be returned from pipeline callbacks.
-
-  Returning actions is a way of pipeline interaction with its elements and
-  other parts of framework.
-  """
-  @type action_t :: forward_action_t | spec_action_t | remove_child_action_t
+  @type bin_options_t :: any
 
   @typedoc """
   Type that defines all valid return values from most callbacks.
   """
-  @type callback_return_t :: CallbackHandler.callback_return_t(action_t, State.internal_state_t())
+  @type callback_return_t ::
+          CallbackHandler.callback_return_t(ParentAction.t(), State.internal_state_t())
 
   @doc """
   Enables to check whether module is membrane pipeline
@@ -83,7 +59,7 @@ defmodule Membrane.Bin do
   and initialize element internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
   """
-  @callback handle_init(options :: pipeline_options_t) ::
+  @callback handle_init(options :: bin_options_t) ::
               {{:ok, Spec.t()}, State.internal_state_t()}
               | {:error, any}
 
@@ -132,7 +108,7 @@ defmodule Membrane.Bin do
   Callback invoked when `Membrane.Pipeline.Spec` is linked and in the same playback
   state as pipeline.
 
-  Spec can be started from `c:handle_init/1` callback or as `t:spec_action_t/0`
+  Spec can be started from `c:handle_init/1` callback or as `t:Membrane.Core.ParentAction.spec_action_t/0`
   action.
   """
   @callback handle_spec_started(elements :: [Element.name_t()], state :: State.internal_state_t()) ::
@@ -224,20 +200,20 @@ defmodule Membrane.Bin do
   @spec start_link(
           atom,
           module,
-          pipeline_options :: pipeline_options_t,
+          bin_options :: bin_options_t,
           process_options :: GenServer.options()
         ) :: GenServer.on_start()
-  def start_link(my_name, module, pipeline_options \\ nil, process_options \\ []),
-    do: do_start(:start_link, my_name, module, pipeline_options, process_options)
+  def start_link(my_name, module, bin_options \\ nil, process_options \\ []),
+    do: do_start(:start_link, my_name, module, bin_options, process_options)
 
-  defp do_start(method, my_name, module, pipeline_options, process_options) do
+  defp do_start(method, my_name, module, bin_options, process_options) do
     with :ok <-
            (if module |> bin? do
               :ok
             else
               :not_bin
             end) do
-      apply(GenServer, method, [__MODULE__, {my_name, module, pipeline_options}, process_options])
+      apply(GenServer, method, [__MODULE__, {my_name, module, bin_options}, process_options])
     else
       :not_bin ->
         {:not_bin, module}
@@ -254,12 +230,12 @@ defmodule Membrane.Bin do
   end
 
   @impl GenServer
-  def init({my_name, module, pipeline_options}) do
-    with {{:ok, spec}, internal_state} <- module.handle_init(pipeline_options) do
+  def init({my_name, module, bin_options}) do
+    with {{:ok, spec}, internal_state} <- module.handle_init(bin_options) do
       state =
         %State{
           internal_state: internal_state,
-          bin_options: pipeline_options,
+          bin_options: bin_options,
           module: module,
           name: my_name,
           linking_buffer: LinkingBuffer.new()
@@ -659,14 +635,7 @@ defmodule Membrane.Bin do
 
   @impl CallbackHandler
   def handle_action({:forward, {elementname, message}}, _cb, _params, state) do
-    with {:ok, pid} <- state |> ParentState.get_child_pid(elementname) do
-      send(pid, message)
-      {:ok, state}
-    else
-      {:error, reason} ->
-        {{:error, {:cannot_forward_message, [element: elementname, message: message], reason}},
-         state}
-    end
+    ParentAction.handle_forward(elementname, message, state)
   end
 
   def handle_action({:spec, spec = %Spec{}}, _cb, _params, state) do
@@ -674,14 +643,7 @@ defmodule Membrane.Bin do
   end
 
   def handle_action({:remove_child, children}, _cb, _params, state) do
-    with {:ok, pids} <-
-           children
-           |> Bunch.listify()
-           |> Bunch.Enum.try_map(&ParentState.get_child_pid(state, &1)) do
-      pids |> Enum.each(&Message.send(&1, :prepare_shutdown))
-      :ok
-    end
-    ~> {&1, state}
+    ParentAction.handle_remove_child(children, state)
   end
 
   def handle_action({:notify, notification}, _cb, _params, state) do
@@ -689,7 +651,7 @@ defmodule Membrane.Bin do
   end
 
   def handle_action(action, callback, _params, state) do
-    raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
+    ParentAction.handle_unknown_action(action, callback, state.module)
   end
 
   @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}
