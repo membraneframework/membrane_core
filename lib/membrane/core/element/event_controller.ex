@@ -59,11 +59,15 @@ defmodule Membrane.Core.Element.EventController do
     data = PadModel.get_data!(state, pad_ref)
     context = CallbackContext.Event.from_state(state)
 
+    callback = stream_event_to_callback(event)
+    new_params = Map.put(params, :direction, data.direction)
+    args = [pad_ref, context]
+
     CallbackHandler.exec_and_handle_callback(
-      stream_event_to_callback(event),
+      callback,
       ActionHandler,
-      params |> Map.merge(%{direction: data.direction}),
-      [pad_ref, context],
+      new_params,
+      args,
       state
     )
   end
@@ -72,11 +76,14 @@ defmodule Membrane.Core.Element.EventController do
     data = PadModel.get_data!(state, pad_ref)
     context = CallbackContext.Event.from_state(state)
 
+    new_params = Map.put(params, :direction, data.direction)
+    args = [pad_ref, event, context]
+
     CallbackHandler.exec_and_handle_callback(
       :handle_event,
       ActionHandler,
-      params |> Map.merge(%{direction: data.direction}),
-      [pad_ref, event, context],
+      new_params,
+      args,
       state
     )
   end
