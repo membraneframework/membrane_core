@@ -161,7 +161,7 @@ defmodule Membrane.Element.Action do
   Sends EndOfStream event through a pad (output) that triggers
   callback `end_of_stream/3` at the receiver element.
 
-  Forbidden when playback state is stopped.
+  Allowed only when playback is in playing state.
   """
   @type end_of_stream_t :: {:end_of_stream, Pad.ref_t()}
 

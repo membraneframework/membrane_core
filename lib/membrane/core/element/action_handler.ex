@@ -131,7 +131,7 @@ defmodule Membrane.Core.Element.ActionHandler do
          {:end_of_stream, pad_ref},
          _callback,
          _params,
-         %State{type: type} = state
+         %State{type: type, playback: %{state: :playing}} = state
        )
        when is_pad_ref(pad_ref) and type != :sink do
     send_event(pad_ref, %Event.EndOfStream{}, state)
