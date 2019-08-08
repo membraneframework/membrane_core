@@ -147,6 +147,8 @@ defmodule Membrane.Bin do
 
   @doc PadsSpecs.def_bin_pad_docs(:input)
   defmacro def_input_pad(name, spec) do
+    Pad.assert_public_name!(name)
+
     input_spec = spec
     output_spec = Keyword.drop(spec, @private_input_pad_spec_keys)
 
@@ -169,6 +171,8 @@ defmodule Membrane.Bin do
 
   @doc PadsSpecs.def_bin_pad_docs(:output)
   defmacro def_output_pad(name, spec) do
+    Pad.assert_public_name!(name)
+
     output_spec = Keyword.drop(spec, @private_input_pad_spec_keys)
     input_spec = spec
 
