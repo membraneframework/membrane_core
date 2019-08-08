@@ -3,7 +3,7 @@ defmodule Membrane.Bin do
   alias Membrane.Core.{PadModel, PadsSpecs}
   alias Membrane.Pipeline.Link
   alias Membrane.Bin
-  alias Membrane.Bin.{State, Spec, LinkingBuffer}
+  alias Membrane.Core.Bin.{State, LinkingBuffer}
   alias Membrane.{CallbackError, Core, Element, Notification, BinError}
   alias Core.Pad
   alias Core.{Message, Playback}
