@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Element.OptionsSpecs do
+defmodule Membrane.Core.OptionsSpecs do
   @moduledoc false
 
   alias Membrane.Time

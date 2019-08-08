@@ -47,7 +47,7 @@ defmodule Membrane.Element.Base do
 
   alias Membrane.{Action, Core, Element, Event}
   alias Core.CallbackHandler
-  alias Core.Element.OptionsSpecs
+  alias Core.OptionsSpecs
   alias Element.{Action, CallbackContext, Pad}
 
   use Bunch

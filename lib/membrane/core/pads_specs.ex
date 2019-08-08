@@ -3,7 +3,7 @@ defmodule Membrane.Core.PadsSpecs do
   # Functions parsing element pads specifications, generating functions and docs
   # based on them.
   alias Membrane.{Caps}
-  alias Membrane.Core.Element.OptionsSpecs
+  alias Membrane.Core.OptionsSpecs
   alias Membrane.Core.Pad
   alias Bunch.Type
   use Bunch
