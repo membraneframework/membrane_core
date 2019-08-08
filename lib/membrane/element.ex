@@ -19,7 +19,6 @@ defmodule Membrane.Element do
   use Membrane.Log, tags: :core
   use Bunch
   use GenServer
-  use Membrane.Core.PlaybackRequestor
 
   @typedoc """
   Defines options that can be passed to `start/5` / `start_link/5` and received
