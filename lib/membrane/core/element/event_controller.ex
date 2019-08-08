@@ -7,6 +7,7 @@ defmodule Membrane.Core.Element.EventController do
   alias Core.Element.{ActionHandler, PadModel, State}
   alias Element.{CallbackContext, Pad}
   require CallbackContext.Event
+  require CallbackContext.StreamManagement
   require PadModel
   use Core.Element.Log
   use Bunch
@@ -57,7 +58,7 @@ defmodule Membrane.Core.Element.EventController do
   defp do_exec_handle_event(pad_ref, %event_type{} = event, params, state)
        when event_type in [Event.StartOfStream, Event.EndOfStream] do
     data = PadModel.get_data!(state, pad_ref)
-    context = CallbackContext.Event.from_state(state)
+    context = CallbackContext.StreamManagement.from_state(state)
 
     callback = stream_event_to_callback(event)
     new_params = Map.put(params, :direction, data.direction)

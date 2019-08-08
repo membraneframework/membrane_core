@@ -195,7 +195,7 @@ defmodule Membrane.Element.Base do
   """
   @callback handle_start_of_stream(
               pad :: Pad.ref_t(),
-              context :: CallbackContext.Event.t(),
+              context :: CallbackContext.StreamManagement.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -205,7 +205,7 @@ defmodule Membrane.Element.Base do
   """
   @callback handle_end_of_stream(
               pad :: Pad.ref_t(),
-              context :: CallbackContext.Event.t(),
+              context :: CallbackContext.StreamManagement.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
