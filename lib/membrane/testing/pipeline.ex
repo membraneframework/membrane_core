@@ -308,6 +308,11 @@ defmodule Membrane.Testing.Pipeline do
         state
       )
 
+  @impl true
+  def handle_element_start_of_stream({_element, _pad} = arg, state) do
+    notify_test_process({:handle_element_start_of_stream, arg}, state)
+  end
+
   defp default_options(%Options{test_process: nil} = options),
     do: %Options{options | test_process: self()}
 

@@ -334,6 +334,19 @@ defmodule Membrane.Testing.Assertions do
     end
   end
 
+  def assert_handle_element_start_of_stream(
+        pipeline,
+        element_name,
+        pad \\ :input,
+        timeout \\ @default_timeout
+      ) do
+    assert_receive_from_pipeline(
+      pipeline,
+      {:handle_element_start_of_stream, {element_name, pad}},
+      timeout
+    )
+  end
+
   @doc """
   Asserts that `Membrane.Testing.Pipeline` received or is going to receive
   `:start_of_stream` from the element with element `element_name` within the
