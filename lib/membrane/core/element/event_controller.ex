@@ -3,12 +3,13 @@ defmodule Membrane.Core.Element.EventController do
   # Module handling events incoming through input pads.
 
   alias Membrane.{Core, Element, Event}
-  alias Core.{CallbackHandler, InputBuffer}
+  alias Core.{CallbackHandler, InputBuffer, Message}
   alias Core.Element.{ActionHandler, PadModel, State}
   alias Element.{CallbackContext, Pad}
   require CallbackContext.Event
   require CallbackContext.StreamManagement
   require PadModel
+  require Message
   use Core.Element.Log
   use Bunch
 
@@ -64,13 +65,17 @@ defmodule Membrane.Core.Element.EventController do
     new_params = Map.put(params, :direction, data.direction)
     args = [pad_ref, context]
 
-    CallbackHandler.exec_and_handle_callback(
-      callback,
-      ActionHandler,
-      new_params,
-      args,
-      state
-    )
+    res =
+      CallbackHandler.exec_and_handle_callback(
+        callback,
+        ActionHandler,
+        new_params,
+        args,
+        state
+      )
+
+    Message.send(state.watcher, callback, [state.name, pad_ref])
+    res
   end
 
   defp do_exec_handle_event(pad_ref, event, params, state) do
