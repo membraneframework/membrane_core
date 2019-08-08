@@ -129,7 +129,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp do_handle_action(
          {:end_of_stream, pad_ref},
-         _cb,
+         _callback,
          _params,
          %State{type: type} = state
        )
