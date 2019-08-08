@@ -28,6 +28,8 @@ defmodule Membrane.Bin do
   use Membrane.Core.PlaybackHandler
   use Membrane.Core.PlaybackRequestor
 
+  @private_input_pad_spec_keys [:demand_unit]
+
   defmodule Spec do
     @moduledoc """
     This module serves the same purpose as `Membrane.Pipeline.Spec`.
@@ -143,12 +145,14 @@ defmodule Membrane.Bin do
     end
   end
 
-  # TODO establish options for the private pads
-  # * push or pull mode?
+  @doc PadsSpecs.def_bin_pad_docs(:input)
   defmacro def_input_pad(name, spec) do
-    availability = Keyword.get(spec, :availability, :always)
-    input = PadsSpecs.def_pad(name, :input, spec)
-    output = PadsSpecs.def_pad({:private, name}, :output, caps: :any, availability: availability)
+    input_spec = spec
+    output_spec = Keyword.drop(spec, @private_input_pad_spec_keys)
+
+    input = PadsSpecs.def_pad(name, :input, input_spec)
+
+    output = PadsSpecs.def_pad({:private, name}, :output, output_spec)
 
     quote do
       unquote(input)
@@ -163,16 +167,13 @@ defmodule Membrane.Bin do
     end
   end
 
+  @doc PadsSpecs.def_bin_pad_docs(:output)
   defmacro def_output_pad(name, spec) do
-    availability = Keyword.get(spec, :availability, :always)
-    output = PadsSpecs.def_pad(name, :output, spec)
+    output_spec = Keyword.drop(spec, @private_input_pad_spec_keys)
+    input_spec = spec
 
-    input =
-      PadsSpecs.def_pad({:private, name}, :input,
-        caps: :any,
-        demand_unit: :buffers,
-        availability: availability
-      )
+    output = PadsSpecs.def_pad(name, :output, output_spec)
+    input = PadsSpecs.def_pad({:private, name}, :input, input_spec)
 
     quote do
       unquote(output)

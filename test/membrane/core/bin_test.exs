@@ -16,7 +16,7 @@ defmodule Membrane.Core.BinTest do
 
     def_input_pad :input, demand_unit: :buffers, caps: :any
 
-    def_output_pad :output, caps: :any
+    def_output_pad :output, caps: :any, demand_unit: :buffers
 
     @impl true
     def handle_init(opts) do
@@ -50,7 +50,7 @@ defmodule Membrane.Core.BinTest do
 
     def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :on_request
 
-    def_output_pad :output, caps: :any, availability: :on_request
+    def_output_pad :output, caps: :any, availability: :on_request, demand_unit: :buffers
 
     @impl true
     def handle_init(opts) do

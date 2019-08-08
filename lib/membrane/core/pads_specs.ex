@@ -30,19 +30,13 @@ defmodule Membrane.Core.PadsSpecs do
   Returns documentation string common for both input and output pads
   """
   @spec def_pad_docs(Pad.direction_t()) :: String.t()
-  def def_pad_docs(direction) do
-    """
-    Macro that defines #{direction} pad for the element.
+  def def_pad_docs(direction), do: documenation_string(direction, false)
 
-    Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
-    without module prefix.
-
-    It automatically generates documentation from the given definition
-    and adds compile-time caps specs validation.
-
-    The type `t:Membrane.Element.Pad.#{direction}_spec_t/0` describes how the definition of pads should look.
-    """
-  end
+  @doc """
+  Returns documentation string common for both input and output pads
+  """
+  @spec def_bin_pad_docs(Pad.direction_t()) :: String.t()
+  def def_bin_pad_docs(direction), do: documenation_string(direction, true)
 
   @doc """
   Returns AST inserted into element's module defining a pad
@@ -263,5 +257,33 @@ defmodule Membrane.Core.PadsSpecs do
 
   defp generate_pad_property_doc(_k, v) do
     "`#{inspect(v)}`"
+  end
+
+  defp documenation_string(direction, bin?) do
+    sentence_object =
+      if bin? do
+        "bin"
+      else
+        "element"
+      end
+
+    reference =
+      if bin? do
+        "The type `t:Membrane.Pad.#{direction}_spec_t/0` describes how the definition of pads should look."
+      else
+        "The type `t:Membrane.Pad.bin_spec_t/0` describes how the definition of pads should look."
+      end
+
+    """
+    Macro that defines #{direction} pad for the #{sentence_object}.
+
+    Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
+    without module prefix.
+
+    It automatically generates documentation from the given definition
+    and adds compile-time caps specs validation.
+
+    #{reference}
+    """
   end
 end

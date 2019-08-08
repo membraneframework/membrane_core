@@ -83,9 +83,17 @@ defmodule Membrane.Core.Pad do
   @type availability_mode_t :: :static | :dynamic
 
   @typedoc """
-  Describes how a pad should be declared in element.
+  Describes how a pad should be declared in element or bin.
   """
-  @type spec_t :: output_spec_t | input_spec_t
+  @type spec_t :: output_spec_t | input_spec_t | bin_spec_t
+
+  @typedoc """
+  For bins there are exactly the same options for both directions.
+  Specifying `:demand_unit` for bin's output pad means that you are
+  actually defining what demand units are going to be used against
+  the first bin's element.
+  """
+  @type bin_spec_t :: input_spec_t
 
   @typedoc """
   Describes how an output pad should be declared inside an element.
