@@ -1,9 +1,6 @@
 defmodule Membrane.Core.BinTest do
   use ExUnit.Case, async: true
 
-  # TODO extract common part from Test bin modules (maybe create a bin in testing/ dir
-  # TODO extract common part of sending and asserting receiving buffers
-
   alias Membrane.Testing
 
   import Membrane.Testing.Assertions
@@ -408,7 +405,6 @@ defmodule Membrane.Core.BinTest do
     end
   end
 
-  # TODO move to some test utils?
   defp get_child_pid(last_child_pid, []) when is_pid(last_child_pid) do
     {:ok, last_child_pid}
   end
