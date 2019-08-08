@@ -1,6 +1,6 @@
 defmodule Membrane.Bin do
   alias Membrane.Element
-  alias Membrane.Core.PadsSpecs
+  alias Membrane.Core.{PadModel, PadsSpecs}
   alias Membrane.Pipeline.Link
   alias Membrane.Bin
   alias Membrane.Bin.{State, Spec, LinkingBuffer}
@@ -20,6 +20,7 @@ defmodule Membrane.Bin do
   require Message
   require Pad
   require PadsSpecs
+  require PadModel
 
   use Bunch
   use Membrane.Log, tags: :core
@@ -579,9 +580,13 @@ defmodule Membrane.Bin do
     {Element.shutdown(pid), state}
   end
 
-  def handle_info(Message.new(:demand_unit, [_demand_unit, _pad_ref]), state) do
-    # TODO
-    {:ok, state} |> noreply(state)
+  def handle_info(Message.new(:demand_unit, [demand_unit, pad_ref]), state) do
+    PadModel.assert_data!(state, pad_ref, %{direction: :output})
+
+    state
+    |> PadModel.set_data!(pad_ref, [:other_demand_unit], demand_unit)
+    ~> {:ok, &1}
+    |> noreply(state)
   end
 
   def handle_info(Message.new(type, _args, for_pad: pad) = msg, state)
