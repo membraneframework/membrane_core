@@ -54,8 +54,8 @@ defmodule Membrane.Core.Element.EventController do
 
   @spec do_exec_handle_event(Pad.ref_t(), Event.t(), params :: map, State.t()) ::
           State.stateful_try_t()
-  defp do_exec_handle_event(pad_ref, event, params, state)
-       when event in [%Event.StartOfStream{}, %Event.EndOfStream{}] do
+  defp do_exec_handle_event(pad_ref, %event_type{} = event, params, state)
+       when event_type in [Event.StartOfStream, Event.EndOfStream] do
     data = PadModel.get_data!(state, pad_ref)
     context = CallbackContext.Event.from_state(state)
 
