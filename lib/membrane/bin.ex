@@ -62,7 +62,7 @@ defmodule Membrane.Bin do
   end
 
   @typedoc """
-  Defines options that can be passed to `start/3` / `start_link/3` and received
+  Defines options that can be passed to `start_link/3` and received
   in `c:handle_init/1` callback.
   """
   @type bin_options_t :: any
@@ -132,8 +132,8 @@ defmodule Membrane.Bin do
   Callback invoked when `Membrane.Bin.Spec` is linked and in the same playback
   state as bin.
 
-  Spec can be started from `c:handle_init/1` callback or as `t:Membrane.Core.ParentAction.spec_action_t/0`
-  action.
+  Spec can be started from `c:handle_init/1` callback or as
+  `t:Membrane.Core.ParentAction.spec_action_t/0` action.
   """
   @callback handle_spec_started(
               elements :: [ParentUtils.child_name_t()],
@@ -160,7 +160,6 @@ defmodule Membrane.Bin do
     output_spec = Keyword.drop(spec, @private_input_pad_spec_keys)
 
     input = PadsSpecs.def_pad(name, :input, input_spec)
-
     output = PadsSpecs.def_pad({:private, name}, :output, output_spec)
 
     quote do
@@ -199,21 +198,31 @@ defmodule Membrane.Bin do
     end
   end
 
+  @doc """
+  Generates `get_corresponding_private_pad/1` function, along with docs and typespecs.
+  """
   defmacro generate_bin_pairs(env) do
     pad_pairs = Module.get_attribute(env.module, :bin_pads_pairs)
 
-    for {p1, p2} <- pad_pairs do
+    [
       quote do
-        def get_corresponding_private_pad({:dynamic, unquote(p1), id}),
-          do: {:ok, {:dynamic, unquote(p2), id}}
-
-        def get_corresponding_private_pad({:dynamic, unquote(p2), id}),
-          do: {:ok, {:dynamic, unquote(p1), id}}
-
-        def get_corresponding_private_pad(unquote(p1)), do: {:ok, unquote(p2)}
-        def get_corresponding_private_pad(unquote(p2)), do: {:ok, unquote(p1)}
+        @doc """
+        This function allows to fetch a private pad that a public one forwards messages to.
+        """
       end
-    end ++
+    ] ++
+      for {p1, p2} <- pad_pairs do
+        quote do
+          def get_corresponding_private_pad({:dynamic, unquote(p1), id}),
+            do: {:ok, {:dynamic, unquote(p2), id}}
+
+          def get_corresponding_private_pad({:dynamic, unquote(p2), id}),
+            do: {:ok, {:dynamic, unquote(p1), id}}
+
+          def get_corresponding_private_pad(unquote(p1)), do: {:ok, unquote(p2)}
+          def get_corresponding_private_pad(unquote(p2)), do: {:ok, unquote(p1)}
+        end
+      end ++
       [
         quote do
           def get_corresponding_private_pad(_), do: {:error, :unknown_pad}
@@ -345,10 +354,10 @@ defmodule Membrane.Bin do
       |> Enum.reduce(
         {[], state},
         fn link, {links_acc, state_acc} ->
-          {from, s1} = link.from |> resolve_link(state_acc)
-          {to, s2} = link.to |> resolve_link(s1)
+          {from, state1} = link.from |> resolve_link(state_acc)
+          {to, state2} = link.to |> resolve_link(state1)
           new_link = %{link | from: from, to: to}
-          {[new_link | links_acc], s2}
+          {[new_link | links_acc], state2}
         end
       )
 
@@ -540,12 +549,8 @@ defmodule Membrane.Bin do
     if new_pending_pids != pending_pids and new_pending_pids |> Enum.empty?() do
       callback = PlaybackHandler.state_change_callback(current_playback_state, new_playback_state)
 
-      with {:ok, new_state} <-
-             CallbackHandler.exec_and_handle_callback(callback, __MODULE__, [], new_state) do
-        PlaybackHandler.continue_playback_change(__MODULE__, new_state)
-      else
-        error -> error
-      end
+      CallbackHandler.exec_and_handle_callback(callback, __MODULE__, [], new_state)
+      ~>> ({:ok, new_state} -> PlaybackHandler.continue_playback_change(__MODULE__, new_state))
     else
       {:ok, new_state}
     end
@@ -686,6 +691,7 @@ defmodule Membrane.Bin do
 
   defmacro __using__(_) do
     marker = this_bin_marker()
+
     quote location: :keep do
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
