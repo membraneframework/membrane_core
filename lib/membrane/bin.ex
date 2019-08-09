@@ -146,7 +146,7 @@ defmodule Membrane.Bin do
                   (is_tuple(term) and tuple_size(term) == 2 and is_atom(elem(term, 0)) and
                      is_integer(elem(term, 1)) and elem(term, 1) >= 0)
 
-  defmacro this_bin_marker do
+  defmacrop this_bin_marker do
     quote do
       {unquote(__MODULE__), :this_bin}
     end
@@ -685,6 +685,7 @@ defmodule Membrane.Bin do
   end
 
   defmacro __using__(_) do
+    marker = this_bin_marker()
     quote location: :keep do
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
@@ -699,7 +700,7 @@ defmodule Membrane.Bin do
       @impl true
       def membrane_bin?, do: true
 
-      defp this_bin, do: unquote(__MODULE__).this_bin_marker()
+      defp this_bin, do: unquote(marker)
 
       @impl true
       def handle_init(_options), do: {{:ok, %Bin.Spec{}}, %{}}
