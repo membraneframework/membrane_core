@@ -42,13 +42,13 @@ defmodule Membrane.Core.ParentUtils do
     |> Enum.map(& &1.name)
     |> Kernel.++(Map.keys(state_children))
     |> Bunch.Enum.duplicates()
-    ~> (
+    |> case do
       [] ->
         :ok
 
       duplicates ->
         raise ParentError, "Duplicated names in children specification: #{inspect(duplicates)}"
-    )
+    end
   end
 
   @spec start_children([parsed_child_t]) :: [State.child_t()]
