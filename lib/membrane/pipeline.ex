@@ -15,6 +15,7 @@ defmodule Membrane.Pipeline do
   alias Bunch.Type
   import Membrane.Helper.GenServer
   require Element
+  require Membrane.PlaybackState
   require Message
   require Pad
   use Bunch
@@ -22,7 +23,6 @@ defmodule Membrane.Pipeline do
   use Membrane.Core.CallbackHandler
   use GenServer
   use Membrane.Core.PlaybackHandler
-  use Membrane.Core.PlaybackRequestor
 
   @typedoc """
   Defines options that can be passed to `start/3` / `start_link/3` and received
@@ -129,6 +129,16 @@ defmodule Membrane.Pipeline do
               callback_return_t
 
   @doc """
+  Callback invoked when pipeline is shutting down.
+  Internally called in `c:GenServer.terminate/2` callback.
+
+  Useful for any cleanup required.
+  """
+
+  @callback handle_shutdown(reason, state :: State.internal_state_t()) :: :ok
+            when reason: :normal | :shutdown | {:shutdown, any}
+
+  @doc """
   Starts the Pipeline based on given module and links it to the current
   process.
 
@@ -189,6 +199,39 @@ defmodule Membrane.Pipeline do
   @spec stop_and_terminate(pipeline :: pid) :: :ok
   def stop_and_terminate(pipeline) do
     Message.send(pipeline, :stop_and_terminate)
+    :ok
+  end
+
+  @doc """
+  Changes playback state to `:playing`.
+
+  An alias for `change_playback_state/2` with proper state.
+  """
+  @spec play(pid) :: :ok
+  def play(pid), do: change_playback_state(pid, :playing)
+
+  @doc """
+  Changes playback state to `:prepared`.
+
+  An alias for `change_playback_state/2` with proper state.
+  """
+  @spec prepare(pid) :: :ok
+  def prepare(pid), do: change_playback_state(pid, :prepared)
+
+  @doc """
+  Changes playback state to `:stopped`.
+
+  An alias for `change_playback_state/2` with proper state.
+  """
+  @spec stop(pid) :: :ok
+  def stop(pid), do: change_playback_state(pid, :stopped)
+
+  @spec change_playback_state(pid, Membrane.PlaybackState.t()) :: :ok
+  defp change_playback_state(pid, new_state)
+       when Membrane.PlaybackState.is_playback_state(new_state) do
+    alias Membrane.Core.Message
+    require Message
+    Message.send(pid, :change_playback_state, new_state)
     :ok
   end
 
@@ -256,7 +299,7 @@ defmodule Membrane.Pipeline do
     {:ok, state} = exec_handle_spec_started(children_names, state)
 
     children_data
-    |> Enum.each(&Core.Element.change_playback_state(&1.pid, state.playback.state))
+    |> Enum.each(&change_playback_state(&1.pid, state.playback.state))
 
     debug("""
     Initialized pipeline spec
@@ -526,12 +569,7 @@ defmodule Membrane.Pipeline do
   @impl PlaybackHandler
   def handle_playback_state(_old, new, state) do
     children_pids = state |> State.get_children() |> Map.values() |> Enum.map(& &1.pid)
-
-    children_pids
-    |> Enum.each(fn pid ->
-      Core.Element.change_playback_state(pid, new)
-    end)
-
+    children_pids |> Enum.each(&change_playback_state(&1, new))
     state = %{state | pending_pids: children_pids |> MapSet.new()}
     PlaybackHandler.suspend_playback_change(state)
   end
@@ -621,13 +659,21 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_info(Message.new(:shutdown_ready, child), state) do
-    {{:ok, pid}, state} = State.pop_child(state, child)
+    {{:ok, %{pid: pid}}, state} = State.pop_child(state, child)
+
     {Core.Element.shutdown(pid), state}
+    |> noreply(state)
   end
 
   def handle_info(message, state) do
     CallbackHandler.exec_and_handle_callback(:handle_other, __MODULE__, [message], state)
     |> noreply(state)
+  end
+
+  @impl GenServer
+  def terminate(reason, state) do
+    CallbackHandler.exec_and_handle_callback(:handle_shutdown, __MODULE__, [reason], state)
+    :ok
   end
 
   @impl CallbackHandler
@@ -680,7 +726,7 @@ defmodule Membrane.Pipeline do
     children = children |> Bunch.listify()
 
     {:ok, state} =
-      if state.clock.provider in children do
+      if state.clock_provider.provider in children do
         %State{state | clock_provider: %{clock: nil, provider: nil, choice: :auto}}
         |> choose_clock
       else
@@ -789,6 +835,9 @@ defmodule Membrane.Pipeline do
       @impl true
       def handle_spec_started(_new_children, state), do: {:ok, state}
 
+      @impl true
+      def handle_shutdown(_reason, _state), do: :ok
+
       defoverridable start: 0,
                      start: 1,
                      start: 2,
@@ -805,7 +854,8 @@ defmodule Membrane.Pipeline do
                      handle_prepared_to_stopped: 1,
                      handle_notification: 3,
                      handle_other: 2,
-                     handle_spec_started: 2
+                     handle_spec_started: 2,
+                     handle_shutdown: 2
     end
   end
 end

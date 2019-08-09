@@ -18,7 +18,6 @@ defmodule Membrane.Core.Element do
   use Membrane.Log, tags: :core
   use Bunch
   use GenServer
-  use Membrane.Core.PlaybackRequestor
   import Membrane.Helper.GenServer
   require Membrane.Core.Message
   alias Membrane.Clock

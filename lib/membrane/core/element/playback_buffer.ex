@@ -16,6 +16,9 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     State
   }
 
+  alias Membrane.Core.Message
+
+  require Message
   require PadModel
   use Core.Element.Log
   use Bunch
@@ -42,7 +45,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   @spec store(message_t, State.t()) :: State.stateful_try_t()
   def store(msg, %State{playback: %Playback{state: :playing}} = state), do: exec(msg, state)
 
-  def store({type, _args} = msg, state)
+  def store(Message.new(type, _args, _opts) = msg, state)
       when type in [:event, :caps] do
     if state.playback_buffer |> empty? do
       exec(msg, state)
@@ -77,12 +80,23 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   def eval(state), do: {:ok, state}
 
+  def flush_for_pad(%__MODULE__{q: q} = buf, pad_ref) do
+    alias Membrane.Core.Message
+    require Message
+
+    q
+    |> Enum.filter(fn msg -> Message.for_pad(msg) != pad_ref end)
+    |> Enum.into(%@qe{})
+    ~> %{buf | q: &1}
+  end
+
   @spec empty?(t) :: boolean
   defp empty?(%__MODULE__{q: q}), do: q |> Enum.empty?()
 
   @spec exec(message_t, State.t()) :: State.stateful_try_t()
   # Callback invoked on demand request coming from the output pad in the pull mode
-  defp exec({:demand, [size, pad_ref]}, state) do
+  defp exec(Message.new(:demand, size, _opts) = msg, state) do
+    pad_ref = Message.for_pad(msg)
     PadModel.assert_data!(state, pad_ref, %{direction: :output})
 
     demand =
@@ -97,7 +111,8 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   end
 
   # Callback invoked on buffer coming through the input pad
-  defp exec({:buffer, [buffers, pad_ref]}, state) do
+  defp exec(Message.new(:buffer, buffers, _opts) = msg, state) do
+    pad_ref = Message.for_pad(msg)
     PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
     debug(
@@ -125,7 +140,8 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   end
 
   # Callback invoked on incoming caps
-  defp exec({:caps, [caps, pad_ref]}, state) do
+  defp exec(Message.new(:caps, caps, _opts) = msg, state) do
+    pad_ref = Message.for_pad(msg)
     PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
     debug(
@@ -140,7 +156,8 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   end
 
   # Callback invoked on incoming event
-  defp exec({:event, [event, pad_ref]}, state) do
+  defp exec(Message.new(:event, event, _opts) = msg, state) do
+    pad_ref = Message.for_pad(msg)
     PadModel.assert_instance!(state, pad_ref)
 
     debug(

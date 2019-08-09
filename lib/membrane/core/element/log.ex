@@ -88,7 +88,6 @@ defmodule Membrane.Core.Element.Log do
     end
   end
 
-  @spec bring_logger() :: term
   defp bring_logger do
     quote do
       use Membrane.Log, tags: :core, import: false

@@ -56,8 +56,9 @@ defmodule Membrane.Core.InputBufferSpec do
         })
       )
 
-      expected_list = [preferred_size(), linked_output_ref()]
-      assert_received Message.new(:demand, ^expected_list)
+      pad_ref = linked_output_ref()
+      expected_size = preferred_size()
+      assert_received Message.new(:demand, ^expected_size, for_pad: ^pad_ref)
     end
 
     context "if toilet is not false" do
@@ -237,8 +238,9 @@ defmodule Membrane.Core.InputBufferSpec do
           linked_output_ref()
         )
 
-        expected_list = [current_size(), linked_output_ref()]
-        assert_received Message.new(:demand, ^expected_list)
+        expected_size = current_size()
+        pad_ref = linked_output_ref()
+        assert_received Message.new(:demand, ^expected_size, for_pad: ^pad_ref)
       end
     end
 
@@ -261,7 +263,7 @@ defmodule Membrane.Core.InputBufferSpec do
           exp_list = Qex.new() |> Qex.push(buffers2()) |> Enum.into([])
 
           expect(list) |> to(eq exp_list)
-          assert_received Message.new(:demand, _)
+          assert_received Message.new(:demand, _, _)
         end
       end
 
@@ -285,7 +287,7 @@ defmodule Membrane.Core.InputBufferSpec do
           exp_list = Qex.new() |> Qex.push(exp_rest) |> Enum.into([])
 
           expect(list) |> to(eq exp_list)
-          assert_received Message.new(:demand, _)
+          assert_received Message.new(:demand, _, _)
         end
       end
     end

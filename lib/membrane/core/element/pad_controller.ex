@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.{Core, Event, ElementLinkError}
   alias Core.{CallbackHandler, Message, InputBuffer}
-  alias Core.Element.{ActionHandler, EventController, PadModel, State}
+  alias Core.Element.{ActionHandler, EventController, PadModel, State, PlaybackBuffer}
   alias Membrane.Element.{CallbackContext, Pad}
   require CallbackContext.{PadAdded, PadRemoved}
   require Message
@@ -88,10 +88,12 @@ defmodule Membrane.Core.Element.PadController do
   Removes pad data.
   Signals an EoS (via handle_event) to the element if unlinked pad was an input.
   Executes `handle_pad_removed` callback if the pad was dynamic.
+  Note: it also flushes all buffers from PlaybackBuffer.
   """
   @spec handle_unlink(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   def handle_unlink(pad_ref, state) do
-    with {:ok, state} <- generate_eos_if_needed(pad_ref, state),
+    with {:ok, state} <- flush_playback_buffer(pad_ref, state),
+         {:ok, state} <- generate_eos_if_needed(pad_ref, state),
          {:ok, state} <- handle_pad_removed(pad_ref, state),
          {:ok, state} <- PadModel.delete_data(state, pad_ref) do
       {:ok, state}
@@ -346,5 +348,10 @@ defmodule Membrane.Core.Element.PadController do
     else
       {:ok, state}
     end
+  end
+
+  defp flush_playback_buffer(pad_ref, state) do
+    new_playback_buf = PlaybackBuffer.flush_for_pad(state.playback_buffer, pad_ref)
+    {:ok, %{state | playback_buffer: new_playback_buf}}
   end
 end

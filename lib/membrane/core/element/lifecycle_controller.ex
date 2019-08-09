@@ -53,7 +53,7 @@ defmodule Membrane.Core.Element.LifecycleController do
     end
 
     %State{module: module, internal_state: internal_state} = state
-    :ok = module.handle_shutdown(internal_state)
+    :ok = module.handle_shutdown(reason, internal_state)
     {:ok, state}
   end
 
@@ -121,18 +121,22 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @impl PlaybackHandler
   def handle_playback_state_changed(old, new, state) do
-    if new == :stopped and state.terminating == true do
-      :ok = unlink(state.pads.data)
-    end
-
-    :ok =
-      case {old, new} do
-        {:prepared, :playing} -> Sync.ready(state.stream_sync)
-        {:playing, :prepared} -> Sync.unready(state.stream_sync)
-        _ -> :ok
+    shutdown_res =
+      if new == :stopped and state.terminating == true do
+        prepare_shutdown(state)
+      else
+        {:ok, state}
       end
 
-    PlaybackBuffer.eval(state)
+    with {:ok, state} <- shutdown_res,
+         :ok <-
+           (case {old, new} do
+              {:prepared, :playing} -> Sync.ready(state.stream_sync)
+              {:playing, :prepared} -> Sync.unready(state.stream_sync)
+              _ -> :ok
+            end) do
+      PlaybackBuffer.eval(state)
+    end
   end
 
   @doc """
