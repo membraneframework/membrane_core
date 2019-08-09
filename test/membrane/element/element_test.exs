@@ -109,5 +109,11 @@ defmodule Membrane.Element.ElementTest do
 
       TestFilter.refute_callback_called(:handle_event)
     end
+
+    test "causes handle_element_end_of_stream/3 to be called in pipeline", %{pipeline: pipeline} do
+      Pipeline.play(pipeline)
+
+      assert_handle_element_end_of_stream(pipeline, :filter)
+    end
   end
 end

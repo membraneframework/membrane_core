@@ -318,6 +318,11 @@ defmodule Membrane.Testing.Pipeline do
 
   defp default_options(default), do: default
 
+  @impl true
+  def handle_element_end_of_stream({_element, _pad} = arg, state) do
+    notify_test_process({:handle_element_end_of_stream, arg}, state)
+  end
+
   defp eval(custom_function, custom_args, function, state)
 
   defp eval(_, _, function, %State{module: nil}),
