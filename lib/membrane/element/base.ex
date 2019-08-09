@@ -265,12 +265,10 @@ defmodule Membrane.Element.Base do
       def handle_shutdown(_reason, _state), do: :ok
 
       @impl true
-      def handle_start_of_stream(pad, _context, state),
-        do: {{:ok, notify: {:start_of_stream, pad}}, state}
+      def handle_start_of_stream(pad, _context, state), do: {:ok, state}
 
       @impl true
-      def handle_end_of_stream(pad, _context, state),
-        do: {{:ok, notify: {:end_of_stream, pad}}, state}
+      def handle_end_of_stream(pad, _context, state), do: {:ok, state}
 
       defoverridable handle_init: 1,
                      handle_stopped_to_prepared: 2,

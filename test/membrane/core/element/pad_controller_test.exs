@@ -119,7 +119,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
       state = prepare_static_state(TrivialSink, :input)
       assert state.pads.data |> Map.has_key?(:input)
       assert {:ok, new_state} = @module.handle_unlink(:input, state)
-      assert_received Message.new(:notification, [:element, {:end_of_stream, :input}])
+      assert_received Message.new(:handle_end_of_stream, [:element, :input])
       refute new_state.pads.data |> Map.has_key?(:input)
     end
 
