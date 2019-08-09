@@ -74,7 +74,8 @@ defmodule Membrane.Core.Element.EventController do
         state
       )
 
-    Message.send(state.watcher, callback, [state.name, pad_ref])
+    if state.watcher, do: Message.send(state.watcher, callback, [state.name, pad_ref])
+
     res
   end
 
