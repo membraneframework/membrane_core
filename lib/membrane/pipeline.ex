@@ -40,7 +40,7 @@ defmodule Membrane.Pipeline do
     Children that should be spawned when the pipeline starts can be defined
     with the `:children` field.
 
-    You have to set it to a keyword list, where keys are valid element names (`t:Membrane.ParentUtils.chidl_name_t/0`)
+    You have to set it to a keyword list, where keys are valid element names (`t:Membrane.ParentUtils.child_name_t/0`)
     that are unique within this pipeline and values are either element's module or
     struct of that module.
 
