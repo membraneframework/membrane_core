@@ -1,17 +1,13 @@
 defmodule Membrane.Core.ParentUtils do
   use Bunch
-
-  alias Membrane.Element
-  alias Membrane.Bin
-  alias Membrane.ParentError
-  alias Membrane.Core.ParentState
-  alias Membrane.Core.Message
-
-  require Element
-  require Bin
-  require Message
-
   use Membrane.Log, tags: :core
+
+  alias Membrane.{Bin, Element, ParentError}
+  alias Membrane.Core.{Message, ParentState}
+
+  require Bin
+  require Element
+  require Message
 
   @type child_name_t :: Element.name_t() | Bin.name_t()
   @typep parsed_child_t :: %{name: child_name_t(), module: module, options: Keyword.t()}
