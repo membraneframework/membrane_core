@@ -118,11 +118,17 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_other(message :: any, state :: State.internal_state_t()) :: callback_return_t
 
+  @doc """
+  Callback invoked when pipeline's element receives start_of_stream event.
+  """
   @callback handle_element_start_of_stream(
               {Element.name_t(), Pad.t()},
               state :: State.internal_state_t()
             ) :: callback_return_t
 
+  @doc """
+  Callback invoked when pipeline's element receives end_of_stream event.
+  """
   @callback handle_element_end_of_stream(
               {Element.name_t(), Pad.t()},
               state :: State.internal_state_t()
