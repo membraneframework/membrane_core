@@ -46,20 +46,24 @@ defmodule Membrane.Element.ElementTest do
     def handle_process(_pad, _buffer, _context, state), do: {:ok, state}
   end
 
+  setup do
+    {:ok, pipeline} =
+      Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+        elements: [
+          source: %Testing.Source{output: ['a', 'b', 'c']},
+          filter: %TestFilter{target: self()},
+          sink: Testing.Sink
+        ]
+      })
+
+    on_exit(fn ->
+      Testing.Pipeline.stop(pipeline)
+    end)
+
+    [pipeline: pipeline]
+  end
+
   describe "Start of stream" do
-    setup do
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          elements: [
-            source: Testing.Source,
-            filter: %TestFilter{target: self()},
-            sink: Testing.Sink
-          ]
-        })
-
-      [pipeline: pipeline]
-    end
-
     test "causes handle_start_of_stream/3 to be called", %{pipeline: pipeline} do
       Testing.Pipeline.play(pipeline)
       assert_pipeline_playback_changed(pipeline, _, :playing)
@@ -82,19 +86,6 @@ defmodule Membrane.Element.ElementTest do
   end
 
   describe "End of stream" do
-    setup do
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          elements: [
-            source: %Testing.Source{output: ['some payload']},
-            filter: %TestFilter{target: self()},
-            sink: Testing.Sink
-          ]
-        })
-
-      [pipeline: pipeline]
-    end
-
     test "causes handle_end_of_stream/3 to be called", %{pipeline: pipeline} do
       Testing.Pipeline.play(pipeline)
       assert_pipeline_playback_changed(pipeline, _, :playing)
