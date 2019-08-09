@@ -1,33 +1,39 @@
 defmodule Membrane.Bin do
-  alias Membrane.Element
-  alias Membrane.Core.{PadModel, PadsSpecs}
-  alias Membrane.Pipeline.Link
-  alias Membrane.Bin
-  alias Membrane.Core.Bin.{State, LinkingBuffer}
-  alias Membrane.{CallbackError, Core, Element, Notification, BinError}
-  alias Core.Pad
-  alias Core.{Message, Playback}
-  alias Bunch.Type
-  alias Membrane.Core.PadController
-  alias Membrane.Core.PadSpecHandler
-  alias Membrane.Core.ParentUtils
-  alias Membrane.Core.ParentState
-  alias Membrane.Core.ParentAction
-
-  import Membrane.Helper.GenServer
-
-  require Element
-  require Message
-  require Pad
-  require PadsSpecs
-  require PadModel
-
   use Bunch
   use Membrane.Log, tags: :core
   use Membrane.Core.CallbackHandler
   use GenServer
   use Membrane.Core.PlaybackHandler
   use Membrane.Core.PlaybackRequestor
+
+  import Membrane.Helper.GenServer
+
+  alias Membrane.Element
+
+  alias Membrane.Core.{
+    PadController,
+    PadSpecHandler,
+    ParentUtils,
+    ParentState,
+    ParentAction,
+    PadModel,
+    PadsSpecs,
+    Pad,
+    Message,
+    Playback
+  }
+
+  alias Membrane.Pipeline.Link
+  alias Membrane.Bin
+  alias Membrane.Core.Bin.{State, LinkingBuffer}
+  alias Membrane.{CallbackError, Element, Notification, BinError}
+  alias Bunch.Type
+
+  require Element
+  require Message
+  require Pad
+  require PadsSpecs
+  require PadModel
 
   @private_input_pad_spec_keys [:demand_unit]
 
@@ -46,9 +52,9 @@ defmodule Membrane.Bin do
 
     ```
     %{
-    {this_bin(), :input} => {:filter1, :input, buffer: [preferred_size: 10]},
-    {:filter1, :output} => {:filter2, :input, buffer: [preferred_size: 10]},
-    {:filter2, :output} => {this_bin(), :output, buffer: [preferred_size: 10]}
+      {this_bin(), :input} => {:filter1, :input, buffer: [preferred_size: 10]},
+      {:filter1, :output} => {:filter2, :input, buffer: [preferred_size: 10]},
+      {:filter2, :output} => {this_bin(), :output, buffer: [preferred_size: 10]}
     }
     ```
     """
@@ -68,13 +74,13 @@ defmodule Membrane.Bin do
           CallbackHandler.callback_return_t(ParentAction.t(), State.internal_state_t())
 
   @doc """
-  Enables to check whether module is membrane bin
+  Enables to check whether module is membrane bin.
   """
   @callback membrane_bin? :: true
 
   @doc """
   Callback invoked on initialization of bin process. It should parse options
-  and initialize element internal state. Internally it is invoked inside
+  and initialize element's internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
   """
   @callback handle_init(options :: bin_options_t) ::
