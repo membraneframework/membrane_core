@@ -1,11 +1,12 @@
 defmodule Membrane.Core.Bin.State do
   @moduledoc false
-  # Structure representing state of a pipeline. It is a part of the private API.
-  # It does not represent state of pipelines you construct, it's a state used
+  # Structure representing state of a bin. It is a part of the private API.
+  # It does not represent state of bins you construct, it's a state used
   # internally in Membrane.
 
-  alias Membrane.Core.{Playback, Playbackable}
+  alias Membrane.Core.{Playback, Playbackable, PadModel}
   alias Membrane.Element
+  alias Membrane.Core.Bin.LinkingBuffer
   alias __MODULE__, as: ThisModule
   use Bunch
   use Bunch.Access
@@ -16,7 +17,13 @@ defmodule Membrane.Core.Bin.State do
           module: module,
           children: children_t,
           pending_pids: MapSet.t(pid),
-          terminating?: boolean
+          terminating?: boolean,
+          name: Bin.name_t(),
+          bin_options: any,
+          pads: PadModel.pads_t() | nil,
+          watcher: pid,
+          controlling_pid: pid,
+          linking_buffer: LinkingBuffer.t()
         }
 
   @type internal_state_t :: map | struct
@@ -33,7 +40,6 @@ defmodule Membrane.Core.Bin.State do
             bin_options: nil,
             pads: nil,
             watcher: nil,
-            links: nil,
             controlling_pid: nil,
             linking_buffer: nil
 
