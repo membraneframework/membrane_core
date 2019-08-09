@@ -46,11 +46,13 @@ defmodule Membrane.Pipeline do
 
     Sample definitions:
 
+    ```
     [
-    first_element: %Element.With.Options.Struct{option_a: 42},
-    some_element: Element.Without.Options,
-    other_element: Element.Using.Default.Options
+      first_element: %Element.With.Options.Struct{option_a: 42},
+      some_element: Element.Without.Options,
+      other_element: Element.Using.Default.Options
     ]
+    ```
 
     ## Links
 
@@ -68,10 +70,10 @@ defmodule Membrane.Pipeline do
 
     ```
     %{
-    {:source_a, :output} => {:converter, :input, buffer: [preferred_size: 20_000]},
-    {:converter, :output} => {:mixer, :input_a},
-    {:source_b, :output} => {:mixer, :input_b, pad: [mute: true]}
-    {:mixer, :output} => {:sink, :input, buffer: [warn_size: 264_000, fail_size: 300_000]},
+      {:source_a, :output} => {:converter, :input, buffer: [preferred_size: 20_000]},
+      {:converter, :output} => {:mixer, :input_a},
+      {:source_b, :output} => {:mixer, :input_b, pad: [mute: true]}
+      {:mixer, :output} => {:sink, :input, buffer: [warn_size: 264_000, fail_size: 300_000]},
     }
     ```
     """
