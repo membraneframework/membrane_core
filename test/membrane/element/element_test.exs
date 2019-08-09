@@ -3,7 +3,6 @@ defmodule Membrane.Element.ElementTest do
 
   import Membrane.Testing.Assertions
 
-  alias Membrane.Pipeline
   alias Membrane.Testing
 
   defmodule TestFilter do
@@ -62,21 +61,21 @@ defmodule Membrane.Element.ElementTest do
     end
 
     test "causes handle_start_of_stream/3 to be called", %{pipeline: pipeline} do
-      Pipeline.play(pipeline)
+      Testing.Pipeline.play(pipeline)
       assert_pipeline_playback_changed(pipeline, _, :playing)
 
       TestFilter.assert_callback_called(:handle_start_of_stream)
     end
 
     test "does not trigger calling callback handle_event/3", %{pipeline: pipeline} do
-      Pipeline.play(pipeline)
+      Testing.Pipeline.play(pipeline)
       assert_pipeline_playback_changed(pipeline, _, :playing)
 
       TestFilter.refute_callback_called(:handle_event)
     end
 
     test "causes handle_element_start_of_stream/3 to be called in pipeline", %{pipeline: pipeline} do
-      Pipeline.play(pipeline)
+      Testing.Pipeline.play(pipeline)
 
       assert_start_of_stream(pipeline, :filter)
     end
@@ -97,21 +96,21 @@ defmodule Membrane.Element.ElementTest do
     end
 
     test "causes handle_end_of_stream/3 to be called", %{pipeline: pipeline} do
-      Pipeline.play(pipeline)
+      Testing.Pipeline.play(pipeline)
       assert_pipeline_playback_changed(pipeline, _, :playing)
 
       TestFilter.assert_callback_called(:handle_end_of_stream)
     end
 
     test "does not trigger calling callback handle_event/3", %{pipeline: pipeline} do
-      Pipeline.play(pipeline)
+      Testing.Pipeline.play(pipeline)
       assert_pipeline_playback_changed(pipeline, _, :playing)
 
       TestFilter.refute_callback_called(:handle_event)
     end
 
     test "causes handle_element_end_of_stream/3 to be called in pipeline", %{pipeline: pipeline} do
-      Pipeline.play(pipeline)
+      Testing.Pipeline.play(pipeline)
 
       assert_end_of_stream(pipeline, :filter)
     end
