@@ -123,6 +123,11 @@ defmodule Membrane.Pipeline do
               state :: State.internal_state_t()
             ) :: callback_return_t
 
+  @callback handle_element_end_of_stream(
+              {Element.name_t(), Pad.t()},
+              state :: State.internal_state_t()
+            ) :: callback_return_t
+
   @doc """
   Callback invoked when `Membrane.Pipeline.Spec` is linked and in the same playback
   state as pipeline.
@@ -554,9 +559,10 @@ defmodule Membrane.Pipeline do
     |> noreply(state)
   end
 
-  def handle_info(Message.new(:handle_start_of_stream, [element_name, pad_ref]), state) do
+  def handle_info(Message.new(cb, [element_name, pad_ref]), state)
+      when cb in [:handle_start_of_stream, :handle_end_of_stream] do
     CallbackHandler.exec_and_handle_callback(
-      :handle_element_start_of_stream,
+      to_parent_sm_callback(cb),
       __MODULE__,
       [{element_name, pad_ref}],
       state
@@ -603,6 +609,9 @@ defmodule Membrane.Pipeline do
   def handle_action(action, callback, _params, state) do
     raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
   end
+
+  defp to_parent_sm_callback(:handle_start_of_stream), do: :handle_element_start_of_stream
+  defp to_parent_sm_callback(:handle_end_of_stream), do: :handle_element_end_of_stream
 
   defmacro __using__(_) do
     quote location: :keep do
@@ -701,6 +710,9 @@ defmodule Membrane.Pipeline do
       @impl true
       def handle_element_start_of_stream({_element, _pad}, state), do: {:ok, state}
 
+      @impl true
+      def handle_element_end_of_stream({_element, _pad}, state), do: {:ok, state}
+
       defoverridable start: 0,
                      start: 1,
                      start: 2,
@@ -719,7 +731,8 @@ defmodule Membrane.Pipeline do
                      handle_other: 2,
                      handle_spec_started: 2,
                      handle_shutdown: 2,
-                     handle_element_start_of_stream: 2
+                     handle_element_start_of_stream: 2,
+                     handle_element_end_of_stream: 2
     end
   end
 end
