@@ -18,6 +18,7 @@ defmodule Membrane.Clock do
   Proxy mode is enabled with `proxy_for: pid` or `proxy: true` (no initial proxy)
   option, and the proxy is set/changed using `proxy_for/2`.
   """
+  use Bunch
   use GenServer
   require Membrane.Core.Message
   alias Membrane.Time
@@ -103,26 +104,37 @@ defmodule Membrane.Clock do
 
   @impl GenServer
   def handle_info(Message.new(:clock_subscribe, pid), state) do
-    send(pid, {:membrane_clock_ratio, self(), state.ratio})
-    monitor = Process.monitor(pid)
-    state = state |> put_in([:subscribers, pid], %{monitor: monitor})
-    {:noreply, state}
+    state
+    |> update_in([:subscribers, pid], fn
+      nil ->
+        send(pid, {:membrane_clock_ratio, self(), state.ratio})
+        monitor = Process.monitor(pid)
+        %{monitor: monitor, subscriptions: 1}
+
+      %{subscriptions: subs} = subscriber ->
+        %{subscriber | subscriptions: subs + 1}
+    end)
+    ~> {:noreply, &1}
   end
 
   @impl GenServer
   def handle_info(Message.new(:clock_unsubscribe, pid), state) do
     Process.demonitor(state.subscribers[pid].monitor)
-    handle_unsubscribe(pid, state)
+
+    {subs, state} =
+      state |> Bunch.Access.get_updated_in([:subscribers, pid, :subscriptions], &(&1 - 1))
+
+    state = if subs == 0, do: handle_unsubscribe(pid, state), else: state
+    {:noreply, state}
   end
 
   @impl GenServer
   def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
-    handle_unsubscribe(pid, state)
+    {:noreply, handle_unsubscribe(pid, state)}
   end
 
   defp handle_unsubscribe(pid, state) do
-    state = state |> Bunch.Access.delete_in([:subscribers, pid])
-    {:noreply, state}
+    state |> Bunch.Access.delete_in([:subscribers, pid])
   end
 
   defp handle_clock_update({nom, denom}, state) do

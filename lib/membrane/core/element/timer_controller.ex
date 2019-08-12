@@ -11,10 +11,7 @@ defmodule Membrane.Core.Element.TimerController do
     if state.timers |> Map.has_key?(id) do
       {{:error, {:timer_already_exists, id: id}}, state}
     else
-      unless state.timers |> Bunch.KVList.any_value?(&(&1.clock == clock)) do
-        clock |> Clock.subscribe()
-      end
-
+      clock |> Clock.subscribe()
       timer = Timer.start(id, interval, clock)
       state |> Bunch.Access.put_in([:timers, id], timer) ~> {:ok, &1}
     end
@@ -27,11 +24,7 @@ defmodule Membrane.Core.Element.TimerController do
       {{:error, {:unknown_timer, id}}, state}
     else
       :ok = timer |> Timer.stop()
-
-      unless state.timers |> Bunch.KVList.any_value?(&(&1.clock == timer.clock)) do
-        timer.clock |> Clock.unsubscribe()
-      end
-
+      timer.clock |> Clock.unsubscribe()
       {:ok, state}
     end
   end
