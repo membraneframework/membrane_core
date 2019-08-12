@@ -98,15 +98,15 @@ defmodule Membrane.Core.Element.ActionHandler do
               :handle_end_of_stream
             ] do
     {action, dir} =
-      case {cb, params} do
-        {:handle_process_list, _} ->
+      case cb do
+        :handle_process_list ->
           {:buffer, :output}
 
-        {:handle_caps, _} ->
+        :handle_caps ->
           {:caps, :output}
 
-        {ev_cb, %{direction: dir}} when ev_cb in [:handle_event, :handle_end_of_stream] ->
-          {:event, Pad.opposite_direction(dir)}
+        ev_cb when ev_cb in [:handle_event, :handle_end_of_stream] ->
+          {:event, Pad.opposite_direction(params.direction)}
       end
 
     pads = state |> PadModel.filter_data(%{direction: dir}) |> Map.keys()
