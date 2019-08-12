@@ -3,38 +3,44 @@ defmodule Membrane.Sync do
   Sync allows to synchronize multiple processes, so that they performed their jobs
   at the same time.
 
+  The main purpose for Sync is to synchronize multiple streams within a pipeline.
   The flow of usage goes as follows:
-  - Processes register themselves in Sync, using `register/2`.
-  - When a process is ready to synchronize, it invokes `ready/1`. When a process
-  is ready, it is assumed it is going to invoke `sync/2` approximately at the same
-  time as all other ready processes.
-  - If a process becomes no longer ready, it should invoke `unready/1`.
+  - A Sync process is started.
+  - Processes register themselves (or are being registered) in the Sync, using
+  `register/2`. Registered processes are not being synchronized till the Sync
+  becomes active (see the next step). Each registered process is monitored and
+  automatically unregistered upon exit. Sync can be setup to exit when all the
+  registered processes exit by passing the `empty_exit?` option to `start_link/2`.
+  - When all processes that need to be registered are registered, the Sync can
+  be activated with `activate/1` function. This disables registration and enables
+  synchronization.
   - Once a process needs to sync, it invokes `sync/2`, which results in blocking
-  until all ready processes invoke `sync/2`.
+  until all the registered processes invoke `sync/2`. This works only when the Sync
+  is active - otherwise calling `sync/2` returns immediately.
   - Once all the ready processes invoke `sync/2`, the calls return, and they become
   registered again.
-  - Once a process exits, it is automatically unregistered.
+  - When synchronization needs to be turned off, the Sync should be deactivated
+  with `deactivate/2`. This disables synchronization and enables registration again.
+  All the calls to `sync/2` return immediately.
 
+  If a process designed to work with Sync should not be synced, `no_sync/0` should
+  be used.
   """
   use Bunch
   use GenServer
-  require Membrane.Core.Message
-  alias Membrane.Core.Message
   alias Membrane.Time
 
-  @always :membrane_sync_always
+  @no_sync :membrane_no_sync
 
-  @type t :: pid | :membrane_sync_always
-  @type ref_t :: {reference, pid} | :membrane_sync_always
-  @type level_t :: :registered | :ready
-  @type result_t :: :ok | {:error, :not_found | [invalid_level: level_t]}
+  @type t :: pid | :membrane_sync_no_sync
+  @type status_t :: :registered | :sync
 
   @doc """
   Starts a Sync process linked to the current process.
 
   ## Options
-  - :empty_exit? - if true, Sync automatically exits when all syncees exit;
-    defaults to false
+  - :empty_exit? - if true, Sync automatically exits when all the registered
+    processes exit; defaults to false
 
   """
   @spec start_link([empty_exit?: boolean], GenServer.options()) :: GenServer.on_start()
@@ -47,103 +53,97 @@ defmodule Membrane.Sync do
     pid
   end
 
-  @spec register(t, pid) :: ref_t
+  @spec register(t, pid) :: :ok | {:error, :invalid_activeness}
   def register(sync, pid \\ self())
 
-  def register(@always, _pid), do: @always
+  def register(@no_sync, _pid), do: :ok
 
   def register(sync, pid) do
-    ref = make_ref()
-    :ok = Message.call(sync, :sync_register, [ref, pid])
-    {ref, sync}
+    GenServer.call(sync, {:sync_register, pid})
   end
 
-  @spec unready(ref_t) :: result_t
-  def unready(@always), do: :ok
+  @spec activate(t) :: :ok | {:error, :invalid_activeness}
+  def activate(@no_sync), do: :ok
 
-  def unready({ref, sync}) do
-    Message.call(sync, :sync_unready, ref)
+  def activate(sync) do
+    GenServer.call(sync, {:sync_toggle_active, true})
   end
 
-  @spec ready(ref_t) :: result_t
-  def ready(@always), do: :ok
+  @spec deactivate(t) :: :ok | {:error, :invalid_activeness}
+  def deactivate(@no_sync), do: :ok
 
-  def ready({ref, sync}) do
-    Message.call(sync, :sync_ready, ref)
+  def deactivate(sync) do
+    GenServer.call(sync, {:sync_toggle_active, false})
   end
 
-  @spec sync(ref_t) :: result_t
-  def sync(@always), do: :ok
+  @spec sync(t) :: :ok | {:error, :not_found}
+  def sync(@no_sync), do: :ok
 
-  def sync({ref, sync}, options \\ []) do
-    latency = options |> Keyword.get(:latency, 0)
-    Message.call(sync, :sync, [ref, latency])
+  def sync(sync, options \\ []) do
+    GenServer.call(sync, {:sync, options})
   end
 
-  def always(), do: @always
+  @doc """
+  Returns a Sync that always returns immediately when calling `sync/2` on it.
+  """
+  @spec no_sync() :: t
+  def no_sync(), do: @no_sync
 
   @impl true
   def init(opts) do
     {:ok,
      %{
-       state: :init,
-       syncees: %{},
-       syncees_pids: %{},
-       empty_exit?: opts |> Keyword.get(:empty_exit?, false)
+       processes: %{},
+       empty_exit?: opts |> Keyword.get(:empty_exit?, false),
+       active?: false
      }}
   end
 
   @impl true
-  def handle_call(Message.new(:sync_register, [ref, pid]), _from, state) do
+  def handle_call({:sync_register, pid}, _from, %{active?: false} = state) do
     Process.monitor(pid)
-
-    state =
-      state
-      |> put_in([:syncees, ref], %{level: %{name: :registered}, latency: 0})
-      |> put_in([:syncees_pids, pid], ref)
-
+    state = state |> put_in([:processes, pid], %{status: :registered, latency: 0, reply_to: nil})
     {:reply, :ok, state}
   end
 
   @impl true
-  def handle_call(Message.new(:sync_ready, ref), _from, %{state: :waiting} = state) do
-    case update_level(ref, %{name: :ready}, [:registered], state) do
-      {:ok, state} -> {:reply, :ok, state}
-      {{:error, reason}, state} -> {:reply, {:error, reason}, state}
-    end
+  def handle_call({:sync_register, _pid}, _from, state) do
+    {:reply, {:error, :invalid_activeness}, state}
   end
 
   @impl true
-  def handle_call(Message.new(:sync_unready, ref), _from, state) do
-    case update_level(ref, %{name: :registered}, [:registered, :ready], state) do
-      {:ok, %{state: :waiting} = state} ->
-        state = state |> check_and_handle_sync()
-        {:reply, :ok, state}
+  def handle_call({:sync, options}, {pid, _ref} = from, %{active?: true} = state) do
+    latency = options |> Keyword.get(:latency, 0)
 
-      {:ok, state} ->
-        {:reply, :ok, state}
+    case state.processes[pid] do
+      nil ->
+        {:reply, {:error, :not_found}, state}
 
-      {{:error, reason}, state} ->
-        {:reply, {:error, reason}, state}
-    end
-  end
+      %{status: :registered} = syncee ->
+        state =
+          state
+          |> put_in([:processes, pid], %{syncee | status: :sync, latency: latency, reply_to: from})
+          |> check_and_handle_sync()
 
-  @impl true
-  def handle_call(Message.new(:sync, [ref, latency]), from, %{state: :waiting} = state) do
-    case update_level(ref, %{name: :sync, from: from}, [:ready], state) do
-      {:ok, state} ->
-        state = state |> put_in([:syncees, ref, :latency], latency) |> check_and_handle_sync()
         {:noreply, state}
-
-      {error, state} ->
-        {:reply, error, state}
     end
   end
 
   @impl true
-  def handle_call(Message.new(request, _ref) = message, from, %{state: :init} = state)
-      when request in [:sync, :sync_ready] do
-    handle_call(message, from, %{state | state: :waiting})
+  def handle_call({:sync, _options}, _from, %{active?: false} = state) do
+    {:reply, :ok, state}
+  end
+
+  @impl true
+  def handle_call({:sync_toggle_active, new_active?}, _from, %{active?: active?} = state)
+      when new_active? == active? do
+    {:reply, {:error, :invalid_activeness}, state}
+  end
+
+  @impl true
+  def handle_call({:sync_toggle_active, active?}, _from, state) do
+    state = %{state | active?: active?} |> check_and_handle_sync()
+    {:reply, :ok, state}
   end
 
   @impl true
@@ -154,63 +154,42 @@ defmodule Membrane.Sync do
 
   @impl true
   def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
-    {ref, state} = state |> pop_in([:syncees_pids, pid])
-    state = state |> Bunch.Access.delete_in([:syncees, ref]) |> check_and_handle_sync()
+    state = state |> Bunch.Access.delete_in([:processes, pid]) |> check_and_handle_sync()
 
-    if state.empty_exit? and state.syncees |> Enum.empty?() do
+    if state.empty_exit? and state.processes |> Enum.empty?() do
       {:stop, :normal, state}
     else
       {:noreply, state}
     end
   end
 
-  defp update_level(ref, new_level, supported_levels, state) do
-    syncee = state.syncees[ref]
-
-    cond do
-      syncee |> is_nil ->
-        {{:error, :not_found}, state}
-
-      syncee.level.name in supported_levels ->
-        {:ok, state |> put_in([:syncees, ref, :level], new_level)}
-
-      true ->
-        {{:error, invalid_level: syncee.level.name}, state}
-    end
-  end
-
   defp check_and_handle_sync(state) do
-    unless all_syncees_level?(state.syncees, [:sync, :registered]) do
+    if state.active? and state.processes |> Bunch.KVList.any_value?(&(&1.status != :sync)) do
       state
     else
-      send_sync_replies(state.syncees)
-      state = reset_syncees(state)
-      %{state | state: :init}
+      send_sync_replies(state.processes)
+      state |> reset_processes()
     end
   end
 
-  defp all_syncees_level?(syncees, levels) do
-    syncees |> Map.values() |> Enum.all?(&(&1.level.name in levels))
-  end
+  defp send_sync_replies(processes) do
+    processes_data = processes |> Map.values()
+    max_latency = processes_data |> Enum.map(& &1.latency) |> Enum.max(fn -> 0 end)
 
-  defp send_sync_replies(syncees) do
-    max_latency = syncees |> Map.values() |> Enum.map(& &1.latency) |> Enum.max(fn -> 0 end)
-
-    syncees
-    |> Map.values()
-    |> Enum.filter(&(&1.level.name == :sync))
-    |> Enum.group_by(& &1.latency, & &1.level.from)
-    |> Enum.each(fn {latency, from} ->
+    processes_data
+    |> Enum.filter(&(&1.status == :sync))
+    |> Enum.group_by(& &1.latency, & &1.reply_to)
+    |> Enum.each(fn {latency, reply_to} ->
       time = (max_latency - latency) |> Time.to_milliseconds()
-      Process.send_after(self(), {:reply, from}, time)
+      Process.send_after(self(), {:reply, reply_to}, time)
     end)
   end
 
-  defp reset_syncees(state) do
+  defp reset_processes(state) do
     state
     |> Map.update!(
-      :syncees,
-      &Bunch.Map.map_values(&1, fn s -> %{s | level: %{name: :registered}} end)
+      :processes,
+      &Bunch.Map.map_values(&1, fn s -> %{s | status: :registered} end)
     )
   end
 end

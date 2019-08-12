@@ -11,7 +11,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
   @module Membrane.Core.Element.PadController
 
   defp prepare_state(elem_module, name \\ :element) do
-    State.new(%{name: name, module: elem_module, clock: nil})
+    State.new(%{name: name, module: elem_module, clock: nil, sync: nil})
     |> PadSpecHandler.init_pads()
     |> Bunch.Access.put_in(:internal_state, %{})
     |> Bunch.Access.put_in(:watcher, self())

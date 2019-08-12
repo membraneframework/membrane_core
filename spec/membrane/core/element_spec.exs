@@ -8,6 +8,7 @@ defmodule Membrane.Core.ElementSpec do
   alias Membrane.Pipeline.Link
   alias Membrane.Pipeline.Link.Endpoint
   alias Membrane.Support.Element.{TrivialFilter, TrivialSink, TrivialSource}
+  alias Membrane.Sync
 
   require CallbackContext.PlaybackChange
   require Message
@@ -30,7 +31,8 @@ defmodule Membrane.Core.ElementSpec do
       name: :name,
       user_options: %{},
       pipeline: self(),
-      clock: nil
+      clock: nil,
+      sync: Sync.no_sync()
     })
   end
 
@@ -67,7 +69,8 @@ defmodule Membrane.Core.ElementSpec do
             name: :name,
             user_options: %{},
             pipeline: self(),
-            clock: nil
+            clock: nil,
+            sync: Sync.no_sync()
           })
 
       # finally do: Process.exit(from_pid(), :kill)
@@ -156,7 +159,7 @@ defmodule Membrane.Core.ElementSpec do
 
       let :state,
         do: %{
-          State.new(%{module: module(), name: :name, clock: nil})
+          State.new(%{module: module(), name: :name, clock: nil, sync: nil})
           | playback: playback(),
             playback_buffer: Membrane.Core.Element.PlaybackBuffer.new(),
             internal_state: internal_state()
@@ -474,7 +477,7 @@ defmodule Membrane.Core.ElementSpec do
 
       let :state,
         do: %{
-          State.new(%{module: module(), name: :name, clock: nil})
+          State.new(%{module: module(), name: :name, clock: nil, sync: nil})
           | playback: playback(),
             internal_state: internal_state()
         }
@@ -679,7 +682,7 @@ defmodule Membrane.Core.ElementSpec do
 
       let :state,
         do: %{
-          State.new(%{module: module(), name: :name, clock: nil})
+          State.new(%{module: module(), name: :name, clock: nil, sync: nil})
           | playback: playback(),
             internal_state: internal_state()
         }
@@ -882,7 +885,10 @@ defmodule Membrane.Core.ElementSpec do
       let :message, do: Message.new(:set_watcher, new_watcher())
 
       let :state,
-        do: %{State.new(%{module: TrivialFilter, name: :name, clock: nil}) | watcher: watcher()}
+        do: %{
+          State.new(%{module: TrivialFilter, name: :name, clock: nil, sync: nil})
+          | watcher: watcher()
+        }
 
       context "and current watcher is nil" do
         let :watcher, do: nil

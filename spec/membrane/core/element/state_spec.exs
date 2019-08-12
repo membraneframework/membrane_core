@@ -7,7 +7,13 @@ defmodule Membrane.Core.Element.StateSpec do
 
   describe "new/1" do
     it "should create proper state" do
-      state = described_module().new(%{module: TrivialFilter, name: :name, clock: nil})
+      state =
+        described_module().new(%{
+          module: TrivialFilter,
+          name: :name,
+          clock: nil,
+          sync: Sync.no_sync()
+        })
 
       expect(state)
       |> to(
@@ -27,7 +33,7 @@ defmodule Membrane.Core.Element.StateSpec do
              clock: nil,
              pipeline_clock: nil,
              latency: 0,
-             stream_sync: Sync.always(),
+             stream_sync: Sync.no_sync(),
              terminating: false
            )
       )

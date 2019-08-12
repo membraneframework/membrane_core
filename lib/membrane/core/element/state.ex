@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.State do
   # internally in Membrane.
 
   use Membrane.Log, tags: :core
-  alias Membrane.{Clock, Core, Element, Sync}
+  alias Membrane.{Clock, Core, Element}
   alias Core.{Playback, Playbackable, Timer}
   alias Core.Element.{PadModel, PadSpecHandler, PlaybackBuffer}
   alias Element.Pad
@@ -76,7 +76,7 @@ defmodule Membrane.Core.Element.State do
       timers: %{},
       pipeline_clock: options.clock,
       clock: nil,
-      stream_sync: Sync.always(),
+      stream_sync: options.sync,
       latency: 0,
       terminating: false
     }

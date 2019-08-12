@@ -22,6 +22,8 @@ defmodule Membrane.Core.Element.LifecycleController do
   def handle_init(options, %State{module: module} = state) do
     debug("Initializing element: #{inspect(module)}, options: #{inspect(options)}", state)
 
+    :ok = Sync.register(state.stream_sync)
+
     with {:ok, state} <-
            CallbackHandler.exec_and_handle_callback(
              :handle_init,
@@ -120,7 +122,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   end
 
   @impl PlaybackHandler
-  def handle_playback_state_changed(old, new, state) do
+  def handle_playback_state_changed(_old, new, state) do
     shutdown_res =
       if new == :stopped and state.terminating == true do
         prepare_shutdown(state)
@@ -128,13 +130,7 @@ defmodule Membrane.Core.Element.LifecycleController do
         {:ok, state}
       end
 
-    with {:ok, state} <- shutdown_res,
-         :ok <-
-           (case {old, new} do
-              {:prepared, :playing} -> Sync.ready(state.stream_sync)
-              {:playing, :prepared} -> Sync.unready(state.stream_sync)
-              _ -> :ok
-            end) do
+    with {:ok, state} <- shutdown_res do
       PlaybackBuffer.eval(state)
     end
   end

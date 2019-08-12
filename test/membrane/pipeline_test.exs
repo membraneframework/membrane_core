@@ -5,7 +5,7 @@ defmodule Membrane.PipelineTest do
   use ExUnit.Case
 
   def state(_ctx) do
-    [state: %State{}]
+    [state: struct(State)]
   end
 
   setup_all :state

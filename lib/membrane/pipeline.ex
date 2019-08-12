@@ -9,7 +9,18 @@ defmodule Membrane.Pipeline do
   """
 
   alias __MODULE__.{Link, State, Spec}
-  alias Membrane.{CallbackError, Clock, Core, Element, Notification, PipelineError, Sync}
+
+  alias Membrane.{
+    CallbackError,
+    Clock,
+    Core,
+    Element,
+    Notification,
+    PipelineError,
+    PlaybackState,
+    Sync
+  }
+
   alias Element.Pad
   alias Core.{Message, Playback}
   alias Bunch.Type
@@ -227,10 +238,7 @@ defmodule Membrane.Pipeline do
   def stop(pid), do: change_playback_state(pid, :stopped)
 
   @spec change_playback_state(pid, Membrane.PlaybackState.t()) :: :ok
-  defp change_playback_state(pid, new_state)
-       when Membrane.PlaybackState.is_playback_state(new_state) do
-    alias Membrane.Core.Message
-    require Message
+  defp change_playback_state(pid, new_state) when PlaybackState.is_playback_state(new_state) do
     Message.send(pid, :change_playback_state, new_state)
     :ok
   end
@@ -287,13 +295,13 @@ defmodule Membrane.Pipeline do
 
     parsed_children = children_spec |> parse_children
     :ok = parsed_children |> check_if_children_names_unique(state)
-    children = parsed_children |> start_children(state.clock_proxy)
+    syncs = setup_syncs(parsed_children, stream_sync)
+    children = parsed_children |> start_children(state.clock_proxy, syncs)
     state = children |> add_children(state)
     {:ok, state} = choose_clock(children, clock_provider, state)
     {:ok, links} = links |> parse_links
     links = links |> resolve_links(state)
     :ok = links |> link_children(state)
-    :ok = set_children_stream_sync(children, links, stream_sync)
     {children_names, children_data} = children |> Enum.unzip()
     :ok = children_data |> set_children_watcher
     {:ok, state} = exec_handle_spec_started(children_names, state)
@@ -345,20 +353,46 @@ defmodule Membrane.Pipeline do
     )
   end
 
-  # Starts children based on given specification and links them to the current
-  # process in the supervision tree.
-  #
-  # Please note that this function is not atomic and in case of error there's
-  # a chance that some of children will remain running.
-  # @spec start_children([parsed_child_t]) :: Type.try_t([State.child_t()])
-  defp start_children(children, pipeline_clock) do
-    debug("Starting children: #{inspect(children)}")
+  defp setup_syncs(children, nil) do
+    sinks =
+      children |> Enum.filter(&(&1.module.membrane_element_type == :sink)) |> Enum.map(& &1.name)
 
-    children |> Enum.map(&start_child(&1, pipeline_clock))
+    setup_syncs(children, [sinks])
   end
 
-  defp start_child(%{name: name, module: module, options: options}, pipeline_clock) do
+  defp setup_syncs(children, stream_sync) do
+    children_names = children |> MapSet.new(& &1.name)
+    all_to_sync = stream_sync |> List.flatten()
+
+    withl dups: [] <- all_to_sync |> Bunch.Enum.duplicates(),
+          unknown: [] <- all_to_sync |> Enum.reject(&(&1 in children_names)) do
+      stream_sync
+      |> Enum.flat_map(fn elements ->
+        sync = Sync.start_link!(empty_exit?: true)
+        elements |> Enum.map(&{&1, sync})
+      end)
+      |> Map.new()
+    else
+      dups: dups ->
+        raise PipelineError,
+              "Cannot apply sync - duplicate elements: #{dups |> Enum.join(", ")}"
+
+      unknown: unknown ->
+        raise PipelineError,
+              "Cannot apply sync - unknown elements: #{unknown |> Enum.join(", ")}"
+    end
+  end
+
+  defp start_children(children, pipeline_clock, syncs) do
+    debug("Starting children: #{inspect(children)}")
+
+    children |> Enum.map(&start_child(&1, pipeline_clock, syncs))
+  end
+
+  defp start_child(%{name: name, module: module, options: options}, pipeline_clock, syncs) do
     debug("Pipeline: starting child: name: #{inspect(name)}, module: #{inspect(module)}")
+
+    sync = syncs |> Map.get(name, Sync.no_sync())
 
     with {:ok, pid} <-
            Core.Element.start_link(%{
@@ -366,11 +400,12 @@ defmodule Membrane.Pipeline do
              name: name,
              pipeline: self(),
              user_options: options,
-             clock: pipeline_clock
+             clock: pipeline_clock,
+             sync: sync
            }),
          :ok <- Message.call(pid, :set_controlling_pid, self()),
          {:ok, clock} <- setup_clock(module, pid) do
-      {name, %{pid: pid, clock: clock}}
+      {name, %{pid: pid, clock: clock, sync: sync}}
     else
       {:error, reason} ->
         raise PipelineError,
@@ -515,36 +550,6 @@ defmodule Membrane.Pipeline do
     :ok = children_data |> Bunch.Enum.try_each(&Message.call(&1.pid, :set_watcher, self()))
   end
 
-  defp set_children_stream_sync(children, links, stream_sync) do
-    children = children |> Map.new()
-
-    unless stream_sync do
-      [
-        children
-        |> Map.keys()
-        |> Enum.reject(fn cn -> links |> Enum.any?(&(&1.from.element == cn)) end)
-      ]
-    else
-      stream_sync
-    end
-    |> Enum.each(fn sync_group ->
-      {sync, elements} =
-        case sync_group do
-          {sync, elements} -> {sync, elements}
-          elements -> {Sync.start_link!(empty_exit?: true), elements}
-        end
-
-      with {elements, []} <- elements |> Enum.map(&children[&1]) |> Enum.split_with(& &1) do
-        elements
-        |> Enum.each(&Message.call(&1.pid, :set_stream_sync, Sync.register(sync, &1.pid)))
-      else
-        {_children, unknown} ->
-          raise PipelineError,
-                "Cannot apply sync - unknown elements: #{unknown |> Enum.join(", ")}"
-      end
-    end)
-  end
-
   @spec exec_handle_spec_started([Element.name_t()], State.t()) :: {:ok, State.t()}
   defp exec_handle_spec_started(children_names, state) do
     callback_res =
@@ -567,11 +572,29 @@ defmodule Membrane.Pipeline do
   end
 
   @impl PlaybackHandler
-  def handle_playback_state(_old, new, state) do
-    children_pids = state |> State.get_children() |> Map.values() |> Enum.map(& &1.pid)
+  def handle_playback_state(old, new, state) do
+    children_data = state |> State.get_children() |> Map.values()
+    children_pids = children_data |> Enum.map(& &1.pid)
     children_pids |> Enum.each(&change_playback_state(&1, new))
+    :ok = toggle_syncs_active(old, new, children_data)
     state = %{state | pending_pids: children_pids |> MapSet.new()}
     PlaybackHandler.suspend_playback_change(state)
+  end
+
+  defp toggle_syncs_active(:prepared, :playing, children_data) do
+    do_toggle_syncs_active(children_data, &Sync.activate/1)
+  end
+
+  defp toggle_syncs_active(:playing, :prepared, children_data) do
+    do_toggle_syncs_active(children_data, &Sync.deactivate/1)
+  end
+
+  defp toggle_syncs_active(_old_playback_state, _new_playback_state, _children_data) do
+    :ok
+  end
+
+  defp do_toggle_syncs_active(children_data, fun) do
+    children_data |> Enum.uniq_by(& &1.sync) |> Enum.map(& &1.sync) |> Bunch.Enum.try_each(fun)
   end
 
   @impl PlaybackHandler

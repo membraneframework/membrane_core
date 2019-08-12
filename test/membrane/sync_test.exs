@@ -8,20 +8,27 @@ defmodule Membrane.SyncTest do
     defp gen_times do
       sync = @module.start_link!()
 
-      {request_times, sync_times} =
+      tasks =
         1..10
         |> Enum.map(fn i ->
           Task.async(fn ->
-            ref = sync |> @module.register()
-            :ok = ref |> @module.ready()
             :ok = receive do: (:cont -> :ok)
             Process.sleep(10 * i)
             request_time = System.monotonic_time(:millisecond)
-            :ok = ref |> @module.sync()
+            :ok = sync |> @module.sync()
             sync_time = System.monotonic_time(:millisecond)
             {request_time, sync_time}
           end)
         end)
+        |> Enum.map(fn task ->
+          :ok = sync |> @module.register(task.pid)
+          task
+        end)
+
+      sync |> @module.activate()
+
+      {request_times, sync_times} =
+        tasks
         |> Enum.map(fn task ->
           send(task.pid, :cont)
           task
@@ -45,7 +52,7 @@ defmodule Membrane.SyncTest do
     end
   end
 
-  test "should sync only ready processes" do
+  test "should sync only if active" do
     sync = @module.start_link!()
 
     t1 =
@@ -56,9 +63,8 @@ defmodule Membrane.SyncTest do
 
     t2 =
       Task.async(fn ->
-        ref = sync |> @module.register()
-        :ok = ref |> @module.ready()
-        :ok = ref |> @module.sync()
+        :ok = sync |> @module.register()
+        :ok = sync |> @module.sync()
         :ok
       end)
 
@@ -67,28 +73,54 @@ defmodule Membrane.SyncTest do
     :ok = Task.await(t1)
   end
 
-  test "should sync only ready processes even if some used to be ready" do
+  test "should not sync when unactive even if used to be active" do
     sync = @module.start_link!()
+    sync |> @module.activate()
+    sync |> @module.deactivate()
 
     t1 =
       Task.async(fn ->
-        ref = sync |> @module.register()
-        :ok = ref |> @module.ready()
-        :ok = ref |> @module.unready()
         receive do: (:cont -> :ok)
       end)
 
+    sync |> @module.register(t1.pid)
+
     t2 =
       Task.async(fn ->
-        ref = sync |> @module.register()
-        :ok = ref |> @module.ready()
-        :ok = ref |> @module.sync()
+        :ok = sync |> @module.register()
+        :ok = sync |> @module.sync()
         :ok
       end)
 
     :ok = Task.await(t2)
     send(t1.pid, :cont)
     :ok = Task.await(t1)
+  end
+
+  test "should finish syncing currently synced processes upon deactivation" do
+    sync = @module.start_link!()
+
+    t1 =
+      Task.async(fn ->
+        :ok = receive do: (:cont -> :ok)
+        Process.sleep(50)
+        sync |> @module.deactivate()
+        :ok
+      end)
+
+    :ok = sync |> @module.register(t1.pid)
+
+    t2 =
+      Task.async(fn ->
+        :ok = sync |> @module.register()
+        :ok = sync |> @module.activate()
+        send(t1.pid, :cont)
+        :ok = sync |> @module.sync()
+        :ok
+      end)
+
+    :ok = Task.await(t1)
+    :ok = Task.await(t2)
   end
 
   test "should forget processes that have already exited" do
@@ -96,18 +128,16 @@ defmodule Membrane.SyncTest do
 
     t1 =
       Task.async(fn ->
-        ref = sync |> @module.register()
-        :ok = ref |> @module.ready()
-        :ok
+        :ok = sync |> @module.register()
       end)
 
     :ok = Task.await(t1)
 
     t2 =
       Task.async(fn ->
-        ref = sync |> @module.register()
-        :ok = ref |> @module.ready()
-        :ok = ref |> @module.sync()
+        :ok = sync |> @module.register()
+        :ok = sync |> @module.activate()
+        :ok = sync |> @module.sync()
         :ok
       end)
 
@@ -119,19 +149,19 @@ defmodule Membrane.SyncTest do
 
     t1 =
       Task.async(fn ->
-        ref = sync |> @module.register()
-        :ok = ref |> @module.ready()
         :ok = receive do: (:cont -> :ok)
         Process.sleep(50)
         :ok
       end)
 
+    :ok = sync |> @module.register(t1.pid)
+
     t2 =
       Task.async(fn ->
-        ref = sync |> @module.register()
-        :ok = ref |> @module.ready()
+        :ok = sync |> @module.register()
+        :ok = sync |> @module.activate()
         send(t1.pid, :cont)
-        :ok = ref |> @module.sync()
+        :ok = sync |> @module.sync()
         :ok
       end)
 
@@ -147,21 +177,18 @@ defmodule Membrane.SyncTest do
     |> Enum.each(fn sync ->
       [
         Task.async(fn ->
-          ref = sync |> @module.register()
-          :ok = ref |> @module.ready()
-          :ok = ref |> @module.sync()
           receive do: (:cont -> :ok)
+          :ok = sync |> @module.activate()
+          :ok = sync |> @module.sync()
         end),
         Task.async(fn ->
-          ref = sync |> @module.register()
-          :ok = ref |> @module.ready()
-          receive do: (:cont -> :ok)
-        end),
-        Task.async(fn ->
-          sync |> @module.register()
           receive do: (:cont -> :ok)
         end)
       ]
+      |> Enum.map(fn task ->
+        :ok = sync |> @module.register(task.pid)
+        task
+      end)
       |> Enum.map(fn task ->
         send(task.pid, :cont)
         task
@@ -174,21 +201,20 @@ defmodule Membrane.SyncTest do
     refute Process.alive?(s2)
   end
 
-  test "#{inspect(@module)}.always/0 should sync always" do
-    sync = @module.always()
+  test "#{inspect(@module)}.no_sync/0 should sync at once" do
+    sync = @module.no_sync()
 
     t1 =
       Task.async(fn ->
-        ref = sync |> @module.register()
-        :ok = ref |> @module.ready()
+        :ok = sync |> @module.register()
         receive do: (:cont -> :ok)
       end)
 
     t2 =
       Task.async(fn ->
-        ref = sync |> @module.register()
-        :ok = ref |> @module.ready()
-        :ok = ref |> @module.sync()
+        :ok = sync |> @module.register()
+        :ok = sync |> @module.activate()
+        :ok = sync |> @module.sync()
       end)
 
     :ok = Task.await(t2)

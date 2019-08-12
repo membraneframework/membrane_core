@@ -165,7 +165,8 @@ defmodule Membrane.PipelineSpec do
         do: %Membrane.Pipeline.State{
           children: %{child_name() => self()},
           internal_state: internal_state(),
-          module: module()
+          module: module(),
+          clock_proxy: nil
         }
 
       let :notification, do: :notification
@@ -233,7 +234,13 @@ defmodule Membrane.PipelineSpec do
     context "when receiving other message" do
       let :message, do: :some_message
       let :internal_state, do: :some_internal_state
-      let :state, do: %Membrane.Pipeline.State{module: module(), internal_state: internal_state()}
+
+      let :state,
+        do: %Membrane.Pipeline.State{
+          module: module(),
+          internal_state: internal_state(),
+          clock_proxy: nil
+        }
 
       before do
         allow module()

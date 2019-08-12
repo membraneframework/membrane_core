@@ -5,7 +5,7 @@ defmodule Membrane.Pipeline.State do
   # internally in Membrane.
 
   alias Membrane.Core.{Playback, Playbackable}
-  alias Membrane.Element
+  alias Membrane.{Clock, Element, Sync}
   alias Bunch.Type
   use Bunch
 
@@ -17,21 +17,29 @@ defmodule Membrane.Pipeline.State do
           module: module,
           children: children_t,
           pending_pids: MapSet.t(pid),
-          terminating?: boolean
+          terminating?: boolean,
+          clock_provider: %{
+            clock: Clock.t() | nil,
+            provider: Element.name_t() | nil,
+            choice: :auto | :manual
+          },
+          clock_proxy: Clock.t()
         }
 
   @type internal_state_t :: map | struct
-  @type child_t :: {Element.name_t(), pid}
-  @type children_t :: %{Element.name_t() => pid}
+  @type child_data_t :: %{pid: pid, clock: Clock.t(), sync: Sync.t()}
+  @type children_t :: %{Element.name_t() => child_data_t}
 
-  defstruct internal_state: nil,
-            module: nil,
-            children: %{},
-            playback: %Playback{},
-            pending_pids: MapSet.new(),
-            terminating?: false,
-            clock_provider: %{clock: nil, provider: nil, choice: :auto},
-            clock_proxy: nil
+  @enforce_keys [:module, :clock_proxy]
+  defstruct @enforce_keys ++
+              [
+                internal_state: nil,
+                children: %{},
+                playback: %Playback{},
+                pending_pids: MapSet.new(),
+                terminating?: false,
+                clock_provider: %{clock: nil, provider: nil, choice: :auto}
+              ]
 
   @spec add_child(t, Element.name_t(), pid) :: Type.stateful_try_t(t)
   def add_child(%__MODULE__{children: children} = state, child, pid) do
@@ -42,7 +50,7 @@ defmodule Membrane.Pipeline.State do
     end
   end
 
-  # @spec get_child_pid(t, Element.name_t()) :: Type.try_t(pid)
+  @spec get_child_data(t, Element.name_t()) :: Type.try_t(child_data_t)
   def get_child_data(%__MODULE__{children: children}, child) do
     children[child] |> Bunch.error_if_nil({:unknown_child, child})
   end
