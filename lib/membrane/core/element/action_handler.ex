@@ -90,13 +90,23 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp do_handle_action({:forward, data}, cb, params, %State{type: :filter} = state)
-       when cb in [:handle_caps, :handle_event, :handle_process_list] do
+       when cb in [
+              :handle_caps,
+              :handle_event,
+              :handle_process_list,
+              :handle_start_of_stream,
+              :handle_end_of_stream
+            ] do
     {action, dir} =
       case {cb, params} do
-        {:handle_process_list, _} -> {:buffer, :output}
-        {:handle_caps, _} -> {:caps, :output}
-        {:handle_event, %{direction: :input}} -> {:event, :output}
-        {:handle_event, %{direction: :output}} -> {:event, :input}
+        {:handle_process_list, _} ->
+          {:buffer, :output}
+
+        {:handle_caps, _} ->
+          {:caps, :output}
+
+        {ev_cb, %{direction: dir}} when ev_cb in [:handle_event, :handle_end_of_stream] ->
+          {:event, Pad.opposite_direction(dir)}
       end
 
     pads = state |> PadModel.filter_data(%{direction: dir}) |> Map.keys()

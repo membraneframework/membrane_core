@@ -3,13 +3,15 @@ defmodule Membrane.Core.Element.PadControllerSpec do
   alias Membrane.Support.Element.{DynamicFilter, TrivialFilter}
   alias Membrane.Core.Element.{PadModel, PadSpecHandler, State}
   alias Membrane.Event.EndOfStream
+  alias Membrane.Core.Playbackable
 
   describe ".link_pad/7" do
     let :module, do: TrivialFilter
     let :name, do: :element_name
 
     let! :state do
-      State.new(module(), name()) |> PadSpecHandler.init_pads()
+      State.new(module(), name())
+      |> PadSpecHandler.init_pads()
     end
 
     context "when pad is present in the element" do
@@ -121,6 +123,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
     let! :state do
       {pad_info, state} =
         State.new(module(), name())
+        |> Playbackable.update_playback(&%{&1 | state: :playing})
         |> PadSpecHandler.init_pads()
         |> Bunch.Access.get_and_update_in(
           [:pads, :info],
