@@ -4,7 +4,7 @@ defmodule Membrane.Core.Pipeline.SpecController do
 
   @behaviour Membrane.Core.ChildrenController
 
-  alias Membrane.PipelineError
+  alias Membrane.ParentError
 
   alias Membrane.Core.{
     ParentState,
@@ -25,19 +25,20 @@ defmodule Membrane.Core.Pipeline.SpecController do
     ~> {&1, state}
   end
 
-  defp resolve_link(%{element: element, pad_name: pad_name, id: id} = endpoint, state) do
+  @spec resolve_link(Link.Endpoint.t(), ParentState.t()) :: Link.Endpoint.t() | {:error, reason :: any()}
+  def resolve_link(%{element: element, pad_name: pad_name, id: id} = endpoint, state) do
     with {:ok, pid} <- state |> ParentState.get_child_pid(element),
          {:ok, pad_ref} <- pid |> Message.call(:get_pad_ref, [pad_name, id]) do
       %{endpoint | pid: pid, pad_ref: pad_ref}
     else
       {:error, {:unknown_child, child}} ->
-        raise PipelineError, "Child #{inspect(child)} does not exist"
+        raise ParentError, "Child #{inspect(child)} does not exist"
 
       {:error, {:cannot_handle_message, :unknown_pad, _ctx}} ->
-        raise PipelineError, "Child #{inspect(element)} does not have pad #{inspect(pad_name)}"
+        raise ParentError, "Child #{inspect(element)} does not have pad #{inspect(pad_name)}"
 
       {:error, reason} ->
-        raise PipelineError, """
+        raise ParentError, """
         Error resolving pad #{inspect(pad_name)} of element #{inspect(element)}, \
         reason: #{inspect(reason, pretty: true)}\
         """
@@ -73,7 +74,7 @@ defmodule Membrane.Core.Pipeline.SpecController do
       callback_res
     else
       {{:error, reason}, state} ->
-        raise PipelineError, """
+        raise ParentError, """
         Callback :handle_spec_started failed with reason: #{inspect(reason)}
         Pipeline state: #{inspect(state, pretty: true)}
         """

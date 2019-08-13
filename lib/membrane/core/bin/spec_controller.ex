@@ -4,7 +4,7 @@ defmodule Membrane.Core.Bin.SpecController do
 
   @behaviour Membrane.Core.ChildrenController
 
-  alias Membrane.{Bin, BinError}
+  alias Membrane.{Bin, ParentError}
 
   alias Membrane.Core.{
     ParentState,
@@ -50,28 +50,12 @@ defmodule Membrane.Core.Bin.SpecController do
       {new_endpoint, state}
     else
       {:error, :unknown_pad} ->
-        raise BinError, "Bin #{inspect(name)} does not have pad #{inspect(pad_name)}"
+        raise ParentError, "Bin #{inspect(name)} does not have pad #{inspect(pad_name)}"
     end
   end
 
-  defp resolve_link(%{element: element, pad_name: pad_name, id: id} = endpoint, state) do
-    with {:ok, pid} <- state |> ParentState.get_child_pid(element),
-         {:ok, pad_ref} <- pid |> Message.call(:get_pad_ref, [pad_name, id]) do
-      {%{endpoint | pid: pid, pad_ref: pad_ref}, state}
-    else
-      {:error, {:unknown_child, child}} ->
-        raise BinError, "Child #{inspect(child)} does not exist"
-
-      {:error, {:cannot_handle_message, :unknown_pad, _ctx}} ->
-        raise BinError, "Child #{inspect(element)} does not have pad #{inspect(pad_name)}"
-
-      {:error, reason} ->
-        raise BinError, """
-        Error resolving pad #{inspect(pad_name)} of element #{inspect(element)}, \
-        reason: #{inspect(reason, pretty: true)}\
-        """
-    end
-  end
+  # This is the case of normal endpoint linking (not bin api)
+  defp resolve_link(endpoint, state), do: {Membrane.Core.Pipeline.SpecController.resolve_link(endpoint, state), state}
 
   # Links children based on given specification and map for mapping children
   # names into PIDs.
@@ -162,7 +146,7 @@ defmodule Membrane.Core.Bin.SpecController do
       callback_res
     else
       {{:error, reason}, state} ->
-        raise BinError, """
+        raise ParentError, """
         Callback :handle_spec_started failed with reason: #{inspect(reason)}
         Pipeline state: #{inspect(state, pretty: true)}
         """
