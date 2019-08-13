@@ -123,9 +123,9 @@ defmodule Membrane.Core.Bin.SpecController do
   defp handle_link(pid, args, state) do
     case self() do
       ^pid ->
-        {{:ok, _spec} = res, state} = apply(PadController, :handle_link, args ++ [state])
-        {:ok, state} = PadController.handle_linking_finished(state)
-        {res, state}
+        with {{:ok, _spec} = res, state} <- apply(PadController, :handle_link, args ++ [state]),
+             {:ok, state} <- PadController.handle_linking_finished(state),
+             do: {res, state}
 
       _ ->
         res = Message.call(pid, :handle_link, args)
