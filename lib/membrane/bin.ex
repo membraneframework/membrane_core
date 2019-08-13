@@ -156,8 +156,22 @@ defmodule Membrane.Bin do
 
   defp do_start(method, my_name, module, bin_options, process_options) do
     if module |> bin? do
+      debug("""
+      Bin start link: module: #{inspect(module)},
+      bin options: #{inspect(bin_options)},
+      process options: #{inspect(process_options)}
+      """)
+
       apply(GenServer, method, [__MODULE__, {my_name, module, bin_options}, process_options])
     else
+      warn_error(
+        """
+        Cannot start bin, passed module #{inspect(module)} is not a Membrane Bin.
+        Make sure that given module is the right one and it uses Membrane.Bin
+        """,
+        {:not_bin, module}
+      )
+
       {:not_bin, module}
     end
   end
