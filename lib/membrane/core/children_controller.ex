@@ -4,7 +4,7 @@ defmodule Membrane.Core.ChildrenController do
   use Membrane.Core.PlaybackRequestor
 
   alias Membrane.{Bin, Element, ParentError, Spec}
-  alias Membrane.Core.{Message, ParentState}
+  alias Membrane.Core.{Message, Parent}
   alias Membrane.Core.ChildrenController
   # TODO Link should be moved out of Pipeline
   alias Membrane.Core.Pipeline.Link
@@ -19,13 +19,13 @@ defmodule Membrane.Core.ChildrenController do
 
   @callback resolve_links([Link.t()], State.t()) :: [Link.resolved_t()]
 
-  @callback link_children([Link.resolved_t()], ParentState.t()) :: Type.try_t()
+  @callback link_children([Link.resolved_t()], Parent.State.t()) :: Type.try_t()
 
-  @callback exec_handle_spec_started([ChildrenController.child_name_t()], ParentState.t()) ::
-              {:ok, ParentState.t()}
+  @callback exec_handle_spec_started([ChildrenController.child_name_t()], Parent.State.t()) ::
+              {:ok, Parent.State.t()}
 
-  @spec handle_spec(module(), Spec.t(), ParentState.t()) ::
-          Type.stateful_try_t([child_name_t()], ParentState.t())
+  @spec handle_spec(module(), Spec.t(), Parent.State.t()) ::
+          Type.stateful_try_t([child_name_t()], Parent.State.t())
   def handle_spec(spec_controller_module, %{children: children_spec, links: links}, state) do
     debug("""
     Initializing spec
@@ -106,7 +106,7 @@ defmodule Membrane.Core.ChildrenController do
   def add_children(children, state) do
     children
     |> Bunch.Enum.try_reduce(state, fn {name, pid}, state ->
-      state |> ParentState.add_child(name, pid)
+      state |> Parent.State.add_child(name, pid)
     end)
   end
 

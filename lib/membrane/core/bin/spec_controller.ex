@@ -7,7 +7,7 @@ defmodule Membrane.Core.Bin.SpecController do
   alias Membrane.{Bin, ParentError}
 
   alias Membrane.Core.{
-    ParentState,
+    Parent,
     Message,
     Pad,
     PadController,
@@ -70,7 +70,7 @@ defmodule Membrane.Core.Bin.SpecController do
     with {:ok, state} <- links |> Bunch.Enum.try_reduce_while(state, &link/2),
          :ok <-
            state
-           |> ParentState.get_children()
+           |> Parent.State.get_children()
            |> Bunch.Enum.try_each(fn {_pid, pid} -> pid |> Element.handle_linking_finished() end),
          do: {:ok, state}
   end

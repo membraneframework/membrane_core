@@ -3,7 +3,7 @@ defmodule Membrane.Core.ParentAction do
   This module consists of common for bin and pipeline types and functions connected to actions.
   """
   alias Membrane.CallbackError
-  alias Membrane.Core.ParentState
+  alias Membrane.Core.Parent
   alias Membrane.Core.Message
   alias Membrane.Notification
   alias Membrane.Pipeline
@@ -40,7 +40,7 @@ defmodule Membrane.Core.ParentAction do
   @type t :: forward_action_t | spec_action_t | remove_child_action_t
 
   def handle_forward(elementname, message, state) do
-    with {:ok, pid} <- state |> ParentState.get_child_pid(elementname) do
+    with {:ok, pid} <- state |> Parent.State.get_child_pid(elementname) do
       send(pid, message)
       {:ok, state}
     else
@@ -54,7 +54,7 @@ defmodule Membrane.Core.ParentAction do
     with {:ok, pids} <-
            children
            |> Bunch.listify()
-           |> Bunch.Enum.try_map(&ParentState.get_child_pid(state, &1)) do
+           |> Bunch.Enum.try_map(&Parent.State.get_child_pid(state, &1)) do
       pids |> Enum.each(&Message.send(&1, :prepare_shutdown))
       :ok
     end

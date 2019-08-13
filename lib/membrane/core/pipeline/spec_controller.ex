@@ -7,7 +7,7 @@ defmodule Membrane.Core.Pipeline.SpecController do
   alias Membrane.ParentError
 
   alias Membrane.Core.{
-    ParentState,
+    Parent,
     Message,
     CallbackHandler
   }
@@ -25,10 +25,10 @@ defmodule Membrane.Core.Pipeline.SpecController do
     ~> {&1, state}
   end
 
-  @spec resolve_link(Link.Endpoint.t(), ParentState.t()) ::
+  @spec resolve_link(Link.Endpoint.t(), Parent.State.t()) ::
           Link.Endpoint.t() | {:error, reason :: any()}
   def resolve_link(%{element: element, pad_name: pad_name, id: id} = endpoint, state) do
-    with {:ok, pid} <- state |> ParentState.get_child_pid(element),
+    with {:ok, pid} <- state |> Parent.State.get_child_pid(element),
          {:ok, pad_ref} <- pid |> Message.call(:get_pad_ref, [pad_name, id]) do
       %{endpoint | pid: pid, pad_ref: pad_ref}
     else
@@ -56,7 +56,7 @@ defmodule Membrane.Core.Pipeline.SpecController do
     with :ok <- links |> Bunch.Enum.try_each(&Element.link/1),
          :ok <-
            state
-           |> ParentState.get_children()
+           |> Parent.State.get_children()
            |> Bunch.Enum.try_each(fn {_pid, pid} -> pid |> Element.handle_linking_finished() end),
          do: {:ok, state}
   end

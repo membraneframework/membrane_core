@@ -6,7 +6,7 @@ defmodule Membrane.Core.ParentMessageDispatcher do
 
   alias Membrane.Core.{
     ChildrenController,
-    ParentState,
+    Parent,
     PadModel,
     Playback,
     PlaybackHandler,
@@ -92,7 +92,7 @@ defmodule Membrane.Core.ParentMessageDispatcher do
   end
 
   def handle_message(Message.new(:notification, [from, notification]), state, handlers) do
-    with {:ok, _} <- state |> ParentState.get_child_pid(from) do
+    with {:ok, _} <- state |> Parent.State.get_child_pid(from) do
       CallbackHandler.exec_and_handle_callback(
         :handle_notification,
         handlers.action_handler,
@@ -106,7 +106,7 @@ defmodule Membrane.Core.ParentMessageDispatcher do
   end
 
   def handle_message(Message.new(:shutdown_ready, child), state, _) do
-    {{:ok, pid}, state} = ParentState.pop_child(state, child)
+    {{:ok, pid}, state} = Parent.State.pop_child(state, child)
     {Element.shutdown(pid), state}
   end
 
@@ -129,7 +129,7 @@ defmodule Membrane.Core.ParentMessageDispatcher do
 
   @impl PlaybackHandler
   def handle_playback_state(_old, new, state) do
-    children_pids = state |> ParentState.get_children() |> Map.values()
+    children_pids = state |> Parent.State.get_children() |> Map.values()
 
     children_pids
     |> Enum.each(fn pid ->

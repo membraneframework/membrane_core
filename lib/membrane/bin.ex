@@ -13,7 +13,7 @@ defmodule Membrane.Bin do
     PadController,
     PadSpecHandler,
     ChildrenController,
-    ParentState,
+    Parent,
     ParentAction,
     PadModel,
     PadsSpecs,
@@ -221,7 +221,7 @@ defmodule Membrane.Bin do
 
   @impl PlaybackHandler
   def handle_playback_state(_old, new, state) do
-    children_pids = state |> ParentState.get_children() |> Map.values()
+    children_pids = state |> Parent.State.get_children() |> Map.values()
 
     children_pids
     |> Enum.each(fn pid ->

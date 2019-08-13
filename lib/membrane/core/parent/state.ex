@@ -1,4 +1,4 @@
-defprotocol Membrane.Core.ParentState do
+defprotocol Membrane.Core.Parent.State do
   alias Membrane.Core.ChildrenController
 
   @type children_t :: %{ChildrenController.child_name_t() => pid}
@@ -19,7 +19,7 @@ defprotocol Membrane.Core.ParentState do
   def get_children(state)
 end
 
-defmodule Membrane.Core.ParentState.Default do
+defmodule Membrane.Core.Parent.State.Default do
   defmacro __using__(_) do
     quote location: :keep do
       def add_child(%{children: children} = state, child, pid) do

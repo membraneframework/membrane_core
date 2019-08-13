@@ -14,7 +14,7 @@ defmodule Membrane.Pipeline do
   alias Core.Message
   alias Core.Pipeline.SpecController
   alias Membrane.Core.ChildrenController
-  alias Membrane.Core.ParentState
+  alias Membrane.Core.Parent
   alias Membrane.Core.ParentAction
   alias Membrane.Core.ParentMessageDispatcher
   import Membrane.Helper.GenServer
@@ -258,7 +258,7 @@ defmodule Membrane.Pipeline do
 
   @impl PlaybackHandler
   def handle_playback_state(_old, new, state) do
-    children_pids = state |> ParentState.get_children() |> Map.values()
+    children_pids = state |> Parent.State.get_children() |> Map.values()
 
     children_pids
     |> Enum.each(&change_playback_state(&1, new))

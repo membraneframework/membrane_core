@@ -48,7 +48,7 @@ defmodule Membrane.Core.Bin.State do
     def get_controlling_pid(%ThisModule{controlling_pid: pid}), do: pid
   end
 
-  defimpl Membrane.Core.ParentState, for: __MODULE__ do
-    use Membrane.Core.ParentState.Default
+  defimpl Membrane.Core.Parent.State, for: __MODULE__ do
+    use Membrane.Core.Parent.State.Default
   end
 end
