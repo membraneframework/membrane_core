@@ -269,10 +269,10 @@ defmodule Membrane.Bin do
       |> Enum.reduce(
         {[], state},
         fn link, {links_acc, state_acc} ->
-          {from, state1} = link.from |> resolve_link(state_acc)
-          {to, state2} = link.to |> resolve_link(state1)
+          {from, state_acc} = link.from |> resolve_link(state_acc)
+          {to, state_acc} = link.to |> resolve_link(state_acc)
           new_link = %{link | from: from, to: to}
-          {[new_link | links_acc], state2}
+          {[new_link | links_acc], state_acc}
         end
       )
 
