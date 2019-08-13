@@ -17,7 +17,6 @@ defmodule Membrane.Core.ChildrenController do
   @type child_name_t :: Element.name_t() | Bin.name_t()
   @typep parsed_child_t :: %{name: child_name_t(), module: module, options: Keyword.t()}
 
-
   @callback resolve_links([Link.t()], State.t()) :: [Link.resolved_t()]
 
   @callback link_children([Link.resolved_t()], ParentState.t()) :: Type.try_t()
@@ -25,7 +24,8 @@ defmodule Membrane.Core.ChildrenController do
   @callback exec_handle_spec_started([ChildrenController.child_name_t()], ParentState.t()) ::
               {:ok, ParentState.t()}
 
-  @spec handle_spec(module(), Spec.t(), ParentState.t()) :: Type.stateful_try_t([child_name_t()], ParentState.t())
+  @spec handle_spec(module(), Spec.t(), ParentState.t()) ::
+          Type.stateful_try_t([child_name_t()], ParentState.t())
   def handle_spec(spec_controller_module, %{children: children_spec, links: links}, state) do
     debug("""
     Initializing spec
@@ -35,8 +35,7 @@ defmodule Membrane.Core.ChildrenController do
 
     parsed_children = children_spec |> parse_children()
 
-    {:ok, state} =
-      {parsed_children |> check_if_children_names_unique(state), state}
+    {:ok, state} = {parsed_children |> check_if_children_names_unique(state), state}
 
     children = parsed_children |> start_children()
     {:ok, state} = children |> add_children(state)

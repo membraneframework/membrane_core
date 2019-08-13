@@ -25,7 +25,8 @@ defmodule Membrane.Core.Pipeline.SpecController do
     ~> {&1, state}
   end
 
-  @spec resolve_link(Link.Endpoint.t(), ParentState.t()) :: Link.Endpoint.t() | {:error, reason :: any()}
+  @spec resolve_link(Link.Endpoint.t(), ParentState.t()) ::
+          Link.Endpoint.t() | {:error, reason :: any()}
   def resolve_link(%{element: element, pad_name: pad_name, id: id} = endpoint, state) do
     with {:ok, pid} <- state |> ParentState.get_child_pid(element),
          {:ok, pad_ref} <- pid |> Message.call(:get_pad_ref, [pad_name, id]) do

@@ -55,7 +55,8 @@ defmodule Membrane.Core.Bin.SpecController do
   end
 
   # This is the case of normal endpoint linking (not bin api)
-  defp resolve_link(endpoint, state), do: {Membrane.Core.Pipeline.SpecController.resolve_link(endpoint, state), state}
+  defp resolve_link(endpoint, state),
+    do: {Membrane.Core.Pipeline.SpecController.resolve_link(endpoint, state), state}
 
   # Links children based on given specification and map for mapping children
   # names into PIDs.
