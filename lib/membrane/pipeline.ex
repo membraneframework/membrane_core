@@ -163,12 +163,7 @@ defmodule Membrane.Pipeline do
     do: do_start(:start, module, pipeline_options, process_options)
 
   defp do_start(method, module, pipeline_options, process_options) do
-    with :ok <-
-           (if module |> pipeline? do
-              :ok
-            else
-              :not_pipeline
-            end) do
+    if module |> pipeline? do
       debug("""
       Pipeline start link: module: #{inspect(module)},
       pipeline options: #{inspect(pipeline_options)},
@@ -177,14 +172,13 @@ defmodule Membrane.Pipeline do
 
       apply(GenServer, method, [__MODULE__, {module, pipeline_options}, process_options])
     else
-      :not_pipeline ->
-        warn_error(
-          """
-          Cannot start pipeline, passed module #{inspect(module)} is not a Membrane Pipeline.
-          Make sure that given module is the right one and it uses Membrane.Pipeline
-          """,
-          {:not_pipeline, module}
-        )
+      warn_error(
+        """
+        Cannot start pipeline, passed module #{inspect(module)} is not a Membrane Pipeline.
+        Make sure that given module is the right one and it uses Membrane.Pipeline
+        """,
+        {:not_pipeline, module}
+      )
     end
   end
 

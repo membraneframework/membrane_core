@@ -155,16 +155,10 @@ defmodule Membrane.Bin do
     do: do_start(:start_link, my_name, module, bin_options, process_options)
 
   defp do_start(method, my_name, module, bin_options, process_options) do
-    with :ok <-
-           (if module |> bin? do
-              :ok
-            else
-              :not_bin
-            end) do
+    if module |> bin? do
       apply(GenServer, method, [__MODULE__, {my_name, module, bin_options}, process_options])
     else
-      :not_bin ->
-        {:not_bin, module}
+      {:not_bin, module}
     end
   end
 
