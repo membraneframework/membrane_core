@@ -94,33 +94,27 @@ defmodule Membrane.Core.Element.ActionHandler do
               :handle_caps,
               :handle_event,
               :handle_process_list,
-              :handle_start_of_stream,
               :handle_end_of_stream
             ] do
-    {action, dir} =
+    dir =
       case cb do
-        :handle_process_list ->
-          {:buffer, :output}
-
-        :handle_caps ->
-          {:caps, :output}
-
-        ev_cb when ev_cb in [:handle_event, :handle_end_of_stream] ->
-          {:event, Pad.opposite_direction(params.direction)}
-      end
-
-    result_data =
-      if data == :end_of_stream do
-        %Event.EndOfStream{}
-      else
-        data
+        :handle_event -> Pad.opposite_direction(params.direction)
+        _ -> :output
       end
 
     pads = state |> PadModel.filter_data(%{direction: dir}) |> Map.keys()
 
     pads
     |> Bunch.Enum.try_reduce(state, fn pad, st ->
-      do_handle_action({action, {pad, result_data}}, cb, params, st)
+      action =
+        case cb do
+          :handle_event -> {:event, {pad, data}}
+          :handle_process_list -> {:buffer, {pad, data}}
+          :handle_caps -> {:caps, {pad, data}}
+          :handle_end_of_stream -> {:end_of_stream, pad}
+        end
+
+      do_handle_action(action, cb, params, st)
     end)
   end
 
