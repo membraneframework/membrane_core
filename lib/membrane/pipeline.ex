@@ -8,7 +8,7 @@ defmodule Membrane.Pipeline do
   and process it in different ways.
   """
 
-  alias __MODULE__.{Link, State}
+  alias Membrane.Core.Pipeline.{Link, State}
   alias Membrane.{CallbackError, Core, Element, Notification, PipelineError, Spec}
   alias Core.Pad
   alias Core.{Message, Playback}

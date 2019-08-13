@@ -1,4 +1,4 @@
-defmodule Membrane.Pipeline.Link do
+defmodule Membrane.Core.Pipeline.Link do
   @moduledoc false
 
   alias Membrane.Core.Pad

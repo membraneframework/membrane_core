@@ -5,7 +5,7 @@ defmodule Membrane.Core.Bin.SpecController do
 
   alias Membrane.{Spec, Bin, BinError}
   # TODO Link should be moved out of Pipeline
-  alias Membrane.Pipeline.Link
+  alias Membrane.Core.Pipeline.Link
 
   alias Membrane.Core.{
     ChildrenController,
