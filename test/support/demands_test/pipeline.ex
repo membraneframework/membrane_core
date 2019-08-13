@@ -1,6 +1,7 @@
 defmodule Membrane.Support.DemandsTest.Pipeline do
   @moduledoc false
   use Membrane.Pipeline
+  alias Membrane.Spec
 
   @impl true
   def handle_init(opts) do
@@ -15,7 +16,7 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
       {:filter, :output} => {:sink, :input, buffer: [preferred_size: 50]}
     }
 
-    spec = %Pipeline.Spec{
+    spec = %Spec{
       children: children,
       links: links
     }

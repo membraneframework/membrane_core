@@ -1,7 +1,8 @@
 defmodule Membrane.PipelineTest do
   @module Membrane.Pipeline
 
-  alias Membrane.Pipeline.{Spec, State}
+  alias Membrane.Pipeline.State
+  alias Membrane.Spec
   use ExUnit.Case
 
   def state(_ctx) do

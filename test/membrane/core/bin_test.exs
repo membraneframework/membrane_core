@@ -2,6 +2,7 @@ defmodule Membrane.Core.BinTest do
   use ExUnit.Case, async: true
 
   alias Membrane.Testing
+  alias Membrane.Spec
 
   import Membrane.Testing.Assertions
 
@@ -28,7 +29,7 @@ defmodule Membrane.Core.BinTest do
         {:filter2, :output} => {this_bin(), :output, buffer: [preferred_size: 10]}
       }
 
-      spec = %Membrane.Bin.Spec{
+      spec = %Spec{
         children: children,
         links: links
       }
@@ -62,7 +63,7 @@ defmodule Membrane.Core.BinTest do
         {:filter2, :output} => {this_bin(), :output, buffer: [preferred_size: 10]}
       }
 
-      spec = %Membrane.Bin.Spec{
+      spec = %Spec{
         children: children,
         links: links
       }
@@ -95,7 +96,7 @@ defmodule Membrane.Core.BinTest do
         {:filter, :output} => {:sink, :input, buffer: [preferred_size: 10]}
       }
 
-      spec = %Membrane.Bin.Spec{
+      spec = %Spec{
         children: children,
         links: links
       }
@@ -123,7 +124,7 @@ defmodule Membrane.Core.BinTest do
         {:source, :output} => {:sink, :input, buffer: [preferred_size: 10]}
       }
 
-      spec = %Membrane.Bin.Spec{
+      spec = %Spec{
         children: children,
         links: links
       }

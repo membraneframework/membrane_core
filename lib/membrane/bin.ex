@@ -8,7 +8,7 @@ defmodule Membrane.Bin do
 
   import Membrane.Helper.GenServer
 
-  alias Membrane.Element
+  alias Membrane.{Element, Spec}
 
   alias Membrane.Core.{
     PadController,
@@ -24,7 +24,6 @@ defmodule Membrane.Bin do
   }
 
   alias Membrane.Pipeline.Link
-  alias Membrane.Bin
   alias Membrane.Core.Bin.{State, LinkingBuffer}
   alias Membrane.{CallbackError, Element, Notification, BinError}
   alias Bunch.Type
@@ -34,30 +33,6 @@ defmodule Membrane.Bin do
   require Pad
   require PadsSpecs
   require PadModel
-
-  defmodule Spec do
-    @moduledoc """
-    This module serves the same purpose as `Membrane.Pipeline.Spec`.
-
-    ## Bin links
-
-    For bins boundries there are special links allowed. User should define links
-    between bin's input and first child's input (input-input type) and first
-    child's output and bin output (output-output type). In this case, callback module
-    creator should name endpoint of the bin with macro `this_bin()`
-
-    Sample definition:
-
-    ```
-    %{
-      {this_bin(), :input} => {:filter1, :input, buffer: [preferred_size: 10]},
-      {:filter1, :output} => {:filter2, :input, buffer: [preferred_size: 10]},
-      {:filter2, :output} => {this_bin(), :output, buffer: [preferred_size: 10]}
-    }
-    ```
-    """
-    use Membrane.Core.ParentSpec
-  end
 
   @typedoc """
   Defines options that can be passed to `start_link/3` and received
@@ -640,7 +615,7 @@ defmodule Membrane.Bin do
       defp this_bin, do: unquote(marker)
 
       @impl true
-      def handle_init(_options), do: {{:ok, %Bin.Spec{}}, %{}}
+      def handle_init(_options), do: {{:ok, %Membrane.Spec{}}, %{}}
 
       @impl true
       def handle_stopped_to_prepared(state), do: {:ok, state}

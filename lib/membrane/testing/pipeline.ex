@@ -210,7 +210,7 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   def handle_init(%Options{module: nil} = options) do
-    spec = %Membrane.Pipeline.Spec{
+    spec = %Membrane.Spec{
       children: options.elements,
       links: options.links
     }

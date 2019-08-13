@@ -8,8 +8,8 @@ defmodule Membrane.Pipeline do
   and process it in different ways.
   """
 
-  alias __MODULE__.{Link, State, Spec}
-  alias Membrane.{CallbackError, Core, Element, Notification, PipelineError}
+  alias __MODULE__.{Link, State}
+  alias Membrane.{CallbackError, Core, Element, Notification, PipelineError, Spec}
   alias Core.Pad
   alias Core.{Message, Playback}
   alias Bunch.Type
@@ -26,59 +26,6 @@ defmodule Membrane.Pipeline do
   use Membrane.Core.CallbackHandler
   use GenServer
   use Membrane.Core.PlaybackHandler
-
-  defmodule Spec do
-    @moduledoc """
-    Structure representing topology of a pipeline.
-
-    It can be returned from
-    `c:Membrane.Pipeline.handle_init/1` callback upon pipeline's initialization.
-    It will define a topology of children and links that build the pipeline.
-
-    ## Children
-
-    Children that should be spawned when the pipeline starts can be defined
-    with the `:children` field.
-
-    You have to set it to a keyword list, where keys are valid element names (`t:Membrane.ParentUtils.child_name_t/0`)
-    that are unique within this pipeline and values are either element's module or
-    struct of that module.
-
-    Sample definitions:
-
-    ```
-    [
-      first_element: %Element.With.Options.Struct{option_a: 42},
-      some_element: Element.Without.Options,
-      other_element: Element.Using.Default.Options
-    ]
-    ```
-
-    ## Links
-
-    Links that should be made when the pipeline starts, and children are spawned
-    can be defined with the `:links` field.
-
-    You have to set it to a map, where both keys and values are tuples of
-    `{child_name, pad_name}`. Entries can also have additional options passed by
-    keyword list at the end of a tuple (See `t:endpoint_options_t/0`).
-    Children names have to match names given to the `:children` field.
-
-    Once it's done, pipeline will ensure that links are present.
-
-    Sample definition:
-
-    ```
-    %{
-      {:source_a, :output} => {:converter, :input, buffer: [preferred_size: 20_000]},
-      {:converter, :output} => {:mixer, :input_a},
-      {:source_b, :output} => {:mixer, :input_b, pad: [mute: true]}
-      {:mixer, :output} => {:sink, :input, buffer: [warn_size: 264_000, fail_size: 300_000]},
-    }
-    ```
-    """
-    use Membrane.Core.ParentSpec
-  end
 
   @typedoc """
   Defines options that can be passed to `start/3` / `start_link/3` and received
@@ -627,7 +574,7 @@ defmodule Membrane.Pipeline do
       def membrane_pipeline?, do: true
 
       @impl true
-      def handle_init(_options), do: {{:ok, %Pipeline.Spec{}}, %{}}
+      def handle_init(_options), do: {{:ok, %Membrane.Spec{}}, %{}}
 
       @impl true
       def handle_stopped_to_prepared(state), do: {:ok, state}

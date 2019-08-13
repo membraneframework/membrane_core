@@ -16,6 +16,8 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
   """
   use Membrane.Pipeline
 
+  alias Membrane.Spec
+
   def remove_child(pid, child_name) do
     send(pid, {:remove_child, child_name})
   end
@@ -39,7 +41,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
       }
       |> maybe_add_extra_source_link(opts)
 
-    spec = %Pipeline.Spec{
+    spec = %Spec{
       children: children,
       links: links
     }
