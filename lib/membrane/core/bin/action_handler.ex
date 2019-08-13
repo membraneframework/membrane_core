@@ -14,19 +14,23 @@ defmodule Membrane.Core.Bin.ActionHandler do
     ParentAction.handle_forward(elementname, message, state)
   end
 
+  @impl CallbackHandler
   def handle_action({:spec, spec = %Spec{}}, _cb, _params, state) do
     with {{:ok, _children}, state} <- Core.Bin.SpecController.handle_spec(spec, state),
          do: {:ok, state}
   end
 
+  @impl CallbackHandler
   def handle_action({:remove_child, children}, _cb, _params, state) do
     ParentAction.handle_remove_child(children, state)
   end
 
+  @impl CallbackHandler
   def handle_action({:notify, notification}, _cb, _params, state) do
     send_notification(notification, state)
   end
 
+  @impl CallbackHandler
   def handle_action(action, callback, _params, state) do
     ParentAction.handle_unknown_action(action, callback, state.module)
   end
