@@ -132,9 +132,13 @@ defmodule Membrane.Core.Pad do
                   (term |> is_tuple and term |> tuple_size == 3 and term |> elem(0) == :dynamic and
                      term |> elem(1) |> is_atom and term |> elem(2) |> is_integer)
 
+  defguardp is_public_name(term) when is_atom(term)
+
+  defguardp is_private_name(term)
+            when tuple_size(term) == 2 and elem(term, 0) == :private and is_atom(elem(term, 1))
+
   defguard is_pad_name(term)
-           when is_atom(term) or
-                  (tuple_size(term) == 2 and elem(term, 0) == :private and is_atom(elem(term, 1)))
+           when is_public_name(term) or is_private_name(term)
 
   defguard is_availability(term) when term in @availability_t
 
@@ -164,8 +168,27 @@ defmodule Membrane.Core.Pad do
         file: __ENV__.file,
         description: "#{inspect(name)} is not a proper pad name. Use public names only."
     end
+
+  def get_corresponding_bin_pad({:dynamic, name, id}),
+    do: {:dynamic, get_corresponding_bin_name(name), id}
+
+  def get_corresponding_bin_pad(name), do: get_corresponding_bin_name(name)
+
+  def create_private_name(name) do
+    assert_public_name!(name)
+    get_corresponding_bin_name(name)
   end
 
-  defp public_name?(name) when is_atom(name), do: true
-  defp public_name?(_), do: false
+  defp get_corresponding_bin_name({:private, name}) when is_public_name(name), do: name
+  defp get_corresponding_bin_name(name) when is_public_name(name), do: {:private, name}
+
+  def assert_public_name!(name) when is_public_name(name) do
+    :ok
+  end
+
+  def assert_public_name!(name) do
+    raise CompileError,
+      file: __ENV__.file,
+      description: "#{inspect(name)} is not a proper pad name. Use public names only."
+  end
 end

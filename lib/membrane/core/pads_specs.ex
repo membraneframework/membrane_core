@@ -38,11 +38,16 @@ defmodule Membrane.Core.PadsSpecs do
   @spec def_bin_pad_docs(Pad.direction_t()) :: String.t()
   def def_bin_pad_docs(direction), do: documenation_string(direction, true)
 
+  def def_bin_pad(pad_name, direction, raw_specs) do
+    def_pad(pad_name, direction, raw_specs, true)
+  end
+
   @doc """
   Returns AST inserted into element's module defining a pad
   """
   @spec def_pad(Pad.name_t(), Pad.direction_t(), Macro.t()) :: Macro.t()
-  def def_pad(pad_name, direction, raw_specs) do
+  def def_pad(pad_name, direction, raw_specs, bin? \\ false) do
+    Pad.assert_public_name!(pad_name)
     Code.ensure_loaded(Caps.Matcher)
 
     specs =
@@ -54,7 +59,10 @@ defmodule Membrane.Core.PadsSpecs do
 
     {escaped_pad_opts, pad_opts_typedef} = OptionsSpecs.def_pad_options(pad_name, specs[:options])
 
-    specs = specs |> Keyword.put(:options, escaped_pad_opts)
+    specs =
+      specs
+      |> Keyword.put(:bin?, bin?)
+      |> Keyword.put(:options, escaped_pad_opts)
 
     quote do
       if Module.get_attribute(__MODULE__, :membrane_pads) == nil do
@@ -158,9 +166,10 @@ defmodule Membrane.Core.PadsSpecs do
                 availability: [in: [:always, :on_request], default: :always],
                 caps: [validate: &Caps.Matcher.validate_specs/1],
                 mode: [in: [:pull, :push], default: :pull],
+                bin?: [validate: &is_boolean/1, default: false],
                 demand_unit: [
                   in: [:buffers, :bytes],
-                  require_if: &(&1.mode == :pull and direction == :input)
+                  require_if: &(&1.mode == :pull and (&1.bin? or direction == :input))
                 ],
                 options: [default: nil]
               ) do

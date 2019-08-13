@@ -3,7 +3,7 @@ defmodule Membrane.Core.PadController do
   # Module handling linking and unlinking pads.
 
   alias Membrane.{Core, Event, LinkError}
-  alias Core.{CallbackHandler, Message, InputBuffer, Pad, PadModel}
+  alias Core.{CallbackHandler, Message, InputBuffer, Pad, PadModel, PadSpecHandler}
   alias Core.Element.{ActionHandler, EventController, State, PlaybackBuffer}
   alias Membrane.Element.{CallbackContext}
   require CallbackContext.{PadAdded, PadRemoved}
@@ -186,6 +186,7 @@ defmodule Membrane.Core.PadController do
   defp parse_link_props!(props, pad_name, state) do
     {_, pad} =
       state.module.membrane_pads()
+      |> PadSpecHandler.add_bin_pads()
       |> Enum.find(fn {k, _} -> k == pad_name end)
 
     opts_spec = pad.options

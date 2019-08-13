@@ -35,8 +35,6 @@ defmodule Membrane.Bin do
   require PadsSpecs
   require PadModel
 
-  @private_input_pad_spec_keys [:demand_unit]
-
   defmodule Spec do
     @moduledoc """
     This module serves the same purpose as `Membrane.Pipeline.Spec`.
@@ -154,80 +152,12 @@ defmodule Membrane.Bin do
 
   @doc PadsSpecs.def_bin_pad_docs(:input)
   defmacro def_input_pad(name, spec) do
-    Pad.assert_public_name!(name)
-
-    input_spec = spec
-    output_spec = Keyword.drop(spec, @private_input_pad_spec_keys)
-
-    input = PadsSpecs.def_pad(name, :input, input_spec)
-    output = PadsSpecs.def_pad({:private, name}, :output, output_spec)
-
-    quote do
-      unquote(input)
-      unquote(output)
-
-      if Module.get_attribute(__MODULE__, :bin_pads_pairs) == nil do
-        Module.register_attribute(__MODULE__, :bin_pads_pairs, accumulate: true)
-        @before_compile {unquote(__MODULE__), :generate_bin_pairs}
-      end
-
-      @bin_pads_pairs {unquote(name), {:private, unquote(name)}}
-    end
+    PadsSpecs.def_bin_pad(name, :input, spec)
   end
 
   @doc PadsSpecs.def_bin_pad_docs(:output)
   defmacro def_output_pad(name, spec) do
-    Pad.assert_public_name!(name)
-
-    output_spec = Keyword.drop(spec, @private_input_pad_spec_keys)
-    input_spec = spec
-
-    output = PadsSpecs.def_pad(name, :output, output_spec)
-    input = PadsSpecs.def_pad({:private, name}, :input, input_spec)
-
-    quote do
-      unquote(output)
-      unquote(input)
-
-      if Module.get_attribute(__MODULE__, :bin_pads_pairs) == nil do
-        Module.register_attribute(__MODULE__, :bin_pads_pairs, accumulate: true)
-        @before_compile {unquote(__MODULE__), :generate_bin_pairs}
-      end
-
-      @bin_pads_pairs {{:private, unquote(name)}, unquote(name)}
-    end
-  end
-
-  @doc """
-  Generates `get_corresponding_private_pad/1` function, along with docs and typespecs.
-  """
-  defmacro generate_bin_pairs(env) do
-    pad_pairs = Module.get_attribute(env.module, :bin_pads_pairs)
-
-    [
-      quote do
-        @doc """
-        This function allows to fetch a private pad that a public one forwards messages to.
-        """
-      end
-    ] ++
-      for {p1, p2} <- pad_pairs do
-        quote do
-          def get_corresponding_private_pad({:dynamic, unquote(p1), id}),
-            do: {:ok, {:dynamic, unquote(p2), id}}
-
-          def get_corresponding_private_pad({:dynamic, unquote(p2), id}),
-            do: {:ok, {:dynamic, unquote(p1), id}}
-
-          def get_corresponding_private_pad(unquote(p1)), do: {:ok, unquote(p2)}
-          def get_corresponding_private_pad(unquote(p2)), do: {:ok, unquote(p1)}
-        end
-      end ++
-      [
-        quote do
-          def get_corresponding_private_pad(_), do: {:error, :unknown_pad}
-        end
-      ]
+    PadsSpecs.def_bin_pad(name, :output, spec)
   end
 
   @doc """
@@ -366,11 +296,12 @@ defmodule Membrane.Bin do
 
   defp resolve_link(
          %{element: this_bin_marker(), pad_name: pad_name, id: id} = endpoint,
-         %{module: bin_mod, name: name} = state
+         %{name: name} = state
        ) do
-    with {:ok, private_bin} <- bin_mod.get_corresponding_private_pad(pad_name),
-         {{:ok, pad_ref}, state} <- PadController.get_pad_ref(private_bin, id, state) do
-      new_endpoint = %{endpoint | pid: self(), pad_ref: pad_ref, pad_name: private_bin}
+    private_pad = Pad.get_corresponding_bin_pad(pad_name)
+
+    with {{:ok, private_pad_ref}, state} <- PadController.get_pad_ref(private_pad, id, state) do
+      new_endpoint = %{endpoint | pid: self(), pad_ref: private_pad_ref, pad_name: private_pad}
       {new_endpoint, state}
     else
       {:error, :unknown_pad} ->
@@ -602,11 +533,11 @@ defmodule Membrane.Bin do
 
   def handle_info(Message.new(type, _args, for_pad: pad) = msg, state)
       when type in [:demand, :caps, :buffer, :event] do
-    %{module: module, linking_buffer: buf} = state
+    %{linking_buffer: buf} = state
 
-    {:ok, outgoing_pad} =
+    outgoing_pad =
       pad
-      |> module.get_corresponding_private_pad()
+      |> Pad.get_corresponding_bin_pad()
 
     new_buf = LinkingBuffer.store_or_send(buf, msg, outgoing_pad, state)
 

@@ -11,14 +11,21 @@ defmodule Membrane.Core.PadSpecHandler do
   use Bunch
   use Core.Element.Log
 
+  @private_input_pad_spec_keys [:demand_unit]
+
   @doc """
   Initializes pads info basing on element's pads specifications.
   """
-  @spec init_pads(Element.State.t() | Bin.State.t()) :: Element.State.t() | Bin.State.t()
+  @spec init_pads(Core.Element.State.t() | Core.Bin.State.t()) ::
+          Element.State.t() | Bin.State.t()
   def init_pads(%{module: module} = state) do
     pads = %{
       data: %{},
-      info: module.membrane_pads() |> Bunch.KVList.map_values(&init_pad_info/1) |> Map.new(),
+      info:
+        module.membrane_pads()
+        |> add_bin_pads()
+        |> Bunch.KVList.map_values(&init_pad_info/1)
+        |> Map.new(),
       dynamic_currently_linking: []
     }
 
@@ -37,4 +44,32 @@ defmodule Membrane.Core.PadSpecHandler do
       end
     )
   end
+
+  def add_bin_pads(module_pads) do
+    Enum.flat_map(module_pads, &create_private_pad/1)
+  end
+
+  defp create_private_pad({_name, %{bin?: false}} = pad) do
+    [pad]
+  end
+
+  defp create_private_pad({name, spec}) do
+    priv_bin_name = Pad.create_private_name(name)
+
+    public_spec = filter_out_inadequate_opts(spec)
+
+    priv_spec =
+      filter_out_inadequate_opts(%{spec | direction: opposite_direction(spec.direction)})
+
+    [{name, public_spec}, {priv_bin_name, priv_spec}]
+  end
+
+  defp filter_out_inadequate_opts(%{direction: :input} = spec), do: spec
+
+  defp filter_out_inadequate_opts(%{direction: :output} = spec),
+    do: Map.drop(spec, @private_input_pad_spec_keys)
+
+  # TODO to be replaced with Pad.opposite_direction/1 once merged to master!
+  defp opposite_direction(:input), do: :output
+  defp opposite_direction(:output), do: :input
 end
