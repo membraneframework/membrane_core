@@ -1,4 +1,4 @@
-defmodule Membrane.Core.ParentUtils do
+defmodule Membrane.Core.ChildrenController do
   use Bunch
   use Membrane.Log, tags: :core
 
@@ -58,7 +58,7 @@ defmodule Membrane.Core.ParentUtils do
     children |> Enum.map(&start_child/1)
   end
 
-  @spec add_children([ParentUtils.parsed_child_t()], Bin.State.t() | Pipeline.State.t()) ::
+  @spec add_children([ChildrenController.parsed_child_t()], Bin.State.t() | Pipeline.State.t()) ::
           Type.stateful_try_t(State.t())
   def add_children(children, state) do
     children

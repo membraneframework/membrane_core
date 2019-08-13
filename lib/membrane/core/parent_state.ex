@@ -1,18 +1,18 @@
 defprotocol Membrane.Core.ParentState do
-  alias Membrane.Core.ParentUtils
+  alias Membrane.Core.ChildrenController
 
-  @type children_t :: %{ParentUtils.child_name_t() => pid}
+  @type children_t :: %{ChildrenController.child_name_t() => pid}
 
-  @spec add_child(t, ParentUtils.child_name_t(), pid) :: Type.stateful_try_t(t)
+  @spec add_child(t, ChildrenController.child_name_t(), pid) :: Type.stateful_try_t(t)
   def add_child(state, child, pid)
 
-  @spec get_child_pid(t, ParentUtils.child_name_t()) :: Type.try_t(pid)
+  @spec get_child_pid(t, ChildrenController.child_name_t()) :: Type.try_t(pid)
   def get_child_pid(state, child)
 
-  @spec pop_child(t, ParentUtils.child_name_t()) :: Type.stateful_try_t(pid, t)
+  @spec pop_child(t, ChildrenController.child_name_t()) :: Type.stateful_try_t(pid, t)
   def pop_child(state, child)
 
-  @spec get_children_names(t) :: [ParentUtils.child_name_t()]
+  @spec get_children_names(t) :: [ChildrenController.child_name_t()]
   def get_children_names(state)
 
   @spec get_children(t) :: children_t

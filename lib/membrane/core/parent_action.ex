@@ -8,14 +8,14 @@ defmodule Membrane.Core.ParentAction do
   alias Membrane.Notification
   alias Membrane.Pipeline
   alias Membrane.Bin
-  alias Membrane.Core.ParentUtils
+  alias Membrane.Core.ChildrenController
 
   use Bunch
 
   @typedoc """
   Action that sends a message to element identified by name.
   """
-  @type forward_action_t :: {:forward, {ParentUtils.child_name_t(), Notification.t()}}
+  @type forward_action_t :: {:forward, {ChildrenController.child_name_t(), Notification.t()}}
 
   @typedoc """
   Action that instantiates elements and links them according to `Membrane.Core.ParentSpec`.
@@ -29,7 +29,7 @@ defmodule Membrane.Core.ParentAction do
   Action that stops, unlinks and removes specified child/children from their parent.
   """
   @type remove_child_action_t ::
-          {:remove_child, ParentUtils.child_name_t() | [ParentUtils.child_name_t()]}
+          {:remove_child, ChildrenController.child_name_t() | [ChildrenController.child_name_t()]}
 
   @typedoc """
   Type describing actions that can be returned from parent callbacks.

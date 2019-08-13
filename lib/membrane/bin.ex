@@ -13,7 +13,7 @@ defmodule Membrane.Bin do
   alias Membrane.Core.{
     PadController,
     PadSpecHandler,
-    ParentUtils,
+    ChildrenController,
     ParentState,
     ParentAction,
     PadModel,
@@ -89,7 +89,7 @@ defmodule Membrane.Bin do
   """
   @callback handle_notification(
               notification :: Notification.t(),
-              element :: ParentUtils.child_name_t(),
+              element :: ChildrenController.child_name_t(),
               state :: State.internal_state_t()
             ) :: callback_return_t
 
@@ -109,7 +109,7 @@ defmodule Membrane.Bin do
   `t:Membrane.Core.ParentAction.spec_action_t/0` action.
   """
   @callback handle_spec_started(
-              elements :: [ParentUtils.child_name_t()],
+              elements :: [ChildrenController.child_name_t()],
               state :: State.internal_state_t()
             ) ::
               callback_return_t
@@ -225,17 +225,19 @@ defmodule Membrane.Bin do
     links: #{inspect(links)}
     """)
 
-    parsed_children = children_spec |> ParentUtils.parse_children()
+    parsed_children = children_spec |> ChildrenController.parse_children()
 
-    {:ok, state} = {parsed_children |> ParentUtils.check_if_children_names_unique(state), state}
-    children = parsed_children |> ParentUtils.start_children()
-    {:ok, state} = children |> ParentUtils.add_children(state)
+    {:ok, state} =
+      {parsed_children |> ChildrenController.check_if_children_names_unique(state), state}
+
+    children = parsed_children |> ChildrenController.start_children()
+    {:ok, state} = children |> ChildrenController.add_children(state)
 
     {{:ok, links}, state} = {links |> parse_links, state}
     {links, state} = links |> resolve_links(state)
     {:ok, state} = links |> link_children(state)
     {children_names, children_pids} = children |> Enum.unzip()
-    {:ok, state} = {children_pids |> ParentUtils.set_children_watcher(), state}
+    {:ok, state} = {children_pids |> ChildrenController.set_children_watcher(), state}
     {:ok, state} = exec_handle_spec_started(children_names, state)
 
     children_pids
