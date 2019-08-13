@@ -146,7 +146,7 @@ defmodule Membrane.PipelineSpec do
 
     it "should send a message to initialize children asynchronously" do
       described_module().init({module(), options()})
-      assert_received Message.new(:pipeline_spec, _)
+      assert_received Message.new(:handle_spec, _)
     end
 
     it "should call pipeline's handle_init" do
@@ -177,7 +177,7 @@ defmodule Membrane.PipelineSpec do
       let :init_result, do: TrivialPipeline.handle_init(nil)
       let :spec, do: init_result() |> elem(0) |> elem(1)
       let :internal_state, do: init_result() |> elem(1)
-      let :message, do: Message.new(:pipeline_spec, spec())
+      let :message, do: Message.new(:handle_spec, spec())
       let :links_number, do: length(spec().links |> Map.keys())
 
       it "should return :noreply response" do

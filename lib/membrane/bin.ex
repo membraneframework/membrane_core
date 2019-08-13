@@ -19,7 +19,7 @@ defmodule Membrane.Bin do
     PadsSpecs,
     Pad,
     Message,
-    Playback
+    ParentMessageDispatcher
   }
 
   alias Membrane.Core.Bin.{State, LinkingBuffer, SpecController}
@@ -200,7 +200,7 @@ defmodule Membrane.Bin do
         }
         |> PadSpecHandler.init_pads()
 
-      Message.self(:bin_spec, spec)
+      Message.self(:handle_spec, spec)
       {:ok, state}
     else
       {:error, reason} ->
@@ -241,92 +241,6 @@ defmodule Membrane.Bin do
   def handle_playback_state_changed(_old, _new, state), do: {:ok, state}
 
   @impl GenServer
-  def handle_info(
-        Message.new(:playback_state_changed, [_pid, _new_playback_state]),
-        %State{pending_pids: pending_pids} = state
-      )
-      when pending_pids == %MapSet{} do
-    {:ok, state} |> noreply
-  end
-
-  def handle_info(Message.new(:bin_spec, spec), state) do
-    with {{:ok, _children}, state} <-
-           SpecController |> ChildrenController.handle_spec(spec, state) do
-      {:ok, state}
-    end
-    |> noreply(state)
-  end
-
-  def handle_info(
-        Message.new(:playback_state_changed, [_pid, new_playback_state]),
-        %State{playback: %Playback{pending_state: pending_playback_state}} = state
-      )
-      when new_playback_state != pending_playback_state do
-    {:ok, state} |> noreply
-  end
-
-  def handle_info(
-        Message.new(:playback_state_changed, [pid, new_playback_state]),
-        %State{playback: %Playback{state: current_playback_state}, pending_pids: pending_pids} =
-          state
-      ) do
-    new_pending_pids = pending_pids |> MapSet.delete(pid)
-    new_state = %{state | pending_pids: new_pending_pids}
-
-    if new_pending_pids != pending_pids and new_pending_pids |> Enum.empty?() do
-      callback = PlaybackHandler.state_change_callback(current_playback_state, new_playback_state)
-
-      CallbackHandler.exec_and_handle_callback(callback, ActionHandler, [], new_state)
-      ~>> ({:ok, new_state} -> PlaybackHandler.continue_playback_change(__MODULE__, new_state))
-    else
-      {:ok, new_state}
-    end
-    |> noreply(new_state)
-  end
-
-  def handle_info(Message.new(:change_playback_state, new_state), state) do
-    PlaybackHandler.change_playback_state(new_state, __MODULE__, state) |> noreply(state)
-  end
-
-  def handle_info(Message.new(:stop_and_terminate), state) do
-    case state.playback.state do
-      :stopped ->
-        {:stop, :normal, state}
-
-      _ ->
-        state = %{state | terminating?: true}
-
-        PlaybackHandler.change_and_lock_playback_state(:stopped, __MODULE__, state)
-        |> noreply(state)
-    end
-  end
-
-  def handle_info(Message.new(:notification, [from, notification]), state) do
-    with {:ok, _} <- state |> ParentState.get_child_pid(from) do
-      CallbackHandler.exec_and_handle_callback(
-        :handle_notification,
-        ActionHandler,
-        [notification, from],
-        state
-      )
-    end
-    |> noreply(state)
-  end
-
-  def handle_info(Message.new(:shutdown_ready, child), state) do
-    {{:ok, pid}, state} = ParentState.pop_child(state, child)
-    {Element.shutdown(pid), state}
-  end
-
-  def handle_info(Message.new(:demand_unit, [demand_unit, pad_ref]), state) do
-    PadModel.assert_data!(state, pad_ref, %{direction: :output})
-
-    state
-    |> PadModel.set_data!(pad_ref, [:other_demand_unit], demand_unit)
-    ~> {:ok, &1}
-    |> noreply(state)
-  end
-
   def handle_info(Message.new(type, _args, for_pad: pad) = msg, state)
       when type in [:demand, :caps, :buffer, :event] do
     %{linking_buffer: buf} = state
@@ -341,7 +255,11 @@ defmodule Membrane.Bin do
   end
 
   def handle_info(message, state) do
-    CallbackHandler.exec_and_handle_callback(:handle_other, __MODULE__, [message], state)
+    ParentMessageDispatcher.handle_message(message, state, %{
+      action_handler: ActionHandler,
+      playback_controller: __MODULE__,
+      spec_controller: SpecController
+    })
     |> noreply(state)
   end
 

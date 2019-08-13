@@ -11,11 +11,12 @@ defmodule Membrane.Pipeline do
   alias Membrane.Core.Pipeline.State
   alias Membrane.{CallbackError, Core, Element, Notification, Spec}
   alias Core.Pad
-  alias Core.{Message, Playback}
+  alias Core.Message
   alias Core.Pipeline.SpecController
   alias Membrane.Core.ChildrenController
   alias Membrane.Core.ParentState
   alias Membrane.Core.ParentAction
+  alias Membrane.Core.ParentMessageDispatcher
   import Membrane.Helper.GenServer
   require Element
   require Membrane.PlaybackState
@@ -236,7 +237,7 @@ defmodule Membrane.Pipeline do
   def init({module, pipeline_options}) do
     with {{:ok, spec}, internal_state} <- module.handle_init(pipeline_options) do
       state = %State{internal_state: internal_state, module: module}
-      Message.self(:pipeline_spec, spec)
+      Message.self(:handle_spec, spec)
       {:ok, state}
     else
       {:error, reason} ->
@@ -275,89 +276,6 @@ defmodule Membrane.Pipeline do
   def handle_playback_state_changed(_old, _new, state), do: {:ok, state}
 
   @impl GenServer
-  def handle_info(
-        Message.new(:playback_state_changed, [_pid, _new_playback_state]),
-        %State{pending_pids: pending_pids} = state
-      )
-      when pending_pids == %MapSet{} do
-    {:ok, state} |> noreply
-  end
-
-  def handle_info(
-        Message.new(:playback_state_changed, [_pid, new_playback_state]),
-        %State{playback: %Playback{pending_state: pending_playback_state}} = state
-      )
-      when new_playback_state != pending_playback_state do
-    {:ok, state} |> noreply
-  end
-
-  def handle_info(
-        Message.new(:playback_state_changed, [pid, new_playback_state]),
-        %State{playback: %Playback{state: current_playback_state}, pending_pids: pending_pids} =
-          state
-      ) do
-    new_pending_pids = pending_pids |> MapSet.delete(pid)
-    new_state = %{state | pending_pids: new_pending_pids}
-
-    if new_pending_pids != pending_pids and new_pending_pids |> Enum.empty?() do
-      callback = PlaybackHandler.state_change_callback(current_playback_state, new_playback_state)
-
-      with {:ok, new_state} <-
-             CallbackHandler.exec_and_handle_callback(callback, __MODULE__, [], new_state) do
-        PlaybackHandler.continue_playback_change(__MODULE__, new_state)
-      else
-        error -> error
-      end
-    else
-      {:ok, new_state}
-    end
-    |> noreply(new_state)
-  end
-
-  def handle_info(Message.new(:change_playback_state, new_state), state) do
-    PlaybackHandler.change_playback_state(new_state, __MODULE__, state) |> noreply(state)
-  end
-
-  def handle_info(Message.new(:stop_and_terminate), state) do
-    case state.playback.state do
-      :stopped ->
-        {:stop, :normal, state}
-
-      _ ->
-        state = %{state | terminating?: true}
-
-        PlaybackHandler.change_and_lock_playback_state(:stopped, __MODULE__, state)
-        |> noreply(state)
-    end
-  end
-
-  def handle_info(Message.new(:pipeline_spec, spec), state) do
-    with {{:ok, _children}, state} <-
-           SpecController |> ChildrenController.handle_spec(spec, state) do
-      {:ok, state}
-    end
-    |> noreply(state)
-  end
-
-  def handle_info(Message.new(:notification, [from, notification]), state) do
-    with {:ok, _} <- state |> ParentState.get_child_pid(from) do
-      CallbackHandler.exec_and_handle_callback(
-        :handle_notification,
-        __MODULE__,
-        [notification, from],
-        state
-      )
-    end
-    |> noreply(state)
-  end
-
-  def handle_info(Message.new(:shutdown_ready, child), state) do
-    {{:ok, pid}, state} = ParentState.pop_child(state, child)
-
-    {Element.shutdown(pid), state}
-    |> noreply(state)
-  end
-
   def handle_info(Message.new(cb, [element_name, pad_ref]), state)
       when cb in [:handle_start_of_stream, :handle_end_of_stream] do
     CallbackHandler.exec_and_handle_callback(
@@ -370,7 +288,11 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_info(message, state) do
-    CallbackHandler.exec_and_handle_callback(:handle_other, __MODULE__, [message], state)
+    ParentMessageDispatcher.handle_message(message, state, %{
+      action_handler: __MODULE__,
+      playback_controller: __MODULE__,
+      spec_controller: SpecController
+    })
     |> noreply(state)
   end
 

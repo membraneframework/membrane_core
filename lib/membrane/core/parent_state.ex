@@ -31,8 +31,7 @@ defmodule Membrane.Core.ParentState.Default do
       end
 
       def get_child_pid(%{children: children}, child) do
-        with {:ok, pid} <- children[child] |> Bunch.error_if_nil({:unknown_child, child}),
-             do: {:ok, pid}
+        children[child] |> Bunch.error_if_nil({:unknown_child, child})
       end
 
       def pop_child(%{children: children} = state, child) do
