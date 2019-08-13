@@ -15,7 +15,6 @@ defmodule Membrane.Pipeline do
   alias Core.Pipeline.SpecController
   alias Membrane.Core.ChildrenController
   alias Membrane.Core.Parent
-  alias Membrane.Core.ParentAction
   alias Membrane.Core.ParentMessageDispatcher
   import Membrane.Helper.GenServer
   require Element
@@ -38,7 +37,7 @@ defmodule Membrane.Pipeline do
   Type that defines all valid return values from most callbacks.
   """
   @type callback_return_t ::
-          CallbackHandler.callback_return_t(ParentAction.t(), State.internal_state_t())
+          CallbackHandler.callback_return_t(Parent.Action.t(), State.internal_state_t())
 
   @doc """
   Enables to check whether module is membrane pipeline
@@ -304,7 +303,7 @@ defmodule Membrane.Pipeline do
 
   @impl CallbackHandler
   def handle_action({:forward, {elementname, message}}, _cb, _params, state) do
-    ParentAction.handle_forward(elementname, message, state)
+    Parent.Action.handle_forward(elementname, message, state)
   end
 
   def handle_action({:spec, spec = %Spec{}}, _cb, _params, state) do
@@ -313,11 +312,11 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_action({:remove_child, children}, _cb, _params, state) do
-    ParentAction.handle_remove_child(children, state)
+    Parent.Action.handle_remove_child(children, state)
   end
 
   def handle_action(action, callback, _params, state) do
-    ParentAction.handle_unknown_action(action, callback, state.module)
+    Parent.Action.handle_unknown_action(action, callback, state.module)
   end
 
   defp to_parent_sm_callback(:handle_start_of_stream), do: :handle_element_start_of_stream

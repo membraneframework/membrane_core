@@ -14,7 +14,6 @@ defmodule Membrane.Bin do
     PadSpecHandler,
     ChildrenController,
     Parent,
-    ParentAction,
     PadModel,
     PadsSpecs,
     Pad,
@@ -42,7 +41,7 @@ defmodule Membrane.Bin do
   Type that defines all valid return values from most callbacks.
   """
   @type callback_return_t ::
-          CallbackHandler.callback_return_t(ParentAction.t(), State.internal_state_t())
+          CallbackHandler.callback_return_t(Parent.Action.t(), State.internal_state_t())
 
   @doc """
   Enables to check whether module is membrane bin.
@@ -104,7 +103,7 @@ defmodule Membrane.Bin do
   state as bin.
 
   Spec can be started from `c:handle_init/1` callback or as
-  `t:Membrane.Core.ParentAction.spec_action_t/0` action.
+  `t:Membrane.Core.Parent.Action.spec_action_t/0` action.
   """
   @callback handle_spec_started(
               elements :: [ChildrenController.child_name_t()],

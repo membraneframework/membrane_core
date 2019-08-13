@@ -1,4 +1,4 @@
-defmodule Membrane.Core.ParentAction do
+defmodule Membrane.Core.Parent.Action do
   @moduledoc """
   This module consists of common for bin and pipeline types and functions connected to actions.
   """

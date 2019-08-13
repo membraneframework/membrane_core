@@ -3,14 +3,14 @@ defmodule Membrane.Core.Bin.ActionHandler do
   use Membrane.Log, tags: :core
 
   alias Membrane.{Core, Spec}
-  alias Core.{ParentAction, Message, ChildrenController}
+  alias Core.{Parent, Message, ChildrenController}
   alias Core.Bin.{State, SpecController}
 
   require Message
 
   @impl CallbackHandler
   def handle_action({:forward, {elementname, message}}, _cb, _params, state) do
-    ParentAction.handle_forward(elementname, message, state)
+    Parent.Action.handle_forward(elementname, message, state)
   end
 
   @impl CallbackHandler
@@ -21,7 +21,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:remove_child, children}, _cb, _params, state) do
-    ParentAction.handle_remove_child(children, state)
+    Parent.Action.handle_remove_child(children, state)
   end
 
   @impl CallbackHandler
@@ -31,7 +31,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
 
   @impl CallbackHandler
   def handle_action(action, callback, _params, state) do
-    ParentAction.handle_unknown_action(action, callback, state.module)
+    Parent.Action.handle_unknown_action(action, callback, state.module)
   end
 
   @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}
