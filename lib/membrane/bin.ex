@@ -53,7 +53,7 @@ defmodule Membrane.Bin do
 
   @doc """
   Callback invoked on initialization of bin process. It should parse options
-  and initialize element's internal state. Internally it is invoked inside
+  and initialize bin's internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
   """
   @callback handle_init(options :: bin_options_t) ::
