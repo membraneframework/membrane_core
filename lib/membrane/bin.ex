@@ -1,7 +1,6 @@
 defmodule Membrane.Bin do
   use Bunch
   use Membrane.Log, tags: :core
-  use Membrane.Core.CallbackHandler
   use GenServer
   use Membrane.Core.PlaybackHandler
 
@@ -10,6 +9,7 @@ defmodule Membrane.Bin do
   alias Membrane.{Element, Spec}
 
   alias Membrane.Core.{
+    CallbackHandler,
     PadController,
     PadSpecHandler,
     ChildrenController,
@@ -24,6 +24,7 @@ defmodule Membrane.Bin do
 
   alias Membrane.Core.Bin.{State, LinkingBuffer, SpecController}
   alias Membrane.{CallbackError, Element, Notification}
+  alias Membrane.Core.Bin.ActionHandler
 
   require Element
   require Message
@@ -274,7 +275,7 @@ defmodule Membrane.Bin do
     if new_pending_pids != pending_pids and new_pending_pids |> Enum.empty?() do
       callback = PlaybackHandler.state_change_callback(current_playback_state, new_playback_state)
 
-      CallbackHandler.exec_and_handle_callback(callback, __MODULE__, [], new_state)
+      CallbackHandler.exec_and_handle_callback(callback, ActionHandler, [], new_state)
       ~>> ({:ok, new_state} -> PlaybackHandler.continue_playback_change(__MODULE__, new_state))
     else
       {:ok, new_state}
@@ -303,7 +304,7 @@ defmodule Membrane.Bin do
     with {:ok, _} <- state |> ParentState.get_child_pid(from) do
       CallbackHandler.exec_and_handle_callback(
         :handle_notification,
-        __MODULE__,
+        ActionHandler,
         [notification, from],
         state
       )
@@ -375,39 +376,6 @@ defmodule Membrane.Bin do
 
   def handle_call(Message.new(:set_watcher, watcher), _, state) do
     {:ok, %{state | watcher: watcher}} |> reply()
-  end
-
-  @impl CallbackHandler
-  def handle_action({:forward, {elementname, message}}, _cb, _params, state) do
-    ParentAction.handle_forward(elementname, message, state)
-  end
-
-  def handle_action({:spec, spec = %Spec{}}, _cb, _params, state) do
-    with {{:ok, _children}, state} <- SpecController.handle_spec(spec, state), do: {:ok, state}
-  end
-
-  def handle_action({:remove_child, children}, _cb, _params, state) do
-    ParentAction.handle_remove_child(children, state)
-  end
-
-  def handle_action({:notify, notification}, _cb, _params, state) do
-    send_notification(notification, state)
-  end
-
-  def handle_action(action, callback, _params, state) do
-    ParentAction.handle_unknown_action(action, callback, state.module)
-  end
-
-  @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}
-  defp send_notification(notification, %State{watcher: nil} = state) do
-    debug("Dropping notification #{inspect(notification)} as watcher is undefined", state)
-    {:ok, state}
-  end
-
-  defp send_notification(notification, %State{watcher: watcher, name: name} = state) do
-    debug("Sending notification #{inspect(notification)} (watcher: #{inspect(watcher)})", state)
-    Message.send(watcher, :notification, [name, notification])
-    {:ok, state}
   end
 
   def set_controlling_pid(server, controlling_pid, timeout \\ 5000) do

@@ -20,6 +20,7 @@ defmodule Membrane.Core.SpecController do
     children: #{inspect(children_spec)}
     links: #{inspect(links)}
     """)
+
     parsed_children = children_spec |> ChildrenController.parse_children()
 
     {:ok, state} =

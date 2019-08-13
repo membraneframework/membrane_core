@@ -6,6 +6,7 @@ defmodule Membrane.Core.Pipeline.SpecController do
 
   alias Membrane.Core
   alias Membrane.{Spec, PipelineError}
+
   alias Membrane.Core.{
     ParentState,
     Message,

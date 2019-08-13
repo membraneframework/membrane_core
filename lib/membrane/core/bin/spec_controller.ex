@@ -158,7 +158,7 @@ defmodule Membrane.Core.Bin.SpecController do
     callback_res =
       CallbackHandler.exec_and_handle_callback(
         :handle_spec_started,
-        Membrane.Bin,
+        Membrane.Core.Bin.ActionHandler,
         [children_names],
         state
       )
