@@ -1,14 +1,12 @@
 defmodule Membrane.Core.Bin.SpecController do
   use Bunch
   use Membrane.Log, tags: :core
-  use Membrane.Core.PlaybackRequestor
 
-  alias Membrane.{Spec, Bin, BinError}
-  # TODO Link should be moved out of Pipeline
-  alias Membrane.Core.Pipeline.Link
+  @behaviour Membrane.Core.SpecController
+
+  alias Membrane.{Spec, Bin, BinError, Core}
 
   alias Membrane.Core.{
-    ChildrenController,
     ParentState,
     Message,
     Pad,
@@ -18,51 +16,19 @@ defmodule Membrane.Core.Bin.SpecController do
 
   alias Membrane.Core.Bin.LinkingBuffer
   alias Membrane.Element
+  # TODO Link should be moved out of Pipeline
+  alias Membrane.Core.Pipeline.Link
 
   require Bin
   require Message
 
   @spec handle_spec(Spec.t(), State.t()) :: Type.stateful_try_t([Element.name_t()], State.t())
   def handle_spec(%Spec{children: children_spec, links: links}, state) do
-    debug("""
-    Initializing bin spec
-    children: #{inspect(children_spec)}
-    links: #{inspect(links)}
-    """)
-
-    parsed_children = children_spec |> ChildrenController.parse_children()
-
-    {:ok, state} =
-      {parsed_children |> ChildrenController.check_if_children_names_unique(state), state}
-
-    children = parsed_children |> ChildrenController.start_children()
-    {:ok, state} = children |> ChildrenController.add_children(state)
-
-    {{:ok, links}, state} = {links |> parse_links, state}
-    {links, state} = links |> resolve_links(state)
-    {:ok, state} = links |> link_children(state)
-    {children_names, children_pids} = children |> Enum.unzip()
-    {:ok, state} = {children_pids |> ChildrenController.set_children_watcher(), state}
-    {:ok, state} = exec_handle_spec_started(children_names, state)
-
-    children_pids
-    |> Enum.each(&change_playback_state(&1, state.playback.state))
-
-    debug("""
-    Initialized bin spec
-    children: #{inspect(children)}
-    children pids: #{inspect(children)}
-    links: #{inspect(links)}
-    """)
-
-    {{:ok, children_names}, state}
+    Core.SpecController.handle_spec(__MODULE__, %{children: children_spec, links: links}, state)
   end
 
-  @spec parse_links(Spec.links_spec_t() | any) :: Type.try_t([Link.t()])
-  defp parse_links(links), do: links |> Bunch.Enum.try_map(&Link.parse/1)
-
-  @spec resolve_links([Link.t()], State.t()) :: [Link.resolved_t()]
-  defp resolve_links(links, state) do
+  @impl true
+  def resolve_links(links, state) do
     {new_links, new_state} =
       links
       |> Enum.map_reduce(
@@ -117,8 +83,8 @@ defmodule Membrane.Core.Bin.SpecController do
   #
   # Please note that this function is not atomic and in case of error there's
   # a chance that some of children will remain linked.
-  @spec link_children([Link.resolved_t()], State.t()) :: Type.try_t()
-  defp link_children(links, state) do
+  @impl true
+  def link_children(links, state) do
     debug("Linking children: links = #{inspect(links)}")
 
     with {:ok, state} <- links |> Bunch.Enum.try_reduce_while(state, &link/2),
@@ -187,8 +153,8 @@ defmodule Membrane.Core.Bin.SpecController do
     end
   end
 
-  @spec exec_handle_spec_started([Element.name_t()], State.t()) :: {:ok, State.t()}
-  defp exec_handle_spec_started(children_names, state) do
+  @impl true
+  def exec_handle_spec_started(children_names, state) do
     callback_res =
       CallbackHandler.exec_and_handle_callback(
         :handle_spec_started,
