@@ -290,7 +290,9 @@ defmodule Membrane.PipelineSpec do
     context "when receiving other message" do
       let :message, do: :some_message
       let :internal_state, do: :some_internal_state
-      let :state, do: %Membrane.Core.Pipeline.State{module: module(), internal_state: internal_state()}
+
+      let :state,
+        do: %Membrane.Core.Pipeline.State{module: module(), internal_state: internal_state()}
 
       before do
         allow module()
