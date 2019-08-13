@@ -332,7 +332,7 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_info(Message.new(:pipeline_spec, spec), state) do
-    with {{:ok, _children}, state} <- spec |> SpecController.handle_spec(state) do
+    with {{:ok, _children}, state} <- SpecController |> ChildrenController.handle_spec(spec, state) do
       {:ok, state}
     end
     |> noreply(state)
@@ -385,7 +385,7 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_action({:spec, spec = %Spec{}}, _cb, _params, state) do
-    with {{:ok, _children}, state} <- SpecController.handle_spec(spec, state), do: {:ok, state}
+    with {{:ok, _children}, state} <- ChildrenController.handle_spec(SpecController, spec, state), do: {:ok, state}
   end
 
   def handle_action({:remove_child, children}, _cb, _params, state) do

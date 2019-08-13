@@ -2,9 +2,9 @@ defmodule Membrane.Core.Bin.SpecController do
   use Bunch
   use Membrane.Log, tags: :core
 
-  @behaviour Membrane.Core.SpecController
+  @behaviour Membrane.Core.ChildrenController
 
-  alias Membrane.{Spec, Bin, BinError, Core}
+  alias Membrane.{Bin, BinError}
 
   alias Membrane.Core.{
     ParentState,
@@ -21,11 +21,6 @@ defmodule Membrane.Core.Bin.SpecController do
 
   require Bin
   require Message
-
-  @spec handle_spec(Spec.t(), State.t()) :: Type.stateful_try_t([Element.name_t()], State.t())
-  def handle_spec(%Spec{children: children_spec, links: links}, state) do
-    Core.SpecController.handle_spec(__MODULE__, %{children: children_spec, links: links}, state)
-  end
 
   @impl true
   def resolve_links(links, state) do

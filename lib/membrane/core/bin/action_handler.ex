@@ -3,9 +3,8 @@ defmodule Membrane.Core.Bin.ActionHandler do
   use Membrane.Log, tags: :core
 
   alias Membrane.{Core, Spec}
-  alias Core.ParentAction
-  alias Core.Bin.State
-  alias Core.Message
+  alias Core.{ParentAction, Message, ChildrenController}
+  alias Core.Bin.{State, SpecController}
 
   require Message
 
@@ -16,7 +15,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:spec, spec = %Spec{}}, _cb, _params, state) do
-    with {{:ok, _children}, state} <- Core.Bin.SpecController.handle_spec(spec, state),
+    with {{:ok, _children}, state} <- ChildrenController.handle_spec(SpecController, spec, state),
          do: {:ok, state}
   end
 

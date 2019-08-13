@@ -250,7 +250,7 @@ defmodule Membrane.Bin do
   end
 
   def handle_info(Message.new(:bin_spec, spec), state) do
-    with {{:ok, _children}, state} <- spec |> SpecController.handle_spec(state) do
+    with {{:ok, _children}, state} <- SpecController |> ChildrenController.handle_spec(spec, state) do
       {:ok, state}
     end
     |> noreply(state)
