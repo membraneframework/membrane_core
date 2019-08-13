@@ -109,11 +109,18 @@ defmodule Membrane.Core.Element.ActionHandler do
           {:event, Pad.opposite_direction(params.direction)}
       end
 
+    result_data =
+      if data == :end_of_stream do
+        %Event.EndOfStream{}
+      else
+        data
+      end
+
     pads = state |> PadModel.filter_data(%{direction: dir}) |> Map.keys()
 
     pads
     |> Bunch.Enum.try_reduce(state, fn pad, st ->
-      do_handle_action({action, {pad, data}}, cb, params, st)
+      do_handle_action({action, {pad, result_data}}, cb, params, st)
     end)
   end
 
