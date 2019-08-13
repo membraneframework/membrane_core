@@ -15,7 +15,6 @@ defmodule Membrane.Pipeline do
   alias Core.Pipeline.SpecController
   alias Membrane.Core.ChildrenController
   alias Membrane.Core.Parent
-  alias Membrane.Core.ParentMessageDispatcher
   import Membrane.Helper.GenServer
   require Element
   require Membrane.PlaybackState
@@ -287,7 +286,7 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_info(message, state) do
-    ParentMessageDispatcher.handle_message(message, state, %{
+    Parent.MessageDispatcher.handle_message(message, state, %{
       action_handler: __MODULE__,
       playback_controller: __MODULE__,
       spec_controller: SpecController

@@ -1,4 +1,4 @@
-defmodule Membrane.Core.ParentMessageDispatcher do
+defmodule Membrane.Core.Parent.MessageDispatcher do
   use Bunch
   use Membrane.Core.PlaybackHandler
 

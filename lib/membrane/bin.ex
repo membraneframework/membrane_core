@@ -17,8 +17,7 @@ defmodule Membrane.Bin do
     PadModel,
     PadsSpecs,
     Pad,
-    Message,
-    ParentMessageDispatcher
+    Message
   }
 
   alias Membrane.Core.Bin.{State, LinkingBuffer, SpecController}
@@ -254,7 +253,7 @@ defmodule Membrane.Bin do
   end
 
   def handle_info(message, state) do
-    ParentMessageDispatcher.handle_message(message, state, %{
+    Parent.MessageDispatcher.handle_message(message, state, %{
       action_handler: ActionHandler,
       playback_controller: __MODULE__,
       spec_controller: SpecController
