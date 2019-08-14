@@ -24,9 +24,9 @@ defmodule Membrane.Core.BinTest do
       ]
 
       links = %{
-        {this_bin(), :input} => {:filter1, :input, buffer: [preferred_size: 10]},
-        {:filter1, :output} => {:filter2, :input, buffer: [preferred_size: 10]},
-        {:filter2, :output} => {this_bin(), :output, buffer: [preferred_size: 10]}
+        {this_bin(), :input} => {:filter1, :input, []},
+        {:filter1, :output} => {:filter2, :input, []},
+        {:filter2, :output} => {this_bin(), :output, []}
       }
 
       spec = %Spec{
@@ -58,9 +58,9 @@ defmodule Membrane.Core.BinTest do
       ]
 
       links = %{
-        {this_bin(), :input} => {:filter1, :input, buffer: [preferred_size: 10]},
-        {:filter1, :output} => {:filter2, :input, buffer: [preferred_size: 10]},
-        {:filter2, :output} => {this_bin(), :output, buffer: [preferred_size: 10]}
+        {this_bin(), :input} => {:filter1, :input, []},
+        {:filter1, :output} => {:filter2, :input, []},
+        {:filter2, :output} => {this_bin(), :output, []}
       }
 
       spec = %Spec{
@@ -92,8 +92,8 @@ defmodule Membrane.Core.BinTest do
       ]
 
       links = %{
-        {this_bin(), :input} => {:filter, :input, buffer: [preferred_size: 10]},
-        {:filter, :output} => {:sink, :input, buffer: [preferred_size: 10]}
+        {this_bin(), :input} => {:filter, :input, []},
+        {:filter, :output} => {:sink, :input, []}
       }
 
       spec = %Spec{
@@ -121,7 +121,7 @@ defmodule Membrane.Core.BinTest do
       ]
 
       links = %{
-        {:source, :output} => {:sink, :input, buffer: [preferred_size: 10]}
+        {:source, :output} => {:sink, :input, []}
       }
 
       spec = %Spec{
