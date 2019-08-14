@@ -1,11 +1,11 @@
-defmodule Membrane.Core.ChildrenController do
+defmodule Membrane.Core.Parent.ChildrenController do
   @moduledoc false
   use Bunch
   use Membrane.Log, tags: :core
   use Membrane.Core.PlaybackRequestor
 
   alias Membrane.{Bin, Element, ParentError, Spec}
-  alias Membrane.Core.{ChildrenController, Message, Parent}
+  alias Membrane.Core.{Message, Parent}
   # TODO Link should be moved out of Pipeline
   alias Membrane.Core.Pipeline.Link
   alias Bunch.Type
@@ -21,7 +21,7 @@ defmodule Membrane.Core.ChildrenController do
 
   @callback link_children([Link.resolved_t()], Parent.State.t()) :: Type.try_t()
 
-  @callback exec_handle_spec_started([ChildrenController.child_name_t()], Parent.State.t()) ::
+  @callback exec_handle_spec_started([child_name_t()], Parent.State.t()) ::
               {:ok, Parent.State.t()}
 
   @spec handle_spec(module(), Spec.t(), Parent.State.t()) ::
@@ -101,7 +101,7 @@ defmodule Membrane.Core.ChildrenController do
     children |> Enum.map(&start_child/1)
   end
 
-  @spec add_children([ChildrenController.parsed_child_t()], Parent.State.t()) ::
+  @spec add_children([parsed_child_t()], Parent.State.t()) ::
           Type.stateful_try_t(Parent.State.t())
   def add_children(children, state) do
     children

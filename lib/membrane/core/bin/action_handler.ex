@@ -3,7 +3,8 @@ defmodule Membrane.Core.Bin.ActionHandler do
   use Membrane.Log, tags: :core
 
   alias Membrane.{Core, Spec}
-  alias Core.{Parent, Message, ChildrenController}
+  alias Core.{Parent, Message}
+  alias Parent.ChildrenController
   alias Core.Bin.{State, SpecController}
 
   require Message

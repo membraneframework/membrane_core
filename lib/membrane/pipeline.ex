@@ -13,8 +13,8 @@ defmodule Membrane.Pipeline do
   alias Core.Pad
   alias Core.Message
   alias Core.Pipeline.SpecController
-  alias Membrane.Core.ChildrenController
   alias Membrane.Core.Parent
+  alias Parent.ChildrenController
   import Membrane.Helper.GenServer
   require Element
   require Membrane.PlaybackState

@@ -5,7 +5,6 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   alias Membrane.Element
 
   alias Membrane.Core.{
-    ChildrenController,
     Parent,
     PadModel,
     Playback,
@@ -15,6 +14,8 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     Bin,
     Pipeline
   }
+
+  alias Parent.ChildrenController
 
   require Message
   require PadModel

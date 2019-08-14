@@ -1,5 +1,5 @@
 defmodule Membrane.Core.Parent.State do
-  alias Membrane.Core.ChildrenController
+  alias Membrane.Core.Parent.ChildrenController
 
   @type children_t :: %{ChildrenController.child_name_t() => pid}
 

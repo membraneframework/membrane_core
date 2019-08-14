@@ -2,7 +2,7 @@ defmodule Membrane.Core.Pipeline.SpecController do
   use Bunch
   use Membrane.Log, tags: :core
 
-  @behaviour Membrane.Core.ChildrenController
+  @behaviour Membrane.Core.Parent.ChildrenController
 
   alias Membrane.ParentError
 
