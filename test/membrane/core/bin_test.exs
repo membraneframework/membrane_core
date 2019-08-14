@@ -2,138 +2,9 @@ defmodule Membrane.Core.BinTest do
   use ExUnit.Case, async: true
 
   alias Membrane.Testing
-  alias Membrane.Spec
+  alias Membrane.Support.Bin.TestBins
 
   import Membrane.Testing.Assertions
-
-  defmodule TestBin do
-    use Membrane.Bin
-
-    def_options filter1: [type: :atom],
-                filter2: [type: :atom]
-
-    def_input_pad :input, demand_unit: :buffers, caps: :any
-
-    def_output_pad :output, caps: :any, demand_unit: :buffers
-
-    @impl true
-    def handle_init(opts) do
-      children = [
-        filter1: opts.filter1,
-        filter2: opts.filter2
-      ]
-
-      links = %{
-        {this_bin(), :input} => {:filter1, :input, []},
-        {:filter1, :output} => {:filter2, :input, []},
-        {:filter2, :output} => {this_bin(), :output, []}
-      }
-
-      spec = %Spec{
-        children: children,
-        links: links
-      }
-
-      state = %{}
-
-      {{:ok, spec}, state}
-    end
-  end
-
-  defmodule TestDynamicPadBin do
-    use Membrane.Bin
-
-    def_options filter1: [type: :atom],
-                filter2: [type: :atom]
-
-    def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :on_request
-
-    def_output_pad :output, caps: :any, availability: :on_request, demand_unit: :buffers
-
-    @impl true
-    def handle_init(opts) do
-      children = [
-        filter1: opts.filter1,
-        filter2: opts.filter2
-      ]
-
-      links = %{
-        {this_bin(), :input} => {:filter1, :input, []},
-        {:filter1, :output} => {:filter2, :input, []},
-        {:filter2, :output} => {this_bin(), :output, []}
-      }
-
-      spec = %Spec{
-        children: children,
-        links: links
-      }
-
-      state = %{}
-
-      {{:ok, spec}, state}
-    end
-
-    def handle_pad_added(_pad_ref, _ctx, state), do: {:ok, state}
-  end
-
-  defmodule TestSinkBin do
-    use Membrane.Bin
-
-    def_options filter: [type: :atom],
-                sink: [type: :atom]
-
-    def_input_pad :input, demand_unit: :buffers, caps: :any
-
-    @impl true
-    def handle_init(opts) do
-      children = [
-        filter: opts.filter,
-        sink: opts.sink
-      ]
-
-      links = %{
-        {this_bin(), :input} => {:filter, :input, []},
-        {:filter, :output} => {:sink, :input, []}
-      }
-
-      spec = %Spec{
-        children: children,
-        links: links
-      }
-
-      state = %{}
-
-      {{:ok, spec}, state}
-    end
-  end
-
-  defmodule TestPadlessBin do
-    use Membrane.Bin
-
-    def_options source: [type: :atom],
-                sink: [type: :atom]
-
-    @impl true
-    def handle_init(opts) do
-      children = [
-        source: opts.source,
-        sink: opts.sink
-      ]
-
-      links = %{
-        {:source, :output} => {:sink, :input, []}
-      }
-
-      spec = %Spec{
-        children: children,
-        links: links
-      }
-
-      state = %{}
-
-      {{:ok, spec}, state}
-    end
-  end
 
   defmodule TestFilter do
     use Membrane.Filter
@@ -169,7 +40,7 @@ defmodule Membrane.Core.BinTest do
         Testing.Pipeline.start_link(%Testing.Pipeline.Options{
           elements: [
             source: %Testing.Source{output: buffers},
-            test_bin: %TestBin{
+            test_bin: %TestBins.SimpleBin{
               filter1: TestFilter,
               filter2: TestFilter
             },
@@ -187,11 +58,11 @@ defmodule Membrane.Core.BinTest do
         Testing.Pipeline.start_link(%Testing.Pipeline.Options{
           elements: [
             source: %Testing.Source{output: buffers},
-            test_bin1: %TestBin{
+            test_bin1: %TestBins.SimpleBin{
               filter1: TestFilter,
               filter2: TestFilter
             },
-            test_bin2: %TestBin{
+            test_bin2: %TestBins.SimpleBin{
               filter1: TestFilter,
               filter2: TestFilter
             },
@@ -209,9 +80,9 @@ defmodule Membrane.Core.BinTest do
         Testing.Pipeline.start_link(%Testing.Pipeline.Options{
           elements: [
             source: %Testing.Source{output: buffers},
-            test_bin: %TestBin{
+            test_bin: %TestBins.SimpleBin{
               filter1: TestFilter,
-              filter2: %TestBin{
+              filter2: %TestBins.SimpleBin{
                 filter1: TestFilter,
                 filter2: TestFilter
               }
@@ -230,12 +101,12 @@ defmodule Membrane.Core.BinTest do
         Testing.Pipeline.start_link(%Testing.Pipeline.Options{
           elements: [
             source: %Testing.Source{output: buffers},
-            test_bin: %TestBin{
-              filter1: %TestBin{
+            test_bin: %TestBins.SimpleBin{
+              filter1: %TestBins.SimpleBin{
                 filter1: TestFilter,
                 filter2: TestFilter
               },
-              filter2: %TestBin{
+              filter2: %TestBins.SimpleBin{
                 filter1: TestFilter,
                 filter2: TestFilter
               }
@@ -253,7 +124,7 @@ defmodule Membrane.Core.BinTest do
       {:ok, pipeline} =
         Testing.Pipeline.start_link(%Testing.Pipeline.Options{
           elements: [
-            test_bin: %TestPadlessBin{
+            test_bin: %TestBins.TestPadlessBin{
               source: %Testing.Source{output: buffers},
               sink: Testing.Sink
             }
@@ -270,7 +141,7 @@ defmodule Membrane.Core.BinTest do
         Testing.Pipeline.start_link(%Testing.Pipeline.Options{
           elements: [
             source: %Testing.Source{output: buffers},
-            test_bin: %TestSinkBin{
+            test_bin: %TestBins.TestSinkBin{
               filter: TestFilter,
               sink: Testing.Sink
             }
@@ -287,7 +158,7 @@ defmodule Membrane.Core.BinTest do
         Testing.Pipeline.start_link(%Testing.Pipeline.Options{
           elements: [
             source: Testing.Source,
-            test_bin: %TestBin{
+            test_bin: %TestBins.SimpleBin{
               filter1: TestFilter,
               filter2: TestFilter
             },
@@ -317,7 +188,7 @@ defmodule Membrane.Core.BinTest do
         Testing.Pipeline.start_link(%Testing.Pipeline.Options{
           elements: [
             source: %Testing.Source{output: buffers},
-            test_bin: %TestDynamicPadBin{
+            test_bin: %TestBins.TestDynamicPadBin{
               filter1: TestFilter,
               filter2: TestFilter
             },
