@@ -13,12 +13,12 @@ defmodule Membrane.Core.Parent.Action do
   @type forward_action_t :: {:forward, {ChildrenController.child_name_t(), Notification.t()}}
 
   @typedoc """
-  Action that instantiates elements and links them according to `Membrane.Core.ParentSpec`.
+  Action that instantiates elements and links them according to `Membrane.Spec`.
 
   Children's playback state is changed to the current parent state.
   `c:handle_spec_started` callback is executed once it happens.
   """
-  @type spec_action_t :: {:spec, Pipeline.Spec.t() | Bin.Spec.t()}
+  @type spec_action_t :: {:spec, Spec.t()}
 
   @typedoc """
   Action that stops, unlinks and removes specified child/children from their parent.

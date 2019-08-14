@@ -17,7 +17,7 @@ defmodule Membrane.Core.ChildrenController do
   @type child_name_t :: Element.name_t() | Bin.name_t()
   @typep parsed_child_t :: %{name: child_name_t(), module: module, options: Keyword.t()}
 
-  @callback resolve_links([Link.t()], State.t()) :: [Link.resolved_t()]
+  @callback resolve_links([Link.t()], Parent.State.t()) :: [Link.resolved_t()]
 
   @callback link_children([Link.resolved_t()], Parent.State.t()) :: Type.try_t()
 
@@ -76,7 +76,7 @@ defmodule Membrane.Core.ChildrenController do
     raise ParentError, "Invalid children config: #{inspect(config, pretty: true)}"
   end
 
-  @spec check_if_children_names_unique([parsed_child_t], Bin.State.t() | Pipeline.State.t()) ::
+  @spec check_if_children_names_unique([parsed_child_t], Parent.State.t()) ::
           Type.try_t()
   def check_if_children_names_unique(children, state) do
     %{children: state_children} = state
@@ -94,15 +94,15 @@ defmodule Membrane.Core.ChildrenController do
     end
   end
 
-  @spec start_children([parsed_child_t]) :: [State.child_t()]
+  @spec start_children([parsed_child_t]) :: [Parent.State.child_t()]
   def start_children(children) do
     debug("Starting children: #{inspect(children)}")
 
     children |> Enum.map(&start_child/1)
   end
 
-  @spec add_children([ChildrenController.parsed_child_t()], Bin.State.t() | Pipeline.State.t()) ::
-          Type.stateful_try_t(State.t())
+  @spec add_children([ChildrenController.parsed_child_t()], Parent.State.t()) ::
+          Type.stateful_try_t(Parent.State.t())
   def add_children(children, state) do
     children
     |> Bunch.Enum.try_reduce(state, fn {name, pid}, state ->

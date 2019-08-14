@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.State do
 
   @type children_t :: %{ChildrenController.child_name_t() => pid}
 
-  @type t :: %{children: children_t()}
+  @type t :: Bin.State.t() | Pipeline.State.t()
 
   @spec add_child(t, ChildrenController.child_name_t(), pid) :: Type.stateful_try_t(t)
   def add_child(%{children: children} = state, child, pid) do
