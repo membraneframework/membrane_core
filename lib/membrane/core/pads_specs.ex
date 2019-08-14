@@ -61,7 +61,6 @@ defmodule Membrane.Core.PadsSpecs do
 
     specs =
       specs
-      |> Keyword.put(:bin?, bin?)
       |> Keyword.put(:options, escaped_pad_opts)
 
     quote do
@@ -73,6 +72,7 @@ defmodule Membrane.Core.PadsSpecs do
       @membrane_pads unquote(__MODULE__).parse_pad_specs!(
                        {unquote(pad_name), unquote(specs)},
                        unquote(direction),
+                       unquote(bin?),
                        __ENV__
                      )
       unquote(pad_opts_typedef)
@@ -138,10 +138,11 @@ defmodule Membrane.Core.PadsSpecs do
   @spec parse_pad_specs!(
           specs :: Pad.spec_t(),
           direction :: Pad.direction_t(),
-          declaration_env :: Macro.Env.t()
+          declaration_env :: Macro.Env.t(),
+          boolean()
         ) :: {Pad.name_t(), Pad.description_t()}
-  def parse_pad_specs!(specs, direction, env) do
-    with {:ok, specs} <- parse_pad_specs(specs, direction) do
+  def parse_pad_specs!(specs, direction, bin?, env) do
+    with {:ok, specs} <- parse_pad_specs(specs, direction, bin?) do
       specs
     else
       {:error, reason} ->
@@ -155,9 +156,9 @@ defmodule Membrane.Core.PadsSpecs do
     end
   end
 
-  @spec parse_pad_specs(Pad.spec_t(), Pad.direction_t()) ::
+  @spec parse_pad_specs(Pad.spec_t(), Pad.direction_t(), boolean()) ::
           Type.try_t({Pad.name_t(), Pad.description_t()})
-  def parse_pad_specs(spec, direction) do
+  def parse_pad_specs(spec, direction, bin?) do
     withl spec: {name, config} when Pad.is_pad_name(name) and is_list(config) <- spec,
           config:
             {:ok, config} <-
@@ -169,11 +170,16 @@ defmodule Membrane.Core.PadsSpecs do
                 bin?: [validate: &is_boolean/1, default: false],
                 demand_unit: [
                   in: [:buffers, :bytes],
-                  require_if: &(&1.mode == :pull and (&1.bin? or direction == :input))
+                  require_if: &(&1.mode == :pull and (bin? or direction == :input))
                 ],
                 options: [default: nil]
               ) do
-      {:ok, {name, Map.put(config, :direction, direction)}}
+      new_config =
+        config
+        |> Map.put(:bin?, bin?)
+        |> Map.put(:direction, direction)
+
+      {:ok, {name, new_config}}
     else
       spec: spec -> {:error, {:invalid_pad_spec, spec}}
       config: {:error, reason} -> {:error, {reason, pad: name}}
