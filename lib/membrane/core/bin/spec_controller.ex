@@ -40,8 +40,16 @@ defmodule Membrane.Core.Bin.SpecController do
     {new_links, new_state}
   end
 
-  defp resolve_link(
-         %{element: Bin.this_bin_marker(), pad_name: pad_name, id: id} = endpoint,
+  defp resolve_link(endpoint, state) do
+    if endpoint.element == Bin.itself() do
+      resolve_bin_link(endpoint, state)
+    else
+      resolve_normal_link(endpoint, state)
+    end
+  end
+
+  defp resolve_bin_link(
+         %{pad_name: pad_name, id: id} = endpoint,
          %{name: name} = state
        ) do
     private_pad = Pad.get_corresponding_bin_pad(pad_name)
@@ -55,8 +63,7 @@ defmodule Membrane.Core.Bin.SpecController do
     end
   end
 
-  # This is the case of normal endpoint linking (not bin api)
-  defp resolve_link(endpoint, state),
+  defp resolve_normal_link(endpoint, state),
     do: {Membrane.Core.Pipeline.SpecController.resolve_link(endpoint, state), state}
 
   # Links children based on given specification and map for mapping children

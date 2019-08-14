@@ -19,9 +19,9 @@ defmodule Membrane.Support.Bin.TestBins do
       ]
 
       links = %{
-        {this_bin(), :input} => {:filter1, :input, []},
+        {Bin.itself(), :input} => {:filter1, :input, []},
         {:filter1, :output} => {:filter2, :input, []},
-        {:filter2, :output} => {this_bin(), :output, []}
+        {:filter2, :output} => {Bin.itself(), :output, []}
       }
 
       spec = %Spec{
@@ -53,9 +53,9 @@ defmodule Membrane.Support.Bin.TestBins do
       ]
 
       links = %{
-        {this_bin(), :input} => {:filter1, :input, []},
+        {Bin.itself(), :input} => {:filter1, :input, []},
         {:filter1, :output} => {:filter2, :input, []},
-        {:filter2, :output} => {this_bin(), :output, []}
+        {:filter2, :output} => {Bin.itself(), :output, []}
       }
 
       spec = %Spec{
@@ -87,7 +87,7 @@ defmodule Membrane.Support.Bin.TestBins do
       ]
 
       links = %{
-        {this_bin(), :input} => {:filter, :input, []},
+        {Bin.itself(), :input} => {:filter, :input, []},
         {:filter, :output} => {:sink, :input, []}
       }
 

@@ -115,15 +115,10 @@ defmodule Membrane.Bin do
                   (is_tuple(term) and tuple_size(term) == 2 and is_atom(elem(term, 0)) and
                      is_integer(elem(term, 1)) and elem(term, 1) >= 0)
 
-  # TODO maybe move this somewhere to Core.* as this became public?
   @doc """
-  This macro defines a struct that represents this bin in callback module.
+  This function defines a struct that represents this bin in callback module.
   """
-  defmacro this_bin_marker do
-    quote do
-      {unquote(__MODULE__), :this_bin}
-    end
-  end
+  def itself, do: {__MODULE__, :itself}
 
   @doc PadsSpecs.def_bin_pad_docs(:input)
   defmacro def_input_pad(name, spec) do
@@ -296,8 +291,6 @@ defmodule Membrane.Bin do
   end
 
   defmacro __using__(_) do
-    marker = this_bin_marker()
-
     quote location: :keep do
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
@@ -311,8 +304,6 @@ defmodule Membrane.Bin do
 
       @impl true
       def membrane_bin?, do: true
-
-      defp this_bin, do: unquote(marker)
 
       @impl true
       def handle_init(_options), do: {{:ok, %Membrane.Spec{}}, %{}}
