@@ -40,23 +40,21 @@ defmodule Membrane.Core.Pad.Data do
           bin?: boolean()
         }
 
-  defstruct [
-    :accepted_caps,
-    :availability,
-    :direction,
-    :mode,
-    :demand_unit,
-    :other_demand_unit,
-    :current_id,
-    :pid,
-    :other_ref,
-    :caps,
-    :start_of_stream?,
-    :end_of_stream?,
-    :sticky_messages,
-    :input_buf,
-    :demand,
-    :options,
-    :bin?
-  ]
+  defstruct accepted_caps: nil,
+            availability: nil,
+            direction: nil,
+            mode: nil,
+            demand_unit: nil,
+            other_demand_unit: nil,
+            current_id: nil,
+            pid: nil,
+            other_ref: nil,
+            caps: nil,
+            start_of_stream?: nil,
+            end_of_stream?: nil,
+            sticky_messages: nil,
+            input_buf: nil,
+            demand: nil,
+            options: [],
+            bin?: false
 end
