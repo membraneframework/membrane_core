@@ -336,23 +336,41 @@ defmodule Membrane.Testing.Assertions do
 
   @doc """
   Asserts that `Membrane.Testing.Pipeline` received or is going to receive
-  `:start_of_stream` from the element with element `element_name` within the
+  start_of_stream event from the element with element `element_name` within the
   `timeout` period specified in milliseconds.
 
       assert_start_of_stream(pipeline, :an_element)
   """
-  def assert_start_of_stream(pipeline, element_name, pad \\ :input, timeout \\ @default_timeout) do
-    assert_pipeline_notified(pipeline, element_name, {:start_of_stream, ^pad}, timeout)
+  defmacro assert_start_of_stream(
+             pipeline,
+             element_name,
+             pad \\ :input,
+             timeout \\ @default_timeout
+           ) do
+    assert_receive_from_pipeline(
+      pipeline,
+      {:handle_element_start_of_stream, {element_name, pad}},
+      timeout
+    )
   end
 
   @doc """
   Asserts that `Membrane.Testing.Pipeline` received or is going to receive
-  `:end_of_stream` from the element with name `element_name` within the `timeout`
+  end_of_stream event from the element with name `element_name` within the `timeout`
   period specified in milliseconds.
 
       assert_end_of_stream(pipeline, :an_element)
   """
-  def assert_end_of_stream(pipeline, element_name, pad \\ :input, timeout \\ @default_timeout) do
-    assert_pipeline_notified(pipeline, element_name, {:end_of_stream, ^pad}, timeout)
+  defmacro assert_end_of_stream(
+             pipeline,
+             element_name,
+             pad \\ :input,
+             timeout \\ @default_timeout
+           ) do
+    assert_receive_from_pipeline(
+      pipeline,
+      {:handle_element_end_of_stream, {element_name, pad}},
+      timeout
+    )
   end
 end

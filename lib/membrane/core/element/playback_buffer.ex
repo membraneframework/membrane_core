@@ -132,7 +132,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
         if PadModel.get_data!(state, pad_ref, :start_of_stream?) do
           {:ok, state}
         else
-          EventController.handle_event(pad_ref, %Event.StartOfStream{}, state)
+          EventController.handle_start_of_stream(pad_ref, state)
         end
 
       BufferController.handle_buffer(pad_ref, buffers, state)

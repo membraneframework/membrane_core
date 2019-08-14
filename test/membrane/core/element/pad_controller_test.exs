@@ -2,17 +2,17 @@ defmodule Membrane.Core.Element.PadControllerTest do
   use ExUnit.Case, async: true
   alias Membrane.Support.Element.{DynamicFilter, TrivialFilter, TrivialSink}
   alias Membrane.Core.Element.{PadModel, PadSpecHandler, State}
-  alias Membrane.Core.Message
+  alias Membrane.Core.{Message, Playbackable}
   alias Membrane.Element.Pad
   alias Membrane.ElementLinkError
-  alias Membrane.Event.EndOfStream
   require Message
 
   @module Membrane.Core.Element.PadController
 
-  defp prepare_state(elem_module, name \\ :element) do
+  defp prepare_state(elem_module, name \\ :element, playback_state \\ :stopped) do
     elem_module
     |> State.new(name)
+    |> Playbackable.update_playback(&%{&1 | state: playback_state})
     |> PadSpecHandler.init_pads()
     |> Bunch.Access.put_in(:internal_state, %{})
     |> Bunch.Access.put_in(:watcher, self())
@@ -94,8 +94,8 @@ defmodule Membrane.Core.Element.PadControllerTest do
     state |> Bunch.Access.put_in([:pads, :data, pad_name], data)
   end
 
-  defp prepare_dynamic_state(elem_module, name \\ :element, pad_name, pad_ref) do
-    state = elem_module |> prepare_state(name)
+  defp prepare_dynamic_state(elem_module, name, playback_state, pad_name, pad_ref) do
+    state = elem_module |> prepare_state(name, playback_state)
     info = state.pads.info[pad_name]
 
     data =
@@ -120,16 +120,16 @@ defmodule Membrane.Core.Element.PadControllerTest do
       state = prepare_static_state(TrivialSink, :input)
       assert state.pads.data |> Map.has_key?(:input)
       assert {:ok, new_state} = @module.handle_unlink(:input, state)
-      assert_received Message.new(:notification, [:element, {:end_of_stream, :input}])
+      assert_received Message.new(:handle_end_of_stream, [:element, :input])
       refute new_state.pads.data |> Map.has_key?(:input)
     end
 
     test "for dynamic input pad" do
       pad_ref = {:dynamic, :input, 0}
-      state = prepare_dynamic_state(DynamicFilter, :input, pad_ref)
+      state = prepare_dynamic_state(DynamicFilter, :element, :playing, :input, pad_ref)
       assert state.pads.data |> Map.has_key?(pad_ref)
       assert {:ok, new_state} = @module.handle_unlink(pad_ref, state)
-      assert new_state.internal_state.last_event == {pad_ref, %EndOfStream{}}
+      assert new_state.internal_state[:last_event] == nil
       assert new_state.internal_state.last_pad_removed == pad_ref
       refute new_state.pads.data |> Map.has_key?(pad_ref)
     end

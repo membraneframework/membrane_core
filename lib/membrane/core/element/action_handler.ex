@@ -28,7 +28,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec do_handle_action(Action.t(), callback :: atom, params :: map, State.t()) ::
           State.stateful_try_t()
   defp do_handle_action({action, _}, cb, _params, %State{playback: %{state: :stopped}} = state)
-       when action in [:buffer, :event, :caps, :demand, :redemand, :forward] and
+       when action in [:buffer, :event, :caps, :demand, :redemand, :forward, :end_of_stream] and
               cb != :handle_stopped_to_prepared do
     {{:error, {:playback_state, :stopped}}, state}
   end
@@ -90,20 +90,31 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp do_handle_action({:forward, data}, cb, params, %State{type: :filter} = state)
-       when cb in [:handle_caps, :handle_event, :handle_process_list] do
-    {action, dir} =
-      case {cb, params} do
-        {:handle_process_list, _} -> {:buffer, :output}
-        {:handle_caps, _} -> {:caps, :output}
-        {:handle_event, %{direction: :input}} -> {:event, :output}
-        {:handle_event, %{direction: :output}} -> {:event, :input}
+       when cb in [
+              :handle_caps,
+              :handle_event,
+              :handle_process_list,
+              :handle_end_of_stream
+            ] do
+    dir =
+      case cb do
+        :handle_event -> Pad.opposite_direction(params.direction)
+        _ -> :output
       end
 
     pads = state |> PadModel.filter_data(%{direction: dir}) |> Map.keys()
 
     pads
     |> Bunch.Enum.try_reduce(state, fn pad, st ->
-      do_handle_action({action, {pad, data}}, cb, params, st)
+      action =
+        case cb do
+          :handle_event -> {:event, {pad, data}}
+          :handle_process_list -> {:buffer, {pad, data}}
+          :handle_caps -> {:caps, {pad, data}}
+          :handle_end_of_stream -> {:end_of_stream, pad}
+        end
+
+      do_handle_action(action, cb, params, st)
     end)
   end
 
@@ -125,6 +136,16 @@ defmodule Membrane.Core.Element.ActionHandler do
        )
        when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter] do
     supply_demand(pad_ref, size, cb, params[:supplying_demand?] || false, state)
+  end
+
+  defp do_handle_action(
+         {:end_of_stream, pad_ref},
+         _callback,
+         _params,
+         %State{type: type, playback: %{state: :playing}} = state
+       )
+       when is_pad_ref(pad_ref) and type != :sink do
+    send_event(pad_ref, %Event.EndOfStream{}, state)
   end
 
   defp do_handle_action(action, callback, _params, state) do

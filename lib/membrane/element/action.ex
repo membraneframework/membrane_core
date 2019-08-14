@@ -138,7 +138,7 @@ defmodule Membrane.Element.Action do
   forward buffers, `c:Membrane.Element.WithInputPads.handle_caps/4` - caps
   and `c:Membrane.Element.Base.handle_event/4` - events.
   """
-  @type forward_t :: {:forward, Buffer.t() | [Buffer.t()] | Caps.t() | Event.t()}
+  @type forward_t :: {:forward, Buffer.t() | [Buffer.t()] | Caps.t() | Event.t(), :end_of_stream}
 
   @typedoc """
   Suspends/resumes change of playback state.
@@ -158,6 +158,14 @@ defmodule Membrane.Element.Action do
   @type playback_change_t :: {:playback_change, :suspend | :resume}
 
   @typedoc """
+  Sends EndOfStream event through a pad (output) that triggers
+  callback `end_of_stream/3` at the receiver element.
+
+  Allowed only when playback is in playing state.
+  """
+  @type end_of_stream_t :: {:end_of_stream, Pad.ref_t()}
+
+  @typedoc """
   Type that defines a single action that may be returned from element callbacks.
 
   Depending on element type, callback, current playback state and other
@@ -173,4 +181,5 @@ defmodule Membrane.Element.Action do
           | redemand_t
           | forward_t
           | playback_change_t
+          | end_of_stream_t
 end
