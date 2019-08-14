@@ -31,9 +31,9 @@ defmodule Membrane.Core.Bin.State do
   @type children_t :: %{Element.name_t() => pid}
 
   defstruct internal_state: nil,
+            playback: %Playback{},
             module: nil,
             children: %{},
-            playback: %Playback{},
             pending_pids: MapSet.new(),
             terminating?: false,
             name: nil,
