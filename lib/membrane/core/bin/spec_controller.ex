@@ -1,4 +1,5 @@
 defmodule Membrane.Core.Bin.SpecController do
+  @moduledoc false
   use Bunch
   use Membrane.Log, tags: :core
 

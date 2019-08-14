@@ -1,4 +1,5 @@
 defmodule Membrane.Core.ChildrenController do
+  @moduledoc false
   use Bunch
   use Membrane.Log, tags: :core
   use Membrane.Core.PlaybackRequestor
