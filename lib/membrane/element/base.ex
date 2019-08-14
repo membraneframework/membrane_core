@@ -191,25 +191,6 @@ defmodule Membrane.Element.Base do
             when reason: :normal | :shutdown | {:shutdown, any}
 
   @doc """
-  Callback invoked when element receives `Membrane.Event.StartOfStream` event.
-  """
-  @callback handle_start_of_stream(
-              pad :: Pad.ref_t(),
-              context :: CallbackContext.StreamManagement.t(),
-              state :: Element.state_t()
-            ) :: callback_return_t
-
-  @doc """
-  Callback invoked when element receives `Membrane.Event.EndOfStream` event
-  emitted when action `end_of_stream` is returned.
-  """
-  @callback handle_end_of_stream(
-              pad :: Pad.ref_t(),
-              context :: CallbackContext.StreamManagement.t(),
-              state :: Element.state_t()
-            ) :: callback_return_t
-
-  @doc """
   Macro defining options that parametrize element.
 
   It automatically generates appropriate struct and documentation.
@@ -264,12 +245,6 @@ defmodule Membrane.Element.Base do
       @impl true
       def handle_shutdown(_reason, _state), do: :ok
 
-      @impl true
-      def handle_start_of_stream(pad, _context, state), do: {:ok, state}
-
-      @impl true
-      def handle_end_of_stream(pad, _context, state), do: {:ok, state}
-
       defoverridable handle_init: 1,
                      handle_stopped_to_prepared: 2,
                      handle_playing_to_prepared: 2,
@@ -279,9 +254,7 @@ defmodule Membrane.Element.Base do
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
                      handle_event: 4,
-                     handle_shutdown: 2,
-                     handle_start_of_stream: 3,
-                     handle_end_of_stream: 3
+                     handle_shutdown: 2
     end
   end
 end
