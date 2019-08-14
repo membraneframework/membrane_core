@@ -5,8 +5,7 @@ defmodule Membrane.Core.ChildrenController do
   use Membrane.Core.PlaybackRequestor
 
   alias Membrane.{Bin, Element, ParentError, Spec}
-  alias Membrane.Core.{Message, Parent}
-  alias Membrane.Core.ChildrenController
+  alias Membrane.Core.{ChildrenController, Message, Parent}
   # TODO Link should be moved out of Pipeline
   alias Membrane.Core.Pipeline.Link
   alias Bunch.Type
