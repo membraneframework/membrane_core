@@ -14,22 +14,13 @@ defmodule Membrane.Core.BinTest do
     def_input_pad :input, demand_unit: :buffers, caps: :any
 
     @impl true
-    def handle_init(opts), do: {:ok, opts}
-
-    @impl true
     def handle_other({:notify_parent, notif}, _ctx, state), do: {{:ok, notify: notif}, state}
-
-    @impl true
-    def handle_prepared_to_playing(_ctx, state), do: {:ok, state}
 
     @impl true
     def handle_demand(:output, size, _, _ctx, state), do: {{:ok, demand: {:input, size}}, state}
 
     @impl true
     def handle_process(_pad, buf, _, state), do: {{:ok, buffer: {:output, buf}}, state}
-
-    @impl true
-    def handle_shutdown(_reason, _state), do: :ok
   end
 
   describe "Starting and transmitting buffers" do
