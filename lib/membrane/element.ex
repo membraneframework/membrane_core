@@ -9,7 +9,7 @@ defmodule Membrane.Element do
   """
 
   alias Membrane.Core
-  alias Membrane.Core.Pipeline.Link
+  alias Membrane.Core.Link
   alias Link.Endpoint
   alias Core.Element.{MessageDispatcher, State}
   alias Core.Message

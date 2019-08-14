@@ -5,8 +5,8 @@ defmodule Membrane.ElementSpec do
   alias Membrane.Core.Element.State
   alias Membrane.Element.{CallbackContext, LinkError}
   alias Membrane.LinkError
-  alias Membrane.Core.Pipeline.Link
-  alias Membrane.Core.Pipeline.Link.Endpoint
+  alias Membrane.Core.Link
+  alias Membrane.Core.Link.Endpoint
   alias Membrane.Support.Element.{TrivialFilter, TrivialSink, TrivialSource}
 
   require CallbackContext.PlaybackChange

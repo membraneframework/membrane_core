@@ -1,6 +1,6 @@
 defmodule Membrane.Pipeline.LinkTest do
   use ExUnit.Case
-  alias Membrane.Core.Pipeline.Link
+  alias Membrane.Core.Link
   alias Link.Endpoint
 
   @moduletag :focus

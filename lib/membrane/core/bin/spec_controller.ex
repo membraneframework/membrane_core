@@ -17,8 +17,7 @@ defmodule Membrane.Core.Bin.SpecController do
 
   alias Membrane.Core.Bin.LinkingBuffer
   alias Membrane.Element
-  # TODO Link should be moved out of Pipeline
-  alias Membrane.Core.Pipeline.Link
+  alias Membrane.Core.Link
 
   require Bin
   require Message

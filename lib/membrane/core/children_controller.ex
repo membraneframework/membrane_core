@@ -6,8 +6,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
 
   alias Membrane.{Bin, Element, ParentError, Spec}
   alias Membrane.Core.{Message, Parent}
-  # TODO Link should be moved out of Pipeline
-  alias Membrane.Core.Pipeline.Link
+  alias Membrane.Core.Link
   alias Bunch.Type
 
   require Bin
