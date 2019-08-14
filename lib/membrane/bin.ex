@@ -190,8 +190,7 @@ defmodule Membrane.Bin do
           internal_state: internal_state,
           bin_options: bin_options,
           module: module,
-          name: my_name,
-          linking_buffer: LinkingBuffer.new()
+          name: my_name
         }
         |> PadSpecHandler.init_pads()
 
