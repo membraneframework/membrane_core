@@ -158,9 +158,6 @@ defmodule Membrane.Core.BinTest do
     def handle_process(_pad, buf, _, state), do: {{:ok, buffer: {:output, buf}}, state}
 
     @impl true
-    def handle_event(_pad, event, _ctx, state), do: {{:ok, forward: event}, state}
-
-    @impl true
     def handle_shutdown(_reason, _state), do: :ok
   end
 
