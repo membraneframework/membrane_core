@@ -151,10 +151,7 @@ defmodule Membrane.Bin do
           bin_options :: bin_options_t,
           process_options :: GenServer.options()
         ) :: GenServer.on_start()
-  def start_link(my_name, module, bin_options \\ nil, process_options \\ []),
-    do: do_start(:start_link, my_name, module, bin_options, process_options)
-
-  defp do_start(method, my_name, module, bin_options, process_options) do
+  def start_link(my_name, module, bin_options \\ nil, process_options \\ []) do
     if module |> bin? do
       debug("""
       Bin start link: module: #{inspect(module)},
@@ -162,7 +159,7 @@ defmodule Membrane.Bin do
       process options: #{inspect(process_options)}
       """)
 
-      apply(GenServer, method, [__MODULE__, {my_name, module, bin_options}, process_options])
+      GenServer.start_link(__MODULE__, {my_name, module, bin_options}, process_options)
     else
       warn_error(
         """
