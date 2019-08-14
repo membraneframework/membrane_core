@@ -177,17 +177,7 @@ defmodule Membrane.Core.BinTest do
           ]
         })
 
-      :ok = Testing.Pipeline.play(pipeline)
-
-      assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
-
-      assert_start_of_stream(pipeline, :sink)
-
-      buffers
-      |> Enum.each(fn b -> assert_sink_buffer(pipeline, :sink, %Membrane.Buffer{payload: ^b}) end)
-
-      assert_end_of_stream(pipeline, :sink)
+      assert_data_flows_through(pipeline, buffers)
     end
 
     test "when bin is next to a bin" do
@@ -209,17 +199,7 @@ defmodule Membrane.Core.BinTest do
           ]
         })
 
-      :ok = Testing.Pipeline.play(pipeline)
-
-      assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
-
-      assert_start_of_stream(pipeline, :sink)
-
-      buffers
-      |> Enum.each(fn b -> assert_sink_buffer(pipeline, :sink, %Membrane.Buffer{payload: ^b}) end)
-
-      assert_end_of_stream(pipeline, :sink)
+      assert_data_flows_through(pipeline, buffers)
     end
 
     test "when bins are nested" do
@@ -240,17 +220,7 @@ defmodule Membrane.Core.BinTest do
           ]
         })
 
-      :ok = Testing.Pipeline.play(pipeline)
-
-      assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
-
-      assert_start_of_stream(pipeline, :sink)
-
-      buffers
-      |> Enum.each(fn b -> assert_sink_buffer(pipeline, :sink, %Membrane.Buffer{payload: ^b}) end)
-
-      assert_end_of_stream(pipeline, :sink)
+      assert_data_flows_through(pipeline, buffers)
     end
 
     test "when there are consecutive bins that are nested" do
@@ -274,17 +244,7 @@ defmodule Membrane.Core.BinTest do
           ]
         })
 
-      :ok = Testing.Pipeline.play(pipeline)
-
-      assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
-
-      assert_start_of_stream(pipeline, :sink)
-
-      buffers
-      |> Enum.each(fn b -> assert_sink_buffer(pipeline, :sink, %Membrane.Buffer{payload: ^b}) end)
-
-      assert_end_of_stream(pipeline, :sink)
+      assert_data_flows_through(pipeline, buffers)
     end
 
     test "when pipeline has only one element being a padless bin" do
@@ -300,19 +260,7 @@ defmodule Membrane.Core.BinTest do
           ]
         })
 
-      :ok = Testing.Pipeline.play(pipeline)
-
-      assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
-
-      assert_start_of_stream(pipeline, :test_bin)
-
-      buffers
-      |> Enum.each(fn b ->
-        assert_sink_buffer(pipeline, :test_bin, %Membrane.Buffer{payload: ^b})
-      end)
-
-      assert_end_of_stream(pipeline, :test_bin)
+      assert_data_flows_through(pipeline, buffers, :test_bin)
     end
 
     test "when bin is a sink bin" do
@@ -329,19 +277,7 @@ defmodule Membrane.Core.BinTest do
           ]
         })
 
-      :ok = Testing.Pipeline.play(pipeline)
-
-      assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
-
-      assert_start_of_stream(pipeline, :test_bin)
-
-      buffers
-      |> Enum.each(fn b ->
-        assert_sink_buffer(pipeline, :test_bin, %Membrane.Buffer{payload: ^b})
-      end)
-
-      assert_end_of_stream(pipeline, :test_bin)
+      assert_data_flows_through(pipeline, buffers, :test_bin)
     end
   end
 
@@ -389,17 +325,7 @@ defmodule Membrane.Core.BinTest do
           ]
         })
 
-      :ok = Testing.Pipeline.play(pipeline)
-
-      assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
-
-      assert_start_of_stream(pipeline, :sink)
-
-      buffers
-      |> Enum.each(fn b -> assert_sink_buffer(pipeline, :sink, %Membrane.Buffer{payload: ^b}) end)
-
-      assert_end_of_stream(pipeline, :sink)
+      assert_data_flows_through(pipeline, buffers)
     end
   end
 
@@ -415,5 +341,21 @@ defmodule Membrane.Core.BinTest do
 
   defp get_child_pid(_, _) do
     {:error, :child_was_not_found}
+  end
+
+  defp assert_data_flows_through(pipeline, buffers, receiving_element \\ :sink) do
+    :ok = Testing.Pipeline.play(pipeline)
+
+    assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
+    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+
+    assert_start_of_stream(pipeline, receiving_element)
+
+    buffers
+    |> Enum.each(fn b ->
+      assert_sink_buffer(pipeline, receiving_element, %Membrane.Buffer{payload: ^b})
+    end)
+
+    assert_end_of_stream(pipeline, receiving_element)
   end
 end
