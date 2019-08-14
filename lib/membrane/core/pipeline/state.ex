@@ -29,8 +29,4 @@ defmodule Membrane.Core.Pipeline.State do
             playback: %Playback{},
             pending_pids: MapSet.new(),
             terminating?: false
-
-  defimpl Membrane.Core.Parent.State, for: __MODULE__ do
-    use Membrane.Core.Parent.State.Default
-  end
 end
