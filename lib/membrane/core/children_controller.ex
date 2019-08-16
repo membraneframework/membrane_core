@@ -127,8 +127,6 @@ defmodule Membrane.Core.Parent.ChildrenController do
     end
   end
 
-  # Recursion that starts children processes, case when both module and options
-  # are provided.
   defp start_child_element(%{name: name, module: module, options: options}) do
     debug("Pipeline: starting child: name: #{inspect(name)}, module: #{inspect(module)}")
 

@@ -184,12 +184,12 @@ defmodule Membrane.Core.PadController do
 
   @spec parse_link_props!(Keyword.t(), Pad.name_t(), State.t()) :: Keyword.t()
   defp parse_link_props!(props, pad_name, state) do
-    {_, pad} =
+    {_, pad_spec} =
       state.module.membrane_pads()
       |> PadSpecHandler.add_bin_pads()
       |> Enum.find(fn {k, _} -> k == pad_name end)
 
-    opts_spec = pad.options
+    opts_spec = pad_spec.options
     pad_props = parse_pad_props!(pad_name, opts_spec, props[:pad])
     buffer_props = parse_buffer_props!(pad_name, props[:buffer])
     [pad: pad_props, buffer: buffer_props]

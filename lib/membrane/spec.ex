@@ -46,9 +46,9 @@ defmodule Membrane.Spec do
 
     ```
     %{
-      {this_bin(), :input} => {:filter1, :input, buffer: [preferred_size: 10]},
+      {Bin.itself(), :input} => {:filter1, :input, buffer: [preferred_size: 10]},
       {:filter1, :output} => {:filter2, :input, buffer: [preferred_size: 10]},
-      {:filter2, :output} => {this_bin(), :output, buffer: [preferred_size: 10]}
+      {:filter2, :output} => {Bin.itself(), :output, buffer: [preferred_size: 10]}
     }
   """
 
