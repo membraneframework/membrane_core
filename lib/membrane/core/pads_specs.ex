@@ -275,13 +275,6 @@ defmodule Membrane.Core.PadsSpecs do
   end
 
   defp documenation_string(direction, bin?) do
-    sentence_object =
-      if bin? do
-        "bin"
-      else
-        "element"
-      end
-
     reference =
       if bin? do
         "The type `t:Membrane.Pad.#{direction}_spec_t/0` describes how the definition of pads should look."
@@ -290,7 +283,7 @@ defmodule Membrane.Core.PadsSpecs do
       end
 
     """
-    Macro that defines #{direction} pad for the #{sentence_object}.
+    Macro that defines #{direction} pad for the #{if bin?, do: "bin", else: "element"}.
 
     Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
     without module prefix.
