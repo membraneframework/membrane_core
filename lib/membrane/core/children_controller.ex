@@ -16,15 +16,15 @@ defmodule Membrane.Core.Parent.ChildrenController do
   @type child_name_t :: Element.name_t() | Bin.name_t()
   @typep parsed_child_t :: %{name: child_name_t(), module: module, options: Keyword.t()}
 
-  @callback resolve_links([Link.t()], Parent.State.t()) :: [Link.resolved_t()]
+  @callback resolve_links([Link.t()], Parent.ChildrenModel.t()) :: [Link.resolved_t()]
 
-  @callback link_children([Link.resolved_t()], Parent.State.t()) :: Type.try_t()
+  @callback link_children([Link.resolved_t()], Parent.ChildrenModel.t()) :: Type.try_t()
 
-  @callback exec_handle_spec_started([child_name_t()], Parent.State.t()) ::
-              {:ok, Parent.State.t()}
+  @callback exec_handle_spec_started([child_name_t()], Parent.ChildrenModel.t()) ::
+              {:ok, Parent.ChildrenModel.t()}
 
-  @spec handle_spec(module(), Spec.t(), Parent.State.t()) ::
-          Type.stateful_try_t([child_name_t()], Parent.State.t())
+  @spec handle_spec(module(), Spec.t(), Parent.ChildrenModel.t()) ::
+          Type.stateful_try_t([child_name_t()], Parent.ChildrenModel.t())
   def handle_spec(spec_controller_module, %{children: children_spec, links: links}, state) do
     debug("""
     Initializing spec
@@ -75,7 +75,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
     raise ParentError, "Invalid children config: #{inspect(config, pretty: true)}"
   end
 
-  @spec check_if_children_names_unique([parsed_child_t], Parent.State.t()) ::
+  @spec check_if_children_names_unique([parsed_child_t], Parent.ChildrenModel.t()) ::
           Type.try_t()
   def check_if_children_names_unique(children, state) do
     %{children: state_children} = state
@@ -93,19 +93,19 @@ defmodule Membrane.Core.Parent.ChildrenController do
     end
   end
 
-  @spec start_children([parsed_child_t]) :: [Parent.State.child_t()]
+  @spec start_children([parsed_child_t]) :: [Parent.ChildrenModel.child_t()]
   def start_children(children) do
     debug("Starting children: #{inspect(children)}")
 
     children |> Enum.map(&start_child/1)
   end
 
-  @spec add_children([parsed_child_t()], Parent.State.t()) ::
-          Type.stateful_try_t(Parent.State.t())
+  @spec add_children([parsed_child_t()], Parent.ChildrenModel.t()) ::
+          Type.stateful_try_t(Parent.ChildrenModel.t())
   def add_children(children, state) do
     children
     |> Bunch.Enum.try_reduce(state, fn {name, pid}, state ->
-      state |> Parent.State.add_child(name, pid)
+      state |> Parent.ChildrenModel.add_child(name, pid)
     end)
   end
 

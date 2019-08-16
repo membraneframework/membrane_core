@@ -76,7 +76,7 @@ defmodule Membrane.Core.Bin.SpecController do
     with {:ok, state} <- links |> Bunch.Enum.try_reduce_while(state, &link/2),
          :ok <-
            state
-           |> Parent.State.get_children()
+           |> Parent.ChildrenModel.get_children()
            |> Bunch.Enum.try_each(fn {_pid, pid} -> pid |> Element.handle_linking_finished() end),
          do: {:ok, state}
   end

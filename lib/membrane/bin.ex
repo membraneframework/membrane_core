@@ -209,7 +209,7 @@ defmodule Membrane.Bin do
 
   @impl PlaybackHandler
   def handle_playback_state(_old, new, state) do
-    children_pids = state |> Parent.State.get_children() |> Map.values()
+    children_pids = state |> Parent.ChildrenModel.get_children() |> Map.values()
 
     children_pids
     |> Enum.each(fn pid ->

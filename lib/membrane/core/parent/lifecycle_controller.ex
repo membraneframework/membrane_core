@@ -88,7 +88,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   end
 
   def handle_notification(from, notification, state, handlers) do
-    with {:ok, _} <- state |> Parent.State.get_child_pid(from) do
+    with {:ok, _} <- state |> Parent.ChildrenModel.get_child_pid(from) do
       CallbackHandler.exec_and_handle_callback(
         :handle_notification,
         handlers.action_handler,
@@ -102,7 +102,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   end
 
   def handle_shutdown_ready(child, state, _handlers) do
-    {{:ok, pid}, state} = Parent.State.pop_child(state, child)
+    {{:ok, pid}, state} = Parent.ChildrenModel.pop_child(state, child)
     {Element.shutdown(pid), state}
   end
 
@@ -125,7 +125,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   @impl PlaybackHandler
   def handle_playback_state(_old, new, state) do
-    children_pids = state |> Parent.State.get_children() |> Map.values()
+    children_pids = state |> Parent.ChildrenModel.get_children() |> Map.values()
 
     children_pids
     |> Enum.each(fn pid ->
