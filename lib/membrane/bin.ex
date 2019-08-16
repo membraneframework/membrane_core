@@ -229,6 +229,9 @@ defmodule Membrane.Bin do
   def handle_playback_state_changed(_old, _new, state), do: {:ok, state}
 
   @impl GenServer
+  # The only elmeent-specific message that is handled here so we can't handle
+  # it in `Parent.LifecycleController`. This forwards all :demand, :caps, :buffer, :event
+  # messages to an appropriate element.
   def handle_info(Message.new(type, _args, for_pad: pad) = msg, state)
       when type in [:demand, :caps, :buffer, :event] do
     %{linking_buffer: buf} = state
@@ -243,11 +246,7 @@ defmodule Membrane.Bin do
   end
 
   def handle_info(message, state) do
-    Parent.MessageDispatcher.handle_message(message, state, %{
-      action_handler: ActionHandler,
-      playback_controller: __MODULE__,
-      spec_controller: SpecController
-    })
+    Parent.MessageDispatcher.handle_message(message, state, handlers())
     |> noreply(state)
   end
 
@@ -288,6 +287,14 @@ defmodule Membrane.Bin do
   def set_controlling_pid(server, controlling_pid, timeout \\ 5000) do
     Message.call(server, :set_controlling_pid, controlling_pid, [], timeout)
   end
+
+  @spec handlers :: Parent.MessageDispatcher.handlers()
+  defp handlers,
+    do: %{
+      action_handler: ActionHandler,
+      playback_controller: __MODULE__,
+      spec_controller: SpecController
+    }
 
   defmacro __using__(_) do
     quote location: :keep do

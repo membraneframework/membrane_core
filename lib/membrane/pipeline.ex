@@ -285,11 +285,7 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_info(message, state) do
-    Parent.MessageDispatcher.handle_message(message, state, %{
-      action_handler: __MODULE__,
-      playback_controller: __MODULE__,
-      spec_controller: SpecController
-    })
+    Parent.MessageDispatcher.handle_message(message, state, handlers())
     |> noreply(state)
   end
 
@@ -319,6 +315,14 @@ defmodule Membrane.Pipeline do
 
   defp to_parent_sm_callback(:handle_start_of_stream), do: :handle_element_start_of_stream
   defp to_parent_sm_callback(:handle_end_of_stream), do: :handle_element_end_of_stream
+
+  @spec handlers :: Parent.MessageDispatcher.handlers()
+  defp handlers,
+    do: %{
+      action_handler: __MODULE__,
+      playback_controller: __MODULE__,
+      spec_controller: SpecController
+    }
 
   defmacro __using__(_) do
     quote location: :keep do
