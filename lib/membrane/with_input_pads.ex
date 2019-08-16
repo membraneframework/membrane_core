@@ -51,13 +51,11 @@ defmodule Membrane.WithInputPads do
   """
   @deprecated "Use def_input_pad/2 for each pad instead"
   defmacro def_input_pads(pads) do
-    for name <- pads, do: Pad.assert_public_name!(name)
     PadsSpecs.def_pads(pads, :input)
   end
 
   @doc PadsSpecs.def_pad_docs(:input)
   defmacro def_input_pad(name, spec) do
-    Pad.assert_public_name!(name)
     PadsSpecs.def_pad(name, :input, spec)
   end
 
