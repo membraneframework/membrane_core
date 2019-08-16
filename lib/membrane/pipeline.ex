@@ -9,8 +9,7 @@ defmodule Membrane.Pipeline do
   """
 
   alias Membrane.Core.Pipeline.State
-  alias Membrane.{CallbackError, Core, Element, Notification, Spec}
-  alias Core.Pad
+  alias Membrane.{CallbackError, Core, Element, Notification, Pad, Spec}
   alias Core.Message
   alias Core.Pipeline.SpecController
   alias Membrane.Core.Parent

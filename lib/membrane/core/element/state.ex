@@ -5,8 +5,8 @@ defmodule Membrane.Core.Element.State do
   # internally in Membrane.
 
   use Membrane.Log, tags: :core
-  alias Membrane.{Core, Element}
-  alias Core.{Pad, PadSpecHandler, Playback, Playbackable, PadModel}
+  alias Membrane.{Core, Element, Pad}
+  alias Core.{PadSpecHandler, Playback, Playbackable, PadModel}
   alias Core.Element.PlaybackBuffer
   alias Bunch.Type
   alias __MODULE__, as: ThisModule

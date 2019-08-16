@@ -8,8 +8,8 @@ defmodule Membrane.WithOutputPads do
   For more information on implementing elements, see `Membrane.Element.Base`.
   """
 
-  alias Membrane.{Buffer, Element}
-  alias Membrane.Core.{Pad, PadsSpecs}
+  alias Membrane.{Buffer, Element, Pad}
+  alias Membrane.Core.PadsSpecs
   alias Element.CallbackContext
 
   @doc """

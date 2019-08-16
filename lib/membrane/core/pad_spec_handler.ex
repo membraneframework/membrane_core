@@ -2,9 +2,8 @@ defmodule Membrane.Core.PadSpecHandler do
   @moduledoc false
   # Module parsing pads specifications in elements.
 
-  alias Membrane.Bin
+  alias Membrane.{Bin, Pad}
   alias Membrane.{Core, Element}
-  alias Core.Pad
   alias Core.Element
   alias Core.PadModel
   require Pad

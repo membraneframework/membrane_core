@@ -117,7 +117,7 @@ defmodule Membrane.Core.PadControllerSpec do
     let :other_ref, do: :other_pad
 
     let :pad_data,
-      do: %Membrane.Core.Pad.Data{
+      do: %Membrane.Pad.Data{
         start_of_stream?: true,
         end_of_stream?: false
       }
@@ -187,7 +187,7 @@ defmodule Membrane.Core.PadControllerSpec do
       let :pad_ref, do: {:input, 0}
 
       let :pad_data,
-        do: %Membrane.Core.Pad.Data{
+        do: %Membrane.Pad.Data{
           start_of_stream?: true,
           end_of_stream?: false
         }

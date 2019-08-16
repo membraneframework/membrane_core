@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Pad.Data do
+defmodule Membrane.Pad.Data do
   @moduledoc """
   Struct describing current pad state.
 
@@ -14,7 +14,7 @@ defmodule Membrane.Core.Pad.Data do
   Other fields in the struct ARE NOT PART OF THE PUBLIC API and should not be
   accessed or relied on.
   """
-  alias Membrane.Core.Pad
+  alias Membrane.Pad
   alias Membrane.{Buffer, Caps, Core, Event}
   alias Buffer.Metric
   alias Core.InputBuffer

@@ -6,7 +6,7 @@ defmodule Membrane.Bin do
 
   import Membrane.Helper.GenServer
 
-  alias Membrane.{Element, Spec}
+  alias Membrane.{Element, Pad, Spec}
 
   alias Membrane.Core.{
     CallbackHandler,
@@ -16,7 +16,6 @@ defmodule Membrane.Bin do
     Parent,
     PadModel,
     PadsSpecs,
-    Pad,
     Message
   }
 

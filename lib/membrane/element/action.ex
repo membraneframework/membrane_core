@@ -11,7 +11,7 @@ defmodule Membrane.Element.Action do
   """
 
   alias Membrane.{Buffer, Caps, Event, Notification}
-  alias Membrane.Core.Pad
+  alias Membrane.Pad
 
   @typedoc """
   Sends a message to the watcher.

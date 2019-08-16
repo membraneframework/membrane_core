@@ -8,7 +8,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   alias Element.{Action, Pad}
   require Message
   require PadModel
-  import Core.Pad, only: [is_pad_ref: 1]
+  import Membrane.Pad, only: [is_pad_ref: 1]
   use Core.Element.Log
   use Bunch
   use Membrane.Core.CallbackHandler

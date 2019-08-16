@@ -5,12 +5,11 @@ defmodule Membrane.Core.Bin.SpecController do
 
   @behaviour Membrane.Core.Parent.ChildrenController
 
-  alias Membrane.{Bin, ParentError}
+  alias Membrane.{Bin, Pad, ParentError}
 
   alias Membrane.Core.{
     Parent,
     Message,
-    Pad,
     PadController,
     CallbackHandler
   }

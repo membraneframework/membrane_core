@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Bin.LinkingBuffer do
   alias Membrane.Core.Message
   alias Membrane.Core.PadModel
-  alias Membrane.Core.Pad
+  alias Membrane.Pad
   alias Membrane.Bin
   require Message
 

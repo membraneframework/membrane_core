@@ -2,12 +2,12 @@ defmodule Membrane.Core.PadsSpecs do
   @moduledoc false
   # Functions parsing element pads specifications, generating functions and docs
   # based on them.
-  alias Membrane.{Caps}
+  alias Membrane.Caps
   alias Membrane.Core.OptionsSpecs
-  alias Membrane.Core.Pad
+  alias Membrane.Pad
   alias Bunch.Type
   use Bunch
-  require Membrane.Core.Pad
+  require Membrane.Pad
 
   @spec def_pads([{Pad.name_t(), raw_spec :: Macro.t()}], Pad.direction_t()) :: Macro.t()
   def def_pads(pads, direction) do
@@ -96,7 +96,7 @@ defmodule Membrane.Core.PadsSpecs do
     :ok = validate_pads!(pads, env)
     pads_docs = generate_docs_from_pads_specs(pads)
 
-    alias Membrane.Core.Pad
+    alias Membrane.Pad
 
     quote do
       @doc """
