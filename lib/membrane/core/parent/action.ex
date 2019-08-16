@@ -2,7 +2,7 @@ defmodule Membrane.Core.Parent.Action do
   @moduledoc """
   This module consists of common for bin and pipeline types and functions connected to actions.
   """
-  alias Membrane.{CallbackError, Notification}
+  alias Membrane.{CallbackError, Notification, Spec}
   alias Membrane.Core.{Parent, Message}
   alias Parent.ChildrenController
 
