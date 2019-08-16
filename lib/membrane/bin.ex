@@ -229,8 +229,8 @@ defmodule Membrane.Bin do
   def handle_playback_state_changed(_old, _new, state), do: {:ok, state}
 
   @impl GenServer
-  # The only elmeent-specific message that is handled here so we can't handle
-  # it in `Parent.LifecycleController`. This forwards all :demand, :caps, :buffer, :event
+  # Element-specific message.
+  # This forwards all :demand, :caps, :buffer, :event
   # messages to an appropriate element.
   def handle_info(Message.new(type, _args, for_pad: pad) = msg, state)
       when type in [:demand, :caps, :buffer, :event] do
@@ -243,6 +243,16 @@ defmodule Membrane.Bin do
     new_buf = LinkingBuffer.store_or_send(buf, msg, outgoing_pad, state)
 
     {:ok, %{state | linking_buffer: new_buf}} |> noreply()
+  end
+
+  # Element-specific message.
+  def handle_info(Message.new(:demand_unit, [demand_unit, pad_ref]), state) do
+    PadModel.assert_data!(state, pad_ref, %{direction: :output})
+
+    state
+    |> PadModel.set_data!(pad_ref, [:other_demand_unit], demand_unit)
+    ~> {:ok, &1}
+    |> noreply()
   end
 
   def handle_info(message, state) do

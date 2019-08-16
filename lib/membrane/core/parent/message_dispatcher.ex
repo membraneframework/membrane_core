@@ -41,10 +41,6 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     LifecycleController.handle_shutdown_ready(child, state, handlers)
   end
 
-  def handle_message(Message.new(:demand_unit, [demand_unit, pad_ref]), state, handlers) do
-    LifecycleController.handle_demand_unit(demand_unit, pad_ref, state, handlers)
-  end
-
   def handle_message(message, state, handlers) do
     LifecycleController.handle_other(message, state, handlers)
   end
