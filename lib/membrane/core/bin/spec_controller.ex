@@ -10,8 +10,7 @@ defmodule Membrane.Core.Bin.SpecController do
   alias Membrane.Core.{
     Parent,
     Message,
-    PadController,
-    CallbackHandler
+    PadController
   }
 
   alias Membrane.Core.Bin.LinkingBuffer
@@ -138,23 +137,5 @@ defmodule Membrane.Core.Bin.SpecController do
   end
 
   @impl true
-  def exec_handle_spec_started(children_names, state) do
-    callback_res =
-      CallbackHandler.exec_and_handle_callback(
-        :handle_spec_started,
-        Membrane.Core.Bin.ActionHandler,
-        [children_names],
-        state
-      )
-
-    with {:ok, _} <- callback_res do
-      callback_res
-    else
-      {{:error, reason}, state} ->
-        raise ParentError, """
-        Callback :handle_spec_started failed with reason: #{inspect(reason)}
-        Pipeline state: #{inspect(state, pretty: true)}
-        """
-    end
-  end
+  def action_handler_module, do: Membrane.Core.Bin.ActionHandler
 end

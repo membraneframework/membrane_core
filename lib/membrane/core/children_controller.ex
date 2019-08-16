@@ -5,7 +5,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
   use Membrane.Core.PlaybackRequestor
 
   alias Membrane.{Bin, Element, ParentError, Spec}
-  alias Membrane.Core.{Message, Parent}
+  alias Membrane.Core.{CallbackHandler, Message, Parent}
   alias Membrane.Core.Link
   alias Bunch.Type
 
@@ -20,8 +20,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
 
   @callback link_children([Link.resolved_t()], Parent.ChildrenModel.t()) :: Type.try_t()
 
-  @callback exec_handle_spec_started([child_name_t()], Parent.ChildrenModel.t()) ::
-              {:ok, Parent.ChildrenModel.t()}
+  @callback action_handler_module :: module()
 
   @spec handle_spec(module(), Spec.t(), Parent.ChildrenModel.t()) ::
           Type.stateful_try_t([child_name_t()], Parent.ChildrenModel.t())
@@ -44,7 +43,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
     {:ok, state} = links |> spec_controller_module.link_children(state)
     {children_names, children_pids} = children |> Enum.unzip()
     {:ok, state} = {children_pids |> set_children_watcher(), state}
-    {:ok, state} = spec_controller_module.exec_handle_spec_started(children_names, state)
+    {:ok, state} = exec_handle_spec_started(spec_controller_module, children_names, state)
 
     children_pids
     |> Enum.each(&change_playback_state(&1, state.playback.state))
@@ -163,5 +162,25 @@ defmodule Membrane.Core.Parent.ChildrenController do
 
   defp set_watcher(server, watcher, timeout \\ 5000) when is_pid(server) do
     Message.call(server, :set_watcher, watcher, [], timeout)
+  end
+
+  defp exec_handle_spec_started(spec_controller_module, children_names, state) do
+    callback_res =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_spec_started,
+        spec_controller_module.action_handler_module,
+        [children_names],
+        state
+      )
+
+    with {:ok, _} <- callback_res do
+      callback_res
+    else
+      {{:error, reason}, state} ->
+        raise ParentError, """
+        Callback :handle_spec_started failed with reason: #{inspect(reason)}
+        Pipeline state: #{inspect(state, pretty: true)}
+        """
+    end
   end
 end
