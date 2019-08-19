@@ -69,8 +69,12 @@ defmodule Membrane.Pipeline do
 
   @typedoc """
   Type that defines all valid return values from most callbacks.
+
+  In case of error, a callback is supposed to return `{:error, any}` if it is not
+  passed state, and `{{:error, any}, state}` otherwise.
   """
-  @type callback_return_t :: CallbackHandler.callback_return_t(action_t, State.internal_state_t())
+  @type callback_return_t ::
+          {:ok | {:ok, [action_t]} | {:error, any}, State.internal_state_t()} | {:error, any}
 
   @typep parsed_child_t :: %{name: Element.name_t(), module: module, options: Keyword.t()}
 
@@ -84,9 +88,7 @@ defmodule Membrane.Pipeline do
   and initialize element internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
   """
-  @callback handle_init(options :: pipeline_options_t) ::
-              {{:ok, Spec.t()}, State.internal_state_t()}
-              | {:error, any}
+  @callback handle_init(options :: pipeline_options_t) :: callback_return_t
 
   @doc """
   Callback invoked when pipeline transition from `:stopped` to `:prepared` state has finished,
@@ -436,8 +438,8 @@ defmodule Membrane.Pipeline do
 
   defp choose_clock(children, provider, state) do
     cond do
-      provider -> get_clock_from_provider(children, provider)
-      state.clock_provider.clock && state.clock_provider.choice == :manual -> nil
+      provider != nil -> get_clock_from_provider(children, provider)
+      state.clock_provider.clock != nil && state.clock_provider.choice == :manual -> nil
       true -> choose_clock_provider(state.children)
     end
     |> case do
@@ -485,7 +487,7 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  @spec add_children([parsed_child_t], State.t()) :: Type.stateful_try_t(State.t())
+  @spec add_children([parsed_child_t], State.t()) :: State.t()
   defp add_children(children, state) do
     {:ok, state} =
       children
@@ -701,6 +703,12 @@ defmodule Membrane.Pipeline do
 
   @impl CallbackHandler
   def handle_actions(%Spec{} = spec, :handle_init, params, state) do
+    warn("""
+    Returning bare spec from `handle_init` is deprecated.
+    Return `{{:ok, spec: spec}, state}` instead.
+    Found in `#{inspect(state.module)}.handle_init/1`.
+    """)
+
     super([spec: spec], :handle_init, params, state)
   end
 

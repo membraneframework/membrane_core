@@ -73,7 +73,7 @@ defmodule Membrane.Core.ElementSpec do
             sync: Sync.no_sync()
           })
 
-      # finally do: Process.exit(from_pid(), :kill)
+      finally do: Process.exit(from_pid(), :kill)
 
       let :to_pid, do: self()
 
@@ -245,7 +245,7 @@ defmodule Membrane.Core.ElementSpec do
             allow module()
                   |> to(
                     accept(:handle_prepared_to_playing, fn _, received_internal_state ->
-                      {:error, reason(), %{received_internal_state | a: 3}}
+                      {{:error, reason()}, %{received_internal_state | a: 3}}
                     end)
                   )
 

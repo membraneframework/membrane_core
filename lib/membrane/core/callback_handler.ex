@@ -5,6 +5,7 @@ defmodule Membrane.Core.CallbackHandler do
   # results.
 
   alias Bunch.Type
+  alias Membrane.CallbackError
   use Bunch
   use Membrane.Log, tags: :core
 
@@ -84,11 +85,11 @@ defmodule Membrane.Core.CallbackHandler do
         state
       )
       when is_map(handler_params) do
-    split_cont_f = handler_params |> Map.get(:split_cont_f, fn _ -> true end)
+    split_continuation_arbiter = handler_params |> Map.get(:split_continuation_arbiter, fn _ -> true end)
 
     args_list
     |> Bunch.Enum.try_reduce_while(state, fn args, state ->
-      if split_cont_f.(state) do
+      if split_continuation_arbiter.(state) do
         result = callback |> exec_callback(args |> Bunch.listify(), handler_params, state)
 
         result
@@ -111,13 +112,16 @@ defmodule Membrane.Core.CallbackHandler do
         {:ok, f} -> args ++ [f.(state)]
       end
 
+    handler_params = handler_params |> Map.put_new(:state, true)
+
     args =
-      case handler_params |> Map.fetch(:state) do
-        {:ok, false} -> args
-        _ -> args ++ [state |> Map.fetch!(:internal_state)]
+      if handler_params.state do
+        args ++ [state |> Map.fetch!(:internal_state)]
+      else
+        args
       end
 
-    module |> apply(callback, args)
+    module |> apply(callback, args) |> parse_callback_result(module, callback, handler_params)
   end
 
   @spec handle_callback_result(
@@ -128,12 +132,16 @@ defmodule Membrane.Core.CallbackHandler do
           state_t
         ) :: Type.stateful_try_t(state_t)
   defp handle_callback_result(result, callback, handler_module, handler_params, state) do
-    module = state |> Map.get(:module)
+    {result, state} =
+      case result do
+        {result, {:state, new_internal_state}} ->
+          {result, state |> Map.put(:internal_state, new_internal_state)}
 
-    with {{:ok, {result, new_internal_state}}, state} <-
-           {result |> parse_callback_result(module, callback), state},
-         state = state |> Map.put(:internal_state, new_internal_state),
-         {{:ok, actions}, state} <- {result, state},
+        {result, :no_state} ->
+          {result, state}
+      end
+
+    with {{:ok, actions}, state} <- {result, state},
          {:ok, state} <-
            actions
            |> exec_handle_actions(callback, handler_module, handler_params, state) do
@@ -156,17 +164,17 @@ defmodule Membrane.Core.CallbackHandler do
     end
   end
 
-  @spec parse_callback_result(callback_return_t | any, module, callback :: atom) ::
+  @spec parse_callback_result(callback_return_t | any, module, callback :: atom, handler_params_t) ::
           {:ok, Type.stateful_try_t(list, internal_state_t)}
           | {:error, {:invalid_callback_result, details :: Keyword.t()}}
-  defp parse_callback_result({:ok, new_internal_state}, module, cb),
-    do: parse_callback_result({{:ok, []}, new_internal_state}, module, cb)
+  defp parse_callback_result({:ok, new_internal_state}, module, cb, params),
+    do: parse_callback_result({{:ok, []}, new_internal_state}, module, cb, params)
 
-  defp parse_callback_result({{:ok, actions}, new_internal_state}, _module, _cb) do
-    {:ok, {{:ok, actions}, new_internal_state}}
+  defp parse_callback_result({{:ok, actions}, new_internal_state}, _module, _cb, _params) do
+    {{:ok, actions}, {:state, new_internal_state}}
   end
 
-  defp parse_callback_result({{:error, reason}, new_internal_state}, module, cb) do
+  defp parse_callback_result({{:error, reason}, new_internal_state}, module, cb, %{state: true}) do
     warn_error(
       """
       Callback #{inspect(cb)} from module #{inspect(module)} returned an error
@@ -175,27 +183,21 @@ defmodule Membrane.Core.CallbackHandler do
       reason
     )
 
-    {:ok, {{:error, reason}, new_internal_state}}
+    {{:error, reason}, {:state, new_internal_state}}
   end
 
-  defp parse_callback_result(result, module, cb) do
+  defp parse_callback_result({:error, reason}, module, cb, %{state: false}) do
     warn_error(
       """
-      Callback replies are expected to be one of:
-
-          {:ok, state}
-          {{:ok, actions}, state}
-          {{:error, reason}, state}
-
-      where actions is a list that is specific to #{inspect(module)}
-
-      Instead, callback #{inspect(cb)} from module #{inspect(module)} returned
-      value of #{inspect(result)} which does not match any of the valid return
-      values.
-
-      Check if all callbacks return values are in the right format.
+      Callback #{inspect(cb)} from module #{inspect(module)} returned an error
       """,
-      {:invalid_callback_result, result: result, module: module, callback: cb}
+      reason
     )
+
+    {{:error, reason}, :no_state}
+  end
+
+  defp parse_callback_result(result, module, cb, _params) do
+    raise CallbackError, kind: :bad_return, callback: {module, cb}, val: result
   end
 end

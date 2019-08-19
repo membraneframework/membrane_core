@@ -1,7 +1,7 @@
 defmodule Membrane.Sync do
   @moduledoc """
-  Sync allows to synchronize multiple processes, so that they performed their jobs
-  at the same time.
+  Sync allows to synchronize multiple processes, so that they could perform their
+  jobs at the same time.
 
   The main purpose for Sync is to synchronize multiple streams within a pipeline.
   The flow of usage goes as follows:

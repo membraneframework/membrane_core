@@ -20,6 +20,6 @@ defmodule Membrane.Support.Element.TrivialPipeline do
       links: links
     }
 
-    {{:ok, spec}, %{}}
+    {{:ok, spec: spec}, %{}}
   end
 end

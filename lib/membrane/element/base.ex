@@ -46,7 +46,6 @@ defmodule Membrane.Element.Base do
   """
 
   alias Membrane.{Action, Core, Element, Event}
-  alias Core.CallbackHandler
   alias Core.Element.OptionsSpecs
   alias Element.{Action, CallbackContext, Pad}
 
@@ -54,8 +53,12 @@ defmodule Membrane.Element.Base do
 
   @typedoc """
   Type that defines all valid return values from most callbacks.
+
+  In case of error, a callback is supposed to return `{:error, any}` if it is not
+  passed state, and `{{:error, any}, state}` otherwise.
   """
-  @type callback_return_t :: CallbackHandler.callback_return_t(Action.t(), Element.state_t())
+  @type callback_return_t ::
+          {:ok | {:ok, [Action.t()]} | {:error, any}, Element.state_t()} | {:error, any}
 
   @doc """
   Automatically implemented callback returning specification of pads exported

@@ -20,7 +20,7 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
       links: links
     }
 
-    {{:ok, spec}, %{target: opts.target}}
+    {{:ok, spec: spec}, %{target: opts.target}}
   end
 
   @impl true
