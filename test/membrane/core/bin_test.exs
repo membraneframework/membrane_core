@@ -109,40 +109,69 @@ defmodule Membrane.Core.BinTest do
       assert_data_flows_through(pipeline, buffers)
     end
 
-    # TODO fix this test when we have testing bin
-    # test "when pipeline has only one element being a padless bin" do
-    #  buffers = ['a', 'b', 'c']
+    test "when pipeline has only one element being a padless bin" do
+      buffers = ['a', 'b', 'c']
 
-    #  {:ok, pipeline} =
-    #    Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-    #      elements: [
-    #        test_bin: %TestBins.TestPadlessBin{
-    #          source: %Testing.Source{output: buffers},
-    #          sink: Testing.Sink
-    #        }
-    #      ]
-    #    })
+      {:ok, pipeline} =
+        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+          elements: [
+            test_bin: %TestBins.TestPadlessBin{
+              source: %Testing.Source{output: buffers},
+              sink: Testing.Sink
+            }
+          ]
+        })
 
-    #  assert_data_flows_through(pipeline, buffers, :test_bin)
-    # end
+      :ok = Testing.Pipeline.play(pipeline)
 
-    ## TODO fix this test when we have testing bin
-    # test "when bin is a sink bin" do
-    #  buffers = ['a', 'b', 'c']
+      assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
+      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
 
-    #  {:ok, pipeline} =
-    #    Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-    #      elements: [
-    #        source: %Testing.Source{output: buffers},
-    #        test_bin: %TestBins.TestSinkBin{
-    #          filter: TestFilter,
-    #          sink: Testing.Sink
-    #        }
-    #      ]
-    #    })
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_start_of_stream, {:sink, _}})
 
-    #  assert_data_flows_through(pipeline, buffers, :test_bin)
-    # end
+      buffers
+      |> Enum.each(fn b ->
+        assert_sink_buffer(pipeline, :test_bin, %Membrane.Buffer{payload: ^b})
+      end)
+
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:sink, _}})
+    end
+
+    test "when bin is a sink bin" do
+      buffers = ['a', 'b', 'c']
+
+      {:ok, pipeline} =
+        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+          elements: [
+            source: %Testing.Source{output: buffers},
+            test_bin: %TestBins.TestSinkBin{
+              filter: TestFilter,
+              sink: Testing.Sink
+            }
+          ]
+        })
+
+      :ok = Testing.Pipeline.play(pipeline)
+
+      assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
+      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+
+      assert_pipeline_notified(
+        pipeline,
+        :test_bin,
+        {:handle_element_start_of_stream, {:filter, _}}
+      )
+
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_start_of_stream, {:sink, _}})
+
+      buffers
+      |> Enum.each(fn b ->
+        assert_sink_buffer(pipeline, :test_bin, %Membrane.Buffer{payload: ^b})
+      end)
+
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:filter, _}})
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:sink, _}})
+    end
   end
 
   describe "Events passing in pipeline" do

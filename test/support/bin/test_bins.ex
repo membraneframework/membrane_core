@@ -100,6 +100,16 @@ defmodule Membrane.Support.Bin.TestBins do
 
       {{:ok, spec}, state}
     end
+
+    @impl true
+    def handle_element_start_of_stream(arg, state) do
+      {{:ok, notify: {:handle_element_start_of_stream, arg}}, state}
+    end
+
+    @impl true
+    def handle_element_end_of_stream(arg, state) do
+      {{:ok, notify: {:handle_element_end_of_stream, arg}}, state}
+    end
   end
 
   defmodule TestPadlessBin do
@@ -127,6 +137,16 @@ defmodule Membrane.Support.Bin.TestBins do
       state = %{}
 
       {{:ok, spec}, state}
+    end
+
+    @impl true
+    def handle_element_start_of_stream(arg, state) do
+      {{:ok, notify: {:handle_element_start_of_stream, arg}}, state}
+    end
+
+    @impl true
+    def handle_element_end_of_stream(arg, state) do
+      {{:ok, notify: {:handle_element_end_of_stream, arg}}, state}
     end
   end
 end
