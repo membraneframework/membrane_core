@@ -122,17 +122,11 @@ defmodule Membrane.Core.BinTest do
           ]
         })
 
-      :ok = Testing.Pipeline.play(pipeline)
-
-      assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+      assert_playing(pipeline)
 
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_start_of_stream, {:sink, _}})
 
-      buffers
-      |> Enum.each(fn b ->
-        assert_sink_buffer(pipeline, :test_bin, %Membrane.Buffer{payload: ^b})
-      end)
+      assert_buffers_flow_through(pipeline, buffers, :test_bin)
 
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:sink, _}})
     end
@@ -151,10 +145,7 @@ defmodule Membrane.Core.BinTest do
           ]
         })
 
-      :ok = Testing.Pipeline.play(pipeline)
-
-      assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+      assert_playing(pipeline)
 
       assert_pipeline_notified(
         pipeline,
@@ -164,10 +155,7 @@ defmodule Membrane.Core.BinTest do
 
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_start_of_stream, {:sink, _}})
 
-      buffers
-      |> Enum.each(fn b ->
-        assert_sink_buffer(pipeline, :test_bin, %Membrane.Buffer{payload: ^b})
-      end)
+      assert_buffers_flow_through(pipeline, buffers, :test_bin)
 
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:filter, _}})
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:sink, _}})
@@ -237,18 +225,26 @@ defmodule Membrane.Core.BinTest do
   end
 
   defp assert_data_flows_through(pipeline, buffers, receiving_element \\ :sink) do
-    :ok = Testing.Pipeline.play(pipeline)
-
-    assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+    assert_playing(pipeline)
 
     assert_start_of_stream(pipeline, ^receiving_element)
 
+    assert_buffers_flow_through(pipeline, buffers, receiving_element)
+
+    assert_end_of_stream(pipeline, ^receiving_element)
+  end
+
+  defp assert_buffers_flow_through(pipeline, buffers, receiving_element) do
     buffers
     |> Enum.each(fn b ->
       assert_sink_buffer(pipeline, receiving_element, %Membrane.Buffer{payload: ^b})
     end)
+  end
 
-    assert_end_of_stream(pipeline, ^receiving_element)
+  defp assert_playing(pipeline) do
+    :ok = Testing.Pipeline.play(pipeline)
+
+    assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
+    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
   end
 end
