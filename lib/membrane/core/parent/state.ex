@@ -1,11 +1,9 @@
 defmodule Membrane.Core.Parent.ChildrenModel do
-  alias Membrane.Core.Parent.ChildrenController
-
-  @type children_t :: %{ChildrenController.child_name_t() => pid}
+  @type children_t :: %{Child.name_t() => pid}
 
   @type t :: Bin.State.t() | Pipeline.State.t()
 
-  @spec add_child(t, ChildrenController.child_name_t(), pid) :: Type.stateful_try_t(t)
+  @spec add_child(t, Child.name_t(), pid) :: Type.stateful_try_t(t)
   def add_child(%{children: children} = state, child, pid) do
     if Map.has_key?(children, child) do
       {{:error, {:duplicate_child, child}}, state}
@@ -14,12 +12,12 @@ defmodule Membrane.Core.Parent.ChildrenModel do
     end
   end
 
-  @spec get_child_pid(t, ChildrenController.child_name_t()) :: Type.try_t(pid)
+  @spec get_child_pid(t, Child.name_t()) :: Type.try_t(pid)
   def get_child_pid(%{children: children}, child) do
     children[child] |> Bunch.error_if_nil({:unknown_child, child})
   end
 
-  @spec pop_child(t, ChildrenController.child_name_t()) :: Type.stateful_try_t(pid, t)
+  @spec pop_child(t, Child.name_t()) :: Type.stateful_try_t(pid, t)
   def pop_child(%{children: children} = state, child) do
     {pid, children} = children |> Map.pop(child)
 
@@ -29,7 +27,7 @@ defmodule Membrane.Core.Parent.ChildrenModel do
     end
   end
 
-  @spec get_children_names(t) :: [ChildrenController.child_name_t()]
+  @spec get_children_names(t) :: [Child.name_t()]
   def get_children_names(%{children: children}) do
     children |> Map.keys()
   end

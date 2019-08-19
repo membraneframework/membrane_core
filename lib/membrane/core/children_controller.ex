@@ -4,7 +4,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
   use Membrane.Log, tags: :core
   #  use Membrane.Core.PlaybackRequestor
 
-  alias Membrane.{Bin, Element, ParentError, Spec}
+  alias Membrane.{Bin, Child, Element, ParentError, Spec}
   alias Membrane.Core.{CallbackHandler, Message, Parent}
   alias Membrane.Core.Link
   alias Bunch.Type
@@ -14,8 +14,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
   require Message
   require Membrane.PlaybackState
 
-  @type child_name_t :: Element.name_t() | Bin.name_t()
-  @typep parsed_child_t :: %{name: child_name_t(), module: module, options: Keyword.t()}
+  @typep parsed_child_t :: %{name: Child.name_t(), module: module, options: Keyword.t()}
 
   @callback resolve_links([Link.t()], Parent.ChildrenModel.t()) :: [Link.resolved_t()]
 
@@ -24,7 +23,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
   @callback action_handler_module :: module()
 
   @spec handle_spec(module(), Spec.t(), Parent.ChildrenModel.t()) ::
-          Type.stateful_try_t([child_name_t()], Parent.ChildrenModel.t())
+          Type.stateful_try_t([Child.name_t()], Parent.ChildrenModel.t())
   def handle_spec(spec_controller_module, %{children: children_spec, links: links}, state) do
     debug("""
     Initializing spec

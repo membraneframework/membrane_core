@@ -80,7 +80,7 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_notification(
               notification :: Notification.t(),
-              element :: ChildrenController.child_name_t(),
+              element :: Child.name_t(),
               state :: State.internal_state_t()
             ) :: callback_return_t
 
@@ -116,7 +116,7 @@ defmodule Membrane.Pipeline do
   action.
   """
   @callback handle_spec_started(
-              elements :: [ChildrenController.child_name_t()],
+              elements :: [Child.name_t()],
               state :: State.internal_state_t()
             ) ::
               callback_return_t

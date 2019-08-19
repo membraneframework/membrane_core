@@ -12,7 +12,6 @@ defmodule Membrane.Bin do
     CallbackHandler,
     PadController,
     PadSpecHandler,
-    ChildrenController,
     Parent,
     PadModel,
     PadsSpecs,
@@ -85,7 +84,7 @@ defmodule Membrane.Bin do
   """
   @callback handle_notification(
               notification :: Notification.t(),
-              element :: ChildrenController.child_name_t(),
+              element :: Child.name_t(),
               state :: State.internal_state_t()
             ) :: callback_return_t
 
@@ -121,7 +120,7 @@ defmodule Membrane.Bin do
   `t:Membrane.Core.Parent.Action.spec_action_t/0` action.
   """
   @callback handle_spec_started(
-              elements :: [ChildrenController.child_name_t()],
+              elements :: [Child.name_t()],
               state :: State.internal_state_t()
             ) ::
               callback_return_t

@@ -8,7 +8,7 @@ defmodule Membrane.Spec do
   ## Children
   Children that should be spawned when the pipeline/bin starts can be defined
   with the `:children` field.
-  You have to set it to a keyword list, where keys are valid children names (`t:Membrane.ChildrenController.child_name_t/0`)
+  You have to set it to a keyword list, where keys are valid children names (`t:Membrane.Child.name_t/0`)
   that are unique within this pipeline/bin and values are either element's module or
   struct of that module.
   Sample definitions:

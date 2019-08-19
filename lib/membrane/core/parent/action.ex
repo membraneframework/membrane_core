@@ -1,17 +1,13 @@
 defmodule Membrane.Core.Parent.Action do
-  @moduledoc """
-  This module consists of common for bin and pipeline types and functions connected to actions.
-  """
-  alias Membrane.{CallbackError, Notification, Spec}
+  alias Membrane.{CallbackError, Child, Notification, Spec}
   alias Membrane.Core.{Parent, Message}
-  alias Parent.ChildrenController
 
   use Bunch
 
   @typedoc """
   Action that sends a message to element identified by name.
   """
-  @type forward_action_t :: {:forward, {ChildrenController.child_name_t(), Notification.t()}}
+  @type forward_action_t :: {:forward, {Child.name_t(), Notification.t()}}
 
   @typedoc """
   Action that instantiates elements and links them according to `Membrane.Spec`.
@@ -25,7 +21,7 @@ defmodule Membrane.Core.Parent.Action do
   Action that stops, unlinks and removes specified child/children from their parent.
   """
   @type remove_child_action_t ::
-          {:remove_child, ChildrenController.child_name_t() | [ChildrenController.child_name_t()]}
+          {:remove_child, Child.name_t() | [Child.name_t()]}
 
   @typedoc """
   Type describing actions that can be returned from parent callbacks.
