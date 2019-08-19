@@ -92,6 +92,6 @@ defmodule Membrane.Pipeline.Spec do
 
   defstruct children: [],
             links: %{},
-            stream_sync: nil,
+            stream_sync: [],
             clock_provider: nil
 end

@@ -355,7 +355,7 @@ defmodule Membrane.Pipeline do
     )
   end
 
-  defp setup_syncs(children, nil) do
+  defp setup_syncs(children, :sinks) do
     sinks =
       children |> Enum.filter(&(&1.module.membrane_element_type == :sink)) |> Enum.map(& &1.name)
 
