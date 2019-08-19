@@ -147,7 +147,6 @@ defmodule Membrane.Pipeline do
 
   Useful for any cleanup required.
   """
-
   @callback handle_shutdown(reason, state :: State.internal_state_t()) :: :ok
             when reason: :normal | :shutdown | {:shutdown, any}
 
@@ -697,7 +696,7 @@ defmodule Membrane.Pipeline do
 
   @impl GenServer
   def terminate(reason, state) do
-    CallbackHandler.exec_and_handle_callback(:handle_shutdown, __MODULE__, [reason], state)
+    :ok = state.module.handle_shutdown(reason, state.internal_state)
     :ok
   end
 
