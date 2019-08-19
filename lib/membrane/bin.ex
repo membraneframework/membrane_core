@@ -100,7 +100,7 @@ defmodule Membrane.Bin do
   Callback invoked when pipeline's element receives start_of_stream event.
   """
   @callback handle_element_start_of_stream(
-              {Element.name_t(), Pad.t()},
+              {Child.name_t(), Pad.t()},
               state :: State.internal_state_t()
             ) :: callback_return_t
 
@@ -108,7 +108,7 @@ defmodule Membrane.Bin do
   Callback invoked when pipeline's element receives end_of_stream event.
   """
   @callback handle_element_end_of_stream(
-              {Element.name_t(), Pad.t()},
+              {Child.name_t(), Pad.t()},
               state :: State.internal_state_t()
             ) :: callback_return_t
 
@@ -384,7 +384,9 @@ defmodule Membrane.Bin do
                      handle_prepared_to_stopped: 1,
                      handle_notification: 3,
                      handle_other: 2,
-                     handle_spec_started: 2
+                     handle_spec_started: 2,
+                     handle_element_start_of_stream: 2,
+                     handle_element_end_of_stream: 2
     end
   end
 end
