@@ -109,38 +109,40 @@ defmodule Membrane.Core.BinTest do
       assert_data_flows_through(pipeline, buffers)
     end
 
-    test "when pipeline has only one element being a padless bin" do
-      buffers = ['a', 'b', 'c']
+    # TODO fix this test when we have testing bin
+    # test "when pipeline has only one element being a padless bin" do
+    #  buffers = ['a', 'b', 'c']
 
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          elements: [
-            test_bin: %TestBins.TestPadlessBin{
-              source: %Testing.Source{output: buffers},
-              sink: Testing.Sink
-            }
-          ]
-        })
+    #  {:ok, pipeline} =
+    #    Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+    #      elements: [
+    #        test_bin: %TestBins.TestPadlessBin{
+    #          source: %Testing.Source{output: buffers},
+    #          sink: Testing.Sink
+    #        }
+    #      ]
+    #    })
 
-      assert_data_flows_through(pipeline, buffers, :test_bin)
-    end
+    #  assert_data_flows_through(pipeline, buffers, :test_bin)
+    # end
 
-    test "when bin is a sink bin" do
-      buffers = ['a', 'b', 'c']
+    ## TODO fix this test when we have testing bin
+    # test "when bin is a sink bin" do
+    #  buffers = ['a', 'b', 'c']
 
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          elements: [
-            source: %Testing.Source{output: buffers},
-            test_bin: %TestBins.TestSinkBin{
-              filter: TestFilter,
-              sink: Testing.Sink
-            }
-          ]
-        })
+    #  {:ok, pipeline} =
+    #    Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+    #      elements: [
+    #        source: %Testing.Source{output: buffers},
+    #        test_bin: %TestBins.TestSinkBin{
+    #          filter: TestFilter,
+    #          sink: Testing.Sink
+    #        }
+    #      ]
+    #    })
 
-      assert_data_flows_through(pipeline, buffers, :test_bin)
-    end
+    #  assert_data_flows_through(pipeline, buffers, :test_bin)
+    # end
   end
 
   describe "Events passing in pipeline" do
