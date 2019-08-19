@@ -4,7 +4,6 @@ defmodule Membrane.Core.PadControllerTest do
   alias Membrane.Core.Element.State
   alias Membrane.Core.{Message, Playbackable, PadModel, PadSpecHandler}
   alias Membrane.{LinkError, Pad}
-  alias Membrane.Event.EndOfStream
   require Message
 
   @module Membrane.Core.PadController

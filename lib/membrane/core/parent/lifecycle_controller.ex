@@ -17,6 +17,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   require Message
   require PadModel
+  require Membrane.PlaybackState
 
   @type handlers :: %{
           action_handler: module(),
@@ -129,10 +130,32 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
     children_pids
     |> Enum.each(fn pid ->
-      Element.change_playback_state(pid, new)
+      change_playback_state(pid, new)
     end)
 
     state = %{state | pending_pids: children_pids |> MapSet.new()}
     PlaybackHandler.suspend_playback_change(state)
   end
+
+  @spec change_playback_state(pid, Membrane.PlaybackState.t()) :: :ok
+  defp change_playback_state(pid, new_state)
+       when Membrane.PlaybackState.is_playback_state(new_state) do
+    alias Membrane.Core.Message
+    require Message
+    Message.send(pid, :change_playback_state, new_state)
+    :ok
+  end
+
+  def handle_stream_management_event(cb, element_name, pad_ref, state, handlers)
+      when cb in [:handle_start_of_stream, :handle_end_of_stream] do
+    CallbackHandler.exec_and_handle_callback(
+      to_parent_sm_callback(cb),
+      handlers.action_handler,
+      [{element_name, pad_ref}],
+      state
+    )
+  end
+
+  defp to_parent_sm_callback(:handle_start_of_stream), do: :handle_element_start_of_stream
+  defp to_parent_sm_callback(:handle_end_of_stream), do: :handle_element_end_of_stream
 end

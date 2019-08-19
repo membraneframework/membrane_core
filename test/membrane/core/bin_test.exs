@@ -211,13 +211,13 @@ defmodule Membrane.Core.BinTest do
     assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
     assert_pipeline_playback_changed(pipeline, :prepared, :playing)
 
-    assert_start_of_stream(pipeline, receiving_element)
+    assert_start_of_stream(pipeline, ^receiving_element)
 
     buffers
     |> Enum.each(fn b ->
       assert_sink_buffer(pipeline, receiving_element, %Membrane.Buffer{payload: ^b})
     end)
 
-    assert_end_of_stream(pipeline, receiving_element)
+    assert_end_of_stream(pipeline, ^receiving_element)
   end
 end

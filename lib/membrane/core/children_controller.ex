@@ -2,7 +2,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
   @moduledoc false
   use Bunch
   use Membrane.Log, tags: :core
-  use Membrane.Core.PlaybackRequestor
+  #  use Membrane.Core.PlaybackRequestor
 
   alias Membrane.{Bin, Element, ParentError, Spec}
   alias Membrane.Core.{CallbackHandler, Message, Parent}
@@ -12,6 +12,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
   require Bin
   require Element
   require Message
+  require Membrane.PlaybackState
 
   @type child_name_t :: Element.name_t() | Bin.name_t()
   @typep parsed_child_t :: %{name: child_name_t(), module: module, options: Keyword.t()}
@@ -49,6 +50,15 @@ defmodule Membrane.Core.Parent.ChildrenController do
     |> Enum.each(&change_playback_state(&1, state.playback.state))
 
     {{:ok, children_names}, state}
+  end
+
+  @spec change_playback_state(pid, Membrane.PlaybackState.t()) :: :ok
+  defp change_playback_state(pid, new_state)
+       when Membrane.PlaybackState.is_playback_state(new_state) do
+    alias Membrane.Core.Message
+    require Message
+    Message.send(pid, :change_playback_state, new_state)
+    :ok
   end
 
   defp parse_links(links), do: links |> Bunch.Enum.try_map(&Link.parse/1)

@@ -162,13 +162,6 @@ defmodule Membrane.Pad do
   def opposite_direction(:input), do: :output
   def opposite_direction(:output), do: :input
 
-  def assert_public_name!(name) do
-    if not public_name?(name) do
-      raise CompileError,
-        file: __ENV__.file,
-        description: "#{inspect(name)} is not a proper pad name. Use public names only."
-    end
-
   def get_corresponding_bin_pad({:dynamic, name, id}),
     do: {:dynamic, get_corresponding_bin_name(name), id}
 

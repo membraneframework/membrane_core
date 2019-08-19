@@ -2,10 +2,21 @@ defmodule Membrane.Core.Element.ActionHandler do
   @moduledoc false
   # Module validating and executing actions returned by element's callbacks.
 
-  alias Membrane.{ActionError, Buffer, Caps, CallbackError, Core, Element, Event, Notification}
+  alias Membrane.{
+    ActionError,
+    Buffer,
+    Caps,
+    CallbackError,
+    Core,
+    Element,
+    Event,
+    Notification,
+    Pad
+  }
+
   alias Core.Element.{DemandHandler, LifecycleController, State}
   alias Core.{Message, PlaybackHandler, PadModel}
-  alias Element.{Action, Pad}
+  alias Element.Action
   require Message
   require PadModel
   import Membrane.Pad, only: [is_pad_ref: 1]

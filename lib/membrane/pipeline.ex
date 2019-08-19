@@ -273,17 +273,6 @@ defmodule Membrane.Pipeline do
   def handle_playback_state_changed(_old, _new, state), do: {:ok, state}
 
   @impl GenServer
-  def handle_info(Message.new(cb, [element_name, pad_ref]), state)
-      when cb in [:handle_start_of_stream, :handle_end_of_stream] do
-    CallbackHandler.exec_and_handle_callback(
-      to_parent_sm_callback(cb),
-      __MODULE__,
-      [{element_name, pad_ref}],
-      state
-    )
-    |> noreply(state)
-  end
-
   def handle_info(message, state) do
     Parent.MessageDispatcher.handle_message(message, state, handlers())
     |> noreply(state)
@@ -312,9 +301,6 @@ defmodule Membrane.Pipeline do
   def handle_action(action, callback, _params, state) do
     Parent.Action.handle_unknown_action(action, callback, state.module)
   end
-
-  defp to_parent_sm_callback(:handle_start_of_stream), do: :handle_element_start_of_stream
-  defp to_parent_sm_callback(:handle_end_of_stream), do: :handle_element_end_of_stream
 
   @spec handlers :: Parent.MessageDispatcher.handlers()
   defp handlers,

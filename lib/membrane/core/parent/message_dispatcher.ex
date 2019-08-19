@@ -41,6 +41,11 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     LifecycleController.handle_shutdown_ready(child, state, handlers)
   end
 
+  def handle_message(Message.new(cb, [element_name, pad_ref]), state, handlers)
+      when cb in [:handle_start_of_stream, :handle_end_of_stream] do
+    LifecycleController.handle_stream_management_event(cb, element_name, pad_ref, state, handlers)
+  end
+
   def handle_message(message, state, handlers) do
     LifecycleController.handle_other(message, state, handlers)
   end

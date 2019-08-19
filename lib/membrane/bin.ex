@@ -28,6 +28,7 @@ defmodule Membrane.Bin do
   require Pad
   require PadsSpecs
   require PadModel
+  require Membrane.PlaybackState
 
   @typedoc """
   Defines options that can be passed to `start_link/3` and received
@@ -95,6 +96,22 @@ defmodule Membrane.Bin do
   Useful for receiving ticks from timer, data sent from NIFs or other stuff.
   """
   @callback handle_other(message :: any, state :: State.internal_state_t()) :: callback_return_t
+
+  @doc """
+  Callback invoked when pipeline's element receives start_of_stream event.
+  """
+  @callback handle_element_start_of_stream(
+              {Element.name_t(), Pad.t()},
+              state :: State.internal_state_t()
+            ) :: callback_return_t
+
+  @doc """
+  Callback invoked when pipeline's element receives end_of_stream event.
+  """
+  @callback handle_element_end_of_stream(
+              {Element.name_t(), Pad.t()},
+              state :: State.internal_state_t()
+            ) :: callback_return_t
 
   @doc """
   Callback invoked when `Membrane.Bin.Spec` is linked and in the same playback
@@ -213,7 +230,7 @@ defmodule Membrane.Bin do
 
     children_pids
     |> Enum.each(fn pid ->
-      Element.change_playback_state(pid, new)
+      change_playback_state(pid, new)
     end)
 
     state = %{state | pending_pids: children_pids |> MapSet.new()}
@@ -306,6 +323,15 @@ defmodule Membrane.Bin do
       spec_controller: SpecController
     }
 
+  @spec change_playback_state(pid, Membrane.PlaybackState.t()) :: :ok
+  defp change_playback_state(pid, new_state)
+       when Membrane.PlaybackState.is_playback_state(new_state) do
+    alias Membrane.Core.Message
+    require Message
+    Message.send(pid, :change_playback_state, new_state)
+    :ok
+  end
+
   defmacro __using__(_) do
     quote location: :keep do
       alias unquote(__MODULE__)
@@ -345,6 +371,12 @@ defmodule Membrane.Bin do
 
       @impl true
       def handle_spec_started(_new_children, state), do: {:ok, state}
+
+      @impl true
+      def handle_element_start_of_stream({_element, _pad}, state), do: {:ok, state}
+
+      @impl true
+      def handle_element_end_of_stream({_element, _pad}, state), do: {:ok, state}
 
       defoverridable handle_init: 1,
                      handle_stopped_to_prepared: 1,
