@@ -14,15 +14,15 @@ defmodule Membrane.Core.Bin.State do
   @type t :: %__MODULE__{
           internal_state: internal_state_t | nil,
           playback: Playback.t(),
-          module: module,
+          module: module | nil,
           children: children_t,
           pending_pids: MapSet.t(pid),
           terminating?: boolean,
-          name: Bin.name_t(),
-          bin_options: any,
+          name: Bin.name_t() | nil,
+          bin_options: any | nil,
           pads: PadModel.pads_t() | nil,
-          watcher: pid,
-          controlling_pid: pid,
+          watcher: pid | nil,
+          controlling_pid: pid | nil,
           linking_buffer: LinkingBuffer.t()
         }
 
