@@ -6,7 +6,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   alias Membrane.{Core, Element}
   alias Core.{CallbackHandler, Message, Playback, PadModel}
   alias Core.Element.{ActionHandler, PlaybackBuffer, State}
-  alias Element.{CallbackContext, Pad}
+  alias Element.CallbackContext
   require CallbackContext.{Other, PlaybackChange}
   require Message
   require PadModel
@@ -98,24 +98,6 @@ defmodule Membrane.Core.Element.LifecycleController do
 
     CallbackHandler.exec_and_handle_callback(:handle_other, ActionHandler, [message, ctx], state)
     |> or_warn_error("Error while handling message")
-  end
-
-  @spec handle_watcher(pid, State.t()) :: {:ok, State.t()}
-  def handle_watcher(watcher, state), do: {:ok, %{state | watcher: watcher}}
-
-  @spec handle_controlling_pid(pid, State.t()) :: {:ok, State.t()}
-  def handle_controlling_pid(pid, state), do: {:ok, %{state | controlling_pid: pid}}
-
-  @doc """
-  Stores demand unit of subsequent element pad.
-  """
-  @spec handle_demand_unit(demand_unit :: atom, Pad.ref_t(), State.t()) :: {:ok, State.t()}
-  def handle_demand_unit(demand_unit, pad_ref, state) do
-    PadModel.assert_data!(state, pad_ref, %{direction: :output})
-
-    state
-    |> PadModel.set_data!(pad_ref, [:other_demand_unit], demand_unit)
-    ~> {:ok, &1}
   end
 
   @impl PlaybackHandler

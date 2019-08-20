@@ -10,6 +10,7 @@ defmodule Membrane.Bin do
 
   alias Membrane.Core.{
     CallbackHandler,
+    Child,
     PadController,
     PadSpecHandler,
     Parent,
@@ -245,7 +246,7 @@ defmodule Membrane.Bin do
   def handle_playback_state_changed(_old, _new, state), do: {:ok, state}
 
   @impl GenServer
-  # Element-specific message.
+  # Bin-specific message.
   # This forwards all :demand, :caps, :buffer, :event
   # messages to an appropriate element.
   def handle_info(Message.new(type, _args, for_pad: pad) = msg, state)
@@ -263,11 +264,7 @@ defmodule Membrane.Bin do
 
   # Element-specific message.
   def handle_info(Message.new(:demand_unit, [demand_unit, pad_ref]), state) do
-    PadModel.assert_data!(state, pad_ref, %{direction: :output})
-
-    state
-    |> PadModel.set_data!(pad_ref, [:other_demand_unit], demand_unit)
-    ~> {:ok, &1}
+    Child.LifecycleController.handle_demand_unit(demand_unit, pad_ref, state)
     |> noreply()
   end
 
@@ -282,7 +279,7 @@ defmodule Membrane.Bin do
   end
 
   def handle_call(Message.new(:set_controlling_pid, pid), _, state) do
-    {:ok, %{state | controlling_pid: pid}}
+    Child.LifecycleController.handle_controlling_pid(pid, state)
     |> reply()
   end
 
@@ -307,7 +304,8 @@ defmodule Membrane.Bin do
   end
 
   def handle_call(Message.new(:set_watcher, watcher), _, state) do
-    {:ok, %{state | watcher: watcher}} |> reply()
+    Child.LifecycleController.handle_watcher(watcher, state)
+    |> reply()
   end
 
   def set_controlling_pid(server, controlling_pid, timeout \\ 5000) do

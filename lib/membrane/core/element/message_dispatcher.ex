@@ -3,7 +3,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   # Module handling messages incoming to element and dispatching them to controllers.
 
   alias Membrane.Core
-  alias Core.PadController
+  alias Core.{PadController, Child}
   alias Core.Element.{DemandHandler, LifecycleController, PlaybackBuffer, State}
   alias Core.{Message, PlaybackHandler}
   require Message
@@ -49,15 +49,15 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   end
 
   defp do_handle_message(Message.new(:set_watcher, watcher), :call, state) do
-    LifecycleController.handle_watcher(watcher, state)
+    Child.LifecycleController.handle_watcher(watcher, state)
   end
 
   defp do_handle_message(Message.new(:set_controlling_pid, pid), :call, state) do
-    LifecycleController.handle_controlling_pid(pid, state)
+    Child.LifecycleController.handle_controlling_pid(pid, state)
   end
 
   defp do_handle_message(Message.new(:demand_unit, [demand_unit, pad_ref]), :info, state) do
-    LifecycleController.handle_demand_unit(demand_unit, pad_ref, state)
+    Child.LifecycleController.handle_demand_unit(demand_unit, pad_ref, state)
   end
 
   defp do_handle_message(Message.new(:prepare_shutdown), :info, state) do
