@@ -1,4 +1,5 @@
 defmodule Membrane.Core.Parent.MessageDispatcher do
+  @moduledoc false
   alias Membrane.Core.Message
 
   alias Membrane.Core.Parent.{LifecycleController, State}

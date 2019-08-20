@@ -1,4 +1,5 @@
 defmodule Membrane.Core.Child.LifecycleController do
+  @moduledoc false
   use Bunch
 
   alias Membrane.Pad

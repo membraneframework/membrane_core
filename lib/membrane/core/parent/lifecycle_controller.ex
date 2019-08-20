@@ -1,4 +1,5 @@
 defmodule Membrane.Core.Parent.LifecycleController do
+  @moduledoc false
   use Bunch
   use Membrane.Core.PlaybackHandler
 

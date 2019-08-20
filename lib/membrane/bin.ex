@@ -40,7 +40,7 @@ defmodule Membrane.Bin do
   Type that defines all valid return values from most callbacks.
   """
   @type callback_return_t ::
-          CallbackHandler.callback_return_t(Parent.Action.t(), State.internal_state_t())
+          CallbackHandler.callback_return_t(Membrane.Parent.Action.t(), State.internal_state_t())
 
   @doc """
   Enables to check whether module is membrane bin.

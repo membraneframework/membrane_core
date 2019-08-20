@@ -1,4 +1,5 @@
 defmodule Membrane.Core.Bin.ActionHandler do
+  @moduledoc false
   use Membrane.Core.CallbackHandler
   use Membrane.Log, tags: :core
 

@@ -2,7 +2,6 @@ defmodule Membrane.Core.Parent.ChildrenController do
   @moduledoc false
   use Bunch
   use Membrane.Log, tags: :core
-  #  use Membrane.Core.PlaybackRequestor
 
   alias Membrane.{Bin, Child, Element, ParentError, Spec}
   alias Membrane.Core.{CallbackHandler, Message, Parent}
