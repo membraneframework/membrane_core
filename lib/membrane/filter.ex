@@ -23,6 +23,8 @@ defmodule Membrane.Filter do
   @doc """
   Callback that is to process buffers.
 
+  By default calls `c:handle_process/4` for each buffer.
+
   For pads in pull mode it is called when buffers have been demanded (by returning
   `:demand` action from any callback).
 
@@ -65,10 +67,6 @@ defmodule Membrane.Filter do
       def handle_event(_pad, event, _context, state), do: {{:ok, forward: event}, state}
 
       @impl true
-      def handle_demand(_pad, _size, _unit, _context, state),
-        do: {{:error, :handle_demand_not_implemented}, state}
-
-      @impl true
       def handle_process(_pad, _buffer, _context, state),
         do: {{:error, :handle_process_not_implemented}, state}
 
@@ -80,7 +78,6 @@ defmodule Membrane.Filter do
 
       defoverridable handle_caps: 4,
                      handle_event: 4,
-                     handle_demand: 5,
                      handle_process_list: 4,
                      handle_process: 4
     end

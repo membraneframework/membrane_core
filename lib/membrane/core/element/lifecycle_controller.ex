@@ -3,17 +3,17 @@ defmodule Membrane.Core.Element.LifecycleController do
   # Module handling element initialization, termination, playback state changes
   # and similar stuff.
 
-  alias Membrane.{Core, Element, Sync}
-  alias Core.{CallbackHandler, Message, Playback}
-  alias Core.Element.{ActionHandler, PadModel, PlaybackBuffer, State}
-  alias Element.{CallbackContext, Pad}
-  require CallbackContext.{Other, PlaybackChange}
-  require Message
-  require PadModel
-  require Playback
-  use Core.PlaybackHandler
-  use Core.Element.Log
+  use Membrane.Core.PlaybackHandler
+  use Membrane.Core.Element.Log
   use Bunch
+  require Membrane.Core.Element.PadModel
+  require Membrane.Core.Message
+  require Membrane.Core.Playback
+  require Membrane.Element.CallbackContext.{Other, PlaybackChange}
+  alias Membrane.{Clock, Sync}
+  alias Membrane.Core.{CallbackHandler, Message, Playback}
+  alias Membrane.Core.Element.{ActionHandler, PadModel, PlaybackBuffer, State}
+  alias Membrane.Element.{CallbackContext, Pad}
 
   @doc """
   Performs initialization tasks and executes `handle_init` callback.
@@ -23,6 +23,13 @@ defmodule Membrane.Core.Element.LifecycleController do
     debug("Initializing element: #{inspect(module)}, options: #{inspect(options)}", state)
 
     :ok = Sync.register(state.stream_sync)
+
+    state =
+      if Bunch.Module.check_behaviour(module, :membrane_clock?) do
+        %State{state | clock: Clock.start_link!()}
+      else
+        state
+      end
 
     with {:ok, state} <-
            CallbackHandler.exec_and_handle_callback(
@@ -90,7 +97,9 @@ defmodule Membrane.Core.Element.LifecycleController do
   end
 
   @spec handle_watcher(pid, State.t()) :: {:ok, State.t()}
-  def handle_watcher(watcher, state), do: {:ok, %{state | watcher: watcher}}
+  def handle_watcher(watcher, state) do
+    {{:ok, state |> Map.take([:clock])}, %State{state | watcher: watcher}}
+  end
 
   @spec handle_controlling_pid(pid, State.t()) :: {:ok, State.t()}
   def handle_controlling_pid(pid, state), do: {:ok, %{state | controlling_pid: pid}}

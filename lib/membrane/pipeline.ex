@@ -304,7 +304,6 @@ defmodule Membrane.Pipeline do
     links = links |> resolve_links(state)
     :ok = links |> link_children(state)
     {children_names, children_data} = children |> Enum.unzip()
-    :ok = children_data |> set_children_watcher
     {:ok, state} = exec_handle_spec_started(children_names, state)
 
     children_data
@@ -405,29 +404,13 @@ defmodule Membrane.Pipeline do
              sync: sync
            }),
          :ok <- Message.call(pid, :set_controlling_pid, self()),
-         {:ok, clock} <- setup_clock(module, pid) do
+         {:ok, %{clock: clock}} <- Message.call(pid, :handle_watcher, self()) do
       {name, %{pid: pid, clock: clock, sync: sync}}
     else
       {:error, reason} ->
         raise PipelineError,
               "Cannot start child #{inspect(name)}, \
               reason: #{inspect(reason, pretty: true)}"
-    end
-  end
-
-  defp setup_clock(module, pid) do
-    if Bunch.Module.loaded_and_function_exported?(module, :clock, 0) do
-      clock =
-        case module.clock() do
-          true -> Clock.start_link!()
-          clock -> clock
-        end
-
-      with :ok <- Message.call(pid, :clock, clock) do
-        {:ok, clock}
-      end
-    else
-      {:ok, nil}
     end
   end
 
@@ -544,11 +527,6 @@ defmodule Membrane.Pipeline do
              pid |> Message.call(:linking_finished, [])
            end),
          do: :ok
-  end
-
-  @spec set_children_watcher([pid]) :: :ok
-  defp set_children_watcher(children_data) do
-    :ok = children_data |> Bunch.Enum.try_each(&Message.call(&1.pid, :set_watcher, self()))
   end
 
   @spec exec_handle_spec_started([Element.name_t()], State.t()) :: {:ok, State.t()}

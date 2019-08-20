@@ -10,7 +10,7 @@ defmodule Membrane.Element.Action do
   do not return any actions) unless explicitly stated otherwise.
   """
 
-  alias Membrane.{Buffer, Caps, Event, Notification}
+  alias Membrane.{Buffer, Caps, Event, Notification, Time}
   alias Membrane.Element.Pad
 
   @typedoc """
@@ -158,6 +158,28 @@ defmodule Membrane.Element.Action do
   @type playback_change_t :: {:playback_change, :suspend | :resume}
 
   @typedoc """
+  Starts a timer that will invoke `c:Membrane.Element.Base.handle_tick/3` callback
+  every `interval` according to the given `clock`.
+
+  If no clock is passed, pipeline clock is chosen. The timer's `id` is passed
+  to the `c:Membrane.Element.Base.handle_tick/3` callback and can be used for
+  stopping it (`t:stop_timer_t`).
+
+  Timers use `Process.send_after/3` under the hood.
+  """
+  @type timer_t ::
+          {:timer,
+           {id :: any, interval :: Time.t(), clock :: Clock.t()}
+           | {id :: any, interval :: Time.t()}}
+
+  @typedoc """
+  Stops a timer started with `t:timer_t` action.
+
+  This action is atomic: stopping timer guarantees that no ticks will arrive from it.
+  """
+  @type stop_timer_t :: {:timer, id :: any}
+
+  @typedoc """
   Type that defines a single action that may be returned from element callbacks.
 
   Depending on element type, callback, current playback state and other
@@ -173,4 +195,6 @@ defmodule Membrane.Element.Action do
           | redemand_t
           | forward_t
           | playback_change_t
+          | timer_t
+          | stop_timer_t
 end

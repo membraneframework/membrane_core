@@ -21,6 +21,8 @@ defmodule Membrane.Sink do
   @doc """
   Callback that is called when buffer should be written by the sink.
 
+  By default calls `handle_write/4` for each buffer.
+
   For pads in pull mode it is called when buffers have been demanded (by returning
   `:demand` action from any callback).
 

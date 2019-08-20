@@ -30,6 +30,8 @@ defmodule Membrane.Clock do
   alias Membrane.Time
   alias Membrane.Core.Message
 
+  @type t :: pid
+
   @typedoc """
   Update message received by the Clock. It should contain the time till the next
   update.
@@ -66,7 +68,7 @@ defmodule Membrane.Clock do
   This function can be called multiple times from the same process. To unsubscribe,
   `unsubscribe/2` should be called the same amount of times.
   """
-  @spec subscribe(clock :: pid, subscriber :: pid) :: :ok
+  @spec subscribe(t, subscriber :: pid) :: :ok
   def subscribe(clock, pid \\ self()) do
     GenServer.cast(clock, {:clock_subscribe, pid})
   end
@@ -77,12 +79,12 @@ defmodule Membrane.Clock do
   For unsubscription to take effect, `unsubscribe/2` should be called the same
   amount of times as `subscribe/2`.
   """
-  @spec unsubscribe(clock :: pid, subscriber :: pid) :: :ok
+  @spec unsubscribe(t, subscriber :: pid) :: :ok
   def unsubscribe(clock, pid \\ self()) do
     GenServer.cast(clock, {:clock_unsubscribe, pid})
   end
 
-  @spec proxy_for(clock :: pid, clock_to_proxy_for :: pid) :: :ok
+  @spec proxy_for(t, clock_to_proxy_for :: pid) :: :ok
   def proxy_for(clock, clock_to_proxy_for) do
     GenServer.cast(clock, {:proxy_for, clock_to_proxy_for})
   end

@@ -880,9 +880,9 @@ defmodule Membrane.Core.ElementSpec do
   end
 
   describe "handle_info/3" do
-    context "if message is Message.new(:set_watcher, pid)" do
+    context "if message is Message.new(:handle_watcher, pid)" do
       let :new_watcher, do: self()
-      let :message, do: Message.new(:set_watcher, new_watcher())
+      let :message, do: Message.new(:handle_watcher, new_watcher())
 
       let :state,
         do: %{
@@ -895,7 +895,7 @@ defmodule Membrane.Core.ElementSpec do
 
         it "should return {:noreply, :state()} with watcher set to the new watcher" do
           expect(described_module().handle_call(message(), self(), state()))
-          |> to(eq {:reply, :ok, %{state() | watcher: new_watcher()}})
+          |> to(eq {:reply, {:ok, %{clock: nil}}, %{state() | watcher: new_watcher()}})
         end
       end
 
@@ -904,7 +904,7 @@ defmodule Membrane.Core.ElementSpec do
 
         it "should return {:reply, :ok, state()} with watcher set to the new watcher" do
           expect(described_module().handle_call(message(), self(), state()))
-          |> to(eq {:reply, :ok, %{state() | watcher: new_watcher()}})
+          |> to(eq {:reply, {:ok, %{clock: nil}}, %{state() | watcher: new_watcher()}})
         end
       end
     end

@@ -140,8 +140,8 @@ defmodule Membrane.Core.Element.ActionHandler do
     do_handle_action({:timer, {id, interval, state.pipeline_clock}}, cb, params, state)
   end
 
-  defp do_handle_action({:untimer, ref}, _cb, _params, state) do
-    TimerController.stop_timer(ref, state)
+  defp do_handle_action({:stop_timer, id}, _cb, _params, state) do
+    TimerController.stop_timer(id, state)
   end
 
   defp do_handle_action({:latency, latency}, _cb, _params, state) do

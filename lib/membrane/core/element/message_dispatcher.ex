@@ -56,7 +56,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     PlaybackHandler.change_playback_state(new_playback_state, LifecycleController, state)
   end
 
-  defp do_handle_message(Message.new(:set_watcher, watcher), :call, state) do
+  defp do_handle_message(Message.new(:handle_watcher, watcher), :call, state) do
     LifecycleController.handle_watcher(watcher, state)
   end
 
@@ -106,10 +106,6 @@ defmodule Membrane.Core.Element.MessageDispatcher do
 
   defp do_handle_message(Message.new(:timer_tick, timer_id), :info, state) do
     TimerController.handle_tick(timer_id, state)
-  end
-
-  defp do_handle_message(Message.new(:clock, clock), :call, state) do
-    {:ok, %State{state | clock: clock}}
   end
 
   defp do_handle_message({:membrane_clock_ratio, clock, ratio}, :info, state) do

@@ -45,11 +45,11 @@ defmodule Membrane.Element.Base do
   module.
   """
 
-  alias Membrane.{Action, Core, Element, Event}
-  alias Core.Element.OptionsSpecs
-  alias Element.{Action, CallbackContext, Pad}
-
   use Bunch
+
+  alias Membrane.Core.Element.OptionsSpecs
+  alias Membrane.Element.{Action, CallbackContext, Pad}
+  alias Membrane.Event
 
   @typedoc """
   Type that defines all valid return values from most callbacks.
@@ -73,6 +73,11 @@ defmodule Membrane.Element.Base do
   Automatically implemented callback used to determine if module is a membrane element.
   """
   @callback membrane_element? :: true
+
+  @doc """
+  Automatically implemented callback used to determine whether element exports clock.
+  """
+  @callback membrane_clock? :: true
 
   @doc """
   Automatically implemented callback determining whether element is a source,
@@ -187,11 +192,34 @@ defmodule Membrane.Element.Base do
             ) :: callback_return_t
 
   @doc """
+  Callback invoked upon each timer tick. A timer can be started with `Action.timer_t`
+  action.
+  """
+  @callback handle_tick(
+              timer_id :: any,
+              context :: CallbackContext.tick_t(),
+              state :: Element.state_t()
+            ) :: callback_return_t
+
+  @doc """
   Callback invoked when element is shutting down just before process is exiting.
   Internally called in `c:GenServer.terminate/2` callback.
   """
   @callback handle_shutdown(reason, state :: Element.state_t()) :: :ok
             when reason: :normal | :shutdown | {:shutdown, any}
+
+  @optional_callbacks membrane_clock?: 0,
+                      handle_init: 1,
+                      handle_stopped_to_prepared: 2,
+                      handle_prepared_to_playing: 2,
+                      handle_playing_to_prepared: 2,
+                      handle_prepared_to_stopped: 2,
+                      handle_other: 3,
+                      handle_pad_added: 3,
+                      handle_pad_removed: 3,
+                      handle_event: 4,
+                      handle_tick: 3,
+                      handle_shutdown: 2
 
   @doc """
   Macro defining options that parametrize element.
@@ -204,6 +232,21 @@ defmodule Membrane.Element.Base do
     OptionsSpecs.def_options(__CALLER__.module, options)
   end
 
+  @doc """
+  Defines that element exports a clock to pipeline.
+
+  Exporting clock allows pipeline to choose it as the pipeline clock, enableing other
+  elements to synchronize with it. Element's clock is accessible via `clock` field,
+  while pipeline's one - via `pipeline_clock` field in callback contexts. Both of
+  them can be used for starting timers.
+  """
+  defmacro def_clock do
+    quote do
+      @impl true
+      def membrane_clock?, do: true
+    end
+  end
+
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
@@ -212,7 +255,7 @@ defmodule Membrane.Element.Base do
 
       alias Membrane.Element.CallbackContext, as: Ctx
 
-      import unquote(__MODULE__), only: [def_options: 1]
+      import unquote(__MODULE__), only: [def_clock: 0, def_options: 1]
 
       @impl true
       def membrane_element?, do: true
@@ -225,10 +268,10 @@ defmodule Membrane.Element.Base do
       def handle_stopped_to_prepared(_context, state), do: {:ok, state}
 
       @impl true
-      def handle_playing_to_prepared(_context, state), do: {:ok, state}
+      def handle_prepared_to_playing(_context, state), do: {:ok, state}
 
       @impl true
-      def handle_prepared_to_playing(_context, state), do: {:ok, state}
+      def handle_playing_to_prepared(_context, state), do: {:ok, state}
 
       @impl true
       def handle_prepared_to_stopped(_context, state), do: {:ok, state}
