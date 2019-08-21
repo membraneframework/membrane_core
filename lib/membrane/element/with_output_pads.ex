@@ -37,6 +37,8 @@ defmodule Membrane.Element.WithOutputPads do
               state :: Element.state_t()
             ) :: CommonBehaviour.callback_return_t()
 
+  @optional_callbacks handle_demand: 5
+
   @doc """
   Macro that defines multiple output pads for the element.
 
@@ -57,6 +59,12 @@ defmodule Membrane.Element.WithOutputPads do
       @behaviour unquote(__MODULE__)
 
       import unquote(__MODULE__), only: [def_output_pads: 1, def_output_pad: 2]
+
+      @impl true
+      def handle_demand(_pad, _size, _unit, _context, state),
+        do: {{:error, :handle_demand_not_implemented}, state}
+
+      defoverridable handle_demand: 5
     end
   end
 end

@@ -2,11 +2,11 @@ defmodule Membrane.Core.Element.PadsSpecs do
   @moduledoc false
   # Functions parsing element pads specifications, generating functions and docs
   # based on them.
-  alias Membrane.{Caps, Element}
-  alias Membrane.Core.Element.OptionsSpecs
-  alias Element.Pad
-  alias Bunch.Type
   use Bunch
+  alias Bunch.Type
+  alias Membrane.Caps
+  alias Membrane.Core.Element.OptionsSpecs
+  alias Membrane.Element.{Base, Pad}
 
   @spec def_pads([{Pad.name_t(), raw_spec :: Macro.t()}], Pad.direction_t()) :: Macro.t()
   def def_pads(pads, direction) do
@@ -95,15 +95,12 @@ defmodule Membrane.Core.Element.PadsSpecs do
         unquote(pads |> Macro.escape())
       end
 
-      if @moduledoc != false do
-        @moduledoc """
-        #{@moduledoc}
+      @membrane_pads_moduledoc """
+      ## Pads
 
-        ## Pads
-
-        #{unquote(pads_docs)}
-        """
-      end
+      #{unquote(pads_docs)}
+      """
+      unquote(Base.update_moduledoc())
     end
   end
 

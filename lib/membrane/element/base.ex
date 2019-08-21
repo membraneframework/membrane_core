@@ -242,8 +242,32 @@ defmodule Membrane.Element.Base do
   """
   defmacro def_clock do
     quote do
+      @membrane_clock_moduledoc """
+      ## Clock
+
+      This element exports clock. See `#{unquote(inspect(__MODULE__))}.def_clock/0`
+      for more information.
+      """
+      unquote(update_moduledoc())
+
       @impl true
       def membrane_clock?, do: true
+    end
+  end
+
+  @doc false
+  def update_moduledoc() do
+    quote do
+      if @moduledoc != false do
+        @moduledoc [
+                     :membrane_options_moduledoc,
+                     :membrane_clock_moduledoc,
+                     :membrane_pads_moduledoc
+                   ]
+                   |> Enum.map(&Module.get_attribute(__MODULE__, &1))
+                   |> Enum.filter(& &1)
+                   |> Enum.join("\n")
+      end
     end
   end
 
