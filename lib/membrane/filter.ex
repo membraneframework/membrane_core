@@ -55,6 +55,9 @@ defmodule Membrane.Filter do
       use Membrane.Element.Base
       use Membrane.Element.WithOutputPads
       use Membrane.Element.WithInputPads
+
+      alias Membrane.Event.EndOfStream
+
       @behaviour unquote(__MODULE__)
 
       @impl true
@@ -76,10 +79,14 @@ defmodule Membrane.Filter do
         {{:ok, split: {:handle_process, args_list}}, state}
       end
 
+      @impl true
+      def handle_end_of_stream(pad, _context, state), do: {{:ok, forward: :end_of_stream}, state}
+
       defoverridable handle_caps: 4,
                      handle_event: 4,
                      handle_process_list: 4,
-                     handle_process: 4
+                     handle_process: 4,
+                     handle_end_of_stream: 3
     end
   end
 end

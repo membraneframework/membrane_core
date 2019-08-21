@@ -28,6 +28,25 @@ defmodule Membrane.Element.WithInputPads do
   @optional_callbacks handle_caps: 4
 
   @doc """
+  Callback invoked when element receives `Membrane.Event.StartOfStream` event.
+  """
+  @callback handle_start_of_stream(
+              pad :: Pad.ref_t(),
+              context :: CallbackContext.StreamManagement.t(),
+              state :: Element.state_t()
+            ) :: CommonBehaviour.callback_return_t()
+
+  @doc """
+  Callback invoked when element receives `Membrane.Event.EndOfStream` event
+  emitted when action `end_of_stream` is returned.
+  """
+  @callback handle_end_of_stream(
+              pad :: Pad.ref_t(),
+              context :: CallbackContext.StreamManagement.t(),
+              state :: Element.state_t()
+            ) :: CommonBehaviour.callback_return_t()
+
+  @doc """
   Macro that defines multiple input pads for the element.
 
   Deprecated in favor of `def_input_pad/2`
@@ -51,7 +70,15 @@ defmodule Membrane.Element.WithInputPads do
       @impl true
       def handle_caps(_pad, _caps, _context, state), do: {:ok, state}
 
-      defoverridable handle_caps: 4
+      @impl true
+      def handle_start_of_stream(pad, _context, state), do: {:ok, state}
+
+      @impl true
+      def handle_end_of_stream(pad, _context, state), do: {:ok, state}
+
+      defoverridable handle_caps: 4,
+                     handle_start_of_stream: 3,
+                     handle_end_of_stream: 3
     end
   end
 end

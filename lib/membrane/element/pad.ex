@@ -143,4 +143,8 @@ defmodule Membrane.Element.Pad do
   """
   def name_by_ref({:dynamic, name, _id}) when is_pad_name(name), do: name
   def name_by_ref(ref) when is_pad_name(ref), do: ref
+
+  @spec opposite_direction(direction_t()) :: direction_t()
+  def opposite_direction(:input), do: :output
+  def opposite_direction(:output), do: :input
 end

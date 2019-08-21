@@ -3,13 +3,20 @@ defmodule Membrane.Core.Element.EventController do
   # Module handling events incoming through input pads.
 
   alias Membrane.{Core, Element, Event, Sync}
-  alias Core.{CallbackHandler, InputBuffer}
+  alias Core.{CallbackHandler, InputBuffer, Message}
   alias Core.Element.{ActionHandler, PadModel, State}
   alias Element.{CallbackContext, Pad}
   require CallbackContext.Event
+  require CallbackContext.StreamManagement
   require PadModel
+  require Message
   use Core.Element.Log
   use Bunch
+
+  @spec handle_start_of_stream(Pad.ref_t(), State.t()) :: State.stateful_try_t()
+  def handle_start_of_stream(pad_ref, state) do
+    handle_event(pad_ref, %Event.StartOfStream{}, state)
+  end
 
   @doc """
   Handles incoming event: either stores it in InputBuffer, or executes element callback.
@@ -21,7 +28,7 @@ defmodule Membrane.Core.Element.EventController do
     pad_data = PadModel.get_data!(state, pad_ref)
 
     if not Event.async?(event) && pad_data.mode == :pull && pad_data.direction == :input &&
-         pad_data.input_buf |> InputBuffer.empty?() |> Kernel.not() do
+         buffers_before_event_present?(pad_data) do
       state
       |> PadModel.update_data(pad_ref, :input_buf, &(&1 |> InputBuffer.store(:event, event)))
     else
@@ -51,17 +58,35 @@ defmodule Membrane.Core.Element.EventController do
 
   @spec do_exec_handle_event(Pad.ref_t(), Event.t(), params :: map, State.t()) ::
           State.stateful_try_t()
+  defp do_exec_handle_event(pad_ref, %event_type{} = event, params, state)
+       when event_type in [Event.StartOfStream, Event.EndOfStream] do
+    data = PadModel.get_data!(state, pad_ref)
+    context = CallbackContext.StreamManagement.from_state(state)
+
+    callback = stream_event_to_callback(event)
+    new_params = Map.put(params, :direction, data.direction)
+    args = [pad_ref, context]
+
+    res =
+      CallbackHandler.exec_and_handle_callback(
+        callback,
+        ActionHandler,
+        new_params,
+        args,
+        state
+      )
+
+    if state.watcher, do: Message.send(state.watcher, callback, [state.name, pad_ref])
+
+    res
+  end
+
   defp do_exec_handle_event(pad_ref, event, params, state) do
     data = PadModel.get_data!(state, pad_ref)
     context = &CallbackContext.Event.from_state/1
-
-    CallbackHandler.exec_and_handle_callback(
-      :handle_event,
-      ActionHandler,
-      %{context: context, direction: data.direction} |> Map.merge(params),
-      [pad_ref, event],
-      state
-    )
+    params = %{context: context, direction: data.direction} |> Map.merge(params)
+    args = [pad_ref, event]
+    CallbackHandler.exec_and_handle_callback(:handle_event, ActionHandler, params, args, state)
   end
 
   defp check_sync(%Event.StartOfStream{}, state) do
@@ -114,4 +139,9 @@ defmodule Membrane.Core.Element.EventController do
   end
 
   defp handle_special_event(_pad_ref, _event, state), do: {{:ok, :handle}, state}
+
+  defp buffers_before_event_present?(pad_data), do: not InputBuffer.empty?(pad_data.input_buf)
+
+  defp stream_event_to_callback(%Event.StartOfStream{}), do: :handle_start_of_stream
+  defp stream_event_to_callback(%Event.EndOfStream{}), do: :handle_end_of_stream
 end

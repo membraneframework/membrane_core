@@ -28,8 +28,6 @@ defmodule Membrane.Testing.Sink do
 
   use Membrane.Sink
 
-  alias Membrane.Event
-
   def_input_pad :input,
     demand_unit: :buffers,
     caps: :any
@@ -55,15 +53,17 @@ defmodule Membrane.Testing.Sink do
   def handle_prepared_to_playing(_context, state), do: {:ok, state}
 
   @impl true
-  def handle_event(pad, %Event.StartOfStream{}, _context, state),
-    do: {{:ok, notify: {:start_of_stream, pad}}, state}
-
-  def handle_event(pad, %Event.EndOfStream{}, _context, state),
-    do: {{:ok, notify: {:end_of_stream, pad}}, state}
-
   def handle_event(:input, event, _context, state) do
     {{:ok, notify: {:event, event}}, state}
   end
+
+  @impl true
+  def handle_start_of_stream(pad, _ctx, state),
+    do: {{:ok, notify: {:start_of_stream, pad}}, state}
+
+  @impl true
+  def handle_end_of_stream(pad, _ctx, state),
+    do: {{:ok, notify: {:end_of_stream, pad}}, state}
 
   @impl true
   def handle_caps(pad, caps, _context, state),
