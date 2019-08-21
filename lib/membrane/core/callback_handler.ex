@@ -85,7 +85,8 @@ defmodule Membrane.Core.CallbackHandler do
         state
       )
       when is_map(handler_params) do
-    split_continuation_arbiter = handler_params |> Map.get(:split_continuation_arbiter, fn _ -> true end)
+    split_continuation_arbiter =
+      handler_params |> Map.get(:split_continuation_arbiter, fn _ -> true end)
 
     args_list
     |> Bunch.Enum.try_reduce_while(state, fn args, state ->
