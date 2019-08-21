@@ -11,13 +11,14 @@ defmodule Membrane.Clock do
   the time passed, in practice the described approach turns out to be more convenient,
   as it simplifies the first update.
 
-  Basing on updates, Clock calculates a _ratio_ between the Erlang clock and
-  the custom clock, that is broadcasted (see t:ratio_t) to _subscribers_
-  (see `subscribe/2`) - processes willing to synchronize to the custom clock.
-  Subscribers can adjust their timers according to received ratio - timers started
-  with `:timer` action in elements do it automatically. Initial ratio is equal
+  Basing on updates, Clock calculates a _ratio_ between a reference time and
+  the time provided by the custom clock. The reference time can be configured with
+  `:time_provider` option. The ratio is broadcasted (see t:ratio_t)
+  to _subscribers_ (see `subscribe/2`) - processes willing to synchronize to the
+  custom clock. Subscribers can adjust their timers according to received ratio -
+  timers started with `:timer` action in elements do it automatically. Initial ratio is equal
   to 1, which means that if no updates are received, Clock is synchronized to the
-  Erlang clock.
+  reference time.
 
   ## Proxy mode
   Clock can work in _proxy_ mode, which means it cannot receive updates, but
@@ -45,11 +46,24 @@ defmodule Membrane.Clock do
 
   @typedoc """
   Ratio message sent by the Clock to all its subscribers. It contains the ratio
-  of a custom clock to the Erlang clock.
+  of the custom clock time to the reference time.
   """
   @type ratio_t :: {:membrane_clock_ratio, clock :: pid, Ratio.t()}
 
-  @type option_t :: {:proxy, boolean} | {:proxy_for, pid}
+  @typedoc """
+  Options accepted by `start_link/2`, `start_link!/2`, and `start/2` functions.
+
+  They are the following:
+    - time_provider - function providing the reference time in milliseconds
+    - proxy - determines whether the Clock should work in proxy mode
+    - proxy - enables the proxy mode and sets proxied Clock to pid
+
+  Check the moduledoc for more details.
+  """
+  @type option_t ::
+          {:time_provider, (() -> milliseconds :: integer)}
+          | {:proxy, boolean}
+          | {:proxy_for, pid}
 
   @spec start_link([option_t], GenServer.options()) :: GenServer.on_start()
   def start_link(options \\ [], gen_server_options \\ []) do
@@ -60,6 +74,11 @@ defmodule Membrane.Clock do
   def start_link!(options \\ [], gen_server_options \\ []) do
     {:ok, clock} = start_link(options, gen_server_options)
     clock
+  end
+
+  @spec start([option_t], GenServer.options()) :: GenServer.on_start()
+  def start(options \\ [], gen_server_options \\ []) do
+    GenServer.start(__MODULE__, options, gen_server_options)
   end
 
   @doc """
@@ -92,7 +111,12 @@ defmodule Membrane.Clock do
   @impl GenServer
   def init(options) do
     state =
-      %{ratio: 1, subscribers: %{}}
+      %{
+        ratio: 1,
+        subscribers: %{},
+        time_provider:
+          options |> Keyword.get(:time_provider, fn -> System.monotonic_time(:millisecond) end)
+      }
       |> Map.merge(
         case {options[:proxy], options[:proxy_for]} do
           {_, pid} when is_pid(pid) ->
@@ -185,10 +209,6 @@ defmodule Membrane.Clock do
     handle_clock_update(Ratio.new(nom, denom), state)
   end
 
-  defp handle_clock_update(till_next, %{init_time: nil} = state) do
-    %{state | init_time: Time.monotonic_time(), till_next: till_next}
-  end
-
   defp handle_clock_update(till_next, state) do
     use Ratio
 
@@ -196,9 +216,19 @@ defmodule Membrane.Clock do
       raise "Clock update time cannot be negative, received: #{inspect(till_next)}"
     end
 
+    till_next = till_next * Time.millisecond(1)
+
+    case state.init_time do
+      nil -> %{state | init_time: get_time(state.time_provider), till_next: till_next}
+      _ -> do_handle_clock_update(till_next, state)
+    end
+  end
+
+  defp do_handle_clock_update(till_next, state) do
+    use Ratio
     %{till_next: from_previous, clock_time: clock_time} = state
-    clock_time = clock_time + from_previous * Time.millisecond(1)
-    ratio = clock_time / (Time.monotonic_time() - state.init_time)
+    clock_time = clock_time + from_previous
+    ratio = clock_time / (get_time(state.time_provider) - state.init_time)
     state = %{state | clock_time: clock_time, till_next: till_next}
     broadcast_and_update_ratio(ratio, state)
   end
@@ -211,5 +241,9 @@ defmodule Membrane.Clock do
   defp send_ratio(pid, ratio) do
     send(pid, {:membrane_clock_ratio, self(), ratio})
     :ok
+  end
+
+  defp get_time(time_provider) do
+    time_provider.() |> Time.milliseconds()
   end
 end
