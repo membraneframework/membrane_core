@@ -9,7 +9,7 @@ defmodule Membrane.Pipeline do
   """
 
   alias Membrane.Core.Pipeline.State
-  alias Membrane.{CallbackError, Core, Element, Notification, Pad, Spec}
+  alias Membrane.{CallbackError, Core, Element, Pad, Spec}
   alias Core.Message
   alias Core.Pipeline.SpecController
   alias Membrane.Core.Parent
@@ -31,12 +31,6 @@ defmodule Membrane.Pipeline do
   """
   @type pipeline_options_t :: any
 
-  @typedoc """
-  Type that defines all valid return values from most callbacks.
-  """
-  @type callback_return_t ::
-          CallbackHandler.callback_return_t(Membrane.Parent.Action.t(), State.internal_state_t())
-
   @doc """
   Enables to check whether module is membrane pipeline
   """
@@ -50,76 +44,6 @@ defmodule Membrane.Pipeline do
   @callback handle_init(options :: pipeline_options_t) ::
               {{:ok, Spec.t()}, State.internal_state_t()}
               | {:error, any}
-
-  @doc """
-  Callback invoked when pipeline transition from `:stopped` to `:prepared` state has finished,
-  that is all of its elements are prepared to enter `:playing` state.
-  """
-  @callback handle_stopped_to_prepared(state :: State.internal_state_t()) :: callback_return_t
-
-  @doc """
-  Callback invoked when pipeline transition from `:playing` to `:prepared` state has finished,
-  that is all of its elements are prepared to be stopped.
-  """
-  @callback handle_playing_to_prepared(state :: State.internal_state_t()) :: callback_return_t
-
-  @doc """
-  Callback invoked when pipeline is in `:playing` state, i.e. all its elements
-  are in this state.
-  """
-  @callback handle_prepared_to_playing(state :: State.internal_state_t()) :: callback_return_t
-
-  @doc """
-  Callback invoked when pipeline is in `:playing` state, i.e. all its elements
-  are in this state.
-  """
-  @callback handle_prepared_to_stopped(state :: State.internal_state_t()) :: callback_return_t
-
-  @doc """
-  Callback invoked when a notification comes in from an element.
-  """
-  @callback handle_notification(
-              notification :: Notification.t(),
-              element :: Child.name_t(),
-              state :: State.internal_state_t()
-            ) :: callback_return_t
-
-  @doc """
-  Callback invoked when pipeline receives a message that is not recognized
-  as an internal membrane message.
-
-  Useful for receiving ticks from timer, data sent from NIFs or other stuff.
-  """
-  @callback handle_other(message :: any, state :: State.internal_state_t()) :: callback_return_t
-
-  @doc """
-  Callback invoked when pipeline's element receives start_of_stream event.
-  """
-  @callback handle_element_start_of_stream(
-              {Element.name_t(), Pad.t()},
-              state :: State.internal_state_t()
-            ) :: callback_return_t
-
-  @doc """
-  Callback invoked when pipeline's element receives end_of_stream event.
-  """
-  @callback handle_element_end_of_stream(
-              {Element.name_t(), Pad.t()},
-              state :: State.internal_state_t()
-            ) :: callback_return_t
-
-  @doc """
-  Callback invoked when `Membrane.Pipeline.Spec` is linked and in the same playback
-  state as pipeline.
-
-  Spec can be started from `c:handle_init/1` callback or as `t:spec_action_t/0`
-  action.
-  """
-  @callback handle_spec_started(
-              elements :: [Child.name_t()],
-              state :: State.internal_state_t()
-            ) ::
-              callback_return_t
 
   @doc """
   Callback invoked when pipeline is shutting down.
@@ -312,6 +236,7 @@ defmodule Membrane.Pipeline do
 
   defmacro __using__(_) do
     quote location: :keep do
+      use Membrane.Core.Parent
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
 
@@ -381,34 +306,10 @@ defmodule Membrane.Pipeline do
       def handle_init(_options), do: {{:ok, %Membrane.Spec{}}, %{}}
 
       @impl true
-      def handle_stopped_to_prepared(state), do: {:ok, state}
-
-      @impl true
-      def handle_playing_to_prepared(state), do: {:ok, state}
-
-      @impl true
-      def handle_prepared_to_playing(state), do: {:ok, state}
-
-      @impl true
-      def handle_prepared_to_stopped(state), do: {:ok, state}
-
-      @impl true
       def handle_notification(_notification, _from, state), do: {:ok, state}
 
       @impl true
-      def handle_other(_message, state), do: {:ok, state}
-
-      @impl true
-      def handle_spec_started(_new_children, state), do: {:ok, state}
-
-      @impl true
       def handle_shutdown(_reason, _state), do: :ok
-
-      @impl true
-      def handle_element_start_of_stream({_element, _pad}, state), do: {:ok, state}
-
-      @impl true
-      def handle_element_end_of_stream({_element, _pad}, state), do: {:ok, state}
 
       defoverridable start: 0,
                      start: 1,
@@ -420,16 +321,8 @@ defmodule Membrane.Pipeline do
                      prepare: 1,
                      stop: 1,
                      handle_init: 1,
-                     handle_stopped_to_prepared: 1,
-                     handle_playing_to_prepared: 1,
-                     handle_prepared_to_playing: 1,
-                     handle_prepared_to_stopped: 1,
-                     handle_notification: 3,
-                     handle_other: 2,
-                     handle_spec_started: 2,
                      handle_shutdown: 2,
-                     handle_element_start_of_stream: 2,
-                     handle_element_end_of_stream: 2
+                     handle_notification: 3
     end
   end
 end

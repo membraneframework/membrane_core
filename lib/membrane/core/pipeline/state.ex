@@ -5,7 +5,6 @@ defmodule Membrane.Core.Pipeline.State do
   # internally in Membrane.
 
   alias Membrane.Core.{Playback, Playbackable}
-  alias Membrane.Element
   use Bunch
 
   @derive Playbackable
@@ -19,9 +18,8 @@ defmodule Membrane.Core.Pipeline.State do
           terminating?: boolean
         }
 
+  @type children_t :: %{Child.name_t() => pid}
   @type internal_state_t :: map | struct
-  @type child_t :: {Element.name_t(), pid}
-  @type children_t :: %{Element.name_t() => pid}
 
   defstruct internal_state: nil,
             module: nil,

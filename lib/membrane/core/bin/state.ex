@@ -4,18 +4,17 @@ defmodule Membrane.Core.Bin.State do
   # It does not represent state of bins you construct, it's a state used
   # internally in Membrane.
 
-  alias Membrane.Core.{Playback, Playbackable, PadModel}
-  alias Membrane.Element
+  alias Membrane.Core.{Parent, Playback, Playbackable, PadModel}
   alias Membrane.Core.Bin.LinkingBuffer
   alias __MODULE__, as: ThisModule
   use Bunch
   use Bunch.Access
 
   @type t :: %__MODULE__{
-          internal_state: internal_state_t | nil,
+          internal_state: Parent.internal_state_t() | nil,
           playback: Playback.t(),
           module: module | nil,
-          children: children_t,
+          children: Parent.children_t(),
           pending_pids: MapSet.t(pid),
           terminating?: boolean,
           name: Bin.name_t() | nil,
@@ -25,10 +24,6 @@ defmodule Membrane.Core.Bin.State do
           controlling_pid: pid | nil,
           linking_buffer: LinkingBuffer.t()
         }
-
-  @type internal_state_t :: map | struct
-  @type child_t :: {Element.name_t(), pid}
-  @type children_t :: %{Element.name_t() => pid}
 
   defstruct internal_state: nil,
             playback: %Playback{},

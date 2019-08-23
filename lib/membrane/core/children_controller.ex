@@ -61,7 +61,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
 
   defp parse_links(links), do: links |> Bunch.Enum.try_map(&Link.parse/1)
 
-  defguard is_child_name(term) when Element.is_element_name(term) or Bin.is_bin_name(term)
+  defguardp is_child_name(term) when Element.is_element_name(term) or Bin.is_bin_name(term)
 
   @spec parse_children(Spec.children_spec_t() | any) :: [parsed_child_t]
   def parse_children(children) when is_map(children) or is_list(children),
