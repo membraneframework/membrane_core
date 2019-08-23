@@ -2,10 +2,8 @@ defmodule Membrane.Core.PadSpecHandler do
   @moduledoc false
   # Module parsing pads specifications in elements.
 
-  alias Membrane.{Bin, Pad}
-  alias Membrane.{Core, Element}
-  alias Core.Element
-  alias Core.PadModel
+  alias Membrane.{Bin, Core, Element, Pad}
+  alias Core.{Element, PadModel}
   require Pad
   use Bunch
   use Core.Element.Log
@@ -55,17 +53,16 @@ defmodule Membrane.Core.PadSpecHandler do
   defp create_private_pad({name, spec}) do
     priv_bin_name = Pad.create_private_name(name)
 
-    public_spec = filter_out_inadequate_opts(spec)
+    public_spec = filter_opts(spec)
 
-    priv_spec =
-      filter_out_inadequate_opts(%{spec | direction: opposite_direction(spec.direction)})
+    priv_spec = filter_opts(%{spec | direction: opposite_direction(spec.direction)})
 
     [{name, public_spec}, {priv_bin_name, priv_spec}]
   end
 
-  defp filter_out_inadequate_opts(%{direction: :input} = spec), do: spec
+  defp filter_opts(%{direction: :input} = spec), do: spec
 
-  defp filter_out_inadequate_opts(%{direction: :output} = spec),
+  defp filter_opts(%{direction: :output} = spec),
     do: Map.drop(spec, @private_input_pad_spec_keys)
 
   # TODO to be replaced with Pad.opposite_direction/1 once merged to master!

@@ -5,13 +5,13 @@ defmodule Membrane.Core.Parent.Action do
 
   use Bunch
 
-  def handle_forward(elementname, message, state) do
-    with {:ok, pid} <- state |> Parent.ChildrenModel.get_child_pid(elementname) do
+  def handle_forward(element_name, message, state) do
+    with {:ok, pid} <- state |> Parent.ChildrenModel.get_child_pid(element_name) do
       send(pid, message)
       {:ok, state}
     else
       {:error, reason} ->
-        {{:error, {:cannot_forward_message, [element: elementname, message: message], reason}},
+        {{:error, {:cannot_forward_message, [element: element_name, message: message], reason}},
          state}
     end
   end

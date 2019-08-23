@@ -66,9 +66,7 @@ defmodule Membrane.Core.PadModel do
     end
   end
 
-  @spec filter_refs_by_data(state_t(), constraints :: map) :: [
-          Pad.ref_t()
-        ]
+  @spec filter_refs_by_data(state_t(), constraints :: map) :: [Pad.ref_t()]
   def filter_refs_by_data(state, constraints \\ %{})
 
   def filter_refs_by_data(state, constraints) when constraints == %{} do
@@ -81,9 +79,7 @@ defmodule Membrane.Core.PadModel do
     |> Keyword.keys()
   end
 
-  @spec filter_data(state_t(), constraints :: map) :: %{
-          atom => Pad.Data.t()
-        }
+  @spec filter_data(state_t(), constraints :: map) :: %{atom => Pad.Data.t()}
   def filter_data(state, constraints \\ %{})
 
   def filter_data(state, constraints) when constraints == %{} do
@@ -207,8 +203,7 @@ defmodule Membrane.Core.PadModel do
     end
   end
 
-  @spec pop_data!(state_t(), Pad.ref_t()) ::
-          State.stateful_t(Pad.Data.t())
+  @spec pop_data!(state_t(), Pad.ref_t()) :: State.stateful_t(Pad.Data.t())
   def pop_data!(state, pad_ref) do
     {{:ok, pad_data}, state} = pop_data(state, pad_ref)
     {pad_data, state}
@@ -222,8 +217,7 @@ defmodule Membrane.Core.PadModel do
     end
   end
 
-  @spec delete_data!(state_t(), Pad.ref_t()) ::
-          state_t()
+  @spec delete_data!(state_t(), Pad.ref_t()) :: state_t()
   def delete_data!(state, pad_ref) do
     {:ok, state} = delete_data(state, pad_ref)
     state

@@ -7,7 +7,7 @@ defmodule Membrane.Core.PadsSpecs do
   alias Membrane.Pad
   alias Bunch.Type
   use Bunch
-  require Membrane.Pad
+  require Pad
 
   @spec def_pads([{Pad.name_t(), raw_spec :: Macro.t()}], Pad.direction_t()) :: Macro.t()
   def def_pads(pads, direction) do
@@ -29,14 +29,26 @@ defmodule Membrane.Core.PadsSpecs do
   @doc """
   Returns documentation string common for both input and output pads
   """
-  @spec def_pad_docs(Pad.direction_t()) :: String.t()
-  def def_pad_docs(direction), do: documenation_string(direction, false)
+  @spec def_pad_docs(Pad.direction_t(), :bin | :element) :: String.t()
+  def def_pad_docs(direction, for_entity) do
+    {entity, pad_type_spec} =
+      case for_entity do
+        :bin -> {"bin", "bin_spec_t/0"}
+        :element -> {"element", "#{direction}_spec_t/0"}
+      end
 
-  @doc """
-  Returns documentation string common for both input and output pads
-  """
-  @spec def_bin_pad_docs(Pad.direction_t()) :: String.t()
-  def def_bin_pad_docs(direction), do: documenation_string(direction, true)
+    """
+    Macro that defines #{direction} pad for the #{entity}.
+
+    Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
+    without module prefix.
+
+    It automatically generates documentation from the given definition
+    and adds compile-time caps specs validation.
+
+    "The type `t:Membrane.Pad.#{pad_type_spec}` describes how the definition of pads should look."
+    """
+  end
 
   def def_bin_pad(pad_name, direction, raw_specs) do
     def_pad(pad_name, direction, raw_specs, true)
@@ -272,26 +284,5 @@ defmodule Membrane.Core.PadsSpecs do
 
   defp generate_pad_property_doc(_k, v) do
     "`#{inspect(v)}`"
-  end
-
-  defp documenation_string(direction, bin?) do
-    reference =
-      if bin? do
-        "The type `t:Membrane.Pad.#{direction}_spec_t/0` describes how the definition of pads should look."
-      else
-        "The type `t:Membrane.Pad.bin_spec_t/0` describes how the definition of pads should look."
-      end
-
-    """
-    Macro that defines #{direction} pad for the #{if bin?, do: "bin", else: "element"}.
-
-    Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
-    without module prefix.
-
-    It automatically generates documentation from the given definition
-    and adds compile-time caps specs validation.
-
-    #{reference}
-    """
   end
 end

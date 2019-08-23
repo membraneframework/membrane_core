@@ -6,11 +6,13 @@ defmodule Membrane.Spec do
   It will define a topology of children and links that build the pipeline/bin.
 
   ## Children
+
   Children that should be spawned when the pipeline/bin starts can be defined
   with the `:children` field.
   You have to set it to a keyword list, where keys are valid children names (`t:Membrane.Child.name_t/0`)
   that are unique within this pipeline/bin and values are either element's module or
   struct of that module.
+
   Sample definitions:
       [
         first_element: %Element.With.Options.Struct{option_a: 42},
@@ -27,6 +29,7 @@ defmodule Membrane.Spec do
   keyword list at the end of a tuple (See `t:endpoint_options_t/0`).
   Element names have to match names given to the `:children` field.
   Once it's done, pipeline will ensure that links are present.
+
   Sample definition:
       %{
         {:source_a, :output} => {:converter, :input, buffer: [preferred_size: 20_000]},
@@ -37,19 +40,19 @@ defmodule Membrane.Spec do
       
   ## Bin links
 
-    For bins boundaries there are special links allowed. User should define links
-    between bin's input and first child's input (input-input type) and last
-    child's output and bin output (output-output type). In this case, callback module
-    creator should name endpoint of the bin with macro `this_bin()`
+  For bins boundaries there are special links allowed. User should define links
+  between bin's input and first child's input (input-input type) and last
+  child's output and bin output (output-output type). In this case, callback module
+  creator should name endpoint of the bin with macro `this_bin()`
 
-    Sample definition:
+  Sample definition:
 
-    ```
-    %{
-      {Bin.itself(), :input} => {:filter1, :input, buffer: [preferred_size: 10]},
-      {:filter1, :output} => {:filter2, :input, buffer: [preferred_size: 10]},
-      {:filter2, :output} => {Bin.itself(), :output, buffer: [preferred_size: 10]}
-    }
+  ```
+  %{
+    {Bin.itself(), :input} => {:filter1, :input, buffer: [preferred_size: 10]},
+    {:filter1, :output} => {:filter2, :input, buffer: [preferred_size: 10]},
+    {:filter2, :output} => {Bin.itself(), :output, buffer: [preferred_size: 10]}
+  }
   """
 
   alias Membrane.Element

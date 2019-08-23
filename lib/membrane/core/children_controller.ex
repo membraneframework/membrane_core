@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
   use Bunch
   use Membrane.Log, tags: :core
 
-  alias Membrane.{Bin, Child, Element, ParentError, Spec}
+  alias Membrane.{Bin, CallbackError, Child, Element, Spec, ParentError}
   alias Membrane.Core.{CallbackHandler, Message, Parent}
   alias Membrane.Core.Link
   alias Bunch.Type
@@ -61,7 +61,10 @@ defmodule Membrane.Core.Parent.ChildrenController do
 
   defp parse_links(links), do: links |> Bunch.Enum.try_map(&Link.parse/1)
 
-  defguardp is_child_name(term) when Element.is_element_name(term) or Bin.is_bin_name(term)
+  defguardp is_child_name(term)
+            when is_atom(term) or
+                   (is_tuple(term) and tuple_size(term) == 2 and is_atom(elem(term, 0)) and
+                      is_integer(elem(term, 1)) and elem(term, 1) >= 0)
 
   @spec parse_children(Spec.children_spec_t() | any) :: [parsed_child_t]
   def parse_children(children) when is_map(children) or is_list(children),
@@ -184,10 +187,9 @@ defmodule Membrane.Core.Parent.ChildrenController do
     with {:ok, _} <- callback_res do
       callback_res
     else
-      {{:error, reason}, state} ->
-        raise ParentError, """
+      {{:error, reason}, _state} ->
+        raise CallbackError, """
         Callback :handle_spec_started failed with reason: #{inspect(reason)}
-        Pipeline state: #{inspect(state, pretty: true)}
         """
     end
   end

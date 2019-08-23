@@ -11,8 +11,8 @@ defmodule Membrane.Core.Bin.ActionHandler do
   require Message
 
   @impl CallbackHandler
-  def handle_action({:forward, {elementname, message}}, _cb, _params, state) do
-    Parent.Action.handle_forward(elementname, message, state)
+  def handle_action({:forward, {element_name, message}}, _cb, _params, state) do
+    Parent.Action.handle_forward(element_name, message, state)
   end
 
   @impl CallbackHandler

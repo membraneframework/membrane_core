@@ -116,35 +116,26 @@ defmodule Membrane.Pipeline do
   @doc """
   Changes playback state to `:playing`.
 
-  An alias for `change_playback_state/2` with proper state.
+  An alias for `Membrane.Core.Parent.change_playback_state/2` with proper state.
   """
   @spec play(pid) :: :ok
-  def play(pid), do: change_playback_state(pid, :playing)
+  def play(pid), do: Membrane.Core.Parent.change_playback_state(pid, :playing)
 
   @doc """
   Changes playback state to `:prepared`.
 
-  An alias for `change_playback_state/2` with proper state.
+  An alias for `Membrane.Core.Parent.change_playback_state/2` with proper state.
   """
   @spec prepare(pid) :: :ok
-  def prepare(pid), do: change_playback_state(pid, :prepared)
+  def prepare(pid), do: Membrane.Core.Parent.change_playback_state(pid, :prepared)
 
   @doc """
   Changes playback state to `:stopped`.
 
-  An alias for `change_playback_state/2` with proper state.
+  An alias for `Membrane.Core.Parent.change_playback_state/2` with proper state.
   """
   @spec stop(pid) :: :ok
-  def stop(pid), do: change_playback_state(pid, :stopped)
-
-  @spec change_playback_state(pid, Membrane.PlaybackState.t()) :: :ok
-  defp change_playback_state(pid, new_state)
-       when Membrane.PlaybackState.is_playback_state(new_state) do
-    alias Membrane.Core.Message
-    require Message
-    Message.send(pid, :change_playback_state, new_state)
-    :ok
-  end
+  def stop(pid), do: Membrane.Core.Parent.change_playback_state(pid, :stopped)
 
   @impl GenServer
   def init(module) when is_atom(module) do
@@ -178,14 +169,8 @@ defmodule Membrane.Pipeline do
   end
 
   @impl PlaybackHandler
-  def handle_playback_state(_old, new, state) do
-    children_pids = state |> Parent.ChildrenModel.get_children() |> Map.values()
-
-    children_pids
-    |> Enum.each(&change_playback_state(&1, new))
-
-    state = %{state | pending_pids: children_pids |> MapSet.new()}
-    PlaybackHandler.suspend_playback_change(state)
+  def handle_playback_state(old, new, state) do
+    Membrane.Core.Parent.handle_playback_state(old, new, state)
   end
 
   @impl PlaybackHandler
@@ -236,7 +221,7 @@ defmodule Membrane.Pipeline do
 
   defmacro __using__(_) do
     quote location: :keep do
-      use Membrane.Core.Parent
+      use Membrane.Parent
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
 

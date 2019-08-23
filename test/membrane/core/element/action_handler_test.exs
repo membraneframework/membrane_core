@@ -1,9 +1,8 @@
 defmodule Membrane.Core.Element.ActionHandlerTest do
   use ExUnit.Case, async: true
   alias Membrane.{ActionError, Buffer, Pad.Data}
-  alias Membrane.Core.{Message, Playback}
+  alias Membrane.Core.{Message, PadModel, Playback}
   alias Membrane.Core.Element.State
-  alias Membrane.Core.PadModel
   alias Membrane.Support.DemandsTest.Filter
   alias Membrane.Support.Element.{TrivialFilter, TrivialSource}
 

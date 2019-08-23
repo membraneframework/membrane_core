@@ -5,7 +5,7 @@ defmodule Membrane.Core.Bin.SpecController do
 
   @behaviour Membrane.Core.Parent.ChildrenController
 
-  alias Membrane.{Bin, Pad, ParentError}
+  alias Membrane.{Bin, LinkError, Pad}
 
   alias Membrane.Core.{
     Parent,
@@ -56,7 +56,7 @@ defmodule Membrane.Core.Bin.SpecController do
       {new_endpoint, state}
     else
       {:error, :unknown_pad} ->
-        raise ParentError, "Bin #{inspect(name)} does not have pad #{inspect(pad_name)}"
+        raise LinkError, "Bin #{inspect(name)} does not have pad #{inspect(pad_name)}"
     end
   end
 
@@ -97,7 +97,7 @@ defmodule Membrane.Core.Bin.SpecController do
 
     state =
       if from.pid == self() do
-        LinkingBuffer.eval_for_pad(state.linking_buffer, from.pad_ref, state)
+        LinkingBuffer.flush_for_pad(state.linking_buffer, from.pad_ref, state)
         ~> %{state | linking_buffer: &1}
       else
         state
@@ -116,7 +116,7 @@ defmodule Membrane.Core.Bin.SpecController do
 
     state =
       if to.pid == self() do
-        LinkingBuffer.eval_for_pad(state.linking_buffer, to.pad_ref, state)
+        LinkingBuffer.flush_for_pad(state.linking_buffer, to.pad_ref, state)
         ~> %{state | linking_buffer: &1}
       else
         state

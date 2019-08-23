@@ -1,124 +1,36 @@
 defmodule Membrane.Core.Parent do
-  alias Membrane.{Bin, Child, Parent, Pipeline}
+  use Membrane.Core.PlaybackHandler
 
-  @type internal_state_t :: map | struct
-  @type child_t :: {Child.name_t(), pid}
-  @type children_t :: %{Child.name_t() => pid}
+  alias Membrane.Core
+  alias Core.{Message, PlaybackHandler}
 
-  @type state_t :: Bin.State.t() | Pipeline.State.t()
+  require Membrane.PlaybackState
+  require Message
 
-  @typedoc """
-  Type that defines all valid return values from most callbacks.
-  """
-  @type callback_return_t ::
-          CallbackHandler.callback_return_t(Parent.Action.t(), internal_state_t())
+  def handle_playback_state(_old, new, state) do
+    children_pids = state |> Core.Parent.ChildrenModel.get_children() |> Map.values()
 
-  @doc """
-  Callback invoked when bin transition from `:stopped` to `:prepared` state has finished,
-  that is all of its elements are prepared to enter `:playing` state.
-  """
-  @callback handle_stopped_to_prepared(state :: internal_state_t()) :: callback_return_t
+    children_pids
+    |> Enum.each(&change_playback_state(&1, new))
 
-  @doc """
-  Callback invoked when bin transition from `:playing` to `:prepared` state has finished,
-  that is all of its elements are prepared to be stopped.
-  """
-  @callback handle_playing_to_prepared(state :: internal_state_t()) :: callback_return_t
+    state = %{state | pending_pids: children_pids |> MapSet.new()}
+    PlaybackHandler.suspend_playback_change(state)
+  end
 
-  @doc """
-  Callback invoked when bin is in `:playing` state, i.e. all its elements
-  are in this state.
-  """
-  @callback handle_prepared_to_playing(state :: internal_state_t()) :: callback_return_t
+  @impl PlaybackHandler
+  def handle_playback_state_changed(_old, :stopped, %{terminating?: true} = state) do
+    Message.self(:stop_and_terminate)
+    {:ok, state}
+  end
 
-  @doc """
-  Callback invoked when bin is in `:playing` state, i.e. all its elements
-  are in this state.
-  """
-  @callback handle_prepared_to_stopped(state :: internal_state_t()) :: callback_return_t
+  def handle_playback_state_changed(_old, _new, state), do: {:ok, state}
 
-  @doc """
-  Callback invoked when a notification comes in from an element.
-  """
-  @callback handle_notification(
-              notification :: Notification.t(),
-              element :: Child.name_t(),
-              state :: internal_state_t()
-            ) :: callback_return_t
-
-  @doc """
-  Callback invoked when bin receives a message that is not recognized
-  as an internal membrane message.
-
-  Useful for receiving ticks from timer, data sent from NIFs or other stuff.
-  """
-  @callback handle_other(message :: any, state :: internal_state_t()) :: callback_return_t
-
-  @doc """
-  Callback invoked when pipeline's element receives start_of_stream event.
-  """
-  @callback handle_element_start_of_stream(
-              {Child.name_t(), Pad.t()},
-              state :: internal_state_t()
-            ) :: callback_return_t
-
-  @doc """
-  Callback invoked when pipeline's element receives end_of_stream event.
-  """
-  @callback handle_element_end_of_stream(
-              {Child.name_t(), Pad.t()},
-              state :: internal_state_t()
-            ) :: callback_return_t
-
-  @doc """
-  Callback invoked when `Membrane.Bin.Spec` is linked and in the same playback
-  state as bin.
-
-  Spec can be started from `c:handle_init/1` callback or as
-  `t:Membrane.Core.Parent.Action.spec_action_t/0` action.
-  """
-  @callback handle_spec_started(
-              elements :: [Child.name_t()],
-              state :: internal_state_t()
-            ) ::
-              callback_return_t
-
-  defmacro __using__(_) do
-    quote do
-      @behaviour unquote(__MODULE__)
-
-      @impl true
-      def handle_stopped_to_prepared(state), do: {:ok, state}
-
-      @impl true
-      def handle_playing_to_prepared(state), do: {:ok, state}
-
-      @impl true
-      def handle_prepared_to_playing(state), do: {:ok, state}
-
-      @impl true
-      def handle_prepared_to_stopped(state), do: {:ok, state}
-
-      @impl true
-      def handle_other(_message, state), do: {:ok, state}
-
-      @impl true
-      def handle_spec_started(_new_children, state), do: {:ok, state}
-
-      @impl true
-      def handle_element_start_of_stream({_element, _pad}, state), do: {:ok, state}
-
-      @impl true
-      def handle_element_end_of_stream({_element, _pad}, state), do: {:ok, state}
-
-      defoverridable handle_stopped_to_prepared: 1,
-                     handle_playing_to_prepared: 1,
-                     handle_prepared_to_playing: 1,
-                     handle_prepared_to_stopped: 1,
-                     handle_other: 2,
-                     handle_spec_started: 2,
-                     handle_element_start_of_stream: 2,
-                     handle_element_end_of_stream: 2
-    end
+  @spec change_playback_state(pid, Membrane.PlaybackState.t()) :: :ok
+  def change_playback_state(pid, new_state)
+      when Membrane.PlaybackState.is_playback_state(new_state) do
+    alias Membrane.Core.Message
+    require Message
+    Message.send(pid, :change_playback_state, new_state)
+    :ok
   end
 end

@@ -1,10 +1,10 @@
 defmodule Membrane.ElementSpec do
   use ESpec, async: false
 
+  alias Membrane.LinkError
   alias Membrane.Core.{Message, Playback}
   alias Membrane.Core.Element.State
-  alias Membrane.Element.{CallbackContext, LinkError}
-  alias Membrane.LinkError
+  alias Membrane.Element.CallbackContext
   alias Membrane.Core.Link
   alias Membrane.Core.Link.Endpoint
   alias Membrane.Support.Element.{TrivialFilter, TrivialSink, TrivialSource}

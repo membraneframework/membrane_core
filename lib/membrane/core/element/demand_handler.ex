@@ -3,8 +3,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   # Module handling demands requested on output pads.
 
   alias Membrane.{Core, Pad}
-  alias Membrane.Core.{PadModel}
-  alias Core.{Message, InputBuffer}
+  alias Core.{Message, InputBuffer, PadModel}
 
   alias Core.Element.{
     BufferController,

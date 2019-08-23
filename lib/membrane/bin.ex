@@ -51,22 +51,17 @@ defmodule Membrane.Bin do
               {{:ok, Spec.t()}, State.internal_state_t()}
               | {:error, any}
 
-  defguard is_bin_name(term)
-           when is_atom(term) or
-                  (is_tuple(term) and tuple_size(term) == 2 and is_atom(elem(term, 0)) and
-                     is_integer(elem(term, 1)) and elem(term, 1) >= 0)
-
   @doc """
-  This function defines a struct that represents this bin in callback module.
+  This function defines a term that allows to reference current bin from Membrane.Spec
   """
   def itself, do: {__MODULE__, :itself}
 
-  @doc PadsSpecs.def_bin_pad_docs(:input)
+  @doc PadsSpecs.def_pad_docs(:input, :bin)
   defmacro def_input_pad(name, spec) do
     PadsSpecs.def_bin_pad(name, :input, spec)
   end
 
-  @doc PadsSpecs.def_bin_pad_docs(:output)
+  @doc PadsSpecs.def_pad_docs(:output, :bin)
   defmacro def_output_pad(name, spec) do
     PadsSpecs.def_bin_pad(name, :output, spec)
   end
@@ -150,25 +145,9 @@ defmodule Membrane.Bin do
   end
 
   @impl PlaybackHandler
-  def handle_playback_state(_old, new, state) do
-    children_pids = state |> Parent.ChildrenModel.get_children() |> Map.values()
-
-    children_pids
-    |> Enum.each(fn pid ->
-      change_playback_state(pid, new)
-    end)
-
-    state = %{state | pending_pids: children_pids |> MapSet.new()}
-    PlaybackHandler.suspend_playback_change(state)
+  def handle_playback_state(old, new, state) do
+    Membrane.Core.Parent.handle_playback_state(old, new, state)
   end
-
-  @impl PlaybackHandler
-  def handle_playback_state_changed(_old, :stopped, %State{terminating?: true} = state) do
-    Message.self(:stop_and_terminate)
-    {:ok, state}
-  end
-
-  def handle_playback_state_changed(_old, _new, state), do: {:ok, state}
 
   @impl GenServer
   # Bin-specific message.
@@ -218,7 +197,7 @@ defmodule Membrane.Bin do
 
     {:ok, new_state} = PadController.handle_linking_finished(state)
 
-    LinkingBuffer.eval_for_pad(state.linking_buffer, pad_ref, new_state)
+    LinkingBuffer.flush_for_pad(state.linking_buffer, pad_ref, new_state)
     ~> {{:ok, info}, %{new_state | linking_buffer: &1}}
     |> reply()
   end
@@ -245,18 +224,9 @@ defmodule Membrane.Bin do
       spec_controller: SpecController
     }
 
-  @spec change_playback_state(pid, Membrane.PlaybackState.t()) :: :ok
-  defp change_playback_state(pid, new_state)
-       when Membrane.PlaybackState.is_playback_state(new_state) do
-    alias Membrane.Core.Message
-    require Message
-    Message.send(pid, :change_playback_state, new_state)
-    :ok
-  end
-
   defmacro __using__(_) do
     quote location: :keep do
-      use Membrane.Core.Parent
+      use Membrane.Parent
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
 
