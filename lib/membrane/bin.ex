@@ -99,8 +99,6 @@ defmodule Membrane.Bin do
         """,
         {:not_bin, module}
       )
-
-      {:not_bin, module}
     end
   end
 

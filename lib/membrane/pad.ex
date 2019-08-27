@@ -89,9 +89,9 @@ defmodule Membrane.Pad do
 
   @typedoc """
   For bins there are exactly the same options for both directions.
-  Specifying `:demand_unit` for bin's output pad means that you are
-  actually defining what demand units are going to be used against
-  the first bin's element.
+  The only difference is that `:demand_unit` option specified in
+  bin will be used to make demands from bin's elements connected
+  to its input pad.
   """
   @type bin_spec_t :: input_spec_t
 
