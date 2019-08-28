@@ -164,15 +164,19 @@ defmodule Membrane.Sync do
   end
 
   defp check_and_handle_sync(state) do
-    if state.active? and state.processes |> Bunch.KVList.any_value?(&(&1.status != :sync)) do
-      state
-    else
-      send_sync_replies(state.processes)
+    if not state.active? or ready_to_sync?(state.processes) do
+      ensure_syncs_released(state.processes)
       state |> reset_processes()
+    else
+      state
     end
   end
 
-  defp send_sync_replies(processes) do
+  defp ready_to_sync?(processes) do
+    not (processes |> Bunch.KVList.any_value?(&(&1.status != :sync)))
+  end
+
+  defp ensure_syncs_released(processes) do
     processes_data = processes |> Map.values()
     max_latency = processes_data |> Enum.map(& &1.latency) |> Enum.max(fn -> 0 end)
 
