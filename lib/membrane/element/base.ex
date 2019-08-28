@@ -235,7 +235,7 @@ defmodule Membrane.Element.Base do
   @doc """
   Defines that element exports a clock to pipeline.
 
-  Exporting clock allows pipeline to choose it as the pipeline clock, enableing other
+  Exporting clock allows pipeline to choose it as the pipeline clock, enabling other
   elements to synchronize with it. Element's clock is accessible via `clock` field,
   while pipeline's one - via `pipeline_clock` field in callback contexts. Both of
   them can be used for starting timers.

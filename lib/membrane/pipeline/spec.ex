@@ -56,6 +56,12 @@ defmodule Membrane.Pipeline.Spec do
 
   By default, no elements are synchronized.
 
+  Sample definitions:
+    
+    %Spec{stream_sync: [[:element1, :element2], [:element3, :element4]]}
+
+    %Spec{stream_sync: :sinks}
+
   ## Clock provider
 
   Clock provider is an element that exports clock that should be used as the pipeline

@@ -16,7 +16,7 @@ defmodule Membrane.Clock do
   `:time_provider` option. The ratio is broadcasted (see t:ratio_t)
   to _subscribers_ (see `subscribe/2`) - processes willing to synchronize to the
   custom clock. Subscribers can adjust their timers according to received ratio -
-  timers started with `:timer` action in elements do it automatically. Initial ratio is equal
+  timers started with `:start_timer` action in elements do it automatically. Initial ratio is equal
   to 1, which means that if no updates are received, Clock is synchronized to the
   reference time.
 
@@ -56,7 +56,7 @@ defmodule Membrane.Clock do
   They are the following:
     - time_provider - function providing the reference time in milliseconds
     - proxy - determines whether the Clock should work in proxy mode
-    - proxy - enables the proxy mode and sets proxied Clock to pid
+    - proxy_for - enables the proxy mode and sets proxied Clock to pid
 
   Check the moduledoc for more details.
   """
@@ -85,7 +85,8 @@ defmodule Membrane.Clock do
   Subscribes `pid` for receiving `t:ratio_t` messages from the clock.
 
   This function can be called multiple times from the same process. To unsubscribe,
-  `unsubscribe/2` should be called the same amount of times.
+  `unsubscribe/2` should be called the same amount of times. The subscribed pid
+  always receives one message, regardless of how many times it called `subscribe/2`.
   """
   @spec subscribe(t, subscriber :: pid) :: :ok
   def subscribe(clock, pid \\ self()) do
@@ -103,6 +104,9 @@ defmodule Membrane.Clock do
     GenServer.cast(clock, {:clock_unsubscribe, pid})
   end
 
+  @doc """
+  Sets a new proxy clock to `clock_to_proxy_for`.
+  """
   @spec proxy_for(t, clock_to_proxy_for :: pid) :: :ok
   def proxy_for(clock, clock_to_proxy_for) do
     GenServer.cast(clock, {:proxy_for, clock_to_proxy_for})
@@ -190,7 +194,7 @@ defmodule Membrane.Clock do
   end
 
   @impl GenServer
-  # When ratio from previously proxied clock incomes after unsubscribing
+  # When ratio from previously proxied clock comes in after unsubscribing
   def handle_info({:membrane_clock_ratio, _pid, _ratio}, %{proxy: true} = state) do
     {:noreply, state}
   end

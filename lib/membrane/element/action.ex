@@ -167,8 +167,8 @@ defmodule Membrane.Element.Action do
 
   Timers use `Process.send_after/3` under the hood.
   """
-  @type timer_t ::
-          {:timer,
+  @type start_timer_t ::
+          {:start_timer,
            {id :: any, interval :: Time.t(), clock :: Clock.t()}
            | {id :: any, interval :: Time.t()}}
 
@@ -203,7 +203,7 @@ defmodule Membrane.Element.Action do
           | redemand_t
           | forward_t
           | playback_change_t
-          | timer_t
+          | start_timer_t
           | stop_timer_t
           | end_of_stream_t
 end

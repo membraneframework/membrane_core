@@ -195,7 +195,7 @@ defmodule Membrane.Core.CallbackHandler do
       reason
     )
 
-    {{:error, reason}, :no_state}
+    raise CallbackError, kind: :error, callback: {module, cb}, reason: reason
   end
 
   defp parse_callback_result(result, module, cb, _params) do

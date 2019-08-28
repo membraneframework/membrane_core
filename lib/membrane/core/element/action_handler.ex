@@ -143,12 +143,12 @@ defmodule Membrane.Core.Element.ActionHandler do
     supply_demand(pad_ref, size, cb, params[:supplying_demand?] || false, state)
   end
 
-  defp do_handle_action({:timer, {id, interval, clock}}, _cb, _params, state) do
+  defp do_handle_action({:start_timer, {id, interval, clock}}, _cb, _params, state) do
     TimerController.start_timer(interval, clock, id, state)
   end
 
-  defp do_handle_action({:timer, {id, interval}}, cb, params, state) do
-    do_handle_action({:timer, {id, interval, state.pipeline_clock}}, cb, params, state)
+  defp do_handle_action({:start_timer, {id, interval}}, cb, params, state) do
+    do_handle_action({:start_timer, {id, interval, state.pipeline_clock}}, cb, params, state)
   end
 
   defp do_handle_action({:stop_timer, id}, _cb, _params, state) do

@@ -6,7 +6,7 @@ defmodule Membrane.Sync do
   The main purpose for Sync is to synchronize multiple streams within a pipeline.
   The flow of usage goes as follows:
   - A Sync process is started.
-  - Processes register themselves (or are being registered) in the Sync, using
+  - Processes register themselves (or are registered) in the Sync, using
   `register/2`. Registered processes are not being synchronized till the Sync
   becomes active (see the next step). Each registered process is monitored and
   automatically unregistered upon exit. Sync can be setup to exit when all the
@@ -24,7 +24,7 @@ defmodule Membrane.Sync do
   All the calls to `sync/2` return immediately.
 
   If a process designed to work with Sync should not be synced, `no_sync/0` should
-  be used.
+  be used. Then all calls to `sync/2` return immediately.
   """
   use Bunch
   use GenServer
@@ -53,7 +53,7 @@ defmodule Membrane.Sync do
     pid
   end
 
-  @spec register(t, pid) :: :ok | {:error, :invalid_activeness}
+  @spec register(t, pid) :: :ok | {:error, :bad_activity_request}
   def register(sync, pid \\ self())
 
   def register(@no_sync, _pid), do: :ok
@@ -62,14 +62,14 @@ defmodule Membrane.Sync do
     GenServer.call(sync, {:sync_register, pid})
   end
 
-  @spec activate(t) :: :ok | {:error, :invalid_activeness}
+  @spec activate(t) :: :ok | {:error, :bad_activity_request}
   def activate(@no_sync), do: :ok
 
   def activate(sync) do
     GenServer.call(sync, {:sync_toggle_active, true})
   end
 
-  @spec deactivate(t) :: :ok | {:error, :invalid_activeness}
+  @spec deactivate(t) :: :ok | {:error, :bad_activity_request}
   def deactivate(@no_sync), do: :ok
 
   def deactivate(sync) do
@@ -108,7 +108,7 @@ defmodule Membrane.Sync do
 
   @impl true
   def handle_call({:sync_register, _pid}, _from, state) do
-    {:reply, {:error, :invalid_activeness}, state}
+    {:reply, {:error, :bad_activity_request}, state}
   end
 
   @impl true
@@ -137,7 +137,7 @@ defmodule Membrane.Sync do
   @impl true
   def handle_call({:sync_toggle_active, new_active?}, _from, %{active?: active?} = state)
       when new_active? == active? do
-    {:reply, {:error, :invalid_activeness}, state}
+    {:reply, {:error, :bad_activity_request}, state}
   end
 
   @impl true

@@ -73,7 +73,7 @@ defmodule Membrane.SyncTest do
     :ok = Task.await(t1)
   end
 
-  test "should not sync when unactive even if used to be active" do
+  test "should not sync when inactive even if used to be active" do
     sync = @module.start_link!()
     sync |> @module.activate()
     sync |> @module.deactivate()
