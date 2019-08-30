@@ -26,6 +26,7 @@ defmodule Membrane.Core.Element.State do
           pads: PadModel.pads_t() | nil,
           watcher: pid | nil,
           controlling_pid: pid | nil,
+          parent_monitor: reference() | nil,
           playback: Playback.t(),
           playback_buffer: PlaybackBuffer.t(),
           delayed_demands: %{{Pad.ref_t(), :supply | :redemand} => :sync | :async}
@@ -39,6 +40,7 @@ defmodule Membrane.Core.Element.State do
     :pads,
     :watcher,
     :controlling_pid,
+    :parent_monitor,
     :playback,
     :playback_buffer,
     :delayed_demands
@@ -52,8 +54,8 @@ defmodule Membrane.Core.Element.State do
   @doc """
   Initializes new state.
   """
-  @spec new(module, Element.name_t()) :: t
-  def new(module, name) do
+  @spec new(module, Element.name_t(), reference() | nil) :: t
+  def new(module, name, parent_monitor \\ nil) do
     %__MODULE__{
       module: module,
       type: apply(module, :membrane_element_type, []),
@@ -62,6 +64,7 @@ defmodule Membrane.Core.Element.State do
       pads: nil,
       watcher: nil,
       controlling_pid: nil,
+      parent_monitor: parent_monitor,
       playback: %Playback{},
       playback_buffer: PlaybackBuffer.new(),
       delayed_demands: %{}

@@ -222,9 +222,9 @@ defmodule Membrane.Element do
   end
 
   @impl GenServer
-  def init({pipeline, module, name, options}) do
-    Process.monitor(pipeline)
-    state = State.new(module, name)
+  def init({parent, module, name, options}) do
+    parent_monitor = Process.monitor(parent)
+    state = State.new(module, name, parent_monitor)
 
     with {:ok, state} <-
            MessageDispatcher.handle_message(
@@ -252,7 +252,7 @@ defmodule Membrane.Element do
   end
 
   @impl GenServer
-  def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
+  def handle_info({:DOWN, ref, :process, _pid, reason}, %{parent_monitor: ref} = state) do
     {:ok, state} =
       MessageDispatcher.handle_message(Message.new(:pipeline_down, reason), :info, state)
 
