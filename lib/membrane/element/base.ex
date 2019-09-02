@@ -242,22 +242,27 @@ defmodule Membrane.Element.Base do
   """
   defmacro def_clock do
     quote do
-      @membrane_clock_moduledoc """
-      ## Clock
+      if !Module.get_attribute(__MODULE__, :has_clock) do
+        @membrane_clock_moduledoc """
+        ## Clock
 
-      This element exports clock. See `#{unquote(inspect(__MODULE__))}.def_clock/0`
-      for more information.
-      """
-      unquote(update_moduledoc())
+        This element exports clock. See `#{unquote(inspect(__MODULE__))}.def_clock/0`
+        for more information.
+        """
+        unquote(update_moduledoc())
 
-      @impl true
-      def membrane_clock?, do: true
+        @impl true
+        def membrane_clock?, do: true
+      else
+        raise CompileError, file: __ENV__.file, description: "Element can define at most 1 clock"
+      end
     end
   end
 
   @doc false
   def update_moduledoc() do
     quote do
+      @has_clock true
       if @moduledoc != false do
         @moduledoc [
                      :membrane_options_moduledoc,
