@@ -270,6 +270,12 @@ defmodule Membrane.Element.Base do
                      :membrane_pads_moduledoc
                    ]
                    |> Enum.map(&Module.get_attribute(__MODULE__, &1))
+                   |> Enum.concat([Module.get_attribute(__MODULE__, :moduledoc)])
+                   |> Enum.map(fn
+                     # built-in @moduledoc writes docs in the form of {integer(), string}
+                     {_, text} -> text
+                     e -> e
+                   end)
                    |> Enum.filter(& &1)
                    |> Enum.join("\n")
       end
