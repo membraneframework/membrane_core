@@ -48,11 +48,6 @@ defmodule Membrane.Sync do
     GenServer.start_link(__MODULE__, options, gen_server_options)
   end
 
-  def start_link!(options \\ [], gen_server_options \\ []) do
-    {:ok, pid} = start_link(options, gen_server_options)
-    pid
-  end
-
   @spec register(t, pid) :: :ok | {:error, :bad_activity_request}
   def register(sync, pid \\ self())
 

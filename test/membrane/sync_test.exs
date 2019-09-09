@@ -21,7 +21,7 @@ defmodule Membrane.SyncTest do
     end
 
     defp gen_times do
-      sync = @module.start_link!()
+      {:ok, sync} = @module.start_link()
 
       tasks =
         1..@task_number
@@ -56,7 +56,7 @@ defmodule Membrane.SyncTest do
   end
 
   test "should sync only if active, otherwise sync returns immediately" do
-    sync = @module.start_link!()
+    {:ok, sync} = @module.start_link()
 
     t1 =
       Task.async(fn ->
@@ -76,7 +76,7 @@ defmodule Membrane.SyncTest do
   end
 
   test "should not sync when inactive even if used to be active" do
-    sync = @module.start_link!()
+    {:ok, sync} = @module.start_link()
     sync |> @module.activate()
     sync |> @module.deactivate()
 
@@ -96,7 +96,7 @@ defmodule Membrane.SyncTest do
   end
 
   test "should finish syncing currently synced processes upon deactivation" do
-    sync = @module.start_link!()
+    {:ok, sync} = @module.start_link()
 
     t1 =
       synced_start_task(fn ->
@@ -120,7 +120,7 @@ defmodule Membrane.SyncTest do
   end
 
   test "should forget processes that have already exited" do
-    sync = @module.start_link!()
+    {:ok, sync} = @module.start_link()
 
     t1 =
       Task.async(fn ->
@@ -140,7 +140,7 @@ defmodule Membrane.SyncTest do
   end
 
   test "should sync once all non-syncing processes exit" do
-    sync = @module.start_link!()
+    {:ok, sync} = @module.start_link()
 
     t1 = synced_start_task(fn -> Process.sleep(@long_time) end)
 
@@ -175,7 +175,7 @@ defmodule Membrane.SyncTest do
   end
 
   test "should exit once all syncees exit if :empty_exit? flag is present" do
-    sync = @module.start_link!(empty_exit?: true)
+    {:ok, sync} = @module.start_link(empty_exit?: true)
 
     activate_sync_register(sync)
 
@@ -184,7 +184,7 @@ defmodule Membrane.SyncTest do
   end
 
   test "should not exit after all syncees exit if :empty_exit? flag is not present" do
-    sync = @module.start_link!()
+    {:ok, sync} = @module.start_link()
 
     activate_sync_register(sync)
 

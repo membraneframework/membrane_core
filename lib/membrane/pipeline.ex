@@ -384,7 +384,7 @@ defmodule Membrane.Pipeline do
           unknown: [] <- all_to_sync |> Enum.reject(&(&1 in children_names)) do
       stream_sync
       |> Enum.flat_map(fn elements ->
-        sync = Sync.start_link!(empty_exit?: true)
+        {:ok, sync} = Sync.start_link(empty_exit?: true)
         elements |> Enum.map(&{&1, sync})
       end)
       |> Map.new()
