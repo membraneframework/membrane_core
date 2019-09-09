@@ -45,7 +45,8 @@ defmodule Membrane.Core.Element.OptionsSpecs do
       """
       @type t :: %unquote(module){unquote_splicing(opt_typespecs)}
 
-      with {_, previous_doc} <- Module.get_attribute(__MODULE__, :moduledoc) do
+      with {_, previous_doc} when previous_doc != false <-
+             Module.get_attribute(__MODULE__, :moduledoc) do
         @moduledoc """
         #{previous_doc}
 

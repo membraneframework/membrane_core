@@ -245,7 +245,8 @@ defmodule Membrane.Element.Base do
       if !Module.get_attribute(__MODULE__, :has_clock) do
         @has_clock true
 
-        with {_, previous_doc} <- Module.get_attribute(__MODULE__, :moduledoc) do
+        with {_, previous_doc} when previous_doc != false <-
+               Module.get_attribute(__MODULE__, :moduledoc) do
           @moduledoc """
           #{previous_doc}
 

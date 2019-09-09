@@ -95,7 +95,8 @@ defmodule Membrane.Core.Element.PadsSpecs do
         unquote(pads |> Macro.escape())
       end
 
-      with {_, previous_doc} <- Module.get_attribute(__MODULE__, :moduledoc) do
+      with {_, previous_doc} when previous_doc != false <-
+             Module.get_attribute(__MODULE__, :moduledoc) do
         @moduledoc """
         #{previous_doc}
 
