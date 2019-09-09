@@ -242,8 +242,8 @@ defmodule Membrane.Element.Base do
   """
   defmacro def_clock do
     quote do
-      if !Module.get_attribute(__MODULE__, :has_clock) do
-        @has_clock true
+      if !Module.get_attribute(__MODULE__, :membrane_element_has_clock) do
+        @membrane_element_has_clock true
 
         with {_, previous_doc} when previous_doc != false <-
                Module.get_attribute(__MODULE__, :moduledoc) do
