@@ -437,11 +437,11 @@ defmodule Membrane.Pipeline do
   defp choose_clock(children, provider, state) do
     cond do
       provider != nil -> get_clock_from_provider(children, provider)
-      state.clock_provider.clock != nil && state.clock_provider.choice == :manual -> nil
+      invalid_choice?(state) -> :no_provider
       true -> choose_clock_provider(state.children)
     end
     |> case do
-      nil ->
+      :no_provider ->
         {:ok, state}
 
       clock_provider ->
@@ -449,6 +449,9 @@ defmodule Membrane.Pipeline do
         {:ok, %State{state | clock_provider: clock_provider}}
     end
   end
+
+  defp invalid_choice?(state),
+    do: state.clock_provider.clock != nil && state.clock_provider.choice == :manual
 
   defp get_clock_from_provider(children, provider) do
     children
