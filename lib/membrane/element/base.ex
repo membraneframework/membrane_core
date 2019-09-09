@@ -243,13 +243,18 @@ defmodule Membrane.Element.Base do
   defmacro def_clock do
     quote do
       if !Module.get_attribute(__MODULE__, :has_clock) do
-        @membrane_clock_moduledoc """
-        ## Clock
+        @has_clock true
 
-        This element exports clock. See `#{unquote(inspect(__MODULE__))}.def_clock/0`
-        for more information.
-        """
-        unquote(update_moduledoc())
+        with {_, previous_doc} <- Module.get_attribute(__MODULE__, :moduledoc) do
+          @moduledoc """
+          #{previous_doc}
+
+          ## Clock
+
+          This element exports clock. See `#{unquote(inspect(__MODULE__))}.def_clock/0`
+          for more information.
+          """
+        end
 
         @impl true
         def membrane_clock?, do: true
@@ -259,34 +264,12 @@ defmodule Membrane.Element.Base do
     end
   end
 
-  @doc false
-  def update_moduledoc() do
-    quote do
-      @has_clock true
-      if @moduledoc != false do
-        @moduledoc [
-                     :membrane_options_moduledoc,
-                     :membrane_clock_moduledoc,
-                     :membrane_pads_moduledoc
-                   ]
-                   |> Enum.map(&Module.get_attribute(__MODULE__, &1))
-                   |> Enum.concat([Module.get_attribute(__MODULE__, :moduledoc)])
-                   |> Enum.map(fn
-                     # built-in @moduledoc writes docs in the form of {integer(), string}
-                     {_, text} -> text
-                     e -> e
-                   end)
-                   |> Enum.filter(& &1)
-                   |> Enum.join("\n")
-      end
-    end
-  end
-
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 
       use Membrane.Log, tags: :element, import: false
+      require Membrane.Core.Element.PadsSpecs
 
       alias Membrane.Element.CallbackContext, as: Ctx
 

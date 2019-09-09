@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.OptionsSpecs do
   @moduledoc false
 
   alias Membrane.Time
-  alias Membrane.Element.{Base, Pad}
+  alias Membrane.Element.Pad
 
   use Bunch
 
@@ -45,14 +45,17 @@ defmodule Membrane.Core.Element.OptionsSpecs do
       """
       @type t :: %unquote(module){unquote_splicing(opt_typespecs)}
 
-      @membrane_options_moduledoc """
-      ## Element options
+      with {_, previous_doc} <- Module.get_attribute(__MODULE__, :moduledoc) do
+        @moduledoc """
+        #{previous_doc}
 
-      Passed via struct `t:#{inspect(__MODULE__)}.t/0`
+        ## Element options
 
-      #{unquote(typedoc)}
-      """
-      unquote(Base.update_moduledoc())
+        Passed via struct `t:#{inspect(__MODULE__)}.t/0`
+
+        #{unquote(typedoc)}
+        """
+      end
 
       @doc """
       Returns description of options available for this module
