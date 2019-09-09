@@ -705,7 +705,6 @@ defmodule Membrane.Pipeline do
   @impl GenServer
   def terminate(reason, state) do
     :ok = state.module.handle_shutdown(reason, state.internal_state)
-    :ok
   end
 
   @impl CallbackHandler

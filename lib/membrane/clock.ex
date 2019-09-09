@@ -114,6 +114,8 @@ defmodule Membrane.Clock do
 
   @impl GenServer
   def init(options) do
+    proxy_opts = get_proxy_options(options[:proxy], options[:proxy_for])
+
     state =
       %{
         ratio: 1,
@@ -121,19 +123,9 @@ defmodule Membrane.Clock do
         time_provider:
           options |> Keyword.get(:time_provider, fn -> System.monotonic_time(:millisecond) end)
       }
-      |> Map.merge(
-        case {options[:proxy], options[:proxy_for]} do
-          {_, pid} when is_pid(pid) ->
-            Message.send(pid, :clock_subscribe, self())
-            %{proxy: true, proxy_for: pid}
+      |> Map.merge(proxy_opts)
 
-          {true, _} ->
-            %{proxy: true, proxy_for: nil}
-
-          _ ->
-            %{init_time: nil, clock_time: 0, till_next: nil, proxy: false}
-        end
-      )
+    if pid = proxy_opts[:proxy_for], do: Message.send(pid, :clock_subscribe, self())
 
     {:ok, state}
   end
@@ -204,6 +196,11 @@ defmodule Membrane.Clock do
     {:noreply, handle_unsubscribe(pid, state)}
   end
 
+  defp get_proxy_options(proxy, proxy_for)
+  defp get_proxy_options(_, pid) when is_pid(pid), do: %{proxy: true, proxy_for: pid}
+  defp get_proxy_options(true, _), do: %{proxy: true, proxy_for: nil}
+  defp get_proxy_options(_, _), do: %{init_time: nil, clock_time: 0, till_next: nil, proxy: false}
+
   defp handle_unsubscribe(pid, state) do
     Process.demonitor(state.subscribers[pid].monitor)
     state |> Bunch.Access.delete_in([:subscribers, pid])
@@ -242,10 +239,7 @@ defmodule Membrane.Clock do
     %{state | ratio: ratio}
   end
 
-  defp send_ratio(pid, ratio) do
-    send(pid, {:membrane_clock_ratio, self(), ratio})
-    :ok
-  end
+  defp send_ratio(pid, ratio), do: send(pid, {:membrane_clock_ratio, self(), ratio})
 
   defp get_time(time_provider) do
     time_provider.() |> Time.milliseconds()
