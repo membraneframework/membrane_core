@@ -4,35 +4,39 @@ defmodule Membrane.SyncTest do
   use ExUnit.Case
   use Bunch
 
+  @task_number 10
+  @sync_delay 1
+
+  @long_time 50
+
   describe "should sync processes" do
+    defp requester_task(sync, time_multiplier) do
+      Task.async(fn ->
+        :ok = receive do: (:continue -> :ok)
+        Process.sleep(10 * time_multiplier)
+        request_time = System.monotonic_time(:millisecond)
+        :ok = sync |> @module.sync()
+        sync_time = System.monotonic_time(:millisecond)
+        {request_time, sync_time}
+      end)
+    end
+
     defp gen_times do
       sync = @module.start_link!()
 
       tasks =
-        1..10
-        |> Enum.map(fn i ->
-          Task.async(fn ->
-            :ok = receive do: (:cont -> :ok)
-            Process.sleep(10 * i)
-            request_time = System.monotonic_time(:millisecond)
-            :ok = sync |> @module.sync()
-            sync_time = System.monotonic_time(:millisecond)
-            {request_time, sync_time}
-          end)
-        end)
-        |> Enum.map(fn task ->
-          :ok = sync |> @module.register(task.pid)
-          task
-        end)
+        1..@task_number
+        |> Enum.map(&requester_task(sync, &1))
 
-      sync |> @module.activate()
+      tasks
+      |> Enum.each(fn task -> :ok = @module.register(sync, task.pid) end)
+
+      @module.activate(sync)
+
+      tasks |> Enum.each(&send(&1.pid, :continue))
 
       {request_times, sync_times} =
         tasks
-        |> Enum.map(fn task ->
-          send(task.pid, :cont)
-          task
-        end)
         |> Enum.map(&Task.await/1)
         |> Enum.unzip()
 
@@ -43,33 +47,32 @@ defmodule Membrane.SyncTest do
       {request_times, sync_times} = gen_times()
       now = System.monotonic_time(:millisecond)
       last_request = request_times |> Enum.min_by(&(now - &1))
-      sync_times |> Enum.each(&assert_in_delta(&1, last_request, 10))
+      sync_times |> Enum.each(&assert_in_delta(&1, last_request, @task_number * @sync_delay))
     end
 
     test "synchronization should happen approximately at the same time in each process" do
       {_request_times, sync_times} = gen_times()
-      sync_times |> Enum.min_max() ~> ({min, max} -> assert_in_delta(min, max, 5))
+      sync_times |> Enum.min_max() ~> ({min, max} -> assert_in_delta(min, max, @sync_delay))
     end
   end
 
-  test "should sync only if active" do
+  test "should sync only if active, otherwise sync returns immediately" do
     sync = @module.start_link!()
 
     t1 =
       Task.async(fn ->
         sync |> @module.register()
-        receive do: (:cont -> :ok)
+        receive do: (:continue -> :ok)
       end)
 
     t2 =
       Task.async(fn ->
         :ok = sync |> @module.register()
         :ok = sync |> @module.sync()
-        :ok
       end)
 
     :ok = Task.await(t2)
-    send(t1.pid, :cont)
+    send(t1.pid, :continue)
     :ok = Task.await(t1)
   end
 
@@ -80,7 +83,7 @@ defmodule Membrane.SyncTest do
 
     t1 =
       Task.async(fn ->
-        receive do: (:cont -> :ok)
+        receive do: (:continue -> :ok)
       end)
 
     sync |> @module.register(t1.pid)
@@ -89,11 +92,10 @@ defmodule Membrane.SyncTest do
       Task.async(fn ->
         :ok = sync |> @module.register()
         :ok = sync |> @module.sync()
-        :ok
       end)
 
     :ok = Task.await(t2)
-    send(t1.pid, :cont)
+    send(t1.pid, :continue)
     :ok = Task.await(t1)
   end
 
@@ -102,8 +104,8 @@ defmodule Membrane.SyncTest do
 
     t1 =
       Task.async(fn ->
-        :ok = receive do: (:cont -> :ok)
-        Process.sleep(50)
+        :ok = receive do: (:continue -> :ok)
+        Process.sleep(@long_time)
         sync |> @module.deactivate()
         :ok
       end)
@@ -114,9 +116,8 @@ defmodule Membrane.SyncTest do
       Task.async(fn ->
         :ok = sync |> @module.register()
         :ok = sync |> @module.activate()
-        send(t1.pid, :cont)
+        send(t1.pid, :continue)
         :ok = sync |> @module.sync()
-        :ok
       end)
 
     :ok = Task.await(t1)
@@ -138,7 +139,6 @@ defmodule Membrane.SyncTest do
         :ok = sync |> @module.register()
         :ok = sync |> @module.activate()
         :ok = sync |> @module.sync()
-        :ok
       end)
 
     :ok = Task.await(t2)
@@ -149,8 +149,8 @@ defmodule Membrane.SyncTest do
 
     t1 =
       Task.async(fn ->
-        :ok = receive do: (:cont -> :ok)
-        Process.sleep(50)
+        :ok = receive do: (:continue -> :ok)
+        Process.sleep(@long_time)
         :ok
       end)
 
@@ -160,9 +160,8 @@ defmodule Membrane.SyncTest do
       Task.async(fn ->
         :ok = sync |> @module.register()
         :ok = sync |> @module.activate()
-        send(t1.pid, :cont)
+        send(t1.pid, :continue)
         :ok = sync |> @module.sync()
-        :ok
       end)
 
     :ok = Task.await(t1)
@@ -177,12 +176,12 @@ defmodule Membrane.SyncTest do
     |> Enum.each(fn sync ->
       [
         Task.async(fn ->
-          receive do: (:cont -> :ok)
+          receive do: (:continue -> :ok)
           :ok = sync |> @module.activate()
           :ok = sync |> @module.sync()
         end),
         Task.async(fn ->
-          receive do: (:cont -> :ok)
+          receive do: (:continue -> :ok)
         end)
       ]
       |> Enum.map(fn task ->
@@ -190,13 +189,13 @@ defmodule Membrane.SyncTest do
         task
       end)
       |> Enum.map(fn task ->
-        send(task.pid, :cont)
+        send(task.pid, :continue)
         task
       end)
       |> Enum.map(&Task.await/1)
     end)
 
-    Process.sleep(20)
+    Process.sleep(@long_time)
     assert Process.alive?(s1)
     refute Process.alive?(s2)
   end
@@ -207,7 +206,7 @@ defmodule Membrane.SyncTest do
     t1 =
       Task.async(fn ->
         :ok = sync |> @module.register()
-        receive do: (:cont -> :ok)
+        receive do: (:continue -> :ok)
       end)
 
     t2 =
@@ -218,7 +217,7 @@ defmodule Membrane.SyncTest do
       end)
 
     :ok = Task.await(t2)
-    send(t1.pid, :cont)
+    send(t1.pid, :continue)
     :ok = Task.await(t1)
   end
 end
