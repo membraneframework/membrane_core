@@ -245,17 +245,12 @@ defmodule Membrane.Element.Base do
       if !Module.get_attribute(__MODULE__, :membrane_element_has_clock) do
         @membrane_element_has_clock true
 
-        with {_, previous_doc} when previous_doc != false <-
-               Module.get_attribute(__MODULE__, :moduledoc) do
-          @moduledoc """
-          #{previous_doc}
+        @membrane_clock_moduledoc """
+        ## Clock
 
-          ## Clock
-
-          This element exports clock. See `#{unquote(inspect(__MODULE__))}.def_clock/0`
-          for more information.
-          """
-        end
+        This element exports clock. See `#{unquote(inspect(__MODULE__))}.def_clock/0`
+        for more information.
+        """
 
         @impl true
         def membrane_clock?, do: true
@@ -265,12 +260,38 @@ defmodule Membrane.Element.Base do
     end
   end
 
+  defmacro generate_moduledoc(_env) do
+    quote do
+      alias Membrane.Core.Element.PadsSpecs
+
+      @membrane_pads_moduledoc PadsSpecs.generate_docs_from_pads_specs(@membrane_pads)
+
+      if @moduledoc != false do
+        @moduledoc [
+                     :moduledoc,
+                     :membrane_options_moduledoc,
+                     :membrane_clock_moduledoc,
+                     :membrane_pads_moduledoc
+                   ]
+                   |> Enum.map(&Module.get_attribute(__MODULE__, &1))
+                   |> Enum.map(fn
+                     # built-in @moduledoc writes docs in the form of {integer(), string}
+                     {_, text} -> text
+                     e -> e
+                   end)
+                   |> Enum.filter(& &1)
+                   |> Enum.join("\n")
+      end
+    end
+  end
+
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 
+      @before_compile {unquote(__MODULE__), :generate_moduledoc}
+
       use Membrane.Log, tags: :element, import: false
-      require Membrane.Core.Element.PadsSpecs
 
       alias Membrane.Element.CallbackContext, as: Ctx
 
