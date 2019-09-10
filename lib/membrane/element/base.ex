@@ -240,7 +240,14 @@ defmodule Membrane.Element.Base do
   while pipeline's one - via `pipeline_clock` field in callback contexts. Both of
   them can be used for starting timers.
   """
-  defmacro def_clock do
+  defmacro def_clock(doc \\ nil) do
+    user_doc_part =
+      if doc do
+        "\n#{doc}"
+      else
+        ""
+      end
+
     quote do
       if !Module.get_attribute(__MODULE__, :membrane_element_has_clock) do
         @membrane_element_has_clock true
@@ -250,6 +257,8 @@ defmodule Membrane.Element.Base do
 
         This element exports clock. See `#{unquote(inspect(__MODULE__))}.def_clock/0`
         for more information.
+
+        #{unquote(user_doc_part)}
         """
 
         @impl true
@@ -295,7 +304,7 @@ defmodule Membrane.Element.Base do
 
       alias Membrane.Element.CallbackContext, as: Ctx
 
-      import unquote(__MODULE__), only: [def_clock: 0, def_options: 1]
+      import unquote(__MODULE__), only: [def_clock: 0, def_clock: 1, def_options: 1]
 
       @impl true
       def membrane_element?, do: true
