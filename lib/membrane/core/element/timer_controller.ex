@@ -32,7 +32,7 @@ defmodule Membrane.Core.Element.TimerController do
   def handle_tick(timer_id, %State{} = state) do
     context = &CallbackContext.Tick.from_state/1
 
-    with true <- state.timers |> Map.has_key?(timer_id) or {:ok, state},
+    with true <- state.timers |> Map.has_key?(timer_id),
          {:ok, state} <-
            CallbackHandler.exec_and_handle_callback(
              :handle_tick,
@@ -42,6 +42,8 @@ defmodule Membrane.Core.Element.TimerController do
              state
            ) do
       state |> Bunch.Access.update_in([:timers, timer_id], &Timer.tick/1) ~> {:ok, &1}
+    else
+      false -> {:ok, state}
     end
   end
 

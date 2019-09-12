@@ -58,9 +58,11 @@ defmodule Membrane.Pipeline.Spec do
 
   Sample definitions:
     
+    ```
     %Spec{stream_sync: [[:element1, :element2], [:element3, :element4]]}
 
     %Spec{stream_sync: :sinks}
+    ```
 
   ## Clock provider
 

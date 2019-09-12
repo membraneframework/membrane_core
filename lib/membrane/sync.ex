@@ -114,10 +114,15 @@ defmodule Membrane.Sync do
       nil ->
         {:reply, {:error, :not_found}, state}
 
-      %{status: :registered} = syncee ->
+      %{status: :registered} = requestor ->
         state =
           state
-          |> put_in([:processes, pid], %{syncee | status: :sync, latency: latency, reply_to: from})
+          |> put_in([:processes, pid], %{
+            requestor
+            | status: :sync,
+              latency: latency,
+              reply_to: from
+          })
           |> check_and_handle_sync()
 
         {:noreply, state}

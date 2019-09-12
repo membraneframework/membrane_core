@@ -177,7 +177,7 @@ defmodule Membrane.Element.Action do
 
   This action is atomic: stopping timer guarantees that no ticks will arrive from it.
   """
-  @type stop_timer_t :: {:timer, id :: any}
+  @type stop_timer_t :: {:stop_timer, id :: any}
 
   @typedoc """
   Sends EndOfStream event through a pad (output) that triggers

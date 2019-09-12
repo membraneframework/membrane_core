@@ -13,7 +13,7 @@ defmodule Membrane.Clock do
 
   Basing on updates, Clock calculates a _ratio_ between a reference time and
   the time provided by the custom clock. The reference time can be configured with
-  `:time_provider` option. The ratio is broadcasted (see t:ratio_t)
+  `:time_provider` option. The ratio is broadcasted (see `t:ratio_t`)
   to _subscribers_ (see `subscribe/2`) - processes willing to synchronize to the
   custom clock. Subscribers can adjust their timers according to received ratio -
   timers started with `:start_timer` action in elements do it automatically. Initial ratio is equal
