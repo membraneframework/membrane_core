@@ -65,6 +65,7 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane.Sink$/,
           ~r/^Membrane.Source$/,
           ~r/^Membrane.Element$/,
+          ~r/^Membrane.Clock$/,
           ~r/^Membrane.Element(?!\.CallbackContext)\..*/,
           ~r/^Membrane.Core.InputBuffer/
         ],
