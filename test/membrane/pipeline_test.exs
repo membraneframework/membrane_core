@@ -4,8 +4,8 @@ defmodule Membrane.PipelineTest do
   alias Membrane.Pipeline.{Spec, State}
   use ExUnit.Case
 
-  def state(_ctx) do
-    [state: struct(State)]
+  defp state(_ctx) do
+    [state: %State{module: nil, clock_proxy: nil}]
   end
 
   setup_all :state
