@@ -29,11 +29,13 @@ defmodule Membrane.Core.Element.StateSpec do
              playback: %Playback{},
              playback_buffer: PlaybackBuffer.new(),
              delayed_demands: %{},
-             timers: %{},
-             clock: nil,
-             pipeline_clock: nil,
-             latency: 0,
-             stream_sync: Sync.no_sync(),
+             synchronization: %{
+               timers: %{},
+               clock: nil,
+               pipeline_clock: nil,
+               latency: 0,
+               stream_sync: Sync.no_sync()
+             },
              terminating: false
            )
       )

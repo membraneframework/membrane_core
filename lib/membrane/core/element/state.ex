@@ -29,7 +29,9 @@ defmodule Membrane.Core.Element.State do
           playback: Playback.t(),
           playback_buffer: PlaybackBuffer.t(),
           delayed_demands: %{{Pad.ref_t(), :supply | :redemand} => :sync | :async},
-          timers: %{Timer.id_t() => Timer.t()},
+          synchronization: %{
+            timers: %{Timer.id_t() => Timer.t()}
+          },
           terminating: boolean | :ready
         }
 
@@ -44,11 +46,7 @@ defmodule Membrane.Core.Element.State do
     :playback,
     :playback_buffer,
     :delayed_demands,
-    :timers,
-    :pipeline_clock,
-    :clock,
-    :stream_sync,
-    :latency,
+    :synchronization,
     :terminating
   ]
 
@@ -73,11 +71,13 @@ defmodule Membrane.Core.Element.State do
       playback: %Playback{},
       playback_buffer: PlaybackBuffer.new(),
       delayed_demands: %{},
-      timers: %{},
-      pipeline_clock: options.clock,
-      clock: nil,
-      stream_sync: options.sync,
-      latency: 0,
+      synchronization: %{
+        pipeline_clock: options.clock,
+        timers: %{},
+        clock: nil,
+        stream_sync: options.sync,
+        latency: 0
+      },
       terminating: false
     }
     |> PadSpecHandler.init_pads()

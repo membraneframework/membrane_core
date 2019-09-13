@@ -22,11 +22,11 @@ defmodule Membrane.Core.Element.LifecycleController do
   def handle_init(options, %State{module: module} = state) do
     debug("Initializing element: #{inspect(module)}, options: #{inspect(options)}", state)
 
-    :ok = Sync.register(state.stream_sync)
+    :ok = Sync.register(state.synchronization.stream_sync)
 
     state =
       if Bunch.Module.check_behaviour(module, :membrane_clock?) do
-        %State{state | clock: Clock.start_link!()}
+        update_in(state[:synchronization][:clock], fn _ -> Clock.start_link!() end)
       else
         state
       end
@@ -98,7 +98,8 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @spec handle_watcher(pid, State.t()) :: {:ok, State.t()}
   def handle_watcher(watcher, state) do
-    {{:ok, state |> Map.take([:clock])}, %State{state | watcher: watcher}}
+    %State{synchronization: %{clock: clock}} = state
+    {{:ok, %{clock: clock}}, %State{state | watcher: watcher}}
   end
 
   @spec handle_controlling_pid(pid, State.t()) :: {:ok, State.t()}

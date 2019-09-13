@@ -94,7 +94,7 @@ defmodule Membrane.Core.Element.EventController do
        |> Map.values()
        |> Enum.filter(&(&1.direction == :input))
        |> Enum.all?(& &1.start_of_stream?) do
-      :ok = Sync.sync(state.stream_sync)
+      :ok = Sync.sync(state.synchronization.stream_sync)
     end
 
     {:ok, state}

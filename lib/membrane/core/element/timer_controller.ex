@@ -13,12 +13,12 @@ defmodule Membrane.Core.Element.TimerController do
     else
       clock |> Clock.subscribe()
       timer = Timer.start(id, interval, clock)
-      state |> Bunch.Access.put_in([:timers, id], timer) ~> {:ok, &1}
+      state |> Bunch.Access.put_in([:synchronization, :timers, id], timer) ~> {:ok, &1}
     end
   end
 
   def stop_timer(id, state) do
-    {timer, state} = state |> Bunch.Access.pop_in([:timers, id])
+    {timer, state} = state |> Bunch.Access.pop_in([:synchronization, :timers, id])
 
     if timer |> is_nil do
       {{:error, {:unknown_timer, id}}, state}
@@ -41,7 +41,9 @@ defmodule Membrane.Core.Element.TimerController do
              [timer_id],
              state
            ) do
-      state |> Bunch.Access.update_in([:timers, timer_id], &Timer.tick/1) ~> {:ok, &1}
+      state
+      |> Bunch.Access.update_in([:synchronization, :timers, timer_id], &Timer.tick/1)
+      ~> {:ok, &1}
     else
       false -> {:ok, state}
     end
@@ -50,7 +52,7 @@ defmodule Membrane.Core.Element.TimerController do
   def handle_clock_update(clock, ratio, state) do
     state
     |> update_in(
-      [:timers],
+      [:synchronization, :timers],
       &Bunch.Map.map_values(&1, fn
         %Timer{clock: ^clock} = timer -> timer |> Timer.update_ratio(ratio)
         timer -> timer

@@ -42,8 +42,8 @@ defmodule Membrane.Element.CallbackContext do
             unquote_splicing(args),
             playback_state: state.playback.state,
             pads: state.pads.data,
-            clock: state.clock,
-            pipeline_clock: state.pipeline_clock
+            clock: state.synchronization.clock,
+            pipeline_clock: state.synchronization.pipeline_clock
           }
         end
       end
