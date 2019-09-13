@@ -47,7 +47,7 @@ defmodule Membrane.Element.Base do
 
   use Bunch
 
-  alias Membrane.Core.Element.OptionsSpecs
+  alias Membrane.Core.Element.{OptionsSpecs, PadsSpecs}
   alias Membrane.Element.{Action, CallbackContext, Pad}
   alias Membrane.Event
 
@@ -221,6 +221,13 @@ defmodule Membrane.Element.Base do
                       handle_tick: 3,
                       handle_shutdown: 2
 
+  @docs_order [
+    :moduledoc,
+    :membrane_options_moduledoc,
+    :membrane_pads_moduledoc,
+    :membrane_clock_moduledoc
+  ]
+
   @doc """
   Macro defining options that parametrize element.
 
@@ -240,56 +247,48 @@ defmodule Membrane.Element.Base do
   while pipeline's one - via `pipeline_clock` field in callback contexts. Both of
   them can be used for starting timers.
   """
-  defmacro def_clock(doc \\ nil) do
-    user_doc_part =
-      if doc do
-        "\n#{doc}"
-      else
-        ""
-      end
-
+  defmacro def_clock(doc \\ "") do
     quote do
-      if !Module.get_attribute(__MODULE__, :membrane_element_has_clock) do
-        @membrane_element_has_clock true
+      @membrane_element_has_clock true
 
-        @membrane_clock_moduledoc """
-        ## Clock
+      Module.put_attribute(__MODULE__, :membrane_clock_moduledoc, """
+      ## Clock
 
-        This element exports clock. See `#{unquote(inspect(__MODULE__))}.def_clock/0`
-        for more information.
+      This element exports clock. See `#{unquote(inspect(__MODULE__))}.def_clock/0`
+      for more information.
 
-        #{unquote(user_doc_part)}
-        """
+      #{unquote(doc)}
+      """)
 
-        @impl true
-        def membrane_clock?, do: true
-      else
-        raise CompileError, file: __ENV__.file, description: "Element can define at most 1 clock"
-      end
+      @impl true
+      def membrane_clock?, do: true
     end
   end
 
-  defmacro generate_moduledoc(_env) do
+  defmacro generate_moduledoc(env) do
+    membrane_pads_moduledoc =
+      Module.get_attribute(env.module, :membrane_pads)
+      |> PadsSpecs.generate_docs_from_pads_specs()
+
+    Module.put_attribute(env.module, :membrane_pads_moduledoc, membrane_pads_moduledoc)
+
     quote do
-      alias Membrane.Core.Element.PadsSpecs
-
-      @membrane_pads_moduledoc PadsSpecs.generate_docs_from_pads_specs(@membrane_pads)
-
       if @moduledoc != false do
-        @moduledoc [
-                     :moduledoc,
-                     :membrane_options_moduledoc,
-                     :membrane_clock_moduledoc,
-                     :membrane_pads_moduledoc
-                   ]
-                   |> Enum.map(&Module.get_attribute(__MODULE__, &1))
-                   |> Enum.map(fn
-                     # built-in @moduledoc writes docs in the form of {integer(), string}
-                     {_, text} -> text
-                     e -> e
-                   end)
-                   |> Enum.filter(& &1)
-                   |> Enum.join("\n")
+        @moduledoc unquote(
+                     @docs_order
+                     |> Enum.map(&Module.get_attribute(__CALLER__.module, &1))
+                     |> Enum.map(fn
+                       # built-in @moduledoc writes docs in the form of {integer(), string}
+                       {_, text} -> text
+                       e -> e
+                     end)
+                     |> Enum.filter(& &1)
+                     |> Enum.reduce(fn x, acc ->
+                       quote do
+                         unquote(acc) <> unquote(x)
+                       end
+                     end)
+                   )
       end
     end
   end

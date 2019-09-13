@@ -167,17 +167,21 @@ defmodule Membrane.Core.Element.PadsSpecs do
       |> Enum.sort_by(fn {_, config} -> config[:direction] end)
       |> Enum.map(&generate_docs_from_pad_specs/1)
       |> Enum.reduce(fn x, acc ->
-        """
-        #{acc}
-        #{x}
-        """
+        quote do
+          """
+          #{unquote(acc)}
+          #{unquote(x)}
+          """
+        end
       end)
 
-    """
-    ## Pads
+    quote do
+      """
+      ## Pads
 
-    #{pads_docs}
-    """
+      #{unquote(pads_docs)}
+      """
+    end
   end
 
   defp generate_docs_from_pad_specs({name, config}) do
@@ -208,11 +212,13 @@ defmodule Membrane.Core.Element.PadsSpecs do
         quote_expr("")
       end
 
-    """
-    ### `#{inspect(name)}`
+    quote do
+      """
+      ### `#{inspect(unquote(name))}`
 
-    #{config_doc}
-    """ <> options_doc
+      #{unquote(config_doc)}
+      """ <> unquote(options_doc)
+    end
   end
 
   defp generate_pad_property_doc(:caps, caps) do
