@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.State do
   # internally in Membrane.
 
   use Membrane.Log, tags: :core
-  alias Membrane.{Clock, Core, Element}
+  alias Membrane.{Clock, Core, Element, Sync}
   alias Core.{Playback, Playbackable, Timer}
   alias Core.Element.{PadModel, PadSpecHandler, PlaybackBuffer}
   alias Element.Pad
@@ -30,7 +30,11 @@ defmodule Membrane.Core.Element.State do
           playback_buffer: PlaybackBuffer.t(),
           delayed_demands: %{{Pad.ref_t(), :supply | :redemand} => :sync | :async},
           synchronization: %{
-            timers: %{Timer.id_t() => Timer.t()}
+            timers: %{Timer.id_t() => Timer.t()},
+            pipeline_clock: Clock.t(),
+            latency: non_neg_integer(),
+            stream_sync: Sync.t(),
+            clock: Clock.t()
           },
           terminating: boolean | :ready
         }
@@ -58,7 +62,7 @@ defmodule Membrane.Core.Element.State do
   @doc """
   Initializes new state.
   """
-  @spec new(%{module: module, name: Element.name_t(), clock: Clock.t()}) :: t
+  @spec new(%{module: module, name: Element.name_t(), clock: Clock.t(), sync: Sync.t()}) :: t
   def new(options) do
     %__MODULE__{
       module: options.module,

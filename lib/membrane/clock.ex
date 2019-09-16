@@ -70,7 +70,7 @@ defmodule Membrane.Clock do
     GenServer.start_link(__MODULE__, options, gen_server_options)
   end
 
-  @spec start_link!([option_t], GenServer.options()) :: pid | no_return
+  @spec start_link!([option_t], GenServer.options()) :: t | no_return
   def start_link!(options \\ [], gen_server_options \\ []) do
     {:ok, clock} = start_link(options, gen_server_options)
     clock

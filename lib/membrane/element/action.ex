@@ -163,7 +163,7 @@ defmodule Membrane.Element.Action do
 
   If no clock is passed, pipeline clock is chosen. The timer's `id` is passed
   to the `c:Membrane.Element.Base.handle_tick/3` callback and can be used for
-  stopping it (`t:stop_timer_t`).
+  stopping it (`t:stop_timer_t/0`).
 
   Timers use `Process.send_after/3` under the hood.
   """
@@ -173,7 +173,7 @@ defmodule Membrane.Element.Action do
            | {id :: any, interval :: Time.t()}}
 
   @typedoc """
-  Stops a timer started with `t:timer_t` action.
+  Stops a timer started with `t:start_timer_t/0` action.
 
   This action is atomic: stopping timer guarantees that no ticks will arrive from it.
   """
