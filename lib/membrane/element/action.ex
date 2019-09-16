@@ -180,6 +180,13 @@ defmodule Membrane.Element.Action do
   @type stop_timer_t :: {:stop_timer, id :: any}
 
   @typedoc """
+  This action sets the latency for the element.
+
+  This action is not premitted in callback `c:Membrane.Element.Base.handle_init/1`.
+  """
+  @type latency_t :: {:latency, latency :: non_neg_integer}
+
+  @typedoc """
   Sends EndOfStream event through a pad (output) that triggers
   callback `end_of_stream/3` at the receiver element.
 
@@ -205,5 +212,6 @@ defmodule Membrane.Element.Action do
           | playback_change_t
           | start_timer_t
           | stop_timer_t
+          | latency_t
           | end_of_stream_t
 end
