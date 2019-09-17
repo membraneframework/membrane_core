@@ -33,7 +33,7 @@ defmodule Membrane.Core.Element.TimerController do
   def handle_tick(timer_id, %State{} = state) do
     context = &CallbackContext.Tick.from_state/1
 
-    with true <- state.timers |> Map.has_key?(timer_id),
+    with true <- state.synchronization.timers |> Map.has_key?(timer_id),
          {:ok, state} <-
            CallbackHandler.exec_and_handle_callback(
              :handle_tick,
