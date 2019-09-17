@@ -4,6 +4,16 @@ defmodule Membrane.Core.Timer do
   alias Membrane.Core.Message
   alias Membrane.Time
 
+  @type t :: %__MODULE__{
+          id: any,
+          interval: Time.t(),
+          init_time: Time.t(),
+          clock: Clock.t(),
+          time_passed: Time.t(),
+          ratio: Ratio.t(),
+          timer_ref: reference() | nil
+        }
+
   @enforce_keys [:interval, :clock, :init_time, :id]
   defstruct @enforce_keys ++ [time_passed: 0, ratio: 1, timer_ref: nil]
 
