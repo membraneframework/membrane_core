@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.TimerController do
   alias Membrane.Element.CallbackContext
 
   def start_timer(interval, clock, id, state) do
-    if state.timers |> Map.has_key?(id) do
+    if state.synchronization.timers |> Map.has_key?(id) do
       {{:error, {:timer_already_exists, id: id}}, state}
     else
       clock |> Clock.subscribe()
