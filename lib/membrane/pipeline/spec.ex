@@ -68,7 +68,7 @@ defmodule Membrane.Pipeline.Spec do
 
   Clock provider is an element that exports clock that should be used as the pipeline
   clock. The pipeline clock is the default clock used by elements' timers.
-  For more information see `Membrane.Element.Base.def_clock/0`.
+  For more information see `Membrane.Element.Base.def_clock/1`.
 
   """
 
