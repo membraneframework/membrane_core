@@ -172,6 +172,9 @@ defmodule Membrane.SyncTest do
 
     for t <- [t1, t2] do
       :ok = sync |> @module.register(t.pid)
+    end
+
+    for t <- [t1, t2] do
       continue_task(t)
     end
     |> Enum.map(&Task.await/1)
