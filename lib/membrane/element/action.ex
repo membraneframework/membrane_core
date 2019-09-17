@@ -138,7 +138,7 @@ defmodule Membrane.Element.Action do
   forward buffers, `c:Membrane.Element.WithInputPads.handle_caps/4` - caps
   and `c:Membrane.Element.Base.handle_event/4` - events.
   """
-  @type forward_t :: {:forward, Buffer.t() | [Buffer.t()] | Caps.t() | Event.t(), :end_of_stream}
+  @type forward_t :: {:forward, Buffer.t() | [Buffer.t()] | Caps.t() | Event.t() | :end_of_stream}
 
   @typedoc """
   Suspends/resumes change of playback state.
