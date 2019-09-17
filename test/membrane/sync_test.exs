@@ -6,6 +6,7 @@ defmodule Membrane.SyncTest do
 
   @task_number 10
   @sync_delay 1
+  @error 5
 
   @long_time 50
 
@@ -46,7 +47,9 @@ defmodule Membrane.SyncTest do
       {request_times, sync_times} = gen_times()
       now = System.monotonic_time(:millisecond)
       last_request = request_times |> Enum.min_by(&(now - &1))
-      sync_times |> Enum.each(&assert_in_delta(&1, last_request, @task_number * @sync_delay))
+
+      sync_times
+      |> Enum.each(&assert_in_delta(&1, last_request, @task_number * @sync_delay + @error))
     end
 
     test "synchronization should happen approximately at the same time in each process" do
