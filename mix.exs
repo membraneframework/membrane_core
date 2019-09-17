@@ -26,7 +26,8 @@ defmodule Membrane.Mixfile do
         "coveralls.html": :test
       ],
       test_coverage: [tool: ExCoveralls, test_task: "espec"],
-      deps: deps()
+      deps: deps(),
+      aliases: aliases()
     ]
   end
 
@@ -100,6 +101,12 @@ defmodule Membrane.Mixfile do
       {:dialyxir, "~> 1.0.0-rc.4", only: [:dev], runtime: false},
       {:bunch, github: "membraneframework/bunch"},
       {:ratio, "~> 2.0"}
+    ]
+  end
+
+  defp aliases do
+    [
+      test: "test --exclude long_running"
     ]
   end
 end
