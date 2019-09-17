@@ -39,7 +39,7 @@ defmodule Membrane.Integration.SyncTest do
   test "Ratio modifies ticking pace correctly" do
     tick_interval = 100
     tries = 300
-    ratio_error = 0.05
+    ratio_error = 0.1
 
     actual_report_interval = 100
     reported_interval = 300
