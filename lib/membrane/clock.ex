@@ -121,7 +121,7 @@ defmodule Membrane.Clock do
         ratio: 1,
         subscribers: %{},
         time_provider:
-          options |> Keyword.get(:time_provider, fn -> System.monotonic_time(:millisecond) end)
+          options |> Keyword.get(:time_provider, fn -> System.monotonic_time(:nanosecond) end)
       }
       |> Map.merge(proxy_opts)
 
@@ -242,6 +242,6 @@ defmodule Membrane.Clock do
   defp send_ratio(pid, ratio), do: send(pid, {:membrane_clock_ratio, self(), ratio})
 
   defp get_time(time_provider) do
-    time_provider.() |> Time.milliseconds()
+    time_provider.() |> Time.nanoseconds()
   end
 end
