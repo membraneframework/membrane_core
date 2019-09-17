@@ -6,12 +6,13 @@ defmodule Membrane.SyncTest do
 
   @task_number 10
   @sync_delay 1
+  @error 5
 
   @long_time 50
 
   describe "should sync processes" do
     defp requester_task(sync, time_multiplier) do
-      synced_start_task(fn ->
+      spawn_paused_task(fn ->
         Process.sleep(10 * time_multiplier)
         request_time = System.monotonic_time(:millisecond)
         :ok = sync |> @module.sync()
@@ -32,7 +33,7 @@ defmodule Membrane.SyncTest do
 
       @module.activate(sync)
 
-      tasks |> Enum.each(&sync_start/1)
+      tasks |> Enum.each(&continue_task/1)
 
       {request_times, sync_times} =
         tasks
@@ -46,7 +47,9 @@ defmodule Membrane.SyncTest do
       {request_times, sync_times} = gen_times()
       now = System.monotonic_time(:millisecond)
       last_request = request_times |> Enum.min_by(&(now - &1))
-      sync_times |> Enum.each(&assert_in_delta(&1, last_request, @task_number * @sync_delay))
+
+      sync_times
+      |> Enum.each(&assert_in_delta(&1, last_request, @task_number * @sync_delay + @error))
     end
 
     test "synchronization should happen approximately at the same time in each process" do
@@ -80,7 +83,7 @@ defmodule Membrane.SyncTest do
     sync |> @module.activate()
     sync |> @module.deactivate()
 
-    t1 = synced_start_task(fn -> :ok end)
+    t1 = spawn_paused_task(fn -> :ok end)
 
     sync |> @module.register(t1.pid)
 
@@ -91,7 +94,7 @@ defmodule Membrane.SyncTest do
       end)
 
     :ok = Task.await(t2)
-    sync_start(t1)
+    continue_task(t1)
     :ok = Task.await(t1)
   end
 
@@ -99,7 +102,7 @@ defmodule Membrane.SyncTest do
     {:ok, sync} = @module.start_link()
 
     t1 =
-      synced_start_task(fn ->
+      spawn_paused_task(fn ->
         Process.sleep(@long_time)
         sync |> @module.deactivate()
         :ok
@@ -111,7 +114,7 @@ defmodule Membrane.SyncTest do
       Task.async(fn ->
         :ok = sync |> @module.register()
         :ok = sync |> @module.activate()
-        sync_start(t1)
+        continue_task(t1)
         :ok = sync |> @module.sync()
       end)
 
@@ -142,7 +145,7 @@ defmodule Membrane.SyncTest do
   test "should sync once all non-syncing processes exit" do
     {:ok, sync} = @module.start_link()
 
-    t1 = synced_start_task(fn -> Process.sleep(@long_time) end)
+    t1 = spawn_paused_task(fn -> Process.sleep(@long_time) end)
 
     :ok = sync |> @module.register(t1.pid)
 
@@ -150,7 +153,7 @@ defmodule Membrane.SyncTest do
       Task.async(fn ->
         :ok = sync |> @module.register()
         :ok = sync |> @module.activate()
-        sync_start(t1)
+        continue_task(t1)
         :ok = sync |> @module.sync()
       end)
 
@@ -158,18 +161,21 @@ defmodule Membrane.SyncTest do
     :ok = Task.await(t2)
   end
 
-  defp activate_sync_register(sync) do
+  defp register_activate_sync(sync) do
     t1 =
-      synced_start_task(fn ->
+      spawn_paused_task(fn ->
         :ok = sync |> @module.activate()
         :ok = sync |> @module.sync()
       end)
 
-    t2 = synced_start_task(fn -> :ok end)
+    t2 = spawn_paused_task(fn -> :ok end)
 
     for t <- [t1, t2] do
       :ok = sync |> @module.register(t.pid)
-      sync_start(t)
+    end
+
+    for t <- [t1, t2] do
+      continue_task(t)
     end
     |> Enum.map(&Task.await/1)
   end
@@ -177,7 +183,7 @@ defmodule Membrane.SyncTest do
   test "should exit once all syncees exit if :empty_exit? flag is present" do
     {:ok, sync} = @module.start_link(empty_exit?: true)
 
-    activate_sync_register(sync)
+    register_activate_sync(sync)
 
     Process.sleep(@long_time)
     refute Process.alive?(sync)
@@ -186,7 +192,7 @@ defmodule Membrane.SyncTest do
   test "should not exit after all syncees exit if :empty_exit? flag is not present" do
     {:ok, sync} = @module.start_link()
 
-    activate_sync_register(sync)
+    register_activate_sync(sync)
 
     Process.sleep(@long_time)
     assert Process.alive?(sync)
@@ -213,15 +219,15 @@ defmodule Membrane.SyncTest do
     :ok = Task.await(t1)
   end
 
-  defp synced_start_task(task_fun) do
+  defp spawn_paused_task(task_fun) do
     Task.async(fn ->
-      :ok = receive do: (:start -> :ok)
+      :ok = receive do: (:continue -> :ok)
       task_fun.()
     end)
   end
 
-  defp sync_start(task) do
-    send(task.pid, :start)
+  defp continue_task(task) do
+    send(task.pid, :continue)
     task
   end
 end

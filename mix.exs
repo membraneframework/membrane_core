@@ -98,7 +98,7 @@ defmodule Membrane.Mixfile do
       {:excoveralls, "~> 0.8", only: :test},
       {:qex, "~> 0.3"},
       {:dialyxir, "~> 1.0.0-rc.4", only: [:dev], runtime: false},
-      {:bunch, github: "membraneframework/bunch"},
+      {:bunch, "~> 1.2"},
       {:ratio, "~> 2.0"}
     ]
   end
