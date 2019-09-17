@@ -156,7 +156,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp do_handle_action({:latency, latency}, _cb, _params, state) do
-    new_state = update_in(state[:synchronization][:latency], latency)
+    new_state = put_in(state.synchronization.latency, latency)
     {:ok, new_state}
   end
 

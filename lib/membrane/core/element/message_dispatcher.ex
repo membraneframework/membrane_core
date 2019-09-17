@@ -113,7 +113,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   end
 
   defp do_handle_message(Message.new(:set_stream_sync, sync), :call, state) do
-    new_state = update_in(state[:synchronization][:stream_sync], sync)
+    new_state = put_in(state.synchronization.stream_sync, sync)
     {:ok, new_state}
   end
 
