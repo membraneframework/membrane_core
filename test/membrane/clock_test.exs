@@ -74,8 +74,7 @@ defmodule Membrane.ClockTest do
       send(clock, {:membrane_clock_update, random_time()})
       send(clock, time: 13)
       @module.subscribe(clock)
-      # TODO why do we get integers and not floats?
-      ratio = trunc(20 / (13 - 3))
+      ratio = Ratio.new(20, 13 - 3)
       assert_receive {:membrane_clock_ratio, ^clock, ^ratio}
       refute_receive {:membrane_clock_ratio, ^clock, _ratio}
     end
@@ -88,8 +87,7 @@ defmodule Membrane.ClockTest do
       Task.start_link(fn ->
         @module.subscribe(clock)
         assert_receive {:membrane_clock_ratio, ^clock, @initial_ratio}
-        # TODO why do we get integers and not floats?
-        ratio = trunc(20 / (13 - 3))
+        ratio = Ratio.new(20, 13 - 3)
         assert_receive {:membrane_clock_ratio, ^clock, ^ratio}
         ratio = Ratio.new(20 + 30, 23 - 3)
         assert_receive {:membrane_clock_ratio, ^clock, ^ratio}
