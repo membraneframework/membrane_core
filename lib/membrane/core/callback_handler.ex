@@ -188,13 +188,6 @@ defmodule Membrane.Core.CallbackHandler do
   end
 
   defp parse_callback_result({:error, reason}, module, cb, %{state: false}) do
-    warn_error(
-      """
-      Callback #{inspect(cb)} from module #{inspect(module)} returned an error
-      """,
-      reason
-    )
-
     raise CallbackError, kind: :error, callback: {module, cb}, reason: reason
   end
 
