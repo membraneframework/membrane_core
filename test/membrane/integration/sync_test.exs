@@ -1,6 +1,8 @@
 defmodule Membrane.Integration.SyncTest do
   use ExUnit.Case, async: false
 
+  import Membrane.Testing.Assertions
+
   alias Membrane.Support.Sync
   alias Membrane.{Time, Testing}
 
@@ -81,5 +83,35 @@ defmodule Membrane.Integration.SyncTest do
     after
       @timeout -> amount
     end
+  end
+
+  test "synchronize sinks" do
+    spec = Membrane.Support.Sync.Pipeline.default_spec()
+
+    options = %Testing.Pipeline.Options{
+      module: Membrane.Support.Sync.Pipeline,
+      custom_args: spec
+    }
+
+    {:ok, pipeline} = Testing.Pipeline.start_link(options)
+    :ok = Testing.Pipeline.play(pipeline)
+
+    assert_start_of_stream(pipeline, :sink_a)
+    assert_start_of_stream(pipeline, :sink_b, :input, @error)
+  end
+
+  test "synchronize selected groups" do
+    spec = Membrane.Support.Sync.Pipeline.default_spec()
+
+    options = %Testing.Pipeline.Options{
+      module: Membrane.Support.Sync.Pipeline,
+      custom_args: %{spec | stream_sync: [[:sink_a, :sink_b]]}
+    }
+
+    {:ok, pipeline} = Testing.Pipeline.start_link(options)
+    :ok = Testing.Pipeline.play(pipeline)
+
+    assert_start_of_stream(pipeline, :sink_a)
+    assert_start_of_stream(pipeline, :sink_b, :input, @error)
   end
 end
