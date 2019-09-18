@@ -216,7 +216,7 @@ defmodule Membrane.Testing.Pipeline do
     }
 
     new_state = %State{test_process: options.test_process, module: nil}
-    {{:ok, spec}, new_state}
+    {{:ok, spec: spec}, new_state}
   end
 
   def handle_init(%Options{links: nil, elements: nil} = options) do

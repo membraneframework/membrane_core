@@ -24,12 +24,6 @@ defmodule Membrane.Source do
 
       @impl true
       def membrane_element_type, do: :source
-
-      @impl true
-      def handle_demand(_pad, _size, _unit, _context, state),
-        do: {{:error, :handle_demand_not_implemented}, state}
-
-      defoverridable handle_demand: 5
     end
   end
 end

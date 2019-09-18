@@ -3,17 +3,17 @@ defmodule Membrane.Core.Element.LifecycleController do
   # Module handling element initialization, termination, playback state changes
   # and similar stuff.
 
-  alias Membrane.{Core, Element}
-  alias Core.{CallbackHandler, Message, Playback}
-  alias Core.Element.{ActionHandler, PadModel, PlaybackBuffer, State}
-  alias Element.{CallbackContext, Pad}
-  require CallbackContext.{Other, PlaybackChange}
-  require Message
-  require PadModel
-  require Playback
-  use Core.PlaybackHandler
-  use Core.Element.Log
+  use Membrane.Core.PlaybackHandler
+  use Membrane.Core.Element.Log
   use Bunch
+  require Membrane.Core.Element.PadModel
+  require Membrane.Core.Message
+  require Membrane.Core.Playback
+  require Membrane.Element.CallbackContext.{Other, PlaybackChange}
+  alias Membrane.{Clock, Sync}
+  alias Membrane.Core.{CallbackHandler, Message, Playback}
+  alias Membrane.Core.Element.{ActionHandler, PadModel, PlaybackBuffer, State}
+  alias Membrane.Element.{CallbackContext, Pad}
 
   @doc """
   Performs initialization tasks and executes `handle_init` callback.
@@ -22,38 +22,29 @@ defmodule Membrane.Core.Element.LifecycleController do
   def handle_init(options, %State{module: module} = state) do
     debug("Initializing element: #{inspect(module)}, options: #{inspect(options)}", state)
 
-    with {:ok, state} <- exec_init_handler(module, options, state) do
+    :ok = Sync.register(state.synchronization.stream_sync)
+
+    state =
+      if Bunch.Module.check_behaviour(module, :membrane_clock?) do
+        {:ok, clock} = Clock.start_link()
+        put_in(state.synchronization.clock, clock)
+      else
+        state
+      end
+
+    with {:ok, state} <-
+           CallbackHandler.exec_and_handle_callback(
+             :handle_init,
+             ActionHandler,
+             %{state: false},
+             [options],
+             state
+           ) do
       debug("Element initialized: #{inspect(module)}", state)
       {:ok, state}
     else
       {{:error, reason}, state} ->
         warn_error("Failed to initialize element", reason, state)
-    end
-  end
-
-  @spec exec_init_handler(module, Element.options_t(), State.t()) :: State.stateful_try_t()
-  defp exec_init_handler(module, options, state) do
-    with {:ok, internal_state} <- module.handle_init(options) do
-      {:ok, %State{state | internal_state: internal_state}}
-    else
-      {:error, reason} ->
-        warn_error(
-          """
-          Module #{inspect(module)} handle_init callback returned an error
-          """,
-          {:handle_init, module, reason},
-          state
-        )
-
-      other ->
-        warn_error(
-          """
-          Module #{inspect(module)} handle_init callback returned invalid result:
-          #{inspect(other)} instead of {:ok, state} or {:error, reason}
-          """,
-          {:invalid_callback_result, :handle_init, other},
-          state
-        )
     end
   end
 
@@ -94,14 +85,23 @@ defmodule Membrane.Core.Element.LifecycleController do
   """
   @spec handle_other(message :: any, State.t()) :: State.stateful_try_t()
   def handle_other(message, state) do
-    ctx = CallbackContext.Other.from_state(state)
+    context = &CallbackContext.Other.from_state/1
 
-    CallbackHandler.exec_and_handle_callback(:handle_other, ActionHandler, [message, ctx], state)
+    CallbackHandler.exec_and_handle_callback(
+      :handle_other,
+      ActionHandler,
+      %{context: context},
+      [message],
+      state
+    )
     |> or_warn_error("Error while handling message")
   end
 
   @spec handle_watcher(pid, State.t()) :: {:ok, State.t()}
-  def handle_watcher(watcher, state), do: {:ok, %{state | watcher: watcher}}
+  def handle_watcher(watcher, state) do
+    %State{synchronization: %{clock: clock}} = state
+    {{:ok, %{clock: clock}}, %State{state | watcher: watcher}}
+  end
 
   @spec handle_controlling_pid(pid, State.t()) :: {:ok, State.t()}
   def handle_controlling_pid(pid, state), do: {:ok, %{state | controlling_pid: pid}}
@@ -120,24 +120,30 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @impl PlaybackHandler
   def handle_playback_state(old_playback_state, new_playback_state, state) do
-    ctx = CallbackContext.PlaybackChange.from_state(state)
+    context = &CallbackContext.PlaybackChange.from_state/1
     callback = PlaybackHandler.state_change_callback(old_playback_state, new_playback_state)
 
     CallbackHandler.exec_and_handle_callback(
       callback,
       ActionHandler,
-      [ctx],
+      %{context: context},
+      [],
       state
     )
   end
 
   @impl PlaybackHandler
-  def handle_playback_state_changed(_old, :stopped, %State{terminating: true} = state),
-    do: prepare_shutdown(state)
+  def handle_playback_state_changed(_old, new, state) do
+    shutdown_res =
+      if new == :stopped and state.terminating == true do
+        prepare_shutdown(state)
+      else
+        {:ok, state}
+      end
 
-  @impl PlaybackHandler
-  def handle_playback_state_changed(_old, _new, state) do
-    PlaybackBuffer.eval(state)
+    with {:ok, state} <- shutdown_res do
+      PlaybackBuffer.eval(state)
+    end
   end
 
   @doc """

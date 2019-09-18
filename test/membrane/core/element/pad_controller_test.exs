@@ -10,8 +10,8 @@ defmodule Membrane.Core.Element.PadControllerTest do
   @module Membrane.Core.Element.PadController
 
   defp prepare_state(elem_module, name \\ :element, playback_state \\ :stopped) do
-    elem_module
-    |> State.new(name)
+    %{name: name, module: elem_module, clock: nil, sync: nil}
+    |> State.new()
     |> Playbackable.update_playback(&%{&1 | state: playback_state})
     |> PadSpecHandler.init_pads()
     |> Bunch.Access.put_in(:internal_state, %{})

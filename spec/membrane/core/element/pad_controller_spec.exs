@@ -10,7 +10,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
     let :name, do: :element_name
 
     let! :state do
-      State.new(module(), name())
+      State.new(%{module: module(), name: name(), clock: nil, sync: nil})
       |> PadSpecHandler.init_pads()
     end
 
@@ -122,7 +122,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
 
     let! :state do
       {pad_info, state} =
-        State.new(module(), name())
+        State.new(%{module: module(), name: name(), clock: nil, sync: nil})
         |> Playbackable.update_playback(&%{&1 | state: :playing})
         |> PadSpecHandler.init_pads()
         |> Bunch.Access.get_and_update_in(

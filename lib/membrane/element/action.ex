@@ -10,7 +10,7 @@ defmodule Membrane.Element.Action do
   do not return any actions) unless explicitly stated otherwise.
   """
 
-  alias Membrane.{Buffer, Caps, Event, Notification}
+  alias Membrane.{Buffer, Caps, Event, Notification, Time}
   alias Membrane.Element.Pad
 
   @typedoc """
@@ -158,6 +158,35 @@ defmodule Membrane.Element.Action do
   @type playback_change_t :: {:playback_change, :suspend | :resume}
 
   @typedoc """
+  Starts a timer that will invoke `c:Membrane.Element.Base.handle_tick/3` callback
+  every `interval` according to the given `clock`.
+
+  If no clock is passed, pipeline clock is chosen. The timer's `id` is passed
+  to the `c:Membrane.Element.Base.handle_tick/3` callback and can be used for
+  stopping it (`t:stop_timer_t/0`).
+
+  Timers use `Process.send_after/3` under the hood.
+  """
+  @type start_timer_t ::
+          {:start_timer,
+           {id :: any, interval :: Time.t(), clock :: Clock.t()}
+           | {id :: any, interval :: Time.t()}}
+
+  @typedoc """
+  Stops a timer started with `t:start_timer_t/0` action.
+
+  This action is atomic: stopping timer guarantees that no ticks will arrive from it.
+  """
+  @type stop_timer_t :: {:stop_timer, id :: any}
+
+  @typedoc """
+  This action sets the latency for the element.
+
+  This action is not premitted in callback `c:Membrane.Element.Base.handle_init/1`.
+  """
+  @type latency_t :: {:latency, latency :: non_neg_integer}
+
+  @typedoc """
   Sends EndOfStream event through a pad (output) that triggers
   callback `end_of_stream/3` at the receiver element.
 
@@ -181,5 +210,8 @@ defmodule Membrane.Element.Action do
           | redemand_t
           | forward_t
           | playback_change_t
+          | start_timer_t
+          | stop_timer_t
+          | latency_t
           | end_of_stream_t
 end

@@ -74,7 +74,11 @@ defmodule Membrane.Mixfile do
         ],
         Logging: [~r/^Membrane.Log.*/],
         Testing: [~r/^Membrane.Testing.*/],
-        Utils: [~r/^Membrane.(Time|Helper).*/]
+        Utils: [
+          ~r/^Membrane.Clock$/,
+          ~r/^Membrane.Sync$/,
+          ~r/^Membrane.Time.*/
+        ]
       ]
     ]
   end
@@ -97,7 +101,8 @@ defmodule Membrane.Mixfile do
       {:excoveralls, "~> 0.8", only: :test},
       {:qex, "~> 0.3"},
       {:dialyxir, "~> 1.0.0-rc.4", only: [:dev], runtime: false},
-      {:bunch, "~> 1.1"}
+      {:bunch, "~> 1.2"},
+      {:ratio, "~> 2.0"}
     ]
   end
 end

@@ -9,7 +9,18 @@ defmodule Membrane.Pipeline do
   """
 
   alias __MODULE__.{Link, State, Spec}
-  alias Membrane.{CallbackError, Core, Element, Notification, PipelineError}
+
+  alias Membrane.{
+    CallbackError,
+    Clock,
+    Core,
+    Element,
+    Notification,
+    PipelineError,
+    PlaybackState,
+    Sync
+  }
+
   alias Element.Pad
   alias Core.{Message, Playback}
   alias Bunch.Type
@@ -58,8 +69,12 @@ defmodule Membrane.Pipeline do
 
   @typedoc """
   Type that defines all valid return values from most callbacks.
+
+  In case of error, a callback is supposed to return `{:error, any}` if it is not
+  passed state, and `{{:error, any}, state}` otherwise.
   """
-  @type callback_return_t :: CallbackHandler.callback_return_t(action_t, State.internal_state_t())
+  @type callback_return_t ::
+          {:ok | {:ok, [action_t]} | {:error, any}, State.internal_state_t()} | {:error, any}
 
   @typep parsed_child_t :: %{name: Element.name_t(), module: module, options: Keyword.t()}
 
@@ -73,9 +88,7 @@ defmodule Membrane.Pipeline do
   and initialize element internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
   """
-  @callback handle_init(options :: pipeline_options_t) ::
-              {{:ok, Spec.t()}, State.internal_state_t()}
-              | {:error, any}
+  @callback handle_init(options :: pipeline_options_t) :: callback_return_t
 
   @doc """
   Callback invoked when pipeline transition from `:stopped` to `:prepared` state has finished,
@@ -150,7 +163,6 @@ defmodule Membrane.Pipeline do
 
   Useful for any cleanup required.
   """
-
   @callback handle_shutdown(reason, state :: State.internal_state_t()) :: :ok
             when reason: :normal | :shutdown | {:shutdown, any}
 
@@ -243,10 +255,7 @@ defmodule Membrane.Pipeline do
   def stop(pid), do: change_playback_state(pid, :stopped)
 
   @spec change_playback_state(pid, Membrane.PlaybackState.t()) :: :ok
-  defp change_playback_state(pid, new_state)
-       when Membrane.PlaybackState.is_playback_state(new_state) do
-    alias Membrane.Core.Message
-    require Message
+  defp change_playback_state(pid, new_state) when PlaybackState.is_playback_state(new_state) do
     Message.send(pid, :change_playback_state, new_state)
     :ok
   end
@@ -261,16 +270,21 @@ defmodule Membrane.Pipeline do
   end
 
   def init({module, pipeline_options}) do
-    with {{:ok, spec}, internal_state} <- module.handle_init(pipeline_options) do
-      state = %State{internal_state: internal_state, module: module}
-      Message.self(:pipeline_spec, spec)
+    {:ok, clock} = Clock.start_link(proxy: true)
+    state = %State{module: module, clock_proxy: clock}
+
+    with {:ok, state} <-
+           CallbackHandler.exec_and_handle_callback(
+             :handle_init,
+             __MODULE__,
+             %{state: false},
+             [pipeline_options],
+             state
+           ) do
       {:ok, state}
     else
       {:error, reason} ->
         raise CallbackError, kind: :error, callback: {module, :handle_init}, reason: reason
-
-      other ->
-        raise CallbackError, kind: :bad_return, callback: {module, :handle_init}, value: other
     end
   end
 
@@ -283,7 +297,14 @@ defmodule Membrane.Pipeline do
   end
 
   @spec handle_spec(Spec.t(), State.t()) :: Type.stateful_try_t([Element.name_t()], State.t())
-  defp handle_spec(%Spec{children: children_spec, links: links}, state) do
+  defp handle_spec(spec, state) do
+    %Spec{
+      children: children_spec,
+      links: links,
+      stream_sync: stream_sync,
+      clock_provider: clock_provider
+    } = spec
+
     debug("""
     Initializing pipeline spec
     children: #{inspect(children_spec)}
@@ -291,19 +312,19 @@ defmodule Membrane.Pipeline do
     """)
 
     parsed_children = children_spec |> parse_children
-
-    {:ok, state} = {parsed_children |> check_if_children_names_unique(state), state}
-    children = parsed_children |> start_children
-    {:ok, state} = children |> add_children(state)
-    {{:ok, links}, state} = {links |> parse_links, state}
+    :ok = parsed_children |> check_if_children_names_unique(state)
+    syncs = setup_syncs(parsed_children, stream_sync, state.playback.state)
+    children = parsed_children |> start_children(state.clock_proxy, syncs)
+    state = children |> add_children(state)
+    {:ok, state} = choose_clock(children, clock_provider, state)
+    {:ok, links} = links |> parse_links
     links = links |> resolve_links(state)
-    {:ok, state} = {links |> link_children(state), state}
-    {children_names, children_pids} = children |> Enum.unzip()
-    {:ok, state} = {children_pids |> set_children_watcher, state}
+    :ok = links |> link_children(state)
+    {children_names, children_data} = children |> Enum.unzip()
     {:ok, state} = exec_handle_spec_started(children_names, state)
 
-    children_pids
-    |> Enum.each(&change_playback_state(&1, state.playback.state))
+    children_data
+    |> Enum.each(&change_playback_state(&1.pid, state.playback.state))
 
     debug("""
     Initialized pipeline spec
@@ -349,26 +370,64 @@ defmodule Membrane.Pipeline do
     )
   end
 
-  # Starts children based on given specification and links them to the current
-  # process in the supervision tree.
-  #
-  # Please note that this function is not atomic and in case of error there's
-  # a chance that some of children will remain running.
-  @spec start_children([parsed_child_t]) :: [State.child_t()]
-  defp start_children(children) do
-    debug("Starting children: #{inspect(children)}")
+  defp setup_syncs(children, :sinks, playback_state) do
+    sinks =
+      children |> Enum.filter(&(&1.module.membrane_element_type == :sink)) |> Enum.map(& &1.name)
 
-    children |> Enum.map(&start_child/1)
+    setup_syncs(children, [sinks], playback_state)
   end
 
-  # Recursion that starts children processes, case when both module and options
-  # are provided.
-  defp start_child(%{name: name, module: module, options: options}) do
+  defp setup_syncs(children, stream_sync, playback_state) do
+    children_names = children |> MapSet.new(& &1.name)
+    all_to_sync = stream_sync |> List.flatten()
+
+    withl dups: [] <- all_to_sync |> Bunch.Enum.duplicates(),
+          unknown: [] <- all_to_sync |> Enum.reject(&(&1 in children_names)) do
+      stream_sync
+      |> Enum.flat_map(fn elements ->
+        {:ok, sync} = Sync.start_link(empty_exit?: true)
+
+        if playback_state == :playing do
+          Sync.activate(sync)
+        end
+
+        elements |> Enum.map(&{&1, sync})
+      end)
+      |> Map.new()
+    else
+      dups: dups ->
+        raise PipelineError,
+              "Cannot apply sync - duplicate elements: #{dups |> Enum.join(", ")}"
+
+      unknown: unknown ->
+        raise PipelineError,
+              "Cannot apply sync - unknown elements: #{unknown |> Enum.join(", ")}"
+    end
+  end
+
+  defp start_children(children, pipeline_clock, syncs) do
+    debug("Starting children: #{inspect(children)}")
+
+    children |> Enum.map(&start_child(&1, pipeline_clock, syncs))
+  end
+
+  defp start_child(%{name: name, module: module, options: options}, pipeline_clock, syncs) do
     debug("Pipeline: starting child: name: #{inspect(name)}, module: #{inspect(module)}")
 
-    with {:ok, pid} <- Element.start_link(self(), module, name, options),
-         :ok <- Element.set_controlling_pid(pid, self()) do
-      {name, pid}
+    sync = syncs |> Map.get(name, Sync.no_sync())
+
+    with {:ok, pid} <-
+           Core.Element.start_link(%{
+             module: module,
+             name: name,
+             pipeline: self(),
+             user_options: options,
+             clock: pipeline_clock,
+             sync: sync
+           }),
+         :ok <- Message.call(pid, :set_controlling_pid, self()),
+         {:ok, %{clock: clock}} <- Message.call(pid, :handle_watcher, self()) do
+      {name, %{pid: pid, clock: clock, sync: sync}}
     else
       {:error, reason} ->
         raise PipelineError,
@@ -377,12 +436,73 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  @spec add_children([parsed_child_t], State.t()) :: Type.stateful_try_t(State.t())
-  defp add_children(children, state) do
+  defp choose_clock(state) do
+    choose_clock([], nil, state)
+  end
+
+  defp choose_clock(children, provider, state) do
+    cond do
+      provider != nil -> get_clock_from_provider(children, provider)
+      invalid_choice?(state) -> :no_provider
+      true -> choose_clock_provider(state.children)
+    end
+    |> case do
+      :no_provider ->
+        {:ok, state}
+
+      clock_provider ->
+        Clock.proxy_for(state.clock_proxy, clock_provider.clock)
+        {:ok, %State{state | clock_provider: clock_provider}}
+    end
+  end
+
+  defp invalid_choice?(state),
+    do: state.clock_provider.clock != nil && state.clock_provider.choice == :manual
+
+  defp get_clock_from_provider(children, provider) do
     children
-    |> Bunch.Enum.try_reduce(state, fn {name, pid}, state ->
-      state |> State.add_child(name, pid)
+    |> Enum.find(fn
+      {^provider, _data} -> true
+      _ -> false
     end)
+    |> case do
+      nil ->
+        raise PipelineError, "Unknown clock provider: #{inspect(provider)}"
+
+      {^provider, %{clock: nil}} ->
+        raise PipelineError, "#{inspect(provider)} is not a clock provider"
+
+      {^provider, %{clock: clock}} ->
+        %{clock: clock, provider: provider, choice: :manual}
+    end
+  end
+
+  defp choose_clock_provider(children) do
+    case children |> Bunch.KVList.filter_by_values(& &1.clock) do
+      [] ->
+        %{clock: nil, provider: nil, choice: :auto}
+
+      [{child, %{clock: clock}}] ->
+        %{clock: clock, provider: child, choice: :auto}
+
+      children ->
+        raise PipelineError, """
+        Cannot choose clock for the pipeline, as multiple elements provide one, namely: #{
+          children |> Keyword.keys() |> Enum.join(", ")
+        }. Please explicitly select the clock by setting `Spec.clock_provider` parameter.
+        """
+    end
+  end
+
+  @spec add_children([parsed_child_t], State.t()) :: State.t()
+  defp add_children(children, state) do
+    {:ok, state} =
+      children
+      |> Bunch.Enum.try_reduce(state, fn {name, data}, state ->
+        state |> State.add_child(name, data)
+      end)
+
+    state
   end
 
   @spec parse_links(Spec.links_spec_t() | any) :: Type.try_t([Link.t()])
@@ -397,7 +517,7 @@ defmodule Membrane.Pipeline do
   end
 
   defp resolve_link(%{element: element, pad_name: pad_name, id: id} = endpoint, state) do
-    with {:ok, pid} <- state |> State.get_child_pid(element),
+    with {:ok, %{pid: pid}} <- state |> State.get_child_data(element),
          {:ok, pad_ref} <- pid |> Message.call(:get_pad_ref, [pad_name, id]) do
       %{endpoint | pid: pid, pad_ref: pad_ref}
     else
@@ -424,22 +544,14 @@ defmodule Membrane.Pipeline do
   defp link_children(links, state) do
     debug("Linking children: links = #{inspect(links)}")
 
-    with :ok <- links |> Bunch.Enum.try_each(&Element.link/1),
+    with :ok <- links |> Bunch.Enum.try_each(&Core.Element.link/1),
          :ok <-
            state
            |> State.get_children()
-           |> Bunch.Enum.try_each(fn {_pid, pid} -> pid |> Element.handle_linking_finished() end),
+           |> Bunch.Enum.try_each(fn {_name, %{pid: pid}} ->
+             pid |> Message.call(:linking_finished, [])
+           end),
          do: :ok
-  end
-
-  @spec set_children_watcher([pid]) :: :ok
-  defp set_children_watcher(elements_pids) do
-    elements_pids
-    |> Enum.each(fn pid ->
-      :ok = pid |> Element.set_watcher(self())
-    end)
-
-    :ok
   end
 
   @spec exec_handle_spec_started([Element.name_t()], State.t()) :: {:ok, State.t()}
@@ -464,14 +576,29 @@ defmodule Membrane.Pipeline do
   end
 
   @impl PlaybackHandler
-  def handle_playback_state(_old, new, state) do
-    children_pids = state |> State.get_children() |> Map.values()
-
-    children_pids
-    |> Enum.each(&change_playback_state(&1, new))
-
+  def handle_playback_state(old, new, state) do
+    children_data = state |> State.get_children() |> Map.values()
+    children_pids = children_data |> Enum.map(& &1.pid)
+    children_pids |> Enum.each(&change_playback_state(&1, new))
+    :ok = toggle_syncs_active(old, new, children_data)
     state = %{state | pending_pids: children_pids |> MapSet.new()}
     PlaybackHandler.suspend_playback_change(state)
+  end
+
+  defp toggle_syncs_active(:prepared, :playing, children_data) do
+    do_toggle_syncs_active(children_data, &Sync.activate/1)
+  end
+
+  defp toggle_syncs_active(:playing, :prepared, children_data) do
+    do_toggle_syncs_active(children_data, &Sync.deactivate/1)
+  end
+
+  defp toggle_syncs_active(_old_playback_state, _new_playback_state, _children_data) do
+    :ok
+  end
+
+  defp do_toggle_syncs_active(children_data, fun) do
+    children_data |> Enum.uniq_by(& &1.sync) |> Enum.map(& &1.sync) |> Bunch.Enum.try_each(fun)
   end
 
   @impl PlaybackHandler
@@ -547,7 +674,7 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_info(Message.new(:notification, [from, notification]), state) do
-    with {:ok, _} <- state |> State.get_child_pid(from) do
+    with {:ok, _} <- state |> State.get_child_data(from) do
       CallbackHandler.exec_and_handle_callback(
         :handle_notification,
         __MODULE__,
@@ -559,9 +686,9 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_info(Message.new(:shutdown_ready, child), state) do
-    {{:ok, pid}, state} = State.pop_child(state, child)
+    {{:ok, %{pid: pid}}, state} = State.pop_child(state, child)
 
-    {Element.shutdown(pid), state}
+    {Core.Element.shutdown(pid), state}
     |> noreply(state)
   end
 
@@ -583,13 +710,48 @@ defmodule Membrane.Pipeline do
 
   @impl GenServer
   def terminate(reason, state) do
-    CallbackHandler.exec_and_handle_callback(:handle_shutdown, __MODULE__, [reason], state)
-    :ok
+    :ok = state.module.handle_shutdown(reason, state.internal_state)
   end
 
   @impl CallbackHandler
-  def handle_action({:forward, {elementname, message}}, _cb, _params, state) do
-    with {:ok, pid} <- state |> State.get_child_pid(elementname) do
+  def handle_actions(%Spec{} = spec, :handle_init, params, state) do
+    warn("""
+    Returning bare spec from `handle_init` is deprecated.
+    Return `{{:ok, spec: spec}, state}` instead.
+    Found in `#{inspect(state.module)}.handle_init/1`.
+    """)
+
+    super([spec: spec], :handle_init, params, state)
+  end
+
+  @impl CallbackHandler
+  def handle_actions(actions, callback, params, state) do
+    super(actions, callback, params, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action(action, callback, params, state) do
+    with {:ok, state} <- do_handle_action(action, callback, params, state) do
+      {:ok, state}
+    else
+      {{:error, :invalid_action}, state} ->
+        raise CallbackError,
+          kind: :invalid_action,
+          action: action,
+          callback: {state.module, callback}
+
+      error ->
+        error
+    end
+  end
+
+  def do_handle_action({action, _args}, :handle_init, _params, state)
+      when action not in [:spec] do
+    {{:error, :invalid_action}, state}
+  end
+
+  def do_handle_action({:forward, {elementname, message}}, _cb, _params, state) do
+    with {:ok, %{pid: pid}} <- state |> State.get_child_data(elementname) do
       send(pid, message)
       {:ok, state}
     else
@@ -599,21 +761,30 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  def handle_action({:spec, spec = %Spec{}}, _cb, _params, state) do
+  def do_handle_action({:spec, spec = %Spec{}}, _cb, _params, state) do
     with {{:ok, _children}, state} <- handle_spec(spec, state), do: {:ok, state}
   end
 
-  def handle_action({:remove_child, children}, _cb, _params, state) do
-    with {:ok, pids} <-
-           children |> Bunch.listify() |> Bunch.Enum.try_map(&State.get_child_pid(state, &1)) do
-      pids |> Enum.each(&Message.send(&1, :prepare_shutdown))
+  def do_handle_action({:remove_child, children}, _cb, _params, state) do
+    children = children |> Bunch.listify()
+
+    {:ok, state} =
+      if state.clock_provider.provider in children do
+        %State{state | clock_provider: %{clock: nil, provider: nil, choice: :auto}}
+        |> choose_clock
+      else
+        {:ok, state}
+      end
+
+    with {:ok, data} <- children |> Bunch.Enum.try_map(&State.get_child_data(state, &1)) do
+      data |> Enum.each(&Message.send(&1.pid, :prepare_shutdown))
       :ok
     end
     ~> {&1, state}
   end
 
-  def handle_action(action, callback, _params, state) do
-    raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
+  def do_handle_action(_action, _callback, _params, state) do
+    {{:error, :invalid_action}, state}
   end
 
   defp to_parent_sm_callback(:handle_start_of_stream), do: :handle_element_start_of_stream
@@ -687,7 +858,7 @@ defmodule Membrane.Pipeline do
       def membrane_pipeline?, do: true
 
       @impl true
-      def handle_init(_options), do: {{:ok, %Pipeline.Spec{}}, %{}}
+      def handle_init(_options), do: {:ok, %{}}
 
       @impl true
       def handle_stopped_to_prepared(state), do: {:ok, state}

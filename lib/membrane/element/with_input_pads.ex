@@ -25,6 +25,8 @@ defmodule Membrane.Element.WithInputPads do
               state :: Element.state_t()
             ) :: CommonBehaviour.callback_return_t()
 
+  @optional_callbacks handle_caps: 4
+
   @doc """
   Callback invoked when element receives `Membrane.Event.StartOfStream` event.
   """

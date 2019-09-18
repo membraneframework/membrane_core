@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.EventController do
   @moduledoc false
   # Module handling events incoming through input pads.
 
-  alias Membrane.{Core, Element, Event}
+  alias Membrane.{Core, Element, Event, Sync}
   alias Core.{CallbackHandler, InputBuffer, Message}
   alias Core.Element.{ActionHandler, PadModel, State}
   alias Element.{CallbackContext, Pad}
@@ -13,6 +13,7 @@ defmodule Membrane.Core.Element.EventController do
   use Core.Element.Log
   use Bunch
 
+  @spec handle_start_of_stream(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   def handle_start_of_stream(pad_ref, state) do
     handle_event(pad_ref, %Event.StartOfStream{}, state)
   end
@@ -39,7 +40,8 @@ defmodule Membrane.Core.Element.EventController do
           State.stateful_try_t()
   def exec_handle_event(pad_ref, event, params \\ %{}, state) do
     withl handle: {{:ok, :handle}, state} <- handle_special_event(pad_ref, event, state),
-          exec: {:ok, state} <- do_exec_handle_event(pad_ref, event, params, state) do
+          do: {:ok, state} <- check_sync(event, state),
+          do: {:ok, state} <- do_exec_handle_event(pad_ref, event, params, state) do
       {:ok, state}
     else
       handle: {{:ok, :ignore}, state} ->
@@ -49,7 +51,7 @@ defmodule Membrane.Core.Element.EventController do
       handle: {{:error, reason}, state} ->
         warn_error("Error while handling event", {:handle_event, reason}, state)
 
-      exec: {{:error, reason}, state} ->
+      do: {:error, reason} ->
         warn_error("Error while handling event", {:handle_event, reason}, state)
     end
   end
@@ -81,18 +83,25 @@ defmodule Membrane.Core.Element.EventController do
 
   defp do_exec_handle_event(pad_ref, event, params, state) do
     data = PadModel.get_data!(state, pad_ref)
-    context = CallbackContext.Event.from_state(state)
+    context = &CallbackContext.Event.from_state/1
+    params = %{context: context, direction: data.direction} |> Map.merge(params)
+    args = [pad_ref, event]
+    CallbackHandler.exec_and_handle_callback(:handle_event, ActionHandler, params, args, state)
+  end
 
-    new_params = Map.put(params, :direction, data.direction)
-    args = [pad_ref, event, context]
+  defp check_sync(%Event.StartOfStream{}, state) do
+    if state.pads.data
+       |> Map.values()
+       |> Enum.filter(&(&1.direction == :input))
+       |> Enum.all?(& &1.start_of_stream?) do
+      :ok = Sync.sync(state.synchronization.stream_sync)
+    end
 
-    CallbackHandler.exec_and_handle_callback(
-      :handle_event,
-      ActionHandler,
-      new_params,
-      args,
-      state
-    )
+    {:ok, state}
+  end
+
+  defp check_sync(_event, state) do
+    {:ok, state}
   end
 
   @spec handle_special_event(Pad.ref_t(), Event.t(), State.t()) ::

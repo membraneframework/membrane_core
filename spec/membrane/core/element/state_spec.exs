@@ -3,10 +3,17 @@ defmodule Membrane.Core.Element.StateSpec do
   alias Membrane.Support.Element.TrivialFilter
   alias Membrane.Core.Playback
   alias Membrane.Core.Element.{PadSpecHandler, PlaybackBuffer}
+  alias Membrane.Sync
 
-  describe "new/2" do
+  describe "new/1" do
     it "should create proper state" do
-      state = described_module().new(TrivialFilter, :name)
+      state =
+        described_module().new(%{
+          module: TrivialFilter,
+          name: :name,
+          clock: nil,
+          sync: Sync.no_sync()
+        })
 
       expect(state)
       |> to(
@@ -22,6 +29,13 @@ defmodule Membrane.Core.Element.StateSpec do
              playback: %Playback{},
              playback_buffer: PlaybackBuffer.new(),
              delayed_demands: %{},
+             synchronization: %{
+               timers: %{},
+               clock: nil,
+               pipeline_clock: nil,
+               latency: 0,
+               stream_sync: Sync.no_sync()
+             },
              terminating: false
            )
       )

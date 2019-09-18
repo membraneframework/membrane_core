@@ -15,7 +15,7 @@ defmodule Membrane.Element.CallbackContext do
 
   defmacro __using__(fields) do
     quote do
-      default_fields_names = [:pads, :playback_state]
+      default_fields_names = [:pads, :playback_state, :clock, :pipeline_clock]
       fields_names = unquote(fields |> Keyword.keys())
 
       @type t :: %__MODULE__{
@@ -36,10 +36,14 @@ defmodule Membrane.Element.CallbackContext do
       @impl true
       defmacro from_state(state, args \\ []) do
         quote do
+          state = unquote(state)
+
           %unquote(__MODULE__){
             unquote_splicing(args),
-            playback_state: unquote(state).playback.state,
-            pads: unquote(state).pads.data
+            playback_state: state.playback.state,
+            pads: state.pads.data,
+            clock: state.synchronization.clock,
+            pipeline_clock: state.synchronization.pipeline_clock
           }
         end
       end

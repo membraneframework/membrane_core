@@ -2,11 +2,11 @@ defmodule Membrane.Core.Element.PadsSpecs do
   @moduledoc false
   # Functions parsing element pads specifications, generating functions and docs
   # based on them.
-  alias Membrane.{Caps, Element}
-  alias Membrane.Core.Element.OptionsSpecs
-  alias Element.Pad
-  alias Bunch.Type
   use Bunch
+  alias Bunch.Type
+  alias Membrane.Caps
+  alias Membrane.Core.Element.OptionsSpecs
+  alias Membrane.Element.Pad
 
   @spec def_pads([{Pad.name_t(), raw_spec :: Macro.t()}], Pad.direction_t()) :: Macro.t()
   def def_pads(pads, direction) do
@@ -67,6 +67,10 @@ defmodule Membrane.Core.Element.PadsSpecs do
         @before_compile {unquote(__MODULE__), :generate_membrane_pads}
       end
 
+      if Module.get_attribute(__MODULE__, :membrane_element_pads_docs) == nil do
+        Module.register_attribute(__MODULE__, :membrane_element_pads_docs, accumulate: true)
+      end
+
       @membrane_pads unquote(__MODULE__).parse_pad_specs!(
                        {unquote(pad_name), unquote(specs)},
                        unquote(direction),
@@ -82,7 +86,6 @@ defmodule Membrane.Core.Element.PadsSpecs do
   defmacro generate_membrane_pads(env) do
     pads = Module.get_attribute(env.module, :membrane_pads) |> Enum.reverse()
     :ok = validate_pads!(pads, env)
-    pads_docs = generate_docs_from_pads_specs(pads)
 
     alias Membrane.Element.Pad
 
@@ -93,16 +96,6 @@ defmodule Membrane.Core.Element.PadsSpecs do
       @spec membrane_pads() :: [{unquote(Pad).name_t(), unquote(Pad).description_t()}]
       def membrane_pads() do
         unquote(pads |> Macro.escape())
-      end
-
-      if @moduledoc != false do
-        @moduledoc """
-        #{@moduledoc}
-
-        ## Pads
-
-        #{unquote(pads_docs)}
-        """
       end
     end
   end
@@ -169,17 +162,26 @@ defmodule Membrane.Core.Element.PadsSpecs do
   """
   @spec generate_docs_from_pads_specs([{Pad.name_t(), Pad.description_t()}]) :: Macro.t()
   def generate_docs_from_pads_specs(pads_specs) do
-    pads_specs
-    |> Enum.sort_by(fn {_, config} -> config[:direction] end)
-    |> Enum.map(&generate_docs_from_pad_specs/1)
-    |> Enum.reduce(fn x, acc ->
-      quote do
-        """
-        #{unquote(acc)}
-        #{unquote(x)}
-        """
-      end
-    end)
+    pads_docs =
+      pads_specs
+      |> Enum.sort_by(fn {_, config} -> config[:direction] end)
+      |> Enum.map(&generate_docs_from_pad_specs/1)
+      |> Enum.reduce(fn x, acc ->
+        quote do
+          """
+          #{unquote(acc)}
+          #{unquote(x)}
+          """
+        end
+      end)
+
+    quote do
+      """
+      ## Pads
+
+      #{unquote(pads_docs)}
+      """
+    end
   end
 
   defp generate_docs_from_pad_specs({name, config}) do

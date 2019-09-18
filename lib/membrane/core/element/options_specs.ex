@@ -45,17 +45,13 @@ defmodule Membrane.Core.Element.OptionsSpecs do
       """
       @type t :: %unquote(module){unquote_splicing(opt_typespecs)}
 
-      if @moduledoc != false do
-        @moduledoc """
-        #{@moduledoc}
+      @membrane_options_moduledoc """
+      ## Element options
 
-        ## Element options
+      Passed via struct `t:#{inspect(__MODULE__)}.t/0`
 
-        Passed via struct `t:#{inspect(__MODULE__)}.t/0`
-
-        #{unquote(typedoc)}
-        """
-      end
+      #{unquote(typedoc)}
+      """
 
       @doc """
       Returns description of options available for this module

@@ -43,6 +43,33 @@ defmodule Membrane.Pipeline.Spec do
         {:source_b, :output} => {:mixer, :input_b, pad: [mute: true]}
         {:mixer, :output} => {:sink, :input, buffer: [warn_size: 264_000, fail_size: 300_000]},
       }
+
+  ## Stream sync
+
+  `:stream_sync` field can be used for specifying elements that should start playing
+  at the same moment. An example can be audio and video player sinks. This option
+  accepts either `:sinks` atom or list of groups (lists) of elements. Passing `:sinks`
+  results in synchronizing all sinks in the pipeline, while passing list of groups
+  of elements synchronizes all elements in each group. It is worth mentioning
+  that to keep the stream synchronized all involved elements need to rely on
+  the same clock.
+
+  By default, no elements are synchronized.
+
+  Sample definitions:
+    
+    ```
+    %Spec{stream_sync: [[:element1, :element2], [:element3, :element4]]}
+
+    %Spec{stream_sync: :sinks}
+    ```
+
+  ## Clock provider
+
+  Clock provider is an element that exports clock that should be used as the pipeline
+  clock. The pipeline clock is the default clock used by elements' timers.
+  For more information see `Membrane.Element.Base.def_clock/1`.
+
   """
 
   alias Membrane.Element
@@ -87,9 +114,13 @@ defmodule Membrane.Pipeline.Spec do
   """
   @type t :: %__MODULE__{
           children: children_spec_t,
-          links: links_spec_t
+          links: links_spec_t,
+          stream_sync: :sinks | [[Element.name_t()]],
+          clock_provider: Element.name_t()
         }
 
   defstruct children: [],
-            links: %{}
+            links: %{},
+            stream_sync: [],
+            clock_provider: nil
 end

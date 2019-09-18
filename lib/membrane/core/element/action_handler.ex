@@ -3,7 +3,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   # Module validating and executing actions returned by element's callbacks.
 
   alias Membrane.{ActionError, Buffer, Caps, CallbackError, Core, Element, Event, Notification}
-  alias Core.Element.{DemandHandler, LifecycleController, PadModel, State}
+  alias Core.Element.{DemandHandler, LifecycleController, PadModel, State, TimerController}
   alias Core.{Message, PlaybackHandler}
   alias Element.{Action, Pad}
   require Message
@@ -27,6 +27,11 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec do_handle_action(Action.t(), callback :: atom, params :: map, State.t()) ::
           State.stateful_try_t()
+  defp do_handle_action({action, _}, :handle_init, _params, state)
+       when action not in [:latency] do
+    {{:error, :invalid_action}, state}
+  end
+
   defp do_handle_action({action, _}, cb, _params, %State{playback: %{state: :stopped}} = state)
        when action in [:buffer, :event, :caps, :demand, :redemand, :forward, :end_of_stream] and
               cb != :handle_stopped_to_prepared do
@@ -136,6 +141,23 @@ defmodule Membrane.Core.Element.ActionHandler do
        )
        when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter] do
     supply_demand(pad_ref, size, cb, params[:supplying_demand?] || false, state)
+  end
+
+  defp do_handle_action({:start_timer, {id, interval, clock}}, _cb, _params, state) do
+    TimerController.start_timer(interval, clock, id, state)
+  end
+
+  defp do_handle_action({:start_timer, {id, interval}}, cb, params, state) do
+    do_handle_action({:start_timer, {id, interval, state.pipeline_clock}}, cb, params, state)
+  end
+
+  defp do_handle_action({:stop_timer, id}, _cb, _params, state) do
+    TimerController.stop_timer(id, state)
+  end
+
+  defp do_handle_action({:latency, latency}, _cb, _params, state) do
+    new_state = put_in(state.synchronization.latency, latency)
+    {:ok, new_state}
   end
 
   defp do_handle_action(

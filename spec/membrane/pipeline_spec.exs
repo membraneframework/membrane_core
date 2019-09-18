@@ -24,12 +24,6 @@ defmodule Membrane.PipelineSpec do
         {:ok, pid} = described_module().start_link(module(), options(), process_options())
         expect(Process.alive?(pid)) |> to(be_true())
       end
-
-      it "should return pid of the process that is linked in the supervision tree" do
-        {:ok, pid} = described_module().start_link(module(), options(), process_options())
-        {:links, links} = :erlang.process_info(pid, :links)
-        expect(length(links)) |> to(eq 1)
-      end
     end
 
     context "when starting module that is not a pipeline" do
@@ -68,12 +62,6 @@ defmodule Membrane.PipelineSpec do
       it "should return pid of the process that is alive" do
         {:ok, pid} = described_module().start(module(), options(), process_options())
         expect(Process.alive?(pid)) |> to(be_true())
-      end
-
-      it "should return pid of the process that is  not linked in the supervision tree" do
-        {:ok, pid} = described_module().start(module(), options(), process_options())
-        {:links, links} = :erlang.process_info(pid, :links)
-        expect(length(links)) |> to(eq 0)
       end
     end
 
@@ -144,11 +132,6 @@ defmodule Membrane.PipelineSpec do
       expect(state.playback.state) |> to(eq :stopped)
     end
 
-    it "should send a message to initialize children asynchronously" do
-      described_module().init({module(), options()})
-      assert_received Message.new(:pipeline_spec, _)
-    end
-
     it "should call pipeline's handle_init" do
       described_module().init({module(), options()})
       expect(TrivialPipeline |> to(accepted(:handle_init)))
@@ -173,46 +156,6 @@ defmodule Membrane.PipelineSpec do
             |> to(accept(:handle_message, fn arg1, arg2 -> :meck.passthrough([arg1, arg2]) end))
     end
 
-    context "when receiving message with pipeline spec" do
-      let :init_result, do: TrivialPipeline.handle_init(nil)
-      let :spec, do: init_result() |> elem(0) |> elem(1)
-      let :internal_state, do: init_result() |> elem(1)
-      let :message, do: Message.new(:pipeline_spec, spec())
-      let :links_number, do: length(spec().links |> Map.keys())
-
-      it "should return :noreply response" do
-        {atom, _state} = described_module().handle_info(message(), state())
-        expect(atom) |> to(eq :noreply)
-      end
-
-      it "should return new pipeline state" do
-        {:noreply, state} = described_module().handle_info(message(), state())
-        expect(state.__struct__) |> to(eq Membrane.Pipeline.State)
-      end
-
-      it "should return new pipeline state containing map with pids for every child" do
-        {:noreply, state} = described_module().handle_info(message(), state())
-
-        expect(state.children |> Map.keys() |> Enum.sort())
-        |> to(eq spec().children |> Keyword.keys() |> Enum.sort())
-      end
-
-      it "should return new pipeline state containing state" do
-        {:noreply, state} = described_module().handle_info(message(), state())
-        expect(state.internal_state) |> to(eq internal_state())
-      end
-
-      it "should call element's handle_init" do
-        described_module().handle_info(message(), state())
-        expect(sample_element()) |> to(accepted(:handle_init))
-      end
-
-      it "should link elements" do
-        described_module().handle_info(message(), state())
-        expect(Membrane.Element) |> to(accepted(:link, :any, count: links_number()))
-      end
-    end
-
     context "when receiving message from the element" do
       let :child_name, do: :child_name
       let :current_child_name, do: child_name()
@@ -222,7 +165,8 @@ defmodule Membrane.PipelineSpec do
         do: %Membrane.Pipeline.State{
           children: %{child_name() => self()},
           internal_state: internal_state(),
-          module: module()
+          module: module(),
+          clock_proxy: nil
         }
 
       let :notification, do: :notification
@@ -290,7 +234,13 @@ defmodule Membrane.PipelineSpec do
     context "when receiving other message" do
       let :message, do: :some_message
       let :internal_state, do: :some_internal_state
-      let :state, do: %Membrane.Pipeline.State{module: module(), internal_state: internal_state()}
+
+      let :state,
+        do: %Membrane.Pipeline.State{
+          module: module(),
+          internal_state: internal_state(),
+          clock_proxy: nil
+        }
 
       before do
         allow module()

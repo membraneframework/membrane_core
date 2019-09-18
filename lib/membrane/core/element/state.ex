@@ -5,8 +5,8 @@ defmodule Membrane.Core.Element.State do
   # internally in Membrane.
 
   use Membrane.Log, tags: :core
-  alias Membrane.{Core, Element}
-  alias Core.{Playback, Playbackable}
+  alias Membrane.{Clock, Core, Element, Sync}
+  alias Core.{Playback, Playbackable, Timer}
   alias Core.Element.{PadModel, PadSpecHandler, PlaybackBuffer}
   alias Element.Pad
   alias Bunch.Type
@@ -29,6 +29,13 @@ defmodule Membrane.Core.Element.State do
           playback: Playback.t(),
           playback_buffer: PlaybackBuffer.t(),
           delayed_demands: %{{Pad.ref_t(), :supply | :redemand} => :sync | :async},
+          synchronization: %{
+            timers: %{Timer.id_t() => Timer.t()},
+            pipeline_clock: Clock.t(),
+            latency: non_neg_integer(),
+            stream_sync: Sync.t(),
+            clock: Clock.t()
+          },
           terminating: boolean | :ready
         }
 
@@ -43,6 +50,7 @@ defmodule Membrane.Core.Element.State do
     :playback,
     :playback_buffer,
     :delayed_demands,
+    :synchronization,
     :terminating
   ]
 
@@ -54,12 +62,12 @@ defmodule Membrane.Core.Element.State do
   @doc """
   Initializes new state.
   """
-  @spec new(module, Element.name_t()) :: t
-  def new(module, name) do
+  @spec new(%{module: module, name: Element.name_t(), clock: Clock.t(), sync: Sync.t()}) :: t
+  def new(options) do
     %__MODULE__{
-      module: module,
-      type: apply(module, :membrane_element_type, []),
-      name: name,
+      module: options.module,
+      type: apply(options.module, :membrane_element_type, []),
+      name: options.name,
       internal_state: nil,
       pads: nil,
       watcher: nil,
@@ -67,6 +75,13 @@ defmodule Membrane.Core.Element.State do
       playback: %Playback{},
       playback_buffer: PlaybackBuffer.new(),
       delayed_demands: %{},
+      synchronization: %{
+        pipeline_clock: options.clock,
+        timers: %{},
+        clock: nil,
+        stream_sync: options.sync,
+        latency: 0
+      },
       terminating: false
     }
     |> PadSpecHandler.init_pads()

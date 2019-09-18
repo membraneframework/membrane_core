@@ -172,7 +172,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
   defp get_filter_pid(ref, pipeline_pid) do
     state = :sys.get_state(pipeline_pid)
-    pid = state.children[ref]
+    pid = state.children[ref].pid
     Process.monitor(pid)
     pid
   end
