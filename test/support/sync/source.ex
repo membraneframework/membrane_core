@@ -7,9 +7,6 @@ defmodule Membrane.Support.Sync.Source do
               test_process: [type: :pid]
 
   @impl true
-  def handle_init(opts), do: {:ok, opts}
-
-  @impl true
   def handle_prepared_to_playing(ctx, %{tick_interval: interval} = state) do
     clock = ctx.pipeline_clock
     {{:ok, start_timer: {:my_timer, interval, clock}}, state}
@@ -26,7 +23,4 @@ defmodule Membrane.Support.Sync.Source do
 
   @impl true
   def handle_demand(:output, _size, _, _ctx, state), do: {:ok, state}
-
-  @impl true
-  def handle_event(_pad, event, _ctx, state), do: {{:ok, forward: event}, state}
 end
