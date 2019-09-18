@@ -65,7 +65,6 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane.Sink$/,
           ~r/^Membrane.Source$/,
           ~r/^Membrane.Element$/,
-          ~r/^Membrane.Clock$/,
           ~r/^Membrane.Element(?!\.CallbackContext)\..*/,
           ~r/^Membrane.Core.InputBuffer/
         ],
@@ -75,7 +74,11 @@ defmodule Membrane.Mixfile do
         ],
         Logging: [~r/^Membrane.Log.*/],
         Testing: [~r/^Membrane.Testing.*/],
-        Utils: [~r/^Membrane.(Time|Helper).*/]
+        Utils: [
+          ~r/^Membrane.Clock$/,
+          ~r/^Membrane.Sync$/,
+          ~r/^Membrane.Time.*/
+        ]
       ]
     ]
   end

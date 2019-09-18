@@ -61,12 +61,10 @@ defmodule Membrane.Testing.Assertions do
     end
   end
 
-  # TODO: Link to playback state docs.
-  # https://github.com/membraneframework/membrane-core/issues/165
   @doc """
-  Asserts that pipeline's playback state changed or will change from
-  `previous_state` to `current_state` within the `timeout` period specified in
-  milliseconds.
+  Asserts that pipeline's playback state (see `Membrane.PlaybackState`)
+  changed or will change from `previous_state` to `current_state` within
+  the `timeout` period specified in milliseconds.
 
   The `prev_state` and `current_state` must be match patterns.
 
