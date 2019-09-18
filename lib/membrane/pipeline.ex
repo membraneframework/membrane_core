@@ -270,7 +270,8 @@ defmodule Membrane.Pipeline do
   end
 
   def init({module, pipeline_options}) do
-    state = %State{module: module, clock_proxy: Clock.start_link!(proxy: true)}
+    {:ok, clock} = Clock.start_link(proxy: true)
+    state = %State{module: module, clock_proxy: clock}
 
     with {:ok, state} <-
            CallbackHandler.exec_and_handle_callback(

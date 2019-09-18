@@ -6,7 +6,9 @@ defmodule Membrane.ClockTest do
   use ExUnit.Case
 
   test "should calculate proper ratio and send it to subscribers on each (but the first) update" do
-    clock = @module.start_link!(time_provider: fn -> receive do: (time: t -> ms_to_ns(t)) end)
+    {:ok, clock} =
+      @module.start_link(time_provider: fn -> receive do: (time: t -> ms_to_ns(t)) end)
+
     @module.subscribe(clock)
     assert_receive {:membrane_clock_ratio, ^clock, @initial_ratio}
     send(clock, {:membrane_clock_update, 20})
@@ -23,7 +25,10 @@ defmodule Membrane.ClockTest do
 
   test "should handle different ratio formats" do
     use Ratio
-    clock = @module.start_link!(time_provider: fn -> receive do: (time: t -> ms_to_ns(t)) end)
+
+    {:ok, clock} =
+      @module.start_link(time_provider: fn -> receive do: (time: t -> ms_to_ns(t)) end)
+
     send(clock, {:membrane_clock_update, 5})
     send(clock, time: 5)
     send(clock, {:membrane_clock_update, Ratio.new(1, 3)})
@@ -39,7 +44,7 @@ defmodule Membrane.ClockTest do
 
   test "should send proper ratio when default time provider is used" do
     ratio_error = 0.3
-    clock = @module.start_link!()
+    {:ok, clock} = @module.start_link()
     @module.subscribe(clock)
     assert_receive {:membrane_clock_ratio, ^clock, @initial_ratio}
     send(clock, {:membrane_clock_update, 100})
@@ -53,14 +58,14 @@ defmodule Membrane.ClockTest do
 
   describe "should send current ratio once a new subscriber connects" do
     test "when no updates have been sent" do
-      clock = @module.start_link!()
+      {:ok, clock} = @module.start_link()
       @module.subscribe(clock)
       assert_receive {:membrane_clock_ratio, ^clock, @initial_ratio}
       refute_receive {:membrane_clock_ratio, ^clock, _ratio}
     end
 
     test "when one update has been sent" do
-      clock = @module.start_link!()
+      {:ok, clock} = @module.start_link()
       send(clock, {:membrane_clock_update, random_time()})
       @module.subscribe(clock)
       assert_receive {:membrane_clock_ratio, ^clock, @initial_ratio}
@@ -68,7 +73,9 @@ defmodule Membrane.ClockTest do
     end
 
     test "when more than one update has been sent" do
-      clock = @module.start_link!(time_provider: fn -> receive do: (time: t -> ms_to_ns(t)) end)
+      {:ok, clock} =
+        @module.start_link(time_provider: fn -> receive do: (time: t -> ms_to_ns(t)) end)
+
       send(clock, {:membrane_clock_update, 20})
       send(clock, time: 3)
       send(clock, {:membrane_clock_update, random_time()})
@@ -81,7 +88,7 @@ defmodule Membrane.ClockTest do
   end
 
   test "all subscribers should receive the same ratio after each update" do
-    clock = @module.start_link!(time_provider: fn -> receive do: (time: t -> t) end)
+    {:ok, clock} = @module.start_link(time_provider: fn -> receive do: (time: t -> t) end)
 
     fn ->
       Task.start_link(fn ->
@@ -104,7 +111,7 @@ defmodule Membrane.ClockTest do
   end
 
   test "should handle subscriptions properly" do
-    clock = @module.start_link!()
+    {:ok, clock} = @module.start_link()
 
     update = random_time()
 
@@ -134,7 +141,7 @@ defmodule Membrane.ClockTest do
   end
 
   test "should unsubscribe upon process death" do
-    clock = @module.start_link!()
+    {:ok, clock} = @module.start_link()
     update = random_time()
     send(clock, {:membrane_clock_update, update})
     Process.sleep(10)
@@ -149,7 +156,7 @@ defmodule Membrane.ClockTest do
   end
 
   test "should ignore unsubscribe from a non-subscribed process" do
-    clock = @module.start_link!()
+    {:ok, clock} = @module.start_link()
     @module.unsubscribe(clock)
   end
 

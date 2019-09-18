@@ -26,7 +26,8 @@ defmodule Membrane.Core.Element.LifecycleController do
 
     state =
       if Bunch.Module.check_behaviour(module, :membrane_clock?) do
-        put_in(state.synchronization.clock, Clock.start_link!())
+        {:ok, clock} = Clock.start_link()
+        put_in(state.synchronization.clock, clock)
       else
         state
       end
