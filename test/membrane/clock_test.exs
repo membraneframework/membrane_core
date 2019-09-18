@@ -6,7 +6,7 @@ defmodule Membrane.ClockTest do
   use ExUnit.Case
 
   test "should calculate proper ratio and send it to subscribers on each (but the first) update" do
-    clock = @module.start_link!(time_provider: fn -> receive do: (time: t -> t) end)
+    clock = @module.start_link!(time_provider: fn -> receive do: (time: t -> ms_to_ns(t)) end)
     @module.subscribe(clock)
     assert_receive {:membrane_clock_ratio, ^clock, @initial_ratio}
     send(clock, {:membrane_clock_update, 20})
@@ -23,7 +23,7 @@ defmodule Membrane.ClockTest do
 
   test "should handle different ratio formats" do
     use Ratio
-    clock = @module.start_link!(time_provider: fn -> receive do: (time: t -> t) end)
+    clock = @module.start_link!(time_provider: fn -> receive do: (time: t -> ms_to_ns(t)) end)
     send(clock, {:membrane_clock_update, 5})
     send(clock, time: 5)
     send(clock, {:membrane_clock_update, Ratio.new(1, 3)})
@@ -68,7 +68,7 @@ defmodule Membrane.ClockTest do
     end
 
     test "when more than one update has been sent" do
-      clock = @module.start_link!(time_provider: fn -> receive do: (time: t -> t) end)
+      clock = @module.start_link!(time_provider: fn -> receive do: (time: t -> ms_to_ns(t)) end)
       send(clock, {:membrane_clock_update, 20})
       send(clock, time: 3)
       send(clock, {:membrane_clock_update, random_time()})
@@ -156,4 +156,6 @@ defmodule Membrane.ClockTest do
   end
 
   defp random_time, do: :rand.uniform(10000)
+
+  defp ms_to_ns(e), do: e * 1_000_000
 end

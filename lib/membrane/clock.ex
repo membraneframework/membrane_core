@@ -61,7 +61,7 @@ defmodule Membrane.Clock do
   Check the moduledoc for more details.
   """
   @type option_t ::
-          {:time_provider, (() -> milliseconds :: integer)}
+          {:time_provider, (() -> Time.t())}
           | {:proxy, boolean}
           | {:proxy_for, pid}
 
@@ -120,8 +120,7 @@ defmodule Membrane.Clock do
       %{
         ratio: 1,
         subscribers: %{},
-        time_provider:
-          options |> Keyword.get(:time_provider, fn -> System.monotonic_time(:millisecond) end)
+        time_provider: options |> Keyword.get(:time_provider, fn -> Time.monotonic_time() end)
       }
       |> Map.merge(proxy_opts)
 
@@ -220,7 +219,7 @@ defmodule Membrane.Clock do
     till_next = till_next * Time.millisecond(1)
 
     case state.init_time do
-      nil -> %{state | init_time: get_time(state.time_provider), till_next: till_next}
+      nil -> %{state | init_time: state.time_provider.(), till_next: till_next}
       _ -> do_handle_clock_update(till_next, state)
     end
   end
@@ -229,7 +228,7 @@ defmodule Membrane.Clock do
     use Ratio
     %{till_next: from_previous, clock_time: clock_time} = state
     clock_time = clock_time + from_previous
-    ratio = clock_time / (get_time(state.time_provider) - state.init_time)
+    ratio = clock_time / (state.time_provider.() - state.init_time)
     state = %{state | clock_time: clock_time, till_next: till_next}
     broadcast_and_update_ratio(ratio, state)
   end
@@ -240,8 +239,4 @@ defmodule Membrane.Clock do
   end
 
   defp send_ratio(pid, ratio), do: send(pid, {:membrane_clock_ratio, self(), ratio})
-
-  defp get_time(time_provider) do
-    time_provider.() |> Time.milliseconds()
-  end
 end
