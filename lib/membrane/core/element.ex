@@ -31,7 +31,7 @@ defmodule Membrane.Core.Element do
           module: module,
           name: Element.name_t(),
           user_options: Element.options_t(),
-          pipeline: pid,
+          parent: pid,
           clock: Clock.t()
         }
 
@@ -130,8 +130,8 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def init(options) do
-    Process.monitor(options.pipeline)
-    state = State.new(options)
+    parent_monitor = Process.monitor(options.parent)
+    state = options |> Map.put(:parent_monitor, parent_monitor) |> State.new()
 
     with {:ok, state} <-
            MessageDispatcher.handle_message(
@@ -159,7 +159,7 @@ defmodule Membrane.Core.Element do
   end
 
   @impl GenServer
-  def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
+  def handle_info({:DOWN, ref, :process, _pid, reason}, %{parent_monitor: ref} = state) do
     {:ok, state} =
       MessageDispatcher.handle_message(Message.new(:pipeline_down, reason), :info, state)
 
