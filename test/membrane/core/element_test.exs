@@ -43,12 +43,12 @@ defmodule Membrane.Core.ElementTest do
 
       {:ok, _clock} = Message.call(elem_pid, :handle_watcher, self())
       ref = make_ref()
-      self = self()
-      send(elem_pid, {:DOWN, ref, :process, self, :normal})
+      deceased_pid = self()
+      send(elem_pid, {:DOWN, ref, :process, deceased_pid, :normal})
 
       assert_receive Message.new(:notification, [
                        :name,
-                       {:DOWN, ^ref, :process, ^self, :normal}
+                       {:DOWN, ^ref, :process, ^deceased_pid, :normal}
                      ])
 
       assert Process.alive?(elem_pid)
@@ -60,7 +60,7 @@ defmodule Membrane.Core.ElementTest do
       module: SomeElement,
       name: :name,
       user_options: %{},
-      pipeline: pipeline,
+      parent: pipeline,
       clock: nil,
       sync: Membrane.Sync.no_sync()
     }
