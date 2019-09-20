@@ -10,7 +10,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   require Membrane.Core.Message
   require Membrane.Core.Playback
   require Membrane.Element.CallbackContext.{Other, PlaybackChange}
-  alias Membrane.{Clock, Sync}
+  alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.{CallbackHandler, Message, Playback}
   alias Membrane.Core.Element.{ActionHandler, PadModel, PlaybackBuffer, State}
   alias Membrane.Element.{CallbackContext, Pad}
@@ -97,7 +97,8 @@ defmodule Membrane.Core.Element.LifecycleController do
     |> or_warn_error("Error while handling message")
   end
 
-  @spec handle_watcher(pid, State.t()) :: {:ok, State.t()}
+  @spec handle_watcher(pid, State.t()) ::
+          {{:ok, %{clock: Clock.t()}}, State.t()}
   def handle_watcher(watcher, state) do
     %State{synchronization: %{clock: clock}} = state
     {{:ok, %{clock: clock}}, %State{state | watcher: watcher}}

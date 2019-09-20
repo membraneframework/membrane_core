@@ -10,7 +10,7 @@ defmodule Membrane.Element.Action do
   do not return any actions) unless explicitly stated otherwise.
   """
 
-  alias Membrane.{Buffer, Caps, Event, Notification, Time}
+  alias Membrane.{Buffer, Caps, Clock, Event, Notification, Time}
   alias Membrane.Element.Pad
 
   @typedoc """

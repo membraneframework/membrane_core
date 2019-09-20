@@ -14,7 +14,8 @@ defmodule Membrane.Core.Element.DemandController do
   @doc """
   Handles demand coming on a output pad. Updates demand value and executes `handle_demand` callback.
   """
-  @spec handle_demand(Pad.ref_t(), non_neg_integer, State.t()) :: State.stateful_try_t()
+  @spec handle_demand(Pad.ref_t(), non_neg_integer, State.t()) ::
+          State.stateful_try_t()
   def handle_demand(pad_ref, size, state) do
     PadModel.assert_data(state, pad_ref, %{direction: :output})
 

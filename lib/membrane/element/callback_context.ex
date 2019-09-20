@@ -21,7 +21,7 @@ defmodule Membrane.Element.CallbackContext do
       @type t :: %__MODULE__{
               unquote_splicing(fields),
               pads: %{Pad.ref_t() => Pad.Data.t()},
-              playback_state: Membrane.Element.playback_state_t()
+              playback_state: Membrane.PlaybackState.t()
             }
 
       @behaviour unquote(__MODULE__)

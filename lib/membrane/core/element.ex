@@ -20,10 +20,9 @@ defmodule Membrane.Core.Element do
   use GenServer
   import Membrane.Helper.GenServer
   require Membrane.Core.Message
-  alias Membrane.Clock
+  alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.Element.{MessageDispatcher, State}
   alias Membrane.Core.Message
-  alias Membrane.Element
   alias Membrane.ElementLinkError
   alias Membrane.Pipeline.{Link, Link.Endpoint}
 
@@ -32,7 +31,8 @@ defmodule Membrane.Core.Element do
           name: Element.name_t(),
           user_options: Element.options_t(),
           pipeline: pid,
-          clock: Clock.t()
+          clock: Clock.t(),
+          sync: Sync.t()
         }
 
   @doc """
@@ -131,7 +131,7 @@ defmodule Membrane.Core.Element do
   @impl GenServer
   def init(options) do
     Process.monitor(options.pipeline)
-    state = State.new(options)
+    state = options |> Map.take([:module, :name, :clock, :sync]) |> State.new()
 
     with {:ok, state} <-
            MessageDispatcher.handle_message(
