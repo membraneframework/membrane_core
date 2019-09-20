@@ -334,7 +334,7 @@ defmodule Membrane.Testing.Assertions do
 
   @doc """
   Asserts that `Membrane.Testing.Pipeline` received or is going to receive start_of_stream
-  notification from the element with its name `element_name` within the `timeout` period
+  notification from the element with a name `element_name` within the `timeout` period
   specified in milliseconds.
 
       assert_start_of_stream(pipeline, :an_element)
@@ -354,7 +354,7 @@ defmodule Membrane.Testing.Assertions do
 
   @doc """
   Asserts that `Membrane.Testing.Pipeline` received or is going to receive end_of_stream
-  notification about from the element with its name `element_name` within the `timeout` period
+  notification about from the element with a name `element_name` within the `timeout` period
   specified in milliseconds.
 
       assert_end_of_stream(pipeline, :an_element)
