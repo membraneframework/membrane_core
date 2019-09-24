@@ -20,10 +20,9 @@ defmodule Membrane.Core.Element do
   use GenServer
   import Membrane.Helper.GenServer
   require Membrane.Core.Message
-  alias Membrane.{Clock, Element, Sync}
+  alias Membrane.{Clock, Element, ElementLinkError, Sync}
   alias Membrane.Core.Element.{MessageDispatcher, State}
   alias Membrane.Core.Message
-  alias Membrane.ElementLinkError
   alias Membrane.Pipeline.{Link, Link.Endpoint}
 
   @type options_t :: %{

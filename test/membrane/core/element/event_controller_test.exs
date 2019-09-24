@@ -71,13 +71,12 @@ defmodule Membrane.Core.Element.EventControllerTest do
     end
 
     test "end of stream", %{state: state} do
-      state = %{
-        state
-        | pads:
-            Bunch.Access.update_in(state.pads, [:data, :input], fn data ->
-              %{data | start_of_stream?: true}
-            end)
-      }
+      pads =
+        Bunch.Access.update_in(state.pads, [:data, :input], fn data ->
+          %{data | start_of_stream?: true}
+        end)
+
+      state = %{state | pads: pads}
 
       assert {:ok, state} = EventController.handle_event(:input, %Event.EndOfStream{}, state)
       assert state.pads.data.input.end_of_stream?
