@@ -131,7 +131,12 @@ defmodule Membrane.Core.Element do
   @impl GenServer
   def init(options) do
     parent_monitor = Process.monitor(options.parent)
-    state = options |> Map.put(:parent_monitor, parent_monitor) |> State.new()
+
+    state =
+      options
+      |> Map.take([:module, :name, :clock, :sync])
+      |> Map.put(:parent_monitor, parent_monitor)
+      |> State.new()
 
     with {:ok, state} <-
            MessageDispatcher.handle_message(
