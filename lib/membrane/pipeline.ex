@@ -420,7 +420,7 @@ defmodule Membrane.Pipeline do
            Core.Element.start_link(%{
              module: module,
              name: name,
-             pipeline: self(),
+             parent: self(),
              user_options: options,
              clock: pipeline_clock,
              sync: sync
