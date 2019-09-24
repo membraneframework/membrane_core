@@ -8,8 +8,8 @@ defmodule Membrane.Core.Element.EventController do
   alias Element.{CallbackContext, Pad}
   require CallbackContext.Event
   require CallbackContext.StreamManagement
-  require PadModel
   require Message
+  require PadModel
   use Core.Element.Log
   use Bunch
 
@@ -51,7 +51,7 @@ defmodule Membrane.Core.Element.EventController do
       handle: {{:error, reason}, state} ->
         warn_error("Error while handling event", {:handle_event, reason}, state)
 
-      do: {:error, reason} ->
+      do: {{:error, reason}, state} ->
         warn_error("Error while handling event", {:handle_event, reason}, state)
     end
   end
