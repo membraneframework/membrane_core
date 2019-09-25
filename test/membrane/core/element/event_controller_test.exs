@@ -53,24 +53,24 @@ defmodule Membrane.Core.Element.EventControllerTest do
     [state: state]
   end
 
-  describe "Event controller handles special events" do
+  describe "Event controller handles special event" do
     setup %{state: state} do
       {:ok, sync} = start_supervised({Membrane.Sync, []})
       [state: %{state | synchronization: %{state.synchronization | stream_sync: sync}}]
     end
 
-    test "start of stream", %{state: state} do
+    test "start of stream successfully", %{state: state} do
       assert {:ok, state} = EventController.handle_event(:input, %Event.StartOfStream{}, state)
       assert state.pads.data.input.start_of_stream?
     end
 
-    test "ignore end of stream when there was no start of stream", %{state: state} do
+    test "ignoring end of stream when there was no start of stream prior", %{state: state} do
       assert {:ok, state} = EventController.handle_event(:input, %Event.EndOfStream{}, state)
       refute state.pads.data.input.end_of_stream?
       refute state.pads.data.input.start_of_stream?
     end
 
-    test "end of stream", %{state: state} do
+    test "end of stream successfully", %{state: state} do
       pads =
         Bunch.Access.update_in(state.pads, [:data, :input], fn data ->
           %{data | start_of_stream?: true}
@@ -84,11 +84,11 @@ defmodule Membrane.Core.Element.EventControllerTest do
   end
 
   describe "Event controller handles normal events" do
-    test "handles ignore", %{state: state} do
+    test "succesfully when callback module returns {:ok, state}", %{state: state} do
       assert {:ok, ^state} = EventController.handle_event(:input, %Event.Underrun{}, state)
     end
 
-    test "handles error", %{state: state} do
+    test "processing error returned by callback module", %{state: state} do
       assert {{:error, {:handle_event, :cause}}, ^state} =
                EventController.handle_event(:input, %Event.Discontinuity{}, state)
     end

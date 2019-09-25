@@ -12,7 +12,7 @@ defmodule Membrane.PipelineTest do
   setup_all :state
 
   describe "Handle init" do
-    test "valid pipeline" do
+    test "should raise an error if handle_init returns an error" do
       defmodule ValidPipeline do
         use Membrane.Pipeline
 
@@ -25,7 +25,7 @@ defmodule Membrane.PipelineTest do
       end
     end
 
-    test "should raise an error if handle_init raises an error" do
+    test "executes successfully when callback module's handle init returns {{:ok, spec}},state} " do
       defmodule InvalidPipeline do
         use Membrane.Pipeline
 
