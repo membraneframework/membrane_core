@@ -12,7 +12,9 @@ defmodule Membrane.Mixfile do
       elixirc_paths: elixirc_paths(Mix.env()),
       description: "Membrane Multimedia Framework (Core)",
       dialyzer: [
-        flags: [:error_handling, :underspecs]
+        flags: [:error_handling, :underspecs],
+        ignore_warnings: "dialyzer.ignore_warnings.exs",
+        list_unused_filters: true
       ],
       package: package(),
       name: "Membrane Core",
