@@ -170,18 +170,25 @@ defmodule Membrane.Testing.Pipeline do
     do_start(:start, pipeline_options, process_options)
   end
 
-  defp do_start(_type, %Options{elements: nil, module: nil}, _process_options),
-    do: {:error, :no_config}
+  defp do_start(_type, %Options{elements: nil, module: nil}, _process_options) do
+    raise """
+
+    You provided no information about pipeline contents. Please provide either:
+     - list of elemenst via `elements` field of Options struct with optional links between
+     them via `links` field of `Options` struct
+     - module that implements `Membrane.Pipeline` callbacks via `module` field of `Options`
+     struct
+    """
+  end
 
   defp do_start(_type, %Options{elements: elements, module: module}, _process_options)
        when is_atom(module) and module != nil and elements != nil do
-    warn("""
+    raise """
+
     When working with Membrane.Testing.Pipeline you can't provide both
     override module and elements list in the Membrane.Testing.Pipeline.Options
     struct.
-    """)
-
-    {:error, :wrong_options}
+    """
   end
 
   defp do_start(type, options, process_options) do
