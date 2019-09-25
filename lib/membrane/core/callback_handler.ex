@@ -161,8 +161,7 @@ defmodule Membrane.Core.CallbackHandler do
   end
 
   @spec parse_callback_result(callback_return_t | any, module, callback :: atom, handler_params_t) ::
-          {{:ok, list}, internal_state_t}
-          | {:error, {:invalid_callback_result, details :: Keyword.t()}}
+          Type.stateful_try_t(list, internal_state_t)
   defp parse_callback_result({:ok, new_internal_state}, module, cb, params),
     do: parse_callback_result({{:ok, []}, new_internal_state}, module, cb, params)
 

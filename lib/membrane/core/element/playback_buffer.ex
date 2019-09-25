@@ -93,7 +93,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   @spec empty?(t) :: boolean
   defp empty?(%__MODULE__{q: q}), do: q |> Enum.empty?()
 
-  # @spec exec(message_t, State.t()) :: State.stateful_try_t()
+  @spec exec(message_t, State.t()) :: State.stateful_try_t()
   # Callback invoked on demand request coming from the output pad in the pull mode
   defp exec(Message.new(:demand, size, _opts) = msg, state) do
     pad_ref = Message.for_pad(msg)

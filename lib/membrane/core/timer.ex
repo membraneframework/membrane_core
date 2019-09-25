@@ -7,7 +7,7 @@ defmodule Membrane.Core.Timer do
 
   @type id_t :: any()
   @type t :: %__MODULE__{
-          id: any,
+          id: id_t,
           interval: Time.t(),
           init_time: Time.t(),
           clock: Clock.t(),
