@@ -579,7 +579,12 @@ defmodule Membrane.Pipeline do
     children_pids |> Enum.each(&change_playback_state(&1, new))
     :ok = toggle_syncs_active(old, new, children_data)
     state = %{state | pending_pids: children_pids |> MapSet.new()}
-    PlaybackHandler.suspend_playback_change(state)
+
+    if children_pids |> Enum.empty?() do
+      {:ok, state}
+    else
+      PlaybackHandler.suspend_playback_change(state)
+    end
   end
 
   defp toggle_syncs_active(:prepared, :playing, children_data) do
@@ -599,12 +604,15 @@ defmodule Membrane.Pipeline do
   end
 
   @impl PlaybackHandler
-  def handle_playback_state_changed(_old, :stopped, %State{terminating?: true} = state) do
-    Message.self(:stop_and_terminate)
-    {:ok, state}
-  end
+  def handle_playback_state_changed(old, new, state) do
+    callback = PlaybackHandler.state_change_callback(old, new)
 
-  def handle_playback_state_changed(_old, _new, state), do: {:ok, state}
+    if new == :stopped and state.terminating? do
+      Message.self(:stop_and_terminate)
+    end
+
+    CallbackHandler.exec_and_handle_callback(callback, __MODULE__, [], state)
+  end
 
   @impl GenServer
   def handle_info(
@@ -624,22 +632,14 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_info(
-        Message.new(:playback_state_changed, [pid, new_playback_state]),
-        %State{playback: %Playback{state: current_playback_state}, pending_pids: pending_pids} =
-          state
+        Message.new(:playback_state_changed, [pid, _new_playback_state]),
+        %State{pending_pids: pending_pids} = state
       ) do
     new_pending_pids = pending_pids |> MapSet.delete(pid)
     new_state = %{state | pending_pids: new_pending_pids}
 
     if new_pending_pids != pending_pids and new_pending_pids |> Enum.empty?() do
-      callback = PlaybackHandler.state_change_callback(current_playback_state, new_playback_state)
-
-      with {:ok, new_state} <-
-             CallbackHandler.exec_and_handle_callback(callback, __MODULE__, [], new_state) do
-        PlaybackHandler.continue_playback_change(__MODULE__, new_state)
-      else
-        error -> error
-      end
+      PlaybackHandler.continue_playback_change(__MODULE__, new_state)
     else
       {:ok, new_state}
     end
