@@ -12,9 +12,7 @@ defmodule Membrane.Mixfile do
       elixirc_paths: elixirc_paths(Mix.env()),
       description: "Membrane Multimedia Framework (Core)",
       dialyzer: [
-        flags: [:error_handling, :underspecs],
-        ignore_warnings: "dialyzer.ignore_warnings.exs",
-        list_unused_filters: true
+        flags: [:error_handling, :underspecs]
       ],
       package: package(),
       name: "Membrane Core",
@@ -102,7 +100,7 @@ defmodule Membrane.Mixfile do
       {:espec, "~> 1.7", only: :test},
       {:excoveralls, "~> 0.8", only: :test},
       {:qex, "~> 0.3"},
-      {:dialyxir, "~> 1.0.0-rc.4", only: [:dev], runtime: false},
+      {:dialyxir, "~> 1.0.0-rc.7", only: [:dev], runtime: false},
       {:bunch, "~> 1.2"},
       {:ratio, "~> 2.0"}
     ]
