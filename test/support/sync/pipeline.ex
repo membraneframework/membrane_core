@@ -32,4 +32,9 @@ defmodule Membrane.Support.Sync.Pipeline do
   def handle_init(spec) do
     {{:ok, spec: spec}, %{}}
   end
+
+  @impl true
+  def handle_other({:spawn_children, spec}, state) do
+    {{:ok, spec: spec}, state}
+  end
 end

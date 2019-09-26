@@ -102,6 +102,26 @@ defmodule Membrane.Integration.SyncTest do
     assert_start_of_stream(pipeline, :sink_b, :input, @sync_error_ms)
   end
 
+  test "synchronize dynamically spawned elements" do
+    spec = Membrane.Support.Sync.Pipeline.default_spec()
+    spec = %{spec | stream_sync: [[:sink_a, :sink_b]]}
+
+    options = %Testing.Pipeline.Options{
+      module: Membrane.Support.Sync.Pipeline,
+      custom_args: %Membrane.Pipeline.Spec{}
+    }
+
+    {:ok, pipeline} = Testing.Pipeline.start_link(options)
+    :ok = Testing.Pipeline.play(pipeline)
+
+    assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
+    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+    send(pipeline, {:spawn_children, spec})
+
+    assert_start_of_stream(pipeline, :sink_a)
+    assert_start_of_stream(pipeline, :sink_b, :input, @sync_error_ms)
+  end
+
   test "synchronize selected groups" do
     spec = Membrane.Support.Sync.Pipeline.default_spec()
 

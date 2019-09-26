@@ -310,8 +310,13 @@ defmodule Membrane.Pipeline do
 
     parsed_children = children_spec |> parse_children
     :ok = parsed_children |> check_if_children_names_unique(state)
-    syncs = setup_syncs(parsed_children, stream_sync, state.playback.state)
+    syncs = setup_syncs(parsed_children, stream_sync)
     children = parsed_children |> start_children(state.clock_proxy, syncs)
+
+    if state.playback.state == :playing do
+      syncs |> MapSet.new(&elem(&1, 1)) |> Bunch.Enum.try_each(&Sync.activate/1)
+    end
+
     state = children |> add_children(state)
     {:ok, state} = choose_clock(children, clock_provider, state)
     {:ok, links} = links |> parse_links
@@ -367,14 +372,14 @@ defmodule Membrane.Pipeline do
     )
   end
 
-  defp setup_syncs(children, :sinks, playback_state) do
+  defp setup_syncs(children, :sinks) do
     sinks =
       children |> Enum.filter(&(&1.module.membrane_element_type == :sink)) |> Enum.map(& &1.name)
 
-    setup_syncs(children, [sinks], playback_state)
+    setup_syncs(children, [sinks])
   end
 
-  defp setup_syncs(children, stream_sync, playback_state) do
+  defp setup_syncs(children, stream_sync) do
     children_names = children |> MapSet.new(& &1.name)
     all_to_sync = stream_sync |> List.flatten()
 
@@ -383,11 +388,6 @@ defmodule Membrane.Pipeline do
       stream_sync
       |> Enum.flat_map(fn elements ->
         {:ok, sync} = Sync.start_link(empty_exit?: true)
-
-        if playback_state == :playing do
-          Sync.activate(sync)
-        end
-
         elements |> Enum.map(&{&1, sync})
       end)
       |> Map.new()
