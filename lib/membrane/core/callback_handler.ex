@@ -126,21 +126,16 @@ defmodule Membrane.Core.CallbackHandler do
   end
 
   @spec handle_callback_result(
-          callback_return_t,
+          {{:ok, [Membrane.Element.Action.t() | Membrane.Pipeline.action_t()]},
+           internal_state :: any},
           callback :: atom,
           module,
           handler_params_t,
           state_t
         ) :: Type.stateful_try_t(state_t)
-  defp handle_callback_result(result, callback, handler_module, handler_params, state) do
-    {result, state} =
-      case result do
-        {result, {:state, new_internal_state}} ->
-          {result, state |> Map.put(:internal_state, new_internal_state)}
-
-        {result, :no_state} ->
-          {result, state}
-      end
+  defp handle_callback_result(cb_result, callback, handler_module, handler_params, state) do
+    {result, new_internal_state} = cb_result
+    state = state |> Map.put(:internal_state, new_internal_state)
 
     with {{:ok, actions}, state} <- {result, state},
          {:ok, state} <-
@@ -166,13 +161,12 @@ defmodule Membrane.Core.CallbackHandler do
   end
 
   @spec parse_callback_result(callback_return_t | any, module, callback :: atom, handler_params_t) ::
-          {:ok, Type.stateful_try_t(list, internal_state_t)}
-          | {:error, {:invalid_callback_result, details :: Keyword.t()}}
+          Type.stateful_try_t(list, internal_state_t)
   defp parse_callback_result({:ok, new_internal_state}, module, cb, params),
     do: parse_callback_result({{:ok, []}, new_internal_state}, module, cb, params)
 
   defp parse_callback_result({{:ok, actions}, new_internal_state}, _module, _cb, _params) do
-    {{:ok, actions}, {:state, new_internal_state}}
+    {{:ok, actions}, new_internal_state}
   end
 
   defp parse_callback_result({{:error, reason}, new_internal_state}, module, cb, %{state: true}) do
@@ -184,7 +178,7 @@ defmodule Membrane.Core.CallbackHandler do
       reason
     )
 
-    {{:error, reason}, {:state, new_internal_state}}
+    {{:error, reason}, new_internal_state}
   end
 
   defp parse_callback_result({:error, reason}, module, cb, %{state: false}) do

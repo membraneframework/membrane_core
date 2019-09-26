@@ -100,7 +100,7 @@ defmodule Membrane.Mixfile do
       {:espec, "~> 1.7", only: :test},
       {:excoveralls, "~> 0.8", only: :test},
       {:qex, "~> 0.3"},
-      {:dialyxir, "~> 1.0.0-rc.4", only: [:dev], runtime: false},
+      {:dialyxir, "~> 1.0.0-rc.7", only: [:dev], runtime: false},
       {:bunch, "~> 1.2"},
       {:ratio, "~> 2.0"}
     ]

@@ -135,7 +135,7 @@ defmodule Membrane.Pipeline do
   Callback invoked when pipeline's element receives start_of_stream event.
   """
   @callback handle_element_start_of_stream(
-              {Element.name_t(), Pad.t()},
+              {Element.name_t(), Pad.ref_t()},
               state :: State.internal_state_t()
             ) :: callback_return_t
 
@@ -143,7 +143,7 @@ defmodule Membrane.Pipeline do
   Callback invoked when pipeline's element receives end_of_stream event.
   """
   @callback handle_element_end_of_stream(
-              {Element.name_t(), Pad.t()},
+              {Element.name_t(), Pad.ref_t()},
               state :: State.internal_state_t()
             ) :: callback_return_t
 
@@ -282,9 +282,6 @@ defmodule Membrane.Pipeline do
              state
            ) do
       {:ok, state}
-    else
-      {:error, reason} ->
-        raise CallbackError, kind: :error, callback: {module, :handle_init}, reason: reason
     end
   end
 

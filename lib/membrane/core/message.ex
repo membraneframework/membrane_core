@@ -6,7 +6,7 @@ defmodule Membrane.Core.Message do
 
   Record.defrecord(:message, __MODULE__, type: nil, args: [], opts: [])
 
-  @type t :: {__MODULE__, type_t, args_t}
+  @type t :: {__MODULE__, type_t, args_t, opts_t}
   @type type_t :: atom
   @type args_t :: list | any
   @type opts_t :: Keyword.t()

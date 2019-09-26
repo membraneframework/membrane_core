@@ -35,7 +35,7 @@ defmodule Membrane.Core.Element.State do
             pipeline_clock: Clock.t(),
             latency: non_neg_integer(),
             stream_sync: Sync.t(),
-            clock: Clock.t()
+            clock: Clock.t() | nil
           },
           terminating: boolean | :ready
         }

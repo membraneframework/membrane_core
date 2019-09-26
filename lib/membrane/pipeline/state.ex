@@ -55,7 +55,7 @@ defmodule Membrane.Pipeline.State do
     children[child] |> Bunch.error_if_nil({:unknown_child, child})
   end
 
-  @spec pop_child(t, Element.name_t()) :: Type.stateful_try_t(pid, t)
+  @spec pop_child(t, Element.name_t()) :: Type.stateful_try_t(child_data_t, t)
   def pop_child(%__MODULE__{children: children} = state, child) do
     {pid, children} = children |> Map.pop(child)
 
