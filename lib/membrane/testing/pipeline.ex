@@ -97,6 +97,7 @@ defmodule Membrane.Testing.Pipeline do
   """
 
   use Membrane.Pipeline
+  use Membrane.Log
 
   alias Membrane.{Element, Pipeline}
   alias Membrane.Pipeline.Spec
@@ -162,11 +163,38 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   def start_link(pipeline_options, process_options \\ []) do
-    Pipeline.start_link(__MODULE__, default_options(pipeline_options), process_options)
+    do_start(:start_link, pipeline_options, process_options)
   end
 
   def start(pipeline_options, process_options \\ []) do
-    Pipeline.start(__MODULE__, default_options(pipeline_options), process_options)
+    do_start(:start, pipeline_options, process_options)
+  end
+
+  defp do_start(_type, %Options{elements: nil, module: nil}, _process_options) do
+    raise """
+
+    You provided no information about pipeline contents. Please provide either:
+     - list of elemenst via `elements` field of Options struct with optional links between
+     them via `links` field of `Options` struct
+     - module that implements `Membrane.Pipeline` callbacks via `module` field of `Options`
+     struct
+    """
+  end
+
+  defp do_start(_type, %Options{elements: elements, module: module}, _process_options)
+       when is_atom(module) and module != nil and elements != nil do
+    raise """
+
+    When working with Membrane.Testing.Pipeline you can't provide both
+    override module and elements list in the Membrane.Testing.Pipeline.Options
+    struct.
+    """
+  end
+
+  defp do_start(type, options, process_options) do
+    pipeline_options = default_options(options)
+    args = [__MODULE__, pipeline_options, process_options]
+    apply(Pipeline, type, args)
   end
 
   @doc """
