@@ -18,14 +18,16 @@ defmodule Membrane.Mixfile do
       name: "Membrane Core",
       source_url: link(),
       docs: docs(),
+      aliases: ["test.all": "do espec, test"],
       preferred_cli_env: [
         espec: :test,
+        "test.all": :test,
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.post": :test,
         "coveralls.html": :test
       ],
-      test_coverage: [tool: ExCoveralls, test_task: "espec"],
+      test_coverage: [tool: ExCoveralls, test_task: "test.all"],
       deps: deps()
     ]
   end
