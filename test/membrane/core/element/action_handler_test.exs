@@ -533,7 +533,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   end
 
   describe "handling_actions" do
-    @describetag :focus
     setup :playing_trivial_source
 
     test "when :redemand is the last action", %{state: state} do
