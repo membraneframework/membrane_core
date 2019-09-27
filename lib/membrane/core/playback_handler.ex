@@ -108,6 +108,8 @@ defmodule Membrane.Core.PlaybackHandler do
     end
   end
 
+  @spec change_and_lock_playback_state(PlaybackState.t(), module(), Playbackable.t()) ::
+          handler_return_t()
   def change_and_lock_playback_state(new_playback_state, handler, playbackable) do
     with {:ok, playbackable} <- lock_target_state(playbackable) do
       playbackable =
