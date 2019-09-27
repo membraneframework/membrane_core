@@ -51,14 +51,14 @@ defmodule Membrane.Testing.PipelineTest do
   end
 
   describe "When starting Testing Pipeline does" do
-    test "returns an error if a pipeline is started with both elements and module provided in options" do
-      assert_raise RuntimeError, fn ->
+    test "raises an error if a pipeline is started with both elements and module provided in options" do
+      assert_raise RuntimeError, ~r/override module and elements list/, fn ->
         Pipeline.start(%Pipeline.Options{elements: [elem: Elem], module: Mod})
       end
     end
 
-    test "returns an error if no means of generating spec are provided (no elements, no module)" do
-      assert_raise RuntimeError, fn ->
+    test "raises an error if no means of generating spec are provided (no elements, no module)" do
+      assert_raise RuntimeError, ~r/You provided no information about pipeline contents./, fn ->
         Pipeline.start(%Pipeline.Options{elements: nil, module: nil})
       end
     end
