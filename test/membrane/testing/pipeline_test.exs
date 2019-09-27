@@ -7,7 +7,7 @@ defmodule Membrane.Testing.PipelineTest do
     use Membrane.Pipeline
 
     @impl true
-    def handle_init(_opts), do: {{:ok, %Membrane.Pipeline.Spec{}}, :state}
+    def handle_init(_opts), do: {{:ok, spec: %Membrane.Pipeline.Spec{}}, :state}
   end
 
   describe "When initializing Testing Pipeline" do
@@ -15,7 +15,7 @@ defmodule Membrane.Testing.PipelineTest do
       elements = [elem: Elem, elem2: Elem]
       links = %{{:elem, :output} => {:elem2, :input}}
       options = %Pipeline.Options{elements: elements}
-      assert {{:ok, spec}, state} = Pipeline.handle_init(options)
+      assert {{:ok, spec: spec}, state} = Pipeline.handle_init(options)
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
       assert spec == %Membrane.Pipeline.Spec{
@@ -28,7 +28,7 @@ defmodule Membrane.Testing.PipelineTest do
       elements = [elem: Elem, elem2: Elem]
       links = %{{:elem, :output} => {:elem2, :input}}
       options = %Pipeline.Options{elements: elements, links: links}
-      assert {{:ok, spec}, state} = Pipeline.handle_init(options)
+      assert {{:ok, spec: spec}, state} = Pipeline.handle_init(options)
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
       assert spec == %Membrane.Pipeline.Spec{
@@ -39,7 +39,7 @@ defmodule Membrane.Testing.PipelineTest do
 
     test "if no elements nor links were provided uses module's callback" do
       options = %Pipeline.Options{module: MockPipeline}
-      assert {{:ok, spec}, state} = Pipeline.handle_init(options)
+      assert {{:ok, spec: spec}, state} = Pipeline.handle_init(options)
       assert spec == %Membrane.Pipeline.Spec{}
 
       assert state == %Pipeline.State{
