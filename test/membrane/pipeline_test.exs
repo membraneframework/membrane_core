@@ -25,7 +25,7 @@ defmodule Membrane.PipelineTest do
       end
     end
 
-    test "executes successfully when callback module's handle init returns {{:ok, spec}},state} " do
+    test "executes successfully when callback module's handle_init returns {{:ok, spec: spec}}, state} " do
       defmodule InvalidPipeline do
         use Membrane.Pipeline
 
