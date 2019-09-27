@@ -1,7 +1,7 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "0.4.0"
+  @version "0.4.1"
   @source_ref "v#{@version}"
 
   def project do
@@ -18,14 +18,16 @@ defmodule Membrane.Mixfile do
       name: "Membrane Core",
       source_url: link(),
       docs: docs(),
+      aliases: ["test.all": "do espec, test"],
       preferred_cli_env: [
         espec: :test,
+        "test.all": :test,
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.post": :test,
         "coveralls.html": :test
       ],
-      test_coverage: [tool: ExCoveralls, test_task: "espec"],
+      test_coverage: [tool: ExCoveralls, test_task: "test.all"],
       deps: deps()
     ]
   end
@@ -96,11 +98,11 @@ defmodule Membrane.Mixfile do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.19", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.21", only: :dev, runtime: false},
       {:espec, "~> 1.7", only: :test},
-      {:excoveralls, "~> 0.8", only: :test},
+      {:excoveralls, "~> 0.11", only: :test},
       {:qex, "~> 0.3"},
-      {:dialyxir, "~> 1.0.0-rc.4", only: [:dev], runtime: false},
+      {:dialyxir, "~> 1.0.0-rc.7", only: [:dev], runtime: false},
       {:bunch, "~> 1.2"},
       {:ratio, "~> 2.0"}
     ]

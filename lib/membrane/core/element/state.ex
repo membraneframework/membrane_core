@@ -26,6 +26,7 @@ defmodule Membrane.Core.Element.State do
           pads: PadModel.pads_t() | nil,
           watcher: pid | nil,
           controlling_pid: pid | nil,
+          parent_monitor: reference() | nil,
           playback: Playback.t(),
           playback_buffer: PlaybackBuffer.t(),
           delayed_demands: %{{Pad.ref_t(), :supply | :redemand} => :sync | :async},
@@ -34,7 +35,7 @@ defmodule Membrane.Core.Element.State do
             pipeline_clock: Clock.t(),
             latency: non_neg_integer(),
             stream_sync: Sync.t(),
-            clock: Clock.t()
+            clock: Clock.t() | nil
           },
           terminating: boolean | :ready
         }
@@ -47,6 +48,7 @@ defmodule Membrane.Core.Element.State do
     :pads,
     :watcher,
     :controlling_pid,
+    :parent_monitor,
     :playback,
     :playback_buffer,
     :delayed_demands,
@@ -62,7 +64,13 @@ defmodule Membrane.Core.Element.State do
   @doc """
   Initializes new state.
   """
-  @spec new(%{module: module, name: Element.name_t(), clock: Clock.t(), sync: Sync.t()}) :: t
+  @spec new(%{
+          module: module,
+          name: Element.name_t(),
+          clock: Clock.t(),
+          sync: Sync.t(),
+          parent_monitor: reference()
+        }) :: t
   def new(options) do
     %__MODULE__{
       module: options.module,
@@ -72,6 +80,7 @@ defmodule Membrane.Core.Element.State do
       pads: nil,
       watcher: nil,
       controlling_pid: nil,
+      parent_monitor: options[:parent_monitor],
       playback: %Playback{},
       playback_buffer: PlaybackBuffer.new(),
       delayed_demands: %{},

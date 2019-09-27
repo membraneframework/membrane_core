@@ -135,7 +135,7 @@ defmodule Membrane.Pipeline do
   Callback invoked when pipeline's element receives start_of_stream event.
   """
   @callback handle_element_start_of_stream(
-              {Element.name_t(), Pad.t()},
+              {Element.name_t(), Pad.ref_t()},
               state :: State.internal_state_t()
             ) :: callback_return_t
 
@@ -143,7 +143,7 @@ defmodule Membrane.Pipeline do
   Callback invoked when pipeline's element receives end_of_stream event.
   """
   @callback handle_element_end_of_stream(
-              {Element.name_t(), Pad.t()},
+              {Element.name_t(), Pad.ref_t()},
               state :: State.internal_state_t()
             ) :: callback_return_t
 
@@ -282,9 +282,6 @@ defmodule Membrane.Pipeline do
              state
            ) do
       {:ok, state}
-    else
-      {:error, reason} ->
-        raise CallbackError, kind: :error, callback: {module, :handle_init}, reason: reason
     end
   end
 
@@ -313,8 +310,13 @@ defmodule Membrane.Pipeline do
 
     parsed_children = children_spec |> parse_children
     :ok = parsed_children |> check_if_children_names_unique(state)
-    syncs = setup_syncs(parsed_children, stream_sync, state.playback.state)
+    syncs = setup_syncs(parsed_children, stream_sync)
     children = parsed_children |> start_children(state.clock_proxy, syncs)
+
+    if state.playback.state == :playing do
+      syncs |> MapSet.new(&elem(&1, 1)) |> Bunch.Enum.try_each(&Sync.activate/1)
+    end
+
     state = children |> add_children(state)
     {:ok, state} = choose_clock(children, clock_provider, state)
     {:ok, links} = links |> parse_links
@@ -370,14 +372,14 @@ defmodule Membrane.Pipeline do
     )
   end
 
-  defp setup_syncs(children, :sinks, playback_state) do
+  defp setup_syncs(children, :sinks) do
     sinks =
       children |> Enum.filter(&(&1.module.membrane_element_type == :sink)) |> Enum.map(& &1.name)
 
-    setup_syncs(children, [sinks], playback_state)
+    setup_syncs(children, [sinks])
   end
 
-  defp setup_syncs(children, stream_sync, playback_state) do
+  defp setup_syncs(children, stream_sync) do
     children_names = children |> MapSet.new(& &1.name)
     all_to_sync = stream_sync |> List.flatten()
 
@@ -386,11 +388,6 @@ defmodule Membrane.Pipeline do
       stream_sync
       |> Enum.flat_map(fn elements ->
         {:ok, sync} = Sync.start_link(empty_exit?: true)
-
-        if playback_state == :playing do
-          Sync.activate(sync)
-        end
-
         elements |> Enum.map(&{&1, sync})
       end)
       |> Map.new()
@@ -420,7 +417,7 @@ defmodule Membrane.Pipeline do
            Core.Element.start_link(%{
              module: module,
              name: name,
-             pipeline: self(),
+             parent: self(),
              user_options: options,
              clock: pipeline_clock,
              sync: sync
@@ -582,7 +579,12 @@ defmodule Membrane.Pipeline do
     children_pids |> Enum.each(&change_playback_state(&1, new))
     :ok = toggle_syncs_active(old, new, children_data)
     state = %{state | pending_pids: children_pids |> MapSet.new()}
-    PlaybackHandler.suspend_playback_change(state)
+
+    if children_pids |> Enum.empty?() do
+      {:ok, state}
+    else
+      PlaybackHandler.suspend_playback_change(state)
+    end
   end
 
   defp toggle_syncs_active(:prepared, :playing, children_data) do
@@ -602,12 +604,15 @@ defmodule Membrane.Pipeline do
   end
 
   @impl PlaybackHandler
-  def handle_playback_state_changed(_old, :stopped, %State{terminating?: true} = state) do
-    Message.self(:stop_and_terminate)
-    {:ok, state}
-  end
+  def handle_playback_state_changed(old, new, state) do
+    callback = PlaybackHandler.state_change_callback(old, new)
 
-  def handle_playback_state_changed(_old, _new, state), do: {:ok, state}
+    if new == :stopped and state.terminating? do
+      Message.self(:stop_and_terminate)
+    end
+
+    CallbackHandler.exec_and_handle_callback(callback, __MODULE__, [], state)
+  end
 
   @impl GenServer
   def handle_info(
@@ -627,22 +632,14 @@ defmodule Membrane.Pipeline do
   end
 
   def handle_info(
-        Message.new(:playback_state_changed, [pid, new_playback_state]),
-        %State{playback: %Playback{state: current_playback_state}, pending_pids: pending_pids} =
-          state
+        Message.new(:playback_state_changed, [pid, _new_playback_state]),
+        %State{pending_pids: pending_pids} = state
       ) do
     new_pending_pids = pending_pids |> MapSet.delete(pid)
     new_state = %{state | pending_pids: new_pending_pids}
 
     if new_pending_pids != pending_pids and new_pending_pids |> Enum.empty?() do
-      callback = PlaybackHandler.state_change_callback(current_playback_state, new_playback_state)
-
-      with {:ok, new_state} <-
-             CallbackHandler.exec_and_handle_callback(callback, __MODULE__, [], new_state) do
-        PlaybackHandler.continue_playback_change(__MODULE__, new_state)
-      else
-        error -> error
-      end
+      PlaybackHandler.continue_playback_change(__MODULE__, new_state)
     else
       {:ok, new_state}
     end

@@ -20,18 +20,17 @@ defmodule Membrane.Core.Element do
   use GenServer
   import Membrane.Helper.GenServer
   require Membrane.Core.Message
-  alias Membrane.Clock
+  alias Membrane.{Clock, Element, ElementLinkError, Sync}
   alias Membrane.Core.Element.{MessageDispatcher, State}
   alias Membrane.Core.Message
-  alias Membrane.Element
-  alias Membrane.ElementLinkError
   alias Membrane.Pipeline.{Link, Link.Endpoint}
 
   @type options_t :: %{
           module: module,
           name: Element.name_t(),
           user_options: Element.options_t(),
-          pipeline: pid,
+          sync: Sync.t(),
+          parent: pid,
           clock: Clock.t()
         }
 
@@ -130,8 +129,13 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def init(options) do
-    Process.monitor(options.pipeline)
-    state = State.new(options)
+    parent_monitor = Process.monitor(options.parent)
+
+    state =
+      options
+      |> Map.take([:module, :name, :clock, :sync])
+      |> Map.put(:parent_monitor, parent_monitor)
+      |> State.new()
 
     with {:ok, state} <-
            MessageDispatcher.handle_message(
@@ -159,7 +163,7 @@ defmodule Membrane.Core.Element do
   end
 
   @impl GenServer
-  def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
+  def handle_info({:DOWN, ref, :process, _pid, reason}, %{parent_monitor: ref} = state) do
     {:ok, state} =
       MessageDispatcher.handle_message(Message.new(:pipeline_down, reason), :info, state)
 

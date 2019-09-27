@@ -32,7 +32,7 @@ defmodule Membrane.Sync do
 
   @no_sync :membrane_no_sync
 
-  @type t :: pid | :membrane_sync_no_sync
+  @type t :: pid | :membrane_no_sync
   @type status_t :: :registered | :sync
 
   @doc """
@@ -81,7 +81,7 @@ defmodule Membrane.Sync do
   @doc """
   Returns a Sync that always returns immediately when calling `sync/2` on it.
   """
-  @spec no_sync() :: t
+  @spec no_sync() :: :membrane_no_sync
   def no_sync(), do: @no_sync
 
   @impl true

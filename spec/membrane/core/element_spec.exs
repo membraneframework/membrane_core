@@ -30,7 +30,7 @@ defmodule Membrane.Core.ElementSpec do
       module: module,
       name: :name,
       user_options: %{},
-      pipeline: self(),
+      parent: self(),
       clock: nil,
       sync: Sync.no_sync()
     })
@@ -68,7 +68,7 @@ defmodule Membrane.Core.ElementSpec do
             module: TrivialSink,
             name: :name,
             user_options: %{},
-            pipeline: self(),
+            parent: self(),
             clock: nil,
             sync: Sync.no_sync()
           })

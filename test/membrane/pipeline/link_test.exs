@@ -3,8 +3,6 @@ defmodule Membrane.Pipeline.LinkTest do
   alias Membrane.Pipeline.Link
   alias Link.Endpoint
 
-  @moduletag :focus
-
   test "Endpoint parsing" do
     assert Endpoint.parse({:source, :input}) ==
              {:ok, %Endpoint{element: :source, pad_name: :input, opts: []}}

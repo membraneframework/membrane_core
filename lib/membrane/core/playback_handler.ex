@@ -73,6 +73,7 @@ defmodule Membrane.Core.PlaybackHandler do
   def state_change_callback(:prepared, :playing), do: :handle_prepared_to_playing
   def state_change_callback(:prepared, :stopped), do: :handle_prepared_to_stopped
 
+  @spec change_playback_state(PlaybackState.t(), module(), Playbackable.t()) :: handler_return_t()
   def change_playback_state(new_playback_state, handler, playbackable) do
     {playback, playbackable} =
       playbackable
@@ -107,6 +108,8 @@ defmodule Membrane.Core.PlaybackHandler do
     end
   end
 
+  @spec change_and_lock_playback_state(PlaybackState.t(), module(), Playbackable.t()) ::
+          handler_return_t()
   def change_and_lock_playback_state(new_playback_state, handler, playbackable) do
     with {:ok, playbackable} <- lock_target_state(playbackable) do
       playbackable =
@@ -117,6 +120,8 @@ defmodule Membrane.Core.PlaybackHandler do
     end
   end
 
+  @spec lock_target_state(pb) :: {:ok | {:error, :playback_already_locked}, pb}
+        when pb: Playbackable.t()
   def lock_target_state(playbackable) do
     if Playbackable.get_playback(playbackable).target_locked? do
       {{:error, :playback_already_locked}, playbackable}
@@ -125,6 +130,8 @@ defmodule Membrane.Core.PlaybackHandler do
     end
   end
 
+  @spec unlock_target_state(pb) :: {:ok | {:error, :playback_already_unlocked}, pb}
+        when pb: Playbackable.t()
   def unlock_target_state(playbackable) do
     if Playbackable.get_playback(playbackable).target_locked? do
       {:ok, switch_target_lock(playbackable)}
@@ -133,10 +140,12 @@ defmodule Membrane.Core.PlaybackHandler do
     end
   end
 
+  @spec suspend_playback_change(pb) :: {:ok, pb} when pb: Playbackable.t()
   def suspend_playback_change(playbackable) do
     {:ok, playbackable |> Playbackable.update_playback(&%{&1 | async_state_change: true})}
   end
 
+  @spec continue_playback_change(module, Playbackable.t()) :: handler_return_t()
   def continue_playback_change(handler, playbackable) do
     {old_playback, playbackable} =
       playbackable

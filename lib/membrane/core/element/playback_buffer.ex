@@ -28,7 +28,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
           q: Qex.t()
         }
 
-  @type message_t :: {:demand | :buffer | :caps | :event, args :: list}
+  @type message_t :: {Message, :demand | :buffer | :caps | :event, args :: list, opts :: list}
 
   defstruct q: nil
 
