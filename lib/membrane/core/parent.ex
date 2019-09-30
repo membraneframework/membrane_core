@@ -8,7 +8,10 @@ defmodule Membrane.Core.Parent do
   require Message
 
   def handle_playback_state(_old, new, state) do
-    children_pids = state |> Core.Parent.ChildrenModel.get_children() |> Map.values()
+    children_pids =
+      state
+      |> Core.Parent.ChildrenModel.get_children()
+      |> Map.values()
 
     children_pids
     |> Enum.each(&change_playback_state(&1, new))
@@ -28,8 +31,6 @@ defmodule Membrane.Core.Parent do
   @spec change_playback_state(pid, Membrane.PlaybackState.t()) :: :ok
   def change_playback_state(pid, new_state)
       when Membrane.PlaybackState.is_playback_state(new_state) do
-    alias Membrane.Core.Message
-    require Message
     Message.send(pid, :change_playback_state, new_state)
     :ok
   end

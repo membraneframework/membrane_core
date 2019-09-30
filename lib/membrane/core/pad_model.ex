@@ -2,10 +2,10 @@ defmodule Membrane.Core.PadModel do
   @moduledoc false
   # Utility functions for veryfying and manipulating pads and their data.
 
-  alias Membrane.Pad
-  alias Membrane.Core.Element.State
+  alias Membrane.{Element, Pad}
   alias Membrane.Bin.State
-  alias Membrane.Element
+  alias Membrane.Core.Element.State
+
   use Bunch
 
   @type pads_data_t :: %{Pad.ref_t() => Pad.Data.t()}

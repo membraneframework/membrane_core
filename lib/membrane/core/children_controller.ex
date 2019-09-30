@@ -53,8 +53,6 @@ defmodule Membrane.Core.Parent.ChildrenController do
   @spec change_playback_state(pid, Membrane.PlaybackState.t()) :: :ok
   defp change_playback_state(pid, new_state)
        when Membrane.PlaybackState.is_playback_state(new_state) do
-    alias Membrane.Core.Message
-    require Message
     Message.send(pid, :change_playback_state, new_state)
     :ok
   end
@@ -184,9 +182,10 @@ defmodule Membrane.Core.Parent.ChildrenController do
         state
       )
 
-    with {:ok, _} <- callback_res do
-      callback_res
-    else
+    case callback_res do
+      {:ok, _} ->
+        callback_res
+
       {{:error, reason}, _state} ->
         raise CallbackError, """
         Callback :handle_spec_started failed with reason: #{inspect(reason)}
