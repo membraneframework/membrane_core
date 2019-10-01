@@ -50,7 +50,7 @@ defmodule Membrane.Element.WithOutputPads do
     PadsSpecs.def_pads(pads, :output)
   end
 
-  @doc PadsSpecs.def_pad_docs(:output)
+  @doc PadsSpecs.def_pad_docs(:output, :element)
   defmacro def_output_pad(name, spec) do
     PadsSpecs.def_pad(name, :output, spec)
   end

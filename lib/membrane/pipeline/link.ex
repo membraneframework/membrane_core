@@ -70,13 +70,8 @@ defmodule Membrane.Pipeline.Link do
       {:error, {:invalid_endpoint, endpoint}}
     end
 
-    defp validate_pad_name(pad) do
-      if Pad.is_pad_name(pad) do
-        :ok
-      else
-        {:error, {:invalid_pad_format, pad}}
-      end
-    end
+    defp validate_pad_name(pad) when Pad.is_pad_name(pad), do: :ok
+    defp validate_pad_name(pad), do: {:error, {:invalid_pad_format, pad}}
 
     defp validate_opts(opts) do
       if Keyword.keyword?(opts) do

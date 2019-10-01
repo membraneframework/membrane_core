@@ -57,7 +57,7 @@ defmodule Membrane.Element.WithInputPads do
     PadsSpecs.def_pads(pads, :input)
   end
 
-  @doc PadsSpecs.def_pad_docs(:input)
+  @doc PadsSpecs.def_pad_docs(:input, :element)
   defmacro def_input_pad(name, spec) do
     PadsSpecs.def_pad(name, :input, spec)
   end

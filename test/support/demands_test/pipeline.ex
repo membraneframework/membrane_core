@@ -15,7 +15,7 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
       {:filter, :output} => {:sink, :input, buffer: [preferred_size: 50]}
     }
 
-    spec = %Pipeline.Spec{
+    spec = %Membrane.Spec{
       children: children,
       links: links
     }

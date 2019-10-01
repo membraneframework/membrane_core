@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
   alias Membrane.Core.Element.{PadModel, PadSpecHandler, State}
   alias Membrane.Core.{Message, Playbackable}
   alias Membrane.Element.Pad
-  alias Membrane.ElementLinkError
+  alias Membrane.LinkError
   require Message
 
   @module Membrane.Core.Element.PadController
@@ -41,7 +41,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
     test "when pad is does not exist in the element" do
       state = prepare_state(TrivialFilter)
 
-      assert_raise ElementLinkError, fn ->
+      assert_raise LinkError, fn ->
         @module.handle_link(
           :invalid_pad_ref,
           :output,

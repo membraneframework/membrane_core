@@ -97,28 +97,6 @@ defmodule Membrane.Core.Element.LifecycleController do
     |> or_warn_error("Error while handling message")
   end
 
-  @spec handle_watcher(pid, State.t()) ::
-          {{:ok, %{clock: Clock.t()}}, State.t()}
-  def handle_watcher(watcher, state) do
-    %State{synchronization: %{clock: clock}} = state
-    {{:ok, %{clock: clock}}, %State{state | watcher: watcher}}
-  end
-
-  @spec handle_controlling_pid(pid, State.t()) :: {:ok, State.t()}
-  def handle_controlling_pid(pid, state), do: {:ok, %{state | controlling_pid: pid}}
-
-  @doc """
-  Stores demand unit of subsequent element pad.
-  """
-  @spec handle_demand_unit(demand_unit :: atom, Pad.ref_t(), State.t()) :: {:ok, State.t()}
-  def handle_demand_unit(demand_unit, pad_ref, state) do
-    PadModel.assert_data!(state, pad_ref, %{direction: :output})
-
-    state
-    |> PadModel.set_data!(pad_ref, [:other_demand_unit], demand_unit)
-    ~> {:ok, &1}
-  end
-
   @impl PlaybackHandler
   def handle_playback_state(old_playback_state, new_playback_state, state) do
     context = &CallbackContext.PlaybackChange.from_state/1

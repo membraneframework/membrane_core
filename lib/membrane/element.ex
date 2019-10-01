@@ -33,10 +33,6 @@ defmodule Membrane.Element do
   @doc """
   Checks whether the given term is a valid element name
   """
-  defguard is_element_name(term)
-           when is_atom(term) or
-                  (is_tuple(term) and tuple_size(term) == 2 and is_atom(elem(term, 0)) and
-                     is_integer(elem(term, 1)) and elem(term, 1) >= 0)
 
   @doc """
   Checks whether module is an element.

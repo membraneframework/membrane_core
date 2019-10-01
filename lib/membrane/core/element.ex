@@ -20,7 +20,7 @@ defmodule Membrane.Core.Element do
   use GenServer
   import Membrane.Helper.GenServer
   require Membrane.Core.Message
-  alias Membrane.{Clock, Element, ElementLinkError, Sync}
+  alias Membrane.{Clock, Element, LinkError, Sync}
   alias Membrane.Core.Element.{MessageDispatcher, State}
   alias Membrane.Core.Message
   alias Membrane.Pipeline.{Link, Link.Endpoint}
@@ -93,7 +93,7 @@ defmodule Membrane.Core.Element do
   """
   @spec link(link_spec :: %Link{}) :: :ok
   def link(%Link{from: %Endpoint{pid: pid}, to: %Endpoint{pid: pid}}) when is_pid(pid) do
-    raise ElementLinkError, "Cannot link element with itself"
+    raise LinkError, "Cannot link element with itself"
   end
 
   def link(%Link{from: %Endpoint{pid: from_pid} = from, to: %Endpoint{pid: to_pid} = to})
@@ -121,7 +121,7 @@ defmodule Membrane.Core.Element do
   end
 
   def link(link) do
-    raise ElementLinkError, """
+    raise LinkError, """
     Invalid link - one of pids is invalid.
     #{inspect(link, pretty: true)}
     """

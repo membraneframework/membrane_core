@@ -2,6 +2,14 @@ defmodule Membrane.PipelineError do
   defexception [:message]
 end
 
+defmodule Membrane.BinError do
+  defexception [:message]
+end
+
+defmodule Membrane.ParentError do
+  defexception [:message]
+end
+
 defmodule Membrane.CallbackError do
   defexception [:message]
 
@@ -114,6 +122,6 @@ defmodule Membrane.ActionError do
   end
 end
 
-defmodule Membrane.ElementLinkError do
+defmodule Membrane.LinkError do
   defexception [:message]
 end
