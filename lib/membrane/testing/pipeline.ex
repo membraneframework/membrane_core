@@ -100,7 +100,7 @@ defmodule Membrane.Testing.Pipeline do
   use Membrane.Log
 
   alias Membrane.{Element, Pipeline}
-  alias Membrane.Pipeline.Spec
+  alias Membrane.Spec
 
   defmodule Options do
     @moduledoc """
@@ -238,7 +238,7 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   def handle_init(%Options{module: nil} = options) do
-    spec = %Membrane.Pipeline.Spec{
+    spec = %Membrane.Spec{
       children: options.elements,
       links: options.links
     }

@@ -1,10 +1,10 @@
-defmodule Membrane.Core.Element.PadController do
+defmodule Membrane.Core.PadController do
   @moduledoc false
   # Module handling linking and unlinking pads.
 
   alias Membrane.{Core, Event, LinkError}
-  alias Core.{CallbackHandler, Message, InputBuffer}
-  alias Core.Element.{ActionHandler, EventController, PadModel, State, PlaybackBuffer}
+  alias Core.{CallbackHandler, Message, InputBuffer, PadModel}
+  alias Core.Element.{ActionHandler, EventController, State, PlaybackBuffer}
   alias Membrane.Element.{CallbackContext, Pad}
   require CallbackContext.{PadAdded, PadRemoved}
   require Message

@@ -1,11 +1,11 @@
-defmodule Membrane.Core.Element.PadsSpecs do
+defmodule Membrane.Core.PadsSpecs do
   @moduledoc false
   # Functions parsing element pads specifications, generating functions and docs
   # based on them.
   use Bunch
   alias Bunch.Type
   alias Membrane.Caps
-  alias Membrane.Core.Element.OptionsSpecs
+  alias Membrane.Core.OptionsSpecs
   alias Membrane.Element.Pad
 
   require Pad

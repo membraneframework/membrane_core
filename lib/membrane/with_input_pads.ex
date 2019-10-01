@@ -1,4 +1,4 @@
-defmodule Membrane.Element.WithInputPads do
+defmodule Membrane.WithInputPads do
   @moduledoc """
   Module defining behaviour for sink and filter elements.
 
@@ -8,9 +8,9 @@ defmodule Membrane.Element.WithInputPads do
   For more information on implementing elements, see `Membrane.Element.Base`.
   """
 
-  alias Membrane.Element
-  alias Membrane.Core.Element.PadsSpecs
-  alias Element.{CallbackContext, Pad}
+  alias Membrane.{Element, Pad}
+  alias Membrane.Core.PadsSpecs
+  alias Element.CallbackContext
   alias Membrane.Core.CallbackHandler
 
   @doc """

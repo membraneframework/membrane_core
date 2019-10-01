@@ -1,4 +1,4 @@
-defmodule Membrane.Element.WithOutputPads do
+defmodule Membrane.WithOutputPads do
   @moduledoc """
   Module defining behaviour for source and filter elements.
 
@@ -8,9 +8,9 @@ defmodule Membrane.Element.WithOutputPads do
   For more information on implementing elements, see `Membrane.Element.Base`.
   """
 
-  alias Membrane.{Buffer, Element}
-  alias Membrane.Core.Element.PadsSpecs
-  alias Element.{CallbackContext, Pad}
+  alias Membrane.{Buffer, Element, Pad}
+  alias Membrane.Core.PadsSpecs
+  alias Element.CallbackContext
   alias Membrane.Core.CallbackHandler
 
   @doc """

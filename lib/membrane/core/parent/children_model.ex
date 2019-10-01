@@ -1,5 +1,8 @@
 defmodule Membrane.Core.Parent.ChildrenModel do
   @moduledoc false
+
+  alias Membrane.Core.{Bin, Pipeline}
+
   @type children_t :: %{Child.name_t() => pid}
 
   @type t :: Bin.State.t() | Pipeline.State.t()

@@ -1,8 +1,8 @@
-defmodule Membrane.Pipeline.Link do
+defmodule Membrane.Core.Link do
   @moduledoc false
 
   alias Membrane.Element.Pad
-  alias Membrane.Pipeline
+  alias Membrane.Spec
   alias __MODULE__.Endpoint
   require Pad
 
@@ -34,7 +34,7 @@ defmodule Membrane.Pipeline.Link do
             id: Pad.dynamic_id_t() | nil,
             pad_ref: Pad.ref_t() | nil,
             pid: pid() | nil,
-            opts: Pipeline.Spec.endpoint_options_t()
+            opts: Spec.endpoint_options_t()
           }
 
     @type resolved_t() :: %__MODULE__{
@@ -43,10 +43,10 @@ defmodule Membrane.Pipeline.Link do
             id: Pad.dynamic_id_t() | nil,
             pad_ref: Pad.ref_t(),
             pid: pid(),
-            opts: Pipeline.Spec.endpoint_options_t()
+            opts: Spec.endpoint_options_t()
           }
 
-    @spec parse(Pipeline.Spec.link_endpoint_spec_t() | any()) :: {:ok, t()} | {:error, any()}
+    @spec parse(Spec.link_endpoint_spec_t() | any()) :: {:ok, t()} | {:error, any()}
     def parse({elem, pad_name}) do
       parse({elem, pad_name, nil, []})
     end
@@ -87,7 +87,7 @@ defmodule Membrane.Pipeline.Link do
     end
   end
 
-  @spec parse(Pipeline.Spec.links_spec_t()) :: {:ok, t()} | {:error, any()}
+  @spec parse(Spec.links_spec_t()) :: {:ok, t()} | {:error, any()}
   def parse({from, to}) do
     with {:ok, from} <- Endpoint.parse(from),
          {:ok, to} <- Endpoint.parse(to) do

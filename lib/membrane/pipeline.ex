@@ -16,12 +16,12 @@ defmodule Membrane.Pipeline do
     Core,
     Element,
     Notification,
+    Pad,
     PipelineError,
     PlaybackState,
     Sync
   }
 
-  alias Element.Pad
   alias Core.{Message, Playback}
   alias Bunch.Type
   import Membrane.Helper.GenServer

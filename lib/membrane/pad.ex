@@ -1,4 +1,4 @@
-defmodule Membrane.Element.Pad do
+defmodule Membrane.Pad do
   @moduledoc """
   Pads are units defined by each element, allowing it to be linked with another
   elements. This module consists of pads typespecs and utils.

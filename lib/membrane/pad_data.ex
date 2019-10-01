@@ -1,4 +1,4 @@
-defmodule Membrane.Element.Pad.Data do
+defmodule Membrane.Pad.Data do
   @moduledoc """
   Struct describing current pad state.
 
@@ -9,7 +9,7 @@ defmodule Membrane.Element.Pad.Data do
       has been received (or sent) on the pad
     - `:end_of_stream?` - flag determining whether `Membrane.Event.EndOfStream`
       has been received (or sent) on the pad
-    - `:options` - options passed in `Membrane.Pipeline.Spec` when linking pad
+    - `:options` - options passed in `Membrane.Spec` when linking pad
 
   Other fields in the struct ARE NOT PART OF THE PUBLIC API and should not be
   accessed or relied on.

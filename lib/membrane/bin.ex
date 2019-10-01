@@ -9,12 +9,14 @@ defmodule Membrane.Bin do
   alias Membrane.{Element, Pad, Spec}
 
   alias Membrane.Core.{
+    Bin,
     Child,
     PadController,
     PadSpecHandler,
     Parent,
     PadModel,
     PadsSpecs,
+    Pipeline,
     Message
   }
 

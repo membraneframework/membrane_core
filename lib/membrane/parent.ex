@@ -1,5 +1,6 @@
 defmodule Membrane.Parent do
-  alias Membrane.{Bin, Child, Parent, Pipeline}
+  alias Membrane.{Child, Parent}
+  alias Membrane.Core.{Bin, Pipeline}
 
   @type internal_state_t :: map | struct
   @type child_t :: {Child.name_t(), pid}
