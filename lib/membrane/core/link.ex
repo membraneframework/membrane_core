@@ -1,8 +1,7 @@
 defmodule Membrane.Core.Link do
   @moduledoc false
 
-  alias Membrane.Element.Pad
-  alias Membrane.Spec
+  alias Membrane.{Pad, Spec}
   alias __MODULE__.Endpoint
   require Pad
 
@@ -20,7 +19,7 @@ defmodule Membrane.Core.Link do
     @moduledoc false
 
     alias Membrane.Element
-    alias Membrane.Element.Pad
+    alias Membrane.Pad
     alias Membrane.Pipeline
 
     @enforce_keys [:element, :pad_name]

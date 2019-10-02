@@ -3,7 +3,8 @@ defmodule Membrane.PipelineTest do
 
   @module Membrane.Pipeline
 
-  alias Membrane.Pipeline.{Spec, State}
+  alias Membrane.Core.Pipeline.State
+  alias Membrane.Spec
 
   defp state(_ctx) do
     [state: %State{module: nil, clock_proxy: nil}]
@@ -38,7 +39,7 @@ defmodule Membrane.PipelineTest do
 
       assert {:ok, state} = @module.init(InvalidPipeline)
 
-      assert %Membrane.Pipeline.State{
+      assert %State{
                internal_state: %{},
                module: InvalidPipeline
              } = state

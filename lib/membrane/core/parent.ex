@@ -7,7 +7,7 @@ defmodule Membrane.Core.Parent do
   require Membrane.PlaybackState
   require Message
 
-  def handle_playback_state(_old, new, state) do
+  def handle_playback_state(old, new, state) do
     children_data =
       state
       |> Core.Parent.ChildrenModel.get_children()

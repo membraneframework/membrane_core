@@ -15,7 +15,7 @@ defmodule Membrane.Support.Element.TrivialPipeline do
       {:filter, :output} => {:consumer, :input, buffer: [preferred_size: 10]}
     }
 
-    spec = %Spec{
+    spec = %Membrane.Spec{
       children: children,
       links: links
     }

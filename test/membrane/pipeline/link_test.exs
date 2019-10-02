@@ -1,6 +1,6 @@
 defmodule Membrane.Pipeline.LinkTest do
   use ExUnit.Case
-  alias Membrane.Pipeline.Link
+  alias Membrane.Core.Link
   alias Link.Endpoint
 
   test "Endpoint parsing" do

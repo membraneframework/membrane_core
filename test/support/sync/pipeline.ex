@@ -21,7 +21,7 @@ defmodule Membrane.Support.Sync.Pipeline do
       {:source_b, :output} => {:sink_b, :input}
     }
 
-    %Membrane.Pipeline.Spec{
+    %Membrane.Spec{
       children: children,
       links: links,
       stream_sync: :sinks

@@ -53,7 +53,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
     if new_pending_pids != pending_pids and new_pending_pids |> Enum.empty?() do
 
-      PlaybackHandler.continue_playback_change(handlers.playback_controller, new_state))
+      PlaybackHandler.continue_playback_change(handlers.playback_controller, new_state)
     else
       {:ok, new_state}
     end

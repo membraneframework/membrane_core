@@ -16,7 +16,7 @@ defmodule Membrane.Core.Parent.ChildrenModel do
     end
   end
 
-  @spec get_child_pid(t, Child.name_t()) :: Type.try_t(pid)
+  @spec get_child_data(t, Child.name_t()) :: Type.try_t(pid)
   def get_child_data(%{children: children}, child) do
     children[child] |> Bunch.error_if_nil({:unknown_child, child})
   end

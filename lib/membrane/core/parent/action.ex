@@ -21,13 +21,13 @@ defmodule Membrane.Core.Parent.Action do
 
     {:ok, state} =
       if state.clock_provider.provider in children do
-        %State{state | clock_provider: %{clock: nil, provider: nil, choice: :auto}}
+        %{state | clock_provider: %{clock: nil, provider: nil, choice: :auto}}
         |> choose_clock
       else
         {:ok, state}
       end
 
-    with {:ok, data} <- children |> Bunch.Enum.try_map(&State.get_child_data(state, &1)) do
+    with {:ok, data} <- children |> Bunch.Enum.try_map(&Parent.ChildrenModel.get_child_data(state, &1)) do
       data |> Enum.each(&Message.send(&1.pid, :prepare_shutdown))
       :ok
     end
@@ -54,7 +54,7 @@ defmodule Membrane.Core.Parent.Action do
 
       clock_provider ->
         Clock.proxy_for(state.clock_proxy, clock_provider.clock)
-        {:ok, %State{state | clock_provider: clock_provider}}
+        {:ok, %{state | clock_provider: clock_provider}}
     end
   end
 

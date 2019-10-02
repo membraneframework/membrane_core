@@ -8,8 +8,6 @@ defmodule Membrane.Pipeline do
   and process it in different ways.
   """
 
-  alias __MODULE__.{Link, State, Spec}
-
   alias Membrane.{
     CallbackError,
     Clock,
@@ -19,10 +17,12 @@ defmodule Membrane.Pipeline do
     Pad,
     PipelineError,
     PlaybackState,
+    Spec,
     Sync
   }
 
-  alias Core.{Message, Playback}
+  alias Core.{Link, Message, Playback}
+  alias Core.Pipeline.State
   alias Bunch.Type
   import Membrane.Helper.GenServer
   require Element
@@ -51,7 +51,7 @@ defmodule Membrane.Pipeline do
   and initialize element internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
   """
-  @callback handle_init(options :: pipeline_options_t) :: callback_return_t
+  @callback handle_init(options :: pipeline_options_t) :: CallbackHandler.callback_return_t
 
   @doc """
   Callback invoked when pipeline is shutting down.
@@ -196,7 +196,7 @@ defmodule Membrane.Pipeline do
   @impl GenServer
   def handle_info(message, state) do
     Parent.MessageDispatcher.handle_message(message, state, handlers())
-    |> noreply(new_state)
+    |> noreply(state)
   end
 
   @impl GenServer

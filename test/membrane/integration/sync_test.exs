@@ -108,7 +108,7 @@ defmodule Membrane.Integration.SyncTest do
 
     options = %Testing.Pipeline.Options{
       module: Membrane.Support.Sync.Pipeline,
-      custom_args: %Membrane.Pipeline.Spec{}
+      custom_args: %Membrane.Spec{}
     }
 
     {:ok, pipeline} = Testing.Pipeline.start_link(options)

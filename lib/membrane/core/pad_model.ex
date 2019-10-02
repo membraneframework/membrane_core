@@ -28,6 +28,8 @@ defmodule Membrane.Core.PadModel do
 
   @type state_t :: Bin.state_t() | Element.state_t()
 
+  @type unknown_pad_error_t :: {:error, {:unknown_pad, Pad.name_t()}}
+
   @spec assert_instance(state_t(), Pad.ref_t()) ::
           :ok | unknown_pad_error_t
   def assert_instance(state, pad_ref) do

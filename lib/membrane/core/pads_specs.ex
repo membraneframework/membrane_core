@@ -6,7 +6,7 @@ defmodule Membrane.Core.PadsSpecs do
   alias Bunch.Type
   alias Membrane.Caps
   alias Membrane.Core.OptionsSpecs
-  alias Membrane.Element.Pad
+  alias Membrane.Pad
 
   require Pad
 

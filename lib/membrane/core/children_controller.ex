@@ -51,13 +51,12 @@ defmodule Membrane.Core.Parent.ChildrenController do
 
     {:ok, state} = children |> add_children(state)
 
-    {:ok, state} = choose_clock(children, clock_provider, state)
+    {:ok, state} = Parent.Action.choose_clock(children, clock_provider, state) # TODO where choose_cloc/3 should be?
 
     {{:ok, links}, state} = {links |> parse_links(), state}
     {links, state} = links |> spec_controller_module.resolve_links(state)
     {:ok, state} = links |> spec_controller_module.link_children(state)
     {children_names, children_data} = children |> Enum.unzip()
-    {:ok, state} = {children_pids |> set_children_watcher(), state}
     {:ok, state} = exec_handle_spec_started(spec_controller_module, children_names, state)
 
     children_data
@@ -147,7 +146,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
     end
   end
 
-  @spec start_children([parsed_child_t]) :: [Parent.ChildrenModel.child_t()]
+  #@spec start_children([parsed_child_t], parent_clock :: Clock.t(), syncs :: m) :: [Parent.ChildrenModel.child_t()] # TODO
   def start_children(children, parent_clock, syncs) do
     debug("Starting children: #{inspect(children)}")
 
@@ -163,13 +162,14 @@ defmodule Membrane.Core.Parent.ChildrenController do
     end)
   end
 
-  defp start_child(%{module: module} = spec, parent_clock, syncs) do
+  defp start_child(%{name: name, module: module} = spec, parent_clock, syncs) do
+    sync = syncs |> Map.get(name, Sync.no_sync())
     case child_type(module) do
       :bin ->
-        start_child_bin(spec) # TODO set clock and syncs for bin as well
+        start_child_bin(spec, parent_clock, sync) # TODO set clock and syncs for bin as well
 
       :element ->
-        start_child_element(spec, parent_clock, syncs)
+        start_child_element(spec, parent_clock, sync)
     end
   end
 
@@ -181,14 +181,13 @@ defmodule Membrane.Core.Parent.ChildrenController do
     end
   end
 
-  defp start_child_element(%{name: name, module: module, options: options}, parent_clock, syncs) do
+  defp start_child_element(%{name: name, module: module, options: options}, parent_clock, sync) do
     debug("Pipeline: starting child: name: #{inspect(name)}, module: #{inspect(module)}")
 
-    sync = syncs |> Map.get(name, Sync.no_sync())
-
     with {:ok, pid} <- Core.Element.start_link(%{parent: self(), module: module, name: name, user_options: options, clock: parent_clock, sync: sync}),
-         :ok <- Message.call(pid, :set_controlling_pid, self()) do
-      {name, pid}
+         :ok <- Message.call(pid, :set_controlling_pid, self()),
+         {:ok, %{clock: clock}} <- Message.call(pid, :handle_watcher, self()) do
+      {name, %{pid: pid, clock: clock, sync: sync}}
     else
       {:error, reason} ->
         raise ParentError,
@@ -197,28 +196,17 @@ defmodule Membrane.Core.Parent.ChildrenController do
     end
   end
 
-  defp start_child_bin(%{name: name, module: module, options: options}) do
+  defp start_child_bin(%{name: name, module: module, options: options}, parent_clock, sync) do
     with {:ok, pid} <- Bin.start_link(name, module, options, []),
-         :ok <- Bin.set_controlling_pid(pid, self()) do
-      {name, pid}
+         :ok <- Bin.set_controlling_pid(pid, self()),
+         {:ok, %{clock: clock}} <- Message.call(pid, :handle_watcher, self()) do
+      {name, %{pid: pid, clock: clock, sync: sync}}
     else
       {:error, reason} ->
         raise ParentError,
               "Cannot start child #{inspect(name)}, \
               reason: #{inspect(reason, pretty: true)}"
     end
-  end
-
-  @spec set_children_watcher([pid]) :: :ok
-  def set_children_watcher(elements_pids) do
-    elements_pids
-    |> Enum.each(fn pid ->
-      :ok = set_watcher(pid, self())
-    end)
-  end
-
-  defp set_watcher(server, watcher, timeout \\ 5000) when is_pid(server) do
-    Message.call(server, :set_watcher, watcher, [], timeout)
   end
 
   defp exec_handle_spec_started(spec_controller_module, children_names, state) do
