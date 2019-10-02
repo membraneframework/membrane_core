@@ -1,8 +1,8 @@
 defmodule Membrane.Core.Element.StateSpec do
   use ESpec, async: true
   alias Membrane.Support.Element.TrivialFilter
-  alias Membrane.Core.Playback
-  alias Membrane.Core.Element.{PadSpecHandler, PlaybackBuffer}
+  alias Membrane.Core.{PadSpecHandler, Playback}
+  alias Membrane.Core.Element.PlaybackBuffer
   alias Membrane.Sync
 
   describe "new/1" do

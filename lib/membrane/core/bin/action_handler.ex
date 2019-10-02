@@ -6,7 +6,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
   alias Membrane.{Core, Spec}
   alias Core.{Parent, Message}
   alias Parent.ChildrenController
-  alias Core.Bin.{State, SpecController}
+  alias Core.Bin.State
 
   require Message
 
@@ -17,7 +17,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:spec, spec = %Spec{}}, _cb, _params, state) do
-    with {{:ok, _children}, state} <- ChildrenController.handle_spec(SpecController, spec, state),
+    with {{:ok, _children}, state} <- ChildrenController.handle_spec(spec, state),
          do: {:ok, state}
   end
 

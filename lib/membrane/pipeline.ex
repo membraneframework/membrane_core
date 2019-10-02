@@ -20,7 +20,7 @@ defmodule Membrane.Pipeline do
 
   alias Core.Parent
   alias Core.Message
-  alias Core.Pipeline.{SpecController, State}
+  alias Core.Pipeline.State
   alias Parent.ChildrenController
   import Membrane.Helper.GenServer
   require Element
@@ -153,7 +153,7 @@ defmodule Membrane.Pipeline do
 
   def init({module, pipeline_options}) do
     {:ok, clock} = Clock.start_link(proxy: true)
-    state = %State{module: module, clock_proxy: clock, handlers: handlers()}
+    state = %State{module: module, clock_proxy: clock}
 
     with {:ok, state} <-
            CallbackHandler.exec_and_handle_callback(
@@ -245,7 +245,7 @@ defmodule Membrane.Pipeline do
   end
 
   def do_handle_action({:spec, spec = %Spec{}}, _cb, _params, state) do
-    with {{:ok, _children}, state} <- ChildrenController.handle_spec(SpecController, spec, state), do: {:ok, state}
+    with {{:ok, _children}, state} <- ChildrenController.handle_spec(spec, state), do: {:ok, state}
   end
 
   def do_handle_action({:remove_child, children}, _cb, _params, state) do
@@ -255,15 +255,6 @@ defmodule Membrane.Pipeline do
   def do_handle_action(_action, _callback, _params, state) do
     {{:error, :invalid_action}, state}
   end
-
-  @spec handlers :: Parent.MessageDispatcher.handlers()
-
-  defp handlers,
-    do: %{
-      action_handler: __MODULE__,
-      playback_controller: __MODULE__,
-      spec_controller: SpecController
-    }
 
   defmacro __using__(_) do
     quote location: :keep do

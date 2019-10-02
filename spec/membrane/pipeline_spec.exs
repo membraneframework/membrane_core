@@ -119,7 +119,7 @@ defmodule Membrane.PipelineSpec do
 
     it "should return {:ok, %Pipeline.State{}} tuple" do
       {:ok, state} = described_module().init({module(), options()})
-      expect(state.__struct__) |> to(eq Membrane.Pipeline.State)
+      expect(state.__struct__) |> to(eq Membrane.Core.Pipeline.State)
     end
 
     it "should return state containing correct module" do
@@ -162,7 +162,7 @@ defmodule Membrane.PipelineSpec do
       let :internal_state, do: :some_internal_state
 
       let :state,
-        do: %Membrane.Pipeline.State{
+        do: %Membrane.Core.Pipeline.State{
           children: %{child_name() => self()},
           internal_state: internal_state(),
           module: module(),
@@ -236,7 +236,7 @@ defmodule Membrane.PipelineSpec do
       let :internal_state, do: :some_internal_state
 
       let :state,
-        do: %Membrane.Pipeline.State{
+        do: %Membrane.Core.Pipeline.State{
           module: module(),
           internal_state: internal_state(),
           clock_proxy: nil

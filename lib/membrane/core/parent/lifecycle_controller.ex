@@ -29,7 +29,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   def handle_spec(spec, state) do
     with {{:ok, _children}, state} <-
-           state.handlers.spec_controller |> ChildrenController.handle_spec(spec, state) do
+           ChildrenController.handle_spec(spec, state) do
       {:ok, state}
     end
   end

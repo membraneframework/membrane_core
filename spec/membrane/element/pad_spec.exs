@@ -1,6 +1,6 @@
 defmodule Membrane.Element.PadSpec do
   use ESpec, async: true
-  import Membrane.Element.Pad
+  import Membrane.Pad
 
   describe ".is_pad_ref/1" do
     context "when correct pad ref is given" do

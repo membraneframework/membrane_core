@@ -4,9 +4,9 @@ defmodule Membrane.Core.Pipeline.State do
   # It does not represent state of pipelines you construct, it's a state used
   # internally in Membrane.
 
+  alias Membrane.Core
   alias Membrane.Core.{Playback, Playbackable}
   alias Membrane.{Clock, Element, Sync}
-  alias Bunch.Type
   use Bunch
 
   @derive Playbackable
@@ -24,7 +24,7 @@ defmodule Membrane.Core.Pipeline.State do
             choice: :auto | :manual
           },
           clock_proxy: Clock.t(),
-          handlers: Parent.MessageDispatcher.handlers() | nil
+          handlers: Parent.MessageDispatcher.handlers()
         }
 
   @type internal_state_t :: map | struct
@@ -40,6 +40,10 @@ defmodule Membrane.Core.Pipeline.State do
                 pending_pids: MapSet.new(),
                 terminating?: false,
                 clock_provider: %{clock: nil, provider: nil, choice: :auto},
-                handlers: nil
+                handlers: %{
+                  action_handler: Membrane.Pipeline,
+                  playback_controller: Membrane.Pipeline,
+                  spec_controller: Core.Pipeline.SpecController
+                }
               ]
 end

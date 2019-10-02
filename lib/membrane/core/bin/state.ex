@@ -4,6 +4,7 @@ defmodule Membrane.Core.Bin.State do
   # It does not represent state of bins you construct, it's a state used
   # internally in Membrane.
 
+  alias Membrane.Core.Bin
   alias Membrane.Core.{Parent, Playback, Playbackable, PadModel}
   alias Membrane.Core.Bin.LinkingBuffer
   alias __MODULE__, as: ThisModule
@@ -29,7 +30,7 @@ defmodule Membrane.Core.Bin.State do
             choice: :auto | :manual
           },
           clock_proxy: Clock.t(),
-          handlers: Parent.MessageDispatcher.handlers() | nil,
+          handlers: Parent.MessageDispatcher.handlers(),
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
             pipeline_clock: Clock.t(),
@@ -55,7 +56,11 @@ defmodule Membrane.Core.Bin.State do
             controlling_pid: nil,
             linking_buffer: LinkingBuffer.new(),
             clock_provider: %{clock: nil, provider: nil, choice: :auto},
-            handlers: nil,
+            handlers: %{
+              action_handler: Bin.ActionHandler,
+              playback_controller: Bin,
+              spec_controller: Bin.SpecController
+            },
             synchronization: %{}
           ]
 

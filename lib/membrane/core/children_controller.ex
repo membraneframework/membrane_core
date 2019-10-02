@@ -22,9 +22,9 @@ defmodule Membrane.Core.Parent.ChildrenController do
 
   @callback action_handler_module :: module()
 
-  @spec handle_spec(module(), Spec.t(), Parent.ChildrenModel.t()) ::
+  @spec handle_spec(Spec.t(), Parent.ChildrenModel.t()) ::
           Type.stateful_try_t([Child.name_t()], Parent.ChildrenModel.t())
-  def handle_spec(spec_controller_module, spec, state) do
+  def handle_spec(spec, state) do
     %Spec{
       children: children_spec,
       links: links,
@@ -55,10 +55,10 @@ defmodule Membrane.Core.Parent.ChildrenController do
     {:ok, state} = Parent.Action.choose_clock(children, clock_provider, state) # TODO where choose_cloc/3 should be?
 
     {{:ok, links}, state} = {links |> parse_links(), state}
-    {links, state} = links |> spec_controller_module.resolve_links(state)
-    {:ok, state} = links |> spec_controller_module.link_children(state)
+    {links, state} = links |> state.handlers.spec_controller.resolve_links(state)
+    {:ok, state} = links |> state.handlers.spec_controller.link_children(state)
     {children_names, children_data} = children |> Enum.unzip()
-    {:ok, state} = exec_handle_spec_started(spec_controller_module, children_names, state)
+    {:ok, state} = exec_handle_spec_started(state.handlers.spec_controller, children_names, state)
 
     children_data
     |> Enum.each(&change_playback_state(&1.pid, state.playback.state))
