@@ -12,42 +12,42 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
           spec_controller: module()
         }
 
-  @spec handle_message(Message.t(), :info | :call | :other, State.t()) ::
+  @spec handle_message(Message.t(), State.t()) ::
           State.stateful_try_t(any)
   def handle_message(
         Message.new(:playback_state_changed, [pid, new_playback_state]),
-        state,
-        handlers
+        state
       ) do
-    LifecycleController.handle_playback_state_changed(pid, new_playback_state, state, handlers)
+    LifecycleController.child_playback_changed(pid, new_playback_state, state)
   end
 
-  def handle_message(Message.new(:handle_spec, spec), state, handlers) do
-    LifecycleController.handle_spec(spec, state, handlers)
+  def handle_message(Message.new(:handle_spec, spec), state) do
+    LifecycleController.handle_spec(spec, state)
   end
 
-  def handle_message(Message.new(:change_playback_state, new_state), state, handlers) do
-    LifecycleController.change_playback_state(new_state, state, handlers)
+  # Request to change playback state
+  def handle_message(Message.new(:change_playback_state, new_state), state) do
+    LifecycleController.change_playback_state(new_state, state)
   end
 
-  def handle_message(Message.new(:stop_and_terminate), state, handlers) do
-    LifecycleController.handle_stop(state, handlers)
+  def handle_message(Message.new(:stop_and_terminate), state) do
+    LifecycleController.handle_stop(state)
   end
 
-  def handle_message(Message.new(:notification, [from, notification]), state, handlers) do
-    LifecycleController.handle_notification(from, notification, state, handlers)
+  def handle_message(Message.new(:notification, [from, notification]), state) do
+    LifecycleController.handle_notification(from, notification, state)
   end
 
-  def handle_message(Message.new(:shutdown_ready, child), state, handlers) do
-    LifecycleController.handle_shutdown_ready(child, state, handlers)
+  def handle_message(Message.new(:shutdown_ready, child), state) do
+    LifecycleController.handle_shutdown_ready(child, state)
   end
 
-  def handle_message(Message.new(cb, [element_name, pad_ref]), state, handlers)
+  def handle_message(Message.new(cb, [element_name, pad_ref]), state)
       when cb in [:handle_start_of_stream, :handle_end_of_stream] do
-    LifecycleController.handle_stream_management_event(cb, element_name, pad_ref, state, handlers)
+    LifecycleController.handle_stream_management_event(cb, element_name, pad_ref, state)
   end
 
-  def handle_message(message, state, handlers) do
-    LifecycleController.handle_other(message, state, handlers)
+  def handle_message(message, state) do
+    LifecycleController.handle_other(message, state)
   end
 end

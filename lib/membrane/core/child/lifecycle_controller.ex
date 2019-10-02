@@ -25,5 +25,8 @@ defmodule Membrane.Core.Child.LifecycleController do
   def handle_controlling_pid(pid, state), do: {:ok, %{state | controlling_pid: pid}}
 
   @spec handle_watcher(pid, state()) :: {:ok, state()}
-  def handle_watcher(watcher, state), do: {:ok, %{state | watcher: watcher}}
+  def handle_watcher(watcher, state) do
+    %{synchronization: %{clock: clock}} = state
+    {{:ok, %{clock: clock}}, %{state | watcher: watcher}}
+  end
 end

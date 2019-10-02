@@ -13,20 +13,18 @@ defmodule Membrane.Pipeline do
     Clock,
     Core,
     Element,
-    Notification,
     Pad,
-    PipelineError,
     PlaybackState,
-    Spec,
-    Sync
+    Spec
   }
 
-  alias Core.{Link, Message, Playback}
-  alias Core.Pipeline.State
-  alias Bunch.Type
+  alias Core.Parent
+  alias Core.Message
+  alias Core.Pipeline.{SpecController, State}
+  alias Parent.ChildrenController
   import Membrane.Helper.GenServer
   require Element
-  require Membrane.PlaybackState
+  require PlaybackState
   require Message
   require Pad
   use Bunch
@@ -155,7 +153,7 @@ defmodule Membrane.Pipeline do
 
   def init({module, pipeline_options}) do
     {:ok, clock} = Clock.start_link(proxy: true)
-    state = %State{module: module, clock_proxy: clock}
+    state = %State{module: module, clock_proxy: clock, handlers: handlers()}
 
     with {:ok, state} <-
            CallbackHandler.exec_and_handle_callback(
@@ -195,7 +193,7 @@ defmodule Membrane.Pipeline do
 
   @impl GenServer
   def handle_info(message, state) do
-    Parent.MessageDispatcher.handle_message(message, state, handlers())
+    Parent.MessageDispatcher.handle_message(message, state)
     |> noreply(state)
   end
 

@@ -14,7 +14,6 @@ defmodule Membrane.Core.Bin.SpecController do
   }
 
   alias Membrane.Core.Bin.LinkingBuffer
-  alias Membrane.Element
   alias Membrane.Core.Link
 
   require Bin
@@ -76,7 +75,7 @@ defmodule Membrane.Core.Bin.SpecController do
          :ok <-
            state
            |> Parent.ChildrenModel.get_children()
-           |> Bunch.Enum.try_each(fn {_pid, pid} -> pid |> Element.handle_linking_finished() end),
+           |> Bunch.Enum.try_each(fn {_name, %{pid: pid}} -> pid |> Message.call(:linking_finished, []) end),
          do: {:ok, state}
   end
 

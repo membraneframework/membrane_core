@@ -5,13 +5,10 @@ defmodule Membrane.Core.Pipeline.SpecController do
   @behaviour Membrane.Core.Parent.ChildrenController
 
   alias Membrane.ParentError
+  alias Membrane.Core
+  alias Core.Message
 
-  alias Membrane.Core.{
-    Parent,
-    Message
-  }
-
-  alias Membrane.Element
+  alias Membrane.Core.Parent
 
   require Message
 
@@ -52,11 +49,11 @@ defmodule Membrane.Core.Pipeline.SpecController do
   # a chance that some of children will remain linked.
   @impl true
   def link_children(links, state) do
-    with :ok <- links |> Bunch.Enum.try_each(&Element.link/1),
+    with :ok <- links |> Bunch.Enum.try_each(&Core.Element.link/1),
          :ok <-
            state
            |> Parent.ChildrenModel.get_children()
-           |> Bunch.Enum.try_each(fn {_name, %{pid: pid}} -> pid |> Core.Element.handle_linking_finished() end), # TODO handle_linking_finished has to be moved to Core.Element from Element
+           |> Bunch.Enum.try_each(fn {_name, %{pid: pid}} -> pid |> Message.call(:linking_finished, []) end), # TODO handle_linking_finished has to be moved to Core.Element from Element
          do: {:ok, state}
   end
 

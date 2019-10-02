@@ -28,8 +28,16 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
     {{:ok, forward: {name, msg}}, state}
   end
 
+
+  @impl true
+  def handle_stopped_to_prepared(%{target: target} = state) do
+    IO.puts "handle_stopped_to_prepared is called"
+    {:ok, state}
+  end
+
   @impl true
   def handle_prepared_to_playing(%{target: target} = state) do
+    IO.puts "handle_prepared_to_playing is called"
     send(target, :playing)
     {:ok, state}
   end

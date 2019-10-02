@@ -14,7 +14,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     TimerController
   }
 
-  alias Core.{Message, PlaybackHandler}
+  alias Core.{Child, Message, PlaybackHandler}
   require Message
   use Core.Element.Log
   use Bunch

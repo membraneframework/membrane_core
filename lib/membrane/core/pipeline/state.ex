@@ -23,7 +23,8 @@ defmodule Membrane.Core.Pipeline.State do
             provider: Element.name_t() | nil, # TODO should this be any child? Probably, eventually yes?
             choice: :auto | :manual
           },
-          clock_proxy: Clock.t()
+          clock_proxy: Clock.t(),
+          handlers: Parent.MessageDispatcher.handlers() | nil
         }
 
   @type internal_state_t :: map | struct
@@ -38,6 +39,7 @@ defmodule Membrane.Core.Pipeline.State do
                 playback: %Playback{},
                 pending_pids: MapSet.new(),
                 terminating?: false,
-                clock_provider: %{clock: nil, provider: nil, choice: :auto}
+                clock_provider: %{clock: nil, provider: nil, choice: :auto},
+                handlers: nil
               ]
 end

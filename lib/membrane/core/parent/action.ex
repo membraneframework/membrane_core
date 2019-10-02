@@ -1,12 +1,12 @@
 defmodule Membrane.Core.Parent.Action do
   @moduledoc false
-  alias Membrane.CallbackError
+  alias Membrane.{CallbackError, Clock, ParentError}
   alias Membrane.Core.{Parent, Message}
 
   use Bunch
 
   def handle_forward(element_name, message, state) do
-    with {:ok, pid} <- state |> Parent.ChildrenModel.get_child_pid(element_name) do
+    with {:ok, %{pid: pid}} <- state |> Parent.ChildrenModel.get_child_data(element_name) do
       send(pid, message)
       {:ok, state}
     else
@@ -38,11 +38,12 @@ defmodule Membrane.Core.Parent.Action do
     raise CallbackError, kind: :invalid_action, action: action, callback: {module, callback}
   end
 
-  defp choose_clock(state) do
+  # TODO this should be in different place?
+  def choose_clock(state) do
     choose_clock([], nil, state)
   end
 
-  defp choose_clock(children, provider, state) do
+  def choose_clock(children, provider, state) do
     cond do
       provider != nil -> get_clock_from_provider(children, provider)
       invalid_choice?(state) -> :no_provider

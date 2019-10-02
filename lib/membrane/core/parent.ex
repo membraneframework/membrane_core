@@ -1,11 +1,13 @@
 defmodule Membrane.Core.Parent do
-  use Membrane.Core.PlaybackHandler
+  #use Membrane.Core.PlaybackHandler
 
-  alias Membrane.Core
-  alias Core.{Message, PlaybackHandler}
+  alias Membrane.{Core, Sync}
+  alias Core.{CallbackHandler, Message, Playback, PlaybackHandler}
 
   require Membrane.PlaybackState
   require Message
+
+  # TODO these functions should probably be simply moved to Parent.LifecycleController (?) unless used elsewhere.
 
   def handle_playback_state(old, new, state) do
     children_data =
@@ -29,7 +31,6 @@ defmodule Membrane.Core.Parent do
     end
   end
 
-  @impl PlaybackHandler
   def handle_playback_state_changed(old, new, state) do
     callback = PlaybackHandler.state_change_callback(old, new)
 
@@ -37,7 +38,7 @@ defmodule Membrane.Core.Parent do
       Message.self(:stop_and_terminate)
     end
 
-    CallbackHandler.exec_and_handle_callback(callback, __MODULE__, [], state)
+    CallbackHandler.exec_and_handle_callback(callback, state.handlers.action_handler, [], state)
   end
 
   @spec change_playback_state(pid, Membrane.PlaybackState.t()) :: :ok

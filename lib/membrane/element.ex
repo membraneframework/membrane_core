@@ -31,10 +31,6 @@ defmodule Membrane.Element do
   @type state_t :: map | struct
 
   @doc """
-  Checks whether the given term is a valid element name
-  """
-
-  @doc """
   Checks whether module is an element.
   """
   @spec element?(module) :: boolean

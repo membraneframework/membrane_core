@@ -1,13 +1,13 @@
 defmodule Membrane.Core.Element.PadControllerTest do
   use ExUnit.Case, async: true
   alias Membrane.Support.Element.{DynamicFilter, TrivialFilter, TrivialSink}
-  alias Membrane.Core.Element.{PadModel, PadSpecHandler, State}
-  alias Membrane.Core.{Message, Playbackable}
+  alias Membrane.Core.Element.State
+  alias Membrane.Core.{Message, PadModel, PadSpecHandler, Playbackable}
   alias Membrane.Pad
   alias Membrane.LinkError
   require Message
 
-  @module Membrane.Core.Element.PadController
+  @module Membrane.Core.PadController
 
   defp prepare_state(elem_module, name \\ :element, playback_state \\ :stopped) do
     %{name: name, module: elem_module, clock: nil, sync: nil}

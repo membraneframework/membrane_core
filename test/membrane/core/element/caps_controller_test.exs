@@ -3,8 +3,8 @@ defmodule Membrane.Core.Element.CapsControllerTest do
 
   alias Membrane.Buffer
   alias Membrane.Caps.Mock, as: MockCaps
-  alias Membrane.Core.{InputBuffer, Message}
-  alias Membrane.Core.Element.{PadModel, State}
+  alias Membrane.Core.{InputBuffer, Message, PadModel}
+  alias Membrane.Core.Element.State
   alias Membrane.Pad.Data
   alias Membrane.Support.DemandsTest.Filter
 

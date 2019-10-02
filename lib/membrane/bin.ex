@@ -115,13 +115,23 @@ defmodule Membrane.Bin do
 
   @impl GenServer
   def init({my_name, module, bin_options}) do
-    with {{:ok, spec}, internal_state} <- module.handle_init(bin_options) do
+    {:ok, clock} = Membrane.Clock.start_link(proxy: true)
+    with {{:ok, spec}, internal_state} <- module.handle_init(bin_options) do # TODO use CallbackHandler to call init
       state =
         %State{
           internal_state: internal_state,
           bin_options: bin_options,
           module: module,
-          name: my_name
+          name: my_name,
+          clock_proxy: clock,
+          handlers: handlers(),
+          synchronization: %{
+            pipeline_clock: clock, # TODO change key name, it is bin clock
+            timers: %{},
+            clock: nil,
+            stream_sync: nil,
+            latency: 0
+          }
         }
         |> PadSpecHandler.init_pads()
 
@@ -173,7 +183,7 @@ defmodule Membrane.Bin do
   end
 
   def handle_info(message, state) do
-    Parent.MessageDispatcher.handle_message(message, state, handlers())
+    Parent.MessageDispatcher.handle_message(message, state)
     |> noreply(state)
   end
 
@@ -207,7 +217,7 @@ defmodule Membrane.Bin do
     |> reply()
   end
 
-  def handle_call(Message.new(:set_watcher, watcher), _, state) do
+  def handle_call(Message.new(:handle_watcher, watcher), _, state) do
     Child.LifecycleController.handle_watcher(watcher, state)
     |> reply()
   end

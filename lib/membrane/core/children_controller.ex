@@ -3,9 +3,10 @@ defmodule Membrane.Core.Parent.ChildrenController do
   use Bunch
   use Membrane.Log, tags: :core
 
-  alias Membrane.{Bin, CallbackError, Child, Element, Spec, ParentError}
-  alias Membrane.Core.{CallbackHandler, Message, Parent}
-  alias Membrane.Core.Link
+  alias Membrane.{Bin, CallbackError, Child, Element, ParentError, Spec, Sync}
+  alias Membrane.Core
+  alias Core.{CallbackHandler, Message, Parent}
+  alias Core.Link
   alias Bunch.Type
 
   require Bin
@@ -86,11 +87,11 @@ defmodule Membrane.Core.Parent.ChildrenController do
       |> Map.new()
     else
       dups: dups ->
-        raise PipelineError,
+        raise ParentError,
               "Cannot apply sync - duplicate elements: #{dups |> Enum.join(", ")}"
 
       unknown: unknown ->
-        raise PipelineError,
+        raise ParentError,
               "Cannot apply sync - unknown elements: #{unknown |> Enum.join(", ")}"
     end
   end
@@ -197,6 +198,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
   end
 
   defp start_child_bin(%{name: name, module: module, options: options}, parent_clock, sync) do
+    # TODO redo start link of Bin to accept parent clock and options as map
     with {:ok, pid} <- Bin.start_link(name, module, options, []),
          :ok <- Bin.set_controlling_pid(pid, self()),
          {:ok, %{clock: clock}} <- Message.call(pid, :handle_watcher, self()) do

@@ -11,9 +11,9 @@ defmodule Membrane.Core.Element.LifecycleController do
   require Membrane.Core.Playback
   require Membrane.Element.CallbackContext.{Other, PlaybackChange}
   alias Membrane.{Clock, Element, Sync}
-  alias Membrane.Core.{CallbackHandler, Message, PadModel, Playback}
+  alias Membrane.Core.{CallbackHandler, Message, Playback}
   alias Membrane.Core.Element.{ActionHandler, PlaybackBuffer, State}
-  alias Membrane.Element.{CallbackContext, Pad}
+  alias Membrane.Element.CallbackContext
 
   @doc """
   Performs initialization tasks and executes `handle_init` callback.

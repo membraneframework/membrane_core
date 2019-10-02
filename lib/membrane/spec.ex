@@ -67,7 +67,7 @@ defmodule Membrane.Spec do
 
   By default, no elements are synchronized.
 
- Sample definitions:
+  Sample definitions:
 
     ```
     %Spec{stream_sync: [[:element1, :element2], [:element3, :element4]]}

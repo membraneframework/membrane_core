@@ -22,10 +22,27 @@ defmodule Membrane.Core.Bin.State do
           pads: PadModel.pads_t() | nil,
           watcher: pid | nil,
           controlling_pid: pid | nil,
-          linking_buffer: LinkingBuffer.t()
+          linking_buffer: LinkingBuffer.t(),
+          clock_provider: %{
+            clock: Clock.t() | nil,
+            provider: Element.name_t() | nil, # TODO should this be any child? Probably, eventually yes?
+            choice: :auto | :manual
+          },
+          clock_proxy: Clock.t(),
+          handlers: Parent.MessageDispatcher.handlers() | nil,
+          synchronization: %{
+            timers: %{Timer.id_t() => Timer.t()},
+            pipeline_clock: Clock.t(),
+            latency: non_neg_integer(),
+            stream_sync: Sync.t(),
+            clock: Clock.t() | nil
+          },
         }
 
-  defstruct internal_state: nil,
+  @enforce_keys [:module, :clock_proxy]
+  defstruct @enforce_keys ++
+          [
+            internal_state: nil,
             playback: %Playback{},
             module: nil,
             children: %{},
@@ -36,7 +53,11 @@ defmodule Membrane.Core.Bin.State do
             pads: nil,
             watcher: nil,
             controlling_pid: nil,
-            linking_buffer: LinkingBuffer.new()
+            linking_buffer: LinkingBuffer.new(),
+            clock_provider: %{clock: nil, provider: nil, choice: :auto},
+            handlers: nil,
+            synchronization: %{}
+          ]
 
   defimpl Playbackable, for: __MODULE__ do
     use Playbackable.Default
