@@ -216,7 +216,7 @@ defmodule Membrane.Core.BinTest do
 
   defp get_child_pid(last_child_pid, [child | children]) when is_pid(last_child_pid) do
     state = :sys.get_state(last_child_pid)
-    child_pid = state.children[child]
+    %{pid: child_pid} = state.children[child]
     get_child_pid(child_pid, children)
   end
 

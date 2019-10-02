@@ -119,7 +119,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     {:ok, state}
   end
 
-  def child_playback_changed(pid, new_playback_state, %{pending_pids: pending_pids} = state) do
+  def child_playback_changed(pid, _new_playback_state, %{pending_pids: pending_pids} = state) do
     new_pending_pids = pending_pids |> MapSet.delete(pid)
     new_state = %{state | pending_pids: new_pending_pids}
 

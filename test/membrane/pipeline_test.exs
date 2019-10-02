@@ -32,7 +32,7 @@ defmodule Membrane.PipelineTest do
 
         @impl true
         def handle_init(_) do
-          spec = %Membrane.Pipeline.Spec{}
+          spec = %Membrane.Spec{}
           {{:ok, spec: spec}, %{}}
         end
       end
