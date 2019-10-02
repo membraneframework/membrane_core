@@ -184,5 +184,4 @@ defmodule Membrane.Pad do
       file: __ENV__.file,
       description: "#{inspect(name)} is not a proper pad name. Use public names only."
   end
-
 end

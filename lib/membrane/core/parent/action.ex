@@ -27,7 +27,8 @@ defmodule Membrane.Core.Parent.Action do
         {:ok, state}
       end
 
-    with {:ok, data} <- children |> Bunch.Enum.try_map(&Parent.ChildrenModel.get_child_data(state, &1)) do
+    with {:ok, data} <-
+           children |> Bunch.Enum.try_map(&Parent.ChildrenModel.get_child_data(state, &1)) do
       data |> Enum.each(&Message.send(&1.pid, :prepare_shutdown))
       :ok
     end

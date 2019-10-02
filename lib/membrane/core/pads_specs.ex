@@ -203,6 +203,7 @@ defmodule Membrane.Core.PadsSpecs do
       """
     end
   end
+
   def generate_docs_from_pads_specs(pads_specs) do
     pads_docs =
       pads_specs

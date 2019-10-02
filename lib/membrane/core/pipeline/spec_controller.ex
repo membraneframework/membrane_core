@@ -53,7 +53,10 @@ defmodule Membrane.Core.Pipeline.SpecController do
          :ok <-
            state
            |> Parent.ChildrenModel.get_children()
-           |> Bunch.Enum.try_each(fn {_name, %{pid: pid}} -> pid |> Message.call(:linking_finished, []) end), # TODO handle_linking_finished has to be moved to Core.Element from Element
+           # TODO handle_linking_finished has to be moved to Core.Element from Element
+           |> Bunch.Enum.try_each(fn {_name, %{pid: pid}} ->
+             pid |> Message.call(:linking_finished, [])
+           end),
          do: {:ok, state}
   end
 

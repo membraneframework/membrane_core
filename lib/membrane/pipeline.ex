@@ -49,7 +49,7 @@ defmodule Membrane.Pipeline do
   and initialize element internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
   """
-  @callback handle_init(options :: pipeline_options_t) :: CallbackHandler.callback_return_t
+  @callback handle_init(options :: pipeline_options_t) :: CallbackHandler.callback_return_t()
 
   @doc """
   Callback invoked when pipeline is shutting down.
@@ -99,13 +99,13 @@ defmodule Membrane.Pipeline do
 
       apply(GenServer, method, [__MODULE__, {module, pipeline_options}, process_options])
     else
-        warn_error(
-          """
-          Cannot start pipeline, passed module #{inspect(module)} is not a Membrane Pipeline.
-          Make sure that given module is the right one and it uses Membrane.Pipeline
-          """,
-          {:not_pipeline, module}
-        )
+      warn_error(
+        """
+        Cannot start pipeline, passed module #{inspect(module)} is not a Membrane Pipeline.
+        Make sure that given module is the right one and it uses Membrane.Pipeline
+        """,
+        {:not_pipeline, module}
+      )
     end
   end
 
@@ -245,7 +245,8 @@ defmodule Membrane.Pipeline do
   end
 
   def do_handle_action({:spec, spec = %Spec{}}, _cb, _params, state) do
-    with {{:ok, _children}, state} <- ChildrenController.handle_spec(spec, state), do: {:ok, state}
+    with {{:ok, _children}, state} <- ChildrenController.handle_spec(spec, state),
+         do: {:ok, state}
   end
 
   def do_handle_action({:remove_child, children}, _cb, _params, state) do

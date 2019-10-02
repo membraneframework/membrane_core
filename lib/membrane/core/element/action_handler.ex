@@ -2,7 +2,18 @@ defmodule Membrane.Core.Element.ActionHandler do
   @moduledoc false
   # Module validating and executing actions returned by element's callbacks.
 
-  alias Membrane.{ActionError, Buffer, Caps, CallbackError, Core, Element, Event, Notification, Pad}
+  alias Membrane.{
+    ActionError,
+    Buffer,
+    Caps,
+    CallbackError,
+    Core,
+    Element,
+    Event,
+    Notification,
+    Pad
+  }
+
   alias Core.Element.{DemandHandler, LifecycleController, State, TimerController}
   alias Core.{Message, PadModel, PlaybackHandler}
   alias Element.Action

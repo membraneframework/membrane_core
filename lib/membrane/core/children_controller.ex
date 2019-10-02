@@ -52,7 +52,8 @@ defmodule Membrane.Core.Parent.ChildrenController do
 
     {:ok, state} = children |> add_children(state)
 
-    {:ok, state} = Parent.Action.choose_clock(children, clock_provider, state) # TODO where choose_cloc/3 should be?
+    # TODO where choose_cloc/3 should be?
+    {:ok, state} = Parent.Action.choose_clock(children, clock_provider, state)
 
     {{:ok, links}, state} = {links |> parse_links(), state}
     {links, state} = links |> state.handlers.spec_controller.resolve_links(state)
@@ -147,7 +148,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
     end
   end
 
-  #@spec start_children([parsed_child_t], parent_clock :: Clock.t(), syncs :: m) :: [Parent.ChildrenModel.child_t()] # TODO
+  # @spec start_children([parsed_child_t], parent_clock :: Clock.t(), syncs :: m) :: [Parent.ChildrenModel.child_t()] # TODO
   def start_children(children, parent_clock, syncs) do
     debug("Starting children: #{inspect(children)}")
 
@@ -165,9 +166,11 @@ defmodule Membrane.Core.Parent.ChildrenController do
 
   defp start_child(%{name: name, module: module} = spec, parent_clock, syncs) do
     sync = syncs |> Map.get(name, Sync.no_sync())
+
     case child_type(module) do
       :bin ->
-        start_child_bin(spec, parent_clock, sync) # TODO set clock and syncs for bin as well
+        # TODO set clock and syncs for bin as well
+        start_child_bin(spec, parent_clock, sync)
 
       :element ->
         start_child_element(spec, parent_clock, sync)
@@ -185,7 +188,15 @@ defmodule Membrane.Core.Parent.ChildrenController do
   defp start_child_element(%{name: name, module: module, options: options}, parent_clock, sync) do
     debug("Pipeline: starting child: name: #{inspect(name)}, module: #{inspect(module)}")
 
-    with {:ok, pid} <- Core.Element.start_link(%{parent: self(), module: module, name: name, user_options: options, clock: parent_clock, sync: sync}),
+    with {:ok, pid} <-
+           Core.Element.start_link(%{
+             parent: self(),
+             module: module,
+             name: name,
+             user_options: options,
+             clock: parent_clock,
+             sync: sync
+           }),
          :ok <- Message.call(pid, :set_controlling_pid, self()),
          {:ok, %{clock: clock}} <- Message.call(pid, :handle_watcher, self()) do
       {name, %{pid: pid, clock: clock, sync: sync}}
@@ -197,7 +208,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
     end
   end
 
-  defp start_child_bin(%{name: name, module: module, options: options}, parent_clock, sync) do
+  defp start_child_bin(%{name: name, module: module, options: options}, _parent_clock, sync) do
     # TODO redo start link of Bin to accept parent clock and options as map
     with {:ok, pid} <- Bin.start_link(name, module, options, []),
          :ok <- Bin.set_controlling_pid(pid, self()),

@@ -36,5 +36,4 @@ defmodule Membrane.Core.Message do
 
   def set_for_pad(message(opts: opts) = msg, pad),
     do: message(msg, opts: Keyword.put(opts, :for_pad, pad))
-
 end

@@ -20,7 +20,8 @@ defmodule Membrane.Core.Pipeline.State do
           terminating?: boolean,
           clock_provider: %{
             clock: Clock.t() | nil,
-            provider: Element.name_t() | nil, # TODO should this be any child? Probably, eventually yes?
+            # TODO should this be any child? Probably, eventually yes?
+            provider: Element.name_t() | nil,
             choice: :auto | :manual
           },
           clock_proxy: Clock.t(),

@@ -109,7 +109,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
       when pending_pids == %MapSet{} do
     {:ok, state}
   end
-  
+
   def child_playback_changed(
         _pid,
         new_playback_state,

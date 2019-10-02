@@ -1,8 +1,8 @@
 defmodule Membrane.Core.Parent do
-  #use Membrane.Core.PlaybackHandler
+  # use Membrane.Core.PlaybackHandler
 
   alias Membrane.{Core, Sync}
-  alias Core.{CallbackHandler, Message, Playback, PlaybackHandler}
+  alias Core.{CallbackHandler, Message, PlaybackHandler}
 
   require Membrane.PlaybackState
   require Message
@@ -63,6 +63,4 @@ defmodule Membrane.Core.Parent do
   defp do_toggle_syncs_active(children_data, fun) do
     children_data |> Enum.uniq_by(& &1.sync) |> Enum.map(& &1.sync) |> Bunch.Enum.try_each(fun)
   end
-
-
 end

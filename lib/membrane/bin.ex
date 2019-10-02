@@ -116,7 +116,8 @@ defmodule Membrane.Bin do
   @impl GenServer
   def init({my_name, module, bin_options}) do
     {:ok, clock} = Membrane.Clock.start_link(proxy: true)
-    with {{:ok, spec}, internal_state} <- module.handle_init(bin_options) do # TODO use CallbackHandler to call init
+    # TODO use CallbackHandler to call init
+    with {{:ok, spec}, internal_state} <- module.handle_init(bin_options) do
       state =
         %State{
           internal_state: internal_state,
@@ -126,7 +127,8 @@ defmodule Membrane.Bin do
           clock_proxy: clock,
           handlers: handlers(),
           synchronization: %{
-            pipeline_clock: clock, # TODO change key name, it is bin clock
+            # TODO change key name, it is bin clock
+            pipeline_clock: clock,
             timers: %{},
             clock: nil,
             stream_sync: nil,

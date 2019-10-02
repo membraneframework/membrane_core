@@ -13,11 +13,16 @@ defmodule Membrane.Core.PadSpecHandler do
   @doc """
   Initializes pads info basing on element's pads specifications.
   """
-  @spec init_pads(Core.Element.State.t() | Core.Bin.State.t()) :: Element.State.t() | Bin.State.t()
+  @spec init_pads(Core.Element.State.t() | Core.Bin.State.t()) ::
+          Element.State.t() | Bin.State.t()
   def init_pads(%{module: module} = state) do
     pads = %{
       data: %{},
-      info: module.membrane_pads() |> add_bin_pads() |> Bunch.KVList.map_values(&init_pad_info/1) |> Map.new(),
+      info:
+        module.membrane_pads()
+        |> add_bin_pads()
+        |> Bunch.KVList.map_values(&init_pad_info/1)
+        |> Map.new(),
       dynamic_currently_linking: []
     }
 
@@ -63,5 +68,4 @@ defmodule Membrane.Core.PadSpecHandler do
   # TODO to be replaced with Pad.opposite_direction/1 once merged to master!
   defp opposite_direction(:input), do: :output
   defp opposite_direction(:output), do: :input
-
 end

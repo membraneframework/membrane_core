@@ -26,7 +26,8 @@ defmodule Membrane.Core.Bin.State do
           linking_buffer: LinkingBuffer.t(),
           clock_provider: %{
             clock: Clock.t() | nil,
-            provider: Element.name_t() | nil, # TODO should this be any child? Probably, eventually yes?
+            # TODO should this be any child? Probably, eventually yes?
+            provider: Element.name_t() | nil,
             choice: :auto | :manual
           },
           clock_proxy: Clock.t(),
@@ -37,32 +38,32 @@ defmodule Membrane.Core.Bin.State do
             latency: non_neg_integer(),
             stream_sync: Sync.t(),
             clock: Clock.t() | nil
-          },
+          }
         }
 
   @enforce_keys [:module, :clock_proxy]
   defstruct @enforce_keys ++
-          [
-            internal_state: nil,
-            playback: %Playback{},
-            module: nil,
-            children: %{},
-            pending_pids: MapSet.new(),
-            terminating?: false,
-            name: nil,
-            bin_options: nil,
-            pads: nil,
-            watcher: nil,
-            controlling_pid: nil,
-            linking_buffer: LinkingBuffer.new(),
-            clock_provider: %{clock: nil, provider: nil, choice: :auto},
-            handlers: %{
-              action_handler: Bin.ActionHandler,
-              playback_controller: Bin,
-              spec_controller: Bin.SpecController
-            },
-            synchronization: %{}
-          ]
+              [
+                internal_state: nil,
+                playback: %Playback{},
+                module: nil,
+                children: %{},
+                pending_pids: MapSet.new(),
+                terminating?: false,
+                name: nil,
+                bin_options: nil,
+                pads: nil,
+                watcher: nil,
+                controlling_pid: nil,
+                linking_buffer: LinkingBuffer.new(),
+                clock_provider: %{clock: nil, provider: nil, choice: :auto},
+                handlers: %{
+                  action_handler: Bin.ActionHandler,
+                  playback_controller: Bin,
+                  spec_controller: Bin.SpecController
+                },
+                synchronization: %{}
+              ]
 
   defimpl Playbackable, for: __MODULE__ do
     use Playbackable.Default

@@ -20,7 +20,6 @@ defmodule Membrane.Core.Link do
 
     alias Membrane.Element
     alias Membrane.Pad
-    alias Membrane.Pipeline
 
     @enforce_keys [:element, :pad_name]
     defstruct element: nil, pad_name: nil, id: nil, pad_ref: nil, pid: nil, opts: []

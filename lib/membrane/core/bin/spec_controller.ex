@@ -75,7 +75,9 @@ defmodule Membrane.Core.Bin.SpecController do
          :ok <-
            state
            |> Parent.ChildrenModel.get_children()
-           |> Bunch.Enum.try_each(fn {_name, %{pid: pid}} -> pid |> Message.call(:linking_finished, []) end),
+           |> Bunch.Enum.try_each(fn {_name, %{pid: pid}} ->
+             pid |> Message.call(:linking_finished, [])
+           end),
          do: {:ok, state}
   end
 
