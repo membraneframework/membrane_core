@@ -59,7 +59,7 @@ defmodule Membrane.Core.Bin.State do
                 clock_provider: %{clock: nil, provider: nil, choice: :auto},
                 handlers: %{
                   action_handler: Bin.ActionHandler,
-                  playback_controller: Bin,
+                  playback_controller: Core.Parent.LifecycleController,
                   spec_controller: Bin.SpecController
                 },
                 synchronization: %{}

@@ -31,7 +31,6 @@ defmodule Membrane.Pipeline do
   use Membrane.Log, tags: :core
   use Membrane.Core.CallbackHandler
   use GenServer
-  use Membrane.Core.PlaybackHandler
 
   @typedoc """
   Defines options that can be passed to `start/3` / `start_link/3` and received
@@ -173,22 +172,6 @@ defmodule Membrane.Pipeline do
   @spec pipeline?(module) :: boolean
   def pipeline?(module) do
     module |> Bunch.Module.check_behaviour(:membrane_pipeline?)
-  end
-
-  @impl PlaybackHandler
-  def handle_playback_state(old, new, state) do
-    Membrane.Core.Parent.handle_playback_state(old, new, state)
-  end
-
-  @impl PlaybackHandler
-  def handle_playback_state_changed(old, new, state) do
-    callback = PlaybackHandler.state_change_callback(old, new)
-
-    if new == :stopped and state.terminating? do
-      Message.self(:stop_and_terminate)
-    end
-
-    CallbackHandler.exec_and_handle_callback(callback, __MODULE__, [], state)
   end
 
   @impl GenServer

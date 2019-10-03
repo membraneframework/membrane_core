@@ -2,7 +2,6 @@ defmodule Membrane.Bin do
   use Bunch
   use Membrane.Log, tags: :core
   use GenServer
-  use Membrane.Core.PlaybackHandler
 
   import Membrane.Helper.GenServer
 
@@ -157,11 +156,6 @@ defmodule Membrane.Bin do
   @spec bin?(module) :: boolean
   def bin?(module) do
     module |> Bunch.Module.check_behaviour(:membrane_bin?)
-  end
-
-  @impl PlaybackHandler
-  def handle_playback_state(old, new, state) do
-    Membrane.Core.Parent.handle_playback_state(old, new, state)
   end
 
   @impl GenServer

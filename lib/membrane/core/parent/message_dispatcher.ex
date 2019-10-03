@@ -25,7 +25,6 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     LifecycleController.handle_spec(spec, state)
   end
 
-  # Request to change playback state
   def handle_message(Message.new(:change_playback_state, new_state), state) do
     LifecycleController.change_playback_state(new_state, state)
   end
