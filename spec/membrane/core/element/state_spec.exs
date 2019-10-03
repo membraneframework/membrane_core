@@ -32,7 +32,7 @@ defmodule Membrane.Core.Element.StateSpec do
              synchronization: %{
                timers: %{},
                clock: nil,
-               pipeline_clock: nil,
+               parent_clock: nil,
                latency: 0,
                stream_sync: Sync.no_sync()
              },

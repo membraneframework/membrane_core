@@ -31,7 +31,7 @@ defmodule Membrane.Core.Element.State do
           delayed_demands: %{{Pad.ref_t(), :supply | :redemand} => :sync | :async},
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
-            pipeline_clock: Clock.t(),
+            parent_clock: Clock.t(),
             latency: non_neg_integer(),
             stream_sync: Sync.t(),
             clock: Clock.t() | nil
@@ -84,7 +84,7 @@ defmodule Membrane.Core.Element.State do
       playback_buffer: PlaybackBuffer.new(),
       delayed_demands: %{},
       synchronization: %{
-        pipeline_clock: options.clock,
+        parent_clock: options.clock,
         timers: %{},
         clock: nil,
         stream_sync: options.sync,

@@ -34,7 +34,7 @@ defmodule Membrane.Core.Bin.State do
           handlers: Parent.MessageDispatcher.handlers(),
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
-            pipeline_clock: Clock.t(),
+            parent_clock: Clock.t(),
             latency: non_neg_integer(),
             stream_sync: Sync.t(),
             clock: Clock.t() | nil

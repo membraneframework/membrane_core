@@ -159,7 +159,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp do_handle_action({:start_timer, {id, interval}}, cb, params, state) do
-    clock = state.synchronization.pipeline_clock
+    clock = state.synchronization.parent_clock
     do_handle_action({:start_timer, {id, interval, clock}}, cb, params, state)
   end
 

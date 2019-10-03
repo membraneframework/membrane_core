@@ -124,8 +124,7 @@ defmodule Membrane.Bin do
         name: my_name,
         clock_proxy: clock,
         synchronization: %{
-          # TODO change key name, it is bin clock
-          pipeline_clock: clock,
+          parent_clock: clock,
           timers: %{},
           clock: nil,
           stream_sync: nil,
