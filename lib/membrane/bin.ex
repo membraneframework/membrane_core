@@ -20,9 +20,8 @@ defmodule Membrane.Bin do
     Message
   }
 
-  alias Membrane.Core.Bin.{State, LinkingBuffer, SpecController}
+  alias Membrane.Core.Bin.{State, LinkingBuffer}
   alias Membrane.{CallbackError, Element}
-  alias Membrane.Core.Bin.ActionHandler
 
   require Element
   require Message
@@ -125,7 +124,6 @@ defmodule Membrane.Bin do
           module: module,
           name: my_name,
           clock_proxy: clock,
-          handlers: handlers(),
           synchronization: %{
             # TODO change key name, it is bin clock
             pipeline_clock: clock,
@@ -227,14 +225,6 @@ defmodule Membrane.Bin do
   def set_controlling_pid(server, controlling_pid, timeout \\ 5000) do
     Message.call(server, :set_controlling_pid, controlling_pid, [], timeout)
   end
-
-  @spec handlers :: Parent.MessageDispatcher.handlers()
-  defp handlers,
-    do: %{
-      action_handler: ActionHandler,
-      playback_controller: __MODULE__,
-      spec_controller: SpecController
-    }
 
   defmacro __using__(_) do
     quote location: :keep do
