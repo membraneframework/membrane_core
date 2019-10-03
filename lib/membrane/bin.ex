@@ -136,8 +136,7 @@ defmodule Membrane.Bin do
     with {:ok, state} <-
            CallbackHandler.exec_and_handle_callback(
              :handle_init,
-             # TODO take handlers from one source
-             Bin.ActionHandler,
+             state.handlers.action_handler,
              %{state: false},
              [bin_options],
              state
