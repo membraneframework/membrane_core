@@ -10,6 +10,7 @@ defmodule Membrane.Bin do
 
   alias Membrane.Core.{
     Bin,
+    CallbackHandler,
     Child,
     PadController,
     PadSpecHandler,
@@ -115,27 +116,33 @@ defmodule Membrane.Bin do
   @impl GenServer
   def init({my_name, module, bin_options}) do
     {:ok, clock} = Membrane.Clock.start_link(proxy: true)
-    # TODO use CallbackHandler to call init
-    with {{:ok, spec}, internal_state} <- module.handle_init(bin_options) do
-      state =
-        %State{
-          internal_state: internal_state,
-          bin_options: bin_options,
-          module: module,
-          name: my_name,
-          clock_proxy: clock,
-          synchronization: %{
-            # TODO change key name, it is bin clock
-            pipeline_clock: clock,
-            timers: %{},
-            clock: nil,
-            stream_sync: nil,
-            latency: 0
-          }
-        }
-        |> PadSpecHandler.init_pads()
 
-      Message.self(:handle_spec, spec)
+    state =
+      %State{
+        bin_options: bin_options,
+        module: module,
+        name: my_name,
+        clock_proxy: clock,
+        synchronization: %{
+          # TODO change key name, it is bin clock
+          pipeline_clock: clock,
+          timers: %{},
+          clock: nil,
+          stream_sync: nil,
+          latency: 0
+        }
+      }
+      |> PadSpecHandler.init_pads()
+
+    with {:ok, state} <-
+           CallbackHandler.exec_and_handle_callback(
+             :handle_init,
+             # TODO take handlers from one source
+             Bin.ActionHandler,
+             %{state: false},
+             [bin_options],
+             state
+           ) do
       {:ok, state}
     else
       {:error, reason} ->

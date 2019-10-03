@@ -31,7 +31,7 @@ defmodule Membrane.Support.Bin.TestBins do
 
       state = %{}
 
-      {{:ok, spec}, state}
+      {{:ok, spec: spec}, state}
     end
   end
 
@@ -65,7 +65,7 @@ defmodule Membrane.Support.Bin.TestBins do
 
       state = %{}
 
-      {{:ok, spec}, state}
+      {{:ok, spec: spec}, state}
     end
 
     def handle_pad_added(_pad_ref, _ctx, state), do: {:ok, state}
@@ -98,7 +98,7 @@ defmodule Membrane.Support.Bin.TestBins do
 
       state = %{}
 
-      {{:ok, spec}, state}
+      {{:ok, spec: spec}, state}
     end
 
     @impl true
@@ -136,7 +136,7 @@ defmodule Membrane.Support.Bin.TestBins do
 
       state = %{}
 
-      {{:ok, spec}, state}
+      {{:ok, spec: spec}, state}
     end
 
     @impl true
