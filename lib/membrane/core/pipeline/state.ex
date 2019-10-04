@@ -4,9 +4,9 @@ defmodule Membrane.Core.Pipeline.State do
   # It does not represent state of pipelines you construct, it's a state used
   # internally in Membrane.
 
-  alias Membrane.Core
+  alias Membrane.{Child, Core}
   alias Membrane.Core.{Playback, Playbackable}
-  alias Membrane.{Clock, Element, Sync}
+  alias Membrane.{Clock, Sync}
   use Bunch
 
   @derive Playbackable
@@ -20,8 +20,7 @@ defmodule Membrane.Core.Pipeline.State do
           terminating?: boolean,
           clock_provider: %{
             clock: Clock.t() | nil,
-            # TODO should this be any child? Probably, eventually yes?
-            provider: Element.name_t() | nil,
+            provider: Child.name_t() | nil,
             choice: :auto | :manual
           },
           clock_proxy: Clock.t(),

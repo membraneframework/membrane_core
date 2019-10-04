@@ -53,6 +53,11 @@ defmodule Membrane.Bin do
               | {:error, any}
 
   @doc """
+  Automatically implemented callback used to determine whether bin exports clock.
+  """
+  @callback membrane_clock? :: true
+
+  @doc """
   This function defines a term that allows to reference current bin from Membrane.Spec
   """
   def itself, do: {__MODULE__, :itself}
@@ -65,6 +70,23 @@ defmodule Membrane.Bin do
   @doc PadsSpecs.def_pad_docs(:output, :bin)
   defmacro def_output_pad(name, spec) do
     PadsSpecs.def_bin_pad(name, :output, spec)
+  end
+
+  defmacro def_clock(doc \\ "") do
+    quote do
+      @membrane_bin_exposes_clock true
+
+      Module.put_attribute(__MODULE__, :membrane_clock_moduledoc, """
+      ## Clock
+
+      This bin exposes a clock of one of its children.
+
+      #{unquote(doc)}
+      """)
+
+      @impl true
+      def membrane_clock?, do: true
+    end
   end
 
   @doc """
@@ -114,7 +136,11 @@ defmodule Membrane.Bin do
 
   @impl GenServer
   def init({my_name, module, bin_options}) do
-    {:ok, clock} = Membrane.Clock.start_link(proxy: true)
+    clock =
+      if module |> Bunch.Module.check_behaviour(:membrane_clock?) do
+        {:ok, pid} = Membrane.Clock.start_link(proxy: true)
+        pid
+      end
 
     state =
       %State{
@@ -125,7 +151,8 @@ defmodule Membrane.Bin do
         synchronization: %{
           parent_clock: clock,
           timers: %{},
-          clock: nil,
+          # TODO make an `if` here. We don't always want to expose the clock
+          clock: clock,
           stream_sync: nil,
           latency: 0
         }
@@ -232,7 +259,9 @@ defmodule Membrane.Bin do
       @behaviour unquote(__MODULE__)
 
       import Membrane.Element.Base, only: [def_options: 1]
-      import unquote(__MODULE__), only: [def_input_pad: 2, def_output_pad: 2]
+
+      import unquote(__MODULE__),
+        only: [def_input_pad: 2, def_output_pad: 2, def_clock: 0, def_clock: 1]
 
       require Membrane.Core.PadsSpecs
 
@@ -242,6 +271,9 @@ defmodule Membrane.Bin do
       def membrane_bin?, do: true
 
       @impl true
+      def membrane_clock?, do: false
+
+      @impl true
       def handle_init(_options), do: {{:ok, %Membrane.Spec{}}, %{}}
 
       @impl true
@@ -249,7 +281,8 @@ defmodule Membrane.Bin do
         do: {{:ok, notify: notification}, state}
 
       defoverridable handle_init: 1,
-                     handle_notification: 3
+                     handle_notification: 3,
+                     membrane_clock?: 0
     end
   end
 end

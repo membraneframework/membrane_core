@@ -210,6 +210,74 @@ defmodule Membrane.Core.BinTest do
     end
   end
 
+  describe "Integration with clocks" do
+    defmodule ClockElement do
+      use Membrane.Source
+
+      def_output_pad :output, caps: :any
+
+      def_clock()
+    end
+
+    defmodule ClockBin do
+      use Membrane.Bin
+
+      def_clock()
+
+      @impl true
+      def handle_init(_) do
+        children = [element_child: ClockElement]
+
+        spec = %Membrane.Spec{
+          children: children,
+          links: %{},
+          clock_provider: :element_child
+        }
+
+        {{:ok, spec: spec}, :ignored}
+      end
+    end
+
+    defmodule ClockPipeline do
+      use Membrane.Pipeline
+
+      @impl true
+      def handle_init(_) do
+        children = [bin_child: ClockBin]
+
+        {{:ok, spec: %Membrane.Spec{children: children, links: %{}, clock_provider: :bin_child}},
+         :ignored}
+      end
+    end
+
+    test "Bin is clock_provider" do
+      {:ok, pid} = ClockPipeline.start_link()
+
+      %Membrane.Core.Pipeline.State{clock_provider: pipeline_clock_provider} =
+        state = :sys.get_state(pid)
+
+      assert %{choice: :manual, clock: clock1, provider: :bin_child} = pipeline_clock_provider
+      refute is_nil(clock1)
+
+      %{pid: bin_pid} = state.children[:bin_child]
+      %Membrane.Core.Bin.State{clock_provider: bin_clock_provider} = :sys.get_state(bin_pid)
+      assert %{choice: :manual, clock: clock2, provider: :element_child} = bin_clock_provider
+      refute is_nil(clock2)
+
+      assert proxy_for?(clock1, clock2)
+    end
+
+    defp proxy_for?(c1, c2) do
+      c1_state = :sys.get_state(c1)
+      assert c1_state.proxy_for == c2
+    end
+
+    # defp proxy_for?(c1, c2) do
+    #  c1_state = :sys.get_state(c1)
+    #  assert c1_state.proxy_for == c2.pid
+    # end
+  end
+
   defp get_child_pid(last_child_pid, []) when is_pid(last_child_pid) do
     {:ok, last_child_pid}
   end

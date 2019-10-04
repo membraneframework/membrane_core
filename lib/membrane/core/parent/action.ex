@@ -48,7 +48,7 @@ defmodule Membrane.Core.Parent.Action do
     cond do
       provider != nil -> get_clock_from_provider(children, provider)
       invalid_choice?(state) -> :no_provider
-      true -> choose_clock_provider(state.children)
+      true -> choose_clock_provider(children)
     end
     |> case do
       :no_provider ->

@@ -4,6 +4,7 @@ defmodule Membrane.Core.Bin.State do
   # It does not represent state of bins you construct, it's a state used
   # internally in Membrane.
 
+  alias Membrane.Child
   alias Membrane.Core.Bin
   alias Membrane.Core.{Parent, Playback, Playbackable, PadModel}
   alias Membrane.Core.Bin.LinkingBuffer
@@ -26,8 +27,7 @@ defmodule Membrane.Core.Bin.State do
           linking_buffer: LinkingBuffer.t(),
           clock_provider: %{
             clock: Clock.t() | nil,
-            # TODO should this be any child? Probably, eventually yes?
-            provider: Element.name_t() | nil,
+            provider: Child.name_t() | nil,
             choice: :auto | :manual
           },
           clock_proxy: Clock.t(),

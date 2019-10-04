@@ -55,7 +55,7 @@ defmodule Membrane.Core.PadSpecHandler do
 
     public_spec = filter_opts(spec)
 
-    priv_spec = filter_opts(%{spec | direction: opposite_direction(spec.direction)})
+    priv_spec = filter_opts(%{spec | direction: Pad.opposite_direction(spec.direction)})
 
     [{name, public_spec}, {priv_bin_name, priv_spec}]
   end
@@ -64,8 +64,4 @@ defmodule Membrane.Core.PadSpecHandler do
 
   defp filter_opts(%{direction: :output} = spec),
     do: Map.drop(spec, @private_input_pad_spec_keys)
-
-  # TODO to be replaced with Pad.opposite_direction/1 once merged to master!
-  defp opposite_direction(:input), do: :output
-  defp opposite_direction(:output), do: :input
 end

@@ -30,7 +30,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     children_pids = children_data |> Enum.map(& &1.pid)
 
     children_pids
-    |> Enum.each(&Parent.change_playback_state(&1, new))
+    |> Enum.each(&PlaybackHandler.request_change_playback_state(&1, new))
 
     :ok = toggle_syncs_active(old, new, children_data)
 
@@ -117,7 +117,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
-  # TODO get pending pids via child_controller?
   def child_playback_changed(
         _pid,
         _new_playback_state,

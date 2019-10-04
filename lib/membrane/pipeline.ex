@@ -120,26 +120,27 @@ defmodule Membrane.Pipeline do
   @doc """
   Changes playback state to `:playing`.
 
-  An alias for `Membrane.Core.Parent.change_playback_state/2` with proper state.
+  An alias for `Membrane.Core.PlaybackHandler.change_playback_state/2` with proper state.
   """
   @spec play(pid) :: :ok
-  def play(pid), do: Membrane.Core.Parent.change_playback_state(pid, :playing)
+  def play(pid), do: Membrane.Core.PlaybackHandler.request_change_playback_state(pid, :playing)
 
   @doc """
   Changes playback state to `:prepared`.
 
-  An alias for `Membrane.Core.Parent.change_playback_state/2` with proper state.
+  An alias for `Membrane.Core.PlaybackHandler.change_playback_state/2` with proper state.
   """
   @spec prepare(pid) :: :ok
-  def prepare(pid), do: Membrane.Core.Parent.change_playback_state(pid, :prepared)
+  def prepare(pid),
+    do: Membrane.Core.PlaybackHandler.request_change_playback_state(pid, :prepared)
 
   @doc """
   Changes playback state to `:stopped`.
 
-  An alias for `Membrane.Core.Parent.change_playback_state/2` with proper state.
+  An alias for `Membrane.Core.PlaybackHandler.change_playback_state/2` with proper state.
   """
   @spec stop(pid) :: :ok
-  def stop(pid), do: Membrane.Core.Parent.change_playback_state(pid, :stopped)
+  def stop(pid), do: Membrane.Core.PlaybackHandler.request_change_playback_state(pid, :stopped)
 
   @impl GenServer
   def init(module) when is_atom(module) do

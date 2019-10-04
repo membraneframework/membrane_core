@@ -254,7 +254,7 @@ defmodule Membrane.Element.Base do
       Module.put_attribute(__MODULE__, :membrane_clock_moduledoc, """
       ## Clock
 
-      This element provides a clock to its pipeline.
+      This element provides a clock to its parent.
 
       #{unquote(doc)}
       """)
