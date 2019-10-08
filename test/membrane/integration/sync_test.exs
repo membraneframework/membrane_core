@@ -3,8 +3,9 @@ defmodule Membrane.Integration.SyncTest do
 
   import Membrane.Testing.Assertions
 
-  alias Membrane.Support.Sync
+  alias Membrane.Support.{Sync, TestBins}
   alias Membrane.{Time, Testing}
+  alias TestBins.TestFilter
 
   @tick_number_error 5
   @sync_error_ms 5
@@ -135,5 +136,51 @@ defmodule Membrane.Integration.SyncTest do
 
     assert_start_of_stream(pipeline, :sink_a)
     assert_start_of_stream(pipeline, :sink_b, :input, @sync_error_ms)
+  end
+
+  defmodule SimpleBin do
+    use Membrane.Bin
+
+    def_input_pad :input, demand_unit: :buffers, caps: :any
+    def_output_pad :output, caps: :any, demand_unit: :buffers
+
+    @impl true
+    def handle_init(_) do
+      children = [filter1: TestFilter, filter2: TestFilter]
+
+      spec = %Membrane.Spec{
+        children: children,
+        links: %{},
+        stream_sync: []
+      }
+
+      {{:ok, spec: spec}, :ignored}
+    end
+  end
+
+  test "synchronize selected groups with bin results with error" do
+    alias Membrane.Testing.Source
+
+    children = [
+      el1: Source,
+      el2: SimpleBin
+    ]
+
+    links = %{}
+
+    spec = %Membrane.Spec{
+      children: children,
+      links: links,
+      stream_sync: [[:el1, :el2]]
+    }
+
+    options = %Testing.Pipeline.Options{
+      module: Membrane.Support.Sync.Pipeline,
+      custom_args: %{spec | stream_sync: [[:el1, :el2]]}
+    }
+
+    assert {:error, reason} = Testing.Pipeline.start_link(options)
+
+    assert {%Membrane.ParentError{}, _} = reason
   end
 end

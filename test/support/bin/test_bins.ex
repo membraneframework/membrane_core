@@ -1,6 +1,23 @@
 defmodule Membrane.Support.Bin.TestBins do
   alias Membrane.Spec
 
+  defmodule TestFilter do
+    use Membrane.Filter
+
+    def_output_pad :output, caps: :any
+
+    def_input_pad :input, demand_unit: :buffers, caps: :any
+
+    @impl true
+    def handle_other({:notify_parent, notif}, _ctx, state), do: {{:ok, notify: notif}, state}
+
+    @impl true
+    def handle_demand(:output, size, _, _ctx, state), do: {{:ok, demand: {:input, size}}, state}
+
+    @impl true
+    def handle_process(_pad, buf, _, state), do: {{:ok, buffer: {:output, buf}}, state}
+  end
+
   defmodule SimpleBin do
     use Membrane.Bin
 

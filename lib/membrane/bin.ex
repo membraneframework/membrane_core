@@ -5,7 +5,7 @@ defmodule Membrane.Bin do
 
   import Membrane.Helper.GenServer
 
-  alias Membrane.{Element, Pad, Spec}
+  alias Membrane.{Element, Pad, Spec, Sync}
 
   alias Membrane.Core.{
     Bin,
@@ -151,9 +151,9 @@ defmodule Membrane.Bin do
         synchronization: %{
           parent_clock: clock,
           timers: %{},
-          # TODO make an `if` here. We don't always want to expose the clock
           clock: clock,
-          stream_sync: nil,
+          # This is a sync for siblings. This is not yet allowed.
+          stream_sync: Sync.no_sync(),
           latency: 0
         }
       }

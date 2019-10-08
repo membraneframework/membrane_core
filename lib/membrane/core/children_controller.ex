@@ -159,21 +159,21 @@ defmodule Membrane.Core.Parent.ChildrenController do
           Type.stateful_try_t(Parent.ChildrenModel.t())
   def add_children(children, state) do
     children
-    |> Bunch.Enum.try_reduce(state, fn {name, pid}, state ->
-      state |> Parent.ChildrenModel.add_child(name, pid)
+    |> Bunch.Enum.try_reduce(state, fn {name, data}, state ->
+      state |> Parent.ChildrenModel.add_child(name, data)
     end)
   end
 
   defp start_child(%{name: name, module: module} = spec, parent_clock, syncs) do
-    sync = syncs |> Map.get(name, Sync.no_sync())
+    sync = syncs |> Map.get(name)
 
     case child_type(module) do
       :bin ->
-        # TODO set clock and syncs for bin as well
-        start_child_bin(spec, parent_clock, sync)
+        assert_no_sync!(spec, sync)
+        start_child_bin(spec)
 
       :element ->
-        start_child_element(spec, parent_clock, sync)
+        start_child_element(spec, parent_clock, to_no_sync(sync))
     end
   end
 
@@ -187,6 +187,12 @@ defmodule Membrane.Core.Parent.ChildrenController do
 
   defp start_child_element(%{name: name, module: module, options: options}, parent_clock, sync) do
     debug("Pipeline: starting child: name: #{inspect(name)}, module: #{inspect(module)}")
+
+    sync =
+      case sync do
+        nil -> Sync.no_sync()
+        _ -> sync
+      end
 
     with {:ok, pid} <-
            Core.Element.start_link(%{
@@ -208,19 +214,32 @@ defmodule Membrane.Core.Parent.ChildrenController do
     end
   end
 
-  defp start_child_bin(%{name: name, module: module, options: options}, _parent_clock, sync) do
+  defp start_child_bin(%{name: name, module: module, options: options}) do
     # TODO redo start link of Bin to accept parent clock and options as map
     with {:ok, pid} <- Bin.start_link(name, module, options, []),
          :ok <- Bin.set_controlling_pid(pid, self()),
          {:ok, %{clock: clock}} <- Message.call(pid, :handle_watcher, self()) do
-      {name, %{pid: pid, clock: clock, sync: sync}}
+      {name, %{pid: pid, clock: clock, sync: Sync.no_sync()}}
     else
       {:error, reason} ->
         raise ParentError,
-              "Cannot start child #{inspect(name)}, \
+              "Cannot start child #{inspect(name)} module: #{inspect(module)}, \
               reason: #{inspect(reason, pretty: true)}"
     end
   end
+
+  defp assert_no_sync!(_spec, _sync = nil) do
+    :ok
+  end
+
+  defp assert_no_sync!(%{name: name}, _sync) do
+    raise ParentError,
+          "Cannot start child #{inspect(name)}, \
+       reason: bin cannot be synced with other elements"
+  end
+
+  defp to_no_sync(nil), do: Sync.no_sync()
+  defp to_no_sync(sync), do: sync
 
   defp exec_handle_spec_started(spec_controller_module, children_names, state) do
     callback_res =

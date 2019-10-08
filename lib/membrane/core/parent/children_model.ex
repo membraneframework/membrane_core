@@ -8,11 +8,11 @@ defmodule Membrane.Core.Parent.ChildrenModel do
   @type t :: Bin.State.t() | Pipeline.State.t()
 
   @spec add_child(t, Child.name_t(), pid) :: Type.stateful_try_t(t)
-  def add_child(%{children: children} = state, child, pid) do
+  def add_child(%{children: children} = state, child, data) do
     if Map.has_key?(children, child) do
       {{:error, {:duplicate_child, child}}, state}
     else
-      {:ok, %{state | children: children |> Map.put(child, pid)}}
+      {:ok, %{state | children: children |> Map.put(child, data)}}
     end
   end
 
