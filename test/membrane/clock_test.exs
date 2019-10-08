@@ -162,7 +162,7 @@ defmodule Membrane.ClockTest do
 
   describe "Clock election in parent" do
     alias Membrane.Clock
-    alias Membrane.Core.{Pipeline.State, Parent.Action}
+    alias Membrane.Core.{Pipeline.State, Parent.ChildrenController}
 
     test "when provider is specified" do
       {:ok, clock} = Clock.start_link()
@@ -175,7 +175,7 @@ defmodule Membrane.ClockTest do
 
       dummy_pipeline_state = %State{module: __MODULE__, clock_proxy: proxy_clock}
 
-      {:ok, new_state} = Action.choose_clock(children, :el2, dummy_pipeline_state)
+      {:ok, new_state} = ChildrenController.choose_clock(children, :el2, dummy_pipeline_state)
 
       %State{clock_provider: result_provider, clock_proxy: result_proxy} = new_state
 
@@ -195,7 +195,7 @@ defmodule Membrane.ClockTest do
       dummy_pipeline_state = %State{module: __MODULE__, clock_proxy: proxy_clock}
 
       assert_raise Membrane.ParentError, ~r/.*el1.*clock provider/, fn ->
-        Action.choose_clock(children, :el1, dummy_pipeline_state)
+        ChildrenController.choose_clock(children, :el1, dummy_pipeline_state)
       end
     end
 
@@ -213,7 +213,7 @@ defmodule Membrane.ClockTest do
       dummy_pipeline_state = %State{module: __MODULE__, clock_proxy: proxy_clock}
 
       assert_raise Membrane.ParentError, ~r/.*multiple elements.*/, fn ->
-        Action.choose_clock(children, nil, dummy_pipeline_state)
+        ChildrenController.choose_clock(children, nil, dummy_pipeline_state)
       end
     end
 
@@ -229,7 +229,7 @@ defmodule Membrane.ClockTest do
 
       dummy_pipeline_state = %State{module: __MODULE__, clock_proxy: proxy_clock}
 
-      {:ok, new_state} = Action.choose_clock(children, nil, dummy_pipeline_state)
+      {:ok, new_state} = ChildrenController.choose_clock(children, nil, dummy_pipeline_state)
 
       %State{clock_provider: result_provider, clock_proxy: result_proxy} = new_state
 

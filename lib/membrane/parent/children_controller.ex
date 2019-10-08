@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
   use Bunch
   use Membrane.Log, tags: :core
 
-  alias Membrane.{Bin, CallbackError, Child, Element, ParentError, Spec, Sync}
+  alias Membrane.{Bin, Clock, CallbackError, Child, Element, ParentError, Spec, Sync}
   alias Membrane.Core
   alias Core.{CallbackHandler, Message, Parent}
   alias Core.Link
@@ -52,8 +52,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
 
     {:ok, state} = children |> add_children(state)
 
-    # TODO where choose_cloc/3 should be?
-    {:ok, state} = Parent.Action.choose_clock(children, clock_provider, state)
+    {:ok, state} = choose_clock(children, clock_provider, state)
 
     {{:ok, links}, state} = {links |> parse_links(), state}
     {links, state} = links |> state.handlers.spec_controller.resolve_links(state)
@@ -148,7 +147,11 @@ defmodule Membrane.Core.Parent.ChildrenController do
     end
   end
 
-  # @spec start_children([parsed_child_t], parent_clock :: Clock.t(), syncs :: m) :: [Parent.ChildrenModel.child_t()] # TODO
+  @spec start_children(
+          [parsed_child_t],
+          parent_clock :: Clock.t(),
+          syncs :: %{Child.name_t() => pid()}
+        ) :: [Parent.ChildrenModel.child_t()]
   def start_children(children, parent_clock, syncs) do
     debug("Starting children: #{inspect(children)}")
 
@@ -215,7 +218,6 @@ defmodule Membrane.Core.Parent.ChildrenController do
   end
 
   defp start_child_bin(%{name: name, module: module, options: options}) do
-    # TODO redo start link of Bin to accept parent clock and options as map
     with {:ok, pid} <- Bin.start_link(name, module, options, []),
          :ok <- Bin.set_controlling_pid(pid, self()),
          {:ok, %{clock: clock}} <- Message.call(pid, :handle_watcher, self()) do
@@ -257,6 +259,64 @@ defmodule Membrane.Core.Parent.ChildrenController do
       {{:error, reason}, _state} ->
         raise CallbackError, """
         Callback :handle_spec_started failed with reason: #{inspect(reason)}
+        """
+    end
+  end
+
+  def choose_clock(state) do
+    choose_clock([], nil, state)
+  end
+
+  def choose_clock(children, provider, state) do
+    cond do
+      provider != nil -> get_clock_from_provider(children, provider)
+      invalid_choice?(state) -> :no_provider
+      true -> choose_clock_provider(children)
+    end
+    |> case do
+      :no_provider ->
+        {:ok, state}
+
+      clock_provider ->
+        Clock.proxy_for(state.clock_proxy, clock_provider.clock)
+        {:ok, %{state | clock_provider: clock_provider}}
+    end
+  end
+
+  defp invalid_choice?(state),
+    do: state.clock_provider.clock != nil && state.clock_provider.choice == :manual
+
+  defp get_clock_from_provider(children, provider) do
+    children
+    |> Enum.find(fn
+      {^provider, _data} -> true
+      _ -> false
+    end)
+    |> case do
+      nil ->
+        raise ParentError, "Unknown clock provider: #{inspect(provider)}"
+
+      {^provider, %{clock: nil}} ->
+        raise ParentError, "#{inspect(provider)} is not a clock provider"
+
+      {^provider, %{clock: clock}} ->
+        %{clock: clock, provider: provider, choice: :manual}
+    end
+  end
+
+  defp choose_clock_provider(children) do
+    case children |> Bunch.KVList.filter_by_values(& &1.clock) do
+      [] ->
+        %{clock: nil, provider: nil, choice: :auto}
+
+      [{child, %{clock: clock}}] ->
+        %{clock: clock, provider: child, choice: :auto}
+
+      children ->
+        raise ParentError, """
+        Cannot choose clock for the pipeline, as multiple elements provide one, namely: #{
+          children |> Keyword.keys() |> Enum.join(", ")
+        }. Please explicitly select the clock by setting `Spec.clock_provider` parameter.
         """
     end
   end
