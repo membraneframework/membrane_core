@@ -1,6 +1,6 @@
 defmodule Membrane.Core.Parent.Action do
   @moduledoc false
-  alias Membrane.{CallbackError, Clock, ParentError}
+  alias Membrane.CallbackError
   alias Membrane.Core.{Parent, Message}
   alias Parent.ChildrenController
 
