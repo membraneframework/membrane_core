@@ -124,7 +124,8 @@ defmodule Membrane.Pad do
           :caps => Caps.Matcher.caps_specs_t(),
           optional(:demand_unit) => Buffer.Metric.unit_t(),
           :direction => direction_t(),
-          :options => nil | Keyword.t()
+          :options => nil | Keyword.t(),
+          :bin? => boolean()
         }
 
   defguard is_pad_ref(term)

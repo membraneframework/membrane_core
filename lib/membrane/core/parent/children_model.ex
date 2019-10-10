@@ -10,7 +10,7 @@ defmodule Membrane.Core.Parent.ChildrenModel do
 
   @type t :: Bin.State.t() | Pipeline.State.t()
 
-  @spec add_child(t, Child.name_t(), pid) :: Type.stateful_try_t(t)
+  @spec add_child(t, Child.name_t(), child_data :: map()) :: Type.stateful_try_t(t)
   def add_child(%{children: children} = state, child, data) do
     if Map.has_key?(children, child) do
       {{:error, {:duplicate_child, child}}, state}
@@ -19,12 +19,13 @@ defmodule Membrane.Core.Parent.ChildrenModel do
     end
   end
 
-  @spec get_child_data(t, Child.name_t()) :: Type.try_t(pid)
+  # TODO narrow down data type of child_data
+  @spec get_child_data(t, Child.name_t()) :: {:ok, child_data :: map()} | {:error, any}
   def get_child_data(%{children: children}, child) do
     children[child] |> Bunch.error_if_nil({:unknown_child, child})
   end
 
-  @spec pop_child(t, Child.name_t()) :: Type.stateful_try_t(pid, t)
+  @spec pop_child(t, Child.name_t()) :: Type.stateful_try_t(map(), t)
   def pop_child(%{children: children} = state, child) do
     {pid, children} = children |> Map.pop(child)
 

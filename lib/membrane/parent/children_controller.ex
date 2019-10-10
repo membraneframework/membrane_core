@@ -16,7 +16,8 @@ defmodule Membrane.Core.Parent.ChildrenController do
 
   @typep parsed_child_t :: %{name: Child.name_t(), module: module, options: Keyword.t()}
 
-  @callback resolve_links([Link.t()], Parent.ChildrenModel.t()) :: [Link.resolved_t()]
+  @callback resolve_links([Link.t()], Parent.ChildrenModel.t()) ::
+              {[Link.resolved_t()], Core.Bin.State.t() | Core.Pipeline.State.t()}
 
   @callback link_children([Link.resolved_t()], Parent.ChildrenModel.t()) :: Type.try_t()
 
@@ -257,9 +258,10 @@ defmodule Membrane.Core.Parent.ChildrenController do
         callback_res
 
       {{:error, reason}, _state} ->
-        raise CallbackError, """
-        Callback :handle_spec_started failed with reason: #{inspect(reason)}
-        """
+        raise CallbackError,
+          message: """
+          Callback :handle_spec_started failed with reason: #{inspect(reason)}
+          """
     end
   end
 

@@ -2,7 +2,7 @@ defmodule Membrane.Core.Child.LifecycleController do
   @moduledoc false
   use Bunch
 
-  alias Membrane.Pad
+  alias Membrane.{Clock, Pad}
   alias Membrane.Core.{Bin, Element, PadModel}
 
   require PadModel
@@ -24,7 +24,7 @@ defmodule Membrane.Core.Child.LifecycleController do
   @spec handle_controlling_pid(pid, state()) :: {:ok, state()}
   def handle_controlling_pid(pid, state), do: {:ok, %{state | controlling_pid: pid}}
 
-  @spec handle_watcher(pid, state()) :: {:ok, state()}
+  @spec handle_watcher(pid, state()) :: {{:ok, %{clock: Clock.t()}}, state()}
   def handle_watcher(watcher, state) do
     %{synchronization: %{clock: clock}} = state
     {{:ok, %{clock: clock}}, %{state | watcher: watcher}}

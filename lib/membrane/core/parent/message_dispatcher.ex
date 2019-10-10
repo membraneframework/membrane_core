@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   alias Membrane.Core.Message
 
   alias Membrane.Core.{Parent, Pipeline, Bin}
-  alias Parent.{LifecycleController, MessageDispatcher}
+  alias Parent.LifecycleController
   alias Bunch.Type
 
   require Message

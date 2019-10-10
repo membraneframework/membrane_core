@@ -54,7 +54,7 @@ defmodule Membrane.Core.Bin.SpecController do
       new_endpoint = %{endpoint | pid: self(), pad_ref: private_pad_ref, pad_name: private_pad}
       {new_endpoint, state}
     else
-      {:error, :unknown_pad} ->
+      {{:error, :unknown_pad}, _state} ->
         raise LinkError, "Bin #{inspect(name)} does not have pad #{inspect(pad_name)}"
     end
   end

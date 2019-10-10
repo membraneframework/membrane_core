@@ -36,6 +36,7 @@ defmodule Membrane.Core.Parent.Action do
     ~> {&1, state}
   end
 
+  @spec handle_unknown_action(Membrane.Parent.Action.t(), atom, module) :: no_return()
   def handle_unknown_action(action, callback, module) do
     raise CallbackError, kind: :invalid_action, action: action, callback: {module, callback}
   end

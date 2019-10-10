@@ -173,10 +173,10 @@ defmodule Membrane.Bin do
            ) do
       {:ok, state}
     else
-      {:error, reason} ->
+      {{:error, reason}, _state} ->
         raise CallbackError, kind: :error, callback: {module, :handle_init}, reason: reason
 
-      other ->
+      {other, _state} ->
         raise CallbackError, kind: :bad_return, callback: {module, :handle_init}, value: other
     end
   end
