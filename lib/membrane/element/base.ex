@@ -12,7 +12,7 @@ defmodule Membrane.Element.Base do
   processing. Each element defines a set of pads, through which it can be linked
   with other elements. During playback, pads can either send (output pads) or
   receive (input pads) data. For more information on pads, see
-  `Membrane.Element.Pad`.
+  `Membrane.Pad`.
 
   To implement an element, one of base modules (`Membrane.Source`,
   `Membrane.Filter`, `Membrane.Sink`)
@@ -48,8 +48,8 @@ defmodule Membrane.Element.Base do
   use Bunch
 
   alias Membrane.Core.{PadsSpecs, OptionsSpecs}
-  alias Membrane.{Element, Event}
-  alias Membrane.Element.{Action, CallbackContext, Pad}
+  alias Membrane.{Element, Event, Pad}
+  alias Membrane.Element.{Action, CallbackContext}
 
   @typedoc """
   Type that defines all valid return values from most callbacks.

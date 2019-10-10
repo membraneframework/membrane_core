@@ -2,8 +2,8 @@ defmodule Membrane.Core.PadSpecHandler do
   @moduledoc false
   # Module parsing pads specifications in elements.
 
-  alias Membrane.{Core, Element, Pad}
-  alias Core.PadModel
+  alias Membrane.{Core, Pad}
+  alias Core.{Bin, Element, PadModel}
   require Pad
   use Bunch
   use Core.Element.Log
@@ -13,7 +13,7 @@ defmodule Membrane.Core.PadSpecHandler do
   @doc """
   Initializes pads info basing on element's pads specifications.
   """
-  @spec init_pads(Core.Element.State.t() | Core.Bin.State.t()) ::
+  @spec init_pads(Element.State.t() | Bin.State.t()) ::
           Element.State.t() | Bin.State.t()
   def init_pads(%{module: module} = state) do
     pads = %{

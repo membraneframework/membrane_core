@@ -1,11 +1,11 @@
 defmodule Membrane.Core.Bin.LinkingBuffer do
-  alias Membrane.Core.Message
-  alias Membrane.Core.PadModel
+  alias Membrane.Core
+  alias Core.Message
+  alias Core.PadModel
   alias Membrane.Pad
-  alias Membrane.Bin
   require Message
 
-  @type t :: Map.t()
+  @type t :: %{}
 
   @doc """
   Creates a new linking buffer.
@@ -24,7 +24,7 @@ defmodule Membrane.Core.Bin.LinkingBuffer do
                    to be sent
   * bin_state - state of the bin
   """
-  @spec store_or_send(t(), Message.t(), Pad.ref_t(), Bin.State.t()) :: t()
+  @spec store_or_send(t(), Message.t(), Pad.ref_t(), Core.Bin.State.t()) :: t()
   def store_or_send(buf, msg, sender_pad, bin_state) do
     case PadModel.get_data(bin_state, sender_pad) do
       {:ok, %{pid: dest_pid, other_ref: other_ref}} ->
@@ -40,7 +40,7 @@ defmodule Membrane.Core.Bin.LinkingBuffer do
   Sends messages stored for a given outpud pad.
   A link must already be available.
   """
-  @spec flush_for_pad(t(), Pad.ref_t(), Bin.State.t()) :: t()
+  @spec flush_for_pad(t(), Pad.ref_t(), Core.Bin.State.t()) :: t()
   def flush_for_pad(buf, pad, bin_state) do
     case Map.pop(buf, pad) do
       {nil, ^buf} ->

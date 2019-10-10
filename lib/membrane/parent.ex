@@ -1,9 +1,8 @@
 defmodule Membrane.Parent do
-  alias Membrane.{Child, Parent}
-  alias Membrane.Core.{Bin, Pipeline}
+  alias Membrane.{Child, Notification, Pad, Parent}
+  alias Membrane.Core.{Bin, CallbackHandler, Pipeline}
 
   @type internal_state_t :: map | struct
-  @type child_t :: {Child.name_t(), pid}
   @type children_t :: %{Child.name_t() => pid}
 
   @type state_t :: Bin.State.t() | Pipeline.State.t()
@@ -59,7 +58,7 @@ defmodule Membrane.Parent do
   Callback invoked when pipeline's element receives `Membrane.Event.StartOfStream` event.
   """
   @callback handle_element_start_of_stream(
-              {Child.name_t(), Pad.t()},
+              {Child.name_t(), Pad.ref_t()},
               state :: internal_state_t()
             ) :: callback_return_t
 
@@ -67,7 +66,7 @@ defmodule Membrane.Parent do
   Callback invoked when pipeline's element receives `Membrane.Event.EndOfStream` event.
   """
   @callback handle_element_end_of_stream(
-              {Child.name_t(), Pad.t()},
+              {Child.name_t(), Pad.ref_t()},
               state :: internal_state_t()
             ) :: callback_return_t
 

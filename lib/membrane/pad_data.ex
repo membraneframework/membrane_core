@@ -14,7 +14,7 @@ defmodule Membrane.Pad.Data do
   Other fields in the struct ARE NOT PART OF THE PUBLIC API and should not be
   accessed or relied on.
   """
-  alias Membrane.Element.Pad
+  alias Membrane.Pad
   alias Membrane.{Buffer, Caps, Core, Event}
   alias Buffer.Metric
   alias Core.InputBuffer

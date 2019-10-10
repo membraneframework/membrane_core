@@ -2,7 +2,9 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   @moduledoc false
   alias Membrane.Core.Message
 
-  alias Membrane.Core.Parent.{LifecycleController, State}
+  alias Membrane.Core.{Parent, Pipeline, Bin}
+  alias Parent.{LifecycleController, MessageDispatcher}
+  alias Bunch.Type
 
   require Message
 
@@ -12,8 +14,8 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
           spec_controller: module()
         }
 
-  @spec handle_message(Message.t(), State.t()) ::
-          State.stateful_try_t(any)
+  @spec handle_message(Message.t(), Pipeline.State.t() | Bin.State.t()) ::
+          Type.stateful_try_t(any)
   def handle_message(
         Message.new(:playback_state_changed, [pid, new_playback_state]),
         state

@@ -6,7 +6,7 @@ defmodule Membrane.Element.CallbackContext do
   holding it in elements state. Context differs depending on callback.
   """
 
-  alias Membrane.Element.Pad
+  alias Membrane.Pad
   alias Membrane.Core
   alias Core.Element.State
   use Bunch

@@ -3,7 +3,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
   use Membrane.Core.CallbackHandler
   use Membrane.Log, tags: :core
 
-  alias Membrane.{Core, Spec}
+  alias Membrane.{Core, Notification, Spec}
   alias Core.{Parent, Message}
   alias Parent.ChildrenController
   alias Core.Bin.State

@@ -112,7 +112,7 @@ defmodule Membrane.Core.PadsSpecs do
     pads = Module.get_attribute(env.module, :membrane_pads) |> nil_to([]) |> Enum.reverse()
     :ok = validate_pads!(pads, env)
 
-    alias Membrane.Element.Pad
+    alias Membrane.Pad
 
     quote do
       @doc """

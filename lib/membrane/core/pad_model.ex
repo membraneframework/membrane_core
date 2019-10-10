@@ -3,7 +3,8 @@ defmodule Membrane.Core.PadModel do
   # Utility functions for veryfying and manipulating pads and their data.
 
   alias Membrane.Pad
-  alias Membrane.Core.Element.State
+  alias Membrane.Core.{Bin, Element}
+  alias Bunch.Type
   use Bunch
 
   @type pads_data_t :: %{Pad.ref_t() => Pad.Data.t()}
@@ -26,7 +27,7 @@ defmodule Membrane.Core.PadModel do
           dynamic_currently_linking: [Pad.ref_t()]
         }
 
-  @type state_t :: Bin.state_t() | Element.state_t()
+  @type state_t :: Bin.State.t() | Element.State.t()
 
   @type unknown_pad_error_t :: {:error, {:unknown_pad, Pad.name_t()}}
 
@@ -107,7 +108,7 @@ defmodule Membrane.Core.PadModel do
   end
 
   @spec set_data(state_t(), Pad.ref_t(), keys :: atom | [atom]) ::
-          State.stateful_t(:ok | unknown_pad_error_t)
+          Type.stateful_t(:ok | unknown_pad_error_t, state_t)
   def set_data(state, pad_ref, keys \\ [], v) do
     with {:ok, state} <- {assert_instance(state, pad_ref), state} do
       state
@@ -123,7 +124,7 @@ defmodule Membrane.Core.PadModel do
   end
 
   @spec update_data(state_t(), Pad.ref_t(), keys :: atom | [atom], (data -> {:ok | error, data})) ::
-          State.stateful_t(:ok | error | unknown_pad_error_t)
+          Type.stateful_t(:ok | error | unknown_pad_error_t, state_t)
         when data: Pad.Data.t() | any, error: {:error, reason :: any}
   def update_data(state, pad_ref, keys \\ [], f) do
     with {:ok, state} <- {assert_instance(state, pad_ref), state},
@@ -150,7 +151,7 @@ defmodule Membrane.Core.PadModel do
           Pad.ref_t(),
           keys :: atom | [atom],
           (data -> {success | error, data})
-        ) :: State.stateful_t(success | error | unknown_pad_error_t)
+        ) :: Type.stateful_t(success | error | unknown_pad_error_t, state_t)
         when data: Pad.Data.t() | any, success: {:ok, data}, error: {:error, reason :: any}
   def get_and_update_data(state, pad_ref, keys \\ [], f) do
     with {:ok, state} <- {assert_instance(state, pad_ref), state},
@@ -168,7 +169,7 @@ defmodule Membrane.Core.PadModel do
           Pad.ref_t(),
           keys :: atom | [atom],
           (data -> {data, data})
-        ) :: State.stateful_t(data)
+        ) :: Type.stateful_t(data, state_t)
         when data: Pad.Data.t() | any
   def get_and_update_data!(state, pad_ref, keys \\ [], f) do
     :ok = assert_instance(state, pad_ref)
@@ -178,7 +179,7 @@ defmodule Membrane.Core.PadModel do
   end
 
   @spec pop_data(state_t(), Pad.ref_t()) ::
-          State.stateful_t({:ok, Pad.Data.t()} | unknown_pad_error_t)
+          Type.stateful_t({:ok, Pad.Data.t()} | unknown_pad_error_t, state_t)
   def pop_data(state, pad_ref) do
     with {:ok, state} <- {assert_instance(state, pad_ref), state} do
       {data, state} =
@@ -189,13 +190,13 @@ defmodule Membrane.Core.PadModel do
     end
   end
 
-  @spec pop_data!(state_t(), Pad.ref_t()) :: State.stateful_t(Pad.Data.t())
+  @spec pop_data!(state_t(), Pad.ref_t()) :: Type.stateful_t(Pad.Data.t(), state_t)
   def pop_data!(state, pad_ref) do
     {{:ok, pad_data}, state} = pop_data(state, pad_ref)
     {pad_data, state}
   end
 
-  @spec delete_data(state_t(), Pad.ref_t()) :: State.stateful_t(:ok | unknown_pad_error_t)
+  @spec delete_data(state_t(), Pad.ref_t()) :: Type.stateful_t(:ok | unknown_pad_error_t, state_t)
   def delete_data(state, pad_ref) do
     with {{:ok, _out}, state} <- pop_data(state, pad_ref) do
       {:ok, state}

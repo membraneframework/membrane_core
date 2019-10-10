@@ -126,7 +126,7 @@ defmodule Membrane.Core.CallbackHandler do
   end
 
   @spec handle_callback_result(
-          {{:ok, [Membrane.Element.Action.t() | Membrane.Pipeline.action_t()]},
+          {{:ok, [Membrane.Element.Action.t() | Membrane.Parent.Action.t()]},
            internal_state :: any},
           callback :: atom,
           module,

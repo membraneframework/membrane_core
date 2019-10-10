@@ -4,10 +4,11 @@ defmodule Membrane.Core.Bin.State do
   # It does not represent state of bins you construct, it's a state used
   # internally in Membrane.
 
-  alias Membrane.Child
-  alias Membrane.Core.Bin
-  alias Membrane.Core.{Parent, Playback, Playbackable, PadModel}
-  alias Membrane.Core.Bin.LinkingBuffer
+  alias Membrane.{Child, Clock, Parent, Sync}
+  alias Membrane.Core
+  alias Core.{Bin, Timer}
+  alias Core.{Playback, Playbackable, PadModel}
+  alias Core.Bin.LinkingBuffer
   alias __MODULE__, as: ThisModule
   use Bunch
   use Bunch.Access
@@ -19,7 +20,7 @@ defmodule Membrane.Core.Bin.State do
           children: Parent.children_t(),
           pending_pids: MapSet.t(pid),
           terminating?: boolean,
-          name: Bin.name_t() | nil,
+          name: Membrane.Bin.name_t() | nil,
           bin_options: any | nil,
           pads: PadModel.pads_t() | nil,
           watcher: pid | nil,
@@ -31,7 +32,7 @@ defmodule Membrane.Core.Bin.State do
             choice: :auto | :manual
           },
           clock_proxy: Clock.t(),
-          handlers: Parent.MessageDispatcher.handlers(),
+          handlers: Core.Parent.MessageDispatcher.handlers(),
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
             parent_clock: Clock.t(),
@@ -40,6 +41,8 @@ defmodule Membrane.Core.Bin.State do
             clock: Clock.t() | nil
           }
         }
+
+  @type internal_state_t :: map | struct
 
   @enforce_keys [:module, :clock_proxy]
   defstruct @enforce_keys ++

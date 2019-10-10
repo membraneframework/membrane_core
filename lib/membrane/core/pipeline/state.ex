@@ -5,7 +5,7 @@ defmodule Membrane.Core.Pipeline.State do
   # internally in Membrane.
 
   alias Membrane.{Child, Core}
-  alias Membrane.Core.{Playback, Playbackable}
+  alias Membrane.Core.{Parent, Playback, Playbackable}
   alias Membrane.{Clock, Sync}
   use Bunch
 

@@ -16,7 +16,6 @@ defmodule Membrane.Bin do
     Parent,
     PadModel,
     PadsSpecs,
-    Pipeline,
     Message
   }
 
@@ -30,13 +29,18 @@ defmodule Membrane.Bin do
   require PadModel
   require Membrane.PlaybackState
 
-  @type state_t :: Bin.State.t() | Pipeline.State.t()
+  @type state_t :: Bin.State.t()
 
   @typedoc """
   Defines options that can be passed to `start_link/3` and received
   in `c:handle_init/1` callback.
   """
   @type bin_options_t :: any
+
+  @typedoc """
+  Type that defines a bin name by which it is identified.
+  """
+  @type name_t :: atom
 
   @doc """
   Enables to check whether module is membrane bin.
@@ -49,7 +53,7 @@ defmodule Membrane.Bin do
   `c:GenServer.init/1` callback.
   """
   @callback handle_init(options :: bin_options_t) ::
-              {{:ok, Spec.t()}, State.internal_state_t()}
+              {{:ok, Spec.t()}, Bin.State.internal_state_t()}
               | {:error, any}
 
   @doc """
