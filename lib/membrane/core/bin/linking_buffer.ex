@@ -1,4 +1,5 @@
 defmodule Membrane.Core.Bin.LinkingBuffer do
+  @moduledoc false
   alias Membrane.Core
   alias Core.Message
   alias Core.PadModel
@@ -14,7 +15,7 @@ defmodule Membrane.Core.Bin.LinkingBuffer do
   def new, do: Map.new()
 
   @doc """
-  This function sends a message to pad, IF AND ONLY IF
+  This function sends a message to a pad, IF AND ONLY IF
   this pad is already linked. If it's not, it is stored
   and will be sent after calling `flush_for_pad()`.
   Params:
@@ -37,7 +38,7 @@ defmodule Membrane.Core.Bin.LinkingBuffer do
   end
 
   @doc """
-  Sends messages stored for a given outpud pad.
+  Sends messages stored for a given output pad.
   A link must already be available.
   """
   @spec flush_for_pad(t(), Pad.ref_t(), Core.Bin.State.t()) :: t()

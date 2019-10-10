@@ -6,8 +6,7 @@ defmodule Membrane.Core.Bin.State do
 
   alias Membrane.{Child, Clock, Parent, Sync}
   alias Membrane.Core
-  alias Core.{Bin, Timer}
-  alias Core.{Playback, Playbackable, PadModel}
+  alias Core.{Bin, Playback, Playbackable, PadModel, Timer}
   alias Core.Bin.LinkingBuffer
   alias __MODULE__, as: ThisModule
   use Bunch
@@ -16,7 +15,7 @@ defmodule Membrane.Core.Bin.State do
   @type t :: %__MODULE__{
           internal_state: Parent.internal_state_t() | nil,
           playback: Playback.t(),
-          module: module | nil,
+          module: module,
           children: Parent.children_t(),
           pending_pids: MapSet.t(pid),
           terminating?: boolean,
@@ -49,7 +48,6 @@ defmodule Membrane.Core.Bin.State do
               [
                 internal_state: nil,
                 playback: %Playback{},
-                module: nil,
                 children: %{},
                 pending_pids: MapSet.new(),
                 terminating?: false,

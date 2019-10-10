@@ -20,7 +20,7 @@ defmodule Membrane.Spec do
         other_element: Bin.Using.Default.Options
       ]
 
-  ## Pipeline Links
+  ## Links
 
   Links that should be made when the pipeline starts, and children are spawned
   can be defined with the `:links` field.
@@ -38,12 +38,12 @@ defmodule Membrane.Spec do
         {:mixer, :output} => {:sink, :input, buffer: [warn_size: 264_000, fail_size: 300_000]},
       }
       
-  ## Bin links
+  ### Bins
 
   For bins boundaries there are special links allowed. User should define links
   between bin's input and first child's input (input-input type) and last
   child's output and bin output (output-output type). In this case, callback module
-  creator should name endpoint of the bin with macro `this_bin()`
+  creator should name endpoint of the bin with function `Membrane.Bin.itself()`
 
   Sample definition:
 
@@ -97,7 +97,7 @@ defmodule Membrane.Spec do
   @typedoc """
   Options passed to the element when linking its pad with different one.
   The allowed options are:
-  * `:buffer` - keywoed allowing to configure `Membrane.Core.InputBuffer` between elements. Valid only for input pads.
+  * `:buffer` - keyword allowing to configure `Membrane.Core.InputBuffer` between elements. Valid only for input pads.
     See `t:Membrane.Core.InputBuffer.props_t/0` for configurable properties.
   * `:pad` - any element-specific options that will be available in `Membrane.Pad.Data` struct.
   """
