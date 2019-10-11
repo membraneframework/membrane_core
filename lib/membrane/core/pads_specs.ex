@@ -47,7 +47,7 @@ defmodule Membrane.Core.PadsSpecs do
     It automatically generates documentation from the given definition
     and adds compile-time caps specs validation.
 
-    "The type `t:Membrane.Pad.#{pad_type_spec}` describes how the definition of pads should look."
+    The type `t:Membrane.Pad.#{pad_type_spec}` describes how the definition of pads should look.
     """
   end
 
@@ -109,7 +109,7 @@ defmodule Membrane.Core.PadsSpecs do
   Generates `membrane_pads/0` function, along with docs and typespecs.
   """
   defmacro generate_membrane_pads(env) do
-    pads = Module.get_attribute(env.module, :membrane_pads) |> nil_to([]) |> Enum.reverse()
+    pads = Module.get_attribute(env.module, :membrane_pads, []) |> Enum.reverse()
     :ok = validate_pads!(pads, env)
 
     alias Membrane.Pad
@@ -124,9 +124,6 @@ defmodule Membrane.Core.PadsSpecs do
       end
     end
   end
-
-  defp nil_to(nil, val_if_nil), do: val_if_nil
-  defp nil_to(val, _), do: val
 
   @spec validate_pads!(
           pads :: [{Pad.name_t(), Pad.description_t()}],
@@ -170,22 +167,18 @@ defmodule Membrane.Core.PadsSpecs do
             {:ok, config} <-
               config
               |> Bunch.Config.parse(
+                direction: [default: direction],
                 availability: [in: [:always, :on_request], default: :always],
                 caps: [validate: &Caps.Matcher.validate_specs/1],
                 mode: [in: [:pull, :push], default: :pull],
-                bin?: [validate: &is_boolean/1, default: false],
+                bin?: [validate: &is_boolean/1, default: bin?],
                 demand_unit: [
                   in: [:buffers, :bytes],
                   require_if: &(&1.mode == :pull and (bin? or direction == :input))
                 ],
                 options: [default: nil]
               ) do
-      new_config =
-        config
-        |> Map.put(:bin?, bin?)
-        |> Map.put(:direction, direction)
-
-      {:ok, {name, new_config}}
+      {:ok, {name, config}}
     else
       spec: spec -> {:error, {:invalid_pad_spec, spec}}
       config: {:error, reason} -> {:error, {reason, pad: name}}

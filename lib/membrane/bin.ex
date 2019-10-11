@@ -62,7 +62,7 @@ defmodule Membrane.Bin do
   @callback membrane_clock? :: true
 
   @doc """
-  This function defines a term that allows to reference current bin from Membrane.Spec
+  This function defines a term that allows to reference current bin from `Membrane.Spec`
   """
   def itself, do: {__MODULE__, :itself}
 

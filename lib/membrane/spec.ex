@@ -14,16 +14,20 @@ defmodule Membrane.Spec do
   struct of that module.
 
   Sample definitions:
+
+  ```
       [
         first_element: %Element.With.Options.Struct{option_a: 42},
         some_element: Element.Without.Options,
         other_element: Bin.Using.Default.Options
       ]
+  ```
 
   ## Links
 
   Links that should be made when the pipeline starts, and children are spawned
   can be defined with the `:links` field.
+
   You have to set it to a map, where both keys and values are tuples of
   `{element_name, pad_name}`. Entries can also have additional options passed by
   keyword list at the end of a tuple (See `t:endpoint_options_t/0`).
@@ -96,6 +100,7 @@ defmodule Membrane.Spec do
 
   @typedoc """
   Options passed to the element when linking its pad with different one.
+
   The allowed options are:
   * `:buffer` - keyword allowing to configure `Membrane.Core.InputBuffer` between elements. Valid only for input pads.
     See `t:Membrane.Core.InputBuffer.props_t/0` for configurable properties.

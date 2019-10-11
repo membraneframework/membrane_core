@@ -6,7 +6,7 @@ defmodule Membrane.Parent.Action do
   """
 
   @typedoc """
-  Action that sends a message to element identified by name.
+  Action that sends a message to an element identified by name.
   """
   @type forward_action_t :: {:forward, {Child.name_t(), Notification.t()}}
 
@@ -14,7 +14,7 @@ defmodule Membrane.Parent.Action do
   Action that instantiates elements and links them according to `Membrane.Spec`.
 
   Children's playback state is changed to the current parent state.
-  `c:handle_spec_started` callback is executed once it happens.
+  `c:Membrane.Parent.handle_spec_started/2` callback is executed once it happens.
   """
   @type spec_action_t :: {:spec, Spec.t()}
 

@@ -255,11 +255,6 @@ defmodule Membrane.Core.BinTest do
       c1_state = :sys.get_state(c1)
       assert c1_state.proxy_for == c2
     end
-
-    # defp proxy_for?(c1, c2) do
-    #  c1_state = :sys.get_state(c1)
-    #  assert c1_state.proxy_for == c2.pid
-    # end
   end
 
   defp get_child_pid(last_child_pid, []) when is_pid(last_child_pid) do

@@ -32,7 +32,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   end
 
   def handle_message(Message.new(:stop_and_terminate), state) do
-    LifecycleController.handle_stop(state)
+    LifecycleController.handle_stop_and_terminate(state)
   end
 
   def handle_message(Message.new(:notification, [from, notification]), state) do

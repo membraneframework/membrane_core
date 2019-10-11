@@ -30,7 +30,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     children_pids = children_data |> Enum.map(& &1.pid)
 
     children_pids
-    |> Enum.each(&PlaybackHandler.request_change_playback_state(&1, new))
+    |> Enum.each(&PlaybackHandler.request_playback_state_change(&1, new))
 
     :ok = toggle_syncs_active(old, new, children_data)
 
@@ -65,7 +65,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     PlaybackHandler.change_playback_state(new_state, __MODULE__, state)
   end
 
-  def handle_stop(state) do
+  def handle_stop_and_terminate(state) do
     case state.playback.state do
       :stopped ->
         {:stop, :normal, state}

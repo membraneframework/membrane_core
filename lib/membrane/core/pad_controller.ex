@@ -189,7 +189,7 @@ defmodule Membrane.Core.PadController do
   defp parse_link_props!(props, pad_name, state) do
     {_, pad_spec} =
       state.module.membrane_pads()
-      |> PadSpecHandler.add_bin_pads()
+      |> PadSpecHandler.add_private_pads()
       |> Enum.find(fn {k, _} -> k == pad_name end)
 
     opts_spec = pad_spec.options

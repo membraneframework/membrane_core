@@ -20,7 +20,7 @@ defmodule Membrane.Core.PadSpecHandler do
       data: %{},
       info:
         module.membrane_pads()
-        |> add_bin_pads()
+        |> add_private_pads()
         |> Bunch.KVList.map_values(&init_pad_info/1)
         |> Map.new(),
       dynamic_currently_linking: []
@@ -42,7 +42,7 @@ defmodule Membrane.Core.PadSpecHandler do
     )
   end
 
-  def add_bin_pads(module_pads) do
+  def add_private_pads(module_pads) do
     Enum.flat_map(module_pads, &create_private_pad/1)
   end
 

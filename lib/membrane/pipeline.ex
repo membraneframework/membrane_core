@@ -123,7 +123,7 @@ defmodule Membrane.Pipeline do
   An alias for `Membrane.Core.PlaybackHandler.change_playback_state/2` with proper state.
   """
   @spec play(pid) :: :ok
-  def play(pid), do: Membrane.Core.PlaybackHandler.request_change_playback_state(pid, :playing)
+  def play(pid), do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :playing)
 
   @doc """
   Changes playback state to `:prepared`.
@@ -132,7 +132,7 @@ defmodule Membrane.Pipeline do
   """
   @spec prepare(pid) :: :ok
   def prepare(pid),
-    do: Membrane.Core.PlaybackHandler.request_change_playback_state(pid, :prepared)
+    do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :prepared)
 
   @doc """
   Changes playback state to `:stopped`.
@@ -140,7 +140,7 @@ defmodule Membrane.Pipeline do
   An alias for `Membrane.Core.PlaybackHandler.change_playback_state/2` with proper state.
   """
   @spec stop(pid) :: :ok
-  def stop(pid), do: Membrane.Core.PlaybackHandler.request_change_playback_state(pid, :stopped)
+  def stop(pid), do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :stopped)
 
   @impl GenServer
   def init(module) when is_atom(module) do

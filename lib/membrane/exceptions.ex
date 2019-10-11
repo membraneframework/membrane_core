@@ -2,10 +2,6 @@ defmodule Membrane.PipelineError do
   defexception [:message]
 end
 
-defmodule Membrane.BinError do
-  defexception [:message]
-end
-
 defmodule Membrane.ParentError do
   defexception [:message]
 end
