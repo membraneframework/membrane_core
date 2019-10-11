@@ -59,7 +59,7 @@ defmodule Membrane.Bin do
   @doc """
   Automatically implemented callback used to determine whether bin exports clock.
   """
-  @callback membrane_clock? :: true
+  @callback membrane_clock? :: boolean()
 
   @doc """
   This function defines a term that allows to reference current bin from `Membrane.Spec`
@@ -76,6 +76,12 @@ defmodule Membrane.Bin do
     PadsSpecs.def_bin_pad(name, :output, spec)
   end
 
+  @doc """
+  Defines that bin exposes a clock which is a proxy to one of its children.
+
+  If this macro is not called, no ticks will be forwarded to parent, regardless
+  of clock definitions in its children.
+  """
   defmacro def_clock(doc \\ "") do
     quote do
       @membrane_bin_exposes_clock true
@@ -250,10 +256,6 @@ defmodule Membrane.Bin do
   def handle_call(Message.new(:handle_watcher, watcher), _, state) do
     Child.LifecycleController.handle_watcher(watcher, state)
     |> reply()
-  end
-
-  def set_controlling_pid(server, controlling_pid, timeout \\ 5000) do
-    Message.call(server, :set_controlling_pid, controlling_pid, [], timeout)
   end
 
   defmacro __using__(_) do

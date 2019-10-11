@@ -220,7 +220,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
 
   defp start_child_bin(%{name: name, module: module, options: options}) do
     with {:ok, pid} <- Bin.start_link(name, module, options, []),
-         :ok <- Bin.set_controlling_pid(pid, self()),
+         :ok <- Message.call(pid, :set_controlling_pid, self()),
          {:ok, %{clock: clock}} <- Message.call(pid, :handle_watcher, self()) do
       {name, %{pid: pid, clock: clock, sync: Sync.no_sync()}}
     else
