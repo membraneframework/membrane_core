@@ -183,4 +183,14 @@ defmodule Membrane.Integration.SyncTest do
 
     assert {%Membrane.ParentError{}, _} = reason
   end
+
+  test "synchronization inside a bin is possible" do
+    {:ok, pipeline} =
+      Testing.Pipeline.start_link(%Testing.Pipeline.Options{elements: [bin: Sync.SyncBin]})
+
+    :ok = Testing.Pipeline.play(pipeline)
+
+    assert_pipeline_notified(pipeline, :bin, {:start_of_stream, :sink_a})
+    assert_pipeline_notified(pipeline, :bin, {:start_of_stream, :sink_b}, @sync_error_ms)
+  end
 end
