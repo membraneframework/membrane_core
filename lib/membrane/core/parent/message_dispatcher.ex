@@ -23,10 +23,6 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     LifecycleController.child_playback_changed(pid, new_playback_state, state)
   end
 
-  def handle_message(Message.new(:handle_spec, spec), state) do
-    LifecycleController.handle_spec(spec, state)
-  end
-
   def handle_message(Message.new(:change_playback_state, new_state), state) do
     LifecycleController.change_playback_state(new_state, state)
   end

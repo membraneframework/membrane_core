@@ -14,8 +14,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
     Message
   }
 
-  alias Parent.ChildrenController
-
   require Message
   require PadModel
   require Membrane.PlaybackState
@@ -52,13 +50,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
 
     CallbackHandler.exec_and_handle_callback(callback, state.handlers.action_handler, [], state)
-  end
-
-  def handle_spec(spec, state) do
-    with {{:ok, _children}, state} <-
-           ChildrenController.handle_spec(spec, state) do
-      {:ok, state}
-    end
   end
 
   def change_playback_state(new_state, state) do
