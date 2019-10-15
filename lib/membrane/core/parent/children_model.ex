@@ -2,11 +2,12 @@ defmodule Membrane.Core.Parent.ChildrenModel do
   @moduledoc false
 
   alias Bunch.Type
-  alias Membrane.Child
+  alias Membrane.{Child, Clock, Sync}
   alias Membrane.Core.{Bin, Pipeline}
 
   @type child_t :: {Child.name_t(), pid}
-  @type children_t :: %{Child.name_t() => pid}
+  @type child_data :: %{clock: Clock.t(), pid: pid, sync: Sync.t()}
+  @type children_t :: %{Child.name_t() => child_data()}
 
   @type t :: Bin.State.t() | Pipeline.State.t()
 

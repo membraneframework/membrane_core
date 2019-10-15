@@ -3,7 +3,6 @@ defmodule Membrane.Parent do
   alias Membrane.Core.{Bin, CallbackHandler, Pipeline}
 
   @type internal_state_t :: map | struct
-  @type children_t :: %{Child.name_t() => pid}
 
   @type state_t :: Bin.State.t() | Pipeline.State.t()
 

@@ -8,6 +8,7 @@ defmodule Membrane.Core.Bin.State do
   alias Membrane.Core
   alias Core.{Bin, Playback, Playbackable, PadModel, Timer}
   alias Core.Bin.LinkingBuffer
+  alias Core.Parent.ChildrenModel
   alias __MODULE__, as: ThisModule
   use Bunch
   use Bunch.Access
@@ -16,7 +17,7 @@ defmodule Membrane.Core.Bin.State do
           internal_state: Parent.internal_state_t() | nil,
           playback: Playback.t(),
           module: module,
-          children: Parent.children_t(),
+          children: ChildrenModel.children_t(),
           pending_pids: MapSet.t(pid),
           terminating?: boolean,
           name: Membrane.Bin.name_t() | nil,
