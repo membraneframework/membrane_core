@@ -1,4 +1,4 @@
-defmodule Membrane.Spec do
+defmodule Membrane.ParentSpec do
   @moduledoc """
   Structure representing topology of a pipeline/bin.
   It can be returned from
@@ -74,8 +74,8 @@ defmodule Membrane.Spec do
   Sample definitions:
 
     ```
-    %Spec{stream_sync: [[:element1, :element2], [:element3, :element4]]}
-    %Spec{stream_sync: :sinks}
+    %ParentSpec{stream_sync: [[:element1, :element2], [:element3, :element4]]}
+    %ParentSpec{stream_sync: :sinks}
     ```
 
   ## Clock provider
@@ -111,7 +111,7 @@ defmodule Membrane.Spec do
         ]
 
   @typedoc """
-  Spec for one of the ends of the link
+  ParentSpec for one of the ends of the link
   """
   @type link_endpoint_spec_t ::
           {Element.name_t(), Pad.name_t()}

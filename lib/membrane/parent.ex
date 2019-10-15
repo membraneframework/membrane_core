@@ -70,10 +70,10 @@ defmodule Membrane.Parent do
             ) :: callback_return_t
 
   @doc """
-  Callback invoked when `Membrane.Bin.Spec` is linked and in the same playback
+  Callback invoked when `Membrane.ParentSpec` is linked and in the same playback
   state as bin.
 
-  Spec can be started from `c:handle_init/1` callback or as
+  This callback can be started from `c:handle_init/1` callback or as
   `t:Membrane.Core.Parent.Action.spec_action_t/0` action.
   """
   @callback handle_spec_started(

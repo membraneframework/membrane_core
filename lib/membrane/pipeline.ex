@@ -15,7 +15,7 @@ defmodule Membrane.Pipeline do
     Element,
     Pad,
     PlaybackState,
-    Spec
+    ParentSpec
   }
 
   alias Core.Parent
@@ -188,7 +188,7 @@ defmodule Membrane.Pipeline do
 
   @impl CallbackHandler
   # Deprecation
-  def handle_actions(%Spec{} = spec, :handle_init, params, state) do
+  def handle_actions(%ParentSpec{} = spec, :handle_init, params, state) do
     warn("""
     Returning bare spec from `handle_init` is deprecated.
     Return `{{:ok, spec: spec}, state}` instead.
@@ -228,7 +228,7 @@ defmodule Membrane.Pipeline do
     Parent.Action.handle_forward(elementname, message, state)
   end
 
-  def do_handle_action({:spec, spec = %Spec{}}, _cb, _params, state) do
+  def do_handle_action({:spec, spec = %ParentSpec{}}, _cb, _params, state) do
     with {{:ok, _children}, state} <- ChildrenController.handle_spec(spec, state),
          do: {:ok, state}
   end
@@ -310,7 +310,7 @@ defmodule Membrane.Pipeline do
       def membrane_pipeline?, do: true
 
       @impl true
-      def handle_init(_options), do: {{:ok, spec: %Membrane.Spec{}}, %{}}
+      def handle_init(_options), do: {{:ok, spec: %Membrane.ParentSpec{}}, %{}}
 
       @impl true
       def handle_notification(_notification, _from, state), do: {:ok, state}

@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
   use Bunch
   use Membrane.Log, tags: :core
 
-  alias Membrane.{Bin, Clock, CallbackError, Child, Element, ParentError, Spec, Sync}
+  alias Membrane.{Bin, Clock, CallbackError, Child, Element, ParentError, ParentSpec, Sync}
   alias Membrane.Core
   alias Core.{CallbackHandler, Message, Parent}
   alias Core.Link
@@ -23,10 +23,10 @@ defmodule Membrane.Core.Parent.ChildrenController do
 
   @callback action_handler_module :: module()
 
-  @spec handle_spec(Spec.t(), Parent.ChildrenModel.t()) ::
+  @spec handle_spec(ParentSpec.t(), Parent.ChildrenModel.t()) ::
           Type.stateful_try_t([Child.name_t()], Parent.ChildrenModel.t())
   def handle_spec(spec, state) do
-    %Spec{
+    %ParentSpec{
       children: children_spec,
       links: links,
       stream_sync: stream_sync,
@@ -111,7 +111,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
                    (is_tuple(term) and tuple_size(term) == 2 and is_atom(elem(term, 0)) and
                       is_integer(elem(term, 1)) and elem(term, 1) >= 0)
 
-  @spec parse_children(Spec.children_spec_t() | any) :: [parsed_child_t]
+  @spec parse_children(ParentSpec.children_spec_t() | any) :: [parsed_child_t]
   def parse_children(children) when is_map(children) or is_list(children),
     do: children |> Enum.map(&parse_child/1)
 
@@ -318,7 +318,7 @@ defmodule Membrane.Core.Parent.ChildrenController do
         raise ParentError, """
         Cannot choose clock for the pipeline, as multiple elements provide one, namely: #{
           children |> Keyword.keys() |> Enum.join(", ")
-        }. Please explicitly select the clock by setting `Spec.clock_provider` parameter.
+        }. Please explicitly select the clock by setting `ParentSpec.clock_provider` parameter.
         """
     end
   end

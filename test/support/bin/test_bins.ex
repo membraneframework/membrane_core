@@ -1,5 +1,5 @@
 defmodule Membrane.Support.Bin.TestBins do
-  alias Membrane.Spec
+  alias Membrane.ParentSpec
 
   defmodule TestFilter do
     use Membrane.Filter
@@ -41,7 +41,7 @@ defmodule Membrane.Support.Bin.TestBins do
         {:filter2, :output} => {Bin.itself(), :output, []}
       }
 
-      spec = %Spec{
+      spec = %ParentSpec{
         children: children,
         links: links
       }
@@ -75,7 +75,7 @@ defmodule Membrane.Support.Bin.TestBins do
         {:filter2, :output} => {Bin.itself(), :output, []}
       }
 
-      spec = %Spec{
+      spec = %ParentSpec{
         children: children,
         links: links
       }
@@ -108,7 +108,7 @@ defmodule Membrane.Support.Bin.TestBins do
         {:filter, :output} => {:sink, :input, []}
       }
 
-      spec = %Spec{
+      spec = %ParentSpec{
         children: children,
         links: links
       }
@@ -146,7 +146,7 @@ defmodule Membrane.Support.Bin.TestBins do
         {:source, :output} => {:sink, :input, []}
       }
 
-      spec = %Spec{
+      spec = %ParentSpec{
         children: children,
         links: links
       }

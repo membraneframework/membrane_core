@@ -1,5 +1,5 @@
 defmodule Membrane.Parent.Action do
-  alias Membrane.{Child, Notification, Spec}
+  alias Membrane.{Child, Notification, ParentSpec}
 
   @moduledoc """
   Common types definitions for bin and element.
@@ -11,12 +11,12 @@ defmodule Membrane.Parent.Action do
   @type forward_action_t :: {:forward, {Child.name_t(), Notification.t()}}
 
   @typedoc """
-  Action that instantiates elements and links them according to `Membrane.Spec`.
+  Action that instantiates elements and links them according to `Membrane.ParentSpec`.
 
   Children's playback state is changed to the current parent state.
   `c:Membrane.Parent.handle_spec_started/2` callback is executed once it happens.
   """
-  @type spec_action_t :: {:spec, Spec.t()}
+  @type spec_action_t :: {:spec, ParentSpec.t()}
 
   @typedoc """
   Action that stops, unlinks and removes specified child/children from their parent.

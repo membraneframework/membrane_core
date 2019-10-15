@@ -109,7 +109,7 @@ defmodule Membrane.Integration.SyncTest do
 
     options = %Testing.Pipeline.Options{
       module: Membrane.Support.Sync.Pipeline,
-      custom_args: %Membrane.Spec{}
+      custom_args: %Membrane.ParentSpec{}
     }
 
     {:ok, pipeline} = Testing.Pipeline.start_link(options)
@@ -148,7 +148,7 @@ defmodule Membrane.Integration.SyncTest do
     def handle_init(_) do
       children = [filter1: TestFilter, filter2: TestFilter]
 
-      spec = %Membrane.Spec{
+      spec = %Membrane.ParentSpec{
         children: children,
         links: %{},
         stream_sync: []
@@ -168,7 +168,7 @@ defmodule Membrane.Integration.SyncTest do
 
     links = %{}
 
-    spec = %Membrane.Spec{
+    spec = %Membrane.ParentSpec{
       children: children,
       links: links,
       stream_sync: [[:el1, :el2]]

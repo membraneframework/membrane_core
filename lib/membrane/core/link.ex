@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Link do
   @moduledoc false
 
-  alias Membrane.{Pad, Spec}
+  alias Membrane.{Pad, ParentSpec}
   alias __MODULE__.Endpoint
   require Pad
 
@@ -32,7 +32,7 @@ defmodule Membrane.Core.Link do
             id: Pad.dynamic_id_t() | nil,
             pad_ref: Pad.ref_t() | nil,
             pid: pid() | nil,
-            opts: Spec.endpoint_options_t()
+            opts: ParentSpec.endpoint_options_t()
           }
 
     @type resolved_t() :: %__MODULE__{
@@ -41,10 +41,10 @@ defmodule Membrane.Core.Link do
             id: Pad.dynamic_id_t() | nil,
             pad_ref: Pad.ref_t(),
             pid: pid(),
-            opts: Spec.endpoint_options_t()
+            opts: ParentSpec.endpoint_options_t()
           }
 
-    @spec parse(Spec.link_endpoint_spec_t() | any()) :: {:ok, t()} | {:error, any()}
+    @spec parse(ParentSpec.link_endpoint_spec_t() | any()) :: {:ok, t()} | {:error, any()}
     def parse({elem, pad_name}) do
       parse({elem, pad_name, nil, []})
     end
@@ -85,7 +85,7 @@ defmodule Membrane.Core.Link do
     end
   end
 
-  @spec parse(Spec.links_spec_t()) :: {:ok, t()} | {:error, any()}
+  @spec parse(ParentSpec.links_spec_t()) :: {:ok, t()} | {:error, any()}
   def parse({from, to}) do
     with {:ok, from} <- Endpoint.parse(from),
          {:ok, to} <- Endpoint.parse(to) do

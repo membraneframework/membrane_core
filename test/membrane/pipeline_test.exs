@@ -4,7 +4,7 @@ defmodule Membrane.PipelineTest do
   @module Membrane.Pipeline
 
   alias Membrane.Core.Pipeline.State
-  alias Membrane.Spec
+  alias Membrane.ParentSpec
 
   defp state(_ctx) do
     [state: %State{module: nil, clock_proxy: nil}]
@@ -32,7 +32,7 @@ defmodule Membrane.PipelineTest do
 
         @impl true
         def handle_init(_) do
-          spec = %Membrane.Spec{}
+          spec = %Membrane.ParentSpec{}
           {{:ok, spec: spec}, %{}}
         end
       end
@@ -50,7 +50,7 @@ defmodule Membrane.PipelineTest do
     test "should raise if duplicate elements exist in spec", %{state: state} do
       assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
         @module.handle_action(
-          {:spec, %Spec{children: [a: :child1, a: :child2]}},
+          {:spec, %ParentSpec{children: [a: :child1, a: :child2]}},
           nil,
           [],
           state
@@ -63,7 +63,7 @@ defmodule Membrane.PipelineTest do
 
       assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
         @module.handle_action(
-          {:spec, %Spec{children: [a: :child]}},
+          {:spec, %ParentSpec{children: [a: :child]}},
           nil,
           [],
           state
