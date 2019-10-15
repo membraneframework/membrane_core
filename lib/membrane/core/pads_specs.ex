@@ -51,14 +51,18 @@ defmodule Membrane.Core.PadsSpecs do
     """
   end
 
+  @doc """
+  Returns AST inserted into bin's module defining a pad
+  """
+  @spec def_bin_pad(Pad.name_t(), Pad.direction_t(), Macro.t()) :: Macro.t()
   def def_bin_pad(pad_name, direction, raw_specs) do
     def_pad(pad_name, direction, raw_specs, true)
   end
 
   @doc """
-  Returns AST inserted into element's module defining a pad
+  Returns AST inserted into element's or bin's module defining a pad
   """
-  @spec def_pad(Pad.name_t(), Pad.direction_t(), Macro.t()) :: Macro.t()
+  @spec def_pad(Pad.name_t(), Pad.direction_t(), Macro.t(), boolean()) :: Macro.t()
   def def_pad(pad_name, direction, raw_specs, bin? \\ false) do
     Pad.assert_public_name!(pad_name)
     Code.ensure_loaded(Caps.Matcher)
