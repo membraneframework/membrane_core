@@ -1,11 +1,16 @@
 defmodule Membrane.Core.Parent.Action do
   @moduledoc false
-  alias Membrane.CallbackError
-  alias Membrane.Core.{Parent, Message}
+  alias Bunch.Type
+  alias Membrane.{CallbackError, Child}
+  alias Membrane.Core
+  alias Core.{Parent, Message, Bin, Pipeline}
   alias Parent.ChildrenController
 
   use Bunch
 
+  @type state_t :: Bin.State.t() | Pipeline.State.t()
+
+  @spec handle_forward(Child.name_t(), any, state_t()) :: Type.stateful_try_t(state_t)
   def handle_forward(element_name, message, state) do
     with {:ok, %{pid: pid}} <- state |> Parent.ChildrenModel.get_child_data(element_name) do
       send(pid, message)
@@ -17,6 +22,8 @@ defmodule Membrane.Core.Parent.Action do
     end
   end
 
+  @spec handle_remove_child(Child.name_t() | [Child.name_t()], state_t()) ::
+          Type.stateful_try_t(state_t)
   def handle_remove_child(children, state) do
     children = children |> Bunch.listify()
 
