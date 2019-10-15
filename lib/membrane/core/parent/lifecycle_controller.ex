@@ -3,7 +3,8 @@ defmodule Membrane.Core.Parent.LifecycleController do
   use Bunch
   use Membrane.Core.PlaybackHandler
 
-  alias Membrane.{Core, Sync}
+  alias Bunch.Type
+  alias Membrane.{Child, Core, Notification, Sync}
 
   alias Core.{
     Parent,
@@ -14,9 +15,13 @@ defmodule Membrane.Core.Parent.LifecycleController do
     Message
   }
 
+  alias Membrane.PlaybackState
+
   require Message
   require PadModel
-  require Membrane.PlaybackState
+  require PlaybackState
+
+  @type state_t :: Core.Bin.State.t() | Core.Pipeline.State.t()
 
   @impl PlaybackHandler
   def handle_playback_state(old, new, state) do
@@ -52,10 +57,14 @@ defmodule Membrane.Core.Parent.LifecycleController do
     CallbackHandler.exec_and_handle_callback(callback, state.handlers.action_handler, [], state)
   end
 
+  @spec change_playback_state(PlaybackState.t(), Playbackable.t()) ::
+          PlaybackHandler.handler_return_t()
   def change_playback_state(new_state, state) do
     PlaybackHandler.change_playback_state(new_state, __MODULE__, state)
   end
 
+  @spec handle_stop_and_terminate(state_t) ::
+          {:stop, :normal, state_t} | PlaybackHandler.handler_return_t()
   def handle_stop_and_terminate(state) do
     case state.playback.state do
       :stopped ->
@@ -72,6 +81,8 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
+  @spec handle_notification(Child.name_t(), Notification.t(), state_t) ::
+          Type.stateful_try_t(state_t)
   def handle_notification(from, notification, state) do
     with {:ok, _} <- state |> Parent.ChildrenModel.get_child_data(from) do
       CallbackHandler.exec_and_handle_callback(
@@ -86,6 +97,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
+  @spec handle_shutdown_ready(Child.name_t(), state_t()) :: {:ok, state_t()}
   def handle_shutdown_ready(child, state) do
     {{:ok, %{pid: pid}}, state} = Parent.ChildrenModel.pop_child(state, child)
     {Core.Element.shutdown(pid), state}
@@ -99,6 +111,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     ~> {:ok, &1}
   end
 
+  @spec handle_other(any, state_t()) :: Type.stateful_try_t(state_t)
   def handle_other(message, state) do
     CallbackHandler.exec_and_handle_callback(
       :handle_other,
@@ -108,6 +121,8 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
+  @spec child_playback_changed(pid, PlaybackState.t(), state_t()) ::
+          PlaybackHandler.handler_return_t()
   def child_playback_changed(
         _pid,
         _new_playback_state,
@@ -137,6 +152,8 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
+  @spec handle_stream_management_event(atom, Child.name_t(), Pad.ref_t(), state_t()) ::
+          Type.stateful_try_t(state_t)
   def handle_stream_management_event(cb, element_name, pad_ref, state)
       when cb in [:handle_start_of_stream, :handle_end_of_stream] do
     CallbackHandler.exec_and_handle_callback(
