@@ -4,7 +4,7 @@ defmodule Membrane.Core.Parent.Action do
   alias Membrane.{CallbackError, Child}
   alias Membrane.Core
   alias Core.{Parent, Message, Bin, Pipeline}
-  alias Parent.ChildrenController
+  alias Parent.SpecController
 
   use Bunch
 
@@ -30,7 +30,7 @@ defmodule Membrane.Core.Parent.Action do
     {:ok, state} =
       if state.clock_provider.provider in children do
         %{state | clock_provider: %{clock: nil, provider: nil, choice: :auto}}
-        |> ChildrenController.choose_clock()
+        |> SpecController.choose_clock()
       else
         {:ok, state}
       end

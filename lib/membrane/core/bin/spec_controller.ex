@@ -3,7 +3,7 @@ defmodule Membrane.Core.Bin.SpecController do
   use Bunch
   use Membrane.Log, tags: :core
 
-  @behaviour Membrane.Core.Parent.ChildrenController
+  @behaviour Membrane.Core.Parent.SpecController
 
   alias Membrane.{Bin, LinkError, Pad}
 

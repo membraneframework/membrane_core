@@ -21,7 +21,7 @@ defmodule Membrane.Pipeline do
   alias Core.Parent
   alias Core.Message
   alias Core.Pipeline.State
-  alias Parent.ChildrenController
+  alias Parent.SpecController
   import Membrane.Helper.GenServer
   require Element
   require PlaybackState
@@ -229,7 +229,7 @@ defmodule Membrane.Pipeline do
   end
 
   def do_handle_action({:spec, spec = %ParentSpec{}}, _cb, _params, state) do
-    with {{:ok, _children}, state} <- ChildrenController.handle_spec(spec, state),
+    with {{:ok, _children}, state} <- SpecController.handle_spec(spec, state),
          do: {:ok, state}
   end
 
