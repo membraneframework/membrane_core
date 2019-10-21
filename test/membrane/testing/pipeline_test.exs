@@ -1,6 +1,7 @@
 defmodule Membrane.Testing.PipelineTest do
   use ExUnit.Case
 
+  alias Membrane.ParentSpec
   alias Membrane.Testing.Pipeline
 
   defmodule MockPipeline do
@@ -12,8 +13,9 @@ defmodule Membrane.Testing.PipelineTest do
 
   describe "When initializing Testing Pipeline" do
     test "generates links if only elements were provided" do
+      import ParentSpec
       elements = [elem: Elem, elem2: Elem]
-      links = %{{:elem, :output} => {:elem2, :input}}
+      links = [link(:elem) |> to(:elem2)]
       options = %Pipeline.Options{elements: elements}
       assert {{:ok, spec: spec}, state} = Pipeline.handle_init(options)
       assert state == %Pipeline.State{module: nil, test_process: nil}
@@ -25,8 +27,9 @@ defmodule Membrane.Testing.PipelineTest do
     end
 
     test "uses prepared links if they were provided" do
+      import ParentSpec
       elements = [elem: Elem, elem2: Elem]
-      links = %{{:elem, :output} => {:elem2, :input}}
+      links = link(:elem) |> to(:elem2)
       options = %Pipeline.Options{elements: elements, links: links}
       assert {{:ok, spec: spec}, state} = Pipeline.handle_init(options)
       assert state == %Pipeline.State{module: nil, test_process: nil}

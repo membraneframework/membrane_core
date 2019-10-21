@@ -32,11 +32,15 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
       |> maybe_add_extra_source(opts)
 
     links =
-      %{
-        {:source, :output} => {:filter1, :input1, buffer: [preferred_size: 10]},
-        {:filter1, :output} => {:filter2, :input1, buffer: [preferred_size: 10]},
-        {:filter2, :output} => {:sink, :input, buffer: [preferred_size: 10]}
-      }
+      [
+        link(:source)
+        |> via_in(:input1, buffer: [preferred_size: 10])
+        |> to(:filter1)
+        |> via_in(:input1, buffer: [preferred_size: 10])
+        |> to(:filter2)
+        |> via_in(:input, buffer: [preferred_size: 10])
+        |> to(:sink)
+      ]
       |> maybe_add_extra_source_link(opts)
 
     spec = %Membrane.ParentSpec{
@@ -62,7 +66,10 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
   defp maybe_add_extra_source(children, _), do: children
 
   defp maybe_add_extra_source_link(links, %{extra_source: _}) do
-    Map.put(links, {:extra_source, :output}, {:filter2, :input2, buffer: [preferred_size: 10]})
+    [
+      link(:extra_source) |> via_in(:input2, buffer: [preferred_size: 10]) |> to(:filter2)
+      | links
+    ]
   end
 
   defp maybe_add_extra_source_link(links, _) do

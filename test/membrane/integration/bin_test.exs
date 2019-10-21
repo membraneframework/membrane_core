@@ -214,7 +214,7 @@ defmodule Membrane.Core.BinTest do
 
         spec = %Membrane.ParentSpec{
           children: children,
-          links: %{},
+          links: [],
           clock_provider: :element_child
         }
 
@@ -230,7 +230,7 @@ defmodule Membrane.Core.BinTest do
         children = [bin_child: ClockBin]
 
         {{:ok,
-          spec: %Membrane.ParentSpec{children: children, links: %{}, clock_provider: :bin_child}},
+          spec: %Membrane.ParentSpec{children: children, links: [], clock_provider: :bin_child}},
          :ignored}
       end
     end

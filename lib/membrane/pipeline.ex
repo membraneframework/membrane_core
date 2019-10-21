@@ -241,11 +241,21 @@ defmodule Membrane.Pipeline do
     {{:error, :invalid_action}, state}
   end
 
-  defmacro __using__(_) do
+  defmacro __using__(args) do
+    bring_spec =
+      if args |> Keyword.get(:bring_spec?, true) do
+        quote do
+          import Membrane.ParentSpec
+          alias Membrane.ParentSpec
+        end
+      end
+
     quote location: :keep do
       use Membrane.Parent
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
+
+      unquote(bring_spec)
 
       @doc """
       Starts the pipeline `#{inspect(__MODULE__)}` and links it to the current process.

@@ -150,7 +150,7 @@ defmodule Membrane.Integration.SyncTest do
 
       spec = %Membrane.ParentSpec{
         children: children,
-        links: %{},
+        links: [],
         stream_sync: []
       }
 
@@ -166,7 +166,7 @@ defmodule Membrane.Integration.SyncTest do
       el2: SimpleBin
     ]
 
-    links = %{}
+    links = []
 
     spec = %Membrane.ParentSpec{
       children: children,

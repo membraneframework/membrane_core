@@ -35,11 +35,9 @@ defmodule Membrane.Support.Bin.TestBins do
         filter2: opts.filter2
       ]
 
-      links = %{
-        {Bin.itself(), :input} => {:filter1, :input, []},
-        {:filter1, :output} => {:filter2, :input, []},
-        {:filter2, :output} => {Bin.itself(), :output, []}
-      }
+      links = [
+        link_bin_input() |> to(:filter1) |> to(:filter2) |> to_bin_output()
+      ]
 
       spec = %ParentSpec{
         children: children,
@@ -69,11 +67,9 @@ defmodule Membrane.Support.Bin.TestBins do
         filter2: opts.filter2
       ]
 
-      links = %{
-        {Bin.itself(), :input} => {:filter1, :input, []},
-        {:filter1, :output} => {:filter2, :input, []},
-        {:filter2, :output} => {Bin.itself(), :output, []}
-      }
+      links = [
+        link_bin_input() |> to(:filter1) |> to(:filter2) |> to_bin_output()
+      ]
 
       spec = %ParentSpec{
         children: children,
@@ -103,10 +99,7 @@ defmodule Membrane.Support.Bin.TestBins do
         sink: opts.sink
       ]
 
-      links = %{
-        {Bin.itself(), :input} => {:filter, :input, []},
-        {:filter, :output} => {:sink, :input, []}
-      }
+      links = [link_bin_input() |> to(:filter) |> to(:sink)]
 
       spec = %ParentSpec{
         children: children,
@@ -142,9 +135,7 @@ defmodule Membrane.Support.Bin.TestBins do
         sink: opts.sink
       ]
 
-      links = %{
-        {:source, :output} => {:sink, :input, []}
-      }
+      links = [link(:source) |> to(:sink)]
 
       spec = %ParentSpec{
         children: children,
