@@ -51,6 +51,7 @@ defmodule Membrane.Core.Parent.SpecController do
     {:ok, state} = choose_clock(children, clock_provider, state)
 
     {:ok, links} = links |> Link.from_spec()
+
     {links, state} = links |> specific_spec_mod.resolve_links(state)
     {:ok, state} = links |> specific_spec_mod.link_children(state)
     {children_names, children_data} = children |> Enum.unzip()
