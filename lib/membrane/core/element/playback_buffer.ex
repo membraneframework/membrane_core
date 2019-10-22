@@ -45,7 +45,10 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   @spec store(message_t, State.t()) :: State.stateful_try_t()
   def store(msg, %State{playback: %Playback{state: :playing}} = state), do: exec(msg, state)
 
-  def store(Message.new(type, _args, _opts) = msg, state)
+  def store(
+        Message.new(type, _args, _opts) = msg,
+        %State{playback: %Playback{state: :prepared}} = state
+      )
       when type in [:event, :caps] do
     if state.playback_buffer |> empty? do
       exec(msg, state)

@@ -118,7 +118,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     {:ok, new_state}
   end
 
-  defp do_handle_message(Message.new(_, _) = message, mode, state) do
+  defp do_handle_message(Message.new(_, _, _) = message, mode, state) do
     {{:error, {:invalid_message, message, mode: mode}}, state}
   end
 

@@ -1,4 +1,4 @@
-defmodule Membrane.Element.ElementTest do
+defmodule Membrane.ElementTest do
   use ExUnit.Case, async: true
 
   import Membrane.Testing.Assertions
