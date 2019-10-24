@@ -6,7 +6,7 @@ defmodule Membrane.Element.CallbackContext.Caps do
   The `old_caps` field contains caps previously present on the pad, and is equal
   to `pads[pad].caps` field.
   """
-  alias Membrane.Core.PadModel
+  alias Membrane.Core.Child.PadModel
 
   use Membrane.Element.CallbackContext,
     old_caps: Membrane.Caps.t()

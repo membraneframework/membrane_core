@@ -5,7 +5,8 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   # before another does.
 
   alias Membrane.{Buffer, Core, Event}
-  alias Core.{PadModel, Playback}
+  alias Core.Playback
+  alias Core.Child.PadModel
 
   alias Core.Element.{
     BufferController,

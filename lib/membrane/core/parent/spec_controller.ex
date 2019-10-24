@@ -6,7 +6,7 @@ defmodule Membrane.Core.Parent.SpecController do
   alias Membrane.{Bin, Clock, CallbackError, Child, Element, ParentError, ParentSpec, Sync}
   alias Membrane.Core
   alias Core.{CallbackHandler, Message, Parent}
-  alias Core.Link
+  alias Core.Parent.Link
   alias Bunch.Type
 
   require Bin

@@ -3,7 +3,8 @@ defmodule Membrane.Core.Element.BufferController do
   # Module handling buffers incoming through input pads.
 
   alias Membrane.{Buffer, Core, Element, Pad}
-  alias Core.{CallbackHandler, InputBuffer, PadModel}
+  alias Core.{CallbackHandler, InputBuffer}
+  alias Core.Child.PadModel
   alias Element.CallbackContext
   alias Core.Element.{ActionHandler, DemandHandler, State}
   require CallbackContext.{Process, Write}

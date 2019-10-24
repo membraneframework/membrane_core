@@ -3,7 +3,8 @@ defmodule Membrane.Core.Child.LifecycleController do
   use Bunch
 
   alias Membrane.{Clock, Pad}
-  alias Membrane.Core.{Bin, Element, PadModel}
+  alias Membrane.Core.{Bin, Element}
+  alias Membrane.Core.Child.PadModel
 
   require PadModel
 

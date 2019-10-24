@@ -6,7 +6,8 @@ defmodule Membrane.Core.Bin.State do
 
   alias Membrane.{Child, Clock, Parent, Sync}
   alias Membrane.Core
-  alias Core.{Bin, Playback, Playbackable, PadModel, Timer}
+  alias Core.{Bin, Playback, Playbackable, Timer}
+  alias Core.Child.PadModel
   alias Core.Bin.LinkingBuffer
   alias Core.Parent.ChildrenModel
   alias __MODULE__, as: ThisModule

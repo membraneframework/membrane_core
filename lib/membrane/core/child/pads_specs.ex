@@ -1,4 +1,4 @@
-defmodule Membrane.Core.PadsSpecs do
+defmodule Membrane.Core.Child.PadsSpecs do
   @moduledoc false
   # Functions parsing element pads specifications, generating functions and docs
   # based on them.

@@ -6,7 +6,8 @@ defmodule Membrane.Core.Element.State do
 
   use Membrane.Log, tags: :core
   alias Membrane.{Clock, Core, Element, Pad, Sync}
-  alias Core.{PadSpecHandler, Playback, PadModel, Playbackable, Timer}
+  alias Core.{Playback, Playbackable, Timer}
+  alias Core.Child.{PadModel, PadSpecHandler}  
   alias Core.Element.PlaybackBuffer
   alias Bunch.Type
   alias __MODULE__, as: ThisModule

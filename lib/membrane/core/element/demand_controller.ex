@@ -3,7 +3,8 @@ defmodule Membrane.Core.Element.DemandController do
   # Module handling demands incoming through output pads.
 
   alias Membrane.{Core, Element, Pad}
-  alias Core.{CallbackHandler, PadModel}
+  alias Core.CallbackHandler
+  alias Core.Child.PadModel
   alias Element.CallbackContext
   alias Core.Element.{ActionHandler, State}
   require CallbackContext.Demand

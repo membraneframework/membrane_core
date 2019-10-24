@@ -23,7 +23,7 @@ defmodule Membrane.Core.Element do
   alias Membrane.{Clock, Element, LinkError, Sync}
   alias Membrane.Core.Element.{MessageDispatcher, State}
   alias Membrane.Core.Message
-  alias Membrane.Core.{Link, Link.Endpoint}
+  alias Membrane.Core.Parent.{Link, Link.Endpoint}
 
   @type options_t :: %{
           module: module,

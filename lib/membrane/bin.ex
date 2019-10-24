@@ -11,14 +11,11 @@ defmodule Membrane.Bin do
     Bin,
     CallbackHandler,
     Child,
-    PadController,
-    PadSpecHandler,
     Parent,
-    PadModel,
-    PadsSpecs,
     Message
   }
 
+  alias Membrane.Core.Child.{PadController, PadModel, PadSpecHandler, PadsSpecs}
   alias Membrane.Core.Bin.{State, LinkingBuffer}
   alias Membrane.{CallbackError, Element}
 
@@ -269,9 +266,9 @@ defmodule Membrane.Bin do
       import unquote(__MODULE__),
         only: [def_input_pad: 2, def_output_pad: 2, def_clock: 0, def_clock: 1]
 
-      require Membrane.Core.PadsSpecs
+      require Membrane.Core.Child.PadsSpecs
 
-      Membrane.Core.PadsSpecs.ensure_default_membrane_pads()
+      Membrane.Core.Child.PadsSpecs.ensure_default_membrane_pads()
 
       @impl true
       def membrane_bin?, do: true

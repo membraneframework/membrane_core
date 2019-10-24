@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
 
   alias Membrane.Core
 
-  alias Core.PadController
+  alias Core.Child.PadController
 
   alias Core.Element.{
     DemandHandler,

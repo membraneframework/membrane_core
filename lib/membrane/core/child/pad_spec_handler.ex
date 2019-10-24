@@ -1,9 +1,10 @@
-defmodule Membrane.Core.PadSpecHandler do
+defmodule Membrane.Core.Child.PadSpecHandler do
   @moduledoc false
   # Module parsing pads specifications in elements.
 
   alias Membrane.{Core, Pad}
-  alias Core.{Bin, Element, PadModel}
+  alias Core.{Bin, Element}
+  alias Core.Child.PadModel
   require Pad
   use Bunch
   use Core.Element.Log

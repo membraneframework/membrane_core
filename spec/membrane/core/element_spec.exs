@@ -5,8 +5,8 @@ defmodule Membrane.Core.ElementSpec do
   alias Membrane.Core.Element.State
   alias Membrane.Element.CallbackContext
   alias Membrane.LinkError
-  alias Membrane.Core.Link
-  alias Membrane.Core.Link.Endpoint
+  alias Membrane.Core.Parent.Link
+  alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.Support.Element.{TrivialFilter, TrivialSink, TrivialSource}
   alias Membrane.Sync
 

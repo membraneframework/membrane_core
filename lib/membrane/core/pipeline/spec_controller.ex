@@ -6,7 +6,8 @@ defmodule Membrane.Core.Pipeline.SpecController do
 
   alias Membrane.ParentError
   alias Membrane.Core
-  alias Core.{Link, Message}
+  alias Core.Message
+  alias Core.Parent.Link
 
   alias Membrane.Core.Parent
 

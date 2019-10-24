@@ -6,7 +6,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   use Membrane.Core.PlaybackHandler
   use Membrane.Core.Element.Log
   use Bunch
-  require Membrane.Core.PadModel
+  require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
   require Membrane.Core.Playback
   require Membrane.Element.CallbackContext.{Other, PlaybackChange}

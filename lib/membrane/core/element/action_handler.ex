@@ -15,7 +15,8 @@ defmodule Membrane.Core.Element.ActionHandler do
   }
 
   alias Core.Element.{DemandHandler, LifecycleController, State, TimerController}
-  alias Core.{Message, PadModel, PlaybackHandler}
+  alias Core.{Message, PlaybackHandler}
+  alias Core.Child.PadModel
   alias Element.Action
   require Message
   require PadModel

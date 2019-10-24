@@ -1,7 +1,7 @@
-defmodule Membrane.Core.PadControllerSpec do
+defmodule Membrane.Core.Child.PadControllerSpec do
   use ESpec, async: false
   alias Membrane.Support.Element.{DynamicFilter, TrivialFilter}
-  alias Membrane.Core.{PadModel, PadSpecHandler}
+  alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.Core.Element.State
   alias Membrane.Event.EndOfStream
   alias Membrane.Core.Playbackable

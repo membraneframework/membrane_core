@@ -9,12 +9,12 @@ defmodule Membrane.Core.Bin.SpecController do
 
   alias Membrane.Core.{
     Parent,
-    Message,
-    PadController
+    Message
   }
 
+  alias Membrane.Core.Child.PadController
   alias Membrane.Core.Bin.LinkingBuffer
-  alias Membrane.Core.Link
+  alias Membrane.Core.Parent.Link
 
   require Bin
   require Message

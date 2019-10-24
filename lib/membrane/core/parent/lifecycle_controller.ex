@@ -4,17 +4,17 @@ defmodule Membrane.Core.Parent.LifecycleController do
   use Membrane.Core.PlaybackHandler
 
   alias Bunch.Type
-  alias Membrane.{Child, Core, Notification, Sync}
+  alias Membrane.{Child, Core, Notification, Pad, Sync}
 
   alias Core.{
     Parent,
-    PadModel,
     Playback,
     PlaybackHandler,
     CallbackHandler,
     Message
   }
 
+  alias Core.Child.PadModel
   alias Membrane.PlaybackState
 
   require Message

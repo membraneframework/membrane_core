@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Link do
+defmodule Membrane.Core.Parent.Link do
   @moduledoc false
 
   alias Membrane.{Pad, ParentSpec}
