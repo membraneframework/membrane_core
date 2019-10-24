@@ -42,7 +42,6 @@ defmodule Membrane.Core.Pipeline.State do
                 clock_provider: %{clock: nil, provider: nil, choice: :auto},
                 handlers: %{
                   action_handler: Membrane.Pipeline,
-                  playback_controller: Core.Parent.LifecycleController,
                   spec_controller: Core.Pipeline.SpecController
                 }
               ]

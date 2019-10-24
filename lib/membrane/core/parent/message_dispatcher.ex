@@ -10,7 +10,6 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
 
   @type handlers :: %{
           action_handler: module(),
-          playback_controller: module(),
           spec_controller: module()
         }
 

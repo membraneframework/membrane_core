@@ -75,7 +75,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
         PlaybackHandler.change_and_lock_playback_state(
           :stopped,
-          state.handlers.playback_controller,
+          Core.Parent.LifecycleController,
           state
         )
     end
