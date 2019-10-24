@@ -8,10 +8,6 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
 
   require Message
 
-  @type handlers :: %{
-          action_handler: module()
-        }
-
   @spec handle_message(Message.t(), Pipeline.State.t() | Bin.State.t()) ::
           Type.stateful_try_t(any)
   def handle_message(

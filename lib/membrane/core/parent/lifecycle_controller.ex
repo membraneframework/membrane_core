@@ -27,7 +27,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   def handle_playback_state(old, new, state) do
     children_data =
       state
-      |> Core.Parent.ChildrenModel.get_children()
+      |> Parent.ChildrenModel.get_children()
       |> Map.values()
 
     children_pids = children_data |> Enum.map(& &1.pid)
@@ -54,7 +54,12 @@ defmodule Membrane.Core.Parent.LifecycleController do
       Message.self(:stop_and_terminate)
     end
 
-    CallbackHandler.exec_and_handle_callback(callback, state.handlers.action_handler, [], state)
+    CallbackHandler.exec_and_handle_callback(
+      callback,
+      Parent.Action.action_handler_module(state),
+      [],
+      state
+    )
   end
 
   @spec change_playback_state(PlaybackState.t(), Playbackable.t()) ::
@@ -75,7 +80,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
         PlaybackHandler.change_and_lock_playback_state(
           :stopped,
-          Core.Parent.LifecycleController,
+          Parent.LifecycleController,
           state
         )
     end
@@ -87,7 +92,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     with {:ok, _} <- state |> Parent.ChildrenModel.get_child_data(from) do
       CallbackHandler.exec_and_handle_callback(
         :handle_notification,
-        state.handlers.action_handler,
+        Parent.Action.action_handler_module(state),
         [notification, from],
         state
       )
@@ -115,7 +120,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   def handle_other(message, state) do
     CallbackHandler.exec_and_handle_callback(
       :handle_other,
-      state.handlers.action_handler,
+      Parent.Action.action_handler_module(state),
       [message],
       state
     )
@@ -158,7 +163,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
       when cb in [:handle_start_of_stream, :handle_end_of_stream] do
     CallbackHandler.exec_and_handle_callback(
       to_parent_sm_callback(cb),
-      state.handlers.action_handler,
+      Parent.Action.action_handler_module(state),
       [{element_name, pad_ref}],
       state
     )

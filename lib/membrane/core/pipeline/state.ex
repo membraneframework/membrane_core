@@ -5,7 +5,7 @@ defmodule Membrane.Core.Pipeline.State do
   # internally in Membrane.
 
   alias Membrane.Child
-  alias Membrane.Core.{Parent, Playback, Playbackable}
+  alias Membrane.Core.{Playback, Playbackable}
   alias Membrane.{Clock, Sync}
   use Bunch
 
@@ -23,8 +23,7 @@ defmodule Membrane.Core.Pipeline.State do
             provider: Child.name_t() | nil,
             choice: :auto | :manual
           },
-          clock_proxy: Clock.t(),
-          handlers: Parent.MessageDispatcher.handlers()
+          clock_proxy: Clock.t()
         }
 
   @type internal_state_t :: map | struct
@@ -39,9 +38,6 @@ defmodule Membrane.Core.Pipeline.State do
                 playback: %Playback{},
                 pending_pids: MapSet.new(),
                 terminating?: false,
-                clock_provider: %{clock: nil, provider: nil, choice: :auto},
-                handlers: %{
-                  action_handler: Membrane.Pipeline
-                }
+                clock_provider: %{clock: nil, provider: nil, choice: :auto}
               ]
 end

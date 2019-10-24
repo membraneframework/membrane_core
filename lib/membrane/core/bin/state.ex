@@ -6,7 +6,7 @@ defmodule Membrane.Core.Bin.State do
 
   alias Membrane.{Child, Clock, Parent, Sync}
   alias Membrane.Core
-  alias Core.{Bin, Playback, Playbackable, Timer}
+  alias Core.{Playback, Playbackable, Timer}
   alias Core.Child.PadModel
   alias Core.Bin.LinkingBuffer
   alias Core.Parent.ChildrenModel
@@ -33,7 +33,6 @@ defmodule Membrane.Core.Bin.State do
             choice: :auto | :manual
           },
           clock_proxy: Clock.t(),
-          handlers: Core.Parent.MessageDispatcher.handlers(),
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
             parent_clock: Clock.t(),
@@ -60,9 +59,6 @@ defmodule Membrane.Core.Bin.State do
                 controlling_pid: nil,
                 linking_buffer: LinkingBuffer.new(),
                 clock_provider: %{clock: nil, provider: nil, choice: :auto},
-                handlers: %{
-                  action_handler: Bin.ActionHandler
-                },
                 synchronization: %{}
               ]
 

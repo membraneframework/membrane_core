@@ -246,7 +246,7 @@ defmodule Membrane.Core.Parent.SpecController do
     callback_res =
       CallbackHandler.exec_and_handle_callback(
         :handle_spec_started,
-        action_handler_module(state),
+        Parent.Action.action_handler_module(state),
         [children_names],
         state
       )
@@ -262,9 +262,6 @@ defmodule Membrane.Core.Parent.SpecController do
           """
     end
   end
-
-  defp action_handler_module(%Core.Pipeline.State{}), do: Membrane.Pipeline
-  defp action_handler_module(%Core.Bin.State{}), do: Membrane.Core.Bin.ActionHandler
 
   def choose_clock(state) do
     choose_clock([], nil, state)

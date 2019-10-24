@@ -47,4 +47,7 @@ defmodule Membrane.Core.Parent.Action do
   def handle_unknown_action(action, callback, module) do
     raise CallbackError, kind: :invalid_action, action: action, callback: {module, callback}
   end
+
+  def action_handler_module(%Pipeline.State{}), do: Membrane.Pipeline
+  def action_handler_module(%Bin.State{}), do: Bin.ActionHandler
 end

@@ -169,7 +169,7 @@ defmodule Membrane.Bin do
     with {:ok, state} <-
            CallbackHandler.exec_and_handle_callback(
              :handle_init,
-             state.handlers.action_handler,
+             Membrane.Core.Bin.ActionHandler,
              %{state: false},
              [bin_options],
              state
