@@ -2,18 +2,14 @@ defmodule Membrane.Core.Pipeline.SpecController do
   use Bunch
   use Membrane.Log, tags: :core
 
-  @behaviour Membrane.Core.Parent.SpecController
-
   alias Membrane.ParentError
   alias Membrane.Core
   alias Core.Message
-  alias Core.Parent.Link
 
   alias Membrane.Core.Parent
 
   require Message
 
-  @impl true
   def resolve_links(links, state) do
     links
     |> Enum.map(fn %{from: from, to: to} = link ->
@@ -22,8 +18,6 @@ defmodule Membrane.Core.Pipeline.SpecController do
     ~> {&1, state}
   end
 
-  @spec resolve_link(Link.Endpoint.t(), Parent.ChildrenModel.t()) ::
-          Link.Endpoint.t()
   def resolve_link(%{element: element, pad_name: pad_name, id: id} = endpoint, state) do
     with {:ok, %{pid: pid}} <- state |> Parent.ChildrenModel.get_child_data(element),
          {:ok, pad_ref} <- pid |> Message.call(:get_pad_ref, [pad_name, id]) do
@@ -48,7 +42,6 @@ defmodule Membrane.Core.Pipeline.SpecController do
   #
   # Please note that this function is not atomic and in case of error there's
   # a chance that some of children will remain linked.
-  @impl true
   def link_children(links, state) do
     with :ok <- links |> Bunch.Enum.try_each(&Core.Element.link/1),
          :ok <-
@@ -59,7 +52,4 @@ defmodule Membrane.Core.Pipeline.SpecController do
            end),
          do: {:ok, state}
   end
-
-  @impl true
-  def action_handler_module, do: Membrane.Pipeline
 end

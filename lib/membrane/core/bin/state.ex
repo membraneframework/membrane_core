@@ -61,8 +61,7 @@ defmodule Membrane.Core.Bin.State do
                 linking_buffer: LinkingBuffer.new(),
                 clock_provider: %{clock: nil, provider: nil, choice: :auto},
                 handlers: %{
-                  action_handler: Bin.ActionHandler,
-                  spec_controller: Bin.SpecController
+                  action_handler: Bin.ActionHandler
                 },
                 synchronization: %{}
               ]

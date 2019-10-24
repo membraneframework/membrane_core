@@ -16,13 +16,6 @@ defmodule Membrane.Core.Parent.SpecController do
 
   @typep parsed_child_t :: %{name: Child.name_t(), module: module, options: Keyword.t()}
 
-  @callback resolve_links([Link.t()], Parent.ChildrenModel.t()) ::
-              {[Link.resolved_t()], Core.Bin.State.t() | Core.Pipeline.State.t()}
-
-  @callback link_children([Link.resolved_t()], Parent.ChildrenModel.t()) :: Type.try_t()
-
-  @callback action_handler_module :: module()
-
   @spec handle_spec(ParentSpec.t(), Parent.ChildrenModel.t()) ::
           Type.stateful_try_t([Child.name_t()], Parent.ChildrenModel.t())
   def handle_spec(spec, state) do
@@ -38,6 +31,8 @@ defmodule Membrane.Core.Parent.SpecController do
     children: #{inspect(children_spec)}
     links: #{inspect(links)}
     """)
+
+    specific_spec_mod = specific_spec_module(state)
 
     parsed_children = children_spec |> parse_children()
 
@@ -56,16 +51,19 @@ defmodule Membrane.Core.Parent.SpecController do
     {:ok, state} = choose_clock(children, clock_provider, state)
 
     {{:ok, links}, state} = {links |> parse_links(), state}
-    {links, state} = links |> state.handlers.spec_controller.resolve_links(state)
-    {:ok, state} = links |> state.handlers.spec_controller.link_children(state)
+    {links, state} = links |> specific_spec_mod.resolve_links(state)
+    {:ok, state} = links |> specific_spec_mod.link_children(state)
     {children_names, children_data} = children |> Enum.unzip()
-    {:ok, state} = exec_handle_spec_started(state.handlers.spec_controller, children_names, state)
+    {:ok, state} = exec_handle_spec_started(children_names, state)
 
     children_data
     |> Enum.each(&change_playback_state(&1.pid, state.playback.state))
 
     {{:ok, children_names}, state}
   end
+
+  defp specific_spec_module(%Core.Bin.State{}), do: Core.Bin.SpecController
+  defp specific_spec_module(%Core.Pipeline.State{}), do: Core.Pipeline.SpecController
 
   defp setup_syncs(children, :sinks) do
     sinks =
@@ -244,11 +242,11 @@ defmodule Membrane.Core.Parent.SpecController do
   defp to_no_sync(nil), do: Sync.no_sync()
   defp to_no_sync(sync), do: sync
 
-  defp exec_handle_spec_started(spec_controller_module, children_names, state) do
+  defp exec_handle_spec_started(children_names, state) do
     callback_res =
       CallbackHandler.exec_and_handle_callback(
         :handle_spec_started,
-        spec_controller_module.action_handler_module,
+        action_handler_module(state),
         [children_names],
         state
       )
@@ -264,6 +262,9 @@ defmodule Membrane.Core.Parent.SpecController do
           """
     end
   end
+
+  defp action_handler_module(%Core.Pipeline.State{}), do: Membrane.Pipeline
+  defp action_handler_module(%Core.Bin.State{}), do: Membrane.Core.Bin.ActionHandler
 
   def choose_clock(state) do
     choose_clock([], nil, state)

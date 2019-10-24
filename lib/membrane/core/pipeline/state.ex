@@ -4,7 +4,7 @@ defmodule Membrane.Core.Pipeline.State do
   # It does not represent state of pipelines you construct, it's a state used
   # internally in Membrane.
 
-  alias Membrane.{Child, Core}
+  alias Membrane.Child
   alias Membrane.Core.{Parent, Playback, Playbackable}
   alias Membrane.{Clock, Sync}
   use Bunch
@@ -41,8 +41,7 @@ defmodule Membrane.Core.Pipeline.State do
                 terminating?: false,
                 clock_provider: %{clock: nil, provider: nil, choice: :auto},
                 handlers: %{
-                  action_handler: Membrane.Pipeline,
-                  spec_controller: Core.Pipeline.SpecController
+                  action_handler: Membrane.Pipeline
                 }
               ]
 end

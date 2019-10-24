@@ -3,8 +3,6 @@ defmodule Membrane.Core.Bin.SpecController do
   use Bunch
   use Membrane.Log, tags: :core
 
-  @behaviour Membrane.Core.Parent.SpecController
-
   alias Membrane.{Bin, LinkError, Pad}
 
   alias Membrane.Core.{
@@ -19,7 +17,6 @@ defmodule Membrane.Core.Bin.SpecController do
   require Bin
   require Message
 
-  @impl true
   def resolve_links(links, state) do
     {new_links, new_state} =
       links
@@ -67,7 +64,6 @@ defmodule Membrane.Core.Bin.SpecController do
   #
   # Please note that this function is not atomic and in case of error there's
   # a chance that some of children will remain linked.
-  @impl true
   def link_children(links, state) do
     debug("Linking children: links = #{inspect(links)}")
 
@@ -136,7 +132,4 @@ defmodule Membrane.Core.Bin.SpecController do
     Message.call(pid, :handle_link, args)
     ~> {&1, state}
   end
-
-  @impl true
-  def action_handler_module, do: Membrane.Core.Bin.ActionHandler
 end

@@ -9,8 +9,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   require Message
 
   @type handlers :: %{
-          action_handler: module(),
-          spec_controller: module()
+          action_handler: module()
         }
 
   @spec handle_message(Message.t(), Pipeline.State.t() | Bin.State.t()) ::
