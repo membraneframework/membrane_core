@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Element.PadControllerTest do
+defmodule Membrane.Core.Child.PadControllerTest do
   use ExUnit.Case, async: true
   alias Membrane.Support.Element.{DynamicFilter, TrivialFilter, TrivialSink}
   alias Membrane.Core.Element.State
