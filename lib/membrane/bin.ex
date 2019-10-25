@@ -1,4 +1,14 @@
 defmodule Membrane.Bin do
+  @moduledoc """
+  Bins, similarly to pipelines, are containers for elements. However, at the same time, they can be placed and linked within pipelines.
+  Although bin is a separate Membrane entity, it can be perceived as a pipeline within an element.
+  Bins can also be nested within one another.
+
+  There are two main reasons why bins are useful:
+  * they enable creating reusable element groups
+  * they allow managing their children, for instance by dynamically spawning or replacing them as the stream changes.
+  """
+
   use Bunch
   use Membrane.Log, tags: :core
   use GenServer
