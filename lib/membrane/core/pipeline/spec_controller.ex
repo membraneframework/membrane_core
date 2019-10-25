@@ -8,6 +8,7 @@ defmodule Membrane.Core.Pipeline.SpecController do
   alias Core.Message
 
   alias Membrane.Core.Parent
+  alias Membrane.Core.Parent.Link.Endpoint
 
   require Message
 
@@ -21,7 +22,9 @@ defmodule Membrane.Core.Pipeline.SpecController do
     ~> {&1, state}
   end
 
-  def resolve_link(%{element: element, pad_name: pad_name, id: id} = endpoint, state) do
+  @spec resolve_link(Endpoint.t(), Core.Pipeline.State.t() | Core.Bin.State.t()) ::
+          Endpoint.t()
+  def resolve_link(%Endpoint{element: element, pad_name: pad_name, id: id} = endpoint, state) do
     with {:ok, %{pid: pid}} <- state |> Parent.ChildrenModel.get_child_data(element),
          {:ok, pad_ref} <- pid |> Message.call(:get_pad_ref, [pad_name, id]) do
       %{endpoint | pid: pid, pad_ref: pad_ref}
