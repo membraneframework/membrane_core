@@ -238,10 +238,8 @@ defmodule Membrane.Bin do
     {{:ok, info}, state} =
       PadController.handle_link(pad_ref, pad_direction, pid, other_ref, other_info, props, state)
 
-    {:ok, new_state} = PadController.handle_linking_finished(state)
-
-    LinkingBuffer.flush_for_pad(state.linking_buffer, pad_ref, new_state)
-    ~> {{:ok, info}, %{new_state | linking_buffer: &1}}
+    LinkingBuffer.flush_for_pad(state.linking_buffer, pad_ref, state)
+    ~> {{:ok, info}, %{state | linking_buffer: &1}}
     |> reply()
   end
 
