@@ -245,7 +245,7 @@ defmodule Membrane.Core.Parent.SpecController do
   defp exec_handle_spec_started(children_names, state) do
     action_handler =
       case state do
-        %Core.Pipeline.State{} -> Membrane.Pipeline
+        %Core.Pipeline.State{} -> Core.Pipeline.ActionHandler
         %Core.Bin.State{} -> Core.Bin.ActionHandler
       end
 
