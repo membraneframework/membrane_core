@@ -171,18 +171,19 @@ defmodule Membrane.Core.Child.PadsSpecs do
             {:ok, config} <-
               config
               |> Bunch.Config.parse(
-                direction: [default: direction],
                 availability: [in: [:always, :on_request], default: :always],
                 caps: [validate: &Caps.Matcher.validate_specs/1],
                 mode: [in: [:pull, :push], default: :pull],
-                bin?: [validate: &is_boolean/1, default: bin?],
                 demand_unit: [
                   in: [:buffers, :bytes],
                   require_if: &(&1.mode == :pull and (bin? or direction == :input))
                 ],
                 options: [default: nil]
               ) do
-      {:ok, {name, config}}
+      config
+      |> Map.put(:direction, direction)
+      |> Map.put(:bin?, bin?)
+      ~> {:ok, {name, &1}}
     else
       spec: spec -> {:error, {:invalid_pad_spec, spec}}
       config: {:error, reason} -> {:error, {reason, pad: name}}
