@@ -169,7 +169,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
-  defp get_callback_action_handler(%Core.Pipeline.State{}), do: Membrane.Pipeline
+  defp get_callback_action_handler(%Core.Pipeline.State{}), do: Core.Pipeline.ActionHandler
   defp get_callback_action_handler(%Core.Bin.State{}), do: Core.Bin.ActionHandler
 
   defp to_parent_sm_callback(:handle_start_of_stream), do: :handle_element_start_of_stream
