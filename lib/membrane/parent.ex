@@ -86,9 +86,19 @@ defmodule Membrane.Parent do
             ) ::
               callback_return_t
 
-  defmacro __using__(_) do
+  defmacro __using__(args \\ []) do
+    bring_spec =
+      if args |> Keyword.get(:bring_spec?, true) do
+        quote do
+          import Membrane.ParentSpec
+          alias Membrane.ParentSpec
+        end
+      end
+
     quote do
       @behaviour unquote(__MODULE__)
+
+      unquote(bring_spec)
 
       @impl true
       def handle_stopped_to_prepared(state), do: {:ok, state}

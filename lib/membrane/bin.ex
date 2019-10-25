@@ -68,11 +68,6 @@ defmodule Membrane.Bin do
   """
   @callback membrane_clock? :: boolean()
 
-  @doc """
-  This function defines a term that allows to reference current bin from `Membrane.ParentSpec`
-  """
-  def itself, do: {__MODULE__, :itself}
-
   @doc PadsSpecs.def_pad_docs(:input, :bin)
   defmacro def_input_pad(name, spec) do
     PadsSpecs.def_bin_pad(name, :input, spec)
@@ -263,9 +258,9 @@ defmodule Membrane.Bin do
     |> reply()
   end
 
-  defmacro __using__(_) do
+  defmacro __using__(args \\ []) do
     quote location: :keep do
-      use Membrane.Parent
+      use Membrane.Parent, unquote(args)
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
 

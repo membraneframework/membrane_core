@@ -183,9 +183,9 @@ defmodule Membrane.Pipeline do
     :ok = state.module.handle_shutdown(reason, state.internal_state)
   end
 
-  defmacro __using__(_) do
+  defmacro __using__(args \\ []) do
     quote location: :keep do
-      use Membrane.Parent
+      use Membrane.Parent, unquote(args)
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
 

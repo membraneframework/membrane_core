@@ -10,10 +10,13 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
       sink: opts.sink
     ]
 
-    links = %{
-      {:source, :output} => {:filter, :input, buffer: [preferred_size: 50]},
-      {:filter, :output} => {:sink, :input, buffer: [preferred_size: 50]}
-    }
+    links = [
+      link(:source)
+      |> via_in(:input, buffer: [preferred_size: 50])
+      |> to(:filter)
+      |> via_in(:input, buffer: [preferred_size: 50])
+      |> to(:sink)
+    ]
 
     spec = %Membrane.ParentSpec{
       children: children,

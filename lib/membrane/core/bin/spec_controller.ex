@@ -37,7 +37,7 @@ defmodule Membrane.Core.Bin.SpecController do
   end
 
   defp resolve_link(endpoint, state) do
-    if endpoint.element == Bin.itself() do
+    if endpoint.element == {Membrane.Bin, :itself} do
       resolve_bin_link(endpoint, state)
     else
       resolve_normal_link(endpoint, state)

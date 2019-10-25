@@ -36,7 +36,7 @@ defmodule Membrane.Pad.Data do
           sticky_messages: [Event.t()],
           input_buf: InputBuffer.t() | nil,
           demand: integer() | nil,
-          options: Keyword.t(),
+          options: %{optional(atom) => any},
           bin?: boolean()
         }
 
@@ -55,6 +55,6 @@ defmodule Membrane.Pad.Data do
             sticky_messages: nil,
             input_buf: nil,
             demand: nil,
-            options: [],
+            options: %{},
             bin?: false
 end

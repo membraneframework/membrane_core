@@ -50,7 +50,8 @@ defmodule Membrane.Core.Parent.SpecController do
 
     {:ok, state} = choose_clock(children, clock_provider, state)
 
-    {{:ok, links}, state} = {links |> parse_links(), state}
+    {:ok, links} = links |> Link.from_spec()
+
     {links, state} = links |> specific_spec_mod.resolve_links(state)
     {:ok, state} = links |> specific_spec_mod.link_children(state)
     {children_names, children_data} = children |> Enum.unzip()
@@ -101,8 +102,6 @@ defmodule Membrane.Core.Parent.SpecController do
     Message.send(pid, :change_playback_state, new_state)
     :ok
   end
-
-  defp parse_links(links), do: links |> Bunch.Enum.try_map(&Link.parse/1)
 
   defguardp is_child_name(term)
             when is_atom(term) or
