@@ -3,6 +3,7 @@ defmodule Membrane.Core.Bin.SpecController do
   use Bunch
   use Membrane.Log, tags: :core
 
+  alias Bunch.Type
   alias Membrane.{Bin, LinkError, Pad}
 
   alias Membrane.Core.{
@@ -10,6 +11,7 @@ defmodule Membrane.Core.Bin.SpecController do
     Message
   }
 
+  alias Membrane.Core
   alias Membrane.Core.Child.PadController
   alias Membrane.Core.Bin.LinkingBuffer
   alias Membrane.Core.Parent.Link
@@ -17,6 +19,7 @@ defmodule Membrane.Core.Bin.SpecController do
   require Bin
   require Message
 
+  @spec resolve_links([Link.t()], Core.Bin.State.t()) :: {[Link.resolved_t()], Core.Bin.State.t()}
   def resolve_links(links, state) do
     {new_links, new_state} =
       links
@@ -64,6 +67,7 @@ defmodule Membrane.Core.Bin.SpecController do
   #
   # Please note that this function is not atomic and in case of error there's
   # a chance that some of children will remain linked.
+  @spec link_children([Link.resolved_t()], Core.Bin.State.t()) :: Type.try_t()
   def link_children(links, state) do
     debug("Linking children: links = #{inspect(links)}")
 

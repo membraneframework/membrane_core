@@ -112,14 +112,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
     {Core.Element.shutdown(pid), state}
   end
 
-  def handle_demand_unit(demand_unit, pad_ref, state, _) do
-    PadModel.assert_data!(state, pad_ref, %{direction: :output})
-
-    state
-    |> PadModel.set_data!(pad_ref, [:other_demand_unit], demand_unit)
-    ~> {:ok, &1}
-  end
-
   @spec handle_other(any, state_t()) :: Type.stateful_try_t(state_t)
   def handle_other(message, state) do
     action_handler = get_callback_action_handler(state)

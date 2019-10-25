@@ -43,6 +43,9 @@ defmodule Membrane.Core.Child.PadSpecHandler do
     )
   end
 
+  @spec add_private_pads([{Pad.name_t(), Pad.description_t()}]) :: [
+          {Pad.name_t(), Pad.description_t()}
+        ]
   def add_private_pads(module_pads) do
     Enum.flat_map(module_pads, &create_private_pad/1)
   end

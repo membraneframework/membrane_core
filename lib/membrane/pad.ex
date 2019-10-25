@@ -17,7 +17,7 @@ defmodule Membrane.Pad do
   @typedoc """
   Defines the term by which the pad instance is identified.
   """
-  @type ref_t :: atom | {:dynamic, atom, dynamic_id_t}
+  @type ref_t :: name_t | {:dynamic, name_t, dynamic_id_t}
 
   @typedoc """
   Possible id of dynamic pad
@@ -156,6 +156,7 @@ defmodule Membrane.Pad do
   @doc """
   Returns the name for the given pad reference
   """
+  @spec name_by_ref(ref_t()) :: name_t()
   def name_by_ref({:dynamic, name, _id}) when is_pad_name(name), do: name
   def name_by_ref(ref) when is_pad_name(ref), do: ref
 
@@ -163,16 +164,18 @@ defmodule Membrane.Pad do
   def opposite_direction(:input), do: :output
   def opposite_direction(:output), do: :input
 
+  @spec get_corresponding_bin_pad(ref_t()) :: ref_t()
   def get_corresponding_bin_pad({:dynamic, name, id}),
     do: {:dynamic, get_corresponding_bin_name(name), id}
 
   def get_corresponding_bin_pad(name), do: get_corresponding_bin_name(name)
 
-  def create_private_name(name) do
-    assert_public_name!(name)
+  @spec create_private_name(atom) :: name_t()
+  def create_private_name(name) when is_public_name(name) do
     get_corresponding_bin_name(name)
   end
 
+  @spec get_corresponding_bin_name(name_t()) :: name_t()
   defp get_corresponding_bin_name({:private, name}) when is_public_name(name), do: name
   defp get_corresponding_bin_name(name) when is_public_name(name), do: {:private, name}
 

@@ -110,27 +110,27 @@ defmodule Membrane.Core.Parent.SpecController do
                       is_integer(elem(term, 1)) and elem(term, 1) >= 0)
 
   @spec parse_children(ParentSpec.children_spec_t() | any) :: [parsed_child_t]
-  def parse_children(children) when is_map(children) or is_list(children),
+  defp parse_children(children) when is_map(children) or is_list(children),
     do: children |> Enum.map(&parse_child/1)
 
-  def parse_child({name, %module{} = options})
-      when is_child_name(name) do
+  defp parse_child({name, %module{} = options})
+       when is_child_name(name) do
     %{name: name, module: module, options: options}
   end
 
-  def parse_child({name, module})
-      when is_child_name(name) and is_atom(module) do
+  defp parse_child({name, module})
+       when is_child_name(name) and is_atom(module) do
     options = module |> Bunch.Module.struct()
     %{name: name, module: module, options: options}
   end
 
-  def parse_child(config) do
+  defp parse_child(config) do
     raise ParentError, "Invalid children config: #{inspect(config, pretty: true)}"
   end
 
   @spec check_if_children_names_unique([parsed_child_t], Parent.ChildrenModel.t()) ::
           Type.try_t()
-  def check_if_children_names_unique(children, state) do
+  defp check_if_children_names_unique(children, state) do
     %{children: state_children} = state
 
     children
@@ -151,7 +151,7 @@ defmodule Membrane.Core.Parent.SpecController do
           parent_clock :: Clock.t(),
           syncs :: %{Child.name_t() => pid()}
         ) :: [Parent.ChildrenModel.child_t()]
-  def start_children(children, parent_clock, syncs) do
+  defp start_children(children, parent_clock, syncs) do
     debug("Starting children: #{inspect(children)}")
 
     children |> Enum.map(&start_child(&1, parent_clock, syncs))
@@ -159,7 +159,7 @@ defmodule Membrane.Core.Parent.SpecController do
 
   @spec add_children([parsed_child_t()], Parent.ChildrenModel.t()) ::
           Type.stateful_try_t(Parent.ChildrenModel.t())
-  def add_children(children, state) do
+  defp add_children(children, state) do
     children
     |> Bunch.Enum.try_reduce(state, fn {name, data}, state ->
       state |> Parent.ChildrenModel.add_child(name, data)
@@ -269,6 +269,7 @@ defmodule Membrane.Core.Parent.SpecController do
     end
   end
 
+  @spec choose_clock(Parent.ChildrenModel.t()) :: {:ok, Parent.ChildrenModel.t()}
   def choose_clock(state) do
     choose_clock([], nil, state)
   end

@@ -4,6 +4,8 @@ defmodule Membrane.Core.Message do
 
   require Record
 
+  alias Membrane.Pad
+
   Record.defrecord(:message, __MODULE__, type: nil, args: [], opts: [])
 
   @type t :: {__MODULE__, type_t, args_t, opts_t}
@@ -32,8 +34,10 @@ defmodule Membrane.Core.Message do
     GenServer.call(pid, message(type: type, args: args, opts: opts), timeout)
   end
 
+  @spec for_pad(t()) :: Pad.ref_t()
   def for_pad(message(opts: opts)), do: Keyword.get(opts, :for_pad)
 
+  @spec set_for_pad(t(), Pad.ref_t()) :: t()
   def set_for_pad(message(opts: opts) = msg, pad),
     do: message(msg, opts: Keyword.put(opts, :for_pad, pad))
 end
