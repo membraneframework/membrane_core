@@ -1,4 +1,6 @@
 defmodule Membrane.Core.Bin.LinkingBuffer do
+  @moduledoc false
+
   alias Membrane.Core.Message
   alias Membrane.Core.Child.PadModel
   alias Membrane.Pad

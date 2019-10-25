@@ -62,6 +62,7 @@ defmodule Membrane.Mixfile do
       ],
       groups_for_modules: [
         Pipeline: [~r/^Membrane.Pipeline.*/],
+        Bin: [~r/^Membrane.Bin*/],
         Element: [
           ~r/^Membrane.Filter$/,
           ~r/^Membrane.Sink$/,
@@ -70,6 +71,8 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane.Element(?!\.CallbackContext)\..*/,
           ~r/^Membrane.Core.InputBuffer/
         ],
+        Parent: [~r/^Membrane.Parent.*/],
+        Child: [~r/^Membrane.Child.*/],
         "Callback contexts": [~r/^Membrane.Element.CallbackContext.*/],
         Communication: [
           ~r/^Membrane.(Buffer|Payload|Caps|Event|Notification).*/
@@ -79,7 +82,9 @@ defmodule Membrane.Mixfile do
         Utils: [
           ~r/^Membrane.Clock$/,
           ~r/^Membrane.Sync$/,
-          ~r/^Membrane.Time.*/
+          ~r/^Membrane.Time.*/,
+          ~r/^Membrane.Pad.*/,
+          ~r/^Membrane.PlaybackState.*/
         ]
       ]
     ]

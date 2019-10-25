@@ -1,9 +1,9 @@
 defmodule Membrane.Parent.Action do
-  alias Membrane.{Child, Notification, ParentSpec}
-
   @moduledoc """
-  Common types definitions for bin and element.
+  Common types' definitions for bin and element.
   """
+
+  alias Membrane.{Child, Notification, ParentSpec}
 
   @typedoc """
   Action that sends a message to an element identified by name.

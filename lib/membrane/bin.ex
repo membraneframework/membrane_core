@@ -1,4 +1,14 @@
 defmodule Membrane.Bin do
+  @moduledoc """
+  Bins, similarly to pipelines, are containers for elements. However, at the same time, they can be placed and linked within pipelines.
+  Although bin is a separate Membrane entity, it can be perceived as a pipeline within an element.
+  Bins can also be nested within one another.
+
+  There are two main reasons why bins are useful:
+  * they enable creating reusable element groups
+  * they allow managing their children, for instance by dynamically spawning or replacing them as the stream changes.
+  """
+
   use Bunch
   use Membrane.Log, tags: :core
   use GenServer
@@ -233,10 +243,8 @@ defmodule Membrane.Bin do
     {{:ok, info}, state} =
       PadController.handle_link(pad_ref, pad_direction, pid, other_ref, other_info, props, state)
 
-    {:ok, new_state} = PadController.handle_linking_finished(state)
-
-    LinkingBuffer.flush_for_pad(state.linking_buffer, pad_ref, new_state)
-    ~> {{:ok, info}, %{new_state | linking_buffer: &1}}
+    LinkingBuffer.flush_for_pad(state.linking_buffer, pad_ref, state)
+    ~> {{:ok, info}, %{state | linking_buffer: &1}}
     |> reply()
   end
 
