@@ -51,7 +51,7 @@ defmodule Membrane.Sink do
   defmacro __using__(_) do
     quote location: :keep do
       use Membrane.Element.Base
-      use Membrane.WithInputPads
+      use Membrane.Element.WithInputPads
       @behaviour unquote(__MODULE__)
 
       @impl true
