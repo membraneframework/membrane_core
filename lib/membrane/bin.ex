@@ -58,15 +58,6 @@ defmodule Membrane.Bin do
   """
   @callback membrane_clock? :: boolean()
 
-  defmodule Itself do
-    @moduledoc false
-    defstruct []
-  end
-
-  defimpl Inspect, for: Itself do
-    def inspect(_struct, _opts), do: "bin itself"
-  end
-
   @doc PadsSpecs.def_pad_docs(:input, :bin)
   defmacro def_input_pad(name, spec) do
     PadsSpecs.def_bin_pad(name, :input, spec)
@@ -259,17 +250,9 @@ defmodule Membrane.Bin do
     |> reply()
   end
 
-  defmacro __using__(args) do
-    bring_spec =
-      if args |> Keyword.get(:bring_spec?, true) do
-        quote do
-          import Membrane.ParentSpec
-          alias Membrane.ParentSpec
-        end
-      end
-
+  defmacro __using__(args \\ []) do
     quote location: :keep do
-      use Membrane.Parent
+      use Membrane.Parent, unquote(args)
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
 
@@ -279,8 +262,6 @@ defmodule Membrane.Bin do
         only: [def_input_pad: 2, def_output_pad: 2, def_clock: 0, def_clock: 1]
 
       require Membrane.Core.Child.PadsSpecs
-
-      unquote(bring_spec)
 
       Membrane.Core.Child.PadsSpecs.ensure_default_membrane_pads()
 

@@ -44,6 +44,7 @@ defmodule Membrane.Core.Parent.Link do
           }
   end
 
+  @spec from_spec(ParentSpec.links_spec_t()) :: {:ok, [t]} | no_return
   def from_spec(links) when is_list(links) do
     links
     |> List.flatten()
@@ -87,7 +88,7 @@ defmodule Membrane.Core.Parent.Link do
   defp get_pad_name(link_spec, child, direction) do
     case link_spec do
       %{^direction => pad_name} -> pad_name
-      %{^child => %Membrane.Bin.Itself{}} -> Pad.opposite_direction(direction)
+      %{^child => {Membrane.Bin, :itself}} -> Pad.opposite_direction(direction)
       _ -> direction
     end
   end

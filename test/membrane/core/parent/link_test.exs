@@ -1,4 +1,4 @@
-defmodule Membrane.Parent.LinkTest do
+defmodule Membrane.Core.Parent.LinkTest do
   use ExUnit.Case
 
   alias Membrane.Core.Parent.Link
@@ -85,7 +85,7 @@ defmodule Membrane.Parent.LinkTest do
                  pid: nil
                },
                to: %Endpoint{
-                 element: %Membrane.Bin.Itself{},
+                 element: {Membrane.Bin, :itself},
                  id: nil,
                  opts: [],
                  pad_name: :output,
@@ -96,8 +96,91 @@ defmodule Membrane.Parent.LinkTest do
            ]
   end
 
+  test "link with multiple branches" do
+    import Membrane.ParentSpec
+
+    links_spec = [link(:a) |> to(:b) |> to(:c), link(:d) |> to(:b) |> to(:e)]
+
+    assert {:ok, links} = Link.from_spec(links_spec)
+
+    assert Enum.sort(links) == [
+             %Link{
+               from: %Endpoint{
+                 element: :a,
+                 id: nil,
+                 opts: [],
+                 pad_name: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 element: :b,
+                 id: nil,
+                 opts: [],
+                 pad_name: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             },
+             %Link{
+               from: %Endpoint{
+                 element: :b,
+                 id: nil,
+                 opts: [],
+                 pad_name: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 element: :c,
+                 id: nil,
+                 opts: [],
+                 pad_name: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             },
+             %Link{
+               from: %Endpoint{
+                 element: :b,
+                 id: nil,
+                 opts: [],
+                 pad_name: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 element: :e,
+                 id: nil,
+                 opts: [],
+                 pad_name: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             },
+             %Link{
+               from: %Endpoint{
+                 element: :d,
+                 id: nil,
+                 opts: [],
+                 pad_name: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 element: :b,
+                 id: nil,
+                 opts: [],
+                 pad_name: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             }
+           ]
+  end
+
   test "invalid link" do
-    [:abc, [:abc]]
+    [:abc, [:abc], %{{:abc, :output} => {:def, :input}}]
     |> Enum.each(fn link_spec ->
       assert_raise Membrane.ParentError, ~r/.*Invalid links specification.*:abc/, fn ->
         Link.from_spec(link_spec)
@@ -112,7 +195,7 @@ defmodule Membrane.Parent.LinkTest do
       :a => [link(:a)],
       :b => [link(:b) |> via_out(:x)],
       :c => [link(:c) |> via_in(:y)],
-      %Membrane.Bin.Itself{} => [link_bin_input()]
+      {Membrane.Bin, :itself} => [link_bin_input()]
     }
     |> Enum.each(fn {from, link_spec} ->
       assert_raise Membrane.ParentError,

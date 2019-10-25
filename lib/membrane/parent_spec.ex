@@ -162,7 +162,7 @@ defmodule Membrane.ParentSpec do
 
   @spec link_bin_input(Pad.name_t(), pad_options_t) :: LinkBuilder.t() | no_return
   def link_bin_input(pad \\ :input, opts \\ []) do
-    %LinkBuilder{links: [%{from: %Membrane.Bin.Itself{}}], status: :from} |> via_out(pad, opts)
+    %LinkBuilder{links: [%{from: {Membrane.Bin, :itself}}], status: :from} |> via_out(pad, opts)
   end
 
   @spec via_out(LinkBuilder.t(), Pad.name_t(), pad_options_t) :: LinkBuilder.t() | no_return
@@ -222,7 +222,7 @@ defmodule Membrane.ParentSpec do
   end
 
   def to_bin_output(builder, pad, opts) do
-    builder |> via_in(pad, opts) |> LinkBuilder.update(:done, to: %Membrane.Bin.Itself{})
+    builder |> via_in(pad, opts) |> LinkBuilder.update(:done, to: {Membrane.Bin, :itself})
   end
 
   defp validate_pad_name(pad) when Pad.is_pad_name(pad) do
