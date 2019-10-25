@@ -9,7 +9,6 @@ defmodule Membrane.Pipeline do
   """
 
   alias Membrane.{
-    CallbackError,
     Clock,
     Core,
     Element,
@@ -20,7 +19,6 @@ defmodule Membrane.Pipeline do
   alias Core.Parent
   alias Core.Message
   alias Core.Pipeline.State
-  alias Parent.SpecController
   alias Membrane.Core.CallbackHandler
   import Membrane.Helper.GenServer
   require Element
