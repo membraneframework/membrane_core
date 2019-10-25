@@ -1,4 +1,6 @@
 defmodule Membrane.Core.Pipeline.SpecController do
+  @moduledoc false
+
   use Bunch
   use Membrane.Log, tags: :core
 

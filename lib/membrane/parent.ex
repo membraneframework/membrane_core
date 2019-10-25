@@ -1,4 +1,8 @@
 defmodule Membrane.Parent do
+  @moduledoc """
+  Module that manages a common part between pipelines and bins.
+  """
+
   alias Membrane.{Child, Notification, Pad, Parent}
   alias Membrane.Core.{Bin, CallbackHandler, Pipeline}
 
