@@ -243,10 +243,16 @@ defmodule Membrane.Core.Parent.SpecController do
   defp to_no_sync(sync), do: sync
 
   defp exec_handle_spec_started(children_names, state) do
+    action_handler =
+      case state do
+        %Core.Pipeline.State{} -> Membrane.Pipeline
+        %Core.Bin.State{} -> Core.Bin.ActionHandler
+      end
+
     callback_res =
       CallbackHandler.exec_and_handle_callback(
         :handle_spec_started,
-        Parent.Action.action_handler_module(state),
+        action_handler,
         [children_names],
         state
       )

@@ -54,9 +54,11 @@ defmodule Membrane.Core.Parent.LifecycleController do
       Message.self(:stop_and_terminate)
     end
 
+    action_handler = get_callback_action_handler(state)
+
     CallbackHandler.exec_and_handle_callback(
       callback,
-      Parent.Action.action_handler_module(state),
+      action_handler,
       [],
       state
     )
@@ -90,9 +92,11 @@ defmodule Membrane.Core.Parent.LifecycleController do
           Type.stateful_try_t(state_t)
   def handle_notification(from, notification, state) do
     with {:ok, _} <- state |> Parent.ChildrenModel.get_child_data(from) do
+      action_handler = get_callback_action_handler(state)
+
       CallbackHandler.exec_and_handle_callback(
         :handle_notification,
-        Parent.Action.action_handler_module(state),
+        action_handler,
         [notification, from],
         state
       )
@@ -118,9 +122,11 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   @spec handle_other(any, state_t()) :: Type.stateful_try_t(state_t)
   def handle_other(message, state) do
+    action_handler = get_callback_action_handler(state)
+
     CallbackHandler.exec_and_handle_callback(
       :handle_other,
-      Parent.Action.action_handler_module(state),
+      action_handler,
       [message],
       state
     )
@@ -161,13 +167,18 @@ defmodule Membrane.Core.Parent.LifecycleController do
           Type.stateful_try_t(state_t)
   def handle_stream_management_event(cb, element_name, pad_ref, state)
       when cb in [:handle_start_of_stream, :handle_end_of_stream] do
+    action_handler = get_callback_action_handler(state)
+
     CallbackHandler.exec_and_handle_callback(
       to_parent_sm_callback(cb),
-      Parent.Action.action_handler_module(state),
+      action_handler,
       [{element_name, pad_ref}],
       state
     )
   end
+
+  defp get_callback_action_handler(%Core.Pipeline.State{}), do: Membrane.Pipeline
+  defp get_callback_action_handler(%Core.Bin.State{}), do: Core.Bin.ActionHandler
 
   defp to_parent_sm_callback(:handle_start_of_stream), do: :handle_element_start_of_stream
   defp to_parent_sm_callback(:handle_end_of_stream), do: :handle_element_end_of_stream
