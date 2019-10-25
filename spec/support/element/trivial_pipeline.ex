@@ -10,12 +10,15 @@ defmodule Membrane.Support.Element.TrivialPipeline do
       consumer: TrivialSink
     ]
 
-    links = %{
-      {:producer, :output} => {:filter, :input, buffer: [preferred_size: 10]},
-      {:filter, :output} => {:consumer, :input, buffer: [preferred_size: 10]}
-    }
+    links = [
+      link(:producer)
+      |> via_in(:input, buffer: [preferred_size: 10])
+      |> to(:filter)
+      |> via_in(:input, buffer: [preferred_size: 10])
+      |> to(:consumer)
+    ]
 
-    spec = %Pipeline.Spec{
+    spec = %Membrane.ParentSpec{
       children: children,
       links: links
     }

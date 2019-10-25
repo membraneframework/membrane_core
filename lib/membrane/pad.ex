@@ -1,4 +1,4 @@
-defmodule Membrane.Element.Pad do
+defmodule Membrane.Pad do
   @moduledoc """
   Pads are units defined by each element, allowing it to be linked with another
   elements. This module consists of pads typespecs and utils.
@@ -17,7 +17,7 @@ defmodule Membrane.Element.Pad do
   @typedoc """
   Defines the term by which the pad instance is identified.
   """
-  @type ref_t :: atom | {:dynamic, atom, dynamic_id_t}
+  @type ref_t :: name_t | {:dynamic, name_t, dynamic_id_t}
 
   @typedoc """
   Possible id of dynamic pad
@@ -27,7 +27,7 @@ defmodule Membrane.Element.Pad do
   @typedoc """
   Defines the name of pad or group of dynamic pads
   """
-  @type name_t :: atom
+  @type name_t :: atom | {:private, atom}
 
   @typedoc """
   Defines possible pad directions:
@@ -83,9 +83,17 @@ defmodule Membrane.Element.Pad do
   @type availability_mode_t :: :static | :dynamic
 
   @typedoc """
-  Describes how a pad should be declared in element.
+  Describes how a pad should be declared in element or bin.
   """
-  @type spec_t :: output_spec_t | input_spec_t
+  @type spec_t :: output_spec_t | input_spec_t | bin_spec_t
+
+  @typedoc """
+  For bins there are exactly the same options for both directions.
+  The only difference is that `:demand_unit` option specified in
+  bin will be used to make demands from bin's elements connected
+  to its input pad.
+  """
+  @type bin_spec_t :: input_spec_t
 
   @typedoc """
   Describes how an output pad should be declared inside an element.
@@ -116,7 +124,8 @@ defmodule Membrane.Element.Pad do
           :caps => Caps.Matcher.caps_specs_t(),
           optional(:demand_unit) => Buffer.Metric.unit_t(),
           :direction => direction_t(),
-          :options => nil | Keyword.t()
+          :options => nil | Keyword.t(),
+          :bin? => boolean()
         }
 
   defguard is_pad_ref(term)
@@ -124,7 +133,13 @@ defmodule Membrane.Element.Pad do
                   (term |> is_tuple and term |> tuple_size == 3 and term |> elem(0) == :dynamic and
                      term |> elem(1) |> is_atom and term |> elem(2) |> is_integer)
 
-  defguard is_pad_name(term) when is_atom(term)
+  defguardp is_public_name(term) when is_atom(term)
+
+  defguardp is_private_name(term)
+            when tuple_size(term) == 2 and elem(term, 0) == :private and is_atom(elem(term, 1))
+
+  defguard is_pad_name(term)
+           when is_public_name(term) or is_private_name(term)
 
   defguard is_availability(term) when term in @availability_t
 
@@ -141,10 +156,36 @@ defmodule Membrane.Element.Pad do
   @doc """
   Returns the name for the given pad reference
   """
+  @spec name_by_ref(ref_t()) :: name_t()
   def name_by_ref({:dynamic, name, _id}) when is_pad_name(name), do: name
   def name_by_ref(ref) when is_pad_name(ref), do: ref
 
   @spec opposite_direction(direction_t()) :: direction_t()
   def opposite_direction(:input), do: :output
   def opposite_direction(:output), do: :input
+
+  @spec get_corresponding_bin_pad(ref_t()) :: ref_t()
+  def get_corresponding_bin_pad({:dynamic, name, id}),
+    do: {:dynamic, get_corresponding_bin_name(name), id}
+
+  def get_corresponding_bin_pad(name), do: get_corresponding_bin_name(name)
+
+  @spec create_private_name(atom) :: name_t()
+  def create_private_name(name) when is_public_name(name) do
+    get_corresponding_bin_name(name)
+  end
+
+  @spec get_corresponding_bin_name(name_t()) :: name_t()
+  defp get_corresponding_bin_name({:private, name}) when is_public_name(name), do: name
+  defp get_corresponding_bin_name(name) when is_public_name(name), do: {:private, name}
+
+  def assert_public_name!(name) when is_public_name(name) do
+    :ok
+  end
+
+  def assert_public_name!(name) do
+    raise CompileError,
+      file: __ENV__.file,
+      description: "#{inspect(name)} is not a proper pad name. Use public names only."
+  end
 end

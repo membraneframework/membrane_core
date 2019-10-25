@@ -1,7 +1,8 @@
-defmodule Membrane.Core.Element.PadControllerSpec do
+defmodule Membrane.Core.Child.PadControllerSpec do
   use ESpec, async: false
   alias Membrane.Support.Element.{DynamicFilter, TrivialFilter}
-  alias Membrane.Core.Element.{PadModel, PadSpecHandler, State}
+  alias Membrane.Core.Child.{PadModel, PadSpecHandler}
+  alias Membrane.Core.Element.State
   alias Membrane.Event.EndOfStream
   alias Membrane.Core.Playbackable
 
@@ -105,7 +106,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
           )
         end
 
-        expect(call) |> to(raise_exception(Membrane.ElementLinkError))
+        expect(call) |> to(raise_exception(Membrane.LinkError))
       end
     end
   end
@@ -115,7 +116,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
     let :other_ref, do: :other_pad
 
     let :pad_data,
-      do: %Membrane.Element.Pad.Data{
+      do: %Membrane.Pad.Data{
         start_of_stream?: true,
         end_of_stream?: false
       }
@@ -185,7 +186,7 @@ defmodule Membrane.Core.Element.PadControllerSpec do
       let :pad_ref, do: {:input, 0}
 
       let :pad_data,
-        do: %Membrane.Element.Pad.Data{
+        do: %Membrane.Pad.Data{
           start_of_stream?: true,
           end_of_stream?: false
         }

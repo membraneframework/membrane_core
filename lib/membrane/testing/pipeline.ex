@@ -100,7 +100,7 @@ defmodule Membrane.Testing.Pipeline do
   use Membrane.Log
 
   alias Membrane.{Element, Pipeline}
-  alias Membrane.Pipeline.Spec
+  alias Membrane.ParentSpec
 
   defmodule Options do
     @moduledoc """
@@ -130,8 +130,8 @@ defmodule Membrane.Testing.Pipeline do
 
     @type t :: %__MODULE__{
             test_process: pid() | nil,
-            elements: Spec.children_spec_t() | nil,
-            links: Spec.links_spec_t() | nil,
+            elements: ParentSpec.children_spec_t() | nil,
+            links: ParentSpec.links_spec_t() | nil,
             module: module() | nil,
             custom_args: Pipeline.pipeline_options_t() | nil
           }
@@ -206,14 +206,16 @@ defmodule Membrane.Testing.Pipeline do
       iex> Pipeline.populate_links([el1: MembraneElement1, el2: MembraneElement2])
       %{{:el1, :output} => {:el2, :input}}
   """
-  @spec populate_links(elements :: Spec.children_spec_t()) :: Spec.links_spec_t()
-  def populate_links(elements) do
-    elements
-    |> Enum.chunk_every(2, 1, :discard)
-    |> Enum.map(fn [{output_name, _}, {input_name, _}] ->
-      {{output_name, :output}, {input_name, :input}}
-    end)
-    |> Enum.into(%{})
+  @spec populate_links(elements :: ParentSpec.children_spec_t()) :: ParentSpec.links_spec_t()
+  def populate_links(elements) when length(elements) < 2 do
+    []
+  end
+
+  def populate_links(elements) when is_list(elements) do
+    import ParentSpec
+    [h | t] = elements |> Keyword.keys()
+    links = t |> Enum.reduce(link(h), &to(&2, &1))
+    [links]
   end
 
   @doc """
@@ -238,7 +240,7 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   def handle_init(%Options{module: nil} = options) do
-    spec = %Membrane.Pipeline.Spec{
+    spec = %Membrane.ParentSpec{
       children: options.elements,
       links: options.links
     }

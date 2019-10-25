@@ -1,17 +1,21 @@
-defmodule Membrane.Core.Element.PadController do
+defmodule Membrane.Core.Child.PadController do
   @moduledoc false
   # Module handling linking and unlinking pads.
 
-  alias Membrane.{Core, Event, ElementLinkError}
+  alias Membrane.{Core, Event, LinkError, Pad}
   alias Core.{CallbackHandler, Message, InputBuffer}
-  alias Core.Element.{ActionHandler, EventController, PadModel, State, PlaybackBuffer}
-  alias Membrane.Element.{CallbackContext, Pad}
+  alias Core.Child.{PadModel, PadSpecHandler}
+  alias Core.Element.{ActionHandler, EventController, PlaybackBuffer}
+  alias Membrane.Element.CallbackContext
+  alias Bunch.Type
   require CallbackContext.{PadAdded, PadRemoved}
   require Message
   require Pad
   require PadModel
-  use Core.Element.Log
+  use Membrane.Log
   use Bunch
+
+  @type state_t :: Core.Bin.State.t() | Core.Element.State.t()
 
   @doc """
   Verifies linked pad, initializes it's data.
@@ -23,8 +27,8 @@ defmodule Membrane.Core.Element.PadController do
           Pad.ref_t(),
           PadModel.pad_info_t() | nil,
           Keyword.t(),
-          State.t()
-        ) :: State.stateful_try_t(PadModel.pad_info_t())
+          state_t()
+        ) :: Type.stateful_try_t(PadModel.pad_info_t(), state_t)
   def handle_link(pad_ref, direction, pid, other_ref, other_info, props, state) do
     pad_name = pad_ref |> Pad.name_by_ref()
     info = state.pads.info[pad_name]
@@ -45,7 +49,7 @@ defmodule Membrane.Core.Element.PadController do
 
       {{:ok, info}, state}
     else
-      {:error, reason} -> raise ElementLinkError, "#{inspect(reason)}"
+      {:error, reason} -> raise LinkError, "#{inspect(reason)}"
     end
   end
 
@@ -55,7 +59,7 @@ defmodule Membrane.Core.Element.PadController do
   This can be done only at the end of linking, because before there is no guarantee
   that the pad has been linked in the other element.
   """
-  @spec handle_linking_finished(State.t()) :: State.stateful_try_t()
+  @spec handle_linking_finished(state_t()) :: Type.stateful_try_t(state_t)
   def handle_linking_finished(state) do
     with {:ok, state} <-
            state.pads.dynamic_currently_linking
@@ -90,7 +94,7 @@ defmodule Membrane.Core.Element.PadController do
   Executes `handle_pad_removed` callback if the pad was dynamic.
   Note: it also flushes all buffers from PlaybackBuffer.
   """
-  @spec handle_unlink(Pad.ref_t(), State.t()) :: State.stateful_try_t()
+  @spec handle_unlink(Pad.ref_t(), state_t()) :: Type.stateful_try_t(state_t)
   def handle_unlink(pad_ref, state) do
     with {:ok, state} <- flush_playback_buffer(pad_ref, state),
          {:ok, state} <- generate_eos_if_needed(pad_ref, state),
@@ -106,8 +110,8 @@ defmodule Membrane.Core.Element.PadController do
   In case of static pad it will be just its name, for dynamic it will return
   tuple containing name and id.
   """
-  @spec get_pad_ref(Pad.name_t(), Pad.dynamic_id_t() | nil, State.t()) ::
-          State.stateful_try_t(Pad.ref_t())
+  @spec get_pad_ref(Pad.name_t(), Pad.dynamic_id_t() | nil, state_t()) ::
+          Type.stateful_try_t(Pad.ref_t(), state_t)
   def get_pad_ref(pad_name, id, state) do
     case state.pads.info[pad_name] do
       nil ->
@@ -137,18 +141,18 @@ defmodule Membrane.Core.Element.PadController do
           Pad.ref_t(),
           Pad.direction_t(),
           PadModel.pad_info_t(),
-          State.t()
+          state_t()
         ) :: :ok
   defp validate_pad_being_linked!(pad_ref, direction, info, state) do
     cond do
       :ok == PadModel.assert_instance(state, pad_ref) ->
-        raise ElementLinkError, "Pad #{inspect(pad_ref)} has already been linked"
+        raise LinkError, "Pad #{inspect(pad_ref)} has already been linked"
 
       info == nil ->
-        raise ElementLinkError, "Unknown pad #{inspect(pad_ref)}"
+        raise LinkError, "Unknown pad #{inspect(pad_ref)}"
 
       info.direction != direction ->
-        raise ElementLinkError, """
+        raise LinkError, """
         Invalid pad direction:
           expected: #{inspect(direction)},
           actual: #{inspect(info.direction)}
@@ -174,7 +178,7 @@ defmodule Membrane.Core.Element.PadController do
          {from, %{direction: :output, mode: :pull}},
          {to, %{direction: :input, mode: :push}}
        ) do
-    raise ElementLinkError,
+    raise LinkError,
           "Cannot connect pull output #{inspect(from)} to push input #{inspect(to)}"
   end
 
@@ -182,10 +186,14 @@ defmodule Membrane.Core.Element.PadController do
     :ok
   end
 
-  @spec parse_link_props!(Keyword.t(), Pad.name_t(), State.t()) :: Keyword.t()
+  @spec parse_link_props!(Keyword.t(), Pad.name_t(), state_t()) :: Keyword.t()
   defp parse_link_props!(props, pad_name, state) do
-    opts_spec = state.module.membrane_pads()[pad_name].options
+    {_, pad_spec} =
+      state.module.membrane_pads()
+      |> PadSpecHandler.add_private_pads()
+      |> Enum.find(fn {k, _} -> k == pad_name end)
 
+    opts_spec = pad_spec.options
     pad_props = parse_pad_props!(pad_name, opts_spec, props[:pad])
     buffer_props = parse_buffer_props!(pad_name, props[:buffer])
     [pad: pad_props, buffer: buffer_props]
@@ -196,7 +204,7 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp parse_pad_props!(pad_name, nil, _props) do
-    raise ElementLinkError, "Pad #{inspect(pad_name)} does not define any options"
+    raise LinkError, "Pad #{inspect(pad_name)} does not define any options"
   end
 
   defp parse_pad_props!(pad_name, options_spec, props) do
@@ -207,10 +215,10 @@ defmodule Membrane.Core.Element.PadController do
         pad_props
 
       {:error, {:config_field, {:key_not_found, key}}} ->
-        raise ElementLinkError, "Missing option #{inspect(key)} for pad #{inspect(pad_name)}"
+        raise LinkError, "Missing option #{inspect(key)} for pad #{inspect(pad_name)}"
 
       {:error, {:config_invalid_keys, keys}} ->
-        raise ElementLinkError,
+        raise LinkError,
               "Invalid keys in options of pad #{inspect(pad_name)} - #{inspect(keys)}"
     end
   end
@@ -221,7 +229,7 @@ defmodule Membrane.Core.Element.PadController do
         buffer_props
 
       {:error, {:config_invalid_keys, keys}} ->
-        raise ElementLinkError,
+        raise LinkError,
               "Invalid keys in buffer options of pad #{inspect(pad_name)}: #{inspect(keys)}"
     end
   end
@@ -233,8 +241,8 @@ defmodule Membrane.Core.Element.PadController do
           Pad.ref_t(),
           PadModel.pad_info_t(),
           props :: Keyword.t(),
-          State.t()
-        ) :: State.t()
+          state_t()
+        ) :: state_t()
   defp init_pad_data(info, ref, pid, other_ref, other_info, props, state) do
     data =
       info
@@ -260,14 +268,12 @@ defmodule Membrane.Core.Element.PadController do
           map(),
           PadModel.pad_info_t(),
           props :: Keyword.t(),
-          State.t()
+          state_t()
         ) :: map()
   defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, other_info, props, state) do
     %{pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
 
-    :ok =
-      pid
-      |> Message.call(:demand_unit, [demand_unit, other_ref])
+    Message.send(pid, :demand_unit, [demand_unit, other_ref])
 
     buffer_props = props[:buffer] || Keyword.new()
 
@@ -291,15 +297,15 @@ defmodule Membrane.Core.Element.PadController do
 
   defp init_pad_mode_data(%{mode: :push}, _other_info, _props, _state), do: %{}
 
-  @spec add_to_currently_linking(Pad.ref_t(), State.t()) :: State.t()
+  @spec add_to_currently_linking(Pad.ref_t(), state_t()) :: state_t()
   defp add_to_currently_linking(ref, state),
     do: state |> Bunch.Access.update_in([:pads, :dynamic_currently_linking], &[ref | &1])
 
-  @spec clear_currently_linking(State.t()) :: State.t()
+  @spec clear_currently_linking(state_t()) :: state_t()
   defp clear_currently_linking(state),
     do: state |> Bunch.Access.put_in([:pads, :dynamic_currently_linking], [])
 
-  @spec generate_eos_if_needed(Pad.ref_t(), State.t()) :: State.stateful_try_t()
+  @spec generate_eos_if_needed(Pad.ref_t(), state_t()) :: Type.stateful_try_t(state_t)
   defp generate_eos_if_needed(pad_ref, state) do
     direction = PadModel.get_data!(state, pad_ref, :direction)
     eos? = PadModel.get_data!(state, pad_ref, :end_of_stream?)
@@ -311,7 +317,7 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  @spec handle_pad_added(Pad.ref_t(), State.t()) :: State.stateful_try_t()
+  @spec handle_pad_added(Pad.ref_t(), state_t()) :: Type.stateful_try_t(state_t)
   defp handle_pad_added(ref, state) do
     pad_opts = PadModel.get_data!(state, ref, :options)
 
@@ -331,7 +337,7 @@ defmodule Membrane.Core.Element.PadController do
     )
   end
 
-  @spec handle_pad_removed(Pad.ref_t(), State.t()) :: State.stateful_try_t()
+  @spec handle_pad_removed(Pad.ref_t(), state_t()) :: Type.stateful_try_t(state_t)
   defp handle_pad_removed(ref, state) do
     %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
 

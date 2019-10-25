@@ -4,7 +4,7 @@ defmodule Membrane.Sink do
 
   Behaviours for sinks are specified, besides this place, in modules
   `Membrane.Element.Base`,
-  and `Membrane.Element.WithInputPads`.
+  and `Membrane.WithInputPads`.
 
   Sink elements can define only input pads. Job of a usual sink is to receive some
   data on such pad and consume it (write to a soundcard, send through TCP etc.).
@@ -15,8 +15,8 @@ defmodule Membrane.Sink do
   provide more complex solutions.
   """
 
-  alias Membrane.{Buffer, Element}
-  alias Element.{CallbackContext, Pad}
+  alias Membrane.{Buffer, Element, Pad}
+  alias Element.CallbackContext
 
   @doc """
   Callback that is called when buffer should be written by the sink.

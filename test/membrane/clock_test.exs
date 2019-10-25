@@ -160,6 +160,84 @@ defmodule Membrane.ClockTest do
     @module.unsubscribe(clock)
   end
 
+  describe "Clock election in parent" do
+    alias Membrane.Clock
+    alias Membrane.Core.{Pipeline.State, Parent.SpecController}
+
+    test "when provider is specified" do
+      {:ok, clock} = Clock.start_link()
+      {:ok, proxy_clock} = Clock.start_link(proxy: true)
+
+      children = [
+        el1: %{clock: nil, pid: :c.pid(0, 1, 0)},
+        el2: %{clock: clock, pid: :c.pid(0, 2, 0)}
+      ]
+
+      dummy_pipeline_state = %State{module: __MODULE__, clock_proxy: proxy_clock}
+
+      {:ok, new_state} = SpecController.choose_clock(children, :el2, dummy_pipeline_state)
+
+      %State{clock_provider: result_provider, clock_proxy: result_proxy} = new_state
+
+      assert %{choice: :manual, clock: ^clock, provider: :el2} = result_provider
+      assert ^proxy_clock = result_proxy
+    end
+
+    test "when provider is specified but it has no clock" do
+      {:ok, clock} = Clock.start_link()
+      {:ok, proxy_clock} = Clock.start_link(proxy: true)
+
+      children = [
+        el1: %{clock: nil, pid: :c.pid(0, 1, 0)},
+        el2: %{clock: clock, pid: :c.pid(0, 2, 0)}
+      ]
+
+      dummy_pipeline_state = %State{module: __MODULE__, clock_proxy: proxy_clock}
+
+      assert_raise Membrane.ParentError, ~r/.*el1.*clock provider/, fn ->
+        SpecController.choose_clock(children, :el1, dummy_pipeline_state)
+      end
+    end
+
+    test "when provider is not specified and there are multiple clock providers among children" do
+      {:ok, clock} = Clock.start_link()
+      {:ok, clock2} = Clock.start_link()
+      {:ok, proxy_clock} = Clock.start_link(proxy: true)
+
+      children = [
+        el1: %{clock: nil, pid: :c.pid(0, 1, 0)},
+        el2: %{clock: clock, pid: :c.pid(0, 2, 0)},
+        el3: %{clock: clock2, pid: :c.pid(0, 3, 0)}
+      ]
+
+      dummy_pipeline_state = %State{module: __MODULE__, clock_proxy: proxy_clock}
+
+      assert_raise Membrane.ParentError, ~r/.*multiple elements.*/, fn ->
+        SpecController.choose_clock(children, nil, dummy_pipeline_state)
+      end
+    end
+
+    test "when there is no clock provider and there is exactly one clock provider among children" do
+      {:ok, clock} = Clock.start_link()
+      {:ok, proxy_clock} = Clock.start_link(proxy: true)
+
+      children = [
+        el1: %{clock: nil, pid: :c.pid(0, 1, 0)},
+        el2: %{clock: clock, pid: :c.pid(0, 2, 0)},
+        el3: %{clock: nil, pid: :c.pid(0, 3, 0)}
+      ]
+
+      dummy_pipeline_state = %State{module: __MODULE__, clock_proxy: proxy_clock}
+
+      {:ok, new_state} = SpecController.choose_clock(children, nil, dummy_pipeline_state)
+
+      %State{clock_provider: result_provider, clock_proxy: result_proxy} = new_state
+
+      assert %{choice: :auto, clock: ^clock, provider: :el2} = result_provider
+      assert ^proxy_clock = result_proxy
+    end
+  end
+
   defp random_time, do: :rand.uniform(10000)
 
   defp ms_to_ns(e), do: e * 1_000_000

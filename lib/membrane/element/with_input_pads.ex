@@ -8,9 +8,9 @@ defmodule Membrane.Element.WithInputPads do
   For more information on implementing elements, see `Membrane.Element.Base`.
   """
 
-  alias Membrane.Element
-  alias Membrane.Core.Element.PadsSpecs
-  alias Element.{CallbackContext, Pad}
+  alias Membrane.{Element, Pad}
+  alias Membrane.Core.Child.PadsSpecs
+  alias Element.CallbackContext
   alias Membrane.Core.CallbackHandler
 
   @doc """
@@ -57,7 +57,7 @@ defmodule Membrane.Element.WithInputPads do
     PadsSpecs.def_pads(pads, :input)
   end
 
-  @doc PadsSpecs.def_pad_docs(:input)
+  @doc PadsSpecs.def_pad_docs(:input, :element)
   defmacro def_input_pad(name, spec) do
     PadsSpecs.def_pad(name, :input, spec)
   end

@@ -1,12 +1,14 @@
-defmodule Membrane.Core.Element.PadsSpecs do
+defmodule Membrane.Core.Child.PadsSpecs do
   @moduledoc false
   # Functions parsing element pads specifications, generating functions and docs
   # based on them.
   use Bunch
   alias Bunch.Type
   alias Membrane.Caps
-  alias Membrane.Core.Element.OptionsSpecs
-  alias Membrane.Element.Pad
+  alias Membrane.Core.OptionsSpecs
+  alias Membrane.Pad
+
+  require Pad
 
   @spec def_pads([{Pad.name_t(), raw_spec :: Macro.t()}], Pad.direction_t()) :: Macro.t()
   def def_pads(pads, direction) do
@@ -28,10 +30,16 @@ defmodule Membrane.Core.Element.PadsSpecs do
   @doc """
   Returns documentation string common for both input and output pads
   """
-  @spec def_pad_docs(Pad.direction_t()) :: String.t()
-  def def_pad_docs(direction) do
+  @spec def_pad_docs(Pad.direction_t(), :bin | :element) :: String.t()
+  def def_pad_docs(direction, for_entity) do
+    {entity, pad_type_spec} =
+      case for_entity do
+        :bin -> {"bin", "bin_spec_t/0"}
+        :element -> {"element", "#{direction}_spec_t/0"}
+      end
+
     """
-    Macro that defines #{direction} pad for the element.
+    Macro that defines #{direction} pad for the #{entity}.
 
     Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
     without module prefix.
@@ -39,15 +47,24 @@ defmodule Membrane.Core.Element.PadsSpecs do
     It automatically generates documentation from the given definition
     and adds compile-time caps specs validation.
 
-    The type `t:Membrane.Element.Pad.#{direction}_spec_t/0` describes how the definition of pads should look.
+    The type `t:Membrane.Pad.#{pad_type_spec}` describes how the definition of pads should look.
     """
   end
 
   @doc """
-  Returns AST inserted into element's module defining a pad
+  Returns AST inserted into bin's module defining a pad
   """
-  @spec def_pad(Pad.name_t(), Pad.direction_t(), Macro.t()) :: Macro.t()
-  def def_pad(pad_name, direction, raw_specs) do
+  @spec def_bin_pad(Pad.name_t(), Pad.direction_t(), Macro.t()) :: Macro.t()
+  def def_bin_pad(pad_name, direction, raw_specs) do
+    def_pad(pad_name, direction, raw_specs, true)
+  end
+
+  @doc """
+  Returns AST inserted into element's or bin's module defining a pad
+  """
+  @spec def_pad(Pad.name_t(), Pad.direction_t(), Macro.t(), boolean()) :: Macro.t()
+  def def_pad(pad_name, direction, raw_specs, bin? \\ false) do
+    Pad.assert_public_name!(pad_name)
     Code.ensure_loaded(Caps.Matcher)
 
     specs =
@@ -59,7 +76,9 @@ defmodule Membrane.Core.Element.PadsSpecs do
 
     {escaped_pad_opts, pad_opts_typedef} = OptionsSpecs.def_pad_options(pad_name, specs[:options])
 
-    specs = specs |> Keyword.put(:options, escaped_pad_opts)
+    specs =
+      specs
+      |> Keyword.put(:options, escaped_pad_opts)
 
     quote do
       if Module.get_attribute(__MODULE__, :membrane_pads) == nil do
@@ -74,9 +93,19 @@ defmodule Membrane.Core.Element.PadsSpecs do
       @membrane_pads unquote(__MODULE__).parse_pad_specs!(
                        {unquote(pad_name), unquote(specs)},
                        unquote(direction),
+                       unquote(bin?),
                        __ENV__
                      )
       unquote(pad_opts_typedef)
+    end
+  end
+
+  defmacro ensure_default_membrane_pads do
+    quote do
+      if Module.get_attribute(__MODULE__, :membrane_pads) == nil do
+        Module.register_attribute(__MODULE__, :membrane_pads, accumulate: true)
+        @before_compile {unquote(__MODULE__), :generate_membrane_pads}
+      end
     end
   end
 
@@ -84,10 +113,10 @@ defmodule Membrane.Core.Element.PadsSpecs do
   Generates `membrane_pads/0` function, along with docs and typespecs.
   """
   defmacro generate_membrane_pads(env) do
-    pads = Module.get_attribute(env.module, :membrane_pads) |> Enum.reverse()
+    pads = Module.get_attribute(env.module, :membrane_pads, []) |> Enum.reverse()
     :ok = validate_pads!(pads, env)
 
-    alias Membrane.Element.Pad
+    alias Membrane.Pad
 
     quote do
       @doc """
@@ -116,10 +145,11 @@ defmodule Membrane.Core.Element.PadsSpecs do
   @spec parse_pad_specs!(
           specs :: Pad.spec_t(),
           direction :: Pad.direction_t(),
+          boolean(),
           declaration_env :: Macro.Env.t()
         ) :: {Pad.name_t(), Pad.description_t()}
-  def parse_pad_specs!(specs, direction, env) do
-    with {:ok, specs} <- parse_pad_specs(specs, direction) do
+  def parse_pad_specs!(specs, direction, bin?, env) do
+    with {:ok, specs} <- parse_pad_specs(specs, direction, bin?) do
       specs
     else
       {:error, reason} ->
@@ -133,10 +163,10 @@ defmodule Membrane.Core.Element.PadsSpecs do
     end
   end
 
-  @spec parse_pad_specs(Pad.spec_t(), Pad.direction_t()) ::
+  @spec parse_pad_specs(Pad.spec_t(), Pad.direction_t(), boolean()) ::
           Type.try_t({Pad.name_t(), Pad.description_t()})
-  def parse_pad_specs(spec, direction) do
-    withl spec: {name, config} when is_atom(name) and is_list(config) <- spec,
+  def parse_pad_specs(spec, direction, bin?) do
+    withl spec: {name, config} when Pad.is_pad_name(name) and is_list(config) <- spec,
           config:
             {:ok, config} <-
               config
@@ -146,11 +176,14 @@ defmodule Membrane.Core.Element.PadsSpecs do
                 mode: [in: [:pull, :push], default: :pull],
                 demand_unit: [
                   in: [:buffers, :bytes],
-                  require_if: &(&1.mode == :pull and direction == :input)
+                  require_if: &(&1.mode == :pull and (bin? or direction == :input))
                 ],
                 options: [default: nil]
               ) do
-      {:ok, {name, Map.put(config, :direction, direction)}}
+      config
+      |> Map.put(:direction, direction)
+      |> Map.put(:bin?, bin?)
+      ~> {:ok, {name, &1}}
     else
       spec: spec -> {:error, {:invalid_pad_spec, spec}}
       config: {:error, reason} -> {:error, {reason, pad: name}}
@@ -161,6 +194,14 @@ defmodule Membrane.Core.Element.PadsSpecs do
   Generates docs describing pads based on pads specification.
   """
   @spec generate_docs_from_pads_specs([{Pad.name_t(), Pad.description_t()}]) :: Macro.t()
+  def generate_docs_from_pads_specs([]) do
+    quote do
+      """
+      There are no pads.
+      """
+    end
+  end
+
   def generate_docs_from_pads_specs(pads_specs) do
     pads_docs =
       pads_specs

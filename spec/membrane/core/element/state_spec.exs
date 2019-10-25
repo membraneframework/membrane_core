@@ -2,7 +2,8 @@ defmodule Membrane.Core.Element.StateSpec do
   use ESpec, async: true
   alias Membrane.Support.Element.TrivialFilter
   alias Membrane.Core.Playback
-  alias Membrane.Core.Element.{PadSpecHandler, PlaybackBuffer}
+  alias Membrane.Core.Child.PadSpecHandler
+  alias Membrane.Core.Element.PlaybackBuffer
   alias Membrane.Sync
 
   describe "new/1" do
@@ -32,7 +33,7 @@ defmodule Membrane.Core.Element.StateSpec do
              synchronization: %{
                timers: %{},
                clock: nil,
-               pipeline_clock: nil,
+               parent_clock: nil,
                latency: 0,
                stream_sync: Sync.no_sync()
              },

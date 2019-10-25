@@ -6,7 +6,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
   alias Membrane.Core.Element.{EventController, State}
   alias Membrane.Core.Message
   alias Membrane.Event
-  alias Membrane.Element.Pad.Data
+  alias Membrane.Pad.Data
   alias Membrane.Core.InputBuffer
 
   defmodule MockEventHandlingElement do

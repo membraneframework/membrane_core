@@ -2,8 +2,10 @@ defmodule Membrane.PipelineTest do
   use ExUnit.Case
 
   @module Membrane.Pipeline
+  @action_handler_module Membrane.Core.Pipeline.ActionHandler
 
-  alias Membrane.Pipeline.{Spec, State}
+  alias Membrane.Core.Pipeline.State
+  alias Membrane.ParentSpec
 
   defp state(_ctx) do
     [state: %State{module: nil, clock_proxy: nil}]
@@ -31,14 +33,14 @@ defmodule Membrane.PipelineTest do
 
         @impl true
         def handle_init(_) do
-          spec = %Membrane.Pipeline.Spec{}
+          spec = %Membrane.ParentSpec{}
           {{:ok, spec: spec}, %{}}
         end
       end
 
       assert {:ok, state} = @module.init(InvalidPipeline)
 
-      assert %Membrane.Pipeline.State{
+      assert %State{
                internal_state: %{},
                module: InvalidPipeline
              } = state
@@ -47,9 +49,9 @@ defmodule Membrane.PipelineTest do
 
   describe "handle_action spec" do
     test "should raise if duplicate elements exist in spec", %{state: state} do
-      assert_raise Membrane.PipelineError, ~r/.*duplicate.*\[:a\]/i, fn ->
-        @module.handle_action(
-          {:spec, %Spec{children: [a: :child1, a: :child2]}},
+      assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
+        @action_handler_module.handle_action(
+          {:spec, %ParentSpec{children: [a: :child1, a: :child2]}},
           nil,
           [],
           state
@@ -60,9 +62,9 @@ defmodule Membrane.PipelineTest do
     test "should raise if trying to spawn element with already taken name", %{state: state} do
       state = %State{state | children: %{a: self()}}
 
-      assert_raise Membrane.PipelineError, ~r/.*duplicate.*\[:a\]/i, fn ->
-        @module.handle_action(
-          {:spec, %Spec{children: [a: :child]}},
+      assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
+        @action_handler_module.handle_action(
+          {:spec, %ParentSpec{children: [a: :child]}},
           nil,
           [],
           state

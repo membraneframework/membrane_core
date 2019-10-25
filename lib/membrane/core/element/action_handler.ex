@@ -2,13 +2,25 @@ defmodule Membrane.Core.Element.ActionHandler do
   @moduledoc false
   # Module validating and executing actions returned by element's callbacks.
 
-  alias Membrane.{ActionError, Buffer, Caps, CallbackError, Core, Element, Event, Notification}
-  alias Core.Element.{DemandHandler, LifecycleController, PadModel, State, TimerController}
+  alias Membrane.{
+    ActionError,
+    Buffer,
+    Caps,
+    CallbackError,
+    Core,
+    Element,
+    Event,
+    Notification,
+    Pad
+  }
+
+  alias Core.Element.{DemandHandler, LifecycleController, State, TimerController}
   alias Core.{Message, PlaybackHandler}
-  alias Element.{Action, Pad}
+  alias Core.Child.PadModel
+  alias Element.Action
   require Message
   require PadModel
-  import Element.Pad, only: [is_pad_ref: 1]
+  import Pad, only: [is_pad_ref: 1]
   use Core.Element.Log
   use Bunch
   use Membrane.Core.CallbackHandler
@@ -148,7 +160,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp do_handle_action({:start_timer, {id, interval}}, cb, params, state) do
-    clock = state.synchronization.pipeline_clock
+    clock = state.synchronization.parent_clock
     do_handle_action({:start_timer, {id, interval, clock}}, cb, params, state)
   end
 

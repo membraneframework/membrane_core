@@ -16,12 +16,12 @@ defmodule Membrane.Support.Sync.Pipeline do
       sink_b: %Sink{}
     ]
 
-    links = %{
-      {:source_a, :output} => {:sink_a, :input},
-      {:source_b, :output} => {:sink_b, :input}
-    }
+    links = [
+      link(:source_a) |> to(:sink_a),
+      link(:source_b) |> to(:sink_b)
+    ]
 
-    %Membrane.Pipeline.Spec{
+    %Membrane.ParentSpec{
       children: children,
       links: links,
       stream_sync: :sinks

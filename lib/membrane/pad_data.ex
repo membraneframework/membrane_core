@@ -1,4 +1,4 @@
-defmodule Membrane.Element.Pad.Data do
+defmodule Membrane.Pad.Data do
   @moduledoc """
   Struct describing current pad state.
 
@@ -9,12 +9,12 @@ defmodule Membrane.Element.Pad.Data do
       has been received (or sent) on the pad
     - `:end_of_stream?` - flag determining whether `Membrane.Event.EndOfStream`
       has been received (or sent) on the pad
-    - `:options` - options passed in `Membrane.Pipeline.Spec` when linking pad
+    - `:options` - options passed in `Membrane.ParentSpec` when linking pad
 
   Other fields in the struct ARE NOT PART OF THE PUBLIC API and should not be
   accessed or relied on.
   """
-  alias Membrane.Element.Pad
+  alias Membrane.Pad
   alias Membrane.{Buffer, Caps, Core, Event}
   alias Buffer.Metric
   alias Core.InputBuffer
@@ -36,25 +36,25 @@ defmodule Membrane.Element.Pad.Data do
           sticky_messages: [Event.t()],
           input_buf: InputBuffer.t() | nil,
           demand: integer() | nil,
-          options: Keyword.t()
+          options: %{optional(atom) => any},
+          bin?: boolean()
         }
 
-  defstruct [
-    :accepted_caps,
-    :availability,
-    :direction,
-    :mode,
-    :demand_unit,
-    :other_demand_unit,
-    :current_id,
-    :pid,
-    :other_ref,
-    :caps,
-    :start_of_stream?,
-    :end_of_stream?,
-    :sticky_messages,
-    :input_buf,
-    :demand,
-    :options
-  ]
+  defstruct accepted_caps: nil,
+            availability: nil,
+            direction: nil,
+            mode: nil,
+            demand_unit: nil,
+            other_demand_unit: nil,
+            current_id: nil,
+            pid: nil,
+            other_ref: nil,
+            caps: nil,
+            start_of_stream?: nil,
+            end_of_stream?: nil,
+            sticky_messages: nil,
+            input_buf: nil,
+            demand: nil,
+            options: %{},
+            bin?: false
 end

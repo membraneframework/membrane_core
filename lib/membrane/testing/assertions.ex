@@ -133,7 +133,7 @@ defmodule Membrane.Testing.Assertions do
       assert_pipeline_receive(pid, :tick)
 
   Such call would flunk if the message `:tick` has not been handled by
-  `c:Membrane.Pipeline.handle_other/2` within the `timeout`.
+  `c:Membrane.Parent.handle_other/2` within the `timeout`.
   """
   defmacro assert_pipeline_receive(pipeline, message_pattern, timeout \\ @default_timeout) do
     do_pipeline_receive(&assert_receive_from_pipeline/3, pipeline, message_pattern, timeout)
@@ -151,7 +151,7 @@ defmodule Membrane.Testing.Assertions do
 
 
   Such call would flunk if the message `:tick` has been handled by
-  `c:Membrane.Pipeline.handle_other/2`.
+  `c:Membrane.Parent.handle_other/2`.
   """
   defmacro refute_pipeline_receive(pipeline, message_pattern, timeout \\ @default_timeout) do
     do_pipeline_receive(&refute_receive_from_pipeline/3, pipeline, message_pattern, timeout)
