@@ -86,7 +86,7 @@ defmodule Membrane.ParentSpec do
 
   require Membrane.Pad
 
-  alias Membrane.{Child, Element, Pad}
+  alias Membrane.{Child, Pad}
   alias Membrane.Core.InputBuffer
   alias Membrane.ParentError
 
@@ -118,8 +118,8 @@ defmodule Membrane.ParentSpec do
   @type child_spec_t :: module | struct
 
   @type children_spec_t ::
-          [{Membrane.Element.name_t(), child_spec_t}]
-          | %{Membrane.Element.name_t() => child_spec_t}
+          [{Child.name_t(), child_spec_t}]
+          | %{Child.name_t() => child_spec_t}
 
   @typedoc """
   Options passed to the element when linking its pad with a different one.
@@ -144,8 +144,8 @@ defmodule Membrane.ParentSpec do
   @type t :: %__MODULE__{
           children: children_spec_t,
           links: links_spec_t,
-          stream_sync: :sinks | [[Element.name_t()]],
-          clock_provider: Element.name_t()
+          stream_sync: :sinks | [[Child.name_t()]],
+          clock_provider: Child.name_t()
         }
 
   @valid_link_opt_keys [:id, :pad, :buffer]

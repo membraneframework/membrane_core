@@ -26,7 +26,7 @@ defmodule Membrane.Core.Parent.Link do
     defstruct element: nil, pad_name: nil, id: nil, pad_ref: nil, pid: nil, opts: []
 
     @type t() :: %__MODULE__{
-            element: Element.name_t(),
+            element: Element.name_t() | {Membrane.Bin, :itself},
             pad_name: Pad.name_t(),
             id: Pad.dynamic_id_t() | nil,
             pad_ref: Pad.ref_t() | nil,
@@ -35,7 +35,7 @@ defmodule Membrane.Core.Parent.Link do
           }
 
     @type resolved_t() :: %__MODULE__{
-            element: Element.name_t(),
+            element: Element.name_t() | {Membrane.Bin, :itself},
             pad_name: Pad.name_t(),
             id: Pad.dynamic_id_t() | nil,
             pad_ref: Pad.ref_t(),

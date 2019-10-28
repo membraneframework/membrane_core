@@ -45,12 +45,12 @@ defmodule Membrane.Bin do
   Defines options that can be passed to `start_link/3` and received
   in `c:handle_init/1` callback.
   """
-  @type bin_options_t :: any
+  @type options_t :: struct | nil
 
   @typedoc """
   Type that defines a bin name by which it is identified.
   """
-  @type name_t :: atom
+  @type name_t :: any()
 
   @doc """
   Enables to check whether module is membrane bin.
@@ -62,7 +62,7 @@ defmodule Membrane.Bin do
   and initialize bin's internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
   """
-  @callback handle_init(options :: bin_options_t) ::
+  @callback handle_init(options :: options_t) ::
               {{:ok, ParentSpec.t()}, Bin.State.internal_state_t()}
               | {:error, any}
 
@@ -117,7 +117,7 @@ defmodule Membrane.Bin do
   @spec start_link(
           atom,
           module,
-          bin_options :: bin_options_t,
+          bin_options :: options_t,
           process_options :: GenServer.options()
         ) :: GenServer.on_start()
   def start_link(my_name, module, bin_options \\ nil, process_options \\ []) do

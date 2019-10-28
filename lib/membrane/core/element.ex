@@ -20,10 +20,9 @@ defmodule Membrane.Core.Element do
   use GenServer
   import Membrane.Helper.GenServer
   require Membrane.Core.Message
-  alias Membrane.{Clock, Element, LinkError, Sync}
+  alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.Element.{MessageDispatcher, State}
   alias Membrane.Core.Message
-  alias Membrane.Core.Parent.{Link, Link.Endpoint}
 
   @type options_t :: %{
           module: module,
@@ -86,45 +85,6 @@ defmodule Membrane.Core.Element do
     debug("Shutdown -> #{inspect(server)}")
     GenServer.stop(server, :normal, timeout)
     :ok
-  end
-
-  @doc """
-  Sends synchronous calls to two elements, telling them to link with each other.
-  """
-  @spec link(link_spec :: %Link{}) :: :ok
-  def link(%Link{from: %Endpoint{pid: pid}, to: %Endpoint{pid: pid}}) when is_pid(pid) do
-    raise LinkError, "Cannot link element with itself"
-  end
-
-  def link(%Link{from: %Endpoint{pid: from_pid} = from, to: %Endpoint{pid: to_pid} = to})
-      when is_pid(from_pid) and is_pid(to_pid) do
-    with {:ok, pad_from_info} <-
-           Message.call(from_pid, :handle_link, [
-             from.pad_ref,
-             :output,
-             to_pid,
-             to.pad_ref,
-             nil,
-             from.opts
-           ]),
-         {:ok, _pad_to_info} <-
-           Message.call(to_pid, :handle_link, [
-             to.pad_ref,
-             :input,
-             from_pid,
-             from.pad_ref,
-             pad_from_info,
-             to.opts
-           ]) do
-      :ok
-    end
-  end
-
-  def link(link) do
-    raise LinkError, """
-    Invalid link - one of pids is invalid.
-    #{inspect(link, pretty: true)}
-    """
   end
 
   @impl GenServer

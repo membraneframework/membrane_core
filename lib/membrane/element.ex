@@ -15,7 +15,7 @@ defmodule Membrane.Element do
   @typedoc """
   Type that defines an element name by which it is identified.
   """
-  @type name_t :: atom | {atom, non_neg_integer}
+  @type name_t :: any()
 
   @typedoc """
   Defines possible element types:

@@ -4,10 +4,7 @@ defmodule Membrane.Core.ElementSpec do
   alias Membrane.Core.{Message, Playback}
   alias Membrane.Core.Element.State
   alias Membrane.Element.CallbackContext
-  alias Membrane.LinkError
-  alias Membrane.Core.Parent.Link
-  alias Membrane.Core.Parent.Link.Endpoint
-  alias Membrane.Support.Element.{TrivialFilter, TrivialSink, TrivialSource}
+  alias Membrane.Support.Element.{TrivialFilter, TrivialSource}
   alias Membrane.Sync
 
   require CallbackContext.PlaybackChange
@@ -15,15 +12,6 @@ defmodule Membrane.Core.ElementSpec do
 
   pending ".start_link/3"
   pending ".start/3"
-
-  let :from_pad, do: :output
-  let :to_pad, do: :input
-
-  let :link_struct,
-    do: %Link{
-      from: %Endpoint{element: :a, pad_name: from_pad(), pad_ref: from_pad(), pid: from_pid()},
-      to: %Endpoint{element: :b, pad_name: to_pad(), pad_ref: to_pad(), pid: to_pid()}
-    }
 
   def start_element(module) do
     described_module().start_link(%{
@@ -44,108 +32,6 @@ defmodule Membrane.Core.ElementSpec do
         capture_log(fn -> unquote(call) end)
       catch
         :exit, {{exception, _}, _} -> exception
-      end
-    end
-  end
-
-  describe ".link/1" do
-    let :tested_call, do: fn -> described_module().link(link_struct()) end
-
-    context "if first given PID is not a PID of an element process" do
-      let :from_pid, do: self()
-      let :to_pid, do: :destination
-
-      it "should raise an exception" do
-        expect(fn -> described_module().link(link_struct()) end)
-        |> to(raise_exception(LinkError))
-      end
-    end
-
-    context "if second given PID is not a PID of an element process" do
-      let_ok :from_pid,
-        do:
-          Membrane.Core.Element.start(%{
-            module: TrivialSink,
-            name: :name,
-            user_options: %{},
-            parent: self(),
-            clock: nil,
-            sync: Sync.no_sync()
-          })
-
-      finally do: Process.exit(from_pid(), :kill)
-
-      let :to_pid, do: self()
-
-      it "should raise an exception" do
-        expect(catch_exit(described_module().link(link_struct())))
-        |> to(match_pattern %LinkError{})
-      end
-    end
-
-    context "if both given PIDs are equal" do
-      let :from_pid, do: self()
-      let :to_pid, do: self()
-
-      it "should raise an exception" do
-        expect(fn -> described_module().link(link_struct()) end)
-        |> to(raise_exception(LinkError))
-      end
-    end
-
-    context "if both given PIDs are PIDs of element processes" do
-      let_ok :from_pid, do: start_element(from_module())
-      finally do: Process.exit(from_pid(), :kill)
-
-      let_ok :to_pid, do: start_element(to_module())
-      finally do: Process.exit(to_pid(), :kill)
-
-      context "but first given PID is not a source" do
-        let :from_module, do: TrivialSink
-        let :to_module, do: TrivialSink
-        let :from_pad, do: :input
-
-        it "should raise an exception" do
-          expect(catch_exit(described_module().link(link_struct())))
-          |> to(match_pattern %LinkError{})
-        end
-      end
-
-      context "but second given PID is not a sink" do
-        let :from_module, do: TrivialSource
-        let :to_module, do: TrivialSource
-        let :to_pad, do: :output
-
-        it "should raise an exception" do
-          expect(catch_exit(described_module().link(link_struct())))
-          |> to(match_pattern %LinkError{})
-        end
-      end
-
-      context "but incorrect pad ref is given" do
-        let :from_module, do: TrivialSource
-        let :to_module, do: TrivialSink
-        let :from_pad, do: :s
-        let :to_pad, do: :s
-
-        it "should raise an exception" do
-          expect(catch_exit(described_module().link(link_struct())))
-          |> to(match_pattern %LinkError{})
-        end
-      end
-
-      context "and first given PID is a source and second given PID is a sink" do
-        let :from_module, do: TrivialSource
-        let :to_module, do: TrivialSink
-
-        context "but pads are already linked" do
-          before do: :ok = described_module().link(link_struct())
-
-          it "should raise an exception" do
-            expect(catch_exit(described_module().link(link_struct())))
-            |> to(match_pattern %LinkError{})
-          end
-        end
       end
     end
   end
