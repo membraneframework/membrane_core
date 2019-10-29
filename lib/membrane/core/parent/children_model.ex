@@ -1,12 +1,11 @@
 defmodule Membrane.Core.Parent.ChildrenModel do
   @moduledoc false
 
-  alias Membrane.Core.Parent
-  alias Membrane.Core.Parent.State
+  alias Membrane.Core.Parent.{ChildEntry, State}
 
-  @type children_t :: %{Membrane.Child.name_t() => Parent.Child.resolved_t()}
+  @type children_t :: %{Membrane.Child.name_t() => ChildEntry.resolved_t()}
 
-  @spec add_child(State.t(), Membrane.Child.name_t(), Parent.Child.resolved_t()) ::
+  @spec add_child(State.t(), Membrane.Child.name_t(), ChildEntry.resolved_t()) ::
           {:ok | {:error, {:duplicate_child, Membrane.Child.name_t()}}, State.t()}
   def add_child(%{children: children} = state, child, data) do
     if Map.has_key?(children, child) do

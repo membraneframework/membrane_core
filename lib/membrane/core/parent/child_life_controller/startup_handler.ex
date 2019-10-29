@@ -7,9 +7,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
 
   alias Membrane.{CallbackError, Clock, ParentError, Sync}
   alias Membrane.Core.{Bin, CallbackHandler, Element, Message, Parent, Pipeline}
-  alias Membrane.Core.Parent.State
+  alias Membrane.Core.Parent.{ChildEntry, State}
 
-  @spec check_if_children_names_unique([Parent.Child.t()], State.t()) ::
+  @spec check_if_children_names_unique([ChildEntry.t()], State.t()) ::
           :ok | no_return
   def check_if_children_names_unique(children, state) do
     %{children: state_children} = state
@@ -27,7 +27,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     end
   end
 
-  @spec setup_syncs([Parent.Child.t()], :sinks | [[Membrane.Child.name_t()]]) :: %{
+  @spec setup_syncs([ChildEntry.t()], :sinks | [[Membrane.Child.name_t()]]) :: %{
           Membrane.Child.name_t() => Sync.t()
         }
   def setup_syncs(children, :sinks) do
@@ -61,17 +61,17 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
   end
 
   @spec start_children(
-          [Parent.Child.t()],
+          [ChildEntry.t()],
           parent_clock :: Clock.t(),
           syncs :: %{Membrane.Child.name_t() => pid()}
-        ) :: [Parent.Child.resolved_t()]
+        ) :: [ChildEntry.resolved_t()]
   def start_children(children, parent_clock, syncs) do
     debug("Starting children: #{inspect(children)}")
 
     children |> Enum.map(&start_child(&1, parent_clock, syncs))
   end
 
-  @spec add_children([Parent.Child.resolved_t()], State.t()) ::
+  @spec add_children([ChildEntry.resolved_t()], State.t()) ::
           {:ok | {:error, any}, State.t()}
   def add_children(children, state) do
     children
@@ -120,7 +120,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
   end
 
   defp start_child(child, parent_clock, syncs) do
-    %Parent.Child{name: name, module: module, options: options} = child
+    %ChildEntry{name: name, module: module, options: options} = child
     debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")
     sync = syncs |> Map.get(name, Sync.no_sync())
 
@@ -156,7 +156,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     with {:ok, pid} <- start_result,
          :ok <- Message.call(pid, :set_controlling_pid, self()),
          {:ok, %{clock: clock}} <- Message.call(pid, :handle_watcher, self()) do
-      %Parent.Child{child | pid: pid, clock: clock, sync: sync}
+      %ChildEntry{child | pid: pid, clock: clock, sync: sync}
     else
       {:error, reason} ->
         raise ParentError,

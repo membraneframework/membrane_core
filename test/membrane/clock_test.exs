@@ -162,15 +162,16 @@ defmodule Membrane.ClockTest do
 
   describe "Clock election in parent" do
     alias Membrane.Clock
-    alias Membrane.Core.{Parent, Pipeline.State, Parent.ClockHandler}
+    alias Membrane.Core.{Pipeline.State, Parent.ClockHandler}
+    alias Membrane.Core.Parent.ChildEntry
 
     test "when provider is specified" do
       {:ok, clock} = Clock.start_link()
       {:ok, proxy_clock} = Clock.start_link(proxy: true)
 
       children = [
-        %Parent.Child{name: :el1, pid: :c.pid(0, 1, 0)},
-        %Parent.Child{name: :el2, clock: clock, pid: :c.pid(0, 2, 0)}
+        %ChildEntry{name: :el1, pid: :c.pid(0, 1, 0)},
+        %ChildEntry{name: :el2, clock: clock, pid: :c.pid(0, 2, 0)}
       ]
 
       dummy_pipeline_state = %State{module: __MODULE__, clock_proxy: proxy_clock}
@@ -188,8 +189,8 @@ defmodule Membrane.ClockTest do
       {:ok, proxy_clock} = Clock.start_link(proxy: true)
 
       children = [
-        %Parent.Child{name: :el1, pid: :c.pid(0, 1, 0)},
-        %Parent.Child{name: :el2, clock: clock, pid: :c.pid(0, 2, 0)}
+        %ChildEntry{name: :el1, pid: :c.pid(0, 1, 0)},
+        %ChildEntry{name: :el2, clock: clock, pid: :c.pid(0, 2, 0)}
       ]
 
       dummy_pipeline_state = %State{module: __MODULE__, clock_proxy: proxy_clock}
@@ -205,9 +206,9 @@ defmodule Membrane.ClockTest do
       {:ok, proxy_clock} = Clock.start_link(proxy: true)
 
       children = [
-        %Parent.Child{name: :el1, pid: :c.pid(0, 1, 0)},
-        %Parent.Child{name: :el2, clock: clock, pid: :c.pid(0, 2, 0)},
-        %Parent.Child{name: :el3, clock: clock2, pid: :c.pid(0, 3, 0)}
+        %ChildEntry{name: :el1, pid: :c.pid(0, 1, 0)},
+        %ChildEntry{name: :el2, clock: clock, pid: :c.pid(0, 2, 0)},
+        %ChildEntry{name: :el3, clock: clock2, pid: :c.pid(0, 3, 0)}
       ]
 
       dummy_pipeline_state = %State{module: __MODULE__, clock_proxy: proxy_clock}
@@ -222,9 +223,9 @@ defmodule Membrane.ClockTest do
       {:ok, proxy_clock} = Clock.start_link(proxy: true)
 
       children = [
-        %Parent.Child{name: :el1, pid: :c.pid(0, 1, 0)},
-        %Parent.Child{name: :el2, clock: clock, pid: :c.pid(0, 2, 0)},
-        %Parent.Child{name: :el3, pid: :c.pid(0, 3, 0)}
+        %ChildEntry{name: :el1, pid: :c.pid(0, 1, 0)},
+        %ChildEntry{name: :el2, clock: clock, pid: :c.pid(0, 2, 0)},
+        %ChildEntry{name: :el3, pid: :c.pid(0, 3, 0)}
       ]
 
       dummy_pipeline_state = %State{module: __MODULE__, clock_proxy: proxy_clock}

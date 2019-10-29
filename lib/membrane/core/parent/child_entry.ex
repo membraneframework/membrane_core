@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Parent.Child do
+defmodule Membrane.Core.Parent.ChildEntry do
   @moduledoc false
 
   alias Membrane.{Clock, ParentError, ParentSpec, Sync}

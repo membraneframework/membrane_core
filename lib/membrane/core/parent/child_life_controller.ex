@@ -11,7 +11,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   alias __MODULE__.{StartupHandler, LinkHandler}
   alias Membrane.ParentSpec
   alias Membrane.Core.{Message, Parent}
-  alias Membrane.Core.Parent.{ClockHandler, Link, State}
+  alias Membrane.Core.Parent.{ChildEntry, ClockHandler, Link, State}
 
   @spec handle_spec(ParentSpec.t(), State.t()) ::
           {{:ok, [Membrane.Child.name_t()]}, State.t()} | no_return
@@ -22,7 +22,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     links: #{inspect(spec.links)}
     """)
 
-    children = Parent.Child.from_spec(spec.children)
+    children = ChildEntry.from_spec(spec.children)
     :ok = StartupHandler.check_if_children_names_unique(children, state)
     syncs = StartupHandler.setup_syncs(children, spec.stream_sync)
     children = StartupHandler.start_children(children, state.clock_proxy, syncs)

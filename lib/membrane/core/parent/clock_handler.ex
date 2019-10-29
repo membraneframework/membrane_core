@@ -2,15 +2,14 @@ defmodule Membrane.Core.Parent.ClockHandler do
   @moduledoc false
 
   alias Membrane.{Clock, ParentError}
-  alias Membrane.Core.Parent
-  alias Membrane.Core.Parent.State
+  alias Membrane.Core.Parent.{ChildEntry, State}
 
   @spec choose_clock(State.t()) :: {:ok, State.t()}
   def choose_clock(state) do
     choose_clock([], nil, state)
   end
 
-  @spec choose_clock([Parent.Child.t()], Membrane.Child.name_t() | nil, State.t()) ::
+  @spec choose_clock([ChildEntry.t()], Membrane.Child.name_t() | nil, State.t()) ::
           {:ok, State.t()} | no_return
   def choose_clock(children, provider, state) do
     cond do
@@ -38,10 +37,10 @@ defmodule Membrane.Core.Parent.ClockHandler do
       nil ->
         raise ParentError, "Unknown clock provider: #{inspect(provider)}"
 
-      %Parent.Child{clock: nil} ->
+      %ChildEntry{clock: nil} ->
         raise ParentError, "#{inspect(provider)} is not a clock provider"
 
-      %Parent.Child{clock: clock} ->
+      %ChildEntry{clock: clock} ->
         %{clock: clock, provider: provider, choice: :manual}
     end
   end
@@ -51,7 +50,7 @@ defmodule Membrane.Core.Parent.ClockHandler do
       [] ->
         %{clock: nil, provider: nil, choice: :auto}
 
-      [%Parent.Child{name: name, clock: clock}] ->
+      [%ChildEntry{name: name, clock: clock}] ->
         %{clock: clock, provider: name, choice: :auto}
 
       children ->
