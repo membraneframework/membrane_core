@@ -52,37 +52,39 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
          %Bin.State{} = state
        ) do
     %Endpoint{pad_name: pad_name, id: id} = endpoint
-    private_pad = Membrane.Pad.get_corresponding_bin_pad(pad_name)
+    private_name = Membrane.Pad.get_corresponding_bin_pad(pad_name)
 
-    with {{:ok, private_pad_ref}, state} <-
-           Child.PadController.get_pad_ref(private_pad, id, state) do
-      %Endpoint{endpoint | pid: self(), pad_ref: private_pad_ref, pad_name: private_pad}
+    withl pad: {:ok, pad} <- state.pads.info |> Map.fetch(private_name),
+          ref: {:ok, ref} <- Membrane.Pad.make_pad_ref(private_name, id, pad.availability) do
+      %Endpoint{endpoint | pid: self(), pad_ref: ref, pad_name: private_name}
       ~> {&1, state}
     else
-      {{:error, :unknown_pad}, _state} ->
+      pad: :error ->
         raise LinkError, "Bin #{inspect(state.name)} does not have pad #{inspect(pad_name)}"
+
+      ref: {:error, :invalid_availability} ->
+        raise ParentError,
+              "Pad id passed for static pad #{inspect(pad_name)} of bin #{inspect(state.name)}"
     end
   end
 
   defp resolve_endpoint(endpoint, state) do
-    %Endpoint{element: element, pad_name: pad_name, id: id} = endpoint
+    %Endpoint{element: child, pad_name: pad_name, id: id} = endpoint
 
-    withl child: {:ok, %{pid: pid}} <- state |> Parent.ChildrenModel.get_child_data(element),
-          ref: {:ok, pad_ref} <- pid |> Message.call(:get_pad_ref, [pad_name, id]) do
-      endpoint = %Endpoint{endpoint | pid: pid, pad_ref: pad_ref}
-      {endpoint, state}
+    withl child: {:ok, child_data} <- state |> Parent.ChildrenModel.get_child_data(child),
+          pad: {:ok, pad} <- child_data.module.membrane_pads() |> Keyword.fetch(pad_name),
+          ref: {:ok, ref} <- Membrane.Pad.make_pad_ref(pad_name, id, pad.availability) do
+      {%Endpoint{endpoint | pid: child_data.pid, pad_ref: ref}, state}
     else
-      child: {:error, {:unknown_child, child}} ->
+      child: {:error, {:unknown_child, _child}} ->
         raise ParentError, "Child #{inspect(child)} does not exist"
 
-      ref: {:error, {:cannot_handle_message, :unknown_pad, _ctx}} ->
-        raise ParentError, "Child #{inspect(element)} does not have pad #{inspect(pad_name)}"
+      pad: :error ->
+        raise ParentError, "Child #{inspect(child)} does not have pad #{inspect(pad_name)}"
 
-      ref: {:error, reason} ->
-        raise ParentError, """
-        Error resolving pad #{inspect(pad_name)} of element #{inspect(element)}, \
-        reason: #{inspect(reason, pretty: true)}\
-        """
+      ref: {:error, :invalid_availability} ->
+        raise ParentError,
+              "Pad id passed for static pad #{inspect(pad_name)} of child #{inspect(child)}"
     end
   end
 

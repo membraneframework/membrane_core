@@ -22,7 +22,7 @@ defmodule Membrane.Pad do
   @typedoc """
   Possible id of dynamic pad
   """
-  @type dynamic_id_t :: non_neg_integer
+  @type dynamic_id_t :: any
 
   @typedoc """
   Defines the name of pad or group of dynamic pads
@@ -131,7 +131,7 @@ defmodule Membrane.Pad do
   defguard is_pad_ref(term)
            when term |> is_atom or
                   (term |> is_tuple and term |> tuple_size == 3 and term |> elem(0) == :dynamic and
-                     term |> elem(1) |> is_atom and term |> elem(2) |> is_integer)
+                     term |> elem(1) |> is_atom)
 
   defguardp is_public_name(term) when is_atom(term)
 
@@ -178,6 +178,15 @@ defmodule Membrane.Pad do
   @spec get_corresponding_bin_name(name_t()) :: name_t()
   defp get_corresponding_bin_name({:private, name}) when is_public_name(name), do: name
   defp get_corresponding_bin_name(name) when is_public_name(name), do: {:private, name}
+
+  def make_pad_ref(name, id, availability) do
+    case {id, availability_mode(availability)} do
+      {nil, :static} -> {:ok, name}
+      {_id, :static} -> {:error, :invalid_availability}
+      {nil, :dynamic} -> {:ok, {:dynamic, name, make_ref()}}
+      {id, :dynamic} -> {:ok, {:dynamic, name, id}}
+    end
+  end
 
   def assert_public_name!(name) when is_public_name(name) do
     :ok

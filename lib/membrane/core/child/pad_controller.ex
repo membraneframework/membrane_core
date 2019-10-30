@@ -104,39 +104,6 @@ defmodule Membrane.Core.Child.PadController do
     end
   end
 
-  @doc """
-  Returns a pad reference - a term uniquely identifying pad instance.
-
-  In case of static pad it will be just its name, for dynamic it will return
-  tuple containing name and id.
-  """
-  @spec get_pad_ref(Pad.name_t(), Pad.dynamic_id_t() | nil, state_t()) ::
-          Type.stateful_try_t(Pad.ref_t(), state_t)
-  def get_pad_ref(pad_name, id, state) do
-    case state.pads.info[pad_name] do
-      nil ->
-        {{:error, :unknown_pad}, state}
-
-      %{availability: av} = pad_info when Pad.is_availability_dynamic(av) ->
-        {pad_ref, pad_info} = get_dynamic_pad_ref(pad_name, id, pad_info)
-        state |> Bunch.Access.put_in([:pads, :info, pad_name], pad_info) ~> {{:ok, pad_ref}, &1}
-
-      %{availability: av} when Pad.is_availability_static(av) and id == nil ->
-        {{:ok, pad_name}, state}
-
-      %{availability: av} when Pad.is_availability_static(av) and id != nil ->
-        {{:error, :id_on_static_pad}, state}
-    end
-  end
-
-  defp get_dynamic_pad_ref(pad_name, nil, %{current_id: id} = pad_info) do
-    {{:dynamic, pad_name, id}, %{pad_info | current_id: id + 1}}
-  end
-
-  defp get_dynamic_pad_ref(pad_name, id, %{current_id: old_id} = pad_info) do
-    {{:dynamic, pad_name, id}, %{pad_info | current_id: max(id, old_id) + 1}}
-  end
-
   @spec validate_pad_being_linked!(
           Pad.ref_t(),
           Pad.direction_t(),

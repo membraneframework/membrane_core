@@ -56,29 +56,6 @@ defmodule Membrane.Core.Child.PadControllerTest do
     end
   end
 
-  describe "get_pad_ref/3" do
-    test "on a static pad" do
-      state = prepare_state(TrivialFilter)
-      assert @module.get_pad_ref(:input, nil, state) == {{:ok, :input}, state}
-      assert @module.get_pad_ref(:input, 1, state) == {{:error, :id_on_static_pad}, state}
-    end
-
-    test "without supplied id on a dynamic pad" do
-      state = prepare_state(DynamicFilter)
-      assert {{:ok, {:dynamic, :input, 0}}, new_state} = @module.get_pad_ref(:input, nil, state)
-      assert new_state.pads.info.input.current_id == 1
-      assert {{:ok, {:dynamic, :input, 1}}, _state} = @module.get_pad_ref(:input, nil, new_state)
-    end
-
-    test "with supplied id on a dynamic pad" do
-      state = prepare_state(DynamicFilter)
-      assert {{:ok, {:dynamic, :input, 666}}, new_state} = @module.get_pad_ref(:input, 666, state)
-      assert new_state.pads.info.input.current_id == 667
-
-      assert {{:ok, {:dynamic, :input, 667}}, _} = @module.get_pad_ref(:input, 667, new_state)
-    end
-  end
-
   defp prepare_static_state(elem_module, name \\ :element, pad_name) do
     {info, state} =
       elem_module

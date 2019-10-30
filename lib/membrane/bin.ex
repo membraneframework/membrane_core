@@ -217,27 +217,26 @@ defmodule Membrane.Bin do
     {:ok, %{state | linking_buffer: new_buf}} |> noreply()
   end
 
+  @impl GenServer
   # Element-specific message.
   def handle_info(Message.new(:demand_unit, [demand_unit, pad_ref]), state) do
     Child.LifecycleController.handle_demand_unit(demand_unit, pad_ref, state)
     |> noreply()
   end
 
+  @impl GenServer
   def handle_info(message, state) do
     Parent.MessageDispatcher.handle_message(message, state)
     |> noreply(state)
   end
 
   @impl GenServer
-  def handle_call(Message.new(:get_pad_ref, [pad_name, id]), _from, state) do
-    PadController.get_pad_ref(pad_name, id, state) |> reply()
-  end
-
   def handle_call(Message.new(:set_controlling_pid, pid), _, state) do
     Child.LifecycleController.handle_controlling_pid(pid, state)
     |> reply()
   end
 
+  @impl GenServer
   def handle_call(
         Message.new(:handle_link, [pad_ref, pad_direction, pid, other_ref, other_info, props]),
         _from,
@@ -251,11 +250,13 @@ defmodule Membrane.Bin do
     |> reply()
   end
 
+  @impl GenServer
   def handle_call(Message.new(:linking_finished), _, state) do
     PadController.handle_linking_finished(state)
     |> reply()
   end
 
+  @impl GenServer
   def handle_call(Message.new(:handle_watcher, watcher), _, state) do
     Child.LifecycleController.handle_watcher(watcher, state)
     |> reply()
