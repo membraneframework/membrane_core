@@ -25,7 +25,7 @@ defmodule Membrane.Buffer.Metric.ByteSizeTest do
     end
 
     test "when there is only one buffer where split position is greater than buffer size \
-      returns a list with tuple with a buffer and an empty list" do
+      returns the buffer and an empty list" do
       {buf, []} = ByteSize.split_buffers(@single_buffer, byte_size(@pay1) + 10)
       assert buf == [@buf1]
     end
