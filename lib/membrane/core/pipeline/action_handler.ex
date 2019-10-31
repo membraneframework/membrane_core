@@ -6,7 +6,6 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   alias Membrane.CallbackError
   alias Membrane.ParentSpec
   alias Membrane.Core.Parent
-  alias Membrane.Core.Parent.SpecController
 
   @impl CallbackHandler
   # Deprecation
@@ -47,19 +46,19 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   defp do_handle_action({:forward, {elementname, message}}, _cb, _params, state) do
-    Parent.Action.handle_forward(elementname, message, state)
+    Parent.ChildLifeController.handle_forward(elementname, message, state)
   end
 
   defp do_handle_action({:spec, spec = %ParentSpec{}}, _cb, _params, state) do
-    with {{:ok, _children}, state} <- SpecController.handle_spec(spec, state),
+    with {{:ok, _children}, state} <- Parent.ChildLifeController.handle_spec(spec, state),
          do: {:ok, state}
   end
 
   defp do_handle_action({:remove_child, children}, _cb, _params, state) do
-    Parent.Action.handle_remove_child(children, state)
+    Parent.ChildLifeController.handle_remove_child(children, state)
   end
 
-  defp do_handle_action(_action, _callback, _params, state) do
-    {{:error, :invalid_action}, state}
+  defp do_handle_action(action, callback, _params, state) do
+    raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
   end
 end

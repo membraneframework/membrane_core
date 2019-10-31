@@ -154,8 +154,8 @@ defmodule Membrane.Core.Child.PadController do
       info.direction != direction ->
         raise LinkError, """
         Invalid pad direction:
-          expected: #{inspect(direction)},
-          actual: #{inspect(info.direction)}
+          expected: #{inspect(info.direction)},
+          actual: #{inspect(direction)}
         """
 
       true ->
