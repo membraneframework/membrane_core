@@ -165,6 +165,9 @@ defmodule Membrane.Pad do
   defguard is_availability_dynamic(availability) when availability == :on_request
   defguard is_availability_static(availability) when availability == :always
 
+  def public_name?(name) when is_public_name(name), do: true
+  def public_name?(_), do: false
+
   @doc """
   Returns pad availability mode for given availability.
   """
