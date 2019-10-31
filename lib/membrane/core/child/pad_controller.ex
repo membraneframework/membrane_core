@@ -290,6 +290,12 @@ defmodule Membrane.Core.Child.PadController do
   defp handle_pad_added(ref, state) do
     pad_opts = PadModel.get_data!(state, ref, :options)
 
+    action_handler =
+      case state do
+        %Membrane.Core.Bin.State{} -> Membrane.Core.Bin.ActionHandler
+        _ -> ActionHandler
+      end
+
     context =
       &CallbackContext.PadAdded.from_state(
         &1,

@@ -191,8 +191,8 @@ defmodule Membrane.Core.BinTest do
         })
 
       assert_data_flows_through(pipeline, buffers)
-      assert_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, {:dynamic, name, _}})
-      assert is_atom(name)
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, {:dynamic, :input, _}})
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, {:dynamic, :output, _}})
 
       refute_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, _})
     end
