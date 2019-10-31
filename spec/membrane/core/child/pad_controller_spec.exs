@@ -183,7 +183,7 @@ defmodule Membrane.Core.Child.PadControllerSpec do
     context "for element with dynamic input pad" do
       let :module, do: DynamicFilter
       let :pad_name, do: :input
-      let :pad_ref, do: {:input, 0}
+      let :pad_ref, do: {:dynamic, :input, 0}
 
       let :pad_data,
         do: %Membrane.Pad.Data{
