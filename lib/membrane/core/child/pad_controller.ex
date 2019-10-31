@@ -309,8 +309,9 @@ defmodule Membrane.Core.Child.PadController do
   @spec handle_pad_removed(Pad.ref_t(), state_t()) :: Type.stateful_try_t(state_t)
   defp handle_pad_removed(ref, state) do
     %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
+    name = Pad.name_by_ref(ref)
 
-    if availability |> Pad.availability_mode() == :dynamic do
+    if Pad.availability_mode(availability) == :dynamic and Pad.public_name?(name) do
       context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
 
       CallbackHandler.exec_and_handle_callback(

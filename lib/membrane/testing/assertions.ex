@@ -62,6 +62,37 @@ defmodule Membrane.Testing.Assertions do
   end
 
   @doc """
+  Refutes that pipeline received or will receive a notification from the element
+  with name `element_name` within the `timeout` period specified in milliseconds.
+
+  The `notification_pattern` must be a match pattern.
+
+      refute_pipeline_notified(pipeline, :element_name, :hi)
+  """
+  defmacro refute_pipeline_notified(
+             pipeline,
+             element_name,
+             notification_pattern,
+             timeout \\ @default_timeout
+           ) do
+    quote do
+      element_name_value = unquote(element_name)
+
+      unquote(
+        refute_receive_from_pipeline(
+          pipeline,
+          {:handle_notification,
+           {notification_pattern,
+            quote do
+              ^element_name_value
+            end}},
+          timeout
+        )
+      )
+    end
+  end
+
+  @doc """
   Asserts that pipeline's playback state (see `Membrane.PlaybackState`)
   changed or will change from `previous_state` to `current_state` within
   the `timeout` period specified in milliseconds.

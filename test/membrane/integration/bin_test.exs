@@ -175,7 +175,7 @@ defmodule Membrane.Core.BinTest do
   end
 
   describe "Dynamic pads" do
-    test "allow bin to be started and work properly" do
+    test "handle_pad_added is called only for public pads" do
       buffers = ['a', 'b', 'c']
 
       {:ok, pipeline} =
@@ -191,6 +191,10 @@ defmodule Membrane.Core.BinTest do
         })
 
       assert_data_flows_through(pipeline, buffers)
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, {:dynamic, name, _}})
+      assert is_atom(name)
+
+      refute_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, _})
     end
   end
 
