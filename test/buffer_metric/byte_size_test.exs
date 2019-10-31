@@ -43,7 +43,7 @@ defmodule Membrane.Buffer.Metric.ByteSizeTest do
       assert extracted == [@buf1, %Membrane.Buffer{payload: one_byte}]
     end
 
-    test "when splitting buffer is necessary return second buffer without first" do
+    test "when splitting buffer is necessary return the second part of the second buffer" do
       {_, rest} = ByteSize.split_buffers(@buffers, byte_size(@pay1) + 1)
       <<_::binary-size(1), expected_pay::binary>> = @pay2
       assert rest == [%Membrane.Buffer{payload: expected_pay}]
