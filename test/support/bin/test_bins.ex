@@ -18,6 +18,46 @@ defmodule Membrane.Support.Bin.TestBins do
     def handle_process(_pad, buf, _, state), do: {{:ok, buffer: {:output, buf}}, state}
   end
 
+  defmodule TestDynamicPadFilter do
+    use Membrane.Filter
+
+    def_output_pad :output, caps: :any, availability: :on_request
+
+    def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :on_request
+
+    @impl true
+    def handle_other({:notify_parent, notif}, _ctx, state), do: {{:ok, notify: notif}, state}
+
+    @impl true
+    def handle_demand(_output, _size, _unit, ctx, state) do
+      min_demand =
+        ctx.pads
+        |> Map.values()
+        |> Enum.filter(&(&1.direction == :output))
+        |> Enum.map(& &1.demand)
+        |> Enum.min()
+
+      demands =
+        ctx.pads
+        |> Bunch.KVList.filter_by_values(&(&1.direction == :input))
+        |> Keyword.keys()
+        |> Enum.map(&{:demand, {&1, min_demand}})
+
+      {{:ok, demands}, state}
+    end
+
+    @impl true
+    def handle_process(_input, buf, ctx, state) do
+      buffers =
+        ctx.pads
+        |> Bunch.KVList.filter_by_values(&(&1.direction == :output))
+        |> Keyword.keys()
+        |> Enum.map(&{:buffer, {&1, buf}})
+
+      {{:ok, buffers}, state}
+    end
+  end
+
   defmodule SimpleBin do
     use Membrane.Bin
 
@@ -68,7 +108,7 @@ defmodule Membrane.Support.Bin.TestBins do
       ]
 
       links = [
-        link_bin_input() |> to(:filter1) |> to(:filter2) |> to_bin_output()
+        link(:filter1) |> to(:filter2)
       ]
 
       spec = %ParentSpec{
@@ -81,7 +121,25 @@ defmodule Membrane.Support.Bin.TestBins do
       {{:ok, spec: spec}, state}
     end
 
-    def handle_pad_added(_pad_ref, _ctx, state), do: {:ok, state}
+    def handle_pad_added({:dynamic, :input, id}, _ctx, state) do
+      links = [
+        link_bin_input(:input, id: id) |> to(:filter1)
+      ]
+
+      {{:ok, spec: %ParentSpec{links: links}}, state}
+    end
+
+    def handle_pad_added({:dynamic, :output, id}, _ctx, state) do
+      links = [
+        link(:filter2) |> to_bin_output(:output, id: id)
+      ]
+
+      {{:ok, spec: %ParentSpec{links: links}}, state}
+    end
+
+    def handle_pad_added(_pad, _ctx, state) do
+      {:ok, state}
+    end
   end
 
   defmodule TestSinkBin do

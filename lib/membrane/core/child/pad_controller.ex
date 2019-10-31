@@ -5,7 +5,7 @@ defmodule Membrane.Core.Child.PadController do
   alias Membrane.{Core, Event, LinkError, Pad}
   alias Core.{CallbackHandler, Message, InputBuffer}
   alias Core.Child.{PadModel, PadSpecHandler}
-  alias Core.Element.{ActionHandler, EventController, PlaybackBuffer}
+  alias Core.Element.{EventController, PlaybackBuffer}
   alias Membrane.Element.CallbackContext
   alias Bunch.Type
   require CallbackContext.{PadAdded, PadRemoved}
@@ -297,7 +297,7 @@ defmodule Membrane.Core.Child.PadController do
 
     CallbackHandler.exec_and_handle_callback(
       :handle_pad_added,
-      ActionHandler,
+      get_callback_action_handler(state),
       %{context: context},
       [ref],
       state
@@ -313,7 +313,7 @@ defmodule Membrane.Core.Child.PadController do
 
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_removed,
-        ActionHandler,
+        get_callback_action_handler(state),
         %{context: context},
         [ref],
         state
@@ -327,4 +327,7 @@ defmodule Membrane.Core.Child.PadController do
     new_playback_buf = PlaybackBuffer.flush_for_pad(state.playback_buffer, pad_ref)
     {:ok, %{state | playback_buffer: new_playback_buf}}
   end
+
+  defp get_callback_action_handler(%Core.Element.State{}), do: Core.Element.ActionHandler
+  defp get_callback_action_handler(%Core.Bin.State{}), do: Core.Bin.ActionHandler
 end
