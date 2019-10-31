@@ -1,4 +1,4 @@
-defmodule Membrane.Element.CallbackContext do
+defmodule Membrane.CallbackContext do
   @moduledoc """
   Parent module for all contexts passed to callbacks.
 
@@ -8,10 +8,11 @@ defmodule Membrane.Element.CallbackContext do
 
   alias Membrane.Pad
   alias Membrane.Core
-  alias Core.Element.State
+  alias Core.Element
+  alias Core.Bin
   use Bunch
 
-  @macrocallback from_state(State.t(), keyword()) :: Macro.t()
+  @macrocallback from_state(Element.State.t() | Bin.State.t(), keyword()) :: Macro.t()
 
   defmacro __using__(fields) do
     quote do

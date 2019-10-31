@@ -8,7 +8,7 @@ defmodule Membrane.Element.CallbackContext.Caps do
   """
   alias Membrane.Core.Child.PadModel
 
-  use Membrane.Element.CallbackContext,
+  use Membrane.CallbackContext,
     old_caps: Membrane.Caps.t()
 
   @impl true

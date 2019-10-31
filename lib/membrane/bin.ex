@@ -19,6 +19,7 @@ defmodule Membrane.Bin do
   import Membrane.Helper.GenServer
 
   alias Membrane.{Element, Pad, ParentSpec, Sync}
+  alias Membrane.Bin.CallbackContext
 
   alias Membrane.Core.{
     Bin,
@@ -40,6 +41,9 @@ defmodule Membrane.Bin do
   require Membrane.PlaybackState
 
   @type state_t :: Bin.State.t()
+
+  @type callback_return_t ::
+          {:ok | {:ok, [Membrane.Parent.Action.t()]} | {:error, any}, state_t()} | {:error, any}
 
   @typedoc """
   Defines options that can be passed to `start_link/3` and received
@@ -65,6 +69,26 @@ defmodule Membrane.Bin do
   @callback handle_init(options :: options_t) ::
               {{:ok, ParentSpec.t()}, Bin.State.internal_state_t()}
               | {:error, any}
+
+  @doc """
+  Callback that is called when new pad has beed added to bin. Executed
+  ONLY for dynamic pads.
+  """
+  @callback handle_pad_added(
+              pad :: Pad.ref_t(),
+              context :: CallbackContext.PadAdded.t(),
+              state :: state_t()
+            ) :: callback_return_t
+
+  @doc """
+  Callback that is called when some pad of the bin has beed removed. Executed
+  ONLY for dynamic pads.
+  """
+  @callback handle_pad_removed(
+              pad :: Pad.ref_t(),
+              context :: CallbackContext.PadRemoved.t(),
+              state :: state_t()
+            ) :: callback_return_t
 
   @doc """
   Automatically implemented callback used to determine whether bin exports clock.
@@ -297,8 +321,16 @@ defmodule Membrane.Bin do
       def handle_notification(notification, _from, state),
         do: {{:ok, notify: notification}, state}
 
+      @impl true
+      def handle_pad_added(_pad, _ctx, state), do: {:ok, state}
+
+      @impl true
+      def handle_pad_removed(_pad, _ctx, state), do: {:ok, state}
+
       defoverridable handle_init: 1,
                      handle_notification: 3,
+                     handle_pad_added: 3,
+                     handle_pad_removed: 3,
                      membrane_clock?: 0
     end
   end
