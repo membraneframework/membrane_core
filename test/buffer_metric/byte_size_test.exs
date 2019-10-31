@@ -37,7 +37,7 @@ defmodule Membrane.Buffer.Metric.ByteSizeTest do
     end
 
     test "when splitting buffer is necessary extracts first buffer and create separate \
-      buffer for the next byte from the second buffer" do
+      buffer for the first part of the second buffer" do
       {extracted, _} = ByteSize.split_buffers(@buffers, byte_size(@pay1) + 1)
       <<one_byte::binary-size(1), _::binary>> = @pay2
       assert extracted == [@buf1, %Membrane.Buffer{payload: one_byte}]
