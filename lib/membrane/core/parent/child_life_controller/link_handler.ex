@@ -7,9 +7,11 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   alias Membrane.Core.{Bin, Child, Message, Parent}
   alias Membrane.Core.Parent.{Link, State}
   alias Membrane.Core.Parent.Link.Endpoint
+  alias Membrane.Pad
   alias Membrane.{ParentError, LinkError}
 
   require Message
+  require Membrane.Pad
 
   @spec resolve_links([Parent.Link.t()], State.t()) ::
           {[Parent.Link.resolved_t()], State.t()}
@@ -48,43 +50,54 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   @spec resolve_endpoint(Endpoint.t(), State.t()) ::
           {Endpoint.resolved_t(), State.t()} | no_return
   defp resolve_endpoint(
-         %Endpoint{element: {Membrane.Bin, :itself}} = endpoint,
+         %Endpoint{child: {Membrane.Bin, :itself}} = endpoint,
          %Bin.State{} = state
        ) do
-    %Endpoint{pad_name: pad_name, id: id} = endpoint
-    private_name = Membrane.Pad.get_corresponding_bin_pad(pad_name)
+    %Endpoint{pad: pad} = endpoint
+    private_pad = Membrane.Pad.get_corresponding_bin_pad(pad)
 
-    withl pad: {:ok, pad} <- state.pads.info |> Map.fetch(private_name),
-          ref: {:ok, ref} <- Membrane.Pad.make_pad_ref(private_name, id, pad.availability) do
-      %Endpoint{endpoint | pid: self(), pad_ref: ref, pad_name: private_name}
+    withl pad: {:ok, private_info} <- state.pads.info |> Map.fetch(Pad.name_by_ref(private_pad)),
+          ref: {:ok, ref} <- make_pad_ref(private_pad, private_info.availability) do
+      %Endpoint{endpoint | pid: self(), pad_ref: ref, pad: private_pad}
       ~> {&1, state}
     else
       pad: :error ->
-        raise LinkError, "Bin #{inspect(state.name)} does not have pad #{inspect(pad_name)}"
+        raise LinkError, "Bin #{inspect(state.name)} does not have pad #{inspect(pad)}"
 
       ref: {:error, :invalid_availability} ->
         raise ParentError,
-              "Pad id passed for static pad #{inspect(pad_name)} of bin #{inspect(state.name)}"
+              "Dynamic pad ref #{inspect(pad)} passed for static pad of bin #{inspect(state.name)}"
     end
   end
 
   defp resolve_endpoint(endpoint, state) do
-    %Endpoint{element: child, pad_name: pad_name, id: id} = endpoint
+    %Endpoint{child: child, pad: pad} = endpoint
 
     withl child: {:ok, child_data} <- state |> Parent.ChildrenModel.get_child_data(child),
-          pad: {:ok, pad} <- child_data.module.membrane_pads() |> Keyword.fetch(pad_name),
-          ref: {:ok, ref} <- Membrane.Pad.make_pad_ref(pad_name, id, pad.availability) do
+          pad:
+            {:ok, pad_info} <-
+              child_data.module.membrane_pads() |> Keyword.fetch(Pad.name_by_ref(pad)),
+          ref: {:ok, ref} <- make_pad_ref(pad, pad_info.availability) do
       {%Endpoint{endpoint | pid: child_data.pid, pad_ref: ref}, state}
     else
       child: {:error, {:unknown_child, _child}} ->
         raise ParentError, "Child #{inspect(child)} does not exist"
 
       pad: :error ->
-        raise ParentError, "Child #{inspect(child)} does not have pad #{inspect(pad_name)}"
+        raise ParentError, "Child #{inspect(child)} does not have pad #{inspect(pad)}"
 
       ref: {:error, :invalid_availability} ->
         raise ParentError,
-              "Pad id passed for static pad #{inspect(pad_name)} of child #{inspect(child)}"
+              "Dynamic pad ref #{inspect(pad)} passed for static pad of child #{inspect(child)}"
+    end
+  end
+
+  defp make_pad_ref(name_or_ref, availability) do
+    case {name_or_ref, Pad.availability_mode(availability)} do
+      {Pad.ref(_name, _id), :static} -> {:error, :invalid_availability}
+      {name, :static} -> {:ok, name}
+      {Pad.ref(_name, _id) = ref, :dynamic} -> {:ok, ref}
+      {name, :dynamic} -> {:ok, Pad.ref(name, make_ref())}
     end
   end
 
@@ -100,7 +113,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   defp link_endpoint(
          direction,
-         %Endpoint{element: {Membrane.Bin, :itself}} = this,
+         %Endpoint{child: {Membrane.Bin, :itself}} = this,
          other,
          other_info,
          %Bin.State{} = state

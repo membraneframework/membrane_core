@@ -92,6 +92,8 @@ defmodule Membrane.Support.Bin.TestBins do
 
   defmodule TestDynamicPadBin do
     use Membrane.Bin
+    require Membrane.Pad
+    alias Membrane.Pad
 
     def_options filter1: [type: :atom],
                 filter2: [type: :atom]
@@ -121,17 +123,17 @@ defmodule Membrane.Support.Bin.TestBins do
       {{:ok, spec: spec}, state}
     end
 
-    def handle_pad_added({:dynamic, :input, id}, _ctx, state) do
+    def handle_pad_added(Pad.ref(:input, _) = pad, _ctx, state) do
       links = [
-        link_bin_input(:input, id: id) |> to(:filter1)
+        link_bin_input(pad) |> to(:filter1)
       ]
 
       {{:ok, spec: %ParentSpec{links: links}}, state}
     end
 
-    def handle_pad_added({:dynamic, :output, id}, _ctx, state) do
+    def handle_pad_added(Pad.ref(:output, _) = pad, _ctx, state) do
       links = [
-        link(:filter2) |> to_bin_output(:output, id: id)
+        link(:filter2) |> to_bin_output(pad)
       ]
 
       {{:ok, spec: %ParentSpec{links: links}}, state}

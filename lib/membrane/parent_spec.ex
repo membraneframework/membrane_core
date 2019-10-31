@@ -148,7 +148,7 @@ defmodule Membrane.ParentSpec do
           clock_provider: Child.name_t()
         }
 
-  @valid_link_opt_keys [:id, :pad, :buffer]
+  @valid_link_opt_keys [:pad, :buffer]
 
   defstruct children: %{},
             links: [],
@@ -180,11 +180,9 @@ defmodule Membrane.ParentSpec do
   def via_out(%LinkBuilder{} = builder, pad, opts) do
     :ok = validate_pad_name(pad)
     :ok = validate_pad_opts(opts)
-    {id, opts} = opts |> Keyword.pop(:id)
 
     LinkBuilder.update(builder, :output,
       output: pad,
-      output_id: id,
       output_opts: opts
     )
   end
@@ -200,11 +198,9 @@ defmodule Membrane.ParentSpec do
   def via_in(%LinkBuilder{} = builder, pad, opts) do
     :ok = validate_pad_name(pad)
     :ok = validate_pad_opts(opts)
-    {id, opts} = opts |> Keyword.pop(:id)
 
     LinkBuilder.update(builder, :input,
       input: pad,
-      input_id: id,
       input_opts: opts
     )
   end
@@ -225,7 +221,7 @@ defmodule Membrane.ParentSpec do
     builder |> via_in(pad, opts) |> LinkBuilder.update(:done, to: {Membrane.Bin, :itself})
   end
 
-  defp validate_pad_name(pad) when Pad.is_pad_name(pad) do
+  defp validate_pad_name(pad) when Pad.is_pad_name(pad) or Pad.is_pad_ref(pad) do
     :ok
   end
 

@@ -7,6 +7,7 @@ defmodule Membrane.Core.Child.PadControllerTest do
   alias Membrane.Pad
   alias Membrane.LinkError
   require Message
+  require Pad
 
   @module Membrane.Core.Child.PadController
 
@@ -103,7 +104,7 @@ defmodule Membrane.Core.Child.PadControllerTest do
     end
 
     test "for dynamic input pad" do
-      pad_ref = {:dynamic, :input, 0}
+      pad_ref = Pad.ref(:input, 0)
       state = prepare_dynamic_state(DynamicFilter, :element, :playing, :input, pad_ref)
       assert state.pads.data |> Map.has_key?(pad_ref)
       assert {:ok, new_state} = @module.handle_unlink(pad_ref, state)
