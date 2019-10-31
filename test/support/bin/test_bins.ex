@@ -39,9 +39,9 @@ defmodule Membrane.Support.Bin.TestBins do
 
       demands =
         ctx.pads
-        |> Bunch.KVList.filter_by_values(&(&1.direction == :input))
-        |> Keyword.keys()
-        |> Enum.map(&{:demand, {&1, min_demand}})
+        |> Map.values()
+        |> Enum.filter(&(&1.direction == :input))
+        |> Enum.map(&{:demand, {&1.ref, min_demand}})
 
       {{:ok, demands}, state}
     end
@@ -50,9 +50,9 @@ defmodule Membrane.Support.Bin.TestBins do
     def handle_process(_input, buf, ctx, state) do
       buffers =
         ctx.pads
-        |> Bunch.KVList.filter_by_values(&(&1.direction == :output))
-        |> Keyword.keys()
-        |> Enum.map(&{:buffer, {&1, buf}})
+        |> Map.values()
+        |> Enum.filter(&(&1.direction == :output))
+        |> Enum.map(&{:buffer, {&1.ref, buf}})
 
       {{:ok, buffers}, state}
     end

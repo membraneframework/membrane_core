@@ -33,14 +33,7 @@ defmodule Membrane.Core.Child.PadSpecHandler do
 
   @spec init_pad_info(Pad.description_t()) :: PadModel.pad_info_t()
   defp init_pad_info(specs) do
-    specs
-    |> Bunch.Map.move!(:caps, :accepted_caps)
-    |> Map.merge(
-      case specs.availability |> Pad.availability_mode() do
-        :dynamic -> %{current_id: 0}
-        :static -> %{}
-      end
-    )
+    specs |> Bunch.Map.move!(:caps, :accepted_caps)
   end
 
   @spec add_private_pads([{Pad.name_t(), Pad.description_t()}]) :: [

@@ -183,6 +183,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
       config
       |> Map.put(:direction, direction)
       |> Map.put(:bin?, bin?)
+      |> Map.put(:name, name)
       ~> {:ok, {name, &1}}
     else
       spec: spec -> {:error, {:invalid_pad_spec, spec}}

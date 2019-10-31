@@ -217,6 +217,7 @@ defmodule Membrane.Core.Child.PadController do
         pid: pid,
         other_ref: other_ref,
         options: props[:pad],
+        ref: ref,
         caps: nil,
         start_of_stream?: false,
         end_of_stream?: false

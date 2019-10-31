@@ -14,9 +14,9 @@ defmodule Membrane.Core.Child.PadModel do
           required(:availability) => Pad.availability_t(),
           required(:direction) => Pad.direction_t(),
           required(:mode) => Pad.mode_t(),
+          required(:name) => Pad.name_t(),
           optional(:demand_unit) => Membrane.Buffer.Metric.unit_t(),
-          optional(:other_demand_unit) => Membrane.Buffer.Metric.unit_t(),
-          optional(:current_id) => non_neg_integer
+          optional(:other_demand_unit) => Membrane.Buffer.Metric.unit_t()
         }
 
   @type pads_info_t :: %{Pad.name_t() => pad_info_t}

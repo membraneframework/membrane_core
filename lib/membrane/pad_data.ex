@@ -3,13 +3,21 @@ defmodule Membrane.Pad.Data do
   Struct describing current pad state.
 
   The public fields are:
+    - `:accepted_caps` - specification of possible caps that are accepted on the pad.
+      See `Membrane.Caps.Matcher` for more information
+    - `:availability` - see `Membrane.Pad.availability_t`
     - `:caps` - the most recent `Membrane.Caps` that have been sent (output) or received (input)
-      on the pad. May be `nil` if not yet set.
-    - `:start_of_stream?` - flag determining whether `Membrane.Event.StartOfStream`
-      has been received (or sent) on the pad
+      on the pad. May be `nil` if not yet set
+    - `:demand` - current demand requested on the pad working in pull mode
+    - `:direction` - see `Membrane.Pad.direction_t`
     - `:end_of_stream?` - flag determining whether `Membrane.Event.EndOfStream`
       has been received (or sent) on the pad
+    - `:mode` - see `Membrane.Pad.mode_t`
+    - `:name` - see `Membrane.Pad.name_t`. Do not mistake with `:ref`
     - `:options` - options passed in `Membrane.ParentSpec` when linking pad
+    - `:ref` - see `Membrane.Pad.ref_t`
+    - `:start_of_stream?` - flag determining whether `Membrane.Event.StartOfStream`
+      has been received (or sent) on the pad
 
   Other fields in the struct ARE NOT PART OF THE PUBLIC API and should not be
   accessed or relied on.
@@ -21,13 +29,14 @@ defmodule Membrane.Pad.Data do
   use Bunch.Access
 
   @type t :: %__MODULE__{
-          accepted_caps: any,
+          accepted_caps: Caps.Matcher.caps_specs_t(),
           availability: Pad.availability_t(),
           direction: Pad.direction_t(),
           mode: Pad.mode_t(),
+          name: Pad.name_t(),
+          ref: Pad.ref_t(),
           demand_unit: Metric.unit_t() | nil,
           other_demand_unit: Metric.unit_t() | nil,
-          current_id: non_neg_integer | nil,
           pid: pid,
           other_ref: Pad.ref_t(),
           caps: Caps.t() | nil,
@@ -44,9 +53,10 @@ defmodule Membrane.Pad.Data do
             availability: nil,
             direction: nil,
             mode: nil,
+            name: nil,
+            ref: nil,
             demand_unit: nil,
             other_demand_unit: nil,
-            current_id: nil,
             pid: nil,
             other_ref: nil,
             caps: nil,

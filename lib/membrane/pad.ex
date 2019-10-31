@@ -121,6 +121,7 @@ defmodule Membrane.Pad do
   @type description_t :: %{
           :availability => availability_t(),
           :mode => mode_t(),
+          :name => name_t(),
           :caps => Caps.Matcher.caps_specs_t(),
           optional(:demand_unit) => Buffer.Metric.unit_t(),
           :direction => direction_t(),
