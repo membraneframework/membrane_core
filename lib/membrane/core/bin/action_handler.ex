@@ -3,27 +3,26 @@ defmodule Membrane.Core.Bin.ActionHandler do
   use Membrane.Core.CallbackHandler
   use Membrane.Log, tags: :core
 
-  alias Membrane.{Core, Notification, ParentSpec}
+  alias Membrane.{CallbackError, Core, Notification, ParentSpec}
   alias Core.{Parent, Message}
-  alias Parent.SpecController
   alias Core.Bin.State
 
   require Message
 
   @impl CallbackHandler
   def handle_action({:forward, {element_name, message}}, _cb, _params, state) do
-    Parent.Action.handle_forward(element_name, message, state)
+    Parent.ChildLifeController.handle_forward(element_name, message, state)
   end
 
   @impl CallbackHandler
   def handle_action({:spec, spec = %ParentSpec{}}, _cb, _params, state) do
-    with {{:ok, _children}, state} <- SpecController.handle_spec(spec, state),
+    with {{:ok, _children}, state} <- Parent.ChildLifeController.handle_spec(spec, state),
          do: {:ok, state}
   end
 
   @impl CallbackHandler
   def handle_action({:remove_child, children}, _cb, _params, state) do
-    Parent.Action.handle_remove_child(children, state)
+    Parent.ChildLifeController.handle_remove_child(children, state)
   end
 
   @impl CallbackHandler
@@ -33,7 +32,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
 
   @impl CallbackHandler
   def handle_action(action, callback, _params, state) do
-    Parent.Action.handle_unknown_action(action, callback, state.module)
+    raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
   end
 
   @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}

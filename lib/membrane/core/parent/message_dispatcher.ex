@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Parent.MessageDispatcher do
   @moduledoc false
-  alias Membrane.Core.Message
 
+  alias Membrane.Core.Message
   alias Membrane.Core.{Parent, Pipeline, Bin}
   alias Parent.LifecycleController
   alias Bunch.Type
