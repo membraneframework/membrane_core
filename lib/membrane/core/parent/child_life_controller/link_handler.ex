@@ -48,56 +48,61 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
          %Endpoint{child: {Membrane.Bin, :itself}} = endpoint,
          %Bin.State{} = state
        ) do
-    %Endpoint{pad: pad} = endpoint
-    private_pad = Membrane.Pad.get_corresponding_bin_pad(pad)
+    %Endpoint{pad_spec: pad_spec} = endpoint
+    priv_pad_spec = Membrane.Pad.get_corresponding_bin_pad(pad_spec)
 
-    withl pad: {:ok, private_info} <- state.pads.info |> Map.fetch(Pad.name_by_ref(private_pad)),
-          do: dynamic? = Pad.is_availability_dynamic(private_info.availability),
-          name: false <- dynamic? and Pad.is_pad_name(pad),
-          link: :ok <- (not dynamic? and :ok) || PadModel.assert_instance(state, pad),
-          ref: {:ok, ref} <- make_pad_ref(private_pad, private_info.availability) do
-      %Endpoint{endpoint | pid: self(), pad_ref: ref, pad: private_pad}
+    withl pad: {:ok, priv_info} <- state.pads.info |> Map.fetch(Pad.name_by_ref(priv_pad_spec)),
+          do: dynamic? = Pad.is_availability_dynamic(priv_info.availability),
+          name: false <- dynamic? and Pad.is_pad_name(pad_spec),
+          link: :ok <- (not dynamic? and :ok) || PadModel.assert_instance(state, pad_spec),
+          ref: {:ok, ref} <- make_pad_ref(priv_pad_spec, priv_info.availability) do
+      %Endpoint{endpoint | pid: self(), pad_ref: ref, pad_spec: priv_pad_spec}
     else
       pad: :error ->
-        raise LinkError, "Bin #{inspect(state.name)} does not have pad #{inspect(pad)}"
+        raise LinkError, "Bin #{inspect(state.name)} does not have pad #{inspect(pad_spec)}"
 
       name: true ->
-        raise LinkError, "Exact reference not passed when linking dynamic bin pad #{inspect(pad)}"
+        raise LinkError,
+              "Exact reference not passed when linking dynamic bin pad #{inspect(pad_spec)}"
 
       link: {:error, {:unknown_pad, _}} ->
         raise LinkError,
-              "Linking dynamic bin pad #{inspect(pad)} when it is not yet externally linked"
+              "Linking dynamic bin pad #{inspect(pad_spec)} when it is not yet externally linked"
 
       ref: {:error, :invalid_availability} ->
         raise LinkError,
-              "Dynamic pad ref #{inspect(pad)} passed for static pad of bin #{inspect(state.name)}"
+              "Dynamic pad ref #{inspect(pad_spec)} passed for static pad of bin #{
+                inspect(state.name)
+              }"
     end
   end
 
   defp resolve_endpoint(endpoint, state) do
-    %Endpoint{child: child, pad: pad} = endpoint
+    %Endpoint{child: child, pad_spec: pad_spec} = endpoint
 
     withl child: {:ok, child_data} <- state |> Parent.ChildrenModel.get_child_data(child),
           pad:
             {:ok, pad_info} <-
-              child_data.module.membrane_pads() |> Keyword.fetch(Pad.name_by_ref(pad)),
-          ref: {:ok, ref} <- make_pad_ref(pad, pad_info.availability) do
+              child_data.module.membrane_pads() |> Keyword.fetch(Pad.name_by_ref(pad_spec)),
+          ref: {:ok, ref} <- make_pad_ref(pad_spec, pad_info.availability) do
       %Endpoint{endpoint | pid: child_data.pid, pad_ref: ref}
     else
       child: {:error, {:unknown_child, _child}} ->
         raise LinkError, "Child #{inspect(child)} does not exist"
 
       pad: :error ->
-        raise LinkError, "Child #{inspect(child)} does not have pad #{inspect(pad)}"
+        raise LinkError, "Child #{inspect(child)} does not have pad #{inspect(pad_spec)}"
 
       ref: {:error, :invalid_availability} ->
         raise LinkError,
-              "Dynamic pad ref #{inspect(pad)} passed for static pad of child #{inspect(child)}"
+              "Dynamic pad ref #{inspect(pad_spec)} passed for static pad of child #{
+                inspect(child)
+              }"
     end
   end
 
-  defp make_pad_ref(name_or_ref, availability) do
-    case {name_or_ref, Pad.availability_mode(availability)} do
+  defp make_pad_ref(pad_spec, availability) do
+    case {pad_spec, Pad.availability_mode(availability)} do
       {Pad.ref(_name, _id), :static} -> {:error, :invalid_availability}
       {name, :static} -> {:ok, name}
       {Pad.ref(_name, _id) = ref, :dynamic} -> {:ok, ref}
@@ -105,8 +110,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     end
   end
 
-  defp link(%Link{from: %Endpoint{pid: pid}, to: %Endpoint{pid: pid}}, _state) do
-    raise LinkError, "Cannot link element with itself"
+  defp link(%Link{from: %Endpoint{child: child}, to: %Endpoint{child: child}}, _state) do
+    raise LinkError, "Tried to link element #{inspect(child)} with itself"
   end
 
   defp link(%Link{from: from, to: to}, state) do
@@ -129,7 +134,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
              other.pid,
              other.pad_ref,
              other_info,
-             this.opts,
+             this.pad_opts,
              state
            ) do
       Bin.LinkingBuffer.flush_for_pad(state.linking_buffer, this.pad_ref, state)
@@ -145,7 +150,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
       other.pid,
       other.pad_ref,
       other_info,
-      this.opts
+      this.pad_opts
     ])
     ~> {&1, state}
   end

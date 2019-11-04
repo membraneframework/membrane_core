@@ -34,7 +34,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
     test "should work for static pads" do
       {:ok, links} = Link.from_spec([link(:a) |> to(:b)])
       resolved_links = LinkHandler.resolve_links(links, get_state(TestFilter))
-      endpoints(resolved_links) |> Enum.each(&assert &1.pad_ref == &1.pad)
+      endpoints(resolved_links) |> Enum.each(&assert &1.pad_ref == &1.pad_spec)
     end
 
     test "should work for dynamic pads" do
@@ -43,7 +43,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
       resolved_links = LinkHandler.resolve_links(links, get_state(TestDynamicPadFilter))
 
       endpoints(resolved_links)
-      |> Enum.each(fn %{pad: pad, pad_ref: pad_ref} ->
+      |> Enum.each(fn %{pad_spec: pad, pad_ref: pad_ref} ->
         assert Pad.ref(^pad, _) = pad_ref
       end)
 
@@ -62,7 +62,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
       {:ok, links} = Link.from_spec([link_bin_input() |> to(:a) |> to_bin_output()])
 
       resolved_links = LinkHandler.resolve_links(links, get_state(TestFilter))
-      endpoints(resolved_links) |> Enum.each(&assert &1.pad_ref == &1.pad)
+      endpoints(resolved_links) |> Enum.each(&assert &1.pad_ref == &1.pad_spec)
 
       endpoints(resolved_links)
       |> Enum.filter(&(&1.child == {Membrane.Bin, :itself}))
@@ -83,7 +83,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
         })
 
       resolved_links = LinkHandler.resolve_links(links, state)
-      endpoints(resolved_links) |> Enum.each(&assert &1.pad_ref == &1.pad)
+      endpoints(resolved_links) |> Enum.each(&assert &1.pad_ref == &1.pad_spec)
 
       endpoints(resolved_links)
       |> Enum.filter(&(&1.child == {Membrane.Bin, :itself}))
