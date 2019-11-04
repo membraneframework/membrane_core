@@ -30,7 +30,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {:ok, state} = StartupHandler.add_children(children, state)
     {:ok, state} = ClockHandler.choose_clock(children, spec.clock_provider, state)
     {:ok, links} = Link.from_spec(spec.links)
-    {links, state} = LinkHandler.resolve_links(links, state)
+    links = LinkHandler.resolve_links(links, state)
     {:ok, state} = LinkHandler.link_children(links, state)
     children_names = children |> Enum.map(& &1.name)
     {:ok, state} = StartupHandler.exec_handle_spec_started(children_names, state)
