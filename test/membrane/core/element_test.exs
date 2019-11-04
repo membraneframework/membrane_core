@@ -199,6 +199,7 @@ defmodule Membrane.Core.ElementTest do
              bin?: false,
              direction: :output,
              mode: :pull,
+             name: :output,
              options: nil
            }
 
