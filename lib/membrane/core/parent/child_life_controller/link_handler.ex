@@ -134,7 +134,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
              other.pid,
              other.pad_ref,
              other_info,
-             this.pad_opts,
+             this.pad_props,
              state
            ) do
       Bin.LinkingBuffer.flush_for_pad(state.linking_buffer, this.pad_ref, state)
@@ -150,7 +150,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
       other.pid,
       other.pad_ref,
       other_info,
-      this.pad_opts
+      this.pad_props
     ])
     ~> {&1, state}
   end

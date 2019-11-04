@@ -133,7 +133,7 @@ defmodule Membrane.ParentSpec do
   @type pad_options_t :: [
           {:id, Pad.dynamic_id_t()}
           | {:buffer, InputBuffer.props_t()}
-          | {:pad, element_specific_opts :: any()}
+          | {:options, pad_specific_option :: any()}
         ]
 
   @type links_spec_t :: [LinkBuilder.t() | links_spec_t]
@@ -148,7 +148,7 @@ defmodule Membrane.ParentSpec do
           clock_provider: Child.name_t()
         }
 
-  @valid_link_opt_keys [:pad, :buffer]
+  @valid_pad_prop_keys [:options, :buffer]
 
   defstruct children: %{},
             links: [],
@@ -161,29 +161,29 @@ defmodule Membrane.ParentSpec do
   end
 
   @spec link_bin_input(Pad.name_t(), pad_options_t) :: LinkBuilder.t() | no_return
-  def link_bin_input(pad \\ :input, opts \\ []) do
-    %LinkBuilder{links: [%{from: {Membrane.Bin, :itself}}], status: :from} |> via_out(pad, opts)
+  def link_bin_input(pad \\ :input, props \\ []) do
+    %LinkBuilder{links: [%{from: {Membrane.Bin, :itself}}], status: :from} |> via_out(pad, props)
   end
 
   @spec via_out(LinkBuilder.t(), Pad.name_t(), pad_options_t) :: LinkBuilder.t() | no_return
-  def via_out(builder, pad, opts \\ [])
+  def via_out(builder, pad, props \\ [])
 
-  def via_out(%LinkBuilder{status: :output}, pad, _opts) do
+  def via_out(%LinkBuilder{status: :output}, pad, _props) do
     raise ParentError,
           "Invalid link specification: output #{inspect(pad)} placed after another output or bin's input"
   end
 
-  def via_out(%LinkBuilder{status: :input}, pad, _opts) do
+  def via_out(%LinkBuilder{status: :input}, pad, _props) do
     raise ParentError, "Invalid link specification: output #{inspect(pad)} placed after an input"
   end
 
-  def via_out(%LinkBuilder{} = builder, pad, opts) do
+  def via_out(%LinkBuilder{} = builder, pad, props) do
     :ok = validate_pad_name(pad)
-    :ok = validate_pad_opts(opts)
+    :ok = validate_pad_props(props)
 
     LinkBuilder.update(builder, :output,
       output: pad,
-      output_opts: opts
+      output_props: props
     )
   end
 
@@ -195,13 +195,13 @@ defmodule Membrane.ParentSpec do
           "Invalid link specification: output #{inspect(pad)} placed after another output"
   end
 
-  def via_in(%LinkBuilder{} = builder, pad, opts) do
+  def via_in(%LinkBuilder{} = builder, pad, props) do
     :ok = validate_pad_name(pad)
-    :ok = validate_pad_opts(opts)
+    :ok = validate_pad_props(props)
 
     LinkBuilder.update(builder, :input,
       input: pad,
-      input_opts: opts
+      input_props: props
     )
   end
 
@@ -211,14 +211,14 @@ defmodule Membrane.ParentSpec do
   end
 
   @spec to_bin_output(LinkBuilder.t(), Pad.name_t(), pad_options_t) :: LinkBuilder.t() | no_return
-  def to_bin_output(builder, pad \\ :output, opts \\ [])
+  def to_bin_output(builder, pad \\ :output, props \\ [])
 
-  def to_bin_output(%LinkBuilder{status: :input}, pad, _opts) do
+  def to_bin_output(%LinkBuilder{status: :input}, pad, _props) do
     raise ParentError, "Invalid link specification: bin's output #{pad} placed after an input"
   end
 
-  def to_bin_output(builder, pad, opts) do
-    builder |> via_in(pad, opts) |> LinkBuilder.update(:done, to: {Membrane.Bin, :itself})
+  def to_bin_output(builder, pad, props) do
+    builder |> via_in(pad, props) |> LinkBuilder.update(:done, to: {Membrane.Bin, :itself})
   end
 
   defp validate_pad_name(pad) when Pad.is_pad_name(pad) or Pad.is_pad_ref(pad) do
@@ -229,16 +229,16 @@ defmodule Membrane.ParentSpec do
     raise ParentError, "Invalid link specification: invalid pad name: #{inspect(pad)}"
   end
 
-  defp validate_pad_opts(opts) do
-    unless Keyword.keyword?(opts) do
+  defp validate_pad_props(props) do
+    unless Keyword.keyword?(props) do
       raise ParentError,
-            "Invalid link specification: pad options should be a keyword, got: #{inspect(opts)}"
+            "Invalid link specification: pad options should be a keyword, got: #{inspect(props)}"
     end
 
-    opts
+    props
     |> Keyword.keys()
     |> Enum.each(
-      &unless &1 in @valid_link_opt_keys do
+      &unless &1 in @valid_pad_prop_keys do
         raise ParentError, "Invalid link specification: invalid pad option: #{inspect(&1)}"
       end
     )

@@ -12,7 +12,7 @@ defmodule Membrane.Core.Parent.LinkTest do
     links_spec = [
       link(:a)
       |> to(:b)
-      |> via_in(:input, pad: [q: 1])
+      |> via_in(:input, options: [q: 1])
       |> to(:c)
       |> via_out(:x)
       |> via_in(Pad.ref(:y, 2))
@@ -26,14 +26,14 @@ defmodule Membrane.Core.Parent.LinkTest do
              %Link{
                from: %Endpoint{
                  child: :a,
-                 pad_opts: [],
+                 pad_props: [],
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: :b,
-                 pad_opts: [],
+                 pad_props: [],
                  pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
@@ -42,14 +42,14 @@ defmodule Membrane.Core.Parent.LinkTest do
              %Link{
                from: %Endpoint{
                  child: :b,
-                 pad_opts: [],
+                 pad_props: [],
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: :c,
-                 pad_opts: [pad: [q: 1]],
+                 pad_props: [options: [q: 1]],
                  pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
@@ -58,14 +58,14 @@ defmodule Membrane.Core.Parent.LinkTest do
              %Link{
                from: %Endpoint{
                  child: :c,
-                 pad_opts: [],
+                 pad_props: [],
                  pad_spec: :x,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: :d,
-                 pad_opts: [],
+                 pad_props: [],
                  pad_spec: Pad.ref(:y, 2),
                  pad_ref: nil,
                  pid: nil
@@ -74,14 +74,14 @@ defmodule Membrane.Core.Parent.LinkTest do
              %Link{
                from: %Endpoint{
                  child: :d,
-                 pad_opts: [],
+                 pad_props: [],
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: {Membrane.Bin, :itself},
-                 pad_opts: [],
+                 pad_props: [],
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
@@ -101,14 +101,14 @@ defmodule Membrane.Core.Parent.LinkTest do
              %Link{
                from: %Endpoint{
                  child: :a,
-                 pad_opts: [],
+                 pad_props: [],
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: :b,
-                 pad_opts: [],
+                 pad_props: [],
                  pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
@@ -117,14 +117,14 @@ defmodule Membrane.Core.Parent.LinkTest do
              %Link{
                from: %Endpoint{
                  child: :b,
-                 pad_opts: [],
+                 pad_props: [],
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: :c,
-                 pad_opts: [],
+                 pad_props: [],
                  pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
@@ -133,14 +133,14 @@ defmodule Membrane.Core.Parent.LinkTest do
              %Link{
                from: %Endpoint{
                  child: :b,
-                 pad_opts: [],
+                 pad_props: [],
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: :e,
-                 pad_opts: [],
+                 pad_props: [],
                  pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
@@ -149,14 +149,14 @@ defmodule Membrane.Core.Parent.LinkTest do
              %Link{
                from: %Endpoint{
                  child: :d,
-                 pad_opts: [],
+                 pad_props: [],
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: :b,
-                 pad_opts: [],
+                 pad_props: [],
                  pad_spec: :input,
                  pad_ref: nil,
                  pid: nil

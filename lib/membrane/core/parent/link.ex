@@ -23,14 +23,14 @@ defmodule Membrane.Core.Parent.Link do
     alias Membrane.Pad
 
     @enforce_keys [:child, :pad_spec]
-    defstruct @enforce_keys ++ [pad_ref: nil, pid: nil, pad_opts: []]
+    defstruct @enforce_keys ++ [pad_ref: nil, pid: nil, pad_props: []]
 
     @type t() :: %__MODULE__{
             child: Element.name_t() | {Membrane.Bin, :itself},
             pad_spec: Pad.name_t() | Pad.ref_t(),
             pad_ref: Pad.ref_t() | nil,
             pid: pid() | nil,
-            pad_opts: ParentSpec.pad_options_t()
+            pad_props: ParentSpec.pad_options_t()
           }
 
     @type resolved_t() :: %__MODULE__{
@@ -38,7 +38,7 @@ defmodule Membrane.Core.Parent.Link do
             pad_spec: Pad.name_t() | Pad.ref_t(),
             pad_ref: Pad.ref_t(),
             pid: pid(),
-            pad_opts: ParentSpec.pad_options_t()
+            pad_props: ParentSpec.pad_options_t()
           }
   end
 
@@ -62,12 +62,12 @@ defmodule Membrane.Core.Parent.Link do
         from: %Endpoint{
           child: link.from,
           pad_spec: get_pad(link, :from, :output),
-          pad_opts: Map.get(link, :output_opts, [])
+          pad_props: Map.get(link, :output_props, [])
         },
         to: %Endpoint{
           child: link.to,
           pad_spec: get_pad(link, :to, :input),
-          pad_opts: Map.get(link, :input_opts, [])
+          pad_props: Map.get(link, :input_props, [])
         }
       }
     end)

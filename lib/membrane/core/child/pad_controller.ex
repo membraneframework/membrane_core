@@ -35,7 +35,7 @@ defmodule Membrane.Core.Child.PadController do
 
     with :ok <- validate_pad_being_linked!(pad_ref, direction, info, state),
          :ok <- validate_dir_and_mode!({pad_ref, info}, {other_ref, other_info}) do
-      props = parse_link_props!(props, pad_name, state)
+      props = parse_pad_props!(props, pad_name, state)
       state = init_pad_data(info, pad_ref, pid, other_ref, other_info, props, state)
 
       state =
@@ -153,28 +153,28 @@ defmodule Membrane.Core.Child.PadController do
     :ok
   end
 
-  @spec parse_link_props!(Keyword.t(), Pad.name_t(), state_t()) :: Keyword.t()
-  defp parse_link_props!(props, pad_name, state) do
+  @spec parse_pad_props!(Keyword.t(), Pad.name_t(), state_t()) ::
+          %{atom => any} | no_return
+  defp parse_pad_props!(props, pad_name, state) do
     {_, pad_spec} =
       state.module.membrane_pads()
       |> PadSpecHandler.add_private_pads()
       |> Enum.find(fn {k, _} -> k == pad_name end)
 
-    opts_spec = pad_spec.options
-    pad_props = parse_pad_props!(pad_name, opts_spec, props[:pad])
+    pad_opts = parse_pad_options!(pad_name, pad_spec.options, props[:options])
     buffer_props = parse_buffer_props!(pad_name, props[:buffer])
-    [pad: pad_props, buffer: buffer_props]
+    %{options: pad_opts, buffer: buffer_props}
   end
 
-  defp parse_pad_props!(_pad_name, nil, nil) do
-    {:ok, nil}
+  defp parse_pad_options!(_pad_name, nil, nil) do
+    nil
   end
 
-  defp parse_pad_props!(pad_name, nil, _props) do
+  defp parse_pad_options!(pad_name, nil, _props) do
     raise LinkError, "Pad #{inspect(pad_name)} does not define any options"
   end
 
-  defp parse_pad_props!(pad_name, options_spec, props) do
+  defp parse_pad_options!(pad_name, options_spec, props) do
     bunch_field_specs = options_spec |> Bunch.KVList.map_values(&Keyword.take(&1, [:default]))
 
     case props |> List.wrap() |> Bunch.Config.parse(bunch_field_specs) do
@@ -207,7 +207,7 @@ defmodule Membrane.Core.Child.PadController do
           pid,
           Pad.ref_t(),
           PadModel.pad_info_t(),
-          props :: Keyword.t(),
+          props :: map,
           state_t()
         ) :: state_t()
   defp init_pad_data(info, ref, pid, other_ref, other_info, props, state) do
@@ -216,7 +216,7 @@ defmodule Membrane.Core.Child.PadController do
       |> Map.merge(%{
         pid: pid,
         other_ref: other_ref,
-        options: props[:pad],
+        options: props.options,
         ref: ref,
         caps: nil,
         start_of_stream?: false,
@@ -235,15 +235,13 @@ defmodule Membrane.Core.Child.PadController do
   @spec init_pad_mode_data(
           map(),
           PadModel.pad_info_t(),
-          props :: Keyword.t(),
+          props :: map,
           state_t()
         ) :: map()
   defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, other_info, props, state) do
     %{pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
 
     Message.send(pid, :demand_unit, [demand_unit, other_ref])
-
-    buffer_props = props[:buffer] || Keyword.new()
 
     enable_toilet? = other_info.mode == :push
 
@@ -254,7 +252,7 @@ defmodule Membrane.Core.Child.PadController do
         enable_toilet?,
         pid,
         other_ref,
-        buffer_props
+        props.buffer
       )
 
     %{input_buf: input_buf, demand: 0}
