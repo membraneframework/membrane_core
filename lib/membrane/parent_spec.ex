@@ -57,6 +57,21 @@ defmodule Membrane.ParentSpec do
         link_bin_input() |> to(:filter1) |> to(:filter2) |> to_bin_output(:custom_output)
       ]
 
+  ### Dynamic pads
+
+  In most cases dynamic pads can be linked the same way as static ones, although
+  in the following situations exact pad reference must be passed:
+
+  - When pad id, apart from distinguishing different instances of the same pad,
+    has some specific semantic meaning
+  - When linking dynamic bin pads internally
+
+  Pad reference can be passed instead of a name:
+
+      [
+        link(:tee) |> via_out(Pad.ref(:output, 123)) |> to(:sink)
+      ]
+
   ## Stream sync
 
   `:stream_sync` field can be used for specifying elements that should start playing

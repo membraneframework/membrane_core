@@ -14,18 +14,6 @@ defmodule Membrane.Pad do
   use Bunch
   use Bunch.Typespec
 
-  defmacro ref(name: name) do
-    quote do
-      unquote(name)
-    end
-  end
-
-  defmacro ref(name, id) do
-    quote do
-      {unquote(__MODULE__), unquote(name), unquote(id)}
-    end
-  end
-
   @typedoc """
   Defines the term by which the pad instance is identified.
   """
@@ -140,6 +128,24 @@ defmodule Membrane.Pad do
           :options => nil | Keyword.t(),
           :bin? => boolean()
         }
+
+  @doc """
+  Creates a static pad reference.
+  """
+  defmacro ref(name) do
+    quote do
+      unquote(name)
+    end
+  end
+
+  @doc """
+  Creates a dynamic pad reference.
+  """
+  defmacro ref(name, id) do
+    quote do
+      {unquote(__MODULE__), unquote(name), unquote(id)}
+    end
+  end
 
   defguard is_pad_ref(term)
            when term |> is_atom or
