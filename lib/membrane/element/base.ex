@@ -293,7 +293,15 @@ defmodule Membrane.Element.Base do
     end
   end
 
-  defmacro __using__(_) do
+  defmacro __using__(args \\ []) do
+    bring_pad =
+      if args |> Keyword.get(:bring_pad?, true) do
+        quote do
+          require Membrane.Pad
+          alias Membrane.Pad
+        end
+      end
+
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 
@@ -304,6 +312,8 @@ defmodule Membrane.Element.Base do
       alias Membrane.Element.CallbackContext, as: Ctx
 
       import unquote(__MODULE__), only: [def_clock: 0, def_clock: 1, def_options: 1]
+
+      unquote(bring_pad)
 
       @impl true
       def membrane_element?, do: true

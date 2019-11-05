@@ -7,8 +7,6 @@ defmodule Membrane.Support.Element.DynamicFilter do
 
   use Bunch
   use Membrane.Filter
-  require Membrane.Pad
-  alias Membrane.Pad
 
   def_output_pad :output, caps: :any
 

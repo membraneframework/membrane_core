@@ -92,8 +92,6 @@ defmodule Membrane.Support.Bin.TestBins do
 
   defmodule TestDynamicPadBin do
     use Membrane.Bin
-    require Membrane.Pad
-    alias Membrane.Pad
 
     def_options filter1: [type: :atom],
                 filter2: [type: :atom]

@@ -95,10 +95,19 @@ defmodule Membrane.Parent do
         end
       end
 
+    bring_pad =
+      if args |> Keyword.get(:bring_pad?, true) do
+        quote do
+          require Membrane.Pad
+          alias Membrane.Pad
+        end
+      end
+
     quote do
       @behaviour unquote(__MODULE__)
 
       unquote(bring_spec)
+      unquote(bring_pad)
 
       @impl true
       def handle_stopped_to_prepared(state), do: {:ok, state}
