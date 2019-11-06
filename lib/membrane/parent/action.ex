@@ -11,7 +11,7 @@ defmodule Membrane.Parent.Action do
   @type forward_action_t :: {:forward, {Child.name_t(), Notification.t()}}
 
   @typedoc """
-  Action that instantiates elements and links them according to `Membrane.ParentSpec`.
+  Action that instantiates children and links them according to `Membrane.ParentSpec`.
 
   Children's playback state is changed to the current parent state.
   `c:Membrane.Parent.handle_spec_started/2` callback is executed once it happens.
@@ -27,7 +27,7 @@ defmodule Membrane.Parent.Action do
   @typedoc """
   Type describing actions that can be returned from parent callbacks.
 
-  Returning actions is a way of pipeline/bin interaction with its elements and
+  Returning actions is a way of pipeline/bin interaction with its children and
   other parts of framework.
   """
   @type t :: forward_action_t | spec_action_t | remove_child_action_t

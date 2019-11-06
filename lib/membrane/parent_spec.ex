@@ -1,16 +1,18 @@
 defmodule Membrane.ParentSpec do
   @moduledoc """
   Structure representing topology of a pipeline/bin.
-  It can be returned from
-  `c:Membrane.Pipeline.handle_init/1` and `c:Membrane.Bin.handle_init/1` callback upon initialization.
-  It will define a topology of children and links that build the pipeline/bin.
+
+  It can be incorporated into a pipeline or a bin by returning
+  `t:Membrane.Parent.Action.spec_action_t/0` action. This commonly happens within
+  `c:Membrane.Pipeline.handle_init/1` and `c:Membrane.Bin.handle_init/1`, but can
+  be done in any other callback also.
 
   ## Children
 
   Children that should be spawned when the pipeline/bin starts can be defined
   with the `:children` field.
   You have to set it to a map, where keys are valid children names (`t:Membrane.Child.name_t/0`)
-  that are unique within this pipeline/bin and values are either element's module or
+  that are unique within this pipeline/bin and values are either child's module or
   struct of that module.
 
   Sample definitions:
@@ -18,16 +20,16 @@ defmodule Membrane.ParentSpec do
       %{
         first_element: %Element.With.Options.Struct{option_a: 42},
         some_element: Element.Without.Options,
-        other_element: Bin.Using.Default.Options
+        some_bin: Bin.Using.Default.Options
       }
 
   ## Links
 
-  Links that should be made when the pipeline starts, and children are spawned
-  can be defined with the `:links` field. Links can be defined with use of
-  `link/1` and `to/2` functions that allow to specify elements linked, and
-  `via_in/2` and `via_out/2` that allow to specify pads' names and options. If pads
-  are not specified, name `:input` is assumed for inputs and `:output` for outputs.
+  Links that should be made when the children are spawned can be defined with the
+  `:links` field. Links can be defined with use of `link/1` and `to/2` functions
+  that allow to specify elements linked, and `via_in/2` and `via_out/2` that allow
+  to specify pads' names and parameters. If pads are not specified, name `:input`
+  is assumed for inputs and `:output` for outputs.
 
   Sample definition:
 
@@ -60,17 +62,24 @@ defmodule Membrane.ParentSpec do
   ### Dynamic pads
 
   In most cases dynamic pads can be linked the same way as static ones, although
-  in the following situations exact pad reference must be passed:
+  in the following situations exact pad reference must be passed instead of a name:
 
-  - When pad id, apart from distinguishing different instances of the same pad,
-    has some specific semantic meaning
-  - When linking dynamic bin pads internally
+  - When that reference is needed later, for example to handle a notification related
+  to that particular pad instance
 
-  Pad reference can be passed instead of a name:
+        pad = Pad.ref(:output, make_ref())
+        [
+          link(:tee) |> via_out(pad) |> to(:sink)
+        ]
 
-      [
-        link(:tee) |> via_out(Pad.ref(:output, 123)) |> to(:sink)
-      ]
+  - When linking dynamic pads of a bin with its children, for example in
+  `c:Membrane.Bin.handle_pad_added/3`
+
+        @impl true
+        def handle_pad_added(Pad.ref(:input, _) = pad, _ctx, state) do
+          links = [link_bin_input(pad) |> to(:mixer)]
+          {{:ok, %ParentSpec{links: links}}, state}
+        end
 
   ## Stream sync
 
@@ -137,24 +146,22 @@ defmodule Membrane.ParentSpec do
           | %{Child.name_t() => child_spec_t}
 
   @typedoc """
-  Options passed to the element when linking its pad with a different one.
+  Options passed to the child when linking its pad with a different one.
 
   The allowed options are:
-  * `id` - id of dynamic pad instance. Valid only for dynamic pads.
   * `:buffer` - keyword allowing to configure `Membrane.Core.InputBuffer` between elements. Valid only for input pads.
     See `t:Membrane.Core.InputBuffer.props_t/0` for configurable properties.
-  * `:pad` - any element-specific options that will be available in `Membrane.Pad.Data` struct.
+  * `:options` - any child-specific options that will be available in `Membrane.Pad.Data` struct.
   """
-  @type pad_options_t :: [
-          {:id, Pad.dynamic_id_t()}
-          | {:buffer, InputBuffer.props_t()}
-          | {:options, pad_specific_option :: any()}
+  @type pad_props_t :: [
+          {:buffer, InputBuffer.props_t()}
+          | {:options, Keyword.t()}
         ]
 
   @type links_spec_t :: [LinkBuilder.t() | links_spec_t]
 
   @typedoc """
-  Struct used when starting elements within a pipeline or a bin.
+  Struct used when starting and linking children within a pipeline or a bin.
   """
   @type t :: %__MODULE__{
           children: children_spec_t,
@@ -170,17 +177,32 @@ defmodule Membrane.ParentSpec do
             stream_sync: [],
             clock_provider: nil
 
+  @doc """
+  Begins a link.
+
+  See the _links_ section of the moduledoc for more information.
+  """
   @spec link(Child.name_t()) :: LinkBuilder.t()
   def link(child_name) do
     %LinkBuilder{links: [%{from: child_name}], status: :from}
   end
 
-  @spec link_bin_input(Pad.name_t(), pad_options_t) :: LinkBuilder.t() | no_return
+  @doc """
+  Begins a link with a bin's pad.
+
+  See the _links_ section of the moduledoc for more information.
+  """
+  @spec link_bin_input(Pad.name_t(), pad_props_t) :: LinkBuilder.t() | no_return
   def link_bin_input(pad \\ :input, props \\ []) do
     %LinkBuilder{links: [%{from: {Membrane.Bin, :itself}}], status: :from} |> via_out(pad, props)
   end
 
-  @spec via_out(LinkBuilder.t(), Pad.name_t(), pad_options_t) :: LinkBuilder.t() | no_return
+  @doc """
+  Specifies output pad name and properties of the preceding child.
+
+  See the _links_ section of the moduledoc for more information.
+  """
+  @spec via_out(LinkBuilder.t(), Pad.name_t(), pad_props_t) :: LinkBuilder.t() | no_return
   def via_out(builder, pad, props \\ [])
 
   def via_out(%LinkBuilder{status: :output}, pad, _props) do
@@ -202,7 +224,12 @@ defmodule Membrane.ParentSpec do
     )
   end
 
-  @spec via_in(LinkBuilder.t(), Pad.name_t(), pad_options_t) :: LinkBuilder.t() | no_return
+  @doc """
+  Specifies input pad name and properties of the subsequent child.
+
+  See the _links_ section of the moduledoc for more information.
+  """
+  @spec via_in(LinkBuilder.t(), Pad.name_t(), pad_props_t) :: LinkBuilder.t() | no_return
   def via_in(builder, pad, opts \\ [])
 
   def via_in(%LinkBuilder{status: :input}, pad, _opts) do
@@ -220,12 +247,22 @@ defmodule Membrane.ParentSpec do
     )
   end
 
+  @doc """
+  Continues or ends a link.
+
+  See the _links_ section of the moduledoc for more information.
+  """
   @spec to(LinkBuilder.t(), Child.name_t()) :: LinkBuilder.t()
   def to(%LinkBuilder{} = builder, child_name) do
     LinkBuilder.update(builder, :done, to: child_name)
   end
 
-  @spec to_bin_output(LinkBuilder.t(), Pad.name_t(), pad_options_t) :: LinkBuilder.t() | no_return
+  @doc """
+  Ends a link with a bin's output.
+
+  See the _links_ section of the moduledoc for more information.
+  """
+  @spec to_bin_output(LinkBuilder.t(), Pad.name_t(), pad_props_t) :: LinkBuilder.t() | no_return
   def to_bin_output(builder, pad \\ :output, props \\ [])
 
   def to_bin_output(%LinkBuilder{status: :input}, pad, _props) do

@@ -136,10 +136,6 @@ defmodule Membrane.Support.Bin.TestBins do
 
       {{:ok, spec: %ParentSpec{links: links}}, state}
     end
-
-    def handle_pad_added(_pad, _ctx, state) do
-      {:ok, state}
-    end
   end
 
   defmodule TestSinkBin do

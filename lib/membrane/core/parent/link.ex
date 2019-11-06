@@ -30,7 +30,7 @@ defmodule Membrane.Core.Parent.Link do
             pad_spec: Pad.name_t() | Pad.ref_t(),
             pad_ref: Pad.ref_t() | nil,
             pid: pid() | nil,
-            pad_props: ParentSpec.pad_options_t()
+            pad_props: ParentSpec.pad_props_t()
           }
 
     @type resolved_t() :: %__MODULE__{
@@ -38,7 +38,7 @@ defmodule Membrane.Core.Parent.Link do
             pad_spec: Pad.name_t() | Pad.ref_t(),
             pad_ref: Pad.ref_t(),
             pid: pid(),
-            pad_props: ParentSpec.pad_options_t()
+            pad_props: ParentSpec.pad_props_t()
           }
   end
 

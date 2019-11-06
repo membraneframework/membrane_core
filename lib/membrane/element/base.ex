@@ -293,9 +293,17 @@ defmodule Membrane.Element.Base do
     end
   end
 
-  defmacro __using__(args \\ []) do
+  @doc """
+  Brings common stuff needed to implement an element. Used by
+  `Membrane.Source.__using__/1`, `Membrane.Filter.__using__/1`
+  and `Membrane.Sink.__using__/1`.
+
+  Options:
+    - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
+  """
+  defmacro __using__(options) do
     bring_pad =
-      if args |> Keyword.get(:bring_pad?, true) do
+      if options |> Keyword.get(:bring_pad?, true) do
         quote do
           require Membrane.Pad
           alias Membrane.Pad

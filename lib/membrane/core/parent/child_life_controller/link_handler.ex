@@ -54,7 +54,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     withl pad: {:ok, priv_info} <- state.pads.info |> Map.fetch(Pad.name_by_ref(priv_pad_spec)),
           do: dynamic? = Pad.is_availability_dynamic(priv_info.availability),
           name: false <- dynamic? and Pad.is_pad_name(pad_spec),
-          link: :ok <- (not dynamic? and :ok) || PadModel.assert_instance(state, pad_spec),
+          link: true <- not dynamic? or :ok == PadModel.assert_instance(state, pad_spec),
           ref: {:ok, ref} <- make_pad_ref(priv_pad_spec, priv_info.availability) do
       %Endpoint{endpoint | pid: self(), pad_ref: ref, pad_spec: priv_pad_spec}
     else
@@ -65,7 +65,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
         raise LinkError,
               "Exact reference not passed when linking dynamic bin pad #{inspect(pad_spec)}"
 
-      link: {:error, {:unknown_pad, _}} ->
+      link: false ->
         raise LinkError,
               "Linking dynamic bin pad #{inspect(pad_spec)} when it is not yet externally linked"
 
@@ -81,9 +81,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     %Endpoint{child: child, pad_spec: pad_spec} = endpoint
 
     withl child: {:ok, child_data} <- state |> Parent.ChildrenModel.get_child_data(child),
-          pad:
-            {:ok, pad_info} <-
-              child_data.module.membrane_pads() |> Keyword.fetch(Pad.name_by_ref(pad_spec)),
+          do: pad_name = Pad.name_by_ref(pad_spec),
+          pad: {:ok, pad_info} <- child_data.module.membrane_pads() |> Keyword.fetch(pad_name),
           ref: {:ok, ref} <- make_pad_ref(pad_spec, pad_info.availability) do
       %Endpoint{endpoint | pid: child_data.pid, pad_ref: ref}
     else

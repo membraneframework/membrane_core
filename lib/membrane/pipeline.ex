@@ -183,9 +183,16 @@ defmodule Membrane.Pipeline do
     :ok = state.module.handle_shutdown(reason, state.internal_state)
   end
 
-  defmacro __using__(args \\ []) do
+  @doc """
+  Brings all the stuff necessary to implement a pipeline.
+
+  Options:
+    - `:bring_spec?` - if true (default) imports and aliases `Membrane.ParentSpec`
+    - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
+  """
+  defmacro __using__(options) do
     quote location: :keep do
-      use Membrane.Parent, unquote(args)
+      use Membrane.Parent, unquote(options)
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
 

@@ -2,7 +2,7 @@ defmodule Membrane.Core.Child.PadController do
   @moduledoc false
   # Module handling linking and unlinking pads.
 
-  alias Membrane.{Core, Event, LinkError, Pad}
+  alias Membrane.{Core, Event, LinkError, Pad, ParentSpec}
   alias Core.{CallbackHandler, Message, InputBuffer}
   alias Core.Child.{PadModel, PadSpecHandler}
   alias Core.Element.{EventController, PlaybackBuffer}
@@ -17,6 +17,8 @@ defmodule Membrane.Core.Child.PadController do
 
   @type state_t :: Core.Bin.State.t() | Core.Element.State.t()
 
+  @typep parsed_pad_props_t :: %{buffer: InputBuffer.props_t(), options: map}
+
   @doc """
   Verifies linked pad, initializes it's data.
   """
@@ -26,7 +28,7 @@ defmodule Membrane.Core.Child.PadController do
           pid,
           Pad.ref_t(),
           PadModel.pad_info_t() | nil,
-          Keyword.t(),
+          ParentSpec.pad_props_t(),
           state_t()
         ) :: Type.stateful_try_t(PadModel.pad_info_t(), state_t)
   def handle_link(pad_ref, direction, pid, other_ref, other_info, props, state) do
@@ -134,7 +136,7 @@ defmodule Membrane.Core.Child.PadController do
           {Pad.ref_t(), info :: PadModel.pad_info_t()},
           {Pad.ref_t(), other_info :: PadModel.pad_info_t()}
         ) :: :ok
-  def validate_dir_and_mode!(this, that) do
+  defp validate_dir_and_mode!(this, that) do
     with :ok <- do_validate_dm(this, that),
          :ok <- do_validate_dm(that, this) do
       :ok
@@ -153,8 +155,8 @@ defmodule Membrane.Core.Child.PadController do
     :ok
   end
 
-  @spec parse_pad_props!(Keyword.t(), Pad.name_t(), state_t()) ::
-          %{atom => any} | no_return
+  @spec parse_pad_props!(ParentSpec.pad_props_t(), Pad.name_t(), state_t()) ::
+          parsed_pad_props_t | no_return
   defp parse_pad_props!(props, pad_name, state) do
     {_, pad_spec} =
       state.module.membrane_pads()
@@ -207,7 +209,7 @@ defmodule Membrane.Core.Child.PadController do
           pid,
           Pad.ref_t(),
           PadModel.pad_info_t(),
-          props :: map,
+          parsed_pad_props_t,
           state_t()
         ) :: state_t()
   defp init_pad_data(info, ref, pid, other_ref, other_info, props, state) do
@@ -235,7 +237,7 @@ defmodule Membrane.Core.Child.PadController do
   @spec init_pad_mode_data(
           map(),
           PadModel.pad_info_t(),
-          props :: map,
+          parsed_pad_props_t,
           state_t()
         ) :: map()
   defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, other_info, props, state) do

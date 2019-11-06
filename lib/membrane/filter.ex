@@ -50,9 +50,15 @@ defmodule Membrane.Filter do
               state :: Element.state_t()
             ) :: Membrane.Element.Base.callback_return_t()
 
-  defmacro __using__(_) do
+  @doc """
+  Brings all the stuff necessary to implement a filter element.
+
+  Options:
+    - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
+  """
+  defmacro __using__(options) do
     quote location: :keep do
-      use Membrane.Element.Base
+      use Membrane.Element.Base, unquote(options)
       use Membrane.Element.WithOutputPads
       use Membrane.Element.WithInputPads
 
