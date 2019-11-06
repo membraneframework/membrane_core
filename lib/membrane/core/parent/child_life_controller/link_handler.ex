@@ -38,9 +38,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
            |> Parent.ChildrenModel.get_children()
            |> Bunch.Enum.try_each(fn {_name, %{pid: pid}} ->
              pid |> Message.call(:linking_finished, [])
-           end)
-    do
-      links |> Enum.reduce(state, &flush_linking_buffer/2)
+           end) do
+      links
+      |> Enum.reduce(state, &flush_linking_buffer/2)
       ~> {:ok, &1}
     end
   end
@@ -51,9 +51,11 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     |> flush_linking_buffer_for_endpoint(to)
   end
 
-  defp flush_linking_buffer_for_endpoint(state, %Endpoint{element: {Membrane.Bin, :itself}, pad_ref: pad}) do
-    Bin.LinkingBuffer.flush_for_pad(state.linking_buffer, pad, state)
-    ~> %{state | linking_buffer: &1}
+  defp flush_linking_buffer_for_endpoint(state, %Endpoint{
+         element: {Membrane.Bin, :itself},
+         pad_ref: pad
+       }) do
+    Bin.LinkingBuffer.flush_for_pad(pad, state)
   end
 
   defp flush_linking_buffer_for_endpoint(state, _) do
@@ -154,10 +156,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
              this.pad_props,
              state
            ) do
-      # TODO is it for sure in the correct place? Shouldn't it be in linking finished?
-      #Bin.LinkingBuffer.flush_for_pad(state.linking_buffer, this.pad_ref, state)
-      #~> %{state | linking_buffer: &1}
-      #~> {{:ok, info}, &1}
       {{:ok, info}, state}
     end
   end

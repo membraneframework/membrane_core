@@ -230,15 +230,13 @@ defmodule Membrane.Bin do
   # messages to an appropriate element.
   def handle_info(Message.new(type, _args, for_pad: pad) = msg, state)
       when type in [:demand, :caps, :buffer, :event] do
-    %{linking_buffer: buf} = state
-
     outgoing_pad =
       pad
       |> Pad.get_corresponding_bin_pad()
 
-    new_buf = LinkingBuffer.store_or_send(buf, msg, outgoing_pad, state)
-
-    {:ok, %{state | linking_buffer: new_buf}} |> noreply()
+    LinkingBuffer.store_or_send(msg, outgoing_pad, state)
+    ~> {:ok, &1}
+    |> noreply()
   end
 
   @impl GenServer
@@ -275,9 +273,6 @@ defmodule Membrane.Bin do
 
   @impl GenServer
   def handle_call(Message.new(:linking_finished), _, state) do
-
-    #LinkingBuffer.flush_for_pad(state.linking_buffer, pad_ref, state)
-
     PadController.handle_linking_finished(state)
     |> reply()
   end

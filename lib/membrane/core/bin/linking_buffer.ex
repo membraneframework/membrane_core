@@ -26,15 +26,18 @@ defmodule Membrane.Core.Bin.LinkingBuffer do
                    to be sent
   * bin_state - state of the bin
   """
-  @spec store_or_send(t(), Message.t(), Pad.ref_t(), State.t()) :: t()
-  def store_or_send(buf, msg, sender_pad, bin_state) do
+  @spec store_or_send(Message.t(), Pad.ref_t(), State.t()) :: State.t()
+  def store_or_send(msg, sender_pad, bin_state) do
+    buf = bin_state.linking_buffer
+
     case PadModel.get_data(bin_state, sender_pad) do
       {:ok, %{pid: dest_pid, other_ref: other_ref}} ->
         send(dest_pid, Message.set_for_pad(msg, other_ref))
-        buf
+        bin_state
 
       {:error, {:unknown_pad, _}} ->
-        Map.update(buf, sender_pad, [msg], &[msg | &1])
+        new_buf = Map.update(buf, sender_pad, [msg], &[msg | &1])
+        %{bin_state | linking_buffer: new_buf}
     end
   end
 
@@ -42,26 +45,31 @@ defmodule Membrane.Core.Bin.LinkingBuffer do
   Sends messages stored for a given outpud pad.
   A link must already be available.
   """
-  @spec flush_for_pad(t(), Pad.ref_t(), State.t()) :: t()
-  def flush_for_pad(buf, pad, bin_state) do
+  @spec flush_for_pad(Pad.ref_t(), State.t()) :: State.t()
+  def flush_for_pad(pad, bin_state) do
+    buf = bin_state.linking_buffer
+
     case Map.pop(buf, pad, []) do
       {[], ^buf} ->
-        buf
+        bin_state
 
       {msgs, new_buf} ->
         msgs |> Enum.each(&do_flush(&1, pad, bin_state))
-        new_buf
+        %{bin_state | linking_buffer: new_buf}
     end
   end
 
-  def flush_all_public_pads(buf, bin_state) do
+  @spec flush_all_public_pads(State.t()) :: State.t()
+  def flush_all_public_pads(bin_state) do
+    buf = bin_state.linking_buffer
+
     public_pads =
-    buf
-    |> Enum.map(fn {pad_ref, _msgs} -> pad_ref end)
-    |> Enum.filter(&(&1 |> Pad.name_by_ref() |> Pad.public_name?()))
+      buf
+      |> Enum.map(fn {pad_ref, _msgs} -> pad_ref end)
+      |> Enum.filter(&(&1 |> Pad.name_by_ref() |> Pad.public_name?()))
 
     public_pads
-    |> Enum.reduce(buf, fn pad, acc -> flush_for_pad(acc, pad, bin_state) end)
+    |> Enum.reduce(bin_state, &flush_for_pad/2)
   end
 
   defp do_flush(msg, sender_pad, bin_state) do

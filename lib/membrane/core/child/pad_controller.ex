@@ -88,15 +88,13 @@ defmodule Membrane.Core.Child.PadController do
 
       bin? = match?(%Membrane.Core.Bin.State{}, state)
 
-      state =
       if bin? do
-        new_buf = LinkingBuffer.flush_all_public_pads(state.linking_buffer, state)
-        %{state | linking_buffer: new_buf} # TODO pass only state?
+        LinkingBuffer.flush_all_public_pads(state)
       else
         state
       end
-
-      {:ok, clear_currently_linking(state)}
+      |> clear_currently_linking()
+      ~> {:ok, &1}
     end
   end
 
