@@ -73,7 +73,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     LifecycleController.prepare_shutdown(state)
   end
 
-  # Sent by `Membrane.Core.Element.ActionHandler.handle_demand`, check there for
+  # Sent by `Membrane.Core.Element.DemandHandler.handle_delayed_demands`, check there for
   # more information
   defp do_handle_message(Message.new(:invoke_supply_demand, pad_ref), :info, state) do
     DemandHandler.supply_demand(pad_ref, state)
