@@ -136,6 +136,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
              this.pad_props,
              state
            ) do
+      # TODO is it for sure in the correct place? Shouldn't it be in linking finished?
       Bin.LinkingBuffer.flush_for_pad(state.linking_buffer, this.pad_ref, state)
       ~> %{state | linking_buffer: &1}
       ~> {{:ok, info}, &1}

@@ -241,6 +241,18 @@ defmodule Membrane.Core.Child.PadController do
           parsed_pad_props_t,
           state_t()
         ) :: map()
+  defp init_pad_mode_data(
+         %{mode: :pull, direction: :input} = data,
+         _other_info,
+         _props,
+         %Membrane.Core.Bin.State{}
+       ) do
+    %{pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
+
+    Message.send(pid, :demand_unit, [demand_unit, other_ref])
+    %{}
+  end
+
   defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, other_info, props, state) do
     %{pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
 

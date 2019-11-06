@@ -34,7 +34,7 @@ defmodule Membrane.Core.Bin.LinkingBuffer do
         buf
 
       {:error, {:unknown_pad, _}} ->
-        Map.update(buf, sender_pad, [], &[msg | &1])
+        Map.update(buf, sender_pad, [msg], &[msg | &1])
     end
   end
 
