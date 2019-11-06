@@ -269,13 +269,15 @@ defmodule Membrane.Bin do
     {{:ok, info}, state} =
       PadController.handle_link(pad_ref, pad_direction, pid, other_ref, other_info, props, state)
 
-    LinkingBuffer.flush_for_pad(state.linking_buffer, pad_ref, state)
-    ~> {{:ok, info}, %{state | linking_buffer: &1}}
+    {{:ok, info}, state}
     |> reply()
   end
 
   @impl GenServer
   def handle_call(Message.new(:linking_finished), _, state) do
+
+    #LinkingBuffer.flush_for_pad(state.linking_buffer, pad_ref, state)
+
     PadController.handle_linking_finished(state)
     |> reply()
   end

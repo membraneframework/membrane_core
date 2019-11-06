@@ -54,6 +54,16 @@ defmodule Membrane.Core.Bin.LinkingBuffer do
     end
   end
 
+  def flush_all_public_pads(buf, bin_state) do
+    public_pads =
+    buf
+    |> Enum.map(fn {pad_ref, _msgs} -> pad_ref end)
+    |> Enum.filter(&(&1 |> Pad.name_by_ref() |> Pad.public_name?()))
+
+    public_pads
+    |> Enum.reduce(buf, fn pad, acc -> flush_for_pad(acc, pad, bin_state) end)
+  end
+
   defp do_flush(msg, sender_pad, bin_state) do
     {:ok, %{pid: dest_pid, other_ref: other_ref}} = PadModel.get_data(bin_state, sender_pad)
     send(dest_pid, Message.set_for_pad(msg, other_ref))

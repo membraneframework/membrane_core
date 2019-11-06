@@ -8,6 +8,7 @@ defmodule Membrane.Core.Child.PadController do
   alias Core.Element.{EventController, PlaybackBuffer}
   alias Membrane.Element.CallbackContext
   alias Bunch.Type
+  alias Membrane.Core.Bin.LinkingBuffer
   require CallbackContext.{PadAdded, PadRemoved}
   require Message
   require Pad
@@ -83,6 +84,16 @@ defmodule Membrane.Core.Child.PadController do
           """,
           state
         )
+      end
+
+      bin? = match?(%Membrane.Core.Bin.State{}, state)
+
+      state =
+      if bin? do
+        new_buf = LinkingBuffer.flush_all_public_pads(state.linking_buffer, state)
+        %{state | linking_buffer: new_buf} # TODO pass only state?
+      else
+        state
       end
 
       {:ok, clear_currently_linking(state)}
