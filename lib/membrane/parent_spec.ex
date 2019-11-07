@@ -194,7 +194,7 @@ defmodule Membrane.ParentSpec do
   """
   @spec link_bin_input(Pad.name_t(), pad_props_t) :: LinkBuilder.t() | no_return
   def link_bin_input(pad \\ :input, props \\ []) do
-    %LinkBuilder{links: [%{from: {Membrane.Bin, :itself}}], status: :from} |> via_out(pad, props)
+    link({Membrane.Bin, :itself}) |> via_out(pad, props)
   end
 
   @doc """
@@ -252,7 +252,21 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec to(LinkBuilder.t(), Child.name_t()) :: LinkBuilder.t()
+  @spec to(LinkBuilder.t(), Child.name_t()) :: LinkBuilder.t() | no_return
+  def to(
+        %LinkBuilder{
+          links: [%{from: {Membrane.Bin, :itself}}, %{to: {Membrane.Bin, :itself}} | _] = links
+        } = builder,
+        child_name
+      ) do
+    to(%LinkBuilder{builder | links: tl(links)}, child_name)
+  end
+
+  def to(%LinkBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, child_name) do
+    raise ParentError,
+          "Invalid link specification: child #{inspect(child_name)} placed after bin's output"
+  end
+
   def to(%LinkBuilder{} = builder, child_name) do
     LinkBuilder.update(builder, :done, to: child_name)
   end
@@ -270,7 +284,7 @@ defmodule Membrane.ParentSpec do
   end
 
   def to_bin_output(builder, pad, props) do
-    builder |> via_in(pad, props) |> LinkBuilder.update(:done, to: {Membrane.Bin, :itself})
+    builder |> via_in(pad, props) |> to({Membrane.Bin, :itself})
   end
 
   defp validate_pad_name(pad) when Pad.is_pad_name(pad) or Pad.is_pad_ref(pad) do
