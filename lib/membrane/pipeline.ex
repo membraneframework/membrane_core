@@ -576,7 +576,13 @@ defmodule Membrane.Pipeline do
   def handle_playback_state(old, new, state) do
     children_data = state |> State.get_children() |> Map.values()
     children_pids = children_data |> Enum.map(& &1.pid)
-    children_pids |> Enum.each(&change_playback_state(&1, new))
+
+    if new == :stopped and state.terminating? do
+      children_pids |> Enum.each(&Message.send(&1, :prepare_shutdown))
+    else
+      children_pids |> Enum.each(&change_playback_state(&1, new))
+    end
+
     :ok = toggle_syncs_active(old, new, children_data)
     state = %{state | pending_pids: children_pids |> MapSet.new()}
 
