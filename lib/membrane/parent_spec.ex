@@ -192,7 +192,7 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec link_bin_input(Pad.name_t(), pad_props_t) :: LinkBuilder.t() | no_return
+  @spec link_bin_input(Pad.name_t() | Pad.ref_t(), pad_props_t) :: LinkBuilder.t() | no_return
   def link_bin_input(pad \\ :input, props \\ []) do
     link({Membrane.Bin, :itself}) |> via_out(pad, props)
   end
@@ -202,7 +202,8 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec via_out(LinkBuilder.t(), Pad.name_t(), pad_props_t) :: LinkBuilder.t() | no_return
+  @spec via_out(LinkBuilder.t(), Pad.name_t() | Pad.ref_t(), pad_props_t) ::
+          LinkBuilder.t() | no_return
   def via_out(builder, pad, props \\ [])
 
   def via_out(%LinkBuilder{status: :output}, pad, _props) do
@@ -229,7 +230,8 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec via_in(LinkBuilder.t(), Pad.name_t(), pad_props_t) :: LinkBuilder.t() | no_return
+  @spec via_in(LinkBuilder.t(), Pad.name_t() | Pad.ref_t(), pad_props_t) ::
+          LinkBuilder.t() | no_return
   def via_in(builder, pad, opts \\ [])
 
   def via_in(%LinkBuilder{status: :input}, pad, _opts) do
@@ -276,7 +278,8 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec to_bin_output(LinkBuilder.t(), Pad.name_t(), pad_props_t) :: LinkBuilder.t() | no_return
+  @spec to_bin_output(LinkBuilder.t(), Pad.name_t() | Pad.ref_t(), pad_props_t) ::
+          LinkBuilder.t() | no_return
   def to_bin_output(builder, pad \\ :output, props \\ [])
 
   def to_bin_output(%LinkBuilder{status: :input}, pad, _props) do
