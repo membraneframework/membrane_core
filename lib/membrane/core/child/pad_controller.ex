@@ -313,8 +313,8 @@ defmodule Membrane.Core.Child.PadController do
 
     action_handler =
       case state do
-        %Membrane.Core.Bin.State{} -> Membrane.Core.Bin.ActionHandler
-        _ -> ActionHandler
+        %Membrane.Core.Bin.State{} -> Core.Bin.ActionHandler
+        %Membrane.Core.Element.State{} -> Core.Element.ActionHandler
       end
 
     context =

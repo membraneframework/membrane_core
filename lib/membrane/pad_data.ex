@@ -7,7 +7,7 @@ defmodule Membrane.Pad.Data do
       See `Membrane.Caps.Matcher` for more information
     - `:availability` - see `Membrane.Pad.availability_t`
     - `:caps` - the most recent `Membrane.Caps` that have been sent (output) or received (input)
-      on the pad. May be `nil` if not yet set
+      on the pad. May be `nil` if not yet set. This field only applies to elements' pads.
     - `:demand` - current demand requested on the pad working in pull mode
     - `:direction` - see `Membrane.Pad.direction_t`
     - `:end_of_stream?` - flag determining whether `Membrane.Event.EndOfStream`

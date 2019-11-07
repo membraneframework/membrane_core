@@ -1,7 +1,7 @@
 defmodule Membrane.Bin.CallbackContext.PadAdded do
   @moduledoc """
   Structure representing a context that is passed to the bin when
-  when new pad added is created
+  when a new dynamic pad instance added is created
   """
   use Membrane.CallbackContext,
     direction: :input | :output,

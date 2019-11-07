@@ -77,7 +77,7 @@ defmodule Membrane.Bin do
   @callback handle_pad_added(
               pad :: Pad.ref_t(),
               context :: CallbackContext.PadAdded.t(),
-              state :: state_t()
+              state :: Bin.State.internal_state_t()
             ) :: callback_return_t
 
   @doc """
@@ -87,7 +87,7 @@ defmodule Membrane.Bin do
   @callback handle_pad_removed(
               pad :: Pad.ref_t(),
               context :: CallbackContext.PadRemoved.t(),
-              state :: state_t()
+              state :: Bin.State.internal_state_t()
             ) :: callback_return_t
 
   @doc """
