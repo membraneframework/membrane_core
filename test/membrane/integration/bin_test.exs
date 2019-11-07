@@ -3,7 +3,7 @@ defmodule Membrane.Core.BinTest do
 
   alias Membrane.Testing
   alias Membrane.Support.Bin.TestBins
-  alias TestBins.TestFilter
+  alias Membrane.Support.Bin.TestBins.{TestDynamicPadFilter, TestFilter}
 
   import Membrane.Testing.Assertions
 
@@ -183,8 +183,8 @@ defmodule Membrane.Core.BinTest do
           elements: [
             source: %Testing.Source{output: buffers},
             test_bin: %TestBins.TestDynamicPadBin{
-              filter1: TestFilter,
-              filter2: TestFilter
+              filter1: TestDynamicPadFilter,
+              filter2: TestDynamicPadFilter
             },
             sink: Testing.Sink
           ]

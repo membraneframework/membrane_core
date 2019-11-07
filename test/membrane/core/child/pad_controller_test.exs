@@ -7,6 +7,7 @@ defmodule Membrane.Core.Child.PadControllerTest do
   alias Membrane.Pad
   alias Membrane.LinkError
   require Message
+  require Pad
 
   @module Membrane.Core.Child.PadController
 
@@ -53,29 +54,6 @@ defmodule Membrane.Core.Child.PadControllerTest do
           state
         )
       end
-    end
-  end
-
-  describe "get_pad_ref/3" do
-    test "on a static pad" do
-      state = prepare_state(TrivialFilter)
-      assert @module.get_pad_ref(:input, nil, state) == {{:ok, :input}, state}
-      assert @module.get_pad_ref(:input, 1, state) == {{:error, :id_on_static_pad}, state}
-    end
-
-    test "without supplied id on a dynamic pad" do
-      state = prepare_state(DynamicFilter)
-      assert {{:ok, {:dynamic, :input, 0}}, new_state} = @module.get_pad_ref(:input, nil, state)
-      assert new_state.pads.info.input.current_id == 1
-      assert {{:ok, {:dynamic, :input, 1}}, _state} = @module.get_pad_ref(:input, nil, new_state)
-    end
-
-    test "with supplied id on a dynamic pad" do
-      state = prepare_state(DynamicFilter)
-      assert {{:ok, {:dynamic, :input, 666}}, new_state} = @module.get_pad_ref(:input, 666, state)
-      assert new_state.pads.info.input.current_id == 667
-
-      assert {{:ok, {:dynamic, :input, 667}}, _} = @module.get_pad_ref(:input, 667, new_state)
     end
   end
 
@@ -126,7 +104,7 @@ defmodule Membrane.Core.Child.PadControllerTest do
     end
 
     test "for dynamic input pad" do
-      pad_ref = {:dynamic, :input, 0}
+      pad_ref = Pad.ref(:input, 0)
       state = prepare_dynamic_state(DynamicFilter, :element, :playing, :input, pad_ref)
       assert state.pads.data |> Map.has_key?(pad_ref)
       assert {:ok, new_state} = @module.handle_unlink(pad_ref, state)

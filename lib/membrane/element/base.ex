@@ -293,7 +293,23 @@ defmodule Membrane.Element.Base do
     end
   end
 
-  defmacro __using__(_) do
+  @doc """
+  Brings common stuff needed to implement an element. Used by
+  `Membrane.Source.__using__/1`, `Membrane.Filter.__using__/1`
+  and `Membrane.Sink.__using__/1`.
+
+  Options:
+    - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
+  """
+  defmacro __using__(options) do
+    bring_pad =
+      if options |> Keyword.get(:bring_pad?, true) do
+        quote do
+          require Membrane.Pad
+          alias Membrane.Pad
+        end
+      end
+
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 
@@ -304,6 +320,8 @@ defmodule Membrane.Element.Base do
       alias Membrane.Element.CallbackContext, as: Ctx
 
       import unquote(__MODULE__), only: [def_clock: 0, def_clock: 1, def_options: 1]
+
+      unquote(bring_pad)
 
       @impl true
       def membrane_element?, do: true

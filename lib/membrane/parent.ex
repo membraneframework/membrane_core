@@ -86,12 +86,28 @@ defmodule Membrane.Parent do
             ) ::
               callback_return_t
 
-  defmacro __using__(args \\ []) do
+  @doc """
+  Brings common stuff needed to implement a parent. Used by
+  `Membrane.Pipeline.__using__/1` and `Membrane.Bin.__using__/1`.
+
+  Options:
+    - `:bring_spec?` - if true (default) imports and aliases `Membrane.ParentSpec`
+    - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
+  """
+  defmacro __using__(options) do
     bring_spec =
-      if args |> Keyword.get(:bring_spec?, true) do
+      if options |> Keyword.get(:bring_spec?, true) do
         quote do
           import Membrane.ParentSpec
           alias Membrane.ParentSpec
+        end
+      end
+
+    bring_pad =
+      if options |> Keyword.get(:bring_pad?, true) do
+        quote do
+          require Membrane.Pad
+          alias Membrane.Pad
         end
       end
 
@@ -99,6 +115,7 @@ defmodule Membrane.Parent do
       @behaviour unquote(__MODULE__)
 
       unquote(bring_spec)
+      unquote(bring_pad)
 
       @impl true
       def handle_stopped_to_prepared(state), do: {:ok, state}

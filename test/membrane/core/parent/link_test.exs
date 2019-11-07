@@ -6,14 +6,16 @@ defmodule Membrane.Core.Parent.LinkTest do
 
   test "valid link" do
     import Membrane.ParentSpec
+    require Membrane.Pad
+    alias Membrane.Pad
 
     links_spec = [
       link(:a)
       |> to(:b)
-      |> via_in(:input, pad: [q: 1])
+      |> via_in(:input, options: [q: 1])
       |> to(:c)
       |> via_out(:x)
-      |> via_in(:y, id: 2)
+      |> via_in(Pad.ref(:y, 2))
       |> to(:d)
       |> to_bin_output()
     ]
@@ -23,72 +25,64 @@ defmodule Membrane.Core.Parent.LinkTest do
     assert Enum.sort(links) == [
              %Link{
                from: %Endpoint{
-                 element: :a,
-                 id: nil,
-                 opts: [],
-                 pad_name: :output,
+                 child: :a,
+                 pad_props: [],
+                 pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 element: :b,
-                 id: nil,
-                 opts: [],
-                 pad_name: :input,
+                 child: :b,
+                 pad_props: [],
+                 pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
                }
              },
              %Link{
                from: %Endpoint{
-                 element: :b,
-                 id: nil,
-                 opts: [],
-                 pad_name: :output,
+                 child: :b,
+                 pad_props: [],
+                 pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 element: :c,
-                 id: nil,
-                 opts: [pad: [q: 1]],
-                 pad_name: :input,
+                 child: :c,
+                 pad_props: [options: [q: 1]],
+                 pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
                }
              },
              %Link{
                from: %Endpoint{
-                 element: :c,
-                 id: nil,
-                 opts: [],
-                 pad_name: :x,
+                 child: :c,
+                 pad_props: [],
+                 pad_spec: :x,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 element: :d,
-                 id: 2,
-                 opts: [],
-                 pad_name: :y,
+                 child: :d,
+                 pad_props: [],
+                 pad_spec: Pad.ref(:y, 2),
                  pad_ref: nil,
                  pid: nil
                }
              },
              %Link{
                from: %Endpoint{
-                 element: :d,
-                 id: nil,
-                 opts: [],
-                 pad_name: :output,
+                 child: :d,
+                 pad_props: [],
+                 pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 element: {Membrane.Bin, :itself},
-                 id: nil,
-                 opts: [],
-                 pad_name: :output,
+                 child: {Membrane.Bin, :itself},
+                 pad_props: [],
+                 pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                }
@@ -106,72 +100,64 @@ defmodule Membrane.Core.Parent.LinkTest do
     assert Enum.sort(links) == [
              %Link{
                from: %Endpoint{
-                 element: :a,
-                 id: nil,
-                 opts: [],
-                 pad_name: :output,
+                 child: :a,
+                 pad_props: [],
+                 pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 element: :b,
-                 id: nil,
-                 opts: [],
-                 pad_name: :input,
+                 child: :b,
+                 pad_props: [],
+                 pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
                }
              },
              %Link{
                from: %Endpoint{
-                 element: :b,
-                 id: nil,
-                 opts: [],
-                 pad_name: :output,
+                 child: :b,
+                 pad_props: [],
+                 pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 element: :c,
-                 id: nil,
-                 opts: [],
-                 pad_name: :input,
+                 child: :c,
+                 pad_props: [],
+                 pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
                }
              },
              %Link{
                from: %Endpoint{
-                 element: :b,
-                 id: nil,
-                 opts: [],
-                 pad_name: :output,
+                 child: :b,
+                 pad_props: [],
+                 pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 element: :e,
-                 id: nil,
-                 opts: [],
-                 pad_name: :input,
+                 child: :e,
+                 pad_props: [],
+                 pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
                }
              },
              %Link{
                from: %Endpoint{
-                 element: :d,
-                 id: nil,
-                 opts: [],
-                 pad_name: :output,
+                 child: :d,
+                 pad_props: [],
+                 pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 element: :b,
-                 id: nil,
-                 opts: [],
-                 pad_name: :input,
+                 child: :b,
+                 pad_props: [],
+                 pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
                }

@@ -1,16 +1,18 @@
 defmodule Membrane.ParentSpec do
   @moduledoc """
   Structure representing topology of a pipeline/bin.
-  It can be returned from
-  `c:Membrane.Pipeline.handle_init/1` and `c:Membrane.Bin.handle_init/1` callback upon initialization.
-  It will define a topology of children and links that build the pipeline/bin.
+
+  It can be incorporated into a pipeline or a bin by returning
+  `t:Membrane.Parent.Action.spec_action_t/0` action. This commonly happens within
+  `c:Membrane.Pipeline.handle_init/1` and `c:Membrane.Bin.handle_init/1`, but can
+  be done in any other callback also.
 
   ## Children
 
   Children that should be spawned when the pipeline/bin starts can be defined
   with the `:children` field.
   You have to set it to a map, where keys are valid children names (`t:Membrane.Child.name_t/0`)
-  that are unique within this pipeline/bin and values are either element's module or
+  that are unique within this pipeline/bin and values are either child's module or
   struct of that module.
 
   Sample definitions:
@@ -18,16 +20,16 @@ defmodule Membrane.ParentSpec do
       %{
         first_element: %Element.With.Options.Struct{option_a: 42},
         some_element: Element.Without.Options,
-        other_element: Bin.Using.Default.Options
+        some_bin: Bin.Using.Default.Options
       }
 
   ## Links
 
-  Links that should be made when the pipeline starts, and children are spawned
-  can be defined with the `:links` field. Links can be defined with use of
-  `link/1` and `to/2` functions that allow to specify elements linked, and
-  `via_in/2` and `via_out/2` that allow to specify pads' names and options. If pads
-  are not specified, name `:input` is assumed for inputs and `:output` for outputs.
+  Links that should be made when the children are spawned can be defined with the
+  `:links` field. Links can be defined with use of `link/1` and `to/2` functions
+  that allow to specify elements linked, and `via_in/2` and `via_out/2` that allow
+  to specify pads' names and parameters. If pads are not specified, name `:input`
+  is assumed for inputs and `:output` for outputs.
 
   Sample definition:
 
@@ -56,6 +58,28 @@ defmodule Membrane.ParentSpec do
       [
         link_bin_input() |> to(:filter1) |> to(:filter2) |> to_bin_output(:custom_output)
       ]
+
+  ### Dynamic pads
+
+  In most cases dynamic pads can be linked the same way as static ones, although
+  in the following situations exact pad reference must be passed instead of a name:
+
+  - When that reference is needed later, for example to handle a notification related
+  to that particular pad instance
+
+        pad = Pad.ref(:output, make_ref())
+        [
+          link(:tee) |> via_out(pad) |> to(:sink)
+        ]
+
+  - When linking dynamic pads of a bin with its children, for example in
+  `c:Membrane.Bin.handle_pad_added/3`
+
+        @impl true
+        def handle_pad_added(Pad.ref(:input, _) = pad, _ctx, state) do
+          links = [link_bin_input(pad) |> to(:mixer)]
+          {{:ok, %ParentSpec{links: links}}, state}
+        end
 
   ## Stream sync
 
@@ -122,24 +146,22 @@ defmodule Membrane.ParentSpec do
           | %{Child.name_t() => child_spec_t}
 
   @typedoc """
-  Options passed to the element when linking its pad with a different one.
+  Options passed to the child when linking its pad with a different one.
 
   The allowed options are:
-  * `id` - id of dynamic pad instance. Valid only for dynamic pads.
   * `:buffer` - keyword allowing to configure `Membrane.Core.InputBuffer` between elements. Valid only for input pads.
     See `t:Membrane.Core.InputBuffer.props_t/0` for configurable properties.
-  * `:pad` - any element-specific options that will be available in `Membrane.Pad.Data` struct.
+  * `:options` - any child-specific options that will be available in `Membrane.Pad.Data` struct.
   """
-  @type pad_options_t :: [
-          {:id, Pad.dynamic_id_t()}
-          | {:buffer, InputBuffer.props_t()}
-          | {:pad, element_specific_opts :: any()}
+  @type pad_props_t :: [
+          {:buffer, InputBuffer.props_t()}
+          | {:options, Keyword.t()}
         ]
 
   @type links_spec_t :: [LinkBuilder.t() | links_spec_t]
 
   @typedoc """
-  Struct used when starting elements within a pipeline or a bin.
+  Struct used when starting and linking children within a pipeline or a bin.
   """
   @type t :: %__MODULE__{
           children: children_spec_t,
@@ -148,48 +170,68 @@ defmodule Membrane.ParentSpec do
           clock_provider: Child.name_t()
         }
 
-  @valid_link_opt_keys [:id, :pad, :buffer]
+  @valid_pad_prop_keys [:options, :buffer]
 
   defstruct children: %{},
             links: [],
             stream_sync: [],
             clock_provider: nil
 
+  @doc """
+  Begins a link.
+
+  See the _links_ section of the moduledoc for more information.
+  """
   @spec link(Child.name_t()) :: LinkBuilder.t()
   def link(child_name) do
     %LinkBuilder{links: [%{from: child_name}], status: :from}
   end
 
-  @spec link_bin_input(Pad.name_t(), pad_options_t) :: LinkBuilder.t() | no_return
-  def link_bin_input(pad \\ :input, opts \\ []) do
-    %LinkBuilder{links: [%{from: {Membrane.Bin, :itself}}], status: :from} |> via_out(pad, opts)
+  @doc """
+  Begins a link with a bin's pad.
+
+  See the _links_ section of the moduledoc for more information.
+  """
+  @spec link_bin_input(Pad.name_t() | Pad.ref_t(), pad_props_t) :: LinkBuilder.t() | no_return
+  def link_bin_input(pad \\ :input, props \\ []) do
+    link({Membrane.Bin, :itself}) |> via_out(pad, props)
   end
 
-  @spec via_out(LinkBuilder.t(), Pad.name_t(), pad_options_t) :: LinkBuilder.t() | no_return
-  def via_out(builder, pad, opts \\ [])
+  @doc """
+  Specifies output pad name and properties of the preceding child.
 
-  def via_out(%LinkBuilder{status: :output}, pad, _opts) do
+  See the _links_ section of the moduledoc for more information.
+  """
+  @spec via_out(LinkBuilder.t(), Pad.name_t() | Pad.ref_t(), pad_props_t) ::
+          LinkBuilder.t() | no_return
+  def via_out(builder, pad, props \\ [])
+
+  def via_out(%LinkBuilder{status: :output}, pad, _props) do
     raise ParentError,
           "Invalid link specification: output #{inspect(pad)} placed after another output or bin's input"
   end
 
-  def via_out(%LinkBuilder{status: :input}, pad, _opts) do
+  def via_out(%LinkBuilder{status: :input}, pad, _props) do
     raise ParentError, "Invalid link specification: output #{inspect(pad)} placed after an input"
   end
 
-  def via_out(%LinkBuilder{} = builder, pad, opts) do
+  def via_out(%LinkBuilder{} = builder, pad, props) do
     :ok = validate_pad_name(pad)
-    :ok = validate_pad_opts(opts)
-    {id, opts} = opts |> Keyword.pop(:id)
+    :ok = validate_pad_props(props)
 
     LinkBuilder.update(builder, :output,
       output: pad,
-      output_id: id,
-      output_opts: opts
+      output_props: props
     )
   end
 
-  @spec via_in(LinkBuilder.t(), Pad.name_t(), pad_options_t) :: LinkBuilder.t() | no_return
+  @doc """
+  Specifies input pad name and properties of the subsequent child.
+
+  See the _links_ section of the moduledoc for more information.
+  """
+  @spec via_in(LinkBuilder.t(), Pad.name_t() | Pad.ref_t(), pad_props_t) ::
+          LinkBuilder.t() | no_return
   def via_in(builder, pad, opts \\ [])
 
   def via_in(%LinkBuilder{status: :input}, pad, _opts) do
@@ -197,35 +239,58 @@ defmodule Membrane.ParentSpec do
           "Invalid link specification: output #{inspect(pad)} placed after another output"
   end
 
-  def via_in(%LinkBuilder{} = builder, pad, opts) do
+  def via_in(%LinkBuilder{} = builder, pad, props) do
     :ok = validate_pad_name(pad)
-    :ok = validate_pad_opts(opts)
-    {id, opts} = opts |> Keyword.pop(:id)
+    :ok = validate_pad_props(props)
 
     LinkBuilder.update(builder, :input,
       input: pad,
-      input_id: id,
-      input_opts: opts
+      input_props: props
     )
   end
 
-  @spec to(LinkBuilder.t(), Child.name_t()) :: LinkBuilder.t()
+  @doc """
+  Continues or ends a link.
+
+  See the _links_ section of the moduledoc for more information.
+  """
+  @spec to(LinkBuilder.t(), Child.name_t()) :: LinkBuilder.t() | no_return
+  def to(
+        %LinkBuilder{
+          links: [%{from: {Membrane.Bin, :itself}}, %{to: {Membrane.Bin, :itself}} | _] = links
+        } = builder,
+        child_name
+      ) do
+    to(%LinkBuilder{builder | links: tl(links)}, child_name)
+  end
+
+  def to(%LinkBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, child_name) do
+    raise ParentError,
+          "Invalid link specification: child #{inspect(child_name)} placed after bin's output"
+  end
+
   def to(%LinkBuilder{} = builder, child_name) do
     LinkBuilder.update(builder, :done, to: child_name)
   end
 
-  @spec to_bin_output(LinkBuilder.t(), Pad.name_t(), pad_options_t) :: LinkBuilder.t() | no_return
-  def to_bin_output(builder, pad \\ :output, opts \\ [])
+  @doc """
+  Ends a link with a bin's output.
 
-  def to_bin_output(%LinkBuilder{status: :input}, pad, _opts) do
+  See the _links_ section of the moduledoc for more information.
+  """
+  @spec to_bin_output(LinkBuilder.t(), Pad.name_t() | Pad.ref_t(), pad_props_t) ::
+          LinkBuilder.t() | no_return
+  def to_bin_output(builder, pad \\ :output, props \\ [])
+
+  def to_bin_output(%LinkBuilder{status: :input}, pad, _props) do
     raise ParentError, "Invalid link specification: bin's output #{pad} placed after an input"
   end
 
-  def to_bin_output(builder, pad, opts) do
-    builder |> via_in(pad, opts) |> LinkBuilder.update(:done, to: {Membrane.Bin, :itself})
+  def to_bin_output(builder, pad, props) do
+    builder |> via_in(pad, props) |> to({Membrane.Bin, :itself})
   end
 
-  defp validate_pad_name(pad) when Pad.is_pad_name(pad) do
+  defp validate_pad_name(pad) when Pad.is_pad_name(pad) or Pad.is_pad_ref(pad) do
     :ok
   end
 
@@ -233,16 +298,16 @@ defmodule Membrane.ParentSpec do
     raise ParentError, "Invalid link specification: invalid pad name: #{inspect(pad)}"
   end
 
-  defp validate_pad_opts(opts) do
-    unless Keyword.keyword?(opts) do
+  defp validate_pad_props(props) do
+    unless Keyword.keyword?(props) do
       raise ParentError,
-            "Invalid link specification: pad options should be a keyword, got: #{inspect(opts)}"
+            "Invalid link specification: pad options should be a keyword, got: #{inspect(props)}"
     end
 
-    opts
+    props
     |> Keyword.keys()
     |> Enum.each(
-      &unless &1 in @valid_link_opt_keys do
+      &unless &1 in @valid_pad_prop_keys do
         raise ParentError, "Invalid link specification: invalid pad option: #{inspect(&1)}"
       end
     )

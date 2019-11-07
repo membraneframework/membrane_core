@@ -17,12 +17,12 @@ defmodule Membrane.Pad do
   @typedoc """
   Defines the term by which the pad instance is identified.
   """
-  @type ref_t :: name_t | {:dynamic, name_t, dynamic_id_t}
+  @type ref_t :: name_t | {__MODULE__, name_t, dynamic_id_t}
 
   @typedoc """
   Possible id of dynamic pad
   """
-  @type dynamic_id_t :: non_neg_integer
+  @type dynamic_id_t :: any
 
   @typedoc """
   Defines the name of pad or group of dynamic pads
@@ -121,6 +121,7 @@ defmodule Membrane.Pad do
   @type description_t :: %{
           :availability => availability_t(),
           :mode => mode_t(),
+          :name => name_t(),
           :caps => Caps.Matcher.caps_specs_t(),
           optional(:demand_unit) => Buffer.Metric.unit_t(),
           :direction => direction_t(),
@@ -128,10 +129,28 @@ defmodule Membrane.Pad do
           :bin? => boolean()
         }
 
+  @doc """
+  Creates a static pad reference.
+  """
+  defmacro ref(name) do
+    quote do
+      unquote(name)
+    end
+  end
+
+  @doc """
+  Creates a dynamic pad reference.
+  """
+  defmacro ref(name, id) do
+    quote do
+      {unquote(__MODULE__), unquote(name), unquote(id)}
+    end
+  end
+
   defguard is_pad_ref(term)
            when term |> is_atom or
-                  (term |> is_tuple and term |> tuple_size == 3 and term |> elem(0) == :dynamic and
-                     term |> elem(1) |> is_atom and term |> elem(2) |> is_integer)
+                  (term |> is_tuple and term |> tuple_size == 3 and term |> elem(0) == __MODULE__ and
+                     term |> elem(1) |> is_atom)
 
   defguardp is_public_name(term) when is_atom(term)
 
@@ -157,16 +176,16 @@ defmodule Membrane.Pad do
   Returns the name for the given pad reference
   """
   @spec name_by_ref(ref_t()) :: name_t()
-  def name_by_ref({:dynamic, name, _id}) when is_pad_name(name), do: name
-  def name_by_ref(ref) when is_pad_name(ref), do: ref
+  def name_by_ref(ref(name, _id)) when is_pad_name(name), do: name
+  def name_by_ref(name) when is_pad_name(name), do: name
 
   @spec opposite_direction(direction_t()) :: direction_t()
   def opposite_direction(:input), do: :output
   def opposite_direction(:output), do: :input
 
   @spec get_corresponding_bin_pad(ref_t()) :: ref_t()
-  def get_corresponding_bin_pad({:dynamic, name, id}),
-    do: {:dynamic, get_corresponding_bin_name(name), id}
+  def get_corresponding_bin_pad(ref(name, id)),
+    do: ref(get_corresponding_bin_name(name), id)
 
   def get_corresponding_bin_pad(name), do: get_corresponding_bin_name(name)
 

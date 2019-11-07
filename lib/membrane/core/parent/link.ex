@@ -22,25 +22,23 @@ defmodule Membrane.Core.Parent.Link do
     alias Membrane.Element
     alias Membrane.Pad
 
-    @enforce_keys [:element, :pad_name]
-    defstruct element: nil, pad_name: nil, id: nil, pad_ref: nil, pid: nil, opts: []
+    @enforce_keys [:child, :pad_spec]
+    defstruct @enforce_keys ++ [pad_ref: nil, pid: nil, pad_props: []]
 
     @type t() :: %__MODULE__{
-            element: Element.name_t() | {Membrane.Bin, :itself},
-            pad_name: Pad.name_t(),
-            id: Pad.dynamic_id_t() | nil,
+            child: Element.name_t() | {Membrane.Bin, :itself},
+            pad_spec: Pad.name_t() | Pad.ref_t(),
             pad_ref: Pad.ref_t() | nil,
             pid: pid() | nil,
-            opts: ParentSpec.pad_options_t()
+            pad_props: ParentSpec.pad_props_t()
           }
 
     @type resolved_t() :: %__MODULE__{
-            element: Element.name_t() | {Membrane.Bin, :itself},
-            pad_name: Pad.name_t(),
-            id: Pad.dynamic_id_t() | nil,
+            child: Element.name_t() | {Membrane.Bin, :itself},
+            pad_spec: Pad.name_t() | Pad.ref_t(),
             pad_ref: Pad.ref_t(),
             pid: pid(),
-            opts: ParentSpec.pad_options_t()
+            pad_props: ParentSpec.pad_props_t()
           }
   end
 
@@ -62,16 +60,14 @@ defmodule Membrane.Core.Parent.Link do
     |> Enum.map(fn link ->
       %__MODULE__{
         from: %Endpoint{
-          element: link.from,
-          pad_name: get_pad_name(link, :from, :output),
-          id: Map.get(link, :output_id),
-          opts: Map.get(link, :output_opts, [])
+          child: link.from,
+          pad_spec: get_pad(link, :from, :output),
+          pad_props: Map.get(link, :output_props, [])
         },
         to: %Endpoint{
-          element: link.to,
-          pad_name: get_pad_name(link, :to, :input),
-          id: Map.get(link, :input_id),
-          opts: Map.get(link, :input_opts, [])
+          child: link.to,
+          pad_spec: get_pad(link, :to, :input),
+          pad_props: Map.get(link, :input_props, [])
         }
       }
     end)
@@ -85,7 +81,7 @@ defmodule Membrane.Core.Parent.Link do
     """
   end
 
-  defp get_pad_name(link_spec, child, direction) do
+  defp get_pad(link_spec, child, direction) do
     case link_spec do
       %{^direction => pad_name} -> pad_name
       %{^child => {Membrane.Bin, :itself}} -> Pad.opposite_direction(direction)

@@ -2,10 +2,10 @@ defmodule Membrane.Core.Child.PadController do
   @moduledoc false
   # Module handling linking and unlinking pads.
 
-  alias Membrane.{Core, Event, LinkError, Pad}
+  alias Membrane.{Core, Event, LinkError, Pad, ParentSpec}
   alias Core.{CallbackHandler, Message, InputBuffer}
   alias Core.Child.{PadModel, PadSpecHandler}
-  alias Core.Element.{ActionHandler, EventController, PlaybackBuffer}
+  alias Core.Element.{EventController, PlaybackBuffer}
   alias Membrane.Element.CallbackContext
   alias Bunch.Type
   require CallbackContext.{PadAdded, PadRemoved}
@@ -17,6 +17,8 @@ defmodule Membrane.Core.Child.PadController do
 
   @type state_t :: Core.Bin.State.t() | Core.Element.State.t()
 
+  @typep parsed_pad_props_t :: %{buffer: InputBuffer.props_t(), options: map}
+
   @doc """
   Verifies linked pad, initializes it's data.
   """
@@ -26,7 +28,7 @@ defmodule Membrane.Core.Child.PadController do
           pid,
           Pad.ref_t(),
           PadModel.pad_info_t() | nil,
-          Keyword.t(),
+          ParentSpec.pad_props_t(),
           state_t()
         ) :: Type.stateful_try_t(PadModel.pad_info_t(), state_t)
   def handle_link(pad_ref, direction, pid, other_ref, other_info, props, state) do
@@ -35,7 +37,7 @@ defmodule Membrane.Core.Child.PadController do
 
     with :ok <- validate_pad_being_linked!(pad_ref, direction, info, state),
          :ok <- validate_dir_and_mode!({pad_ref, info}, {other_ref, other_info}) do
-      props = parse_link_props!(props, pad_name, state)
+      props = parse_pad_props!(props, pad_name, state)
       state = init_pad_data(info, pad_ref, pid, other_ref, other_info, props, state)
 
       state =
@@ -104,39 +106,6 @@ defmodule Membrane.Core.Child.PadController do
     end
   end
 
-  @doc """
-  Returns a pad reference - a term uniquely identifying pad instance.
-
-  In case of static pad it will be just its name, for dynamic it will return
-  tuple containing name and id.
-  """
-  @spec get_pad_ref(Pad.name_t(), Pad.dynamic_id_t() | nil, state_t()) ::
-          Type.stateful_try_t(Pad.ref_t(), state_t)
-  def get_pad_ref(pad_name, id, state) do
-    case state.pads.info[pad_name] do
-      nil ->
-        {{:error, :unknown_pad}, state}
-
-      %{availability: av} = pad_info when Pad.is_availability_dynamic(av) ->
-        {pad_ref, pad_info} = get_dynamic_pad_ref(pad_name, id, pad_info)
-        state |> Bunch.Access.put_in([:pads, :info, pad_name], pad_info) ~> {{:ok, pad_ref}, &1}
-
-      %{availability: av} when Pad.is_availability_static(av) and id == nil ->
-        {{:ok, pad_name}, state}
-
-      %{availability: av} when Pad.is_availability_static(av) and id != nil ->
-        {{:error, :id_on_static_pad}, state}
-    end
-  end
-
-  defp get_dynamic_pad_ref(pad_name, nil, %{current_id: id} = pad_info) do
-    {{:dynamic, pad_name, id}, %{pad_info | current_id: id + 1}}
-  end
-
-  defp get_dynamic_pad_ref(pad_name, id, %{current_id: old_id} = pad_info) do
-    {{:dynamic, pad_name, id}, %{pad_info | current_id: max(id, old_id) + 1}}
-  end
-
   @spec validate_pad_being_linked!(
           Pad.ref_t(),
           Pad.direction_t(),
@@ -167,7 +136,7 @@ defmodule Membrane.Core.Child.PadController do
           {Pad.ref_t(), info :: PadModel.pad_info_t()},
           {Pad.ref_t(), other_info :: PadModel.pad_info_t()}
         ) :: :ok
-  def validate_dir_and_mode!(this, that) do
+  defp validate_dir_and_mode!(this, that) do
     with :ok <- do_validate_dm(this, that),
          :ok <- do_validate_dm(that, this) do
       :ok
@@ -186,28 +155,28 @@ defmodule Membrane.Core.Child.PadController do
     :ok
   end
 
-  @spec parse_link_props!(Keyword.t(), Pad.name_t(), state_t()) :: Keyword.t()
-  defp parse_link_props!(props, pad_name, state) do
+  @spec parse_pad_props!(ParentSpec.pad_props_t(), Pad.name_t(), state_t()) ::
+          parsed_pad_props_t | no_return
+  defp parse_pad_props!(props, pad_name, state) do
     {_, pad_spec} =
       state.module.membrane_pads()
       |> PadSpecHandler.add_private_pads()
       |> Enum.find(fn {k, _} -> k == pad_name end)
 
-    opts_spec = pad_spec.options
-    pad_props = parse_pad_props!(pad_name, opts_spec, props[:pad])
+    pad_opts = parse_pad_options!(pad_name, pad_spec.options, props[:options])
     buffer_props = parse_buffer_props!(pad_name, props[:buffer])
-    [pad: pad_props, buffer: buffer_props]
+    %{options: pad_opts, buffer: buffer_props}
   end
 
-  defp parse_pad_props!(_pad_name, nil, nil) do
-    {:ok, nil}
+  defp parse_pad_options!(_pad_name, nil, nil) do
+    nil
   end
 
-  defp parse_pad_props!(pad_name, nil, _props) do
+  defp parse_pad_options!(pad_name, nil, _props) do
     raise LinkError, "Pad #{inspect(pad_name)} does not define any options"
   end
 
-  defp parse_pad_props!(pad_name, options_spec, props) do
+  defp parse_pad_options!(pad_name, options_spec, props) do
     bunch_field_specs = options_spec |> Bunch.KVList.map_values(&Keyword.take(&1, [:default]))
 
     case props |> List.wrap() |> Bunch.Config.parse(bunch_field_specs) do
@@ -240,7 +209,7 @@ defmodule Membrane.Core.Child.PadController do
           pid,
           Pad.ref_t(),
           PadModel.pad_info_t(),
-          props :: Keyword.t(),
+          parsed_pad_props_t,
           state_t()
         ) :: state_t()
   defp init_pad_data(info, ref, pid, other_ref, other_info, props, state) do
@@ -249,7 +218,8 @@ defmodule Membrane.Core.Child.PadController do
       |> Map.merge(%{
         pid: pid,
         other_ref: other_ref,
-        options: props[:pad],
+        options: props.options,
+        ref: ref,
         caps: nil,
         start_of_stream?: false,
         end_of_stream?: false
@@ -267,15 +237,13 @@ defmodule Membrane.Core.Child.PadController do
   @spec init_pad_mode_data(
           map(),
           PadModel.pad_info_t(),
-          props :: Keyword.t(),
+          parsed_pad_props_t,
           state_t()
         ) :: map()
   defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, other_info, props, state) do
     %{pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
 
     Message.send(pid, :demand_unit, [demand_unit, other_ref])
-
-    buffer_props = props[:buffer] || Keyword.new()
 
     enable_toilet? = other_info.mode == :push
 
@@ -286,7 +254,7 @@ defmodule Membrane.Core.Child.PadController do
         enable_toilet?,
         pid,
         other_ref,
-        buffer_props
+        props.buffer
       )
 
     %{input_buf: input_buf, demand: 0}
@@ -330,7 +298,7 @@ defmodule Membrane.Core.Child.PadController do
 
     CallbackHandler.exec_and_handle_callback(
       :handle_pad_added,
-      ActionHandler,
+      get_callback_action_handler(state),
       %{context: context},
       [ref],
       state
@@ -346,7 +314,7 @@ defmodule Membrane.Core.Child.PadController do
 
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_removed,
-        ActionHandler,
+        get_callback_action_handler(state),
         %{context: context},
         [ref],
         state
@@ -360,4 +328,7 @@ defmodule Membrane.Core.Child.PadController do
     new_playback_buf = PlaybackBuffer.flush_for_pad(state.playback_buffer, pad_ref)
     {:ok, %{state | playback_buffer: new_playback_buf}}
   end
+
+  defp get_callback_action_handler(%Core.Element.State{}), do: Core.Element.ActionHandler
+  defp get_callback_action_handler(%Core.Bin.State{}), do: Core.Bin.ActionHandler
 end

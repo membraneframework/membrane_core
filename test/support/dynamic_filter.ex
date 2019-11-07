@@ -20,18 +20,18 @@ defmodule Membrane.Support.Element.DynamicFilter do
   end
 
   @impl true
-  def handle_pad_added({:dynamic, :input, _id} = ref, _ctx, state) do
+  def handle_pad_added(Pad.ref(:input, _) = ref, _ctx, state) do
     {:ok, state |> Map.put(:last_pad_addded, ref)}
   end
 
   @impl true
-  def handle_pad_removed({:dynamic, :input, _id} = ref, _ctx, state) do
+  def handle_pad_removed(Pad.ref(:input, _) = ref, _ctx, state) do
     {:ok, state |> Map.put(:last_pad_removed, ref)}
   end
 
   @impl true
   def handle_demand(_ref, size, _, _ctx, state) do
-    {{:ok, demand: {{:dynamic, :input, 0}, size}}, state}
+    {{:ok, demand: {Pad.ref(:input, 0), size}}, state}
   end
 
   @impl true
