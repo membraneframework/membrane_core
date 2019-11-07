@@ -52,7 +52,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   end
 
   defp flush_linking_buffer_for_endpoint(state, %Endpoint{
-         element: {Membrane.Bin, :itself},
+         child: {Membrane.Bin, :itself},
          pad_ref: pad
        }) do
     Bin.LinkingBuffer.flush_for_pad(pad, state)

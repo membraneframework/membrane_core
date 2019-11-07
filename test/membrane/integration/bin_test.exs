@@ -176,6 +176,8 @@ defmodule Membrane.Core.BinTest do
 
   describe "Dynamic pads" do
     test "handle_pad_added is called only for public pads" do
+      alias Membrane.Pad
+      require Pad
       buffers = ['a', 'b', 'c']
 
       {:ok, pipeline} =
@@ -191,8 +193,8 @@ defmodule Membrane.Core.BinTest do
         })
 
       assert_data_flows_through(pipeline, buffers)
-      assert_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, {:dynamic, :input, _}})
-      assert_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, {:dynamic, :output, _}})
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, Pad.ref(:input, _)})
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, Pad.ref(:output, _)})
 
       refute_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, _})
     end
