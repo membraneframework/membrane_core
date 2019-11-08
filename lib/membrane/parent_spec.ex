@@ -78,7 +78,7 @@ defmodule Membrane.ParentSpec do
         @impl true
         def handle_pad_added(Pad.ref(:input, _) = pad, _ctx, state) do
           links = [link_bin_input(pad) |> to(:mixer)]
-          {{:ok, %ParentSpec{links: links}}, state}
+          {{:ok, spec: %ParentSpec{links: links}}, state}
         end
 
   ## Stream sync
