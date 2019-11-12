@@ -5,6 +5,7 @@ defmodule Membrane.Core.Child.PadControllerSpec do
   alias Membrane.Core.Element.State
   alias Membrane.Event.EndOfStream
   alias Membrane.Core.Playbackable
+  alias Membrane.Pad
 
   describe ".link_pad/7" do
     let :module, do: TrivialFilter
@@ -181,9 +182,10 @@ defmodule Membrane.Core.Child.PadControllerSpec do
     end
 
     context "for element with dynamic input pad" do
+      require Pad
       let :module, do: DynamicFilter
       let :pad_name, do: :input
-      let :pad_ref, do: {:dynamic, :input, 0}
+      let :pad_ref, do: Pad.ref(:input, 0)
 
       let :pad_data,
         do: %Membrane.Pad.Data{
