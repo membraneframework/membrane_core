@@ -29,7 +29,7 @@ defmodule Membrane.Core.InputBuffer do
           demand: non_neg_integer(),
           min_demand: pos_integer(),
           metric: module(),
-          toilet: %{:warn => pos_integer, :fail => pos_integer},
+          toilet?: boolean(),
           toilet_props: %{:warn => pos_integer, :fail => pos_integer}
         }
 
@@ -40,7 +40,7 @@ defmodule Membrane.Core.InputBuffer do
             demand: nil,
             min_demand: nil,
             metric: nil,
-            toilet: false,
+            toilet?: false,
             toilet_props: nil
 
   @typedoc """
@@ -83,26 +83,14 @@ defmodule Membrane.Core.InputBuffer do
   @spec init(
           Element.name_t(),
           Buffer.Metric.unit_t(),
-          enable_toilet? :: boolean(),
           pid(),
           Pad.ref_t(),
           props_t
         ) :: t()
-  # TODO don't allow to enable toilet on init
-  def init(name, demand_unit, enable_toilet?, demand_pid, demand_pad, props) do
+  def init(name, demand_unit, demand_pid, demand_pad, props) do
     metric = Buffer.Metric.from_unit(demand_unit)
     preferred_size = props[:preferred_size] || metric.input_buf_preferred_size
     min_demand = props[:min_demand] || preferred_size |> div(4)
-
-    toilet =
-      if enable_toilet? do
-        %{
-          warn: props[:warn_size] || preferred_size * 2,
-          fail: props[:fail_size] || preferred_size * 4
-        }
-      else
-        false
-      end
 
     %__MODULE__{
       name: name,
@@ -111,7 +99,8 @@ defmodule Membrane.Core.InputBuffer do
       min_demand: min_demand,
       demand: preferred_size,
       metric: metric,
-      toilet: toilet,
+      # Toilet can be enabled with `enable_toilet/1`
+      toilet?: false,
       toilet_props: %{
         warn: props[:warn_size] || preferred_size * 2,
         fail: props[:fail_size] || preferred_size * 4
@@ -120,8 +109,8 @@ defmodule Membrane.Core.InputBuffer do
     |> send_demands(demand_pid, demand_pad)
   end
 
-  def enable_toilet(%__MODULE__{toilet_props: props} = buf) do
-    new_buf = %{buf | toilet: props}
+  def enable_toilet(%__MODULE__{toilet?: false} = buf) do
+    new_buf = %{buf | toilet?: true}
     {:ok, new_buf}
   end
 
@@ -129,7 +118,7 @@ defmodule Membrane.Core.InputBuffer do
   def store(input_buf, type \\ :buffers, v)
 
   def store(
-        %__MODULE__{current_size: size, preferred_size: pref_size, toilet: false} = input_buf,
+        %__MODULE__{current_size: size, preferred_size: pref_size, toilet?: false} = input_buf,
         :buffers,
         v
       )
@@ -144,7 +133,11 @@ defmodule Membrane.Core.InputBuffer do
     {:ok, do_store_buffers(input_buf, v)}
   end
 
-  def store(%__MODULE__{toilet: %{warn: warn_lvl, fail: fail_lvl}} = input_buf, :buffers, v)
+  def store(
+        %__MODULE__{toilet?: true, toilet_props: %{warn: warn_lvl, fail: fail_lvl}} = input_buf,
+        :buffers,
+        v
+      )
       when is_list(v) do
     %__MODULE__{current_size: size} = input_buf = do_store_buffers(input_buf, v)
 
@@ -247,7 +240,7 @@ defmodule Membrane.Core.InputBuffer do
   @spec send_demands(t(), pid(), Pad.ref_t()) :: t()
   defp send_demands(
          %__MODULE__{
-           toilet: false,
+           toilet?: false,
            current_size: size,
            preferred_size: pref_size,
            demand: demand,
@@ -279,7 +272,7 @@ defmodule Membrane.Core.InputBuffer do
          name: name,
          current_size: size,
          preferred_size: pref_size,
-         toilet: toilet
+         toilet?: toilet
        }) do
     name_str =
       if toilet do

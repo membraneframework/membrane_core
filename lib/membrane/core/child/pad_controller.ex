@@ -287,7 +287,6 @@ defmodule Membrane.Core.Child.PadController do
       InputBuffer.init(
         state.name,
         demand_unit,
-        false,
         pid,
         other_ref,
         props.buffer
