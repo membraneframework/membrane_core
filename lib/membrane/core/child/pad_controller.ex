@@ -66,7 +66,7 @@ defmodule Membrane.Core.Child.PadController do
   def handle_linking_finished(state) do
     with {:ok, state} <-
            state.pads.dynamic_currently_linking
-           |> Enum.filter(&(&1 |> Pad.name_by_ref() |> Pad.public_name?()))
+           |> Enum.filter(&(&1 |> Pad.name_by_ref() |> Pad.is_public_name()))
            |> Bunch.Enum.try_reduce(state, &handle_pad_added/2) do
       static_unlinked =
         state.pads.info
@@ -338,7 +338,7 @@ defmodule Membrane.Core.Child.PadController do
     %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
     name = Pad.name_by_ref(ref)
 
-    if Pad.availability_mode(availability) == :dynamic and Pad.public_name?(name) do
+    if Pad.availability_mode(availability) == :dynamic and Pad.is_public_name(name) do
       context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
 
       CallbackHandler.exec_and_handle_callback(

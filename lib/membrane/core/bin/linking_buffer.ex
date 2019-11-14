@@ -6,6 +6,7 @@ defmodule Membrane.Core.Bin.LinkingBuffer do
   alias Membrane.Pad
   alias Membrane.Core.Bin.State
   require Message
+  require Pad
 
   @type t :: %{Pad.name_t() => [Message.t()]}
 
@@ -66,7 +67,7 @@ defmodule Membrane.Core.Bin.LinkingBuffer do
     public_pads =
       buf
       |> Enum.map(fn {pad_ref, _msgs} -> pad_ref end)
-      |> Enum.filter(&(&1 |> Pad.name_by_ref() |> Pad.public_name?()))
+      |> Enum.filter(&(&1 |> Pad.name_by_ref() |> Pad.is_public_name()))
 
     public_pads
     |> Enum.reduce(bin_state, &flush_for_pad/2)

@@ -4,15 +4,15 @@ defmodule Membrane.Pad.Data do
 
   The public fields are:
     - `:accepted_caps` - specification of possible caps that are accepted on the pad.
-      See `Membrane.Caps.Matcher` for more information
+      See `Membrane.Caps.Matcher` for more information. This field only applies to elements' pads.
     - `:availability` - see `Membrane.Pad.availability_t`
     - `:caps` - the most recent `Membrane.Caps` that have been sent (output) or received (input)
       on the pad. May be `nil` if not yet set. This field only applies to elements' pads.
-    - `:demand` - current demand requested on the pad working in pull mode
+    - `:demand` - current demand requested on the pad working in pull mode. This field only applies to elements' pads.
     - `:direction` - see `Membrane.Pad.direction_t`
     - `:end_of_stream?` - flag determining whether `Membrane.Event.EndOfStream`
       has been received (or sent) on the pad
-    - `:mode` - see `Membrane.Pad.mode_t`
+    - `:mode` - see `Membrane.Pad.mode_t`. This field only applies to elements' pads.
     - `:name` - see `Membrane.Pad.name_t`. Do not mistake with `:ref`
     - `:options` - options passed in `Membrane.ParentSpec` when linking pad
     - `:ref` - see `Membrane.Pad.ref_t`
