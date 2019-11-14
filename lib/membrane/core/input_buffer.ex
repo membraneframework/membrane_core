@@ -114,6 +114,10 @@ defmodule Membrane.Core.InputBuffer do
     {:ok, new_buf}
   end
 
+  def enable_toilet(%__MODULE__{toilet?: true}) do
+    {:error, :already_enabled}
+  end
+
   @spec store(t(), atom(), any()) :: {:ok, t()} | {:error, any()}
   def store(input_buf, type \\ :buffers, v)
 
