@@ -103,13 +103,10 @@ defmodule Membrane.Core.Child.PadController do
     state.pads.data
     |> Map.values()
     |> Enum.filter(&(&1.mode == :push))
-    |> IO.inspect(label: "[#{inspect(self)}] Sending to these")
     |> Enum.each(&Message.send(&1.pid, :push_mode_announcment, [], for_pad: &1.other_ref))
   end
 
   def enable_toilet(pad_ref, state) do
-    IO.puts("[#{inspect(self)}] I enable toilet for #{inspect(pad_ref)}")
-
     %Pad.Data{input_buf: buf} = state.pads.data[pad_ref]
     {:ok, new_buf} = InputBuffer.enable_toilet(buf)
 
@@ -281,20 +278,16 @@ defmodule Membrane.Core.Child.PadController do
     %{}
   end
 
-  defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, other_info, props, state) do
+  defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, _other_info, props, state) do
     %{pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
 
     Message.send(pid, :demand_unit, [demand_unit, other_ref])
-
-    # Toilet will be enabled with a message
-    # other_info.mode == :push
-    enable_toilet? = false
 
     input_buf =
       InputBuffer.init(
         state.name,
         demand_unit,
-        enable_toilet?,
+        false,
         pid,
         other_ref,
         props.buffer
