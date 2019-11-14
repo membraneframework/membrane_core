@@ -108,7 +108,7 @@ defmodule Membrane.Core.Child.PadController do
 
   def enable_toilet(pad_ref, state) do
     %Pad.Data{input_buf: buf} = state.pads.data[pad_ref]
-    {:ok, new_buf} = InputBuffer.enable_toilet(buf)
+    new_buf = InputBuffer.enable_toilet(buf)
 
     Bunch.Struct.put_in(state, [:pads, :data, pad_ref, :input_buf], new_buf)
     ~> {:ok, &1}

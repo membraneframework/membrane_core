@@ -109,13 +109,8 @@ defmodule Membrane.Core.InputBuffer do
     |> send_demands(demand_pid, demand_pad)
   end
 
-  def enable_toilet(%__MODULE__{toilet?: false} = buf) do
-    new_buf = %{buf | toilet?: true}
-    {:ok, new_buf}
-  end
-
-  def enable_toilet(%__MODULE__{toilet?: true}) do
-    {:error, :already_enabled}
+  def enable_toilet(buf) do
+    %__MODULE__{buf | toilet?: true}
   end
 
   @spec store(t(), atom(), any()) :: {:ok, t()} | {:error, any()}

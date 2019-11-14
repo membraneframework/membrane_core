@@ -77,18 +77,17 @@ defmodule Membrane.Core.InputBufferSpec do
           |> described_module().enable_toilet()
         )
         |> to(
-          eq({:ok,
-           %InputBuffer{
-             name: name(),
-             # As toilet is always off after init, demand will be sent and ignored
-             demand: 0,
-             preferred_size: preferred_size(),
-             min_demand: min_demand(),
-             toilet_props: %{warn: warn_size(), fail: fail_size()},
-             toilet?: true,
-             metric: expected_metric(),
-             q: Qex.new()
-           }})
+          eq(%InputBuffer{
+            name: name(),
+            # As toilet is always off after init, demand will be sent and ignored
+            demand: 0,
+            preferred_size: preferred_size(),
+            min_demand: min_demand(),
+            toilet_props: %{warn: warn_size(), fail: fail_size()},
+            toilet?: true,
+            metric: expected_metric(),
+            q: Qex.new()
+          })
         )
 
         refute_received Message.new(:demand, _)
