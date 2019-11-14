@@ -89,6 +89,10 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     PadController.handle_linking_finished(state)
   end
 
+  defp do_handle_message(Message.new(:push_mode_announcment, [], for_pad: ref), :info, state) do
+    PadController.enable_toilet(ref, state)
+  end
+
   defp do_handle_message(
          Message.new(:handle_link, [pad_ref, pad_direction, pid, other_ref, other_info, props]),
          :call,

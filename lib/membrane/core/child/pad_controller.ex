@@ -91,11 +91,30 @@ defmodule Membrane.Core.Child.PadController do
       if bin? do
         LinkingBuffer.flush_all_public_pads(state)
       else
+        send_push_mode_announcments(state)
         state
       end
       |> clear_currently_linking()
       ~> {:ok, &1}
     end
+  end
+
+  defp send_push_mode_announcments(state) do
+    state.pads.data
+    |> Map.values()
+    |> Enum.filter(&(&1.mode == :push))
+    |> IO.inspect(label: "[#{inspect(self)}] Sending to these")
+    |> Enum.each(&Message.send(&1.pid, :push_mode_announcment, [], for_pad: &1.other_ref))
+  end
+
+  def enable_toilet(pad_ref, state) do
+    IO.puts("[#{inspect(self)}] I enable toilet for #{inspect(pad_ref)}")
+
+    %Pad.Data{input_buf: buf} = state.pads.data[pad_ref]
+    {:ok, new_buf} = InputBuffer.enable_toilet(buf)
+
+    Bunch.Struct.put_in(state, [:pads, :data, pad_ref, :input_buf], new_buf)
+    ~> {:ok, &1}
   end
 
   @doc """
@@ -267,7 +286,9 @@ defmodule Membrane.Core.Child.PadController do
 
     Message.send(pid, :demand_unit, [demand_unit, other_ref])
 
-    enable_toilet? = other_info.mode == :push
+    # Toilet will be enabled with a message
+    # other_info.mode == :push
+    enable_toilet? = false
 
     input_buf =
       InputBuffer.init(

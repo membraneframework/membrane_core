@@ -229,7 +229,7 @@ defmodule Membrane.Bin do
   # This forwards all :demand, :caps, :buffer, :event
   # messages to an appropriate element.
   def handle_info(Message.new(type, _args, for_pad: pad) = msg, state)
-      when type in [:demand, :caps, :buffer, :event] do
+      when type in [:demand, :caps, :buffer, :event, :push_mode_announcment] do
     outgoing_pad =
       pad
       |> Pad.get_corresponding_bin_pad()

@@ -29,7 +29,8 @@ defmodule Membrane.Core.InputBuffer do
           demand: non_neg_integer(),
           min_demand: pos_integer(),
           metric: module(),
-          toilet: %{:warn => pos_integer, :fail => pos_integer}
+          toilet: %{:warn => pos_integer, :fail => pos_integer},
+          toilet_props: %{:warn => pos_integer, :fail => pos_integer}
         }
 
   defstruct name: :input_buf,
@@ -39,7 +40,8 @@ defmodule Membrane.Core.InputBuffer do
             demand: nil,
             min_demand: nil,
             metric: nil,
-            toilet: false
+            toilet: false,
+            toilet_props: nil
 
   @typedoc """
   Properties that can be passed when creating new InputBuffer
@@ -86,6 +88,7 @@ defmodule Membrane.Core.InputBuffer do
           Pad.ref_t(),
           props_t
         ) :: t()
+  # TODO don't allow to enable toilet on init
   def init(name, demand_unit, enable_toilet?, demand_pid, demand_pad, props) do
     metric = Buffer.Metric.from_unit(demand_unit)
     preferred_size = props[:preferred_size] || metric.input_buf_preferred_size
@@ -108,9 +111,18 @@ defmodule Membrane.Core.InputBuffer do
       min_demand: min_demand,
       demand: preferred_size,
       metric: metric,
-      toilet: toilet
+      toilet: toilet,
+      toilet_props: %{
+        warn: props[:warn_size] || preferred_size * 2,
+        fail: props[:fail_size] || preferred_size * 4
+      }
     }
     |> send_demands(demand_pid, demand_pad)
+  end
+
+  def enable_toilet(%__MODULE__{toilet_props: props} = buf) do
+    new_buf = %{buf | toilet: props}
+    {:ok, new_buf}
   end
 
   @spec store(t(), atom(), any()) :: {:ok, t()} | {:error, any()}
