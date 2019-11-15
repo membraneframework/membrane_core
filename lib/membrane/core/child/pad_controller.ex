@@ -39,7 +39,7 @@ defmodule Membrane.Core.Child.PadController do
     with :ok <- validate_pad_being_linked!(pad_ref, direction, info, state),
          :ok <- validate_dir_and_mode!({pad_ref, info}, {other_ref, other_info}) do
       props = parse_pad_props!(props, pad_name, state)
-      state = init_pad_data(info, pad_ref, pid, other_ref, other_info, props, state)
+      state = init_pad_data(info, pad_ref, pid, other_ref, props, state)
 
       state =
         case Pad.availability_mode(info.availability) do
@@ -107,13 +107,8 @@ defmodule Membrane.Core.Child.PadController do
   end
 
   @spec enable_toilet(Pad.ref_t(), state_t()) :: {:ok, state_t()}
-  def enable_toilet(pad_ref, state) do
-    %Pad.Data{input_buf: buf} = state.pads.data[pad_ref]
-    new_buf = InputBuffer.enable_toilet(buf)
-
-    Bunch.Struct.put_in(state, [:pads, :data, pad_ref, :input_buf], new_buf)
-    ~> {:ok, &1}
-  end
+  def enable_toilet(pad_ref, state),
+    do: PadModel.update_data(state, pad_ref, [:input_buf], &{:ok, InputBuffer.enable_toilet(&1)})
 
   @doc """
   Handles situation where pad has been unlinked (e.g. when connected element has been removed from pipline)
@@ -235,11 +230,10 @@ defmodule Membrane.Core.Child.PadController do
           Pad.ref_t(),
           pid,
           Pad.ref_t(),
-          PadModel.pad_info_t(),
           parsed_pad_props_t,
           state_t()
         ) :: state_t()
-  defp init_pad_data(info, ref, pid, other_ref, other_info, props, state) do
+  defp init_pad_data(info, ref, pid, other_ref, props, state) do
     data =
       info
       |> Map.merge(%{
@@ -253,7 +247,7 @@ defmodule Membrane.Core.Child.PadController do
       })
 
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
-    data = data |> Map.merge(init_pad_mode_data(data, other_info, props, state))
+    data = data |> Map.merge(init_pad_mode_data(data, props, state))
     data = struct!(Pad.Data, data)
     state |> Bunch.Access.put_in([:pads, :data, ref], data)
   end
@@ -263,13 +257,11 @@ defmodule Membrane.Core.Child.PadController do
 
   @spec init_pad_mode_data(
           map(),
-          PadModel.pad_info_t(),
           parsed_pad_props_t,
           state_t()
         ) :: map()
   defp init_pad_mode_data(
          %{mode: :pull, direction: :input} = data,
-         _other_info,
          _props,
          %Membrane.Core.Bin.State{}
        ) do
@@ -279,7 +271,7 @@ defmodule Membrane.Core.Child.PadController do
     %{}
   end
 
-  defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, _other_info, props, state) do
+  defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, props, state) do
     %{pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
 
     Message.send(pid, :demand_unit, [demand_unit, other_ref])
@@ -296,10 +288,10 @@ defmodule Membrane.Core.Child.PadController do
     %{input_buf: input_buf, demand: 0}
   end
 
-  defp init_pad_mode_data(%{mode: :pull, direction: :output}, _other_info, _props, _state),
+  defp init_pad_mode_data(%{mode: :pull, direction: :output}, _props, _state),
     do: %{demand: 0}
 
-  defp init_pad_mode_data(%{mode: :push}, _other_info, _props, _state), do: %{}
+  defp init_pad_mode_data(%{mode: :push}, _props, _state), do: %{}
 
   @spec add_to_currently_linking(Pad.ref_t(), state_t()) :: state_t()
   defp add_to_currently_linking(ref, state),

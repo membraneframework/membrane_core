@@ -99,7 +99,6 @@ defmodule Membrane.Core.InputBuffer do
       min_demand: min_demand,
       demand: preferred_size,
       metric: metric,
-      # Toilet can be enabled with `enable_toilet/1`
       toilet?: false,
       toilet_props: %{
         warn: props[:warn_size] || preferred_size * 2,
