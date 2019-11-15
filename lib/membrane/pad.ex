@@ -152,7 +152,7 @@ defmodule Membrane.Pad do
                   (term |> is_tuple and term |> tuple_size == 3 and term |> elem(0) == __MODULE__ and
                      term |> elem(1) |> is_atom)
 
-  defguardp is_public_name(term) when is_atom(term)
+  defguard is_public_name(term) when is_atom(term)
 
   defguardp is_private_name(term)
             when tuple_size(term) == 2 and elem(term, 0) == :private and is_atom(elem(term, 1))

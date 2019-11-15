@@ -126,7 +126,7 @@ defmodule Membrane.Support.Bin.TestBins do
         link_bin_input(pad) |> to(:filter1)
       ]
 
-      {{:ok, spec: %ParentSpec{links: links}}, state}
+      {{:ok, notify: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
     end
 
     def handle_pad_added(Pad.ref(:output, _) = pad, _ctx, state) do
@@ -134,7 +134,7 @@ defmodule Membrane.Support.Bin.TestBins do
         link(:filter2) |> to_bin_output(pad)
       ]
 
-      {{:ok, spec: %ParentSpec{links: links}}, state}
+      {{:ok, notify: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
     end
   end
 

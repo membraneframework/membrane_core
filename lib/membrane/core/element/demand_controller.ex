@@ -18,6 +18,19 @@ defmodule Membrane.Core.Element.DemandController do
   @spec handle_demand(Pad.ref_t(), non_neg_integer, State.t()) ::
           State.stateful_try_t()
   def handle_demand(pad_ref, size, state) do
+    if ignore?(pad_ref, state) do
+      {:ok, state}
+    else
+      do_handle_demand(pad_ref, size, state)
+    end
+  end
+
+  @spec ignore?(Pad.ref_t(), State.t()) :: boolean()
+  defp ignore?(pad_ref, state), do: state.pads.data[pad_ref].mode == :push
+
+  @spec do_handle_demand(Pad.ref_t(), non_neg_integer, State.t()) ::
+          State.stateful_try_t()
+  defp do_handle_demand(pad_ref, size, state) do
     PadModel.assert_data(state, pad_ref, %{direction: :output})
 
     {total_size, state} =

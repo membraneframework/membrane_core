@@ -19,7 +19,6 @@ defmodule Membrane.Core.InputBufferSpec do
     let :warn_size, do: 200
     let :fail_size, do: 400
     let :min_demand, do: 10
-    let :toilet, do: false
     let :demand_unit, do: :bytes
     let :demand_pid, do: self()
     let :linked_output_ref, do: :output_pad_ref
@@ -38,7 +37,6 @@ defmodule Membrane.Core.InputBufferSpec do
         described_module().init(
           name(),
           demand_unit(),
-          toilet(),
           demand_pid(),
           linked_output_ref(),
           props()
@@ -50,7 +48,8 @@ defmodule Membrane.Core.InputBufferSpec do
           demand: 0,
           preferred_size: preferred_size(),
           min_demand: min_demand(),
-          toilet: toilet(),
+          toilet?: false,
+          toilet_props: %{warn: warn_size(), fail: fail_size()},
           metric: expected_metric(),
           q: Qex.new()
         })
@@ -61,8 +60,8 @@ defmodule Membrane.Core.InputBufferSpec do
       assert_received Message.new(:demand, ^expected_size, for_pad: ^pad_ref)
     end
 
-    context "if toilet is not false" do
-      let :toilet, do: true
+    context "if toilet is enabled it is true" do
+      let :toilet?, do: true
 
       it "should not send the demand" do
         flush()
@@ -71,19 +70,21 @@ defmodule Membrane.Core.InputBufferSpec do
           described_module().init(
             name(),
             demand_unit(),
-            toilet(),
             demand_pid(),
             linked_output_ref(),
             props()
           )
+          |> described_module().enable_toilet()
         )
         |> to(
           eq(%InputBuffer{
             name: name(),
-            demand: preferred_size(),
+            # As toilet is always off after init, demand will be sent and ignored
+            demand: 0,
             preferred_size: preferred_size(),
             min_demand: min_demand(),
-            toilet: %{warn: warn_size(), fail: fail_size()},
+            toilet_props: %{warn: warn_size(), fail: fail_size()},
+            toilet?: true,
             metric: expected_metric(),
             q: Qex.new()
           })

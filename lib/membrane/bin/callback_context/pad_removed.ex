@@ -1,6 +1,6 @@
-defmodule Membrane.Element.CallbackContext.PadRemoved do
+defmodule Membrane.Bin.CallbackContext.PadRemoved do
   @moduledoc """
-  Structure representing a context that is passed to the element
+  Structure representing a context that is passed to the bin
   when a dynamic pad is removed
   """
   use Membrane.CallbackContext,

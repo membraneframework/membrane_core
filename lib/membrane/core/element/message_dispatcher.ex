@@ -73,7 +73,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     LifecycleController.prepare_shutdown(state)
   end
 
-  # Sent by `Membrane.Core.Element.ActionHandler.handle_demand`, check there for
+  # Sent by `Membrane.Core.Element.DemandHandler.handle_delayed_demands`, check there for
   # more information
   defp do_handle_message(Message.new(:invoke_supply_demand, pad_ref), :info, state) do
     DemandHandler.supply_demand(pad_ref, state)
@@ -87,6 +87,10 @@ defmodule Membrane.Core.Element.MessageDispatcher do
 
   defp do_handle_message(Message.new(:linking_finished), :call, state) do
     PadController.handle_linking_finished(state)
+  end
+
+  defp do_handle_message(Message.new(:push_mode_announcment, [], for_pad: ref), :info, state) do
+    PadController.enable_toilet(ref, state)
   end
 
   defp do_handle_message(

@@ -3,6 +3,6 @@ defmodule Membrane.Element.CallbackContext.Demand do
   Structure representing a context that is passed to the element
   when processing incoming demand.
   """
-  use Membrane.Element.CallbackContext,
+  use Membrane.CallbackContext,
     incoming_demand: non_neg_integer()
 end

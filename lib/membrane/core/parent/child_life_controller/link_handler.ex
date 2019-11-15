@@ -38,8 +38,28 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
            |> Parent.ChildrenModel.get_children()
            |> Bunch.Enum.try_each(fn {_name, %{pid: pid}} ->
              pid |> Message.call(:linking_finished, [])
-           end),
-         do: {:ok, state}
+           end) do
+      links
+      |> Enum.reduce(state, &flush_linking_buffer/2)
+      ~> {:ok, &1}
+    end
+  end
+
+  defp flush_linking_buffer(%Link{from: from, to: to}, state) do
+    state
+    |> flush_linking_buffer_for_endpoint(from)
+    |> flush_linking_buffer_for_endpoint(to)
+  end
+
+  defp flush_linking_buffer_for_endpoint(state, %Endpoint{
+         child: {Membrane.Bin, :itself},
+         pad_ref: pad
+       }) do
+    Bin.LinkingBuffer.flush_for_pad(pad, state)
+  end
+
+  defp flush_linking_buffer_for_endpoint(state, _) do
+    state
   end
 
   @spec resolve_endpoint(Endpoint.t(), State.t()) ::
@@ -136,9 +156,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
              this.pad_props,
              state
            ) do
-      Bin.LinkingBuffer.flush_for_pad(state.linking_buffer, this.pad_ref, state)
-      ~> %{state | linking_buffer: &1}
-      ~> {{:ok, info}, &1}
+      {{:ok, info}, state}
     end
   end
 
