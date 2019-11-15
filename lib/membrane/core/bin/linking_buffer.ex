@@ -31,16 +31,20 @@ defmodule Membrane.Core.Bin.LinkingBuffer do
   def store_or_send(msg, sender_pad, bin_state) do
     buf = bin_state.linking_buffer
 
-    case PadModel.get_data(bin_state, sender_pad) do
-      {:ok, %{pid: dest_pid, other_ref: other_ref}} ->
-        send(dest_pid, Message.set_for_pad(msg, other_ref))
-        bin_state
-
-      {:error, {:unknown_pad, _}} ->
+    with {:ok, %{pid: dest_pid, other_ref: other_ref}} <-
+           PadModel.get_data(bin_state, sender_pad),
+         false <- currently_linking?(sender_pad, bin_state) do
+      send(dest_pid, Message.set_for_pad(msg, other_ref))
+      bin_state
+    else
+      _ ->
         new_buf = Map.update(buf, sender_pad, [msg], &[msg | &1])
         %{bin_state | linking_buffer: new_buf}
     end
   end
+
+  defp currently_linking?(pad, state),
+    do: pad in state.pads.dynamic_currently_linking
 
   @doc """
   Sends messages stored for a given outpud pad.
