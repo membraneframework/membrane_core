@@ -8,7 +8,7 @@ defmodule Membrane.Pipeline do
   another, and process it in different ways.
 
   To create a pipeline, use the `__using__/1` macro and implement callbacks
-  of `Membrane.Pipeline` behaviour. For details on istantiating and linking
+  of `Membrane.Pipeline` behaviour. For details on instantiating and linking
   children, see `Membrane.ParentSpec`.
   """
 
