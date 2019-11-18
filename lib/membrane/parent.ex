@@ -18,24 +18,24 @@ defmodule Membrane.Parent do
 
   @doc """
   Callback invoked when bin transition from `:stopped` to `:prepared` state has finished,
-  that is all of its elements are prepared to enter `:playing` state.
+  that is all of its children are prepared to enter `:playing` state.
   """
   @callback handle_stopped_to_prepared(state :: internal_state_t()) :: callback_return_t
 
   @doc """
   Callback invoked when bin transition from `:playing` to `:prepared` state has finished,
-  that is all of its elements are prepared to be stopped.
+  that is all of its children are prepared to be stopped.
   """
   @callback handle_playing_to_prepared(state :: internal_state_t()) :: callback_return_t
 
   @doc """
-  Callback invoked when bin is in `:playing` state, i.e. all its elements
+  Callback invoked when bin is in `:playing` state, i.e. all its children
   are in this state.
   """
   @callback handle_prepared_to_playing(state :: internal_state_t()) :: callback_return_t
 
   @doc """
-  Callback invoked when bin is in `:playing` state, i.e. all its elements
+  Callback invoked when bin is in `:playing` state, i.e. all its children
   are in this state.
   """
   @callback handle_prepared_to_stopped(state :: internal_state_t()) :: callback_return_t
@@ -81,7 +81,7 @@ defmodule Membrane.Parent do
   `t:Membrane.Core.Parent.Action.spec_action_t/0` action.
   """
   @callback handle_spec_started(
-              elements :: [Child.name_t()],
+              children :: [Child.name_t()],
               state :: internal_state_t()
             ) ::
               callback_return_t

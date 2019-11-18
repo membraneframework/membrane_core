@@ -3,9 +3,13 @@ defmodule Membrane.Pipeline do
   Module containing functions for constructing and supervising pipelines.
 
   Pipelines are units that make it possible to instantiate, link and manage
-  elements in convenient way (actually elements should always be used inside
-  a pipeline). Linking elements together enables them to pass data to one another,
-  and process it in different ways.
+  elements and bins in convenient way (actually they should always be used inside
+  a pipeline). Linking pipeline children together enables them to pass data to one
+  another, and process it in different ways.
+
+  To create a pipeline, use the `__using__/1` macro and implement callbacks
+  of `Membrane.Pipeline` behaviour. For details on istantiating and linking
+  children, see `Membrane.ParentSpec`.
   """
 
   alias Membrane.{
@@ -42,7 +46,7 @@ defmodule Membrane.Pipeline do
 
   @doc """
   Callback invoked on initialization of pipeline process. It should parse options
-  and initialize element internal state. Internally it is invoked inside
+  and initialize pipeline's internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
   """
   @callback handle_init(options :: pipeline_options_t) :: CallbackHandler.callback_return_t()

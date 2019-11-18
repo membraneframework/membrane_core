@@ -1,6 +1,6 @@
 defmodule Membrane.Core.Child.PadsSpecs do
   @moduledoc false
-  # Functions parsing element pads specifications, generating functions and docs
+  # Functions parsing element and bin pads specifications, generating functions and docs
   # based on them.
   use Bunch
   alias Bunch.Type

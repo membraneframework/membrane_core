@@ -32,7 +32,11 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
         }
   def setup_syncs(children, :sinks) do
     sinks =
-      children |> Enum.filter(&(&1.module.membrane_element_type == :sink)) |> Enum.map(& &1.name)
+      children
+      |> Enum.filter(
+        &(Membrane.Element.element?(&1.module) and &1.module.membrane_element_type == :sink)
+      )
+      |> Enum.map(& &1.name)
 
     setup_syncs(children, [sinks])
   end
