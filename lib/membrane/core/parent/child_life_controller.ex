@@ -41,13 +41,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @spec handle_forward(Membrane.Child.name_t(), any, State.t()) ::
           {:ok | {:error, any}, State.t()}
-  def handle_forward(element_name, message, state) do
-    with {:ok, %{pid: pid}} <- state |> Parent.ChildrenModel.get_child_data(element_name) do
+  def handle_forward(child_name, message, state) do
+    with {:ok, %{pid: pid}} <- state |> Parent.ChildrenModel.get_child_data(child_name) do
       send(pid, message)
       {:ok, state}
     else
       {:error, reason} ->
-        {{:error, {:cannot_forward_message, [element: element_name, message: message], reason}},
+        {{:error, {:cannot_forward_message, [element: child_name, message: message], reason}},
          state}
     end
   end

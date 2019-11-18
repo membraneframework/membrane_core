@@ -1,12 +1,12 @@
 defmodule Membrane.Parent.Action do
   @moduledoc """
-  Common types' definitions for bin and element.
+  Common types' definitions for bin and pipeline.
   """
 
   alias Membrane.{Child, Notification, ParentSpec}
 
   @typedoc """
-  Action that sends a message to an element identified by name.
+  Action that sends a message to a child identified by name.
   """
   @type forward_action_t :: {:forward, {Child.name_t(), Notification.t()}}
 

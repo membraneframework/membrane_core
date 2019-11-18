@@ -1,6 +1,6 @@
 defmodule Membrane.Core.Child.PadSpecHandler do
   @moduledoc false
-  # Module parsing pads specifications in elements.
+  # Module parsing pads specifications in elements and bins.
 
   alias Membrane.{Core, Pad}
   alias Core.{Bin, Element}
@@ -12,7 +12,7 @@ defmodule Membrane.Core.Child.PadSpecHandler do
   @private_input_pad_spec_keys [:demand_unit]
 
   @doc """
-  Initializes pads info basing on element's pads specifications.
+  Initializes pads info basing on element's or bin's pads specifications.
   """
   @spec init_pads(Element.State.t() | Bin.State.t()) ::
           Element.State.t() | Bin.State.t()

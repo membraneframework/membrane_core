@@ -1,7 +1,7 @@
 defmodule Membrane.Pad do
   @moduledoc """
-  Pads are units defined by each element, allowing it to be linked with another
-  elements. This module consists of pads typespecs and utils.
+  Pads are units defined by elements and bins, allowing them to be linked with their
+  siblings. This module consists of pads typespecs and utils.
 
   Each pad is described by its name, direction, availability, mode and possible caps.
   For pads to be linkable, these properties have to be compatible. For more
@@ -89,9 +89,8 @@ defmodule Membrane.Pad do
 
   @typedoc """
   For bins there are exactly the same options for both directions.
-  The only difference is that `:demand_unit` option specified in
-  bin will be used to make demands from bin's elements connected
-  to its input pad.
+  Demand unit is derived from the first element inside the bin linked to the
+  given input.
   """
   @type bin_spec_t :: input_spec_t
 

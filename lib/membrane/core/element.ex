@@ -1,7 +1,8 @@
 defmodule Membrane.Core.Element do
   @moduledoc false
   # Module containing functions spawning, shutting down, inspecting and controlling
-  # playback of elements. These functions are usually called by `Membrane.Pipeline`.
+  # playback of elements. These functions are usually called by `Membrane.Pipeline`
+  # or `Membrane.Bin`.
   #
   # Modules in this namespace are responsible for managing elements: handling incoming
   # data, executing callbacks and evaluating actions. These modules can be divided

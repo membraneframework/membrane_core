@@ -3,7 +3,7 @@ defmodule Membrane.CallbackContext do
   Parent module for all contexts passed to callbacks.
 
   The idea of context is to provide access to commonly used information without
-  holding it in elements state. Context differs depending on callback.
+  forcing user to hold it in state. Context differs depending on callback.
   """
 
   alias Membrane.Pad
