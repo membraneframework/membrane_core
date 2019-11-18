@@ -247,6 +247,12 @@ defmodule Membrane.Bin do
   end
 
   @impl GenServer
+  def handle_info(Message.new(:handle_unlink, pad_ref), state) do
+    PadController.handle_pad_removed(pad_ref, state)
+    |> noreply()
+  end
+
+  @impl GenServer
   def handle_info(message, state) do
     Parent.MessageDispatcher.handle_message(message, state)
   end
