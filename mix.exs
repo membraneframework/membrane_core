@@ -81,6 +81,7 @@ defmodule Membrane.Mixfile do
         Testing: [~r/^Membrane.Testing.*/],
         Utils: [
           ~r/^Membrane.Clock$/,
+          ~r/^Membrane.CallbackContext$/,
           ~r/^Membrane.Sync$/,
           ~r/^Membrane.Time.*/,
           ~r/^Membrane.Pad.*/,
