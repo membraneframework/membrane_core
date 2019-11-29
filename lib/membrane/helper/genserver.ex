@@ -4,10 +4,12 @@ defmodule Membrane.Helper.GenServer do
   use Membrane.Log, tags: :core
 
   def noreply({:ok, new_state}), do: {:noreply, new_state}
-  def noreply({:ok, new_state}, _old_state), do: {:noreply, new_state}
 
   def noreply({:stop, _reason, _new_state} = res), do: res
+
   def noreply({:stop, _reason, _new_state} = res, _old_state), do: res
+
+  def noreply({:ok, new_state}, _old_state), do: {:noreply, new_state}
 
   def noreply({{:error, reason}, new_state}, old_state) do
     warn_error(
