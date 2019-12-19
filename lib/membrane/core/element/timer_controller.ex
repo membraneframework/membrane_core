@@ -8,13 +8,26 @@ defmodule Membrane.Core.Element.TimerController do
   alias Membrane.Core.Element.{ActionHandler, State}
   alias Membrane.Element.CallbackContext
 
-  def start_timer(interval, clock, id, state) do
+  def start_timer(id, interval, clock, state) do
     if state.synchronization.timers |> Map.has_key?(id) do
       {{:error, {:timer_already_exists, id: id}}, state}
     else
       clock |> Clock.subscribe()
       timer = Timer.start(id, interval, clock)
       state |> Bunch.Access.put_in([:synchronization, :timers, id], timer) ~> {:ok, &1}
+    end
+  end
+
+  def timer_interval(id, interval, state) do
+    with {:ok, timer} <- state.synchronization.timers |> Map.fetch(id) do
+      Bunch.Access.put_in(
+        state,
+        [:synchronization, :timers, id],
+        Timer.set_interval(timer, interval)
+      )
+      ~> {:ok, &1}
+    else
+      :error -> {{:error, {:unknown_timer, id}}, state}
     end
   end
 

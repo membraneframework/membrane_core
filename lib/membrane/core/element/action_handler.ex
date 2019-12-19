@@ -156,12 +156,16 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp do_handle_action({:start_timer, {id, interval, clock}}, _cb, _params, state) do
-    TimerController.start_timer(interval, clock, id, state)
+    TimerController.start_timer(id, interval, clock, state)
   end
 
   defp do_handle_action({:start_timer, {id, interval}}, cb, params, state) do
     clock = state.synchronization.parent_clock
     do_handle_action({:start_timer, {id, interval, clock}}, cb, params, state)
+  end
+
+  defp do_handle_action({:timer_interval, {id, interval}}, _cb, _params, state) do
+    TimerController.timer_interval(id, interval, state)
   end
 
   defp do_handle_action({:stop_timer, id}, _cb, _params, state) do

@@ -8,7 +8,7 @@ defmodule Membrane.Core.Timer do
   @type id_t :: any()
   @type t :: %__MODULE__{
           id: id_t,
-          interval: Time.t(),
+          interval: Time.t() | :wait,
           init_time: Time.t(),
           clock: Clock.t(),
           time_passed: Time.t(),
@@ -33,6 +33,10 @@ defmodule Membrane.Core.Timer do
     %__MODULE__{timer | ratio: ratio}
   end
 
+  def tick(%__MODULE__{interval: :wait} = timer) do
+    timer
+  end
+
   def tick(timer) do
     use Ratio
 
@@ -48,5 +52,13 @@ defmodule Membrane.Core.Timer do
     time = (init_time + ratio * time_passed) |> Ratio.floor() |> Time.to_milliseconds()
     timer_ref = Process.send_after(self(), Message.new(:timer_tick, id), time, abs: true)
     %__MODULE__{timer | time_passed: time_passed, timer_ref: timer_ref}
+  end
+
+  def set_interval(%__MODULE__{interval: :wait} = timer, interval) do
+    tick(%__MODULE__{timer | interval: interval})
+  end
+
+  def set_interval(timer, interval) do
+    %__MODULE__{timer | interval: interval}
   end
 end
