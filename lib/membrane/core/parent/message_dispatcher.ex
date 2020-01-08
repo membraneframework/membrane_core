@@ -8,8 +8,10 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
 
   require Message
 
-  @spec handle_message(Message.t(), Pipeline.State.t() | Bin.State.t()) ::
-          Type.stateful_try_t(any)
+  @type state :: Pipeline.State.t() | Bin.State.t()
+
+  @spec handle_message(Message.t(), state) ::
+          Type.stateful_try_t(state) | {:stop, reason :: :normal, state}
   def handle_message(
         Message.new(:playback_state_changed, [pid, new_playback_state]),
         state
@@ -22,7 +24,13 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   end
 
   def handle_message(Message.new(:stop_and_terminate), state) do
-    LifecycleController.handle_stop_and_terminate(state)
+    case LifecycleController.handle_stop_and_terminate(state) do
+      {:ok, :stop} ->
+        {:stop, :normal, state}
+
+      e ->
+        e
+    end
   end
 
   def handle_message(Message.new(:notification, [from, notification]), state) do
