@@ -238,6 +238,16 @@ defmodule Membrane.Time do
     def unquote(to_fun_name)(time) when is_t(time) do
       round(time / unquote(unit.duration))
     end
+
+    as_fun_name = :"as_#{unit.plural}"
+
+    @doc """
+    Returns time in #{unit.plural}, represented as a rational number.
+    """
+    @spec unquote(as_fun_name)(t) :: integer | Ratio.t()
+    def unquote(as_fun_name)(time) when is_t(time) do
+      Ratio./(time, unquote(unit.duration))
+    end
   end)
 
   defp best_unit(time) do

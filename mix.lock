@@ -20,7 +20,7 @@
   "numbers": {:hex, :numbers, "5.1.1", "1277dbee5dc73b0e1608bd6d318bd8338cbcba5b68cade65f24e4bb402676b5c", [:mix], [{:coerce, "~> 1.0", [hex: :coerce, repo: "hexpm", optional: false]}, {:decimal, "~> 1.5", [hex: :decimal, repo: "hexpm", optional: true]}], "hexpm"},
   "parse_trans": {:hex, :parse_trans, "3.3.0", "09765507a3c7590a784615cfd421d101aec25098d50b89d7aa1d66646bc571c1", [:rebar3], [], "hexpm"},
   "qex": {:hex, :qex, "0.5.0", "5a3a9becf67d4006377c4c247ffdaaa8ae5b3634a0caadb788dc24d6125068f4", [:mix], [], "hexpm"},
-  "ratio": {:hex, :ratio, "2.2.2", "c26013b9af7d03cf451bbe11608046e4c9d06e127f5e387668ae97163e75a6dd", [:mix], [{:numbers, "~> 5.1.0", [hex: :numbers, repo: "hexpm", optional: false]}], "hexpm"},
+  "ratio": {:hex, :ratio, "2.3.0", "71e4c7ca7b9959c8d4ada7dd40a05e96d782ef5cf7ac2a6f4ebb8a3c66a991c0", [:mix], [{:numbers, "~> 5.1.0", [hex: :numbers, repo: "hexpm", optional: false]}], "hexpm"},
   "ssl_verify_fun": {:hex, :ssl_verify_fun, "1.1.5", "6eaf7ad16cb568bb01753dbbd7a95ff8b91c7979482b95f38443fe2c8852a79b", [:make, :mix, :rebar3], [], "hexpm"},
   "unicode_util_compat": {:hex, :unicode_util_compat, "0.4.1", "d869e4c68901dd9531385bb0c8c40444ebf624e60b6962d95952775cac5e90cd", [:rebar3], [], "hexpm"},
 }
