@@ -26,10 +26,13 @@ defmodule Membrane.Time do
     %{plural: :nanoseconds, singular: :nanosecond, abbrev: "ns", duration: 1}
   ]
 
-  @doc """
-  Checks whether value is Membrane.Time.t
-  """
+  @deprecated "Use `is_time/1` instead"
   defguard is_t(value) when is_integer(value)
+
+  @doc """
+  Checks whether a value is `Membrane.Time.t`.
+  """
+  defguard is_time(value) when is_integer(value)
 
   @doc """
   Returns duration as a string with unit. Chosen unit is the biggest possible
@@ -47,7 +50,7 @@ defmodule Membrane.Time do
 
   """
   @spec pretty_duration(t) :: String.t()
-  def pretty_duration(time) when is_t(time) do
+  def pretty_duration(time) when is_time(time) do
     {time, unit} = time |> best_unit()
 
     "#{time} #{unit.abbrev}"
@@ -69,7 +72,7 @@ defmodule Membrane.Time do
 
   """
   @spec to_code(t) :: Macro.t()
-  def to_code(time) when is_t(time) do
+  def to_code(time) when is_time(time) do
     case best_unit(time) do
       {1, unit} ->
         quote do
@@ -87,7 +90,7 @@ defmodule Membrane.Time do
   Returns string representation of result of `to_code/1`.
   """
   @spec to_code_str(t) :: Macro.t()
-  def to_code_str(time) when is_t(time) do
+  def to_code_str(time) when is_time(time) do
     time |> to_code() |> Macro.to_string()
   end
 
@@ -156,7 +159,7 @@ defmodule Membrane.Time do
   Returns time as a iso8601 string.
   """
   @spec to_iso8601(t) :: String.t()
-  def to_iso8601(value) when is_t(value) do
+  def to_iso8601(value) when is_time(value) do
     value |> to_datetime |> DateTime.to_iso8601()
   end
 
@@ -172,7 +175,7 @@ defmodule Membrane.Time do
   Returns time as a `DateTime` struct. TimeZone is set to UTC.
   """
   @spec to_datetime(t) :: DateTime.t()
-  def to_datetime(value) when is_t(value) do
+  def to_datetime(value) when is_time(value) do
     DateTime.from_unix!(value |> nanoseconds, :nanosecond)
   end
 
@@ -202,7 +205,7 @@ defmodule Membrane.Time do
   Returns time in VM native units. Rounded using Kernel.round/1.
   """
   @spec to_native_units(t) :: integer
-  def to_native_units(value) when is_t(value) do
+  def to_native_units(value) when is_time(value) do
     round(value / native_unit())
   end
 
@@ -235,7 +238,7 @@ defmodule Membrane.Time do
     Returns time in #{unit.plural}. Rounded using `Kernel.round/1`.
     """
     @spec unquote(to_fun_name)(t) :: integer
-    def unquote(to_fun_name)(time) when is_t(time) do
+    def unquote(to_fun_name)(time) when is_time(time) do
       round(time / unquote(unit.duration))
     end
 
@@ -245,7 +248,7 @@ defmodule Membrane.Time do
     Returns time in #{unit.plural}, represented as a rational number.
     """
     @spec unquote(as_fun_name)(t) :: integer | Ratio.t()
-    def unquote(as_fun_name)(time) when is_t(time) do
+    def unquote(as_fun_name)(time) when is_time(time) do
       Ratio./(time, unquote(unit.duration))
     end
   end)
