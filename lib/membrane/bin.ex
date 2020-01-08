@@ -249,7 +249,6 @@ defmodule Membrane.Bin do
   @impl GenServer
   def handle_info(message, state) do
     Parent.MessageDispatcher.handle_message(message, state)
-    |> noreply(state)
   end
 
   @impl GenServer
