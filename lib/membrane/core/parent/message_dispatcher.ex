@@ -13,7 +13,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   @type state :: Pipeline.State.t() | Bin.State.t()
 
   @spec handle_message(Message.t(), state) ::
-          Type.stateful_try_t(state) | {:stop, reason :: :normal, state}
+          Membrane.Helper.GenServer.genserver_return_t() | {:stop, reason :: :normal, state}
   def handle_message(
         Message.new(:playback_state_changed, [pid, new_playback_state]),
         state
