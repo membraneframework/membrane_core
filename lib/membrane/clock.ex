@@ -210,7 +210,7 @@ defmodule Membrane.Clock do
       raise "Clock update time cannot be negative, received: #{inspect(till_next)}"
     end
 
-    till_next = till_next * Time.millisecond(1)
+    till_next = till_next * Time.millisecond()
 
     case state.init_time do
       nil -> %{state | init_time: state.time_provider.(), till_next: till_next}
