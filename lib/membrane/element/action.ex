@@ -85,7 +85,7 @@ defmodule Membrane.Element.Action do
   @type demand_size_t :: pos_integer | (pos_integer() -> non_neg_integer())
 
   @typedoc """
-  Executes `c:Membrane.WithOutputPads.handle_demand/5` callback
+  Executes `c:Membrane.Element.WithOutputPads.handle_demand/5` callback
   for the given pad if its demand is greater than 0.
 
   The pad must have output direction and work in pull mode.
@@ -123,19 +123,19 @@ defmodule Membrane.Element.Action do
   event occurs on the output pad).
 
   Used by default implementations of
-  `c:Membrane.WithInputPads.handle_caps/4` and
+  `c:Membrane.Element.WithInputPads.handle_caps/4` and
   `c:Membrane.Element.Base.handle_event/4` callbacks in filter.
 
   Allowed only when _all_ below conditions are met:
   - element is filter,
   - callback is `c:Membrane.Filter.handle_process_list/4`,
-  `c:Membrane.WithInputPads.handle_caps/4`
+  `c:Membrane.Element.WithInputPads.handle_caps/4`
   or `c:Membrane.Element.Base.handle_event/4`,
   - playback state is valid for sending buffer, caps or event action
   respectively.
 
   Keep in mind that `c:Membrane.Filter.handle_process_list/4` can only
-  forward buffers, `c:Membrane.WithInputPads.handle_caps/4` - caps
+  forward buffers, `c:Membrane.Element.WithInputPads.handle_caps/4` - caps
   and `c:Membrane.Element.Base.handle_event/4` - events.
   """
   @type forward_t :: {:forward, Buffer.t() | [Buffer.t()] | Caps.t() | Event.t() | :end_of_stream}
