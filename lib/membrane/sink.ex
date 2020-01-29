@@ -4,7 +4,7 @@ defmodule Membrane.Sink do
 
   Behaviours for sinks are specified, besides this place, in modules
   `Membrane.Element.Base`,
-  and `Membrane.WithInputPads`.
+  and `Membrane.Element.WithInputPads`.
 
   Sink elements can define only input pads. Job of a usual sink is to receive some
   data on such pad and consume it (write to a soundcard, send through TCP etc.).
