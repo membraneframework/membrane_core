@@ -164,7 +164,8 @@ defmodule Membrane.Core.Element.ActionHandler do
     do_handle_action({:start_timer, {id, interval, clock}}, cb, params, state)
   end
 
-  defp do_handle_action({:timer_interval, {id, interval}}, _cb, _params, state) do
+  defp do_handle_action({:timer_interval, {id, interval}}, cb, _params, state)
+       when interval != :no_interval or cb == :handle_tick do
     TimerController.timer_interval(id, interval, state)
   end
 

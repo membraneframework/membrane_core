@@ -3,7 +3,7 @@ defmodule Membrane.Clock do
   Clock is a Membrane utility that allows elements to measure time according to
   a particular clock, which can be e.g. a soundcard hardware clock.
 
-  Internally, Clock is a GenServer process that can receive _updates_ (see `t:update_t/0`),
+  Internally, Clock is a GenServer process that can receive _updates_ (see `t:update_message_t/0`),
   which are messages containing amount of time until the next update.
   For example, a sink playing audio to the sound card can send an update before
   each write to the sound card buffer (for practical reasons that can be done every
@@ -11,9 +11,9 @@ defmodule Membrane.Clock do
   the time passed, in practice the described approach turns out to be more convenient,
   as it simplifies the first update.
 
-  Basing on updates, Clock calculates a _ratio_ between a reference time and
+  Basing on updates, Clock calculates a `t:ratio_t/0` between a reference time and
   the time provided by the custom clock. The reference time can be configured with
-  `:time_provider` option. The ratio is broadcasted (see `t:ratio_t/0`)
+  `:time_provider` option. The ratio is broadcasted (see `t:ratio_message_t/0`)
   to _subscribers_ (see `subscribe/2`) - processes willing to synchronize to the
   custom clock. Subscribers can adjust their timers according to received ratio -
   timers started with `t:Membrane.Element.Action.start_timer_t/0` action in elements do it automatically.
@@ -34,10 +34,15 @@ defmodule Membrane.Clock do
   @type t :: pid
 
   @typedoc """
+  A ratio between a reference time and the time provided by the custom clock.
+  """
+  @type ratio_t :: Ratio.t() | non_neg_integer
+
+  @typedoc """
   Update message received by the Clock. It should contain the time till the next
   update.
   """
-  @type update_t ::
+  @type update_message_t ::
           {:membrane_clock_update,
            milliseconds ::
              non_neg_integer
@@ -48,7 +53,7 @@ defmodule Membrane.Clock do
   Ratio message sent by the Clock to all its subscribers. It contains the ratio
   of the custom clock time to the reference time.
   """
-  @type ratio_t :: {:membrane_clock_ratio, clock :: pid, Ratio.t()}
+  @type ratio_message_t :: {:membrane_clock_ratio, clock :: pid, ratio_t}
 
   @typedoc """
   Options accepted by `start_link/2` and `start/2` functions.
@@ -76,7 +81,7 @@ defmodule Membrane.Clock do
   end
 
   @doc """
-  Subscribes `pid` for receiving `t:ratio_t/0` messages from the clock.
+  Subscribes `pid` for receiving `t:ratio_message_t/0` messages from the clock.
 
   This function can be called multiple times from the same process. To unsubscribe,
   `unsubscribe/2` should be called the same amount of times. The subscribed pid
@@ -88,7 +93,7 @@ defmodule Membrane.Clock do
   end
 
   @doc """
-  Unsubscribes `pid` from receiving `t:ratio_t/0` messages from the clock.
+  Unsubscribes `pid` from receiving `t:ratio_message_t/0` messages from the clock.
 
   For unsubscription to take effect, `unsubscribe/2` should be called the same
   amount of times as `subscribe/2`.
