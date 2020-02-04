@@ -217,14 +217,14 @@ defmodule Membrane.Core.ElementTest do
 
   test "should update timer on each tick" do
     {:ok, clock} = Membrane.Clock.start_link()
-    {:ok, state} = Element.TimerController.start_timer(1000, clock, :timer, get_state())
+    {:ok, state} = Element.TimerController.start_timer(:timer, 1000, clock, get_state())
     assert {:noreply, state} = Element.handle_info(Message.new(:timer_tick, :timer), state)
     assert state.synchronization.timers.timer.time_passed == 2000
   end
 
   test "should update clock ratio" do
     {:ok, clock} = Membrane.Clock.start_link()
-    {:ok, state} = Element.TimerController.start_timer(1000, clock, :timer, get_state())
+    {:ok, state} = Element.TimerController.start_timer(:timer, 1000, clock, get_state())
 
     assert {:noreply, state} = Element.handle_info({:membrane_clock_ratio, clock, 123}, state)
 

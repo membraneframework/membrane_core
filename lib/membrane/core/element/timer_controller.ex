@@ -8,7 +8,9 @@ defmodule Membrane.Core.Element.TimerController do
   alias Membrane.Core.Element.{ActionHandler, State}
   alias Membrane.Element.CallbackContext
 
-  def start_timer(interval, clock, id, state) do
+  @spec start_timer(Timer.id_t(), Timer.interval_t(), Clock.t(), State.t()) ::
+          {:ok, State.t()} | {{:error, {:timer_already_exists, id: Timer.id_t()}}, State.t()}
+  def start_timer(id, interval, clock, state) do
     if state.synchronization.timers |> Map.has_key?(id) do
       {{:error, {:timer_already_exists, id: id}}, state}
     else
@@ -18,6 +20,23 @@ defmodule Membrane.Core.Element.TimerController do
     end
   end
 
+  @spec timer_interval(Timer.id_t(), Timer.interval_t(), State.t()) ::
+          {:ok, State.t()} | {{:error, {:unknown_timer, id: Timer.id_t()}}, State.t()}
+  def timer_interval(id, interval, state) do
+    with {:ok, timer} <- state.synchronization.timers |> Map.fetch(id) do
+      Bunch.Access.put_in(
+        state,
+        [:synchronization, :timers, id],
+        Timer.set_interval(timer, interval)
+      )
+      ~> {:ok, &1}
+    else
+      :error -> {{:error, {:unknown_timer, id}}, state}
+    end
+  end
+
+  @spec stop_timer(Timer.id_t(), State.t()) ::
+          {:ok, State.t()} | {{:error, {:unknown_timer, id: Timer.id_t()}}, State.t()}
   def stop_timer(id, state) do
     {timer, state} = state |> Bunch.Access.pop_in([:synchronization, :timers, id])
 
@@ -30,6 +49,7 @@ defmodule Membrane.Core.Element.TimerController do
     end
   end
 
+  @spec handle_tick(Timer.id_t(), State.t()) :: {:ok, State.t()} | {{:error, any}, State.t()}
   def handle_tick(timer_id, %State{} = state) do
     context = &CallbackContext.Tick.from_state/1
 
@@ -54,6 +74,7 @@ defmodule Membrane.Core.Element.TimerController do
     end
   end
 
+  @spec handle_clock_update(Timer.id_t(), Clock.ratio_t(), State.t()) :: {:ok, State.t()}
   def handle_clock_update(clock, ratio, state) do
     state
     |> update_in(

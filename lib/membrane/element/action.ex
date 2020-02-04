@@ -10,7 +10,7 @@ defmodule Membrane.Element.Action do
   do not return any actions) unless explicitly stated otherwise.
   """
 
-  alias Membrane.{Buffer, Caps, Clock, Event, Notification, Time}
+  alias Membrane.{Buffer, Caps, Clock, Event, Notification}
   alias Membrane.Pad
 
   @typedoc """
@@ -161,23 +161,46 @@ defmodule Membrane.Element.Action do
   Starts a timer that will invoke `c:Membrane.Element.Base.handle_tick/3` callback
   every `interval` according to the given `clock`.
 
-  If no clock is passed, pipeline clock is chosen. The timer's `id` is passed
-  to the `c:Membrane.Element.Base.handle_tick/3` callback and can be used for
-  stopping it (`t:stop_timer_t/0`).
+  The timer's `id` is passed to the `c:Membrane.Element.Base.handle_tick/3`
+  callback and can be used for changing its interval via `t:timer_interval_t/0`
+  or stopping it via `t:stop_timer_t/0`.
+
+  If `interval` is set to `:no_interval`, the timer won't issue any ticks until
+  the interval is set with `t:timer_interval_t/0` action.
+
+  If no `clock` is passed, pipeline clock is chosen.
 
   Timers use `Process.send_after/3` under the hood.
   """
   @type start_timer_t ::
           {:start_timer,
-           {id :: any, interval :: Time.t(), clock :: Clock.t()}
-           | {id :: any, interval :: Time.t()}}
+           {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval}
+           | {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval,
+              clock :: Clock.t()}}
+
+  @typedoc """
+  Changes interval of a timer started with `t:start_timer_t/0`.
+
+  Permitted only from `c:Membrane.Element.Base.handle_tick/3`, unless the interval
+  was previously set to `:no_interval`.
+
+  If the `interval` is `:no_interval`, the timer won't issue any ticks until
+  another `t:set_interval_t/0` action. Otherwise, the timer will issue ticks every
+  new `interval`. The next tick after interval change is scheduled at
+  `new_interval + previous_time`, where previous_time is the time of the latest
+  tick or the time of returning `t:start_timer_t/0` action if no tick has been
+  sent yet.
+  """
+  @type timer_interval_t ::
+          {:timer_interval,
+           {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval}}
 
   @typedoc """
   Stops a timer started with `t:start_timer_t/0` action.
 
   This action is atomic: stopping timer guarantees that no ticks will arrive from it.
   """
-  @type stop_timer_t :: {:stop_timer, id :: any}
+  @type stop_timer_t :: {:stop_timer, timer_id :: any}
 
   @typedoc """
   This action sets the latency for the element.
