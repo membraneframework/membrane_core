@@ -11,12 +11,12 @@ defmodule Membrane.Clock do
   the time passed, in practice the described approach turns out to be more convenient,
   as it simplifies the first update.
 
-  Basing on updates, Clock calculates a `t:ratio_t/0` between a reference time and
-  the time provided by the custom clock. The reference time can be configured with
-  `:time_provider` option. The ratio is broadcasted (see `t:ratio_message_t/0`)
-  to _subscribers_ (see `subscribe/2`) - processes willing to synchronize to the
-  custom clock. Subscribers can adjust their timers according to received ratio -
-  timers started with `t:Membrane.Element.Action.start_timer_t/0` action in elements do it automatically.
+  Basing on updates, Clock calculates the `t:ratio_t/0` of its time to the reference
+  time. The reference time can be configured with `:time_provider` option. The ratio
+  is broadcasted (see `t:ratio_message_t/0`) to _subscribers_ (see `subscribe/2`)
+  - processes willing to synchronize to the custom clock. Subscribers can adjust
+  their timers according to received ratio - timers started with
+  `t:Membrane.Element.Action.start_timer_t/0` action in elements do it automatically.
   Initial ratio is equal to 1, which means that if no updates are received,
   Clock is synchronized to the reference time.
 
@@ -34,7 +34,7 @@ defmodule Membrane.Clock do
   @type t :: pid
 
   @typedoc """
-  A ratio between a reference time and the time provided by the custom clock.
+  Ratio of the Clock time to the reference time.
   """
   @type ratio_t :: Ratio.t() | non_neg_integer
 

@@ -77,7 +77,7 @@ defmodule Membrane.Integration.SyncTest do
     expected_ratio = 3.0
     actual_tick_time = actual_test_time / ticks_amount
 
-    assert_in_delta actual_tick_time / tick_interval, expected_ratio, ratio_error
+    assert_in_delta tick_interval / actual_tick_time, expected_ratio, ratio_error
   end
 
   defp receive_ticks(pipeline, amount \\ 0) do
