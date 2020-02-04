@@ -189,7 +189,8 @@ defmodule Membrane.Element.Action do
   new `interval`. The next tick after interval change is scheduled at
   `new_interval + previous_time`, where previous_time is the time of the latest
   tick or the time of returning `t:start_timer_t/0` action if no tick has been
-  sent yet.
+  sent yet. Note that if `current_time - previous_time > new_interval`, a burst
+  of `div(current_time - previous_time, new_interval)` ticks is issued immediately.
   """
   @type timer_interval_t ::
           {:timer_interval,
