@@ -39,9 +39,9 @@ defmodule Membrane.Testing.Pipeline do
       el1: MembraneElement1,
       el2: MembraneElement2,
       ],
-      links: %{
-        {:el1, :output} => {:el2, :input}
-      }
+      links: [
+        link(:el1) |> to(:el2)
+      ]
     }
     ```
 
@@ -114,7 +114,7 @@ defmodule Membrane.Testing.Pipeline do
     List of element specs.
 
     ## Links
-    Map describing links between elements.
+    List describing the links between elements.
 
     ## Module
     Pipeline Module with custom callbacks.
@@ -203,8 +203,7 @@ defmodule Membrane.Testing.Pipeline do
 
   ## Example
 
-      iex> Pipeline.populate_links([el1: MembraneElement1, el2: MembraneElement2])
-      %{{:el1, :output} => {:el2, :input}}
+      Pipeline.populate_links([el1: MembraneElement1, el2: MembraneElement2])
   """
   @spec populate_links(elements :: ParentSpec.children_spec_t()) :: ParentSpec.links_spec_t()
   def populate_links(elements) when length(elements) < 2 do
