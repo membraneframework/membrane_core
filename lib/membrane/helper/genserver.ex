@@ -3,7 +3,10 @@ defmodule Membrane.Helper.GenServer do
 
   use Membrane.Log, tags: :core
 
+  @type genserver_return_t :: {:noreply, any} | {:reply, any, any}
+
   def noreply({:ok, new_state}), do: {:noreply, new_state}
+
   def noreply({:ok, new_state}, _old_state), do: {:noreply, new_state}
 
   def noreply({{:error, reason}, new_state}, old_state) do

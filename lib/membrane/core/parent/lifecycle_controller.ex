@@ -71,11 +71,11 @@ defmodule Membrane.Core.Parent.LifecycleController do
   end
 
   @spec handle_stop_and_terminate(state_t) ::
-          {:stop, :normal, state_t} | PlaybackHandler.handler_return_t()
+          PlaybackHandler.handler_return_t() | {{:ok, :stop}, state_t}
   def handle_stop_and_terminate(state) do
     case state.playback.state do
       :stopped ->
-        {:stop, :normal, state}
+        {{:ok, :stop}, state}
 
       _ ->
         state = %{state | terminating?: true}

@@ -19,7 +19,6 @@ defmodule Membrane.Core.Element do
   use Membrane.Log, tags: :core
   use Bunch
   use GenServer
-  import Membrane.Helper.GenServer
   require Membrane.Core.Message
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.Element.{MessageDispatcher, State}
@@ -120,12 +119,12 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_call(message, _from, state) do
-    message |> MessageDispatcher.handle_message(:call, state) |> reply(state)
+    message |> MessageDispatcher.handle_message(:call, state)
   end
 
   @impl GenServer
   def handle_info({:DOWN, ref, :process, _pid, reason}, %{parent_monitor: ref} = state) do
-    {:ok, state} =
+    {:noreply, state} =
       MessageDispatcher.handle_message(Message.new(:pipeline_down, reason), :info, state)
 
     {:stop, reason, state}
@@ -133,6 +132,6 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_info(message, state) do
-    message |> MessageDispatcher.handle_message(:info, state) |> noreply(state)
+    message |> MessageDispatcher.handle_message(:info, state)
   end
 end

@@ -15,7 +15,9 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   }
 
   alias Core.{Child, Message, PlaybackHandler}
+  alias Membrane.Helper
   require Message
+  import Helper.GenServer
   use Core.Element.Log
   use Bunch
 
@@ -23,19 +25,28 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   Parses message incoming to element and forwards it to proper controller.
   """
   @spec handle_message(Message.t(), :info | :call | :other, State.t()) ::
-          State.stateful_try_t() | State.stateful_try_t(any)
+          State.stateful_try_t()
+          | State.stateful_try_t(any)
+          | Helper.GenServer.genserver_return_t()
   def handle_message(message, mode, state) do
-    withl handle:
-            {:ok, {res, state}} <-
-              message |> do_handle_message(mode, state) |> Bunch.stateful_try_with_status(),
-          demands: {:ok, state} <- DemandHandler.handle_delayed_demands(state) do
-      {res, state}
-    else
-      handle: {_error, {{:error, reason}, state}} ->
-        handle_message_error(message, mode, reason, state)
+    result =
+      withl handle:
+              {:ok, {res, state}} <-
+                message |> do_handle_message(mode, state) |> Bunch.stateful_try_with_status(),
+            demands: {:ok, state} <- DemandHandler.handle_delayed_demands(state) do
+        {res, state}
+      else
+        handle: {_error, {{:error, reason}, state}} ->
+          handle_message_error(message, mode, reason, state)
 
-      demands: {{:error, reason}, state} ->
-        handle_message_error(message, mode, reason, state)
+        demands: {{:error, reason}, state} ->
+          handle_message_error(message, mode, reason, state)
+      end
+
+    case mode do
+      :info -> result |> noreply(state)
+      :call -> result |> reply(state)
+      :other -> result
     end
   end
 

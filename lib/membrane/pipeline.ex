@@ -24,7 +24,6 @@ defmodule Membrane.Pipeline do
   alias Core.Message
   alias Core.Pipeline.State
   alias Membrane.Core.CallbackHandler
-  import Membrane.Helper.GenServer
   require Element
   require PlaybackState
   require Message
@@ -179,7 +178,6 @@ defmodule Membrane.Pipeline do
   @impl GenServer
   def handle_info(message, state) do
     Parent.MessageDispatcher.handle_message(message, state)
-    |> noreply(state)
   end
 
   @impl GenServer
