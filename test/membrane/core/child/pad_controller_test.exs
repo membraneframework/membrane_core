@@ -70,7 +70,9 @@ defmodule Membrane.Core.Child.PadControllerTest do
       }
       |> Map.merge(info)
 
-    state |> Bunch.Access.put_in([:pads, :data, pad_name], data)
+    state
+    |> Bunch.Access.put_in([:pads, :data, pad_name], data)
+    |> Bunch.Struct.put_in([:playback, :state], :playing)
   end
 
   defp prepare_dynamic_state(elem_module, name, playback_state, pad_name, pad_ref) do

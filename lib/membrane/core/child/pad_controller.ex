@@ -302,7 +302,7 @@ defmodule Membrane.Core.Child.PadController do
     do: state |> Bunch.Access.put_in([:pads, :dynamic_currently_linking], [])
 
   @spec generate_eos_if_needed(Pad.ref_t(), state_t()) :: Type.stateful_try_t(state_t)
-  defp generate_eos_if_needed(pad_ref, state) do
+  def generate_eos_if_needed(pad_ref, state) do
     direction = PadModel.get_data!(state, pad_ref, :direction)
     eos? = PadModel.get_data!(state, pad_ref, :end_of_stream?)
 

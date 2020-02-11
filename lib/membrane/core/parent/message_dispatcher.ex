@@ -48,6 +48,8 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
 
   def handle_message(Message.new(cb, [element_name, pad_ref]), state)
       when cb in [:handle_start_of_stream, :handle_end_of_stream] do
+    inform_parent(state, cb, [pad_ref])
+
     LifecycleController.handle_stream_management_event(cb, element_name, pad_ref, state)
     |> noreply(state)
   end
@@ -56,4 +58,12 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     LifecycleController.handle_other(message, state)
     |> noreply(state)
   end
+
+  defp inform_parent(state, msg, msg_params) do
+    if not pipeline?(state) and state.watcher,
+      do: Message.send(state.watcher, msg, [state.name | msg_params])
+  end
+
+  defp pipeline?(%Pipeline.State{}), do: true
+  defp pipeline?(_), do: false
 end
