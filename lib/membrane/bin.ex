@@ -18,7 +18,7 @@ defmodule Membrane.Bin do
 
   import Membrane.Helper.GenServer
 
-  alias Membrane.{Element, Pad, ParentSpec, Sync}
+  alias Membrane.{Element, Pad, Sync}
   alias Membrane.Bin.CallbackContext
 
   alias Membrane.Core.{
@@ -67,7 +67,7 @@ defmodule Membrane.Bin do
   `c:GenServer.init/1` callback.
   """
   @callback handle_init(options :: options_t) ::
-              {{:ok, spec: ParentSpec.t()}, Bin.State.internal_state_t()}
+              {{:ok, Membrane.Parent.Action.spec_action_t()}, Bin.State.internal_state_t()}
               | {:error, any}
 
   @doc """
