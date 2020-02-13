@@ -311,7 +311,7 @@ defmodule Membrane.Bin do
       def membrane_clock?, do: false
 
       @impl true
-      def handle_init(_options), do: {{:ok, %Membrane.ParentSpec{}}, %{}}
+      def handle_init(_options), do: {{:ok, spec: %Membrane.ParentSpec{}}, %{}}
 
       @impl true
       def handle_notification(notification, _from, state),
