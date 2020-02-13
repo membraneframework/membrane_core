@@ -67,7 +67,7 @@ defmodule Membrane.Bin do
   `c:GenServer.init/1` callback.
   """
   @callback handle_init(options :: options_t) ::
-              {{:ok, Membrane.Parent.Action.spec_action_t()}, Bin.State.internal_state_t()}
+              {{:ok, [Membrane.Parent.Action.spec_action_t()]}, Bin.State.internal_state_t()}
               | {:error, any}
 
   @doc """
