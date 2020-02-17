@@ -43,4 +43,22 @@ defmodule Membrane.Testing.SourceTest do
       assert %Buffer{payload: payload} == buffer
     end
   end
+
+  test "Created generator function sends end_of_stream if leftover is empty" do
+    buffers = [%Membrane.Buffer{payload: 1}]
+    assert {state, generator} = Source.output_from_buffers(buffers)
+
+    assert {{:ok, actions}, state} =
+             Source.handle_demand(:output, 2, :buffers, nil, %{
+               generator_state: state,
+               output: generator
+             })
+
+    assert [
+             {:buffer, {:output, [buffer]}},
+             {:end_of_stream, :output}
+           ] = actions
+
+    assert %Buffer{payload: 1} == buffer
+  end
 end

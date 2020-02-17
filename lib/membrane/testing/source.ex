@@ -83,6 +83,22 @@ defmodule Membrane.Testing.Source do
     {action, generator_state + size}
   end
 
+  @doc """
+  Creates output with generator function from list of buffers
+  """
+  @spec output_from_buffers([Buffer.t()]) :: {[Buffer.t()], generator()}
+  def output_from_buffers(data) do
+    fun = fn state, size ->
+      {buffers, leftover} = Enum.split(state, size)
+      buffer_action = [{:buffer, {:output, buffers}}]
+      event_action = if leftover == [], do: [end_of_stream: :output], else: []
+      to_send = buffer_action ++ event_action
+      {to_send, leftover}
+    end
+
+    {data, fun}
+  end
+
   defp get_actions(%{generator_state: generator_state, output: actions_generator} = state, size)
        when is_function(actions_generator) do
     {actions, generator_state} = actions_generator.(generator_state, size)
