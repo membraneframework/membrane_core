@@ -111,6 +111,10 @@ defmodule Membrane.Parent do
               context :: any,
               state :: internal_state_t()
             ) :: callback_return_t
+  @callback handle_spec_started(
+              children :: [Child.name_t()],
+              state :: internal_state_t()
+            ) :: callback_return_t
 
   @doc """
   Brings common stuff needed to implement a parent. Used by
