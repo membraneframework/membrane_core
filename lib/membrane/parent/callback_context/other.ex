@@ -3,5 +3,5 @@ defmodule Membrane.Parent.CallbackContext.Other do
   Structure representing a context that is passed to the callback when
   parent receives unrecognized message.
   """
-  use Membrane.CallbackContext
+  use Membrane.Parent.CallbackContext
 end

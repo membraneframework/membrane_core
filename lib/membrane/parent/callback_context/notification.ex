@@ -3,5 +3,5 @@ defmodule Membrane.Parent.CallbackContext.Notification do
   passed to CallbackHandler in Membrane.Core.Parent.LifecycleController.handle_notification/1
   todo: update this doc
   """
-  use Membrane.CallbackContext
+  use Membrane.Parent.CallbackContext
 end

@@ -3,5 +3,5 @@ defmodule Membrane.Parent.CallbackContext.SpecStarted do
   passed CallbackHandler in Membrane.Core.Parent.ChildLifeController.StartupHandler.exec_handle_spec_started/1
   todo: update this doc
   """
-  use Membrane.CallbackContext
+  use Membrane.Parent.CallbackContext
 end
