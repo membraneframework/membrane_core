@@ -138,7 +138,9 @@ defmodule Membrane.Core.Element.EventController do
         {{:ok, :ignore}, state}
 
       %{state: playback_state} ->
-        raise {:received_eos_in_incorrect_state, pad_ref, playback_state}
+        raise "Received end of stream event in an incorrect state. State: #{
+                inspect(playback_state)
+              }, on pad: #{inspect(pad_ref)}"
 
       %{start_of_stream?: false} ->
         {{:ok, :ignore}, state}
