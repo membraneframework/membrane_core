@@ -125,8 +125,7 @@ defmodule Membrane.Core.Element.EventController do
     pad_data = PadModel.get_data!(state, pad_ref)
 
     with %{direction: :input, start_of_stream?: true, end_of_stream?: false} <- pad_data,
-         %{playback: playback} <- state,
-         %{state: :playing} <- playback do
+         %{state: :playing} <- state.playback do
       state
       |> PadModel.set_data!(pad_ref, :end_of_stream?, true)
       ~> {{:ok, :handle}, &1}
@@ -135,11 +134,11 @@ defmodule Membrane.Core.Element.EventController do
         {{:error, {:received_end_of_stream_through_output, pad_ref}}, state}
 
       %{end_of_stream?: true} ->
-        warn("Ignoring event EndOfStream as it has already come before", state)
+        debug("Ignoring event EndOfStream as it has already come before", state)
         {{:ok, :ignore}, state}
 
       %{state: playback_state} ->
-        {{:error, {:received_eos_in_incorrect_state, pad_ref, playback_state}}, state}
+        raise {:received_eos_in_incorrect_state, pad_ref, playback_state}
 
       %{start_of_stream?: false} ->
         {{:ok, :ignore}, state}
