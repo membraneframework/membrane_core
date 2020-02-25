@@ -109,12 +109,34 @@ defmodule Membrane.Pipeline do
   end
 
   @doc """
-  Changes pipeline's playback state to `:stopped` and terminates its process
+  Changes pipeline's playback state to `:stopped` and terminates its process.
+  It accpets two options:
+    * `blocking?` - tells whether to stop the pipeline synchronously
+    * `timeout` - if `blocking?` is set to true it tells how much
+      time (ms) to wait for pipeline to get terminated. Defaults to 5000.
   """
-  @spec stop_and_terminate(pipeline :: pid) :: :ok
-  def stop_and_terminate(pipeline) do
+  @spec stop_and_terminate(pipeline :: pid, Keyword.t()) :: :ok
+  def stop_and_terminate(pipeline, opts \\ []) do
+    blocking? = Keyword.get(opts, :blocking?, false)
+    timeout = Keyword.get(opts, :timeout, 5000)
+
+    ref = if blocking?, do: Process.monitor(pipeline)
+
     Message.send(pipeline, :stop_and_terminate)
-    :ok
+
+    if blocking?,
+      do: wait_for_down(ref, timeout),
+      else: :ok
+  end
+
+  defp wait_for_down(ref, timeout) do
+    receive do
+      {:DOWN, ^ref, _, _, _} ->
+        :ok
+    after
+      timeout ->
+        {:error, :not_terminated_within_timeout}
+    end
   end
 
   @doc """
@@ -254,8 +276,8 @@ defmodule Membrane.Pipeline do
 
       A proxy for `Membrane.Pipeline.stop_and_terminate/1`
       """
-      @spec stop_and_terminate(pid) :: :ok
-      defdelegate stop_and_terminate(pipeline), to: Pipeline
+      @spec stop_and_terminate(pid, Keyword.t()) :: :ok
+      defdelegate stop_and_terminate(pipeline, opts), to: Pipeline
 
       @impl true
       def membrane_pipeline?, do: true

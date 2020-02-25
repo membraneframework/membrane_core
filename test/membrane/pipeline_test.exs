@@ -7,6 +7,8 @@ defmodule Membrane.PipelineTest do
   alias Membrane.Core.Pipeline.State
   alias Membrane.ParentSpec
 
+  alias Membrane.Testing
+
   defp state(_ctx) do
     [state: %State{module: nil, clock_proxy: nil}]
   end
@@ -71,5 +73,15 @@ defmodule Membrane.PipelineTest do
         )
       end
     end
+  end
+
+  defmodule TestPipeline do
+    use Membrane.Pipeline
+  end
+
+  test "Pipeline can be terminated synchronously" do
+    {:ok, pid} = Testing.Pipeline.start_link(%Testing.Pipeline.Options{module: TestPipeline})
+
+    assert :ok == Testing.Pipeline.stop_and_terminate(pid, blocking?: true)
   end
 end
