@@ -8,6 +8,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
   alias Membrane.Event
   alias Membrane.Pad.Data
   alias Membrane.Core.InputBuffer
+  alias Membrane.Core.Element.LifecycleController
 
   defmodule MockEventHandlingElement do
     use Membrane.Filter
@@ -35,6 +36,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
           pads: %{
             data: %{
               input: %Data{
+                ref: :input,
                 accepted_caps: :any,
                 direction: :input,
                 pid: self(),
@@ -71,14 +73,18 @@ defmodule Membrane.Core.Element.EventControllerTest do
     end
 
     test "end of stream successfully", %{state: state} do
-      pads =
-        Bunch.Access.update_in(state.pads, [:data, :input], fn data ->
-          %{data | start_of_stream?: true}
-        end)
-
-      state = %{state | pads: pads}
+      state = put_start_of_stream(state, :input)
 
       assert {:ok, state} = EventController.handle_event(:input, %Event.EndOfStream{}, state)
+      assert state.pads.data.input.end_of_stream?
+    end
+
+    test "end of stream is generated when playback state changes from :playing to :prepared", %{
+      state: state
+    } do
+      state = put_start_of_stream(state, :input)
+
+      {:ok, state} = LifecycleController.handle_playback_state(:playing, :prepared, state)
       assert state.pads.data.input.end_of_stream?
     end
   end
@@ -92,5 +98,14 @@ defmodule Membrane.Core.Element.EventControllerTest do
       assert {{:error, {:handle_event, :cause}}, ^state} =
                EventController.handle_event(:input, %Event.Discontinuity{}, state)
     end
+  end
+
+  defp put_start_of_stream(state, pad_ref) do
+    pads =
+      Bunch.Access.update_in(state.pads, [:data, pad_ref], fn data ->
+        %{data | start_of_stream?: true}
+      end)
+
+    %{state | pads: pads}
   end
 end
