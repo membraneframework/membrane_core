@@ -8,7 +8,6 @@ defmodule Membrane.Core.Element.EventControllerTest do
   alias Membrane.Event
   alias Membrane.Pad.Data
   alias Membrane.Core.InputBuffer
-  alias Membrane.Core.Element.LifecycleController
 
   defmodule MockEventHandlingElement do
     use Membrane.Filter
@@ -76,15 +75,6 @@ defmodule Membrane.Core.Element.EventControllerTest do
       state = put_start_of_stream(state, :input)
 
       assert {:ok, state} = EventController.handle_event(:input, %Event.EndOfStream{}, state)
-      assert state.pads.data.input.end_of_stream?
-    end
-
-    test "end of stream is generated when playback state changes from :playing to :prepared", %{
-      state: state
-    } do
-      state = put_start_of_stream(state, :input)
-
-      {:ok, state} = LifecycleController.handle_playback_state(:playing, :prepared, state)
       assert state.pads.data.input.end_of_stream?
     end
   end
