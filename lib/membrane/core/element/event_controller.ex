@@ -122,8 +122,10 @@ defmodule Membrane.Core.Element.EventController do
   end
 
   defp handle_special_event(pad_ref, %Event.EndOfStream{}, state) do
-    with %{direction: :input, start_of_stream?: true, end_of_stream?: false} <-
-           PadModel.get_data!(state, pad_ref) do
+    pad_data = PadModel.get_data!(state, pad_ref)
+
+    with %{direction: :input, start_of_stream?: true, end_of_stream?: false} <- pad_data,
+         %{state: :playing} <- state.playback do
       state
       |> PadModel.set_data!(pad_ref, :end_of_stream?, true)
       ~> {{:ok, :handle}, &1}
@@ -132,7 +134,13 @@ defmodule Membrane.Core.Element.EventController do
         {{:error, {:received_end_of_stream_through_output, pad_ref}}, state}
 
       %{end_of_stream?: true} ->
-        {{:error, {:end_of_stream_already_received, pad_ref}}, state}
+        debug("Ignoring event EndOfStream as it has already come before", state)
+        {{:ok, :ignore}, state}
+
+      %{state: playback_state} ->
+        raise "Received end of stream event in an incorrect state. State: #{
+                inspect(playback_state)
+              }, on pad: #{inspect(pad_ref)}"
 
       %{start_of_stream?: false} ->
         {{:ok, :ignore}, state}
