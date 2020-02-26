@@ -14,6 +14,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   alias Membrane.Core.{CallbackHandler, Message, Playback}
   alias Membrane.Core.Element.{ActionHandler, PlaybackBuffer, State}
   alias Membrane.Element.CallbackContext
+  alias Membrane.Core.Child.PadController
 
   @doc """
   Performs initialization tasks and executes `handle_init` callback.
@@ -101,6 +102,20 @@ defmodule Membrane.Core.Element.LifecycleController do
   def handle_playback_state(old_playback_state, new_playback_state, state) do
     context = &CallbackContext.PlaybackChange.from_state/1
     callback = PlaybackHandler.state_change_callback(old_playback_state, new_playback_state)
+
+    state =
+      if old_playback_state == :playing and new_playback_state == :prepared do
+        state.pads.data
+        |> Map.values()
+        |> Enum.filter(&(&1.direction == :input))
+        |> Enum.map(& &1.ref)
+        |> Enum.reduce(state, fn pad, state_acc ->
+          {:ok, state} = PadController.generate_eos_if_needed(pad, state_acc)
+          state
+        end)
+      else
+        state
+      end
 
     CallbackHandler.exec_and_handle_callback(
       callback,
