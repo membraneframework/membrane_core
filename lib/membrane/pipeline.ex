@@ -116,7 +116,7 @@ defmodule Membrane.Pipeline do
       time (ms) to wait for pipeline to get terminated. Defaults to 5000.
   """
   @spec stop_and_terminate(pipeline :: pid, Keyword.t()) ::
-          :ok | {:error, :not_terminated_within_timeout}
+          :ok | {:error, :timeout}
   def stop_and_terminate(pipeline, opts \\ []) do
     blocking? = Keyword.get(opts, :blocking?, false)
     timeout = Keyword.get(opts, :timeout, 5000)
@@ -136,7 +136,7 @@ defmodule Membrane.Pipeline do
         :ok
     after
       timeout ->
-        {:error, :not_terminated_within_timeout}
+        {:error, :timeout}
     end
   end
 
