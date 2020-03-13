@@ -77,10 +77,10 @@ defmodule Membrane.Core.PlaybackHandler do
   def state_change_callback(:prepared, :playing), do: :handle_prepared_to_playing
   def state_change_callback(:prepared, :stopped), do: :handle_prepared_to_stopped
 
-  @spec request_playback_state_change(pid, Membrane.PlaybackState.t()) :: :ok
-  def request_playback_state_change(pid, new_state)
+  # @spec request_playback_state_change(pid, Membrane.PlaybackState.t()) :: :ok
+  def request_playback_state_change(pid, new_state, terminating? \\ false)
       when Membrane.PlaybackState.is_playback_state(new_state) do
-    Message.send(pid, :change_playback_state, new_state)
+    Message.send(pid, :change_playback_state, {new_state, terminating?})
     :ok
   end
 

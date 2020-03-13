@@ -9,7 +9,8 @@ defmodule Membrane.Core.Parent.ChildEntry do
           options: struct | nil,
           pid: pid | nil,
           clock: Clock.t() | nil,
-          sync: Sync.t() | nil
+          sync: Sync.t() | nil,
+          bin?: boolean()
         }
 
   @type resolved_t :: %__MODULE__{
@@ -21,7 +22,7 @@ defmodule Membrane.Core.Parent.ChildEntry do
           sync: Sync.t()
         }
 
-  defstruct [:name, :module, :options, :pid, :clock, :sync]
+  defstruct [:name, :module, :options, :pid, :clock, :sync, :bin?]
 
   @spec from_spec(ParentSpec.children_spec_t() | any) :: [t] | no_return
   def from_spec(children_spec) when is_map(children_spec) or is_list(children_spec) do
@@ -29,12 +30,23 @@ defmodule Membrane.Core.Parent.ChildEntry do
   end
 
   defp parse_child({name, %module{} = options}) do
-    %__MODULE__{name: name, module: module, options: options}
+    %__MODULE__{
+      name: name,
+      module: module,
+      options: options,
+      bin?: Bunch.Module.check_behaviour(module, :membrane_bin?)
+    }
   end
 
   defp parse_child({name, module}) when is_atom(module) do
     options = module |> Bunch.Module.struct()
-    %__MODULE__{name: name, module: module, options: options}
+
+    %__MODULE__{
+      name: name,
+      module: module,
+      options: options,
+      bin?: Bunch.Module.check_behaviour(module, :membrane_bin?)
+    }
   end
 
   defp parse_child(config) do
