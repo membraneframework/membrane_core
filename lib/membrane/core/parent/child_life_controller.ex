@@ -34,7 +34,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {:ok, state} = LinkHandler.link_children(links, state)
     children_names = children |> Enum.map(& &1.name)
     {:ok, state} = StartupHandler.exec_handle_spec_started(children_names, state)
-    children |> Enum.each(&Message.send(&1.pid, :change_playback_state, state.playback.state))
+
+    children
+    |> Enum.each(
+      &Message.send(&1.pid, :change_playback_state, {state.playback.state, state.terminating?})
+    )
 
     {{:ok, children_names}, state}
   end

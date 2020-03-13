@@ -65,7 +65,11 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     LifecycleController.handle_pipeline_down(reason, state)
   end
 
-  defp do_handle_message(Message.new(:change_playback_state, new_playback_state), :info, state) do
+  defp do_handle_message(
+         Message.new(:change_playback_state, {new_playback_state, _terminating}),
+         :info,
+         state
+       ) do
     PlaybackHandler.change_playback_state(new_playback_state, LifecycleController, state)
   end
 

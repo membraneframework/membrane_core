@@ -21,7 +21,9 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     |> noreply(state)
   end
 
-  def handle_message(Message.new(:change_playback_state, new_state), state) do
+  def handle_message(Message.new(:change_playback_state, {new_state, terminating?}), state) do
+    state = %{state | terminating?: terminating?}
+
     LifecycleController.change_playback_state(new_state, state)
     |> noreply(state)
   end

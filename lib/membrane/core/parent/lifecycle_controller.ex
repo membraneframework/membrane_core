@@ -33,7 +33,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     children_pids = children_data |> Enum.map(& &1.pid)
 
     children_pids
-    |> Enum.each(&PlaybackHandler.request_playback_state_change(&1, new))
+    |> Enum.each(&PlaybackHandler.request_playback_state_change(&1, new, state.terminating?))
 
     :ok = toggle_syncs_active(old, new, children_data)
 
@@ -75,6 +75,32 @@ defmodule Membrane.Core.Parent.LifecycleController do
   def handle_stop_and_terminate(state) do
     case state.playback.state do
       :stopped ->
+        children =
+          state
+          |> Parent.ChildrenModel.get_children()
+          |> Enum.map(fn {_name, entry} -> entry end)
+
+        elements =
+          children
+          |> Enum.filter(&(not &1.bin?))
+
+        bins =
+          children
+          |> Enum.filter(& &1.bin?)
+
+        bin_refs =
+          bins
+          |> Enum.map(&Process.monitor(&1.pid))
+
+        elements
+        |> Enum.each(&Message.send(&1.pid, :prepare_shutdown))
+
+        bins
+        |> Enum.each(&Message.send(&1.pid, :stop_and_terminate))
+
+        wait_for_downs(bin_refs)
+        wait_for_shutdown_ready(elements)
+
         {{:ok, :stop}, state}
 
       _ ->
@@ -85,6 +111,32 @@ defmodule Membrane.Core.Parent.LifecycleController do
           Parent.LifecycleController,
           state
         )
+    end
+  end
+
+  defp wait_for_downs([]), do: :ok
+
+  defp wait_for_downs(refs) do
+    receive do
+      {:DOWN, ref, :process, _pid, _reason} ->
+        refs
+        |> Enum.filter(&(&1 != ref))
+        |> wait_for_downs()
+    after
+      5000 -> {:error, :timeout}
+    end
+  end
+
+  defp wait_for_shutdown_ready([]), do: :ok
+
+  defp wait_for_shutdown_ready(elements) do
+    receive do
+      Message.new(:shutdown_ready, el_name) ->
+        elements
+        |> Enum.filter(&(&1.name != el_name))
+        |> wait_for_shutdown_ready()
+    after
+      5000 -> {:error, :timeout}
     end
   end
 
@@ -109,6 +161,11 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @spec handle_shutdown_ready(Child.name_t(), state_t()) :: {:ok, state_t()}
   def handle_shutdown_ready(child, state) do
     {{:ok, %{pid: pid}}, state} = Parent.ChildrenModel.pop_child(state, child)
+    children = Parent.ChildrenModel.get_children(state)
+
+    if Enum.empty?(children) and state.watcher,
+      do: Message.send(state.watcher, :shutdown_ready)
+
     {Core.Element.shutdown(pid), state}
   end
 
