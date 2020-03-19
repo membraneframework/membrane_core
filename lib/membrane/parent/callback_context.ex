@@ -1,48 +1,21 @@
 defmodule Membrane.Parent.CallbackContext do
-  alias Membrane.Core
-  alias Core.Element
-  alias Core.Bin
-  use Bunch
+  use Membrane.CallbackContext
 
-  @macrocallback from_state(Element.State.t() | Bin.State.t(), keyword()) :: Macro.t()
+  @impl true
+  def default_fields_names() do
+    [
+      :playback_state
+      # ?:clock
+    ]
+  end
 
-  defmacro __using__(fields) do
+  @impl true
+  def default_ctx_assigment(state) do
     quote do
-      default_fields_names = [
-        :playback_state
-        #  ? :clock
+      [
+        playback_state: unquote(state).playback.state
+        # ?clock: state.clock_provider.clock
       ]
-
-      fields_names = unquote(fields |> Keyword.keys())
-
-      @type t :: %__MODULE__{
-              unquote_splicing(fields),
-              playback_state: Membrane.PlaybackState.t()
-            }
-
-      @behaviour unquote(__MODULE__)
-
-      @enforce_keys Module.get_attribute(__MODULE__, :enforce_keys)
-                    ~> (&1 || fields_names)
-                    |> Bunch.listify()
-                    ~> (&1 ++ default_fields_names)
-
-      defstruct fields_names ++ default_fields_names
-
-      @impl true
-      defmacro from_state(state, args \\ []) do
-        quote do
-          state = unquote(state)
-
-          %unquote(__MODULE__){
-            unquote_splicing(args),
-            playback_state: state.playback.state
-            # clock: state.clock_provider.clock
-          }
-        end
-      end
-
-      defoverridable unquote(__MODULE__)
     end
   end
 end

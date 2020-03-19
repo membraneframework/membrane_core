@@ -3,6 +3,6 @@ defmodule Membrane.Element.CallbackContext.PadRemoved do
   Structure representing a context that is passed to the element
   when a dynamic pad is removed
   """
-  use Membrane.CallbackContext,
+  use Membrane.Element.CallbackContext,
     direction: :input | :output
 end

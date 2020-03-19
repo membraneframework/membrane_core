@@ -3,5 +3,5 @@ defmodule Membrane.Element.CallbackContext.Event do
   Structure representing a context that is passed to the element
   when handling event.
   """
-  use Membrane.CallbackContext
+  use Membrane.Element.CallbackContext
 end

@@ -3,5 +3,5 @@ defmodule Membrane.Element.CallbackContext.Other do
   Structure representing a context that is passed to the callback when
   element receives unrecognized message.
   """
-  use Membrane.CallbackContext
+  use Membrane.Element.CallbackContext
 end
