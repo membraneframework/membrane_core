@@ -324,8 +324,10 @@ defmodule Membrane.Core.Child.PadController do
   defp handle_pad_added(ref, state) do
     pad_opts = PadModel.get_data!(state, ref, :options)
 
+    context_module = get_context_module(PadAdded, state)
+
     context =
-      &CallbackContext.PadAdded.from_state(
+      &context_module.from_state(
         &1,
         direction: PadModel.get_data!(state, ref, :direction),
         options: pad_opts
@@ -346,7 +348,8 @@ defmodule Membrane.Core.Child.PadController do
     name = Pad.name_by_ref(ref)
 
     if Pad.availability_mode(availability) == :dynamic and Pad.is_public_name(name) do
-      context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
+      context_module = get_context_module(PadAdded, state)
+      context = &context_module.from_state(&1, direction: direction)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_removed,
@@ -367,4 +370,12 @@ defmodule Membrane.Core.Child.PadController do
 
   defp get_callback_action_handler(%Core.Element.State{}), do: Core.Element.ActionHandler
   defp get_callback_action_handler(%Core.Bin.State{}), do: Core.Bin.ActionHandler
+
+  defp get_context_module(module_sufix, %Core.Element.State{}) do
+    Module.concat(Membrane.Element.CallbackContext, module_sufix)
+  end
+
+  defp get_context_module(module_sufix, %Core.Bin.State{}) do
+    Module.concat(Membrane.Bin.CallbackContext, module_sufix)
+  end
 end
