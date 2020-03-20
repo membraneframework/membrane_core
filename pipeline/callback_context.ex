@@ -1,4 +1,4 @@
-defmodule Membrane.Parent.CallbackContext do
+defmodule Membrane.Pipeline.CallbackContext do
   use Membrane.CallbackContext
 
   @impl true
@@ -10,7 +10,7 @@ defmodule Membrane.Parent.CallbackContext do
   end
 
   @impl true
-  def default_ctx_assigment(state) do
+  def default_ctx_assigment() do
     quote do
       [
         playback_state: unquote(state).playback.state,
