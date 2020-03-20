@@ -86,10 +86,6 @@ defmodule Membrane.Core.Child.PadsSpecs do
         @before_compile {unquote(__MODULE__), :generate_membrane_pads}
       end
 
-      if Module.get_attribute(__MODULE__, :membrane_element_pads_docs) == nil do
-        Module.register_attribute(__MODULE__, :membrane_element_pads_docs, accumulate: true)
-      end
-
       @membrane_pads unquote(__MODULE__).parse_pad_specs!(
                        {unquote(pad_name), unquote(specs)},
                        unquote(direction),
