@@ -67,7 +67,8 @@ defmodule Membrane.CallbackContext do
               require unquote(ModuleInBetween)
 
               %unquote(__MODULE__){
-                unquote_splicing(ModuleInBetween.default_ctx_assigment(state) ++ args)
+                unquote_splicing(ModuleInBetween.default_ctx_assigment(state)),
+                unquote_splicing(args)
               }
             end
           end
