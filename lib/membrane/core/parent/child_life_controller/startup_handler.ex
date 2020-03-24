@@ -4,12 +4,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
 
   require Membrane.Logger
   require Membrane.Core.Message
-  require Membrane.Parent.CallbackContext.SpecStarted
+  require Membrane.Pipeline.CallbackContext.SpecStarted
+  require Membrane.Bin.CallbackContext.SpecStarted
 
+  alias Membrane.Core
   alias Membrane.{CallbackError, Clock, ParentError, Sync}
   alias Membrane.Core.{Bin, CallbackHandler, Element, Message, Parent, Pipeline}
   alias Membrane.Core.Parent.{ChildEntry, State}
-  alias Membrane.Parent.CallbackContext
 
   @spec check_if_children_names_unique([ChildEntry.t()], State.t()) ::
           :ok | no_return
@@ -100,7 +101,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
   @spec exec_handle_spec_started([Membrane.Child.name_t()], State.t()) ::
           {:ok, State.t()} | no_return
   def exec_handle_spec_started(children_names, state) do
-    context = &CallbackContext.SpecStarted.from_state/1
+    context =
+      case state do
+        %Core.Bin.State{} ->
+          &Membrane.Bin.CallbackContext.SpecStarted.from_state/1
+
+        %Core.Pipeline.State{} ->
+          &Membrane.Pipeline.CallbackContext.SpecStarted.from_state/1
+      end
 
     action_handler =
       case state do

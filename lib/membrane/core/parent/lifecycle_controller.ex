@@ -108,6 +108,15 @@ defmodule Membrane.Core.Parent.LifecycleController do
       context = get_available_contexts(state).notification
       action_handler = get_callback_action_handler(state)
 
+      # IO.puts "\ndupa"
+      # IO.inspect from
+      # IO.inspect notification
+      # IO.inspect state
+      # IO.puts "\n"
+      # IO.inspect context
+      # IO.inspect action_handler
+      # IO.puts "\n\n\n"
+
       CallbackHandler.exec_and_handle_callback(
         :handle_notification,
         action_handler,
