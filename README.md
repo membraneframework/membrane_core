@@ -34,7 +34,7 @@ API documentation is available at [HexDocs](https://hexdocs.pm/membrane_core/)
 
 ## Support and questions
 
-If you have any problems with Membrane Framework feel free to contact us on the [mailing list](https://groups.google.com/forum/#!forum/membrane-framework), [Discord](https://discord.gg/nwnfVSY) or via [e-mail](mailto:info@membraneframework.org).
+If you have any problems with Membrane Framework feel free to contact us via [membrane tag at Elixir forum](https://elixirforum.com/tag/membrane), [mailing list](https://groups.google.com/forum/#!forum/membrane-framework), [Discord](https://discord.gg/nwnfVSY) or via [e-mail](mailto:info@membraneframework.org).
 
 ## Copyright and License
 
