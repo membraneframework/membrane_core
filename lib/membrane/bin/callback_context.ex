@@ -6,7 +6,8 @@ defmodule Membrane.Bin.CallbackContext do
     [
       :playback_state,
       :clock,
-      :pads
+      :pads,
+      :name
     ]
   end
 
@@ -16,7 +17,8 @@ defmodule Membrane.Bin.CallbackContext do
       [
         playback_state: unquote(state).playback.state,
         clock: unquote(state).clock_provider.clock,
-        pads: unquote(state).pads.data
+        pads: unquote(state).pads.data,
+        name: unquote(state).name
       ]
     end
   end

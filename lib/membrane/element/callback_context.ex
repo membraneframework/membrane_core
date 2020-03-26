@@ -8,7 +8,8 @@ defmodule Membrane.Element.CallbackContext do
       :pads,
       :playback_state,
       :clock,
-      :parent_clock
+      :parent_clock,
+      :name
     ]
   end
 
@@ -19,7 +20,8 @@ defmodule Membrane.Element.CallbackContext do
         playback_state: unquote(state).playback.state,
         pads: unquote(state).pads.data,
         clock: unquote(state).synchronization.clock,
-        parent_clock: unquote(state).synchronization.parent_clock
+        parent_clock: unquote(state).synchronization.parent_clock,
+        name: unquote(state).name
       ]
     end
   end

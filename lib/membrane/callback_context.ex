@@ -5,7 +5,6 @@ defmodule Membrane.CallbackContext do
   alias Core.Pipeline
 
   @callback default_fields_names :: list(atom)
-  @callback default_fields_spec :: list
   @callback default_ctx_assigment(any) :: list
 
   defmacro __using__(_opts) do
@@ -22,13 +21,6 @@ defmodule Membrane.CallbackContext do
       @impl true
       def default_fields_names() do
         []
-      end
-
-      @impl true
-      def default_fields_spec() do
-        quote do
-          []
-        end
       end
 
       @impl true
