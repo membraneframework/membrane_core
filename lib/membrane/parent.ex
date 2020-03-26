@@ -7,6 +7,7 @@ defmodule Membrane.Parent do
   alias Membrane.Core.{Bin, CallbackHandler, Pipeline}
 
   @type internal_state_t :: map | struct
+  @type internal_callback_ctx_t :: map | struct
 
   @type state_t :: Bin.State.t() | Pipeline.State.t()
 
@@ -20,7 +21,10 @@ defmodule Membrane.Parent do
   Callback invoked when bin transition from `:stopped` to `:prepared` state has finished,
   that is all of its children are prepared to enter `:playing` state.
   """
-  @callback handle_stopped_to_prepared(context :: any, state :: internal_state_t()) ::
+  @callback handle_stopped_to_prepared(
+              context :: internal_callback_ctx_t(),
+              state :: internal_state_t()
+            ) ::
               callback_return_t
   @callback handle_stopped_to_prepared(state :: internal_state_t()) :: callback_return_t
 
@@ -28,7 +32,10 @@ defmodule Membrane.Parent do
   Callback invoked when bin transition from `:playing` to `:prepared` state has finished,
   that is all of its children are prepared to be stopped.
   """
-  @callback handle_playing_to_prepared(context :: any, state :: internal_state_t()) ::
+  @callback handle_playing_to_prepared(
+              context :: internal_callback_ctx_t(),
+              state :: internal_state_t()
+            ) ::
               callback_return_t
   @callback handle_playing_to_prepared(state :: internal_state_t()) :: callback_return_t
 
@@ -36,7 +43,10 @@ defmodule Membrane.Parent do
   Callback invoked when bin is in `:playing` state, i.e. all its children
   are in this state.
   """
-  @callback handle_prepared_to_playing(context :: any, state :: internal_state_t()) ::
+  @callback handle_prepared_to_playing(
+              context :: internal_callback_ctx_t(),
+              state :: internal_state_t()
+            ) ::
               callback_return_t
   @callback handle_prepared_to_playing(state :: internal_state_t()) :: callback_return_t
 
@@ -44,7 +54,10 @@ defmodule Membrane.Parent do
   Callback invoked when bin is in `:playing` state, i.e. all its children
   are in this state.
   """
-  @callback handle_prepared_to_stopped(context :: any, state :: internal_state_t()) ::
+  @callback handle_prepared_to_stopped(
+              context :: internal_callback_ctx_t(),
+              state :: internal_state_t()
+            ) ::
               callback_return_t
   @callback handle_prepared_to_stopped(state :: internal_state_t()) :: callback_return_t
 
@@ -54,7 +67,7 @@ defmodule Membrane.Parent do
   @callback handle_notification(
               notification :: Notification.t(),
               element :: Child.name_t(),
-              context :: any,
+              context :: internal_callback_ctx_t(),
               state :: internal_state_t()
             ) :: callback_return_t
   @callback handle_notification(
@@ -69,7 +82,11 @@ defmodule Membrane.Parent do
 
   Useful for receiving ticks from timer, data sent from NIFs or other stuff.
   """
-  @callback handle_other(message :: any, context :: any, state :: internal_state_t()) ::
+  @callback handle_other(
+              message :: any,
+              context :: internal_callback_ctx_t(),
+              state :: internal_state_t()
+            ) ::
               callback_return_t
   @callback handle_other(message :: any, state :: internal_state_t()) :: callback_return_t
 
@@ -78,7 +95,7 @@ defmodule Membrane.Parent do
   """
   @callback handle_element_start_of_stream(
               {Child.name_t(), Pad.ref_t()},
-              context :: any,
+              context :: internal_callback_ctx_t(),
               state :: internal_state_t()
             ) :: callback_return_t
   @callback handle_element_start_of_stream(
@@ -91,7 +108,7 @@ defmodule Membrane.Parent do
   """
   @callback handle_element_end_of_stream(
               {Child.name_t(), Pad.ref_t()},
-              context :: any,
+              context :: internal_callback_ctx_t(),
               state :: internal_state_t()
             ) :: callback_return_t
   @callback handle_element_end_of_stream(
@@ -108,7 +125,7 @@ defmodule Membrane.Parent do
   """
   @callback handle_spec_started(
               children :: [Child.name_t()],
-              context :: any,
+              context :: internal_callback_ctx_t(),
               state :: internal_state_t()
             ) :: callback_return_t
   @callback handle_spec_started(
