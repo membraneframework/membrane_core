@@ -1,7 +1,7 @@
 defmodule Membrane.Pipeline.CallbackContext.Notification do
   @moduledoc """
-  passed to CallbackHandler in Membrane.Core.Pipeline.LifecycleController.handle_notification/1
-  todo: update this doc
+  Structure representing a context that is passed to the callback when
+  bin receives notification.
   """
   use Membrane.Pipeline.CallbackContext
 end

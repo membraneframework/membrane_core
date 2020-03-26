@@ -1,7 +1,7 @@
 defmodule Membrane.Bin.CallbackContext.SpecStarted do
   @moduledoc """
-  passed CallbackHandler in Membrane.Core.Bin.ChildLifeController.StartupHandler.exec_handle_spec_started/1
-  todo: update this doc
+  Structure representing a context that is passed to the callback of the bin
+  when it instantiates children and links them according to `Membrane.ParentSpec`
   """
   use Membrane.Bin.CallbackContext
 end
