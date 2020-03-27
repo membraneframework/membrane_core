@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Child.PadController do
   @moduledoc false
+
   # Module handling linking and unlinking pads.
 
   alias Membrane.{Core, Event, LinkError, Pad, ParentSpec}

@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Element.ActionHandler do
   @moduledoc false
+
   # Module validating and executing actions returned by element's callbacks.
 
   alias Membrane.{

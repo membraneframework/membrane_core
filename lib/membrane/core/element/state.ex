@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Element.State do
   @moduledoc false
+
   # Structure representing state of an Core.Element. It is a part of the private API.
   # It does not represent state of elements you construct, it's a state used
   # internally in Membrane.

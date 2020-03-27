@@ -1,5 +1,6 @@
 defmodule Membrane.Core.PlaybackHandler do
   @moduledoc false
+
   # Behaviour for modules that have playback state, i.e. elements and pipelines
   #
   # There are three playback states: :stopped, :prepared and :playing.

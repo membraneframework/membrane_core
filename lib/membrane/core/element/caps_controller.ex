@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Element.CapsController do
   @moduledoc false
+
   # Module handling caps received on input pads.
 
   alias Membrane.{Caps, Core, Element, Pad}

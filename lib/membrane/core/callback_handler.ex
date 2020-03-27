@@ -1,5 +1,6 @@
 defmodule Membrane.Core.CallbackHandler do
   @moduledoc false
+
   # Behaviour for module that delegates its job to the other module via callbacks.
   # It delivers implementation of executing callbacks and results parsing their
   # results.

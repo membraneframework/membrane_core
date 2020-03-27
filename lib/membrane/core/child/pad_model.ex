@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Child.PadModel do
   @moduledoc false
+
   # Utility functions for veryfying and manipulating pads and their data.
 
   alias Membrane.Pad

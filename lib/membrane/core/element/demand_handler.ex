@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Element.DemandHandler do
   @moduledoc false
+
   # Module handling demands requested on output pads.
 
   alias Membrane.{Core, Pad}
