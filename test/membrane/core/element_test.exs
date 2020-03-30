@@ -153,7 +153,6 @@ defmodule Membrane.Core.ElementTest do
     msg = Message.new(:demand, 10, for_pad: :output)
     assert {:noreply, state} = Element.handle_info(msg, playing_state())
     assert state.pads.data.output.demand == 10
-    assert_receive ^msg
   end
 
   test "should store incoming buffers in input buffer" do
