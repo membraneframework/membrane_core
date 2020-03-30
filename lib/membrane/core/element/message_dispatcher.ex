@@ -101,7 +101,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   end
 
   defp do_handle_message(Message.new(:push_mode_announcment, [], for_pad: ref), :info, state) do
-    PadController.enable_toilet(ref, state)
+    PadController.enable_toilet_if_pull(ref, state)
   end
 
   defp do_handle_message(
