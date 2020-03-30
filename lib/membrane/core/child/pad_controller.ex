@@ -106,9 +106,16 @@ defmodule Membrane.Core.Child.PadController do
     |> Enum.each(&Message.send(&1.pid, :push_mode_announcment, [], for_pad: &1.other_ref))
   end
 
-  @spec enable_toilet(Pad.ref_t(), state_t()) :: {:ok, state_t()}
-  def enable_toilet(pad_ref, state),
-    do: PadModel.update_data(state, pad_ref, [:input_buf], &{:ok, InputBuffer.enable_toilet(&1)})
+  @spec enable_toilet_if_pull(Pad.ref_t(), state_t()) :: {:ok, state_t()}
+  def enable_toilet_if_pull(pad_ref, state) do
+    case PadModel.get_data!(state, pad_ref, :mode) do
+      :pull ->
+        PadModel.update_data(state, pad_ref, [:input_buf], &{:ok, InputBuffer.enable_toilet(&1)})
+
+      :push ->
+        {:ok, state}
+    end
+  end
 
   @doc """
   Handles situation where pad has been unlinked (e.g. when connected element has been removed from pipline)
