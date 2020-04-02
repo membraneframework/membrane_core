@@ -147,7 +147,7 @@ defmodule Membrane.Core.InputBuffer do
       warn([
         """
         InputBuffer #{inspect(input_buf.name)} (toilet) has buffers of size #{inspect(size)},
-        which is above #{above_level}, from output #{inspect(input_buf.linked_output_ref)} that works in push mode.
+        which is above #{above_level}, from output working in push mode.
         To have control over amount of buffers being produced, consider using pull mode.
         If this is a normal situation, increase warn/fail size in buffer options.
         """
