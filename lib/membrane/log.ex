@@ -111,7 +111,13 @@ defmodule Membrane.Log do
         end
 
       true ->
-        quote location: :keep, bind_quoted: [message: message, tags: tags] do
+        # A hack to avoid 'unused variable' warnings when pruning log message creation
+        quote location: :keep do
+          if false do
+            _ = unquote(message)
+            _ = unquote(tags)
+          end
+
           :ok
         end
     end
