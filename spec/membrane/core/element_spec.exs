@@ -38,7 +38,7 @@ defmodule Membrane.Core.ElementSpec do
 
   describe ".handle_info/3" do
     context "change playback state to playing" do
-      let :message, do: Message.new(:change_playback_state, :playing)
+      let :message, do: Message.new(:change_playback_state, {:playing, false})
       let :module, do: TrivialSource
       let :internal_state, do: %{a: 1}
       let :ctx_playback_change, do: state() |> CallbackContext.PlaybackChange.from_state()
@@ -357,7 +357,7 @@ defmodule Membrane.Core.ElementSpec do
     end
 
     context "change playback state to prepared" do
-      let :message, do: Message.new(:change_playback_state, :prepared)
+      let :message, do: Message.new(:change_playback_state, {:prepared, false})
       let :module, do: TrivialFilter
       let :internal_state, do: %{}
 
@@ -561,7 +561,7 @@ defmodule Membrane.Core.ElementSpec do
     end
 
     context "change playback state to stopped" do
-      let :message, do: Message.new(:change_playback_state, :stopped)
+      let :message, do: Message.new(:change_playback_state, {:stopped, false})
       let :module, do: TrivialFilter
       let :internal_state, do: %{}
       let :ctx_playback_change, do: state() |> CallbackContext.PlaybackChange.from_state()
