@@ -75,30 +75,17 @@ defmodule Membrane.Core.Parent.LifecycleController do
   def handle_stop_and_terminate(state) do
     case state.playback.state do
       :stopped ->
-        children =
+        {bins, elements} =
           state
           |> Parent.ChildrenModel.get_children()
           |> Enum.map(fn {_name, entry} -> entry end)
+          |> split_children_by_type()
 
-        elements =
-          children
-          |> Enum.filter(&(not &1.bin?))
+        bins_refs = Enum.map(bins, &Process.monitor(&1.pid))
 
-        bins =
-          children
-          |> Enum.filter(& &1.bin?)
-
-        bin_refs =
-          bins
-          |> Enum.map(&Process.monitor(&1.pid))
-
-        elements
-        |> Enum.each(&Message.send(&1.pid, :prepare_shutdown))
-
-        bins
-        |> Enum.each(&Message.send(&1.pid, :stop_and_terminate))
-
-        wait_for_downs(bin_refs)
+        send_each(elements, :prepare_shutdown)
+        send_each(bins, :stop_and_terminate)
+        wait_for_downs(bins_refs)
         wait_for_shutdown_ready(elements)
 
         {{:ok, :stop}, state}
@@ -112,6 +99,18 @@ defmodule Membrane.Core.Parent.LifecycleController do
           state
         )
     end
+  end
+
+  defp send_each(children, msg) do
+    children
+    |> Enum.each(&Message.send(&1.pid, msg))
+  end
+
+  defp split_children_by_type(children) do
+    bins = Enum.filter(children, & &1.bin?)
+    elements = children -- bins
+
+    {bins, elements}
   end
 
   defp wait_for_downs([]), do: :ok
