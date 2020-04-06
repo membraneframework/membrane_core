@@ -18,40 +18,56 @@ defmodule Membrane.Core.Element.Log do
   end
 
   defmacro debug(message, state, tags \\ []) do
+    tags =
+      quote do
+        unquote(__MODULE__).append_tags(unquote(tags), unquote(state))
+      end
+
     quote do
       unquote(bring_logger())
-      tags = unquote(__MODULE__).append_tags(unquote(tags), unquote(state))
-      Log.debug(unquote(__MODULE__).parse(unquote(message), unquote(state)), tags)
+      Log.debug(unquote(__MODULE__).parse(unquote(message), unquote(state)), unquote(tags))
     end
   end
 
   @doc false
   defmacro info(message, state, tags \\ []) do
+    tags =
+      quote do
+        unquote(__MODULE__).append_tags(unquote(tags), unquote(state))
+      end
+
     quote do
       unquote(bring_logger())
-      tags = unquote(__MODULE__).append_tags(unquote(tags), unquote(state))
-      Log.info(unquote(__MODULE__).parse(unquote(message), unquote(state)), tags)
+      Log.info(unquote(__MODULE__).parse(unquote(message), unquote(state)), unquote(tags))
     end
   end
 
   @doc false
   defmacro warn(message, state, tags \\ []) do
+    tags =
+      quote do
+        unquote(__MODULE__).append_tags(unquote(tags), unquote(state))
+      end
+
     quote do
       unquote(bring_logger())
-      tags = unquote(__MODULE__).append_tags(unquote(tags), unquote(state))
-      Log.warn(unquote(__MODULE__).parse_warn(unquote(message), unquote(state)), tags)
+      Log.warn(unquote(__MODULE__).parse_warn(unquote(message), unquote(state)), unquote(tags))
     end
   end
 
   defmacro warn_error(message, reason, state, tags \\ []) do
+    tags =
+      quote do
+        unquote(__MODULE__).append_tags(unquote(tags), unquote(state))
+      end
+
     quote do
       unquote(bring_logger())
-      tags = unquote(__MODULE__).append_tags(unquote(tags), unquote(state))
 
       Log.warn_error(
         unquote(__MODULE__).parse_warn(unquote(message), unquote(state)),
         unquote(reason),
-        tags
+        unquote(tags)
       )
 
       unquote({{:error, reason}, state})
