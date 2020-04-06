@@ -7,7 +7,7 @@ defmodule Membrane.Buffer.Metric.Count do
   @behaviour Buffer.Metric
 
   @impl true
-  def input_buf_preferred_size, do: 10
+  def input_buf_preferred_size, do: 40
 
   @impl true
   def buffers_size(buffers), do: length(buffers)
