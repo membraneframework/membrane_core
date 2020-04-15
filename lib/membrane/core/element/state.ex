@@ -37,8 +37,7 @@ defmodule Membrane.Core.Element.State do
             latency: non_neg_integer(),
             stream_sync: Sync.t(),
             clock: Clock.t() | nil
-          },
-          terminating: boolean | :ready
+          }
         }
 
   defstruct [
@@ -53,8 +52,7 @@ defmodule Membrane.Core.Element.State do
     :playback,
     :playback_buffer,
     :delayed_demands,
-    :synchronization,
-    :terminating
+    :synchronization
   ]
 
   defimpl Playbackable, for: __MODULE__ do
@@ -91,8 +89,7 @@ defmodule Membrane.Core.Element.State do
         clock: nil,
         stream_sync: options.sync,
         latency: 0
-      },
-      terminating: false
+      }
     }
     |> PadSpecHandler.init_pads()
   end
