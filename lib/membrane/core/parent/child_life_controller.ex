@@ -36,9 +36,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {:ok, state} = StartupHandler.exec_handle_spec_started(children_names, state)
 
     children
-    |> Enum.each(
-      &Message.send(&1.pid, :change_playback_state, {state.playback.state, state.terminating?})
-    )
+    |> Enum.each(&Message.send(&1.pid, :change_playback_state, state.playback.state))
 
     {{:ok, children_names}, state}
   end
@@ -71,7 +69,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     with {:ok, data} <-
            children |> Bunch.Enum.try_map(&Parent.ChildrenModel.get_child_data(state, &1)) do
-      data |> Enum.each(&Message.send(&1.pid, :prepare_shutdown))
+      data |> Enum.each(&Message.send(&1.pid, :terminate))
       :ok
     end
     ~> {&1, state}

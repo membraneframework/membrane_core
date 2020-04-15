@@ -40,6 +40,8 @@ defmodule Membrane.Parent do
   """
   @callback handle_prepared_to_stopped(state :: internal_state_t()) :: callback_return_t
 
+  @callback handle_stopped_to_terminating(state :: internal_state_t()) :: callback_return_t
+
   @doc """
   Callback invoked when a notification comes in from an element.
   """
@@ -128,6 +130,9 @@ defmodule Membrane.Parent do
 
       @impl true
       def handle_prepared_to_stopped(state), do: {:ok, state}
+
+      @impl true
+      def handle_stopped_to_terminating(state), do: {:ok, state}
 
       @impl true
       def handle_other(_message, state), do: {:ok, state}

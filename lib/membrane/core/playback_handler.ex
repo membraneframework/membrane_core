@@ -38,7 +38,7 @@ defmodule Membrane.Core.PlaybackHandler do
   """
   @callback notify_controller(:playback_changed, PlaybackState.t(), pid) :: :ok
 
-  @states [:stopped, :prepared, :playing]
+  @states [:terminating, :stopped, :prepared, :playing]
   @states_positions @states |> Enum.with_index() |> Map.new()
 
   defmacro __using__(_) do
@@ -73,15 +73,17 @@ defmodule Membrane.Core.PlaybackHandler do
           | :handle_prepared_to_playing
           | :handle_prepared_to_stopped
           | :handle_stopped_to_prepared
+          | :handle_stopped_to_terminating
   def state_change_callback(:stopped, :prepared), do: :handle_stopped_to_prepared
   def state_change_callback(:playing, :prepared), do: :handle_playing_to_prepared
   def state_change_callback(:prepared, :playing), do: :handle_prepared_to_playing
   def state_change_callback(:prepared, :stopped), do: :handle_prepared_to_stopped
+  def state_change_callback(:stopped, :terminating), do: :handle_stopped_to_terminating
 
-  @spec request_playback_state_change(pid, Membrane.PlaybackState.t(), boolean()) :: :ok
-  def request_playback_state_change(pid, new_state, terminating? \\ false)
+  @spec request_playback_state_change(pid, Membrane.PlaybackState.t()) :: :ok
+  def request_playback_state_change(pid, new_state)
       when Membrane.PlaybackState.is_playback_state(new_state) do
-    Message.send(pid, :change_playback_state, {new_state, terminating?})
+    Message.send(pid, :change_playback_state, new_state)
     :ok
   end
 

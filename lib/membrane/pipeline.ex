@@ -123,7 +123,7 @@ defmodule Membrane.Pipeline do
 
     ref = if blocking?, do: Process.monitor(pipeline)
 
-    Message.send(pipeline, :stop_and_terminate)
+    Message.send(pipeline, :terminate)
 
     if blocking?,
       do: wait_for_down(ref, timeout),

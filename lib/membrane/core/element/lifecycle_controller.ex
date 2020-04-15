@@ -12,7 +12,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   require Membrane.Core.Playback
   require Membrane.Element.CallbackContext.{Other, PlaybackChange}
   alias Membrane.{Clock, Element, Sync}
-  alias Membrane.Core.{CallbackHandler, Message, Playback}
+  alias Membrane.Core.{CallbackHandler, Message}
   alias Membrane.Core.Element.{ActionHandler, PlaybackBuffer, State}
   alias Membrane.Element.CallbackContext
   alias Membrane.Core.Child.PadController
@@ -55,7 +55,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   """
   @spec handle_shutdown(reason :: any, State.t()) :: {:ok, State.t()}
   def handle_shutdown(reason, state) do
-    if state.terminating == :ready do
+    if Playbackable.get_playback(state) |> Map.get(:state) == :terminating do
       debug("Terminating element, reason: #{inspect(reason)}", state)
     else
       warn(
@@ -129,32 +129,21 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @impl PlaybackHandler
   def handle_playback_state_changed(_old, new, state) do
-    shutdown_res =
-      if new == :stopped and state.terminating == true do
-        prepare_shutdown(state)
-      else
-        {:ok, state}
-      end
+    if new == :terminating do
+      unlink(state.pads.data)
 
-    with {:ok, state} <- shutdown_res do
-      PlaybackBuffer.eval(state)
+      # Message.send(state.watcher, :shutdown_ready, state.name) # TODO Maybe we need DOWN only here?
     end
+
+    PlaybackBuffer.eval(state)
   end
 
   @doc """
   Locks on stopped state and unlinks all element's pads.
   """
-  @spec prepare_shutdown(State.t()) :: State.stateful_try_t()
-  def prepare_shutdown(state) do
-    if state.playback.state == :stopped and state.playback |> Playback.stable?() do
-      {_result, state} = PlaybackHandler.lock_target_state(state)
-      unlink(state.pads.data)
-      Message.send(state.watcher, :shutdown_ready, state.name)
-      {:ok, %State{state | terminating: :ready}}
-    else
-      state = %State{state | terminating: true}
-      PlaybackHandler.change_and_lock_playback_state(:stopped, __MODULE__, state)
-    end
+  @spec terminate(State.t()) :: State.stateful_try_t()
+  def terminate(state) do
+    PlaybackHandler.change_and_lock_playback_state(:terminating, __MODULE__, state)
   end
 
   defp unlink(pads_data) do

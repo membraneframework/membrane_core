@@ -66,7 +66,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   end
 
   defp do_handle_message(
-         Message.new(:change_playback_state, {new_playback_state, _terminating}),
+         Message.new(:change_playback_state, new_playback_state),
          :info,
          state
        ) do
@@ -85,8 +85,8 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     Child.LifecycleController.handle_demand_unit(demand_unit, pad_ref, state)
   end
 
-  defp do_handle_message(Message.new(:prepare_shutdown), :info, state) do
-    LifecycleController.prepare_shutdown(state)
+  defp do_handle_message(Message.new(:terminate), :info, state) do
+    LifecycleController.terminate(state)
   end
 
   # Sent by `Membrane.Core.Element.DemandHandler.handle_delayed_demands`, check there for
