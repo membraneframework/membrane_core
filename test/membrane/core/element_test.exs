@@ -71,7 +71,7 @@ defmodule Membrane.Core.ElementTest do
 
   defp playing_state do
     {:noreply, state} =
-      Element.handle_info(Message.new(:change_playback_state, {:playing, false}), linked_state())
+      Element.handle_info(Message.new(:change_playback_state, :playing), linked_state())
 
     state
   end
@@ -79,29 +79,29 @@ defmodule Membrane.Core.ElementTest do
   test "should change playback state" do
     assert {:noreply, state} =
              Element.handle_info(
-               Message.new(:change_playback_state, {:prepared, false}),
+               Message.new(:change_playback_state, :prepared),
                get_state()
              )
 
     assert state.playback.state == :prepared
 
     assert {:noreply, state} =
-             Element.handle_info(Message.new(:change_playback_state, {:playing, false}), state)
+             Element.handle_info(Message.new(:change_playback_state, :playing), state)
 
     assert state.playback.state == :playing
 
     assert {:noreply, state} =
-             Element.handle_info(Message.new(:change_playback_state, {:prepared, false}), state)
+             Element.handle_info(Message.new(:change_playback_state, :prepared), state)
 
     assert state.playback.state == :prepared
 
     assert {:noreply, state} =
-             Element.handle_info(Message.new(:change_playback_state, {:stopped, false}), state)
+             Element.handle_info(Message.new(:change_playback_state, :stopped), state)
 
     assert state.playback.state == :stopped
 
     assert {:noreply, state} =
-             Element.handle_info(Message.new(:change_playback_state, {:playing, false}), state)
+             Element.handle_info(Message.new(:change_playback_state, :playing), state)
 
     assert state.playback.state == :playing
   end

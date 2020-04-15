@@ -31,9 +31,7 @@ defmodule Membrane.Helper.GenServer do
     {:stop, {:error, reason}, old_state}
   end
 
-  def noreply({:stop, _reason, _new_state} = stop, _old_state) do
-    stop
-  end
+  def noreply({:stop, _reason, _new_state} = stop, _old_state), do: stop
 
   def reply({:ok, new_state}), do: {:reply, :ok, new_state}
   def reply({{:ok, v}, new_state}), do: {:reply, {:ok, v}, new_state}

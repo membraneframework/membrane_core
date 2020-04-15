@@ -50,6 +50,11 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     |> noreply(state)
   end
 
+  def handle_message({:DOWN, _ref, :process, child_pid, reason}, state) do
+    LifecycleController.handle_child_death(child_pid, reason, state)
+    |> noreply(state)
+  end
+
   def handle_message(message, state) do
     LifecycleController.handle_other(message, state)
     |> noreply(state)
