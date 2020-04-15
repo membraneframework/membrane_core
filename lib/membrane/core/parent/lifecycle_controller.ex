@@ -114,18 +114,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
-  # TODO do we need this?
-  @spec handle_shutdown_ready(Child.name_t(), state_t()) :: {:ok, state_t()}
-  def handle_shutdown_ready(child, state) do
-    {{:ok, %{pid: pid}}, state} = Parent.ChildrenModel.pop_child(state, child)
-    children = Parent.ChildrenModel.get_children(state)
-
-    if Enum.empty?(children) and Map.has_key?(state, :watcher),
-      do: Message.send(state.watcher, :shutdown_ready, state.name)
-
-    {Core.Element.shutdown(pid), state}
-  end
-
   @spec handle_other(any, state_t()) :: Type.stateful_try_t(state_t)
   def handle_other(message, state) do
     action_handler = get_callback_action_handler(state)

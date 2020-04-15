@@ -37,11 +37,6 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     |> noreply(state)
   end
 
-  def handle_message(Message.new(:shutdown_ready, child), state) do
-    LifecycleController.handle_shutdown_ready(child, state)
-    |> noreply(state)
-  end
-
   def handle_message(Message.new(cb, [element_name, pad_ref]), state)
       when cb in [:handle_start_of_stream, :handle_end_of_stream] do
     inform_parent(state, cb, [pad_ref])
