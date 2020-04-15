@@ -61,12 +61,20 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
     action_handler = get_callback_action_handler(state)
 
-    CallbackHandler.exec_and_handle_callback(
-      callback,
-      action_handler,
-      [],
-      state
-    )
+    callback_res =
+      CallbackHandler.exec_and_handle_callback(
+        callback,
+        action_handler,
+        [],
+        state
+      )
+
+    # All children should have been killed by now (we kill synchronously).
+    # If this process is a process of a pipeline, there is no parent to kill
+    # us so we commit suicide.
+    if new == :terminating and pipeline?(state),
+      do: {:stop, :normal, state},
+      else: callback_res
   end
 
   defp pipeline?(%Core.Pipeline.State{}), do: true
@@ -134,7 +142,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
           PlaybackHandler.handler_return_t()
   def child_playback_changed(
         _pid,
-        _new_playback_state,
+        # new_playback_state,
         %{pending_pids: pending_pids} = state
       )
       when pending_pids == %MapSet{} do
@@ -150,22 +158,27 @@ defmodule Membrane.Core.Parent.LifecycleController do
     {:ok, state}
   end
 
-  def child_playback_changed(pid, new_playback_state, %{pending_pids: pending_pids} = state) do
+  def child_playback_changed(pid, _new_playback_state, %{pending_pids: pending_pids} = state) do
     new_pending_pids = pending_pids |> MapSet.delete(pid)
     new_state = %{state | pending_pids: new_pending_pids}
 
     if new_pending_pids != pending_pids and new_pending_pids |> Enum.empty?() do
-      res = PlaybackHandler.continue_playback_change(__MODULE__, new_state)
-
-      # All children should have been killed by now (we kill synchronously).
-      # If this process is a process of a pipeline, there is no parent to kill
-      # us so we commit suicide.
-      if new_playback_state == :terminating and pipeline?(state),
-        do: {:stop, :normal, state},
-        else: res
+      PlaybackHandler.continue_playback_change(__MODULE__, new_state)
     else
       {:ok, new_state}
     end
+  end
+
+  # Child was removed
+  def handle_child_death(pid, :normal, state) do
+    new_children =
+      state
+      |> Parent.ChildrenModel.get_children()
+      |> Enum.filter(fn {_name, entry} -> entry.pid != pid end)
+      |> Enum.into(%{})
+
+    # TODO use children model here
+    {:ok, %{state | children: new_children}}
   end
 
   @spec handle_stream_management_event(atom, Child.name_t(), Pad.ref_t(), state_t()) ::

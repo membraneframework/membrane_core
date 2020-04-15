@@ -128,11 +128,7 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @impl PlaybackHandler
   def handle_playback_state_changed(_old, new, state) do
-    if new == :terminating do
-      unlink(state.pads.data)
-
-      # Message.send(state.watcher, :shutdown_ready, state.name) # TODO Maybe we need DOWN only here?
-    end
+    if new == :terminating, do: unlink(state.pads.data)
 
     PlaybackBuffer.eval(state)
   end
@@ -141,8 +137,14 @@ defmodule Membrane.Core.Element.LifecycleController do
   Locks on stopped state and unlinks all element's pads.
   """
   @spec terminate(State.t()) :: State.stateful_try_t()
-  def terminate(state) do
-    PlaybackHandler.change_and_lock_playback_state(:terminating, __MODULE__, state)
+  def terminate(state, opts \\ []) do
+    kill_after? = Keyword.get(opts, :kill_after?, false)
+
+    result = PlaybackHandler.change_and_lock_playback_state(:terminating, __MODULE__, state)
+
+    if kill_after?,
+      do: {{:ok, {:stop, :normal, state}}, state},
+      else: result
   end
 
   defp unlink(pads_data) do

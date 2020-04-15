@@ -43,10 +43,19 @@ defmodule Membrane.Core.Element.MessageDispatcher do
           handle_message_error(message, mode, reason, state)
       end
 
-    case mode do
-      :info -> result |> noreply(state)
-      :call -> result |> reply(state)
-      :other -> result
+    # TODO get rid of this hack when we resign from
+    # Bunch.stateful_try_with and family. This hack unwraps
+    # gensever :stop tuple.
+    case result do
+      {{:ok, {:stop, _reason, _state} = stop}, state} ->
+        stop |> noreply(state)
+
+      _ ->
+        case mode do
+          :info -> result |> noreply(state)
+          :call -> result |> reply(state)
+          :other -> result
+        end
     end
   end
 
@@ -86,6 +95,10 @@ defmodule Membrane.Core.Element.MessageDispatcher do
 
   defp do_handle_message(Message.new(:terminate), :info, state) do
     LifecycleController.terminate(state)
+  end
+
+  defp do_handle_message(Message.new(:terminate_and_kill), :info, state) do
+    LifecycleController.terminate(state, kill_after?: true)
   end
 
   # Sent by `Membrane.Core.Element.DemandHandler.handle_delayed_demands`, check there for
