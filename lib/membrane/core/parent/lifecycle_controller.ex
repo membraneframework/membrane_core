@@ -33,7 +33,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     children_pids = children_data |> Enum.map(& &1.pid)
 
     children_pids
-    |> Enum.each(&PlaybackHandler.request_playback_state_change(&1, new, state.terminating?))
+    |> Enum.each(&PlaybackHandler.request_playback_state_change(&1, new))
 
     :ok = toggle_syncs_active(old, new, children_data)
 
@@ -50,8 +50,13 @@ defmodule Membrane.Core.Parent.LifecycleController do
   def handle_playback_state_changed(old, new, state) do
     callback = PlaybackHandler.state_change_callback(old, new)
 
-    if new == :stopped and state.terminating? do
-      Message.self(:stop_and_terminate)
+    # This means all children have gone into `terminating` state
+    # and we can kill their processes. They are killed synchronously.
+    if new == :terminating do
+      state
+      |> Parent.ChildrenModel.get_children()
+      |> Enum.map(fn {_name, entry} -> entry end)
+      |> Enum.each(&Core.Element.shutdown(&1.pid))
     end
 
     action_handler = get_callback_action_handler(state)
@@ -64,79 +69,23 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
+  defp pipeline?(%Core.Pipeline.State{}), do: true
+  defp pipeline?(_), do: false
+
   @spec change_playback_state(PlaybackState.t(), Playbackable.t()) ::
           PlaybackHandler.handler_return_t()
   def change_playback_state(new_state, state) do
     PlaybackHandler.change_playback_state(new_state, __MODULE__, state)
   end
 
-  @spec handle_stop_and_terminate(state_t) ::
+  @spec handle_terminate(state_t) ::
           PlaybackHandler.handler_return_t() | {{:ok, :stop}, state_t}
-  def handle_stop_and_terminate(state) do
-    case state.playback.state do
-      :stopped ->
-        {bins, elements} =
-          state
-          |> Parent.ChildrenModel.get_children()
-          |> Enum.map(fn {_name, entry} -> entry end)
-          |> split_children_by_type()
-
-        bins_refs = Enum.map(bins, &Process.monitor(&1.pid))
-
-        send_each(elements, :prepare_shutdown)
-        send_each(bins, :stop_and_terminate)
-        wait_for_downs(bins_refs)
-        wait_for_shutdown_ready(elements)
-
-        {{:ok, :stop}, state}
-
-      _ ->
-        state = %{state | terminating?: true}
-
-        PlaybackHandler.change_and_lock_playback_state(
-          :stopped,
-          Parent.LifecycleController,
-          state
-        )
-    end
-  end
-
-  defp send_each(children, msg) do
-    children
-    |> Enum.each(&Message.send(&1.pid, msg))
-  end
-
-  defp split_children_by_type(children) do
-    bins = Enum.filter(children, & &1.bin?)
-    elements = children -- bins
-
-    {bins, elements}
-  end
-
-  defp wait_for_downs([]), do: :ok
-
-  defp wait_for_downs(refs) do
-    receive do
-      {:DOWN, ref, :process, _pid, _reason} ->
-        refs
-        |> Enum.filter(&(&1 != ref))
-        |> wait_for_downs()
-    after
-      5000 -> {:error, :timeout}
-    end
-  end
-
-  defp wait_for_shutdown_ready([]), do: :ok
-
-  defp wait_for_shutdown_ready(elements) do
-    receive do
-      Message.new(:shutdown_ready, el_name) ->
-        elements
-        |> Enum.filter(&(&1.name != el_name))
-        |> wait_for_shutdown_ready()
-    after
-      5000 -> {:error, :timeout}
-    end
+  def handle_terminate(state) do
+    PlaybackHandler.change_and_lock_playback_state(
+      :terminating,
+      Parent.LifecycleController,
+      state
+    )
   end
 
   @spec handle_notification(Child.name_t(), Notification.t(), state_t) ::
@@ -157,13 +106,14 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
+  # TODO do we need this?
   @spec handle_shutdown_ready(Child.name_t(), state_t()) :: {:ok, state_t()}
   def handle_shutdown_ready(child, state) do
     {{:ok, %{pid: pid}}, state} = Parent.ChildrenModel.pop_child(state, child)
     children = Parent.ChildrenModel.get_children(state)
 
-    if Enum.empty?(children) and state.watcher,
-      do: Message.send(state.watcher, :shutdown_ready)
+    if Enum.empty?(children) and Map.has_key?(state, :watcher),
+      do: Message.send(state.watcher, :shutdown_ready, state.name)
 
     {Core.Element.shutdown(pid), state}
   end
@@ -200,12 +150,19 @@ defmodule Membrane.Core.Parent.LifecycleController do
     {:ok, state}
   end
 
-  def child_playback_changed(pid, _new_playback_state, %{pending_pids: pending_pids} = state) do
+  def child_playback_changed(pid, new_playback_state, %{pending_pids: pending_pids} = state) do
     new_pending_pids = pending_pids |> MapSet.delete(pid)
     new_state = %{state | pending_pids: new_pending_pids}
 
     if new_pending_pids != pending_pids and new_pending_pids |> Enum.empty?() do
-      PlaybackHandler.continue_playback_change(__MODULE__, new_state)
+      res = PlaybackHandler.continue_playback_change(__MODULE__, new_state)
+
+      # All children should have been killed by now (we kill synchronously).
+      # If this process is a process of a pipeline, there is no parent to kill
+      # us so we commit suicide.
+      if new_playback_state == :terminating and pipeline?(state),
+        do: {:stop, :normal, state},
+        else: res
     else
       {:ok, new_state}
     end
