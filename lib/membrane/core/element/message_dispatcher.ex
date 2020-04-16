@@ -79,7 +79,13 @@ defmodule Membrane.Core.Element.MessageDispatcher do
          :info,
          state
        ) do
-    PlaybackHandler.change_playback_state(new_playback_state, LifecycleController, state)
+    with {:stop, _reason, _state} = stop_tuple <-
+           PlaybackHandler.change_playback_state(new_playback_state, LifecycleController, state) do
+      # TODO get rid of this hack when we resign from
+      # Bunch.stateful_try_with and family. This hack unwraps
+      # gensever :stop tuple.
+      {{:ok, stop_tuple}, state}
+    end
   end
 
   defp do_handle_message(Message.new(:handle_watcher, watcher), :call, state) do
