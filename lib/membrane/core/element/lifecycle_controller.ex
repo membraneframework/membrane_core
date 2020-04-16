@@ -55,7 +55,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   """
   @spec handle_shutdown(reason :: any, State.t()) :: {:ok, State.t()}
   def handle_shutdown(reason, state) do
-    playback_state = state |> Playbackable.get_playback() |> Map.get(:state)
+    playback_state = state.playback.state
 
     if playback_state == :terminating do
       debug("Terminating element, reason: #{inspect(reason)}", state)

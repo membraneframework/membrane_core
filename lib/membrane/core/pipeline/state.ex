@@ -10,8 +10,6 @@ defmodule Membrane.Core.Pipeline.State do
   alias Membrane.{Clock, Sync}
   use Bunch
 
-  @derive Playbackable
-
   @type t :: %__MODULE__{
           internal_state: internal_state_t | nil,
           playback: Playback.t(),

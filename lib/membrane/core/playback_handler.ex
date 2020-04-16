@@ -90,86 +90,83 @@ defmodule Membrane.Core.PlaybackHandler do
   end
 
   @spec change_playback_state(PlaybackState.t(), module(), Playbackable.t()) :: handler_return_t()
-  def change_playback_state(new_playback_state, handler, playbackable) do
-    {playback, playbackable} =
-      playbackable
-      |> Playbackable.get_and_update_playback(fn
-        %Playback{target_locked?: true} = p -> {p, p}
-        %Playback{} = p -> %Playback{p | target_state: new_playback_state} ~> {&1, &1}
-      end)
+  def change_playback_state(new_playback_state, handler, state) do
+    %{playback: playback} = state
 
-    playbackable = lock_if_terminating(playbackable, new_playback_state)
+    playback =
+      case playback do
+        %{target_locked: true} -> playback
+        _ -> %{playback | target_state: new_playback_state}
+      end
+
+    playback = lock_if_terminating(playback, new_playback_state)
+
+    IO.puts("#{inspect(playback.state)} != #{inspect(playback.target_state)}")
 
     if playback.pending_state == nil and playback.state != playback.target_state do
-      do_change_playback_state(playback, handler, playbackable)
+      do_change_playback_state(handler, %{state | playback: playback})
     else
-      {:ok, playbackable}
+      {:ok, %{state | playback: playback}}
     end
   end
 
-  defp lock_if_terminating(playbackable, target_state)
+  defp lock_if_terminating(playback, target_state)
+  defp lock_if_terminating(playback, :terminating), do: %{playback | target_locked?: true}
+  defp lock_if_terminating(playback, _), do: playback
 
-  defp lock_if_terminating(playbackable, :terminating) do
-    Playbackable.update_playback(playbackable, &%{&1 | target_locked?: true})
-  end
+  defp do_change_playback_state(handler, state) do
+    playback = state.playback
 
-  defp lock_if_terminating(playbackable, _), do: playbackable
+    with {:ok, next_playback_state} <-
+           next_state(playback.state, playback.target_state),
+         {:ok, state} <-
+           handler.handle_playback_state(playback.state, next_playback_state, state) do
+      playback = %{state.playback | pending_state: next_playback_state}
+      state = %{state | playback: playback}
 
-  defp do_change_playback_state(playback, handler, playbackable) do
-    with {{:ok, next_playback_state}, playbackable} <-
-           {next_state(playback.state, playback.target_state), playbackable},
-         {:ok, playbackable} <-
-           handler.handle_playback_state(playback.state, next_playback_state, playbackable) do
-      {async_state_change, playbackable} =
-        playbackable
-        |> Playbackable.get_and_update_playback(
-          &{&1.async_state_change, %Playback{&1 | pending_state: next_playback_state}}
-        )
-
-      if async_state_change do
-        {:ok, playbackable}
+      if state.playback.async_state_change do
+        {:ok, state}
       else
-        continue_playback_change(handler, playbackable)
+        continue_playback_change(handler, state)
       end
     end
   end
 
   @spec suspend_playback_change(pb) :: {:ok, pb} when pb: Playbackable.t()
-  def suspend_playback_change(playbackable) do
-    {:ok, playbackable |> Playbackable.update_playback(&%{&1 | async_state_change: true})}
+  def suspend_playback_change(state) do
+    playback = %{state.playback | async_state_change: true}
+    {:ok, %{state | playback: playback}}
   end
 
   @spec continue_playback_change(module, Playbackable.t()) :: handler_return_t()
-  def continue_playback_change(handler, playbackable) do
-    {old_playback, playbackable} =
-      playbackable
-      |> Playbackable.get_and_update_playback(fn p ->
-        {p,
-         %Playback{
-           p
-           | async_state_change: false,
-             state: p.pending_state,
-             pending_state: nil
-         }}
-      end)
+  def continue_playback_change(handler, state) do
+    old_playback = state.playback
+
+    new_playback = %{
+      old_playback
+      | async_state_change: false,
+        state: old_playback.pending_state,
+        pending_state: nil
+    }
+
+    state = %{state | playback: new_playback}
 
     handler_res =
       handler.handle_playback_state_changed(
         old_playback.state,
         old_playback.pending_state,
-        playbackable
+        state
       )
 
     case handler_res do
-      {:stop, _reason, playbackable} = stop_tuple ->
-        maybe_notify_controller(handler, playbackable)
+      {:stop, _reason, state} = stop_tuple ->
+        maybe_notify_controller(handler, state)
         stop_tuple
 
-      {:ok, playbackable} ->
-        maybe_notify_controller(handler, playbackable)
-        playback = Playbackable.get_playback(playbackable)
+      {:ok, state} ->
+        maybe_notify_controller(handler, state)
 
-        change_playback_state(playback.target_state, handler, playbackable)
+        change_playback_state(state.playback.target_state, handler, state)
 
       res ->
         warn(
@@ -182,13 +179,12 @@ defmodule Membrane.Core.PlaybackHandler do
     end
   end
 
-  defp maybe_notify_controller(handler, playbackable) do
-    playback = playbackable |> Playbackable.get_playback()
+  defp maybe_notify_controller(handler, %{controlling_pid: controlling_pid} = state)
+       when not is_nil(controlling_pid),
+       do:
+         handler.notify_controller(:playback_changed, state.playback.state, state.controlling_pid)
 
-    if controlling_pid = playbackable |> Playbackable.get_controlling_pid() do
-      handler.notify_controller(:playback_changed, playback.state, controlling_pid)
-    end
-  end
+  defp maybe_notify_controller(_handler, _state), do: :ok
 
   defp next_state(current, target) do
     withl curr: curr_pos when curr_pos != nil <- @states_positions[current],
