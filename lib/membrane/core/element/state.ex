@@ -10,7 +10,6 @@ defmodule Membrane.Core.Element.State do
   alias Core.Child.{PadModel, PadSpecHandler}
   alias Core.Element.PlaybackBuffer
   alias Bunch.Type
-  alias __MODULE__, as: ThisModule
   require Pad
   use Bunch.Access
 
