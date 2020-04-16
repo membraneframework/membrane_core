@@ -130,7 +130,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
           PlaybackHandler.handler_return_t()
   def child_playback_changed(
         _pid,
-        # new_playback_state,
+        _new_playback_state,
         %{pending_pids: pending_pids} = state
       )
       when pending_pids == %MapSet{} do
