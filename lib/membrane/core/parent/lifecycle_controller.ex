@@ -60,9 +60,11 @@ defmodule Membrane.Core.Parent.LifecycleController do
         state
       )
 
-    if new == :terminating,
-      do: {:stop, :normal, state},
-      else: callback_res
+    with {:ok, state} <- callback_res do
+      if new == :terminating,
+        do: {:stop, :normal, state},
+        else: callback_res
+    end
   end
 
   @spec change_playback_state(PlaybackState.t(), Playbackable.t()) ::

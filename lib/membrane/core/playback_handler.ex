@@ -14,8 +14,10 @@ defmodule Membrane.Core.PlaybackHandler do
   require Message
 
   use Bunch
+  use Membrane.Log, tags: :core
 
-  @type handler_return_t :: {:ok | {:error, any()}, Playbackable.t()}
+  @type handler_return_t ::
+          {:ok | {:error, any()}, Playbackable.t()} | {:stop, any(), Playbackable.t()}
 
   @doc """
   Callback invoked when playback state is going to be changed.
@@ -30,7 +32,7 @@ defmodule Membrane.Core.PlaybackHandler do
               PlaybackState.t(),
               PlaybackState.t(),
               Playbackable.t()
-            ) :: handler_return_t | {:stop, any(), Playbackable.t()}
+            ) :: handler_return_t
 
   @doc """
   Callback that is to notify controller that playback state has changed.
@@ -191,6 +193,12 @@ defmodule Membrane.Core.PlaybackHandler do
         change_playback_state(playback.target_state, handler, playbackable)
 
       res ->
+        warn(
+          "PlaybackHandler got unknown result from callback handle_playback_state_changed: #{
+            inspect(handler_res)
+          }. Not proceeding with palyback state change."
+        )
+
         res
     end
   end
