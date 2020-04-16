@@ -98,12 +98,22 @@ defmodule Membrane.Core.PlaybackHandler do
         %Playback{} = p -> %Playback{p | target_state: new_playback_state} ~> {&1, &1}
       end)
 
+    playbackable = lock_if_terminating(playbackable, new_playback_state)
+
     if playback.pending_state == nil and playback.state != playback.target_state do
       do_change_playback_state(playback, handler, playbackable)
     else
       {:ok, playbackable}
     end
   end
+
+  defp lock_if_terminating(playbackable, target_state)
+
+  defp lock_if_terminating(playbackable, :terminating) do
+    Playbackable.update_playback(playbackable, &%{&1 | target_locked?: true})
+  end
+
+  defp lock_if_terminating(playbackable, _), do: playbackable
 
   defp do_change_playback_state(playback, handler, playbackable) do
     with {{:ok, next_playback_state}, playbackable} <-
@@ -121,38 +131,6 @@ defmodule Membrane.Core.PlaybackHandler do
       else
         continue_playback_change(handler, playbackable)
       end
-    end
-  end
-
-  @spec change_and_lock_playback_state(PlaybackState.t(), module(), Playbackable.t()) ::
-          handler_return_t()
-  def change_and_lock_playback_state(new_playback_state, handler, playbackable) do
-    with {:ok, playbackable} <- lock_target_state(playbackable) do
-      playbackable =
-        playbackable
-        |> Playbackable.update_playback(&%Playback{&1 | target_state: new_playback_state})
-
-      change_playback_state(new_playback_state, handler, playbackable)
-    end
-  end
-
-  @spec lock_target_state(pb) :: {:ok | {:error, :playback_already_locked}, pb}
-        when pb: Playbackable.t()
-  def lock_target_state(playbackable) do
-    if Playbackable.get_playback(playbackable).target_locked? do
-      {{:error, :playback_already_locked}, playbackable}
-    else
-      {:ok, switch_target_lock(playbackable)}
-    end
-  end
-
-  @spec unlock_target_state(pb) :: {:ok | {:error, :playback_already_unlocked}, pb}
-        when pb: Playbackable.t()
-  def unlock_target_state(playbackable) do
-    if Playbackable.get_playback(playbackable).target_locked? do
-      {:ok, switch_target_lock(playbackable)}
-    else
-      {{:error, :playback_already_unlocked}, playbackable}
     end
   end
 
@@ -210,11 +188,6 @@ defmodule Membrane.Core.PlaybackHandler do
     if controlling_pid = playbackable |> Playbackable.get_controlling_pid() do
       handler.notify_controller(:playback_changed, playback.state, controlling_pid)
     end
-  end
-
-  defp switch_target_lock(playbackable) do
-    playbackable
-    |> Playbackable.update_playback(&%Playback{&1 | target_locked?: not &1.target_locked?})
   end
 
   defp next_state(current, target) do
