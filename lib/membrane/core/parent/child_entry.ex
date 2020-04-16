@@ -9,8 +9,7 @@ defmodule Membrane.Core.Parent.ChildEntry do
           options: struct | nil,
           pid: pid | nil,
           clock: Clock.t() | nil,
-          sync: Sync.t() | nil,
-          bin?: boolean()
+          sync: Sync.t() | nil
         }
 
   @type resolved_t :: %__MODULE__{
@@ -22,7 +21,7 @@ defmodule Membrane.Core.Parent.ChildEntry do
           sync: Sync.t()
         }
 
-  defstruct [:name, :module, :options, :pid, :clock, :sync, :bin?]
+  defstruct [:name, :module, :options, :pid, :clock, :sync]
 
   @spec from_spec(ParentSpec.children_spec_t() | any) :: [t] | no_return
   def from_spec(children_spec) when is_map(children_spec) or is_list(children_spec) do
@@ -33,8 +32,7 @@ defmodule Membrane.Core.Parent.ChildEntry do
     %__MODULE__{
       name: name,
       module: module,
-      options: options,
-      bin?: Bunch.Module.check_behaviour(module, :membrane_bin?)
+      options: options
     }
   end
 
@@ -44,8 +42,7 @@ defmodule Membrane.Core.Parent.ChildEntry do
     %__MODULE__{
       name: name,
       module: module,
-      options: options,
-      bin?: Bunch.Module.check_behaviour(module, :membrane_bin?)
+      options: options
     }
   end
 
