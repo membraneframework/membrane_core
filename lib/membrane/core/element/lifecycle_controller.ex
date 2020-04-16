@@ -55,11 +55,15 @@ defmodule Membrane.Core.Element.LifecycleController do
   """
   @spec handle_shutdown(reason :: any, State.t()) :: {:ok, State.t()}
   def handle_shutdown(reason, state) do
-    if Playbackable.get_playback(state) |> Map.get(:state) == :terminating do
+    playback_state = state |> Playbackable.get_playback() |> Map.get(:state)
+
+    if playback_state == :terminating do
       debug("Terminating element, reason: #{inspect(reason)}", state)
     else
       warn(
-        "Terminating element possibly not prepared for termination. Reason: #{inspect(reason)}",
+        "Terminating element possibly not prepared for termination as it was in state #{
+          inspect(playback_state)
+        }. Reason: #{inspect(reason)}",
         state
       )
     end
@@ -138,14 +142,11 @@ defmodule Membrane.Core.Element.LifecycleController do
   Locks on stopped state and unlinks all element's pads.
   """
   @spec terminate(State.t()) :: State.stateful_try_t()
-  def terminate(state, opts \\ []) do
-    kill_after? = Keyword.get(opts, :kill_after?, false)
-
-    result = PlaybackHandler.change_and_lock_playback_state(:terminating, __MODULE__, state)
-
-    if kill_after?,
-      do: {{:ok, {:stop, :normal, state}}, state},
-      else: result
+  def terminate(state) do
+    with {:ok, state} <-
+           PlaybackHandler.change_and_lock_playback_state(:terminating, __MODULE__, state) do
+      {{:ok, {:stop, :normal, state}}, state}
+    end
   end
 
   defp unlink(pads_data) do

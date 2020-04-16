@@ -70,7 +70,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     with {:ok, data} <-
            children |> Bunch.Enum.try_map(&Parent.ChildrenModel.get_child_data(state, &1)) do
       data |> Enum.each(&Process.monitor(&1.pid))
-      data |> Enum.each(&Message.send(&1.pid, :terminate_and_kill))
+      # TODO use playbackhandler function here
+      data |> Enum.each(&Message.send(&1.pid, :terminate))
       :ok
     end
     ~> {&1, state}

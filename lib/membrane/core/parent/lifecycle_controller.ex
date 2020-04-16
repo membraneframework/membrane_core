@@ -2,6 +2,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @moduledoc false
   use Bunch
   use Membrane.Core.PlaybackHandler
+  use Membrane.Log, tags: :core
 
   alias Bunch.Type
   alias Membrane.{Child, Core, Notification, Pad, Sync}
@@ -49,16 +50,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @impl PlaybackHandler
   def handle_playback_state_changed(old, new, state) do
     callback = PlaybackHandler.state_change_callback(old, new)
-
-    # This means all children have gone into `terminating` state
-    # and we can kill their processes. They are killed synchronously.
-    if new == :terminating do
-      state
-      |> Parent.ChildrenModel.get_children()
-      |> Enum.map(fn {_name, entry} -> entry end)
-      |> Enum.each(&Core.Element.shutdown(&1.pid))
-    end
-
     action_handler = get_callback_action_handler(state)
 
     callback_res =
@@ -69,10 +60,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
         state
       )
 
-    # All children should have been killed by now (we kill synchronously).
-    # If this process is a process of a pipeline, there is no parent to kill
-    # us so we commit suicide.
-    if new == :terminating and pipeline?(state),
+    if new == :terminating,
       do: {:stop, :normal, state},
       else: callback_res
   end
@@ -158,7 +146,9 @@ defmodule Membrane.Core.Parent.LifecycleController do
   end
 
   # Child was removed
-  def handle_child_death(pid, :normal, state) do
+  def handle_child_death(pid, reason, state) do
+    if reason != :normal, do: warn("Child finished with reason #{inspect(reason)}")
+
     new_children =
       state
       |> Parent.ChildrenModel.get_children()
