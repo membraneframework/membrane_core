@@ -12,6 +12,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   alias Membrane.ParentSpec
   alias Membrane.Core.{Message, Parent}
   alias Membrane.Core.Parent.{ChildEntry, ClockHandler, Link, State}
+  alias Membrane.Core.PlaybackHandler
 
   @spec handle_spec(ParentSpec.t(), State.t()) ::
           {{:ok, [Membrane.Child.name_t()]}, State.t()} | no_return
@@ -70,8 +71,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     with {:ok, data} <-
            children |> Bunch.Enum.try_map(&Parent.ChildrenModel.get_child_data(state, &1)) do
       data |> Enum.each(&Process.monitor(&1.pid))
-      # TODO use playbackhandler function here
-      data |> Enum.each(&Message.send(&1.pid, :terminate))
+      data |> Enum.each(&PlaybackHandler.request_playback_state_change(&1.pid, :terminating))
       :ok
     end
     ~> {&1, state}
