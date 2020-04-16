@@ -135,17 +135,11 @@ defmodule Membrane.Core.Element.LifecycleController do
   def handle_playback_state_changed(_old, new, state) do
     if new == :terminating, do: unlink(state.pads.data)
 
-    PlaybackBuffer.eval(state)
-  end
-
-  @doc """
-  Locks on stopped state and unlinks all element's pads.
-  """
-  @spec terminate(State.t()) :: State.stateful_try_t()
-  def terminate(state) do
-    with {:ok, state} <-
-           PlaybackHandler.change_and_lock_playback_state(:terminating, __MODULE__, state) do
-      {{:ok, {:stop, :normal, state}}, state}
+    with {:ok, state} <- PlaybackBuffer.eval(state) do
+      if new == :terminating,
+        # TODO return normal :stop tuple when we eradicate dispatchers
+        do: {{:ok, {:stop, :normal, state}}, state},
+        else: {:ok, state}
     end
   end
 

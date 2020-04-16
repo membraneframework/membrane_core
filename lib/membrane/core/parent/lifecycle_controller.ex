@@ -74,16 +74,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
     PlaybackHandler.change_playback_state(new_state, __MODULE__, state)
   end
 
-  @spec handle_terminate(state_t) ::
-          PlaybackHandler.handler_return_t() | {{:ok, :stop}, state_t}
-  def handle_terminate(state) do
-    PlaybackHandler.change_and_lock_playback_state(
-      :terminating,
-      Parent.LifecycleController,
-      state
-    )
-  end
-
   @spec handle_notification(Child.name_t(), Notification.t(), state_t) ::
           Type.stateful_try_t(state_t)
   def handle_notification(from, notification, state) do
