@@ -8,7 +8,7 @@ defmodule Membrane.Core.PlaybackHandler do
   # be handled by `handle_stopped_to_prepared`, `handle_playing_to_prepared`,
   # `handle_prepared_to_playing` and `handle_prepared_to_stopped` callbacks.
 
-  alias Membrane.Core.{Message, Playback, Playbackable}
+  alias Membrane.Core.{Message, State}
   alias Membrane.PlaybackState
 
   require PlaybackState
@@ -18,12 +18,12 @@ defmodule Membrane.Core.PlaybackHandler do
   use Membrane.Log, tags: :core
 
   @type handler_return_t ::
-          {:ok | {:error, any()}, Playbackable.t()} | {:stop, any(), Playbackable.t()}
+          {:ok | {:error, any()}, State.t()} | {:stop, any(), State.t()}
 
   @doc """
   Callback invoked when playback state is going to be changed.
   """
-  @callback handle_playback_state(PlaybackState.t(), PlaybackState.t(), Playbackable.t()) ::
+  @callback handle_playback_state(PlaybackState.t(), PlaybackState.t(), State.t()) ::
               handler_return_t
 
   @doc """
@@ -32,7 +32,7 @@ defmodule Membrane.Core.PlaybackHandler do
   @callback handle_playback_state_changed(
               PlaybackState.t(),
               PlaybackState.t(),
-              Playbackable.t()
+              State.t()
             ) :: handler_return_t
 
   @doc """
@@ -45,15 +45,14 @@ defmodule Membrane.Core.PlaybackHandler do
 
   defmacro __using__(_) do
     quote location: :keep do
-      alias Membrane.Core.Playbackable
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
 
       @impl unquote(__MODULE__)
-      def handle_playback_state(_old, _new, playbackable), do: {:ok, playbackable}
+      def handle_playback_state(_old, _new, state), do: {:ok, state}
 
       @impl unquote(__MODULE__)
-      def handle_playback_state_changed(_old, _new, playbackable), do: {:ok, playbackable}
+      def handle_playback_state_changed(_old, _new, state), do: {:ok, state}
 
       @impl unquote(__MODULE__)
       def notify_controller(:playback_changed, playback_state, controlling_pid) do
@@ -89,7 +88,7 @@ defmodule Membrane.Core.PlaybackHandler do
     :ok
   end
 
-  @spec change_playback_state(PlaybackState.t(), module(), Playbackable.t()) :: handler_return_t()
+  @spec change_playback_state(PlaybackState.t(), module(), State.t()) :: handler_return_t()
   def change_playback_state(new_playback_state, handler, state) do
     %{playback: playback} = state
 
@@ -100,8 +99,6 @@ defmodule Membrane.Core.PlaybackHandler do
       end
 
     playback = lock_if_terminating(playback, new_playback_state)
-
-    IO.puts("#{inspect(playback.state)} != #{inspect(playback.target_state)}")
 
     if playback.pending_state == nil and playback.state != playback.target_state do
       do_change_playback_state(handler, %{state | playback: playback})
@@ -132,13 +129,13 @@ defmodule Membrane.Core.PlaybackHandler do
     end
   end
 
-  @spec suspend_playback_change(pb) :: {:ok, pb} when pb: Playbackable.t()
+  @spec suspend_playback_change(pb) :: {:ok, pb} when pb: State.t()
   def suspend_playback_change(state) do
     playback = %{state.playback | async_state_change: true}
     {:ok, %{state | playback: playback}}
   end
 
-  @spec continue_playback_change(module, Playbackable.t()) :: handler_return_t()
+  @spec continue_playback_change(module, State.t()) :: handler_return_t()
   def continue_playback_change(handler, state) do
     old_playback = state.playback
 

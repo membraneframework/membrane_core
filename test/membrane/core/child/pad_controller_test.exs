@@ -2,7 +2,7 @@ defmodule Membrane.Core.Child.PadControllerTest do
   use ExUnit.Case, async: true
   alias Membrane.Support.Element.{DynamicFilter, TrivialFilter, TrivialSink}
   alias Membrane.Core.Element.State
-  alias Membrane.Core.{Message, Playbackable}
+  alias Membrane.Core.Message
   alias Membrane.Core.Child.{PadSpecHandler, PadModel}
   alias Membrane.Pad
   alias Membrane.LinkError
@@ -14,7 +14,7 @@ defmodule Membrane.Core.Child.PadControllerTest do
   defp prepare_state(elem_module, name \\ :element, playback_state \\ :stopped) do
     %{name: name, module: elem_module, clock: nil, sync: nil}
     |> State.new()
-    |> Playbackable.update_playback(&%{&1 | state: playback_state})
+    |> Map.update!(:playback, &%{&1 | state: playback_state})
     |> PadSpecHandler.init_pads()
     |> Bunch.Access.put_in(:internal_state, %{})
     |> Bunch.Access.put_in(:watcher, self())

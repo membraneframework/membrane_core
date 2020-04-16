@@ -4,7 +4,6 @@ defmodule Membrane.Core.Child.PadControllerSpec do
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.Core.Element.State
   alias Membrane.Event.EndOfStream
-  alias Membrane.Core.Playbackable
   alias Membrane.Pad
 
   describe ".link_pad/7" do
@@ -125,7 +124,7 @@ defmodule Membrane.Core.Child.PadControllerSpec do
     let! :state do
       {pad_info, state} =
         State.new(%{module: module(), name: name(), clock: nil, sync: nil})
-        |> Playbackable.update_playback(&%{&1 | state: :playing})
+        |> Map.update!(:playback, &%{&1 | state: :playing})
         |> PadSpecHandler.init_pads()
         |> Bunch.Access.get_and_update_in(
           [:pads, :info],
