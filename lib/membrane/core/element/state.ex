@@ -54,11 +54,6 @@ defmodule Membrane.Core.Element.State do
     :synchronization
   ]
 
-  defimpl Playbackable, for: __MODULE__ do
-    use Playbackable.Default
-    def get_controlling_pid(%ThisModule{controlling_pid: pid}), do: pid
-  end
-
   @doc """
   Initializes new state.
   """

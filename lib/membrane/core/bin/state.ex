@@ -59,9 +59,4 @@ defmodule Membrane.Core.Bin.State do
                 clock_provider: %{clock: nil, provider: nil, choice: :auto},
                 synchronization: %{}
               ]
-
-  defimpl Playbackable, for: __MODULE__ do
-    use Playbackable.Default
-    def get_controlling_pid(%ThisModule{controlling_pid: pid}), do: pid
-  end
 end
