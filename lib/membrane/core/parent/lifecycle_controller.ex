@@ -65,9 +65,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
       else: callback_res
   end
 
-  defp pipeline?(%Core.Pipeline.State{}), do: true
-  defp pipeline?(_), do: false
-
   @spec change_playback_state(PlaybackState.t(), Playbackable.t()) ::
           PlaybackHandler.handler_return_t()
   def change_playback_state(new_state, state) do
