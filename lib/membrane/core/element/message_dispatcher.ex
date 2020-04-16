@@ -97,10 +97,6 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     LifecycleController.terminate(state)
   end
 
-  defp do_handle_message(Message.new(:terminate_and_kill), :info, state) do
-    LifecycleController.terminate(state, kill_after?: true)
-  end
-
   # Sent by `Membrane.Core.Element.DemandHandler.handle_delayed_demands`, check there for
   # more information
   defp do_handle_message(Message.new(:invoke_supply_demand, pad_ref), :info, state) do

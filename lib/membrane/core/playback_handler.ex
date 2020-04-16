@@ -30,7 +30,7 @@ defmodule Membrane.Core.PlaybackHandler do
               PlaybackState.t(),
               PlaybackState.t(),
               Playbackable.t()
-            ) :: handler_return_t
+            ) :: handler_return_t | {:stop, any(), Playbackable.t()}
 
   @doc """
   Callback that is to notify controller that playback state has changed.
@@ -172,19 +172,34 @@ defmodule Membrane.Core.PlaybackHandler do
          }}
       end)
 
-    with {:ok, playbackable} <-
-           handler.handle_playback_state_changed(
-             old_playback.state,
-             old_playback.pending_state,
-             playbackable
-           ) do
-      playback = playbackable |> Playbackable.get_playback()
+    handler_res =
+      handler.handle_playback_state_changed(
+        old_playback.state,
+        old_playback.pending_state,
+        playbackable
+      )
 
-      if controlling_pid = playbackable |> Playbackable.get_controlling_pid() do
-        handler.notify_controller(:playback_changed, playback.state, controlling_pid)
-      end
+    case handler_res do
+      {:stop, _reason, playbackable} = stop_tuple ->
+        maybe_notify_controller(handler, playbackable)
+        stop_tuple
 
-      change_playback_state(playback.target_state, handler, playbackable)
+      {:ok, playbackable} ->
+        maybe_notify_controller(handler, playbackable)
+        playback = Playbackable.get_playback(playbackable)
+
+        change_playback_state(playback.target_state, handler, playbackable)
+
+      res ->
+        res
+    end
+  end
+
+  defp maybe_notify_controller(handler, playbackable) do
+    playback = playbackable |> Playbackable.get_playback()
+
+    if controlling_pid = playbackable |> Playbackable.get_controlling_pid() do
+      handler.notify_controller(:playback_changed, playback.state, controlling_pid)
     end
   end
 
