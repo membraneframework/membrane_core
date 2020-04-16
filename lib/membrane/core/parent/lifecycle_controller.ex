@@ -67,7 +67,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
-  @spec change_playback_state(PlaybackState.t(), Playbackable.t()) ::
+  @spec change_playback_state(PlaybackState.t(), Parent.State.t()) ::
           PlaybackHandler.handler_return_t()
   def change_playback_state(new_state, state) do
     PlaybackHandler.change_playback_state(new_state, __MODULE__, state)
