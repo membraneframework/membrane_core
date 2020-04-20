@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Message do
   @moduledoc false
+
   # Record representing membrane internal message
 
   require Record

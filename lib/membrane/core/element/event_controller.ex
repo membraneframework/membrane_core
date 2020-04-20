@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Element.EventController do
   @moduledoc false
+
   # Module handling events incoming through input pads.
 
   alias Membrane.{Core, Element, Event, Pad, Sync}

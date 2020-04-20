@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Element.LifecycleController do
   @moduledoc false
+
   # Module handling element initialization, termination, playback state changes
   # and similar stuff.
 

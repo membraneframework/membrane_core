@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Pipeline.State do
   @moduledoc false
+
   # Structure representing state of a pipeline. It is a part of the private API.
   # It does not represent state of pipelines you construct, it's a state used
   # internally in Membrane.

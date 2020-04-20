@@ -1,5 +1,6 @@
 defprotocol Membrane.Core.Playbackable do
   @moduledoc false
+
   # Protocol that has to be adopted by modules that use `Membrane.Core.Playback`.
   #
   # Modules that adopt `Membrane.Core.PlaybackHandler` behaviour have to store their
@@ -28,6 +29,7 @@ end
 
 defmodule Membrane.Core.Playbackable.Default do
   @moduledoc false
+
   # The default implementation for `Membrane.Core.Playbackable`.
   # Assumes that `playbackable` is a map and stores `playback` and
   # `controlling_pid` inside it.

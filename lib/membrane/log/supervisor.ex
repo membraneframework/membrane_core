@@ -7,7 +7,6 @@ defmodule Membrane.Log.Supervisor do
   """
 
   use Supervisor
-  import Supervisor.Spec
 
   @type child_id_t :: term
 
@@ -31,7 +30,7 @@ defmodule Membrane.Log.Supervisor do
   """
   @spec add_logger(atom, any, child_id_t) :: :ok | :invalid_module
   def add_logger(module, options, child_id) do
-    child_spec = worker(Membrane.Log.Logger, [module, options], id: child_id)
+    child_spec = %{id: child_id, start: {Membrane.Log.Logger, :start_link, [module, options]}}
 
     case Supervisor.start_child(__MODULE__, child_spec) do
       {:ok, _child} -> :ok
@@ -78,9 +77,9 @@ defmodule Membrane.Log.Supervisor do
         %{module: module, id: child_id} = logger_map
         options = logger_map |> Map.get(:options)
 
-        worker(Membrane.Log.Logger, [module, options], id: child_id)
+        %{id: child_id, start: {Membrane.Log.Logger, :start_link, [module, options]}}
       end)
 
-    supervise(child_list, strategy: :one_for_one)
+    Supervisor.init(child_list, strategy: :one_for_one)
   end
 end

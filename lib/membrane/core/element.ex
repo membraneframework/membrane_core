@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Element do
   @moduledoc false
+
   # Module containing functions spawning, shutting down, inspecting and controlling
   # playback of elements. These functions are usually called by `Membrane.Pipeline`
   # or `Membrane.Bin`.

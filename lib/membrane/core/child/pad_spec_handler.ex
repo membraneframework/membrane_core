@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Child.PadSpecHandler do
   @moduledoc false
+
   # Module parsing pads specifications in elements and bins.
 
   alias Membrane.{Core, Pad}

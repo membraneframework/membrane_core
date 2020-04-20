@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Bin.State do
   @moduledoc false
+
   # Structure representing state of a bin. It is a part of the private API.
   # It does not represent state of bins you construct, it's a state used
   # internally in Membrane.

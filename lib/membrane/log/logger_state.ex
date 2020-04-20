@@ -1,5 +1,6 @@
 defmodule Membrane.Log.Logger.State do
   @moduledoc false
+
   # Structure representing state of the logger. It is a part of the private API.
   # It does not represent state of logger you construct, it's a state used
   # internally in Membrane.

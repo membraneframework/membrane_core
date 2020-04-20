@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Element.MessageDispatcher do
   @moduledoc false
+
   # Module handling messages incoming to element and dispatching them to controllers.
 
   alias Membrane.Core

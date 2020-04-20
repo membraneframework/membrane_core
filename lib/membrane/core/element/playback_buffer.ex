@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Element.PlaybackBuffer do
   @moduledoc false
+
   # Buffer for storing messages that cannot be handled in current playback state.
   # Allows to avoid race conditions when one element changes playback state
   # before another does.

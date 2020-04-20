@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Element.BufferController do
   @moduledoc false
+
   # Module handling buffers incoming through input pads.
 
   alias Membrane.{Buffer, Core, Element, Pad}

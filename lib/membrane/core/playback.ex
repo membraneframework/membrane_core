@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Playback do
   @moduledoc false
+
   # This module defines available playback states and struct that is held
   # internally by every module having playback state.
 
