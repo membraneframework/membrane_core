@@ -1,7 +1,6 @@
 defmodule Membrane.Core.Element.TimerController do
   @moduledoc false
   use Bunch
-  use Membrane.Core.Element.Log
   require Membrane.Element.CallbackContext.Tick
   alias Membrane.Clock
   alias Membrane.Core.{CallbackHandler, Timer}
@@ -66,11 +65,8 @@ defmodule Membrane.Core.Element.TimerController do
       |> Bunch.Access.update_in([:synchronization, :timers, timer_id], &Timer.tick/1)
       ~> {:ok, &1}
     else
-      {{:error, reason}, state} ->
-        warn_error("Error while handling tick", reason, state)
-
-      false ->
-        {:ok, state}
+      {{:error, reason}, state} -> {{:error, reason}, state}
+      false -> {:ok, state}
     end
   end
 

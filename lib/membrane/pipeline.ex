@@ -12,26 +12,16 @@ defmodule Membrane.Pipeline do
   children, see `Membrane.ParentSpec`.
   """
 
-  alias Membrane.{
-    Clock,
-    Core,
-    Element,
-    Pad,
-    PlaybackState
-  }
-
-  alias Core.Parent
-  alias Core.Message
-  alias Core.Pipeline.State
-  alias Membrane.Core.CallbackHandler
-  alias Membrane.Core.PlaybackHandler
-  require Element
-  require PlaybackState
-  require Message
-  require Pad
   use Bunch
-  use Membrane.Log, tags: :core
   use GenServer
+
+  require Logger
+  require Membrane.Element
+
+  alias Membrane.Clock
+  alias Membrane.Core
+  alias Membrane.Core.{Parent, CallbackHandler, PlaybackHandler}
+  alias Membrane.Core.Pipeline.State
 
   @typedoc """
   Defines options that can be passed to `start/3` / `start_link/3` and received
@@ -91,7 +81,7 @@ defmodule Membrane.Pipeline do
 
   defp do_start(method, module, pipeline_options, process_options) do
     if module |> pipeline? do
-      debug("""
+      Logger.debug("""
       Pipeline start link: module: #{inspect(module)},
       pipeline options: #{inspect(pipeline_options)},
       process options: #{inspect(process_options)}
@@ -99,13 +89,12 @@ defmodule Membrane.Pipeline do
 
       apply(GenServer, method, [__MODULE__, {module, pipeline_options}, process_options])
     else
-      warn_error(
-        """
-        Cannot start pipeline, passed module #{inspect(module)} is not a Membrane Pipeline.
-        Make sure that given module is the right one and it uses Membrane.Pipeline
-        """,
-        {:not_pipeline, module}
-      )
+      Logger.error("""
+      Cannot start pipeline, passed module #{inspect(module)} is not a Membrane Pipeline.
+      Make sure that given module is the right one and it uses Membrane.Pipeline
+      """)
+
+      {:error, {:not_pipeline, module}}
     end
   end
 
@@ -176,6 +165,7 @@ defmodule Membrane.Pipeline do
   end
 
   def init({module, pipeline_options}) do
+    Logger.metadata(mb_name: :pipeline)
     {:ok, clock} = Clock.start_link(proxy: true)
     state = %State{module: module, clock_proxy: clock}
 

@@ -6,13 +6,13 @@ defmodule Membrane.Core.InputBuffer do
   prevents the situation where the data in a stream contains the discontinuities.
   It also guarantees that element won't be flooded with the incoming data.
   """
+
+  use Bunch
+  require Logger
+  require Membrane.Core.Message
   alias Membrane.Buffer
   alias Membrane.Core.Message
-  alias Membrane.Element
   alias Membrane.Pad
-  require Message
-  use Bunch
-  use Membrane.Log, tags: :core
 
   @qe Qex
 
@@ -22,8 +22,8 @@ defmodule Membrane.Core.InputBuffer do
   @type output_t :: {:empty | :value, [output_value_t]}
 
   @type t :: %__MODULE__{
-          name: Element.name_t(),
           q: @qe.t(),
+          log_tag: String.t(),
           preferred_size: pos_integer(),
           current_size: non_neg_integer(),
           demand: non_neg_integer(),
@@ -33,8 +33,8 @@ defmodule Membrane.Core.InputBuffer do
           toilet_props: %{:warn => pos_integer, :fail => pos_integer}
         }
 
-  defstruct name: :input_buf,
-            q: nil,
+  defstruct q: nil,
+            log_tag: nil,
             preferred_size: 100,
             current_size: 0,
             demand: nil,
@@ -81,20 +81,20 @@ defmodule Membrane.Core.InputBuffer do
   end
 
   @spec init(
-          Element.name_t(),
           Buffer.Metric.unit_t(),
           pid(),
           Pad.ref_t(),
+          String.t(),
           props_t
         ) :: t()
-  def init(name, demand_unit, demand_pid, demand_pad, props) do
+  def init(demand_unit, demand_pid, demand_pad, log_tag, props) do
     metric = Buffer.Metric.from_unit(demand_unit)
     preferred_size = props[:preferred_size] || metric.input_buf_preferred_size
     min_demand = props[:min_demand] || preferred_size |> div(4)
 
     %__MODULE__{
-      name: name,
       q: @qe.new(),
+      log_tag: log_tag,
       preferred_size: preferred_size,
       min_demand: min_demand,
       demand: preferred_size,
@@ -121,15 +121,12 @@ defmodule Membrane.Core.InputBuffer do
       )
       when is_list(v) do
     if size >= pref_size do
-      debug(
-        report(
-          """
-          Received buffers despite not requesting them.
-          It is probably caused by overestimating demand by previous element.
-          """,
-          input_buf
-        )
-      )
+      """
+      Received buffers despite not requesting them.
+      It is probably caused by overestimating demand by previous element.
+      """
+      |> mk_log(input_buf)
+      |> Logger.debug()
     end
 
     {:ok, do_store_buffers(input_buf, v)}
@@ -151,24 +148,44 @@ defmodule Membrane.Core.InputBuffer do
           "fail level"
         end
 
-      warn(
-        report(
-          """
-          Reached buffers of size #{inspect(size)},
-          which is above #{above_level}, from output working in push mode.
-          To have control over amount of buffers being produced, consider using pull mode.
-          If this is a normal situation, increase warn/fail size in buffer options.
-          """,
-          input_buf
-        )
-      )
+      """
+      Reached buffers of size #{inspect(size)},
+      which is above #{above_level}, from output working in push mode.
+      To have control over amount of buffers being produced, consider using pull mode.
+      If this is a normal situation, increase warn/fail size in buffer options.
+      """
+      |> mk_log(input_buf)
+      |> Logger.warn()
     end
 
     if size >= fail_lvl do
-      warn_error(
-        report("Failing: too much data", input_buf),
-        {:input_buf, toilet: :too_many_buffers}
-      )
+      raise ~S"""
+            Toilet overflow
+
+                         ` ' `
+                     .'''. ' .'''.
+                       .. ' ' ..
+                      '  '.'.'  '
+                      .'''.'.'''.
+                     ' .''.'.''. '
+                   ;------ ' ------;
+                   | ~~ .--'--//   |
+                   |   /   '   \   |
+                   |  /    '    \  |
+                   |  |    '    |  |  ,----.
+                   |   \ , ' , /   | =|____|=
+                   '---,###'###,---'  (---(
+                      /##  '  ##\      )---)
+                      |##, ' ,##|     (---(
+                       \'#####'/       `---`
+                        \`"#"`/
+                         |`"`|
+                       .-|   |-.
+                  jgs /  '   '  \
+                      '---------'
+            """
+            |> mk_log(input_buf)
+            |> IO.iodata_to_binary()
     else
       {:ok, input_buf}
     end
@@ -177,13 +194,13 @@ defmodule Membrane.Core.InputBuffer do
   def store(input_buf, :buffer, v), do: store(input_buf, :buffers, [v])
 
   def store(%__MODULE__{q: q} = input_buf, type, v) when type in @non_buf_types do
-    debug(report("Storing #{type}", input_buf))
+    "Storing #{type}" |> mk_log(input_buf) |> Logger.debug()
     {:ok, %__MODULE__{input_buf | q: q |> @qe.push({:non_buffer, type, v})}}
   end
 
   defp do_store_buffers(%__MODULE__{q: q, current_size: size, metric: metric} = input_buf, v) do
     buf_cnt = v |> metric.buffers_size
-    debug(report("Storing #{inspect(buf_cnt)} buffers", input_buf))
+    "Storing #{inspect(buf_cnt)} buffers" |> mk_log(input_buf) |> Logger.debug()
 
     %__MODULE__{
       input_buf
@@ -195,7 +212,7 @@ defmodule Membrane.Core.InputBuffer do
   @spec take_and_demand(t(), non_neg_integer(), pid(), Pad.ref_t()) :: {{:ok, output_t()}, t()}
   def take_and_demand(%__MODULE__{current_size: size} = input_buf, count, demand_pid, demand_pad)
       when count >= 0 do
-    debug(report("Taking #{inspect(count)} buffers", input_buf))
+    "Taking #{inspect(count)} buffers" |> mk_log(input_buf) |> Logger.debug()
     {out, %__MODULE__{current_size: new_size} = input_buf} = do_take(input_buf, count)
 
     input_buf =
@@ -257,15 +274,11 @@ defmodule Membrane.Core.InputBuffer do
        when size < pref_size and demand > 0 do
     to_demand = max(demand, min_demand)
 
-    debug(
-      report(
-        """
-        Sending demand of size #{inspect(to_demand)}
-        to input #{inspect(linked_output_ref)}
-        """,
-        input_buf
-      )
-    )
+    """
+    Sending demand of size #{inspect(to_demand)} to input #{inspect(linked_output_ref)}
+    """
+    |> mk_log(input_buf)
+    |> Logger.debug()
 
     Message.send(demand_pid, :demand, to_demand, for_pad: linked_output_ref)
     %__MODULE__{input_buf | demand: demand - to_demand}
@@ -275,22 +288,13 @@ defmodule Membrane.Core.InputBuffer do
     input_buf
   end
 
-  defp report(msg, %__MODULE__{
-         name: name,
-         current_size: size,
-         preferred_size: pref_size,
-         toilet?: toilet
-       }) do
-    name_str =
-      if toilet do
-        "#{inspect(name)} (toilet)"
-      else
-        inspect(name)
-      end
+  defp mk_log(message, input_buf) do
+    %__MODULE__{log_tag: log_tag, current_size: size, preferred_size: pref_size, toilet?: toilet} =
+      input_buf
 
     [
-      "InputBuffer #{name_str}: ",
-      msg,
+      "InputBuffer #{log_tag}#{if toilet, do: " (toilet)", else: ""}: ",
+      message,
       "\n",
       "InputBuffer size: #{inspect(size)}, ",
       if toilet do

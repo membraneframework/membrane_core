@@ -3,15 +3,15 @@ defmodule Membrane.Core.Element.CapsController do
 
   # Module handling caps received on input pads.
 
-  alias Membrane.{Caps, Core, Element, Pad}
-  alias Core.{CallbackHandler, InputBuffer}
-  alias Core.Child.PadModel
-  alias Core.Element.{ActionHandler, State}
-  alias Element.CallbackContext
-  require CallbackContext.Caps
-  require PadModel
-  use Core.Element.Log
   use Bunch
+  require Logger
+  require Membrane.Element.CallbackContext.Caps
+  require Membrane.Core.Child.PadModel
+  alias Membrane.{Caps, Pad}
+  alias Membrane.Core.{CallbackHandler, InputBuffer}
+  alias Membrane.Core.Child.PadModel
+  alias Membrane.Core.Element.{ActionHandler, State}
+  alias Membrane.Element.CallbackContext
 
   @doc """
   Handles incoming caps: either stores them in InputBuffer, or executes element callback.
@@ -48,18 +48,16 @@ defmodule Membrane.Core.Element.CapsController do
       {:ok, PadModel.set_data!(state, pad_ref, :caps, caps)}
     else
       match: false ->
-        warn_error(
-          """
-          Received caps: #{inspect(caps)} that are not specified in def_input_pad
-          for pad #{inspect(pad_ref)}. Specs of accepted caps are:
-          #{inspect(accepted_caps, pretty: true)}
-          """,
-          :invalid_caps,
-          state
-        )
+        Logger.error("""
+        Received caps: #{inspect(caps)} that are not specified in def_input_pad
+        for pad #{inspect(pad_ref)}. Specs of accepted caps are:
+        #{inspect(accepted_caps, pretty: true)}
+        """)
+
+        {{:error, :invalid_caps}, state}
 
       callback: {{:error, reason}, state} ->
-        warn_error("Error while handling caps", reason, state)
+        {{:error, reason}, state}
     end
   end
 end

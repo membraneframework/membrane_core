@@ -2,12 +2,15 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @moduledoc false
   use Bunch
   use Membrane.Core.PlaybackHandler
-  use Membrane.Log, tags: :core
+
+  require Logger
+  require Membrane.Core.Message
+  require Membrane.PlaybackState
 
   alias Bunch.Type
   alias Membrane.{Child, Core, Notification, Pad, Sync}
 
-  alias Core.{
+  alias Membrane.Core.{
     Parent,
     PlaybackHandler,
     CallbackHandler,
@@ -16,12 +19,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   alias Membrane.Core.Parent.ChildrenModel
 
-  alias Core.Child.PadModel
   alias Membrane.PlaybackState
-
-  require Message
-  require PadModel
-  require PlaybackState
 
   @type state_t :: Core.Bin.State.t() | Core.Pipeline.State.t()
 

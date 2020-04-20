@@ -3,19 +3,20 @@ defmodule Membrane.Core.Child.PadController do
 
   # Module handling linking and unlinking pads.
 
-  alias Membrane.{Core, Event, LinkError, Pad, ParentSpec}
-  alias Core.{CallbackHandler, Message, InputBuffer}
-  alias Core.Child.{PadModel, PadSpecHandler}
-  alias Core.Element.{EventController, PlaybackBuffer}
-  alias Membrane.Element.CallbackContext
-  alias Bunch.Type
-  alias Membrane.Core.Bin.LinkingBuffer
-  require CallbackContext.{PadAdded, PadRemoved}
-  require Message
-  require Pad
-  require PadModel
-  use Membrane.Log
   use Bunch
+  require Logger
+  require Membrane.Core.Child.PadModel
+  require Membrane.Core.Message
+  require Membrane.Element.CallbackContext.{PadAdded, PadRemoved}
+  require Membrane.Pad
+  alias Bunch.Type
+  alias Membrane.Core
+  alias Membrane.Core.Bin.LinkingBuffer
+  alias Membrane.Core.{CallbackHandler, Message, InputBuffer}
+  alias Membrane.Core.Child.{PadModel, PadSpecHandler}
+  alias Membrane.Core.Element.{EventController, PlaybackBuffer}
+  alias Membrane.Element.CallbackContext
+  alias Membrane.{Event, LinkError, Pad, ParentSpec}
 
   @type state_t :: Core.Bin.State.t() | Core.Element.State.t()
 
@@ -79,12 +80,10 @@ defmodule Membrane.Core.Child.PadController do
         end)
 
       if not Enum.empty?(static_unlinked) do
-        warn(
-          """
-          Some static pads remained unlinked: #{inspect(static_unlinked)}
-          """,
-          state
-        )
+        Logger.warn("""
+        Some static pads remained unlinked: #{inspect(static_unlinked)}
+        State: #{inspect(state)}
+        """)
       end
 
       bin? = match?(%Membrane.Core.Bin.State{}, state)
@@ -279,17 +278,17 @@ defmodule Membrane.Core.Child.PadController do
     %{}
   end
 
-  defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, props, state) do
-    %{pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
+  defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, props, _state) do
+    %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
 
     Message.send(pid, :demand_unit, [demand_unit, other_ref])
 
     input_buf =
       InputBuffer.init(
-        state.name,
         demand_unit,
         pid,
         other_ref,
+        inspect(ref),
         props.buffer
       )
 

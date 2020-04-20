@@ -1,8 +1,8 @@
 defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
   @moduledoc false
   use Bunch
-  use Membrane.Log, tags: :core
 
+  require Logger
   require Membrane.Core.Message
 
   alias Membrane.{CallbackError, Clock, ParentError, Sync}
@@ -70,7 +70,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
           syncs :: %{Membrane.Child.name_t() => pid()}
         ) :: [ChildEntry.resolved_t()]
   def start_children(children, parent_clock, syncs) do
-    debug("Starting children: #{inspect(children)}")
+    Logger.debug("Starting children: #{inspect(children)}")
 
     children |> Enum.map(&start_child(&1, parent_clock, syncs))
   end
@@ -125,7 +125,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
 
   defp start_child(child, parent_clock, syncs) do
     %ChildEntry{name: name, module: module, options: options} = child
-    debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")
+    Logger.debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")
     sync = syncs |> Map.get(name, Sync.no_sync())
 
     start_result =

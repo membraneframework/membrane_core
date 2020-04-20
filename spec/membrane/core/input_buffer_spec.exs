@@ -14,7 +14,7 @@ defmodule Membrane.Core.InputBufferSpec do
   end
 
   describe ".init/6" do
-    let :name, do: :name
+    let :log_tag, do: "test"
     let :preferred_size, do: 100
     let :warn_size, do: 200
     let :fail_size, do: 400
@@ -35,16 +35,16 @@ defmodule Membrane.Core.InputBufferSpec do
     it "should return InputBuffer struct and send demand message" do
       expect(
         described_module().init(
-          name(),
           demand_unit(),
           demand_pid(),
           linked_output_ref(),
+          log_tag(),
           props()
         )
       )
       |> to(
         eq(%InputBuffer{
-          name: name(),
+          log_tag: log_tag(),
           demand: 0,
           preferred_size: preferred_size(),
           min_demand: min_demand(),
@@ -68,17 +68,17 @@ defmodule Membrane.Core.InputBufferSpec do
 
         expect(
           described_module().init(
-            name(),
             demand_unit(),
             demand_pid(),
             linked_output_ref(),
+            log_tag(),
             props()
           )
           |> described_module().enable_toilet()
         )
         |> to(
           eq(%InputBuffer{
-            name: name(),
+            log_tag: log_tag(),
             # As toilet is always off after init, demand will be sent and ignored
             demand: 0,
             preferred_size: preferred_size(),

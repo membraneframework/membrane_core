@@ -3,17 +3,17 @@ defmodule Membrane.Core.Element.EventController do
 
   # Module handling events incoming through input pads.
 
-  alias Membrane.{Core, Element, Event, Pad, Sync}
-  alias Core.{CallbackHandler, InputBuffer, Message}
-  alias Core.Child.PadModel
-  alias Core.Element.{ActionHandler, State}
-  alias Element.CallbackContext
-  require CallbackContext.Event
-  require CallbackContext.StreamManagement
-  require Message
-  require PadModel
-  use Core.Element.Log
   use Bunch
+  require Logger
+  require Membrane.Core.Child.PadModel
+  require Membrane.Core.Message
+  require Membrane.Element.CallbackContext.Event
+  require Membrane.Element.CallbackContext.StreamManagement
+  alias Membrane.Core.{CallbackHandler, InputBuffer, Message}
+  alias Membrane.Core.Child.PadModel
+  alias Membrane.Core.Element.{ActionHandler, State}
+  alias Membrane.Element.CallbackContext
+  alias Membrane.{Event, Pad, Sync}
 
   @spec handle_start_of_stream(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   def handle_start_of_stream(pad_ref, state) do
@@ -42,19 +42,29 @@ defmodule Membrane.Core.Element.EventController do
           State.stateful_try_t()
   def exec_handle_event(pad_ref, event, params \\ %{}, state) do
     withl handle: {{:ok, :handle}, state} <- handle_special_event(pad_ref, event, state),
-          do: {:ok, state} <- check_sync(event, state),
-          do: {:ok, state} <- do_exec_handle_event(pad_ref, event, params, state) do
+          try: {:ok, state} <- check_sync(event, state),
+          try: {:ok, state} <- do_exec_handle_event(pad_ref, event, params, state) do
       {:ok, state}
     else
       handle: {{:ok, :ignore}, state} ->
-        debug("ignoring event #{inspect(event)}", state)
+        Logger.debug("Ignoring event #{inspect(event)}")
         {:ok, state}
 
       handle: {{:error, reason}, state} ->
-        warn_error("Error while handling event", {:handle_event, reason}, state)
+        Logger.error("""
+        Error while handling event, reason: #{inspect(reason)}
+        State: #{inspect(state)}
+        """)
 
-      do: {{:error, reason}, state} ->
-        warn_error("Error while handling event", {:handle_event, reason}, state)
+        {{:error, {:handle_event, reason}}, state}
+
+      try: {{:error, reason}, state} ->
+        Logger.error("""
+        Error while handling event, reason: #{inspect(reason)}
+        State: #{inspect(state)}
+        """)
+
+        {{:error, {:handle_event, reason}}, state}
     end
   end
 
@@ -135,7 +145,7 @@ defmodule Membrane.Core.Element.EventController do
         {{:error, {:received_end_of_stream_through_output, pad_ref}}, state}
 
       %{end_of_stream?: true} ->
-        debug("Ignoring event EndOfStream as it has already come before", state)
+        Logger.debug("Ignoring end of stream as it has already come before")
         {{:ok, :ignore}, state}
 
       %{state: playback_state} ->

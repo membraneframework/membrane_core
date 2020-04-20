@@ -13,10 +13,11 @@ defmodule Membrane.Bin do
   """
 
   use Bunch
-  use Membrane.Log, tags: :core
   use GenServer
 
   import Membrane.Helper.GenServer
+
+  require Logger
 
   alias Membrane.{Element, Pad, Sync}
   alias Membrane.Bin.CallbackContext
@@ -144,23 +145,20 @@ defmodule Membrane.Bin do
           bin_options :: options_t,
           process_options :: GenServer.options()
         ) :: GenServer.on_start()
-  def start_link(my_name, module, bin_options \\ nil, process_options \\ []) do
+  def start_link(name, module, bin_options \\ nil, process_options \\ []) do
     if module |> bin? do
-      debug("""
+      Logger.debug("""
       Bin start link: module: #{inspect(module)},
       bin options: #{inspect(bin_options)},
       process options: #{inspect(process_options)}
       """)
 
-      GenServer.start_link(__MODULE__, {my_name, module, bin_options}, process_options)
+      GenServer.start_link(__MODULE__, {name, module, bin_options}, process_options)
     else
-      warn_error(
-        """
-        Cannot start bin, passed module #{inspect(module)} is not a Membrane Bin.
-        Make sure that given module is the right one and it uses Membrane.Bin
-        """,
-        {:not_bin, module}
-      )
+      raise """
+      Cannot start bin, passed module #{inspect(module)} is not a Membrane Bin.
+      Make sure that given module is the right one and it uses Membrane.Bin
+      """
     end
   end
 
@@ -174,7 +172,9 @@ defmodule Membrane.Bin do
   end
 
   @impl GenServer
-  def init({my_name, module, bin_options}) do
+  def init({name, module, bin_options}) do
+    Logger.metadata(mb_name: inspect(name))
+
     clock =
       if module |> Bunch.Module.check_behaviour(:membrane_clock?) do
         {:ok, pid} = Membrane.Clock.start_link(proxy: true)
@@ -185,7 +185,7 @@ defmodule Membrane.Bin do
       %State{
         bin_options: bin_options,
         module: module,
-        name: my_name,
+        name: name,
         clock_proxy: clock,
         synchronization: %{
           parent_clock: clock,

@@ -3,11 +3,17 @@ defmodule Membrane.Core.Element.MessageDispatcher do
 
   # Module handling messages incoming to element and dispatching them to controllers.
 
-  alias Membrane.Core
+  use Bunch
 
-  alias Core.Child.PadController
+  import Membrane.Helper.GenServer
 
-  alias Core.Element.{
+  require Logger
+  require Membrane.Core.Message
+
+  alias Membrane.Core.{Child, Message, PlaybackHandler}
+  alias Membrane.Core.Child.PadController
+
+  alias Membrane.Core.Element.{
     DemandHandler,
     LifecycleController,
     PlaybackBuffer,
@@ -15,12 +21,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     TimerController
   }
 
-  alias Core.{Child, Message, PlaybackHandler}
   alias Membrane.Helper
-  require Message
-  import Helper.GenServer
-  use Core.Element.Log
-  use Bunch
 
   @doc """
   Parses message incoming to element and forwards it to proper controller.
@@ -158,14 +159,14 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   end
 
   defp handle_message_error(message, mode, reason, state) do
+    Logger.error("""
+    MessageDispatcher: cannot handle message: #{inspect(message)}, mode: #{inspect(mode)}
+    Reason: #{inspect(reason)}
+    State: #{inspect(state)}
+    """)
+
     reason = {:cannot_handle_message, reason, message: message, mode: mode}
 
-    warn_error(
-      """
-      MessageDispatcher: cannot handle message: #{inspect(message)}, mode: #{inspect(mode)}
-      """,
-      reason,
-      state
-    )
+    {{:error, reason}, state}
   end
 end

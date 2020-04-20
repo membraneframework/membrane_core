@@ -5,11 +5,18 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   # Allows to avoid race conditions when one element changes playback state
   # before another does.
 
-  alias Membrane.{Buffer, Core, Event}
-  alias Core.Playback
-  alias Core.Child.PadModel
+  use Bunch
+  use Bunch.Access
 
-  alias Core.Element.{
+  require Logger
+  require Membrane.Core.Message
+  require Membrane.Core.Child.PadModel
+
+  alias Membrane.Event
+  alias Membrane.Core.Playback
+  alias Membrane.Core.Child.PadModel
+
+  alias Membrane.Core.Element.{
     BufferController,
     CapsController,
     DemandController,
@@ -18,12 +25,6 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   }
 
   alias Membrane.Core.Message
-
-  require Message
-  require PadModel
-  use Core.Element.Log
-  use Bunch
-  use Bunch.Access
 
   @type t :: %__MODULE__{
           q: Qex.t()
@@ -74,7 +75,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   """
   @spec eval(State.t()) :: State.stateful_try_t()
   def eval(%State{playback: %Playback{state: :playing}} = state) do
-    debug("evaluating playback buffer", state)
+    Logger.debug("Evaluating playback buffer")
 
     with {:ok, state} <-
            state.playback_buffer.q
@@ -103,15 +104,14 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     pad_ref = Message.for_pad(msg)
     PadModel.assert_data!(state, pad_ref, %{direction: :output})
 
-    debug(
+    Logger.debug(
       "Received #{
         if size == 0 do
           "dumb demand"
         else
           "demand of size #{inspect(size)}"
         end
-      } on pad #{inspect(pad_ref)}",
-      state
+      } on pad #{inspect(pad_ref)}"
     )
 
     DemandController.handle_demand(pad_ref, size, state)
@@ -122,12 +122,10 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     pad_ref = Message.for_pad(msg)
     PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
-    debug(
-      ["
-      Received buffers on pad #{inspect(pad_ref)}
-      Buffers: ", Buffer.print(buffers)],
-      state
-    )
+    Logger.debug("""
+    Received buffers on pad #{inspect(pad_ref)}
+    Buffers: #{inspect(buffers)}
+    """)
 
     {messages, state} = PadModel.get_and_update_data!(state, pad_ref, :sticky_messages, &{&1, []})
 
@@ -151,13 +149,10 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     pad_ref = Message.for_pad(msg)
     PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
-    debug(
-      """
-      Received caps on pad #{inspect(pad_ref)}
-      Caps: #{inspect(caps)}
-      """,
-      state
-    )
+    Logger.debug("""
+    Received caps on pad #{inspect(pad_ref)}
+    Caps: #{inspect(caps)}
+    """)
 
     CapsController.handle_caps(pad_ref, caps, state)
   end
@@ -167,13 +162,10 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     pad_ref = Message.for_pad(msg)
     PadModel.assert_instance!(state, pad_ref)
 
-    debug(
-      """
-      Received event on pad #{inspect(pad_ref)}
-      Event: #{inspect(event)}
-      """,
-      state
-    )
+    Logger.debug("""
+    Received event on pad #{inspect(pad_ref)}
+    Event: #{inspect(event)}
+    """)
 
     do_exec = fn state ->
       EventController.handle_event(pad_ref, event, state)

@@ -3,15 +3,15 @@ defmodule Membrane.Core.Element.DemandController do
 
   # Module handling demands incoming through output pads.
 
-  alias Membrane.{Core, Element, Pad}
-  alias Core.CallbackHandler
-  alias Core.Child.PadModel
-  alias Element.CallbackContext
-  alias Core.Element.{ActionHandler, State}
-  require CallbackContext.Demand
-  require PadModel
-  use Core.Element.Log
   use Bunch
+  require Logger
+  require Membrane.Element.CallbackContext.Demand
+  require Membrane.Core.Child.PadModel
+  alias Membrane.Core.CallbackHandler
+  alias Membrane.Core.Child.PadModel
+  alias Membrane.Core.Element.{ActionHandler, State}
+  alias Membrane.Element.CallbackContext
+  alias Membrane.Pad
 
   @doc """
   Handles demand coming on a output pad. Updates demand value and executes `handle_demand` callback.
@@ -52,10 +52,6 @@ defmodule Membrane.Core.Element.DemandController do
         [pad_ref, total_size, unit],
         state
       )
-      |> or_warn_error("""
-      Demand arrived from pad #{inspect(pad_ref)}, but error happened while
-      handling it.
-      """)
     else
       {:ok, state}
     end
@@ -65,23 +61,17 @@ defmodule Membrane.Core.Element.DemandController do
   defp exec_handle_demand?(pad_ref, state) do
     case PadModel.get_data!(state, pad_ref) do
       %{end_of_stream?: true} ->
-        debug(
-          """
-          Demand controller: not executing handle_demand as EndOfStream has already been sent
-          """,
-          state
-        )
+        Logger.debug("""
+        Demand controller: not executing handle_demand as EndOfStream has already been sent
+        """)
 
         false
 
       %{demand: demand} when demand <= 0 ->
-        debug(
-          """
-          Demand controller: not executing handle_demand as demand is not greater than 0,
-          demand: #{inspect(demand)}
-          """,
-          state
-        )
+        Logger.debug("""
+        Demand controller: not executing handle_demand as demand is not greater than 0,
+        demand: #{inspect(demand)}
+        """)
 
         false
 

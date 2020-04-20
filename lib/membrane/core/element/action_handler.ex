@@ -3,28 +3,20 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   # Module validating and executing actions returned by element's callbacks.
 
-  alias Membrane.{
-    ActionError,
-    Buffer,
-    Caps,
-    CallbackError,
-    Core,
-    Element,
-    Event,
-    Notification,
-    Pad
-  }
-
-  alias Core.Element.{DemandHandler, LifecycleController, State, TimerController}
-  alias Core.{Message, PlaybackHandler}
-  alias Core.Child.PadModel
-  alias Element.Action
-  require Message
-  require PadModel
-  import Pad, only: [is_pad_ref: 1]
-  use Core.Element.Log
   use Bunch
   use Membrane.Core.CallbackHandler
+
+  import Membrane.Pad, only: [is_pad_ref: 1]
+
+  require Logger
+  require Membrane.Core.Child.PadModel
+  require Membrane.Core.Message
+
+  alias Membrane.{ActionError, Buffer, Caps, CallbackError, Event, Notification, Pad}
+  alias Membrane.Core.Element.{DemandHandler, LifecycleController, State, TimerController}
+  alias Membrane.Core.{Message, PlaybackHandler}
+  alias Membrane.Core.Child.PadModel
+  alias Membrane.Element.Action
 
   @impl CallbackHandler
   def handle_action(action, callback, params, state) do
@@ -256,7 +248,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp send_buffer(pad_ref, buffers, _callback, state) when is_list(buffers) do
-    debug("Sending #{length(buffers)} buffer(s) through pad #{inspect(pad_ref)}", state)
+    Logger.debug("Sending #{length(buffers)} buffer(s) through pad #{inspect(pad_ref)}")
 
     withl buffers:
             :ok <-
@@ -304,13 +296,10 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec send_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.stateful_try_t()
   def send_caps(pad_ref, caps, state) do
-    debug(
-      """
-      Sending caps through pad #{inspect(pad_ref)}
-      Caps: #{inspect(caps)}
-      """,
-      state
-    )
+    Logger.debug("""
+    Sending caps through pad #{inspect(pad_ref)}
+    Caps: #{inspect(caps)}
+    """)
 
     withl pad: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
           direction: %{direction: :output} <- pad_data,
@@ -348,13 +337,10 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp supply_demand(pad_ref, 0, callback, _currently_supplying?, state) do
-    debug(
-      """
-      Ignoring demand of size of 0 requested by callback #{inspect(callback)}
-      on pad #{inspect(pad_ref)}.
-      """,
-      state
-    )
+    Logger.debug("""
+    Ignoring demand of size of 0 requested by callback #{inspect(callback)}
+    on pad #{inspect(pad_ref)}.
+    """)
 
     {:ok, state}
   end
@@ -397,13 +383,10 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec send_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
   defp send_event(pad_ref, event, state) do
-    debug(
-      """
-      Sending event through pad #{inspect(pad_ref)}
-      Event: #{inspect(event)}
-      """,
-      state
-    )
+    Logger.debug("""
+    Sending event through pad #{inspect(pad_ref)}
+    Event: #{inspect(event)}
+    """)
 
     withl event: true <- event |> Event.event?(),
           pad: {:ok, %{pid: pid, other_ref: other_ref}} <- PadModel.get_data(state, pad_ref),
@@ -434,12 +417,12 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}
   defp send_notification(notification, %State{watcher: nil} = state) do
-    debug("Dropping notification #{inspect(notification)} as watcher is undefined", state)
+    Logger.debug("Dropping notification #{inspect(notification)} as watcher is undefined")
     {:ok, state}
   end
 
   defp send_notification(notification, %State{watcher: watcher, name: name} = state) do
-    debug("Sending notification #{inspect(notification)} (watcher: #{inspect(watcher)})", state)
+    Logger.debug("Sending notification #{inspect(notification)} (watcher: #{inspect(watcher)})")
     Message.send(watcher, :notification, [name, notification])
     {:ok, state}
   end

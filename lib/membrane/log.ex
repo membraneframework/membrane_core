@@ -1,4 +1,5 @@
 defmodule Membrane.Log do
+  @deprecated "Use `Logger` instead"
   @moduledoc """
   Mixin for logging using simple functions such as info/1, debug/1 in other
   modules.

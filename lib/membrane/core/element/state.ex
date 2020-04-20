@@ -5,14 +5,13 @@ defmodule Membrane.Core.Element.State do
   # It does not represent state of elements you construct, it's a state used
   # internally in Membrane.
 
-  use Membrane.Log, tags: :core
-  alias Membrane.{Clock, Core, Element, Pad, Sync}
-  alias Core.{Playback, Timer}
-  alias Core.Child.{PadModel, PadSpecHandler}
-  alias Core.Element.PlaybackBuffer
-  alias Bunch.Type
-  require Pad
   use Bunch.Access
+  require Membrane.Pad
+  alias Bunch.Type
+  alias Membrane.{Clock, Element, Pad, Sync}
+  alias Membrane.Core.{Playback, Timer}
+  alias Membrane.Core.Child.{PadModel, PadSpecHandler}
+  alias Membrane.Core.Element.PlaybackBuffer
 
   @type stateful_t(value) :: Type.stateful_t(value, t)
   @type stateful_try_t :: Type.stateful_try_t(t)
