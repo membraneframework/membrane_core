@@ -29,6 +29,8 @@ defmodule Membrane.Time do
   # Difference between 01.01.1900 (start of NTP epoch) and 01.01.1970 (start of Unix epoch) in seconds
   @ntp_unix_epoch_diff 2_208_988_800
 
+  @two_to_pow_32 Ratio.pow(2, 32)
+
   @deprecated "Use `is_time/1` instead"
   defguard is_t(value) when is_integer(value)
 
@@ -193,7 +195,7 @@ defmodule Membrane.Time do
   def from_ntp_timestamp(<<ntp_seconds::32, ntp_fraction::32>>) do
     fractional =
       ntp_fraction
-      |> Ratio.new(Ratio.pow(2, 32))
+      |> Ratio.new(@two_to_pow_32)
       |> Ratio.mult(second())
       |> Ratio.trunc()
 
@@ -212,7 +214,7 @@ defmodule Membrane.Time do
     ntp_seconds = seconds + @ntp_unix_epoch_diff
 
     fraction = ts_as_ratio |> Ratio.sub(seconds)
-    fixed_point_fraction = fraction |> Ratio.mult(Ratio.pow(2, 32)) |> Ratio.trunc()
+    fixed_point_fraction = fraction |> Ratio.mult(@two_to_pow_32) |> Ratio.trunc()
 
     <<ntp_seconds::32, fixed_point_fraction::32>>
   end
