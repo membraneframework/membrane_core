@@ -26,6 +26,9 @@ defmodule Membrane.Time do
     %{plural: :nanoseconds, singular: :nanosecond, abbrev: "ns", duration: 1}
   ]
 
+  # Difference between 01.01.1900 (start of NTP epoch) and 01.01.1970 (start of Unix epoch) in seconds
+  @ntp_unix_epoch_diff 2_208_988_800
+
   @deprecated "Use `is_time/1` instead"
   defguard is_t(value) when is_integer(value)
 
@@ -177,6 +180,41 @@ defmodule Membrane.Time do
   @spec to_datetime(t) :: DateTime.t()
   def to_datetime(value) when is_time(value) do
     DateTime.from_unix!(value |> nanoseconds, :nanosecond)
+  end
+
+  @doc """
+  Converts NTP timestamp (time since 0h on 1st Jan 1900) into Unix timestamp
+  (time since 1st Jan 1970) represented in `Membrane.Time` units.
+
+  NTP timestamp uses fixed point representation with the integer part in the first 32 bits
+  and the fractional part in the last 32 bits.
+  """
+  @spec from_ntp_timestamp(ntp_time :: <<_::64>>) :: t()
+  def from_ntp_timestamp(<<ntp_seconds::32, ntp_fraction::32>>) do
+    fractional =
+      ntp_fraction
+      |> Ratio.new(Ratio.pow(2, 32))
+      |> Ratio.mult(second())
+      |> Ratio.trunc()
+
+    unix_seconds = (ntp_seconds - @ntp_unix_epoch_diff) |> seconds()
+
+    unix_seconds + fractional
+  end
+
+  @doc """
+  Converts the timestamp into NTP timestamp. May introduce small rounding errors.
+  """
+  @spec to_ntp_timestamp(timestamp :: t()) :: <<_::64>>
+  def to_ntp_timestamp(timestamp) do
+    ts_as_ratio = timestamp |> as_seconds()
+    seconds = ts_as_ratio |> Ratio.trunc()
+    ntp_seconds = seconds + @ntp_unix_epoch_diff
+
+    fraction = ts_as_ratio |> Ratio.sub(seconds)
+    fixed_point_fraction = fraction |> Ratio.mult(Ratio.pow(2, 32)) |> Ratio.trunc()
+
+    <<ntp_seconds::32, fixed_point_fraction::32>>
   end
 
   @doc """
