@@ -11,7 +11,8 @@ defmodule Membrane.Time do
   that do not touch hardware clock, you should use Membrane units for consistency.
   """
 
-  @compile {:inline, native_units: 1, native_unit: 0, nanoseconds: 1, nanosecond: 0}
+  @compile {:inline,
+            native_units: 1, native_unit: 0, nanoseconds: 1, nanosecond: 0, second: 0, seconds: 1}
 
   @type t :: integer
   @type non_neg_t :: non_neg_integer
@@ -25,6 +26,11 @@ defmodule Membrane.Time do
     %{plural: :microseconds, singular: :microsecond, abbrev: "us", duration: 1_000},
     %{plural: :nanoseconds, singular: :nanosecond, abbrev: "ns", duration: 1}
   ]
+
+  # Difference between 01.01.1900 (start of NTP epoch) and 01.01.1970 (start of Unix epoch) in seconds
+  @ntp_unix_epoch_diff 2_208_988_800
+
+  @two_to_pow_32 Ratio.pow(2, 32)
 
   @deprecated "Use `is_time/1` instead"
   defguard is_t(value) when is_integer(value)
@@ -177,6 +183,36 @@ defmodule Membrane.Time do
   @spec to_datetime(t) :: DateTime.t()
   def to_datetime(value) when is_time(value) do
     DateTime.from_unix!(value |> nanoseconds, :nanosecond)
+  end
+
+  @doc """
+  Converts NTP timestamp (time since 0h on 1st Jan 1900) into Unix timestamp
+  (time since 1st Jan 1970) represented in `Membrane.Time` units.
+
+  NTP timestamp uses fixed point representation with the integer part in the first 32 bits
+  and the fractional part in the last 32 bits.
+  """
+  @spec from_ntp_timestamp(ntp_time :: <<_::64>>) :: t()
+  def from_ntp_timestamp(<<ntp_seconds::32, ntp_fraction::32>>) do
+    fractional = (ntp_fraction * second()) |> div(@two_to_pow_32)
+
+    unix_seconds = (ntp_seconds - @ntp_unix_epoch_diff) |> seconds()
+
+    unix_seconds + fractional
+  end
+
+  @doc """
+  Converts the timestamp into NTP timestamp. May introduce small rounding errors.
+  """
+  @spec to_ntp_timestamp(timestamp :: t()) :: <<_::64>>
+  def to_ntp_timestamp(timestamp) do
+    seconds = timestamp |> div(second())
+    ntp_seconds = seconds + @ntp_unix_epoch_diff
+
+    fractional = rem(timestamp, second())
+    ntp_fractional = (fractional * @two_to_pow_32) |> div(second())
+
+    <<ntp_seconds::32, ntp_fractional::32>>
   end
 
   @doc """
