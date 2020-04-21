@@ -11,7 +11,8 @@ defmodule Membrane.Time do
   that do not touch hardware clock, you should use Membrane units for consistency.
   """
 
-  @compile {:inline, native_units: 1, native_unit: 0, nanoseconds: 1, nanosecond: 0}
+  @compile {:inline,
+            native_units: 1, native_unit: 0, nanoseconds: 1, nanosecond: 0, second: 0, seconds: 1}
 
   @type t :: integer
   @type non_neg_t :: non_neg_integer
@@ -193,11 +194,7 @@ defmodule Membrane.Time do
   """
   @spec from_ntp_timestamp(ntp_time :: <<_::64>>) :: t()
   def from_ntp_timestamp(<<ntp_seconds::32, ntp_fraction::32>>) do
-    fractional =
-      ntp_fraction
-      |> Ratio.new(@two_to_pow_32)
-      |> Ratio.mult(second())
-      |> Ratio.trunc()
+    fractional = (ntp_fraction * second()) |> div(@two_to_pow_32)
 
     unix_seconds = (ntp_seconds - @ntp_unix_epoch_diff) |> seconds()
 
@@ -209,14 +206,13 @@ defmodule Membrane.Time do
   """
   @spec to_ntp_timestamp(timestamp :: t()) :: <<_::64>>
   def to_ntp_timestamp(timestamp) do
-    ts_as_ratio = timestamp |> as_seconds()
-    seconds = ts_as_ratio |> Ratio.trunc()
+    seconds = timestamp |> div(second())
     ntp_seconds = seconds + @ntp_unix_epoch_diff
 
-    fraction = ts_as_ratio |> Ratio.sub(seconds)
-    fixed_point_fraction = fraction |> Ratio.mult(@two_to_pow_32) |> Ratio.trunc()
+    fractional = rem(timestamp, second())
+    ntp_fractional = (fractional * @two_to_pow_32) |> div(second())
 
-    <<ntp_seconds::32, fixed_point_fraction::32>>
+    <<ntp_seconds::32, ntp_fractional::32>>
   end
 
   @doc """
