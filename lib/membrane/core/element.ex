@@ -31,7 +31,8 @@ defmodule Membrane.Core.Element do
           user_options: Element.options_t(),
           sync: Sync.t(),
           parent: pid,
-          clock: Clock.t()
+          clock: Clock.t(),
+          log_metadata: Keyword.t()
         }
 
   @doc """
@@ -88,6 +89,7 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def init(options) do
+    Logger.metadata([mb_name: inspect(options.name)] ++ options.log_metadata)
     parent_monitor = Process.monitor(options.parent)
 
     state =

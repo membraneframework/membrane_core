@@ -146,6 +146,11 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     {:ok, new_state}
   end
 
+  defp do_handle_message(Message.new(:log_metadata, metadata), :info, state) do
+    :ok = Logger.metadata(metadata)
+    {:ok, state}
+  end
+
   defp do_handle_message(Message.new(_, _, _) = message, mode, state) do
     {{:error, {:invalid_message, message, mode: mode}}, state}
   end

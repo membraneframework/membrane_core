@@ -37,7 +37,8 @@ defmodule Membrane.Core.Bin.State do
             latency: non_neg_integer(),
             stream_sync: Sync.t(),
             clock: Clock.t() | nil
-          }
+          },
+          children_log_metadata: Keyword.t()
         }
 
   @type internal_state_t :: map | struct
@@ -55,6 +56,7 @@ defmodule Membrane.Core.Bin.State do
                 controlling_pid: nil,
                 linking_buffer: LinkingBuffer.new(),
                 clock_provider: %{clock: nil, provider: nil, choice: :auto},
-                synchronization: %{}
+                synchronization: %{},
+                children_log_metadata: []
               ]
 end

@@ -30,6 +30,11 @@ defmodule Membrane.Core.Bin.ActionHandler do
   end
 
   @impl CallbackHandler
+  def handle_action({:log_metadata, metadata}, _cb, _params, state) do
+    Parent.LifecycleController.handle_log_metadata(metadata, state)
+  end
+
+  @impl CallbackHandler
   def handle_action(action, callback, _params, state) do
     raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
   end

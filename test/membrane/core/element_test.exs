@@ -43,7 +43,8 @@ defmodule Membrane.Core.ElementTest do
         name: :some_element,
         clock: nil,
         sync: Membrane.Sync.no_sync(),
-        parent: self()
+        parent: self(),
+        log_metadata: []
       })
 
     state
@@ -308,7 +309,8 @@ defmodule Membrane.Core.ElementTest do
       user_options: %{},
       parent: pipeline,
       clock: nil,
-      sync: Membrane.Sync.no_sync()
+      sync: Membrane.Sync.no_sync(),
+      log_metadata: []
     }
   end
 end

@@ -167,6 +167,21 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
+  @spec handle_log_metadata(Keyword.t(), state_t) :: {:ok, State.t()}
+  def handle_log_metadata(metadata, state) do
+    :ok = Logger.metadata(metadata)
+
+    children_log_metadata =
+      state.children_log_metadata
+      |> Map.new()
+      |> Map.merge(Map.new(metadata))
+      |> Bunch.KVEnum.filter_by_values(&(&1 != nil))
+
+    Bunch.KVEnum.each_value(state.children, &Message.send(&1.pid, :log_metadata, metadata))
+
+    {:ok, %{state | children_log_metadata: children_log_metadata}}
+  end
+
   defp get_callback_action_handler(%Core.Pipeline.State{}), do: Core.Pipeline.ActionHandler
   defp get_callback_action_handler(%Core.Bin.State{}), do: Core.Bin.ActionHandler
 

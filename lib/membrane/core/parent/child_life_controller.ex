@@ -26,7 +26,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     children = ChildEntry.from_spec(spec.children)
     :ok = StartupHandler.check_if_children_names_unique(children, state)
     syncs = StartupHandler.setup_syncs(children, spec.stream_sync)
-    children = StartupHandler.start_children(children, state.clock_proxy, syncs)
+
+    children =
+      StartupHandler.start_children(
+        children,
+        state.clock_proxy,
+        syncs,
+        state.children_log_metadata
+      )
+
     :ok = StartupHandler.maybe_activate_syncs(syncs, state)
     {:ok, state} = StartupHandler.add_children(children, state)
     {:ok, state} = ClockHandler.choose_clock(children, spec.clock_provider, state)

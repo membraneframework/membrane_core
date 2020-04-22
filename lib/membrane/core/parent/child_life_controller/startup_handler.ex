@@ -67,12 +67,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
   @spec start_children(
           [ChildEntry.t()],
           parent_clock :: Clock.t(),
-          syncs :: %{Membrane.Child.name_t() => pid()}
+          syncs :: %{Membrane.Child.name_t() => pid()},
+          log_metadata :: Keyword.t()
         ) :: [ChildEntry.resolved_t()]
-  def start_children(children, parent_clock, syncs) do
+  def start_children(children, parent_clock, syncs, log_metadata) do
     Logger.debug("Starting children: #{inspect(children)}")
 
-    children |> Enum.map(&start_child(&1, parent_clock, syncs))
+    children |> Enum.map(&start_child(&1, parent_clock, syncs, log_metadata))
   end
 
   @spec add_children([ChildEntry.resolved_t()], State.t()) ::
@@ -123,7 +124,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     end
   end
 
-  defp start_child(child, parent_clock, syncs) do
+  defp start_child(child, parent_clock, syncs, log_metadata) do
     %ChildEntry{name: name, module: module, options: options} = child
     Logger.debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")
     sync = syncs |> Map.get(name, Sync.no_sync())
@@ -137,7 +138,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
             name: name,
             user_options: options,
             clock: parent_clock,
-            sync: sync
+            sync: sync,
+            log_metadata: log_metadata
           })
 
         Bunch.Module.check_behaviour(module, :membrane_bin?) ->
@@ -147,7 +149,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
                   reason: bin cannot be synced with other elements"
           end
 
-          Membrane.Bin.start_link(name, module, options, [])
+          Membrane.Bin.start_link(name, module, options, log_metadata, [])
 
         true ->
           raise ParentError, """

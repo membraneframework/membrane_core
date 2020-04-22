@@ -22,7 +22,6 @@ defmodule Membrane.Core.Element.LifecycleController do
   """
   @spec handle_init(Element.options_t(), State.t()) :: State.stateful_try_t()
   def handle_init(options, %State{module: module} = state) do
-    Logger.metadata(mb_name: inspect(state.name))
     Logger.debug("Initializing element: #{inspect(module)}, options: #{inspect(options)}")
 
     :ok = Sync.register(state.synchronization.stream_sync)

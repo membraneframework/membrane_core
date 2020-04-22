@@ -145,7 +145,7 @@ defmodule Membrane.Bin do
           bin_options :: options_t,
           process_options :: GenServer.options()
         ) :: GenServer.on_start()
-  def start_link(name, module, bin_options \\ nil, process_options \\ []) do
+  def start_link(name, module, bin_options \\ nil, log_metadata, process_options \\ []) do
     if module |> bin? do
       Logger.debug("""
       Bin start link: module: #{inspect(module)},
@@ -153,7 +153,7 @@ defmodule Membrane.Bin do
       process options: #{inspect(process_options)}
       """)
 
-      GenServer.start_link(__MODULE__, {name, module, bin_options}, process_options)
+      GenServer.start_link(__MODULE__, {name, module, bin_options, log_metadata}, process_options)
     else
       raise """
       Cannot start bin, passed module #{inspect(module)} is not a Membrane Bin.
@@ -172,8 +172,8 @@ defmodule Membrane.Bin do
   end
 
   @impl GenServer
-  def init({name, module, bin_options}) do
-    Logger.metadata(mb_name: inspect(name))
+  def init({name, module, bin_options, log_metadata}) do
+    Logger.metadata([mb_name: inspect(name)] ++ log_metadata)
 
     clock =
       if module |> Bunch.Module.check_behaviour(:membrane_clock?) do

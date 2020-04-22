@@ -42,8 +42,12 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   defp do_handle_action({action, _args}, :handle_init, _params, state)
-       when action not in [:spec] do
+       when action not in [:spec, :log_metadata] do
     {{:error, :invalid_action}, state}
+  end
+
+  defp do_handle_action({:log_metadata, metadata}, _cb, _params, state) do
+    Parent.LifecycleController.handle_log_metadata(metadata, state)
   end
 
   defp do_handle_action({:forward, {elementname, message}}, _cb, _params, state) do
