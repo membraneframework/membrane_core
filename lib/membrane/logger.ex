@@ -18,13 +18,15 @@ defmodule Membrane.Logger do
 
   while the default verbosity is `:normal`.
 
+  A `mb_verbosity: :verbose` metadata entry is added to each debug.
+
   Use for debugs that usually pollute the output.
   """
   defmacro debug_verbose(message, metadata \\ []) do
     case Keyword.get(get_config(), :verbosity, :normal) do
       :verbose ->
         quote do
-          Logger.debug(unquote(message), unquote(metadata))
+          Logger.debug(unquote(message), unquote([mb_verbosity: :verbose] ++ metadata))
         end
 
       :normal ->
