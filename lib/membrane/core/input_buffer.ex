@@ -10,6 +10,7 @@ defmodule Membrane.Core.InputBuffer do
   use Bunch
   require Logger
   require Membrane.Core.Message
+  require Membrane.Logger
   alias Membrane.Buffer
   alias Membrane.Core.Message
   alias Membrane.Pad
@@ -126,7 +127,7 @@ defmodule Membrane.Core.InputBuffer do
       It is probably caused by overestimating demand by previous element.
       """
       |> mk_log(input_buf)
-      |> Logger.debug()
+      |> Membrane.Logger.debug_verbose()
     end
 
     {:ok, do_store_buffers(input_buf, v)}
@@ -194,13 +195,13 @@ defmodule Membrane.Core.InputBuffer do
   def store(input_buf, :buffer, v), do: store(input_buf, :buffers, [v])
 
   def store(%__MODULE__{q: q} = input_buf, type, v) when type in @non_buf_types do
-    "Storing #{type}" |> mk_log(input_buf) |> Logger.debug()
+    "Storing #{type}" |> mk_log(input_buf) |> Membrane.Logger.debug_verbose()
     {:ok, %__MODULE__{input_buf | q: q |> @qe.push({:non_buffer, type, v})}}
   end
 
   defp do_store_buffers(%__MODULE__{q: q, current_size: size, metric: metric} = input_buf, v) do
     buf_cnt = v |> metric.buffers_size
-    "Storing #{inspect(buf_cnt)} buffers" |> mk_log(input_buf) |> Logger.debug()
+    "Storing #{inspect(buf_cnt)} buffers" |> mk_log(input_buf) |> Membrane.Logger.debug_verbose()
 
     %__MODULE__{
       input_buf
@@ -212,7 +213,7 @@ defmodule Membrane.Core.InputBuffer do
   @spec take_and_demand(t(), non_neg_integer(), pid(), Pad.ref_t()) :: {{:ok, output_t()}, t()}
   def take_and_demand(%__MODULE__{current_size: size} = input_buf, count, demand_pid, demand_pad)
       when count >= 0 do
-    "Taking #{inspect(count)} buffers" |> mk_log(input_buf) |> Logger.debug()
+    "Taking #{inspect(count)} buffers" |> mk_log(input_buf) |> Membrane.Logger.debug_verbose()
     {out, %__MODULE__{current_size: new_size} = input_buf} = do_take(input_buf, count)
 
     input_buf =
@@ -278,7 +279,7 @@ defmodule Membrane.Core.InputBuffer do
     Sending demand of size #{inspect(to_demand)} to input #{inspect(linked_output_ref)}
     """
     |> mk_log(input_buf)
-    |> Logger.debug()
+    |> Membrane.Logger.debug_verbose()
 
     Message.send(demand_pid, :demand, to_demand, for_pad: linked_output_ref)
     %__MODULE__{input_buf | demand: demand - to_demand}

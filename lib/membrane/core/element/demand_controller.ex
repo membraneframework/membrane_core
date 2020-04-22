@@ -7,6 +7,7 @@ defmodule Membrane.Core.Element.DemandController do
   require Logger
   require Membrane.Element.CallbackContext.Demand
   require Membrane.Core.Child.PadModel
+  require Membrane.Logger
   alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{ActionHandler, State}
@@ -61,14 +62,14 @@ defmodule Membrane.Core.Element.DemandController do
   defp exec_handle_demand?(pad_ref, state) do
     case PadModel.get_data!(state, pad_ref) do
       %{end_of_stream?: true} ->
-        Logger.debug("""
+        Membrane.Logger.debug_verbose("""
         Demand controller: not executing handle_demand as EndOfStream has already been sent
         """)
 
         false
 
       %{demand: demand} when demand <= 0 ->
-        Logger.debug("""
+        Membrane.Logger.debug_verbose("""
         Demand controller: not executing handle_demand as demand is not greater than 0,
         demand: #{inspect(demand)}
         """)

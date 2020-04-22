@@ -11,6 +11,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   require Logger
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
+  require Membrane.Logger
 
   alias Membrane.{ActionError, Buffer, Caps, CallbackError, Event, Notification, Pad}
   alias Membrane.Core.Element.{DemandHandler, LifecycleController, State, TimerController}
@@ -248,7 +249,9 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp send_buffer(pad_ref, buffers, _callback, state) when is_list(buffers) do
-    Logger.debug("Sending #{length(buffers)} buffer(s) through pad #{inspect(pad_ref)}")
+    Membrane.Logger.debug_verbose(
+      "Sending #{length(buffers)} buffer(s) through pad #{inspect(pad_ref)}"
+    )
 
     withl buffers:
             :ok <-
@@ -337,7 +340,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp supply_demand(pad_ref, 0, callback, _currently_supplying?, state) do
-    Logger.debug("""
+    Membrane.Logger.debug_verbose("""
     Ignoring demand of size of 0 requested by callback #{inspect(callback)}
     on pad #{inspect(pad_ref)}.
     """)
@@ -383,7 +386,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec send_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
   defp send_event(pad_ref, event, state) do
-    Logger.debug("""
+    Membrane.Logger.debug_verbose("""
     Sending event through pad #{inspect(pad_ref)}
     Event: #{inspect(event)}
     """)
@@ -417,12 +420,18 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}
   defp send_notification(notification, %State{watcher: nil} = state) do
-    Logger.debug("Dropping notification #{inspect(notification)} as watcher is undefined")
+    Membrane.Logger.debug_verbose(
+      "Dropping notification #{inspect(notification)} as watcher is undefined"
+    )
+
     {:ok, state}
   end
 
   defp send_notification(notification, %State{watcher: watcher, name: name} = state) do
-    Logger.debug("Sending notification #{inspect(notification)} (watcher: #{inspect(watcher)})")
+    Membrane.Logger.debug_verbose(
+      "Sending notification #{inspect(notification)} (watcher: #{inspect(watcher)})"
+    )
+
     Message.send(watcher, :notification, [name, notification])
     {:ok, state}
   end

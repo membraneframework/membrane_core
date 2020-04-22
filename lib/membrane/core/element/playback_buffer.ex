@@ -11,6 +11,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   require Logger
   require Membrane.Core.Message
   require Membrane.Core.Child.PadModel
+  require Membrane.Logger
 
   alias Membrane.Event
   alias Membrane.Core.Playback
@@ -104,7 +105,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     pad_ref = Message.for_pad(msg)
     PadModel.assert_data!(state, pad_ref, %{direction: :output})
 
-    Logger.debug(
+    Membrane.Logger.debug_verbose(
       "Received #{
         if size == 0 do
           "dumb demand"
@@ -122,7 +123,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     pad_ref = Message.for_pad(msg)
     PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
-    Logger.debug("""
+    Membrane.Logger.debug_verbose("""
     Received buffers on pad #{inspect(pad_ref)}
     Buffers: #{inspect(buffers)}
     """)
@@ -162,7 +163,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     pad_ref = Message.for_pad(msg)
     PadModel.assert_instance!(state, pad_ref)
 
-    Logger.debug("""
+    Membrane.Logger.debug_verbose("""
     Received event on pad #{inspect(pad_ref)}
     Event: #{inspect(event)}
     """)
