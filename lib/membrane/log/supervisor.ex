@@ -1,4 +1,5 @@
 defmodule Membrane.Log.Supervisor do
+  @moduledoc deprecated: "Use Elixir `Logger` instead"
   @moduledoc """
   Module responsible for supervising router_level loggers. It is also responsible for
   receiving and routing log messages to appropriate loggers.

@@ -1,4 +1,5 @@
 defmodule Membrane.Log.Logger do
+  @moduledoc deprecated: "Use Elixir `Logger` instead"
   @moduledoc """
   Module containing functions spawning, shutting down, and handling messages
   sent to logger.

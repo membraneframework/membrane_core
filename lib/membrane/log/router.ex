@@ -1,4 +1,5 @@
 defmodule Membrane.Log.Router do
+  @moduledoc deprecated: "Use Elixir `Logger` instead"
   @moduledoc """
   Defines a router that dispatches logs to instances of `Membrane.Log.Logger.Base`
   """
