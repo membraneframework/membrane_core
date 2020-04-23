@@ -194,7 +194,8 @@ defmodule Membrane.Bin do
           # This is a sync for siblings. This is not yet allowed.
           stream_sync: Sync.no_sync(),
           latency: 0
-        }
+        },
+        children_log_metadata: log_metadata
       }
       |> PadSpecHandler.init_pads()
 
