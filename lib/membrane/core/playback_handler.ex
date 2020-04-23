@@ -67,19 +67,20 @@ defmodule Membrane.Core.PlaybackHandler do
   end
 
   @doc """
-  Returns callback name for transition between playback states
+  Returns callback name for transition between playback states.
+  nil means no callback should be called.
   """
   @spec state_change_callback(prev_state :: PlaybackState.t(), next_state :: PlaybackState.t()) ::
           :handle_playing_to_prepared
           | :handle_prepared_to_playing
           | :handle_prepared_to_stopped
           | :handle_stopped_to_prepared
-          | :handle_stopped_to_terminating
+          | nil
   def state_change_callback(:stopped, :prepared), do: :handle_stopped_to_prepared
   def state_change_callback(:playing, :prepared), do: :handle_playing_to_prepared
   def state_change_callback(:prepared, :playing), do: :handle_prepared_to_playing
   def state_change_callback(:prepared, :stopped), do: :handle_prepared_to_stopped
-  def state_change_callback(:stopped, :terminating), do: :handle_stopped_to_terminating
+  def state_change_callback(:stopped, :terminating), do: nil
 
   @spec request_playback_state_change(pid, Membrane.PlaybackState.t()) :: :ok
   def request_playback_state_change(pid, new_state)

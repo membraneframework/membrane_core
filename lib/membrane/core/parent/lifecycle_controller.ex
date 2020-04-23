@@ -53,12 +53,16 @@ defmodule Membrane.Core.Parent.LifecycleController do
     action_handler = get_callback_action_handler(state)
 
     callback_res =
-      CallbackHandler.exec_and_handle_callback(
-        callback,
-        action_handler,
-        [],
-        state
-      )
+      if callback do
+        CallbackHandler.exec_and_handle_callback(
+          callback,
+          action_handler,
+          [],
+          state
+        )
+      else
+        {:ok, state}
+      end
 
     with {:ok, state} <- callback_res do
       if new == :terminating,

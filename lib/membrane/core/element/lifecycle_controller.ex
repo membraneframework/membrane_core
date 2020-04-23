@@ -122,13 +122,17 @@ defmodule Membrane.Core.Element.LifecycleController do
         state
       end
 
-    CallbackHandler.exec_and_handle_callback(
-      callback,
-      ActionHandler,
-      %{context: context},
-      [],
-      state
-    )
+    if callback do
+      CallbackHandler.exec_and_handle_callback(
+        callback,
+        ActionHandler,
+        %{context: context},
+        [],
+        state
+      )
+    else
+      {:ok, state}
+    end
   end
 
   @impl PlaybackHandler
