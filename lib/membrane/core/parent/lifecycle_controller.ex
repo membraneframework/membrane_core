@@ -2,6 +2,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @moduledoc false
   use Bunch
   use Membrane.Core.PlaybackHandler
+  use Membrane.Log, tags: :core
 
   alias Bunch.Type
   alias Membrane.{Child, Core, Notification, Pad, Sync}
@@ -49,43 +50,31 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @impl PlaybackHandler
   def handle_playback_state_changed(old, new, state) do
     callback = PlaybackHandler.state_change_callback(old, new)
-
-    if new == :stopped and state.terminating? do
-      Message.self(:stop_and_terminate)
-    end
-
     action_handler = get_callback_action_handler(state)
 
-    CallbackHandler.exec_and_handle_callback(
-      callback,
-      action_handler,
-      [],
-      state
-    )
+    callback_res =
+      if callback do
+        CallbackHandler.exec_and_handle_callback(
+          callback,
+          action_handler,
+          [],
+          state
+        )
+      else
+        {:ok, state}
+      end
+
+    with {:ok, state} <- callback_res do
+      if new == :terminating,
+        do: {:stop, :normal, state},
+        else: callback_res
+    end
   end
 
-  @spec change_playback_state(PlaybackState.t(), Playbackable.t()) ::
+  @spec change_playback_state(PlaybackState.t(), Parent.State.t()) ::
           PlaybackHandler.handler_return_t()
   def change_playback_state(new_state, state) do
     PlaybackHandler.change_playback_state(new_state, __MODULE__, state)
-  end
-
-  @spec handle_stop_and_terminate(state_t) ::
-          PlaybackHandler.handler_return_t() | {{:ok, :stop}, state_t}
-  def handle_stop_and_terminate(state) do
-    case state.playback.state do
-      :stopped ->
-        {{:ok, :stop}, state}
-
-      _ ->
-        state = %{state | terminating?: true}
-
-        PlaybackHandler.change_and_lock_playback_state(
-          :stopped,
-          Parent.LifecycleController,
-          state
-        )
-    end
   end
 
   @spec handle_notification(Child.name_t(), Notification.t(), state_t) ::
@@ -104,12 +93,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
       error ->
         {error, state}
     end
-  end
-
-  @spec handle_shutdown_ready(Child.name_t(), state_t()) :: {:ok, state_t()}
-  def handle_shutdown_ready(child, state) do
-    {{:ok, %{pid: pid}}, state} = Parent.ChildrenModel.pop_child(state, child)
-    {Core.Element.shutdown(pid), state}
   end
 
   @spec handle_other(any, state_t()) :: Type.stateful_try_t(state_t)
@@ -153,6 +136,17 @@ defmodule Membrane.Core.Parent.LifecycleController do
     else
       {:ok, new_state}
     end
+  end
+
+  # Child was removed
+  def handle_child_death(pid, :normal, state) do
+    new_children =
+      state
+      |> Parent.ChildrenModel.get_children()
+      |> Enum.filter(fn {_name, entry} -> entry.pid != pid end)
+      |> Enum.into(%{})
+
+    {:ok, %{state | children: new_children}}
   end
 
   @spec handle_stream_management_event(atom, Child.name_t(), Pad.ref_t(), state_t()) ::

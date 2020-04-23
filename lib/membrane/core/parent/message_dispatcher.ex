@@ -26,23 +26,8 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     |> noreply(state)
   end
 
-  def handle_message(Message.new(:stop_and_terminate), state) do
-    case LifecycleController.handle_stop_and_terminate(state) do
-      {{:ok, :stop}, state} ->
-        {:stop, :normal, state}
-
-      result ->
-        result |> noreply(state)
-    end
-  end
-
   def handle_message(Message.new(:notification, [from, notification]), state) do
     LifecycleController.handle_notification(from, notification, state)
-    |> noreply(state)
-  end
-
-  def handle_message(Message.new(:shutdown_ready, child), state) do
-    LifecycleController.handle_shutdown_ready(child, state)
     |> noreply(state)
   end
 
@@ -51,6 +36,11 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     inform_parent(state, cb, [pad_ref])
 
     LifecycleController.handle_stream_management_event(cb, element_name, pad_ref, state)
+    |> noreply(state)
+  end
+
+  def handle_message({:DOWN, _ref, :process, child_pid, reason}, state) do
+    LifecycleController.handle_child_death(child_pid, reason, state)
     |> noreply(state)
   end
 

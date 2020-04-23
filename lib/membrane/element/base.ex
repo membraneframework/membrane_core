@@ -143,6 +143,11 @@ defmodule Membrane.Element.Base do
               state :: Element.state_t()
             ) :: callback_return_t
 
+  @callback handle_stopped_to_terminating(
+              context :: CallbackContext.PlaybackChange.t(),
+              state :: Element.state_t()
+            ) :: callback_return_t
+
   @doc """
   Callback invoked when element receives a message that is not recognized
   as an internal membrane message.
@@ -341,6 +346,9 @@ defmodule Membrane.Element.Base do
 
       @impl true
       def handle_prepared_to_stopped(_context, state), do: {:ok, state}
+
+      @impl true
+      def handle_stopped_to_terminating(_context, state), do: {:ok, state}
 
       @impl true
       def handle_other(_message, _context, state), do: {:ok, state}

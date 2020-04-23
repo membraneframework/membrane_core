@@ -9,14 +9,12 @@ defmodule Membrane.Core.Playback do
   defstruct state: :stopped,
             pending_state: nil,
             target_state: :stopped,
-            target_locked?: false,
             async_state_change: false
 
   @type t :: %__MODULE__{
           state: PlaybackState.t(),
           pending_state: PlaybackState.t() | nil,
           target_state: PlaybackState.t(),
-          target_locked?: boolean,
           async_state_change: boolean
         }
 

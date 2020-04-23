@@ -44,10 +44,19 @@ defmodule Membrane.Core.Element.MessageDispatcher do
           handle_message_error(message, mode, reason, state)
       end
 
-    case mode do
-      :info -> result |> noreply(state)
-      :call -> result |> reply(state)
-      :other -> result
+    # TODO get rid of this hack when we resign from
+    # Bunch.stateful_try_with and family. This hack unwraps
+    # gensever :stop tuple. Issue #228
+    case result do
+      {{:ok, {:stop, _reason, _state} = stop}, state} ->
+        stop |> noreply(state)
+
+      _ ->
+        case mode do
+          :info -> result |> noreply(state)
+          :call -> result |> reply(state)
+          :other -> result
+        end
     end
   end
 
@@ -65,8 +74,18 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     LifecycleController.handle_pipeline_down(reason, state)
   end
 
-  defp do_handle_message(Message.new(:change_playback_state, new_playback_state), :info, state) do
-    PlaybackHandler.change_playback_state(new_playback_state, LifecycleController, state)
+  defp do_handle_message(
+         Message.new(:change_playback_state, new_playback_state),
+         :info,
+         state
+       ) do
+    with {:stop, _reason, _state} = stop_tuple <-
+           PlaybackHandler.change_playback_state(new_playback_state, LifecycleController, state) do
+      # TODO get rid of this hack when we resign from
+      # Bunch.stateful_try_with and family. This hack unwraps
+      # gensever :stop tuple. Issue #228
+      {{:ok, stop_tuple}, state}
+    end
   end
 
   defp do_handle_message(Message.new(:handle_watcher, watcher), :call, state) do
@@ -79,10 +98,6 @@ defmodule Membrane.Core.Element.MessageDispatcher do
 
   defp do_handle_message(Message.new(:demand_unit, [demand_unit, pad_ref]), :info, state) do
     Child.LifecycleController.handle_demand_unit(demand_unit, pad_ref, state)
-  end
-
-  defp do_handle_message(Message.new(:prepare_shutdown), :info, state) do
-    LifecycleController.prepare_shutdown(state)
   end
 
   # Sent by `Membrane.Core.Element.DemandHandler.handle_delayed_demands`, check there for

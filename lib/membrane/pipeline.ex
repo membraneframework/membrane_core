@@ -24,6 +24,7 @@ defmodule Membrane.Pipeline do
   alias Core.Message
   alias Core.Pipeline.State
   alias Membrane.Core.CallbackHandler
+  alias Membrane.Core.PlaybackHandler
   require Element
   require PlaybackState
   require Message
@@ -123,7 +124,7 @@ defmodule Membrane.Pipeline do
 
     ref = if blocking?, do: Process.monitor(pipeline)
 
-    Message.send(pipeline, :stop_and_terminate)
+    PlaybackHandler.request_playback_state_change(pipeline, :terminating)
 
     if blocking?,
       do: wait_for_down(ref, timeout),

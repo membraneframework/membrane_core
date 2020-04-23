@@ -7,11 +7,10 @@ defmodule Membrane.Core.Element.State do
 
   use Membrane.Log, tags: :core
   alias Membrane.{Clock, Core, Element, Pad, Sync}
-  alias Core.{Playback, Playbackable, Timer}
+  alias Core.{Playback, Timer}
   alias Core.Child.{PadModel, PadSpecHandler}
   alias Core.Element.PlaybackBuffer
   alias Bunch.Type
-  alias __MODULE__, as: ThisModule
   require Pad
   use Bunch.Access
 
@@ -37,8 +36,7 @@ defmodule Membrane.Core.Element.State do
             latency: non_neg_integer(),
             stream_sync: Sync.t(),
             clock: Clock.t() | nil
-          },
-          terminating: boolean | :ready
+          }
         }
 
   defstruct [
@@ -53,14 +51,8 @@ defmodule Membrane.Core.Element.State do
     :playback,
     :playback_buffer,
     :delayed_demands,
-    :synchronization,
-    :terminating
+    :synchronization
   ]
-
-  defimpl Playbackable, for: __MODULE__ do
-    use Playbackable.Default
-    def get_controlling_pid(%ThisModule{controlling_pid: pid}), do: pid
-  end
 
   @doc """
   Initializes new state.
@@ -91,8 +83,7 @@ defmodule Membrane.Core.Element.State do
         clock: nil,
         stream_sync: options.sync,
         latency: 0
-      },
-      terminating: false
+      }
     }
     |> PadSpecHandler.init_pads()
   end

@@ -6,11 +6,9 @@ defmodule Membrane.Core.Pipeline.State do
   # internally in Membrane.
 
   alias Membrane.Child
-  alias Membrane.Core.{Playback, Playbackable}
+  alias Membrane.Core.Playback
   alias Membrane.{Clock, Sync}
   use Bunch
-
-  @derive Playbackable
 
   @type t :: %__MODULE__{
           internal_state: internal_state_t | nil,
@@ -18,7 +16,6 @@ defmodule Membrane.Core.Pipeline.State do
           module: module,
           children: children_t,
           pending_pids: MapSet.t(pid),
-          terminating?: boolean,
           clock_provider: %{
             clock: Clock.t() | nil,
             provider: Child.name_t() | nil,
@@ -38,7 +35,6 @@ defmodule Membrane.Core.Pipeline.State do
                 children: %{},
                 playback: %Playback{},
                 pending_pids: MapSet.new(),
-                terminating?: false,
                 clock_provider: %{clock: nil, provider: nil, choice: :auto}
               ]
 end

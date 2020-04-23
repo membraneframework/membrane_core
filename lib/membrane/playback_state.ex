@@ -13,7 +13,7 @@ defmodule Membrane.PlaybackState do
   or `c:Membrane.Parent.handle_prepared_to_playing/1`)
   """
 
-  @type t :: :stopped | :prepared | :playing
+  @type t :: :stopped | :prepared | :playing | :terminating
 
-  defguard is_playback_state(atom) when atom in [:stopped, :prepared, :playing]
+  defguard is_playback_state(atom) when atom in [:stopped, :prepared, :playing, :terminating]
 end

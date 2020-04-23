@@ -78,7 +78,10 @@ defmodule Membrane.Core.ElementTest do
 
   test "should change playback state" do
     assert {:noreply, state} =
-             Element.handle_info(Message.new(:change_playback_state, :prepared), get_state())
+             Element.handle_info(
+               Message.new(:change_playback_state, :prepared),
+               get_state()
+             )
 
     assert state.playback.state == :prepared
 

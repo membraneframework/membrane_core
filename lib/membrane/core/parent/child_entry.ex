@@ -29,12 +29,21 @@ defmodule Membrane.Core.Parent.ChildEntry do
   end
 
   defp parse_child({name, %module{} = options}) do
-    %__MODULE__{name: name, module: module, options: options}
+    %__MODULE__{
+      name: name,
+      module: module,
+      options: options
+    }
   end
 
   defp parse_child({name, module}) when is_atom(module) do
     options = module |> Bunch.Module.struct()
-    %__MODULE__{name: name, module: module, options: options}
+
+    %__MODULE__{
+      name: name,
+      module: module,
+      options: options
+    }
   end
 
   defp parse_child(config) do
