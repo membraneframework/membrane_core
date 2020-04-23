@@ -94,11 +94,9 @@ defmodule Membrane.Core.PlaybackHandler do
 
     playback =
       case playback do
-        %{target_locked: true} -> playback
+        %{target_state: :terminating} -> playback
         _ -> %{playback | target_state: new_playback_state}
       end
-
-    playback = lock_if_terminating(playback, new_playback_state)
 
     if playback.pending_state == nil and playback.state != playback.target_state do
       do_change_playback_state(handler, %{state | playback: playback})
@@ -106,10 +104,6 @@ defmodule Membrane.Core.PlaybackHandler do
       {:ok, %{state | playback: playback}}
     end
   end
-
-  defp lock_if_terminating(playback, target_state)
-  defp lock_if_terminating(playback, :terminating), do: %{playback | target_locked?: true}
-  defp lock_if_terminating(playback, _), do: playback
 
   defp do_change_playback_state(handler, state) do
     playback = state.playback
@@ -164,15 +158,6 @@ defmodule Membrane.Core.PlaybackHandler do
         maybe_notify_controller(handler, state)
 
         change_playback_state(state.playback.target_state, handler, state)
-
-      res ->
-        warn(
-          "PlaybackHandler got unknown result from callback handle_playback_state_changed: #{
-            inspect(handler_res)
-          }. Not proceeding with palyback state change."
-        )
-
-        res
     end
   end
 

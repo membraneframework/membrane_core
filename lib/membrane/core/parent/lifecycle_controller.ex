@@ -135,9 +135,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   end
 
   # Child was removed
-  def handle_child_death(pid, reason, state) do
-    if reason != :normal, do: warn("Child finished with reason #{inspect(reason)}")
-
+  def handle_child_death(pid, :normal, state) do
     new_children =
       state
       |> Parent.ChildrenModel.get_children()
