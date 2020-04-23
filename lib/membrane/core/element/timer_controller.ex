@@ -65,7 +65,7 @@ defmodule Membrane.Core.Element.TimerController do
       |> Bunch.Access.update_in([:synchronization, :timers, timer_id], &Timer.tick/1)
       ~> {:ok, &1}
     else
-      {{:error, reason}, state} -> {{:error, reason}, state}
+      {{:error, _reason}, _state} = err -> err
       false -> {:ok, state}
     end
   end
