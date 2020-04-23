@@ -142,7 +142,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
       |> Enum.filter(fn {_name, entry} -> entry.pid != pid end)
       |> Enum.into(%{})
 
-    # TODO use children model here
     {:ok, %{state | children: new_children}}
   end
 
