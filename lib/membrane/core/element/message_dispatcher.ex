@@ -46,7 +46,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
 
     # TODO get rid of this hack when we resign from
     # Bunch.stateful_try_with and family. This hack unwraps
-    # gensever :stop tuple.
+    # gensever :stop tuple. Issue #228
     case result do
       {{:ok, {:stop, _reason, _state} = stop}, state} ->
         stop |> noreply(state)
@@ -83,7 +83,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
            PlaybackHandler.change_playback_state(new_playback_state, LifecycleController, state) do
       # TODO get rid of this hack when we resign from
       # Bunch.stateful_try_with and family. This hack unwraps
-      # gensever :stop tuple.
+      # gensever :stop tuple. Issue #228
       {{:ok, stop_tuple}, state}
     end
   end
