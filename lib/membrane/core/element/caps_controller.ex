@@ -22,7 +22,7 @@ defmodule Membrane.Core.Element.CapsController do
     data = PadModel.get_data!(state, pad_ref)
 
     if data.mode == :pull and not (data.input_buf |> InputBuffer.empty?()) do
-      state |> PadModel.update_data(pad_ref, :input_buf, &(&1 |> InputBuffer.store(:caps, caps)))
+      PadModel.update_data(state, pad_ref, :input_buf, &{:ok, InputBuffer.store(&1, :caps, caps)})
     else
       exec_handle_caps(pad_ref, caps, state)
     end

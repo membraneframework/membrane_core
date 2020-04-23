@@ -51,10 +51,7 @@ defmodule Membrane.Core.Element.CapsControllerTest do
         |> PadModel.update_data!(
           :input,
           :input_buf,
-          fn input_buf ->
-            {:ok, input_buf} = InputBuffer.store(input_buf, :buffer, %Buffer{payload: "aa"})
-            input_buf
-          end
+          &InputBuffer.store(&1, :buffer, %Buffer{payload: "aa"})
         )
 
       assert {:ok, new_state} = @module.handle_caps(:input, %MockCaps{}, state)

@@ -130,7 +130,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   def supply_demand(pad_ref, state) do
     pad_data = state |> PadModel.get_data!(pad_ref)
 
-    {input_buf_output, new_input_buf} =
+    {{_buffer_status, data}, new_input_buf} =
       InputBuffer.take_and_demand(
         pad_data.input_buf,
         pad_data.demand,
@@ -138,9 +138,9 @@ defmodule Membrane.Core.Element.DemandHandler do
         pad_data.other_ref
       )
 
-    with {:ok, {_buffer_status, data}} <- input_buf_output,
-         state = state |> PadModel.set_data!(pad_ref, :input_buf, new_input_buf),
-         {:ok, state} <- handle_input_buf_output(pad_ref, data, state) do
+    state = PadModel.set_data!(state, pad_ref, :input_buf, new_input_buf)
+
+    with {:ok, state} <- handle_input_buf_output(pad_ref, data, state) do
       {:ok, state}
     else
       {{:error, reason}, state} ->

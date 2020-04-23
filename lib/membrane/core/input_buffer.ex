@@ -112,7 +112,7 @@ defmodule Membrane.Core.InputBuffer do
   @spec enable_toilet(t()) :: t()
   def enable_toilet(buf), do: %__MODULE__{buf | toilet?: true}
 
-  @spec store(t(), atom(), any()) :: {:ok, t()} | {:error, any()}
+  @spec store(t(), atom(), any()) :: t()
   def store(input_buf, type \\ :buffers, v)
 
   def store(
@@ -130,7 +130,7 @@ defmodule Membrane.Core.InputBuffer do
       |> Membrane.Logger.debug_verbose()
     end
 
-    {:ok, do_store_buffers(input_buf, v)}
+    do_store_buffers(input_buf, v)
   end
 
   def store(
@@ -188,7 +188,7 @@ defmodule Membrane.Core.InputBuffer do
             |> mk_log(input_buf)
             |> IO.iodata_to_binary()
     else
-      {:ok, input_buf}
+      input_buf
     end
   end
 
@@ -196,7 +196,7 @@ defmodule Membrane.Core.InputBuffer do
 
   def store(%__MODULE__{q: q} = input_buf, type, v) when type in @non_buf_types do
     "Storing #{type}" |> mk_log(input_buf) |> Membrane.Logger.debug_verbose()
-    {:ok, %__MODULE__{input_buf | q: q |> @qe.push({:non_buffer, type, v})}}
+    %__MODULE__{input_buf | q: q |> @qe.push({:non_buffer, type, v})}
   end
 
   defp do_store_buffers(%__MODULE__{q: q, current_size: size, metric: metric} = input_buf, v) do
@@ -210,7 +210,7 @@ defmodule Membrane.Core.InputBuffer do
     }
   end
 
-  @spec take_and_demand(t(), non_neg_integer(), pid(), Pad.ref_t()) :: {{:ok, output_t()}, t()}
+  @spec take_and_demand(t(), non_neg_integer(), pid(), Pad.ref_t()) :: {output_t(), t()}
   def take_and_demand(%__MODULE__{current_size: size} = input_buf, count, demand_pid, demand_pad)
       when count >= 0 do
     "Taking #{inspect(count)} buffers" |> mk_log(input_buf) |> Membrane.Logger.debug_verbose()
@@ -221,7 +221,7 @@ defmodule Membrane.Core.InputBuffer do
       |> Bunch.Struct.update_in(:demand, &(&1 + size - new_size))
       |> send_demands(demand_pid, demand_pad)
 
-    {{:ok, out}, input_buf}
+    {out, input_buf}
   end
 
   defp do_take(%__MODULE__{q: q, current_size: size, metric: metric} = input_buf, count) do

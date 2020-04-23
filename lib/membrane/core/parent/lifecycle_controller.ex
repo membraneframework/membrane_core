@@ -167,7 +167,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
-  @spec handle_log_metadata(Keyword.t(), state_t) :: {:ok, State.t()}
+  @spec handle_log_metadata(Keyword.t(), state_t) :: {:ok, state_t()}
   def handle_log_metadata(metadata, state) do
     :ok = Logger.metadata(metadata)
 

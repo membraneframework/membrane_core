@@ -63,8 +63,8 @@ defmodule Membrane.Core.Element.BufferController do
   defp handle_buffer_pull(pad_ref, buffers, state) do
     PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
-    with {:ok, old_input_buf} <- PadModel.get_data(state, pad_ref, :input_buf),
-         {:ok, input_buf} <- old_input_buf |> InputBuffer.store(buffers) do
+    with {:ok, old_input_buf} <- PadModel.get_data(state, pad_ref, :input_buf) do
+      input_buf = InputBuffer.store(old_input_buf, buffers)
       state = PadModel.set_data!(state, pad_ref, :input_buf, input_buf)
 
       if old_input_buf |> InputBuffer.empty?() do
