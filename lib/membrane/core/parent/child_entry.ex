@@ -9,7 +9,8 @@ defmodule Membrane.Core.Parent.ChildEntry do
           options: struct | nil,
           pid: pid | nil,
           clock: Clock.t() | nil,
-          sync: Sync.t() | nil
+          sync: Sync.t() | nil,
+          in_playback_transition?: boolean()
         }
 
   @type resolved_t :: %__MODULE__{
@@ -18,10 +19,11 @@ defmodule Membrane.Core.Parent.ChildEntry do
           options: struct | nil,
           pid: pid,
           clock: Clock.t(),
-          sync: Sync.t()
+          sync: Sync.t(),
+          in_playback_transition?: boolean()
         }
 
-  defstruct [:name, :module, :options, :pid, :clock, :sync]
+  defstruct [:name, :module, :options, :pid, :clock, :sync, :in_playback_transition?]
 
   @spec from_spec(ParentSpec.children_spec_t() | any) :: [t] | no_return
   def from_spec(children_spec) when is_map(children_spec) or is_list(children_spec) do
@@ -32,7 +34,8 @@ defmodule Membrane.Core.Parent.ChildEntry do
     %__MODULE__{
       name: name,
       module: module,
-      options: options
+      options: options,
+      in_playback_transition?: false
     }
   end
 
@@ -42,7 +45,8 @@ defmodule Membrane.Core.Parent.ChildEntry do
     %__MODULE__{
       name: name,
       module: module,
-      options: options
+      options: options,
+      in_playback_transition?: false
     }
   end
 

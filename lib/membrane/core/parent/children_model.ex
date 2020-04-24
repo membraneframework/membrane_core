@@ -34,6 +34,19 @@ defmodule Membrane.Core.Parent.ChildrenModel do
     end
   end
 
+  @spec pop_child_by(State.t(), atom(), any()) ::
+          {{:ok, child_data :: map() | nil}, State.t()}
+  def pop_child_by(%{children: children} = state, key, val) do
+    res =
+      children
+      |> Map.values()
+      |> Enum.find(&(Map.get(&1, key) == val))
+
+    children = Map.delete(children, res)
+
+    {{:ok, res}, %{state | children: children}}
+  end
+
   @spec get_children_names(State.t()) :: [Membrane.Child.name_t()]
   def get_children_names(%{children: children}) do
     children |> Map.keys()
@@ -42,5 +55,27 @@ defmodule Membrane.Core.Parent.ChildrenModel do
   @spec get_children(State.t()) :: children_t
   def get_children(%{children: children}) do
     children
+  end
+
+  @spec update_children(State.t(), fun()) :: State.t()
+  def update_children(state, mapper) do
+    children =
+      state.children
+      |> Enum.map(fn {k, v} -> {k, mapper.(v)} end)
+      |> Enum.into(%{})
+
+    %{state | children: children}
+  end
+
+  @spec all?(State.t(), fun()) :: boolean()
+  def all?(state, predicate) do
+    state.children
+    |> Enum.all?(fn {_k, v} -> predicate.(v) end)
+  end
+
+  @spec any?(State.t(), fun()) :: boolean()
+  def any?(state, predicate) do
+    state.children
+    |> Enum.any?(fn {_k, v} -> predicate.(v) end)
   end
 end
