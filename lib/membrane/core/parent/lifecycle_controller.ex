@@ -127,15 +127,8 @@ defmodule Membrane.Core.Parent.LifecycleController do
     {:ok, state}
   end
 
-  def child_playback_changed(pid, _new_playback_state, %{pending_pids: pending_pids} = state) do
-    new_pending_pids = pending_pids |> MapSet.delete(pid)
-    new_state = %{state | pending_pids: new_pending_pids}
-
-    if new_pending_pids != pending_pids and new_pending_pids |> Enum.empty?() do
-      PlaybackHandler.continue_playback_change(__MODULE__, new_state)
-    else
-      {:ok, new_state}
-    end
+  def child_playback_changed(pid, _new_playback_state, state) do
+    remove_pending_pid(state, pid)
   end
 
   # Child was removed
@@ -149,9 +142,18 @@ defmodule Membrane.Core.Parent.LifecycleController do
     # if child was deleted by action and at the same time
     # was in the process of terminating (due to parent termination)
     # it might be in pending pids, we have to remove it.
-    new_pending_pids = MapSet.delete(state.pending_pids, pid)
+    remove_pending_pid(%{state | children: new_children}, pid)
+  end
 
-    {:ok, %{state | children: new_children, pending_pids: new_pending_pids}}
+  defp remove_pending_pid(state, pid) do
+    new_pending_pids = state.pending_pids |> MapSet.delete(pid)
+    new_state = %{state | pending_pids: new_pending_pids}
+
+    if new_pending_pids != state.pending_pids and Enum.empty?(new_pending_pids) do
+      PlaybackHandler.continue_playback_change(__MODULE__, new_state)
+    else
+      {:ok, new_state}
+    end
   end
 
   @spec handle_stream_management_event(atom, Child.name_t(), Pad.ref_t(), state_t()) ::
