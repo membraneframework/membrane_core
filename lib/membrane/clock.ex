@@ -190,7 +190,7 @@ defmodule Membrane.Clock do
   end
 
   @impl GenServer
-  def handle_info({:DOWN, _ref, :process, pid, reason}, state) do
+  def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
     {:noreply, handle_unsubscribe(pid, state)}
   end
 
