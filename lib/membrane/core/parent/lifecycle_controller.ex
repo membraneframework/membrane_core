@@ -146,7 +146,12 @@ defmodule Membrane.Core.Parent.LifecycleController do
       |> Enum.filter(fn {_name, entry} -> entry.pid != pid end)
       |> Enum.into(%{})
 
-    {:ok, %{state | children: new_children}}
+    # if child was deleted by action and at the same time
+    # was in the process of terminating (due to parent termination)
+    # it might be in pending pids, we have to remove it.
+    new_pending_pids = MapSet.delete(state.pending_pids, pid)
+
+    {:ok, %{state | children: new_children, pending_pids: new_pending_pids}}
   end
 
   @spec handle_stream_management_event(atom, Child.name_t(), Pad.ref_t(), state_t()) ::
