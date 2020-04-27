@@ -44,7 +44,7 @@ defmodule Membrane.Core.Parent.ChildrenModel do
     children
   end
 
-  @spec update_children(State.t(), children_names :: [Membrane.Child.name_t()] | :all, fun()) ::
+  @spec update_children(State.t(), fun()) ::
           State.t()
   def update_children(state, mapper) do
     children =
