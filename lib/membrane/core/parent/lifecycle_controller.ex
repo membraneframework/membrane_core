@@ -111,11 +111,10 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @spec child_playback_changed(pid, PlaybackState.t(), state_t()) ::
           PlaybackHandler.handler_return_t()
   def child_playback_changed(pid, new_pb_state, state) do
-    if no_child_in_transition?(state) or
-         not transition_finished?(new_pb_state, state.playback.pending_state) do
-      {:ok, state}
-    else
+    if transition_finished?(new_pb_state, state.playback.pending_state) do
       finish_pids_transition(state, pid)
+    else
+      {:ok, state}
     end
   end
 
@@ -140,16 +139,20 @@ defmodule Membrane.Core.Parent.LifecycleController do
   end
 
   defp finish_pids_transition(state, pid) do
-    new_state =
+    state =
       state
       |> ChildrenModel.update_children(fn
         %{pid: ^pid} = child -> %{child | pending?: false}
         child -> child
       end)
 
-    if state != new_state and no_child_in_transition?(new_state),
-      do: PlaybackHandler.continue_playback_change(__MODULE__, new_state),
-      else: {:ok, new_state}
+    # If we suspended playback state change and there are no pending children
+    # this means we want to continue the change for the parent.
+    if PlaybackHandler.suspended?(state) and no_child_in_transition?(state) do
+      PlaybackHandler.continue_playback_change(__MODULE__, state)
+    else
+      {:ok, state}
+    end
   end
 
   @spec handle_stream_management_event(atom, Child.name_t(), Pad.ref_t(), state_t()) ::

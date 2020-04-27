@@ -44,11 +44,12 @@ defmodule Membrane.Core.Parent.ChildrenModel do
     children
   end
 
-  @spec update_children(State.t(), fun()) :: State.t()
+  @spec update_children(State.t(), children_names :: [Membrane.Child.name_t()] | :all, fun()) ::
+          State.t()
   def update_children(state, mapper) do
     children =
       state.children
-      |> Enum.map(fn {k, v} -> {k, mapper.(v)} end)
+      |> Enum.map(fn {name, entry} -> {name, mapper.(entry)} end)
       |> Enum.into(%{})
 
     %{state | children: children}
