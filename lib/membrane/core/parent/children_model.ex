@@ -34,19 +34,6 @@ defmodule Membrane.Core.Parent.ChildrenModel do
     end
   end
 
-  @spec pop_child_by(State.t(), atom(), any()) ::
-          {{:ok, child_data :: map() | nil}, State.t()}
-  def pop_child_by(%{children: children} = state, key, val) do
-    res =
-      children
-      |> Map.values()
-      |> Enum.find(&(Map.get(&1, key) == val))
-
-    children = Map.delete(children, res)
-
-    {{:ok, res}, %{state | children: children}}
-  end
-
   @spec get_children_names(State.t()) :: [Membrane.Child.name_t()]
   def get_children_names(%{children: children}) do
     children |> Map.keys()

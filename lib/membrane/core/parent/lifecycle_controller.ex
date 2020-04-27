@@ -136,9 +136,14 @@ defmodule Membrane.Core.Parent.LifecycleController do
   end
 
   defp finish_pids_transition(state, pid) do
-    {{:ok, child}, state} = Parent.ChildrenModel.pop_child_by(state, :pid, pid)
+    state =
+      state
+      |> Parent.ChildrenModel.update_children(fn
+        %{pid: ^pid} = child -> %{child | in_playback_transition?: false}
+        child -> child
+      end)
 
-    if not is_nil(child) and Parent.ChildrenModel.any?(state, & &1.in_playback_transition?) do
+    if not Parent.ChildrenModel.any?(state, & &1.in_playback_transition?) do
       PlaybackHandler.continue_playback_change(__MODULE__, state)
     else
       {:ok, state}
