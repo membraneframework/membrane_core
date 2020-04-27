@@ -59,10 +59,4 @@ defmodule Membrane.Core.Parent.ChildrenModel do
     state.children
     |> Enum.all?(fn {_k, v} -> predicate.(v) end)
   end
-
-  @spec any?(State.t(), fun()) :: boolean()
-  def any?(state, predicate) do
-    state.children
-    |> Enum.any?(fn {_k, v} -> predicate.(v) end)
-  end
 end
