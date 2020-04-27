@@ -14,6 +14,8 @@ defmodule Membrane.Core.Parent.LifecycleController do
     Message
   }
 
+  alias Membrane.Core.Parent.ChildrenModel
+
   alias Core.Child.PadModel
   alias Membrane.PlaybackState
 
@@ -27,7 +29,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   def handle_playback_state(old, new, state) do
     children_data =
       state
-      |> Parent.ChildrenModel.get_children()
+      |> ChildrenModel.get_children()
       |> Map.values()
 
     children_pids = children_data |> Enum.map(& &1.pid)
@@ -37,7 +39,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
     :ok = toggle_syncs_active(old, new, children_data)
 
-    state = state |> Parent.ChildrenModel.update_children(&%{&1 | in_playback_transition?: true})
+    state = state |> ChildrenModel.update_children(&%{&1 | in_playback_transition?: true})
 
     if children_pids |> Enum.empty?() do
       {:ok, state}
@@ -79,7 +81,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @spec handle_notification(Child.name_t(), Notification.t(), state_t) ::
           Type.stateful_try_t(state_t)
   def handle_notification(from, notification, state) do
-    with {:ok, _} <- state |> Parent.ChildrenModel.get_child_data(from) do
+    with {:ok, _} <- state |> ChildrenModel.get_child_data(from) do
       action_handler = get_callback_action_handler(state)
 
       CallbackHandler.exec_and_handle_callback(
@@ -118,7 +120,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   end
 
   defp no_child_in_transition?(state),
-    do: Parent.ChildrenModel.all?(state, &(not &1.in_playback_transition?))
+    do: ChildrenModel.all?(state, &(not &1.in_playback_transition?))
 
   defp transition_finished?(pending_state, new_state)
   defp transition_finished?(pb_state, pb_state), do: true
@@ -126,9 +128,11 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   # Child was removed
   def handle_child_death(pid, :normal, state) do
+    {:ok, state} = finish_pids_transition(state, pid)
+
     new_children =
       state
-      |> Parent.ChildrenModel.get_children()
+      |> ChildrenModel.get_children()
       |> Enum.filter(fn {_name, entry} -> entry.pid != pid end)
       |> Enum.into(%{})
 
@@ -136,18 +140,16 @@ defmodule Membrane.Core.Parent.LifecycleController do
   end
 
   defp finish_pids_transition(state, pid) do
-    state =
+    new_state =
       state
-      |> Parent.ChildrenModel.update_children(fn
+      |> ChildrenModel.update_children(fn
         %{pid: ^pid} = child -> %{child | in_playback_transition?: false}
         child -> child
       end)
 
-    if not Parent.ChildrenModel.any?(state, & &1.in_playback_transition?) do
-      PlaybackHandler.continue_playback_change(__MODULE__, state)
-    else
-      {:ok, state}
-    end
+    if state != new_state and no_child_in_transition?(new_state),
+      do: PlaybackHandler.continue_playback_change(__MODULE__, new_state),
+      else: {:ok, new_state}
   end
 
   @spec handle_stream_management_event(atom, Child.name_t(), Pad.ref_t(), state_t()) ::
