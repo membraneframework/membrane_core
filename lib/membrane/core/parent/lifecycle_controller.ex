@@ -39,7 +39,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
     :ok = toggle_syncs_active(old, new, children_data)
 
-    state = state |> ChildrenModel.update_children(&%{&1 | in_playback_transition?: true})
+    state = state |> ChildrenModel.update_children(&%{&1 | pending?: true})
 
     if children_pids |> Enum.empty?() do
       {:ok, state}
@@ -120,7 +120,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   end
 
   defp no_child_in_transition?(state),
-    do: ChildrenModel.all?(state, &(not &1.in_playback_transition?))
+    do: ChildrenModel.all?(state, &(not &1.pending?))
 
   defp transition_finished?(pending_state, new_state)
   defp transition_finished?(pb_state, pb_state), do: true
@@ -143,7 +143,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     new_state =
       state
       |> ChildrenModel.update_children(fn
-        %{pid: ^pid} = child -> %{child | in_playback_transition?: false}
+        %{pid: ^pid} = child -> %{child | pending?: false}
         child -> child
       end)
 
