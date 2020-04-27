@@ -200,7 +200,7 @@ defmodule Membrane.Clock do
   defp get_proxy_options(_, _), do: %{init_time: nil, clock_time: 0, till_next: nil, proxy: false}
 
   defp handle_unsubscribe(pid, state) do
-    Process.demonitor(state.subscribers[pid].monitor)
+    Process.demonitor(state.subscribers[pid].monitor, [:flush])
     state |> Bunch.Access.delete_in([:subscribers, pid])
   end
 

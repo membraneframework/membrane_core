@@ -9,11 +9,12 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   alias Core.{
     Parent,
-    Playback,
     PlaybackHandler,
     CallbackHandler,
     Message
   }
+
+  alias Membrane.Core.Parent.ChildrenModel
 
   alias Core.Child.PadModel
   alias Membrane.PlaybackState
@@ -28,7 +29,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   def handle_playback_state(old, new, state) do
     children_data =
       state
-      |> Parent.ChildrenModel.get_children()
+      |> ChildrenModel.get_children()
       |> Map.values()
 
     children_pids = children_data |> Enum.map(& &1.pid)
@@ -38,7 +39,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
     :ok = toggle_syncs_active(old, new, children_data)
 
-    state = %{state | pending_pids: children_pids |> MapSet.new()}
+    state = state |> ChildrenModel.update_children(&%{&1 | pending?: true})
 
     if children_pids |> Enum.empty?() do
       {:ok, state}
@@ -80,7 +81,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @spec handle_notification(Child.name_t(), Notification.t(), state_t) ::
           Type.stateful_try_t(state_t)
   def handle_notification(from, notification, state) do
-    with {:ok, _} <- state |> Parent.ChildrenModel.get_child_data(from) do
+    with {:ok, _} <- state |> ChildrenModel.get_child_data(from) do
       action_handler = get_callback_action_handler(state)
 
       CallbackHandler.exec_and_handle_callback(
@@ -109,44 +110,49 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   @spec child_playback_changed(pid, PlaybackState.t(), state_t()) ::
           PlaybackHandler.handler_return_t()
-  def child_playback_changed(
-        _pid,
-        _new_playback_state,
-        %{pending_pids: pending_pids} = state
-      )
-      when pending_pids == %MapSet{} do
-    {:ok, state}
-  end
-
-  def child_playback_changed(
-        _pid,
-        new_playback_state,
-        %{playback: %Playback{pending_state: pending_playback_state}} = state
-      )
-      when new_playback_state != pending_playback_state do
-    {:ok, state}
-  end
-
-  def child_playback_changed(pid, _new_playback_state, %{pending_pids: pending_pids} = state) do
-    new_pending_pids = pending_pids |> MapSet.delete(pid)
-    new_state = %{state | pending_pids: new_pending_pids}
-
-    if new_pending_pids != pending_pids and new_pending_pids |> Enum.empty?() do
-      PlaybackHandler.continue_playback_change(__MODULE__, new_state)
+  def child_playback_changed(pid, new_pb_state, state) do
+    if transition_finished?(new_pb_state, state.playback.pending_state) do
+      finish_pids_transition(state, pid)
     else
-      {:ok, new_state}
+      {:ok, state}
     end
   end
 
+  defp no_child_in_transition?(state),
+    do: ChildrenModel.all?(state, &(not &1.pending?))
+
+  defp transition_finished?(pending_state, new_state)
+  defp transition_finished?(pb_state, pb_state), do: true
+  defp transition_finished?(_, _), do: false
+
   # Child was removed
   def handle_child_death(pid, :normal, state) do
+    {:ok, state} = finish_pids_transition(state, pid)
+
     new_children =
       state
-      |> Parent.ChildrenModel.get_children()
+      |> ChildrenModel.get_children()
       |> Enum.filter(fn {_name, entry} -> entry.pid != pid end)
       |> Enum.into(%{})
 
     {:ok, %{state | children: new_children}}
+  end
+
+  defp finish_pids_transition(state, pid) do
+    state =
+      state
+      |> ChildrenModel.update_children(fn
+        %{pid: ^pid} = child -> %{child | pending?: false}
+        child -> child
+      end)
+
+    # If we suspended playback state change and there are no pending children
+    # this means we want to continue the change for the parent.
+    if PlaybackHandler.suspended?(state) and no_child_in_transition?(state) do
+      PlaybackHandler.continue_playback_change(__MODULE__, state)
+    else
+      {:ok, state}
+    end
   end
 
   @spec handle_stream_management_event(atom, Child.name_t(), Pad.ref_t(), state_t()) ::

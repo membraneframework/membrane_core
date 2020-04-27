@@ -43,4 +43,21 @@ defmodule Membrane.Core.Parent.ChildrenModel do
   def get_children(%{children: children}) do
     children
   end
+
+  @spec update_children(State.t(), fun()) ::
+          State.t()
+  def update_children(state, mapper) do
+    children =
+      state.children
+      |> Enum.map(fn {name, entry} -> {name, mapper.(entry)} end)
+      |> Enum.into(%{})
+
+    %{state | children: children}
+  end
+
+  @spec all?(State.t(), fun()) :: boolean()
+  def all?(state, predicate) do
+    state.children
+    |> Enum.all?(fn {_k, v} -> predicate.(v) end)
+  end
 end
