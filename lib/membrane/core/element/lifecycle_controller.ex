@@ -49,7 +49,7 @@ defmodule Membrane.Core.Element.LifecycleController do
         Logger.error("""
         Failed to initialize element
         Reason: #{inspect(reason)}
-        State: #{inspect(state)}
+        State: #{inspect(state, pretty: true)}
         """)
 
         {{:error, reason}, state}
@@ -71,7 +71,7 @@ defmodule Membrane.Core.Element.LifecycleController do
         inspect(playback_state)
       }.
       Reason: #{inspect(reason)}",
-      State: #{inspect(state)}
+      State: #{inspect(state, pretty: true)}
       """)
     end
 
@@ -86,7 +86,7 @@ defmodule Membrane.Core.Element.LifecycleController do
       Logger.error("""
       Shutting down because of pipeline failure
       Reason: #{inspect(reason)}
-      State: #{inspect(state)}
+      State: #{inspect(state, pretty: true)}
       """)
     end
 

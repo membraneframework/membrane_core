@@ -57,7 +57,7 @@ defmodule Membrane.Core.Element.EventController do
       handle: {{:error, reason}, state} ->
         Logger.error("""
         Error while handling event, reason: #{inspect(reason)}
-        State: #{inspect(state)}
+        State: #{inspect(state, pretty: true)}
         """)
 
         {{:error, {:handle_event, reason}}, state}
@@ -65,7 +65,7 @@ defmodule Membrane.Core.Element.EventController do
       try: {{:error, reason}, state} ->
         Logger.error("""
         Error while handling event, reason: #{inspect(reason)}
-        State: #{inspect(state)}
+        State: #{inspect(state, pretty: true)}
         """)
 
         {{:error, {:handle_event, reason}}, state}
@@ -157,7 +157,7 @@ defmodule Membrane.Core.Element.EventController do
 
       playback: %{state: playback_state} ->
         raise "Received end of stream event in an incorrect state. State: #{
-                inspect(playback_state)
+                inspect(playback_state, pretty: true)
               }, on pad: #{inspect(pad_ref)}"
     end
   end

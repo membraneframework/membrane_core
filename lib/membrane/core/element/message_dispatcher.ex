@@ -167,7 +167,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     Logger.error("""
     MessageDispatcher: cannot handle message: #{inspect(message)}, mode: #{inspect(mode)}
     Reason: #{inspect(reason)}
-    State: #{inspect(state)}
+    State: #{inspect(state, pretty: true)}
     """)
 
     reason = {:cannot_handle_message, reason, message: message, mode: mode}

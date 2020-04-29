@@ -12,8 +12,8 @@ defmodule Membrane.Helper.GenServer do
   def noreply({{:error, reason}, new_state}, old_state) do
     Logger.error("""
     Terminating GenServer, reason: #{inspect(reason)},
-    old state: #{inspect(old_state)},
-    new state: #{inspect(new_state)}
+    old state: #{inspect(old_state, pretty: true)},
+    new state: #{inspect(new_state, pretty: true)}
     """)
 
     {:stop, {:error, reason}, new_state}
@@ -22,7 +22,7 @@ defmodule Membrane.Helper.GenServer do
   def noreply({:error, reason}, old_state) do
     Logger.error("""
     Terminating GenServer, reason: #{inspect(reason)},
-    old state: #{inspect(old_state)}
+    old state: #{inspect(old_state, pretty: true)}
     """)
 
     {:stop, {:error, reason}, old_state}
@@ -38,8 +38,8 @@ defmodule Membrane.Helper.GenServer do
   def reply({{:error, reason}, new_state}, old_state) do
     Logger.error("""
     GenServer returning error reply, reason: #{inspect(reason)}
-    old state: #{inspect(old_state)},
-    new state: #{inspect(new_state)}
+    old state: #{inspect(old_state, pretty: true)},
+    new state: #{inspect(new_state, pretty: true)}
     """)
 
     {:reply, {:error, reason}, new_state}
@@ -48,7 +48,7 @@ defmodule Membrane.Helper.GenServer do
   def reply({:error, reason}, old_state) do
     Logger.error("""
     GenServer returning error reply, reason: #{inspect(reason)}
-    old state: #{inspect(old_state)}
+    old state: #{inspect(old_state, pretty: true)}
     """)
 
     {:reply, {:error, reason}, old_state}

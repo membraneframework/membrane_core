@@ -173,7 +173,7 @@ defmodule Membrane.Core.CallbackHandler do
   defp parse_callback_result({{:error, reason}, new_internal_state}, module, cb, %{state: true}) do
     Logger.error("""
     Callback #{inspect(cb)} from module #{inspect(module)} returned an error
-    Internal state: #{inspect(new_internal_state)}
+    Internal state: #{inspect(new_internal_state, pretty: true)}
     """)
 
     {{:error, reason}, new_internal_state}
