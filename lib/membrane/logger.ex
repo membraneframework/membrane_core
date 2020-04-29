@@ -3,6 +3,7 @@ defmodule Membrane.Logger do
   Logging utils.
   """
 
+  # TODO: compile_env should be always used when we require Elixir 1.10
   @get_env_fun if function_exported?(Application, :compile_env, 3),
                  do: :compile_env,
                  else: :get_env
@@ -10,33 +11,29 @@ defmodule Membrane.Logger do
   @doc """
   Macro for verbose debug logs that should be silenced by default.
 
-  Debugs done via this macro are displayed only when verbosity is set to `:verbose`
+  Debugs done via this macro are displayed only when verbose logging is enabled
   via `Mix.Config`:
 
       use Mix.Config
-      config :membrane_core, :logger, verbosity: :verbose
+      config :membrane_core, :logger, verbose: true
 
-  while the default verbosity is `:normal`.
-
-  A `mb_verbosity: :verbose` metadata entry is added to each debug.
+  A `mb_verbose: true` metadata entry is added to each debug.
 
   Use for debugs that usually pollute the output.
   """
   defmacro debug_verbose(message, metadata \\ []) do
-    case Keyword.get(get_config(), :verbosity, :normal) do
-      :verbose ->
-        quote do
-          Logger.debug(unquote(message), unquote([mb_verbosity: :verbose] ++ metadata))
+    if Keyword.get(get_config(), :verbose, false) do
+      quote do
+        Logger.debug(unquote(message), unquote([mb_verbose: true] ++ metadata))
+      end
+    else
+      # A hack to suppress the 'unused variable' warnings
+      quote do
+        fn ->
+          _ = unquote(message)
+          _ = unquote(metadata)
         end
-
-      :normal ->
-        # A hack to suppress the 'unused variable' warnings
-        quote do
-          fn ->
-            _ = unquote(message)
-            _ = unquote(metadata)
-          end
-        end
+      end
     end
   end
 

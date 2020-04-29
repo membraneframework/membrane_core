@@ -165,7 +165,7 @@ defmodule Membrane.Pipeline do
   end
 
   def init({module, pipeline_options}) do
-    Logger.metadata(mb_name: :pipeline)
+    Logger.metadata(mb_name: "pipeline@#{inspect(self())}")
     {:ok, clock} = Clock.start_link(proxy: true)
     state = %State{module: module, clock_proxy: clock}
 

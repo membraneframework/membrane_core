@@ -141,55 +141,61 @@ defmodule Membrane.Core.InputBuffer do
       when is_list(v) do
     %__MODULE__{current_size: size} = input_buf = do_store_buffers(input_buf, v)
 
-    if size >= warn_lvl do
-      above_level =
-        if size < fail_lvl do
-          "warn level"
-        else
-          "fail level"
-        end
+    cond do
+      size > fail_lvl ->
+        ~S"""
+        Toilet overflow
 
-      """
-      Reached buffers of size #{inspect(size)},
-      which is above #{above_level}, from output working in push mode.
-      To have control over amount of buffers being produced, consider using pull mode.
-      If this is a normal situation, increase warn/fail size in buffer options.
-      """
-      |> mk_log(input_buf)
-      |> Logger.warn()
+
+                     ` ' `
+                 .'''. ' .'''.
+                   .. ' ' ..
+                  '  '.'.'  '
+                  .'''.'.'''.
+                 ' .''.'.''. '
+               ;------ ' ------;
+               | ~~ .--'--//   |
+               |   /   '   \   |
+               |  /    '    \  |
+               |  |    '    |  |  ,----.
+               |   \ , ' , /   | =|____|=
+               '---,###'###,---'  (---(
+                  /##  '  ##\      )---)
+                  |##, ' ,##|     (---(
+                   \'#####'/       `---`
+                    \`"#"`/
+                     |`"`|
+                   .-|   |-.
+              jgs /  '   '  \
+                  '---------'
+        """
+        |> mk_log(input_buf)
+        |> Membrane.Logger.debug_verbose()
+
+        """
+        Toilet overflow.
+
+        Reached buffers of size #{inspect(size)},
+        which is above fail level, from output working in push mode.
+        To have control over amount of buffers being produced, consider using pull mode.
+        If this is a normal situation, increase warn/fail size in buffer options.
+
+        See `Membrane.Core.InputBuffer` for more information.
+        """
+        |> mk_log(input_buf)
+        |> IO.iodata_to_binary()
+        |> raise
+
+      size > warn_lvl ->
+        "Reached buffers of size #{inspect(size)}, which is above warn level, from output working in push mode. See `Membrane.Core.InputBuffer` for more information."
+        |> mk_log(input_buf)
+        |> Logger.warn()
+
+      true ->
+        :ok
     end
 
-    if size >= fail_lvl do
-      raise ~S"""
-            Toilet overflow
-
-                         ` ' `
-                     .'''. ' .'''.
-                       .. ' ' ..
-                      '  '.'.'  '
-                      .'''.'.'''.
-                     ' .''.'.''. '
-                   ;------ ' ------;
-                   | ~~ .--'--//   |
-                   |   /   '   \   |
-                   |  /    '    \  |
-                   |  |    '    |  |  ,----.
-                   |   \ , ' , /   | =|____|=
-                   '---,###'###,---'  (---(
-                      /##  '  ##\      )---)
-                      |##, ' ,##|     (---(
-                       \'#####'/       `---`
-                        \`"#"`/
-                         |`"`|
-                       .-|   |-.
-                  jgs /  '   '  \
-                      '---------'
-            """
-            |> mk_log(input_buf)
-            |> IO.iodata_to_binary()
-    else
-      input_buf
-    end
+    input_buf
   end
 
   def store(input_buf, :buffer, v), do: store(input_buf, :buffers, [v])
