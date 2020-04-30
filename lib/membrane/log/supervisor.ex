@@ -16,7 +16,7 @@ defmodule Membrane.Log.Supervisor do
 
   Options are passed to `Supervisor.start_link/3`.
   """
-  @spec start_link(Keyword.t(), Supervisor.options() | []) :: Supervisor.on_start()
+  @spec start_link(Keyword.t(), [Supervisor.option()] | []) :: Supervisor.on_start()
   def start_link(config, options \\ []) do
     Supervisor.start_link(__MODULE__, config, options ++ [name: __MODULE__])
   end

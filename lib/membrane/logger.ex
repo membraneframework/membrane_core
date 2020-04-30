@@ -1,6 +1,30 @@
 defmodule Membrane.Logger do
   @moduledoc """
-  Logging utils.
+  Wrapper around the Elixir logger. Adds Membrane prefixes and handles verbose logging.
+
+  ## Prefixes
+
+  By default, this wrapper prepends each log with a prefix containig the context
+  of the log, such as element name. This can be turned off via configuration:
+
+      use Mix.Config
+      config :membrane_core, :logger, prefix: false
+
+  Regardless of the config, the prefix is passed to `Logger` metadata under `:mb` key.
+  Prefixes are passed via process dictionary, so they have process-wide scope.
+
+  ## Verbose logging
+
+  For verbose debug logs that should be silenced by default, use `debug_verbose/2`
+  macro. Verbose logs are purged in the compile time, unless turned on via configuration:
+
+      use Mix.Config
+      config :membrane_core, :logger, verbose: true
+
+  Verbose debugs should be used for logs that are USUALLY USEFUL for debugging,
+  but printed so often that they make the output illegible. For example, it may
+  be a good idea to debug_verbose from within `c:Membrane.Filter.handle_process/4`
+  or `c:Membrane.Element.WithOutputPads.handle_demand/5` callbacks.
   """
 
   # TODO: compile_env should be always used when we require Elixir 1.10
@@ -30,17 +54,9 @@ defmodule Membrane.Logger do
   end
 
   @doc """
-  Macro for verbose debug logs that should be silenced by default.
+  Macro for verbose debug logs, that are silenced by default.
 
-  Debugs done via this macro are displayed only when verbose logging is enabled
-  via `Mix.Config`:
-
-      use Mix.Config
-      config :membrane_core, :logger, verbose: true
-
-  A `mb_verbose: true` metadata entry is added to each debug.
-
-  Use for debugs that usually pollute the output.
+  For details, see the 'verbose logging' section of the moduledoc.
   """
   defmacro debug_verbose(message, metadata \\ []) do
     if Keyword.get(@config, :verbose, false) do
@@ -62,6 +78,11 @@ defmodule Membrane.Logger do
   end
 
   Enum.map([:debug, :info, :warn, :error], fn method ->
+    @doc """
+    Wrapper around `Logger.#{method}/2` that adds Membrane prefix.
+
+    For details, see the 'prefixes' section of the moduledoc.
+    """
     defmacro unquote(method)(message, metadata \\ []) do
       method = unquote(method)
 
@@ -72,6 +93,11 @@ defmodule Membrane.Logger do
     end
   end)
 
+  @doc """
+  Wrapper around `Logger.log/3` that adds Membrane prefix.
+
+  For details, see the 'prefixes' section of the moduledoc.
+  """
   defmacro log(level, message, metadata \\ []) do
     quote do
       require Logger
@@ -79,14 +105,28 @@ defmodule Membrane.Logger do
     end
   end
 
+  @doc """
+  Wrapper around `Logger.bare_log/3` that adds Membrane prefix.
+
+  For details, see the 'prefixes' section of the moduledoc.
+  """
+  @spec bare_log(Logger.level(), Logger.message(), Logger.metadata()) :: :ok
   def bare_log(level, message, metadata \\ []) do
     Logger.bare_log(level, prefix_prepender(message), metadata)
   end
 
+  @doc """
+  Returns the Membrane logger config.
+  """
+  @spec get_config() :: Keyword.t()
   def get_config() do
     Application.get_env(:membrane_core, :logger, [])
   end
 
+  @doc """
+  Returns value at given key in the Membrane logger config.
+  """
+  @spec get_config(key, value) :: value when key: atom, value: any
   def get_config(key, default \\ nil) do
     Application.get_env(:membrane_core, :logger, [])
     |> Keyword.get(key, default)

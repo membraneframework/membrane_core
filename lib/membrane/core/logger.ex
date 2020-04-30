@@ -7,7 +7,7 @@ defmodule Membrane.Core.Logger do
 
   def put_bin_prefix(name) do
     name_str = if String.valid?(name), do: name, else: inspect(name)
-    put_prefix(name_str <> " bin")
+    put_prefix(name_str <> " (bin)")
   end
 
   def put_element_prefix(name) do
@@ -19,7 +19,7 @@ defmodule Membrane.Core.Logger do
     Logger.metadata(mb: prefix)
 
     if Membrane.Logger.get_config(:prefix, true) do
-      Process.put(:membrane_logger_prefix, "(" <> prefix <> ") ")
+      Process.put(:membrane_logger_prefix, prefix <> " ")
     end
 
     :ok
