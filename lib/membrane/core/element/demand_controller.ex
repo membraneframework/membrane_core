@@ -7,7 +7,7 @@ defmodule Membrane.Core.Element.DemandController do
   require Membrane.Logger
   require Membrane.Element.CallbackContext.Demand
   require Membrane.Core.Child.PadModel
-  
+
   alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{ActionHandler, State}

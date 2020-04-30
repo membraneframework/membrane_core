@@ -11,7 +11,6 @@ defmodule Membrane.Core.Element.ActionHandler do
   require Membrane.Logger
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
-  
 
   alias Membrane.{ActionError, Buffer, Caps, CallbackError, Event, Notification, Pad}
   alias Membrane.Core.Element.{DemandHandler, LifecycleController, State, TimerController}

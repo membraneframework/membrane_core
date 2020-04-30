@@ -11,7 +11,6 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   require Membrane.Logger
   require Membrane.Core.Message
   require Membrane.Core.Child.PadModel
-  
 
   alias Membrane.Event
   alias Membrane.Core.Playback
