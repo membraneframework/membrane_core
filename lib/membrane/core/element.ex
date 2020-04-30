@@ -90,7 +90,8 @@ defmodule Membrane.Core.Element do
   @impl GenServer
   def init(options) do
     parent_monitor = Process.monitor(options.parent)
-    :ok = Membrane.Core.Logger.put_element_prefix(options.name)
+    name_str = if String.valid?(options.name), do: options.name, else: inspect(options.name)
+    :ok = Membrane.Logger.set_prefix(name_str)
     Logger.metadata(options.log_metadata)
 
     state =

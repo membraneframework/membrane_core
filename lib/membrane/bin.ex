@@ -173,7 +173,8 @@ defmodule Membrane.Bin do
 
   @impl GenServer
   def init({name, module, bin_options, log_metadata}) do
-    :ok = Membrane.Core.Logger.put_bin_prefix(name)
+    name_str = if String.valid?(name), do: name, else: inspect(name)
+    :ok = Membrane.Logger.set_prefix(name_str <> " bin")
     Logger.metadata(log_metadata)
 
     clock =

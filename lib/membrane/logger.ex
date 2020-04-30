@@ -11,7 +11,8 @@ defmodule Membrane.Logger do
       config :membrane_core, :logger, prefix: false
 
   Regardless of the config, the prefix is passed to `Logger` metadata under `:mb` key.
-  Prefixes are passed via process dictionary, so they have process-wide scope.
+  Prefixes are passed via process dictionary, so they have process-wide scope,
+  but it can be extended with `get_prefix/0` and `set_prefix/1`.
 
   ## Verbose logging
 
@@ -113,6 +114,37 @@ defmodule Membrane.Logger do
   @spec bare_log(Logger.level(), Logger.message(), Logger.metadata()) :: :ok
   def bare_log(level, message, metadata \\ []) do
     Logger.bare_log(level, prefix_prepender(message), metadata)
+  end
+
+  @doc """
+  Returns the logger prefix.
+
+  Returns an empty string if no prefix is set.
+  """
+  @spec get_prefix() :: String.t()
+  def get_prefix() do
+    Process.get(:membrane_logger_prefix, "")
+  end
+
+  @doc """
+  Sets the logger prefix. Avoid using in Membrane-managed processes.
+
+  This function is intended to enable setting prefix obtained in a Membrane-managed
+  process via `get_prefix/1`. If some custom data needs to be prepended to logs,
+  please use `Logger.metadata/2`.
+
+  Prefixes in Membrane-managed processes are set automatically and using this
+  function there would overwrite them, which is usually unintended.
+  """
+  @spec set_prefix(prefix :: String.t()) :: :ok
+  def set_prefix(prefix) do
+    Logger.metadata(mb: prefix)
+
+    if Membrane.Logger.get_config(:prefix, true) do
+      Process.put(:membrane_logger_prefix, "[" <> prefix <> "] ")
+    end
+
+    :ok
   end
 
   @doc """

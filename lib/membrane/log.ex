@@ -87,11 +87,10 @@ defmodule Membrane.Log do
 
     send_code =
       quote do
-        Router.send_log(
-          unquote(level),
-          unquote(message),
-          Membrane.Time.pretty_now(),
-          (unquote(tags) |> Bunch.listify()) ++ unquote(default_tags)
+        require Membrane.Logger
+
+        Membrane.Logger.log(unquote(level), unquote(message),
+          membrane_tags: inspect(Bunch.listify(unquote(tags)) ++ unquote(default_tags))
         )
       end
 
