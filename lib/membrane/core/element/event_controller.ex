@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.EventController do
   # Module handling events incoming through input pads.
 
   use Bunch
-  require Logger
+  require Membrane.Logger
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
   require Membrane.Element.CallbackContext.Event
@@ -51,11 +51,11 @@ defmodule Membrane.Core.Element.EventController do
       {:ok, state}
     else
       handle: {{:ok, :ignore}, state} ->
-        Logger.debug("Ignoring event #{inspect(event)}")
+        Membrane.Logger.debug("Ignoring event #{inspect(event)}")
         {:ok, state}
 
       handle: {{:error, reason}, state} ->
-        Logger.error("""
+        Membrane.Logger.error("""
         Error while handling event, reason: #{inspect(reason)}
         State: #{inspect(state, pretty: true)}
         """)
@@ -63,7 +63,7 @@ defmodule Membrane.Core.Element.EventController do
         {{:error, {:handle_event, reason}}, state}
 
       try: {{:error, reason}, state} ->
-        Logger.error("""
+        Membrane.Logger.error("""
         Error while handling event, reason: #{inspect(reason)}
         State: #{inspect(state, pretty: true)}
         """)
@@ -149,7 +149,7 @@ defmodule Membrane.Core.Element.EventController do
         {{:error, {:received_end_of_stream_through_output, pad_ref}}, state}
 
       data: %{end_of_stream?: true} ->
-        Logger.debug("Ignoring end of stream as it has already come before")
+        Membrane.Logger.debug("Ignoring end of stream as it has already come before")
         {{:ok, :ignore}, state}
 
       data: %{start_of_stream?: false} ->

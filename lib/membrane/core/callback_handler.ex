@@ -6,7 +6,7 @@ defmodule Membrane.Core.CallbackHandler do
   # results.
 
   use Bunch
-  require Logger
+  require Membrane.Logger
   alias Bunch.Type
   alias Membrane.CallbackError
 
@@ -153,7 +153,7 @@ defmodule Membrane.Core.CallbackHandler do
       {:ok, state}
     else
       {{:error, reason}, state} ->
-        Logger.error("""
+        Membrane.Logger.error("""
         Error while handling actions returned by callback #{inspect(callback)}
         """)
 
@@ -171,7 +171,7 @@ defmodule Membrane.Core.CallbackHandler do
   end
 
   defp parse_callback_result({{:error, reason}, new_internal_state}, module, cb, %{state: true}) do
-    Logger.error("""
+    Membrane.Logger.error("""
     Callback #{inspect(cb)} from module #{inspect(module)} returned an error
     Internal state: #{inspect(new_internal_state, pretty: true)}
     """)

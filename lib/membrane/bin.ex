@@ -17,7 +17,7 @@ defmodule Membrane.Bin do
 
   import Membrane.Helper.GenServer
 
-  require Logger
+  require Membrane.Logger
 
   alias Membrane.{Element, Pad, Sync}
   alias Membrane.Bin.CallbackContext
@@ -147,7 +147,7 @@ defmodule Membrane.Bin do
         ) :: GenServer.on_start()
   def start_link(name, module, bin_options \\ nil, log_metadata, process_options \\ []) do
     if module |> bin? do
-      Logger.debug("""
+      Membrane.Logger.debug("""
       Bin start link: module: #{inspect(module)},
       bin options: #{inspect(bin_options)},
       process options: #{inspect(process_options)}

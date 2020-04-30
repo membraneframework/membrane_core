@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.CapsController do
   # Module handling caps received on input pads.
 
   use Bunch
-  require Logger
+  require Membrane.Logger
   require Membrane.Element.CallbackContext.Caps
   require Membrane.Core.Child.PadModel
   alias Membrane.{Caps, Pad}
@@ -48,7 +48,7 @@ defmodule Membrane.Core.Element.CapsController do
       {:ok, PadModel.set_data!(state, pad_ref, :caps, caps)}
     else
       match: false ->
-        Logger.error("""
+        Membrane.Logger.error("""
         Received caps: #{inspect(caps)} that are not specified in def_input_pad
         for pad #{inspect(pad_ref)}. Specs of accepted caps are:
         #{inspect(accepted_caps, pretty: true)}

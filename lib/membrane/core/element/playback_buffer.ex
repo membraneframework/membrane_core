@@ -8,10 +8,10 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   use Bunch
   use Bunch.Access
 
-  require Logger
+  require Membrane.Logger
   require Membrane.Core.Message
   require Membrane.Core.Child.PadModel
-  require Membrane.Logger
+  
 
   alias Membrane.Event
   alias Membrane.Core.Playback
@@ -76,7 +76,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   """
   @spec eval(State.t()) :: State.stateful_try_t()
   def eval(%State{playback: %Playback{state: :playing}} = state) do
-    Logger.debug("Evaluating playback buffer")
+    Membrane.Logger.debug("Evaluating playback buffer")
 
     with {:ok, state} <-
            state.playback_buffer.q
@@ -150,7 +150,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     pad_ref = Message.for_pad(msg)
     PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
-    Logger.debug("""
+    Membrane.Logger.debug("""
     Received caps on pad #{inspect(pad_ref)}
     Caps: #{inspect(caps)}
     """)

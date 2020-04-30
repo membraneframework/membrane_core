@@ -2,7 +2,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @moduledoc false
   use Bunch
 
-  require Logger
+  require Membrane.Logger
   require Membrane.Bin
   require Membrane.Core.Message
   require Membrane.Element
@@ -17,7 +17,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @spec handle_spec(ParentSpec.t(), State.t()) ::
           {{:ok, [Membrane.Child.name_t()]}, State.t()} | no_return
   def handle_spec(%ParentSpec{} = spec, state) do
-    Logger.debug("""
+    Membrane.Logger.debug("""
     Initializing spec
     children: #{inspect(spec.children)}
     links: #{inspect(spec.links)}

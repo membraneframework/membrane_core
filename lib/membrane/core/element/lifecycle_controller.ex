@@ -6,7 +6,7 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   use Membrane.Core.PlaybackHandler
   use Bunch
-  require Logger
+  require Membrane.Logger
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
   require Membrane.Core.Playback
@@ -22,7 +22,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   """
   @spec handle_init(Element.options_t(), State.t()) :: State.stateful_try_t()
   def handle_init(options, %State{module: module} = state) do
-    Logger.debug("Initializing element: #{inspect(module)}, options: #{inspect(options)}")
+    Membrane.Logger.debug("Initializing element: #{inspect(module)}, options: #{inspect(options)}")
 
     :ok = Sync.register(state.synchronization.stream_sync)
 
@@ -42,11 +42,11 @@ defmodule Membrane.Core.Element.LifecycleController do
              [options],
              state
            ) do
-      Logger.debug("Element initialized: #{inspect(module)}")
+      Membrane.Logger.debug("Element initialized: #{inspect(module)}")
       {:ok, state}
     else
       {{:error, reason}, state} ->
-        Logger.error("""
+        Membrane.Logger.error("""
         Failed to initialize element
         Reason: #{inspect(reason)}
         State: #{inspect(state, pretty: true)}
@@ -64,9 +64,9 @@ defmodule Membrane.Core.Element.LifecycleController do
     playback_state = state.playback.state
 
     if playback_state == :terminating do
-      Logger.debug("Terminating element, reason: #{inspect(reason)}")
+      Membrane.Logger.debug("Terminating element, reason: #{inspect(reason)}")
     else
-      Logger.warn("""
+      Membrane.Logger.warn("""
       Terminating element possibly not prepared for termination as it was in state #{
         inspect(playback_state)
       }.
@@ -83,7 +83,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   @spec handle_pipeline_down(reason :: any, State.t()) :: {:ok, State.t()}
   def handle_pipeline_down(reason, state) do
     if reason != :normal do
-      Logger.error("""
+      Membrane.Logger.error("""
       Shutting down because of pipeline failure
       Reason: #{inspect(reason)}
       State: #{inspect(state, pretty: true)}

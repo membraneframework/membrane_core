@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   use Bunch
   use Membrane.Core.PlaybackHandler
 
-  require Logger
+  require Membrane.Logger
   require Membrane.Core.Message
   require Membrane.PlaybackState
 
@@ -25,7 +25,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   @impl PlaybackHandler
   def handle_playback_state(old, new, state) do
-    Logger.debug("Changing playback state from #{old} to #{new}")
+    Membrane.Logger.debug("Changing playback state from #{old} to #{new}")
 
     children_data =
       state
@@ -68,10 +68,10 @@ defmodule Membrane.Core.Parent.LifecycleController do
     with {:ok, state} <- callback_res do
       case state do
         %Core.Pipeline.State{} ->
-          Logger.info("Pipeline playback state changed from #{old} to #{new}")
+          Membrane.Logger.info("Pipeline playback state changed from #{old} to #{new}")
 
         %Core.Bin.State{} ->
-          Logger.debug("Playback state changed from #{old} to #{new}")
+          Membrane.Logger.debug("Playback state changed from #{old} to #{new}")
       end
 
       if new == :terminating,

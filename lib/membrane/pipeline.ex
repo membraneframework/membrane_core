@@ -15,7 +15,7 @@ defmodule Membrane.Pipeline do
   use Bunch
   use GenServer
 
-  require Logger
+  require Membrane.Logger
   require Membrane.Element
 
   alias Membrane.Clock
@@ -81,7 +81,7 @@ defmodule Membrane.Pipeline do
 
   defp do_start(method, module, pipeline_options, process_options) do
     if module |> pipeline? do
-      Logger.debug("""
+      Membrane.Logger.debug("""
       Pipeline start link: module: #{inspect(module)},
       pipeline options: #{inspect(pipeline_options)},
       process options: #{inspect(process_options)}
@@ -89,7 +89,7 @@ defmodule Membrane.Pipeline do
 
       apply(GenServer, method, [__MODULE__, {module, pipeline_options}, process_options])
     else
-      Logger.error("""
+      Membrane.Logger.error("""
       Cannot start pipeline, passed module #{inspect(module)} is not a Membrane Pipeline.
       Make sure that given module is the right one and it uses Membrane.Pipeline
       """)

@@ -4,10 +4,10 @@ defmodule Membrane.Core.Element.DemandController do
   # Module handling demands incoming through output pads.
 
   use Bunch
-  require Logger
+  require Membrane.Logger
   require Membrane.Element.CallbackContext.Demand
   require Membrane.Core.Child.PadModel
-  require Membrane.Logger
+  
   alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{ActionHandler, State}

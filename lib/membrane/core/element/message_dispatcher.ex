@@ -7,7 +7,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
 
   import Membrane.Helper.GenServer
 
-  require Logger
+  require Membrane.Logger
   require Membrane.Core.Message
 
   alias Membrane.Core.{Child, Message, PlaybackHandler}
@@ -164,7 +164,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   end
 
   defp handle_message_error(message, mode, reason, state) do
-    Logger.error("""
+    Membrane.Logger.error("""
     MessageDispatcher: cannot handle message: #{inspect(message)}, mode: #{inspect(mode)}
     Reason: #{inspect(reason)}
     State: #{inspect(state, pretty: true)}

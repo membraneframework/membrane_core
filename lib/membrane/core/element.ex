@@ -19,7 +19,7 @@ defmodule Membrane.Core.Element do
 
   use Bunch
   use GenServer
-  require Logger
+  require Membrane.Logger
   require Membrane.Core.Message
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.Element.{MessageDispatcher, State}
@@ -56,7 +56,7 @@ defmodule Membrane.Core.Element do
     %{module: module, name: name, user_options: user_options} = options
 
     if Element.element?(options.module) do
-      Logger.debug("""
+      Membrane.Logger.debug("""
       Element #{method}: #{inspect(name)}
       module: #{inspect(module)},
       element options: #{inspect(user_options)},

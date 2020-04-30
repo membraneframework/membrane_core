@@ -4,7 +4,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   # Module handling demands requested on output pads.
 
   use Bunch
-  require Logger
+  require Membrane.Logger
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
 
@@ -144,7 +144,7 @@ defmodule Membrane.Core.Element.DemandHandler do
       {:ok, state}
     else
       {{:error, reason}, state} ->
-        Logger.error("""
+        Membrane.Logger.error("""
         Error while supplying demand on pad #{inspect(pad_ref)} of size #{
           inspect(pad_data.demand)
         }

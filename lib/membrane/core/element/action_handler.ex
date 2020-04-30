@@ -8,10 +8,10 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   import Membrane.Pad, only: [is_pad_ref: 1]
 
-  require Logger
+  require Membrane.Logger
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
-  require Membrane.Logger
+  
 
   alias Membrane.{ActionError, Buffer, Caps, CallbackError, Event, Notification, Pad}
   alias Membrane.Core.Element.{DemandHandler, LifecycleController, State, TimerController}
@@ -299,7 +299,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec send_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.stateful_try_t()
   def send_caps(pad_ref, caps, state) do
-    Logger.debug("""
+    Membrane.Logger.debug("""
     Sending caps through pad #{inspect(pad_ref)}
     Caps: #{inspect(caps)}
     """)

@@ -8,9 +8,9 @@ defmodule Membrane.Core.InputBuffer do
   """
 
   use Bunch
-  require Logger
-  require Membrane.Core.Message
   require Membrane.Logger
+  require Membrane.Core.Message
+
   alias Membrane.Buffer
   alias Membrane.Core.Message
   alias Membrane.Pad
@@ -189,7 +189,7 @@ defmodule Membrane.Core.InputBuffer do
       size > warn_lvl ->
         "Reached buffers of size #{inspect(size)}, which is above warn level, from output working in push mode. See `Membrane.Core.InputBuffer` for more information."
         |> mk_log(input_buf)
-        |> Logger.warn()
+        |> Membrane.Logger.warn()
 
       true ->
         :ok

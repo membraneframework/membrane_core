@@ -1,7 +1,7 @@
 defmodule Membrane.Helper.GenServer do
   @moduledoc false
 
-  require Logger
+  require Membrane.Logger
 
   @type genserver_return_t :: {:noreply, any} | {:reply, any, any}
 
@@ -10,7 +10,7 @@ defmodule Membrane.Helper.GenServer do
   def noreply({:ok, new_state}, _old_state), do: {:noreply, new_state}
 
   def noreply({{:error, reason}, new_state}, old_state) do
-    Logger.error("""
+    Membrane.Logger.error("""
     Terminating GenServer, reason: #{inspect(reason)},
     old state: #{inspect(old_state, pretty: true)},
     new state: #{inspect(new_state, pretty: true)}
@@ -20,7 +20,7 @@ defmodule Membrane.Helper.GenServer do
   end
 
   def noreply({:error, reason}, old_state) do
-    Logger.error("""
+    Membrane.Logger.error("""
     Terminating GenServer, reason: #{inspect(reason)},
     old state: #{inspect(old_state, pretty: true)}
     """)
@@ -36,7 +36,7 @@ defmodule Membrane.Helper.GenServer do
   def reply({{:ok, v}, new_state}, _old_state), do: {:reply, {:ok, v}, new_state}
 
   def reply({{:error, reason}, new_state}, old_state) do
-    Logger.error("""
+    Membrane.Logger.error("""
     GenServer returning error reply, reason: #{inspect(reason)}
     old state: #{inspect(old_state, pretty: true)},
     new state: #{inspect(new_state, pretty: true)}
@@ -46,7 +46,7 @@ defmodule Membrane.Helper.GenServer do
   end
 
   def reply({:error, reason}, old_state) do
-    Logger.error("""
+    Membrane.Logger.error("""
     GenServer returning error reply, reason: #{inspect(reason)}
     old state: #{inspect(old_state, pretty: true)}
     """)

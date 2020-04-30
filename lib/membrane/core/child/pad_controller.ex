@@ -4,7 +4,7 @@ defmodule Membrane.Core.Child.PadController do
   # Module handling linking and unlinking pads.
 
   use Bunch
-  require Logger
+  require Membrane.Logger
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
   require Membrane.Element.CallbackContext.{PadAdded, PadRemoved}
@@ -80,7 +80,7 @@ defmodule Membrane.Core.Child.PadController do
         end)
 
       if not Enum.empty?(static_unlinked) do
-        Logger.warn("""
+        Membrane.Logger.warn("""
         Some static pads remained unlinked: #{inspect(static_unlinked)}
         State: #{inspect(state, pretty: true)}
         """)
