@@ -173,7 +173,8 @@ defmodule Membrane.Bin do
 
   @impl GenServer
   def init({name, module, bin_options, log_metadata}) do
-    Logger.metadata([mb_name: inspect(name)] ++ log_metadata)
+    :ok = Membrane.Core.Logger.put_bin_prefix(name)
+    Logger.metadata(log_metadata)
 
     clock =
       if module |> Bunch.Module.check_behaviour(:membrane_clock?) do
