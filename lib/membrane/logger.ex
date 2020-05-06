@@ -57,7 +57,7 @@ defmodule Membrane.Logger do
   @doc """
   Macro for verbose debug logs, that are silenced by default.
 
-  For details, see the 'verbose logging' section of the moduledoc.
+  For details, see the ['verbose logging'](#module-verbose-logging) section of the moduledoc.
   """
   defmacro debug_verbose(message, metadata \\ []) do
     if Keyword.get(@config, :verbose, false) do
