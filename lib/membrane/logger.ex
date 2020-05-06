@@ -82,7 +82,7 @@ defmodule Membrane.Logger do
     @doc """
     Wrapper around `Logger.#{method}/2` that adds Membrane prefix.
 
-    For details, see the 'prefixes' section of the moduledoc.
+    For details, see the ['prefixes'](#module-prefixes) section of the moduledoc.
     """
     defmacro unquote(method)(message, metadata \\ []) do
       method = unquote(method)
