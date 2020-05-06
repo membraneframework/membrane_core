@@ -97,7 +97,7 @@ defmodule Membrane.Logger do
   @doc """
   Wrapper around `Logger.log/3` that adds Membrane prefix.
 
-  For details, see the 'prefixes' section of the moduledoc.
+  For details, see the ['prefixes'](#module-prefixes) section of the moduledoc.
   """
   defmacro log(level, message, metadata \\ []) do
     quote do
