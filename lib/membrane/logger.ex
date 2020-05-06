@@ -4,7 +4,7 @@ defmodule Membrane.Logger do
 
   ## Prefixes
 
-  By default, this wrapper prepends each log with a prefix containig the context
+  By default, this wrapper prepends each log with a prefix containing the context
   of the log, such as element name. This can be turned off via configuration:
 
       use Mix.Config
