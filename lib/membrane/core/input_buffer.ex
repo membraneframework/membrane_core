@@ -175,8 +175,8 @@ defmodule Membrane.Core.InputBuffer do
         """
         Toilet overflow.
 
-        Reached buffers of size #{inspect(size)},
-        which is above fail level, from output working in push mode.
+        Reached the size of #{inspect(size)},
+        which is above fail level when storing data from output working in push mode.
         To have control over amount of buffers being produced, consider using pull mode.
         If this is a normal situation, increase warn/fail size in buffer options.
 
