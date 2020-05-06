@@ -19,7 +19,7 @@ defmodule Membrane.Core.InputBufferTest do
         |> InputBuffer.store(bufs(20))
       end
     ]
-    |> Enum.map(fn f -> assert_raise RuntimeError, ~r/Toilet overflow.*/, f end)
+    |> Enum.each(fn f -> assert_raise RuntimeError, ~r/Toilet overflow.*/, f end)
   end
 
   test "no toilet overflow" do
