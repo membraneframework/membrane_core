@@ -37,22 +37,22 @@ defmodule Membrane.Logger do
                     Process.get(:membrane_logger_prefix, "")
                   end)
 
-  defmacrop prefix_prepender(message) do
-    quote do
-      message = unquote(message)
-
+  defp dynamically_prepend_prefix(message) do
+    quote bind_quoted: [message: message, prefix: @prefix_getter] do
       if is_function(message, 0) do
         fn ->
           case message.() do
-            {content, metadata} -> {[unquote(@prefix_getter), message], metadata}
-            content -> [unquote(@prefix_getter), content]
+            {content, metadata} -> {[prefix, content], metadata}
+            content -> [prefix, content]
           end
         end
       else
-        [unquote(@prefix_getter), message]
+        [prefix, message]
       end
     end
   end
+
+  defmacrop dynamically_prepend_prefix_macro(message), do: dynamically_prepend_prefix(message)
 
   @doc """
   Macro for verbose debug logs, that are silenced by default.
@@ -113,7 +113,7 @@ defmodule Membrane.Logger do
   """
   @spec bare_log(Logger.level(), Logger.message(), Logger.metadata()) :: :ok
   def bare_log(level, message, metadata \\ []) do
-    Logger.bare_log(level, prefix_prepender(message), metadata)
+    Logger.bare_log(level, dynamically_prepend_prefix_macro(message), metadata)
   end
 
   @doc """
@@ -173,6 +173,6 @@ defmodule Membrane.Logger do
   end
 
   defp prepend_prefix(message) do
-    prefix_prepender(message)
+    dynamically_prepend_prefix(message)
   end
 end
