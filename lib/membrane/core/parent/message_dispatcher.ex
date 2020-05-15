@@ -1,13 +1,13 @@
 defmodule Membrane.Core.Parent.MessageDispatcher do
   @moduledoc false
 
-  alias Membrane.Core.Message
-  alias Membrane.Core.{Parent, Pipeline, Bin}
-  alias Parent.LifecycleController
-
-  require Message
-
   import Membrane.Helper.GenServer
+
+  require Membrane.Core.Message
+
+  alias Membrane.Core.{Bin, Pipeline}
+  alias Membrane.Core.Message
+  alias Membrane.Core.Parent.LifecycleController
 
   @type state :: Pipeline.State.t() | Bin.State.t()
 
@@ -36,6 +36,11 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     inform_parent(state, cb, [pad_ref])
 
     LifecycleController.handle_stream_management_event(cb, element_name, pad_ref, state)
+    |> noreply(state)
+  end
+
+  def handle_message(Message.new(:log_metadata, metadata), state) do
+    LifecycleController.handle_log_metadata(metadata, state)
     |> noreply(state)
   end
 

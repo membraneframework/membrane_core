@@ -17,9 +17,9 @@ defmodule Membrane.Core.Element do
   # - `Membrane.Core.Element.State` defines the state struct that these modules
   #   operate on.
 
-  use Membrane.Log, tags: :core
   use Bunch
   use GenServer
+  require Membrane.Logger
   require Membrane.Core.Message
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.Element.{MessageDispatcher, State}
@@ -31,7 +31,8 @@ defmodule Membrane.Core.Element do
           user_options: Element.options_t(),
           sync: Sync.t(),
           parent: pid,
-          clock: Clock.t()
+          clock: Clock.t(),
+          log_metadata: Keyword.t()
         }
 
   @doc """
@@ -55,7 +56,7 @@ defmodule Membrane.Core.Element do
     %{module: module, name: name, user_options: user_options} = options
 
     if Element.element?(options.module) do
-      debug("""
+      Membrane.Logger.debug("""
       Element #{method}: #{inspect(name)}
       module: #{inspect(module)},
       element options: #{inspect(user_options)},
@@ -82,8 +83,6 @@ defmodule Membrane.Core.Element do
   """
   @spec shutdown(pid, timeout) :: :ok
   def shutdown(server, timeout \\ 5000) do
-    import Membrane.Log
-    debug("Shutdown -> #{inspect(server)}")
     GenServer.stop(server, :normal, timeout)
     :ok
   end
@@ -91,6 +90,9 @@ defmodule Membrane.Core.Element do
   @impl GenServer
   def init(options) do
     parent_monitor = Process.monitor(options.parent)
+    name_str = if String.valid?(options.name), do: options.name, else: inspect(options.name)
+    :ok = Membrane.Logger.set_prefix(name_str)
+    Logger.metadata(options.log_metadata)
 
     state =
       options

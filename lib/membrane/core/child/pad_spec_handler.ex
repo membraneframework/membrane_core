@@ -8,7 +8,6 @@ defmodule Membrane.Core.Child.PadSpecHandler do
   alias Core.Child.PadModel
   require Pad
   use Bunch
-  use Core.Element.Log
 
   @private_input_pad_spec_keys [:demand_unit]
 

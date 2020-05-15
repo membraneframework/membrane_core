@@ -97,7 +97,6 @@ defmodule Membrane.Testing.Pipeline do
   """
 
   use Membrane.Pipeline
-  use Membrane.Log
 
   alias Membrane.{Element, Pipeline}
   alias Membrane.ParentSpec

@@ -20,7 +20,8 @@ defmodule Membrane.Core.Pipeline.State do
             provider: Child.name_t() | nil,
             choice: :auto | :manual
           },
-          clock_proxy: Clock.t()
+          clock_proxy: Clock.t(),
+          children_log_metadata: Keyword.t()
         }
 
   @type internal_state_t :: map | struct
@@ -33,6 +34,7 @@ defmodule Membrane.Core.Pipeline.State do
                 internal_state: nil,
                 children: %{},
                 playback: %Playback{},
-                clock_provider: %{clock: nil, provider: nil, choice: :auto}
+                clock_provider: %{clock: nil, provider: nil, choice: :auto},
+                children_log_metadata: []
               ]
 end

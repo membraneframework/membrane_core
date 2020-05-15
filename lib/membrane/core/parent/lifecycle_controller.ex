@@ -2,12 +2,15 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @moduledoc false
   use Bunch
   use Membrane.Core.PlaybackHandler
-  use Membrane.Log, tags: :core
+
+  require Membrane.Logger
+  require Membrane.Core.Message
+  require Membrane.PlaybackState
 
   alias Bunch.Type
   alias Membrane.{Child, Core, Notification, Pad, Sync}
 
-  alias Core.{
+  alias Membrane.Core.{
     Parent,
     PlaybackHandler,
     CallbackHandler,
@@ -16,17 +19,14 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   alias Membrane.Core.Parent.ChildrenModel
 
-  alias Core.Child.PadModel
   alias Membrane.PlaybackState
-
-  require Message
-  require PadModel
-  require PlaybackState
 
   @type state_t :: Core.Bin.State.t() | Core.Pipeline.State.t()
 
   @impl PlaybackHandler
   def handle_playback_state(old, new, state) do
+    Membrane.Logger.debug("Changing playback state from #{old} to #{new}")
+
     children_data =
       state
       |> ChildrenModel.get_children()
@@ -66,6 +66,14 @@ defmodule Membrane.Core.Parent.LifecycleController do
       end
 
     with {:ok, state} <- callback_res do
+      case state do
+        %Core.Pipeline.State{} ->
+          Membrane.Logger.info("Pipeline playback state changed from #{old} to #{new}")
+
+        %Core.Bin.State{} ->
+          Membrane.Logger.debug("Playback state changed from #{old} to #{new}")
+      end
+
       if new == :terminating,
         do: {:stop, :normal, state},
         else: callback_res
@@ -167,6 +175,21 @@ defmodule Membrane.Core.Parent.LifecycleController do
       [{element_name, pad_ref}],
       state
     )
+  end
+
+  @spec handle_log_metadata(Keyword.t(), state_t) :: {:ok, state_t()}
+  def handle_log_metadata(metadata, state) do
+    :ok = Logger.metadata(metadata)
+
+    children_log_metadata =
+      state.children_log_metadata
+      |> Map.new()
+      |> Map.merge(Map.new(metadata))
+      |> Bunch.KVEnum.filter_by_values(&(&1 != nil))
+
+    Bunch.KVEnum.each_value(state.children, &Message.send(&1.pid, :log_metadata, metadata))
+
+    {:ok, %{state | children_log_metadata: children_log_metadata}}
   end
 
   defp get_callback_action_handler(%Core.Pipeline.State{}), do: Core.Pipeline.ActionHandler

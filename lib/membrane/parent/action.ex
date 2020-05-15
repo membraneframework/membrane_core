@@ -25,6 +25,13 @@ defmodule Membrane.Parent.Action do
           {:remove_child, Child.name_t() | [Child.name_t()]}
 
   @typedoc """
+  Action that sets `Logger` metadata for the parent and all its descendants.
+
+  Uses `Logger.metadata/1` underneath.
+  """
+  @type log_metadata_action_t :: {:log_metadata, Keyword.t()}
+
+  @typedoc """
   Type describing actions that can be returned from parent callbacks.
 
   Returning actions is a way of pipeline/bin interaction with its children and

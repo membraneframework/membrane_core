@@ -2,7 +2,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   @moduledoc false
 
   use Bunch
-  use Membrane.Log, tags: :core
+
+  require Membrane.Core.Message
+  require Membrane.Pad
 
   alias Membrane.Core.{Bin, Child, Message, Parent}
   alias Membrane.Core.Child.PadModel
@@ -10,9 +12,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.Pad
   alias Membrane.LinkError
-
-  require Message
-  require Membrane.Pad
 
   @spec resolve_links([Parent.Link.t()], State.t()) ::
           [Parent.Link.resolved_t()]

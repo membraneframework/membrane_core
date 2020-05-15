@@ -1,4 +1,5 @@
 defmodule Membrane.Log.Logger.Base do
+  @moduledoc deprecated: "Use Elixir `Logger` instead"
   @moduledoc """
     This is a base module used by all logger implementations.
   """

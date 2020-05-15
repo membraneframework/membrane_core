@@ -3,15 +3,14 @@ defmodule Membrane.Core.Element.BufferController do
 
   # Module handling buffers incoming through input pads.
 
-  alias Membrane.{Buffer, Core, Element, Pad}
-  alias Core.{CallbackHandler, InputBuffer}
-  alias Core.Child.PadModel
-  alias Element.CallbackContext
-  alias Core.Element.{ActionHandler, DemandHandler, State}
-  require CallbackContext.{Process, Write}
-  require PadModel
-  use Core.Element.Log
   use Bunch
+  require Membrane.Element.CallbackContext.{Process, Write}
+  require Membrane.Core.Child.PadModel
+  alias Membrane.{Buffer, Pad}
+  alias Membrane.Core.{CallbackHandler, InputBuffer}
+  alias Membrane.Core.Child.PadModel
+  alias Membrane.Core.Element.{ActionHandler, DemandHandler, State}
+  alias Membrane.Element.CallbackContext
 
   @doc """
   Handles incoming buffer: either stores it in InputBuffer, or executes element's
@@ -47,7 +46,6 @@ defmodule Membrane.Core.Element.BufferController do
       [pad_ref, buffers],
       state
     )
-    |> or_warn_error("Error while handling process")
   end
 
   def exec_buffer_handler(pad_ref, buffers, params, %State{type: :sink} = state) do
@@ -58,7 +56,6 @@ defmodule Membrane.Core.Element.BufferController do
       [pad_ref, buffers],
       state
     )
-    |> or_warn_error("Error while handling write")
   end
 
   @spec handle_buffer_pull(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) ::
@@ -66,8 +63,8 @@ defmodule Membrane.Core.Element.BufferController do
   defp handle_buffer_pull(pad_ref, buffers, state) do
     PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
-    with {:ok, old_input_buf} <- PadModel.get_data(state, pad_ref, :input_buf),
-         {:ok, input_buf} <- old_input_buf |> InputBuffer.store(buffers) do
+    with {:ok, old_input_buf} <- PadModel.get_data(state, pad_ref, :input_buf) do
+      input_buf = InputBuffer.store(old_input_buf, buffers)
       state = PadModel.set_data!(state, pad_ref, :input_buf, input_buf)
 
       if old_input_buf |> InputBuffer.empty?() do

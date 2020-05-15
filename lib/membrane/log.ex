@@ -1,4 +1,5 @@
 defmodule Membrane.Log do
+  @moduledoc deprecated: "Use Elixir `Logger` or `Membrane.Logger` instead"
   @moduledoc """
   Mixin for logging using simple functions such as info/1, debug/1 in other
   modules.
@@ -86,11 +87,10 @@ defmodule Membrane.Log do
 
     send_code =
       quote do
-        Router.send_log(
-          unquote(level),
-          unquote(message),
-          Membrane.Time.pretty_now(),
-          (unquote(tags) |> Bunch.listify()) ++ unquote(default_tags)
+        require Membrane.Logger
+
+        Membrane.Logger.log(unquote(level), unquote(message),
+          membrane_tags: inspect(Bunch.listify(unquote(tags)) ++ unquote(default_tags))
         )
       end
 

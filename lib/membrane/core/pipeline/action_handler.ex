@@ -1,7 +1,8 @@
 defmodule Membrane.Core.Pipeline.ActionHandler do
   @moduledoc false
   use Membrane.Core.CallbackHandler
-  use Membrane.Log, tags: :core
+
+  require Membrane.Logger
 
   alias Membrane.CallbackError
   alias Membrane.ParentSpec
@@ -10,7 +11,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   @impl CallbackHandler
   # Deprecation
   def handle_actions(%ParentSpec{} = spec, :handle_init, params, state) do
-    warn("""
+    Membrane.Logger.warn("""
     Returning bare spec from `handle_init` is deprecated.
     Return `{{:ok, spec: spec}, state}` instead.
     Found in `#{inspect(state.module)}.handle_init/1`.
@@ -41,8 +42,12 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   defp do_handle_action({action, _args}, :handle_init, _params, state)
-       when action not in [:spec] do
+       when action not in [:spec, :log_metadata] do
     {{:error, :invalid_action}, state}
+  end
+
+  defp do_handle_action({:log_metadata, metadata}, _cb, _params, state) do
+    Parent.LifecycleController.handle_log_metadata(metadata, state)
   end
 
   defp do_handle_action({:forward, {elementname, message}}, _cb, _params, state) do

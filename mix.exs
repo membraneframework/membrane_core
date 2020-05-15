@@ -57,7 +57,6 @@ defmodule Membrane.Mixfile do
         Membrane.Caps,
         Membrane.Event,
         Membrane.EventProtocol,
-        Membrane.Log,
         Membrane.Testing
       ],
       groups_for_modules: [
@@ -77,7 +76,7 @@ defmodule Membrane.Mixfile do
         Communication: [
           ~r/^Membrane.(Buffer|Payload|Caps|Event|Notification).*/
         ],
-        Logging: [~r/^Membrane.Log.*/],
+        Logging: [~r/^Membrane.Logger/],
         Testing: [~r/^Membrane.Testing.*/],
         Utils: [
           ~r/^Membrane.Clock$/,
@@ -86,7 +85,8 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane.Time.*/,
           ~r/^Membrane.Pad.*/,
           ~r/^Membrane.PlaybackState.*/
-        ]
+        ],
+        Deprecated: [~r/^Membrane.Log\.?/]
       ]
     ]
   end
@@ -109,7 +109,7 @@ defmodule Membrane.Mixfile do
       {:excoveralls, "~> 0.11", only: :test},
       {:qex, "~> 0.3"},
       {:dialyxir, "~> 1.0.0-rc.7", only: [:dev], runtime: false},
-      {:bunch, "~> 1.2"},
+      {:bunch, "~> 1.3"},
       {:ratio, "~> 2.0"}
     ]
   end

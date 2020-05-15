@@ -3,11 +3,15 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   # Module handling demands requested on output pads.
 
-  alias Membrane.{Core, Pad}
-  alias Core.{Message, InputBuffer}
-  alias Core.Child.PadModel
+  use Bunch
+  require Membrane.Logger
+  require Membrane.Core.Child.PadModel
+  require Membrane.Core.Message
 
-  alias Core.Element.{
+  alias Membrane.Core.{Message, InputBuffer}
+  alias Membrane.Core.Child.PadModel
+
+  alias Membrane.Core.Element.{
     BufferController,
     CapsController,
     DemandController,
@@ -15,10 +19,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     State
   }
 
-  require Message
-  require PadModel
-  use Core.Element.Log
-  use Bunch
+  alias Membrane.Pad
 
   @doc """
   Updates demand on the given input pad that should be supplied by future calls
@@ -127,30 +128,29 @@ defmodule Membrane.Core.Element.DemandHandler do
           State.t()
         ) :: State.stateful_try_t()
   def supply_demand(pad_ref, state) do
-    total_size = PadModel.get_data!(state, pad_ref, :demand)
-    do_supply_demand(pad_ref, total_size, state)
-  end
-
-  @spec do_supply_demand(Pad.ref_t(), pos_integer, State.t()) :: State.stateful_try_t()
-  defp do_supply_demand(pad_ref, size, state) do
     pad_data = state |> PadModel.get_data!(pad_ref)
 
-    {input_buf_output, new_input_buf} =
-      pad_data.input_buf |> InputBuffer.take_and_demand(size, pad_data.pid, pad_data.other_ref)
+    {{_buffer_status, data}, new_input_buf} =
+      InputBuffer.take_and_demand(
+        pad_data.input_buf,
+        pad_data.demand,
+        pad_data.pid,
+        pad_data.other_ref
+      )
 
-    with {:ok, {_buffer_status, data}} <- input_buf_output,
-         state = state |> PadModel.set_data!(pad_ref, :input_buf, new_input_buf),
-         {:ok, state} <- handle_input_buf_output(pad_ref, data, state) do
+    state = PadModel.set_data!(state, pad_ref, :input_buf, new_input_buf)
+
+    with {:ok, state} <- handle_input_buf_output(pad_ref, data, state) do
       {:ok, state}
     else
       {{:error, reason}, state} ->
-        warn_error(
-          """
-          Error while supplying demand on pad #{inspect(pad_ref)} of size #{inspect(size)}
-          """,
-          {:do_supply_demand, reason},
-          state
-        )
+        Membrane.Logger.error("""
+        Error while supplying demand on pad #{inspect(pad_ref)} of size #{
+          inspect(pad_data.demand)
+        }
+        """)
+
+        {{:error, {:supply_demand, reason}}, state}
     end
   end
 

@@ -1,8 +1,7 @@
 defmodule Membrane.Core.Bin.ActionHandler do
   @moduledoc false
   use Membrane.Core.CallbackHandler
-  use Membrane.Log, tags: :core
-
+  require Membrane.Logger
   alias Membrane.{CallbackError, Core, Notification, ParentSpec}
   alias Core.{Parent, Message}
   alias Core.Bin.State
@@ -31,18 +30,26 @@ defmodule Membrane.Core.Bin.ActionHandler do
   end
 
   @impl CallbackHandler
+  def handle_action({:log_metadata, metadata}, _cb, _params, state) do
+    Parent.LifecycleController.handle_log_metadata(metadata, state)
+  end
+
+  @impl CallbackHandler
   def handle_action(action, callback, _params, state) do
     raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
   end
 
   @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}
   defp send_notification(notification, %State{watcher: nil} = state) do
-    debug("Dropping notification #{inspect(notification)} as watcher is undefined", state)
+    Membrane.Logger.warn("Dropping notification #{inspect(notification)} as watcher is undefined")
     {:ok, state}
   end
 
   defp send_notification(notification, %State{watcher: watcher, name: name} = state) do
-    debug("Sending notification #{inspect(notification)} (watcher: #{inspect(watcher)})", state)
+    Membrane.Logger.debug(
+      "Sending notification #{inspect(notification)} (watcher: #{inspect(watcher)})"
+    )
+
     Message.send(watcher, :notification, [name, notification])
     {:ok, state}
   end

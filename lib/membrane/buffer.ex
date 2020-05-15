@@ -20,19 +20,4 @@ defmodule Membrane.Buffer do
   @enforce_keys [:payload]
   defstruct payload: nil,
             metadata: Map.new()
-
-  @doc """
-  Converts buffer/buffers to the format in which they can be logged with
-  `Membrane.Log`.
-  """
-  def print(%Buffer{metadata: metadata, payload: payload}),
-    do: [
-      "%Membrane.Buffer{metadata: ",
-      inspect(metadata),
-      ", payload: ",
-      {:binary, payload},
-      "}"
-    ]
-
-  def print(buffers), do: buffers |> Enum.map(&print/1)
 end

@@ -5,8 +5,8 @@ defmodule Membrane.Core.Element.LifecycleController do
   # and similar stuff.
 
   use Membrane.Core.PlaybackHandler
-  use Membrane.Core.Element.Log
   use Bunch
+  require Membrane.Logger
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
   require Membrane.Core.Playback
@@ -22,7 +22,9 @@ defmodule Membrane.Core.Element.LifecycleController do
   """
   @spec handle_init(Element.options_t(), State.t()) :: State.stateful_try_t()
   def handle_init(options, %State{module: module} = state) do
-    debug("Initializing element: #{inspect(module)}, options: #{inspect(options)}", state)
+    Membrane.Logger.debug(
+      "Initializing element: #{inspect(module)}, options: #{inspect(options)}"
+    )
 
     :ok = Sync.register(state.synchronization.stream_sync)
 
@@ -42,11 +44,17 @@ defmodule Membrane.Core.Element.LifecycleController do
              [options],
              state
            ) do
-      debug("Element initialized: #{inspect(module)}", state)
+      Membrane.Logger.debug("Element initialized: #{inspect(module)}")
       {:ok, state}
     else
       {{:error, reason}, state} ->
-        warn_error("Failed to initialize element", reason, state)
+        Membrane.Logger.error("""
+        Failed to initialize element
+        Reason: #{inspect(reason)}
+        State: #{inspect(state, pretty: true)}
+        """)
+
+        {{:error, reason}, state}
     end
   end
 
@@ -58,14 +66,15 @@ defmodule Membrane.Core.Element.LifecycleController do
     playback_state = state.playback.state
 
     if playback_state == :terminating do
-      debug("Terminating element, reason: #{inspect(reason)}", state)
+      Membrane.Logger.debug("Terminating element, reason: #{inspect(reason)}")
     else
-      warn(
-        "Terminating element possibly not prepared for termination as it was in state #{
-          inspect(playback_state)
-        }. Reason: #{inspect(reason)}",
-        state
-      )
+      Membrane.Logger.warn("""
+      Terminating element possibly not prepared for termination as it was in state #{
+        inspect(playback_state)
+      }.
+      Reason: #{inspect(reason)}",
+      State: #{inspect(state, pretty: true)}
+      """)
     end
 
     %State{module: module, internal_state: internal_state} = state
@@ -76,11 +85,11 @@ defmodule Membrane.Core.Element.LifecycleController do
   @spec handle_pipeline_down(reason :: any, State.t()) :: {:ok, State.t()}
   def handle_pipeline_down(reason, state) do
     if reason != :normal do
-      warn_error(
-        "Shutting down because of pipeline failure",
-        {:pipeline_failure, reason: reason},
-        state
-      )
+      Membrane.Logger.error("""
+      Shutting down because of pipeline failure
+      Reason: #{inspect(reason)}
+      State: #{inspect(state, pretty: true)}
+      """)
     end
 
     handle_shutdown(reason, state)
@@ -100,7 +109,6 @@ defmodule Membrane.Core.Element.LifecycleController do
       [message],
       state
     )
-    |> or_warn_error("Error while handling message")
   end
 
   @impl PlaybackHandler

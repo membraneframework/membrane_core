@@ -320,8 +320,6 @@ defmodule Membrane.Element.Base do
 
       @before_compile {unquote(__MODULE__), :generate_moduledoc}
 
-      use Membrane.Log, tags: :element, import: false
-
       alias Membrane.Element.CallbackContext, as: Ctx
 
       import unquote(__MODULE__), only: [def_clock: 0, def_clock: 1, def_options: 1]

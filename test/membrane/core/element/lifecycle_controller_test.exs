@@ -15,7 +15,7 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
   end
 
   setup do
-    input_buf = InputBuffer.init(:test, :buffers, self(), :some_pad, preferred_size: 10)
+    input_buf = InputBuffer.init(:buffers, self(), :some_pad, "test", preferred_size: 10)
 
     state =
       %{

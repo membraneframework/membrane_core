@@ -3,17 +3,17 @@ defmodule Membrane.Core.Element.EventController do
 
   # Module handling events incoming through input pads.
 
-  alias Membrane.{Core, Element, Event, Pad, Sync}
-  alias Core.{CallbackHandler, InputBuffer, Message}
-  alias Core.Child.PadModel
-  alias Core.Element.{ActionHandler, State}
-  alias Element.CallbackContext
-  require CallbackContext.Event
-  require CallbackContext.StreamManagement
-  require Message
-  require PadModel
-  use Core.Element.Log
   use Bunch
+  require Membrane.Logger
+  require Membrane.Core.Child.PadModel
+  require Membrane.Core.Message
+  require Membrane.Element.CallbackContext.Event
+  require Membrane.Element.CallbackContext.StreamManagement
+  alias Membrane.Core.{CallbackHandler, InputBuffer, Message}
+  alias Membrane.Core.Child.PadModel
+  alias Membrane.Core.Element.{ActionHandler, State}
+  alias Membrane.Element.CallbackContext
+  alias Membrane.{Event, Pad, Sync}
 
   @spec handle_start_of_stream(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   def handle_start_of_stream(pad_ref, state) do
@@ -31,8 +31,12 @@ defmodule Membrane.Core.Element.EventController do
 
     if not Event.async?(event) && pad_data.mode == :pull && pad_data.direction == :input &&
          buffers_before_event_present?(pad_data) do
-      state
-      |> PadModel.update_data(pad_ref, :input_buf, &(&1 |> InputBuffer.store(:event, event)))
+      PadModel.update_data(
+        state,
+        pad_ref,
+        :input_buf,
+        &{:ok, InputBuffer.store(&1, :event, event)}
+      )
     else
       exec_handle_event(pad_ref, event, state)
     end
@@ -42,19 +46,29 @@ defmodule Membrane.Core.Element.EventController do
           State.stateful_try_t()
   def exec_handle_event(pad_ref, event, params \\ %{}, state) do
     withl handle: {{:ok, :handle}, state} <- handle_special_event(pad_ref, event, state),
-          do: {:ok, state} <- check_sync(event, state),
-          do: {:ok, state} <- do_exec_handle_event(pad_ref, event, params, state) do
+          try: {:ok, state} <- check_sync(event, state),
+          try: {:ok, state} <- do_exec_handle_event(pad_ref, event, params, state) do
       {:ok, state}
     else
       handle: {{:ok, :ignore}, state} ->
-        debug("ignoring event #{inspect(event)}", state)
+        Membrane.Logger.debug("Ignoring event #{inspect(event)}")
         {:ok, state}
 
       handle: {{:error, reason}, state} ->
-        warn_error("Error while handling event", {:handle_event, reason}, state)
+        Membrane.Logger.error("""
+        Error while handling event, reason: #{inspect(reason)}
+        State: #{inspect(state, pretty: true)}
+        """)
 
-      do: {{:error, reason}, state} ->
-        warn_error("Error while handling event", {:handle_event, reason}, state)
+        {{:error, {:handle_event, reason}}, state}
+
+      try: {{:error, reason}, state} ->
+        Membrane.Logger.error("""
+        Error while handling event, reason: #{inspect(reason)}
+        State: #{inspect(state, pretty: true)}
+        """)
+
+        {{:error, {:handle_event, reason}}, state}
     end
   end
 
@@ -125,26 +139,26 @@ defmodule Membrane.Core.Element.EventController do
   defp handle_special_event(pad_ref, %Event.EndOfStream{}, state) do
     pad_data = PadModel.get_data!(state, pad_ref)
 
-    with %{direction: :input, start_of_stream?: true, end_of_stream?: false} <- pad_data,
-         %{state: :playing} <- state.playback do
+    withl data: %{direction: :input, start_of_stream?: true, end_of_stream?: false} <- pad_data,
+          playback: %{state: :playing} <- state.playback do
       state
       |> PadModel.set_data!(pad_ref, :end_of_stream?, true)
       ~> {{:ok, :handle}, &1}
     else
-      %{direction: :output} ->
+      data: %{direction: :output} ->
         {{:error, {:received_end_of_stream_through_output, pad_ref}}, state}
 
-      %{end_of_stream?: true} ->
-        debug("Ignoring event EndOfStream as it has already come before", state)
+      data: %{end_of_stream?: true} ->
+        Membrane.Logger.debug("Ignoring end of stream as it has already come before")
         {{:ok, :ignore}, state}
 
-      %{state: playback_state} ->
+      data: %{start_of_stream?: false} ->
+        {{:ok, :ignore}, state}
+
+      playback: %{state: playback_state} ->
         raise "Received end of stream event in an incorrect state. State: #{
-                inspect(playback_state)
+                inspect(playback_state, pretty: true)
               }, on pad: #{inspect(pad_ref)}"
-
-      %{start_of_stream?: false} ->
-        {{:ok, :ignore}, state}
     end
   end
 
