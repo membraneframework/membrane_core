@@ -10,7 +10,7 @@ defmodule Membrane.Logger do
       use Mix.Config
       config :membrane_core, :logger, prefix: false
 
-  Regardless of the config, the prefix is passed to `Logger` metadata under `:mb` key.
+  Regardless of the config, the prefix is passed to `Logger` metadata under `:mb_prefix` key.
   Prefixes are passed via process dictionary, so they have process-wide scope,
   but it can be extended with `get_prefix/0` and `set_prefix/1`.
 
@@ -138,7 +138,7 @@ defmodule Membrane.Logger do
   """
   @spec set_prefix(prefix :: String.t()) :: :ok
   def set_prefix(prefix) do
-    Logger.metadata(mb: prefix)
+    Logger.metadata(mb_prefix: prefix)
 
     if Membrane.Logger.get_config(:prefix, true) do
       Process.put(:membrane_logger_prefix, "[" <> prefix <> "] ")
