@@ -33,12 +33,12 @@ defmodule Membrane.Logger do
             do: Application.compile_env(:membrane_core, :logger, []),
             else: Application.get_env(:membrane_core, :logger, [])
 
-  @prefix_getter (quote do
-                    Process.get(:membrane_logger_prefix, "")
-                  end)
+  @get_prefix_ast (quote do
+                     Process.get(:membrane_logger_prefix, "")
+                   end)
 
-  defp dynamically_prepend_prefix(message) do
-    quote bind_quoted: [message: message, prefix: @prefix_getter] do
+  defp runtime_prepend_prefix_ast(message) do
+    quote bind_quoted: [message: message, prefix: @get_prefix_ast] do
       if is_function(message, 0) do
         fn ->
           case message.() do
@@ -52,7 +52,7 @@ defmodule Membrane.Logger do
     end
   end
 
-  defmacrop dynamically_prepend_prefix_macro(message), do: dynamically_prepend_prefix(message)
+  defmacrop runtime_prepend_prefix(message), do: runtime_prepend_prefix_ast(message)
 
   @doc """
   Macro for verbose debug logs, that are silenced by default.
@@ -63,7 +63,11 @@ defmodule Membrane.Logger do
     if Keyword.get(@config, :verbose, false) do
       quote do
         require Logger
-        Logger.debug(unquote(prepend_prefix(message)), unquote([mb_verbose: true] ++ metadata))
+
+        Logger.debug(
+          unquote(prepend_prefix_ast(message)),
+          unquote([mb_verbose: true] ++ metadata)
+        )
       end
     else
       # A hack to suppress the 'unused variable' warnings
@@ -89,7 +93,7 @@ defmodule Membrane.Logger do
 
       quote do
         require Logger
-        Logger.unquote(method)(unquote(prepend_prefix(message)), unquote(metadata))
+        Logger.unquote(method)(unquote(prepend_prefix_ast(message)), unquote(metadata))
       end
     end
   end)
@@ -102,7 +106,7 @@ defmodule Membrane.Logger do
   defmacro log(level, message, metadata \\ []) do
     quote do
       require Logger
-      Logger.log(unquote(level), unquote(prepend_prefix(message)), unquote(metadata))
+      Logger.log(unquote(level), unquote(prepend_prefix_ast(message)), unquote(metadata))
     end
   end
 
@@ -113,7 +117,7 @@ defmodule Membrane.Logger do
   """
   @spec bare_log(Logger.level(), Logger.message(), Logger.metadata()) :: :ok
   def bare_log(level, message, metadata \\ []) do
-    Logger.bare_log(level, dynamically_prepend_prefix_macro(message), metadata)
+    Logger.bare_log(level, runtime_prepend_prefix(message), metadata)
   end
 
   @doc """
@@ -164,15 +168,15 @@ defmodule Membrane.Logger do
     |> Keyword.get(key, default)
   end
 
-  defp prepend_prefix(message) when is_binary(message) or is_list(message) do
-    [@prefix_getter, message]
+  defp prepend_prefix_ast(message) when is_binary(message) or is_list(message) do
+    [@get_prefix_ast, message]
   end
 
-  defp prepend_prefix({op, _meta, _args} = message) when op in [:<<>>, :<>] do
-    [@prefix_getter, message]
+  defp prepend_prefix_ast({op, _meta, _args} = message) when op in [:<<>>, :<>] do
+    [@get_prefix_ast, message]
   end
 
-  defp prepend_prefix(message) do
-    dynamically_prepend_prefix(message)
+  defp prepend_prefix_ast(message) do
+    runtime_prepend_prefix_ast(message)
   end
 end
