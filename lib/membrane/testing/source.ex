@@ -1,25 +1,31 @@
 defmodule Membrane.Testing.Source do
   @moduledoc """
-  Testing Element for supplying data based on generator function passed through
-  options.
+  Testing Element for supplying data based on generator function or payloads passed
+  through options.
 
   ## Example usage
 
   As mentioned earlier you can use this element in one of two ways, providing
   either a generator function or an `Enumerable.t`.
 
+  If you provide an `Enumerable.t` with payloads, then each of those payloads will
+  be wrapped in a `Membrane.Buffer` and sent through `:output` pad.
   ```
-  %Sink{output: [0xA1, 0xB2, 0xC3, 0xD4]}
+  %Source{output: [0xA1, 0xB2, 0xC3, 0xD4]}
   ```
 
-  In order to specify `Membrane.Testing.Sink` with generator function you need
-  to provide initial state and function that matches `t:generator/0` type.
+  In order to specify `Membrane.Testing.Source` with generator function you need
+  to provide initial state and function that matches `t:generator/0` type. This
+  function should take state and demand size as its' arguments and return
+  a tuple consisting of actions that element will return during the
+  `c:Membrane.Element.WithOutputPads.handle_demand/5`
+  callback and new state.
   ```
   generator_function = fn state, size ->
     #generate some buffers
     {actions, state + 1}
   end
-  %Sink{output: {1, generator_function}}
+  %Source{output: {1, generator_function}}
   ```
   """
 
@@ -84,7 +90,7 @@ defmodule Membrane.Testing.Source do
   end
 
   @doc """
-  Creates output with generator function from list of buffers
+  Creates output with generator function from list of buffers.
   """
   @spec output_from_buffers([Buffer.t()]) :: {[Buffer.t()], generator()}
   def output_from_buffers(data) do
