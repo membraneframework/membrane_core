@@ -16,7 +16,7 @@ defmodule Membrane.Testing.Source do
 
   In order to specify `Membrane.Testing.Source` with generator function you need
   to provide initial state and function that matches `t:generator/0` type. This
-  function should take state and demand size as its' arguments and return
+  function should take state and demand size as its arguments and return
   a tuple consisting of actions that element will return during the
   `c:Membrane.Element.WithOutputPads.handle_demand/5`
   callback and new state.
