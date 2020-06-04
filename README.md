@@ -32,6 +32,10 @@ To get familiar with basic concepts and build your first application using Membr
 
 API documentation is available at [HexDocs](https://hexdocs.pm/membrane_core/)
 
+## Erlang/OTP 23 compatibility
+
+It is not recommended currently to use Membrane with Erlang/OTP 23 due to [ERL-1273](https://bugs.erlang.org/browse/ERL-1273) that blocks compilation of some elements on Linux and macOS ([membraneframework/bundlex#58](https://github.com/membraneframework/bundlex/issues/58)). Erlang/OTP 22 is confirmed not to exhibit this bug.
+
 ## Support and questions
 
 If you have any problems with Membrane Framework feel free to contact us via [membrane tag at Elixir forum](https://elixirforum.com/tag/membrane), [mailing list](https://groups.google.com/forum/#!forum/membrane-framework), [Discord](https://discord.gg/nwnfVSY) or via [e-mail](mailto:info@membraneframework.org).
