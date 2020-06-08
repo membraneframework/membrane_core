@@ -34,7 +34,7 @@ API documentation is available at [HexDocs](https://hexdocs.pm/membrane_core/)
 
 ## Erlang/OTP 23 compatibility
 
-It is not recommended currently to use Membrane with Erlang/OTP 23 due to [ERL-1273](https://bugs.erlang.org/browse/ERL-1273) that blocks compilation of some elements on Linux and macOS ([membraneframework/bundlex#58](https://github.com/membraneframework/bundlex/issues/58)). Erlang/OTP 22 is confirmed not to exhibit this bug.
+It is currently not recommended to use Membrane with Erlang/OTP 23 due to [ERL-1273](https://bugs.erlang.org/browse/ERL-1273) that blocks compilation of some native elements ([membraneframework/bundlex#58](https://github.com/membraneframework/bundlex/issues/58)). Erlang/OTP 22 is confirmed not to exhibit this bug.
 
 ## Support and questions
 
