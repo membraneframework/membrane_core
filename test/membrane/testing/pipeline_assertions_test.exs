@@ -15,7 +15,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
     test "does not flunk when notification is handled", %{
       state: state
     } do
-      Pipeline.handle_notification(:notification, :element, state)
+      Pipeline.handle_notification(:notification, :element, context(), state)
       assert_pipeline_notified(self(), :element, :notification)
     end
 
@@ -30,7 +30,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
     test "does not flunk when state change is handled", %{
       state: state
     } do
-      Pipeline.handle_prepared_to_stopped(state)
+      Pipeline.handle_prepared_to_stopped(context(), state)
       assert_pipeline_playback_changed(self(), :prepared, :stopped)
     end
 
@@ -41,7 +41,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
     end
 
     test "flunks when state change does not match given one", %{state: state} do
-      Pipeline.handle_prepared_to_stopped(state)
+      Pipeline.handle_prepared_to_stopped(context(), state)
 
       assert_raise ExUnit.AssertionError, fn ->
         assert_pipeline_playback_changed(self(), :stopped, :prepared, 0)
@@ -51,7 +51,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
     test "supports pattern as argument", %{
       state: state
     } do
-      Pipeline.handle_prepared_to_stopped(state)
+      Pipeline.handle_prepared_to_stopped(context(), state)
       prev_state = :prepared
       current_state = :stopped
       assert_pipeline_playback_changed(self(), ^prev_state, ^current_state)
@@ -68,7 +68,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
     test "flunks when state change does not match provided pattern", %{
       state: state
     } do
-      Pipeline.handle_stopped_to_prepared(state)
+      Pipeline.handle_stopped_to_prepared(context(), state)
 
       assert_raise ExUnit.AssertionError, fn ->
         prev_state = :prepared
@@ -99,12 +99,12 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
     end
 
     test "allows for wildcard as first argument", %{state: state} do
-      Pipeline.handle_prepared_to_stopped(state)
+      Pipeline.handle_prepared_to_stopped(context(), state)
       assert_pipeline_playback_changed(self(), _, :stopped)
     end
 
     test "allows for wildcard as second argument", %{state: state} do
-      Pipeline.handle_playing_to_prepared(state)
+      Pipeline.handle_playing_to_prepared(context(), state)
       assert_pipeline_playback_changed(self(), :playing, _)
     end
 
@@ -124,7 +124,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
   describe "assert_pipeline_receive" do
     test "does not flunk when pipeline receives a message", %{state: state} do
       message = "I am an important message"
-      Pipeline.handle_other(message, state)
+      Pipeline.handle_other(message, context(), state)
       assert_pipeline_receive(self(), ^message)
     end
 
@@ -145,7 +145,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
 
     test "flunks when pipeline receives message", %{state: state} do
       message = "I am an important message"
-      Pipeline.handle_other(message, state)
+      Pipeline.handle_other(message, context(), state)
 
       assert_raise ExUnit.AssertionError, fn ->
         refute_pipeline_receive(self(), ^message)
@@ -156,7 +156,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
   describe "assert_sink_caps" do
     test "does not flunk when caps are handled", %{state: state} do
       caps = %{property: :value}
-      Pipeline.handle_notification({:caps, :input, caps}, :sink, state)
+      Pipeline.handle_notification({:caps, :input, caps}, :sink, context(), state)
       assert_sink_caps(self(), :sink, ^caps)
     end
 
@@ -170,7 +170,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
   describe "refute_sink_caps" do
     test "flunks when caps are handled", %{state: state} do
       caps = %{property: :value}
-      Pipeline.handle_notification({:caps, :input, caps}, :sink, state)
+      Pipeline.handle_notification({:caps, :input, caps}, :sink, context(), state)
 
       assert_raise ExUnit.AssertionError, fn ->
         refute_sink_caps(self(), :sink, ^caps)
@@ -185,7 +185,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
   describe "assert_sink_event" do
     test "does not flunk when event is handled", %{state: state} do
       event = %Membrane.Event.Discontinuity{}
-      Pipeline.handle_notification({:event, event}, :sink, state)
+      Pipeline.handle_notification({:event, event}, :sink, context(), state)
       assert_sink_event(self(), :sink, ^event)
     end
 
@@ -199,7 +199,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
   describe "refute_sink_event" do
     test "flunks when event is handled", %{state: state} do
       event = %Membrane.Event.Discontinuity{}
-      Pipeline.handle_notification({:event, event}, :sink, state)
+      Pipeline.handle_notification({:event, event}, :sink, context(), state)
 
       assert_raise ExUnit.AssertionError, fn ->
         refute_sink_event(self(), :sink, ^event)
@@ -214,7 +214,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
   describe "assert_sink_buffer" do
     test "does not flunk when buffer is handled", %{state: state} do
       buffer = %Membrane.Buffer{payload: 255}
-      Pipeline.handle_notification({:buffer, buffer}, :sink, state)
+      Pipeline.handle_notification({:buffer, buffer}, :sink, context(), state)
       assert_sink_buffer(self(), :sink, ^buffer)
     end
 
@@ -228,7 +228,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
   describe "refute_sink_buffer" do
     test "flunks when buffer is handled", %{state: state} do
       buffer = %Membrane.Buffer{payload: 255}
-      Pipeline.handle_notification({:buffer, buffer}, :sink, state)
+      Pipeline.handle_notification({:buffer, buffer}, :sink, context(), state)
 
       assert_raise ExUnit.AssertionError, fn ->
         refute_sink_buffer(self(), :sink, ^buffer)
@@ -242,7 +242,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
 
   describe "assert_start_of_stream" do
     test "does not flunk when :start_of_stream is handled by pipeline", %{state: state} do
-      Pipeline.handle_element_start_of_stream({:sink, :input}, state)
+      Pipeline.handle_element_start_of_stream({:sink, :input}, context(), state)
       assert_start_of_stream(self(), :sink)
     end
 
@@ -255,7 +255,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
 
   describe "assert_end_of_stream" do
     test "does not flunk when :end_of_stream is handled by pipeline", %{state: state} do
-      Pipeline.handle_element_end_of_stream({:sink, :input}, state)
+      Pipeline.handle_element_end_of_stream({:sink, :input}, context(), state)
       assert_end_of_stream(self(), :sink)
     end
 
@@ -265,4 +265,6 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
       end
     end
   end
+
+  defp context(), do: nil
 end

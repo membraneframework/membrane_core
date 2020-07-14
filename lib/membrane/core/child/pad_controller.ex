@@ -8,6 +8,7 @@ defmodule Membrane.Core.Child.PadController do
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
   require Membrane.Element.CallbackContext.{PadAdded, PadRemoved}
+  require Membrane.Bin.CallbackContext.{PadAdded, PadRemoved}
   require Membrane.Pad
   alias Bunch.Type
   alias Membrane.Core
@@ -15,7 +16,6 @@ defmodule Membrane.Core.Child.PadController do
   alias Membrane.Core.{CallbackHandler, Message, InputBuffer}
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.Core.Element.{EventController, PlaybackBuffer}
-  alias Membrane.Element.CallbackContext
   alias Membrane.{Event, LinkError, Pad, ParentSpec}
 
   @type state_t :: Core.Bin.State.t() | Core.Element.State.t()

@@ -207,7 +207,7 @@ defmodule Membrane.Pipeline do
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
   """
   defmacro __using__(options) do
-    quote location: :keep do
+    quote do
       use Membrane.Parent, unquote(options)
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
@@ -278,9 +278,6 @@ defmodule Membrane.Pipeline do
       def handle_init(_options), do: {{:ok, spec: %Membrane.ParentSpec{}}, %{}}
 
       @impl true
-      def handle_notification(_notification, _from, state), do: {:ok, state}
-
-      @impl true
       def handle_shutdown(_reason, _state), do: :ok
 
       defoverridable start: 0,
@@ -293,8 +290,7 @@ defmodule Membrane.Pipeline do
                      prepare: 1,
                      stop: 1,
                      handle_init: 1,
-                     handle_shutdown: 2,
-                     handle_notification: 3
+                     handle_shutdown: 2
     end
   end
 end

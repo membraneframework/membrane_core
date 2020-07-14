@@ -17,14 +17,9 @@ defmodule Membrane.Core.Parent.LifecycleController do
     Message
   }
 
-  alias Core.Child.PadModel
+  alias Membrane.Core.Parent.ChildrenModel
   alias Membrane.PlaybackState
 
-  alias Membrane.PlaybackState
-
-  # require Membrane.CallbackContext
-  # require Membrane.Pipeline.CallbackContext
-  # require Membrane.Bin.CallbackContext
   require Membrane.Pipeline.CallbackContext.{
     PlaybackChange,
     Notification,
@@ -107,15 +102,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
     with {:ok, _} <- state |> Parent.ChildrenModel.get_child_data(from) do
       context = get_available_contexts(state).notification
       action_handler = get_callback_action_handler(state)
-
-      # IO.puts "\ndupa"
-      # IO.inspect from
-      # IO.inspect notification
-      # IO.inspect state
-      # IO.puts "\n"
-      # IO.inspect context
-      # IO.inspect action_handler
-      # IO.puts "\n\n\n"
 
       CallbackHandler.exec_and_handle_callback(
         :handle_notification,

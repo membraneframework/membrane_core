@@ -237,6 +237,7 @@ defmodule Membrane.Testing.Pipeline do
     handle_init(%Options{options | links: new_links})
   end
 
+  @impl true
   def handle_init(%Options{module: nil} = options) do
     spec = %Membrane.ParentSpec{
       children: options.elements,
@@ -247,6 +248,7 @@ defmodule Membrane.Testing.Pipeline do
     {{:ok, spec: spec}, new_state}
   end
 
+  @impl true
   def handle_init(%Options{links: nil, elements: nil} = options) do
     new_state = %State{
       test_process: options.test_process,
@@ -258,98 +260,113 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_stopped_to_prepared(%State{} = state),
-    do:
-      eval(
-        :handle_stopped_to_prepared,
-        [],
-        fn -> notify_playback_state_changed(:stopped, :prepared, state) end,
-        state
-      )
+  def handle_stopped_to_prepared(ctx, %State{} = state) do
+    eval(
+      :handle_stopped_to_prepared,
+      [ctx],
+      fn -> notify_playback_state_changed(:stopped, :prepared, state) end,
+      state
+    )
+  end
 
   @impl true
-  def handle_prepared_to_playing(%State{} = state),
-    do:
-      eval(
-        :handle_prepared_to_playing,
-        [],
-        fn -> notify_playback_state_changed(:prepared, :playing, state) end,
-        state
-      )
+  def handle_prepared_to_playing(ctx, %State{} = state) do
+    eval(
+      :handle_prepared_to_playing,
+      [ctx],
+      fn -> notify_playback_state_changed(:prepared, :playing, state) end,
+      state
+    )
+  end
 
   @impl true
-  def handle_playing_to_prepared(%State{} = state),
-    do:
-      eval(
-        :handle_playing_to_prepared,
-        [],
-        fn -> notify_playback_state_changed(:playing, :prepared, state) end,
-        state
-      )
+  def handle_playing_to_prepared(ctx, %State{} = state) do
+    eval(
+      :handle_playing_to_prepared,
+      [ctx],
+      fn -> notify_playback_state_changed(:playing, :prepared, state) end,
+      state
+    )
+  end
 
   @impl true
-  def handle_prepared_to_stopped(%State{} = state),
-    do:
-      eval(
-        :handle_prepared_to_stopped,
-        [],
-        fn -> notify_playback_state_changed(:prepared, :stopped, state) end,
-        state
-      )
+  def handle_prepared_to_stopped(ctx, %State{} = state) do
+    eval(
+      :handle_prepared_to_stopped,
+      [ctx],
+      fn -> notify_playback_state_changed(:prepared, :stopped, state) end,
+      state
+    )
+  end
 
   @impl true
-  def handle_notification(notification, from, %State{} = state),
-    do:
-      eval(
-        :handle_notification,
-        [notification, from],
-        fn -> notify_test_process({:handle_notification, {notification, from}}, state) end,
-        state
-      )
+  def handle_notification(notification, from, ctx, %State{} = state) do
+    eval(
+      :handle_notification,
+      [notification, from, ctx],
+      fn -> notify_test_process({:handle_notification, {notification, from}}, state) end,
+      state
+    )
+  end
 
   @impl true
-  def handle_spec_started(elements, %State{} = state),
-    do:
-      eval(
-        :handle_spec_started,
-        [elements],
-        fn -> {:ok, state} end,
-        state
-      )
+  def handle_spec_started(elements, ctx, %State{} = state) do
+    eval(
+      :handle_spec_started,
+      [elements, ctx],
+      fn -> {:ok, state} end,
+      state
+    )
+  end
 
   @impl true
-  def handle_other({:for_element, element, message}, %State{} = state),
-    do:
-      eval(
-        :handle_other,
-        [{:for_element, element, message}],
-        fn -> {{:ok, forward: {element, message}}, state} end,
-        state
-      )
-
-  def handle_other(message, %State{} = state),
-    do:
-      eval(
-        :handle_other,
-        [message],
-        fn -> notify_test_process({:handle_other, message}, state) end,
-        state
-      )
+  def handle_other({:for_element, element, message}, ctx, %State{} = state) do
+    eval(
+      :handle_other,
+      [{:for_element, element, message}, ctx],
+      fn -> {{:ok, forward: {element, message}}, state} end,
+      state
+    )
+  end
 
   @impl true
-  def handle_element_start_of_stream({_element, _pad} = arg, state) do
-    notify_test_process({:handle_element_start_of_stream, arg}, state)
+  def handle_other(message, ctx, %State{} = state) do
+    eval(
+      :handle_other,
+      [message, ctx],
+      fn -> notify_test_process({:handle_other, message}, state) end,
+      state
+    )
+  end
+
+  @impl true
+  def handle_element_start_of_stream(endpoint, ctx, state) do
+    eval(
+      :handle_element_start_of_stream,
+      [endpoint, ctx],
+      fn ->
+        notify_test_process({:handle_element_start_of_stream, endpoint}, state)
+      end,
+      state
+    )
+  end
+
+  @impl true
+  def handle_element_end_of_stream(endpoint, ctx, state) do
+    eval(
+      :handle_element_end_of_stream,
+      [endpoint, ctx],
+      fn ->
+        notify_test_process({:handle_element_end_of_stream, endpoint}, state)
+      end,
+      state
+    )
   end
 
   defp default_options(%Options{test_process: nil} = options),
     do: %Options{options | test_process: self()}
 
-  defp default_options(default), do: default
-
-  @impl true
-  def handle_element_end_of_stream({_element, _pad} = arg, state) do
-    notify_test_process({:handle_element_end_of_stream, arg}, state)
-  end
+  defp default_options(options), do: options
 
   defp eval(custom_function, custom_args, function, state)
 
@@ -371,7 +388,6 @@ defmodule Membrane.Testing.Pipeline do
 
   defp notify_test_process(message, %State{test_process: test_process} = state) do
     send(test_process, {__MODULE__, self(), message})
-
     {:ok, state}
   end
 

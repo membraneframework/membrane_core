@@ -323,7 +323,7 @@ defmodule Membrane.Bin do
       def handle_init(_options), do: {{:ok, spec: %Membrane.ParentSpec{}}, %{}}
 
       @impl true
-      def handle_notification(notification, _from, state),
+      def handle_notification(notification, _from, _ctx, state),
         do: {{:ok, notify: notification}, state}
 
       @impl true
@@ -332,11 +332,11 @@ defmodule Membrane.Bin do
       @impl true
       def handle_pad_removed(_pad, _ctx, state), do: {:ok, state}
 
-      defoverridable handle_init: 1,
-                     handle_notification: 3,
+      defoverridable membrane_clock?: 0,
+                     handle_init: 1,
+                     handle_notification: 4,
                      handle_pad_added: 3,
-                     handle_pad_removed: 3,
-                     membrane_clock?: 0
+                     handle_pad_removed: 3
     end
   end
 end
