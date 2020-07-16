@@ -1,20 +1,13 @@
 defmodule Membrane.Element.CallbackContext do
-  alias Membrane.Pad
-  use Membrane.CallbackContext
+  use Membrane.CallbackContext,
+    pads: %{Membrane.Pad.ref_t() => Membrane.Pad.Data.t()},
+    playback_state: Membrane.PlaybackState.t(),
+    clock: Membrane.Clock.t() | nil,
+    parent_clock: Membrane.Clock.t() | nil,
+    name: Membrane.Element.name_t()
 
   @impl true
-  def default_fields_names() do
-    [
-      :pads,
-      :playback_state,
-      :clock,
-      :parent_clock,
-      :name
-    ]
-  end
-
-  @impl true
-  def default_ctx_assigment(state) do
+  def extract_default_fields(state, args) do
     quote do
       [
         playback_state: unquote(state).playback.state,
@@ -23,6 +16,6 @@ defmodule Membrane.Element.CallbackContext do
         parent_clock: unquote(state).synchronization.parent_clock,
         name: unquote(state).name
       ]
-    end
+    end ++ args
   end
 end

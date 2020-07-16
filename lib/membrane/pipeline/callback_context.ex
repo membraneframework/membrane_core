@@ -1,21 +1,15 @@
 defmodule Membrane.Pipeline.CallbackContext do
-  use Membrane.CallbackContext
+  use Membrane.CallbackContext,
+    playback_state: Membrane.PlaybackState.t(),
+    clock: Membrane.Clock.t()
 
   @impl true
-  def default_fields_names() do
-    [
-      :playback_state,
-      :clock
-    ]
-  end
-
-  @impl true
-  def default_ctx_assigment(state) do
+  def extract_default_fields(state, args) do
     quote do
       [
         playback_state: unquote(state).playback.state,
         clock: unquote(state).clock_provider.clock
       ]
-    end
+    end ++ args
   end
 end

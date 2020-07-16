@@ -1,66 +1,56 @@
 defmodule Membrane.CallbackContext do
-  alias Membrane.Core
-  alias Core.Element
-  alias Core.Bin
-  alias Core.Pipeline
+  use Bunch
 
-  @callback default_fields_names :: list(atom)
-  @callback default_ctx_assigment(any) :: list
+  @callback extract_default_fields(state :: Macro.t(), args :: keyword(Macro.t())) ::
+              keyword(Macro.t())
 
-  defmacro __using__(_opts) do
+  defmacro __using__(default_fields) do
     quote do
-      alias Membrane.Pad
-      alias Membrane.Core
-      alias Core.Element
-      alias Core.Bin
-      alias Core.Pipeline
-      use Bunch
-
       @behaviour unquote(__MODULE__)
 
       @impl true
-      def default_fields_names() do
-        []
-      end
-
-      @impl true
-      def default_ctx_assigment(_state) do
-        quote do
-          []
-        end
+      def extract_default_fields(_state, args) do
+        args
       end
 
       defoverridable unquote(__MODULE__)
 
-      @macrocallback from_state(Element.State.t() | Bin.State.t() | Pipeline.State.t(), keyword()) ::
-                       Macro.t()
+      @macrocallback from_state(state :: Macro.t(), args :: keyword(Macro.t())) :: Macro.t()
 
+      unquote(nested_using({:quote, [], [[do: default_fields]]}))
+    end
+  end
+
+  defp nested_using(default_fields) do
+    quote do
       defmacro __using__(fields) do
+        default_fields = unquote(default_fields)
+
         quote do
           require unquote(__MODULE__)
           @behaviour unquote(__MODULE__)
 
-          fields_names = unquote(fields |> Keyword.keys())
+          @type t :: %__MODULE__{unquote_splicing(fields ++ default_fields)}
+
+          fields_names = unquote(Keyword.keys(fields))
+          default_fields_names = unquote(Keyword.keys(default_fields))
 
           @enforce_keys Module.get_attribute(__MODULE__, :enforce_keys)
                         ~> (&1 || fields_names)
                         |> Bunch.listify()
-                        ~> (&1 ++ unquote(__MODULE__).default_fields_names())
+                        ~> (&1 ++ default_fields_names)
 
-          defstruct fields_names ++ unquote(__MODULE__).default_fields_names()
+          defstruct fields_names ++ default_fields_names
 
           @impl true
           defmacro from_state(state, args \\ []) do
-            require unquote(__MODULE__)
-            alias unquote(__MODULE__), as: ModuleInBetween
+            module = unquote(__MODULE__)
 
             quote do
-              state = unquote(state)
-              require unquote(ModuleInBetween)
+              require unquote(module)
 
               %unquote(__MODULE__){
-                unquote_splicing(ModuleInBetween.default_ctx_assigment(state)),
-                unquote_splicing(args)
+                unquote_splicing(module.extract_default_fields(state, args))
               }
             end
           end
