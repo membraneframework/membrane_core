@@ -5,7 +5,6 @@ defmodule Membrane.Core.Element.DemandController do
 
   use Bunch
   require Membrane.Logger
-  require Membrane.Element.CallbackContext.Demand
   require Membrane.Core.Child.PadModel
 
   alias Membrane.Core.CallbackHandler
@@ -43,7 +42,7 @@ defmodule Membrane.Core.Element.DemandController do
 
     if exec_handle_demand?(pad_ref, state) do
       %{other_demand_unit: unit} = PadModel.get_data!(state, pad_ref)
-
+      require CallbackContext.Demand
       context = &CallbackContext.Demand.from_state(&1, incoming_demand: size)
 
       CallbackHandler.exec_and_handle_callback(

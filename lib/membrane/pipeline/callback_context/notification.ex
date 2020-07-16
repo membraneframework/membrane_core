@@ -3,5 +3,5 @@ defmodule Membrane.Pipeline.CallbackContext.Notification do
   Structure representing a context that is passed to the callback when
   bin receives notification.
   """
-  use Membrane.Pipeline.CallbackContext
+  use Membrane.Core.Pipeline.CallbackContext
 end

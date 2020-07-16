@@ -1,5 +1,5 @@
-defmodule Membrane.Bin.CallbackContext do
-  use Membrane.CallbackContext,
+defmodule Membrane.Core.Bin.CallbackContext do
+  use Membrane.Core.CallbackContext,
     playback_state: Membrane.PlaybackState.t(),
     clock: Membrane.Clock.t() | nil,
     pads: %{Membrane.Pad.ref_t() => Membrane.Pad.Data.t()},

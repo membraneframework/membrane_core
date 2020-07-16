@@ -5,7 +5,6 @@ defmodule Membrane.Core.Element.CapsController do
 
   use Bunch
   require Membrane.Logger
-  require Membrane.Element.CallbackContext.Caps
   require Membrane.Core.Child.PadModel
   alias Membrane.{Caps, Pad}
   alias Membrane.Core.{CallbackHandler, InputBuffer}
@@ -31,8 +30,8 @@ defmodule Membrane.Core.Element.CapsController do
   @spec exec_handle_caps(Pad.ref_t(), Caps.t(), params :: map, State.t()) ::
           State.stateful_try_t()
   def exec_handle_caps(pad_ref, caps, params \\ %{}, state) do
+    require CallbackContext.Caps
     %{accepted_caps: accepted_caps} = PadModel.get_data!(state, pad_ref)
-
     context = &CallbackContext.Caps.from_state(&1, pad: pad_ref)
 
     withl match: true <- Caps.Matcher.match?(accepted_caps, caps),

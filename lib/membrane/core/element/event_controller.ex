@@ -7,8 +7,6 @@ defmodule Membrane.Core.Element.EventController do
   require Membrane.Logger
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
-  require Membrane.Element.CallbackContext.Event
-  require Membrane.Element.CallbackContext.StreamManagement
   alias Membrane.Core.{CallbackHandler, InputBuffer, Message}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{ActionHandler, State}
@@ -77,6 +75,7 @@ defmodule Membrane.Core.Element.EventController do
   defp do_exec_handle_event(pad_ref, %event_type{} = event, params, state)
        when event_type in [Event.StartOfStream, Event.EndOfStream] do
     data = PadModel.get_data!(state, pad_ref)
+    require CallbackContext.StreamManagement
     context = CallbackContext.StreamManagement.from_state(state)
 
     callback = stream_event_to_callback(event)
@@ -99,6 +98,7 @@ defmodule Membrane.Core.Element.EventController do
 
   defp do_exec_handle_event(pad_ref, event, params, state) do
     data = PadModel.get_data!(state, pad_ref)
+    require CallbackContext.Event
     context = &CallbackContext.Event.from_state/1
     params = %{context: context, direction: data.direction} |> Map.merge(params)
     args = [pad_ref, event]

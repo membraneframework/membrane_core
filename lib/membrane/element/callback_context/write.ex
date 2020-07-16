@@ -3,5 +3,5 @@ defmodule Membrane.Element.CallbackContext.Write do
   Structure representing a context that is passed to the element
   when new buffer arrives to the sink.
   """
-  use Membrane.Element.CallbackContext
+  use Membrane.Core.Element.CallbackContext
 end

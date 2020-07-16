@@ -3,5 +3,5 @@ defmodule Membrane.Bin.CallbackContext.PlaybackChange do
   Structure representing a context that is passed to the callback of the bin
   when it changes playback state
   """
-  use Membrane.Bin.CallbackContext
+  use Membrane.Core.Bin.CallbackContext
 end

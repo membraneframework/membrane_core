@@ -3,5 +3,5 @@ defmodule Membrane.Element.CallbackContext.StreamManagement do
   Structure representing a context that is passed to the element
   when handling start and end of stream events.
   """
-  use Membrane.Element.CallbackContext
+  use Membrane.Core.Element.CallbackContext
 end

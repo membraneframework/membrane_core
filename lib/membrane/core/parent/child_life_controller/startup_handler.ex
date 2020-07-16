@@ -4,10 +4,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
 
   require Membrane.Logger
   require Membrane.Core.Message
-  require Membrane.Pipeline.CallbackContext.SpecStarted
-  require Membrane.Bin.CallbackContext.SpecStarted
+  require Membrane.Core.Parent
 
-  alias Membrane.Core
   alias Membrane.{CallbackError, Clock, ParentError, Sync}
   alias Membrane.Core.{Bin, CallbackHandler, Element, Message, Parent, Pipeline}
   alias Membrane.Core.Parent.{ChildEntry, State}
@@ -101,14 +99,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
   @spec exec_handle_spec_started([Membrane.Child.name_t()], State.t()) ::
           {:ok, State.t()} | no_return
   def exec_handle_spec_started(children_names, state) do
-    context =
-      case state do
-        %Core.Bin.State{} ->
-          &Membrane.Bin.CallbackContext.SpecStarted.from_state/1
-
-        %Core.Pipeline.State{} ->
-          &Membrane.Pipeline.CallbackContext.SpecStarted.from_state/1
-      end
+    context = Parent.callback_context_generator(SpecStarted, state)
 
     action_handler =
       case state do

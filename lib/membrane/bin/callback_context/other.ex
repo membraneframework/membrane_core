@@ -3,5 +3,5 @@ defmodule Membrane.Bin.CallbackContext.Other do
   Structure representing a context that is passed to the callback when
   bin receives unrecognized message.
   """
-  use Membrane.Bin.CallbackContext
+  use Membrane.Core.Bin.CallbackContext
 end

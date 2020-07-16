@@ -1,5 +1,5 @@
-defmodule Membrane.Pipeline.CallbackContext do
-  use Membrane.CallbackContext,
+defmodule Membrane.Core.Pipeline.CallbackContext do
+  use Membrane.Core.CallbackContext,
     playback_state: Membrane.PlaybackState.t(),
     clock: Membrane.Clock.t()
 

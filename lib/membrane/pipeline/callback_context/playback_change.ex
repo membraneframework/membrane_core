@@ -3,5 +3,5 @@ defmodule Membrane.Pipeline.CallbackContext.PlaybackChange do
   Structure representing a context that is passed to the callback of the pipeline
   when it changes playback state
   """
-  use Membrane.Pipeline.CallbackContext
+  use Membrane.Core.Pipeline.CallbackContext
 end
