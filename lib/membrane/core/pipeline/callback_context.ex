@@ -1,4 +1,6 @@
 defmodule Membrane.Core.Pipeline.CallbackContext do
+  @moduledoc false
+
   use Membrane.Core.CallbackContext,
     playback_state: Membrane.PlaybackState.t(),
     clock: Membrane.Clock.t()

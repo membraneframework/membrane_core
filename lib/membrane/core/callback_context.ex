@@ -1,4 +1,6 @@
 defmodule Membrane.Core.CallbackContext do
+  @moduledoc false
+
   use Bunch
 
   @callback extract_default_fields(state :: Macro.t(), args :: keyword(Macro.t())) ::

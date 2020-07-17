@@ -49,9 +49,12 @@ defmodule Membrane.Mixfile do
       extras: ["README.md"],
       source_ref: @source_ref,
       nest_modules_by_prefix: [
+        Membrane.Bin,
         Membrane.Pipeline,
         Membrane.Element,
         Membrane.Element.CallbackContext,
+        Membrane.Pipeline.CallbackContext,
+        Membrane.Bin.CallbackContext,
         Membrane.Payload,
         Membrane.Buffer,
         Membrane.Caps,
@@ -60,8 +63,8 @@ defmodule Membrane.Mixfile do
         Membrane.Testing
       ],
       groups_for_modules: [
-        Pipeline: [~r/^Membrane.Pipeline.*/],
-        Bin: [~r/^Membrane.Bin*/],
+        Pipeline: [~r/^Membrane.Pipeline((?!\.CallbackContext)\..*)?$/],
+        Bin: [~r/^Membrane.Bin((?!\.CallbackContext)\..*)?$/],
         Element: [
           ~r/^Membrane.Filter$/,
           ~r/^Membrane.Sink$/,
@@ -72,7 +75,7 @@ defmodule Membrane.Mixfile do
         ],
         Parent: [~r/^Membrane.Parent.*/],
         Child: [~r/^Membrane.Child.*/],
-        "Callback contexts": [~r/^Membrane.Element.CallbackContext.*/],
+        "Callback contexts": [~r/^Membrane\..*\.CallbackContext.*/],
         Communication: [
           ~r/^Membrane.(Buffer|Payload|Caps|Event|Notification).*/
         ],

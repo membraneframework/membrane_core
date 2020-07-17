@@ -17,34 +17,18 @@ defmodule Membrane.Bin do
 
   import Membrane.Helper.GenServer
 
+  require Membrane.Core.Message
   require Membrane.Logger
 
-  alias Membrane.{Element, Pad, Sync}
+  alias Membrane.{CallbackError, Child, Core, Pad, Sync}
   alias Membrane.Bin.CallbackContext
-
-  alias Membrane.Core.{
-    Bin,
-    CallbackHandler,
-    Child,
-    Parent,
-    Message
-  }
-
-  alias Membrane.Core.Child.{PadController, PadModel, PadSpecHandler, PadsSpecs}
-  alias Membrane.Core.Bin.{State, LinkingBuffer}
-  alias Membrane.{CallbackError, Element}
-
-  require Element
-  require Message
-  require Pad
-  require PadsSpecs
-  require PadModel
-  require Membrane.PlaybackState
-
-  @type state_t :: Bin.State.t()
+  alias Membrane.Core.{CallbackHandler, Message}
+  alias Membrane.Core.Bin.{LinkingBuffer, State}
+  alias Membrane.Core.Child.{PadController, PadSpecHandler, PadsSpecs}
 
   @type callback_return_t ::
-          {:ok | {:ok, [Membrane.Parent.Action.t()]} | {:error, any}, state_t()} | {:error, any}
+          {:ok | {:ok, [Membrane.Parent.Action.t()]} | {:error, any}, state :: any}
+          | {:error, any}
 
   @typedoc """
   Defines options that can be passed to `start_link/3` and received
@@ -68,7 +52,7 @@ defmodule Membrane.Bin do
   `c:GenServer.init/1` callback.
   """
   @callback handle_init(options :: options_t) ::
-              {{:ok, [Membrane.Parent.Action.spec_action_t()]}, Bin.State.internal_state_t()}
+              {{:ok, [Membrane.Parent.Action.spec_action_t()]}, any}
               | {:error, any}
 
   @doc """
@@ -78,7 +62,7 @@ defmodule Membrane.Bin do
   @callback handle_pad_added(
               pad :: Pad.ref_t(),
               context :: CallbackContext.PadAdded.t(),
-              state :: Bin.State.internal_state_t()
+              state :: any
             ) :: callback_return_t
 
   @doc """
@@ -88,13 +72,116 @@ defmodule Membrane.Bin do
   @callback handle_pad_removed(
               pad :: Pad.ref_t(),
               context :: CallbackContext.PadRemoved.t(),
-              state :: Bin.State.internal_state_t()
+              state :: any
             ) :: callback_return_t
 
   @doc """
   Automatically implemented callback used to determine whether bin exports clock.
   """
   @callback membrane_clock? :: boolean()
+
+  @doc """
+  Callback invoked when bin transition from `:stopped` to `:prepared` state has finished,
+  that is all of its children are prepared to enter `:playing` state.
+  """
+  @callback handle_stopped_to_prepared(
+              context :: CallbackContext.PlaybackChange.t(),
+              state :: any
+            ) ::
+              callback_return_t
+
+  @doc """
+  Callback invoked when bin transition from `:playing` to `:prepared` state has finished,
+  that is all of its children are prepared to be stopped.
+  """
+  @callback handle_playing_to_prepared(
+              context :: CallbackContext.PlaybackChange.t(),
+              state :: any
+            ) ::
+              callback_return_t
+
+  @doc """
+  Callback invoked when bin is in `:playing` state, i.e. all its children
+  are in this state.
+  """
+  @callback handle_prepared_to_playing(
+              context :: CallbackContext.PlaybackChange.t(),
+              state :: any
+            ) ::
+              callback_return_t
+
+  @doc """
+  Callback invoked when bin is in `:playing` state, i.e. all its children
+  are in this state.
+  """
+  @callback handle_prepared_to_stopped(
+              context :: CallbackContext.PlaybackChange.t(),
+              state :: any
+            ) ::
+              callback_return_t
+
+  @doc """
+  Callback invoked when bin is in `:terminating` state, i.e. all its children
+  are in this state.
+  """
+  @callback handle_stopped_to_terminating(
+              context :: CallbackContext.PlaybackChange.t(),
+              state :: any
+            ) :: callback_return_t
+
+  @doc """
+  Callback invoked when a notification comes in from an element.
+  """
+  @callback handle_notification(
+              notification :: Membrane.Notification.t(),
+              element :: Child.name_t(),
+              context :: CallbackContext.Notification.t(),
+              state :: any
+            ) :: callback_return_t
+
+  @doc """
+  Callback invoked when bin receives a message that is not recognized
+  as an internal membrane message.
+
+  Useful for receiving ticks from timer, data sent from NIFs or other stuff.
+  """
+  @callback handle_other(
+              message :: any,
+              context :: CallbackContext.Other.t(),
+              state :: any
+            ) ::
+              callback_return_t
+
+  @doc """
+  Callback invoked when an element receives `Membrane.Event.StartOfStream` event.
+  """
+  @callback handle_element_start_of_stream(
+              {Child.name_t(), Pad.ref_t()},
+              context :: CallbackContext.StreamManagement.t(),
+              state :: any
+            ) :: callback_return_t
+
+  @doc """
+  Callback invoked when an element receives `Membrane.Event.EndOfStream` event.
+  """
+  @callback handle_element_end_of_stream(
+              {Child.name_t(), Pad.ref_t()},
+              context :: CallbackContext.StreamManagement.t(),
+              state :: any
+            ) :: callback_return_t
+
+  @doc """
+  Callback invoked when `Membrane.ParentSpec` is linked and in the same playback
+  state as bin.
+
+  This callback can be started from `c:handle_init/1` callback or as
+  `t:Membrane.Core.Parent.Action.spec_action_t/0` action.
+  """
+  @callback handle_spec_started(
+              children :: [Child.name_t()],
+              context :: CallbackContext.SpecStarted.t(),
+              state :: any
+            ) :: callback_return_t
 
   @doc PadsSpecs.def_pad_docs(:input, :bin)
   defmacro def_input_pad(name, spec) do
@@ -245,7 +332,7 @@ defmodule Membrane.Bin do
   @impl GenServer
   # Element-specific message.
   def handle_info(Message.new(:demand_unit, [demand_unit, pad_ref]), state) do
-    Child.LifecycleController.handle_demand_unit(demand_unit, pad_ref, state)
+    Core.Child.LifecycleController.handle_demand_unit(demand_unit, pad_ref, state)
     |> noreply()
   end
 
@@ -257,12 +344,12 @@ defmodule Membrane.Bin do
 
   @impl GenServer
   def handle_info(message, state) do
-    Parent.MessageDispatcher.handle_message(message, state)
+    Core.Parent.MessageDispatcher.handle_message(message, state)
   end
 
   @impl GenServer
   def handle_call(Message.new(:set_controlling_pid, pid), _, state) do
-    Child.LifecycleController.handle_controlling_pid(pid, state)
+    Core.Child.LifecycleController.handle_controlling_pid(pid, state)
     |> reply()
   end
 
@@ -287,22 +374,40 @@ defmodule Membrane.Bin do
 
   @impl GenServer
   def handle_call(Message.new(:handle_watcher, watcher), _, state) do
-    Child.LifecycleController.handle_watcher(watcher, state)
+    Core.Child.LifecycleController.handle_watcher(watcher, state)
     |> reply()
   end
 
   @doc """
-  Brings all the stuff necessary to implement a pipeline.
+  Brings all the stuff necessary to implement a bin.
 
   Options:
     - `:bring_spec?` - if true (default) imports and aliases `Membrane.ParentSpec`
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
   """
   defmacro __using__(options) do
+    bring_spec =
+      if options |> Keyword.get(:bring_spec?, true) do
+        quote do
+          import Membrane.ParentSpec
+          alias Membrane.ParentSpec
+        end
+      end
+
+    bring_pad =
+      if options |> Keyword.get(:bring_pad?, true) do
+        quote do
+          require Membrane.Pad
+          alias Membrane.Pad
+        end
+      end
+
     quote location: :keep do
-      use Membrane.Parent, unquote(options)
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
+
+      unquote(bring_spec)
+      unquote(bring_pad)
 
       import Membrane.Element.Base, only: [def_options: 1]
 
@@ -323,20 +428,98 @@ defmodule Membrane.Bin do
       def handle_init(_options), do: {{:ok, spec: %Membrane.ParentSpec{}}, %{}}
 
       @impl true
-      def handle_notification(notification, _from, _ctx, state),
-        do: {{:ok, notify: notification}, state}
-
-      @impl true
       def handle_pad_added(_pad, _ctx, state), do: {:ok, state}
 
       @impl true
       def handle_pad_removed(_pad, _ctx, state), do: {:ok, state}
 
-      defoverridable membrane_clock?: 0,
-                     handle_init: 1,
-                     handle_notification: 4,
-                     handle_pad_added: 3,
-                     handle_pad_removed: 3
+      @impl true
+      def handle_stopped_to_prepared(_ctx, state), do: handle_stopped_to_prepared(state)
+
+      @impl true
+      def handle_prepared_to_playing(_ctx, state), do: handle_prepared_to_playing(state)
+
+      @impl true
+      def handle_playing_to_prepared(_ctx, state), do: handle_playing_to_prepared(state)
+
+      @impl true
+      def handle_prepared_to_stopped(_ctx, state), do: handle_prepared_to_stopped(state)
+
+      @impl true
+      def handle_stopped_to_terminating(_ctx, state), do: handle_stopped_to_terminating(state)
+
+      @impl true
+      def handle_other(message, _ctx, state), do: handle_other(message, state)
+
+      @impl true
+      def handle_spec_started(new_children, _ctx, state),
+        do: handle_spec_started(new_children, state)
+
+      @impl true
+      def handle_element_start_of_stream({element, pad}, _ctx, state),
+        do: handle_element_start_of_stream({element, pad}, state)
+
+      @impl true
+      def handle_element_end_of_stream({element, pad}, _ctx, state),
+        do: handle_element_end_of_stream({element, pad}, state)
+
+      @impl true
+      def handle_notification(notification, element, _ctx, state),
+        do: handle_notification(notification, element, state)
+
+      # DEPRECATED:
+
+      @doc false
+      def handle_stopped_to_prepared(state), do: {:ok, state}
+      @doc false
+      def handle_prepared_to_playing(state), do: {:ok, state}
+      @doc false
+      def handle_playing_to_prepared(state), do: {:ok, state}
+      @doc false
+      def handle_prepared_to_stopped(state), do: {:ok, state}
+      @doc false
+      def handle_stopped_to_terminating(state), do: {:ok, state}
+      @doc false
+      def handle_other(_message, state), do: {:ok, state}
+      @doc false
+      def handle_spec_started(_new_children, state), do: {:ok, state}
+      @doc false
+      def handle_element_start_of_stream({_element, _pad}, state), do: {:ok, state}
+      @doc false
+      def handle_element_end_of_stream({_element, _pad}, state), do: {:ok, state}
+      @doc false
+      def handle_notification(notification, _element, state),
+        do: {{:ok, notify: notification}, state}
+
+      deprecated = [
+        handle_stopped_to_prepared: 1,
+        handle_prepared_to_playing: 1,
+        handle_playing_to_prepared: 1,
+        handle_prepared_to_stopped: 1,
+        handle_stopped_to_terminating: 1,
+        handle_other: 2,
+        handle_spec_started: 2,
+        handle_element_start_of_stream: 2,
+        handle_element_end_of_stream: 2,
+        handle_notification: 3
+      ]
+
+      defoverridable [
+                       membrane_clock?: 0,
+                       handle_init: 1,
+                       handle_pad_added: 3,
+                       handle_pad_removed: 3,
+                       handle_stopped_to_prepared: 2,
+                       handle_playing_to_prepared: 2,
+                       handle_prepared_to_playing: 2,
+                       handle_prepared_to_stopped: 2,
+                       handle_stopped_to_terminating: 2,
+                       handle_other: 3,
+                       handle_spec_started: 3,
+                       handle_element_start_of_stream: 3,
+                       handle_element_end_of_stream: 3,
+                       handle_notification: 4
+                     ] ++ deprecated
     end
   end
 end

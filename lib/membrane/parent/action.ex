@@ -14,7 +14,7 @@ defmodule Membrane.Parent.Action do
   Action that instantiates children and links them according to `Membrane.ParentSpec`.
 
   Children's playback state is changed to the current parent state.
-  `c:Membrane.Parent.handle_spec_started/2` callback is executed once it happens.
+  `c:Membrane.Parent.handle_spec_started/3` callback is executed once it happens.
   """
   @type spec_action_t :: {:spec, ParentSpec.t()}
 

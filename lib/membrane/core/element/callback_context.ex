@@ -1,4 +1,6 @@
 defmodule Membrane.Core.Element.CallbackContext do
+  @moduledoc false
+
   use Membrane.Core.CallbackContext,
     pads: %{Membrane.Pad.ref_t() => Membrane.Pad.Data.t()},
     playback_state: Membrane.PlaybackState.t(),
