@@ -63,19 +63,17 @@ defmodule Membrane.Mixfile do
         Membrane.Testing
       ],
       groups_for_modules: [
-        Pipeline: [~r/^Membrane.Pipeline((?!\.CallbackContext)\..*)?$/],
-        Bin: [~r/^Membrane.Bin((?!\.CallbackContext)\..*)?$/],
+        Pipeline: [~r/^Membrane.Pipeline/],
+        Bin: [~r/^Membrane.Bin/],
         Element: [
           ~r/^Membrane.Filter$/,
           ~r/^Membrane.Sink$/,
           ~r/^Membrane.Source$/,
-          ~r/^Membrane.Element$/,
-          ~r/^Membrane.Element(?!\.CallbackContext)\..*/,
+          ~r/^Membrane.Element/,
           ~r/^Membrane.Core.InputBuffer/
         ],
         Parent: [~r/^Membrane.Parent.*/],
         Child: [~r/^Membrane.Child.*/],
-        "Callback contexts": [~r/^Membrane\..*\.CallbackContext.*/],
         Communication: [
           ~r/^Membrane.(Buffer|Payload|Caps|Event|Notification).*/
         ],
@@ -83,7 +81,6 @@ defmodule Membrane.Mixfile do
         Testing: [~r/^Membrane.Testing.*/],
         Utils: [
           ~r/^Membrane.Clock$/,
-          ~r/^Membrane.CallbackContext$/,
           ~r/^Membrane.Sync$/,
           ~r/^Membrane.Time.*/,
           ~r/^Membrane.Pad.*/,
