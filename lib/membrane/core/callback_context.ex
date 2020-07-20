@@ -1,8 +1,6 @@
 defmodule Membrane.Core.CallbackContext do
   @moduledoc false
 
-  use Bunch
-
   @callback extract_default_fields(state :: Macro.t(), args :: keyword(Macro.t())) ::
               keyword(Macro.t())
 
@@ -37,10 +35,8 @@ defmodule Membrane.Core.CallbackContext do
           fields_names = unquote(Keyword.keys(fields))
           default_fields_names = unquote(Keyword.keys(default_fields))
 
-          @enforce_keys Module.get_attribute(__MODULE__, :enforce_keys)
-                        ~> (&1 || fields_names)
-                        |> Bunch.listify()
-                        ~> (&1 ++ default_fields_names)
+          @enforce_keys Module.get_attribute(__MODULE__, :enforce_keys, fields_names) ++
+                          default_fields_names
 
           defstruct fields_names ++ default_fields_names
 
