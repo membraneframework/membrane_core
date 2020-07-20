@@ -52,11 +52,12 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
   end
 
   @impl true
-  def handle_other({:child_msg, name, msg}, state) do
+  def handle_other({:child_msg, name, msg}, _ctx, state) do
     {{:ok, forward: {name, msg}}, state}
   end
 
-  def handle_other({:remove_child, name}, state) do
+  @impl true
+  def handle_other({:remove_child, name}, _ctx, state) do
     {{:ok, remove_child: name}, state}
   end
 

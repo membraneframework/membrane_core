@@ -18,16 +18,22 @@ defmodule Membrane.Pipeline do
   require Membrane.Logger
   require Membrane.Element
 
-  alias Membrane.Clock
-  alias Membrane.Core
+  alias Membrane.{Clock, Child, Core, Pad}
   alias Membrane.Core.{Parent, CallbackHandler, PlaybackHandler}
   alias Membrane.Core.Pipeline.State
+  alias Membrane.Pipeline.CallbackContext
 
   @typedoc """
   Defines options that can be passed to `start/3` / `start_link/3` and received
   in `c:handle_init/1` callback.
   """
   @type pipeline_options_t :: any
+
+  @type state_t :: map | struct
+
+  @type callback_return_t ::
+          {:ok | {:ok, [Membrane.Parent.Action.t()]} | {:error, any}, state_t}
+          | {:error, any}
 
   @doc """
   Enables to check whether module is membrane pipeline
@@ -47,8 +53,111 @@ defmodule Membrane.Pipeline do
 
   Useful for any cleanup required.
   """
-  @callback handle_shutdown(reason, state :: State.internal_state_t()) :: :ok
+  @callback handle_shutdown(reason, state :: any) :: :ok
             when reason: :normal | :shutdown | {:shutdown, any}
+
+  @doc """
+  Callback invoked when pipeline transition from `:stopped` to `:prepared` state has finished,
+  that is all of its children are prepared to enter `:playing` state.
+  """
+  @callback handle_stopped_to_prepared(
+              context :: CallbackContext.PlaybackChange.t(),
+              state :: any
+            ) ::
+              callback_return_t
+
+  @doc """
+  Callback invoked when pipeline transition from `:playing` to `:prepared` state has finished,
+  that is all of its children are prepared to be stopped.
+  """
+  @callback handle_playing_to_prepared(
+              context :: CallbackContext.PlaybackChange.t(),
+              state :: any
+            ) ::
+              callback_return_t
+
+  @doc """
+  Callback invoked when pipeline is in `:playing` state, i.e. all its children
+  are in this state.
+  """
+  @callback handle_prepared_to_playing(
+              context :: CallbackContext.PlaybackChange.t(),
+              state :: any
+            ) ::
+              callback_return_t
+
+  @doc """
+  Callback invoked when pipeline is in `:playing` state, i.e. all its children
+  are in this state.
+  """
+  @callback handle_prepared_to_stopped(
+              context :: CallbackContext.PlaybackChange.t(),
+              state :: any
+            ) ::
+              callback_return_t
+
+  @doc """
+  Callback invoked when pipeline is in `:terminating` state, i.e. all its children
+  are in this state.
+  """
+  @callback handle_stopped_to_terminating(
+              context :: CallbackContext.PlaybackChange.t(),
+              state :: any
+            ) :: callback_return_t
+
+  @doc """
+  Callback invoked when a notification comes in from an element.
+  """
+  @callback handle_notification(
+              notification :: Membrane.Notification.t(),
+              element :: Child.name_t(),
+              context :: CallbackContext.Notification.t(),
+              state :: any
+            ) :: callback_return_t
+
+  @doc """
+  Callback invoked when pipeline receives a message that is not recognized
+  as an internal membrane message.
+
+  Useful for receiving ticks from timer, data sent from NIFs or other stuff.
+  """
+  @callback handle_other(
+              message :: any,
+              context :: CallbackContext.Other.t(),
+              state :: any
+            ) ::
+              callback_return_t
+
+  @doc """
+  Callback invoked when an element receives `Membrane.Event.StartOfStream` event.
+  """
+  @callback handle_element_start_of_stream(
+              {Child.name_t(), Pad.ref_t()},
+              context :: CallbackContext.StreamManagement.t(),
+              state :: any
+            ) :: callback_return_t
+
+  @doc """
+  Callback invoked when an element receives `Membrane.Event.EndOfStream` event.
+  """
+  @callback handle_element_end_of_stream(
+              {Child.name_t(), Pad.ref_t()},
+              context :: CallbackContext.StreamManagement.t(),
+              state :: any
+            ) :: callback_return_t
+
+  @doc """
+  Callback invoked when `Membrane.ParentSpec` is linked and in the same playback
+  state as pipeline.
+
+  This callback can be started from `c:handle_init/1` callback or as
+  `t:Membrane.Core.Parent.Action.spec_action_t/0` action.
+  """
+  @callback handle_spec_started(
+              children :: [Child.name_t()],
+              context :: CallbackContext.SpecStarted.t(),
+              state :: any
+            ) :: callback_return_t
 
   @doc """
   Starts the Pipeline based on given module and links it to the current
@@ -207,10 +316,28 @@ defmodule Membrane.Pipeline do
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
   """
   defmacro __using__(options) do
-    quote location: :keep do
-      use Membrane.Parent, unquote(options)
+    bring_spec =
+      if options |> Keyword.get(:bring_spec?, true) do
+        quote do
+          import Membrane.ParentSpec
+          alias Membrane.ParentSpec
+        end
+      end
+
+    bring_pad =
+      if options |> Keyword.get(:bring_pad?, true) do
+        quote do
+          require Membrane.Pad
+          alias Membrane.Pad
+        end
+      end
+
+    quote do
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
+
+      unquote(bring_spec)
+      unquote(bring_pad)
 
       @doc """
       Starts the pipeline `#{inspect(__MODULE__)}` and links it to the current process.
@@ -278,23 +405,101 @@ defmodule Membrane.Pipeline do
       def handle_init(_options), do: {{:ok, spec: %Membrane.ParentSpec{}}, %{}}
 
       @impl true
-      def handle_notification(_notification, _from, state), do: {:ok, state}
-
-      @impl true
       def handle_shutdown(_reason, _state), do: :ok
 
-      defoverridable start: 0,
-                     start: 1,
-                     start: 2,
-                     start_link: 0,
-                     start_link: 1,
-                     start_link: 2,
-                     play: 1,
-                     prepare: 1,
-                     stop: 1,
-                     handle_init: 1,
-                     handle_shutdown: 2,
-                     handle_notification: 3
+      @impl true
+      def handle_stopped_to_prepared(_ctx, state), do: handle_stopped_to_prepared(state)
+
+      @impl true
+      def handle_prepared_to_playing(_ctx, state), do: handle_prepared_to_playing(state)
+
+      @impl true
+      def handle_playing_to_prepared(_ctx, state), do: handle_playing_to_prepared(state)
+
+      @impl true
+      def handle_prepared_to_stopped(_ctx, state), do: handle_prepared_to_stopped(state)
+
+      @impl true
+      def handle_stopped_to_terminating(_ctx, state), do: handle_stopped_to_terminating(state)
+
+      @impl true
+      def handle_other(message, _ctx, state), do: handle_other(message, state)
+
+      @impl true
+      def handle_spec_started(new_children, _ctx, state),
+        do: handle_spec_started(new_children, state)
+
+      @impl true
+      def handle_element_start_of_stream({element, pad}, _ctx, state),
+        do: handle_element_start_of_stream({element, pad}, state)
+
+      @impl true
+      def handle_element_end_of_stream({element, pad}, _ctx, state),
+        do: handle_element_end_of_stream({element, pad}, state)
+
+      @impl true
+      def handle_notification(notification, element, _ctx, state),
+        do: handle_notification(notification, element, state)
+
+      # DEPRECATED:
+
+      @doc false
+      def handle_stopped_to_prepared(state), do: {:ok, state}
+      @doc false
+      def handle_prepared_to_playing(state), do: {:ok, state}
+      @doc false
+      def handle_playing_to_prepared(state), do: {:ok, state}
+      @doc false
+      def handle_prepared_to_stopped(state), do: {:ok, state}
+      @doc false
+      def handle_stopped_to_terminating(state), do: {:ok, state}
+      @doc false
+      def handle_other(_message, state), do: {:ok, state}
+      @doc false
+      def handle_spec_started(_new_children, state), do: {:ok, state}
+      @doc false
+      def handle_element_start_of_stream({_element, _pad}, state), do: {:ok, state}
+      @doc false
+      def handle_element_end_of_stream({_element, _pad}, state), do: {:ok, state}
+      @doc false
+      def handle_notification(_notification, _element, state), do: {:ok, state}
+
+      deprecated = [
+        handle_stopped_to_prepared: 1,
+        handle_prepared_to_playing: 1,
+        handle_playing_to_prepared: 1,
+        handle_prepared_to_stopped: 1,
+        handle_stopped_to_terminating: 1,
+        handle_other: 2,
+        handle_spec_started: 2,
+        handle_element_start_of_stream: 2,
+        handle_element_end_of_stream: 2,
+        handle_notification: 3
+      ]
+
+      defoverridable [
+                       start: 0,
+                       start: 1,
+                       start: 2,
+                       start_link: 0,
+                       start_link: 1,
+                       start_link: 2,
+                       play: 1,
+                       prepare: 1,
+                       stop: 1,
+                       handle_init: 1,
+                       handle_shutdown: 2,
+                       handle_stopped_to_prepared: 2,
+                       handle_playing_to_prepared: 2,
+                       handle_prepared_to_playing: 2,
+                       handle_prepared_to_stopped: 2,
+                       handle_stopped_to_terminating: 2,
+                       handle_other: 3,
+                       handle_spec_started: 3,
+                       handle_element_start_of_stream: 3,
+                       handle_element_end_of_stream: 3,
+                       handle_notification: 4
+                     ] ++ deprecated
     end
   end
 end

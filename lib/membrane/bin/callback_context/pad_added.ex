@@ -3,7 +3,7 @@ defmodule Membrane.Bin.CallbackContext.PadAdded do
   Structure representing a context that is passed to the bin when
   when a new dynamic pad instance added is created
   """
-  use Membrane.CallbackContext,
+  use Membrane.Core.Bin.CallbackContext,
     direction: :input | :output,
     options: Keyword.t()
 end
