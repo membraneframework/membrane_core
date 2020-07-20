@@ -29,8 +29,10 @@ defmodule Membrane.Pipeline do
   """
   @type pipeline_options_t :: any
 
+  @type state_t :: map | struct
+
   @type callback_return_t ::
-          {:ok | {:ok, [Membrane.Parent.Action.t()]} | {:error, any}, state :: any}
+          {:ok | {:ok, [Membrane.Parent.Action.t()]} | {:error, any}, state_t}
           | {:error, any}
 
   @doc """

@@ -26,8 +26,10 @@ defmodule Membrane.Bin do
   alias Membrane.Core.Bin.{LinkingBuffer, State}
   alias Membrane.Core.Child.{PadController, PadSpecHandler, PadsSpecs}
 
+  @type state_t :: map | struct
+
   @type callback_return_t ::
-          {:ok | {:ok, [Membrane.Parent.Action.t()]} | {:error, any}, state :: any}
+          {:ok | {:ok, [Membrane.Parent.Action.t()]} | {:error, any}, state_t}
           | {:error, any}
 
   @typedoc """
