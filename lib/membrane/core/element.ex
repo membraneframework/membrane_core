@@ -24,6 +24,7 @@ defmodule Membrane.Core.Element do
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.Element.{MessageDispatcher, State}
   alias Membrane.Core.Message
+  alias Membrane.Helper.LocationPath
 
   @type options_t :: %{
           module: module,
@@ -93,6 +94,9 @@ defmodule Membrane.Core.Element do
     name_str = if String.valid?(options.name), do: options.name, else: inspect(options.name)
     :ok = Membrane.Logger.set_prefix(name_str)
     Logger.metadata(options.log_metadata)
+
+    :ok = LocationPath.set_current_path(options.log_metadata[:parent_path])
+    :ok = LocationPath.append_current_path(name_str)
 
     state =
       options
