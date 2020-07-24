@@ -10,7 +10,7 @@ defmodule Membrane.PlaybackState do
   Every playback state change is done step-by-step meaning that when going from `:stopped` to `:playing`
   there are 2 state changes (`:stopped` -> `:prepared` and `:prepared` -> `:playing`) resulting in
   invocation of proper callbacks (such as `c:Membrane.Element.Base.handle_stopped_to_prepared/2`
-  or `c:Membrane.Parent.handle_prepared_to_playing/1`)
+  or `c:Membrane.Parent.handle_prepared_to_playing/2`)
   """
 
   @type t :: :stopped | :prepared | :playing | :terminating

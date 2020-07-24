@@ -10,7 +10,6 @@ defmodule Membrane.Core.Element.LifecycleController do
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
   require Membrane.Core.Playback
-  require Membrane.Element.CallbackContext.{Other, PlaybackChange}
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.{CallbackHandler, Message}
   alias Membrane.Core.Element.{ActionHandler, PlaybackBuffer, State}
@@ -100,6 +99,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   """
   @spec handle_other(message :: any, State.t()) :: State.stateful_try_t()
   def handle_other(message, state) do
+    require CallbackContext.Other
     context = &CallbackContext.Other.from_state/1
 
     CallbackHandler.exec_and_handle_callback(
@@ -113,6 +113,7 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @impl PlaybackHandler
   def handle_playback_state(old_playback_state, new_playback_state, state) do
+    require CallbackContext.PlaybackChange
     context = &CallbackContext.PlaybackChange.from_state/1
     callback = PlaybackHandler.state_change_callback(old_playback_state, new_playback_state)
 

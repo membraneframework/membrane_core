@@ -49,9 +49,12 @@ defmodule Membrane.Mixfile do
       extras: ["README.md"],
       source_ref: @source_ref,
       nest_modules_by_prefix: [
+        Membrane.Bin,
         Membrane.Pipeline,
         Membrane.Element,
         Membrane.Element.CallbackContext,
+        Membrane.Pipeline.CallbackContext,
+        Membrane.Bin.CallbackContext,
         Membrane.Payload,
         Membrane.Buffer,
         Membrane.Caps,
@@ -60,19 +63,17 @@ defmodule Membrane.Mixfile do
         Membrane.Testing
       ],
       groups_for_modules: [
-        Pipeline: [~r/^Membrane.Pipeline.*/],
-        Bin: [~r/^Membrane.Bin*/],
+        Pipeline: [~r/^Membrane.Pipeline/],
+        Bin: [~r/^Membrane.Bin/],
         Element: [
           ~r/^Membrane.Filter$/,
           ~r/^Membrane.Sink$/,
           ~r/^Membrane.Source$/,
-          ~r/^Membrane.Element$/,
-          ~r/^Membrane.Element(?!\.CallbackContext)\..*/,
+          ~r/^Membrane.Element/,
           ~r/^Membrane.Core.InputBuffer/
         ],
         Parent: [~r/^Membrane.Parent.*/],
         Child: [~r/^Membrane.Child.*/],
-        "Callback contexts": [~r/^Membrane.Element.CallbackContext.*/],
         Communication: [
           ~r/^Membrane.(Buffer|Payload|Caps|Event|Notification).*/
         ],
@@ -80,7 +81,6 @@ defmodule Membrane.Mixfile do
         Testing: [~r/^Membrane.Testing.*/],
         Utils: [
           ~r/^Membrane.Clock$/,
-          ~r/^Membrane.CallbackContext$/,
           ~r/^Membrane.Sync$/,
           ~r/^Membrane.Time.*/,
           ~r/^Membrane.Pad.*/,

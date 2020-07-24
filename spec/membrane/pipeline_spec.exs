@@ -174,6 +174,12 @@ defmodule Membrane.PipelineSpec do
       let :notification_message,
         do: Message.new(:notification, [current_child_name(), notification()])
 
+      let :callback_context,
+        do: %Membrane.Pipeline.CallbackContext.Notification{
+          clock: nil,
+          playback_state: :stopped
+        }
+
       context "when received from child" do
         let :child_pid, do: self()
 
@@ -186,7 +192,14 @@ defmodule Membrane.PipelineSpec do
           described_module().handle_info(notification_message(), state())
 
           expect(module())
-          |> to(accepted(:handle_notification, [notification(), child_name(), internal_state()]))
+          |> to(
+            accepted(:handle_notification, [
+              notification(),
+              child_name(),
+              callback_context(),
+              internal_state()
+            ])
+          )
         end
 
         it "should keep state unchanged" do
@@ -242,6 +255,12 @@ defmodule Membrane.PipelineSpec do
           clock_proxy: nil
         }
 
+      let :callback_context,
+        do: %Membrane.Pipeline.CallbackContext.Other{
+          clock: nil,
+          playback_state: :stopped
+        }
+
       before do
         allow module()
               |> to(accept(:handle_other, fn arg1, arg2 -> :meck.passthrough([arg1, arg2]) end))
@@ -259,7 +278,9 @@ defmodule Membrane.PipelineSpec do
 
       it "should invoke handle_other callback from the pipeline module" do
         described_module().handle_info(message(), state())
-        expect(module()) |> to(accepted(:handle_other, [message(), internal_state()]))
+
+        expect(module())
+        |> to(accepted(:handle_other, [message(), callback_context(), internal_state()]))
       end
     end
   end

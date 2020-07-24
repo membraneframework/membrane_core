@@ -11,7 +11,7 @@ defmodule Membrane.Core.Pipeline.State do
   use Bunch
 
   @type t :: %__MODULE__{
-          internal_state: internal_state_t | nil,
+          internal_state: Membrane.Pipeline.state_t(),
           playback: Playback.t(),
           module: module,
           children: children_t,
@@ -24,7 +24,6 @@ defmodule Membrane.Core.Pipeline.State do
           children_log_metadata: Keyword.t()
         }
 
-  @type internal_state_t :: map | struct
   @type child_data_t :: %{pid: pid, clock: Clock.t(), sync: Sync.t()}
   @type children_t :: %{Child.name_t() => child_data_t}
 

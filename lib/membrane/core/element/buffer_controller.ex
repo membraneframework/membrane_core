@@ -4,7 +4,6 @@ defmodule Membrane.Core.Element.BufferController do
   # Module handling buffers incoming through input pads.
 
   use Bunch
-  require Membrane.Element.CallbackContext.{Process, Write}
   require Membrane.Core.Child.PadModel
   alias Membrane.{Buffer, Pad}
   alias Membrane.Core.{CallbackHandler, InputBuffer}
@@ -39,6 +38,8 @@ defmodule Membrane.Core.Element.BufferController do
   def exec_buffer_handler(pad_ref, buffers, params \\ %{}, state)
 
   def exec_buffer_handler(pad_ref, buffers, params, %State{type: :filter} = state) do
+    require CallbackContext.Process
+
     CallbackHandler.exec_and_handle_callback(
       :handle_process_list,
       ActionHandler,
@@ -49,6 +50,8 @@ defmodule Membrane.Core.Element.BufferController do
   end
 
   def exec_buffer_handler(pad_ref, buffers, params, %State{type: :sink} = state) do
+    require CallbackContext.Write
+
     CallbackHandler.exec_and_handle_callback(
       :handle_write_list,
       ActionHandler,

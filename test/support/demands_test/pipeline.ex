@@ -27,12 +27,12 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
   end
 
   @impl true
-  def handle_other({:child_msg, name, msg}, state) do
+  def handle_other({:child_msg, name, msg}, _ctx, state) do
     {{:ok, forward: {name, msg}}, state}
   end
 
   @impl true
-  def handle_prepared_to_playing(%{target: target} = state) do
+  def handle_prepared_to_playing(_ctx, %{target: target} = state) do
     send(target, :playing)
     {:ok, state}
   end

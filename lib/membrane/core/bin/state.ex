@@ -5,7 +5,7 @@ defmodule Membrane.Core.Bin.State do
   # It does not represent state of bins you construct, it's a state used
   # internally in Membrane.
 
-  alias Membrane.{Child, Clock, Parent, Sync}
+  alias Membrane.{Child, Clock, Sync}
   alias Membrane.Core
   alias Core.{Playback, Timer}
   alias Core.Child.PadModel
@@ -15,7 +15,7 @@ defmodule Membrane.Core.Bin.State do
   use Bunch.Access
 
   @type t :: %__MODULE__{
-          internal_state: Parent.internal_state_t() | nil,
+          internal_state: Membrane.Bin.state_t() | nil,
           playback: Playback.t(),
           module: module,
           children: ChildrenModel.children_t(),
@@ -40,8 +40,6 @@ defmodule Membrane.Core.Bin.State do
           },
           children_log_metadata: Keyword.t()
         }
-
-  @type internal_state_t :: map | struct
 
   @enforce_keys [:module, :clock_proxy]
   defstruct @enforce_keys ++

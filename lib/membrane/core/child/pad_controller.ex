@@ -5,17 +5,16 @@ defmodule Membrane.Core.Child.PadController do
 
   use Bunch
   require Membrane.Logger
+  require Membrane.Core.Child
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
-  require Membrane.Element.CallbackContext.{PadAdded, PadRemoved}
   require Membrane.Pad
   alias Bunch.Type
   alias Membrane.Core
   alias Membrane.Core.Bin.LinkingBuffer
-  alias Membrane.Core.{CallbackHandler, Message, InputBuffer}
+  alias Membrane.Core.{CallbackHandler, Child, Message, InputBuffer}
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.Core.Element.{EventController, PlaybackBuffer}
-  alias Membrane.Element.CallbackContext
   alias Membrane.{Event, LinkError, Pad, ParentSpec}
 
   @type state_t :: Core.Bin.State.t() | Core.Element.State.t()
@@ -322,14 +321,10 @@ defmodule Membrane.Core.Child.PadController do
 
   @spec handle_pad_added(Pad.ref_t(), state_t()) :: Type.stateful_try_t(state_t)
   defp handle_pad_added(ref, state) do
-    pad_opts = PadModel.get_data!(state, ref, :options)
+    %{options: pad_opts, direction: direction} = PadModel.get_data!(state, ref)
 
     context =
-      &CallbackContext.PadAdded.from_state(
-        &1,
-        direction: PadModel.get_data!(state, ref, :direction),
-        options: pad_opts
-      )
+      Child.callback_context_generator(PadAdded, state, options: pad_opts, direction: direction)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_pad_added,
@@ -346,7 +341,7 @@ defmodule Membrane.Core.Child.PadController do
     name = Pad.name_by_ref(ref)
 
     if Pad.availability_mode(availability) == :dynamic and Pad.is_public_name(name) do
-      context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
+      context = Child.callback_context_generator(PadRemoved, state, direction: direction)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_removed,
