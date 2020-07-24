@@ -130,7 +130,10 @@ defmodule Membrane.Core.InputBuffer do
       |> Membrane.Logger.debug_verbose()
     end
 
-    do_store_buffers(input_buf, v)
+    %__MODULE__{current_size: size} = input_buf = do_store_buffers(input_buf, v)
+
+    report_buffer_size(size, ["store"])
+    input_buf
   end
 
   def store(
@@ -195,13 +198,19 @@ defmodule Membrane.Core.InputBuffer do
         :ok
     end
 
+    report_buffer_size(size, ["store"])
+
     input_buf
   end
 
   def store(input_buf, :buffer, v), do: store(input_buf, :buffers, [v])
 
-  def store(%__MODULE__{q: q} = input_buf, type, v) when type in @non_buf_types do
+  def store(%__MODULE__{q: q, current_size: size} = input_buf, type, v)
+      when type in @non_buf_types do
     "Storing #{type}" |> mk_log(input_buf) |> Membrane.Logger.debug_verbose()
+
+    report_buffer_size(size, ["store"])
+
     %__MODULE__{input_buf | q: q |> @qe.push({:non_buffer, type, v})}
   end
 
@@ -226,6 +235,8 @@ defmodule Membrane.Core.InputBuffer do
       input_buf
       |> Bunch.Struct.update_in(:demand, &(&1 + size - new_size))
       |> send_demands(demand_pid, demand_pad)
+
+    report_buffer_size(new_size, ["demand"])
 
     {out, input_buf}
   end
@@ -310,6 +321,21 @@ defmodule Membrane.Core.InputBuffer do
         "preferred size: #{inspect(pref_size)}"
       end
     ]
+  end
+
+  # meta tag should containe information about current pipeline and element name that input buffer is being attached to
+  defp report_buffer_size(size, tags) do
+    pipeline_pid = "test pipeline"
+    element_name = "input buffer somewhere"
+    :telemetry.execute(
+      [:membrane, :buffer, :size],
+      %{
+        pipeline_pid: pipeline_pid,
+        element_name: Enum.join([element_name | tags], ":"),
+        value: size
+      },
+      %{}
+    )
   end
 
   @spec empty?(t()) :: boolean()
