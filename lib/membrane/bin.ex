@@ -25,7 +25,7 @@ defmodule Membrane.Bin do
   alias Membrane.Core.{CallbackHandler, Message}
   alias Membrane.Core.Bin.{LinkingBuffer, State}
   alias Membrane.Core.Child.{PadController, PadSpecHandler, PadsSpecs}
-  alias Membrane.Helper.LocationPath
+  alias Membrane.Helper.PathLocator
 
   @type state_t :: map | struct
 
@@ -267,8 +267,7 @@ defmodule Membrane.Bin do
     :ok = Membrane.Logger.set_prefix(name_str <> " bin")
     Logger.metadata(log_metadata)
 
-    :ok = LocationPath.set_current_path(log_metadata[:parent_path])
-    :ok = LocationPath.append_current_path(name_str <> " bin")
+    :ok = PathLocator.set_and_append_path(log_metadata[:parent_path], name_str <> " bin")
 
     clock =
       if module |> Bunch.Module.check_behaviour(:membrane_clock?) do

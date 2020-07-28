@@ -133,7 +133,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     Membrane.Logger.debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")
     sync = syncs |> Map.get(name, Sync.no_sync())
 
-    log_metadata = log_metadata |> Keyword.put(:parent_path, Membrane.Helper.LocationPath.get_current_path())
+    log_metadata = log_metadata |> Keyword.put(:parent_path, Membrane.Helper.PathLocator.get_path())
 
     start_result =
       cond do

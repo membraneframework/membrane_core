@@ -14,6 +14,8 @@ defmodule Membrane.Core.InputBuffer do
   alias Membrane.Buffer
   alias Membrane.Core.Message
   alias Membrane.Pad
+  alias Membrane.Telemetry
+  alias Membrane.Helper.PathLocator
 
   @qe Qex
 
@@ -132,7 +134,7 @@ defmodule Membrane.Core.InputBuffer do
 
     %__MODULE__{current_size: size} = input_buf = do_store_buffers(input_buf, v)
 
-    report_buffer_size(size, ["store"])
+    report_buffer_size("store", size, input_buf)
     input_buf
   end
 
@@ -198,7 +200,7 @@ defmodule Membrane.Core.InputBuffer do
         :ok
     end
 
-    report_buffer_size(size, ["store"])
+    report_buffer_size("store", size, input_buf)
 
     input_buf
   end
@@ -209,7 +211,7 @@ defmodule Membrane.Core.InputBuffer do
       when type in @non_buf_types do
     "Storing #{type}" |> mk_log(input_buf) |> Membrane.Logger.debug_verbose()
 
-    report_buffer_size(size, ["store"])
+    report_buffer_size("store", size, input_buf)
 
     %__MODULE__{input_buf | q: q |> @qe.push({:non_buffer, type, v})}
   end
@@ -236,7 +238,7 @@ defmodule Membrane.Core.InputBuffer do
       |> Bunch.Struct.update_in(:demand, &(&1 + size - new_size))
       |> send_demands(demand_pid, demand_pad)
 
-    report_buffer_size(new_size, ["demand"])
+    report_buffer_size("take_and_demand", new_size, input_buf)
 
     {out, input_buf}
   end
@@ -323,15 +325,14 @@ defmodule Membrane.Core.InputBuffer do
     ]
   end
 
-  # meta tag should containe information about current pipeline and element name that input buffer is being attached to
-  defp report_buffer_size(size, tags) do
-    pipeline_pid = "test pipeline"
-    element_name = "input buffer somewhere"
+  defp report_buffer_size(method, size, %__MODULE__{log_tag: log_tag}) do
     :telemetry.execute(
-      [:membrane, :buffer, :size],
+      Telemetry.input_buffer_size_event,
       %{
-        pipeline_pid: pipeline_pid,
-        element_name: Enum.join([element_name | tags], ":"),
+        element_path:
+          PathLocator.get_formatted_path() <>
+            "/" <> log_tag,
+        method: method,
         value: size
       },
       %{}
