@@ -2,17 +2,17 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @moduledoc false
   use Bunch
 
-  require Membrane.Logger
-  require Membrane.Bin
-  require Membrane.Core.Message
-  require Membrane.Element
-  require Membrane.PlaybackState
-
   alias __MODULE__.{StartupHandler, LinkHandler}
   alias Membrane.ParentSpec
   alias Membrane.Core.{Message, Parent}
   alias Membrane.Core.Parent.{ChildEntry, ClockHandler, Link, State}
   alias Membrane.Core.PlaybackHandler
+
+  require Membrane.Logger
+  require Membrane.Bin
+  require Membrane.Core.Message
+  require Membrane.Element
+  require Membrane.PlaybackState
 
   @spec handle_spec(ParentSpec.t(), State.t()) ::
           {{:ok, [Membrane.Child.name_t()]}, State.t()} | no_return
