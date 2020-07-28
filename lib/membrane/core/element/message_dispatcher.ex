@@ -7,9 +7,6 @@ defmodule Membrane.Core.Element.MessageDispatcher do
 
   import Membrane.Helper.GenServer
 
-  require Membrane.Logger
-  require Membrane.Core.Message
-
   alias Membrane.Core.{Child, Message, PlaybackHandler}
   alias Membrane.Core.Child.PadController
 
@@ -22,6 +19,9 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   }
 
   alias Membrane.Helper
+
+  require Membrane.Core.Message
+  require Membrane.Logger
 
   @doc """
   Parses message incoming to element and forwards it to proper controller.

@@ -3,8 +3,8 @@ defmodule Membrane.Integration.SyncTest do
 
   import Membrane.Testing.Assertions
 
+  alias Membrane.{Testing, Time}
   alias Membrane.Support.{Sync, TestBins}
-  alias Membrane.{Time, Testing}
   alias TestBins.TestFilter
 
   @tick_number_error 5

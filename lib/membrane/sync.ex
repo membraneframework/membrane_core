@@ -28,6 +28,7 @@ defmodule Membrane.Sync do
   """
   use Bunch
   use GenServer
+
   alias Membrane.Time
 
   @no_sync :membrane_no_sync

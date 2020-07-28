@@ -28,8 +28,9 @@ defmodule Membrane.Clock do
   """
   use Bunch
   use GenServer
-  alias Membrane.Time
+
   alias Membrane.Core.Message
+  alias Membrane.Time
 
   @type t :: pid
 

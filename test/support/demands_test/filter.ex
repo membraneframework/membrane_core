@@ -1,6 +1,7 @@
 defmodule Membrane.Support.DemandsTest.Filter do
   @moduledoc false
   use Membrane.Filter
+
   alias Membrane.Buffer
 
   def_output_pad :output, caps: :any

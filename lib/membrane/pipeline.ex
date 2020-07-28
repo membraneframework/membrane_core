@@ -15,13 +15,13 @@ defmodule Membrane.Pipeline do
   use Bunch
   use GenServer
 
-  alias Membrane.{Clock, Child, Core, Pad}
-  alias Membrane.Core.{Parent, CallbackHandler, PlaybackHandler}
+  alias Membrane.{Child, Clock, Core, Pad}
+  alias Membrane.Core.{CallbackHandler, Parent, PlaybackHandler}
   alias Membrane.Core.Pipeline.State
   alias Membrane.Pipeline.CallbackContext
 
-  require Membrane.Logger
   require Membrane.Element
+  require Membrane.Logger
 
   @typedoc """
   Defines options that can be passed to `start/3` / `start_link/3` and received

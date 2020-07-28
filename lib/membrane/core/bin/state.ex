@@ -8,12 +8,11 @@ defmodule Membrane.Core.Bin.State do
   use Bunch
   use Bunch.Access
 
+  alias Membrane.Core.{Playback, Timer}
+  alias Membrane.Core.Bin.LinkingBuffer
+  alias Membrane.Core.Child.PadModel
+  alias Membrane.Core.Parent.ChildrenModel
   alias Membrane.{Child, Clock, Sync}
-  alias Membrane.Core
-  alias Core.{Playback, Timer}
-  alias Core.Child.PadModel
-  alias Core.Bin.LinkingBuffer
-  alias Core.Parent.ChildrenModel
 
   @type t :: %__MODULE__{
           internal_state: Membrane.Bin.state_t() | nil,

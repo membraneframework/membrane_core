@@ -1,11 +1,13 @@
 defmodule Membrane.Core.Child.PadControllerTest do
   use ExUnit.Case, async: true
-  alias Membrane.Support.Element.{DynamicFilter, TrivialFilter, TrivialSink}
+
+  alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.Core.Element.State
   alias Membrane.Core.Message
-  alias Membrane.Core.Child.{PadSpecHandler, PadModel}
-  alias Membrane.Pad
   alias Membrane.LinkError
+  alias Membrane.Pad
+  alias Membrane.Support.Element.{DynamicFilter, TrivialFilter, TrivialSink}
+
   require Message
   require Pad
 

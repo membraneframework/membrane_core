@@ -1,6 +1,8 @@
 defmodule Membrane.Caps.MatcherSpec do
   use ESpec
+
   import Membrane.Caps.Matcher, only: [range: 2, one_of: 1]
+
   alias Membrane.Caps.Mock, as: MockCaps
 
   describe "validate_specs/1" do

@@ -24,8 +24,8 @@ defmodule Membrane.Core.Element do
   alias Membrane.Core.Element.{MessageDispatcher, State}
   alias Membrane.Core.Message
 
-  require Membrane.Logger
   require Membrane.Core.Message
+  require Membrane.Logger
 
   @type options_t :: %{
           module: module,

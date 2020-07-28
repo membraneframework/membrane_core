@@ -1,10 +1,10 @@
 defmodule Membrane.Core.OptionsSpecs do
   @moduledoc false
 
-  alias Membrane.Time
-  alias Membrane.Pad
-
   use Bunch
+
+  alias Membrane.Pad
+  alias Membrane.Time
 
   @default_types_params %{
     atom: [spec: quote_expr(atom)],

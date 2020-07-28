@@ -4,17 +4,19 @@ defmodule Membrane.Core.Element.LifecycleController do
   # Module handling element initialization, termination, playback state changes
   # and similar stuff.
 
-  use Membrane.Core.PlaybackHandler
   use Bunch
-  require Membrane.Logger
+  use Membrane.Core.PlaybackHandler
+
+  alias Membrane.{Clock, Element, Sync}
+  alias Membrane.Core.{CallbackHandler, Message}
+  alias Membrane.Core.Child.PadController
+  alias Membrane.Core.Element.{ActionHandler, PlaybackBuffer, State}
+  alias Membrane.Element.CallbackContext
+
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
   require Membrane.Core.Playback
-  alias Membrane.{Clock, Element, Sync}
-  alias Membrane.Core.{CallbackHandler, Message}
-  alias Membrane.Core.Element.{ActionHandler, PlaybackBuffer, State}
-  alias Membrane.Element.CallbackContext
-  alias Membrane.Core.Child.PadController
+  require Membrane.Logger
 
   @doc """
   Performs initialization tasks and executes `handle_init` callback.

@@ -3,9 +3,9 @@ defmodule Membrane.Core.Message do
 
   # Record representing membrane internal message
 
-  require Record
-
   alias Membrane.Pad
+
+  require Record
 
   Record.defrecord(:message, __MODULE__, type: nil, args: [], opts: [])
 

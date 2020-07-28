@@ -1,11 +1,11 @@
 defmodule Membrane.Core.BinTest do
   use ExUnit.Case, async: true
 
-  alias Membrane.Testing
+  import Membrane.Testing.Assertions
+
   alias Membrane.Support.Bin.TestBins
   alias Membrane.Support.Bin.TestBins.{TestDynamicPadFilter, TestFilter}
-
-  import Membrane.Testing.Assertions
+  alias Membrane.Testing
 
   describe "Starting and transmitting buffers" do
     test "in simple, flat use case" do

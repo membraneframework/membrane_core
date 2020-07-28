@@ -1,5 +1,6 @@
 defmodule Membrane.Core.Element.ActionHandlerTest do
   use ExUnit.Case, async: true
+
   alias Membrane.{ActionError, Buffer}
   alias Membrane.Core.{Message, Playback}
   alias Membrane.Core.Child.PadModel

@@ -3,23 +3,23 @@ defmodule Membrane.Core.Parent.LifecycleController do
   use Bunch
   use Membrane.Core.PlaybackHandler
 
-  require Membrane.Core.Message
-  require Membrane.Core.Parent
-  require Membrane.Logger
-  require Membrane.PlaybackState
-
   alias Bunch.Type
   alias Membrane.{Child, Core, Notification, Pad, Sync}
 
   alias Membrane.Core.{
-    Parent,
-    PlaybackHandler,
     CallbackHandler,
-    Message
+    Message,
+    Parent,
+    PlaybackHandler
   }
 
   alias Membrane.Core.Parent.ChildrenModel
   alias Membrane.PlaybackState
+
+  require Membrane.Core.Message
+  require Membrane.Core.Parent
+  require Membrane.Logger
+  require Membrane.PlaybackState
 
   @type state_t :: Core.Bin.State.t() | Core.Pipeline.State.t()
 

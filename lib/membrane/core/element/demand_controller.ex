@@ -4,14 +4,15 @@ defmodule Membrane.Core.Element.DemandController do
   # Module handling demands incoming through output pads.
 
   use Bunch
-  require Membrane.Logger
-  require Membrane.Core.Child.PadModel
 
   alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{ActionHandler, State}
   alias Membrane.Element.CallbackContext
   alias Membrane.Pad
+
+  require Membrane.Core.Child.PadModel
+  require Membrane.Logger
 
   @doc """
   Handles demand coming on a output pad. Updates demand value and executes `handle_demand` callback.

@@ -1,10 +1,11 @@
 defmodule Membrane.Core.Bin.LinkingBuffer do
   @moduledoc false
 
-  alias Membrane.Core.Message
-  alias Membrane.Core.Child.PadModel
-  alias Membrane.Pad
   alias Membrane.Core.Bin.State
+  alias Membrane.Core.Child.PadModel
+  alias Membrane.Core.Message
+  alias Membrane.Pad
+
   require Message
   require Pad
 

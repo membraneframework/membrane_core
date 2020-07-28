@@ -1,13 +1,13 @@
 defmodule Membrane.Core.Element.LifecycleControllerTest do
   use ExUnit.Case
 
-  require Membrane.Core.Message
-
+  alias Membrane.Core.Element.LifecycleController
   alias Membrane.Core.Element.State
+  alias Membrane.Core.InputBuffer
   alias Membrane.Core.Message
   alias Membrane.Pad.Data
-  alias Membrane.Core.InputBuffer
-  alias Membrane.Core.Element.LifecycleController
+
+  require Membrane.Core.Message
 
   defmodule DummyElement do
     use Membrane.Filter

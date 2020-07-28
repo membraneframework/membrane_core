@@ -1,11 +1,13 @@
 defmodule Membrane.Core.Element.TimerController do
   @moduledoc false
   use Bunch
-  require Membrane.Element.CallbackContext.Tick
+
   alias Membrane.Clock
   alias Membrane.Core.{CallbackHandler, Timer}
   alias Membrane.Core.Element.{ActionHandler, State}
   alias Membrane.Element.CallbackContext
+
+  require Membrane.Element.CallbackContext.Tick
 
   @spec start_timer(Timer.id_t(), Timer.interval_t(), Clock.t(), State.t()) ::
           {:ok, State.t()} | {{:error, {:timer_already_exists, id: Timer.id_t()}}, State.t()}

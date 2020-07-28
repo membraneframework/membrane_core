@@ -8,14 +8,14 @@ defmodule Membrane.Core.PlaybackHandler do
   # be handled by `handle_stopped_to_prepared`, `handle_playing_to_prepared`,
   # `handle_prepared_to_playing` and `handle_prepared_to_stopped` callbacks.
 
+  use Bunch
+  use Membrane.Log, tags: :core
+
   alias Membrane.Core.{Message, State}
   alias Membrane.PlaybackState
 
-  require PlaybackState
   require Message
-
-  use Bunch
-  use Membrane.Log, tags: :core
+  require PlaybackState
 
   @type handler_return_t ::
           {:ok | {:error, any()}, State.t()} | {:stop, any(), State.t()}

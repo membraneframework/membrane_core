@@ -4,13 +4,15 @@ defmodule Membrane.Core.Element.CapsController do
   # Module handling caps received on input pads.
 
   use Bunch
-  require Membrane.Logger
-  require Membrane.Core.Child.PadModel
+
   alias Membrane.{Caps, Pad}
   alias Membrane.Core.{CallbackHandler, InputBuffer}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{ActionHandler, State}
   alias Membrane.Element.CallbackContext
+
+  require Membrane.Core.Child.PadModel
+  require Membrane.Logger
 
   @doc """
   Handles incoming caps: either stores them in InputBuffer, or executes element callback.

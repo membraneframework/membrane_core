@@ -5,11 +5,11 @@ defmodule Membrane.Core.Child.PadSpecHandler do
 
   use Bunch
 
-  require Pad
+  alias Membrane.Core.{Bin, Element}
+  alias Membrane.Core.Child.PadModel
+  alias Membrane.Pad
 
-  alias Membrane.{Core, Pad}
-  alias Core.{Bin, Element}
-  alias Core.Child.PadModel
+  require Membrane.Pad
 
   @private_input_pad_spec_keys [:demand_unit]
 

@@ -8,14 +8,13 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
     (useful when you have two sources in a pipeline)
   * send demands and buffers from two input pads to one output pad.
 
-
   Should be used along with `Membrane.Support.ChildRemovalTest.Pipeline` as they
   share names (i.e. input_pads: `input1` and `input2`) and exchanged messages' formats.
   """
 
-  alias Membrane.Event.StartOfStream
-
   use Membrane.Filter
+
+  alias Membrane.Event.StartOfStream
 
   def_output_pad :output, caps: :any
 

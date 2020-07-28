@@ -1,18 +1,17 @@
 defmodule Membrane.Integration.ChildRemovalTest do
-  use ExUnit.Case, async: false
   use Bunch
+  use ExUnit.Case, async: false
 
+  import Membrane.Testing.Assertions
+
+  alias Membrane.Buffer
+  alias Membrane.Core.Element.PlaybackBuffer
+  alias Membrane.Core.Message
+  alias Membrane.Pipeline
   alias Membrane.Support.ChildRemovalTest
   alias Membrane.Testing
 
-  alias Membrane.Core.Element.PlaybackBuffer
-  alias Membrane.Buffer
-  alias Membrane.Pipeline
-
-  alias Membrane.Core.Message
   require Message
-
-  import Membrane.Testing.Assertions
 
   test "Element can be removed when pipeline is in stopped state" do
     assert {:ok, pipeline_pid} =

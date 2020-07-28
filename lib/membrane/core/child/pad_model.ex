@@ -5,9 +5,9 @@ defmodule Membrane.Core.Child.PadModel do
 
   use Bunch
 
-  alias Membrane.Pad
-  alias Membrane.Core.{Bin, Element}
   alias Bunch.Type
+  alias Membrane.Core.{Bin, Element}
+  alias Membrane.Pad
 
   @type pads_data_t :: %{Pad.ref_t() => Pad.Data.t()}
 

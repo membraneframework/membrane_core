@@ -4,11 +4,8 @@ defmodule Membrane.Core.Element.DemandHandler do
   # Module handling demands requested on output pads.
 
   use Bunch
-  require Membrane.Logger
-  require Membrane.Core.Child.PadModel
-  require Membrane.Core.Message
 
-  alias Membrane.Core.{Message, InputBuffer}
+  alias Membrane.Core.{InputBuffer, Message}
   alias Membrane.Core.Child.PadModel
 
   alias Membrane.Core.Element.{
@@ -20,6 +17,10 @@ defmodule Membrane.Core.Element.DemandHandler do
   }
 
   alias Membrane.Pad
+
+  require Membrane.Core.Child.PadModel
+  require Membrane.Core.Message
+  require Membrane.Logger
 
   @doc """
   Updates demand on the given input pad that should be supplied by future calls

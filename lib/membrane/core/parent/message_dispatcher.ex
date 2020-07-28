@@ -3,11 +3,11 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
 
   import Membrane.Helper.GenServer
 
-  require Membrane.Core.Message
-
   alias Membrane.Core.{Bin, Pipeline}
   alias Membrane.Core.Message
   alias Membrane.Core.Parent.LifecycleController
+
+  require Membrane.Core.Message
 
   @type state :: Pipeline.State.t() | Bin.State.t()
 

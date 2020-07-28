@@ -4,18 +4,20 @@ defmodule Membrane.Core.Child.PadController do
   # Module handling linking and unlinking pads.
 
   use Bunch
-  require Membrane.Logger
+
+  alias Bunch.Type
+  alias Membrane.{Event, LinkError, Pad, ParentSpec}
+  alias Membrane.Core
+  alias Membrane.Core.{CallbackHandler, Child, InputBuffer, Message}
+  alias Membrane.Core.Bin.LinkingBuffer
+  alias Membrane.Core.Child.{PadModel, PadSpecHandler}
+  alias Membrane.Core.Element.{EventController, PlaybackBuffer}
+
   require Membrane.Core.Child
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
+  require Membrane.Logger
   require Membrane.Pad
-  alias Bunch.Type
-  alias Membrane.Core
-  alias Membrane.Core.Bin.LinkingBuffer
-  alias Membrane.Core.{CallbackHandler, Child, Message, InputBuffer}
-  alias Membrane.Core.Child.{PadModel, PadSpecHandler}
-  alias Membrane.Core.Element.{EventController, PlaybackBuffer}
-  alias Membrane.{Event, LinkError, Pad, ParentSpec}
 
   @type state_t :: Core.Bin.State.t() | Core.Element.State.t()
 

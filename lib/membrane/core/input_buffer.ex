@@ -8,12 +8,13 @@ defmodule Membrane.Core.InputBuffer do
   """
 
   use Bunch
-  require Membrane.Logger
-  require Membrane.Core.Message
 
   alias Membrane.Buffer
   alias Membrane.Core.Message
   alias Membrane.Pad
+
+  require Membrane.Core.Message
+  require Membrane.Logger
 
   @qe Qex
 
@@ -145,7 +146,6 @@ defmodule Membrane.Core.InputBuffer do
       size > fail_lvl ->
         ~S"""
         Toilet overflow
-
 
                      ` ' `
                  .'''. ' .'''.

@@ -83,7 +83,6 @@ defmodule Membrane.Testing.Pipeline do
       }
       {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
 
-
   We can now wait till the end of the stream reaches the sink element (don't forget
   to import `Membrane.Testing.Assertions`):
 

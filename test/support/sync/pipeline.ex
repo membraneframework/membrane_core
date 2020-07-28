@@ -1,7 +1,8 @@
 defmodule Membrane.Support.Sync.Pipeline do
   @moduledoc false
   use Membrane.Pipeline
-  alias Membrane.Testing.{Source, Sink}
+
+  alias Membrane.Testing.{Sink, Source}
 
   def default_spec() do
     demand_generator = fn time, _size ->

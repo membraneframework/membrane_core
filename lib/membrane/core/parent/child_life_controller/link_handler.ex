@@ -3,15 +3,15 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   use Bunch
 
-  require Membrane.Core.Message
-  require Membrane.Pad
-
   alias Membrane.Core.{Bin, Child, Message, Parent}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Parent.{Link, State}
   alias Membrane.Core.Parent.Link.Endpoint
-  alias Membrane.Pad
   alias Membrane.LinkError
+  alias Membrane.Pad
+
+  require Membrane.Core.Message
+  require Membrane.Pad
 
   @spec resolve_links([Parent.Link.t()], State.t()) ::
           [Parent.Link.resolved_t()]

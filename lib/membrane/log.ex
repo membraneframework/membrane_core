@@ -6,6 +6,7 @@ defmodule Membrane.Log do
   """
 
   use Bunch
+
   alias Membrane.Log.Router
 
   @type level_t :: :debug | :info | :warn

@@ -30,6 +30,7 @@ defmodule Membrane.Testing.Source do
   """
 
   use Membrane.Source
+
   alias Membrane.Buffer
   alias Membrane.Element.Action
 

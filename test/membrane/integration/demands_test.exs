@@ -1,12 +1,13 @@
 defmodule Membrane.Integration.DemandsTest do
-  use ExUnit.Case, async: false
   use Bunch
-  alias Membrane.Buffer
-  alias Membrane.Support.DemandsTest
-  alias DemandsTest.Filter
-  alias Membrane.Testing.{Pipeline, Source, Sink}
+  use ExUnit.Case, async: false
+
   import ExUnit.Assertions
   import Membrane.Testing.Assertions
+
+  alias Membrane.Buffer
+  alias Membrane.Support.DemandsTest.Filter
+  alias Membrane.Testing.{Pipeline, Sink, Source}
 
   def assert_buffers_received(range, pid) do
     Enum.each(range, fn i ->

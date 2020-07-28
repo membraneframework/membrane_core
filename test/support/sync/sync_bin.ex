@@ -1,6 +1,7 @@
 defmodule Membrane.Support.Sync.SyncBin do
   @moduledoc false
   use Membrane.Bin
+
   alias Membrane.Support.Sync
 
   @impl true

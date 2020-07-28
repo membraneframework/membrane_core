@@ -1,8 +1,10 @@
 defmodule Membrane.Testing.PipelineAssertionsTest do
   use ExUnit.Case
+
+  import Membrane.Testing.Assertions
+
   alias Membrane.Testing.Pipeline
   alias Membrane.Testing.Pipeline.State
-  import Membrane.Testing.Assertions
 
   # Note: Most of tests in this file are just to force compile valid macro invocations
   # Note: so compiler can find the errors.
