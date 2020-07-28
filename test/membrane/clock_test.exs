@@ -1,9 +1,9 @@
 defmodule Membrane.ClockTest do
+  use ExUnit.Case
+
   @module Membrane.Clock
 
   @initial_ratio 1
-
-  use ExUnit.Case
 
   test "should calculate proper ratio and send it to subscribers on each (but the first) update" do
     {:ok, clock} =

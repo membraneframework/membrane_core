@@ -1,8 +1,8 @@
 defmodule Membrane.SyncTest do
-  @module Membrane.Sync
-
   use Bunch
   use ExUnit.Case
+
+  @module Membrane.Sync
 
   @task_number 10
   @sync_delay 1

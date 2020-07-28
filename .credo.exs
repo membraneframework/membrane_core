@@ -105,7 +105,7 @@ common_checks = [
   {Credo.Check.Design.DuplicatedCode, false},
   {Credo.Check.Readability.AliasAs, false},
   {Credo.Check.Readability.MultiAlias, false},
-  {Credo.Check.Readability.Specs, [priority: :low]},
+  {Credo.Check.Readability.Specs, false},
   {Credo.Check.Readability.SinglePipe, false},
   {Credo.Check.Readability.WithCustomTaggedTuple, false},
   {Credo.Check.Refactor.ABCSize, false},
@@ -185,43 +185,15 @@ common_checks = [
       checks: common_checks
     },
     %{
-      name: "no-test",
+      name: "specs-only",
       files: %{
         included: [
           "lib/",
-          "src/",
-          "web/",
-          "apps/*/lib/",
-          "apps/*/src/",
-          "apps/*/test/",
-          "apps/*/web/"
+          "apps/*/lib/"
         ],
         excluded: [~r"/_build/", ~r"/deps/", ~r"/node_modules/"]
       },
-      #
-      # Load and configure plugins here:
-      #
-      plugins: [],
-      #
-      # If you create your own checks, you must specify the source files for
-      # them here, so they can be loaded by Credo before running the analysis.
-      #
-      requires: [],
-      #
-      # If you want to enforce a style guide and need a more traditional linting
-      # experience, you can change `strict` to `true` below:
-      #
-      strict: false,
-      #
-      # To modify the timeout for parsing files, change this value:
-      #
-      parse_timeout: 5000,
-      #
-      # If you want to use uncolored output by default, you can change `color`
-      # to `false` below:
-      #
-      color: true,
-      checks: common_checks
+      checks: [{Credo.Check.Readability.Specs, []}]
     }
   ]
 }
