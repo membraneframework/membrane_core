@@ -215,7 +215,7 @@ defmodule Membrane.Core.BinTest do
       def_clock()
 
       @impl true
-      def handle_init(_) do
+      def handle_init(_options) do
         children = [element_child: ClockElement]
 
         spec = %Membrane.ParentSpec{
@@ -232,7 +232,7 @@ defmodule Membrane.Core.BinTest do
       use Membrane.Pipeline
 
       @impl true
-      def handle_init(_) do
+      def handle_init(_options) do
         children = [bin_child: ClockBin]
 
         {{:ok,
@@ -274,7 +274,7 @@ defmodule Membrane.Core.BinTest do
     get_child_pid(child_pid, children)
   end
 
-  defp get_child_pid(_, _) do
+  defp get_child_pid(_last_child_pid, _children) do
     {:error, :child_was_not_found}
   end
 

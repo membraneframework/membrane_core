@@ -10,9 +10,10 @@ defmodule Membrane.Pad do
   Each link can only consist of exactly two pads.
   """
 
-  alias Membrane.{Buffer, Caps}
   use Bunch
   use Bunch.Typespec
+
+  alias Membrane.{Buffer, Caps}
 
   @typedoc """
   Defines the term by which the pad instance is identified.

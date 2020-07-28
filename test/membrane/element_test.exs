@@ -34,13 +34,15 @@ defmodule Membrane.ElementTest do
     end
 
     @impl true
-    def handle_event(_, _, _, state) do
+    def handle_event(_pad, _event, _context, state) do
       send(state.target, {:callback_called, :handle_event})
       {:ok, state}
     end
 
     @impl true
-    def handle_demand(_, size, _, _ctx, state), do: {{:ok, demand: {:input, size}}, state}
+    def handle_demand(_pad, size, _unit, _context, state) do
+      {{:ok, demand: {:input, size}}, state}
+    end
 
     @impl true
     def handle_process(_pad, _buffer, _context, state), do: {:ok, state}
@@ -66,14 +68,14 @@ defmodule Membrane.ElementTest do
   describe "Start of stream" do
     test "causes handle_start_of_stream/3 to be called", %{pipeline: pipeline} do
       Testing.Pipeline.play(pipeline)
-      assert_pipeline_playback_changed(pipeline, _, :playing)
+      assert_pipeline_playback_changed(pipeline, _from, :playing)
 
       TestFilter.assert_callback_called(:handle_start_of_stream)
     end
 
     test "does not trigger calling callback handle_event/3", %{pipeline: pipeline} do
       Testing.Pipeline.play(pipeline)
-      assert_pipeline_playback_changed(pipeline, _, :playing)
+      assert_pipeline_playback_changed(pipeline, _from, :playing)
 
       TestFilter.refute_callback_called(:handle_event)
     end
@@ -88,14 +90,14 @@ defmodule Membrane.ElementTest do
   describe "End of stream" do
     test "causes handle_end_of_stream/3 to be called", %{pipeline: pipeline} do
       Testing.Pipeline.play(pipeline)
-      assert_pipeline_playback_changed(pipeline, _, :playing)
+      assert_pipeline_playback_changed(pipeline, _from, :playing)
 
       TestFilter.assert_callback_called(:handle_end_of_stream)
     end
 
     test "does not trigger calling callback handle_event/3", %{pipeline: pipeline} do
       Testing.Pipeline.play(pipeline)
-      assert_pipeline_playback_changed(pipeline, _, :playing)
+      assert_pipeline_playback_changed(pipeline, _from, :playing)
 
       TestFilter.refute_callback_called(:handle_event)
     end

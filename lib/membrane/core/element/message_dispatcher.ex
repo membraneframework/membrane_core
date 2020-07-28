@@ -52,7 +52,7 @@ defmodule Membrane.Core.Element.MessageDispatcher do
       {{:ok, {:stop, _reason, _state} = stop}, state} ->
         stop |> noreply(state)
 
-      _ ->
+      _non_stop_result ->
         case mode do
           :info -> result |> noreply(state)
           :call -> result |> reply(state)

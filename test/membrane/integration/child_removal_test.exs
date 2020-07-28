@@ -182,7 +182,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
   # Checks if there is at least one item in the playback buffer for each pad specified in `for_pads`
   defp wait_for_buffer_fillup(el_pid, for_pads, timeout \\ 5) do
     1..10
-    |> Enum.take_while(fn _ ->
+    |> Enum.take_while(fn _i ->
       Process.sleep(timeout)
 
       %PlaybackBuffer{q: q} = :sys.get_state(el_pid).playback_buffer

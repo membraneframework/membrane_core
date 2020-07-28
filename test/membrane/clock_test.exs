@@ -239,7 +239,7 @@ defmodule Membrane.ClockTest do
     end
   end
 
-  defp random_time, do: :rand.uniform(10000)
+  defp random_time, do: :rand.uniform(10_000)
 
   defp ms_to_ns(e), do: e * 1_000_000
 end

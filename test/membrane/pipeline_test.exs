@@ -21,7 +21,7 @@ defmodule Membrane.PipelineTest do
         use Membrane.Pipeline
 
         @impl true
-        def handle_init(_), do: {:error, :reason}
+        def handle_init(_options), do: {:error, :reason}
       end
 
       assert_raise Membrane.CallbackError, fn ->
@@ -34,7 +34,7 @@ defmodule Membrane.PipelineTest do
         use Membrane.Pipeline
 
         @impl true
-        def handle_init(_) do
+        def handle_init(_options) do
           spec = %Membrane.ParentSpec{}
           {{:ok, spec: spec}, %{}}
         end

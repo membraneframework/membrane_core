@@ -64,7 +64,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
   defp maybe_add_extra_source(children, %{extra_source: source}),
     do: [{:extra_source, source} | children]
 
-  defp maybe_add_extra_source(children, _), do: children
+  defp maybe_add_extra_source(children, _opts), do: children
 
   defp maybe_add_extra_source_link(links, %{extra_source: _}) do
     [
@@ -73,7 +73,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
     ]
   end
 
-  defp maybe_add_extra_source_link(links, _) do
+  defp maybe_add_extra_source_link(links, _opts) do
     links
   end
 end

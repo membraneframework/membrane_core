@@ -15,11 +15,11 @@ defmodule Membrane.Core.Element.EventControllerTest do
     def_output_pad :output, caps: :any
 
     @impl true
-    def handle_event(_, %Membrane.Event.Discontinuity{}, _ctx, state) do
+    def handle_event(_pad, %Membrane.Event.Discontinuity{}, _ctx, state) do
       {{:error, :cause}, state}
     end
 
-    def handle_event(_, %Membrane.Event.Underrun{}, _ctx, state) do
+    def handle_event(_pad, %Membrane.Event.Underrun{}, _ctx, state) do
       {:ok, state}
     end
   end

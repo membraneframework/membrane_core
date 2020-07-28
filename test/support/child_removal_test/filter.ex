@@ -63,7 +63,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   end
 
   @impl true
-  def handle_demand(:output, size, _, _ctx, state) do
+  def handle_demand(:output, size, _unit, _ctx, state) do
     demands =
       state.pads
       |> Enum.map(fn pad -> {:demand, {pad, state.demand_generator.(size)}} end)
@@ -72,16 +72,16 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   end
 
   @impl true
-  def handle_process(_pad, buf, _, state) do
+  def handle_process(_pad, buf, _ctx, state) do
     {{:ok, buffer: {:output, buf}}, state}
   end
 
   @impl true
   def handle_event(pad, %StartOfStream{} = ev, ctx, state) do
-    if not ctx.pads[pad].start_of_stream? do
-      {{:ok, forward: ev}, %{state | sof_sent?: true}}
-    else
+    if ctx.pads[pad].start_of_stream? do
       {:ok, state}
+    else
+      {{:ok, forward: ev}, %{state | sof_sent?: true}}
     end
   end
 

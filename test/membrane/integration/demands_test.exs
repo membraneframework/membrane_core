@@ -50,7 +50,7 @@ defmodule Membrane.Integration.DemandsTest do
   end
 
   test "Pipeline with filter underestimating demand" do
-    filter_demand_gen = fn _ -> 2 end
+    filter_demand_gen = fn _incoming_demand -> 2 end
 
     assert {:ok, pid} =
              Pipeline.start_link(%Pipeline.Options{

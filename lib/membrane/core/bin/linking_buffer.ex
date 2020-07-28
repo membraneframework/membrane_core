@@ -37,7 +37,7 @@ defmodule Membrane.Core.Bin.LinkingBuffer do
       send(dest_pid, Message.set_for_pad(msg, other_ref))
       bin_state
     else
-      _ ->
+      _unknown_or_linking ->
         new_buf = Map.update(buf, sender_pad, [msg], &[msg | &1])
         %{bin_state | linking_buffer: new_buf}
     end

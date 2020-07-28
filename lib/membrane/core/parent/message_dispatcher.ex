@@ -60,5 +60,5 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   end
 
   defp pipeline?(%Pipeline.State{}), do: true
-  defp pipeline?(_), do: false
+  defp pipeline?(_state), do: false
 end

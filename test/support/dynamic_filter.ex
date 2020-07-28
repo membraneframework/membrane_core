@@ -30,7 +30,7 @@ defmodule Membrane.Support.Element.DynamicFilter do
   end
 
   @impl true
-  def handle_demand(_ref, size, _, _ctx, state) do
+  def handle_demand(_ref, size, _unit, _ctx, state) do
     {{:ok, demand: {Pad.ref(:input, 0), size}}, state}
   end
 

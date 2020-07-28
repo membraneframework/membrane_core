@@ -1,11 +1,11 @@
 defmodule Membrane.Core.Bin.ActionHandler do
   @moduledoc false
   use Membrane.Core.CallbackHandler
-  require Membrane.Logger
   alias Membrane.{CallbackError, Core, Notification, ParentSpec}
   alias Core.{Parent, Message}
   alias Core.Bin.State
 
+  require Membrane.Logger
   require Message
 
   @impl CallbackHandler

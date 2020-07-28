@@ -15,13 +15,13 @@ defmodule Membrane.Pipeline do
   use Bunch
   use GenServer
 
-  require Membrane.Logger
-  require Membrane.Element
-
   alias Membrane.{Clock, Child, Core, Pad}
   alias Membrane.Core.{Parent, CallbackHandler, PlaybackHandler}
   alias Membrane.Core.Pipeline.State
   alias Membrane.Pipeline.CallbackContext
+
+  require Membrane.Logger
+  require Membrane.Element
 
   @typedoc """
   Defines options that can be passed to `start/3` / `start_link/3` and received
@@ -332,6 +332,7 @@ defmodule Membrane.Pipeline do
         end
       end
 
+    # credo:disable-for-next-line Credo.Check.Refactor.LongQuoteBlocks
     quote do
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)

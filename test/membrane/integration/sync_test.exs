@@ -26,7 +26,7 @@ defmodule Membrane.Integration.SyncTest do
                ]
              })
 
-    for tries <- [100, 1000, 10000] do
+    for tries <- [100, 1000, 10_000] do
       Testing.Pipeline.play(pipeline)
 
       assert_pipeline_playback_changed(pipeline, :prepared, :playing)
@@ -145,7 +145,7 @@ defmodule Membrane.Integration.SyncTest do
     def_output_pad :output, caps: :any, demand_unit: :buffers
 
     @impl true
-    def handle_init(_) do
+    def handle_init(_options) do
       children = [filter1: TestFilter, filter2: TestFilter]
 
       spec = %Membrane.ParentSpec{

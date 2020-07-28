@@ -96,7 +96,7 @@ defmodule Membrane.Core.PlaybackHandler do
     playback =
       case playback do
         %{target_state: :terminating} -> playback
-        _ -> %{playback | target_state: new_playback_state}
+        _not_terminating -> %{playback | target_state: new_playback_state}
       end
 
     if playback.pending_state == nil and playback.state != playback.target_state do

@@ -262,7 +262,7 @@ defmodule Membrane.Core.InputBuffer do
     |> @qe.pop
     |> case do
       {{:value, {:non_buffer, type, e}}, nq} -> q_pop(nq, 0, metric, [{type, e} | acc])
-      _ -> {{:value, acc |> Enum.reverse()}, q}
+      _empty_or_buffer -> {{:value, acc |> Enum.reverse()}, q}
     end
   end
 

@@ -137,7 +137,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   defp transition_finished?(pending_state, new_state)
   defp transition_finished?(pb_state, pb_state), do: true
-  defp transition_finished?(_, _), do: false
+  defp transition_finished?(_pending_state, _new_state), do: false
 
   # Child was removed
   def handle_child_death(pid, :normal, state) do

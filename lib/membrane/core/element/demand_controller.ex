@@ -75,7 +75,7 @@ defmodule Membrane.Core.Element.DemandController do
 
         false
 
-      _ ->
+      _pad_data ->
         true
     end
   end

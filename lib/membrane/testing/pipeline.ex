@@ -370,7 +370,7 @@ defmodule Membrane.Testing.Pipeline do
 
   defp eval(custom_function, custom_args, function, state)
 
-  defp eval(_, _, function, %State{module: nil}),
+  defp eval(_custom_function, _custom_args, function, %State{module: nil}),
     do: function.()
 
   defp eval(custom_function, custom_args, function, %State{module: module} = state) do

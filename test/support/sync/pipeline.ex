@@ -1,4 +1,5 @@
 defmodule Membrane.Support.Sync.Pipeline do
+  @moduledoc false
   use Membrane.Pipeline
   alias Membrane.Testing.{Source, Sink}
 

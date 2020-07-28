@@ -57,7 +57,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     Bin.LinkingBuffer.flush_for_pad(pad, state)
   end
 
-  defp flush_linking_buffer_for_endpoint(state, _) do
+  defp flush_linking_buffer_for_endpoint(state, _endpoint) do
     state
   end
 

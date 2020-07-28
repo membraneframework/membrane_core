@@ -85,7 +85,7 @@ defmodule Membrane.Core.Parent.Link do
     case link_spec do
       %{^direction => pad_name} -> pad_name
       %{^child => {Membrane.Bin, :itself}} -> Pad.opposite_direction(direction)
-      _ -> direction
+      _link_spec -> direction
     end
   end
 end

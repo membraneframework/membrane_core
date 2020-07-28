@@ -5,14 +5,15 @@ defmodule Membrane.Core.Bin.State do
   # It does not represent state of bins you construct, it's a state used
   # internally in Membrane.
 
+  use Bunch
+  use Bunch.Access
+
   alias Membrane.{Child, Clock, Sync}
   alias Membrane.Core
   alias Core.{Playback, Timer}
   alias Core.Child.PadModel
   alias Core.Bin.LinkingBuffer
   alias Core.Parent.ChildrenModel
-  use Bunch
-  use Bunch.Access
 
   @type t :: %__MODULE__{
           internal_state: Membrane.Bin.state_t() | nil,

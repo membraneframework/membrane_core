@@ -3,10 +3,11 @@ defmodule Membrane.Core.Child.PadModel do
 
   # Utility functions for veryfying and manipulating pads and their data.
 
+  use Bunch
+
   alias Membrane.Pad
   alias Membrane.Core.{Bin, Element}
   alias Bunch.Type
-  use Bunch
 
   @type pads_data_t :: %{Pad.ref_t() => Pad.Data.t()}
 

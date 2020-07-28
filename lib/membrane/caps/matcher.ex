@@ -32,9 +32,10 @@ defmodule Membrane.Caps.Matcher do
 
   """
   import Kernel, except: [match?: 2]
-  require Record
 
   alias Bunch
+
+  require Record
 
   @type caps_spec_t :: module() | {module(), keyword()}
   @type caps_specs_t :: :any | caps_spec_t() | [caps_spec_t()]
@@ -126,7 +127,7 @@ defmodule Membrane.Caps.Matcher do
   When `:any` is used as specs, caps can by anything (i.e. they can be invalid)
   """
   @spec match?(caps_specs_t(), struct() | any()) :: boolean()
-  def match?(:any, _), do: true
+  def match?(:any, _caps), do: true
 
   def match?(specs, %_{} = caps) when is_list(specs) do
     specs |> Enum.any?(fn spec -> match?(spec, caps) end)

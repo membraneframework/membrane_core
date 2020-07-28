@@ -74,7 +74,7 @@ defmodule Membrane.Core.Child.PadController do
         |> Enum.flat_map(fn {name, info} ->
           case info.availability |> Pad.availability_mode() do
             :static -> [name]
-            _ -> []
+            _other -> []
           end
         end)
 
@@ -179,7 +179,7 @@ defmodule Membrane.Core.Child.PadController do
           "Cannot connect pull output #{inspect(from)} to push input #{inspect(to)}"
   end
 
-  defp do_validate_dm(_, _) do
+  defp do_validate_dm(_pad, _other_pad) do
     :ok
   end
 

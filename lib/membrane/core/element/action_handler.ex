@@ -8,15 +8,15 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   import Membrane.Pad, only: [is_pad_ref: 1]
 
-  require Membrane.Logger
-  require Membrane.Core.Child.PadModel
-  require Membrane.Core.Message
-
   alias Membrane.{ActionError, Buffer, Caps, CallbackError, Event, Notification, Pad}
   alias Membrane.Core.Element.{DemandHandler, LifecycleController, State, TimerController}
   alias Membrane.Core.{Message, PlaybackHandler}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Element.Action
+
+  require Membrane.Logger
+  require Membrane.Core.Child.PadModel
+  require Membrane.Core.Message
 
   @impl CallbackHandler
   def handle_action(action, callback, params, state) do
@@ -109,7 +109,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     dir =
       case cb do
         :handle_event -> Pad.opposite_direction(params.direction)
-        _ -> :output
+        _other -> :output
       end
 
     pads = state |> PadModel.filter_data(%{direction: dir}) |> Map.keys()
@@ -191,11 +191,11 @@ defmodule Membrane.Core.Element.ActionHandler do
       actions
       |> Enum.drop_while(fn
         {:redemand, _} -> false
-        _ -> true
+        _other_action -> true
       end)
       |> Enum.split_while(fn
         {:redemand, _} -> true
-        _ -> false
+        _other_action -> false
       end)
 
     case {redemands, actions_after_redemands} do
@@ -215,7 +215,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     |> Bunch.Enum.chunk_by_prev(
       fn
         {:buffer, {pad, _}}, {:buffer, {pad, _}} -> true
-        _, _ -> false
+        _prev_action, _action -> false
       end,
       fn
         [{:buffer, {pad, _}} | _] = buffers ->

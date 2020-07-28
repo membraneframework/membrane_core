@@ -122,5 +122,5 @@ defimpl Membrane.Payload, for: BitString do
 
   @impl true
   @spec module(binary()) :: module()
-  def module(_), do: Payload.Binary
+  def module(_payload), do: Payload.Binary
 end
