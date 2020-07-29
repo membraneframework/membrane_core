@@ -19,7 +19,7 @@ defmodule Membrane.Integration.TimerTest do
     end
   end
 
-  test "timer" do
+  test "Stopping timer from handle_tick" do
     {:ok, pipeline} =
       Testing.Pipeline.start_link(%Testing.Pipeline.Options{
         elements: [element: Element, sink: Testing.Sink]
