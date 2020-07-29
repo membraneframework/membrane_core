@@ -9,10 +9,11 @@ defmodule Membrane.Telemetry do
 
   @type event_name_t :: [atom(), ...]
 
-
-
-  @type input_buffer_size_event_value_t :: %{element_path: String.t(), method: String.t(), value: integer()}
-
+  @type input_buffer_size_event_value_t :: %{
+          element_path: String.t(),
+          method: String.t(),
+          value: integer()
+        }
 
   @doc """
   Returns event name used by InputBuffer to report current buffer size inside of functions

@@ -5,11 +5,11 @@ defmodule Membrane.Helper.PathLocator do
   # Path is a list consisted of following pipeline/bin/element names down the proper pipeline.
   # Information is being stored in a process dictionary and can be set/appended to.
 
-  @type path_t :: list(String.t)
+  @type path_t :: list(String.t())
 
   @key :membrane_path
 
-  @spec append_path(String.t) :: :ok
+  @spec append_path(String.t()) :: :ok
   def append_path(name) do
     path = Process.get(@key, [])
     Process.put(@key, path ++ [name])
@@ -27,16 +27,16 @@ defmodule Membrane.Helper.PathLocator do
     append_path(name)
   end
 
-  @spec get_formatted_path() :: String.t
+  @spec get_formatted_path() :: String.t()
   def get_formatted_path() do
     Process.get(@key, []) |> Enum.join("/")
   end
 
-  @spec get_formatted_path(path_t()) :: String.t
+  @spec get_formatted_path(path_t()) :: String.t()
   def get_formatted_path(path) do
     path |> Enum.join("/")
   end
 
-  @spec get_path() :: list(String.t)
+  @spec get_path() :: list(String.t())
   def get_path(), do: Process.get(@key, [])
 end
