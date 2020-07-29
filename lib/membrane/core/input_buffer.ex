@@ -331,7 +331,7 @@ defmodule Membrane.Core.InputBuffer do
       %{
         element_path:
           PathLocator.get_formatted_path() <>
-            "/" <> log_tag,
+            "/" <> (log_tag || ""),
         method: method,
         value: size
       },
