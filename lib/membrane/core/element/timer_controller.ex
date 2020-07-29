@@ -52,6 +52,7 @@ defmodule Membrane.Core.Element.TimerController do
   def handle_tick(timer_id, %State{} = state) do
     context = &CallbackContext.Tick.from_state/1
 
+    # the first clause checks if the timer wasn't removed before receiving this tick
     withl present?: true <- Map.has_key?(state.synchronization.timers, timer_id),
           callback:
             {:ok, state} <-
@@ -62,6 +63,7 @@ defmodule Membrane.Core.Element.TimerController do
                 [timer_id],
                 state
               ),
+          # in case the timer was removed in handle_tick
           present?: true <- Map.has_key?(state.synchronization.timers, timer_id) do
       state
       |> Bunch.Access.update_in([:synchronization, :timers, timer_id], &Timer.tick/1)
