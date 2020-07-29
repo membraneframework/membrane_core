@@ -5,7 +5,6 @@ defmodule Membrane.Helper.PathLocator do
   Information is being stored in a process dictionary and can be set/appended to.
   """
 
-
   @type path_t :: list(String.t())
 
   @key :membrane_path
