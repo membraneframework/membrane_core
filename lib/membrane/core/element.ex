@@ -95,7 +95,7 @@ defmodule Membrane.Core.Element do
     :ok = Membrane.Logger.set_prefix(name_str)
     Logger.metadata(options.log_metadata)
 
-    :ok = PathLocator.set_and_append_path(options.log_metadata[:parent_path], name_str)
+    :ok = PathLocator.set_and_append_path(options.log_metadata[:parent_path] || [], name_str)
 
     state =
       options

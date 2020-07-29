@@ -267,7 +267,7 @@ defmodule Membrane.Bin do
     :ok = Membrane.Logger.set_prefix(name_str <> " bin")
     Logger.metadata(log_metadata)
 
-    :ok = PathLocator.set_and_append_path(log_metadata[:parent_path], name_str <> " bin")
+    :ok = PathLocator.set_and_append_path(log_metadata[:parent_path] || [], name_str <> " bin")
 
     clock =
       if module |> Bunch.Module.check_behaviour(:membrane_clock?) do
