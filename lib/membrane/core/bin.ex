@@ -13,6 +13,13 @@ defmodule Membrane.Core.Bin do
   alias Membrane.Core.{CallbackHandler, Message}
   alias Membrane.Core.Child.{PadController, PadSpecHandler}
 
+  @type options_t :: %{
+          name: atom,
+          module: module,
+          bin_options: Membrane.Bin.options_t(),
+          log_metadata: Keyword.t()
+        }
+
   @doc """
   Starts the Bin based on given module and links it to the current
   process.
@@ -23,28 +30,20 @@ defmodule Membrane.Core.Bin do
 
   Returns the same values as `GenServer.start_link/3`.
   """
-  @spec start_link(
-          atom,
-          module,
-          bin_options :: Membrane.Bin.options_t(),
-          process_options :: GenServer.options()
-        ) :: GenServer.on_start()
-  def start_link(name, module, bin_options \\ nil, log_metadata, process_options \\ []) do
-    if module |> Membrane.Bin.bin?() do
+  @spec start_link(options_t) :: GenServer.on_start()
+  def start_link(options, process_options \\ []) do
+    if options.module |> Membrane.Bin.bin?() do
       Membrane.Logger.debug("""
-      Bin start link: module: #{inspect(module)},
-      bin options: #{inspect(bin_options)},
+      Bin start link: name: #{inspect(options.name)}
+      module: #{inspect(options.module)},
+      bin options: #{inspect(options.bin_options)},
       process options: #{inspect(process_options)}
       """)
 
-      GenServer.start_link(
-        Membrane.Core.Bin,
-        {name, module, bin_options, log_metadata},
-        process_options
-      )
+      GenServer.start_link(Membrane.Core.Bin, options, process_options)
     else
       raise """
-      Cannot start bin, passed module #{inspect(module)} is not a Membrane Bin.
+      Cannot start bin, passed module #{inspect(options.module)} is not a Membrane Bin.
       Make sure that given module is the right one and it uses Membrane.Bin
       """
     end
@@ -60,7 +59,8 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
-  def init({name, module, bin_options, log_metadata}) do
+  def init(options) do
+    %{name: name, module: module, log_metadata: log_metadata} = options
     name_str = if String.valid?(name), do: name, else: inspect(name)
     :ok = Membrane.Logger.set_prefix(name_str <> " bin")
     Logger.metadata(log_metadata)
@@ -73,7 +73,7 @@ defmodule Membrane.Core.Bin do
 
     state =
       %State{
-        bin_options: bin_options,
+        bin_options: options.bin_options,
         module: module,
         name: name,
         clock_proxy: clock,
@@ -94,7 +94,7 @@ defmodule Membrane.Core.Bin do
              :handle_init,
              Membrane.Core.Bin.ActionHandler,
              %{state: false},
-             [bin_options],
+             [options.bin_options],
              state
            ) do
       {:ok, state}

@@ -157,7 +157,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
                   reason: bin cannot be synced with other elements"
           end
 
-          Core.Bin.start_link(name, module, options, log_metadata, [])
+          Core.Bin.start_link(%{
+            name: name,
+            module: module,
+            bin_options: options,
+            log_metadata: log_metadata
+          })
 
         true ->
           raise ParentError, """
