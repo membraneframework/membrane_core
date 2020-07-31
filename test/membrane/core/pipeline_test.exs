@@ -1,12 +1,11 @@
-defmodule Membrane.PipelineTest do
+defmodule Membrane.Core.PipelineTest do
   use ExUnit.Case
 
-  alias Membrane.Core.Pipeline.State
+  @module Membrane.Core.Pipeline
+
+  alias Membrane.Core.Pipeline.{ActionHandler, State}
   alias Membrane.ParentSpec
   alias Membrane.Testing
-
-  @module Membrane.Pipeline
-  @action_handler_module Membrane.Core.Pipeline.ActionHandler
 
   defp state(_ctx) do
     [state: %State{module: nil, clock_proxy: nil}]
@@ -51,7 +50,7 @@ defmodule Membrane.PipelineTest do
   describe "handle_action spec" do
     test "should raise if duplicate elements exist in spec", %{state: state} do
       assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
-        @action_handler_module.handle_action(
+        ActionHandler.handle_action(
           {:spec, %ParentSpec{children: [a: :child1, a: :child2]}},
           nil,
           [],
@@ -64,7 +63,7 @@ defmodule Membrane.PipelineTest do
       state = %State{state | children: %{a: self()}}
 
       assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
-        @action_handler_module.handle_action(
+        ActionHandler.handle_action(
           {:spec, %ParentSpec{children: [a: :child]}},
           nil,
           [],

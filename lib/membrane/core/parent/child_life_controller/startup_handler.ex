@@ -2,8 +2,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
   @moduledoc false
   use Bunch
 
-  alias Membrane.{CallbackError, Clock, ParentError, Sync}
-  alias Membrane.Core.{Bin, CallbackHandler, Element, Message, Parent, Pipeline}
+  require Membrane.Logger
+  require Membrane.Core.Message
+  require Membrane.Core.Parent
+
+  alias Membrane.{CallbackError, Clock, Core, ParentError, Sync}
+  alias Membrane.Core.{CallbackHandler, Message, Parent}
   alias Membrane.Core.Parent.{ChildEntry, State}
 
   require Membrane.Core.Message
@@ -103,8 +107,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
 
     action_handler =
       case state do
-        %Pipeline.State{} -> Pipeline.ActionHandler
-        %Bin.State{} -> Bin.ActionHandler
+        %Core.Pipeline.State{} -> Core.Pipeline.ActionHandler
+        %Core.Bin.State{} -> Core.Bin.ActionHandler
       end
 
     callback_res =
@@ -135,8 +139,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
 
     start_result =
       cond do
-        Bunch.Module.check_behaviour(module, :membrane_element?) ->
-          Element.start_link(%{
+        Membrane.Element.element?(module) ->
+          Core.Element.start_link(%{
             parent: self(),
             module: module,
             name: name,
@@ -146,14 +150,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
             log_metadata: log_metadata
           })
 
-        Bunch.Module.check_behaviour(module, :membrane_bin?) ->
+        Membrane.Bin.bin?(module) ->
           unless sync == Sync.no_sync() do
             raise ParentError,
                   "Cannot start child #{inspect(name)}, \
                   reason: bin cannot be synced with other elements"
           end
 
-          Membrane.Bin.start_link(name, module, options, log_metadata, [])
+          Core.Bin.start_link(name, module, options, log_metadata, [])
 
         true ->
           raise ParentError, """

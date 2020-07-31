@@ -13,12 +13,13 @@ defmodule Membrane.Pipeline do
   """
 
   use Bunch
-  use GenServer
 
-  alias Membrane.{Child, Clock, Core, Pad}
-  alias Membrane.Core.{CallbackHandler, Parent, PlaybackHandler}
-  alias Membrane.Core.Pipeline.State
-  alias Membrane.Pipeline.CallbackContext
+  require Membrane.Logger
+  require Membrane.Element
+
+  alias __MODULE__.CallbackContext
+  alias Membrane.{Child, Pad}
+  alias Membrane.Core.{CallbackHandler, PlaybackHandler}
 
   require Membrane.Element
   require Membrane.Logger
@@ -196,7 +197,11 @@ defmodule Membrane.Pipeline do
       process options: #{inspect(process_options)}
       """)
 
-      apply(GenServer, method, [__MODULE__, {module, pipeline_options}, process_options])
+      apply(GenServer, method, [
+        Membrane.Core.Pipeline,
+        {module, pipeline_options},
+        process_options
+      ])
     else
       Membrane.Logger.error("""
       Cannot start pipeline, passed module #{inspect(module)} is not a Membrane Pipeline.
@@ -264,48 +269,12 @@ defmodule Membrane.Pipeline do
   @spec stop(pid) :: :ok
   def stop(pid), do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :stopped)
 
-  @impl GenServer
-  def init(module) when is_atom(module) do
-    init({module, module |> Bunch.Module.struct()})
-  end
-
-  def init(%module{} = pipeline_options) do
-    init({module, pipeline_options})
-  end
-
-  def init({module, pipeline_options}) do
-    :ok = Membrane.Logger.set_prefix("pipeline@#{:erlang.pid_to_list(self())}")
-    {:ok, clock} = Clock.start_link(proxy: true)
-    state = %State{module: module, clock_proxy: clock}
-
-    with {:ok, state} <-
-           CallbackHandler.exec_and_handle_callback(
-             :handle_init,
-             Core.Pipeline.ActionHandler,
-             %{state: false},
-             [pipeline_options],
-             state
-           ) do
-      {:ok, state}
-    end
-  end
-
   @doc """
   Checks whether module is a pipeline.
   """
   @spec pipeline?(module) :: boolean
   def pipeline?(module) do
     module |> Bunch.Module.check_behaviour(:membrane_pipeline?)
-  end
-
-  @impl GenServer
-  def handle_info(message, state) do
-    Parent.MessageDispatcher.handle_message(message, state)
-  end
-
-  @impl GenServer
-  def terminate(reason, state) do
-    :ok = state.module.handle_shutdown(reason, state.internal_state)
   end
 
   @doc """
