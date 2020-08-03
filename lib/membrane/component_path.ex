@@ -1,6 +1,6 @@
 defmodule Membrane.ComponentPath do
   @moduledoc """
-  Traces element's path inside of a pipeline.
+  Traces element's path inside a pipeline.
   Path is a list consisted of following pipeline/bin/element names down the assembled pipeline.
   Information is being stored in a process dictionary and can be set/appended to.
   """
