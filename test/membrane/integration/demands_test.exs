@@ -9,13 +9,13 @@ defmodule Membrane.Integration.DemandsTest do
   alias Membrane.Support.DemandsTest.Filter
   alias Membrane.Testing.{Pipeline, Sink, Source}
 
-  def assert_buffers_received(range, pid) do
+  defp assert_buffers_received(range, pid) do
     Enum.each(range, fn i ->
       assert_sink_buffer(pid, :sink, %Buffer{payload: <<^i::16>> <> <<255>>})
     end)
   end
 
-  def test_pipeline(pid) do
+  defp test_pipeline(pid) do
     pattern_gen = fn i -> %Buffer{payload: <<i::16>> <> <<255>>} end
     assert Pipeline.play(pid) == :ok
 

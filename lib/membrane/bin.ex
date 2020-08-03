@@ -232,6 +232,7 @@ defmodule Membrane.Bin do
           atom,
           module,
           bin_options :: options_t,
+          log_metadata :: Keyword.t(),
           process_options :: GenServer.options()
         ) :: GenServer.on_start()
   def start_link(name, module, bin_options \\ nil, log_metadata, process_options \\ []) do
@@ -471,6 +472,7 @@ defmodule Membrane.Bin do
 
       # DEPRECATED:
 
+      # credo:disable-for-lines:22 Credo.Check.Readability.Specs
       @doc false
       def handle_stopped_to_prepared(state), do: {:ok, state}
       @doc false

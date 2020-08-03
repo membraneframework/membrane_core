@@ -14,8 +14,10 @@ defmodule Membrane.ElementTest do
 
     def_options target: [type: :pid]
 
+    # credo:disable-for-next-line Credo.Check.Readability.Specs
     def assert_callback_called(name), do: assert_receive({:callback_called, ^name})
 
+    # credo:disable-for-next-line Credo.Check.Readability.Specs
     def refute_callback_called(name), do: refute_receive({:callback_called, ^name})
 
     @impl true

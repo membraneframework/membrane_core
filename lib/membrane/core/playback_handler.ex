@@ -130,6 +130,7 @@ defmodule Membrane.Core.PlaybackHandler do
     {:ok, %{state | playback: playback}}
   end
 
+  @spec suspended?(State.t()) :: any
   def suspended?(state), do: state.playback.async_state_change
 
   @spec continue_playback_change(module, State.t()) :: handler_return_t()

@@ -109,19 +109,19 @@ defmodule Membrane.Core.Child.PadModel do
     pad_data
   end
 
-  @spec set_data(state_t(), Pad.ref_t(), keys :: atom | [atom]) ::
+  @spec set_data(state_t(), Pad.ref_t(), keys :: atom | [atom], value :: term()) ::
           Type.stateful_t(:ok | unknown_pad_error_t, state_t)
-  def set_data(state, pad_ref, keys \\ [], v) do
+  def set_data(state, pad_ref, keys \\ [], value) do
     with {:ok, state} <- {assert_instance(state, pad_ref), state} do
       state
-      |> Bunch.Access.put_in(data_keys(pad_ref, keys), v)
+      |> Bunch.Access.put_in(data_keys(pad_ref, keys), value)
       ~> {:ok, &1}
     end
   end
 
-  @spec set_data!(state_t(), Pad.ref_t(), keys :: atom | [atom]) :: state_t()
-  def set_data!(state, pad_ref, keys \\ [], v) do
-    {:ok, state} = set_data(state, pad_ref, keys, v)
+  @spec set_data!(state_t(), Pad.ref_t(), keys :: atom | [atom], value :: term()) :: state_t()
+  def set_data!(state, pad_ref, keys \\ [], value) do
+    {:ok, state} = set_data(state, pad_ref, keys, value)
     state
   end
 

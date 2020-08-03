@@ -127,6 +127,7 @@ defmodule Membrane.Support.Bin.TestBins do
       {{:ok, spec: spec}, state}
     end
 
+    @impl true
     def handle_pad_added(Pad.ref(:input, _) = pad, _ctx, state) do
       links = [
         link_bin_input(pad) |> to(:filter1)

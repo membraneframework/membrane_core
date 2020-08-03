@@ -444,6 +444,7 @@ defmodule Membrane.Pipeline do
 
       # DEPRECATED:
 
+      # credo:disable-for-lines:21 Credo.Check.Readability.Specs
       @doc false
       def handle_stopped_to_prepared(state), do: {:ok, state}
       @doc false

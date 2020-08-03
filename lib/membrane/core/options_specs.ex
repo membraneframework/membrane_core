@@ -92,6 +92,7 @@ defmodule Membrane.Core.OptionsSpecs do
     {escaped_opts, type_definiton}
   end
 
+  @spec generate_opts_doc(escaped_opts :: Keyword.t()) :: Macro.t()
   def generate_opts_doc(escaped_opts) do
     escaped_opts
     |> Enum.map(&generate_opt_doc/1)

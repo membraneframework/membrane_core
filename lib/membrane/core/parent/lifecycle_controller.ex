@@ -21,8 +21,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
   require Membrane.Logger
   require Membrane.PlaybackState
 
-  @type state_t :: Core.Bin.State.t() | Core.Pipeline.State.t()
-
   @impl PlaybackHandler
   def handle_playback_state(old, new, state) do
     Membrane.Logger.debug("Changing playback state from #{old} to #{new}")
@@ -88,8 +86,8 @@ defmodule Membrane.Core.Parent.LifecycleController do
     PlaybackHandler.change_playback_state(new_state, __MODULE__, state)
   end
 
-  @spec handle_notification(Child.name_t(), Notification.t(), state_t) ::
-          Type.stateful_try_t(state_t)
+  @spec handle_notification(Child.name_t(), Notification.t(), Core.State.t()) ::
+          Type.stateful_try_t(Core.State.t())
   def handle_notification(from, notification, state) do
     with {:ok, _} <- state |> Parent.ChildrenModel.get_child_data(from) do
       context = Parent.callback_context_generator(Notification, state)
@@ -108,7 +106,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
-  @spec handle_other(any, state_t()) :: Type.stateful_try_t(state_t)
+  @spec handle_other(any, Core.State.t()) :: Type.stateful_try_t(Core.State.t())
   def handle_other(message, state) do
     context = Parent.callback_context_generator(Other, state)
     action_handler = get_callback_action_handler(state)
@@ -122,7 +120,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
-  @spec child_playback_changed(pid, PlaybackState.t(), state_t()) ::
+  @spec child_playback_changed(pid, PlaybackState.t(), Core.State.t()) ::
           PlaybackHandler.handler_return_t()
   def child_playback_changed(pid, new_pb_state, state) do
     if transition_finished?(new_pb_state, state.playback.pending_state) do
@@ -140,6 +138,8 @@ defmodule Membrane.Core.Parent.LifecycleController do
   defp transition_finished?(_pending_state, _new_state), do: false
 
   # Child was removed
+  @spec handle_child_death(child_pid :: pid(), reason :: atom(), state :: Core.State.t()) ::
+          {:ok, Core.State.t()}
   def handle_child_death(pid, :normal, state) do
     {:ok, state} = finish_pids_transition(state, pid)
 
@@ -169,8 +169,8 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
-  @spec handle_stream_management_event(atom, Child.name_t(), Pad.ref_t(), state_t()) ::
-          Type.stateful_try_t(state_t)
+  @spec handle_stream_management_event(atom, Child.name_t(), Pad.ref_t(), Core.State.t()) ::
+          Type.stateful_try_t(Core.State.t())
   def handle_stream_management_event(cb, element_name, pad_ref, state)
       when cb in [:handle_start_of_stream, :handle_end_of_stream] do
     context = Parent.callback_context_generator(StreamManagement, state)
@@ -185,7 +185,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
-  @spec handle_log_metadata(Keyword.t(), state_t) :: {:ok, state_t()}
+  @spec handle_log_metadata(Keyword.t(), Core.State.t()) :: {:ok, Core.State.t()}
   def handle_log_metadata(metadata, state) do
     :ok = Logger.metadata(metadata)
 

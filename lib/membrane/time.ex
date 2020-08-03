@@ -250,12 +250,14 @@ defmodule Membrane.Time do
     Returns one #{unit.singular} in `#{inspect(__MODULE__)}` units.
     """
     @spec unquote(unit.singular)() :: t
+    # credo:disable-for-next-line Credo.Check.Readability.Specs
     def unquote(unit.singular)() do
       unquote(unit.duration)
     end
 
     @deprecated "Use `#{unit.singular}/0` or `#{unit.plural}/1` instead."
     @spec unquote(unit.singular)(integer) :: t
+    # credo:disable-for-next-line Credo.Check.Readability.Specs
     def unquote(unit.singular)(number) when is_integer(number) do
       number * unquote(unit.duration)
     end
@@ -264,6 +266,7 @@ defmodule Membrane.Time do
     Returns given amount of #{unit.plural} in `#{inspect(__MODULE__)}` units.
     """
     @spec unquote(unit.plural)(integer) :: t
+    # credo:disable-for-next-line Credo.Check.Readability.Specs
     def unquote(unit.plural)(number) when is_integer(number) do
       number * unquote(unit.duration)
     end
@@ -274,6 +277,7 @@ defmodule Membrane.Time do
     Returns time in #{unit.plural}. Rounded using `Kernel.round/1`.
     """
     @spec unquote(to_fun_name)(t) :: integer
+    # credo:disable-for-next-line Credo.Check.Readability.Specs
     def unquote(to_fun_name)(time) when is_time(time) do
       round(time / unquote(unit.duration))
     end
@@ -284,6 +288,7 @@ defmodule Membrane.Time do
     Returns time in #{unit.plural}, represented as a rational number.
     """
     @spec unquote(as_fun_name)(t) :: integer | Ratio.t()
+    # credo:disable-for-next-line Credo.Check.Readability.Specs
     def unquote(as_fun_name)(time) when is_time(time) do
       Ratio./(time, unquote(unit.duration))
     end

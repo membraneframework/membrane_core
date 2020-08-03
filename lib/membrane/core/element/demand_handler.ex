@@ -90,6 +90,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     |> Bunch.Struct.put_in([:delayed_demands, {pad_ref, :redemand}], :sync)
   end
 
+  @spec handle_delayed_demands(State.t()) :: State.stateful_try_t()
   def handle_delayed_demands(%State{delayed_demands: del_dem} = state) when del_dem == %{} do
     {:ok, state}
   end

@@ -29,5 +29,6 @@ defmodule Membrane.Support.DemandsTest.Filter do
     {{:ok, buffer: {:output, %Buffer{payload: payload <> <<255>>}}, redemand: :output}, state}
   end
 
+  @spec default_demand_generator(integer()) :: integer()
   def default_demand_generator(demand), do: demand
 end

@@ -88,5 +88,6 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
     {{:ok, forward: event}, state}
   end
 
+  @spec default_demand_generator(integer()) :: integer()
   def default_demand_generator(demand), do: demand
 end

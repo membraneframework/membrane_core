@@ -160,10 +160,12 @@ defmodule Membrane.Testing.Pipeline do
           }
   end
 
+  @spec start_link(Options.t(), GenServer.options()) :: GenServer.on_start()
   def start_link(pipeline_options, process_options \\ []) do
     do_start(:start_link, pipeline_options, process_options)
   end
 
+  @spec start(Options.t(), GenServer.options()) :: GenServer.on_start()
   def start(pipeline_options, process_options \\ []) do
     do_start(:start, pipeline_options, process_options)
   end

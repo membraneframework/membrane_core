@@ -198,6 +198,7 @@ defmodule Membrane.Pad do
   defp get_corresponding_bin_name({:private, name}) when is_public_name(name), do: name
   defp get_corresponding_bin_name(name) when is_public_name(name), do: {:private, name}
 
+  @spec assert_public_name!(name_t()) :: :ok
   def assert_public_name!(name) when is_public_name(name) do
     :ok
   end

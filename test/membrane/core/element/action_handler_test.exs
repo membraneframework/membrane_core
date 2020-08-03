@@ -13,7 +13,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
   @module Membrane.Core.Element.ActionHandler
 
-  def demand_test_filter(_context) do
+  defp demand_test_filter(_context) do
     state = %{
       State.new(%{module: Filter, name: :test_name, clock: nil, sync: nil})
       | watcher: self(),
@@ -79,7 +79,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
   end
 
-  def trivial_filter_state(_context) do
+  defp trivial_filter_state(_context) do
     state = %{
       State.new(%{module: TrivialFilter, name: :elem_name, clock: nil, sync: nil})
       | type: :filter,
@@ -512,7 +512,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
   end
 
-  def playing_trivial_source(_context) do
+  defp playing_trivial_source(_context) do
     state =
       %{
         State.new(%{module: TrivialSource, name: :elem_name, clock: nil, sync: nil})

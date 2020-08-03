@@ -85,6 +85,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   def eval(state), do: {:ok, state}
 
+  @spec flush_for_pad(t(), Membrane.Pad.ref()) :: t()
   def flush_for_pad(%__MODULE__{q: q} = buf, pad_ref) do
     alias Membrane.Core.Message
     require Message
