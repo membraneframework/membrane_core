@@ -15,7 +15,7 @@ defmodule Membrane.Core.InputBuffer do
   alias Membrane.Core.Message
   alias Membrane.Pad
   alias Membrane.Telemetry
-  alias Membrane.Helper.PathLocator
+  alias Membrane.ComponentPath
 
   @qe Qex
 
@@ -330,7 +330,7 @@ defmodule Membrane.Core.InputBuffer do
       Telemetry.input_buffer_size_event(),
       %{
         element_path:
-          PathLocator.get_formatted_path() <>
+          ComponentPath.get_formatted() <>
             "/" <> (log_tag || ""),
         method: method,
         value: size

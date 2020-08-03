@@ -24,7 +24,7 @@ defmodule Membrane.Core.Element do
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.Element.{MessageDispatcher, State}
   alias Membrane.Core.Message
-  alias Membrane.Helper.PathLocator
+  alias Membrane.ComponentPath
 
   @type options_t :: %{
           module: module,
@@ -95,7 +95,7 @@ defmodule Membrane.Core.Element do
     :ok = Membrane.Logger.set_prefix(name_str)
     Logger.metadata(options.log_metadata)
 
-    :ok = PathLocator.set_and_append_path(options.log_metadata[:parent_path] || [], name_str)
+    :ok = ComponentPath.set_and_append(options.log_metadata[:parent_path] || [], name_str)
 
     state =
       options

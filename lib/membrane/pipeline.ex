@@ -275,7 +275,7 @@ defmodule Membrane.Pipeline do
 
   def init({module, pipeline_options}) do
     pipeline_name = "pipeline@#{:erlang.pid_to_list(self())}"
-    :ok = Membrane.Helper.PathLocator.set_path([pipeline_name])
+    :ok = Membrane.ComponentPath.set([pipeline_name])
     :ok = Membrane.Logger.set_prefix(pipeline_name)
     {:ok, clock} = Clock.start_link(proxy: true)
     state = %State{module: module, clock_proxy: clock}
