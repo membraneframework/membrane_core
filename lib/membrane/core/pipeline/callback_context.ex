@@ -10,7 +10,7 @@ defmodule Membrane.Core.Pipeline.CallbackContext do
     quote do
       [
         playback_state: unquote(state).playback.state,
-        clock: unquote(state).clock_provider.clock
+        clock: unquote(state).synchronization.clock_proxy
       ]
     end ++ args
   end

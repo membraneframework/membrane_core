@@ -24,7 +24,14 @@ defmodule Membrane.Core.Pipeline do
   def init({module, pipeline_options}) do
     :ok = Membrane.Logger.set_prefix("pipeline@#{:erlang.pid_to_list(self())}")
     {:ok, clock} = Clock.start_link(proxy: true)
-    state = %State{module: module, clock_proxy: clock}
+
+    state = %State{
+      module: module,
+      synchronization: %{
+        clock_proxy: clock,
+        clock_provider: %{clock: nil, provider: nil, choice: :auto}
+      }
+    }
 
     with {:ok, state} <-
            CallbackHandler.exec_and_handle_callback(

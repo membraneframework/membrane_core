@@ -3,7 +3,8 @@ defmodule Membrane.Core.Bin.CallbackContext do
 
   use Membrane.Core.CallbackContext,
     playback_state: Membrane.PlaybackState.t(),
-    clock: Membrane.Clock.t() | nil,
+    clock: Membrane.Clock.t(),
+    parent_clock: Membrane.Clock.t(),
     pads: %{Membrane.Pad.ref_t() => Membrane.Pad.Data.t()},
     name: Membrane.Bin.name_t()
 
@@ -12,7 +13,8 @@ defmodule Membrane.Core.Bin.CallbackContext do
     quote do
       [
         playback_state: unquote(state).playback.state,
-        clock: unquote(state).clock_provider.clock,
+        clock: unquote(state).synchronization.clock,
+        parent_clock: unquote(state).synchronization.parent_clock,
         pads: unquote(state).pads.data,
         name: unquote(state).name
       ]

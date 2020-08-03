@@ -68,7 +68,7 @@ defmodule Membrane.Core.Element.State do
   def new(options) do
     %__MODULE__{
       module: options.module,
-      type: apply(options.module, :membrane_element_type, []),
+      type: options.module.membrane_element_type(),
       name: options.name,
       internal_state: nil,
       pads: nil,
@@ -79,7 +79,7 @@ defmodule Membrane.Core.Element.State do
       playback_buffer: PlaybackBuffer.new(),
       delayed_demands: %{},
       synchronization: %{
-        parent_clock: options.clock,
+        parent_clock: options.parent_clock,
         timers: %{},
         clock: nil,
         stream_sync: options.sync,

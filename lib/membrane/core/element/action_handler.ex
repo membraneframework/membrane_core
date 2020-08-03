@@ -8,15 +8,16 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   import Membrane.Pad, only: [is_pad_ref: 1]
 
-  alias Membrane.{ActionError, Buffer, CallbackError, Caps, Event, Notification, Pad}
-  alias Membrane.Core.{Message, PlaybackHandler}
-  alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{DemandHandler, LifecycleController, State, TimerController}
-  alias Membrane.Element.Action
-
+  require Membrane.Logger
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
-  require Membrane.Logger
+
+  alias Membrane.{ActionError, Buffer, Caps, CallbackError, Event, Notification, Pad}
+  alias Membrane.Core.Element.{DemandHandler, LifecycleController, State}
+  alias Membrane.Core.{Message, PlaybackHandler, TimerController}
+  alias Membrane.Core.Child.PadModel
+  alias Membrane.Core.Element.{DemandHandler, LifecycleController, State}
+  alias Membrane.Element.Action
 
   @impl CallbackHandler
   def handle_action(action, callback, params, state) do

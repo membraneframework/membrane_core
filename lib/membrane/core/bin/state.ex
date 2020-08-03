@@ -20,41 +20,37 @@ defmodule Membrane.Core.Bin.State do
           module: module,
           children: ChildrenModel.children_t(),
           name: Membrane.Bin.name_t() | nil,
-          bin_options: any | nil,
           pads: PadModel.pads_t() | nil,
           watcher: pid | nil,
           controlling_pid: pid | nil,
           linking_buffer: LinkingBuffer.t(),
-          clock_provider: %{
-            clock: Clock.t() | nil,
-            provider: Child.name_t() | nil,
-            choice: :auto | :manual
-          },
-          clock_proxy: Clock.t(),
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
             parent_clock: Clock.t(),
             latency: non_neg_integer(),
             stream_sync: Sync.t(),
-            clock: Clock.t() | nil
+            clock: Clock.t() | nil,
+            clock_proxy: Clock.t(),
+            clock_provider: %{
+              clock: Clock.t() | nil,
+              provider: Child.name_t() | nil,
+              choice: :auto | :manual
+            }
           },
           children_log_metadata: Keyword.t()
         }
 
-  @enforce_keys [:module, :clock_proxy]
+  @enforce_keys [:module, :synchronization]
   defstruct @enforce_keys ++
               [
                 internal_state: nil,
                 playback: %Playback{},
                 children: %{},
                 name: nil,
-                bin_options: nil,
                 pads: nil,
                 watcher: nil,
                 controlling_pid: nil,
                 linking_buffer: LinkingBuffer.new(),
-                clock_provider: %{clock: nil, provider: nil, choice: :auto},
-                synchronization: %{},
                 children_log_metadata: []
               ]
 end

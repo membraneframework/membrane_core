@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Element.TimerController do
+defmodule Membrane.Core.TimerController do
   @moduledoc false
   use Bunch
 

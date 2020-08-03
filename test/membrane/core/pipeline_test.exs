@@ -8,7 +8,7 @@ defmodule Membrane.Core.PipelineTest do
   alias Membrane.Testing
 
   defp state(_ctx) do
-    [state: %State{module: nil, clock_proxy: nil}]
+    [state: %State{module: nil, synchronization: %{}}]
   end
 
   setup_all :state

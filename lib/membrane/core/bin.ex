@@ -16,7 +16,7 @@ defmodule Membrane.Core.Bin do
   @type options_t :: %{
           name: atom,
           module: module,
-          bin_options: Membrane.Bin.options_t(),
+          user_options: Membrane.Bin.options_t(),
           log_metadata: Keyword.t()
         }
 
@@ -36,7 +36,7 @@ defmodule Membrane.Core.Bin do
       Membrane.Logger.debug("""
       Bin start link: name: #{inspect(options.name)}
       module: #{inspect(options.module)},
-      bin options: #{inspect(options.bin_options)},
+      bin options: #{inspect(options.user_options)},
       process options: #{inspect(process_options)}
       """)
 
@@ -65,22 +65,19 @@ defmodule Membrane.Core.Bin do
     :ok = Membrane.Logger.set_prefix(name_str <> " bin")
     Logger.metadata(log_metadata)
 
-    clock =
-      if module |> Bunch.Module.check_behaviour(:membrane_clock?) do
-        {:ok, pid} = Membrane.Clock.start_link(proxy: true)
-        pid
-      end
+    clock_proxy = Membrane.Clock.start_link(proxy: true) ~> ({:ok, pid} -> pid)
+    clock = if Bunch.Module.check_behaviour(module, :membrane_clock?), do: clock_proxy, else: nil
 
     state =
       %State{
-        bin_options: options.bin_options,
         module: module,
         name: name,
-        clock_proxy: clock,
         synchronization: %{
-          parent_clock: clock,
+          parent_clock: options.parent_clock,
           timers: %{},
           clock: clock,
+          clock_provider: %{clock: nil, provider: nil, choice: :auto},
+          clock_proxy: clock_proxy,
           # This is a sync for siblings. This is not yet allowed.
           stream_sync: Sync.no_sync(),
           latency: 0
@@ -94,7 +91,7 @@ defmodule Membrane.Core.Bin do
              :handle_init,
              Membrane.Core.Bin.ActionHandler,
              %{state: false},
-             [options.bin_options],
+             [options.user_options],
              state
            ) do
       {:ok, state}

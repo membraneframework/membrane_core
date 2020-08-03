@@ -30,14 +30,14 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     children =
       StartupHandler.start_children(
         children,
-        state.clock_proxy,
+        state.synchronization.clock_proxy,
         syncs,
         state.children_log_metadata
       )
 
     :ok = StartupHandler.maybe_activate_syncs(syncs, state)
     {:ok, state} = StartupHandler.add_children(children, state)
-    {:ok, state} = ClockHandler.choose_clock(children, spec.clock_provider, state)
+    state = ClockHandler.choose_clock(children, spec.clock_provider, state)
     {:ok, links} = Link.from_spec(spec.links)
     links = LinkHandler.resolve_links(links, state)
     {:ok, state} = LinkHandler.link_children(links, state)
@@ -69,9 +69,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     children = children |> Bunch.listify()
 
     {:ok, state} =
-      if state.clock_provider.provider in children do
-        %{state | clock_provider: %{clock: nil, provider: nil, choice: :auto}}
-        |> ClockHandler.choose_clock()
+      if state.synchronization.clock_provider.provider in children do
+        ClockHandler.reset_clock(state)
       else
         {:ok, state}
       end

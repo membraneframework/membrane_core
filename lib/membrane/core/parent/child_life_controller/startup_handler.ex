@@ -145,7 +145,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
             module: module,
             name: name,
             user_options: options,
-            clock: parent_clock,
+            parent_clock: parent_clock,
             sync: sync,
             log_metadata: log_metadata
           })
@@ -160,7 +160,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
           Core.Bin.start_link(%{
             name: name,
             module: module,
-            bin_options: options,
+            user_options: options,
+            parent_clock: parent_clock,
             log_metadata: log_metadata
           })
 

@@ -33,7 +33,7 @@ defmodule Membrane.Core.Element do
           user_options: Element.options_t(),
           sync: Sync.t(),
           parent: pid,
-          clock: Clock.t(),
+          parent_clock: Clock.t(),
           log_metadata: Keyword.t()
         }
 
@@ -106,7 +106,7 @@ defmodule Membrane.Core.Element do
 
     state =
       options
-      |> Map.take([:module, :name, :clock, :sync])
+      |> Map.take([:module, :name, :parent_clock, :sync])
       |> Map.put(:parent_monitor, parent_monitor)
       |> State.new()
 
