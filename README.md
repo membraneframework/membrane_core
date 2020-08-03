@@ -20,7 +20,7 @@ This package provides core of the [Membrane Multimedia Framework](https://membra
 
 ## Installation
 
-Add the following line to your `deps` in `mix.exs`.  Run `mix deps.get`.
+Add the following line to your `deps` in `mix.exs`. Run `mix deps.get`.
 
 ```elixir
 {:membrane_core, "~> 0.5.2"}
@@ -32,6 +32,12 @@ To get familiar with basic concepts and build your first application using Membr
 
 API documentation is available at [HexDocs](https://hexdocs.pm/membrane_core/)
 
+## Contributing
+
+Any contributions are more than welcome! You can help us improving Membrane by either contributing to the core (see [opened issues](https://github.com/membraneframework/membrane-core/issues)), extending our [guide](https://github.com/membraneframework/guide) or by creating new elements.
+
+For more details see [Contribution guide](CONTRIBUTING.md)
+
 ## Support and questions
 
 If you have any problems with Membrane Framework feel free to contact us via [membrane tag at Elixir forum](https://elixirforum.com/tag/membrane), [mailing list](https://groups.google.com/forum/#!forum/membrane-framework), [Discord](https://discord.gg/nwnfVSY) or via [e-mail](mailto:info@membraneframework.org).
@@ -40,7 +46,6 @@ If you have any problems with Membrane Framework feel free to contact us via [me
 
 Copyright 2018, [Software Mansion](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane)
 
-[![Software Mansion](https://logo.swmansion.com/logo?color=white&variant=desktop&width=200&tag=membrane-github)](
-https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane)
+[![Software Mansion](https://logo.swmansion.com/logo?color=white&variant=desktop&width=200&tag=membrane-github)](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane)
 
 Licensed under the [Apache License, Version 2.0](LICENSE)
