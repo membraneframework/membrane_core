@@ -5,19 +5,12 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   alias Bunch.Type
   alias Membrane.{Child, Core, Notification, Pad, Sync}
-
-  alias Membrane.Core.{
-    CallbackHandler,
-    Message,
-    Parent,
-    PlaybackHandler
-  }
-
+  alias Membrane.Core.{CallbackHandler, Message, Component, Parent, PlaybackHandler}
   alias Membrane.Core.Parent.ChildrenModel
   alias Membrane.PlaybackState
 
+  require Membrane.Core.Component
   require Membrane.Core.Message
-  require Membrane.Core.Parent
   require Membrane.Logger
   require Membrane.PlaybackState
 
@@ -25,11 +18,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   def handle_playback_state(old, new, state) do
     Membrane.Logger.debug("Changing playback state from #{old} to #{new}")
 
-    children_data =
-      state
-      |> ChildrenModel.get_children()
-      |> Map.values()
-
+    children_data = state |> ChildrenModel.get_children() |> Map.values()
     children_pids = children_data |> Enum.map(& &1.pid)
 
     children_pids
@@ -48,7 +37,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   @impl PlaybackHandler
   def handle_playback_state_changed(old, new, state) do
-    context = Parent.callback_context_generator(PlaybackChange, state)
+    context = Component.callback_context_generator(:parent, PlaybackChange, state)
     callback = PlaybackHandler.state_change_callback(old, new)
     action_handler = get_callback_action_handler(state)
 
@@ -90,7 +79,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
           Type.stateful_try_t(Core.State.t())
   def handle_notification(from, notification, state) do
     with {:ok, _} <- state |> Parent.ChildrenModel.get_child_data(from) do
-      context = Parent.callback_context_generator(Notification, state)
+      context = Component.callback_context_generator(:parent, Notification, state)
       action_handler = get_callback_action_handler(state)
 
       CallbackHandler.exec_and_handle_callback(
@@ -108,7 +97,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   @spec handle_other(any, Core.State.t()) :: Type.stateful_try_t(Core.State.t())
   def handle_other(message, state) do
-    context = Parent.callback_context_generator(Other, state)
+    context = Component.callback_context_generator(:parent, Other, state)
     action_handler = get_callback_action_handler(state)
 
     CallbackHandler.exec_and_handle_callback(
@@ -173,7 +162,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
           Type.stateful_try_t(Core.State.t())
   def handle_stream_management_event(cb, element_name, pad_ref, state)
       when cb in [:handle_start_of_stream, :handle_end_of_stream] do
-    context = Parent.callback_context_generator(StreamManagement, state)
+    context = Component.callback_context_generator(:parent, StreamManagement, state)
     action_handler = get_callback_action_handler(state)
 
     CallbackHandler.exec_and_handle_callback(

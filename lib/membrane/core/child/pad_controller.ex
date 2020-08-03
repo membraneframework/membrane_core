@@ -4,17 +4,17 @@ defmodule Membrane.Core.Child.PadController do
   # Module handling linking and unlinking pads.
 
   use Bunch
-
   alias Bunch.Type
   alias Membrane.{Event, LinkError, Pad, ParentSpec}
   alias Membrane.Core
-  alias Membrane.Core.{CallbackHandler, Child, InputBuffer, Message}
+  alias Membrane.Core.{CallbackHandler, InputBuffer, Message}
   alias Membrane.Core.Bin.LinkingBuffer
+  alias Membrane.Core.{CallbackHandler, Component, Message, InputBuffer}
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.Core.Element.{EventController, PlaybackBuffer}
 
-  require Membrane.Core.Child
   require Membrane.Core.Child.PadModel
+  require Membrane.Core.Component
   require Membrane.Core.Message
   require Membrane.Logger
   require Membrane.Pad
@@ -326,7 +326,10 @@ defmodule Membrane.Core.Child.PadController do
     %{options: pad_opts, direction: direction} = PadModel.get_data!(state, ref)
 
     context =
-      Child.callback_context_generator(PadAdded, state, options: pad_opts, direction: direction)
+      Component.callback_context_generator(:child, PadAdded, state,
+        options: pad_opts,
+        direction: direction
+      )
 
     CallbackHandler.exec_and_handle_callback(
       :handle_pad_added,
@@ -343,7 +346,8 @@ defmodule Membrane.Core.Child.PadController do
     name = Pad.name_by_ref(ref)
 
     if Pad.availability_mode(availability) == :dynamic and Pad.is_public_name(name) do
-      context = Child.callback_context_generator(PadRemoved, state, direction: direction)
+      context =
+        Component.callback_context_generator(:child, PadRemoved, state, direction: direction)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_removed,
