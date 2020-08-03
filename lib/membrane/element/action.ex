@@ -7,7 +7,7 @@ defmodule Membrane.Element.Action do
   other elements and parts of framework. Each action may be returned by any
   callback (except for `c:Membrane.Element.Base.handle_init/1`
   and `c:Membrane.Element.Base.handle_shutdown/2`, as they
-  do not return any actions) unless explicitly stated otherwise.
+  do not support returning any actions) unless explicitly stated otherwise.
   """
 
   alias Membrane.{Buffer, Caps, Clock, Event, Notification}
@@ -168,7 +168,7 @@ defmodule Membrane.Element.Action do
   If `interval` is set to `:no_interval`, the timer won't issue any ticks until
   the interval is set with `t:timer_interval_t/0` action.
 
-  If no `clock` is passed, pipeline clock is chosen.
+  If no `clock` is passed, parent clock is chosen.
 
   Timers use `Process.send_after/3` under the hood.
   """

@@ -17,6 +17,7 @@ defmodule Membrane.Core.Bin do
           name: atom,
           module: module,
           user_options: Membrane.Bin.options_t(),
+          parent_clock: Membrane.Clock.t(),
           log_metadata: Keyword.t()
         }
 

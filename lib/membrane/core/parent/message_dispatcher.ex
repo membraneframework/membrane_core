@@ -3,16 +3,15 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
 
   import Membrane.Helper.GenServer
 
-  alias Membrane.Core.{Bin, Pipeline}
+  alias Membrane.Core.{Parent, Pipeline, TimerController}
   alias Membrane.Core.Message
   alias Membrane.Core.Parent.LifecycleController
 
   require Membrane.Core.Message
 
-  @type state :: Pipeline.State.t() | Bin.State.t()
-
-  @spec handle_message(Message.t(), state) ::
-          Membrane.Helper.GenServer.genserver_return_t() | {:stop, reason :: :normal, state}
+  @spec handle_message(Message.t(), Parent.state_t()) ::
+          Membrane.Helper.GenServer.genserver_return_t()
+          | {:stop, reason :: :normal, Parent.state_t()}
   def handle_message(
         Message.new(:playback_state_changed, [pid, new_playback_state]),
         state
@@ -42,6 +41,14 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   def handle_message(Message.new(:log_metadata, metadata), state) do
     LifecycleController.handle_log_metadata(metadata, state)
     |> noreply(state)
+  end
+
+  def handle_message(Message.new(:timer_tick, timer_id), state) do
+    TimerController.handle_tick(timer_id, state) |> noreply(state)
+  end
+
+  def handle_message({:membrane_clock_ratio, clock, ratio}, state) do
+    TimerController.handle_clock_update(clock, ratio, state) |> noreply(state)
   end
 
   def handle_message({:DOWN, _ref, :process, child_pid, reason}, state) do

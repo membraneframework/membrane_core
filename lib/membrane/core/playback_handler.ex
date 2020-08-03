@@ -9,21 +9,20 @@ defmodule Membrane.Core.PlaybackHandler do
   # `handle_prepared_to_playing` and `handle_prepared_to_stopped` callbacks.
 
   use Bunch
-  use Membrane.Log, tags: :core
 
-  alias Membrane.Core.{Message, State}
+  alias Membrane.Core.{Component, Message}
   alias Membrane.PlaybackState
 
   require Message
   require PlaybackState
 
   @type handler_return_t ::
-          {:ok | {:error, any()}, State.t()} | {:stop, any(), State.t()}
+          {:ok | {:error, any()}, Component.state_t()} | {:stop, any(), Component.state_t()}
 
   @doc """
   Callback invoked when playback state is going to be changed.
   """
-  @callback handle_playback_state(PlaybackState.t(), PlaybackState.t(), State.t()) ::
+  @callback handle_playback_state(PlaybackState.t(), PlaybackState.t(), Component.state_t()) ::
               handler_return_t
 
   @doc """
@@ -32,7 +31,7 @@ defmodule Membrane.Core.PlaybackHandler do
   @callback handle_playback_state_changed(
               PlaybackState.t(),
               PlaybackState.t(),
-              State.t()
+              Component.state_t()
             ) :: handler_return_t
 
   @doc """
@@ -89,7 +88,8 @@ defmodule Membrane.Core.PlaybackHandler do
     :ok
   end
 
-  @spec change_playback_state(PlaybackState.t(), module(), State.t()) :: handler_return_t()
+  @spec change_playback_state(PlaybackState.t(), module(), Component.state_t()) ::
+          handler_return_t()
   def change_playback_state(new_playback_state, handler, state) do
     %{playback: playback} = state
 
@@ -124,7 +124,7 @@ defmodule Membrane.Core.PlaybackHandler do
     end
   end
 
-  @spec suspend_playback_change(pb) :: {:ok, pb} when pb: State.t()
+  @spec suspend_playback_change(pb) :: {:ok, pb} when pb: Component.state_t()
   def suspend_playback_change(state) do
     playback = %{state.playback | async_state_change: true}
     {:ok, %{state | playback: playback}}
@@ -133,7 +133,7 @@ defmodule Membrane.Core.PlaybackHandler do
   @spec suspended?(State.t()) :: any
   def suspended?(state), do: state.playback.async_state_change
 
-  @spec continue_playback_change(module, State.t()) :: handler_return_t()
+  @spec continue_playback_change(module, Component.state_t()) :: handler_return_t()
   def continue_playback_change(handler, state) do
     old_playback = state.playback
 

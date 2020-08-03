@@ -29,7 +29,8 @@ defmodule Membrane.Core.Pipeline do
       module: module,
       synchronization: %{
         clock_proxy: clock,
-        clock_provider: %{clock: nil, provider: nil, choice: :auto}
+        clock_provider: %{clock: nil, provider: nil, choice: :auto},
+        timers: %{}
       }
     }
 

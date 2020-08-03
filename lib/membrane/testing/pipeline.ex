@@ -364,6 +364,16 @@ defmodule Membrane.Testing.Pipeline do
     )
   end
 
+  @impl true
+  def handle_tick(timer, ctx, state) do
+    eval(
+      :handle_tick,
+      [timer, ctx],
+      fn -> {:ok, state} end,
+      state
+    )
+  end
+
   defp default_options(%Options{test_process: nil} = options),
     do: %Options{options | test_process: self()}
 

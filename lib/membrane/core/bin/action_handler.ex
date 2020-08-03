@@ -2,7 +2,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
   @moduledoc false
   use Membrane.Core.CallbackHandler
 
-  alias Membrane.Core.{Message, Parent}
+  alias Membrane.Core.{Message, Parent, TimerController}
   alias Membrane.Core.Bin.State
   alias Membrane.{CallbackError, Notification, ParentSpec}
 
@@ -33,6 +33,28 @@ defmodule Membrane.Core.Bin.ActionHandler do
   @impl CallbackHandler
   def handle_action({:log_metadata, metadata}, _cb, _params, state) do
     Parent.LifecycleController.handle_log_metadata(metadata, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:start_timer, {id, interval, clock}}, _cb, _params, state) do
+    TimerController.start_timer(id, interval, clock, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:start_timer, {id, interval}}, cb, params, state) do
+    clock = state.synchronization.clock_proxy
+    handle_action({:start_timer, {id, interval, clock}}, cb, params, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:timer_interval, {id, interval}}, cb, _params, state)
+      when interval != :no_interval or cb == :handle_tick do
+    TimerController.timer_interval(id, interval, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:stop_timer, id}, _cb, _params, state) do
+    TimerController.stop_timer(id, state)
   end
 
   @impl CallbackHandler

@@ -61,7 +61,7 @@ defmodule Membrane.Core.Element.State do
   @spec new(%{
           module: module,
           name: Element.name_t(),
-          clock: Clock.t(),
+          parent_clock: Clock.t(),
           sync: Sync.t(),
           parent_monitor: reference()
         }) :: t

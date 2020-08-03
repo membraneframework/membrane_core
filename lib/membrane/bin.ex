@@ -12,7 +12,7 @@ defmodule Membrane.Bin do
   In order to create bin `use Membrane.Bin` in your callback module.
   """
 
-  alias __MODULE__.CallbackContext
+  alias __MODULE__.{Action, CallbackContext}
   alias Membrane.{Child, Pad}
   alias Membrane.Core.Child.PadsSpecs
 
@@ -21,9 +21,7 @@ defmodule Membrane.Bin do
 
   @type state_t :: map | struct
 
-  @type callback_return_t ::
-          {:ok | {:ok, [Membrane.Parent.Action.t()]} | {:error, any}, state_t}
-          | {:error, any}
+  @type callback_return_t :: {:ok | {:ok, [Action.t()]} | {:error, any}, state_t} | {:error, any}
 
   @typedoc """
   Defines options that can be passed to `start_link/3` and received
@@ -46,9 +44,7 @@ defmodule Membrane.Bin do
   and initialize bin's internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
   """
-  @callback handle_init(options :: options_t) ::
-              {{:ok, [Membrane.Parent.Action.spec_action_t()]}, any}
-              | {:error, any}
+  @callback handle_init(options :: options_t) :: callback_return_t()
 
   @doc """
   Callback that is called when new pad has beed added to bin. Executed
@@ -57,7 +53,7 @@ defmodule Membrane.Bin do
   @callback handle_pad_added(
               pad :: Pad.ref_t(),
               context :: CallbackContext.PadAdded.t(),
-              state :: any
+              state :: state_t
             ) :: callback_return_t
 
   @doc """
@@ -67,7 +63,7 @@ defmodule Membrane.Bin do
   @callback handle_pad_removed(
               pad :: Pad.ref_t(),
               context :: CallbackContext.PadRemoved.t(),
-              state :: any
+              state :: state_t
             ) :: callback_return_t
 
   @doc """
@@ -81,7 +77,7 @@ defmodule Membrane.Bin do
   """
   @callback handle_stopped_to_prepared(
               context :: CallbackContext.PlaybackChange.t(),
-              state :: any
+              state :: state_t
             ) ::
               callback_return_t
 
@@ -91,7 +87,7 @@ defmodule Membrane.Bin do
   """
   @callback handle_playing_to_prepared(
               context :: CallbackContext.PlaybackChange.t(),
-              state :: any
+              state :: state_t
             ) ::
               callback_return_t
 
@@ -101,7 +97,7 @@ defmodule Membrane.Bin do
   """
   @callback handle_prepared_to_playing(
               context :: CallbackContext.PlaybackChange.t(),
-              state :: any
+              state :: state_t
             ) ::
               callback_return_t
 
@@ -111,7 +107,7 @@ defmodule Membrane.Bin do
   """
   @callback handle_prepared_to_stopped(
               context :: CallbackContext.PlaybackChange.t(),
-              state :: any
+              state :: state_t
             ) ::
               callback_return_t
 
@@ -121,7 +117,7 @@ defmodule Membrane.Bin do
   """
   @callback handle_stopped_to_terminating(
               context :: CallbackContext.PlaybackChange.t(),
-              state :: any
+              state :: state_t
             ) :: callback_return_t
 
   @doc """
@@ -131,7 +127,7 @@ defmodule Membrane.Bin do
               notification :: Membrane.Notification.t(),
               element :: Child.name_t(),
               context :: CallbackContext.Notification.t(),
-              state :: any
+              state :: state_t
             ) :: callback_return_t
 
   @doc """
@@ -143,7 +139,7 @@ defmodule Membrane.Bin do
   @callback handle_other(
               message :: any,
               context :: CallbackContext.Other.t(),
-              state :: any
+              state :: state_t
             ) ::
               callback_return_t
 
@@ -153,7 +149,7 @@ defmodule Membrane.Bin do
   @callback handle_element_start_of_stream(
               {Child.name_t(), Pad.ref_t()},
               context :: CallbackContext.StreamManagement.t(),
-              state :: any
+              state :: state_t
             ) :: callback_return_t
 
   @doc """
@@ -162,7 +158,7 @@ defmodule Membrane.Bin do
   @callback handle_element_end_of_stream(
               {Child.name_t(), Pad.ref_t()},
               context :: CallbackContext.StreamManagement.t(),
-              state :: any
+              state :: state_t
             ) :: callback_return_t
 
   @doc """
@@ -170,13 +166,39 @@ defmodule Membrane.Bin do
   state as bin.
 
   This callback can be started from `c:handle_init/1` callback or as
-  `t:Membrane.Core.Parent.Action.spec_action_t/0` action.
+  `t:Membrane.Bin.Action.spec_t/0` action.
   """
   @callback handle_spec_started(
               children :: [Child.name_t()],
               context :: CallbackContext.SpecStarted.t(),
-              state :: any
+              state :: state_t
             ) :: callback_return_t
+
+  @doc """
+  Callback invoked upon each timer tick. A timer can be started with `Membrane.Bin.Action.start_timer_t`
+  action.
+  """
+  @callback handle_tick(
+              timer_id :: any,
+              context :: CallbackContext.Tick.t(),
+              state :: state_t
+            ) :: callback_return_t
+
+  @optional_callbacks membrane_clock?: 0,
+                      handle_init: 1,
+                      handle_pad_added: 3,
+                      handle_pad_removed: 3,
+                      handle_stopped_to_prepared: 2,
+                      handle_playing_to_prepared: 2,
+                      handle_prepared_to_playing: 2,
+                      handle_prepared_to_stopped: 2,
+                      handle_stopped_to_terminating: 2,
+                      handle_other: 3,
+                      handle_spec_started: 3,
+                      handle_element_start_of_stream: 3,
+                      handle_element_end_of_stream: 3,
+                      handle_notification: 4,
+                      handle_tick: 3
 
   @doc PadsSpecs.def_pad_docs(:input, :bin)
   defmacro def_input_pad(name, spec) do

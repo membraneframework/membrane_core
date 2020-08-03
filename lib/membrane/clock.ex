@@ -69,7 +69,7 @@ defmodule Membrane.Clock do
   @type option_t ::
           {:time_provider, (() -> Time.t())}
           | {:proxy, boolean}
-          | {:proxy_for, pid}
+          | {:proxy_for, pid | nil}
 
   @spec start_link([option_t], GenServer.options()) :: GenServer.on_start()
   def start_link(options \\ [], gen_server_options \\ []) do
@@ -107,7 +107,7 @@ defmodule Membrane.Clock do
   @doc """
   Sets a new proxy clock to `clock_to_proxy_for`.
   """
-  @spec proxy_for(t, clock_to_proxy_for :: pid) :: :ok
+  @spec proxy_for(t, clock_to_proxy_for :: pid | nil) :: :ok
   def proxy_for(clock, clock_to_proxy_for) do
     GenServer.cast(clock, {:proxy_for, clock_to_proxy_for})
   end

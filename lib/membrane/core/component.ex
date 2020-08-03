@@ -1,6 +1,17 @@
 defmodule Membrane.Core.Component do
   @moduledoc false
 
+  @type state_t ::
+          Membrane.Core.Pipeline.State.t()
+          | Membrane.Core.Bin.State.t()
+          | Membrane.Core.Element.State.t()
+
+  [Pipeline, Bin, Element]
+  |> Enum.map(fn component ->
+    def action_handler(%unquote(Module.concat([Membrane.Core, component, State])){}),
+      do: unquote(Module.concat([Membrane.Core, component, ActionHandler]))
+  end)
+
   defmacro callback_context_generator(restrict, module, state, args \\ []) do
     module = Macro.expand(module, __ENV__)
 

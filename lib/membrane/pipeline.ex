@@ -17,7 +17,7 @@ defmodule Membrane.Pipeline do
   require Membrane.Logger
   require Membrane.Element
 
-  alias __MODULE__.CallbackContext
+  alias __MODULE__.{Action, CallbackContext}
   alias Membrane.{Child, Pad}
   alias Membrane.Core.{CallbackHandler, PlaybackHandler}
 
@@ -33,7 +33,7 @@ defmodule Membrane.Pipeline do
   @type state_t :: map | struct
 
   @type callback_return_t ::
-          {:ok | {:ok, [Membrane.Parent.Action.t()]} | {:error, any}, state_t}
+          {:ok | {:ok, [Action.t()]} | {:error, any}, state_t}
           | {:error, any}
 
   @doc """
@@ -54,7 +54,7 @@ defmodule Membrane.Pipeline do
 
   Useful for any cleanup required.
   """
-  @callback handle_shutdown(reason, state :: any) :: :ok
+  @callback handle_shutdown(reason, state :: state_t) :: :ok
             when reason: :normal | :shutdown | {:shutdown, any}
 
   @doc """
@@ -63,7 +63,7 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_stopped_to_prepared(
               context :: CallbackContext.PlaybackChange.t(),
-              state :: any
+              state :: state_t
             ) ::
               callback_return_t
 
@@ -73,7 +73,7 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_playing_to_prepared(
               context :: CallbackContext.PlaybackChange.t(),
-              state :: any
+              state :: state_t
             ) ::
               callback_return_t
 
@@ -83,7 +83,7 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_prepared_to_playing(
               context :: CallbackContext.PlaybackChange.t(),
-              state :: any
+              state :: state_t
             ) ::
               callback_return_t
 
@@ -93,7 +93,7 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_prepared_to_stopped(
               context :: CallbackContext.PlaybackChange.t(),
-              state :: any
+              state :: state_t
             ) ::
               callback_return_t
 
@@ -103,7 +103,7 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_stopped_to_terminating(
               context :: CallbackContext.PlaybackChange.t(),
-              state :: any
+              state :: state_t
             ) :: callback_return_t
 
   @doc """
@@ -113,7 +113,7 @@ defmodule Membrane.Pipeline do
               notification :: Membrane.Notification.t(),
               element :: Child.name_t(),
               context :: CallbackContext.Notification.t(),
-              state :: any
+              state :: state_t
             ) :: callback_return_t
 
   @doc """
@@ -125,7 +125,7 @@ defmodule Membrane.Pipeline do
   @callback handle_other(
               message :: any,
               context :: CallbackContext.Other.t(),
-              state :: any
+              state :: state_t
             ) ::
               callback_return_t
 
@@ -135,7 +135,7 @@ defmodule Membrane.Pipeline do
   @callback handle_element_start_of_stream(
               {Child.name_t(), Pad.ref_t()},
               context :: CallbackContext.StreamManagement.t(),
-              state :: any
+              state :: state_t
             ) :: callback_return_t
 
   @doc """
@@ -144,7 +144,7 @@ defmodule Membrane.Pipeline do
   @callback handle_element_end_of_stream(
               {Child.name_t(), Pad.ref_t()},
               context :: CallbackContext.StreamManagement.t(),
-              state :: any
+              state :: state_t
             ) :: callback_return_t
 
   @doc """
@@ -152,13 +152,37 @@ defmodule Membrane.Pipeline do
   state as pipeline.
 
   This callback can be started from `c:handle_init/1` callback or as
-  `t:Membrane.Core.Parent.Action.spec_action_t/0` action.
+  `t:Membrane.Pipeline.Action.spec_t/0` action.
   """
   @callback handle_spec_started(
               children :: [Child.name_t()],
               context :: CallbackContext.SpecStarted.t(),
-              state :: any
+              state :: state_t
             ) :: callback_return_t
+
+  @doc """
+  Callback invoked upon each timer tick. A timer can be started with `Membrane.Pipeline.Action.start_timer_t`
+  action.
+  """
+  @callback handle_tick(
+              timer_id :: any,
+              context :: CallbackContext.Tick.t(),
+              state :: state_t
+            ) :: callback_return_t
+
+  @optional_callbacks handle_init: 1,
+                      handle_shutdown: 2,
+                      handle_stopped_to_prepared: 2,
+                      handle_playing_to_prepared: 2,
+                      handle_prepared_to_playing: 2,
+                      handle_prepared_to_stopped: 2,
+                      handle_stopped_to_terminating: 2,
+                      handle_other: 3,
+                      handle_spec_started: 3,
+                      handle_element_start_of_stream: 3,
+                      handle_element_end_of_stream: 3,
+                      handle_notification: 4,
+                      handle_tick: 3
 
   @doc """
   Starts the Pipeline based on given module and links it to the current

@@ -3,7 +3,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   use Membrane.Core.CallbackHandler
 
   alias Membrane.CallbackError
-  alias Membrane.Core.Parent
+  alias Membrane.Core.{Parent, TimerController}
   alias Membrane.ParentSpec
 
   require Membrane.Logger
@@ -61,6 +61,24 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
 
   defp do_handle_action({:remove_child, children}, _cb, _params, state) do
     Parent.ChildLifeController.handle_remove_child(children, state)
+  end
+
+  defp do_handle_action({:start_timer, {id, interval, clock}}, _cb, _params, state) do
+    TimerController.start_timer(id, interval, clock, state)
+  end
+
+  defp do_handle_action({:start_timer, {id, interval}}, cb, params, state) do
+    clock = state.synchronization.clock_proxy
+    do_handle_action({:start_timer, {id, interval, clock}}, cb, params, state)
+  end
+
+  defp do_handle_action({:timer_interval, {id, interval}}, cb, _params, state)
+       when interval != :no_interval or cb == :handle_tick do
+    TimerController.timer_interval(id, interval, state)
+  end
+
+  defp do_handle_action({:stop_timer, id}, _cb, _params, state) do
+    TimerController.stop_timer(id, state)
   end
 
   defp do_handle_action(action, callback, _params, state) do

@@ -18,6 +18,7 @@ defmodule Membrane.Core.Pipeline.State do
           module: module,
           children: children_t,
           synchronization: %{
+            timers: %{Timer.id_t() => Timer.t()},
             clock_provider: %{
               clock: Clock.t() | nil,
               provider: Child.name_t() | nil,
