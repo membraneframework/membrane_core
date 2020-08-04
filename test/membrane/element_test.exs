@@ -14,11 +14,17 @@ defmodule Membrane.ElementTest do
 
     def_options target: [type: :pid]
 
-    # credo:disable-for-next-line Credo.Check.Readability.Specs
-    def assert_callback_called(name), do: assert_receive({:callback_called, ^name})
+    @spec assert_callback_called(atom) :: :ok
+    def assert_callback_called(name) do
+      assert_receive {:callback_called, ^name}
+      :ok
+    end
 
-    # credo:disable-for-next-line Credo.Check.Readability.Specs
-    def refute_callback_called(name), do: refute_receive({:callback_called, ^name})
+    @spec refute_callback_called(atom) :: :ok
+    def refute_callback_called(name) do
+      refute_receive {:callback_called, ^name}
+      :ok
+    end
 
     @impl true
     def handle_init(opts), do: {:ok, opts}
