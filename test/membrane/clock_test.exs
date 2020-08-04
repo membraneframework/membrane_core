@@ -1,9 +1,9 @@
 defmodule Membrane.ClockTest do
+  use ExUnit.Case
+
   @module Membrane.Clock
 
   @initial_ratio 1
-
-  use ExUnit.Case
 
   test "should calculate proper ratio and send it to subscribers on each (but the first) update" do
     {:ok, clock} =
@@ -239,7 +239,7 @@ defmodule Membrane.ClockTest do
     end
   end
 
-  defp random_time, do: :rand.uniform(10000)
+  defp random_time, do: :rand.uniform(10_000)
 
   defp ms_to_ns(e), do: e * 1_000_000
 end

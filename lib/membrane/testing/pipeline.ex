@@ -83,7 +83,6 @@ defmodule Membrane.Testing.Pipeline do
       }
       {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
 
-
   We can now wait till the end of the stream reaches the sink element (don't forget
   to import `Membrane.Testing.Assertions`):
 
@@ -161,10 +160,12 @@ defmodule Membrane.Testing.Pipeline do
           }
   end
 
+  @spec start_link(Options.t(), GenServer.options()) :: GenServer.on_start()
   def start_link(pipeline_options, process_options \\ []) do
     do_start(:start_link, pipeline_options, process_options)
   end
 
+  @spec start(Options.t(), GenServer.options()) :: GenServer.on_start()
   def start(pipeline_options, process_options \\ []) do
     do_start(:start, pipeline_options, process_options)
   end
@@ -370,7 +371,7 @@ defmodule Membrane.Testing.Pipeline do
 
   defp eval(custom_function, custom_args, function, state)
 
-  defp eval(_, _, function, %State{module: nil}),
+  defp eval(_custom_function, _custom_args, function, %State{module: nil}),
     do: function.()
 
   defp eval(custom_function, custom_args, function, %State{module: module} = state) do

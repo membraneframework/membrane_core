@@ -1,6 +1,12 @@
 defmodule Membrane.Core.ElementTest do
   use ExUnit.Case, async: true
 
+  alias __MODULE__.SomeElement
+  alias Membrane.Core.Element
+  alias Membrane.Core.Message
+
+  require Membrane.Core.Message
+
   defmodule SomeElement do
     use Membrane.Source
     def_output_pad :output, caps: :any
@@ -10,12 +16,6 @@ defmodule Membrane.Core.ElementTest do
       {{:ok, notify: msg}, state}
     end
   end
-
-  require Membrane.Core.Message
-
-  alias __MODULE__.SomeElement
-  alias Membrane.Core.Element
-  alias Membrane.Core.Message
 
   defmodule Filter do
     use Membrane.Filter

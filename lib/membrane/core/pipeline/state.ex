@@ -5,10 +5,11 @@ defmodule Membrane.Core.Pipeline.State do
   # It does not represent state of pipelines you construct, it's a state used
   # internally in Membrane.
 
+  use Bunch
+
+  alias Membrane.{Clock, Sync}
   alias Membrane.Child
   alias Membrane.Core.Playback
-  alias Membrane.{Clock, Sync}
-  use Bunch
 
   @type t :: %__MODULE__{
           internal_state: Membrane.Pipeline.state_t(),

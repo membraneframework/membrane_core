@@ -1,6 +1,7 @@
 defmodule Membrane.Support.Element.TrivialPipeline do
-  alias Membrane.Support.Element.{TrivialSource, TrivialFilter, TrivialSink}
   use Membrane.Pipeline
+
+  alias Membrane.Support.Element.{TrivialFilter, TrivialSink, TrivialSource}
 
   @impl true
   def handle_init(_) do

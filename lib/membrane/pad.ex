@@ -10,9 +10,10 @@ defmodule Membrane.Pad do
   Each link can only consist of exactly two pads.
   """
 
-  alias Membrane.{Buffer, Caps}
   use Bunch
   use Bunch.Typespec
+
+  alias Membrane.{Buffer, Caps}
 
   @typedoc """
   Defines the term by which the pad instance is identified.
@@ -197,6 +198,7 @@ defmodule Membrane.Pad do
   defp get_corresponding_bin_name({:private, name}) when is_public_name(name), do: name
   defp get_corresponding_bin_name(name) when is_public_name(name), do: {:private, name}
 
+  @spec assert_public_name!(name_t()) :: :ok
   def assert_public_name!(name) when is_public_name(name) do
     :ok
   end

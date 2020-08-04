@@ -1,7 +1,9 @@
 defmodule Membrane.Support.Bin.TestBins do
+  @moduledoc false
   alias Membrane.ParentSpec
 
   defmodule TestFilter do
+    @moduledoc false
     use Membrane.Filter
 
     def_output_pad :output, caps: :any
@@ -12,13 +14,15 @@ defmodule Membrane.Support.Bin.TestBins do
     def handle_other({:notify_parent, notif}, _ctx, state), do: {{:ok, notify: notif}, state}
 
     @impl true
-    def handle_demand(:output, size, _, _ctx, state), do: {{:ok, demand: {:input, size}}, state}
+    def handle_demand(:output, size, _unit, _ctx, state),
+      do: {{:ok, demand: {:input, size}}, state}
 
     @impl true
-    def handle_process(_pad, buf, _, state), do: {{:ok, buffer: {:output, buf}}, state}
+    def handle_process(_pad, buf, _ctx, state), do: {{:ok, buffer: {:output, buf}}, state}
   end
 
   defmodule TestDynamicPadFilter do
+    @moduledoc false
     use Membrane.Filter
 
     def_output_pad :output, caps: :any, availability: :on_request
@@ -59,6 +63,7 @@ defmodule Membrane.Support.Bin.TestBins do
   end
 
   defmodule SimpleBin do
+    @moduledoc false
     use Membrane.Bin
 
     def_options filter1: [type: :atom],
@@ -91,6 +96,7 @@ defmodule Membrane.Support.Bin.TestBins do
   end
 
   defmodule TestDynamicPadBin do
+    @moduledoc false
     use Membrane.Bin
 
     def_options filter1: [type: :atom],
@@ -121,6 +127,7 @@ defmodule Membrane.Support.Bin.TestBins do
       {{:ok, spec: spec}, state}
     end
 
+    @impl true
     def handle_pad_added(Pad.ref(:input, _) = pad, _ctx, state) do
       links = [
         link_bin_input(pad) |> to(:filter1)
@@ -139,6 +146,7 @@ defmodule Membrane.Support.Bin.TestBins do
   end
 
   defmodule TestSinkBin do
+    @moduledoc false
     use Membrane.Bin
 
     def_options filter: [type: :atom],
@@ -177,6 +185,7 @@ defmodule Membrane.Support.Bin.TestBins do
   end
 
   defmodule TestPadlessBin do
+    @moduledoc false
     use Membrane.Bin
 
     def_options source: [type: :atom],

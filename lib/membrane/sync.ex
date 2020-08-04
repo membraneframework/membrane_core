@@ -28,6 +28,7 @@ defmodule Membrane.Sync do
   """
   use Bunch
   use GenServer
+
   alias Membrane.Time
 
   @no_sync :membrane_no_sync
@@ -71,10 +72,11 @@ defmodule Membrane.Sync do
     GenServer.call(sync, {:sync_toggle_active, false})
   end
 
-  @spec sync(t) :: :ok | {:error, :not_found}
-  def sync(@no_sync), do: :ok
+  @spec sync(t, options :: Keyword.t()) :: :ok | {:error, :not_found}
+  def sync(sync, options \\ [])
+  def sync(@no_sync, _options), do: :ok
 
-  def sync(sync, options \\ []) do
+  def sync(sync, options) do
     GenServer.call(sync, {:sync, options})
   end
 

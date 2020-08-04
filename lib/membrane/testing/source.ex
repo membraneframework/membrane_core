@@ -30,6 +30,7 @@ defmodule Membrane.Testing.Source do
   """
 
   use Membrane.Source
+
   alias Membrane.Buffer
   alias Membrane.Element.Action
 
@@ -118,7 +119,7 @@ defmodule Membrane.Testing.Source do
     actions =
       case output do
         [] -> [buffer: {:output, buffers}, end_of_stream: :output]
-        _ -> [buffer: {:output, buffers}]
+        _non_empty -> [buffer: {:output, buffers}]
       end
 
     {actions, %{state | output: output}}

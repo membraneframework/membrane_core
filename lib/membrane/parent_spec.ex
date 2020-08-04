@@ -108,11 +108,11 @@ defmodule Membrane.ParentSpec do
 
   """
 
-  require Membrane.Pad
-
   alias Membrane.{Child, Pad}
   alias Membrane.Core.InputBuffer
   alias Membrane.ParentError
+
+  require Membrane.Pad
 
   defmodule LinkBuilder do
     @moduledoc false

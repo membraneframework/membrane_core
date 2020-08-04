@@ -4,14 +4,16 @@ defmodule Membrane.Core.Element.EventController do
   # Module handling events incoming through input pads.
 
   use Bunch
-  require Membrane.Logger
-  require Membrane.Core.Child.PadModel
-  require Membrane.Core.Message
+
+  alias Membrane.{Event, Pad, Sync}
   alias Membrane.Core.{CallbackHandler, InputBuffer, Message}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{ActionHandler, State}
   alias Membrane.Element.CallbackContext
-  alias Membrane.{Event, Pad, Sync}
+
+  require Membrane.Core.Child.PadModel
+  require Membrane.Core.Message
+  require Membrane.Logger
 
   @spec handle_start_of_stream(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   def handle_start_of_stream(pad_ref, state) do

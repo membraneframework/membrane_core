@@ -3,11 +3,13 @@ defmodule Membrane.Core.Child.PadSpecHandler do
 
   # Module parsing pads specifications in elements and bins.
 
-  alias Membrane.{Core, Pad}
-  alias Core.{Bin, Element}
-  alias Core.Child.PadModel
-  require Pad
   use Bunch
+
+  alias Membrane.Core.{Bin, Element}
+  alias Membrane.Core.Child.PadModel
+  alias Membrane.Pad
+
+  require Membrane.Pad
 
   @private_input_pad_spec_keys [:demand_unit]
 

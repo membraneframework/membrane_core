@@ -3,8 +3,7 @@ defmodule Membrane.Buffer.Metric.Count do
     Implementation of `Membrane.Buffer.Metric` for the `:buffers` unit
   """
 
-  alias Membrane.Buffer
-  @behaviour Buffer.Metric
+  @behaviour Membrane.Buffer.Metric
 
   @impl true
   def input_buf_preferred_size, do: 40

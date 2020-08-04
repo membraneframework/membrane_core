@@ -1,10 +1,10 @@
 defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
   use ExUnit.Case
 
-  alias Membrane.Core.Parent.ChildLifeController.LinkHandler
   alias Membrane.Core.Parent.{ChildEntry, Link}
+  alias Membrane.Core.Parent.ChildLifeController.LinkHandler
   alias Membrane.LinkError
-  alias Membrane.Support.Bin.TestBins.{TestFilter, TestDynamicPadFilter}
+  alias Membrane.Support.Bin.TestBins.{TestDynamicPadFilter, TestFilter}
 
   defp get_state(child_module, availability \\ :always) do
     %Membrane.Core.Bin.State{
