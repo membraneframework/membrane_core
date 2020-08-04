@@ -1,13 +1,12 @@
 defmodule Membrane.PipelineTest do
   use ExUnit.Case
 
-  @module Membrane.Pipeline
-  @action_handler_module Membrane.Core.Pipeline.ActionHandler
-
   alias Membrane.Core.Pipeline.State
   alias Membrane.ParentSpec
-
   alias Membrane.Testing
+
+  @module Membrane.Pipeline
+  @action_handler_module Membrane.Core.Pipeline.ActionHandler
 
   defp state(_ctx) do
     [state: %State{module: nil, clock_proxy: nil}]
@@ -21,7 +20,7 @@ defmodule Membrane.PipelineTest do
         use Membrane.Pipeline
 
         @impl true
-        def handle_init(_), do: {:error, :reason}
+        def handle_init(_options), do: {:error, :reason}
       end
 
       assert_raise Membrane.CallbackError, fn ->
@@ -34,7 +33,7 @@ defmodule Membrane.PipelineTest do
         use Membrane.Pipeline
 
         @impl true
-        def handle_init(_) do
+        def handle_init(_options) do
           spec = %Membrane.ParentSpec{}
           {{:ok, spec: spec}, %{}}
         end

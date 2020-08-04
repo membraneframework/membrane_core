@@ -22,11 +22,11 @@ defmodule Membrane.Pad.Data do
   Other fields in the struct ARE NOT PART OF THE PUBLIC API and should not be
   accessed or relied on.
   """
-  alias Membrane.Pad
-  alias Membrane.{Buffer, Caps, Core, Event}
-  alias Buffer.Metric
-  alias Core.InputBuffer
   use Bunch.Access
+
+  alias Membrane.Buffer.Metric
+  alias Membrane.Core.InputBuffer
+  alias Membrane.{Caps, Event, Pad}
 
   @type t :: %__MODULE__{
           accepted_caps: Caps.Matcher.caps_specs_t(),

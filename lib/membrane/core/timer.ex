@@ -1,9 +1,10 @@
 defmodule Membrane.Core.Timer do
   @moduledoc false
-  require Membrane.Core.Message
+  alias Membrane.Clock
   alias Membrane.Core.Message
   alias Membrane.Time
-  alias Membrane.Clock
+
+  require Membrane.Core.Message
 
   @type id_t :: any()
   @type interval_t :: Ratio.t() | non_neg_integer | :no_interval

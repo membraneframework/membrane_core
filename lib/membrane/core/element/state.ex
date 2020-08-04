@@ -6,12 +6,14 @@ defmodule Membrane.Core.Element.State do
   # internally in Membrane.
 
   use Bunch.Access
-  require Membrane.Pad
+
   alias Bunch.Type
   alias Membrane.{Clock, Element, Pad, Sync}
   alias Membrane.Core.{Playback, Timer}
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.Core.Element.PlaybackBuffer
+
+  require Membrane.Pad
 
   @type stateful_t(value) :: Type.stateful_t(value, t)
   @type stateful_try_t :: Type.stateful_try_t(t)

@@ -73,8 +73,8 @@ defmodule Membrane.Logger do
       # A hack to suppress the 'unused variable' warnings
       quote do
         fn ->
-          _ = unquote(message)
-          _ = unquote(metadata)
+          _unused = unquote(message)
+          _unused = unquote(metadata)
         end
 
         :ok

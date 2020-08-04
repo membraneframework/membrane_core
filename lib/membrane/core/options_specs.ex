@@ -1,10 +1,10 @@
 defmodule Membrane.Core.OptionsSpecs do
   @moduledoc false
 
-  alias Membrane.Time
-  alias Membrane.Pad
-
   use Bunch
+
+  alias Membrane.Pad
+  alias Membrane.Time
 
   @default_types_params %{
     atom: [spec: quote_expr(atom)],
@@ -92,6 +92,7 @@ defmodule Membrane.Core.OptionsSpecs do
     {escaped_opts, type_definiton}
   end
 
+  @spec generate_opts_doc(escaped_opts :: Keyword.t()) :: Macro.t()
   def generate_opts_doc(escaped_opts) do
     escaped_opts
     |> Enum.map(&generate_opt_doc/1)

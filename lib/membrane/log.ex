@@ -6,6 +6,7 @@ defmodule Membrane.Log do
   """
 
   use Bunch
+
   alias Membrane.Log.Router
 
   @type level_t :: :debug | :info | :warn
@@ -114,8 +115,8 @@ defmodule Membrane.Log do
         # A hack to avoid 'unused variable' warnings when pruning log message creation
         quote location: :keep do
           if false do
-            _ = unquote(message)
-            _ = unquote(tags)
+            _unused = unquote(message)
+            _unused = unquote(tags)
           end
 
           :ok

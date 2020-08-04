@@ -6,9 +6,11 @@ defmodule Membrane.Core.CallbackHandler do
   # results.
 
   use Bunch
-  require Membrane.Logger
+
   alias Bunch.Type
   alias Membrane.CallbackError
+
+  require Membrane.Logger
 
   @type state_t :: %{
           :module => module,
@@ -87,7 +89,7 @@ defmodule Membrane.Core.CallbackHandler do
       )
       when is_map(handler_params) do
     split_continuation_arbiter =
-      handler_params |> Map.get(:split_continuation_arbiter, fn _ -> true end)
+      handler_params |> Map.get(:split_continuation_arbiter, fn _state -> true end)
 
     args_list
     |> Bunch.Enum.try_reduce_while(state, fn args, state ->

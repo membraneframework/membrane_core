@@ -14,5 +14,5 @@ end
 defimpl Membrane.EventProtocol, for: Membrane.Event.StartOfStream do
   use Membrane.EventProtocol.DefaultImpl
   @impl true
-  def sticky?(_), do: true
+  def sticky?(_event), do: true
 end

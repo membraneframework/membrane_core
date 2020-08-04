@@ -1,7 +1,9 @@
 defmodule Membrane.PipelineSpec do
   use ESpec, async: false
-  alias Membrane.Support.Element.TrivialPipeline
+
   alias Membrane.Core.Message
+  alias Membrane.Support.Element.TrivialPipeline
+
   require Message
 
   describe ".start_link/3" do

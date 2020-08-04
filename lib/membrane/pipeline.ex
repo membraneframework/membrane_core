@@ -15,13 +15,13 @@ defmodule Membrane.Pipeline do
   use Bunch
   use GenServer
 
-  require Membrane.Logger
-  require Membrane.Element
-
-  alias Membrane.{Clock, Child, Core, Pad}
-  alias Membrane.Core.{Parent, CallbackHandler, PlaybackHandler}
+  alias Membrane.{Child, Clock, Core, Pad}
+  alias Membrane.Core.{CallbackHandler, Parent, PlaybackHandler}
   alias Membrane.Core.Pipeline.State
   alias Membrane.Pipeline.CallbackContext
+
+  require Membrane.Element
+  require Membrane.Logger
 
   @typedoc """
   Defines options that can be passed to `start/3` / `start_link/3` and received
@@ -334,6 +334,7 @@ defmodule Membrane.Pipeline do
         end
       end
 
+    # credo:disable-for-next-line Credo.Check.Refactor.LongQuoteBlocks
     quote do
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
@@ -445,6 +446,7 @@ defmodule Membrane.Pipeline do
 
       # DEPRECATED:
 
+      # credo:disable-for-lines:21 Credo.Check.Readability.Specs
       @doc false
       def handle_stopped_to_prepared(state), do: {:ok, state}
       @doc false

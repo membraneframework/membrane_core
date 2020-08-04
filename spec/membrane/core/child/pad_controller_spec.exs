@@ -1,10 +1,11 @@
 defmodule Membrane.Core.Child.PadControllerSpec do
   use ESpec, async: false
-  alias Membrane.Support.Element.{DynamicFilter, TrivialFilter}
+
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.Core.Element.State
   alias Membrane.Event.EndOfStream
   alias Membrane.Pad
+  alias Membrane.Support.Element.{DynamicFilter, TrivialFilter}
 
   describe ".link_pad/7" do
     let :module, do: TrivialFilter

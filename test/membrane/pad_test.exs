@@ -1,5 +1,6 @@
 defmodule Membrane.Element.PadTest do
   use ExUnit.Case, async: true
+
   import Membrane.Pad
 
   describe "is_pad_ref/1" do

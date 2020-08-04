@@ -1,9 +1,11 @@
 defmodule Membrane.Core.InputBufferSpec do
+  use ESpec, async: true
+
+  alias Membrane.Buffer
   alias Membrane.Core.{InputBuffer, Message}
   alias Membrane.Testing.Event
+
   require Message
-  alias Membrane.Buffer
-  use ESpec, async: true
 
   def flush do
     receive do

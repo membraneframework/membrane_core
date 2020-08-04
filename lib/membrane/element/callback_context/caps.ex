@@ -6,10 +6,11 @@ defmodule Membrane.Element.CallbackContext.Caps do
   The `old_caps` field contains caps previously present on the pad, and is equal
   to `pads[pad].caps` field.
   """
-  alias Membrane.Core.Child.PadModel
 
   use Membrane.Core.Element.CallbackContext,
     old_caps: Membrane.Caps.t()
+
+  alias Membrane.Core.Child.PadModel
 
   @impl true
   defmacro from_state(state, args) do

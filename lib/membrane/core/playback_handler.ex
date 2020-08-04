@@ -8,14 +8,14 @@ defmodule Membrane.Core.PlaybackHandler do
   # be handled by `handle_stopped_to_prepared`, `handle_playing_to_prepared`,
   # `handle_prepared_to_playing` and `handle_prepared_to_stopped` callbacks.
 
+  use Bunch
+  use Membrane.Log, tags: :core
+
   alias Membrane.Core.{Message, State}
   alias Membrane.PlaybackState
 
-  require PlaybackState
   require Message
-
-  use Bunch
-  use Membrane.Log, tags: :core
+  require PlaybackState
 
   @type handler_return_t ::
           {:ok | {:error, any()}, State.t()} | {:stop, any(), State.t()}
@@ -96,7 +96,7 @@ defmodule Membrane.Core.PlaybackHandler do
     playback =
       case playback do
         %{target_state: :terminating} -> playback
-        _ -> %{playback | target_state: new_playback_state}
+        _not_terminating -> %{playback | target_state: new_playback_state}
       end
 
     if playback.pending_state == nil and playback.state != playback.target_state do
@@ -130,6 +130,7 @@ defmodule Membrane.Core.PlaybackHandler do
     {:ok, %{state | playback: playback}}
   end
 
+  @spec suspended?(State.t()) :: any
   def suspended?(state), do: state.playback.async_state_change
 
   @spec continue_playback_change(module, State.t()) :: handler_return_t()

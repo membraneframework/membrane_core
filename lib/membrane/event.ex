@@ -12,6 +12,7 @@ defmodule Membrane.Event do
 
   @type t :: EventProtocol.t()
 
+  @spec event?(t()) :: boolean
   def event?(event) do
     EventProtocol.impl_for(event) != nil
   end

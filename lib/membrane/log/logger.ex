@@ -5,8 +5,9 @@ defmodule Membrane.Log.Logger do
   sent to logger.
   """
 
-  alias Membrane.Log.Logger.State
   use GenServer
+
+  alias Membrane.Log.Logger.State
 
   # Type that defines possible return values of start/start_link functions.
   @type on_start :: GenServer.on_start()

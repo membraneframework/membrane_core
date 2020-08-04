@@ -28,8 +28,9 @@ defmodule Membrane.Clock do
   """
   use Bunch
   use GenServer
-  alias Membrane.Time
+
   alias Membrane.Core.Message
+  alias Membrane.Time
 
   @type t :: pid
 
@@ -195,9 +196,11 @@ defmodule Membrane.Clock do
   end
 
   defp get_proxy_options(proxy, proxy_for)
-  defp get_proxy_options(_, pid) when is_pid(pid), do: %{proxy: true, proxy_for: pid}
-  defp get_proxy_options(true, _), do: %{proxy: true, proxy_for: nil}
-  defp get_proxy_options(_, _), do: %{init_time: nil, clock_time: 0, till_next: nil, proxy: false}
+  defp get_proxy_options(_proxy, pid) when is_pid(pid), do: %{proxy: true, proxy_for: pid}
+  defp get_proxy_options(true, _proxy_for), do: %{proxy: true, proxy_for: nil}
+
+  defp get_proxy_options(_proxy, _proxy_for),
+    do: %{init_time: nil, clock_time: 0, till_next: nil, proxy: false}
 
   defp handle_unsubscribe(pid, state) do
     Process.demonitor(state.subscribers[pid].monitor, [:flush])
@@ -219,7 +222,7 @@ defmodule Membrane.Clock do
 
     case state.init_time do
       nil -> %{state | init_time: state.time_provider.(), till_next: till_next}
-      _ -> do_handle_clock_update(till_next, state)
+      _init_time -> do_handle_clock_update(till_next, state)
     end
   end
 
