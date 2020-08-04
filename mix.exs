@@ -46,7 +46,7 @@ defmodule Membrane.Mixfile do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md"],
+      extras: ["README.md", "CONTRIBUTING.md", LICENSE: [title: "License"]],
       source_ref: @source_ref,
       nest_modules_by_prefix: [
         Membrane.Bin,

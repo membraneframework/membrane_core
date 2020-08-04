@@ -64,7 +64,7 @@ defmodule Membrane.Log.Supervisor do
   @spec each_logger(([children_info] -> any())) :: :ok
         when children_info:
                {term() | :undefined, Supervisor.child() | :restarting, :worker | :supervisor,
-                :supervisor.modules()}
+                [module()] | :dynamic}
   def each_logger(func) do
     __MODULE__ |> Supervisor.which_children() |> Enum.each(func)
     :ok
