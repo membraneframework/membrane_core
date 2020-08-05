@@ -15,6 +15,10 @@ defmodule Membrane.Telemetry do
         * Measurement: `t:input_buffer_size_event_value_t/0`
         * Metadata: `%{}`
 
+    * `[:membrane, :link, :new]` - indicates new link connection being made in pipeline
+        * Measurement: `t:new_link_event_value_t/0`
+        * Metadata: `%{}`
+
   """
 
   @type event_name_t :: [atom(), ...]
@@ -33,4 +37,23 @@ defmodule Membrane.Telemetry do
 
   @spec input_buffer_size_event() :: event_name_t()
   def input_buffer_size_event, do: [:membrane, :input_buffer, :size]
+
+
+
+
+  @typedoc """
+  * parent_path - process path of link parent
+  * from - from element name
+  * via - optional connector between 'from' and 'to'
+  * to - to element name
+  """
+  @type new_link_event_value_t :: %{
+    parent_path: String.t(),
+    from: String.t(),
+    via: String.t() | nil,
+    to: String.t(),
+  }
+
+  @spec new_link_event() :: event_name_t()
+  def new_link_event, do: [:membrane, :link, :new]
 end
