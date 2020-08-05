@@ -2,10 +2,10 @@ defmodule Membrane.Core.Parent.ClockHandler do
   @moduledoc false
 
   alias Membrane.{Clock, Core, ParentError}
-  alias Membrane.Core.Parent.{ChildEntry, State}
+  alias Membrane.Core.Parent.ChildEntry
 
-  @spec choose_clock([ChildEntry.t()], Membrane.Child.name_t() | nil, State.t()) ::
-          State.t() | no_return
+  @spec choose_clock([ChildEntry.t()], Membrane.Child.name_t() | nil, Core.Parent.state_t()) ::
+          Core.Parent.state_t() | no_return
   def choose_clock(children, provider, state) do
     %{synchronization: synchronization} = state
 
@@ -24,6 +24,7 @@ defmodule Membrane.Core.Parent.ClockHandler do
     end
   end
 
+  @spec reset_clock(Core.Parent.state_t()) :: Core.Parent.state_t()
   def reset_clock(state),
     do: set_clock_provider(%{clock: nil, provider: nil, choice: :auto}, state)
 

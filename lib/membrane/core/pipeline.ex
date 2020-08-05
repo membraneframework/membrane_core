@@ -2,13 +2,12 @@ defmodule Membrane.Core.Pipeline do
   @moduledoc false
   use GenServer
 
-  require Membrane.Logger
-  require Membrane.Element
-
   alias __MODULE__.{ActionHandler, State}
   alias Membrane.Clock
   alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Parent.MessageDispatcher
+
+  require Membrane.Logger
 
   @impl GenServer
   def init(module) when is_atom(module) do

@@ -69,7 +69,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
-  @spec change_playback_state(PlaybackState.t(), Parent.State.t()) ::
+  @spec change_playback_state(PlaybackState.t(), Parent.state_t()) ::
           PlaybackHandler.handler_return_t()
   def change_playback_state(new_state, state) do
     PlaybackHandler.change_playback_state(new_state, __MODULE__, state)
@@ -127,8 +127,8 @@ defmodule Membrane.Core.Parent.LifecycleController do
   defp transition_finished?(_pending_state, _new_state), do: false
 
   # Child was removed
-  @spec handle_child_death(child_pid :: pid(), reason :: atom(), state :: Core.State.t()) ::
-          {:ok, Core.State.t()}
+  @spec handle_child_death(child_pid :: pid(), reason :: atom(), state :: Component.state_t()) ::
+          {:ok, Component.state_t()}
   def handle_child_death(pid, :normal, state) do
     {:ok, state} = finish_pids_transition(state, pid)
 

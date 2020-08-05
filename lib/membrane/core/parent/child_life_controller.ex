@@ -5,7 +5,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   alias __MODULE__.{StartupHandler, LinkHandler}
   alias Membrane.ParentSpec
   alias Membrane.Core.{Message, Parent}
-  alias Membrane.Core.Parent.{ChildEntry, ClockHandler, Link, State}
+  alias Membrane.Core.Parent.{ChildEntry, ClockHandler, Link}
   alias Membrane.Core.PlaybackHandler
 
   require Membrane.Logger
@@ -14,8 +14,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   require Membrane.Element
   require Membrane.PlaybackState
 
-  @spec handle_spec(ParentSpec.t(), State.t()) ::
-          {{:ok, [Membrane.Child.name_t()]}, State.t()} | no_return
+  @spec handle_spec(ParentSpec.t(), Parent.state_t()) ::
+          {{:ok, [Membrane.Child.name_t()]}, Parent.state_t()} | no_return
   def handle_spec(%ParentSpec{} = spec, state) do
     Membrane.Logger.debug("""
     Initializing spec
@@ -50,8 +50,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {{:ok, children_names}, state}
   end
 
-  @spec handle_forward(Membrane.Child.name_t(), any, State.t()) ::
-          {:ok | {:error, any}, State.t()}
+  @spec handle_forward(Membrane.Child.name_t(), any, Parent.state_t()) ::
+          {:ok | {:error, any}, Parent.state_t()}
   def handle_forward(child_name, message, state) do
     with {:ok, %{pid: pid}} <- state |> Parent.ChildrenModel.get_child_data(child_name) do
       send(pid, message)
@@ -63,8 +63,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
-  @spec handle_remove_child(Membrane.Child.name_t() | [Membrane.Child.name_t()], State.t()) ::
-          {:ok | {:error, any}, State.t()}
+  @spec handle_remove_child(Membrane.Child.name_t() | [Membrane.Child.name_t()], Parent.state_t()) ::
+          {:ok | {:error, any}, Parent.state_t()}
   def handle_remove_child(children, state) do
     children = children |> Bunch.listify()
 

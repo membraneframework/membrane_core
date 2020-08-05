@@ -6,6 +6,7 @@ defmodule Membrane.Core.Component do
           | Membrane.Core.Bin.State.t()
           | Membrane.Core.Element.State.t()
 
+  @spec action_handler(state_t) :: module
   [Pipeline, Bin, Element]
   |> Enum.map(fn component ->
     def action_handler(%unquote(Module.concat([Membrane.Core, component, State])){}),

@@ -10,7 +10,7 @@ defmodule Membrane.Core.Pipeline.State do
 
   alias Membrane.{Clock, Sync}
   alias Membrane.Child
-  alias Membrane.Core.Playback
+  alias Membrane.Core.{Playback, Timer}
 
   @type t :: %__MODULE__{
           internal_state: Membrane.Pipeline.state_t(),

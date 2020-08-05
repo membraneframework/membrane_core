@@ -5,13 +5,13 @@ defmodule Membrane.Core.Bin do
 
   import Membrane.Helper.GenServer
 
-  require Membrane.Core.Message
-  require Membrane.Logger
-
   alias __MODULE__.{LinkingBuffer, State}
   alias Membrane.{CallbackError, Core, Pad, Sync}
   alias Membrane.Core.{CallbackHandler, Message}
   alias Membrane.Core.Child.{PadController, PadSpecHandler}
+
+  require Membrane.Core.Message
+  require Membrane.Logger
 
   @type options_t :: %{
           name: atom,
@@ -31,7 +31,7 @@ defmodule Membrane.Core.Bin do
 
   Returns the same values as `GenServer.start_link/3`.
   """
-  @spec start_link(options_t) :: GenServer.on_start()
+  @spec start_link(options_t, GenServer.options()) :: GenServer.on_start()
   def start_link(options, process_options \\ []) do
     if options.module |> Membrane.Bin.bin?() do
       Membrane.Logger.debug("""
@@ -139,7 +139,7 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
-  def handle_call(Message.new(:set_controlling_pid, pid), _, state) do
+  def handle_call(Message.new(:set_controlling_pid, pid), _from, state) do
     Core.Child.LifecycleController.handle_controlling_pid(pid, state)
     |> reply()
   end
@@ -158,13 +158,13 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
-  def handle_call(Message.new(:linking_finished), _, state) do
+  def handle_call(Message.new(:linking_finished), _from, state) do
     PadController.handle_linking_finished(state)
     |> reply()
   end
 
   @impl GenServer
-  def handle_call(Message.new(:handle_watcher, watcher), _, state) do
+  def handle_call(Message.new(:handle_watcher, watcher), _from, state) do
     Core.Child.LifecycleController.handle_watcher(watcher, state)
     |> reply()
   end

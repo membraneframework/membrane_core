@@ -1,11 +1,11 @@
 defmodule Membrane.Core.PipelineTest do
   use ExUnit.Case
 
-  @module Membrane.Core.Pipeline
-
   alias Membrane.Core.Pipeline.{ActionHandler, State}
   alias Membrane.ParentSpec
   alias Membrane.Testing
+
+  @module Membrane.Core.Pipeline
 
   defp state(_ctx) do
     [state: %State{module: nil, synchronization: %{}}]

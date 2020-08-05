@@ -14,14 +14,10 @@ defmodule Membrane.Pipeline do
 
   use Bunch
 
-  require Membrane.Logger
-  require Membrane.Element
-
   alias __MODULE__.{Action, CallbackContext}
   alias Membrane.{Child, Pad}
   alias Membrane.Core.{CallbackHandler, PlaybackHandler}
 
-  require Membrane.Element
   require Membrane.Logger
 
   @typedoc """
@@ -301,6 +297,74 @@ defmodule Membrane.Pipeline do
     module |> Bunch.Module.check_behaviour(:membrane_pipeline?)
   end
 
+  @doc false
+  defmacro __before_compile__(_env) do
+    quote do
+      unless Enum.any?(0..2, &Module.defines?(__MODULE__, {:start_link, &1})) do
+        @doc """
+        Starts the pipeline `#{inspect(__MODULE__)}` and links it to the current process.
+
+        A proxy for `#{inspect(unquote(__MODULE__))}.start_link/3`
+        """
+        @spec start_link(
+                pipeline_options :: Pipeline.pipeline_options_t(),
+                process_options :: GenServer.options()
+              ) :: GenServer.on_start()
+        def start_link(pipeline_options \\ nil, process_options \\ []) do
+          unquote(__MODULE__).start_link(__MODULE__, pipeline_options, process_options)
+        end
+      end
+
+      unless Enum.any?(0..2, &Module.defines?(__MODULE__, {:start, &1})) do
+        @doc """
+        Starts the pipeline `#{inspect(__MODULE__)}` without linking it
+        to the current process.
+
+        A proxy for `#{inspect(unquote(__MODULE__))}.start/3`
+        """
+        @spec start(
+                pipeline_options :: Pipeline.pipeline_options_t(),
+                process_options :: GenServer.options()
+              ) :: GenServer.on_start()
+        def start(pipeline_options \\ nil, process_options \\ []) do
+          unquote(__MODULE__).start(__MODULE__, pipeline_options, process_options)
+        end
+      end
+
+      unless Module.defines?(__MODULE__, {:play, 1}) do
+        @doc """
+        Changes playback state of pipeline to `:playing`.
+        """
+        @spec play(pid()) :: :ok
+        defdelegate play(pipeline), to: unquote(__MODULE__)
+      end
+
+      unless Module.defines?(__MODULE__, {:prepare, 1}) do
+        @doc """
+        Changes playback state to `:prepared`.
+        """
+        @spec prepare(pid) :: :ok
+        defdelegate prepare(pipeline), to: unquote(__MODULE__)
+      end
+
+      unless Module.defines?(__MODULE__, {:stop, 1}) do
+        @doc """
+        Changes playback state to `:stopped`.
+        """
+        @spec stop(pid) :: :ok
+        defdelegate stop(pid), to: unquote(__MODULE__)
+      end
+
+      unless Enum.any?(0..1, &Module.defines?(__MODULE__, {:stop_and_terminate, &1})) do
+        @doc """
+        Changes pipeline's playback state to `:stopped` and terminates its process.
+        """
+        @spec stop_and_terminate(pid, Keyword.t()) :: :ok
+        defdelegate stop_and_terminate(pipeline, opts \\ []), to: unquote(__MODULE__)
+      end
+    end
+  end
+
   @doc """
   Brings all the stuff necessary to implement a pipeline.
 
@@ -330,67 +394,10 @@ defmodule Membrane.Pipeline do
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
 
+      @before_compile Pipeline
+
       unquote(bring_spec)
       unquote(bring_pad)
-
-      @doc """
-      Starts the pipeline `#{inspect(__MODULE__)}` and links it to the current process.
-
-      A proxy for `Membrane.Pipeline.start_link/3`
-      """
-      @spec start_link(
-              pipeline_options :: Pipeline.pipeline_options_t(),
-              process_options :: GenServer.options()
-            ) :: GenServer.on_start()
-      def start_link(pipeline_options \\ nil, process_options \\ []) do
-        Pipeline.start_link(__MODULE__, pipeline_options, process_options)
-      end
-
-      @doc """
-      Starts the pipeline `#{inspect(__MODULE__)}` without linking it
-      to the current process.
-
-      A proxy for `Membrane.Pipeline.start/3`
-      """
-      @spec start(
-              pipeline_options :: Pipeline.pipeline_options_t(),
-              process_options :: GenServer.options()
-            ) :: GenServer.on_start()
-      def start(pipeline_options \\ nil, process_options \\ []) do
-        Pipeline.start(__MODULE__, pipeline_options, process_options)
-      end
-
-      @doc """
-      Changes playback state of pipeline to `:playing`
-
-      A proxy for `Membrane.Pipeline.play/1`
-      """
-      @spec play(pid()) :: :ok
-      defdelegate play(pipeline), to: Pipeline
-
-      @doc """
-      Changes playback state to `:prepared`.
-
-      A proxy for `Membrane.Pipeline.prepare/1`
-      """
-      @spec prepare(pid) :: :ok
-      defdelegate prepare(pipeline), to: Pipeline
-
-      @doc """
-      Changes playback state to `:stopped`.
-
-      A proxy for `Membrane.Pipeline.stop/1`
-      """
-      @spec stop(pid) :: :ok
-      defdelegate stop(pid), to: Pipeline
-
-      @doc """
-      Changes pipeline's playback state to `:stopped` and terminates its process.
-
-      A proxy for `Membrane.Pipeline.stop_and_terminate/1`
-      """
-      @spec stop_and_terminate(pid, Keyword.t()) :: :ok
-      defdelegate stop_and_terminate(pipeline, opts), to: Pipeline
 
       @impl true
       def membrane_pipeline?, do: true
@@ -473,15 +480,6 @@ defmodule Membrane.Pipeline do
       ]
 
       defoverridable [
-                       start: 0,
-                       start: 1,
-                       start: 2,
-                       start_link: 0,
-                       start_link: 1,
-                       start_link: 2,
-                       play: 1,
-                       prepare: 1,
-                       stop: 1,
                        handle_init: 1,
                        handle_shutdown: 2,
                        handle_stopped_to_prepared: 2,

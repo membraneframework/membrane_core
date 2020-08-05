@@ -17,8 +17,8 @@ defmodule Membrane.Filter do
   provide more complex solutions.
   """
 
-  alias Element.CallbackContext
   alias Membrane.{Buffer, Element, Pad}
+  alias Membrane.Element.CallbackContext
 
   @doc """
   Callback that is to process buffers.
