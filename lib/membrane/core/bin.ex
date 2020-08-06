@@ -6,7 +6,7 @@ defmodule Membrane.Core.Bin do
   import Membrane.Helper.GenServer
 
   alias __MODULE__.{LinkingBuffer, State}
-  alias Membrane.{CallbackError, Core, Pad, Sync}
+  alias Membrane.{CallbackError, Core, ComponentPath, Pad, Sync}
   alias Membrane.Core.{CallbackHandler, Message}
   alias Membrane.Core.Child.{PadController, PadSpecHandler}
 
@@ -65,6 +65,7 @@ defmodule Membrane.Core.Bin do
     name_str = if String.valid?(name), do: name, else: inspect(name)
     :ok = Membrane.Logger.set_prefix(name_str <> " bin")
     Logger.metadata(log_metadata)
+    :ok = ComponentPath.set_and_append(log_metadata[:parent_path] || [], name_str <> " bin")
 
     clock_proxy = Membrane.Clock.start_link(proxy: true) ~> ({:ok, pid} -> pid)
     clock = if Bunch.Module.check_behaviour(module, :membrane_clock?), do: clock_proxy, else: nil

@@ -21,7 +21,9 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def init({module, pipeline_options}) do
-    :ok = Membrane.Logger.set_prefix("pipeline@#{:erlang.pid_to_list(self())}")
+    pipeline_name = "pipeline@#{:erlang.pid_to_list(self())}"
+    :ok = Membrane.ComponentPath.set([pipeline_name])
+    :ok = Membrane.Logger.set_prefix(pipeline_name)
     {:ok, clock} = Clock.start_link(proxy: true)
 
     state = %State{
