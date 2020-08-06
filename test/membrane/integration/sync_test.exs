@@ -60,7 +60,8 @@ defmodule Membrane.Integration.SyncTest do
                ]
              })
 
-    %{clock_provider: %{clock: original_clock, provider: :sink}} = :sys.get_state(pipeline)
+    %{synchronization: %{clock_provider: %{clock: original_clock, provider: :sink}}} =
+      :sys.get_state(pipeline)
 
     Testing.Pipeline.play(pipeline)
 
