@@ -89,14 +89,6 @@ defmodule Membrane.Core.Element do
     :ok
   end
 
-  @doc """
-  Checks whether module is an element.
-  """
-  @spec bin?(module) :: boolean
-  def bin?(module) do
-    module |> Bunch.Module.check_behaviour(:membrane_element?)
-  end
-
   @impl GenServer
   def init(options) do
     parent_monitor = Process.monitor(options.parent)
