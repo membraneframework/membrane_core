@@ -175,7 +175,7 @@ defmodule Membrane.Bin do
             ) :: callback_return_t
 
   @doc """
-  Callback invoked upon each timer tick. A timer can be started with `Membrane.Bin.Action.start_timer_t`
+  Callback invoked upon each timer tick. A timer can be started with `t:Membrane.Bin.Action.start_timer_t/0`
   action.
   """
   @callback handle_tick(
