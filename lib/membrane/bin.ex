@@ -22,6 +22,7 @@ defmodule Membrane.Bin do
   alias Membrane.Core.{CallbackHandler, Message}
   alias Membrane.Core.Bin.{LinkingBuffer, State}
   alias Membrane.Core.Child.{PadController, PadSpecHandler, PadsSpecs}
+  alias Membrane.ComponentPath
 
   require Membrane.Core.Message
   require Membrane.Logger
@@ -266,6 +267,8 @@ defmodule Membrane.Bin do
     name_str = if String.valid?(name), do: name, else: inspect(name)
     :ok = Membrane.Logger.set_prefix(name_str <> " bin")
     Logger.metadata(log_metadata)
+
+    :ok = ComponentPath.set_and_append(log_metadata[:parent_path] || [], name_str <> " bin")
 
     clock =
       if module |> Bunch.Module.check_behaviour(:membrane_clock?) do

@@ -12,6 +12,8 @@ defmodule Membrane.Core.InputBuffer do
   alias Membrane.Buffer
   alias Membrane.Core.Message
   alias Membrane.Pad
+  alias Membrane.Telemetry
+  alias Membrane.ComponentPath
 
   require Membrane.Core.Message
   require Membrane.Logger
@@ -131,7 +133,10 @@ defmodule Membrane.Core.InputBuffer do
       |> Membrane.Logger.debug_verbose()
     end
 
-    do_store_buffers(input_buf, v)
+    %__MODULE__{current_size: size} = input_buf = do_store_buffers(input_buf, v)
+
+    report_buffer_size("store", size, input_buf)
+    input_buf
   end
 
   def store(
@@ -195,13 +200,19 @@ defmodule Membrane.Core.InputBuffer do
         :ok
     end
 
+    report_buffer_size("store", size, input_buf)
+
     input_buf
   end
 
   def store(input_buf, :buffer, v), do: store(input_buf, :buffers, [v])
 
-  def store(%__MODULE__{q: q} = input_buf, type, v) when type in @non_buf_types do
+  def store(%__MODULE__{q: q, current_size: size} = input_buf, type, v)
+      when type in @non_buf_types do
     "Storing #{type}" |> mk_log(input_buf) |> Membrane.Logger.debug_verbose()
+
+    report_buffer_size("store", size, input_buf)
+
     %__MODULE__{input_buf | q: q |> @qe.push({:non_buffer, type, v})}
   end
 
@@ -226,6 +237,8 @@ defmodule Membrane.Core.InputBuffer do
       input_buf
       |> Bunch.Struct.update_in(:demand, &(&1 + size - new_size))
       |> send_demands(demand_pid, demand_pad)
+
+    report_buffer_size("take_and_demand", new_size, input_buf)
 
     {out, input_buf}
   end
@@ -310,6 +323,20 @@ defmodule Membrane.Core.InputBuffer do
         "preferred size: #{inspect(pref_size)}"
       end
     ]
+  end
+
+  defp report_buffer_size(method, size, %__MODULE__{log_tag: log_tag}) do
+    :telemetry.execute(
+      Telemetry.input_buffer_size_event(),
+      %{
+        element_path:
+          ComponentPath.get_formatted() <>
+            "/" <> (log_tag || ""),
+        method: method,
+        value: size
+      },
+      %{}
+    )
   end
 
   @spec empty?(t()) :: boolean()

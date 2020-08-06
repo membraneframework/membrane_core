@@ -133,6 +133,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     Membrane.Logger.debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")
     sync = syncs |> Map.get(name, Sync.no_sync())
 
+    log_metadata = log_metadata |> Keyword.put(:parent_path, Membrane.ComponentPath.get())
+
     start_result =
       cond do
         Bunch.Module.check_behaviour(module, :membrane_element?) ->
