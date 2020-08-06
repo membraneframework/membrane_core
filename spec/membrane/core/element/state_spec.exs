@@ -13,7 +13,7 @@ defmodule Membrane.Core.Element.StateSpec do
         described_module().new(%{
           module: TrivialFilter,
           name: :name,
-          clock: nil,
+          parent_clock: nil,
           sync: Sync.no_sync()
         })
 

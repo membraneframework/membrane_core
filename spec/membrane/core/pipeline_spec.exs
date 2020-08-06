@@ -66,7 +66,7 @@ defmodule Membrane.Core.PipelineSpec do
           children: %{child_name() => self()},
           internal_state: internal_state(),
           module: module(),
-          clock_proxy: nil
+          synchronization: %{clock_proxy: nil}
         }
 
       let :notification, do: :notification
@@ -152,7 +152,7 @@ defmodule Membrane.Core.PipelineSpec do
         do: %Membrane.Core.Pipeline.State{
           module: module(),
           internal_state: internal_state(),
-          clock_proxy: nil
+          synchronization: %{clock_proxy: nil}
         }
 
       let :callback_context,
