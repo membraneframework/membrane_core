@@ -168,7 +168,7 @@ defmodule Membrane.Element.Action do
   If `interval` is set to `:no_interval`, the timer won't issue any ticks until
   the interval is set with `t:timer_interval_t/0` action.
 
-  If no `clock` is passed, parent clock is chosen.
+  If no `clock` is passed, parent's clock is chosen.
 
   Timers use `Process.send_after/3` under the hood.
   """
