@@ -23,6 +23,7 @@ defmodule Membrane.Core.Element do
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.Element.{MessageDispatcher, State}
   alias Membrane.Core.Message
+  alias Membrane.ComponentPath
 
   require Membrane.Core.Message
   require Membrane.Logger
@@ -95,6 +96,8 @@ defmodule Membrane.Core.Element do
     name_str = if String.valid?(options.name), do: options.name, else: inspect(options.name)
     :ok = Membrane.Logger.set_prefix(name_str)
     Logger.metadata(options.log_metadata)
+
+    :ok = ComponentPath.set_and_append(options.log_metadata[:parent_path] || [], name_str)
 
     state =
       options

@@ -110,6 +110,7 @@ defmodule Membrane.Mixfile do
       {:espec, "~> 1.8", only: :test},
       {:excoveralls, "~> 0.11", only: :test},
       {:qex, "~> 0.3"},
+      {:telemetry, "~> 0.4"},
       {:bunch, "~> 1.3"},
       {:ratio, "~> 2.0"}
     ]
