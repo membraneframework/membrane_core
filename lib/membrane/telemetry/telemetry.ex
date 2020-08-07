@@ -50,7 +50,7 @@ defmodule Membrane.Telemetry do
           from: String.t(),
           to: String.t(),
           pad_from: String.t(),
-          pad_to: String.t(),
+          pad_to: String.t()
         }
 
   @spec new_link_event() :: event_name_t()
