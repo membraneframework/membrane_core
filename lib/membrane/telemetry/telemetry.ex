@@ -38,21 +38,20 @@ defmodule Membrane.Telemetry do
   @spec input_buffer_size_event() :: event_name_t()
   def input_buffer_size_event, do: [:membrane, :input_buffer, :size]
 
-
-
-
   @typedoc """
   * parent_path - process path of link parent
   * from - from element name
-  * via - optional connector between 'from' and 'to'
   * to - to element name
+  * pad_from - from's pad name string
+  * pad_to - to's pad name string
   """
   @type new_link_event_value_t :: %{
-    parent_path: String.t(),
-    from: String.t(),
-    via: String.t() | nil,
-    to: String.t(),
-  }
+          parent_path: String.t(),
+          from: String.t(),
+          to: String.t(),
+          pad_from: String.t(),
+          pad_to: String.t(),
+        }
 
   @spec new_link_event() :: event_name_t()
   def new_link_event, do: [:membrane, :link, :new]

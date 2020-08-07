@@ -58,21 +58,6 @@ defmodule Membrane.Core.Parent.Link do
         from_spec(links)
     end)
     |> Enum.map(fn link ->
-      :telemetry.execute(
-        Membrane.Telemetry.new_link_event(),
-        %{
-          parent_path: Membrane.ComponentPath.get_formatted(),
-          from: "#{inspect link.from}",
-          via: link[:output] |> fn
-            nil -> nil
-            output -> "#{inspect output}"
-          end.(),
-          to: "#{inspect link.to}",
-          pad_from: "#{inspect get_pad(link, :from, :output)}",
-          pad_to: "#{inspect get_pad(link, :to, :input)}",
-        }
-      )
-
       %__MODULE__{
         from: %Endpoint{
           child: link.from,
