@@ -10,16 +10,6 @@ defmodule Membrane.Core.Pipeline do
   require Membrane.Logger
 
   @impl GenServer
-  def init(module) when is_atom(module) do
-    init({module, module |> Bunch.Module.struct()})
-  end
-
-  @impl GenServer
-  def init(%module{} = pipeline_options) do
-    init({module, pipeline_options})
-  end
-
-  @impl GenServer
   def init({module, pipeline_options}) do
     pipeline_name = "pipeline@#{:erlang.pid_to_list(self())}"
     :ok = Membrane.ComponentPath.set([pipeline_name])
