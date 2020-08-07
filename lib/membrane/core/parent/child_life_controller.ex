@@ -5,7 +5,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   alias __MODULE__.{StartupHandler, LinkHandler}
   alias Membrane.ParentSpec
   alias Membrane.Core.{Message, Parent}
-  alias Membrane.Core.Parent.{ChildEntry, ClockHandler, Link, State}
+  alias Membrane.Core.Parent.{ChildEntry, ClockHandler, Link}
   alias Membrane.Core.PlaybackHandler
 
   require Membrane.Logger
@@ -14,8 +14,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   require Membrane.Element
   require Membrane.PlaybackState
 
-  @spec handle_spec(ParentSpec.t(), State.t()) ::
-          {{:ok, [Membrane.Child.name_t()]}, State.t()} | no_return
+  @spec handle_spec(ParentSpec.t(), Parent.state_t()) ::
+          {{:ok, [Membrane.Child.name_t()]}, Parent.state_t()} | no_return
   def handle_spec(%ParentSpec{} = spec, state) do
     Membrane.Logger.debug("""
     Initializing spec
@@ -30,14 +30,14 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     children =
       StartupHandler.start_children(
         children,
-        state.clock_proxy,
+        state.synchronization.clock_proxy,
         syncs,
         state.children_log_metadata
       )
 
     :ok = StartupHandler.maybe_activate_syncs(syncs, state)
     {:ok, state} = StartupHandler.add_children(children, state)
-    {:ok, state} = ClockHandler.choose_clock(children, spec.clock_provider, state)
+    state = ClockHandler.choose_clock(children, spec.clock_provider, state)
     {:ok, links} = Link.from_spec(spec.links)
     links = LinkHandler.resolve_links(links, state)
     {:ok, state} = LinkHandler.link_children(links, state)
@@ -50,8 +50,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {{:ok, children_names}, state}
   end
 
-  @spec handle_forward(Membrane.Child.name_t(), any, State.t()) ::
-          {:ok | {:error, any}, State.t()}
+  @spec handle_forward(Membrane.Child.name_t(), any, Parent.state_t()) ::
+          {:ok | {:error, any}, Parent.state_t()}
   def handle_forward(child_name, message, state) do
     with {:ok, %{pid: pid}} <- state |> Parent.ChildrenModel.get_child_data(child_name) do
       send(pid, message)
@@ -63,15 +63,14 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
-  @spec handle_remove_child(Membrane.Child.name_t() | [Membrane.Child.name_t()], State.t()) ::
-          {:ok | {:error, any}, State.t()}
+  @spec handle_remove_child(Membrane.Child.name_t() | [Membrane.Child.name_t()], Parent.state_t()) ::
+          {:ok | {:error, any}, Parent.state_t()}
   def handle_remove_child(children, state) do
     children = children |> Bunch.listify()
 
     {:ok, state} =
-      if state.clock_provider.provider in children do
-        %{state | clock_provider: %{clock: nil, provider: nil, choice: :auto}}
-        |> ClockHandler.choose_clock()
+      if state.synchronization.clock_provider.provider in children do
+        ClockHandler.reset_clock(state)
       else
         {:ok, state}
       end

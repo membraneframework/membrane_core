@@ -13,14 +13,11 @@ defmodule Membrane.Pipeline do
   """
 
   use Bunch
-  use GenServer
 
-  alias Membrane.{Child, Clock, Core, Pad}
-  alias Membrane.Core.{CallbackHandler, Parent, PlaybackHandler}
-  alias Membrane.Core.Pipeline.State
-  alias Membrane.Pipeline.CallbackContext
+  alias __MODULE__.{Action, CallbackContext}
+  alias Membrane.{Child, Pad}
+  alias Membrane.Core.{CallbackHandler, PlaybackHandler}
 
-  require Membrane.Element
   require Membrane.Logger
 
   @typedoc """
@@ -32,7 +29,7 @@ defmodule Membrane.Pipeline do
   @type state_t :: map | struct
 
   @type callback_return_t ::
-          {:ok | {:ok, [Membrane.Parent.Action.t()]} | {:error, any}, state_t}
+          {:ok | {:ok, [Action.t()]} | {:error, any}, state_t}
           | {:error, any}
 
   @doc """
@@ -53,7 +50,7 @@ defmodule Membrane.Pipeline do
 
   Useful for any cleanup required.
   """
-  @callback handle_shutdown(reason, state :: any) :: :ok
+  @callback handle_shutdown(reason, state :: state_t) :: :ok
             when reason: :normal | :shutdown | {:shutdown, any}
 
   @doc """
@@ -62,7 +59,7 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_stopped_to_prepared(
               context :: CallbackContext.PlaybackChange.t(),
-              state :: any
+              state :: state_t
             ) ::
               callback_return_t
 
@@ -72,7 +69,7 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_playing_to_prepared(
               context :: CallbackContext.PlaybackChange.t(),
-              state :: any
+              state :: state_t
             ) ::
               callback_return_t
 
@@ -82,7 +79,7 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_prepared_to_playing(
               context :: CallbackContext.PlaybackChange.t(),
-              state :: any
+              state :: state_t
             ) ::
               callback_return_t
 
@@ -92,7 +89,7 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_prepared_to_stopped(
               context :: CallbackContext.PlaybackChange.t(),
-              state :: any
+              state :: state_t
             ) ::
               callback_return_t
 
@@ -102,7 +99,7 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_stopped_to_terminating(
               context :: CallbackContext.PlaybackChange.t(),
-              state :: any
+              state :: state_t
             ) :: callback_return_t
 
   @doc """
@@ -112,7 +109,7 @@ defmodule Membrane.Pipeline do
               notification :: Membrane.Notification.t(),
               element :: Child.name_t(),
               context :: CallbackContext.Notification.t(),
-              state :: any
+              state :: state_t
             ) :: callback_return_t
 
   @doc """
@@ -124,7 +121,7 @@ defmodule Membrane.Pipeline do
   @callback handle_other(
               message :: any,
               context :: CallbackContext.Other.t(),
-              state :: any
+              state :: state_t
             ) ::
               callback_return_t
 
@@ -134,7 +131,7 @@ defmodule Membrane.Pipeline do
   @callback handle_element_start_of_stream(
               {Child.name_t(), Pad.ref_t()},
               context :: CallbackContext.StreamManagement.t(),
-              state :: any
+              state :: state_t
             ) :: callback_return_t
 
   @doc """
@@ -143,7 +140,7 @@ defmodule Membrane.Pipeline do
   @callback handle_element_end_of_stream(
               {Child.name_t(), Pad.ref_t()},
               context :: CallbackContext.StreamManagement.t(),
-              state :: any
+              state :: state_t
             ) :: callback_return_t
 
   @doc """
@@ -151,13 +148,37 @@ defmodule Membrane.Pipeline do
   state as pipeline.
 
   This callback can be started from `c:handle_init/1` callback or as
-  `t:Membrane.Core.Parent.Action.spec_action_t/0` action.
+  `t:Membrane.Pipeline.Action.spec_t/0` action.
   """
   @callback handle_spec_started(
               children :: [Child.name_t()],
               context :: CallbackContext.SpecStarted.t(),
-              state :: any
+              state :: state_t
             ) :: callback_return_t
+
+  @doc """
+  Callback invoked upon each timer tick. A timer can be started with `Membrane.Pipeline.Action.start_timer_t`
+  action.
+  """
+  @callback handle_tick(
+              timer_id :: any,
+              context :: CallbackContext.Tick.t(),
+              state :: state_t
+            ) :: callback_return_t
+
+  @optional_callbacks handle_init: 1,
+                      handle_shutdown: 2,
+                      handle_stopped_to_prepared: 2,
+                      handle_playing_to_prepared: 2,
+                      handle_prepared_to_playing: 2,
+                      handle_prepared_to_stopped: 2,
+                      handle_stopped_to_terminating: 2,
+                      handle_other: 3,
+                      handle_spec_started: 3,
+                      handle_element_start_of_stream: 3,
+                      handle_element_end_of_stream: 3,
+                      handle_notification: 4,
+                      handle_tick: 3
 
   @doc """
   Starts the Pipeline based on given module and links it to the current
@@ -196,7 +217,11 @@ defmodule Membrane.Pipeline do
       process options: #{inspect(process_options)}
       """)
 
-      apply(GenServer, method, [__MODULE__, {module, pipeline_options}, process_options])
+      apply(GenServer, method, [
+        Membrane.Core.Pipeline,
+        {module, pipeline_options},
+        process_options
+      ])
     else
       Membrane.Logger.error("""
       Cannot start pipeline, passed module #{inspect(module)} is not a Membrane Pipeline.
@@ -264,34 +289,6 @@ defmodule Membrane.Pipeline do
   @spec stop(pid) :: :ok
   def stop(pid), do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :stopped)
 
-  @impl GenServer
-  def init(module) when is_atom(module) do
-    init({module, module |> Bunch.Module.struct()})
-  end
-
-  def init(%module{} = pipeline_options) do
-    init({module, pipeline_options})
-  end
-
-  def init({module, pipeline_options}) do
-    pipeline_name = "pipeline@#{:erlang.pid_to_list(self())}"
-    :ok = Membrane.ComponentPath.set([pipeline_name])
-    :ok = Membrane.Logger.set_prefix(pipeline_name)
-    {:ok, clock} = Clock.start_link(proxy: true)
-    state = %State{module: module, clock_proxy: clock}
-
-    with {:ok, state} <-
-           CallbackHandler.exec_and_handle_callback(
-             :handle_init,
-             Core.Pipeline.ActionHandler,
-             %{state: false},
-             [pipeline_options],
-             state
-           ) do
-      {:ok, state}
-    end
-  end
-
   @doc """
   Checks whether module is a pipeline.
   """
@@ -300,14 +297,72 @@ defmodule Membrane.Pipeline do
     module |> Bunch.Module.check_behaviour(:membrane_pipeline?)
   end
 
-  @impl GenServer
-  def handle_info(message, state) do
-    Parent.MessageDispatcher.handle_message(message, state)
-  end
+  @doc false
+  defmacro __before_compile__(_env) do
+    quote do
+      unless Enum.any?(0..2, &Module.defines?(__MODULE__, {:start_link, &1})) do
+        @doc """
+        Starts the pipeline `#{inspect(__MODULE__)}` and links it to the current process.
 
-  @impl GenServer
-  def terminate(reason, state) do
-    :ok = state.module.handle_shutdown(reason, state.internal_state)
+        A proxy for `#{inspect(unquote(__MODULE__))}.start_link/3`
+        """
+        @spec start_link(
+                pipeline_options :: Pipeline.pipeline_options_t(),
+                process_options :: GenServer.options()
+              ) :: GenServer.on_start()
+        def start_link(pipeline_options \\ nil, process_options \\ []) do
+          unquote(__MODULE__).start_link(__MODULE__, pipeline_options, process_options)
+        end
+      end
+
+      unless Enum.any?(0..2, &Module.defines?(__MODULE__, {:start, &1})) do
+        @doc """
+        Starts the pipeline `#{inspect(__MODULE__)}` without linking it
+        to the current process.
+
+        A proxy for `#{inspect(unquote(__MODULE__))}.start/3`
+        """
+        @spec start(
+                pipeline_options :: Pipeline.pipeline_options_t(),
+                process_options :: GenServer.options()
+              ) :: GenServer.on_start()
+        def start(pipeline_options \\ nil, process_options \\ []) do
+          unquote(__MODULE__).start(__MODULE__, pipeline_options, process_options)
+        end
+      end
+
+      unless Module.defines?(__MODULE__, {:play, 1}) do
+        @doc """
+        Changes playback state of pipeline to `:playing`.
+        """
+        @spec play(pid()) :: :ok
+        defdelegate play(pipeline), to: unquote(__MODULE__)
+      end
+
+      unless Module.defines?(__MODULE__, {:prepare, 1}) do
+        @doc """
+        Changes playback state to `:prepared`.
+        """
+        @spec prepare(pid) :: :ok
+        defdelegate prepare(pipeline), to: unquote(__MODULE__)
+      end
+
+      unless Module.defines?(__MODULE__, {:stop, 1}) do
+        @doc """
+        Changes playback state to `:stopped`.
+        """
+        @spec stop(pid) :: :ok
+        defdelegate stop(pid), to: unquote(__MODULE__)
+      end
+
+      unless Enum.any?(1..2, &Module.defines?(__MODULE__, {:stop_and_terminate, &1})) do
+        @doc """
+        Changes pipeline's playback state to `:stopped` and terminates its process.
+        """
+        @spec stop_and_terminate(pid, Keyword.t()) :: :ok
+        defdelegate stop_and_terminate(pipeline, opts \\ []), to: unquote(__MODULE__)
+      end
+    end
   end
 
   @doc """
@@ -339,67 +394,10 @@ defmodule Membrane.Pipeline do
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
 
+      @before_compile Pipeline
+
       unquote(bring_spec)
       unquote(bring_pad)
-
-      @doc """
-      Starts the pipeline `#{inspect(__MODULE__)}` and links it to the current process.
-
-      A proxy for `Membrane.Pipeline.start_link/3`
-      """
-      @spec start_link(
-              pipeline_options :: Pipeline.pipeline_options_t(),
-              process_options :: GenServer.options()
-            ) :: GenServer.on_start()
-      def start_link(pipeline_options \\ nil, process_options \\ []) do
-        Pipeline.start_link(__MODULE__, pipeline_options, process_options)
-      end
-
-      @doc """
-      Starts the pipeline `#{inspect(__MODULE__)}` without linking it
-      to the current process.
-
-      A proxy for `Membrane.Pipeline.start/3`
-      """
-      @spec start(
-              pipeline_options :: Pipeline.pipeline_options_t(),
-              process_options :: GenServer.options()
-            ) :: GenServer.on_start()
-      def start(pipeline_options \\ nil, process_options \\ []) do
-        Pipeline.start(__MODULE__, pipeline_options, process_options)
-      end
-
-      @doc """
-      Changes playback state of pipeline to `:playing`
-
-      A proxy for `Membrane.Pipeline.play/1`
-      """
-      @spec play(pid()) :: :ok
-      defdelegate play(pipeline), to: Pipeline
-
-      @doc """
-      Changes playback state to `:prepared`.
-
-      A proxy for `Membrane.Pipeline.prepare/1`
-      """
-      @spec prepare(pid) :: :ok
-      defdelegate prepare(pipeline), to: Pipeline
-
-      @doc """
-      Changes playback state to `:stopped`.
-
-      A proxy for `Membrane.Pipeline.stop/1`
-      """
-      @spec stop(pid) :: :ok
-      defdelegate stop(pid), to: Pipeline
-
-      @doc """
-      Changes pipeline's playback state to `:stopped` and terminates its process.
-
-      A proxy for `Membrane.Pipeline.stop_and_terminate/1`
-      """
-      @spec stop_and_terminate(pid, Keyword.t()) :: :ok
-      defdelegate stop_and_terminate(pipeline, opts), to: Pipeline
 
       @impl true
       def membrane_pipeline?, do: true
@@ -482,15 +480,6 @@ defmodule Membrane.Pipeline do
       ]
 
       defoverridable [
-                       start: 0,
-                       start: 1,
-                       start: 2,
-                       start_link: 0,
-                       start_link: 1,
-                       start_link: 2,
-                       play: 1,
-                       prepare: 1,
-                       stop: 1,
                        handle_init: 1,
                        handle_shutdown: 2,
                        handle_stopped_to_prepared: 2,

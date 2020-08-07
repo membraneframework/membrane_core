@@ -5,19 +5,12 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   alias Bunch.Type
   alias Membrane.{Child, Core, Notification, Pad, Sync}
-
-  alias Membrane.Core.{
-    CallbackHandler,
-    Message,
-    Parent,
-    PlaybackHandler
-  }
-
+  alias Membrane.Core.{CallbackHandler, Message, Component, Parent, PlaybackHandler}
   alias Membrane.Core.Parent.ChildrenModel
   alias Membrane.PlaybackState
 
+  require Membrane.Core.Component
   require Membrane.Core.Message
-  require Membrane.Core.Parent
   require Membrane.Logger
   require Membrane.PlaybackState
 
@@ -25,11 +18,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   def handle_playback_state(old, new, state) do
     Membrane.Logger.debug("Changing playback state from #{old} to #{new}")
 
-    children_data =
-      state
-      |> ChildrenModel.get_children()
-      |> Map.values()
-
+    children_data = state |> ChildrenModel.get_children() |> Map.values()
     children_pids = children_data |> Enum.map(& &1.pid)
 
     children_pids
@@ -48,7 +37,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   @impl PlaybackHandler
   def handle_playback_state_changed(old, new, state) do
-    context = Parent.callback_context_generator(PlaybackChange, state)
+    context = Component.callback_context_generator(:parent, PlaybackChange, state)
     callback = PlaybackHandler.state_change_callback(old, new)
     action_handler = get_callback_action_handler(state)
 
@@ -80,17 +69,17 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
-  @spec change_playback_state(PlaybackState.t(), Parent.State.t()) ::
+  @spec change_playback_state(PlaybackState.t(), Parent.state_t()) ::
           PlaybackHandler.handler_return_t()
   def change_playback_state(new_state, state) do
     PlaybackHandler.change_playback_state(new_state, __MODULE__, state)
   end
 
-  @spec handle_notification(Child.name_t(), Notification.t(), Core.State.t()) ::
-          Type.stateful_try_t(Core.State.t())
+  @spec handle_notification(Child.name_t(), Notification.t(), Parent.state_t()) ::
+          Type.stateful_try_t(Parent.state_t())
   def handle_notification(from, notification, state) do
     with {:ok, _} <- state |> Parent.ChildrenModel.get_child_data(from) do
-      context = Parent.callback_context_generator(Notification, state)
+      context = Component.callback_context_generator(:parent, Notification, state)
       action_handler = get_callback_action_handler(state)
 
       CallbackHandler.exec_and_handle_callback(
@@ -106,9 +95,9 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
-  @spec handle_other(any, Core.State.t()) :: Type.stateful_try_t(Core.State.t())
+  @spec handle_other(any, Parent.state_t()) :: Type.stateful_try_t(Parent.state_t())
   def handle_other(message, state) do
-    context = Parent.callback_context_generator(Other, state)
+    context = Component.callback_context_generator(:parent, Other, state)
     action_handler = get_callback_action_handler(state)
 
     CallbackHandler.exec_and_handle_callback(
@@ -120,7 +109,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
-  @spec child_playback_changed(pid, PlaybackState.t(), Core.State.t()) ::
+  @spec child_playback_changed(pid, PlaybackState.t(), Parent.state_t()) ::
           PlaybackHandler.handler_return_t()
   def child_playback_changed(pid, new_pb_state, state) do
     if transition_finished?(new_pb_state, state.playback.pending_state) do
@@ -138,8 +127,8 @@ defmodule Membrane.Core.Parent.LifecycleController do
   defp transition_finished?(_pending_state, _new_state), do: false
 
   # Child was removed
-  @spec handle_child_death(child_pid :: pid(), reason :: atom(), state :: Core.State.t()) ::
-          {:ok, Core.State.t()}
+  @spec handle_child_death(child_pid :: pid(), reason :: atom(), state :: Component.state_t()) ::
+          {:ok, Component.state_t()}
   def handle_child_death(pid, :normal, state) do
     {:ok, state} = finish_pids_transition(state, pid)
 
@@ -169,11 +158,11 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
-  @spec handle_stream_management_event(atom, Child.name_t(), Pad.ref_t(), Core.State.t()) ::
-          Type.stateful_try_t(Core.State.t())
+  @spec handle_stream_management_event(atom, Child.name_t(), Pad.ref_t(), Parent.state_t()) ::
+          Type.stateful_try_t(Parent.state_t())
   def handle_stream_management_event(cb, element_name, pad_ref, state)
       when cb in [:handle_start_of_stream, :handle_end_of_stream] do
-    context = Parent.callback_context_generator(StreamManagement, state)
+    context = Component.callback_context_generator(:parent, StreamManagement, state)
     action_handler = get_callback_action_handler(state)
 
     CallbackHandler.exec_and_handle_callback(
@@ -185,7 +174,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
-  @spec handle_log_metadata(Keyword.t(), Core.State.t()) :: {:ok, Core.State.t()}
+  @spec handle_log_metadata(Keyword.t(), Parent.state_t()) :: {:ok, Parent.state_t()}
   def handle_log_metadata(metadata, state) do
     :ok = Logger.metadata(metadata)
 

@@ -41,7 +41,7 @@ defmodule Membrane.Core.ElementTest do
         module: Filter,
         user_options: nil,
         name: :some_element,
-        clock: nil,
+        parent_clock: nil,
         sync: Membrane.Sync.no_sync(),
         parent: self(),
         log_metadata: []
@@ -220,14 +220,14 @@ defmodule Membrane.Core.ElementTest do
 
   test "should update timer on each tick" do
     {:ok, clock} = Membrane.Clock.start_link()
-    {:ok, state} = Element.TimerController.start_timer(:timer, 1000, clock, get_state())
+    {:ok, state} = Membrane.Core.TimerController.start_timer(:timer, 1000, clock, get_state())
     assert {:noreply, state} = Element.handle_info(Message.new(:timer_tick, :timer), state)
     assert state.synchronization.timers.timer.time_passed == 2000
   end
 
   test "should update clock ratio" do
     {:ok, clock} = Membrane.Clock.start_link()
-    {:ok, state} = Element.TimerController.start_timer(:timer, 1000, clock, get_state())
+    {:ok, state} = Membrane.Core.TimerController.start_timer(:timer, 1000, clock, get_state())
 
     assert {:noreply, state} = Element.handle_info({:membrane_clock_ratio, clock, 123}, state)
 
@@ -308,7 +308,7 @@ defmodule Membrane.Core.ElementTest do
       name: :name,
       user_options: %{},
       parent: pipeline,
-      clock: nil,
+      parent_clock: nil,
       sync: Membrane.Sync.no_sync(),
       log_metadata: []
     }

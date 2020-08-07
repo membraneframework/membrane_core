@@ -3,9 +3,9 @@ defmodule Membrane.ParentSpec do
   Structure representing topology of a pipeline/bin.
 
   It can be incorporated into a pipeline or a bin by returning
-  `t:Membrane.Parent.Action.spec_action_t/0` action. This commonly happens within
-  `c:Membrane.Pipeline.handle_init/1` and `c:Membrane.Bin.handle_init/1`, but can
-  be done in any other callback also.
+  `t:Membrane.Pipeline.Action.spec_t/0` or `t:Membrane.Bin.Action.spec_t/0`
+  action, respectively. This commonly happens within `c:Membrane.Pipeline.handle_init/1`
+  and `c:Membrane.Bin.handle_init/1`, but can be done in any other callback also.
 
   ## Children
 

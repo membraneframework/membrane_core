@@ -7,15 +7,14 @@ defmodule Membrane.Core.Element.MessageDispatcher do
 
   import Membrane.Helper.GenServer
 
-  alias Membrane.Core.{Child, Message, PlaybackHandler}
+  alias Membrane.Core.{Child, Message, PlaybackHandler, TimerController}
   alias Membrane.Core.Child.PadController
 
   alias Membrane.Core.Element.{
     DemandHandler,
     LifecycleController,
     PlaybackBuffer,
-    State,
-    TimerController
+    State
   }
 
   alias Membrane.Helper
