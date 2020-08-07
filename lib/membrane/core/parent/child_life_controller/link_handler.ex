@@ -141,7 +141,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     %Endpoint{child: to_child, pad_ref: to_pad} = to
 
     :telemetry.execute(
-      Membrane.Telemetry.new_link_event(),
+      Membrane.Telemetry.new_link_event_name(),
       %{
         parent_path: Membrane.ComponentPath.get_formatted(),
         from: "#{inspect(from_child)}",

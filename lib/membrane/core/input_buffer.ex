@@ -327,7 +327,7 @@ defmodule Membrane.Core.InputBuffer do
 
   defp report_buffer_size(method, size, %__MODULE__{log_tag: log_tag}) do
     :telemetry.execute(
-      Telemetry.input_buffer_size_event(),
+      Telemetry.input_buffer_size_event_name(),
       %{
         element_path:
           ComponentPath.get_formatted() <>
