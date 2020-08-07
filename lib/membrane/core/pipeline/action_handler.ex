@@ -2,11 +2,11 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   @moduledoc false
   use Membrane.Core.CallbackHandler
 
-  require Membrane.Logger
-
   alias Membrane.CallbackError
-  alias Membrane.ParentSpec
   alias Membrane.Core.Parent
+  alias Membrane.ParentSpec
+
+  require Membrane.Logger
 
   @impl CallbackHandler
   # Deprecation

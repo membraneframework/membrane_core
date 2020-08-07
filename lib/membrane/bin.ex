@@ -17,15 +17,15 @@ defmodule Membrane.Bin do
 
   import Membrane.Helper.GenServer
 
-  require Membrane.Core.Message
-  require Membrane.Logger
-
   alias Membrane.{CallbackError, Child, Core, Pad, Sync}
   alias Membrane.Bin.CallbackContext
   alias Membrane.Core.{CallbackHandler, Message}
   alias Membrane.Core.Bin.{LinkingBuffer, State}
   alias Membrane.Core.Child.{PadController, PadSpecHandler, PadsSpecs}
   alias Membrane.ComponentPath
+
+  require Membrane.Core.Message
+  require Membrane.Logger
 
   @type state_t :: map | struct
 
@@ -233,6 +233,7 @@ defmodule Membrane.Bin do
           atom,
           module,
           bin_options :: options_t,
+          log_metadata :: Keyword.t(),
           process_options :: GenServer.options()
         ) :: GenServer.on_start()
   def start_link(name, module, bin_options \\ nil, log_metadata, process_options \\ []) do
@@ -353,7 +354,7 @@ defmodule Membrane.Bin do
   end
 
   @impl GenServer
-  def handle_call(Message.new(:set_controlling_pid, pid), _, state) do
+  def handle_call(Message.new(:set_controlling_pid, pid), _from, state) do
     Core.Child.LifecycleController.handle_controlling_pid(pid, state)
     |> reply()
   end
@@ -372,13 +373,13 @@ defmodule Membrane.Bin do
   end
 
   @impl GenServer
-  def handle_call(Message.new(:linking_finished), _, state) do
+  def handle_call(Message.new(:linking_finished), _from, state) do
     PadController.handle_linking_finished(state)
     |> reply()
   end
 
   @impl GenServer
-  def handle_call(Message.new(:handle_watcher, watcher), _, state) do
+  def handle_call(Message.new(:handle_watcher, watcher), _from, state) do
     Core.Child.LifecycleController.handle_watcher(watcher, state)
     |> reply()
   end
@@ -474,6 +475,7 @@ defmodule Membrane.Bin do
 
       # DEPRECATED:
 
+      # credo:disable-for-lines:22 Credo.Check.Readability.Specs
       @doc false
       def handle_stopped_to_prepared(state), do: {:ok, state}
       @doc false

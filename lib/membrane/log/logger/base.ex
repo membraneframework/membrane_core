@@ -56,10 +56,10 @@ defmodule Membrane.Log.Logger.Base do
 
       # Default implementations
 
-      @doc false
+      @impl true
       def handle_init(_opts), do: {:ok, %{}}
 
-      @doc false
+      @impl true
       def handle_shutdown(_state), do: :ok
 
       defoverridable handle_init: 1,

@@ -8,12 +8,6 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   use Bunch
   use Bunch.Access
 
-  require Membrane.Logger
-  require Membrane.Core.Message
-  require Membrane.Core.Child.PadModel
-
-  alias Membrane.Event
-  alias Membrane.Core.Playback
   alias Membrane.Core.Child.PadModel
 
   alias Membrane.Core.Element.{
@@ -25,6 +19,12 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   }
 
   alias Membrane.Core.Message
+  alias Membrane.Core.Playback
+  alias Membrane.Event
+
+  require Membrane.Core.Child.PadModel
+  require Membrane.Core.Message
+  require Membrane.Logger
 
   @type t :: %__MODULE__{
           q: Qex.t()
@@ -85,6 +85,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   def eval(state), do: {:ok, state}
 
+  @spec flush_for_pad(t(), Membrane.Pad.ref()) :: t()
   def flush_for_pad(%__MODULE__{q: q} = buf, pad_ref) do
     alias Membrane.Core.Message
     require Message

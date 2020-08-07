@@ -8,10 +8,10 @@ defmodule Membrane.Element.WithInputPads do
   For more information on implementing elements, see `Membrane.Element.Base`.
   """
 
-  alias Membrane.{Element, Pad}
-  alias Membrane.Core.Child.PadsSpecs
   alias Element.CallbackContext
+  alias Membrane.{Element, Pad}
   alias Membrane.Core.CallbackHandler
+  alias Membrane.Core.Child.PadsSpecs
 
   @doc """
   Callback invoked when Element is receiving information about new caps for

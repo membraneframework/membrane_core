@@ -2,13 +2,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
   @moduledoc false
   use Bunch
 
-  require Membrane.Logger
-  require Membrane.Core.Message
-  require Membrane.Core.Parent
-
   alias Membrane.{CallbackError, Clock, ParentError, Sync}
   alias Membrane.Core.{Bin, CallbackHandler, Element, Message, Parent, Pipeline}
   alias Membrane.Core.Parent.{ChildEntry, State}
+
+  require Membrane.Core.Message
+  require Membrane.Core.Parent
+  require Membrane.Logger
 
   @spec check_if_children_names_unique([ChildEntry.t()], State.t()) ::
           :ok | no_return

@@ -1,10 +1,11 @@
 defmodule Membrane.Testing.SourceTest do
   use ExUnit.Case
-  alias Membrane.Testing.Source
+
   alias Membrane.Buffer
+  alias Membrane.Testing.Source
 
   test "Source initializes buffer generator and its state properly" do
-    generator = fn _, _ -> nil end
+    generator = fn _state, _size -> nil end
 
     assert Source.handle_init(%Source{output: {:abc, generator}}) ==
              {:ok, %{output: generator, generator_state: :abc}}

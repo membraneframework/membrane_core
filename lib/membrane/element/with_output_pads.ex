@@ -8,10 +8,10 @@ defmodule Membrane.Element.WithOutputPads do
   For more information on implementing elements, see `Membrane.Element.Base`.
   """
 
-  alias Membrane.{Buffer, Element, Pad}
-  alias Membrane.Core.Child.PadsSpecs
   alias Element.CallbackContext
+  alias Membrane.{Buffer, Element, Pad}
   alias Membrane.Core.CallbackHandler
+  alias Membrane.Core.Child.PadsSpecs
 
   @doc """
   Callback called when buffers should be emitted by a source or filter.

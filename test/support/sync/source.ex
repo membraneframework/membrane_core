@@ -1,4 +1,5 @@
 defmodule Membrane.Support.Sync.Source do
+  @moduledoc false
   use Membrane.Source
 
   def_output_pad :output, caps: :any
@@ -21,5 +22,5 @@ defmodule Membrane.Support.Sync.Source do
   end
 
   @impl true
-  def handle_demand(:output, _size, _, _ctx, state), do: {:ok, state}
+  def handle_demand(:output, _size, _unit, _ctx, state), do: {:ok, state}
 end

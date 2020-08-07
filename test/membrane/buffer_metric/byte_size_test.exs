@@ -1,5 +1,6 @@
 defmodule Membrane.Buffer.Metric.ByteSizeTest do
   use ExUnit.Case, async: true
+
   alias Membrane.Buffer
   alias Membrane.Buffer.Metric.ByteSize
 

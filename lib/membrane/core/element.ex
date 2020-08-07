@@ -19,12 +19,14 @@ defmodule Membrane.Core.Element do
 
   use Bunch
   use GenServer
-  require Membrane.Logger
-  require Membrane.Core.Message
+
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.Element.{MessageDispatcher, State}
   alias Membrane.Core.Message
   alias Membrane.ComponentPath
+
+  require Membrane.Core.Message
+  require Membrane.Logger
 
   @type options_t :: %{
           module: module,

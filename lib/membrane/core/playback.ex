@@ -18,6 +18,7 @@ defmodule Membrane.Core.Playback do
           async_state_change: boolean
         }
 
+  @spec stable?(t()) :: boolean
   def stable?(%__MODULE__{state: state, pending_state: nil, target_state: state}), do: true
   def stable?(%__MODULE__{}), do: false
 end

@@ -3,9 +3,9 @@ defmodule Membrane.Core.Message do
 
   # Record representing membrane internal message
 
-  require Record
-
   alias Membrane.Pad
+
+  require Record
 
   Record.defrecord(:message, __MODULE__, type: nil, args: [], opts: [])
 
@@ -30,7 +30,7 @@ defmodule Membrane.Core.Message do
     __MODULE__.send(self(), type, args, opts)
   end
 
-  @spec call(GenServer.server(), type_t, args_t, timeout()) :: term()
+  @spec call(GenServer.server(), type_t, args_t, opts_t, timeout()) :: term()
   def call(pid, type, args \\ [], opts \\ [], timeout \\ 5000) do
     GenServer.call(pid, message(type: type, args: args, opts: opts), timeout)
   end

@@ -15,6 +15,7 @@ defmodule Membrane.Buffer.Metric do
   @callback split_buffers([%Buffer{}] | [], non_neg_integer) ::
               {[%Buffer{}] | [], [%Buffer{}] | []}
 
+  @spec from_unit(unit_t()) :: module()
   def from_unit(:buffers), do: Metric.Count
   def from_unit(:bytes), do: Metric.ByteSize
 end

@@ -46,7 +46,7 @@ defmodule Membrane.Mixfile do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md"],
+      extras: ["README.md", "CONTRIBUTING.md", LICENSE: [title: "License"]],
       source_ref: @source_ref,
       nest_modules_by_prefix: [
         Membrane.Bin,
@@ -105,11 +105,12 @@ defmodule Membrane.Mixfile do
   defp deps do
     [
       {:ex_doc, "~> 0.21", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.0.0", only: :dev, runtime: false},
+      {:credo, "~> 1.4", only: :dev, runtime: false},
       {:espec, "~> 1.8", only: :test},
       {:excoveralls, "~> 0.11", only: :test},
       {:qex, "~> 0.3"},
       {:telemetry, "~> 0.4"},
-      {:dialyxir, "~> 1.0.0", only: :dev, runtime: false},
       {:bunch, "~> 1.3"},
       {:ratio, "~> 2.0"}
     ]

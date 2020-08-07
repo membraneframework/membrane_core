@@ -73,8 +73,8 @@ defmodule Membrane.Logger do
       # A hack to suppress the 'unused variable' warnings
       quote do
         fn ->
-          _ = unquote(message)
-          _ = unquote(metadata)
+          _unused = unquote(message)
+          _unused = unquote(metadata)
         end
 
         :ok
@@ -135,7 +135,7 @@ defmodule Membrane.Logger do
 
   This function is intended to enable setting prefix obtained in a Membrane-managed
   process via `get_prefix/1`. If some custom data needs to be prepended to logs,
-  please use `Logger.metadata/2`.
+  please use `Logger.metadata/1`.
 
   Prefixes in Membrane-managed processes are set automatically and using this
   function there would overwrite them, which is usually unintended.

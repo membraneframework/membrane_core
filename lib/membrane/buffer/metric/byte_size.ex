@@ -3,9 +3,9 @@ defmodule Membrane.Buffer.Metric.ByteSize do
   Implementation of `Membrane.Buffer.Metric` for the `:bytes` unit
   """
 
-  alias Membrane.Buffer
-  alias Membrane.Payload
-  @behaviour Buffer.Metric
+  @behaviour Membrane.Buffer.Metric
+
+  alias Membrane.{Buffer, Payload}
 
   @impl true
   def input_buf_preferred_size, do: 65_536
