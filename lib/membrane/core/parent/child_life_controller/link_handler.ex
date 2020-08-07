@@ -132,7 +132,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     case pad do
       {:private, direction} -> direction
       {Membrane.Pad, {:private, direction}, ref} -> {Membrane.Pad, direction, ref}
-      _ -> pad
+      _pad -> pad
     end
   end
 
