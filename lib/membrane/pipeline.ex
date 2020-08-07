@@ -355,7 +355,7 @@ defmodule Membrane.Pipeline do
         defdelegate stop(pid), to: unquote(__MODULE__)
       end
 
-      unless Enum.any?(0..1, &Module.defines?(__MODULE__, {:stop_and_terminate, &1})) do
+      unless Enum.any?(1..2, &Module.defines?(__MODULE__, {:stop_and_terminate, &1})) do
         @doc """
         Changes pipeline's playback state to `:stopped` and terminates its process.
         """
