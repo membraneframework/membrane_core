@@ -136,7 +136,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     end
   end
 
-  defp report_link_endpoint(from, to) do
+  defp report_new_link(from, to) do
     %Endpoint{child: from_child, pad_ref: from_pad} = from
     %Endpoint{child: to_child, pad_ref: to_pad} = to
 
@@ -157,7 +157,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   end
 
   defp link(%Link{from: from, to: to}, state) do
-    report_link_endpoint(from, to)
+    report_new_link(from, to)
     {{:ok, info}, state} = link_endpoint(:output, from, to, nil, state)
     {{:ok, _info}, state} = link_endpoint(:input, to, from, info, state)
     state
