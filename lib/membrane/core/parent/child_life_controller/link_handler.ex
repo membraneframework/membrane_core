@@ -128,7 +128,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     end
   end
 
-  defp get_pad_name(pad) do
+  defp get_public_pad_name(pad) do
     case pad do
       {:private, direction} -> direction
       {Membrane.Pad, {:private, direction}, ref} -> {Membrane.Pad, direction, ref}
@@ -146,8 +146,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
         parent_path: Membrane.ComponentPath.get_formatted(),
         from: "#{inspect(from_child)}",
         to: "#{inspect(to_child)}",
-        pad_from: "#{inspect(get_pad_name(from_pad))}",
-        pad_to: "#{inspect(get_pad_name(to_pad))}"
+        pad_from: "#{inspect(get_public_pad_name(from_pad))}",
+        pad_to: "#{inspect(get_public_pad_name(to_pad))}"
       }
     )
   end
