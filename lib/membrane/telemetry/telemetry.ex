@@ -15,6 +15,10 @@ defmodule Membrane.Telemetry do
         * Measurement: `t:input_buffer_size_event_value_t/0`
         * Metadata: `%{}`
 
+    * `[:membrane, :link, :new]` - used by `Membrane.Core.Parent.ChildLifeController.LinkHandler` to report new link connection being initialized in pipeline.
+        * Measurement: `t:new_link_event_value_t/0`
+        * Metadata: `%{}`
+
   """
 
   @type event_name_t :: [atom(), ...]
@@ -31,6 +35,24 @@ defmodule Membrane.Telemetry do
           value: integer()
         }
 
-  @spec input_buffer_size_event() :: event_name_t()
-  def input_buffer_size_event, do: [:membrane, :input_buffer, :size]
+  @spec input_buffer_size_event_name() :: event_name_t()
+  def input_buffer_size_event_name, do: [:membrane, :input_buffer, :size]
+
+  @typedoc """
+  * parent_path - process path of link's parent
+  * from - from element name
+  * to - to element name
+  * pad_from - from's pad name
+  * pad_to - to's pad name
+  """
+  @type new_link_event_value_t :: %{
+          parent_path: String.t(),
+          from: String.t(),
+          to: String.t(),
+          pad_from: String.t(),
+          pad_to: String.t()
+        }
+
+  @spec new_link_event_name() :: event_name_t()
+  def new_link_event_name, do: [:membrane, :link, :new]
 end

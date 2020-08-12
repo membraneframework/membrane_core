@@ -128,11 +128,36 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     end
   end
 
+  defp get_public_pad_name(pad) do
+    case pad do
+      {:private, direction} -> direction
+      {Membrane.Pad, {:private, direction}, ref} -> {Membrane.Pad, direction, ref}
+      _pad -> pad
+    end
+  end
+
+  defp report_new_link(from, to) do
+    %Endpoint{child: from_child, pad_ref: from_pad} = from
+    %Endpoint{child: to_child, pad_ref: to_pad} = to
+
+    :telemetry.execute(
+      Membrane.Telemetry.new_link_event_name(),
+      %{
+        parent_path: Membrane.ComponentPath.get_formatted(),
+        from: "#{inspect(from_child)}",
+        to: "#{inspect(to_child)}",
+        pad_from: "#{inspect(get_public_pad_name(from_pad))}",
+        pad_to: "#{inspect(get_public_pad_name(to_pad))}"
+      }
+    )
+  end
+
   defp link(%Link{from: %Endpoint{child: child}, to: %Endpoint{child: child}}, _state) do
     raise LinkError, "Tried to link element #{inspect(child)} with itself"
   end
 
   defp link(%Link{from: from, to: to}, state) do
+    report_new_link(from, to)
     {{:ok, info}, state} = link_endpoint(:output, from, to, nil, state)
     {{:ok, _info}, state} = link_endpoint(:input, to, from, info, state)
     state
