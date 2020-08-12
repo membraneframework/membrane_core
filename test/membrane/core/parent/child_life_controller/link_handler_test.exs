@@ -10,7 +10,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
     %Membrane.Core.Bin.State{
       module: nil,
       name: :my_bin,
-      clock_proxy: nil,
+      synchronization: %{},
       children: [a: %ChildEntry{module: child_module}, b: %ChildEntry{module: child_module}],
       pads: %{
         info:

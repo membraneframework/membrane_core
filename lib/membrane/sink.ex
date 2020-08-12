@@ -15,8 +15,8 @@ defmodule Membrane.Sink do
   provide more complex solutions.
   """
 
-  alias Element.CallbackContext
   alias Membrane.{Buffer, Element, Pad}
+  alias Membrane.Element.CallbackContext
 
   @doc """
   Callback that is called when buffer should be written by the sink.

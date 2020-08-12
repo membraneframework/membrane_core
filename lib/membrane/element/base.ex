@@ -198,7 +198,7 @@ defmodule Membrane.Element.Base do
             ) :: callback_return_t
 
   @doc """
-  Callback invoked upon each timer tick. A timer can be started with `Action.timer_t`
+  Callback invoked upon each timer tick. A timer can be started with `Membrane.Element.Action.start_timer_t`
   action.
   """
   @callback handle_tick(

@@ -2,15 +2,15 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
   @moduledoc false
   use Bunch
 
-  alias Membrane.{CallbackError, Clock, ParentError, Sync}
-  alias Membrane.Core.{Bin, CallbackHandler, Element, Message, Parent, Pipeline}
-  alias Membrane.Core.Parent.{ChildEntry, State}
+  alias Membrane.{CallbackError, Clock, Core, ParentError, Sync}
+  alias Membrane.Core.{CallbackHandler, Component, Message, Parent}
+  alias Membrane.Core.Parent.ChildEntry
 
+  require Membrane.Core.Component
   require Membrane.Core.Message
-  require Membrane.Core.Parent
   require Membrane.Logger
 
-  @spec check_if_children_names_unique([ChildEntry.t()], State.t()) ::
+  @spec check_if_children_names_unique([ChildEntry.t()], Parent.state_t()) ::
           :ok | no_return
   def check_if_children_names_unique(children, state) do
     %{children: state_children} = state
@@ -77,8 +77,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     children |> Enum.map(&start_child(&1, parent_clock, syncs, log_metadata))
   end
 
-  @spec add_children([ChildEntry.resolved_t()], State.t()) ::
-          {:ok | {:error, any}, State.t()}
+  @spec add_children([ChildEntry.resolved_t()], Parent.state_t()) ::
+          {:ok | {:error, any}, Parent.state_t()}
   def add_children(children, state) do
     children
     |> Bunch.Enum.try_reduce(state, fn child, state ->
@@ -86,7 +86,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     end)
   end
 
-  @spec maybe_activate_syncs(%{Membrane.Child.name_t() => Sync.t()}, State.t()) ::
+  @spec maybe_activate_syncs(%{Membrane.Child.name_t() => Sync.t()}, Parent.state_t()) ::
           :ok | {:error, :bad_activity_request}
   def maybe_activate_syncs(syncs, %{playback: %{state: :playing}}) do
     syncs |> MapSet.new(&elem(&1, 1)) |> Bunch.Enum.try_each(&Sync.activate/1)
@@ -96,15 +96,15 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     :ok
   end
 
-  @spec exec_handle_spec_started([Membrane.Child.name_t()], State.t()) ::
-          {:ok, State.t()} | no_return
+  @spec exec_handle_spec_started([Membrane.Child.name_t()], Parent.state_t()) ::
+          {:ok, Parent.state_t()} | no_return
   def exec_handle_spec_started(children_names, state) do
-    context = Parent.callback_context_generator(SpecStarted, state)
+    context = Component.callback_context_generator(:parent, SpecStarted, state)
 
     action_handler =
       case state do
-        %Pipeline.State{} -> Pipeline.ActionHandler
-        %Bin.State{} -> Bin.ActionHandler
+        %Core.Pipeline.State{} -> Core.Pipeline.ActionHandler
+        %Core.Bin.State{} -> Core.Bin.ActionHandler
       end
 
     callback_res =
@@ -137,25 +137,31 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
 
     start_result =
       cond do
-        Bunch.Module.check_behaviour(module, :membrane_element?) ->
-          Element.start_link(%{
+        Membrane.Element.element?(module) ->
+          Core.Element.start_link(%{
             parent: self(),
             module: module,
             name: name,
             user_options: options,
-            clock: parent_clock,
+            parent_clock: parent_clock,
             sync: sync,
             log_metadata: log_metadata
           })
 
-        Bunch.Module.check_behaviour(module, :membrane_bin?) ->
+        Membrane.Bin.bin?(module) ->
           unless sync == Sync.no_sync() do
             raise ParentError,
                   "Cannot start child #{inspect(name)}, \
                   reason: bin cannot be synced with other elements"
           end
 
-          Membrane.Bin.start_link(name, module, options, log_metadata, [])
+          Core.Bin.start_link(%{
+            name: name,
+            module: module,
+            user_options: options,
+            parent_clock: parent_clock,
+            log_metadata: log_metadata
+          })
 
         true ->
           raise ParentError, """
