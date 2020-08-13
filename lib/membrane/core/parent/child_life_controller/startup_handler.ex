@@ -4,13 +4,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
 
   alias Membrane.{CallbackError, Clock, Core, ParentError, Sync}
   alias Membrane.Core.{CallbackHandler, Component, Message, Parent}
-  alias Membrane.Core.Parent.ChildEntry
 
   require Membrane.Core.Component
   require Membrane.Core.Message
   require Membrane.Logger
 
-  @spec check_if_children_names_unique([ChildEntry.t()], Parent.state_t()) ::
+  @spec check_if_children_names_unique([Parent.ChildEntry.unresolved_t()], Parent.state_t()) ::
           :ok | no_return
   def check_if_children_names_unique(children, state) do
     %{children: state_children} = state
@@ -28,9 +27,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     end
   end
 
-  @spec setup_syncs([ChildEntry.t()], :sinks | [[Membrane.Child.name_t()]]) :: %{
-          Membrane.Child.name_t() => Sync.t()
-        }
+  @spec setup_syncs([Parent.ChildEntry.unresolved_t()], :sinks | [[Membrane.Child.name_t()]]) ::
+          %{Membrane.Child.name_t() => Sync.t()}
   def setup_syncs(children, :sinks) do
     sinks =
       children
@@ -66,18 +64,18 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
   end
 
   @spec start_children(
-          [ChildEntry.t()],
+          [Parent.ChildEntry.unresolved_t()],
           parent_clock :: Clock.t(),
           syncs :: %{Membrane.Child.name_t() => pid()},
           log_metadata :: Keyword.t()
-        ) :: [ChildEntry.resolved_t()]
+        ) :: [Membrane.ChildEntry.t()]
   def start_children(children, parent_clock, syncs, log_metadata) do
     Membrane.Logger.debug("Starting children: #{inspect(children)}")
 
     children |> Enum.map(&start_child(&1, parent_clock, syncs, log_metadata))
   end
 
-  @spec add_children([ChildEntry.resolved_t()], Parent.state_t()) ::
+  @spec add_children([Membrane.ChildEntry.t()], Parent.state_t()) ::
           {:ok | {:error, any}, Parent.state_t()}
   def add_children(children, state) do
     children
@@ -129,15 +127,15 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
   end
 
   defp start_child(child, parent_clock, syncs, log_metadata) do
-    %ChildEntry{name: name, module: module, options: options} = child
+    %Membrane.ChildEntry{name: name, module: module, options: options} = child
     Membrane.Logger.debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")
     sync = syncs |> Map.get(name, Sync.no_sync())
 
     log_metadata = log_metadata |> Keyword.put(:parent_path, Membrane.ComponentPath.get())
 
     start_result =
-      cond do
-        Membrane.Element.element?(module) ->
+      case child.component_type do
+        :element ->
           Core.Element.start_link(%{
             parent: self(),
             module: module,
@@ -148,7 +146,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
             log_metadata: log_metadata
           })
 
-        Membrane.Bin.bin?(module) ->
+        :bin ->
           unless sync == Sync.no_sync() do
             raise ParentError,
                   "Cannot start child #{inspect(name)}, \
@@ -162,19 +160,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
             parent_clock: parent_clock,
             log_metadata: log_metadata
           })
-
-        true ->
-          raise ParentError, """
-          Module #{inspect(module)} is neither Membrane Element nor Bin.
-          Make sure that given module is the right one, implements proper behaviour
-          and all needed dependencies are properly specified in the Mixfile.
-          """
       end
 
     with {:ok, pid} <- start_result,
          :ok <- Message.call(pid, :set_controlling_pid, self()),
          {:ok, %{clock: clock}} <- Message.call(pid, :handle_watcher, self()) do
-      %ChildEntry{child | pid: pid, clock: clock, sync: sync}
+      %Membrane.ChildEntry{child | pid: pid, clock: clock, sync: sync}
     else
       {:error, reason} ->
         raise ParentError,
