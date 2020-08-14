@@ -2,10 +2,10 @@ defmodule Membrane.Core.Parent.ClockHandler do
   @moduledoc false
 
   alias Membrane.{Clock, Core, ParentError}
-  alias Membrane.Core.Parent.ChildEntry
+  alias Membrane.Core.Parent.ChildEntryParser
 
   @spec choose_clock(
-          [ChildEntry.unresolved_t()],
+          [ChildEntryParser.raw_child_entry_t()],
           Membrane.Child.name_t() | nil,
           Core.Parent.state_t()
         ) ::

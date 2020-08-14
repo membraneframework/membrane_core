@@ -1,9 +1,9 @@
-defmodule Membrane.Core.Parent.ChildEntry do
+defmodule Membrane.Core.Parent.ChildEntryParser do
   @moduledoc false
 
-  alias Membrane.{ParentError, ParentSpec}
+  alias Membrane.{ChildEntry, ParentError, ParentSpec}
 
-  @type unresolved_t :: %Membrane.ChildEntry{
+  @type raw_child_entry_t :: %ChildEntry{
           name: Membrane.Child.name_t(),
           module: module,
           options: struct | nil,
@@ -14,13 +14,13 @@ defmodule Membrane.Core.Parent.ChildEntry do
           pending?: boolean()
         }
 
-  @spec from_spec(ParentSpec.children_spec_t() | any) :: [Membrane.ChildEntry.t()] | no_return
+  @spec from_spec(ParentSpec.children_spec_t() | any) :: [raw_child_entry_t] | no_return
   def from_spec(children_spec) when is_map(children_spec) or is_list(children_spec) do
     children_spec |> Enum.map(&parse_child/1)
   end
 
   defp parse_child({name, %module{} = options}) do
-    %Membrane.ChildEntry{
+    %ChildEntry{
       name: name,
       module: module,
       options: options,
@@ -32,7 +32,7 @@ defmodule Membrane.Core.Parent.ChildEntry do
   defp parse_child({name, module}) when is_atom(module) do
     options = module |> Bunch.Module.struct()
 
-    %Membrane.ChildEntry{
+    %ChildEntry{
       name: name,
       module: module,
       options: options,
