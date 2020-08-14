@@ -1,12 +1,12 @@
 defmodule Membrane.Core.Parent.ChildrenModel do
   @moduledoc false
 
+  alias Membrane.ChildEntry
   alias Membrane.Core.Parent
-  alias Membrane.Core.Parent.ChildEntry
 
-  @type children_t :: %{Membrane.Child.name_t() => ChildEntry.resolved_t()}
+  @type children_t :: %{Membrane.Child.name_t() => ChildEntry.t()}
 
-  @spec add_child(Parent.state_t(), Membrane.Child.name_t(), ChildEntry.resolved_t()) ::
+  @spec add_child(Parent.state_t(), Membrane.Child.name_t(), ChildEntry.t()) ::
           {:ok | {:error, {:duplicate_child, Membrane.Child.name_t()}}, Parent.state_t()}
   def add_child(%{children: children} = state, child, data) do
     if Map.has_key?(children, child) do
@@ -17,14 +17,14 @@ defmodule Membrane.Core.Parent.ChildrenModel do
   end
 
   @spec get_child_data(Parent.state_t(), Membrane.Child.name_t()) ::
-          {:ok, child_data :: ChildEntry.resolved_t()}
+          {:ok, child_data :: ChildEntry.t()}
           | {:error, {:unknown_child, Membrane.Child.name_t()}}
   def get_child_data(%{children: children}, child) do
     children[child] |> Bunch.error_if_nil({:unknown_child, child})
   end
 
   @spec pop_child(Parent.state_t(), Membrane.Child.name_t()) ::
-          {{:ok, child_data :: ChildEntry.resolved_t()}
+          {{:ok, child_data :: ChildEntry.t()}
            | {:error, {:unknown_child, Membrane.Child.name_t()}}, Parent.state_t()}
   def pop_child(%{children: children} = state, child) do
     {pid, children} = children |> Map.pop(child)

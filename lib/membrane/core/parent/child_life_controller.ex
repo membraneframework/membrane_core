@@ -5,7 +5,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   alias __MODULE__.{StartupHandler, LinkHandler}
   alias Membrane.ParentSpec
   alias Membrane.Core.{Message, Parent}
-  alias Membrane.Core.Parent.{ChildEntry, ClockHandler, Link}
+  alias Membrane.Core.Parent.{ChildEntryParser, ClockHandler, Link}
   alias Membrane.Core.PlaybackHandler
 
   require Membrane.Logger
@@ -23,7 +23,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     links: #{inspect(spec.links)}
     """)
 
-    children = ChildEntry.from_spec(spec.children)
+    children = ChildEntryParser.from_spec(spec.children)
     :ok = StartupHandler.check_if_children_names_unique(children, state)
     syncs = StartupHandler.setup_syncs(children, spec.stream_sync)
 

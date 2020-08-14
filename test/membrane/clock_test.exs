@@ -163,7 +163,7 @@ defmodule Membrane.ClockTest do
   describe "Clock election in parent" do
     alias Membrane.Clock
     alias Membrane.Core.{Pipeline.State, Parent.ClockHandler}
-    alias Membrane.Core.Parent.ChildEntry
+    alias Membrane.ChildEntry
 
     test "when provider is specified" do
       {:ok, clock} = Clock.start_link()

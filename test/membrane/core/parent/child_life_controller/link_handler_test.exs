@@ -1,7 +1,8 @@
 defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
   use ExUnit.Case
 
-  alias Membrane.Core.Parent.{ChildEntry, Link}
+  alias Membrane.ChildEntry
+  alias Membrane.Core.Parent.Link
   alias Membrane.Core.Parent.ChildLifeController.LinkHandler
   alias Membrane.LinkError
   alias Membrane.Support.Bin.TestBins.{TestDynamicPadFilter, TestFilter}

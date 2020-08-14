@@ -2,9 +2,13 @@ defmodule Membrane.Core.Parent.ClockHandler do
   @moduledoc false
 
   alias Membrane.{Clock, Core, ParentError}
-  alias Membrane.Core.Parent.ChildEntry
+  alias Membrane.Core.Parent.ChildEntryParser
 
-  @spec choose_clock([ChildEntry.t()], Membrane.Child.name_t() | nil, Core.Parent.state_t()) ::
+  @spec choose_clock(
+          [ChildEntryParser.raw_child_entry_t()],
+          Membrane.Child.name_t() | nil,
+          Core.Parent.state_t()
+        ) ::
           Core.Parent.state_t() | no_return
   def choose_clock(children, provider, state) do
     %{synchronization: synchronization} = state
