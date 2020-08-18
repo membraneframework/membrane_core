@@ -50,17 +50,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {{:ok, children_names}, state}
   end
 
-  @spec handle_forward(Membrane.Child.name_t(), any, Parent.state_t()) ::
+  @spec handle_forward([{Membrane.Child.name_t(), any}], Parent.state_t()) ::
           {:ok | {:error, any}, Parent.state_t()}
-  def handle_forward(child_name, message, state) do
-    with {:ok, %{pid: pid}} <- state |> Parent.ChildrenModel.get_child_data(child_name) do
-      send(pid, message)
-      {:ok, state}
-    else
-      {:error, reason} ->
-        {{:error, {:cannot_forward_message, [element: child_name, message: message], reason}},
-         state}
-    end
+  def handle_forward(children_messages, state) do
+    result = Bunch.Enum.try_each(children_messages, &do_handle_forward(&1, state))
+    {result, state}
   end
 
   @spec handle_remove_child(Membrane.Child.name_t() | [Membrane.Child.name_t()], Parent.state_t()) ::
@@ -82,5 +76,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       :ok
     end
     ~> {&1, state}
+  end
+
+  defp do_handle_forward({child_name, message}, state) do
+    with {:ok, %{pid: pid}} <- state |> Parent.ChildrenModel.get_child_data(child_name) do
+      send(pid, message)
+      :ok
+    else
+      {:error, reason} ->
+        {:error, {:cannot_forward_message, [element: child_name, message: message], reason}}
+    end
   end
 end
