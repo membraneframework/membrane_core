@@ -50,8 +50,8 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
     Parent.LifecycleController.handle_log_metadata(metadata, state)
   end
 
-  defp do_handle_action({:forward, {elementname, message}}, _cb, _params, state) do
-    Parent.ChildLifeController.handle_forward(elementname, message, state)
+  defp do_handle_action({:forward, children_messages}, _cb, _params, state) do
+    Parent.ChildLifeController.handle_forward(Bunch.listify(children_messages), state)
   end
 
   defp do_handle_action({:spec, spec = %ParentSpec{}}, _cb, _params, state) do

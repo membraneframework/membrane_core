@@ -8,12 +8,12 @@ defmodule Membrane.Bin.Action do
   callback unless explicitly stated otherwise.
   """
 
-  alias Membrane.{Child, Notification, ParentSpec}
+  alias Membrane.{Child, ParentSpec}
 
   @typedoc """
   Action that sends a message to a child identified by name.
   """
-  @type forward_t :: {:forward, {Child.name_t(), Notification.t()}}
+  @type forward_t :: {:forward, {Child.name_t(), any} | [{Child.name_t(), any}]}
 
   @typedoc """
   Action that instantiates children and links them according to `Membrane.ParentSpec`.
