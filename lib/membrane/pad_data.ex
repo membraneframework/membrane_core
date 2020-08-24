@@ -10,14 +10,12 @@ defmodule Membrane.Pad.Data do
       on the pad. May be `nil` if not yet set. This field only applies to elements' pads.
     - `:demand` - current demand requested on the pad working in pull mode. This field only applies to elements' pads.
     - `:direction` - see `Membrane.Pad.direction_t`
-    - `:end_of_stream?` - flag determining whether `Membrane.Event.EndOfStream`
-      has been received (or sent) on the pad
+    - `:end_of_stream?` - flag determining whether the stream processing via the pad has been finished
     - `:mode` - see `Membrane.Pad.mode_t`. This field only applies to elements' pads.
     - `:name` - see `Membrane.Pad.name_t`. Do not mistake with `:ref`
     - `:options` - options passed in `Membrane.ParentSpec` when linking pad
     - `:ref` - see `Membrane.Pad.ref_t`
-    - `:start_of_stream?` - flag determining whether `Membrane.Event.StartOfStream`
-      has been received (or sent) on the pad
+    - `:start_of_stream?` - flag determining whether the stream processing via the pad has been started
 
   Other fields in the struct ARE NOT PART OF THE PUBLIC API and should not be
   accessed or relied on.

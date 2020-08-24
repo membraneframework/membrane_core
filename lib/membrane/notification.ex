@@ -5,9 +5,6 @@ defmodule Membrane.Notification do
 
   A notification can be handled in parent with
   `c:Membrane.Parent.handle_notification/4` callback.
-
-  The example of a notification is tuple `{:end_of_stream, pad_ref}` that, by default,
-  is sent when handling `Membrane.Event.EndOfStream` event
   """
 
   @type t :: any

@@ -63,7 +63,7 @@ defmodule Membrane.Core.Element.DemandController do
     case PadModel.get_data!(state, pad_ref) do
       %{end_of_stream?: true} ->
         Membrane.Logger.debug_verbose("""
-        Demand controller: not executing handle_demand as EndOfStream has already been sent
+        Demand controller: not executing handle_demand as :end_of_stream action has already been returned
         """)
 
         false

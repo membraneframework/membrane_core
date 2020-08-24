@@ -10,7 +10,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   alias Membrane.{ActionError, Buffer, Caps, CallbackError, Event, Notification, Pad}
   alias Membrane.Core.Element.{DemandHandler, LifecycleController, State}
-  alias Membrane.Core.{Message, PlaybackHandler, TimerController}
+  alias Membrane.Core.{Events, Message, PlaybackHandler, TimerController}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{DemandHandler, LifecycleController, State}
   alias Membrane.Element.Action
@@ -179,7 +179,7 @@ defmodule Membrane.Core.Element.ActionHandler do
          %State{type: type, playback: %{state: :playing}} = state
        )
        when is_pad_ref(pad_ref) and type != :sink do
-    send_event(pad_ref, %Event.EndOfStream{}, state)
+    send_event(pad_ref, %Events.EndOfStream{}, state)
   end
 
   defp do_handle_action(action, callback, _params, state) do
@@ -404,7 +404,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
-  defp handle_event(pad_ref, %Event.EndOfStream{}, state) do
+  defp handle_event(pad_ref, %Events.EndOfStream{}, state) do
     with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
       {:ok, PadModel.set_data!(state, pad_ref, :end_of_stream?, true)}
     else

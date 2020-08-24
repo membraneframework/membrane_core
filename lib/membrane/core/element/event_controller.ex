@@ -6,7 +6,7 @@ defmodule Membrane.Core.Element.EventController do
   use Bunch
 
   alias Membrane.{Event, Pad, Sync}
-  alias Membrane.Core.{CallbackHandler, InputBuffer, Message}
+  alias Membrane.Core.{CallbackHandler, Events, InputBuffer, Message}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{ActionHandler, State}
   alias Membrane.Element.CallbackContext
@@ -17,7 +17,7 @@ defmodule Membrane.Core.Element.EventController do
 
   @spec handle_start_of_stream(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   def handle_start_of_stream(pad_ref, state) do
-    handle_event(pad_ref, %Event.StartOfStream{}, state)
+    handle_event(pad_ref, %Events.StartOfStream{}, state)
   end
 
   @doc """
@@ -75,7 +75,7 @@ defmodule Membrane.Core.Element.EventController do
   @spec do_exec_handle_event(Pad.ref_t(), Event.t(), params :: map, State.t()) ::
           State.stateful_try_t()
   defp do_exec_handle_event(pad_ref, %event_type{} = event, params, state)
-       when event_type in [Event.StartOfStream, Event.EndOfStream] do
+       when event_type in [Events.StartOfStream, Events.EndOfStream] do
     data = PadModel.get_data!(state, pad_ref)
     require CallbackContext.StreamManagement
     context = CallbackContext.StreamManagement.from_state(state)
@@ -107,7 +107,7 @@ defmodule Membrane.Core.Element.EventController do
     CallbackHandler.exec_and_handle_callback(:handle_event, ActionHandler, params, args, state)
   end
 
-  defp check_sync(%Event.StartOfStream{}, state) do
+  defp check_sync(%Events.StartOfStream{}, state) do
     if state.pads.data
        |> Map.values()
        |> Enum.filter(&(&1.direction == :input))
@@ -124,7 +124,7 @@ defmodule Membrane.Core.Element.EventController do
 
   @spec handle_special_event(Pad.ref_t(), Event.t(), State.t()) ::
           State.stateful_try_t(:handle | :ignore)
-  defp handle_special_event(pad_ref, %Event.StartOfStream{}, state) do
+  defp handle_special_event(pad_ref, %Events.StartOfStream{}, state) do
     with %{direction: :input, start_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
       state
       |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
@@ -138,7 +138,7 @@ defmodule Membrane.Core.Element.EventController do
     end
   end
 
-  defp handle_special_event(pad_ref, %Event.EndOfStream{}, state) do
+  defp handle_special_event(pad_ref, %Events.EndOfStream{}, state) do
     pad_data = PadModel.get_data!(state, pad_ref)
 
     withl data: %{direction: :input, start_of_stream?: true, end_of_stream?: false} <- pad_data,
@@ -168,6 +168,6 @@ defmodule Membrane.Core.Element.EventController do
 
   defp buffers_before_event_present?(pad_data), do: not InputBuffer.empty?(pad_data.input_buf)
 
-  defp stream_event_to_callback(%Event.StartOfStream{}), do: :handle_start_of_stream
-  defp stream_event_to_callback(%Event.EndOfStream{}), do: :handle_end_of_stream
+  defp stream_event_to_callback(%Events.StartOfStream{}), do: :handle_start_of_stream
+  defp stream_event_to_callback(%Events.EndOfStream{}), do: :handle_end_of_stream
 end

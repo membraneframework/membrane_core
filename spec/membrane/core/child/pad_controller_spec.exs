@@ -3,7 +3,7 @@ defmodule Membrane.Core.Child.PadControllerSpec do
 
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.Core.Element.State
-  alias Membrane.Event.EndOfStream
+  alias Membrane.Core.Events.EndOfStream
   alias Membrane.Pad
   alias Membrane.Support.Element.{DynamicFilter, TrivialFilter}
 
