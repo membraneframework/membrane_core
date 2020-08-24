@@ -38,8 +38,8 @@ defmodule Membrane.Element.WithInputPads do
             ) :: CallbackHandler.callback_return_t()
 
   @doc """
-  Callback invoked when element receives `Membrane.Event.EndOfStream` event
-  emitted when action `end_of_stream` is returned.
+  Callback invoked when the previous element has finished processing via the pad,
+  and it cannot be used anymore.
   """
   @callback handle_end_of_stream(
               pad :: Pad.ref_t(),

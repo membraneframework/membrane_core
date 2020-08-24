@@ -62,8 +62,6 @@ defmodule Membrane.Filter do
       use Membrane.Element.WithOutputPads
       use Membrane.Element.WithInputPads
 
-      alias Membrane.Event.EndOfStream
-
       @behaviour unquote(__MODULE__)
 
       @impl true

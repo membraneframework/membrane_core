@@ -211,9 +211,10 @@ defmodule Membrane.Element.Action do
   @type latency_t :: {:latency, latency :: non_neg_integer}
 
   @typedoc """
-  Sends EndOfStream event through a pad (output) that triggers
-  callback `end_of_stream/3` at the receiver element.
+  Marks that processing via a pad (output) has been finished and the pad instance
+  won't be used anymore.
 
+  Triggers `end_of_stream/3` callback at the receiver element.
   Allowed only when playback is in playing state.
   """
   @type end_of_stream_t :: {:end_of_stream, Pad.ref_t()}

@@ -5,9 +5,9 @@ defmodule Membrane.Core.Child.PadController do
 
   use Bunch
   alias Bunch.Type
-  alias Membrane.{Event, LinkError, Pad, ParentSpec}
+  alias Membrane.{LinkError, Pad, ParentSpec}
   alias Membrane.Core
-  alias Membrane.Core.{CallbackHandler, InputBuffer, Message}
+  alias Membrane.Core.{CallbackHandler, Events, InputBuffer, Message}
   alias Membrane.Core.Bin.LinkingBuffer
   alias Membrane.Core.{CallbackHandler, Component, Message, InputBuffer}
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
@@ -315,7 +315,7 @@ defmodule Membrane.Core.Child.PadController do
     eos? = PadModel.get_data!(state, pad_ref, :end_of_stream?)
 
     if direction == :input and not eos? do
-      EventController.exec_handle_event(pad_ref, %Event.EndOfStream{}, state)
+      EventController.exec_handle_event(pad_ref, %Events.EndOfStream{}, state)
     else
       {:ok, state}
     end

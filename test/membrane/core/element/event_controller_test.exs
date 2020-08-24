@@ -2,8 +2,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
   use ExUnit.Case
 
   alias Membrane.Core.Element.{EventController, State}
-  alias Membrane.Core.InputBuffer
-  alias Membrane.Core.Message
+  alias Membrane.Core.{Events, InputBuffer, Message}
   alias Membrane.Event
   alias Membrane.Pad.Data
 
@@ -66,12 +65,12 @@ defmodule Membrane.Core.Element.EventControllerTest do
     end
 
     test "start of stream successfully", %{state: state} do
-      assert {:ok, state} = EventController.handle_event(:input, %Event.StartOfStream{}, state)
+      assert {:ok, state} = EventController.handle_event(:input, %Events.StartOfStream{}, state)
       assert state.pads.data.input.start_of_stream?
     end
 
     test "ignoring end of stream when there was no start of stream prior", %{state: state} do
-      assert {:ok, state} = EventController.handle_event(:input, %Event.EndOfStream{}, state)
+      assert {:ok, state} = EventController.handle_event(:input, %Events.EndOfStream{}, state)
       refute state.pads.data.input.end_of_stream?
       refute state.pads.data.input.start_of_stream?
     end
@@ -79,7 +78,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
     test "end of stream successfully", %{state: state} do
       state = put_start_of_stream(state, :input)
 
-      assert {:ok, state} = EventController.handle_event(:input, %Event.EndOfStream{}, state)
+      assert {:ok, state} = EventController.handle_event(:input, %Events.EndOfStream{}, state)
       assert state.pads.data.input.end_of_stream?
     end
   end

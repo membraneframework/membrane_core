@@ -246,7 +246,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
   end
 
-  @mock_event %Membrane.Event.EndOfStream{}
+  @mock_event %Membrane.Core.Events.EndOfStream{}
   defp event_action(pad), do: {:event, {pad, @mock_event}}
 
   describe "handling :event action" do

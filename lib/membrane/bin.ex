@@ -144,7 +144,7 @@ defmodule Membrane.Bin do
               callback_return_t
 
   @doc """
-  Callback invoked when an element receives `Membrane.Event.StartOfStream` event.
+  Callback invoked when a child element starts processing stream via given pad.
   """
   @callback handle_element_start_of_stream(
               {Child.name_t(), Pad.ref_t()},
@@ -153,7 +153,7 @@ defmodule Membrane.Bin do
             ) :: callback_return_t
 
   @doc """
-  Callback invoked when an element receives `Membrane.Event.EndOfStream` event.
+  Callback invoked when a child element finishes processing stream via given pad.
   """
   @callback handle_element_end_of_stream(
               {Child.name_t(), Pad.ref_t()},

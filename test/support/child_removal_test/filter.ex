@@ -4,8 +4,6 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   It allows to:
   * slow down the moment of switching between :prepared and :playing states.
-  * not send doubled `%Membrane.Event.StartOfStream{}` event
-    (useful when you have two sources in a pipeline)
   * send demands and buffers from two input pads to one output pad.
 
   Should be used along with `Membrane.Support.ChildRemovalTest.Pipeline` as they
@@ -13,8 +11,6 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   """
 
   use Membrane.Filter
-
-  alias Membrane.Event.StartOfStream
 
   def_output_pad :output, caps: :any
 
@@ -73,19 +69,6 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   @impl true
   def handle_process(_pad, buf, _ctx, state) do
     {{:ok, buffer: {:output, buf}}, state}
-  end
-
-  @impl true
-  def handle_event(pad, %StartOfStream{} = ev, ctx, state) do
-    if ctx.pads[pad].start_of_stream? do
-      {:ok, state}
-    else
-      {{:ok, forward: ev}, %{state | sof_sent?: true}}
-    end
-  end
-
-  def handle_event(_pad, event, _ctx, state) do
-    {{:ok, forward: event}, state}
   end
 
   @spec default_demand_generator(integer()) :: integer()
