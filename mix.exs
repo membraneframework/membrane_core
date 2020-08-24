@@ -84,7 +84,9 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane.Sync$/,
           ~r/^Membrane.Time.*/,
           ~r/^Membrane.Pad.*/,
-          ~r/^Membrane.PlaybackState.*/
+          ~r/^Membrane.PlaybackState.*/,
+          ~r/^Membrane.Telemetry.*/,
+          ~r/^Membrane.ComponentPath.*/
         ],
         Deprecated: [~r/^Membrane.Log\.?/]
       ]
