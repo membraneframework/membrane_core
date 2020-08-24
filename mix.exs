@@ -63,32 +63,32 @@ defmodule Membrane.Mixfile do
         Membrane.Testing
       ],
       groups_for_modules: [
-        Pipeline: [~r/^Membrane.Pipeline/],
-        Bin: [~r/^Membrane.Bin/],
+        Pipeline: [~r/^Membrane\.Pipeline($|\.)/],
+        Bin: [~r/^Membrane\.Bin($|\.)/],
         Element: [
-          ~r/^Membrane.Filter$/,
-          ~r/^Membrane.Sink$/,
-          ~r/^Membrane.Source$/,
-          ~r/^Membrane.Element/,
-          ~r/^Membrane.Core.InputBuffer/
+          ~r/^Membrane\.Filter($|\.)/,
+          ~r/^Membrane\.Sink($|\.)/,
+          ~r/^Membrane\.Source($|\.)/,
+          ~r/^Membrane\.Element($|\.)/,
+          ~r/^Membrane\.Core\.InputBuffer($|\.)/
         ],
-        Parent: [~r/^Membrane.Parent.*/],
-        Child: [~r/^Membrane.Child.*/],
+        Parent: [~r/^Membrane\.(Parent|ParentSpec)($|\.)/],
+        Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],
         Communication: [
-          ~r/^Membrane.(Buffer|Payload|Caps|Event|Notification).*/
+          ~r/^Membrane\.(Buffer|Payload|Caps|Event|EventProtocol|Notification|Pad)($|\.)/
         ],
-        Logging: [~r/^Membrane.Logger/],
-        Testing: [~r/^Membrane.Testing.*/],
+        Logging: [~r/^Membrane\.Logger($|\.)/],
+        Testing: [~r/^Membrane\.Testing($|\.)/],
         Utils: [
-          ~r/^Membrane.Clock$/,
-          ~r/^Membrane.Sync$/,
-          ~r/^Membrane.Time.*/,
-          ~r/^Membrane.Pad.*/,
-          ~r/^Membrane.PlaybackState.*/,
-          ~r/^Membrane.Telemetry.*/,
-          ~r/^Membrane.ComponentPath.*/
+          ~r/^Membrane\.Clock($|\.)/,
+          ~r/^Membrane\.Sync($|\.)/,
+          ~r/^Membrane\.Time($|\.)/,
+          ~r/^Membrane\.PlaybackState($|\.)/,
+          ~r/^Membrane\.Telemetry($|\.)/,
+          ~r/^Membrane\.ComponentPath($|\.)/
         ],
-        Deprecated: [~r/^Membrane.Log\.?/]
+        Errors: [~r/Error$/],
+        Deprecated: [~r/^Membrane\.Log($|\.)/]
       ]
     ]
   end
