@@ -202,12 +202,12 @@ defmodule Membrane.Bin do
 
   @doc PadsSpecs.def_pad_docs(:input, :bin)
   defmacro def_input_pad(name, spec) do
-    PadsSpecs.def_bin_pad(name, :input, spec)
+    PadsSpecs.def_pad(name, :input, spec, :bin)
   end
 
   @doc PadsSpecs.def_pad_docs(:output, :bin)
   defmacro def_output_pad(name, spec) do
-    PadsSpecs.def_bin_pad(name, :output, spec)
+    PadsSpecs.def_pad(name, :output, spec, :bin)
   end
 
   @doc """

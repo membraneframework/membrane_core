@@ -199,7 +199,6 @@ defmodule Membrane.Core.ElementTest do
     assert reply == %{
              accepted_caps: :any,
              availability: :always,
-             bin?: false,
              direction: :output,
              mode: :pull,
              name: :output,
