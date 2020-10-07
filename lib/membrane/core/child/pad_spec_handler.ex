@@ -51,10 +51,10 @@ defmodule Membrane.Core.Child.PadSpecHandler do
 
   defp create_private_pad({name, spec}) do
     priv_bin_name = Pad.create_private_name(name)
-
     public_spec = filter_opts(spec)
 
-    priv_spec = filter_opts(%{spec | direction: Pad.opposite_direction(spec.direction)})
+    priv_spec =
+      filter_opts(%{spec | direction: Pad.opposite_direction(spec.direction), options: []})
 
     [{name, public_spec}, {priv_bin_name, priv_spec}]
   end
