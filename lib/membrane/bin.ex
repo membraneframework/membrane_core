@@ -15,6 +15,7 @@ defmodule Membrane.Bin do
   alias __MODULE__.{Action, CallbackContext}
   alias Membrane.{Child, Pad}
   alias Membrane.Core.Child.PadsSpecs
+  alias Membrane.Core.OptionsSpecs
 
   require Membrane.Core.Message
   require Membrane.Logger
@@ -242,6 +243,22 @@ defmodule Membrane.Bin do
   end
 
   @doc """
+  Macro defining options that parametrize bin.
+
+  It automatically generates appropriate struct and documentation.
+
+  #{OptionsSpecs.options_doc()}
+  """
+  defmacro def_options(options) do
+    OptionsSpecs.def_options(__CALLER__.module, options, :bin)
+  end
+
+  @doc false
+  defmacro __before_compile__(env) do
+    Membrane.Core.Child.generate_moduledoc(env.module, :bin)
+  end
+
+  @doc """
   Brings all the stuff necessary to implement a bin.
 
   Options:
@@ -268,14 +285,13 @@ defmodule Membrane.Bin do
     quote location: :keep do
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
+      @before_compile unquote(__MODULE__)
 
       unquote(bring_spec)
       unquote(bring_pad)
 
-      import Membrane.Element.Base, only: [def_options: 1]
-
       import unquote(__MODULE__),
-        only: [def_input_pad: 2, def_output_pad: 2, def_clock: 0, def_clock: 1]
+        only: [def_input_pad: 2, def_output_pad: 2, def_options: 1, def_clock: 0, def_clock: 1]
 
       require Membrane.Core.Child.PadsSpecs
 
