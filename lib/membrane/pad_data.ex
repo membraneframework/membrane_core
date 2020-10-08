@@ -43,8 +43,7 @@ defmodule Membrane.Pad.Data do
           sticky_messages: [Event.t()],
           input_buf: InputBuffer.t() | nil,
           demand: integer() | nil,
-          options: %{optional(atom) => any},
-          bin?: boolean()
+          options: %{optional(atom) => any}
         }
 
   defstruct accepted_caps: nil,
@@ -63,6 +62,5 @@ defmodule Membrane.Pad.Data do
             sticky_messages: nil,
             input_buf: nil,
             demand: nil,
-            options: %{},
-            bin?: false
+            options: %{}
 end

@@ -188,11 +188,7 @@ defmodule Membrane.Core.Child.PadController do
   @spec parse_pad_props!(ParentSpec.pad_props_t(), Pad.name_t(), state_t()) ::
           parsed_pad_props_t | no_return
   defp parse_pad_props!(props, pad_name, state) do
-    {_, pad_spec} =
-      state.module.membrane_pads()
-      |> PadSpecHandler.add_private_pads()
-      |> Enum.find(fn {k, _} -> k == pad_name end)
-
+    {_, pad_spec} = PadSpecHandler.get_pads(state) |> Enum.find(fn {k, _} -> k == pad_name end)
     pad_opts = parse_pad_options!(pad_name, pad_spec.options, props[:options])
     buffer_props = parse_buffer_props!(pad_name, props[:buffer])
     %{options: pad_opts, buffer: buffer_props}

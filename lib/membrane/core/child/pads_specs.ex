@@ -11,14 +11,15 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
   require Pad
 
-  @spec def_pads([{Pad.name_t(), raw_spec :: Macro.t()}], Pad.direction_t()) :: Macro.t()
-  def def_pads(pads, direction) do
+  @spec def_pads([{Pad.name_t(), raw_spec :: Macro.t()}], Pad.direction_t(), :element | :bin) ::
+          Macro.t()
+  def def_pads(pads, direction, component) do
     pads
     |> Enum.reduce(
       quote do
       end,
       fn {name, spec}, acc ->
-        pad_def = def_pad(name, direction, spec)
+        pad_def = def_pad(component, name, direction, spec)
 
         quote do
           unquote(acc)
@@ -32,9 +33,9 @@ defmodule Membrane.Core.Child.PadsSpecs do
   Returns documentation string common for both input and output pads
   """
   @spec def_pad_docs(Pad.direction_t(), :bin | :element) :: String.t()
-  def def_pad_docs(direction, for_entity) do
+  def def_pad_docs(direction, component) do
     {entity, pad_type_spec} =
-      case for_entity do
+      case component do
         :bin -> {"bin", "bin_spec_t/0"}
         :element -> {"element", "#{direction}_spec_t/0"}
       end
@@ -53,18 +54,10 @@ defmodule Membrane.Core.Child.PadsSpecs do
   end
 
   @doc """
-  Returns AST inserted into bin's module defining a pad
-  """
-  @spec def_bin_pad(Pad.name_t(), Pad.direction_t(), Macro.t()) :: Macro.t()
-  def def_bin_pad(pad_name, direction, raw_specs) do
-    def_pad(pad_name, direction, raw_specs, true)
-  end
-
-  @doc """
   Returns AST inserted into element's or bin's module defining a pad
   """
-  @spec def_pad(Pad.name_t(), Pad.direction_t(), Macro.t(), boolean()) :: Macro.t()
-  def def_pad(pad_name, direction, raw_specs, bin? \\ false) do
+  @spec def_pad(Pad.name_t(), Pad.direction_t(), Macro.t(), :element | :bin) :: Macro.t()
+  def def_pad(pad_name, direction, raw_specs, component) do
     Pad.assert_public_name!(pad_name)
     Code.ensure_loaded(Caps.Matcher)
 
@@ -90,7 +83,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
       @membrane_pads unquote(__MODULE__).parse_pad_specs!(
                        {unquote(pad_name), unquote(specs)},
                        unquote(direction),
-                       unquote(bin?),
+                       unquote(component),
                        __ENV__
                      )
       unquote(pad_opts_typedef)
@@ -142,11 +135,11 @@ defmodule Membrane.Core.Child.PadsSpecs do
   @spec parse_pad_specs!(
           specs :: Pad.spec_t(),
           direction :: Pad.direction_t(),
-          boolean(),
+          :element | :bin,
           declaration_env :: Macro.Env.t()
         ) :: {Pad.name_t(), Pad.description_t()}
-  def parse_pad_specs!(specs, direction, bin?, env) do
-    with {:ok, specs} <- parse_pad_specs(specs, direction, bin?) do
+  def parse_pad_specs!(specs, direction, component, env) do
+    with {:ok, specs} <- parse_pad_specs(specs, direction, component) do
       specs
     else
       {:error, reason} ->
@@ -160,9 +153,9 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  @spec parse_pad_specs(Pad.spec_t(), Pad.direction_t(), boolean()) ::
+  @spec parse_pad_specs(Pad.spec_t(), Pad.direction_t(), :element | :bin) ::
           Type.try_t({Pad.name_t(), Pad.description_t()})
-  def parse_pad_specs(spec, direction, bin?) do
+  def parse_pad_specs(spec, direction, component) do
     withl spec: {name, config} when Pad.is_pad_name(name) and is_list(config) <- spec,
           config:
             {:ok, config} <-
@@ -173,13 +166,12 @@ defmodule Membrane.Core.Child.PadsSpecs do
                 mode: [in: [:pull, :push], default: :pull],
                 demand_unit: [
                   in: [:buffers, :bytes],
-                  require_if: &(&1.mode == :pull and (bin? or direction == :input))
+                  require_if: &(&1.mode == :pull and (component == :bin or direction == :input))
                 ],
                 options: [default: nil]
               ) do
       config
       |> Map.put(:direction, direction)
-      |> Map.put(:bin?, bin?)
       |> Map.put(:name, name)
       ~> {:ok, {name, &1}}
     else

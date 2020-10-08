@@ -47,12 +47,12 @@ defmodule Membrane.Element.WithOutputPads do
   """
   @deprecated "Use `def_output_pad/2 for each pad instead"
   defmacro def_output_pads(pads) do
-    PadsSpecs.def_pads(pads, :output)
+    PadsSpecs.def_pads(pads, :output, :element)
   end
 
   @doc PadsSpecs.def_pad_docs(:output, :element)
   defmacro def_output_pad(name, spec) do
-    PadsSpecs.def_pad(name, :output, spec)
+    PadsSpecs.def_pad(name, :output, spec, :element)
   end
 
   defmacro __using__(_) do
