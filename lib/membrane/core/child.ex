@@ -10,7 +10,7 @@ defmodule Membrane.Core.Child do
   ]
 
   @spec generate_moduledoc(module, :element | :bin) :: Macro.t()
-  def generate_moduledoc(module, child) do
+  def generate_moduledoc(module, child_type) do
     membrane_pads_moduledoc =
       Module.get_attribute(module, :membrane_pads)
       |> __MODULE__.PadsSpecs.generate_docs_from_pads_specs()
@@ -26,9 +26,7 @@ defmodule Membrane.Core.Child do
     if moduledoc != false do
       moduledoc =
         if String.trim(moduledoc) == "" do
-          quote do
-            unquote(moduledoc) <> "Membrane #{unquote(child)}.\n\n"
-          end
+          "Membrane #{child_type}.\n\n"
         else
           moduledoc
         end
