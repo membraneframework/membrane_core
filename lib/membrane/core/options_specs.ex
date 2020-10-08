@@ -3,6 +3,7 @@ defmodule Membrane.Core.OptionsSpecs do
 
   use Bunch
 
+  alias Bunch.{KVEnum, Markdown}
   alias Membrane.Pad
   alias Membrane.Time
 
@@ -34,8 +35,8 @@ defmodule Membrane.Core.OptionsSpecs do
     """
   end
 
-  @spec def_options(module(), nil | Keyword.t()) :: Macro.t()
-  def def_options(module, options) do
+  @spec def_options(module(), nil | Keyword.t(), :element | :bin) :: Macro.t()
+  def def_options(module, options, child) do
     {opt_typespecs, escaped_opts} = parse_opts(options)
     typedoc = generate_opts_doc(escaped_opts)
 
@@ -46,7 +47,7 @@ defmodule Membrane.Core.OptionsSpecs do
       @type t :: %unquote(module){unquote_splicing(opt_typespecs)}
 
       @membrane_options_moduledoc """
-      ## Element options
+      ## #{unquote(child) |> to_string |> String.capitalize()} options
 
       Passed via struct `t:#{inspect(__MODULE__)}.t/0`
 
@@ -108,9 +109,13 @@ defmodule Membrane.Core.OptionsSpecs do
   end
 
   defp generate_opt_doc({opt_name, opt_definition}) do
-    header = "* `#{Atom.to_string(opt_name)}`"
+    header = "`#{Atom.to_string(opt_name)}`"
 
-    desc = opt_definition |> Keyword.get(:description, "")
+    spec = """
+    ```
+    #{Keyword.fetch!(opt_definition, :spec)}
+    ```
+    """
 
     default_val_desc =
       if Keyword.has_key?(opt_definition, :default) do
@@ -128,29 +133,33 @@ defmodule Membrane.Core.OptionsSpecs do
         quote_expr("***Required***")
       end
 
+    desc = Keyword.get(opt_definition, :description, "") |> String.trim()
+
     quote do
       """
-      #{unquote(header)}
-
-      #{unquote(default_val_desc) |> Bunch.Markdown.indent()}
-
-      #{unquote(desc) |> String.trim() |> Bunch.Markdown.indent()}
+      - #{unquote(header)}  \n
+      #{
+        unquote([spec, default_val_desc, desc])
+        |> Enum.map_join("  \n", &Markdown.indent/1)
+      }
       """
     end
   end
 
-  defp parse_opts(kw) when is_list(kw) do
-    # AST of typespec for keyword list containing options
-    opt_typespecs =
-      kw
-      |> Bunch.KVList.map_values(fn v ->
-        default_val = @default_types_params[v[:type]][:spec] || quote_expr(any)
-
-        v[:spec] || default_val
+  defp parse_opts(opts) when is_list(opts) do
+    opts =
+      KVEnum.map_values(opts, fn definition ->
+        default_spec = @default_types_params[definition[:type]][:spec] || quote_expr(any)
+        Keyword.put_new(definition, :spec, default_spec)
       end)
 
-    opts_without_typespecs = kw |> Bunch.KVList.map_values(&Keyword.delete(&1, :spec))
+    opts_typespecs = KVEnum.map_values(opts, & &1[:spec])
 
-    {opt_typespecs, opts_without_typespecs}
+    escaped_opts =
+      KVEnum.map_values(opts, fn definition ->
+        Keyword.update!(definition, :spec, &Macro.to_string/1)
+      end)
+
+    {opts_typespecs, escaped_opts}
   end
 end

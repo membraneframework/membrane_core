@@ -48,7 +48,6 @@ defmodule Membrane.Element.Base do
   use Bunch
 
   alias Membrane.{Element, Event, Pad}
-  alias Membrane.Core.Child.PadsSpecs
   alias Membrane.Core.OptionsSpecs
   alias Membrane.Element.{Action, CallbackContext}
 
@@ -223,13 +222,6 @@ defmodule Membrane.Element.Base do
                       handle_tick: 3,
                       handle_shutdown: 2
 
-  @docs_order [
-    :moduledoc,
-    :membrane_options_moduledoc,
-    :membrane_pads_moduledoc,
-    :membrane_clock_moduledoc
-  ]
-
   @doc """
   Macro defining options that parametrize element.
 
@@ -238,7 +230,7 @@ defmodule Membrane.Element.Base do
   #{OptionsSpecs.options_doc()}
   """
   defmacro def_options(options) do
-    OptionsSpecs.def_options(__CALLER__.module, options)
+    OptionsSpecs.def_options(__CALLER__.module, options, :element)
   end
 
   @doc """
@@ -266,32 +258,9 @@ defmodule Membrane.Element.Base do
     end
   end
 
-  defmacro generate_moduledoc(env) do
-    membrane_pads_moduledoc =
-      Module.get_attribute(env.module, :membrane_pads)
-      |> PadsSpecs.generate_docs_from_pads_specs()
-
-    Module.put_attribute(env.module, :membrane_pads_moduledoc, membrane_pads_moduledoc)
-
-    quote do
-      if @moduledoc != false do
-        @moduledoc unquote(
-                     @docs_order
-                     |> Enum.map(&Module.get_attribute(__CALLER__.module, &1))
-                     |> Enum.map(fn
-                       # built-in @moduledoc writes docs in the form of {integer(), string}
-                       {_, text} -> text
-                       e -> e
-                     end)
-                     |> Enum.filter(& &1)
-                     |> Enum.reduce(fn x, acc ->
-                       quote do
-                         unquote(acc) <> unquote(x)
-                       end
-                     end)
-                   )
-      end
-    end
+  @doc false
+  defmacro __before_compile__(env) do
+    Membrane.Core.Child.generate_moduledoc(env.module, :element)
   end
 
   @doc """
@@ -314,7 +283,7 @@ defmodule Membrane.Element.Base do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 
-      @before_compile {unquote(__MODULE__), :generate_moduledoc}
+      @before_compile unquote(__MODULE__)
 
       alias Membrane.Element.CallbackContext, as: Ctx
 

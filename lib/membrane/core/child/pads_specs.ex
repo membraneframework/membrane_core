@@ -222,7 +222,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
       config
       |> Enum.map(fn {k, v} ->
         {
-          k |> to_string() |> String.replace("_", "&nbsp;") |> String.capitalize(),
+          k |> to_string() |> String.replace("_", " ") |> String.capitalize(),
           generate_pad_property_doc(k, v)
         }
       end)
@@ -234,7 +234,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
       if pad_opts != nil do
         quote do
           """
-          #{Bunch.Markdown.hard_indent("Options", 4)}
+          #{Bunch.Markdown.indent("Options:")}
 
           #{unquote(OptionsSpecs.generate_opts_doc(pad_opts))}
           """
