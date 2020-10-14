@@ -21,7 +21,8 @@ defmodule Membrane.ChildEntry do
           pid: pid,
           clock: Membrane.Clock.t(),
           sync: Membrane.Sync.t(),
-          playback_synced?: boolean()
+          playback_synced?: boolean(),
+          terminating?: boolean()
         }
 
   defstruct [
@@ -32,6 +33,7 @@ defmodule Membrane.ChildEntry do
     :pid,
     :clock,
     :sync,
-    playback_synced?: false
+    playback_synced?: false,
+    terminating?: false
   ]
 end

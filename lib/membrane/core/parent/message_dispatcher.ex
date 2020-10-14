@@ -5,7 +5,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
 
   alias Membrane.Core.{Parent, Pipeline, TimerController}
   alias Membrane.Core.Message
-  alias Membrane.Core.Parent.LifecycleController
+  alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
 
   require Membrane.Core.Message
 
@@ -16,7 +16,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
         Message.new(:playback_state_changed, [pid, new_playback_state]),
         state
       ) do
-    LifecycleController.child_playback_changed(pid, new_playback_state, state)
+    ChildLifeController.child_playback_changed(pid, new_playback_state, state)
     |> noreply(state)
   end
 
@@ -52,7 +52,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   end
 
   def handle_message({:DOWN, _ref, :process, child_pid, reason}, state) do
-    LifecycleController.handle_child_death(child_pid, reason, state)
+    ChildLifeController.handle_child_death(child_pid, reason, state)
     |> noreply(state)
   end
 

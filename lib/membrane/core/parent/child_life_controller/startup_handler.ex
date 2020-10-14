@@ -4,7 +4,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
 
   alias Membrane.{CallbackError, ChildEntry, Clock, Core, ParentError, Sync}
   alias Membrane.Core.{CallbackHandler, Component, Message, Parent}
-  alias Membrane.Core.Parent.ChildEntryParser
+  alias Membrane.Core.Parent.{ChildEntryParser, ChildrenModel}
 
   require Membrane.Core.Component
   require Membrane.Core.Message
@@ -81,7 +81,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
   def add_children(children, state) do
     children
     |> Bunch.Enum.try_reduce(state, fn child, state ->
-      state |> Parent.ChildrenModel.add_child(child.name, child)
+      state |> ChildrenModel.add_child(child.name, child)
     end)
   end
 
@@ -134,14 +134,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
         state
 
       expected_playback ->
-        children =
-          Enum.reduce(children_names, state.children, fn name, children ->
-            %{^name => child} = children
+        {:ok, state} =
+          ChildrenModel.update_children(state, children_names, fn child ->
             Message.send(child.pid, :change_playback_state, expected_playback)
-            %{children | name => %{child | playback_synced?: false}}
+            %{child | playback_synced?: false}
           end)
 
-        %{state | children: children}
+        state
     end
   end
 

@@ -33,9 +33,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     state = links |> Enum.reduce(state, &link/2)
 
     with :ok <-
-           state
-           |> Parent.ChildrenModel.get_children()
-           |> Bunch.Enum.try_each(fn {_name, %{pid: pid}} ->
+           Bunch.Enum.try_each(state.children, fn {_name, %{pid: pid}} ->
              pid |> Message.call(:linking_finished, [])
            end) do
       links

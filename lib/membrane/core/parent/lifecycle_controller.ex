@@ -17,10 +17,10 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @impl PlaybackHandler
   def handle_playback_state(old, new, state) do
     Membrane.Logger.debug("Changing playback state from #{old} to #{new}")
-    children_data = state |> ChildrenModel.get_children() |> Map.values()
-    Enum.each(children_data, &PlaybackHandler.request_playback_state_change(&1.pid, new))
+    children_data = Map.values(state.children)
     :ok = toggle_syncs_active(old, new, children_data)
-    state = ChildrenModel.update_children(state, &%{&1 | playback_synced?: false})
+    Enum.each(children_data, &PlaybackHandler.request_playback_state_change(&1.pid, new))
+    {:ok, state} = ChildrenModel.update_children(state, &%{&1 | playback_synced?: false})
 
     if children_data |> Enum.empty?() do
       {:ok, state}
@@ -99,34 +99,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
-  @spec child_playback_changed(pid, PlaybackState.t(), Parent.state_t()) ::
-          PlaybackHandler.handler_return_t()
-  def child_playback_changed(pid, child_pb_state, state) do
-    child = child_by_pid(pid, state)
-    %{playback: playback} = state
-
-    cond do
-      playback.pending_state == nil and playback.state == child_pb_state ->
-        state = put_in(state, [:children, child, :playback_synced?], true)
-        {:ok, state}
-
-      playback.pending_state == child_pb_state ->
-        state = put_in(state, [:children, child, :playback_synced?], true)
-        maybe_finish_playback_transition(state)
-
-      true ->
-        {:ok, state}
-    end
-  end
-
-  @spec handle_child_death(child_pid :: pid(), reason :: atom(), state :: Component.state_t()) ::
-          {:ok, Component.state_t()}
-  def handle_child_death(pid, :normal, state) do
-    child = child_by_pid(pid, state)
-    state = Bunch.Access.delete_in(state, [:children, child])
-    maybe_finish_playback_transition(state)
-  end
-
   @spec handle_stream_management_event(atom, Child.name_t(), Pad.ref_t(), Parent.state_t()) ::
           Type.stateful_try_t(Parent.state_t())
   def handle_stream_management_event(cb, element_name, pad_ref, state)
@@ -158,7 +130,9 @@ defmodule Membrane.Core.Parent.LifecycleController do
     {:ok, %{state | children_log_metadata: children_log_metadata}}
   end
 
-  defp maybe_finish_playback_transition(state) do
+  @spec maybe_finish_playback_transition(Parent.state_t()) ::
+          {:ok | {:error, any}, Parent.state_t()}
+  def maybe_finish_playback_transition(state) do
     all_children_in_sync? = ChildrenModel.all?(state, & &1.playback_synced?)
 
     if PlaybackHandler.suspended?(state) and all_children_in_sync? do
@@ -166,15 +140,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
     else
       {:ok, state}
     end
-  end
-
-  defp child_by_pid(pid, state) do
-    {child_name, _child_data} =
-      state
-      |> ChildrenModel.get_children()
-      |> Enum.find(fn {_name, entry} -> entry.pid == pid end)
-
-    child_name
   end
 
   defp get_callback_action_handler(%Core.Pipeline.State{}), do: Core.Pipeline.ActionHandler
