@@ -7,11 +7,7 @@ defmodule Membrane.Core.Parent.ChildEntryParser do
           name: Membrane.Child.name_t(),
           module: module,
           options: struct | nil,
-          component_type: :element | :bin,
-          pid: pid | nil,
-          clock: Membrane.Clock.t() | nil,
-          sync: Membrane.Sync.t() | nil,
-          pending?: boolean()
+          component_type: :element | :bin
         }
 
   @spec from_spec(ParentSpec.children_spec_t() | any) :: [raw_child_entry_t] | no_return
@@ -24,8 +20,7 @@ defmodule Membrane.Core.Parent.ChildEntryParser do
       name: name,
       module: module,
       options: options,
-      component_type: component_type(module),
-      pending?: false
+      component_type: component_type(module)
     }
   end
 
@@ -36,8 +31,7 @@ defmodule Membrane.Core.Parent.ChildEntryParser do
       name: name,
       module: module,
       options: options,
-      component_type: component_type(module),
-      pending?: false
+      component_type: component_type(module)
     }
   end
 

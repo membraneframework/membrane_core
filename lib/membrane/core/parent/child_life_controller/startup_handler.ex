@@ -127,6 +127,24 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     end
   end
 
+  @spec init_playback_state([Membrane.Child.name_t()], Parent.state_t()) :: Parent.state_t()
+  def init_playback_state(children_names, state) do
+    case state.playback.pending_state || state.playback.state do
+      :stopped ->
+        state
+
+      expected_playback ->
+        children =
+          Enum.reduce(children_names, state.children, fn name, children ->
+            %{^name => child} = children
+            Message.send(child.pid, :change_playback_state, expected_playback)
+            %{children | name => %{child | playback_synced?: false}}
+          end)
+
+        %{state | children: children}
+    end
+  end
+
   defp start_child(child, parent_clock, syncs, log_metadata) do
     %ChildEntry{name: name, module: module, options: options} = child
     Membrane.Logger.debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")

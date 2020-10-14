@@ -4,13 +4,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   alias __MODULE__.{StartupHandler, LinkHandler}
   alias Membrane.ParentSpec
-  alias Membrane.Core.{Message, Parent}
+  alias Membrane.Core.Parent
   alias Membrane.Core.Parent.{ChildEntryParser, ClockHandler, Link}
   alias Membrane.Core.PlaybackHandler
 
   require Membrane.Logger
   require Membrane.Bin
-  require Membrane.Core.Message
   require Membrane.Element
   require Membrane.PlaybackState
 
@@ -37,16 +36,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     :ok = StartupHandler.maybe_activate_syncs(syncs, state)
     {:ok, state} = StartupHandler.add_children(children, state)
+    children_names = children |> Enum.map(& &1.name)
     state = ClockHandler.choose_clock(children, spec.clock_provider, state)
     {:ok, links} = Link.from_spec(spec.links)
     links = LinkHandler.resolve_links(links, state)
     {:ok, state} = LinkHandler.link_children(links, state)
-    children_names = children |> Enum.map(& &1.name)
     {:ok, state} = StartupHandler.exec_handle_spec_started(children_names, state)
-
-    children
-    |> Enum.each(&Message.send(&1.pid, :change_playback_state, state.playback.state))
-
+    state = StartupHandler.init_playback_state(children_names, state)
     {{:ok, children_names}, state}
   end
 

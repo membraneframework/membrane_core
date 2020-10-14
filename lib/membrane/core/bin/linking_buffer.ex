@@ -60,7 +60,7 @@ defmodule Membrane.Core.Bin.LinkingBuffer do
         bin_state
 
       {msgs, new_buf} ->
-        msgs |> Enum.each(&do_flush(&1, pad, bin_state))
+        msgs |> Enum.reverse() |> Enum.each(&do_flush(&1, pad, bin_state))
         %{bin_state | linking_buffer: new_buf}
     end
   end
