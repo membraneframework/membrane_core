@@ -40,9 +40,10 @@ defmodule Membrane.Core.Parent.ChildrenModel do
   def update_children(state, children_names, mapper) do
     result =
       Bunch.Enum.try_reduce(children_names, state.children, fn name, children ->
-        case Map.fetch(children, name) do
-          {:ok, child} -> {:ok, %{children | name => mapper.(child)}}
-          :error -> {:error, {:unknown_child, name}}
+        if Map.has_key?(children, name) do
+          {:ok, Map.update!(children, name, mapper)}
+        else
+          {:error, {:unknown_child, name}}
         end
       end)
 
