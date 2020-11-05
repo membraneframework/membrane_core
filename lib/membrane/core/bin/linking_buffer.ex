@@ -48,7 +48,7 @@ defmodule Membrane.Core.Bin.LinkingBuffer do
     do: pad in state.pads.dynamic_currently_linking
 
   @doc """
-  Sends messages stored for a given outpud pad.
+  Sends messages stored for a given output pad.
   A link must already be available.
   """
   @spec flush_for_pad(Pad.ref_t(), State.t()) :: State.t()
