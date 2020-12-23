@@ -191,12 +191,10 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   end
 
   defp send_linking_finished(links) do
-    endpoints =
-      links
-      |> Enum.flat_map(&[&1.from, &1.to])
-      |> Enum.reject(&(&1.child == {Membrane.Bin, :itself}))
-      |> Enum.uniq()
-
-    Bunch.Enum.try_each(endpoints, &Message.call(&1.pid, :linking_finished))
+    links
+    |> Enum.flat_map(&[&1.from, &1.to])
+    |> Enum.reject(&(&1.child == {Membrane.Bin, :itself}))
+    |> Enum.uniq()
+    |> Bunch.Enum.try_each(&Message.call(&1.pid, :linking_finished))
   end
 end
