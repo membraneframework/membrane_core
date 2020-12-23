@@ -4,7 +4,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
 
   alias Membrane.{CallbackError, ChildEntry, Clock, Core, ParentError, Sync}
   alias Membrane.Core.{CallbackHandler, Component, Message, Parent}
-  alias Membrane.Core.Parent.ChildEntryParser
+  alias Membrane.Core.Parent.{ChildEntryParser, ChildrenModel}
 
   require Membrane.Core.Component
   require Membrane.Core.Message
@@ -81,7 +81,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
   def add_children(children, state) do
     children
     |> Bunch.Enum.try_reduce(state, fn child, state ->
-      state |> Parent.ChildrenModel.add_child(child.name, child)
+      state |> ChildrenModel.add_child(child.name, child)
     end)
   end
 
@@ -124,6 +124,23 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
           message: """
           Callback :handle_spec_started failed with reason: #{inspect(reason)}
           """
+    end
+  end
+
+  @spec init_playback_state([Membrane.Child.name_t()], Parent.state_t()) :: Parent.state_t()
+  def init_playback_state(children_names, state) do
+    case state.playback.pending_state || state.playback.state do
+      :stopped ->
+        state
+
+      expected_playback ->
+        {:ok, state} =
+          ChildrenModel.update_children(state, children_names, fn child ->
+            Message.send(child.pid, :change_playback_state, expected_playback)
+            %{child | playback_synced?: false}
+          end)
+
+        state
     end
   end
 

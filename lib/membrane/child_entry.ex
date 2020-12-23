@@ -11,6 +11,8 @@ defmodule Membrane.ChildEntry do
   Other fields in the struct ARE NOT PART OF THE PUBLIC API and should not be
   accessed or relied on.
   """
+  use Bunch.Access
+
   @type t :: %__MODULE__{
           name: Membrane.Child.name_t(),
           module: module,
@@ -19,8 +21,19 @@ defmodule Membrane.ChildEntry do
           pid: pid,
           clock: Membrane.Clock.t(),
           sync: Membrane.Sync.t(),
-          pending?: boolean()
+          playback_synced?: boolean(),
+          terminating?: boolean()
         }
 
-  defstruct [:name, :module, :options, :component_type, :pid, :clock, :sync, :pending?]
+  defstruct [
+    :name,
+    :module,
+    :options,
+    :component_type,
+    :pid,
+    :clock,
+    :sync,
+    playback_synced?: false,
+    terminating?: false
+  ]
 end

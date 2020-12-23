@@ -147,7 +147,9 @@ defmodule Membrane.Core.Element.LifecycleController do
   end
 
   @impl PlaybackHandler
-  def handle_playback_state_changed(_old, new, state) do
+  def handle_playback_state_changed(old, new, state) do
+    Membrane.Logger.debug_verbose("Playback state changed from #{old} to #{new}")
+
     if new == :stopped, do: unlink(state.pads.data)
 
     with {:ok, state} <- PlaybackBuffer.eval(state) do

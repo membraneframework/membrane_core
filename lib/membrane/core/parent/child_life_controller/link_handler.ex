@@ -32,15 +32,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   def link_children(links, state) do
     state = links |> Enum.reduce(state, &link/2)
 
-    with :ok <-
-           state
-           |> Parent.ChildrenModel.get_children()
-           |> Bunch.Enum.try_each(fn {_name, %{pid: pid}} ->
-             pid |> Message.call(:linking_finished, [])
-           end) do
-      links
-      |> Enum.reduce(state, &flush_linking_buffer/2)
-      ~> {:ok, &1}
+    with :ok <- send_linking_finished(links) do
+      state = Enum.reduce(links, state, &flush_linking_buffer/2)
+      {:ok, state}
     end
   end
 
@@ -194,5 +188,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
       this.pad_props
     ])
     ~> {&1, state}
+  end
+
+  defp send_linking_finished(links) do
+    links
+    |> Enum.flat_map(&[&1.from, &1.to])
+    |> Enum.reject(&(&1.child == {Membrane.Bin, :itself}))
+    |> Enum.uniq()
+    |> Bunch.Enum.try_each(&Message.call(&1.pid, :linking_finished))
   end
 end
