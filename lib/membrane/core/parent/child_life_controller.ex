@@ -119,11 +119,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @spec maybe_handle_child_death(child_pid :: pid(), reason :: atom(), state :: Parent.state_t()) ::
           {:ok, Parent.state_t()}
-  def maybe_handle_child_death(pid, :normal, state) do
+  def maybe_handle_child_death(pid, reason, state) do
     withl find: {:ok, child_name} <- child_by_pid(pid, state),
+          assert: :normal = reason,
           handle: state = Bunch.Access.delete_in(state, [:children, child_name]),
           handle: {:ok, state} <- LifecycleController.maybe_finish_playback_transition(state) do
-          {{:ok, :child}, state}
+      {{:ok, :child}, state}
     else
       find: :error -> {{:ok, :not_child}, state}
       handle: error -> error

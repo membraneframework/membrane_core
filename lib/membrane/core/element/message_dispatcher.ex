@@ -96,10 +96,6 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     Child.LifecycleController.handle_controlling_pid(pid, state)
   end
 
-  defp do_handle_message(Message.new(:demand_unit, [demand_unit, pad_ref]), :info, state) do
-    Child.LifecycleController.handle_demand_unit(demand_unit, pad_ref, state)
-  end
-
   # Sent by `Membrane.Core.Element.DemandHandler.handle_delayed_demands`, check there for
   # more information
   defp do_handle_message(Message.new(:invoke_supply_demand, pad_ref), :info, state) do
@@ -121,11 +117,11 @@ defmodule Membrane.Core.Element.MessageDispatcher do
   end
 
   defp do_handle_message(
-         Message.new(:handle_link, [pad_ref, pad_direction, pid, other_ref, other_info, props]),
+         Message.new(:handle_link, [direction, this, other, other_info]),
          :call,
          state
        ) do
-    PadController.handle_link(pad_ref, pad_direction, pid, other_ref, other_info, props, state)
+    PadController.handle_link(direction, this, other, other_info, state)
   end
 
   defp do_handle_message(Message.new(:handle_unlink, pad_ref), :info, state) do

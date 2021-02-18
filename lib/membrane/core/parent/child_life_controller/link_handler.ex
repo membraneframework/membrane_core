@@ -152,8 +152,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   defp link(%Link{from: from, to: to}, state) do
     report_new_link(from, to)
-    {{:ok, info}, state} = link_endpoint(:output, from, to, nil, state)
-    {{:ok, _info}, state} = link_endpoint(:input, to, from, info, state)
+
+    {{:ok, _info}, state} =
+      if from.child == {Membrane.Bin, :itself} do
+        link_endpoint(:output, from, to, state)
+      else
+        link_endpoint(:input, to, from, state)
+      end
+
     state
   end
 
@@ -161,32 +167,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
          direction,
          %Endpoint{child: {Membrane.Bin, :itself}} = this,
          other,
-         other_info,
          %Bin.State{} = state
        ) do
-    with {{:ok, info}, state} <-
-           Child.PadController.handle_link(
-             this.pad_ref,
-             direction,
-             other.pid,
-             other.pad_ref,
-             other_info,
-             this.pad_props,
-             state
-           ) do
-      {{:ok, info}, state}
-    end
+    Child.PadController.handle_link(direction, this, other, nil, state)
   end
 
-  defp link_endpoint(direction, this, other, other_info, state) do
-    Message.call(this.pid, :handle_link, [
-      this.pad_ref,
-      direction,
-      other.pid,
-      other.pad_ref,
-      other_info,
-      this.pad_props
-    ])
+  defp link_endpoint(direction, this, other, state) do
+    Message.call(this.pid, :handle_link, [direction, this, other, nil])
     ~> {&1, state}
   end
 

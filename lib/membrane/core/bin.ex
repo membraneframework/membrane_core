@@ -122,13 +122,6 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
-  # Element-specific message.
-  def handle_info(Message.new(:demand_unit, [demand_unit, pad_ref]), state) do
-    Core.Child.LifecycleController.handle_demand_unit(demand_unit, pad_ref, state)
-    |> noreply()
-  end
-
-  @impl GenServer
   def handle_info(Message.new(:handle_unlink, pad_ref), state) do
     PadController.handle_pad_removed(pad_ref, state)
     |> noreply()
@@ -146,16 +139,8 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
-  def handle_call(
-        Message.new(:handle_link, [pad_ref, pad_direction, pid, other_ref, other_info, props]),
-        _from,
-        state
-      ) do
-    {{:ok, info}, state} =
-      PadController.handle_link(pad_ref, pad_direction, pid, other_ref, other_info, props, state)
-
-    {{:ok, info}, state}
-    |> reply()
+  def handle_call(Message.new(:handle_link, [direction, this, other, other_info]), _from, state) do
+    PadController.handle_link(direction, this, other, other_info, state) |> reply()
   end
 
   @impl GenServer
