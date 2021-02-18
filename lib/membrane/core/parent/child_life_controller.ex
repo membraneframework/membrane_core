@@ -100,7 +100,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @spec child_playback_changed(pid, Membrane.PlaybackState.t(), Parent.state_t()) ::
           {:ok | {:error, any}, Parent.state_t()}
   def child_playback_changed(pid, child_pb_state, state) do
-    child = child_by_pid(pid, state)
+    {:ok, child} = child_by_pid(pid, state)
     %{playback: playback} = state
 
     cond do
@@ -117,18 +117,23 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
-  @spec handle_child_death(child_pid :: pid(), reason :: atom(), state :: Parent.state_t()) ::
+  @spec maybe_handle_child_death(child_pid :: pid(), reason :: atom(), state :: Parent.state_t()) ::
           {:ok, Parent.state_t()}
-  def handle_child_death(pid, :normal, state) do
-    child = child_by_pid(pid, state)
-    state = Bunch.Access.delete_in(state, [:children, child])
-    LifecycleController.maybe_finish_playback_transition(state)
+  def maybe_handle_child_death(pid, :normal, state) do
+    withl find: {:ok, child_name} <- child_by_pid(pid, state),
+          handle: state = Bunch.Access.delete_in(state, [:children, child_name]),
+          handle: {:ok, state} <- LifecycleController.maybe_finish_playback_transition(state) do
+          {{:ok, :child}, state}
+    else
+      find: :error -> {{:ok, :not_child}, state}
+      handle: error -> error
+    end
   end
 
   defp child_by_pid(pid, state) do
-    {child_name, _child_data} =
-      Enum.find(state.children, fn {_name, entry} -> entry.pid == pid end)
-
-    child_name
+    case Enum.find(state.children, fn {_name, entry} -> entry.pid == pid end) do
+      {child_name, _child_data} -> {:ok, child_name}
+      nil -> :error
+    end
   end
 end

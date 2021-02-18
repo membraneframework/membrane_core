@@ -3,9 +3,10 @@ defmodule Membrane.Core.Child.LifecycleController do
   use Bunch
 
   alias Membrane.{Clock, Pad}
-  alias Membrane.Core.Child
+  alias Membrane.Core.{Child, Message}
   alias Membrane.Core.Child.PadModel
 
+  require Message
   require PadModel
 
   @doc """
@@ -28,5 +29,11 @@ defmodule Membrane.Core.Child.LifecycleController do
   def handle_watcher(watcher, state) do
     %{synchronization: %{clock: clock}} = state
     {{:ok, %{clock: clock}}, %{state | watcher: watcher}}
+  end
+
+  def unlink(state) do
+    state.pads.data
+    |> Map.values()
+    |> Enum.each(&Message.send(&1.pid, :handle_unlink, &1.other_ref))
   end
 end

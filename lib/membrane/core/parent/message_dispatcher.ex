@@ -51,8 +51,13 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     TimerController.handle_clock_update(clock, ratio, state) |> noreply(state)
   end
 
-  def handle_message({:DOWN, _ref, :process, child_pid, reason}, state) do
-    ChildLifeController.handle_child_death(child_pid, reason, state)
+  def handle_message({:DOWN, _ref, :process, pid, reason} = message, state) do
+    with {{:ok, result}, state} <- ChildLifeController.maybe_handle_child_death(pid, reason, state) do
+      case result do
+        :child -> {:ok, state}
+        :not_child -> LifecycleController.handle_other(message, state)
+      end
+    end
     |> noreply(state)
   end
 

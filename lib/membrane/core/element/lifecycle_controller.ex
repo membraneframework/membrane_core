@@ -7,7 +7,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   use Bunch
   use Membrane.Core.PlaybackHandler
 
-  alias Membrane.{Clock, Element, Sync}
+  alias Membrane.{Clock, Core, Element, Sync}
   alias Membrane.Core.{CallbackHandler, Message}
   alias Membrane.Core.Child.PadController
   alias Membrane.Core.Element.{ActionHandler, PlaybackBuffer, State}
@@ -150,18 +150,12 @@ defmodule Membrane.Core.Element.LifecycleController do
   def handle_playback_state_changed(old, new, state) do
     Membrane.Logger.debug_verbose("Playback state changed from #{old} to #{new}")
 
-    if new == :stopped, do: unlink(state.pads.data)
+    if new == :stopped, do: Core.Child.LifecycleController.unlink(state)
 
     with {:ok, state} <- PlaybackBuffer.eval(state) do
       if new == :terminating,
         do: {:stop, :normal, state},
         else: {:ok, state}
     end
-  end
-
-  defp unlink(pads_data) do
-    pads_data
-    |> Map.values()
-    |> Enum.each(&Message.send(&1.pid, :handle_unlink, &1.other_ref))
   end
 end
