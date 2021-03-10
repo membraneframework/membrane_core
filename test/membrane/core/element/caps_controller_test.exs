@@ -42,7 +42,7 @@ defmodule Membrane.Core.Element.CapsControllerTest do
 
   describe "handle_caps for pull pad" do
     test "with empty input_buf", %{state: state} do
-      assert {:ok, new_state} = @module.handle_caps(:input, %MockCaps{}, state)
+      assert {:ok, _state} = @module.handle_caps(:input, %MockCaps{}, state)
     end
 
     test "with input_buf containing one buffer", %{state: state} do

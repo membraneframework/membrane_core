@@ -26,14 +26,12 @@ defmodule Membrane.Core.Child.PadControllerTest do
     test "when pad is present in the element" do
       state = prepare_state(TrivialFilter)
 
-      assert {{:ok, pad_info}, new_state} =
+      assert {{:ok, _pad_info}, new_state} =
                @module.handle_link(
                  :output,
-                 :output,
-                 self(),
-                 :other_input,
-                 nil,
-                 %{},
+                 %{pad_ref: :output, pid: self(), pad_props: []},
+                 %{pad_ref: :other_input, pid: nil},
+                 %{direction: :input, mode: :pull, demand_unit: :buffers},
                  state
                )
 
@@ -46,15 +44,7 @@ defmodule Membrane.Core.Child.PadControllerTest do
       state = prepare_state(TrivialFilter)
 
       assert_raise LinkError, fn ->
-        @module.handle_link(
-          :invalid_pad_ref,
-          :output,
-          self(),
-          :other_input,
-          nil,
-          %{},
-          state
-        )
+        @module.handle_link(:output, %{pad_ref: :invalid_pad_ref}, %{}, %{}, state)
       end
     end
   end

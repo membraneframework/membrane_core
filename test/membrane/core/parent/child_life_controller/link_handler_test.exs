@@ -202,7 +202,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
     resolved_links = LinkHandler.resolve_links(links, state)
     assert {:ok, _state} = LinkHandler.link_children(resolved_links, state)
     assert_receive Message.new(:handle_link, _args)
-    assert_receive Message.new(:handle_link, _args)
     assert_receive Message.new(:linking_finished)
     assert_receive Message.new(:linking_finished)
     refute_receive Message.new(_name, _args, _opts)

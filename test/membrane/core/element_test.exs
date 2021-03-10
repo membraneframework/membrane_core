@@ -53,14 +53,24 @@ defmodule Membrane.Core.ElementTest do
   defp linked_state do
     {:reply, {:ok, _reply}, state} =
       Element.handle_call(
-        Message.new(:handle_link, [:output, :output, self(), :input, %{mode: :pull}, []]),
+        Message.new(:handle_link, [
+          :output,
+          %{pad_ref: :output, pad_props: []},
+          %{pad_ref: :input, pid: self()},
+          %{direction: :input, mode: :pull, demand_unit: :buffers}
+        ]),
         nil,
         get_state()
       )
 
     {:reply, {:ok, _reply}, state} =
       Element.handle_call(
-        Message.new(:handle_link, [:input, :input, self(), :output, %{mode: :pull}, []]),
+        Message.new(:handle_link, [
+          :input,
+          %{pad_ref: :input, pad_props: []},
+          %{pad_ref: :output, pid: self()},
+          %{direction: :output, mode: :pull}
+        ]),
         nil,
         state
       )
@@ -130,13 +140,6 @@ defmodule Membrane.Core.ElementTest do
     assert state.controlling_pid == :c.pid(0, 255, 0)
   end
 
-  test "should set demand unit" do
-    assert {:noreply, state} =
-             Element.handle_info(Message.new(:demand_unit, [:bytes, :output]), linked_state())
-
-    assert state.pads.data.output.other_demand_unit == :bytes
-  end
-
   test "should store demand/buffer/caps/event when not playing" do
     initial_state = linked_state()
 
@@ -182,7 +185,7 @@ defmodule Membrane.Core.ElementTest do
     ]
     |> Enum.each(fn msg ->
       assert {:noreply, _state} = Element.handle_info(msg, playing_state())
-      assert_receive msg
+      assert_receive ^msg
     end)
   end
 
@@ -191,7 +194,12 @@ defmodule Membrane.Core.ElementTest do
 
     assert {:reply, {:ok, reply}, state} =
              Element.handle_call(
-               Message.new(:handle_link, [:output, :output, pid, :input, %{mode: :pull}, []]),
+               Message.new(:handle_link, [
+                 :output,
+                 %{pad_ref: :output, pad_props: []},
+                 %{pad_ref: :input, pid: pid},
+                 %{direction: :input, mode: :pull, demand_unit: :buffers}
+               ]),
                nil,
                get_state()
              )
@@ -205,7 +213,8 @@ defmodule Membrane.Core.ElementTest do
              options: nil
            }
 
-    assert %Membrane.Pad.Data{pid: ^pid, other_ref: :input} = state.pads.data.output
+    assert %Membrane.Pad.Data{pid: ^pid, other_ref: :input, other_demand_unit: :buffers} =
+             state.pads.data.output
 
     assert {:reply, :ok, _state} = Element.handle_call(Message.new(:linking_finished), nil, state)
   end
