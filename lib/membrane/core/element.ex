@@ -21,9 +21,11 @@ defmodule Membrane.Core.Element do
   use GenServer
 
   alias Membrane.{Clock, Element, Sync}
-  alias Membrane.Core.Element.{MessageDispatcher, State}
-  alias Membrane.Core.Message
+  alias Membrane.Core.Element.{MessageDispatcher, State, LifecycleController}
+  alias Membrane.Core.{Message, Child}
   alias Membrane.ComponentPath
+  alias Membrane.Core.Element.DemandHandler
+
 
   require Membrane.Core.Message
   require Membrane.Logger
@@ -105,12 +107,7 @@ defmodule Membrane.Core.Element do
       |> Map.put(:parent_monitor, parent_monitor)
       |> State.new()
 
-    with {:ok, state} <-
-           MessageDispatcher.handle_message(
-             Message.new(:init, options.user_options),
-             :other,
-             state
-           ) do
+    with {:ok, state} <- LifecycleController.handle_init(options.user_options, state) do
       {:ok, state}
     else
       {{:error, reason}, _state} -> {:stop, {:element_init, reason}}
@@ -119,10 +116,24 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def terminate(reason, state) do
-    {:ok, _state} =
-      MessageDispatcher.handle_message(Message.new(:shutdown, reason), :other, state)
+    {:ok, _state} = LifecycleController.handle_shutdown(reason, state)
 
     :ok
+  end
+
+  @impl GenServer
+  def handle_call(Message.new(:handle_watcher, watcher) = message, _from, state) do
+      withl handle:
+              {{:ok, clock}, state} <- Child.LifecycleController.handle_watcher(watcher, state),
+            demands: {:ok, state} <- DemandHandler.handle_delayed_demands(state) do
+        {:reply, {:ok, clock}, state}
+      else
+        handle: {_error, {{:error, reason}, state}} ->
+          handle_message_error(message, :call, reason, state)
+
+        demands: {{:error, reason}, state} ->
+          handle_message_error(message, :call, reason, state)
+      end
   end
 
   @impl GenServer
@@ -141,5 +152,17 @@ defmodule Membrane.Core.Element do
   @impl GenServer
   def handle_info(message, state) do
     message |> MessageDispatcher.handle_message(:info, state)
+  end
+
+  defp handle_message_error(message, mode, reason, state) do
+    Membrane.Logger.error("""
+    Cannot handle message: #{inspect(message)}, mode: #{inspect(mode)}
+    Reason: #{inspect(reason)}
+    State: #{inspect(state, pretty: true)}
+    """)
+
+    reason = {:cannot_handle_message, reason, message: message, mode: mode}
+
+    {:reply, {:error, reason}, state}
   end
 end
