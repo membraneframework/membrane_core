@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   import Membrane.Pad, only: [is_pad_ref: 1]
 
   alias Membrane.{ActionError, Buffer, Caps, CallbackError, Event, Notification, Pad}
-  alias Membrane.Core.Element.{DemandHandler, LifecycleController, State}
+  alias Membrane.Core.Element.{DemandHandler, LifecycleController, DemandController, State}
   alias Membrane.Core.{Events, Message, PlaybackHandler, TimerController}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{DemandHandler, LifecycleController, State}
@@ -142,11 +142,11 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp do_handle_action(
          {:demand, {pad_ref, size}},
          cb,
-         params,
+         _params,
          %State{type: type} = state
        )
        when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter] do
-    supply_demand(pad_ref, size, cb, params[:supplying_demand?] || false, state)
+    supply_demand(pad_ref, size, cb, state)
   end
 
   defp do_handle_action({:start_timer, {id, interval, clock}}, _cb, _params, state) do
@@ -326,7 +326,6 @@ defmodule Membrane.Core.Element.ActionHandler do
           Pad.ref_t(),
           Action.demand_size_t(),
           callback :: atom,
-          currently_supplying? :: boolean,
           State.t()
         ) :: State.stateful_try_t()
 
@@ -334,14 +333,13 @@ defmodule Membrane.Core.Element.ActionHandler do
          _pad_ref,
          _size,
          callback,
-         _currently_supplying?,
          %State{playback: %{state: playback_state}} = state
        )
        when playback_state != :playing and callback != :handle_prepared_to_playing do
     {{:error, {:playback_state, playback_state}}, state}
   end
 
-  defp supply_demand(pad_ref, 0, callback, _currently_supplying?, state) do
+  defp supply_demand(pad_ref, 0, callback, state) do
     Membrane.Logger.debug_verbose("""
     Ignoring demand of size of 0 requested by callback #{inspect(callback)}
     on pad #{inspect(pad_ref)}.
@@ -350,20 +348,17 @@ defmodule Membrane.Core.Element.ActionHandler do
     {:ok, state}
   end
 
-  defp supply_demand(_pad_ref, size, _callback, _currently_supplying?, state)
+  defp supply_demand(_pad_ref, size, _callback, state)
        when is_integer(size) and size < 0 do
     {{:error, :negative_demand}, state}
   end
 
-  defp supply_demand(pad_ref, size, _callback, currently_supplying?, state) do
+  defp supply_demand(pad_ref, size, _callback, state) do
     withl data: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
           dir: %{direction: :input} <- pad_data,
           mode: %{mode: :pull} <- pad_data,
           update: {:ok, state} <- DemandHandler.update_demand(pad_ref, size, state) do
-      supply_mode = if currently_supplying?, do: :async, else: :sync
-      state = DemandHandler.delay_supply(pad_ref, supply_mode, state)
-
-      {:ok, state}
+      DemandHandler.supply_demand(pad_ref, state)
     else
       data: {:error, reason} -> {{:error, reason}, state}
       dir: %{direction: dir} -> {{:error, {:invalid_pad_dir, pad_ref, dir}}, state}
@@ -377,7 +372,16 @@ defmodule Membrane.Core.Element.ActionHandler do
     withl data: {:ok, pad_data} <- PadModel.get_data(state, out_ref),
           dir: %{direction: :output} <- pad_data,
           mode: %{mode: :pull} <- pad_data do
-      state = DemandHandler.delay_redemand(out_ref, state)
+      state =
+        case state do
+          %State{supplying_demand?: true} ->
+            DemandHandler.delay_redemand(out_ref, state)
+
+          _not_supplying_demand ->
+            {:ok, state} = DemandController.handle_demand(out_ref, 0, state)
+            state
+        end
+
       {:ok, state}
     else
       data: {:error, reason} -> {{:error, reason}, state}

@@ -129,7 +129,18 @@ defmodule Membrane.Core.Element.DemandHandler do
           Pad.ref_t(),
           State.t()
         ) :: State.stateful_try_t()
+  def supply_demand(pad_ref, %State{supplying_demand?: true} = state) do
+    {:ok, delay_supply(pad_ref, :async, state)}
+  end
+
   def supply_demand(pad_ref, state) do
+    with {:ok, state} <- do_supply_demand(pad_ref, %State{state | supplying_demand?: true}) do
+      {:ok, state} = handle_delayed_demands(state)
+      {:ok, %State{state | supplying_demand?: false}}
+    end
+  end
+
+  defp do_supply_demand(pad_ref, state) do
     pad_data = state |> PadModel.get_data!(pad_ref)
 
     {{_buffer_status, data}, new_input_buf} =
@@ -174,10 +185,10 @@ defmodule Membrane.Core.Element.DemandHandler do
           State.t()
         ) :: State.stateful_try_t()
   defp do_handle_input_buf_output(pad_ref, {:event, e}, state),
-    do: EventController.exec_handle_event(pad_ref, e, %{supplying_demand?: true}, state)
+    do: EventController.exec_handle_event(pad_ref, e, state)
 
   defp do_handle_input_buf_output(pad_ref, {:caps, c}, state),
-    do: CapsController.exec_handle_caps(pad_ref, c, %{supplying_demand?: true}, state)
+    do: CapsController.exec_handle_caps(pad_ref, c, state)
 
   defp do_handle_input_buf_output(
          pad_ref,
@@ -186,6 +197,6 @@ defmodule Membrane.Core.Element.DemandHandler do
        ) do
     state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - size))
 
-    BufferController.exec_buffer_handler(pad_ref, buffers, %{supplying_demand?: true}, state)
+    BufferController.exec_buffer_handler(pad_ref, buffers, state)
   end
 end
