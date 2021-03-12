@@ -22,6 +22,8 @@ defmodule Membrane.Core.Element.DemandHandler do
   require Membrane.Core.Message
   require Membrane.Logger
 
+  @empty MapSet.new()
+
   @doc """
   Updates demand on the given input pad that should be supplied by future calls
   to `supply_demand/2` or `check_and_supply_demands/2`.
@@ -67,15 +69,10 @@ defmodule Membrane.Core.Element.DemandHandler do
   is sent to self, and demand is supplied upon receiving it. This enables buffers
   waiting in mailbox to be received in the meantime.
   """
-  @spec delay_supply(Pad.ref_t(), :sync | :async, State.t()) :: State.t()
-  def delay_supply(pad_ref, :async, state) do
+  @spec delay_supply(Pad.ref_t(), State.t()) :: State.t()
+  def delay_supply(pad_ref, state) do
     state
-    |> Bunch.Struct.put_in([:delayed_demands, {pad_ref, :supply}], :async)
-  end
-
-  def delay_supply(pad_ref, :sync, state) do
-    state
-    |> Map.update!(:delayed_demands, &Map.put_new(&1, {pad_ref, :supply}, :sync))
+    |> Map.update!(:delayed_demands, &MapSet.put(&1, {pad_ref, :supply}))
   end
 
   @doc """
@@ -87,11 +84,11 @@ defmodule Membrane.Core.Element.DemandHandler do
   @spec delay_redemand(Pad.ref_t(), State.t()) :: State.t()
   def delay_redemand(pad_ref, state) do
     state
-    |> Bunch.Struct.put_in([:delayed_demands, {pad_ref, :redemand}], :sync)
+    |> Map.update!(:delayed_demands, &MapSet.put(&1, {pad_ref, :redemand}))
   end
 
   @spec handle_delayed_demands(State.t()) :: State.stateful_try_t()
-  def handle_delayed_demands(%State{delayed_demands: del_dem} = state) when del_dem == %{} do
+  def handle_delayed_demands(%State{delayed_demands: del_dem} = state) when del_dem == @empty do
     {:ok, state}
   end
 
@@ -100,19 +97,16 @@ defmodule Membrane.Core.Element.DemandHandler do
     # balanced among pads, i.e. to prevent situation where demands requested by
     # one pad are supplied right away while another one is waiting for buffers
     # potentially for a long time.
-    [{{pad_ref, action}, mode}] = del_dem |> Enum.take_random(1)
-    state = %State{state | delayed_demands: del_dem |> Map.delete({pad_ref, action})}
+    [{pad_ref, action}] = del_dem |> Enum.take_random(1)
+    state = %State{state | delayed_demands: del_dem |> MapSet.delete({pad_ref, action})}
 
     res =
-      case {action, mode} do
-        {:supply, :sync} ->
-          supply_demand(pad_ref, state)
-
-        {:supply, :async} ->
+      case action do
+        :supply ->
           Message.self(:invoke_supply_demand, pad_ref)
           {:ok, state}
 
-        {:redemand, :sync} ->
+        :redemand ->
           DemandController.handle_demand(pad_ref, 0, state)
       end
 
@@ -147,7 +141,7 @@ defmodule Membrane.Core.Element.DemandHandler do
           State.t()
         ) :: State.stateful_try_t()
   def supply_demand(pad_ref, %State{supplying_demand?: true} = state) do
-    {:ok, delay_supply(pad_ref, :async, state)}
+    {:ok, delay_supply(pad_ref, state)}
   end
 
   def supply_demand(pad_ref, state) do

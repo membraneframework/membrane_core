@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   import Membrane.Pad, only: [is_pad_ref: 1]
 
   alias Membrane.{ActionError, Buffer, Caps, CallbackError, Event, Notification, Pad}
-  alias Membrane.Core.Element.{DemandHandler, LifecycleController, DemandController, State}
+  alias Membrane.Core.Element.{DemandHandler, LifecycleController, State}
   alias Membrane.Core.{Events, Message, PlaybackHandler, TimerController}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{DemandHandler, LifecycleController, State}

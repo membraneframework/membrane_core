@@ -31,7 +31,7 @@ defmodule Membrane.Core.Element.State do
           playback: Playback.t(),
           playback_buffer: PlaybackBuffer.t(),
           supplying_demand?: boolean(),
-          delayed_demands: %{{Pad.ref_t(), :supply | :redemand} => :sync | :async},
+          delayed_demands: MapSet.t({Pad.ref_t(), :supply | :redemand}),
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
             parent_clock: Clock.t(),
@@ -80,7 +80,7 @@ defmodule Membrane.Core.Element.State do
       playback: %Playback{},
       playback_buffer: PlaybackBuffer.new(),
       supplying_demand?: false,
-      delayed_demands: %{},
+      delayed_demands: MapSet.new(),
       synchronization: %{
         parent_clock: options.parent_clock,
         timers: %{},

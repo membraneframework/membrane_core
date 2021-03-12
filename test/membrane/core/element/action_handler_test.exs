@@ -47,7 +47,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         state = %{state | playback: %Playback{state: playback}, supplying_demand?: true}
         assert {:ok, state} = @module.handle_action({:demand, {:input, 10}}, callback, %{}, state)
         assert state.pads.data.input.demand == 10
-        assert %{{:input, :supply} => :async} == state.delayed_demands
+        assert MapSet.new([{:input, :supply}]) == state.delayed_demands
       end)
 
       state = %{state | playback: %Playback{state: :playing}}
@@ -61,7 +61,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
                )
 
       assert state.pads.data.input.demand == 10
-      assert %{{:input, :supply} => :async} == state.delayed_demands
+      assert MapSet.new([{:input, :supply}]) == state.delayed_demands
     end
 
     test "returning error on invalid constraints", %{state: state} do
@@ -507,8 +507,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         )
 
       assert {:ok, new_state} = result
-      assert %{new_state | delayed_demands: %{}} == state
-      assert new_state.delayed_demands[{:output, :redemand}] == :sync
+      assert %{new_state | delayed_demands: MapSet.new()} == state
+      assert MapSet.member?(new_state.delayed_demands, {:output, :redemand}) == true
     end
   end
 
@@ -551,8 +551,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_received Message.new(:notification, [:elem_name, :a])
       assert_received Message.new(:notification, [:elem_name, :b])
       assert {:ok, new_state} = result
-      assert %{new_state | delayed_demands: %{}} == state
-      assert new_state.delayed_demands[{:output, :redemand}] == :sync
+      assert %{new_state | delayed_demands: MapSet.new()} == state
+      assert MapSet.member?(new_state.delayed_demands, {:output, :redemand}) == true
     end
 
     test "when two :redemand actions are last", %{state: state} do
@@ -569,8 +569,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_received Message.new(:notification, [:elem_name, :a])
       assert_received Message.new(:notification, [:elem_name, :b])
       assert {:ok, new_state} = result
-      assert %{new_state | delayed_demands: %{}} == state
-      assert new_state.delayed_demands[{:output, :redemand}] == :sync
+      assert %{new_state | delayed_demands: MapSet.new()} == state
+      assert MapSet.member?(new_state.delayed_demands, {:output, :redemand}) == true
     end
 
     test "when :redemand is not the last action", %{state: state} do
