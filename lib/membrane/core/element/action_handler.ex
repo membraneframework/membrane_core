@@ -372,17 +372,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     withl data: {:ok, pad_data} <- PadModel.get_data(state, out_ref),
           dir: %{direction: :output} <- pad_data,
           mode: %{mode: :pull} <- pad_data do
-      state =
-        case state do
-          %State{supplying_demand?: true} ->
-            DemandHandler.delay_redemand(out_ref, state)
-
-          _not_supplying_demand ->
-            {:ok, state} = DemandController.handle_demand(out_ref, 0, state)
-            state
-        end
-
-      {:ok, state}
+      DemandHandler.handle_redemand(out_ref, state)
     else
       data: {:error, reason} -> {{:error, reason}, state}
       dir: %{direction: dir} -> {{:error, {:invalid_pad_dir, out_ref, dir}}, state}

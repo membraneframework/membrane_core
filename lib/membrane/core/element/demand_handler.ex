@@ -122,6 +122,23 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @doc """
+  Called when redemand action was returned.
+    * If element is currently supplying demand it means
+      that after finishing supply_demand it will call handle_delayed_demands so redemand is delayed.
+    * If element is currently not supplying demand (it's always the case for source) handle_demand is
+      invoked right away, and it will invoke handle_demand callback, which will probably return :redemand
+      and :buffers and in that way source will synchronously supply demand.
+  """
+  @spec handle_redemand(Pad.ref_t(), State.t()) :: {:ok, State.t()}
+  def handle_redemand(pad_ref, %State{supplying_demand?: true} = state) do
+    {:ok, delay_redemand(pad_ref, state)}
+  end
+
+  def handle_redemand(pad_ref, state) do
+    DemandController.handle_demand(pad_ref, 0, state)
+  end
+
+  @doc """
   Based on the demand on the given pad takes InputBuffer contents
   and passes it to proper controllers.
   """
