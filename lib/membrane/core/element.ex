@@ -25,7 +25,7 @@ defmodule Membrane.Core.Element do
   alias Membrane.Core.{Message, Child}
   alias Membrane.ComponentPath
   alias Membrane.Core.Element.DemandHandler
-
+  alias Membrane.Core.Child.PadController
 
   require Membrane.Core.Message
   require Membrane.Logger
@@ -122,18 +122,42 @@ defmodule Membrane.Core.Element do
   end
 
   @impl GenServer
-  def handle_call(Message.new(:handle_watcher, watcher) = message, _from, state) do
-      withl handle:
-              {{:ok, clock}, state} <- Child.LifecycleController.handle_watcher(watcher, state),
-            demands: {:ok, state} <- DemandHandler.handle_delayed_demands(state) do
-        {:reply, {:ok, clock}, state}
-      else
-        handle: {_error, {{:error, reason}, state}} ->
-          handle_message_error(message, :call, reason, state)
+  def handle_call(Message.new(:handle_watcher, watcher), _from, state) do
+    {{:ok, clock}, state} = Child.LifecycleController.handle_watcher(watcher, state)
+    {:reply, {:ok, clock}, state}
+  end
 
-        demands: {{:error, reason}, state} ->
-          handle_message_error(message, :call, reason, state)
-      end
+  @impl GenServer
+  def handle_call(Message.new(:set_controlling_pid, pid), _from, state) do
+    {:ok, state} = Child.LifecycleController.handle_controlling_pid(pid, state)
+    {:reply, :ok, state}
+  end
+
+  @impl GenServer
+  def handle_call(Message.new(:linking_finished), _from, state) do
+    {:ok, state} = PadController.handle_linking_finished(state)
+    {:reply, :ok, state}
+  end
+
+  @impl GenServer
+  def handle_call(
+        Message.new(:handle_link, [direction, this, other, other_info]) = message,
+        _from,
+        state
+      ) do
+    with {{:ok, info}, state} <-
+           PadController.handle_link(direction, this, other, other_info, state) do
+      {:reply, {:ok, info}, state}
+    else
+      {{:error, reason}, state} ->
+        handle_message_error(message, :call, reason, state)
+    end
+  end
+
+  @impl GenServer
+  def handle_call(Message.new(:set_stream_sync, sync), _from, state) do
+    new_state = put_in(state.synchronization.stream_sync, sync)
+    {:reply, :ok, new_state}
   end
 
   @impl GenServer
