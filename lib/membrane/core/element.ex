@@ -8,8 +8,6 @@ defmodule Membrane.Core.Element do
   # Modules in this namespace are responsible for managing elements: handling incoming
   # data, executing callbacks and evaluating actions. These modules can be divided
   # in terms of functionality in the following way:
-  # - `Membrane.Core.Element.MessageDispatcher` parses incoming messages and
-  #   forwards them to controllers and handlers
   # - Controllers handle messages received from other elements or calls from other
   #   controllers and handlers
   # - Handlers handle actions invoked by element itself
@@ -20,9 +18,11 @@ defmodule Membrane.Core.Element do
   use Bunch
   use GenServer
 
+  import Membrane.Helper.GenServer
+
   alias Membrane.{Clock, Element, Sync}
-  alias Membrane.Core.Element.{MessageDispatcher, State, LifecycleController}
-  alias Membrane.Core.{Message, Child}
+  alias Membrane.Core.Element.{State, LifecycleController, PlaybackBuffer}
+  alias Membrane.Core.{Message, Child, PlaybackHandler, TimerController}
   alias Membrane.ComponentPath
   alias Membrane.Core.Element.DemandHandler
   alias Membrane.Core.Child.PadController
@@ -123,20 +123,17 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_call(Message.new(:handle_watcher, watcher), _from, state) do
-    {{:ok, clock}, state} = Child.LifecycleController.handle_watcher(watcher, state)
-    {:reply, {:ok, clock}, state}
+    Child.LifecycleController.handle_watcher(watcher, state) |> reply(state)
   end
 
   @impl GenServer
   def handle_call(Message.new(:set_controlling_pid, pid), _from, state) do
-    {:ok, state} = Child.LifecycleController.handle_controlling_pid(pid, state)
-    {:reply, :ok, state}
+    Child.LifecycleController.handle_controlling_pid(pid, state) |> reply(state)
   end
 
   @impl GenServer
   def handle_call(Message.new(:linking_finished), _from, state) do
-    {:ok, state} = PadController.handle_linking_finished(state)
-    {:reply, :ok, state}
+    PadController.handle_linking_finished(state) |> reply(state)
   end
 
   @impl GenServer
@@ -145,37 +142,123 @@ defmodule Membrane.Core.Element do
         _from,
         state
       ) do
-    with {{:ok, info}, state} <-
-           PadController.handle_link(direction, this, other, other_info, state) do
-      {:reply, {:ok, info}, state}
-    else
-      {{:error, reason}, state} ->
-        handle_message_error(message, :call, reason, state)
-    end
+    result =
+      with {{:ok, info}, new_state} <-
+             PadController.handle_link(direction, this, other, other_info, state) do
+        {{:ok, info}, new_state}
+      else
+        {{:error, reason}, _state} ->
+          handle_message_error(message, :call, reason, state)
+      end
+
+    result |> reply(state)
   end
 
   @impl GenServer
   def handle_call(Message.new(:set_stream_sync, sync), _from, state) do
     new_state = put_in(state.synchronization.stream_sync, sync)
-    {:reply, :ok, new_state}
+    {:ok, new_state} |> reply()
   end
 
   @impl GenServer
   def handle_call(message, _from, state) do
-    message |> MessageDispatcher.handle_message(:call, state)
+    handle_message_error(message, :call, {:invalid_message, message, mode: :call}, state)
+    |> reply(state)
   end
 
   @impl GenServer
   def handle_info({:DOWN, ref, :process, _pid, reason}, %{parent_monitor: ref} = state) do
-    {:noreply, state} =
-      MessageDispatcher.handle_message(Message.new(:pipeline_down, reason), :info, state)
+    {:ok, state} = LifecycleController.handle_pipeline_down(reason, state)
 
     {:stop, reason, state}
   end
 
   @impl GenServer
+  def handle_info(Message.new(:change_playback_state, new_playback_state), state) do
+    PlaybackHandler.change_playback_state(new_playback_state, LifecycleController, state)
+    |> noreply(state)
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:invoke_supply_demand, pad_ref) = message, state) do
+    case DemandHandler.supply_demand(pad_ref, state) do
+      {:ok, _state} = result ->
+        result |> noreply()
+
+      {{:error, reason}, _state} ->
+        handle_message_error(message, :info, reason, state) |> noreply(state)
+    end
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(type, _args, _opts) = msg, state)
+      when type in [:demand, :buffer, :caps, :event] do
+    case msg |> PlaybackBuffer.store(state) do
+      {:ok, _state} = res ->
+        res |> noreply()
+
+      {{:error, reason}, new_state} ->
+        handle_message_error(msg, :info, reason, new_state) |> noreply(state)
+    end
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:push_mode_announcment, [], for_pad: ref) = msg, state) do
+    case PadController.enable_toilet_if_pull(ref, state) do
+      {:ok, _state} = res ->
+        res |> noreply()
+
+      {{:error, reason}, new_state} ->
+        handle_message_error(msg, :info, reason, new_state) |> noreply(state)
+    end
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:handle_unlink, pad_ref) = msg, state) do
+    case PadController.handle_unlink(pad_ref, state) do
+      {:ok, _state} = res ->
+        res |> noreply()
+      {{:error, reason}, new_state} ->
+        handle_message_error(msg, :info, reason, new_state) |> noreply(state)
+    end
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:timer_tick, timer_id) = msg, state) do
+    case TimerController.handle_tick(timer_id, state) do
+      {:ok, _state} = res ->
+        res |> noreply(state)
+
+      {{:error, reason}, new_state} ->
+        handle_message_error(msg, :info, reason, new_state) |> noreply(state)
+    end
+  end
+
+  @impl GenServer
+  def handle_info({:membrane_clock_ratio, clock, ratio}, state) do
+    TimerController.handle_clock_update(clock, ratio, state) |> noreply()
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:log_metadata, metadata), state) do
+    :ok = Logger.metadata(metadata)
+    {:ok, state} |> noreply()
+  end
+
+  def handle_info(Message.new(_, _, _) = message, state) do
+    handle_message_error(message, :info, {:invalid_message, message, mode: :info}, state)
+    |> noreply(state)
+  end
+
+  @impl GenServer
   def handle_info(message, state) do
-    message |> MessageDispatcher.handle_message(:info, state)
+    case LifecycleController.handle_other(message, state) do
+      {:ok, _state} = res ->
+        res |> noreply(state)
+
+      {{:error, reason}, new_state} ->
+        handle_message_error(message, :info, reason, new_state) |> noreply(state)
+    end
   end
 
   defp handle_message_error(message, mode, reason, state) do
@@ -187,6 +270,6 @@ defmodule Membrane.Core.Element do
 
     reason = {:cannot_handle_message, reason, message: message, mode: mode}
 
-    {:reply, {:error, reason}, state}
+    {{:error, reason}, state}
   end
 end
