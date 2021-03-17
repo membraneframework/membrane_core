@@ -218,6 +218,7 @@ defmodule Membrane.Core.Element do
     case PadController.handle_unlink(pad_ref, state) do
       {:ok, _state} = res ->
         res |> noreply()
+
       {{:error, reason}, new_state} ->
         handle_message_error(msg, :info, reason, new_state) |> noreply(state)
     end
