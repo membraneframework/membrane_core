@@ -100,18 +100,12 @@ defmodule Membrane.Core.Element.DemandHandler do
     [{pad_ref, action}] = del_dem |> Enum.take_random(1)
     state = %State{state | delayed_demands: del_dem |> MapSet.delete({pad_ref, action})}
 
-    res =
-      case action do
-        :supply ->
-          Message.self(:invoke_supply_demand, pad_ref)
-          {:ok, state}
+    case action do
+      :supply ->
+        supply_demand(pad_ref, state)
 
-        :redemand ->
-          DemandController.handle_demand(pad_ref, 0, state)
-      end
-
-    with {:ok, state} <- res do
-      handle_delayed_demands(state)
+      :redemand ->
+        DemandController.handle_demand(pad_ref, 0, state)
     end
   end
 
@@ -146,7 +140,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   def supply_demand(pad_ref, state) do
     with {:ok, state} <- do_supply_demand(pad_ref, %State{state | supplying_demand?: true}) do
-      {:ok, state} = handle_delayed_demands(state)
+      {:ok, state} = handle_delayed_demands(%State{state | supplying_demand?: false})
       {:ok, %State{state | supplying_demand?: false}}
     end
   end
