@@ -77,6 +77,7 @@ defmodule Membrane.Core.Parent.Link do
 
   def from_spec(links), do: from_spec_error(links)
 
+  @spec from_spec_error(t) :: no_return
   defp from_spec_error(links) do
     raise ParentError, """
     Invalid links specification: #{inspect(links)}.
