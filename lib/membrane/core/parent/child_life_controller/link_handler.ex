@@ -152,29 +152,24 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   defp link(%Link{from: from, to: to}, state) do
     report_new_link(from, to)
+    do_link(from, to, state)
+  end
 
-    {{:ok, _info}, state} =
-      if from.child == {Membrane.Bin, :itself} do
-        link_endpoint(:output, from, to, state)
-      else
-        link_endpoint(:input, to, from, state)
-      end
-
+  # If the link involves the bin itself, make sure to call `handle_link` in the bin, to avoid
+  # calling self() or calling a child that would call the bin, making a deadlock.
+  defp do_link(%Endpoint{child: {Membrane.Bin, :itself}} = from, to, %Bin.State{} = state) do
+    {{:ok, _info}, state} = Child.PadController.handle_link(:output, from, to, nil, state)
     state
   end
 
-  defp link_endpoint(
-         direction,
-         %Endpoint{child: {Membrane.Bin, :itself}} = this,
-         other,
-         %Bin.State{} = state
-       ) do
-    Child.PadController.handle_link(direction, this, other, nil, state)
+  defp do_link(from, %Endpoint{child: {Membrane.Bin, :itself}} = to, %Bin.State{} = state) do
+    {{:ok, _info}, state} = Child.PadController.handle_link(:input, to, from, nil, state)
+    state
   end
 
-  defp link_endpoint(direction, this, other, state) do
-    Message.call(this.pid, :handle_link, [direction, this, other, nil])
-    ~> {&1, state}
+  defp do_link(from, to, state) do
+    {:ok, _info} = Message.call(from.pid, :handle_link, [:output, from, to, nil])
+    state
   end
 
   defp send_linking_finished(links) do
