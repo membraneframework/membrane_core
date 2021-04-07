@@ -68,7 +68,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @spec handle_delayed_demands(State.t()) :: State.stateful_try_t()
-  def handle_delayed_demands(%State{delayed_demands: del_dem} = state) when del_dem == @empty do
+  def handle_delayed_demands(%State{delayed_demands: del_dem} = state) when del_dem == %MapSet{} do
     {:ok, state}
   end
 
