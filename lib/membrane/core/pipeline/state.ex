@@ -9,7 +9,7 @@ defmodule Membrane.Core.Pipeline.State do
   use Bunch.Access
 
   alias Membrane.Child
-  alias Membrane.Core.Parent.ChildrenModel
+  alias Membrane.Core.Parent.{ChildrenModel, Link}
   alias Membrane.Core.{Playback, Timer}
 
   @type t :: %__MODULE__{
@@ -17,6 +17,8 @@ defmodule Membrane.Core.Pipeline.State do
           playback: Playback.t(),
           module: module,
           children: ChildrenModel.children_t(),
+          crash_groups: [{any(), :temporary, [Child.name_t()]}],
+          links: [Link.t()],
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
             clock_provider: %{
@@ -34,6 +36,8 @@ defmodule Membrane.Core.Pipeline.State do
               [
                 internal_state: nil,
                 children: %{},
+                crash_groups: [],
+                links: [],
                 playback: %Playback{},
                 children_log_metadata: []
               ]

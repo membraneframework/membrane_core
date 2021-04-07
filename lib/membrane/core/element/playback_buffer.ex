@@ -45,7 +45,14 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   Stores message if it cannot be handled yet.
   """
   @spec store(message_t, State.t()) :: State.stateful_try_t()
-  def store(msg, %State{playback: %Playback{state: :playing}} = state), do: exec(msg, state)
+  def store(msg, %State{playback: %Playback{state: :playing}} = state) do
+    with {:ok, state} <- exec(msg, state) do
+      {:ok, state}
+    else
+      {:error, {:unknown_pad, pad_ref}} ->
+        {:ok, state}
+    end
+  end
 
   def store(
         Message.new(type, _args, _opts) = msg,
@@ -99,63 +106,67 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
   @spec empty?(t) :: boolean
   defp empty?(%__MODULE__{q: q}), do: q |> Enum.empty?()
 
-  @spec exec(message_t, State.t()) :: State.stateful_try_t()
+  @spec exec(message_t, State.t()) :: State.stateful_try_t() | {:error, any()}
   # Callback invoked on demand request coming from the output pad in the pull mode
   defp exec(Message.new(:demand, size, _opts) = msg, state) do
     pad_ref = Message.for_pad(msg)
-    PadModel.assert_data!(state, pad_ref, %{direction: :output})
 
-    Membrane.Logger.debug_verbose(
-      "Received #{
-        if size == 0 do
-          "dumb demand"
-        else
-          "demand of size #{inspect(size)}"
-        end
-      } on pad #{inspect(pad_ref)}"
-    )
+    with :ok <- PadModel.assert_data(state, pad_ref, %{direction: :output}) do
+      Membrane.Logger.debug_verbose(
+        "Received #{
+          if size == 0 do
+            "dumb demand"
+          else
+            "demand of size #{inspect(size)}"
+          end
+        } on pad #{inspect(pad_ref)}"
+      )
 
-    DemandController.handle_demand(pad_ref, size, state)
+      DemandController.handle_demand(pad_ref, size, state)
+    end
   end
 
   # Callback invoked on buffer coming through the input pad
   defp exec(Message.new(:buffer, buffers, _opts) = msg, state) do
     pad_ref = Message.for_pad(msg)
-    PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
-    Membrane.Logger.debug_verbose("""
-    Received buffers on pad #{inspect(pad_ref)}
-    Buffers: #{inspect(buffers)}
-    """)
+    with :ok <- PadModel.assert_data(state, pad_ref, %{direction: :input}) do
+      Membrane.Logger.debug_verbose("""
+      Received buffers on pad #{inspect(pad_ref)}
+      Buffers: #{inspect(buffers)}
+      """)
 
-    {messages, state} = PadModel.get_and_update_data!(state, pad_ref, :sticky_messages, &{&1, []})
+      {messages, state} =
+        PadModel.get_and_update_data!(state, pad_ref, :sticky_messages, &{&1, []})
 
-    with {:ok, state} <-
-           messages
-           |> Enum.reverse()
-           |> Bunch.Enum.try_reduce(state, fn msg, st -> msg.(st) end) do
-      {:ok, state} =
-        if PadModel.get_data!(state, pad_ref, :start_of_stream?) do
-          {:ok, state}
-        else
-          EventController.handle_start_of_stream(pad_ref, state)
-        end
+      with {:ok, state} <-
+             messages
+             |> Enum.reverse()
+             |> Bunch.Enum.try_reduce(state, fn msg, st -> msg.(st) end) do
+        {:ok, state} =
+          if PadModel.get_data!(state, pad_ref, :start_of_stream?) do
+            {:ok, state}
+          else
+            EventController.handle_start_of_stream(pad_ref, state)
+          end
 
-      BufferController.handle_buffer(pad_ref, buffers, state)
+        BufferController.handle_buffer(pad_ref, buffers, state)
+      end
     end
   end
 
   # Callback invoked on incoming caps
   defp exec(Message.new(:caps, caps, _opts) = msg, state) do
     pad_ref = Message.for_pad(msg)
-    PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
-    Membrane.Logger.debug("""
-    Received caps on pad #{inspect(pad_ref)}
-    Caps: #{inspect(caps)}
-    """)
+    with :ok <- PadModel.assert_data(state, pad_ref, %{direction: :input}) do
+      Membrane.Logger.debug("""
+      Received caps on pad #{inspect(pad_ref)}
+      Caps: #{inspect(caps)}
+      """)
 
-    CapsController.handle_caps(pad_ref, caps, state)
+      CapsController.handle_caps(pad_ref, caps, state)
+    end
   end
 
   # Callback invoked on incoming event

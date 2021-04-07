@@ -5,9 +5,10 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
 
   alias Membrane.Core.{Parent, Pipeline, TimerController}
   alias Membrane.Core.Message
-  alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
+  alias Membrane.Core.Parent.{ChildLifeController, LifecycleController, Link}
 
   require Membrane.Core.Message
+  require Membrane.Logger
 
   @spec handle_message(Message.t(), Parent.state_t()) ::
           Membrane.Helper.GenServer.genserver_return_t()
@@ -51,13 +52,56 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     TimerController.handle_clock_update(clock, ratio, state) |> noreply(state)
   end
 
-  def handle_message({:DOWN, _ref, :process, pid, reason} = message, state) do
+  def handle_message({:EXIT, pid, :normal} = message, state) do
     with {{:ok, result}, state} <-
-           ChildLifeController.maybe_handle_child_death(pid, reason, state) do
+           ChildLifeController.maybe_handle_child_death(pid, :normal, state) do
       case result do
         :child -> {:ok, state}
         :not_child -> LifecycleController.handle_other(message, state)
       end
+    end
+    |> noreply(state)
+  end
+
+  # when child exited abnormally
+  def handle_message({:EXIT, pid, reason}, state) do
+    # check if child was in any crash groups
+    crash_group =
+      state.crash_groups
+      |> Enum.find(fn {_group_id, _mode, members_pids} ->
+        pid in members_pids
+      end)
+
+    if crash_group do
+      # mode is not used for now as only temporary mode is supported
+      {group_id, _mode, members_pids} = crash_group
+
+      # find all links connected with this group
+      all_links = state.links
+
+      links_to_unlink =
+        all_links
+        |> Enum.filter(fn %Link{from: from, to: to} ->
+          from.pid in members_pids or to.pid in members_pids
+        end)
+
+      with {:ok, state} <- ChildLifeController.LinkHandler.unlink_children(links_to_unlink, state) do
+        Membrane.Logger.debug("""
+        Member of crash group #{group_id} has terminated due to #{inspect(reason)}.
+        Terminating rest of groups members.
+        """)
+
+        members_pids |> Enum.each(&if Process.alive?(&1), do: GenServer.stop(&1, reason))
+
+        {:ok, state}
+      end
+    else
+      Membrane.Logger.debug("""
+      Pipeline child crashed but was not member of any crash group.
+      Terminating.
+      """)
+
+      GenServer.stop(self(), reason)
     end
     |> noreply(state)
   end

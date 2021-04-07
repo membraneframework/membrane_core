@@ -2,7 +2,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @moduledoc false
   use Bunch
 
-  alias __MODULE__.{StartupHandler, LinkHandler}
+  alias __MODULE__.{StartupHandler, LinkHandler, CrashGroupHandler}
   alias Membrane.ParentSpec
   alias Membrane.Core.Parent
   alias Membrane.Core.Parent.{ChildEntryParser, ClockHandler, LifecycleController, Link}
@@ -36,6 +36,16 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     :ok = StartupHandler.maybe_activate_syncs(syncs, state)
     {:ok, state} = StartupHandler.add_children(children, state)
     children_names = children |> Enum.map(& &1.name)
+
+    # adding crash group to state
+    {:ok, state} =
+      if spec.crash_group do
+        children_pids = children |> Enum.map(& &1.pid)
+        CrashGroupHandler.add_crash_group(spec.crash_group, children_pids, state)
+      else
+        {:ok, state}
+      end
+
     state = ClockHandler.choose_clock(children, spec.clock_provider, state)
     {:ok, links} = Link.from_spec(spec.links)
     links = LinkHandler.resolve_links(links, state)
@@ -85,7 +95,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         """)
       end
 
-      data |> Enum.each(&Process.monitor(&1.pid))
       data |> Enum.each(&PlaybackHandler.request_playback_state_change(&1.pid, :terminating))
 
       {:ok, state} =
@@ -119,10 +128,26 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @spec maybe_handle_child_death(child_pid :: pid(), reason :: atom(), state :: Parent.state_t()) ::
           {:ok, Parent.state_t()}
+  @spec maybe_handle_child_death(any, any, atom | %{:children => any, optional(any) => any}) ::
+          {{:error, any} | {:ok, :child | :not_child},
+           atom | %{:children => any, optional(any) => any}}
   def maybe_handle_child_death(pid, reason, state) do
     withl find: {:ok, child_name} <- child_by_pid(pid, state),
           assert: :normal = reason,
           handle: state = Bunch.Access.delete_in(state, [:children, child_name]),
+          handle:
+            state =
+              Bunch.Access.update_in(
+                state,
+                [:links],
+                &(&1
+                  |> Enum.reject(fn %Link{from: from, to: to} ->
+                    %Link.Endpoint{child: from_name} = from
+                    %Link.Endpoint{child: to_name} = to
+
+                    from_name == child_name or to_name == child_name
+                  end))
+              ),
           handle: {:ok, state} <- LifecycleController.maybe_finish_playback_transition(state) do
       {{:ok, :child}, state}
     else

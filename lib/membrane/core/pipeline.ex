@@ -16,6 +16,9 @@ defmodule Membrane.Core.Pipeline do
     :ok = Membrane.Logger.set_prefix(pipeline_name)
     {:ok, clock} = Clock.start_link(proxy: true)
 
+    # setting :trap_exit flag to receive exit messages from child elements
+    Process.flag(:trap_exit, true)
+
     state = %State{
       module: module,
       synchronization: %{
