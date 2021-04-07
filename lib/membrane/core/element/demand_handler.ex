@@ -136,8 +136,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   def supply_demand(pad_ref, state) do
     with {:ok, state} <- do_supply_demand(pad_ref, %State{state | supplying_demand?: true}) do
-      {:ok, state} = handle_delayed_demands(%State{state | supplying_demand?: false})
-      {:ok, %State{state | supplying_demand?: false}}
+      handle_delayed_demands(%State{state | supplying_demand?: false})
     end
   end
 
