@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   use Bunch
 
-  alias Membrane.Core.{InputBuffer, Message}
+  alias Membrane.Core.InputBuffer
   alias Membrane.Core.Child.PadModel
 
   alias Membrane.Core.Element.{
@@ -21,8 +21,6 @@ defmodule Membrane.Core.Element.DemandHandler do
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
   require Membrane.Logger
-
-  @empty MapSet.new()
 
   @doc """
   Updates demand on the given input pad that should be supplied by future calls
@@ -68,7 +66,8 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @spec handle_delayed_demands(State.t()) :: State.stateful_try_t()
-  def handle_delayed_demands(%State{delayed_demands: del_dem} = state) when del_dem == %MapSet{} do
+  def handle_delayed_demands(%State{delayed_demands: del_dem} = state)
+      when del_dem == %MapSet{} do
     {:ok, state}
   end
 
