@@ -56,26 +56,6 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @doc """
-  Delays supplying demand until all current processing is finished.
-
-  This is necessary due to the case when one requests a demand action while previous
-  demand is being supplied. This could lead to a situation where buffers are taken
-  from InputBuffer and passed to callbacks, while buffers being currently supplied
-  have not been processed yet, and therefore to changing order of buffers.
-
-  Async mode is supported to handle the case when buffers are passed to
-  handle_process/handle_write, then demand is requested, handle_process/handle_write
-  is called, another demand is requested and so on. In such scenario a message
-  is sent to self, and demand is supplied upon receiving it. This enables buffers
-  waiting in mailbox to be received in the meantime.
-  """
-  @spec delay_supply(Pad.ref_t(), State.t()) :: State.t()
-  def delay_supply(pad_ref, state) do
-    state
-    |> Map.update!(:delayed_demands, &MapSet.put(&1, {pad_ref, :supply}))
-  end
-
-  @doc """
   Delays executing redemand until all current processing is finished.
 
   Works similar to `delay_supply/3`, but only `:sync` mode is supported. See
@@ -105,21 +85,25 @@ defmodule Membrane.Core.Element.DemandHandler do
         supply_demand(pad_ref, state)
 
       :redemand ->
-        DemandController.handle_demand(pad_ref, 0, state)
+        handle_redemand(pad_ref, state)
     end
   end
 
   @doc """
   Called when redemand action was returned.
-    * If element is currently supplying demand it means
-      that after finishing supply_demand it will call handle_delayed_demands so redemand is delayed.
-    * If element is currently not supplying demand (it's always the case for source) handle_demand is
-      invoked right away, and it will invoke handle_demand callback, which will probably return :redemand
-      and :buffers and in that way source will synchronously supply demand.
+    * If element is currently supplying demand it means that after finishing supply_demand it will call
+      `handle_delayed_demands`.
+    * If element isn't supplying demand at the moment `handle_demand` is invoked right away, and it will
+      invoke handle_demand callback, which will probably return :redemand and :buffers and in that way
+      source will synchronously supply demand.
   """
   @spec handle_redemand(Pad.ref_t(), State.t()) :: {:ok, State.t()}
   def handle_redemand(pad_ref, %State{supplying_demand?: true} = state) do
-    {:ok, delay_redemand(pad_ref, state)}
+    state =
+      state
+      |> Map.update!(:delayed_demands, &MapSet.put(&1, {pad_ref, :redemand}))
+
+    {:ok, state}
   end
 
   def handle_redemand(pad_ref, state) do
@@ -127,15 +111,28 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @doc """
-  Based on the demand on the given pad takes InputBuffer contents
-  and passes it to proper controllers.
+  If element is not supplying demand currently, this function supplies
+  demand right away by taking buffers from the InputBuffer of the given pad
+  and passing it to proper controllers.
+
+  If element is currently supplying demand it delays supplying demand until all
+  current processing is finished.
+
+  This is necessary due to the case when one requests a demand action while previous
+  demand is being supplied. This could lead to a situation where buffers are taken
+  from InputBuffer and passed to callbacks, while buffers being currently supplied
+  have not been processed yet, and therefore to changing order of buffers.
   """
   @spec supply_demand(
           Pad.ref_t(),
           State.t()
         ) :: State.stateful_try_t()
   def supply_demand(pad_ref, %State{supplying_demand?: true} = state) do
-    {:ok, delay_supply(pad_ref, state)}
+    state =
+      state
+      |> Map.update!(:delayed_demands, &MapSet.put(&1, {pad_ref, :supply}))
+
+    {:ok, state}
   end
 
   def supply_demand(pad_ref, state) do
