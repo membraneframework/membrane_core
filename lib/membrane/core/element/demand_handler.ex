@@ -79,12 +79,17 @@ defmodule Membrane.Core.Element.DemandHandler do
     [{pad_ref, action}] = del_dem |> Enum.take_random(1)
     state = %State{state | delayed_demands: del_dem |> MapSet.delete({pad_ref, action})}
 
-    case action do
-      :supply ->
-        supply_demand(pad_ref, state)
+    res =
+      case action do
+        :supply ->
+          supply_demand(pad_ref, state)
 
-      :redemand ->
-        handle_redemand(pad_ref, state)
+        :redemand ->
+          handle_redemand(pad_ref, state)
+      end
+
+    with {:ok, state} <- res do
+      handle_delayed_demands(state)
     end
   end
 
@@ -93,8 +98,8 @@ defmodule Membrane.Core.Element.DemandHandler do
     * If element is currently supplying demand it means that after finishing supply_demand it will call
       `handle_delayed_demands`.
     * If element isn't supplying demand at the moment `handle_demand` is invoked right away, and it will
-      invoke handle_demand callback, which will probably return :redemand and :buffers and in that way
-      source will synchronously supply demand.
+      invoke handle_demand callback, which will probably return :redemand and :buffers actions and in
+      that way source will synchronously supply demand.
   """
   @spec handle_redemand(Pad.ref_t(), State.t()) :: {:ok, State.t()}
   def handle_redemand(pad_ref, %State{supplying_demand?: true} = state) do
