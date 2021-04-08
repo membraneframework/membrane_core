@@ -117,6 +117,14 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
+  @doc """
+  Handles death of a child:
+  - removes it from state
+  - if in playback transition, checks if it can be finished (in case the dead child
+    was the last one we were waiting for to change the playback state)
+
+  If a pid turns out not to be a pid of any child, it is a NOOP.
+  """
   @spec maybe_handle_child_death(child_pid :: pid(), reason :: atom(), state :: Parent.state_t()) ::
           {{:ok, :child | :not_child}, Parent.state_t()}
   def maybe_handle_child_death(pid, reason, state) do
