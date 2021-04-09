@@ -33,6 +33,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         state.children_log_metadata
       )
 
+    # monitoring children
+    :ok = children |> Enum.each(&Process.monitor(&1.pid))
+
     :ok = StartupHandler.maybe_activate_syncs(syncs, state)
     {:ok, state} = StartupHandler.add_children(children, state)
     children_names = children |> Enum.map(& &1.name)

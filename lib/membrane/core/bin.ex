@@ -33,6 +33,18 @@ defmodule Membrane.Core.Bin do
   """
   @spec start_link(options_t, GenServer.options()) :: GenServer.on_start()
   def start_link(options, process_options \\ []) do
+    do_start(:start_link, options, process_options)
+  end
+
+  @doc """
+  Works similarly to `start_link/2`, but does not link to the current process.
+  """
+  @spec start(options_t(), GenServer.options()) :: GenServer.on_start()
+  def start(options, process_options \\ []) do
+    do_start(:start, options, process_options)
+  end
+
+  defp do_start(method, options, process_options) do
     if options.module |> Membrane.Bin.bin?() do
       Membrane.Logger.debug("""
       Bin start link: name: #{inspect(options.name)}
@@ -40,8 +52,8 @@ defmodule Membrane.Core.Bin do
       bin options: #{inspect(options.user_options)},
       process options: #{inspect(process_options)}
       """)
-
-      GenServer.start_link(Membrane.Core.Bin, options, process_options)
+      
+      apply(GenServer, method, [Membrane.Core.Bin, options, process_options])
     else
       raise """
       Cannot start bin, passed module #{inspect(options.module)} is not a Membrane Bin.
