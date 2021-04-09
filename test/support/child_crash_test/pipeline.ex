@@ -74,15 +74,16 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
         group \\ nil
       ) do
     children = [{source_name, Testing.Source}] ++ (filters_names |> Enum.map(&{&1, Filter}))
-    children_names = children |> Enum.map(&(elem(&1, 0)))
+    children_names = children |> Enum.map(&elem(&1, 0))
     children_count = length(children)
 
     links =
       children_names
       |> Enum.with_index()
       |> Enum.map(fn {child, i} ->
-        if i < children_count - 1, do: link(child) |> to(Enum.at(children_names, i + 1)),
-      else: link(child) |> to(:center_filter)
+        if i < children_count - 1,
+          do: link(child) |> to(Enum.at(children_names, i + 1)),
+          else: link(child) |> to(:center_filter)
       end)
 
     spec = %Membrane.ParentSpec{

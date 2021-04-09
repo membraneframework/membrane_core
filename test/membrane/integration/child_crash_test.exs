@@ -37,7 +37,7 @@ defmodule Membrane.Integration.ChildCrashTest do
     assert_pid_dead(center_filter_pid)
     assert_pid_dead(sink_pid)
 
-    assert_pid_alive(pipeline_pid)
+    assert_pid_dead(pipeline_pid)
   end
 
   test "small pipeline with one crash group test" do

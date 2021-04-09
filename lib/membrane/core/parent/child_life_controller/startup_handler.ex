@@ -154,15 +154,15 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     start_result =
       case child.component_type do
         :element ->
-            Core.Element.start(%{
-              parent: self(),
-              module: module,
-              name: name,
-              user_options: options,
-              parent_clock: parent_clock,
-              sync: sync,
-              log_metadata: log_metadata
-            })
+          Core.Element.start(%{
+            parent: self(),
+            module: module,
+            name: name,
+            user_options: options,
+            parent_clock: parent_clock,
+            sync: sync,
+            log_metadata: log_metadata
+          })
 
         :bin ->
           unless sync == Sync.no_sync() do
@@ -170,13 +170,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
                   "Cannot start child #{inspect(name)}, \
                   reason: bin cannot be synced with other elements"
           end
-            Core.Bin.start(%{
-              name: name,
-              module: module,
-              user_options: options,
-              parent_clock: parent_clock,
-              log_metadata: log_metadata
-            })
+
+          Core.Bin.start(%{
+            name: name,
+            module: module,
+            user_options: options,
+            parent_clock: parent_clock,
+            log_metadata: log_metadata
+          })
       end
 
     with {:ok, pid} <- start_result,

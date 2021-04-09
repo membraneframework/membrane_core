@@ -52,7 +52,7 @@ defmodule Membrane.Core.Bin do
       bin options: #{inspect(options.user_options)},
       process options: #{inspect(process_options)}
       """)
-      
+
       apply(GenServer, method, [Membrane.Core.Bin, options, process_options])
     else
       raise """
