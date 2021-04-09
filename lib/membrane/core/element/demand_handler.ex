@@ -82,7 +82,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     res =
       case action do
         :supply ->
-          supply_demand(pad_ref, state)
+          do_supply_demand(pad_ref, state)
 
         :redemand ->
           handle_redemand(pad_ref, state)
@@ -140,12 +140,15 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   def supply_demand(pad_ref, state) do
-    with {:ok, state} <- do_supply_demand(pad_ref, %State{state | supplying_demand?: true}) do
-      handle_delayed_demands(%State{state | supplying_demand?: false})
+    with {:ok, state} <- do_supply_demand(pad_ref, state) do
+      handle_delayed_demands(state)
     end
   end
 
   defp do_supply_demand(pad_ref, state) do
+    # marking is state that actual demand supply has been started (note changing back to false when finished)
+    state = %State{state | supplying_demand?: true}
+
     pad_data = state |> PadModel.get_data!(pad_ref)
 
     {{_buffer_status, data}, new_input_buf} =
@@ -159,7 +162,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     state = PadModel.set_data!(state, pad_ref, :input_buf, new_input_buf)
 
     with {:ok, state} <- handle_input_buf_output(pad_ref, data, state) do
-      {:ok, state}
+      {:ok, %State{state | supplying_demand?: false}}
     else
       {{:error, reason}, state} ->
         Membrane.Logger.error("""
@@ -168,7 +171,7 @@ defmodule Membrane.Core.Element.DemandHandler do
         }
         """)
 
-        {{:error, {:supply_demand, reason}}, state}
+        {{:error, {:supply_demand, reason}}, %State{state | supplying_demand?: false}}
     end
   end
 
