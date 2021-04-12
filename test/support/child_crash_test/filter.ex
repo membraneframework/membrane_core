@@ -1,4 +1,9 @@
 defmodule Membrane.Support.ChildCrashTest.Filter do
+  @moduledoc """
+  Filter used in child crash test.
+  Can be crashed on demand by sending `:crash` message.
+  """
+
   use Membrane.Filter
 
   def_output_pad :output, caps: :any

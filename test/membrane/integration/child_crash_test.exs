@@ -140,7 +140,7 @@ defmodule Membrane.Integration.ChildCrashTest do
     refute_receive {:EXIT, ^pid, _}
   end
 
-  def assert_pid_dead(pid) do
+  defp assert_pid_dead(pid) do
     assert_receive {:EXIT, ^pid, _}, 2000
   end
 

@@ -1,4 +1,9 @@
 defmodule Membrane.Support.ChildCrashTest.Pipeline do
+  @moduledoc """
+  Pipeline used in child crash test.
+  Allows adding specs by handling message `:create_path`.
+  """
+
   use Membrane.Pipeline
 
   alias Membrane.Support.ChildCrashTest.Filter
@@ -34,7 +39,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
     {{:ok, spec: spec}, state}
   end
 
-  @spec add_single_source(pid(), any(), any()) :: any()
+  @spec add_single_source(pid(), any(), any(), any()) :: any()
   def add_single_source(pid, source_name, group \\ nil, source \\ Testing.Source) do
     children = [
       {source_name, source}
