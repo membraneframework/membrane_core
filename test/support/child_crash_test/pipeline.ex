@@ -34,12 +34,6 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
     {{:ok, spec: spec}, state}
   end
 
-  # @impl true
-  # def handle_other({:DOWN, _, _, _, _} = msg, _ctx, state) do
-  #   IO.inspect(msg, label: "%%%")
-  #   {:ok, state}
-  # end
-
   @spec add_single_source(pid(), any(), any()) :: any()
   def add_single_source(pid, source_name, group \\ nil, source \\ Testing.Source) do
     children = [

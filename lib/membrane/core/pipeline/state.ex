@@ -11,13 +11,14 @@ defmodule Membrane.Core.Pipeline.State do
   alias Membrane.Child
   alias Membrane.Core.Parent.{ChildrenModel, Link}
   alias Membrane.Core.{Playback, Timer}
+  alias Membrane.Core.Parent.CrashGroup
 
   @type t :: %__MODULE__{
           internal_state: Membrane.Pipeline.state_t(),
           playback: Playback.t(),
           module: module,
           children: ChildrenModel.children_t(),
-          crash_groups: [{any(), :temporary, [Child.name_t()]}],
+          crash_groups: [CrashGroup.t()],
           links: [Link.t()],
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},

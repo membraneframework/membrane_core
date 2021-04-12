@@ -5,7 +5,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
 
   alias Membrane.Core.{Parent, Pipeline, TimerController}
   alias Membrane.Core.Message
-  alias Membrane.Core.Parent.{ChildLifeController, LifecycleController, Link}
+  alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
 
   require Membrane.Core.Message
   require Membrane.Logger
@@ -53,9 +53,9 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   end
 
   # when monitored child exited normally
-  def handle_message({:DOWN, _ref, :process, pid, :normal} = message, state) do
+  def handle_message({:DOWN, _ref, :process, pid, reason} = message, state) do
     with {{:ok, result}, state} <-
-           ChildLifeController.maybe_handle_child_death(pid, :normal, state) do
+           ChildLifeController.maybe_handle_child_death(pid, reason, state) do
       case result do
         :child -> {:ok, state}
         :not_child -> LifecycleController.handle_other(message, state)
@@ -64,48 +64,54 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     |> noreply(state)
   end
 
-  # when child exited abnormally
-  def handle_message({:DOWN, _ref, :process, pid, reason}, state) do
-    # check if child was in any crash groups
-    crash_group =
-      state.crash_groups
-      |> Enum.find(fn {_group_id, _mode, members_pids} ->
-        pid in members_pids
-      end)
+  # # when child exited because other member of crash group that is belong to crashed
+  # # ignoring that message
+  # def handle_message({:DOWN, _ref, :process, _pid, :group_down}, state) do
+  #    |> noreply()
+  # end
 
-    if crash_group do
-      # mode is not used for now as only temporary mode is supported
-      {group_id, _mode, members_pids} = crash_group
+  # # when child exited abnormally
+  # def handle_message({:DOWN, _ref, :process, pid, reason}, state) do
+  #   # check if child was in any crash groups
+  #   crash_group =
+  #     state.crash_groups
+  #     |> Enum.find(fn %CrashGroup{members: members_pids} ->
+  #       pid in members_pids
+  #     end)
 
-      # find all links connected with this group
-      all_links = state.links
+  #   if crash_group do
+  #     # mode is not used for now as only temporary mode is supported
+  #     %CrashGroup{name: group_name, mode: :temporary, members: members_pids} = crash_group
 
-      links_to_unlink =
-        all_links
-        |> Enum.filter(fn %Link{from: from, to: to} ->
-          from.pid in members_pids or to.pid in members_pids
-        end)
+  #     # find all links connected with this group
+  #     all_links = state.links
 
-      with {:ok, state} <- ChildLifeController.LinkHandler.unlink_children(links_to_unlink, state) do
-        Membrane.Logger.debug("""
-        Member of crash group #{group_id} has terminated due to #{inspect(reason)}.
-        Terminating rest of groups members.
-        """)
+  #     links_to_unlink =
+  #       all_links
+  #       |> Enum.filter(fn %Link{from: from, to: to} ->
+  #         from.pid in members_pids or to.pid in members_pids
+  #       end)
 
-        members_pids |> Enum.each(&if Process.alive?(&1), do: GenServer.stop(&1, reason))
+  #     with {:ok, state} <- ChildLifeController.LinkHandler.unlink_children(links_to_unlink, state) do
+  #       Membrane.Logger.debug("""
+  #       Member of crash group #{group_name} has terminated due to #{inspect(reason)}.
+  #       Terminating rest of groups members.
+  #       """)
 
-        {:ok, state}
-      end
-    else
-      Membrane.Logger.debug("""
-      Pipeline child crashed but was not member of any crash group.
-      Terminating.
-      """)
+  #       members_pids |> Enum.each(&if Process.alive?(&1), do: GenServer.stop(&1, :group_down))
 
-      GenServer.stop(self(), reason)
-    end
-    |> noreply(state)
-  end
+  #       ChildLifeController.CrashGroupHandler.remove_crash_group(group_name, state)
+  #     end
+  #   else
+  #     Membrane.Logger.debug("""
+  #     Pipeline child crashed but was not member of any crash group.
+  #     Terminating.
+  #     """)
+
+  #     GenServer.stop(self(), :kill)
+  #   end
+  #   |> noreply(state)
+  # end
 
   def handle_message(message, state) do
     LifecycleController.handle_other(message, state)

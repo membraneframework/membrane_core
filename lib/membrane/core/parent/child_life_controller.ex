@@ -5,7 +5,16 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   alias __MODULE__.{StartupHandler, LinkHandler, CrashGroupHandler}
   alias Membrane.ParentSpec
   alias Membrane.Core.Parent
-  alias Membrane.Core.Parent.{ChildEntryParser, ClockHandler, LifecycleController, Link}
+
+  alias Membrane.Core.Parent.{
+    ChildEntryParser,
+    ClockHandler,
+    LifecycleController,
+    Link,
+    ChildLifeController,
+    CrashGroup
+  }
+
   alias Membrane.Core.PlaybackHandler
 
   require Membrane.Logger
@@ -129,33 +138,100 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
-  @spec maybe_handle_child_death(child_pid :: pid(), reason :: atom(), state :: Parent.state_t()) ::
-          {:ok, Parent.state_t()}
   @spec maybe_handle_child_death(any, any, atom | %{:children => any, optional(any) => any}) ::
-          {{:error, any} | {:ok, :child | :not_child},
-           atom | %{:children => any, optional(any) => any}}
-  def maybe_handle_child_death(pid, reason, state) do
+          {{:error, any} | {:ok, :child | :not_child}, Parent.state_t()}
+  def maybe_handle_child_death(pid, :normal, state) do
     withl find: {:ok, child_name} <- child_by_pid(pid, state),
-          assert: :normal = reason,
           handle: state = Bunch.Access.delete_in(state, [:children, child_name]),
-          handle:
-            state =
-              Bunch.Access.update_in(
-                state,
-                [:links],
-                &(&1
-                  |> Enum.reject(fn %Link{from: from, to: to} ->
-                    %Link.Endpoint{child: from_name} = from
-                    %Link.Endpoint{child: to_name} = to
-
-                    from_name == child_name or to_name == child_name
-                  end))
-              ),
+          handle: state = remove_child_links(child_name, state),
           handle: {:ok, state} <- LifecycleController.maybe_finish_playback_transition(state) do
       {{:ok, :child}, state}
     else
       find: :error -> {{:ok, :not_child}, state}
       handle: error -> error
+    end
+  end
+
+  def maybe_handle_child_death(pid, :group_down, state) do
+    withl find: {:ok, _child_name} <- child_by_pid(pid, state) do
+      {{:ok, :child}, state}
+    else
+      find: :error -> {{:ok, :not_child}, state}
+    end
+  end
+
+  def maybe_handle_child_death(pid, _reason, state) do
+    withl find: {:ok, group} <- group_by_member_pid(pid, state),
+          group_kill: {:ok, state} <- crash_all_group_members(group, state) do
+      {{:ok, :child}, state}
+    else
+      find: :error ->
+        Membrane.Logger.debug("""
+        Pipeline child crashed but was not member of any crash group.
+        Terminating.
+        """)
+
+        kill_whole_pipeline()
+
+      group_kill: _error ->
+        Membrane.Logger.debug("""
+        Error while killing the group.
+        """)
+
+        {:error, :can_not_kill_all_group_members}
+    end
+  end
+
+  # called when process was a member of a crash group
+  defp crash_all_group_members(crash_group, state) do
+    %CrashGroup{name: group_name, mode: :temporary, members: members_pids} = crash_group
+
+    links_to_unlink =
+      state.links
+      |> Enum.filter(fn %Link{from: from, to: to} ->
+        from.pid in members_pids or to.pid in members_pids
+      end)
+
+    with {:ok, state} <- ChildLifeController.LinkHandler.unlink_children(links_to_unlink, state) do
+      members_pids |> Enum.each(&if Process.alive?(&1), do: GenServer.stop(&1, :group_down))
+
+      ChildLifeController.CrashGroupHandler.remove_crash_group(group_name, state)
+    end
+  end
+
+  # called when process was not a member of any crash group
+  defp kill_whole_pipeline() do
+    Membrane.Logger.debug("""
+    Pipeline child crashed but was not member of any crash group.
+    Terminating.
+    """)
+
+    GenServer.stop(self(), :kill)
+  end
+
+  defp remove_child_links(child_name, state) do
+    Map.update!(
+      state,
+      :links,
+      &(&1
+        |> Enum.reject(fn %Link{from: from, to: to} ->
+          %Link.Endpoint{child: from_name} = from
+          %Link.Endpoint{child: to_name} = to
+
+          from_name == child_name or to_name == child_name
+        end))
+    )
+  end
+
+  defp group_by_member_pid(member_pid, state) do
+    crash_group =
+      Enum.find(state.crash_groups, fn %CrashGroup{members: members_pids} ->
+        member_pid in members_pids
+      end)
+
+    case crash_group do
+      %CrashGroup{} -> {:ok, crash_group}
+      nil -> :error
     end
   end
 

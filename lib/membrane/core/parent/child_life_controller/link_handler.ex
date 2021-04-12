@@ -43,7 +43,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     with :ok <- send_unlink(links) do
       state =
         state
-        |> Bunch.Access.update_in([:links], &(&1 |> Enum.reject(fn link -> link in links end)))
+        |> Map.update!(:links, &(&1 |> Enum.reject(fn link -> link in links end)))
 
       {:ok, state}
     end
@@ -193,13 +193,10 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   end
 
   defp send_unlink(links) do
-    res =
-      links
-      |> Enum.each(fn %Link{to: to} ->
-        Message.send(to.pid, :handle_unlink, to.pad_ref)
-      end)
-
-    res
+    links
+    |> Enum.each(fn %Link{to: to} ->
+      Message.send(to.pid, :handle_unlink, to.pad_ref)
+    end)
   end
 
   defp send_linking_finished(links) do
