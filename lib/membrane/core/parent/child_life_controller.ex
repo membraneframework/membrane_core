@@ -182,7 +182,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
-  # called when process was a member of a crash group
+  # called when a dead child was a member of a crash group
   defp crash_all_group_members(crash_group, state) do
     %CrashGroup{name: group_name, mode: :temporary, members: members_pids} = crash_group
 
