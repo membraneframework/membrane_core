@@ -212,10 +212,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
-  # called when process was not a member of any crash group
+  # called when a dead child was not a member of any crash group
   defp kill_whole_pipeline() do
     Membrane.Logger.debug("""
-    Pipeline child crashed but was not member of any crash group.
+    A child crashed but was not a member of any crash group.
     Terminating.
     """)
 
