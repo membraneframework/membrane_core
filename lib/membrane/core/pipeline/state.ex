@@ -18,7 +18,7 @@ defmodule Membrane.Core.Pipeline.State do
           playback: Playback.t(),
           module: module,
           children: ChildrenModel.children_t(),
-          crash_groups: [CrashGroup.t()],
+          crash_groups: %{CrashGroup.name_t() => CrashGroup.t()},
           links: [Link.t()],
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
@@ -37,7 +37,7 @@ defmodule Membrane.Core.Pipeline.State do
               [
                 internal_state: nil,
                 children: %{},
-                crash_groups: [],
+                crash_groups: %{},
                 links: [],
                 playback: %Playback{},
                 children_log_metadata: []

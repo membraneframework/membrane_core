@@ -49,8 +49,11 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     with {:ok, state} <- exec(msg, state) do
       {:ok, state}
     else
-      _error ->
+      {:error, {:unknown_pad, _pad_ref}} ->
         {:ok, state}
+
+      error ->
+        error
     end
   end
 

@@ -1,10 +1,10 @@
 defmodule Membrane.Core.Parent.CrashGroup do
-  @moduledoc """
-  A module representing crash group:
-    * name - name that identifies the group
-    * type - responsible for restart policy of members of groups
-    * members - list of members of group
-  """
+  @moduledoc false
+
+  # A module representing crash group:
+  #   * name - name that identifies the group
+  #   * type - responsible for restart policy of members of groups
+  #   * members - list of members of group
 
   @type name_t() :: any()
 

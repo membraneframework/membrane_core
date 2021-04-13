@@ -341,7 +341,7 @@ defmodule Membrane.Core.Child.PadController do
         state
       )
     else
-      {:ok, state}
+      unless Pad.is_public_name(name), do: raise("Public static pad unlinked"), else: {:ok, state}
     end
   end
 
