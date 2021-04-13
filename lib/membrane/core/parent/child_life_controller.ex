@@ -138,7 +138,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
-  @spec maybe_handle_child_death(any, any, atom | %{:children => any, optional(any) => any}) ::
+  @spec maybe_handle_child_death(pid, atom, atom | Parent.state_t()) ::
           {{:error, any} | {:ok, :child | :not_child}, Parent.state_t()}
   def maybe_handle_child_death(pid, :normal, state) do
     withl find: {:ok, child_name} <- child_by_pid(pid, state),
