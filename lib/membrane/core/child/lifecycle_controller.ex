@@ -18,7 +18,7 @@ defmodule Membrane.Core.Child.LifecycleController do
     {{:ok, %{clock: clock}}, %{state | watcher: watcher}}
   end
 
-  @spec unlink(Membrane.Pipeline.state_t()) :: :ok
+  @spec unlink(Child.state_t()) :: :ok
   def unlink(state) do
     state.pads.data
     |> Map.values()
