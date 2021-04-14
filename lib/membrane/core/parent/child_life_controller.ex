@@ -190,7 +190,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         Terminating.
         """)
 
-        kill_whole_pipeline()
+        propagate_child_crash()
 
       group_kill: _error ->
         Membrane.Logger.debug("""
@@ -221,7 +221,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   # called when a dead child was not a member of any crash group
-  defp kill_whole_pipeline() do
+  defp propagate_child_crash() do
     Membrane.Logger.debug("""
     A child crashed but was not a member of any crash group.
     Terminating.

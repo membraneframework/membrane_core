@@ -40,13 +40,15 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   @spec unlink_children([Link.t()], Parent.state_t()) :: {:ok | {:error, any}, Parent.state_t()}
   def unlink_children(links, state) do
-    with :ok <- send_unlink(links) do
-      state =
-        state
-        |> Map.update!(:links, &(&1 |> Enum.reject(fn link -> link in links end)))
+    Enum.each(links, fn %Link{to: to} ->
+      Message.send(to.pid, :handle_unlink, to.pad_ref)
+    end)
 
-      {:ok, state}
-    end
+    state =
+      state
+      |> Map.update!(:links, &(&1 |> Enum.reject(fn link -> link in links end)))
+
+    {:ok, state}
   end
 
   defp flush_linking_buffer(%Link{from: from, to: to}, state) do
@@ -180,20 +182,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   defp link_endpoint(direction, this, other, state) do
     with {:ok, _info} = res <- Message.call(this.pid, :handle_link, [direction, this, other, nil]) do
-      ### update link in state
       state = state |> Bunch.Struct.update_in([:links], &[%Link{from: other, to: this} | &1])
 
       {res, state}
     end
   end
 
-  defp send_unlink(links) do
-    links
-    |> Enum.each(fn %Link{to: to} ->
-      Message.send(to.pid, :handle_unlink, to.pad_ref)
-    end)
-  end
-  
   defp do_link(from, to, state) do
     {:ok, _info} = Message.call(from.pid, :handle_link, [:output, from, to, nil])
     state

@@ -52,7 +52,6 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     TimerController.handle_clock_update(clock, ratio, state) |> noreply(state)
   end
 
-  # when monitored child exited normally
   def handle_message({:DOWN, _ref, :process, pid, reason} = message, state) do
     with {{:ok, result}, state} <-
            ChildLifeController.maybe_handle_child_death(pid, reason, state) do
