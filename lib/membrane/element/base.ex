@@ -207,7 +207,7 @@ defmodule Membrane.Element.Base do
   Internally called in `c:GenServer.terminate/2` callback.
   """
   @callback handle_shutdown(reason, state :: Element.state_t()) :: :ok
-            when reason: :normal | :shutdown | {:shutdown, any}
+            when reason: :normal | :shutdown | {:shutdown, any} | term()
 
   @optional_callbacks membrane_clock?: 0,
                       handle_init: 1,

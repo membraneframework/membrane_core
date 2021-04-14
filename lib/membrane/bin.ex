@@ -54,7 +54,7 @@ defmodule Membrane.Bin do
   Useful for any cleanup required.
   """
   @callback handle_shutdown(reason, state :: state_t) :: :ok
-            when reason: :normal | :shutdown | {:shutdown, any}
+            when reason: :normal | :shutdown | {:shutdown, any} | term()
 
   @doc """
   Callback that is called when new pad has beed added to bin. Executed
