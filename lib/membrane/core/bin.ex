@@ -154,4 +154,9 @@ defmodule Membrane.Core.Bin do
     Core.Child.LifecycleController.handle_watcher(watcher, state)
     |> reply()
   end
+
+  @impl GenServer
+  def terminate(reason, state) do
+    :ok = state.module.handle_shutdown(reason, state.internal_state)
+  end
 end
