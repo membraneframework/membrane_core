@@ -48,6 +48,15 @@ defmodule Membrane.Bin do
   @callback handle_init(options :: options_t) :: callback_return_t()
 
   @doc """
+  Callback invoked when bin is shutting down.
+  Internally called in `c:GenServer.terminate/2` callback.
+
+  Useful for any cleanup required.
+  """
+  @callback handle_shutdown(reason, state :: state_t) :: :ok
+            when reason: :normal | :shutdown | {:shutdown, any}
+
+  @doc """
   Callback that is called when new pad has beed added to bin. Executed
   ONLY for dynamic pads.
   """
@@ -187,6 +196,7 @@ defmodule Membrane.Bin do
 
   @optional_callbacks membrane_clock?: 0,
                       handle_init: 1,
+                      handle_shutdown: 2,
                       handle_pad_added: 3,
                       handle_pad_removed: 3,
                       handle_stopped_to_prepared: 2,
@@ -307,6 +317,9 @@ defmodule Membrane.Bin do
       def handle_init(_options), do: {{:ok, spec: %Membrane.ParentSpec{}}, %{}}
 
       @impl true
+      def handle_shutdown(_reason, _state), do: :ok
+
+      @impl true
       def handle_pad_added(_pad, _ctx, state), do: {:ok, state}
 
       @impl true
@@ -387,6 +400,7 @@ defmodule Membrane.Bin do
       defoverridable [
                        membrane_clock?: 0,
                        handle_init: 1,
+                       handle_shutdown: 2,
                        handle_pad_added: 3,
                        handle_pad_removed: 3,
                        handle_stopped_to_prepared: 2,
