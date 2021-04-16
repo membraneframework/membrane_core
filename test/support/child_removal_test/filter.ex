@@ -12,7 +12,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   use Membrane.Filter
 
-  def_output_pad :output, caps: :any
+  def_output_pad :output, caps: :any, availability: :on_request
 
   def_input_pad :input1, demand_unit: :buffers, caps: :any, availability: :on_request
 
@@ -58,17 +58,30 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   end
 
   @impl true
-  def handle_demand(:output, size, _unit, _ctx, state) do
+  def handle_demand(_output, size, _unit, ctx, state) do
     demands =
-      state.pads
-      |> Enum.map(fn pad -> {:demand, {pad, state.demand_generator.(size)}} end)
+      ctx.pads
+      |> Map.values()
+      |> Enum.filter(&(&1.direction == :input))
+      |> Enum.map(fn pad -> {:demand, {pad.ref, state.demand_generator.(size)}} end)
 
     {{:ok, demands}, state}
   end
 
   @impl true
-  def handle_process(_pad, buf, _ctx, state) do
-    {{:ok, buffer: {:output, buf}}, state}
+  def handle_process(_input, buf, ctx, state) do
+    buffers =
+      ctx.pads
+      |> Map.values()
+      |> Enum.filter(&(&1.direction == :output))
+      |> Enum.map(&{:buffer, {&1.ref, buf}})
+
+    {{:ok, buffers}, state}
+  end
+
+  @impl true
+  def handle_end_of_stream(pad, _ctx, state) do
+    {:ok, %{state | pads: MapSet.delete(state.pads, pad)}}
   end
 
   @spec default_demand_generator(integer()) :: integer()

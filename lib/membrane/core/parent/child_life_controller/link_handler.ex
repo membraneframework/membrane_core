@@ -180,16 +180,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     state
   end
 
-  defp link_endpoint(direction, this, other, state) do
-    with {:ok, _info} = res <- Message.call(this.pid, :handle_link, [direction, this, other, nil]) do
-      state = state |> Bunch.Struct.update_in([:links], &[%Link{from: other, to: this} | &1])
-
-      {res, state}
-    end
-  end
-
   defp do_link(from, to, state) do
     {:ok, _info} = Message.call(from.pid, :handle_link, [:output, from, to, nil])
+    state = Bunch.Access.update_in(state, [:links], &[%Link{from: from, to: to} | &1])
     state
   end
 

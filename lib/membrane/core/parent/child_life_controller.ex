@@ -204,7 +204,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   # called when process was a member of a crash group
   @spec crash_all_group_members(CrashGroup.t(), Parent.state_t()) :: {:ok, Parent.state_t()}
   defp crash_all_group_members(crash_group, state) do
-    %CrashGroup{name: group_name, mode: :temporary, members: members_pids} = crash_group
+    %CrashGroup{members: members_pids} = crash_group
 
     links_to_unlink =
       state.links
@@ -212,10 +212,17 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         from.pid in members_pids or to.pid in members_pids
       end)
 
-    with {:ok, state} <- ChildLifeController.LinkHandler.unlink_children(links_to_unlink, state),
-         :ok <-
-           members_pids
-           |> Enum.each(&if Process.alive?(&1), do: GenServer.stop(&1, {:shutdown, :group_kill})) do
+    with {:ok, state} <- ChildLifeController.LinkHandler.unlink_children(links_to_unlink, state) do
+      :ok =
+        Enum.each(
+          members_pids,
+          fn pid ->
+            if Process.alive?(pid) do
+              GenServer.stop(pid, {:shutdown, :group_kill})
+            end
+          end
+        )
+
       {:ok, state}
     end
   end

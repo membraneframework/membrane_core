@@ -6,6 +6,8 @@ defmodule Membrane.Core.Parent.CrashGroup do
   #   * type - responsible for restart policy of members of groups
   #   * members - list of members of group
 
+  use Bunch.Access
+
   @type name_t() :: any()
 
   @type t :: %__MODULE__{
