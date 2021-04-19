@@ -9,10 +9,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   alias Membrane.Core.Parent.{
     ChildEntryParser,
     ClockHandler,
+    CrashGroup,
     LifecycleController,
     Link,
-    ChildLifeController,
-    CrashGroup
+    LinkParser
   }
 
   alias Membrane.Core.PlaybackHandler
@@ -59,7 +59,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       end
 
     state = ClockHandler.choose_clock(children, spec.clock_provider, state)
-    {:ok, links} = Link.from_spec(spec.links)
+    {:ok, links} = LinkParser.parse_links(spec.links)
     links = LinkHandler.resolve_links(links, state)
     {:ok, state} = LinkHandler.link_children(links, state)
     {:ok, state} = StartupHandler.exec_handle_spec_started(children_names, state)
@@ -200,17 +200,14 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp crash_all_group_members(crash_group, state) do
     %CrashGroup{members: members_pids} = crash_group
 
-    state = ChildLifeController.LinkHandler.unlink_crash_group(crash_group, state)
+    state = LinkHandler.unlink_crash_group(crash_group, state)
 
-    :ok =
-      Enum.each(
-        members_pids,
-        fn pid ->
-          if Process.alive?(pid) do
-            GenServer.stop(pid, {:shutdown, :membrane_crash_group_kill})
-          end
-        end
-      )
+    Enum.each(
+      members_pids,
+      fn pid ->
+        if Process.alive?(pid), do: GenServer.stop(pid, {:shutdown, :membrane_crash_group_kill})
+      end
+    )
 
     state
   end

@@ -5,7 +5,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   alias Membrane.Core.{Bin, Child, Message, Parent}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Parent.{Link, CrashGroup}
+  alias Membrane.Core.Parent.{CrashGroup, Link, LinkParser}
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.LinkError
   alias Membrane.Pad
@@ -13,8 +13,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   require Membrane.Core.Message
   require Membrane.Pad
 
-  @spec resolve_links([Parent.Link.t()], Parent.state_t()) ::
-          [Parent.Link.resolved_t()]
+  @spec resolve_links([LinkParser.raw_link_t()], Parent.state_t()) ::
+          [Parent.Link.t()]
   def resolve_links(links, state) do
     Enum.map(
       links,
@@ -27,7 +27,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   #
   # Please note that this function is not atomic and in case of error there's
   # a chance that some of children will remain linked.
-  @spec link_children([Parent.Link.resolved_t()], Parent.state_t()) ::
+  @spec link_children([Parent.Link.t()], Parent.state_t()) ::
           {:ok | {:error, any}, Parent.state_t()}
   def link_children(links, state) do
     state = Enum.reduce(links, state, &link/2)
@@ -75,8 +75,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     state
   end
 
-  @spec resolve_endpoint(Endpoint.t(), Parent.state_t()) ::
-          Endpoint.resolved_t() | no_return
+  @spec resolve_endpoint(LinkParser.raw_endpoint_t(), Parent.state_t()) ::
+          Endpoint.t() | no_return
   defp resolve_endpoint(
          %Endpoint{child: {Membrane.Bin, :itself}} = endpoint,
          %Bin.State{} = state

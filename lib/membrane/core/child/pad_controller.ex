@@ -11,7 +11,7 @@ defmodule Membrane.Core.Child.PadController do
   alias Membrane.Core.{CallbackHandler, Component, Message, InputBuffer}
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.Core.Element.{EventController, PlaybackBuffer}
-  alias Membrane.Core.Parent.Link.Endpoint
+  alias Membrane.Core.Parent.LinkParser
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Component
@@ -28,8 +28,8 @@ defmodule Membrane.Core.Child.PadController do
   """
   @spec handle_link(
           Pad.direction_t(),
-          Endpoint.t(),
-          Endpoint.t(),
+          LinkParser.raw_endpoint_t(),
+          LinkParser.raw_endpoint_t(),
           PadModel.pad_info_t() | nil,
           state_t()
         ) :: Type.stateful_try_t(PadModel.pad_info_t(), state_t)
