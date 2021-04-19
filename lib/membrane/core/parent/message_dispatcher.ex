@@ -8,7 +8,6 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
 
   require Membrane.Core.Message
-  require Membrane.Logger
 
   @spec handle_message(Message.t(), Parent.state_t()) ::
           Membrane.Helper.GenServer.genserver_return_t()

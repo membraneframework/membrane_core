@@ -162,7 +162,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   def maybe_handle_child_death(pid, {:shutdown, :group_kill}, state) do
     withl find: {:ok, _child_name} <- child_by_pid(pid, state),
-          find: {:ok, group} <- group_by_member_pid(pid, state) do
+          find: {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
       state =
         state
         |> CrashGroupHandler.remove_member_of_crash_group(group.name, pid)
@@ -175,7 +175,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   def maybe_handle_child_death(pid, _reason, state) do
-    withl find: {:ok, group} <- group_by_member_pid(pid, state),
+    withl find: {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state),
           group_kill: {:ok, state} <- crash_all_group_members(group, state) do
       state =
         state
@@ -243,21 +243,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
           from_name == child_name or to_name == child_name
         end))
     )
-  end
-
-  @spec group_by_member_pid(pid(), Parent.state_t()) :: {:ok, CrashGroup.t()} | :error
-  defp group_by_member_pid(member_pid, state) do
-    crash_group =
-      state.crash_groups
-      |> Map.values()
-      |> Enum.find(fn %CrashGroup{members: members_pids} ->
-        member_pid in members_pids
-      end)
-
-    case crash_group do
-      %CrashGroup{} -> {:ok, crash_group}
-      nil -> :error
-    end
   end
 
   defp child_by_pid(pid, state) do

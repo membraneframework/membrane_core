@@ -16,8 +16,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   @spec resolve_links([Parent.Link.t()], Parent.state_t()) ::
           [Parent.Link.resolved_t()]
   def resolve_links(links, state) do
-    links
-    |> Enum.map(
+    Enum.map(
+      links,
       &%Link{&1 | from: resolve_endpoint(&1.from, state), to: resolve_endpoint(&1.to, state)}
     )
   end
@@ -30,7 +30,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   @spec link_children([Parent.Link.resolved_t()], Parent.state_t()) ::
           {:ok | {:error, any}, Parent.state_t()}
   def link_children(links, state) do
-    state = links |> Enum.reduce(state, &link/2)
+    state = Enum.reduce(links, state, &link/2)
 
     with :ok <- send_linking_finished(links) do
       state = Enum.reduce(links, state, &flush_linking_buffer/2)
@@ -44,8 +44,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     %CrashGroup{members: members_pids} = crash_group
 
     links_to_unlink =
-      state.links
-      |> Enum.filter(fn %Link{from: from, to: to} ->
+      Enum.filter(state.links, fn %Link{from: from, to: to} ->
         from.pid in members_pids or to.pid in members_pids
       end)
 
@@ -58,7 +57,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     end)
 
     state =
-      Map.update!(state, :links, &(&1 |> Enum.reject(fn link -> link in links_to_unlink end)))
+      Map.update!(state, :links, &(Enum.reject(&1, fn link -> link in links_to_unlink end)))
 
     {:ok, state}
   end
@@ -89,7 +88,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     %Endpoint{pad_spec: pad_spec} = endpoint
     priv_pad_spec = Membrane.Pad.get_corresponding_bin_pad(pad_spec)
 
-    withl pad: {:ok, priv_info} <- state.pads.info |> Map.fetch(Pad.name_by_ref(priv_pad_spec)),
+    withl pad: {:ok, priv_info} <- Map.fetch(state.pads.info, Pad.name_by_ref(priv_pad_spec)),
           do: dynamic? = Pad.is_availability_dynamic(priv_info.availability),
           name: false <- dynamic? and Pad.is_pad_name(pad_spec),
           link: true <- not dynamic? or :ok == PadModel.assert_instance(state, pad_spec),
@@ -118,9 +117,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   defp resolve_endpoint(endpoint, state) do
     %Endpoint{child: child, pad_spec: pad_spec} = endpoint
 
-    withl child: {:ok, child_data} <- state |> Parent.ChildrenModel.get_child_data(child),
+    withl child: {:ok, child_data} <- Parent.ChildrenModel.get_child_data(state, child),
           do: pad_name = Pad.name_by_ref(pad_spec),
-          pad: {:ok, pad_info} <- child_data.module.membrane_pads() |> Keyword.fetch(pad_name),
+          pad: {:ok, pad_info} <- Keyword.fetch(child_data.module.membrane_pads(), pad_name),
           ref: {:ok, ref} <- make_pad_ref(pad_spec, pad_info.availability) do
       %Endpoint{endpoint | pid: child_data.pid, pad_ref: ref}
     else

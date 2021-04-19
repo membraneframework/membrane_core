@@ -35,11 +35,26 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
     if group_name in state.crash_groups do
       state
     else
-      state
-      |> Bunch.Access.update_in(
+      Bunch.Access.update_in(
+        state,
         [:crash_groups, group_name, :members],
         &(&1 |> List.delete(pid))
       )
+    end
+  end
+
+  @spec get_group_by_member_pid(pid(), Parent.state_t()) :: {:ok, CrashGroup.t()} | :error
+  def get_group_by_member_pid(member_pid, state) do
+    crash_group =
+      state.crash_groups
+      |> Map.values()
+      |> Enum.find(fn %CrashGroup{members: members_pids} ->
+        member_pid in members_pids
+      end)
+
+    case crash_group do
+      %CrashGroup{} -> {:ok, crash_group}
+      nil -> :error
     end
   end
 end
