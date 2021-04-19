@@ -5,7 +5,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   alias Membrane.Core.{Bin, Child, Message, Parent}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Parent.Link
+  alias Membrane.Core.Parent.{Link, CrashGroup}
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.LinkError
   alias Membrane.Pad
@@ -38,15 +38,27 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     end
   end
 
-  @spec unlink_children([Link.t()], Parent.state_t()) :: {:ok | {:error, any}, Parent.state_t()}
-  def unlink_children(links, state) do
-    Enum.each(links, fn %Link{to: to} ->
-      Message.send(to.pid, :handle_unlink, to.pad_ref)
+  @spec unlink_crash_group(CrashGroup.t(), Parent.state_t()) ::
+          {:ok | {:error, any}, Parent.state_t()}
+  def unlink_crash_group(crash_group, state) do
+    %CrashGroup{members: members_pids} = crash_group
+
+    links_to_unlink =
+      state.links
+      |> Enum.filter(fn %Link{from: from, to: to} ->
+        from.pid in members_pids or to.pid in members_pids
+      end)
+
+    Enum.each(links_to_unlink, fn %Link{to: to, from: from} ->
+      if to.pid in members_pids and from.pid not in members_pids,
+        do: Message.send(from.pid, :handle_unlink, from.pad_ref)
+
+      if to.pid not in members_pids and from.pid in members_pids,
+        do: Message.send(to.pid, :handle_unlink, to.pad_ref)
     end)
 
     state =
-      state
-      |> Map.update!(:links, &(&1 |> Enum.reject(fn link -> link in links end)))
+      Map.update!(state, :links, &(&1 |> Enum.reject(fn link -> link in links_to_unlink end)))
 
     {:ok, state}
   end

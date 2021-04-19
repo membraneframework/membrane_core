@@ -74,6 +74,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
       ) do
     children = [{source_name, Testing.Source}] ++ (filters_names |> Enum.map(&{&1, Filter}))
     children_names = children |> Enum.map(&elem(&1, 0))
+
     children_count = length(children)
 
     links =

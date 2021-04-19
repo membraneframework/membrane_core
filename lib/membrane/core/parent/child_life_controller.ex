@@ -206,13 +206,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp crash_all_group_members(crash_group, state) do
     %CrashGroup{members: members_pids} = crash_group
 
-    links_to_unlink =
-      state.links
-      |> Enum.filter(fn %Link{from: from, to: to} ->
-        from.pid in members_pids or to.pid in members_pids
-      end)
-
-    with {:ok, state} <- ChildLifeController.LinkHandler.unlink_children(links_to_unlink, state) do
+    with {:ok, state} <- ChildLifeController.LinkHandler.unlink_crash_group(crash_group, state) do
       :ok =
         Enum.each(
           members_pids,
