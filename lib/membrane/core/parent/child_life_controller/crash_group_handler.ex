@@ -33,13 +33,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
           Pipeline.State.t()
   def remove_member_of_crash_group(state, group_name, pid) do
     if group_name in state.crash_groups do
-      state
-    else
       Bunch.Access.update_in(
         state,
         [:crash_groups, group_name, :members],
-        &(&1 |> List.delete(pid))
+        &List.delete(&1, pid)
       )
+    else
+      state
     end
   end
 

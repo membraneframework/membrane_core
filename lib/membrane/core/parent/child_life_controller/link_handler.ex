@@ -56,8 +56,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
         do: Message.send(to.pid, :handle_unlink, to.pad_ref)
     end)
 
-    state =
-      Map.update!(state, :links, &(Enum.reject(&1, fn link -> link in links_to_unlink end)))
+    state = Map.update!(state, :links, &Enum.reject(&1, fn link -> link in links_to_unlink end))
 
     {:ok, state}
   end
