@@ -175,50 +175,42 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   def maybe_handle_child_death(pid, _reason, state) do
-    withl find: {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state),
-          group_kill: {:ok, state} <- crash_all_group_members(group, state) do
+    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
       state =
-        state
+        crash_all_group_members(group, state)
         |> CrashGroupHandler.remove_member_of_crash_group(group.name, pid)
         |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
 
       {{:ok, :child}, state}
     else
-      find: :error ->
+      :error ->
         Membrane.Logger.debug("""
-        Pipeline child crashed but was not member of any crash group.
+        Pipeline child crashed but was not a member of any crash group.
         Terminating.
         """)
 
         propagate_child_crash()
-
-      group_kill: _error ->
-        Membrane.Logger.debug("""
-        Error while killing the group.
-        """)
-
-        {:error, :can_not_kill_all_group_members}
     end
   end
 
   # called when process was a member of a crash group
-  @spec crash_all_group_members(CrashGroup.t(), Parent.state_t()) :: {:ok, Parent.state_t()}
+  @spec crash_all_group_members(CrashGroup.t(), Parent.state_t()) :: Parent.state_t()
   defp crash_all_group_members(crash_group, state) do
     %CrashGroup{members: members_pids} = crash_group
 
-    with {:ok, state} <- ChildLifeController.LinkHandler.unlink_crash_group(crash_group, state) do
-      :ok =
-        Enum.each(
-          members_pids,
-          fn pid ->
-            if Process.alive?(pid) do
-              GenServer.stop(pid, {:shutdown, :group_kill})
-            end
-          end
-        )
+    state = ChildLifeController.LinkHandler.unlink_crash_group(crash_group, state)
 
-      {:ok, state}
-    end
+    :ok =
+      Enum.each(
+        members_pids,
+        fn pid ->
+          if Process.alive?(pid) do
+            GenServer.stop(pid, {:shutdown, :group_kill})
+          end
+        end
+      )
+
+    state
   end
 
   # called when a dead child was not a member of any crash group

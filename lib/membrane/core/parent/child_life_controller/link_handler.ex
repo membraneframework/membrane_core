@@ -38,27 +38,24 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     end
   end
 
-  @spec unlink_crash_group(CrashGroup.t(), Parent.state_t()) ::
-          {:ok | {:error, any}, Parent.state_t()}
+  @spec unlink_crash_group(CrashGroup.t(), Parent.state_t()) :: Parent.state_t()
   def unlink_crash_group(crash_group, state) do
     %CrashGroup{members: members_pids} = crash_group
 
-    links_to_unlink =
+    links_to_remove =
       Enum.filter(state.links, fn %Link{from: from, to: to} ->
         from.pid in members_pids or to.pid in members_pids
       end)
 
-    Enum.each(links_to_unlink, fn %Link{to: to, from: from} ->
-      if to.pid in members_pids and from.pid not in members_pids,
-        do: Message.send(from.pid, :handle_unlink, from.pad_ref)
-
-      if to.pid not in members_pids and from.pid in members_pids,
-        do: Message.send(to.pid, :handle_unlink, to.pad_ref)
+    Enum.each(links_to_remove, fn %Link{to: to, from: from} ->
+      cond do
+        from.pid not in members_pids -> Message.send(from.pid, :handle_unlink, from.pad_ref)
+        to.pid not in members_pids -> Message.send(to.pid, :handle_unlink, to.pad_ref)
+        true -> :ok
+      end
     end)
 
-    state = Map.update!(state, :links, &Enum.reject(&1, fn link -> link in links_to_unlink end))
-
-    {:ok, state}
+    Map.update!(state, :links, &Enum.reject(&1, fn link -> link in links_to_remove end))
   end
 
   defp flush_linking_buffer(%Link{from: from, to: to}, state) do

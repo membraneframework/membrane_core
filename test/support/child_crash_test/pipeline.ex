@@ -76,12 +76,9 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
     children_names = children |> Enum.map(&elem(&1, 0))
 
     links =
-      Enum.chunk_every(children_names, 2, 1)
-      |> Enum.map(fn pair ->
-        case pair do
-          [first_elem, second_elem] -> link(first_elem) |> to(second_elem)
-          [elem] -> link(elem) |> to(:center_filter)
-        end
+      Enum.chunk_every(children_names, 2, 1, [:center_filter])
+      |> Enum.map(fn [first_elem, second_elem] ->
+        link(first_elem) |> to(second_elem)
       end)
 
     spec = %Membrane.ParentSpec{
