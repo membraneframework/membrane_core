@@ -297,8 +297,9 @@ defmodule Membrane.Core.Child.PadController do
   def generate_eos_if_needed(pad_ref, state) do
     direction = PadModel.get_data!(state, pad_ref, :direction)
     eos? = PadModel.get_data!(state, pad_ref, :end_of_stream?)
+    %{state: playback_state} = state.playback
 
-    if direction == :input and not eos? do
+    if direction == :input and not eos? and playback_state == :playing do
       EventController.exec_handle_event(pad_ref, %Events.EndOfStream{}, state)
     else
       {:ok, state}
@@ -329,24 +330,31 @@ defmodule Membrane.Core.Child.PadController do
     %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
     name = Pad.name_by_ref(ref)
 
-    if Pad.availability_mode(availability) == :dynamic and Pad.is_public_name(name) do
-      context =
-        Component.callback_context_generator(:child, PadRemoved, state, direction: direction)
+    cond do
+      Pad.availability_mode(availability) == :dynamic and Pad.is_public_name(name) ->
+        context =
+          Component.callback_context_generator(:child, PadRemoved, state, direction: direction)
 
-      CallbackHandler.exec_and_handle_callback(
-        :handle_pad_removed,
-        get_callback_action_handler(state),
-        %{context: context},
-        [ref],
-        state
-      )
-    else
-      {:ok, state}
+        CallbackHandler.exec_and_handle_callback(
+          :handle_pad_removed,
+          get_callback_action_handler(state),
+          %{context: context},
+          [ref],
+          state
+        )
+
+      Pad.availability_mode(availability) == :static and Pad.is_public_name(name) and
+          state.playback.state in [:playing, :prepared] ->
+        raise("Public static pad #{name} unlinked")
+
+      true ->
+        {:ok, state}
     end
   end
 
   defp flush_playback_buffer(pad_ref, state) do
     new_playback_buf = PlaybackBuffer.flush_for_pad(state.playback_buffer, pad_ref)
+
     {:ok, %{state | playback_buffer: new_playback_buf}}
   end
 

@@ -160,12 +160,14 @@ defmodule Membrane.ParentSpec do
 
   @type links_spec_t :: [LinkBuilder.t() | links_spec_t]
 
+  @type crash_group_spec_t :: {any(), :temporary} | nil
   @typedoc """
   Struct used when starting and linking children within a pipeline or a bin.
   """
   @type t :: %__MODULE__{
           children: children_spec_t,
           links: links_spec_t,
+          crash_group: crash_group_spec_t(),
           stream_sync: :sinks | [[Child.name_t()]],
           clock_provider: Child.name_t()
         }
@@ -174,6 +176,7 @@ defmodule Membrane.ParentSpec do
 
   defstruct children: %{},
             links: [],
+            crash_group: nil,
             stream_sync: [],
             clock_provider: nil
 
