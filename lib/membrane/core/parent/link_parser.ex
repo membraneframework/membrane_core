@@ -16,37 +16,45 @@ defmodule Membrane.Core.Parent.LinkParser do
           pad_props: ParentSpec.pad_props_t()
         }
 
-  @spec parse_links(ParentSpec.links_spec_t()) :: {:ok, [raw_link_t]} | no_return
+  @spec parse_links(ParentSpec.links_spec_t()) ::
+          {[raw_link_t], ParentSpec.children_spec_t()} | no_return
   def parse_links(links) when is_list(links) do
-    links
-    |> List.flatten()
-    |> Enum.flat_map(fn
-      %ParentSpec.LinkBuilder{links: links, status: :done} ->
-        links
+    {links, children} =
+      links
+      |> List.flatten()
+      |> Enum.map(fn
+        %ParentSpec.LinkBuilder{links: links, children: children, status: :done} ->
+          {Enum.reverse(links), children}
 
-      %ParentSpec.LinkBuilder{links: [%{from: from} | _]} ->
-        raise ParentError,
-              "Invalid link specification: link from #{inspect(from)} lacks its destination."
+        %ParentSpec.LinkBuilder{links: [%{from: from} | _]} ->
+          raise ParentError,
+                "Invalid link specification: link from #{inspect(from)} lacks its destination."
 
-      _other ->
-        from_spec_error(links)
-    end)
-    |> Enum.reverse()
-    |> Enum.map(fn link ->
-      %Link{
-        from: %Endpoint{
-          child: link.from,
-          pad_spec: get_pad(link, :from, :output),
-          pad_props: Map.get(link, :output_props, [])
-        },
-        to: %Endpoint{
-          child: link.to,
-          pad_spec: get_pad(link, :to, :input),
-          pad_props: Map.get(link, :input_props, [])
+        _other ->
+          from_spec_error(links)
+      end)
+      |> Enum.unzip()
+
+    links =
+      links
+      |> List.flatten()
+      |> Enum.map(fn link ->
+        %Link{
+          from: %Endpoint{
+            child: link.from,
+            pad_spec: get_pad(link, :from, :output),
+            pad_props: Map.get(link, :output_props, [])
+          },
+          to: %Endpoint{
+            child: link.to,
+            pad_spec: get_pad(link, :to, :input),
+            pad_props: Map.get(link, :input_props, [])
+          }
         }
-      }
-    end)
-    ~> {:ok, &1}
+      end)
+
+    children = children |> List.flatten()
+    {links, children}
   end
 
   def parse_links(links), do: from_spec_error(links)

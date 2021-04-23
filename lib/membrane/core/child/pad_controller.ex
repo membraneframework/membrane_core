@@ -77,6 +77,7 @@ defmodule Membrane.Core.Child.PadController do
   def handle_linking_finished(state) do
     with {:ok, state} <-
            state.pads.dynamic_currently_linking
+           |> Enum.reverse()
            |> Enum.filter(&(&1 |> Pad.name_by_ref() |> Pad.is_public_name()))
            |> Bunch.Enum.try_reduce(state, &handle_pad_added/2) do
       static_unlinked =
