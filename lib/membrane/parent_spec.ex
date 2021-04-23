@@ -46,6 +46,23 @@ defmodule Membrane.ParentSpec do
         |> to(:sink)
       ]
 
+  Links can also contain children definitions, for example:
+
+      [
+        link(:first_element, %Element.With.Options.Struct{option_a: 42})
+        |> to(:some_element, Element.Without.Options)
+        |> to(:element_specified_in_children)
+      ]
+
+  Which is particularly convenient for creating links conditionally:
+
+      maybe_link = &to(&1, :some_element, Some.Element)
+      [
+        link(:first_element)
+        |> then(if condition?, do: maybe_link, else: & &1)
+        |> to(:another_element)
+      ]
+
   ### Bins
 
   For bins boundaries there are special links allowed. User should define links
@@ -194,6 +211,11 @@ defmodule Membrane.ParentSpec do
     %LinkBuilder{links: [%{from: child_name}], status: :from}
   end
 
+  @doc """
+  Defines a child and begins a link with it.
+
+  See the _links_ section of the moduledoc for more information.
+  """
   @spec link(Child.name_t(), child_spec_t()) :: LinkBuilder.t()
   def link(child_name, child_spec) do
     link(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
@@ -276,6 +298,11 @@ defmodule Membrane.ParentSpec do
     LinkBuilder.update(builder, :done, to: child_name)
   end
 
+  @doc """
+  Defines a child and continues or ends a link with it.
+
+  See the _links_ section of the moduledoc for more information.
+  """
   @spec to(LinkBuilder.t(), Child.name_t(), child_spec_t()) :: LinkBuilder.t() | no_return
   def to(%LinkBuilder{} = builder, child_name, child_spec) do
     builder |> to(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
