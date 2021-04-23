@@ -267,15 +267,6 @@ defmodule Membrane.ParentSpec do
   See the _links_ section of the moduledoc for more information.
   """
   @spec to(LinkBuilder.t(), Child.name_t()) :: LinkBuilder.t() | no_return
-  def to(
-        %LinkBuilder{
-          links: [%{from: {Membrane.Bin, :itself}}, %{to: {Membrane.Bin, :itself}} | _] = links
-        } = builder,
-        child_name
-      ) do
-    to(%LinkBuilder{builder | links: tl(links)}, child_name)
-  end
-
   def to(%LinkBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, child_name) do
     raise ParentError,
           "Invalid link specification: child #{inspect(child_name)} placed after bin's output"
