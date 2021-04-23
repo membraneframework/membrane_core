@@ -30,7 +30,8 @@ defmodule Membrane.Core.Element.State do
           parent_monitor: reference() | nil,
           playback: Playback.t(),
           playback_buffer: PlaybackBuffer.t(),
-          delayed_demands: %{{Pad.ref_t(), :supply | :redemand} => :sync | :async},
+          supplying_demand?: boolean(),
+          delayed_demands: MapSet.t({Pad.ref_t(), :supply | :redemand}),
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
             parent_clock: Clock.t(),
@@ -51,6 +52,7 @@ defmodule Membrane.Core.Element.State do
     :parent_monitor,
     :playback,
     :playback_buffer,
+    :supplying_demand?,
     :delayed_demands,
     :synchronization
   ]
@@ -77,7 +79,8 @@ defmodule Membrane.Core.Element.State do
       parent_monitor: options[:parent_monitor],
       playback: %Playback{},
       playback_buffer: PlaybackBuffer.new(),
-      delayed_demands: %{},
+      supplying_demand?: false,
+      delayed_demands: MapSet.new(),
       synchronization: %{
         parent_clock: options.parent_clock,
         timers: %{},

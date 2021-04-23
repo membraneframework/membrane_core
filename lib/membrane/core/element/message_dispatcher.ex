@@ -33,14 +33,10 @@ defmodule Membrane.Core.Element.MessageDispatcher do
     result =
       withl handle:
               {:ok, {res, state}} <-
-                message |> do_handle_message(mode, state) |> Bunch.stateful_try_with_status(),
-            demands: {:ok, state} <- DemandHandler.handle_delayed_demands(state) do
+                message |> do_handle_message(mode, state) |> Bunch.stateful_try_with_status() do
         {res, state}
       else
         handle: {_error, {{:error, reason}, state}} ->
-          handle_message_error(message, mode, reason, state)
-
-        demands: {{:error, reason}, state} ->
           handle_message_error(message, mode, reason, state)
       end
 
