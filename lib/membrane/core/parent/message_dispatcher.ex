@@ -71,10 +71,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   end
 
   defp is_child_pid?(pid, state) do
-    case Enum.find(state.children, fn {_name, entry} -> entry.pid == pid end) do
-      nil -> false
-      _child -> true
-    end
+    Enum.any?(state.children, fn {_name, entry} -> entry.pid == pid end) 
   end
 
   defp pipeline?(%Pipeline.State{}), do: true
