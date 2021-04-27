@@ -70,7 +70,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
       do: Message.send(state.watcher, msg, [state.name | msg_params])
   end
 
-  defp is_child?(pid, state) do
+  defp is_child_pid?(pid, state) do
     case Enum.find(state.children, fn {_name, entry} -> entry.pid == pid end) do
       nil -> false
       _child -> true
