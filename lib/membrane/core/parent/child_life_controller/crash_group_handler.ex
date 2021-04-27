@@ -54,7 +54,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
 
     case crash_group do
       %CrashGroup{} -> {:ok, crash_group}
-      nil -> :error
+      nil -> {:error, :not_member}
     end
   end
 end
