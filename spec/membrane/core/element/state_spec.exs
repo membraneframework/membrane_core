@@ -30,7 +30,8 @@ defmodule Membrane.Core.Element.StateSpec do
              controlling_pid: nil,
              playback: %Playback{},
              playback_buffer: PlaybackBuffer.new(),
-             delayed_demands: %{},
+             supplying_demand?: false,
+             delayed_demands: MapSet.new(),
              synchronization: %{
                timers: %{},
                clock: nil,
