@@ -144,23 +144,23 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   - if in playback transition, checks if it can be finished (in case the dead child
     was the last one we were waiting for to change the playback state)
 
-  If a pid turns out not to be a pid of any child, it is a NOOP.
+  If a pid turns out not to be a pid of any child error is raised.
   """
   @spec handle_child_death(child_pid :: pid(), reason :: atom(), state :: Parent.state_t()) ::
           {:ok | {:error, :not_child}, Parent.state_t()}
   def handle_child_death(pid, :normal, state) do
     with {:ok, child_name} <- child_by_pid(pid, state),
          state = Bunch.Access.delete_in(state, [:children, child_name]),
-         state = remove_child_links(child_name, state),
-         {:ok, state} <- LifecycleController.maybe_finish_playback_transition(state) do
-      {:ok, state}
+         state = remove_child_links(child_name, state) do
+      LifecycleController.maybe_finish_playback_transition(state)
     else
-      {:error, :not_child} -> {{:error, :not_child}, state}
-      error -> error
+      {:error, :not_child} ->
+        raise Membrane.PipelineError,
+              "Tried to handle child death that wasn't a child of that pipeline."
     end
   end
 
-  def handle_child_death(pid, {:shutdown, :group_kill}, state) do
+  def handle_child_death(pid, {:shutdown, :membrane_crash_group_kill}, state) do
     with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
       state =
         state
@@ -169,7 +169,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
       {:ok, state}
     else
-      {:error, :not_member} = error -> {error, state}
+      {:error, :not_member} ->
+        raise Membrane.PipelineError,
+              "Child  that was not a member of a group killed with :membrane_crash_group_kill."
     end
   end
 
@@ -204,7 +206,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         members_pids,
         fn pid ->
           if Process.alive?(pid) do
-            GenServer.stop(pid, {:shutdown, :group_kill})
+            GenServer.stop(pid, {:shutdown, :membrane_crash_group_kill})
           end
         end
       )

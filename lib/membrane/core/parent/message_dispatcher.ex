@@ -52,7 +52,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   end
 
   def handle_message({:DOWN, _ref, :process, pid, reason} = message, state) do
-    if is_child?(pid, state) do
+    if is_child_pid?(pid, state) do
       ChildLifeController.handle_child_death(pid, reason, state)
     else
       LifecycleController.handle_other(message, state)
@@ -71,7 +71,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   end
 
   defp is_child_pid?(pid, state) do
-    Enum.any?(state.children, fn {_name, entry} -> entry.pid == pid end) 
+    Enum.any?(state.children, fn {_name, entry} -> entry.pid == pid end)
   end
 
   defp pipeline?(%Pipeline.State{}), do: true
