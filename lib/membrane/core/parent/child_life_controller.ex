@@ -149,14 +149,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @spec handle_child_death(child_pid :: pid(), reason :: atom(), state :: Parent.state_t()) ::
           {:ok | {:error, :not_child}, Parent.state_t()}
   def handle_child_death(pid, :normal, state) do
-    with {:ok, child_name} <- child_by_pid(pid, state),
-         state = Bunch.Access.delete_in(state, [:children, child_name]),
-         state = remove_child_links(child_name, state) do
+    with {:ok, child_name} <- child_by_pid(pid, state) do
+      state = Bunch.Access.delete_in(state, [:children, child_name])
+      state = remove_child_links(child_name, state)
+
       LifecycleController.maybe_finish_playback_transition(state)
     else
       {:error, :not_child} ->
         raise Membrane.PipelineError,
-              "Tried to handle child death that wasn't a child of that pipeline."
+              "Tried to handle death of process that wasn't a child of that pipeline."
     end
   end
 
@@ -171,7 +172,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     else
       {:error, :not_member} ->
         raise Membrane.PipelineError,
-              "Child  that was not a member of a group killed with :membrane_crash_group_kill."
+              "Child that was not a member of any crash group killed with :membrane_crash_group_kill."
     end
   end
 
