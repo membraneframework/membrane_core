@@ -11,6 +11,7 @@ defmodule Membrane.Core.Bin.State do
   alias Membrane.Core.{Playback, Timer}
   alias Membrane.Core.Bin.LinkingBuffer
   alias Membrane.Core.Child.PadModel
+  alias Membrane.Core.Parent.Link
   alias Membrane.Core.Parent.ChildrenModel
   alias Membrane.{Child, Clock, Sync}
 
@@ -24,6 +25,7 @@ defmodule Membrane.Core.Bin.State do
           watcher: pid | nil,
           controlling_pid: pid | nil,
           linking_buffer: LinkingBuffer.t(),
+          links: [Link.t()],
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
             parent_clock: Clock.t(),
@@ -51,6 +53,7 @@ defmodule Membrane.Core.Bin.State do
                 watcher: nil,
                 controlling_pid: nil,
                 linking_buffer: LinkingBuffer.new(),
-                children_log_metadata: []
+                children_log_metadata: [],
+                links: []
               ]
 end
