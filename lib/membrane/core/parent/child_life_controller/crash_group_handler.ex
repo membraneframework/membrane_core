@@ -14,7 +14,19 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
     {group_name, mode} = group_spec
     crash_group = %CrashGroup{name: group_name, mode: mode, members: children_pids}
 
-    {:ok, %{state | crash_groups: Map.put(state.crash_groups, group_name, crash_group)}}
+    {:ok,
+     %{
+       state
+       | crash_groups:
+           Map.update(
+             state.crash_groups,
+             group_name,
+             crash_group,
+             fn %CrashGroup{members: current_children_pids} = existing_group ->
+               %{existing_group | members: current_children_pids ++ children_pids}
+             end
+           )
+     }}
   end
 
   @spec remove_crash_group_if_empty(Pipeline.State.t(), CrashGroup.name_t()) ::
