@@ -52,12 +52,10 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   end
 
   def handle_message({:DOWN, _ref, :process, pid, reason} = message, state) do
-    with {{:ok, result}, state} <-
-           ChildLifeController.maybe_handle_child_death(pid, reason, state) do
-      case result do
-        :child -> {:ok, state}
-        :not_child -> LifecycleController.handle_other(message, state)
-      end
+    if is_child_pid?(pid, state) do
+      ChildLifeController.handle_child_death(pid, reason, state)
+    else
+      LifecycleController.handle_other(message, state)
     end
     |> noreply(state)
   end
@@ -70,6 +68,10 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   defp inform_parent(state, msg, msg_params) do
     if not pipeline?(state) and state.watcher,
       do: Message.send(state.watcher, msg, [state.name | msg_params])
+  end
+
+  defp is_child_pid?(pid, state) do
+    Enum.any?(state.children, fn {_name, entry} -> entry.pid == pid end)
   end
 
   defp pipeline?(%Pipeline.State{}), do: true

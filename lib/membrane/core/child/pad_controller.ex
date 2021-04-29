@@ -330,25 +330,19 @@ defmodule Membrane.Core.Child.PadController do
     %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
     name = Pad.name_by_ref(ref)
 
-    cond do
-      Pad.availability_mode(availability) == :dynamic and Pad.is_public_name(name) ->
-        context =
-          Component.callback_context_generator(:child, PadRemoved, state, direction: direction)
+    if Pad.availability_mode(availability) == :dynamic and Pad.is_public_name(name) do
+      context =
+        Component.callback_context_generator(:child, PadRemoved, state, direction: direction)
 
-        CallbackHandler.exec_and_handle_callback(
-          :handle_pad_removed,
-          get_callback_action_handler(state),
-          %{context: context},
-          [ref],
-          state
-        )
-
-      Pad.availability_mode(availability) == :static and Pad.is_public_name(name) and
-          state.playback.state in [:playing, :prepared] ->
-        raise("Public static pad #{name} unlinked")
-
-      true ->
-        {:ok, state}
+      CallbackHandler.exec_and_handle_callback(
+        :handle_pad_removed,
+        get_callback_action_handler(state),
+        %{context: context},
+        [ref],
+        state
+      )
+    else
+      {:ok, state}
     end
   end
 

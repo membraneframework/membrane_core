@@ -142,37 +142,39 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   - if in playback transition, checks if it can be finished (in case the dead child
     was the last one we were waiting for to change the playback state)
 
-  If a pid turns out not to be a pid of any child, it is a NOOP.
+  If a pid turns out not to be a pid of any child error is raised.
   """
-  @spec maybe_handle_child_death(child_pid :: pid(), reason :: atom(), state :: Parent.state_t()) ::
-          {{:ok, :child | :not_child}, Parent.state_t()}
-  def maybe_handle_child_death(pid, :normal, state) do
-    withl find: {:ok, child_name} <- child_by_pid(pid, state),
-          handle: state = Bunch.Access.delete_in(state, [:children, child_name]),
-          handle: state = remove_child_links(child_name, state),
-          handle: {:ok, state} <- LifecycleController.maybe_finish_playback_transition(state) do
-      {{:ok, :child}, state}
+  @spec handle_child_death(child_pid :: pid(), reason :: atom(), state :: Parent.state_t()) ::
+          {:ok | {:error, :not_child}, Parent.state_t()}
+  def handle_child_death(pid, :normal, state) do
+    with {:ok, child_name} <- child_by_pid(pid, state) do
+      state = Bunch.Access.delete_in(state, [:children, child_name])
+      state = remove_child_links(child_name, state)
+
+      LifecycleController.maybe_finish_playback_transition(state)
     else
-      find: :error -> {{:ok, :not_child}, state}
-      handle: error -> error
+      {:error, :not_child} ->
+        raise Membrane.PipelineError,
+              "Tried to handle death of process that wasn't a child of that pipeline."
     end
   end
 
-  def maybe_handle_child_death(pid, {:shutdown, :group_kill}, state) do
-    withl find: {:ok, _child_name} <- child_by_pid(pid, state),
-          find: {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
+  def handle_child_death(pid, {:shutdown, :membrane_crash_group_kill}, state) do
+    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
       state =
         state
         |> CrashGroupHandler.remove_member_of_crash_group(group.name, pid)
         |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
 
-      {{:ok, :child}, state}
+      {:ok, state}
     else
-      find: :error -> {{:ok, :not_child}, state}
+      {:error, :not_member} ->
+        raise Membrane.PipelineError,
+              "Child that was not a member of any crash group killed with :membrane_crash_group_kill."
     end
   end
 
-  def maybe_handle_child_death(pid, _reason, state) do
+  def handle_child_death(pid, _reason, state) do
     with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
       state =
         crash_all_group_members(group, state)
@@ -187,9 +189,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
           state
         )
 
-      {{:ok, :child}, state}
+      {:ok, state}
     else
-      :error ->
+      {:error, :not_member} ->
         Membrane.Logger.debug("""
         Pipeline child crashed but was not a member of any crash group.
         Terminating.
@@ -211,7 +213,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         members_pids,
         fn pid ->
           if Process.alive?(pid) do
-            GenServer.stop(pid, {:shutdown, :group_kill})
+            GenServer.stop(pid, {:shutdown, :membrane_crash_group_kill})
           end
         end
       )
@@ -246,7 +248,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp child_by_pid(pid, state) do
     case Enum.find(state.children, fn {_name, entry} -> entry.pid == pid end) do
       {child_name, _child_data} -> {:ok, child_name}
-      nil -> :error
+      nil -> {:error, :not_child}
     end
   end
 end

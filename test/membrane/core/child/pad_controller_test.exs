@@ -89,29 +89,11 @@ defmodule Membrane.Core.Child.PadControllerTest do
       refute new_state.pads.data |> Map.has_key?(:output)
     end
 
-    test "for public static output pad (playing)" do
-      state = prepare_static_state(TrivialFilter, :element, :output, :playing)
-      assert state.pads.data |> Map.has_key?(:output)
-
-      assert_raise RuntimeError, ~r/Public static pad .* unlinked/, fn ->
-        @module.handle_unlink(:output, state)
-      end
-    end
-
     test "for public static input pad (stopped)" do
       state = prepare_static_state(TrivialSink, :element, :input, :stopped)
       assert state.pads.data |> Map.has_key?(:input)
       assert {:ok, new_state} = @module.handle_unlink(:input, state)
       refute new_state.pads.data |> Map.has_key?(:input)
-    end
-
-    test "for public static input pad (playing)" do
-      state = prepare_static_state(TrivialSink, :element, :input, :playing)
-      assert state.pads.data |> Map.has_key?(:input)
-
-      assert_raise RuntimeError, ~r/Public static pad .* unlinked/, fn ->
-        @module.handle_unlink(:input, state)
-      end
     end
 
     test "for dynamic input pad" do
