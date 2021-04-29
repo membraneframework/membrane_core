@@ -170,7 +170,7 @@ defmodule Membrane.Pipeline do
   @doc """
   Callback invoked when crash of the crash group happens.
   """
-  @callback handle_group_down(group_name :: CrashGroup.name_t(), state :: state_t) :: callback_return_t
+  @callback handle_crash_group_down(group_name :: CrashGroup.name_t(), context :: [pid()], state :: state_t) :: callback_return_t
 
   @optional_callbacks handle_init: 1,
                       handle_shutdown: 2,
@@ -185,7 +185,7 @@ defmodule Membrane.Pipeline do
                       handle_element_end_of_stream: 3,
                       handle_notification: 4,
                       handle_tick: 3,
-                      handle_group_down: 2
+                      handle_crash_group_down: 3
 
   @doc """
   Starts the Pipeline based on given module and links it to the current
@@ -450,7 +450,7 @@ defmodule Membrane.Pipeline do
         do: handle_notification(notification, element, state)
 
       @impl true
-      def handle_group_down(group_name, state), do: {:ok, state}
+      def handle_crash_group_down(_group_name, _ctx, state), do: {:ok, state}
 
       # DEPRECATED:
 

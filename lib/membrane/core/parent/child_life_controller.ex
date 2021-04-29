@@ -180,9 +180,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
 
       CallbackHandler.exec_and_handle_callback(
-          :handle_group_down,
+          :handle_crash_group_down,
           Core.Parent.Pipeline.ActionHandler,
-          %{},
+          %{context: fn _state -> group.members end},
           [group.name],
           state
         )

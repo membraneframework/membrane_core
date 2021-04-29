@@ -67,8 +67,9 @@ defmodule Membrane.Core.CallbackHandler do
         state
       )
       when is_map(handler_params) do
-    result = callback |> exec_callback(args, handler_params, state)
-    result |> handle_callback_result(callback, handler_module, handler_params, state)
+    result = exec_callback(callback, args, handler_params, state)
+
+    handle_callback_result(result, callback, handler_module, handler_params, state)
   end
 
   @spec exec_and_handle_splitted_callback(
