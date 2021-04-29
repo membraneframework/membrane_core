@@ -178,6 +178,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   def handle_child_death(pid, _reason, state) do
     with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
+      IO.inspect("member of group: #{inspect(group)} with pid #{inspect(pid)} died", label: "$%$%$%")
+
       state =
         crash_all_group_members(group, state)
         |> CrashGroupHandler.remove_member_of_crash_group(group.name, pid)
