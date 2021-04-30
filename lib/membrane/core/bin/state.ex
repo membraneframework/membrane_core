@@ -26,6 +26,7 @@ defmodule Membrane.Core.Bin.State do
           controlling_pid: pid | nil,
           linking_buffer: LinkingBuffer.t(),
           links: [Link.t()],
+          crash_groups: %{CrashGroup.name_t() => CrashGroup.t()},
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
             parent_clock: Clock.t(),
@@ -52,6 +53,7 @@ defmodule Membrane.Core.Bin.State do
                 pads: nil,
                 watcher: nil,
                 controlling_pid: nil,
+                crash_groups: %{},
                 linking_buffer: LinkingBuffer.new(),
                 children_log_metadata: [],
                 links: []
