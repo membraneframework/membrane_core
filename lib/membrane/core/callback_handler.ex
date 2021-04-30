@@ -138,12 +138,11 @@ defmodule Membrane.Core.CallbackHandler do
         ) :: Type.stateful_try_t(state_t)
   defp handle_callback_result(cb_result, callback, handler_module, handler_params, state) do
     {result, new_internal_state} = cb_result
-    state = state |> Map.put(:internal_state, new_internal_state)
+    state = Map.put(state, :internal_state, new_internal_state)
 
     with {{:ok, actions}, state} <- {result, state},
          {:ok, state} <-
-           actions
-           |> exec_handle_actions(callback, handler_module, handler_params, state) do
+           exec_handle_actions(actions, callback, handler_module, handler_params, state) do
       {:ok, state}
     end
   end
@@ -151,7 +150,7 @@ defmodule Membrane.Core.CallbackHandler do
   @spec exec_handle_actions(list, callback :: atom, module, handler_params_t, state_t) ::
           Type.stateful_try_t(state_t)
   defp exec_handle_actions(actions, callback, handler_module, handler_params, state) do
-    with {:ok, state} <- actions |> handler_module.handle_actions(callback, handler_params, state) do
+    with {:ok, state} <- handler_module.handle_actions(actions, callback, handler_params, state) do
       {:ok, state}
     else
       {{:error, reason}, state} ->

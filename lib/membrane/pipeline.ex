@@ -502,7 +502,7 @@ defmodule Membrane.Pipeline do
                        handle_element_start_of_stream: 3,
                        handle_element_end_of_stream: 3,
                        handle_notification: 4,
-                       handle_group_down: 2
+                       handle_crash_group_down: 3
                      ] ++ deprecated
     end
   end

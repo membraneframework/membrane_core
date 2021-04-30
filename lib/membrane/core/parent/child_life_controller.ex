@@ -183,7 +183,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
       CallbackHandler.exec_and_handle_callback(
           :handle_crash_group_down,
-          Core.Parent.Pipeline.ActionHandler,
+          Membrane.Core.Pipeline.ActionHandler,
           %{context: fn _state -> group.members end},
           [group.name],
           state
