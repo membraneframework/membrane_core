@@ -4,7 +4,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   alias __MODULE__.{StartupHandler, LinkHandler, CrashGroupHandler}
   alias Membrane.ParentSpec
-  alias Membrane.Core.{Parent, PlaybackHandler, CallbackHandler}
+  alias Membrane.Core.{Parent, PlaybackHandler, CallbackHandler, Component}
 
   alias Membrane.Core.Parent.{
     ChildEntryParser,
@@ -18,6 +18,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   require Membrane.Logger
   require Membrane.Bin
   require Membrane.Element
+  require Membrane.Core.Component
 
   @spec handle_spec(ParentSpec.t(), Parent.state_t()) ::
           {{:ok, [Membrane.Child.name_t()]}, Parent.state_t()} | no_return
@@ -181,13 +182,18 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         |> CrashGroupHandler.remove_member_of_crash_group(group.name, pid)
         |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
 
-      CallbackHandler.exec_and_handle_callback(
-          :handle_crash_group_down,
-          Membrane.Core.Pipeline.ActionHandler,
-          %{context: fn _state -> group.members end},
-          [group.name],
-          state
+      context =
+        Component.callback_context_generator(:parent, CrashGroupDown, state,
+          members: group.members
         )
+
+      CallbackHandler.exec_and_handle_callback(
+        :handle_crash_group_down,
+        Membrane.Core.Pipeline.ActionHandler,
+        %{context: context},
+        [group.name],
+        state
+      )
 
       {:ok, state}
     else
