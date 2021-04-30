@@ -454,7 +454,9 @@ defmodule Membrane.Pipeline do
         do: handle_notification(notification, element, state)
 
       @impl true
-      def handle_crash_group_down(_group_name, _ctx, state), do: {:ok, state}
+      def handle_crash_group_down(_group_name, _ctx, state) do
+        {:ok, state}
+      end
 
       # DEPRECATED:
 

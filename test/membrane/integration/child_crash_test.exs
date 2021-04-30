@@ -67,6 +67,8 @@ defmodule Membrane.Integration.ChildCrashTest do
     assert_pid_alive(center_filter_pid)
     assert_pid_alive(sink_pid)
     assert_pid_alive(pipeline_pid)
+
+    assert_pipeline_receive(pipeline_pid, {:handle_crash_group_called, 1})
   end
 
   test "Element that is a member of a crash group" do
@@ -134,6 +136,9 @@ defmodule Membrane.Integration.ChildCrashTest do
     assert_pid_alive(filter_2_2_pid)
     assert_pid_alive(source_2_pid)
     assert_pid_alive(pipeline_pid)
+
+    assert_pipeline_receive(pipeline_pid, {:handle_crash_group_called, 1})
+    refute_pipeline_receive(pipeline_pid, {:handle_crash_group_called, 2})
   end
 
   defp assert_pid_alive(pid) do
