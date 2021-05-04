@@ -200,7 +200,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   defp exec_handle_crash_group_down_callback(group, state) do
     members_names =
-      Enum.map(group.members, fn member_pid ->
+      Enum.map(group.dead_members, fn member_pid ->
         {:ok, member_name} = child_by_pid(member_pid, state)
         member_name
       end)
