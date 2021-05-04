@@ -23,9 +23,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
     %CrashGroup{members: members} = state.crash_groups[group_name]
 
     if members == [] do
-      crash_groups = Bunch.Access.delete_in(state, [:crash_groups, group_name])
+      state = Bunch.Access.delete_in(state, [:crash_groups, group_name])
 
-      {:removed, %{state | crash_groups: crash_groups}}
+      {:removed, state}
     else
       {:not_removed, state}
     end
