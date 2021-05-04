@@ -2,23 +2,23 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @moduledoc false
   use Bunch
 
-  alias __MODULE__.{StartupHandler, LinkHandler, CrashGroupHandler}
+  alias __MODULE__.{CrashGroupHandler, LinkHandler, StartupHandler}
   alias Membrane.ParentSpec
-  alias Membrane.Core.{Parent, PlaybackHandler, CallbackHandler, Component}
+  alias Membrane.Core.{CallbackHandler, Component, Parent, PlaybackHandler}
 
   alias Membrane.Core.Parent.{
     ChildEntryParser,
-    ClockHandler,
-    LifecycleController,
-    Link,
     ChildLifeController,
-    CrashGroup
+    ClockHandler,
+    CrashGroup,
+    LifecycleController,
+    Link
   }
 
-  require Membrane.Logger
+  require Membrane.Core.Component
   require Membrane.Bin
   require Membrane.Element
-  require Membrane.Core.Component
+  require Membrane.Logger
 
   @spec handle_spec(ParentSpec.t(), Parent.state_t()) ::
           {{:ok, [Membrane.Child.name_t()]}, Parent.state_t()} | no_return
