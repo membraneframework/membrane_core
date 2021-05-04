@@ -172,7 +172,7 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_crash_group_down(
               group_name :: CrashGroup.name_t(),
-              context :: [pid()],
+              context :: CallbackContext.CrashGroupDown.t(),
               state :: state_t
             ) :: callback_return_t
 
