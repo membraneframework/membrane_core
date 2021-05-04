@@ -199,8 +199,14 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp exec_handle_crash_group_down_callback(group, state) do
+    members_names =
+      Enum.map(group.members, fn member_pid ->
+        {:ok, member_name} = child_by_pid(member_pid, state)
+        member_name
+      end)
+
     context =
-      Component.callback_context_generator(:parent, CrashGroupDown, state, members: group.members)
+      Component.callback_context_generator(:parent, CrashGroupDown, state, members: members_names)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_crash_group_down,

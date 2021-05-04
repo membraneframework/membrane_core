@@ -4,5 +4,5 @@ defmodule Membrane.Bin.CallbackContext.CrashGroupDown do
   when a crash group is down.
   """
   use Membrane.Core.Bin.CallbackContext,
-    members: [pid()]
+    members: [Membrane.Child.name_t()]
 end
