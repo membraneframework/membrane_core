@@ -48,6 +48,10 @@ defmodule Membrane.Core.Parent.LifecycleController do
         {:ok, state}
       end
 
+    if state.__struct__ == Membrane.Core.Bin.State and new == :stopped do
+      Core.Child.LifecycleController.unlink(state)
+    end
+
     with {:ok, state} <- callback_res do
       Membrane.Logger.debug("Playback state changed from #{old} to #{new}")
 

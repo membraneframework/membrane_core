@@ -44,10 +44,10 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "delaying demand", %{state: state} do
       [{:playing, :handle_other}, {:prepared, :handle_prepared_to_playing}]
       |> Enum.each(fn {playback, callback} ->
-        state = %{state | playback: %Playback{state: playback}}
+        state = %{state | playback: %Playback{state: playback}, supplying_demand?: true}
         assert {:ok, state} = @module.handle_action({:demand, {:input, 10}}, callback, %{}, state)
         assert state.pads.data.input.demand == 10
-        assert %{{:input, :supply} => :sync} == state.delayed_demands
+        assert MapSet.new([{:input, :supply}]) == state.delayed_demands
       end)
 
       state = %{state | playback: %Playback{state: :playing}}
@@ -56,12 +56,12 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
                @module.handle_action(
                  {:demand, {:input, 10}},
                  :handle_other,
-                 %{supplying_demand?: true},
-                 state
+                 %{},
+                 %{state | supplying_demand?: true}
                )
 
       assert state.pads.data.input.demand == 10
-      assert %{{:input, :supply} => :async} == state.delayed_demands
+      assert MapSet.new([{:input, :supply}]) == state.delayed_demands
     end
 
     test "returning error on invalid constraints", %{state: state} do
@@ -494,7 +494,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
     test "when pad works in pull mode", %{state: state} do
       state =
-        state
+        %{state | supplying_demand?: true}
         |> set_playback_state(:playing)
         |> PadModel.set_data!(:output, :mode, :pull)
 
@@ -507,8 +507,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         )
 
       assert {:ok, new_state} = result
-      assert %{new_state | delayed_demands: %{}} == state
-      assert new_state.delayed_demands[{:output, :redemand}] == :sync
+      assert %{new_state | delayed_demands: MapSet.new()} == state
+      assert MapSet.member?(new_state.delayed_demands, {:output, :redemand}) == true
     end
   end
 
@@ -538,6 +538,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     setup :playing_trivial_source
 
     test "when :redemand is the last action", %{state: state} do
+      state = %{state | supplying_demand?: true}
+
       result =
         @module.handle_actions(
           [notify: :a, notify: :b, redemand: :output],
@@ -549,11 +551,13 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_received Message.new(:notification, [:elem_name, :a])
       assert_received Message.new(:notification, [:elem_name, :b])
       assert {:ok, new_state} = result
-      assert %{new_state | delayed_demands: %{}} == state
-      assert new_state.delayed_demands[{:output, :redemand}] == :sync
+      assert %{new_state | delayed_demands: MapSet.new()} == state
+      assert MapSet.member?(new_state.delayed_demands, {:output, :redemand}) == true
     end
 
     test "when two :redemand actions are last", %{state: state} do
+      state = %{state | supplying_demand?: true}
+
       result =
         @module.handle_actions(
           [notify: :a, notify: :b, redemand: :output, redemand: :output],
@@ -565,8 +569,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_received Message.new(:notification, [:elem_name, :a])
       assert_received Message.new(:notification, [:elem_name, :b])
       assert {:ok, new_state} = result
-      assert %{new_state | delayed_demands: %{}} == state
-      assert new_state.delayed_demands[{:output, :redemand}] == :sync
+      assert %{new_state | delayed_demands: MapSet.new()} == state
+      assert MapSet.member?(new_state.delayed_demands, {:output, :redemand}) == true
     end
 
     test "when :redemand is not the last action", %{state: state} do

@@ -33,7 +33,7 @@ defmodule Membrane.Testing.SourceTest do
       payload = 1
       payloads = [payload]
 
-      assert {{:ok, actions}, state} =
+      assert {{:ok, actions}, _state} =
                Source.handle_demand(:output, 2, :buffers, nil, %{output: payloads})
 
       assert [
@@ -49,7 +49,7 @@ defmodule Membrane.Testing.SourceTest do
     buffers = [%Membrane.Buffer{payload: 1}]
     assert {state, generator} = Source.output_from_buffers(buffers)
 
-    assert {{:ok, actions}, state} =
+    assert {{:ok, actions}, _state} =
              Source.handle_demand(:output, 2, :buffers, nil, %{
                generator_state: state,
                output: generator

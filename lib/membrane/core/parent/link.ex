@@ -54,9 +54,10 @@ defmodule Membrane.Core.Parent.Link do
         raise ParentError,
               "Invalid link specification: link from #{inspect(from)} lacks its destination."
 
-      links ->
-        from_spec(links)
+      _other ->
+        from_spec_error(links)
     end)
+    |> Enum.reverse()
     |> Enum.map(fn link ->
       %__MODULE__{
         from: %Endpoint{
@@ -74,7 +75,10 @@ defmodule Membrane.Core.Parent.Link do
     ~> {:ok, &1}
   end
 
-  def from_spec(links) do
+  def from_spec(links), do: from_spec_error(links)
+
+  @spec from_spec_error(t) :: no_return
+  defp from_spec_error(links) do
     raise ParentError, """
     Invalid links specification: #{inspect(links)}.
     See `#{inspect(ParentSpec)}` for information on specifying links.

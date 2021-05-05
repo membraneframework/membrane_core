@@ -51,7 +51,7 @@ defmodule Membrane.Pipeline do
   Useful for any cleanup required.
   """
   @callback handle_shutdown(reason, state :: state_t) :: :ok
-            when reason: :normal | :shutdown | {:shutdown, any}
+            when reason: :normal | :shutdown | {:shutdown, any} | term()
 
   @doc """
   Callback invoked when pipeline transition from `:stopped` to `:prepared` state has finished,

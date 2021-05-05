@@ -33,6 +33,18 @@ defmodule Membrane.Core.Bin do
   """
   @spec start_link(options_t, GenServer.options()) :: GenServer.on_start()
   def start_link(options, process_options \\ []) do
+    do_start(:start_link, options, process_options)
+  end
+
+  @doc """
+  Works similarly to `start_link/2`, but does not link to the current process.
+  """
+  @spec start(options_t(), GenServer.options()) :: GenServer.on_start()
+  def start(options, process_options \\ []) do
+    do_start(:start, options, process_options)
+  end
+
+  defp do_start(method, options, process_options) do
     if options.module |> Membrane.Bin.bin?() do
       Membrane.Logger.debug("""
       Bin start link: name: #{inspect(options.name)}
@@ -41,7 +53,7 @@ defmodule Membrane.Core.Bin do
       process options: #{inspect(process_options)}
       """)
 
-      GenServer.start_link(Membrane.Core.Bin, options, process_options)
+      apply(GenServer, method, [Membrane.Core.Bin, options, process_options])
     else
       raise """
       Cannot start bin, passed module #{inspect(options.module)} is not a Membrane Bin.
@@ -122,13 +134,6 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
-  # Element-specific message.
-  def handle_info(Message.new(:demand_unit, [demand_unit, pad_ref]), state) do
-    Core.Child.LifecycleController.handle_demand_unit(demand_unit, pad_ref, state)
-    |> noreply()
-  end
-
-  @impl GenServer
   def handle_info(Message.new(:handle_unlink, pad_ref), state) do
     PadController.handle_pad_removed(pad_ref, state)
     |> noreply()
@@ -146,16 +151,8 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
-  def handle_call(
-        Message.new(:handle_link, [pad_ref, pad_direction, pid, other_ref, other_info, props]),
-        _from,
-        state
-      ) do
-    {{:ok, info}, state} =
-      PadController.handle_link(pad_ref, pad_direction, pid, other_ref, other_info, props, state)
-
-    {{:ok, info}, state}
-    |> reply()
+  def handle_call(Message.new(:handle_link, [direction, this, other, other_info]), _from, state) do
+    PadController.handle_link(direction, this, other, other_info, state) |> reply()
   end
 
   @impl GenServer
@@ -168,5 +165,10 @@ defmodule Membrane.Core.Bin do
   def handle_call(Message.new(:handle_watcher, watcher), _from, state) do
     Core.Child.LifecycleController.handle_watcher(watcher, state)
     |> reply()
+  end
+
+  @impl GenServer
+  def terminate(reason, state) do
+    :ok = state.module.handle_shutdown(reason, state.internal_state)
   end
 end

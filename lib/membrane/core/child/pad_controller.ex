@@ -5,13 +5,13 @@ defmodule Membrane.Core.Child.PadController do
 
   use Bunch
   alias Bunch.Type
-  alias Membrane.{LinkError, Pad, ParentSpec}
-  alias Membrane.Core
+  alias Membrane.{Core, LinkError, Pad, ParentSpec}
   alias Membrane.Core.{CallbackHandler, Events, InputBuffer, Message}
   alias Membrane.Core.Bin.LinkingBuffer
   alias Membrane.Core.{CallbackHandler, Component, Message, InputBuffer}
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.Core.Element.{EventController, PlaybackBuffer}
+  alias Membrane.Core.Parent.Link.Endpoint
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Component
@@ -27,30 +27,38 @@ defmodule Membrane.Core.Child.PadController do
   Verifies linked pad, initializes it's data.
   """
   @spec handle_link(
-          Pad.ref_t(),
           Pad.direction_t(),
-          pid,
-          Pad.ref_t(),
+          Endpoint.t(),
+          Endpoint.t(),
           PadModel.pad_info_t() | nil,
-          ParentSpec.pad_props_t(),
           state_t()
         ) :: Type.stateful_try_t(PadModel.pad_info_t(), state_t)
-  def handle_link(pad_ref, direction, pid, other_ref, other_info, props, state) do
-    pad_name = pad_ref |> Pad.name_by_ref()
-    info = state.pads.info[pad_name]
+  def handle_link(direction, this, other, other_info, state) do
+    name = this.pad_ref |> Pad.name_by_ref()
+    info = state.pads.info[name]
 
-    with :ok <- validate_pad_being_linked!(pad_ref, direction, info, state),
-         :ok <- validate_dir_and_mode!({pad_ref, info}, {other_ref, other_info}) do
-      props = parse_pad_props!(props, pad_name, state)
-      state = init_pad_data(info, pad_ref, pid, other_ref, props, state)
+    {:ok, other_info} =
+      if other_info do
+        {:ok, other_info}
+      else
+        other_direction = Pad.opposite_direction(direction)
+        Message.call(other.pid, :handle_link, [other_direction, other, this, info])
+      end
+
+    with :ok <- validate_pad_being_linked!(this.pad_ref, direction, info, state),
+         :ok <- validate_dir_and_mode!({this.pad_ref, info}, {other.pad_ref, other_info}) do
+      props = parse_pad_props!(this.pad_props, name, state)
+
+      state =
+        init_pad_data(this.pad_ref, info, props, other.pad_ref, other.pid, other_info, state)
 
       state =
         case Pad.availability_mode(info.availability) do
           :static ->
-            state |> Bunch.Access.update_in([:pads, :info], &(&1 |> Map.delete(pad_name)))
+            state |> Bunch.Access.update_in([:pads, :info], &(&1 |> Map.delete(name)))
 
           :dynamic ->
-            add_to_currently_linking(pad_ref, state)
+            add_to_currently_linking(this.pad_ref, state)
         end
 
       {{:ok, info}, state}
@@ -230,18 +238,19 @@ defmodule Membrane.Core.Child.PadController do
   end
 
   @spec init_pad_data(
+          Pad.ref_t(),
           PadModel.pad_info_t(),
+          parsed_pad_props_t,
           Pad.ref_t(),
           pid,
-          Pad.ref_t(),
-          parsed_pad_props_t,
+          PadModel.pad_info_t(),
           state_t()
         ) :: state_t()
-  defp init_pad_data(info, ref, pid, other_ref, props, state) do
+  defp init_pad_data(ref, info, props, other_ref, other_pid, other_info, state) do
     data =
       info
       |> Map.merge(%{
-        pid: pid,
+        pid: other_pid,
         other_ref: other_ref,
         options: props.options,
         ref: ref,
@@ -251,7 +260,7 @@ defmodule Membrane.Core.Child.PadController do
       })
 
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
-    data = data |> Map.merge(init_pad_mode_data(data, props, state))
+    data = data |> Map.merge(init_pad_mode_data(data, props, other_info, state))
     data = struct!(Pad.Data, data)
     state |> Bunch.Access.put_in([:pads, :data, ref], data)
   end
@@ -259,43 +268,22 @@ defmodule Membrane.Core.Child.PadController do
   defp init_pad_direction_data(%{direction: :input}, _props, _state), do: %{sticky_messages: []}
   defp init_pad_direction_data(%{direction: :output}, _props, _state), do: %{}
 
-  @spec init_pad_mode_data(
-          map(),
-          parsed_pad_props_t,
-          state_t()
-        ) :: map()
+  @spec init_pad_mode_data(map(), parsed_pad_props_t, PadModel.pad_info_t(), state_t()) :: map()
   defp init_pad_mode_data(
          %{mode: :pull, direction: :input} = data,
-         _props,
-         %Membrane.Core.Bin.State{}
+         props,
+         _other_info,
+         %Membrane.Core.Element.State{}
        ) do
-    %{pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
-
-    Message.send(pid, :demand_unit, [demand_unit, other_ref])
-    %{}
-  end
-
-  defp init_pad_mode_data(%{mode: :pull, direction: :input} = data, props, _state) do
     %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
-
-    Message.send(pid, :demand_unit, [demand_unit, other_ref])
-
-    input_buf =
-      InputBuffer.init(
-        demand_unit,
-        pid,
-        other_ref,
-        inspect(ref),
-        props.buffer
-      )
-
+    input_buf = InputBuffer.init(demand_unit, pid, other_ref, inspect(ref), props.buffer)
     %{input_buf: input_buf, demand: 0}
   end
 
-  defp init_pad_mode_data(%{mode: :pull, direction: :output}, _props, _state),
-    do: %{demand: 0}
+  defp init_pad_mode_data(%{mode: :pull, direction: :output}, _props, other_info, _state),
+    do: %{demand: 0, other_demand_unit: other_info[:demand_unit]}
 
-  defp init_pad_mode_data(%{mode: :push}, _props, _state), do: %{}
+  defp init_pad_mode_data(_data, _props, _other_info, _state), do: %{}
 
   @spec add_to_currently_linking(Pad.ref_t(), state_t()) :: state_t()
   defp add_to_currently_linking(ref, state),
@@ -309,8 +297,9 @@ defmodule Membrane.Core.Child.PadController do
   def generate_eos_if_needed(pad_ref, state) do
     direction = PadModel.get_data!(state, pad_ref, :direction)
     eos? = PadModel.get_data!(state, pad_ref, :end_of_stream?)
+    %{state: playback_state} = state.playback
 
-    if direction == :input and not eos? do
+    if direction == :input and not eos? and playback_state == :playing do
       EventController.exec_handle_event(pad_ref, %Events.EndOfStream{}, state)
     else
       {:ok, state}
@@ -359,6 +348,7 @@ defmodule Membrane.Core.Child.PadController do
 
   defp flush_playback_buffer(pad_ref, state) do
     new_playback_buf = PlaybackBuffer.flush_for_pad(state.playback_buffer, pad_ref)
+
     {:ok, %{state | playback_buffer: new_playback_buf}}
   end
 

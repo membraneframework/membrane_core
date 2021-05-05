@@ -21,7 +21,7 @@ defmodule Membrane.Core.Child.PadControllerSpec do
       let :pad_name, do: :output
       let :direction, do: :output
       let :other_ref, do: :other_input
-      let :other_info, do: nil
+      let :other_info, do: %{}
       let :props, do: %{}
 
       it "should return an ok result with pad info" do
@@ -29,12 +29,10 @@ defmodule Membrane.Core.Child.PadControllerSpec do
 
         expect(
           described_module().handle_link(
-            pad_ref(),
             direction(),
-            self(),
-            other_ref(),
+            %{pad_ref: pad_ref(), pid: self(), pad_props: props()},
+            %{pad_ref: other_ref(), pid: self()},
             other_info(),
-            props(),
             state()
           )
         )
@@ -44,12 +42,10 @@ defmodule Membrane.Core.Child.PadControllerSpec do
       it "should remove given pad from pads.info" do
         {{:ok, _info}, new_state} =
           described_module().handle_link(
-            pad_ref(),
             direction(),
-            self(),
-            other_ref(),
+            %{pad_ref: pad_ref(), pid: self(), pad_props: props()},
+            %{pad_ref: other_ref(), pid: self()},
             other_info(),
-            props(),
             state()
           )
 
@@ -59,12 +55,10 @@ defmodule Membrane.Core.Child.PadControllerSpec do
       it "should not modify state except pads list" do
         {{:ok, _info}, new_state} =
           described_module().handle_link(
-            pad_ref(),
             direction(),
-            self(),
-            other_ref(),
+            %{pad_ref: pad_ref(), pid: self(), pad_props: props()},
+            %{pad_ref: other_ref(), pid: self()},
             other_info(),
-            props(),
             state()
           )
 
@@ -74,12 +68,10 @@ defmodule Membrane.Core.Child.PadControllerSpec do
       it "should add pad to the 'pads.data' list" do
         {{:ok, _info}, new_state} =
           described_module().handle_link(
-            pad_ref(),
             direction(),
-            self(),
-            other_ref(),
+            %{pad_ref: pad_ref(), pid: self(), pad_props: props()},
+            %{pad_ref: other_ref(), pid: self()},
             other_info(),
-            props(),
             state()
           )
 
@@ -91,18 +83,16 @@ defmodule Membrane.Core.Child.PadControllerSpec do
       let :pad_ref, do: :invalid_ref
       let :direction, do: :output
       let :other_ref, do: :other_input
-      let :other_info, do: nil
+      let :other_info, do: %{}
       let :props, do: %{}
 
       it "should raise an exception" do
         call = fn ->
           described_module().handle_link(
-            pad_ref(),
             direction(),
-            self(),
-            other_ref(),
+            %{pad_ref: pad_ref(), pid: self(), pad_props: props()},
+            %{pad_ref: other_ref(), pid: self()},
             other_info(),
-            props(),
             state()
           )
         end

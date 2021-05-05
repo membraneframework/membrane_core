@@ -6,10 +6,10 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
   * Simple one, with two filters
       source -- filter1 -- [input1] filter2 -- sink
   * Pipeline with two sources (if `extra_source` key is provided in opts).
-      source -- filter1 -- [input1] filter2 -- sink
-                                    [input2]
-                                     /
-                    extra_source ___/
+      source -- filter1 -- filter2 -- [input1] filter3 -- sink
+                                               [input2]
+                                                 /
+                                extra_source ___/
 
   Should be used along with `Membrane.Support.ChildRemovalTest.Pipeline` as they
   share names (i.e. input_pads: `input1` and `input2`) and exchanged messages' formats.
@@ -28,6 +28,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
         source: opts.source,
         filter1: opts.filter1,
         filter2: opts.filter2,
+        filter3: opts.filter3,
         sink: opts.sink
       ]
       |> maybe_add_extra_source(opts)
@@ -39,6 +40,8 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
         |> to(:filter1)
         |> via_in(:input1, buffer: [preferred_size: 10])
         |> to(:filter2)
+        |> via_in(:input1, buffer: [preferred_size: 10])
+        |> to(:filter3)
         |> via_in(:input, buffer: [preferred_size: 10])
         |> to(:sink)
       ]
@@ -69,7 +72,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
 
   defp maybe_add_extra_source_link(links, %{extra_source: _}) do
     [
-      link(:extra_source) |> via_in(:input2, buffer: [preferred_size: 10]) |> to(:filter2)
+      link(:extra_source) |> via_in(:input2, buffer: [preferred_size: 10]) |> to(:filter3)
       | links
     ]
   end
