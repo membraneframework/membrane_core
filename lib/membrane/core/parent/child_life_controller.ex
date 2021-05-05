@@ -161,11 +161,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   def handle_child_death(pid, {:shutdown, :membrane_crash_group_kill}, state) do
-    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
+    with {:ok, child_name} <- child_by_pid(pid, state),
+         {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
       {result, state} =
         state
         |> CrashGroupHandler.remove_member_of_crash_group(group.name, pid)
         |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
+
+      state = Bunch.Access.delete_in(state, [:children, child_name])
+      state = remove_child_links(child_name, state)
 
       if result == :removed, do: exec_handle_crash_group_down_callback(group, state)
 
@@ -178,11 +182,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   def handle_child_death(pid, _reason, state) do
-    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
+    with {:ok, child_name} <- child_by_pid(pid, state),
+         {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
       {result, state} =
         crash_all_group_members(group, state)
         |> CrashGroupHandler.remove_member_of_crash_group(group.name, pid)
         |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
+
+      state = Bunch.Access.delete_in(state, [:children, child_name])
+      state = remove_child_links(child_name, state)
 
       if result == :removed, do: exec_handle_crash_group_down_callback(group, state)
 
