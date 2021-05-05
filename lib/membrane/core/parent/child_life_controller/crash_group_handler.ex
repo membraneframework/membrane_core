@@ -14,19 +14,20 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
     {group_name, mode} = group_spec
     crash_group = %CrashGroup{name: group_name, mode: mode, members: children_pids}
 
-    {:ok,
-     %{
-       state
-       | crash_groups:
-           Map.update(
-             state.crash_groups,
-             group_name,
-             crash_group,
-             fn %CrashGroup{members: current_children_pids} = existing_group ->
-               %{existing_group | members: current_children_pids ++ children_pids}
-             end
-           )
-     }}
+    state = %{
+      state
+      | crash_groups:
+          Map.update(
+            state.crash_groups,
+            group_name,
+            crash_group,
+            fn %CrashGroup{members: current_children_pids} = existing_group ->
+              %{existing_group | members: current_children_pids ++ children_pids}
+            end
+          )
+    }
+
+    {:ok, state}
   end
 
   @spec remove_crash_group_if_empty(Pipeline.State.t(), CrashGroup.name_t()) ::
@@ -35,11 +36,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
     %CrashGroup{members: members} = state.crash_groups[group_name]
 
     if members == [] do
+      group = state.crash_groups[group_name]
       state = Bunch.Access.delete_in(state, [:crash_groups, group_name])
 
-      {:removed, state}
+      {group, state}
     else
-      {:not_removed, state}
+      {nil, state}
     end
   end
 

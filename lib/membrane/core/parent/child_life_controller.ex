@@ -63,6 +63,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {:ok, state} = LinkHandler.link_children(links, state)
     {:ok, state} = StartupHandler.exec_handle_spec_started(children_names, state)
     state = StartupHandler.init_playback_state(children_names, state)
+
     {{:ok, children_names}, state}
   end
 
@@ -151,7 +152,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     with {:ok, child_name} <- child_by_pid(pid, state) do
       state = Bunch.Access.delete_in(state, [:children, child_name])
       state = remove_child_links(child_name, state)
-
       LifecycleController.maybe_finish_playback_transition(state)
     else
       {:error, :not_child} ->
@@ -161,17 +161,16 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   def handle_child_death(pid, {:shutdown, :membrane_crash_group_kill}, state) do
-    with {:ok, child_name} <- child_by_pid(pid, state),
-         {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
-      {result, state} =
+    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
+      {group, state} =
         state
         |> CrashGroupHandler.remove_member_of_crash_group(group.name, pid)
         |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
 
-      state = Bunch.Access.delete_in(state, [:children, child_name])
-      state = remove_child_links(child_name, state)
-
-      if result == :removed, do: exec_handle_crash_group_down_callback(group, state)
+      state =
+        if group,
+          do: exec_handle_crash_group_down_callback(group, state),
+          else: state
 
       {:ok, state}
     else
@@ -182,17 +181,16 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   def handle_child_death(pid, _reason, state) do
-    with {:ok, child_name} <- child_by_pid(pid, state),
-         {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
+    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
       {result, state} =
         crash_all_group_members(group, state)
         |> CrashGroupHandler.remove_member_of_crash_group(group.name, pid)
         |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
 
-      state = Bunch.Access.delete_in(state, [:children, child_name])
-      state = remove_child_links(child_name, state)
-
-      if result == :removed, do: exec_handle_crash_group_down_callback(group, state)
+      state =
+        if group,
+          do: exec_handle_crash_group_down_callback(group, state),
+          else: state
 
       {:ok, state}
     else
@@ -223,6 +221,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       [group.name],
       state
     )
+
+    Enum.reduce(members_names, state, fn member, state_acc ->
+      state_acc = Bunch.Access.delete_in(state_acc, [:children, member])
+      remove_child_links(member, state_acc)
+    end)
   end
 
   # called when process was a member of a crash group
