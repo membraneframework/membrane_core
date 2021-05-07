@@ -135,7 +135,7 @@ defmodule Membrane.Core.Element do
     {:noreply, state} =
       MessageDispatcher.handle_message(Message.new(:pipeline_down, reason), :info, state)
 
-    {:stop, reason, state}
+    {:stop, {:shutdown, :parent_crash}, state}
   end
 
   @impl GenServer

@@ -16,6 +16,7 @@ defmodule Membrane.Core.Bin do
   @type options_t :: %{
           name: atom,
           module: module,
+          parent: pid,
           user_options: Membrane.Bin.options_t(),
           parent_clock: Membrane.Clock.t(),
           log_metadata: Keyword.t()

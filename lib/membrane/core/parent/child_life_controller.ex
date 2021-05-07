@@ -182,7 +182,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   def handle_child_death(pid, _reason, state) do
     with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
-      {result, state} =
+      {group, state} =
         crash_all_group_members(group, state)
         |> CrashGroupHandler.remove_member_of_crash_group(group.name, pid)
         |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
@@ -200,7 +200,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         Terminating.
         """)
 
-        propagate_child_crash()
+        propagate_child_crash(state)
     end
   end
 
@@ -249,13 +249,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   # called when a dead child was not a member of any crash group
-  defp propagate_child_crash() do
+  defp propagate_child_crash(state) do
     Membrane.Logger.debug("""
     A child crashed but was not a member of any crash group.
     Terminating.
     """)
 
-    GenServer.stop(self(), :kill)
+    {:stop, {:shutdown, :child_crash}, state}
   end
 
   defp remove_child_links(child_name, state) do

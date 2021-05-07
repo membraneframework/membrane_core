@@ -31,7 +31,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
   end
 
   @spec remove_crash_group_if_empty(Pipeline.State.t(), CrashGroup.name_t()) ::
-          {:removed | :not_removed, Pipeline.State.t()}
+          {CrashGroup.t() | nil, Pipeline.State.t()}
   def remove_crash_group_if_empty(state, group_name) do
     %CrashGroup{members: members} = state.crash_groups[group_name]
 

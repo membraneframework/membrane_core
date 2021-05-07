@@ -274,17 +274,17 @@ defmodule Membrane.Core.ElementTest do
 
   describe "Not linked element" do
     test "should shutdown when pipeline is down" do
-      monitored_proc = spawn(fn -> receive do: (:exit -> :ok) end)
+      pipeline_mock = spawn(fn -> receive do: (:exit -> :ok) end)
 
       {:ok, elem_pid} =
-        monitored_proc
+        pipeline_mock
         |> element_init_options
         |> Element.start()
 
-      {:ok, _clock} = Message.call(elem_pid, :handle_watcher, self())
+      {:ok, _clock} = Message.call(elem_pid, :handle_watcher, pipeline_mock)
       ref = Process.monitor(elem_pid)
-      send(monitored_proc, :exit)
-      assert_receive {:DOWN, ^ref, :process, ^elem_pid, :normal}
+      send(pipeline_mock, :exit)
+      assert_receive {:DOWN, ^ref, :process, ^elem_pid, {:shutdown, :parent_crash}}
     end
 
     test "should not assume pipeline is down when getting any monitor message" do
