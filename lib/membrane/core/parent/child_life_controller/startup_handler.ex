@@ -172,6 +172,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
           end
 
           Core.Bin.start(%{
+            parent: self(),
             name: name,
             module: module,
             user_options: options,

@@ -73,6 +73,8 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def init(options) do
+    Process.monitor(options.parent)
+
     %{name: name, module: module, log_metadata: log_metadata} = options
     name_str = if String.valid?(name), do: name, else: inspect(name)
     :ok = Membrane.Logger.set_prefix(name_str <> " bin")
