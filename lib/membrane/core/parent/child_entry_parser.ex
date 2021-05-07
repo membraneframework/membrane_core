@@ -10,9 +10,9 @@ defmodule Membrane.Core.Parent.ChildEntryParser do
           component_type: :element | :bin
         }
 
-  @spec parse_children_entries(ParentSpec.children_spec_t() | any) ::
+  @spec parse(ParentSpec.children_spec_t() | any) ::
           [raw_child_entry_t] | no_return
-  def parse_children_entries(children_spec)
+  def parse(children_spec)
       when is_map(children_spec) or is_list(children_spec) do
     children_spec |> Enum.map(&parse_child/1)
   end

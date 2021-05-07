@@ -44,13 +44,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
 
   describe "resolve links" do
     test "should work for static pads" do
-      {links, []} = LinkParser.parse_links([link(:a) |> to(:b)])
+      {links, []} = LinkParser.parse([link(:a) |> to(:b)])
       resolved_links = LinkHandler.resolve_links(links, get_state(TestFilter))
       endpoints(resolved_links) |> Enum.each(&assert &1.pad_ref == &1.pad_spec)
     end
 
     test "should work for dynamic pads" do
-      {links, []} = LinkParser.parse_links([link(:a) |> to(:b)])
+      {links, []} = LinkParser.parse([link(:a) |> to(:b)])
 
       resolved_links = LinkHandler.resolve_links(links, get_state(TestDynamicPadFilter))
 
@@ -60,7 +60,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
       end)
 
       {links, []} =
-        LinkParser.parse_links([
+        LinkParser.parse([
           link(:a) |> via_out(Pad.ref(:output, :x)) |> via_in(Pad.ref(:input, :y)) |> to(:b)
         ])
 
@@ -71,7 +71,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
     end
 
     test "should work for bin static pads" do
-      {links, []} = LinkParser.parse_links([link_bin_input() |> to(:a) |> to_bin_output()])
+      {links, []} = LinkParser.parse([link_bin_input() |> to(:a) |> to_bin_output()])
 
       resolved_links = LinkHandler.resolve_links(links, get_state(TestFilter))
       endpoints(resolved_links) |> Enum.each(&assert &1.pad_ref == &1.pad_spec)
@@ -83,7 +83,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
 
     test "should work for bin dynamic pads" do
       {links, []} =
-        LinkParser.parse_links([
+        LinkParser.parse([
           link_bin_input(Pad.ref(:input, :x)) |> to(:a) |> to_bin_output(Pad.ref(:output, :y))
         ])
 
@@ -103,7 +103,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
     end
 
     test "should fail when trying to link non-existent child" do
-      {links, []} = LinkParser.parse_links([link(:a) |> to(:m)])
+      {links, []} = LinkParser.parse([link(:a) |> to(:m)])
 
       assert_raise LinkError, ~r/child :m does not exist/i, fn ->
         LinkHandler.resolve_links(links, get_state(TestFilter))
@@ -111,7 +111,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
     end
 
     test "should fail when trying to link non-existent pad" do
-      {links, []} = LinkParser.parse_links([link(:a) |> via_out(:x) |> to(:b)])
+      {links, []} = LinkParser.parse([link(:a) |> via_out(:x) |> to(:b)])
 
       assert_raise LinkError, ~r/child :a does not have pad :x/i, fn ->
         LinkHandler.resolve_links(links, get_state(TestFilter))
@@ -119,7 +119,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
     end
 
     test "should fail when trying to pass dynamic pad ref to a static pad" do
-      {links, []} = LinkParser.parse_links([link(:a) |> via_out(Pad.ref(:output, :x)) |> to(:b)])
+      {links, []} = LinkParser.parse([link(:a) |> via_out(Pad.ref(:output, :x)) |> to(:b)])
 
       assert_raise LinkError,
                    ~r/dynamic pad ref .*membrane.pad.*:output.* passed for static pad of child :a/i,
@@ -129,7 +129,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
     end
 
     test "should fail when trying to link non-existent bin pad" do
-      {links, []} = LinkParser.parse_links([link_bin_input(:x) |> to(:b)])
+      {links, []} = LinkParser.parse([link_bin_input(:x) |> to(:b)])
 
       assert_raise LinkError, ~r/bin :my_bin does not have pad :x/i, fn ->
         LinkHandler.resolve_links(links, get_state(TestFilter))
@@ -137,7 +137,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
     end
 
     test "should fail when trying to link dynamic bin pad and passed only name" do
-      {links, []} = LinkParser.parse_links([link_bin_input(:input) |> to(:b)])
+      {links, []} = LinkParser.parse([link_bin_input(:input) |> to(:b)])
 
       assert_raise LinkError,
                    ~r/exact reference not passed when linking dynamic bin pad :input/i,
@@ -150,7 +150,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
     end
 
     test "should fail when trying to link dynamic bin pad that is not externally linked yet" do
-      {links, []} = LinkParser.parse_links([link_bin_input(Pad.ref(:input, :x)) |> to(:b)])
+      {links, []} = LinkParser.parse([link_bin_input(Pad.ref(:input, :x)) |> to(:b)])
 
       assert_raise LinkError,
                    ~r/linking dynamic bin pad .*membrane.pad.*:input.* not .* externally linked/i,
@@ -163,7 +163,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
     end
 
     test "should fail when trying to pass dynamic pad ref to a static bin pad" do
-      {links, []} = LinkParser.parse_links([link(:a) |> to_bin_output(Pad.ref(:output, :x))])
+      {links, []} = LinkParser.parse([link(:a) |> to_bin_output(Pad.ref(:output, :x))])
 
       assert_raise LinkError,
                    ~r/dynamic pad ref .*membrane.pad.*:output.* passed for static pad of bin :my_bin/i,
@@ -198,7 +198,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
 
     {:ok, pid} = GenServer.start_link(Proxy, self())
     state = get_state(TestFilter, pid: pid)
-    {links, []} = LinkParser.parse_links([link(:a) |> to(:b)])
+    {links, []} = LinkParser.parse([link(:a) |> to(:b)])
     resolved_links = LinkHandler.resolve_links(links, state)
     assert {:ok, _state} = LinkHandler.link_children(resolved_links, state)
     assert_receive Message.new(:handle_link, _args)

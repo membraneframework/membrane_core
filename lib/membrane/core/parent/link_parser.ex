@@ -16,9 +16,9 @@ defmodule Membrane.Core.Parent.LinkParser do
           pad_props: ParentSpec.pad_props_t()
         }
 
-  @spec parse_links(ParentSpec.links_spec_t()) ::
+  @spec parse(ParentSpec.links_spec_t()) ::
           {[raw_link_t], ParentSpec.children_spec_t()} | no_return
-  def parse_links(links) when is_list(links) do
+  def parse(links) when is_list(links) do
     {links, children} =
       links
       |> List.flatten()
@@ -57,7 +57,7 @@ defmodule Membrane.Core.Parent.LinkParser do
     {links, children}
   end
 
-  def parse_links(links), do: from_spec_error(links)
+  def parse(links), do: from_spec_error(links)
 
   @spec from_spec_error([raw_link_t]) :: no_return
   defp from_spec_error(links) do
