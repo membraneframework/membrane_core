@@ -9,10 +9,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   alias Membrane.Core.Parent.{
     ChildEntryParser,
     ClockHandler,
+    CrashGroup,
     LifecycleController,
     Link,
-    ChildLifeController,
-    CrashGroup
+    LinkParser
   }
 
   alias Membrane.Core.PlaybackHandler
@@ -30,7 +30,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     links: #{inspect(spec.links)}
     """)
 
-    children = ChildEntryParser.from_spec(spec.children)
+    {links, children_spec_from_links} = LinkParser.parse(spec.links)
+    children_spec = Enum.concat(spec.children, children_spec_from_links)
+    children = ChildEntryParser.parse(children_spec)
     :ok = StartupHandler.check_if_children_names_unique(children, state)
     syncs = StartupHandler.setup_syncs(children, spec.stream_sync)
 
@@ -59,7 +61,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       end
 
     state = ClockHandler.choose_clock(children, spec.clock_provider, state)
-    {:ok, links} = Link.from_spec(spec.links)
     links = LinkHandler.resolve_links(links, state)
     {:ok, state} = LinkHandler.link_children(links, state)
     {:ok, state} = StartupHandler.exec_handle_spec_started(children_names, state)
@@ -200,17 +201,14 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp crash_all_group_members(crash_group, state) do
     %CrashGroup{members: members_pids} = crash_group
 
-    state = ChildLifeController.LinkHandler.unlink_crash_group(crash_group, state)
+    state = LinkHandler.unlink_crash_group(crash_group, state)
 
-    :ok =
-      Enum.each(
-        members_pids,
-        fn pid ->
-          if Process.alive?(pid) do
-            GenServer.stop(pid, {:shutdown, :membrane_crash_group_kill})
-          end
-        end
-      )
+    Enum.each(
+      members_pids,
+      fn pid ->
+        if Process.alive?(pid), do: GenServer.stop(pid, {:shutdown, :membrane_crash_group_kill})
+      end
+    )
 
     state
   end
