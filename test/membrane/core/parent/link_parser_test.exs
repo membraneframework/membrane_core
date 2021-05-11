@@ -1,7 +1,7 @@
-defmodule Membrane.Core.Parent.LinkTest do
+defmodule Membrane.Core.Parent.LinkParserTest do
   use ExUnit.Case
 
-  alias Membrane.Core.Parent.Link
+  alias Membrane.Core.Parent.{Link, LinkParser}
   alias Membrane.Core.Parent.Link.Endpoint
 
   test "valid link" do
@@ -20,9 +20,9 @@ defmodule Membrane.Core.Parent.LinkTest do
       |> to_bin_output()
     ]
 
-    assert {:ok, links} = Link.from_spec(links_spec)
+    assert {links, []} = LinkParser.parse(links_spec)
 
-    assert Enum.sort(links) == [
+    assert links == [
              %Link{
                from: %Endpoint{
                  child: :a,
@@ -95,9 +95,9 @@ defmodule Membrane.Core.Parent.LinkTest do
 
     links_spec = [link(:a) |> to(:b) |> to(:c), link(:d) |> to(:b) |> to(:e)]
 
-    assert {:ok, links} = Link.from_spec(links_spec)
+    assert {links, []} = LinkParser.parse(links_spec)
 
-    assert Enum.sort(links) == [
+    assert links == [
              %Link{
                from: %Endpoint{
                  child: :a,
@@ -132,22 +132,6 @@ defmodule Membrane.Core.Parent.LinkTest do
              },
              %Link{
                from: %Endpoint{
-                 child: :b,
-                 pad_props: [],
-                 pad_spec: :output,
-                 pad_ref: nil,
-                 pid: nil
-               },
-               to: %Endpoint{
-                 child: :e,
-                 pad_props: [],
-                 pad_spec: :input,
-                 pad_ref: nil,
-                 pid: nil
-               }
-             },
-             %Link{
-               from: %Endpoint{
                  child: :d,
                  pad_props: [],
                  pad_spec: :output,
@@ -161,6 +145,22 @@ defmodule Membrane.Core.Parent.LinkTest do
                  pad_ref: nil,
                  pid: nil
                }
+             },
+             %Link{
+               from: %Endpoint{
+                 child: :b,
+                 pad_props: [],
+                 pad_spec: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 child: :e,
+                 pad_props: [],
+                 pad_spec: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
              }
            ]
   end
@@ -169,7 +169,7 @@ defmodule Membrane.Core.Parent.LinkTest do
     [:abc, [:abc], %{{:abc, :output} => {:def, :input}}]
     |> Enum.each(fn link_spec ->
       assert_raise Membrane.ParentError, ~r/.*Invalid links specification.*:abc/, fn ->
-        Link.from_spec(link_spec)
+        LinkParser.parse(link_spec)
       end
     end)
   end
@@ -186,7 +186,51 @@ defmodule Membrane.Core.Parent.LinkTest do
     |> Enum.each(fn {from, link_spec} ->
       assert_raise Membrane.ParentError,
                    ~r/.*link from #{inspect(from)} lacks its destination.*/,
-                   fn -> Link.from_spec(link_spec) end
+                   fn -> LinkParser.parse(link_spec) end
     end)
+  end
+
+  test "link creating children" do
+    import Membrane.ParentSpec
+
+    links_spec = [link(:a, A) |> to(:b, B) |> to(:c, C)]
+    assert {links, children} = LinkParser.parse(links_spec)
+
+    assert links == [
+             %Link{
+               from: %Endpoint{
+                 child: :a,
+                 pad_props: [],
+                 pad_spec: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 child: :b,
+                 pad_props: [],
+                 pad_spec: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             },
+             %Link{
+               from: %Endpoint{
+                 child: :b,
+                 pad_props: [],
+                 pad_spec: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 child: :c,
+                 pad_props: [],
+                 pad_spec: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             }
+           ]
+
+    assert Enum.sort(children) == [a: A, b: B, c: C]
   end
 end
