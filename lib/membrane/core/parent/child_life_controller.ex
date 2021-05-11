@@ -8,11 +8,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   alias Membrane.Core.Parent.{
     ChildEntryParser,
-    ChildLifeController,
     ClockHandler,
     CrashGroup,
     LifecycleController,
-    Link
+    Link,
+    LinkParser
   }
 
   require Membrane.Core.Component
@@ -29,7 +29,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     links: #{inspect(spec.links)}
     """)
 
-    children = ChildEntryParser.from_spec(spec.children)
+    {links, children_spec_from_links} = LinkParser.parse(spec.links)
+    children_spec = Enum.concat(spec.children, children_spec_from_links)
+    children = ChildEntryParser.parse(children_spec)
     :ok = StartupHandler.check_if_children_names_unique(children, state)
     syncs = StartupHandler.setup_syncs(children, spec.stream_sync)
 
@@ -41,24 +43,24 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         state.children_log_metadata
       )
 
+    children_names = children |> Enum.map(& &1.name)
+    children_pids = children |> Enum.map(& &1.pid)
+
     # monitoring children
-    :ok = children |> Enum.each(&Process.monitor(&1.pid))
+    :ok = Enum.each(children_pids, &Process.monitor(&1))
 
     :ok = StartupHandler.maybe_activate_syncs(syncs, state)
     {:ok, state} = StartupHandler.add_children(children, state)
-    children_names = children |> Enum.map(& &1.name)
 
     # adding crash group to state
     {:ok, state} =
       if spec.crash_group do
-        children_pids = children |> Enum.map(& &1.pid)
-        CrashGroupHandler.add_crash_group(spec.crash_group, children_pids, state)
+        CrashGroupHandler.add_crash_group(spec.crash_group, children_names, children_pids, state)
       else
         {:ok, state}
       end
 
     state = ClockHandler.choose_clock(children, spec.clock_provider, state)
-    {:ok, links} = Link.from_spec(spec.links)
     links = LinkHandler.resolve_links(links, state)
     {:ok, state} = LinkHandler.link_children(links, state)
     {:ok, state} = StartupHandler.exec_handle_spec_started(children_names, state)
@@ -162,15 +164,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   def handle_child_death(pid, {:shutdown, :membrane_crash_group_kill}, state) do
     with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
-      {group, state} =
+      {result, state} =
         state
         |> CrashGroupHandler.remove_member_of_crash_group(group.name, pid)
         |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
 
-      state =
-        if group,
-          do: exec_handle_crash_group_down_callback(group, state),
-          else: state
+      if result == :removed,
+        do: exec_handle_crash_group_down_callback(group.name, group.members, state)
 
       {:ok, state}
     else
@@ -182,15 +182,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   def handle_child_death(pid, _reason, state) do
     with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
-      {group, state} =
+      {result, state} =
         crash_all_group_members(group, state)
         |> CrashGroupHandler.remove_member_of_crash_group(group.name, pid)
         |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
 
-      state =
-        if group,
-          do: exec_handle_crash_group_down_callback(group, state),
-          else: state
+      if result == :removed,
+        do: exec_handle_crash_group_down_callback(group.name, group.members, state)
 
       {:ok, state}
     else
@@ -204,49 +202,37 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
-  defp exec_handle_crash_group_down_callback(group, state) do
-    members_names =
-      Enum.map(group.dead_members, fn member_pid ->
-        {:ok, member_name} = child_by_pid(member_pid, state)
-        member_name
-      end)
-
+  defp exec_handle_crash_group_down_callback(group_name, group_members, state) do
     context =
-      Component.callback_context_generator(:parent, CrashGroupDown, state, members: members_names)
+      Component.callback_context_generator(:parent, CrashGroupDown, state, members: group_members)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_crash_group_down,
       Membrane.Core.Pipeline.ActionHandler,
       %{context: context},
-      [group.name],
+      [group_name],
       state
     )
-
-    Enum.reduce(members_names, state, fn member, state_acc ->
-      state_acc = Bunch.Access.delete_in(state_acc, [:children, member])
-      remove_child_links(member, state_acc)
-    end)
   end
 
   # called when process was a member of a crash group
   @spec crash_all_group_members(CrashGroup.t(), Parent.state_t()) :: Parent.state_t()
-  defp crash_all_group_members(crash_group, state) do
-    %CrashGroup{members: members_pids} = crash_group
+  defp crash_all_group_members(%CrashGroup{triggered?: false} = crash_group, state) do
+    %CrashGroup{alive_members: members_pids} = crash_group
 
-    state = ChildLifeController.LinkHandler.unlink_crash_group(crash_group, state)
+    state = LinkHandler.unlink_crash_group(crash_group, state)
 
-    :ok =
-      Enum.each(
-        members_pids,
-        fn pid ->
-          if Process.alive?(pid) do
-            GenServer.stop(pid, {:shutdown, :membrane_crash_group_kill})
-          end
-        end
-      )
+    Enum.each(
+      members_pids,
+      fn pid ->
+        if Process.alive?(pid), do: GenServer.stop(pid, {:shutdown, :membrane_crash_group_kill})
+      end
+    )
 
-    state
+    CrashGroupHandler.set_triggered(state, crash_group.name)
   end
+
+  defp crash_all_group_members(_crash_group, state), do: state
 
   # called when a dead child was not a member of any crash group
   defp propagate_child_crash(state) do
