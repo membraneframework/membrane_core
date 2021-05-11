@@ -40,7 +40,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   @spec unlink_crash_group(CrashGroup.t(), Parent.state_t()) :: Parent.state_t()
   def unlink_crash_group(crash_group, state) do
-    %CrashGroup{members: members_pids} = crash_group
+    %CrashGroup{members: members_names} = crash_group
+
+    members_pids = Enum.map(state.children, &(elem(&1, 1))) |> Enum.filter(&(&1.name in members_names)) |> Enum.map(&(&1.pid))
 
     links_to_remove =
       Enum.filter(state.links, fn %Link{from: from, to: to} ->
