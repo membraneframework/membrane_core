@@ -8,7 +8,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   alias Membrane.Core.Parent.{
     ChildEntryParser,
-    ChildLifeController,
     ClockHandler,
     CrashGroup,
     LifecycleController,
