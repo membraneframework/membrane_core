@@ -235,7 +235,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp crash_all_group_members(_crash_group, state), do: state
-  
+
   # called when a dead child was not a member of any crash group
   defp propagate_child_crash() do
     Membrane.Logger.debug("""
