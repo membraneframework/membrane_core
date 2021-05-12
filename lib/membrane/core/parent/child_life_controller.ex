@@ -163,17 +163,24 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   def handle_child_death(pid, {:shutdown, :membrane_crash_group_kill}, state) do
-    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
+    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state),
+         {:ok, child_name} <- child_by_pid(pid, state) do
       {result, state} =
         state
+        |> Bunch.Access.delete_in([:children, child_name])
         |> CrashGroupHandler.remove_member_of_crash_group(group.name, pid)
         |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
 
-      if result == :removed,
-        do: exec_handle_crash_group_down_callback(group.name, group.members, state)
+      if result == :removed do
+        exec_handle_crash_group_down_callback(group.name, group.members, state)
+      end
 
       {:ok, state}
     else
+      {:error, :not_child} ->
+        raise Membrane.PipelineError,
+              "Tried to handle death of process that wasn't a child of that pipeline."
+
       {:error, :not_member} ->
         raise Membrane.PipelineError,
               "Child that was not a member of any crash group killed with :membrane_crash_group_kill."
@@ -181,17 +188,24 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   def handle_child_death(pid, _reason, state) do
-    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
+    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state),
+         {:ok, child_name} <- child_by_pid(pid, state) do
       {result, state} =
         crash_all_group_members(group, state)
+        |> Bunch.Access.delete_in([:children, child_name])
         |> CrashGroupHandler.remove_member_of_crash_group(group.name, pid)
         |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
 
-      if result == :removed,
-        do: exec_handle_crash_group_down_callback(group.name, group.members, state)
+      if result == :removed do
+        exec_handle_crash_group_down_callback(group.name, group.members, state)
+      end
 
       {:ok, state}
     else
+      {:error, :not_child} ->
+        raise Membrane.PipelineError,
+              "Tried to handle death of process that wasn't a child of that pipeline."
+
       {:error, :not_member} ->
         Membrane.Logger.debug("""
         Pipeline child crashed but was not a member of any crash group.
