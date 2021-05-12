@@ -31,8 +31,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
             state.crash_groups,
             group_name,
             crash_group,
-            fn %CrashGroup{members: current_children_pids} = existing_group ->
-              %{existing_group | members: current_children_pids ++ children_pids}
+            fn %CrashGroup{members: current_children_names, alive_members: current_alive_members} = existing_group ->
+              %{existing_group | members: current_children_names ++ children_names, alive_members: current_alive_members ++ children_pids}
             end
           )
     }
