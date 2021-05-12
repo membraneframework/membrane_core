@@ -173,9 +173,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
       if result == :removed do
         exec_handle_crash_group_down_callback(group.name, group.members, state)
+      else
+        {:ok, state}
       end
-
-      {:ok, state}
     else
       {:error, :not_child} ->
         raise Membrane.PipelineError,
@@ -198,9 +198,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
       if result == :removed do
         exec_handle_crash_group_down_callback(group.name, group.members, state)
+      else
+        {:ok, state}
       end
-
-      {:ok, state}
     else
       {:error, :not_child} ->
         raise Membrane.PipelineError,

@@ -138,6 +138,7 @@ defmodule Membrane.Core.CallbackHandler do
         ) :: Type.stateful_try_t(state_t)
   defp handle_callback_result(cb_result, callback, handler_module, handler_params, state) do
     {result, new_internal_state} = cb_result
+
     state = Map.put(state, :internal_state, new_internal_state)
 
     with {{:ok, actions}, state} <- {result, state},
