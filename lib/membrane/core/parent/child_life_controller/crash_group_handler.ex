@@ -64,7 +64,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
         [:crash_groups, group_name, :alive_members_pids],
         &List.delete(&1, pid)
       )
-      |> Bunch.Access.update_in([:crash_groups, group_name, :dead_members], &[pid | &1])
     else
       state
     end
