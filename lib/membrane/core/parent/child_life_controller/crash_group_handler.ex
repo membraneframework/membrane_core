@@ -58,15 +58,11 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
   @spec remove_member_of_crash_group(Pipeline.State.t(), CrashGroup.name_t(), pid()) ::
           Pipeline.State.t()
   def remove_member_of_crash_group(state, group_name, pid) do
-    if group_name in Map.keys(state.crash_groups) do
-      Bunch.Access.update_in(
-        state,
-        [:crash_groups, group_name, :alive_members_pids],
-        &List.delete(&1, pid)
-      )
-    else
-      state
-    end
+    Bunch.Access.update_in(
+      state,
+      [:crash_groups, group_name, :alive_members_pids],
+      &List.delete(&1, pid)
+    )
   end
 
   @spec get_group_by_member_pid(pid(), Parent.state_t()) :: {:ok, CrashGroup.t()} | :error
