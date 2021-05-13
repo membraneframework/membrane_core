@@ -17,6 +17,7 @@ defmodule Membrane.Pipeline do
   alias __MODULE__.{Action, CallbackContext}
   alias Membrane.{Child, Pad}
   alias Membrane.Core.{CallbackHandler, PlaybackHandler}
+  alias Membrane.Core.Parent.CrashGroup
 
   require Membrane.Logger
 
@@ -166,6 +167,15 @@ defmodule Membrane.Pipeline do
               state :: state_t
             ) :: callback_return_t
 
+  @doc """
+  Callback invoked when crash of the crash group happens.
+  """
+  @callback handle_crash_group_down(
+              group_name :: CrashGroup.name_t(),
+              context :: CallbackContext.CrashGroupDown.t(),
+              state :: state_t
+            ) :: callback_return_t
+
   @optional_callbacks handle_init: 1,
                       handle_shutdown: 2,
                       handle_stopped_to_prepared: 2,
@@ -178,7 +188,8 @@ defmodule Membrane.Pipeline do
                       handle_element_start_of_stream: 3,
                       handle_element_end_of_stream: 3,
                       handle_notification: 4,
-                      handle_tick: 3
+                      handle_tick: 3,
+                      handle_crash_group_down: 3
 
   @doc """
   Starts the Pipeline based on given module and links it to the current
@@ -442,6 +453,11 @@ defmodule Membrane.Pipeline do
       def handle_notification(notification, element, _ctx, state),
         do: handle_notification(notification, element, state)
 
+      @impl true
+      def handle_crash_group_down(_group_name, _ctx, state) do
+        {:ok, state}
+      end
+
       # DEPRECATED:
 
       # credo:disable-for-lines:21 Credo.Check.Readability.Specs
@@ -491,7 +507,8 @@ defmodule Membrane.Pipeline do
                        handle_spec_started: 3,
                        handle_element_start_of_stream: 3,
                        handle_element_end_of_stream: 3,
-                       handle_notification: 4
+                       handle_notification: 4,
+                       handle_crash_group_down: 3
                      ] ++ deprecated
     end
   end
