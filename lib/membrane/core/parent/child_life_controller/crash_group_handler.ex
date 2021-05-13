@@ -18,26 +18,24 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
     {group_name, mode} = group_spec
 
     state =
-      Bunch.Access.update_in(state, [:crash_groups, group_name], fn maybe_group ->
-        if maybe_group do
+      Bunch.Access.update_in(state, [:crash_groups, group_name], fn
+        %CrashGroup{
+          members: current_children_names,
+          alive_members_pids: current_alive_members
+        } = group ->
           %CrashGroup{
-            members: current_children_names,
-            alive_members_pids: current_alive_members
-          } = maybe_group
-
-          %CrashGroup{
-            maybe_group
+            group
             | members: current_children_names ++ children_names,
               alive_members_pids: current_alive_members ++ children_pids
           }
-        else
+
+        nil ->
           %CrashGroup{
             name: group_name,
             mode: mode,
             members: children_names,
             alive_members_pids: children_pids
           }
-        end
       end)
 
     {:ok, state}

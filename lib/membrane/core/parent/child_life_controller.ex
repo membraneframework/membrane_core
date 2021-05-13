@@ -180,18 +180,17 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         raise Membrane.PipelineError,
               "Tried to handle death of process that wasn't a child of that pipeline."
 
-      {:error, :not_member} ->
-        if reason == {:shutdown, :membrane_crash_group_kill} do
-          raise Membrane.PipelineError,
-                "Child that was not a member of any crash group killed with :membrane_crash_group_kill."
-        else
-          Membrane.Logger.debug("""
-          Pipeline child crashed but was not a member of any crash group.
-          Terminating.
-          """)
+      {:error, :not_member} when reason == {:shutdown, :membrane_crash_group_kill} ->
+        raise Membrane.PipelineError,
+              "Child that was not a member of any crash group killed with :membrane_crash_group_kill."
 
-          propagate_child_crash(state)
-        end
+      {:error, :not_member} ->
+        Membrane.Logger.debug("""
+        Pipeline child crashed but was not a member of any crash group.
+        Terminating.
+        """)
+
+        propagate_child_crash(state)
     end
   end
 
