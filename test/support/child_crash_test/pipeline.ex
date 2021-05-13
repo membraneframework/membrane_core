@@ -8,6 +8,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
   alias Membrane.Support.ChildCrashTest.Filter
   alias Membrane.Testing
+  alias Membrane.Support.Bin.TestBins
 
   @spec crash_child(pid()) :: any()
   def crash_child(pid) do
@@ -59,6 +60,29 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
     links = [
       link(source_name)
       |> to(:center_filter)
+    ]
+
+    spec = %Membrane.ParentSpec{
+      children: children,
+      links: links
+    }
+
+    spec =
+      if group do
+        %{spec | crash_group: group}
+      else
+        spec
+      end
+
+    send(pid, {:create_path, spec})
+  end
+
+  @spec add_bin(pid(), atom(), atom(), any()) :: any()
+  def add_bin(pid, bin_name, source_name, group \\ nil) do
+    children = [{source_name, Testing.Source}, {bin_name, TestBins.CrashTestBin}]
+
+    links = [
+      link(source_name) |> to(bin_name) |> to(:center_filter)
     ]
 
     spec = %Membrane.ParentSpec{

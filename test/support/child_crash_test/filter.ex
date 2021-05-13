@@ -46,4 +46,9 @@ defmodule Membrane.Support.ChildCrashTest.Filter do
   def handle_end_of_stream(pad, _ctx, state) do
     {:ok, %{state | pads: MapSet.delete(state.pads, pad)}}
   end
+
+  @spec crash(pid()) :: any()
+  def crash(pid) do
+    send(pid, :crash)
+  end
 end

@@ -65,6 +65,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {:ok, state} = LinkHandler.link_children(links, state)
     {:ok, state} = StartupHandler.exec_handle_spec_started(children_names, state)
     state = StartupHandler.init_playback_state(children_names, state)
+
     {{:ok, children_names}, state}
   end
 
@@ -153,7 +154,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     with {:ok, child_name} <- child_by_pid(pid, state) do
       state = Bunch.Access.delete_in(state, [:children, child_name])
       state = remove_child_links(child_name, state)
-
       LifecycleController.maybe_finish_playback_transition(state)
     else
       {:error, :not_child} ->

@@ -71,15 +71,69 @@ defmodule Membrane.Integration.ChildCrashTest do
     assert_pipeline_receive(pipeline_pid, {:handle_crash_group_called, 1})
   end
 
+  test "Crash group consisting of bin crashes" do
+    Process.flag(:trap_exit, true)
+
+    assert {:ok, pipeline_pid} =
+             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+               module: ChildCrashTest.Pipeline
+             })
+
+    :ok = Pipeline.play(pipeline_pid)
+
+    ChildCrashTest.Pipeline.add_bin(pipeline_pid, :bin_1, :source_1, {1, :temporary})
+
+    ChildCrashTest.Pipeline.add_bin(pipeline_pid, :bin_2, :source_2, {2, :temporary})
+
+    ChildCrashTest.Pipeline.add_bin(pipeline_pid, :bin_3, :source_3, {3, :temporary})
+
+    [
+      sink_pid,
+      center_filter_pid,
+      bin_1_pid,
+      bin_2_pid,
+      bin_3_pid,
+      source_1_pid,
+      source_2_pid,
+      source_3_pid
+    ] =
+      [
+        :sink,
+        :center_filter,
+        :bin_1,
+        :bin_2,
+        :bin_3,
+        :source_1,
+        :source_2,
+        :source_3
+      ]
+      |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
+
+    assert_pipeline_playback_changed(pipeline_pid, _, :playing)
+
+    filter_1_pid = get_pid(:filter, bin_1_pid)
+
+    ChildCrashTest.Filter.crash(filter_1_pid)
+
+    # assert source 1, bin_1 and filter that is inside of it are dead
+    assert_pid_dead(source_1_pid)
+    assert_pid_dead(bin_1_pid)
+
+    assert_pid_alive(sink_pid)
+    assert_pid_alive(center_filter_pid)
+    assert_pid_alive(bin_2_pid)
+    assert_pid_alive(bin_3_pid)
+    assert_pid_alive(source_2_pid)
+    assert_pid_alive(source_3_pid)
+    assert_pid_alive(pipeline_pid)
+  end
+
   test "Crash two groups one after another" do
     Process.flag(:trap_exit, true)
 
     assert {:ok, pipeline_pid} =
              Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-               module: ChildCrashTest.Pipeline,
-               custom_args: %{
-                 sink: Testing.Sink
-               }
+               module: ChildCrashTest.Pipeline
              })
 
     :ok = Pipeline.play(pipeline_pid)
@@ -168,5 +222,17 @@ defmodule Membrane.Integration.ChildCrashTest do
     pid = state.children[ref].pid
     :erlang.link(pid)
     pid
+  end
+
+  defp get_pid_and_link(ref, pipeline_pid) do
+    state = :sys.get_state(pipeline_pid)
+    pid = state.children[ref].pid
+    :erlang.link(pid)
+    pid
+  end
+
+  defp get_pid(ref, parent_pid) do
+    state = :sys.get_state(parent_pid)
+    state.children[ref].pid
   end
 end

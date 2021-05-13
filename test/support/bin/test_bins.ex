@@ -95,6 +95,48 @@ defmodule Membrane.Support.Bin.TestBins do
     end
   end
 
+  defmodule CrashTestBin do
+    @moduledoc false
+    use Membrane.Bin
+
+    def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :on_request
+
+    def_output_pad :output, caps: :any, availability: :on_request, demand_unit: :buffers
+
+    @impl true
+    def handle_init(_opts) do
+      children = [
+        filter: Membrane.Support.ChildCrashTest.Filter
+      ]
+
+      spec = %ParentSpec{
+        children: children,
+        links: []
+      }
+
+      state = %{}
+
+      {{:ok, spec: spec}, state}
+    end
+
+    @impl true
+    def handle_pad_added(Pad.ref(:input, _) = pad, _ctx, state) do
+      links = [
+        link_bin_input(pad) |> to(:filter)
+      ]
+
+      {{:ok, notify: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
+    end
+
+    def handle_pad_added(Pad.ref(:output, _) = pad, _ctx, state) do
+      links = [
+        link(:filter) |> to_bin_output(pad)
+      ]
+
+      {{:ok, notify: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
+    end
+  end
+
   defmodule TestDynamicPadBin do
     @moduledoc false
     use Membrane.Bin
