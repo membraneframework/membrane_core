@@ -21,8 +21,8 @@ defmodule Membrane.Core.Element do
   import Membrane.Helper.GenServer
 
   alias Membrane.{Clock, Element, Sync}
-  alias Membrane.Core.Element.{State, LifecycleController, PlaybackBuffer}
-  alias Membrane.Core.{Message, Child, PlaybackHandler, TimerController}
+  alias Membrane.Core.Element.{LifecycleController, PlaybackBuffer, State}
+  alias Membrane.Core.{Child, Message, PlaybackHandler, TimerController}
   alias Membrane.ComponentPath
   alias Membrane.Core.Element.DemandHandler
   alias Membrane.Core.Child.PadController
@@ -268,8 +268,6 @@ defmodule Membrane.Core.Element do
     Reason: #{inspect(reason)}
     State: #{inspect(state, pretty: true)}
     """)
-
-    reason = {:cannot_handle_message, reason, message: message, mode: mode}
 
     {{:error, reason}, state}
   end
