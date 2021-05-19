@@ -149,6 +149,4 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-# config directory
-config/
 # End of https://www.gitignore.io/api/c,vim,linux,macos,elixir,windows,visualstudiocode

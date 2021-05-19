@@ -11,7 +11,7 @@ defmodule Membrane.Core.Child.PadController do
   alias Membrane.Core.{CallbackHandler, Component, Message, InputBuffer}
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.Core.Element.{EventController, PlaybackBuffer}
-  alias Membrane.Core.Parent.Link.Endpoint
+  alias Membrane.Core.Parent.LinkParser
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Component
@@ -28,8 +28,8 @@ defmodule Membrane.Core.Child.PadController do
   """
   @spec handle_link(
           Pad.direction_t(),
-          Endpoint.t(),
-          Endpoint.t(),
+          LinkParser.raw_endpoint_t(),
+          LinkParser.raw_endpoint_t(),
           PadModel.pad_info_t() | nil,
           state_t()
         ) :: Type.stateful_try_t(PadModel.pad_info_t(), state_t)
@@ -77,6 +77,7 @@ defmodule Membrane.Core.Child.PadController do
   def handle_linking_finished(state) do
     with {:ok, state} <-
            state.pads.dynamic_currently_linking
+           |> Enum.reverse()
            |> Enum.filter(&(&1 |> Pad.name_by_ref() |> Pad.is_public_name()))
            |> Bunch.Enum.try_reduce(state, &handle_pad_added/2) do
       static_unlinked =
@@ -297,8 +298,9 @@ defmodule Membrane.Core.Child.PadController do
   def generate_eos_if_needed(pad_ref, state) do
     direction = PadModel.get_data!(state, pad_ref, :direction)
     eos? = PadModel.get_data!(state, pad_ref, :end_of_stream?)
+    %{state: playback_state} = state.playback
 
-    if direction == :input and not eos? do
+    if direction == :input and not eos? and playback_state == :playing do
       EventController.exec_handle_event(pad_ref, %Events.EndOfStream{}, state)
     else
       {:ok, state}
@@ -347,6 +349,7 @@ defmodule Membrane.Core.Child.PadController do
 
   defp flush_playback_buffer(pad_ref, state) do
     new_playback_buf = PlaybackBuffer.flush_for_pad(state.playback_buffer, pad_ref)
+
     {:ok, %{state | playback_buffer: new_playback_buf}}
   end
 

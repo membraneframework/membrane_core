@@ -16,6 +16,7 @@ defmodule Membrane.Core.Bin do
   @type options_t :: %{
           name: atom,
           module: module,
+          parent: pid,
           user_options: Membrane.Bin.options_t(),
           parent_clock: Membrane.Clock.t(),
           log_metadata: Keyword.t()
@@ -33,6 +34,18 @@ defmodule Membrane.Core.Bin do
   """
   @spec start_link(options_t, GenServer.options()) :: GenServer.on_start()
   def start_link(options, process_options \\ []) do
+    do_start(:start_link, options, process_options)
+  end
+
+  @doc """
+  Works similarly to `start_link/2`, but does not link to the current process.
+  """
+  @spec start(options_t(), GenServer.options()) :: GenServer.on_start()
+  def start(options, process_options \\ []) do
+    do_start(:start, options, process_options)
+  end
+
+  defp do_start(method, options, process_options) do
     if options.module |> Membrane.Bin.bin?() do
       Membrane.Logger.debug("""
       Bin start link: name: #{inspect(options.name)}
@@ -41,7 +54,7 @@ defmodule Membrane.Core.Bin do
       process options: #{inspect(process_options)}
       """)
 
-      GenServer.start_link(Membrane.Core.Bin, options, process_options)
+      apply(GenServer, method, [Membrane.Core.Bin, options, process_options])
     else
       raise """
       Cannot start bin, passed module #{inspect(options.module)} is not a Membrane Bin.
@@ -61,6 +74,8 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def init(options) do
+    Process.monitor(options.parent)
+
     %{name: name, module: module, log_metadata: log_metadata} = options
     name_str = if String.valid?(name), do: name, else: inspect(name)
     :ok = Membrane.Logger.set_prefix(name_str <> " bin")
@@ -153,5 +168,10 @@ defmodule Membrane.Core.Bin do
   def handle_call(Message.new(:handle_watcher, watcher), _from, state) do
     Core.Child.LifecycleController.handle_watcher(watcher, state)
     |> reply()
+  end
+
+  @impl GenServer
+  def terminate(reason, state) do
+    :ok = state.module.handle_shutdown(reason, state.internal_state)
   end
 end

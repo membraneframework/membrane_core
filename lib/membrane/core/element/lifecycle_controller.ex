@@ -87,7 +87,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   @spec handle_pipeline_down(reason :: any, State.t()) :: {:ok, State.t()}
   def handle_pipeline_down(reason, state) do
     if reason != :normal do
-      Membrane.Logger.error("""
+      Membrane.Logger.debug("""
       Shutting down because of pipeline failure
       Reason: #{inspect(reason)}
       State: #{inspect(state, pretty: true)}

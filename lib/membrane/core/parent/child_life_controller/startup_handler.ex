@@ -154,7 +154,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     start_result =
       case child.component_type do
         :element ->
-          Core.Element.start_link(%{
+          Core.Element.start(%{
             parent: self(),
             module: module,
             name: name,
@@ -171,7 +171,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
                   reason: bin cannot be synced with other elements"
           end
 
-          Core.Bin.start_link(%{
+          Core.Bin.start(%{
+            parent: self(),
             name: name,
             module: module,
             user_options: options,

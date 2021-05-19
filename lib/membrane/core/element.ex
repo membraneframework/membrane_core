@@ -170,7 +170,7 @@ defmodule Membrane.Core.Element do
   def handle_info({:DOWN, ref, :process, _pid, reason}, %{parent_monitor: ref} = state) do
     {:ok, state} = LifecycleController.handle_pipeline_down(reason, state)
 
-    {:stop, reason, state}
+    {:stop, {:shutdown, :parent_crash}, state}
   end
 
   @impl GenServer
