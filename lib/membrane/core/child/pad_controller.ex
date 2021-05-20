@@ -101,7 +101,7 @@ defmodule Membrane.Core.Child.PadController do
       if bin? do
         LinkingBuffer.flush_all_public_pads(state)
       else
-        send_push_mode_announcments(state)
+        send_push_mode_announcements(state)
         state
       end
       |> clear_currently_linking()
@@ -109,11 +109,11 @@ defmodule Membrane.Core.Child.PadController do
     end
   end
 
-  defp send_push_mode_announcments(state) do
+  defp send_push_mode_announcements(state) do
     state.pads.data
     |> Map.values()
     |> Enum.filter(&(&1.mode == :push))
-    |> Enum.each(&Message.send(&1.pid, :push_mode_announcment, [], for_pad: &1.other_ref))
+    |> Enum.each(&Message.send(&1.pid, :push_mode_announcement, [], for_pad: &1.other_ref))
   end
 
   @spec enable_toilet_if_pull(Pad.ref_t(), state_t()) :: {:ok, state_t()}
