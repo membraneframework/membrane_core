@@ -51,16 +51,16 @@ defmodule Membrane.Core.InputBuffer do
   Properties that can be passed when creating new InputBuffer
 
   Available options are:
-    * `:preffered_size` - size which will be the 'target' for InputBuffer - it will make demands
+    * `:preferred_size` - size which will be the 'target' for InputBuffer - it will make demands
       trying to grow to this size. Its default value depends on the set `#{inspect(Buffer.Metric)}` and is
       obtained via `c:#{inspect(Buffer.Metric)}.input_buf_preferred_size/0`
     * `:min_demand` - the minimal size of a demand that can be sent to the linked output pad.
       This prevents from excessive message passing between elements. Defaults to a quarter of
       preferred size.
     * `warn_size` - in toilet mode (connecting push output to pull input pad), receiving more data
-      than this size triggers a warning. By default it is equal to twice the preffered size.
+      than this size triggers a warning. By default it is equal to twice the preferred size.
     * `fail_size` - in toilet mode (connecting push output to pull input pad), receiving more data
-      than this results in an element failure. By default, it is four times the preffered size.
+      than this results in an element failure. By default, it is four times the preferred size.
   """
   @type props_t :: [
           {:preferred_size, pos_integer()}
