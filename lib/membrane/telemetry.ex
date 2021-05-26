@@ -11,8 +11,8 @@ defmodule Membrane.Telemetry do
 
   The following events are published by Membrane's Core with following measurement types and metadata:
 
-    * `[:membrane, :input_buffer, :size]` - to report current input buffer's size.
-        * Measurement: `t:input_buffer_size_event_value_t/0`
+    * `[:membrane, :metric, :value]` - used by `Membrane.Core.InputBuffer` to report current buffer's size inside functions `Membrane.Core.InputBuffer.store/3` and `Membrane.Core.InputBuffer.take_and_demand/4`. TODO add info about rest of metrics
+        * Measurement: `t:metric_event_value_t/0`
         * Metadata: `%{}`
 
     * `[:membrane, :link, :new]` - to report new link connection being initialized in pipeline.
@@ -25,18 +25,18 @@ defmodule Membrane.Telemetry do
 
   @typedoc """
   * element_path - element's process path with pad's name that input buffer is attached to
-  * method - input buffer's function call name
-  * value - current buffer's size
+  * metric - metric name
+  * value - metric's value
 
   """
-  @type input_buffer_size_event_value_t :: %{
+  @type metric_event_value_t :: %{
           element_path: String.t(),
-          method: String.t(),
+          metric: String.t(),
           value: integer()
         }
 
-  @spec input_buffer_size_event_name() :: event_name_t()
-  def input_buffer_size_event_name, do: [:membrane, :input_buffer, :size]
+  @spec metric_event_name() :: event_name_t()
+  def metric_event_name, do: [:membrane, :metric, :value]
 
   @typedoc """
   * parent_path - process path of link's parent
