@@ -6,10 +6,12 @@ defmodule Membrane.Core.Element.EventController do
   use Bunch
 
   alias Membrane.{Event, Pad, Sync}
+  alias Membrane.ComponentPath
   alias Membrane.Core.{CallbackHandler, Events, InputBuffer, Message}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{ActionHandler, State}
   alias Membrane.Element.CallbackContext
+  alias Membrane.Telemetry
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
@@ -27,6 +29,8 @@ defmodule Membrane.Core.Element.EventController do
   """
   @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
   def handle_event(pad_ref, event, state) do
+    report_event(inspect(pad_ref))
+
     pad_data = PadModel.get_data!(state, pad_ref)
 
     if not Event.async?(event) && pad_data.mode == :pull && pad_data.direction == :input &&
@@ -168,4 +172,18 @@ defmodule Membrane.Core.Element.EventController do
 
   defp stream_event_to_callback(%Events.StartOfStream{}), do: :handle_start_of_stream
   defp stream_event_to_callback(%Events.EndOfStream{}), do: :handle_end_of_stream
+
+  defp report_event(log_tag) do
+    :telemetry.execute(
+      Telemetry.metric_event_name(),
+      %{
+        element_path:
+          ComponentPath.get_formatted() <>
+            "/" <> (log_tag || ""),
+        metric: "event",
+        value: 1
+      },
+      %{}
+    )
+  end
 end

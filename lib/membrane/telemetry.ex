@@ -11,7 +11,7 @@ defmodule Membrane.Telemetry do
 
   The following events are published by Membrane's Core with following measurement types and metadata:
 
-    * `[:membrane, :metric, :value]` - used by `Membrane.Core.InputBuffer` to report current buffer's size inside functions `Membrane.Core.InputBuffer.store/3` and `Membrane.Core.InputBuffer.take_and_demand/4`. TODO add info about rest of metrics
+    * `[:membrane, :metric, :value]` - used to report metrics, such as input buffer's size inside functions `Membrane.Core.InputBuffer.store/3` and `Membrane.Core.InputBuffer.take_and_demand/4`, incoming events in `Membrane.Core.Element.EventController` and received caps in `Membrane.Core.Element.CapsController`.
         * Measurement: `t:metric_event_value_t/0`
         * Metadata: `%{}`
 
