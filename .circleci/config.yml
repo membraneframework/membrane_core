@@ -2,7 +2,7 @@ version: 2.0
 jobs:
   test:
     docker:
-      - image: membrane/membrane:latest
+      - image: membraneframeworklabs/docker_membrane
         environment:
           MIX_ENV: test
 
@@ -17,7 +17,7 @@ jobs:
 
   lint:
     docker:
-      - image: membrane/bionic-membrane:latest
+      - image: membraneframeworklabs/docker_membrane
         environment:
           MIX_ENV: dev
 
