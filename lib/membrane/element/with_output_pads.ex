@@ -9,7 +9,6 @@ defmodule Membrane.Element.WithOutputPads do
   """
 
   alias Membrane.{Buffer, Element, Pad}
-  alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Child.PadsSpecs
   alias Membrane.Element.CallbackContext
 
