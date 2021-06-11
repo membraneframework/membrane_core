@@ -3,6 +3,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
   # A module responsible for managing crash groups inside the state of pipeline.
 
   alias Membrane.ParentSpec
+  alias Membrane.Core.Parent
   alias Membrane.Core.Pipeline
   alias Membrane.Core.Parent.CrashGroup
 
@@ -64,7 +65,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
     )
   end
 
-  @spec get_group_by_member_pid(pid(), Parent.state_t()) :: {:ok, CrashGroup.t()} | :error
+  @spec get_group_by_member_pid(pid(), Parent.state_t()) ::
+          {:ok, CrashGroup.t()} | {:error, :not_member}
   def get_group_by_member_pid(member_pid, state) do
     crash_group =
       state.crash_groups

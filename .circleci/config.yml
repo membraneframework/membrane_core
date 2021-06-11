@@ -29,6 +29,7 @@ jobs:
       - run: mix format --check-formatted
       - run: mix compile
       - run: mix credo
+      - run: mix dialyzer 
       - run: mix docs && mix docs 2>&1 | (! grep -q "warning:")
 
 workflows:
