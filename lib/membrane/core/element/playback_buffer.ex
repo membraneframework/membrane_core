@@ -115,11 +115,15 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     pad_ref = Message.for_pad(msg)
 
     with :ok <- PadModel.assert_data(state, pad_ref, %{direction: :output}) do
-      Membrane.Logger.debug_verbose("Received #{if size == 0 do
-        "dumb demand"
-      else
-        "demand of size #{inspect(size)}"
-      end} on pad #{inspect(pad_ref)}")
+      Membrane.Logger.debug_verbose(
+        "Received #{
+          if size == 0 do
+            "dumb demand"
+          else
+            "demand of size #{inspect(size)}"
+          end
+        } on pad #{inspect(pad_ref)}"
+      )
 
       DemandController.handle_demand(pad_ref, size, state)
     end

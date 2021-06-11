@@ -166,7 +166,9 @@ defmodule Membrane.Core.Element.DemandHandler do
     else
       {{:error, reason}, state} ->
         Membrane.Logger.error("""
-        Error while supplying demand on pad #{inspect(pad_ref)} of size #{inspect(pad_data.demand)}
+        Error while supplying demand on pad #{inspect(pad_ref)} of size #{
+          inspect(pad_data.demand)
+        }
         """)
 
         {{:error, {:supply_demand, reason}}, %State{state | supplying_demand?: false}}

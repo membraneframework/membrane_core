@@ -104,7 +104,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
       ref: {:error, :invalid_availability} ->
         raise LinkError,
-              "Dynamic pad ref #{inspect(pad_spec)} passed for static pad of bin #{inspect(state.name)}"
+              "Dynamic pad ref #{inspect(pad_spec)} passed for static pad of bin #{
+                inspect(state.name)
+              }"
     end
   end
 
@@ -125,7 +127,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
       ref: {:error, :invalid_availability} ->
         raise LinkError,
-              "Dynamic pad ref #{inspect(pad_spec)} passed for static pad of child #{inspect(child)}"
+              "Dynamic pad ref #{inspect(pad_spec)} passed for static pad of child #{
+                inspect(child)
+              }"
     end
   end
 

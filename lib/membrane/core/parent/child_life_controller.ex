@@ -103,7 +103,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
       if already_removing != [] do
         Membrane.Logger.warn("""
-        Trying to remove children that are already being removed: #{Enum.map_join(already_removing, ", ", &inspect(&1.name))}. This may lead to 'unknown child' errors.
+        Trying to remove children that are already being removed: #{
+          Enum.map_join(already_removing, ", ", &inspect(&1.name))
+        }. This may lead to 'unknown child' errors.
         """)
       end
 

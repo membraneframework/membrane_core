@@ -16,8 +16,8 @@ defmodule Membrane.Pipeline do
 
   alias __MODULE__.{Action, CallbackContext}
   alias Membrane.{Child, Pad}
-  alias Membrane.Core.{CallbackHandler, PlaybackHandler}
-  alias Membrane.Core.Parent.CrashGroup
+  alias Membrane.Core.PlaybackHandler
+  alias Membrane.CrashGroup
 
   require Membrane.Logger
 
@@ -43,7 +43,7 @@ defmodule Membrane.Pipeline do
   and initialize pipeline's internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
   """
-  @callback handle_init(options :: pipeline_options_t) :: CallbackHandler.callback_return_t()
+  @callback handle_init(options :: pipeline_options_t) :: callback_return_t()
 
   @doc """
   Callback invoked when pipeline is shutting down.

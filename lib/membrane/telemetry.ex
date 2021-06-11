@@ -11,11 +11,11 @@ defmodule Membrane.Telemetry do
 
   The following events are published by Membrane's Core with following measurement types and metadata:
 
-    * `[:membrane, :input_buffer, :size]` - used by `Membrane.Core.InputBuffer` to report current buffer's size inside functions `Membrane.Core.InputBuffer.store/3` and `Membrane.Core.InputBuffer.take_and_demand/4`.
+    * `[:membrane, :input_buffer, :size]` - to report current input buffer's size.
         * Measurement: `t:input_buffer_size_event_value_t/0`
         * Metadata: `%{}`
 
-    * `[:membrane, :link, :new]` - used by `Membrane.Core.Parent.ChildLifeController.LinkHandler` to report new link connection being initialized in pipeline.
+    * `[:membrane, :link, :new]` - to report new link connection being initialized in pipeline.
         * Measurement: `t:new_link_event_value_t/0`
         * Metadata: `%{}`
 
