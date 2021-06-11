@@ -160,7 +160,7 @@ defmodule Membrane.ParentSpec do
     end
   end
 
-  @opaque link_builder_t :: link_builder_t()
+  @opaque link_builder_t :: LinkBuilder.t()
 
   @type child_spec_t :: module | struct
 
