@@ -158,9 +158,7 @@ defmodule Membrane.Core.Element.EventController do
         {{:ok, :ignore}, state}
 
       playback: %{state: playback_state} ->
-        raise "Received end of stream event in an incorrect state. State: #{
-                inspect(playback_state, pretty: true)
-              }, on pad: #{inspect(pad_ref)}"
+        raise "Received end of stream event in an incorrect state. State: #{inspect(playback_state, pretty: true)}, on pad: #{inspect(pad_ref)}"
     end
   end
 

@@ -138,10 +138,7 @@ defmodule Membrane.Core.OptionsSpecs do
     quote do
       """
       - #{unquote(header)}  \n
-      #{
-        unquote([spec, default_val_desc, desc])
-        |> Enum.map_join("  \n", &Markdown.indent/1)
-      }
+      #{unquote([spec, default_val_desc, desc]) |> Enum.map_join("  \n", &Markdown.indent/1)}
       """
     end
   end
