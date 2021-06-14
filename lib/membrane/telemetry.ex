@@ -32,7 +32,7 @@ defmodule Membrane.Telemetry do
 
   @typedoc """
   * element_path - element's process path with pad's name that input buffer is attached to
-  * metric - metric name
+  * metric - metric's name
   * value - metric's value
 
   """
@@ -41,9 +41,6 @@ defmodule Membrane.Telemetry do
           metric: String.t(),
           value: integer()
         }
-
-  @spec metric_event_name() :: event_name_t()
-  def metric_event_name, do: [:membrane, :metric, :value]
 
   @typedoc """
   * parent_path - process path of link's parent
@@ -60,9 +57,6 @@ defmodule Membrane.Telemetry do
           pad_to: String.t()
         }
 
-  @spec new_link_event_name() :: event_name_t()
-  def new_link_event_name, do: [:membrane, :link, :new]
-
   @doc """
   Macro for reporting metric measurements.
 
@@ -76,7 +70,7 @@ defmodule Membrane.Telemetry do
         path = ComponentPath.get_formatted() <> "/" <> (unquote(log_tag) || "")
 
         :telemetry.execute(
-          unquote(metric_event_name()),
+          [:membrane, :metric, :value],
           %{
             element_path: path,
             metric: unquote(metric),
@@ -124,7 +118,7 @@ defmodule Membrane.Telemetry do
         %Endpoint{child: to_child, pad_ref: to_pad} = unquote(to)
 
         :telemetry.execute(
-          unquote(new_link_event_name()),
+          [:membrane, :link, :new],
           %{
             parent_path: Membrane.ComponentPath.get_formatted(),
             from: "#{inspect(from_child)}",

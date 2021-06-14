@@ -28,7 +28,7 @@ defmodule Membrane.Core.Element.EventController do
   """
   @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
   def handle_event(pad_ref, event, state) do
-    report_event(inspect(pad_ref))
+    Membrane.Telemetry.report_metric("event", 1, inspect(pad_ref))
 
     pad_data = PadModel.get_data!(state, pad_ref)
 
@@ -171,8 +171,4 @@ defmodule Membrane.Core.Element.EventController do
 
   defp stream_event_to_callback(%Events.StartOfStream{}), do: :handle_start_of_stream
   defp stream_event_to_callback(%Events.EndOfStream{}), do: :handle_end_of_stream
-
-  defp report_event(log_tag) do
-    Membrane.Telemetry.report_metric("event", 1, log_tag)
-  end
 end
