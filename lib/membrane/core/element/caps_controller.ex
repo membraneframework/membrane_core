@@ -6,15 +6,14 @@ defmodule Membrane.Core.Element.CapsController do
   use Bunch
 
   alias Membrane.{Caps, Pad}
-  alias Membrane.ComponentPath
   alias Membrane.Core.{CallbackHandler, InputBuffer}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{ActionHandler, State}
   alias Membrane.Element.CallbackContext
-  alias Membrane.Telemetry
 
   require Membrane.Core.Child.PadModel
   require Membrane.Logger
+  require Membrane.Telemetry
 
   @doc """
   Handles incoming caps: either stores them in InputBuffer, or executes element callback.
@@ -67,16 +66,6 @@ defmodule Membrane.Core.Element.CapsController do
   end
 
   defp report_caps(log_tag) do
-    :telemetry.execute(
-      Telemetry.metric_event_name(),
-      %{
-        element_path:
-          ComponentPath.get_formatted() <>
-            "/" <> (log_tag || ""),
-        metric: "caps",
-        value: 1
-      },
-      %{}
-    )
+    Membrane.Telemetry.report_metric("caps", 1, log_tag)
   end
 end
