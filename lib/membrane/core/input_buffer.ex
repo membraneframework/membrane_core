@@ -12,11 +12,10 @@ defmodule Membrane.Core.InputBuffer do
   alias Membrane.Buffer
   alias Membrane.Core.Message
   alias Membrane.Pad
-  alias Membrane.Telemetry
-  alias Membrane.ComponentPath
 
   require Membrane.Core.Message
   require Membrane.Logger
+  require Membrane.Telemetry
 
   @qe Qex
 
@@ -326,17 +325,7 @@ defmodule Membrane.Core.InputBuffer do
   end
 
   defp report_buffer_size(method, size, %__MODULE__{log_tag: log_tag}) do
-    :telemetry.execute(
-      Telemetry.input_buffer_size_event_name(),
-      %{
-        element_path:
-          ComponentPath.get_formatted() <>
-            "/" <> (log_tag || ""),
-        method: method,
-        value: size
-      },
-      %{}
-    )
+    Membrane.Telemetry.report_metric(method, size, log_tag)
   end
 
   @spec empty?(t()) :: boolean()
