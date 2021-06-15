@@ -24,6 +24,7 @@ defmodule Membrane.Core.CallbackHandler do
           {:ok, internal_state}
           | {{:ok, [action]}, internal_state}
           | {{:error, any}, internal_state}
+          | {:error, any}
 
   @type callback_return_t :: callback_return_t(any, any)
 

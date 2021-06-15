@@ -22,7 +22,11 @@ defmodule Membrane.Bin do
 
   @type state_t :: map | struct
 
-  @type callback_return_t :: {:ok | {:ok, [Action.t()]} | {:error, any}, state_t} | {:error, any}
+  @type callback_return_t ::
+          {:ok, state_t}
+          | {{:ok, [Action.t()]}, state_t}
+          | {{:error, any}, state_t}
+          | {:error, any}
 
   @typedoc """
   Defines options that can be passed to `start_link/3` and received
