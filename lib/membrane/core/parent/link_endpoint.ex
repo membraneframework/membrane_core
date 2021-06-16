@@ -1,5 +1,7 @@
 defmodule Membrane.Core.Parent.Link.Endpoint do
-  @moduledoc false
+  @moduledoc """
+  Module defining parent link endpoint.
+  """
 
   alias Membrane.{Element, Pad, ParentSpec}
 

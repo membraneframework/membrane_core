@@ -19,25 +19,29 @@ defmodule Membrane.Telemetry do
         * Measurement: `t:new_link_event_value_t/0`
         * Metadata: `%{}`
 
-  It also privides macros to report metrics. Metrics are reported only when application using Membrane Core specifies following in compile-time config file:
+  It also privides functions to report measurements. That measurements are reported only when application using Membrane Core specifies following in compile-time config file:
 
       config :membrane_core,
-        enable_metrics: true
+        enable_telemetry: true
 
   """
 
-  @enable_metrics Application.compile_env(:membrane_core, :enable_metrics, false)
+  alias Membrane.ComponentPath
+  alias Membrane.Core.Parent.Link.Endpoint
+
+  require Membrane.Pad
+
+  @enable_telemetry Application.compile_env(:membrane_core, :enable_telemetry, false)
 
   @type event_name_t :: [atom(), ...]
 
   @typedoc """
-  * element_path - element's process path with pad's name that input buffer is attached to
+  * component_path - element's or bin's path
   * metric - metric's name
   * value - metric's value
-
   """
   @type metric_event_value_t :: %{
-          element_path: String.t(),
+          component_path: String.t(),
           metric: String.t(),
           value: integer()
         }
@@ -58,24 +62,18 @@ defmodule Membrane.Telemetry do
         }
 
   @doc """
-  Macro for reporting metric measurements.
+  Macro for reporting metrics.
+
+  Provided `calculate_measurement` is a function that calculates measurement.
 
   Metrics are reported only when it is enabled in the application using Membrane Core.
   """
-  defmacro report_metric(metric, value, log_tag) do
-    if @enable_metrics do
+  defmacro report_measurement(event_name, calculate_measurement) do
+    if @enable_telemetry do
       quote do
-        alias Membrane.ComponentPath
-
-        path = ComponentPath.get_formatted() <> "/" <> (unquote(log_tag) || "")
-
         :telemetry.execute(
-          [:membrane, :metric, :value],
-          %{
-            element_path: path,
-            metric: unquote(metric),
-            value: unquote(value)
-          },
+          unquote(event_name),
+          unquote(calculate_measurement).(),
           %{}
         )
       end
@@ -83,9 +81,8 @@ defmodule Membrane.Telemetry do
       # A hack to suppress the 'unused variable' warnings
       quote do
         fn ->
-          _unused = unquote(metric)
-          _unused = unquote(value)
-          _unused = unquote(log_tag)
+          _unused = unquote(event_name)
+          _unused = unquote(calculate_measurement)
         end
 
         :ok
@@ -94,50 +91,65 @@ defmodule Membrane.Telemetry do
   end
 
   @doc """
-  Macro for reporting new links.
-
-  Links are reported only when metrics reporting is enabled in the application using Membrane Core.
+  Reports metrics such as input buffer's size inside functions, incoming events and received caps.
   """
-  defmacro report_new_link(from, to) do
-    if @enable_metrics do
-      quote do
-        alias Membrane.ComponentPath
-        alias Membrane.Core.Parent.Link.Endpoint
+  @spec report_metric(String.t(), integer(), String.t()) :: :ok
+  def report_metric(metric, value, log_tag) do
+    calculate_measurement = get_calculate_measurement_function(metric, value, log_tag)
 
-        require Membrane.Pad
+    report_measurement(
+      [:membrane, :metric, :value],
+      calculate_measurement
+    )
+  end
 
-        get_public_pad_name = fn pad ->
-          case pad do
-            {:private, direction} -> direction
-            {Membrane.Pad, {:private, direction}, ref} -> {Membrane.Pad, direction, ref}
-            _pad -> pad
-          end
-        end
+  @doc """
+  Reports new link connection being initialized in pipeline.
+  """
+  @spec report_new_link(Endpoint.t(), Endpoint.t()) :: :ok
+  def report_new_link(from, to) do
+    calculate_measurement = get_calculate_measurement_function(from, to)
 
-        %Endpoint{child: from_child, pad_ref: from_pad} = unquote(from)
-        %Endpoint{child: to_child, pad_ref: to_pad} = unquote(to)
+    report_measurement(
+      [:membrane, :link, :new],
+      calculate_measurement
+    )
+  end
 
-        :telemetry.execute(
-          [:membrane, :link, :new],
-          %{
-            parent_path: Membrane.ComponentPath.get_formatted(),
-            from: "#{inspect(from_child)}",
-            to: "#{inspect(to_child)}",
-            pad_from: "#{inspect(get_public_pad_name.(from_pad))}",
-            pad_to: "#{inspect(get_public_pad_name.(to_pad))}"
-          }
-        )
-      end
-    else
-      # A hack to suppress 'unused variable' warnings
-      quote do
-        fn ->
-          _unused = unquote(from)
-          _unused = unquote(to)
-        end
+  # Returns function to call inside `report_measurement` macro to prepare metric measurement.
+  defp get_calculate_measurement_function(metric, value, log_tag) do
+    fn ->
+      component_path = ComponentPath.get_formatted() <> "/" <> (log_tag || "")
 
-        :ok
-      end
+      %{
+        component_path: component_path,
+        metric: metric,
+        value: value
+      }
+    end
+  end
+
+  # Returns function to call inside `report_measurement` macro to prepare new link measurement.
+  defp get_calculate_measurement_function(from, to) do
+    fn ->
+      %Endpoint{child: from_child, pad_ref: from_pad} = from
+      %Endpoint{child: to_child, pad_ref: to_pad} = to
+
+      %{
+        parent_path: Membrane.ComponentPath.get_formatted(),
+        from: "#{inspect(from_child)}",
+        to: "#{inspect(to_child)}",
+        pad_from: "#{inspect(get_public_pad_name(from_pad))}",
+        pad_to: "#{inspect(get_public_pad_name(to_pad))}"
+      }
+    end
+  end
+
+  defp get_public_pad_name(pad) do
+    case pad do
+      {:private, direction} -> direction
+      {Membrane.Pad, {:private, direction}, ref} -> {Membrane.Pad, direction, ref}
+      _pad -> pad
     end
   end
 end
