@@ -6,21 +6,20 @@ defmodule Membrane.Core.Element.CapsController do
   use Bunch
 
   alias Membrane.{Caps, Pad}
-  alias Membrane.Core.{CallbackHandler, InputBuffer}
+  alias Membrane.Core.{CallbackHandler, InputBuffer, Telemetry}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{ActionHandler, State}
   alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel
   require Membrane.Logger
-  require Membrane.Telemetry
 
   @doc """
   Handles incoming caps: either stores them in InputBuffer, or executes element callback.
   """
   @spec handle_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.stateful_try_t()
   def handle_caps(pad_ref, caps, state) do
-    Membrane.Telemetry.report_metric("caps", 1, inspect(pad_ref))
+    Telemetry.report_metric("caps", 1, inspect(pad_ref))
 
     PadModel.assert_data!(state, pad_ref, %{direction: :input})
     data = PadModel.get_data!(state, pad_ref)

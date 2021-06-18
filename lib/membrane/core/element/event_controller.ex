@@ -6,7 +6,7 @@ defmodule Membrane.Core.Element.EventController do
   use Bunch
 
   alias Membrane.{Event, Pad, Sync}
-  alias Membrane.Core.{CallbackHandler, Events, InputBuffer, Message}
+  alias Membrane.Core.{CallbackHandler, Events, InputBuffer, Message, Telemetry}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{ActionHandler, State}
   alias Membrane.Element.CallbackContext
@@ -14,7 +14,6 @@ defmodule Membrane.Core.Element.EventController do
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
   require Membrane.Logger
-  require Membrane.Telemetry
 
   @spec handle_start_of_stream(Pad.ref_t(), State.t()) :: State.stateful_try_t()
   def handle_start_of_stream(pad_ref, state) do
@@ -28,7 +27,7 @@ defmodule Membrane.Core.Element.EventController do
   """
   @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
   def handle_event(pad_ref, event, state) do
-    Membrane.Telemetry.report_metric("event", 1, inspect(pad_ref))
+    Telemetry.report_metric("event", 1, inspect(pad_ref))
 
     pad_data = PadModel.get_data!(state, pad_ref)
 

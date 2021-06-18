@@ -10,12 +10,11 @@ defmodule Membrane.Core.InputBuffer do
   use Bunch
 
   alias Membrane.Buffer
-  alias Membrane.Core.Message
+  alias Membrane.Core.{Message, Telemetry}
   alias Membrane.Pad
 
   require Membrane.Core.Message
   require Membrane.Logger
-  require Membrane.Telemetry
 
   @qe Qex
 
@@ -325,7 +324,7 @@ defmodule Membrane.Core.InputBuffer do
   end
 
   defp report_buffer_size(method, size, %__MODULE__{log_tag: log_tag}) do
-    Membrane.Telemetry.report_metric(method, size, log_tag)
+    Telemetry.report_metric(method, size, log_tag)
   end
 
   @spec empty?(t()) :: boolean()

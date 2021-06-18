@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   use Bunch
 
-  alias Membrane.Core.{Bin, Child, Message, Parent}
+  alias Membrane.Core.{Bin, Child, Message, Parent, Telemetry}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Parent.{CrashGroup, Link, LinkParser}
   alias Membrane.Core.Parent.Link.Endpoint
@@ -12,7 +12,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   require Membrane.Core.Message
   require Membrane.Pad
-  require Membrane.Telemetry
 
   @spec resolve_links([LinkParser.raw_link_t()], Parent.state_t()) ::
           [Parent.Link.t()]
@@ -144,7 +143,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   end
 
   defp link(%Link{from: from, to: to}, state) do
-    Membrane.Telemetry.report_new_link(from, to)
+    Telemetry.report_new_link(from, to)
     do_link(from, to, state)
   end
 
