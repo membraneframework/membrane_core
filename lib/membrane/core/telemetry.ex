@@ -43,7 +43,15 @@ defmodule Membrane.Core.Telemetry do
   """
   @spec report_metric(String.t(), integer(), String.t()) :: :ok
   def report_metric(metric, value, log_tag) do
-    calculate_measurement = get_calculate_measurement_function(metric, value, log_tag)
+    calculate_measurement = fn ->
+      component_path = ComponentPath.get_formatted() <> "/" <> (log_tag || "")
+
+      %{
+        component_path: component_path,
+        metric: metric,
+        value: value
+      }
+    end
 
     report_measurement(
       Telemetry.metric_event_name(),
@@ -56,30 +64,7 @@ defmodule Membrane.Core.Telemetry do
   """
   @spec report_new_link(Endpoint.t(), Endpoint.t()) :: :ok
   def report_new_link(from, to) do
-    calculate_measurement = get_calculate_measurement_function(from, to)
-
-    report_measurement(
-      Telemetry.new_link_event_name(),
-      calculate_measurement
-    )
-  end
-
-  # Returns function to call inside `report_measurement` macro to prepare metric measurement.
-  defp get_calculate_measurement_function(metric, value, log_tag) do
-    fn ->
-      component_path = ComponentPath.get_formatted() <> "/" <> (log_tag || "")
-
-      %{
-        component_path: component_path,
-        metric: metric,
-        value: value
-      }
-    end
-  end
-
-  # Returns function to call inside `report_measurement` macro to prepare new link measurement.
-  defp get_calculate_measurement_function(from, to) do
-    fn ->
+    calculate_measurement = fn ->
       %Endpoint{child: from_child, pad_ref: from_pad} = from
       %Endpoint{child: to_child, pad_ref: to_pad} = to
 
@@ -91,6 +76,11 @@ defmodule Membrane.Core.Telemetry do
         pad_to: "#{inspect(get_public_pad_name(to_pad))}"
       }
     end
+
+    report_measurement(
+      Telemetry.new_link_event_name(),
+      calculate_measurement
+    )
   end
 
   defp get_public_pad_name(pad) do
