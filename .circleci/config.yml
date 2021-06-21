@@ -2,7 +2,7 @@ version: 2.0
 jobs:
   test:
     docker:
-      - image: membrane/membrane:latest
+      - image: membraneframeworklabs/docker_membrane
         environment:
           MIX_ENV: test
 
@@ -17,7 +17,7 @@ jobs:
 
   lint:
     docker:
-      - image: membrane/bionic-membrane:latest
+      - image: membraneframeworklabs/docker_membrane
         environment:
           MIX_ENV: dev
 
@@ -29,6 +29,7 @@ jobs:
       - run: mix format --check-formatted
       - run: mix compile
       - run: mix credo
+      - run: mix dialyzer 
       - run: mix docs && mix docs 2>&1 | (! grep -q "warning:")
 
 workflows:

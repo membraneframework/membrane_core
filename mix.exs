@@ -1,14 +1,14 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "0.6.1"
+  @version "0.7.0"
   @source_ref "v#{@version}"
 
   def project do
     [
       app: :membrane_core,
       version: @version,
-      elixir: "~> 1.7",
+      elixir: "~> 1.10",
       elixirc_paths: elixirc_paths(Mix.env()),
       description: "Membrane Multimedia Framework (Core)",
       dialyzer: [

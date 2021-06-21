@@ -14,6 +14,7 @@ defmodule Membrane.Core.Bin.State do
   alias Membrane.Core.Parent.Link
   alias Membrane.Core.Parent.ChildrenModel
   alias Membrane.{Child, Clock, Sync}
+  alias Membrane.Core.Parent.CrashGroup
 
   @type t :: %__MODULE__{
           internal_state: Membrane.Bin.state_t() | nil,

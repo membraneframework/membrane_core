@@ -160,6 +160,8 @@ defmodule Membrane.ParentSpec do
     end
   end
 
+  @opaque link_builder_t :: LinkBuilder.t()
+
   @type child_spec_t :: module | struct
 
   @type children_spec_t ::
@@ -179,7 +181,7 @@ defmodule Membrane.ParentSpec do
           | {:options, Keyword.t()}
         ]
 
-  @type links_spec_t :: [LinkBuilder.t() | links_spec_t]
+  @type links_spec_t :: [link_builder_t() | links_spec_t]
 
   @type crash_group_spec_t :: {any(), :temporary} | nil
   @typedoc """
@@ -206,7 +208,7 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec link(Child.name_t()) :: LinkBuilder.t()
+  @spec link(Child.name_t()) :: link_builder_t()
   def link(child_name) do
     %LinkBuilder{links: [%{from: child_name}], status: :from}
   end
@@ -216,7 +218,7 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec link(Child.name_t(), child_spec_t()) :: LinkBuilder.t()
+  @spec link(Child.name_t(), child_spec_t()) :: link_builder_t()
   def link(child_name, child_spec) do
     link(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
   end
@@ -226,7 +228,7 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec link_bin_input(Pad.name_t() | Pad.ref_t(), pad_props_t) :: LinkBuilder.t() | no_return
+  @spec link_bin_input(Pad.name_t() | Pad.ref_t(), pad_props_t) :: link_builder_t() | no_return
   def link_bin_input(pad \\ :input, props \\ []) do
     link({Membrane.Bin, :itself}) |> via_out(pad, props)
   end
@@ -236,8 +238,8 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec via_out(LinkBuilder.t(), Pad.name_t() | Pad.ref_t(), pad_props_t) ::
-          LinkBuilder.t() | no_return
+  @spec via_out(link_builder_t(), Pad.name_t() | Pad.ref_t(), pad_props_t) ::
+          link_builder_t() | no_return
   def via_out(builder, pad, props \\ [])
 
   def via_out(%LinkBuilder{status: :output}, pad, _props) do
@@ -264,8 +266,8 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec via_in(LinkBuilder.t(), Pad.name_t() | Pad.ref_t(), pad_props_t) ::
-          LinkBuilder.t() | no_return
+  @spec via_in(link_builder_t(), Pad.name_t() | Pad.ref_t(), pad_props_t) ::
+          link_builder_t() | no_return
   def via_in(builder, pad, opts \\ [])
 
   def via_in(%LinkBuilder{status: :input}, pad, _opts) do
@@ -288,7 +290,7 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec to(LinkBuilder.t(), Child.name_t()) :: LinkBuilder.t() | no_return
+  @spec to(link_builder_t(), Child.name_t()) :: link_builder_t() | no_return
   def to(%LinkBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, child_name) do
     raise ParentError,
           "Invalid link specification: child #{inspect(child_name)} placed after bin's output"
@@ -303,7 +305,7 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec to(LinkBuilder.t(), Child.name_t(), child_spec_t()) :: LinkBuilder.t() | no_return
+  @spec to(link_builder_t(), Child.name_t(), child_spec_t()) :: link_builder_t() | no_return
   def to(%LinkBuilder{} = builder, child_name, child_spec) do
     builder |> to(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
   end
@@ -313,8 +315,8 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec to_bin_output(LinkBuilder.t(), Pad.name_t() | Pad.ref_t(), pad_props_t) ::
-          LinkBuilder.t() | no_return
+  @spec to_bin_output(link_builder_t(), Pad.name_t() | Pad.ref_t(), pad_props_t) ::
+          link_builder_t() | no_return
   def to_bin_output(builder, pad \\ :output, props \\ [])
 
   def to_bin_output(%LinkBuilder{status: :input}, pad, _props) do

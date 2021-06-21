@@ -11,32 +11,36 @@ defmodule Membrane.Telemetry do
 
   The following events are published by Membrane's Core with following measurement types and metadata:
 
-    * `[:membrane, :input_buffer, :size]` - used by `Membrane.Core.InputBuffer` to report current buffer's size inside functions `Membrane.Core.InputBuffer.store/3` and `Membrane.Core.InputBuffer.take_and_demand/4`.
-        * Measurement: `t:input_buffer_size_event_value_t/0`
+    * `[:membrane, :metric, :value]` - used to report metrics, such as input buffer's size inside functions, incoming events and received caps.
+        * Measurement: `t:metric_event_value_t/0`
         * Metadata: `%{}`
 
-    * `[:membrane, :link, :new]` - used by `Membrane.Core.Parent.ChildLifeController.LinkHandler` to report new link connection being initialized in pipeline.
+    * `[:membrane, :link, :new]` - to report new link connection being initialized in pipeline.
         * Measurement: `t:new_link_event_value_t/0`
         * Metadata: `%{}`
+
+  The measurements are reported only when application using Membrane Core specifies following in compile-time config file:
+
+      config :membrane_core,
+        enable_telemetry: true
 
   """
 
   @type event_name_t :: [atom(), ...]
 
   @typedoc """
-  * element_path - element's process path with pad's name that input buffer is attached to
-  * method - input buffer's function call name
-  * value - current buffer's size
-
+  * component_path - element's or bin's path
+  * metric - metric's name
+  * value - metric's value
   """
-  @type input_buffer_size_event_value_t :: %{
-          element_path: String.t(),
-          method: String.t(),
+  @type metric_event_value_t :: %{
+          component_path: String.t(),
+          metric: String.t(),
           value: integer()
         }
 
-  @spec input_buffer_size_event_name() :: event_name_t()
-  def input_buffer_size_event_name, do: [:membrane, :input_buffer, :size]
+  @spec metric_event_name() :: event_name_t()
+  def metric_event_name, do: [:membrane, :metric, :value]
 
   @typedoc """
   * parent_path - process path of link's parent

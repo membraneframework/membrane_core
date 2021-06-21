@@ -16,8 +16,8 @@ defmodule Membrane.Pipeline do
 
   alias __MODULE__.{Action, CallbackContext}
   alias Membrane.{Child, Pad}
-  alias Membrane.Core.{CallbackHandler, PlaybackHandler}
-  alias Membrane.Core.Parent.CrashGroup
+  alias Membrane.Core.PlaybackHandler
+  alias Membrane.CrashGroup
 
   require Membrane.Logger
 
@@ -29,6 +29,19 @@ defmodule Membrane.Pipeline do
 
   @type state_t :: map | struct
 
+  @typedoc """
+  Defines return values from Pipeline callback functions.
+
+  ## Return values
+
+    * `{:ok, state}` - Save process state, with no actions to change the pipeline.
+    * `{{:ok, [action]}, state}` - Return a list of actions that will be performed within the
+      pipline. This can be used to start new children, or to send messages to specific children,
+      for example. Actions are a tuple of `{type, arguments}`, so may be written in the
+      form a keyword list. See `Membrane.Pipeline.Action` for more info.
+    * `{{:error, reason}, state}` - Terminates the pipeline with the given reason.
+    * `{:error, reason}` - raises a `Membrane.CallbackError` with the error tuple.
+  """
   @type callback_return_t ::
           {:ok | {:ok, [Action.t()]} | {:error, any}, state_t}
           | {:error, any}
@@ -43,7 +56,7 @@ defmodule Membrane.Pipeline do
   and initialize pipeline's internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
   """
-  @callback handle_init(options :: pipeline_options_t) :: CallbackHandler.callback_return_t()
+  @callback handle_init(options :: pipeline_options_t) :: callback_return_t()
 
   @doc """
   Callback invoked when pipeline is shutting down.

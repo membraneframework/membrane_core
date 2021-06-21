@@ -28,10 +28,7 @@ defmodule Membrane.Logger do
   or `c:Membrane.Element.WithOutputPads.handle_demand/5` callbacks.
   """
 
-  # TODO: compile_env should be always used when we require Elixir 1.10
-  @config if function_exported?(Application, :compile_env, 3),
-            do: Application.compile_env(:membrane_core, :logger, []),
-            else: Application.get_env(:membrane_core, :logger, [])
+  @config Application.compile_env(:membrane_core, :logger, [])
 
   @get_prefix_ast (quote do
                      Process.get(:membrane_logger_prefix, "")
