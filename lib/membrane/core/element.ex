@@ -191,7 +191,7 @@ defmodule Membrane.Core.Element do
   end
 
   @impl GenServer
-  def handle_info(Message.new(:push_mode_announcment, [], for_pad: ref) = msg, state) do
+  def handle_info(Message.new(:push_mode_announcement, [], for_pad: ref) = msg, state) do
     case PadController.enable_toilet_if_pull(ref, state) do
       {:ok, _state} = res ->
         noreply(res)
