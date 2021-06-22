@@ -6,7 +6,7 @@ defmodule Membrane.Core.Element.EventController do
   use Bunch
 
   alias Membrane.{Event, Pad, Sync}
-  alias Membrane.Core.{CallbackHandler, Events, InputBuffer, Message}
+  alias Membrane.Core.{CallbackHandler, Events, InputBuffer, Message, Telemetry}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{ActionHandler, State}
   alias Membrane.Element.CallbackContext
@@ -27,6 +27,8 @@ defmodule Membrane.Core.Element.EventController do
   """
   @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
   def handle_event(pad_ref, event, state) do
+    Telemetry.report_metric("event", 1, inspect(pad_ref))
+
     pad_data = PadModel.get_data!(state, pad_ref)
 
     if not Event.async?(event) && pad_data.mode == :pull && pad_data.direction == :input &&
@@ -158,9 +160,7 @@ defmodule Membrane.Core.Element.EventController do
         {{:ok, :ignore}, state}
 
       playback: %{state: playback_state} ->
-        raise "Received end of stream event in an incorrect state. State: #{
-                inspect(playback_state, pretty: true)
-              }, on pad: #{inspect(pad_ref)}"
+        raise "Received end of stream event in an incorrect state. State: #{inspect(playback_state, pretty: true)}, on pad: #{inspect(pad_ref)}"
     end
   end
 

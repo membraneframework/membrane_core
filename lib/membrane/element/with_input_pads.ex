@@ -9,7 +9,6 @@ defmodule Membrane.Element.WithInputPads do
   """
 
   alias Membrane.{Element, Pad}
-  alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Child.PadsSpecs
   alias Membrane.Element.CallbackContext
 
@@ -24,7 +23,7 @@ defmodule Membrane.Element.WithInputPads do
               caps :: Membrane.Caps.t(),
               context :: CallbackContext.Caps.t(),
               state :: Element.state_t()
-            ) :: CallbackHandler.callback_return_t()
+            ) :: Membrane.Element.Base.callback_return_t()
 
   @optional_callbacks handle_caps: 4
 
@@ -35,7 +34,7 @@ defmodule Membrane.Element.WithInputPads do
               pad :: Pad.ref_t(),
               context :: CallbackContext.StreamManagement.t(),
               state :: Element.state_t()
-            ) :: CallbackHandler.callback_return_t()
+            ) :: Membrane.Element.Base.callback_return_t()
 
   @doc """
   Callback invoked when the previous element has finished processing via the pad,
@@ -45,7 +44,7 @@ defmodule Membrane.Element.WithInputPads do
               pad :: Pad.ref_t(),
               context :: CallbackContext.StreamManagement.t(),
               state :: Element.state_t()
-            ) :: CallbackHandler.callback_return_t()
+            ) :: Membrane.Element.Base.callback_return_t()
 
   @doc """
   Macro that defines multiple input pads for the element.

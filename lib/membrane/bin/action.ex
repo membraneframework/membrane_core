@@ -65,7 +65,7 @@ defmodule Membrane.Bin.Action do
   was previously set to `:no_interval`.
 
   If the `interval` is `:no_interval`, the timer won't issue any ticks until
-  another `t:set_interval_t/0` action. Otherwise, the timer will issue ticks every
+  another `t:timer_interval_t/0` action. Otherwise, the timer will issue ticks every
   new `interval`. The next tick after interval change is scheduled at
   `new_interval + previous_time`, where previous_time is the time of the latest
   tick or the time of returning `t:start_timer_t/0` action if no tick has been

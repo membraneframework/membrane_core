@@ -7,8 +7,13 @@ defmodule Membrane.Testing.SourceTest do
   test "Source initializes buffer generator and its state properly" do
     generator = fn _state, _size -> nil end
 
-    assert Source.handle_init(%Source{output: {:abc, generator}}) ==
-             {:ok, %{output: generator, generator_state: :abc}}
+    assert {:ok, %{output: ^generator, generator_state: :abc}} =
+             Source.handle_init(%Source{output: {:abc, generator}})
+  end
+
+  test "Source sends caps on play" do
+    assert {{:ok, caps: {:output, :caps}}, _state} =
+             Source.handle_prepared_to_playing(nil, %{caps: :caps})
   end
 
   describe "Source when handling demand" do
