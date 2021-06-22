@@ -251,12 +251,6 @@ defmodule Membrane.Core.Element do
   end
 
   defp handle_message_error(message, mode, reason, state) do
-    Membrane.Logger.error("""
-    Cannot handle message: #{inspect(message)}, mode: #{inspect(mode)}
-    Reason: #{inspect(reason)}
-    State: #{inspect(state, pretty: true)}
-    """)
-
     {{:error, reason}, state}
   end
 end
