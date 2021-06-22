@@ -250,7 +250,7 @@ defmodule Membrane.Core.Element do
     end
   end
 
-  defp handle_message_error(message, mode, reason, state) do
+  defp handle_message_error(_message, _mode, reason, state) do
     {{:error, reason}, state}
   end
 end
