@@ -137,7 +137,7 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_call(
-        Message.new(:handle_link, [direction, this, other, other_info]) = message,
+        Message.new(:handle_link, [direction, this, other, other_info]),
         _from,
         state
       ) do
@@ -146,8 +146,8 @@ defmodule Membrane.Core.Element do
              PadController.handle_link(direction, this, other, other_info, state) do
         {{:ok, info}, new_state}
       else
-        {{:error, reason}, _state} ->
-          handle_message_error(message, :call, reason, state)
+        {{:error, reason}, new_state} ->
+          {{:error, reason}, new_state}
       end
 
     result |> reply(state)
@@ -161,7 +161,7 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_call(message, _from, state) do
-    handle_message_error(message, :call, {:invalid_message, message, mode: :call}, state)
+    {{:error, {:invalid_message, message, mode: :call}}, state}
     |> reply(state)
   end
 
@@ -186,40 +186,40 @@ defmodule Membrane.Core.Element do
         noreply(res)
 
       {{:error, reason}, new_state} ->
-        handle_message_error(msg, :info, reason, new_state) |> noreply(state)
+        noreply({{:error, reason}, new_state}, state)
     end
   end
 
   @impl GenServer
-  def handle_info(Message.new(:push_mode_announcement, [], for_pad: ref) = msg, state) do
+  def handle_info(Message.new(:push_mode_announcement, [], for_pad: ref), state) do
     case PadController.enable_toilet_if_pull(ref, state) do
       {:ok, _state} = res ->
         noreply(res)
 
       {{:error, reason}, new_state} ->
-        handle_message_error(msg, :info, reason, new_state) |> noreply(state)
+        noreply({{:error, reason}, new_state}, state)
     end
   end
 
   @impl GenServer
-  def handle_info(Message.new(:handle_unlink, pad_ref) = msg, state) do
+  def handle_info(Message.new(:handle_unlink, pad_ref), state) do
     case PadController.handle_unlink(pad_ref, state) do
       {:ok, _state} = res ->
         noreply(res)
 
       {{:error, reason}, new_state} ->
-        handle_message_error(msg, :info, reason, new_state) |> noreply(state)
+        noreply({{:error, reason}, new_state}, state)
     end
   end
 
   @impl GenServer
-  def handle_info(Message.new(:timer_tick, timer_id) = msg, state) do
+  def handle_info(Message.new(:timer_tick, timer_id), state) do
     case TimerController.handle_tick(timer_id, state) do
       {:ok, _state} = res ->
         noreply(res, state)
 
       {{:error, reason}, new_state} ->
-        handle_message_error(msg, :info, reason, new_state) |> noreply(state)
+        noreply({{:error, reason}, new_state}, state)
     end
   end
 
@@ -235,7 +235,7 @@ defmodule Membrane.Core.Element do
   end
 
   def handle_info(Message.new(_, _, _) = message, state) do
-    handle_message_error(message, :info, {:invalid_message, message, mode: :info}, state)
+    {{:error, {:invalid_message, message, mode: :info}}, state}
     |> noreply(state)
   end
 
@@ -246,11 +246,7 @@ defmodule Membrane.Core.Element do
         noreply(res, state)
 
       {{:error, reason}, new_state} ->
-        handle_message_error(message, :info, reason, new_state) |> noreply(state)
+        noreply({{:error, reason}, new_state}, state)
     end
-  end
-
-  defp handle_message_error(_message, _mode, reason, state) do
-    {{:error, reason}, state}
   end
 end
