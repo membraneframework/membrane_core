@@ -141,16 +141,7 @@ defmodule Membrane.Core.Element do
         _from,
         state
       ) do
-    result =
-      with {{:ok, info}, new_state} <-
-             PadController.handle_link(direction, this, other, other_info, state) do
-        {{:ok, info}, new_state}
-      else
-        {{:error, reason}, new_state} ->
-          {{:error, reason}, new_state}
-      end
-
-    result |> reply(state)
+    PadController.handle_link(direction, this, other, other_info, state) |> reply(state)
   end
 
   @impl GenServer
@@ -181,46 +172,22 @@ defmodule Membrane.Core.Element do
   @impl GenServer
   def handle_info(Message.new(type, _args, _opts) = msg, state)
       when type in [:demand, :buffer, :caps, :event] do
-    case PlaybackBuffer.store(msg, state) do
-      {:ok, _state} = res ->
-        noreply(res)
-
-      {{:error, reason}, new_state} ->
-        noreply({{:error, reason}, new_state}, state)
-    end
+    PlaybackBuffer.store(msg, state) |> noreply(state)
   end
 
   @impl GenServer
   def handle_info(Message.new(:push_mode_announcement, [], for_pad: ref), state) do
-    case PadController.enable_toilet_if_pull(ref, state) do
-      {:ok, _state} = res ->
-        noreply(res)
-
-      {{:error, reason}, new_state} ->
-        noreply({{:error, reason}, new_state}, state)
-    end
+    PadController.enable_toilet_if_pull(ref, state) |> noreply(state)
   end
 
   @impl GenServer
   def handle_info(Message.new(:handle_unlink, pad_ref), state) do
-    case PadController.handle_unlink(pad_ref, state) do
-      {:ok, _state} = res ->
-        noreply(res)
-
-      {{:error, reason}, new_state} ->
-        noreply({{:error, reason}, new_state}, state)
-    end
+    PadController.handle_unlink(pad_ref, state) |> noreply(state)
   end
 
   @impl GenServer
   def handle_info(Message.new(:timer_tick, timer_id), state) do
-    case TimerController.handle_tick(timer_id, state) do
-      {:ok, _state} = res ->
-        noreply(res, state)
-
-      {{:error, reason}, new_state} ->
-        noreply({{:error, reason}, new_state}, state)
-    end
+    TimerController.handle_tick(timer_id, state) |> noreply(state)
   end
 
   @impl GenServer
@@ -241,12 +208,6 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_info(message, state) do
-    case LifecycleController.handle_other(message, state) do
-      {:ok, _state} = res ->
-        noreply(res, state)
-
-      {{:error, reason}, new_state} ->
-        noreply({{:error, reason}, new_state}, state)
-    end
+    LifecycleController.handle_other(message, state) |> noreply(state)
   end
 end
