@@ -123,6 +123,41 @@ defmodule Membrane.ParentSpec do
   clock. The pipeline clock is the default clock used by elements' timers.
   For more information see `Membrane.Element.Base.def_clock/1`.
 
+  # Crash Groups
+  Crash group is a logical entity that prevents the whole pipeline from crashing when one of its children crashes.
+  Internally crash groups utilizes process monitoring mechanism to detect child crash and thanks to that Membrane
+  doesn't influence value of `:trap_exit` flag.
+
+  ## Adding children to the Crash Group
+
+  ```elixir
+  children = %{
+    {:endpoint_bin, endpoint_id} => %EndpointBin{
+      # ...
+    }
+  }
+
+  spec = %ParentSpec{children: children, crash_group: {endpoint_id, :temporary}}
+  ```
+
+  Crash group is defined by two element tuple, first element is group id which is of type `Membrane.Crashgroup.name_t()`, and the second is a mode. Currently we support only
+  `:temporary` which means that membrane will not make any attempts to restart crashed child.
+
+  In above snippet we create a new children - EndpointBin and we add it to crash group with id `endpoint_id`. When EndpointBin crashes the whole pipeline will still be alive.
+
+  ## Handling crash of Crash Group
+  When some child in a crash group crashes the callback [`handle_crash_group_down/3`](https://hexdocs.pm/membrane_core/Membrane.Pipeline.html#c:handle_crash_group_down/3) is called.
+
+  ```elixir
+  @impl true
+  def handle_crash_group_down(crash_group_id, ctx, state) do
+    Membrane.Logger.info("Crash group: #{inspect(crash_group_id)} is down.")
+    # do some stuff
+  end
+  ```
+
+  ## Limitations
+  At this moment Crash Groups are only useful for elements with dynamic pads.
   """
 
   alias Membrane.{Child, Pad}
