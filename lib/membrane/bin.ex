@@ -144,7 +144,7 @@ defmodule Membrane.Bin do
   Callback invoked when bin receives a message that is not recognized
   as an internal membrane message.
 
-  Useful for receiving ticks from timer, data sent from NIFs or other stuff.
+  Useful for receiving data sent from NIFs or other stuff.
   """
   @callback handle_other(
               message :: any,
