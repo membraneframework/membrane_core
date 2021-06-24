@@ -4,8 +4,6 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
   import Membrane.Testing.Assertions
 
-  alias Membrane.Buffer
-  alias Membrane.Core.Element.PlaybackBuffer
   alias Membrane.Core.Message
   alias Membrane.Pipeline
   alias Membrane.Support.ChildRemovalTest

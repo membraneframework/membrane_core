@@ -116,7 +116,8 @@ defmodule Membrane.Core.Child.PadController do
     |> Enum.each(&Message.send(&1.pid, :push_mode_announcement, [], for_pad: &1.other_ref))
   end
 
-  @spec enable_toilet_if_pull(Pad.ref_t(), state_t()) :: {:ok, state_t()}
+  @spec enable_toilet_if_pull(Pad.ref_t(), state_t()) ::
+          {:ok, state_t()} | {{:error, reason :: any}, state_t()}
   def enable_toilet_if_pull(pad_ref, state) do
     case PadModel.get_data!(state, pad_ref, :mode) do
       :pull ->

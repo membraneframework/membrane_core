@@ -130,7 +130,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   @spec supply_demand(
           Pad.ref_t(),
           State.t()
-        ) :: State.stateful_try_t()
+        ) :: {:ok, State.t()} | {{:error, any()}, State.t()}
   def supply_demand(pad_ref, %State{supplying_demand?: true} = state) do
     state =
       state

@@ -224,13 +224,6 @@ defmodule Membrane.Integration.ChildCrashTest do
     pid
   end
 
-  defp get_pid_and_link(ref, pipeline_pid) do
-    state = :sys.get_state(pipeline_pid)
-    pid = state.children[ref].pid
-    :erlang.link(pid)
-    pid
-  end
-
   defp get_pid(ref, parent_pid) do
     state = :sys.get_state(parent_pid)
     state.children[ref].pid

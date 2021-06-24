@@ -256,14 +256,14 @@ defmodule Membrane.Core.ElementTest do
       Message.new(:abc, :def, for_pad: :input)
     ]
     |> Enum.each(fn msg ->
-      assert {:stop, {:error, {:cannot_handle_message, {:invalid_message, ^msg, _}, _}}, _state} =
+      assert {:stop, {:error, {:invalid_message, ^msg, _}}, _state} =
                Element.handle_info(msg, get_state())
 
-      assert {:reply, {:error, {:cannot_handle_message, {:invalid_message, ^msg, _}, _}}, _state} =
+      assert {:reply, {:error, {:invalid_message, ^msg, _}}, _state} =
                Element.handle_call(msg, nil, get_state())
     end)
 
-    assert {:reply, {:error, {:cannot_handle_message, {:invalid_message, :abc, _}, _}}, _state} =
+    assert {:reply, {:error, {:invalid_message, :abc, _}}, _state} =
              Element.handle_call(:abc, nil, get_state())
   end
 
