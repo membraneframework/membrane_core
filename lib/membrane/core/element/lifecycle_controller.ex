@@ -88,7 +88,6 @@ defmodule Membrane.Core.Element.LifecycleController do
       Membrane.Logger.debug("""
       Shutting down because of pipeline failure
       Reason: #{inspect(reason)}
-      State: #{inspect(state, pretty: true)}
       """)
     end
 
