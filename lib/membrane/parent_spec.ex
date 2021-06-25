@@ -151,8 +151,7 @@ defmodule Membrane.ParentSpec do
   ```elixir
   @impl true
   def handle_crash_group_down(crash_group_id, ctx, state) do
-    Membrane.Logger.info("Crash group: #{inspect(crash_group_id)} is down.")
-    # do some stuff
+    # do some stuff in reaction to crash of group with id crash_group_id
   end
   ```
 
