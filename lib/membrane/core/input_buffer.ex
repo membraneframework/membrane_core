@@ -112,7 +112,8 @@ defmodule Membrane.Core.InputBuffer do
   end
 
   @spec enable_toilet(t()) :: t()
-  def enable_toilet(buf), do: %__MODULE__{buf | toilet?: true}
+  def enable_toilet(%__MODULE__{} = buf), do: %__MODULE__{buf | toilet?: true}
+  def enable_toilet(nil), do: nil
 
   @spec store(t(), atom(), any()) :: t()
   def store(input_buf, type \\ :buffers, v)
@@ -327,4 +328,5 @@ defmodule Membrane.Core.InputBuffer do
 
   @spec empty?(t()) :: boolean()
   def empty?(%__MODULE__{current_size: size}), do: size == 0
+  def empty?(nil), do: true
 end

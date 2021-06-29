@@ -50,7 +50,8 @@ defmodule Membrane.Core.Element.State do
     :playback_buffer,
     :supplying_demand?,
     :delayed_demands,
-    :synchronization
+    :synchronization,
+    :demand_size
   ]
 
   @doc """
@@ -81,7 +82,8 @@ defmodule Membrane.Core.Element.State do
         clock: nil,
         stream_sync: options.sync,
         latency: 0
-      }
+      },
+      demand_size: 4000
     }
     |> PadSpecHandler.init_pads()
   end
