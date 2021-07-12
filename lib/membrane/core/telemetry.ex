@@ -12,16 +12,15 @@ defmodule Membrane.Core.Telemetry do
   @doc """
   Macro for reporting metrics.
 
-  Provided `calculate_measurement` is a function.
-
   Metrics are reported only when it is enabled in the application using Membrane Core.
   """
-  defmacro report_measurement(event_name, calculate_measurement) do
+  defmacro report_event(event_name, measurement) do
     if @enable_telemetry do
       quote do
         :telemetry.execute(
           unquote(event_name),
-          unquote(calculate_measurement).(),
+          # if(is_function(unquote(measurement)), do: unquote(measurement).(), else: unquote(measurement)),
+          unquote(measurement),
           %{}
         )
       end
@@ -30,7 +29,7 @@ defmodule Membrane.Core.Telemetry do
       quote do
         fn ->
           _unused = unquote(event_name)
-          _unused = unquote(calculate_measurement)
+          _unused = unquote(measurement)
         end
 
         :ok
@@ -43,43 +42,54 @@ defmodule Membrane.Core.Telemetry do
   """
   @spec report_metric(String.t(), integer(), String.t()) :: :ok
   def report_metric(metric, value, log_tag) do
-    calculate_measurement = fn ->
-      component_path = ComponentPath.get_formatted() <> "/" <> (log_tag || "")
-
+    report_event(
+      Telemetry.metric_event_name(),
       %{
-        component_path: component_path,
+        component_path: ComponentPath.get_formatted() <> "/" <> (log_tag || ""),
         metric: metric,
         value: value
       }
-    end
-
-    report_measurement(
-      Telemetry.metric_event_name(),
-      calculate_measurement
     )
   end
 
   @doc """
   Reports new link connection being initialized in pipeline.
   """
-  @spec report_new_link(Endpoint.t(), Endpoint.t()) :: :ok
-  def report_new_link(from, to) do
-    calculate_measurement = fn ->
-      %Endpoint{child: from_child, pad_ref: from_pad} = from
-      %Endpoint{child: to_child, pad_ref: to_pad} = to
-
+  @spec report_link(Endpoint.t(), Endpoint.t()) :: :ok
+  def report_link(from, to) do
+    report_event(
+      Telemetry.new_link_event_name(),
       %{
         parent_path: Membrane.ComponentPath.get_formatted(),
-        from: "#{inspect(from_child)}",
-        to: "#{inspect(to_child)}",
-        pad_from: "#{inspect(get_public_pad_name(from_pad))}",
-        pad_to: "#{inspect(get_public_pad_name(to_pad))}"
+        from: inspect(from.child),
+        to: inspect(to.child),
+        pad_from: get_public_pad_name(from.pad_ref) |> inspect(),
+        pad_to: get_public_pad_name(to.pad_ref) |> inspect()
       }
-    end
+    )
+  end
 
-    report_measurement(
-      Telemetry.new_link_event_name(),
-      calculate_measurement
+  @spec report_init(:pipeline | :bin | :element, ComponentPath.path_t()) :: :ok
+  def report_init(type, path) do
+    report_event(
+      case type do
+        :pipeline -> Telemetry.pipeline_init_event_name()
+        :bin -> Telemetry.bin_init_event_name()
+        :element -> Telemetry.element_init_event_name()
+      end,
+      %{path: ComponentPath.format(path)}
+    )
+  end
+
+  @spec report_terminate(:pipeline | :bin | :element, ComponentPath.path_t()) :: :ok
+  def report_terminate(type, path) do
+    report_event(
+      case type do
+        :pipeline -> Telemetry.pipeline_terminate_event_name()
+        :bin -> Telemetry.bin_terminate_event_name()
+        :element -> Telemetry.element_terminate_event_name()
+      end,
+      %{path: ComponentPath.format(path)}
     )
   end
 

@@ -4,16 +4,24 @@ defmodule Membrane.Core.Pipeline do
 
   alias __MODULE__.{ActionHandler, State}
   alias Membrane.Clock
+  alias Membrane.ComponentPath
   alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Parent.MessageDispatcher
+  alias Membrane.Core.Telemetry
 
   require Membrane.Logger
 
   @impl GenServer
   def init({module, pipeline_options}) do
+    # TODO: verify if this is event a valid approach to the problem
+    # - nonce to make sure that pipeline gets unique identifier between runs
+    nonce = :crypto.strong_rand_bytes(4) |> Base.encode64() |> String.trim_trailing("==")
     pipeline_name = "pipeline@#{:erlang.pid_to_list(self())}"
-    :ok = Membrane.ComponentPath.set([pipeline_name])
+    :ok = Membrane.ComponentPath.set(["(#{nonce}) " <> pipeline_name])
     :ok = Membrane.Logger.set_prefix(pipeline_name)
+
+    Telemetry.report_init(:pipeline, ComponentPath.get())
+
     {:ok, clock} = Clock.start_link(proxy: true)
 
     state = %State{
@@ -44,6 +52,8 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def terminate(reason, state) do
+    Telemetry.report_terminate(:pipeline, ComponentPath.get())
+
     :ok = state.module.handle_shutdown(reason, state.internal_state)
   end
 end
