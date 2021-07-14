@@ -15,7 +15,7 @@ defmodule Membrane.Core.Pipeline do
   def init({module, pipeline_options}) do
     # TODO: verify if this is event a valid approach to the problem
     # - nonce to make sure that pipeline gets unique identifier between runs
-    nonce = :crypto.strong_rand_bytes(4) |> Base.encode64() |> String.trim_trailing("==")
+    nonce = :crypto.strong_rand_bytes(4) |> Base.encode64() |> String.trim_trailing("==") |> String.replace("/", "")
     pipeline_name = "pipeline@#{:erlang.pid_to_list(self())}"
     :ok = Membrane.ComponentPath.set(["(#{nonce}) " <> pipeline_name])
     :ok = Membrane.Logger.set_prefix(pipeline_name)
