@@ -40,13 +40,13 @@ defmodule Membrane.Core.Telemetry do
   @doc """
   Reports metrics such as input buffer's size inside functions, incoming events and received caps.
   """
-  @spec report_metric(String.t(), integer(), String.t()) :: :ok
-  def report_metric(metric, value, log_tag) do
+  @spec report_metric(atom(), integer(), String.t() | nil) :: :ok
+  def report_metric(metric, value, log_tag \\ nil) do
     report_event(
       Telemetry.metric_event_name(),
       %{
         component_path: ComponentPath.get_formatted() <> "/" <> (log_tag || ""),
-        metric: metric,
+        metric: Atom.to_string(metric),
         value: value
       }
     )
