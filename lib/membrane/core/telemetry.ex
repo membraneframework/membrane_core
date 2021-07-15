@@ -69,27 +69,27 @@ defmodule Membrane.Core.Telemetry do
     )
   end
 
-  @spec report_init(:pipeline | :bin | :element, ComponentPath.path_t()) :: :ok
-  def report_init(type, path) do
+  @spec report_init(:pipeline | :bin | :element) :: :ok
+  def report_init(type) do
     report_event(
       case type do
         :pipeline -> Telemetry.pipeline_init_event_name()
         :bin -> Telemetry.bin_init_event_name()
         :element -> Telemetry.element_init_event_name()
       end,
-      %{path: ComponentPath.format(path)}
+      %{path: ComponentPath.get_formatted()}
     )
   end
 
-  @spec report_terminate(:pipeline | :bin | :element, ComponentPath.path_t()) :: :ok
-  def report_terminate(type, path) do
+  @spec report_terminate(:pipeline | :bin | :element) :: :ok
+  def report_terminate(type) do
     report_event(
       case type do
         :pipeline -> Telemetry.pipeline_terminate_event_name()
         :bin -> Telemetry.bin_terminate_event_name()
         :element -> Telemetry.element_terminate_event_name()
       end,
-      %{path: ComponentPath.format(path)}
+      %{path: ComponentPath.get_formatted()}
     )
   end
 

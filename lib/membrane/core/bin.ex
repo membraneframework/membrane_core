@@ -82,7 +82,7 @@ defmodule Membrane.Core.Bin do
     Logger.metadata(log_metadata)
     :ok = ComponentPath.set_and_append(log_metadata[:parent_path] || [], name_str <> " bin")
 
-    Telemetry.report_init(:bin, ComponentPath.get())
+    Telemetry.report_init(:bin)
 
     clock_proxy = Membrane.Clock.start_link(proxy: true) ~> ({:ok, pid} -> pid)
     clock = if Bunch.Module.check_behaviour(module, :membrane_clock?), do: clock_proxy, else: nil
@@ -174,7 +174,7 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def terminate(reason, state) do
-    Telemetry.report_terminate(:bin, ComponentPath.get())
+    Telemetry.report_terminate(:bin)
 
     :ok = state.module.handle_shutdown(reason, state.internal_state)
   end

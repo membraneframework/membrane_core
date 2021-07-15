@@ -100,7 +100,7 @@ defmodule Membrane.Core.Element do
 
     :ok = ComponentPath.set_and_append(options.log_metadata[:parent_path] || [], name_str)
 
-    Telemetry.report_init(:element, ComponentPath.get())
+    Telemetry.report_init(:element)
 
     state =
       options
@@ -117,7 +117,7 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def terminate(reason, state) do
-    Telemetry.report_terminate(:element, ComponentPath.get())
+    Telemetry.report_terminate(:element)
 
     {:ok, _state} = LifecycleController.handle_shutdown(reason, state)
 

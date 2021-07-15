@@ -20,7 +20,7 @@ defmodule Membrane.Core.Pipeline do
     :ok = Membrane.ComponentPath.set(["(#{nonce}) " <> pipeline_name])
     :ok = Membrane.Logger.set_prefix(pipeline_name)
 
-    Telemetry.report_init(:pipeline, ComponentPath.get())
+    Telemetry.report_init(:pipeline)
 
     {:ok, clock} = Clock.start_link(proxy: true)
 
@@ -52,7 +52,7 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def terminate(reason, state) do
-    Telemetry.report_terminate(:pipeline, ComponentPath.get())
+    Telemetry.report_terminate(:pipeline)
 
     :ok = state.module.handle_shutdown(reason, state.internal_state)
   end
