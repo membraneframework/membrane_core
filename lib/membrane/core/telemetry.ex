@@ -19,7 +19,6 @@ defmodule Membrane.Core.Telemetry do
       quote do
         :telemetry.execute(
           unquote(event_name),
-          # if(is_function(unquote(measurement)), do: unquote(measurement).(), else: unquote(measurement)),
           unquote(measurement),
           %{}
         )
@@ -48,6 +47,27 @@ defmodule Membrane.Core.Telemetry do
         component_path: ComponentPath.get_formatted() <> "/" <> (log_tag || ""),
         metric: Atom.to_string(metric),
         value: value
+      }
+    )
+  end
+
+  @doc """
+  Given list of buffers (or a single buffer) calculates total size of their payloads in bits
+  and reports it.
+  """
+  @spec report_bitrate([Membrane.Buffer.t()] | Membrane.Buffer.t()) :: :ok
+  def report_bitrate(buffers) do
+    report_event(
+      Telemetry.metric_event_name(),
+      %{
+        component_path: ComponentPath.get_formatted() <> "/",
+        metric: "bitrate",
+        value:
+          8 * if is_list(buffers) do
+            Enum.reduce(buffers, 0, &(Membrane.Payload.size(&1.payload) + &2))
+          else
+            Membrane.Payload.size(buffers.payload)
+          end
       }
     )
   end

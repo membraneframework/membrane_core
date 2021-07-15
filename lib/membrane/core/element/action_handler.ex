@@ -80,10 +80,9 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp do_handle_action({:buffer, {pad_ref, buffers}}, cb, _params, %State{type: type} = state)
        when type in [:source, :filter] and is_pad_ref(pad_ref) do
 
-    # all this telemetry seems soo expensive..
     Telemetry.report_metric(:buffer, if(is_list(buffers), do: length(buffers), else: 1))
-    Telemetry.report_metric(:bitrate, 8 * if(is_list(buffers), do: Enum.reduce(buffers, 0, &(byte_size(&1.payload) + &2)), else: byte_size(buffers.payload)))
     Telemetry.report_metric(:queue_len, :erlang.process_info(self(), :message_queue_len) |> elem(1))
+    Telemetry.report_bitrate(buffers)
 
     send_buffer(pad_ref, buffers, cb, state)
   end

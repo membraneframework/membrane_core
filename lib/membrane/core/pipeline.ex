@@ -4,7 +4,6 @@ defmodule Membrane.Core.Pipeline do
 
   alias __MODULE__.{ActionHandler, State}
   alias Membrane.Clock
-  alias Membrane.ComponentPath
   alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Parent.MessageDispatcher
   alias Membrane.Core.Telemetry
