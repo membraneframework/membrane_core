@@ -79,9 +79,13 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp do_handle_action({:buffer, {pad_ref, buffers}}, cb, _params, %State{type: type} = state)
        when type in [:source, :filter] and is_pad_ref(pad_ref) do
-
     Telemetry.report_metric(:buffer, if(is_list(buffers), do: length(buffers), else: 1))
-    Telemetry.report_metric(:queue_len, :erlang.process_info(self(), :message_queue_len) |> elem(1))
+
+    Telemetry.report_metric(
+      :queue_len,
+      :erlang.process_info(self(), :message_queue_len) |> elem(1)
+    )
+
     Telemetry.report_bitrate(buffers)
 
     send_buffer(pad_ref, buffers, cb, state)

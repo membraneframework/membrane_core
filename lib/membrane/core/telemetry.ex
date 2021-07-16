@@ -63,11 +63,12 @@ defmodule Membrane.Core.Telemetry do
         component_path: ComponentPath.get_formatted() <> "/",
         metric: "bitrate",
         value:
-          8 * if is_list(buffers) do
-            Enum.reduce(buffers, 0, &(Membrane.Payload.size(&1.payload) + &2))
-          else
-            Membrane.Payload.size(buffers.payload)
-          end
+          8 *
+            if is_list(buffers) do
+              Enum.reduce(buffers, 0, &(Membrane.Payload.size(&1.payload) + &2))
+            else
+              Membrane.Payload.size(buffers.payload)
+            end
       }
     )
   end
