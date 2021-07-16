@@ -55,6 +55,7 @@ defmodule Membrane.Telemetry do
         }
 
   @spec metric_event_name() :: event_name_t()
+  @compile {:inline, metric_event_name: 0}
   def metric_event_name, do: [:membrane, :metric, :value]
 
   @typedoc """
@@ -73,14 +74,30 @@ defmodule Membrane.Telemetry do
         }
 
   @spec new_link_event_name() :: event_name_t()
+  @compile {:inline, new_link_event_name: 0}
   def new_link_event_name, do: [:membrane, :link, :new]
 
-  [:pipeline, :bin, :element]
-  |> Enum.each(fn type ->
-    @spec unquote(:"#{type}_init_event_name")() :: event_name_t()
-    def unquote(:"#{type}_init_event_name")(), do: [:membrane, unquote(type), :init]
+  @spec pipeline_init_event_name() :: event_name_t()
+  @compile {:inline, pipeline_init_event_name: 0}
+  def pipeline_init_event_name(), do: [:membrane, :pipeline, :init]
 
-    @spec unquote(:"#{type}_terminate_event_name")() :: event_name_t()
-    def unquote(:"#{type}_terminate_event_name")(), do: [:membrane, unquote(type), :terminate]
-  end)
+  @spec pipeline_terminate_event_name() :: event_name_t()
+  @compile {:inline, pipeline_terminate_event_name: 0}
+  def pipeline_terminate_event_name(), do: [:membrane, :pipeline, :terminate]
+
+  @spec bin_init_event_name() :: event_name_t()
+  @compile {:inline, bin_init_event_name: 0}
+  def bin_init_event_name(), do: [:membrane, :bin, :init]
+
+  @spec bin_terminate_event_name() :: event_name_t()
+  @compile {:inline, bin_terminate_event_name: 0}
+  def bin_terminate_event_name(), do: [:membrane, :_terminate, :terminate]
+
+  @spec element_init_event_name() :: event_name_t()
+  @compile {:inline, element_init_event_name: 0}
+  def element_init_event_name(), do: [:membrane, :element, :init]
+
+  @spec element_terminate_event_name() :: event_name_t()
+  @compile {:inline, element_terminate_event_name: 0}
+  def element_terminate_event_name(), do: [:membrane, :element, :terminate]
 end
