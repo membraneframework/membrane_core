@@ -10,6 +10,24 @@ defmodule Membrane.ComponentPath do
   @key :membrane_path
 
   @doc """
+  Prepends a nonce string to given name and initializes the current path.
+
+  Nonce is used to guarantee path uniqueness between different application runs.
+  Prepended nonce is of format '([A-Za-z0-9+]) '.
+  """
+  @spec init_with_nonce(String.t()) :: :ok
+  def init_with_nonce(name) do
+    nonce =
+      :crypto.strong_rand_bytes(4)
+      |> Base.encode64()
+      |> String.trim_trailing("==")
+      |> String.replace("/", "O")
+
+    Process.put(@key, ["(#{nonce}) #{name}"])
+    :ok
+  end
+
+  @doc """
   Appends given name to the current path.
 
   If path has not been previously set then creates new one with given name.

@@ -16,7 +16,15 @@ defmodule Membrane.Telemetry do
         * Metadata: `%{}`
 
     * `[:membrane, :link, :new]` - to report new link connection being initialized in pipeline.
-        * Measurement: `t:new_link_event_value_t/0`
+        * Measurement: `t:link_event_value_t/0`
+        * Metadata: `%{}`
+
+    * `[:membrane, :pipeline | :bin | :element, :init]` - to report pipeline/element/bin initialization
+        * Measurement: `t:init_or_terminate_event_value_t/0`
+        * Metadata: `%{}`
+
+    * `[:membrane, :pipeline | :bin | :element, :terminate]` - to report pipeline/element/bin termination
+        * Measurement: `t:init_or_terminate_event_value_t/0`
         * Metadata: `%{}`
 
   The measurements are reported only when application using Membrane Core specifies following in compile-time config file:
@@ -39,7 +47,15 @@ defmodule Membrane.Telemetry do
           value: integer()
         }
 
+  @typedoc """
+  * path - element's path
+  """
+  @type init_or_terminate_event_value_t :: %{
+          path: Membrane.ComponentPath.path_t()
+        }
+
   @spec metric_event_name() :: event_name_t()
+  @compile {:inline, metric_event_name: 0}
   def metric_event_name, do: [:membrane, :metric, :value]
 
   @typedoc """
@@ -49,7 +65,7 @@ defmodule Membrane.Telemetry do
   * pad_from - from's pad name
   * pad_to - to's pad name
   """
-  @type new_link_event_value_t :: %{
+  @type link_event_value_t :: %{
           parent_path: String.t(),
           from: String.t(),
           to: String.t(),
@@ -58,5 +74,30 @@ defmodule Membrane.Telemetry do
         }
 
   @spec new_link_event_name() :: event_name_t()
+  @compile {:inline, new_link_event_name: 0}
   def new_link_event_name, do: [:membrane, :link, :new]
+
+  @spec pipeline_init_event_name() :: event_name_t()
+  @compile {:inline, pipeline_init_event_name: 0}
+  def pipeline_init_event_name(), do: [:membrane, :pipeline, :init]
+
+  @spec pipeline_terminate_event_name() :: event_name_t()
+  @compile {:inline, pipeline_terminate_event_name: 0}
+  def pipeline_terminate_event_name(), do: [:membrane, :pipeline, :terminate]
+
+  @spec bin_init_event_name() :: event_name_t()
+  @compile {:inline, bin_init_event_name: 0}
+  def bin_init_event_name(), do: [:membrane, :bin, :init]
+
+  @spec bin_terminate_event_name() :: event_name_t()
+  @compile {:inline, bin_terminate_event_name: 0}
+  def bin_terminate_event_name(), do: [:membrane, :_terminate, :terminate]
+
+  @spec element_init_event_name() :: event_name_t()
+  @compile {:inline, element_init_event_name: 0}
+  def element_init_event_name(), do: [:membrane, :element, :init]
+
+  @spec element_terminate_event_name() :: event_name_t()
+  @compile {:inline, element_terminate_event_name: 0}
+  def element_terminate_event_name(), do: [:membrane, :element, :terminate]
 end
