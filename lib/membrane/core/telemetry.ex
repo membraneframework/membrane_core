@@ -55,7 +55,7 @@ defmodule Membrane.Core.Telemetry do
   Given list of buffers (or a single buffer) calculates total size of their payloads in bits
   and reports it.
   """
-  @spec report_bitrate([Membrane.Buffer.t()] | Membrane.Buffer.t()) :: :ok
+  @spec report_bitrate(buffers :: any()) :: :ok
   def report_bitrate(buffers) do
     report_event(
       Telemetry.metric_event_name(),
@@ -114,7 +114,8 @@ defmodule Membrane.Core.Telemetry do
     )
   end
 
-  defp get_public_pad_name(pad) do
+  @spec get_public_pad_name(Membrane.Pad.ref_t()) :: Membrane.Pad.ref_t()
+  def get_public_pad_name(pad) do
     case pad do
       {:private, direction} -> direction
       {Membrane.Pad, {:private, direction}, ref} -> {Membrane.Pad, direction, ref}
