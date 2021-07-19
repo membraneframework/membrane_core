@@ -13,7 +13,7 @@ defmodule Membrane.Core.Pipeline do
   @impl GenServer
   def init({module, pipeline_options}) do
     pipeline_name = "pipeline@#{:erlang.pid_to_list(self())}"
-    :ok = Membrane.ComponentPath.init_with_nonce(pipeline_name)
+    :ok = Membrane.ComponentPath.set([pipeline_name])
     :ok = Membrane.Logger.set_prefix(pipeline_name)
 
     Telemetry.report_init(:pipeline)

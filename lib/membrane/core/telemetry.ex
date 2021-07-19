@@ -3,7 +3,6 @@ defmodule Membrane.Core.Telemetry do
 
   alias Membrane.ComponentPath
   alias Membrane.Core.Parent.Link.Endpoint
-  alias Membrane.Telemetry
 
   require Membrane.Pad
 
@@ -42,7 +41,7 @@ defmodule Membrane.Core.Telemetry do
   @spec report_metric(atom(), integer(), String.t() | nil) :: :ok
   def report_metric(metric, value, log_tag \\ nil) do
     report_event(
-      Telemetry.metric_event_name(),
+      [:membrane, :metric, :value],
       %{
         component_path: ComponentPath.get_formatted() <> "/" <> (log_tag || ""),
         metric: Atom.to_string(metric),
@@ -55,20 +54,14 @@ defmodule Membrane.Core.Telemetry do
   Given list of buffers (or a single buffer) calculates total size of their payloads in bits
   and reports it.
   """
-  @spec report_bitrate(buffers :: any()) :: :ok
+  @spec report_bitrate(buffers :: [Membrane.Buffer.t()]) :: :ok
   def report_bitrate(buffers) do
     report_event(
-      Telemetry.metric_event_name(),
+      [:membrane, :metric, :value],
       %{
         component_path: ComponentPath.get_formatted() <> "/",
         metric: "bitrate",
-        value:
-          8 *
-            if is_list(buffers) do
-              Enum.reduce(buffers, 0, &(Membrane.Payload.size(&1.payload) + &2))
-            else
-              Membrane.Payload.size(buffers.payload)
-            end
+        value: 8 * Enum.reduce(buffers, 0, &(Membrane.Payload.size(&1.payload) + &2))
       }
     )
   end
@@ -79,7 +72,7 @@ defmodule Membrane.Core.Telemetry do
   @spec report_link(Endpoint.t(), Endpoint.t()) :: :ok
   def report_link(from, to) do
     report_event(
-      Telemetry.new_link_event_name(),
+      [:membrane, :link, :new],
       %{
         parent_path: Membrane.ComponentPath.get_formatted(),
         from: inspect(from.child),
@@ -91,25 +84,17 @@ defmodule Membrane.Core.Telemetry do
   end
 
   @spec report_init(:pipeline | :bin | :element) :: :ok
-  def report_init(type) do
+  def report_init(type) when type in [:pipeline, :bin, :element] do
     report_event(
-      case type do
-        :pipeline -> Telemetry.pipeline_init_event_name()
-        :bin -> Telemetry.bin_init_event_name()
-        :element -> Telemetry.element_init_event_name()
-      end,
+      [:membrane, type, :init],
       %{path: ComponentPath.get_formatted()}
     )
   end
 
   @spec report_terminate(:pipeline | :bin | :element) :: :ok
-  def report_terminate(type) do
+  def report_terminate(type) when type in [:pipeline, :bin, :element] do
     report_event(
-      case type do
-        :pipeline -> Telemetry.pipeline_terminate_event_name()
-        :bin -> Telemetry.bin_terminate_event_name()
-        :element -> Telemetry.element_terminate_event_name()
-      end,
+      [:membrane, type, :terminate],
       %{path: ComponentPath.get_formatted()}
     )
   end

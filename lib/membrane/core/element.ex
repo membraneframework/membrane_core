@@ -27,6 +27,7 @@ defmodule Membrane.Core.Element do
   alias Membrane.Core.Child.PadController
 
   require Membrane.Core.Message
+  require Membrane.Core.Telemetry
   require Membrane.Logger
 
   @type options_t :: %{
@@ -212,6 +213,11 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_info(message, state) do
+    Telemetry.report_metric(
+      :queue_len,
+      :erlang.process_info(self(), :message_queue_len) |> elem(1)
+    )
+
     LifecycleController.handle_other(message, state) |> noreply(state)
   end
 end

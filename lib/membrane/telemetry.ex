@@ -54,10 +54,6 @@ defmodule Membrane.Telemetry do
           path: Membrane.ComponentPath.path_t()
         }
 
-  @spec metric_event_name() :: event_name_t()
-  @compile {:inline, metric_event_name: 0}
-  def metric_event_name, do: [:membrane, :metric, :value]
-
   @typedoc """
   * parent_path - process path of link's parent
   * from - from element name
@@ -72,32 +68,4 @@ defmodule Membrane.Telemetry do
           pad_from: String.t(),
           pad_to: String.t()
         }
-
-  @spec new_link_event_name() :: event_name_t()
-  @compile {:inline, new_link_event_name: 0}
-  def new_link_event_name, do: [:membrane, :link, :new]
-
-  @spec pipeline_init_event_name() :: event_name_t()
-  @compile {:inline, pipeline_init_event_name: 0}
-  def pipeline_init_event_name(), do: [:membrane, :pipeline, :init]
-
-  @spec pipeline_terminate_event_name() :: event_name_t()
-  @compile {:inline, pipeline_terminate_event_name: 0}
-  def pipeline_terminate_event_name(), do: [:membrane, :pipeline, :terminate]
-
-  @spec bin_init_event_name() :: event_name_t()
-  @compile {:inline, bin_init_event_name: 0}
-  def bin_init_event_name(), do: [:membrane, :bin, :init]
-
-  @spec bin_terminate_event_name() :: event_name_t()
-  @compile {:inline, bin_terminate_event_name: 0}
-  def bin_terminate_event_name(), do: [:membrane, :_terminate, :terminate]
-
-  @spec element_init_event_name() :: event_name_t()
-  @compile {:inline, element_init_event_name: 0}
-  def element_init_event_name(), do: [:membrane, :element, :init]
-
-  @spec element_terminate_event_name() :: event_name_t()
-  @compile {:inline, element_terminate_event_name: 0}
-  def element_terminate_event_name(), do: [:membrane, :element, :terminate]
 end
