@@ -9,6 +9,7 @@ defmodule Membrane.Core.Element.BufferController do
   alias Membrane.Core.{CallbackHandler, InputBuffer}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{ActionHandler, DemandHandler, State}
+  alias Membrane.Core.Telemetry
   alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel
@@ -53,6 +54,9 @@ defmodule Membrane.Core.Element.BufferController do
 
   def exec_buffer_handler(pad_ref, buffers, params, %State{type: :sink} = state) do
     require CallbackContext.Write
+
+    Telemetry.report_metric(:buffer, length(List.wrap(buffers)))
+    Telemetry.report_bitrate(buffers)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_write_list,

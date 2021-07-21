@@ -38,6 +38,7 @@ defmodule Membrane.Core.Telemetry do
   @doc """
   Reports metrics such as input buffer's size inside functions, incoming events and received caps.
   """
+  @compile {:inline, report_metric: 3}
   @spec report_metric(atom(), integer(), String.t() | nil) :: :ok
   def report_metric(metric, value, log_tag \\ nil) do
     report_event(
@@ -54,14 +55,15 @@ defmodule Membrane.Core.Telemetry do
   Given list of buffers (or a single buffer) calculates total size of their payloads in bits
   and reports it.
   """
-  @spec report_bitrate(buffers :: [Membrane.Buffer.t()]) :: :ok
+  @compile {:inline, report_bitrate: 1}
+  @spec report_bitrate(buffers :: [Membrane.Buffer.t()] | Membrane.Buffer.t()) :: :ok
   def report_bitrate(buffers) do
     report_event(
       [:membrane, :metric, :value],
       %{
         component_path: ComponentPath.get_formatted() <> "/",
         metric: "bitrate",
-        value: 8 * Enum.reduce(buffers, 0, &(Membrane.Payload.size(&1.payload) + &2))
+        value: 8 * Enum.reduce(List.wrap(buffers), 0, &(Membrane.Payload.size(&1.payload) + &2))
       }
     )
   end
@@ -69,6 +71,7 @@ defmodule Membrane.Core.Telemetry do
   @doc """
   Reports new link connection being initialized in pipeline.
   """
+  @compile {:inline, report_link: 2}
   @spec report_link(Endpoint.t(), Endpoint.t()) :: :ok
   def report_link(from, to) do
     report_event(
@@ -83,6 +86,7 @@ defmodule Membrane.Core.Telemetry do
     )
   end
 
+  @compile {:inline, report_init: 1}
   @spec report_init(:pipeline | :bin | :element) :: :ok
   def report_init(type) when type in [:pipeline, :bin, :element] do
     report_event(
@@ -91,6 +95,7 @@ defmodule Membrane.Core.Telemetry do
     )
   end
 
+  @compile {:inline, report_terminate: 1}
   @spec report_terminate(:pipeline | :bin | :element) :: :ok
   def report_terminate(type) when type in [:pipeline, :bin, :element] do
     report_event(
