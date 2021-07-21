@@ -169,55 +169,54 @@ defmodule Membrane.Core.Element do
   end
 
   @impl GenServer
-  def handle_info(Message.new(:change_playback_state, new_playback_state), state) do
-    PlaybackHandler.change_playback_state(new_playback_state, LifecycleController, state)
-    |> noreply(state)
-  end
-
-  @impl GenServer
-  def handle_info(Message.new(type, _args, _opts) = msg, state)
-      when type in [:demand, :buffer, :caps, :event] do
-    PlaybackBuffer.store(msg, state) |> noreply(state)
-  end
-
-  @impl GenServer
-  def handle_info(Message.new(:push_mode_announcement, [], for_pad: ref), state) do
-    PadController.enable_toilet_if_pull(ref, state) |> noreply(state)
-  end
-
-  @impl GenServer
-  def handle_info(Message.new(:handle_unlink, pad_ref), state) do
-    PadController.handle_unlink(pad_ref, state) |> noreply(state)
-  end
-
-  @impl GenServer
-  def handle_info(Message.new(:timer_tick, timer_id), state) do
-    TimerController.handle_tick(timer_id, state) |> noreply(state)
-  end
-
-  @impl GenServer
-  def handle_info({:membrane_clock_ratio, clock, ratio}, state) do
-    TimerController.handle_clock_update(clock, ratio, state) |> noreply()
-  end
-
-  @impl GenServer
-  def handle_info(Message.new(:log_metadata, metadata), state) do
-    :ok = Logger.metadata(metadata)
-    noreply({:ok, state})
-  end
-
-  def handle_info(Message.new(_, _, _) = message, state) do
-    {{:error, {:invalid_message, message, mode: :info}}, state}
-    |> noreply(state)
-  end
-
-  @impl GenServer
   def handle_info(message, state) do
     Telemetry.report_metric(
       :queue_len,
       :erlang.process_info(self(), :message_queue_len) |> elem(1)
     )
 
+    do_handle_info(message, state)
+  end
+
+  @compile {:inline, do_handle_info: 2}
+
+  defp do_handle_info(Message.new(:change_playback_state, new_playback_state), state) do
+    PlaybackHandler.change_playback_state(new_playback_state, LifecycleController, state)
+    |> noreply(state)
+  end
+
+  defp do_handle_info(Message.new(type, _args, _opts) = msg, state)
+       when type in [:demand, :buffer, :caps, :event] do
+    PlaybackBuffer.store(msg, state) |> noreply(state)
+  end
+
+  defp do_handle_info(Message.new(:push_mode_announcement, [], for_pad: ref), state) do
+    PadController.enable_toilet_if_pull(ref, state) |> noreply(state)
+  end
+
+  defp do_handle_info(Message.new(:handle_unlink, pad_ref), state) do
+    PadController.handle_unlink(pad_ref, state) |> noreply(state)
+  end
+
+  defp do_handle_info(Message.new(:timer_tick, timer_id), state) do
+    TimerController.handle_tick(timer_id, state) |> noreply(state)
+  end
+
+  defp do_handle_info({:membrane_clock_ratio, clock, ratio}, state) do
+    TimerController.handle_clock_update(clock, ratio, state) |> noreply()
+  end
+
+  defp do_handle_info(Message.new(:log_metadata, metadata), state) do
+    :ok = Logger.metadata(metadata)
+    noreply({:ok, state})
+  end
+
+  defp do_handle_info(Message.new(_, _, _) = message, state) do
+    {{:error, {:invalid_message, message, mode: :info}}, state}
+    |> noreply(state)
+  end
+
+  defp do_handle_info(message, state) do
     LifecycleController.handle_other(message, state) |> noreply(state)
   end
 end
