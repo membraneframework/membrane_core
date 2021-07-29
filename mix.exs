@@ -63,7 +63,7 @@ defmodule Membrane.Mixfile do
         Membrane.Testing
       ],
       groups_for_modules: [
-        Pipeline: [~r/^Membrane\.Pipeline($|\.)/],
+        Pipeline: [~r/^Membrane\.Pipeline($|\.)/, ~r/^Membrane\.(CrashGroup)($|\.)/],
         Bin: [~r/^Membrane\.Bin($|\.)/],
         Element: [
           ~r/^Membrane\.Filter($|\.)/,
@@ -77,7 +77,6 @@ defmodule Membrane.Mixfile do
         Communication: [
           ~r/^Membrane\.(Buffer|Payload|Caps|Event|EventProtocol|Notification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
         ],
-        "Fault tolerance": [~r/^Membrane\.(CrashGroup)($|\.)/],
         Logging: [~r/^Membrane\.Logger($|\.)/],
         Testing: [~r/^Membrane\.Testing($|\.)/],
         Utils: [

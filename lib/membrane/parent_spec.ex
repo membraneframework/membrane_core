@@ -1,6 +1,6 @@
 defmodule Membrane.ParentSpec do
   @moduledoc """
-  Structure representing topology of a pipeline/bin.
+  Structure representing the topology of a pipeline/bin.
 
   It can be incorporated into a pipeline or a bin by returning
   `t:Membrane.Pipeline.Action.spec_t/0` or `t:Membrane.Bin.Action.spec_t/0`
@@ -26,9 +26,9 @@ defmodule Membrane.ParentSpec do
   ## Links
 
   Links that should be made when the children are spawned can be defined with the
-  `:links` field. Links can be defined with use of `link/1` and `to/2` functions
-  that allow to specify elements linked, and `via_in/2` and `via_out/2` that allow
-  to specify pads' names and parameters. If pads are not specified, name `:input`
+  `:links` field. Links can be defined with the use of `link/1` and `to/2` functions
+  that allow specifying elements linked, and `via_in/2` and `via_out/2` that allow
+  specifying pads' names and parameters. If pads are not specified, name `:input`
   is assumed for inputs and `:output` for outputs.
 
   Sample definition:
@@ -65,8 +65,8 @@ defmodule Membrane.ParentSpec do
 
   ### Bins
 
-  For bins boundaries there are special links allowed. User should define links
-  between bin's input and first child's input (input-input type) and last
+  For bins boundaries, there are special links allowed. The user should define links
+  between the bin's input and the first child's input (input-input type) and last
   child's output and bin output (output-output type). In this case, `link_bin_input/2`
   and `to_bin_output/3` should be used.
 
@@ -78,10 +78,10 @@ defmodule Membrane.ParentSpec do
 
   ### Dynamic pads
 
-  In most cases dynamic pads can be linked the same way as static ones, although
-  in the following situations exact pad reference must be passed instead of a name:
+  In most cases, dynamic pads can be linked the same way as static ones, although
+  in the following situations, exact pad reference must be passed instead of a name:
 
-  - When that reference is needed later, for example to handle a notification related
+  - When that reference is needed later, for example, to handle a notification related
   to that particular pad instance
 
         pad = Pad.ref(:output, make_ref())
@@ -102,8 +102,8 @@ defmodule Membrane.ParentSpec do
 
   `:stream_sync` field can be used for specifying elements that should start playing
   at the same moment. An example can be audio and video player sinks. This option
-  accepts either `:sinks` atom or list of groups (lists) of elements. Passing `:sinks`
-  results in synchronizing all sinks in the pipeline, while passing list of groups
+  accepts either `:sinks` atom or a list of groups (lists) of elements. Passing `:sinks`
+  results in synchronizing all sinks in the pipeline, while passing a list of groups
   of elements synchronizes all elements in each group. It is worth mentioning
   that to keep the stream synchronized all involved elements need to rely on
   the same clock.
@@ -119,15 +119,15 @@ defmodule Membrane.ParentSpec do
 
   ## Clock provider
 
-  Clock provider is an element that exports clock that should be used as the pipeline
+  A clock provider is an element that exports a clock that should be used as the pipeline
   clock. The pipeline clock is the default clock used by elements' timers.
   For more information see `Membrane.Element.Base.def_clock/1`.
 
-  ## Crash Groups
-  The crash group is a logical entity that prevents the whole pipeline from crashing when one of
+  ## Crash groups
+  A crash group is a logical entity that prevents the whole pipeline from crashing when one of
   its children crash.
 
-  ## Adding children to the Crash Group
+  ### Adding children to a crash group
 
   ```elixir
   children = %{
@@ -142,7 +142,7 @@ defmodule Membrane.ParentSpec do
   spec = %ParentSpec{children: children, crash_group: {group_id, :temporary}}
   ```
 
-  The crash group is defined by two-element tuple, first element is an ID which is of type
+  The crash group is defined by a two-element tuple, first element is an ID which is of type
   `Membrane.CrashGroup.name_t()`, and the second is a mode. Currently, we support only
   `:temporary` mode which means that Membrane will not make any attempts to restart crashed child.
 
@@ -150,8 +150,11 @@ defmodule Membrane.ParentSpec do
   to the crash group with id `group_id`. Crash of `:some_element_1` or `:some_element_2` propagates
   only to the rest of the members of the crash group and the pipeline stays alive.
 
-  ## Handling crash of Crash Group
-  When any of the members of the crash group go down the callback:
+  Currently, crash group covers all children within one or more `ParentSpec`s.
+
+  ### Handling crash of a crash group
+
+  When any of the members of the crash group goes down, the callback:
   [`handle_crash_group_down/3`](https://hexdocs.pm/membrane_core/Membrane.Pipeline.html#c:handle_crash_group_down/3)
   is called.
 
@@ -162,9 +165,10 @@ defmodule Membrane.ParentSpec do
   end
   ```
 
-  ## Limitations
-  At this moment Crash Groups are only useful for elements with dynamic pads.
-  Crash groups works only in pipelines and are not supported in bins.
+  ### Limitations
+
+  At this moment crash groups are only useful for elements with dynamic pads.
+  Crash groups work only in pipelines and are not supported in bins.
   """
 
   alias Membrane.{Child, Pad}
