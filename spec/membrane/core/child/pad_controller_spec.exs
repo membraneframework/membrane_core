@@ -39,19 +39,6 @@ defmodule Membrane.Core.Child.PadControllerSpec do
         |> to(match_pattern {{:ok, ^pad_info}, _})
       end
 
-      it "should remove given pad from pads.info" do
-        {{:ok, _info}, new_state} =
-          described_module().handle_link(
-            direction(),
-            %{pad_ref: pad_ref(), pid: self(), pad_props: props()},
-            %{pad_ref: other_ref(), pid: self()},
-            other_info(),
-            state()
-          )
-
-        expect(new_state.pads.info |> Map.has_key?(pad_name())) |> to(eq false)
-      end
-
       it "should not modify state except pads list" do
         {{:ok, _info}, new_state} =
           described_module().handle_link(
