@@ -291,9 +291,7 @@ defmodule Membrane.Core.Child.PadController do
       |> Enum.filter(&(&1.direction == :output and data.name in &1.demand_inputs))
       |> Enum.map(& &1.name)
 
-    Message.send(data.pid, :demand, state.demand_size, for_pad: data.other_ref)
-
-    %{demand: state.demand_size, demand_pads: demand_pads}
+    %{demand: 0, demand_pads: demand_pads}
   end
 
   defp init_pad_mode_data(%{mode: :pull, direction: :output} = info, _props, other_info, _state),

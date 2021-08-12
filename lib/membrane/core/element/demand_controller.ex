@@ -15,12 +15,11 @@ defmodule Membrane.Core.Element.DemandController do
   require Membrane.Logger
 
   @doc """
-  Handles demand coming on a output pad. Updates demand value and executes `handle_demand` callback.
+  Handles demand coming on an output pad. Updates demand value and executes `handle_demand` callback.
   """
   @spec handle_demand(Pad.ref_t(), non_neg_integer, State.t()) ::
           State.stateful_try_t()
   def handle_demand(pad_ref, size, state) do
-    # IO.inspect({size, state.name}, label: :demand)
     %{direction: :output, demand_pads: demand_pads} = PadModel.get_data!(state, pad_ref)
 
     cond do
@@ -51,22 +50,16 @@ defmodule Membrane.Core.Element.DemandController do
     demand_size = state.demand_size
 
     if demand <= demand_size / 2 and
-         not (get_auto_demand_pads_data(pad_ref, state) |> Enum.all?(&(&1.demand > 0))) do
-      IO.inspect(state.name, label: :miss)
-    end
-
-    if demand <= demand_size / 2 and
          get_auto_demand_pads_data(pad_ref, state) |> Enum.all?(&(&1.demand > 0)) do
-      # if demand <= demand_size / 2 do
       %{pid: pid, other_ref: other_ref} = PadModel.get_data!(state, pad_ref)
-      Message.send(pid, :demand, demand_size, for_pad: other_ref)
-      PadModel.set_data!(state, pad_ref, :demand, demand + demand_size)
+      Message.send(pid, :demand, demand_size - demand, for_pad: other_ref)
+      PadModel.set_data!(state, pad_ref, :demand, demand_size)
     else
       state
     end
   end
 
-  defp get_auto_demand_pads_data(pad_ref, state) do
+  def get_auto_demand_pads_data(pad_ref, state) do
     demand_pads = PadModel.get_data!(state, pad_ref, :demand_pads)
 
     state.pads.data
