@@ -233,6 +233,17 @@ defmodule Membrane.Testing.Pipeline do
     :ok
   end
 
+  @doc """
+  Executes specified actions in the pipeline.
+
+  The actions are returned from the `handle_other` callback.
+  """
+  @spec execute_actions(pid(), Keyword.t()) :: :ok
+  def execute_actions(pipeline, actions) do
+    send(pipeline, {:execute_actions, actions})
+    :ok
+  end
+
   @impl true
   def handle_init(%Options{links: nil, module: nil} = options) do
     new_links = populate_links(options.elements)
@@ -337,6 +348,16 @@ defmodule Membrane.Testing.Pipeline do
       :handle_other,
       [{:for_element, element, message}, ctx],
       fn -> {{:ok, forward: {element, message}}, state} end,
+      state
+    )
+  end
+
+  @impl true
+  def handle_other({:execute_actions, actions}, ctx, %State{} = state) do
+    eval(
+      :handle_other,
+      [{:execute_actions, actions}, ctx],
+      fn -> {{:ok, actions}, state} end,
       state
     )
   end

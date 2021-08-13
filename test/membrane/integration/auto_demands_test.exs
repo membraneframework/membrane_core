@@ -120,6 +120,32 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.stop_and_terminate(pipeline, blocking?: true)
   end
 
+  test "handle removed branch" do
+    import Membrane.ParentSpec
+
+    assert {:ok, pipeline} =
+             Pipeline.start_link(%Pipeline.Options{
+               elements: [],
+               links: [
+                 link(:source, %Source{output: 1..100_000}) |> to(:tee, AutoDemandTee),
+                 link(:tee) |> to(:left_sink, Sink),
+                 link(:tee) |> to(:right_sink, %Sink{autodemand: false})
+               ]
+             })
+
+    Pipeline.play(pipeline)
+    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+    Process.sleep(500)
+    Pipeline.execute_actions(pipeline, remove_child: :right_sink)
+
+    Enum.each(1..100_000, fn payload ->
+      assert_sink_buffer(pipeline, :left_sink, buffer)
+      assert buffer.payload == payload
+    end)
+
+    Pipeline.stop_and_terminate(pipeline, blocking?: true)
+  end
+
   defp reduce_link(link, enum, fun) do
     Enum.reduce(enum, link, &fun.(&2, &1))
   end

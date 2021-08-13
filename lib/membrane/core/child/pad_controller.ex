@@ -10,7 +10,7 @@ defmodule Membrane.Core.Child.PadController do
   alias Membrane.Core.Bin.LinkingBuffer
   alias Membrane.Core.{CallbackHandler, Component, Message, InputBuffer}
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
-  alias Membrane.Core.Element.{EventController, PlaybackBuffer}
+  alias Membrane.Core.Element.{DemandController, EventController, PlaybackBuffer}
   alias Membrane.Core.Parent.LinkParser
 
   require Membrane.Core.Child.PadModel
@@ -138,7 +138,8 @@ defmodule Membrane.Core.Child.PadController do
     with {:ok, state} <- flush_playback_buffer(pad_ref, state),
          {:ok, state} <- generate_eos_if_needed(pad_ref, state),
          {:ok, state} <- handle_pad_removed(pad_ref, state),
-         {:ok, state} <- PadModel.delete_data(state, pad_ref) do
+         {{:ok, data}, state} <- PadModel.pop_data(state, pad_ref) do
+      state = check_for_auto_demands(data, state)
       {:ok, state}
     end
   end
@@ -261,20 +262,24 @@ defmodule Membrane.Core.Child.PadController do
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
     data = data |> Map.merge(init_pad_mode_data(data, props, other_info, state))
     data = struct!(Pad.Data, data)
+    state = Bunch.Access.put_in(state, [:pads, :data, ref], data)
 
-    state =
-      if data.demand_mode == :auto do
+    if data.demand_mode == :auto do
+      state =
         state.pads.data
         |> Map.values()
         |> Enum.filter(&(&1.direction != data.direction and &1.demand_mode == :auto))
         |> Enum.reduce(state, fn other_data, state ->
           PadModel.update_data!(state, other_data.ref, :demand_pads, &[data.ref | &1])
         end)
-      else
-        state
-      end
 
-    state |> Bunch.Access.put_in([:pads, :data, ref], data)
+      case data.direction do
+        :input -> DemandController.check_auto_demand(ref, state)
+        :output -> state
+      end
+    else
+      state
+    end
   end
 
   defp init_pad_direction_data(%{direction: :input}, _props, _state), do: %{sticky_messages: []}
@@ -382,6 +387,23 @@ defmodule Membrane.Core.Child.PadController do
     new_playback_buf = PlaybackBuffer.flush_for_pad(state.playback_buffer, pad_ref)
 
     {:ok, %{state | playback_buffer: new_playback_buf}}
+  end
+
+  defp check_for_auto_demands(%{mode: :pull, demand_mode: :auto} = pad_data, state) do
+    state =
+      Enum.reduce(pad_data.demand_pads, state, fn pad, state ->
+        PadModel.update_data!(state, pad, :demand_pads, &List.delete(&1, pad_data.ref))
+      end)
+
+    if pad_data.direction == :output do
+      Enum.reduce(pad_data.demand_pads, state, &DemandController.check_auto_demand/2)
+    else
+      state
+    end
+  end
+
+  defp check_for_auto_demands(_pad_data, state) do
+    state
   end
 
   defp get_callback_action_handler(%Core.Element.State{}), do: Core.Element.ActionHandler
