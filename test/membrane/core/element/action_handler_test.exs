@@ -96,6 +96,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
               other_ref: :other_ref,
               caps: nil,
               other_demand_unit: :bytes,
+              start_of_stream?: true,
               end_of_stream?: false,
               mode: :push,
               accepted_caps: :any
@@ -105,6 +106,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
               pid: self(),
               other_ref: :other_input,
               caps: nil,
+              start_of_stream?: true,
               end_of_stream?: false,
               mode: :push,
               accepted_caps: :any

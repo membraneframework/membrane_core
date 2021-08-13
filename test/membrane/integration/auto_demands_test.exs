@@ -9,7 +9,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     use Membrane.Filter
 
     def_input_pad :input, caps: :any, demand_mode: :auto
-    def_output_pad :output, caps: :any, demand_inputs: [:input]
+    def_output_pad :output, caps: :any, demand_mode: :auto
 
     def_options factor: [default: 1], direction: [default: :up]
 
@@ -38,7 +38,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     use Membrane.Filter
 
     def_input_pad :input, caps: :any, demand_mode: :auto
-    def_output_pad :output, caps: :any, demand_inputs: [:input], availability: :on_request
+    def_output_pad :output, caps: :any, demand_mode: :auto, availability: :on_request
 
     @impl true
     def handle_process(:input, buffer, _ctx, state), do: {{:ok, forward: buffer}, state}

@@ -261,6 +261,19 @@ defmodule Membrane.Core.Child.PadController do
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
     data = data |> Map.merge(init_pad_mode_data(data, props, other_info, state))
     data = struct!(Pad.Data, data)
+
+    state =
+      if data.demand_mode == :auto do
+        state.pads.data
+        |> Map.values()
+        |> Enum.filter(&(&1.direction != data.direction and &1.demand_mode == :auto))
+        |> Enum.reduce(state, fn other_data, state ->
+          PadModel.update_data!(state, other_data.ref, :demand_pads, &[data.ref | &1])
+        end)
+      else
+        state
+      end
+
     state |> Bunch.Access.put_in([:pads, :data, ref], data)
   end
 
@@ -280,26 +293,27 @@ defmodule Membrane.Core.Child.PadController do
   end
 
   defp init_pad_mode_data(
-         %{mode: :pull, direction: :input, demand_mode: :auto} = data,
+         %{mode: :pull, direction: :output, demand_mode: :manual},
          _props,
-         _other_info,
+         other_info,
+         _state
+       ),
+       do: %{demand: 0, other_demand_unit: other_info[:demand_unit]}
+
+  defp init_pad_mode_data(
+         %{mode: :pull, demand_mode: :auto, direction: direction},
+         _props,
+         other_info,
          %Membrane.Core.Element.State{} = state
        ) do
     demand_pads =
-      state.pads.info
+      state.pads.data
       |> Map.values()
-      |> Enum.filter(&(&1.direction == :output and data.name in &1.demand_inputs))
-      |> Enum.map(& &1.name)
+      |> Enum.filter(&(&1.direction != direction and &1.demand_mode == :auto))
+      |> Enum.map(& &1.ref)
 
-    %{demand: 0, demand_pads: demand_pads}
+    %{demand: 0, demand_pads: demand_pads, other_demand_unit: other_info[:demand_unit]}
   end
-
-  defp init_pad_mode_data(%{mode: :pull, direction: :output} = info, _props, other_info, _state),
-    do: %{
-      demand: 0,
-      other_demand_unit: other_info[:demand_unit],
-      demand_pads: Map.get(info, :demand_inputs, [])
-    }
 
   defp init_pad_mode_data(_data, _props, _other_info, _state), do: %{}
 

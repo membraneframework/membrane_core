@@ -168,9 +168,6 @@ defmodule Membrane.Core.Child.PadsSpecs do
                   in: [:auto, :manual],
                   default: :manual
                 ],
-                demand_inputs: [
-                  default: []
-                ],
                 demand_unit: [
                   in: [:buffers, :bytes],
                   require_if:

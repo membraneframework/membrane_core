@@ -25,8 +25,8 @@ defmodule Membrane.Core.Element.BufferController do
     PadModel.assert_data!(state, pad_ref, %{direction: :input})
 
     case PadModel.get_data!(state, pad_ref) do
-      %{mode: :pull, demand_pads: []} -> handle_buffer_pull(pad_ref, buffers, state)
-      %{mode: :pull} -> handle_buffer_auto_pull(pad_ref, buffers, state)
+      %{mode: :pull, demand_mode: :auto} -> handle_buffer_auto_pull(pad_ref, buffers, state)
+      %{mode: :pull} -> handle_buffer_pull(pad_ref, buffers, state)
       %{mode: :push} -> exec_buffer_handler(pad_ref, buffers, state)
     end
   end
@@ -85,7 +85,9 @@ defmodule Membrane.Core.Element.BufferController do
   end
 
   defp handle_buffer_auto_pull(pad_ref, buffers, state) do
-    state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - length(buffers)))
+    demand_unit = PadModel.get_data!(state, pad_ref, :demand_unit)
+    buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
+    state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - buf_size))
     state = DemandController.check_auto_demand(pad_ref, state)
     exec_buffer_handler(pad_ref, buffers, state)
   end

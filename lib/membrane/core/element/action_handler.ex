@@ -267,10 +267,12 @@ defmodule Membrane.Core.Element.ActionHandler do
           data: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
           dir: %{direction: :output} <- pad_data,
           eos: %{end_of_stream?: false} <- pad_data do
-      %{mode: mode, pid: pid, other_ref: other_ref, other_demand_unit: other_demand_unit} =
-        pad_data
+      %{pid: pid, other_ref: other_ref} = pad_data
 
-      state = handle_buffer(pad_ref, mode, other_demand_unit, buffers, state)
+      state =
+        handle_buffer(pad_ref, pad_data, buffers, state)
+        |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
+
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
       {:ok, state}
     else
@@ -287,20 +289,21 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @spec handle_buffer(
           Pad.ref_t(),
-          Pad.mode_t(),
-          Buffer.Metric.unit_t(),
+          Membrane.Pad.Data.t(),
           [Buffer.t()],
           State.t()
         ) :: State.t()
-  defp handle_buffer(pad_ref, :pull, other_demand_unit, buffers, state) do
+  defp handle_buffer(
+         pad_ref,
+         %{mode: :pull, other_demand_unit: other_demand_unit},
+         buffers,
+         state
+       ) do
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
-
-    state
-    |> PadModel.update_data!(pad_ref, :demand, &(&1 - buf_size))
-    |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
+    PadModel.update_data!(state, pad_ref, :demand, &(&1 - buf_size))
   end
 
-  defp handle_buffer(_pad_ref, :push, _options, _buffers, state) do
+  defp handle_buffer(_pad_ref, _pad_data, _buffers, state) do
     state
   end
 
