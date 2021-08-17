@@ -98,7 +98,6 @@ defmodule Membrane.Core.Child.PadController do
       if bin? do
         LinkingBuffer.flush_all_public_pads(state)
       else
-        send_push_mode_announcements(state)
         state
       end
       |> clear_currently_linking()
@@ -106,15 +105,6 @@ defmodule Membrane.Core.Child.PadController do
     end
   end
 
-  defp send_push_mode_announcements(state) do
-    state.pads.data
-    |> Map.values()
-    |> Enum.filter(&(&1.mode == :push))
-    |> Enum.each(&Message.send(&1.pid, :push_mode_announcement, [], for_pad: &1.other_ref))
-  end
-
-  @spec enable_toilet_if_pull(Pad.ref_t(), state_t()) ::
-          {:ok, state_t()} | {{:error, reason :: any}, state_t()}
   def enable_toilet_if_pull(pad_ref, state) do
     case PadModel.get_data!(state, pad_ref, :mode) do
       :pull ->
@@ -286,14 +276,19 @@ defmodule Membrane.Core.Child.PadController do
   defp init_pad_direction_data(%{direction: :output}, _props, _state), do: %{}
 
   @spec init_pad_mode_data(map(), parsed_pad_props_t, PadModel.pad_info_t(), state_t()) :: map()
+
   defp init_pad_mode_data(
          %{mode: :pull, direction: :input, demand_mode: :manual} = data,
          props,
-         _other_info,
+         other_info,
          %Membrane.Core.Element.State{}
        ) do
     %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
-    input_buf = InputBuffer.init(demand_unit, pid, other_ref, inspect(ref), props.buffer)
+
+    input_buf =
+      InputBuffer.init(demand_unit, pid, other_ref, inspect(ref), props.buffer)
+      |> then(if other_info.mode == :push, do: &InputBuffer.enable_toilet/1, else: & &1)
+
     %{input_buf: input_buf, demand: 0}
   end
 

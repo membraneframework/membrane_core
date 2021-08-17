@@ -113,7 +113,6 @@ defmodule Membrane.Core.InputBuffer do
 
   @spec enable_toilet(t()) :: t()
   def enable_toilet(%__MODULE__{} = buf), do: %__MODULE__{buf | toilet?: true}
-  def enable_toilet(nil), do: nil
 
   @spec store(t(), atom(), any()) :: t()
   def store(input_buf, type \\ :buffers, v)
