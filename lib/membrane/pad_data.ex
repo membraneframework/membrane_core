@@ -65,5 +65,6 @@ defmodule Membrane.Pad.Data do
             options: %{},
             demand_pads: [],
             demand_inputs: nil,
-            demand_mode: nil
+            demand_mode: nil,
+            toilet: nil
 end

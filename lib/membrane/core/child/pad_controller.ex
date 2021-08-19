@@ -33,24 +33,28 @@ defmodule Membrane.Core.Child.PadController do
           PadModel.pad_info_t() | nil,
           state_t()
         ) :: Type.stateful_try_t(PadModel.pad_info_t(), state_t)
-  def handle_link(direction, this, other, other_info, state) do
+  def handle_link(direction, this, other, link_metadata, state) do
     name = this.pad_ref |> Pad.name_by_ref()
     info = state.pads.info[name]
 
-    {:ok, other_info} =
-      if other_info do
-        {:ok, other_info}
+    {:ok, link_metadata} =
+      if link_metadata do
+        {:ok, link_metadata}
       else
         other_direction = Pad.opposite_direction(direction)
-        Message.call(other.pid, :handle_link, [other_direction, other, this, info])
+        metadata = %{info: info, toilet: :atomics.new(1, [])}
+        Message.call(other.pid, :handle_link, [other_direction, other, this, metadata])
       end
 
+    # IO.inspect({direction, this, other, info, link_metadata})
+
     with :ok <- validate_pad_being_linked!(this.pad_ref, direction, info, state),
-         :ok <- validate_dir_and_mode!({this.pad_ref, info}, {other.pad_ref, other_info}) do
+         :ok <-
+           validate_dir_and_mode!({this.pad_ref, info}, {other.pad_ref, link_metadata.info}) do
       props = parse_pad_props!(this.pad_props, name, state)
 
       state =
-        init_pad_data(this.pad_ref, info, props, other.pad_ref, other.pid, other_info, state)
+        init_pad_data(this.pad_ref, info, props, other.pad_ref, other.pid, link_metadata, state)
 
       state =
         case Pad.availability_mode(info.availability) do
@@ -58,7 +62,7 @@ defmodule Membrane.Core.Child.PadController do
           :static -> state
         end
 
-      {{:ok, info}, state}
+      {{:ok, %{link_metadata | info: info}}, state}
     else
       {:error, reason} -> raise LinkError, "#{inspect(reason)}"
     end
@@ -102,16 +106,6 @@ defmodule Membrane.Core.Child.PadController do
       end
       |> clear_currently_linking()
       ~> {:ok, &1}
-    end
-  end
-
-  def enable_toilet_if_pull(pad_ref, state) do
-    case PadModel.get_data!(state, pad_ref, :mode) do
-      :pull ->
-        PadModel.update_data(state, pad_ref, [:input_buf], &{:ok, InputBuffer.enable_toilet(&1)})
-
-      :push ->
-        {:ok, state}
     end
   end
 
@@ -236,7 +230,7 @@ defmodule Membrane.Core.Child.PadController do
           PadModel.pad_info_t(),
           state_t()
         ) :: state_t()
-  defp init_pad_data(ref, info, props, other_ref, other_pid, other_info, state) do
+  defp init_pad_data(ref, info, props, other_ref, other_pid, metadata, state) do
     data =
       info
       |> Map.merge(%{
@@ -250,7 +244,7 @@ defmodule Membrane.Core.Child.PadController do
       })
 
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
-    data = data |> Map.merge(init_pad_mode_data(data, props, other_info, state))
+    data = data |> Map.merge(init_pad_mode_data(data, props, metadata, state))
     data = struct!(Pad.Data, data)
     state = Bunch.Access.put_in(state, [:pads, :data, ref], data)
 
@@ -280,30 +274,34 @@ defmodule Membrane.Core.Child.PadController do
   defp init_pad_mode_data(
          %{mode: :pull, direction: :input, demand_mode: :manual} = data,
          props,
-         other_info,
+         metadata,
          %Membrane.Core.Element.State{}
        ) do
     %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
+    input_buf = InputBuffer.init(demand_unit, pid, other_ref, inspect(ref), props.buffer)
 
-    input_buf =
-      InputBuffer.init(demand_unit, pid, other_ref, inspect(ref), props.buffer)
-      |> then(if other_info.mode == :push, do: &InputBuffer.enable_toilet/1, else: & &1)
+    {toilet, input_buf} =
+      if metadata.info.mode == :push do
+        {metadata.toilet, InputBuffer.enable_toilet(input_buf)}
+      else
+        {nil, input_buf}
+      end
 
-    %{input_buf: input_buf, demand: 0}
+    %{input_buf: input_buf, demand: 0, toilet: toilet}
   end
 
   defp init_pad_mode_data(
          %{mode: :pull, direction: :output, demand_mode: :manual},
          _props,
-         other_info,
+         metadata,
          _state
        ),
-       do: %{demand: 0, other_demand_unit: other_info[:demand_unit]}
+       do: %{demand: 0, other_demand_unit: metadata.info[:demand_unit]}
 
   defp init_pad_mode_data(
          %{mode: :pull, demand_mode: :auto, direction: direction},
          _props,
-         other_info,
+         metadata,
          %Membrane.Core.Element.State{} = state
        ) do
     demand_pads =
@@ -312,10 +310,39 @@ defmodule Membrane.Core.Child.PadController do
       |> Enum.filter(&(&1.direction != direction and &1.demand_mode == :auto))
       |> Enum.map(& &1.ref)
 
-    %{demand: 0, demand_pads: demand_pads, other_demand_unit: other_info[:demand_unit]}
+    toilet =
+      if direction == :input and metadata.info.mode == :push do
+        metadata.toilet
+      else
+        nil
+      end
+
+    %{
+      demand: 0,
+      demand_pads: demand_pads,
+      other_demand_unit: metadata.info[:demand_unit],
+      toilet: toilet
+    }
   end
 
-  defp init_pad_mode_data(_data, _props, _other_info, _state), do: %{}
+  defp init_pad_mode_data(
+         %{mode: :push, direction: :output},
+         _props,
+         %{info: %{mode: :pull}} = metadata,
+         _state
+       ) do
+    Task.start_link(fn ->
+      Stream.repeatedly(fn ->
+        Process.sleep(1000)
+        IO.inspect({_state.name, :atomics.get(metadata.toilet, 1)})
+      end)
+      |> Stream.run()
+    end)
+
+    %{toilet: metadata.toilet, other_demand_unit: metadata.info[:demand_unit]}
+  end
+
+  defp init_pad_mode_data(_data, _props, _metadata, _state), do: %{}
 
   @spec add_to_currently_linking(Pad.ref_t(), state_t()) :: state_t()
   defp add_to_currently_linking(ref, state),

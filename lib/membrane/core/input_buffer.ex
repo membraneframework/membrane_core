@@ -147,58 +147,58 @@ defmodule Membrane.Core.InputBuffer do
       when is_list(v) do
     %__MODULE__{current_size: size} = input_buf = do_store_buffers(input_buf, v)
 
-    cond do
-      size > fail_lvl ->
-        ~S"""
-        Toilet overflow
+    # cond do
+    #   size > fail_lvl ->
+    #     ~S"""
+    #     Toilet overflow
 
-                     ` ' `
-                 .'''. ' .'''.
-                   .. ' ' ..
-                  '  '.'.'  '
-                  .'''.'.'''.
-                 ' .''.'.''. '
-               ;------ ' ------;
-               | ~~ .--'--//   |
-               |   /   '   \   |
-               |  /    '    \  |
-               |  |    '    |  |  ,----.
-               |   \ , ' , /   | =|____|=
-               '---,###'###,---'  (---(
-                  /##  '  ##\      )---)
-                  |##, ' ,##|     (---(
-                   \'#####'/       `---`
-                    \`"#"`/
-                     |`"`|
-                   .-|   |-.
-              jgs /  '   '  \
-                  '---------'
-        """
-        |> mk_log(input_buf)
-        |> Membrane.Logger.debug_verbose()
+    #                  ` ' `
+    #              .'''. ' .'''.
+    #                .. ' ' ..
+    #               '  '.'.'  '
+    #               .'''.'.'''.
+    #              ' .''.'.''. '
+    #            ;------ ' ------;
+    #            | ~~ .--'--//   |
+    #            |   /   '   \   |
+    #            |  /    '    \  |
+    #            |  |    '    |  |  ,----.
+    #            |   \ , ' , /   | =|____|=
+    #            '---,###'###,---'  (---(
+    #               /##  '  ##\      )---)
+    #               |##, ' ,##|     (---(
+    #                \'#####'/       `---`
+    #                 \`"#"`/
+    #                  |`"`|
+    #                .-|   |-.
+    #           jgs /  '   '  \
+    #               '---------'
+    #     """
+    #     |> mk_log(input_buf)
+    #     |> Membrane.Logger.debug_verbose()
 
-        """
-        Toilet overflow.
+    #     """
+    #     Toilet overflow.
 
-        Reached the size of #{inspect(size)},
-        which is above fail level when storing data from output working in push mode.
-        To have control over amount of buffers being produced, consider using pull mode.
-        If this is a normal situation, increase warn/fail size in buffer options.
+    #     Reached the size of #{inspect(size)},
+    #     which is above fail level when storing data from output working in push mode.
+    #     To have control over amount of buffers being produced, consider using pull mode.
+    #     If this is a normal situation, increase warn/fail size in buffer options.
 
-        See `Membrane.Core.InputBuffer` for more information.
-        """
-        |> mk_log(input_buf)
-        |> IO.iodata_to_binary()
-        |> raise
+    #     See `Membrane.Core.InputBuffer` for more information.
+    #     """
+    #     |> mk_log(input_buf)
+    #     |> IO.iodata_to_binary()
+    #     |> raise
 
-      size > warn_lvl ->
-        "Reached buffers of size #{inspect(size)}, which is above warn level, from output working in push mode. See `Membrane.Core.InputBuffer` for more information."
-        |> mk_log(input_buf)
-        |> Membrane.Logger.warn()
+    #   size > warn_lvl ->
+    #     "Reached buffers of size #{inspect(size)}, which is above warn level, from output working in push mode. See `Membrane.Core.InputBuffer` for more information."
+    #     |> mk_log(input_buf)
+    #     |> Membrane.Logger.warn()
 
-      true ->
-        :ok
-    end
+    #   true ->
+    #     :ok
+    # end
 
     Telemetry.report_metric(:store, size, input_buf.log_tag)
 

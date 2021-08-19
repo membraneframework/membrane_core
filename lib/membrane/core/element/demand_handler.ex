@@ -203,6 +203,11 @@ defmodule Membrane.Core.Element.DemandHandler do
        ) do
     state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - size))
 
+    if toilet = PadModel.get_data!(state, pad_ref, :toilet) do
+      :atomics.sub(toilet, 1, size)
+      IO.inspect({state.name, Process.info(self(), :message_queue_len)}, label: :msgq)
+    end
+
     BufferController.exec_buffer_handler(pad_ref, buffers, state)
   end
 end

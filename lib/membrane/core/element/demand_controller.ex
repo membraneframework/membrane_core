@@ -40,13 +40,19 @@ defmodule Membrane.Core.Element.DemandController do
     end
   end
 
+  @spec check_auto_demand(Pad.ref_t(), State.t()) :: State.t()
   def check_auto_demand(pad_ref, state) do
-    demand = PadModel.get_data!(state, pad_ref, :demand)
+    %{demand: demand, toilet: toilet} = data = PadModel.get_data!(state, pad_ref)
     demand_size = state.demand_size
 
-    if demand <= demand_size / 2 and auto_demands_positive?(pad_ref, state) do
-      %{pid: pid, other_ref: other_ref} = PadModel.get_data!(state, pad_ref)
-      Message.send(pid, :demand, demand_size - demand, for_pad: other_ref)
+    if demand <= div(demand_size, 2) and auto_demands_positive?(pad_ref, state) do
+      if toilet do
+        :atomics.sub(toilet, 1, demand_size - demand)
+      else
+        %{pid: pid, other_ref: other_ref} = data
+        Message.send(pid, :demand, demand_size - demand, for_pad: other_ref)
+      end
+
       PadModel.set_data!(state, pad_ref, :demand, demand_size)
     else
       state

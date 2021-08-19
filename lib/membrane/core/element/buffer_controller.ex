@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.BufferController do
 
   use Bunch
 
-  alias Membrane.{Buffer, Pad}
+  alias Membrane.{Buffer, Pad, PadData}
   alias Membrane.Core.{CallbackHandler, InputBuffer, Telemetry}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{ActionHandler, DemandController, DemandHandler, State}
@@ -22,13 +22,8 @@ defmodule Membrane.Core.Element.BufferController do
   """
   @spec handle_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.stateful_try_t()
   def handle_buffer(pad_ref, buffers, state) do
-    PadModel.assert_data!(state, pad_ref, %{direction: :input})
-
-    case PadModel.get_data!(state, pad_ref) do
-      %{mode: :pull, demand_mode: :auto} -> handle_buffer_auto_pull(pad_ref, buffers, state)
-      %{mode: :pull} -> handle_buffer_pull(pad_ref, buffers, state)
-      %{mode: :push} -> exec_buffer_handler(pad_ref, buffers, state)
-    end
+    %{direction: :input} = data = PadModel.get_data!(state, pad_ref)
+    do_handle_buffer(pad_ref, data, buffers, state)
   end
 
   @doc """
@@ -67,28 +62,29 @@ defmodule Membrane.Core.Element.BufferController do
     )
   end
 
-  @spec handle_buffer_pull(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) ::
+  @spec do_handle_buffer(Pad.ref_t(), PadData.t(), [Buffer.t()] | Buffer.t(), State.t()) ::
           State.stateful_try_t()
-  defp handle_buffer_pull(pad_ref, buffers, state) do
-    with {:ok, old_input_buf} <- PadModel.get_data(state, pad_ref, :input_buf) do
-      input_buf = InputBuffer.store(old_input_buf, buffers)
-      state = PadModel.set_data!(state, pad_ref, :input_buf, input_buf)
+  defp do_handle_buffer(pad_ref, %{mode: :pull, demand_mode: :auto} = data, buffers, state) do
+    %{demand: demand, demand_unit: demand_unit} = data
+    buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
+    state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
+    state = DemandController.check_auto_demand(pad_ref, state)
+    exec_buffer_handler(pad_ref, buffers, state)
+  end
 
-      if old_input_buf |> InputBuffer.empty?() do
-        DemandHandler.supply_demand(pad_ref, state)
-      else
-        {:ok, state}
-      end
+  defp do_handle_buffer(pad_ref, %{mode: :pull} = data, buffers, state) do
+    %{input_buf: old_input_buf} = data
+    input_buf = InputBuffer.store(old_input_buf, buffers)
+    state = PadModel.set_data!(state, pad_ref, :input_buf, input_buf)
+
+    if old_input_buf |> InputBuffer.empty?() do
+      DemandHandler.supply_demand(pad_ref, state)
     else
-      {:error, reason} -> {{:error, reason}, state}
+      {:ok, state}
     end
   end
 
-  defp handle_buffer_auto_pull(pad_ref, buffers, state) do
-    demand_unit = PadModel.get_data!(state, pad_ref, :demand_unit)
-    buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
-    state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - buf_size))
-    state = DemandController.check_auto_demand(pad_ref, state)
+  defp do_handle_buffer(pad_ref, _data, buffers, state) do
     exec_buffer_handler(pad_ref, buffers, state)
   end
 end

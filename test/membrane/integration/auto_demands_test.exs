@@ -146,6 +146,71 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.stop_and_terminate(pipeline, blocking?: true)
   end
 
+  defmodule PushSource do
+    use Membrane.Source
+
+    def_output_pad :output, mode: :push, caps: :any
+
+    @impl true
+    def handle_other(actions, _ctx, state) do
+      {{:ok, actions}, state}
+    end
+  end
+
+  test "toilet" do
+    import Membrane.ParentSpec
+
+    assert {:ok, pipeline} =
+             Pipeline.start_link(%Pipeline.Options{
+               elements: [],
+               links: [
+                 link(:source, PushSource)
+                 |> to(:filter, AutoDemandFilter)
+                 |> to(:sink, Sink)
+               ]
+             })
+
+    Pipeline.play(pipeline)
+    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+    buffers = Enum.map(1..10, &%Membrane.Buffer{payload: &1})
+    Pipeline.message_child(pipeline, :source, buffer: {:output, buffers})
+
+    Enum.each(1..100_010, fn i ->
+      assert_sink_buffer(pipeline, :sink, buffer)
+      assert buffer.payload == i
+
+      if i <= 100_000 do
+        buffer = %Membrane.Buffer{payload: i + 10}
+        Pipeline.message_child(pipeline, :source, buffer: {:output, buffer})
+      end
+    end)
+
+    Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    refute_sink_buffer(pipeline, :sink, _buffer, 0)
+  end
+
+  @tag :target
+  test "toilet overflow" do
+    import Membrane.ParentSpec
+
+    assert {:ok, pipeline} =
+             Pipeline.start(%Pipeline.Options{
+               elements: [],
+               links: [
+                 link(:source, PushSource)
+                 |> to(:filter, AutoDemandFilter)
+                 |> to(:sink, %Sink{autodemand: false})
+               ]
+             })
+
+    Process.monitor(pipeline)
+    Pipeline.play(pipeline)
+    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+    buffers = Enum.map(1..100_000, &%Membrane.Buffer{payload: &1})
+    Pipeline.message_child(pipeline, :source, buffer: {:output, buffers})
+    assert_receive({:DOWN, _ref, :process, ^pipeline, {:shutdown, :child_crash}})
+  end
+
   defp reduce_link(link, enum, fun) do
     Enum.reduce(enum, link, &fun.(&2, &1))
   end

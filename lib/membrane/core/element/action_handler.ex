@@ -303,6 +303,20 @@ defmodule Membrane.Core.Element.ActionHandler do
     PadModel.update_data!(state, pad_ref, :demand, &(&1 - buf_size))
   end
 
+  defp handle_buffer(_pad_ref, %{mode: :push, toilet: toilet} = data, buffers, state)
+       when is_reference(toilet) do
+    %{other_demand_unit: other_demand_unit, pid: pid} = data
+    buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
+    toilet_size = :atomics.add_get(toilet, 1, buf_size)
+
+    if toilet_size > 2000 do
+      Membrane.Logger.error("Toilet overflow, size: #{toilet_size}")
+      Process.exit(pid, :kill)
+    end
+
+    state
+  end
+
   defp handle_buffer(_pad_ref, _pad_data, _buffers, state) do
     state
   end
