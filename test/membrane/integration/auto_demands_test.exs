@@ -189,7 +189,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
     refute_sink_buffer(pipeline, :sink, _buffer, 0)
   end
 
-  @tag :target
   test "toilet overflow" do
     import Membrane.ParentSpec
 

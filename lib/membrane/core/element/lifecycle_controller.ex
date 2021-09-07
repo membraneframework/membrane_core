@@ -8,8 +8,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   use Membrane.Core.PlaybackHandler
 
   alias Membrane.{Clock, Core, Element, Sync}
-  alias Membrane.Core.{CallbackHandler, Message}
-  alias Membrane.Core.Child.PadController
+  alias Membrane.Core.{CallbackHandler, Child, Element, Message}
   alias Membrane.Core.Element.{ActionHandler, PlaybackBuffer, State}
   alias Membrane.Element.CallbackContext
 
@@ -132,17 +131,23 @@ defmodule Membrane.Core.Element.LifecycleController do
     callback = PlaybackHandler.state_change_callback(old_playback_state, new_playback_state)
 
     state =
-      if old_playback_state == :playing and new_playback_state == :prepared do
-        state.pads.data
-        |> Map.values()
-        |> Enum.filter(&(&1.direction == :input))
-        |> Enum.map(& &1.ref)
-        |> Enum.reduce(state, fn pad, state_acc ->
-          {:ok, state} = PadController.generate_eos_if_needed(pad, state_acc)
+      case {old_playback_state, new_playback_state} do
+        {:stopped, :prepared} ->
+          Child.PadController.check_for_unlinked_static_pads(state)
           state
-        end)
-      else
-        state
+
+        {:playing, :prepared} ->
+          state.pads.data
+          |> Map.values()
+          |> Enum.filter(&(&1.direction == :input))
+          |> Enum.map(& &1.ref)
+          |> Enum.reduce(state, fn pad, state_acc ->
+            {:ok, state} = Element.PadController.generate_eos_if_needed(pad, state_acc)
+            state
+          end)
+
+        _other ->
+          state
       end
 
     if callback do

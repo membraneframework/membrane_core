@@ -12,6 +12,7 @@ defmodule Membrane.Core.Child.LifecycleController do
   def unlink(state) do
     state.pads.data
     |> Map.values()
+    |> Enum.filter(& &1[:pid])
     |> Enum.each(&Message.send(&1.pid, :handle_unlink, &1.other_ref))
   end
 end

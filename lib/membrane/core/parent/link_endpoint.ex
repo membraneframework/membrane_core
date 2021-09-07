@@ -1,6 +1,8 @@
 defmodule Membrane.Core.Parent.Link.Endpoint do
   @moduledoc false
 
+  use Bunch.Access
+
   alias Membrane.{Element, Pad, ParentSpec}
 
   @enforce_keys [:child, :pad_spec]

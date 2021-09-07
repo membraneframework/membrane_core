@@ -99,6 +99,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp do_handle_action({:redemand, out_ref}, cb, _params, %State{type: type} = state)
        when type in [:source, :filter] and is_pad_ref(out_ref) and
               {type, cb} != {:filter, :handle_demand} do
+    IO.inspect(state.name, label: :redemand)
     handle_redemand(out_ref, state)
   end
 
@@ -305,14 +306,14 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp handle_buffer(_pad_ref, %{mode: :push, toilet: toilet} = data, buffers, state)
        when is_reference(toilet) do
-    %{other_demand_unit: other_demand_unit, pid: pid} = data
-    buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
-    toilet_size = :atomics.add_get(toilet, 1, buf_size)
+    # %{other_demand_unit: other_demand_unit, pid: pid} = data
+    # buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
+    # toilet_size = :atomics.add_get(toilet, 1, buf_size)
 
-    if toilet_size > 2000 do
-      Membrane.Logger.error("Toilet overflow, size: #{toilet_size}")
-      Process.exit(pid, :kill)
-    end
+    # if toilet_size > 2000 do
+    #   Membrane.Logger.error("Toilet overflow, size: #{toilet_size}")
+    #   Process.exit(pid, :kill)
+    # end
 
     state
   end

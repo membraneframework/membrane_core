@@ -58,7 +58,6 @@ defmodule Membrane.Core.Child.PadsSpecs do
   """
   @spec def_pad(Pad.name_t(), Pad.direction_t(), Macro.t(), :element | :bin) :: Macro.t()
   def def_pad(pad_name, direction, raw_specs, component) do
-    Pad.assert_public_name!(pad_name)
     Code.ensure_loaded(Caps.Matcher)
 
     specs =

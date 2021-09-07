@@ -21,11 +21,14 @@ defmodule Membrane.Core.Element do
   import Membrane.Helper.GenServer
 
   alias Membrane.{Clock, Element, Sync}
+<<<<<<< HEAD
   alias Membrane.Core.Element.{LifecycleController, PlaybackBuffer, State}
   alias Membrane.Core.{Message, PlaybackHandler, Telemetry, TimerController}
+=======
+  alias Membrane.Core.Element.{LifecycleController, PadController, PlaybackBuffer, State}
+  alias Membrane.Core.{Child, Message, PlaybackHandler, TimerController}
+>>>>>>> 519c051f (refactor pad linking)
   alias Membrane.ComponentPath
-  alias Membrane.Core.Child.PadController
-
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
   require Membrane.Logger
@@ -140,17 +143,13 @@ defmodule Membrane.Core.Element do
   end
 
   @impl GenServer
-  def handle_call(Message.new(:linking_finished), _from, state) do
-    PadController.handle_linking_finished(state) |> reply(state)
-  end
-
-  @impl GenServer
   def handle_call(
-        Message.new(:handle_link, [direction, this, other, other_info]),
+        Message.new(:handle_link, [direction, this, other, other_info, metadata]),
         _from,
         state
       ) do
-    PadController.handle_link(direction, this, other, other_info, state) |> reply(state)
+    Membrane.Logger.debug("handle link")
+    PadController.handle_link(direction, this, other, other_info, metadata, state) |> reply(state)
   end
 
   @impl GenServer
@@ -195,7 +194,7 @@ defmodule Membrane.Core.Element do
   end
 
   @impl GenServer
-  def handle_info(Message.new(:handle_unlink, pad_ref), state) do
+  def do_handle_info(Message.new(:handle_unlink, pad_ref), state) do
     PadController.handle_unlink(pad_ref, state) |> noreply(state)
   end
 
@@ -203,7 +202,15 @@ defmodule Membrane.Core.Element do
     TimerController.handle_tick(timer_id, state) |> noreply(state)
   end
 
-  defp do_handle_info({:membrane_clock_ratio, clock, ratio}, state) do
+  @impl GenServer
+  def do_handle_info(Message.new(:link_request, [_pad_ref, _direction, link_id, _pad_props]), state) do
+    Membrane.Logger.debug("link request")
+    Message.send(state.watcher, :link_response, link_id)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def do_handle_info({:membrane_clock_ratio, clock, ratio}, state) do
     TimerController.handle_clock_update(clock, ratio, state) |> noreply()
   end
 

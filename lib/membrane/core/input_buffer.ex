@@ -230,6 +230,7 @@ defmodule Membrane.Core.InputBuffer do
   @spec take_and_demand(t(), non_neg_integer(), pid(), Pad.ref_t()) :: {output_t(), t()}
   def take_and_demand(%__MODULE__{current_size: size} = input_buf, count, demand_pid, demand_pad)
       when count >= 0 do
+    # Membrane.Logger.info("taking buffers")
     "Taking #{inspect(count)} buffers" |> mk_log(input_buf) |> Membrane.Logger.debug_verbose()
     {out, %__MODULE__{current_size: new_size} = input_buf} = do_take(input_buf, count)
 

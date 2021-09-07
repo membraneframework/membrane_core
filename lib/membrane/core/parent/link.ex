@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Parent.Link do
   @moduledoc false
 
-  use Bunch
+  use Bunch.Access
 
   alias __MODULE__.Endpoint
 

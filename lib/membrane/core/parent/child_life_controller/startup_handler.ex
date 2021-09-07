@@ -129,20 +129,30 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
   end
 
   @spec init_playback_state([Membrane.Child.name_t()], Parent.state_t()) :: Parent.state_t()
-  def init_playback_state(children_names, state) do
-    case state.playback.pending_state || state.playback.state do
-      :stopped ->
-        state
+  def init_playback_state(spec_ref, state) do
+    Membrane.Logger.debug("Spec playback init #{inspect(spec_ref)} #{inspect(state.children)}")
 
-      expected_playback ->
-        {:ok, state} =
-          ChildrenModel.update_children(state, children_names, fn child ->
+    {:ok, state} =
+      ChildrenModel.update_children(state, fn
+        %{spec: ^spec_ref} = child ->
+          expected_playback = state.playback.pending_state || state.playback.state
+
+          Membrane.Logger.debug(
+            "Initializing playback state #{inspect(expected_playback)} #{inspect(child)}"
+          )
+
+          if expected_playback == :stopped do
+            %{child | playback_sync: :synced}
+          else
             Message.send(child.pid, :change_playback_state, expected_playback)
-            %{child | playback_synced?: false}
-          end)
+            %{child | playback_sync: :syncing}
+          end
 
-        state
-    end
+        child ->
+          child
+      end)
+
+    state
   end
 
   defp start_child(child, node, parent_clock, syncs, log_metadata) do

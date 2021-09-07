@@ -28,7 +28,7 @@ defmodule Membrane.Pad do
   @typedoc """
   Defines the name of pad or group of dynamic pads
   """
-  @type name_t :: atom | {:private, atom}
+  @type name_t :: atom
 
   @typedoc """
   Defines possible pad directions:
@@ -151,13 +151,7 @@ defmodule Membrane.Pad do
                   (term |> is_tuple and term |> tuple_size == 3 and term |> elem(0) == __MODULE__ and
                      term |> elem(1) |> is_atom)
 
-  defguard is_public_name(term) when is_atom(term)
-
-  defguardp is_private_name(term)
-            when tuple_size(term) == 2 and elem(term, 0) == :private and is_atom(elem(term, 1))
-
-  defguard is_pad_name(term)
-           when is_public_name(term) or is_private_name(term)
+  defguard is_pad_name(term) when is_atom(term)
 
   defguard is_availability(term) when term in @availability_t
 
@@ -181,30 +175,4 @@ defmodule Membrane.Pad do
   @spec opposite_direction(direction_t()) :: direction_t()
   def opposite_direction(:input), do: :output
   def opposite_direction(:output), do: :input
-
-  @spec get_corresponding_bin_pad(ref_t()) :: ref_t()
-  def get_corresponding_bin_pad(ref(name, id)),
-    do: ref(get_corresponding_bin_name(name), id)
-
-  def get_corresponding_bin_pad(name), do: get_corresponding_bin_name(name)
-
-  @spec create_private_name(atom) :: name_t()
-  def create_private_name(name) when is_public_name(name) do
-    get_corresponding_bin_name(name)
-  end
-
-  @spec get_corresponding_bin_name(name_t()) :: name_t()
-  defp get_corresponding_bin_name({:private, name}) when is_public_name(name), do: name
-  defp get_corresponding_bin_name(name) when is_public_name(name), do: {:private, name}
-
-  @spec assert_public_name!(name_t()) :: :ok
-  def assert_public_name!(name) when is_public_name(name) do
-    :ok
-  end
-
-  def assert_public_name!(name) do
-    raise CompileError,
-      file: __ENV__.file,
-      description: "#{inspect(name)} is not a proper pad name. Use public names only."
-  end
 end

@@ -19,8 +19,16 @@ defmodule Membrane.Core.Parent.LifecycleController do
     Membrane.Logger.debug("Changing playback state from #{old} to #{new}")
     children_data = Map.values(state.children)
     :ok = toggle_syncs_active(old, new, children_data)
-    Enum.each(children_data, &PlaybackHandler.request_playback_state_change(&1.pid, new))
-    {:ok, state} = ChildrenModel.update_children(state, &%{&1 | playback_synced?: false})
+
+    children_data
+    |> Enum.reject(&(&1.playback_sync == :not_synced))
+    |> Enum.each(&PlaybackHandler.request_playback_state_change(&1.pid, new))
+
+    {:ok, state} =
+      ChildrenModel.update_children(
+        state,
+        &if(&1.playback_sync == :synced, do: %{&1 | playback_sync: :syncing}, else: &1)
+      )
 
     if children_data |> Enum.empty?() do
       {:ok, state}
@@ -48,8 +56,12 @@ defmodule Membrane.Core.Parent.LifecycleController do
         {:ok, state}
       end
 
-    if state.__struct__ == Membrane.Core.Bin.State and new == :stopped do
-      Core.Child.LifecycleController.unlink(state)
+    if state.__struct__ == Membrane.Core.Bin.State do
+      case {old, new} do
+        {:stopped, :perpared} -> Core.Child.PadController.check_for_unlinked_static_pads(state)
+        {_old, :stopped} -> Core.Child.LifecycleController.unlink(state)
+        _other -> :ok
+      end
     end
 
     with {:ok, state} <- callback_res do
@@ -137,7 +149,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @spec maybe_finish_playback_transition(Parent.state_t()) ::
           {:ok | {:error, any}, Parent.state_t()}
   def maybe_finish_playback_transition(state) do
-    all_children_in_sync? = ChildrenModel.all?(state, & &1.playback_synced?)
+    all_children_in_sync? = ChildrenModel.all?(state, &(&1.playback_sync == :synced))
 
     if PlaybackHandler.suspended?(state) and all_children_in_sync? do
       PlaybackHandler.continue_playback_change(__MODULE__, state)

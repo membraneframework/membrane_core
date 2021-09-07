@@ -32,6 +32,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {links, children_spec_from_links} = LinkParser.parse(spec.links)
     children_spec = Enum.concat(spec.children, children_spec_from_links)
     children = ChildEntryParser.parse(children_spec)
+    spec_ref = make_ref()
+    children = Enum.map(children, &%{&1 | spec: spec_ref})
     :ok = StartupHandler.check_if_children_names_unique(children, state)
     syncs = StartupHandler.setup_syncs(children, spec.stream_sync)
 
@@ -66,9 +68,18 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     state = ClockHandler.choose_clock(children, spec.clock_provider, state)
     links = LinkHandler.resolve_links(links, state)
-    {:ok, state} = LinkHandler.link_children(links, state)
+
+    state =
+      if links == [] do
+        StartupHandler.init_playback_state(spec_ref, state)
+      else
+        Membrane.Logger.debug("Requesting links #{inspect(spec_ref)} #{inspect(links)}")
+        LinkHandler.request_links(links, spec_ref, state)
+      end
+
+    # {:ok, state} = LinkHandler.link_children(links, state)
     {:ok, state} = StartupHandler.exec_handle_spec_started(children_names, state)
-    state = StartupHandler.init_playback_state(children_names, state)
+    # state = StartupHandler.init_playback_state(children_names, state)
 
     {{:ok, children_names}, state}
   end
@@ -130,11 +141,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     cond do
       playback.pending_state == nil and playback.state == child_pb_state ->
-        state = put_in(state, [:children, child, :playback_synced?], true)
+        state = put_in(state, [:children, child, :playback_sync], :synced)
         {:ok, state}
 
       playback.pending_state == child_pb_state ->
-        state = put_in(state, [:children, child, :playback_synced?], true)
+        state = put_in(state, [:children, child, :playback_sync], :synced)
         LifecycleController.maybe_finish_playback_transition(state)
 
       true ->
