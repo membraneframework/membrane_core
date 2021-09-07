@@ -152,6 +152,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     with {:ok, child_name} <- child_by_pid(pid, state) do
       state = Bunch.Access.delete_in(state, [:children, child_name])
       state = remove_child_links(child_name, state)
+      state = remove_child_from_crash_group(pid, state)
       LifecycleController.maybe_finish_playback_transition(state)
     else
       {:error, :not_child} ->
@@ -232,6 +233,18 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     """)
 
     {:stop, {:shutdown, :child_crash}, state}
+  end
+
+  defp remove_child_from_crash_group(child_pid, state) do
+    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(child_pid, state) do
+      {_result, state} =
+        CrashGroupHandler.remove_member_of_crash_group(state, group.name, child_pid)
+        |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
+
+      state
+    else
+      {:error, :not_member} -> state
+    end
   end
 
   defp remove_child_links(child_name, state) do
