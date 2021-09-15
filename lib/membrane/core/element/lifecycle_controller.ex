@@ -20,6 +20,7 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @safe_shutdown_reasons [
     {:shutdown, :child_crash},
+    {:shutdown, :membrane_crash_group_kill},
     {:shutdown, :parent_crash}
   ]
 
