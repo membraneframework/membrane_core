@@ -219,7 +219,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     Enum.each(
       members_pids,
       fn pid ->
-        if Process.alive?(pid), do: GenServer.stop(pid, {:shutdown, :membrane_crash_group_kill})
+        if node(pid) == node() do
+          if Process.alive?(pid),
+            do: GenServer.stop(pid, {:shutdown, :membrane_crash_group_kill})
+        else
+          if :rpc.call(node(pid), Process, :alive?, [pid]),
+            do: GenServer.stop(pid, {:shutdown, :membrane_crash_group_kill})
+        end
       end
     )
 
