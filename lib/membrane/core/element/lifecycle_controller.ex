@@ -18,6 +18,12 @@ defmodule Membrane.Core.Element.LifecycleController do
   require Membrane.Core.Playback
   require Membrane.Logger
 
+  @safe_shutdown_reasons [
+    {:shutdown, :child_crash},
+    {:shutdown, :membrane_crash_group_kill},
+    {:shutdown, :parent_crash}
+  ]
+
   @doc """
   Performs initialization tasks and executes `handle_init` callback.
   """
@@ -66,14 +72,22 @@ defmodule Membrane.Core.Element.LifecycleController do
   def handle_shutdown(reason, state) do
     playback_state = state.playback.state
 
-    if playback_state == :terminating do
-      Membrane.Logger.debug("Terminating element, reason: #{inspect(reason)}")
-    else
-      Membrane.Logger.warn("""
-      Terminating element possibly not prepared for termination as it was in state #{inspect(playback_state)}.
-      Reason: #{inspect(reason)}",
-      State: #{inspect(state, pretty: true)}
-      """)
+    cond do
+      playback_state == :terminating ->
+        Membrane.Logger.debug("Terminating element, reason: #{inspect(reason)}")
+
+      reason in @safe_shutdown_reasons ->
+        Membrane.Logger.debug("""
+        Terminating element possibly not prepared for termination as it was in state #{inspect(playback_state)}.
+        Reason: #{inspect(reason)}"
+        """)
+
+      true ->
+        Membrane.Logger.warn("""
+        Terminating element possibly not prepared for termination as it was in state #{inspect(playback_state)}.
+        Reason: #{inspect(reason)},
+        State: #{inspect(state, pretty: true)}
+        """)
     end
 
     %State{module: module, internal_state: internal_state} = state
