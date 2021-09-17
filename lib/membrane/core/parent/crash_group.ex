@@ -16,10 +16,10 @@ defmodule Membrane.Core.Parent.CrashGroup do
           members: [Membrane.Child.name_t()],
           alive_members_pids: [pid()],
           triggered?: boolean(),
-          first_crashed_child: Membrane.Child.name_t()
+          crash_initiator: Membrane.Child.name_t()
         }
 
   @enforce_keys [:name, :mode]
   defstruct @enforce_keys ++
-              [members: [], alive_members_pids: [], triggered?: false, first_crashed_child: nil]
+              [members: [], alive_members_pids: [], triggered?: false, crash_initiator: nil]
 end

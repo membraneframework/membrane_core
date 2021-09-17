@@ -5,5 +5,5 @@ defmodule Membrane.Bin.CallbackContext.CrashGroupDown do
   """
   use Membrane.Core.Bin.CallbackContext,
     members: [Membrane.Child.name_t()],
-    first_crashed_child: Membrane.Child.name_t()
+    crash_initiator: Membrane.Child.name_t()
 end
