@@ -166,14 +166,21 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   def handle_child_death(pid, reason, state) do
-    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
+    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state),
+         {:ok, child_name} <- child_by_pid(pid, state) do
       {result, state} =
-        crash_all_group_members(group, state)
+        crash_all_group_members(group, child_name, state)
         |> remove_child_from_crash_group(group, pid)
 
       if result == :removed do
         state = Enum.reduce(group.members, state, &Bunch.Access.delete_in(&2, [:children, &1]))
-        exec_handle_crash_group_down_callback(group.name, group.members, state)
+
+        exec_handle_crash_group_down_callback(
+          group.name,
+          group.members,
+          group.crash_initiator || child_name,
+          state
+        )
       else
         {:ok, state}
       end
@@ -196,9 +203,17 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
-  defp exec_handle_crash_group_down_callback(group_name, group_members, state) do
+  defp exec_handle_crash_group_down_callback(
+         group_name,
+         group_members,
+         crash_initiator,
+         state
+       ) do
     context =
-      Component.callback_context_generator(:parent, CrashGroupDown, state, members: group_members)
+      Component.callback_context_generator(:parent, CrashGroupDown, state,
+        members: group_members,
+        crash_initiator: crash_initiator
+      )
 
     CallbackHandler.exec_and_handle_callback(
       :handle_crash_group_down,
@@ -210,8 +225,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   # called when process was a member of a crash group
-  @spec crash_all_group_members(CrashGroup.t(), Parent.state_t()) :: Parent.state_t()
-  defp crash_all_group_members(%CrashGroup{triggered?: false} = crash_group, state) do
+  @spec crash_all_group_members(CrashGroup.t(), Membrane.Child.name_t(), Parent.state_t()) ::
+          Parent.state_t()
+  defp crash_all_group_members(
+         %CrashGroup{triggered?: false} = crash_group,
+         crash_initiator,
+         state
+       ) do
     %CrashGroup{alive_members_pids: members_pids} = crash_group
 
     state = LinkHandler.unlink_crash_group(crash_group, state)
@@ -229,10 +249,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       end
     )
 
-    CrashGroupHandler.set_triggered(state, crash_group.name)
+    CrashGroupHandler.set_triggered(state, crash_group.name, crash_initiator)
   end
 
-  defp crash_all_group_members(_crash_group, state), do: state
+  defp crash_all_group_members(_crash_group, _crash_initiator, state), do: state
 
   # called when a dead child was not a member of any crash group
   defp propagate_child_crash(state) do
