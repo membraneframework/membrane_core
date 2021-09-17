@@ -89,4 +89,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
       value
     )
   end
+
+  @spec set_first_crashed_child(Pipeline.State.t(), CrashGroup.name_t(), Membrane.Child.name_t()) ::
+          Pipeline.State.t()
+  def set_first_crashed_child(state, group_name, child_name) do
+    Bunch.Access.put_in(
+      state,
+      [:crash_groups, group_name, :first_crashed_child],
+      child_name
+    )
+  end
 end

@@ -162,14 +162,22 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   def handle_child_death(pid, reason, state) do
-    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state) do
+    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state),
+         {:ok, child_name} <- child_by_pid(pid, state) do
       {result, state} =
         crash_all_group_members(group, state)
+        |> set_first_crashed_child_if_needed(group, child_name)
         |> remove_child_from_crash_group(group, pid)
 
       if result == :removed do
         state = Enum.reduce(group.members, state, &Bunch.Access.delete_in(&2, [:children, &1]))
-        exec_handle_crash_group_down_callback(group.name, group.members, state)
+
+        exec_handle_crash_group_down_callback(
+          group.name,
+          group.members,
+          group.first_crashed_child,
+          state
+        )
       else
         {:ok, state}
       end
@@ -192,9 +200,29 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
-  defp exec_handle_crash_group_down_callback(group_name, group_members, state) do
+  defp set_first_crashed_child_if_needed(
+         state,
+         %{name: group_name, first_crashed_child: nil},
+         child_name
+       ) do
+    CrashGroupHandler.set_first_crashed_child(state, group_name, child_name)
+  end
+
+  defp set_first_crashed_child_if_needed(state, _group, _child_name) do
+    state
+  end
+
+  defp exec_handle_crash_group_down_callback(
+         group_name,
+         group_members,
+         first_crashed_child,
+         state
+       ) do
     context =
-      Component.callback_context_generator(:parent, CrashGroupDown, state, members: group_members)
+      Component.callback_context_generator(:parent, CrashGroupDown, state,
+        members: group_members,
+        first_crashed_child: first_crashed_child
+      )
 
     CallbackHandler.exec_and_handle_callback(
       :handle_crash_group_down,
