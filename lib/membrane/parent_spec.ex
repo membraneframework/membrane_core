@@ -236,9 +236,10 @@ defmodule Membrane.ParentSpec do
   @type t :: %__MODULE__{
           children: children_spec_t,
           links: links_spec_t,
-          crash_group: crash_group_spec_t(),
+          crash_group: crash_group_spec_t() | nil,
           stream_sync: :sinks | [[Child.name_t()]],
-          clock_provider: Child.name_t()
+          clock_provider: Child.name_t() | nil,
+          node: node() | nil
         }
 
   @valid_pad_prop_keys [:options, :buffer]
@@ -247,7 +248,8 @@ defmodule Membrane.ParentSpec do
             links: [],
             crash_group: nil,
             stream_sync: [],
-            clock_provider: nil
+            clock_provider: nil,
+            node: nil
 
   @doc """
   Begins a link.
