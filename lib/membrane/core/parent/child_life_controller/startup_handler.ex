@@ -66,14 +66,15 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
 
   @spec start_children(
           [ChildEntryParser.raw_child_entry_t()],
+          node(),
           parent_clock :: Clock.t(),
           syncs :: %{Membrane.Child.name_t() => pid()},
           log_metadata :: Keyword.t()
         ) :: [ChildEntry.t()]
-  def start_children(children, parent_clock, syncs, log_metadata) do
-    Membrane.Logger.debug("Starting children: #{inspect(children)}")
+  def start_children(children, node, parent_clock, syncs, log_metadata) do
+    Membrane.Logger.debug("Starting children: #{inspect(children)} on node #{node}")
 
-    children |> Enum.map(&start_child(&1, parent_clock, syncs, log_metadata))
+    children |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata))
   end
 
   @spec add_children([ChildEntry.t()], Parent.state_t()) ::
@@ -144,7 +145,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     end
   end
 
-  defp start_child(child, parent_clock, syncs, log_metadata) do
+  defp start_child(child, node, parent_clock, syncs, log_metadata) do
     %ChildEntry{name: name, module: module, options: options} = child
     Membrane.Logger.debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")
     sync = syncs |> Map.get(name, Sync.no_sync())
@@ -154,15 +155,19 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     start_result =
       case child.component_type do
         :element ->
-          Core.Element.start(%{
-            parent: self(),
-            module: module,
-            name: name,
-            user_options: options,
-            parent_clock: parent_clock,
-            sync: sync,
-            log_metadata: log_metadata
-          })
+          Core.Element.start(
+            node,
+            %{
+              parent: self(),
+              module: module,
+              name: name,
+              user_options: options,
+              parent_clock: parent_clock,
+              sync: sync,
+              log_metadata: log_metadata
+            },
+            []
+          )
 
         :bin ->
           unless sync == Sync.no_sync() do
@@ -171,14 +176,18 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
                   reason: bin cannot be synced with other elements"
           end
 
-          Core.Bin.start(%{
-            parent: self(),
-            name: name,
-            module: module,
-            user_options: options,
-            parent_clock: parent_clock,
-            log_metadata: log_metadata
-          })
+          Core.Bin.start(
+            node,
+            %{
+              parent: self(),
+              name: name,
+              module: module,
+              user_options: options,
+              parent_clock: parent_clock,
+              log_metadata: log_metadata
+            },
+            []
+          )
       end
 
     with {:ok, pid} <- start_result,

@@ -35,9 +35,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     :ok = StartupHandler.check_if_children_names_unique(children, state)
     syncs = StartupHandler.setup_syncs(children, spec.stream_sync)
 
+    # ensure node is set to local if it's nil in spec
+    node = spec.node || node()
+
     children =
       StartupHandler.start_children(
         children,
+        node,
         state.synchronization.clock_proxy,
         syncs,
         state.children_log_metadata
@@ -215,7 +219,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     Enum.each(
       members_pids,
       fn pid ->
-        if Process.alive?(pid), do: GenServer.stop(pid, {:shutdown, :membrane_crash_group_kill})
+        if node(pid) == node() do
+          if Process.alive?(pid),
+            do: GenServer.stop(pid, {:shutdown, :membrane_crash_group_kill})
+        else
+          if :rpc.call(node(pid), Process, :alive?, [pid]),
+            do: GenServer.stop(pid, {:shutdown, :membrane_crash_group_kill})
+        end
       end
     )
 
