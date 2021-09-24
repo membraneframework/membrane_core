@@ -81,12 +81,11 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
     end
   end
 
-  @spec set_triggered(Pipeline.State.t(), CrashGroup.name_t(), boolean()) :: Pipeline.State.t()
-  def set_triggered(state, group_name, value \\ true) do
-    Bunch.Access.put_in(
-      state,
-      [:crash_groups, group_name, :triggered?],
-      value
-    )
+  @spec set_triggered(Pipeline.State.t(), CrashGroup.name_t(), Membrane.Child.name_t()) ::
+          Pipeline.State.t()
+  def set_triggered(state, group_name, crash_initiator) do
+    Bunch.Access.update_in(state, [:crash_groups, group_name], fn group ->
+      %{group | triggered?: true, crash_initiator: crash_initiator}
+    end)
   end
 end

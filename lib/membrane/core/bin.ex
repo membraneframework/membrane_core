@@ -33,28 +33,40 @@ defmodule Membrane.Core.Bin do
   Returns the same values as `GenServer.start_link/3`.
   """
   @spec start_link(options_t, GenServer.options()) :: GenServer.on_start()
-  def start_link(options, process_options \\ []) do
-    do_start(:start_link, options, process_options)
-  end
+  def start_link(options, process_options \\ []),
+    do: start_link(node(), options, process_options)
+
+  @spec start_link(node(), options_t, GenServer.options()) :: GenServer.on_start()
+  def start_link(node, options, process_options),
+    do: do_start(node, :start_link, options, process_options)
 
   @doc """
   Works similarly to `start_link/2`, but does not link to the current process.
   """
   @spec start(options_t(), GenServer.options()) :: GenServer.on_start()
-  def start(options, process_options \\ []) do
-    do_start(:start, options, process_options)
-  end
+  def start(options, process_options \\ []),
+    do: start(node(), options, process_options)
 
-  defp do_start(method, options, process_options) do
+  @spec start(node(), options_t(), GenServer.options()) :: GenServer.on_start()
+  def start(node, options, process_options),
+    do: do_start(node, :start, options, process_options)
+
+  defp do_start(node, method, options, process_options) do
     if options.module |> Membrane.Bin.bin?() do
       Membrane.Logger.debug("""
-      Bin start link: name: #{inspect(options.name)}
+      Bin #{method}: #{inspect(options.name)}
+      node: #{node},
       module: #{inspect(options.module)},
       bin options: #{inspect(options.user_options)},
       process options: #{inspect(process_options)}
       """)
 
-      apply(GenServer, method, [Membrane.Core.Bin, options, process_options])
+      # rpc if necessary
+      if node == node() do
+        apply(GenServer, method, [Membrane.Core.Bin, options, process_options])
+      else
+        :rpc.call(node, GenServer, method, [Membrane.Core.Bin, options, process_options])
+      end
     else
       raise """
       Cannot start bin, passed module #{inspect(options.module)} is not a Membrane Bin.

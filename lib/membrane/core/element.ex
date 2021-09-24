@@ -48,27 +48,41 @@ defmodule Membrane.Core.Element do
   """
   @spec start_link(options_t, GenServer.options()) :: GenServer.on_start()
   def start_link(options, process_options \\ []),
-    do: do_start(:start_link, options, process_options)
+    do: start_link(node(), options, process_options)
+
+  @spec start_link(node(), options_t, GenServer.options()) :: GenServer.on_start()
+  def start_link(node, options, process_options) when is_atom(node),
+    do: do_start(node, :start_link, options, process_options)
 
   @doc """
   Works similarly to `start_link/5`, but does not link to the current process.
   """
   @spec start(options_t, GenServer.options()) :: GenServer.on_start()
   def start(options, process_options \\ []),
-    do: do_start(:start, options, process_options)
+    do: start(node(), options, process_options)
 
-  defp do_start(method, options, process_options) do
+  @spec start(node(), options_t, GenServer.options()) :: GenServer.on_start()
+  def start(node, options, process_options),
+    do: do_start(node, :start, options, process_options)
+
+  defp do_start(node, method, options, process_options) do
     %{module: module, name: name, user_options: user_options} = options
 
     if Element.element?(options.module) do
       Membrane.Logger.debug("""
       Element #{method}: #{inspect(name)}
+      node: #{node},
       module: #{inspect(module)},
       element options: #{inspect(user_options)},
       process options: #{inspect(process_options)}
       """)
 
-      apply(GenServer, method, [__MODULE__, options, process_options])
+      # rpc if necessary
+      if node == node() do
+        apply(GenServer, method, [__MODULE__, options, process_options])
+      else
+        :rpc.call(node, GenServer, method, [__MODULE__, options, process_options])
+      end
     else
       raise """
       Cannot start element, passed module #{inspect(module)} is not a Membrane Element.

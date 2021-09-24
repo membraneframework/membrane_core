@@ -15,9 +15,11 @@ defmodule Membrane.Core.Parent.CrashGroup do
           mode: :temporary,
           members: [Membrane.Child.name_t()],
           alive_members_pids: [pid()],
-          triggered?: boolean()
+          triggered?: boolean(),
+          crash_initiator: Membrane.Child.name_t()
         }
 
   @enforce_keys [:name, :mode]
-  defstruct @enforce_keys ++ [members: [], alive_members_pids: [], triggered?: false]
+  defstruct @enforce_keys ++
+              [members: [], alive_members_pids: [], triggered?: false, crash_initiator: nil]
 end
