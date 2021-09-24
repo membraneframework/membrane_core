@@ -8,6 +8,7 @@ defmodule Membrane.Core.Pipeline do
   alias Membrane.Core.Parent.MessageDispatcher
   alias Membrane.Core.Telemetry
 
+  require Membrane.Core.Telemetry
   require Membrane.Logger
 
   @impl GenServer

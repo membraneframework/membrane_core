@@ -11,6 +11,7 @@ defmodule Membrane.Core.Bin do
   alias Membrane.Core.Child.{PadController, PadSpecHandler}
 
   require Membrane.Core.Message
+  require Membrane.Core.Telemetry
   require Membrane.Logger
 
   @type options_t :: %{

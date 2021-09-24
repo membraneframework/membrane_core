@@ -13,6 +13,7 @@ defmodule Membrane.Core.Element.EventController do
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
+  require Membrane.Core.Telemetry
   require Membrane.Logger
 
   @spec handle_start_of_stream(Pad.ref_t(), State.t()) :: State.stateful_try_t()

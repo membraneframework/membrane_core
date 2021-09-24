@@ -12,6 +12,7 @@ defmodule Membrane.Core.Element.CapsController do
   alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel
+  require Membrane.Core.Telemetry
   require Membrane.Logger
 
   @doc """

@@ -16,9 +16,10 @@ defmodule Membrane.Core.Element.ActionHandler do
   alias Membrane.Core.Element.{DemandHandler, LifecycleController, State}
   alias Membrane.Element.Action
 
-  require Membrane.Logger
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
+  require Membrane.Core.Telemetry
+  require Membrane.Logger
 
   @impl CallbackHandler
   def handle_action(action, callback, params, state) do

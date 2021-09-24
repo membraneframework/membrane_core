@@ -14,6 +14,7 @@ defmodule Membrane.Core.InputBuffer do
   alias Membrane.Pad
 
   require Membrane.Core.Message
+  require Membrane.Core.Telemetry
   require Membrane.Logger
 
   @qe Qex

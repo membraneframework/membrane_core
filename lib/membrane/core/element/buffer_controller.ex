@@ -13,6 +13,7 @@ defmodule Membrane.Core.Element.BufferController do
   alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel
+  require Membrane.Core.Telemetry
 
   @doc """
   Handles incoming buffer: either stores it in InputBuffer, or executes element's
