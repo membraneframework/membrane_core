@@ -56,6 +56,7 @@ defmodule Membrane.Core.Telemetry do
     report_event(event, value)
   end
 
+  @spec get_public_pad_name(Membrane.Pad.ref_t()) :: Membrane.Pad.ref_t()
   def get_public_pad_name(pad) do
     case pad do
       {:private, direction} -> direction
