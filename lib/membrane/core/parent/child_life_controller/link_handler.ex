@@ -11,6 +11,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   alias Membrane.Pad
 
   require Membrane.Core.Message
+  require Membrane.Core.Telemetry
   require Membrane.Pad
 
   @spec resolve_links([LinkParser.raw_link_t()], Parent.state_t()) ::
@@ -143,7 +144,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   end
 
   defp link(%Link{from: from, to: to}, state) do
-    Telemetry.report_new_link(from, to)
+    Telemetry.report_link(from, to)
     do_link(from, to, state)
   end
 

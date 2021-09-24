@@ -7,10 +7,11 @@ defmodule Membrane.Core.Bin do
 
   alias __MODULE__.{LinkingBuffer, State}
   alias Membrane.{CallbackError, Core, ComponentPath, Pad, Sync}
-  alias Membrane.Core.{CallbackHandler, Message}
+  alias Membrane.Core.{CallbackHandler, Message, Telemetry}
   alias Membrane.Core.Child.{PadController, PadSpecHandler}
 
   require Membrane.Core.Message
+  require Membrane.Core.Telemetry
   require Membrane.Logger
 
   @type options_t :: %{
@@ -93,6 +94,8 @@ defmodule Membrane.Core.Bin do
     :ok = Membrane.Logger.set_prefix(name_str <> " bin")
     Logger.metadata(log_metadata)
     :ok = ComponentPath.set_and_append(log_metadata[:parent_path] || [], name_str <> " bin")
+
+    Telemetry.report_init(:bin)
 
     clock_proxy = Membrane.Clock.start_link(proxy: true) ~> ({:ok, pid} -> pid)
     clock = if Bunch.Module.check_behaviour(module, :membrane_clock?), do: clock_proxy, else: nil
@@ -184,6 +187,8 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def terminate(reason, state) do
+    Telemetry.report_terminate(:bin)
+
     :ok = state.module.handle_shutdown(reason, state.internal_state)
   end
 end
