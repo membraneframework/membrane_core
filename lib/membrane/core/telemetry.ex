@@ -56,8 +56,9 @@ defmodule Membrane.Core.Telemetry do
     report_event(event, value)
   end
 
-  @spec get_public_pad_name(Membrane.Pad.ref_t()) :: Membrane.Pad.ref_t()
-  def get_public_pad_name(pad) do
+  @doc false
+  @spec __get_public_pad_name__(Membrane.Pad.ref_t()) :: Membrane.Pad.ref_t()
+  def __get_public_pad_name__(pad) do
     case pad do
       {:private, direction} -> direction
       {Membrane.Pad, {:private, direction}, ref} -> {Membrane.Pad, direction, ref}
@@ -81,8 +82,8 @@ defmodule Membrane.Core.Telemetry do
           from: inspect(unquote(from).child),
           to: inspect(unquote(to).child),
           pad_from:
-            Membrane.Core.Telemetry.get_public_pad_name(unquote(from).pad_ref) |> inspect(),
-          pad_to: Membrane.Core.Telemetry.get_public_pad_name(unquote(to).pad_ref) |> inspect()
+            Membrane.Core.Telemetry.__get_public_pad_name__(unquote(from).pad_ref) |> inspect(),
+          pad_to: Membrane.Core.Telemetry.__get_public_pad_name__(unquote(to).pad_ref) |> inspect()
         }
       end
 
