@@ -117,7 +117,7 @@ defmodule Membrane.Core.OptionsSpecs do
     ```
     """
 
-    default_val_desc =
+    default_value_doc =
       if Keyword.has_key?(opt_definition, :default) do
         inspector =
           opt_definition
@@ -133,12 +133,15 @@ defmodule Membrane.Core.OptionsSpecs do
         quote_expr("***Required***")
       end
 
-    desc = Keyword.get(opt_definition, :description, "") |> String.trim()
+    description = Keyword.get(opt_definition, :description, "")
 
     quote do
+      description = unquote(description) |> String.trim()
+      doc_parts = [unquote_splicing([spec, default_value_doc]), description]
+
       """
       - #{unquote(header)}  \n
-      #{unquote([spec, default_val_desc, desc]) |> Enum.map_join("  \n", &Markdown.indent/1)}
+      #{doc_parts |> Enum.map_join("  \n", &Markdown.indent/1)}
       """
     end
   end
