@@ -83,7 +83,8 @@ defmodule Membrane.Core.Telemetry do
           to: inspect(unquote(to).child),
           pad_from:
             Membrane.Core.Telemetry.__get_public_pad_name__(unquote(from).pad_ref) |> inspect(),
-          pad_to: Membrane.Core.Telemetry.__get_public_pad_name__(unquote(to).pad_ref) |> inspect()
+          pad_to:
+            Membrane.Core.Telemetry.__get_public_pad_name__(unquote(to).pad_ref) |> inspect()
         }
       end
 
