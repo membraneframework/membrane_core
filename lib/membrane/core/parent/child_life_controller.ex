@@ -29,7 +29,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     links: #{inspect(spec.links)}
     """)
 
-    {links, children_spec_from_links} = LinkParser.parse(spec.links)
+    {links, removals, children_spec_from_links} = LinkParser.parse(spec.links)
     children_spec = Enum.concat(spec.children, children_spec_from_links)
     children = ChildEntryParser.parse(children_spec)
     :ok = StartupHandler.check_if_children_names_unique(children, state)
@@ -66,7 +66,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     state = ClockHandler.choose_clock(children, spec.clock_provider, state)
     links = LinkHandler.resolve_links(links, state)
+    removals = LinkHandler.resolve_link_removals(removals, state)
+
     {:ok, state} = LinkHandler.link_children(links, state)
+    {:ok, state} = LinkHandler.unlink_children(removals, state)
     {:ok, state} = StartupHandler.exec_handle_spec_started(children_names, state)
     state = StartupHandler.init_playback_state(children_names, state)
 

@@ -23,6 +23,23 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     )
   end
 
+  @spec resolve_link_removals([LinkParser.raw_link_t()], Parent.state_t()) ::
+          [Parent.Link.t()]
+  def resolve_link_removals(links, state) do
+    Enum.map(
+      links,
+      fn link ->
+        state.links
+        |> Enum.find(fn existing_link ->
+          existing_link.from.child == link.from.child and
+            existing_link.from.pad_spec == link.from.pad_spec and
+            existing_link.to.child == link.to.child and
+            existing_link.to.pad_spec == link.to.pad_spec
+        end)
+      end
+    )
+  end
+
   # Links children based on given specification and map for mapping children
   # names into PIDs.
   #
@@ -37,6 +54,19 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
       state = Enum.reduce(links, state, &flush_linking_buffer/2)
       {:ok, state}
     end
+  end
+
+  @spec unlink_children([Parent.Link.t()], Parent.state_t()) ::
+          {:ok, Parent.state_t()} | {{:error, any()}, Parent.state_t()}
+  def unlink_children(links, state) do
+    Enum.each(links, fn %Link{to: to, from: from} ->
+      Message.send(from.pid, :handle_unlink, from.pad_ref)
+      Message.send(to.pid, :handle_unlink, to.pad_ref)
+    end)
+
+    state = Map.update!(state, :links, &Enum.reject(&1, fn link -> link in links end))
+
+    {:ok, state}
   end
 
   @spec unlink_crash_group(CrashGroup.t(), Parent.state_t()) :: Parent.state_t()
