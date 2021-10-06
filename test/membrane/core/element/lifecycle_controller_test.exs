@@ -19,7 +19,13 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
 
     state =
       %{
-        State.new(%{module: DummyElement, name: :test_name, parent_clock: nil, sync: nil})
+        State.new(%{
+          module: DummyElement,
+          name: :test_name,
+          parent_clock: nil,
+          sync: nil,
+          parent: self()
+        })
         | watcher: self(),
           type: :filter,
           pads: %{

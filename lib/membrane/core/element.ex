@@ -108,7 +108,7 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def init(options) do
-    parent_monitor = Process.monitor(options.parent)
+    Process.monitor(options.parent)
     name_str = if String.valid?(options.name), do: options.name, else: inspect(options.name)
     :ok = Membrane.Logger.set_prefix(name_str)
     Logger.metadata(options.log_metadata)
@@ -117,11 +117,7 @@ defmodule Membrane.Core.Element do
 
     Telemetry.report_init(:element)
 
-    state =
-      options
-      |> Map.take([:module, :name, :parent_clock, :sync])
-      |> Map.put(:parent_monitor, parent_monitor)
-      |> State.new()
+    state = Map.take(options, [:module, :name, :parent_clock, :sync, :parent]) |> State.new()
 
     with {:ok, state} <- LifecycleController.handle_init(options.user_options, state) do
       {:ok, state}
@@ -176,7 +172,7 @@ defmodule Membrane.Core.Element do
   end
 
   @impl GenServer
-  def handle_info({:DOWN, ref, :process, _pid, reason}, %{parent_monitor: ref} = state) do
+  def handle_info({:DOWN, _ref, :process, parent_pid, reason}, %{parent_pid: parent_pid} = state) do
     {:ok, state} = LifecycleController.handle_pipeline_down(reason, state)
 
     {:stop, {:shutdown, :parent_crash}, state}

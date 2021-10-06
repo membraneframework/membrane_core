@@ -14,7 +14,7 @@ defmodule Membrane.Core.Child.PadControllerTest do
   @module Membrane.Core.Child.PadController
 
   defp prepare_state(elem_module, name \\ :element, playback_state \\ :stopped) do
-    %{name: name, module: elem_module, parent_clock: nil, sync: nil}
+    %{name: name, module: elem_module, parent_clock: nil, sync: nil, parent: self()}
     |> State.new()
     |> Map.update!(:playback, &%{&1 | state: playback_state})
     |> PadSpecHandler.init_pads()

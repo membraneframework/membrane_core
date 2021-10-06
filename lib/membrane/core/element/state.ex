@@ -26,8 +26,8 @@ defmodule Membrane.Core.Element.State do
           internal_state: Element.state_t() | nil,
           pads: PadModel.pads_t() | nil,
           watcher: pid | nil,
+          parent_pid: pid,
           controlling_pid: pid | nil,
-          parent_monitor: reference() | nil,
           playback: Playback.t(),
           playback_buffer: PlaybackBuffer.t(),
           supplying_demand?: boolean(),
@@ -48,8 +48,8 @@ defmodule Membrane.Core.Element.State do
     :internal_state,
     :pads,
     :watcher,
+    :parent_pid,
     :controlling_pid,
-    :parent_monitor,
     :playback,
     :playback_buffer,
     :supplying_demand?,
@@ -65,7 +65,7 @@ defmodule Membrane.Core.Element.State do
           name: Element.name_t(),
           parent_clock: Clock.t(),
           sync: Sync.t(),
-          parent_monitor: reference()
+          parent: pid
         }) :: t
   def new(options) do
     %__MODULE__{
@@ -74,9 +74,9 @@ defmodule Membrane.Core.Element.State do
       name: options.name,
       internal_state: nil,
       pads: nil,
+      parent_pid: options.parent,
       watcher: nil,
       controlling_pid: nil,
-      parent_monitor: options[:parent_monitor],
       playback: %Playback{},
       playback_buffer: PlaybackBuffer.new(),
       supplying_demand?: false,
