@@ -22,7 +22,7 @@ defmodule Membrane.Core.Element do
 
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.Element.{LifecycleController, PlaybackBuffer, State}
-  alias Membrane.Core.{Child, Message, PlaybackHandler, Telemetry, TimerController}
+  alias Membrane.Core.{Message, PlaybackHandler, Telemetry, TimerController}
   alias Membrane.ComponentPath
   alias Membrane.Core.Child.PadController
 
@@ -138,11 +138,6 @@ defmodule Membrane.Core.Element do
   @impl GenServer
   def handle_call(Message.new(:get_clock), _from, state) do
     reply({{:ok, state.synchronization.clock}, state})
-  end
-
-  @impl GenServer
-  def handle_call(Message.new(:set_controlling_pid, pid), _from, state) do
-    Child.LifecycleController.handle_controlling_pid(pid, state) |> reply(state)
   end
 
   @impl GenServer

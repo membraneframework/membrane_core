@@ -164,12 +164,6 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
-  def handle_call(Message.new(:set_controlling_pid, pid), _from, state) do
-    Core.Child.LifecycleController.handle_controlling_pid(pid, state)
-    |> reply()
-  end
-
-  @impl GenServer
   def handle_call(Message.new(:handle_link, [direction, this, other, other_info]), _from, state) do
     PadController.handle_link(direction, this, other, other_info, state) |> reply()
   end

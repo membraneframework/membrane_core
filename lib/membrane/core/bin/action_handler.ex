@@ -64,14 +64,16 @@ defmodule Membrane.Core.Bin.ActionHandler do
 
   @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}
   defp send_notification(notification, %State{parent_pid: nil} = state) do
-    Membrane.Logger.warn("Dropping notification #{inspect(notification)} (parent_pid: nil)")
+    Membrane.Logger.warn(
+      "Dropping notification #{inspect(notification)} (parent PID is not defined)"
+    )
 
     {:ok, state}
   end
 
   defp send_notification(notification, %State{parent_pid: parent_pid, name: name} = state) do
     Membrane.Logger.debug(
-      "Sending notification #{inspect(notification)} (parent_pid: #{inspect(parent_pid)})"
+      "Sending notification #{inspect(notification)} (parent PID: #{inspect(parent_pid)})"
     )
 
     Message.send(parent_pid, :notification, [name, notification])

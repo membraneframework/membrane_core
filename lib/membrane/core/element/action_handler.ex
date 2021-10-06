@@ -36,7 +36,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec do_handle_action(Action.t(), callback :: atom, params :: map, State.t()) ::
           State.stateful_try_t()
   defp do_handle_action({action, _}, :handle_init, _params, state)
-       when action not in [:latency] do
+       when action not in [:latency, :notify] do
     {{:error, :invalid_action}, state}
   end
 

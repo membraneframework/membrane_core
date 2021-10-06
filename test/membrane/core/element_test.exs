@@ -129,17 +129,6 @@ defmodule Membrane.Core.ElementTest do
     assert state == get_state()
   end
 
-  test "should set controlling pid" do
-    assert {:reply, :ok, state} =
-             Element.handle_call(
-               Message.new(:set_controlling_pid, :c.pid(0, 255, 0)),
-               nil,
-               get_state()
-             )
-
-    assert state.controlling_pid == :c.pid(0, 255, 0)
-  end
-
   test "should store demand/buffer/caps/event when not playing" do
     initial_state = linked_state()
 

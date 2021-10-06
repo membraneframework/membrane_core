@@ -26,7 +26,6 @@ defmodule Membrane.Core.Element.StateSpec do
              name: :name,
              internal_state: nil,
              pads: PadSpecHandler.init_pads(state).pads,
-             controlling_pid: nil,
              playback: %Playback{},
              playback_buffer: PlaybackBuffer.new(),
              supplying_demand?: false,
