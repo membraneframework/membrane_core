@@ -14,7 +14,7 @@ defmodule Membrane.Element.Action do
   alias Membrane.Pad
 
   @typedoc """
-  Sends a message to the watcher.
+  Sends a message to the parent.
   """
   @type notify_t :: {:notify, Notification.t()}
 

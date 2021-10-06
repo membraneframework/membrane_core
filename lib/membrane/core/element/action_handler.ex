@@ -420,20 +420,20 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp handle_event(_pad_ref, _event, state), do: {:ok, state}
 
   @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}
-  defp send_notification(notification, %State{watcher: nil} = state) do
+  defp send_notification(notification, %State{parent_pid: nil} = state) do
     Membrane.Logger.debug_verbose(
-      "Dropping notification #{inspect(notification)} as watcher is undefined"
+      "Dropping notification #{inspect(notification)} (parent PID is not defined)"
     )
 
     {:ok, state}
   end
 
-  defp send_notification(notification, %State{watcher: watcher, name: name} = state) do
+  defp send_notification(notification, %State{parent_pid: parent_pid, name: name} = state) do
     Membrane.Logger.debug_verbose(
-      "Sending notification #{inspect(notification)} (watcher: #{inspect(watcher)})"
+      "Sending notification #{inspect(notification)} (parent PID: #{inspect(parent_pid)})"
     )
 
-    Message.send(watcher, :notification, [name, notification])
+    Message.send(parent_pid, :notification, [name, notification])
     {:ok, state}
   end
 end

@@ -104,6 +104,7 @@ defmodule Membrane.Core.Bin do
       %State{
         module: module,
         name: name,
+        parent_pid: options.parent,
         synchronization: %{
           parent_clock: options.parent_clock,
           timers: %{},

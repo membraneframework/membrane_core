@@ -287,25 +287,21 @@ defmodule Membrane.Core.ElementTest do
       assert_receive {:DOWN, ^ref, :process, ^elem_pid, {:shutdown, :parent_crash}}
     end
 
-    test "should not assume pipeline is down when getting any monitor message" do
-      monitored_proc = spawn(fn -> receive do: (:exit -> :ok) end)
-      on_exit(fn -> send(monitored_proc, :exit) end)
-
+    test "DOWN message should be delivered to handle_other if it's not coming from parent" do
       {:ok, elem_pid} =
-        monitored_proc
+        self()
         |> element_init_options
         |> Element.start()
+      monitored_proc = spawn(fn -> receive do: (:exit -> :ok) end)
+      on_exit(fn -> send(monitored_proc, :exit) end)
+      ref = Process.monitor(monitored_proc)
 
-      {:ok, _clock} = Message.call(elem_pid, :handle_watcher, self())
-      ref = make_ref()
-      deceased_pid = self()
-      send(elem_pid, {:DOWN, ref, :process, deceased_pid, :normal})
+      send(elem_pid, {:DOWN, ref, :process, monitored_proc, :normal})
 
       assert_receive Message.new(:notification, [
                        :name,
-                       {:DOWN, ^ref, :process, ^deceased_pid, :normal}
+                       {:DOWN, ^ref, :process, ^monitored_proc, :normal}
                      ])
-
       assert Process.alive?(elem_pid)
     end
   end

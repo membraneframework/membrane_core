@@ -66,12 +66,12 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   end
 
   defp inform_parent(state, msg, msg_params) do
-    if not pipeline?(state) and state.watcher,
-      do: Message.send(state.watcher, msg, [state.name | msg_params])
+    if not pipeline?(state) and state.parent_pid,
+      do: Message.send(state.parent_pid, msg, [state.name | msg_params])
   end
 
   defp is_parent_pid?(pid, state) do
-    state[:watcher] == pid
+    state[:parent_pid] == pid
   end
 
   defp is_child_pid?(pid, state) do

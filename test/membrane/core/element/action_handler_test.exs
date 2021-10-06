@@ -427,8 +427,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   describe "handling :notification action" do
     setup :trivial_filter_state
 
-    test "when watcher is set", %{state: state} do
-      state = %{state | watcher: self()}
+    test "when parent pid is set", %{state: state} do
+      state = %{state | parent_pid: self()}
 
       result =
         @module.handle_action(
@@ -442,8 +442,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_received Message.new(:notification, [:elem_name, @mock_notification])
     end
 
-    test "when watcher is not set", %{state: state} do
-      state = %{state | watcher: nil}
+    test "when parent pid is not set", %{state: state} do
+      state = %{state | parent_pid: nil}
 
       result =
         @module.handle_action(
