@@ -19,7 +19,6 @@ defmodule Membrane.Core.Child.PadControllerTest do
     |> Map.update!(:playback, &%{&1 | state: playback_state})
     |> PadSpecHandler.init_pads()
     |> Bunch.Access.put_in(:internal_state, %{})
-    |> Bunch.Access.put_in(:watcher, self())
   end
 
   describe ".handle_link/7" do

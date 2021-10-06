@@ -64,9 +64,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
 
   @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}
   defp send_notification(notification, %State{parent_pid: nil} = state) do
-    Membrane.Logger.warn(
-      "Dropping notification #{inspect(notification)} (parent_pid: nil)"
-    )
+    Membrane.Logger.warn("Dropping notification #{inspect(notification)} (parent_pid: nil)")
 
     {:ok, state}
   end

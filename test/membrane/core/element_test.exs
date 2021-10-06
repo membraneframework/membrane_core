@@ -117,16 +117,16 @@ defmodule Membrane.Core.ElementTest do
     assert state.playback.state == :playing
   end
 
-  test "should update watcher and reply as expected" do
+  test "should return correct clock and should not modify the state" do
     assert {:reply, {:ok, reply}, state} =
              Element.handle_call(
-               Message.new(:handle_watcher, :c.pid(0, 255, 0)),
+               Message.new(:get_clock),
                nil,
                get_state()
              )
 
-    assert reply == %{clock: state.synchronization.clock}
-    assert state.watcher == :c.pid(0, 255, 0)
+    assert reply == state.synchronization.clock
+    assert state == get_state()
   end
 
   test "should set controlling pid" do
@@ -281,7 +281,6 @@ defmodule Membrane.Core.ElementTest do
         |> element_init_options
         |> Element.start()
 
-      {:ok, _clock} = Message.call(elem_pid, :handle_watcher, pipeline_mock)
       ref = Process.monitor(elem_pid)
       send(pipeline_mock, :exit)
       assert_receive {:DOWN, ^ref, :process, ^elem_pid, {:shutdown, :parent_crash}}
@@ -292,6 +291,7 @@ defmodule Membrane.Core.ElementTest do
         self()
         |> element_init_options
         |> Element.start()
+
       monitored_proc = spawn(fn -> receive do: (:exit -> :ok) end)
       on_exit(fn -> send(monitored_proc, :exit) end)
       ref = Process.monitor(monitored_proc)
@@ -302,6 +302,7 @@ defmodule Membrane.Core.ElementTest do
                        :name,
                        {:DOWN, ^ref, :process, ^monitored_proc, :normal}
                      ])
+
       assert Process.alive?(elem_pid)
     end
   end

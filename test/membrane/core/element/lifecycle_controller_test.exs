@@ -26,8 +26,7 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
           sync: nil,
           parent: self()
         })
-        | watcher: self(),
-          type: :filter,
+        | type: :filter,
           pads: %{
             data: %{
               input: %Data{

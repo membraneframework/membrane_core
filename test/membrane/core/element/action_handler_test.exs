@@ -16,8 +16,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   defp demand_test_filter(_context) do
     state = %{
       State.new(%{module: Filter, name: :test_name, parent_clock: nil, sync: nil, parent: self()})
-      | watcher: self(),
-        type: :filter,
+      | type: :filter,
         pads: %{
           data: %{
             input: %Data{
@@ -528,8 +527,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           sync: nil,
           parent: self()
         })
-        | watcher: self(),
-          type: :source,
+        | type: :source,
           pads: %{
             data: %{
               output: %{

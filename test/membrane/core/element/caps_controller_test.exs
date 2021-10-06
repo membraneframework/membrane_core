@@ -25,8 +25,7 @@ defmodule Membrane.Core.Element.CapsControllerTest do
           sync: nil,
           parent: self()
         })
-        | watcher: self(),
-          type: :filter,
+        | type: :filter,
           pads: %{
             data: %{
               input: %Data{

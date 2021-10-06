@@ -181,9 +181,8 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
-  def handle_call(Message.new(:handle_watcher, watcher), _from, state) do
-    Core.Child.LifecycleController.handle_watcher(watcher, state)
-    |> reply()
+  def handle_call(Message.new(:get_clock), _from, state) do
+    reply({{:ok, state.synchronization.clock}, state})
   end
 
   @impl GenServer
