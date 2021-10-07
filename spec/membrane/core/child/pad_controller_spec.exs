@@ -12,7 +12,7 @@ defmodule Membrane.Core.Child.PadControllerSpec do
     let :name, do: :element_name
 
     let! :state do
-      State.new(%{module: module(), name: name(), parent_clock: nil, sync: nil})
+      State.new(%{module: module(), name: name(), parent_clock: nil, sync: nil, parent: self()})
       |> PadSpecHandler.init_pads()
     end
 
@@ -114,7 +114,7 @@ defmodule Membrane.Core.Child.PadControllerSpec do
 
     let! :state do
       {pad_info, state} =
-        State.new(%{module: module(), name: name(), parent_clock: nil, sync: nil})
+        State.new(%{module: module(), name: name(), parent_clock: nil, sync: nil, parent: self()})
         |> Map.update!(:playback, &%{&1 | state: :playing})
         |> PadSpecHandler.init_pads()
         |> Bunch.Access.get_and_update_in(

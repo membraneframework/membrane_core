@@ -45,7 +45,7 @@ defmodule Membrane.Core.ElementSpec do
 
       let :state,
         do: %{
-          State.new(%{module: module(), name: :name, parent_clock: nil, sync: nil})
+          State.new(%{module: module(), name: :name, parent_clock: nil, sync: nil, parent: self()})
           | playback: playback(),
             playback_buffer: Membrane.Core.Element.PlaybackBuffer.new(),
             internal_state: internal_state()
@@ -363,7 +363,7 @@ defmodule Membrane.Core.ElementSpec do
 
       let :state,
         do: %{
-          State.new(%{module: module(), name: :name, parent_clock: nil, sync: nil})
+          State.new(%{module: module(), name: :name, parent_clock: nil, sync: nil, parent: self()})
           | playback: playback(),
             internal_state: internal_state()
         }
@@ -568,7 +568,7 @@ defmodule Membrane.Core.ElementSpec do
 
       let :state,
         do: %{
-          State.new(%{module: module(), name: :name, parent_clock: nil, sync: nil})
+          State.new(%{module: module(), name: :name, parent_clock: nil, sync: nil, parent: self()})
           | playback: playback(),
             internal_state: internal_state()
         }
