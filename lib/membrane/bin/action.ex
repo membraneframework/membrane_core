@@ -28,7 +28,13 @@ defmodule Membrane.Bin.Action do
   Action that stops, unlinks and removes specified child/children from the bin.
   """
   @type remove_child_t ::
-          {:remove_child, Child.name_t() | [Child.name_t()]}
+          {:remove_child, ParentSpec.LinkBuilder.t() | [ParentSpec.LinkBuilder.t()]}
+
+  @typedoc """
+  Action that removes specified links between children.
+  """
+  @type remove_link_t ::
+          {:remove_link, Child.name_t() | [Child.name_t()]}
 
   @typedoc """
   Action that sets `Logger` metadata for the bin and all its descendants.
@@ -93,6 +99,7 @@ defmodule Membrane.Bin.Action do
           forward_t
           | spec_t
           | remove_child_t
+          | remove_link_t
           | log_metadata_t
           | start_timer_t
           | timer_interval_t

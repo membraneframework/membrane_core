@@ -17,31 +17,8 @@ defmodule Membrane.Core.Parent.LinkParser do
         }
 
   @spec parse(ParentSpec.links_spec_t()) ::
-          {[raw_link_t], [], ParentSpec.children_spec_t()} | no_return
+          {[raw_link_t], ParentSpec.children_spec_t()} | no_return
   def parse(links) when is_list(links) do
-    removals =
-      links
-      |> List.flatten()
-      |> Enum.reduce([], fn
-        %ParentSpec.LinkDestroyer{} = destroyer, acc ->
-          [
-            %Link{
-              from: %Endpoint{
-                child: destroyer.from,
-                pad_spec: destroyer.output_pad
-              },
-              to: %Endpoint{
-                child: destroyer.to,
-                pad_spec: destroyer.input_pad
-              }
-            }
-            | acc
-          ]
-
-        _link, acc ->
-          acc
-      end)
-
     {links, children} =
       links
       |> List.flatten()
@@ -52,9 +29,6 @@ defmodule Membrane.Core.Parent.LinkParser do
         %ParentSpec.LinkBuilder{links: [%{from: from} | _]} ->
           raise ParentError,
                 "Invalid link specification: link from #{inspect(from)} lacks its destination."
-
-        %ParentSpec.LinkDestroyer{} ->
-          {[], []}
 
         _other ->
           from_spec_error(links)
@@ -80,7 +54,7 @@ defmodule Membrane.Core.Parent.LinkParser do
       end)
 
     children = children |> List.flatten()
-    {links, removals, children}
+    {links, children}
   end
 
   def parse(links), do: from_spec_error(links)

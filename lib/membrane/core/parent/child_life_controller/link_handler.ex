@@ -31,10 +31,10 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
       fn link ->
         state.links
         |> Enum.find(fn existing_link ->
-          existing_link.from.child == link.from.child and
-            existing_link.from.pad_spec == link.from.pad_spec and
-            existing_link.to.child == link.to.child and
-            existing_link.to.pad_spec == link.to.pad_spec
+          existing_link.from.child == link.from and
+            existing_link.from.pad_spec == link.output_pad and
+            existing_link.to.child == link.to and
+            existing_link.to.pad_spec == link.input_pad
         end)
       end
     )

@@ -26,6 +26,11 @@ defmodule Membrane.Core.Bin.ActionHandler do
   end
 
   @impl CallbackHandler
+  def handle_action({:remove_link, links}, _cb, _params, state) do
+    Parent.ChildLifeController.handle_remove_link(links, state)
+  end
+
+  @impl CallbackHandler
   def handle_action({:notify, notification}, _cb, _params, state) do
     send_notification(notification, state)
   end

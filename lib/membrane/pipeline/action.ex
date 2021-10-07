@@ -31,6 +31,12 @@ defmodule Membrane.Pipeline.Action do
           {:remove_child, Child.name_t() | [Child.name_t()]}
 
   @typedoc """
+  Action that removes specified links between children.
+  """
+  @type remove_link_t ::
+          {:remove_child, ParentSpec.LinkBuilder.t() | [ParentSpec.LinkBuilder.t()]}
+
+  @typedoc """
   Action that sets `Logger` metadata for the pipeline and all its descendants.
 
   Uses `Logger.metadata/1` underneath.
@@ -93,6 +99,7 @@ defmodule Membrane.Pipeline.Action do
           forward_t
           | spec_t
           | remove_child_t
+          | remove_link_t
           | log_metadata_t
           | start_timer_t
           | timer_interval_t
