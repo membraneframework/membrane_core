@@ -129,8 +129,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         ) ::
           {:ok | {:error, any}, Parent.state_t()}
   def handle_remove_link(links, state) do
-    removals = LinkHandler.resolve_link_removals(links, state)
-    LinkHandler.unlink_children(removals, state)
+    case LinkParser.parse(links) do
+      {links, []} ->
+        removals = LinkHandler.resolve_link_removals(links, state)
+        LinkHandler.unlink_children(removals, state)
+
+      {_links, _children_spec_from_links} ->
+        raise Membrane.PipelineError,
+              "Found new child references when parsing links to remove."
+    end
   end
 
   @spec child_playback_changed(pid, Membrane.PlaybackState.t(), Parent.state_t()) ::

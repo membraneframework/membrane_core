@@ -20,7 +20,7 @@ defmodule Membrane.Core.Parent.LinkParserTest do
       |> to_bin_output()
     ]
 
-    assert {links, [], []} = LinkParser.parse(links_spec)
+    assert {links, []} = LinkParser.parse(links_spec)
 
     assert links == [
              %Link{
@@ -90,67 +90,12 @@ defmodule Membrane.Core.Parent.LinkParserTest do
            ]
   end
 
-  test "separates link destroyers" do
-    import Membrane.ParentSpec
-    require Membrane.Pad
-    alias Membrane.Pad
-
-    links_spec = [
-      link(:a)
-      |> to_bin_output(),
-      unlink(Pad.ref(:output, 456))
-      |> from(:d)
-      |> to(:e)
-      |> via_in(:input)
-    ]
-
-    assert {links, removals, []} = LinkParser.parse(links_spec)
-
-    assert links == [
-             %Link{
-               from: %Membrane.Core.Parent.Link.Endpoint{
-                 child: :a,
-                 pad_props: [],
-                 pad_ref: nil,
-                 pad_spec: :output,
-                 pid: nil
-               },
-               to: %Membrane.Core.Parent.Link.Endpoint{
-                 child: {Membrane.Bin, :itself},
-                 pad_props: [],
-                 pad_ref: nil,
-                 pad_spec: :output,
-                 pid: nil
-               }
-             }
-           ]
-
-    assert removals == [
-             %Link{
-               from: %Membrane.Core.Parent.Link.Endpoint{
-                 child: :d,
-                 pad_props: [],
-                 pad_ref: nil,
-                 pad_spec: Pad.ref(:output, 456),
-                 pid: nil
-               },
-               to: %Membrane.Core.Parent.Link.Endpoint{
-                 child: :e,
-                 pad_props: [],
-                 pad_ref: nil,
-                 pad_spec: :input,
-                 pid: nil
-               }
-             }
-           ]
-  end
-
   test "link with multiple branches" do
     import Membrane.ParentSpec
 
     links_spec = [link(:a) |> to(:b) |> to(:c), link(:d) |> to(:b) |> to(:e)]
 
-    assert {links, [], []} = LinkParser.parse(links_spec)
+    assert {links, []} = LinkParser.parse(links_spec)
 
     assert links == [
              %Link{
@@ -249,7 +194,7 @@ defmodule Membrane.Core.Parent.LinkParserTest do
     import Membrane.ParentSpec
 
     links_spec = [link(:a, A) |> to(:b, B) |> to(:c, C)]
-    assert {links, [], children} = LinkParser.parse(links_spec)
+    assert {links, children} = LinkParser.parse(links_spec)
 
     assert links == [
              %Link{

@@ -210,46 +210,7 @@ defmodule Membrane.ParentSpec do
     end
   end
 
-  defmodule LinkDestroyer do
-    @moduledoc false
-
-    use Bunch.Access
-
-    @enforce_keys :output_pad
-    defstruct from: nil,
-              input_pad: nil,
-              output_pad: nil,
-              status: :output,
-              to: nil
-
-    @type t :: %__MODULE__{
-            from: Child.name_t(),
-            input_pad: Pad.ref_t(),
-            output_pad: Pad.ref_t(),
-            status: status_t(),
-            to: Child.name_t()
-          }
-
-    @type status_t :: :output | :from | :input | :done
-
-    @spec from(t(), Child.name_t()) :: t()
-    def from(%__MODULE__{from: nil, status: :output} = destroyer, child_name) do
-      %__MODULE__{destroyer | from: child_name, status: :from}
-    end
-
-    @spec input_pad(t(), Pad.name_t()) :: t()
-    def input_pad(%__MODULE__{input_pad: nil, status: :input} = destroyer, pad) do
-      %__MODULE__{destroyer | input_pad: pad, status: :done}
-    end
-
-    @spec to(t(), Child.name_t()) :: t()
-    def to(%__MODULE__{to: nil, status: :from} = destroyer, child_name) do
-      %__MODULE__{destroyer | to: child_name, status: :input}
-    end
-  end
-
   @opaque link_builder_t :: LinkBuilder.t()
-  @opaque link_destroyer_t :: LinkDestroyer.t()
 
   @type child_spec_t :: module | struct
 
@@ -270,7 +231,7 @@ defmodule Membrane.ParentSpec do
           | {:options, Keyword.t()}
         ]
 
-  @type links_spec_t :: [link_builder_t() | link_destroyer_t() | links_spec_t]
+  @type links_spec_t :: [link_builder_t() | links_spec_t]
 
   @type crash_group_spec_t :: {any(), :temporary} | nil
   @typedoc """
@@ -326,22 +287,6 @@ defmodule Membrane.ParentSpec do
     link({Membrane.Bin, :itself}) |> via_out(pad, props)
   end
 
-  @spec unlink(Pad.name_t() | Pad.ref_t()) :: link_destroyer_t()
-  def unlink(pad) do
-    %LinkDestroyer{output_pad: pad}
-  end
-
-  @spec unlink_bin_input(Pad.name_t() | Pad.ref_t()) :: link_destroyer_t()
-  def unlink_bin_input(pad \\ :input) do
-    unlink(pad)
-    |> from({Membrane.Bin, :itself})
-  end
-
-  @spec from(link_destroyer_t(), Child.name_t()) :: link_destroyer_t()
-  def from(%LinkDestroyer{} = unlinker, child_name) do
-    LinkDestroyer.from(unlinker, child_name)
-  end
-
   @doc """
   Specifies output pad name and properties of the preceding child.
 
@@ -375,7 +320,7 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec via_in(link_builder_t() | link_destroyer_t(), Pad.name_t() | Pad.ref_t(), pad_props_t) ::
+  @spec via_in(link_builder_t(), Pad.name_t() | Pad.ref_t(), pad_props_t) ::
           link_builder_t() | no_return
   def via_in(builder, pad, opts \\ [])
 
@@ -394,16 +339,12 @@ defmodule Membrane.ParentSpec do
     )
   end
 
-  def via_in(%LinkDestroyer{} = destroyer, pad, _opts) do
-    LinkDestroyer.input_pad(destroyer, pad)
-  end
-
   @doc """
   Continues or ends a link.
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec to(link_builder_t() | link_destroyer_t(), Child.name_t()) :: link_builder_t() | no_return
+  @spec to(link_builder_t(), Child.name_t()) :: link_builder_t() | no_return
   def to(%LinkBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, child_name) do
     raise ParentError,
           "Invalid link specification: child #{inspect(child_name)} placed after bin's output"
@@ -411,10 +352,6 @@ defmodule Membrane.ParentSpec do
 
   def to(%LinkBuilder{} = builder, child_name) do
     LinkBuilder.update(builder, :done, to: child_name)
-  end
-
-  def to(%LinkDestroyer{} = destroyer, child_name) do
-    LinkDestroyer.to(destroyer, child_name)
   end
 
   @doc """
