@@ -8,7 +8,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   import Membrane.Pad, only: [is_pad_ref: 1]
 
-  alias Membrane.{ActionError, Buffer, Caps, CallbackError, Event, Notification, Pad}
+  alias Membrane.{ActionError, Buffer, Caps, CallbackError, Event, Pad}
   alias Membrane.Core.Element.{DemandHandler, LifecycleController, State}
   alias Membrane.Core.{Events, Message, PlaybackHandler, TimerController}
   alias Membrane.Core.Child.PadModel
@@ -418,15 +418,6 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp handle_event(_pad_ref, _event, state), do: {:ok, state}
-
-  @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}
-  defp send_notification(notification, %State{parent_pid: nil} = state) do
-    Membrane.Logger.debug_verbose(
-      "Dropping notification #{inspect(notification)} (parent PID is not defined)"
-    )
-
-    {:ok, state}
-  end
 
   defp send_notification(notification, %State{parent_pid: parent_pid, name: name} = state) do
     Membrane.Logger.debug_verbose(

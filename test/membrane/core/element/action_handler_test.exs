@@ -440,21 +440,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert result == {:ok, state}
       assert_received Message.new(:notification, [:elem_name, @mock_notification])
     end
-
-    test "when parent pid is not set", %{state: state} do
-      state = %{state | parent_pid: nil}
-
-      result =
-        @module.handle_action(
-          {:notify, @mock_notification},
-          :handle_other,
-          %{},
-          state
-        )
-
-      assert result == {:ok, state}
-      refute_received Message.new(:notification, [:elem_name, @mock_notification])
-    end
   end
 
   describe "handling :redemand action" do

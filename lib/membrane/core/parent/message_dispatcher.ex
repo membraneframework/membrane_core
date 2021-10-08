@@ -71,7 +71,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   end
 
   defp is_parent_pid?(pid, state) do
-    state[:parent_pid] == pid
+    state.parent_pid == pid
   end
 
   defp is_child_pid?(pid, state) do

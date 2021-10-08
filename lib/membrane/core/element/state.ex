@@ -25,7 +25,7 @@ defmodule Membrane.Core.Element.State do
           name: Element.name_t(),
           internal_state: Element.state_t() | nil,
           pads: PadModel.pads_t() | nil,
-          parent_pid: pid | nil,
+          parent_pid: pid,
           playback: Playback.t(),
           playback_buffer: PlaybackBuffer.t(),
           supplying_demand?: boolean(),

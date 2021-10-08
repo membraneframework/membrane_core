@@ -23,7 +23,7 @@ defmodule Membrane.Core.Bin.State do
           children: ChildrenModel.children_t(),
           name: Membrane.Bin.name_t() | nil,
           pads: PadModel.pads_t() | nil,
-          parent_pid: pid | nil,
+          parent_pid: pid,
           linking_buffer: LinkingBuffer.t(),
           links: [Link.t()],
           crash_groups: %{CrashGroup.name_t() => CrashGroup.t()},
