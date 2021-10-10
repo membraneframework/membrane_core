@@ -297,14 +297,18 @@ defmodule Membrane.Core.Child.PadController do
 
   @spec generate_eos_if_needed(Pad.ref_t(), state_t()) :: Type.stateful_try_t(state_t)
   def generate_eos_if_needed(pad_ref, state) do
-    direction = PadModel.get_data!(state, pad_ref, :direction)
-    eos? = PadModel.get_data!(state, pad_ref, :end_of_stream?)
-    %{state: playback_state} = state.playback
+    with {:ok, direction} <- PadModel.get_data(state, pad_ref, :direction),
+         {:ok, eos?} <- PadModel.get_data(state, pad_ref, :end_of_stream?) do
+      %{state: playback_state} = state.playback
 
-    if direction == :input and not eos? and playback_state == :playing do
-      EventController.exec_handle_event(pad_ref, %Events.EndOfStream{}, state)
+      if direction == :input and not eos? and playback_state == :playing do
+        EventController.exec_handle_event(pad_ref, %Events.EndOfStream{}, state)
+      else
+        {:ok, state}
+      end
     else
-      {:ok, state}
+      {:error, error} ->
+        raise Membrane.PipelineError, inspect(error)
     end
   end
 
