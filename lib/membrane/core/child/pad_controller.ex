@@ -352,10 +352,13 @@ defmodule Membrane.Core.Child.PadController do
     end
   end
 
-  defp flush_playback_buffer(pad_ref, state) do
-    new_playback_buf = PlaybackBuffer.flush_for_pad(state.playback_buffer, pad_ref)
-
+  defp flush_playback_buffer(pad_ref, %{playback_buffer: playback_buffer} = state) do
+    new_playback_buf = PlaybackBuffer.flush_for_pad(playback_buffer, pad_ref)
     {:ok, %{state | playback_buffer: new_playback_buf}}
+  end
+
+  defp flush_playback_buffer(_pad_ref, state) do
+    {:ok, state}
   end
 
   defp get_callback_action_handler(%Core.Element.State{}), do: Core.Element.ActionHandler
