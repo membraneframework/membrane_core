@@ -1,5 +1,5 @@
 defmodule Membrane.Core.ElementTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   alias __MODULE__.SomeElement
   alias Membrane.Core.Element
