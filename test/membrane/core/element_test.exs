@@ -117,27 +117,16 @@ defmodule Membrane.Core.ElementTest do
     assert state.playback.state == :playing
   end
 
-  test "should update watcher and reply as expected" do
+  test "should return correct clock and should not modify the state" do
     assert {:reply, {:ok, reply}, state} =
              Element.handle_call(
-               Message.new(:handle_watcher, :c.pid(0, 255, 0)),
+               Message.new(:get_clock),
                nil,
                get_state()
              )
 
-    assert reply == %{clock: state.synchronization.clock}
-    assert state.watcher == :c.pid(0, 255, 0)
-  end
-
-  test "should set controlling pid" do
-    assert {:reply, :ok, state} =
-             Element.handle_call(
-               Message.new(:set_controlling_pid, :c.pid(0, 255, 0)),
-               nil,
-               get_state()
-             )
-
-    assert state.controlling_pid == :c.pid(0, 255, 0)
+    assert reply == state.synchronization.clock
+    assert state == get_state()
   end
 
   test "should store demand/buffer/caps/event when not playing" do
@@ -281,29 +270,26 @@ defmodule Membrane.Core.ElementTest do
         |> element_init_options
         |> Element.start()
 
-      {:ok, _clock} = Message.call(elem_pid, :handle_watcher, pipeline_mock)
       ref = Process.monitor(elem_pid)
       send(pipeline_mock, :exit)
       assert_receive {:DOWN, ^ref, :process, ^elem_pid, {:shutdown, :parent_crash}}
     end
 
-    test "should not assume pipeline is down when getting any monitor message" do
-      monitored_proc = spawn(fn -> receive do: (:exit -> :ok) end)
-      on_exit(fn -> send(monitored_proc, :exit) end)
-
+    test "DOWN message should be delivered to handle_other if it's not coming from parent" do
       {:ok, elem_pid} =
-        monitored_proc
+        self()
         |> element_init_options
         |> Element.start()
 
-      {:ok, _clock} = Message.call(elem_pid, :handle_watcher, self())
-      ref = make_ref()
-      deceased_pid = self()
-      send(elem_pid, {:DOWN, ref, :process, deceased_pid, :normal})
+      monitored_proc = spawn(fn -> receive do: (:exit -> :ok) end)
+      on_exit(fn -> send(monitored_proc, :exit) end)
+      ref = Process.monitor(monitored_proc)
+
+      send(elem_pid, {:DOWN, ref, :process, monitored_proc, :normal})
 
       assert_receive Message.new(:notification, [
                        :name,
-                       {:DOWN, ^ref, :process, ^deceased_pid, :normal}
+                       {:DOWN, ^ref, :process, ^monitored_proc, :normal}
                      ])
 
       assert Process.alive?(elem_pid)

@@ -63,17 +63,12 @@ defmodule Membrane.Core.Bin.ActionHandler do
   end
 
   @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}
-  defp send_notification(notification, %State{watcher: nil} = state) do
-    Membrane.Logger.warn("Dropping notification #{inspect(notification)} as watcher is undefined")
-    {:ok, state}
-  end
-
-  defp send_notification(notification, %State{watcher: watcher, name: name} = state) do
+  defp send_notification(notification, %State{parent_pid: parent_pid, name: name} = state) do
     Membrane.Logger.debug(
-      "Sending notification #{inspect(notification)} (watcher: #{inspect(watcher)})"
+      "Sending notification #{inspect(notification)} (parent PID: #{inspect(parent_pid)})"
     )
 
-    Message.send(watcher, :notification, [name, notification])
+    Message.send(parent_pid, :notification, [name, notification])
     {:ok, state}
   end
 end

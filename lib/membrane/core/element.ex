@@ -22,7 +22,7 @@ defmodule Membrane.Core.Element do
 
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.Element.{LifecycleController, PlaybackBuffer, State}
-  alias Membrane.Core.{Child, Message, PlaybackHandler, Telemetry, TimerController}
+  alias Membrane.Core.{Message, PlaybackHandler, Telemetry, TimerController}
   alias Membrane.ComponentPath
   alias Membrane.Core.Child.PadController
 
@@ -108,7 +108,7 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def init(options) do
-    parent_monitor = Process.monitor(options.parent)
+    Process.monitor(options.parent)
     name_str = if String.valid?(options.name), do: options.name, else: inspect(options.name)
     :ok = Membrane.Logger.set_prefix(name_str)
     Logger.metadata(options.log_metadata)
@@ -117,11 +117,7 @@ defmodule Membrane.Core.Element do
 
     Telemetry.report_init(:element)
 
-    state =
-      options
-      |> Map.take([:module, :name, :parent_clock, :sync])
-      |> Map.put(:parent_monitor, parent_monitor)
-      |> State.new()
+    state = Map.take(options, [:module, :name, :parent_clock, :sync, :parent]) |> State.new()
 
     with {:ok, state} <- LifecycleController.handle_init(options.user_options, state) do
       {:ok, state}
@@ -140,13 +136,8 @@ defmodule Membrane.Core.Element do
   end
 
   @impl GenServer
-  def handle_call(Message.new(:handle_watcher, watcher), _from, state) do
-    Child.LifecycleController.handle_watcher(watcher, state) |> reply(state)
-  end
-
-  @impl GenServer
-  def handle_call(Message.new(:set_controlling_pid, pid), _from, state) do
-    Child.LifecycleController.handle_controlling_pid(pid, state) |> reply(state)
+  def handle_call(Message.new(:get_clock), _from, state) do
+    reply({{:ok, state.synchronization.clock}, state})
   end
 
   @impl GenServer
@@ -176,7 +167,7 @@ defmodule Membrane.Core.Element do
   end
 
   @impl GenServer
-  def handle_info({:DOWN, ref, :process, _pid, reason}, %{parent_monitor: ref} = state) do
+  def handle_info({:DOWN, _ref, :process, parent_pid, reason}, %{parent_pid: parent_pid} = state) do
     {:ok, state} = LifecycleController.handle_pipeline_down(reason, state)
 
     {:stop, {:shutdown, :parent_crash}, state}

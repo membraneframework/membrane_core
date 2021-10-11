@@ -32,10 +32,10 @@ defmodule Membrane.Core.Element.EventControllerTest do
           module: MockEventHandlingElement,
           name: :test_name,
           parent_clock: nil,
-          sync: nil
+          sync: nil,
+          parent: self()
         })
-        | watcher: self(),
-          type: :filter,
+        | type: :filter,
           pads: %{
             data: %{
               input: %Data{

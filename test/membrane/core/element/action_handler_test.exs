@@ -15,9 +15,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
   defp demand_test_filter(_context) do
     state = %{
-      State.new(%{module: Filter, name: :test_name, parent_clock: nil, sync: nil})
-      | watcher: self(),
-        type: :filter,
+      State.new(%{module: Filter, name: :test_name, parent_clock: nil, sync: nil, parent: self()})
+      | type: :filter,
         pads: %{
           data: %{
             input: %Data{
@@ -81,7 +80,13 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
   defp trivial_filter_state(_context) do
     state = %{
-      State.new(%{module: TrivialFilter, name: :elem_name, parent_clock: nil, sync: nil})
+      State.new(%{
+        module: TrivialFilter,
+        name: :elem_name,
+        parent_clock: nil,
+        sync: nil,
+        parent: nil
+      })
       | type: :filter,
         pads: %{
           data: %{
@@ -421,8 +426,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   describe "handling :notification action" do
     setup :trivial_filter_state
 
-    test "when watcher is set", %{state: state} do
-      state = %{state | watcher: self()}
+    test "when parent pid is set", %{state: state} do
+      state = %{state | parent_pid: self()}
 
       result =
         @module.handle_action(
@@ -434,21 +439,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
       assert result == {:ok, state}
       assert_received Message.new(:notification, [:elem_name, @mock_notification])
-    end
-
-    test "when watcher is not set", %{state: state} do
-      state = %{state | watcher: nil}
-
-      result =
-        @module.handle_action(
-          {:notify, @mock_notification},
-          :handle_other,
-          %{},
-          state
-        )
-
-      assert result == {:ok, state}
-      refute_received Message.new(:notification, [:elem_name, @mock_notification])
     end
   end
 
@@ -515,9 +505,14 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   defp playing_trivial_source(_context) do
     state =
       %{
-        State.new(%{module: TrivialSource, name: :elem_name, parent_clock: nil, sync: nil})
-        | watcher: self(),
-          type: :source,
+        State.new(%{
+          module: TrivialSource,
+          name: :elem_name,
+          parent_clock: nil,
+          sync: nil,
+          parent: self()
+        })
+        | type: :source,
           pads: %{
             data: %{
               output: %{

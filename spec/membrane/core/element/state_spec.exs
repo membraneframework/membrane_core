@@ -14,7 +14,8 @@ defmodule Membrane.Core.Element.StateSpec do
           module: TrivialFilter,
           name: :name,
           parent_clock: nil,
-          sync: Sync.no_sync()
+          sync: Sync.no_sync(),
+          parent: self()
         })
 
       expect(state)
@@ -26,12 +27,11 @@ defmodule Membrane.Core.Element.StateSpec do
              name: :name,
              internal_state: nil,
              pads: PadSpecHandler.init_pads(state).pads,
-             watcher: nil,
-             controlling_pid: nil,
              playback: %Playback{},
              playback_buffer: PlaybackBuffer.new(),
              supplying_demand?: false,
              delayed_demands: MapSet.new(),
+             parent_pid: self(),
              synchronization: %{
                timers: %{},
                clock: nil,

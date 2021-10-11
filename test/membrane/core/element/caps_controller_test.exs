@@ -18,9 +18,14 @@ defmodule Membrane.Core.Element.CapsControllerTest do
 
     state =
       %{
-        State.new(%{module: Filter, name: :test_name, parent_clock: nil, sync: nil})
-        | watcher: self(),
-          type: :filter,
+        State.new(%{
+          module: Filter,
+          name: :test_name,
+          parent_clock: nil,
+          sync: nil,
+          parent: self()
+        })
+        | type: :filter,
           pads: %{
             data: %{
               input: %Data{

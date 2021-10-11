@@ -45,7 +45,7 @@ defmodule Membrane.Core.ElementSpec do
 
       let :state,
         do: %{
-          State.new(%{module: module(), name: :name, parent_clock: nil, sync: nil})
+          State.new(%{module: module(), name: :name, parent_clock: nil, sync: nil, parent: self()})
           | playback: playback(),
             playback_buffer: Membrane.Core.Element.PlaybackBuffer.new(),
             internal_state: internal_state()
@@ -363,7 +363,7 @@ defmodule Membrane.Core.ElementSpec do
 
       let :state,
         do: %{
-          State.new(%{module: module(), name: :name, parent_clock: nil, sync: nil})
+          State.new(%{module: module(), name: :name, parent_clock: nil, sync: nil, parent: self()})
           | playback: playback(),
             internal_state: internal_state()
         }
@@ -568,7 +568,7 @@ defmodule Membrane.Core.ElementSpec do
 
       let :state,
         do: %{
-          State.new(%{module: module(), name: :name, parent_clock: nil, sync: nil})
+          State.new(%{module: module(), name: :name, parent_clock: nil, sync: nil, parent: self()})
           | playback: playback(),
             internal_state: internal_state()
         }
@@ -760,37 +760,6 @@ defmodule Membrane.Core.ElementSpec do
             described_module().handle_info(message(), state())
 
           expect(returned_playback.state) |> to(eq :stopped)
-        end
-      end
-    end
-  end
-
-  describe "handle_info/3" do
-    context "if message is Message.new(:handle_watcher, pid)" do
-      let :new_watcher, do: self()
-      let :message, do: Message.new(:handle_watcher, new_watcher())
-
-      let :state,
-        do: %{
-          State.new(%{module: TrivialFilter, name: :name, parent_clock: nil, sync: nil})
-          | watcher: watcher()
-        }
-
-      context "and current watcher is nil" do
-        let :watcher, do: nil
-
-        it "should return {:noreply, :state()} with watcher set to the new watcher" do
-          expect(described_module().handle_call(message(), self(), state()))
-          |> to(eq {:reply, {:ok, %{clock: nil}}, %{state() | watcher: new_watcher()}})
-        end
-      end
-
-      context "and current watcher is set to the same watcher as requested" do
-        let :watcher, do: new_watcher()
-
-        it "should return {:reply, :ok, state()} with watcher set to the new watcher" do
-          expect(described_module().handle_call(message(), self(), state()))
-          |> to(eq {:reply, {:ok, %{clock: nil}}, %{state() | watcher: new_watcher()}})
         end
       end
     end

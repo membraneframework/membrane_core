@@ -54,10 +54,10 @@ defmodule Membrane.Core.PlaybackHandler do
       def handle_playback_state_changed(_old, _new, state), do: {:ok, state}
 
       @impl unquote(__MODULE__)
-      def notify_controller(:playback_changed, playback_state, controlling_pid) do
+      def notify_controller(:playback_changed, playback_state, parent_pid) do
         alias Membrane.Core.Message
         require Message
-        Message.send(controlling_pid, :playback_state_changed, [self(), playback_state])
+        Message.send(parent_pid, :playback_state_changed, [self(), playback_state])
         :ok
       end
 
@@ -168,12 +168,12 @@ defmodule Membrane.Core.PlaybackHandler do
   defp maybe_notify_controller(
          handler,
          %{
-           controlling_pid: controlling_pid,
+           parent_pid: parent_pid,
            playback: %{state: playback_state, target_state: playback_state}
          }
        )
-       when not is_nil(controlling_pid),
-       do: handler.notify_controller(:playback_changed, playback_state, controlling_pid)
+       when not is_nil(parent_pid),
+       do: handler.notify_controller(:playback_changed, playback_state, parent_pid)
 
   defp maybe_notify_controller(_handler, _state), do: :ok
 

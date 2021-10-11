@@ -8,7 +8,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   import Membrane.Pad, only: [is_pad_ref: 1]
 
-  alias Membrane.{ActionError, Buffer, Caps, CallbackError, Event, Notification, Pad}
+  alias Membrane.{ActionError, Buffer, Caps, CallbackError, Event, Pad}
   alias Membrane.Core.Element.{DemandHandler, LifecycleController, State}
   alias Membrane.Core.{Events, Message, PlaybackHandler, TimerController}
   alias Membrane.Core.Child.PadModel
@@ -36,7 +36,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec do_handle_action(Action.t(), callback :: atom, params :: map, State.t()) ::
           State.stateful_try_t()
   defp do_handle_action({action, _}, :handle_init, _params, state)
-       when action not in [:latency] do
+       when action not in [:latency, :notify] do
     {{:error, :invalid_action}, state}
   end
 
@@ -419,21 +419,12 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp handle_event(_pad_ref, _event, state), do: {:ok, state}
 
-  @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}
-  defp send_notification(notification, %State{watcher: nil} = state) do
+  defp send_notification(notification, %State{parent_pid: parent_pid, name: name} = state) do
     Membrane.Logger.debug_verbose(
-      "Dropping notification #{inspect(notification)} as watcher is undefined"
+      "Sending notification #{inspect(notification)} (parent PID: #{inspect(parent_pid)})"
     )
 
-    {:ok, state}
-  end
-
-  defp send_notification(notification, %State{watcher: watcher, name: name} = state) do
-    Membrane.Logger.debug_verbose(
-      "Sending notification #{inspect(notification)} (watcher: #{inspect(watcher)})"
-    )
-
-    Message.send(watcher, :notification, [name, notification])
+    Message.send(parent_pid, :notification, [name, notification])
     {:ok, state}
   end
 end

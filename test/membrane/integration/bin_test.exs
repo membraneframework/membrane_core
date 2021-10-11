@@ -5,7 +5,11 @@ defmodule Membrane.Core.BinTest do
 
   alias Membrane.Support.Bin.TestBins
   alias Membrane.Support.Bin.TestBins.{TestDynamicPadFilter, TestFilter}
+  alias Membrane.Core.Bin
+  alias Membrane.Core.Message
   alias Membrane.Testing
+
+  require Membrane.Core.Message
 
   describe "Starting and transmitting buffers" do
     test "in simple, flat use case" do
@@ -143,6 +147,41 @@ defmodule Membrane.Core.BinTest do
 
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:filter, _}})
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:sink, _}})
+    end
+  end
+
+  describe "Handling DOWN messages" do
+    test "should shutdown when parent is down" do
+      pipeline_mock = spawn(fn -> receive do: (:exit -> :ok) end)
+
+      {:ok, bin_pid} =
+        pipeline_mock
+        |> bin_init_options
+        |> Bin.start()
+
+      ref = Process.monitor(bin_pid)
+      send(pipeline_mock, :exit)
+      assert_receive {:DOWN, ^ref, :process, ^bin_pid, {:shutdown, :parent_crash}}
+    end
+
+    test "DOWN message should be delivered to handle_other if it's not coming from parent" do
+      {:ok, bin_pid} =
+        self()
+        |> bin_init_options
+        |> Bin.start()
+
+      monitored_proc = spawn(fn -> receive do: (:exit -> :ok) end)
+      on_exit(fn -> send(monitored_proc, :exit) end)
+      ref = Process.monitor(monitored_proc)
+
+      send(bin_pid, {:DOWN, ref, :process, monitored_proc, :normal})
+
+      assert_receive Message.new(:notification, [
+                       :name,
+                       {:DOWN, ^ref, :process, ^monitored_proc, :normal}
+                     ])
+
+      assert Process.alive?(bin_pid)
     end
   end
 
@@ -303,5 +342,19 @@ defmodule Membrane.Core.BinTest do
 
     assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
     assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+  end
+
+  defp bin_init_options(pipeline) do
+    %{
+      name: :name,
+      module: TestBins.SimpleBin,
+      parent: pipeline,
+      parent_clock: nil,
+      log_metadata: [],
+      user_options: %{
+        filter1: TestFilter,
+        filter2: TestFilter
+      }
+    }
   end
 end

@@ -191,8 +191,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
       end
 
     with {:ok, pid} <- start_result,
-         :ok <- Message.call(pid, :set_controlling_pid, self()),
-         {:ok, %{clock: clock}} <- Message.call(pid, :handle_watcher, self()) do
+         {:ok, clock} <- Message.call(pid, :get_clock) do
       %ChildEntry{child | pid: pid, clock: clock, sync: sync}
     else
       {:error, reason} ->

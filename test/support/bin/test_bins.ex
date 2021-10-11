@@ -93,6 +93,11 @@ defmodule Membrane.Support.Bin.TestBins do
 
       {{:ok, spec: spec}, state}
     end
+
+    @impl true
+    def handle_other(msg, _ctx, state) do
+      {{:ok, notify: msg}, state}
+    end
   end
 
   defmodule CrashTestBin do
