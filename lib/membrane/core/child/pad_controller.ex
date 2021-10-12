@@ -140,7 +140,8 @@ defmodule Membrane.Core.Child.PadController do
   def handle_unlink(pad_ref, %Core.Bin.State{} = state) do
     with {:ok, state} <- flush_linking_buffer(pad_ref, state),
          {:ok, state} <- handle_pad_removed(pad_ref, state),
-         {:ok, state} <- PadModel.delete_data(state, pad_ref) do
+         {:ok, state} <- PadModel.delete_data(state, pad_ref),
+         {:ok, state} <- remove_linking_buffer(pad_ref, state) do
       {:ok, state}
     end
   end
@@ -371,4 +372,9 @@ defmodule Membrane.Core.Child.PadController do
 
   defp get_callback_action_handler(%Core.Element.State{}), do: Core.Element.ActionHandler
   defp get_callback_action_handler(%Core.Bin.State{}), do: Core.Bin.ActionHandler
+
+  defp remove_linking_buffer(pad_ref, %Core.Bin.State{} = state) do
+    {_buf, state} = pop_in(state, [:linking_buffer, pad_ref])
+    {:ok, state}
+  end
 end
