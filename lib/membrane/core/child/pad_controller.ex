@@ -129,10 +129,10 @@ defmodule Membrane.Core.Child.PadController do
   end
 
   @doc """
-  Handles situation where pad has been unlinked (e.g. when connected element has been removed from pipline)
+  Handles situation where pad has been unlinked (e.g. when connected element has been removed from a bin or a pipline)
 
   Removes pad data.
-  Signals an EoS (via handle_event) to the element if unlinked pad was an input.
+  Signals an EoS (via handle_event) to the element if unlinked pad was an element's input.
   Executes `handle_pad_removed` callback if the pad was dynamic.
   Note: it also flushes all buffers from PlaybackBuffer.
   """
