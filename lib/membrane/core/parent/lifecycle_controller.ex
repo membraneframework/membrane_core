@@ -135,7 +135,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   end
 
   @spec maybe_finish_playback_transition(Parent.state_t()) ::
-          {:ok | {:error, any}, Parent.state_t()}
+          PlaybackHandler.handler_return_t()
   def maybe_finish_playback_transition(state) do
     all_children_in_sync? = ChildrenModel.all?(state, & &1.playback_synced?)
 

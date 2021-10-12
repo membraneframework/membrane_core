@@ -114,10 +114,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
       data |> Enum.each(&PlaybackHandler.request_playback_state_change(&1.pid, :terminating))
 
-      {:ok, state} =
-        Parent.ChildrenModel.update_children(state, names, &%{&1 | terminating?: true})
-
-      {:ok, state}
+      Parent.ChildrenModel.update_children(state, names, &%{&1 | terminating?: true})
     else
       error -> {error, state}
     end
@@ -169,7 +166,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   If a pid turns out not to be a pid of any child error is raised.
   """
   @spec handle_child_death(child_pid :: pid(), reason :: atom(), state :: Parent.state_t()) ::
-          {:ok | {:error, :not_child}, Parent.state_t()}
+          PlaybackHandler.handler_return_t()
   def handle_child_death(pid, :normal, state) do
     with {:ok, child_name} <- child_by_pid(pid, state) do
       state = Bunch.Access.delete_in(state, [:children, child_name])
@@ -300,11 +297,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       state,
       :links,
       &(&1
-        |> Enum.reject(fn %Link{from: from, to: to} ->
-          %Link.Endpoint{child: from_name} = from
-          %Link.Endpoint{child: to_name} = to
-
-          from_name == child_name or to_name == child_name
+        |> Enum.reject(fn
+          %Link{from: %Link.Endpoint{child: ^child_name}} -> true
+          %Link{to: %Link.Endpoint{child: ^child_name}} -> true
+          _link -> false
         end))
     )
   end
