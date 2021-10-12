@@ -154,7 +154,10 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def handle_info(Message.new(:handle_unlink, pad_ref), state) do
-    PadController.handle_unlink(pad_ref, state)
+    {:ok, state} = PadController.handle_unlink(pad_ref, state)
+    {_buf, state} = pop_in(state, [:linking_buffer, pad_ref])
+
+    {:ok, state}
     |> noreply()
   end
 

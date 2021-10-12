@@ -137,6 +137,14 @@ defmodule Membrane.Core.Child.PadController do
   Note: it also flushes all buffers from PlaybackBuffer.
   """
   @spec handle_unlink(Pad.ref_t(), state_t()) :: Type.stateful_try_t(state_t)
+  def handle_unlink(pad_ref, %Core.Bin.State{} = state) do
+    with {:ok, state} <- flush_linking_buffer(pad_ref, state),
+         {:ok, state} <- handle_pad_removed(pad_ref, state),
+         {:ok, state} <- PadModel.delete_data(state, pad_ref) do
+      {:ok, state}
+    end
+  end
+
   def handle_unlink(pad_ref, state) do
     with {:ok, state} <- flush_playback_buffer(pad_ref, state),
          {:ok, state} <- generate_eos_if_needed(pad_ref, state),
@@ -352,13 +360,13 @@ defmodule Membrane.Core.Child.PadController do
     end
   end
 
+  defp flush_linking_buffer(pad_ref, state) do
+    {:ok, LinkingBuffer.flush_for_pad(pad_ref, state)}
+  end
+
   defp flush_playback_buffer(pad_ref, %{playback_buffer: playback_buffer} = state) do
     new_playback_buf = PlaybackBuffer.flush_for_pad(playback_buffer, pad_ref)
     {:ok, %{state | playback_buffer: new_playback_buf}}
-  end
-
-  defp flush_playback_buffer(_pad_ref, state) do
-    {:ok, state}
   end
 
   defp get_callback_action_handler(%Core.Element.State{}), do: Core.Element.ActionHandler

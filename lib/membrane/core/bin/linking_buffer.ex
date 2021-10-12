@@ -6,6 +6,7 @@ defmodule Membrane.Core.Bin.LinkingBuffer do
   alias Membrane.Core.Message
   alias Membrane.Pad
 
+  require Membrane.Logger
   require Message
   require Pad
 
@@ -79,7 +80,13 @@ defmodule Membrane.Core.Bin.LinkingBuffer do
   end
 
   defp do_flush(msg, sender_pad, bin_state) do
-    {:ok, %{pid: dest_pid, other_ref: other_ref}} = PadModel.get_data(bin_state, sender_pad)
-    send(dest_pid, Message.set_for_pad(msg, other_ref))
+    case PadModel.get_data(bin_state, sender_pad) do
+      {:ok, %{pid: dest_pid, other_ref: other_ref}} ->
+        send(dest_pid, Message.set_for_pad(msg, other_ref))
+
+      _error ->
+        Membrane.Logger.warn("flushed pad does not exist: #{inspect(sender_pad)}")
+        :ok
+    end
   end
 end
