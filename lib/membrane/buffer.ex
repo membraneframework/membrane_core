@@ -9,15 +9,26 @@ defmodule Membrane.Buffer do
 
   alias __MODULE__
   alias Membrane.Payload
+  alias Membrane.Time
 
   @type metadata_t :: map
 
   @type t :: %Buffer{
+          pts: Time.t() | nil,
+          dts: Time.t() | nil,
           payload: Payload.t(),
           metadata: metadata_t
         }
 
   @enforce_keys [:payload]
-  defstruct payload: nil,
-            metadata: Map.new()
+  defstruct @enforce_keys ++ [:pts, :dts, metadata: Map.new()]
+
+  @doc """
+  Returns `Membrane.Buffer.t()` `:dts` if available or `:pts` if `:dts` is not set.
+  If none of them is set `:nil` is returned.
+  """
+  @spec get_dts_or_pts(__MODULE__.t()) :: Time.t() | nil
+  def get_dts_or_pts(buffer) do
+    buffer.dts || buffer.pts
+  end
 end
