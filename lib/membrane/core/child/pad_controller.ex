@@ -317,7 +317,11 @@ defmodule Membrane.Core.Child.PadController do
       end
     else
       {:error, error} ->
-        raise Membrane.PipelineError, inspect(error)
+        raise LinkError,
+              """
+              Error checking if EndOfStream event is needed
+              Error: #{inspect(error)}
+              """
     end
   end
 
