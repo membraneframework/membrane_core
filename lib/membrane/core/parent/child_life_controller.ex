@@ -44,7 +44,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         node,
         state.synchronization.clock_proxy,
         syncs,
-        state.children_log_metadata
+        spec.log_metadata
       )
 
     children_names = children |> Enum.map(& &1.name)

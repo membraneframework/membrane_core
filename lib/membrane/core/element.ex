@@ -111,8 +111,7 @@ defmodule Membrane.Core.Element do
     Process.monitor(options.parent)
     name_str = if String.valid?(options.name), do: options.name, else: inspect(options.name)
     :ok = Membrane.Logger.set_prefix(name_str)
-    Logger.metadata(options.log_metadata)
-
+    :ok = Logger.metadata(options.log_metadata)
     :ok = ComponentPath.set_and_append(options.log_metadata[:parent_path] || [], name_str)
 
     Telemetry.report_init(:element)

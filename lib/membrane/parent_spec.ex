@@ -169,6 +169,10 @@ defmodule Membrane.ParentSpec do
 
   At this moment crash groups are only useful for elements with dynamic pads.
   Crash groups work only in pipelines and are not supported in bins.
+
+  ## Log metadata
+  `:log_metadata` field can be used to set the `Membrane.Logger` metadata for all children from that
+  `Membrane.ParentSpec`
   """
 
   alias Membrane.{Child, Pad}
@@ -239,7 +243,8 @@ defmodule Membrane.ParentSpec do
           crash_group: crash_group_spec_t() | nil,
           stream_sync: :sinks | [[Child.name_t()]],
           clock_provider: Child.name_t() | nil,
-          node: node() | nil
+          node: node() | nil,
+          log_metadata: Keyword.t()
         }
 
   @valid_pad_prop_keys [:options, :buffer]
@@ -249,7 +254,8 @@ defmodule Membrane.ParentSpec do
             crash_group: nil,
             stream_sync: [],
             clock_provider: nil,
-            node: nil
+            node: nil,
+            log_metadata: []
 
   @doc """
   Begins a link.
