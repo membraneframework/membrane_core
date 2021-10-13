@@ -35,9 +35,11 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
           state.links
           |> Enum.find(fn existing_link ->
             existing_link.from.child == link.from.child and
-              existing_link.from.pad_spec == link.from.pad_spec and
+              (existing_link.from.pad_spec == link.from.pad_spec or
+                 existing_link.from.pad_spec == Pad.get_corresponding_bin_pad(link.from.pad_spec)) and
               existing_link.to.child == link.to.child and
-              existing_link.to.pad_spec == link.to.pad_spec
+              (existing_link.to.pad_spec == link.to.pad_spec or
+                 existing_link.to.pad_spec == Pad.get_corresponding_bin_pad(link.to.pad_spec))
           end)
 
         if existing_link do

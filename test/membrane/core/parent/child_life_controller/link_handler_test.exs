@@ -15,19 +15,23 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
   require Membrane.Core.Message
   require Membrane.Pad
 
-  defp get_state(child_module, opts \\ []) do
+  defp get_state(opts) do
+    child_module = Keyword.get(opts, :child_module)
     pid = Keyword.get(opts, :pid, nil)
     availability = Keyword.get(opts, :availability, :always)
+
+    children =
+      Keyword.get(opts, :children,
+        a: %ChildEntry{module: child_module, pid: pid},
+        b: %ChildEntry{module: child_module, pid: pid},
+        c: %ChildEntry{module: child_module, pid: pid}
+      )
 
     %Membrane.Core.Bin.State{
       module: nil,
       name: :my_bin,
       synchronization: %{},
-      children: [
-        a: %ChildEntry{module: child_module, pid: pid},
-        b: %ChildEntry{module: child_module, pid: pid},
-        c: %ChildEntry{module: child_module, pid: pid}
-      ],
+      children: children,
       pads: %{
         info:
           [input: %{availability: availability}, output: %{availability: availability}]
@@ -45,14 +49,15 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
   describe "resolve links" do
     test "should work for static pads" do
       {links, []} = LinkParser.parse([link(:a) |> to(:b)])
-      resolved_links = LinkHandler.resolve_links(links, get_state(TestFilter))
+      resolved_links = LinkHandler.resolve_links(links, get_state(child_module: TestFilter))
       endpoints(resolved_links) |> Enum.each(&assert &1.pad_ref == &1.pad_spec)
     end
 
     test "should work for dynamic pads" do
       {links, []} = LinkParser.parse([link(:a) |> to(:b)])
 
-      resolved_links = LinkHandler.resolve_links(links, get_state(TestDynamicPadFilter))
+      resolved_links =
+        LinkHandler.resolve_links(links, get_state(child_module: TestDynamicPadFilter))
 
       endpoints(resolved_links)
       |> Enum.each(fn %{pad_spec: pad, pad_ref: pad_ref} ->
@@ -64,7 +69,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
           link(:a) |> via_out(Pad.ref(:output, :x)) |> via_in(Pad.ref(:input, :y)) |> to(:b)
         ])
 
-      resolved_links = LinkHandler.resolve_links(links, get_state(TestDynamicPadFilter))
+      resolved_links =
+        LinkHandler.resolve_links(links, get_state(child_module: TestDynamicPadFilter))
 
       assert [%{pad_ref: Pad.ref(:output, :x)}, %{pad_ref: Pad.ref(:input, :y)}] =
                resolved_links |> endpoints() |> Enum.sort()
@@ -73,7 +79,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
     test "should work for bin static pads" do
       {links, []} = LinkParser.parse([link_bin_input() |> to(:a) |> to_bin_output()])
 
-      resolved_links = LinkHandler.resolve_links(links, get_state(TestFilter))
+      resolved_links = LinkHandler.resolve_links(links, get_state(child_module: TestFilter))
       endpoints(resolved_links) |> Enum.each(&assert &1.pad_ref == &1.pad_spec)
 
       endpoints(resolved_links)
@@ -88,7 +94,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
         ])
 
       state =
-        get_state(TestFilter, availability: :on_request)
+        get_state(child_module: TestFilter, availability: :on_request)
         |> put_in([:pads, :data], %{
           Pad.ref(:input, :x) => %Pad.Data{},
           Pad.ref(:output, :y) => %Pad.Data{}
@@ -106,7 +112,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
       {links, []} = LinkParser.parse([link(:a) |> to(:m)])
 
       assert_raise LinkError, ~r/child :m does not exist/i, fn ->
-        LinkHandler.resolve_links(links, get_state(TestFilter))
+        LinkHandler.resolve_links(links, get_state(child_module: TestFilter))
       end
     end
 
@@ -114,7 +120,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
       {links, []} = LinkParser.parse([link(:a) |> via_out(:x) |> to(:b)])
 
       assert_raise LinkError, ~r/child :a does not have pad :x/i, fn ->
-        LinkHandler.resolve_links(links, get_state(TestFilter))
+        LinkHandler.resolve_links(links, get_state(child_module: TestFilter))
       end
     end
 
@@ -124,7 +130,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
       assert_raise LinkError,
                    ~r/dynamic pad ref .*membrane.pad.*:output.* passed for static pad of child :a/i,
                    fn ->
-                     LinkHandler.resolve_links(links, get_state(TestFilter))
+                     LinkHandler.resolve_links(links, get_state(child_module: TestFilter))
                    end
     end
 
@@ -132,7 +138,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
       {links, []} = LinkParser.parse([link_bin_input(:x) |> to(:b)])
 
       assert_raise LinkError, ~r/bin :my_bin does not have pad :x/i, fn ->
-        LinkHandler.resolve_links(links, get_state(TestFilter))
+        LinkHandler.resolve_links(links, get_state(child_module: TestFilter))
       end
     end
 
@@ -144,7 +150,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
                    fn ->
                      LinkHandler.resolve_links(
                        links,
-                       get_state(TestFilter, availability: :on_request)
+                       get_state(child_module: TestFilter, availability: :on_request)
                      )
                    end
     end
@@ -157,7 +163,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
                    fn ->
                      LinkHandler.resolve_links(
                        links,
-                       get_state(TestFilter, availability: :on_request)
+                       get_state(child_module: TestFilter, availability: :on_request)
                      )
                    end
     end
@@ -168,42 +174,122 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandlerTest do
       assert_raise LinkError,
                    ~r/dynamic pad ref .*membrane.pad.*:output.* passed for static pad of bin :my_bin/i,
                    fn ->
-                     LinkHandler.resolve_links(links, get_state(TestFilter))
+                     LinkHandler.resolve_links(links, get_state(child_module: TestFilter))
                    end
     end
   end
 
-  test "should link resolved pads" do
-    defmodule Proxy do
-      use GenServer
+  describe "resolve_link_removals" do
+    setup do
+      state =
+        get_state(
+          children: [
+            a: %ChildEntry{module: TestFilter, pid: nil},
+            b: %ChildEntry{module: TestDynamicPadFilter, pid: nil},
+            c: %ChildEntry{module: TestFilter, pid: nil}
+          ]
+        )
 
-      @impl true
-      def init(pid) do
-        {:ok, %{pid: pid}}
-      end
+      link =
+        link_bin_input()
+        |> to(:a)
+        |> via_in(Pad.ref(:input, :b))
+        |> to(:b)
+        |> via_out(Pad.ref(:output, :b))
+        |> to(:c)
+        |> to_bin_output()
 
-      @impl true
-      def handle_call(msg, _from, state) do
-        send(state.pid, msg)
+      {links, []} = LinkParser.parse([link])
 
-        reply =
-          case msg do
-            Message.new(:handle_link, _args) -> {:ok, nil}
-            Message.new(:linking_finished) -> :ok
-          end
+      resolved_links = LinkHandler.resolve_links(links, state)
+      state = %{state | links: resolved_links}
 
-        {:reply, reply, state}
-      end
+      [initial_state: state]
     end
 
-    {:ok, pid} = GenServer.start_link(Proxy, self())
-    state = get_state(TestFilter, pid: pid)
-    {links, []} = LinkParser.parse([link(:a) |> to(:b)])
-    resolved_links = LinkHandler.resolve_links(links, state)
-    assert {:ok, _state} = LinkHandler.link_children(resolved_links, state)
-    assert_receive Message.new(:handle_link, _args)
-    assert_receive Message.new(:linking_finished)
-    assert_receive Message.new(:linking_finished)
-    refute_receive Message.new(_name, _args, _opts)
+    test "matches existing bin input links", context do
+      {links, []} = LinkParser.parse([link_bin_input() |> to(:a)])
+      link_removals = LinkHandler.resolve_link_removals(links, context.initial_state)
+
+      assert [link] = link_removals
+
+      assert link.from.child == {Membrane.Bin, :itself}
+      assert link.from.pad_spec == {:private, :input}
+      assert link.to.child == :a
+      assert link.to.pad_spec == :input
+    end
+
+    test "matches existing bin output links", context do
+      {links, []} = LinkParser.parse([link(:c) |> to_bin_output])
+      link_removals = LinkHandler.resolve_link_removals(links, context.initial_state)
+
+      assert [link] = link_removals
+
+      assert link.from.child == :c
+      assert link.from.pad_spec == :output
+      assert link.to.child == {Membrane.Bin, :itself}
+      assert link.to.pad_spec == {:private, :output}
+    end
+
+    test "matches dynamic input pads", context do
+      {links, []} = LinkParser.parse([link(:a) |> via_in(Pad.ref(:input, :b)) |> to(:b)])
+      link_removals = LinkHandler.resolve_link_removals(links, context.initial_state)
+
+      assert [link] = link_removals
+
+      assert link.from.child == :a
+      assert link.from.pad_spec == :output
+      assert link.to.child == :b
+      assert link.to.pad_spec == Pad.ref(:input, :b)
+    end
+
+    test "matches dynamic output pads", context do
+      {links, []} = LinkParser.parse([link(:b) |> via_out(Pad.ref(:output, :b)) |> to(:c)])
+      link_removals = LinkHandler.resolve_link_removals(links, context.initial_state)
+
+      assert [link] = link_removals
+
+      assert link.from.child == :b
+      assert link.from.pad_spec == Pad.ref(:output, :b)
+      assert link.to.child == :c
+      assert link.to.pad_spec == :input
+    end
+  end
+
+  describe "link_children" do
+    test "should link resolved pads" do
+      defmodule Proxy do
+        use GenServer
+
+        @impl true
+        def init(pid) do
+          {:ok, %{pid: pid}}
+        end
+
+        @impl true
+        def handle_call(msg, _from, state) do
+          send(state.pid, msg)
+
+          reply =
+            case msg do
+              Message.new(:handle_link, _args) -> {:ok, nil}
+              Message.new(:handle_unlink, _args) -> {:ok, nil}
+              Message.new(:linking_finished) -> :ok
+            end
+
+          {:reply, reply, state}
+        end
+      end
+
+      {:ok, pid} = GenServer.start_link(Proxy, self())
+      state = get_state(child_module: TestFilter, pid: pid)
+      {links, []} = LinkParser.parse([link(:a) |> to(:b)])
+      resolved_links = LinkHandler.resolve_links(links, state)
+      assert {:ok, _state} = LinkHandler.link_children(resolved_links, state)
+      assert_receive Message.new(:handle_link, _args)
+      assert_receive Message.new(:linking_finished)
+      assert_receive Message.new(:linking_finished)
+      refute_receive Message.new(_name, _args, _opts)
+    end
   end
 end
