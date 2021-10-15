@@ -21,7 +21,7 @@ defmodule Membrane.Buffer do
         }
 
   @enforce_keys [:payload]
-  defstruct @enforce_keys ++ [:pts, :dts, metadata: Map.new()]
+  defstruct @enforce_keys ++ [pts: nil, dts: nil, metadata: Map.new()]
 
   @doc """
   Returns `Membrane.Buffer.t()` `:dts` if available or `:pts` if `:dts` is not set.
