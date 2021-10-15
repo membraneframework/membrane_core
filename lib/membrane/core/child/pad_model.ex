@@ -33,13 +33,8 @@ defmodule Membrane.Core.Child.PadModel do
 
   @spec assert_instance(Child.state_t(), Pad.ref_t()) ::
           :ok | unknown_pad_error_t
-  def assert_instance(state, pad_ref) do
-    if state.pads.data |> Map.has_key?(pad_ref) do
-      :ok
-    else
-      {:error, {:unknown_pad, pad_ref}}
-    end
-  end
+  def assert_instance(%{pads: %{data: data}}, pad_ref) when is_map_key(data, pad_ref), do: :ok
+  def assert_instance(_state, pad_ref), do: {:error, {:unknown_pad, pad_ref}}
 
   @spec assert_instance!(Child.state_t(), Pad.ref_t()) :: :ok
   def assert_instance!(state, pad_ref) do
@@ -94,10 +89,14 @@ defmodule Membrane.Core.Child.PadModel do
   @spec get_data(Child.state_t(), Pad.ref_t(), keys :: atom | [atom]) ::
           {:ok, Pad.Data.t() | any} | unknown_pad_error_t
   def get_data(state, pad_ref, keys \\ []) do
-    with :ok <- assert_instance(state, pad_ref) do
-      state
-      |> Bunch.Access.get_in(data_keys(pad_ref, keys))
-      ~> {:ok, &1}
+    case assert_instance(state, pad_ref) do
+      :ok ->
+        state
+        |> Bunch.Access.get_in(data_keys(pad_ref, keys))
+        ~> {:ok, &1}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -110,10 +109,14 @@ defmodule Membrane.Core.Child.PadModel do
   @spec set_data(Child.state_t(), Pad.ref_t(), keys :: atom | [atom], value :: term()) ::
           Type.stateful_t(:ok | unknown_pad_error_t, Child.state_t())
   def set_data(state, pad_ref, keys \\ [], value) do
-    with {:ok, state} <- {assert_instance(state, pad_ref), state} do
-      state
-      |> Bunch.Access.put_in(data_keys(pad_ref, keys), value)
-      ~> {:ok, &1}
+    case assert_instance(state, pad_ref) do
+      :ok ->
+        state
+        |> Bunch.Access.put_in(data_keys(pad_ref, keys), value)
+        ~> {:ok, &1}
+
+      {:error, reason} ->
+        {{:error, reason}, state}
     end
   end
 
@@ -133,13 +136,12 @@ defmodule Membrane.Core.Child.PadModel do
           Type.stateful_t(:ok | error | unknown_pad_error_t, Child.state_t())
         when data: Pad.Data.t() | any, error: {:error, reason :: any}
   def update_data(state, pad_ref, keys \\ [], f) do
-    with {:ok, state} <- {assert_instance(state, pad_ref), state},
-         {:ok, state} <-
-           state
-           |> Bunch.Access.get_and_update_in(data_keys(pad_ref, keys), f) do
-      {:ok, state}
-    else
-      {{:error, reason}, state} -> {{:error, reason}, state}
+    case assert_instance(state, pad_ref) do
+      :ok ->
+        state |> Bunch.Access.get_and_update_in(data_keys(pad_ref, keys), f)
+
+      {:error, reason} ->
+        {{:error, reason}, state}
     end
   end
 
@@ -151,6 +153,35 @@ defmodule Membrane.Core.Child.PadModel do
 
     state
     |> Bunch.Access.update_in(data_keys(pad_ref, keys), f)
+  end
+
+  @spec update_multi(Child.state_t(), Pad.ref_t(), [
+          {key :: atom, (data -> data)} | {key :: atom, any}
+        ]) ::
+          Type.stateful_t(:ok | unknown_pad_error_t, Child.state_t())
+        when data: Pad.Data.t() | any
+  def update_multi(state, pad_ref, updates) do
+    case assert_instance(state, pad_ref) do
+      :ok ->
+        state
+        |> Bunch.Access.update_in([:pads, :data, pad_ref], fn pad_data ->
+          apply_updates(pad_data, updates)
+        end)
+        ~> {:ok, &1}
+
+      {:error, reason} ->
+        {{:error, reason}, state}
+    end
+  end
+
+  @spec update_multi!(Child.state_t(), Pad.ref_t(), [
+          {key :: atom, (data -> data)} | {key :: atom, any}
+        ]) ::
+          Child.state_t()
+        when data: Pad.Data.t() | any
+  def update_multi!(state, pad_ref, updates) do
+    {:ok, state} = update_multi(state, pad_ref, updates)
+    state
   end
 
   @spec get_and_update_data(
@@ -215,6 +246,23 @@ defmodule Membrane.Core.Child.PadModel do
   def delete_data!(state, pad_ref) do
     {:ok, state} = delete_data(state, pad_ref)
     state
+  end
+
+  @spec constraints_met?(Pad.Data.t(), [
+          {key :: atom, (data -> data)} | {key :: atom, any}
+        ]) :: Pad.Data.t()
+        when data: Pad.Data.t()
+  defp apply_updates(pad_data, updates) do
+    for {key, update} <- updates, reduce: pad_data do
+      pad_data ->
+        case update do
+          f when is_function(f) ->
+            Map.update(pad_data, key, nil, f)
+
+          value ->
+            Map.put(pad_data, key, value)
+        end
+    end
   end
 
   @spec constraints_met?(Pad.Data.t(), map) :: boolean
