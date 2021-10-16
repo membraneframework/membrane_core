@@ -96,9 +96,8 @@ defmodule Membrane.Core.CallbackHandler do
     args_list
     |> Bunch.Enum.try_reduce_while(state, fn args, state ->
       if split_continuation_arbiter.(state) do
-        result = callback |> exec_callback(args |> Bunch.listify(), handler_params, state)
-
-        result
+        callback
+        |> exec_callback(args |> Bunch.listify(), handler_params, state)
         |> handle_callback_result(original_callback, handler_module, handler_params, state)
         ~>> ({:ok, state} -> {{:ok, :cont}, state})
       else
@@ -109,9 +108,7 @@ defmodule Membrane.Core.CallbackHandler do
 
   @spec exec_callback(callback :: atom, args :: list, handler_params_t, state_t) ::
           callback_return_t | any
-  defp exec_callback(callback, args, handler_params, state) do
-    module = state |> Map.fetch!(:module)
-
+  defp exec_callback(callback, args, handler_params, %{module: module} = state) do
     args =
       case handler_params |> Map.fetch(:context) do
         :error -> args
@@ -139,13 +136,14 @@ defmodule Membrane.Core.CallbackHandler do
         ) :: Type.stateful_try_t(state_t)
   defp handle_callback_result(cb_result, callback, handler_module, handler_params, state) do
     {result, new_internal_state} = cb_result
-
     state = Map.put(state, :internal_state, new_internal_state)
 
-    with {{:ok, actions}, state} <- {result, state},
-         {:ok, state} <-
-           exec_handle_actions(actions, callback, handler_module, handler_params, state) do
-      {:ok, state}
+    case result do
+      {:ok, actions} ->
+        exec_handle_actions(actions, callback, handler_module, handler_params, state)
+
+      {:error, reason} ->
+        {{:error, reason}, state}
     end
   end
 
