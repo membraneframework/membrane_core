@@ -108,23 +108,36 @@ defmodule Membrane.Core.CallbackHandler do
 
   @spec exec_callback(callback :: atom, args :: list, handler_params_t, state_t) ::
           callback_return_t | any
-  defp exec_callback(callback, args, handler_params, %{module: module} = state) do
-    args =
-      case handler_params |> Map.fetch(:context) do
-        :error -> args
-        {:ok, f} -> args ++ [f.(state)]
-      end
+  defp exec_callback(:handle_init, args, handler_params, %{module: module}) do
+    module
+    |> apply(:handle_init, args)
+    |> parse_callback_result(module, :handle_init, handler_params)
+  end
 
-    handler_params = handler_params |> Map.put_new(:state, true)
+  defp exec_callback(
+         callback,
+         args,
+         %{context: context_fun} = handler_params,
+         %{module: module, internal_state: internal_state} = state
+       ) do
+    args = args ++ [context_fun.(state)] ++ [internal_state]
 
-    args =
-      if handler_params.state do
-        args ++ [state |> Map.fetch!(:internal_state)]
-      else
-        args
-      end
+    module
+    |> apply(callback, args)
+    |> parse_callback_result(module, callback, handler_params)
+  end
 
-    module |> apply(callback, args) |> parse_callback_result(module, callback, handler_params)
+  defp exec_callback(
+         callback,
+         args,
+         handler_params,
+         %{module: module, internal_state: internal_state}
+       ) do
+    args = args ++ [internal_state]
+
+    module
+    |> apply(callback, args)
+    |> parse_callback_result(module, callback, handler_params)
   end
 
   @spec handle_callback_result(
@@ -171,17 +184,17 @@ defmodule Membrane.Core.CallbackHandler do
     {{:ok, actions}, new_internal_state}
   end
 
-  defp parse_callback_result({{:error, reason}, new_internal_state}, module, cb, %{state: true}) do
+  defp parse_callback_result({:error, reason}, module, cb, %{state: false}) do
+    raise CallbackError, kind: :error, callback: {module, cb}, reason: reason
+  end
+
+  defp parse_callback_result({{:error, reason}, new_internal_state}, module, cb, _params) do
     Membrane.Logger.error("""
     Callback #{inspect(cb)} from module #{inspect(module)} returned an error
     Internal state: #{inspect(new_internal_state, pretty: true)}
     """)
 
     {{:error, reason}, new_internal_state}
-  end
-
-  defp parse_callback_result({:error, reason}, module, cb, %{state: false}) do
-    raise CallbackError, kind: :error, callback: {module, cb}, reason: reason
   end
 
   defp parse_callback_result(result, module, cb, _params) do
