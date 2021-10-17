@@ -97,7 +97,7 @@ defmodule Membrane.Core.CallbackHandler do
     |> Bunch.Enum.try_reduce_while(state, fn args, state ->
       if split_continuation_arbiter.(state) do
         callback
-        |> exec_callback(args |> Bunch.listify(), handler_params, state)
+        |> exec_callback(args, handler_params, state)
         |> handle_callback_result(original_callback, handler_module, handler_params, state)
         ~>> ({:ok, state} -> {{:ok, :cont}, state})
       else
