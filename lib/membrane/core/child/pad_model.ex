@@ -270,8 +270,17 @@ defmodule Membrane.Core.Child.PadModel do
     constraints |> Enum.all?(fn {k, v} -> data[k] === v end)
   end
 
+  @spec data_keys(Pad.ref_t()) :: [atom]
+  defp data_keys(pad_ref), do: [:pads, :data, pad_ref]
+
   @spec data_keys(Pad.ref_t(), keys :: atom | [atom]) :: [atom]
-  defp data_keys(pad_ref, keys \\ []) do
-    [:pads, :data, pad_ref | Bunch.listify(keys)]
+  defp data_keys(pad_ref, keys)
+
+  defp data_keys(pad_ref, keys) when is_list(keys) do
+    [:pads, :data, pad_ref | keys]
+  end
+
+  defp data_keys(pad_ref, key) do
+    [:pads, :data, pad_ref, key]
   end
 end
