@@ -86,22 +86,42 @@ defmodule Membrane.Core.Child.PadModel do
     |> Map.new()
   end
 
+  @spec get_data(Child.state_t(), Pad.ref_t()) :: {:ok, Pad.Data.t() | any} | unknown_pad_error_t
+  def get_data(%{pads: %{data: data}}, pad_ref)
+      when is_map_key(data, pad_ref) do
+    data
+    |> Map.get(pad_ref)
+    ~> {:ok, &1}
+  end
+
+  def get_data(_state, pad_ref), do: {:error, {:unknown_pad, pad_ref}}
+
   @spec get_data(Child.state_t(), Pad.ref_t(), keys :: atom | [atom]) ::
           {:ok, Pad.Data.t() | any} | unknown_pad_error_t
-  def get_data(state, pad_ref, keys \\ []) do
-    case assert_instance(state, pad_ref) do
-      :ok ->
-        state
-        |> Bunch.Access.get_in(data_keys(pad_ref, keys))
-        ~> {:ok, &1}
+  def get_data(%{pads: %{data: data}}, pad_ref, keys)
+      when is_map_key(data, pad_ref) and is_list(keys) do
+    data
+    |> get_in([pad_ref | keys])
+    ~> {:ok, &1}
+  end
 
-      {:error, reason} ->
-        {:error, reason}
-    end
+  def get_data(%{pads: %{data: data}}, pad_ref, key)
+      when is_map_key(data, pad_ref) and is_atom(key) do
+    data
+    |> get_in([pad_ref, key])
+    ~> {:ok, &1}
+  end
+
+  def get_data(_state, pad_ref, _keys), do: {:error, {:unknown_pad, pad_ref}}
+
+  @spec get_data!(Child.state_t(), Pad.ref_t()) :: Pad.Data.t() | any
+  def get_data!(state, pad_ref) do
+    {:ok, pad_data} = get_data(state, pad_ref)
+    pad_data
   end
 
   @spec get_data!(Child.state_t(), Pad.ref_t(), keys :: atom | [atom]) :: Pad.Data.t() | any
-  def get_data!(state, pad_ref, keys \\ []) do
+  def get_data!(state, pad_ref, keys) do
     {:ok, pad_data} = get_data(state, pad_ref, keys)
     pad_data
   end
@@ -192,13 +212,13 @@ defmodule Membrane.Core.Child.PadModel do
         ) :: Type.stateful_t(success | error | unknown_pad_error_t, Child.state_t())
         when data: Pad.Data.t() | any, success: {:ok, data}, error: {:error, reason :: any}
   def get_and_update_data(state, pad_ref, keys \\ [], f) do
-    with {:ok, state} <- {assert_instance(state, pad_ref), state},
-         {{:ok, out}, state} <-
-           state
-           |> Bunch.Access.get_and_update_in(data_keys(pad_ref, keys), f) do
-      {{:ok, out}, state}
-    else
-      {{:error, reason}, state} -> {{:error, reason}, state}
+    case assert_instance(state, pad_ref) do
+      :ok ->
+        state
+        |> Bunch.Access.get_and_update_in(data_keys(pad_ref, keys), f)
+
+      {:error, reason} ->
+        {{:error, reason}, state}
     end
   end
 
@@ -219,7 +239,7 @@ defmodule Membrane.Core.Child.PadModel do
   @spec pop_data(Child.state_t(), Pad.ref_t()) ::
           Type.stateful_t({:ok, Pad.Data.t()} | unknown_pad_error_t, Child.state_t())
   def pop_data(state, pad_ref) do
-    with {:ok, state} <- {assert_instance(state, pad_ref), state} do
+    with :ok <- assert_instance(state, pad_ref) do
       {data, state} =
         state
         |> Bunch.Access.pop_in(data_keys(pad_ref))
