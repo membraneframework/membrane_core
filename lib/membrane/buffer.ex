@@ -25,7 +25,7 @@ defmodule Membrane.Buffer do
 
   @doc """
   Returns `Membrane.Buffer.t()` `:dts` if available or `:pts` if `:dts` is not set.
-  If none of them is set `:nil` is returned.
+  If none of them is set `nil` is returned.
   """
   @spec get_dts_or_pts(__MODULE__.t()) :: Time.t() | nil
   def get_dts_or_pts(buffer) do
