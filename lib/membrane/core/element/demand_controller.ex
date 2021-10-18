@@ -68,10 +68,33 @@ defmodule Membrane.Core.Element.DemandController do
         CallbackHandler.exec_and_handle_callback(
           :handle_demand,
           ActionHandler,
-          %{context: context},
+          %{context: context, split_continuation_arbiter: &exec_handle_demand?(pad_ref, &1)},
           [pad_ref, total_size, unit],
           state
         )
+    end
+  end
+
+  @spec exec_handle_demand?(Pad.ref_t(), State.t()) :: boolean
+  defp exec_handle_demand?(pad_ref, state) do
+    case PadModel.get_data!(state, pad_ref) do
+      %{end_of_stream?: true} ->
+        Membrane.Logger.debug_verbose("""
+        Demand controller: not executing handle_demand as :end_of_stream action has already been returned
+        """)
+
+        false
+
+      %{demand: demand} when demand <= 0 ->
+        Membrane.Logger.debug_verbose("""
+        Demand controller: not executing handle_demand as demand is not greater than 0,
+        demand: #{inspect(demand)}
+        """)
+
+        false
+
+      _pad_data ->
+        true
     end
   end
 end
