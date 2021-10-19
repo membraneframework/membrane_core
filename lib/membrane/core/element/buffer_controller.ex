@@ -22,11 +22,20 @@ defmodule Membrane.Core.Element.BufferController do
   """
   @spec handle_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.stateful_try_t()
   def handle_buffer(pad_ref, buffers, state) do
-    PadModel.assert_data!(state, pad_ref, %{direction: :input})
+    pad_data = PadModel.get_data!(state, pad_ref)
 
-    case PadModel.get_data!(state, pad_ref, :mode) do
-      :pull -> handle_buffer_pull(pad_ref, buffers, state)
-      :push -> exec_buffer_handler(pad_ref, buffers, state)
+    case pad_data do
+      %{direction: :output} ->
+        raise Membrane.PipelineError, """
+        handle_buffer can only be called for an input pad.
+        pad_ref: #{inspect(pad_ref)}
+        """
+
+      %{mode: :pull} ->
+        handle_buffer_pull(pad_ref, buffers, state)
+
+      %{mode: :push} ->
+        exec_buffer_handler(pad_ref, buffers, state)
     end
   end
 
@@ -71,8 +80,6 @@ defmodule Membrane.Core.Element.BufferController do
   @spec handle_buffer_pull(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) ::
           State.stateful_try_t()
   defp handle_buffer_pull(pad_ref, buffers, state) do
-    PadModel.assert_data!(state, pad_ref, %{direction: :input})
-
     with {:ok, old_input_buf} <- PadModel.get_data(state, pad_ref, :input_buf) do
       input_buf = InputBuffer.store(old_input_buf, buffers)
       state = PadModel.set_data!(state, pad_ref, :input_buf, input_buf)
