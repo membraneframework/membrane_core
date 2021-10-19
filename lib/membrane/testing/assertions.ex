@@ -19,6 +19,8 @@ defmodule Membrane.Testing.Assertions do
         unquote(timeout),
         unquote(failure_message)
       )
+
+      :ok
     end
   end
 

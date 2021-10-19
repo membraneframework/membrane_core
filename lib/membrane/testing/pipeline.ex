@@ -218,6 +218,21 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @doc """
+  Execute a specific set of actions in the Pipeline.
+
+  ## Example
+
+  Knowing that `pipeline` has child named `sink`, message can be sent as follows:
+
+      execute_actions(pipeline, remove_child: :sink)
+  """
+  @spec execute_actions(pid(), Keyword.t()) :: :ok
+  def execute_actions(pipeline, actions) do
+    send(pipeline, {:execute_actions, actions})
+    :ok
+  end
+
+  @doc """
   Sends message to a child by Element name.
 
   ## Example
@@ -318,6 +333,12 @@ defmodule Membrane.Testing.Pipeline do
       fn -> {:ok, state} end,
       state
     )
+  end
+
+  @impl true
+  def handle_other({:execute_actions, actions}, _ctx, %State{} = state) do
+    notify_test_process({:execute_actions, actions}, state)
+    {{:ok, actions}, state}
   end
 
   @impl true

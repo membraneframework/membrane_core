@@ -60,6 +60,69 @@ defmodule Membrane.Support.Bin.TestBins do
 
       {{:ok, buffers}, state}
     end
+
+    @impl true
+    def handle_pad_removed(pad, _ctx, state) do
+      {{:ok, notify: {:handle_pad_removed, pad}}, state}
+    end
+  end
+
+  defmodule DynamicBin do
+    @moduledoc false
+    use Membrane.Bin
+    alias Membrane.Pad
+    require Membrane.Pad
+
+    def_options children: [type: :list],
+                links: [type: :list],
+                receiver: [type: :pid]
+
+    def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :on_request
+    def_output_pad :output, caps: :any, demand_unit: :buffers, availability: :on_request
+
+    @impl true
+    def handle_init(opts) do
+      spec = %ParentSpec{
+        children: opts.children,
+        links: opts.links
+      }
+
+      state = %{receiver: opts.receiver, children: opts.children}
+      {{:ok, spec: spec}, state}
+    end
+
+    @impl true
+    def handle_pad_added(Pad.ref(:input, _id) = pad, _ctx, state) do
+      [{child_name, _child} | _] = state.children
+      links = [link_bin_input(pad) |> to(child_name)]
+
+      {{:ok, spec: %ParentSpec{links: links}}, state}
+    end
+
+    def handle_pad_added(Pad.ref(:output, _id) = pad, _ctx, state) do
+      {child_name, _child} = List.last(state.children)
+      links = [link(child_name) |> to_bin_output(pad)]
+      {{:ok, spec: %ParentSpec{links: links}}, state}
+    end
+
+    @impl true
+    def handle_pad_removed(pad, _ctx, state) do
+      {{:ok, notify: {:handle_pad_removed, pad}}, state}
+    end
+
+    @impl true
+    def handle_other({:remove_link, links}, _ctx, state) do
+      {{:ok, remove_link: links, notify: :link_removed}, state}
+    end
+
+    def handle_other(msg, _ctx, state) do
+      {{:ok, notify: {:handle_other, msg}}, state}
+    end
+
+    @impl true
+    def handle_notification(msg, from, _ctx, state) do
+      {{:ok, notify: {:handle_notification, from, msg}}, state}
+    end
   end
 
   defmodule SimpleBin do

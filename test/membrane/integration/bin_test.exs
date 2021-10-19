@@ -1,12 +1,13 @@
 defmodule Membrane.Core.BinTest do
   use ExUnit.Case, async: true
 
+  import Membrane.Support.PipelineHelpers
   import Membrane.Testing.Assertions
 
-  alias Membrane.Support.Bin.TestBins
-  alias Membrane.Support.Bin.TestBins.{TestDynamicPadFilter, TestFilter}
   alias Membrane.Core.Bin
   alias Membrane.Core.Message
+  alias Membrane.Support.Bin.TestBins
+  alias Membrane.Support.Bin.TestBins.{TestDynamicPadFilter, TestFilter}
   alias Membrane.Testing
 
   require Membrane.Core.Message
@@ -318,30 +319,6 @@ defmodule Membrane.Core.BinTest do
 
   defp get_child_pid(_last_child_pid, _children) do
     {:error, :child_was_not_found}
-  end
-
-  defp assert_data_flows_through(pipeline, buffers, receiving_element \\ :sink) do
-    assert_playing(pipeline)
-
-    assert_start_of_stream(pipeline, ^receiving_element)
-
-    assert_buffers_flow_through(pipeline, buffers, receiving_element)
-
-    assert_end_of_stream(pipeline, ^receiving_element)
-  end
-
-  defp assert_buffers_flow_through(pipeline, buffers, receiving_element) do
-    buffers
-    |> Enum.each(fn b ->
-      assert_sink_buffer(pipeline, receiving_element, %Membrane.Buffer{payload: ^b})
-    end)
-  end
-
-  defp assert_playing(pipeline) do
-    :ok = Testing.Pipeline.play(pipeline)
-
-    assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
   end
 
   defp bin_init_options(pipeline) do
