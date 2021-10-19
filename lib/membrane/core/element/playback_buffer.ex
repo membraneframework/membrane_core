@@ -135,13 +135,13 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
       Buffers: #{inspect(buffers)}
       """)
 
-      {messages, state} =
+      {sticky_messages, state} =
         PadModel.get_and_update_data!(state, pad_ref, :sticky_messages, &{&1, []})
 
       with {:ok, state} <-
-             messages
+             sticky_messages
              |> Enum.reverse()
-             |> Bunch.Enum.try_reduce(state, fn msg, st -> msg.(st) end) do
+             |> Bunch.Enum.try_reduce(state, fn sticky_message, st -> sticky_message.(st) end) do
         {:ok, state} =
           if PadModel.get_data!(state, pad_ref, :start_of_stream?) do
             {:ok, state}
