@@ -1,6 +1,8 @@
 defmodule Membrane.Support.PipelineHelpers do
   @moduledoc false
 
+  alias Membrane.Child
+  alias Membrane.Pad
   alias Membrane.Testing
   require Membrane.Testing.Assertions
 
@@ -40,6 +42,44 @@ defmodule Membrane.Support.PipelineHelpers do
     after
       100 ->
         {:error, :timeout}
+    end
+  end
+
+  @spec assert_pad_removed(pid(), Child.name_t(), Pad.ref_t()) :: Macro.t()
+  defmacro assert_pad_removed(pipeline, element, pad) do
+    quote do
+      import ExUnit.Assertions
+
+      assert_receive(
+        {Membrane.Testing.Pipeline, ^unquote(pipeline),
+         {:handle_notification, {{:handle_pad_removed, unquote(pad)}, unquote(element)}}}
+      )
+    end
+  end
+
+  @spec refute_pad_removed(pid(), Child.name_t(), Pad.ref_t()) :: Macro.t()
+  defmacro refute_pad_removed(pipeline, element, pad) do
+    quote do
+      import ExUnit.Assertions
+
+      refute_receive(
+        {Membrane.Testing.Pipeline, ^unquote(pipeline),
+         {:handle_notification, {{:handle_pad_removed, unquote(pad)}, unquote(element)}}}
+      )
+    end
+  end
+
+  @spec assert_nested_pad_removed(pid(), Child.name_t(), Child.name_t(), Pad.ref_t()) :: Macro.t()
+  defmacro assert_nested_pad_removed(pipeline, element, nested_element, pad) do
+    quote do
+      import ExUnit.Assertions
+
+      assert_receive(
+        {Membrane.Testing.Pipeline, ^unquote(pipeline),
+         {:handle_notification,
+          {{:handle_notification, unquote(nested_element), {:handle_pad_removed, unquote(pad)}},
+           unquote(element)}}}
+      )
     end
   end
 end

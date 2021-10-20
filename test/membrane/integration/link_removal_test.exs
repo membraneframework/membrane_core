@@ -10,6 +10,7 @@ defmodule Membrane.Core.LinkRemovalTest do
   alias Membrane.Testing
 
   require Membrane.Pad
+  require Membrane.Testing.Assertions
 
   @buffers ['a', 'b', 'c']
 
@@ -44,11 +45,10 @@ defmodule Membrane.Core.LinkRemovalTest do
     test "can remove a bin input", %{pipeline: pipeline} do
       Testing.Pipeline.execute_actions(pipeline, remove_link: [link(:source) |> to(:test_bin)])
 
-      assert_receive {Membrane.Testing.Pipeline, ^pipeline, {:execute_actions, _links}}
+      assert_pad_removed(pipeline, :test_bin, Pad.ref(:input, _id))
+      refute_pad_removed(pipeline, :test_bin, Pad.ref(:output, _id))
 
-      assert_receive {Membrane.Testing.Pipeline, ^pipeline,
-                      {:handle_notification,
-                       {{:handle_pad_removed, Pad.ref(:input, _id)}, :test_bin}}}
+      Testing.Assertions.assert_end_of_stream(pipeline, :test_bin, Pad.ref(:input, _id))
 
       stop_pipeline(pipeline)
     end
@@ -56,11 +56,10 @@ defmodule Membrane.Core.LinkRemovalTest do
     test "can remove a bin output", %{pipeline: pipeline} do
       Testing.Pipeline.execute_actions(pipeline, remove_link: [link(:test_bin) |> to(:sink)])
 
-      assert_receive {Membrane.Testing.Pipeline, ^pipeline, {:execute_actions, _links}}
+      assert_pad_removed(pipeline, :test_bin, Pad.ref(:output, _id))
+      refute_pad_removed(pipeline, :test_bin, Pad.ref(:input, _id))
 
-      assert_receive {Membrane.Testing.Pipeline, ^pipeline,
-                      {:handle_notification,
-                       {{:handle_pad_removed, Pad.ref(:output, _id)}, :test_bin}}}
+      Testing.Assertions.assert_end_of_stream(pipeline, :test_bin, Pad.ref(:input, _id))
 
       stop_pipeline(pipeline)
     end
@@ -72,18 +71,13 @@ defmodule Membrane.Core.LinkRemovalTest do
         {:remove_link, [link(:filter1) |> to(:filter2)]}
       )
 
-      assert_receive {Membrane.Testing.Pipeline, ^pipeline,
-                      {:handle_notification, {:link_removed, :test_bin}}}
+      assert_nested_pad_removed(pipeline, :test_bin, :filter1, Pad.ref(:output, _ref))
+      assert_nested_pad_removed(pipeline, :test_bin, :filter2, Pad.ref(:input, _ref))
 
-      assert_receive {Membrane.Testing.Pipeline, ^pipeline,
-                      {:handle_notification,
-                       {{:handle_notification, :filter1,
-                         {:handle_pad_removed, Pad.ref(:output, _ref)}}, :test_bin}}}
+      Testing.Assertions.assert_end_of_stream(pipeline, :test_bin, Pad.ref(:input, _id))
 
-      assert_receive {Membrane.Testing.Pipeline, ^pipeline,
-                      {:handle_notification,
-                       {{:handle_notification, :filter2,
-                         {:handle_pad_removed, Pad.ref(:input, _ref)}}, :test_bin}}}
+      refute_pad_removed(pipeline, :test_bin, Pad.ref(:output, _id))
+      refute_pad_removed(pipeline, :test_bin, Pad.ref(:input, _id))
 
       stop_pipeline(pipeline)
     end
