@@ -87,7 +87,12 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
               Message.send(state.watcher, :link_response, link_id)
               state
             else
-              Membrane.Core.Child.PadModel.set_data!(state, endpoint.pad_ref, :link_id, :ready)
+              Membrane.Core.Child.PadModel.set_data!(
+                state,
+                endpoint.pad_ref,
+                :response_received?,
+                true
+              )
             end
           end)
         end

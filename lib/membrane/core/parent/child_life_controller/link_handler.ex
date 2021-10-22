@@ -4,6 +4,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   use Bunch
 
   alias Membrane.Core.{Bin, Child, Message, Parent, Telemetry}
+  alias Membrane.Core.Bin.PadController
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Parent.{CrashGroup, Link, LinkParser}
   alias Membrane.Core.Parent.Link.Endpoint
@@ -42,7 +43,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   end
 
   defp do_request_link(
-         _direction,
+         direction,
          %Link.Endpoint{child: {Membrane.Bin, :itself}} = this,
          other,
          spec_ref,
@@ -50,11 +51,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
          state
        ) do
     state =
-      PadModel.update_data!(
-        state,
-        this.pad_ref,
-        &%{&1 | endpoint: other, spec_ref: spec_ref}
-      )
+      PadController.handle_internal_link_request(this.pad_ref, direction, other, spec_ref, state)
 
     {0, state}
   end

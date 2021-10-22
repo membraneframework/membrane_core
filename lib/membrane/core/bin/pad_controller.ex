@@ -5,7 +5,7 @@ defmodule Membrane.Core.Bin.PadController do
 
   use Bunch
   alias Bunch.Type
-  alias Membrane.{Core, Pad}
+  alias Membrane.{Core, LinkError, Pad}
   alias Membrane.Core.{CallbackHandler, Child, Message}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Bin.ActionHandler
@@ -26,27 +26,58 @@ defmodule Membrane.Core.Bin.PadController do
     :ok = Child.PadController.validate_pad_being_linked!(pad_ref, direction, info, state)
     pad_props = Child.PadController.parse_pad_props!(pad_props, pad_name, state)
 
-    if info.availability == :always do
-      if PadModel.get_data!(state, pad_ref, :link_id) == :ready do
-        Membrane.Logger.debug("Sending link response, #{inspect(pad_ref)}")
-        Message.send(state.watcher, :link_response, link_id)
+    state =
+      cond do
+        :ok != PadModel.assert_instance(state, pad_ref) ->
+          init_pad_data(pad_ref, info, state)
+
+        PadModel.get_data!(state, pad_ref, :response_received?) ->
+          Membrane.Logger.debug("Sending link response, #{inspect(pad_ref)}")
+          Message.send(state.watcher, :link_response, link_id)
+          state
+
+        true ->
+          state
       end
 
-      PadModel.set_data!(state, pad_ref, :link_id, link_id)
-    else
-      data =
-        Map.merge(info, %{
-          link_id: link_id,
-          endpoint: nil,
-          linked?: false,
-          spec_ref: nil,
-          options: pad_props.options
-        })
+    state =
+      PadModel.update_data!(state, pad_ref, &%{&1 | link_id: link_id, options: pad_props.options})
 
-      state = put_in(state, [:pads, :data, pad_ref], data)
-      {:ok, state} = handle_pad_added(pad_ref, state)
-      state
-    end
+    {:ok, state} = handle_pad_added(pad_ref, state)
+    state
+  end
+
+  def handle_internal_link_request(pad_ref, direction, endpoint, spec_ref, state) do
+    pad_name = Pad.name_by_ref(pad_ref)
+    info = Map.fetch!(state.pads.info, pad_name)
+
+    state =
+      cond do
+        :ok == PadModel.assert_instance(state, pad_ref) ->
+          state
+
+        info.availability == :always ->
+          init_pad_data(pad_ref, info, state)
+
+        true ->
+          raise LinkError, "Dynamic pads must be firstly linked externally, then internally"
+      end
+
+    PadModel.update_data!(state, pad_ref, &%{&1 | endpoint: endpoint, spec_ref: spec_ref})
+  end
+
+  defp init_pad_data(pad_ref, info, state) do
+    data =
+      Map.merge(info, %{
+        link_id: nil,
+        endpoint: nil,
+        linked?: false,
+        response_received?: false,
+        spec_ref: nil,
+        options: nil
+      })
+
+    put_in(state, [:pads, :data, pad_ref], data)
   end
 
   @doc """
@@ -104,25 +135,32 @@ defmodule Membrane.Core.Bin.PadController do
   @spec handle_pad_added(Pad.ref_t(), Core.Bin.State.t()) ::
           Type.stateful_try_t(Core.Bin.State.t())
   defp handle_pad_added(ref, state) do
-    %{options: pad_opts, direction: direction} = PadModel.get_data!(state, ref)
-    context = &CallbackContext.PadAdded.from_state(&1, options: pad_opts, direction: direction)
+    %{options: pad_opts, direction: direction, availability: availability} =
+      PadModel.get_data!(state, ref)
 
-    CallbackHandler.exec_and_handle_callback(
-      :handle_pad_added,
-      ActionHandler,
-      %{context: context},
-      [ref],
-      state
-    )
+    if Pad.availability_mode(availability) == :dynamic do
+      context = &CallbackContext.PadAdded.from_state(&1, options: pad_opts, direction: direction)
+
+      CallbackHandler.exec_and_handle_callback(
+        :handle_pad_added,
+        ActionHandler,
+        %{context: context},
+        [ref],
+        state
+      )
+    else
+      {:ok, state}
+    end
   end
 
   @spec handle_pad_removed(Pad.ref_t(), Core.Bin.State.t()) ::
           Type.stateful_try_t(Core.Bin.State.t())
   def handle_pad_removed(ref, state) do
     %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
-    context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
 
     if Pad.availability_mode(availability) == :dynamic do
+      context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
+
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_removed,
         ActionHandler,

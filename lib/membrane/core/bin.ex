@@ -127,23 +127,6 @@ defmodule Membrane.Core.Bin do
       }
       |> PadSpecHandler.init_pads()
 
-    state =
-      state.pads.info
-      |> Map.values()
-      |> Enum.filter(&(&1.availability == :always))
-      |> Enum.reduce(state, fn info, state ->
-        data =
-          Map.merge(info, %{
-            link_id: nil,
-            endpoint: nil,
-            linked?: false,
-            spec_ref: nil,
-            options: nil
-          })
-
-        put_in(state, [:pads, :data, info.name], data)
-      end)
-
     with {:ok, state} <-
            CallbackHandler.exec_and_handle_callback(
              :handle_init,
