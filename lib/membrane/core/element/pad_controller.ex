@@ -33,7 +33,8 @@ defmodule Membrane.Core.Element.PadController do
         ) :: Type.stateful_try_t(PadModel.pad_info_t(), Core.Element.State.t())
   def handle_link(direction, this, other, other_info, link_metadata, state) do
     name = this.pad_ref |> Pad.name_by_ref()
-    info = state.pads.info[name]
+    info = Map.fetch!(state.pads.info, name)
+    :ok = Child.PadController.validate_pad_being_linked!(this.pad_ref, direction, info, state)
 
     {other, other_info, link_metadata} =
       if link_metadata do
@@ -47,8 +48,6 @@ defmodule Membrane.Core.Element.PadController do
 
         {other, other_info, metadata}
       end
-
-    :ok = Child.PadController.validate_pad_being_linked!(this.pad_ref, direction, info, state)
 
     :ok =
       Child.PadController.validate_pad_mode!({this.pad_ref, info}, {other.pad_ref, other_info})
