@@ -49,58 +49,8 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   end
 
   def handle_message(Message.new(:link_response, link_id), state) do
-    Membrane.Logger.debug("link response #{inspect(link_id)}")
-
-    {spec_ref, state} =
-      get_and_update_in(state, [:pending_links, link_id], fn pending_link ->
-        %{to_respond: to_respond, spec_ref: spec_ref} = pending_link
-        {spec_ref, %{pending_link | to_respond: to_respond - 1}}
-      end)
-
-    pending_links =
-      state.pending_links
-      |> Map.values()
-      |> Enum.filter(&(&1.spec_ref == spec_ref))
-
-    Membrane.Logger.debug("pending links: #{inspect(pending_links)}")
-
-    if Enum.all?(pending_links, &(&1.to_respond == 0)) do
-      {bin_links, non_bin_links} =
-        pending_links
-        |> Enum.map(& &1.link)
-        |> Enum.split_with(&({Membrane.Bin, :itself} in [&1.from.child, &1.to.child]))
-
-      {:ok, state} = ChildLifeController.LinkHandler.link_children(non_bin_links, state)
-
-      state =
-        if bin_links == [] do
-          ChildLifeController.StartupHandler.init_playback_state(spec_ref, state)
-        else
-          bin_links
-          |> Enum.flat_map(&[&1.from, &1.to])
-          |> Enum.filter(&(&1.child == {Membrane.Bin, :itself}))
-          |> Enum.reduce(state, fn endpoint, state ->
-            link_id = Membrane.Core.Child.PadModel.get_data!(state, endpoint.pad_ref, :link_id)
-
-            if link_id do
-              Membrane.Logger.debug("Sending link response")
-              Message.send(state.watcher, :link_response, link_id)
-              state
-            else
-              Membrane.Core.Child.PadModel.set_data!(
-                state,
-                endpoint.pad_ref,
-                :response_received?,
-                true
-              )
-            end
-          end)
-        end
-
-      {:noreply, state}
-    else
-      {:noreply, state}
-    end
+    state = ChildLifeController.LinkHandler.handle_link_response(link_id, state)
+    {:noreply, state}
   end
 
   def handle_message({:membrane_clock_ratio, clock, ratio}, state) do

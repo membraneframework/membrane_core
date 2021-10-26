@@ -40,8 +40,19 @@ defmodule Membrane.Core.Bin.PadController do
           state
       end
 
+    {spec_ref, state} =
+      PadModel.get_and_update_data!(
+        state,
+        pad_ref,
+        &{&1.spec_ref, %{&1 | link_id: link_id, options: pad_props.options}}
+      )
+
     state =
-      PadModel.update_data!(state, pad_ref, &%{&1 | link_id: link_id, options: pad_props.options})
+      if spec_ref do
+        ChildLifeController.LinkHandler.proceed_spec_linking(spec_ref, state)
+      else
+        state
+      end
 
     {:ok, state} = handle_pad_added(pad_ref, state)
     state
@@ -66,18 +77,31 @@ defmodule Membrane.Core.Bin.PadController do
     PadModel.update_data!(state, pad_ref, &%{&1 | endpoint: endpoint, spec_ref: spec_ref})
   end
 
-  defp init_pad_data(pad_ref, info, state) do
-    data =
-      Map.merge(info, %{
-        link_id: nil,
-        endpoint: nil,
-        linked?: false,
-        response_received?: false,
-        spec_ref: nil,
-        options: nil
-      })
+  def respond_links(spec_ref, state) do
+    state.pads.data
+    |> Map.values()
+    |> Enum.filter(&(&1.spec_ref == spec_ref))
+    |> Enum.reduce(state, fn pad_data, state ->
+      if pad_data.link_id do
+        # Membrane.Logger.debug("Sending link response")
+        Message.send(state.watcher, :link_response, pad_data.link_id)
+        state
+      else
+        Membrane.Core.Child.PadModel.set_data!(
+          state,
+          pad_data.ref,
+          :response_received?,
+          true
+        )
+      end
+    end)
+  end
 
-    put_in(state, [:pads, :data, pad_ref], data)
+  def all_pads_linked?(spec_ref, state) do
+    state.pads.data
+    |> Map.values()
+    |> Enum.filter(&(&1.spec_ref == spec_ref))
+    |> Enum.all?(& &1.linked?)
   end
 
   @doc """
@@ -106,18 +130,7 @@ defmodule Membrane.Core.Bin.PadController do
       ])
 
     state = PadModel.set_data!(state, this.pad_ref, :linked?, true)
-
-    state =
-      if state.pads.data
-         |> Map.values()
-         |> Enum.filter(&(&1.spec_ref == spec_ref))
-         |> Enum.all?(& &1.linked?) do
-        Membrane.Logger.debug("Spec playback init #{inspect(spec_ref)}")
-        ChildLifeController.StartupHandler.init_playback_state(spec_ref, state)
-      else
-        state
-      end
-
+    state = ChildLifeController.LinkHandler.proceed_spec_linking(spec_ref, state)
     {reply, state}
   end
 
@@ -171,5 +184,20 @@ defmodule Membrane.Core.Bin.PadController do
     else
       {:ok, state}
     end
+  end
+
+  defp init_pad_data(pad_ref, info, state) do
+    data =
+      Map.merge(info, %{
+        ref: pad_ref,
+        link_id: nil,
+        endpoint: nil,
+        linked?: false,
+        response_received?: false,
+        spec_ref: nil,
+        options: nil
+      })
+
+    put_in(state, [:pads, :data, pad_ref], data)
   end
 end

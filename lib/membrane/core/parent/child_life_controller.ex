@@ -67,20 +67,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       end
 
     state = ClockHandler.choose_clock(children, spec.clock_provider, state)
-    links = LinkHandler.resolve_links(links, state)
-
-    state =
-      if links == [] do
-        StartupHandler.init_playback_state(spec_ref, state)
-      else
-        Membrane.Logger.debug("Requesting links #{inspect(spec_ref)} #{inspect(links)}")
-        LinkHandler.request_links(links, spec_ref, state)
-      end
-
-    # {:ok, state} = LinkHandler.link_children(links, state)
+    state = LinkHandler.init_spec_linking(spec_ref, links, state)
     {:ok, state} = StartupHandler.exec_handle_spec_started(children_names, state)
-    # state = StartupHandler.init_playback_state(children_names, state)
-
     {{:ok, children_names}, state}
   end
 

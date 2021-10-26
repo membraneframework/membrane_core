@@ -53,6 +53,6 @@ defmodule Membrane.Core.Bin.State do
                 crash_groups: %{},
                 children_log_metadata: [],
                 links: [],
-                pending_links: %{}
+                pending_specs: %{}
               ]
 end
