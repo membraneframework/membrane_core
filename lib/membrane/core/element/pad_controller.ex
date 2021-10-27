@@ -160,16 +160,12 @@ defmodule Membrane.Core.Element.PadController do
          %Membrane.Core.Element.State{}
        ) do
     %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
-    input_buf = InputBuffer.init(demand_unit, pid, other_ref, inspect(ref), props.buffer)
+    enable_toilet? = other_info.mode == :push
 
-    {toilet, input_buf} =
-      if other_info.mode == :push do
-        {metadata.toilet, InputBuffer.enable_toilet(input_buf)}
-      else
-        {nil, input_buf}
-      end
+    input_buf =
+      InputBuffer.init(demand_unit, pid, other_ref, inspect(ref), enable_toilet?, props.buffer)
 
-    %{input_buf: input_buf, demand: 0, toilet: toilet}
+    %{input_buf: input_buf, demand: 0, toilet: if(enable_toilet?, do: metadata.toilet)}
   end
 
   defp init_pad_mode_data(

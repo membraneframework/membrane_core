@@ -99,7 +99,6 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp do_handle_action({:redemand, out_ref}, cb, _params, %State{type: type} = state)
        when type in [:source, :filter] and is_pad_ref(out_ref) and
               {type, cb} != {:filter, :handle_demand} do
-    IO.inspect(state.name, label: :redemand)
     handle_redemand(out_ref, state)
   end
 
@@ -271,7 +270,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       %{pid: pid, other_ref: other_ref} = pad_data
 
       state =
-        handle_buffer(pad_ref, pad_data, buffers, state)
+        DemandHandler.handle_outgoing_buffers(pad_ref, pad_data, buffers, state)
         |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
 
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
@@ -286,40 +285,6 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp send_buffer(_pad_ref, invalid_value, _callback, state) do
     {{:error, {:invalid_buffer, invalid_value}}, state}
-  end
-
-  @spec handle_buffer(
-          Pad.ref_t(),
-          Membrane.Pad.Data.t(),
-          [Buffer.t()],
-          State.t()
-        ) :: State.t()
-  defp handle_buffer(
-         pad_ref,
-         %{mode: :pull, other_demand_unit: other_demand_unit},
-         buffers,
-         state
-       ) do
-    buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
-    PadModel.update_data!(state, pad_ref, :demand, &(&1 - buf_size))
-  end
-
-  defp handle_buffer(_pad_ref, %{mode: :push, toilet: toilet} = data, buffers, state)
-       when is_reference(toilet) do
-    # %{other_demand_unit: other_demand_unit, pid: pid} = data
-    # buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
-    # toilet_size = :atomics.add_get(toilet, 1, buf_size)
-
-    # if toilet_size > 2000 do
-    #   Membrane.Logger.error("Toilet overflow, size: #{toilet_size}")
-    #   Process.exit(pid, :kill)
-    # end
-
-    state
-  end
-
-  defp handle_buffer(_pad_ref, _pad_data, _buffers, state) do
-    state
   end
 
   @spec send_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.stateful_try_t()

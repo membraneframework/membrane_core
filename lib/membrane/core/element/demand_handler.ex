@@ -5,6 +5,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   use Bunch
 
+  alias Membrane.Buffer
   alias Membrane.Core.InputBuffer
   alias Membrane.Core.Child.PadModel
 
@@ -171,6 +172,73 @@ defmodule Membrane.Core.Element.DemandHandler do
 
         {{:error, {:supply_demand, reason}}, %State{state | supplying_demand?: false}}
     end
+  end
+
+  @spec handle_outgoing_buffers(
+          Pad.ref_t(),
+          Membrane.Pad.Data.t(),
+          [Buffer.t()],
+          State.t()
+        ) :: State.t()
+  def handle_outgoing_buffers(
+        pad_ref,
+        %{mode: :pull, other_demand_unit: other_demand_unit},
+        buffers,
+        state
+      ) do
+    buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
+    PadModel.update_data!(state, pad_ref, :demand, &(&1 - buf_size))
+  end
+
+  def handle_outgoing_buffers(_pad_ref, %{mode: :push, toilet: toilet} = data, buffers, state)
+      when is_reference(toilet) do
+    %{other_demand_unit: other_demand_unit, pid: pid} = data
+    buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
+    toilet_size = :atomics.add_get(toilet, 1, buf_size)
+
+    if toilet_size > 200 do
+      Membrane.Logger.debug_verbose(~S"""
+      Toilet overflow
+
+                   ` ' `
+               .'''. ' .'''.
+                 .. ' ' ..
+                '  '.'.'  '
+                .'''.'.'''.
+               ' .''.'.''. '
+             ;------ ' ------;
+             | ~~ .--'--//   |
+             |   /   '   \   |
+             |  /    '    \  |
+             |  |    '    |  |  ,----.
+             |   \ , ' , /   | =|____|=
+             '---,###'###,---'  (---(
+                /##  '  ##\      )---)
+                |##, ' ,##|     (---(
+                 \'#####'/       `---`
+                  \`"#"`/
+                   |`"`|
+                 .-|   |-.
+            jgs /  '   '  \
+                '---------'
+      """)
+
+      Membrane.Logger.error("""
+      Toilet overflow.
+
+      Reached the size of #{inspect(toilet_size)},
+      which is above fail level when storing data from output working in push mode.
+      To have control over amount of buffers being produced, consider using pull mode.
+      """)
+
+      Process.exit(pid, :kill)
+    end
+
+    state
+  end
+
+  def handle_outgoing_buffers(_pad_ref, _pad_data, _buffers, state) do
+    state
   end
 
   @spec handle_input_buf_output(

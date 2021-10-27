@@ -32,8 +32,7 @@ defmodule Membrane.Core.InputBuffer do
           demand: non_neg_integer(),
           min_demand: pos_integer(),
           metric: module(),
-          toilet?: boolean(),
-          toilet_props: %{:warn => pos_integer, :fail => pos_integer}
+          toilet?: boolean()
         }
 
   defstruct q: nil,
@@ -43,8 +42,7 @@ defmodule Membrane.Core.InputBuffer do
             demand: nil,
             min_demand: nil,
             metric: nil,
-            toilet?: false,
-            toilet_props: nil
+            toilet?: false
 
   @typedoc """
   Properties that can be passed when creating new InputBuffer
@@ -56,16 +54,10 @@ defmodule Membrane.Core.InputBuffer do
     * `:min_demand` - the minimal size of a demand that can be sent to the linked output pad.
       This prevents from excessive message passing between elements. Defaults to a quarter of
       preferred size.
-    * `warn_size` - in toilet mode (connecting push output to pull input pad), receiving more data
-      than this size triggers a warning. By default it is equal to twice the preferred size.
-    * `fail_size` - in toilet mode (connecting push output to pull input pad), receiving more data
-      than this results in an element failure. By default, it is four times the preferred size.
   """
   @type props_t :: [
           {:preferred_size, pos_integer()}
           | {:min_demand, pos_integer()}
-          | {:warn_size, pos_integer()}
-          | {:fail_size, pos_integer()}
         ]
 
   @spec parse_props(keyword()) :: {:error, reason :: any()} | {:ok, props_t()}
@@ -75,9 +67,7 @@ defmodule Membrane.Core.InputBuffer do
            |> List.wrap()
            |> Bunch.Config.parse(
              preferred_size: [default: nil],
-             min_demand: [default: nil],
-             warn_size: [default: nil],
-             fail_size: [default: nil]
+             min_demand: [default: nil]
            ) do
       {:ok, Enum.to_list(parsed)}
     end
@@ -88,9 +78,10 @@ defmodule Membrane.Core.InputBuffer do
           pid(),
           Pad.ref_t(),
           String.t(),
+          toilet? :: boolean(),
           props_t
         ) :: t()
-  def init(demand_unit, demand_pid, demand_pad, log_tag, props) do
+  def init(demand_unit, demand_pid, demand_pad, log_tag, toilet?, props) do
     metric = Buffer.Metric.from_unit(demand_unit)
     preferred_size = props[:preferred_size] || metric.input_buf_preferred_size
     min_demand = props[:min_demand] || preferred_size |> div(4)
@@ -102,27 +93,17 @@ defmodule Membrane.Core.InputBuffer do
       min_demand: min_demand,
       demand: preferred_size,
       metric: metric,
-      toilet?: false,
-      toilet_props: %{
-        warn: props[:warn_size] || preferred_size * 2,
-        fail: props[:fail_size] || preferred_size * 4
-      }
+      toilet?: toilet?
     }
     |> send_demands(demand_pid, demand_pad)
   end
 
-  @spec enable_toilet(t()) :: t()
-  def enable_toilet(%__MODULE__{} = buf), do: %__MODULE__{buf | toilet?: true}
-
   @spec store(t(), atom(), any()) :: t()
   def store(input_buf, type \\ :buffers, v)
 
-  def store(
-        %__MODULE__{current_size: size, preferred_size: pref_size, toilet?: false} = input_buf,
-        :buffers,
-        v
-      )
-      when is_list(v) do
+  def store(input_buf, :buffers, v) when is_list(v) do
+    %__MODULE__{current_size: size, preferred_size: pref_size} = input_buf
+
     if size >= pref_size do
       """
       Received buffers despite not requesting them.
@@ -133,72 +114,6 @@ defmodule Membrane.Core.InputBuffer do
     end
 
     %__MODULE__{current_size: size} = input_buf = do_store_buffers(input_buf, v)
-
-    Telemetry.report_metric(:store, size, input_buf.log_tag)
-
-    input_buf
-  end
-
-  def store(
-        %__MODULE__{toilet?: true, toilet_props: %{warn: warn_lvl, fail: fail_lvl}} = input_buf,
-        :buffers,
-        v
-      )
-      when is_list(v) do
-    %__MODULE__{current_size: size} = input_buf = do_store_buffers(input_buf, v)
-
-    # cond do
-    #   size > fail_lvl ->
-    #     ~S"""
-    #     Toilet overflow
-
-    #                  ` ' `
-    #              .'''. ' .'''.
-    #                .. ' ' ..
-    #               '  '.'.'  '
-    #               .'''.'.'''.
-    #              ' .''.'.''. '
-    #            ;------ ' ------;
-    #            | ~~ .--'--//   |
-    #            |   /   '   \   |
-    #            |  /    '    \  |
-    #            |  |    '    |  |  ,----.
-    #            |   \ , ' , /   | =|____|=
-    #            '---,###'###,---'  (---(
-    #               /##  '  ##\      )---)
-    #               |##, ' ,##|     (---(
-    #                \'#####'/       `---`
-    #                 \`"#"`/
-    #                  |`"`|
-    #                .-|   |-.
-    #           jgs /  '   '  \
-    #               '---------'
-    #     """
-    #     |> mk_log(input_buf)
-    #     |> Membrane.Logger.debug_verbose()
-
-    #     """
-    #     Toilet overflow.
-
-    #     Reached the size of #{inspect(size)},
-    #     which is above fail level when storing data from output working in push mode.
-    #     To have control over amount of buffers being produced, consider using pull mode.
-    #     If this is a normal situation, increase warn/fail size in buffer options.
-
-    #     See `Membrane.Core.InputBuffer` for more information.
-    #     """
-    #     |> mk_log(input_buf)
-    #     |> IO.iodata_to_binary()
-    #     |> raise
-
-    #   size > warn_lvl ->
-    #     "Reached buffers of size #{inspect(size)}, which is above warn level, from output working in push mode. See `Membrane.Core.InputBuffer` for more information."
-    #     |> mk_log(input_buf)
-    #     |> Membrane.Logger.warn()
-
-    #   true ->
-    #     :ok
-    # end
 
     Telemetry.report_metric(:store, size, input_buf.log_tag)
 
@@ -230,7 +145,6 @@ defmodule Membrane.Core.InputBuffer do
   @spec take_and_demand(t(), non_neg_integer(), pid(), Pad.ref_t()) :: {output_t(), t()}
   def take_and_demand(%__MODULE__{current_size: size} = input_buf, count, demand_pid, demand_pad)
       when count >= 0 do
-    # Membrane.Logger.info("taking buffers")
     "Taking #{inspect(count)} buffers" |> mk_log(input_buf) |> Membrane.Logger.debug_verbose()
     {out, %__MODULE__{current_size: new_size} = input_buf} = do_take(input_buf, count)
 
@@ -317,12 +231,7 @@ defmodule Membrane.Core.InputBuffer do
       "InputBuffer #{log_tag}#{if toilet, do: " (toilet)", else: ""}: ",
       message,
       "\n",
-      "InputBuffer size: #{inspect(size)}, ",
-      if toilet do
-        "toilet limits: #{inspect(toilet)}"
-      else
-        "preferred size: #{inspect(pref_size)}"
-      end
+      "InputBuffer size: #{inspect(size)}, preferred size: #{inspect(pref_size)}"
     ]
   end
 

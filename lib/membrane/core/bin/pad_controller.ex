@@ -58,7 +58,7 @@ defmodule Membrane.Core.Bin.PadController do
     state
   end
 
-  def handle_internal_link_request(pad_ref, direction, endpoint, spec_ref, state) do
+  def handle_internal_link_request(pad_ref, endpoint, spec_ref, state) do
     pad_name = Pad.name_by_ref(pad_ref)
     info = Map.fetch!(state.pads.info, pad_name)
 

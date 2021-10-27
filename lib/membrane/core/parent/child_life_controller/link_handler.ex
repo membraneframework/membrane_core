@@ -135,16 +135,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   end
 
   defp request_link(
-         direction,
+         _direction,
          %Link.Endpoint{child: {Membrane.Bin, :itself}} = this,
          other,
          spec_ref,
          _link_id,
          state
        ) do
-    state =
-      PadController.handle_internal_link_request(this.pad_ref, direction, other, spec_ref, state)
-
+    state = PadController.handle_internal_link_request(this.pad_ref, other, spec_ref, state)
     {0, state}
   end
 
