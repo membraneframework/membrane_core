@@ -153,7 +153,9 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def handle_info(Message.new(:link_request, [pad_ref, direction, link_id, pad_props]), state) do
-    state = PadController.handle_link_request(pad_ref, direction, link_id, pad_props, state)
+    state =
+      PadController.handle_external_link_request(pad_ref, direction, link_id, pad_props, state)
+
     {:noreply, state}
   end
 

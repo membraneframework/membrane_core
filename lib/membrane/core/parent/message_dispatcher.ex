@@ -53,6 +53,11 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     {:noreply, state}
   end
 
+  def handle_message(Message.new(:spec_linking_timeout, spec_ref), state) do
+    state = ChildLifeController.LinkHandler.handle_spec_timeout(spec_ref, state)
+    {:noreply, state}
+  end
+
   def handle_message({:membrane_clock_ratio, clock, ratio}, state) do
     TimerController.handle_clock_update(clock, ratio, state) |> noreply(state)
   end

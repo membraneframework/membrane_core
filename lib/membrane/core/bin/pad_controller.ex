@@ -18,7 +18,7 @@ defmodule Membrane.Core.Bin.PadController do
   require Membrane.Logger
   require Membrane.Pad
 
-  def handle_link_request(pad_ref, direction, link_id, pad_props, state) do
+  def handle_external_link_request(pad_ref, direction, link_id, pad_props, state) do
     Membrane.Logger.debug("Received link request on pad #{inspect(pad_ref)}")
     pad_name = Pad.name_by_ref(pad_ref)
     info = Map.fetch!(state.pads.info, pad_name)

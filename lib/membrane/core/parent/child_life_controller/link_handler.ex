@@ -17,6 +17,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   require Membrane.Pad
 
   def init_spec_linking(spec_ref, links, state) do
+    Process.send_after(self(), Message.new(:spec_linking_timeout, spec_ref), 5000)
     links = resolve_links(links, state)
 
     {links, state} =
@@ -39,6 +40,17 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
       })
 
     proceed_spec_linking(spec_ref, state)
+  end
+
+  def handle_spec_timeout(spec_ref, state) do
+    {spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
+
+    unless spec_data.status == :linked do
+      raise LinkError,
+            "Spec #{inspect(spec_ref)} linking took too long, spec_data: #{inspect(spec_data, pretty: true)}"
+    end
+
+    state
   end
 
   def proceed_spec_linking(spec_ref, state) do
