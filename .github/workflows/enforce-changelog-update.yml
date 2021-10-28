@@ -3,6 +3,7 @@ on:
   pull_request:
     branches:
       - master
+  workflow_call: []   
 jobs:
   check-changelog-update:
     runs-on: ubuntu-latest
