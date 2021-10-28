@@ -3,7 +3,10 @@ on:
   pull_request:
     branches:
       - master
-  workflow_call: []   
+  workflow_call:
+    secrets:
+      GITHUB_TOKEN:
+        required: true   
 jobs:
   check-changelog-update:
     runs-on: ubuntu-latest
