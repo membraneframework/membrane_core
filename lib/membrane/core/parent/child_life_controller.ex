@@ -132,7 +132,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         LinkHandler.unlink_children(removals, state)
 
       {_links, _children_spec_from_links} ->
-        raise Membrane.PipelineError,
+        raise Membrane.ParentError,
               "Found new child references when parsing links to remove."
     end
   end
