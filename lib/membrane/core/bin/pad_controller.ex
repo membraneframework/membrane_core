@@ -28,10 +28,10 @@ defmodule Membrane.Core.Bin.PadController do
 
     state =
       with {:ok, response_received?} <- PadModel.get_data(state, pad_ref, :response_received?) do
-          if response_received? do
-            Membrane.Logger.debug("Sending link response, #{inspect(pad_ref)}")
-            Message.send(state.parent_pid, :link_response, link_id)
-          end
+        if response_received? do
+          Membrane.Logger.debug("Sending link response, #{inspect(pad_ref)}")
+          Message.send(state.parent_pid, :link_response, link_id)
+        end
 
         PadModel.get_data!(state, pad_ref, :response_received?) ->
           Membrane.Logger.debug("Sending link response, #{inspect(pad_ref)}")
@@ -41,7 +41,7 @@ defmodule Membrane.Core.Bin.PadController do
         true ->
           state
       else
-        {:error, {:unknown_pad, pad_ref} ->
+        {:error, {:unknown_pad, pad_ref}} ->
           init_pad_data(pad_ref, info, state)
       end
 

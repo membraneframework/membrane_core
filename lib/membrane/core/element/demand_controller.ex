@@ -42,10 +42,12 @@ defmodule Membrane.Core.Element.DemandController do
 
   @spec check_auto_demand(Pad.ref_t(), State.t()) :: State.t()
   def check_auto_demand(pad_ref, state) do
-    %{demand: demand, toilet: toilet} = data = PadModel.get_data!(state, pad_ref)
+    %{demand: demand, toilet: toilet, demand_pads: demand_pads} =
+      data = PadModel.get_data!(state, pad_ref)
+
     demand_size = state.demand_size
 
-    if demand <= div(demand_size, 2) and auto_demands_positive?(pad_ref, state) do
+    if demand <= div(demand_size, 2) and auto_demands_positive?(demand_pads, state) do
       if toilet do
         :atomics.sub(toilet, 1, demand_size - demand)
       else
@@ -59,9 +61,8 @@ defmodule Membrane.Core.Element.DemandController do
     end
   end
 
-  defp auto_demands_positive?(pad_ref, state) do
-    PadModel.get_data!(state, pad_ref, :demand_pads)
-    |> Enum.all?(&(PadModel.get_data!(state, &1, :demand) > 0))
+  defp auto_demands_positive?(demand_pads, state) do
+    Enum.all?(demand_pads, &(PadModel.get_data!(state, &1, :demand) > 0))
   end
 
   @spec ignore?(Pad.ref_t(), State.t()) :: boolean()

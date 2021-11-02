@@ -58,7 +58,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
     if state.__struct__ == Membrane.Core.Bin.State do
       case {old, new} do
-        {:stopped, :perpared} -> Core.Child.PadController.check_for_unlinked_static_pads(state)
+        {:stopped, :prepared} -> Core.Child.PadController.check_for_unlinked_static_pads(state)
         {_old, :stopped} -> Core.Child.LifecycleController.unlink(state)
         _other -> :ok
       end
