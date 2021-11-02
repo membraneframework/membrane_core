@@ -18,16 +18,16 @@ jobs:
       - name: Verify changes in CHANGELOG file
         id: verify-changes
         run: |
-          changelogPresent=false
+          changelogPresent=0
           for changed_file in ${{ steps.files.outputs.all }}; do
             if [ "$changed_file" == "CHANGELOG.md" ]; then
-              changelogPresent=true
+              changelogPresent=1
               break
             fi
           done
           echo "::set-output name=changelog-updated::$changelogPresent"
       - name: Check
-        if: ${{ steps.verify-changes.outputs.changelog-updated }}
+        if: ${{ steps.verify-changes.outputs.changelog-updated == 0 }}
         uses: actions/github-script@v3
         with:
           script: |
