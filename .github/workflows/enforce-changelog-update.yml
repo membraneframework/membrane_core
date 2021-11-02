@@ -1,0 +1,26 @@
+name: Enforce CHANGELOG Update
+on:
+  pull_request:
+    branches:
+      - master
+  workflow_call:
+    secrets:
+      GITHUB_TOKEN:
+        required: true   
+jobs:
+  check-changelog-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Verify changes in CHANGELOG file
+        id: verify-changes
+        run: |
+          git fetch
+          echo "::set-output name=changelog-updated::$(git diff --name-only origin/${{ github.base_ref }} origin/${{ github.head_ref }}  | grep ^CHANGELOG.md$ | wc -w)"
+      - name: Check
+        if: ${{steps.verify-changes.outputs.changelog-updated == 0}}
+        uses: actions/github-script@v3
+        with:
+          script: |
+            core.setFailed('CHANGELOG has to be updated on pull request to master')
