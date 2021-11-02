@@ -27,33 +27,21 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   @spec resolve_link_removals([LinkParser.raw_link_t()], Parent.state_t()) ::
           [Parent.Link.t()]
   def resolve_link_removals(links, state) do
-    Enum.reduce(
-      links,
-      [],
-      fn link, removals ->
-        existing_link =
-          state.links
-          |> Enum.find(fn existing_link ->
-            existing_link.from.child == link.from.child and
-              (existing_link.from.pad_spec == link.from.pad_spec or
-                 existing_link.from.pad_spec == Pad.get_corresponding_bin_pad(link.from.pad_spec)) and
-              existing_link.to.child == link.to.child and
-              (existing_link.to.pad_spec == link.to.pad_spec or
-                 existing_link.to.pad_spec == Pad.get_corresponding_bin_pad(link.to.pad_spec))
-          end)
-
-        if existing_link do
-          removals ++ [existing_link]
-        else
-          Membrane.Logger.warn("""
-          Asked to remove a link that does not exist.
-          Link: #{inspect(link)}
-          """)
-
-          removals
-        end
-      end
-    )
+    Enum.map(links, fn link ->
+      state.links
+      |> Enum.find(fn existing_link ->
+        existing_link.from.child == link.from.child and
+          (existing_link.from.pad_spec == link.from.pad_spec or
+             existing_link.from.pad_spec == Pad.get_corresponding_bin_pad(link.from.pad_spec)) and
+          existing_link.to.child == link.to.child and
+          (existing_link.to.pad_spec == link.to.pad_spec or
+             existing_link.to.pad_spec == Pad.get_corresponding_bin_pad(link.to.pad_spec))
+      end) ||
+        raise Membrane.ParentError, """
+        Asked to remove a link that does not exist.
+        Link: #{inspect(link)}
+        """
+    end)
   end
 
   # Links children based on given specification and map for mapping children
