@@ -1,3 +1,7 @@
+## Next release
+### PR's not influencing public API:
+ * fix action enforcing CHANGELOG update with PR [#345](https://github.com/membraneframework/membrane_core/pull/345)
+
 ## 0.8.0
 ### Release notes:
   * update telemetry dependency to also allow 1.0 #343
