@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Parent.MessageDispatcher do
   @moduledoc false
 
-  import Membrane.Helper.GenServer
+  import Membrane.Core.Helper.GenServer
 
   alias Membrane.Core.{Parent, Pipeline, TimerController}
   alias Membrane.Core.Message
@@ -11,7 +11,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   require Membrane.Logger
 
   @spec handle_message(Message.t(), Parent.state_t()) ::
-          Membrane.Helper.GenServer.genserver_return_t()
+          Membrane.Core.Helper.GenServer.genserver_return_t()
           | {:stop, reason :: :normal, Parent.state_t()}
   def handle_message(
         Message.new(:playback_state_changed, [pid, new_playback_state]),

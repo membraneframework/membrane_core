@@ -18,7 +18,7 @@ defmodule Membrane.Core.Element do
   use Bunch
   use GenServer
 
-  import Membrane.Helper.GenServer
+  import Membrane.Core.Helper.GenServer
 
   alias Membrane.{Clock, Element, Sync}
 <<<<<<< HEAD

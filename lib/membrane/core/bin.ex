@@ -3,7 +3,7 @@ defmodule Membrane.Core.Bin do
   use Bunch
   use GenServer
 
-  import Membrane.Helper.GenServer
+  import Membrane.Core.Helper.GenServer
 
 <<<<<<< HEAD
   alias __MODULE__.{LinkingBuffer, State}
