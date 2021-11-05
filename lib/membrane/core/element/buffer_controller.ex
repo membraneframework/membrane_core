@@ -1,5 +1,5 @@
 defmodule Membrane.Core.Element.BufferController do
-  @moduledoc false
+  # @moduledoc false
 
   # Module handling buffers incoming through input pads.
 

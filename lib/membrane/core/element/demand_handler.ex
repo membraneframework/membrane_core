@@ -1,5 +1,5 @@
 defmodule Membrane.Core.Element.DemandHandler do
-  @moduledoc false
+  # @moduledoc false
 
   # Module handling demands requested on output pads.
 
@@ -22,77 +22,6 @@ defmodule Membrane.Core.Element.DemandHandler do
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
   require Membrane.Logger
-
-  @doc """
-  Updates demand on the given input pad that should be supplied by future calls
-  to `supply_demand/2` or `check_and_supply_demands/2`.
-  """
-  @spec update_demand(
-          Pad.ref_t(),
-          pos_integer,
-          State.t()
-        ) :: State.stateful_try_t()
-  def update_demand(pad_ref, size, state) when is_integer(size) do
-    state = PadModel.set_data!(state, pad_ref, :demand, size)
-    {:ok, state}
-  end
-
-  def update_demand(pad_ref, size_fun, state) when is_function(size_fun) do
-    PadModel.update_data(
-      state,
-      pad_ref,
-      :demand,
-      fn demand ->
-        new_demand = size_fun.(demand)
-
-        if new_demand < 0 do
-          {:error, :negative_demand}
-        else
-          {:ok, new_demand}
-        end
-      end
-    )
-  end
-
-  @doc """
-  Delays executing redemand until all current processing is finished.
-
-  Works similar to `delay_supply/3`, but only `:sync` mode is supported. See
-  doc for `delay_supply/3` for more info.
-  """
-  @spec delay_redemand(Pad.ref_t(), State.t()) :: State.t()
-  def delay_redemand(pad_ref, state) do
-    state
-    |> Map.update!(:delayed_demands, &MapSet.put(&1, {pad_ref, :redemand}))
-  end
-
-  @spec handle_delayed_demands(State.t()) :: State.stateful_try_t()
-  def handle_delayed_demands(%State{delayed_demands: del_dem} = state)
-      when del_dem == %MapSet{} do
-    {:ok, state}
-  end
-
-  def handle_delayed_demands(%State{delayed_demands: del_dem} = state) do
-    # Taking random element of `:delayed_demands` is done to keep data flow
-    # balanced among pads, i.e. to prevent situation where demands requested by
-    # one pad are supplied right away while another one is waiting for buffers
-    # potentially for a long time.
-    [{pad_ref, action}] = del_dem |> Enum.take_random(1)
-    state = %State{state | delayed_demands: del_dem |> MapSet.delete({pad_ref, action})}
-
-    res =
-      case action do
-        :supply ->
-          do_supply_demand(pad_ref, state)
-
-        :redemand ->
-          handle_redemand(pad_ref, state)
-      end
-
-    with {:ok, state} <- res do
-      handle_delayed_demands(state)
-    end
-  end
 
   @doc """
   Called when redemand action was returned.
@@ -132,6 +61,12 @@ defmodule Membrane.Core.Element.DemandHandler do
           Pad.ref_t(),
           State.t()
         ) :: {:ok, State.t()} | {{:error, any()}, State.t()}
+  def supply_demand(pad_ref, size, state) do
+    with {:ok, state} <- update_demand(pad_ref, size, state) do
+      supply_demand(pad_ref, state)
+    end
+  end
+
   def supply_demand(pad_ref, %State{supplying_demand?: true} = state) do
     state =
       state
@@ -239,6 +174,65 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   def handle_outgoing_buffers(_pad_ref, _pad_data, _buffers, state) do
     state
+  end
+
+  @doc """
+  Updates demand on the given input pad that should be supplied by future calls
+  to `supply_demand/2` or `check_and_supply_demands/2`.
+  """
+  @spec update_demand(
+          Pad.ref_t(),
+          pos_integer,
+          State.t()
+        ) :: State.stateful_try_t()
+  defp update_demand(pad_ref, size, state) when is_integer(size) do
+    state = PadModel.set_data!(state, pad_ref, :demand, size)
+    {:ok, state}
+  end
+
+  defp update_demand(pad_ref, size_fun, state) when is_function(size_fun) do
+    PadModel.update_data(
+      state,
+      pad_ref,
+      :demand,
+      fn demand ->
+        new_demand = size_fun.(demand)
+
+        if new_demand < 0 do
+          {:error, :negative_demand}
+        else
+          {:ok, new_demand}
+        end
+      end
+    )
+  end
+
+  @spec handle_delayed_demands(State.t()) :: State.stateful_try_t()
+  defp handle_delayed_demands(%State{delayed_demands: del_dem} = state)
+       when del_dem == %MapSet{} do
+    {:ok, state}
+  end
+
+  defp handle_delayed_demands(%State{delayed_demands: del_dem} = state) do
+    # Taking random element of `:delayed_demands` is done to keep data flow
+    # balanced among pads, i.e. to prevent situation where demands requested by
+    # one pad are supplied right away while another one is waiting for buffers
+    # potentially for a long time.
+    [{pad_ref, action}] = del_dem |> Enum.take_random(1)
+    state = %State{state | delayed_demands: del_dem |> MapSet.delete({pad_ref, action})}
+
+    res =
+      case action do
+        :supply ->
+          do_supply_demand(pad_ref, state)
+
+        :redemand ->
+          handle_redemand(pad_ref, state)
+      end
+
+    with {:ok, state} <- res do
+      handle_delayed_demands(state)
+    end
   end
 
   @spec handle_input_buf_output(

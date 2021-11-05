@@ -1,5 +1,5 @@
 defmodule Membrane.Core.Element.DemandController do
-  @moduledoc false
+  # @moduledoc false
 
   # Module handling demands incoming through output pads.
 
@@ -41,24 +41,28 @@ defmodule Membrane.Core.Element.DemandController do
   end
 
   @spec check_auto_demand(Pad.ref_t(), State.t()) :: State.t()
-  def check_auto_demand(pad_ref, state) do
+  def check_auto_demand(pad_ref, demand_decrease \\ 0, state) do
     %{demand: demand, toilet: toilet, demand_pads: demand_pads} =
       data = PadModel.get_data!(state, pad_ref)
 
-    demand_size = state.demand_size
+    demand = demand - demand_decrease
+    demand_request_size = state.demand_size
 
-    if demand <= div(demand_size, 2) and auto_demands_positive?(demand_pads, state) do
-      if toilet do
-        :atomics.sub(toilet, 1, demand_size - demand)
+    demand =
+      if demand <= div(demand_request_size, 2) and auto_demands_positive?(demand_pads, state) do
+        if toilet do
+          :atomics.sub(toilet, 1, demand_request_size - demand)
+        else
+          %{pid: pid, other_ref: other_ref} = data
+          Message.send(pid, :demand, demand_request_size - demand, for_pad: other_ref)
+        end
+
+        demand_request_size
       else
-        %{pid: pid, other_ref: other_ref} = data
-        Message.send(pid, :demand, demand_size - demand, for_pad: other_ref)
+        demand
       end
 
-      PadModel.set_data!(state, pad_ref, :demand, demand_size)
-    else
-      state
-    end
+    PadModel.set_data!(state, pad_ref, :demand, demand)
   end
 
   defp auto_demands_positive?(demand_pads, state) do

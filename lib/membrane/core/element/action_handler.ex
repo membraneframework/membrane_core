@@ -344,14 +344,12 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp supply_demand(pad_ref, size, _callback, state) do
     withl data: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
           dir: %{direction: :input} <- pad_data,
-          mode: %{mode: :pull} <- pad_data,
-          update: {:ok, state} <- DemandHandler.update_demand(pad_ref, size, state) do
-      DemandHandler.supply_demand(pad_ref, state)
+          mode: %{mode: :pull} <- pad_data do
+      DemandHandler.supply_demand(pad_ref, size, state)
     else
       data: {:error, reason} -> {{:error, reason}, state}
       dir: %{direction: dir} -> {{:error, {:invalid_pad_dir, pad_ref, dir}}, state}
       mode: %{mode: mode} -> {{:error, {:invalid_pad_mode, pad_ref, mode}}, state}
-      update: {{:error, reason}, state} -> {{:error, reason}, state}
     end
   end
 
