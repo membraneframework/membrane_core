@@ -2,6 +2,7 @@
  * allow telemetry in version 1.0 only [#347](https://github.com/membraneframework/membrane_core/pull/347)
 ### PR's not influencing public API:
  * fix action enforcing CHANGELOG update with PR [#345](https://github.com/membraneframework/membrane_core/pull/345)
+ * Release membrane_core v0.8.1 [#348](https://github.com/membraneframework/membrane_core/pull/348)
 
 ## 0.8.0
 ### Release notes:
