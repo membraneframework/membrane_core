@@ -104,7 +104,7 @@ defmodule Membrane.Core.Child.PadController do
   end
 
   def check_for_unlinked_static_pads(state) do
-    linked_pads_names = state.pads.data |> Map.values() |> Enum.map(& &1.name) |> MapSet.new()
+    linked_pads_names = state.pads.data |> Map.values() |> MapSet.new(& &1.name)
 
     static_unlinked_pads =
       state.pads.info
