@@ -133,7 +133,7 @@ defmodule Membrane.Core.Element.PadController do
         end)
 
       case data.direction do
-        :input -> DemandController.check_auto_demand(ref, state)
+        :input -> DemandController.send_auto_demand_if_needed(ref, state)
         :output -> state
       end
     else
@@ -277,7 +277,7 @@ defmodule Membrane.Core.Element.PadController do
       end)
 
     if pad_data.direction == :output do
-      Enum.reduce(pad_data.demand_pads, state, &DemandController.check_auto_demand/2)
+      Enum.reduce(pad_data.demand_pads, state, &DemandController.send_auto_demand_if_needed/2)
     else
       state
     end

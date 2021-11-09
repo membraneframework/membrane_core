@@ -30,7 +30,7 @@ defmodule Membrane.Core.Element.DemandController do
     state = PadModel.set_data!(state, pad_ref, :demand, old_demand + size)
 
     if old_demand <= 0 do
-      {:ok, Enum.reduce(demand_pads, state, &check_auto_demand/2)}
+      {:ok, Enum.reduce(demand_pads, state, &send_auto_demand_if_needed/2)}
     else
       {:ok, state}
     end
@@ -59,8 +59,8 @@ defmodule Membrane.Core.Element.DemandController do
     end
   end
 
-  @spec check_auto_demand(Pad.ref_t(), State.t()) :: State.t()
-  def check_auto_demand(pad_ref, demand_decrease \\ 0, state) do
+  @spec send_auto_demand_if_needed(Pad.ref_t(), integer, State.t()) :: State.t()
+  def send_auto_demand_if_needed(pad_ref, demand_decrease \\ 0, state) do
     data = PadModel.get_data!(state, pad_ref)
     %{demand: demand, toilet: toilet, demand_pads: demand_pads} = data
 

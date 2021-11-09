@@ -33,7 +33,7 @@ defmodule Membrane.ChildEntry do
     :pid,
     :clock,
     :sync,
-    :spec,
+    :spec_ref,
     playback_sync: :not_synced,
     terminating?: false
   ]

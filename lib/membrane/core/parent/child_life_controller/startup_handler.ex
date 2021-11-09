@@ -134,7 +134,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
 
     {:ok, state} =
       ChildrenModel.update_children(state, fn
-        %{spec: ^spec_ref} = child ->
+        %{spec_ref: ^spec_ref} = child ->
           expected_playback = state.playback.pending_state || state.playback.state
 
           Membrane.Logger.debug(

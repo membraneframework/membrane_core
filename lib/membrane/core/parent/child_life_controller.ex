@@ -33,7 +33,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     children_spec = Enum.concat(spec.children, children_spec_from_links)
     children = ChildEntryParser.parse(children_spec)
     spec_ref = make_ref()
-    children = Enum.map(children, &%{&1 | spec: spec_ref})
+    children = Enum.map(children, &%{&1 | spec_ref: spec_ref})
     :ok = StartupHandler.check_if_children_names_unique(children, state)
     syncs = StartupHandler.setup_syncs(children, spec.stream_sync)
 

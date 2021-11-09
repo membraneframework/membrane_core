@@ -103,7 +103,7 @@ defmodule Membrane.Core.Child.PadController do
     end
   end
 
-  def check_for_unlinked_static_pads(state) do
+  def assert_all_static_pads_linked!(state) do
     linked_pads_names = state.pads.data |> Map.values() |> MapSet.new(& &1.name)
 
     static_unlinked_pads =

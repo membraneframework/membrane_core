@@ -26,6 +26,32 @@ defmodule Membrane.Core.Element.BufferController do
     do_handle_buffer(pad_ref, data, buffers, state)
   end
 
+  @spec do_handle_buffer(Pad.ref_t(), PadData.t(), [Buffer.t()] | Buffer.t(), State.t()) ::
+          State.stateful_try_t()
+  defp do_handle_buffer(pad_ref, %{mode: :pull, demand_mode: :auto} = data, buffers, state) do
+    %{demand: demand, demand_unit: demand_unit} = data
+    buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
+    state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
+    state = DemandController.send_auto_demand_if_needed(pad_ref, state)
+    exec_buffer_handler(pad_ref, buffers, state)
+  end
+
+  defp do_handle_buffer(pad_ref, %{mode: :pull} = data, buffers, state) do
+    %{input_buf: old_input_buf} = data
+    input_buf = InputBuffer.store(old_input_buf, buffers)
+    state = PadModel.set_data!(state, pad_ref, :input_buf, input_buf)
+
+    if old_input_buf |> InputBuffer.empty?() do
+      DemandHandler.supply_demand(pad_ref, state)
+    else
+      {:ok, state}
+    end
+  end
+
+  defp do_handle_buffer(pad_ref, _data, buffers, state) do
+    exec_buffer_handler(pad_ref, buffers, state)
+  end
+
   @doc """
   Executes `handle_process` or `handle_write_list` callback.
   """
@@ -60,31 +86,5 @@ defmodule Membrane.Core.Element.BufferController do
       [pad_ref, buffers],
       state
     )
-  end
-
-  @spec do_handle_buffer(Pad.ref_t(), PadData.t(), [Buffer.t()] | Buffer.t(), State.t()) ::
-          State.stateful_try_t()
-  defp do_handle_buffer(pad_ref, %{mode: :pull, demand_mode: :auto} = data, buffers, state) do
-    %{demand: demand, demand_unit: demand_unit} = data
-    buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
-    state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
-    state = DemandController.check_auto_demand(pad_ref, state)
-    exec_buffer_handler(pad_ref, buffers, state)
-  end
-
-  defp do_handle_buffer(pad_ref, %{mode: :pull} = data, buffers, state) do
-    %{input_buf: old_input_buf} = data
-    input_buf = InputBuffer.store(old_input_buf, buffers)
-    state = PadModel.set_data!(state, pad_ref, :input_buf, input_buf)
-
-    if old_input_buf |> InputBuffer.empty?() do
-      DemandHandler.supply_demand(pad_ref, state)
-    else
-      {:ok, state}
-    end
-  end
-
-  defp do_handle_buffer(pad_ref, _data, buffers, state) do
-    exec_buffer_handler(pad_ref, buffers, state)
   end
 end
