@@ -61,8 +61,8 @@ defmodule Membrane.Core.Element.DemandController do
 
   @spec check_auto_demand(Pad.ref_t(), State.t()) :: State.t()
   def check_auto_demand(pad_ref, demand_decrease \\ 0, state) do
-    %{demand: demand, toilet: toilet, demand_pads: demand_pads} =
-      data = PadModel.get_data!(state, pad_ref)
+    data = PadModel.get_data!(state, pad_ref)
+    %{demand: demand, toilet: toilet, demand_pads: demand_pads} = data
 
     demand = demand - demand_decrease
     demand_request_size = state.demand_size
