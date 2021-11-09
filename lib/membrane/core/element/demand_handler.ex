@@ -1,5 +1,5 @@
 defmodule Membrane.Core.Element.DemandHandler do
-  # @moduledoc false
+  @moduledoc false
 
   # Module handling demands requested on output pads.
 
@@ -62,9 +62,8 @@ defmodule Membrane.Core.Element.DemandHandler do
           State.t()
         ) :: {:ok, State.t()} | {{:error, any()}, State.t()}
   def supply_demand(pad_ref, size, state) do
-    with {:ok, state} <- update_demand(pad_ref, size, state) do
-      supply_demand(pad_ref, state)
-    end
+    state = update_demand(pad_ref, size, state)
+    supply_demand(pad_ref, state)
   end
 
   def supply_demand(pad_ref, %State{supplying_demand?: true} = state) do
@@ -176,22 +175,12 @@ defmodule Membrane.Core.Element.DemandHandler do
     state
   end
 
-  @doc """
-  Updates demand on the given input pad that should be supplied by future calls
-  to `supply_demand/2` or `check_and_supply_demands/2`.
-  """
-  @spec update_demand(
-          Pad.ref_t(),
-          pos_integer,
-          State.t()
-        ) :: State.stateful_try_t()
   defp update_demand(pad_ref, size, state) when is_integer(size) do
-    state = PadModel.set_data!(state, pad_ref, :demand, size)
-    {:ok, state}
+    PadModel.set_data!(state, pad_ref, :demand, size)
   end
 
   defp update_demand(pad_ref, size_fun, state) when is_function(size_fun) do
-    PadModel.update_data(
+    PadModel.update_data!(
       state,
       pad_ref,
       :demand,
@@ -199,10 +188,11 @@ defmodule Membrane.Core.Element.DemandHandler do
         new_demand = size_fun.(demand)
 
         if new_demand < 0 do
-          {:error, :negative_demand}
-        else
-          {:ok, new_demand}
+          raise Membrane.ElementError,
+                "Demand altering function requested negative demand on pad #{inspect(pad_ref)} in #{state.module}"
         end
+
+        new_demand
       end
     )
   end
@@ -223,11 +213,8 @@ defmodule Membrane.Core.Element.DemandHandler do
 
     res =
       case action do
-        :supply ->
-          do_supply_demand(pad_ref, state)
-
-        :redemand ->
-          handle_redemand(pad_ref, state)
+        :supply -> do_supply_demand(pad_ref, state)
+        :redemand -> handle_redemand(pad_ref, state)
       end
 
     with {:ok, state} <- res do

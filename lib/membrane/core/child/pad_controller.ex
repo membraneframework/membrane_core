@@ -1,4 +1,6 @@
 defmodule Membrane.Core.Child.PadController do
+  @moduledoc false
+
   alias Membrane.Core.InputBuffer
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.LinkError

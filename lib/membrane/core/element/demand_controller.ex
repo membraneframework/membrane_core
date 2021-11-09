@@ -1,5 +1,5 @@
 defmodule Membrane.Core.Element.DemandController do
-  # @moduledoc false
+  @moduledoc false
 
   # Module handling demands incoming through output pads.
 
@@ -20,21 +20,40 @@ defmodule Membrane.Core.Element.DemandController do
   @spec handle_demand(Pad.ref_t(), non_neg_integer, State.t()) ::
           State.stateful_try_t()
   def handle_demand(pad_ref, size, state) do
-    %{direction: :output, demand_mode: demand_mode} = PadModel.get_data!(state, pad_ref)
-
-    cond do
-      ignore?(pad_ref, state) -> {:ok, state}
-      demand_mode == :auto -> handle_auto_demand(pad_ref, size, state)
-      true -> do_handle_demand(pad_ref, size, state)
-    end
+    data = PadModel.get_data!(state, pad_ref)
+    %{direction: :output, mode: :pull} = data
+    do_handle_demand(pad_ref, size, data, state)
   end
 
-  defp handle_auto_demand(pad_ref, size, state) do
-    %{demand: old_demand, demand_pads: demand_pads} = PadModel.get_data!(state, pad_ref)
+  defp do_handle_demand(pad_ref, size, %{demand_mode: :auto} = data, state) do
+    %{demand: old_demand, demand_pads: demand_pads} = data
     state = PadModel.set_data!(state, pad_ref, :demand, old_demand + size)
 
     if old_demand <= 0 do
       {:ok, Enum.reduce(demand_pads, state, &check_auto_demand/2)}
+    else
+      {:ok, state}
+    end
+  end
+
+  defp do_handle_demand(pad_ref, size, %{demand_mode: :manual} = data, state) do
+    demand = data.demand + size
+    state = PadModel.set_data!(state, pad_ref, :demand, demand)
+
+    if exec_handle_demand?(data) do
+      require CallbackContext.Demand
+      context = &CallbackContext.Demand.from_state(&1, incoming_demand: size)
+
+      CallbackHandler.exec_and_handle_callback(
+        :handle_demand,
+        ActionHandler,
+        %{
+          split_continuation_arbiter: &exec_handle_demand?(PadModel.get_data!(&1, pad_ref)),
+          context: context
+        },
+        [pad_ref, demand, data.other_demand_unit],
+        state
+      )
     else
       {:ok, state}
     end
@@ -69,55 +88,24 @@ defmodule Membrane.Core.Element.DemandController do
     Enum.all?(demand_pads, &(PadModel.get_data!(state, &1, :demand) > 0))
   end
 
-  @spec ignore?(Pad.ref_t(), State.t()) :: boolean()
-  defp ignore?(pad_ref, state), do: state.pads.data[pad_ref].mode == :push
+  defp exec_handle_demand?(%{end_of_stream?: true}) do
+    Membrane.Logger.debug_verbose("""
+    Demand controller: not executing handle_demand as :end_of_stream action has already been returned
+    """)
 
-  @spec do_handle_demand(Pad.ref_t(), non_neg_integer, State.t()) ::
-          State.stateful_try_t()
-  defp do_handle_demand(pad_ref, size, state) do
-    {total_size, state} =
-      state
-      |> PadModel.get_and_update_data!(pad_ref, :demand, fn demand ->
-        (demand + size) ~> {&1, &1}
-      end)
-
-    if exec_handle_demand?(pad_ref, state) do
-      %{other_demand_unit: unit} = PadModel.get_data!(state, pad_ref)
-      require CallbackContext.Demand
-      context = &CallbackContext.Demand.from_state(&1, incoming_demand: size)
-
-      CallbackHandler.exec_and_handle_callback(
-        :handle_demand,
-        ActionHandler,
-        %{split_continuation_arbiter: &exec_handle_demand?(pad_ref, &1), context: context},
-        [pad_ref, total_size, unit],
-        state
-      )
-    else
-      {:ok, state}
-    end
+    false
   end
 
-  @spec exec_handle_demand?(Pad.ref_t(), State.t()) :: boolean
-  defp exec_handle_demand?(pad_ref, state) do
-    case PadModel.get_data!(state, pad_ref) do
-      %{end_of_stream?: true} ->
-        Membrane.Logger.debug_verbose("""
-        Demand controller: not executing handle_demand as :end_of_stream action has already been returned
-        """)
+  defp exec_handle_demand?(%{demand: demand}) when demand <= 0 do
+    Membrane.Logger.debug_verbose("""
+    Demand controller: not executing handle_demand as demand is not greater than 0,
+    demand: #{inspect(demand)}
+    """)
 
-        false
+    false
+  end
 
-      %{demand: demand} when demand <= 0 ->
-        Membrane.Logger.debug_verbose("""
-        Demand controller: not executing handle_demand as demand is not greater than 0,
-        demand: #{inspect(demand)}
-        """)
-
-        false
-
-      _pad_data ->
-        true
-    end
+  defp exec_handle_demand?(_pad_data) do
+    true
   end
 end
