@@ -220,8 +220,7 @@ defmodule Membrane.Core.Element.PadController do
   @spec generate_eos_if_needed(Pad.ref_t(), Core.Element.State.t()) ::
           Type.stateful_try_t(Core.Element.State.t())
   def generate_eos_if_needed(pad_ref, state) do
-    direction = PadModel.get_data!(state, pad_ref, :direction)
-    eos? = PadModel.get_data!(state, pad_ref, :end_of_stream?)
+    %{direction: direction, end_of_stream?: eos?} = PadModel.get_data!(state, pad_ref)
     %{state: playback_state} = state.playback
 
     if direction == :input and not eos? and playback_state == :playing do
