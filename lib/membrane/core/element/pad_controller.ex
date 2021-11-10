@@ -129,7 +129,7 @@ defmodule Membrane.Core.Element.PadController do
         |> Map.values()
         |> Enum.filter(&(&1.direction != data.direction and &1.demand_mode == :auto))
         |> Enum.reduce(state, fn other_data, state ->
-          PadModel.update_data!(state, other_data.ref, :demand_pads, &[data.ref | &1])
+          PadModel.update_data!(state, other_data.ref, :associated_pads, &[data.ref | &1])
         end)
 
       case data.direction do
@@ -184,7 +184,7 @@ defmodule Membrane.Core.Element.PadController do
          metadata,
          %Membrane.Core.Element.State{} = state
        ) do
-    demand_pads =
+    associated_pads =
       state.pads.data
       |> Map.values()
       |> Enum.filter(&(&1.direction != direction and &1.demand_mode == :auto))
@@ -199,7 +199,7 @@ defmodule Membrane.Core.Element.PadController do
 
     %{
       demand: 0,
-      demand_pads: demand_pads,
+      associated_pads: associated_pads,
       other_demand_unit: other_info[:demand_unit],
       toilet: toilet
     }
@@ -272,12 +272,12 @@ defmodule Membrane.Core.Element.PadController do
 
   defp check_for_auto_demands(%{mode: :pull, demand_mode: :auto} = pad_data, state) do
     state =
-      Enum.reduce(pad_data.demand_pads, state, fn pad, state ->
-        PadModel.update_data!(state, pad, :demand_pads, &List.delete(&1, pad_data.ref))
+      Enum.reduce(pad_data.associated_pads, state, fn pad, state ->
+        PadModel.update_data!(state, pad, :associated_pads, &List.delete(&1, pad_data.ref))
       end)
 
     if pad_data.direction == :output do
-      Enum.reduce(pad_data.demand_pads, state, &DemandController.send_auto_demand_if_needed/2)
+      Enum.reduce(pad_data.associated_pads, state, &DemandController.send_auto_demand_if_needed/2)
     else
       state
     end

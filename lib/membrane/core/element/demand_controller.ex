@@ -26,11 +26,11 @@ defmodule Membrane.Core.Element.DemandController do
   end
 
   defp do_handle_demand(pad_ref, size, %{demand_mode: :auto} = data, state) do
-    %{demand: old_demand, demand_pads: demand_pads} = data
+    %{demand: old_demand, associated_pads: associated_pads} = data
     state = PadModel.set_data!(state, pad_ref, :demand, old_demand + size)
 
     if old_demand <= 0 do
-      {:ok, Enum.reduce(demand_pads, state, &send_auto_demand_if_needed/2)}
+      {:ok, Enum.reduce(associated_pads, state, &send_auto_demand_if_needed/2)}
     else
       {:ok, state}
     end
@@ -62,13 +62,13 @@ defmodule Membrane.Core.Element.DemandController do
   @spec send_auto_demand_if_needed(Pad.ref_t(), integer, State.t()) :: State.t()
   def send_auto_demand_if_needed(pad_ref, demand_decrease \\ 0, state) do
     data = PadModel.get_data!(state, pad_ref)
-    %{demand: demand, toilet: toilet, demand_pads: demand_pads} = data
+    %{demand: demand, toilet: toilet, associated_pads: associated_pads} = data
 
     demand = demand - demand_decrease
     demand_request_size = state.demand_size
 
     demand =
-      if demand <= div(demand_request_size, 2) and auto_demands_positive?(demand_pads, state) do
+      if demand <= div(demand_request_size, 2) and auto_demands_positive?(associated_pads, state) do
         if toilet do
           :atomics.sub(toilet, 1, demand_request_size - demand)
         else
@@ -84,8 +84,8 @@ defmodule Membrane.Core.Element.DemandController do
     PadModel.set_data!(state, pad_ref, :demand, demand)
   end
 
-  defp auto_demands_positive?(demand_pads, state) do
-    Enum.all?(demand_pads, &(PadModel.get_data!(state, &1, :demand) > 0))
+  defp auto_demands_positive?(associated_pads, state) do
+    Enum.all?(associated_pads, &(PadModel.get_data!(state, &1, :demand) > 0))
   end
 
   defp exec_handle_demand?(%{end_of_stream?: true}) do
