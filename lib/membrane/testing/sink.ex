@@ -43,10 +43,8 @@ defmodule Membrane.Testing.Sink do
                 """
               ]
 
-  defmacrop notify(payload) do
-    quote do
-      [notify: %Notification{payload: unquote(payload)}]
-    end
+  defp notify(payload) do
+    [notify: %Notification{payload: payload}]
   end
 
   @impl true
