@@ -43,10 +43,6 @@ defmodule Membrane.Testing.Sink do
                 """
               ]
 
-  defp notify(payload) do
-    [notify: %Notification{payload: payload}]
-  end
-
   @impl true
   def handle_init(opts) do
     {:ok, opts}
@@ -86,5 +82,9 @@ defmodule Membrane.Testing.Sink do
       %{autodemand: false} -> {{:ok, notify({:buffer, buf})}, state}
       %{autodemand: true} -> {{:ok, [demand: :input] ++ notify({:buffer, buf})}, state}
     end
+  end
+
+  defp notify(payload) do
+    [notify: %Notification{payload: payload}]
   end
 end
