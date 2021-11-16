@@ -8,7 +8,7 @@ defmodule Membrane.Core.Element.EventController do
   alias Membrane.{Event, Pad, Sync}
   alias Membrane.Core.{CallbackHandler, Events, InputBuffer, Message, Telemetry}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, State}
+  alias Membrane.Core.Element.{ActionHandler, PadController, State}
   alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel
@@ -146,9 +146,9 @@ defmodule Membrane.Core.Element.EventController do
 
     withl data: %{direction: :input, start_of_stream?: true, end_of_stream?: false} <- pad_data,
           playback: %{state: :playing} <- state.playback do
-      state
-      |> PadModel.set_data!(pad_ref, :end_of_stream?, true)
-      ~> {{:ok, :handle}, &1}
+      state = PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
+      state = PadController.remove_pad_associations(pad_ref, state)
+      {{:ok, :handle}, state}
     else
       data: %{direction: :output} ->
         {{:error, {:received_end_of_stream_through_output, pad_ref}}, state}

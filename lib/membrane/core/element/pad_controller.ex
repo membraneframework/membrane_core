@@ -88,9 +88,8 @@ defmodule Membrane.Core.Element.PadController do
   def handle_unlink(pad_ref, state) do
     with {:ok, state} <- flush_playback_buffer(pad_ref, state),
          {:ok, state} <- generate_eos_if_needed(pad_ref, state),
-         {:ok, state} <- handle_pad_removed(pad_ref, state),
-         {{:ok, data}, state} <- PadModel.pop_data(state, pad_ref) do
-      state = check_for_auto_demands(data, state)
+         {:ok, state} <- handle_pad_removed(pad_ref, state) do
+      state = PadModel.delete_data!(state, pad_ref)
       {:ok, state}
     end
   end
@@ -270,20 +269,26 @@ defmodule Membrane.Core.Element.PadController do
     {:ok, %{state | playback_buffer: new_playback_buf}}
   end
 
-  defp check_for_auto_demands(%{mode: :pull, demand_mode: :auto} = pad_data, state) do
-    state =
-      Enum.reduce(pad_data.associated_pads, state, fn pad, state ->
-        PadModel.update_data!(state, pad, :associated_pads, &List.delete(&1, pad_data.ref))
-      end)
+  def remove_pad_associations(pad_ref, state) do
+    case PadModel.get_data!(state, pad_ref) do
+      %{mode: :pull, demand_mode: :auto} = pad_data ->
+        state =
+          Enum.reduce(pad_data.associated_pads, state, fn pad, state ->
+            PadModel.update_data!(state, pad, :associated_pads, &List.delete(&1, pad_data.ref))
+          end)
 
-    if pad_data.direction == :output do
-      Enum.reduce(pad_data.associated_pads, state, &DemandController.send_auto_demand_if_needed/2)
-    else
-      state
+        if pad_data.direction == :output do
+          Enum.reduce(
+            pad_data.associated_pads,
+            state,
+            &DemandController.send_auto_demand_if_needed/2
+          )
+        else
+          state
+        end
+
+      _pad_data ->
+        state
     end
-  end
-
-  defp check_for_auto_demands(_pad_data, state) do
-    state
   end
 end

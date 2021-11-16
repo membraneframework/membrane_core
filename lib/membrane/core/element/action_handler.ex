@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   import Membrane.Pad, only: [is_pad_ref: 1]
 
   alias Membrane.{ActionError, Buffer, Caps, CallbackError, Event, Pad}
-  alias Membrane.Core.Element.{DemandHandler, LifecycleController, State}
+  alias Membrane.Core.Element.{DemandHandler, LifecycleController, PadController, State}
   alias Membrane.Core.{Events, Message, PlaybackHandler, TimerController}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Telemetry
@@ -388,6 +388,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
   defp handle_event(pad_ref, %Events.EndOfStream{}, state) do
     with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
+      state = PadController.remove_pad_associations(pad_ref, state)
       {:ok, PadModel.set_data!(state, pad_ref, :end_of_stream?, true)}
     else
       %{direction: :input} ->
