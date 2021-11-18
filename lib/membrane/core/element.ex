@@ -21,13 +21,8 @@ defmodule Membrane.Core.Element do
   import Membrane.Core.Helper.GenServer
 
   alias Membrane.{Clock, Element, Sync}
-<<<<<<< HEAD
-  alias Membrane.Core.Element.{LifecycleController, PlaybackBuffer, State}
-  alias Membrane.Core.{Message, PlaybackHandler, Telemetry, TimerController}
-=======
   alias Membrane.Core.Element.{LifecycleController, PadController, PlaybackBuffer, State}
-  alias Membrane.Core.{Child, Message, PlaybackHandler, TimerController}
->>>>>>> 519c051f (refactor pad linking)
+  alias Membrane.Core.{Message, PlaybackHandler, Telemetry, TimerController}
   alias Membrane.ComponentPath
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
@@ -192,7 +187,7 @@ defmodule Membrane.Core.Element do
     PlaybackBuffer.store(msg, state) |> noreply(state)
   end
 
-  def do_handle_info(Message.new(:handle_unlink, pad_ref), state) do
+  defp do_handle_info(Message.new(:handle_unlink, pad_ref), state) do
     PadController.handle_unlink(pad_ref, state) |> noreply(state)
   end
 
@@ -212,7 +207,7 @@ defmodule Membrane.Core.Element do
     {:noreply, state}
   end
 
-  def do_handle_info({:membrane_clock_ratio, clock, ratio}, state) do
+  defp do_handle_info({:membrane_clock_ratio, clock, ratio}, state) do
     TimerController.handle_clock_update(clock, ratio, state) |> noreply()
   end
 

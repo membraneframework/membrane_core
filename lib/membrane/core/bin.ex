@@ -5,18 +5,11 @@ defmodule Membrane.Core.Bin do
 
   import Membrane.Core.Helper.GenServer
 
-<<<<<<< HEAD
-  alias __MODULE__.{LinkingBuffer, State}
-  alias Membrane.{CallbackError, Core, ComponentPath, Pad, Sync}
-  alias Membrane.Core.{CallbackHandler, Message, Telemetry}
-  alias Membrane.Core.Child.{PadController, PadSpecHandler}
-=======
   alias __MODULE__.State
   alias Membrane.{CallbackError, Core, ComponentPath, Sync}
   alias Membrane.Core.Bin.PadController
-  alias Membrane.Core.{CallbackHandler, Message}
+  alias Membrane.Core.{CallbackHandler, Message, Telemetry}
   alias Membrane.Core.Child.PadSpecHandler
->>>>>>> 519c051f (refactor pad linking)
 
   require Membrane.Core.Message
   require Membrane.Core.Telemetry

@@ -40,13 +40,7 @@ defmodule Membrane.Core.Bin.PadController do
           Message.send(state.parent_pid, :link_response, link_id)
         end
 
-        PadModel.get_data!(state, pad_ref, :response_received?) ->
-          Membrane.Logger.debug("Sending link response, #{inspect(pad_ref)}")
-          Message.send(state.watcher, :link_response, link_id)
-          state
-
-        true ->
-          state
+        state
       else
         {:error, {:unknown_pad, pad_ref}} ->
           init_pad_data(pad_ref, info, state)
@@ -103,7 +97,7 @@ defmodule Membrane.Core.Bin.PadController do
     |> Enum.reduce(state, fn pad_data, state ->
       if pad_data.link_id do
         # Membrane.Logger.debug("Sending link response")
-        Message.send(state.watcher, :link_response, pad_data.link_id)
+        Message.send(state.parent_pid, :link_response, pad_data.link_id)
         state
       else
         Membrane.Core.Child.PadModel.set_data!(
