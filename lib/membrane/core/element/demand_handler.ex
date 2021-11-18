@@ -59,6 +59,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   """
   @spec supply_demand(
           Pad.ref_t(),
+          size :: non_neg_integer | (non_neg_integer() -> non_neg_integer()),
           State.t()
         ) :: {:ok, State.t()} | {{:error, any()}, State.t()}
   def supply_demand(pad_ref, size, state) do
@@ -66,6 +67,10 @@ defmodule Membrane.Core.Element.DemandHandler do
     supply_demand(pad_ref, state)
   end
 
+  @spec supply_demand(
+          Pad.ref_t(),
+          State.t()
+        ) :: {:ok, State.t()} | {{:error, any()}, State.t()}
   def supply_demand(pad_ref, %State{supplying_demand?: true} = state) do
     state =
       state
@@ -110,7 +115,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   @spec handle_outgoing_buffers(
           Pad.ref_t(),
-          Membrane.Pad.Data.t(),
+          Membrane.Pad.data_t(),
           [Buffer.t()],
           State.t()
         ) :: State.t()
@@ -121,7 +126,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   def handle_outgoing_buffers(_pad_ref, %{mode: :push, toilet: toilet} = data, buffers, state)
-      when is_reference(toilet) do
+      when toilet != nil do
     %{other_demand_unit: other_demand_unit, pid: pid} = data
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
     toilet_size = :atomics.add_get(toilet, 1, buf_size)
@@ -194,27 +199,27 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @spec handle_delayed_demands(State.t()) :: State.stateful_try_t()
-  defp handle_delayed_demands(%State{delayed_demands: del_dem} = state)
-       when del_dem == %MapSet{} do
-    {:ok, state}
-  end
-
-  defp handle_delayed_demands(%State{delayed_demands: del_dem} = state) do
+  defp handle_delayed_demands(%State{delayed_demands: delayed_demands} = state) do
     # Taking random element of `:delayed_demands` is done to keep data flow
     # balanced among pads, i.e. to prevent situation where demands requested by
     # one pad are supplied right away while another one is waiting for buffers
     # potentially for a long time.
-    [{pad_ref, action}] = del_dem |> Enum.take_random(1)
-    state = %State{state | delayed_demands: del_dem |> MapSet.delete({pad_ref, action})}
+    case Enum.take_random(state.delayed_demands, 1) do
+      [] ->
+        {:ok, state}
 
-    res =
-      case action do
-        :supply -> do_supply_demand(pad_ref, state)
-        :redemand -> handle_redemand(pad_ref, state)
-      end
+      [{pad_ref, action} = entry] ->
+        state = %State{state | delayed_demands: MapSet.delete(delayed_demands, entry)}
 
-    with {:ok, state} <- res do
-      handle_delayed_demands(state)
+        res =
+          case action do
+            :supply -> do_supply_demand(pad_ref, state)
+            :redemand -> handle_redemand(pad_ref, state)
+          end
+
+        with {:ok, state} <- res do
+          handle_delayed_demands(state)
+        end
     end
   end
 

@@ -20,6 +20,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   require Membrane.Element
   require Membrane.Logger
 
+  @type spec_ref_t :: reference()
+
   @spec handle_spec(ParentSpec.t(), Parent.state_t()) ::
           {{:ok, [Membrane.Child.name_t()]}, Parent.state_t()} | no_return
   def handle_spec(%ParentSpec{} = spec, state) do

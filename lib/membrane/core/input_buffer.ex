@@ -223,6 +223,8 @@ defmodule Membrane.Core.InputBuffer do
     input_buf
   end
 
+  # This function may be unused if particular logs are pruned
+  @dialyzer {:no_unused, mk_log: 2}
   defp mk_log(message, input_buf) do
     %__MODULE__{log_tag: log_tag, current_size: size, preferred_size: pref_size, toilet?: toilet} =
       input_buf

@@ -9,7 +9,7 @@ defmodule Membrane.Core.Child.PadModel do
   alias Membrane.Core.Child
   alias Membrane.Pad
 
-  @type pads_data_t :: %{Pad.ref_t() => Pad.Data.t()}
+  @type pads_data_t :: %{Pad.ref_t() => Pad.data_t()}
 
   @type pad_info_t :: %{
           required(:accepted_caps) => any,
@@ -18,7 +18,8 @@ defmodule Membrane.Core.Child.PadModel do
           required(:mode) => Pad.mode_t(),
           required(:name) => Pad.name_t(),
           optional(:demand_unit) => Membrane.Buffer.Metric.unit_t(),
-          optional(:other_demand_unit) => Membrane.Buffer.Metric.unit_t()
+          optional(:other_demand_unit) => Membrane.Buffer.Metric.unit_t(),
+          optional(:demand_mode) => :auto | :manual
         }
 
   @type pads_info_t :: %{Pad.name_t() => pad_info_t}
@@ -78,7 +79,7 @@ defmodule Membrane.Core.Child.PadModel do
     |> Keyword.keys()
   end
 
-  @spec filter_data(Child.state_t(), constraints :: map) :: %{atom => Pad.Data.t()}
+  @spec filter_data(Child.state_t(), constraints :: map) :: %{atom => Pad.data_t()}
   def filter_data(state, constraints \\ %{})
 
   def filter_data(state, constraints) when constraints == %{} do
@@ -92,7 +93,7 @@ defmodule Membrane.Core.Child.PadModel do
   end
 
   @spec get_data(Child.state_t(), Pad.ref_t(), keys :: atom | [atom]) ::
-          {:ok, Pad.Data.t() | any} | unknown_pad_error_t
+          {:ok, Pad.data_t() | any} | unknown_pad_error_t
   def get_data(state, pad_ref, keys \\ []) do
     with :ok <- assert_instance(state, pad_ref) do
       state
@@ -101,7 +102,7 @@ defmodule Membrane.Core.Child.PadModel do
     end
   end
 
-  @spec get_data!(Child.state_t(), Pad.ref_t(), keys :: atom | [atom]) :: Pad.Data.t() | any
+  @spec get_data!(Child.state_t(), Pad.ref_t(), keys :: atom | [atom]) :: Pad.data_t() | any
   def get_data!(state, pad_ref, keys \\ []) do
     {:ok, pad_data} = get_data(state, pad_ref, keys)
     pad_data
@@ -131,7 +132,7 @@ defmodule Membrane.Core.Child.PadModel do
           (data -> {:ok | error, data})
         ) ::
           Type.stateful_t(:ok | error | unknown_pad_error_t, Child.state_t())
-        when data: Pad.Data.t() | any, error: {:error, reason :: any}
+        when data: Pad.data_t() | any, error: {:error, reason :: any}
   def update_data(state, pad_ref, keys \\ [], f) do
     with {:ok, state} <- {assert_instance(state, pad_ref), state},
          {:ok, state} <-
@@ -145,7 +146,7 @@ defmodule Membrane.Core.Child.PadModel do
 
   @spec update_data!(Child.state_t(), Pad.ref_t(), keys :: atom | [atom], (data -> data)) ::
           Child.state_t()
-        when data: Pad.Data.t() | any
+        when data: Pad.data_t() | any
   def update_data!(state, pad_ref, keys \\ [], f) do
     :ok = assert_instance(state, pad_ref)
 
@@ -159,7 +160,7 @@ defmodule Membrane.Core.Child.PadModel do
           keys :: atom | [atom],
           (data -> {success | error, data})
         ) :: Type.stateful_t(success | error | unknown_pad_error_t, Child.state_t())
-        when data: Pad.Data.t() | any, success: {:ok, data}, error: {:error, reason :: any}
+        when data: Pad.data_t() | any, success: {:ok, data}, error: {:error, reason :: any}
   def get_and_update_data(state, pad_ref, keys \\ [], f) do
     with {:ok, state} <- {assert_instance(state, pad_ref), state},
          {{:ok, out}, state} <-
@@ -177,7 +178,7 @@ defmodule Membrane.Core.Child.PadModel do
           keys :: atom | [atom],
           (data -> {data, data})
         ) :: Type.stateful_t(data, Child.state_t())
-        when data: Pad.Data.t() | any
+        when data: Pad.data_t() | any
   def get_and_update_data!(state, pad_ref, keys \\ [], f) do
     :ok = assert_instance(state, pad_ref)
 
@@ -186,7 +187,7 @@ defmodule Membrane.Core.Child.PadModel do
   end
 
   @spec pop_data(Child.state_t(), Pad.ref_t()) ::
-          Type.stateful_t({:ok, Pad.Data.t()} | unknown_pad_error_t, Child.state_t())
+          Type.stateful_t({:ok, Pad.data_t()} | unknown_pad_error_t, Child.state_t())
   def pop_data(state, pad_ref) do
     with {:ok, state} <- {assert_instance(state, pad_ref), state} do
       {data, state} =
@@ -197,7 +198,7 @@ defmodule Membrane.Core.Child.PadModel do
     end
   end
 
-  @spec pop_data!(Child.state_t(), Pad.ref_t()) :: Type.stateful_t(Pad.Data.t(), Child.state_t())
+  @spec pop_data!(Child.state_t(), Pad.ref_t()) :: Type.stateful_t(Pad.data_t(), Child.state_t())
   def pop_data!(state, pad_ref) do
     {{:ok, pad_data}, state} = pop_data(state, pad_ref)
     {pad_data, state}
@@ -217,7 +218,7 @@ defmodule Membrane.Core.Child.PadModel do
     state
   end
 
-  @spec constraints_met?(Pad.Data.t(), map) :: boolean
+  @spec constraints_met?(Pad.data_t(), map) :: boolean
   defp constraints_met?(data, constraints) do
     constraints |> Enum.all?(fn {k, v} -> data[k] === v end)
   end

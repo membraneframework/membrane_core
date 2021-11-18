@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.CallbackContext do
   @moduledoc false
 
   use Membrane.Core.CallbackContext,
-    pads: %{Membrane.Pad.ref_t() => Membrane.Pad.Data.t()},
+    pads: %{Membrane.Pad.ref_t() => Membrane.Pad.data_t()},
     playback_state: Membrane.PlaybackState.t(),
     clock: Membrane.Clock.t() | nil,
     parent_clock: Membrane.Clock.t() | nil,

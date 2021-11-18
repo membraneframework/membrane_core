@@ -37,8 +37,8 @@ defmodule Membrane.Core.Child.PadController do
   end
 
   @spec validate_pad_mode!(
-          {Pad.ref_t(), info :: PadModel.pad_info_t()},
-          {Pad.ref_t(), other_info :: PadModel.pad_info_t()}
+          {Pad.ref_t(), info :: PadModel.pad_info_t() | Pad.data_t()},
+          {Pad.ref_t(), other_info :: PadModel.pad_info_t() | Pad.data_t()}
         ) :: :ok
   def validate_pad_mode!(this, that) do
     :ok = do_validate_pad_mode!(this, that)
@@ -58,7 +58,7 @@ defmodule Membrane.Core.Child.PadController do
     :ok
   end
 
-  @spec parse_pad_props!(ParentSpec.pad_props_t(), Pad.name_t(), state_t()) ::
+  @spec parse_pad_props!(Membrane.ParentSpec.pad_props_t(), Pad.name_t(), state_t()) ::
           parsed_pad_props_t | no_return
   def parse_pad_props!(props, pad_name, state) do
     {_, pad_spec} = PadSpecHandler.get_pads(state) |> Enum.find(fn {k, _} -> k == pad_name end)
@@ -103,6 +103,7 @@ defmodule Membrane.Core.Child.PadController do
     end
   end
 
+  @spec assert_all_static_pads_linked!(state_t) :: :ok
   def assert_all_static_pads_linked!(state) do
     linked_pads_names = state.pads.data |> Map.values() |> MapSet.new(& &1.name)
 

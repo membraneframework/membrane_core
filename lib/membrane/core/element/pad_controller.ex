@@ -8,8 +8,16 @@ defmodule Membrane.Core.Element.PadController do
   alias Membrane.{Core, Pad}
   alias Membrane.Core.{CallbackHandler, Child, Events, InputBuffer, Message}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, DemandController, EventController, PlaybackBuffer}
-  alias Membrane.Core.Parent.LinkParser
+
+  alias Membrane.Core.Element.{
+    ActionHandler,
+    DemandController,
+    EventController,
+    PlaybackBuffer,
+    State
+  }
+
+  alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel
@@ -25,13 +33,18 @@ defmodule Membrane.Core.Element.PadController do
   """
   @spec handle_link(
           Pad.direction_t(),
-          LinkParser.raw_endpoint_t(),
-          LinkParser.raw_endpoint_t(),
+          Endpoint.t(),
+          Endpoint.t(),
           PadModel.pad_info_t() | nil,
-          map,
-          Core.Element.State.t()
-        ) :: Type.stateful_try_t(PadModel.pad_info_t(), Core.Element.State.t())
+          %{toilet: reference()},
+          State.t()
+        ) ::
+          {{:ok, {Endpoint.t(), PadModel.pad_info_t()}}, State.t()}
   def handle_link(direction, this, other, other_info, link_metadata, state) do
+    Membrane.Logger.debug(
+      "Element handle link on pad #{inspect(this.pad_ref)} with pad #{inspect(other.pad_ref)} of child #{inspect(other.child)}"
+    )
+
     name = this.pad_ref |> Pad.name_by_ref()
     info = Map.fetch!(state.pads.info, name)
     :ok = Child.PadController.validate_pad_being_linked!(this.pad_ref, direction, info, state)
@@ -119,7 +132,7 @@ defmodule Membrane.Core.Element.PadController do
 
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
     data = data |> Map.merge(init_pad_mode_data(data, props, other_info, metadata, state))
-    data = struct!(Pad.Data, data)
+    data = struct!(Membrane.Element.PadData, data)
     state = Bunch.Access.put_in(state, [:pads, :data, ref], data)
 
     if data.demand_mode == :auto do
@@ -229,6 +242,30 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
+  @spec remove_pad_associations(Pad.ref_t(), State.t()) :: State.t()
+  def remove_pad_associations(pad_ref, state) do
+    case PadModel.get_data!(state, pad_ref) do
+      %{mode: :pull, demand_mode: :auto} = pad_data ->
+        state =
+          Enum.reduce(pad_data.associated_pads, state, fn pad, state ->
+            PadModel.update_data!(state, pad, :associated_pads, &List.delete(&1, pad_data.ref))
+          end)
+
+        if pad_data.direction == :output do
+          Enum.reduce(
+            pad_data.associated_pads,
+            state,
+            &DemandController.send_auto_demand_if_needed/2
+          )
+        else
+          state
+        end
+
+      _pad_data ->
+        state
+    end
+  end
+
   @spec handle_pad_added(Pad.ref_t(), Core.Element.State.t()) ::
           Type.stateful_try_t(Core.Element.State.t())
   defp handle_pad_added(ref, state) do
@@ -267,28 +304,5 @@ defmodule Membrane.Core.Element.PadController do
     new_playback_buf = PlaybackBuffer.flush_for_pad(state.playback_buffer, pad_ref)
 
     {:ok, %{state | playback_buffer: new_playback_buf}}
-  end
-
-  def remove_pad_associations(pad_ref, state) do
-    case PadModel.get_data!(state, pad_ref) do
-      %{mode: :pull, demand_mode: :auto} = pad_data ->
-        state =
-          Enum.reduce(pad_data.associated_pads, state, fn pad, state ->
-            PadModel.update_data!(state, pad, :associated_pads, &List.delete(&1, pad_data.ref))
-          end)
-
-        if pad_data.direction == :output do
-          Enum.reduce(
-            pad_data.associated_pads,
-            state,
-            &DemandController.send_auto_demand_if_needed/2
-          )
-        else
-          state
-        end
-
-      _pad_data ->
-        state
-    end
   end
 end

@@ -125,8 +125,11 @@ defmodule Membrane.Pad do
           :caps => Caps.Matcher.caps_specs_t(),
           optional(:demand_unit) => Buffer.Metric.unit_t(),
           :direction => direction_t(),
-          :options => nil | Keyword.t()
+          :options => nil | Keyword.t(),
+          optional(:demand_mode) => :auto | :manual
         }
+
+  @type data_t :: Membrane.Element.PadData.t() | Membrane.Bin.PadData.t()
 
   @doc """
   Creates a static pad reference.

@@ -148,7 +148,6 @@ defmodule Membrane.Core.Element do
         _from,
         state
       ) do
-    Membrane.Logger.debug("handle link")
     PadController.handle_link(direction, this, other, other_info, metadata, state) |> reply(state)
   end
 
@@ -193,7 +192,6 @@ defmodule Membrane.Core.Element do
     PlaybackBuffer.store(msg, state) |> noreply(state)
   end
 
-  @impl GenServer
   def do_handle_info(Message.new(:handle_unlink, pad_ref), state) do
     PadController.handle_unlink(pad_ref, state) |> noreply(state)
   end
@@ -202,14 +200,18 @@ defmodule Membrane.Core.Element do
     TimerController.handle_tick(timer_id, state) |> noreply(state)
   end
 
-  @impl GenServer
-  def do_handle_info(Message.new(:link_request, [_pad_ref, _direction, link_id, _pad_props]), state) do
-    Membrane.Logger.debug("link request")
-    Message.send(state.watcher, :link_response, link_id)
+  defp do_handle_info(
+         Message.new(:link_request, [pad_ref, _direction, link_id, _pad_props]),
+         state
+       ) do
+    Membrane.Logger.debug(
+      "Element link request on pad #{inspect(pad_ref)}, link id #{inspect(link_id)}, replying immediately"
+    )
+
+    Message.send(state.parent_pid, :link_response, link_id)
     {:noreply, state}
   end
 
-  @impl GenServer
   def do_handle_info({:membrane_clock_ratio, clock, ratio}, state) do
     TimerController.handle_clock_update(clock, ratio, state) |> noreply()
   end

@@ -5,8 +5,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   alias Membrane.Core.{Bin, Message, Parent, Pipeline, Telemetry}
   alias Membrane.Core.Bin.PadController
+  alias Membrane.Core.Parent.{ChildLifeController, CrashGroup, Link, LinkParser}
   alias Membrane.Core.Parent.ChildLifeController.StartupHandler
-  alias Membrane.Core.Parent.{CrashGroup, Link, LinkParser}
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.LinkError
   alias Membrane.Pad
@@ -16,6 +16,19 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   require Membrane.Logger
   require Membrane.Pad
 
+  @type link_id_t :: {ChildLifeController.spec_ref_t(), reference()}
+
+  @type pending_spec_t :: %{
+          status: :linking_internally | :linking_externally | :linked,
+          links: %{link_id_t => %{link: Parent.Link.t(), to_respond: non_neg_integer()}}
+        }
+
+  @type pending_specs_t :: %{ChildLifeController.spec_ref_t() => pending_spec_t()}
+
+  @type state_t :: Pipeline.State.t() | Bin.State.t()
+
+  @spec init_spec_linking(ChildLifeController.spec_ref_t(), [LinkParser.raw_link_t()], state_t()) ::
+          state_t()
   def init_spec_linking(spec_ref, links, state) do
     Process.send_after(self(), Message.new(:spec_linking_timeout, spec_ref), 5000)
     links = resolve_links(links, state)
@@ -42,6 +55,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     proceed_spec_linking(spec_ref, state)
   end
 
+  @spec handle_spec_timeout(ChildLifeController.spec_ref_t(), state_t()) :: state_t()
   def handle_spec_timeout(spec_ref, state) do
     {spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
 
@@ -53,6 +67,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     state
   end
 
+  @spec proceed_spec_linking(ChildLifeController.spec_ref_t(), state_t()) :: state_t()
   def proceed_spec_linking(spec_ref, state) do
     spec_data = Map.fetch!(state.pending_specs, spec_ref)
     {spec_data, state} = do_proceed_spec_linking(spec_ref, spec_data, state)
@@ -111,6 +126,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     {spec_data, state}
   end
 
+  @spec handle_link_response(link_id_t(), state_t()) :: state_t()
   def handle_link_response(link_id, state) do
     {spec_ref, _link_ref} = link_id
     state = update_in(state, [:pending_specs, spec_ref, :links, link_id, :to_respond], &(&1 - 1))

@@ -8,8 +8,8 @@ defmodule Membrane.Core.Bin.PadController do
   alias Membrane.{Core, LinkError, Pad}
   alias Membrane.Core.{CallbackHandler, Child, Message}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Bin.ActionHandler
-  alias Membrane.Core.Parent.{ChildLifeController, LinkParser}
+  alias Membrane.Core.Bin.{ActionHandler, State}
+  alias Membrane.Core.Parent.{ChildLifeController, Link, LinkParser}
   alias Membrane.Bin.CallbackContext
 
   require Membrane.Core.Child.PadModel
@@ -18,6 +18,13 @@ defmodule Membrane.Core.Bin.PadController do
   require Membrane.Logger
   require Membrane.Pad
 
+  @spec handle_external_link_request(
+          Pad.ref_t(),
+          Pad.direction_t(),
+          ChildLifeController.LinkHandler.link_id_t(),
+          Membrane.ParentSpec.pad_props_t(),
+          State.t()
+        ) :: State.t()
   def handle_external_link_request(pad_ref, direction, link_id, pad_props, state) do
     Membrane.Logger.debug("Received link request on pad #{inspect(pad_ref)}")
     pad_name = Pad.name_by_ref(pad_ref)
@@ -63,6 +70,12 @@ defmodule Membrane.Core.Bin.PadController do
     state
   end
 
+  @spec handle_internal_link_request(
+          Pad.ref_t(),
+          Link.Endpoint.t(),
+          ChildLifeController.spec_ref_t(),
+          State.t()
+        ) :: State.t()
   def handle_internal_link_request(pad_ref, endpoint, spec_ref, state) do
     pad_name = Pad.name_by_ref(pad_ref)
     info = Map.fetch!(state.pads.info, pad_name)
@@ -82,6 +95,7 @@ defmodule Membrane.Core.Bin.PadController do
     PadModel.update_data!(state, pad_ref, &%{&1 | endpoint: endpoint, spec_ref: spec_ref})
   end
 
+  @spec respond_links(ChildLifeController.spec_ref_t(), State.t()) :: State.t()
   def respond_links(spec_ref, state) do
     state.pads.data
     |> Map.values()
@@ -102,6 +116,7 @@ defmodule Membrane.Core.Bin.PadController do
     end)
   end
 
+  @spec all_pads_linked?(ChildLifeController.spec_ref_t(), State.t()) :: boolean()
   def all_pads_linked?(spec_ref, state) do
     state.pads.data
     |> Map.values()
@@ -123,7 +138,12 @@ defmodule Membrane.Core.Bin.PadController do
   def handle_link(direction, this, other, other_info, link_metadata, state) do
     pad_data = PadModel.get_data!(state, this.pad_ref)
     %{spec_ref: spec_ref, endpoint: endpoint} = pad_data
-    :ok = Child.PadController.validate_pad_mode!(pad_data, other_info)
+
+    :ok =
+      Child.PadController.validate_pad_mode!(
+        {this.pad_ref, pad_data},
+        {other.pad_ref, other_info}
+      )
 
     reply =
       Message.call(endpoint.pid, :handle_link, [

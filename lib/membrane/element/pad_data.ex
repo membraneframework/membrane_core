@@ -1,4 +1,4 @@
-defmodule Membrane.Pad.Data do
+defmodule Membrane.Element.PadData do
   @moduledoc """
   Struct describing current pad state.
 
@@ -43,7 +43,9 @@ defmodule Membrane.Pad.Data do
           sticky_messages: [Event.t()],
           input_buf: InputBuffer.t() | nil,
           demand: integer() | nil,
-          options: %{optional(atom) => any}
+          options: %{optional(atom) => any},
+          toilet: :atomics.atomics_ref() | nil,
+          demand_mode: :auto | :manual
         }
 
   defstruct accepted_caps: nil,

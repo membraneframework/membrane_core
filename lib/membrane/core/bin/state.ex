@@ -11,6 +11,7 @@ defmodule Membrane.Core.Bin.State do
   alias Membrane.Core.{Playback, Timer}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Parent.Link
+  alias Membrane.Core.Parent.ChildLifeController.LinkHandler
   alias Membrane.Core.Parent.ChildrenModel
   alias Membrane.{Child, Clock, Sync}
   alias Membrane.Core.Parent.CrashGroup
@@ -38,7 +39,8 @@ defmodule Membrane.Core.Bin.State do
               choice: :auto | :manual
             }
           },
-          children_log_metadata: Keyword.t()
+          children_log_metadata: Keyword.t(),
+          pending_specs: LinkHandler.pending_specs_t()
         }
 
   @enforce_keys [:module, :synchronization]
