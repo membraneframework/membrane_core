@@ -17,6 +17,7 @@ defmodule Membrane.Core.Bin do
   @type options_t :: %{
           name: atom,
           module: module,
+          node: node | nil,
           parent: pid,
           user_options: Membrane.Bin.options_t(),
           parent_clock: Membrane.Clock.t(),
@@ -33,40 +34,33 @@ defmodule Membrane.Core.Bin do
 
   Returns the same values as `GenServer.start_link/3`.
   """
-  @spec start_link(options_t, GenServer.options()) :: GenServer.on_start()
-  def start_link(options, process_options \\ []),
-    do: start_link(node(), options, process_options)
-
-  @spec start_link(node(), options_t, GenServer.options()) :: GenServer.on_start()
-  def start_link(node, options, process_options),
-    do: do_start(node, :start_link, options, process_options)
+  @spec start_link(options_t) :: GenServer.on_start()
+  def start_link(options),
+    do: do_start(:start_link, options)
 
   @doc """
-  Works similarly to `start_link/2`, but does not link to the current process.
+  Works similarly to `start_link/3`, but does not link to the current process.
   """
-  @spec start(options_t(), GenServer.options()) :: GenServer.on_start()
-  def start(options, process_options \\ []),
-    do: start(node(), options, process_options)
+  @spec start(options_t()) :: GenServer.on_start()
+  def start(options),
+    do: do_start(:start, options)
 
-  @spec start(node(), options_t(), GenServer.options()) :: GenServer.on_start()
-  def start(node, options, process_options),
-    do: do_start(node, :start, options, process_options)
+  defp do_start(method, options) do
+    %{module: module, name: name, node: node, user_options: user_options} = options
 
-  defp do_start(node, method, options, process_options) do
     if options.module |> Membrane.Bin.bin?() do
       Membrane.Logger.debug("""
-      Bin #{method}: #{inspect(options.name)}
+      Bin #{method}: #{inspect(name)}
       node: #{node},
-      module: #{inspect(options.module)},
-      bin options: #{inspect(options.user_options)},
-      process options: #{inspect(process_options)}
+      module: #{inspect(module)},
+      bin options: #{inspect(user_options)}
       """)
 
       # rpc if necessary
-      if node == node() do
-        apply(GenServer, method, [Membrane.Core.Bin, options, process_options])
+      if node do
+        :rpc.call(node, GenServer, method, [Membrane.Core.Bin, options])
       else
-        :rpc.call(node, GenServer, method, [Membrane.Core.Bin, options, process_options])
+        apply(GenServer, method, [Membrane.Core.Bin, options])
       end
     else
       raise """
