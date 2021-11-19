@@ -129,8 +129,6 @@ defmodule Membrane.Pad do
           optional(:demand_mode) => :auto | :manual
         }
 
-  @type data_t :: Membrane.Element.PadData.t() | Membrane.Bin.PadData.t()
-
   @doc """
   Creates a static pad reference.
   """

@@ -22,30 +22,30 @@ defmodule Membrane.Element.PadData do
   """
   use Bunch.Access
 
-  alias Membrane.Buffer.Metric
-  alias Membrane.Core.InputBuffer
-  alias Membrane.{Caps, Event, Pad}
+  alias Membrane.{Caps, Pad}
+
+  @type private_field :: term()
 
   @type t :: %__MODULE__{
           accepted_caps: Caps.Matcher.caps_specs_t(),
           availability: Pad.availability_t(),
+          caps: Caps.t() | nil,
+          demand: integer() | nil,
+          start_of_stream?: boolean(),
+          end_of_stream?: boolean(),
           direction: Pad.direction_t(),
           mode: Pad.mode_t(),
           name: Pad.name_t(),
           ref: Pad.ref_t(),
-          demand_unit: Metric.unit_t() | nil,
-          other_demand_unit: Metric.unit_t() | nil,
-          pid: pid,
-          other_ref: Pad.ref_t(),
-          caps: Caps.t() | nil,
-          start_of_stream?: boolean(),
-          end_of_stream?: boolean(),
-          sticky_messages: [Event.t()],
-          input_buf: InputBuffer.t() | nil,
-          demand: integer() | nil,
           options: %{optional(atom) => any},
-          toilet: :atomics.atomics_ref() | nil,
-          demand_mode: :auto | :manual
+          demand_unit: private_field,
+          other_demand_unit: private_field,
+          pid: private_field,
+          other_ref: private_field,
+          sticky_messages: private_field,
+          input_buf: private_field,
+          toilet: private_field,
+          demand_mode: private_field
         }
 
   defstruct accepted_caps: nil,

@@ -22,14 +22,16 @@ defmodule Membrane.Bin.PadData do
   """
   use Bunch.Access
 
+  @type private_field :: term()
+
   @type t :: %__MODULE__{
           ref: Membrane.Pad.ref_t(),
-          link_id: Membrane.Core.Parent.ChildLifeController.LinkHandler.link_id_t(),
-          endpoint: Membrane.Core.Parent.Link.Endpoint.t(),
-          linked?: boolean(),
-          response_received?: boolean(),
-          spec_ref: Membrane.Core.Parent.ChildLifeController.spec_ref_t(),
-          options: Membrane.ParentSpec.pad_props_t()
+          options: Membrane.ParentSpec.pad_props_t(),
+          link_id: private_field,
+          endpoint: private_field,
+          linked?: private_field,
+          response_received?: private_field,
+          spec_ref: private_field
         }
 
   defstruct [:ref, :link_id, :endpoint, :linked?, :response_received?, :spec_ref, :options]

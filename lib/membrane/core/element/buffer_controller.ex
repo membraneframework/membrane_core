@@ -26,7 +26,7 @@ defmodule Membrane.Core.Element.BufferController do
     do_handle_buffer(pad_ref, data, buffers, state)
   end
 
-  @spec do_handle_buffer(Pad.ref_t(), Pad.data_t(), [Buffer.t()] | Buffer.t(), State.t()) ::
+  @spec do_handle_buffer(Pad.ref_t(), PadModel.pad_data_t(), [Buffer.t()] | Buffer.t(), State.t()) ::
           State.stateful_try_t()
   defp do_handle_buffer(pad_ref, %{mode: :pull, demand_mode: :auto} = data, buffers, state) do
     %{demand: demand, demand_unit: demand_unit} = data

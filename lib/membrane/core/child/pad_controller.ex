@@ -37,8 +37,8 @@ defmodule Membrane.Core.Child.PadController do
   end
 
   @spec validate_pad_mode!(
-          {Pad.ref_t(), info :: PadModel.pad_info_t() | Pad.data_t()},
-          {Pad.ref_t(), other_info :: PadModel.pad_info_t() | Pad.data_t()}
+          {Pad.ref_t(), info :: PadModel.pad_info_t() | PadModel.pad_data_t()},
+          {Pad.ref_t(), other_info :: PadModel.pad_info_t() | PadModel.pad_data_t()}
         ) :: :ok
   def validate_pad_mode!(this, that) do
     :ok = do_validate_pad_mode!(this, that)

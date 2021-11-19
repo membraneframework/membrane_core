@@ -115,7 +115,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   @spec handle_outgoing_buffers(
           Pad.ref_t(),
-          Membrane.Pad.data_t(),
+          PadModel.pad_data_t(),
           [Buffer.t()],
           State.t()
         ) :: State.t()

@@ -5,7 +5,7 @@ defmodule Membrane.Core.Bin.CallbackContext do
     playback_state: Membrane.PlaybackState.t(),
     clock: Membrane.Clock.t(),
     parent_clock: Membrane.Clock.t(),
-    pads: %{Membrane.Pad.ref_t() => Membrane.Pad.data_t()},
+    pads: %{Membrane.Pad.ref_t() => Membrane.Bin.PadData.t()},
     name: Membrane.Bin.name_t(),
     children: %{Membrane.Child.name_t() => Membrane.ChildEntry.t()}
 
