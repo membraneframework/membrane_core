@@ -180,4 +180,33 @@ defmodule Membrane.FilterAggregatorTest do
     assert state_a == test_range |> Enum.map(&(&1 + 1)) |> Enum.sum()
     assert state_b == test_range |> Enum.map(&((&1 + 1) * 2)) |> Enum.sum()
   end
+
+  test "handle_demand", ctx do
+    incoming_demand = 10
+
+    expect(FilterB, :handle_demand, fn :output, demand, :buffers, _ctx, state ->
+      assert state.module == FilterB
+      assert demand == incoming_demand
+      out_demand = demand * 2
+      state = %{state | state: "B"}
+      {{:ok, demand: {:input, out_demand}}, state}
+    end)
+
+    expect(FilterA, :handle_demand, fn :output, demand, :buffers, _ctx, state ->
+      assert state.module == FilterA
+      out_demand = demand + 1
+      state = %{state | state: "A"}
+      {{:ok, demand: {:input, out_demand}}, state}
+    end)
+
+    assert {{:ok, actions}, %{states: states}} =
+             TestedModule.handle_demand(:output, incoming_demand, :buffers, %{}, %{
+               states: ctx.states
+             })
+
+    assert actions == [demand: {:input, incoming_demand * 2 + 1}]
+    assert [{:a, FilterA, state_a}, {:b, FilterB, state_b}] = states
+    assert state_a == %{module: FilterA, state: "A"}
+    assert state_b == %{module: FilterB, state: "B"}
+  end
 end
