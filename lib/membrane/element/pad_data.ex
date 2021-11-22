@@ -66,7 +66,6 @@ defmodule Membrane.Element.PadData do
             demand: nil,
             options: %{},
             associated_pads: [],
-            demand_inputs: nil,
             demand_mode: nil,
             toilet: nil
 end

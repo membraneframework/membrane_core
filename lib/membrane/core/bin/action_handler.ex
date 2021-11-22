@@ -64,7 +64,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
 
   @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}
   defp send_notification(notification, %State{parent_pid: parent_pid, name: name} = state) do
-    Membrane.Logger.debug(
+    Membrane.Logger.debug_verbose(
       "Sending notification #{inspect(notification)} (parent PID: #{inspect(parent_pid)})"
     )
 

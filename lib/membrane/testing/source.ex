@@ -86,6 +86,7 @@ defmodule Membrane.Testing.Source do
 
   @impl true
   def handle_demand(:output, size, :buffers, _ctx, state) do
+    IO.inspect(size, label: :demand)
     {actions, state} = get_actions(state, size)
     {{:ok, actions}, state}
   end

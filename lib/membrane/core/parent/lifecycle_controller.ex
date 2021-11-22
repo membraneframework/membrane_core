@@ -84,6 +84,10 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @spec handle_notification(Child.name_t(), Notification.t(), Parent.state_t()) ::
           Type.stateful_try_t(Parent.state_t())
   def handle_notification(from, notification, state) do
+    Membrane.Logger.debug_verbose(
+      "Received notification #{inspect(notification)} from #{inspect(from)}"
+    )
+
     with {:ok, _} <- state |> Parent.ChildrenModel.get_child_data(from) do
       context = Component.callback_context_generator(:parent, Notification, state)
       action_handler = get_callback_action_handler(state)

@@ -38,7 +38,8 @@ defmodule Membrane.Core.Element.DemandController do
 
   defp do_handle_demand(pad_ref, size, %{demand_mode: :manual} = data, state) do
     demand = data.demand + size
-    state = PadModel.set_data!(state, pad_ref, :demand, demand)
+    data = %{data | demand: demand}
+    state = PadModel.set_data!(state, pad_ref, data)
 
     if exec_handle_demand?(data) do
       require CallbackContext.Demand
@@ -72,12 +73,20 @@ defmodule Membrane.Core.Element.DemandController do
         if toilet do
           :atomics.sub(toilet, 1, demand_request_size - demand)
         else
+          Membrane.Logger.debug_verbose(
+            "Sending auto demand of size #{demand_request_size - demand} on pad #{inspect(pad_ref)}"
+          )
+
           %{pid: pid, other_ref: other_ref} = data
           Message.send(pid, :demand, demand_request_size - demand, for_pad: other_ref)
         end
 
         demand_request_size
       else
+        Membrane.Logger.debug_verbose(
+          "Not sending auto demand on pad #{inspect(pad_ref)}, pads data: #{inspect(state.pads.data)}"
+        )
+
         demand
       end
 
