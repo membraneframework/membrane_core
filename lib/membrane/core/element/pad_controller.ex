@@ -102,6 +102,7 @@ defmodule Membrane.Core.Element.PadController do
     with {:ok, state} <- flush_playback_buffer(pad_ref, state),
          {:ok, state} <- generate_eos_if_needed(pad_ref, state),
          {:ok, state} <- handle_pad_removed(pad_ref, state) do
+      state = remove_pad_associations(pad_ref, state)
       state = PadModel.delete_data!(state, pad_ref)
       {:ok, state}
     end
@@ -250,6 +251,7 @@ defmodule Membrane.Core.Element.PadController do
           Enum.reduce(pad_data.associated_pads, state, fn pad, state ->
             PadModel.update_data!(state, pad, :associated_pads, &List.delete(&1, pad_data.ref))
           end)
+          |> PadModel.set_data!(pad_ref, :associated_pads, [])
 
         if pad_data.direction == :output do
           Enum.reduce(
