@@ -185,34 +185,6 @@ defmodule Membrane.Core.BinTest do
     end
   end
 
-  describe "Events passing in pipeline" do
-    test "notifications are handled by bin as if it's a pipeline" do
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          elements: [
-            source: Testing.Source,
-            test_bin: %TestBins.SimpleBin{
-              filter1: TestFilter,
-              filter2: TestFilter
-            },
-            sink: %Testing.Sink{autodemand: false}
-          ]
-        })
-
-      :ok = Testing.Pipeline.play(pipeline)
-
-      assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
-
-      {:ok, filter1_pid} = get_child_pid(pipeline, [:test_bin, :filter1])
-
-      send(filter1_pid, {:notify_parent, :some_example_notification})
-
-      # As this test's implementation of bin only passes notifications up
-      assert_pipeline_notified(pipeline, :test_bin, :some_example_notification)
-    end
-  end
-
   describe "Dynamic pads" do
     test "handle_pad_added is called only for public pads" do
       alias Membrane.Pad
