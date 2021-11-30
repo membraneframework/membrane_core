@@ -222,12 +222,16 @@ defmodule Membrane.Support.Bin.TestBins do
 
     @impl true
     def handle_notification(
-          %Membrane.Testing.Notification{payload: _payload} = notification,
+          %{payload: {:buffer, %Membrane.Buffer{}}} = notification,
           _element,
           _ctx,
           state
         ) do
       {{:ok, notify: notification}, state}
+    end
+
+    def handle_notification(_notification, _element, _ctx, state) do
+      {:ok, state}
     end
 
     @impl true
@@ -269,12 +273,16 @@ defmodule Membrane.Support.Bin.TestBins do
 
     @impl true
     def handle_notification(
-          %Membrane.Testing.Notification{payload: _payload} = notification,
+          %{payload: {:buffer, %Membrane.Buffer{}}} = notification,
           _element,
           _ctx,
           state
         ) do
       {{:ok, notify: notification}, state}
+    end
+
+    def handle_notification(_notification, _element, _ctx, state) do
+      {:ok, state}
     end
 
     @impl true
