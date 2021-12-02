@@ -48,7 +48,7 @@ defmodule Membrane.Core.Bin do
   defp do_start(method, options) do
     %{module: module, name: name, node: node, user_options: user_options} = options
 
-    if options.module |> Membrane.Bin.bin?() do
+    if Membrane.Bin.bin?(module) do
       Membrane.Logger.debug("""
       Bin #{method}: #{inspect(name)}
       node: #{node},
