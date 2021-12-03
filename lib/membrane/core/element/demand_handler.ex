@@ -46,7 +46,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   @doc """
   If element is not supplying demand currently, this function supplies
-  demand right away by taking buffers from the InputBuffer of the given pad
+  demand right away by taking buffers from the InputBuffer of the given input pad
   and passing it to proper controllers.
 
   If element is currently supplying demand it delays supplying demand until all
@@ -56,6 +56,9 @@ defmodule Membrane.Core.Element.DemandHandler do
   demand is being supplied. This could lead to a situation where buffers are taken
   from InputBuffer and passed to callbacks, while buffers being currently supplied
   have not been processed yet, and therefore to changing order of buffers.
+
+  The `size` argument can be passed optionally to update the demand on the pad
+  before proceeding to supplying it.
   """
   @spec supply_demand(
           Pad.ref_t(),
@@ -113,6 +116,10 @@ defmodule Membrane.Core.Element.DemandHandler do
     end
   end
 
+  @doc """
+  Decreases the demand on the output by the size of outgoing buffers. Checks for the toilet
+  overflow if the toilet is enabled.
+  """
   @spec handle_outgoing_buffers(
           Pad.ref_t(),
           PadModel.pad_data_t(),

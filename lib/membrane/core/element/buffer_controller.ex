@@ -17,7 +17,7 @@ defmodule Membrane.Core.Element.BufferController do
 
   @doc """
   Handles incoming buffer: either stores it in InputBuffer, or executes element's
-  callback. Also calls `Membrane.Core.Element.DemandHandler.check_and_handle_demands/2`
+  callback. Also calls `Membrane.Core.Element.DemandHandler.supply_demand/2`
   to check if there are any unsupplied demands.
   """
   @spec handle_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.stateful_try_t()

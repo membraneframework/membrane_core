@@ -18,6 +18,9 @@ defmodule Membrane.Core.Bin.PadController do
   require Membrane.Logger
   require Membrane.Pad
 
+  @doc """
+  Handles link request from outside of the bin.
+  """
   @spec handle_external_link_request(
           Pad.ref_t(),
           Pad.direction_t(),
@@ -64,6 +67,9 @@ defmodule Membrane.Core.Bin.PadController do
     state
   end
 
+  @doc """
+  Handles link request from one of bin's children.
+  """
   @spec handle_internal_link_request(
           Pad.ref_t(),
           Link.Endpoint.t(),
@@ -89,6 +95,9 @@ defmodule Membrane.Core.Bin.PadController do
     PadModel.update_data!(state, pad_ref, &%{&1 | endpoint: endpoint, spec_ref: spec_ref})
   end
 
+  @doc """
+  Sends link response to the parent for each of bin's pads involved in given spec.
+  """
   @spec respond_links(ChildLifeController.spec_ref_t(), State.t()) :: State.t()
   def respond_links(spec_ref, state) do
     state.pads.data
@@ -96,7 +105,6 @@ defmodule Membrane.Core.Bin.PadController do
     |> Enum.filter(&(&1.spec_ref == spec_ref))
     |> Enum.reduce(state, fn pad_data, state ->
       if pad_data.link_id do
-        # Membrane.Logger.debug("Sending link response")
         Message.send(state.parent_pid, :link_response, pad_data.link_id)
         state
       else
@@ -110,6 +118,9 @@ defmodule Membrane.Core.Bin.PadController do
     end)
   end
 
+  @doc """
+  Returns true if all pads of given `spec_ref` are linked, false otherwise.
+  """
   @spec all_pads_linked?(ChildLifeController.spec_ref_t(), State.t()) :: boolean()
   def all_pads_linked?(spec_ref, state) do
     state.pads.data
@@ -119,7 +130,7 @@ defmodule Membrane.Core.Bin.PadController do
   end
 
   @doc """
-  Verifies linked pad, initializes it's data.
+  Verifies linked pad and proxies the message to the proper child.
   """
   @spec handle_link(
           Pad.direction_t(),
@@ -187,7 +198,7 @@ defmodule Membrane.Core.Bin.PadController do
 
   @spec handle_pad_removed(Pad.ref_t(), Core.Bin.State.t()) ::
           Type.stateful_try_t(Core.Bin.State.t())
-  def handle_pad_removed(ref, state) do
+  defp handle_pad_removed(ref, state) do
     %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
 
     if Pad.availability_mode(availability) == :dynamic do
@@ -216,6 +227,8 @@ defmodule Membrane.Core.Bin.PadController do
         spec_ref: nil,
         options: nil
       })
+
+    data = struct!(Membrane.Bin.PadData, data)
 
     put_in(state, [:pads, :data, pad_ref], data)
   end

@@ -1,6 +1,16 @@
 defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   @moduledoc false
 
+  # Module responsible for linking children.
+  #
+  # The linking process consists of the following phases:
+  # - Internal linking - link requests are sent to all the children involved. After receiving link responses
+  #   for each link, the actual linking (sending `:handle_link` messages) happens. When all children are
+  #   linked, proceed to the next phase.
+  # - External linking - only for bins. Responding to link requests sent to bin and proxying linking messages
+  #   to the proper children. When all the messages are proxied, proceed to the next phase.
+  # - Linking finished - Playback state of all the new children of the spec is initialized.
+
   use Bunch
 
   alias Membrane.Core.{Bin, Message, Parent, Pipeline, Telemetry}

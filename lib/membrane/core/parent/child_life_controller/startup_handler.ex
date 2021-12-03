@@ -4,7 +4,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
 
   alias Membrane.{CallbackError, ChildEntry, Clock, Core, ParentError, Sync}
   alias Membrane.Core.{CallbackHandler, Component, Message, Parent}
-  alias Membrane.Core.Parent.{ChildEntryParser, ChildrenModel}
+  alias Membrane.Core.Parent.{ChildEntryParser, ChildLifeController, ChildrenModel}
 
   require Membrane.Core.Component
   require Membrane.Core.Message
@@ -128,7 +128,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     end
   end
 
-  @spec init_playback_state([Membrane.Child.name_t()], Parent.state_t()) :: Parent.state_t()
+  @spec init_playback_state(ChildLifeController.spec_ref_t(), Parent.state_t()) ::
+          Parent.state_t()
   def init_playback_state(spec_ref, state) do
     Membrane.Logger.debug("Spec playback init #{inspect(spec_ref)} #{inspect(state.children)}")
 

@@ -128,7 +128,8 @@ defmodule Membrane.Core.Element.PadController do
         ref: ref,
         caps: nil,
         start_of_stream?: false,
-        end_of_stream?: false
+        end_of_stream?: false,
+        associated_pads: []
       })
 
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
@@ -230,6 +231,10 @@ defmodule Membrane.Core.Element.PadController do
 
   defp init_pad_mode_data(_data, _props, _other_info, _metadata, _state), do: %{}
 
+  @doc """
+  Generates end of stream on the given input pad if it hasn't been generated yet
+  and playback state is `playing`.
+  """
   @spec generate_eos_if_needed(Pad.ref_t(), Core.Element.State.t()) ::
           Type.stateful_try_t(Core.Element.State.t())
   def generate_eos_if_needed(pad_ref, state) do
@@ -243,6 +248,9 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
+  @doc """
+  Removes all associations between the given pad and any other pads.
+  """
   @spec remove_pad_associations(Pad.ref_t(), State.t()) :: State.t()
   def remove_pad_associations(pad_ref, state) do
     case PadModel.get_data!(state, pad_ref) do
@@ -285,7 +293,7 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec handle_pad_removed(Pad.ref_t(), Core.Element.State.t()) ::
           Type.stateful_try_t(Core.Element.State.t())
-  def handle_pad_removed(ref, state) do
+  defp handle_pad_removed(ref, state) do
     %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
     context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
 

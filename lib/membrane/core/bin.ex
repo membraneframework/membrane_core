@@ -28,7 +28,7 @@ defmodule Membrane.Core.Bin do
   Starts the Bin based on given module and links it to the current
   process.
 
-  Bin options are passed to module's `c:handle_init/1` callback.
+  Bin options are passed to module's `c:Membrane.Bin.handle_init/1` callback.
 
   Process options are internally passed to `GenServer.start_link/3`.
 
@@ -140,7 +140,7 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def handle_info(Message.new(:handle_unlink, pad_ref), state) do
-    PadController.handle_pad_removed(pad_ref, state)
+    PadController.handle_unlink(pad_ref, state)
     |> noreply()
   end
 

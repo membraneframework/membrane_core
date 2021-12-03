@@ -4,14 +4,14 @@ defmodule Membrane.Element.PadData do
 
   The public fields are:
     - `:accepted_caps` - specification of possible caps that are accepted on the pad.
-      See `Membrane.Caps.Matcher` for more information. This field only applies to elements' pads.
+      See `Membrane.Caps.Matcher` for more information.
     - `:availability` - see `Membrane.Pad.availability_t`
     - `:caps` - the most recent `Membrane.Caps` that have been sent (output) or received (input)
-      on the pad. May be `nil` if not yet set. This field only applies to elements' pads.
-    - `:demand` - current demand requested on the pad working in pull mode. This field only applies to elements' pads.
+      on the pad. May be `nil` if not yet set.
+    - `:demand` - current demand requested on the pad working in pull mode.
     - `:direction` - see `Membrane.Pad.direction_t`
     - `:end_of_stream?` - flag determining whether the stream processing via the pad has been finished
-    - `:mode` - see `Membrane.Pad.mode_t`. This field only applies to elements' pads.
+    - `:mode` - see `Membrane.Pad.mode_t`.
     - `:name` - see `Membrane.Pad.name_t`. Do not mistake with `:ref`
     - `:options` - options passed in `Membrane.ParentSpec` when linking pad
     - `:ref` - see `Membrane.Pad.ref_t`
@@ -45,27 +45,34 @@ defmodule Membrane.Element.PadData do
           sticky_messages: private_field,
           input_buf: private_field,
           toilet: private_field,
-          demand_mode: private_field
+          demand_mode: private_field,
+          associated_pads: private_field
         }
 
-  defstruct accepted_caps: nil,
-            availability: nil,
-            direction: nil,
-            mode: nil,
-            name: nil,
-            ref: nil,
-            demand_unit: nil,
-            other_demand_unit: nil,
-            pid: nil,
-            other_ref: nil,
-            caps: nil,
-            start_of_stream?: nil,
-            end_of_stream?: nil,
-            sticky_messages: nil,
-            input_buf: nil,
-            demand: nil,
-            options: %{},
-            associated_pads: [],
-            demand_mode: nil,
-            toilet: nil
+  @enforce_keys [
+    :accepted_caps,
+    :availability,
+    :direction,
+    :mode,
+    :name,
+    :caps,
+    :ref,
+    :pid,
+    :other_ref,
+    :start_of_stream?,
+    :end_of_stream?,
+    :options,
+    :toilet,
+    :associated_pads
+  ]
+
+  defstruct @enforce_keys ++
+              [
+                input_buf: nil,
+                demand: nil,
+                demand_mode: nil,
+                demand_unit: nil,
+                other_demand_unit: nil,
+                sticky_messages: []
+              ]
 end

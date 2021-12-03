@@ -16,7 +16,13 @@ defmodule Membrane.Core.Child.PadModel do
           endpoint: Membrane.Core.Parent.Link.Endpoint.t(),
           linked?: boolean(),
           response_received?: boolean(),
-          spec_ref: Membrane.Core.Parent.ChildLifeController.spec_ref_t()
+          spec_ref: Membrane.Core.Parent.ChildLifeController.spec_ref_t(),
+          accepted_caps: Membrane.Caps.Matcher.caps_specs_t(),
+          availability: Pad.availability_t(),
+          direction: Pad.direction_t(),
+          mode: Pad.mode_t(),
+          name: Pad.name_t(),
+          demand_unit: Membrane.Buffer.Metric.unit_t() | nil
         }
 
   @type element_pad_data_t :: %Membrane.Element.PadData{
@@ -38,7 +44,8 @@ defmodule Membrane.Core.Child.PadModel do
           input_buf: Membrane.Core.InputBuffer.t() | nil,
           options: %{optional(atom) => any},
           toilet: :atomics.atomics_ref() | nil,
-          demand_mode: :auto | :manual
+          demand_mode: :auto | :manual | nil,
+          associated_pads: [Pad.ref_t()] | nil
         }
 
   @type pad_data_t :: bin_pad_data_t | element_pad_data_t

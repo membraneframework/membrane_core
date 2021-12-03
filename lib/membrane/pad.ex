@@ -55,13 +55,26 @@ defmodule Membrane.Pad do
   previously demanded, so that no undemanded data can arrive.
 
   Linking pads with different modes is possible, but only in case of output pad
-  working in push mode, and input in pull mode. Moreover, toilet mode of
-  `Membrane.Core.InputBuffer` has to be enabled then.
+  working in push mode, and input in pull mode. In such case, however, error will
+  be raised whenever too many buffers accumulate on the input pad, waiting to be
+  processed.
 
-  For more information on transfering data and demands, see `Membrane.Source`,
-  `Membrane.Filter`, `Membrane.Sink`.
+  For more information on transfering data and demands, see `t:demand_mode_t`,
+  `Membrane.Source`, `Membrane.Filter`, `Membrane.Sink`.
   """
   @type mode_t :: :push | :pull
+
+  @typedoc """
+  Defines the mode of handling and requesting demand on pads.
+
+  - `:manual` - demand is manually handled and requested. See `Membrane.Element.Action.demand_t`,
+  `Membrane.Element.Action.redemand_t`, `c:Membrane.Element.WithOutputPads.handle_demand/5`
+  - `:automatic` - demand is managed automatically: the core ensures that there's demand
+  on each input pad (that has `demand_mode` set to `:auto`) whenever there's demand on all
+  output pads (that have `demand_mode` set to `:auto`). Currently works only for
+  `Membrane.Filter`s.
+  """
+  @type demand_mode_t :: :manual | :auto
 
   @typedoc """
   Values used when defining pad availability:
@@ -93,18 +106,23 @@ defmodule Membrane.Pad do
   Demand unit is derived from the first element inside the bin linked to the
   given input.
   """
-  @type bin_spec_t :: input_spec_t
+  @type bin_spec_t :: {name_t(), [common_spec_options_t]}
 
   @typedoc """
   Describes how an output pad should be declared inside an element.
   """
-  @type output_spec_t :: {name_t(), [common_spec_options_t]}
+  @type output_spec_t :: {name_t(), [common_spec_options_t | {:demand_mode, demand_mode_t()}]}
 
   @typedoc """
   Describes how an input pad should be declared inside an element.
   """
   @type input_spec_t ::
-          {name_t(), [common_spec_options_t | {:demand_unit, Buffer.Metric.unit_t()}]}
+          {name_t(),
+           [
+             common_spec_options_t
+             | {:demand_mode, demand_mode_t()}
+             | {:demand_unit, Buffer.Metric.unit_t()}
+           ]}
 
   @typedoc """
   Pad options used in `t:spec_t/0`
@@ -126,7 +144,7 @@ defmodule Membrane.Pad do
           optional(:demand_unit) => Buffer.Metric.unit_t(),
           :direction => direction_t(),
           :options => nil | Keyword.t(),
-          optional(:demand_mode) => :auto | :manual
+          optional(:demand_mode) => demand_mode_t()
         }
 
   @doc """

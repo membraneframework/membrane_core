@@ -170,12 +170,14 @@ defmodule Membrane.Core.Child.PadsSpecs do
                 demand_unit: [
                   in: [:buffers, :bytes],
                   require_if:
-                    &(&1.mode == :pull and &1[:demand_mode] != :auto and
+                    &(&1.mode == :pull and &1.demand_mode != :auto and
                         (component == :bin or direction == :input)),
                   default: :buffers
                 ],
                 options: [default: nil]
               ) do
+      config = if component == :bin, do: Map.delete(config, :demand_mode), else: config
+
       config
       |> Map.put(:direction, direction)
       |> Map.put(:name, name)

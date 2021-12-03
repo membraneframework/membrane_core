@@ -60,6 +60,16 @@ defmodule Membrane.Core.Element.DemandController do
     end
   end
 
+  @doc """
+  Sends auto demand to an input pad if it should be sent.
+
+  The demand should be sent when the current demand on the input pad is at most
+  half of the demand request size and if there's positive demand on each of
+  associated output pads.
+
+  Also, the `demand_decrease` argument can be passed, decreasing the size of the
+  demand on the input pad before proceeding to the rest of the function logic.
+  """
   @spec send_auto_demand_if_needed(Pad.ref_t(), integer, State.t()) :: State.t()
   def send_auto_demand_if_needed(pad_ref, demand_decrease \\ 0, state) do
     data = PadModel.get_data!(state, pad_ref)
