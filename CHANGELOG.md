@@ -1,4 +1,5 @@
  ## 0.9.0
+ * Fixed PadAdded spec [#359](https://github.com/membraneframework/membrane_core/pull/359)
  ### PRs not influencing public API:
  * Prevent internal testing notifications from reaching pipeline module [#350](https://github.com/membraneframework/membrane_core/pull/350)
  * Fix unknown node error on distribution changes [#352](https://github.com/membraneframework/membrane_core/pull/352)
