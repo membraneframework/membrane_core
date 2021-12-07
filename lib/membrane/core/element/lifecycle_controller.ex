@@ -47,7 +47,7 @@ defmodule Membrane.Core.Element.LifecycleController do
            CallbackHandler.exec_and_handle_callback(
              :handle_init,
              ActionHandler,
-             %{state: false},
+             %{},
              [options],
              state
            ) do
