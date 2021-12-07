@@ -293,6 +293,7 @@ defmodule Membrane.Core.Child.PadModel do
   defp data_keys(pad_ref), do: [:pads, :data, pad_ref]
 
   @spec data_keys(Pad.ref_t(), keys :: atom | [atom]) :: [atom]
+  @compile {:inline, data_keys: 2}
   defp data_keys(pad_ref, keys)
 
   defp data_keys(pad_ref, keys) when is_list(keys) do
