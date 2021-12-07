@@ -120,7 +120,7 @@ defmodule Membrane.Core.CallbackHandler do
          %{context: context_fun} = handler_params,
          %{module: module, internal_state: internal_state} = state
        ) do
-    args = args ++ [context_fun.(state)] ++ [internal_state]
+    args = args ++ [context_fun.(state), internal_state]
 
     module
     |> apply(callback, args)
