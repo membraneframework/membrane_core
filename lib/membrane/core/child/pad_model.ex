@@ -131,7 +131,7 @@ defmodule Membrane.Core.Child.PadModel do
   def set_data(state, pad_ref, keys \\ [], value) do
     case assert_instance(state, pad_ref) do
       :ok ->
-        put_in(data_keys(pad_ref, keys), value)
+        put_in(state, data_keys(pad_ref, keys), value)
         ~> {:ok, &1}
 
       {:error, reason} ->
@@ -267,9 +267,8 @@ defmodule Membrane.Core.Child.PadModel do
     state
   end
 
-  @spec constraints_met?(Pad.Data.t(), [
-          {key :: atom, (data -> data)} | {key :: atom, any}
-        ]) :: Pad.Data.t()
+  @spec apply_updates(Pad.Data.t(), [{key :: atom, (data -> data)} | {key :: atom, any}]) ::
+          Pad.Data.t()
         when data: Pad.Data.t()
   defp apply_updates(pad_data, updates) do
     for {key, update} <- updates, reduce: pad_data do
