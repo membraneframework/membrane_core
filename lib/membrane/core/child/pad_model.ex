@@ -87,14 +87,12 @@ defmodule Membrane.Core.Child.PadModel do
   end
 
   @spec get_data(Child.state_t(), Pad.ref_t()) :: {:ok, Pad.Data.t() | any} | unknown_pad_error_t
-  def get_data(%{pads: %{data: data}}, pad_ref)
-      when is_map_key(data, pad_ref) do
-    data
-    |> Map.get(pad_ref)
-    ~> {:ok, &1}
+  def get_data(%{pads: %{data: data}}, pad_ref) do
+    case Map.fetch(data, pad_ref) do
+      {:ok, pad_data} -> {:ok, pad_data}
+      :error -> {:error, {:unknown_pad, pad_ref}}
+    end
   end
-
-  def get_data(_state, pad_ref), do: {:error, {:unknown_pad, pad_ref}}
 
   @spec get_data(Child.state_t(), Pad.ref_t(), keys :: atom | [atom]) ::
           {:ok, Pad.Data.t() | any} | unknown_pad_error_t
