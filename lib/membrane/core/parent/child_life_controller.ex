@@ -35,16 +35,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     :ok = StartupHandler.check_if_children_names_unique(children, state)
     syncs = StartupHandler.setup_syncs(children, spec.stream_sync)
 
-    # ensure node is set to local if it's nil in spec
-    node = spec.node || node()
-
     children =
       StartupHandler.start_children(
         children,
-        node,
+        spec.node,
         state.synchronization.clock_proxy,
         syncs,
-        state.children_log_metadata
+        spec.log_metadata
       )
 
     children_names = children |> Enum.map(& &1.name)

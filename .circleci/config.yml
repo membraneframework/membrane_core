@@ -12,7 +12,7 @@ jobs:
       - checkout
       - run: mix deps.get
       - run: mix compile --force --warnings-as-errors
-      - run: mix test --include long_running
+      - run: mix test --include long_running --max-cases 1
       - run: mix espec
 
   lint:

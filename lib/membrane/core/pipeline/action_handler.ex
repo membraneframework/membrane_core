@@ -47,6 +47,11 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   defp do_handle_action({:log_metadata, metadata}, _cb, _params, state) do
+    Membrane.Logger.warn("""
+    `log_metadata` action is deprecated.
+    Use `log_metadata` field in `Membrane.ParentSpec` instead.
+    """)
+
     Parent.LifecycleController.handle_log_metadata(metadata, state)
   end
 
