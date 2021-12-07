@@ -24,7 +24,7 @@ defmodule Membrane.Core.Element do
   alias Membrane.Core.Element.{LifecycleController, PlaybackBuffer, State}
   alias Membrane.Core.{Message, PlaybackHandler, Telemetry, TimerController}
   alias Membrane.ComponentPath
-  alias Membrane.Core.Child.PadController
+  alias Membrane.Core.Child.{PadController, PadModel}
 
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
@@ -196,6 +196,17 @@ defmodule Membrane.Core.Element do
 
   defp do_handle_info(Message.new(:push_mode_announcement, [], for_pad: ref), state) do
     PadController.enable_toilet_if_pull(ref, state) |> noreply(state)
+  end
+
+  defp do_handle_info(Message.new(:handle_link_removal, pad_ref), state) do
+    case PadModel.get_data!(state, pad_ref) do
+      %{availability: :on_request} ->
+        PadController.handle_unlink(pad_ref, state) |> noreply(state)
+
+      %{availability: :always} ->
+        raise Membrane.ParentError,
+              "Links with availability: :always may not be dynamically removed"
+    end
   end
 
   defp do_handle_info(Message.new(:handle_unlink, pad_ref), state) do

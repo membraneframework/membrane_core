@@ -14,11 +14,28 @@ defmodule Membrane.Core.LinkRemovalTest do
 
   @buffers ['a', 'b', 'c']
 
-  defp setup_pipeline(_ctx) do
+  ExUnit.Case.register_attribute(__MODULE__, :sink_module)
+
+  defp setup_pipeline(ctx) do
+    test_pid = self()
+    sink_module = ctx.registered.sink_module || Testing.DynamicSink
+
+    sink_pad = if sink_module == Testing.DynamicSink, do: Pad.ref(:input, 1), else: :input
+
+    links = [
+      link(:source)
+      |> via_out(Pad.ref(:output, 1))
+      |> to(:test_bin)
+      |> via_in(sink_pad)
+      |> to(:sink)
+    ]
+
     {:ok, pipeline} =
       Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+        crash_group: {:test, :temporary},
+        test_process: test_pid,
         elements: [
-          source: %Testing.Source{output: @buffers},
+          source: %Testing.DynamicSource{output: @buffers},
           test_bin: %TestBins.DynamicBin{
             children: [
               filter1: TestDynamicPadFilter,
@@ -28,22 +45,25 @@ defmodule Membrane.Core.LinkRemovalTest do
             links: [
               link(:filter1) |> to(:filter2) |> to(:filter3)
             ],
-            receiver: self()
+            receiver: test_pid
           },
-          sink: Testing.Sink
-        ]
+          sink: sink_module
+        ],
+        links: links
       })
 
-    assert_data_flows_through(pipeline, @buffers)
+    assert_data_flows_through(pipeline, @buffers, :sink, sink_pad)
 
-    [pipeline: pipeline]
+    [pipeline: pipeline, sink_pad: sink_pad]
   end
 
   describe "removing links" do
     setup :setup_pipeline
 
     test "can remove a bin input", %{pipeline: pipeline} do
-      Testing.Pipeline.execute_actions(pipeline, remove_link: [link(:source) |> to(:test_bin)])
+      Testing.Pipeline.execute_actions(pipeline,
+        remove_link: [link(:source) |> via_out(Pad.ref(:output, 1)) |> to(:test_bin)]
+      )
 
       assert_pad_removed(pipeline, :test_bin, Pad.ref(:input, _id))
       refute_pad_removed(pipeline, :test_bin, Pad.ref(:output, _id))
@@ -53,8 +73,10 @@ defmodule Membrane.Core.LinkRemovalTest do
       stop_pipeline(pipeline)
     end
 
-    test "can remove a bin output", %{pipeline: pipeline} do
-      Testing.Pipeline.execute_actions(pipeline, remove_link: [link(:test_bin) |> to(:sink)])
+    test "can remove a bin output", %{pipeline: pipeline, sink_pad: sink_pad} do
+      Testing.Pipeline.execute_actions(pipeline,
+        remove_link: [link(:test_bin) |> via_in(sink_pad) |> to(:sink)]
+      )
 
       assert_pad_removed(pipeline, :test_bin, Pad.ref(:output, _id))
       refute_pad_removed(pipeline, :test_bin, Pad.ref(:input, _id))
@@ -80,6 +102,17 @@ defmodule Membrane.Core.LinkRemovalTest do
       refute_pad_removed(pipeline, :test_bin, Pad.ref(:input, _id))
 
       stop_pipeline(pipeline)
+    end
+
+    @sink_module Testing.Sink
+    test "raises when unlink a static pad", %{pipeline: pipeline} do
+      ExUnit.CaptureLog.capture_log(fn ->
+        Testing.Pipeline.execute_actions(pipeline,
+          remove_link: [link(:test_bin) |> via_in(:input) |> to(:sink)]
+        )
+      end)
+
+      assert_receive {_pipeline, _pid, {:handle_crash_group_down, :test}}
     end
   end
 end

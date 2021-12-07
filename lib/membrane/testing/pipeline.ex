@@ -124,13 +124,14 @@ defmodule Membrane.Testing.Pipeline do
     based on elements order using default pad names.
     """
 
-    defstruct [:elements, :links, :test_process, :module, :custom_args]
+    defstruct [:elements, :links, :test_process, :module, :crash_group, :custom_args]
 
     @type t :: %__MODULE__{
             test_process: pid() | nil,
             elements: ParentSpec.children_spec_t() | nil,
             links: ParentSpec.links_spec_t() | nil,
             module: module() | nil,
+            crash_group: {term, :temporary} | nil,
             custom_args: Pipeline.pipeline_options_t() | nil
           }
   end
@@ -257,7 +258,8 @@ defmodule Membrane.Testing.Pipeline do
   def handle_init(%Options{module: nil} = options) do
     spec = %Membrane.ParentSpec{
       children: options.elements,
-      links: options.links
+      links: options.links,
+      crash_group: options.crash_group
     }
 
     new_state = %State{test_process: options.test_process, module: nil}
@@ -400,7 +402,9 @@ defmodule Membrane.Testing.Pipeline do
     eval(
       :handle_crash_group_down,
       [group_name, ctx],
-      fn -> {:ok, state} end,
+      fn ->
+        notify_test_process({:handle_crash_group_down, group_name}, state)
+      end,
       state
     )
   end

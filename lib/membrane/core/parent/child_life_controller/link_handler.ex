@@ -65,8 +65,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   def unlink_children(links, state) do
     state =
       Enum.reduce(links, state, fn %Link{to: to, from: from}, state ->
-        Message.send(from.pid, :handle_unlink, from.pad_ref)
-        Message.send(to.pid, :handle_unlink, to.pad_ref)
+        Message.send(from.pid, :handle_link_removal, from.pad_ref)
+        Message.send(to.pid, :handle_link_removal, to.pad_ref)
 
         if Map.has_key?(state, :pads) do
           {_, pads} = pop_in(state.pads, [:data, from.pad_ref])

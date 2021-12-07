@@ -8,7 +8,7 @@ defmodule Membrane.Core.Bin do
   alias __MODULE__.{LinkingBuffer, State}
   alias Membrane.{CallbackError, Core, ComponentPath, Pad, Sync}
   alias Membrane.Core.{CallbackHandler, Message, Telemetry}
-  alias Membrane.Core.Child.{PadController, PadSpecHandler}
+  alias Membrane.Core.Child.{PadController, PadModel, PadSpecHandler}
 
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
@@ -150,6 +150,19 @@ defmodule Membrane.Core.Bin do
     LinkingBuffer.store_or_send(msg, outgoing_pad, state)
     ~> {:ok, &1}
     |> noreply()
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:handle_link_removal, pad_ref), state) do
+    case PadModel.get_data!(state, pad_ref) do
+      %{availability: :on_request} ->
+        PadController.handle_unlink(pad_ref, state)
+        |> noreply()
+
+      %{availability: :always} ->
+        raise Membrane.ParentError,
+              "Links with availability: :always may not be dynamically removed"
+    end
   end
 
   @impl GenServer

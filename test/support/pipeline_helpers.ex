@@ -6,12 +6,17 @@ defmodule Membrane.Support.PipelineHelpers do
   alias Membrane.Testing
   require Membrane.Testing.Assertions
 
-  @spec assert_data_flows_through(pid(), list(), :atom) :: :ok | no_return()
-  def assert_data_flows_through(pipeline, buffers, receiving_element \\ :sink) do
+  @spec assert_data_flows_through(pid(), list(), atom(), Pad.ref_t()) :: :ok | no_return()
+  def assert_data_flows_through(
+        pipeline,
+        buffers,
+        receiving_element \\ :sink,
+        receiving_pad \\ :input
+      ) do
     assert_playing(pipeline)
-    :ok = Testing.Assertions.assert_start_of_stream(pipeline, ^receiving_element)
+    :ok = Testing.Assertions.assert_start_of_stream(pipeline, ^receiving_element, ^receiving_pad)
     :ok = assert_buffers_flow_through(pipeline, buffers, receiving_element)
-    :ok = Testing.Assertions.assert_end_of_stream(pipeline, ^receiving_element)
+    :ok = Testing.Assertions.assert_end_of_stream(pipeline, ^receiving_element, ^receiving_pad)
   end
 
   @spec assert_playing(pid()) :: :ok
