@@ -131,8 +131,7 @@ defmodule Membrane.Core.Child.PadModel do
   def set_data(state, pad_ref, keys \\ [], value) do
     case assert_instance(state, pad_ref) do
       :ok ->
-        state
-        |> Bunch.Access.put_in(data_keys(pad_ref, keys), value)
+        put_in(data_keys(pad_ref, keys), value)
         ~> {:ok, &1}
 
       {:error, reason} ->
