@@ -224,7 +224,8 @@ defmodule Membrane.ParentSpec do
   The allowed options are:
   * `:buffer` - keyword allowing to configure `Membrane.Core.InputBuffer` between elements. Valid only for input pads.
     See `t:Membrane.Core.InputBuffer.props_t/0` for configurable properties.
-  * `:options` - any child-specific options that will be available in `Membrane.Pad.Data` struct.
+  * `:options` - any child-specific options that will be available in pads data in child's callback contexts,
+    see `Membrane.Element.CallbackContext.PadAdded` and `Membrane.Bin.CallbackContext.PadAdded`
   """
   @type pad_props_t :: [
           {:buffer, InputBuffer.props_t()}

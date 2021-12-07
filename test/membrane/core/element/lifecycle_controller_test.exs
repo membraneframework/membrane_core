@@ -5,7 +5,6 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
   alias Membrane.Core.Element.State
   alias Membrane.Core.InputBuffer
   alias Membrane.Core.Message
-  alias Membrane.Pad.Data
 
   require Membrane.Core.Message
 
@@ -15,7 +14,7 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
   end
 
   setup do
-    input_buf = InputBuffer.init(:buffers, self(), :some_pad, "test", preferred_size: 10)
+    input_buf = InputBuffer.init(:buffers, self(), :some_pad, "test", false, preferred_size: 10)
 
     state =
       %{
@@ -29,17 +28,18 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
         | type: :filter,
           pads: %{
             data: %{
-              input: %Data{
-                ref: :input,
-                accepted_caps: :any,
-                direction: :input,
-                pid: self(),
-                mode: :pull,
-                start_of_stream?: true,
-                end_of_stream?: false,
-                input_buf: input_buf,
-                demand: 0
-              }
+              input:
+                struct(Membrane.Element.PadData,
+                  ref: :input,
+                  accepted_caps: :any,
+                  direction: :input,
+                  pid: self(),
+                  mode: :pull,
+                  start_of_stream?: true,
+                  end_of_stream?: false,
+                  input_buf: input_buf,
+                  demand: 0
+                )
             }
           }
       }

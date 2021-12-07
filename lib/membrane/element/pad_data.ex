@@ -49,7 +49,7 @@ defmodule Membrane.Element.PadData do
           associated_pads: private_field
         }
 
-  @enforce_keys [
+  @enforce_keysx [
     :accepted_caps,
     :availability,
     :direction,
@@ -66,7 +66,7 @@ defmodule Membrane.Element.PadData do
     :associated_pads
   ]
 
-  defstruct @enforce_keys ++
+  defstruct @enforce_keysx ++
               [
                 input_buf: nil,
                 demand: nil,

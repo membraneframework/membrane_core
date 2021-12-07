@@ -5,7 +5,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   alias Membrane.Core.{Message, Playback}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.State
-  alias Membrane.Pad.Data
   alias Membrane.Support.DemandsTest.Filter
   alias Membrane.Support.Element.{TrivialFilter, TrivialSource}
 
@@ -19,17 +18,19 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       | type: :filter,
         pads: %{
           data: %{
-            input: %Data{
-              direction: :input,
-              pid: self(),
-              mode: :pull,
-              demand: 0
-            },
-            input_push: %Data{
-              direction: :input,
-              pid: self(),
-              mode: :push
-            }
+            input:
+              struct(Membrane.Element.PadData,
+                direction: :input,
+                pid: self(),
+                mode: :pull,
+                demand: 0
+              ),
+            input_push:
+              struct(Membrane.Element.PadData,
+                direction: :input,
+                pid: self(),
+                mode: :push
+              )
           }
         }
     }

@@ -94,7 +94,7 @@ defmodule Membrane.Core.Child.PadControllerSpec do
     let :other_ref, do: :other_pad
 
     let :pad_data,
-      do: %Membrane.Pad.Data{
+      do: %Membrane.Element.PadData{
         start_of_stream?: true,
         end_of_stream?: false
       }
@@ -165,7 +165,7 @@ defmodule Membrane.Core.Child.PadControllerSpec do
       let :pad_ref, do: Pad.ref(:input, 0)
 
       let :pad_data,
-        do: %Membrane.Pad.Data{
+        do: %Membrane.Element.PadData{
           start_of_stream?: true,
           end_of_stream?: false
         }

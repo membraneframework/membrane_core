@@ -4,7 +4,6 @@ defmodule Membrane.Core.Element.EventControllerTest do
   alias Membrane.Core.Element.{EventController, State}
   alias Membrane.Core.{Events, InputBuffer, Message}
   alias Membrane.Event
-  alias Membrane.Pad.Data
 
   require Membrane.Core.Message
 
@@ -24,7 +23,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
   end
 
   setup do
-    input_buf = InputBuffer.init(:buffers, self(), :some_pad, "test", preferred_size: 10)
+    input_buf = InputBuffer.init(:buffers, self(), :some_pad, "test", false, preferred_size: 10)
 
     state =
       %{
@@ -38,17 +37,18 @@ defmodule Membrane.Core.Element.EventControllerTest do
         | type: :filter,
           pads: %{
             data: %{
-              input: %Data{
-                ref: :input,
-                accepted_caps: :any,
-                direction: :input,
-                pid: self(),
-                mode: :pull,
-                start_of_stream?: false,
-                end_of_stream?: false,
-                input_buf: input_buf,
-                demand: 0
-              }
+              input:
+                struct(Membrane.Element.PadData,
+                  ref: :input,
+                  accepted_caps: :any,
+                  direction: :input,
+                  pid: self(),
+                  mode: :pull,
+                  start_of_stream?: false,
+                  end_of_stream?: false,
+                  input_buf: input_buf,
+                  demand: 0
+                )
             }
           }
       }

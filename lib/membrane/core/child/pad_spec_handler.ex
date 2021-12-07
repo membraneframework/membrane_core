@@ -22,8 +22,7 @@ defmodule Membrane.Core.Child.PadSpecHandler do
       info:
         get_pads(state)
         |> Bunch.KVList.map_values(&init_pad_info/1)
-        |> Map.new(),
-      dynamic_currently_linking: []
+        |> Map.new()
     }
 
     state

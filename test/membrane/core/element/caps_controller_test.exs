@@ -6,7 +6,6 @@ defmodule Membrane.Core.Element.CapsControllerTest do
   alias Membrane.Core.{InputBuffer, Message}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.State
-  alias Membrane.Pad.Data
   alias Membrane.Support.DemandsTest.Filter
 
   require Message
@@ -14,7 +13,7 @@ defmodule Membrane.Core.Element.CapsControllerTest do
   @module Membrane.Core.Element.CapsController
 
   setup do
-    input_buf = InputBuffer.init(:buffers, self(), :some_pad, "test", preferred_size: 10)
+    input_buf = InputBuffer.init(:buffers, self(), :some_pad, "test", false, preferred_size: 10)
 
     state =
       %{
@@ -28,14 +27,15 @@ defmodule Membrane.Core.Element.CapsControllerTest do
         | type: :filter,
           pads: %{
             data: %{
-              input: %Data{
-                accepted_caps: :any,
-                direction: :input,
-                pid: self(),
-                mode: :pull,
-                input_buf: input_buf,
-                demand: 0
-              }
+              input:
+                struct(Membrane.Element.PadData,
+                  accepted_caps: :any,
+                  direction: :input,
+                  pid: self(),
+                  mode: :pull,
+                  input_buf: input_buf,
+                  demand: 0
+                )
             }
           }
       }

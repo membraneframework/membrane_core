@@ -19,6 +19,7 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.Element.CallbackContext
+  alias Membrane.LinkError
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
@@ -36,7 +37,7 @@ defmodule Membrane.Core.Element.PadController do
           Endpoint.t(),
           Endpoint.t(),
           PadModel.pad_info_t() | nil,
-          %{toilet: reference()},
+          %{toilet: reference()} | nil,
           State.t()
         ) ::
           {{:ok, {Endpoint.t(), PadModel.pad_info_t()}}, State.t()}
@@ -46,7 +47,17 @@ defmodule Membrane.Core.Element.PadController do
     )
 
     name = this.pad_ref |> Pad.name_by_ref()
-    info = Map.fetch!(state.pads.info, name)
+
+    info =
+      case Map.fetch(state.pads.info, name) do
+        {:ok, info} ->
+          info
+
+        :error ->
+          raise LinkError,
+                "Tried to link via unknown pad #{inspect(name)} of #{inspect(state.name)}"
+      end
+
     :ok = Child.PadController.validate_pad_being_linked!(this.pad_ref, direction, info, state)
 
     {other, other_info, link_metadata} =

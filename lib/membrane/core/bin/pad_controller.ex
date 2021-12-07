@@ -27,11 +27,20 @@ defmodule Membrane.Core.Bin.PadController do
           ChildLifeController.LinkHandler.link_id_t(),
           Membrane.ParentSpec.pad_props_t(),
           State.t()
-        ) :: State.t()
+        ) :: State.t() | no_return
   def handle_external_link_request(pad_ref, direction, link_id, pad_props, state) do
     Membrane.Logger.debug("Received link request on pad #{inspect(pad_ref)}")
     pad_name = Pad.name_by_ref(pad_ref)
-    info = Map.fetch!(state.pads.info, pad_name)
+
+    info =
+      case Map.fetch(state.pads.info, pad_name) do
+        {:ok, info} ->
+          info
+
+        :error ->
+          raise LinkError,
+                "Tried to link via unknown pad #{inspect(pad_name)} of #{inspect(state.name)}"
+      end
 
     :ok = Child.PadController.validate_pad_being_linked!(pad_ref, direction, info, state)
     pad_props = Child.PadController.parse_pad_props!(pad_props, pad_name, state)

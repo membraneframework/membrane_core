@@ -67,8 +67,7 @@ defmodule Membrane.Core.Child.PadModel do
 
   @type pads_t :: %{
           data: pads_data_t,
-          info: pads_info_t,
-          dynamic_currently_linking: [Pad.ref_t()]
+          info: pads_info_t
         }
 
   @type unknown_pad_error_t :: {:error, {:unknown_pad, Pad.name_t()}}

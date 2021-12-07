@@ -74,10 +74,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
       |> Keyword.put(:options, escaped_pad_opts)
 
     quote do
-      if Module.get_attribute(__MODULE__, :membrane_pads) == nil do
-        Module.register_attribute(__MODULE__, :membrane_pads, accumulate: true)
-        @before_compile {unquote(__MODULE__), :generate_membrane_pads}
-      end
+      unquote(do_ensure_default_membrane_pads())
 
       @membrane_pads unquote(__MODULE__).parse_pad_specs!(
                        {unquote(pad_name), unquote(specs)},
@@ -89,7 +86,11 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  defmacro ensure_default_membrane_pads do
+  defmacro ensure_default_membrane_pads() do
+    do_ensure_default_membrane_pads()
+  end
+
+  defp do_ensure_default_membrane_pads() do
     quote do
       if Module.get_attribute(__MODULE__, :membrane_pads) == nil do
         Module.register_attribute(__MODULE__, :membrane_pads, accumulate: true)

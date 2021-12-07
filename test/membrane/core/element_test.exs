@@ -55,9 +55,10 @@ defmodule Membrane.Core.ElementTest do
       Element.handle_call(
         Message.new(:handle_link, [
           :output,
-          %{pad_ref: :output, pad_props: []},
-          %{pad_ref: :input, pid: self()},
-          %{direction: :input, mode: :pull, demand_unit: :buffers}
+          %{pad_ref: :output, pad_props: [], child: :this},
+          %{pad_ref: :input, pid: self(), child: :other},
+          %{direction: :input, mode: :pull, demand_unit: :buffers},
+          %{toilet: :atomics.new(1, [])}
         ]),
         nil,
         get_state()
@@ -67,15 +68,14 @@ defmodule Membrane.Core.ElementTest do
       Element.handle_call(
         Message.new(:handle_link, [
           :input,
-          %{pad_ref: :input, pad_props: []},
-          %{pad_ref: :output, pid: self()},
-          %{direction: :output, mode: :pull}
+          %{pad_ref: :input, pad_props: [], child: :this},
+          %{pad_ref: :output, pid: self(), child: :other},
+          %{direction: :output, mode: :pull},
+          %{toilet: :atomics.new(1, [])}
         ]),
         nil,
         state
       )
-
-    {:reply, :ok, state} = Element.handle_call(Message.new(:linking_finished), nil, state)
 
     state
   end
@@ -185,27 +185,32 @@ defmodule Membrane.Core.ElementTest do
              Element.handle_call(
                Message.new(:handle_link, [
                  :output,
-                 %{pad_ref: :output, pad_props: []},
-                 %{pad_ref: :input, pid: pid},
-                 %{direction: :input, mode: :pull, demand_unit: :buffers}
+                 %{pad_ref: :output, pad_props: [], child: :this},
+                 %{pad_ref: :input, pid: pid, child: :other},
+                 %{direction: :input, mode: :pull, demand_unit: :buffers},
+                 %{toilet: :atomics.new(1, [])}
                ]),
                nil,
                get_state()
              )
 
-    assert %{
-             accepted_caps: :any,
-             availability: :always,
-             direction: :output,
-             mode: :pull,
-             name: :output,
-             options: nil
-           } = reply
+    assert {%{child: :this, pad_props: [], pad_ref: :output},
+            %{
+              accepted_caps: :any,
+              availability: :always,
+              demand_mode: :manual,
+              demand_unit: :buffers,
+              direction: :output,
+              mode: :pull,
+              name: :output,
+              options: nil
+            }} = reply
 
-    assert %Membrane.Pad.Data{pid: ^pid, other_ref: :input, other_demand_unit: :buffers} =
-             state.pads.data.output
-
-    assert {:reply, :ok, _state} = Element.handle_call(Message.new(:linking_finished), nil, state)
+    assert %Membrane.Element.PadData{
+             pid: ^pid,
+             other_ref: :input,
+             other_demand_unit: :buffers
+           } = state.pads.data.output
   end
 
   test "should handle unlinking pads" do
