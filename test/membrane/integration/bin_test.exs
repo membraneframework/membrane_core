@@ -356,6 +356,7 @@ defmodule Membrane.Core.BinTest do
     %{
       name: :name,
       module: TestBins.SimpleBin,
+      node: nil,
       parent: pipeline,
       parent_clock: nil,
       log_metadata: [],

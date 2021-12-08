@@ -28,6 +28,8 @@ defmodule Membrane.Testing.Sink do
 
   use Membrane.Sink
 
+  alias Membrane.Testing.Notification
+
   def_input_pad :input,
     demand_unit: :buffers,
     caps: :any
@@ -54,20 +56,20 @@ defmodule Membrane.Testing.Sink do
 
   @impl true
   def handle_event(:input, event, _context, state) do
-    {{:ok, notify: {:event, event}}, state}
+    {{:ok, notify({:event, event})}, state}
   end
 
   @impl true
   def handle_start_of_stream(pad, _ctx, state),
-    do: {{:ok, notify: {:start_of_stream, pad}}, state}
+    do: {{:ok, notify({:start_of_stream, pad})}, state}
 
   @impl true
   def handle_end_of_stream(pad, _ctx, state),
-    do: {{:ok, notify: {:end_of_stream, pad}}, state}
+    do: {{:ok, notify({:end_of_stream, pad})}, state}
 
   @impl true
   def handle_caps(pad, caps, _context, state),
-    do: {{:ok, notify: {:caps, pad, caps}}, state}
+    do: {{:ok, notify({:caps, pad, caps})}, state}
 
   @impl true
   def handle_other({:make_demand, size}, _ctx, %{autodemand: false} = state) do
@@ -77,8 +79,12 @@ defmodule Membrane.Testing.Sink do
   @impl true
   def handle_write(:input, buf, _ctx, state) do
     case state do
-      %{autodemand: false} -> {{:ok, notify: {:buffer, buf}}, state}
-      %{autodemand: true} -> {{:ok, demand: :input, notify: {:buffer, buf}}, state}
+      %{autodemand: false} -> {{:ok, notify({:buffer, buf})}, state}
+      %{autodemand: true} -> {{:ok, [demand: :input] ++ notify({:buffer, buf})}, state}
     end
+  end
+
+  defp notify(payload) do
+    [notify: %Notification{payload: payload}]
   end
 end
