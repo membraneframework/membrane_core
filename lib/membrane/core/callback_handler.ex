@@ -142,10 +142,8 @@ defmodule Membrane.Core.CallbackHandler do
 
     state = Map.put(state, :internal_state, new_internal_state)
 
-    with {{:ok, actions}, state} <- {result, state},
-         {:ok, state} <-
-           exec_handle_actions(actions, callback, handler_module, handler_params, state) do
-      {:ok, state}
+    with {{:ok, actions}, state} <- {result, state} do
+      exec_handle_actions(actions, callback, handler_module, handler_params, state)
     end
   end
 
