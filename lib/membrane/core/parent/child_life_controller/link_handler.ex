@@ -162,7 +162,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   defp do_link(from, to, state) do
     {:ok, _info} = Message.call(from.pid, :handle_link, [:output, from, to, nil])
-    state = Bunch.Access.update_in(state, [:links], &[%Link{from: from, to: to} | &1])
+    state = update_in(state, [:links], &[%Link{from: from, to: to} | &1])
     state
   end
 

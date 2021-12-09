@@ -75,7 +75,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
 
   defp do_store(msg, state) do
     state
-    |> Bunch.Access.update_in([:playback_buffer, :q], &@qe.push(&1, msg))
+    |> update_in([:playback_buffer, :q], &@qe.push(&1, msg))
     ~> (state -> {:ok, state})
   end
 
@@ -90,7 +90,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     with {:ok, state} <-
            state.playback_buffer.q
            |> Bunch.Enum.try_reduce(state, &exec/2),
-         do: {:ok, state |> Bunch.Access.put_in([:playback_buffer, :q], @qe.new)}
+         do: {:ok, state |> put_in([:playback_buffer, :q], @qe.new)}
   end
 
   def eval(state), do: {:ok, state}

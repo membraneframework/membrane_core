@@ -155,7 +155,7 @@ defmodule Membrane.Core.Child.PadModel do
   def update_data(state, pad_ref, keys \\ [], f) do
     case assert_instance(state, pad_ref) do
       :ok ->
-        state |> Bunch.Access.get_and_update_in(data_keys(pad_ref, keys), f)
+        state |> get_and_update_in(data_keys(pad_ref, keys), f)
 
       {:error, reason} ->
         {{:error, reason}, state}
@@ -169,7 +169,7 @@ defmodule Membrane.Core.Child.PadModel do
     :ok = assert_instance(state, pad_ref)
 
     state
-    |> Bunch.Access.update_in(data_keys(pad_ref, keys), f)
+    |> update_in(data_keys(pad_ref, keys), f)
   end
 
   @spec update_multi(Child.state_t(), Pad.ref_t(), [
@@ -181,7 +181,7 @@ defmodule Membrane.Core.Child.PadModel do
     case assert_instance(state, pad_ref) do
       :ok ->
         state
-        |> Bunch.Access.update_in([:pads, :data, pad_ref], fn pad_data ->
+        |> update_in([:pads, :data, pad_ref], fn pad_data ->
           apply_updates(pad_data, updates)
         end)
         ~> {:ok, &1}
@@ -212,7 +212,7 @@ defmodule Membrane.Core.Child.PadModel do
     case assert_instance(state, pad_ref) do
       :ok ->
         state
-        |> Bunch.Access.get_and_update_in(data_keys(pad_ref, keys), f)
+        |> get_and_update_in(data_keys(pad_ref, keys), f)
 
       {:error, reason} ->
         {{:error, reason}, state}
@@ -230,7 +230,7 @@ defmodule Membrane.Core.Child.PadModel do
     :ok = assert_instance(state, pad_ref)
 
     state
-    |> Bunch.Access.get_and_update_in(data_keys(pad_ref, keys), f)
+    |> get_and_update_in(data_keys(pad_ref, keys), f)
   end
 
   @spec pop_data(Child.state_t(), Pad.ref_t()) ::
@@ -239,7 +239,7 @@ defmodule Membrane.Core.Child.PadModel do
     with :ok <- assert_instance(state, pad_ref) do
       {data, state} =
         state
-        |> Bunch.Access.pop_in(data_keys(pad_ref))
+        |> pop_in(data_keys(pad_ref))
 
       {{:ok, data}, state}
     end
