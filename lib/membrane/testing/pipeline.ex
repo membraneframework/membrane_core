@@ -99,6 +99,7 @@ defmodule Membrane.Testing.Pipeline do
 
   alias Membrane.{Element, Pipeline}
   alias Membrane.ParentSpec
+  alias Membrane.Testing.Notification
 
   defmodule Options do
     @moduledoc """
@@ -315,6 +316,16 @@ defmodule Membrane.Testing.Pipeline do
       fn -> notify_playback_state_changed(:prepared, :stopped, state) end,
       state
     )
+  end
+
+  @impl true
+  def handle_notification(
+        %Notification{payload: notification},
+        from,
+        _ctx,
+        %State{} = state
+      ) do
+    notify_test_process({:handle_notification, {notification, from}}, state)
   end
 
   @impl true

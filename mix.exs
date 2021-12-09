@@ -1,7 +1,7 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "0.8.0"
+  @version "0.8.1"
   @source_ref "v#{@version}"
 
   def project do
@@ -112,7 +112,7 @@ defmodule Membrane.Mixfile do
       {:espec, "~> 1.8.3", only: :test},
       {:excoveralls, "~> 0.11", only: :test},
       {:qex, "~> 0.3"},
-      {:telemetry, "~> 0.4"},
+      {:telemetry, "~> 1.0"},
       {:bunch, "~> 1.3"},
       {:ratio, "~> 2.0"}
     ]
