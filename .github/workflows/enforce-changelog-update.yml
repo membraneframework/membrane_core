@@ -9,6 +9,7 @@ on:
         required: true   
 jobs:
   check-changelog-update:
+    if: ${{ !contains( github.event.pull_request.labels.*.name, 'no-changelog') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -31,4 +32,4 @@ jobs:
         uses: actions/github-script@v3
         with:
           script: |
-            core.setFailed('CHANGELOG has to be updated on pull request to master')
+            core.setFailed('Add label "no-changelog" or update CHANGELOG.md on pull request to master.')
