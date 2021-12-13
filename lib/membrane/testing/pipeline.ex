@@ -162,25 +162,31 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @spec start_link(Options.t(), GenServer.options()) :: GenServer.on_start()
-  def start_link(pipeline_options, process_options \\ []) do
+  def start_link(pipeline_options \\ %Options{elements: [], module: nil}, process_options \\ []) do
     do_start(:start_link, pipeline_options, process_options)
   end
 
   @spec start(Options.t(), GenServer.options()) :: GenServer.on_start()
-  def start(pipeline_options, process_options \\ []) do
+  def start(pipeline_options \\ %Options{elements: [], module: nil}, process_options \\ []) do
     do_start(:start, pipeline_options, process_options)
   end
 
-  defp do_start(_type, %Options{elements: nil, module: nil}, _process_options) do
-    raise """
-
-    You provided no information about pipeline contents. Please provide either:
-     - list of elemenst via `elements` field of Options struct with optional links between
-     them via `links` field of `Options` struct
-     - module that implements `Membrane.Pipeline` callbacks via `module` field of `Options`
-     struct
-    """
+  @spec exec_actions(pid(), [Pipeline.Action.t()]) :: :ok
+  def exec_actions(pipeline, actions) do
+    send(pipeline, {:exec_actions, actions})
+    :ok
   end
+
+  # defp do_start(_type, %Options{elements: nil, module: nil}, _process_options) do
+  #   raise """
+
+  #   You provided no information about pipeline contents. Please provide either:
+  #    - list of elemenst via `elements` field of Options struct with optional links between
+  #    them via `links` field of `Options` struct
+  #    - module that implements `Membrane.Pipeline` callbacks via `module` field of `Options`
+  #    struct
+  #   """
+  # end
 
   defp do_start(_type, %Options{elements: elements, module: module}, _process_options)
        when is_atom(module) and module != nil and elements != nil do
@@ -357,6 +363,11 @@ defmodule Membrane.Testing.Pipeline do
     testing_pipeline_result = {:ok, state}
 
     combine_results(injected_module_result, testing_pipeline_result)
+  end
+
+  @impl true
+  def handle_other({:exec_actions, actions}, _ctx, %State{} = state) do
+    {{:ok, actions}, state}
   end
 
   @impl true
