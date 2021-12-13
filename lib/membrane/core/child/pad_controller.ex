@@ -140,9 +140,8 @@ defmodule Membrane.Core.Child.PadController do
   def handle_unlink(pad_ref, state) do
     with {:ok, state} <- flush_playback_buffer(pad_ref, state),
          {:ok, state} <- generate_eos_if_needed(pad_ref, state),
-         {:ok, state} <- handle_pad_removed(pad_ref, state),
-         {:ok, state} <- PadModel.delete_data(state, pad_ref) do
-      {:ok, state}
+         {:ok, state} <- handle_pad_removed(pad_ref, state) do
+      PadModel.delete_data(state, pad_ref)
     end
   end
 
@@ -177,9 +176,8 @@ defmodule Membrane.Core.Child.PadController do
           {Pad.ref_t(), other_info :: PadModel.pad_info_t()}
         ) :: :ok
   defp validate_dir_and_mode!(this, that) do
-    with :ok <- do_validate_dm(this, that),
-         :ok <- do_validate_dm(that, this) do
-      :ok
+    with :ok <- do_validate_dm(this, that) do
+      do_validate_dm(that, this)
     end
   end
 
