@@ -117,7 +117,7 @@ defmodule Membrane.Core.Bin do
            CallbackHandler.exec_and_handle_callback(
              :handle_init,
              Membrane.Core.Bin.ActionHandler,
-             %{state: false},
+             %{},
              [options.user_options],
              state
            ) do

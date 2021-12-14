@@ -11,6 +11,7 @@ defmodule Membrane.Core.Element.DemandController do
   alias Membrane.Element.CallbackContext
   alias Membrane.Pad
 
+  require CallbackContext.Demand
   require Membrane.Core.Child.PadModel
   require Membrane.Logger
 
@@ -33,28 +34,44 @@ defmodule Membrane.Core.Element.DemandController do
   @spec do_handle_demand(Pad.ref_t(), non_neg_integer, State.t()) ::
           State.stateful_try_t()
   defp do_handle_demand(pad_ref, size, state) do
-    PadModel.assert_data(state, pad_ref, %{direction: :output})
-
     {total_size, state} =
       state
       |> PadModel.get_and_update_data!(pad_ref, :demand, fn demand ->
         (demand + size) ~> {&1, &1}
       end)
 
-    if exec_handle_demand?(pad_ref, state) do
-      %{other_demand_unit: unit} = PadModel.get_data!(state, pad_ref)
-      require CallbackContext.Demand
-      context = &CallbackContext.Demand.from_state(&1, incoming_demand: size)
+    case PadModel.get_data!(state, pad_ref) do
+      %{direction: :input} ->
+        raise Membrane.PipelineError, """
+        handle_demand can only be called for an output pad.
+        pad_ref: #{inspect(pad_ref)}
+        """
 
-      CallbackHandler.exec_and_handle_callback(
-        :handle_demand,
-        ActionHandler,
-        %{split_continuation_arbiter: &exec_handle_demand?(pad_ref, &1), context: context},
-        [pad_ref, total_size, unit],
-        state
-      )
-    else
-      {:ok, state}
+      %{end_of_stream?: true} ->
+        Membrane.Logger.debug_verbose("""
+        Demand controller: not executing handle_demand as :end_of_stream action has already been returned
+        """)
+
+        {:ok, state}
+
+      %{demand: demand} when demand <= 0 ->
+        Membrane.Logger.debug_verbose("""
+        Demand controller: not executing handle_demand as demand is not greater than 0,
+        demand: #{inspect(demand)}
+        """)
+
+        {:ok, state}
+
+      %{other_demand_unit: unit} ->
+        context = &CallbackContext.Demand.from_state(&1, incoming_demand: size)
+
+        CallbackHandler.exec_and_handle_callback(
+          :handle_demand,
+          ActionHandler,
+          %{context: context, split_continuation_arbiter: &exec_handle_demand?(pad_ref, &1)},
+          [pad_ref, total_size, unit],
+          state
+        )
     end
   end
 

@@ -16,7 +16,7 @@ defmodule Membrane.Core.TimerController do
     else
       clock |> Clock.subscribe()
       timer = Timer.start(id, interval, clock)
-      state |> Bunch.Access.put_in([:synchronization, :timers, id], timer) ~> {:ok, &1}
+      state |> put_in([:synchronization, :timers, id], timer) ~> {:ok, &1}
     end
   end
 
@@ -25,7 +25,7 @@ defmodule Membrane.Core.TimerController do
           | {{:error, {:unknown_timer, id: Timer.id_t()}}, Component.state_t()}
   def timer_interval(id, interval, state) do
     with {:ok, timer} <- state.synchronization.timers |> Map.fetch(id) do
-      Bunch.Access.put_in(
+      put_in(
         state,
         [:synchronization, :timers, id],
         Timer.set_interval(timer, interval)
@@ -70,7 +70,7 @@ defmodule Membrane.Core.TimerController do
           # in case the timer was removed in handle_tick
           present?: true <- Map.has_key?(state.synchronization.timers, timer_id) do
       state
-      |> Bunch.Access.update_in([:synchronization, :timers, timer_id], &Timer.tick/1)
+      |> update_in([:synchronization, :timers, timer_id], &Timer.tick/1)
       ~> {:ok, &1}
     else
       present?: false -> {:ok, state}
