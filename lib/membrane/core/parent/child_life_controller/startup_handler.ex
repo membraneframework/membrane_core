@@ -66,13 +66,19 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
 
   @spec start_children(
           [ChildEntryParser.raw_child_entry_t()],
-          node(),
+          node() | nil,
           parent_clock :: Clock.t(),
           syncs :: %{Membrane.Child.name_t() => pid()},
           log_metadata :: Keyword.t()
         ) :: [ChildEntry.t()]
   def start_children(children, node, parent_clock, syncs, log_metadata) do
-    Membrane.Logger.debug("Starting children: #{inspect(children)} on node #{node}")
+    # If the node is set to the current node, set it to nil, to avoid race conditions when
+    # distribution changes
+    node = if node == node(), do: nil, else: node
+
+    Membrane.Logger.debug(
+      "Starting children: #{inspect(children)}#{if node, do: " on node #{node}"}"
+    )
 
     children |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata))
   end
@@ -166,19 +172,16 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     start_result =
       case child.component_type do
         :element ->
-          Core.Element.start(
-            node,
-            %{
-              parent: self(),
-              module: module,
-              name: name,
-              user_options: options,
-              parent_clock: parent_clock,
-              sync: sync,
-              log_metadata: log_metadata
-            },
-            []
-          )
+          Core.Element.start(%{
+            parent: self(),
+            module: module,
+            name: name,
+            node: node,
+            user_options: options,
+            parent_clock: parent_clock,
+            sync: sync,
+            log_metadata: log_metadata
+          })
 
         :bin ->
           unless sync == Sync.no_sync() do
@@ -187,18 +190,15 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
                   reason: bin cannot be synced with other elements"
           end
 
-          Core.Bin.start(
-            node,
-            %{
-              parent: self(),
-              name: name,
-              module: module,
-              user_options: options,
-              parent_clock: parent_clock,
-              log_metadata: log_metadata
-            },
-            []
-          )
+          Core.Bin.start(%{
+            parent: self(),
+            name: name,
+            module: module,
+            node: node,
+            user_options: options,
+            parent_clock: parent_clock,
+            log_metadata: log_metadata
+          })
       end
 
     with {:ok, pid} <- start_result,

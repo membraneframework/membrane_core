@@ -178,9 +178,8 @@ defmodule Membrane.Core.Bin.PadController do
   """
   @spec handle_unlink(Pad.ref_t(), Core.Bin.State.t()) :: Type.stateful_try_t(Core.Bin.State.t())
   def handle_unlink(pad_ref, state) do
-    with {:ok, state} <- handle_pad_removed(pad_ref, state),
-         {:ok, state} <- PadModel.delete_data(state, pad_ref) do
-      {:ok, state}
+    with {:ok, state} <- handle_pad_removed(pad_ref, state) do
+      PadModel.delete_data(state, pad_ref)
     end
   end
 

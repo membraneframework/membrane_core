@@ -267,9 +267,9 @@ defmodule Membrane.Core.Child.PadsSpecs do
     |> Enum.map(fn
       {module, params} ->
         params_doc =
-          params
-          |> Enum.map(fn {k, v} -> Bunch.Markdown.hard_indent("`#{k}: #{inspect(v)}`") end)
-          |> Enum.join(",<br />")
+          Enum.map_join(params, ",<br />", fn {k, v} ->
+            Bunch.Markdown.hard_indent("`#{k}: #{inspect(v)}`")
+          end)
 
         "`#{inspect(module)}`, restrictions:<br />#{params_doc}"
 

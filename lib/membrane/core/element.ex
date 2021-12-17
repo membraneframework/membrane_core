@@ -31,6 +31,7 @@ defmodule Membrane.Core.Element do
   @type options_t :: %{
           module: module,
           name: Element.name_t(),
+          node: node | nil,
           user_options: Element.options_t(),
           sync: Sync.t(),
           parent: pid,
@@ -44,27 +45,19 @@ defmodule Membrane.Core.Element do
 
   Calls `GenServer.start_link/3` underneath.
   """
-  @spec start_link(options_t, GenServer.options()) :: GenServer.on_start()
-  def start_link(options, process_options \\ []),
-    do: start_link(node(), options, process_options)
-
-  @spec start_link(node(), options_t, GenServer.options()) :: GenServer.on_start()
-  def start_link(node, options, process_options) when is_atom(node),
-    do: do_start(node, :start_link, options, process_options)
+  @spec start_link(options_t) :: GenServer.on_start()
+  def start_link(options),
+    do: do_start(:start_link, options)
 
   @doc """
-  Works similarly to `start_link/5`, but does not link to the current process.
+  Works similarly to `start_link/3`, but does not link to the current process.
   """
-  @spec start(options_t, GenServer.options()) :: GenServer.on_start()
-  def start(options, process_options \\ []),
-    do: start(node(), options, process_options)
+  @spec start(options_t) :: GenServer.on_start()
+  def start(options),
+    do: do_start(:start, options)
 
-  @spec start(node(), options_t, GenServer.options()) :: GenServer.on_start()
-  def start(node, options, process_options),
-    do: do_start(node, :start, options, process_options)
-
-  defp do_start(node, method, options, process_options) do
-    %{module: module, name: name, user_options: user_options} = options
+  defp do_start(method, options) do
+    %{module: module, name: name, node: node, user_options: user_options} = options
 
     if Element.element?(options.module) do
       Membrane.Logger.debug("""
@@ -72,14 +65,13 @@ defmodule Membrane.Core.Element do
       node: #{node},
       module: #{inspect(module)},
       element options: #{inspect(user_options)},
-      process options: #{inspect(process_options)}
       """)
 
       # rpc if necessary
-      if node == node() do
-        apply(GenServer, method, [__MODULE__, options, process_options])
+      if node do
+        :rpc.call(node, GenServer, method, [__MODULE__, options])
       else
-        :rpc.call(node, GenServer, method, [__MODULE__, options, process_options])
+        apply(GenServer, method, [__MODULE__, options])
       end
     else
       raise """
