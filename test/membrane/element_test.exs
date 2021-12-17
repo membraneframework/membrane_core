@@ -62,9 +62,22 @@ defmodule Membrane.ElementTest do
       filter: %TestFilter{target: self()},
       sink: Testing.Sink
     ]
-    links = [Membrane.ParentSpec.link(:source) |> Membrane.ParentSpec.to(:filter) |> Membrane.ParentSpec.to(:sink)]
-    {:ok, pipeline} = Testing.Pipeline.start_link()
-    Testing.Pipeline.exec_actions(pipeline, spec: %Membrane.ParentSpec{children: children, links: links})
+
+    links = [
+      Membrane.ParentSpec.link(:source)
+      |> Membrane.ParentSpec.to(:filter)
+      |> Membrane.ParentSpec.to(:sink)
+    ]
+
+    {:ok, pipeline} =
+      Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+        module: Membrane.RemoteControlled.Pipeline
+      })
+
+    Membrane.RemoteControlled.Pipeline.exec_actions(pipeline,
+      spec: %Membrane.ParentSpec{children: children, links: links}
+    )
+
     # {:ok, pipeline} =
     #   Testing.Pipeline.start_link(%Testing.Pipeline.Options{
     #     elements: [
