@@ -25,6 +25,7 @@ defmodule Membrane.Core.InputBufferSpec do
     let :demand_pid, do: self()
     let :linked_output_ref, do: :output_pad_ref
     let :expected_metric, do: Buffer.Metric.from_unit(demand_unit())
+    let :toilet?, do: false
 
     let :props,
       do: [
@@ -41,6 +42,7 @@ defmodule Membrane.Core.InputBufferSpec do
           demand_pid(),
           linked_output_ref(),
           log_tag(),
+          toilet?(),
           props()
         )
       )
@@ -51,7 +53,6 @@ defmodule Membrane.Core.InputBufferSpec do
           preferred_size: preferred_size(),
           min_demand: min_demand(),
           toilet?: false,
-          toilet_props: %{warn: warn_size(), fail: fail_size()},
           metric: expected_metric(),
           q: Qex.new()
         })
@@ -75,18 +76,16 @@ defmodule Membrane.Core.InputBufferSpec do
             demand_pid(),
             linked_output_ref(),
             log_tag(),
+            toilet?(),
             props()
           )
-          |> described_module().enable_toilet()
         )
         |> to(
           eq(%InputBuffer{
             log_tag: log_tag(),
-            # As toilet is always off after init, demand will be sent and ignored
-            demand: 0,
+            demand: preferred_size(),
             preferred_size: preferred_size(),
             min_demand: min_demand(),
-            toilet_props: %{warn: warn_size(), fail: fail_size()},
             toilet?: true,
             metric: expected_metric(),
             q: Qex.new()
