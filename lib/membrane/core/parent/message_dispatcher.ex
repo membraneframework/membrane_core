@@ -8,6 +8,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
 
   require Membrane.Core.Message
+  require Membrane.Logger
 
   @spec handle_message(Message.t(), Parent.state_t()) ::
           Membrane.Helper.GenServer.genserver_return_t()
@@ -25,18 +26,34 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     |> noreply(state)
   end
 
+  def handle_message(
+        Message.new(:notification, [
+          _from,
+          {:stream_management_event, event, path_to_element, pad_ref}
+        ]),
+        state
+      ) do
+    [direct_child | _] = path_to_element
+
+    if not pipeline?(state) and state.parent_pid do
+      notification = {:stream_management_event, event, [state.name | path_to_element], pad_ref}
+
+      Membrane.Logger.debug_verbose(
+        "Sending notification #{inspect(notification)} (parent PID: #{inspect(state.parent_pid)})"
+      )
+
+      Message.send(state.parent_pid, :notification, [state.name, notification])
+    end
+
+    LifecycleController.handle_stream_management_event(event, direct_child, pad_ref, state)
+    |> noreply(state)
+  end
+
   def handle_message(Message.new(:notification, [from, notification]), state) do
     LifecycleController.handle_notification(from, notification, state)
     |> noreply(state)
   end
 
-  def handle_message(Message.new(cb, [element_name, pad_ref]), state)
-      when cb in [:handle_start_of_stream, :handle_end_of_stream] do
-    inform_parent(state, cb, [pad_ref])
-
-    LifecycleController.handle_stream_management_event(cb, element_name, pad_ref, state)
-    |> noreply(state)
-  end
 
   def handle_message(Message.new(:log_metadata, metadata), state) do
     LifecycleController.handle_log_metadata(metadata, state)
@@ -65,10 +82,6 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     |> noreply(state)
   end
 
-  defp inform_parent(state, msg, msg_params) do
-    if not pipeline?(state) and state.parent_pid,
-      do: Message.send(state.parent_pid, msg, [state.name | msg_params])
-  end
 
   defp is_parent_pid?(pid, state) do
     state.parent_pid == pid
