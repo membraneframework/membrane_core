@@ -161,9 +161,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
   defp get_callback_action_handler(%Core.Pipeline.State{}), do: Core.Pipeline.ActionHandler
   defp get_callback_action_handler(%Core.Bin.State{}), do: Core.Bin.ActionHandler
 
-  defp to_parent_sm_callback(:handle_start_of_stream), do: :handle_element_start_of_stream
-  defp to_parent_sm_callback(:handle_end_of_stream), do: :handle_element_end_of_stream
-
   defp toggle_syncs_active(:prepared, :playing, children_data) do
     do_toggle_syncs_active(children_data, &Sync.activate/1)
   end

@@ -54,7 +54,6 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     |> noreply(state)
   end
 
-
   def handle_message(Message.new(:log_metadata, metadata), state) do
     LifecycleController.handle_log_metadata(metadata, state)
     |> noreply(state)
@@ -81,7 +80,6 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     LifecycleController.handle_other(message, state)
     |> noreply(state)
   end
-
 
   defp is_parent_pid?(pid, state) do
     state.parent_pid == pid
