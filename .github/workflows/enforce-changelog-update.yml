@@ -3,10 +3,7 @@ on:
   pull_request:
     branches:
       - master
-  workflow_call:
-    secrets:
-      GITHUB_TOKEN:
-        required: true   
+  workflow_call: 
 jobs:
   check-changelog-update:
     if: ${{ !contains( github.event.pull_request.labels.*.name, 'no-changelog') }}
