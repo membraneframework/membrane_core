@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
 
   import Membrane.Helper.GenServer
 
-  alias Membrane.Core.{Parent, Pipeline, TimerController}
+  alias Membrane.Core.{Parent, TimerController}
   alias Membrane.Core.Message
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
 
@@ -26,22 +26,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     |> noreply(state)
   end
 
-  def handle_message(
-        Message.new(:notification, [
-          from,
-          {:stream_management_event, event, path_to_element, pad_ref} = notification
-        ]),
-        state
-      ) do
-    maybe_notify_parent(event, path_to_element, pad_ref, state)
-
-    LifecycleController.handle_notification(from, notification, state)
-    |> noreply(state)
-  end
-
   def handle_message(Message.new(:stream_management_event, [element_name, pad_ref, event]), state) do
-    maybe_notify_parent(event, [element_name], pad_ref, state)
-
     LifecycleController.handle_stream_management_event(event, element_name, pad_ref, state)
     |> noreply(state)
   end
@@ -78,18 +63,6 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     |> noreply(state)
   end
 
-  defp maybe_notify_parent(event, path_to_element, pad_ref, state) do
-    if not pipeline?(state) and state.parent_pid do
-      notification = {:stream_management_event, event, [state.name | path_to_element], pad_ref}
-
-      Membrane.Logger.debug_verbose(
-        "Sending notification #{inspect(notification)} (parent PID: #{inspect(state.parent_pid)})"
-      )
-
-      Message.send(state.parent_pid, :notification, [state.name, notification])
-    end
-  end
-
   defp is_parent_pid?(pid, state) do
     state.parent_pid == pid
   end
@@ -97,7 +70,4 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   defp is_child_pid?(pid, state) do
     Enum.any?(state.children, fn {_name, entry} -> entry.pid == pid end)
   end
-
-  defp pipeline?(%Pipeline.State{}), do: true
-  defp pipeline?(_state), do: false
 end
