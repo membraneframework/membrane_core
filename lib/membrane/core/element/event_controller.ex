@@ -96,9 +96,10 @@ defmodule Membrane.Core.Element.EventController do
         state
       )
 
-    Message.send(state.parent_pid, :notification, [
+    Message.send(state.parent_pid, :stream_management_event, [
       state.name,
-      {:stream_management_event, event, [state.name], pad_ref}
+      pad_ref,
+      event
     ])
 
     res

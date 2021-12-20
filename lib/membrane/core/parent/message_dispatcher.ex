@@ -28,24 +28,21 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
 
   def handle_message(
         Message.new(:notification, [
-          _from,
-          {:stream_management_event, event, path_to_element, pad_ref}
+          from,
+          {:stream_management_event, event, path_to_element, pad_ref} = notification
         ]),
         state
       ) do
-    [direct_child | _] = path_to_element
+    maybe_notify_parent(event, path_to_element, pad_ref, state)
 
-    if not pipeline?(state) and state.parent_pid do
-      notification = {:stream_management_event, event, [state.name | path_to_element], pad_ref}
+    LifecycleController.handle_notification(from, notification, state)
+    |> noreply(state)
+  end
 
-      Membrane.Logger.debug_verbose(
-        "Sending notification #{inspect(notification)} (parent PID: #{inspect(state.parent_pid)})"
-      )
+  def handle_message(Message.new(:stream_management_event, [element_name, pad_ref, event]), state) do
+    maybe_notify_parent(event, [element_name], pad_ref, state)
 
-      Message.send(state.parent_pid, :notification, [state.name, notification])
-    end
-
-    LifecycleController.handle_stream_management_event(event, direct_child, pad_ref, state)
+    LifecycleController.handle_stream_management_event(event, element_name, pad_ref, state)
     |> noreply(state)
   end
 
@@ -79,6 +76,18 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   def handle_message(message, state) do
     LifecycleController.handle_other(message, state)
     |> noreply(state)
+  end
+
+  defp maybe_notify_parent(event, path_to_element, pad_ref, state) do
+    if not pipeline?(state) and state.parent_pid do
+      notification = {:stream_management_event, event, [state.name | path_to_element], pad_ref}
+
+      Membrane.Logger.debug_verbose(
+        "Sending notification #{inspect(notification)} (parent PID: #{inspect(state.parent_pid)})"
+      )
+
+      Message.send(state.parent_pid, :notification, [state.name, notification])
+    end
   end
 
   defp is_parent_pid?(pid, state) do
