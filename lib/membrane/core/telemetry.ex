@@ -28,7 +28,7 @@ defmodule Membrane.Core.Telemetry do
     report_event(
       event,
       value,
-      Map.get(@telemetry_flags, :metrics, []) |> Enum.find(&(&1 == metric)) != nil
+      Keyword.get(@telemetry_flags, :metrics, []) |> Enum.find(&(&1 == metric)) != nil
     )
   end
 
@@ -60,7 +60,7 @@ defmodule Membrane.Core.Telemetry do
     report_event(
       event,
       value,
-      Map.get(@telemetry_flags, :metrics, []) |> Enum.find(&(&1 == :bitrate)) != nil
+      Keyword.get(@telemetry_flags, :metrics, []) |> Enum.find(&(&1 == :bitrate)) != nil
     )
   end
 
