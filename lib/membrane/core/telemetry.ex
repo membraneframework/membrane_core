@@ -5,7 +5,7 @@ defmodule Membrane.Core.Telemetry do
 
   require Membrane.Pad
 
-  @enable_telemetry Application.compile_env(:membrane_core, :enable_telemetry, false)
+  @telemetry_flags Application.compile_env(:membrane_core, :telemetry_flags, [])
 
   @doc """
   Reports metrics such as input buffer's size inside functions, incoming events and received caps.
@@ -25,7 +25,11 @@ defmodule Membrane.Core.Telemetry do
         }
       end
 
-    report_event(event, value)
+    report_event(
+      event,
+      value,
+      (get_in(@telemetry_flags, [:metrics]) || []) |> Enum.find(&(&1 == metric)) != nil
+    )
   end
 
   @doc """
@@ -53,7 +57,11 @@ defmodule Membrane.Core.Telemetry do
         }
       end
 
-    report_event(event, value)
+    report_event(
+      event,
+      value,
+      (get_in(@telemetry_flags, [:metrics]) || []) |> Enum.find(&(&1 == :bitrate)) != nil
+    )
   end
 
   @doc false
@@ -88,7 +96,7 @@ defmodule Membrane.Core.Telemetry do
         }
       end
 
-    report_event(event, value)
+    report_event(event, value, Enum.find(@telemetry_flags, &(&1 == :links)) != nil)
   end
 
   @doc """
@@ -105,7 +113,7 @@ defmodule Membrane.Core.Telemetry do
         %{path: ComponentPath.get_formatted()}
       end
 
-    report_event(event, value)
+    report_event(event, value, Enum.find(@telemetry_flags, &(&1 == :inits_and_terminates)) != nil)
   end
 
   @doc """
@@ -122,12 +130,12 @@ defmodule Membrane.Core.Telemetry do
         %{path: ComponentPath.get_formatted()}
       end
 
-    report_event(event, value)
+    report_event(event, value, Enum.find(@telemetry_flags, &(&1 == :inits_and_terminates)) != nil)
   end
 
   # Conditional event reporting of telemetry events
-  defp report_event(event_name, measurement) do
-    if @enable_telemetry do
+  defp report_event(event_name, measurement, enable) do
+    if enable do
       quote do
         :telemetry.execute(
           unquote(event_name),
