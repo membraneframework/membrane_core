@@ -10,7 +10,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   defmodule State do
     @enforce_keys [:controller_pid]
-    defstruct @enforce_keys ++ [subscriptions: %{}]
+    defstruct @enforce_keys ++ [matching_functions: []]
   end
 
   @spec start_link(GenServer.options()) :: GenServer.on_start()
@@ -34,17 +34,57 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @impl true
+  def handle_playing_to_prepared(_ctx, state) do
+    pipeline_event = {:playback_state, :prepared}
+    maybe_send_event_to_controller(pipeline_event, state)
+
+    {:ok, state}
+  end
+
+  @impl true
+  def handle_prepared_to_playing(_ctx, state) do
+    pipeline_event = {:playback_state, :playing}
+    maybe_send_event_to_controller(pipeline_event, state)
+
+    {:ok, state}
+  end
+
+  @impl true
+  def handle_prepared_to_stopped(_ctx, state) do
+    pipeline_event = {:playback_state, :stopped}
+    maybe_send_event_to_controller(pipeline_event, state)
+
+    {:ok, state}
+  end
+
+  @impl true
+  def handle_stopped_to_prepared(_ctx, state) do
+    pipeline_event = {:playback_state, :prepared}
+    maybe_send_event_to_controller(pipeline_event, state)
+
+    {:ok, state}
+  end
+
+  @impl true
+  def handle_stopped_to_terminating(_ctx, state) do
+    pipeline_event = {:playback_state, :terminating}
+    maybe_send_event_to_controller(pipeline_event, state)
+
+    {:ok, state}
+  end
+
+  @impl true
   def handle_element_end_of_stream({element_name, pad_ref}, _ctx, state) do
-    subscription_key = {:end_of_stream, element_name, pad_ref}
-    state = mark_subscribed_event_occurred(subscription_key, state)
+    pipeline_event = {:end_of_stream, element_name, pad_ref}
+    maybe_send_event_to_controller(pipeline_event, state)
 
     {:ok, state}
   end
 
   @impl true
   def handle_element_start_of_stream({element_name, pad_ref}, _ctx, state) do
-    subscription_key = {:start_of_stream, element_name, pad_ref}
-    state = mark_subscribed_event_occurred(subscription_key, state)
+    pipeline_event = {:start_of_stream, element_name, pad_ref}
+    maybe_send_event_to_controller(pipeline_event, state)
 
     {:ok, state}
   end
@@ -54,9 +94,27 @@ defmodule Membrane.RemoteControlled.Pipeline do
     {{:ok, actions}, state}
   end
 
-  @spec subscribe(pid(), {:start_of_stream | :end_of_stream, Membrane.Element.name_t(), Membrane.Pad.name_t()}) :: :ok
-  def subscribe(pipeline, subscription_key) do
-    :ok
+  @impl true
+  def handle_other({:subscription, matching_function}, _ctx, state) do
+    {:ok, %{state | matching_functions: [matching_function | state.matching_functions]}}
+  end
+
+  defmacro await(pattern) do
+    quote do
+      unquote(pattern) =
+        receive do
+          unquote(pattern) = msg -> msg
+        end
+    end
+  end
+
+  defmacro subscribe(pipeline, subscription_pattern) do
+    quote do
+      send(
+        unquote(pipeline),
+        {:subscription, fn x -> match?(unquote(subscription_pattern), x) end}
+      )
+    end
   end
 
   @spec exec_actions(pid(), [Pipeline.Action.t()]) :: :ok
@@ -65,19 +123,9 @@ defmodule Membrane.RemoteControlled.Pipeline do
     :ok
   end
 
-  defp mark_subscribed_event_occurred(subscription_key, state) do
-    if Map.has_key?(state.subscriptions, subscription_key) do
-      %State{state | subscriptions: Map.update!(state.subscriptions, subscription_key, &(&1 + 1))}
-    else
-      state
-    end
-  end
-
-  defp mark_subscribed_event_awaited(subscription_key, state) do
-    if Map.has_key?(state.subscriptions, subscription_key) do
-      %State{state | subscriptions: Map.update!(state.subscriptions, subscription_key, &(&1 - 1))}
-    else
-      state
+  defp maybe_send_event_to_controller(event, state) do
+    if Enum.any?(state.matching_functions, & &1.(event)) do
+      send(state.controller_pid, event)
     end
   end
 end
