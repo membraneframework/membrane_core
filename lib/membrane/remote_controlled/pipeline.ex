@@ -90,6 +90,14 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @impl true
+  def handle_notification(notification, element, _ctx, state) do
+    pipeline_event = {:notification, element, notification}
+    maybe_send_event_to_controller(pipeline_event, state)
+
+    {:ok, state}
+  end
+
+  @impl true
   def handle_other({:exec_actions, actions}, _ctx, state) do
     {{:ok, actions}, state}
   end

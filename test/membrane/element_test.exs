@@ -57,35 +57,14 @@ defmodule Membrane.ElementTest do
   end
 
   setup do
-    children = [
-      source: %Testing.Source{output: ['a', 'b', 'c']},
-      filter: %TestFilter{target: self()},
-      sink: Testing.Sink
-    ]
-
-    links = [
-      Membrane.ParentSpec.link(:source)
-      |> Membrane.ParentSpec.to(:filter)
-      |> Membrane.ParentSpec.to(:sink)
-    ]
-
     {:ok, pipeline} =
       Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-        module: Membrane.RemoteControlled.Pipeline
+        elements: [
+          source: %Testing.Source{output: ['a', 'b', 'c']},
+          filter: %TestFilter{target: self()},
+          sink: Testing.Sink
+        ]
       })
-
-    Membrane.RemoteControlled.Pipeline.exec_actions(pipeline,
-      spec: %Membrane.ParentSpec{children: children, links: links}
-    )
-
-    # {:ok, pipeline} =
-    #   Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-    #     elements: [
-    #       source: %Testing.Source{output: ['a', 'b', 'c']},
-    #       filter: %TestFilter{target: self()},
-    #       sink: Testing.Sink
-    #     ]
-    #   })
 
     on_exit(fn ->
       Membrane.Pipeline.stop_and_terminate(pipeline, blocking?: true)
