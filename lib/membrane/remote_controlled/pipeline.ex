@@ -11,8 +11,8 @@ defmodule Membrane.RemoteControlled.Pipeline do
   a given playback state,
   * `{:start_of_stream | :end_of_stream, Membrane.Element.name_t(), Membrane.Pad.name_t()}` emitted
   when one of direct pipeline children informs the pipeline about start or end of stream,
-  * `{:notification, from, Membrane.Notification.t()}` emitted when pipeline receives notification
-  from one of its children.
+  * `{:notification, Membrane.Element.name_t(), Membrane.Notification.t()}` emitted when pipeline
+  receives notification from one of its children.
   """
 
   use Membrane.Pipeline

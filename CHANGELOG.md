@@ -1,6 +1,8 @@
  ## 0.9.0
  * Fixed PadAdded spec [#359](https://github.com/membraneframework/membrane_core/pull/359)
  * More fine-grained control over emitted metrics [#365](https://github.com/membraneframework/membrane_core/pull/365)
+ * Add `Membrane.RemoteControlled.Pipeline` - a basic implementation of a `Membrane.Pipeline` that </br> 
+   can be spawned and controlled by an external process [#366](https://github.com/membraneframework/membrane_core/pull/366)  
  ### PRs not influencing public API:
  * Prevent internal testing notifications from reaching pipeline module [#350](https://github.com/membraneframework/membrane_core/pull/350)
  * Fix unknown node error on distribution changes [#352](https://github.com/membraneframework/membrane_core/pull/352)
