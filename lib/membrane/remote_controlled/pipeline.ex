@@ -25,6 +25,8 @@ defmodule Membrane.RemoteControlled.Pipeline do
           | {:notification, Membrane.Element.name_t(), Membrane.Notification.t()}
 
   defmodule State do
+    @moduledoc false
+
     @enforce_keys [:controller_pid]
     defstruct @enforce_keys ++ [matching_functions: []]
   end
