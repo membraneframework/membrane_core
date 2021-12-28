@@ -1,8 +1,3 @@
-defmodule StructBehaviour do
-  @callback __struct__() :: struct()
-  @callback __struct__(kv :: [atom | {atom, any()}]) :: struct()
-end
-
 defmodule Membrane.FilterAggregatorTest do
   use ExUnit.Case, async: true
 
@@ -19,8 +14,7 @@ defmodule Membrane.FilterAggregatorTest do
       Membrane.Filter,
       Membrane.Element.Base,
       Membrane.Element.WithInputPads,
-      Membrane.Element.WithOutputPads,
-      StructBehaviour
+      Membrane.Element.WithOutputPads
     ]
 
     defmock(FilterA, for: behaviours)
