@@ -264,6 +264,6 @@ defmodule Membrane.Core.Element.DemandHandler do
       :atomics.sub(toilet, 1, size)
     end
 
-    BufferController.exec_buffer_handler(pad_ref, buffers, state)
+    BufferController.exec_buffer_callback(pad_ref, buffers, state)
   end
 end

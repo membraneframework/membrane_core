@@ -33,7 +33,7 @@ defmodule Membrane.Core.Element.BufferController do
     buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
     state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
     state = DemandController.send_auto_demand_if_needed(pad_ref, state)
-    exec_buffer_handler(pad_ref, buffers, state)
+    exec_buffer_callback(pad_ref, buffers, state)
   end
 
   defp do_handle_buffer(pad_ref, %{mode: :pull} = data, buffers, state) do
@@ -49,18 +49,18 @@ defmodule Membrane.Core.Element.BufferController do
   end
 
   defp do_handle_buffer(pad_ref, _data, buffers, state) do
-    exec_buffer_handler(pad_ref, buffers, state)
+    exec_buffer_callback(pad_ref, buffers, state)
   end
 
   @doc """
   Executes `handle_process_list` or `handle_write_list` callback.
   """
-  @spec exec_buffer_handler(
+  @spec exec_buffer_callback(
           Pad.ref_t(),
           [Buffer.t()] | Buffer.t(),
           State.t()
         ) :: State.stateful_try_t()
-  def exec_buffer_handler(pad_ref, buffers, %State{type: :filter} = state) do
+  def exec_buffer_callback(pad_ref, buffers, %State{type: :filter} = state) do
     require CallbackContext.Process
     Telemetry.report_metric("buffer", 1, inspect(pad_ref))
 
@@ -73,7 +73,7 @@ defmodule Membrane.Core.Element.BufferController do
     )
   end
 
-  def exec_buffer_handler(pad_ref, buffers, %State{type: :sink} = state) do
+  def exec_buffer_callback(pad_ref, buffers, %State{type: :sink} = state) do
     require CallbackContext.Write
 
     Telemetry.report_metric(:buffer, length(List.wrap(buffers)))
