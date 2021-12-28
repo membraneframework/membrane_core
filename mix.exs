@@ -1,7 +1,7 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "0.8.1"
+  @version "0.8.2"
   @source_ref "v#{@version}"
 
   def project do
