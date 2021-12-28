@@ -3,11 +3,12 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
 
   import Membrane.Helper.GenServer
 
-  alias Membrane.Core.{Parent, Pipeline, TimerController}
+  alias Membrane.Core.{Parent, TimerController}
   alias Membrane.Core.Message
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
 
   require Membrane.Core.Message
+  require Membrane.Logger
 
   @spec handle_message(Message.t(), Parent.state_t()) ::
           Membrane.Helper.GenServer.genserver_return_t()
@@ -25,16 +26,13 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     |> noreply(state)
   end
 
-  def handle_message(Message.new(:notification, [from, notification]), state) do
-    LifecycleController.handle_notification(from, notification, state)
+  def handle_message(Message.new(:stream_management_event, [element_name, pad_ref, event]), state) do
+    LifecycleController.handle_stream_management_event(event, element_name, pad_ref, state)
     |> noreply(state)
   end
 
-  def handle_message(Message.new(cb, [element_name, pad_ref]), state)
-      when cb in [:handle_start_of_stream, :handle_end_of_stream] do
-    inform_parent(state, cb, [pad_ref])
-
-    LifecycleController.handle_stream_management_event(cb, element_name, pad_ref, state)
+  def handle_message(Message.new(:notification, [from, notification]), state) do
+    LifecycleController.handle_notification(from, notification, state)
     |> noreply(state)
   end
 
@@ -65,11 +63,6 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     |> noreply(state)
   end
 
-  defp inform_parent(state, msg, msg_params) do
-    if not pipeline?(state) and state.parent_pid,
-      do: Message.send(state.parent_pid, msg, [state.name | msg_params])
-  end
-
   defp is_parent_pid?(pid, state) do
     state.parent_pid == pid
   end
@@ -77,7 +70,4 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   defp is_child_pid?(pid, state) do
     Enum.any?(state.children, fn {_name, entry} -> entry.pid == pid end)
   end
-
-  defp pipeline?(%Pipeline.State{}), do: true
-  defp pipeline?(_state), do: false
 end
