@@ -2,16 +2,15 @@ defmodule Membrane.RemoteControlled.Pipeline do
   @moduledoc """
   `Membrane.RemoteControlled.Pipeline` is a basic `Membrane.Pipeline` implementation that can be
   controlled by a controlling process. The controlling process can request the execution of arbitrary
-  valid `Membrane.Pipeline.Action`. The controlling process can also subscribe and await for certain
-  events that are emitted by the pipeline. `Membrane.RemoteControlled.Pipeline` can be used when
-  there is no need for introducing a custom logic in the `Membrane.Pipeline` callbacks implementation.
-  An example of usage could be running a pipeline from the elixir script.
-  Membrane.RemoteControlled.Pipeline emits the following events:
-  * `{:playback_state, Membrane.PlaybackState.t()}` emitted when pipeline enters
-  a given playback state,
-  * `{:start_of_stream | :end_of_stream, Membrane.Element.name_t(), Membrane.Pad.name_t()}` emitted
+  valid `Membrane.Pipeline.Action`. The controlling process can also subscribe and await for
+  `Membrane.RemoteControlled.Pipeline.message_t()` that are sent by the pipeline.
+  `Membrane.RemoteControlled.Pipeline` can be used when there is no need for introducing a custom
+  logic in the `Membrane.Pipeline` callbacks implementation. An example of usage could be running a
+  pipeline from the elixir script. `Membrane.RemoteControlled.Pipeline` sends the following messages:
+  * `{:playback_state, Membrane.PlaybackState.t()}` sent when pipeline enters a given playback state,
+  * `{:start_of_stream | :end_of_stream, Membrane.Element.name_t(), Membrane.Pad.name_t()}` sent
   when one of direct pipeline children informs the pipeline about start or end of stream,
-  * `{:notification, Membrane.Element.name_t(), Membrane.Notification.t()}` emitted when pipeline
+  * `{:notification, Membrane.Element.name_t(), Membrane.Notification.t()}` sent when pipeline
   receives notification from one of its children.
   """
 
@@ -19,7 +18,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   alias Membrane.Pipeline
 
-  @type event_t ::
+  @type message_t ::
           {:playback_state, Membrane.PlaybackState.t()}
           | {:start_of_stream | :end_of_stream, Membrane.Element.name_t(), Membrane.Pad.name_t()}
           | {:notification, Membrane.Element.name_t(), Membrane.Notification.t()}
@@ -37,8 +36,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   """
   @spec start_link(GenServer.options()) :: GenServer.on_start()
   def start_link(process_options \\ []) do
-    args = [__MODULE__, %{controller_pid: self()}, process_options]
-    apply(Pipeline, :start_link, args)
+    Pipeline.start_link(__MODULE__, %{controller_pid: self()}, process_options)
   end
 
   @doc """
@@ -46,33 +44,33 @@ defmodule Membrane.RemoteControlled.Pipeline do
   """
   @spec start(GenServer.options()) :: GenServer.on_start()
   def start(process_options \\ []) do
-    args = [__MODULE__, %{controller_pid: self()}, process_options]
-    apply(Pipeline, :start, args)
+    Pipeline.start(__MODULE__, %{controller_pid: self()}, process_options)
   end
 
   @doc """
-  Awaits for the first `Membrane.RemoteControlled.Pipeline.event_t()` that matches the given `pattern`.
+  Awaits for the first `Membrane.RemoteControlled.Pipeline.message_t()` that matches the given `pattern`.
   It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` before awaiting
-  any events. `pattern` has to be a match pattern.
+  any messages. `pattern` has to be a match pattern.
   """
-  defmacro await(pattern) do
+  defmacro await(pipeline, pattern) do
     quote do
-      unquote(pattern) =
+      {_pipeline, unquote(pattern)} =
         receive do
-          unquote(pattern) = msg ->
+          {unquote(pipeline), unquote(pattern)} = msg ->
             msg
         end
     end
   end
 
   @doc """
-  Subscribes to a given `subscription_pattern`.
-  The `subscription_pattern` must be a match pattern.
+  Subscribes to a given `subscription_pattern`. The `subscription_pattern` should describe some subset
+  of elements of `Membrane.RemoteControlled.Pipeline.message_t()` type. The `subscription_pattern`
+  must be a match pattern.
 
       subscribe(pid, {:playback_state, _})
 
-  Such call would make the `Membrane.RemoteControlled.Pipeline` to send all `:playback_state` events to the
-  controlling process.
+  Such call would make the `Membrane.RemoteControlled.Pipeline` to send all `:playback_state` messages
+  to the controlling process.
   """
   defmacro subscribe(pipeline, subscription_pattern) do
     quote do
@@ -103,7 +101,6 @@ defmodule Membrane.RemoteControlled.Pipeline do
   @impl true
   def handle_init(opts) do
     %{controller_pid: controller_pid} = opts
-
     state = %State{controller_pid: controller_pid}
     {:ok, state}
   end
@@ -112,7 +109,6 @@ defmodule Membrane.RemoteControlled.Pipeline do
   def handle_playing_to_prepared(_ctx, state) do
     pipeline_event = {:playback_state, :prepared}
     maybe_send_event_to_controller(pipeline_event, state)
-
     {:ok, state}
   end
 
@@ -120,7 +116,6 @@ defmodule Membrane.RemoteControlled.Pipeline do
   def handle_prepared_to_playing(_ctx, state) do
     pipeline_event = {:playback_state, :playing}
     maybe_send_event_to_controller(pipeline_event, state)
-
     {:ok, state}
   end
 
@@ -128,7 +123,6 @@ defmodule Membrane.RemoteControlled.Pipeline do
   def handle_prepared_to_stopped(_ctx, state) do
     pipeline_event = {:playback_state, :stopped}
     maybe_send_event_to_controller(pipeline_event, state)
-
     {:ok, state}
   end
 
@@ -136,7 +130,6 @@ defmodule Membrane.RemoteControlled.Pipeline do
   def handle_stopped_to_prepared(_ctx, state) do
     pipeline_event = {:playback_state, :prepared}
     maybe_send_event_to_controller(pipeline_event, state)
-
     {:ok, state}
   end
 
@@ -144,7 +137,6 @@ defmodule Membrane.RemoteControlled.Pipeline do
   def handle_stopped_to_terminating(_ctx, state) do
     pipeline_event = {:playback_state, :terminating}
     maybe_send_event_to_controller(pipeline_event, state)
-
     {:ok, state}
   end
 
@@ -152,7 +144,6 @@ defmodule Membrane.RemoteControlled.Pipeline do
   def handle_element_end_of_stream({element_name, pad_ref}, _ctx, state) do
     pipeline_event = {:end_of_stream, element_name, pad_ref}
     maybe_send_event_to_controller(pipeline_event, state)
-
     {:ok, state}
   end
 
@@ -160,7 +151,6 @@ defmodule Membrane.RemoteControlled.Pipeline do
   def handle_element_start_of_stream({element_name, pad_ref}, _ctx, state) do
     pipeline_event = {:start_of_stream, element_name, pad_ref}
     maybe_send_event_to_controller(pipeline_event, state)
-
     {:ok, state}
   end
 
@@ -168,7 +158,6 @@ defmodule Membrane.RemoteControlled.Pipeline do
   def handle_notification(notification, element, _ctx, state) do
     pipeline_event = {:notification, element, notification}
     maybe_send_event_to_controller(pipeline_event, state)
-
     {:ok, state}
   end
 
@@ -184,7 +173,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   defp maybe_send_event_to_controller(event, state) do
     if Enum.any?(state.matching_functions, & &1.(event)) do
-      send(state.controller_pid, event)
+      send(state.controller_pid, {self(), event})
     end
   end
 end

@@ -65,12 +65,12 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
       Pipeline.play(pipeline)
 
-      assert_receive {:playback_state, :prepared}
-      assert_receive {:playback_state, :playing}
-      assert_receive {:notification, :b, :test_notification}
-      assert_receive {:start_of_stream, :b, :input}
-      refute_receive {:playback_state, :terminating}
-      refute_receive {:playback_state, :stopped}
+      assert_receive {pipeline, {:playback_state, :prepared}}
+      assert_receive {pipeline, {:playback_state, :playing}}
+      assert_receive {pipeline, {:notification, :b, :test_notification}}
+      assert_receive {pipeline, {:start_of_stream, :b, :input}}
+      refute_receive {pipeline, {:playback_state, :terminating}}
+      refute_receive {pipeline, {:playback_state, :stopped}}
 
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
     end
@@ -81,19 +81,18 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
       Pipeline.play(pipeline)
 
-      assert_receive {:playback_state, :prepared}
-      assert_receive {:playback_state, :playing}
-      assert_receive {:end_of_stream, :b, :input}
-      assert_receive {:end_of_stream, :c, :input}
+      assert_receive {pipeline, {:playback_state, :prepared}}
+      assert_receive {pipeline, {:playback_state, :playing}}
+      assert_receive {pipeline, {:end_of_stream, :b, :input}}
+      assert_receive {pipeline, {:end_of_stream, :c, :input}}
 
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
 
-      assert_receive {:playback_state, :stopped}
+      assert_receive {pipeline, {:playback_state, :stopped}}
 
       # assert_receive {:playback_state, :terminating} TODO: figure out why terminating is not delivered
-
-      refute_receive {:notification, _, _}
-      refute_receive {:start_of_stream, _, _}
+      refute_receive {pipeline, {:notification, _, _}}
+      refute_receive {pipeline, {:start_of_stream, _, _}}
     end
   end
 
@@ -107,9 +106,9 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
       Pipeline.play(pipeline)
 
-      Pipeline.await({:playback_state, :playing})
-      Pipeline.await({:start_of_stream, :b, :input})
-      Pipeline.await({:notification, :b, notification})
+      Pipeline.await(pipeline, {:playback_state, :playing})
+      Pipeline.await(pipeline, {:start_of_stream, :b, :input})
+      Pipeline.await(pipeline, {:notification, :b, notification})
 
       assert :test_notification == notification
 
