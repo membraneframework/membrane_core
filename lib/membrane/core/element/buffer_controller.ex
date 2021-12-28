@@ -53,7 +53,7 @@ defmodule Membrane.Core.Element.BufferController do
   end
 
   @doc """
-  Executes `handle_process` or `handle_write_list` callback.
+  Executes `handle_process_list` or `handle_write_list` callback.
   """
   @spec exec_buffer_handler(
           Pad.ref_t(),
