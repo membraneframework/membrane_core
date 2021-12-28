@@ -188,21 +188,15 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   defp update_demand(pad_ref, size_fun, state) when is_function(size_fun) do
-    PadModel.update_data!(
-      state,
-      pad_ref,
-      :demand,
-      fn demand ->
-        new_demand = size_fun.(demand)
+    demand = PadModel.get_data!(state, pad_ref, :demand)
+    new_demand = size_fun.(demand)
 
-        if new_demand < 0 do
-          raise Membrane.ElementError,
-                "Demand altering function requested negative demand on pad #{inspect(pad_ref)} in #{state.module}"
-        end
+    if new_demand < 0 do
+      raise Membrane.ElementError,
+               "Demand altering function requested negative demand on pad #{inspect(pad_ref)} in #{state.module}"
+    end
 
-        new_demand
-      end
-    )
+    PadModel.set_data!(state, pad_ref, :demand, new_demand)
   end
 
   @spec handle_delayed_demands(State.t()) :: State.stateful_try_t()
