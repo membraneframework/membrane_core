@@ -1,8 +1,18 @@
 defmodule Membrane.FilterAggregator do
+  @moduledoc """
+  An element allowing to aggregate many filters within one Elixir process.
+
+  This element supports only filters with one input and one output
+  with following restrictions:
+  * not using timers
+  * (To be fixed) not relying on callback contexts
+  * not relying on received messages
+  * their pads have to be named `:input` and `:output`
+  """
   use Membrane.Filter
 
   def_options filters: [
-                spec: [module()],
+                spec: [module() | struct()],
                 description: "A list of filters applied to incoming stream"
               ]
 
@@ -51,6 +61,20 @@ defmodule Membrane.FilterAggregator do
   def handle_prepared_to_playing(_ctx, %{states: states}) do
     {actions, states} = pipe_downstream([:prepared_to_playing], states)
     actions = List.delete(actions, :prepared_to_playing)
+    {{:ok, actions}, %{states: states}}
+  end
+
+  @impl true
+  def handle_playing_to_prepared(_ctx, %{states: states}) do
+    {actions, states} = pipe_downstream([:playing_to_prepared], states)
+    actions = List.delete(actions, :playing_to_prepared)
+    {{:ok, actions}, %{states: states}}
+  end
+
+  @impl true
+  def handle_prepared_to_stopped(_ctx, %{states: states}) do
+    {actions, states} = pipe_downstream([:prepared_to_stopped], states)
+    actions = List.delete(actions, :prepared_to_stopped)
     {{:ok, actions}, %{states: states}}
   end
 
@@ -161,8 +185,8 @@ defmodule Membrane.FilterAggregator do
       {:ok, next_state} ->
         perform_actions(actions, module, next_state, next_actions_acc)
 
-      _ ->
-        raise "Invalid return from callback"
+      term ->
+        raise "Invalid return from callback: #{inspect(term)}"
     end
   end
 
@@ -182,7 +206,7 @@ defmodule Membrane.FilterAggregator do
     module.handle_event(:input, event, %{}, state)
   end
 
-  # Virtual action that doesn't exist used to trigger handle_start_of_stream
+  # Pseudo-action that doesn't exist used to trigger handle_start_of_stream
   defp perform_action({:start_of_stream, :output}, module, state) do
     {{:ok, actions}, new_state} =
       case module.handle_start_of_stream(:input, %{}, state) do
@@ -208,6 +232,11 @@ defmodule Membrane.FilterAggregator do
     {{:ok, redemand: :output}, state}
   end
 
+  defp perform_action({:notify, message}, _module, state) do
+    # Pass the action downstream
+    {{:ok, notify: message}, state}
+  end
+
   defp perform_action({:split, {:handle_process, args_lists}}, module, state) do
     {{:ok, actions}, state} =
       args_lists
@@ -218,7 +247,7 @@ defmodule Membrane.FilterAggregator do
         end
       end)
 
-    # instead of redemands from splitted callback calls put one after all other actions
+    # instead of redemands from splitted callback calls, put one after all other actions
     actions =
       actions
       |> Enum.split_with(fn
@@ -233,25 +262,36 @@ defmodule Membrane.FilterAggregator do
     {{:ok, actions}, state}
   end
 
-  defp perform_action(:stopped_to_prepared, module, state) do
+  # Playback state change actions. They use pseudo-action to invoke proper callback in following element
+  defp perform_action(action, module, state)
+       when action in [
+              :stopped_to_prepared,
+              :prepared_to_playing,
+              :playing_to_prepared,
+              :prepared_to_stopped
+            ] do
+    perform_playback_change(action, module, state)
+  end
+
+  defp perform_action({:latency, _latency}, _module, _state) do
+    raise "latency action not supported in #{inspect(__MODULE__)}"
+  end
+
+  defp perform_playback_change(pseudo_action, module, state) do
+    callback =
+      case pseudo_action do
+        :stopped_to_prepared -> :handle_stopped_to_prepared
+        :prepared_to_playing -> :handle_prepared_to_playing
+        :playing_to_prepared -> :handle_playing_to_prepared
+        :prepared_to_stopped -> :handle_prepared_to_stopped
+      end
+
     {{:ok, actions}, new_state} =
-      case module.handle_stopped_to_prepared(%{}, state) do
+      case apply(module, callback, [%{}, state]) do
         {:ok, state} -> {{:ok, []}, state}
         result -> result
       end
 
-    {{:ok, actions ++ [:stopped_to_prepared]}, new_state}
+    {{:ok, actions ++ [pseudo_action]}, new_state}
   end
-
-  defp perform_action(:prepared_to_playing, module, state) do
-    {{:ok, actions}, new_state} =
-      case module.handle_prepared_to_playing(%{}, state) do
-        {:ok, state} -> {{:ok, []}, state}
-        result -> result
-      end
-
-    {{:ok, actions ++ [:prepared_to_playing]}, new_state}
-  end
-
-  # TODO: notify, pb_change, timers, latency
 end
