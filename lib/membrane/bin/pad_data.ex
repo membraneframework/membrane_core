@@ -35,20 +35,20 @@ defmodule Membrane.Bin.PadData do
           demand_unit: private_field
         }
 
-  @enforce_keysx [
+  @enforce_keys [
     :ref,
-    :link_id,
-    :endpoint,
-    :linked?,
-    :response_received?,
-    :spec_ref,
     :options,
     :accepted_caps,
     :availability,
     :direction,
     :mode,
-    :name
+    :name,
+    :link_id,
+    :endpoint,
+    :linked?,
+    :response_received?,
+    :spec_ref
   ]
 
-  defstruct @enforce_keysx ++ [demand_unit: nil]
+  defstruct @enforce_keys ++ [demand_unit: nil]
 end

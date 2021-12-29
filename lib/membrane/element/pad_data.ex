@@ -30,7 +30,6 @@ defmodule Membrane.Element.PadData do
           accepted_caps: Caps.Matcher.caps_specs_t(),
           availability: Pad.availability_t(),
           caps: Caps.t() | nil,
-          demand: integer() | nil,
           start_of_stream?: boolean(),
           end_of_stream?: boolean(),
           direction: Pad.direction_t(),
@@ -38,41 +37,42 @@ defmodule Membrane.Element.PadData do
           name: Pad.name_t(),
           ref: Pad.ref_t(),
           options: %{optional(atom) => any},
-          demand_unit: private_field,
-          other_demand_unit: private_field,
           pid: private_field,
           other_ref: private_field,
-          sticky_messages: private_field,
           input_buf: private_field,
-          toilet: private_field,
+          demand: integer() | nil,
           demand_mode: private_field,
+          demand_unit: private_field,
+          other_demand_unit: private_field,
+          sticky_messages: private_field,
+          toilet: private_field,
           associated_pads: private_field
         }
 
-  @enforce_keysx [
+  @enforce_keys [
     :accepted_caps,
     :availability,
+    :caps,
+    :start_of_stream?,
+    :end_of_stream?,
     :direction,
     :mode,
     :name,
-    :caps,
     :ref,
-    :pid,
-    :other_ref,
-    :start_of_stream?,
-    :end_of_stream?,
     :options,
-    :toilet,
-    :associated_pads
+    :pid,
+    :other_ref
   ]
 
-  defstruct @enforce_keysx ++
+  defstruct @enforce_keys ++
               [
                 input_buf: nil,
                 demand: nil,
                 demand_mode: nil,
                 demand_unit: nil,
                 other_demand_unit: nil,
-                sticky_messages: []
+                sticky_messages: [],
+                toilet: nil,
+                associated_pads: []
               ]
 end
