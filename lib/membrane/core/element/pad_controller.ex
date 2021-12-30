@@ -14,7 +14,8 @@ defmodule Membrane.Core.Element.PadController do
     DemandController,
     EventController,
     PlaybackBuffer,
-    State
+    State,
+    Toilet
   }
 
   alias Membrane.Core.Parent.Link.Endpoint
@@ -37,10 +38,10 @@ defmodule Membrane.Core.Element.PadController do
           Endpoint.t(),
           Endpoint.t(),
           PadModel.pad_info_t() | nil,
-          %{toilet: reference()} | nil,
+          %{toilet: Toilet.t() | nil} | nil,
           State.t()
         ) ::
-          {{:ok, {Endpoint.t(), PadModel.pad_info_t()}}, State.t()}
+          {{:ok, {Endpoint.t(), PadModel.pad_info_t(), %{toilet: Toilet.t() | nil}}}, State.t()}
   def handle_link(direction, this, other, other_info, link_metadata, state) do
     Membrane.Logger.debug(
       "Element handle link on pad #{inspect(this.pad_ref)} with pad #{inspect(other.pad_ref)} of child #{inspect(other.child)}"
@@ -60,14 +61,16 @@ defmodule Membrane.Core.Element.PadController do
 
     :ok = Child.PadController.validate_pad_being_linked!(this.pad_ref, direction, info, state)
 
+    toilet = if direction == :input, do: Toilet.new(200, self()), else: nil
+
     {other, other_info, link_metadata} =
       if link_metadata do
-        {other, other_info, link_metadata}
+        {other, other_info, %{link_metadata | toilet: link_metadata.toilet || toilet}}
       else
         other_direction = Pad.opposite_direction(direction)
-        metadata = %{toilet: :atomics.new(1, [])}
+        metadata = %{toilet: toilet}
 
-        {:ok, {other, other_info}} =
+        {:ok, {other, other_info, metadata}} =
           Message.call(other.pid, :handle_link, [other_direction, other, this, info, metadata])
 
         {other, other_info, metadata}
@@ -96,7 +99,7 @@ defmodule Membrane.Core.Element.PadController do
         :static -> {:ok, state}
       end
 
-    {{:ok, {this, info}}, state}
+    {{:ok, {this, info, link_metadata}}, state}
   end
 
   @doc """

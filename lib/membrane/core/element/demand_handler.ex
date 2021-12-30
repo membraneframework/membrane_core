@@ -14,7 +14,8 @@ defmodule Membrane.Core.Element.DemandHandler do
     CapsController,
     DemandController,
     EventController,
-    State
+    State,
+    Toilet
   }
 
   alias Membrane.Pad
@@ -134,48 +135,9 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   def handle_outgoing_buffers(_pad_ref, %{mode: :push, toilet: toilet} = data, buffers, state)
       when toilet != nil do
-    %{other_demand_unit: other_demand_unit, pid: pid} = data
+    %{other_demand_unit: other_demand_unit} = data
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
-    toilet_size = :atomics.add_get(toilet, 1, buf_size)
-
-    if toilet_size > 200 do
-      Membrane.Logger.debug_verbose(~S"""
-      Toilet overflow
-
-                   ` ' `
-               .'''. ' .'''.
-                 .. ' ' ..
-                '  '.'.'  '
-                .'''.'.'''.
-               ' .''.'.''. '
-             ;------ ' ------;
-             | ~~ .--'--//   |
-             |   /   '   \   |
-             |  /    '    \  |
-             |  |    '    |  |  ,----.
-             |   \ , ' , /   | =|____|=
-             '---,###'###,---'  (---(
-                /##  '  ##\      )---)
-                |##, ' ,##|     (---(
-                 \'#####'/       `---`
-                  \`"#"`/
-                   |`"`|
-                 .-|   |-.
-            jgs /  '   '  \
-                '---------'
-      """)
-
-      Membrane.Logger.error("""
-      Toilet overflow.
-
-      Reached the size of #{inspect(toilet_size)},
-      which is above fail level when storing data from output working in push mode.
-      To have control over amount of buffers being produced, consider using pull mode.
-      """)
-
-      Process.exit(pid, :kill)
-    end
-
+    Toilet.urinate(toilet, buf_size)
     state
   end
 
@@ -193,7 +155,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
     if new_demand < 0 do
       raise Membrane.ElementError,
-               "Demand altering function requested negative demand on pad #{inspect(pad_ref)} in #{state.module}"
+            "Demand altering function requested negative demand on pad #{inspect(pad_ref)} in #{state.module}"
     end
 
     PadModel.set_data!(state, pad_ref, :demand, new_demand)
@@ -255,7 +217,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - size))
 
     if toilet = PadModel.get_data!(state, pad_ref, :toilet) do
-      :atomics.sub(toilet, 1, size)
+      Toilet.rinse(toilet, size)
     end
 
     BufferController.exec_buffer_callback(pad_ref, buffers, state)

@@ -58,7 +58,7 @@ defmodule Membrane.Core.ElementTest do
           %{pad_ref: :output, pad_props: [], child: :this},
           %{pad_ref: :input, pid: self(), child: :other},
           %{direction: :input, mode: :pull, demand_unit: :buffers},
-          %{toilet: :atomics.new(1, [])}
+          %{toilet: nil}
         ]),
         nil,
         get_state()
@@ -71,7 +71,7 @@ defmodule Membrane.Core.ElementTest do
           %{pad_ref: :input, pad_props: [], child: :this},
           %{pad_ref: :output, pid: self(), child: :other},
           %{direction: :output, mode: :pull},
-          %{toilet: :atomics.new(1, [])}
+          %{toilet: nil}
         ]),
         nil,
         state
@@ -188,7 +188,7 @@ defmodule Membrane.Core.ElementTest do
                  %{pad_ref: :output, pad_props: [], child: :this},
                  %{pad_ref: :input, pid: pid, child: :other},
                  %{direction: :input, mode: :pull, demand_unit: :buffers},
-                 %{toilet: :atomics.new(1, [])}
+                 %{toilet: nil}
                ]),
                nil,
                get_state()
@@ -204,7 +204,7 @@ defmodule Membrane.Core.ElementTest do
               mode: :pull,
               name: :output,
               options: nil
-            }} = reply
+            }, %{toilet: nil}} = reply
 
     assert %Membrane.Element.PadData{
              pid: ^pid,

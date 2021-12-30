@@ -7,7 +7,7 @@ defmodule Membrane.Core.Element.DemandController do
 
   alias Membrane.Core.{CallbackHandler, Message}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, State}
+  alias Membrane.Core.Element.{ActionHandler, State, Toilet}
   alias Membrane.Element.CallbackContext
   alias Membrane.Pad
 
@@ -81,7 +81,7 @@ defmodule Membrane.Core.Element.DemandController do
     demand =
       if demand <= div(demand_request_size, 2) and auto_demands_positive?(associated_pads, state) do
         if toilet do
-          :atomics.sub(toilet, 1, demand_request_size - demand)
+          Toilet.rinse(toilet, demand_request_size - demand)
         else
           Membrane.Logger.debug_verbose(
             "Sending auto demand of size #{demand_request_size - demand} on pad #{inspect(pad_ref)}"

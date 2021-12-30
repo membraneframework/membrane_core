@@ -43,7 +43,7 @@ defmodule Membrane.Core.Child.PadModel do
           sticky_messages: [Membrane.Event.t()],
           input_buf: Membrane.Core.InputBuffer.t() | nil,
           options: %{optional(atom) => any},
-          toilet: :atomics.atomics_ref() | nil,
+          toilet: Membrane.Core.Element.Toilet.t() | nil,
           demand_mode: :auto | :manual | nil,
           associated_pads: [Pad.ref_t()] | nil
         }
