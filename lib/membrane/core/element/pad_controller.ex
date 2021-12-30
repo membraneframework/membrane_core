@@ -6,13 +6,15 @@ defmodule Membrane.Core.Element.PadController do
   use Bunch
   alias Bunch.Type
   alias Membrane.{Core, Pad}
-  alias Membrane.Core.{CallbackHandler, Child, Events, InputBuffer, Message}
+  alias Membrane.Core.{CallbackHandler, Child, Events, Message}
   alias Membrane.Core.Child.PadModel
 
   alias Membrane.Core.Element.{
     ActionHandler,
     DemandController,
+    DemandHandler,
     EventController,
+    InputQueue,
     PlaybackBuffer,
     State,
     Toilet
@@ -27,8 +29,6 @@ defmodule Membrane.Core.Element.PadController do
   require Membrane.Element.CallbackContext.{PadAdded, PadRemoved}
   require Membrane.Logger
   require Membrane.Pad
-
-  @typep parsed_pad_props_t :: %{buffer: InputBuffer.props_t(), options: map}
 
   @doc """
   Verifies linked pad, initializes it's data.
@@ -61,7 +61,10 @@ defmodule Membrane.Core.Element.PadController do
 
     :ok = Child.PadController.validate_pad_being_linked!(this.pad_ref, direction, info, state)
 
-    toilet = if direction == :input, do: Toilet.new(200, self()), else: nil
+    toilet =
+      if direction == :input,
+        do: Toilet.new(this.pad_props.toilet_capacity_factor, info.demand_unit, self()),
+        else: nil
 
     {other, other_info, link_metadata} =
       if link_metadata do
@@ -79,13 +82,11 @@ defmodule Membrane.Core.Element.PadController do
     :ok =
       Child.PadController.validate_pad_mode!({this.pad_ref, info}, {other.pad_ref, other_info})
 
-    props = Child.PadController.parse_pad_props!(this.pad_props, name, state)
-
     state =
       init_pad_data(
         this.pad_ref,
         info,
-        props,
+        this.pad_props,
         other.pad_ref,
         other.pid,
         other_info,
@@ -122,23 +123,13 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  @spec init_pad_data(
-          Pad.ref_t(),
-          PadModel.pad_info_t(),
-          parsed_pad_props_t,
-          Pad.ref_t(),
-          pid,
-          PadModel.pad_info_t(),
-          map,
-          Core.Element.State.t()
-        ) :: Core.Element.State.t()
   defp init_pad_data(ref, info, props, other_ref, other_pid, other_info, metadata, state) do
     data =
       info
       |> Map.merge(%{
         pid: other_pid,
         other_ref: other_ref,
-        options: props.options,
+        options: Child.PadController.parse_pad_options!(info.name, props.options, state),
         ref: ref,
         caps: nil,
         start_of_stream?: false,
@@ -172,14 +163,6 @@ defmodule Membrane.Core.Element.PadController do
   defp init_pad_direction_data(%{direction: :input}, _props, _state), do: %{sticky_messages: []}
   defp init_pad_direction_data(%{direction: :output}, _props, _state), do: %{}
 
-  @spec init_pad_mode_data(
-          map(),
-          parsed_pad_props_t,
-          PadModel.pad_info_t(),
-          map,
-          Core.Element.State.t()
-        ) ::
-          map()
   defp init_pad_mode_data(
          %{mode: :pull, direction: :input, demand_mode: :manual} = data,
          props,
@@ -190,10 +173,18 @@ defmodule Membrane.Core.Element.PadController do
     %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
     enable_toilet? = other_info.mode == :push
 
-    input_buf =
-      InputBuffer.init(demand_unit, pid, other_ref, inspect(ref), enable_toilet?, props.buffer)
+    input_queue =
+      InputQueue.init(%{
+        demand_unit: demand_unit,
+        demand_pid: pid,
+        demand_pad: other_ref,
+        log_tag: inspect(ref),
+        toilet?: enable_toilet?,
+        demand_excess_factor: props.demand_excess_factor,
+        min_demand_factor: props.min_demand_factor
+      })
 
-    %{input_buf: input_buf, demand: 0, toilet: if(enable_toilet?, do: metadata.toilet)}
+    %{input_queue: input_queue, demand: 0, toilet: if(enable_toilet?, do: metadata.toilet)}
   end
 
   defp init_pad_mode_data(
@@ -207,7 +198,7 @@ defmodule Membrane.Core.Element.PadController do
 
   defp init_pad_mode_data(
          %{mode: :pull, demand_mode: :auto, direction: direction},
-         _props,
+         props,
          other_info,
          metadata,
          %Membrane.Core.Element.State{} = state
@@ -225,10 +216,21 @@ defmodule Membrane.Core.Element.PadController do
         nil
       end
 
+    auto_demand_size =
+      if direction == :input do
+        ceil(
+          Membrane.Buffer.Metric.Count.buffer_size_approximation() *
+            (props.auto_demand_size_factor || DemandHandler.default_auto_demand_size_factor())
+        )
+      else
+        nil
+      end
+
     %{
       demand: 0,
       associated_pads: associated_pads,
       other_demand_unit: other_info[:demand_unit],
+      auto_demand_size: auto_demand_size,
       toilet: toilet
     }
   end

@@ -11,7 +11,7 @@ defmodule Membrane.Core.Child.PadModel do
 
   @type bin_pad_data_t :: %Membrane.Bin.PadData{
           ref: Membrane.Pad.ref_t(),
-          options: Membrane.ParentSpec.pad_props_t(),
+          options: Membrane.ParentSpec.pad_options_t(),
           link_id: Membrane.Core.Parent.ChildLifeController.LinkHandler.link_id_t(),
           endpoint: Membrane.Core.Parent.Link.Endpoint.t(),
           linked?: boolean(),
@@ -41,10 +41,11 @@ defmodule Membrane.Core.Child.PadModel do
           pid: pid,
           other_ref: Pad.ref_t(),
           sticky_messages: [Membrane.Event.t()],
-          input_buf: Membrane.Core.InputBuffer.t() | nil,
+          input_queue: Membrane.Core.Element.InputQueue.t() | nil,
           options: %{optional(atom) => any},
           toilet: Membrane.Core.Element.Toilet.t() | nil,
           demand_mode: :auto | :manual | nil,
+          auto_demand_size: pos_integer() | nil,
           associated_pads: [Pad.ref_t()] | nil
         }
 

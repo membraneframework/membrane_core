@@ -6,7 +6,6 @@ defmodule Membrane.Core.Element.DemandHandler do
   use Bunch
 
   alias Membrane.Buffer
-  alias Membrane.Core.InputBuffer
   alias Membrane.Core.Child.PadModel
 
   alias Membrane.Core.Element.{
@@ -14,6 +13,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     CapsController,
     DemandController,
     EventController,
+    InputQueue,
     State,
     Toilet
   }
@@ -23,6 +23,9 @@ defmodule Membrane.Core.Element.DemandHandler do
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
   require Membrane.Logger
+
+  @spec default_auto_demand_size_factor() :: number()
+  def default_auto_demand_size_factor, do: 4000
 
   @doc """
   Called when redemand action was returned.
@@ -47,7 +50,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   @doc """
   If element is not supplying demand currently, this function supplies
-  demand right away by taking buffers from the InputBuffer of the given input pad
+  demand right away by taking buffers from the InputQueue of the given input pad
   and passing it to proper controllers.
 
   If element is currently supplying demand it delays supplying demand until all
@@ -55,7 +58,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   This is necessary due to the case when one requests a demand action while previous
   demand is being supplied. This could lead to a situation where buffers are taken
-  from InputBuffer and passed to callbacks, while buffers being currently supplied
+  from InputQueue and passed to callbacks, while buffers being currently supplied
   have not been processed yet, and therefore to changing order of buffers.
 
   The `size` argument can be passed optionally to update the demand on the pad
@@ -95,17 +98,17 @@ defmodule Membrane.Core.Element.DemandHandler do
 
     pad_data = state |> PadModel.get_data!(pad_ref)
 
-    {{_buffer_status, data}, new_input_buf} =
-      InputBuffer.take_and_demand(
-        pad_data.input_buf,
+    {{_buffer_status, data}, new_input_queue} =
+      InputQueue.take_and_demand(
+        pad_data.input_queue,
         pad_data.demand,
         pad_data.pid,
         pad_data.other_ref
       )
 
-    state = PadModel.set_data!(state, pad_ref, :input_buf, new_input_buf)
+    state = PadModel.set_data!(state, pad_ref, :input_queue, new_input_queue)
 
-    with {:ok, state} <- handle_input_buf_output(pad_ref, data, state) do
+    with {:ok, state} <- handle_input_queue_output(pad_ref, data, state) do
       {:ok, %State{state | supplying_demand?: false}}
     else
       {{:error, reason}, state} ->
@@ -186,30 +189,30 @@ defmodule Membrane.Core.Element.DemandHandler do
     end
   end
 
-  @spec handle_input_buf_output(
+  @spec handle_input_queue_output(
           Pad.ref_t(),
-          [InputBuffer.output_value_t()],
+          [InputQueue.output_value_t()],
           State.t()
         ) :: State.stateful_try_t()
-  defp handle_input_buf_output(pad_ref, data, state) do
+  defp handle_input_queue_output(pad_ref, data, state) do
     data
     |> Bunch.Enum.try_reduce(state, fn v, state ->
-      do_handle_input_buf_output(pad_ref, v, state)
+      do_handle_input_queue_output(pad_ref, v, state)
     end)
   end
 
-  @spec do_handle_input_buf_output(
+  @spec do_handle_input_queue_output(
           Pad.ref_t(),
-          InputBuffer.output_value_t(),
+          InputQueue.output_value_t(),
           State.t()
         ) :: State.stateful_try_t()
-  defp do_handle_input_buf_output(pad_ref, {:event, e}, state),
+  defp do_handle_input_queue_output(pad_ref, {:event, e}, state),
     do: EventController.exec_handle_event(pad_ref, e, state)
 
-  defp do_handle_input_buf_output(pad_ref, {:caps, c}, state),
+  defp do_handle_input_queue_output(pad_ref, {:caps, c}, state),
     do: CapsController.exec_handle_caps(pad_ref, c, state)
 
-  defp do_handle_input_buf_output(
+  defp do_handle_input_queue_output(
          pad_ref,
          {:buffers, buffers, size},
          state

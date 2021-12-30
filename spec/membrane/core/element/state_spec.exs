@@ -39,8 +39,7 @@ defmodule Membrane.Core.Element.StateSpec do
                latency: 0,
                stream_sync: Sync.no_sync()
              },
-             terminating: false,
-             demand_size: 4000
+             terminating: false
            )
       )
     end

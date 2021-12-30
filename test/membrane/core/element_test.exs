@@ -55,7 +55,7 @@ defmodule Membrane.Core.ElementTest do
       Element.handle_call(
         Message.new(:handle_link, [
           :output,
-          %{pad_ref: :output, pad_props: [], child: :this},
+          %{pad_ref: :output, pad_props: %{options: []}, child: :this},
           %{pad_ref: :input, pid: self(), child: :other},
           %{direction: :input, mode: :pull, demand_unit: :buffers},
           %{toilet: nil}
@@ -68,7 +68,17 @@ defmodule Membrane.Core.ElementTest do
       Element.handle_call(
         Message.new(:handle_link, [
           :input,
-          %{pad_ref: :input, pad_props: [], child: :this},
+          %{
+            pad_ref: :input,
+            pad_props: %{
+              options: [],
+              toilet_capacity_factor: nil,
+              demand_excess_factor: nil,
+              auto_demand_size_factor: nil,
+              min_demand_factor: nil
+            },
+            child: :this
+          },
           %{pad_ref: :output, pid: self(), child: :other},
           %{direction: :output, mode: :pull},
           %{toilet: nil}
@@ -154,7 +164,7 @@ defmodule Membrane.Core.ElementTest do
   test "should store incoming buffers in input buffer" do
     msg = Message.new(:buffer, [%Membrane.Buffer{payload: <<123>>}], for_pad: :input)
     assert {:noreply, state} = Element.handle_info(msg, playing_state())
-    assert state.pads.data.input.input_buf.current_size == 1
+    assert state.pads.data.input.input_queue.size == 1
   end
 
   test "should assign incoming caps to the pad and forward them" do
@@ -185,7 +195,11 @@ defmodule Membrane.Core.ElementTest do
              Element.handle_call(
                Message.new(:handle_link, [
                  :output,
-                 %{pad_ref: :output, pad_props: [], child: :this},
+                 %{
+                   pad_ref: :output,
+                   pad_props: %{options: [], toilet_capacity_factor: nil},
+                   child: :this
+                 },
                  %{pad_ref: :input, pid: pid, child: :other},
                  %{direction: :input, mode: :pull, demand_unit: :buffers},
                  %{toilet: nil}
@@ -194,7 +208,7 @@ defmodule Membrane.Core.ElementTest do
                get_state()
              )
 
-    assert {%{child: :this, pad_props: [], pad_ref: :output},
+    assert {%{child: :this, pad_props: %{options: []}, pad_ref: :output},
             %{
               accepted_caps: :any,
               availability: :always,

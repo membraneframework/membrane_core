@@ -21,7 +21,7 @@ defmodule Membrane.Bin.PadData do
 
   @type t :: %__MODULE__{
           ref: Membrane.Pad.ref_t(),
-          options: Membrane.ParentSpec.pad_props_t(),
+          options: Membrane.ParentSpec.pad_options_t(),
           accepted_caps: Membrane.Caps.Matcher.caps_specs_t(),
           availability: Membrane.Pad.availability_t(),
           direction: Membrane.Pad.direction_t(),

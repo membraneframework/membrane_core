@@ -6,9 +6,9 @@ defmodule Membrane.Core.Element.BufferController do
   use Bunch
 
   alias Membrane.{Buffer, Pad}
-  alias Membrane.Core.{CallbackHandler, InputBuffer, Telemetry}
+  alias Membrane.Core.{CallbackHandler, Telemetry}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, DemandController, DemandHandler, State}
+  alias Membrane.Core.Element.{ActionHandler, DemandController, DemandHandler, InputQueue, State}
   alias Membrane.Core.Telemetry
   alias Membrane.Element.CallbackContext
 
@@ -16,7 +16,7 @@ defmodule Membrane.Core.Element.BufferController do
   require Membrane.Core.Telemetry
 
   @doc """
-  Handles incoming buffer: either stores it in InputBuffer, or executes element's
+  Handles incoming buffer: either stores it in InputQueue, or executes element's
   callback. Also calls `Membrane.Core.Element.DemandHandler.supply_demand/2`
   to check if there are any unsupplied demands.
   """
@@ -37,11 +37,11 @@ defmodule Membrane.Core.Element.BufferController do
   end
 
   defp do_handle_buffer(pad_ref, %{mode: :pull} = data, buffers, state) do
-    %{input_buf: old_input_buf} = data
-    input_buf = InputBuffer.store(old_input_buf, buffers)
-    state = PadModel.set_data!(state, pad_ref, :input_buf, input_buf)
+    %{input_queue: old_input_queue} = data
+    input_queue = InputQueue.store(old_input_queue, buffers)
+    state = PadModel.set_data!(state, pad_ref, :input_queue, input_queue)
 
-    if old_input_buf |> InputBuffer.empty?() do
+    if old_input_queue |> InputQueue.empty?() do
       DemandHandler.supply_demand(pad_ref, state)
     else
       {:ok, state}

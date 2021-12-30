@@ -25,10 +25,10 @@ defmodule Membrane.Core.Bin.PadController do
           Pad.ref_t(),
           Pad.direction_t(),
           ChildLifeController.LinkHandler.link_id_t(),
-          Membrane.ParentSpec.pad_props_t(),
+          Membrane.ParentSpec.pad_options_t(),
           State.t()
         ) :: State.t() | no_return
-  def handle_external_link_request(pad_ref, direction, link_id, pad_props, state) do
+  def handle_external_link_request(pad_ref, direction, link_id, pad_options, state) do
     Membrane.Logger.debug("Received link request on pad #{inspect(pad_ref)}")
     pad_name = Pad.name_by_ref(pad_ref)
 
@@ -43,7 +43,7 @@ defmodule Membrane.Core.Bin.PadController do
       end
 
     :ok = Child.PadController.validate_pad_being_linked!(pad_ref, direction, info, state)
-    pad_props = Child.PadController.parse_pad_props!(pad_props, pad_name, state)
+    pad_options = Child.PadController.parse_pad_options!(pad_name, pad_options, state)
 
     state =
       with {:ok, response_received?} <- PadModel.get_data(state, pad_ref, :response_received?) do
@@ -62,7 +62,7 @@ defmodule Membrane.Core.Bin.PadController do
       PadModel.get_and_update_data!(
         state,
         pad_ref,
-        &{&1.spec_ref, %{&1 | link_id: link_id, options: pad_props.options}}
+        &{&1.spec_ref, %{&1 | link_id: link_id, options: pad_options}}
       )
 
     state =
@@ -153,6 +153,22 @@ defmodule Membrane.Core.Bin.PadController do
     pad_data = PadModel.get_data!(state, this.pad_ref)
     %{spec_ref: spec_ref, endpoint: endpoint} = pad_data
 
+    pad_props =
+      Map.merge(this.pad_props, endpoint.pad_props, fn key, external_value, internal_value ->
+        if key in [
+             :demand_excess_factor,
+             :min_demand_factor,
+             :auto_demand_size_factor,
+             :toilet_capacity_factor
+           ] do
+          external_value || internal_value
+        else
+          internal_value
+        end
+      end)
+
+    endpoint = %{endpoint | pad_props: pad_props}
+
     :ok =
       Child.PadController.validate_pad_mode!(
         {this.pad_ref, pad_data},
@@ -169,6 +185,7 @@ defmodule Membrane.Core.Bin.PadController do
       ])
 
     state = PadModel.set_data!(state, this.pad_ref, :linked?, true)
+    state = PadModel.set_data!(state, this.pad_ref, :endpoint, endpoint)
     state = ChildLifeController.LinkHandler.proceed_spec_linking(spec_ref, state)
     {reply, state}
   end

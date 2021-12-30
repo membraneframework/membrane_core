@@ -49,8 +49,7 @@ defmodule Membrane.Pad do
   such pad, and do it fast enough not to let data accumulate on such pad, what
   may lead to overflow of element process erlang queue, which is highly unwanted.
   - `:pull` output pad - element can send data through such pad only if it have
-  already received demand on the pad. Sending small, limited amount of
-  undemanded data is supported and handled by `Membrane.Core.InputBuffer`.
+  already received demand on the pad.
   - `:pull` input pad - element receives through such pad only data that it has
   previously demanded, so that no undemanded data can arrive.
 
@@ -69,7 +68,7 @@ defmodule Membrane.Pad do
 
   - `:manual` - demand is manually handled and requested. See `Membrane.Element.Action.demand_t`,
   `Membrane.Element.Action.redemand_t`, `c:Membrane.Element.WithOutputPads.handle_demand/5`
-  - `:automatic` - demand is managed automatically: the core ensures that there's demand
+  - `:auto` - demand is managed automatically: the core ensures that there's demand
   on each input pad (that has `demand_mode` set to `:auto`) whenever there's demand on all
   output pads (that have `demand_mode` set to `:auto`). Currently works only for
   `Membrane.Filter`s.
