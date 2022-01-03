@@ -81,12 +81,13 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def init(options) do
-    Process.monitor(options.parent)
+    %{parent: parent, name: name, module: module, log_metadata: log_metadata} = options
 
-    %{name: name, module: module, log_metadata: log_metadata} = options
+    Process.monitor(parent)
+
     name_str = if String.valid?(name), do: name, else: inspect(name)
     :ok = Membrane.Logger.set_prefix(name_str <> " bin")
-    Logger.metadata(log_metadata)
+    :ok = Logger.metadata(log_metadata)
     :ok = ComponentPath.set_and_append(log_metadata[:parent_path] || [], name_str <> " bin")
 
     Telemetry.report_init(:bin)

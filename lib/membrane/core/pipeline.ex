@@ -17,6 +17,13 @@ defmodule Membrane.Core.Pipeline do
     :ok = Membrane.ComponentPath.set([pipeline_name])
     :ok = Membrane.Logger.set_prefix(pipeline_name)
 
+    # NOTE: this would be super helpful to get the metadata inside the `report_init`
+    # but it is not super intuitive for membrane users that this happens automatically on an arbitrary pipeline option...
+    :ok =
+      pipeline_options
+      |> Keyword.get(:log_metadata, [])
+      |> Logger.metadata()
+
     Telemetry.report_init(:pipeline)
 
     {:ok, clock} = Clock.start_link(proxy: true)

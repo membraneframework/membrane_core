@@ -113,7 +113,17 @@ defmodule Membrane.Core.Telemetry do
         %{path: ComponentPath.get_formatted()}
       end
 
-    report_event(event, value, Enum.find(@telemetry_flags, &(&1 == :inits_and_terminates)) != nil)
+    metadata =
+      quote do
+        %{log_metadata: Logger.metadata()}
+      end
+
+    report_event(
+      event,
+      value,
+      Enum.find(@telemetry_flags, &(&1 == :inits_and_terminates)) != nil,
+      metadata
+    )
   end
 
   @doc """
@@ -130,17 +140,27 @@ defmodule Membrane.Core.Telemetry do
         %{path: ComponentPath.get_formatted()}
       end
 
-    report_event(event, value, Enum.find(@telemetry_flags, &(&1 == :inits_and_terminates)) != nil)
+    metadata =
+      quote do
+        %{log_metadata: Logger.metadata()}
+      end
+
+    report_event(
+      event,
+      value,
+      Enum.find(@telemetry_flags, &(&1 == :inits_and_terminates)) != nil,
+      metadata
+    )
   end
 
   # Conditional event reporting of telemetry events
-  defp report_event(event_name, measurement, enable) do
+  defp report_event(event_name, measurement, enable, metadata \\ nil) do
     if enable do
       quote do
         :telemetry.execute(
           unquote(event_name),
           unquote(measurement),
-          %{}
+          unquote(metadata) || %{}
         )
       end
     else
@@ -149,6 +169,7 @@ defmodule Membrane.Core.Telemetry do
         fn ->
           _unused = unquote(event_name)
           _unused = unquote(measurement)
+          _unused = unquote(metadata)
         end
 
         :ok
