@@ -72,7 +72,7 @@ defmodule Membrane.Element.Action do
   of data from `Membrane.Core.InputBuffer`, which _sends_ demands automatically when it
   runs out of data.
   If there is any data available at the pad, the data is passed to
-  `c:Membrane.Filter.handle_process_list/4`
+  `c:Membrane.Filter.handle_process_list/4`, `c:Membrane.Endpoint.handle_write_list/4`
   or `c:Membrane.Sink.handle_write_list/4` callback. Invoked callback is
   guaranteed not to receive more data than demanded.
 
@@ -90,9 +90,9 @@ defmodule Membrane.Element.Action do
 
   The pad must have output direction and work in pull mode.
 
-  ## Redemand in Sources
+  ## Redemand in Sources and Endpoints
 
-  In case of Sources, `:redemand` is just a helper that simplifies element's code.
+  In case of Sources and Endpoints, `:redemand` is just a helper that simplifies element's code.
   The element doesn't need to generate the whole demand synchronously at `handle_demand`
   or store current demand size in its state, but it can just generate one buffer
   and return `:redemand` action.

@@ -79,12 +79,12 @@ defmodule Membrane.Core.Element.ActionHandler do
     do: PlaybackHandler.continue_playback_change(LifecycleController, state)
 
   defp do_handle_action({:buffer, {pad_ref, buffers}}, cb, _params, %State{type: type} = state)
-       when type in [:source, :filter] and is_pad_ref(pad_ref) do
+       when type in [:source, :filter, :endpoint] and is_pad_ref(pad_ref) do
     send_buffer(pad_ref, buffers, cb, state)
   end
 
   defp do_handle_action({:caps, {pad_ref, caps}}, _cb, _params, %State{type: type} = state)
-       when type in [:source, :filter] and is_pad_ref(pad_ref) do
+       when type in [:source, :filter, :endpoint] and is_pad_ref(pad_ref) do
     send_caps(pad_ref, caps, state)
   end
 
@@ -97,7 +97,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp do_handle_action({:redemand, out_ref}, cb, _params, %State{type: type} = state)
-       when type in [:source, :filter] and is_pad_ref(out_ref) and
+       when type in [:source, :filter, :endpoint] and is_pad_ref(out_ref) and
               {type, cb} != {:filter, :handle_demand} do
     handle_redemand(out_ref, state)
   end
@@ -137,7 +137,7 @@ defmodule Membrane.Core.Element.ActionHandler do
          params,
          %State{type: type} = state
        )
-       when is_pad_ref(pad_ref) and type in [:sink, :filter] do
+       when is_pad_ref(pad_ref) and type in [:sink, :filter, :endpoint] do
     do_handle_action({:demand, {pad_ref, 1}}, cb, params, state)
   end
 
@@ -147,7 +147,7 @@ defmodule Membrane.Core.Element.ActionHandler do
          _params,
          %State{type: type} = state
        )
-       when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter] do
+       when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter, :endpoint] do
     supply_demand(pad_ref, size, cb, state)
   end
 
@@ -180,7 +180,7 @@ defmodule Membrane.Core.Element.ActionHandler do
          _params,
          %State{type: type, playback: %{state: :playing}} = state
        )
-       when is_pad_ref(pad_ref) and type != :sink do
+       when is_pad_ref(pad_ref) and type not in [:sink, :endpoint] do
     send_event(pad_ref, %Events.EndOfStream{}, state)
   end
 
@@ -354,7 +354,8 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @spec handle_redemand(Pad.ref_t(), State.t()) :: State.stateful_try_t()
-  defp handle_redemand(out_ref, %{type: type} = state) when type in [:source, :filter] do
+  defp handle_redemand(out_ref, %{type: type} = state)
+       when type in [:source, :filter, :endpoint] do
     withl data: {:ok, pad_data} <- PadModel.get_data(state, out_ref),
           dir: %{direction: :output} <- pad_data,
           mode: %{mode: :pull} <- pad_data do

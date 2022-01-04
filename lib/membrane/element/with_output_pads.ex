@@ -13,20 +13,20 @@ defmodule Membrane.Element.WithOutputPads do
   alias Membrane.Element.CallbackContext
 
   @doc """
-  Callback called when buffers should be emitted by a source or filter.
+  Callback called when buffers should be emitted by a source, filter or endpoint.
 
   It is called only for output pads in the pull mode, as in their case demand
   is triggered by the input pad of the subsequent element.
 
-  In sources, appropriate amount of data should be sent here.
+  In sources and endpoint, appropriate amount of data should be sent here.
 
   In filters, this callback should usually return `:demand` action with
   size sufficient for supplying incoming demand. This will result in calling
   `c:Membrane.Filter.handle_process_list/4`, which is to supply
   the demand.
 
-  If a source is unable to produce enough buffers, or a filter underestimated
-  returned demand, the `:redemand` action should be used (see
+  If a source or an endpoint is unable to produce enough buffers, or a filter
+  underestimated returned demand, the `:redemand` action should be used (see
   `t:Membrane.Element.Action.redemand_t/0`).
   """
   @callback handle_demand(

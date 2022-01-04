@@ -30,7 +30,7 @@ defmodule Membrane.Core.Element.DemandHandler do
       `handle_delayed_demands`.
     * If element isn't supplying demand at the moment `handle_demand` is invoked right away, and it will
       invoke handle_demand callback, which will probably return :redemand and :buffers actions and in
-      that way source will synchronously supply demand.
+      that way source or endpoint will synchronously supply demand.
   """
   @spec handle_redemand(Pad.ref_t(), State.t()) :: {:ok, State.t()}
   def handle_redemand(pad_ref, %State{supplying_demand?: true} = state) do
