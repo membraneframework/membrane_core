@@ -140,16 +140,10 @@ defmodule Membrane.Core.Telemetry do
         %{path: ComponentPath.get_formatted()}
       end
 
-    metadata =
-      quote do
-        %{log_metadata: Logger.metadata()}
-      end
-
     report_event(
       event,
       value,
-      Enum.find(@telemetry_flags, &(&1 == :inits_and_terminates)) != nil,
-      metadata
+      Enum.find(@telemetry_flags, &(&1 == :inits_and_terminates)) != nil
     )
   end
 
