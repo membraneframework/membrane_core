@@ -20,7 +20,7 @@ defmodule Membrane.Telemetry do
 
     * `[:membrane, :pipeline | :bin | :element, :init]` - to report pipeline/element/bin initialization
         * Measurement: `t:init_or_terminate_event_value_t/0`
-        * Metadata: `%{}`
+        * Metadata: `%{log_metadata: keyword()}`, includes Logger's metadata of created component
 
     * `[:membrane, :pipeline | :bin | :element, :terminate]` - to report pipeline/element/bin termination
         * Measurement: `t:init_or_terminate_event_value_t/0`
