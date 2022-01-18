@@ -90,10 +90,11 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   end
 
   defp do_proceed_spec_linking(spec_ref, %{status: :linking_internally} = spec_data, state) do
-    if spec_data.links |> Map.values() |> Enum.all?(&(&1.to_respond == 0)) do
+    links = spec_data.links |> Map.values()
+
+    if Enum.all?(links, &(&1.to_respond == 0)) do
       {:ok, state} =
-        spec_data.links
-        |> Map.values()
+        links
         |> Enum.map(& &1.link)
         |> Enum.reject(&({Membrane.Bin, :itself} in [&1.from.child, &1.to.child]))
         |> link_children(state)
