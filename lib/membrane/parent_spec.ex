@@ -336,7 +336,7 @@ defmodule Membrane.ParentSpec do
     for information about defining pad options.
 
   Additionally, the following properties can be used to adjust the flow control parameters. If set within a bin
-  on an input that connects to the bin input, they will be overriden if set when linking to the bin in its parent.
+  on an input that connects to the bin input, they will be overridden if set when linking to the bin in its parent.
 
   - `toilet_capacity_factor` - Used when a toilet is created, that is for pull input pads that have push output pads
     linked to them. When a push output produces more buffers than the pull input can consume, the buffers are accumulated
