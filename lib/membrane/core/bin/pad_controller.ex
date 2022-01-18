@@ -72,7 +72,7 @@ defmodule Membrane.Core.Bin.PadController do
         state
       end
 
-    {:ok, state} = handle_pad_added(pad_ref, state)
+    {:ok, state} = maybe_handle_pad_added(pad_ref, state)
     state
   end
 
@@ -195,14 +195,14 @@ defmodule Membrane.Core.Bin.PadController do
   """
   @spec handle_unlink(Pad.ref_t(), Core.Bin.State.t()) :: Type.stateful_try_t(Core.Bin.State.t())
   def handle_unlink(pad_ref, state) do
-    with {:ok, state} <- handle_pad_removed(pad_ref, state) do
+    with {:ok, state} <- maybe_handle_pad_removed(pad_ref, state) do
       PadModel.delete_data(state, pad_ref)
     end
   end
 
-  @spec handle_pad_added(Pad.ref_t(), Core.Bin.State.t()) ::
+  @spec maybe_handle_pad_added(Pad.ref_t(), Core.Bin.State.t()) ::
           Type.stateful_try_t(Core.Bin.State.t())
-  defp handle_pad_added(ref, state) do
+  defp maybe_handle_pad_added(ref, state) do
     %{options: pad_opts, direction: direction, availability: availability} =
       PadModel.get_data!(state, ref)
 
@@ -221,16 +221,16 @@ defmodule Membrane.Core.Bin.PadController do
     end
   end
 
-  @spec handle_pad_removed(Pad.ref_t(), Core.Bin.State.t()) ::
+  @spec maybe_handle_pad_removed(Pad.ref_t(), Core.Bin.State.t()) ::
           Type.stateful_try_t(Core.Bin.State.t())
-  defp handle_pad_removed(ref, state) do
+  defp maybe_handle_pad_removed(ref, state) do
     %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
 
     if Pad.availability_mode(availability) == :dynamic do
       context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
 
       CallbackHandler.exec_and_handle_callback(
-        :handle_pad_removed,
+        :maybe_handle_pad_removed,
         ActionHandler,
         %{context: context},
         [ref],

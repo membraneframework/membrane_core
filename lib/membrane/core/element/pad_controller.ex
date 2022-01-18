@@ -94,12 +94,7 @@ defmodule Membrane.Core.Element.PadController do
         state
       )
 
-    {:ok, state} =
-      case Pad.availability_mode(info.availability) do
-        :dynamic -> handle_pad_added(this.pad_ref, state)
-        :static -> {:ok, state}
-      end
-
+    {:ok, state} = maybe_handle_pad_added(this.pad_ref, state)
     {{:ok, {this, info, link_metadata}}, state}
   end
 
@@ -116,7 +111,7 @@ defmodule Membrane.Core.Element.PadController do
   def handle_unlink(pad_ref, state) do
     with {:ok, state} <- flush_playback_buffer(pad_ref, state),
          {:ok, state} <- generate_eos_if_needed(pad_ref, state),
-         {:ok, state} <- handle_pad_removed(pad_ref, state) do
+         {:ok, state} <- maybe_handle_pad_removed(pad_ref, state) do
       state = remove_pad_associations(pad_ref, state)
       state = PadModel.delete_data!(state, pad_ref)
       {:ok, state}
@@ -292,28 +287,35 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  @spec handle_pad_added(Pad.ref_t(), Core.Element.State.t()) ::
+  @spec maybe_handle_pad_added(Pad.ref_t(), Core.Element.State.t()) ::
           Type.stateful_try_t(Core.Element.State.t())
-  defp handle_pad_added(ref, state) do
-    %{options: pad_opts, direction: direction} = PadModel.get_data!(state, ref)
-    context = &CallbackContext.PadAdded.from_state(&1, options: pad_opts, direction: direction)
-
-    CallbackHandler.exec_and_handle_callback(
-      :handle_pad_added,
-      ActionHandler,
-      %{context: context},
-      [ref],
-      state
-    )
-  end
-
-  @spec handle_pad_removed(Pad.ref_t(), Core.Element.State.t()) ::
-          Type.stateful_try_t(Core.Element.State.t())
-  defp handle_pad_removed(ref, state) do
-    %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
-    context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
+  defp maybe_handle_pad_added(ref, state) do
+    %{options: pad_opts, direction: direction, availability: availability} =
+      PadModel.get_data!(state, ref)
 
     if Pad.availability_mode(availability) == :dynamic do
+      context = &CallbackContext.PadAdded.from_state(&1, options: pad_opts, direction: direction)
+
+      CallbackHandler.exec_and_handle_callback(
+        :handle_pad_added,
+        ActionHandler,
+        %{context: context},
+        [ref],
+        state
+      )
+    else
+      {:ok, state}
+    end
+  end
+
+  @spec maybe_handle_pad_removed(Pad.ref_t(), Core.Element.State.t()) ::
+          Type.stateful_try_t(Core.Element.State.t())
+  defp maybe_handle_pad_removed(ref, state) do
+    %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
+
+    if Pad.availability_mode(availability) == :dynamic do
+      context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
+
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_removed,
         ActionHandler,
