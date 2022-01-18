@@ -41,10 +41,15 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
           state_t()
   def init_spec_linking(spec_ref, links, state) do
     Process.send_after(self(), Message.new(:spec_linking_timeout, spec_ref), 5000)
-    links = resolve_links(links, state)
 
     {links, state} =
       Enum.map_reduce(links, state, fn link, state ->
+        link = %Link{
+          link
+          | from: resolve_endpoint(link.from, state),
+            to: resolve_endpoint(link.to, state)
+        }
+
         link_id = {spec_ref, make_ref()}
 
         {to_respond_from, state} =
@@ -161,15 +166,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     end)
 
     Map.update!(state, :links, &Enum.reject(&1, fn link -> link in links_to_remove end))
-  end
-
-  @spec resolve_links([LinkParser.raw_link_t()], Parent.state_t()) ::
-          [Parent.Link.t()]
-  defp resolve_links(links, state) do
-    Enum.map(
-      links,
-      &%Link{&1 | from: resolve_endpoint(&1.from, state), to: resolve_endpoint(&1.to, state)}
-    )
   end
 
   defp request_link(
