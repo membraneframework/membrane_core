@@ -180,7 +180,7 @@ defmodule Membrane.Core.Element.ActionHandler do
          _params,
          %State{type: type, playback: %{state: :playing}} = state
        )
-       when is_pad_ref(pad_ref) and type not in [:sink, :endpoint] do
+       when is_pad_ref(pad_ref) and type != :sink do
     send_event(pad_ref, %Events.EndOfStream{}, state)
   end
 

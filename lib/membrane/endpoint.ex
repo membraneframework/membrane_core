@@ -75,7 +75,7 @@ defmodule Membrane.Endpoint do
       @impl true
       def handle_write_list(pad, buffers, _context, state) do
         args_list = buffers |> Enum.map(&[pad, &1])
-        {{:ok, split: {:handle_process, args_list}}, state}
+        {{:ok, split: {:handle_write, args_list}}, state}
       end
 
       defoverridable handle_write_list: 4,
