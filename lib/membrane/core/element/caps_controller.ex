@@ -6,9 +6,9 @@ defmodule Membrane.Core.Element.CapsController do
   use Bunch
 
   alias Membrane.{Caps, Pad}
-  alias Membrane.Core.{CallbackHandler, InputBuffer, Telemetry}
+  alias Membrane.Core.{CallbackHandler, Telemetry}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, State}
+  alias Membrane.Core.Element.{ActionHandler, InputQueue, State}
   alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel
@@ -16,7 +16,7 @@ defmodule Membrane.Core.Element.CapsController do
   require Membrane.Logger
 
   @doc """
-  Handles incoming caps: either stores them in InputBuffer, or executes element callback.
+  Handles incoming caps: either stores them in InputQueue, or executes element callback.
   """
   @spec handle_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.stateful_try_t()
   def handle_caps(pad_ref, caps, state) do
@@ -25,8 +25,13 @@ defmodule Membrane.Core.Element.CapsController do
     PadModel.assert_data!(state, pad_ref, %{direction: :input})
     data = PadModel.get_data!(state, pad_ref)
 
-    if data.mode == :pull and not (data.input_buf |> InputBuffer.empty?()) do
-      PadModel.update_data(state, pad_ref, :input_buf, &{:ok, InputBuffer.store(&1, :caps, caps)})
+    if data.input_queue && not InputQueue.empty?(data.input_queue) do
+      PadModel.update_data(
+        state,
+        pad_ref,
+        :input_queue,
+        &{:ok, InputQueue.store(&1, :caps, caps)}
+      )
     else
       exec_handle_caps(pad_ref, caps, state)
     end

@@ -1,15 +1,12 @@
 defmodule Membrane.Core.Child.PadController do
   @moduledoc false
 
-  alias Membrane.Core.InputBuffer
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.LinkError
   alias Membrane.Pad
 
   require Membrane.Core.Child.PadModel
   require Membrane.Logger
-
-  @type parsed_pad_props_t :: %{buffer: InputBuffer.props_t(), options: map}
 
   @type state_t :: Membrane.Core.Bin.State.t() | Membrane.Core.Element.State.t()
 
@@ -58,26 +55,14 @@ defmodule Membrane.Core.Child.PadController do
     :ok
   end
 
-  @spec parse_pad_props!(Membrane.ParentSpec.pad_props_t(), Pad.name_t(), state_t()) ::
-          parsed_pad_props_t | no_return
-  def parse_pad_props!(props, pad_name, state) do
-    {_, pad_spec} = PadSpecHandler.get_pads(state) |> Enum.find(fn {k, _} -> k == pad_name end)
-    pad_opts = parse_pad_options!(pad_name, pad_spec.options, props[:options])
-    buffer_props = parse_buffer_props!(pad_name, props[:buffer])
-    %{options: pad_opts, buffer: buffer_props}
-  end
+  @spec parse_pad_options!(Pad.name_t(), Membrane.ParentSpec.pad_options_t(), state_t()) ::
+          map | no_return
+  def parse_pad_options!(pad_name, options, state) do
+    {_pad_name, pad_spec} =
+      PadSpecHandler.get_pads(state) |> Enum.find(fn {k, _} -> k == pad_name end)
 
-  defp parse_pad_options!(_pad_name, nil, nil) do
-    nil
-  end
-
-  defp parse_pad_options!(pad_name, nil, options) do
-    raise LinkError,
-          "Pad #{inspect(pad_name)} does not define any options, got #{inspect(options)}"
-  end
-
-  defp parse_pad_options!(pad_name, options_spec, options) do
-    bunch_field_specs = options_spec |> Bunch.KVList.map_values(&Keyword.take(&1, [:default]))
+    bunch_field_specs =
+      Bunch.KVList.map_values(pad_spec.options || [], &Keyword.take(&1, [:default]))
 
     case options |> List.wrap() |> Bunch.Config.parse(bunch_field_specs) do
       {:ok, options} ->
@@ -89,17 +74,6 @@ defmodule Membrane.Core.Child.PadController do
       {:error, {:config_invalid_keys, keys}} ->
         raise LinkError,
               "Invalid keys in options of pad #{inspect(pad_name)} - #{inspect(keys)}"
-    end
-  end
-
-  defp parse_buffer_props!(pad_name, props) do
-    case InputBuffer.parse_props(props) do
-      {:ok, buffer_props} ->
-        buffer_props
-
-      {:error, {:config_invalid_keys, keys}} ->
-        raise LinkError,
-              "Invalid keys in buffer options of pad #{inspect(pad_name)}: #{inspect(keys)}"
     end
   end
 

@@ -28,7 +28,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
       assert {{:ok, _pad_info}, new_state} =
                @module.handle_link(
                  :output,
-                 %{pad_ref: :output, pid: self(), pad_props: [], child: :a},
+                 %{pad_ref: :output, pid: self(), pad_props: %{options: []}, child: :a},
                  %{pad_ref: :other_input, pid: nil, child: :b},
                  %{direction: :input, mode: :pull, demand_unit: :buffers},
                  %{toilet: make_ref()},

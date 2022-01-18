@@ -185,7 +185,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   end
 
   defp request_link(direction, this, _other, _spec_ref, link_id, state) do
-    Message.send(this.pid, :link_request, [this.pad_ref, direction, link_id, this.pad_props])
+    Message.send(this.pid, :link_request, [
+      this.pad_ref,
+      direction,
+      link_id,
+      this.pad_props.options
+    ])
+
     {1, state}
   end
 

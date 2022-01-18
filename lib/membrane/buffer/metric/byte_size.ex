@@ -8,7 +8,7 @@ defmodule Membrane.Buffer.Metric.ByteSize do
   alias Membrane.{Buffer, Payload}
 
   @impl true
-  def input_buf_preferred_size, do: 65_536
+  def buffer_size_approximation, do: 1500
 
   @impl true
   def buffers_size(buffers),

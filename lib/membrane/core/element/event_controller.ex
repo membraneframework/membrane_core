@@ -6,9 +6,9 @@ defmodule Membrane.Core.Element.EventController do
   use Bunch
 
   alias Membrane.{Event, Pad, Sync}
-  alias Membrane.Core.{CallbackHandler, Events, InputBuffer, Message, Telemetry}
+  alias Membrane.Core.{CallbackHandler, Events, Message, Telemetry}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, PadController, State}
+  alias Membrane.Core.Element.{ActionHandler, InputQueue, PadController, State}
   alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel
@@ -22,7 +22,7 @@ defmodule Membrane.Core.Element.EventController do
   end
 
   @doc """
-  Handles incoming event: either stores it in InputBuffer, or executes element callback.
+  Handles incoming event: either stores it in InputQueue, or executes element callback.
   Extra checks and tasks required by special events such as `:start_of_stream`
   or `:end_of_stream` are performed.
   """
@@ -32,13 +32,12 @@ defmodule Membrane.Core.Element.EventController do
 
     pad_data = PadModel.get_data!(state, pad_ref)
 
-    if not Event.async?(event) && pad_data.mode == :pull && pad_data.direction == :input &&
-         buffers_before_event_present?(pad_data) do
+    if not Event.async?(event) and buffers_before_event_present?(pad_data) do
       PadModel.update_data(
         state,
         pad_ref,
-        :input_buf,
-        &{:ok, InputBuffer.store(&1, :event, event)}
+        :input_queue,
+        &{:ok, InputQueue.store(&1, :event, event)}
       )
     else
       exec_handle_event(pad_ref, event, state)
@@ -167,7 +166,9 @@ defmodule Membrane.Core.Element.EventController do
 
   defp handle_special_event(_pad_ref, _event, state), do: {{:ok, :handle}, state}
 
-  defp buffers_before_event_present?(pad_data), do: not InputBuffer.empty?(pad_data.input_buf)
+  defp buffers_before_event_present?(pad_data) do
+    pad_data.input_queue && not InputQueue.empty?(pad_data.input_queue)
+  end
 
   defp stream_event_to_callback(%Events.StartOfStream{}), do: :handle_start_of_stream
   defp stream_event_to_callback(%Events.EndOfStream{}), do: :handle_end_of_stream

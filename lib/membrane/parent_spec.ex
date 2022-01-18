@@ -36,16 +36,17 @@ defmodule Membrane.ParentSpec do
       [
         link(:source_a)
         |> to(:converter)
-        |> via_in(:input_a, buffer: [preferred_size: 20_000])
+        |> via_in(:input_a, demand_excess_factor: 20)
         |> to(:mixer),
         link(:source_b)
         |> via_out(:custom_output)
-        |> via_in(:input_b, pad: [mute: true])
+        |> via_in(:input_b, options: [mute: true])
         |> to(:mixer)
-        |> via_in(:input, [warn_size: 264_000, fail_size: 300_000])
+        |> via_in(:input, toilet_capacity_factor: 1.5)
         |> to(:sink)
       ]
 
+  See the docs for `via_in/3` and `via_out/3` for details on pad properties that can be set.
   Links can also contain children definitions, for example:
 
       [
@@ -67,8 +68,8 @@ defmodule Membrane.ParentSpec do
 
   For bins boundaries, there are special links allowed. The user should define links
   between the bin's input and the first child's input (input-input type) and last
-  child's output and bin output (output-output type). In this case, `link_bin_input/2`
-  and `to_bin_output/3` should be used.
+  child's output and bin output (output-output type). In this case, `link_bin_input/1`
+  and `to_bin_output/2` should be used.
 
   Sample definition:
 
@@ -176,7 +177,6 @@ defmodule Membrane.ParentSpec do
   """
 
   alias Membrane.{Child, Pad}
-  alias Membrane.Core.InputBuffer
   alias Membrane.ParentError
 
   require Membrane.Pad
@@ -218,19 +218,7 @@ defmodule Membrane.ParentSpec do
           [{Child.name_t(), child_spec_t}]
           | %{Child.name_t() => child_spec_t}
 
-  @typedoc """
-  Options passed to the child when linking its pad with a different one.
-
-  The allowed options are:
-  * `:buffer` - keyword allowing to configure `Membrane.Core.InputBuffer` between elements. Valid only for input pads.
-    See `t:Membrane.Core.InputBuffer.props_t/0` for configurable properties.
-  * `:options` - any child-specific options that will be available in pads data in child's callback contexts,
-    see `Membrane.Element.CallbackContext.PadAdded` and `Membrane.Bin.CallbackContext.PadAdded`
-  """
-  @type pad_props_t :: [
-          {:buffer, InputBuffer.props_t()}
-          | {:options, Keyword.t()}
-        ]
+  @type pad_options_t :: Keyword.t()
 
   @type links_spec_t :: [link_builder_t() | links_spec_t]
 
@@ -247,8 +235,6 @@ defmodule Membrane.ParentSpec do
           node: node() | nil,
           log_metadata: Keyword.t()
         }
-
-  @valid_pad_prop_keys [:options, :buffer]
 
   defstruct children: %{},
             links: [],
@@ -283,17 +269,29 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec link_bin_input(Pad.name_t() | Pad.ref_t(), pad_props_t) :: link_builder_t() | no_return
-  def link_bin_input(pad \\ :input, props \\ []) do
-    link({Membrane.Bin, :itself}) |> via_out(pad, props)
+  @spec link_bin_input(Pad.name_t() | Pad.ref_t()) :: link_builder_t() | no_return
+  def link_bin_input(pad \\ :input) do
+    :ok = validate_pad_name(pad)
+    link({Membrane.Bin, :itself}) |> LinkBuilder.update(:output, output: pad, output_props: %{})
+  end
+
+  @deprecated "Use link_bin_input/1 and `via_in/3` to pass properties"
+  @spec link_bin_input(Pad.name_t() | Pad.ref_t(), Keyword.t()) :: link_builder_t()
+  def link_bin_input(pad, _props) do
+    link_bin_input(pad)
   end
 
   @doc """
   Specifies output pad name and properties of the preceding child.
 
+  The possible properties are:
+  - `options` - If a pad defines options, they can be passed here as a keyword list. Pad options are documented
+    in moduledoc of each element. See `Membrane.Element.WithOutputPads.def_output_pad/2` and `Membrane.Bin.def_output_pad/2`
+    for information about defining pad options.
+
   See the _links_ section of the moduledoc for more information.
   """
-  @spec via_out(link_builder_t(), Pad.name_t() | Pad.ref_t(), pad_props_t) ::
+  @spec via_out(link_builder_t(), Pad.name_t() | Pad.ref_t(), options: pad_options_t()) ::
           link_builder_t() | no_return
   def via_out(builder, pad, props \\ [])
 
@@ -306,9 +304,22 @@ defmodule Membrane.ParentSpec do
     raise ParentError, "Invalid link specification: output #{inspect(pad)} placed after an input"
   end
 
+  def via_out(%LinkBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, pad, _props) do
+    raise ParentError,
+          "Invalid link specification: output #{inspect(pad)} placed after bin's output"
+  end
+
   def via_out(%LinkBuilder{} = builder, pad, props) do
     :ok = validate_pad_name(pad)
-    :ok = validate_pad_props(props)
+
+    props =
+      case Bunch.Config.parse(props, options: [default: []]) do
+        {:ok, props} ->
+          props
+
+        {:error, reason} ->
+          raise ParentError, "Invalid link specification: invalid pad props: #{inspect(reason)}"
+      end
 
     LinkBuilder.update(builder, :output,
       output: pad,
@@ -319,22 +330,77 @@ defmodule Membrane.ParentSpec do
   @doc """
   Specifies input pad name and properties of the subsequent child.
 
+  The possible properties are:
+  - options - If a pad defines options, they can be passed here as a keyword list. Pad options are documented
+    in moduledoc of each element. See `Membrane.Element.WithInputPads.def_input_pad/2` and `Membrane.Bin.def_input_pad/2`
+    for information about defining pad options.
+
+  Additionally, the following properties can be used to adjust the flow control parameters. If set within a bin
+  on an input that connects to the bin input, they will be overriden if set when linking to the bin in its parent.
+
+  - `toilet_capacity_factor` - Used when a toilet is created, that is for pull input pads that have push output pads
+    linked to them. When a push output produces more buffers than the pull input can consume, the buffers are accumulated
+    in a queue called toilet. This option is a factor by which the toilet capacity is multiplied by and defaults to
+    `#{Membrane.Core.Element.Toilet.default_capacity_factor()}` (the default may change in the future). If the toilet
+    size grows above its capacity, it overflows by raising an error.
+  - `demand_excess_factor` - A factor by which the demand excess is multiplied by. Used only for pads working in pull
+    mode with manual demands. See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0` for more info. Defaults
+    to `#{Membrane.Core.Element.InputQueue.default_demand_excess_factor()}` (the default may change in the future).
+  - `min_demand_factor` - A factor by which the minimal demand is multiplied by. Used only for pads working in pull
+    mode with manual demands. See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0` for more info. Defaults
+    to `#{Membrane.Core.Element.InputQueue.default_min_demand_factor()}` (the default may change in the future).
+  - `auto_demand_size_factor` - A factor by which the auto demand size multiplied by. Used only for pads working in pull
+    mode with automatic demands. See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0` for more info. Defaults
+    to `#{Membrane.Core.Element.DemandHandler.default_auto_demand_size_factor()}` (the default may change in the future).
+
   See the _links_ section of the moduledoc for more information.
   """
-  @spec via_in(link_builder_t(), Pad.name_t() | Pad.ref_t(), pad_props_t) ::
+  @spec via_in(link_builder_t(), Pad.name_t() | Pad.ref_t(),
+          options: pad_options_t(),
+          toilet_capacity_factor: number | nil,
+          demand_excess_factor: number | nil,
+          min_demand_factor: number | nil,
+          auto_demand_size_factor: number | nil
+        ) ::
           link_builder_t() | no_return
-  def via_in(builder, pad, opts \\ [])
+  def via_in(builder, pad, props \\ [])
 
-  def via_in(%LinkBuilder{status: :input}, pad, _opts) do
+  def via_in(%LinkBuilder{status: :input}, pad, _props) do
     raise ParentError,
-          "Invalid link specification: output #{inspect(pad)} placed after another output"
+          "Invalid link specification: input #{inspect(pad)} placed after another input"
+  end
+
+  def via_in(%LinkBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, pad, _props) do
+    raise ParentError,
+          "Invalid link specification: input #{inspect(pad)} placed after bin's output"
   end
 
   def via_in(%LinkBuilder{} = builder, pad, props) do
     :ok = validate_pad_name(pad)
-    :ok = validate_pad_props(props)
 
-    LinkBuilder.update(builder, :input,
+    props =
+      props
+      |> Bunch.Config.parse(
+        options: [default: []],
+        demand_excess_factor: [default: nil],
+        min_demand_factor: [default: nil],
+        auto_demand_size_factor: [default: nil],
+        toilet_capacity_factor: [default: nil]
+      )
+      |> case do
+        {:ok, props} ->
+          props
+
+        {:error, reason} ->
+          raise ParentError, "Invalid link specification: invalid pad props: #{inspect(reason)}"
+      end
+
+    if builder.status == :output do
+      builder
+    else
+      via_out(builder, :output)
+    end
+    |> LinkBuilder.update(:input,
       input: pad,
       input_props: props
     )
@@ -352,7 +418,12 @@ defmodule Membrane.ParentSpec do
   end
 
   def to(%LinkBuilder{} = builder, child_name) do
-    LinkBuilder.update(builder, :done, to: child_name)
+    if builder.status == :input do
+      builder
+    else
+      via_in(builder, :input)
+    end
+    |> LinkBuilder.update(:done, to: child_name)
   end
 
   @doc """
@@ -370,16 +441,31 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec to_bin_output(link_builder_t(), Pad.name_t() | Pad.ref_t(), pad_props_t) ::
+  @spec to_bin_output(link_builder_t(), Pad.name_t() | Pad.ref_t()) ::
           link_builder_t() | no_return
-  def to_bin_output(builder, pad \\ :output, props \\ [])
+  def to_bin_output(builder, pad \\ :output)
 
-  def to_bin_output(%LinkBuilder{status: :input}, pad, _props) do
+  def to_bin_output(%LinkBuilder{status: :input}, pad) do
     raise ParentError, "Invalid link specification: bin's output #{pad} placed after an input"
   end
 
-  def to_bin_output(builder, pad, props) do
-    builder |> via_in(pad, props) |> to({Membrane.Bin, :itself})
+  def to_bin_output(builder, pad) do
+    :ok = validate_pad_name(pad)
+
+    if builder.status == :output do
+      builder
+    else
+      via_out(builder, :output)
+    end
+    |> LinkBuilder.update(:input, input: pad, input_props: %{})
+    |> to({Membrane.Bin, :itself})
+  end
+
+  @deprecated "Use to_bin_output/2 and `via_out/3` to pass properties"
+  @spec to_bin_output(link_builder_t(), Pad.name_t() | Pad.ref_t(), Keyword.t()) ::
+          link_builder_t()
+  def to_bin_output(builder, pad, _props) do
+    to_bin_output(builder, pad)
   end
 
   defp validate_pad_name(pad) when Pad.is_pad_name(pad) or Pad.is_pad_ref(pad) do
@@ -388,20 +474,5 @@ defmodule Membrane.ParentSpec do
 
   defp validate_pad_name(pad) do
     raise ParentError, "Invalid link specification: invalid pad name: #{inspect(pad)}"
-  end
-
-  defp validate_pad_props(props) do
-    unless Keyword.keyword?(props) do
-      raise ParentError,
-            "Invalid link specification: pad options should be a keyword, got: #{inspect(props)}"
-    end
-
-    props
-    |> Keyword.keys()
-    |> Enum.each(
-      &unless &1 in @valid_pad_prop_keys do
-        raise ParentError, "Invalid link specification: invalid pad option: #{inspect(&1)}"
-      end
-    )
   end
 end

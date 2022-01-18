@@ -1,8 +1,8 @@
 defmodule Membrane.Core.Element.EventControllerTest do
   use ExUnit.Case
 
-  alias Membrane.Core.Element.{EventController, State}
-  alias Membrane.Core.{Events, InputBuffer, Message}
+  alias Membrane.Core.Element.{EventController, InputQueue, State}
+  alias Membrane.Core.{Events, Message}
   alias Membrane.Event
 
   require Membrane.Core.Message
@@ -23,7 +23,16 @@ defmodule Membrane.Core.Element.EventControllerTest do
   end
 
   setup do
-    input_buf = InputBuffer.init(:buffers, self(), :some_pad, "test", false, preferred_size: 10)
+    input_queue =
+      InputQueue.init(%{
+        demand_unit: :buffers,
+        demand_pid: self(),
+        demand_pad: :some_pad,
+        log_tag: "test",
+        toilet?: false,
+        demand_excess_factor: nil,
+        min_demand_factor: nil
+      })
 
     state =
       %{
@@ -46,7 +55,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
                   mode: :pull,
                   start_of_stream?: false,
                   end_of_stream?: false,
-                  input_buf: input_buf,
+                  input_queue: input_queue,
                   demand: 0
                 )
             }
@@ -54,7 +63,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
       }
       |> Bunch.Struct.put_in([:playback, :state], :playing)
 
-    assert_received Message.new(:demand, 10, for_pad: :some_pad)
+    assert_received Message.new(:demand, _size, for_pad: :some_pad)
     [state: state]
   end
 

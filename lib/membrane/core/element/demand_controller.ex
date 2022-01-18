@@ -73,10 +73,15 @@ defmodule Membrane.Core.Element.DemandController do
   @spec send_auto_demand_if_needed(Pad.ref_t(), integer, State.t()) :: State.t()
   def send_auto_demand_if_needed(pad_ref, demand_decrease \\ 0, state) do
     data = PadModel.get_data!(state, pad_ref)
-    %{demand: demand, toilet: toilet, associated_pads: associated_pads} = data
+
+    %{
+      demand: demand,
+      toilet: toilet,
+      associated_pads: associated_pads,
+      auto_demand_size: demand_request_size
+    } = data
 
     demand = demand - demand_decrease
-    demand_request_size = state.demand_size
 
     demand =
       if demand <= div(demand_request_size, 2) and auto_demands_positive?(associated_pads, state) do

@@ -39,11 +39,12 @@ defmodule Membrane.Element.PadData do
           options: %{optional(atom) => any},
           pid: private_field,
           other_ref: private_field,
-          input_buf: private_field,
+          input_queue: private_field,
           demand: integer() | nil,
           demand_mode: private_field,
           demand_unit: private_field,
           other_demand_unit: private_field,
+          auto_demand_size: private_field(),
           sticky_messages: private_field,
           toilet: private_field,
           associated_pads: private_field
@@ -66,11 +67,12 @@ defmodule Membrane.Element.PadData do
 
   defstruct @enforce_keys ++
               [
-                input_buf: nil,
+                input_queue: nil,
                 demand: nil,
                 demand_mode: nil,
                 demand_unit: nil,
                 other_demand_unit: nil,
+                auto_demand_size: nil,
                 sticky_messages: [],
                 toilet: nil,
                 associated_pads: []
