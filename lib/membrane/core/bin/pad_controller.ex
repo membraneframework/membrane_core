@@ -191,7 +191,7 @@ defmodule Membrane.Core.Bin.PadController do
   end
 
   @doc """
-  Handles situation where pad has been unlinked (e.g. when connected element has been removed from pipline)
+  Handles situation where the pad has been unlinked (e.g. when connected element has been removed from the pipeline)
   """
   @spec handle_unlink(Pad.ref_t(), Core.Bin.State.t()) :: Type.stateful_try_t(Core.Bin.State.t())
   def handle_unlink(pad_ref, state) do
