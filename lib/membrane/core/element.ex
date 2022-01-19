@@ -131,11 +131,11 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_call(
-        Message.new(:handle_link, [direction, this, other, other_info, metadata]),
+        Message.new(:handle_link, [direction, this, other, params]),
         _from,
         state
       ) do
-    PadController.handle_link(direction, this, other, other_info, metadata, state) |> reply(state)
+    PadController.handle_link(direction, this, other, params, state) |> reply(state)
   end
 
   @impl GenServer

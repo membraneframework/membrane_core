@@ -30,8 +30,11 @@ defmodule Membrane.Core.Element.PadControllerTest do
                  :output,
                  %{pad_ref: :output, pid: self(), pad_props: %{options: []}, child: :a},
                  %{pad_ref: :other_input, pid: nil, child: :b},
-                 %{direction: :input, mode: :pull, demand_unit: :buffers},
-                 %{toilet: make_ref()},
+                 %{
+                   initiator: :sibling,
+                   other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
+                   link_metadata: %{toilet: make_ref()}
+                 },
                  state
                )
 
@@ -47,8 +50,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
           :output,
           %{pad_ref: :invalid_pad_ref, child: :a},
           %{pad_ref: :x, child: :b},
-          nil,
-          nil,
+          %{link_initiator: :parent},
           state
         )
       end

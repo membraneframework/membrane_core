@@ -57,8 +57,11 @@ defmodule Membrane.Core.ElementTest do
           :output,
           %{pad_ref: :output, pad_props: %{options: []}, child: :this},
           %{pad_ref: :input, pid: self(), child: :other},
-          %{direction: :input, mode: :pull, demand_unit: :buffers},
-          %{toilet: nil}
+          %{
+            initiator: :sibling,
+            other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
+            link_metadata: %{toilet: nil}
+          }
         ]),
         nil,
         get_state()
@@ -80,8 +83,11 @@ defmodule Membrane.Core.ElementTest do
             child: :this
           },
           %{pad_ref: :output, pid: self(), child: :other},
-          %{direction: :output, mode: :pull},
-          %{toilet: nil}
+          %{
+            initiator: :sibling,
+            other_info: %{direction: :output, mode: :pull},
+            link_metadata: %{toilet: nil}
+          }
         ]),
         nil,
         state
@@ -201,8 +207,11 @@ defmodule Membrane.Core.ElementTest do
                    child: :this
                  },
                  %{pad_ref: :input, pid: pid, child: :other},
-                 %{direction: :input, mode: :pull, demand_unit: :buffers},
-                 %{toilet: nil}
+                 %{
+                   initiator: :sibling,
+                   other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
+                   link_metadata: %{toilet: nil}
+                 }
                ]),
                nil,
                get_state()

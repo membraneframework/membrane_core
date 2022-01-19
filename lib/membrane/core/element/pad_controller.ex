@@ -37,17 +37,21 @@ defmodule Membrane.Core.Element.PadController do
           Pad.direction_t(),
           Endpoint.t(),
           Endpoint.t(),
-          PadModel.pad_info_t() | nil,
-          %{toilet: Toilet.t() | nil} | nil,
+          %{initiator: :parent}
+          | %{
+              initiator: :sibling,
+              other_info: PadModel.pad_info_t() | nil,
+              link_metadata: %{toilet: Toilet.t() | nil}
+            },
           State.t()
         ) ::
           {{:ok, {Endpoint.t(), PadModel.pad_info_t(), %{toilet: Toilet.t() | nil}}}, State.t()}
-  def handle_link(direction, this, other, other_info, link_metadata, state) do
+  def handle_link(direction, endpoint, other_endpoint, link_props, state) do
     Membrane.Logger.debug(
-      "Element handle link on pad #{inspect(this.pad_ref)} with pad #{inspect(other.pad_ref)} of child #{inspect(other.child)}"
+      "Element handle link on pad #{inspect(endpoint.pad_ref)} with pad #{inspect(other_endpoint.pad_ref)} of child #{inspect(other_endpoint.child)}"
     )
 
-    name = this.pad_ref |> Pad.name_by_ref()
+    name = endpoint.pad_ref |> Pad.name_by_ref()
 
     info =
       case Map.fetch(state.pads.info, name) do
@@ -59,43 +63,78 @@ defmodule Membrane.Core.Element.PadController do
                 "Tried to link via unknown pad #{inspect(name)} of #{inspect(state.name)}"
       end
 
-    :ok = Child.PadController.validate_pad_being_linked!(this.pad_ref, direction, info, state)
+    :ok = Child.PadController.validate_pad_being_linked!(endpoint.pad_ref, direction, info, state)
 
     toilet =
       if direction == :input,
-        do: Toilet.new(this.pad_props.toilet_capacity_factor, info.demand_unit, self()),
+        do: Toilet.new(endpoint.pad_props.toilet_capacity_factor, info.demand_unit, self()),
         else: nil
 
-    {other, other_info, link_metadata} =
-      if link_metadata do
-        {other, other_info, %{link_metadata | toilet: link_metadata.toilet || toilet}}
-      else
-        other_direction = Pad.opposite_direction(direction)
-        metadata = %{toilet: toilet}
+    do_handle_link(endpoint, other_endpoint, info, toilet, link_props, state)
+  end
 
-        {:ok, {other, other_info, metadata}} =
-          Message.call(other.pid, :handle_link, [other_direction, other, this, info, metadata])
-
-        {other, other_info, metadata}
-      end
+  defp do_handle_link(endpoint, other_endpoint, info, toilet, %{initiator: :parent}, state) do
+    {:ok, {other_endpoint, other_info, link_metadata}} =
+      Message.call(other_endpoint.pid, :handle_link, [
+        Pad.opposite_direction(info.direction),
+        other_endpoint,
+        endpoint,
+        %{initiator: :sibling, other_info: info, link_metadata: %{toilet: toilet}}
+      ])
 
     :ok =
-      Child.PadController.validate_pad_mode!({this.pad_ref, info}, {other.pad_ref, other_info})
+      Child.PadController.validate_pad_mode!(
+        {endpoint.pad_ref, info},
+        {other_endpoint.pad_ref, other_info}
+      )
 
     state =
       init_pad_data(
-        this.pad_ref,
+        endpoint.pad_ref,
         info,
-        this.pad_props,
-        other.pad_ref,
-        other.pid,
+        endpoint.pad_props,
+        other_endpoint.pad_ref,
+        other_endpoint.pid,
         other_info,
         link_metadata,
         state
       )
 
-    {:ok, state} = maybe_handle_pad_added(this.pad_ref, state)
-    {{:ok, {this, info, link_metadata}}, state}
+    maybe_handle_pad_added(endpoint.pad_ref, state)
+  end
+
+  defp do_handle_link(
+         endpoint,
+         other_endpoint,
+         info,
+         toilet,
+         %{initiator: :sibling} = link_props,
+         state
+       ) do
+    %{other_info: other_info, link_metadata: link_metadata} = link_props
+
+    link_metadata = %{link_metadata | toilet: link_metadata.toilet || toilet}
+
+    :ok =
+      Child.PadController.validate_pad_mode!(
+        {endpoint.pad_ref, info},
+        {other_endpoint.pad_ref, other_info}
+      )
+
+    state =
+      init_pad_data(
+        endpoint.pad_ref,
+        info,
+        endpoint.pad_props,
+        other_endpoint.pad_ref,
+        other_endpoint.pid,
+        other_info,
+        link_metadata,
+        state
+      )
+
+    {:ok, state} = maybe_handle_pad_added(endpoint.pad_ref, state)
+    {{:ok, {endpoint, info, link_metadata}}, state}
   end
 
   @doc """
@@ -260,7 +299,7 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   @doc """
-  Removes all associations between the given pad and any other pads.
+  Removes all associations between the given pad and any other_endpoint pads.
   """
   @spec remove_pad_associations(Pad.ref_t(), State.t()) :: State.t()
   def remove_pad_associations(pad_ref, state) do

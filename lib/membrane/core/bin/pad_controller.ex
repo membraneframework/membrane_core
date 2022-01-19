@@ -85,7 +85,7 @@ defmodule Membrane.Core.Bin.PadController do
           ChildLifeController.spec_ref_t(),
           State.t()
         ) :: State.t()
-  def handle_internal_link_request(pad_ref, endpoint, spec_ref, state) do
+  def handle_internal_link_request(pad_ref, child_endpoint, spec_ref, state) do
     pad_name = Pad.name_by_ref(pad_ref)
     info = Map.fetch!(state.pads.info, pad_name)
 
@@ -101,7 +101,11 @@ defmodule Membrane.Core.Bin.PadController do
           raise LinkError, "Dynamic pads must be firstly linked externally, then internally"
       end
 
-    PadModel.update_data!(state, pad_ref, &%{&1 | endpoint: endpoint, spec_ref: spec_ref})
+    PadModel.update_data!(
+      state,
+      pad_ref,
+      &%{&1 | endpoint: child_endpoint, spec_ref: spec_ref}
+    )
   end
 
   @doc """
@@ -145,16 +149,18 @@ defmodule Membrane.Core.Bin.PadController do
           Pad.direction_t(),
           LinkParser.raw_endpoint_t(),
           LinkParser.raw_endpoint_t(),
-          PadModel.pad_info_t() | nil,
-          map,
+          %{initiator: :parent}
+          | %{initiator: :sibling, other_info: PadModel.pad_info_t() | nil, link_metadata: map},
           Core.Bin.State.t()
         ) :: Type.stateful_try_t(PadModel.pad_info_t(), Core.Bin.State.t())
-  def handle_link(direction, this, other, other_info, link_metadata, state) do
-    pad_data = PadModel.get_data!(state, this.pad_ref)
-    %{spec_ref: spec_ref, endpoint: endpoint} = pad_data
+  def handle_link(direction, endpoint, other_endpoint, params, state) do
+    pad_data = PadModel.get_data!(state, endpoint.pad_ref)
+    %{spec_ref: spec_ref, endpoint: child_endpoint} = pad_data
 
     pad_props =
-      Map.merge(this.pad_props, endpoint.pad_props, fn key, external_value, internal_value ->
+      Map.merge(endpoint.pad_props, child_endpoint.pad_props, fn key,
+                                                                 external_value,
+                                                                 internal_value ->
         if key in [
              :demand_excess_factor,
              :min_demand_factor,
@@ -167,25 +173,26 @@ defmodule Membrane.Core.Bin.PadController do
         end
       end)
 
-    endpoint = %{endpoint | pad_props: pad_props}
+    child_endpoint = %{child_endpoint | pad_props: pad_props}
 
-    :ok =
-      Child.PadController.validate_pad_mode!(
-        {this.pad_ref, pad_data},
-        {other.pad_ref, other_info}
-      )
+    if params.initiator == :sibling do
+      :ok =
+        Child.PadController.validate_pad_mode!(
+          {endpoint.pad_ref, pad_data},
+          {other_endpoint.pad_ref, params.other_info}
+        )
+    end
 
     reply =
-      Message.call(endpoint.pid, :handle_link, [
+      Message.call(child_endpoint.pid, :handle_link, [
         direction,
-        endpoint,
-        other,
-        other_info,
-        link_metadata
+        child_endpoint,
+        other_endpoint,
+        params
       ])
 
-    state = PadModel.set_data!(state, this.pad_ref, :linked?, true)
-    state = PadModel.set_data!(state, this.pad_ref, :endpoint, endpoint)
+    state = PadModel.set_data!(state, endpoint.pad_ref, :linked?, true)
+    state = PadModel.set_data!(state, endpoint.pad_ref, :endpoint, child_endpoint)
     state = ChildLifeController.LinkHandler.proceed_spec_linking(spec_ref, state)
     {reply, state}
   end
