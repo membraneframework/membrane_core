@@ -187,18 +187,6 @@ defmodule Membrane.Core.Element do
     TimerController.handle_tick(timer_id, state) |> noreply(state)
   end
 
-  defp do_handle_info(
-         Message.new(:link_request, [pad_ref, _direction, link_id, _pad_props]),
-         state
-       ) do
-    Membrane.Logger.debug(
-      "Element link request on pad #{inspect(pad_ref)}, link id #{inspect(link_id)}, replying immediately"
-    )
-
-    Message.send(state.parent_pid, :link_response, link_id)
-    {:noreply, state}
-  end
-
   defp do_handle_info({:membrane_clock_ratio, clock, ratio}, state) do
     TimerController.handle_clock_update(clock, ratio, state) |> noreply()
   end

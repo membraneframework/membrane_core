@@ -93,11 +93,11 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     links = spec_data.links |> Map.values()
 
     if Enum.all?(links, &(&1.to_respond == 0)) do
-      {:ok, state} =
+      state =
         links
         |> Enum.map(& &1.link)
         |> Enum.reject(&({Membrane.Bin, :itself} in [&1.from.child, &1.to.child]))
-        |> link_children(state)
+        |> Enum.reduce(state, &link/2)
 
       Membrane.Logger.debug("Spec #{inspect(spec_ref)} linked internally")
       do_proceed_spec_linking(spec_ref, %{spec_data | status: :linked_internally}, state)
@@ -182,26 +182,18 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   end
 
   defp request_link(direction, this, _other, _spec_ref, link_id, state) do
-    Message.send(this.pid, :link_request, [
-      this.pad_ref,
-      direction,
-      link_id,
-      this.pad_props.options
-    ])
+    if Map.fetch!(state.children, this.child).component_type == :bin do
+      Message.send(this.pid, :link_request, [
+        this.pad_ref,
+        direction,
+        link_id,
+        this.pad_props.options
+      ])
 
-    {1, state}
-  end
-
-  # Links children based on given specification and map for mapping children
-  # names into PIDs.
-  #
-  # Please note that this function is not atomic and in case of error there's
-  # a chance that some of children will remain linked.
-  @spec link_children([Parent.Link.t()], Parent.state_t()) ::
-          {:ok | {:error, any}, Parent.state_t()}
-  defp link_children(links, state) do
-    state = Enum.reduce(links, state, &link/2)
-    {:ok, state}
+      {1, state}
+    else
+      {0, state}
+    end
   end
 
   @spec resolve_endpoint(LinkParser.raw_endpoint_t(), Parent.state_t()) ::
