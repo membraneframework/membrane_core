@@ -30,7 +30,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   @type pending_spec_t :: %{
           status: :linking_internally | :linking_externally | :linked,
-          links: %{link_id_t => %{link: Parent.Link.t(), to_respond: non_neg_integer()}}
+          links: %{link_id_t => %{link: Parent.Link.t(), awaiting_responses: non_neg_integer()}}
         }
 
   @type pending_specs_t :: %{ChildLifeController.spec_ref_t() => pending_spec_t()}
@@ -52,13 +52,15 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
         link_id = {spec_ref, make_ref()}
 
-        {to_respond_from, state} =
+        {awaiting_responses_from, state} =
           request_link(:output, link.from, link.to, spec_ref, link_id, state)
 
-        {to_respond_to, state} =
+        {awaiting_responses_to, state} =
           request_link(:input, link.to, link.from, spec_ref, link_id, state)
 
-        {{link_id, %{link: link, to_respond: to_respond_from + to_respond_to}}, state}
+        {{link_id,
+          %{link: link, awaiting_responses: awaiting_responses_from + awaiting_responses_to}},
+         state}
       end)
 
     state =
@@ -92,7 +94,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   defp do_proceed_spec_linking(spec_ref, %{status: :linking_internally} = spec_data, state) do
     links = spec_data.links |> Map.values()
 
-    if Enum.all?(links, &(&1.to_respond == 0)) do
+    if Enum.all?(links, &(&1.awaiting_responses == 0)) do
       state =
         links
         |> Enum.map(& &1.link)
@@ -145,7 +147,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   @spec handle_link_response(link_id_t(), state_t()) :: state_t()
   def handle_link_response(link_id, state) do
     {spec_ref, _link_ref} = link_id
-    state = update_in(state, [:pending_specs, spec_ref, :links, link_id, :to_respond], &(&1 - 1))
+
+    state =
+      update_in(
+        state,
+        [:pending_specs, spec_ref, :links, link_id, :awaiting_responses],
+        &(&1 - 1)
+      )
+
     proceed_spec_linking(spec_ref, state)
   end
 
