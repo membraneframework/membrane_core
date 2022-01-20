@@ -19,7 +19,7 @@ defmodule Membrane.Core.Bin.PadController do
   require Membrane.Pad
 
   @doc """
-  Handles link request from outside of the bin.
+  Handles a link request from the bin's parent.
   """
   @spec handle_external_link_request(
           Pad.ref_t(),
@@ -46,38 +46,31 @@ defmodule Membrane.Core.Bin.PadController do
     pad_options = Child.PadController.parse_pad_options!(pad_name, pad_options, state)
 
     state =
-      with {:ok, response_received?} <- PadModel.get_data(state, pad_ref, :response_received?) do
-        if response_received? do
-          Membrane.Logger.debug("Sending link response, #{inspect(pad_ref)}")
-          Message.send(state.parent_pid, :link_response, link_id)
-        end
-
-        state
-      else
+      case PadModel.get_data(state, pad_ref) do
         {:error, {:unknown_pad, pad_ref}} ->
           init_pad_data(pad_ref, info, state)
+
+        # This case is for pads that were instantiated before the external link request,
+        # that is in the internal link request (see `handle_internal_link_request/4`).
+        # This is possible only for static pads. It might have happened that we already
+        # received a link response for such a pad, so we should reply immediately.
+        {:ok, data} ->
+          if data.response_received? do
+            Membrane.Logger.debug("Sending link response, #{inspect(pad_ref)}")
+            Message.send(state.parent_pid, :link_response, link_id)
+          end
+
+          state
       end
 
-    {spec_ref, state} =
-      PadModel.get_and_update_data!(
-        state,
-        pad_ref,
-        &{&1.spec_ref, %{&1 | link_id: link_id, options: pad_options}}
-      )
-
-    state =
-      if spec_ref do
-        ChildLifeController.LinkHandler.proceed_spec_linking(spec_ref, state)
-      else
-        state
-      end
-
+    state = PadModel.update_data!(state, pad_ref, &%{&1 | link_id: link_id, options: pad_options})
     {:ok, state} = maybe_handle_pad_added(pad_ref, state)
     state
   end
 
   @doc """
-  Handles link request from one of bin's children.
+  Handles a link request coming from the bin itself when linking a bin's pad
+  to a pad of one of its children.
   """
   @spec handle_internal_link_request(
           Pad.ref_t(),
@@ -94,6 +87,7 @@ defmodule Membrane.Core.Bin.PadController do
         :ok == PadModel.assert_instance(state, pad_ref) ->
           state
 
+        # Static pads can be linked internally before the external link request
         info.availability == :always ->
           init_pad_data(pad_ref, info, state)
 
