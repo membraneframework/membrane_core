@@ -194,7 +194,7 @@ defmodule Membrane.ParentSpec do
             status: status_t
           }
 
-    @type status_t :: :from | :output | :input | :done
+    @type status_t :: :from | :from_pad | :to_pad | :done
 
     @spec update(t, status_t, Keyword.t()) :: t
     def update(
@@ -272,7 +272,9 @@ defmodule Membrane.ParentSpec do
   @spec link_bin_input(Pad.name_t() | Pad.ref_t()) :: link_builder_t() | no_return
   def link_bin_input(pad \\ :input) do
     :ok = validate_pad_name(pad)
-    link({Membrane.Bin, :itself}) |> LinkBuilder.update(:output, output: pad, output_props: %{})
+
+    link({Membrane.Bin, :itself})
+    |> LinkBuilder.update(:from_pad, from_pad: pad, from_pad_props: %{})
   end
 
   @deprecated "Use link_bin_input/1 and `via_in/3` to pass properties"
@@ -295,12 +297,12 @@ defmodule Membrane.ParentSpec do
           link_builder_t() | no_return
   def via_out(builder, pad, props \\ [])
 
-  def via_out(%LinkBuilder{status: :output}, pad, _props) do
+  def via_out(%LinkBuilder{status: :from_pad}, pad, _props) do
     raise ParentError,
           "Invalid link specification: output #{inspect(pad)} placed after another output or bin's input"
   end
 
-  def via_out(%LinkBuilder{status: :input}, pad, _props) do
+  def via_out(%LinkBuilder{status: :to_pad}, pad, _props) do
     raise ParentError, "Invalid link specification: output #{inspect(pad)} placed after an input"
   end
 
@@ -321,9 +323,9 @@ defmodule Membrane.ParentSpec do
           raise ParentError, "Invalid link specification: invalid pad props: #{inspect(reason)}"
       end
 
-    LinkBuilder.update(builder, :output,
-      output: pad,
-      output_props: props
+    LinkBuilder.update(builder, :from_pad,
+      from_pad: pad,
+      from_pad_props: props
     )
   end
 
@@ -365,7 +367,7 @@ defmodule Membrane.ParentSpec do
           link_builder_t() | no_return
   def via_in(builder, pad, props \\ [])
 
-  def via_in(%LinkBuilder{status: :input}, pad, _props) do
+  def via_in(%LinkBuilder{status: :to_pad}, pad, _props) do
     raise ParentError,
           "Invalid link specification: input #{inspect(pad)} placed after another input"
   end
@@ -395,14 +397,14 @@ defmodule Membrane.ParentSpec do
           raise ParentError, "Invalid link specification: invalid pad props: #{inspect(reason)}"
       end
 
-    if builder.status == :output do
+    if builder.status == :from_pad do
       builder
     else
       via_out(builder, :output)
     end
-    |> LinkBuilder.update(:input,
-      input: pad,
-      input_props: props
+    |> LinkBuilder.update(:to_pad,
+      to_pad: pad,
+      to_pad_props: props
     )
   end
 
@@ -418,7 +420,7 @@ defmodule Membrane.ParentSpec do
   end
 
   def to(%LinkBuilder{} = builder, child_name) do
-    if builder.status == :input do
+    if builder.status == :to_pad do
       builder
     else
       via_in(builder, :input)
@@ -445,19 +447,19 @@ defmodule Membrane.ParentSpec do
           link_builder_t() | no_return
   def to_bin_output(builder, pad \\ :output)
 
-  def to_bin_output(%LinkBuilder{status: :input}, pad) do
+  def to_bin_output(%LinkBuilder{status: :to_pad}, pad) do
     raise ParentError, "Invalid link specification: bin's output #{pad} placed after an input"
   end
 
   def to_bin_output(builder, pad) do
     :ok = validate_pad_name(pad)
 
-    if builder.status == :output do
+    if builder.status == :from_pad do
       builder
     else
       via_out(builder, :output)
     end
-    |> LinkBuilder.update(:input, input: pad, input_props: %{})
+    |> LinkBuilder.update(:to_pad, to_pad: pad, to_pad_props: %{})
     |> to({Membrane.Bin, :itself})
   end
 
