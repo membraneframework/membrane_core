@@ -237,7 +237,7 @@ defmodule Membrane.Core.Bin.PadController do
       context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
 
       CallbackHandler.exec_and_handle_callback(
-        :maybe_handle_pad_removed,
+        :handle_pad_removed,
         ActionHandler,
         %{context: context},
         [ref],
