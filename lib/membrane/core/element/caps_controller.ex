@@ -25,12 +25,14 @@ defmodule Membrane.Core.Element.CapsController do
     PadModel.assert_data!(state, pad_ref, %{direction: :input})
     data = PadModel.get_data!(state, pad_ref)
 
-    if data.input_queue && not InputQueue.empty?(data.input_queue) do
-      PadModel.update_data(
+    queue = data.input_queue
+
+    if queue && not InputQueue.empty?(queue) do
+      PadModel.set_data(
         state,
         pad_ref,
         :input_queue,
-        &{:ok, InputQueue.store(&1, :caps, caps)}
+        InputQueue.store(queue, :caps, caps)
       )
     else
       exec_handle_caps(pad_ref, caps, state)
