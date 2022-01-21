@@ -1,6 +1,5 @@
  ## 0.9.0
- ### PRs not influencing public API:
- * Prevent internal testing notifications from reaching pipeline module [#350](https://github.com/membraneframework/membrane_core/pull/350) 
+Stop forwarding notifications by default in bins [#358](https://github.com/membraneframework/membrane_core/pull/358)
 
 ## 0.8.1
  * allow telemetry in version 1.0 only [#347](https://github.com/membraneframework/membrane_core/pull/347)
