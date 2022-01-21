@@ -75,9 +75,9 @@ defmodule Membrane.Core.ElementTest do
             pad_ref: :input,
             pad_props: %{
               options: [],
-              toilet_capacity_factor: nil,
-              demand_excess_factor: nil,
-              auto_demand_size_factor: nil,
+              toilet_capacity: nil,
+              demand_excess: nil,
+              auto_demand_size: nil,
               min_demand_factor: nil
             },
             child: :this
@@ -203,7 +203,7 @@ defmodule Membrane.Core.ElementTest do
                  :output,
                  %{
                    pad_ref: :output,
-                   pad_props: %{options: [], toilet_capacity_factor: nil},
+                   pad_props: %{options: [], toilet_capacity: nil},
                    child: :this
                  },
                  %{pad_ref: :input, pid: pid, child: :other},

@@ -24,9 +24,6 @@ defmodule Membrane.Core.Element.DemandHandler do
   require Membrane.Core.Message
   require Membrane.Logger
 
-  @spec default_auto_demand_size_factor() :: number()
-  def default_auto_demand_size_factor, do: 4000
-
   @doc """
   Called when redemand action was returned.
     * If element is currently supplying demand it means that after finishing supply_demand it will call

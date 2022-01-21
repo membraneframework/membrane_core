@@ -12,7 +12,6 @@ defmodule Membrane.Core.Element.PadController do
   alias Membrane.Core.Element.{
     ActionHandler,
     DemandController,
-    DemandHandler,
     EventController,
     InputQueue,
     PlaybackBuffer,
@@ -29,6 +28,8 @@ defmodule Membrane.Core.Element.PadController do
   require Membrane.Element.CallbackContext.{PadAdded, PadRemoved}
   require Membrane.Logger
   require Membrane.Pad
+
+  @default_auto_demand_size_factor 4000
 
   @doc """
   Verifies linked pad, initializes it's data.
@@ -67,7 +68,7 @@ defmodule Membrane.Core.Element.PadController do
 
     toilet =
       if direction == :input,
-        do: Toilet.new(endpoint.pad_props.toilet_capacity_factor, info.demand_unit, self()),
+        do: Toilet.new(endpoint.pad_props.toilet_capacity, info.demand_unit, self()),
         else: nil
 
     do_handle_link(endpoint, other_endpoint, info, toilet, link_props, state)
@@ -214,7 +215,7 @@ defmodule Membrane.Core.Element.PadController do
         demand_pad: other_ref,
         log_tag: inspect(ref),
         toilet?: enable_toilet?,
-        demand_excess_factor: props.demand_excess_factor,
+        demand_excess: props.demand_excess,
         min_demand_factor: props.min_demand_factor
       })
 
@@ -252,10 +253,9 @@ defmodule Membrane.Core.Element.PadController do
 
     auto_demand_size =
       if direction == :input do
-        ceil(
+        props.auto_demand_size ||
           Membrane.Buffer.Metric.Count.buffer_size_approximation() *
-            (props.auto_demand_size_factor || DemandHandler.default_auto_demand_size_factor())
-        )
+            @default_auto_demand_size_factor
       else
         nil
       end

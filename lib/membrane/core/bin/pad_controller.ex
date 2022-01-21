@@ -156,10 +156,10 @@ defmodule Membrane.Core.Bin.PadController do
                                                                  external_value,
                                                                  internal_value ->
         if key in [
-             :demand_excess_factor,
+             :demand_excess,
              :min_demand_factor,
-             :auto_demand_size_factor,
-             :toilet_capacity_factor
+             :auto_demand_size,
+             :toilet_capacity
            ] do
           external_value || internal_value
         else

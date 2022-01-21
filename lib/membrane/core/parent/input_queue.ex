@@ -47,8 +47,7 @@ defmodule Membrane.Core.Element.InputQueue do
 
   defstruct @enforce_keys
 
-  @spec default_demand_excess_factor() :: number()
-  def default_demand_excess_factor, do: 40
+  @default_demand_excess_factor 40
 
   @spec default_min_demand_factor() :: number()
   def default_min_demand_factor, do: 0.25
@@ -59,7 +58,7 @@ defmodule Membrane.Core.Element.InputQueue do
           demand_pad: Pad.ref_t(),
           log_tag: String.t(),
           toilet?: boolean(),
-          demand_excess_factor: pos_integer() | nil,
+          demand_excess: pos_integer() | nil,
           min_demand_factor: pos_integer() | nil
         }) :: t()
   def init(config) do
@@ -69,17 +68,14 @@ defmodule Membrane.Core.Element.InputQueue do
       demand_pad: demand_pad,
       log_tag: log_tag,
       toilet?: toilet?,
-      demand_excess_factor: demand_excess_factor,
+      demand_excess: demand_excess,
       min_demand_factor: min_demand_factor
     } = config
 
     metric = Buffer.Metric.from_unit(demand_unit)
 
-    demand_excess =
-      (metric.buffer_size_approximation() *
-         (demand_excess_factor || default_demand_excess_factor()))
-      |> ceil()
-      |> max(1)
+    default_demand_excess = metric.buffer_size_approximation() * @default_demand_excess_factor
+    demand_excess = demand_excess || default_demand_excess
 
     min_demand =
       (demand_excess * (min_demand_factor || default_min_demand_factor())) |> ceil() |> max(1)

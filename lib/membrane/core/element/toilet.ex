@@ -9,16 +9,15 @@ defmodule Membrane.Core.Element.Toilet do
 
   @opaque t :: {__MODULE__, :atomics.atomics_ref(), pos_integer, Process.dest()}
 
-  @spec default_capacity_factor() :: number
-  def default_capacity_factor, do: 200
+  @default_capacity_factor 200
 
   @spec new(pos_integer() | nil, Membrane.Buffer.Metric.unit_t(), Process.dest()) :: t
-  def new(capacity_factor, demand_unit, responsible_process) do
-    capacity =
+  def new(capacity, demand_unit, responsible_process) do
+    default_capacity =
       Membrane.Buffer.Metric.from_unit(demand_unit).buffer_size_approximation() *
-        (capacity_factor || default_capacity_factor())
+        @default_capacity_factor
 
-    capacity = ceil(capacity)
+    capacity = capacity || default_capacity
     {__MODULE__, :atomics.new(1, []), capacity, responsible_process}
   end
 
@@ -69,7 +68,7 @@ defmodule Membrane.Core.Element.Toilet do
     processes the stream too slow or doesn't process it at all.
     To have control over amount of buffers being produced, consider using output in pull mode
     (see `Membrane.Pad.mode_t`).
-    You can also try changing the `toilet_capacity_factor` in `Membrane.ParentSpec.via_in/3`.
+    You can also try changing the `toilet_capacity` in `Membrane.ParentSpec.via_in/3`.
     """)
 
     Process.exit(responsible_process, :kill)

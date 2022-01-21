@@ -18,15 +18,14 @@ defmodule Membrane.Core.Element.InputQueueSpec do
 
   describe ".init/6" do
     let :log_tag, do: "test"
-    let :demand_excess_factor, do: 100
+    let :demand_excess, do: 100
     let :min_demand_factor, do: 0.1
     let :demand_unit, do: :bytes
     let :demand_pid, do: self()
     let :linked_output_ref, do: :output_pad_ref
     let :toilet?, do: false
     let :expected_metric, do: Buffer.Metric.from_unit(demand_unit())
-    let :expected_demand_excess, do: 150_000
-    let :expected_min_demand, do: 15_000
+    let :expected_min_demand, do: 10
 
     it "should return InputQueue struct and send demand message" do
       expect(
@@ -36,7 +35,7 @@ defmodule Membrane.Core.Element.InputQueueSpec do
           demand_pad: linked_output_ref(),
           log_tag: log_tag(),
           toilet?: toilet?(),
-          demand_excess_factor: demand_excess_factor(),
+          demand_excess: demand_excess(),
           min_demand_factor: min_demand_factor()
         })
       )
@@ -44,7 +43,7 @@ defmodule Membrane.Core.Element.InputQueueSpec do
         eq(%InputQueue{
           q: Qex.new(),
           log_tag: log_tag(),
-          demand_excess: expected_demand_excess(),
+          demand_excess: demand_excess(),
           size: 0,
           demand: 0,
           min_demand: expected_min_demand(),
@@ -53,7 +52,7 @@ defmodule Membrane.Core.Element.InputQueueSpec do
         })
       )
 
-      message = Message.new(:demand, expected_demand_excess(), for_pad: linked_output_ref())
+      message = Message.new(:demand, demand_excess(), for_pad: linked_output_ref())
       assert_received ^message
     end
 
@@ -70,7 +69,7 @@ defmodule Membrane.Core.Element.InputQueueSpec do
             demand_pad: linked_output_ref(),
             log_tag: log_tag(),
             toilet?: toilet?(),
-            demand_excess_factor: demand_excess_factor(),
+            demand_excess: demand_excess(),
             min_demand_factor: min_demand_factor()
           })
         )
@@ -78,9 +77,9 @@ defmodule Membrane.Core.Element.InputQueueSpec do
           eq(%InputQueue{
             q: Qex.new(),
             log_tag: log_tag(),
-            demand_excess: expected_demand_excess(),
+            demand_excess: demand_excess(),
             size: 0,
-            demand: expected_demand_excess(),
+            demand: demand_excess(),
             min_demand: expected_min_demand(),
             metric: expected_metric(),
             toilet?: toilet?()
