@@ -258,47 +258,66 @@ defmodule Membrane.Testing.Pipeline do
       custom_pipeline_state: options.custom_args
     }
 
-    eval(:handle_init, [], fn -> {:ok, new_state} end, new_state)
+    injected_module_result = eval_injected_module_callback(:handle_init, [], new_state)
+    testing_pipeline_result = {:ok, new_state}
+
+    combine_results(injected_module_result, testing_pipeline_result)
   end
 
   @impl true
   def handle_stopped_to_prepared(ctx, %State{} = state) do
-    eval(
-      :handle_stopped_to_prepared,
-      [ctx],
-      fn -> notify_playback_state_changed(:stopped, :prepared, state) end,
-      state
-    )
+    injected_module_result =
+      eval_injected_module_callback(
+        :handle_stopped_to_prepared,
+        [ctx],
+        state
+      )
+
+    testing_pipeline_result = notify_playback_state_changed(:stopped, :prepared, state)
+
+    combine_results(injected_module_result, testing_pipeline_result)
   end
 
   @impl true
   def handle_prepared_to_playing(ctx, %State{} = state) do
-    eval(
-      :handle_prepared_to_playing,
-      [ctx],
-      fn -> notify_playback_state_changed(:prepared, :playing, state) end,
-      state
-    )
+    injected_module_result =
+      eval_injected_module_callback(
+        :handle_prepared_to_playing,
+        [ctx],
+        state
+      )
+
+    testing_pipeline_result = notify_playback_state_changed(:prepared, :playing, state)
+
+    combine_results(injected_module_result, testing_pipeline_result)
   end
 
   @impl true
   def handle_playing_to_prepared(ctx, %State{} = state) do
-    eval(
-      :handle_playing_to_prepared,
-      [ctx],
-      fn -> notify_playback_state_changed(:playing, :prepared, state) end,
-      state
-    )
+    injected_module_result =
+      eval_injected_module_callback(
+        :handle_playing_to_prepared,
+        [ctx],
+        state
+      )
+
+    testing_pipeline_result = notify_playback_state_changed(:playing, :prepared, state)
+
+    combine_results(injected_module_result, testing_pipeline_result)
   end
 
   @impl true
   def handle_prepared_to_stopped(ctx, %State{} = state) do
-    eval(
-      :handle_prepared_to_stopped,
-      [ctx],
-      fn -> notify_playback_state_changed(:prepared, :stopped, state) end,
-      state
-    )
+    injected_module_result =
+      eval_injected_module_callback(
+        :handle_prepared_to_stopped,
+        [ctx],
+        state
+      )
+
+    testing_pipeline_result = notify_playback_state_changed(:prepared, :stopped, state)
+
+    combine_results(injected_module_result, testing_pipeline_result)
   end
 
   @impl true
@@ -313,86 +332,117 @@ defmodule Membrane.Testing.Pipeline do
 
   @impl true
   def handle_notification(notification, from, ctx, %State{} = state) do
-    eval(
-      :handle_notification,
-      [notification, from, ctx],
-      fn -> notify_test_process({:handle_notification, {notification, from}}, state) end,
-      state
-    )
+    injected_module_result =
+      eval_injected_module_callback(
+        :handle_notification,
+        [notification, from, ctx],
+        state
+      )
+
+    testing_pipeline_result =
+      notify_test_process({:handle_notification, {notification, from}}, state)
+
+    combine_results(injected_module_result, testing_pipeline_result)
   end
 
   @impl true
   def handle_spec_started(elements, ctx, %State{} = state) do
-    eval(
-      :handle_spec_started,
-      [elements, ctx],
-      fn -> {:ok, state} end,
-      state
-    )
+    injected_module_result =
+      eval_injected_module_callback(
+        :handle_spec_started,
+        [elements, ctx],
+        state
+      )
+
+    testing_pipeline_result = {:ok, state}
+
+    combine_results(injected_module_result, testing_pipeline_result)
   end
 
   @impl true
   def handle_other({:for_element, element, message}, ctx, %State{} = state) do
-    eval(
-      :handle_other,
-      [{:for_element, element, message}, ctx],
-      fn -> {{:ok, forward: {element, message}}, state} end,
-      state
-    )
+    injected_module_result =
+      eval_injected_module_callback(
+        :handle_other,
+        [{:for_element, element, message}, ctx],
+        state
+      )
+
+    testing_pipeline_result = {{:ok, forward: {element, message}}, state}
+
+    combine_results(injected_module_result, testing_pipeline_result)
   end
 
   @impl true
   def handle_other(message, ctx, %State{} = state) do
-    eval(
-      :handle_other,
-      [message, ctx],
-      fn -> notify_test_process({:handle_other, message}, state) end,
-      state
-    )
+    injected_module_result =
+      eval_injected_module_callback(
+        :handle_other,
+        [message, ctx],
+        state
+      )
+
+    testing_pipeline_result = notify_test_process({:handle_other, message}, state)
+
+    combine_results(injected_module_result, testing_pipeline_result)
   end
 
   @impl true
   def handle_element_start_of_stream(endpoint, ctx, state) do
-    eval(
-      :handle_element_start_of_stream,
-      [endpoint, ctx],
-      fn ->
-        notify_test_process({:handle_element_start_of_stream, endpoint}, state)
-      end,
-      state
-    )
+    injected_module_result =
+      eval_injected_module_callback(
+        :handle_element_start_of_stream,
+        [endpoint, ctx],
+        state
+      )
+
+    testing_pipeline_result =
+      notify_test_process({:handle_element_start_of_stream, endpoint}, state)
+
+    combine_results(injected_module_result, testing_pipeline_result)
   end
 
   @impl true
   def handle_element_end_of_stream(endpoint, ctx, state) do
-    eval(
-      :handle_element_end_of_stream,
-      [endpoint, ctx],
-      fn ->
-        notify_test_process({:handle_element_end_of_stream, endpoint}, state)
-      end,
-      state
-    )
+    injected_module_result =
+      eval_injected_module_callback(
+        :handle_element_end_of_stream,
+        [endpoint, ctx],
+        state
+      )
+
+    testing_pipeline_result =
+      notify_test_process({:handle_element_end_of_stream, endpoint}, state)
+
+    combine_results(injected_module_result, testing_pipeline_result)
   end
 
   @impl true
   def handle_tick(timer, ctx, state) do
-    eval(
-      :handle_tick,
-      [timer, ctx],
-      fn -> {:ok, state} end,
-      state
-    )
+    injected_module_result =
+      eval_injected_module_callback(
+        :handle_tick,
+        [timer, ctx],
+        state
+      )
+
+    testing_pipeline_result = {:ok, state}
+
+    combine_results(injected_module_result, testing_pipeline_result)
   end
 
   @impl true
   def handle_crash_group_down(group_name, ctx, state) do
-    eval(
-      :handle_crash_group_down,
-      [group_name, ctx],
-      fn -> {:ok, state} end,
-      state
-    )
+    injected_module_result =
+      eval_injected_module_callback(
+        :handle_crash_group_down,
+        [group_name, ctx],
+        state
+      )
+
+    testing_pipeline_result = {:ok, state}
+
+    combine_results(injected_module_result, testing_pipeline_result)
   end
 
   defp default_options(%Options{test_process: nil} = options),
@@ -400,18 +450,13 @@ defmodule Membrane.Testing.Pipeline do
 
   defp default_options(options), do: options
 
-  defp eval(custom_function, custom_args, function, state)
+  defp eval_injected_module_callback(callback, args, state)
 
-  defp eval(_custom_function, _custom_args, function, %State{module: nil}),
-    do: function.()
+  defp eval_injected_module_callback(_callback, _args, %State{module: nil} = state),
+    do: {:ok, state} |> unify_result()
 
-  defp eval(custom_function, custom_args, function, %State{module: module} = state) do
-    with custom_result = {{:ok, _actions}, _state} <-
-           apply(module, custom_function, custom_args ++ [state.custom_pipeline_state])
-           |> unify_result do
-      result = function.()
-      combine_results(custom_result, result)
-    end
+  defp eval_injected_module_callback(callback, args, state) do
+    apply(state.module, callback, args ++ [state.custom_pipeline_state]) |> unify_result()
   end
 
   defp notify_playback_state_changed(previous, current, %State{} = state) do

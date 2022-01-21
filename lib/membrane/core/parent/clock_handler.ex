@@ -62,7 +62,7 @@ defmodule Membrane.Core.Parent.ClockHandler do
 
       components ->
         raise ParentError, """
-        Cannot choose clock for the parent, as multiple components provide one, namely: #{components |> Enum.map(& &1.name) |> Enum.join(", ")}. Please explicitly select the clock by setting `ParentSpec.clock_provider` parameter.
+        Cannot choose clock for the parent, as multiple components provide one, namely: #{Enum.map_join(components, ", ", & &1.name)}. Please explicitly select the clock by setting `ParentSpec.clock_provider` parameter.
         """
     end
   end

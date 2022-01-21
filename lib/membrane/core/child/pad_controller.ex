@@ -55,7 +55,7 @@ defmodule Membrane.Core.Child.PadController do
       state =
         case Pad.availability_mode(info.availability) do
           :static ->
-            state |> Bunch.Access.update_in([:pads, :info], &(&1 |> Map.delete(name)))
+            state |> update_in([:pads, :info], &(&1 |> Map.delete(name)))
 
           :dynamic ->
             add_to_currently_linking(this.pad_ref, state)
@@ -140,9 +140,8 @@ defmodule Membrane.Core.Child.PadController do
   def handle_unlink(pad_ref, state) do
     with {:ok, state} <- flush_playback_buffer(pad_ref, state),
          {:ok, state} <- generate_eos_if_needed(pad_ref, state),
-         {:ok, state} <- handle_pad_removed(pad_ref, state),
-         {:ok, state} <- PadModel.delete_data(state, pad_ref) do
-      {:ok, state}
+         {:ok, state} <- handle_pad_removed(pad_ref, state) do
+      PadModel.delete_data(state, pad_ref)
     end
   end
 
@@ -177,9 +176,8 @@ defmodule Membrane.Core.Child.PadController do
           {Pad.ref_t(), other_info :: PadModel.pad_info_t()}
         ) :: :ok
   defp validate_dir_and_mode!(this, that) do
-    with :ok <- do_validate_dm(this, that),
-         :ok <- do_validate_dm(that, this) do
-      :ok
+    with :ok <- do_validate_dm(this, that) do
+      do_validate_dm(that, this)
     end
   end
 
@@ -264,7 +262,7 @@ defmodule Membrane.Core.Child.PadController do
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
     data = data |> Map.merge(init_pad_mode_data(data, props, other_info, state))
     data = struct!(Pad.Data, data)
-    state |> Bunch.Access.put_in([:pads, :data, ref], data)
+    state |> put_in([:pads, :data, ref], data)
   end
 
   defp init_pad_direction_data(%{direction: :input}, _props, _state), do: %{sticky_messages: []}
@@ -289,11 +287,11 @@ defmodule Membrane.Core.Child.PadController do
 
   @spec add_to_currently_linking(Pad.ref_t(), state_t()) :: state_t()
   defp add_to_currently_linking(ref, state),
-    do: state |> Bunch.Access.update_in([:pads, :dynamic_currently_linking], &[ref | &1])
+    do: state |> update_in([:pads, :dynamic_currently_linking], &[ref | &1])
 
   @spec clear_currently_linking(state_t()) :: state_t()
   defp clear_currently_linking(state),
-    do: state |> Bunch.Access.put_in([:pads, :dynamic_currently_linking], [])
+    do: state |> put_in([:pads, :dynamic_currently_linking], [])
 
   @spec generate_eos_if_needed(Pad.ref_t(), state_t()) :: Type.stateful_try_t(state_t)
   def generate_eos_if_needed(pad_ref, state) do

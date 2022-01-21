@@ -300,6 +300,7 @@ defmodule Membrane.Core.ElementTest do
     %{
       module: SomeElement,
       name: :name,
+      node: nil,
       user_options: %{},
       parent: pipeline,
       parent_clock: nil,

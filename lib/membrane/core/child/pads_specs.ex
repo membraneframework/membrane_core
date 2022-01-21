@@ -227,7 +227,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
         }
       end)
       |> Enum.map_join("\n", fn {k, v} ->
-        "#{k} | #{v}"
+        "<tr><td>#{k}</td> <td>#{v}</td></tr>"
       end)
 
     options_doc =
@@ -247,7 +247,9 @@ defmodule Membrane.Core.Child.PadsSpecs do
       """
       ### `#{inspect(unquote(name))}`
 
+      <table>
       #{unquote(config_doc)}
+      </table>
       """ <> unquote(options_doc)
     end
   end
@@ -258,22 +260,22 @@ defmodule Membrane.Core.Child.PadsSpecs do
     |> Enum.map(fn
       {module, params} ->
         params_doc =
-          params
-          |> Enum.map(fn {k, v} -> Bunch.Markdown.hard_indent("`#{k}: #{inspect(v)}`") end)
-          |> Enum.join(",<br />")
+          Enum.map_join(params, ",<br/>", fn {k, v} ->
+            Bunch.Markdown.hard_indent("<code>#{k}: #{inspect(v)}</code>")
+          end)
 
-        "`#{inspect(module)}`, restrictions:<br />#{params_doc}"
+        "<code>#{inspect(module)}</code>, restrictions:<br/>#{params_doc}"
 
       module ->
-        "`#{inspect(module)}`"
+        "<code>#{inspect(module)}</code>"
     end)
     ~> (
       [doc] -> doc
-      docs -> docs |> Enum.join(",<br />")
+      docs -> docs |> Enum.join(",<br/>")
     )
   end
 
   defp generate_pad_property_doc(_k, v) do
-    "`#{inspect(v)}`"
+    "<code>#{inspect(v)}</code>"
   end
 end

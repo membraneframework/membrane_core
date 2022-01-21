@@ -28,6 +28,7 @@ defmodule Membrane.Core.BinTest do
         })
 
       assert_data_flows_through(pipeline, buffers)
+      stop_pipeline(pipeline)
     end
 
     test "when bin is next to a bin" do
@@ -50,6 +51,7 @@ defmodule Membrane.Core.BinTest do
         })
 
       assert_data_flows_through(pipeline, buffers)
+      stop_pipeline(pipeline)
     end
 
     test "when bins are nested" do
@@ -71,6 +73,7 @@ defmodule Membrane.Core.BinTest do
         })
 
       assert_data_flows_through(pipeline, buffers)
+      stop_pipeline(pipeline)
     end
 
     test "when there are consecutive bins that are nested" do
@@ -95,6 +98,7 @@ defmodule Membrane.Core.BinTest do
         })
 
       assert_data_flows_through(pipeline, buffers)
+      stop_pipeline(pipeline)
     end
 
     test "when pipeline has only one element being a padless bin" do
@@ -117,6 +121,7 @@ defmodule Membrane.Core.BinTest do
       assert_buffers_flow_through(pipeline, buffers, :test_bin)
 
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:sink, _}})
+      stop_pipeline(pipeline)
     end
 
     test "when bin is a sink bin" do
@@ -147,6 +152,7 @@ defmodule Membrane.Core.BinTest do
 
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:filter, _}})
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:sink, _}})
+      stop_pipeline(pipeline)
     end
   end
 
@@ -208,6 +214,7 @@ defmodule Membrane.Core.BinTest do
       assert_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, Pad.ref(:output, _)})
 
       refute_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, _})
+      stop_pipeline(pipeline)
     end
   end
 
@@ -320,6 +327,7 @@ defmodule Membrane.Core.BinTest do
     %{
       name: :name,
       module: TestBins.SimpleBin,
+      node: nil,
       parent: pipeline,
       parent_clock: nil,
       log_metadata: [],
@@ -328,5 +336,9 @@ defmodule Membrane.Core.BinTest do
         filter2: TestFilter
       }
     }
+  end
+
+  defp stop_pipeline(pipeline) do
+    Membrane.Pipeline.stop_and_terminate(pipeline, blocking?: true)
   end
 end

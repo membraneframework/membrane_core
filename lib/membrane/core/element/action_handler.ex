@@ -296,8 +296,10 @@ defmodule Membrane.Core.Element.ActionHandler do
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
 
     state
-    |> PadModel.update_data!(pad_ref, :demand, &(&1 - buf_size))
-    |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
+    |> PadModel.update_multi!(pad_ref, [
+      {:demand, &(&1 - buf_size)},
+      {:start_of_stream?, true}
+    ])
   end
 
   defp handle_buffer(_pad_ref, :push, _options, _buffers, state) do

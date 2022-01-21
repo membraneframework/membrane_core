@@ -1,14 +1,13 @@
 defmodule Membrane.Telemetry do
   @moduledoc """
   Defines basic telemetry event types used by Membrane's Core.
+
   Membrane uses [Telemetry Package](https://hex.pm/packages/telemetry) for instrumentation and does not store or save any measurements by itself.
 
   It is user's responsibility to use some sort of metrics reporter
   that will be attached to `:telemetry` package to consume and process generated measurements.
 
   ## Instrumentation
-  `Membrane.Telemetry` publishes functions that return described below event names.
-
   The following events are published by Membrane's Core with following measurement types and metadata:
 
     * `[:membrane, :metric, :value]` - used to report metrics, such as input buffer's size inside functions, incoming events and received caps.
@@ -21,17 +20,45 @@ defmodule Membrane.Telemetry do
 
     * `[:membrane, :pipeline | :bin | :element, :init]` - to report pipeline/element/bin initialization
         * Measurement: `t:init_or_terminate_event_value_t/0`
-        * Metadata: `%{}`
+        * Metadata: `%{log_metadata: keyword()}`, includes Logger's metadata of created component
 
     * `[:membrane, :pipeline | :bin | :element, :terminate]` - to report pipeline/element/bin termination
         * Measurement: `t:init_or_terminate_event_value_t/0`
         * Metadata: `%{}`
 
-  The measurements are reported only when application using Membrane Core specifies following in compile-time config file:
+
+  ## Enabling certain metrics/events
+  A lot of events can happen literally hundreds times per second such as registering that a buffer has been sent/processed.
+
+  This behaviour can come with a great performance penalties but may be helpful for certain discoveries. To avoid any runtime overhead
+  when the reporting is not necessary all metrics/events are hidden behind a compile-time feature flags.
+  To enable a particular measurement one must recompile membrane core with the following snippet put inside
+  user's application `config.exs` file:
 
       config :membrane_core,
-        enable_telemetry: true
+        telemetry_flags: [
+          :flag_name,
+          ...,
+          {:metrics, [list of metrics]}
+          ...
+        ]
 
+  Available flags are (those are of a very low overhead):
+  * `:links` - enables new links notifications
+  * `:inits_and_terminates` - enables notifications of `init` and `terminate` events for elements/bins/pipelines
+
+
+  Additionally one can control which metric values should get measured by passing an option of format :
+  `{:metrics, [list of metrics]}`
+
+  Available metrics are:
+  * `:buffer` - number of buffers being sent from a particular element
+  * `:bitrate` - total number of bits carried by the buffers mentioned above
+  * `:queue_len` - number of messages in element's message queue during GenServer's `handle_info` invocation
+  * `:caps` - indicates that given element has received new caps, value always equals '1'
+  * `:event` - indicates that given element has received a new event, value always equals '1'
+  * `:store` - reports the current size of a input buffer when storing a new buffer
+  * `:take_and_demand` - reports the current size of a input buffer when taking buffers and making a new demand
   """
 
   @type event_name_t :: [atom(), ...]

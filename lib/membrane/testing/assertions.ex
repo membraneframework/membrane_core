@@ -136,10 +136,9 @@ defmodule Membrane.Testing.Assertions do
 
     if are_arguments_values and {previous_state, current_state} not in valid_changes do
       transitions =
-        Enum.map(valid_changes, fn {from, to} ->
+        Enum.map_join(valid_changes, "\n", fn {from, to} ->
           "  " <> to_string(from) <> " -> " <> to_string(to)
         end)
-        |> Enum.join("\n")
 
       message = """
       Transition from #{previous_state} to #{current_state} is not valid.
