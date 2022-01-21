@@ -381,8 +381,7 @@ defmodule Membrane.Bin do
       @doc false
       def handle_element_end_of_stream({_element, _pad}, state), do: {:ok, state}
       @doc false
-      def handle_notification(notification, _element, state),
-        do: {{:ok, notify: notification}, state}
+      def handle_notification(notification, _element, state), do: {:ok, state}
 
       deprecated = [
         handle_stopped_to_prepared: 1,
