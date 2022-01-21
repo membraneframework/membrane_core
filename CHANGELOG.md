@@ -1,6 +1,11 @@
  ## 0.9.0
+ * More fine-grained control over emitted metrics [#365](https://github.com/membraneframework/membrane_core/pull/365)
+ * Added log metadata when reporting init in telemetry [#376](https://github.com/membraneframework/membrane_core/pull/376)
+ * Fix generation of pad documentation inside an element [#377](https://github.com/membraneframework/membrane_core/pull/377)
+
+## 0.8.2
  * Fixed PadAdded spec [#359](https://github.com/membraneframework/membrane_core/pull/359)
- ### PRs not influencing public API:
+### PRs not influencing public API:
  * Prevent internal testing notifications from reaching pipeline module [#350](https://github.com/membraneframework/membrane_core/pull/350)
  * Fix unknown node error on distribution changes [#352](https://github.com/membraneframework/membrane_core/pull/352)
 

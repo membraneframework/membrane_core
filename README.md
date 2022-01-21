@@ -30,8 +30,9 @@ Add the following line to your `deps` in `mix.exs`. Run `mix deps.get`.
 
 To get familiar with basic concepts and build your first application using Membrane Framework, visit [Membrane Guide](https://membraneframework.org/guide).
 
-API documentation is available at [HexDocs](https://hexdocs.pm/membrane_core/)
+API documentation is available at [HexDocs](https://hexdocs.pm/membrane_core/).
 
+Moreover, we would like to invite you to take some of the [Membrane Tutorials](https://tutorials.membraneframework.org), based on real-life use cases.
 ## Contributing
 
 Any contributions are more than welcome! You can help us improving Membrane by either contributing to the core (see [opened issues](https://github.com/membraneframework/membrane-core/issues)), extending our [guide](https://github.com/membraneframework/guide) or by creating new elements.

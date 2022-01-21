@@ -34,7 +34,7 @@ defmodule Membrane.Integration.DemandsTest do
     demand..(2 * demand - 1)
     |> assert_buffers_received(pid)
 
-    assert Pipeline.stop(pid) == :ok
+    assert Pipeline.stop_and_terminate(pid, blocking?: true) == :ok
   end
 
   test "Regular pipeline with proper demands" do

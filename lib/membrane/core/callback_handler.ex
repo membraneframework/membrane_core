@@ -96,9 +96,8 @@ defmodule Membrane.Core.CallbackHandler do
     args_list
     |> Bunch.Enum.try_reduce_while(state, fn args, state ->
       if split_continuation_arbiter.(state) do
-        result = callback |> exec_callback(args |> Bunch.listify(), handler_params, state)
-
-        result
+        callback
+        |> exec_callback(args, handler_params, state)
         |> handle_callback_result(original_callback, handler_module, handler_params, state)
         ~>> ({:ok, state} -> {{:ok, :cont}, state})
       else
@@ -109,25 +108,36 @@ defmodule Membrane.Core.CallbackHandler do
 
   @spec exec_callback(callback :: atom, args :: list, handler_params_t, state_t) ::
           callback_return_t | any
-  defp exec_callback(callback, args, handler_params, state) do
-    module = state |> Map.fetch!(:module)
+  defp exec_callback(:handle_init, args, _handler_params, %{module: module}) do
+    module
+    |> apply(:handle_init, args)
+    |> parse_callback_result(module, :handle_init)
+  end
 
-    args =
-      case handler_params |> Map.fetch(:context) do
-        :error -> args
-        {:ok, f} -> args ++ [f.(state)]
-      end
+  defp exec_callback(
+         callback,
+         args,
+         %{context: context_fun},
+         %{module: module, internal_state: internal_state} = state
+       ) do
+    args = args ++ [context_fun.(state), internal_state]
 
-    handler_params = handler_params |> Map.put_new(:state, true)
+    module
+    |> apply(callback, args)
+    |> parse_callback_result(module, callback)
+  end
 
-    args =
-      if handler_params.state do
-        args ++ [state |> Map.fetch!(:internal_state)]
-      else
-        args
-      end
+  defp exec_callback(
+         callback,
+         args,
+         _handler_params,
+         %{module: module, internal_state: internal_state}
+       ) do
+    args = args ++ [internal_state]
 
-    module |> apply(callback, args) |> parse_callback_result(module, callback, handler_params)
+    module
+    |> apply(callback, args)
+    |> parse_callback_result(module, callback)
   end
 
   @spec handle_callback_result(
@@ -139,7 +149,6 @@ defmodule Membrane.Core.CallbackHandler do
         ) :: Type.stateful_try_t(state_t)
   defp handle_callback_result(cb_result, callback, handler_module, handler_params, state) do
     {result, new_internal_state} = cb_result
-
     state = Map.put(state, :internal_state, new_internal_state)
 
     with {{:ok, actions}, state} <- {result, state} do
@@ -162,16 +171,20 @@ defmodule Membrane.Core.CallbackHandler do
     end
   end
 
-  @spec parse_callback_result(callback_return_t | any, module, callback :: atom, handler_params_t) ::
+  @spec parse_callback_result(callback_return_t | any, module, callback :: atom) ::
           Type.stateful_try_t(list, internal_state_t)
-  defp parse_callback_result({:ok, new_internal_state}, module, cb, params),
-    do: parse_callback_result({{:ok, []}, new_internal_state}, module, cb, params)
+  defp parse_callback_result({:ok, new_internal_state}, module, cb),
+    do: parse_callback_result({{:ok, []}, new_internal_state}, module, cb)
 
-  defp parse_callback_result({{:ok, actions}, new_internal_state}, _module, _cb, _params) do
+  defp parse_callback_result({{:ok, actions}, new_internal_state}, _module, _cb) do
     {{:ok, actions}, new_internal_state}
   end
 
-  defp parse_callback_result({{:error, reason}, new_internal_state}, module, cb, %{state: true}) do
+  defp parse_callback_result({:error, reason}, module, :handle_init) do
+    raise CallbackError, kind: :error, callback: {module, :handle_init}, reason: reason
+  end
+
+  defp parse_callback_result({{:error, reason}, new_internal_state}, module, cb) do
     Membrane.Logger.error("""
     Callback #{inspect(cb)} from module #{inspect(module)} returned an error
     Internal state: #{inspect(new_internal_state, pretty: true)}
@@ -180,11 +193,7 @@ defmodule Membrane.Core.CallbackHandler do
     {{:error, reason}, new_internal_state}
   end
 
-  defp parse_callback_result({:error, reason}, module, cb, %{state: false}) do
-    raise CallbackError, kind: :error, callback: {module, cb}, reason: reason
-  end
-
-  defp parse_callback_result(result, module, cb, _params) do
+  defp parse_callback_result(result, module, cb) do
     raise CallbackError, kind: :bad_return, callback: {module, cb}, val: result
   end
 end

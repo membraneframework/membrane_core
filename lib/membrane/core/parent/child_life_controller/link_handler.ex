@@ -268,6 +268,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   defp link(%Link{from: from, to: to}, state) do
     Telemetry.report_link(from, to)
     :ok = Message.call(from.pid, :handle_link, [:output, from, to, %{initiator: :parent}])
-    Bunch.Access.update_in(state, [:links], &[%Link{from: from, to: to} | &1])
+    update_in(state, [:links], &[%Link{from: from, to: to} | &1])
   end
 end

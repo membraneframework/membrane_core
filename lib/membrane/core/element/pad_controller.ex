@@ -175,7 +175,7 @@ defmodule Membrane.Core.Element.PadController do
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
     data = data |> Map.merge(init_pad_mode_data(data, props, other_info, metadata, state))
     data = struct!(Membrane.Element.PadData, data)
-    state = Bunch.Access.put_in(state, [:pads, :data, ref], data)
+    state = put_in(state, [:pads, :data, ref], data)
 
     if data.demand_mode == :auto do
       state =

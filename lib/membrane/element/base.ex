@@ -90,9 +90,7 @@ defmodule Membrane.Element.Base do
   and initialize element internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
   """
-  @callback handle_init(options :: Element.options_t()) ::
-              {:ok, Element.state_t()}
-              | {:error, any}
+  @callback handle_init(options :: Element.options_t()) :: callback_return_t
 
   @doc """
   Callback invoked when element goes to `:prepared` state from state `:stopped` and should get

@@ -11,6 +11,7 @@ defmodule Membrane.Core.Element.DemandController do
   alias Membrane.Element.CallbackContext
   alias Membrane.Pad
 
+  require CallbackContext.Demand
   require Membrane.Core.Child.PadModel
   require Membrane.Logger
 

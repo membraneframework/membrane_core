@@ -142,7 +142,7 @@ defmodule Membrane.Core.Element.InputQueue do
 
   @spec take_and_demand(t(), non_neg_integer(), pid(), Pad.ref_t()) :: {output_t(), t()}
   def take_and_demand(
-        %__MODULE__{size: size} = input_queue,
+        %__MODULE__{} = input_queue,
         count,
         demand_pid,
         demand_pad
@@ -150,20 +150,15 @@ defmodule Membrane.Core.Element.InputQueue do
       when count >= 0 do
     "Taking #{inspect(count)} buffers" |> mk_log(input_queue) |> Membrane.Logger.debug_verbose()
     {out, %__MODULE__{size: new_size} = input_queue} = do_take(input_queue, count)
-
-    input_queue =
-      input_queue
-      |> Bunch.Struct.update_in(:demand, &(&1 + size - new_size))
-      |> send_demands(demand_pid, demand_pad)
-
+    input_queue = send_demands(input_queue, demand_pid, demand_pad)
     Telemetry.report_metric(:take_and_demand, new_size, input_queue.log_tag)
-
     {out, input_queue}
   end
 
-  defp do_take(%__MODULE__{q: q, size: size, metric: metric} = input_queue, count) do
+  defp do_take(%__MODULE__{q: q, size: size, metric: metric, demand: demand} = input_queue, count) do
     {out, nq} = q |> q_pop(count, metric)
-    {out, %__MODULE__{input_queue | q: nq, size: max(0, size - count)}}
+    new_size = max(0, size - count)
+    {out, %__MODULE__{input_queue | q: nq, size: new_size, demand: demand + size - new_size}}
   end
 
   defp q_pop(q, count, metric, acc \\ [])
