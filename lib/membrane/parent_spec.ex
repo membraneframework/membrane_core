@@ -343,14 +343,17 @@ defmodule Membrane.ParentSpec do
   - `toilet_capacity` - Used when a toilet is created, that is for pull input pads that have push output pads
     linked to them. When a push output produces more buffers than the pull input can consume, the buffers are accumulated
     in a queue called toilet. If the toilet size grows above its capacity, it overflows by raising an error.
-  - `demand_excess` - Used only for pads working in pull mode with manual demands. See `t:Membrane.Pad.mode_t/0`
+  - `demand_excess` - Demand that will be generated automatically by Membrane to allow smooth, concurrent processing.
+    All buffers received in response to that demand will be queued internally until they are actually demanded by user.
+    Used only for pads working in pull mode with manual demands. See `t:Membrane.Pad.mode_t/0`
     and `t:Membrane.Pad.demand_mode_t/0` for more info.
-  - `min_demand_factor` - A factor used to calculate minimal demand (`minimal_demand = demand_excess * min_demand_factor`)
-    by which `demand_excess` is multiplied by to calculate the minimal demand. Used only for pads working in pull
-    mode with manual demands. See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0` for more info. Defaults
-    to `#{Membrane.Core.Element.InputQueue.default_min_demand_factor()}` (the default may change in the future).
-  - `auto_demand_size` - Used only for pads working in pull mode with automatic demands. See `t:Membrane.Pad.mode_t/0`
-    and `t:Membrane.Pad.demand_mode_t/0` for more info.
+  - `min_demand_factor` - A factor used to calculate `minimal demand` (`minimal_demand = demand_excess * min_demand_factor`).
+    Membrane won't send smaller demand that `minimal demand`, to reduce demands' overhead. However, user will always receive
+    as many buffers as they actually demanded, all excess buffers will be queued internally.
+    Used only for pads working in pull mode with manual demands. See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0`
+    for more info. Defaults to `#{Membrane.Core.Element.InputQueue.default_min_demand_factor()}` (the default may change in the future).
+  - `auto_demand_size` - Size of automatically generated demands. Used only for pads working in pull mode with automatic demands.
+    See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0` for more info.
 
   See the _links_ section of the moduledoc for more information.
   """
