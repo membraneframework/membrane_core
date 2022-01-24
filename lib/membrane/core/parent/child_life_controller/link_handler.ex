@@ -232,7 +232,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
           do: pad_name = Pad.name_by_ref(pad_spec),
           pad: {:ok, pad_info} <- Keyword.fetch(child_data.module.membrane_pads(), pad_name),
           ref: {:ok, ref} <- make_pad_ref(pad_spec, pad_info.availability) do
-      %Endpoint{endpoint | pid: child_data.pid, pad_ref: ref}
+      %Endpoint{endpoint | pid: child_data.pid, pad_ref: ref, pad_info: pad_info}
     else
       child: {:error, {:unknown_child, _child}} ->
         raise LinkError, "Child #{inspect(child)} does not exist"
@@ -266,8 +266,22 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     if {Membrane.Bin, :itself} in [from.child, to.child] do
       state
     else
-      :ok = Message.call(from.pid, :handle_link, [:output, from, to, %{initiator: :parent}])
-      update_in(state, [:links], &[%Link{from: from, to: to} | &1])
+      from_availability = Pad.availability_mode(from.pad_info.availability)
+      to_availability = Pad.availability_mode(to.pad_info.availability)
+
+      case {Message.call(from.pid, :handle_link, [:output, from, to, %{initiator: :parent}]),
+            from_availability, to_availability} do
+        {:ok, _form_availability, _to_availability} ->
+          update_in(state, [:links], &[%Link{from: from, to: to} | &1])
+
+        {{:error, {:call_failure, _reason}}, :static, _to_availability} ->
+          Process.exit(to.pid, :kill)
+          state
+
+        {{:error, {:neighbor_not_alive, _reason}}, _from_availability, :static} ->
+          Process.exit(from.pid, :kill)
+          state
+      end
     end
   end
 end

@@ -137,7 +137,7 @@ defmodule Membrane.Core.Element do
         _from,
         state
       ) do
-    PadController.handle_link(direction, this, other, params, state) |> reply(state)
+    reply(PadController.handle_link(direction, this, other, params, state), state)
   end
 
   @impl GenServer
