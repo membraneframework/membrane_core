@@ -55,9 +55,13 @@ defmodule Membrane.Core.ElementTest do
       Element.handle_call(
         Message.new(:handle_link, [
           :output,
-          %{pad_ref: :output, pad_props: []},
-          %{pad_ref: :input, pid: self()},
-          %{direction: :input, mode: :pull, demand_unit: :buffers}
+          %{pad_ref: :output, pad_props: %{options: []}, child: :this},
+          %{pad_ref: :input, pid: self(), child: :other},
+          %{
+            initiator: :sibling,
+            other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
+            link_metadata: %{toilet: nil}
+          }
         ]),
         nil,
         get_state()
@@ -67,15 +71,27 @@ defmodule Membrane.Core.ElementTest do
       Element.handle_call(
         Message.new(:handle_link, [
           :input,
-          %{pad_ref: :input, pad_props: []},
-          %{pad_ref: :output, pid: self()},
-          %{direction: :output, mode: :pull}
+          %{
+            pad_ref: :input,
+            pad_props: %{
+              options: [],
+              toilet_capacity: nil,
+              target_queue_size: nil,
+              auto_demand_size: nil,
+              min_demand_factor: nil
+            },
+            child: :this
+          },
+          %{pad_ref: :output, pid: self(), child: :other},
+          %{
+            initiator: :sibling,
+            other_info: %{direction: :output, mode: :pull},
+            link_metadata: %{toilet: nil}
+          }
         ]),
         nil,
         state
       )
-
-    {:reply, :ok, state} = Element.handle_call(Message.new(:linking_finished), nil, state)
 
     state
   end
@@ -154,7 +170,7 @@ defmodule Membrane.Core.ElementTest do
   test "should store incoming buffers in input buffer" do
     msg = Message.new(:buffer, [%Membrane.Buffer{payload: <<123>>}], for_pad: :input)
     assert {:noreply, state} = Element.handle_info(msg, playing_state())
-    assert state.pads.data.input.input_buf.current_size == 1
+    assert state.pads.data.input.input_queue.size == 1
   end
 
   test "should assign incoming caps to the pad and forward them" do
@@ -185,27 +201,39 @@ defmodule Membrane.Core.ElementTest do
              Element.handle_call(
                Message.new(:handle_link, [
                  :output,
-                 %{pad_ref: :output, pad_props: []},
-                 %{pad_ref: :input, pid: pid},
-                 %{direction: :input, mode: :pull, demand_unit: :buffers}
+                 %{
+                   pad_ref: :output,
+                   pad_props: %{options: [], toilet_capacity: nil},
+                   child: :this
+                 },
+                 %{pad_ref: :input, pid: pid, child: :other},
+                 %{
+                   initiator: :sibling,
+                   other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
+                   link_metadata: %{toilet: nil}
+                 }
                ]),
                nil,
                get_state()
              )
 
-    assert reply == %{
-             accepted_caps: :any,
-             availability: :always,
-             direction: :output,
-             mode: :pull,
-             name: :output,
-             options: nil
-           }
+    assert {%{child: :this, pad_props: %{options: []}, pad_ref: :output},
+            %{
+              accepted_caps: :any,
+              availability: :always,
+              demand_mode: :manual,
+              demand_unit: :buffers,
+              direction: :output,
+              mode: :pull,
+              name: :output,
+              options: nil
+            }, %{toilet: nil}} = reply
 
-    assert %Membrane.Pad.Data{pid: ^pid, other_ref: :input, other_demand_unit: :buffers} =
-             state.pads.data.output
-
-    assert {:reply, :ok, _state} = Element.handle_call(Message.new(:linking_finished), nil, state)
+    assert %Membrane.Element.PadData{
+             pid: ^pid,
+             other_ref: :input,
+             other_demand_unit: :buffers
+           } = state.pads.data.output
   end
 
   test "should handle unlinking pads" do

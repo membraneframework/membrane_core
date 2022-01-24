@@ -287,6 +287,10 @@ defmodule Membrane.Element.Base do
 
       import unquote(__MODULE__), only: [def_clock: 0, def_clock: 1, def_options: 1]
 
+      require Membrane.Core.Child.PadsSpecs
+
+      Membrane.Core.Child.PadsSpecs.ensure_default_membrane_pads()
+
       unquote(bring_pad)
 
       @impl true

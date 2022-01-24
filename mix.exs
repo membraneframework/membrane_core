@@ -69,8 +69,7 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane\.Filter($|\.)/,
           ~r/^Membrane\.Sink($|\.)/,
           ~r/^Membrane\.Source($|\.)/,
-          ~r/^Membrane\.Element($|\.)/,
-          ~r/^Membrane\.Core\.InputBuffer($|\.)/
+          ~r/^Membrane\.Element($|\.)/
         ],
         Parent: [~r/^Membrane\.(Parent|ParentSpec)($|\.)/],
         Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],

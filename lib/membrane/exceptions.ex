@@ -121,3 +121,7 @@ end
 defmodule Membrane.LinkError do
   defexception [:message]
 end
+
+defmodule Membrane.ElementError do
+  defexception [:message]
+end

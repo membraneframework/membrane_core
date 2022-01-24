@@ -22,18 +22,18 @@ defmodule Membrane.Core.Parent.LinkParserTest do
 
     assert {links, []} = LinkParser.parse(links_spec)
 
-    assert links == [
+    assert [
              %Link{
                from: %Endpoint{
                  child: :a,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: :b,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
@@ -42,14 +42,14 @@ defmodule Membrane.Core.Parent.LinkParserTest do
              %Link{
                from: %Endpoint{
                  child: :b,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: :c,
-                 pad_props: [options: [q: 1]],
+                 pad_props: %{options: [q: 1]},
                  pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
@@ -58,14 +58,14 @@ defmodule Membrane.Core.Parent.LinkParserTest do
              %Link{
                from: %Endpoint{
                  child: :c,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :x,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: :d,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: Pad.ref(:y, 2),
                  pad_ref: nil,
                  pid: nil
@@ -74,20 +74,20 @@ defmodule Membrane.Core.Parent.LinkParserTest do
              %Link{
                from: %Endpoint{
                  child: :d,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: {Membrane.Bin, :itself},
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                }
              }
-           ]
+           ] = links
   end
 
   test "link with multiple branches" do
@@ -97,18 +97,18 @@ defmodule Membrane.Core.Parent.LinkParserTest do
 
     assert {links, []} = LinkParser.parse(links_spec)
 
-    assert links == [
+    assert [
              %Link{
                from: %Endpoint{
                  child: :a,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: :b,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
@@ -117,14 +117,14 @@ defmodule Membrane.Core.Parent.LinkParserTest do
              %Link{
                from: %Endpoint{
                  child: :b,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: :c,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
@@ -133,14 +133,14 @@ defmodule Membrane.Core.Parent.LinkParserTest do
              %Link{
                from: %Endpoint{
                  child: :d,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: :b,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
@@ -149,20 +149,20 @@ defmodule Membrane.Core.Parent.LinkParserTest do
              %Link{
                from: %Endpoint{
                  child: :b,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: :e,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
                }
              }
-           ]
+           ] = links
   end
 
   test "invalid link" do
@@ -196,18 +196,18 @@ defmodule Membrane.Core.Parent.LinkParserTest do
     links_spec = [link(:a, A) |> to(:b, B) |> to(:c, C)]
     assert {links, children} = LinkParser.parse(links_spec)
 
-    assert links == [
+    assert [
              %Link{
                from: %Endpoint{
                  child: :a,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: :b,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
@@ -216,20 +216,20 @@ defmodule Membrane.Core.Parent.LinkParserTest do
              %Link{
                from: %Endpoint{
                  child: :b,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
                  child: :c,
-                 pad_props: [],
+                 pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
                  pid: nil
                }
              }
-           ]
+           ] = links
 
     assert Enum.sort(children) == [a: A, b: B, c: C]
   end

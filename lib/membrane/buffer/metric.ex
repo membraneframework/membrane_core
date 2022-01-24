@@ -8,7 +8,7 @@ defmodule Membrane.Buffer.Metric do
 
   @type unit_t :: :buffers | :bytes
 
-  @callback input_buf_preferred_size() :: pos_integer
+  @callback buffer_size_approximation() :: pos_integer
 
   @callback buffers_size([%Buffer{}] | []) :: non_neg_integer
 

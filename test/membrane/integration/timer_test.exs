@@ -6,8 +6,6 @@ defmodule Membrane.Integration.TimerTest do
   defmodule Element do
     use Membrane.Source
 
-    def_output_pad :output, mode: :push, caps: :any
-
     @impl true
     def handle_prepared_to_playing(_ctx, state) do
       {{:ok, start_timer: {:timer, Time.milliseconds(100)}}, state}
@@ -21,8 +19,6 @@ defmodule Membrane.Integration.TimerTest do
 
   defmodule Bin do
     use Membrane.Bin
-
-    def_input_pad :input, mode: :push, caps: :any
 
     @impl true
     def handle_prepared_to_playing(_ctx, state) do
@@ -41,8 +37,7 @@ defmodule Membrane.Integration.TimerTest do
     @impl true
     def handle_init(pid) do
       spec = %ParentSpec{
-        children: [element: Element, bin: Bin],
-        links: [link(:element) |> to(:bin)]
+        children: [element: Element, bin: Bin]
       }
 
       {{:ok, spec: spec}, %{pid: pid}}

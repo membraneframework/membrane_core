@@ -13,7 +13,7 @@ defmodule Membrane.Core.Parent.LinkParser do
           pad_spec: Pad.name_t() | Pad.ref_t(),
           pad_ref: Pad.ref_t() | nil,
           pid: pid() | nil,
-          pad_props: ParentSpec.pad_props_t()
+          pad_props: map()
         }
 
   @spec parse(ParentSpec.links_spec_t()) ::
@@ -42,13 +42,13 @@ defmodule Membrane.Core.Parent.LinkParser do
         %Link{
           from: %Endpoint{
             child: link.from,
-            pad_spec: get_pad(link, :from, :output),
-            pad_props: Map.get(link, :output_props, [])
+            pad_spec: link.from_pad,
+            pad_props: link.from_pad_props
           },
           to: %Endpoint{
             child: link.to,
-            pad_spec: get_pad(link, :to, :input),
-            pad_props: Map.get(link, :input_props, [])
+            pad_spec: link.to_pad,
+            pad_props: link.to_pad_props
           }
         }
       end)
@@ -65,13 +65,5 @@ defmodule Membrane.Core.Parent.LinkParser do
     Invalid links specification: #{inspect(links)}.
     See `#{inspect(ParentSpec)}` for information on specifying links.
     """
-  end
-
-  defp get_pad(link_spec, child, direction) do
-    case link_spec do
-      %{^direction => pad_name} -> pad_name
-      %{^child => {Membrane.Bin, :itself}} -> Pad.opposite_direction(direction)
-      _link_spec -> direction
-    end
   end
 end

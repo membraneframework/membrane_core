@@ -50,7 +50,8 @@ defmodule Membrane.Core.Element.State do
     :playback_buffer,
     :supplying_demand?,
     :delayed_demands,
-    :synchronization
+    :synchronization,
+    :demand_size
   ]
 
   @doc """

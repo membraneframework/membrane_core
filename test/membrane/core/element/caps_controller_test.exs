@@ -3,10 +3,9 @@ defmodule Membrane.Core.Element.CapsControllerTest do
 
   alias Membrane.Buffer
   alias Membrane.Caps.Mock, as: MockCaps
-  alias Membrane.Core.{InputBuffer, Message}
+  alias Membrane.Core.Message
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.State
-  alias Membrane.Pad.Data
+  alias Membrane.Core.Element.{InputQueue, State}
   alias Membrane.Support.DemandsTest.Filter
 
   require Message
@@ -14,7 +13,16 @@ defmodule Membrane.Core.Element.CapsControllerTest do
   @module Membrane.Core.Element.CapsController
 
   setup do
-    input_buf = InputBuffer.init(:buffers, self(), :some_pad, "test", preferred_size: 10)
+    input_queue =
+      InputQueue.init(%{
+        demand_unit: :buffers,
+        demand_pid: self(),
+        demand_pad: :some_pad,
+        log_tag: "test",
+        toilet?: false,
+        target_size: nil,
+        min_demand_factor: nil
+      })
 
     state =
       %{
@@ -28,40 +36,41 @@ defmodule Membrane.Core.Element.CapsControllerTest do
         | type: :filter,
           pads: %{
             data: %{
-              input: %Data{
-                accepted_caps: :any,
-                direction: :input,
-                pid: self(),
-                mode: :pull,
-                input_buf: input_buf,
-                demand: 0
-              }
+              input:
+                struct(Membrane.Element.PadData,
+                  accepted_caps: :any,
+                  direction: :input,
+                  pid: self(),
+                  mode: :pull,
+                  input_queue: input_queue,
+                  demand: 0
+                )
             }
           }
       }
       |> Bunch.Struct.put_in([:playback, :state], :playing)
 
-    assert_received Message.new(:demand, 10, for_pad: :some_pad)
+    assert_received Message.new(:demand, _size, for_pad: :some_pad)
     [state: state]
   end
 
   describe "handle_caps for pull pad" do
-    test "with empty input_buf", %{state: state} do
+    test "with empty input_queue", %{state: state} do
       assert {:ok, _state} = @module.handle_caps(:input, %MockCaps{}, state)
     end
 
-    test "with input_buf containing one buffer", %{state: state} do
+    test "with input_queue containing one buffer", %{state: state} do
       state =
         state
         |> PadModel.update_data!(
           :input,
-          :input_buf,
-          &InputBuffer.store(&1, :buffer, %Buffer{payload: "aa"})
+          :input_queue,
+          &InputQueue.store(&1, :buffer, %Buffer{payload: "aa"})
         )
 
       assert {:ok, new_state} = @module.handle_caps(:input, %MockCaps{}, state)
 
-      assert new_state.pads.data.input.input_buf.q |> Qex.last!() ==
+      assert new_state.pads.data.input.input_queue.q |> Qex.last!() ==
                {:non_buffer, :caps, %MockCaps{}}
     end
   end

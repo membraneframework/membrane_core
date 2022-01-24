@@ -18,14 +18,12 @@ defmodule Membrane.Core.Element do
   use Bunch
   use GenServer
 
-  import Membrane.Helper.GenServer
+  import Membrane.Core.Helper.GenServer
 
   alias Membrane.{Clock, Element, Sync}
-  alias Membrane.Core.Element.{LifecycleController, PlaybackBuffer, State}
+  alias Membrane.Core.Element.{LifecycleController, PadController, PlaybackBuffer, State}
   alias Membrane.Core.{Message, PlaybackHandler, Telemetry, TimerController}
   alias Membrane.ComponentPath
-  alias Membrane.Core.Child.PadController
-
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
   require Membrane.Logger
@@ -89,7 +87,7 @@ defmodule Membrane.Core.Element do
   It will wait for reply for amount of time passed as second argument
   (in milliseconds).
 
-  Will trigger calling `c:Membrane.Element.Base.handle_shutdown/1`
+  Will trigger calling `c:Membrane.Element.Base.handle_shutdown/2`
   callback.
   """
   @spec shutdown(pid, timeout) :: :ok
@@ -134,17 +132,12 @@ defmodule Membrane.Core.Element do
   end
 
   @impl GenServer
-  def handle_call(Message.new(:linking_finished), _from, state) do
-    PadController.handle_linking_finished(state) |> reply(state)
-  end
-
-  @impl GenServer
   def handle_call(
-        Message.new(:handle_link, [direction, this, other, other_info]),
+        Message.new(:handle_link, [direction, this, other, params]),
         _from,
         state
       ) do
-    PadController.handle_link(direction, this, other, other_info, state) |> reply(state)
+    PadController.handle_link(direction, this, other, params, state) |> reply(state)
   end
 
   @impl GenServer
@@ -186,10 +179,6 @@ defmodule Membrane.Core.Element do
   defp do_handle_info(Message.new(type, _args, _opts) = msg, state)
        when type in [:demand, :buffer, :caps, :event] do
     PlaybackBuffer.store(msg, state) |> noreply(state)
-  end
-
-  defp do_handle_info(Message.new(:push_mode_announcement, [], for_pad: ref), state) do
-    PadController.enable_toilet_if_pull(ref, state) |> noreply(state)
   end
 
   defp do_handle_info(Message.new(:handle_unlink, pad_ref), state) do

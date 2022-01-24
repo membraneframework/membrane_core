@@ -290,16 +290,12 @@ defmodule Membrane.Pipeline do
 
   @doc """
   Changes playback state to `:playing`.
-
-  An alias for `Membrane.Core.PlaybackHandler.change_playback_state/2` with proper state.
   """
   @spec play(pid) :: :ok
   def play(pid), do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :playing)
 
   @doc """
   Changes playback state to `:prepared`.
-
-  An alias for `Membrane.Core.PlaybackHandler.change_playback_state/2` with proper state.
   """
   @spec prepare(pid) :: :ok
   def prepare(pid),
@@ -307,8 +303,6 @@ defmodule Membrane.Pipeline do
 
   @doc """
   Changes playback state to `:stopped`.
-
-  An alias for `Membrane.Core.PlaybackHandler.change_playback_state/2` with proper state.
   """
   @spec stop(pid) :: :ok
   def stop(pid), do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :stopped)

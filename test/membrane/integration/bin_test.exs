@@ -192,7 +192,8 @@ defmodule Membrane.Core.BinTest do
   end
 
   describe "Dynamic pads" do
-    test "handle_pad_added is called only for public pads" do
+    @tag :target
+    test "handle_pad_added is called for dynamic pads" do
       alias Membrane.Pad
       require Pad
       buffers = ['a', 'b', 'c']
@@ -202,13 +203,20 @@ defmodule Membrane.Core.BinTest do
           elements: [
             source: %Testing.Source{output: buffers},
             test_bin: %TestBins.TestDynamicPadBin{
-              filter1: TestDynamicPadFilter,
-              filter2: TestDynamicPadFilter
+              filter1: %TestBins.TestDynamicPadBin{
+                filter1: TestDynamicPadFilter,
+                filter2: TestDynamicPadFilter
+              },
+              filter2: %TestBins.TestDynamicPadBin{
+                filter1: TestDynamicPadFilter,
+                filter2: TestDynamicPadFilter
+              }
             },
             sink: Testing.Sink
           ]
         })
 
+      Process.sleep(2000)
       assert_data_flows_through(pipeline, buffers)
       assert_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, Pad.ref(:input, _)})
       assert_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, Pad.ref(:output, _)})
@@ -277,26 +285,13 @@ defmodule Membrane.Core.BinTest do
       refute is_nil(clock2)
 
       assert proxy_for?(clock1, clock2)
+      ClockPipeline.stop_and_terminate(pid, blocking?: true)
     end
 
     defp proxy_for?(c1, c2) do
       c1_state = :sys.get_state(c1)
       assert c1_state.proxy_for == c2
     end
-  end
-
-  defp get_child_pid(last_child_pid, []) when is_pid(last_child_pid) do
-    {:ok, last_child_pid}
-  end
-
-  defp get_child_pid(last_child_pid, [child | children]) when is_pid(last_child_pid) do
-    state = :sys.get_state(last_child_pid)
-    %{pid: child_pid} = state.children[child]
-    get_child_pid(child_pid, children)
-  end
-
-  defp get_child_pid(_last_child_pid, _children) do
-    {:error, :child_was_not_found}
   end
 
   defp assert_data_flows_through(pipeline, buffers, receiving_element \\ :sink) do
@@ -307,6 +302,7 @@ defmodule Membrane.Core.BinTest do
     assert_buffers_flow_through(pipeline, buffers, receiving_element)
 
     assert_end_of_stream(pipeline, ^receiving_element)
+    Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
   end
 
   defp assert_buffers_flow_through(pipeline, buffers, receiving_element) do

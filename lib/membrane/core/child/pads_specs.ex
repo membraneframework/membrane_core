@@ -58,7 +58,6 @@ defmodule Membrane.Core.Child.PadsSpecs do
   """
   @spec def_pad(Pad.name_t(), Pad.direction_t(), Macro.t(), :element | :bin) :: Macro.t()
   def def_pad(pad_name, direction, raw_specs, component) do
-    Pad.assert_public_name!(pad_name)
     Code.ensure_loaded(Caps.Matcher)
 
     specs =
@@ -75,10 +74,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
       |> Keyword.put(:options, escaped_pad_opts)
 
     quote do
-      if Module.get_attribute(__MODULE__, :membrane_pads) == nil do
-        Module.register_attribute(__MODULE__, :membrane_pads, accumulate: true)
-        @before_compile {unquote(__MODULE__), :generate_membrane_pads}
-      end
+      unquote(do_ensure_default_membrane_pads())
 
       @membrane_pads unquote(__MODULE__).parse_pad_specs!(
                        {unquote(pad_name), unquote(specs)},
@@ -90,7 +86,11 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  defmacro ensure_default_membrane_pads do
+  defmacro ensure_default_membrane_pads() do
+    do_ensure_default_membrane_pads()
+  end
+
+  defp do_ensure_default_membrane_pads() do
     quote do
       if Module.get_attribute(__MODULE__, :membrane_pads) == nil do
         Module.register_attribute(__MODULE__, :membrane_pads, accumulate: true)
@@ -164,12 +164,21 @@ defmodule Membrane.Core.Child.PadsSpecs do
                 availability: [in: [:always, :on_request], default: :always],
                 caps: [validate: &Caps.Matcher.validate_specs/1],
                 mode: [in: [:pull, :push], default: :pull],
+                demand_mode: [
+                  in: [:auto, :manual],
+                  default: :manual
+                ],
                 demand_unit: [
                   in: [:buffers, :bytes],
-                  require_if: &(&1.mode == :pull and (component == :bin or direction == :input))
+                  require_if:
+                    &(&1.mode == :pull and &1.demand_mode != :auto and
+                        (component == :bin or direction == :input)),
+                  default: :buffers
                 ],
                 options: [default: nil]
               ) do
+      config = if component == :bin, do: Map.delete(config, :demand_mode), else: config
+
       config
       |> Map.put(:direction, direction)
       |> Map.put(:name, name)

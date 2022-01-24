@@ -1,11 +1,8 @@
 defmodule Membrane.Core.Element.LifecycleControllerTest do
   use ExUnit.Case
 
-  alias Membrane.Core.Element.LifecycleController
-  alias Membrane.Core.Element.State
-  alias Membrane.Core.InputBuffer
+  alias Membrane.Core.Element.{InputQueue, LifecycleController, State}
   alias Membrane.Core.Message
-  alias Membrane.Pad.Data
 
   require Membrane.Core.Message
 
@@ -15,7 +12,16 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
   end
 
   setup do
-    input_buf = InputBuffer.init(:buffers, self(), :some_pad, "test", preferred_size: 10)
+    input_queue =
+      InputQueue.init(%{
+        demand_unit: :buffers,
+        demand_pid: self(),
+        demand_pad: :some_pad,
+        log_tag: "test",
+        toilet?: false,
+        target_size: nil,
+        min_demand_factor: nil
+      })
 
     state =
       %{
@@ -29,23 +35,24 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
         | type: :filter,
           pads: %{
             data: %{
-              input: %Data{
-                ref: :input,
-                accepted_caps: :any,
-                direction: :input,
-                pid: self(),
-                mode: :pull,
-                start_of_stream?: true,
-                end_of_stream?: false,
-                input_buf: input_buf,
-                demand: 0
-              }
+              input:
+                struct(Membrane.Element.PadData,
+                  ref: :input,
+                  accepted_caps: :any,
+                  direction: :input,
+                  pid: self(),
+                  mode: :pull,
+                  start_of_stream?: true,
+                  end_of_stream?: false,
+                  input_queue: input_queue,
+                  demand: 0
+                )
             }
           }
       }
       |> Bunch.Struct.put_in([:playback, :state], :playing)
 
-    assert_received Message.new(:demand, 10, for_pad: :some_pad)
+    assert_received Message.new(:demand, _size, for_pad: :some_pad)
     [state: state]
   end
 

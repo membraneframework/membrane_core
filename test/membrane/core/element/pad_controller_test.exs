@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Child.PadControllerTest do
+defmodule Membrane.Core.Element.PadControllerTest do
   use ExUnit.Case, async: true
 
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
@@ -11,7 +11,7 @@ defmodule Membrane.Core.Child.PadControllerTest do
   require Message
   require Pad
 
-  @module Membrane.Core.Child.PadController
+  @module Membrane.Core.Element.PadController
 
   defp prepare_state(elem_module, name \\ :element, playback_state \\ :stopped) do
     %{name: name, module: elem_module, parent_clock: nil, sync: nil, parent: self()}
@@ -21,21 +21,24 @@ defmodule Membrane.Core.Child.PadControllerTest do
     |> Bunch.Access.put_in(:internal_state, %{})
   end
 
-  describe ".handle_link/7" do
+  describe ".handle_link" do
     test "when pad is present in the element" do
       state = prepare_state(TrivialFilter)
 
       assert {{:ok, _pad_info}, new_state} =
                @module.handle_link(
                  :output,
-                 %{pad_ref: :output, pid: self(), pad_props: []},
-                 %{pad_ref: :other_input, pid: nil},
-                 %{direction: :input, mode: :pull, demand_unit: :buffers},
+                 %{pad_ref: :output, pid: self(), pad_props: %{options: []}, child: :a},
+                 %{pad_ref: :other_input, pid: nil, child: :b},
+                 %{
+                   initiator: :sibling,
+                   other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
+                   link_metadata: %{toilet: make_ref()}
+                 },
                  state
                )
 
       assert %{new_state | pads: nil} == %{state | pads: nil}
-      refute new_state.pads.info |> Map.has_key?(:output)
       assert PadModel.assert_instance(new_state, :output) == :ok
     end
 
@@ -43,7 +46,13 @@ defmodule Membrane.Core.Child.PadControllerTest do
       state = prepare_state(TrivialFilter)
 
       assert_raise LinkError, fn ->
-        @module.handle_link(:output, %{pad_ref: :invalid_pad_ref}, %{}, %{}, state)
+        @module.handle_link(
+          :output,
+          %{pad_ref: :invalid_pad_ref, child: :a},
+          %{pad_ref: :x, child: :b},
+          %{link_initiator: :parent},
+          state
+        )
       end
     end
   end
@@ -55,10 +64,10 @@ defmodule Membrane.Core.Child.PadControllerTest do
       |> Bunch.Access.pop_in([:pads, :info, pad_name])
 
     data =
-      %Pad.Data{
+      struct(Membrane.Element.PadData,
         start_of_stream?: true,
         end_of_stream?: false
-      }
+      )
       |> Map.merge(info)
 
     state
@@ -71,10 +80,10 @@ defmodule Membrane.Core.Child.PadControllerTest do
     info = state.pads.info[pad_name]
 
     data =
-      %Pad.Data{
+      struct(Membrane.Element.PadData,
         start_of_stream?: true,
         end_of_stream?: false
-      }
+      )
       |> Map.merge(info)
 
     state |> Bunch.Access.put_in([:pads, :data, pad_ref], data)

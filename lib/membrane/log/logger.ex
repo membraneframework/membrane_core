@@ -98,7 +98,7 @@ defmodule Membrane.Log.Logger do
     level
     |> module.handle_log(content, time, tags, internal_state)
     |> handle_callback(state)
-    |> Membrane.Helper.GenServer.noreply()
+    |> Membrane.Core.Helper.GenServer.noreply()
   end
 
   # Generic handler that can be used to convert return value from

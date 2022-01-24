@@ -1,7 +1,9 @@
 defmodule Membrane.Core.Parent.Link.Endpoint do
   @moduledoc false
 
-  alias Membrane.{Element, Pad, ParentSpec}
+  use Bunch.Access
+
+  alias Membrane.{Element, Pad}
 
   @enforce_keys [:child, :pad_spec]
   defstruct @enforce_keys ++ [pad_ref: nil, pid: nil, pad_props: []]
@@ -11,6 +13,6 @@ defmodule Membrane.Core.Parent.Link.Endpoint do
           pad_spec: Pad.name_t() | Pad.ref_t(),
           pad_ref: Pad.ref_t(),
           pid: pid(),
-          pad_props: ParentSpec.pad_props_t()
+          pad_props: map()
         }
 end

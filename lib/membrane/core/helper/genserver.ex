@@ -1,4 +1,4 @@
-defmodule Membrane.Helper.GenServer do
+defmodule Membrane.Core.Helper.GenServer do
   @moduledoc false
 
   require Membrane.Logger

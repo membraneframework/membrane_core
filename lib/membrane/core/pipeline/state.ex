@@ -39,6 +39,7 @@ defmodule Membrane.Core.Pipeline.State do
                 children: %{},
                 crash_groups: %{},
                 links: [],
+                pending_specs: %{},
                 playback: %Playback{},
                 children_log_metadata: []
               ]
