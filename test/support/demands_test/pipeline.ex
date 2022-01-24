@@ -12,9 +12,9 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
 
     links = [
       link(:source)
-      |> via_in(:input, demand_excess: 50)
+      |> via_in(:input, target_queue_size: 50)
       |> to(:filter)
-      |> via_in(:input, demand_excess: 50)
+      |> via_in(:input, target_queue_size: 50)
       |> to(:sink)
     ]
 

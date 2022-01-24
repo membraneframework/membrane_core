@@ -12,7 +12,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
           demand_pad: :pad,
           log_tag: "test",
           toilet?: false,
-          demand_excess: nil,
+          target_size: nil,
           min_demand_factor: nil
         })
 

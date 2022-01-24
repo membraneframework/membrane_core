@@ -20,7 +20,7 @@ defmodule Membrane.Core.Element.CapsControllerTest do
         demand_pad: :some_pad,
         log_tag: "test",
         toilet?: false,
-        demand_excess: nil,
+        target_size: nil,
         min_demand_factor: nil
       })
 

@@ -18,7 +18,7 @@ defmodule Membrane.Core.Element.InputQueueSpec do
 
   describe ".init/6" do
     let :log_tag, do: "test"
-    let :demand_excess, do: 100
+    let :target_queue_size, do: 100
     let :min_demand_factor, do: 0.1
     let :demand_unit, do: :bytes
     let :demand_pid, do: self()
@@ -35,7 +35,7 @@ defmodule Membrane.Core.Element.InputQueueSpec do
           demand_pad: linked_output_ref(),
           log_tag: log_tag(),
           toilet?: toilet?(),
-          demand_excess: demand_excess(),
+          target_size: target_queue_size(),
           min_demand_factor: min_demand_factor()
         })
       )
@@ -43,7 +43,7 @@ defmodule Membrane.Core.Element.InputQueueSpec do
         eq(%InputQueue{
           q: Qex.new(),
           log_tag: log_tag(),
-          demand_excess: demand_excess(),
+          target_size: target_queue_size(),
           size: 0,
           demand: 0,
           min_demand: expected_min_demand(),
@@ -52,7 +52,7 @@ defmodule Membrane.Core.Element.InputQueueSpec do
         })
       )
 
-      message = Message.new(:demand, demand_excess(), for_pad: linked_output_ref())
+      message = Message.new(:demand, target_queue_size(), for_pad: linked_output_ref())
       assert_received ^message
     end
 
@@ -69,7 +69,7 @@ defmodule Membrane.Core.Element.InputQueueSpec do
             demand_pad: linked_output_ref(),
             log_tag: log_tag(),
             toilet?: toilet?(),
-            demand_excess: demand_excess(),
+            target_size: target_queue_size(),
             min_demand_factor: min_demand_factor()
           })
         )
@@ -77,9 +77,9 @@ defmodule Membrane.Core.Element.InputQueueSpec do
           eq(%InputQueue{
             q: Qex.new(),
             log_tag: log_tag(),
-            demand_excess: demand_excess(),
+            target_size: target_queue_size(),
             size: 0,
-            demand: demand_excess(),
+            demand: target_queue_size(),
             min_demand: expected_min_demand(),
             metric: expected_metric(),
             toilet?: toilet?()
@@ -197,7 +197,7 @@ defmodule Membrane.Core.Element.InputQueueSpec do
           size: size(),
           demand: 0,
           min_demand: 0,
-          demand_excess: 100,
+          target_queue_size: 100,
           toilet?: false,
           metric: metric(),
           q: q()

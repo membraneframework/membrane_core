@@ -215,7 +215,7 @@ defmodule Membrane.Core.Element.PadController do
         demand_pad: other_ref,
         log_tag: inspect(ref),
         toilet?: enable_toilet?,
-        demand_excess: props.demand_excess,
+        target_size: props.target_queue_size,
         min_demand_factor: props.min_demand_factor
       })
 
