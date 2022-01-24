@@ -28,6 +28,7 @@ defmodule Membrane.Core.BinTest do
         })
 
       assert_data_flows_through(pipeline, buffers)
+      stop_pipeline(pipeline)
     end
 
     test "when bin is next to a bin" do
@@ -50,6 +51,7 @@ defmodule Membrane.Core.BinTest do
         })
 
       assert_data_flows_through(pipeline, buffers)
+      stop_pipeline(pipeline)
     end
 
     test "when bins are nested" do
@@ -71,6 +73,7 @@ defmodule Membrane.Core.BinTest do
         })
 
       assert_data_flows_through(pipeline, buffers)
+      stop_pipeline(pipeline)
     end
 
     test "when there are consecutive bins that are nested" do
@@ -95,6 +98,7 @@ defmodule Membrane.Core.BinTest do
         })
 
       assert_data_flows_through(pipeline, buffers)
+      stop_pipeline(pipeline)
     end
 
     test "when pipeline has only one element being a padless bin" do
@@ -117,7 +121,7 @@ defmodule Membrane.Core.BinTest do
       assert_buffers_flow_through(pipeline, buffers, :test_bin)
 
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:sink, _}})
-      Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
+      stop_pipeline(pipeline)
     end
 
     test "when bin is a sink bin" do
@@ -148,7 +152,7 @@ defmodule Membrane.Core.BinTest do
 
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:filter, _}})
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:sink, _}})
-      Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
+      stop_pipeline(pipeline)
     end
   end
 
@@ -187,38 +191,9 @@ defmodule Membrane.Core.BinTest do
     end
   end
 
-  describe "Events passing in pipeline" do
-    test "notifications are handled by bin as if it's a pipeline" do
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          elements: [
-            source: Testing.Source,
-            test_bin: %TestBins.SimpleBin{
-              filter1: TestFilter,
-              filter2: TestFilter
-            },
-            sink: %Testing.Sink{autodemand: false}
-          ]
-        })
-
-      :ok = Testing.Pipeline.play(pipeline)
-
-      assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
-
-      {:ok, filter1_pid} = get_child_pid(pipeline, [:test_bin, :filter1])
-
-      send(filter1_pid, {:notify_parent, :some_example_notification})
-
-      # As this test's implementation of bin only passes notifications up
-      assert_pipeline_notified(pipeline, :test_bin, :some_example_notification)
-      Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
-    end
-  end
-
   describe "Dynamic pads" do
     @tag :target
-    test "handle_pad_added is called only for public pads" do
+    test "handle_pad_added is called for dynamic pads" do
       alias Membrane.Pad
       require Pad
       buffers = ['a', 'b', 'c']
@@ -246,8 +221,8 @@ defmodule Membrane.Core.BinTest do
       assert_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, Pad.ref(:input, _)})
       assert_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, Pad.ref(:output, _)})
 
-      # refute_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, _})
-      Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
+      refute_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, _})
+      stop_pipeline(pipeline)
     end
   end
 
@@ -319,20 +294,6 @@ defmodule Membrane.Core.BinTest do
     end
   end
 
-  defp get_child_pid(last_child_pid, []) when is_pid(last_child_pid) do
-    {:ok, last_child_pid}
-  end
-
-  defp get_child_pid(last_child_pid, [child | children]) when is_pid(last_child_pid) do
-    state = :sys.get_state(last_child_pid)
-    %{pid: child_pid} = state.children[child]
-    get_child_pid(child_pid, children)
-  end
-
-  defp get_child_pid(_last_child_pid, _children) do
-    {:error, :child_was_not_found}
-  end
-
   defp assert_data_flows_through(pipeline, buffers, receiving_element \\ :sink) do
     assert_playing(pipeline)
 
@@ -371,5 +332,9 @@ defmodule Membrane.Core.BinTest do
         filter2: TestFilter
       }
     }
+  end
+
+  defp stop_pipeline(pipeline) do
+    Membrane.Pipeline.stop_and_terminate(pipeline, blocking?: true)
   end
 end

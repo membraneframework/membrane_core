@@ -24,9 +24,6 @@ defmodule Membrane.Core.Element.DemandHandler do
   require Membrane.Core.Message
   require Membrane.Logger
 
-  @spec default_auto_demand_size_factor() :: number()
-  def default_auto_demand_size_factor, do: 4000
-
   @doc """
   Called when redemand action was returned.
     * If element is currently supplying demand it means that after finishing supply_demand it will call
@@ -140,7 +137,7 @@ defmodule Membrane.Core.Element.DemandHandler do
       when toilet != nil do
     %{other_demand_unit: other_demand_unit} = data
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
-    Toilet.urinate(toilet, buf_size)
+    Toilet.fill(toilet, buf_size)
     state
   end
 
@@ -220,7 +217,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - size))
 
     if toilet = PadModel.get_data!(state, pad_ref, :toilet) do
-      Toilet.rinse(toilet, size)
+      Toilet.drain(toilet, size)
     end
 
     BufferController.exec_buffer_callback(pad_ref, buffers, state)

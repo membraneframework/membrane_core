@@ -12,7 +12,6 @@ defmodule Membrane.Core.Element.PadController do
   alias Membrane.Core.Element.{
     ActionHandler,
     DemandController,
-    DemandHandler,
     EventController,
     InputQueue,
     PlaybackBuffer,
@@ -30,6 +29,8 @@ defmodule Membrane.Core.Element.PadController do
   require Membrane.Logger
   require Membrane.Pad
 
+  @default_auto_demand_size_factor 4000
+
   @doc """
   Verifies linked pad, initializes it's data.
   """
@@ -37,17 +38,21 @@ defmodule Membrane.Core.Element.PadController do
           Pad.direction_t(),
           Endpoint.t(),
           Endpoint.t(),
-          PadModel.pad_info_t() | nil,
-          %{toilet: Toilet.t() | nil} | nil,
+          %{initiator: :parent}
+          | %{
+              initiator: :sibling,
+              other_info: PadModel.pad_info_t() | nil,
+              link_metadata: %{toilet: Toilet.t() | nil}
+            },
           State.t()
         ) ::
           {{:ok, {Endpoint.t(), PadModel.pad_info_t(), %{toilet: Toilet.t() | nil}}}, State.t()}
-  def handle_link(direction, this, other, other_info, link_metadata, state) do
+  def handle_link(direction, endpoint, other_endpoint, link_props, state) do
     Membrane.Logger.debug(
-      "Element handle link on pad #{inspect(this.pad_ref)} with pad #{inspect(other.pad_ref)} of child #{inspect(other.child)}"
+      "Element handle link on pad #{inspect(endpoint.pad_ref)} with pad #{inspect(other_endpoint.pad_ref)} of child #{inspect(other_endpoint.child)}"
     )
 
-    name = this.pad_ref |> Pad.name_by_ref()
+    name = endpoint.pad_ref |> Pad.name_by_ref()
 
     info =
       case Map.fetch(state.pads.info, name) do
@@ -59,48 +64,78 @@ defmodule Membrane.Core.Element.PadController do
                 "Tried to link via unknown pad #{inspect(name)} of #{inspect(state.name)}"
       end
 
-    :ok = Child.PadController.validate_pad_being_linked!(this.pad_ref, direction, info, state)
+    :ok = Child.PadController.validate_pad_being_linked!(endpoint.pad_ref, direction, info, state)
 
     toilet =
       if direction == :input,
-        do: Toilet.new(this.pad_props.toilet_capacity_factor, info.demand_unit, self()),
+        do: Toilet.new(endpoint.pad_props.toilet_capacity, info.demand_unit, self()),
         else: nil
 
-    {other, other_info, link_metadata} =
-      if link_metadata do
-        {other, other_info, %{link_metadata | toilet: link_metadata.toilet || toilet}}
-      else
-        other_direction = Pad.opposite_direction(direction)
-        metadata = %{toilet: toilet}
+    do_handle_link(endpoint, other_endpoint, info, toilet, link_props, state)
+  end
 
-        {:ok, {other, other_info, metadata}} =
-          Message.call(other.pid, :handle_link, [other_direction, other, this, info, metadata])
-
-        {other, other_info, metadata}
-      end
+  defp do_handle_link(endpoint, other_endpoint, info, toilet, %{initiator: :parent}, state) do
+    {:ok, {other_endpoint, other_info, link_metadata}} =
+      Message.call(other_endpoint.pid, :handle_link, [
+        Pad.opposite_direction(info.direction),
+        other_endpoint,
+        endpoint,
+        %{initiator: :sibling, other_info: info, link_metadata: %{toilet: toilet}}
+      ])
 
     :ok =
-      Child.PadController.validate_pad_mode!({this.pad_ref, info}, {other.pad_ref, other_info})
+      Child.PadController.validate_pad_mode!(
+        {endpoint.pad_ref, info},
+        {other_endpoint.pad_ref, other_info}
+      )
 
     state =
       init_pad_data(
-        this.pad_ref,
+        endpoint.pad_ref,
         info,
-        this.pad_props,
-        other.pad_ref,
-        other.pid,
+        endpoint.pad_props,
+        other_endpoint.pad_ref,
+        other_endpoint.pid,
         other_info,
         link_metadata,
         state
       )
 
-    {:ok, state} =
-      case Pad.availability_mode(info.availability) do
-        :dynamic -> handle_pad_added(this.pad_ref, state)
-        :static -> {:ok, state}
-      end
+    maybe_handle_pad_added(endpoint.pad_ref, state)
+  end
 
-    {{:ok, {this, info, link_metadata}}, state}
+  defp do_handle_link(
+         endpoint,
+         other_endpoint,
+         info,
+         toilet,
+         %{initiator: :sibling} = link_props,
+         state
+       ) do
+    %{other_info: other_info, link_metadata: link_metadata} = link_props
+
+    link_metadata = %{link_metadata | toilet: link_metadata.toilet || toilet}
+
+    :ok =
+      Child.PadController.validate_pad_mode!(
+        {endpoint.pad_ref, info},
+        {other_endpoint.pad_ref, other_info}
+      )
+
+    state =
+      init_pad_data(
+        endpoint.pad_ref,
+        info,
+        endpoint.pad_props,
+        other_endpoint.pad_ref,
+        other_endpoint.pid,
+        other_info,
+        link_metadata,
+        state
+      )
+
+    {:ok, state} = maybe_handle_pad_added(endpoint.pad_ref, state)
+    {{:ok, {endpoint, info, link_metadata}}, state}
   end
 
   @doc """
@@ -116,7 +151,7 @@ defmodule Membrane.Core.Element.PadController do
   def handle_unlink(pad_ref, state) do
     with {:ok, state} <- flush_playback_buffer(pad_ref, state),
          {:ok, state} <- generate_eos_if_needed(pad_ref, state),
-         {:ok, state} <- handle_pad_removed(pad_ref, state) do
+         {:ok, state} <- maybe_handle_pad_removed(pad_ref, state) do
       state = remove_pad_associations(pad_ref, state)
       state = PadModel.delete_data!(state, pad_ref)
       {:ok, state}
@@ -140,7 +175,7 @@ defmodule Membrane.Core.Element.PadController do
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
     data = data |> Map.merge(init_pad_mode_data(data, props, other_info, metadata, state))
     data = struct!(Membrane.Element.PadData, data)
-    state = Bunch.Access.put_in(state, [:pads, :data, ref], data)
+    state = put_in(state, [:pads, :data, ref], data)
 
     if data.demand_mode == :auto do
       state =
@@ -180,7 +215,7 @@ defmodule Membrane.Core.Element.PadController do
         demand_pad: other_ref,
         log_tag: inspect(ref),
         toilet?: enable_toilet?,
-        demand_excess_factor: props.demand_excess_factor,
+        demand_excess: props.demand_excess,
         min_demand_factor: props.min_demand_factor
       })
 
@@ -218,10 +253,9 @@ defmodule Membrane.Core.Element.PadController do
 
     auto_demand_size =
       if direction == :input do
-        ceil(
+        props.auto_demand_size ||
           Membrane.Buffer.Metric.Count.buffer_size_approximation() *
-            (props.auto_demand_size_factor || DemandHandler.default_auto_demand_size_factor())
-        )
+            @default_auto_demand_size_factor
       else
         nil
       end
@@ -265,7 +299,7 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   @doc """
-  Removes all associations between the given pad and any other pads.
+  Removes all associations between the given pad and any other_endpoint pads.
   """
   @spec remove_pad_associations(Pad.ref_t(), State.t()) :: State.t()
   def remove_pad_associations(pad_ref, state) do
@@ -292,28 +326,35 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  @spec handle_pad_added(Pad.ref_t(), Core.Element.State.t()) ::
+  @spec maybe_handle_pad_added(Pad.ref_t(), Core.Element.State.t()) ::
           Type.stateful_try_t(Core.Element.State.t())
-  defp handle_pad_added(ref, state) do
-    %{options: pad_opts, direction: direction} = PadModel.get_data!(state, ref)
-    context = &CallbackContext.PadAdded.from_state(&1, options: pad_opts, direction: direction)
-
-    CallbackHandler.exec_and_handle_callback(
-      :handle_pad_added,
-      ActionHandler,
-      %{context: context},
-      [ref],
-      state
-    )
-  end
-
-  @spec handle_pad_removed(Pad.ref_t(), Core.Element.State.t()) ::
-          Type.stateful_try_t(Core.Element.State.t())
-  defp handle_pad_removed(ref, state) do
-    %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
-    context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
+  defp maybe_handle_pad_added(ref, state) do
+    %{options: pad_opts, direction: direction, availability: availability} =
+      PadModel.get_data!(state, ref)
 
     if Pad.availability_mode(availability) == :dynamic do
+      context = &CallbackContext.PadAdded.from_state(&1, options: pad_opts, direction: direction)
+
+      CallbackHandler.exec_and_handle_callback(
+        :handle_pad_added,
+        ActionHandler,
+        %{context: context},
+        [ref],
+        state
+      )
+    else
+      {:ok, state}
+    end
+  end
+
+  @spec maybe_handle_pad_removed(Pad.ref_t(), Core.Element.State.t()) ::
+          Type.stateful_try_t(Core.Element.State.t())
+  defp maybe_handle_pad_removed(ref, state) do
+    %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
+
+    if Pad.availability_mode(availability) == :dynamic do
+      context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
+
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_removed,
         ActionHandler,

@@ -36,13 +36,13 @@ defmodule Membrane.ParentSpec do
       [
         link(:source_a)
         |> to(:converter)
-        |> via_in(:input_a, demand_excess_factor: 20)
+        |> via_in(:input_a, demand_excess: 20)
         |> to(:mixer),
         link(:source_b)
         |> via_out(:custom_output)
         |> via_in(:input_b, options: [mute: true])
         |> to(:mixer)
-        |> via_in(:input, toilet_capacity_factor: 1.5)
+        |> via_in(:input, toilet_capacity: 500)
         |> to(:sink)
       ]
 
@@ -194,7 +194,7 @@ defmodule Membrane.ParentSpec do
             status: status_t
           }
 
-    @type status_t :: :from | :output | :input | :done
+    @type status_t :: :from | :from_pad | :to_pad | :done
 
     @spec update(t, status_t, Keyword.t()) :: t
     def update(
@@ -272,7 +272,9 @@ defmodule Membrane.ParentSpec do
   @spec link_bin_input(Pad.name_t() | Pad.ref_t()) :: link_builder_t() | no_return
   def link_bin_input(pad \\ :input) do
     :ok = validate_pad_name(pad)
-    link({Membrane.Bin, :itself}) |> LinkBuilder.update(:output, output: pad, output_props: %{})
+
+    link({Membrane.Bin, :itself})
+    |> LinkBuilder.update(:from_pad, from_pad: pad, from_pad_props: %{})
   end
 
   @deprecated "Use link_bin_input/1 and `via_in/3` to pass properties"
@@ -295,12 +297,12 @@ defmodule Membrane.ParentSpec do
           link_builder_t() | no_return
   def via_out(builder, pad, props \\ [])
 
-  def via_out(%LinkBuilder{status: :output}, pad, _props) do
+  def via_out(%LinkBuilder{status: :from_pad}, pad, _props) do
     raise ParentError,
           "Invalid link specification: output #{inspect(pad)} placed after another output or bin's input"
   end
 
-  def via_out(%LinkBuilder{status: :input}, pad, _props) do
+  def via_out(%LinkBuilder{status: :to_pad}, pad, _props) do
     raise ParentError, "Invalid link specification: output #{inspect(pad)} placed after an input"
   end
 
@@ -321,9 +323,9 @@ defmodule Membrane.ParentSpec do
           raise ParentError, "Invalid link specification: invalid pad props: #{inspect(reason)}"
       end
 
-    LinkBuilder.update(builder, :output,
-      output: pad,
-      output_props: props
+    LinkBuilder.update(builder, :from_pad,
+      from_pad: pad,
+      from_pad_props: props
     )
   end
 
@@ -336,36 +338,36 @@ defmodule Membrane.ParentSpec do
     for information about defining pad options.
 
   Additionally, the following properties can be used to adjust the flow control parameters. If set within a bin
-  on an input that connects to the bin input, they will be overriden if set when linking to the bin in its parent.
+  on an input that connects to the bin input, they will be overridden if set when linking to the bin in its parent.
 
-  - `toilet_capacity_factor` - Used when a toilet is created, that is for pull input pads that have push output pads
+  - `toilet_capacity` - Used when a toilet is created, that is for pull input pads that have push output pads
     linked to them. When a push output produces more buffers than the pull input can consume, the buffers are accumulated
-    in a queue called toilet. This option is a factor by which the toilet capacity is multiplied by and defaults to
-    `#{Membrane.Core.Element.Toilet.default_capacity_factor()}` (the default may change in the future). If the toilet
-    size grows above its capacity, it overflows by raising an error.
-  - `demand_excess_factor` - A factor by which the demand excess is multiplied by. Used only for pads working in pull
-    mode with manual demands. See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0` for more info. Defaults
-    to `#{Membrane.Core.Element.InputQueue.default_demand_excess_factor()}` (the default may change in the future).
-  - `min_demand_factor` - A factor by which the minimal demand is multiplied by. Used only for pads working in pull
-    mode with manual demands. See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0` for more info. Defaults
-    to `#{Membrane.Core.Element.InputQueue.default_min_demand_factor()}` (the default may change in the future).
-  - `auto_demand_size_factor` - A factor by which the auto demand size multiplied by. Used only for pads working in pull
-    mode with automatic demands. See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0` for more info. Defaults
-    to `#{Membrane.Core.Element.DemandHandler.default_auto_demand_size_factor()}` (the default may change in the future).
+    in a queue called toilet. If the toilet size grows above its capacity, it overflows by raising an error.
+  - `demand_excess` - Demand that will be generated automatically by Membrane to allow smooth, concurrent processing.
+    All buffers received in response to that demand will be queued internally until they are actually demanded by user.
+    Used only for pads working in pull mode with manual demands. See `t:Membrane.Pad.mode_t/0`
+    and `t:Membrane.Pad.demand_mode_t/0` for more info.
+  - `min_demand_factor` - A factor used to calculate `minimal demand` (`minimal_demand = demand_excess * min_demand_factor`).
+    Membrane won't send smaller demand that `minimal demand`, to reduce demands' overhead. However, user will always receive
+    as many buffers as they actually demanded, all excess buffers will be queued internally.
+    Used only for pads working in pull mode with manual demands. See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0`
+    for more info. Defaults to `#{Membrane.Core.Element.InputQueue.default_min_demand_factor()}` (the default may change in the future).
+  - `auto_demand_size` - Size of automatically generated demands. Used only for pads working in pull mode with automatic demands.
+    See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0` for more info.
 
   See the _links_ section of the moduledoc for more information.
   """
   @spec via_in(link_builder_t(), Pad.name_t() | Pad.ref_t(),
           options: pad_options_t(),
-          toilet_capacity_factor: number | nil,
-          demand_excess_factor: number | nil,
+          toilet_capacity: number | nil,
+          demand_excess: number | nil,
           min_demand_factor: number | nil,
-          auto_demand_size_factor: number | nil
+          auto_demand_size: number | nil
         ) ::
           link_builder_t() | no_return
   def via_in(builder, pad, props \\ [])
 
-  def via_in(%LinkBuilder{status: :input}, pad, _props) do
+  def via_in(%LinkBuilder{status: :to_pad}, pad, _props) do
     raise ParentError,
           "Invalid link specification: input #{inspect(pad)} placed after another input"
   end
@@ -382,10 +384,10 @@ defmodule Membrane.ParentSpec do
       props
       |> Bunch.Config.parse(
         options: [default: []],
-        demand_excess_factor: [default: nil],
+        demand_excess: [default: nil],
         min_demand_factor: [default: nil],
-        auto_demand_size_factor: [default: nil],
-        toilet_capacity_factor: [default: nil]
+        auto_demand_size: [default: nil],
+        toilet_capacity: [default: nil]
       )
       |> case do
         {:ok, props} ->
@@ -395,14 +397,14 @@ defmodule Membrane.ParentSpec do
           raise ParentError, "Invalid link specification: invalid pad props: #{inspect(reason)}"
       end
 
-    if builder.status == :output do
+    if builder.status == :from_pad do
       builder
     else
       via_out(builder, :output)
     end
-    |> LinkBuilder.update(:input,
-      input: pad,
-      input_props: props
+    |> LinkBuilder.update(:to_pad,
+      to_pad: pad,
+      to_pad_props: props
     )
   end
 
@@ -418,7 +420,7 @@ defmodule Membrane.ParentSpec do
   end
 
   def to(%LinkBuilder{} = builder, child_name) do
-    if builder.status == :input do
+    if builder.status == :to_pad do
       builder
     else
       via_in(builder, :input)
@@ -445,19 +447,19 @@ defmodule Membrane.ParentSpec do
           link_builder_t() | no_return
   def to_bin_output(builder, pad \\ :output)
 
-  def to_bin_output(%LinkBuilder{status: :input}, pad) do
+  def to_bin_output(%LinkBuilder{status: :to_pad}, pad) do
     raise ParentError, "Invalid link specification: bin's output #{pad} placed after an input"
   end
 
   def to_bin_output(builder, pad) do
     :ok = validate_pad_name(pad)
 
-    if builder.status == :output do
+    if builder.status == :from_pad do
       builder
     else
       via_out(builder, :output)
     end
-    |> LinkBuilder.update(:input, input: pad, input_props: %{})
+    |> LinkBuilder.update(:to_pad, to_pad: pad, to_pad_props: %{})
     |> to({Membrane.Bin, :itself})
   end
 

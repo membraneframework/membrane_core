@@ -98,11 +98,13 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def init(options) do
-    Process.monitor(options.parent)
-    name_str = if String.valid?(options.name), do: options.name, else: inspect(options.name)
+    %{parent: parent, name: name, log_metadata: log_metadata} = options
+
+    Process.monitor(parent)
+    name_str = if String.valid?(name), do: name, else: inspect(name)
     :ok = Membrane.Logger.set_prefix(name_str)
-    :ok = Logger.metadata(options.log_metadata)
-    :ok = ComponentPath.set_and_append(options.log_metadata[:parent_path] || [], name_str)
+    :ok = Logger.metadata(log_metadata)
+    :ok = ComponentPath.set_and_append(log_metadata[:parent_path] || [], name_str)
 
     Telemetry.report_init(:element)
 
@@ -131,11 +133,11 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_call(
-        Message.new(:handle_link, [direction, this, other, other_info, metadata]),
+        Message.new(:handle_link, [direction, this, other, params]),
         _from,
         state
       ) do
-    PadController.handle_link(direction, this, other, other_info, metadata, state) |> reply(state)
+    PadController.handle_link(direction, this, other, params, state) |> reply(state)
   end
 
   @impl GenServer
@@ -185,18 +187,6 @@ defmodule Membrane.Core.Element do
 
   defp do_handle_info(Message.new(:timer_tick, timer_id), state) do
     TimerController.handle_tick(timer_id, state) |> noreply(state)
-  end
-
-  defp do_handle_info(
-         Message.new(:link_request, [pad_ref, _direction, link_id, _pad_props]),
-         state
-       ) do
-    Membrane.Logger.debug(
-      "Element link request on pad #{inspect(pad_ref)}, link id #{inspect(link_id)}, replying immediately"
-    )
-
-    Message.send(state.parent_pid, :link_response, link_id)
-    {:noreply, state}
   end
 
   defp do_handle_info({:membrane_clock_ratio, clock, ratio}, state) do

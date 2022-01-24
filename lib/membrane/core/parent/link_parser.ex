@@ -42,13 +42,13 @@ defmodule Membrane.Core.Parent.LinkParser do
         %Link{
           from: %Endpoint{
             child: link.from,
-            pad_spec: link.output,
-            pad_props: link.output_props
+            pad_spec: link.from_pad,
+            pad_props: link.from_pad_props
           },
           to: %Endpoint{
             child: link.to,
-            pad_spec: link.input,
-            pad_props: link.input_props
+            pad_spec: link.to_pad,
+            pad_props: link.to_pad_props
           }
         }
       end)

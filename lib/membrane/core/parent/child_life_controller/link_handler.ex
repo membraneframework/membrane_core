@@ -30,7 +30,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   @type pending_spec_t :: %{
           status: :linking_internally | :linking_externally | :linked,
-          links: %{link_id_t => %{link: Parent.Link.t(), to_respond: non_neg_integer()}}
+          links: %{link_id_t => %{link: Parent.Link.t(), awaiting_responses: non_neg_integer()}}
         }
 
   @type pending_specs_t :: %{ChildLifeController.spec_ref_t() => pending_spec_t()}
@@ -41,19 +41,26 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
           state_t()
   def init_spec_linking(spec_ref, links, state) do
     Process.send_after(self(), Message.new(:spec_linking_timeout, spec_ref), 5000)
-    links = resolve_links(links, state)
 
     {links, state} =
       Enum.map_reduce(links, state, fn link, state ->
+        link = %Link{
+          link
+          | from: resolve_endpoint(link.from, state),
+            to: resolve_endpoint(link.to, state)
+        }
+
         link_id = {spec_ref, make_ref()}
 
-        {to_respond_from, state} =
+        {awaiting_responses_from, state} =
           request_link(:output, link.from, link.to, spec_ref, link_id, state)
 
-        {to_respond_to, state} =
+        {awaiting_responses_to, state} =
           request_link(:input, link.to, link.from, spec_ref, link_id, state)
 
-        {{link_id, %{link: link, to_respond: to_respond_from + to_respond_to}}, state}
+        {{link_id,
+          %{link: link, awaiting_responses: awaiting_responses_from + awaiting_responses_to}},
+         state}
       end)
 
     state =
@@ -85,13 +92,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   end
 
   defp do_proceed_spec_linking(spec_ref, %{status: :linking_internally} = spec_data, state) do
-    if spec_data.links |> Map.values() |> Enum.all?(&(&1.to_respond == 0)) do
-      {:ok, state} =
-        spec_data.links
-        |> Map.values()
+    links = spec_data.links |> Map.values()
+
+    if Enum.all?(links, &(&1.awaiting_responses == 0)) do
+      state =
+        links
         |> Enum.map(& &1.link)
         |> Enum.reject(&({Membrane.Bin, :itself} in [&1.from.child, &1.to.child]))
-        |> link_children(state)
+        |> Enum.reduce(state, &link/2)
 
       Membrane.Logger.debug("Spec #{inspect(spec_ref)} linked internally")
       do_proceed_spec_linking(spec_ref, %{spec_data | status: :linked_internally}, state)
@@ -139,7 +147,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   @spec handle_link_response(link_id_t(), state_t()) :: state_t()
   def handle_link_response(link_id, state) do
     {spec_ref, _link_ref} = link_id
-    state = update_in(state, [:pending_specs, spec_ref, :links, link_id, :to_respond], &(&1 - 1))
+
+    state =
+      update_in(
+        state,
+        [:pending_specs, spec_ref, :links, link_id, :awaiting_responses],
+        &(&1 - 1)
+      )
+
     proceed_spec_linking(spec_ref, state)
   end
 
@@ -163,15 +178,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     Map.update!(state, :links, &Enum.reject(&1, fn link -> link in links_to_remove end))
   end
 
-  @spec resolve_links([LinkParser.raw_link_t()], Parent.state_t()) ::
-          [Parent.Link.t()]
-  defp resolve_links(links, state) do
-    Enum.map(
-      links,
-      &%Link{&1 | from: resolve_endpoint(&1.from, state), to: resolve_endpoint(&1.to, state)}
-    )
-  end
-
   defp request_link(
          _direction,
          %Link.Endpoint{child: {Membrane.Bin, :itself}} = this,
@@ -185,26 +191,18 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   end
 
   defp request_link(direction, this, _other, _spec_ref, link_id, state) do
-    Message.send(this.pid, :link_request, [
-      this.pad_ref,
-      direction,
-      link_id,
-      this.pad_props.options
-    ])
+    if Map.fetch!(state.children, this.child).component_type == :bin do
+      Message.send(this.pid, :link_request, [
+        this.pad_ref,
+        direction,
+        link_id,
+        this.pad_props.options
+      ])
 
-    {1, state}
-  end
-
-  # Links children based on given specification and map for mapping children
-  # names into PIDs.
-  #
-  # Please note that this function is not atomic and in case of error there's
-  # a chance that some of children will remain linked.
-  @spec link_children([Parent.Link.t()], Parent.state_t()) ::
-          {:ok | {:error, any}, Parent.state_t()}
-  defp link_children(links, state) do
-    state = Enum.reduce(links, state, &link/2)
-    {:ok, state}
+      {1, state}
+    else
+      {0, state}
+    end
   end
 
   @spec resolve_endpoint(LinkParser.raw_endpoint_t(), Parent.state_t()) ::
@@ -269,7 +267,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   defp link(%Link{from: from, to: to}, state) do
     Telemetry.report_link(from, to)
-    {:ok, _info} = Message.call(from.pid, :handle_link, [:output, from, to, nil, nil])
-    Bunch.Access.update_in(state, [:links], &[%Link{from: from, to: to} | &1])
+    :ok = Message.call(from.pid, :handle_link, [:output, from, to, %{initiator: :parent}])
+    update_in(state, [:links], &[%Link{from: from, to: to} | &1])
   end
 end

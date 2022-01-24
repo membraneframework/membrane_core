@@ -6,6 +6,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   alias Bunch.Type
   alias Membrane.{Child, Core, Notification, Pad, Sync}
   alias Membrane.Core.{CallbackHandler, Message, Component, Parent, PlaybackHandler}
+  alias Membrane.Core.Events
   alias Membrane.Core.Parent.ChildrenModel
   alias Membrane.PlaybackState
 
@@ -119,15 +120,26 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
-  @spec handle_stream_management_event(atom, Child.name_t(), Pad.ref_t(), Parent.state_t()) ::
+  @spec handle_stream_management_event(
+          Membrane.Event.t(),
+          Child.name_t(),
+          Pad.ref_t(),
+          Parent.state_t()
+        ) ::
           Type.stateful_try_t(Parent.state_t())
-  def handle_stream_management_event(cb, element_name, pad_ref, state)
-      when cb in [:handle_start_of_stream, :handle_end_of_stream] do
+  def handle_stream_management_event(%event_type{}, element_name, pad_ref, state)
+      when event_type in [Events.StartOfStream, Events.EndOfStream] do
     context = Component.callback_context_generator(:parent, StreamManagement, state)
     action_handler = get_callback_action_handler(state)
 
+    callback =
+      case event_type do
+        Events.StartOfStream -> :handle_element_start_of_stream
+        Events.EndOfStream -> :handle_element_end_of_stream
+      end
+
     CallbackHandler.exec_and_handle_callback(
-      to_parent_sm_callback(cb),
+      callback,
       action_handler,
       %{context: context},
       [{element_name, pad_ref}],
@@ -164,9 +176,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   defp get_callback_action_handler(%Core.Pipeline.State{}), do: Core.Pipeline.ActionHandler
   defp get_callback_action_handler(%Core.Bin.State{}), do: Core.Bin.ActionHandler
-
-  defp to_parent_sm_callback(:handle_start_of_stream), do: :handle_element_start_of_stream
-  defp to_parent_sm_callback(:handle_end_of_stream), do: :handle_element_end_of_stream
 
   defp toggle_syncs_active(:prepared, :playing, children_data) do
     do_toggle_syncs_active(children_data, &Sync.activate/1)

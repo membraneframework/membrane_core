@@ -57,8 +57,11 @@ defmodule Membrane.Core.ElementTest do
           :output,
           %{pad_ref: :output, pad_props: %{options: []}, child: :this},
           %{pad_ref: :input, pid: self(), child: :other},
-          %{direction: :input, mode: :pull, demand_unit: :buffers},
-          %{toilet: nil}
+          %{
+            initiator: :sibling,
+            other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
+            link_metadata: %{toilet: nil}
+          }
         ]),
         nil,
         get_state()
@@ -72,16 +75,19 @@ defmodule Membrane.Core.ElementTest do
             pad_ref: :input,
             pad_props: %{
               options: [],
-              toilet_capacity_factor: nil,
-              demand_excess_factor: nil,
-              auto_demand_size_factor: nil,
+              toilet_capacity: nil,
+              demand_excess: nil,
+              auto_demand_size: nil,
               min_demand_factor: nil
             },
             child: :this
           },
           %{pad_ref: :output, pid: self(), child: :other},
-          %{direction: :output, mode: :pull},
-          %{toilet: nil}
+          %{
+            initiator: :sibling,
+            other_info: %{direction: :output, mode: :pull},
+            link_metadata: %{toilet: nil}
+          }
         ]),
         nil,
         state
@@ -197,12 +203,15 @@ defmodule Membrane.Core.ElementTest do
                  :output,
                  %{
                    pad_ref: :output,
-                   pad_props: %{options: [], toilet_capacity_factor: nil},
+                   pad_props: %{options: [], toilet_capacity: nil},
                    child: :this
                  },
                  %{pad_ref: :input, pid: pid, child: :other},
-                 %{direction: :input, mode: :pull, demand_unit: :buffers},
-                 %{toilet: nil}
+                 %{
+                   initiator: :sibling,
+                   other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
+                   link_metadata: %{toilet: nil}
+                 }
                ]),
                nil,
                get_state()

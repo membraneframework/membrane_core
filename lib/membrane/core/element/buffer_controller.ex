@@ -22,7 +22,8 @@ defmodule Membrane.Core.Element.BufferController do
   """
   @spec handle_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.stateful_try_t()
   def handle_buffer(pad_ref, buffers, state) do
-    %{direction: :input} = data = PadModel.get_data!(state, pad_ref)
+    data = PadModel.get_data!(state, pad_ref)
+    %{direction: :input} = data
     do_handle_buffer(pad_ref, data, buffers, state)
   end
 

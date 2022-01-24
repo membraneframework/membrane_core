@@ -38,6 +38,8 @@ defmodule Membrane.Integration.SyncTest do
 
       assert_in_delta ticks_amount, tries, @tick_number_error
     end
+
+    Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
   end
 
   @tag :long_running
@@ -70,7 +72,7 @@ defmodule Membrane.Integration.SyncTest do
       Process.sleep(actual_report_interval)
     end
 
-    Testing.Pipeline.stop(pipeline)
+    Testing.Pipeline.stop_and_terminate(pipeline)
 
     ticks_amount = receive_ticks(pipeline)
 
@@ -102,6 +104,7 @@ defmodule Membrane.Integration.SyncTest do
 
     assert_start_of_stream(pipeline, :sink_a)
     assert_start_of_stream(pipeline, :sink_b, :input, @sync_error_ms)
+    Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
   end
 
   test "synchronize dynamically spawned elements" do
@@ -122,6 +125,7 @@ defmodule Membrane.Integration.SyncTest do
 
     assert_start_of_stream(pipeline, :sink_a)
     assert_start_of_stream(pipeline, :sink_b, :input, @sync_error_ms)
+    Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
   end
 
   test "synchronize selected groups" do
@@ -137,6 +141,7 @@ defmodule Membrane.Integration.SyncTest do
 
     assert_start_of_stream(pipeline, :sink_a)
     assert_start_of_stream(pipeline, :sink_b, :input, @sync_error_ms)
+    Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
   end
 
   defmodule SimpleBin do

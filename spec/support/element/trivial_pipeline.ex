@@ -13,9 +13,9 @@ defmodule Membrane.Support.Element.TrivialPipeline do
 
     links = [
       link(:producer)
-      |> via_in(:input, demand_excess_factor: 0.25)
+      |> via_in(:input, demand_excess: 10)
       |> to(:filter)
-      |> via_in(:input, demand_excess_factor: 0.25)
+      |> via_in(:input, demand_excess: 10)
       |> to(:consumer)
     ]
 

@@ -221,6 +221,11 @@ defmodule Membrane.Support.Bin.TestBins do
     end
 
     @impl true
+    def handle_notification(notification, _element, _ctx, state) do
+      {{:ok, notify: notification}, state}
+    end
+
+    @impl true
     def handle_element_start_of_stream(arg, _ctx, state) do
       {{:ok, notify: {:handle_element_start_of_stream, arg}}, state}
     end
@@ -255,6 +260,11 @@ defmodule Membrane.Support.Bin.TestBins do
       state = %{}
 
       {{:ok, spec: spec}, state}
+    end
+
+    @impl true
+    def handle_notification(notification, _element, _ctx, state) do
+      {{:ok, notify: notification}, state}
     end
 
     @impl true

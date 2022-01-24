@@ -58,7 +58,7 @@ defmodule Membrane.Pad do
   be raised whenever too many buffers accumulate on the input pad, waiting to be
   processed.
 
-  For more information on transfering data and demands, see `t:demand_mode_t`,
+  For more information on transfering data and demands, see `t:demand_mode_t/0`,
   `Membrane.Source`, `Membrane.Filter`, `Membrane.Endpoint`, `Membrane.Sink`.
   """
   @type mode_t :: :push | :pull
