@@ -343,9 +343,9 @@ defmodule Membrane.ParentSpec do
   - `toilet_capacity` - Used when a toilet is created, that is for pull input pads that have push output pads
     linked to them. When a push output produces more buffers than the pull input can consume, the buffers are accumulated
     in a queue called toilet. If the toilet size grows above its capacity, it overflows by raising an error.
-  - `demand_excess` - Demand that will be generated automatically by Membrane to allow smooth, concurrent processing.
-    All buffers received in response to that demand will be queued internally until they are actually demanded by user.
-    Used only for pads working in pull mode with manual demands. See `t:Membrane.Pad.mode_t/0`
+  - `demand_excess` - The demand used to fill the queue of the input pad. That allows for fulfilling the demands
+    of the element by taking data from the queue while the actual sending of demands is done asynchronously, smoothing
+    the processing. Used only for pads working in pull mode with manual demands. See `t:Membrane.Pad.mode_t/0`
     and `t:Membrane.Pad.demand_mode_t/0` for more info.
   - `min_demand_factor` - A factor used to calculate `minimal demand` (`minimal_demand = demand_excess * min_demand_factor`).
     Membrane won't send smaller demand that `minimal demand`, to reduce demands' overhead. However, user will always receive
