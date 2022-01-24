@@ -36,7 +36,7 @@ defmodule Membrane.ParentSpec do
       [
         link(:source_a)
         |> to(:converter)
-        |> via_in(:input_a, demand_excess: 20)
+        |> via_in(:input_a, target_queue_size: 20)
         |> to(:mixer),
         link(:source_b)
         |> via_out(:custom_output)
@@ -343,11 +343,11 @@ defmodule Membrane.ParentSpec do
   - `toilet_capacity` - Used when a toilet is created, that is for pull input pads that have push output pads
     linked to them. When a push output produces more buffers than the pull input can consume, the buffers are accumulated
     in a queue called toilet. If the toilet size grows above its capacity, it overflows by raising an error.
-  - `demand_excess` - Demand that will be generated automatically by Membrane to allow smooth, concurrent processing.
-    All buffers received in response to that demand will be queued internally until they are actually demanded by user.
-    Used only for pads working in pull mode with manual demands. See `t:Membrane.Pad.mode_t/0`
+  - `target_queue_size` - The size of the queue of the input pad that Membrane will try to maintain. That allows for fulfilling
+    the demands of the element by taking data from the queue while the actual sending of demands is done asynchronously,
+    smoothing the processing. Used only for pads working in pull mode with manual demands. See `t:Membrane.Pad.mode_t/0`
     and `t:Membrane.Pad.demand_mode_t/0` for more info.
-  - `min_demand_factor` - A factor used to calculate `minimal demand` (`minimal_demand = demand_excess * min_demand_factor`).
+  - `min_demand_factor` - A factor used to calculate `minimal demand` (`minimal_demand = target_queue_size * min_demand_factor`).
     Membrane won't send smaller demand that `minimal demand`, to reduce demands' overhead. However, user will always receive
     as many buffers as they actually demanded, all excess buffers will be queued internally.
     Used only for pads working in pull mode with manual demands. See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0`
@@ -360,7 +360,7 @@ defmodule Membrane.ParentSpec do
   @spec via_in(link_builder_t(), Pad.name_t() | Pad.ref_t(),
           options: pad_options_t(),
           toilet_capacity: number | nil,
-          demand_excess: number | nil,
+          target_queue_size: number | nil,
           min_demand_factor: number | nil,
           auto_demand_size: number | nil
         ) ::
@@ -384,7 +384,7 @@ defmodule Membrane.ParentSpec do
       props
       |> Bunch.Config.parse(
         options: [default: []],
-        demand_excess: [default: nil],
+        target_queue_size: [default: nil],
         min_demand_factor: [default: nil],
         auto_demand_size: [default: nil],
         toilet_capacity: [default: nil]

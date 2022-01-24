@@ -156,7 +156,7 @@ defmodule Membrane.Core.Bin.PadController do
                                                                  external_value,
                                                                  internal_value ->
         if key in [
-             :demand_excess,
+             :target_queue_size,
              :min_demand_factor,
              :auto_demand_size,
              :toilet_capacity

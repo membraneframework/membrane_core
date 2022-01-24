@@ -26,7 +26,7 @@ defmodule Membrane.Core.Element.InputQueue do
   @type t :: %__MODULE__{
           q: @qe.t(),
           log_tag: String.t(),
-          demand_excess: pos_integer(),
+          target_size: pos_integer(),
           size: non_neg_integer(),
           demand: non_neg_integer(),
           min_demand: pos_integer(),
@@ -37,7 +37,7 @@ defmodule Membrane.Core.Element.InputQueue do
   @enforce_keys [
     :q,
     :log_tag,
-    :demand_excess,
+    :target_size,
     :size,
     :demand,
     :min_demand,
@@ -47,7 +47,7 @@ defmodule Membrane.Core.Element.InputQueue do
 
   defstruct @enforce_keys
 
-  @default_demand_excess_factor 40
+  @default_target_size_factor 40
 
   @spec default_min_demand_factor() :: number()
   def default_min_demand_factor, do: 0.25
@@ -58,7 +58,7 @@ defmodule Membrane.Core.Element.InputQueue do
           demand_pad: Pad.ref_t(),
           log_tag: String.t(),
           toilet?: boolean(),
-          demand_excess: pos_integer() | nil,
+          target_size: pos_integer() | nil,
           min_demand_factor: pos_integer() | nil
         }) :: t()
   def init(config) do
@@ -68,24 +68,25 @@ defmodule Membrane.Core.Element.InputQueue do
       demand_pad: demand_pad,
       log_tag: log_tag,
       toilet?: toilet?,
-      demand_excess: demand_excess,
+      target_size: target_size,
       min_demand_factor: min_demand_factor
     } = config
 
     metric = Buffer.Metric.from_unit(demand_unit)
 
-    default_demand_excess = metric.buffer_size_approximation() * @default_demand_excess_factor
-    demand_excess = demand_excess || default_demand_excess
+    default_target_size = metric.buffer_size_approximation() * @default_target_size_factor
+
+    target_size = target_size || default_target_size
 
     min_demand =
-      (demand_excess * (min_demand_factor || default_min_demand_factor())) |> ceil() |> max(1)
+      (target_size * (min_demand_factor || default_min_demand_factor())) |> ceil() |> max(1)
 
     %__MODULE__{
       q: @qe.new(),
       log_tag: log_tag,
-      demand_excess: demand_excess,
+      target_size: target_size,
       size: 0,
-      demand: demand_excess,
+      demand: target_size,
       min_demand: min_demand,
       metric: metric,
       toilet?: toilet?
@@ -97,9 +98,9 @@ defmodule Membrane.Core.Element.InputQueue do
   def store(input_queue, type \\ :buffers, v)
 
   def store(input_queue, :buffers, v) when is_list(v) do
-    %__MODULE__{size: size, demand_excess: demand_excess} = input_queue
+    %__MODULE__{size: size, target_size: target_size} = input_queue
 
-    if size >= demand_excess do
+    if size >= target_size do
       """
       Received buffers despite not requesting them.
       It is probably caused by overestimating demand by previous element.
@@ -197,14 +198,14 @@ defmodule Membrane.Core.Element.InputQueue do
          %__MODULE__{
            toilet?: false,
            size: size,
-           demand_excess: demand_excess,
+           target_size: target_size,
            demand: demand,
            min_demand: min_demand
          } = input_queue,
          demand_pid,
          linked_output_ref
        )
-       when size < demand_excess and demand > 0 do
+       when size < target_size and demand > 0 do
     to_demand = max(demand, min_demand)
 
     """
@@ -227,7 +228,7 @@ defmodule Membrane.Core.Element.InputQueue do
     %__MODULE__{
       log_tag: log_tag,
       size: size,
-      demand_excess: demand_excess,
+      target_size: target_size,
       toilet?: toilet
     } = input_queue
 
@@ -235,7 +236,7 @@ defmodule Membrane.Core.Element.InputQueue do
       "InputQueue #{log_tag}#{if toilet, do: " (toilet)", else: ""}: ",
       message,
       "\n",
-      "InputQueue size: #{inspect(size)}, demand excess: #{inspect(demand_excess)}"
+      "InputQueue size: #{inspect(size)}, target size: #{inspect(target_size)}"
     ]
   end
 

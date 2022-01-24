@@ -76,7 +76,7 @@ defmodule Membrane.Core.ElementTest do
             pad_props: %{
               options: [],
               toilet_capacity: nil,
-              demand_excess: nil,
+              target_queue_size: nil,
               auto_demand_size: nil,
               min_demand_factor: nil
             },
