@@ -47,6 +47,7 @@ defmodule Membrane.Mixfile do
     [
       main: "readme",
       extras: ["README.md", "CONTRIBUTING.md", LICENSE: [title: "License"]],
+      formatters: ["html"],
       source_ref: @source_ref,
       nest_modules_by_prefix: [
         Membrane.Bin,
