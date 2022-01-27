@@ -74,7 +74,8 @@ defmodule Membrane.Core.Element.BufferController do
     )
   end
 
-  def exec_buffer_callback(pad_ref, buffers, %State{type: :sink} = state) do
+  def exec_buffer_callback(pad_ref, buffers, %State{type: type} = state)
+      when type in [:sink, :endpoint] do
     require CallbackContext.Write
 
     Telemetry.report_metric(:buffer, length(List.wrap(buffers)))

@@ -76,7 +76,7 @@ defmodule Membrane.Core.Element do
     else
       raise """
       Cannot start element, passed module #{inspect(module)} is not a Membrane Element.
-      Make sure that given module is the right one and it uses Membrane.{Source | Filter | Sink}
+      Make sure that given module is the right one and it uses Membrane.{Source | Filter | Endpoint | Sink}
       """
     end
   end
