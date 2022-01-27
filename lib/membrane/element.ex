@@ -2,8 +2,8 @@ defmodule Membrane.Element do
   @moduledoc """
   Module containing types and functions for operating on elements.
 
-  For behaviours for elements chceck `Membrane.Source`, `Membrane.Filter` and
-  `Membrane.Sink`.
+  For behaviours for elements chceck `Membrane.Source`, `Membrane.Filter`,
+  `Membrane.Endpoint` and `Membrane.Sink`.
   """
 
   @typedoc """
@@ -21,9 +21,10 @@ defmodule Membrane.Element do
   Defines possible element types:
   - source, producing buffers
   - filter, processing buffers
+  - endpoint, producing and consuming buffers
   - sink, consuming buffers
   """
-  @type type_t :: :source | :filter | :sink
+  @type type_t :: :source | :filter | :endpoint | :sink
 
   @typedoc """
   Type of user-managed state of element.

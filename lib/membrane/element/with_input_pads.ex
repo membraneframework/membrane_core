@@ -1,6 +1,6 @@
 defmodule Membrane.Element.WithInputPads do
   @moduledoc """
-  Module defining behaviour for sink and filter elements.
+  Module defining behaviour for sink, filter and endpoint elements.
 
   When used declares behaviour implementation, provides default callback definitions
   and imports macros.
