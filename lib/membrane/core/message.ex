@@ -32,7 +32,12 @@ defmodule Membrane.Core.Message do
 
   @spec call(GenServer.server(), type_t, args_t, opts_t, timeout()) :: term()
   def call(pid, type, args \\ [], opts \\ [], timeout \\ 5000) do
-    GenServer.call(pid, message(type: type, args: args, opts: opts), timeout)
+    try do
+      GenServer.call(pid, message(type: type, args: args, opts: opts), timeout)
+    catch
+      :exit, reason ->
+        {:error, reason}
+    end
   end
 
   @spec for_pad(t()) :: Pad.ref_t()
