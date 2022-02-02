@@ -36,7 +36,7 @@ defmodule Membrane.Core.Message do
       GenServer.call(pid, message(type: type, args: args, opts: opts), timeout)
     catch
       :exit, reason ->
-        {:error, reason}
+        {:error, {:call_failure, reason}}
     end
   end
 

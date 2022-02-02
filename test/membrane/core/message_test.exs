@@ -24,8 +24,12 @@ defmodule Membrane.Core.MessageTest do
   end
 
   test "receiver process not alive" do
-    response = Message.call(:c.pid(0, 255, 0), :request, [], [], 500)
+    pid = spawn(fn -> 5 end)
+    ref = Process.monitor(pid)
+    assert_receive {:DOWN, ^ref, :process, ^pid, :normal}
 
-    assert match?({:error, _reason}, response)
+    response = Message.call(pid, :request, [], [], 500)
+
+    assert match?({:error, {:call_failure, _}}, response)
   end
 end
