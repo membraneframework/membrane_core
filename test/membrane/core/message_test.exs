@@ -25,7 +25,7 @@ defmodule Membrane.Core.MessageTest do
 
     test "return error when receiver process is not alive" do
       Process.flag(:trap_exit, true)
-      pid = spawn(fn -> 5 end)
+      pid = spawn_link(fn -> :ok end)
       assert_receive {:EXIT, ^pid, :normal}
 
       response = Message.call(pid, :request, [], [], 500)
@@ -44,7 +44,7 @@ defmodule Membrane.Core.MessageTest do
 
     test "crash when receiver process is not alive" do
       Process.flag(:trap_exit, true)
-      pid = spawn_link(fn -> 5 end)
+      pid = spawn_link(fn -> :ok end)
       assert_receive {:EXIT, ^pid, :normal}
 
       caller_pid =
