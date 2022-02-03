@@ -15,21 +15,44 @@ defmodule Membrane.Core.MessageTest do
     def handle_call(Message.new(:request), _from, state), do: {:reply, :ok, state}
   end
 
-  test "receiver process alive" do
-    {:ok, receiver} = GenServer.start_link(Receiver, [])
+  describe "call should" do
+    test "return response when receiver process is alive" do
+      {:ok, receiver} = GenServer.start_link(Receiver, [])
 
-    response = Message.call(receiver, :request)
+      response = Message.call(receiver, :request)
+      assert response == :ok
+    end
 
-    assert response == :ok
+    test "return error when receiver process is not alive" do
+      Process.flag(:trap_exit, true)
+      pid = spawn(fn -> 5 end)
+      assert_receive {:EXIT, ^pid, :normal}
+
+      response = Message.call(pid, :request, [], [], 500)
+
+      assert match?({:error, {:call_failure, _}}, response)
+    end
   end
 
-  test "receiver process not alive" do
-    pid = spawn(fn -> 5 end)
-    ref = Process.monitor(pid)
-    assert_receive {:DOWN, ^ref, :process, ^pid, :normal}
+  describe "call! should" do
+    test "return response when receiver process is alive" do
+      {:ok, receiver} = GenServer.start_link(Receiver, [])
 
-    response = Message.call(pid, :request, [], [], 500)
+      response = Message.call!(receiver, :request)
+      assert response == :ok
+    end
 
-    assert match?({:error, {:call_failure, _}}, response)
+    test "crash when receiver process is not alive" do
+      Process.flag(:trap_exit, true)
+      pid = spawn_link(fn -> 5 end)
+      assert_receive {:EXIT, ^pid, :normal}
+
+      caller_pid =
+        spawn_link(fn ->
+          Message.call!(pid, :request, [], [], 500)
+        end)
+
+      assert_receive {:EXIT, ^caller_pid, {:noproc, _details}}
+    end
   end
 end

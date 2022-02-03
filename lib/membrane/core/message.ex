@@ -40,6 +40,11 @@ defmodule Membrane.Core.Message do
     end
   end
 
+  @spec call!(GenServer.server(), type_t, args_t, opts_t, timeout()) :: term()
+  def call!(pid, type, args \\ [], opts \\ [], timeout \\ 5000) do
+    GenServer.call(pid, message(type: type, args: args, opts: opts), timeout)
+  end
+
   @spec for_pad(t()) :: Pad.ref_t()
   def for_pad(message(opts: opts)), do: Keyword.get(opts, :for_pad)
 
