@@ -178,7 +178,7 @@ defmodule Membrane.Core.Bin.PadController do
     end
 
     reply =
-      Message.call(child_endpoint.pid, :handle_link, [
+      Message.call!(child_endpoint.pid, :handle_link, [
         direction,
         child_endpoint,
         other_endpoint,
