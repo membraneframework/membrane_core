@@ -45,9 +45,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     {links, state} =
       Enum.map_reduce(links, state, fn link, state ->
         link = %Link{
-          link
-          | from: resolve_endpoint(link.from, state),
-            to: resolve_endpoint(link.to, state)
+          from: resolve_endpoint(link.from, state),
+          to: resolve_endpoint(link.to, state)
         }
 
         link_id = {spec_ref, make_ref()}
