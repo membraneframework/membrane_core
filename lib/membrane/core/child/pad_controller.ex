@@ -89,10 +89,10 @@ defmodule Membrane.Core.Child.PadController do
       )
 
     unless Enum.empty?(static_unlinked_pads) do
-      Membrane.Logger.warn("""
+      raise """
       Some static pads remained unlinked: #{inspect(Enum.map(static_unlinked_pads, & &1.name))}
       State: #{inspect(state, pretty: true)}
-      """)
+      """
     end
 
     :ok
