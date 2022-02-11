@@ -95,12 +95,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     links = spec_data.links |> Map.values()
 
     if Enum.all?(links, &(&1.awaiting_responses == 0)) do
-      state =
-        links
-        |> Enum.map(& &1.link)
-        |> Enum.reject(&({Membrane.Bin, :itself} in [&1.from.child, &1.to.child]))
-        |> Enum.reduce(state, &link/2)
-
+      state = links |> Enum.map(& &1.link) |> Enum.reduce(state, &link/2)
       Membrane.Logger.debug("Spec #{inspect(spec_ref)} linked internally")
       do_proceed_spec_linking(spec_ref, %{spec_data | status: :linked_internally}, state)
     else
@@ -267,7 +262,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   defp link(%Link{from: from, to: to}, state) do
     Telemetry.report_link(from, to)
-    :ok = Message.call(from.pid, :handle_link, [:output, from, to, %{initiator: :parent}])
-    update_in(state, [:links], &[%Link{from: from, to: to} | &1])
+
+    if {Membrane.Bin, :itself} in [from.child, to.child] do
+      state
+    else
+      :ok = Message.call(from.pid, :handle_link, [:output, from, to, %{initiator: :parent}])
+      update_in(state, [:links], &[%Link{from: from, to: to} | &1])
+    end
   end
 end
