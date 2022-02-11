@@ -315,9 +315,6 @@ defmodule Membrane.Core.ElementTest do
       assert_receive {:DOWN, ^ref, :process, ^elem_pid, {:shutdown, :parent_crash}}
     end
 
-    test "should crash when changes playback state from stopped while some static pads are unlinked" do
-    end
-
     test "DOWN message should be delivered to handle_other if it's not coming from parent" do
       {:ok, elem_pid} =
         self()
