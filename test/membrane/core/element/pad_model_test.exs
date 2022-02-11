@@ -1,5 +1,5 @@
 defmodule Membrane.Core.Child.PadModelTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Membrane.Core.Child.PadModel
 
@@ -58,9 +58,9 @@ defmodule Membrane.Core.Child.PadModelTest do
     setup :setup_element_state
 
     test "is {:ok, state} when the pad is present", ctx do
-      assert get_in(ctx.state, [:pads, :data, :input, :start_of_stream?]) |> is_nil()
+      assert ctx.state.pads.data.input.start_of_stream? == false
       assert {:ok, state} = PadModel.set_data(ctx.state, :input, :start_of_stream?, true)
-      assert get_in(state, [:pads, :data, :input, :start_of_stream?]) == true
+      assert state.pads.data.input.start_of_stream? == true
     end
 
     test "is :unknown_pad when the pad is not present", ctx do
@@ -73,9 +73,9 @@ defmodule Membrane.Core.Child.PadModelTest do
     setup :setup_element_state
 
     test "updates the pad data with the given function when present", ctx do
-      assert get_in(ctx.state, [:pads, :data, :input, :start_of_stream?]) |> is_nil()
+      assert ctx.state.pads.data.input.start_of_stream? == false
       assert state = PadModel.set_data!(ctx.state, :input, :start_of_stream?, true)
-      assert get_in(state, [:pads, :data, :input, :start_of_stream?]) == true
+      assert state.pads.data.input.start_of_stream? == true
     end
 
     test "raises when the pad is not present", ctx do
@@ -118,7 +118,7 @@ defmodule Membrane.Core.Child.PadModelTest do
     setup :setup_element_state
 
     test "updates multiple values in a pad", ctx do
-      assert %{demand: 1, start_of_stream?: nil} = Map.get(ctx.state.pads.data, :input)
+      assert %{demand: 1, start_of_stream?: false} = Map.get(ctx.state.pads.data, :input)
 
       assert {:ok, state} =
                PadModel.update_multi(ctx.state, :input, [
@@ -142,7 +142,7 @@ defmodule Membrane.Core.Child.PadModelTest do
     setup :setup_element_state
 
     test "updates multiple values in a pad", ctx do
-      assert %{demand: 1, start_of_stream?: nil} = Map.get(ctx.state.pads.data, :input)
+      assert %{demand: 1, start_of_stream?: false} = Map.get(ctx.state.pads.data, :input)
 
       assert state =
                PadModel.update_multi!(ctx.state, :input, [

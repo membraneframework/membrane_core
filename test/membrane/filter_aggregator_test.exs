@@ -18,8 +18,6 @@ defmodule Membrane.FilterAggregatorTest do
     StreamManagement
   }
 
-  @moduletag :focus
-
   setup_all do
     behaviours = [
       Membrane.Filter,
