@@ -59,7 +59,7 @@ defmodule Membrane.Pad do
   processed.
 
   For more information on transfering data and demands, see `t:demand_mode_t/0`,
-  `Membrane.Source`, `Membrane.Filter`, `Membrane.Sink`.
+  `Membrane.Source`, `Membrane.Filter`, `Membrane.Endpoint`, `Membrane.Sink`.
   """
   @type mode_t :: :push | :pull
 

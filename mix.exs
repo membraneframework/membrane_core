@@ -68,6 +68,7 @@ defmodule Membrane.Mixfile do
         Bin: [~r/^Membrane\.Bin($|\.)/],
         Element: [
           ~r/^Membrane\.Filter($|\.)/,
+          ~r/^Membrane\.Endpoint($|\.)/,
           ~r/^Membrane\.Sink($|\.)/,
           ~r/^Membrane\.Source($|\.)/,
           ~r/^Membrane\.Element($|\.)/

@@ -12,6 +12,7 @@
 ### PRs not influencing public API:
  * Prevent internal testing notifications from reaching pipeline module [#350](https://github.com/membraneframework/membrane_core/pull/350)
  * Fix unknown node error on distribution changes [#352](https://github.com/membraneframework/membrane_core/pull/352)
+ * Add new type of element, `Membrane.Endpoint` [#382](https://github.com/membraneframework/membrane_core/pull/382)
 
 ## 0.8.1
  * allow telemetry in version 1.0 only [#347](https://github.com/membraneframework/membrane_core/pull/347)
