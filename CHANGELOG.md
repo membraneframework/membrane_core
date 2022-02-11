@@ -4,6 +4,8 @@
  * More fine-grained control over emitted metrics [#365](https://github.com/membraneframework/membrane_core/pull/365)
  * Added log metadata when reporting init in telemetry [#376](https://github.com/membraneframework/membrane_core/pull/376)
  * Fix generation of pad documentation inside an element [#377](https://github.com/membraneframework/membrane_core/pull/377)
+ * Leaving static pads unlinked and transiting to a playback state other than `:stopped` will result
+ in runtime error (previously only a warning was printed out). [##389](https://github.com/membraneframework/membrane_core/pull/389)
 
 ## 0.8.2
  * Fixed PadAdded spec [#359](https://github.com/membraneframework/membrane_core/pull/359)
