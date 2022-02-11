@@ -2,8 +2,7 @@ defmodule Membrane.Core.Child.PadController do
   @moduledoc false
 
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
-  alias Membrane.LinkError
-  alias Membrane.Pad
+  alias Membrane.{LinkError, Pad}
 
   require Membrane.Core.Child.PadModel
   require Membrane.Logger
@@ -89,7 +88,7 @@ defmodule Membrane.Core.Child.PadController do
       )
 
     unless Enum.empty?(static_unlinked_pads) do
-      raise """
+      raise LinkError, """
       Some static pads remained unlinked: #{inspect(Enum.map(static_unlinked_pads, & &1.name))}
       State: #{inspect(state, pretty: true)}
       """

@@ -136,7 +136,7 @@ defmodule Membrane.Core.ElementTest do
   end
 
   test "should raise when static pads unlinked is playback state other than stopped" do
-    assert_raise RuntimeError, fn ->
+    assert_raise Membrane.LinkError, fn ->
       assert {:noreply, _state} =
                Element.handle_info(
                  Message.new(:change_playback_state, :prepared),

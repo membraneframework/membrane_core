@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.PadController do
 
   use Bunch
   alias Bunch.Type
-  alias Membrane.{Core, Pad}
+  alias Membrane.{Core, LinkError, Pad}
   alias Membrane.Core.{CallbackHandler, Child, Events, Message}
   alias Membrane.Core.Child.PadModel
 
@@ -21,7 +21,6 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.Element.CallbackContext
-  alias Membrane.LinkError
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
