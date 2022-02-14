@@ -68,7 +68,7 @@ defmodule Membrane.Integration.ChildCrashTest do
     assert_pid_alive(sink_pid)
     assert_pid_alive(pipeline_pid)
 
-    assert_pipeline_receive(pipeline_pid, {:handle_crash_group_called, 1})
+    assert_pipeline_crash_group_down(pipeline_pid, 1)
   end
 
   test "Crash group consisting of bin crashes" do
@@ -191,8 +191,8 @@ defmodule Membrane.Integration.ChildCrashTest do
     assert_pid_alive(source_2_pid)
     assert_pid_alive(pipeline_pid)
 
-    assert_pipeline_receive(pipeline_pid, {:handle_crash_group_called, 1})
-    refute_pipeline_receive(pipeline_pid, {:handle_crash_group_called, 2})
+    assert_pipeline_crash_group_down(pipeline_pid, 1)
+    refute_pipeline_crash_group_down(pipeline_pid, 2)
 
     ChildCrashTest.Pipeline.crash_child(filter_1_2_pid)
 
@@ -206,7 +206,7 @@ defmodule Membrane.Integration.ChildCrashTest do
     assert_pid_alive(center_filter_pid)
     assert_pid_alive(pipeline_pid)
 
-    assert_pipeline_receive(pipeline_pid, {:handle_crash_group_called, 2})
+    assert_pipeline_crash_group_down(pipeline_pid, 2)
   end
 
   defp assert_pid_alive(pid) do
