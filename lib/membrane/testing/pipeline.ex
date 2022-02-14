@@ -277,58 +277,58 @@ defmodule Membrane.Testing.Pipeline do
 
   @impl true
   def handle_stopped_to_prepared(ctx, %State{} = state) do
-    injected_module_result =
+    {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_stopped_to_prepared,
         [ctx],
         state
       )
 
-    testing_pipeline_result = notify_playback_state_changed(:stopped, :prepared, state)
+    :ok = notify_playback_state_changed(state.test_process, :stopped, :prepared)
 
-    combine_results(injected_module_result, testing_pipeline_result)
+    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
   @impl true
   def handle_prepared_to_playing(ctx, %State{} = state) do
-    injected_module_result =
+    {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_prepared_to_playing,
         [ctx],
         state
       )
 
-    testing_pipeline_result = notify_playback_state_changed(:prepared, :playing, state)
+    :ok = notify_playback_state_changed(state.test_process, :prepared, :playing)
 
-    combine_results(injected_module_result, testing_pipeline_result)
+    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
   @impl true
   def handle_playing_to_prepared(ctx, %State{} = state) do
-    injected_module_result =
+    {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_playing_to_prepared,
         [ctx],
         state
       )
 
-    testing_pipeline_result = notify_playback_state_changed(:playing, :prepared, state)
+    :ok = notify_playback_state_changed(state.test_process, :playing, :prepared)
 
-    combine_results(injected_module_result, testing_pipeline_result)
+    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
   @impl true
   def handle_prepared_to_stopped(ctx, %State{} = state) do
-    injected_module_result =
+    {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_prepared_to_stopped,
         [ctx],
         state
       )
 
-    testing_pipeline_result = notify_playback_state_changed(:prepared, :stopped, state)
+    :ok = notify_playback_state_changed(state.test_process, :prepared, :stopped)
 
-    combine_results(injected_module_result, testing_pipeline_result)
+    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
   @impl true
@@ -338,36 +338,34 @@ defmodule Membrane.Testing.Pipeline do
         _ctx,
         %State{} = state
       ) do
-    notify_test_process({:handle_notification, {notification, from}}, state)
+    :ok = notify_test_process(state.test_process, {:handle_notification, {notification, from}})
+    {:ok, state}
   end
 
   @impl true
   def handle_notification(notification, from, ctx, %State{} = state) do
-    injected_module_result =
+    {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_notification,
         [notification, from, ctx],
         state
       )
 
-    testing_pipeline_result =
-      notify_test_process({:handle_notification, {notification, from}}, state)
+    :ok = notify_test_process(state.test_process, {:handle_notification, {notification, from}})
 
-    combine_results(injected_module_result, testing_pipeline_result)
+    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
   @impl true
   def handle_spec_started(elements, ctx, %State{} = state) do
-    injected_module_result =
+    {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_spec_started,
         [elements, ctx],
         state
       )
 
-    testing_pipeline_result = {:ok, state}
-
-    combine_results(injected_module_result, testing_pipeline_result)
+    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
   @impl true
@@ -399,74 +397,70 @@ defmodule Membrane.Testing.Pipeline do
 
   @impl true
   def handle_other(message, ctx, %State{} = state) do
-    injected_module_result =
+    {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_other,
         [message, ctx],
         state
       )
 
-    testing_pipeline_result = notify_test_process({:handle_other, message}, state)
+    :ok = notify_test_process(state.test_process, {:handle_other, message})
 
-    combine_results(injected_module_result, testing_pipeline_result)
+    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
   @impl true
   def handle_element_start_of_stream(endpoint, ctx, state) do
-    injected_module_result =
+    {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_element_start_of_stream,
         [endpoint, ctx],
         state
       )
 
-    testing_pipeline_result =
-      notify_test_process({:handle_element_start_of_stream, endpoint}, state)
+    :ok = notify_test_process(state.test_process, {:handle_element_start_of_stream, endpoint})
 
-    combine_results(injected_module_result, testing_pipeline_result)
+    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
   @impl true
   def handle_element_end_of_stream(endpoint, ctx, state) do
-    injected_module_result =
+    {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_element_end_of_stream,
         [endpoint, ctx],
         state
       )
 
-    testing_pipeline_result =
-      notify_test_process({:handle_element_end_of_stream, endpoint}, state)
+    :ok = notify_test_process(state.test_process, {:handle_element_end_of_stream, endpoint})
 
-    combine_results(injected_module_result, testing_pipeline_result)
+    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
   @impl true
   def handle_tick(timer, ctx, state) do
-    injected_module_result =
+    {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_tick,
         [timer, ctx],
         state
       )
 
-    testing_pipeline_result = {:ok, state}
-
-    combine_results(injected_module_result, testing_pipeline_result)
+    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
   @impl true
   def handle_crash_group_down(group_name, ctx, state) do
-    injected_module_result =
+    {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_crash_group_down,
         [group_name, ctx],
         state
       )
 
-    testing_pipeline_result = {:ok, state}
+    :ok = notify_test_process(state.test_process, {:handle_crash_group_down, group_name})
 
-    combine_results(injected_module_result, testing_pipeline_result)
+    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
   defp default_options(%Options{test_process: nil} = options),
@@ -483,13 +477,13 @@ defmodule Membrane.Testing.Pipeline do
     apply(state.module, callback, args ++ [state.custom_pipeline_state]) |> unify_result()
   end
 
-  defp notify_playback_state_changed(previous, current, %State{} = state) do
-    notify_test_process({:playback_state_changed, previous, current}, state)
+  defp notify_playback_state_changed(test_process, previous, current) do
+    notify_test_process(test_process, {:playback_state_changed, previous, current})
   end
 
-  defp notify_test_process(message, %State{test_process: test_process} = state) do
+  defp notify_test_process(test_process, message) do
     send(test_process, {__MODULE__, self(), message})
-    {:ok, state}
+    :ok
   end
 
   defp unify_result({:ok, state}),

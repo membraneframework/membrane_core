@@ -40,17 +40,6 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
     {{:ok, spec: spec}, state}
   end
 
-  @impl true
-  def handle_other({:handle_crash_group_called, _group_name}, _ctx, state) do
-    {:ok, state}
-  end
-
-  @impl true
-  def handle_crash_group_down(group_name, _ctx, state) do
-    send(self(), {:handle_crash_group_called, group_name})
-    {:ok, state}
-  end
-
   @spec add_single_source(pid(), any(), any(), any()) :: any()
   def add_single_source(pid, source_name, group \\ nil, source \\ Testing.Source) do
     children = [
