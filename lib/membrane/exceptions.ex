@@ -93,6 +93,10 @@ defmodule Membrane.ActionError do
     "Cannot invoke this action on pad #{inspect(pad)} as it works in #{inspect(mode)} mode"
   end
 
+  defp format_reason({:invalid_demand_mode, pad, demand_mode}) do
+    "Cannot invoke this action on pad #{inspect(pad)} as it uses #{inspect(demand_mode)} demand mode"
+  end
+
   defp format_reason({:eos_sent, pad}) do
     "End of Stream has already been sent on pad #{inspect(pad)}"
   end
