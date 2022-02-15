@@ -23,6 +23,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
                 direction: :input,
                 pid: self(),
                 mode: :pull,
+                demand_mode: :manual,
                 demand: 0
               ),
             input_push:
@@ -490,6 +491,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         %{state | supplying_demand?: true}
         |> set_playback_state(:playing)
         |> PadModel.set_data!(:output, :mode, :pull)
+        |> PadModel.set_data!(:output, :demand_mode, :manual)
 
       result =
         @module.handle_action(
@@ -522,6 +524,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
                 direction: :output,
                 pid: self(),
                 mode: :pull,
+                demand_mode: :manual,
                 demand: 0
               }
             }
