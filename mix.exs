@@ -1,14 +1,14 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "0.8.1"
+  @version "0.9.0"
   @source_ref "v#{@version}"
 
   def project do
     [
       app: :membrane_core,
       version: @version,
-      elixir: "~> 1.10",
+      elixir: "~> 1.12",
       elixirc_paths: elixirc_paths(Mix.env()),
       description: "Membrane Multimedia Framework (Core)",
       dialyzer: [
@@ -33,7 +33,7 @@ defmodule Membrane.Mixfile do
   end
 
   def application do
-    [extra_applications: [], mod: {Membrane, []}]
+    [extra_applications: [:logger], mod: {Membrane, []}]
   end
 
   defp elixirc_paths(:test), do: ["lib", "spec/support", "test/support"]
@@ -46,7 +46,7 @@ defmodule Membrane.Mixfile do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md", "CONTRIBUTING.md", LICENSE: [title: "License"]],
+      extras: ["README.md", "CHANGELOG.md", "CONTRIBUTING.md", LICENSE: [title: "License"]],
       formatters: ["html"],
       source_ref: @source_ref,
       nest_modules_by_prefix: [
@@ -97,7 +97,7 @@ defmodule Membrane.Mixfile do
   defp package do
     [
       maintainers: ["Membrane Team"],
-      licenses: ["Apache 2.0"],
+      licenses: ["Apache-2.0"],
       links: %{
         "GitHub" => link(),
         "Membrane Framework Homepage" => "https://membraneframework.org"
@@ -107,11 +107,11 @@ defmodule Membrane.Mixfile do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.21", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.0.0", only: :dev, runtime: false},
-      {:credo, "~> 1.4", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.1", only: :dev, runtime: false},
+      {:credo, "~> 1.6", only: :dev, runtime: false},
       {:espec, "~> 1.8.3", only: :test},
-      {:excoveralls, "~> 0.11", only: :test},
+      {:excoveralls, "~> 0.14", only: :test},
       {:qex, "~> 0.3"},
       {:telemetry, "~> 1.0"},
       {:bunch, "~> 1.3"},

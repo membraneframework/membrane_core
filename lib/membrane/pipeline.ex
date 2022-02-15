@@ -280,7 +280,7 @@ defmodule Membrane.Pipeline do
 
   defp wait_for_down(ref, timeout) do
     receive do
-      {:DOWN, ^ref, _, _, _} ->
+      {:DOWN, ^ref, _process, _pid, _reason} ->
         :ok
     after
       timeout ->

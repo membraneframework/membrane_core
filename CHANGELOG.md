@@ -1,4 +1,6 @@
- ## 0.9.0
+# Changelog
+
+## 0.9.0
  * Automatic demands [#313](https://github.com/membraneframework/membrane_core/pull/313)
  * Stop forwarding notifications by default in bins [#358](https://github.com/membraneframework/membrane_core/pull/358)
  * More fine-grained control over emitted metrics [#365](https://github.com/membraneframework/membrane_core/pull/365)
