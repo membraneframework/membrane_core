@@ -21,11 +21,16 @@ defmodule Membrane.Core.Element.Toilet do
     {__MODULE__, :atomics.new(1, []), capacity, responsible_process}
   end
 
-  @spec fill(t, non_neg_integer) :: :ok
+  @spec fill(t, non_neg_integer) :: :ok | :overflow
   def fill({__MODULE__, atomic, capacity, responsible_process}, amount) do
     size = :atomics.add_get(atomic, 1, amount)
-    if size > capacity, do: overflow(size, capacity, responsible_process)
-    :ok
+
+    if size > capacity do
+      overflow(size, capacity, responsible_process)
+      :overflow
+    else
+      :ok
+    end
   end
 
   @spec drain(t, non_neg_integer) :: :ok
