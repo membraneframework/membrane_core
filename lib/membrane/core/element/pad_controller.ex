@@ -104,8 +104,8 @@ defmodule Membrane.Core.Element.PadController do
 
         maybe_handle_pad_added(endpoint.pad_ref, state)
 
-      {:error, {:call_failure, _reason} = reason} ->
-        {{:error, {:neighbor_not_alive, reason}}, state}
+      {:error, {:call_failure, reason}} ->
+        {{:error, {:neighbor_dead, reason}}, state}
     end
   end
 
@@ -154,16 +154,16 @@ defmodule Membrane.Core.Element.PadController do
   @spec handle_unlink(Pad.ref_t(), Core.Element.State.t()) ::
           Type.stateful_try_t(Core.Element.State.t())
   def handle_unlink(pad_ref, state) do
-    if Map.has_key?(state.pads.data, pad_ref) do
-      with {:ok, state} <- flush_playback_buffer(pad_ref, state),
-           {:ok, state} <- generate_eos_if_needed(pad_ref, state),
-           {:ok, state} <- maybe_handle_pad_removed(pad_ref, state) do
-        state = remove_pad_associations(pad_ref, state)
-        state = PadModel.delete_data!(state, pad_ref)
-        {:ok, state}
-      end
-    else
+    with :ok <- Membrane.Core.Child.PadModel.assert_instance(state, pad_ref),
+         {:ok, state} <- flush_playback_buffer(pad_ref, state),
+         {:ok, state} <- generate_eos_if_needed(pad_ref, state),
+         {:ok, state} <- maybe_handle_pad_removed(pad_ref, state) do
+      state = remove_pad_associations(pad_ref, state)
+      state = PadModel.delete_data!(state, pad_ref)
       {:ok, state}
+    else
+      {:error, {:unknown_pad, _pad_ref}} -> {:ok, state}
+      error -> error
     end
   end
 
