@@ -1,7 +1,7 @@
 # Changelog
 
 ## 0.10.0
- * Remove all deprecated stuff
+ * Remove all deprecated stuff [#399](https://github.com/membraneframework/membrane_core/pull/399)
 
 ## 0.9.0
  * Automatic demands [#313](https://github.com/membraneframework/membrane_core/pull/313)
