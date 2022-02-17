@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.10.0
+ * Remove all deprecated stuff
+
 ## 0.9.0
  * Automatic demands [#313](https://github.com/membraneframework/membrane_core/pull/313)
  * Stop forwarding notifications by default in bins [#358](https://github.com/membraneframework/membrane_core/pull/358)

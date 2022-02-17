@@ -314,7 +314,7 @@ defmodule Membrane.Bin do
       def membrane_clock?, do: false
 
       @impl true
-      def handle_init(_options), do: {{:ok, spec: %Membrane.ParentSpec{}}, %{}}
+      def handle_init(_options), do: {:ok, %{}}
 
       @impl true
       def handle_shutdown(_reason, _state), do: :ok
@@ -326,93 +326,50 @@ defmodule Membrane.Bin do
       def handle_pad_removed(_pad, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_stopped_to_prepared(_ctx, state), do: handle_stopped_to_prepared(state)
+      def handle_stopped_to_prepared(_ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_prepared_to_playing(_ctx, state), do: handle_prepared_to_playing(state)
+      def handle_prepared_to_playing(_ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_playing_to_prepared(_ctx, state), do: handle_playing_to_prepared(state)
+      def handle_playing_to_prepared(_ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_prepared_to_stopped(_ctx, state), do: handle_prepared_to_stopped(state)
+      def handle_prepared_to_stopped(_ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_stopped_to_terminating(_ctx, state), do: handle_stopped_to_terminating(state)
+      def handle_stopped_to_terminating(_ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_other(message, _ctx, state), do: handle_other(message, state)
+      def handle_other(message, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_spec_started(new_children, _ctx, state),
-        do: handle_spec_started(new_children, state)
+      def handle_spec_started(new_children, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_element_start_of_stream({element, pad}, _ctx, state),
-        do: handle_element_start_of_stream({element, pad}, state)
+      def handle_element_start_of_stream({element, pad}, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_element_end_of_stream({element, pad}, _ctx, state),
-        do: handle_element_end_of_stream({element, pad}, state)
+      def handle_element_end_of_stream({element, pad}, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_notification(notification, element, _ctx, state),
-        do: handle_notification(notification, element, state)
+      def handle_notification(notification, element, _ctx, state), do: {:ok, state}
 
-      # DEPRECATED:
-
-      # credo:disable-for-lines:22 Credo.Check.Readability.Specs
-      @doc false
-      def handle_stopped_to_prepared(state), do: {:ok, state}
-      @doc false
-      def handle_prepared_to_playing(state), do: {:ok, state}
-      @doc false
-      def handle_playing_to_prepared(state), do: {:ok, state}
-      @doc false
-      def handle_prepared_to_stopped(state), do: {:ok, state}
-      @doc false
-      def handle_stopped_to_terminating(state), do: {:ok, state}
-      @doc false
-      def handle_other(_message, state), do: {:ok, state}
-      @doc false
-      def handle_spec_started(_new_children, state), do: {:ok, state}
-      @doc false
-      def handle_element_start_of_stream({_element, _pad}, state), do: {:ok, state}
-      @doc false
-      def handle_element_end_of_stream({_element, _pad}, state), do: {:ok, state}
-      @doc false
-      def handle_notification(notification, _element, state), do: {:ok, state}
-
-      deprecated = [
-        handle_stopped_to_prepared: 1,
-        handle_prepared_to_playing: 1,
-        handle_playing_to_prepared: 1,
-        handle_prepared_to_stopped: 1,
-        handle_stopped_to_terminating: 1,
-        handle_other: 2,
-        handle_spec_started: 2,
-        handle_element_start_of_stream: 2,
-        handle_element_end_of_stream: 2,
-        handle_notification: 3
-      ]
-
-      defoverridable [
-                       membrane_clock?: 0,
-                       handle_init: 1,
-                       handle_shutdown: 2,
-                       handle_pad_added: 3,
-                       handle_pad_removed: 3,
-                       handle_stopped_to_prepared: 2,
-                       handle_playing_to_prepared: 2,
-                       handle_prepared_to_playing: 2,
-                       handle_prepared_to_stopped: 2,
-                       handle_stopped_to_terminating: 2,
-                       handle_other: 3,
-                       handle_spec_started: 3,
-                       handle_element_start_of_stream: 3,
-                       handle_element_end_of_stream: 3,
-                       handle_notification: 4
-                     ] ++ deprecated
+      defoverridable membrane_clock?: 0,
+                     handle_init: 1,
+                     handle_shutdown: 2,
+                     handle_pad_added: 3,
+                     handle_pad_removed: 3,
+                     handle_stopped_to_prepared: 2,
+                     handle_playing_to_prepared: 2,
+                     handle_prepared_to_playing: 2,
+                     handle_prepared_to_stopped: 2,
+                     handle_stopped_to_terminating: 2,
+                     handle_other: 3,
+                     handle_spec_started: 3,
+                     handle_element_start_of_stream: 3,
+                     handle_element_end_of_stream: 3,
+                     handle_notification: 4
     end
   end
 end
