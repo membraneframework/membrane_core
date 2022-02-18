@@ -26,7 +26,7 @@ defmodule Membrane.Testing.DynamicSource do
     #generate some buffers
     {actions, state + 1}
   end
-  
+
   %Source{output: {1, generator_function}}
   """
   use Membrane.Source
@@ -34,7 +34,8 @@ defmodule Membrane.Testing.DynamicSource do
   alias Membrane.Buffer
 
   @type generator ::
-          (state :: any(), pad :: Pad.ref_t(), buffers_cnt :: pos_integer -> {[Action.t()], state :: any()})
+          (state :: any(), pad :: Pad.ref_t(), buffers_cnt :: pos_integer ->
+             {[Action.t()], state :: any()})
 
   def_output_pad :output, caps: :any, availability: :on_request
 

@@ -17,7 +17,9 @@ defmodule Membrane.Testing.DynamicSourceTest do
 
   test "Source sends caps on play" do
     assert {{:ok, caps: {:output, :caps}}, _state} =
-             Testing.DynamicSource.handle_prepared_to_playing(%{pads: %{:output => %{}}}, %{caps: :caps})
+             Testing.DynamicSource.handle_prepared_to_playing(%{pads: %{:output => %{}}}, %{
+               caps: :caps
+             })
   end
 
   test "Source works properly when payload are passed as enumerable" do
