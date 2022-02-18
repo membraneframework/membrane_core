@@ -72,6 +72,11 @@ defmodule Membrane.Integration.LinkingTest do
     end
 
     @impl true
+    def handle_other({:remove_child, child}, _ctx, state) do
+      {{:ok, remove_child: child}, state}
+    end
+
+    @impl true
     def handle_spec_started(_children, _ctx, state) do
       send(state.testing_pid, :spec_started)
       {:ok, state}
@@ -90,6 +95,37 @@ defmodule Membrane.Integration.LinkingTest do
     end)
 
     %{pipeline: pipeline}
+  end
+
+  describe "when element is connected to a bin" do
+    test "and element is removed normally, handle_pad_removed should be called", %{
+      pipeline: pipeline
+    } do
+      spec = %Membrane.ParentSpec{
+        children: [
+          bin: %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}},
+          sink: Testing.Sink
+        ],
+        links: [
+          link(:bin) |> to(:sink)
+        ]
+      }
+
+      send(pipeline, {:start_spec, %{spec: spec}})
+      assert_receive(:spec_started)
+      Testing.Pipeline.play(pipeline)
+      assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'a'})
+      assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'b'})
+      assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'c'})
+      send(pipeline, {:remove_child, :sink})
+      assert_pipeline_notified(pipeline, :bin, :handle_pad_removed)
+      # assert_receive(:spec_started)
+
+      # assert 1 == 2
+    end
+
+    # test "and element crashes, bin forwards the unlink message to child", %{pipeline: pipeline} do
+    # end
   end
 
   test "element should crash when its neighbor connected via static pad crashes", %{
