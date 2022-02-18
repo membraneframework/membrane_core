@@ -4,49 +4,7 @@ defmodule Membrane.Integration.LinkingTest do
   import Membrane.Testing.Assertions
   import Membrane.ParentSpec
 
-  alias Membrane.{Buffer, Testing}
-
-  defmodule DynamicSource do
-    @moduledoc false
-    use Membrane.Source
-
-    def_output_pad :output, caps: :any, availability: :on_request
-
-    def_options output: [
-                  spec: List.t(),
-                  default: []
-                ]
-
-    @impl true
-    def handle_init(opts) do
-      {:ok, Map.from_struct(opts)}
-    end
-
-    @impl true
-    def handle_prepared_to_playing(_ctx, state) do
-      {{:ok, caps: {:output, state.caps}}, state}
-    end
-
-    @impl true
-    def handle_demand(:output, 0, :buffers, _ctx, state) do
-      {:ok, state}
-    end
-
-    @impl true
-    def handle_demand(pad, _size, :buffers, _ctx, state) do
-      if length(state.output) > 0 do
-        [payload | rest] = state.output
-
-        {{:ok,
-          [
-            {:buffer, {pad, %Buffer{payload: payload}}},
-            {:redemand, pad}
-          ]}, %{state | output: rest}}
-      else
-        {{:ok, [end_of_stream: :output]}, state}
-      end
-    end
-  end
+  alias Membrane.Testing
 
   defmodule Pipeline do
     @moduledoc false
@@ -132,7 +90,7 @@ defmodule Membrane.Integration.LinkingTest do
   } do
     spec_1 = %Membrane.ParentSpec{
       children: [
-        source: %DynamicSource{output: ['a', 'b', 'c']}
+        source: %Testing.DynamicSource{output: ['a', 'b', 'c']}
       ],
       crash_group: {:group_1, :temporary}
     }

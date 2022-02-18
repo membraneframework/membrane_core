@@ -154,7 +154,7 @@ defmodule Membrane.Core.Element.PadController do
   @spec handle_unlink(Pad.ref_t(), Core.Element.State.t()) ::
           Type.stateful_try_t(Core.Element.State.t())
   def handle_unlink(pad_ref, state) do
-    with :ok <- Membrane.Core.Child.PadModel.assert_instance(state, pad_ref),
+    with :ok <- Child.PadModel.assert_instance(state, pad_ref),
          {:ok, state} <- flush_playback_buffer(pad_ref, state),
          {:ok, state} <- generate_eos_if_needed(pad_ref, state),
          {:ok, state} <- maybe_handle_pad_removed(pad_ref, state) do
