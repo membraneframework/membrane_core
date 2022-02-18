@@ -46,16 +46,6 @@ defmodule Membrane.Element.WithInputPads do
               state :: Element.state_t()
             ) :: Membrane.Element.Base.callback_return_t()
 
-  @doc """
-  Macro that defines multiple input pads for the element.
-
-  Deprecated in favor of `def_input_pad/2`
-  """
-  @deprecated "Use def_input_pad/2 for each pad instead"
-  defmacro def_input_pads(pads) do
-    PadsSpecs.def_pads(pads, :input, :element)
-  end
-
   @doc PadsSpecs.def_pad_docs(:input, :element)
   defmacro def_input_pad(name, spec) do
     PadsSpecs.def_pad(name, :input, spec, :element)
@@ -65,7 +55,7 @@ defmodule Membrane.Element.WithInputPads do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 
-      import unquote(__MODULE__), only: [def_input_pads: 1, def_input_pad: 2]
+      import unquote(__MODULE__), only: [def_input_pad: 2]
 
       @impl true
       def handle_caps(_pad, _caps, _context, state), do: {:ok, state}

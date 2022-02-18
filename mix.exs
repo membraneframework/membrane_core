@@ -33,11 +33,11 @@ defmodule Membrane.Mixfile do
   end
 
   def application do
-    [extra_applications: [:logger], mod: {Membrane, []}]
+    [extra_applications: [:logger]]
   end
 
   defp elixirc_paths(:test), do: ["lib", "spec/support", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
+  defp elixirc_paths(_env), do: ["lib"]
 
   defp link do
     "https://github.com/membraneframework/membrane-core"
@@ -88,8 +88,7 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane\.Telemetry($|\.)/,
           ~r/^Membrane\.ComponentPath($|\.)/
         ],
-        Errors: [~r/Error$/],
-        Deprecated: [~r/^Membrane\.Log($|\.)/]
+        Errors: [~r/Error$/]
       ]
     ]
   end

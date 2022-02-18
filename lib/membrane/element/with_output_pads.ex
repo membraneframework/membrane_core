@@ -39,16 +39,6 @@ defmodule Membrane.Element.WithOutputPads do
 
   @optional_callbacks handle_demand: 5
 
-  @doc """
-  Macro that defines multiple output pads for the element.
-
-  Deprecated in favor of `def_output_pad/2`
-  """
-  @deprecated "Use `def_output_pad/2 for each pad instead"
-  defmacro def_output_pads(pads) do
-    PadsSpecs.def_pads(pads, :output, :element)
-  end
-
   @doc PadsSpecs.def_pad_docs(:output, :element)
   defmacro def_output_pad(name, spec) do
     PadsSpecs.def_pad(name, :output, spec, :element)
@@ -58,7 +48,7 @@ defmodule Membrane.Element.WithOutputPads do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 
-      import unquote(__MODULE__), only: [def_output_pads: 1, def_output_pad: 2]
+      import unquote(__MODULE__), only: [def_output_pad: 2]
 
       @impl true
       def handle_demand(_pad, _size, _unit, _context, state),
