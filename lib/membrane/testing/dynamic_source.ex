@@ -32,6 +32,7 @@ defmodule Membrane.Testing.DynamicSource do
   use Membrane.Source
 
   alias Membrane.Buffer
+  alias Membrane.Element.Action
 
   @type generator ::
           (state :: any(), pad :: Pad.ref_t(), buffers_cnt :: pos_integer ->
