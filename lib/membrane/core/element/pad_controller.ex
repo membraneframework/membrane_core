@@ -74,7 +74,7 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp do_handle_link(endpoint, other_endpoint, info, toilet, %{initiator: :parent}, state) do
-    {:ok, {other_endpoint, other_info, link_metadata}} =
+    handle_link_response =
       Message.call(other_endpoint.pid, :handle_link, [
         Pad.opposite_direction(info.direction),
         other_endpoint,
@@ -82,25 +82,31 @@ defmodule Membrane.Core.Element.PadController do
         %{initiator: :sibling, other_info: info, link_metadata: %{toilet: toilet}}
       ])
 
-    :ok =
-      Child.PadController.validate_pad_mode!(
-        {endpoint.pad_ref, info},
-        {other_endpoint.pad_ref, other_info}
-      )
+    case handle_link_response do
+      {:ok, {other_endpoint, other_info, link_metadata}} ->
+        :ok =
+          Child.PadController.validate_pad_mode!(
+            {endpoint.pad_ref, info},
+            {other_endpoint.pad_ref, other_info}
+          )
 
-    state =
-      init_pad_data(
-        endpoint.pad_ref,
-        info,
-        endpoint.pad_props,
-        other_endpoint.pad_ref,
-        other_endpoint.pid,
-        other_info,
-        link_metadata,
-        state
-      )
+        state =
+          init_pad_data(
+            endpoint.pad_ref,
+            info,
+            endpoint.pad_props,
+            other_endpoint.pad_ref,
+            other_endpoint.pid,
+            other_info,
+            link_metadata,
+            state
+          )
 
-    maybe_handle_pad_added(endpoint.pad_ref, state)
+        maybe_handle_pad_added(endpoint.pad_ref, state)
+
+      {:error, {:call_failure, reason}} ->
+        {{:error, {:neighbor_dead, reason}}, state}
+    end
   end
 
   defp do_handle_link(
@@ -148,12 +154,16 @@ defmodule Membrane.Core.Element.PadController do
   @spec handle_unlink(Pad.ref_t(), Core.Element.State.t()) ::
           Type.stateful_try_t(Core.Element.State.t())
   def handle_unlink(pad_ref, state) do
-    with {:ok, state} <- flush_playback_buffer(pad_ref, state),
+    with :ok <- Child.PadModel.assert_instance(state, pad_ref),
+         {:ok, state} <- flush_playback_buffer(pad_ref, state),
          {:ok, state} <- generate_eos_if_needed(pad_ref, state),
          {:ok, state} <- maybe_handle_pad_removed(pad_ref, state) do
       state = remove_pad_associations(pad_ref, state)
       state = PadModel.delete_data!(state, pad_ref)
       {:ok, state}
+    else
+      {:error, {:unknown_pad, _pad_ref}} -> {:ok, state}
+      error -> error
     end
   end
 
