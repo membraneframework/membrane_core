@@ -4,7 +4,7 @@ defmodule Membrane.Integration.LinkingTest do
   import Membrane.Testing.Assertions
   import Membrane.ParentSpec
 
-  alias Membrane.Testing
+  alias Membrane.{Testing, Buffer}
 
   defmodule Bin do
     use Membrane.Bin
@@ -119,13 +119,56 @@ defmodule Membrane.Integration.LinkingTest do
       assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'c'})
       send(pipeline, {:remove_child, :sink})
       assert_pipeline_notified(pipeline, :bin, :handle_pad_removed)
-      # assert_receive(:spec_started)
-
-      # assert 1 == 2
     end
 
-    # test "and element crashes, bin forwards the unlink message to child", %{pipeline: pipeline} do
-    # end
+    test "and element crashes, bin forwards the unlink message to child", %{pipeline: pipeline} do
+      bin_spec = %Membrane.ParentSpec{
+        children: [
+          bin: %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}
+        ],
+        crash_group: {:group_1, :temporary}
+      }
+
+      sink_spec = %Membrane.ParentSpec{
+        children: [
+          sink: Testing.Sink
+        ],
+        crash_group: {:group_2, :temporary}
+      }
+
+      links_spec = %Membrane.ParentSpec{
+        links: [
+          link(:bin) |> to(:sink)
+        ]
+      }
+
+      send(pipeline, {:start_spec, %{spec: bin_spec}})
+      assert_receive(:spec_started)
+      send(pipeline, {:start_spec, %{spec: sink_spec}})
+      assert_receive(:spec_started)
+      sink_pid = get_pid(:sink, pipeline)
+      send(pipeline, {:start_spec, %{spec: links_spec}})
+      assert_receive(:spec_started)
+      bin_pid = get_pid(:bin, pipeline)
+      source_pid = get_pid(:source, bin_pid)
+      source_ref = Process.monitor(source_pid)
+      Testing.Pipeline.play(pipeline)
+
+      assert_pipeline_playback_changed(pipeline, _, :playing)
+      Process.exit(sink_pid, :kill)
+      assert_pipeline_crash_group_down(pipeline, :group_2)
+
+      # Source has a static pad so it should crash when this pad is being unlinked while being
+      # in playing state. If source crashes with proper error it means that :handle_unlink message
+      # has been properly forwarded by a bin.
+      assert_receive(
+        {:DOWN, ^source_ref, :process, ^source_pid,
+         {%Membrane.LinkError{
+            message:
+              "Tried to unlink static pad output while :source was in playback state playing."
+          }, _localization}}
+      )
+    end
   end
 
   test "element should crash when its neighbor connected via static pad crashes", %{
@@ -225,7 +268,11 @@ defmodule Membrane.Integration.LinkingTest do
     send(pipeline, {:start_spec, %{spec: links_spec}})
     assert_receive(:spec_started)
     Testing.Pipeline.play(pipeline)
-
     assert_pipeline_playback_changed(pipeline, _, :playing)
+  end
+
+  defp get_pid(ref, parent_pid) do
+    state = :sys.get_state(parent_pid)
+    state.children[ref].pid
   end
 end

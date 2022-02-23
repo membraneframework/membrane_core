@@ -9,10 +9,11 @@ defmodule Membrane.Core.Child.LifecycleController do
   require PadModel
 
   @spec unlink(Child.state_t()) :: :ok
-  def unlink(state) do
-    state.pads_data
-    |> Map.values()
-    |> Enum.filter(& &1[:pid])
-    |> Enum.each(&Message.send(&1.pid, :handle_unlink, &1.other_ref))
+  def unlink(_state) do
+    # state.pads.data
+    # |> Map.values()
+    # |> Enum.filter(& &1[:pid])
+    # |> Enum.each(&Message.send(&1.pid, :handle_unlink, &1.other_ref))
+    :ok
   end
 end

@@ -4,7 +4,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   alias __MODULE__.{CrashGroupHandler, LinkHandler, StartupHandler}
   alias Membrane.ParentSpec
-  alias Membrane.Core.{CallbackHandler, Component, Parent, PlaybackHandler}
+  alias Membrane.Core.{CallbackHandler, Component, Parent, PlaybackHandler, Message}
 
   alias Membrane.Core.Parent.{
     ChildEntryParser,
@@ -281,8 +281,21 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       :links,
       &(&1
         |> Enum.reject(fn %Link{from: from, to: to} ->
-          %Link.Endpoint{child: from_name} = from
-          %Link.Endpoint{child: to_name} = to
+          from_name = from.child
+          to_name = to.child
+
+          cond do
+            child_name == from_name ->
+              Message.send(to.pid, :handle_unlink, to.pad_ref)
+              true
+
+            child_name == to_name ->
+              Message.send(from.pid, :handle_unlink, from.pad_ref)
+              true
+
+            true ->
+              false
+          end
 
           from_name == child_name or to_name == child_name
         end))
