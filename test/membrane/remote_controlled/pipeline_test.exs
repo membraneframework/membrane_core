@@ -3,6 +3,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
   alias Membrane.RemoteControlled.Pipeline
   alias Membrane.ParentSpec
+  alias Membrane.RemoteControlled.Pipeline.Message
 
   require Membrane.RemoteControlled.Pipeline
 
@@ -57,41 +58,41 @@ defmodule Membrane.RemoteControlled.PipelineTest do
     setup :setup_pipeline
 
     test "testing process should receive all subscribed events", %{pipeline: pipeline} do
-      Pipeline.subscribe(pipeline, {:playback_state, :prepared})
-      Pipeline.subscribe(pipeline, {:playback_state, :playing})
-      Pipeline.subscribe(pipeline, {:notification, :b, :test_notification})
-      Pipeline.subscribe(pipeline, {:start_of_stream, :b, :input})
+      Pipeline.subscribe(pipeline, %Message.PlaybackState{state: :prepared})
+      Pipeline.subscribe(pipeline, %Message.PlaybackState{state: :playing})
+      Pipeline.subscribe(pipeline, %Message.Notification{element: :b, data: :test_notification})
+      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: :b, pad: :input})
 
       Pipeline.play(pipeline)
 
-      assert_receive {^pipeline, {:playback_state, :prepared}}
-      assert_receive {^pipeline, {:playback_state, :playing}}
-      assert_receive {^pipeline, {:notification, :b, :test_notification}}
-      assert_receive {^pipeline, {:start_of_stream, :b, :input}}
-      refute_receive {^pipeline, {:playback_state, :terminating}}
-      refute_receive {^pipeline, {:playback_state, :stopped}}
+      assert_receive  %Message.PlaybackState{from: ^pipeline, state: :prepared}
+      assert_receive  %Message.PlaybackState{from: ^pipeline, state: :playing}
+      assert_receive %Message.Notification{from: ^pipeline, element: :b, data: :test_notification}
+      assert_receive %Message.StartOfStream{from: ^pipeline, element: :b, pad: :input}
+      refute_receive %Message.PlaybackState{from: ^pipeline, state: :terminating}
+      refute_receive %Message.PlaybackState{from: ^pipeline, state: :stopped}
 
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
     end
 
     test "should allow to use wildcards in subscription pattern", %{pipeline: pipeline} do
-      Pipeline.subscribe(pipeline, {:playback_state, _})
-      Pipeline.subscribe(pipeline, {:end_of_stream, _, _})
+      Pipeline.subscribe(pipeline, %Message.PlaybackState{state: _})
+      Pipeline.subscribe(pipeline, %Message.EndOfStream{})
 
       Pipeline.play(pipeline)
 
-      assert_receive {^pipeline, {:playback_state, :prepared}}
-      assert_receive {^pipeline, {:playback_state, :playing}}
-      assert_receive {^pipeline, {:end_of_stream, :b, :input}}
-      assert_receive {^pipeline, {:end_of_stream, :c, :input}}
+      assert_receive  %Message.PlaybackState{from: ^pipeline, state: :prepared}
+      assert_receive  %Message.PlaybackState{from: ^pipeline, state: :playing}
+      assert_receive %Message.EndOfStream{from: ^pipeline, element: :b, pad: :input}
+      assert_receive %Message.EndOfStream{from: ^pipeline, element: :c, pad: :input}
 
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
 
-      assert_receive {^pipeline, {:playback_state, :stopped}}
+      assert_receive %Message.PlaybackState{from: ^pipeline, state: :stopped}
 
       # assert_receive {:playback_state, :terminating} TODO: figure out why terminating is not delivered
-      refute_receive {^pipeline, {:notification, _, _}}
-      refute_receive {^pipeline, {:start_of_stream, _, _}}
+      refute_receive %Message.Notification{from: ^pipeline}
+      refute_receive %Message.StartOfStream{from: ^pipeline, element: _, pad: _}
     end
   end
 
@@ -99,9 +100,9 @@ defmodule Membrane.RemoteControlled.PipelineTest do
     setup :setup_pipeline
 
     test "example usage test", %{pipeline: pipeline} do
-      Pipeline.subscribe(pipeline, {:playback_state, _})
-      Pipeline.subscribe(pipeline, {:notification, _, _})
-      Pipeline.subscribe(pipeline, {:start_of_stream, :b, _})
+      Pipeline.subscribe(pipeline, %Message.PlaybackState{state: _})
+      Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
+      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
 
       Pipeline.play(pipeline)
 

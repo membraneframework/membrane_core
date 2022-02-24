@@ -23,6 +23,24 @@ defmodule Membrane.RemoteControlled.Pipeline do
           | {:start_of_stream | :end_of_stream, Membrane.Element.name_t(), Membrane.Pad.name_t()}
           | {:notification, Membrane.Element.name_t(), Membrane.Notification.t()}
 
+  defmodule Message do
+    defmodule PlaybackState do
+      defstruct [:from, :state]
+    end
+
+    defmodule Notification do
+      defstruct [:from, :element, :data]
+    end
+
+    defmodule EndOfStream do
+      defstruct [:from, :element, :pad]
+    end
+
+    defmodule StartOfStream do
+      defstruct [:from, :element, :pad]
+    end
+  end
+
   defmodule State do
     @moduledoc false
 
@@ -61,62 +79,62 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   def await_playback_state(pipeline) do
     receive do
-      {^pipeline, {:playback_state, playback_state}} -> {:playback_state, playback_state}
+      %Message.PlaybackState{from: ^pipeline} = message -> message
     end
   end
 
   def await_playback_state(pipeline, playback_state) do
     receive do
-      {^pipeline, {:playback_state, ^playback_state}} -> {:playback_state, playback_state}
+      %Message.PlaybackState{from: ^pipeline, state: ^playback_state} = message -> message
     end
   end
 
 
   def await_notification(pipeline) do
     receive do
-      {^pipeline, {:notification, element, msg}} -> {:notification, element, msg}
+      %Message.Notification{from: ^pipeline} = message -> message
     end
   end
 
   def await_notification(pipeline, element) do
     receive do
-      {^pipeline, {:notification, ^element, msg}} -> {:notification, element, msg}
+      %Message.Notification{from: ^pipeline, element: ^element} = message -> message
     end
   end
 
   def await_start_of_stream(pipeline) do
     receive do
-      {^pipeline, {:start_of_stream, element, pad}} -> {:start_of_stream, element, pad}
+      %Message.StartOfStream{from: ^pipeline} = message -> message
     end
   end
 
   def await_start_of_stream(pipeline, element) do
     receive do
-      {^pipeline, {:start_of_stream, ^element, pad}} -> {:start_of_stream, element, pad}
+      %Message.StartOfStream{from: ^pipeline, element: ^element} = message -> message
     end
   end
 
   def await_start_of_stream(pipeline, element, pad) do
     receive do
-      {^pipeline, {:start_of_stream, ^element, ^pad}} -> {:start_of_stream, element, pad}
+      %Message.StartOfStream{from: ^pipeline, element: ^element, pad: ^pad} = message -> message
     end
   end
 
   def await_end_of_stream(pipeline) do
     receive do
-      {^pipeline, {:end_of_stream, element, pad}} -> {:end_of_stream, element, pad}
+      %Message.EndOfStream{from: ^pipeline} = message -> message
     end
   end
 
   def await_end_of_stream(pipeline, element) do
     receive do
-      {^pipeline, {:end_of_stream, ^element, pad}} -> {:end_of_stream, element, pad}
+      %Message.EndOfStream{from: ^pipeline, element: ^element} = message -> message
     end
   end
 
   def await_end_of_stream(pipeline, element, pad) do
     receive do
-      {^pipeline, {:end_of_stream, ^element, ^pad}} -> {:end_of_stream, element, pad}
+      %Message.EndOfStream{from: ^pipeline, element: ^element, pad: ^pad} = message -> message
     end
   end
 
@@ -166,56 +184,56 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   @impl true
   def handle_playing_to_prepared(_ctx, state) do
-    pipeline_event = {:playback_state, :prepared}
+    pipeline_event = %Message.PlaybackState{state: :prepared, from: self()}
     maybe_send_event_to_controller(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_prepared_to_playing(_ctx, state) do
-    pipeline_event = {:playback_state, :playing}
+    pipeline_event = %Message.PlaybackState{state: :playing, from: self()}
     maybe_send_event_to_controller(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_prepared_to_stopped(_ctx, state) do
-    pipeline_event = {:playback_state, :stopped}
+    pipeline_event = %Message.PlaybackState{state: :stopped, from: self()}
     maybe_send_event_to_controller(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_stopped_to_prepared(_ctx, state) do
-    pipeline_event = {:playback_state, :prepared}
+    pipeline_event = %Message.PlaybackState{state: :prepared, from: self()}
     maybe_send_event_to_controller(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_stopped_to_terminating(_ctx, state) do
-    pipeline_event = {:playback_state, :terminating}
+    pipeline_event = %Message.PlaybackState{state: :terminating, from: self()}
     maybe_send_event_to_controller(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_element_end_of_stream({element_name, pad_ref}, _ctx, state) do
-    pipeline_event = {:end_of_stream, element_name, pad_ref}
+    pipeline_event = %Message.EndOfStream{element: element_name, pad: pad_ref, from: self()}
     maybe_send_event_to_controller(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_element_start_of_stream({element_name, pad_ref}, _ctx, state) do
-    pipeline_event = {:start_of_stream, element_name, pad_ref}
+    pipeline_event = %Message.StartOfStream{element: element_name, pad: pad_ref, from: self()}
     maybe_send_event_to_controller(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_notification(notification, element, _ctx, state) do
-    pipeline_event = {:notification, element, notification}
+    pipeline_event = %Message.Notification{data: notification, element: element, from: self()}
     maybe_send_event_to_controller(pipeline_event, state)
     {:ok, state}
   end
@@ -230,11 +248,13 @@ defmodule Membrane.RemoteControlled.Pipeline do
     {:ok, %{state | matching_functions: [pattern | state.matching_functions]}}
   end
 
-  defp maybe_send_event_to_controller(event, state) do
-    if Enum.any?(state.matching_functions, & &1.(event)) do
-      send(state.controller_pid, {self(), event})
+  defp maybe_send_event_to_controller(message, state) do
+    if Enum.any?(state.matching_functions, & &1.(message)) do
+      send(state.controller_pid, message)
     end
   end
+
+
 
   # defp do_pattern_match?(event, pattern) do
   #   event_as_list = event |> Tuple.to_list()
