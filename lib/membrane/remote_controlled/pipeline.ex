@@ -52,15 +52,74 @@ defmodule Membrane.RemoteControlled.Pipeline do
   It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` before awaiting
   any messages. `pattern` has to be a match pattern.
   """
-  defmacro await(pipeline, pattern) do
-    quote do
-      {_pipeline, unquote(pattern)} =
-        receive do
-          {unquote(pipeline), unquote(pattern)} = msg ->
-            msg
-        end
+  # def await(pipeline, pattern, timeout\\1_000) do
+  #     receive do
+  #       {^pipeline, event} -> if do_pattern_match?(event, pattern) do event else await(pipeline, pattern) end
+  #     after timeout -> nil
+  #     end
+  # end
+
+  def await_playback_state(pipeline) do
+    receive do
+      {^pipeline, {:playback_state, playback_state}} -> {:playback_state, playback_state}
     end
   end
+
+  def await_playback_state(pipeline, playback_state) do
+    receive do
+      {^pipeline, {:playback_state, ^playback_state}} -> {:playback_state, playback_state}
+    end
+  end
+
+
+  def await_notification(pipeline) do
+    receive do
+      {^pipeline, {:notification, element, msg}} -> {:notification, element, msg}
+    end
+  end
+
+  def await_notification(pipeline, element) do
+    receive do
+      {^pipeline, {:notification, ^element, msg}} -> {:notification, element, msg}
+    end
+  end
+
+  def await_start_of_stream(pipeline) do
+    receive do
+      {^pipeline, {:start_of_stream, element, pad}} -> {:start_of_stream, element, pad}
+    end
+  end
+
+  def await_start_of_stream(pipeline, element) do
+    receive do
+      {^pipeline, {:start_of_stream, ^element, pad}} -> {:start_of_stream, element, pad}
+    end
+  end
+
+  def await_start_of_stream(pipeline, element, pad) do
+    receive do
+      {^pipeline, {:start_of_stream, ^element, ^pad}} -> {:start_of_stream, element, pad}
+    end
+  end
+
+  def await_end_of_stream(pipeline) do
+    receive do
+      {^pipeline, {:end_of_stream, element, pad}} -> {:end_of_stream, element, pad}
+    end
+  end
+
+  def await_end_of_stream(pipeline, element) do
+    receive do
+      {^pipeline, {:end_of_stream, ^element, pad}} -> {:end_of_stream, element, pad}
+    end
+  end
+
+  def await_end_of_stream(pipeline, element, pad) do
+    receive do
+      {^pipeline, {:end_of_stream, ^element, ^pad}} -> {:end_of_stream, element, pad}
+    end
+  end
+
 
   @doc """
   Subscribes to a given `subscription_pattern`. The `subscription_pattern` should describe some subset
@@ -167,8 +226,8 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @impl true
-  def handle_other({:subscription, matching_function}, _ctx, state) do
-    {:ok, %{state | matching_functions: [matching_function | state.matching_functions]}}
+  def handle_other({:subscription, pattern}, _ctx, state) do
+    {:ok, %{state | matching_functions: [pattern | state.matching_functions]}}
   end
 
   defp maybe_send_event_to_controller(event, state) do
@@ -176,4 +235,21 @@ defmodule Membrane.RemoteControlled.Pipeline do
       send(state.controller_pid, {self(), event})
     end
   end
+
+  # defp do_pattern_match?(event, pattern) do
+  #   event_as_list = event |> Tuple.to_list()
+  #   pattern_as_list = pattern |> Tuple.to_list()
+  #   event_as_list |> Enum.slice(0..length(pattern_as_list)) |> Enum.zip(pattern_as_list) |>
+  #     Enum.all?(fn {event_at_given_position, pattern_at_given_position}-> do_pattern_match_at_given_position?(event_at_given_position, pattern_at_given_position) end)
+  # end
+
+  # defp do_pattern_match_at_given_position?(_event_at_given_position, pattern_at_given_position) when pattern_at_given_position==:any do
+  #   true
+  # end
+
+  # defp do_pattern_match_at_given_position?(event_at_given_position, pattern_at_given_position) do
+  #   event_at_given_position==pattern_at_given_position
+  # end
+
+
 end

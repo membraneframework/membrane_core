@@ -8,7 +8,6 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
   defmodule Filter do
     use Membrane.Filter
-
     def_output_pad :output, caps: :any, availability: :always
 
     def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :always
@@ -65,12 +64,12 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
       Pipeline.play(pipeline)
 
-      assert_receive {pipeline, {:playback_state, :prepared}}
-      assert_receive {pipeline, {:playback_state, :playing}}
-      assert_receive {pipeline, {:notification, :b, :test_notification}}
-      assert_receive {pipeline, {:start_of_stream, :b, :input}}
-      refute_receive {pipeline, {:playback_state, :terminating}}
-      refute_receive {pipeline, {:playback_state, :stopped}}
+      assert_receive {^pipeline, {:playback_state, :prepared}}
+      assert_receive {^pipeline, {:playback_state, :playing}}
+      assert_receive {^pipeline, {:notification, :b, :test_notification}}
+      assert_receive {^pipeline, {:start_of_stream, :b, :input}}
+      refute_receive {^pipeline, {:playback_state, :terminating}}
+      refute_receive {^pipeline, {:playback_state, :stopped}}
 
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
     end
@@ -81,18 +80,18 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
       Pipeline.play(pipeline)
 
-      assert_receive {pipeline, {:playback_state, :prepared}}
-      assert_receive {pipeline, {:playback_state, :playing}}
-      assert_receive {pipeline, {:end_of_stream, :b, :input}}
-      assert_receive {pipeline, {:end_of_stream, :c, :input}}
+      assert_receive {^pipeline, {:playback_state, :prepared}}
+      assert_receive {^pipeline, {:playback_state, :playing}}
+      assert_receive {^pipeline, {:end_of_stream, :b, :input}}
+      assert_receive {^pipeline, {:end_of_stream, :c, :input}}
 
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
 
-      assert_receive {pipeline, {:playback_state, :stopped}}
+      assert_receive {^pipeline, {:playback_state, :stopped}}
 
       # assert_receive {:playback_state, :terminating} TODO: figure out why terminating is not delivered
-      refute_receive {pipeline, {:notification, _, _}}
-      refute_receive {pipeline, {:start_of_stream, _, _}}
+      refute_receive {^pipeline, {:notification, _, _}}
+      refute_receive {^pipeline, {:start_of_stream, _, _}}
     end
   end
 
@@ -102,15 +101,15 @@ defmodule Membrane.RemoteControlled.PipelineTest do
     test "example usage test", %{pipeline: pipeline} do
       Pipeline.subscribe(pipeline, {:playback_state, _})
       Pipeline.subscribe(pipeline, {:notification, _, _})
-      Pipeline.subscribe(pipeline, {:start_of_stream, :b, :input})
+      Pipeline.subscribe(pipeline, {:start_of_stream, :b, _})
 
       Pipeline.play(pipeline)
 
-      Pipeline.await(pipeline, {:playback_state, :playing})
-      Pipeline.await(pipeline, {:start_of_stream, :b, :input})
-      Pipeline.await(pipeline, {:notification, :b, notification})
-
-      assert :test_notification == notification
+      #Pipeline.await(pipeline, {:playback_state, element, %Buffer{payload: _}})
+      Pipeline.await_playback_state(pipeline, :playing)
+      Pipeline.await_start_of_stream(pipeline, :b)
+      msg = Pipeline.await_notification(pipeline, :b)
+      IO.inspect(msg)
 
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
     end
