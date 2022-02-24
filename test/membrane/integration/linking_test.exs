@@ -6,6 +6,47 @@ defmodule Membrane.Integration.LinkingTest do
 
   alias Membrane.Testing
 
+  defmodule Bin do
+    use Membrane.Bin
+
+    def_options child: [
+                  spec: struct() | module()
+                ]
+
+    def_output_pad :output, demand_unit: :buffers, caps: :any, availability: :on_request
+
+    @impl true
+    def handle_init(opts) do
+      children = [
+        source: opts.child
+      ]
+
+      spec = %ParentSpec{
+        children: children
+      }
+
+      {{:ok, spec: spec}, %{}}
+    end
+
+    @impl true
+    def handle_pad_added(pad, _ctx, _state) do
+      links = [
+        link(:source) |> to_bin_output(pad)
+      ]
+
+      spec = %ParentSpec{
+        links: links
+      }
+
+      {{:ok, spec: spec}, %{}}
+    end
+
+    @impl true
+    def handle_pad_removed(pad, _ctx, _state) do
+      {{:ok, notify: :handle_pad_removed}, %{}}
+    end
+  end
+
   defmodule Pipeline do
     @moduledoc false
     use Membrane.Pipeline
@@ -117,5 +158,44 @@ defmodule Membrane.Integration.LinkingTest do
 
     refute_pipeline_crash_group_down(pipeline, :group_1)
     assert_pipeline_crash_group_down(pipeline, :group_2)
+  end
+
+  test "pipeline playback state should change successfully after spec with links has been returned",
+       %{pipeline: pipeline} do
+    bin_spec = %Membrane.ParentSpec{
+      children: [
+        bin: %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}
+      ],
+      crash_group: {:group_1, :temporary}
+    }
+
+    sink_spec = %Membrane.ParentSpec{
+      children: [
+        sink: Testing.Sink
+      ],
+      crash_group: {:group_2, :temporary}
+    }
+
+    links_spec = %Membrane.ParentSpec{
+      links: [
+        link(:bin) |> to(:sink)
+      ]
+    }
+
+    send(pipeline, {:start_spec, %{spec: bin_spec}})
+    assert_receive(:spec_started)
+    send(pipeline, {:start_spec, %{spec: sink_spec}})
+    assert_receive(:spec_started)
+    sink_pid = get_pid(:sink, pipeline)
+    send(pipeline, {:start_spec, %{spec: links_spec}})
+    assert_receive(:spec_started)
+    Testing.Pipeline.play(pipeline)
+
+    assert_pipeline_playback_changed(pipeline, _, :playing)
+  end
+
+  defp get_pid(ref, parent_pid) do
+    state = :sys.get_state(parent_pid)
+    state.children[ref].pid
   end
 end
