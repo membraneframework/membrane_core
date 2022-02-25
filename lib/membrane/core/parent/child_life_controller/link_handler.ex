@@ -88,7 +88,25 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   def proceed_spec_linking(spec_ref, state) do
     spec_data = Map.fetch!(state.pending_specs, spec_ref)
     {spec_data, state} = do_proceed_spec_linking(spec_ref, spec_data, state)
-    put_in(state, [:pending_specs, spec_ref], spec_data)
+
+    if spec_data.status == :linked do
+      state = put_in(state, [:pending_specs], Map.delete(state.pending_specs, spec_ref))
+
+      {:ok, state} =
+        if state.delayed_playback_change do
+          Membrane.Core.PlaybackHandler.change_playback_state(
+            state.delayed_playback_change,
+            Membrane.Core.Parent.LifecycleController,
+            %{state | delayed_playback_change: nil}
+          )
+        else
+          {:ok, state}
+        end
+
+      state
+    else
+      put_in(state, [:pending_specs, spec_ref], spec_data)
+    end
   end
 
   defp do_proceed_spec_linking(spec_ref, %{status: :linking_internally} = spec_data, state) do

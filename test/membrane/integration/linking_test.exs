@@ -42,7 +42,7 @@ defmodule Membrane.Integration.LinkingTest do
     end
 
     @impl true
-    def handle_pad_removed(pad, _ctx, _state) do
+    def handle_pad_removed(_pad, _ctx, _state) do
       {{:ok, notify: :handle_pad_removed}, %{}}
     end
   end
@@ -186,16 +186,10 @@ defmodule Membrane.Integration.LinkingTest do
     assert_receive(:spec_started)
     send(pipeline, {:start_spec, %{spec: sink_spec}})
     assert_receive(:spec_started)
-    sink_pid = get_pid(:sink, pipeline)
     send(pipeline, {:start_spec, %{spec: links_spec}})
     assert_receive(:spec_started)
     Testing.Pipeline.play(pipeline)
 
     assert_pipeline_playback_changed(pipeline, _, :playing)
-  end
-
-  defp get_pid(ref, parent_pid) do
-    state = :sys.get_state(parent_pid)
-    state.children[ref].pid
   end
 end
