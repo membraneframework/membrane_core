@@ -65,12 +65,12 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
       Pipeline.play(pipeline)
 
-      assert_receive  %Message.PlaybackState{from: ^pipeline, state: :prepared}
-      assert_receive  %Message.PlaybackState{from: ^pipeline, state: :playing}
-      assert_receive %Message.Notification{from: ^pipeline, element: :b, data: :test_notification}
-      assert_receive %Message.StartOfStream{from: ^pipeline, element: :b, pad: :input}
-      refute_receive %Message.PlaybackState{from: ^pipeline, state: :terminating}
-      refute_receive %Message.PlaybackState{from: ^pipeline, state: :stopped}
+      assert_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :prepared}}
+      assert_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :playing}}
+      assert_receive %Message{from: ^pipeline, body: %Message.Notification{element: :b, data: :test_notification}}
+      assert_receive %Message{from: ^pipeline, body: %Message.StartOfStream{element: :b, pad: :input}}
+      refute_receive  %Message{from: ^pipeline, body: %Message.PlaybackState{state: :terminating}}
+      refute_receive  %Message{from: ^pipeline, body: %Message.PlaybackState{state: :stopped}}
 
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
     end
@@ -81,18 +81,18 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
       Pipeline.play(pipeline)
 
-      assert_receive  %Message.PlaybackState{from: ^pipeline, state: :prepared}
-      assert_receive  %Message.PlaybackState{from: ^pipeline, state: :playing}
-      assert_receive %Message.EndOfStream{from: ^pipeline, element: :b, pad: :input}
-      assert_receive %Message.EndOfStream{from: ^pipeline, element: :c, pad: :input}
+      assert_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :prepared}}
+      assert_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :playing}}
+      assert_receive %Message{from: ^pipeline, body: %Message.EndOfStream{element: :b, pad: :input}}
+      assert_receive %Message{from: ^pipeline, body: %Message.EndOfStream{element: :c, pad: :input}}
 
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
 
-      assert_receive %Message.PlaybackState{from: ^pipeline, state: :stopped}
+      assert_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :stopped}}
 
       # assert_receive {:playback_state, :terminating} TODO: figure out why terminating is not delivered
-      refute_receive %Message.Notification{from: ^pipeline}
-      refute_receive %Message.StartOfStream{from: ^pipeline, element: _, pad: _}
+      refute_receive %Message{from: ^pipeline, body: %Message.Notification{}}
+      refute_receive %Message{from: ^pipeline, body: %Message.StartOfStream{element: _, pad: _}}
     end
   end
 
@@ -124,9 +124,9 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
       Pipeline.play(pipeline)
 
-      Pipeline.await_generic(PlaybackState, from: ^pipeline, state: :playing)
-      Pipeline.await_generic(StartOfStream, from: ^pipeline, element: :c)
-      Pipeline.await_generic(Notification, from: ^pipeline, element: :b)
+      Pipeline.await_generic(^pipeline, PlaybackState, state: :playing)
+      Pipeline.await_generic(^pipeline, StartOfStream, element: :c)
+      Pipeline.await_generic(^pipeline, Notification, element: :b)
 
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
     end
@@ -139,9 +139,9 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
       Pipeline.play(pipeline)
 
-      Pipeline.await_generic2(%Message.PlaybackState{from: ^pipeline, state: :playing})
-      Pipeline.await_generic2(%Message.StartOfStream{from: ^pipeline, element: :c})
-      Pipeline.await_generic2(%Message.Notification{from: ^pipeline, element: :b})
+      Pipeline.await_generic2(^pipeline, %Message.PlaybackState{state: :playing})
+      Pipeline.await_generic2(^pipeline, %Message.StartOfStream{element: :c})
+      Pipeline.await_generic2(^pipeline, %Message.Notification{element: :b})
 
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
     end
