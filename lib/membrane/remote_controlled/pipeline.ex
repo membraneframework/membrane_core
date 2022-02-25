@@ -139,6 +139,25 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
 
+
+  defmacro await_generic(message_type, keywords\\[]) do
+    quote do
+      receive do
+        %Membrane.RemoteControlled.Pipeline.Message.unquote(message_type){unquote_splicing(Macro.expand(keywords, __ENV__))} = msg -> msg
+      end
+    end
+  end
+
+
+  @spec await_generic2(any) :: {:receive, [], [[{any, any}, ...], ...]}
+  defmacro await_generic2(message) do
+    quote do
+      receive do
+        unquote(Macro.expand(message, __ENV__)) = msg -> msg
+      end
+    end
+  end
+
   @doc """
   Subscribes to a given `subscription_pattern`. The `subscription_pattern` should describe some subset
   of elements of `Membrane.RemoteControlled.Pipeline.message_t()` type. The `subscription_pattern`
@@ -253,23 +272,5 @@ defmodule Membrane.RemoteControlled.Pipeline do
       send(state.controller_pid, message)
     end
   end
-
-
-
-  # defp do_pattern_match?(event, pattern) do
-  #   event_as_list = event |> Tuple.to_list()
-  #   pattern_as_list = pattern |> Tuple.to_list()
-  #   event_as_list |> Enum.slice(0..length(pattern_as_list)) |> Enum.zip(pattern_as_list) |>
-  #     Enum.all?(fn {event_at_given_position, pattern_at_given_position}-> do_pattern_match_at_given_position?(event_at_given_position, pattern_at_given_position) end)
-  # end
-
-  # defp do_pattern_match_at_given_position?(_event_at_given_position, pattern_at_given_position) when pattern_at_given_position==:any do
-  #   true
-  # end
-
-  # defp do_pattern_match_at_given_position?(event_at_given_position, pattern_at_given_position) do
-  #   event_at_given_position==pattern_at_given_position
-  # end
-
 
 end

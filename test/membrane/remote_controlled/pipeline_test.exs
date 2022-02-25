@@ -99,18 +99,49 @@ defmodule Membrane.RemoteControlled.PipelineTest do
   describe "Membrane.RemoteControlled.Pipeline" do
     setup :setup_pipeline
 
-    test "example usage test", %{pipeline: pipeline} do
+    test "should await for requested messages with await functions", %{pipeline: pipeline} do
+
       Pipeline.subscribe(pipeline, %Message.PlaybackState{state: _})
-      Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
       Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
+      Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
+
 
       Pipeline.play(pipeline)
 
-      #Pipeline.await(pipeline, {:playback_state, element, %Buffer{payload: _}})
       Pipeline.await_playback_state(pipeline, :playing)
-      Pipeline.await_start_of_stream(pipeline, :b)
-      msg = Pipeline.await_notification(pipeline, :b)
-      IO.inspect(msg)
+      Pipeline.await_start_of_stream(pipeline, :c)
+      Pipeline.await_notification(pipeline, :b)
+
+      Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    end
+
+
+    test "should await for requested messages with generic await macro", %{pipeline: pipeline} do
+
+      Pipeline.subscribe(pipeline, %Message.PlaybackState{state: _})
+      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
+      Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
+
+      Pipeline.play(pipeline)
+
+      Pipeline.await_generic(PlaybackState, from: ^pipeline, state: :playing)
+      Pipeline.await_generic(StartOfStream, from: ^pipeline, element: :c)
+      Pipeline.await_generic(Notification, from: ^pipeline, element: :b)
+
+      Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    end
+
+    test "should await for requested messages with generic await macro2", %{pipeline: pipeline} do
+
+      Pipeline.subscribe(pipeline, %Message.PlaybackState{state: _})
+      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
+      Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
+
+      Pipeline.play(pipeline)
+
+      Pipeline.await_generic2(%Message.PlaybackState{from: ^pipeline, state: :playing})
+      Pipeline.await_generic2(%Message.StartOfStream{from: ^pipeline, element: :c})
+      Pipeline.await_generic2(%Message.Notification{from: ^pipeline, element: :b})
 
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
     end
