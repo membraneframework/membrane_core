@@ -19,7 +19,6 @@ defmodule Membrane.RemoteControlled.Pipeline do
   alias Membrane.Pipeline
   alias Membrane.RemoteControlled.Message
 
-
   defmodule State do
     @moduledoc false
 
