@@ -1,8 +1,8 @@
 defmodule Membrane.RemoteControlled.PipelineTest do
   use ExUnit.Case
   alias Membrane.RemoteControlled.Pipeline
+  alias Membrane.RemoteControlled.Message
   alias Membrane.ParentSpec
-  alias Membrane.RemoteControlled.Pipeline.Message
   require Membrane.RemoteControlled.Pipeline
 
   defmodule Filter do
@@ -58,6 +58,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
     test "testing process should receive all subscribed events", %{pipeline: pipeline} do
       # SETUP
+
       Pipeline.subscribe(pipeline, %Message.PlaybackState{state: :prepared})
       Pipeline.subscribe(pipeline, %Message.PlaybackState{state: :playing})
       Pipeline.subscribe(pipeline, %Message.Notification{element: :b, data: %Membrane.Buffer{}})
