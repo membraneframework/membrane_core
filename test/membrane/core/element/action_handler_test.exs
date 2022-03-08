@@ -171,6 +171,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
     test "when element is playing", %{state: state} do
       state = state |> set_playback_state(:playing) |> PadModel.set_data!(:output, :caps, :any)
+
       result =
         @module.handle_action(
           buffer_action(:output),
@@ -200,7 +201,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       state =
         state
         |> set_playback_state(:playing)
-        |> PadModel.set_data!(:output, :end_of_stream?, true) |> PadModel.set_data!(:output, :caps, :any)
+        |> PadModel.set_data!(:output, :end_of_stream?, true)
+        |> PadModel.set_data!(:output, :caps, :any)
 
       assert_raise ActionError, ~r/end ?of ?stream.*sent.*:output/i, fn ->
         @module.handle_action(
@@ -253,15 +255,18 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       refute_received Message.new(:buffer, [_, :other_ref])
     end
 
-    test "if action handler raises exception when caps are sent before the first buffer", %{state: state} do
+    test "if action handler raises exception when caps are sent before the first buffer", %{
+      state: state
+    } do
       state = state |> set_playback_state(:playing)
+
       assert_raise(ActionError, fn ->
         @module.handle_action(
-              {:buffer, {:output, %Membrane.Buffer{payload: "test"}}},
-              :handle_demand,
-              %{},
-              state
-            )
+          {:buffer, {:output, %Membrane.Buffer{payload: "test"}}},
+          :handle_demand,
+          %{},
+          state
+        )
       end)
     end
   end

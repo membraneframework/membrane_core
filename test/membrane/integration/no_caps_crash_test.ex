@@ -27,6 +27,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
         sink: Sink
       ]
     }
+
     {:ok, pipeline} = Pipeline.start(options)
     ref = Process.monitor(pipeline)
     Pipeline.play(pipeline)
@@ -40,6 +41,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
         sink: Sink
       ]
     }
+
     {:ok, pipeline} = Pipeline.start(options)
     ref = Process.monitor(pipeline)
     Pipeline.play(pipeline)
@@ -47,5 +49,4 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     refute_receive {:DOWN, ^ref, :process, ^pipeline, {:shutdown, :child_crash}}
     Pipeline.stop_and_terminate(pipeline, blocking?: true)
   end
-
 end
