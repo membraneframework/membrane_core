@@ -117,6 +117,10 @@ defmodule Membrane.ActionError do
     "Invalid event: #{inspect(event, pretty: true)}"
   end
 
+  defp format_reason(:caps_not_sent_before_first_buffer) do
+    "Caps were not sent on this pad before the first buffer was"
+  end
+
   defp format_reason(reason) do
     "Unknown error: #{inspect(reason, pretty: true)}"
   end

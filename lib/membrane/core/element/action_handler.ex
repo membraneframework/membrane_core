@@ -250,7 +250,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     send_buffer(pad_ref, [buffer], callback, state)
   end
 
-  defp send_buffer(pad_ref, buffers, callback, state) when is_list(buffers) do
+  defp send_buffer(pad_ref, buffers, _callback, state) when is_list(buffers) do
     Membrane.Logger.debug_verbose(
       "Sending #{length(buffers)} buffer(s) through pad #{inspect(pad_ref)}"
     )
@@ -270,18 +270,15 @@ defmodule Membrane.Core.Element.ActionHandler do
       %{pid: pid, other_ref: other_ref} = pad_data
 
       if state.pads.data[pad_ref].caps == nil do
-        raise ActionError,
-          reason: "Caps were not sent",
-          action: {:buffer, {pad_ref, buffers}},
-          callback: {state.module, callback}
+        {{:error, :caps_not_sent_before_first_buffer}, state}
+      else
+        state =
+          DemandHandler.handle_outgoing_buffers(pad_ref, pad_data, buffers, state)
+          |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
+
+        Message.send(pid, :buffer, buffers, for_pad: other_ref)
+        {:ok, state}
       end
-
-      state =
-        DemandHandler.handle_outgoing_buffers(pad_ref, pad_data, buffers, state)
-        |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
-
-      Message.send(pid, :buffer, buffers, for_pad: other_ref)
-      {:ok, state}
     else
       buffers: {:error, buf} -> {{:error, {:invalid_buffer, buf}}, state}
       data: {:error, reason} -> {{:error, reason}, state}

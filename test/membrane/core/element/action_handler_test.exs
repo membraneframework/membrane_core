@@ -260,7 +260,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     } do
       state = state |> set_playback_state(:playing)
 
-      assert_raise(ActionError, fn ->
+      assert_raise(ActionError, ~r/Caps were not sent on this pad before the first buffer was/, fn ->
+
         @module.handle_action(
           {:buffer, {:output, %Membrane.Buffer{payload: "test"}}},
           :handle_demand,
@@ -268,6 +269,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           state
         )
       end)
+
     end
   end
 
