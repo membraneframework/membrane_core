@@ -105,24 +105,15 @@ defmodule Membrane.Testing.Pipeline do
     @moduledoc """
     Structure representing `options` passed to testing pipeline.
 
-    ##  Test Process
-    `pid` of process that shall receive messages when Pipeline invokes playback
-    state change callback and receives notification.
+    ## Struct fields
 
-    ## Elements
-    List of element specs.
-
-    ## Links
-    List describing the links between elements.
-
-    ## Module
-    Pipeline Module with custom callbacks.
-
-    ## Custom Args
-    Arguments for Module's `handle_init` callback.
-
-    If links are not present or set to nil they will be populated automatically
-    based on elements order using default pad names.
+    - `:test_process` - `pid` of process that shall receive messages from testing pipeline, e.g. when pipeline's playback state changes.
+      This allows using `Membrane.Testing.Assertions`
+    - `:elements` - a list of element specs. Allows to create a simple pipeline without defining a module for it.
+    - `:links` - a list describing the links between elements. If ommited (or set to `nil`), they will be populated automatically
+      based on the elements order using default pad names.
+    - `:module` - pipeline module with custom callbacks - useful if a simple list of elements is not enough.
+    - `:custom_args`- arguments for the module's `handle_init` callback.
     """
 
     defstruct [:elements, :links, :test_process, :module, :custom_args]
