@@ -250,10 +250,6 @@ defmodule Membrane.Core.Element.ActionHandler do
     send_buffer(pad_ref, [buffer], callback, state)
   end
 
-  defmodule CapsError do
-    defexception [:message]
-  end
-
   defp send_buffer(pad_ref, buffers, callback, state) when is_list(buffers) do
     Membrane.Logger.debug_verbose(
       "Sending #{length(buffers)} buffer(s) through pad #{inspect(pad_ref)}"
