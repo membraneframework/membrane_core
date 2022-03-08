@@ -250,11 +250,15 @@ defmodule Membrane.Core.Element.ActionHandler do
     send_buffer(pad_ref, [buffer], callback, state)
   end
 
-  defp send_buffer(pad_ref, buffers, _callback, state) when is_list(buffers) do
+  defmodule CapsError do
+    defexception [:message]
+  end
+
+  defp send_buffer(pad_ref, buffers, callback, state) when is_list(buffers) do
+
     Membrane.Logger.debug_verbose(
       "Sending #{length(buffers)} buffer(s) through pad #{inspect(pad_ref)}"
     )
-
     Telemetry.report_metric(:buffer, length(buffers))
     Telemetry.report_bitrate(buffers)
 
@@ -268,6 +272,10 @@ defmodule Membrane.Core.Element.ActionHandler do
           dir: %{direction: :output} <- pad_data,
           eos: %{end_of_stream?: false} <- pad_data do
       %{pid: pid, other_ref: other_ref} = pad_data
+
+      if  state.pads.data[pad_ref].caps==nil do
+        raise ActionError, reason: "Caps were not sent", action: {:buffer, {pad_ref, buffers}}, callback: {state.module, callback}
+      end
 
       state =
         DemandHandler.handle_outgoing_buffers(pad_ref, pad_data, buffers, state)
@@ -293,7 +301,6 @@ defmodule Membrane.Core.Element.ActionHandler do
     Sending caps through pad #{inspect(pad_ref)}
     Caps: #{inspect(caps)}
     """)
-
     withl pad: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
           direction: %{direction: :output} <- pad_data,
           caps: true <- Caps.Matcher.match?(pad_data.accepted_caps, caps) do
