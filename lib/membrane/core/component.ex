@@ -47,6 +47,24 @@ defmodule Membrane.Core.Component do
     end
   end
 
+  @spec is_pipeline?(state_t) :: boolean()
+  def is_pipeline?(%Membrane.Core.Pipeline.State{}), do: true
+  def is_pipeline?(_state), do: false
+
+  @spec is_element?(state_t) :: boolean()
+  def is_element?(%Membrane.Core.Element.State{}), do: true
+  def is_element?(_state), do: false
+
+  @spec is_bin?(state_t) :: boolean()
+  def is_bin?(%Membrane.Core.Bin.State{}), do: true
+  def is_bin?(_state), do: false
+
+  @spec is_child?(state_t) :: boolean()
+  def is_child?(state), do: is_element?(state) or is_bin?(state)
+
+  @spec is_parent?(state_t) :: boolean()
+  def is_parent?(state), do: is_pipeline?(state) or is_bin?(state)
+
   defp context(component, module),
     do: Module.concat([Membrane, component, CallbackContext, module])
 

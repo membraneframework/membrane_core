@@ -91,7 +91,7 @@ defmodule Membrane.Core.PlaybackHandler do
   @spec change_playback_state(PlaybackState.t(), module(), Component.state_t()) ::
           handler_return_t()
   def change_playback_state(new_playback_state, handler, state) do
-    if not Map.has_key?(state, :pending_specs) or Enum.empty?(state.pending_specs) do
+    if not Component.is_parent?(state) or Enum.empty?(state.pending_specs) do
       %{playback: playback} = state
 
       playback =
@@ -106,7 +106,7 @@ defmodule Membrane.Core.PlaybackHandler do
         {:ok, %{state | playback: playback}}
       end
     else
-      if Map.has_key?(state, :delayed_playback_change) do
+      if Component.is_parent?(state) do
         {:ok, %{state | delayed_playback_change: new_playback_state}}
       else
         {:ok, state}
