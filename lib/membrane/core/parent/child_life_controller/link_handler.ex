@@ -76,7 +76,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   def handle_spec_timeout(spec_ref, state) do
     {spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
 
-    unless spec_data.status == :linked do
+    unless spec_data == nil or spec_data.status == :linked do
       raise LinkError,
             "Spec #{inspect(spec_ref)} linking took too long, spec_data: #{inspect(spec_data, pretty: true)}"
     end
