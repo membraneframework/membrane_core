@@ -58,7 +58,6 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
     test "testing process should receive all subscribed events", %{pipeline: pipeline} do
       # SETUP
-
       Pipeline.subscribe(pipeline, %Message.PlaybackState{state: :prepared})
       Pipeline.subscribe(pipeline, %Message.PlaybackState{state: :playing})
       Pipeline.subscribe(pipeline, %Message.Notification{element: :b, data: %Membrane.Buffer{}})
@@ -136,34 +135,9 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
       # TEST
       Pipeline.await_playback_state(pipeline, :playing)
-      Pipeline.await_start_of_stream(pipeline, :c)
+
+      Pipeline.await_start_of_stream(pipeline, :c, :input)
       Pipeline.await_notification(pipeline, :b)
-
-      # STOP
-      Pipeline.stop_and_terminate(pipeline, blocking?: true)
-    end
-  end
-
-  describe "Membrane.RemoteControlled.Pipeline await_generic/3 macro" do
-    setup :setup_pipeline
-
-    test "should await for requested messages", %{pipeline: pipeline} do
-      # SETUP
-      Pipeline.subscribe(pipeline, %Message.PlaybackState{state: _})
-      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
-      Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
-
-      # RUN
-      Pipeline.play(pipeline)
-
-      # TEST
-      Pipeline.await_generic(pipeline, PlaybackState, state: :playing)
-      Pipeline.await_generic(pipeline, StartOfStream, element: :c, pad: :input)
-
-      Pipeline.await_generic(pipeline, Notification,
-        element: :b,
-        data: %Membrane.Buffer{payload: "test"}
-      )
 
       # STOP
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
@@ -181,8 +155,8 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       Pipeline.play(pipeline)
 
       # TEST
-      Pipeline.await_generic(pipeline, StartOfStream, element: :c)
-      msg = Pipeline.await_generic(pipeline, Notification, element: :b)
+      Pipeline.await_start_of_stream(pipeline, :c)
+      msg = Pipeline.await_notification(pipeline, :b)
 
       assert msg == %Message{
                from: pipeline,
@@ -196,57 +170,19 @@ defmodule Membrane.RemoteControlled.PipelineTest do
     test "should await for requested messages with pinned variables as message body parts", %{
       pipeline: pipeline
     } do
-      alias Membrane.Buffer, as: MemBuff
-
       # SETUP
       Pipeline.subscribe(pipeline, %Message.PlaybackState{state: _})
       Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
       Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
       state = :playing
-      test_payload = "test"
+      element = :c
 
       # START
       Pipeline.play(pipeline)
 
       # TEST
-      Pipeline.await_generic(pipeline, PlaybackState, state: state)
-      Pipeline.await_generic(pipeline, StartOfStream, element: :c)
-
-      Pipeline.await_generic(pipeline, Notification,
-        element: :b,
-        data: %MemBuff{payload: test_payload}
-      )
-
-      # STOP
-      Pipeline.stop_and_terminate(pipeline, blocking?: true)
-    end
-  end
-
-  describe "Membrane.RemoteControlled.Pipeline await_generic_with_alternative_syntax/2 macro" do
-    setup :setup_pipeline
-
-    test "should await for requested messages", %{pipeline: pipeline} do
-      # SETUP
-      state = :playing
-      test_payload = "test"
-      Pipeline.subscribe(pipeline, %Message.PlaybackState{state: _})
-      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
-      Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
-
-      # RUN
-      Pipeline.play(pipeline)
-
-      # TEST
-      Pipeline.await_generic_with_alternative_syntax(pipeline, %Message.PlaybackState{
-        state: state
-      })
-
-      Pipeline.await_generic_with_alternative_syntax(pipeline, %Message.StartOfStream{element: :c})
-
-      Pipeline.await_generic_with_alternative_syntax(pipeline, %Message.Notification{
-        element: :b,
-        data: %Membrane.Buffer{payload: test_payload}
-      })
+      Pipeline.await_playback_state(pipeline, state)
+      Pipeline.await_start_of_stream(pipeline, element, :input)
 
       # STOP
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
