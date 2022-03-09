@@ -11,6 +11,7 @@ defmodule Membrane.RemoteControlled.Message do
             | Membrane.RemoteControlled.Message.StartOfStream.t()
             | Membrane.RemoteControlled.Message.EndOfStream.t()
             | Membrane.RemoteControlled.Message.Notification.t()
+            | Membrane.RemoteControlled.Message.Terminated.t()
         }
 
   @enforce_keys [:from, :body]
@@ -53,6 +54,16 @@ defmodule Membrane.RemoteControlled.Message do
     @type t :: %__MODULE__{element: Membrane.Element.name_t(), data: Membrane.Notification.t()}
 
     @enforce_keys [:element, :data]
+    defstruct @enforce_keys
+  end
+
+  defmodule Terminated do
+    @moduledoc """
+    Message sent when the pipeline is terminated.
+    """
+    @type t :: %__MODULE__{reason: :normal | :shutdown | {:shutdown, any()} | term()}
+
+    @enforce_keys [:reason]
     defstruct @enforce_keys
   end
 end

@@ -23,7 +23,8 @@ defmodule Membrane.RemoteControlled.Pipeline do
     PlaybackState,
     StartOfStream,
     EndOfStream,
-    Notification
+    Notification,
+    Terminated
   }
 
   defmodule State do
@@ -258,6 +259,23 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @doc """
+  Awaits for the `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.Terminated` message,
+  which is send when the pipeline is terminated.
+  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  for that message.
+
+  Usage example:
+    1) awaiting for the pipeline termination:
+    ```
+    Pipeline.await_termination(pipeline)
+    ```
+  """
+  @spec await_termination(pid()) :: Membrane.RemoteControlled.Message.t()
+  def await_termination(pipeline) do
+    do_await(pipeline, Terminated)
+  end
+
+  @doc """
   Subscribes to a given `subscription_pattern`. The `subscription_pattern` should describe some subset
   of elements of `Membrane.RemoteControlled.Pipeline.message_t()` type. The `subscription_pattern`
   must be a match pattern.
@@ -389,6 +407,13 @@ defmodule Membrane.RemoteControlled.Pipeline do
   @impl true
   def handle_other({:subscription, pattern}, _ctx, state) do
     {:ok, %{state | matching_functions: [pattern | state.matching_functions]}}
+  end
+
+  @impl true
+  def handle_shutdown(reason, state) do
+    pipeline_event = %Message{from: self(), body: %Message.Terminated{reason: reason}}
+    send_event_to_controller_if_subscribed(pipeline_event, state)
+    :ok
   end
 
   defp send_event_to_controller_if_subscribed(message, state) do

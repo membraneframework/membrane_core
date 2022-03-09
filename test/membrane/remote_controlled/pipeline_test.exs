@@ -80,7 +80,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
         body: %Message.StartOfStream{element: :b, pad: :input}
       }
 
-      refute_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :terminating}}
+      refute_receive %Message{from: ^pipeline, body: %Message.Terminated{}}
       refute_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :stopped}}
 
       # STOP
@@ -114,8 +114,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
       # TEST
       assert_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :stopped}}
-
-      # assert_receive {:playback_state, :terminating} TODO: figure out why terminating is not delivered
+      refute_receive %Message{from: ^pipeline, body: %Message.Terminated{}}
       refute_receive %Message{from: ^pipeline, body: %Message.Notification{}}
       refute_receive %Message{from: ^pipeline, body: %Message.StartOfStream{element: _, pad: _}}
     end
@@ -129,6 +128,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       Pipeline.subscribe(pipeline, %Message.PlaybackState{state: _})
       Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
       Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
+      Pipeline.subscribe(pipeline, %Message.Terminated{})
 
       # RUN
       Pipeline.play(pipeline)
