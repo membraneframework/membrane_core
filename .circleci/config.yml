@@ -16,6 +16,9 @@ jobs:
             - mix-cache-{{ arch }}
       - run: mix deps.get
       - run: mix compile --force --warnings-as-errors
+      - save_cache:
+          key: mix-cache-{{ arch }}-{{ checksum "mix.lock" }}
+          paths: ["_build", "deps"]
       - run: mix test --include long_running --max-cases 1
       - run: mix espec
 
@@ -29,26 +32,23 @@ jobs:
 
     steps:
       - checkout
+      - run: mix format --check-formatted
       - restore_cache:
           keys:
             - mix-cache-{{ arch }}-{{ checksum "mix.lock" }}
             - mix-cache-{{ arch }}
       - run: mix deps.get
-      - run: mix format --check-formatted
       - run: mix compile
       - run: mix credo
+      - run: mix docs && mix docs 2>&1 | (! grep -q "warning:")
       - run: asdf current elixir | awk '{print $2}' > /tmp/elixir-version
       - restore_cache:
           keys:
             - dialyzer-cache-{{ arch }}-{{ checksum "/tmp/elixir-version" }}
       - run: mix dialyzer
-      - run: mix docs && mix docs 2>&1 | (! grep -q "warning:")
       - save_cache:
           key: dialyzer-cache-{{ arch }}-{{ checksum "/tmp/elixir-version" }}
           paths: ["priv/plts"]
-      - save_cache:
-          key: mix-cache-{{ arch }}-{{ checksum "mix.lock" }}
-          paths: ["_build", "deps"]
 
 workflows:
   version: 2
