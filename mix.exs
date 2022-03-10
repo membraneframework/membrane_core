@@ -112,7 +112,6 @@ defmodule Membrane.Mixfile do
       {:credo, "~> 1.6", only: :dev, runtime: false},
       {:espec, "~> 1.8.3", only: :test},
       {:excoveralls, "~> 0.14", only: :test},
-      {:junit_formatter, "~> 3.1", only: :test},
       {:qex, "~> 0.3"},
       {:telemetry, "~> 1.0"},
       {:bunch, "~> 1.3"},
