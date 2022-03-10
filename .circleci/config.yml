@@ -4,10 +4,17 @@ commands:
     parameters:
       glob:
         type: string
+      split_by:
+        default: "filename"
+        type: string
       command:
         type: string
     steps:
-      - run: circleci tests glob "<<parameters.glob>>" | circleci tests split --split-by=timings | xargs <<parameters.command>>
+      - run:
+          command: |
+            circleci tests glob "<<parameters.glob>>" \
+            | circleci tests split --split-by="<<parameters.split_by>>" \
+            | xargs <<parameters.command>>
 jobs:
   build:
     docker:
@@ -25,9 +32,6 @@ jobs:
             - mix-cache-{{ arch }}
       - run: mix deps.get
       - run: mix compile --force --warnings-as-errors
-      - save_cache:
-          key: mix-cache-{{ arch }}-{{ checksum "mix.lock" }}
-          paths: ["_build", "deps"]
       - persist_to_workspace:
           root: .
           paths: ["*"]
@@ -46,10 +50,13 @@ jobs:
           at: .
       - run_tests:
           glob: "test/membrane/**/*"
+          split_by: "timings"
           command: "mix test --include long_running --max-cases 1"
       - run_tests:
           glob: "spec/membrane/**/*"
           command: "mix espec $TESTFILES"
+      - store_test_results:
+          path: "_build/test/lib/membrane_core"
 
   lint:
     docker:
@@ -69,10 +76,13 @@ jobs:
           keys:
             - dialyzer-cache-{{ arch }}-{{ checksum "/tmp/elixir-version" }}
       - run: mix dialyzer
+      - run: mix docs && mix docs 2>&1 | (! grep -q "warning:")
       - save_cache:
           key: dialyzer-cache-{{ arch }}-{{ checksum "/tmp/elixir-version" }}
           paths: ["priv/plts"]
-      - run: mix docs && mix docs 2>&1 | (! grep -q "warning:")
+      - save_cache:
+          key: mix-cache-{{ arch }}-{{ checksum "mix.lock" }}
+          paths: ["_build", "deps"]
 
 workflows:
   version: 2
