@@ -5,7 +5,7 @@ commands:
       pattern:
         type: string
     steps:
-      - run: export TESTFILES=$(circleci tests glob "<<parameters.pattern>>" | circleci tests split --split-by-timings)
+      - run: export TESTFILES=$(circleci tests glob "<<parameters.pattern>>" | circleci tests split --split-by=timings)
 jobs:
   build:
     docker:
