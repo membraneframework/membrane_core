@@ -58,7 +58,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
         case args do
           nil -> {:^, ctx, [node]}
-          _ -> node
+          _not_nil -> node
         end
       else
         node
