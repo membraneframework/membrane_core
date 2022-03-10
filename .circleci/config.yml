@@ -2,12 +2,12 @@ version: 2.1
 commands:
   run_tests:
     parameters:
-      pattern:
+      glob:
         type: string
       command:
         type: string
     steps:
-      - run: circleci tests glob "<<parameters.pattern>>" | circleci tests split --split-by=timings | xargs <<parameters.command>>
+      - run: circleci tests glob "<<parameters.glob>>" | circleci tests split --split-by=timings | xargs <<parameters.command>>
 jobs:
   build:
     docker:
@@ -45,10 +45,10 @@ jobs:
       - attach_workspace:
           at: .
       - run_tests:
-          pattern: "test/membrane/**/*"
+          glob: "test/membrane/**/*"
           command: "mix test --include long_running --max-cases 1"
       - run_tests:
-          pattern: "spec/membrane/**/*"
+          glob: "spec/membrane/**/*"
           command: "mix espec $TESTFILES"
 
   lint:
