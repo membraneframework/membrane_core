@@ -1,13 +1,13 @@
 version: 2.1
 commands:
-  split_tests:
+  run_tests:
     parameters:
       pattern:
         type: string
+      command:
+        type: string
     steps:
-      - run: export TESTFILES=$(circleci tests glob "<<parameters.pattern>>" | circleci tests split --split-by=timings)
-jobs:
-  build:
+      - run: circleci tests glob "<<parameters.pattern>>" | circleci tests split --split-by=timings | xargs <<parameters.command>>
     docker:
       - image: membraneframeworklabs/docker_membrane
         environment:
@@ -42,12 +42,12 @@ jobs:
     steps:
       - attach_workspace:
           at: .
-      - split_tests:
+      - run_tests:
           pattern: "test/membrane/**/*"
-      - run: mix test --include long_running --max-cases 1 $TESTFILES
-      - split_tests:
+          command: "mix test --include long_running --max-cases 1"
+      - run_tests:
           pattern: "spec/membrane/**/*"
-      - run: mix espec $TESTFILES
+          command: "mix espec $TESTFILES"
 
   lint:
     docker:
@@ -62,10 +62,14 @@ jobs:
           at: .
       - run: mix format --check-formatted
       - run: mix credo
-      # TODO: load *.plt from cache
-      # key: asdf current elixir | awk '{print $2}'
+      - run: asdf current elixir | awk '{print $2}' > /tmp/elixir-version
+      - restore_cache:
+          keys:
+            - dialyzer-cache-{{ arch }}-{{ checksum "/tmp/elixir-version" }}
       - run: mix dialyzer
-      # TODO: store *.plt in cache
+      - save_cache:
+          key: dialyzer-cache-{{ arch }}-{{ checksum "/tmp/elixir-version" }}
+          paths: ["priv/plts"]
       - run: mix docs && mix docs 2>&1 | (! grep -q "warning:")
 
 workflows:
