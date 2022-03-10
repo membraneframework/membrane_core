@@ -8,6 +8,8 @@ commands:
         type: string
     steps:
       - run: circleci tests glob "<<parameters.pattern>>" | circleci tests split --split-by=timings | xargs <<parameters.command>>
+jobs:
+  build:
     docker:
       - image: membraneframeworklabs/docker_membrane
         environment:
