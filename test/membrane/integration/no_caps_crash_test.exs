@@ -18,6 +18,12 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     def handle_demand(:output, _size, :buffers, _ctx, state) do
       {{:ok, [buffer: {:output, %Membrane.Buffer{payload: "Something"}}]}, state}
     end
+
+    @impl true
+    def handle_other({:send_your_pid, requester_pid}, _ctxt, state) do
+      send(requester_pid, {:my_pid, self()})
+      {:ok, state}
+    end
   end
 
   test "if pipeline crashes when the caps are not sent before the first buffer" do
@@ -29,9 +35,22 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     }
 
     {:ok, pipeline} = Pipeline.start(options)
-    ref = Process.monitor(pipeline)
     Pipeline.play(pipeline)
-    assert_receive {:DOWN, ^ref, :process, ^pipeline, {:shutdown, :child_crash}}
+    Pipeline.message_child(pipeline, :source, {:send_your_pid, self()})
+
+    source_pid =
+      receive do
+        {:my_pid, pid} -> pid
+      end
+
+    source_ref = Process.monitor(source_pid)
+    assert_receive {:DOWN, ^source_ref, :process, ^source_pid, {reason, _stack_trace}}
+    assert %Membrane.ActionError{message: action_error_msg} = reason
+
+    assert Regex.match?(
+             ~r/Caps were not sent on this pad before the first buffer was/,
+             action_error_msg
+           )
   end
 
   test "if pipeline works properly when caps are sent before the first buffer" do
