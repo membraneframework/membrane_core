@@ -54,7 +54,7 @@ jobs:
           command: "mix test --include long_running --max-cases 1"
       - run_tests:
           glob: "spec/membrane/**/*"
-          command: "mix espec $TESTFILES"
+          command: "mix espec"
       - store_test_results:
           path: "_build/test/lib/membrane_core"
 
