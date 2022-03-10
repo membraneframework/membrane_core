@@ -5,7 +5,7 @@ commands:
       glob:
         type: string
       split_by:
-        default: "filename"
+        default: "name"
         type: string
       command:
         type: string
@@ -13,7 +13,7 @@ commands:
       - run:
           command: |
             circleci tests glob "<<parameters.glob>>" \
-            | circleci tests split --split-by="<<parameters.split_by>>" \
+            | circleci tests split --split-by=<<parameters.split_by>> \
             | xargs <<parameters.command>>
 jobs:
   build:
