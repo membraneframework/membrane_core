@@ -28,21 +28,14 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - deps-cache-{{ arch }}-{{ .Branch }}-{{ checksum "mix.lock" }}
-            - deps-cache-{{ arch }}-{{ .Branch }}
-            - deps-cache-{{ arch }}
-      - restore_cache:
-          keys:
-            - build-cache-{{ arch }}-{{ .Branch }}
-            - build-cache-{{ arch }}
+            - mix-cache-{{ arch }}-{{ .Branch }}-{{ checksum "mix.lock" }}
+            - mix-cache-{{ arch }}-{{ .Branch }}
+            - mix-cache-{{ arch }}
       - run: mix deps.get
       - run: mix compile --force --warnings-as-errors
       - save_cache:
-          key: deps-cache-{{ arch }}-{{ .Branch }}-{{ checksum "mix.lock" }}
-          paths: "deps"
-      - save_cache:
-          key: build-cache-{{ arch }}-{{ .Branch }}
-          paths: "_build"
+          key: mix-cache-{{ arch }}-{{ .Branch }}-{{ checksum "mix.lock" }}
+          paths: ["deps", "_build"]
       - persist_to_workspace:
           root: .
           paths: "*"
@@ -99,7 +92,7 @@ workflows:
       - build
       - test:
           requires: 
-            - "build"
+            - build
       - lint:
           requires:
-            - "build"
+            - build
