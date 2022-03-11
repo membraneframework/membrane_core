@@ -28,16 +28,24 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - mix-cache-{{ arch }}-{{ checksum "mix.lock" }}
-            - mix-cache-{{ arch }}
+            - deps-cache-{{ arch }}-{{ .Branch }}-{{ checksum "mix.lock" }}
+            - deps-cache-{{ arch }}-{{ .Branch }}
+            - deps-cache-{{ arch }}
+      - restore_cache:
+          keys:
+            - build-cache-{{ arch }}-{{ .Branch }}
+            - build-cache-{{ arch }}
       - run: mix deps.get
       - run: mix compile --force --warnings-as-errors
       - save_cache:
-          key: mix-cache-{{ arch }}-{{ checksum "mix.lock" }}
-          paths: ["_build", "deps"]
+          key: deps-cache-{{ arch }}-{{ .Branch }}-{{ checksum "mix.lock" }}
+          paths: "deps"
+      - save_cache:
+          key: build-cache-{{ arch }}-{{ .Branch }}
+          paths: "_build"
       - persist_to_workspace:
           root: .
-          paths: ["*"]
+          paths: "*"
 
   test:
     docker:
@@ -74,14 +82,14 @@ jobs:
           at: .
       - run: mix format --check-formatted
       - run: mix credo
-      - run: asdf current elixir | awk '{print $2}' > /tmp/elixir-version
+      - run: asdf current elixir | awk '{print $2}' > .elixir_version
       - restore_cache:
           keys:
-            - dialyzer-cache-{{ arch }}-{{ checksum "/tmp/elixir-version" }}
+            - dialyzer-cache-{{ arch }}-{{ checksum ".elixir_version" }}
       - run: mix dialyzer
       - save_cache:
-          key: dialyzer-cache-{{ arch }}-{{ checksum "/tmp/elixir-version" }}
-          paths: ["priv/plts"]
+          key: dialyzer-cache-{{ arch }}-{{ checksum ".elixir_version" }}
+          paths: "priv/plts"
       - run: mix docs && mix docs 2>&1 | (! grep -q "warning:")
 
 workflows:
@@ -90,6 +98,6 @@ workflows:
     jobs:
       - build
       - test:
-          requires: ["build"]
+          requires: "build"
       - lint:
-          requires: ["build"]
+          requires: "build"
