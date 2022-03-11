@@ -51,19 +51,21 @@ defmodule Membrane.RemoteControlled.Pipeline do
     Pipeline.start(__MODULE__, %{controller_pid: self()}, process_options)
   end
 
-  defp pin_leaf_nodes(ast) do
-    Macro.postwalk(ast, fn node ->
-      if not Macro.quoted_literal?(node) and match?({_name, _ctx, _args}, node) do
-        {_name, ctx, args} = node
+  defmacrop pin_leaf_nodes(ast) do
+    quote do
+      Macro.postwalk(unquote(ast), fn node ->
+        if not Macro.quoted_literal?(node) and match?({_name, _ctx, _args}, node) do
+          {_name, ctx, args} = node
 
-        case args do
-          nil -> {:^, ctx, [node]}
-          _not_nil -> node
+          case args do
+            nil -> {:^, ctx, [node]}
+            _not_nil -> node
+          end
+        else
+          node
         end
-      else
-        node
-      end
-    end)
+      end)
+    end
   end
 
   defmacrop do_await(pipeline, message_type, keywords \\ []) do
