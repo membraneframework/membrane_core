@@ -93,7 +93,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
       state = put_in(state, [:pending_specs], Map.delete(state.pending_specs, spec_ref))
 
       {:ok, state} =
-        if state.delayed_playback_change do
+        if not is_nil(state.delayed_playback_change) and Enum.empty?(state.pending_specs) do
           Membrane.Core.PlaybackHandler.change_playback_state(
             state.delayed_playback_change,
             Membrane.Core.Parent.LifecycleController,
