@@ -163,18 +163,20 @@ defmodule Membrane.Core.Element.PadController do
       state = PadModel.delete_data!(state, pad_ref)
       {:ok, state}
     else
-      {:error, {:unknown_pad, _pad_ref}} ->
-        {:ok, state}
-
       {:error, {:cannot_unlink_static_pad_in_playing_or_prepared, pad_ref}} ->
         raise LinkError,
               "Tried to unlink static pad #{Pad.name_by_ref(pad_ref)} while #{inspect(state.name)} was in playback state #{state.playback.target_state}."
+
+      {:error, {:unknown_pad, _pad_ref}} ->
+        {:ok, state}
 
       error ->
         error
     end
   end
 
+  @spec check_if_pad_can_be_unlinked(Pad.ref_t(), Core.Element.State.t()) ::
+          :ok | {:error, {:cannot_unlink_static_pad_in_playing_or_prepared, Pad.name_t()}}
   defp check_if_pad_can_be_unlinked(pad_ref, state) do
     pad_data = PadModel.get_data!(state, pad_ref)
 
@@ -182,7 +184,7 @@ defmodule Membrane.Core.Element.PadController do
          Membrane.Pad.availability_mode(pad_data.availability) == :dynamic do
       :ok
     else
-      {:error, {:cannot_unlink_static_pad_in_playing_or_prepared, pad_ref}}
+      {:error, {:cannot_unlink_static_pad_in_playing_or_prepared, Pad.name_by_ref(pad_ref)}}
     end
   end
 
