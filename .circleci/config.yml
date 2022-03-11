@@ -1,6 +1,22 @@
 version: 2.1
+commands:
+  run_tests:
+    parameters:
+      glob:
+        type: string
+      split_by:
+        default: "filesize"
+        type: string
+      command:
+        type: string
+    steps:
+      - run:
+          command: |
+            circleci tests glob "<<parameters.glob>>" \
+            | circleci tests split --split-by=<<parameters.split_by>> \
+            | xargs <<parameters.command>>
 jobs:
-  test:
+  build:
     docker:
       - image: membraneframeworklabs/docker_membrane
         environment:
@@ -19,8 +35,31 @@ jobs:
       - save_cache:
           key: mix-cache-{{ arch }}-{{ checksum "mix.lock" }}
           paths: ["_build", "deps"]
-      - run: mix test --include long_running --max-cases 1
-      - run: mix espec
+      - persist_to_workspace:
+          root: .
+          paths: ["*"]
+
+  test:
+    docker:
+      - image: membraneframeworklabs/docker_membrane
+        environment:
+          MIX_ENV: test
+
+    working_directory: ~/app
+    parallelism: 4
+
+    steps:
+      - attach_workspace:
+          at: .
+      - run_tests:
+          glob: "test/membrane/**/*.exs"
+          split_by: "timings"
+          command: "mix test --include long_running --max-cases 1"
+      - run_tests:
+          glob: "spec/membrane/**/*.exs"
+          command: "mix espec"
+      - store_test_results:
+          path: "_build/test/lib/membrane_core"
 
   lint:
     docker:
@@ -31,16 +70,10 @@ jobs:
     working_directory: ~/app
 
     steps:
-      - checkout
+      - attach_workspace:
+          at: .
       - run: mix format --check-formatted
-      - restore_cache:
-          keys:
-            - mix-cache-{{ arch }}-{{ checksum "mix.lock" }}
-            - mix-cache-{{ arch }}
-      - run: mix deps.get
-      - run: mix compile
       - run: mix credo
-      - run: mix docs && mix docs 2>&1 | (! grep -q "warning:")
       - run: asdf current elixir | awk '{print $2}' > /tmp/elixir-version
       - restore_cache:
           keys:
@@ -49,10 +82,14 @@ jobs:
       - save_cache:
           key: dialyzer-cache-{{ arch }}-{{ checksum "/tmp/elixir-version" }}
           paths: ["priv/plts"]
+      - run: mix docs && mix docs 2>&1 | (! grep -q "warning:")
 
 workflows:
   version: 2
-  build:
+  build_and_test:
     jobs:
-      - test
-      - lint
+      - build
+      - test:
+          requires: ["build"]
+      - lint:
+          requires: ["build"]
