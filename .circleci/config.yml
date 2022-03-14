@@ -52,7 +52,6 @@ jobs:
     steps:
       - attach_workspace:
           at: .
-      - run: elixir -e "System.schedulers_online() * 2 |> inspect() |> IO.puts()"
       - run_tests:
           glob: "test/membrane/**/*.exs"
           split_by: "timings"
