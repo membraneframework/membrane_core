@@ -5,7 +5,7 @@ commands:
       glob:
         type: string
       split_by:
-        default: "filesize"
+        default: filesize
         type: string
       command:
         type: string
