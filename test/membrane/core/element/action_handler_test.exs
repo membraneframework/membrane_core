@@ -47,7 +47,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       |> Enum.each(fn {playback, callback} ->
         state = %{state | playback: %Playback{state: playback}, supplying_demand?: true}
         assert {:ok, state} = @module.handle_action({:demand, {:input, 10}}, callback, %{}, state)
-        assert state.pads.data.input.demand == 10
+        assert state.pads_data.input.demand == 10
         assert MapSet.new([{:input, :supply}]) == state.delayed_demands
       end)
 
@@ -61,7 +61,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
                  %{state | supplying_demand?: true}
                )
 
-      assert state.pads.data.input.demand == 10
+      assert state.pads_data.input.demand == 10
       assert MapSet.new([{:input, :supply}]) == state.delayed_demands
     end
 

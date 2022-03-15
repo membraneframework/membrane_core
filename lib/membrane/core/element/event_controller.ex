@@ -115,7 +115,7 @@ defmodule Membrane.Core.Element.EventController do
   end
 
   defp check_sync(%Events.StartOfStream{}, state) do
-    if state.pads.data
+    if state.pads_data
        |> Map.values()
        |> Enum.filter(&(&1.direction == :input))
        |> Enum.all?(& &1.start_of_stream?) do

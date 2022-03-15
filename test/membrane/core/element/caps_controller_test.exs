@@ -70,7 +70,7 @@ defmodule Membrane.Core.Element.CapsControllerTest do
 
       assert {:ok, new_state} = @module.handle_caps(:input, %MockCaps{}, state)
 
-      assert new_state.pads.data.input.input_queue.q |> Qex.last!() ==
+      assert new_state.pads_data.input.input_queue.q |> Qex.last!() ==
                {:non_buffer, :caps, %MockCaps{}}
     end
   end

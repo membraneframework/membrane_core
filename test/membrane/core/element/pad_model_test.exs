@@ -58,9 +58,9 @@ defmodule Membrane.Core.Child.PadModelTest do
     setup :setup_element_state
 
     test "is {:ok, state} when the pad is present", ctx do
-      assert get_in(ctx.state, [:pads, :data, :input, :start_of_stream?]) |> is_nil()
+      assert get_in(ctx.state, [:pads_data, :input, :start_of_stream?]) |> is_nil()
       assert {:ok, state} = PadModel.set_data(ctx.state, :input, :start_of_stream?, true)
-      assert get_in(state, [:pads, :data, :input, :start_of_stream?]) == true
+      assert get_in(state, [:pads_data, :input, :start_of_stream?]) == true
     end
 
     test "is :unknown_pad when the pad is not present", ctx do
@@ -73,9 +73,9 @@ defmodule Membrane.Core.Child.PadModelTest do
     setup :setup_element_state
 
     test "updates the pad data with the given function when present", ctx do
-      assert get_in(ctx.state, [:pads, :data, :input, :start_of_stream?]) |> is_nil()
+      assert get_in(ctx.state, [:pads_data, :input, :start_of_stream?]) |> is_nil()
       assert state = PadModel.set_data!(ctx.state, :input, :start_of_stream?, true)
-      assert get_in(state, [:pads, :data, :input, :start_of_stream?]) == true
+      assert get_in(state, [:pads_data, :input, :start_of_stream?]) == true
     end
 
     test "raises when the pad is not present", ctx do
@@ -90,7 +90,7 @@ defmodule Membrane.Core.Child.PadModelTest do
 
     test "updates the pad data with the given function when present", ctx do
       assert PadModel.update_data(ctx.state, :input, :demand, &{:ok, &1 + 5}) ==
-               {:ok, put_in(ctx.state, [:pads, :data, :input, :demand], 6)}
+               {:ok, put_in(ctx.state, [:pads_data, :input, :demand], 6)}
     end
 
     test "is :unknown_pad and original state when the pad is not present", ctx do
@@ -104,7 +104,7 @@ defmodule Membrane.Core.Child.PadModelTest do
 
     test "updates the pad data with the given function when present", ctx do
       assert PadModel.update_data!(ctx.state, :input, :demand, &(&1 + 5)) ==
-               put_in(ctx.state, [:pads, :data, :input, :demand], 6)
+               put_in(ctx.state, [:pads_data, :input, :demand], 6)
     end
 
     test "raises when the pad is not present", ctx do
@@ -118,7 +118,7 @@ defmodule Membrane.Core.Child.PadModelTest do
     setup :setup_element_state
 
     test "updates multiple values in a pad", ctx do
-      assert %{demand: 1, start_of_stream?: nil} = Map.get(ctx.state.pads.data, :input)
+      assert %{demand: 1, start_of_stream?: nil} = Map.get(ctx.state.pads_data, :input)
 
       assert {:ok, state} =
                PadModel.update_multi(ctx.state, :input, [
@@ -126,7 +126,7 @@ defmodule Membrane.Core.Child.PadModelTest do
                  {:start_of_stream?, true}
                ])
 
-      assert %{demand: 45, start_of_stream?: true} = Map.get(state.pads.data, :input)
+      assert %{demand: 45, start_of_stream?: true} = Map.get(state.pads_data, :input)
     end
 
     test "is :unknown_pad and original state when the pad is not present", ctx do
@@ -142,7 +142,7 @@ defmodule Membrane.Core.Child.PadModelTest do
     setup :setup_element_state
 
     test "updates multiple values in a pad", ctx do
-      assert %{demand: 1, start_of_stream?: nil} = Map.get(ctx.state.pads.data, :input)
+      assert %{demand: 1, start_of_stream?: nil} = Map.get(ctx.state.pads_data, :input)
 
       assert state =
                PadModel.update_multi!(ctx.state, :input, [
@@ -150,7 +150,7 @@ defmodule Membrane.Core.Child.PadModelTest do
                  {:start_of_stream?, true}
                ])
 
-      assert %{demand: 45, start_of_stream?: true} = Map.get(state.pads.data, :input)
+      assert %{demand: 45, start_of_stream?: true} = Map.get(state.pads_data, :input)
     end
 
     test "is :unknown_pad and original state when the pad is not present", ctx do

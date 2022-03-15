@@ -60,6 +60,6 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
     state: state
   } do
     {:ok, state} = LifecycleController.handle_playback_state(:playing, :prepared, state)
-    assert state.pads.data.input.end_of_stream?
+    assert state.pads_data.input.end_of_stream?
   end
 end

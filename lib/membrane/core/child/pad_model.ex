@@ -68,16 +68,11 @@ defmodule Membrane.Core.Child.PadModel do
 
   @type pads_info_t :: %{Pad.name_t() => pad_info_t}
 
-  @type pads_t :: %{
-          data: pads_data_t,
-          info: pads_info_t
-        }
-
   @type unknown_pad_error_t :: {:error, {:unknown_pad, Pad.name_t()}}
 
   @spec assert_instance(Child.state_t(), Pad.ref_t()) ::
           :ok | unknown_pad_error_t
-  def assert_instance(%{pads: %{data: data}}, pad_ref) when is_map_key(data, pad_ref), do: :ok
+  def assert_instance(%{pads_data: data}, pad_ref) when is_map_key(data, pad_ref), do: :ok
   def assert_instance(_state, pad_ref), do: {:error, {:unknown_pad, pad_ref}}
 
   @spec assert_instance!(Child.state_t(), Pad.ref_t()) :: :ok
@@ -108,11 +103,11 @@ defmodule Membrane.Core.Child.PadModel do
   def filter_refs_by_data(state, constraints \\ %{})
 
   def filter_refs_by_data(state, constraints) when constraints == %{} do
-    state.pads.data |> Map.keys()
+    state.pads_data |> Map.keys()
   end
 
   def filter_refs_by_data(state, constraints) do
-    state.pads.data
+    state.pads_data
     |> Enum.filter(fn {_name, data} -> data |> constraints_met?(constraints) end)
     |> Keyword.keys()
   end
@@ -121,11 +116,11 @@ defmodule Membrane.Core.Child.PadModel do
   def filter_data(state, constraints \\ %{})
 
   def filter_data(state, constraints) when constraints == %{} do
-    state.pads.data
+    state.pads_data
   end
 
   def filter_data(state, constraints) do
-    state.pads.data
+    state.pads_data
     |> Enum.filter(fn {_name, data} -> data |> constraints_met?(constraints) end)
     |> Map.new()
   end
@@ -176,7 +171,7 @@ defmodule Membrane.Core.Child.PadModel do
       pad_ref = unquote(pad_ref)
 
       case unquote(state) do
-        %{pads: %{data: %{^pad_ref => unquote(pad_data)}}} ->
+        %{pads_data: %{^pad_ref => unquote(pad_data)}} ->
           {:ok, unquote(FastMap.get_in_code(pad_data, keys))}
 
         _state ->
@@ -187,8 +182,8 @@ defmodule Membrane.Core.Child.PadModel do
 
   defmacro get_data!(state, pad_ref, keys \\ []) do
     keys = Bunch.listify(keys)
-    FastMap.get_in_code(state, [:pads, :data, pad_ref] ++ keys)
-    # FastMap.get_in_code(state, [:pads, :data] ++ keys)
+    FastMap.get_in_code(state, [:pads_data, pad_ref] ++ keys)
+    # FastMap.get_in_code(state, [:pads_data] ++ keys)
   end
 
   @spec set_data(Child.state_t(), Pad.ref_t(), keys :: atom | [atom], value :: term()) ::
@@ -213,7 +208,7 @@ defmodule Membrane.Core.Child.PadModel do
 
   defmacro set_data!(state, pad_ref, keys \\ [], value) do
     keys = Bunch.listify(keys)
-    FastMap.set_in_code(state, [:pads, :data, pad_ref] ++ keys, value)
+    FastMap.set_in_code(state, [:pads_data, pad_ref] ++ keys, value)
   end
 
   @spec update_data(
@@ -246,7 +241,7 @@ defmodule Membrane.Core.Child.PadModel do
 
   defmacro update_data!(state, pad_ref, keys \\ [], f) do
     keys = Bunch.listify(keys)
-    FastMap.update_in_code(state, [:pads, :data, pad_ref] ++ keys, f)
+    FastMap.update_in_code(state, [:pads_data, pad_ref] ++ keys, f)
   end
 
   @spec update_multi(Child.state_t(), Pad.ref_t(), [
@@ -258,7 +253,7 @@ defmodule Membrane.Core.Child.PadModel do
     case assert_instance(state, pad_ref) do
       :ok ->
         state
-        |> update_in([:pads, :data, pad_ref], fn pad_data ->
+        |> update_in([:pads_data, pad_ref], fn pad_data ->
           apply_updates(pad_data, updates)
         end)
         ~> {:ok, &1}
@@ -312,7 +307,7 @@ defmodule Membrane.Core.Child.PadModel do
 
   defmacro get_and_update_data!(state, pad_ref, keys \\ [], f) do
     keys = Bunch.listify(keys)
-    FastMap.get_and_update_in_code(state, [:pads, :data, pad_ref] ++ keys, f)
+    FastMap.get_and_update_in_code(state, [:pads_data, pad_ref] ++ keys, f)
   end
 
   @spec pop_data(Child.state_t(), Pad.ref_t()) ::
@@ -369,17 +364,17 @@ defmodule Membrane.Core.Child.PadModel do
   end
 
   @spec data_keys(Pad.ref_t()) :: [atom]
-  defp data_keys(pad_ref), do: [:pads, :data, pad_ref]
+  defp data_keys(pad_ref), do: [:pads_data, pad_ref]
 
   @spec data_keys(Pad.ref_t(), keys :: atom | [atom]) :: [atom]
   @compile {:inline, data_keys: 2}
   defp data_keys(pad_ref, keys)
 
   defp data_keys(pad_ref, keys) when is_list(keys) do
-    [:pads, :data, pad_ref | keys]
+    [:pads_data, pad_ref | keys]
   end
 
   defp data_keys(pad_ref, key) do
-    [:pads, :data, pad_ref, key]
+    [:pads_data, pad_ref, key]
   end
 end

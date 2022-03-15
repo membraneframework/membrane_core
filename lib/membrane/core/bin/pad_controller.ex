@@ -34,7 +34,7 @@ defmodule Membrane.Core.Bin.PadController do
     pad_name = Pad.name_by_ref(pad_ref)
 
     info =
-      case Map.fetch(state.pads.info, pad_name) do
+      case Map.fetch(state.pads_info, pad_name) do
         {:ok, info} ->
           info
 
@@ -81,7 +81,7 @@ defmodule Membrane.Core.Bin.PadController do
         ) :: State.t()
   def handle_internal_link_request(pad_ref, child_endpoint, spec_ref, state) do
     pad_name = Pad.name_by_ref(pad_ref)
-    info = Map.fetch!(state.pads.info, pad_name)
+    info = Map.fetch!(state.pads_info, pad_name)
 
     state =
       cond do
@@ -108,7 +108,7 @@ defmodule Membrane.Core.Bin.PadController do
   """
   @spec respond_links(ChildLifeController.spec_ref_t(), State.t()) :: State.t()
   def respond_links(spec_ref, state) do
-    state.pads.data
+    state.pads_data
     |> Map.values()
     |> Enum.filter(&(&1.spec_ref == spec_ref))
     |> Enum.reduce(state, fn pad_data, state ->
@@ -131,7 +131,7 @@ defmodule Membrane.Core.Bin.PadController do
   """
   @spec all_pads_linked?(ChildLifeController.spec_ref_t(), State.t()) :: boolean()
   def all_pads_linked?(spec_ref, state) do
-    state.pads.data
+    state.pads_data
     |> Map.values()
     |> Enum.filter(&(&1.spec_ref == spec_ref))
     |> Enum.all?(& &1.linked?)
@@ -257,6 +257,6 @@ defmodule Membrane.Core.Bin.PadController do
 
     data = struct!(Membrane.Bin.PadData, data)
 
-    put_in(state, [:pads, :data, pad_ref], data)
+    put_in(state, [:pads_data, pad_ref], data)
   end
 end

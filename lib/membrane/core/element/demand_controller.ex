@@ -100,7 +100,7 @@ defmodule Membrane.Core.Element.DemandController do
         demand_request_size
       else
         Membrane.Logger.debug_verbose(
-          "Not sending auto demand on pad #{inspect(pad_ref)}, pads data: #{inspect(state.pads.data)}"
+          "Not sending auto demand on pad #{inspect(pad_ref)}, pads data: #{inspect(state.pads_data)}"
         )
 
         demand
