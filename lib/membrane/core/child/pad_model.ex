@@ -125,199 +125,56 @@ defmodule Membrane.Core.Child.PadModel do
     |> Map.new()
   end
 
-  # @spec get_data(Child.state_t(), Pad.ref_t()) :: {:ok, pad_data_t() | any} | unknown_pad_error_t
-  # def get_data(%{pads: %{data: data}}, pad_ref) do
-  #   case Map.fetch(data, pad_ref) do
-  #     {:ok, pad_data} -> {:ok, pad_data}
-  #     :error -> {:error, {:unknown_pad, pad_ref}}
-  #   end
-  # end
-
-  # @spec get_data(Child.state_t(), Pad.ref_t(), keys :: atom | [atom]) ::
-  #         {:ok, pad_data_t | any} | unknown_pad_error_t
-  # def get_data(%{pads: %{data: data}}, pad_ref, keys)
-  #     when is_map_key(data, pad_ref) and is_list(keys) do
-  #   data
-  #   |> get_in([pad_ref | keys])
-  #   ~> {:ok, &1}
-  # end
-
-  # def get_data(%{pads: %{data: data}}, pad_ref, key)
-  #     when is_map_key(data, pad_ref) and is_atom(key) do
-  #   data
-  #   |> get_in([pad_ref, key])
-  #   ~> {:ok, &1}
-  # end
-
-  # def get_data(_state, pad_ref, _keys), do: {:error, {:unknown_pad, pad_ref}}
-
-  # @spec get_data!(Child.state_t(), Pad.ref_t()) :: pad_data_t | any
-  # def get_data!(state, pad_ref) do
-  #   {:ok, pad_data} = get_data(state, pad_ref)
-  #   pad_data
-  # end
-
-  # @spec get_data!(Child.state_t(), Pad.ref_t(), keys :: atom | [atom]) :: pad_data_t | any
-  # def get_data!(state, pad_ref, keys) do
-  #   {:ok, pad_data} = get_data(state, pad_ref, keys)
-  #   pad_data
-  # end
-
   defmacro get_data(state, pad_ref, keys \\ []) do
     keys = Bunch.listify(keys)
     pad_data = Macro.unique_var(:pad_data, __MODULE__)
 
-    quote do
-      pad_ref = unquote(pad_ref)
-
-      case unquote(state) do
-        %{pads_data: %{^pad_ref => unquote(pad_data)}} ->
-          {:ok, unquote(FastMap.get_in_code(pad_data, keys))}
-
-        _state ->
-          {:error, {:unknown_pad, pad_ref}}
-      end
-    end
+    {:ok, FastMap.get_in_code(pad_data, keys)}
+    |> wrap_with_pad_check(pad_ref, state, pad_data)
   end
 
   defmacro get_data!(state, pad_ref, keys \\ []) do
     keys = Bunch.listify(keys)
     FastMap.get_in_code(state, [:pads_data, pad_ref] ++ keys)
-    # FastMap.get_in_code(state, [:pads_data] ++ keys)
   end
-
-  @spec set_data(Child.state_t(), Pad.ref_t(), keys :: atom | [atom], value :: term()) ::
-          Type.stateful_t(:ok | unknown_pad_error_t, Child.state_t())
-  def set_data(state, pad_ref, keys \\ [], value) do
-    case assert_instance(state, pad_ref) do
-      :ok ->
-        put_in(state, data_keys(pad_ref, keys), value)
-        ~> {:ok, &1}
-
-      {:error, reason} ->
-        {{:error, reason}, state}
-    end
-  end
-
-  # @spec set_data!(Child.state_t(), Pad.ref_t(), keys :: atom | [atom], value :: term()) ::
-  #         Child.state_t()
-  # def set_data!(state, pad_ref, keys \\ [], value) do
-  #   {:ok, state} = set_data(state, pad_ref, keys, value)
-  #   state
-  # end
 
   defmacro set_data!(state, pad_ref, keys \\ [], value) do
     keys = Bunch.listify(keys)
     FastMap.set_in_code(state, [:pads_data, pad_ref] ++ keys, value)
   end
 
-  @spec update_data(
-          Child.state_t(),
-          Pad.ref_t(),
-          keys :: atom | [atom],
-          (data -> {:ok | error, data})
-        ) ::
-          Type.stateful_t(:ok | error | unknown_pad_error_t, Child.state_t())
-        when data: pad_data_t | any, error: {:error, reason :: any}
-  def update_data(state, pad_ref, keys \\ [], f) do
-    case assert_instance(state, pad_ref) do
-      :ok ->
-        state |> get_and_update_in(data_keys(pad_ref, keys), f)
+  defmacro set_data(state, pad_ref, keys \\ [], value) do
+    keys = Bunch.listify(keys)
 
-      {:error, reason} ->
-        {{:error, reason}, state}
-    end
+    {:ok, FastMap.set_in_code(state, [:pads_data, pad_ref] ++ keys, value)}
+    |> wrap_with_pad_check(pad_ref, state)
   end
-
-  # @spec update_data!(Child.state_t(), Pad.ref_t(), keys :: atom | [atom], (data -> data)) ::
-  #         Child.state_t()
-  #       when data: pad_data_t | any
-  # def update_data!(state, pad_ref, keys \\ [], f) do
-  #   :ok = assert_instance(state, pad_ref)
-
-  #   state
-  #   |> update_in(data_keys(pad_ref, keys), f)
-  # end
 
   defmacro update_data!(state, pad_ref, keys \\ [], f) do
     keys = Bunch.listify(keys)
     FastMap.update_in_code(state, [:pads_data, pad_ref] ++ keys, f)
   end
 
-  @spec update_multi(Child.state_t(), Pad.ref_t(), [
-          {key :: atom, (data -> data)} | {key :: atom, any}
-        ]) ::
-          Type.stateful_t(:ok | unknown_pad_error_t, Child.state_t())
-        when data: pad_data_t() | any
-  def update_multi(state, pad_ref, updates) do
-    case assert_instance(state, pad_ref) do
-      :ok ->
-        state
-        |> update_in([:pads_data, pad_ref], fn pad_data ->
-          apply_updates(pad_data, updates)
-        end)
-        ~> {:ok, &1}
-
-      {:error, reason} ->
-        {{:error, reason}, state}
-    end
+  defmacro update_data(state, pad_ref, keys \\ [], f) do
+    FastMap.get_and_update_in_code(state, [:pads_data, pad_ref] ++ keys, f)
+    |> wrap_with_pad_check(pad_ref, state)
   end
-
-  @spec update_multi!(Child.state_t(), Pad.ref_t(), [
-          {key :: atom, (data -> data)} | {key :: atom, any}
-        ]) ::
-          Child.state_t()
-        when data: pad_data_t() | any
-  def update_multi!(state, pad_ref, updates) do
-    {:ok, state} = update_multi(state, pad_ref, updates)
-    state
-  end
-
-  @spec get_and_update_data(
-          Child.state_t(),
-          Pad.ref_t(),
-          keys :: atom | [atom],
-          (data -> {success | error, data})
-        ) :: Type.stateful_t(success | error | unknown_pad_error_t, Child.state_t())
-        when data: pad_data_t | any, success: {:ok, data}, error: {:error, reason :: any}
-  def get_and_update_data(state, pad_ref, keys \\ [], f) do
-    case assert_instance(state, pad_ref) do
-      :ok ->
-        state
-        |> get_and_update_in(data_keys(pad_ref, keys), f)
-
-      {:error, reason} ->
-        {{:error, reason}, state}
-    end
-  end
-
-  # @spec get_and_update_data!(
-  #         Child.state_t(),
-  #         Pad.ref_t(),
-  #         keys :: atom | [atom],
-  #         (data -> {data, data})
-  #       ) :: Type.stateful_t(data, Child.state_t())
-  #       when data: pad_data_t | any
-  # def get_and_update_data!(state, pad_ref, keys \\ [], f) do
-  #   :ok = assert_instance(state, pad_ref)
-
-  #   state
-  #   |> get_and_update_in(data_keys(pad_ref, keys), f)
-  # end
 
   defmacro get_and_update_data!(state, pad_ref, keys \\ [], f) do
     keys = Bunch.listify(keys)
     FastMap.get_and_update_in_code(state, [:pads_data, pad_ref] ++ keys, f)
   end
 
+  defmacro get_and_update_data(state, pad_ref, keys \\ [], f) do
+    FastMap.get_and_update_in_code(state, [:pads_data, pad_ref] ++ keys, f)
+    |> wrap_with_pad_check(pad_ref, state)
+  end
+
   @spec pop_data(Child.state_t(), Pad.ref_t()) ::
           Type.stateful_t({:ok, pad_data_t} | unknown_pad_error_t, Child.state_t())
   def pop_data(state, pad_ref) do
     with :ok <- assert_instance(state, pad_ref) do
-      {data, state} =
-        state
-        |> pop_in(data_keys(pad_ref))
-
+      {data, state} = pop_in(state, [:pads_data, pad_ref])
       {{:ok, data}, state}
     end
   end
@@ -342,39 +199,27 @@ defmodule Membrane.Core.Child.PadModel do
     state
   end
 
-  @spec apply_updates(pad_data_t(), [{key :: atom, (data -> data)} | {key :: atom, any}]) ::
-          pad_data_t
-        when data: pad_data_t
-  defp apply_updates(pad_data, updates) do
-    for {key, update} <- updates, reduce: pad_data do
-      pad_data ->
-        case update do
-          f when is_function(f) ->
-            Map.update(pad_data, key, nil, f)
-
-          value ->
-            Map.put(pad_data, key, value)
-        end
-    end
-  end
-
   @spec constraints_met?(pad_data_t, map) :: boolean
   defp constraints_met?(data, constraints) do
     constraints |> Enum.all?(fn {k, v} -> data[k] === v end)
   end
 
-  @spec data_keys(Pad.ref_t()) :: [atom]
-  defp data_keys(pad_ref), do: [:pads_data, pad_ref]
+  defp wrap_with_pad_check(
+         code,
+         pad_ref,
+         state,
+         pad_data_var \\ Macro.unique_var(:_pad_data, __MODULE__)
+       ) do
+    quote do
+      pad_ref = unquote(pad_ref)
 
-  @spec data_keys(Pad.ref_t(), keys :: atom | [atom]) :: [atom]
-  @compile {:inline, data_keys: 2}
-  defp data_keys(pad_ref, keys)
+      case unquote(state) do
+        %{pads_data: %{^pad_ref => unquote(pad_data_var)}} ->
+          unquote(code)
 
-  defp data_keys(pad_ref, keys) when is_list(keys) do
-    [:pads_data, pad_ref | keys]
-  end
-
-  defp data_keys(pad_ref, key) do
-    [:pads_data, pad_ref, key]
+        _state ->
+          {:error, {:unknown_pad, pad_ref}}
+      end
+    end
   end
 end
