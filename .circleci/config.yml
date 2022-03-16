@@ -47,7 +47,7 @@ jobs:
           MIX_ENV: test
 
     working_directory: ~/app
-    parallelism: 4
+    parallelism: 2
 
     steps:
       - attach_workspace:
@@ -75,6 +75,7 @@ jobs:
           at: .
       - run: mix format --check-formatted
       - run: mix credo
+      - run: mix docs && mix docs 2>&1 | (! grep -q "warning:")
       - run: asdf current elixir | awk '{print $2}' > .elixir_version
       - restore_cache:
           keys:
@@ -83,7 +84,6 @@ jobs:
       - save_cache:
           key: dialyzer-cache-{{ arch }}-{{ checksum ".elixir_version" }}
           paths: "priv/plts"
-      - run: mix docs && mix docs 2>&1 | (! grep -q "warning:")
 
 workflows:
   version: 2
