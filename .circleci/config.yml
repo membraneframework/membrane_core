@@ -47,7 +47,7 @@ jobs:
           MIX_ENV: test
 
     working_directory: ~/app
-    parallelism: 2
+    parallelism: 4
 
     steps:
       - attach_workspace:
