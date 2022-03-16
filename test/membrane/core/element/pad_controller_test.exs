@@ -38,7 +38,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
                  state
                )
 
-      assert %{new_state | pads: nil} == %{state | pads: nil}
+      assert %{new_state | pads_data: nil} == %{state | pads_data: nil}
       assert PadModel.assert_instance(new_state, :output) == :ok
     end
 

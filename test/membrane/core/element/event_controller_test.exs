@@ -44,21 +44,19 @@ defmodule Membrane.Core.Element.EventControllerTest do
           parent: self()
         })
         | type: :filter,
-          pads: %{
-            data: %{
-              input:
-                struct(Membrane.Element.PadData,
-                  ref: :input,
-                  accepted_caps: :any,
-                  direction: :input,
-                  pid: self(),
-                  mode: :pull,
-                  start_of_stream?: false,
-                  end_of_stream?: false,
-                  input_queue: input_queue,
-                  demand: 0
-                )
-            }
+          pads_data: %{
+            input:
+              struct(Membrane.Element.PadData,
+                ref: :input,
+                accepted_caps: :any,
+                direction: :input,
+                pid: self(),
+                mode: :pull,
+                start_of_stream?: false,
+                end_of_stream?: false,
+                input_queue: input_queue,
+                demand: 0
+              )
           }
       }
       |> Bunch.Struct.put_in([:playback, :state], :playing)

@@ -1,15 +1,12 @@
 defmodule Membrane.Core.Child.PadModelTest do
   use ExUnit.Case
 
-  alias Membrane.Core.Child.PadModel
+  require Membrane.Core.Child.PadModel, as: PadModel
 
   defp setup_element_state(_ctx) do
     state = %Membrane.Core.Element.State{
-      pads: %{
-        data: %{:input => struct(Membrane.Element.PadData, demand: 1)},
-        info: %{},
-        dynamic_currently_linking: []
-      }
+      pads_data: %{:input => struct(Membrane.Element.PadData, demand: 1)},
+      pads_info: %{}
     }
 
     [state: state]
@@ -110,55 +107,6 @@ defmodule Membrane.Core.Child.PadModelTest do
     test "raises when the pad is not present", ctx do
       assert_raise MatchError, fn ->
         PadModel.update_data!(ctx.state, :other_input, :demand, &(&1 + 5))
-      end
-    end
-  end
-
-  describe "update_multi" do
-    setup :setup_element_state
-
-    test "updates multiple values in a pad", ctx do
-      assert %{demand: 1, start_of_stream?: nil} = Map.get(ctx.state.pads_data, :input)
-
-      assert {:ok, state} =
-               PadModel.update_multi(ctx.state, :input, [
-                 {:demand, &(&1 + 44)},
-                 {:start_of_stream?, true}
-               ])
-
-      assert %{demand: 45, start_of_stream?: true} = Map.get(state.pads_data, :input)
-    end
-
-    test "is :unknown_pad and original state when the pad is not present", ctx do
-      assert PadModel.update_multi(ctx.state, :other_input, [
-               {:demand, &(&1 + 44)},
-               {:start_of_stream?, true}
-             ]) ==
-               {{:error, {:unknown_pad, :other_input}}, ctx.state}
-    end
-  end
-
-  describe "update_multi!" do
-    setup :setup_element_state
-
-    test "updates multiple values in a pad", ctx do
-      assert %{demand: 1, start_of_stream?: nil} = Map.get(ctx.state.pads_data, :input)
-
-      assert state =
-               PadModel.update_multi!(ctx.state, :input, [
-                 {:demand, &(&1 + 44)},
-                 {:start_of_stream?, true}
-               ])
-
-      assert %{demand: 45, start_of_stream?: true} = Map.get(state.pads_data, :input)
-    end
-
-    test "is :unknown_pad and original state when the pad is not present", ctx do
-      assert_raise MatchError, fn ->
-        PadModel.update_multi!(ctx.state, :other_input, [
-          {:demand, &(&1 + 44)},
-          {:start_of_stream?, true}
-        ])
       end
     end
   end

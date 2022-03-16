@@ -9,7 +9,7 @@ defmodule Membrane.Core.Child.PadModel do
   alias Membrane.Core.Child
   alias Membrane.Pad
 
-  require FastMap
+  require Membrane.Core.Helper.FastMap, as: FastMap
 
   @type bin_pad_data_t :: %Membrane.Bin.PadData{
           ref: Membrane.Pad.ref_t(),
@@ -127,10 +127,19 @@ defmodule Membrane.Core.Child.PadModel do
 
   defmacro get_data(state, pad_ref, keys \\ []) do
     keys = Bunch.listify(keys)
-    pad_data = Macro.unique_var(:pad_data, __MODULE__)
+    pad_data_var = Macro.unique_var(:pad_data, __MODULE__)
 
-    {:ok, FastMap.get_in_code(pad_data, keys)}
-    |> wrap_with_pad_check(pad_ref, state, pad_data)
+    quote do
+      pad_ref_var = unquote(pad_ref)
+
+      case unquote(state) do
+        %{pads_data: %{^pad_ref_var => unquote(pad_data_var)}} ->
+          {:ok, unquote(FastMap.get_in_code(pad_data_var, keys))}
+
+        _state ->
+          {:error, {:unknown_pad, pad_ref_var}}
+      end
+    end
   end
 
   defmacro get_data!(state, pad_ref, keys \\ []) do
@@ -156,6 +165,8 @@ defmodule Membrane.Core.Child.PadModel do
   end
 
   defmacro update_data(state, pad_ref, keys \\ [], f) do
+    keys = Bunch.listify(keys)
+
     FastMap.get_and_update_in_code(state, [:pads_data, pad_ref] ++ keys, f)
     |> wrap_with_pad_check(pad_ref, state)
   end
@@ -204,21 +215,13 @@ defmodule Membrane.Core.Child.PadModel do
     constraints |> Enum.all?(fn {k, v} -> data[k] === v end)
   end
 
-  defp wrap_with_pad_check(
-         code,
-         pad_ref,
-         state,
-         pad_data_var \\ Macro.unique_var(:_pad_data, __MODULE__)
-       ) do
+  defp wrap_with_pad_check(code, pad_ref, state) do
     quote do
-      pad_ref = unquote(pad_ref)
+      pad_ref_var = unquote(pad_ref)
 
       case unquote(state) do
-        %{pads_data: %{^pad_ref => unquote(pad_data_var)}} ->
-          unquote(code)
-
-        _state ->
-          {:error, {:unknown_pad, pad_ref}}
+        %{pads_data: %{^pad_ref_var => _pad_data}} -> unquote(code)
+        state -> {{:error, {:unknown_pad, pad_ref_var}}, state}
       end
     end
   end
