@@ -15,7 +15,15 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   alias Membrane.Core.{Bin, Message, Parent, Pipeline, Telemetry}
   alias Membrane.Core.Bin.PadController
-  alias Membrane.Core.Parent.{ChildLifeController, CrashGroup, Link, LinkParser}
+
+  alias Membrane.Core.Parent.{
+    ChildLifeController,
+    CrashGroup,
+    LifecycleController,
+    Link,
+    LinkParser
+  }
+
   alias Membrane.Core.Parent.ChildLifeController.StartupHandler
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.LinkError
@@ -90,20 +98,19 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     {spec_data, state} = do_proceed_spec_linking(spec_ref, spec_data, state)
 
     if spec_data.status == :linked do
-      state = put_in(state, [:pending_specs], Map.delete(state.pending_specs, spec_ref))
+      {_spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
 
-      {:ok, state} =
-        if not is_nil(state.delayed_playback_change) and Enum.empty?(state.pending_specs) do
-          Membrane.Core.PlaybackHandler.change_playback_state(
+      if state.delayed_playback_change != nil and Enum.empty?(state.pending_specs) do
+        {:ok, state} =
+          LifecycleController.change_playback_state(
             state.delayed_playback_change,
-            Membrane.Core.Parent.LifecycleController,
             %{state | delayed_playback_change: nil}
           )
-        else
-          {:ok, state}
-        end
 
-      state
+        state
+      else
+        state
+      end
     else
       put_in(state, [:pending_specs, spec_ref], spec_data)
     end

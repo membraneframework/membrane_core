@@ -91,26 +91,18 @@ defmodule Membrane.Core.PlaybackHandler do
   @spec change_playback_state(PlaybackState.t(), module(), Component.state_t()) ::
           handler_return_t()
   def change_playback_state(new_playback_state, handler, state) do
-    if not Component.is_parent?(state) or Enum.empty?(state.pending_specs) do
-      %{playback: playback} = state
+    %{playback: playback} = state
 
-      playback =
-        case playback do
-          %{target_state: :terminating} -> playback
-          _not_terminating -> %{playback | target_state: new_playback_state}
-        end
-
-      if playback.pending_state == nil and playback.state != playback.target_state do
-        do_change_playback_state(handler, %{state | playback: playback})
-      else
-        {:ok, %{state | playback: playback}}
+    playback =
+      case playback do
+        %{target_state: :terminating} -> playback
+        _not_terminating -> %{playback | target_state: new_playback_state}
       end
+
+    if playback.pending_state == nil and playback.state != playback.target_state do
+      do_change_playback_state(handler, %{state | playback: playback})
     else
-      if Component.is_parent?(state) do
-        {:ok, %{state | delayed_playback_change: new_playback_state}}
-      else
-        {:ok, state}
-      end
+      {:ok, %{state | playback: playback}}
     end
   end
 
