@@ -100,7 +100,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     if spec_data.status == :linked do
       {_spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
 
-      if state.delayed_playback_change != nil and Enum.empty?(state.pending_specs) do
+      if state.delayed_playback_change != nil do
         {:ok, state} =
           LifecycleController.change_playback_state(
             state.delayed_playback_change,
