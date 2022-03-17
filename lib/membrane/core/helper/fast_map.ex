@@ -40,12 +40,10 @@ defmodule Membrane.Core.Helper.FastMap do
 
     old_value = List.last(vars)
     new_value = Macro.unique_var(:new_value, Elixir)
-    {fun_arg, fun_body} = resolve_lambda(fun)
 
     update =
       quote do
-        unquote(fun_arg) = unquote(old_value)
-        unquote(new_value) = unquote(fun_body)
+        unquote(new_value) = unquote(fun).(unquote(old_value))
       end
 
     insert = gen_insert(key_vars, map_var, vars, new_value)
@@ -73,12 +71,10 @@ defmodule Membrane.Core.Helper.FastMap do
     old_value = List.last(vars)
     new_value = Macro.unique_var(:new_value, Elixir)
     get_value = Macro.unique_var(:get_value, Elixir)
-    {fun_arg, fun_body} = resolve_lambda(fun)
 
     update =
       quote do
-        unquote(fun_arg) = unquote(old_value)
-        {unquote(get_value), unquote(new_value)} = unquote(fun_body)
+        {unquote(get_value), unquote(new_value)} = unquote(fun).(unquote(old_value))
       end
 
     insert = gen_insert(key_vars, map_var, vars, new_value)
@@ -150,22 +146,5 @@ defmodule Membrane.Core.Helper.FastMap do
         %{unquote(submap) | unquote(key) => unquote(acc)}
       end
     end)
-  end
-
-  # TODO: check whether passing lambda literals is optimized by the compiler and remove if so
-  defp resolve_lambda({:fn, _meta1, [{:->, _meta2, [[fun_arg], fun_body]}]}) do
-    {fun_arg, fun_body}
-  end
-
-  defp resolve_lambda({:&, _meta, [fun_body]}) do
-    fun_arg = Macro.unique_var(:fun_arg, Elixir)
-
-    fun_body =
-      Macro.prewalk(fun_body, fn
-        {:&, _meta, [1]} -> fun_arg
-        other -> other
-      end)
-
-    {fun_arg, fun_body}
   end
 end
