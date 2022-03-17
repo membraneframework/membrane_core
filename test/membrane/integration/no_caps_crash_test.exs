@@ -48,7 +48,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     assert %Membrane.ActionError{message: action_error_msg} = reason
 
     assert Regex.match?(
-             ~r/Caps were not sent on this pad before the first buffer was/,
+             ~r/Tried to send a buffer, while caps have not been sent on this pad/,
              action_error_msg
            )
   end

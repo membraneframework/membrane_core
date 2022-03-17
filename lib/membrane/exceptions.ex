@@ -118,7 +118,7 @@ defmodule Membrane.ActionError do
   end
 
   defp format_reason(:caps_not_sent_before_first_buffer) do
-    "Caps were not sent on this pad before the first buffer was"
+    "Tried to send a buffer, while caps have not been sent on this pad"
   end
 
   defp format_reason(reason) do
