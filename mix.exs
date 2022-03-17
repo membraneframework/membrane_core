@@ -12,6 +12,7 @@ defmodule Membrane.Mixfile do
       elixirc_paths: elixirc_paths(Mix.env()),
       description: "Membrane Multimedia Framework (Core)",
       dialyzer: [
+        plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
         flags: [:error_handling]
       ],
       package: package(),
@@ -111,6 +112,7 @@ defmodule Membrane.Mixfile do
       {:credo, "~> 1.6", only: :dev, runtime: false},
       {:espec, "~> 1.8.3", only: :test},
       {:excoveralls, "~> 0.14", only: :test},
+      {:junit_formatter, "~> 3.1", only: :test},
       {:qex, "~> 0.3"},
       {:telemetry, "~> 1.0"},
       {:bunch, "~> 1.3"},
