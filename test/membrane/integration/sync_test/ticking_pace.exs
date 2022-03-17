@@ -1,4 +1,4 @@
-defmodule Membrane.Integration.SyncTest.LongRunning do
+defmodule Membrane.Integration.SyncTest.TickingPace do
   use ExUnit.Case, async: false
 
   alias Membrane.{Testing, Time}
