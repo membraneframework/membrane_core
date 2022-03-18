@@ -17,11 +17,15 @@ defmodule Membrane.RemoteControlled.Pipeline do
   use Membrane.Pipeline
 
   alias Membrane.Pipeline
+  alias Membrane.RemoteControlled.Message
 
-  @type message_t ::
-          {:playback_state, Membrane.PlaybackState.t()}
-          | {:start_of_stream | :end_of_stream, Membrane.Element.name_t(), Membrane.Pad.name_t()}
-          | {:notification, Membrane.Element.name_t(), Membrane.Notification.t()}
+  alias Membrane.RemoteControlled.Message.{
+    PlaybackState,
+    StartOfStream,
+    EndOfStream,
+    Notification,
+    Terminated
+  }
 
   defmodule State do
     @moduledoc false
@@ -47,19 +51,230 @@ defmodule Membrane.RemoteControlled.Pipeline do
     Pipeline.start(__MODULE__, %{controller_pid: self()}, process_options)
   end
 
-  @doc """
-  Awaits for the first `Membrane.RemoteControlled.Pipeline.message_t()` that matches the given `pattern`.
-  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` before awaiting
-  any messages. `pattern` has to be a match pattern.
-  """
-  defmacro await(pipeline, pattern) do
+  defmacrop pin_leaf_nodes(ast) do
     quote do
-      {_pipeline, unquote(pattern)} =
-        receive do
-          {unquote(pipeline), unquote(pattern)} = msg ->
-            msg
+      Macro.postwalk(unquote(ast), fn node ->
+        if not Macro.quoted_literal?(node) and match?({_name, _ctx, _args}, node) do
+          {_name, ctx, args} = node
+
+          case args do
+            nil -> {:^, ctx, [node]}
+            _not_nil -> node
+          end
+        else
+          node
         end
+      end)
     end
+  end
+
+  defmacrop do_await(pipeline, message_type, keywords \\ []) do
+    keywords = pin_leaf_nodes(keywords)
+
+    quote do
+      receive do
+        %Message{
+          from: ^unquote(pipeline),
+          body: %unquote(message_type){
+            unquote_splicing(Macro.expand(keywords, __ENV__))
+          }
+        } = msg ->
+          msg
+      end
+    end
+  end
+
+  @doc """
+  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.PlaybackState()`
+  message with no further constraints, sent by the process with `pipeline` pid.
+  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  for that message.
+
+  Usage example:
+    1) awaiting for any playback state change occuring in the pipeline:
+    ```
+    Pipeline.await_playback_state(pipeline)
+    ```
+  """
+  @spec await_playback_state(pid()) :: Membrane.RemoteControlled.Message.t()
+  def await_playback_state(pipeline) do
+    do_await(pipeline, PlaybackState)
+  end
+
+  @doc """
+  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.PlaybackState()`
+  message with the given `state`, sent by the process with `pipeline` pid.
+  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  for that message.
+
+  Usage example:
+    1) awaiting for the pipeline's playback state to change into `:playing`:
+    ```
+    Pipeline.await_playback_state(pipeline, :playing)
+    ```
+  """
+  @spec await_playback_state(pid, Membrane.PlaybackState.t()) ::
+          Membrane.RemoteControlled.Message.t()
+  def await_playback_state(pipeline, playback_state) do
+    do_await(pipeline, PlaybackState, state: playback_state)
+  end
+
+  @doc """
+  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.StartOfStream()` message
+  with no further constraints, sent by the process with `pipeline` pid.
+  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  for that message.
+
+  Usage example:
+    1) awaiting for the first `start_of_stream` occuring on any pad of any element in the pipeline:
+    ```
+    Pipeline.await_start_of_stream(pipeline)
+    ```
+  """
+  @spec await_start_of_stream(pid) :: Membrane.RemoteControlled.Message.t()
+  def await_start_of_stream(pipeline) do
+    do_await(pipeline, StartOfStream)
+  end
+
+  @doc """
+  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.StartOfStream()` message
+  concerning the given `element`, sent by the process with `pipeline` pid.
+  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  for that message.
+
+  Usage example:
+    1) awaiting for the first `start_of_stream` occuring on any pad of the `:element_id` element in the pipeline:
+    ```
+    Pipeline.await_start_of_stream(pipeline, :element_id)
+    ```
+  """
+  @spec await_start_of_stream(pid(), Membrane.Element.name_t()) ::
+          Membrane.RemoteControlled.Message.t()
+  def await_start_of_stream(pipeline, element) do
+    do_await(pipeline, StartOfStream, element: element)
+  end
+
+  @doc """
+  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.StartOfStream()` message
+  concerning the given `element` and the `pad`, sent by the process with `pipeline` pid.
+  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  for that message.
+
+  Usage example:
+    1) awaiting for the first `start_of_stream` occuring on the `:pad_id` pad of the `:element_id` element in the pipeline:
+    ```
+    Pipeline.await_start_of_stream(pipeline, :element_id, :pad_id)
+    ```
+  """
+  @spec await_start_of_stream(pid(), Membrane.Element.name_t(), Membrane.Pad.name_t()) ::
+          Membrane.RemoteControlled.Message.t()
+  def await_start_of_stream(pipeline, element, pad) do
+    do_await(pipeline, StartOfStream, element: element, pad: pad)
+  end
+
+  @doc """
+  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.EndOfStream()` message
+  with no further constraints, sent by the process with `pipeline` pid.
+  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  for that message.
+
+  Usage example:
+    1) awaiting for the first `end_of_stream` occuring on any pad of any element in the pipeline:
+    ```
+    Pipeline.await_end_of_stream(pipeline)
+    ```
+  """
+  @spec await_end_of_stream(pid()) :: Membrane.RemoteControlled.Message.t()
+  def await_end_of_stream(pipeline) do
+    do_await(pipeline, EndOfStream)
+  end
+
+  @doc """
+  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.EndOfStream()` message
+  concerning the given `element`, sent by the process with `pipeline` pid.
+  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  for that message.
+
+  Usage example:
+    1) awaiting for the first `end_of_stream` occuring on any pad of the `:element_id` element in the pipeline:
+    ```
+    Pipeline.await_end_of_stream(pipeline, :element_id)
+    ```
+  """
+  @spec await_end_of_stream(pid(), Membrane.Element.name_t()) ::
+          Membrane.RemoteControlled.Message.t()
+  def await_end_of_stream(pipeline, element) do
+    do_await(pipeline, EndOfStream, element: element)
+  end
+
+  @doc """
+  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.EndOfStream()` message
+  concerning the given `element` and the `pad`, sent by the process with `pipeline` pid.
+  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  for that message.
+
+  Usage example:
+    1) awaiting for the first `end_of_stream` occuring on the `:pad_id` of the `:element_id` element in the pipeline:
+    ```
+    Pipeline.await_end_of_stream(pipeline, :element_id, :pad_id)
+    ```
+  """
+  @spec await_end_of_stream(pid(), Membrane.Element.name_t(), Membrane.Pad.name_t()) ::
+          Membrane.RemoteControlled.Message.t()
+  def await_end_of_stream(pipeline, element, pad) do
+    do_await(pipeline, EndOfStream, element: element, pad: pad)
+  end
+
+  @doc """
+  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.Notification()`
+  message with no further constraints, sent by the process with `pipeline` pid.
+  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  for that message.
+
+  Usage example:
+    1) awaiting for the first notification send to any element in the pipeline:
+    ```
+    Pipeline.await_notification(pipeline)
+    ```
+  """
+  @spec await_notification(pid()) :: Membrane.RemoteControlled.Message.t()
+  def await_notification(pipeline) do
+    do_await(pipeline, Notification)
+  end
+
+  @doc """
+  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.Notification()` message
+  concerning the given `element`, sent by the process with `pipeline` pid.
+  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  for that message.
+
+  Usage example:
+    1) awaiting for the first notification send to the `:element_id` element in the pipeline:
+    ```
+    Pipeline.await_notification(pipeline, :element_id)
+    ```
+  """
+  @spec await_notification(pid(), Membrane.Notification.t()) ::
+          Membrane.RemoteControlled.Message.t()
+  def await_notification(pipeline, element) do
+    do_await(pipeline, Notification, element: element)
+  end
+
+  @doc """
+  Awaits for the `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.Terminated` message,
+  which is send when the pipeline is terminated.
+  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  for that message.
+
+  Usage example:
+    1) awaiting for the pipeline termination:
+    ```
+    Pipeline.await_termination(pipeline)
+    ```
+  """
+  @spec await_termination(pid()) :: Membrane.RemoteControlled.Message.t()
+  def await_termination(pipeline) do
+    do_await(pipeline, Terminated)
   end
 
   @doc """
@@ -67,16 +282,27 @@ defmodule Membrane.RemoteControlled.Pipeline do
   of elements of `Membrane.RemoteControlled.Pipeline.message_t()` type. The `subscription_pattern`
   must be a match pattern.
 
-      subscribe(pid, {:playback_state, _})
 
-  Such call would make the `Membrane.RemoteControlled.Pipeline` to send all `:playback_state` messages
-  to the controlling process.
+  Usage examples:
+  1) making the `Membrane.RemoteControlled.Pipeline` send to the controlling process `Message.StartOfStream` message
+    when any pad of the `:element_id` receives `:start_of_stream` event.
+
+    ```
+    subscribe(pipeline, %Message.StartOfStream{element: :element_id, pad: _})
+    ```
+
+  2) making the `Membrane.RemoteControlled.Pipeline` send to the controlling process `Message.PlaybackState` message when the pipeline playback state changes to any state
+    (that is - for all the :stopped, :prepared and :playing playback states).
+
+    ```
+    subscribe(pipeline, %Message.PlaybackState{state: _})
+    ```
   """
   defmacro subscribe(pipeline, subscription_pattern) do
     quote do
       send(
         unquote(pipeline),
-        {:subscription, fn x -> match?(unquote(subscription_pattern), x) end}
+        {:subscription, fn x -> match?(%Message{body: unquote(subscription_pattern)}, x) end}
       )
     end
   end
@@ -84,13 +310,15 @@ defmodule Membrane.RemoteControlled.Pipeline do
   @doc """
   Sends a list of `Pipeline.Action.t()` to the given `Membrane.RemoteControlled.Pipeline` for execution.
 
+  Usage example:
+    1) making the `Membrane.RemoteControlled.Pipeline` start the `Membrane.ParentSpec`
+       specified in the action.
+      ```
       children = ...
       links = ...
       actions = [{:spec, %ParentSpec{children: children, links: links}}]
       Pipeline.exec_actions(pipeline, actions)
-
-  Such a call would make the `Membrane.RemoteControlled.Pipeline` to start the `Membrane.ParentSpec`
-  specified in the action.
+      ```
   """
   @spec exec_actions(pid(), [Pipeline.Action.t()]) :: :ok
   def exec_actions(pipeline, actions) do
@@ -107,57 +335,69 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   @impl true
   def handle_playing_to_prepared(_ctx, state) do
-    pipeline_event = {:playback_state, :prepared}
-    maybe_send_event_to_controller(pipeline_event, state)
+    pipeline_event = %Message{from: self(), body: %Message.PlaybackState{state: :prepared}}
+    send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_prepared_to_playing(_ctx, state) do
-    pipeline_event = {:playback_state, :playing}
-    maybe_send_event_to_controller(pipeline_event, state)
+    pipeline_event = %Message{from: self(), body: %Message.PlaybackState{state: :playing}}
+    send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_prepared_to_stopped(_ctx, state) do
-    pipeline_event = {:playback_state, :stopped}
-    maybe_send_event_to_controller(pipeline_event, state)
+    pipeline_event = %Message{from: self(), body: %Message.PlaybackState{state: :stopped}}
+    send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_stopped_to_prepared(_ctx, state) do
-    pipeline_event = {:playback_state, :prepared}
-    maybe_send_event_to_controller(pipeline_event, state)
+    pipeline_event = %Message{from: self(), body: %Message.PlaybackState{state: :prepared}}
+    send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_stopped_to_terminating(_ctx, state) do
-    pipeline_event = {:playback_state, :terminating}
-    maybe_send_event_to_controller(pipeline_event, state)
+    pipeline_event = %Message{from: self(), body: %Message.PlaybackState{state: :terminating}}
+    send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_element_end_of_stream({element_name, pad_ref}, _ctx, state) do
-    pipeline_event = {:end_of_stream, element_name, pad_ref}
-    maybe_send_event_to_controller(pipeline_event, state)
+    pipeline_event = %Message{
+      from: self(),
+      body: %Message.EndOfStream{element: element_name, pad: pad_ref}
+    }
+
+    send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_element_start_of_stream({element_name, pad_ref}, _ctx, state) do
-    pipeline_event = {:start_of_stream, element_name, pad_ref}
-    maybe_send_event_to_controller(pipeline_event, state)
+    pipeline_event = %Message{
+      from: self(),
+      body: %Message.StartOfStream{element: element_name, pad: pad_ref}
+    }
+
+    send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_notification(notification, element, _ctx, state) do
-    pipeline_event = {:notification, element, notification}
-    maybe_send_event_to_controller(pipeline_event, state)
+    pipeline_event = %Message{
+      from: self(),
+      body: %Message.Notification{data: notification, element: element}
+    }
+
+    send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
@@ -167,13 +407,20 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @impl true
-  def handle_other({:subscription, matching_function}, _ctx, state) do
-    {:ok, %{state | matching_functions: [matching_function | state.matching_functions]}}
+  def handle_other({:subscription, pattern}, _ctx, state) do
+    {:ok, %{state | matching_functions: [pattern | state.matching_functions]}}
   end
 
-  defp maybe_send_event_to_controller(event, state) do
-    if Enum.any?(state.matching_functions, & &1.(event)) do
-      send(state.controller_pid, {self(), event})
+  @impl true
+  def handle_shutdown(reason, state) do
+    pipeline_event = %Message{from: self(), body: %Message.Terminated{reason: reason}}
+    send_event_to_controller_if_subscribed(pipeline_event, state)
+    :ok
+  end
+
+  defp send_event_to_controller_if_subscribed(message, state) do
+    if Enum.any?(state.matching_functions, & &1.(message)) do
+      send(state.controller_pid, message)
     end
   end
 end

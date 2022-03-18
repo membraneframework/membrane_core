@@ -1,16 +1,15 @@
 defmodule Membrane.RemoteControlled.PipelineTest do
   use ExUnit.Case
-
   alias Membrane.RemoteControlled.Pipeline
+  alias Membrane.RemoteControlled.Message
   alias Membrane.ParentSpec
-
   require Membrane.RemoteControlled.Pipeline
 
   defmodule Filter do
     use Membrane.Filter
+    alias Membrane.Buffer
 
     def_output_pad :output, caps: :any, availability: :always
-
     def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :always
 
     @impl true
@@ -24,7 +23,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
       notification_actions =
         if rem(state.buffer_count, 3) == 0 do
-          [{:notify, :test_notification}]
+          [{:notify, %Buffer{payload: "test"}}]
         else
           []
         end
@@ -58,60 +57,134 @@ defmodule Membrane.RemoteControlled.PipelineTest do
     setup :setup_pipeline
 
     test "testing process should receive all subscribed events", %{pipeline: pipeline} do
-      Pipeline.subscribe(pipeline, {:playback_state, :prepared})
-      Pipeline.subscribe(pipeline, {:playback_state, :playing})
-      Pipeline.subscribe(pipeline, {:notification, :b, :test_notification})
-      Pipeline.subscribe(pipeline, {:start_of_stream, :b, :input})
+      # SETUP
+      Pipeline.subscribe(pipeline, %Message.PlaybackState{state: :prepared})
+      Pipeline.subscribe(pipeline, %Message.PlaybackState{state: :playing})
+      Pipeline.subscribe(pipeline, %Message.Notification{element: :b, data: %Membrane.Buffer{}})
+      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: :b, pad: :input})
 
+      # RUN
       Pipeline.play(pipeline)
 
-      assert_receive {pipeline, {:playback_state, :prepared}}
-      assert_receive {pipeline, {:playback_state, :playing}}
-      assert_receive {pipeline, {:notification, :b, :test_notification}}
-      assert_receive {pipeline, {:start_of_stream, :b, :input}}
-      refute_receive {pipeline, {:playback_state, :terminating}}
-      refute_receive {pipeline, {:playback_state, :stopped}}
+      # TEST
+      assert_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :prepared}}
+      assert_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :playing}}
 
+      assert_receive %Message{
+        from: ^pipeline,
+        body: %Message.Notification{element: :b, data: %Membrane.Buffer{payload: "test"}}
+      }
+
+      assert_receive %Message{
+        from: ^pipeline,
+        body: %Message.StartOfStream{element: :b, pad: :input}
+      }
+
+      refute_receive %Message{from: ^pipeline, body: %Message.Terminated{}}
+      refute_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :stopped}}
+
+      # STOP
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
     end
 
     test "should allow to use wildcards in subscription pattern", %{pipeline: pipeline} do
-      Pipeline.subscribe(pipeline, {:playback_state, _})
-      Pipeline.subscribe(pipeline, {:end_of_stream, _, _})
+      # SETUP
+      Pipeline.subscribe(pipeline, %Message.PlaybackState{state: _})
+      Pipeline.subscribe(pipeline, %Message.EndOfStream{})
 
+      # RUN
       Pipeline.play(pipeline)
 
-      assert_receive {pipeline, {:playback_state, :prepared}}
-      assert_receive {pipeline, {:playback_state, :playing}}
-      assert_receive {pipeline, {:end_of_stream, :b, :input}}
-      assert_receive {pipeline, {:end_of_stream, :c, :input}}
+      # TEST
+      assert_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :prepared}}
+      assert_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :playing}}
 
+      assert_receive %Message{
+        from: ^pipeline,
+        body: %Message.EndOfStream{element: :b, pad: :input}
+      }
+
+      assert_receive %Message{
+        from: ^pipeline,
+        body: %Message.EndOfStream{element: :c, pad: :input}
+      }
+
+      # STOP
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
 
-      assert_receive {pipeline, {:playback_state, :stopped}}
-
-      # assert_receive {:playback_state, :terminating} TODO: figure out why terminating is not delivered
-      refute_receive {pipeline, {:notification, _, _}}
-      refute_receive {pipeline, {:start_of_stream, _, _}}
+      # TEST
+      assert_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :stopped}}
+      refute_receive %Message{from: ^pipeline, body: %Message.Terminated{}}
+      refute_receive %Message{from: ^pipeline, body: %Message.Notification{}}
+      refute_receive %Message{from: ^pipeline, body: %Message.StartOfStream{element: _, pad: _}}
     end
   end
 
-  describe "Membrane.RemoteControlled.Pipeline" do
+  describe "Membrane.RemoteControlled.Pipeline await_* functions" do
     setup :setup_pipeline
 
-    test "example usage test", %{pipeline: pipeline} do
-      Pipeline.subscribe(pipeline, {:playback_state, _})
-      Pipeline.subscribe(pipeline, {:notification, _, _})
-      Pipeline.subscribe(pipeline, {:start_of_stream, :b, :input})
+    test "should await for requested messages", %{pipeline: pipeline} do
+      # SETUP
+      Pipeline.subscribe(pipeline, %Message.PlaybackState{state: _})
+      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
+      Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
+      Pipeline.subscribe(pipeline, %Message.Terminated{})
 
+      # RUN
       Pipeline.play(pipeline)
 
-      Pipeline.await(pipeline, {:playback_state, :playing})
-      Pipeline.await(pipeline, {:start_of_stream, :b, :input})
-      Pipeline.await(pipeline, {:notification, :b, notification})
+      # TEST
+      Pipeline.await_playback_state(pipeline, :playing)
 
-      assert :test_notification == notification
+      Pipeline.await_start_of_stream(pipeline, :c, :input)
+      Pipeline.await_notification(pipeline, :b)
 
+      # STOP
+      Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    end
+
+    test "should await for requested messages with parts of message body not being specified", %{
+      pipeline: pipeline
+    } do
+      # SETUP
+      Pipeline.subscribe(pipeline, %Message.PlaybackState{state: _})
+      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
+      Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
+
+      # RUN
+      Pipeline.play(pipeline)
+
+      # TEST
+      Pipeline.await_start_of_stream(pipeline, :c)
+      msg = Pipeline.await_notification(pipeline, :b)
+
+      assert msg == %Message{
+               from: pipeline,
+               body: %Message.Notification{element: :b, data: %Membrane.Buffer{payload: "test"}}
+             }
+
+      # STOP
+      Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    end
+
+    test "should await for requested messages with pinned variables as message body parts", %{
+      pipeline: pipeline
+    } do
+      # SETUP
+      Pipeline.subscribe(pipeline, %Message.PlaybackState{state: _})
+      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
+      Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
+      state = :playing
+      element = :c
+
+      # START
+      Pipeline.play(pipeline)
+
+      # TEST
+      Pipeline.await_playback_state(pipeline, state)
+      Pipeline.await_start_of_stream(pipeline, element, :input)
+
+      # STOP
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
     end
   end
