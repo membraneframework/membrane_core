@@ -2,13 +2,13 @@ defmodule Membrane.Core.Helper.FastMap do
   @moduledoc false
 
   defmacro get_in(map, keys) do
-    get_in_code(map, keys)
+    generate_get_in(map, keys)
   end
 
-  @spec get_in_code(map :: Macro.t(), keys :: [Macro.t()]) :: Macro.t()
-  def get_in_code(map, keys) do
-    map_var = Macro.unique_var(:map, Elixir)
-    value_var = Macro.unique_var(:value, Elixir)
+  @spec generate_get_in(map :: Macro.t(), keys :: [Macro.t()]) :: Macro.t()
+  def generate_get_in(map, keys) do
+    map_var = unique_var(:map)
+    value_var = unique_var(:value)
     {key_vars, key_assignments} = gen_key_vars_and_assignments(keys)
 
     match =
@@ -29,17 +29,17 @@ defmodule Membrane.Core.Helper.FastMap do
   end
 
   defmacro update_in(map, keys, fun) do
-    update_in_code(map, keys, fun)
+    generate_update_in(map, keys, fun)
   end
 
-  @spec update_in_code(map :: Macro.t(), keys :: [Macro.t()], fun :: Macro.t()) :: Macro.t()
-  def update_in_code(map, keys, fun) do
-    map_var = Macro.unique_var(:map, Elixir)
+  @spec generate_update_in(map :: Macro.t(), keys :: [Macro.t()], fun :: Macro.t()) :: Macro.t()
+  def generate_update_in(map, keys, fun) do
+    map_var = unique_var(:map)
     {key_vars, key_assignments} = gen_key_vars_and_assignments(keys)
-    {matches, vars} = gen_matches_and_vars(key_vars, map_var)
+    {matches, vars} = gen_nested_matches_and_vars(key_vars, map_var)
 
     old_value = List.last(vars)
-    new_value = Macro.unique_var(:new_value, Elixir)
+    new_value = unique_var(:new_value)
 
     update =
       quote do
@@ -58,19 +58,19 @@ defmodule Membrane.Core.Helper.FastMap do
   end
 
   defmacro get_and_update_in(map, keys, fun) do
-    get_and_update_in_code(map, keys, fun)
+    generate_get_and_update_in(map, keys, fun)
   end
 
-  @spec get_and_update_in_code(map :: Macro.t(), keys :: [Macro.t()], fun :: Macro.t()) ::
+  @spec generate_get_and_update_in(map :: Macro.t(), keys :: [Macro.t()], fun :: Macro.t()) ::
           Macro.t()
-  def get_and_update_in_code(map, keys, fun) do
-    map_var = Macro.unique_var(:map, Elixir)
+  def generate_get_and_update_in(map, keys, fun) do
+    map_var = unique_var(:map)
     {key_vars, key_assignments} = gen_key_vars_and_assignments(keys)
-    {matches, vars} = gen_matches_and_vars(key_vars, map_var)
+    {matches, vars} = gen_nested_matches_and_vars(key_vars, map_var)
 
     old_value = List.last(vars)
-    new_value = Macro.unique_var(:new_value, Elixir)
-    get_value = Macro.unique_var(:get_value, Elixir)
+    new_value = unique_var(:new_value)
+    get_value = unique_var(:get_value)
 
     update =
       quote do
@@ -89,14 +89,14 @@ defmodule Membrane.Core.Helper.FastMap do
   end
 
   defmacro set_in(map, keys, value) do
-    set_in_code(map, keys, value)
+    generate_set_in(map, keys, value)
   end
 
-  @spec set_in_code(map :: Macro.t(), keys :: [Macro.t()], value :: Macro.t()) :: Macro.t()
-  def set_in_code(map, keys, value) do
-    map_var = Macro.unique_var(:map, Elixir)
+  @spec generate_set_in(map :: Macro.t(), keys :: [Macro.t()], value :: Macro.t()) :: Macro.t()
+  def generate_set_in(map, keys, value) do
+    map_var = unique_var(:map)
     {key_vars, key_assignments} = gen_key_vars_and_assignments(keys)
-    {matches, vars} = gen_matches_and_vars(List.delete_at(key_vars, -1), map_var)
+    {matches, vars} = gen_nested_matches_and_vars(List.delete_at(key_vars, -1), map_var)
     insert = gen_insert(key_vars, map_var, vars, value)
 
     quote do
@@ -108,30 +108,34 @@ defmodule Membrane.Core.Helper.FastMap do
   end
 
   defp gen_key_vars_and_assignments(keys) do
-    key_vars = Enum.map(0..(length(keys) - 1)//1, &Macro.unique_var(:"key_var#{&1}", Elixir))
+    keys
+    |> Enum.with_index()
+    |> Enum.map(fn {key, index} ->
+      key_var = unique_var(:"key_var#{index}")
 
-    key_assignments =
-      Enum.zip(keys, key_vars)
-      |> Enum.map(fn {key, key_var} ->
+      assignment =
         quote do
           unquote(key_var) = unquote(key)
         end
-      end)
 
-    {key_vars, key_assignments}
+      {key_var, assignment}
+    end)
+    |> Enum.unzip()
   end
 
-  defp gen_matches_and_vars(keys, map_var) do
-    {matches_and_vars, _i} =
-      Enum.map_reduce(keys, {map_var, 0}, fn key, {map, i} ->
-        var = Macro.unique_var(:"nested_var#{i}", Elixir)
+  defp gen_nested_matches_and_vars(keys, map_var) do
+    {matches_and_vars, _acc} =
+      keys
+      |> Enum.with_index()
+      |> Enum.map_reduce(map_var, fn {key, i}, map ->
+        var = unique_var(:"nested_var#{i}")
 
         match =
           quote do
             %{^unquote(key) => unquote(var)} = unquote(map)
           end
 
-        {{match, var}, {var, i + 1}}
+        {{match, var}, var}
       end)
 
     Enum.unzip(matches_and_vars)
@@ -146,5 +150,9 @@ defmodule Membrane.Core.Helper.FastMap do
         %{unquote(submap) | unquote(key) => unquote(acc)}
       end
     end)
+  end
+
+  defp unique_var(name) do
+    Macro.unique_var(name, __MODULE__)
   end
 end
