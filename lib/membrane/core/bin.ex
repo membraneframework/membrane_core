@@ -3,12 +3,13 @@ defmodule Membrane.Core.Bin do
   use Bunch
   use GenServer
 
-  import Membrane.Helper.GenServer
+  import Membrane.Core.Helper.GenServer
 
-  alias __MODULE__.{LinkingBuffer, State}
-  alias Membrane.{CallbackError, Core, ComponentPath, Pad, Sync}
+  alias __MODULE__.State
+  alias Membrane.{CallbackError, Core, ComponentPath, Sync}
+  alias Membrane.Core.Bin.PadController
   alias Membrane.Core.{CallbackHandler, Message, Telemetry}
-  alias Membrane.Core.Child.{PadController, PadSpecHandler}
+  alias Membrane.Core.Child.PadSpecHandler
 
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
@@ -28,7 +29,7 @@ defmodule Membrane.Core.Bin do
   Starts the Bin based on given module and links it to the current
   process.
 
-  Bin options are passed to module's `c:handle_init/1` callback.
+  Bin options are passed to module's `c:Membrane.Bin.handle_init/1` callback.
 
   Process options are internally passed to `GenServer.start_link/3`.
 
@@ -81,12 +82,13 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def init(options) do
-    Process.monitor(options.parent)
+    %{parent: parent, name: name, module: module, log_metadata: log_metadata} = options
 
-    %{name: name, module: module, log_metadata: log_metadata} = options
+    Process.monitor(parent)
+
     name_str = if String.valid?(name), do: name, else: inspect(name)
     :ok = Membrane.Logger.set_prefix(name_str <> " bin")
-    Logger.metadata(log_metadata)
+    :ok = Logger.metadata(log_metadata)
     :ok = ComponentPath.set_and_append(log_metadata[:parent_path] || [], name_str <> " bin")
 
     Telemetry.report_init(:bin)
@@ -132,24 +134,17 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
-  # Bin-specific message.
-  # This forwards all :demand, :caps, :buffer, :event
-  # messages to an appropriate element.
-  def handle_info(Message.new(type, _args, for_pad: pad) = msg, state)
-      when type in [:demand, :caps, :buffer, :event, :push_mode_announcement] do
-    outgoing_pad =
-      pad
-      |> Pad.get_corresponding_bin_pad()
-
-    LinkingBuffer.store_or_send(msg, outgoing_pad, state)
-    ~> {:ok, &1}
+  def handle_info(Message.new(:handle_unlink, pad_ref), state) do
+    PadController.handle_unlink(pad_ref, state)
     |> noreply()
   end
 
   @impl GenServer
-  def handle_info(Message.new(:handle_unlink, pad_ref), state) do
-    PadController.handle_pad_removed(pad_ref, state)
-    |> noreply()
+  def handle_info(Message.new(:link_request, [pad_ref, direction, link_id, pad_props]), state) do
+    state =
+      PadController.handle_external_link_request(pad_ref, direction, link_id, pad_props, state)
+
+    {:noreply, state}
   end
 
   @impl GenServer
@@ -158,14 +153,13 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
-  def handle_call(Message.new(:handle_link, [direction, this, other, other_info]), _from, state) do
-    PadController.handle_link(direction, this, other, other_info, state) |> reply()
-  end
-
-  @impl GenServer
-  def handle_call(Message.new(:linking_finished), _from, state) do
-    PadController.handle_linking_finished(state)
-    |> reply()
+  def handle_call(
+        Message.new(:handle_link, [direction, this, other, params]),
+        _from,
+        state
+      ) do
+    {reply, state} = PadController.handle_link(direction, this, other, params, state)
+    {:reply, reply, state}
   end
 
   @impl GenServer

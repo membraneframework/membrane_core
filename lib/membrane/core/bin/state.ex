@@ -9,11 +9,11 @@ defmodule Membrane.Core.Bin.State do
   use Bunch.Access
 
   alias Membrane.Core.{Playback, Timer}
-  alias Membrane.Core.Bin.LinkingBuffer
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Parent.Link
+  alias Membrane.Core.Parent.ChildLifeController.LinkHandler
   alias Membrane.Core.Parent.ChildrenModel
-  alias Membrane.{Child, Clock, Sync}
+  alias Membrane.{Child, Clock, PlaybackState, Sync}
   alias Membrane.Core.Parent.CrashGroup
 
   @type t :: %__MODULE__{
@@ -21,10 +21,10 @@ defmodule Membrane.Core.Bin.State do
           playback: Playback.t(),
           module: module,
           children: ChildrenModel.children_t(),
+          delayed_playback_change: PlaybackState.t() | nil,
           name: Membrane.Bin.name_t() | nil,
           pads: PadModel.pads_t() | nil,
           parent_pid: pid,
-          linking_buffer: LinkingBuffer.t(),
           links: [Link.t()],
           crash_groups: %{CrashGroup.name_t() => CrashGroup.t()},
           synchronization: %{
@@ -40,7 +40,8 @@ defmodule Membrane.Core.Bin.State do
               choice: :auto | :manual
             }
           },
-          children_log_metadata: Keyword.t()
+          children_log_metadata: Keyword.t(),
+          pending_specs: LinkHandler.pending_specs_t()
         }
 
   @enforce_keys [:module, :synchronization]
@@ -49,12 +50,13 @@ defmodule Membrane.Core.Bin.State do
                 internal_state: nil,
                 playback: %Playback{},
                 children: %{},
+                delayed_playback_change: nil,
                 name: nil,
                 pads: nil,
                 parent_pid: nil,
                 crash_groups: %{},
-                linking_buffer: LinkingBuffer.new(),
                 children_log_metadata: [],
-                links: []
+                links: [],
+                pending_specs: %{}
               ]
 end

@@ -6,7 +6,7 @@ defmodule Membrane.Core.Child.PadModelTest do
   defp setup_element_state(_ctx) do
     state = %Membrane.Core.Element.State{
       pads: %{
-        data: %{:input => %Membrane.Pad.Data{demand: 1}},
+        data: %{:input => struct(Membrane.Element.PadData, demand: 1)},
         info: %{},
         dynamic_currently_linking: []
       }

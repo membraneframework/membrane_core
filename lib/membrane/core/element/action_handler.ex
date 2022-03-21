@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   import Membrane.Pad, only: [is_pad_ref: 1]
 
   alias Membrane.{ActionError, Buffer, Caps, CallbackError, Event, Pad}
-  alias Membrane.Core.Element.{DemandHandler, LifecycleController, State}
+  alias Membrane.Core.Element.{DemandHandler, LifecycleController, PadController, State}
   alias Membrane.Core.{Events, Message, PlaybackHandler, TimerController}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Telemetry
@@ -79,12 +79,12 @@ defmodule Membrane.Core.Element.ActionHandler do
     do: PlaybackHandler.continue_playback_change(LifecycleController, state)
 
   defp do_handle_action({:buffer, {pad_ref, buffers}}, cb, _params, %State{type: type} = state)
-       when type in [:source, :filter] and is_pad_ref(pad_ref) do
+       when type in [:source, :filter, :endpoint] and is_pad_ref(pad_ref) do
     send_buffer(pad_ref, buffers, cb, state)
   end
 
   defp do_handle_action({:caps, {pad_ref, caps}}, _cb, _params, %State{type: type} = state)
-       when type in [:source, :filter] and is_pad_ref(pad_ref) do
+       when type in [:source, :filter, :endpoint] and is_pad_ref(pad_ref) do
     send_caps(pad_ref, caps, state)
   end
 
@@ -97,7 +97,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp do_handle_action({:redemand, out_ref}, cb, _params, %State{type: type} = state)
-       when type in [:source, :filter] and is_pad_ref(out_ref) and
+       when type in [:source, :filter, :endpoint] and is_pad_ref(out_ref) and
               {type, cb} != {:filter, :handle_demand} do
     handle_redemand(out_ref, state)
   end
@@ -137,7 +137,7 @@ defmodule Membrane.Core.Element.ActionHandler do
          params,
          %State{type: type} = state
        )
-       when is_pad_ref(pad_ref) and type in [:sink, :filter] do
+       when is_pad_ref(pad_ref) and type in [:sink, :filter, :endpoint] do
     do_handle_action({:demand, {pad_ref, 1}}, cb, params, state)
   end
 
@@ -147,7 +147,7 @@ defmodule Membrane.Core.Element.ActionHandler do
          _params,
          %State{type: type} = state
        )
-       when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter] do
+       when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter, :endpoint] do
     supply_demand(pad_ref, size, cb, state)
   end
 
@@ -267,10 +267,12 @@ defmodule Membrane.Core.Element.ActionHandler do
           data: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
           dir: %{direction: :output} <- pad_data,
           eos: %{end_of_stream?: false} <- pad_data do
-      %{mode: mode, pid: pid, other_ref: other_ref, other_demand_unit: other_demand_unit} =
-        pad_data
+      %{pid: pid, other_ref: other_ref} = pad_data
 
-      state = handle_buffer(pad_ref, mode, other_demand_unit, buffers, state)
+      state =
+        DemandHandler.handle_outgoing_buffers(pad_ref, pad_data, buffers, state)
+        |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
+
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
       {:ok, state}
     else
@@ -283,27 +285,6 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp send_buffer(_pad_ref, invalid_value, _callback, state) do
     {{:error, {:invalid_buffer, invalid_value}}, state}
-  end
-
-  @spec handle_buffer(
-          Pad.ref_t(),
-          Pad.mode_t(),
-          Buffer.Metric.unit_t(),
-          [Buffer.t()],
-          State.t()
-        ) :: State.t()
-  defp handle_buffer(pad_ref, :pull, other_demand_unit, buffers, state) do
-    buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
-
-    state
-    |> PadModel.update_multi!(pad_ref, [
-      {:demand, &(&1 - buf_size)},
-      {:start_of_stream?, true}
-    ])
-  end
-
-  defp handle_buffer(_pad_ref, :push, _options, _buffers, state) do
-    state
   end
 
   @spec send_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.stateful_try_t()
@@ -364,27 +345,32 @@ defmodule Membrane.Core.Element.ActionHandler do
     withl data: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
           dir: %{direction: :input} <- pad_data,
           mode: %{mode: :pull} <- pad_data,
-          update: {:ok, state} <- DemandHandler.update_demand(pad_ref, size, state) do
-      DemandHandler.supply_demand(pad_ref, state)
+          demand_mode: %{demand_mode: :manual} <- pad_data do
+      DemandHandler.supply_demand(pad_ref, size, state)
     else
-      data: {:error, reason} -> {{:error, reason}, state}
-      dir: %{direction: dir} -> {{:error, {:invalid_pad_dir, pad_ref, dir}}, state}
-      mode: %{mode: mode} -> {{:error, {:invalid_pad_mode, pad_ref, mode}}, state}
-      update: {{:error, reason}, state} -> {{:error, reason}, state}
+      data: {:error, reason} -> {:error, reason}
+      dir: %{direction: dir} -> {:error, {:invalid_pad_dir, pad_ref, dir}}
+      mode: %{mode: mode} -> {:error, {:invalid_pad_mode, pad_ref, mode}}
+      demand_mode: %{demand_mode: mode} -> {:error, {:invalid_demand_mode, pad_ref, mode}}
     end
+    ~>> ({:error, reason} -> {{:error, reason}, state})
   end
 
   @spec handle_redemand(Pad.ref_t(), State.t()) :: State.stateful_try_t()
-  defp handle_redemand(out_ref, %{type: type} = state) when type in [:source, :filter] do
+  defp handle_redemand(out_ref, %{type: type} = state)
+       when type in [:source, :filter, :endpoint] do
     withl data: {:ok, pad_data} <- PadModel.get_data(state, out_ref),
           dir: %{direction: :output} <- pad_data,
-          mode: %{mode: :pull} <- pad_data do
+          mode: %{mode: :pull} <- pad_data,
+          demand_mode: %{demand_mode: :manual} <- pad_data do
       DemandHandler.handle_redemand(out_ref, state)
     else
-      data: {:error, reason} -> {{:error, reason}, state}
-      dir: %{direction: dir} -> {{:error, {:invalid_pad_dir, out_ref, dir}}, state}
-      mode: %{mode: mode} -> {{:error, {:invalid_pad_mode, out_ref, mode}}, state}
+      data: {:error, reason} -> {:error, reason}
+      dir: %{direction: dir} -> {:error, {:invalid_pad_dir, out_ref, dir}}
+      mode: %{mode: mode} -> {:error, {:invalid_pad_mode, out_ref, mode}}
+      demand_mode: %{demand_mode: mode} -> {:error, {:invalid_demand_mode, out_ref, mode}}
     end
+    ~>> ({:error, reason} -> {{:error, reason}, state})
   end
 
   @spec send_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
@@ -409,6 +395,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
   defp handle_event(pad_ref, %Events.EndOfStream{}, state) do
     with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
+      state = PadController.remove_pad_associations(pad_ref, state)
       {:ok, PadModel.set_data!(state, pad_ref, :end_of_stream?, true)}
     else
       %{direction: :input} ->

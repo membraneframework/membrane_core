@@ -13,9 +13,9 @@ defmodule Membrane.Support.Element.TrivialPipeline do
 
     links = [
       link(:producer)
-      |> via_in(:input, buffer: [preferred_size: 10])
+      |> via_in(:input, target_queue_size: 10)
       |> to(:filter)
-      |> via_in(:input, buffer: [preferred_size: 10])
+      |> via_in(:input, target_queue_size: 10)
       |> to(:consumer)
     ]
 

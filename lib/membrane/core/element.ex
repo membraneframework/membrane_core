@@ -18,14 +18,12 @@ defmodule Membrane.Core.Element do
   use Bunch
   use GenServer
 
-  import Membrane.Helper.GenServer
+  import Membrane.Core.Helper.GenServer
 
   alias Membrane.{Clock, Element, Sync}
-  alias Membrane.Core.Element.{LifecycleController, PlaybackBuffer, State}
+  alias Membrane.Core.Element.{LifecycleController, PadController, PlaybackBuffer, State}
   alias Membrane.Core.{Message, PlaybackHandler, Telemetry, TimerController}
   alias Membrane.ComponentPath
-  alias Membrane.Core.Child.PadController
-
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
   require Membrane.Logger
@@ -78,7 +76,7 @@ defmodule Membrane.Core.Element do
     else
       raise """
       Cannot start element, passed module #{inspect(module)} is not a Membrane Element.
-      Make sure that given module is the right one and it uses Membrane.{Source | Filter | Sink}
+      Make sure that given module is the right one and it uses Membrane.{Source | Filter | Endpoint | Sink}
       """
     end
   end
@@ -89,7 +87,7 @@ defmodule Membrane.Core.Element do
   It will wait for reply for amount of time passed as second argument
   (in milliseconds).
 
-  Will trigger calling `c:Membrane.Element.Base.handle_shutdown/1`
+  Will trigger calling `c:Membrane.Element.Base.handle_shutdown/2`
   callback.
   """
   @spec shutdown(pid, timeout) :: :ok
@@ -100,11 +98,13 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def init(options) do
-    Process.monitor(options.parent)
-    name_str = if String.valid?(options.name), do: options.name, else: inspect(options.name)
+    %{parent: parent, name: name, log_metadata: log_metadata} = options
+
+    Process.monitor(parent)
+    name_str = if String.valid?(name), do: name, else: inspect(name)
     :ok = Membrane.Logger.set_prefix(name_str)
-    :ok = Logger.metadata(options.log_metadata)
-    :ok = ComponentPath.set_and_append(options.log_metadata[:parent_path] || [], name_str)
+    :ok = Logger.metadata(log_metadata)
+    :ok = ComponentPath.set_and_append(log_metadata[:parent_path] || [], name_str)
 
     Telemetry.report_init(:element)
 
@@ -132,17 +132,12 @@ defmodule Membrane.Core.Element do
   end
 
   @impl GenServer
-  def handle_call(Message.new(:linking_finished), _from, state) do
-    PadController.handle_linking_finished(state) |> reply(state)
-  end
-
-  @impl GenServer
   def handle_call(
-        Message.new(:handle_link, [direction, this, other, other_info]),
+        Message.new(:handle_link, [direction, this, other, params]),
         _from,
         state
       ) do
-    PadController.handle_link(direction, this, other, other_info, state) |> reply(state)
+    reply(PadController.handle_link(direction, this, other, params, state), state)
   end
 
   @impl GenServer
@@ -186,10 +181,6 @@ defmodule Membrane.Core.Element do
     PlaybackBuffer.store(msg, state) |> noreply(state)
   end
 
-  defp do_handle_info(Message.new(:push_mode_announcement, [], for_pad: ref), state) do
-    PadController.enable_toilet_if_pull(ref, state) |> noreply(state)
-  end
-
   defp do_handle_info(Message.new(:handle_unlink, pad_ref), state) do
     PadController.handle_unlink(pad_ref, state) |> noreply(state)
   end
@@ -207,7 +198,7 @@ defmodule Membrane.Core.Element do
     noreply({:ok, state})
   end
 
-  defp do_handle_info(Message.new(_, _, _) = message, state) do
+  defp do_handle_info(Message.new(_type, _args, _opts) = message, state) do
     {{:error, {:invalid_message, message, mode: :info}}, state}
     |> noreply(state)
   end

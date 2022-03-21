@@ -36,13 +36,13 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
     links =
       [
         link(:source)
-        |> via_in(:input1, buffer: [preferred_size: 10])
+        |> via_in(:input1, target_queue_size: 10)
         |> to(:filter1)
-        |> via_in(:input1, buffer: [preferred_size: 10])
+        |> via_in(:input1, target_queue_size: 10)
         |> to(:filter2)
-        |> via_in(:input1, buffer: [preferred_size: 10])
+        |> via_in(:input1, target_queue_size: 10)
         |> to(:filter3)
-        |> via_in(:input, buffer: [preferred_size: 10])
+        |> via_in(:input, target_queue_size: 10)
         |> to(:sink)
       ]
       |> maybe_add_extra_source_link(opts)
@@ -72,7 +72,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
 
   defp maybe_add_extra_source_link(links, %{extra_source: _}) do
     [
-      link(:extra_source) |> via_in(:input2, buffer: [preferred_size: 10]) |> to(:filter3)
+      link(:extra_source) |> via_in(:input2, target_queue_size: 10) |> to(:filter3)
       | links
     ]
   end

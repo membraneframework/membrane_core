@@ -9,85 +9,33 @@ defmodule Membrane.Integration.SyncTest do
 
   @tick_number_error 5
   @sync_error_ms 5
-  @timeout 500
 
   @tag :long_running
   test "When ratio = 1 amount of lost ticks is roughly the same regardless of the time of transmission" do
     tick_interval = 1
 
-    assert {:ok, pipeline} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-               elements: [
-                 source: %Sync.Source{
-                   tick_interval: tick_interval |> Time.milliseconds(),
-                   test_process: self()
-                 },
-                 sink: Sync.Sink
-               ]
-             })
+    pipeline_opts = %Testing.Pipeline.Options{
+      elements: [
+        source: %Sync.Source{
+          tick_interval: tick_interval |> Time.milliseconds(),
+          test_process: self()
+        },
+        sink: Sync.Sink
+      ]
+    }
 
     for tries <- [100, 1000, 10_000] do
+      assert {:ok, pipeline} = Testing.Pipeline.start_link(pipeline_opts)
       Testing.Pipeline.play(pipeline)
 
       assert_pipeline_playback_changed(pipeline, :prepared, :playing)
       Process.sleep(tick_interval * tries)
 
-      Testing.Pipeline.stop(pipeline)
+      Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
 
-      ticks_amount = receive_ticks(pipeline)
+      ticks_amount = Sync.Helper.receive_ticks()
 
       assert_in_delta ticks_amount, tries, @tick_number_error
-    end
-
-    Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
-  end
-
-  @tag :long_running
-  test "Ratio modifies ticking pace correctly" do
-    tick_interval = 100
-    tries = 300
-    ratio_error = 0.1
-
-    actual_report_interval = 100
-    reported_interval = 300
-
-    assert {:ok, pipeline} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-               elements: [
-                 source: %Sync.Source{
-                   tick_interval: tick_interval |> Time.milliseconds(),
-                   test_process: self()
-                 },
-                 sink: Sync.Sink
-               ]
-             })
-
-    %{synchronization: %{clock_provider: %{clock: original_clock, provider: :sink}}} =
-      :sys.get_state(pipeline)
-
-    Testing.Pipeline.play(pipeline)
-
-    for _ <- 1..tries do
-      send(original_clock, {:membrane_clock_update, reported_interval})
-      Process.sleep(actual_report_interval)
-    end
-
-    Testing.Pipeline.stop_and_terminate(pipeline)
-
-    ticks_amount = receive_ticks(pipeline)
-
-    actual_test_time = tries * actual_report_interval
-    expected_ratio = 3.0
-    actual_tick_time = actual_test_time / ticks_amount
-
-    assert_in_delta tick_interval / actual_tick_time, expected_ratio, ratio_error
-  end
-
-  defp receive_ticks(pipeline, amount \\ 0) do
-    receive do
-      :tick -> receive_ticks(pipeline, amount + 1)
-    after
-      @timeout -> amount
     end
   end
 

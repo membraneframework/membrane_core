@@ -15,10 +15,11 @@ defmodule Membrane.Element.Base do
   `Membrane.Pad`.
 
   To implement an element, one of base modules (`Membrane.Source`,
-  `Membrane.Filter`, `Membrane.Sink`)
+  `Membrane.Filter`, `Membrane.Endpoint` or `Membrane.Sink`)
   has to be `use`d, depending on the element type:
   - source, producing buffers (contain only output pads),
   - filter, processing buffers (contain both input and output pads),
+  - endpoint, producing and consuming buffers (contain both input and output pads),
   - sink, consuming buffers (contain only input pads).
   For more information on each element type, check documentation for appropriate
   base module.
@@ -27,11 +28,11 @@ defmodule Membrane.Element.Base do
   Element-specific behaviours are specified in modules:
   - `Membrane.Element.Base` - this module, behaviour common to all
   elements,
-  - `Membrane.Element.WithOutputPads` - behaviour common to sources
-  and filters,
-  - `Membrane.Element.WithInputPads` - behaviour common to sinks and
-  filters,
-  - Base modules (`Membrane.Source`, `Membrane.Filter`,
+  - `Membrane.Element.WithOutputPads` - behaviour common to sources,
+  filters and endpoints
+  - `Membrane.Element.WithInputPads` - behaviour common to sinks,
+  filters and endpoints
+  - Base modules (`Membrane.Source`, `Membrane.Filter`, `Membrane.Endpoint`,
   `Membrane.Sink`) - behaviours specific to each element type.
 
   ## Callbacks
@@ -81,7 +82,7 @@ defmodule Membrane.Element.Base do
 
   @doc """
   Automatically implemented callback determining whether element is a source,
-  a filter or a sink.
+  a filter, an endpoint or a sink.
   """
   @callback membrane_element_type :: Element.type_t()
 
@@ -90,9 +91,7 @@ defmodule Membrane.Element.Base do
   and initialize element internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
   """
-  @callback handle_init(options :: Element.options_t()) ::
-              {:ok, Element.state_t()}
-              | {:error, any}
+  @callback handle_init(options :: Element.options_t()) :: callback_return_t
 
   @doc """
   Callback invoked when element goes to `:prepared` state from state `:stopped` and should get
@@ -182,8 +181,8 @@ defmodule Membrane.Element.Base do
   @doc """
   Callback that is called when event arrives.
 
-  Events may arrive from both sinks and sources. In filters by default event is
-  forwarded to all sources or sinks, respectively.
+  Events may arrive from both input and output pads. In filters by default event is
+  forwarded to all output and input pads, respectively.
   """
   @callback handle_event(
               pad :: Pad.ref_t(),
@@ -265,8 +264,8 @@ defmodule Membrane.Element.Base do
 
   @doc """
   Brings common stuff needed to implement an element. Used by
-  `Membrane.Source.__using__/1`, `Membrane.Filter.__using__/1`
-  and `Membrane.Sink.__using__/1`.
+  `Membrane.Source.__using__/1`, `Membrane.Filter.__using__/1`,
+  `Membrane.Endpoint.__using__/1` and `Membrane.Sink.__using__/1`.
 
   Options:
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
@@ -288,6 +287,10 @@ defmodule Membrane.Element.Base do
       alias Membrane.Element.CallbackContext, as: Ctx
 
       import unquote(__MODULE__), only: [def_clock: 0, def_clock: 1, def_options: 1]
+
+      require Membrane.Core.Child.PadsSpecs
+
+      Membrane.Core.Child.PadsSpecs.ensure_default_membrane_pads()
 
       unquote(bring_pad)
 

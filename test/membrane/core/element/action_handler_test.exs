@@ -5,7 +5,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   alias Membrane.Core.{Message, Playback}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.State
-  alias Membrane.Pad.Data
   alias Membrane.Support.DemandsTest.Filter
   alias Membrane.Support.Element.{TrivialFilter, TrivialSource}
 
@@ -19,17 +18,20 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       | type: :filter,
         pads: %{
           data: %{
-            input: %Data{
-              direction: :input,
-              pid: self(),
-              mode: :pull,
-              demand: 0
-            },
-            input_push: %Data{
-              direction: :input,
-              pid: self(),
-              mode: :push
-            }
+            input:
+              struct(Membrane.Element.PadData,
+                direction: :input,
+                pid: self(),
+                mode: :pull,
+                demand_mode: :manual,
+                demand: 0
+              ),
+            input_push:
+              struct(Membrane.Element.PadData,
+                direction: :input,
+                pid: self(),
+                mode: :push
+              )
           }
         }
     }
@@ -96,6 +98,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
               other_ref: :other_ref,
               caps: nil,
               other_demand_unit: :bytes,
+              start_of_stream?: true,
               end_of_stream?: false,
               mode: :push,
               accepted_caps: :any
@@ -105,6 +108,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
               pid: self(),
               other_ref: :other_input,
               caps: nil,
+              start_of_stream?: true,
               end_of_stream?: false,
               mode: :push,
               accepted_caps: :any
@@ -487,6 +491,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         %{state | supplying_demand?: true}
         |> set_playback_state(:playing)
         |> PadModel.set_data!(:output, :mode, :pull)
+        |> PadModel.set_data!(:output, :demand_mode, :manual)
 
       result =
         @module.handle_action(
@@ -519,6 +524,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
                 direction: :output,
                 pid: self(),
                 mode: :pull,
+                demand_mode: :manual,
                 demand: 0
               }
             }

@@ -32,9 +32,6 @@ defmodule Membrane.Time do
 
   @two_to_pow_32 Ratio.pow(2, 32)
 
-  @deprecated "Use `is_time/1` instead"
-  defguard is_t(value) when is_integer(value)
-
   @doc """
   Checks whether a value is `Membrane.Time.t`.
   """
@@ -102,11 +99,11 @@ defmodule Membrane.Time do
 
   @doc """
   Returns current time in pretty format (currently iso8601), as string
-  Uses `system_time/0` under the hood.
+  Uses `os_time/0` under the hood.
   """
   @spec pretty_now :: String.t()
   def pretty_now do
-    system_time() |> to_iso8601()
+    os_time() |> to_iso8601()
   end
 
   @doc """
@@ -138,16 +135,6 @@ defmodule Membrane.Time do
   """
   @spec vm_time() :: t
   def vm_time() do
-    System.system_time() |> native_units
-  end
-
-  @doc """
-  Returns current time of Erlang VM based on `System.system_time/0`
-  in `Membrane.Time` units.
-  """
-  @deprecated "Use os_time/0 or vm_time/0 instead"
-  @spec system_time() :: t
-  def system_time do
     System.system_time() |> native_units
   end
 
@@ -223,12 +210,6 @@ defmodule Membrane.Time do
     native_units(1)
   end
 
-  @spec native_unit(integer) :: t
-  @deprecated "Use `native_unit/0` or `native_units/1` instead."
-  def native_unit(number) when is_integer(number) do
-    native_units(number)
-  end
-
   @doc """
   Returns given amount of VM native units in `Membrane.Time` units.
   """
@@ -253,13 +234,6 @@ defmodule Membrane.Time do
     # credo:disable-for-next-line Credo.Check.Readability.Specs
     def unquote(unit.singular)() do
       unquote(unit.duration)
-    end
-
-    @deprecated "Use `#{unit.singular}/0` or `#{unit.plural}/1` instead."
-    @spec unquote(unit.singular)(integer) :: t
-    # credo:disable-for-next-line Credo.Check.Readability.Specs
-    def unquote(unit.singular)(number) when is_integer(number) do
-      number * unquote(unit.duration)
     end
 
     @doc """

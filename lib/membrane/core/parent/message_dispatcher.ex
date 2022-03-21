@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Parent.MessageDispatcher do
   @moduledoc false
 
-  import Membrane.Helper.GenServer
+  import Membrane.Core.Helper.GenServer
 
   alias Membrane.Core.{Parent, TimerController}
   alias Membrane.Core.Message
@@ -11,7 +11,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   require Membrane.Logger
 
   @spec handle_message(Message.t(), Parent.state_t()) ::
-          Membrane.Helper.GenServer.genserver_return_t()
+          Membrane.Core.Helper.GenServer.genserver_return_t()
           | {:stop, reason :: :normal, Parent.state_t()}
   def handle_message(
         Message.new(:playback_state_changed, [pid, new_playback_state]),
@@ -43,6 +43,16 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
 
   def handle_message(Message.new(:timer_tick, timer_id), state) do
     TimerController.handle_tick(timer_id, state) |> noreply(state)
+  end
+
+  def handle_message(Message.new(:link_response, link_id), state) do
+    state = ChildLifeController.LinkHandler.handle_link_response(link_id, state)
+    {:noreply, state}
+  end
+
+  def handle_message(Message.new(:spec_linking_timeout, spec_ref), state) do
+    state = ChildLifeController.LinkHandler.handle_spec_timeout(spec_ref, state)
+    {:noreply, state}
   end
 
   def handle_message({:membrane_clock_ratio, clock, ratio}, state) do

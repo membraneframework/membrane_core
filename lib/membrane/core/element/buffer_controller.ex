@@ -6,9 +6,9 @@ defmodule Membrane.Core.Element.BufferController do
   use Bunch
 
   alias Membrane.{Buffer, Pad}
-  alias Membrane.Core.{CallbackHandler, InputBuffer}
+  alias Membrane.Core.{CallbackHandler, Telemetry}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, DemandHandler, State}
+  alias Membrane.Core.Element.{ActionHandler, DemandController, DemandHandler, InputQueue, State}
   alias Membrane.Core.Telemetry
   alias Membrane.Element.CallbackContext
 
@@ -16,53 +16,66 @@ defmodule Membrane.Core.Element.BufferController do
   require Membrane.Core.Telemetry
 
   @doc """
-  Handles incoming buffer: either stores it in InputBuffer, or executes element's
-  callback. Also calls `Membrane.Core.Element.DemandHandler.check_and_handle_demands/2`
+  Handles incoming buffer: either stores it in InputQueue, or executes element's
+  callback. Also calls `Membrane.Core.Element.DemandHandler.supply_demand/2`
   to check if there are any unsupplied demands.
   """
   @spec handle_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.stateful_try_t()
   def handle_buffer(pad_ref, buffers, state) do
-    pad_data = PadModel.get_data!(state, pad_ref)
+    data = PadModel.get_data!(state, pad_ref)
+    %{direction: :input} = data
+    do_handle_buffer(pad_ref, data, buffers, state)
+  end
 
-    case pad_data do
-      %{direction: :output} ->
-        raise Membrane.PipelineError, """
-        handle_buffer can only be called for an input pad.
-        pad_ref: #{inspect(pad_ref)}
-        """
+  @spec do_handle_buffer(Pad.ref_t(), PadModel.pad_data_t(), [Buffer.t()] | Buffer.t(), State.t()) ::
+          State.stateful_try_t()
+  defp do_handle_buffer(pad_ref, %{mode: :pull, demand_mode: :auto} = data, buffers, state) do
+    %{demand: demand, demand_unit: demand_unit} = data
+    buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
+    state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
+    state = DemandController.send_auto_demand_if_needed(pad_ref, state)
+    exec_buffer_callback(pad_ref, buffers, state)
+  end
 
-      %{mode: :pull} ->
-        handle_buffer_pull(pad_ref, pad_data, buffers, state)
+  defp do_handle_buffer(pad_ref, %{mode: :pull} = data, buffers, state) do
+    %{input_queue: old_input_queue} = data
+    input_queue = InputQueue.store(old_input_queue, buffers)
+    state = PadModel.set_data!(state, pad_ref, :input_queue, input_queue)
 
-      %{mode: :push} ->
-        exec_buffer_handler(pad_ref, buffers, state)
+    if old_input_queue |> InputQueue.empty?() do
+      DemandHandler.supply_demand(pad_ref, state)
+    else
+      {:ok, state}
     end
   end
 
+  defp do_handle_buffer(pad_ref, _data, buffers, state) do
+    exec_buffer_callback(pad_ref, buffers, state)
+  end
+
   @doc """
-  Executes `handle_process` or `handle_write_list` callback.
+  Executes `handle_process_list` or `handle_write_list` callback.
   """
-  @spec exec_buffer_handler(
+  @spec exec_buffer_callback(
           Pad.ref_t(),
           [Buffer.t()] | Buffer.t(),
-          params :: map,
           State.t()
         ) :: State.stateful_try_t()
-  def exec_buffer_handler(pad_ref, buffers, params \\ %{}, state)
-
-  def exec_buffer_handler(pad_ref, buffers, params, %State{type: :filter} = state) do
+  def exec_buffer_callback(pad_ref, buffers, %State{type: :filter} = state) do
     require CallbackContext.Process
+    Telemetry.report_metric("buffer", 1, inspect(pad_ref))
 
     CallbackHandler.exec_and_handle_callback(
       :handle_process_list,
       ActionHandler,
-      %{context: &CallbackContext.Process.from_state/1} |> Map.merge(params),
+      %{context: &CallbackContext.Process.from_state/1},
       [pad_ref, buffers],
       state
     )
   end
 
-  def exec_buffer_handler(pad_ref, buffers, params, %State{type: :sink} = state) do
+  def exec_buffer_callback(pad_ref, buffers, %State{type: type} = state)
+      when type in [:sink, :endpoint] do
     require CallbackContext.Write
 
     Telemetry.report_metric(:buffer, length(List.wrap(buffers)))
@@ -71,22 +84,9 @@ defmodule Membrane.Core.Element.BufferController do
     CallbackHandler.exec_and_handle_callback(
       :handle_write_list,
       ActionHandler,
-      %{context: &CallbackContext.Write.from_state/1} |> Map.merge(params),
+      %{context: &CallbackContext.Write.from_state/1},
       [pad_ref, buffers],
       state
     )
-  end
-
-  @spec handle_buffer_pull(Pad.ref_t(), Pad.Data.t(), [Buffer.t()] | Buffer.t(), State.t()) ::
-          State.stateful_try_t()
-  defp handle_buffer_pull(pad_ref, pad_data, buffers, state) do
-    input_buf = InputBuffer.store(pad_data.input_buf, buffers)
-    state = PadModel.set_data!(state, pad_ref, :input_buf, input_buf)
-
-    if pad_data.input_buf |> InputBuffer.empty?() do
-      DemandHandler.supply_demand(pad_ref, state)
-    else
-      {:ok, state}
-    end
   end
 end

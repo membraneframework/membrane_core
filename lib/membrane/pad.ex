@@ -28,7 +28,7 @@ defmodule Membrane.Pad do
   @typedoc """
   Defines the name of pad or group of dynamic pads
   """
-  @type name_t :: atom | {:private, atom}
+  @type name_t :: atom
 
   @typedoc """
   Defines possible pad directions:
@@ -49,19 +49,31 @@ defmodule Membrane.Pad do
   such pad, and do it fast enough not to let data accumulate on such pad, what
   may lead to overflow of element process erlang queue, which is highly unwanted.
   - `:pull` output pad - element can send data through such pad only if it have
-  already received demand on the pad. Sending small, limited amount of
-  undemanded data is supported and handled by `Membrane.Core.InputBuffer`.
+  already received demand on the pad.
   - `:pull` input pad - element receives through such pad only data that it has
   previously demanded, so that no undemanded data can arrive.
 
   Linking pads with different modes is possible, but only in case of output pad
-  working in push mode, and input in pull mode. Moreover, toilet mode of
-  `Membrane.Core.InputBuffer` has to be enabled then.
+  working in push mode, and input in pull mode. In such case, however, error will
+  be raised whenever too many buffers accumulate on the input pad, waiting to be
+  processed.
 
-  For more information on transfering data and demands, see `Membrane.Source`,
-  `Membrane.Filter`, `Membrane.Sink`.
+  For more information on transfering data and demands, see `t:demand_mode_t/0`,
+  `Membrane.Source`, `Membrane.Filter`, `Membrane.Endpoint`, `Membrane.Sink`.
   """
   @type mode_t :: :push | :pull
+
+  @typedoc """
+  Defines the mode of handling and requesting demand on pads.
+
+  - `:manual` - demand is manually handled and requested. See `Membrane.Element.Action.demand_t`,
+  `Membrane.Element.Action.redemand_t`, `c:Membrane.Element.WithOutputPads.handle_demand/5`
+  - `:auto` - demand is managed automatically: the core ensures that there's demand
+  on each input pad (that has `demand_mode` set to `:auto`) whenever there's demand on all
+  output pads (that have `demand_mode` set to `:auto`). Currently works only for
+  `Membrane.Filter`s.
+  """
+  @type demand_mode_t :: :manual | :auto
 
   @typedoc """
   Values used when defining pad availability:
@@ -93,18 +105,23 @@ defmodule Membrane.Pad do
   Demand unit is derived from the first element inside the bin linked to the
   given input.
   """
-  @type bin_spec_t :: input_spec_t
+  @type bin_spec_t :: {name_t(), [common_spec_options_t]}
 
   @typedoc """
   Describes how an output pad should be declared inside an element.
   """
-  @type output_spec_t :: {name_t(), [common_spec_options_t]}
+  @type output_spec_t :: {name_t(), [common_spec_options_t | {:demand_mode, demand_mode_t()}]}
 
   @typedoc """
   Describes how an input pad should be declared inside an element.
   """
   @type input_spec_t ::
-          {name_t(), [common_spec_options_t | {:demand_unit, Buffer.Metric.unit_t()}]}
+          {name_t(),
+           [
+             common_spec_options_t
+             | {:demand_mode, demand_mode_t()}
+             | {:demand_unit, Buffer.Metric.unit_t()}
+           ]}
 
   @typedoc """
   Pad options used in `t:spec_t/0`
@@ -125,7 +142,8 @@ defmodule Membrane.Pad do
           :caps => Caps.Matcher.caps_specs_t(),
           optional(:demand_unit) => Buffer.Metric.unit_t(),
           :direction => direction_t(),
-          :options => nil | Keyword.t()
+          :options => nil | Keyword.t(),
+          optional(:demand_mode) => demand_mode_t()
         }
 
   @doc """
@@ -151,13 +169,7 @@ defmodule Membrane.Pad do
                   (term |> is_tuple and term |> tuple_size == 3 and term |> elem(0) == __MODULE__ and
                      term |> elem(1) |> is_atom)
 
-  defguard is_public_name(term) when is_atom(term)
-
-  defguardp is_private_name(term)
-            when tuple_size(term) == 2 and elem(term, 0) == :private and is_atom(elem(term, 1))
-
-  defguard is_pad_name(term)
-           when is_public_name(term) or is_private_name(term)
+  defguard is_pad_name(term) when is_atom(term)
 
   defguard is_availability(term) when term in @availability_t
 
@@ -181,30 +193,4 @@ defmodule Membrane.Pad do
   @spec opposite_direction(direction_t()) :: direction_t()
   def opposite_direction(:input), do: :output
   def opposite_direction(:output), do: :input
-
-  @spec get_corresponding_bin_pad(ref_t()) :: ref_t()
-  def get_corresponding_bin_pad(ref(name, id)),
-    do: ref(get_corresponding_bin_name(name), id)
-
-  def get_corresponding_bin_pad(name), do: get_corresponding_bin_name(name)
-
-  @spec create_private_name(atom) :: name_t()
-  def create_private_name(name) when is_public_name(name) do
-    get_corresponding_bin_name(name)
-  end
-
-  @spec get_corresponding_bin_name(name_t()) :: name_t()
-  defp get_corresponding_bin_name({:private, name}) when is_public_name(name), do: name
-  defp get_corresponding_bin_name(name) when is_public_name(name), do: {:private, name}
-
-  @spec assert_public_name!(name_t()) :: :ok
-  def assert_public_name!(name) when is_public_name(name) do
-    :ok
-  end
-
-  def assert_public_name!(name) do
-    raise CompileError,
-      file: __ENV__.file,
-      description: "#{inspect(name)} is not a proper pad name. Use public names only."
-  end
 end
