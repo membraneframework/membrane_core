@@ -65,6 +65,11 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
     TimerController.stop_timer(id, state)
   end
 
+  defp do_handle_action({:playback, playback_state}, _cb, _params, state) do
+    Membrane.Core.PlaybackHandler.request_playback_state_change(self(), playback_state)
+    {:ok, state}
+  end
+
   defp do_handle_action(action, callback, _params, state) do
     raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
   end

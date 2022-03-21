@@ -6,6 +6,7 @@ defmodule Membrane.Core.PipelineTest do
   alias Membrane.ParentSpec
   alias Membrane.Testing
 
+  import Membrane.Testing.Assertions
   require Membrane.Core.Message
 
   @module Membrane.Core.Pipeline
@@ -21,6 +22,11 @@ defmodule Membrane.Core.PipelineTest do
     @impl true
     def handle_notification(notification, child, _ctx, state) do
       {:ok, Map.put(state, :notification, {notification, child})}
+    end
+
+    @impl true
+    def handle_other({:execute_actions, actions}, _ctx, state) do
+      {{:ok, actions}, state}
     end
 
     @impl true
@@ -103,5 +109,13 @@ defmodule Membrane.Core.PipelineTest do
   test "Pipeline can be terminated synchronously" do
     {:ok, pid} = Testing.Pipeline.start_link(%Testing.Pipeline.Options{module: TestPipeline})
     assert :ok == Testing.Pipeline.stop_and_terminate(pid, blocking?: true)
+  end
+
+  test "Pipeline should be able to steer its playback state with :playback action" do
+    {:ok, pid} = Testing.Pipeline.start_link(%Testing.Pipeline.Options{module: TestPipeline})
+    Testing.Pipeline.execute_actions(pid, playback: :prepared)
+    assert_pipeline_playback_changed(pid, :stopped, :prepared)
+    Testing.Pipeline.execute_actions(pid, playback: :playing)
+    assert_pipeline_playback_changed(pid, :prepared, :playing)
   end
 end
