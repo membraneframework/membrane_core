@@ -46,7 +46,7 @@ defmodule Membrane.Core.Helper.FastMap do
         unquote(new_value) = unquote(fun).(unquote(old_value))
       end
 
-    insert = gen_insert(key_vars, map_var, vars, new_value)
+    insert = gen_nested_insert(key_vars, map_var, vars, new_value)
 
     quote do
       unquote(map_var) = unquote(map)
@@ -77,7 +77,7 @@ defmodule Membrane.Core.Helper.FastMap do
         {unquote(get_value), unquote(new_value)} = unquote(fun).(unquote(old_value))
       end
 
-    insert = gen_insert(key_vars, map_var, vars, new_value)
+    insert = gen_nested_insert(key_vars, map_var, vars, new_value)
 
     quote do
       unquote(map_var) = unquote(map)
@@ -97,7 +97,7 @@ defmodule Membrane.Core.Helper.FastMap do
     map_var = unique_var(:map)
     {key_vars, key_assignments} = gen_key_vars_and_assignments(keys)
     {matches, vars} = gen_nested_matches_and_vars(List.delete_at(key_vars, -1), map_var)
-    insert = gen_insert(key_vars, map_var, vars, value)
+    insert = gen_nested_insert(key_vars, map_var, vars, value)
 
     quote do
       unquote(map_var) = unquote(map)
@@ -107,6 +107,9 @@ defmodule Membrane.Core.Helper.FastMap do
     end
   end
 
+  # Takes each chunk of code from a list, generates a variable for it
+  # and code assigning it to the variable. Returns the list of variables
+  # and the list of assignments.
   defp gen_key_vars_and_assignments(keys) do
     keys
     |> Enum.with_index()
@@ -123,6 +126,9 @@ defmodule Membrane.Core.Helper.FastMap do
     |> Enum.unzip()
   end
 
+  # Generates `%{^key => value} = map` match for given `map_var`
+  # and the first key. Then generates such matches for subsequent
+  # keys, using previously matched `value` as a subsequent map.
   defp gen_nested_matches_and_vars(keys, map_var) do
     {matches_and_vars, _acc} =
       keys
@@ -141,7 +147,9 @@ defmodule Membrane.Core.Helper.FastMap do
     Enum.unzip(matches_and_vars)
   end
 
-  defp gen_insert(keys, map_var, vars, value) do
+  # Generates a nested map insert in the following manner:
+  # `%{map_var | key_0 => %{var_0 | key_1 => %{... => %{key_n => value}}}`
+  defp gen_nested_insert(keys, map_var, vars, value) do
     keys
     |> Enum.zip([map_var | vars])
     |> Enum.reverse()
