@@ -11,10 +11,6 @@ defmodule Membrane.Core.PipelineTest do
 
   @module Membrane.Core.Pipeline
 
-  defmodule SecondPipeline do
-    use Membrane.Pipeline
-  end
-
   defmodule TestPipeline do
     use Membrane.Pipeline
 
