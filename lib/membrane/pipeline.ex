@@ -292,12 +292,14 @@ defmodule Membrane.Pipeline do
   Changes playback state to `:playing`.
   """
   @spec play(pid) :: :ok
+  @deprecated "use pipeline's :playback action instead"
   def play(pid), do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :playing)
 
   @doc """
   Changes playback state to `:prepared`.
   """
   @spec prepare(pid) :: :ok
+  @deprecated "use pipeline's :playback action instead"
   def prepare(pid),
     do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :prepared)
 
@@ -305,6 +307,7 @@ defmodule Membrane.Pipeline do
   Changes playback state to `:stopped`.
   """
   @spec stop(pid) :: :ok
+  @deprecated "use pipeline's :playback action instead"
   def stop(pid), do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :stopped)
 
   @doc """
@@ -347,30 +350,6 @@ defmodule Membrane.Pipeline do
         def start(pipeline_options \\ nil, process_options \\ []) do
           unquote(__MODULE__).start(__MODULE__, pipeline_options, process_options)
         end
-      end
-
-      unless Module.defines?(__MODULE__, {:play, 1}) do
-        @doc """
-        Changes playback state of pipeline to `:playing`.
-        """
-        @spec play(pid()) :: :ok
-        defdelegate play(pipeline), to: unquote(__MODULE__)
-      end
-
-      unless Module.defines?(__MODULE__, {:prepare, 1}) do
-        @doc """
-        Changes playback state to `:prepared`.
-        """
-        @spec prepare(pid) :: :ok
-        defdelegate prepare(pipeline), to: unquote(__MODULE__)
-      end
-
-      unless Module.defines?(__MODULE__, {:stop, 1}) do
-        @doc """
-        Changes playback state to `:stopped`.
-        """
-        @spec stop(pid) :: :ok
-        defdelegate stop(pid), to: unquote(__MODULE__)
       end
 
       unless Enum.any?(1..2, &Module.defines?(__MODULE__, {:stop_and_terminate, &1})) do
