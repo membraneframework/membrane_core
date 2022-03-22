@@ -319,6 +319,7 @@ defmodule Membrane.Pipeline do
   end
 
   @doc false
+  # credo:disable-for-next-line
   defmacro __before_compile__(_env) do
     quote do
       unless Enum.any?(0..2, &Module.defines?(__MODULE__, {:start_link, &1})) do
