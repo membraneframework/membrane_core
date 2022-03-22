@@ -1,12 +1,12 @@
 defmodule Membrane.Core.PipelineTest do
   use ExUnit.Case
 
+  import Membrane.Testing.Assertions
   alias Membrane.Core.Message
   alias Membrane.Core.Pipeline.{ActionHandler, State}
   alias Membrane.ParentSpec
   alias Membrane.Testing
 
-  import Membrane.Testing.Assertions
   require Membrane.Core.Message
 
   @module Membrane.Core.Pipeline
