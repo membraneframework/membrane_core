@@ -313,7 +313,7 @@ defmodule Membrane.Core.BinTest do
   end
 
   defp assert_playing(pipeline) do
-    :ok = Testing.Pipeline.play(pipeline)
+    :ok = Testing.Pipeline.execute_actions(pipeline, playback: :playing)
 
     assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
     assert_pipeline_playback_changed(pipeline, :prepared, :playing)

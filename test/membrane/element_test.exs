@@ -75,21 +75,21 @@ defmodule Membrane.ElementTest do
 
   describe "Start of stream" do
     test "causes handle_start_of_stream/3 to be called", %{pipeline: pipeline} do
-      Testing.Pipeline.play(pipeline)
+      Testing.Pipeline.execute_actions(pipeline, playback: :playing)
       assert_pipeline_playback_changed(pipeline, _from, :playing)
 
       TestFilter.assert_callback_called(:handle_start_of_stream)
     end
 
     test "does not trigger calling callback handle_event/3", %{pipeline: pipeline} do
-      Testing.Pipeline.play(pipeline)
+      Testing.Pipeline.execute_actions(pipeline, playback: :playing)
       assert_pipeline_playback_changed(pipeline, _from, :playing)
 
       TestFilter.refute_callback_called(:handle_event)
     end
 
     test "causes handle_element_start_of_stream/3 to be called in pipeline", %{pipeline: pipeline} do
-      Testing.Pipeline.play(pipeline)
+      Testing.Pipeline.execute_actions(pipeline, playback: :playing)
 
       assert_start_of_stream(pipeline, :filter)
     end
@@ -97,22 +97,21 @@ defmodule Membrane.ElementTest do
 
   describe "End of stream" do
     test "causes handle_end_of_stream/3 to be called", %{pipeline: pipeline} do
-      Testing.Pipeline.play(pipeline)
+      Testing.Pipeline.execute_actions(pipeline, playback: :playing)
       assert_pipeline_playback_changed(pipeline, _from, :playing)
 
       TestFilter.assert_callback_called(:handle_end_of_stream)
     end
 
     test "does not trigger calling callback handle_event/3", %{pipeline: pipeline} do
-      Testing.Pipeline.play(pipeline)
+      Testing.Pipeline.execute_actions(pipeline, playback: :playing)
       assert_pipeline_playback_changed(pipeline, _from, :playing)
 
       TestFilter.refute_callback_called(:handle_event)
     end
 
     test "causes handle_element_end_of_stream/3 to be called in pipeline", %{pipeline: pipeline} do
-      Testing.Pipeline.play(pipeline)
-
+      Testing.Pipeline.execute_actions(pipeline, playback: :playing)
       assert_end_of_stream(pipeline, :filter)
     end
   end

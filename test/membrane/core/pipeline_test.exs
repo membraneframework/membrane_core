@@ -15,7 +15,6 @@ defmodule Membrane.Core.PipelineTest do
     use Membrane.Pipeline
   end
 
-
   defmodule TestPipeline do
     use Membrane.Pipeline
 
@@ -122,11 +121,5 @@ defmodule Membrane.Core.PipelineTest do
     assert_pipeline_playback_changed(pid, :stopped, :prepared)
     Testing.Pipeline.execute_actions(pid, playback: :playing)
     assert_pipeline_playback_changed(pid, :prepared, :playing)
-  end
-
-  test "Pipeline should be able to steer its playback state with :playback action2" do
-    {:ok, pid} = Testing.Pipeline.start_link(%Testing.Pipeline.Options{module: TestPipeline})
-    IO.inspect(pid)
-    #Testing.Pipeline.play(pid)
   end
 end

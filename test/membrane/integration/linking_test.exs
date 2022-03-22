@@ -72,6 +72,11 @@ defmodule Membrane.Integration.LinkingTest do
     end
 
     @impl true
+    def handle_other({:execute_actions, actions}, _ctx, state) do
+      {{:ok, actions}, state}
+    end
+
+    @impl true
     def handle_spec_started(_children, _ctx, state) do
       send(state.testing_pid, :spec_started)
       {:ok, state}
@@ -188,7 +193,7 @@ defmodule Membrane.Integration.LinkingTest do
     assert_receive(:spec_started)
     send(pipeline, {:start_spec, %{spec: links_spec}})
     assert_receive(:spec_started)
-    Testing.Pipeline.play(pipeline)
+    Testing.Pipeline.execute_actions(pipeline, playback: :playing)
 
     assert_pipeline_playback_changed(pipeline, _, :playing)
   end

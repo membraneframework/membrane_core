@@ -65,6 +65,11 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
     {{:ok, remove_child: name}, state}
   end
 
+  @impl true
+  def handle_other({:execute_actions, actions}, _ctx, state) do
+    {{:ok, actions}, state}
+  end
+
   defp maybe_add_extra_source(children, %{extra_source: source}),
     do: [{:extra_source, source} | children]
 

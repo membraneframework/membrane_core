@@ -352,6 +352,36 @@ defmodule Membrane.Pipeline do
         end
       end
 
+      unless Module.defines?(__MODULE__, {:play, 1}) do
+        @doc """
+        Changes playback state of pipeline to `:playing`.
+        """
+        @spec play(pid()) :: :ok
+        @deprecated "use pipeline's :playback action instead"
+        def play(pid),
+          do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :playing)
+      end
+
+      unless Module.defines?(__MODULE__, {:prepare, 1}) do
+        @doc """
+        Changes playback state to `:prepared`.
+        """
+        @spec prepare(pid()) :: :ok
+        @deprecated "use pipeline's :playback action instead"
+        def prepare(pid),
+          do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :playing)
+      end
+
+      unless Module.defines?(__MODULE__, {:stop, 1}) do
+        @doc """
+        Changes playback state to `:stopped`.
+        """
+        @spec stop(pid()) :: :ok
+        @deprecated "use pipeline's :playback action instead"
+        def stop(pid),
+          do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :playing)
+      end
+
       unless Enum.any?(1..2, &Module.defines?(__MODULE__, {:stop_and_terminate, &1})) do
         @doc """
         Changes pipeline's playback state to `:stopped` and terminates its process.
