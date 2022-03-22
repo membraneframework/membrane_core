@@ -369,7 +369,7 @@ defmodule Membrane.Pipeline do
         @spec prepare(pid()) :: :ok
         @deprecated "use pipeline's :playback action instead"
         def prepare(pid),
-          do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :playing)
+          do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :prepared)
       end
 
       unless Module.defines?(__MODULE__, {:stop, 1}) do
@@ -379,7 +379,7 @@ defmodule Membrane.Pipeline do
         @spec stop(pid()) :: :ok
         @deprecated "use pipeline's :playback action instead"
         def stop(pid),
-          do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :playing)
+          do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :stopped)
       end
 
       unless Enum.any?(1..2, &Module.defines?(__MODULE__, {:stop_and_terminate, &1})) do
