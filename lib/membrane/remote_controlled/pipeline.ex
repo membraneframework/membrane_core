@@ -73,12 +73,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
     quote do
       receive do
-        %Message{
-          from: ^unquote(pipeline),
-          body: %unquote(message_type){
-            unquote_splicing(Macro.expand(keywords, __ENV__))
-          }
-        } = msg ->
+        %unquote(message_type){ unquote_splicing(Macro.expand(keywords, __ENV__)), from: ^unquote(pipeline)} = msg ->
           msg
       end
     end
@@ -96,7 +91,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     Pipeline.await_playback_state(pipeline)
     ```
   """
-  @spec await_playback_state(pid()) :: Membrane.RemoteControlled.Message.t()
+  @spec await_playback_state(pid()) :: Membrane.RemoteControlled.Message.PlaybackState.t()
   def await_playback_state(pipeline) do
     do_await(pipeline, PlaybackState)
   end
@@ -114,7 +109,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     ```
   """
   @spec await_playback_state(pid, Membrane.PlaybackState.t()) ::
-          Membrane.RemoteControlled.Message.t()
+          Membrane.RemoteControlled.Message.PlaybackState.t()
   def await_playback_state(pipeline, playback_state) do
     do_await(pipeline, PlaybackState, state: playback_state)
   end
@@ -131,7 +126,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     Pipeline.await_start_of_stream(pipeline)
     ```
   """
-  @spec await_start_of_stream(pid) :: Membrane.RemoteControlled.Message.t()
+  @spec await_start_of_stream(pid) :: Membrane.RemoteControlled.Message.StartOfStream.t()
   def await_start_of_stream(pipeline) do
     do_await(pipeline, StartOfStream)
   end
@@ -149,7 +144,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     ```
   """
   @spec await_start_of_stream(pid(), Membrane.Element.name_t()) ::
-          Membrane.RemoteControlled.Message.t()
+          Membrane.RemoteControlled.Message.StartOfStream.t()
   def await_start_of_stream(pipeline, element) do
     do_await(pipeline, StartOfStream, element: element)
   end
@@ -167,7 +162,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     ```
   """
   @spec await_start_of_stream(pid(), Membrane.Element.name_t(), Membrane.Pad.name_t()) ::
-          Membrane.RemoteControlled.Message.t()
+          Membrane.RemoteControlled.Message.StartOfStream.t()
   def await_start_of_stream(pipeline, element, pad) do
     do_await(pipeline, StartOfStream, element: element, pad: pad)
   end
@@ -184,7 +179,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     Pipeline.await_end_of_stream(pipeline)
     ```
   """
-  @spec await_end_of_stream(pid()) :: Membrane.RemoteControlled.Message.t()
+  @spec await_end_of_stream(pid()) :: Membrane.RemoteControlled.Message.EndOfStream.t()
   def await_end_of_stream(pipeline) do
     do_await(pipeline, EndOfStream)
   end
@@ -202,7 +197,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     ```
   """
   @spec await_end_of_stream(pid(), Membrane.Element.name_t()) ::
-          Membrane.RemoteControlled.Message.t()
+          Membrane.RemoteControlled.Message.EndOfStream.t()
   def await_end_of_stream(pipeline, element) do
     do_await(pipeline, EndOfStream, element: element)
   end
@@ -220,7 +215,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     ```
   """
   @spec await_end_of_stream(pid(), Membrane.Element.name_t(), Membrane.Pad.name_t()) ::
-          Membrane.RemoteControlled.Message.t()
+          Membrane.RemoteControlled.Message.EndOfStream.t()
   def await_end_of_stream(pipeline, element, pad) do
     do_await(pipeline, EndOfStream, element: element, pad: pad)
   end
@@ -237,7 +232,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     Pipeline.await_notification(pipeline)
     ```
   """
-  @spec await_notification(pid()) :: Membrane.RemoteControlled.Message.t()
+  @spec await_notification(pid()) :: Membrane.RemoteControlled.Message.Notification.t()
   def await_notification(pipeline) do
     do_await(pipeline, Notification)
   end
@@ -255,7 +250,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     ```
   """
   @spec await_notification(pid(), Membrane.Notification.t()) ::
-          Membrane.RemoteControlled.Message.t()
+          Membrane.RemoteControlled.Message.Notification.t()
   def await_notification(pipeline, element) do
     do_await(pipeline, Notification, element: element)
   end
@@ -272,7 +267,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     Pipeline.await_termination(pipeline)
     ```
   """
-  @spec await_termination(pid()) :: Membrane.RemoteControlled.Message.t()
+  @spec await_termination(pid()) :: Membrane.RemoteControlled.Message.Terminated.t()
   def await_termination(pipeline) do
     do_await(pipeline, Terminated)
   end
@@ -302,7 +297,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     quote do
       send(
         unquote(pipeline),
-        {:subscription, fn x -> match?(%Message{body: unquote(subscription_pattern)}, x) end}
+        {:subscription, fn x -> match?(unquote(subscription_pattern), x) end}
       )
     end
   end
@@ -335,68 +330,56 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   @impl true
   def handle_playing_to_prepared(_ctx, state) do
-    pipeline_event = %Message{from: self(), body: %Message.PlaybackState{state: :prepared}}
+    pipeline_event = %Message.PlaybackState{from: self(), state: :prepared}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_prepared_to_playing(_ctx, state) do
-    pipeline_event = %Message{from: self(), body: %Message.PlaybackState{state: :playing}}
+    pipeline_event = %Message.PlaybackState{from: self(), state: :playing}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_prepared_to_stopped(_ctx, state) do
-    pipeline_event = %Message{from: self(), body: %Message.PlaybackState{state: :stopped}}
+    pipeline_event = %Message.PlaybackState{from: self(), state: :stopped}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_stopped_to_prepared(_ctx, state) do
-    pipeline_event = %Message{from: self(), body: %Message.PlaybackState{state: :prepared}}
+    pipeline_event = %Message.PlaybackState{from: self(), state: :prepared}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_stopped_to_terminating(_ctx, state) do
-    pipeline_event = %Message{from: self(), body: %Message.PlaybackState{state: :terminating}}
+    pipeline_event = %Message.PlaybackState{from: self(), state: :terminating}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_element_end_of_stream({element_name, pad_ref}, _ctx, state) do
-    pipeline_event = %Message{
-      from: self(),
-      body: %Message.EndOfStream{element: element_name, pad: pad_ref}
-    }
-
+    pipeline_event = %Message.EndOfStream{from: self(), element: element_name, pad: pad_ref}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_element_start_of_stream({element_name, pad_ref}, _ctx, state) do
-    pipeline_event = %Message{
-      from: self(),
-      body: %Message.StartOfStream{element: element_name, pad: pad_ref}
-    }
-
+    pipeline_event = %Message.StartOfStream{from: self(), element: element_name, pad: pad_ref}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
   def handle_notification(notification, element, _ctx, state) do
-    pipeline_event = %Message{
-      from: self(),
-      body: %Message.Notification{data: notification, element: element}
-    }
-
+    pipeline_event = %Message.Notification{from: self(), data: notification, element: element}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
@@ -413,7 +396,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   @impl true
   def handle_shutdown(reason, state) do
-    pipeline_event = %Message{from: self(), body: %Message.Terminated{reason: reason}}
+    pipeline_event = %Message.Terminated{from: self(), reason: reason}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     :ok
   end

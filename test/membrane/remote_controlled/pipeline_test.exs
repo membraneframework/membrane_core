@@ -67,21 +67,15 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       Pipeline.play(pipeline)
 
       # TEST
-      assert_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :prepared}}
-      assert_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :playing}}
+      assert_receive %Message.PlaybackState{from: ^pipeline, state: :prepared}
+      assert_receive %Message.PlaybackState{from: ^pipeline, state: :playing}
 
-      assert_receive %Message{
-        from: ^pipeline,
-        body: %Message.Notification{element: :b, data: %Membrane.Buffer{payload: "test"}}
-      }
+      assert_receive %Message.Notification{from: ^pipeline, element: :b, data: %Membrane.Buffer{payload: "test"}}
 
-      assert_receive %Message{
-        from: ^pipeline,
-        body: %Message.StartOfStream{element: :b, pad: :input}
-      }
+      assert_receive %Message.StartOfStream{from: ^pipeline, element: :b, pad: :input}
 
-      refute_receive %Message{from: ^pipeline, body: %Message.Terminated{}}
-      refute_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :stopped}}
+      refute_receive %Message.Terminated{from: ^pipeline}
+      refute_receive %Message.PlaybackState{from: ^pipeline, state: :stopped}
 
       # STOP
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
@@ -96,27 +90,21 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       Pipeline.play(pipeline)
 
       # TEST
-      assert_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :prepared}}
-      assert_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :playing}}
+      assert_receive %Message.PlaybackState{from: ^pipeline, state: :prepared}
+      assert_receive %Message.PlaybackState{from: ^pipeline, state: :playing}
 
-      assert_receive %Message{
-        from: ^pipeline,
-        body: %Message.EndOfStream{element: :b, pad: :input}
-      }
+      assert_receive %Message.EndOfStream{from: ^pipeline, element: :b, pad: :input}
 
-      assert_receive %Message{
-        from: ^pipeline,
-        body: %Message.EndOfStream{element: :c, pad: :input}
-      }
+      assert_receive %Message.EndOfStream{from: ^pipeline, element: :c, pad: :input}
 
       # STOP
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
 
       # TEST
-      assert_receive %Message{from: ^pipeline, body: %Message.PlaybackState{state: :stopped}}
-      refute_receive %Message{from: ^pipeline, body: %Message.Terminated{}}
-      refute_receive %Message{from: ^pipeline, body: %Message.Notification{}}
-      refute_receive %Message{from: ^pipeline, body: %Message.StartOfStream{element: _, pad: _}}
+      assert_receive %Message.PlaybackState{from: ^pipeline, state: :stopped}
+      refute_receive %Message.Terminated{from: ^pipeline}
+      refute_receive %Message.Notification{from: ^pipeline}
+      refute_receive %Message.StartOfStream{from: ^pipeline, element: _, pad: _}
     end
   end
 
@@ -158,10 +146,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       Pipeline.await_start_of_stream(pipeline, :c)
       msg = Pipeline.await_notification(pipeline, :b)
 
-      assert msg == %Message{
-               from: pipeline,
-               body: %Message.Notification{element: :b, data: %Membrane.Buffer{payload: "test"}}
-             }
+      assert msg == %Message.Notification{from: pipeline, element: :b, data: %Membrane.Buffer{payload: "test"}}
 
       # STOP
       Pipeline.stop_and_terminate(pipeline, blocking?: true)
