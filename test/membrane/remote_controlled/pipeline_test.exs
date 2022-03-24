@@ -70,7 +70,11 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       assert_receive %Message.PlaybackState{from: ^pipeline, state: :prepared}
       assert_receive %Message.PlaybackState{from: ^pipeline, state: :playing}
 
-      assert_receive %Message.Notification{from: ^pipeline, element: :b, data: %Membrane.Buffer{payload: "test"}}
+      assert_receive %Message.Notification{
+        from: ^pipeline,
+        element: :b,
+        data: %Membrane.Buffer{payload: "test"}
+      }
 
       assert_receive %Message.StartOfStream{from: ^pipeline, element: :b, pad: :input}
 
@@ -146,7 +150,11 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       Pipeline.await_start_of_stream(pipeline, :c)
       msg = Pipeline.await_notification(pipeline, :b)
 
-      assert msg == %Message.Notification{from: pipeline, element: :b, data: %Membrane.Buffer{payload: "test"}}
+      assert msg == %Message.Notification{
+               from: pipeline,
+               element: :b,
+               data: %Membrane.Buffer{payload: "test"}
+             }
 
       # STOP
       Pipeline.stop_and_terminate(pipeline, blocking?: true)

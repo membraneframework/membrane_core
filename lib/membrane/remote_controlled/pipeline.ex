@@ -97,7 +97,10 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
     quote do
       receive do
-        %unquote(message_type){ unquote_splicing(Macro.expand(keywords, __ENV__)), from: ^unquote(pipeline)} = msg ->
+        %unquote(message_type){
+          unquote_splicing(Macro.expand(keywords, __ENV__)),
+          from: ^unquote(pipeline)
+        } = msg ->
           msg
       end
     end

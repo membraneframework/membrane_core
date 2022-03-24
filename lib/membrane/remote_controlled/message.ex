@@ -15,7 +15,11 @@ defmodule Membrane.RemoteControlled.Message do
     @moduledoc """
     Message sent when some element of the pipeline receives the start of stream event on some pad.
     """
-    @type t :: %__MODULE__{from: pid(), element: Membrane.Element.name_t(), pad: Membrane.Pad.name_t()}
+    @type t :: %__MODULE__{
+            from: pid(),
+            element: Membrane.Element.name_t(),
+            pad: Membrane.Pad.name_t()
+          }
 
     @enforce_keys [:from, :element, :pad]
     defstruct @enforce_keys
@@ -25,7 +29,11 @@ defmodule Membrane.RemoteControlled.Message do
     @moduledoc """
     Message sent when some element of the pipeline receives the start of stream event on some pad.
     """
-    @type t :: %__MODULE__{from: pid(), element: Membrane.Element.name_t(), pad: Membrane.Pad.name_t()}
+    @type t :: %__MODULE__{
+            from: pid(),
+            element: Membrane.Element.name_t(),
+            pad: Membrane.Pad.name_t()
+          }
 
     @enforce_keys [:from, :element, :pad]
     defstruct @enforce_keys
@@ -35,7 +43,11 @@ defmodule Membrane.RemoteControlled.Message do
     @moduledoc """
     Message sent when the some element of the pipeline receives a notification.
     """
-    @type t :: %__MODULE__{from: pid(), element: Membrane.Element.name_t(), data: Membrane.Notification.t()}
+    @type t :: %__MODULE__{
+            from: pid(),
+            element: Membrane.Element.name_t(),
+            data: Membrane.Notification.t()
+          }
 
     @enforce_keys [:from, :element, :data]
     defstruct @enforce_keys
