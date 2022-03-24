@@ -1,10 +1,23 @@
 defmodule Membrane.Core.Helper.FastMap do
   @moduledoc false
 
+  @doc """
+  Gets a value from a nested map structure
+
+      iex> require #{inspect(__MODULE__)}
+      iex> users = %{"john" => %{age: 27}, "meg" => %{age: 23}}
+      iex> #{inspect(__MODULE__)}.get_in!(users, ["john", :age])
+      27
+
+  Raises `MatchError` if there's no map under any of the nested keys.
+  """
   defmacro get_in!(map, keys) do
     generate_get_in!(map, keys)
   end
 
+  @doc """
+  Generates AST for `get_in!/2`.
+  """
   @spec generate_get_in!(map :: Macro.t(), keys :: [Macro.t()]) :: Macro.t()
   def generate_get_in!(map, keys) do
     map_var = unique_var(:map)
@@ -28,10 +41,23 @@ defmodule Membrane.Core.Helper.FastMap do
     end
   end
 
+  @doc """
+  Updates a key in a nested map structure.
+
+      iex> require #{inspect(__MODULE__)}
+      iex> users = %{"john" => %{age: 27}, "meg" => %{age: 23}}
+      iex> #{inspect(__MODULE__)}.update_in!(users, ["john", :age], &(&1 + 1))
+      %{"john" => %{age: 28}, "meg" => %{age: 23}}
+
+  Raises `MatchError` if there's no map under any of the nested keys.
+  """
   defmacro update_in!(map, keys, fun) do
     generate_update_in!(map, keys, fun)
   end
 
+  @doc """
+  Generates AST for `update_in!/3`.
+  """
   @spec generate_update_in!(map :: Macro.t(), keys :: [Macro.t()], fun :: Macro.t()) :: Macro.t()
   def generate_update_in!(map, keys, fun) do
     map_var = unique_var(:map)
@@ -57,10 +83,23 @@ defmodule Membrane.Core.Helper.FastMap do
     end
   end
 
+  @doc """
+  Gets a value and updates a nested map structure.
+
+      iex> require #{inspect(__MODULE__)}
+      iex> users = %{"john" => %{age: 27}, "meg" => %{age: 23}}
+      iex> #{inspect(__MODULE__)}.get_and_update_in!(users, ["john", :age], &{&1, &1 + 1})
+      {27, %{"john" => %{age: 28}, "meg" => %{age: 23}}}
+
+  Raises `MatchError` if there's no map under any of the nested keys.
+  """
   defmacro get_and_update_in!(map, keys, fun) do
     generate_get_and_update_in!(map, keys, fun)
   end
 
+  @doc """
+  Generates AST for `get_and_update_in!/3`.
+  """
   @spec generate_get_and_update_in!(map :: Macro.t(), keys :: [Macro.t()], fun :: Macro.t()) ::
           Macro.t()
   def generate_get_and_update_in!(map, keys, fun) do
@@ -88,10 +127,25 @@ defmodule Membrane.Core.Helper.FastMap do
     end
   end
 
+  @doc """
+  Sets a value in a nested map structure.
+
+      iex> require #{inspect(__MODULE__)}
+      iex> users = %{"john" => %{age: 27}, "meg" => %{age: 23}}
+      iex> #{inspect(__MODULE__)}.set_in!(users, ["john", :age], 28)
+      %{"john" => %{age: 28}, "meg" => %{age: 23}}
+
+  All keys, including the last one must already be present in the structure.
+  If the last key is not present, `KeyError` is raised. Raises `MatchError`
+  if there's no map under any other nested key.
+  """
   defmacro set_in!(map, keys, value) do
     generate_set_in!(map, keys, value)
   end
 
+  @doc """
+  Generates AST for `set_in!/3`.
+  """
   @spec generate_set_in!(map :: Macro.t(), keys :: [Macro.t()], value :: Macro.t()) :: Macro.t()
   def generate_set_in!(map, keys, value) do
     map_var = unique_var(:map)
