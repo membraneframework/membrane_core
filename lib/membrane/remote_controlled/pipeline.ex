@@ -1,7 +1,9 @@
 defmodule Membrane.RemoteControlled.Pipeline do
   @moduledoc """
   `Membrane.RemoteControlled.Pipeline` is a basic `Membrane.Pipeline` implementation that can be
-  controlled by a controlling process. The controlling process can request the execution of arbitrary
+  controlled by a controlling process.
+
+  The controlling process can request the execution of arbitrary
   valid `Membrane.Pipeline.Action`:
   ```Elixir
     children = ...
