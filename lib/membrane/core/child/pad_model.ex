@@ -134,7 +134,7 @@ defmodule Membrane.Core.Child.PadModel do
 
       case unquote(state) do
         %{pads_data: %{^pad_ref_var => unquote(pad_data_var)}} ->
-          {:ok, unquote(FastMap.generate_get_in(pad_data_var, keys))}
+          {:ok, unquote(FastMap.generate_get_in!(pad_data_var, keys))}
 
         _state ->
           {:error, {:unknown_pad, pad_ref_var}}
@@ -144,40 +144,40 @@ defmodule Membrane.Core.Child.PadModel do
 
   defmacro get_data!(state, pad_ref, keys \\ []) do
     keys = Bunch.listify(keys)
-    FastMap.generate_get_in(state, [:pads_data, pad_ref] ++ keys)
+    FastMap.generate_get_in!(state, [:pads_data, pad_ref] ++ keys)
   end
 
   defmacro set_data!(state, pad_ref, keys \\ [], value) do
     keys = Bunch.listify(keys)
-    FastMap.generate_set_in(state, [:pads_data, pad_ref] ++ keys, value)
+    FastMap.generate_set_in!(state, [:pads_data, pad_ref] ++ keys, value)
   end
 
   defmacro set_data(state, pad_ref, keys \\ [], value) do
     keys = Bunch.listify(keys)
 
-    {:ok, FastMap.generate_set_in(state, [:pads_data, pad_ref] ++ keys, value)}
+    {:ok, FastMap.generate_set_in!(state, [:pads_data, pad_ref] ++ keys, value)}
     |> wrap_with_pad_check(pad_ref, state)
   end
 
   defmacro update_data!(state, pad_ref, keys \\ [], f) do
     keys = Bunch.listify(keys)
-    FastMap.generate_update_in(state, [:pads_data, pad_ref] ++ keys, f)
+    FastMap.generate_update_in!(state, [:pads_data, pad_ref] ++ keys, f)
   end
 
   defmacro update_data(state, pad_ref, keys \\ [], f) do
     keys = Bunch.listify(keys)
 
-    FastMap.generate_get_and_update_in(state, [:pads_data, pad_ref] ++ keys, f)
+    FastMap.generate_get_and_update_in!(state, [:pads_data, pad_ref] ++ keys, f)
     |> wrap_with_pad_check(pad_ref, state)
   end
 
   defmacro get_and_update_data!(state, pad_ref, keys \\ [], f) do
     keys = Bunch.listify(keys)
-    FastMap.generate_get_and_update_in(state, [:pads_data, pad_ref] ++ keys, f)
+    FastMap.generate_get_and_update_in!(state, [:pads_data, pad_ref] ++ keys, f)
   end
 
   defmacro get_and_update_data(state, pad_ref, keys \\ [], f) do
-    FastMap.generate_get_and_update_in(state, [:pads_data, pad_ref] ++ keys, f)
+    FastMap.generate_get_and_update_in!(state, [:pads_data, pad_ref] ++ keys, f)
     |> wrap_with_pad_check(pad_ref, state)
   end
 

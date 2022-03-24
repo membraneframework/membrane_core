@@ -1,12 +1,12 @@
 defmodule Membrane.Core.Helper.FastMap do
   @moduledoc false
 
-  defmacro get_in(map, keys) do
-    generate_get_in(map, keys)
+  defmacro get_in!(map, keys) do
+    generate_get_in!(map, keys)
   end
 
-  @spec generate_get_in(map :: Macro.t(), keys :: [Macro.t()]) :: Macro.t()
-  def generate_get_in(map, keys) do
+  @spec generate_get_in!(map :: Macro.t(), keys :: [Macro.t()]) :: Macro.t()
+  def generate_get_in!(map, keys) do
     map_var = unique_var(:map)
     value_var = unique_var(:value)
     {key_vars, key_assignments} = gen_key_vars_and_assignments(keys)
@@ -28,12 +28,12 @@ defmodule Membrane.Core.Helper.FastMap do
     end
   end
 
-  defmacro update_in(map, keys, fun) do
-    generate_update_in(map, keys, fun)
+  defmacro update_in!(map, keys, fun) do
+    generate_update_in!(map, keys, fun)
   end
 
-  @spec generate_update_in(map :: Macro.t(), keys :: [Macro.t()], fun :: Macro.t()) :: Macro.t()
-  def generate_update_in(map, keys, fun) do
+  @spec generate_update_in!(map :: Macro.t(), keys :: [Macro.t()], fun :: Macro.t()) :: Macro.t()
+  def generate_update_in!(map, keys, fun) do
     map_var = unique_var(:map)
     {key_vars, key_assignments} = gen_key_vars_and_assignments(keys)
     {matches, vars} = gen_nested_matches_and_vars(key_vars, map_var)
@@ -57,13 +57,13 @@ defmodule Membrane.Core.Helper.FastMap do
     end
   end
 
-  defmacro get_and_update_in(map, keys, fun) do
-    generate_get_and_update_in(map, keys, fun)
+  defmacro get_and_update_in!(map, keys, fun) do
+    generate_get_and_update_in!(map, keys, fun)
   end
 
-  @spec generate_get_and_update_in(map :: Macro.t(), keys :: [Macro.t()], fun :: Macro.t()) ::
+  @spec generate_get_and_update_in!(map :: Macro.t(), keys :: [Macro.t()], fun :: Macro.t()) ::
           Macro.t()
-  def generate_get_and_update_in(map, keys, fun) do
+  def generate_get_and_update_in!(map, keys, fun) do
     map_var = unique_var(:map)
     {key_vars, key_assignments} = gen_key_vars_and_assignments(keys)
     {matches, vars} = gen_nested_matches_and_vars(key_vars, map_var)
@@ -88,12 +88,12 @@ defmodule Membrane.Core.Helper.FastMap do
     end
   end
 
-  defmacro set_in(map, keys, value) do
-    generate_set_in(map, keys, value)
+  defmacro set_in!(map, keys, value) do
+    generate_set_in!(map, keys, value)
   end
 
-  @spec generate_set_in(map :: Macro.t(), keys :: [Macro.t()], value :: Macro.t()) :: Macro.t()
-  def generate_set_in(map, keys, value) do
+  @spec generate_set_in!(map :: Macro.t(), keys :: [Macro.t()], value :: Macro.t()) :: Macro.t()
+  def generate_set_in!(map, keys, value) do
     map_var = unique_var(:map)
     {key_vars, key_assignments} = gen_key_vars_and_assignments(keys)
     {matches, vars} = gen_nested_matches_and_vars(List.delete_at(key_vars, -1), map_var)
