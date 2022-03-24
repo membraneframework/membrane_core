@@ -8,7 +8,7 @@ defmodule Membrane.Core.Pipeline.State do
   use Bunch
   use Bunch.Access
 
-  alias Membrane.Child
+  alias Membrane.{Child, PlaybackState}
   alias Membrane.Core.Parent.{ChildrenModel, Link}
   alias Membrane.Core.{Playback, Timer}
   alias Membrane.Core.Parent.CrashGroup
@@ -19,6 +19,7 @@ defmodule Membrane.Core.Pipeline.State do
           module: module,
           children: ChildrenModel.children_t(),
           crash_groups: %{CrashGroup.name_t() => CrashGroup.t()},
+          delayed_playback_change: {PlaybackState.t(), PlaybackState.t()} | nil,
           links: [Link.t()],
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
@@ -38,6 +39,7 @@ defmodule Membrane.Core.Pipeline.State do
                 internal_state: nil,
                 children: %{},
                 crash_groups: %{},
+                delayed_playback_change: nil,
                 links: [],
                 pending_specs: %{},
                 playback: %Playback{},

@@ -327,7 +327,7 @@ defmodule Membrane.ParentSpec do
   Specifies input pad name and properties of the subsequent child.
 
   The possible properties are:
-  - options - If a pad defines options, they can be passed here as a keyword list. Pad options are documented
+  - `options` - If a pad defines options, they can be passed here as a keyword list. Pad options are documented
     in moduledoc of each element. See `Membrane.Element.WithInputPads.def_input_pad/2` and `Membrane.Bin.def_input_pad/2`
     for information about defining pad options.
 

@@ -15,7 +15,15 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   alias Membrane.Core.{Bin, Message, Parent, Pipeline, Telemetry}
   alias Membrane.Core.Bin.PadController
-  alias Membrane.Core.Parent.{ChildLifeController, CrashGroup, Link, LinkParser}
+
+  alias Membrane.Core.Parent.{
+    ChildLifeController,
+    CrashGroup,
+    LifecycleController,
+    Link,
+    LinkParser
+  }
+
   alias Membrane.Core.Parent.ChildLifeController.StartupHandler
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.LinkError
@@ -76,7 +84,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   def handle_spec_timeout(spec_ref, state) do
     {spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
 
-    unless spec_data.status == :linked do
+    unless spec_data == nil or spec_data.status == :linked do
       raise LinkError,
             "Spec #{inspect(spec_ref)} linking took too long, spec_data: #{inspect(spec_data, pretty: true)}"
     end
@@ -88,7 +96,24 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   def proceed_spec_linking(spec_ref, state) do
     spec_data = Map.fetch!(state.pending_specs, spec_ref)
     {spec_data, state} = do_proceed_spec_linking(spec_ref, spec_data, state)
-    put_in(state, [:pending_specs, spec_ref], spec_data)
+
+    if spec_data.status == :linked do
+      {_spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
+
+      if state.delayed_playback_change != nil do
+        {:ok, state} =
+          LifecycleController.change_playback_state(
+            state.delayed_playback_change,
+            %{state | delayed_playback_change: nil}
+          )
+
+        state
+      else
+        state
+      end
+    else
+      put_in(state, [:pending_specs, spec_ref], spec_data)
+    end
   end
 
   defp do_proceed_spec_linking(spec_ref, %{status: :linking_internally} = spec_data, state) do
