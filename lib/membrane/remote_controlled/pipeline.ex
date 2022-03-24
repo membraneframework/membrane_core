@@ -2,16 +2,38 @@ defmodule Membrane.RemoteControlled.Pipeline do
   @moduledoc """
   `Membrane.RemoteControlled.Pipeline` is a basic `Membrane.Pipeline` implementation that can be
   controlled by a controlling process. The controlling process can request the execution of arbitrary
-  valid `Membrane.Pipeline.Action`. The controlling process can also subscribe and await for
-  `Membrane.RemoteControlled.Pipeline.message_t()` that are sent by the pipeline.
+  valid `Membrane.Pipeline.Action`:
+  ```Elixir
+    children = ...
+    links = ...
+    actions = [{:spec, %ParentSpec{children: children, links: links}}]
+    Pipeline.exec_actions(pipeline, actions)
+  ```
+
+  The controlling process can also subscribe to the messages
+  sent by the pipeline and later on synchroniously await for these messages:
+  ```Elixir
+  # subscribes to message which is sent when the pipeline enters any playback state
+  Pipeline.subscribe(pipeline, %Message.PlaybackState{state: _})
+  ...
+  # awaits for the message sent when the pipeline enters :playing playback state
+  Pipeline.await_playback_state(pipeline, :playing)
+  ...
+  # awaits for the message sent when the pipeline enters :stopped playback state
+  Pipeline.await_playback_state(pipeline, :stopped)
+  ```
+
   `Membrane.RemoteControlled.Pipeline` can be used when there is no need for introducing a custom
   logic in the `Membrane.Pipeline` callbacks implementation. An example of usage could be running a
   pipeline from the elixir script. `Membrane.RemoteControlled.Pipeline` sends the following messages:
-  * `{:playback_state, Membrane.PlaybackState.t()}` sent when pipeline enters a given playback state,
-  * `{:start_of_stream | :end_of_stream, Membrane.Element.name_t(), Membrane.Pad.name_t()}` sent
-  when one of direct pipeline children informs the pipeline about start or end of stream,
-  * `{:notification, Membrane.Element.name_t(), Membrane.Notification.t()}` sent when pipeline
-  receives notification from one of its children.
+  * `Membrane.RemoteControlled.Message.PlaybackState.t()` sent when pipeline enters a given playback state,
+  * `Membrane.RemoteControlled.Message.StartOfStream.t()` sent
+  when one of direct pipeline children informs the pipeline about start of a stream,
+  * `Membrane.RemoteControlled.Message.EndOfStream.t()` sent
+  when one of direct pipeline children informs the pipeline about end of a stream,
+  * `Membrane.RemoteControlled.Message.Notification.t()` sent when pipeline
+  receives notification from one of its children,
+  * `Membrane.RemoteControlled.Message.Terminated.t()` sent when the pipeline is terminated.
   """
 
   use Membrane.Pipeline
@@ -82,7 +104,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   @doc """
   Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.PlaybackState()`
   message with no further constraints, sent by the process with `pipeline` pid.
-  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
 
   Usage example:
@@ -99,7 +121,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   @doc """
   Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.PlaybackState()`
   message with the given `state`, sent by the process with `pipeline` pid.
-  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
 
   Usage example:
@@ -117,7 +139,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   @doc """
   Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.StartOfStream()` message
   with no further constraints, sent by the process with `pipeline` pid.
-  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
 
   Usage example:
@@ -134,7 +156,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   @doc """
   Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.StartOfStream()` message
   concerning the given `element`, sent by the process with `pipeline` pid.
-  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
 
   Usage example:
@@ -152,7 +174,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   @doc """
   Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.StartOfStream()` message
   concerning the given `element` and the `pad`, sent by the process with `pipeline` pid.
-  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
 
   Usage example:
@@ -170,7 +192,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   @doc """
   Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.EndOfStream()` message
   with no further constraints, sent by the process with `pipeline` pid.
-  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
 
   Usage example:
@@ -187,7 +209,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   @doc """
   Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.EndOfStream()` message
   concerning the given `element`, sent by the process with `pipeline` pid.
-  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
 
   Usage example:
@@ -205,7 +227,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   @doc """
   Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.EndOfStream()` message
   concerning the given `element` and the `pad`, sent by the process with `pipeline` pid.
-  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
 
   Usage example:
@@ -223,7 +245,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   @doc """
   Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.Notification()`
   message with no further constraints, sent by the process with `pipeline` pid.
-  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
 
   Usage example:
@@ -240,7 +262,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   @doc """
   Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.Notification()` message
   concerning the given `element`, sent by the process with `pipeline` pid.
-  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
 
   Usage example:
@@ -258,7 +280,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   @doc """
   Awaits for the `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.Terminated` message,
   which is send when the pipeline is terminated.
-  It is required to firstly use the `Membrane.RemoteControlled.Pipeline.subscribe/2` to subscribe for given message before awaiting
+  It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
 
   Usage example:
