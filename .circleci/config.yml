@@ -1,5 +1,44 @@
 version: 2.1
 commands:
+  save_deps_cache:
+    steps:
+      - save_cache:
+          key: v1-mix-deps-cache-{{ checksum "mix.lock" }}
+          paths: ["deps"]
+  restore_deps_cache:
+    steps:
+      - restore_cache:
+          keys:
+            - v1-mix-deps-cache-{{ checksum "mix.lock" }}
+            - v1-mix-deps-cache-
+  save_build_cache:
+    steps:
+      - save_cache:
+          key: v1-build-cache-{{ arch }}-{{ .Environment.MIX_ENV }}-{{ checksum "mix.lock" }}
+          paths: ["_build"]
+  restore_build_cache:
+    steps:
+      - restore_cache:
+          keys:
+            - v1-build-cache-{{ arch }}-{{ .Environment.MIX_ENV }}-{{ checksum "mix.lock" }}
+            - v1-build-cache-{{ arch }}-{{ .Environment.MIX_ENV }}-
+            - v1-build-cache-{{ arch }}-
+  gen_version_file:
+    steps:
+      - run: asdf current erlang > .runtime_version
+      - run: asdf current elixir >> .runtime_version
+  save_plt_cache:
+    steps:
+      - save_cache:
+          key: v1-dialyzer-cache-{{ checksum ".runtime_version" }}-{{ checksum "mix.lock" }}
+          paths: "priv/plts"
+  restore_plt_cache:
+    steps:
+      - restore_cache:
+          keys:
+            - v1-dialyzer-cache-{{ checksum ".runtime_version" }}-{{ checksum "mix.lock" }}
+            - v1-dialyzer-cache-{{ checksum ".runtime_version" }}-
+            - v1-dialyzer-cache-
   run_tests:
     parameters:
       glob:
@@ -26,16 +65,9 @@ jobs:
 
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - mix-cache-{{ arch }}-{{ .Branch }}-{{ checksum "mix.lock" }}
-            - mix-cache-{{ arch }}-{{ .Branch }}
-            - mix-cache-{{ arch }}
+      - restore_deps_cache
       - run: mix deps.get
-      - run: mix compile --force --warnings-as-errors
-      - save_cache:
-          key: mix-cache-{{ arch }}-{{ .Branch }}-{{ checksum "mix.lock" }}
-          paths: ["deps", "_build"]
+      - save_deps_cache
       - persist_to_workspace:
           root: .
           paths: "*"
@@ -52,6 +84,10 @@ jobs:
     steps:
       - attach_workspace:
           at: .
+      - restore_build_cache
+      - run: mix deps.compile
+      - run: mix compile
+      - save_build_cache
       - run_tests:
           glob: "test/membrane/**/*.exs"
           split_by: "timings"
@@ -73,17 +109,17 @@ jobs:
     steps:
       - attach_workspace:
           at: .
+      - restore_build_cache
+      - run: mix deps.compile
+      - run: mix compile --force --warnings-as-errors
+      - save_build_cache
       - run: mix format --check-formatted
       - run: mix credo
       - run: mix docs && mix docs 2>&1 | (! grep -q "warning:")
-      - run: asdf current elixir | awk '{print $2}' > .elixir_version
-      - restore_cache:
-          keys:
-            - dialyzer-cache-{{ arch }}-{{ checksum ".elixir_version" }}
+      - gen_version_file
+      - restore_plt_cache
       - run: mix dialyzer
-      - save_cache:
-          key: dialyzer-cache-{{ arch }}-{{ checksum ".elixir_version" }}
-          paths: "priv/plts"
+      - save_plt_cache
 
 workflows:
   version: 2
@@ -91,7 +127,7 @@ workflows:
     jobs:
       - build
       - test:
-          requires: 
+          requires:
             - build
       - lint:
           requires:
