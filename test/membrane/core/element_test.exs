@@ -4,6 +4,7 @@ defmodule Membrane.Core.ElementTest do
   alias __MODULE__.SomeElement
   alias Membrane.Core.Element
   alias Membrane.Core.Message
+  alias Membrane.Core.Parent.Link.Endpoint
 
   require Membrane.Core.Message
 
@@ -55,8 +56,8 @@ defmodule Membrane.Core.ElementTest do
       Element.handle_call(
         Message.new(:handle_link, [
           :output,
-          %{pad_ref: :output, pad_props: %{options: []}, child: :this},
-          %{pad_ref: :input, pid: self(), child: :other},
+          %Endpoint{pad_spec: :output, pad_ref: :output, pad_props: %{options: []}, child: :this},
+          %Endpoint{pad_spec: :input, pad_ref: :input, pid: self(), child: :other},
           %{
             initiator: :sibling,
             other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
@@ -71,7 +72,8 @@ defmodule Membrane.Core.ElementTest do
       Element.handle_call(
         Message.new(:handle_link, [
           :input,
-          %{
+          %Endpoint{
+            pad_spec: :input,
             pad_ref: :input,
             pad_props: %{
               options: [],
@@ -82,7 +84,7 @@ defmodule Membrane.Core.ElementTest do
             },
             child: :this
           },
-          %{pad_ref: :output, pid: self(), child: :other},
+          %Endpoint{pad_spec: :output, pad_ref: :output, pid: self(), child: :other},
           %{
             initiator: :sibling,
             other_info: %{direction: :output, mode: :pull},
@@ -107,7 +109,7 @@ defmodule Membrane.Core.ElementTest do
     assert {:noreply, state} =
              Element.handle_info(
                Message.new(:change_playback_state, :prepared),
-               get_state()
+               linked_state()
              )
 
     assert state.playback.state == :prepared
@@ -131,6 +133,16 @@ defmodule Membrane.Core.ElementTest do
              Element.handle_info(Message.new(:change_playback_state, :playing), state)
 
     assert state.playback.state == :playing
+  end
+
+  test "should raise when static pads unlinked is playback state other than stopped" do
+    assert_raise Membrane.LinkError, fn ->
+      assert {:noreply, _state} =
+               Element.handle_info(
+                 Message.new(:change_playback_state, :prepared),
+                 get_state()
+               )
+    end
   end
 
   test "should return correct clock and should not modify the state" do

@@ -137,7 +137,7 @@ defmodule Membrane.Core.Element do
         _from,
         state
       ) do
-    PadController.handle_link(direction, this, other, params, state) |> reply(state)
+    reply(PadController.handle_link(direction, this, other, params, state), state)
   end
 
   @impl GenServer
@@ -198,7 +198,7 @@ defmodule Membrane.Core.Element do
     noreply({:ok, state})
   end
 
-  defp do_handle_info(Message.new(_, _, _) = message, state) do
+  defp do_handle_info(Message.new(_type, _args, _opts) = message, state) do
     {{:error, {:invalid_message, message, mode: :info}}, state}
     |> noreply(state)
   end

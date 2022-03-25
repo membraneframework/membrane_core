@@ -129,7 +129,7 @@ defmodule Membrane.Caps.Matcher do
   @spec match?(caps_specs_t(), struct() | any()) :: boolean()
   def match?(:any, _caps), do: true
 
-  def match?(specs, %_{} = caps) when is_list(specs) do
+  def match?(specs, %_caps_module{} = caps) when is_list(specs) do
     specs |> Enum.any?(fn spec -> match?(spec, caps) end)
   end
 

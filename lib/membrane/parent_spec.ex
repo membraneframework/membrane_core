@@ -277,12 +277,6 @@ defmodule Membrane.ParentSpec do
     |> LinkBuilder.update(:from_pad, from_pad: pad, from_pad_props: %{})
   end
 
-  @deprecated "Use link_bin_input/1 and `via_in/3` to pass properties"
-  @spec link_bin_input(Pad.name_t() | Pad.ref_t(), Keyword.t()) :: link_builder_t()
-  def link_bin_input(pad, _props) do
-    link_bin_input(pad)
-  end
-
   @doc """
   Specifies output pad name and properties of the preceding child.
 
@@ -333,7 +327,7 @@ defmodule Membrane.ParentSpec do
   Specifies input pad name and properties of the subsequent child.
 
   The possible properties are:
-  - options - If a pad defines options, they can be passed here as a keyword list. Pad options are documented
+  - `options` - If a pad defines options, they can be passed here as a keyword list. Pad options are documented
     in moduledoc of each element. See `Membrane.Element.WithInputPads.def_input_pad/2` and `Membrane.Bin.def_input_pad/2`
     for information about defining pad options.
 
@@ -461,13 +455,6 @@ defmodule Membrane.ParentSpec do
     end
     |> LinkBuilder.update(:to_pad, to_pad: pad, to_pad_props: %{})
     |> to({Membrane.Bin, :itself})
-  end
-
-  @deprecated "Use to_bin_output/2 and `via_out/3` to pass properties"
-  @spec to_bin_output(link_builder_t(), Pad.name_t() | Pad.ref_t(), Keyword.t()) ::
-          link_builder_t()
-  def to_bin_output(builder, pad, _props) do
-    to_bin_output(builder, pad)
   end
 
   defp validate_pad_name(pad) when Pad.is_pad_name(pad) or Pad.is_pad_ref(pad) do

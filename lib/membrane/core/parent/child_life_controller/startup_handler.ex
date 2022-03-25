@@ -205,10 +205,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
          {:ok, clock} <- Message.call(pid, :get_clock) do
       %ChildEntry{child | pid: pid, clock: clock, sync: sync}
     else
+      {:error, {error, stacktrace}} when is_exception(error) ->
+        reraise error, stacktrace
+
       {:error, reason} ->
-        raise ParentError,
-              "Cannot start child #{inspect(name)}, \
-              reason: #{inspect(reason, pretty: true)}"
+        raise ParentError, """
+        Cannot start child #{inspect(name)},
+        reason: #{inspect(reason, pretty: true)}
+        """
     end
   end
 end

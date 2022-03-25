@@ -1,17 +1,18 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "0.8.1"
+  @version "0.9.0"
   @source_ref "v#{@version}"
 
   def project do
     [
       app: :membrane_core,
       version: @version,
-      elixir: "~> 1.10",
+      elixir: "~> 1.12",
       elixirc_paths: elixirc_paths(Mix.env()),
       description: "Membrane Multimedia Framework (Core)",
       dialyzer: [
+        plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
         flags: [:error_handling]
       ],
       package: package(),
@@ -33,11 +34,11 @@ defmodule Membrane.Mixfile do
   end
 
   def application do
-    [extra_applications: [], mod: {Membrane, []}]
+    [extra_applications: [:logger]]
   end
 
   defp elixirc_paths(:test), do: ["lib", "spec/support", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
+  defp elixirc_paths(_env), do: ["lib"]
 
   defp link do
     "https://github.com/membraneframework/membrane-core"
@@ -46,7 +47,7 @@ defmodule Membrane.Mixfile do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md", "CONTRIBUTING.md", LICENSE: [title: "License"]],
+      extras: ["README.md", "CHANGELOG.md", "CONTRIBUTING.md", LICENSE: [title: "License"]],
       formatters: ["html"],
       source_ref: @source_ref,
       nest_modules_by_prefix: [
@@ -88,8 +89,7 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane\.Telemetry($|\.)/,
           ~r/^Membrane\.ComponentPath($|\.)/
         ],
-        Errors: [~r/Error$/],
-        Deprecated: [~r/^Membrane\.Log($|\.)/]
+        Errors: [~r/Error$/]
       ]
     ]
   end
@@ -97,7 +97,7 @@ defmodule Membrane.Mixfile do
   defp package do
     [
       maintainers: ["Membrane Team"],
-      licenses: ["Apache 2.0"],
+      licenses: ["Apache-2.0"],
       links: %{
         "GitHub" => link(),
         "Membrane Framework Homepage" => "https://membraneframework.org"
@@ -112,13 +112,14 @@ defmodule Membrane.Mixfile do
       {:bunch, "~> 1.3"},
       {:ratio, "~> 2.0"},
       # Development
-      {:ex_doc, "~> 0.21", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
-      {:credo, "~> 1.4", only: :dev, runtime: false},
+      {:credo, "~> 1.6", only: :dev, runtime: false},
       # Testing
       {:espec, "~> 1.8.3", only: :test},
       {:mox, "~> 1.0", only: :test},
-      {:excoveralls, "~> 0.11", only: :test}
+      {:junit_formatter, "~> 3.1", only: :test},
+      {:excoveralls, "~> 0.14", only: :test}
     ]
   end
 end

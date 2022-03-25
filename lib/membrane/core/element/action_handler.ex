@@ -266,7 +266,8 @@ defmodule Membrane.Core.Element.ActionHandler do
               end),
           data: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
           dir: %{direction: :output} <- pad_data,
-          eos: %{end_of_stream?: false} <- pad_data do
+          eos: %{end_of_stream?: false} <- pad_data,
+          caps: %{caps: caps} when not is_nil(caps) <- pad_data do
       %{pid: pid, other_ref: other_ref} = pad_data
 
       state =
@@ -280,6 +281,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       data: {:error, reason} -> {{:error, reason}, state}
       dir: %{direction: dir} -> {{:error, {:invalid_pad_dir, dir}}, state}
       eos: %{end_of_stream?: true} -> {{:error, {:eos_sent, pad_ref}}, state}
+      caps: %{caps: nil} -> {{:error, :caps_not_sent_before_first_buffer}, state}
     end
   end
 
@@ -344,13 +346,16 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp supply_demand(pad_ref, size, _callback, state) do
     withl data: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
           dir: %{direction: :input} <- pad_data,
-          mode: %{mode: :pull} <- pad_data do
+          mode: %{mode: :pull} <- pad_data,
+          demand_mode: %{demand_mode: :manual} <- pad_data do
       DemandHandler.supply_demand(pad_ref, size, state)
     else
-      data: {:error, reason} -> {{:error, reason}, state}
-      dir: %{direction: dir} -> {{:error, {:invalid_pad_dir, pad_ref, dir}}, state}
-      mode: %{mode: mode} -> {{:error, {:invalid_pad_mode, pad_ref, mode}}, state}
+      data: {:error, reason} -> {:error, reason}
+      dir: %{direction: dir} -> {:error, {:invalid_pad_dir, pad_ref, dir}}
+      mode: %{mode: mode} -> {:error, {:invalid_pad_mode, pad_ref, mode}}
+      demand_mode: %{demand_mode: mode} -> {:error, {:invalid_demand_mode, pad_ref, mode}}
     end
+    ~>> ({:error, reason} -> {{:error, reason}, state})
   end
 
   @spec handle_redemand(Pad.ref_t(), State.t()) :: State.stateful_try_t()
@@ -358,13 +363,16 @@ defmodule Membrane.Core.Element.ActionHandler do
        when type in [:source, :filter, :endpoint] do
     withl data: {:ok, pad_data} <- PadModel.get_data(state, out_ref),
           dir: %{direction: :output} <- pad_data,
-          mode: %{mode: :pull} <- pad_data do
+          mode: %{mode: :pull} <- pad_data,
+          demand_mode: %{demand_mode: :manual} <- pad_data do
       DemandHandler.handle_redemand(out_ref, state)
     else
-      data: {:error, reason} -> {{:error, reason}, state}
-      dir: %{direction: dir} -> {{:error, {:invalid_pad_dir, out_ref, dir}}, state}
-      mode: %{mode: mode} -> {{:error, {:invalid_pad_mode, out_ref, mode}}, state}
+      data: {:error, reason} -> {:error, reason}
+      dir: %{direction: dir} -> {:error, {:invalid_pad_dir, out_ref, dir}}
+      mode: %{mode: mode} -> {:error, {:invalid_pad_mode, out_ref, mode}}
+      demand_mode: %{demand_mode: mode} -> {:error, {:invalid_demand_mode, out_ref, mode}}
     end
+    ~>> ({:error, reason} -> {{:error, reason}, state})
   end
 
   @spec send_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()

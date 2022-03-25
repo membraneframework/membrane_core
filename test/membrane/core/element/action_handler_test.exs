@@ -11,7 +11,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   require Message
 
   @module Membrane.Core.Element.ActionHandler
-
+  @mock_caps %Membrane.Caps.Mock{integer: 42}
   defp demand_test_filter(_context) do
     state = %{
       State.new(%{module: Filter, name: :test_name, parent_clock: nil, sync: nil, parent: self()})
@@ -23,6 +23,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
                 direction: :input,
                 pid: self(),
                 mode: :pull,
+                demand_mode: :manual,
                 demand: 0
               ),
             input_push:
@@ -154,7 +155,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
 
     test "when element is moving to playing", %{state: state} do
-      state = state |> set_playback_state(:prepared)
+      state =
+        state |> set_playback_state(:prepared) |> PadModel.set_data!(:output, :caps, @mock_caps)
 
       result =
         @module.handle_action(
@@ -169,7 +171,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
 
     test "when element is playing", %{state: state} do
-      state = state |> set_playback_state(:playing)
+      state =
+        state |> set_playback_state(:playing) |> PadModel.set_data!(:output, :caps, @mock_caps)
 
       result =
         @module.handle_action(
@@ -201,6 +204,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         state
         |> set_playback_state(:playing)
         |> PadModel.set_data!(:output, :end_of_stream?, true)
+        |> PadModel.set_data!(:output, :caps, @mock_caps)
 
       assert_raise ActionError, ~r/end ?of ?stream.*sent.*:output/i, fn ->
         @module.handle_action(
@@ -213,7 +217,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
 
     test "with invalid buffer(s)", %{state: state} do
-      state = state |> set_playback_state(:playing)
+      state =
+        state |> set_playback_state(:playing) |> PadModel.set_data!(:output, :caps, @mock_caps)
 
       assert_raise ActionError, ~r/invalid buffer.*:not_a_buffer/i, fn ->
         @module.handle_action(
@@ -239,7 +244,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
 
     test "with empty buffer list", %{state: state} do
-      state = state |> set_playback_state(:playing)
+      state =
+        state |> set_playback_state(:playing) |> PadModel.set_data!(:output, :caps, @mock_caps)
 
       result =
         @module.handle_action(
@@ -251,6 +257,25 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
       assert result == {:ok, state}
       refute_received Message.new(:buffer, [_, :other_ref])
+    end
+
+    test "if action handler raises exception when caps are sent before the first buffer", %{
+      state: state
+    } do
+      state = state |> set_playback_state(:playing)
+
+      assert_raise(
+        ActionError,
+        ~r/Tried to send a buffer, while caps have not been sent on this pad/,
+        fn ->
+          @module.handle_action(
+            {:buffer, {:output, %Membrane.Buffer{payload: "test"}}},
+            :handle_demand,
+            %{},
+            state
+          )
+        end
+      )
     end
   end
 
@@ -342,7 +367,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
   end
 
-  @mock_caps %Membrane.Caps.Mock{integer: 42}
   defp caps_action(pad), do: {:caps, {pad, @mock_caps}}
 
   describe "handling :caps action" do
@@ -490,6 +514,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         %{state | supplying_demand?: true}
         |> set_playback_state(:playing)
         |> PadModel.set_data!(:output, :mode, :pull)
+        |> PadModel.set_data!(:output, :demand_mode, :manual)
 
       result =
         @module.handle_action(
@@ -522,6 +547,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
                 direction: :output,
                 pid: self(),
                 mode: :pull,
+                demand_mode: :manual,
                 demand: 0
               }
             }

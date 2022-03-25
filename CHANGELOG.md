@@ -1,4 +1,9 @@
 # Changelog
+
+## 0.10.0
+ * Remove all deprecated stuff [#399](https://github.com/membraneframework/membrane_core/pull/399)
+ * Disallow sending buffers without sending caps first [#341](https://github.com/membraneframework/membrane_core/issues/341)
+
 ## 0.9.0
  * Automatic demands [#313](https://github.com/membraneframework/membrane_core/pull/313)
  * Add `Membrane.FilterAggregator` that allows to run multiple filters sequentially within one process. [#355](https://github.com/membraneframework/membrane_core/pull/355)
@@ -6,6 +11,9 @@
  * More fine-grained control over emitted metrics [#365](https://github.com/membraneframework/membrane_core/pull/365)
  * Added log metadata when reporting init in telemetry [#376](https://github.com/membraneframework/membrane_core/pull/376)
  * Fix generation of pad documentation inside an element [#377](https://github.com/membraneframework/membrane_core/pull/377)
+ * Leaving static pads unlinked and transiting to a playback state other than `:stopped` will result
+ in runtime error (previously only a warning was printed out). [#389](https://github.com/membraneframework/membrane_core/pull/389)
+ * It is possible now to assert on crash group down when using Testing.Pipeline. [#391](https://github.com/membraneframework/membrane_core/pull/391)
 
 ## 0.8.2
  * Fixed PadAdded spec [#359](https://github.com/membraneframework/membrane_core/pull/359)

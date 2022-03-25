@@ -15,7 +15,15 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   alias Membrane.Core.{Bin, Message, Parent, Pipeline, Telemetry}
   alias Membrane.Core.Bin.PadController
-  alias Membrane.Core.Parent.{ChildLifeController, CrashGroup, Link, LinkParser}
+
+  alias Membrane.Core.Parent.{
+    ChildLifeController,
+    CrashGroup,
+    LifecycleController,
+    Link,
+    LinkParser
+  }
+
   alias Membrane.Core.Parent.ChildLifeController.StartupHandler
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.LinkError
@@ -76,7 +84,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   def handle_spec_timeout(spec_ref, state) do
     {spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
 
-    unless spec_data.status == :linked do
+    unless spec_data == nil or spec_data.status == :linked do
       raise LinkError,
             "Spec #{inspect(spec_ref)} linking took too long, spec_data: #{inspect(spec_data, pretty: true)}"
     end
@@ -88,19 +96,31 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   def proceed_spec_linking(spec_ref, state) do
     spec_data = Map.fetch!(state.pending_specs, spec_ref)
     {spec_data, state} = do_proceed_spec_linking(spec_ref, spec_data, state)
-    put_in(state, [:pending_specs, spec_ref], spec_data)
+
+    if spec_data.status == :linked do
+      {_spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
+
+      if state.delayed_playback_change != nil do
+        {:ok, state} =
+          LifecycleController.change_playback_state(
+            state.delayed_playback_change,
+            %{state | delayed_playback_change: nil}
+          )
+
+        state
+      else
+        state
+      end
+    else
+      put_in(state, [:pending_specs, spec_ref], spec_data)
+    end
   end
 
   defp do_proceed_spec_linking(spec_ref, %{status: :linking_internally} = spec_data, state) do
     links = spec_data.links |> Map.values()
 
     if Enum.all?(links, &(&1.awaiting_responses == 0)) do
-      state =
-        links
-        |> Enum.map(& &1.link)
-        |> Enum.reject(&({Membrane.Bin, :itself} in [&1.from.child, &1.to.child]))
-        |> Enum.reduce(state, &link/2)
-
+      state = links |> Enum.map(& &1.link) |> Enum.reduce(state, &link/2)
       Membrane.Logger.debug("Spec #{inspect(spec_ref)} linked internally")
       do_proceed_spec_linking(spec_ref, %{spec_data | status: :linked_internally}, state)
     else
@@ -237,7 +257,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
           do: pad_name = Pad.name_by_ref(pad_spec),
           pad: {:ok, pad_info} <- Keyword.fetch(child_data.module.membrane_pads(), pad_name),
           ref: {:ok, ref} <- make_pad_ref(pad_spec, pad_info.availability) do
-      %Endpoint{endpoint | pid: child_data.pid, pad_ref: ref}
+      %Endpoint{endpoint | pid: child_data.pid, pad_ref: ref, pad_info: pad_info}
     else
       child: {:error, {:unknown_child, _child}} ->
         raise LinkError, "Child #{inspect(child)} does not exist"
@@ -267,7 +287,41 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   defp link(%Link{from: from, to: to}, state) do
     Telemetry.report_link(from, to)
-    :ok = Message.call(from.pid, :handle_link, [:output, from, to, %{initiator: :parent}])
-    update_in(state, [:links], &[%Link{from: from, to: to} | &1])
+
+    if {Membrane.Bin, :itself} in [from.child, to.child] do
+      state
+    else
+      from_availability = Pad.availability_mode(from.pad_info.availability)
+      to_availability = Pad.availability_mode(to.pad_info.availability)
+
+      case Message.call(from.pid, :handle_link, [:output, from, to, %{initiator: :parent}]) do
+        :ok ->
+          update_in(state, [:links], &[%Link{from: from, to: to} | &1])
+
+        {:error, {:call_failure, _reason}} when to_availability == :static ->
+          Process.exit(to.pid, :kill)
+          state
+
+        {:error, {:neighbor_dead, _reason}} when from_availability == :static ->
+          Process.exit(from.pid, :kill)
+          state
+
+        {:error, {:call_failure, _reason}} when to_availability == :dynamic ->
+          Membrane.Logger.debug("""
+          Failed to establish link between #{inspect(from.pad_ref)} and #{inspect(to.pad_ref)}
+          because #{inspect(from.child)} is down.
+          """)
+
+          state
+
+        {:error, {:neighbor_dead, _reason}} when from_availability == :dynamic ->
+          Membrane.Logger.debug("""
+          Failed to establish link between #{inspect(from.pad_ref)} and #{inspect(to.pad_ref)}
+          because #{inspect(to.child)} is down.
+          """)
+
+          state
+      end
+    end
   end
 end

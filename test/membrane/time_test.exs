@@ -30,4 +30,21 @@ defmodule Membrane.TimeTest do
 
     assert_in_delta @timestamp_unix_ns, regenerated_timestamp, 1
   end
+
+  test "Time units" do
+    value = 123
+    assert @module.nanoseconds(value) == value
+    assert @module.microseconds(value) == value * 1000
+    assert @module.milliseconds(value) == value * 1_000_000
+    assert @module.seconds(value) == value * 1_000_000_000
+    assert @module.hours(value) == value * 3_600_000_000_000
+    assert @module.days(value) == value * 86_400_000_000_000
+
+    assert value |> @module.seconds() |> @module.native_units() ==
+             :erlang.convert_time_unit(value, :seconds, :native)
+  end
+
+  test "Monotonic time should be integer" do
+    assert is_integer(@module.monotonic_time())
+  end
 end

@@ -79,7 +79,11 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @spec change_playback_state(PlaybackState.t(), Parent.state_t()) ::
           PlaybackHandler.handler_return_t()
   def change_playback_state(new_state, state) do
-    PlaybackHandler.change_playback_state(new_state, __MODULE__, state)
+    if Enum.empty?(state.pending_specs) do
+      PlaybackHandler.change_playback_state(new_state, __MODULE__, state)
+    else
+      {:ok, %{state | delayed_playback_change: new_state}}
+    end
   end
 
   @spec handle_notification(Child.name_t(), Notification.t(), Parent.state_t()) ::

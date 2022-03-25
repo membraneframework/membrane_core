@@ -93,6 +93,56 @@ defmodule Membrane.Testing.Assertions do
   end
 
   @doc """
+  Asserts that a crash group within pipeline will be down within the `timeout` period specified in
+  milliseconds.
+
+  Usage example:
+
+      assert_pipeline_crash_group_down(pipeline, :group_1)
+  """
+  defmacro assert_pipeline_crash_group_down(pipeline, group_name, timeout \\ @default_timeout) do
+    quote do
+      group_name_value = unquote(group_name)
+
+      unquote(
+        assert_receive_from_pipeline(
+          pipeline,
+          {:handle_crash_group_down,
+           quote do
+             ^group_name_value
+           end},
+          timeout
+        )
+      )
+    end
+  end
+
+  @doc """
+  Refutes that a crash group within pipeline won't be down within the `timeout` period specified in
+  milliseconds.
+
+  Usage example:
+
+      refute_pipeline_crash_group_down(pipeline, :group_1)
+  """
+  defmacro refute_pipeline_crash_group_down(pipeline, group_name, timeout \\ @default_timeout) do
+    quote do
+      group_name_value = unquote(group_name)
+
+      unquote(
+        refute_receive_from_pipeline(
+          pipeline,
+          {:handle_crash_group_down,
+           quote do
+             ^group_name_value
+           end},
+          timeout
+        )
+      )
+    end
+  end
+
+  @doc """
   Asserts that pipeline's playback state (see `Membrane.PlaybackState`)
   changed or will change from `previous_state` to `current_state` within
   the `timeout` period specified in milliseconds.
