@@ -35,7 +35,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   when one of direct pipeline children informs the pipeline about end of a stream,
   * `Membrane.RemoteControlled.Message.Notification.t()` sent when pipeline
   receives notification from one of its children,
-  * `Membrane.RemoteControlled.Message.Terminated.t()` sent when the pipeline is terminated.
+  * `Membrane.RemoteControlled.Message.Terminated.t()` sent when the pipeline gracefully terminates.
   """
 
   use Membrane.Pipeline
@@ -284,7 +284,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   @doc """
   Awaits for the `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.Terminated` message,
-  which is send when the pipeline is terminated.
+  which is send when the pipeline gracefully terminates.
   It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
 
@@ -324,7 +324,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     quote do
       send(
         unquote(pipeline),
-        {:subscription, fn x -> match?(unquote(subscription_pattern), x) end}
+        {:subscription, fn message -> match?(unquote(subscription_pattern), message) end}
       )
     end
   end

@@ -1,5 +1,13 @@
 defmodule Membrane.RemoteControlled.Message do
-  @moduledoc false
+  @moduledoc """
+  An abstract module aggregating all the messages that can be sent by the `RemoteControlled.Pipeline`.
+  The available messages are:
+  * `Membrane.RemoteControlled.Message.PlaybackState.t()`
+  * `Membrane.RemoteControlled.Message.StartOfStream.t()`
+  * `Membrane.RemoteControlled.Message.EndOfStream.t()`
+  * `Membrane.RemoteControlled.Message.Notification.t()`
+  * `Membrane.RemoteControlled.Message.Terminated.t()`
+  """
 
   defmodule PlaybackState do
     @moduledoc """
@@ -55,7 +63,7 @@ defmodule Membrane.RemoteControlled.Message do
 
   defmodule Terminated do
     @moduledoc """
-    Message sent when the pipeline is terminated.
+    Message sent when the pipeline gracefully terminates.
     """
     @type t :: %__MODULE__{from: pid(), reason: :normal | :shutdown | {:shutdown, any()} | term()}
 
