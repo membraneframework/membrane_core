@@ -30,7 +30,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   defp do_handle_action({action, _args}, :handle_init, _params, state)
-       when action not in [:spec, :log_metadata] do
+       when action not in [:spec, :log_metadata, :playback] do
     {{:error, :invalid_action}, state}
   end
 

@@ -263,6 +263,28 @@ defmodule Membrane.Pipeline do
     * `timeout` - if `blocking?` is set to true it tells how much
       time (ms) to wait for pipeline to get terminated. Defaults to 5000.
   """
+  @spec stop_and_terminate(pipeline :: pid, Keyword.t()) ::
+          :ok | {:error, :timeout}
+  def stop_and_terminate(pipeline, opts \\ []) do
+    blocking? = Keyword.get(opts, :blocking?, false)
+    timeout = Keyword.get(opts, :timeout, 5000)
+
+    ref = if blocking?, do: Process.monitor(pipeline)
+
+    PlaybackHandler.request_playback_state_change(pipeline, :terminating)
+
+    if blocking?,
+      do: wait_for_down(ref, timeout),
+      else: :ok
+  end
+
+  @doc """
+  Changes pipeline's playback state to `:stopped` and terminates its process.
+  It accpets two options:
+    * `blocking?` - tells whether to stop the pipeline synchronously
+    * `timeout` - if `blocking?` is set to true it tells how much
+      time (ms) to wait for pipeline to get terminated. Defaults to 5000.
+  """
   @spec terminate(pipeline :: pid, Keyword.t()) ::
           :ok | {:error, :timeout}
   def terminate(pipeline, opts \\ []) do
@@ -389,6 +411,15 @@ defmodule Membrane.Pipeline do
         """
         @spec terminate(pid, Keyword.t()) :: :ok
         defdelegate terminate(pipeline, opts \\ []), to: unquote(__MODULE__)
+      end
+
+      unless Enum.any?(1..2, &Module.defines?(__MODULE__, {:stop_and_terminate, &1})) do
+        @doc """
+        Changes pipeline's playback state to `:stopped` and terminates its process.
+        """
+        @spec stop_and_terminate(pid, Keyword.t()) :: :ok
+        @deprecated "use terminate/2 instead"
+        defdelegate stop_and_terminate(pipeline, opts \\ []), to: unquote(__MODULE__)
       end
     end
   end
