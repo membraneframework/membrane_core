@@ -121,6 +121,9 @@ defmodule Membrane.Core.PlaybackHandler do
       else
         continue_playback_change(handler, state)
       end
+    else
+       {:error, reason} -> {{:error, reason}, state}
+       other_error -> other_error
     end
   end
 

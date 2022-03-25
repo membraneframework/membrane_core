@@ -66,8 +66,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   defp do_handle_action({:playback, playback_state}, _cb, _params, state) do
-    Membrane.Core.PlaybackHandler.request_playback_state_change(self(), playback_state)
-    {:ok, state}
+    Membrane.Core.Parent.LifecycleController.change_playback_state(playback_state, state)
   end
 
   defp do_handle_action(action, callback, _params, state) do
