@@ -74,9 +74,9 @@ defmodule Membrane.Core.Bin do
   @doc """
   Changes bin's playback state to `:stopped` and terminates its process
   """
-  @spec stop_and_terminate(bin :: pid) :: :ok
-  def stop_and_terminate(bin) do
-    Message.send(bin, :stop_and_terminate)
+  @spec terminate(bin :: pid) :: :ok
+  def terminate(bin) do
+    Message.send(bin, :terminate)
     :ok
   end
 

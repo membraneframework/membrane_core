@@ -88,7 +88,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
       assert_end_of_stream(pipeline, :sink)
       refute_sink_buffer(pipeline, :sink, _buffer, 0)
 
-      Pipeline.stop_and_terminate(pipeline, blocking?: true)
+      Pipeline.terminate(pipeline, blocking?: true)
     end
   end)
 
@@ -117,7 +117,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     end)
 
     refute_sink_buffer(pipeline, :left_sink, %{payload: 25_000})
-    Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Pipeline.terminate(pipeline, blocking?: true)
   end
 
   test "handle removed branch" do
@@ -143,7 +143,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
       assert buffer.payload == payload
     end)
 
-    Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Pipeline.terminate(pipeline, blocking?: true)
   end
 
   defmodule PushSource do
@@ -185,7 +185,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
       end
     end)
 
-    Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Pipeline.terminate(pipeline, blocking?: true)
     refute_sink_buffer(pipeline, :sink, _buffer, 0)
   end
 

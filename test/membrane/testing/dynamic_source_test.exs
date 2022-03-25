@@ -52,7 +52,7 @@ defmodule Membrane.Testing.DynamicSourceTest do
     assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: 'b'})
     assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: 'c'})
 
-    Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 
   test "Source works properly when using generator function" do
@@ -85,6 +85,6 @@ defmodule Membrane.Testing.DynamicSourceTest do
     assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: <<1::16>>})
     assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: <<2::16>>})
 
-    Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 end

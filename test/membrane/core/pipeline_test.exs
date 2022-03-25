@@ -108,7 +108,7 @@ defmodule Membrane.Core.PipelineTest do
 
   test "Pipeline can be terminated synchronously" do
     {:ok, pid} = Testing.Pipeline.start_link(%Testing.Pipeline.Options{module: TestPipeline})
-    assert :ok == Testing.Pipeline.stop_and_terminate(pid, blocking?: true)
+    assert :ok == Testing.Pipeline.terminate(pid, blocking?: true)
   end
 
   test "Pipeline should be able to steer its playback state with :playback action" do

@@ -67,7 +67,7 @@ defmodule Membrane.ElementTest do
       })
 
     on_exit(fn ->
-      Membrane.Pipeline.stop_and_terminate(pipeline, blocking?: true)
+      Membrane.Pipeline.terminate(pipeline, blocking?: true)
     end)
 
     [pipeline: pipeline]

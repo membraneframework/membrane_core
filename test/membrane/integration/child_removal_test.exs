@@ -122,7 +122,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
   #############
 
   defp stop_pipeline(pid) do
-    assert Pipeline.stop_and_terminate(pid) == :ok
+    assert Pipeline.terminate(pid) == :ok
     assert_pid_dead(pid)
   end
 

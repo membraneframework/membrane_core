@@ -34,7 +34,7 @@ defmodule Membrane.Integration.SyncTest.TickingPace do
       Process.sleep(actual_report_interval)
     end
 
-    Testing.Pipeline.stop_and_terminate(pipeline)
+    Testing.Pipeline.terminate(pipeline)
 
     ticks_amount = Sync.Helper.receive_ticks()
 

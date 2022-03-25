@@ -65,6 +65,6 @@ defmodule Membrane.Core.EndpointTest do
     end)
 
     assert_end_of_stream(pipeline, ^receiving_element)
-    Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 end
