@@ -53,7 +53,7 @@ defmodule Membrane.Integration.LinkingTest do
 
     @impl true
     def handle_init(opts) do
-      {:ok, %{testing_pid: opts.testing_pid}}
+      {{:ok, playback: :playing}, %{testing_pid: opts.testing_pid}}
     end
 
     @impl true
@@ -193,7 +193,6 @@ defmodule Membrane.Integration.LinkingTest do
     assert_receive(:spec_started)
     send(pipeline, {:start_spec, %{spec: links_spec}})
     assert_receive(:spec_started)
-    Testing.Pipeline.execute_actions(pipeline, playback: :playing)
 
     assert_pipeline_playback_changed(pipeline, _, :playing)
   end

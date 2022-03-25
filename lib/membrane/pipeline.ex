@@ -265,17 +265,9 @@ defmodule Membrane.Pipeline do
   """
   @spec stop_and_terminate(pipeline :: pid, Keyword.t()) ::
           :ok | {:error, :timeout}
+  @deprecated "use terminate/2 instead"
   def stop_and_terminate(pipeline, opts \\ []) do
-    blocking? = Keyword.get(opts, :blocking?, false)
-    timeout = Keyword.get(opts, :timeout, 5000)
-
-    ref = if blocking?, do: Process.monitor(pipeline)
-
-    PlaybackHandler.request_playback_state_change(pipeline, :terminating)
-
-    if blocking?,
-      do: wait_for_down(ref, timeout),
-      else: :ok
+    do_terminate(pipeline, opts)
   end
 
   @doc """
@@ -288,16 +280,7 @@ defmodule Membrane.Pipeline do
   @spec terminate(pipeline :: pid, Keyword.t()) ::
           :ok | {:error, :timeout}
   def terminate(pipeline, opts \\ []) do
-    blocking? = Keyword.get(opts, :blocking?, false)
-    timeout = Keyword.get(opts, :timeout, 5000)
-
-    ref = if blocking?, do: Process.monitor(pipeline)
-
-    PlaybackHandler.request_playback_state_change(pipeline, :terminating)
-
-    if blocking?,
-      do: wait_for_down(ref, timeout),
-      else: :ok
+    do_terminate(pipeline, opts)
   end
 
   defp wait_for_down(ref, timeout) do
@@ -308,6 +291,19 @@ defmodule Membrane.Pipeline do
       timeout ->
         {:error, :timeout}
     end
+  end
+
+  defp do_terminate(pipeline, opts) do
+    blocking? = Keyword.get(opts, :blocking?, false)
+    timeout = Keyword.get(opts, :timeout, 5000)
+
+    ref = if blocking?, do: Process.monitor(pipeline)
+
+    PlaybackHandler.request_playback_state_change(pipeline, :terminating)
+
+    if blocking?,
+      do: wait_for_down(ref, timeout),
+      else: :ok
   end
 
   @doc """
@@ -419,7 +415,7 @@ defmodule Membrane.Pipeline do
         """
         @spec stop_and_terminate(pid, Keyword.t()) :: :ok
         @deprecated "use terminate/2 instead"
-        defdelegate stop_and_terminate(pipeline, opts \\ []), to: unquote(__MODULE__)
+        def stop_and_terminate(pipeline, opts \\ []), do: Membrane.Pipeline.terminate(pipeline, opts)
       end
     end
   end

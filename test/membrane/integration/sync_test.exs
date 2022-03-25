@@ -26,7 +26,6 @@ defmodule Membrane.Integration.SyncTest do
 
     for tries <- [100, 1000, 10_000] do
       assert {:ok, pipeline} = Testing.Pipeline.start_link(pipeline_opts)
-      Testing.Pipeline.execute_actions(pipeline, playback: :playing)
 
       assert_pipeline_playback_changed(pipeline, :prepared, :playing)
       Process.sleep(tick_interval * tries)
@@ -48,7 +47,6 @@ defmodule Membrane.Integration.SyncTest do
     }
 
     {:ok, pipeline} = Testing.Pipeline.start_link(options)
-    Testing.Pipeline.execute_actions(pipeline, playback: :playing)
 
     assert_start_of_stream(pipeline, :sink_a)
     assert_start_of_stream(pipeline, :sink_b, :input, @sync_error_ms)
@@ -65,7 +63,6 @@ defmodule Membrane.Integration.SyncTest do
     }
 
     {:ok, pipeline} = Testing.Pipeline.start_link(options)
-    Testing.Pipeline.execute_actions(pipeline, playback: :playing)
 
     assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
     assert_pipeline_playback_changed(pipeline, :prepared, :playing)
@@ -85,7 +82,6 @@ defmodule Membrane.Integration.SyncTest do
     }
 
     {:ok, pipeline} = Testing.Pipeline.start_link(options)
-    Testing.Pipeline.execute_actions(pipeline, playback: :playing)
 
     assert_start_of_stream(pipeline, :sink_a)
     assert_start_of_stream(pipeline, :sink_b, :input, @sync_error_ms)
@@ -141,8 +137,6 @@ defmodule Membrane.Integration.SyncTest do
   test "synchronization inside a bin is possible" do
     {:ok, pipeline} =
       Testing.Pipeline.start_link(%Testing.Pipeline.Options{elements: [bin: Sync.SyncBin]})
-
-    Testing.Pipeline.execute_actions(pipeline, playback: :playing)
 
     assert_pipeline_notified(pipeline, :bin, {:start_of_stream, :sink_a})
     assert_pipeline_notified(pipeline, :bin, {:start_of_stream, :sink_b}, @sync_error_ms)

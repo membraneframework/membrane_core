@@ -17,8 +17,6 @@ defmodule Membrane.Integration.ChildCrashTest do
                }
              })
 
-    Testing.Pipeline.execute_actions(pipeline_pid, playback: :playing)
-
     ChildCrashTest.Pipeline.add_path(pipeline_pid, [:filter_1_1, :filter_2_1], :source_1)
 
     [sink_pid, center_filter_pid, filter_1_1_pid, filter_1_2_pid, source_1_pid] =
@@ -46,8 +44,6 @@ defmodule Membrane.Integration.ChildCrashTest do
              Testing.Pipeline.start_link(%Testing.Pipeline.Options{
                module: ChildCrashTest.Pipeline
              })
-
-    Testing.Pipeline.execute_actions(pipeline_pid, playback: :playing)
 
     ChildCrashTest.Pipeline.add_path(pipeline_pid, [], :source, {1, :temporary})
 
@@ -77,8 +73,6 @@ defmodule Membrane.Integration.ChildCrashTest do
              Testing.Pipeline.start_link(%Testing.Pipeline.Options{
                module: ChildCrashTest.Pipeline
              })
-
-    Testing.Pipeline.execute_actions(pipeline_pid, playback: :playing)
 
     ChildCrashTest.Pipeline.add_bin(pipeline_pid, :bin_1, :source_1, {1, :temporary})
 
@@ -134,8 +128,6 @@ defmodule Membrane.Integration.ChildCrashTest do
              Testing.Pipeline.start_link(%Testing.Pipeline.Options{
                module: ChildCrashTest.Pipeline
              })
-
-    Testing.Pipeline.execute_actions(pipeline_pid, playback: :playing)
 
     ChildCrashTest.Pipeline.add_path(
       pipeline_pid,

@@ -42,7 +42,6 @@ defmodule Membrane.Testing.DynamicSourceTest do
     }
 
     Testing.Pipeline.execute_actions(pipeline, spec: spec)
-    Testing.Pipeline.execute_actions(pipeline, playback: :playing)
 
     assert_pipeline_playback_changed(pipeline, _from, :playing)
     assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: 'a'})
@@ -75,7 +74,6 @@ defmodule Membrane.Testing.DynamicSourceTest do
     }
 
     Testing.Pipeline.execute_actions(pipeline, spec: spec)
-    Testing.Pipeline.execute_actions(pipeline, playback: :playing)
 
     assert_pipeline_playback_changed(pipeline, _from, :playing)
     assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: <<0::16>>})
