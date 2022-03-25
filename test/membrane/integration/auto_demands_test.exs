@@ -155,6 +155,11 @@ defmodule Membrane.Integration.AutoDemandsTest do
     def handle_other(actions, _ctx, state) do
       {{:ok, actions}, state}
     end
+
+    @impl true
+    def handle_prepared_to_playing(_ctx, state) do
+      {{:ok, [caps: {:output, :any}]}, state}
+    end
   end
 
   test "toilet" do
