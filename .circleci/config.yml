@@ -14,14 +14,14 @@ commands:
   save_build_cache:
     steps:
       - save_cache:
-          key: v1-build-cache-{{ arch }}-{{ .Environment.MIX_ENV }}-{{ checksum "mix.lock" }}
+          key: v1-build-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "mix.lock" }}
           paths: ["_build"]
   restore_build_cache:
     steps:
       - restore_cache:
           keys:
-            - v1-build-cache-{{ arch }}-{{ .Environment.MIX_ENV }}-{{ checksum "mix.lock" }}
-            - v1-build-cache-{{ arch }}-{{ .Environment.MIX_ENV }}-
+            - v1-build-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "mix.lock" }}
+            - v1-build-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-
             - v1-build-cache-{{ arch }}-
   gen_version_file:
     steps:
