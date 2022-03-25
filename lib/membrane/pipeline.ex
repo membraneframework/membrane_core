@@ -415,7 +415,8 @@ defmodule Membrane.Pipeline do
         """
         @spec stop_and_terminate(pid, Keyword.t()) :: :ok
         @deprecated "use terminate/2 instead"
-        def stop_and_terminate(pipeline, opts \\ []), do: Membrane.Pipeline.terminate(pipeline, opts)
+        def stop_and_terminate(pipeline, opts \\ []),
+          do: Membrane.Pipeline.terminate(pipeline, opts)
       end
     end
   end

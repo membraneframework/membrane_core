@@ -103,6 +103,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
                  link(:tee) |> to(:right_sink, %Sink{autodemand: false})
                ]
              })
+
     assert_pipeline_playback_changed(pipeline, :prepared, :playing)
     Pipeline.message_child(pipeline, :right_sink, {:make_demand, 1000})
 

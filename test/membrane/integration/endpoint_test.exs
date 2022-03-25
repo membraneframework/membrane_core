@@ -52,7 +52,6 @@ defmodule Membrane.Core.EndpointTest do
   end
 
   defp assert_data_flows_through(pipeline, buffers, receiving_element) do
-
     assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
     assert_pipeline_playback_changed(pipeline, :prepared, :playing)
 
