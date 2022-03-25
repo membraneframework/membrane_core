@@ -266,7 +266,8 @@ defmodule Membrane.Core.Element.ActionHandler do
               end),
           data: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
           dir: %{direction: :output} <- pad_data,
-          eos: %{end_of_stream?: false} <- pad_data do
+          eos: %{end_of_stream?: false} <- pad_data,
+          caps: %{caps: caps} when not is_nil(caps) <- pad_data do
       %{pid: pid, other_ref: other_ref} = pad_data
 
       state =
@@ -280,6 +281,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       data: {:error, reason} -> {{:error, reason}, state}
       dir: %{direction: dir} -> {{:error, {:invalid_pad_dir, dir}}, state}
       eos: %{end_of_stream?: true} -> {{:error, {:eos_sent, pad_ref}}, state}
+      caps: %{caps: nil} -> {{:error, :caps_not_sent_before_first_buffer}, state}
     end
   end
 
