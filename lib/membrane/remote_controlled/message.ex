@@ -9,6 +9,13 @@ defmodule Membrane.RemoteControlled.Message do
   * `Membrane.RemoteControlled.Message.Terminated.t()`
   """
 
+  @type message_t ::
+          __MODULE__.PlaybackState.t()
+          | __MODULE__.StartOfStream.t()
+          | __MODULE__.EndOfStream.t()
+          | __MODULE__.Notification.t()
+          | __MODULE__.Terminated.t()
+
   defmodule PlaybackState do
     @moduledoc """
     Message sent when the pipeline changes its playback state
