@@ -11,11 +11,7 @@ defmodule Membrane.Mixfile do
       elixir: "~> 1.12",
       elixirc_paths: elixirc_paths(Mix.env()),
       description: "Membrane Multimedia Framework (Core)",
-      dialyzer: [
-        plt_core_path: "priv/plts",
-        plt_local_path: "priv/plts",
-        flags: [:error_handling]
-      ],
+      dialyzer: dialyzer(),
       package: package(),
       name: "Membrane Core",
       source_url: link(),
@@ -40,6 +36,22 @@ defmodule Membrane.Mixfile do
 
   defp elixirc_paths(:test), do: ["lib", "spec/support", "test/support"]
   defp elixirc_paths(_env), do: ["lib"]
+
+  defp dialyzer() do
+    opts = [
+      plt_local_path: "priv/plts",
+      flags: [:error_handling]
+    ]
+
+    if System.get_env("CI") == "true" do
+      # Store core PLTs in cacheable directory for CI
+      # For development it's better to stick to default, $MIX_HOME based path
+      # to allow sharing core PLTs between projects
+      [plt_core_path: "priv/plts"] ++ opts
+    else
+      opts
+    end
+  end
 
   defp link do
     "https://github.com/membraneframework/membrane-core"
