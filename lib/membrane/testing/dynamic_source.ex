@@ -21,6 +21,7 @@ defmodule Membrane.Testing.DynamicSource do
   a tuple consisting of actions that element will return during the
   `c:Membrane.Element.WithOutputPads.handle_demand/5`
   callback and new state.
+
   ```
   generator_function = fn state, pad, size ->
     #generate some buffers
@@ -28,6 +29,7 @@ defmodule Membrane.Testing.DynamicSource do
   end
 
   %Source{output: {1, generator_function}}
+  ```
   """
   use Membrane.Source
 
