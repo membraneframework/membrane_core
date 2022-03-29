@@ -65,11 +65,9 @@ commands:
             | circleci tests split --split-by=<<parameters.split_by>> \
             | xargs <<parameters.command>>
 jobs:
-  build:
+  get_deps:
     docker:
       - image: membraneframeworklabs/docker_membrane
-        environment:
-          MIX_ENV: test
 
     working_directory: ~/app
 
@@ -81,6 +79,24 @@ jobs:
       - persist_to_workspace:
           root: .
           paths: "*"
+
+  build_test:
+    docker:
+      - image: membraneframeworklabs/docker_membrane
+        environment:
+          MIX_ENV: test
+
+    working_directory: ~/app
+
+    steps:
+      - attach_workspace:
+          at: .
+      - restore_build_cache:
+          env: test
+      - run: mix deps.compile
+      - run: mix compile --force --warnings-as-errors
+      - save_build_cache:
+          env: test
 
   test:
     docker:
@@ -124,7 +140,7 @@ jobs:
       - restore_build_cache:
           env: dev
       - run: mix deps.compile
-      - run: mix compile --force --warnings-as-errors
+      - run: mix compile
       - save_build_cache:
           env: dev
       - run: mix format --check-formatted
@@ -139,10 +155,13 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - build
+      - get_deps
+      - build_test:
+          requires:
+            - get_deps
       - test:
           requires:
-            - build
+            - get_deps
       - lint:
           requires:
-            - build
+            - get_deps
