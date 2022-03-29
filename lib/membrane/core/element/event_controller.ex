@@ -33,12 +33,13 @@ defmodule Membrane.Core.Element.EventController do
     pad_data = PadModel.get_data!(state, pad_ref)
 
     if not Event.async?(event) and buffers_before_event_present?(pad_data) do
-      PadModel.update_data(
+      PadModel.update_data!(
         state,
         pad_ref,
         :input_queue,
-        &{:ok, InputQueue.store(&1, :event, event)}
+        &InputQueue.store(&1, :event, event)
       )
+      ~> {:ok, &1}
     else
       exec_handle_event(pad_ref, event, state)
     end
@@ -114,7 +115,7 @@ defmodule Membrane.Core.Element.EventController do
   end
 
   defp check_sync(%Events.StartOfStream{}, state) do
-    if state.pads.data
+    if state.pads_data
        |> Map.values()
        |> Enum.filter(&(&1.direction == :input))
        |> Enum.all?(& &1.start_of_stream?) do

@@ -38,7 +38,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
                  state
                )
 
-      assert %{new_state | pads: nil} == %{state | pads: nil}
+      assert %{new_state | pads_data: nil} == %{state | pads_data: nil}
       assert PadModel.assert_instance(new_state, :output) == :ok
     end
 
@@ -61,7 +61,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
     {info, state} =
       elem_module
       |> prepare_state(name)
-      |> Bunch.Access.pop_in([:pads, :info, pad_name])
+      |> Bunch.Access.pop_in([:pads_info, pad_name])
 
     data =
       struct(Membrane.Element.PadData,
@@ -71,13 +71,13 @@ defmodule Membrane.Core.Element.PadControllerTest do
       |> Map.merge(info)
 
     state
-    |> Bunch.Access.put_in([:pads, :data, pad_name], data)
+    |> Bunch.Access.put_in([:pads_data, pad_name], data)
     |> Bunch.Struct.put_in([:playback, :state], playback_state)
   end
 
   defp prepare_dynamic_state(elem_module, name, playback_state, pad_name, pad_ref) do
     state = elem_module |> prepare_state(name, playback_state)
-    info = state.pads.info[pad_name]
+    info = state.pads_info[pad_name]
 
     data =
       struct(Membrane.Element.PadData,
@@ -86,32 +86,32 @@ defmodule Membrane.Core.Element.PadControllerTest do
       )
       |> Map.merge(info)
 
-    state |> Bunch.Access.put_in([:pads, :data, pad_ref], data)
+    state |> Bunch.Access.put_in([:pads_data, pad_ref], data)
   end
 
   describe "handle_unlink" do
     test "for public static output pad (stopped)" do
       state = prepare_static_state(TrivialFilter, :element, :output, :stopped)
-      assert state.pads.data |> Map.has_key?(:output)
+      assert state.pads_data |> Map.has_key?(:output)
       assert {:ok, new_state} = @module.handle_unlink(:output, state)
-      refute new_state.pads.data |> Map.has_key?(:output)
+      refute new_state.pads_data |> Map.has_key?(:output)
     end
 
     test "for public static input pad (stopped)" do
       state = prepare_static_state(TrivialSink, :element, :input, :stopped)
-      assert state.pads.data |> Map.has_key?(:input)
+      assert state.pads_data |> Map.has_key?(:input)
       assert {:ok, new_state} = @module.handle_unlink(:input, state)
-      refute new_state.pads.data |> Map.has_key?(:input)
+      refute new_state.pads_data |> Map.has_key?(:input)
     end
 
     test "for dynamic input pad" do
       pad_ref = Pad.ref(:input, 0)
       state = prepare_dynamic_state(DynamicFilter, :element, :playing, :input, pad_ref)
-      assert state.pads.data |> Map.has_key?(pad_ref)
+      assert state.pads_data |> Map.has_key?(pad_ref)
       assert {:ok, new_state} = @module.handle_unlink(pad_ref, state)
       assert new_state.internal_state[:last_event] == nil
       assert new_state.internal_state.last_pad_removed == pad_ref
-      refute new_state.pads.data |> Map.has_key?(pad_ref)
+      refute new_state.pads_data |> Map.has_key?(pad_ref)
     end
   end
 end
