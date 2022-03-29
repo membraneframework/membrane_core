@@ -17,7 +17,6 @@ defmodule Membrane.Core.Bin.PadController do
   require Membrane.Bin.CallbackContext.{PadAdded, PadRemoved}
   require Membrane.Logger
   require Membrane.Pad
-  # require FastMap
 
   @doc """
   Handles a link request from the bin's parent.
