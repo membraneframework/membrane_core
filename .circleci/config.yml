@@ -19,7 +19,7 @@ commands:
         default: dev
     steps:
       - save_cache:
-          key: v1-build-cache-{{ arch }}-<< parameters.env >>-{{ checksum "mix.lock" }}
+          key: v2-build-cache-{{ arch }}-<< parameters.env >>-{{ checksum "mix.lock" }}
           paths: ["_build/<< parameters.env >>"]
   restore_build_cache:
     parameters:
@@ -30,9 +30,9 @@ commands:
     steps:
       - restore_cache:
           keys:
-            - v1-build-cache-{{ arch }}-<< parameters.env >>-{{ checksum "mix.lock" }}
-            - v1-build-cache-{{ arch }}-<< parameters.env >>-
-            - v1-build-cache-{{ arch }}-
+            - v2-build-cache-{{ arch }}-<< parameters.env >>-{{ checksum "mix.lock" }}
+            - v2-build-cache-{{ arch }}-<< parameters.env >>-
+            - v2-build-cache-{{ arch }}-
   gen_version_file:
     steps:
       - run: asdf current erlang > .runtime_version
