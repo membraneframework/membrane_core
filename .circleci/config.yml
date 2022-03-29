@@ -112,10 +112,7 @@ jobs:
           at: .
       - restore_build_cache:
           env: test
-      - run: mix deps.compile
       - run: mix compile
-      - save_build_cache:
-          env: test
       - run_tests:
           glob: "test/membrane/**/*.exs"
           split_by: "timings"
@@ -139,7 +136,6 @@ jobs:
           at: .
       - restore_build_cache:
           env: dev
-      - run: mix deps.compile
       - run: mix compile
       - save_build_cache:
           env: dev
