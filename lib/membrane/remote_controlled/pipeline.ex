@@ -114,7 +114,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   Usage example:
     1) awaiting for any playback state change occuring in the pipeline:
-    ```
+    ```Elixir
     Pipeline.await_playback_state(pipeline)
     ```
   """
@@ -131,7 +131,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   Usage example:
     1) awaiting for the pipeline's playback state to change into `:playing`:
-    ```
+    ```Elixir
     Pipeline.await_playback_state(pipeline, :playing)
     ```
   """
@@ -149,7 +149,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   Usage example:
     1) awaiting for the first `start_of_stream` occuring on any pad of any element in the pipeline:
-    ```
+    ```Elixir
     Pipeline.await_start_of_stream(pipeline)
     ```
   """
@@ -166,7 +166,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   Usage example:
     1) awaiting for the first `start_of_stream` occuring on any pad of the `:element_id` element in the pipeline:
-    ```
+    ```Elixir
     Pipeline.await_start_of_stream(pipeline, :element_id)
     ```
   """
@@ -184,7 +184,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   Usage example:
     1) awaiting for the first `start_of_stream` occuring on the `:pad_id` pad of the `:element_id` element in the pipeline:
-    ```
+    ```Elixir
     Pipeline.await_start_of_stream(pipeline, :element_id, :pad_id)
     ```
   """
@@ -202,7 +202,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   Usage example:
     1) awaiting for the first `end_of_stream` occuring on any pad of any element in the pipeline:
-    ```
+    ```Elixir
     Pipeline.await_end_of_stream(pipeline)
     ```
   """
@@ -219,7 +219,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   Usage example:
     1) awaiting for the first `end_of_stream` occuring on any pad of the `:element_id` element in the pipeline:
-    ```
+    ```Elixir
     Pipeline.await_end_of_stream(pipeline, :element_id)
     ```
   """
@@ -237,7 +237,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   Usage example:
     1) awaiting for the first `end_of_stream` occuring on the `:pad_id` of the `:element_id` element in the pipeline:
-    ```
+    ```Elixir
     Pipeline.await_end_of_stream(pipeline, :element_id, :pad_id)
     ```
   """
@@ -255,7 +255,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   Usage example:
     1) awaiting for the first notification send to any element in the pipeline:
-    ```
+    ```Elixir
     Pipeline.await_notification(pipeline)
     ```
   """
@@ -272,7 +272,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   Usage example:
     1) awaiting for the first notification send to the `:element_id` element in the pipeline:
-    ```
+    ```Elixir
     Pipeline.await_notification(pipeline, :element_id)
     ```
   """
@@ -290,7 +290,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   Usage example:
     1) awaiting for the pipeline termination:
-    ```
+    ```Elixir
     Pipeline.await_termination(pipeline)
     ```
   """
@@ -309,14 +309,14 @@ defmodule Membrane.RemoteControlled.Pipeline do
   1) making the `Membrane.RemoteControlled.Pipeline` send to the controlling process `Message.StartOfStream` message
     when any pad of the `:element_id` receives `:start_of_stream` event.
 
-    ```
+    ```Elixir
     subscribe(pipeline, %Message.StartOfStream{element: :element_id, pad: _})
     ```
 
   2) making the `Membrane.RemoteControlled.Pipeline` send to the controlling process `Message.PlaybackState` message when the pipeline playback state changes to any state
     (that is - for all the :stopped, :prepared and :playing playback states).
 
-    ```
+    ```Elixir
     subscribe(pipeline, %Message.PlaybackState{state: _})
     ```
   """
@@ -335,12 +335,12 @@ defmodule Membrane.RemoteControlled.Pipeline do
   Usage example:
     1) making the `Membrane.RemoteControlled.Pipeline` start the `Membrane.ParentSpec`
        specified in the action.
-      ```
-      children = ...
-      links = ...
-      actions = [{:spec, %ParentSpec{children: children, links: links}}]
-      Pipeline.exec_actions(pipeline, actions)
-      ```
+    ```Elixir
+    children = ...
+    links = ...
+    actions = [{:spec, %ParentSpec{children: children, links: links}}]
+    Pipeline.exec_actions(pipeline, actions)
+    ```
   """
   @spec exec_actions(pid(), [Pipeline.Action.t()]) :: :ok
   def exec_actions(pipeline, actions) do
