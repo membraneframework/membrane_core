@@ -165,7 +165,7 @@ defmodule Membrane.Core.Element.PadController do
     else
       {:error, {:cannot_unlink_static_pad_in_playing_or_prepared, pad_ref}} ->
         raise LinkError,
-              "Tried to unlink static pad #{Pad.name_by_ref(pad_ref)} while #{inspect(state.name)} was in playback state #{state.playback.target_state}."
+              "Tried to unlink static pad #{pad_ref} while #{inspect(state.name)} was in or was transitioning to playback state #{state.playback.target_state}."
 
       {:error, {:unknown_pad, _pad_ref}} ->
         {:ok, state}

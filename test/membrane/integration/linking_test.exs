@@ -165,7 +165,7 @@ defmodule Membrane.Integration.LinkingTest do
         {:DOWN, ^source_ref, :process, ^source_pid,
          {%Membrane.LinkError{
             message:
-              "Tried to unlink static pad output while :source was in playback state playing."
+              "Tried to unlink static pad output while :source was in or was transitioning to playback state playing."
           }, _localization}}
       )
     end
