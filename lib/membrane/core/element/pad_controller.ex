@@ -54,7 +54,7 @@ defmodule Membrane.Core.Element.PadController do
     name = endpoint.pad_ref |> Pad.name_by_ref()
 
     info =
-      case Map.fetch(state.pads.info, name) do
+      case Map.fetch(state.pads_info, name) do
         {:ok, info} ->
           info
 
@@ -184,11 +184,11 @@ defmodule Membrane.Core.Element.PadController do
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
     data = data |> Map.merge(init_pad_mode_data(data, props, other_info, metadata, state))
     data = struct!(Membrane.Element.PadData, data)
-    state = put_in(state, [:pads, :data, ref], data)
+    state = put_in(state, [:pads_data, ref], data)
 
     if data.demand_mode == :auto do
       state =
-        state.pads.data
+        state.pads_data
         |> Map.values()
         |> Enum.filter(&(&1.direction != data.direction and &1.demand_mode == :auto))
         |> Enum.reduce(state, fn other_data, state ->
@@ -248,7 +248,7 @@ defmodule Membrane.Core.Element.PadController do
          %Membrane.Core.Element.State{} = state
        ) do
     associated_pads =
-      state.pads.data
+      state.pads_data
       |> Map.values()
       |> Enum.filter(&(&1.direction != direction and &1.demand_mode == :auto))
       |> Enum.map(& &1.ref)

@@ -1,5 +1,6 @@
 .elixir_ls
-priv/plts
+/priv/plts/*
+!/priv/plts/.gitkeep
 
 # Created by https://www.gitignore.io/api/c,vim,linux,macos,elixir,windows,visualstudiocode
 

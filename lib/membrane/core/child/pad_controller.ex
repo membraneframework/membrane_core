@@ -78,10 +78,10 @@ defmodule Membrane.Core.Child.PadController do
 
   @spec assert_all_static_pads_linked!(state_t) :: :ok
   def assert_all_static_pads_linked!(state) do
-    linked_pads_names = state.pads.data |> Map.values() |> MapSet.new(& &1.name)
+    linked_pads_names = state.pads_data |> Map.values() |> MapSet.new(& &1.name)
 
     static_unlinked_pads =
-      state.pads.info
+      state.pads_info
       |> Map.values()
       |> Enum.filter(
         &(Pad.availability_mode(&1.availability) == :static and &1.name not in linked_pads_names)
