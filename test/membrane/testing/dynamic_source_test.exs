@@ -26,22 +26,15 @@ defmodule Membrane.Testing.DynamicSourceTest do
     {:ok, pipeline} =
       Testing.Pipeline.start_link(%Membrane.Testing.Pipeline.Options{
         elements: [
-          source: %Testing.DynamicSource{output: ['a', 'b', 'c']}
+          source: %Testing.DynamicSource{output: ['a', 'b', 'c']},
+          sink_1: Testing.Sink,
+          sink_2: Testing.Sink
+        ],
+        links: [
+          link(:source) |> to(:sink_1),
+          link(:source) |> to(:sink_2)
         ]
       })
-
-    spec = %Membrane.ParentSpec{
-      children: [
-        sink_1: Testing.Sink,
-        sink_2: Testing.Sink
-      ],
-      links: [
-        link(:source) |> to(:sink_1),
-        link(:source) |> to(:sink_2)
-      ]
-    }
-
-    Testing.Pipeline.execute_actions(pipeline, spec: spec)
 
     assert_pipeline_playback_changed(pipeline, _from, :playing)
     assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: 'a'})
@@ -58,22 +51,15 @@ defmodule Membrane.Testing.DynamicSourceTest do
     {:ok, pipeline} =
       Testing.Pipeline.start_link(%Membrane.Testing.Pipeline.Options{
         elements: [
-          source: Testing.DynamicSource
+          source: Testing.DynamicSource,
+          sink_1: Testing.Sink,
+          sink_2: Testing.Sink
+        ],
+        links: [
+          link(:source) |> to(:sink_1),
+          link(:source) |> to(:sink_2)
         ]
       })
-
-    spec = %Membrane.ParentSpec{
-      children: [
-        sink_1: Testing.Sink,
-        sink_2: Testing.Sink
-      ],
-      links: [
-        link(:source) |> to(:sink_1),
-        link(:source) |> to(:sink_2)
-      ]
-    }
-
-    Testing.Pipeline.execute_actions(pipeline, spec: spec)
 
     assert_pipeline_playback_changed(pipeline, _from, :playing)
     assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: <<0::16>>})

@@ -15,7 +15,12 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     end
 
     @impl true
-    def handle_demand(:output, _size, :buffers, _ctx, state) do
+    def handle_demand(_pad, _size, _unit, _ctx, state) do
+      {:ok, state}
+    end
+
+    @impl true
+    def handle_other(:send_buffer, _ctx, state) do
       {{:ok, [buffer: {:output, %Membrane.Buffer{payload: "Something"}}]}, state}
     end
 
@@ -35,7 +40,6 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     }
 
     {:ok, pipeline} = Pipeline.start(options)
-    Pipeline.play(pipeline)
     Pipeline.message_child(pipeline, :source, {:send_your_pid, self()})
 
     source_pid =
@@ -44,6 +48,8 @@ defmodule Membrane.FailWhenNoCapsAreSent do
       end
 
     source_ref = Process.monitor(source_pid)
+
+    Pipeline.message_child(pipeline, :source, :send_buffer)
     assert_receive {:DOWN, ^source_ref, :process, ^source_pid, {reason, _stack_trace}}
     assert %Membrane.ActionError{message: action_error_msg} = reason
 
@@ -63,9 +69,8 @@ defmodule Membrane.FailWhenNoCapsAreSent do
 
     {:ok, pipeline} = Pipeline.start(options)
     ref = Process.monitor(pipeline)
-    Pipeline.play(pipeline)
     assert_start_of_stream(pipeline, :sink)
     refute_receive {:DOWN, ^ref, :process, ^pipeline, {:shutdown, :child_crash}}
-    Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Pipeline.terminate(pipeline, blocking?: true)
   end
 end
