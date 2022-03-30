@@ -9,7 +9,7 @@ defmodule Membrane.RemoteControlled.Message do
   * `Membrane.RemoteControlled.Message.Terminated.t()`
   """
 
-  @type message_t ::
+  @type t ::
           __MODULE__.PlaybackState.t()
           | __MODULE__.StartOfStream.t()
           | __MODULE__.EndOfStream.t()
