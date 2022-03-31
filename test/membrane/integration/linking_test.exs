@@ -72,11 +72,6 @@ defmodule Membrane.Integration.LinkingTest do
     end
 
     @impl true
-    def handle_other({:execute_actions, actions}, _ctx, state) do
-      {{:ok, actions}, state}
-    end
-
-    @impl true
     def handle_spec_started(_children, _ctx, state) do
       send(state.testing_pid, :spec_started)
       {:ok, state}
