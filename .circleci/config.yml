@@ -97,6 +97,7 @@ jobs:
       - run: mix compile --force --warnings-as-errors
       - save_build_cache:
           env: test
+      - run: mix deps.unlock --check-unused
 
   test:
     docker:
