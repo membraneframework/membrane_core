@@ -25,11 +25,6 @@ defmodule Membrane.Core.PipelineTest do
     end
 
     @impl true
-    def handle_other({:execute_actions, actions}, _ctx, state) do
-      {{:ok, actions}, state}
-    end
-
-    @impl true
     def handle_other(message, _ctx, state) do
       {:ok, Map.put(state, :other, message)}
     end

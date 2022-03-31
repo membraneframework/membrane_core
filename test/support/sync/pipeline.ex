@@ -40,9 +40,4 @@ defmodule Membrane.Support.Sync.Pipeline do
   def handle_other({:spawn_children, spec}, _ctx, state) do
     {{:ok, spec: spec}, state}
   end
-
-  @impl true
-  def handle_other({:execute_actions, actions}, _ctx, state) do
-    {{:ok, actions}, state}
-  end
 end
