@@ -337,7 +337,12 @@ defmodule Membrane.Pipeline do
   end
 
   @doc false
-  # credo:disable-for-next-line
+  # Credo was disabled there, since it was complaining about too high CC of the following macro, which in fact does not look too complex.
+  # The change which lead to CC increase was making the default definition of function call another function, instead of delegating to that function.
+  # It was necessary, since delegating to the deprecated function led to a depracation warning being printed once 'use Membrane.Pipleine' was done,
+  # despite the fact that the depreacted function wasn't called. In the future releases we will remove deprecated functions and we will also remove that
+  # credo disable instruction so this can be seen just as a temporary solution.
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defmacro __before_compile__(_env) do
     quote do
       unless Enum.any?(0..2, &Module.defines?(__MODULE__, {:start_link, &1})) do
