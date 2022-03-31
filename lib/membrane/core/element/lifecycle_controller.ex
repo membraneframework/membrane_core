@@ -137,7 +137,7 @@ defmodule Membrane.Core.Element.LifecycleController do
           state
 
         {:playing, :prepared} ->
-          state.pads.data
+          state.pads_data
           |> Map.values()
           |> Enum.filter(&(&1.direction == :input))
           |> Enum.reduce(state, fn %{ref: pad_ref}, state_acc ->

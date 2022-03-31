@@ -26,7 +26,6 @@ defmodule Membrane.Core.Element.StateSpec do
              type: :filter,
              name: :name,
              internal_state: nil,
-             pads: PadSpecHandler.init_pads(state).pads,
              playback: %Playback{},
              playback_buffer: PlaybackBuffer.new(),
              supplying_demand?: false,
@@ -41,6 +40,7 @@ defmodule Membrane.Core.Element.StateSpec do
              },
              terminating: false
            )
+           |> PadSpecHandler.init_pads()
       )
     end
   end

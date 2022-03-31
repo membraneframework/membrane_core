@@ -17,16 +17,14 @@ defmodule Membrane.Core.Child.PadSpecHandler do
   @spec init_pads(Element.State.t()) :: Element.State.t()
   @spec init_pads(Bin.State.t()) :: Bin.State.t()
   def init_pads(state) do
-    pads = %{
-      data: %{},
-      info:
-        get_pads(state)
-        |> Bunch.KVList.map_values(&init_pad_info/1)
-        |> Map.new()
+    %{
+      state
+      | pads_info:
+          get_pads(state)
+          |> Bunch.KVList.map_values(&init_pad_info/1)
+          |> Map.new(),
+        pads_data: %{}
     }
-
-    state
-    |> Map.put(:pads, pads)
   end
 
   @spec init_pad_info(Pad.description_t()) :: PadModel.pad_info_t()

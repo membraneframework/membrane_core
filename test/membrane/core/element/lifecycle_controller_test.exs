@@ -33,21 +33,19 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
           parent: self()
         })
         | type: :filter,
-          pads: %{
-            data: %{
-              input:
-                struct(Membrane.Element.PadData,
-                  ref: :input,
-                  accepted_caps: :any,
-                  direction: :input,
-                  pid: self(),
-                  mode: :pull,
-                  start_of_stream?: true,
-                  end_of_stream?: false,
-                  input_queue: input_queue,
-                  demand: 0
-                )
-            }
+          pads_data: %{
+            input:
+              struct(Membrane.Element.PadData,
+                ref: :input,
+                accepted_caps: :any,
+                direction: :input,
+                pid: self(),
+                mode: :pull,
+                start_of_stream?: true,
+                end_of_stream?: false,
+                input_queue: input_queue,
+                demand: 0
+              )
           }
       }
       |> Bunch.Struct.put_in([:playback, :state], :playing)
@@ -60,6 +58,6 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
     state: state
   } do
     {:ok, state} = LifecycleController.handle_playback_state(:playing, :prepared, state)
-    assert state.pads.data.input.end_of_stream?
+    assert state.pads_data.input.end_of_stream?
   end
 end

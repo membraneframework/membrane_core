@@ -176,21 +176,21 @@ defmodule Membrane.Core.ElementTest do
   test "should update demand" do
     msg = Message.new(:demand, 10, for_pad: :output)
     assert {:noreply, state} = Element.handle_info(msg, playing_state())
-    assert state.pads.data.output.demand == 10
+    assert state.pads_data.output.demand == 10
   end
 
   test "should store incoming buffers in input buffer" do
     msg = Message.new(:buffer, [%Membrane.Buffer{payload: <<123>>}], for_pad: :input)
     assert {:noreply, state} = Element.handle_info(msg, playing_state())
-    assert state.pads.data.input.input_queue.size == 1
+    assert state.pads_data.input.input_queue.size == 1
   end
 
   test "should assign incoming caps to the pad and forward them" do
     assert {:noreply, state} =
              Element.handle_info(Message.new(:caps, :caps, for_pad: :input), playing_state())
 
-    assert state.pads.data.input.caps == :caps
-    assert state.pads.data.output.caps == :caps
+    assert state.pads_data.input.caps == :caps
+    assert state.pads_data.output.caps == :caps
 
     assert_receive Message.new(:caps, :caps, for_pad: :input)
   end
@@ -245,14 +245,14 @@ defmodule Membrane.Core.ElementTest do
              pid: ^pid,
              other_ref: :input,
              other_demand_unit: :buffers
-           } = state.pads.data.output
+           } = state.pads_data.output
   end
 
   test "should handle unlinking pads" do
     assert {:noreply, state} =
              Element.handle_info(Message.new(:handle_unlink, :input), linked_state())
 
-    refute Map.has_key?(state.pads.data, :input)
+    refute Map.has_key?(state.pads_data, :input)
   end
 
   test "should update timer on each tick" do

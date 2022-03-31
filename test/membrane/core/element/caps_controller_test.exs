@@ -4,11 +4,11 @@ defmodule Membrane.Core.Element.CapsControllerTest do
   alias Membrane.Buffer
   alias Membrane.Caps.Mock, as: MockCaps
   alias Membrane.Core.Message
-  alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{InputQueue, State}
   alias Membrane.Support.DemandsTest.Filter
 
-  require Message
+  require Membrane.Core.Child.PadModel, as: PadModel
+  require Membrane.Core.Message, as: Message
 
   @module Membrane.Core.Element.CapsController
 
@@ -34,18 +34,16 @@ defmodule Membrane.Core.Element.CapsControllerTest do
           parent: self()
         })
         | type: :filter,
-          pads: %{
-            data: %{
-              input:
-                struct(Membrane.Element.PadData,
-                  accepted_caps: :any,
-                  direction: :input,
-                  pid: self(),
-                  mode: :pull,
-                  input_queue: input_queue,
-                  demand: 0
-                )
-            }
+          pads_data: %{
+            input:
+              struct(Membrane.Element.PadData,
+                accepted_caps: :any,
+                direction: :input,
+                pid: self(),
+                mode: :pull,
+                input_queue: input_queue,
+                demand: 0
+              )
           }
       }
       |> Bunch.Struct.put_in([:playback, :state], :playing)
@@ -70,7 +68,7 @@ defmodule Membrane.Core.Element.CapsControllerTest do
 
       assert {:ok, new_state} = @module.handle_caps(:input, %MockCaps{}, state)
 
-      assert new_state.pads.data.input.input_queue.q |> Qex.last!() ==
+      assert new_state.pads_data.input.input_queue.q |> Qex.last!() ==
                {:non_buffer, :caps, %MockCaps{}}
     end
   end
