@@ -1,18 +1,18 @@
 defmodule Membrane.Testing.Pipeline do
   @moduledoc """
   This Pipeline was created to reduce testing boilerplate and ease communication
-  with its elements. It also provides a utility for informing testing process about
+  with its children. It also provides a utility for informing testing process about
   playback state changes and received notifications.
 
-  When you want a build Pipeline to test your elements you need three things:
+  When you want a build Pipeline to test your children you need three things:
    - Pipeline Module
-   - List of elements
-   - Links between those elements
+   - List of children
+   - Links between those children
 
   When creating pipelines for tests the only essential part is the list of
-   elements. In most cases during the tests, elements are linked in a way that
+   children. In most cases during the tests, children are linked in a way that
   `:output` pad is linked to `:input` pad of subsequent element. So we only need
-   to pass a list of elements and links can be generated automatically.
+   to pass a list of children and links can be generated automatically.
 
   To start a testing pipeline you need to build
   `Membrane.Testing.Pipeline.Options` struct and pass to
@@ -21,7 +21,7 @@ defmodule Membrane.Testing.Pipeline do
 
   ```
   options = %Membrane.Testing.Pipeline.Options {
-    elements: [
+    children:[
       el1: MembraneElement1,
       el2: MembraneElement2,
       ...
@@ -35,7 +35,7 @@ defmodule Membrane.Testing.Pipeline do
 
   ```
   options = %Membrane.Testing.Pipeline.Options {
-    elements: [
+    children:[
       el1: MembraneElement1,
       el2: MembraneElement2,
       ],
@@ -48,7 +48,7 @@ defmodule Membrane.Testing.Pipeline do
   You can also pass a custom pipeline module, by using `:module` field of
   `Membrane.Testing.Pipeline.Options` struct. Every callback of the module
   will be executed before the callbacks of Testing.Pipeline.
-  Passed module has to return a proper spec. There should be no elements
+  Passed module has to return a proper spec. There should be no children
   nor links specified in options passed to test pipeline as that would
   result in a failure.
 
@@ -67,7 +67,7 @@ defmodule Membrane.Testing.Pipeline do
 
   ## Messaging children
 
-  You can send messages to children using their names specified in the elements
+  You can send messages to children using their names specified in the children
   list. Please check `message_child/3` for more details.
 
   ## Example usage
@@ -75,7 +75,7 @@ defmodule Membrane.Testing.Pipeline do
   Firstly, we can start the pipeline providing its options:
 
       options = %Membrane.Testing.Pipeline.Options {
-        elements: [
+        children:[
           source: %Membrane.Testing.Source{},
           tested_element: TestedElement,
           sink: %Membrane.Testing.Sink{}
@@ -109,18 +109,18 @@ defmodule Membrane.Testing.Pipeline do
 
     - `:test_process` - `pid` of process that shall receive messages from testing pipeline, e.g. when pipeline's playback state changes.
       This allows using `Membrane.Testing.Assertions`
-    - `:elements` - a list of element specs. Allows to create a simple pipeline without defining a module for it.
-    - `:links` - a list describing the links between elements. If ommited (or set to `nil`), they will be populated automatically
-      based on the elements order using default pad names.
-    - `:module` - pipeline module with custom callbacks - useful if a simple list of elements is not enough.
+    - `:children` - a list of element specs. Allows to create a simple pipeline without defining a module for it.
+    - `:links` - a list describing the links between children. If ommited (or set to `nil`), they will be populated automatically
+      based on the children order using default pad names.
+    - `:module` - pipeline module with custom callbacks - useful if a simple list of children is not enough.
     - `:custom_args`- arguments for the module's `handle_init` callback.
     """
 
-    defstruct [:elements, :links, :test_process, :module, :custom_args]
+    defstruct [:children, :links, :test_process, :module, :custom_args]
 
     @type t :: %__MODULE__{
             test_process: pid() | nil,
-            elements: ParentSpec.children_spec_t() | nil,
+            children: ParentSpec.children_spec_t() | nil,
             links: ParentSpec.links_spec_t() | nil,
             module: module() | nil,
             custom_args: Pipeline.pipeline_options_t() | nil
@@ -162,23 +162,23 @@ defmodule Membrane.Testing.Pipeline do
     do_start(:start, pipeline_options, process_options)
   end
 
-  defp do_start(_type, %Options{elements: nil, module: nil}, _process_options) do
+  defp do_start(_type, %Options{children: nil, module: nil}, _process_options) do
     raise """
 
     You provided no information about pipeline contents. Please provide either:
-     - list of elemenst via `elements` field of Options struct with optional links between
+     - list of elemenst via `children` field of Options struct with optional links between
      them via `links` field of `Options` struct
      - module that implements `Membrane.Pipeline` callbacks via `module` field of `Options`
      struct
     """
   end
 
-  defp do_start(_type, %Options{elements: elements, module: module}, _process_options)
-       when is_atom(module) and module != nil and elements != nil do
+  defp do_start(_type, %Options{children: children, module: module}, _process_options)
+       when is_atom(module) and module != nil and children != nil do
     raise """
 
     When working with Membrane.Testing.Pipeline you can't provide both
-    override module and elements list in the Membrane.Testing.Pipeline.Options
+    override module and children list in the Membrane.Testing.Pipeline.Options
     struct.
     """
   end
@@ -190,21 +190,21 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @doc """
-  Links subsequent elements using default pads (linking `:input` to `:output` of
+  Links subsequent children using default pads (linking `:input` to `:output` of
   previous element).
 
   ## Example
 
       Pipeline.populate_links([el1: MembraneElement1, el2: MembraneElement2])
   """
-  @spec populate_links(elements :: ParentSpec.children_spec_t()) :: ParentSpec.links_spec_t()
-  def populate_links(elements) when length(elements) < 2 do
+  @spec populate_links(children :: ParentSpec.children_spec_t()) :: ParentSpec.links_spec_t()
+  def populate_links(children) when length(children) < 2 do
     []
   end
 
-  def populate_links(elements) when is_list(elements) do
+  def populate_links(children) when is_list(children) do
     import ParentSpec
-    [h | t] = elements |> Keyword.keys()
+    [h | t] = children |> Keyword.keys()
     links = t |> Enum.reduce(link(h), &to(&2, &1))
     [links]
   end
@@ -237,14 +237,14 @@ defmodule Membrane.Testing.Pipeline do
 
   @impl true
   def handle_init(%Options{links: nil, module: nil} = options) do
-    new_links = populate_links(options.elements)
+    new_links = populate_links(options.children)
     handle_init(%Options{options | links: new_links})
   end
 
   @impl true
   def handle_init(%Options{module: nil} = options) do
     spec = %Membrane.ParentSpec{
-      children: options.elements,
+      children: options.children,
       links: options.links
     }
 
@@ -253,7 +253,7 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_init(%Options{links: nil, elements: nil} = options) do
+  def handle_init(%Options{links: nil, children: nil} = options) do
     new_state = %State{
       test_process: options.test_process,
       module: options.module,
@@ -348,11 +348,11 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_spec_started(elements, ctx, %State{} = state) do
+  def handle_spec_started(children, ctx, %State{} = state) do
     {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_spec_started,
-        [elements, ctx],
+        [children, ctx],
         state
       )
 

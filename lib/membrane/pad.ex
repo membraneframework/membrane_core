@@ -193,4 +193,7 @@ defmodule Membrane.Pad do
   @spec opposite_direction(direction_t()) :: direction_t()
   def opposite_direction(:input), do: :output
   def opposite_direction(:output), do: :input
+
+
+
 end

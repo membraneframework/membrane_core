@@ -28,7 +28,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
 
   test "if pipeline crashes when the caps are not sent before the first buffer" do
     options = %Pipeline.Options{
-      elements: [
+      children: [
         source: SourceWhichDoesNotSendCaps,
         sink: Sink
       ]
@@ -55,7 +55,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
 
   test "if pipeline works properly when caps are sent before the first buffer" do
     options = %Pipeline.Options{
-      elements: [
+      children: [
         source: Source,
         sink: Sink
       ]

@@ -15,7 +15,7 @@ defmodule Membrane.Core.EndpointTest do
 
       {:ok, pipeline} =
         Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          elements: [
+          children: [
             endpoint: %Testing.Endpoint{output: buffers},
             filter: TestFilter
           ],
@@ -33,7 +33,7 @@ defmodule Membrane.Core.EndpointTest do
 
       {:ok, pipeline} =
         Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          elements: [
+          children: [
             endpoint: %Testing.Endpoint{output: buffers},
             filter1: TestFilter,
             filter2: TestFilter,

@@ -17,7 +17,7 @@ defmodule Membrane.Core.BinTest do
 
       {:ok, pipeline} =
         Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          elements: [
+          children: [
             source: %Testing.Source{output: buffers},
             test_bin: %TestBins.SimpleBin{
               filter1: TestFilter,
@@ -36,7 +36,7 @@ defmodule Membrane.Core.BinTest do
 
       {:ok, pipeline} =
         Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          elements: [
+          children: [
             source: %Testing.Source{output: buffers},
             test_bin1: %TestBins.SimpleBin{
               filter1: TestFilter,
@@ -59,7 +59,7 @@ defmodule Membrane.Core.BinTest do
 
       {:ok, pipeline} =
         Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          elements: [
+          children: [
             source: %Testing.Source{output: buffers},
             test_bin: %TestBins.SimpleBin{
               filter1: TestFilter,
@@ -81,7 +81,7 @@ defmodule Membrane.Core.BinTest do
 
       {:ok, pipeline} =
         Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          elements: [
+          children: [
             source: %Testing.Source{output: buffers},
             test_bin: %TestBins.SimpleBin{
               filter1: %TestBins.SimpleBin{
@@ -106,7 +106,7 @@ defmodule Membrane.Core.BinTest do
 
       {:ok, pipeline} =
         Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          elements: [
+          children: [
             test_bin: %TestBins.TestPadlessBin{
               source: %Testing.Source{output: buffers},
               sink: Testing.Sink
@@ -129,7 +129,7 @@ defmodule Membrane.Core.BinTest do
 
       {:ok, pipeline} =
         Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          elements: [
+          children: [
             source: %Testing.Source{output: buffers},
             test_bin: %TestBins.TestSinkBin{
               filter: TestFilter,
@@ -200,7 +200,7 @@ defmodule Membrane.Core.BinTest do
 
       {:ok, pipeline} =
         Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          elements: [
+          children: [
             source: %Testing.Source{output: buffers},
             test_bin: %TestBins.TestDynamicPadBin{
               filter1: %TestBins.TestDynamicPadBin{

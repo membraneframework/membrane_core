@@ -15,7 +15,7 @@ defmodule Membrane.Integration.SyncTest do
     tick_interval = 1
 
     pipeline_opts = %Testing.Pipeline.Options{
-      elements: [
+      children: [
         source: %Sync.Source{
           tick_interval: tick_interval |> Time.milliseconds(),
           test_process: self()
@@ -140,7 +140,7 @@ defmodule Membrane.Integration.SyncTest do
 
   test "synchronization inside a bin is possible" do
     {:ok, pipeline} =
-      Testing.Pipeline.start_link(%Testing.Pipeline.Options{elements: [bin: Sync.SyncBin]})
+      Testing.Pipeline.start_link(%Testing.Pipeline.Options{children: [bin: Sync.SyncBin]})
 
     :ok = Testing.Pipeline.play(pipeline)
 

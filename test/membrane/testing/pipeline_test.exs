@@ -16,7 +16,7 @@ defmodule Membrane.Testing.PipelineTest do
       import ParentSpec
       elements = [elem: Elem, elem2: Elem]
       links = [link(:elem) |> to(:elem2)]
-      options = %Pipeline.Options{elements: elements}
+      options = %Pipeline.Options{children: elements}
       assert {{:ok, spec: spec}, state} = Pipeline.handle_init(options)
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
@@ -30,7 +30,7 @@ defmodule Membrane.Testing.PipelineTest do
       import ParentSpec
       elements = [elem: Elem, elem2: Elem]
       links = link(:elem) |> to(:elem2)
-      options = %Pipeline.Options{elements: elements, links: links}
+      options = %Pipeline.Options{children: elements, links: links}
       assert {{:ok, spec: spec}, state} = Pipeline.handle_init(options)
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
@@ -54,15 +54,9 @@ defmodule Membrane.Testing.PipelineTest do
   end
 
   describe "When starting Testing Pipeline does" do
-    test "raises an error if a pipeline is started with both elements and module provided in options" do
-      assert_raise RuntimeError, ~r/override module and elements list/, fn ->
-        Pipeline.start(%Pipeline.Options{elements: [elem: Elem], module: Mod})
-      end
-    end
-
     test "raises an error if no means of generating spec are provided (no elements, no module)" do
       assert_raise RuntimeError, ~r/You provided no information about pipeline contents./, fn ->
-        Pipeline.start(%Pipeline.Options{elements: nil, module: nil})
+        Pipeline.start(%Pipeline.Options{children: nil, module: nil})
       end
     end
   end

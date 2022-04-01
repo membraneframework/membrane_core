@@ -25,7 +25,7 @@ defmodule Membrane.Testing.DynamicSourceTest do
   test "Source works properly when payload are passed as enumerable" do
     {:ok, pipeline} =
       Testing.Pipeline.start_link(%Membrane.Testing.Pipeline.Options{
-        elements: [
+        children: [
           source: %Testing.DynamicSource{output: ['a', 'b', 'c']}
         ]
       })
@@ -58,7 +58,7 @@ defmodule Membrane.Testing.DynamicSourceTest do
   test "Source works properly when using generator function" do
     {:ok, pipeline} =
       Testing.Pipeline.start_link(%Membrane.Testing.Pipeline.Options{
-        elements: [
+        children: [
           source: Testing.DynamicSource
         ]
       })

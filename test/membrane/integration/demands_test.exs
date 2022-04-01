@@ -40,7 +40,7 @@ defmodule Membrane.Integration.DemandsTest do
   test "Regular pipeline with proper demands" do
     assert {:ok, pid} =
              Pipeline.start_link(%Pipeline.Options{
-               elements: [
+               children: [
                  source: Source,
                  filter: Filter,
                  sink: %Sink{autodemand: false}
@@ -55,7 +55,7 @@ defmodule Membrane.Integration.DemandsTest do
 
     assert {:ok, pid} =
              Pipeline.start_link(%Pipeline.Options{
-               elements: [
+               children: [
                  source: Source,
                  filter: %Filter{demand_generator: filter_demand_gen},
                  sink: %Sink{autodemand: false}
@@ -81,7 +81,7 @@ defmodule Membrane.Integration.DemandsTest do
 
     assert {:ok, pid} =
              Pipeline.start_link(%Pipeline.Options{
-               elements: [
+               children: [
                  source: %Source{output: {0, actions_gen}},
                  filter: Filter,
                  sink: %Sink{autodemand: false}

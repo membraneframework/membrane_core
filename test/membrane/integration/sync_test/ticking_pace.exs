@@ -15,7 +15,7 @@ defmodule Membrane.Integration.SyncTest.TickingPace do
 
     assert {:ok, pipeline} =
              Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-               elements: [
+                children: [
                  source: %Sync.Source{
                    tick_interval: tick_interval |> Time.milliseconds(),
                    test_process: self()

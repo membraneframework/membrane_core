@@ -59,7 +59,7 @@ defmodule Membrane.ElementTest do
   setup do
     {:ok, pipeline} =
       Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-        elements: [
+        children: [
           source: %Testing.Source{output: ['a', 'b', 'c']},
           filter: %TestFilter{target: self()},
           sink: Testing.Sink

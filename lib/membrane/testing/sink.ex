@@ -12,7 +12,7 @@ defmodule Membrane.Testing.Sink do
 
       alias Membrane.Testing
       {:ok, pid} = Testing.Pipeline.start_link(Testing.Pipeline.Options{
-        elements: [
+        children: [
           ...,
           sink: %Testing.Sink{}
         ]

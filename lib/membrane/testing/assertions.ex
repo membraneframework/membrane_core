@@ -250,7 +250,7 @@ defmodule Membrane.Testing.Assertions do
   can assert whether it received caps matching provided pattern.
 
       {:ok, pid} = Membrane.Testing.Pipeline.start_link(%Membrane.Testing.Pipeline.Options{
-        elements: [
+        children: [
           ....,
           the_sink: %Membrane.Testing.Sink{}
         ]
@@ -315,7 +315,7 @@ defmodule Membrane.Testing.Assertions do
   can assert whether it received a buffer matching provided pattern.
 
       {:ok, pid} = Membrane.Testing.Pipeline.start_link(%Membrane.Testing.Pipeline.Options{
-        elements: [
+        children: [
           ....,
           the_sink: %Membrane.Testing.Sink{}
         ]
