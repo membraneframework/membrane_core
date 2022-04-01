@@ -2,13 +2,13 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   use ExUnit.Case, async: true
 
   alias Membrane.{ActionError, Buffer}
-  alias Membrane.Core.{Message, Playback}
-  alias Membrane.Core.Child.PadModel
+  alias Membrane.Core.Playback
   alias Membrane.Core.Element.State
   alias Membrane.Support.DemandsTest.Filter
   alias Membrane.Support.Element.{TrivialFilter, TrivialSource}
 
-  require Message
+  require Membrane.Core.Child.PadModel, as: PadModel
+  require Membrane.Core.Message, as: Message
 
   @module Membrane.Core.Element.ActionHandler
   @mock_caps %Membrane.Caps.Mock{integer: 42}
@@ -16,23 +16,21 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     state = %{
       State.new(%{module: Filter, name: :test_name, parent_clock: nil, sync: nil, parent: self()})
       | type: :filter,
-        pads: %{
-          data: %{
-            input:
-              struct(Membrane.Element.PadData,
-                direction: :input,
-                pid: self(),
-                mode: :pull,
-                demand_mode: :manual,
-                demand: 0
-              ),
-            input_push:
-              struct(Membrane.Element.PadData,
-                direction: :input,
-                pid: self(),
-                mode: :push
-              )
-          }
+        pads_data: %{
+          input:
+            struct(Membrane.Element.PadData,
+              direction: :input,
+              pid: self(),
+              mode: :pull,
+              demand_mode: :manual,
+              demand: 0
+            ),
+          input_push:
+            struct(Membrane.Element.PadData,
+              direction: :input,
+              pid: self(),
+              mode: :push
+            )
         }
     }
 
@@ -47,7 +45,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       |> Enum.each(fn {playback, callback} ->
         state = %{state | playback: %Playback{state: playback}, supplying_demand?: true}
         assert {:ok, state} = @module.handle_action({:demand, {:input, 10}}, callback, %{}, state)
-        assert state.pads.data.input.demand == 10
+        assert state.pads_data.input.demand == 10
         assert MapSet.new([{:input, :supply}]) == state.delayed_demands
       end)
 
@@ -61,7 +59,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
                  %{state | supplying_demand?: true}
                )
 
-      assert state.pads.data.input.demand == 10
+      assert state.pads_data.input.demand == 10
       assert MapSet.new([{:input, :supply}]) == state.delayed_demands
     end
 
@@ -90,29 +88,29 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         parent: nil
       })
       | type: :filter,
-        pads: %{
-          data: %{
-            output: %{
-              direction: :output,
-              pid: self(),
-              other_ref: :other_ref,
-              caps: nil,
-              other_demand_unit: :bytes,
-              start_of_stream?: true,
-              end_of_stream?: false,
-              mode: :push,
-              accepted_caps: :any
-            },
-            input: %{
-              direction: :input,
-              pid: self(),
-              other_ref: :other_input,
-              caps: nil,
-              start_of_stream?: true,
-              end_of_stream?: false,
-              mode: :push,
-              accepted_caps: :any
-            }
+        pads_data: %{
+          output: %{
+            direction: :output,
+            pid: self(),
+            other_ref: :other_ref,
+            caps: nil,
+            other_demand_unit: :bytes,
+            start_of_stream?: true,
+            end_of_stream?: false,
+            mode: :push,
+            demand_mode: nil,
+            accepted_caps: :any
+          },
+          input: %{
+            direction: :input,
+            pid: self(),
+            other_ref: :other_input,
+            caps: nil,
+            start_of_stream?: true,
+            end_of_stream?: false,
+            mode: :push,
+            demand_mode: nil,
+            accepted_caps: :any
           }
         }
     }
@@ -541,15 +539,13 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           parent: self()
         })
         | type: :source,
-          pads: %{
-            data: %{
-              output: %{
-                direction: :output,
-                pid: self(),
-                mode: :pull,
-                demand_mode: :manual,
-                demand: 0
-              }
+          pads_data: %{
+            output: %{
+              direction: :output,
+              pid: self(),
+              mode: :pull,
+              demand_mode: :manual,
+              demand: 0
             }
           }
       }

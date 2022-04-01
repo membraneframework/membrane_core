@@ -16,7 +16,7 @@ defmodule Membrane.Core.Bin.CallbackContext do
         playback_state: unquote(state).playback.state,
         clock: unquote(state).synchronization.clock,
         parent_clock: unquote(state).synchronization.parent_clock,
-        pads: unquote(state).pads.data,
+        pads: unquote(state).pads_data,
         name: unquote(state).name,
         children: unquote(state).children
       ]

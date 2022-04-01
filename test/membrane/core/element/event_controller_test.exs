@@ -44,21 +44,19 @@ defmodule Membrane.Core.Element.EventControllerTest do
           parent: self()
         })
         | type: :filter,
-          pads: %{
-            data: %{
-              input:
-                struct(Membrane.Element.PadData,
-                  ref: :input,
-                  accepted_caps: :any,
-                  direction: :input,
-                  pid: self(),
-                  mode: :pull,
-                  start_of_stream?: false,
-                  end_of_stream?: false,
-                  input_queue: input_queue,
-                  demand: 0
-                )
-            }
+          pads_data: %{
+            input:
+              struct(Membrane.Element.PadData,
+                ref: :input,
+                accepted_caps: :any,
+                direction: :input,
+                pid: self(),
+                mode: :pull,
+                start_of_stream?: false,
+                end_of_stream?: false,
+                input_queue: input_queue,
+                demand: 0
+              )
           }
       }
       |> Bunch.Struct.put_in([:playback, :state], :playing)
@@ -75,20 +73,20 @@ defmodule Membrane.Core.Element.EventControllerTest do
 
     test "start of stream successfully", %{state: state} do
       assert {:ok, state} = EventController.handle_event(:input, %Events.StartOfStream{}, state)
-      assert state.pads.data.input.start_of_stream?
+      assert state.pads_data.input.start_of_stream?
     end
 
     test "ignoring end of stream when there was no start of stream prior", %{state: state} do
       assert {:ok, state} = EventController.handle_event(:input, %Events.EndOfStream{}, state)
-      refute state.pads.data.input.end_of_stream?
-      refute state.pads.data.input.start_of_stream?
+      refute state.pads_data.input.end_of_stream?
+      refute state.pads_data.input.start_of_stream?
     end
 
     test "end of stream successfully", %{state: state} do
       state = put_start_of_stream(state, :input)
 
       assert {:ok, state} = EventController.handle_event(:input, %Events.EndOfStream{}, state)
-      assert state.pads.data.input.end_of_stream?
+      assert state.pads_data.input.end_of_stream?
     end
   end
 
@@ -104,11 +102,8 @@ defmodule Membrane.Core.Element.EventControllerTest do
   end
 
   defp put_start_of_stream(state, pad_ref) do
-    pads =
-      Bunch.Access.update_in(state.pads, [:data, pad_ref], fn data ->
-        %{data | start_of_stream?: true}
-      end)
-
-    %{state | pads: pads}
+    Bunch.Access.update_in(state, [:pads_data, pad_ref], fn data ->
+      %{data | start_of_stream?: true}
+    end)
   end
 end

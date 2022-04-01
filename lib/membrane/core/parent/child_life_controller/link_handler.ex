@@ -233,7 +233,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
        ) do
     %Endpoint{pad_spec: pad_spec} = endpoint
 
-    withl pad: {:ok, pad_info} <- Map.fetch(state.pads.info, Pad.name_by_ref(pad_spec)),
+    withl pad: {:ok, pad_info} <- Map.fetch(state.pads_info, Pad.name_by_ref(pad_spec)),
           ref: {:ok, ref} <- make_pad_ref(pad_spec, pad_info.availability, true) do
       %Endpoint{endpoint | pid: self(), pad_ref: ref}
     else

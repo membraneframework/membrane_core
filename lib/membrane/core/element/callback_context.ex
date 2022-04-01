@@ -13,7 +13,7 @@ defmodule Membrane.Core.Element.CallbackContext do
     quote do
       [
         playback_state: unquote(state).playback.state,
-        pads: unquote(state).pads.data,
+        pads: unquote(state).pads_data,
         clock: unquote(state).synchronization.clock,
         parent_clock: unquote(state).synchronization.parent_clock,
         name: unquote(state).name
