@@ -19,7 +19,7 @@ commands:
         default: dev
     steps:
       - save_cache:
-          key: v1-build-cache-{{ arch }}-<< parameters.env >>-{{ checksum "mix.lock" }}
+          key: v2-build-cache-{{ arch }}-<< parameters.env >>-{{ checksum "mix.lock" }}
           paths: ["_build/<< parameters.env >>"]
   restore_build_cache:
     parameters:
@@ -30,9 +30,9 @@ commands:
     steps:
       - restore_cache:
           keys:
-            - v1-build-cache-{{ arch }}-<< parameters.env >>-{{ checksum "mix.lock" }}
-            - v1-build-cache-{{ arch }}-<< parameters.env >>-
-            - v1-build-cache-{{ arch }}-
+            - v2-build-cache-{{ arch }}-<< parameters.env >>-{{ checksum "mix.lock" }}
+            - v2-build-cache-{{ arch }}-<< parameters.env >>-
+            - v2-build-cache-{{ arch }}-
   gen_version_file:
     steps:
       - run: asdf current erlang > .runtime_version
@@ -65,11 +65,9 @@ commands:
             | circleci tests split --split-by=<<parameters.split_by>> \
             | xargs <<parameters.command>>
 jobs:
-  build:
+  get_deps:
     docker:
       - image: membraneframeworklabs/docker_membrane
-        environment:
-          MIX_ENV: test
 
     working_directory: ~/app
 
@@ -81,6 +79,25 @@ jobs:
       - persist_to_workspace:
           root: .
           paths: "*"
+
+  build_test:
+    docker:
+      - image: membraneframeworklabs/docker_membrane
+        environment:
+          MIX_ENV: test
+
+    working_directory: ~/app
+
+    steps:
+      - attach_workspace:
+          at: .
+      - restore_build_cache:
+          env: test
+      - run: mix deps.compile
+      - run: mix compile --force --warnings-as-errors
+      - save_build_cache:
+          env: test
+      - run: mix deps.unlock --check-unused
 
   test:
     docker:
@@ -96,10 +113,7 @@ jobs:
           at: .
       - restore_build_cache:
           env: test
-      - run: mix deps.compile
       - run: mix compile
-      - save_build_cache:
-          env: test
       - run_tests:
           glob: "test/membrane/**/*.exs"
           split_by: "timings"
@@ -123,8 +137,7 @@ jobs:
           at: .
       - restore_build_cache:
           env: dev
-      - run: mix deps.compile
-      - run: mix compile --force --warnings-as-errors
+      - run: mix compile
       - save_build_cache:
           env: dev
       - run: mix format --check-formatted
@@ -139,10 +152,13 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - build
+      - get_deps
+      - build_test:
+          requires:
+            - get_deps
       - test:
           requires:
-            - build
+            - get_deps
       - lint:
           requires:
-            - build
+            - get_deps
