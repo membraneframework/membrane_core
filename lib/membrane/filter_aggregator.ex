@@ -171,10 +171,9 @@ defmodule Membrane.FilterAggregator do
           {:end_of_stream, :output}
 
         %_struct{} ->
-          cond do
-            Membrane.Event.event?(data) -> {:event, {:output, data}}
-            true -> {:caps, {:output, data}}
-          end
+          if Membrane.Event.event?(data),
+            do: {:event, {:output, data}},
+            else: {:caps, {:output, data}}
       end
 
     perform_actions([action | actions], module, context, state, next_actions_acc)
@@ -294,7 +293,7 @@ defmodule Membrane.FilterAggregator do
         result =
           case result do
             :ok -> {:ok, []}
-            _ -> result
+            _error -> result
           end
 
         {result, {acc_context, state}}

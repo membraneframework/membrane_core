@@ -1,6 +1,16 @@
 defmodule Membrane.FilterAggregator.Context do
   @moduledoc false
 
+  alias Membrane.Element
+
+  @type t :: Membrane.Core.Element.CallbackContext.default_fields()
+
+  @typedoc """
+  Collection of states for encapsuled elements as kept in `Membrane.FilterAggregator` element
+  """
+  @type states :: [{Element.name_t(), module(), t(), Element.state_t()}]
+
+  @spec build_context!(Element.name_t(), module()) :: t()
   def build_context!(name, module) do
     pad_descriptions = module.membrane_pads()
     pads = pad_descriptions |> MapSet.new(fn {k, _v} -> k end)
@@ -43,6 +53,7 @@ defmodule Membrane.FilterAggregator.Context do
     |> then(&struct!(Membrane.Element.PadData, &1))
   end
 
+  @spec link_contexts(ctx_to_update :: t(), prev_ctx :: t(), next_ctx :: t()) :: t()
   def link_contexts(context, prev_context, next_context) do
     input_pad_data =
       context.pads.input
@@ -61,6 +72,7 @@ defmodule Membrane.FilterAggregator.Context do
     Map.put(context, :pads, %{input: input_pad_data, output: output_pad_data})
   end
 
+  @spec update_contexts(states(), (t() -> t())) :: states()
   def update_contexts(states, update_fun) do
     states
     |> Enum.map(fn {name, module, context, state} ->
@@ -68,6 +80,7 @@ defmodule Membrane.FilterAggregator.Context do
     end)
   end
 
+  @spec before_incoming_action(t(), action :: any()) :: t()
   def before_incoming_action(context, {:buffer, {:output, buffers}}) do
     buf_size =
       Membrane.Buffer.Metric.from_unit(context.pads.input.demand_unit).buffers_size(
@@ -99,6 +112,7 @@ defmodule Membrane.FilterAggregator.Context do
     context
   end
 
+  @spec after_incoming_action(t(), action :: any()) :: t()
   def after_incoming_action(context, {:caps, {:output, caps}}) do
     put_in(context.pads.input.caps, caps)
   end
@@ -107,10 +121,12 @@ defmodule Membrane.FilterAggregator.Context do
     context
   end
 
+  @spec after_out_actions(t(), action :: any()) :: t()
   def after_out_actions(context, actions) do
     Enum.reduce(actions, context, fn action, ctx -> after_out_action(ctx, action) end)
   end
 
+  @spec after_out_action(t(), action :: any()) :: t()
   def after_out_action(context, {:buffer, {:output, buffers}}) do
     buf_size =
       Membrane.Buffer.Metric.from_unit(context.pads.output.other_demand_unit).buffers_size(
