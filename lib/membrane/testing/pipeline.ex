@@ -152,15 +152,55 @@ defmodule Membrane.Testing.Pipeline do
           }
   end
 
-  @spec start_link(Options.t(), GenServer.options()) :: GenServer.on_start()
-  def start_link(pipeline_options, process_options \\ []) do
+
+  @type  default_pipeline_keywords_list_t :: [children: ParentSpec.children_spec_t(), links: ParentSpec.links_spec_t(), test_process: pid() | nil]
+  @type  custom_pipeline_keywords_list_t :: [module: module(), custom_args: Pipeline.pipeline_options_t() | nil, test_process: pid() | nil]
+  @type pipeline_keywords_list_t ::  default_pipeline_keywords_list_t() | custom_pipeline_keywords_list_t()
+
+  @spec start_link(Options.t() | pipeline_keywords_list_t(), GenServer.options()) :: GenServer.on_start()
+  def start_link(pipeline_options, process_options \\ [])
+
+  def start_link(pipeline_options, process_options) when is_struct(pipeline_options, Options) do
+    IO.warn("Please pass options to Membrane.Testing.Pipeline.start_link/2 as keywords list, instead of using Membrane.Testing.Options")
     do_start(:start_link, pipeline_options, process_options)
   end
 
-  @spec start(Options.t(), GenServer.options()) :: GenServer.on_start()
-  def start(pipeline_options, process_options \\ []) do
+  def start_link(pipeline_options, process_options) do
+    pipeline_options = transform_pipeline_options(pipeline_options)
+    do_start(:start_link, pipeline_options, process_options)
+  end
+
+
+  @spec start(Options.t() | pipeline_keywords_list_t()) :: GenServer.on_start()
+  def start(pipeline_options, process_options \\ [])
+
+  def start(pipeline_options, process_options) when is_struct(pipeline_options, Options) do
+    IO.warn("Please pass options to Membrane.Testing.Pipeline.start/2 as keywords list, instead of using Membrane.Testing.Options")
     do_start(:start, pipeline_options, process_options)
   end
+
+  def start(pipeline_options, process_options) do
+    pipeline_options = transform_pipeline_options(pipeline_options)
+    do_start(:start, pipeline_options, process_options)
+  end
+
+  defp transform_pipeline_options(pipeline_options) do
+    mode = Keyword.fetch!(pipeline_options, :mode)
+    case mode do
+      :default -> children = Keyword.fetch!(pipeline_options, :children)
+                  links = Keyword.fetch!(pipeline_options, :links)
+                  test_process = Keyword.get(pipeline_options, :test_process)
+                  %{mode: mode, children: children, links: links, test_process: test_process}
+
+      :custom -> module = Keyword.fetch!(pipeline_options, :module)
+                 custom_args = Keyword.get(pipeline_options, :custom_args)
+                 test_process = Keyword.get(pipeline_options, :test_process)
+                 %{mode: mode, module: module, custom_args: custom_args, test_process: test_process}
+      _ -> raise "Unknown testing pipeline mode #{mode}. Available modes are: :custom and :default"
+    end
+  end
+
+
 
   defp do_start(_type, %Options{children: nil, module: nil}, _process_options) do
     raise """
@@ -238,11 +278,30 @@ defmodule Membrane.Testing.Pipeline do
   @impl true
   def handle_init(%Options{links: nil, module: nil} = options) do
     new_links = populate_links(options.children)
-    handle_init(%Options{options | links: new_links})
+    do_handle_init_for_default_implementation(%Options{options | links: new_links})
   end
 
   @impl true
   def handle_init(%Options{module: nil} = options) do
+    do_handle_init_for_default_implementation(options)
+  end
+
+  @impl true
+  def handle_init(%Options{links: nil, children: nil} = options) do
+    do_handle_init_with_custom_module(options)
+  end
+
+  @impl true
+  def handle_init(%{mode: :default} = options) do
+    do_handle_init_for_default_implementation(options)
+  end
+
+  @impl true
+  def handle_init(%{mode: :custom} = options) do
+    do_handle_init_with_custom_module(options)
+  end
+
+  defp do_handle_init_for_default_implementation(options) do
     spec = %Membrane.ParentSpec{
       children: options.children,
       links: options.links
@@ -252,8 +311,7 @@ defmodule Membrane.Testing.Pipeline do
     {{:ok, spec: spec}, new_state}
   end
 
-  @impl true
-  def handle_init(%Options{links: nil, children: nil} = options) do
+  defp do_handle_init_with_custom_module(options) do
     new_state = %State{
       test_process: options.test_process,
       module: options.module,

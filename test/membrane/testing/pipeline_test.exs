@@ -53,11 +53,18 @@ defmodule Membrane.Testing.PipelineTest do
     end
   end
 
-  describe "When starting Testing Pipeline does" do
-    test "raises an error if no means of generating spec are provided (no elements, no module)" do
-      assert_raise RuntimeError, ~r/You provided no information about pipeline contents./, fn ->
-        Pipeline.start(%Pipeline.Options{children: nil, module: nil})
+  describe "When starting Testing Pipeline" do
+    test "raises an error if unknown testing pipeline mode was passed" do
+      assert_raise RuntimeError, ~r/Unknown testing pipeline mode./, fn ->
+        Pipeline.start(mode: :unknown)
       end
     end
+
+    test "raises an error if no testing pipeline mode was passed" do
+      assert_raise KeyError, ~r/key :mode not found in./, fn ->
+        Pipeline.start(children: nil)
+      end
+    end
+
   end
 end
