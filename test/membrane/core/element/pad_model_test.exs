@@ -55,7 +55,7 @@ defmodule Membrane.Core.Child.PadModelTest do
     setup :setup_element_state
 
     test "is {:ok, state} when the pad is present", ctx do
-      assert get_in(ctx.state, [:pads_data, :input, :start_of_stream?]) |> is_nil()
+      assert get_in(ctx.state, [:pads_data, :input, :start_of_stream?]) == false
       assert {:ok, state} = PadModel.set_data(ctx.state, :input, :start_of_stream?, true)
       assert get_in(state, [:pads_data, :input, :start_of_stream?]) == true
     end
@@ -70,7 +70,7 @@ defmodule Membrane.Core.Child.PadModelTest do
     setup :setup_element_state
 
     test "updates the pad data with the given function when present", ctx do
-      assert get_in(ctx.state, [:pads_data, :input, :start_of_stream?]) |> is_nil()
+      assert get_in(ctx.state, [:pads_data, :input, :start_of_stream?]) == false
       assert state = PadModel.set_data!(ctx.state, :input, :start_of_stream?, true)
       assert get_in(state, [:pads_data, :input, :start_of_stream?]) == true
     end
