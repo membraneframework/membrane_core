@@ -272,7 +272,7 @@ defmodule Membrane.Testing.Pipeline do
 
   @impl true
   def handle_init(%Options{links: nil, module: nil} = options) do
-    new_links = populate_links(options.children)
+    new_links = ParentSpec.populate_links(options.children)
     do_handle_init_for_default_implementation(%Options{options | links: new_links})
   end
 
