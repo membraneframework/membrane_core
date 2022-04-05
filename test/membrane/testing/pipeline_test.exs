@@ -12,9 +12,6 @@ defmodule Membrane.Testing.PipelineTest do
   end
 
   describe "Testing pipeline creation" do
-    test "works with :custom module injection" do
-    end
-
     test "works with :default implementation" do
       import ParentSpec
       elements = [elem: Elem, elem2: Elem]
