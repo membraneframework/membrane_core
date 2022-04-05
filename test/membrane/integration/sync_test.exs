@@ -148,8 +148,13 @@ defmodule Membrane.Integration.SyncTest do
 
   test "synchronization inside a bin is possible" do
     children = [bin: Sync.SyncBin]
+
     {:ok, pipeline} =
-      Testing.Pipeline.start_link(mode: :default, children: children, links: Testing.Pipeline.populate_links(children))
+      Testing.Pipeline.start_link(
+        mode: :default,
+        children: children,
+        links: Testing.Pipeline.populate_links(children)
+      )
 
     :ok = Testing.Pipeline.play(pipeline)
 

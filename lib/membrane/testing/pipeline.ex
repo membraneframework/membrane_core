@@ -187,7 +187,7 @@ defmodule Membrane.Testing.Pipeline do
     do_start(:start_link, pipeline_options, process_options)
   end
 
-  @spec start(Options.t() | pipeline_keywords_list_t()) :: GenServer.on_start()
+  @spec start(Options.t() | pipeline_keywords_list_t(), GenServer.options()) :: GenServer.on_start()
   def start(pipeline_options, process_options \\ [])
 
   def start(pipeline_options, process_options) when is_struct(pipeline_options, Options) do
@@ -219,8 +219,8 @@ defmodule Membrane.Testing.Pipeline do
         test_process = Keyword.get(pipeline_options, :test_process)
         %{mode: mode, module: module, custom_args: custom_args, test_process: test_process}
 
-      _ ->
-        raise "Unknown testing pipeline mode #{mode}. Available modes are: :custom and :default"
+      other_mode ->
+        raise "Unknown testing pipeline mode #{other_mode}. Available modes are: :custom and :default"
     end
   end
 

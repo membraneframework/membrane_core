@@ -62,6 +62,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
       source: Source,
       sink: Sink
     ]
+
     options = [
       mode: :default,
       children: children,

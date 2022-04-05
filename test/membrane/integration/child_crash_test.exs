@@ -136,8 +136,8 @@ defmodule Membrane.Integration.ChildCrashTest do
 
     assert {:ok, pipeline_pid} =
              Testing.Pipeline.start_link(
-              mode: :custom,
-              module: ChildCrashTest.Pipeline
+               mode: :custom,
+               module: ChildCrashTest.Pipeline
              )
 
     :ok = Pipeline.play(pipeline_pid)

@@ -64,6 +64,7 @@ defmodule Membrane.Core.BinTest do
 
     test "when bins are nested" do
       buffers = ['a', 'b', 'c']
+
       children = [
         source: %Testing.Source{output: buffers},
         test_bin: %TestBins.SimpleBin{
@@ -75,6 +76,7 @@ defmodule Membrane.Core.BinTest do
         },
         sink: Testing.Sink
       ]
+
       {:ok, pipeline} =
         Testing.Pipeline.start_link(
           mode: :default,
@@ -88,6 +90,7 @@ defmodule Membrane.Core.BinTest do
 
     test "when there are consecutive bins that are nested" do
       buffers = ['a', 'b', 'c']
+
       children = [
         source: %Testing.Source{output: buffers},
         test_bin: %TestBins.SimpleBin{
@@ -116,6 +119,7 @@ defmodule Membrane.Core.BinTest do
 
     test "when pipeline has only one element being a padless bin" do
       buffers = ['a', 'b', 'c']
+
       children = [
         test_bin: %TestBins.TestPadlessBin{
           source: %Testing.Source{output: buffers},
@@ -142,6 +146,7 @@ defmodule Membrane.Core.BinTest do
 
     test "when bin is a sink bin" do
       buffers = ['a', 'b', 'c']
+
       children = [
         source: %Testing.Source{output: buffers},
         test_bin: %TestBins.TestSinkBin{
@@ -216,6 +221,7 @@ defmodule Membrane.Core.BinTest do
       alias Membrane.Pad
       require Pad
       buffers = ['a', 'b', 'c']
+
       children = [
         source: %Testing.Source{output: buffers},
         test_bin: %TestBins.TestDynamicPadBin{
@@ -230,6 +236,7 @@ defmodule Membrane.Core.BinTest do
         },
         sink: Testing.Sink
       ]
+
       {:ok, pipeline} =
         Testing.Pipeline.start_link(
           mode: :default,

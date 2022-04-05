@@ -43,6 +43,7 @@ defmodule Membrane.Integration.DemandsTest do
       filter: Filter,
       sink: %Sink{autodemand: false}
     ]
+
     assert {:ok, pid} =
              Pipeline.start_link(
                mode: :default,
@@ -55,11 +56,13 @@ defmodule Membrane.Integration.DemandsTest do
 
   test "Pipeline with filter underestimating demand" do
     filter_demand_gen = fn _incoming_demand -> 2 end
+
     children = [
       source: Source,
       filter: %Filter{demand_generator: filter_demand_gen},
       sink: %Sink{autodemand: false}
     ]
+
     assert {:ok, pid} =
              Pipeline.start_link(
                mode: :default,
@@ -92,9 +95,9 @@ defmodule Membrane.Integration.DemandsTest do
 
     assert {:ok, pid} =
              Pipeline.start_link(
-              mode: :default,
-              children: children,
-              links: Pipeline.populate_links(children)
+               mode: :default,
+               children: children,
+               links: Pipeline.populate_links(children)
              )
 
     test_pipeline(pid)
