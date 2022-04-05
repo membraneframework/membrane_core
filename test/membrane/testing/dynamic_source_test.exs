@@ -23,12 +23,16 @@ defmodule Membrane.Testing.DynamicSourceTest do
   end
 
   test "Source works properly when payload are passed as enumerable" do
+    children = [
+      source: %Testing.DynamicSource{output: ['a', 'b', 'c']}
+    ]
+
     {:ok, pipeline} =
-      Testing.Pipeline.start_link(%Membrane.Testing.Pipeline.Options{
-        children: [
-          source: %Testing.DynamicSource{output: ['a', 'b', 'c']}
-        ]
-      })
+      Testing.Pipeline.start_link(
+        mode: :default,
+        children: children,
+        links: Testing.Pipeline.populate_links(children)
+      )
 
     spec = %Membrane.ParentSpec{
       children: [
@@ -56,12 +60,16 @@ defmodule Membrane.Testing.DynamicSourceTest do
   end
 
   test "Source works properly when using generator function" do
+    children = [
+      source: Testing.DynamicSource
+    ]
+
     {:ok, pipeline} =
-      Testing.Pipeline.start_link(%Membrane.Testing.Pipeline.Options{
-        children: [
-          source: Testing.DynamicSource
-        ]
-      })
+      Testing.Pipeline.start_link(
+        mode: :default,
+        children: children,
+        links: Testing.Pipeline.populate_links(children)
+      )
 
     spec = %Membrane.ParentSpec{
       children: [

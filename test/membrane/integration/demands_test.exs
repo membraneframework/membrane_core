@@ -38,29 +38,34 @@ defmodule Membrane.Integration.DemandsTest do
   end
 
   test "Regular pipeline with proper demands" do
+    children = [
+      source: Source,
+      filter: Filter,
+      sink: %Sink{autodemand: false}
+    ]
     assert {:ok, pid} =
-             Pipeline.start_link(%Pipeline.Options{
-               children: [
-                 source: Source,
-                 filter: Filter,
-                 sink: %Sink{autodemand: false}
-               ]
-             })
+             Pipeline.start_link(
+               mode: :default,
+               children: children,
+               links: Pipeline.populate_links(children)
+             )
 
     test_pipeline(pid)
   end
 
   test "Pipeline with filter underestimating demand" do
     filter_demand_gen = fn _incoming_demand -> 2 end
-
+    children = [
+      source: Source,
+      filter: %Filter{demand_generator: filter_demand_gen},
+      sink: %Sink{autodemand: false}
+    ]
     assert {:ok, pid} =
-             Pipeline.start_link(%Pipeline.Options{
-               children: [
-                 source: Source,
-                 filter: %Filter{demand_generator: filter_demand_gen},
-                 sink: %Sink{autodemand: false}
-               ]
-             })
+             Pipeline.start_link(
+               mode: :default,
+               children: children,
+               links: Pipeline.populate_links(children)
+             )
 
     test_pipeline(pid)
   end
@@ -79,14 +84,18 @@ defmodule Membrane.Integration.DemandsTest do
       ~> {&1, cnt + 4}
     end
 
+    children = [
+      source: %Source{output: {0, actions_gen}},
+      filter: Filter,
+      sink: %Sink{autodemand: false}
+    ]
+
     assert {:ok, pid} =
-             Pipeline.start_link(%Pipeline.Options{
-               children: [
-                 source: %Source{output: {0, actions_gen}},
-                 filter: Filter,
-                 sink: %Sink{autodemand: false}
-               ]
-             })
+             Pipeline.start_link(
+              mode: :default,
+              children: children,
+              links: Pipeline.populate_links(children)
+             )
 
     test_pipeline(pid)
   end

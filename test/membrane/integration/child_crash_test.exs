@@ -11,12 +11,13 @@ defmodule Membrane.Integration.ChildCrashTest do
     Process.flag(:trap_exit, true)
 
     assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+             Testing.Pipeline.start_link(
+               mode: :custom,
                module: ChildCrashTest.Pipeline,
                custom_args: %{
                  sink: Testing.Sink
                }
-             })
+             )
 
     :ok = Pipeline.play(pipeline_pid)
 
@@ -44,9 +45,10 @@ defmodule Membrane.Integration.ChildCrashTest do
     Process.flag(:trap_exit, true)
 
     assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+             Testing.Pipeline.start_link(
+               mode: :custom,
                module: ChildCrashTest.Pipeline
-             })
+             )
 
     :ok = Pipeline.play(pipeline_pid)
 
@@ -75,9 +77,10 @@ defmodule Membrane.Integration.ChildCrashTest do
     Process.flag(:trap_exit, true)
 
     assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+             Testing.Pipeline.start_link(
+               mode: :custom,
                module: ChildCrashTest.Pipeline
-             })
+             )
 
     :ok = Pipeline.play(pipeline_pid)
 
@@ -132,9 +135,10 @@ defmodule Membrane.Integration.ChildCrashTest do
     Process.flag(:trap_exit, true)
 
     assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-               module: ChildCrashTest.Pipeline
-             })
+             Testing.Pipeline.start_link(
+              mode: :custom,
+              module: ChildCrashTest.Pipeline
+             )
 
     :ok = Pipeline.play(pipeline_pid)
 

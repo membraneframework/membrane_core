@@ -248,13 +248,15 @@ defmodule Membrane.Testing.Assertions do
 
   When the `Membrane.Testing.Sink` is a part of `Membrane.Testing.Pipeline` you
   can assert whether it received caps matching provided pattern.
-
-      {:ok, pid} = Membrane.Testing.Pipeline.start_link(%Membrane.Testing.Pipeline.Options{
-        children: [
+      children = [
           ....,
           the_sink: %Membrane.Testing.Sink{}
-        ]
-      })
+      ]
+      {:ok, pid} = Membrane.Testing.Pipeline.start_link(
+        mode: :default,
+        children: children,
+        links: Membrane.Testing.Pipeline.populate_links(children)
+      )
 
   You can match for exact value:
 
@@ -313,13 +315,15 @@ defmodule Membrane.Testing.Assertions do
 
   When the `Membrane.Testing.Sink` is a part of `Membrane.Testing.Pipeline` you
   can assert whether it received a buffer matching provided pattern.
-
-      {:ok, pid} = Membrane.Testing.Pipeline.start_link(%Membrane.Testing.Pipeline.Options{
-        children: [
+      children = [
           ....,
           the_sink: %Membrane.Testing.Sink{}
-        ]
-      })
+      ]
+      {:ok, pid} = Membrane.Testing.Pipeline.start_link(
+        mode: :default,
+        children: children,
+        links: Membrane.Testing.Pipeline.populate_links(children)
+      )
 
   You can match for exact value:
 

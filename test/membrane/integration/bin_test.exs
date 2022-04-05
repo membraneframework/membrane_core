@@ -15,17 +15,21 @@ defmodule Membrane.Core.BinTest do
     test "in simple, flat use case" do
       buffers = ['a', 'b', 'c']
 
+      children = [
+        source: %Testing.Source{output: buffers},
+        test_bin: %TestBins.SimpleBin{
+          filter1: TestFilter,
+          filter2: TestFilter
+        },
+        sink: Testing.Sink
+      ]
+
       {:ok, pipeline} =
-        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          children: [
-            source: %Testing.Source{output: buffers},
-            test_bin: %TestBins.SimpleBin{
-              filter1: TestFilter,
-              filter2: TestFilter
-            },
-            sink: Testing.Sink
-          ]
-        })
+        Testing.Pipeline.start_link(
+          mode: :default,
+          children: children,
+          links: Testing.Pipeline.populate_links(children)
+        )
 
       assert_data_flows_through(pipeline, buffers)
       stop_pipeline(pipeline)
@@ -34,21 +38,25 @@ defmodule Membrane.Core.BinTest do
     test "when bin is next to a bin" do
       buffers = ['a', 'b', 'c']
 
+      children = [
+        source: %Testing.Source{output: buffers},
+        test_bin1: %TestBins.SimpleBin{
+          filter1: TestFilter,
+          filter2: TestFilter
+        },
+        test_bin2: %TestBins.SimpleBin{
+          filter1: TestFilter,
+          filter2: TestFilter
+        },
+        sink: Testing.Sink
+      ]
+
       {:ok, pipeline} =
-        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          children: [
-            source: %Testing.Source{output: buffers},
-            test_bin1: %TestBins.SimpleBin{
-              filter1: TestFilter,
-              filter2: TestFilter
-            },
-            test_bin2: %TestBins.SimpleBin{
-              filter1: TestFilter,
-              filter2: TestFilter
-            },
-            sink: Testing.Sink
-          ]
-        })
+        Testing.Pipeline.start_link(
+          mode: :default,
+          children: children,
+          links: Testing.Pipeline.populate_links(children)
+        )
 
       assert_data_flows_through(pipeline, buffers)
       stop_pipeline(pipeline)
@@ -56,21 +64,23 @@ defmodule Membrane.Core.BinTest do
 
     test "when bins are nested" do
       buffers = ['a', 'b', 'c']
-
+      children = [
+        source: %Testing.Source{output: buffers},
+        test_bin: %TestBins.SimpleBin{
+          filter1: TestFilter,
+          filter2: %TestBins.SimpleBin{
+            filter1: TestFilter,
+            filter2: TestFilter
+          }
+        },
+        sink: Testing.Sink
+      ]
       {:ok, pipeline} =
-        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          children: [
-            source: %Testing.Source{output: buffers},
-            test_bin: %TestBins.SimpleBin{
-              filter1: TestFilter,
-              filter2: %TestBins.SimpleBin{
-                filter1: TestFilter,
-                filter2: TestFilter
-              }
-            },
-            sink: Testing.Sink
-          ]
-        })
+        Testing.Pipeline.start_link(
+          mode: :default,
+          children: children,
+          links: Testing.Pipeline.populate_links(children)
+        )
 
       assert_data_flows_through(pipeline, buffers)
       stop_pipeline(pipeline)
@@ -78,24 +88,27 @@ defmodule Membrane.Core.BinTest do
 
     test "when there are consecutive bins that are nested" do
       buffers = ['a', 'b', 'c']
+      children = [
+        source: %Testing.Source{output: buffers},
+        test_bin: %TestBins.SimpleBin{
+          filter1: %TestBins.SimpleBin{
+            filter1: TestFilter,
+            filter2: TestFilter
+          },
+          filter2: %TestBins.SimpleBin{
+            filter1: TestFilter,
+            filter2: TestFilter
+          }
+        },
+        sink: Testing.Sink
+      ]
 
       {:ok, pipeline} =
-        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          children: [
-            source: %Testing.Source{output: buffers},
-            test_bin: %TestBins.SimpleBin{
-              filter1: %TestBins.SimpleBin{
-                filter1: TestFilter,
-                filter2: TestFilter
-              },
-              filter2: %TestBins.SimpleBin{
-                filter1: TestFilter,
-                filter2: TestFilter
-              }
-            },
-            sink: Testing.Sink
-          ]
-        })
+        Testing.Pipeline.start_link(
+          mode: :default,
+          children: children,
+          links: Testing.Pipeline.populate_links(children)
+        )
 
       assert_data_flows_through(pipeline, buffers)
       stop_pipeline(pipeline)
@@ -103,16 +116,19 @@ defmodule Membrane.Core.BinTest do
 
     test "when pipeline has only one element being a padless bin" do
       buffers = ['a', 'b', 'c']
+      children = [
+        test_bin: %TestBins.TestPadlessBin{
+          source: %Testing.Source{output: buffers},
+          sink: Testing.Sink
+        }
+      ]
 
       {:ok, pipeline} =
-        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          children: [
-            test_bin: %TestBins.TestPadlessBin{
-              source: %Testing.Source{output: buffers},
-              sink: Testing.Sink
-            }
-          ]
-        })
+        Testing.Pipeline.start_link(
+          mode: :default,
+          children: children,
+          links: Testing.Pipeline.populate_links(children)
+        )
 
       assert_playing(pipeline)
 
@@ -126,17 +142,20 @@ defmodule Membrane.Core.BinTest do
 
     test "when bin is a sink bin" do
       buffers = ['a', 'b', 'c']
+      children = [
+        source: %Testing.Source{output: buffers},
+        test_bin: %TestBins.TestSinkBin{
+          filter: TestFilter,
+          sink: Testing.Sink
+        }
+      ]
 
       {:ok, pipeline} =
-        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          children: [
-            source: %Testing.Source{output: buffers},
-            test_bin: %TestBins.TestSinkBin{
-              filter: TestFilter,
-              sink: Testing.Sink
-            }
-          ]
-        })
+        Testing.Pipeline.start_link(
+          mode: :default,
+          children: children,
+          links: Testing.Pipeline.populate_links(children)
+        )
 
       assert_playing(pipeline)
 
@@ -197,24 +216,26 @@ defmodule Membrane.Core.BinTest do
       alias Membrane.Pad
       require Pad
       buffers = ['a', 'b', 'c']
-
+      children = [
+        source: %Testing.Source{output: buffers},
+        test_bin: %TestBins.TestDynamicPadBin{
+          filter1: %TestBins.TestDynamicPadBin{
+            filter1: TestDynamicPadFilter,
+            filter2: TestDynamicPadFilter
+          },
+          filter2: %TestBins.TestDynamicPadBin{
+            filter1: TestDynamicPadFilter,
+            filter2: TestDynamicPadFilter
+          }
+        },
+        sink: Testing.Sink
+      ]
       {:ok, pipeline} =
-        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          children: [
-            source: %Testing.Source{output: buffers},
-            test_bin: %TestBins.TestDynamicPadBin{
-              filter1: %TestBins.TestDynamicPadBin{
-                filter1: TestDynamicPadFilter,
-                filter2: TestDynamicPadFilter
-              },
-              filter2: %TestBins.TestDynamicPadBin{
-                filter1: TestDynamicPadFilter,
-                filter2: TestDynamicPadFilter
-              }
-            },
-            sink: Testing.Sink
-          ]
-        })
+        Testing.Pipeline.start_link(
+          mode: :default,
+          children: children,
+          links: Testing.Pipeline.populate_links(children)
+        )
 
       Process.sleep(2000)
       assert_data_flows_through(pipeline, buffers)

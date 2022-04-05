@@ -20,13 +20,16 @@ defmodule Membrane.Testing.Pipeline do
   `populate_links/1`.
 
   ```
-  options = %Membrane.Testing.Pipeline.Options {
-    children:[
+  children = [
       el1: MembraneElement1,
       el2: MembraneElement2,
       ...
-    ]
-  }
+  ]
+  options =  [
+    mode: :default,
+    children: children,
+    links: Membrane.Testing.Pipeline.populate_links(children)
+  ]
   {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
   ```
 
@@ -73,14 +76,16 @@ defmodule Membrane.Testing.Pipeline do
   ## Example usage
 
   Firstly, we can start the pipeline providing its options:
-
-      options = %Membrane.Testing.Pipeline.Options {
-        children:[
+      children = [
           source: %Membrane.Testing.Source{},
           tested_element: TestedElement,
           sink: %Membrane.Testing.Sink{}
-        ]
-      }
+      ]
+      options = [
+        mode: :default,
+        children: children,
+        links: Membrane.Testing.Pipeline.populate_links(children)
+      ]
       {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
 
   We can now wait till the end of the stream reaches the sink element (don't forget
@@ -531,6 +536,9 @@ defmodule Membrane.Testing.Pipeline do
 
   defp default_options(%Options{test_process: nil} = options),
     do: %Options{options | test_process: self()}
+
+  defp default_options(%{test_process: nil} = options),
+    do: %{options | test_process: self()}
 
   defp default_options(options), do: options
 

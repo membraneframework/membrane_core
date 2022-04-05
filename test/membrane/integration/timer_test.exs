@@ -57,10 +57,11 @@ defmodule Membrane.Integration.TimerTest do
 
   test "Stopping timer from handle_tick" do
     {:ok, pipeline} =
-      Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+      Testing.Pipeline.start_link(
+        mode: :custom,
         module: Pipeline,
         custom_args: self()
-      })
+      )
 
     Pipeline.play(pipeline)
     assert_pipeline_playback_changed(pipeline, _, :playing)

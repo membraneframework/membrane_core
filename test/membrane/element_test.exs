@@ -57,14 +57,18 @@ defmodule Membrane.ElementTest do
   end
 
   setup do
+    children = [
+      source: %Testing.Source{output: ['a', 'b', 'c']},
+      filter: %TestFilter{target: self()},
+      sink: Testing.Sink
+    ]
+
     {:ok, pipeline} =
-      Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-        children: [
-          source: %Testing.Source{output: ['a', 'b', 'c']},
-          filter: %TestFilter{target: self()},
-          sink: Testing.Sink
-        ]
-      })
+      Testing.Pipeline.start_link(
+        mode: :default,
+        children: children,
+        links: Testing.Pipeline.populate_links(children)
+      )
 
     on_exit(fn ->
       Membrane.Pipeline.stop_and_terminate(pipeline, blocking?: true)

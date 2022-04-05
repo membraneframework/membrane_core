@@ -101,7 +101,7 @@ defmodule Membrane.Core.PipelineTest do
   end
 
   test "Pipeline can be terminated synchronously" do
-    {:ok, pid} = Testing.Pipeline.start_link(%Testing.Pipeline.Options{module: TestPipeline})
+    {:ok, pid} = Testing.Pipeline.start_link(mode: :custom, module: TestPipeline)
     assert :ok == Testing.Pipeline.stop_and_terminate(pid, blocking?: true)
   end
 end
