@@ -48,7 +48,7 @@ defmodule Membrane.Integration.DemandsTest do
              Pipeline.start_link(
                mode: :default,
                children: children,
-               links: Pipeline.populate_links(children)
+               links: Membrane.ParentSpec.populate_links(children)
              )
 
     test_pipeline(pid)
@@ -67,7 +67,7 @@ defmodule Membrane.Integration.DemandsTest do
              Pipeline.start_link(
                mode: :default,
                children: children,
-               links: Pipeline.populate_links(children)
+               links: Membrane.ParentSpec.populate_links(children)
              )
 
     test_pipeline(pid)
@@ -97,7 +97,7 @@ defmodule Membrane.Integration.DemandsTest do
              Pipeline.start_link(
                mode: :default,
                children: children,
-               links: Pipeline.populate_links(children)
+               links: Membrane.ParentSpec.populate_links(children)
              )
 
     test_pipeline(pid)

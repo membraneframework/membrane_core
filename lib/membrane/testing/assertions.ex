@@ -255,7 +255,7 @@ defmodule Membrane.Testing.Assertions do
       {:ok, pid} = Membrane.Testing.Pipeline.start_link(
         mode: :default,
         children: children,
-        links: Membrane.Testing.Pipeline.populate_links(children)
+        links: Membrane.ParentSpec.populate_links(children)
       )
 
   You can match for exact value:
@@ -322,7 +322,7 @@ defmodule Membrane.Testing.Assertions do
       {:ok, pid} = Membrane.Testing.Pipeline.start_link(
         mode: :default,
         children: children,
-        links: Membrane.Testing.Pipeline.populate_links(children)
+        links: Membrane.ParentSpec.populate_links(children)
       )
 
   You can match for exact value:

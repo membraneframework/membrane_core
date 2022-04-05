@@ -24,11 +24,11 @@ defmodule Membrane.Testing.Pipeline do
   options =  [
     mode: :default,
     children: children,
-    links: Membrane.Testing.Pipeline.populate_links(children)
+    links: Membrane.ParentSpec.populate_links(children)
   ]
   {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
   ```
-  Note, that we have used `Membrane.Testing.Pipeline.populate_links/1` function, that creates the list of links
+  Note, that we have used `Membrane.Testing.ParentSpec.populate_links/1` function, that creates the list of links
   for the given list of children, linking them in linear manner (that means - children are linked in a way that
   `:output` pad of a given child is linked to `:input` pad of subsequent child). That is the case
   which is often used while creating testing pipelines.
@@ -73,7 +73,7 @@ defmodule Membrane.Testing.Pipeline do
       options = [
         mode: :default,
         children: children,
-        links: Membrane.Testing.Pipeline.populate_links(children)
+        links: Membrane.ParentSpec.populate_links(children)
       ]
       {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
 
@@ -240,26 +240,6 @@ defmodule Membrane.Testing.Pipeline do
     pipeline_options = default_options(options)
     args = [__MODULE__, pipeline_options, process_options]
     apply(Pipeline, type, args)
-  end
-
-  @doc """
-  Links subsequent children using default pads (linking `:input` to `:output` of
-  previous element).
-
-  ## Example
-
-      Pipeline.populate_links([el1: MembraneElement1, el2: MembraneElement2])
-  """
-  @spec populate_links(children :: ParentSpec.children_spec_t()) :: ParentSpec.links_spec_t()
-  def populate_links(children) when length(children) < 2 do
-    []
-  end
-
-  def populate_links(children) when is_list(children) do
-    import ParentSpec
-    [h | t] = children |> Keyword.keys()
-    links = t |> Enum.reduce(link(h), &to(&2, &1))
-    [links]
   end
 
   @doc """

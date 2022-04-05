@@ -31,7 +31,7 @@ defmodule Membrane.Testing.DynamicSourceTest do
       Testing.Pipeline.start_link(
         mode: :default,
         children: children,
-        links: Testing.Pipeline.populate_links(children)
+        links: Membrane.ParentSpec.populate_links(children)
       )
 
     spec = %Membrane.ParentSpec{
@@ -68,7 +68,7 @@ defmodule Membrane.Testing.DynamicSourceTest do
       Testing.Pipeline.start_link(
         mode: :default,
         children: children,
-        links: Testing.Pipeline.populate_links(children)
+        links: Membrane.ParentSpec.populate_links(children)
       )
 
     spec = %Membrane.ParentSpec{

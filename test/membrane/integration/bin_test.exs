@@ -28,7 +28,7 @@ defmodule Membrane.Core.BinTest do
         Testing.Pipeline.start_link(
           mode: :default,
           children: children,
-          links: Testing.Pipeline.populate_links(children)
+          links: Membrane.ParentSpec.populate_links(children)
         )
 
       assert_data_flows_through(pipeline, buffers)
@@ -55,7 +55,7 @@ defmodule Membrane.Core.BinTest do
         Testing.Pipeline.start_link(
           mode: :default,
           children: children,
-          links: Testing.Pipeline.populate_links(children)
+          links: Membrane.ParentSpec.populate_links(children)
         )
 
       assert_data_flows_through(pipeline, buffers)
@@ -81,7 +81,7 @@ defmodule Membrane.Core.BinTest do
         Testing.Pipeline.start_link(
           mode: :default,
           children: children,
-          links: Testing.Pipeline.populate_links(children)
+          links: Membrane.ParentSpec.populate_links(children)
         )
 
       assert_data_flows_through(pipeline, buffers)
@@ -110,7 +110,7 @@ defmodule Membrane.Core.BinTest do
         Testing.Pipeline.start_link(
           mode: :default,
           children: children,
-          links: Testing.Pipeline.populate_links(children)
+          links: Membrane.ParentSpec.populate_links(children)
         )
 
       assert_data_flows_through(pipeline, buffers)
@@ -131,7 +131,7 @@ defmodule Membrane.Core.BinTest do
         Testing.Pipeline.start_link(
           mode: :default,
           children: children,
-          links: Testing.Pipeline.populate_links(children)
+          links: Membrane.ParentSpec.populate_links(children)
         )
 
       assert_playing(pipeline)
@@ -159,7 +159,7 @@ defmodule Membrane.Core.BinTest do
         Testing.Pipeline.start_link(
           mode: :default,
           children: children,
-          links: Testing.Pipeline.populate_links(children)
+          links: Membrane.ParentSpec.populate_links(children)
         )
 
       assert_playing(pipeline)
@@ -241,7 +241,7 @@ defmodule Membrane.Core.BinTest do
         Testing.Pipeline.start_link(
           mode: :default,
           children: children,
-          links: Testing.Pipeline.populate_links(children)
+          links: Membrane.ParentSpec.populate_links(children)
         )
 
       Process.sleep(2000)

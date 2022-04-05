@@ -233,4 +233,12 @@ defmodule Membrane.Core.Parent.LinkParserTest do
 
     assert Enum.sort(children) == [a: A, b: B, c: C]
   end
+
+  test "Membrane.ParentSpec.populate_links/1 links children in a linear manner" do
+    import Membrane.ParentSpec
+    children = [source: nil, filter: nil, sink: nil]
+    desired_links = [link(:source) |> to(:filter) |> to(:sink)]
+    auto_generated_links = populate_links(children)
+    assert desired_links == auto_generated_links
+  end
 end

@@ -25,7 +25,7 @@ defmodule Membrane.Integration.SyncTest do
     pipeline_opts = [
       mode: :default,
       children: children,
-      links: Testing.Pipeline.populate_links(children)
+      links: Membrane.ParentSpec.populate_links(children)
     ]
 
     for tries <- [100, 1000, 10_000] do
@@ -153,7 +153,7 @@ defmodule Membrane.Integration.SyncTest do
       Testing.Pipeline.start_link(
         mode: :default,
         children: children,
-        links: Testing.Pipeline.populate_links(children)
+        links: Membrane.ParentSpec.populate_links(children)
       )
 
     :ok = Testing.Pipeline.play(pipeline)

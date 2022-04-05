@@ -25,7 +25,7 @@ defmodule Membrane.Integration.SyncTest.TickingPace do
              Testing.Pipeline.start_link(
                mode: :default,
                children: children,
-               links: Testing.Pipeline.populate_links(children)
+               links: Membrane.ParentSpec.populate_links(children)
              )
 
     %{synchronization: %{clock_provider: %{clock: original_clock, provider: :sink}}} =
