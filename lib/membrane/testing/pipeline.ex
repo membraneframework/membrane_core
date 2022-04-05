@@ -221,8 +221,8 @@ defmodule Membrane.Testing.Pipeline do
     raise """
 
     You provided no information about pipeline contents. Please provide either:
-     - list of elemenst via `children` field of Options struct with optional links between
-     them via `links` field of `Options` struct
+     - list of children via `:children` field of Options struct with optional links between
+     them via `:links` field of `Options` struct
      - module that implements `Membrane.Pipeline` callbacks via `module` field of `Options`
      struct
     """
