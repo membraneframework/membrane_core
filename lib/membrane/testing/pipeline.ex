@@ -58,8 +58,8 @@ defmodule Membrane.Testing.Pipeline do
   ```
   options = %Membrane.Testing.Pipeline.Options {
       module: Your.Module
-    }
-    ```
+  }
+  ```
 
   See `Membrane.Testing.Pipeline.Options` for available options.
 
@@ -437,6 +437,11 @@ defmodule Membrane.Testing.Pipeline do
       )
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
+  end
+
+  @impl true
+  def handle_other({:exec_actions, actions}, _ctx, %State{} = state) do
+    {{:ok, actions}, state}
   end
 
   @impl true
