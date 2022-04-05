@@ -148,11 +148,13 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @type default_pipeline_keywords_list_t :: [
+          mode: :default,
           children: ParentSpec.children_spec_t(),
           links: ParentSpec.links_spec_t(),
           test_process: pid() | nil
         ]
   @type custom_pipeline_keywords_list_t :: [
+          mode: :custom,
           module: module(),
           custom_args: Pipeline.pipeline_options_t() | nil,
           test_process: pid() | nil
