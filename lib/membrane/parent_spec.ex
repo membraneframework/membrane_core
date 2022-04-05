@@ -472,7 +472,7 @@ defmodule Membrane.ParentSpec do
 
       Membrane.ParentSpec.populate_links([el1: MembraneElement1, el2: MembraneElement2])
   """
-  @spec populate_links(children :: ParentSpec.children_spec_t()) :: ParentSpec.links_spec_t()
+  @spec populate_links(children :: children_spec_t()) :: links_spec_t()
   def populate_links(children) when length(children) < 2 do
     []
   end
