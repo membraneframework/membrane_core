@@ -146,11 +146,11 @@ defmodule Membrane.Integration.LinkingTest do
       assert_receive(:spec_started)
       send(pipeline, {:start_spec, %{spec: sink_spec}})
       assert_receive(:spec_started)
-      sink_pid = get_pid(:sink, pipeline)
+      sink_pid = get_child_pid(:sink, pipeline)
       send(pipeline, {:start_spec, %{spec: links_spec}})
       assert_receive(:spec_started)
-      bin_pid = get_pid(:bin, pipeline)
-      source_pid = get_pid(:source, bin_pid)
+      bin_pid = get_child_pid(:bin, pipeline)
+      source_pid = get_child_pid(:source, bin_pid)
       source_ref = Process.monitor(source_pid)
       Testing.Pipeline.play(pipeline)
 
@@ -271,7 +271,7 @@ defmodule Membrane.Integration.LinkingTest do
     assert_pipeline_playback_changed(pipeline, _, :playing)
   end
 
-  defp get_pid(ref, parent_pid) do
+  defp get_child_pid(ref, parent_pid) do
     state = :sys.get_state(parent_pid)
     state.children[ref].pid
   end

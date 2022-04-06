@@ -296,8 +296,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
             true ->
               false
           end
-
-          from_name == child_name or to_name == child_name
         end))
     )
   end
