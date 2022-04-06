@@ -147,7 +147,7 @@ defmodule Membrane.Testing.Pipeline do
 
   @type default_pipeline_keyword_list_t :: [
           module: :default | nil,
-          children: ParentSpec.children_spec_t(),
+          children: ParentSpec.children_spec_t() | nil,
           links: ParentSpec.links_spec_t(),
           test_process: pid() | nil
         ]
@@ -198,7 +198,7 @@ defmodule Membrane.Testing.Pipeline do
 
     case module do
       :default ->
-        children = Keyword.fetch!(pipeline_options, :children)
+        children = Keyword.get(pipeline_options, :children, [])
         links = Keyword.fetch!(pipeline_options, :links)
         test_process = Keyword.get(pipeline_options, :test_process)
         %{module: :default, children: children, links: links, test_process: test_process}
