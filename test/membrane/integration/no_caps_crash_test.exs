@@ -34,7 +34,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
 
     options = [
       children: children,
-      links: Membrane.ParentSpec.populate_links(children)
+      links: Membrane.ParentSpec.link_linear(children)
     ]
 
     {:ok, pipeline} = Pipeline.start(options)
@@ -64,7 +64,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
 
     options = [
       children: children,
-      links: Membrane.ParentSpec.populate_links(children)
+      links: Membrane.ParentSpec.link_linear(children)
     ]
 
     {:ok, pipeline} = Pipeline.start(options)

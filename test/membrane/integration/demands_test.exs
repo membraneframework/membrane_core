@@ -47,7 +47,7 @@ defmodule Membrane.Integration.DemandsTest do
     assert {:ok, pid} =
              Pipeline.start_link(
                children: children,
-               links: Membrane.ParentSpec.populate_links(children)
+               links: Membrane.ParentSpec.link_linear(children)
              )
 
     test_pipeline(pid)
@@ -65,7 +65,7 @@ defmodule Membrane.Integration.DemandsTest do
     assert {:ok, pid} =
              Pipeline.start_link(
                children: children,
-               links: Membrane.ParentSpec.populate_links(children)
+               links: Membrane.ParentSpec.link_linear(children)
              )
 
     test_pipeline(pid)
@@ -94,7 +94,7 @@ defmodule Membrane.Integration.DemandsTest do
     assert {:ok, pid} =
              Pipeline.start_link(
                children: children,
-               links: Membrane.ParentSpec.populate_links(children)
+               links: Membrane.ParentSpec.link_linear(children)
              )
 
     test_pipeline(pid)

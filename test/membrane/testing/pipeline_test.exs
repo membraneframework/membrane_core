@@ -114,10 +114,5 @@ defmodule Membrane.Testing.PipelineTest do
       end
     end
 
-    test "raises an error if no children were provided" do
-      assert_raise KeyError, ~r/key :children not found in./, fn ->
-        Pipeline.start(links: :some_links)
-      end
-    end
   end
 end

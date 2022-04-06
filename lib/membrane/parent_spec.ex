@@ -64,12 +64,12 @@ defmodule Membrane.ParentSpec do
         |> to(:another_element)
       ]
 
-   You can also use `populate_links/1` in order to link subsequent children using default pads
+   You can also use `link_linear/1` in order to link subsequent children using default pads
    (linking `:input` to `:output` of previous element). That might be especially helpful when creating
    testing pipelines.
 
       children = [source: Some.Source, filter: Some.Filter, sink: Some.Sink]
-      links = populate_links(children)
+      links = link_linear(children)
 
   ### Bins
 
@@ -470,14 +470,14 @@ defmodule Membrane.ParentSpec do
 
   ## Example
 
-      Membrane.ParentSpec.populate_links([el1: MembraneElement1, el2: MembraneElement2])
+      Membrane.ParentSpec.link_linear([el1: MembraneElement1, el2: MembraneElement2])
   """
-  @spec populate_links(children :: children_spec_t()) :: links_spec_t()
-  def populate_links(children) when length(children) < 2 do
+  @spec link_linear(children :: children_spec_t()) :: links_spec_t()
+  def link_linear(children) when length(children) < 2 do
     []
   end
 
-  def populate_links(children) when is_list(children) do
+  def link_linear(children) when is_list(children) do
     [h | t] = children |> Keyword.keys()
     links = t |> Enum.reduce(link(h), &to(&2, &1))
     [links]

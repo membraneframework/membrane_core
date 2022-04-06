@@ -30,7 +30,7 @@ defmodule Membrane.Testing.DynamicSourceTest do
     {:ok, pipeline} =
       Testing.Pipeline.start_link(
         children: children,
-        links: Membrane.ParentSpec.populate_links(children)
+        links: Membrane.ParentSpec.link_linear(children)
       )
 
     spec = %Membrane.ParentSpec{
@@ -66,7 +66,7 @@ defmodule Membrane.Testing.DynamicSourceTest do
     {:ok, pipeline} =
       Testing.Pipeline.start_link(
         children: children,
-        links: Membrane.ParentSpec.populate_links(children)
+        links: Membrane.ParentSpec.link_linear(children)
       )
 
     spec = %Membrane.ParentSpec{

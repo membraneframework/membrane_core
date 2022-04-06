@@ -24,11 +24,11 @@ defmodule Membrane.Testing.Pipeline do
   options =  [
     module: :default # :default is the default value for this parameter, so you do not need to pass it here
     children: children,
-    links: Membrane.ParentSpec.populate_links(children)
+    links: Membrane.ParentSpec.link_linear(children)
   ]
   {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
   ```
-  Note, that we have used `Membrane.Testing.ParentSpec.populate_links/1` function, that creates the list of links
+  Note, that we have used `Membrane.Testing.ParentSpec.link_linear/1` function, that creates the list of links
   for the given list of children, linking them in linear manner (that means - children are linked in a way that
   `:output` pad of a given child is linked to `:input` pad of subsequent child). That is the case
   which is often used while creating testing pipelines.
@@ -71,7 +71,7 @@ defmodule Membrane.Testing.Pipeline do
       ]
       options = [
         children: children,
-        links: Membrane.ParentSpec.populate_links(children)
+        links: Membrane.ParentSpec.link_linear(children)
       ]
       {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
 
@@ -274,7 +274,7 @@ defmodule Membrane.Testing.Pipeline do
 
   @impl true
   def handle_init(%Options{links: nil, module: nil} = options) do
-    new_links = ParentSpec.populate_links(options.children)
+    new_links = ParentSpec.link_linear(options.children)
     do_handle_init_for_default_implementation(%Options{options | links: new_links})
   end
 
