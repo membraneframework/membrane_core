@@ -267,7 +267,7 @@ defmodule Membrane.Pipeline do
           :ok | {:error, :timeout}
   @deprecated "use terminate/2 instead"
   def stop_and_terminate(pipeline, opts \\ []) do
-    do_terminate(pipeline, opts)
+    terminate(pipeline, opts)
   end
 
   @doc """
@@ -280,20 +280,6 @@ defmodule Membrane.Pipeline do
   @spec terminate(pipeline :: pid, Keyword.t()) ::
           :ok | {:error, :timeout}
   def terminate(pipeline, opts \\ []) do
-    do_terminate(pipeline, opts)
-  end
-
-  defp wait_for_down(ref, timeout) do
-    receive do
-      {:DOWN, ^ref, _process, _pid, _reason} ->
-        :ok
-    after
-      timeout ->
-        {:error, :timeout}
-    end
-  end
-
-  defp do_terminate(pipeline, opts) do
     blocking? = Keyword.get(opts, :blocking?, false)
     timeout = Keyword.get(opts, :timeout, 5000)
 
@@ -304,6 +290,16 @@ defmodule Membrane.Pipeline do
     if blocking?,
       do: wait_for_down(ref, timeout),
       else: :ok
+  end
+
+  defp wait_for_down(ref, timeout) do
+    receive do
+      {:DOWN, ^ref, _process, _pid, _reason} ->
+        :ok
+    after
+      timeout ->
+        {:error, :timeout}
+    end
   end
 
   @doc """
