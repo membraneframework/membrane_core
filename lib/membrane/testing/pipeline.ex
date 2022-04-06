@@ -165,7 +165,7 @@ defmodule Membrane.Testing.Pipeline do
 
   def start_link(pipeline_options, process_options) when is_struct(pipeline_options, Options) do
     IO.warn(
-      "Please pass options to Membrane.Testing.Pipeline.start_link/2 as keywords list, instead of using Membrane.Testing.Options"
+      "Please pass options to Membrane.Testing.Pipeline.start_link/2 as keyword list, instead of using Membrane.Testing.Options"
     )
 
     do_start(:start_link, pipeline_options, process_options)
