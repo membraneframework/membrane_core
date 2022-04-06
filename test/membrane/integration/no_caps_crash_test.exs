@@ -33,7 +33,6 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     ]
 
     options = [
-      mode: :default,
       children: children,
       links: Membrane.ParentSpec.populate_links(children)
     ]
@@ -64,7 +63,6 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     ]
 
     options = [
-      mode: :default,
       children: children,
       links: Membrane.ParentSpec.populate_links(children)
     ]

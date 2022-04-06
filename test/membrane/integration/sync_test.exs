@@ -23,7 +23,6 @@ defmodule Membrane.Integration.SyncTest do
     ]
 
     pipeline_opts = [
-      mode: :default,
       children: children,
       links: Membrane.ParentSpec.populate_links(children)
     ]
@@ -47,7 +46,6 @@ defmodule Membrane.Integration.SyncTest do
     spec = Membrane.Support.Sync.Pipeline.default_spec()
 
     options = [
-      mode: :custom,
       module: Membrane.Support.Sync.Pipeline,
       custom_args: spec
     ]
@@ -65,7 +63,6 @@ defmodule Membrane.Integration.SyncTest do
     spec = %{spec | stream_sync: [[:sink_a, :sink_b]]}
 
     options = [
-      mode: :custom,
       module: Membrane.Support.Sync.Pipeline,
       custom_args: %Membrane.ParentSpec{}
     ]
@@ -86,7 +83,6 @@ defmodule Membrane.Integration.SyncTest do
     spec = Membrane.Support.Sync.Pipeline.default_spec()
 
     options = [
-      mode: :custom,
       module: Membrane.Support.Sync.Pipeline,
       custom_args: %{spec | stream_sync: [[:sink_a, :sink_b]]}
     ]
@@ -136,7 +132,6 @@ defmodule Membrane.Integration.SyncTest do
     }
 
     options = [
-      mode: :custom,
       module: Membrane.Support.Sync.Pipeline,
       custom_args: %{spec | stream_sync: [[:el1, :el2]]}
     ]
@@ -151,7 +146,6 @@ defmodule Membrane.Integration.SyncTest do
 
     {:ok, pipeline} =
       Testing.Pipeline.start_link(
-        mode: :default,
         children: children,
         links: Membrane.ParentSpec.populate_links(children)
       )

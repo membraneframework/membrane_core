@@ -253,7 +253,6 @@ defmodule Membrane.Testing.Assertions do
           the_sink: %Membrane.Testing.Sink{}
       ]
       {:ok, pid} = Membrane.Testing.Pipeline.start_link(
-        mode: :default,
         children: children,
         links: Membrane.ParentSpec.populate_links(children)
       )
@@ -320,7 +319,6 @@ defmodule Membrane.Testing.Assertions do
           the_sink: %Membrane.Testing.Sink{}
       ]
       {:ok, pid} = Membrane.Testing.Pipeline.start_link(
-        mode: :default,
         children: children,
         links: Membrane.ParentSpec.populate_links(children)
       )

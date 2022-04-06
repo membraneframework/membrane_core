@@ -16,7 +16,6 @@ defmodule Membrane.Testing.Sink do
           sink: %Testing.Sink{}
       ]
       {:ok, pid} = Testing.Pipeline.start_link(
-        mode: :default,
         children: children,
         links: Membrane.ParentSpec.populate_links(children)
       )

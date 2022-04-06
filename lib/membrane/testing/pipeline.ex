@@ -10,10 +10,10 @@ defmodule Membrane.Testing.Pipeline do
    - Links between those children
 
   To start a testing pipeline you need to build
-  a keywords list representing the options used to determine the pipeline's behaviour and then
+  a keyword list representing the options used to determine the pipeline's behaviour and then
   pass that options list to the `Membrane.Testing.Pipeline.start_link/2`.
   The testing pipeline can started in one of two modes - either with its `:default` behaviour, or by
-  injecting a `:custom` module behaviour.  The usage of a `:default` mode is presented below:
+  injecting a custom module behaviour. The usage of a `:default` pipeline implementation is presented below:
 
   ```
   children = [
@@ -22,7 +22,7 @@ defmodule Membrane.Testing.Pipeline do
       ...
   ]
   options =  [
-    mode: :default,
+    module: :default # :default is the default value for this parameter, so you do not need to pass it here
     children: children,
     links: Membrane.ParentSpec.populate_links(children)
   ]
@@ -35,7 +35,7 @@ defmodule Membrane.Testing.Pipeline do
   If you need to link children in a different manner, you can of course do it by passing an appropriate list
   of links as a `:links` option, just as you would do with a regular pipeline.
 
-  With the `:custom` mode, you can pass your custom pipeline's module as a `:module` option of
+  You can also pass your custom pipeline's module as a `:module` option of
   the options list. Every callback of the module
   will be executed before the callbacks of Testing.Pipeline.
   Passed module has to return a proper spec. There should be no children
@@ -44,13 +44,12 @@ defmodule Membrane.Testing.Pipeline do
 
   ```
   options = [
-    mode: :custom,
     module: Your.Module
   ]
   {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
   ```
 
-  See `Membrane.Testing.Pipeline.pipeline_keywords_list_t()` for available options.
+  See `Membrane.Testing.Pipeline.pipeline_keyword_list_t()` for available options.
 
   ## Assertions
 
@@ -64,14 +63,13 @@ defmodule Membrane.Testing.Pipeline do
 
   ## Example usage
 
-  Firstly, we can start the pipeline providing its options as a keywords list:
+  Firstly, we can start the pipeline providing its options as a keyword list:
       children = [
           source: %Membrane.Testing.Source{},
           tested_element: TestedElement,
           sink: %Membrane.Testing.Sink{}
       ]
       options = [
-        mode: :default,
         children: children,
         links: Membrane.ParentSpec.populate_links(children)
       ]
@@ -147,22 +145,21 @@ defmodule Membrane.Testing.Pipeline do
           }
   end
 
-  @type default_pipeline_keywords_list_t :: [
-          mode: :default,
+  @type default_pipeline_keyword_list_t :: [
+          module: :default | nil,
           children: ParentSpec.children_spec_t(),
           links: ParentSpec.links_spec_t(),
           test_process: pid() | nil
         ]
-  @type custom_pipeline_keywords_list_t :: [
-          mode: :custom,
+  @type custom_pipeline_keyword_list_t :: [
           module: module(),
           custom_args: Pipeline.pipeline_options_t() | nil,
           test_process: pid() | nil
         ]
-  @type pipeline_keywords_list_t ::
-          default_pipeline_keywords_list_t() | custom_pipeline_keywords_list_t()
+  @type pipeline_keyword_list_t ::
+          default_pipeline_keyword_list_t() | custom_pipeline_keyword_list_t()
 
-  @spec start_link(Options.t() | pipeline_keywords_list_t(), GenServer.options()) ::
+  @spec start_link(Options.t() | pipeline_keyword_list_t(), GenServer.options()) ::
           GenServer.on_start()
   def start_link(pipeline_options, process_options \\ [])
 
@@ -179,13 +176,13 @@ defmodule Membrane.Testing.Pipeline do
     do_start(:start_link, pipeline_options, process_options)
   end
 
-  @spec start(Options.t() | pipeline_keywords_list_t(), GenServer.options()) ::
+  @spec start(Options.t() | pipeline_keyword_list_t(), GenServer.options()) ::
           GenServer.on_start()
   def start(pipeline_options, process_options \\ [])
 
   def start(pipeline_options, process_options) when is_struct(pipeline_options, Options) do
     IO.warn(
-      "Please pass options to Membrane.Testing.Pipeline.start/2 as keywords list, instead of using Membrane.Testing.Options"
+      "Please pass options to Membrane.Testing.Pipeline.start/2 as keyword list, instead of using Membrane.Testing.Options"
     )
 
     do_start(:start, pipeline_options, process_options)
@@ -197,23 +194,28 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   defp transform_pipeline_options(pipeline_options) do
-    mode = Keyword.fetch!(pipeline_options, :mode)
+    module = Keyword.get(pipeline_options, :module, :default)
 
-    case mode do
+    case module do
       :default ->
         children = Keyword.fetch!(pipeline_options, :children)
         links = Keyword.fetch!(pipeline_options, :links)
         test_process = Keyword.get(pipeline_options, :test_process)
-        %{mode: mode, children: children, links: links, test_process: test_process}
+        %{module: :default, children: children, links: links, test_process: test_process}
 
-      :custom ->
-        module = Keyword.fetch!(pipeline_options, :module)
-        custom_args = Keyword.get(pipeline_options, :custom_args)
-        test_process = Keyword.get(pipeline_options, :test_process)
-        %{mode: mode, module: module, custom_args: custom_args, test_process: test_process}
+      module when is_atom(module) ->
+        case Code.ensure_compiled(module) do
+          {:module, _} ->
+            custom_args = Keyword.get(pipeline_options, :custom_args)
+            test_process = Keyword.get(pipeline_options, :test_process)
+            %{module: module, custom_args: custom_args, test_process: test_process}
 
-      other_mode ->
-        raise "Unknown testing pipeline mode #{other_mode}. Available modes are: :custom and :default"
+          {:error, _} ->
+            raise "Unknown module: #{inspect(module)}"
+        end
+
+      not_a_module ->
+        raise "Not a module: #{inspect(not_a_module)}"
     end
   end
 
@@ -287,12 +289,12 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_init(%{mode: :default} = options) do
+  def handle_init(%{module: :default} = options) do
     do_handle_init_for_default_implementation(options)
   end
 
   @impl true
-  def handle_init(%{mode: :custom} = options) do
+  def handle_init(%{module: _module} = options) do
     do_handle_init_with_custom_module(options)
   end
 

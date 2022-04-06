@@ -81,7 +81,6 @@ defmodule Membrane.Integration.LinkingTest do
   setup do
     {:ok, pipeline} =
       Testing.Pipeline.start_link(
-        mode: :custom,
         module: Pipeline,
         custom_args: %{testing_pid: self()}
       )

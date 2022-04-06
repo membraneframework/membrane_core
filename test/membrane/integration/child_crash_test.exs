@@ -12,7 +12,6 @@ defmodule Membrane.Integration.ChildCrashTest do
 
     assert {:ok, pipeline_pid} =
              Testing.Pipeline.start_link(
-               mode: :custom,
                module: ChildCrashTest.Pipeline,
                custom_args: %{
                  sink: Testing.Sink
@@ -44,11 +43,7 @@ defmodule Membrane.Integration.ChildCrashTest do
   test "small pipeline with one crash group test" do
     Process.flag(:trap_exit, true)
 
-    assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(
-               mode: :custom,
-               module: ChildCrashTest.Pipeline
-             )
+    assert {:ok, pipeline_pid} = Testing.Pipeline.start_link(module: ChildCrashTest.Pipeline)
 
     :ok = Pipeline.play(pipeline_pid)
 
@@ -76,11 +71,7 @@ defmodule Membrane.Integration.ChildCrashTest do
   test "Crash group consisting of bin crashes" do
     Process.flag(:trap_exit, true)
 
-    assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(
-               mode: :custom,
-               module: ChildCrashTest.Pipeline
-             )
+    assert {:ok, pipeline_pid} = Testing.Pipeline.start_link(module: ChildCrashTest.Pipeline)
 
     :ok = Pipeline.play(pipeline_pid)
 
@@ -134,11 +125,7 @@ defmodule Membrane.Integration.ChildCrashTest do
   test "Crash two groups one after another" do
     Process.flag(:trap_exit, true)
 
-    assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(
-               mode: :custom,
-               module: ChildCrashTest.Pipeline
-             )
+    assert {:ok, pipeline_pid} = Testing.Pipeline.start_link(module: ChildCrashTest.Pipeline)
 
     :ok = Pipeline.play(pipeline_pid)
 

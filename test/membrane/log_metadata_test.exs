@@ -12,7 +12,6 @@ defmodule Membrane.LogMetadataTest do
 
     assert {:ok, pipeline_pid} =
              Testing.Pipeline.start_link(
-               mode: :custom,
                module: LogMetadataTest.Pipeline,
                custom_args: %{elements: [element_1: metadata_1, element_2: metadata_2]}
              )

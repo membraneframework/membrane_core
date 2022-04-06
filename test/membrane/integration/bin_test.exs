@@ -26,7 +26,6 @@ defmodule Membrane.Core.BinTest do
 
       {:ok, pipeline} =
         Testing.Pipeline.start_link(
-          mode: :default,
           children: children,
           links: Membrane.ParentSpec.populate_links(children)
         )
@@ -53,7 +52,6 @@ defmodule Membrane.Core.BinTest do
 
       {:ok, pipeline} =
         Testing.Pipeline.start_link(
-          mode: :default,
           children: children,
           links: Membrane.ParentSpec.populate_links(children)
         )
@@ -79,7 +77,6 @@ defmodule Membrane.Core.BinTest do
 
       {:ok, pipeline} =
         Testing.Pipeline.start_link(
-          mode: :default,
           children: children,
           links: Membrane.ParentSpec.populate_links(children)
         )
@@ -108,7 +105,6 @@ defmodule Membrane.Core.BinTest do
 
       {:ok, pipeline} =
         Testing.Pipeline.start_link(
-          mode: :default,
           children: children,
           links: Membrane.ParentSpec.populate_links(children)
         )
@@ -129,7 +125,6 @@ defmodule Membrane.Core.BinTest do
 
       {:ok, pipeline} =
         Testing.Pipeline.start_link(
-          mode: :default,
           children: children,
           links: Membrane.ParentSpec.populate_links(children)
         )
@@ -157,7 +152,6 @@ defmodule Membrane.Core.BinTest do
 
       {:ok, pipeline} =
         Testing.Pipeline.start_link(
-          mode: :default,
           children: children,
           links: Membrane.ParentSpec.populate_links(children)
         )
@@ -239,7 +233,6 @@ defmodule Membrane.Core.BinTest do
 
       {:ok, pipeline} =
         Testing.Pipeline.start_link(
-          mode: :default,
           children: children,
           links: Membrane.ParentSpec.populate_links(children)
         )
