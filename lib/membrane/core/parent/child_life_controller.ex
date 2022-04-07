@@ -71,20 +71,20 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {{:ok, children_names}, state}
   end
 
-  @spec handle_forward([{Membrane.Child.name_t(), any}], Parent.state_t()) ::
+  @spec handle_notify_child([{Membrane.Child.name_t(), any}], Parent.state_t()) ::
           {:ok | {:error, any}, Parent.state_t()}
-  def handle_forward(children_messages, state) do
-    result = Bunch.Enum.try_each(children_messages, &do_handle_forward(&1, state))
+  def handle_notify_child(children_messages, state) do
+    result = Bunch.Enum.try_each(children_messages, &do_handle_notify_child(&1, state))
     {result, state}
   end
 
-  defp do_handle_forward({child_name, message}, state) do
+  defp do_handle_notify_child({child_name, message}, state) do
     with {:ok, %{pid: pid}} <- state |> Parent.ChildrenModel.get_child_data(child_name) do
-      send(pid, message)
+      Membrane.Core.Message.send(pid, :parent_notification, [message])
       :ok
     else
       {:error, reason} ->
-        {:error, {:cannot_forward_message, [element: child_name, message: message], reason}}
+        {:error, {:cannot_notify_child, [element: child_name, message: message], reason}}
     end
   end
 

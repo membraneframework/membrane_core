@@ -174,4 +174,14 @@ defmodule Membrane.Core.Element.LifecycleController do
         else: {:ok, state}
     end
   end
+
+  def handle_parent_notification(notification, state) do
+    CallbackHandler.exec_and_handle_callback(
+      :handle_parent_notification,
+      ActionHandler,
+      %{},
+      notification,
+      state
+    )
+  end
 end
