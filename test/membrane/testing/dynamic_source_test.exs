@@ -27,11 +27,7 @@ defmodule Membrane.Testing.DynamicSourceTest do
       source: %Testing.DynamicSource{output: ['a', 'b', 'c']}
     ]
 
-    {:ok, pipeline} =
-      Testing.Pipeline.start_link(
-        children: children,
-        links: []
-      )
+    {:ok, pipeline} = Testing.Pipeline.start_link(children: children)
 
     spec = %Membrane.ParentSpec{
       children: [
@@ -63,11 +59,7 @@ defmodule Membrane.Testing.DynamicSourceTest do
       source: Testing.DynamicSource
     ]
 
-    {:ok, pipeline} =
-      Testing.Pipeline.start_link(
-        children: children,
-        links: []
-      )
+    {:ok, pipeline} = Testing.Pipeline.start_link(children: children)
 
     spec = %Membrane.ParentSpec{
       children: [

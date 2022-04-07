@@ -199,7 +199,7 @@ defmodule Membrane.Testing.Pipeline do
     case module do
       :default ->
         children = Keyword.get(pipeline_options, :children, [])
-        links = Keyword.fetch!(pipeline_options, :links)
+        links = Keyword.get(pipeline_options, :links, [])
         test_process = Keyword.get(pipeline_options, :test_process)
         %{module: :default, children: children, links: links, test_process: test_process}
 

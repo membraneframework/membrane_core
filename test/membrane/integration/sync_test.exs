@@ -106,7 +106,6 @@ defmodule Membrane.Integration.SyncTest do
 
       spec = %Membrane.ParentSpec{
         children: children,
-        links: [],
         stream_sync: []
       }
 
@@ -122,11 +121,8 @@ defmodule Membrane.Integration.SyncTest do
       el2: SimpleBin
     ]
 
-    links = []
-
     spec = %Membrane.ParentSpec{
       children: children,
-      links: links,
       stream_sync: [[:el1, :el2]]
     }
 
@@ -143,11 +139,7 @@ defmodule Membrane.Integration.SyncTest do
   test "synchronization inside a bin is possible" do
     children = [bin: Sync.SyncBin]
 
-    {:ok, pipeline} =
-      Testing.Pipeline.start_link(
-        children: children,
-        links: []
-      )
+    {:ok, pipeline} = Testing.Pipeline.start_link(children: children)
 
     :ok = Testing.Pipeline.play(pipeline)
 

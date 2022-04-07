@@ -92,12 +92,4 @@ defmodule Membrane.Testing.PipelineTest do
       end
     end
   end
-
-  describe "When starting, Testing Pipeline in :default mode" do
-    test "raises an error if no links were provided" do
-      assert_raise KeyError, ~r/key :links not found in./, fn ->
-        Pipeline.start(children: :some_children)
-      end
-    end
-  end
 end

@@ -111,11 +111,7 @@ defmodule Membrane.Core.BinTest do
         }
       ]
 
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(
-          children: children,
-          links: []
-        )
+      {:ok, pipeline} = Testing.Pipeline.start_link(children: children)
 
       assert_playing(pipeline)
 
@@ -249,7 +245,6 @@ defmodule Membrane.Core.BinTest do
 
         spec = %Membrane.ParentSpec{
           children: children,
-          links: [],
           clock_provider: :element_child
         }
 
@@ -264,8 +259,7 @@ defmodule Membrane.Core.BinTest do
       def handle_init(_options) do
         children = [bin_child: ClockBin]
 
-        {{:ok,
-          spec: %Membrane.ParentSpec{children: children, links: [], clock_provider: :bin_child}},
+        {{:ok, spec: %Membrane.ParentSpec{children: children, clock_provider: :bin_child}},
          :ignored}
       end
     end
