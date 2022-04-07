@@ -28,12 +28,11 @@ defmodule Membrane.Integration.SyncTest do
 
     for tries <- [100, 1000, 10_000] do
       assert {:ok, pipeline} = Testing.Pipeline.start_link(pipeline_opts)
-      Testing.Pipeline.play(pipeline)
 
       assert_pipeline_playback_changed(pipeline, :prepared, :playing)
       Process.sleep(tick_interval * tries)
 
-      Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
+      Testing.Pipeline.terminate(pipeline, blocking?: true)
 
       ticks_amount = Sync.Helper.receive_ticks()
 
@@ -50,11 +49,10 @@ defmodule Membrane.Integration.SyncTest do
     ]
 
     {:ok, pipeline} = Testing.Pipeline.start_link(options)
-    :ok = Testing.Pipeline.play(pipeline)
 
     assert_start_of_stream(pipeline, :sink_a)
     assert_start_of_stream(pipeline, :sink_b, :input, @sync_error_ms)
-    Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 
   test "synchronize dynamically spawned elements" do
@@ -67,7 +65,6 @@ defmodule Membrane.Integration.SyncTest do
     ]
 
     {:ok, pipeline} = Testing.Pipeline.start_link(options)
-    :ok = Testing.Pipeline.play(pipeline)
 
     assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
     assert_pipeline_playback_changed(pipeline, :prepared, :playing)
@@ -75,7 +72,7 @@ defmodule Membrane.Integration.SyncTest do
 
     assert_start_of_stream(pipeline, :sink_a)
     assert_start_of_stream(pipeline, :sink_b, :input, @sync_error_ms)
-    Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 
   test "synchronize selected groups" do
@@ -87,11 +84,10 @@ defmodule Membrane.Integration.SyncTest do
     ]
 
     {:ok, pipeline} = Testing.Pipeline.start_link(options)
-    :ok = Testing.Pipeline.play(pipeline)
 
     assert_start_of_stream(pipeline, :sink_a)
     assert_start_of_stream(pipeline, :sink_b, :input, @sync_error_ms)
-    Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 
   defmodule SimpleBin do
@@ -140,8 +136,6 @@ defmodule Membrane.Integration.SyncTest do
     children = [bin: Sync.SyncBin]
 
     {:ok, pipeline} = Testing.Pipeline.start_link(children: children)
-
-    :ok = Testing.Pipeline.play(pipeline)
 
     assert_pipeline_notified(pipeline, :bin, {:start_of_stream, :sink_a})
     assert_pipeline_notified(pipeline, :bin, {:start_of_stream, :sink_b}, @sync_error_ms)

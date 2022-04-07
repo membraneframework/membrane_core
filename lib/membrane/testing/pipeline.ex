@@ -305,7 +305,7 @@ defmodule Membrane.Testing.Pipeline do
     }
 
     new_state = %State{test_process: options.test_process, module: nil}
-    {{:ok, spec: spec}, new_state}
+    {{:ok, [spec: spec, playback: :playing]}, new_state}
   end
 
   defp do_handle_init_with_custom_module(options) do

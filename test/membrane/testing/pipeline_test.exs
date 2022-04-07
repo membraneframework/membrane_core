@@ -17,7 +17,8 @@ defmodule Membrane.Testing.PipelineTest do
       elements = [elem: Elem, elem2: Elem]
       links = [link(:elem) |> to(:elem2)]
       options = %{module: :default, children: elements, links: links, test_process: nil}
-      assert {{:ok, spec: spec}, state} = Pipeline.handle_init(options)
+      assert {{:ok, spec: spec, playback: :playing}, state} = Pipeline.handle_init(options)
+
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
       assert spec == %Membrane.ParentSpec{
@@ -31,7 +32,7 @@ defmodule Membrane.Testing.PipelineTest do
       elements = [elem: Elem, elem2: Elem]
       links = [link(:elem) |> to(:elem2)]
       options = %{module: :default, children: elements, links: links, test_process: nil}
-      assert {{:ok, spec: spec}, state} = Pipeline.handle_init(options)
+      assert {{:ok, spec: spec, playback: :playing}, state} = Pipeline.handle_init(options)
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
       assert spec == %Membrane.ParentSpec{
@@ -58,8 +59,8 @@ defmodule Membrane.Testing.PipelineTest do
       import ParentSpec
       elements = [elem: Elem, elem2: Elem]
       links = link(:elem) |> to(:elem2)
-      options = %Pipeline.Options{children: elements, links: links}
-      assert {{:ok, spec: spec}, state} = Pipeline.handle_init(options)
+      options = %{module: :default, children: elements, links: links, test_process: nil}
+      assert {{:ok, spec: spec, playback: :playing}, state} = Pipeline.handle_init(options)
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
       assert spec == %Membrane.ParentSpec{

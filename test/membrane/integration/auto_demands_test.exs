@@ -76,7 +76,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
                  ]
                )
 
-      Pipeline.play(pipeline)
       assert_pipeline_playback_changed(pipeline, :prepared, :playing)
 
       Enum.each(out_payloads, fn payload ->
@@ -87,7 +86,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
       assert_end_of_stream(pipeline, :sink)
       refute_sink_buffer(pipeline, :sink, _buffer, 0)
 
-      Pipeline.stop_and_terminate(pipeline, blocking?: true)
+      Pipeline.terminate(pipeline, blocking?: true)
     end
   end)
 
@@ -103,7 +102,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
                ]
              )
 
-    Pipeline.play(pipeline)
     assert_pipeline_playback_changed(pipeline, :prepared, :playing)
     Pipeline.message_child(pipeline, :right_sink, {:make_demand, 1000})
 
@@ -115,7 +113,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     end)
 
     refute_sink_buffer(pipeline, :left_sink, %{payload: 25_000})
-    Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Pipeline.terminate(pipeline, blocking?: true)
   end
 
   test "handle removed branch" do
@@ -130,7 +128,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
                ]
              )
 
-    Pipeline.play(pipeline)
     assert_pipeline_playback_changed(pipeline, :prepared, :playing)
     Process.sleep(500)
     Pipeline.execute_actions(pipeline, remove_child: :right_sink)
@@ -140,7 +137,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
       assert buffer.payload == payload
     end)
 
-    Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Pipeline.terminate(pipeline, blocking?: true)
   end
 
   defmodule PushSource do
@@ -171,7 +168,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
                ]
              )
 
-    Pipeline.play(pipeline)
     assert_pipeline_playback_changed(pipeline, :prepared, :playing)
     buffers = Enum.map(1..10, &%Membrane.Buffer{payload: &1})
     Pipeline.message_child(pipeline, :source, buffer: {:output, buffers})
@@ -186,7 +182,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
       end
     end)
 
-    Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Pipeline.terminate(pipeline, blocking?: true)
     refute_sink_buffer(pipeline, :sink, _buffer, 0)
   end
 
@@ -203,7 +199,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
              )
 
     Process.monitor(pipeline)
-    Pipeline.play(pipeline)
     assert_pipeline_playback_changed(pipeline, :prepared, :playing)
     buffers = Enum.map(1..100_000, &%Membrane.Buffer{payload: &1})
     Pipeline.message_child(pipeline, :source, buffer: {:output, buffers})

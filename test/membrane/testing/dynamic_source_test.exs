@@ -23,25 +23,18 @@ defmodule Membrane.Testing.DynamicSourceTest do
   end
 
   test "Source works properly when payload are passed as enumerable" do
-    children = [
-      source: %Testing.DynamicSource{output: ['a', 'b', 'c']}
-    ]
-
-    {:ok, pipeline} = Testing.Pipeline.start_link(children: children)
-
-    spec = %Membrane.ParentSpec{
-      children: [
-        sink_1: Testing.Sink,
-        sink_2: Testing.Sink
-      ],
-      links: [
-        link(:source) |> to(:sink_1),
-        link(:source) |> to(:sink_2)
-      ]
-    }
-
-    Testing.Pipeline.execute_actions(pipeline, spec: spec)
-    Testing.Pipeline.play(pipeline)
+    {:ok, pipeline} =
+      Testing.Pipeline.start_link(
+        children: [
+          source: %Testing.DynamicSource{output: ['a', 'b', 'c']},
+          sink_1: Testing.Sink,
+          sink_2: Testing.Sink
+        ],
+        links: [
+          link(:source) |> to(:sink_1),
+          link(:source) |> to(:sink_2)
+        ]
+      )
 
     assert_pipeline_playback_changed(pipeline, _from, :playing)
     assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: 'a'})
@@ -51,29 +44,22 @@ defmodule Membrane.Testing.DynamicSourceTest do
     assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: 'b'})
     assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: 'c'})
 
-    Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 
   test "Source works properly when using generator function" do
-    children = [
-      source: Testing.DynamicSource
-    ]
-
-    {:ok, pipeline} = Testing.Pipeline.start_link(children: children)
-
-    spec = %Membrane.ParentSpec{
-      children: [
-        sink_1: Testing.Sink,
-        sink_2: Testing.Sink
-      ],
-      links: [
-        link(:source) |> to(:sink_1),
-        link(:source) |> to(:sink_2)
-      ]
-    }
-
-    Testing.Pipeline.execute_actions(pipeline, spec: spec)
-    Testing.Pipeline.play(pipeline)
+    {:ok, pipeline} =
+      Testing.Pipeline.start_link(
+        children: [
+          source: Testing.DynamicSource,
+          sink_1: Testing.Sink,
+          sink_2: Testing.Sink
+        ],
+        links: [
+          link(:source) |> to(:sink_1),
+          link(:source) |> to(:sink_2)
+        ]
+      )
 
     assert_pipeline_playback_changed(pipeline, _from, :playing)
     assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: <<0::16>>})
@@ -83,6 +69,6 @@ defmodule Membrane.Testing.DynamicSourceTest do
     assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: <<1::16>>})
     assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: <<2::16>>})
 
-    Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 end

@@ -59,8 +59,6 @@ defmodule Membrane.Integration.ChildRemovalTest do
       [:filter1, :filter2, :filter3]
       |> Enum.map(&get_filter_pid(&1, pipeline_pid))
 
-    :ok = Pipeline.play(pipeline_pid)
-
     assert_pipeline_playback_changed(pipeline_pid, _, :playing)
     assert_pipeline_notified(pipeline_pid, :filter1, :playing)
     assert_pipeline_notified(pipeline_pid, :filter2, :playing)
@@ -102,7 +100,6 @@ defmodule Membrane.Integration.ChildRemovalTest do
       [:filter1, :filter2, :filter3]
       |> Enum.map(&get_filter_pid(&1, pipeline_pid))
 
-    assert Pipeline.play(pipeline_pid) == :ok
     assert_pipeline_playback_changed(pipeline_pid, _, :playing)
     assert_pipeline_notified(pipeline_pid, :filter1, :playing)
     assert_pipeline_notified(pipeline_pid, :filter2, :playing)
@@ -122,7 +119,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
   #############
 
   defp stop_pipeline(pid) do
-    assert Pipeline.stop_and_terminate(pid) == :ok
+    assert Pipeline.terminate(pid) == :ok
     assert_pid_dead(pid)
   end
 

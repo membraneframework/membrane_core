@@ -30,7 +30,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   defp do_handle_action({action, _args}, :handle_init, _params, state)
-       when action not in [:spec, :log_metadata] do
+       when action not in [:spec, :log_metadata, :playback] do
     {{:error, :invalid_action}, state}
   end
 
@@ -63,6 +63,10 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
 
   defp do_handle_action({:stop_timer, id}, _cb, _params, state) do
     TimerController.stop_timer(id, state)
+  end
+
+  defp do_handle_action({:playback, playback_state}, _cb, _params, state) do
+    Membrane.Core.Parent.LifecycleController.change_playback_state(playback_state, state)
   end
 
   defp do_handle_action(action, callback, _params, state) do

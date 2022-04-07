@@ -5,7 +5,6 @@ defmodule Membrane.Integration.ChildCrashTest do
 
   alias Membrane.Testing
   alias Membrane.Support.ChildCrashTest
-  alias Membrane.Pipeline
 
   test "Element that is not member of any crash group crashed when pipeline is in playing state" do
     Process.flag(:trap_exit, true)
@@ -17,8 +16,6 @@ defmodule Membrane.Integration.ChildCrashTest do
                  sink: Testing.Sink
                }
              )
-
-    :ok = Pipeline.play(pipeline_pid)
 
     ChildCrashTest.Pipeline.add_path(pipeline_pid, [:filter_1_1, :filter_2_1], :source_1)
 
@@ -45,8 +42,6 @@ defmodule Membrane.Integration.ChildCrashTest do
 
     assert {:ok, pipeline_pid} = Testing.Pipeline.start_link(module: ChildCrashTest.Pipeline)
 
-    :ok = Pipeline.play(pipeline_pid)
-
     ChildCrashTest.Pipeline.add_path(pipeline_pid, [], :source, {1, :temporary})
 
     [source_pid, center_filter_pid, sink_pid] =
@@ -72,8 +67,6 @@ defmodule Membrane.Integration.ChildCrashTest do
     Process.flag(:trap_exit, true)
 
     assert {:ok, pipeline_pid} = Testing.Pipeline.start_link(module: ChildCrashTest.Pipeline)
-
-    :ok = Pipeline.play(pipeline_pid)
 
     ChildCrashTest.Pipeline.add_bin(pipeline_pid, :bin_1, :source_1, {1, :temporary})
 
@@ -126,8 +119,6 @@ defmodule Membrane.Integration.ChildCrashTest do
     Process.flag(:trap_exit, true)
 
     assert {:ok, pipeline_pid} = Testing.Pipeline.start_link(module: ChildCrashTest.Pipeline)
-
-    :ok = Pipeline.play(pipeline_pid)
 
     ChildCrashTest.Pipeline.add_path(
       pipeline_pid,

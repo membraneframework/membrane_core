@@ -282,7 +282,7 @@ defmodule Membrane.Core.BinTest do
       refute is_nil(clock2)
 
       assert proxy_for?(clock1, clock2)
-      ClockPipeline.stop_and_terminate(pid, blocking?: true)
+      ClockPipeline.terminate(pid, blocking?: true)
     end
 
     defp proxy_for?(c1, c2) do
@@ -299,7 +299,7 @@ defmodule Membrane.Core.BinTest do
     assert_buffers_flow_through(pipeline, buffers, receiving_element)
 
     assert_end_of_stream(pipeline, ^receiving_element)
-    Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 
   defp assert_buffers_flow_through(pipeline, buffers, receiving_element) do
@@ -310,8 +310,6 @@ defmodule Membrane.Core.BinTest do
   end
 
   defp assert_playing(pipeline) do
-    :ok = Testing.Pipeline.play(pipeline)
-
     assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
     assert_pipeline_playback_changed(pipeline, :prepared, :playing)
   end
@@ -332,6 +330,6 @@ defmodule Membrane.Core.BinTest do
   end
 
   defp stop_pipeline(pipeline) do
-    Membrane.Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Membrane.Pipeline.terminate(pipeline, blocking?: true)
   end
 end
