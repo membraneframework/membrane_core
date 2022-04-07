@@ -31,8 +31,8 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     |> noreply(state)
   end
 
-  def handle_message(Message.new(:notification, [from, notification]), state) do
-    LifecycleController.handle_notification(from, notification, state)
+  def handle_message(Message.new(:child_notification, [from, notification]), state) do
+    LifecycleController.handle_child_notification(from, notification, state)
     |> noreply(state)
   end
 

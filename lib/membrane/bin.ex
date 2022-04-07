@@ -133,7 +133,7 @@ defmodule Membrane.Bin do
   @doc """
   Callback invoked when a notification comes in from an element.
   """
-  @callback handle_notification(
+  @callback handle_child_notification(
               notification :: Membrane.Notification.t(),
               element :: Child.name_t(),
               context :: CallbackContext.Notification.t(),
@@ -208,7 +208,7 @@ defmodule Membrane.Bin do
                       handle_spec_started: 3,
                       handle_element_start_of_stream: 3,
                       handle_element_end_of_stream: 3,
-                      handle_notification: 4,
+                      handle_child_notification: 4,
                       handle_tick: 3
 
   @doc PadsSpecs.def_pad_docs(:input, :bin)
@@ -353,7 +353,7 @@ defmodule Membrane.Bin do
       def handle_element_end_of_stream({element, pad}, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_notification(notification, element, _ctx, state), do: {:ok, state}
+      def handle_child_notification(notification, element, _ctx, state), do: {:ok, state}
 
       defoverridable membrane_clock?: 0,
                      handle_init: 1,
@@ -369,7 +369,7 @@ defmodule Membrane.Bin do
                      handle_spec_started: 3,
                      handle_element_start_of_stream: 3,
                      handle_element_end_of_stream: 3,
-                     handle_notification: 4
+                     handle_child_notification: 4
     end
   end
 end

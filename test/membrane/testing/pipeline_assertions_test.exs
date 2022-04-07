@@ -17,13 +17,13 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
     test "does not flunk when notification is handled", %{
       state: state
     } do
-      Pipeline.handle_notification(:notification, :element, context(), state)
-      assert_pipeline_notified(self(), :element, :notification)
+      Pipeline.handle_child_notification(:child_notification, :element, context(), state)
+      assert_pipeline_notified(self(), :element, :child_notification)
     end
 
     test "flunks when pipeline is not notified" do
       assert_raise ExUnit.AssertionError, fn ->
-        assert_pipeline_notified(self(), :element, :notification, 0)
+        assert_pipeline_notified(self(), :element, :child_notification, 0)
       end
     end
   end
@@ -158,7 +158,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
   describe "assert_sink_caps" do
     test "does not flunk when caps are handled", %{state: state} do
       caps = %{property: :value}
-      Pipeline.handle_notification({:caps, :input, caps}, :sink, context(), state)
+      Pipeline.handle_child_notification({:caps, :input, caps}, :sink, context(), state)
       assert_sink_caps(self(), :sink, ^caps)
     end
 
@@ -172,7 +172,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
   describe "refute_sink_caps" do
     test "flunks when caps are handled", %{state: state} do
       caps = %{property: :value}
-      Pipeline.handle_notification({:caps, :input, caps}, :sink, context(), state)
+      Pipeline.handle_child_notification({:caps, :input, caps}, :sink, context(), state)
 
       assert_raise ExUnit.AssertionError, fn ->
         refute_sink_caps(self(), :sink, ^caps)
@@ -187,7 +187,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
   describe "assert_sink_event" do
     test "does not flunk when event is handled", %{state: state} do
       event = %Membrane.Event.Discontinuity{}
-      Pipeline.handle_notification({:event, event}, :sink, context(), state)
+      Pipeline.handle_child_notification({:event, event}, :sink, context(), state)
       assert_sink_event(self(), :sink, ^event)
     end
 
@@ -201,7 +201,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
   describe "refute_sink_event" do
     test "flunks when event is handled", %{state: state} do
       event = %Membrane.Event.Discontinuity{}
-      Pipeline.handle_notification({:event, event}, :sink, context(), state)
+      Pipeline.handle_child_notification({:event, event}, :sink, context(), state)
 
       assert_raise ExUnit.AssertionError, fn ->
         refute_sink_event(self(), :sink, ^event)
@@ -216,7 +216,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
   describe "assert_sink_buffer" do
     test "does not flunk when buffer is handled", %{state: state} do
       buffer = %Membrane.Buffer{payload: 255}
-      Pipeline.handle_notification({:buffer, buffer}, :sink, context(), state)
+      Pipeline.handle_child_notification({:buffer, buffer}, :sink, context(), state)
       assert_sink_buffer(self(), :sink, ^buffer)
     end
 
@@ -230,7 +230,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
   describe "refute_sink_buffer" do
     test "flunks when buffer is handled", %{state: state} do
       buffer = %Membrane.Buffer{payload: 255}
-      Pipeline.handle_notification({:buffer, buffer}, :sink, context(), state)
+      Pipeline.handle_child_notification({:buffer, buffer}, :sink, context(), state)
 
       assert_raise ExUnit.AssertionError, fn ->
         refute_sink_buffer(self(), :sink, ^buffer)

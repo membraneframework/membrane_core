@@ -116,7 +116,6 @@ defmodule Membrane.Support.Bin.TestBins do
 
       spec = %ParentSpec{
         children: children,
-        links: []
       }
 
       state = %{}
@@ -221,7 +220,7 @@ defmodule Membrane.Support.Bin.TestBins do
     end
 
     @impl true
-    def handle_notification(notification, _element, _ctx, state) do
+    def handle_child_notification(notification, _element, _ctx, state) do
       {{:ok, notify: notification}, state}
     end
 
@@ -263,7 +262,7 @@ defmodule Membrane.Support.Bin.TestBins do
     end
 
     @impl true
-    def handle_notification(notification, _element, _ctx, state) do
+    def handle_child_notification(notification, _element, _ctx, state) do
       {{:ok, notify: notification}, state}
     end
 
