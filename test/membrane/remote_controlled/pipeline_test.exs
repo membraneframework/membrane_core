@@ -64,7 +64,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       Pipeline.subscribe(pipeline, %Message.StartOfStream{element: :b, pad: :input})
 
       # RUN
-      Pipeline.play(pipeline)
+      Pipeline.exec_actions(pipeline, playback: :playing)
 
       # TEST
       assert_receive %Message.PlaybackState{from: ^pipeline, state: :prepared}
@@ -82,7 +82,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       refute_receive %Message.PlaybackState{from: ^pipeline, state: :stopped}
 
       # STOP
-      Pipeline.stop_and_terminate(pipeline, blocking?: true)
+      Pipeline.terminate(pipeline, blocking?: true)
     end
 
     test "should allow to use wildcards in subscription pattern", %{pipeline: pipeline} do
@@ -91,7 +91,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       Pipeline.subscribe(pipeline, %Message.EndOfStream{})
 
       # RUN
-      Pipeline.play(pipeline)
+      Pipeline.exec_actions(pipeline, playback: :playing)
 
       # TEST
       assert_receive %Message.PlaybackState{from: ^pipeline, state: :prepared}
@@ -102,7 +102,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       assert_receive %Message.EndOfStream{from: ^pipeline, element: :c, pad: :input}
 
       # STOP
-      Pipeline.stop_and_terminate(pipeline, blocking?: true)
+      Pipeline.terminate(pipeline, blocking?: true)
 
       # TEST
       assert_receive %Message.PlaybackState{from: ^pipeline, state: :stopped}
@@ -123,7 +123,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       Pipeline.subscribe(pipeline, %Message.Terminated{})
 
       # RUN
-      Pipeline.play(pipeline)
+      Pipeline.exec_actions(pipeline, playback: :playing)
 
       # TEST
       Pipeline.await_playback_state(pipeline, :playing)
@@ -132,7 +132,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       Pipeline.await_notification(pipeline, :b)
 
       # STOP
-      Pipeline.stop_and_terminate(pipeline, blocking?: true)
+      Pipeline.terminate(pipeline, blocking?: true)
     end
 
     test "should await for requested messages with parts of message body not being specified", %{
@@ -144,7 +144,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
 
       # RUN
-      Pipeline.play(pipeline)
+      Pipeline.exec_actions(pipeline, playback: :playing)
 
       # TEST
       Pipeline.await_start_of_stream(pipeline, :c)
@@ -157,7 +157,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
              }
 
       # STOP
-      Pipeline.stop_and_terminate(pipeline, blocking?: true)
+      Pipeline.terminate(pipeline, blocking?: true)
     end
 
     test "should await for requested messages with pinned variables as message body parts", %{
@@ -171,14 +171,14 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       element = :c
 
       # START
-      Pipeline.play(pipeline)
+      Pipeline.exec_actions(pipeline, playback: :playing)
 
       # TEST
       Pipeline.await_playback_state(pipeline, state)
       Pipeline.await_start_of_stream(pipeline, element, :input)
 
       # STOP
-      Pipeline.stop_and_terminate(pipeline, blocking?: true)
+      Pipeline.terminate(pipeline, blocking?: true)
     end
   end
 end

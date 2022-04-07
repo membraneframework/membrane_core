@@ -40,7 +40,7 @@ defmodule Membrane.Integration.TimerTest do
         children: [element: Element, bin: Bin]
       }
 
-      {{:ok, spec: spec}, %{pid: pid}}
+      {{:ok, spec: spec, playback: :playing}, %{pid: pid}}
     end
 
     @impl true
@@ -62,12 +62,11 @@ defmodule Membrane.Integration.TimerTest do
         custom_args: self()
       })
 
-    Pipeline.play(pipeline)
     assert_pipeline_playback_changed(pipeline, _, :playing)
     assert_pipeline_notified(pipeline, :element, :tick)
     assert_pipeline_notified(pipeline, :bin, :tick)
     assert_receive :pipeline_tick
-    Pipeline.stop(pipeline)
+    Testing.Pipeline.execute_actions(pipeline, playback: :stopped)
     assert_pipeline_playback_changed(pipeline, _, :stopped)
   end
 end

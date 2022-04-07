@@ -265,7 +265,21 @@ defmodule Membrane.Pipeline do
   """
   @spec stop_and_terminate(pipeline :: pid, Keyword.t()) ::
           :ok | {:error, :timeout}
+  @deprecated "use terminate/2 instead"
   def stop_and_terminate(pipeline, opts \\ []) do
+    terminate(pipeline, opts)
+  end
+
+  @doc """
+  Changes pipeline's playback state to `:stopped` and terminates its process.
+  It accpets two options:
+    * `blocking?` - tells whether to stop the pipeline synchronously
+    * `timeout` - if `blocking?` is set to true it tells how much
+      time (ms) to wait for pipeline to get terminated. Defaults to 5000.
+  """
+  @spec terminate(pipeline :: pid, Keyword.t()) ::
+          :ok | {:error, :timeout}
+  def terminate(pipeline, opts \\ []) do
     blocking? = Keyword.get(opts, :blocking?, false)
     timeout = Keyword.get(opts, :timeout, 5000)
 
@@ -292,12 +306,14 @@ defmodule Membrane.Pipeline do
   Changes playback state to `:playing`.
   """
   @spec play(pid) :: :ok
+  @deprecated "use pipeline's :playback action instead"
   def play(pid), do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :playing)
 
   @doc """
   Changes playback state to `:prepared`.
   """
   @spec prepare(pid) :: :ok
+  @deprecated "use pipeline's :playback action instead"
   def prepare(pid),
     do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :prepared)
 
@@ -305,6 +321,7 @@ defmodule Membrane.Pipeline do
   Changes playback state to `:stopped`.
   """
   @spec stop(pid) :: :ok
+  @deprecated "use pipeline's :playback action instead"
   def stop(pid), do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :stopped)
 
   @doc """
@@ -316,6 +333,12 @@ defmodule Membrane.Pipeline do
   end
 
   @doc false
+  # Credo was disabled there, since it was complaining about too high CC of the following macro, which in fact does not look too complex.
+  # The change which lead to CC increase was making the default definition of function call another function, instead of delegating to that function.
+  # It was necessary, since delegating to the deprecated function led to a depracation warning being printed once 'use Membrane.Pipleine' was done,
+  # despite the fact that the depreacted function wasn't called. In the future releases we will remove deprecated functions and we will also remove that
+  # credo disable instruction so this can be seen just as a temporary solution.
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defmacro __before_compile__(_env) do
     quote do
       unless Enum.any?(0..2, &Module.defines?(__MODULE__, {:start_link, &1})) do
@@ -354,23 +377,37 @@ defmodule Membrane.Pipeline do
         Changes playback state of pipeline to `:playing`.
         """
         @spec play(pid()) :: :ok
-        defdelegate play(pipeline), to: unquote(__MODULE__)
+        @deprecated "use pipeline's :playback action instead"
+        def play(pid),
+          do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :playing)
       end
 
       unless Module.defines?(__MODULE__, {:prepare, 1}) do
         @doc """
         Changes playback state to `:prepared`.
         """
-        @spec prepare(pid) :: :ok
-        defdelegate prepare(pipeline), to: unquote(__MODULE__)
+        @spec prepare(pid()) :: :ok
+        @deprecated "use pipeline's :playback action instead"
+        def prepare(pid),
+          do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :prepared)
       end
 
       unless Module.defines?(__MODULE__, {:stop, 1}) do
         @doc """
         Changes playback state to `:stopped`.
         """
-        @spec stop(pid) :: :ok
-        defdelegate stop(pid), to: unquote(__MODULE__)
+        @spec stop(pid()) :: :ok
+        @deprecated "use pipeline's :playback action instead"
+        def stop(pid),
+          do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :stopped)
+      end
+
+      unless Enum.any?(1..2, &Module.defines?(__MODULE__, {:terminate, &1})) do
+        @doc """
+        Changes pipeline's playback state to `:stopped` and terminates its process.
+        """
+        @spec terminate(pid, Keyword.t()) :: :ok
+        defdelegate terminate(pipeline, opts \\ []), to: unquote(__MODULE__)
       end
 
       unless Enum.any?(1..2, &Module.defines?(__MODULE__, {:stop_and_terminate, &1})) do
@@ -378,7 +415,9 @@ defmodule Membrane.Pipeline do
         Changes pipeline's playback state to `:stopped` and terminates its process.
         """
         @spec stop_and_terminate(pid, Keyword.t()) :: :ok
-        defdelegate stop_and_terminate(pipeline, opts \\ []), to: unquote(__MODULE__)
+        @deprecated "use terminate/2 instead"
+        def stop_and_terminate(pipeline, opts \\ []),
+          do: Membrane.Pipeline.terminate(pipeline, opts)
       end
     end
   end
