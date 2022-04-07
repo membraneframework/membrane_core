@@ -20,7 +20,7 @@ defmodule Membrane.Support.LogMetadataTest.Pipeline do
 
     @impl true
     def handle_init(_opts) do
-      {{:ok, notify: Logger.metadata()}, %{}}
+      {{:ok, notify_parent: Logger.metadata()}, %{}}
     end
   end
 

@@ -23,7 +23,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
       notification_actions =
         if rem(state.buffer_count, 3) == 0 do
-          [{:notify, %Buffer{payload: "test"}}]
+          [{:notify_parent, %Buffer{payload: "test"}}]
         else
           []
         end

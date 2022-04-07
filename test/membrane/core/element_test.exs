@@ -14,7 +14,7 @@ defmodule Membrane.Core.ElementTest do
 
     @impl true
     def handle_other(msg, _ctx, state) do
-      {{:ok, notify: msg}, state}
+      {{:ok, notify_parent: msg}, state}
     end
   end
 

@@ -10,7 +10,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
   require Message
 
   @impl CallbackHandler
-  def handle_action({:forward, children_messages}, _cb, _params, state) do
+  def handle_action({:notify_child, children_messages}, _cb, _params, state) do
     Parent.ChildLifeController.handle_forward(Bunch.listify(children_messages), state)
   end
 
@@ -26,7 +26,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:notify, notification}, _cb, _params, state) do
+  def handle_action({:notify_parent, notification}, _cb, _params, state) do
     send_notification(notification, state)
   end
 

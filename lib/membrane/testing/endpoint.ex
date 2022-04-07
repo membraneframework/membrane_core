@@ -153,6 +153,6 @@ defmodule Membrane.Testing.Endpoint do
   end
 
   defp notify(payload) do
-    [notify: %Notification{payload: payload}]
+    [notify_parent: %Notification{payload: payload}]
   end
 end

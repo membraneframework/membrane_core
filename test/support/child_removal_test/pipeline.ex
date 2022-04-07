@@ -57,7 +57,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
 
   @impl true
   def handle_other({:child_msg, name, msg}, _ctx, state) do
-    {{:ok, forward: {name, msg}}, state}
+    {{:ok, notify_child: {name, msg}}, state}
   end
 
   @impl true

@@ -13,7 +13,7 @@ defmodule Membrane.Integration.TimerTest do
 
     @impl true
     def handle_tick(:timer, _ctx, state) do
-      {{:ok, notify: :tick, stop_timer: :timer}, state}
+      {{:ok, notify_parent: :tick, stop_timer: :timer}, state}
     end
   end
 
@@ -27,7 +27,7 @@ defmodule Membrane.Integration.TimerTest do
 
     @impl true
     def handle_tick(:timer, _ctx, state) do
-      {{:ok, notify: :tick, stop_timer: :timer}, state}
+      {{:ok, notify_parent: :tick, stop_timer: :timer}, state}
     end
   end
 

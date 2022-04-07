@@ -456,7 +456,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
       result =
         @module.handle_action(
-          {:notify, @mock_notification},
+          {:notify_parent, @mock_notification},
           :handle_other,
           %{},
           state
@@ -562,7 +562,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
       result =
         @module.handle_actions(
-          [notify: :a, notify: :b, redemand: :output],
+          [notify_parent: :a, notify_parent: :b, redemand: :output],
           :handle_other,
           %{},
           state
@@ -580,7 +580,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
       result =
         @module.handle_actions(
-          [notify: :a, notify: :b, redemand: :output, redemand: :output],
+          [notify_parent: :a, notify_parent: :b, redemand: :output, redemand: :output],
           :handle_other,
           %{},
           state
@@ -596,7 +596,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when :redemand is not the last action", %{state: state} do
       assert_raise ActionError, ~r/redemand.*last/i, fn ->
         @module.handle_actions(
-          [redemand: :output, notify: :a, notify: :b],
+          [redemand: :output, notify_parent: :a, notify_parent: :b],
           :handle_other,
           %{},
           state
@@ -610,7 +610,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when there are no :redemand actions", %{state: state} do
       result =
         @module.handle_actions(
-          [notify: :a, notify: :b],
+          [notify_parent: :a, notify_parent: :b],
           :handle_other,
           %{},
           state
