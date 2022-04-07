@@ -11,7 +11,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:notify_child, children_messages}, _cb, _params, state) do
-    Parent.ChildLifeController.handle_forward(Bunch.listify(children_messages), state)
+    Parent.ChildLifeController.handle_notify_child(Bunch.listify(children_messages), state)
   end
 
   @impl CallbackHandler

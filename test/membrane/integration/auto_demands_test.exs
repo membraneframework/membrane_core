@@ -146,7 +146,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     def_output_pad :output, mode: :push, caps: :any
 
     @impl true
-    def handle_other(actions, _ctx, state) do
+    def handle_parent_notification(actions, state) do
       {{:ok, actions}, state}
     end
 

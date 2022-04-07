@@ -198,6 +198,11 @@ defmodule Membrane.Core.Element do
     noreply({:ok, state})
   end
 
+  defp do_handle_info(Message.new(:parent_notification, notification), state) do
+    LifecycleController.handle_parent_notification(notification, state)
+    |> noreply(state)
+  end
+
   defp do_handle_info(Message.new(_type, _args, _opts) = message, state) do
     {{:error, {:invalid_message, message, mode: :info}}, state}
     |> noreply(state)

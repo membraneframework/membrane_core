@@ -202,6 +202,14 @@ defmodule Membrane.Element.Base do
             ) :: callback_return_t
 
   @doc """
+  Callback invoked when a message from the parent is received.
+  """
+  @callback handle_parent_notification(
+              notification :: Membrane.Notification.t(),
+              state :: Element.state_t()
+            ) :: callback_return_t
+
+  @doc """
   Callback invoked when element is shutting down just before process is exiting.
   Internally called in `c:GenServer.terminate/2` callback.
   """
@@ -219,6 +227,7 @@ defmodule Membrane.Element.Base do
                       handle_pad_removed: 3,
                       handle_event: 4,
                       handle_tick: 3,
+                      handle_parent_notification: 2,
                       handle_shutdown: 2
 
   @doc """
@@ -329,6 +338,9 @@ defmodule Membrane.Element.Base do
       def handle_event(_pad, _event, _context, state), do: {:ok, state}
 
       @impl true
+      def handle_parent_notification(_message, state), do: {:ok, state}
+
+      @impl true
       def handle_shutdown(_reason, _state), do: :ok
 
       defoverridable handle_init: 1,
@@ -340,6 +352,7 @@ defmodule Membrane.Element.Base do
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
                      handle_event: 4,
+                     handle_parent_notification: 2,
                      handle_shutdown: 2
     end
   end
