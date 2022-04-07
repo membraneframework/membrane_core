@@ -32,7 +32,6 @@ defmodule Membrane.Support.LogMetadataTest.Pipeline do
         {:spec,
          %Membrane.ParentSpec{
            children: [{element_name, MetadataNotifyingElement}],
-           links: [],
            log_metadata: [test: element_metadata]
          }}
       end)

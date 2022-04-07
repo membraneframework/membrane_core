@@ -85,9 +85,9 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
-  @spec handle_notification(Child.name_t(), Notification.t(), Parent.state_t()) ::
+  @spec handle_child_notification(Child.name_t(), Notification.t(), Parent.state_t()) ::
           Type.stateful_try_t(Parent.state_t())
-  def handle_notification(from, notification, state) do
+  def handle_child_notification(from, notification, state) do
     Membrane.Logger.debug_verbose(
       "Received notification #{inspect(notification)} from #{inspect(from)}"
     )
@@ -97,7 +97,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
       action_handler = get_callback_action_handler(state)
 
       CallbackHandler.exec_and_handle_callback(
-        :handle_notification,
+        :handle_child_notification,
         action_handler,
         %{context: context},
         [notification, from],

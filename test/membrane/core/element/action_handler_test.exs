@@ -448,7 +448,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
   @mock_notification :hello_test
 
-  describe "handling :notification action" do
+  describe "handling :child_notification action" do
     setup :trivial_filter_state
 
     test "when parent pid is set", %{state: state} do
@@ -463,7 +463,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         )
 
       assert result == {:ok, state}
-      assert_received Message.new(:notification, [:elem_name, @mock_notification])
+      assert_received Message.new(:child_notification, [:elem_name, @mock_notification])
     end
   end
 
@@ -568,8 +568,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           state
         )
 
-      assert_received Message.new(:notification, [:elem_name, :a])
-      assert_received Message.new(:notification, [:elem_name, :b])
+      assert_received Message.new(:child_notification, [:elem_name, :a])
+      assert_received Message.new(:child_notification, [:elem_name, :b])
       assert {:ok, new_state} = result
       assert %{new_state | delayed_demands: MapSet.new()} == state
       assert MapSet.member?(new_state.delayed_demands, {:output, :redemand}) == true
@@ -586,8 +586,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           state
         )
 
-      assert_received Message.new(:notification, [:elem_name, :a])
-      assert_received Message.new(:notification, [:elem_name, :b])
+      assert_received Message.new(:child_notification, [:elem_name, :a])
+      assert_received Message.new(:child_notification, [:elem_name, :b])
       assert {:ok, new_state} = result
       assert %{new_state | delayed_demands: MapSet.new()} == state
       assert MapSet.member?(new_state.delayed_demands, {:output, :redemand}) == true
@@ -603,8 +603,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         )
       end
 
-      refute_received Message.new(:notification, [:elem_name, :a])
-      refute_received Message.new(:notification, [:elem_name, :b])
+      refute_received Message.new(:child_notification, [:elem_name, :a])
+      refute_received Message.new(:child_notification, [:elem_name, :b])
     end
 
     test "when there are no :redemand actions", %{state: state} do
@@ -616,8 +616,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           state
         )
 
-      assert_received Message.new(:notification, [:elem_name, :a])
-      assert_received Message.new(:notification, [:elem_name, :b])
+      assert_received Message.new(:child_notification, [:elem_name, :a])
+      assert_received Message.new(:child_notification, [:elem_name, :b])
       assert result == {:ok, state}
     end
   end

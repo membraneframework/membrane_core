@@ -20,8 +20,8 @@ defmodule Membrane.Core.PipelineTest do
     end
 
     @impl true
-    def handle_notification(notification, child, _ctx, state) do
-      {:ok, Map.put(state, :notification, {notification, child})}
+    def handle_child_notification(notification, child, _ctx, state) do
+      {:ok, Map.put(state, :child_notification, {notification, child})}
     end
 
     @impl true
@@ -85,11 +85,11 @@ defmodule Membrane.Core.PipelineTest do
 
   test "notification handling", %{state: state} do
     state = %State{state | children: %{source: %{}}}
-    notification = Message.new(:notification, [:source, :abc])
+    notification = Message.new(:child_notification, [:source, :abc])
     assert {:noreply, state} = @module.handle_info(notification, state)
-    assert %{internal_state: %{notification: {:abc, :source}}} = state
+    assert %{internal_state: %{child_notification: {:abc, :source}}} = state
 
-    notification = Message.new(:notification, [:non_existent_child, :abc])
+    notification = Message.new(:child_notification, [:non_existent_child, :abc])
 
     assert {:stop, {:error, {:unknown_child, :non_existent_child}}, %State{}} =
              @module.handle_info(notification, state)

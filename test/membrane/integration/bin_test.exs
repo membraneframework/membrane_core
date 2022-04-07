@@ -181,7 +181,7 @@ defmodule Membrane.Core.BinTest do
 
       send(bin_pid, {:DOWN, ref, :process, monitored_proc, :normal})
 
-      assert_receive Message.new(:notification, [
+      assert_receive Message.new(:child_notification, [
                        :name,
                        {:DOWN, ^ref, :process, ^monitored_proc, :normal}
                      ])

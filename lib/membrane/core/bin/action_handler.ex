@@ -68,7 +68,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
       "Sending notification #{inspect(notification)} (parent PID: #{inspect(parent_pid)})"
     )
 
-    Message.send(parent_pid, :notification, [name, notification])
+    Message.send(parent_pid, :child_notification, [name, notification])
     {:ok, state}
   end
 end

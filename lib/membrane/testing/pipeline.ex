@@ -378,26 +378,26 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_notification(
+  def handle_child_notification(
         %Notification{payload: notification},
         from,
         _ctx,
         %State{} = state
       ) do
-    :ok = notify_test_process(state.test_process, {:handle_notification, {notification, from}})
+    :ok = notify_test_process(state.test_process, {:handle_child_notification, {notification, from}})
     {:ok, state}
   end
 
   @impl true
-  def handle_notification(notification, from, ctx, %State{} = state) do
+  def handle_child_notification(notification, from, ctx, %State{} = state) do
     {custom_actions, custom_state} =
       eval_injected_module_callback(
-        :handle_notification,
+        :handle_child_notification,
         [notification, from, ctx],
         state
       )
 
-    :ok = notify_test_process(state.test_process, {:handle_notification, {notification, from}})
+    :ok = notify_test_process(state.test_process, {:handle_child_notification, {notification, from}})
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end

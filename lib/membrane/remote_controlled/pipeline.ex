@@ -405,7 +405,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @impl true
-  def handle_notification(notification, element, _ctx, state) do
+  def handle_child_notification(notification, element, _ctx, state) do
     pipeline_event = %Message.Notification{from: self(), data: notification, element: element}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
