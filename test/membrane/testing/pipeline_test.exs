@@ -83,7 +83,7 @@ defmodule Membrane.Testing.PipelineTest do
   end
 
   describe "When starting, Testing Pipeline" do
-    test "raises an error if non-existing module was passed" do
+    test "raises an error if not a module or non-existing module was passed" do
       assert_raise RuntimeError, ~r/Not a module./, fn ->
         Pipeline.start(module: [1, 2])
       end
