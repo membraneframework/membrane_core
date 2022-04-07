@@ -34,7 +34,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
     {{:error, :invalid_action}, state}
   end
 
-  defp do_handle_action({:forward, children_messages}, _cb, _params, state) do
+  defp do_handle_action({:notify_child, children_messages}, _cb, _params, state) do
     Parent.ChildLifeController.handle_forward(Bunch.listify(children_messages), state)
   end
 

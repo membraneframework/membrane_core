@@ -36,12 +36,12 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec do_handle_action(Action.t(), callback :: atom, params :: map, State.t()) ::
           State.stateful_try_t()
   defp do_handle_action({action, _}, :handle_init, _params, state)
-       when action not in [:latency, :notify] do
+       when action not in [:latency, :notify_parent] do
     {{:error, :invalid_action}, state}
   end
 
   defp do_handle_action({action, _}, cb, _params, %State{playback: %{state: :stopped}} = state)
-       when action in [:buffer, :event, :caps, :demand, :redemand, :forward, :end_of_stream] and
+       when action in [:buffer, :event, :caps, :demand, :redemand, :notify_pad, :end_of_stream] and
               cb != :handle_stopped_to_prepared do
     {{:error, {:playback_state, :stopped}}, state}
   end
@@ -51,7 +51,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     send_event(pad_ref, event, state)
   end
 
-  defp do_handle_action({:notify, notification}, _cb, _params, state),
+  defp do_handle_action({:notify_parent, notification}, _cb, _params, state),
     do: send_notification(notification, state)
 
   defp do_handle_action({:split, {callback, args_list}}, cb, params, state) do
@@ -102,7 +102,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     handle_redemand(out_ref, state)
   end
 
-  defp do_handle_action({:forward, data}, cb, params, %State{type: :filter} = state)
+  defp do_handle_action({:notify_pad, data}, cb, params, %State{type: :filter} = state)
        when cb in [
               :handle_caps,
               :handle_event,

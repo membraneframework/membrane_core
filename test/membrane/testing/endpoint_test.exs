@@ -25,7 +25,7 @@ defmodule Membrane.Testing.EndpointTest do
 
       assert actions == [
                demand: :input,
-               notify: %Notification{payload: {:buffer, buffer}}
+               notify_parent: %Notification{payload: {:buffer, buffer}}
              ]
     end
 
@@ -35,7 +35,7 @@ defmodule Membrane.Testing.EndpointTest do
       assert {{:ok, actions}, _state} =
                Endpoint.handle_write(:input, buffer, nil, %{autodemand: false})
 
-      assert actions == [notify: %Notification{payload: {:buffer, buffer}}]
+      assert actions == [notify_parent: %Notification{payload: {:buffer, buffer}}]
     end
   end
 

@@ -384,7 +384,9 @@ defmodule Membrane.Testing.Pipeline do
         _ctx,
         %State{} = state
       ) do
-    :ok = notify_test_process(state.test_process, {:handle_child_notification, {notification, from}})
+    :ok =
+      notify_test_process(state.test_process, {:handle_child_notification, {notification, from}})
+
     {:ok, state}
   end
 
@@ -397,7 +399,8 @@ defmodule Membrane.Testing.Pipeline do
         state
       )
 
-    :ok = notify_test_process(state.test_process, {:handle_child_notification, {notification, from}})
+    :ok =
+      notify_test_process(state.test_process, {:handle_child_notification, {notification, from}})
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
@@ -428,7 +431,7 @@ defmodule Membrane.Testing.Pipeline do
         state
       )
 
-    testing_pipeline_result = {{:ok, forward: {element, message}}, state}
+    testing_pipeline_result = {{:ok, notify_child: {element, message}}, state}
 
     combine_results(injected_module_result, testing_pipeline_result)
   end
