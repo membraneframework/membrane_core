@@ -64,10 +64,7 @@ defmodule Membrane.ElementTest do
     ]
 
     {:ok, pipeline} =
-      Testing.Pipeline.start_link(
-        children: children,
-        links: Membrane.ParentSpec.link_linear(children)
-      )
+      Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
 
     on_exit(fn ->
       Membrane.Pipeline.stop_and_terminate(pipeline, blocking?: true)

@@ -473,13 +473,20 @@ defmodule Membrane.ParentSpec do
       Membrane.ParentSpec.link_linear([el1: MembraneElement1, el2: MembraneElement2])
   """
   @spec link_linear(children :: children_spec_t()) :: links_spec_t()
-  def link_linear(children) when length(children) < 2 do
+  def link_linear([]) do
     []
   end
 
   def link_linear(children) when is_list(children) do
-    [h | t] = children |> Keyword.keys()
-    links = t |> Enum.reduce(link(h), &to(&2, &1))
+    [{first_child_name, first_child_spec} | other_children] = children
+
+    links =
+      other_children
+      |> Enum.reduce(link(first_child_name, first_child_spec), fn {child_name, child_spec},
+                                                                  builder ->
+        to(builder, child_name, child_spec)
+      end)
+
     [links]
   end
 

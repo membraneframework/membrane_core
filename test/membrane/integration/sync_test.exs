@@ -23,7 +23,6 @@ defmodule Membrane.Integration.SyncTest do
     ]
 
     pipeline_opts = [
-      children: children,
       links: Membrane.ParentSpec.link_linear(children)
     ]
 
@@ -147,7 +146,7 @@ defmodule Membrane.Integration.SyncTest do
     {:ok, pipeline} =
       Testing.Pipeline.start_link(
         children: children,
-        links: Membrane.ParentSpec.link_linear(children)
+        links: []
       )
 
     :ok = Testing.Pipeline.play(pipeline)

@@ -33,7 +33,6 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     ]
 
     options = [
-      children: children,
       links: Membrane.ParentSpec.link_linear(children)
     ]
 
@@ -63,7 +62,6 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     ]
 
     options = [
-      children: children,
       links: Membrane.ParentSpec.link_linear(children)
     ]
 

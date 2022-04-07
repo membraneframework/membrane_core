@@ -54,20 +54,6 @@ defmodule Membrane.Testing.PipelineTest do
   end
 
   describe "When initializing Testing Pipeline" do
-    test "generates links if only elements were provided" do
-      import ParentSpec
-      elements = [elem: Elem, elem2: Elem]
-      links = [link(:elem) |> to(:elem2)]
-      options = %Pipeline.Options{children: elements}
-      assert {{:ok, spec: spec}, state} = Pipeline.handle_init(options)
-      assert state == %Pipeline.State{module: nil, test_process: nil}
-
-      assert spec == %Membrane.ParentSpec{
-               links: links,
-               children: elements
-             }
-    end
-
     test "uses prepared links if they were provided" do
       import ParentSpec
       elements = [elem: Elem, elem2: Elem]
@@ -113,6 +99,5 @@ defmodule Membrane.Testing.PipelineTest do
         Pipeline.start(children: :some_children)
       end
     end
-
   end
 end

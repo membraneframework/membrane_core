@@ -25,10 +25,7 @@ defmodule Membrane.Core.BinTest do
       ]
 
       {:ok, pipeline} =
-        Testing.Pipeline.start_link(
-          children: children,
-          links: Membrane.ParentSpec.link_linear(children)
-        )
+        Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
 
       assert_data_flows_through(pipeline, buffers)
       stop_pipeline(pipeline)
@@ -51,10 +48,7 @@ defmodule Membrane.Core.BinTest do
       ]
 
       {:ok, pipeline} =
-        Testing.Pipeline.start_link(
-          children: children,
-          links: Membrane.ParentSpec.link_linear(children)
-        )
+        Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
 
       assert_data_flows_through(pipeline, buffers)
       stop_pipeline(pipeline)
@@ -76,10 +70,7 @@ defmodule Membrane.Core.BinTest do
       ]
 
       {:ok, pipeline} =
-        Testing.Pipeline.start_link(
-          children: children,
-          links: Membrane.ParentSpec.link_linear(children)
-        )
+        Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
 
       assert_data_flows_through(pipeline, buffers)
       stop_pipeline(pipeline)
@@ -104,10 +95,7 @@ defmodule Membrane.Core.BinTest do
       ]
 
       {:ok, pipeline} =
-        Testing.Pipeline.start_link(
-          children: children,
-          links: Membrane.ParentSpec.link_linear(children)
-        )
+        Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
 
       assert_data_flows_through(pipeline, buffers)
       stop_pipeline(pipeline)
@@ -126,7 +114,7 @@ defmodule Membrane.Core.BinTest do
       {:ok, pipeline} =
         Testing.Pipeline.start_link(
           children: children,
-          links: Membrane.ParentSpec.link_linear(children)
+          links: []
         )
 
       assert_playing(pipeline)
@@ -151,10 +139,7 @@ defmodule Membrane.Core.BinTest do
       ]
 
       {:ok, pipeline} =
-        Testing.Pipeline.start_link(
-          children: children,
-          links: Membrane.ParentSpec.link_linear(children)
-        )
+        Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
 
       assert_playing(pipeline)
 
@@ -232,10 +217,7 @@ defmodule Membrane.Core.BinTest do
       ]
 
       {:ok, pipeline} =
-        Testing.Pipeline.start_link(
-          children: children,
-          links: Membrane.ParentSpec.link_linear(children)
-        )
+        Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
 
       Process.sleep(2000)
       assert_data_flows_through(pipeline, buffers)
