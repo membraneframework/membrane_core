@@ -23,7 +23,7 @@ defmodule Membrane.Testing.Pipeline do
   ]
   options =  [
     module: :default # :default is the default value for this parameter, so you do not need to pass it here
-    children: children,
+    children: children, # you do not need to pass :children option either, since the information about children specification is already inside :links
     links: Membrane.ParentSpec.link_linear(children)
   ]
   {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
@@ -146,15 +146,15 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @type default_pipeline_keyword_list_t :: [
-          module: :default | nil,
-          children: ParentSpec.children_spec_t() | nil,
+          module: :default,
+          children: ParentSpec.children_spec_t(),
           links: ParentSpec.links_spec_t(),
-          test_process: pid() | nil
+          test_process: pid()
         ]
   @type custom_pipeline_keyword_list_t :: [
           module: module(),
-          custom_args: Pipeline.pipeline_options_t() | nil,
-          test_process: pid() | nil
+          custom_args: Pipeline.pipeline_options_t(),
+          test_process: pid()
         ]
   @type pipeline_keyword_list_t ::
           default_pipeline_keyword_list_t() | custom_pipeline_keyword_list_t()
