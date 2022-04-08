@@ -279,29 +279,30 @@ defmodule Membrane.Support.Bin.TestBins do
     end
   end
 
-  defmodule NotifyingParentBin do
-    defmodule Element do
-      use Membrane.Filter
+  defmodule NotifyingParentElement do
+    @moduledoc false
+    use Membrane.Filter
 
-      def_input_pad :input, demand_unit: :buffers, caps: :any
-      def_output_pad :output, caps: :any, demand_unit: :buffers
+    def_input_pad :input, demand_unit: :buffers, caps: :any
+    def_output_pad :output, caps: :any, demand_unit: :buffers
 
-      @impl true
-      def handle_init(_opts) do
-        {:ok, %{}}
-      end
-
-      @impl true
-      def handle_parent_notification(notification, state) do
-        {{:ok, notify_parent: {"filter1", notification}}, state}
-      end
-
-      @impl true
-      def handle_demand(_pad, _size, _unit, _ctx, state) do
-        {{:ok, []}, state}
-      end
+    @impl true
+    def handle_init(_opts) do
+      {:ok, %{}}
     end
 
+    @impl true
+    def handle_parent_notification(notification, state) do
+      {{:ok, notify_parent: {"filter1", notification}}, state}
+    end
+
+    @impl true
+    def handle_demand(_pad, _size, _unit, _ctx, state) do
+      {{:ok, []}, state}
+    end
+  end
+
+  defmodule NotifyingParentBin do
     @moduledoc false
     use Membrane.Bin
 
@@ -312,8 +313,8 @@ defmodule Membrane.Support.Bin.TestBins do
     @impl true
     def handle_init(_opts) do
       children = [
-        filter1: Element,
-        filter2: Element
+        filter1: NotifyingParentElement,
+        filter2: NotifyingParentElement
       ]
 
       links = [
