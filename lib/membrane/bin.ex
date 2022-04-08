@@ -140,7 +140,6 @@ defmodule Membrane.Bin do
               state :: state_t
             ) :: callback_return_t
 
-
   @doc """
   Callback invoked when a notification comes in from an parent.
   """

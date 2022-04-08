@@ -279,9 +279,7 @@ defmodule Membrane.Support.Bin.TestBins do
     end
   end
 
-
   defmodule NotifyingParentBin do
-
     defmodule Element do
       use Membrane.Filter
 
@@ -342,5 +340,4 @@ defmodule Membrane.Support.Bin.TestBins do
       {{:ok, notify_parent: notification}, state}
     end
   end
-
 end

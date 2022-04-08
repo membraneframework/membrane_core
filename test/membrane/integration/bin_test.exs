@@ -299,12 +299,12 @@ defmodule Membrane.Core.BinTest do
             sink: Testing.Sink
           ]
         })
+
       Testing.Pipeline.execute_actions(pipeline, notify_child: {:test_bin, "Some notification"})
       assert_pipeline_notified(pipeline, :test_bin, msg)
       assert msg == {"filter1", "Some notification"}
       Testing.Pipeline.terminate(pipeline, blocking?: true)
     end
-
 
     defp proxy_for?(c1, c2) do
       c1_state = :sys.get_state(c1)
