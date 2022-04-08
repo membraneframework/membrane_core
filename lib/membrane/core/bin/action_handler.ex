@@ -4,7 +4,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
 
   alias Membrane.Core.{Message, Parent, TimerController}
   alias Membrane.Core.Bin.State
-  alias Membrane.{CallbackError, Notification, ParentSpec}
+  alias Membrane.{CallbackError, ChildNotification, ParentSpec}
 
   require Membrane.Logger
   require Message
@@ -27,7 +27,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:notify_parent, notification}, _cb, _params, state) do
-    send_notification(notification, state)
+    send_notification_to_parent(notification, state)
   end
 
   @impl CallbackHandler
@@ -62,8 +62,11 @@ defmodule Membrane.Core.Bin.ActionHandler do
     raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
   end
 
-  @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}
-  defp send_notification(notification, %State{parent_pid: parent_pid, name: name} = state) do
+  @spec send_notification_to_parent(ChildNotification.t(), State.t()) :: {:ok, State.t()}
+  defp send_notification_to_parent(
+         notification,
+         %State{parent_pid: parent_pid, name: name} = state
+       ) do
     Membrane.Logger.debug_verbose(
       "Sending notification #{inspect(notification)} (parent PID: #{inspect(parent_pid)})"
     )

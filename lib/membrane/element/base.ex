@@ -205,7 +205,7 @@ defmodule Membrane.Element.Base do
   Callback invoked when a message from the parent is received.
   """
   @callback handle_parent_notification(
-              notification :: Membrane.Notification.t(),
+              notification :: Membrane.ParentNotification.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 

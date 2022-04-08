@@ -52,7 +52,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp do_handle_action({:notify_parent, notification}, _cb, _params, state),
-    do: send_notification(notification, state)
+    do: send_notification_to_parent(notification, state)
 
   defp do_handle_action({:split, {callback, args_list}}, cb, params, state) do
     CallbackHandler.exec_and_handle_splitted_callback(
@@ -410,7 +410,10 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp handle_event(_pad_ref, _event, state), do: {:ok, state}
 
-  defp send_notification(notification, %State{parent_pid: parent_pid, name: name} = state) do
+  defp send_notification_to_parent(
+         notification,
+         %State{parent_pid: parent_pid, name: name} = state
+       ) do
     Membrane.Logger.debug_verbose(
       "Sending notification #{inspect(notification)} (parent PID: #{inspect(parent_pid)})"
     )

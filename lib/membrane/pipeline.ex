@@ -120,9 +120,9 @@ defmodule Membrane.Pipeline do
   Callback invoked when a notification comes in from an element.
   """
   @callback handle_child_notification(
-              notification :: Membrane.Notification.t(),
+              notification :: Membrane.ChildNotification.t(),
               element :: Child.name_t(),
-              context :: CallbackContext.Notification.t(),
+              context :: CallbackContext.ChildNotification.t(),
               state :: state_t
             ) :: callback_return_t
 
