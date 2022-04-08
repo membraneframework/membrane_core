@@ -14,7 +14,10 @@ defmodule Membrane.Bin.Action do
   @typedoc """
   Action that sends a message to a child identified by name.
   """
-  @type notify_child_t :: {:notify_child, {Child.name_t(), Membrane.ParentNotification.t()} | [{Child.name_t(), Membrane.ParentNotification.t()}]}
+  @type notify_child_t ::
+          {:notify_child,
+           {Child.name_t(), Membrane.ParentNotification.t()}
+           | [{Child.name_t(), Membrane.ParentNotification.t()}]}
 
   @typedoc """
   Sends a message to the parent.

@@ -9,6 +9,7 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.{CallbackHandler, Child, Element, Message}
+  alias Membrane.Core.{CallbackHandler, Component, Child, Element, Message}
   alias Membrane.Core.Element.{ActionHandler, PlaybackBuffer, State}
   alias Membrane.Element.CallbackContext
 
@@ -16,6 +17,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   require Membrane.Core.Message
   require Membrane.Core.Playback
   require Membrane.Logger
+  require Membrane.Core.Component
 
   @safe_shutdown_reasons [
     {:shutdown, :child_crash},
@@ -176,10 +178,12 @@ defmodule Membrane.Core.Element.LifecycleController do
   @spec handle_parent_notification(Membrane.ParentNotification.t(), State.t()) ::
           State.stateful_try_t()
   def handle_parent_notification(notification, state) do
+    context = Component.callback_context_generator(:element, ParentNotification, state)
+
     CallbackHandler.exec_and_handle_callback(
       :handle_parent_notification,
       ActionHandler,
-      %{},
+      %{context: context},
       notification,
       state
     )

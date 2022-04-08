@@ -145,6 +145,7 @@ defmodule Membrane.Bin do
   """
   @callback handle_parent_notification(
               notification :: Membrane.ParentNotification.t(),
+              context :: CallbackContext.ParentNotification.t(),
               state :: state_t
             ) :: callback_return_t
 
@@ -217,7 +218,7 @@ defmodule Membrane.Bin do
                       handle_element_start_of_stream: 3,
                       handle_element_end_of_stream: 3,
                       handle_child_notification: 4,
-                      handle_parent_notification: 2,
+                      handle_parent_notification: 3,
                       handle_tick: 3
 
   @doc PadsSpecs.def_pad_docs(:input, :bin)
@@ -365,7 +366,7 @@ defmodule Membrane.Bin do
       def handle_child_notification(_notification, _element, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_parent_notification(_notification, state), do: {:ok, state}
+      def handle_parent_notification(_notification, _ctxt, state), do: {:ok, state}
 
       defoverridable membrane_clock?: 0,
                      handle_init: 1,
@@ -382,7 +383,7 @@ defmodule Membrane.Bin do
                      handle_element_start_of_stream: 3,
                      handle_element_end_of_stream: 3,
                      handle_child_notification: 4,
-                     handle_parent_notification: 2
+                     handle_parent_notification: 3
     end
   end
 end
