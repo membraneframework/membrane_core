@@ -285,6 +285,24 @@ defmodule Membrane.Core.BinTest do
       ClockPipeline.terminate(pid, blocking?: true)
     end
 
+    test "handle_parent_notification/2 works for Bin" do
+      buffers = ['a', 'b', 'c']
+
+      {:ok, pipeline} =
+        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+          elements: [
+            source: %Testing.Source{output: buffers},
+            test_bin: TestBins.NotifyingParentBin,
+            sink: Testing.Sink
+          ]
+        })
+      Testing.Pipeline.execute_actions(pipeline, notify_child: {:test_bin, "Some notification"})
+      assert_pipeline_notified(pipeline, :test_bin, msg)
+      assert msg == {"filter1", "Some notification"}
+      Testing.Pipeline.terminate(pipeline, blocking?: true)
+    end
+
+
     defp proxy_for?(c1, c2) do
       c1_state = :sys.get_state(c1)
       assert c1_state.proxy_for == c2

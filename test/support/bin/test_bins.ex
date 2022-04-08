@@ -278,4 +278,69 @@ defmodule Membrane.Support.Bin.TestBins do
       {{:ok, notify_parent: {:handle_element_end_of_stream, arg}}, state}
     end
   end
+
+
+  defmodule NotifyingParentBin do
+
+    defmodule Element do
+      use Membrane.Filter
+
+      def_input_pad :input, demand_unit: :buffers, caps: :any
+      def_output_pad :output, caps: :any, demand_unit: :buffers
+
+      @impl true
+      def handle_init(_opts) do
+        {:ok, %{}}
+      end
+
+      @impl true
+      def handle_parent_notification(notification, state) do
+        {{:ok, notify_parent: {"filter1", notification}}, state}
+      end
+
+      @impl true
+      def handle_demand(_pad, _size, _unit, _ctx, state) do
+        {{:ok, []}, state}
+      end
+    end
+
+    @moduledoc false
+    use Membrane.Bin
+
+    def_input_pad :input, demand_unit: :buffers, caps: :any
+
+    def_output_pad :output, caps: :any, demand_unit: :buffers
+
+    @impl true
+    def handle_init(_opts) do
+      children = [
+        filter1: Element,
+        filter2: Element
+      ]
+
+      links = [
+        link_bin_input() |> to(:filter1) |> to(:filter2) |> to_bin_output()
+      ]
+
+      spec = %ParentSpec{
+        children: children,
+        links: links
+      }
+
+      state = %{}
+
+      {{:ok, spec: spec}, state}
+    end
+
+    @impl true
+    def handle_parent_notification(notification, state) do
+      {{:ok, notify_child: {:filter1, notification}}, state}
+    end
+
+    @impl true
+    def handle_child_notification(notification, :filter1, _ctx, state) do
+      {{:ok, notify_parent: notification}, state}
+    end
+  end
+
 end

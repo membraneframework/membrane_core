@@ -17,6 +17,11 @@ defmodule Membrane.Bin.Action do
   @type notify_child_t :: {:notify_child, {Child.name_t(), any} | [{Child.name_t(), any}]}
 
   @typedoc """
+  Sends a message to the parent.
+  """
+  @type notify_parent_t :: {:notify_parent, Notification.t()}
+
+  @typedoc """
   Action that instantiates children and links them according to `Membrane.ParentSpec`.
 
   Children's playback state is changed to the current bin state.
@@ -91,6 +96,7 @@ defmodule Membrane.Bin.Action do
   """
   @type t ::
           notify_child_t
+          | notify_parent_t
           | spec_t
           | remove_child_t
           | log_metadata_t

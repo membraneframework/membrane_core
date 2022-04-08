@@ -140,6 +140,18 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
+  def handle_info(Message.new(:parent_notification, notification), state) do
+    CallbackHandler.exec_and_handle_callback(
+      :handle_parent_notification,
+      Membrane.Core.Bin.ActionHandler,
+      %{},
+      notification,
+      state
+    )
+    |> noreply()
+  end
+
+  @impl GenServer
   def handle_info(Message.new(:link_request, [pad_ref, direction, link_id, pad_props]), state) do
     state =
       PadController.handle_external_link_request(pad_ref, direction, link_id, pad_props, state)
