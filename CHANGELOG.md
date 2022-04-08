@@ -8,6 +8,7 @@
    can be spawned and controlled by an external process [#366](https://github.com/membraneframework/membrane_core/pull/366)  
  * Disallow sending buffers without sending caps first [#341](https://github.com/membraneframework/membrane_core/issues/341)
  * Refine the `Membrane.Testing.Pipeline` API - deprecate the `Membrane.Testing.Pipeline.Options` usage, use keyword list as options in `Membrane.Testing.Pipeline.start/1` and `Membrane.Testing.Pipeline.start_link/1`
+ * Refine communication between parent and its children [#270](https://github.com/membraneframework/membrane_core/issues/270)
 ## 0.9.0
  * Automatic demands [#313](https://github.com/membraneframework/membrane_core/pull/313)
  * Stop forwarding notifications by default in bins [#358](https://github.com/membraneframework/membrane_core/pull/358)
