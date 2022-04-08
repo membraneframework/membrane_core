@@ -173,6 +173,7 @@ defmodule Membrane.Core.Element.LifecycleController do
     end
   end
 
+  @spec handle_parent_notification(Membrane.Notification.t(), State.t()) :: State.stateful_try_t()
   def handle_parent_notification(notification, state) do
     CallbackHandler.exec_and_handle_callback(
       :handle_parent_notification,
