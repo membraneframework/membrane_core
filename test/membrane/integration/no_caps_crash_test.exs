@@ -20,12 +20,12 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     end
 
     @impl true
-    def handle_parent_notification(:send_buffer, state) do
+    def handle_parent_notification(:send_buffer, _ctx, state) do
       {{:ok, [buffer: {:output, %Membrane.Buffer{payload: "Something"}}]}, state}
     end
 
     @impl true
-    def handle_parent_notification({:send_your_pid, requester_pid}, state) do
+    def handle_parent_notification({:send_your_pid, requester_pid}, _ctx, state) do
       send(requester_pid, {:my_pid, self()})
       {:ok, state}
     end

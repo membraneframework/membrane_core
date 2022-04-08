@@ -17,8 +17,8 @@ defmodule Membrane.ParentNotification do
   via action `t:Membrane.Pipeline.Action.notify_parent_t` or `t:Membrane.Bin.Action.notify_child_t`
   returned from any callback.
 
-  A notification can be handled in child with `c:Membrane.Element.Base.handle_parent_notification/2` or
-  `c:Membrane.Bin.handle_parent_notification/2` callback.
+  A notification can be handled in child with `c:Membrane.Element.Base.handle_parent_notification/3` or
+  `c:Membrane.Bin.handle_parent_notification/3` callback.
   """
 
   @type t :: any

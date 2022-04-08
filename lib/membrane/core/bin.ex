@@ -10,10 +10,12 @@ defmodule Membrane.Core.Bin do
   alias Membrane.Core.Bin.PadController
   alias Membrane.Core.{CallbackHandler, Message, Telemetry}
   alias Membrane.Core.Child.PadSpecHandler
+  alias Membrane.Core.Component
 
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
   require Membrane.Logger
+  require Membrane.Core.Component
 
   @type options_t :: %{
           name: atom,
@@ -141,10 +143,12 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def handle_info(Message.new(:parent_notification, notification), state) do
+    context = Component.callback_context_generator(:bin, ParentNotification, state)
+
     CallbackHandler.exec_and_handle_callback(
       :handle_parent_notification,
       Membrane.Core.Bin.ActionHandler,
-      %{},
+      %{context: context},
       notification,
       state
     )

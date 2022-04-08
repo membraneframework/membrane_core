@@ -288,7 +288,7 @@ defmodule Membrane.Core.BinTest do
       ClockPipeline.terminate(pid, blocking?: true)
     end
 
-    test "handle_parent_notification/2 works for Bin" do
+    test "handle_parent_notification/3 works for Bin" do
       buffers = ['a', 'b', 'c']
 
       {:ok, pipeline} =

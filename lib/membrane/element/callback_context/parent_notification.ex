@@ -3,5 +3,5 @@ defmodule Membrane.Element.CallbackContext.ParentNotification do
   Structure representing a context that is passed to the callback when
   element receives parent notification.
   """
-  use Membrane.Core.Bin.CallbackContext
+  use Membrane.Core.Element.CallbackContext
 end

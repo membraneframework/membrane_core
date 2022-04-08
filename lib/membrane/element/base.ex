@@ -206,6 +206,7 @@ defmodule Membrane.Element.Base do
   """
   @callback handle_parent_notification(
               notification :: Membrane.ParentNotification.t(),
+              context :: Membrane.Element.CallbackContext.ParentNotification.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -227,7 +228,7 @@ defmodule Membrane.Element.Base do
                       handle_pad_removed: 3,
                       handle_event: 4,
                       handle_tick: 3,
-                      handle_parent_notification: 2,
+                      handle_parent_notification: 3,
                       handle_shutdown: 2
 
   @doc """
@@ -338,7 +339,7 @@ defmodule Membrane.Element.Base do
       def handle_event(_pad, _event, _context, state), do: {:ok, state}
 
       @impl true
-      def handle_parent_notification(_message, state), do: {:ok, state}
+      def handle_parent_notification(_notification, _ctx, state), do: {:ok, state}
 
       @impl true
       def handle_shutdown(_reason, _state), do: :ok
@@ -352,7 +353,7 @@ defmodule Membrane.Element.Base do
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
                      handle_event: 4,
-                     handle_parent_notification: 2,
+                     handle_parent_notification: 3,
                      handle_shutdown: 2
     end
   end

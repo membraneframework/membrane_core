@@ -292,7 +292,7 @@ defmodule Membrane.Support.Bin.TestBins do
     end
 
     @impl true
-    def handle_parent_notification(notification, state) do
+    def handle_parent_notification(notification, _ctx, state) do
       {{:ok, notify_parent: {"filter1", notification}}, state}
     end
 
@@ -332,7 +332,7 @@ defmodule Membrane.Support.Bin.TestBins do
     end
 
     @impl true
-    def handle_parent_notification(notification, state) do
+    def handle_parent_notification(notification, _ctx, state) do
       {{:ok, notify_child: {:filter1, notification}}, state}
     end
 
