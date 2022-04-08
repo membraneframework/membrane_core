@@ -276,7 +276,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     Pipeline.await_notification(pipeline, :element_id)
     ```
   """
-  @spec await_notification(pid(), Membrane.Notification.t()) ::
+  @spec await_notification(pid(), Membrane.ParentNotification.t()) ::
           Membrane.RemoteControlled.Message.Notification.t()
   def await_notification(pipeline, element) do
     do_await(pipeline, Notification, element: element)

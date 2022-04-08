@@ -19,7 +19,7 @@ defmodule Membrane.Bin.Action do
   @typedoc """
   Sends a message to the parent.
   """
-  @type notify_parent_t :: {:notify_parent, Membrane.Notification.t()}
+  @type notify_parent_t :: {:notify_parent, Membrane.ChildNotification.t()}
 
   @typedoc """
   Action that instantiates children and links them according to `Membrane.ParentSpec`.

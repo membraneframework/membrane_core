@@ -61,7 +61,7 @@ defmodule Membrane.RemoteControlled.Message do
     @type t :: %__MODULE__{
             from: pid(),
             element: Membrane.Element.name_t(),
-            data: Membrane.Notification.t()
+            data: Membrane.ParentNotification.t()
           }
 
     @enforce_keys [:from, :element, :data]

@@ -10,13 +10,13 @@ defmodule Membrane.Element.Action do
   do not support returning any actions) unless explicitly stated otherwise.
   """
 
-  alias Membrane.{Buffer, Caps, Clock, Event, Notification}
+  alias Membrane.{Buffer, Caps, Clock, Event, ChildNotification}
   alias Membrane.Pad
 
   @typedoc """
   Sends a message to the parent.
   """
-  @type notify_parent_t :: {:notify_parent, Notification.t()}
+  @type notify_parent_t :: {:notify_parent, ChildNotification.t()}
 
   @typedoc """
   Sends an event through a pad (input or output).

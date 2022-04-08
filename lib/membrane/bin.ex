@@ -134,9 +134,9 @@ defmodule Membrane.Bin do
   Callback invoked when a notification comes in from an element.
   """
   @callback handle_child_notification(
-              notification :: Membrane.Notification.t(),
+              notification :: Membrane.ChildNotification.t(),
               element :: Child.name_t(),
-              context :: CallbackContext.Notification.t(),
+              context :: CallbackContext.ChildNotification.t(),
               state :: state_t
             ) :: callback_return_t
 
@@ -144,7 +144,7 @@ defmodule Membrane.Bin do
   Callback invoked when a notification comes in from an parent.
   """
   @callback handle_parent_notification(
-              notification :: Membrane.Notification.t(),
+              notification :: Membrane.ParentNotification.t(),
               state :: state_t
             ) :: callback_return_t
 
@@ -362,10 +362,10 @@ defmodule Membrane.Bin do
       def handle_element_end_of_stream({element, pad}, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_child_notification(notification, element, _ctx, state), do: {:ok, state}
+      def handle_child_notification(_notification, _element, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_parent_notification(notification, state), do: {:ok, state}
+      def handle_parent_notification(_notification, state), do: {:ok, state}
 
       defoverridable membrane_clock?: 0,
                      handle_init: 1,

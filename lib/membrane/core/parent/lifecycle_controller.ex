@@ -4,7 +4,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   use Membrane.Core.PlaybackHandler
 
   alias Bunch.Type
-  alias Membrane.{Child, Core, Notification, Pad, Sync}
+  alias Membrane.{Child, Core, ChildNotification, Pad, Sync}
   alias Membrane.Core.{CallbackHandler, Message, Component, Parent, PlaybackHandler}
   alias Membrane.Core.Events
   alias Membrane.Core.Parent.ChildrenModel
@@ -85,7 +85,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
-  @spec handle_child_notification(Child.name_t(), Notification.t(), Parent.state_t()) ::
+  @spec handle_child_notification(Child.name_t(), ChildNotification.t(), Parent.state_t()) ::
           Type.stateful_try_t(Parent.state_t())
   def handle_child_notification(from, notification, state) do
     Membrane.Logger.debug_verbose(
@@ -93,7 +93,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
 
     with {:ok, _} <- state |> Parent.ChildrenModel.get_child_data(from) do
-      context = Component.callback_context_generator(:parent, Notification, state)
+      context = Component.callback_context_generator(:parent, ChildNotification, state)
       action_handler = get_callback_action_handler(state)
 
       CallbackHandler.exec_and_handle_callback(
