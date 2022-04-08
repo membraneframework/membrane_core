@@ -5,7 +5,6 @@ defmodule Membrane.FilterAggregator do
   This element supports only filters with one input and one output
   with following restrictions:
   * not using timers
-  * (To be fixed) not relying on callback contexts
   * not relying on received messages
   * their pads have to be named `:input` and `:output`
   * The first filter must make demands in buffers
@@ -33,10 +32,8 @@ defmodule Membrane.FilterAggregator do
       filter_specs
       |> Enum.map(fn
         {name, %module{} = sub_opts} ->
-          struct = struct!(module, sub_opts |> Map.from_struct())
-          {:ok, state} = module.handle_init(struct)
-          context = Context.build_context!(name, module)
-          {name, module, context, state}
+          options = struct!(module, Map.from_struct(sub_opts))
+          {name, module, options}
 
         {name, module} ->
           options =
@@ -48,9 +45,12 @@ defmodule Membrane.FilterAggregator do
               false -> %{}
             end
 
-          {:ok, state} = module.handle_init(options)
-          context = Context.build_context!(name, module)
-          {name, module, context, state}
+          {name, module, options}
+      end)
+      |> Enum.map(fn {name, module, options} ->
+        {:ok, state} = module.handle_init(options)
+        context = Context.build_context!(name, module)
+        {name, module, context, state}
       end)
 
     {:ok, %{states: states}}
@@ -70,35 +70,35 @@ defmodule Membrane.FilterAggregator do
       end)
 
     {actions, states} = pipe_downstream([:stopped_to_prepared], states)
-    actions = List.delete(actions, :stopped_to_prepared)
+    actions = reject_internal_actions(actions)
     {{:ok, actions}, %{states: states}}
   end
 
   @impl true
   def handle_prepared_to_playing(_ctx, %{states: states}) do
     {actions, states} = pipe_downstream([:prepared_to_playing], states)
-    actions = List.delete(actions, :prepared_to_playing)
+    actions = reject_internal_actions(actions)
     {{:ok, actions}, %{states: states}}
   end
 
   @impl true
   def handle_playing_to_prepared(_ctx, %{states: states}) do
     {actions, states} = pipe_downstream([:playing_to_prepared], states)
-    actions = List.delete(actions, :playing_to_prepared)
+    actions = reject_internal_actions(actions)
     {{:ok, actions}, %{states: states}}
   end
 
   @impl true
   def handle_prepared_to_stopped(_ctx, %{states: states}) do
     {actions, states} = pipe_downstream([:prepared_to_stopped], states)
-    actions = List.delete(actions, :prepared_to_stopped)
+    actions = reject_internal_actions(actions)
     {{:ok, actions}, %{states: states}}
   end
 
   @impl true
   def handle_start_of_stream(:input, _ctx, %{states: states}) do
     {actions, states} = pipe_downstream([start_of_stream: :output], states)
-    actions = Keyword.delete(actions, :start_of_stream)
+    actions = reject_internal_actions(actions)
 
     {{:ok, actions}, %{states: states}}
   end
@@ -106,6 +106,7 @@ defmodule Membrane.FilterAggregator do
   @impl true
   def handle_end_of_stream(:input, _ctx, %{states: states}) do
     {actions, states} = pipe_downstream([end_of_stream: :output], states)
+    actions = reject_internal_actions(actions)
 
     {{:ok, actions}, %{states: states}}
   end
@@ -113,22 +114,27 @@ defmodule Membrane.FilterAggregator do
   @impl true
   def handle_caps(:input, caps, _ctx, %{states: states}) do
     {actions, states} = pipe_downstream([caps: {:output, caps}], states)
+    actions = reject_internal_actions(actions)
     {{:ok, actions}, %{states: states}}
   end
 
   @impl true
   def handle_demand(:output, size, :buffers, _ctx, %{states: states}) do
     {actions, states} = pipe_upstream([demand: {:input, size}], states)
+    actions = reject_internal_actions(actions)
     {{:ok, actions}, %{states: states}}
   end
 
   @impl true
   def handle_process_list(:input, buffers, _ctx, %{states: states}) do
     {actions, states} = pipe_downstream([buffer: {:output, buffers}], states)
+    actions = reject_internal_actions(actions)
 
     {{:ok, actions}, %{states: states}}
   end
 
+  # Takes actions received from the downstream elements (closer to sink) and performs them on elements from last to first,
+  # i.e. in opposite direction to the data flow
   defp pipe_upstream(downstream_actions, states) do
     {states, actions} =
       states
@@ -142,6 +148,8 @@ defmodule Membrane.FilterAggregator do
     {actions, Enum.reverse(states)}
   end
 
+  # Takes actions received from the upstream elements (closer to source) and performs them on elements from first to last,
+  # i.e. in the direction of data flow
   defp pipe_downstream(initial_actions, states) do
     {states, actions} =
       states
@@ -185,7 +193,7 @@ defmodule Membrane.FilterAggregator do
     context = Context.after_incoming_action(context, action)
 
     case result do
-      # Perform splitted actions within the same element
+      # Perform split actions within the same element
       {{:ok, [{:split, _action} | _tail] = next_actions}, next_state} ->
         perform_actions(
           next_actions ++ actions,
@@ -210,14 +218,14 @@ defmodule Membrane.FilterAggregator do
     end
   end
 
+  defp perform_action({:buffer, {:output, []}}, _module, _context, state) do
+    {:ok, state}
+  end
+
   defp perform_action({:buffer, {:output, buffer}}, module, context, state) do
     cb_context = struct!(CallbackContext.Process, context)
 
-    if is_list(buffer) do
-      module.handle_process_list(:input, buffer, cb_context, state)
-    else
-      module.handle_process(:input, buffer, cb_context, state)
-    end
+    module.handle_process_list(:input, List.wrap(buffer), cb_context, state)
   end
 
   defp perform_action({:caps, {:output, caps}}, module, context, state) do
@@ -230,12 +238,12 @@ defmodule Membrane.FilterAggregator do
   end
 
   defp perform_action({:event, {:output, event}}, module, context, state) do
-    cb_context = struct!(CallbackContext.Caps, context)
+    cb_context = struct!(CallbackContext.Event, context)
 
     module.handle_event(:input, event, cb_context, state)
   end
 
-  # Pseudo-action that doesn't exist used to trigger handle_start_of_stream
+  # Internal, FilterAggregator action used to trigger handle_start_of_stream
   defp perform_action({:start_of_stream, :output}, module, context, state) do
     cb_context = struct!(CallbackContext.StreamManagement, context)
 
@@ -266,7 +274,7 @@ defmodule Membrane.FilterAggregator do
   end
 
   defp perform_action({:redemand, :output}, _module, _context, state) do
-    # Pass the action downstream, it may come back as a handle_demand call in FilterStage
+    # Pass the action downstream, it may come back as a handle_demand call in the FilterAggregator
     {{:ok, redemand: :output}, state}
   end
 
@@ -275,8 +283,12 @@ defmodule Membrane.FilterAggregator do
     {{:ok, notify: message}, state}
   end
 
-  # pseudo-action used to manipulate context after performing an action
+  # Internal action used to manipulate context after performing an action
   defp perform_action({:merge_context, _ctx_data}, _module, _context, state) do
+    {:ok, state}
+  end
+
+  defp perform_action({:split, {:handle_process, []}}, _module, _context, state) do
     {:ok, state}
   end
 
@@ -299,7 +311,7 @@ defmodule Membrane.FilterAggregator do
         {result, {acc_context, state}}
       end)
 
-    # instead of redemands from splitted callback calls, put one after all other actions
+    # instead of redemands from split callback calls, put one after all other actions
     actions =
       actions
       |> Enum.split_with(fn
@@ -314,7 +326,7 @@ defmodule Membrane.FilterAggregator do
     {{:ok, actions}, state}
   end
 
-  # Playback state change actions. They use pseudo-action to invoke proper callback in following element
+  # Internal, FilterAggregator actions used to trigger playback state change with a proper callback
   defp perform_action(action, module, context, state)
        when action in [
               :stopped_to_prepared,
@@ -347,5 +359,24 @@ defmodule Membrane.FilterAggregator do
       end
 
     {{:ok, actions ++ [pseudo_action]}, new_state}
+  end
+
+  defp reject_internal_actions(actions) do
+    actions
+    |> Enum.reject(fn
+      {action, _args} ->
+        action in [
+          :merge_context,
+          :start_of_stream
+        ]
+
+      action ->
+        action in [
+          :stopped_to_prepared,
+          :prepared_to_playing,
+          :playing_to_prepared,
+          :prepared_to_stopped
+        ]
+    end)
   end
 end

@@ -20,7 +20,7 @@ defmodule Membrane.FilterAggregator.Context do
     unless MapSet.equal?(pads, expected_pads) do
       raise """
       Element #{inspect(module)} has unsupported pads.
-      For more info on supported pads see the docs of Membrane.FilterAggregator
+      For more info on supported pads see the docs of `Membrane.FilterAggregator`
       #{inspect(module)}'s pads: : #{inspect(MapSet.to_list(pads))}
       """
     end
