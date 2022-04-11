@@ -366,7 +366,7 @@ defmodule Membrane.Bin do
       def handle_child_notification(_notification, _element, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_parent_notification(_notification, _ctxt, state), do: {:ok, state}
+      def handle_parent_notification(_notification, _ctx, state), do: {:ok, state}
 
       defoverridable membrane_clock?: 0,
                      handle_init: 1,

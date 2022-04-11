@@ -143,7 +143,7 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def handle_info(Message.new(:parent_notification, notification), state) do
-    context = Component.callback_context_generator(:bin, ParentNotification, state)
+    context = Component.callback_context_generator([:Bin], ParentNotification, state)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_parent_notification,
