@@ -20,8 +20,6 @@ defmodule Membrane.Core.Component do
       case restrict do
         :parent -> [Pipeline, Bin]
         :child -> [Bin, Element]
-        :element -> [Element]
-        :bin -> [Bin]
         :any -> [Pipeline, Bin, Element]
         restrict -> restrict
       end
