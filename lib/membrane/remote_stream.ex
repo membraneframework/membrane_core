@@ -6,9 +6,9 @@ defmodule Membrane.RemoteStream do
   be created at that stage.
 
   Parameters:
-  - content_format - format that is supposed to be carried in the stream,
+  - `:content_format` - format that is supposed to be carried in the stream,
   `nil` if unknown (default)
-  - type - either bytestream (continuous stream) or packetized (each buffer
+  - `:type` - either `:bytestream` (continuous stream) or `:packetized` (each buffer
   contains exactly one specified unit of data)
   """
   @type t :: %__MODULE__{
