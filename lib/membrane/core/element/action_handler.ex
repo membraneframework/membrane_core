@@ -8,7 +8,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   import Membrane.Pad, only: [is_pad_ref: 1]
 
-  alias Membrane.{ActionError, Buffer, Caps, CallbackError, Event, Pad}
+  alias Membrane.{ActionError, Buffer, Caps, ElementError, Event, Pad}
   alias Membrane.Core.Element.{DemandHandler, LifecycleController, PadController, State}
   alias Membrane.Core.{Events, Message, PlaybackHandler, TimerController}
   alias Membrane.Core.Child.PadModel
@@ -22,180 +22,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   require Membrane.Logger
 
   @impl CallbackHandler
-  def handle_action(action, callback, params, state) do
-    with {:ok, state} <- do_handle_action(action, callback, params, state) do
-      state
-    else
-      {{:error, reason}, state} ->
-        raise ActionError, reason: reason, action: action, callback: {state.module, callback}
-    end
-  end
-
-  defguardp is_demand_size(size) when is_integer(size) or is_function(size)
-
-  @spec do_handle_action(Action.t(), callback :: atom, params :: map, State.t()) ::
-          State.stateful_try_t()
-  defp do_handle_action({action, _}, :handle_init, _params, state)
-       when action not in [:latency, :notify] do
-    {{:error, :invalid_action}, state}
-  end
-
-  defp do_handle_action({action, _}, cb, _params, %State{playback: %{state: :stopped}} = state)
-       when action in [:buffer, :event, :caps, :demand, :redemand, :forward, :end_of_stream] and
-              cb != :handle_stopped_to_prepared do
-    {{:error, {:playback_state, :stopped}}, state}
-  end
-
-  defp do_handle_action({:event, {pad_ref, event}}, _cb, _params, state)
-       when is_pad_ref(pad_ref) do
-    send_event(pad_ref, event, state)
-  end
-
-  defp do_handle_action({:notify, notification}, _cb, _params, state),
-    do: send_notification(notification, state)
-
-  defp do_handle_action({:split, {callback, args_list}}, cb, params, state) do
-    state =
-      CallbackHandler.exec_and_handle_splitted_callback(
-        callback,
-        cb,
-        __MODULE__,
-        params |> Map.merge(%{skip_invoking_redemands: true}),
-        args_list,
-        state
-      )
-
-    {:ok, state}
-  end
-
-  defp do_handle_action({:playback_change, :suspend}, cb, _params, state)
-       when cb in [
-              :handle_stopped_to_prepared,
-              :handle_playing_to_prepared,
-              :handle_prepared_to_playing,
-              :handle_prepared_to_stopped
-            ] do
-    PlaybackHandler.suspend_playback_change(state)
-  end
-
-  defp do_handle_action({:playback_change, :resume}, _cb, _params, state),
-    do: PlaybackHandler.continue_playback_change(LifecycleController, state)
-
-  defp do_handle_action({:buffer, {pad_ref, buffers}}, cb, _params, %State{type: type} = state)
-       when type in [:source, :filter, :endpoint] and is_pad_ref(pad_ref) do
-    send_buffer(pad_ref, buffers, cb, state)
-  end
-
-  defp do_handle_action({:caps, {pad_ref, caps}}, _cb, _params, %State{type: type} = state)
-       when type in [:source, :filter, :endpoint] and is_pad_ref(pad_ref) do
-    send_caps(pad_ref, caps, state)
-  end
-
-  defp do_handle_action({:redemand, out_refs}, cb, params, state)
-       when is_list(out_refs) do
-    out_refs
-    |> Bunch.Enum.try_reduce(state, fn out_ref, state ->
-      do_handle_action({:redemand, out_ref}, cb, params, state)
-    end)
-  end
-
-  defp do_handle_action({:redemand, out_ref}, cb, _params, %State{type: type} = state)
-       when type in [:source, :filter, :endpoint] and is_pad_ref(out_ref) and
-              {type, cb} != {:filter, :handle_demand} do
-    handle_redemand(out_ref, state)
-  end
-
-  defp do_handle_action({:forward, data}, cb, params, %State{type: :filter} = state)
-       when cb in [
-              :handle_caps,
-              :handle_event,
-              :handle_process_list,
-              :handle_end_of_stream
-            ] do
-    dir =
-      case cb do
-        :handle_event -> Pad.opposite_direction(params.direction)
-        _other -> :output
-      end
-
-    pads = state |> PadModel.filter_data(%{direction: dir}) |> Map.keys()
-
-    pads
-    |> Bunch.Enum.try_reduce(state, fn pad, st ->
-      action =
-        case cb do
-          :handle_event -> {:event, {pad, data}}
-          :handle_process_list -> {:buffer, {pad, data}}
-          :handle_caps -> {:caps, {pad, data}}
-          :handle_end_of_stream -> {:end_of_stream, pad}
-        end
-
-      do_handle_action(action, cb, params, st)
-    end)
-  end
-
-  defp do_handle_action(
-         {:demand, pad_ref},
-         cb,
-         params,
-         %State{type: type} = state
-       )
-       when is_pad_ref(pad_ref) and type in [:sink, :filter, :endpoint] do
-    do_handle_action({:demand, {pad_ref, 1}}, cb, params, state)
-  end
-
-  defp do_handle_action(
-         {:demand, {pad_ref, size}},
-         cb,
-         _params,
-         %State{type: type} = state
-       )
-       when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter, :endpoint] do
-    supply_demand(pad_ref, size, cb, state)
-  end
-
-  defp do_handle_action({:start_timer, {id, interval, clock}}, _cb, _params, state) do
-    state = TimerController.start_timer(id, interval, clock, state)
-    {:ok, state}
-  end
-
-  defp do_handle_action({:start_timer, {id, interval}}, cb, params, state) do
-    clock = state.synchronization.parent_clock
-    do_handle_action({:start_timer, {id, interval, clock}}, cb, params, state)
-  end
-
-  defp do_handle_action({:timer_interval, {id, interval}}, cb, _params, state)
-       when interval != :no_interval or cb == :handle_tick do
-    state = TimerController.timer_interval(id, interval, state)
-    {:ok, state}
-  end
-
-  defp do_handle_action({:stop_timer, id}, _cb, _params, state) do
-    state = TimerController.stop_timer(id, state)
-    {:ok, state}
-  end
-
-  defp do_handle_action({:latency, latency}, _cb, _params, state) do
-    new_state = put_in(state.synchronization.latency, latency)
-    {:ok, new_state}
-  end
-
-  defp do_handle_action(
-         {:end_of_stream, pad_ref},
-         _callback,
-         _params,
-         %State{type: type, playback: %{state: :playing}} = state
-       )
-       when is_pad_ref(pad_ref) and type != :sink do
-    send_event(pad_ref, %Events.EndOfStream{}, state)
-  end
-
-  defp do_handle_action(action, callback, _params, state) do
-    raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
-  end
-
-  @impl CallbackHandler
-  def handle_actions(actions, callback, handler_params, state) do
+  def transform_actions(actions, callback, _handler_params, state) do
     {redemands, actions_after_redemands} =
       actions
       |> Enum.drop_while(fn
@@ -209,7 +36,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
     case {redemands, actions_after_redemands} do
       {_, []} ->
-        super(actions |> join_buffers(), callback, handler_params, state)
+        {join_buffers(actions), state}
 
       {[redemand | _], _} ->
         raise ActionError,
@@ -217,6 +44,212 @@ defmodule Membrane.Core.Element.ActionHandler do
           action: redemand,
           callback: {state.module, callback}
     end
+  end
+
+  defguardp is_demand_size(size) when is_integer(size) or is_function(size)
+
+  @impl CallbackHandler
+  def handle_action({action, _}, :handle_init, _params, _state)
+      when action not in [:latency, :notify] do
+    raise ActionError, action: action, reason: {:invalid_callback, :handle_init}
+  end
+
+  @impl CallbackHandler
+  def handle_action({action, _}, cb, _params, %State{playback: %{state: :stopped}})
+      when action in [:buffer, :event, :caps, :demand, :redemand, :forward, :end_of_stream] and
+             cb != :handle_stopped_to_prepared do
+    raise ActionError, action: action, reason: {:invalid_playback_state, :stopped}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:event, {pad_ref, event}}, _cb, _params, state)
+      when is_pad_ref(pad_ref) do
+    send_event(pad_ref, event, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:notify, notification}, _cb, _params, state) do
+    %State{name: name, parent_pid: parent_pid} = state
+
+    Membrane.Logger.debug_verbose(
+      "Sending notification #{inspect(notification)} (parent PID: #{inspect(parent_pid)})"
+    )
+
+    Message.send(parent_pid, :notification, [name, notification])
+    state
+  end
+
+  @impl CallbackHandler
+  def handle_action({:split, {callback, args_list}}, cb, params, state) do
+    state =
+      CallbackHandler.exec_and_handle_splitted_callback(
+        callback,
+        cb,
+        __MODULE__,
+        params |> Map.merge(%{skip_invoking_redemands: true}),
+        args_list,
+        state
+      )
+
+    state
+  end
+
+  @impl CallbackHandler
+  def handle_action({:playback_change, :suspend}, cb, _params, state)
+      when cb in [
+             :handle_stopped_to_prepared,
+             :handle_playing_to_prepared,
+             :handle_prepared_to_playing,
+             :handle_prepared_to_stopped
+           ] do
+    {:ok, state} = PlaybackHandler.suspend_playback_change(state)
+    state
+  end
+
+  @impl CallbackHandler
+  def handle_action({:playback_change, :resume}, _cb, _params, state) do
+    {:ok, state} = PlaybackHandler.continue_playback_change(LifecycleController, state)
+    state
+  end
+
+  @impl CallbackHandler
+  def handle_action({:buffer, _args} = action, cb, _params, %State{
+        playback: %{state: playback_state}
+      })
+      when playback_state != :playing and cb != :handle_prepared_to_playing do
+    raise ActionError, action: action, reason: {:invalid_playback_state, playback_state}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:buffer, {pad_ref, buffers}}, _cb, _params, %State{type: type} = state)
+      when type in [:source, :filter, :endpoint] and is_pad_ref(pad_ref) do
+    send_buffer(pad_ref, buffers, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:caps, {pad_ref, caps}}, _cb, _params, %State{type: type} = state)
+      when type in [:source, :filter, :endpoint] and is_pad_ref(pad_ref) do
+    send_caps(pad_ref, caps, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:redemand, out_refs}, cb, params, state)
+      when is_list(out_refs) do
+    Enum.reduce(out_refs, state, fn out_ref, state ->
+      handle_action({:redemand, out_ref}, cb, params, state)
+    end)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:redemand, out_ref}, cb, _params, %State{type: type} = state)
+      when type in [:source, :filter, :endpoint] and is_pad_ref(out_ref) and
+             {type, cb} != {:filter, :handle_demand} do
+    handle_redemand(out_ref, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:forward, data}, cb, params, %State{type: :filter} = state)
+      when cb in [
+             :handle_caps,
+             :handle_event,
+             :handle_process_list,
+             :handle_end_of_stream
+           ] do
+    dir =
+      case cb do
+        :handle_event -> Pad.opposite_direction(params.direction)
+        _other -> :output
+      end
+
+    pads = state |> PadModel.filter_data(%{direction: dir}) |> Map.keys()
+
+    Enum.reduce(pads, state, fn pad, state ->
+      action =
+        case cb do
+          :handle_event -> {:event, {pad, data}}
+          :handle_process_list -> {:buffer, {pad, data}}
+          :handle_caps -> {:caps, {pad, data}}
+          :handle_end_of_stream -> {:end_of_stream, pad}
+        end
+
+      handle_action(action, cb, params, state)
+    end)
+  end
+
+  @impl CallbackHandler
+  def handle_action(
+        {:demand, _args} = action,
+        cb,
+        _params,
+        %State{playback: %{state: playback_state}}
+      )
+      when playback_state != :playing and cb != :handle_prepared_to_playing do
+    raise ActionError, action: action, reason: {:invalid_playback_state, playback_state}
+  end
+
+  @impl CallbackHandler
+  def handle_action(
+        {:demand, pad_ref},
+        cb,
+        params,
+        %State{type: type} = state
+      )
+      when is_pad_ref(pad_ref) and type in [:sink, :filter, :endpoint] do
+    handle_action({:demand, {pad_ref, 1}}, cb, params, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action(
+        {:demand, {pad_ref, size}},
+        _cb,
+        _params,
+        %State{type: type} = state
+      )
+      when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter, :endpoint] do
+    supply_demand(pad_ref, size, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:start_timer, {id, interval, clock}}, _cb, _params, state) do
+    TimerController.start_timer(id, interval, clock, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:start_timer, {id, interval}}, cb, params, state) do
+    clock = state.synchronization.parent_clock
+    handle_action({:start_timer, {id, interval, clock}}, cb, params, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:timer_interval, {id, interval}}, cb, _params, state)
+      when interval != :no_interval or cb == :handle_tick do
+    TimerController.timer_interval(id, interval, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:stop_timer, id}, _cb, _params, state) do
+    TimerController.stop_timer(id, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:latency, latency}, _cb, _params, state) do
+    put_in(state.synchronization.latency, latency)
+  end
+
+  @impl CallbackHandler
+  def handle_action(
+        {:end_of_stream, pad_ref},
+        _callback,
+        _params,
+        %State{type: type, playback: %{state: :playing}} = state
+      )
+      when is_pad_ref(pad_ref) and type != :sink do
+    send_event(pad_ref, %Events.EndOfStream{}, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action(action, _callback, _params, _state) do
+    raise ActionError, action: action, reason: :unknown_action
   end
 
   defp join_buffers(actions) do
@@ -236,27 +269,16 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
   end
 
-  @spec send_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), callback :: atom, State.t()) ::
-          State.stateful_try_t()
-  defp send_buffer(
-         _pad_ref,
-         _buffer,
-         callback,
-         %State{playback: %{state: playback_state}} = state
-       )
-       when playback_state != :playing and callback != :handle_prepared_to_playing do
-    {{:error, {:playback_state, playback_state}}, state}
+  @spec send_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
+  defp send_buffer(_pad_ref, [], state) do
+    state
   end
 
-  defp send_buffer(_pad_ref, [], _callback, state) do
-    {:ok, state}
+  defp send_buffer(pad_ref, %Buffer{} = buffer, state) do
+    send_buffer(pad_ref, [buffer], state)
   end
 
-  defp send_buffer(pad_ref, %Buffer{} = buffer, callback, state) do
-    send_buffer(pad_ref, [buffer], callback, state)
-  end
-
-  defp send_buffer(pad_ref, buffers, _callback, state) when is_list(buffers) do
+  defp send_buffer(pad_ref, buffers, state) when is_list(buffers) do
     Membrane.Logger.debug_verbose(
       "Sending #{length(buffers)} buffer(s) through pad #{inspect(pad_ref)}"
     )
@@ -264,165 +286,157 @@ defmodule Membrane.Core.Element.ActionHandler do
     Telemetry.report_metric(:buffer, length(buffers))
     Telemetry.report_bitrate(buffers)
 
-    withl buffers:
-            :ok <-
-              Bunch.Enum.try_each(buffers, fn
-                %Buffer{} -> :ok
-                value -> {:error, value}
-              end),
-          data: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
-          dir: %{direction: :output} <- pad_data,
-          eos: %{end_of_stream?: false} <- pad_data,
-          caps: %{caps: caps} when not is_nil(caps) <- pad_data do
-      %{pid: pid, other_ref: other_ref} = pad_data
+    Enum.each(buffers, fn
+      %Buffer{} -> :ok
+      value -> raise ElementError, "Tried to send an invalid buffer #{inspect(value)}"
+    end)
 
+    pad_data = PadModel.get_data!(state, pad_ref)
+
+    with %{
+           direction: :output,
+           end_of_stream?: false,
+           caps: caps,
+           pid: pid,
+           other_ref: other_ref
+         }
+         when caps != nil <- pad_data do
       state =
         DemandHandler.handle_outgoing_buffers(pad_ref, pad_data, buffers, state)
         |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
 
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
-      {:ok, state}
+      state
     else
-      buffers: {:error, buf} -> {{:error, {:invalid_buffer, buf}}, state}
-      data: {:error, reason} -> {{:error, reason}, state}
-      dir: %{direction: dir} -> {{:error, {:invalid_pad_dir, dir}}, state}
-      eos: %{end_of_stream?: true} -> {{:error, {:eos_sent, pad_ref}}, state}
-      caps: %{caps: nil} -> {{:error, :caps_not_sent_before_first_buffer}, state}
+      %{direction: :input} ->
+        raise ElementError, "Tried to send a buffer through an input pad #{inspect(pad_ref)}"
+
+      %{end_of_stream?: true} ->
+        raise ElementError,
+              "Tried to send a buffer through a pad #{inspect(pad_ref)} where end of stream has already been sent"
+
+      %{caps: nil} ->
+        raise ElementError,
+              "Tried to send a buffer through a pad #{inspect(pad_ref)} where caps have not been sent yet"
     end
   end
 
-  defp send_buffer(_pad_ref, invalid_value, _callback, state) do
-    {{:error, {:invalid_buffer, invalid_value}}, state}
+  defp send_buffer(_pad_ref, invalid_value, _state) do
+    raise ElementError, "Tried to send an invalid buffer #{inspect(invalid_value)}"
   end
 
-  @spec send_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.stateful_try_t()
+  @spec send_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.t()
   def send_caps(pad_ref, caps, state) do
     Membrane.Logger.debug("""
     Sending caps through pad #{inspect(pad_ref)}
     Caps: #{inspect(caps)}
     """)
 
-    withl pad: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
-          direction: %{direction: :output} <- pad_data,
+    pad_data = PadModel.get_data!(state, pad_ref)
+
+    withl data: %{direction: :output, pid: pid, other_ref: other_ref} <- pad_data,
           caps: true <- Caps.Matcher.match?(pad_data.accepted_caps, caps) do
-      %{pid: pid, other_ref: other_ref} = pad_data
-
-      state = state |> PadModel.set_data!(pad_ref, :caps, caps)
-
+      state = PadModel.set_data!(state, pad_ref, :caps, caps)
       Message.send(pid, :caps, caps, for_pad: other_ref)
-      {:ok, state}
+      state
     else
-      pad: {:error, reason} -> {{:error, reason}, state}
-      direction: %{direction: dir} -> {{:error, {:invalid_pad_dir, pad_ref, dir}}, state}
-      caps: false -> {{:error, {:invalid_caps, caps, pad_data.accepted_caps}}, state}
+      data: %{direction: :input} ->
+        raise ElementError, "Tried to send caps through an input pad #{inspect(pad_ref)}"
+
+      caps: false ->
+        raise ElementError, """
+        Trying to send caps that do not match the specification
+        Caps being sent: #{inspect(caps, pretty: true)}
+        Allowed caps spec: #{inspect(pad_data.accepted_caps, pretty: true)}\
+        """
     end
   end
 
   @spec supply_demand(
           Pad.ref_t(),
           Action.demand_size_t(),
-          callback :: atom,
           State.t()
-        ) :: State.stateful_try_t()
-
-  defp supply_demand(
-         _pad_ref,
-         _size,
-         callback,
-         %State{playback: %{state: playback_state}} = state
-       )
-       when playback_state != :playing and callback != :handle_prepared_to_playing do
-    {{:error, {:playback_state, playback_state}}, state}
+        ) :: State.t()
+  defp supply_demand(pad_ref, 0, state) do
+    Membrane.Logger.debug_verbose("Ignoring demand of size of 0 on pad #{inspect(pad_ref)}")
+    state
   end
 
-  defp supply_demand(pad_ref, 0, callback, state) do
-    Membrane.Logger.debug_verbose("""
-    Ignoring demand of size of 0 requested by callback #{inspect(callback)}
-    on pad #{inspect(pad_ref)}.
-    """)
-
-    {:ok, state}
-  end
-
-  defp supply_demand(_pad_ref, size, _callback, state)
+  defp supply_demand(pad_ref, size, _state)
        when is_integer(size) and size < 0 do
-    {{:error, :negative_demand}, state}
+    raise ElementError,
+          "Tried to request a negative demand of size #{inspect(size)} on pad #{inspect(pad_ref)}"
   end
 
-  defp supply_demand(pad_ref, size, _callback, state) do
-    withl data: {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
-          dir: %{direction: :input} <- pad_data,
-          mode: %{mode: :pull} <- pad_data,
-          demand_mode: %{demand_mode: :manual} <- pad_data do
-      {:ok, DemandHandler.supply_demand(pad_ref, size, state)}
+  defp supply_demand(pad_ref, size, state) do
+    with %{direction: :input, mode: :pull, demand_mode: :manual} <-
+           PadModel.get_data!(state, pad_ref) do
+      DemandHandler.supply_demand(pad_ref, size, state)
     else
-      data: {:error, reason} -> {:error, reason}
-      dir: %{direction: dir} -> {:error, {:invalid_pad_dir, pad_ref, dir}}
-      mode: %{mode: mode} -> {:error, {:invalid_pad_mode, pad_ref, mode}}
-      demand_mode: %{demand_mode: mode} -> {:error, {:invalid_demand_mode, pad_ref, mode}}
+      %{direction: :output} ->
+        raise ElementError, "Tried to request a demand on output pad #{inspect(pad_ref)}"
+
+      %{mode: :push} ->
+        raise ElementError,
+              "Tried to request a demand on pad #{inspect(pad_ref)} working in push mode"
+
+      %{demand_mode: :auto} ->
+        raise ElementError,
+              "Tried to request a demand on pad #{inspect(pad_ref)} that has demand mode set to auto"
     end
-    ~>> ({:error, reason} -> {{:error, reason}, state})
   end
 
-  @spec handle_redemand(Pad.ref_t(), State.t()) :: State.stateful_try_t()
-  defp handle_redemand(out_ref, %{type: type} = state)
+  @spec handle_redemand(Pad.ref_t(), State.t()) :: State.t()
+  defp handle_redemand(pad_ref, %{type: type} = state)
        when type in [:source, :filter, :endpoint] do
-    withl data: {:ok, pad_data} <- PadModel.get_data(state, out_ref),
-          dir: %{direction: :output} <- pad_data,
-          mode: %{mode: :pull} <- pad_data,
-          demand_mode: %{demand_mode: :manual} <- pad_data do
-      state = DemandHandler.handle_redemand(out_ref, state)
-      {:ok, state}
+    with %{direction: :output, mode: :pull, demand_mode: :manual} <-
+           PadModel.get_data!(state, pad_ref) do
+      DemandHandler.handle_redemand(pad_ref, state)
     else
-      data: {:error, reason} -> {:error, reason}
-      dir: %{direction: dir} -> {:error, {:invalid_pad_dir, out_ref, dir}}
-      mode: %{mode: mode} -> {:error, {:invalid_pad_mode, out_ref, mode}}
-      demand_mode: %{demand_mode: mode} -> {:error, {:invalid_demand_mode, out_ref, mode}}
+      %{direction: :input} ->
+        raise ElementError, "Tried to make a redemand on input pad #{inspect(pad_ref)}"
+
+      %{mode: :push} ->
+        raise ElementError,
+              "Tried to make a redemand on pad #{inspect(pad_ref)} working in push mode"
+
+      %{demand_mode: :auto} ->
+        raise ElementError,
+              "Tried to make a redemand on pad #{inspect(pad_ref)} that has demand mode set to auto"
     end
-    ~>> ({:error, reason} -> {{:error, reason}, state})
   end
 
-  @spec send_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
+  @spec send_event(Pad.ref_t(), Event.t(), State.t()) :: State.t()
   defp send_event(pad_ref, event, state) do
     Membrane.Logger.debug_verbose("""
     Sending event through pad #{inspect(pad_ref)}
     Event: #{inspect(event)}
     """)
 
-    withl event: true <- event |> Event.event?(),
-          pad: {:ok, %{pid: pid, other_ref: other_ref}} <- PadModel.get_data(state, pad_ref),
-          handler: {:ok, state} <- handle_event(pad_ref, event, state) do
+    if Event.event?(event) do
+      %{pid: pid, other_ref: other_ref} = PadModel.get_data!(state, pad_ref)
+      state = handle_event(pad_ref, event, state)
       Message.send(pid, :event, event, for_pad: other_ref)
-      {:ok, state}
+      state
     else
-      event: false -> {{:error, {:invalid_event, event}}, state}
-      pad: {:error, reason} -> {{:error, reason}, state}
-      handler: {{:error, reason}, state} -> {{:error, reason}, state}
+      raise Membrane.ElementError,
+            "Tried to send invalid event #{inspect(event)} on pad #{inspect(pad_ref)}"
     end
   end
 
-  @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
+  @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.t()
   defp handle_event(pad_ref, %Events.EndOfStream{}, state) do
     with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
       state = PadController.remove_pad_associations(pad_ref, state)
-      {:ok, PadModel.set_data!(state, pad_ref, :end_of_stream?, true)}
+      PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
     else
       %{direction: :input} ->
-        {{:error, {:invalid_pad_dir, pad_ref, :input}}, state}
+        raise ElementError, "Cannot set end of stream on input pad #{inspect(pad_ref)}"
 
       %{end_of_stream?: true} ->
-        {{:error, {:eos_sent, pad_ref}}, state}
+        raise ElementError, "End of stream already set on pad #{inspect(pad_ref)}"
     end
   end
 
-  defp handle_event(_pad_ref, _event, state), do: {:ok, state}
-
-  defp send_notification(notification, %State{parent_pid: parent_pid, name: name} = state) do
-    Membrane.Logger.debug_verbose(
-      "Sending notification #{inspect(notification)} (parent PID: #{inspect(parent_pid)})"
-    )
-
-    Message.send(parent_pid, :notification, [name, notification])
-    {:ok, state}
-  end
+  defp handle_event(_pad_ref, _event, state), do: state
 end

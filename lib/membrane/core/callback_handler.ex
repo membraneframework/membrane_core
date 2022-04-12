@@ -30,8 +30,8 @@ defmodule Membrane.Core.CallbackHandler do
   @type handler_params_t :: map
 
   @callback handle_action(action :: any, callback :: atom, handler_params_t, state_t) :: state_t
-  @callback handle_actions(actions :: list, callback :: atom, handler_params_t, state_t) ::
-              state_t
+  @callback transform_actions(actions :: list, callback :: atom, handler_params_t, state_t) ::
+              {actions :: list, state_t}
 
   defmacro __using__(_args) do
     quote location: :keep do
@@ -39,11 +39,8 @@ defmodule Membrane.Core.CallbackHandler do
       @behaviour unquote(__MODULE__)
 
       @impl unquote(__MODULE__)
-      def handle_actions(actions, callback, handler_params, state)
-          when is_list(actions) do
-        Enum.reduce(actions, state, fn action, state ->
-          handle_action(action, callback, handler_params, state)
-        end)
+      def transform_actions(actions, _callback, _handler_params, state) do
+        {actions, state}
       end
 
       defoverridable unquote(__MODULE__)
@@ -167,7 +164,33 @@ defmodule Membrane.Core.CallbackHandler do
   defp handle_callback_result(cb_result, callback, handler_module, handler_params, state) do
     {actions, new_internal_state} = cb_result
     state = %{state | internal_state: new_internal_state}
-    handler_module.handle_actions(actions, callback, handler_params, state)
+
+    {actions, state} =
+      try do
+        handler_module.transform_actions(actions, callback, handler_params, state)
+      rescue
+        e ->
+          Membrane.Logger.error("""
+          Error handling actions returned by callback #{inspect(state.module)}.#{callback}
+          State: #{inspect(new_internal_state, pretty: true)}
+          """)
+
+          reraise e, __STACKTRACE__
+      end
+
+    Enum.reduce(actions, state, fn action, state ->
+      try do
+        handler_module.handle_action(action, callback, handler_params, state)
+      rescue
+        e ->
+          Membrane.Logger.error("""
+          Error handling action #{inspect(action)} returned by callback #{inspect(state.module)}.#{callback}
+          State: #{inspect(new_internal_state, pretty: true)}
+          """)
+
+          reraise e, __STACKTRACE__
+      end
+    end)
   end
 
   @spec parse_callback_result(callback_return_t | any, module, callback :: atom) ::

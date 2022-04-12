@@ -51,12 +51,8 @@ defmodule Membrane.FailWhenNoCapsAreSent do
 
     Pipeline.message_child(pipeline, :source, :send_buffer)
     assert_receive {:DOWN, ^source_ref, :process, ^source_pid, {reason, _stack_trace}}
-    assert %Membrane.ActionError{message: action_error_msg} = reason
-
-    assert Regex.match?(
-             ~r/Tried to send a buffer, while caps have not been sent on this pad/,
-             action_error_msg
-           )
+    assert %Membrane.ElementError{message: action_error_msg} = reason
+    assert action_error_msg =~ ~r/buffer.*caps.*not.*sent/
   end
 
   test "if pipeline works properly when caps are sent before the first buffer" do

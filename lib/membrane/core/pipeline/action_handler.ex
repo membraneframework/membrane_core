@@ -9,11 +9,6 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   require Membrane.Logger
 
   @impl CallbackHandler
-  def handle_actions(actions, callback, params, state) do
-    super(actions, callback, params, state)
-  end
-
-  @impl CallbackHandler
   def handle_action(action, callback, params, state) do
     with {:ok, state} <- do_handle_action(action, callback, params, state) do
       state
