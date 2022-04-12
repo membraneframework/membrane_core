@@ -472,7 +472,7 @@ defmodule Membrane.ParentSpec do
 
       Membrane.ParentSpec.link_linear([el1: MembraneElement1, el2: MembraneElement2])
   """
-  @spec link_linear(children :: children_spec_t()) :: links_spec_t()
+  @spec link_linear(children :: [child_spec_t()]) :: links_spec_t()
   def link_linear([]) do
     []
   end
