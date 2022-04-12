@@ -4,14 +4,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   alias __MODULE__.{CrashGroupHandler, LinkHandler, StartupHandler}
   alias Membrane.ParentSpec
-  alias Membrane.Core.{CallbackHandler, Component, Parent, PlaybackHandler, Message}
+  alias Membrane.Core.{CallbackHandler, Component, Parent, PlaybackHandler}
 
   alias Membrane.Core.Parent.{
     ChildEntryParser,
     ClockHandler,
     CrashGroup,
     LifecycleController,
-    Link,
     LinkParser
   }
 
@@ -153,7 +152,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   def handle_child_death(pid, :normal, state) do
     with {:ok, child_name} <- child_by_pid(pid, state) do
       state = Bunch.Access.delete_in(state, [:children, child_name])
-      state = remove_child_links(child_name, state)
+      state = LinkHandler.unlink_element(child_name, state)
       {_result, state} = remove_child_from_crash_group(state, pid)
       LifecycleController.maybe_finish_playback_transition(state)
     else
@@ -273,31 +272,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp remove_child_from_crash_group(state, group, child_pid) do
     CrashGroupHandler.remove_member_of_crash_group(state, group.name, child_pid)
     |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
-  end
-
-  defp remove_child_links(child_name, state) do
-    Map.update!(
-      state,
-      :links,
-      &(&1
-        |> Enum.reject(fn %Link{from: from, to: to} ->
-          from_name = from.child
-          to_name = to.child
-
-          cond do
-            child_name == from_name ->
-              Message.send(to.pid, :handle_unlink, to.pad_ref)
-              true
-
-            child_name == to_name ->
-              Message.send(from.pid, :handle_unlink, from.pad_ref)
-              true
-
-            true ->
-              false
-          end
-        end))
-    )
   end
 
   defp child_by_pid(pid, state) do

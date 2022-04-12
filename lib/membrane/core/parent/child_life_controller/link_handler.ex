@@ -182,20 +182,35 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   def unlink_crash_group(crash_group, state) do
     %CrashGroup{members: members_names} = crash_group
 
-    links_to_remove =
-      Enum.filter(state.links, fn %Link{from: from, to: to} ->
-        from.child in members_names or to.child in members_names
-      end)
-
-    Enum.each(links_to_remove, fn %Link{to: to, from: from} ->
-      cond do
-        from.child not in members_names -> Message.send(from.pid, :handle_unlink, from.pad_ref)
-        to.child not in members_names -> Message.send(to.pid, :handle_unlink, to.pad_ref)
-        true -> :ok
-      end
+    Enum.reduce(members_names, state, fn member_name, state ->
+      unlink_element(member_name, state)
     end)
+  end
 
-    Map.update!(state, :links, &Enum.reject(&1, fn link -> link in links_to_remove end))
+  @spec unlink_element(Membrane.Element.name_t(), Parent.state_t()) :: Parent.state_t()
+  def unlink_element(element_name, state) do
+    Map.update!(
+      state,
+      :links,
+      &(&1
+        |> Enum.reject(fn %Link{from: from, to: to} ->
+          from_name = from.child
+          to_name = to.child
+
+          cond do
+            element_name == from_name ->
+              Message.send(to.pid, :handle_unlink, to.pad_ref)
+              true
+
+            element_name == to_name ->
+              Message.send(from.pid, :handle_unlink, from.pad_ref)
+              true
+
+            true ->
+              false
+          end
+        end))
+    )
   end
 
   defp request_link(
