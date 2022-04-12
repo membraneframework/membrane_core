@@ -89,6 +89,13 @@ defmodule Membrane.Pipeline.Action do
   Returning actions is a way of pipeline interaction with its children and
   other parts of framework.
   """
+
+  @type playback_t :: {:playback, :prepared | :playing | :stopped}
+
+  @typedoc """
+  Changes the playback state of the pipeline to the chosen one.
+  """
+
   @type t ::
           forward_t
           | spec_t
@@ -97,4 +104,5 @@ defmodule Membrane.Pipeline.Action do
           | start_timer_t
           | timer_interval_t
           | stop_timer_t
+          | playback_t
 end

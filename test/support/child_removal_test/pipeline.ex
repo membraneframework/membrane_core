@@ -52,7 +52,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
       links: links
     }
 
-    {{:ok, spec: spec}, %{}}
+    {{:ok, spec: spec, playback: :playing}, %{}}
   end
 
   @impl true

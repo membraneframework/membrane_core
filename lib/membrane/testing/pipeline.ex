@@ -55,8 +55,8 @@ defmodule Membrane.Testing.Pipeline do
   ```
   options = %Membrane.Testing.Pipeline.Options {
       module: Your.Module
-    }
-    ```
+  }
+  ```
 
   See `Membrane.Testing.Pipeline.Options` for available options.
 
@@ -166,7 +166,7 @@ defmodule Membrane.Testing.Pipeline do
     raise """
 
     You provided no information about pipeline contents. Please provide either:
-     - list of elemenst via `elements` field of Options struct with optional links between
+     - list of elements via `elements` field of Options struct with optional links between
      them via `links` field of `Options` struct
      - module that implements `Membrane.Pipeline` callbacks via `module` field of `Options`
      struct
@@ -249,7 +249,7 @@ defmodule Membrane.Testing.Pipeline do
     }
 
     new_state = %State{test_process: options.test_process, module: nil}
-    {{:ok, spec: spec}, new_state}
+    {{:ok, [spec: spec, playback: :playing]}, new_state}
   end
 
   @impl true
@@ -357,6 +357,11 @@ defmodule Membrane.Testing.Pipeline do
       )
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
+  end
+
+  @impl true
+  def handle_other({:exec_actions, actions}, _ctx, %State{} = state) do
+    {{:ok, actions}, state}
   end
 
   @impl true

@@ -77,6 +77,11 @@ defmodule Membrane.Integration.LinkingTest do
     end
 
     @impl true
+    def handle_other(_msg, _ctx, state) do
+      {:ok, state}
+    end
+
+    @impl true
     def handle_spec_started(_children, _ctx, state) do
       send(state.testing_pid, :spec_started)
       {:ok, state}
@@ -91,7 +96,7 @@ defmodule Membrane.Integration.LinkingTest do
       })
 
     on_exit(fn ->
-      Membrane.Pipeline.stop_and_terminate(pipeline, blocking?: true)
+      Membrane.Pipeline.terminate(pipeline, blocking?: true)
     end)
 
     %{pipeline: pipeline}
@@ -113,7 +118,7 @@ defmodule Membrane.Integration.LinkingTest do
 
       send(pipeline, {:start_spec, %{spec: spec}})
       assert_receive(:spec_started)
-      Testing.Pipeline.play(pipeline)
+      Testing.Pipeline.execute_actions(pipeline, playback: :playing)
       assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'a'})
       assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'b'})
       assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'c'})
@@ -152,7 +157,7 @@ defmodule Membrane.Integration.LinkingTest do
       bin_pid = get_child_pid(:bin, pipeline)
       source_pid = get_child_pid(:source, bin_pid)
       source_ref = Process.monitor(source_pid)
-      Testing.Pipeline.play(pipeline)
+      Testing.Pipeline.execute_actions(pipeline, playback: :playing)
 
       assert_pipeline_playback_changed(pipeline, _, :playing)
       Process.exit(sink_pid, :kill)
@@ -267,7 +272,7 @@ defmodule Membrane.Integration.LinkingTest do
     assert_receive(:spec_started)
     send(pipeline, {:start_spec, %{spec: links_spec}})
     assert_receive(:spec_started)
-    Testing.Pipeline.play(pipeline)
+    Testing.Pipeline.execute_actions(pipeline, playback: :playing)
     assert_pipeline_playback_changed(pipeline, _, :playing)
   end
 

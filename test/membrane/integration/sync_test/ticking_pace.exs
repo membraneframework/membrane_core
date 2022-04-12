@@ -27,14 +27,12 @@ defmodule Membrane.Integration.SyncTest.TickingPace do
     %{synchronization: %{clock_provider: %{clock: original_clock, provider: :sink}}} =
       :sys.get_state(pipeline)
 
-    Testing.Pipeline.play(pipeline)
-
     for _ <- 1..tries do
       send(original_clock, {:membrane_clock_update, reported_interval})
       Process.sleep(actual_report_interval)
     end
 
-    Testing.Pipeline.stop_and_terminate(pipeline)
+    Testing.Pipeline.terminate(pipeline)
 
     ticks_amount = Sync.Helper.receive_ticks()
 

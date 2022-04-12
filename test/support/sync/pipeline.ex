@@ -33,7 +33,7 @@ defmodule Membrane.Support.Sync.Pipeline do
 
   @impl true
   def handle_init(spec) do
-    {{:ok, spec: spec}, %{}}
+    {{:ok, spec: spec, playback: :playing}, %{}}
   end
 
   @impl true
