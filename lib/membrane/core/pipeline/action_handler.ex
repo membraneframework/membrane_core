@@ -34,8 +34,8 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
     {{:error, :invalid_action}, state}
   end
 
-  defp do_handle_action({:notify_child, children_messages}, _cb, _params, state) do
-    Parent.ChildLifeController.handle_notify_child(Bunch.listify(children_messages), state)
+  defp do_handle_action({:notify_child, notification}, _cb, _params, state) do
+    Parent.ChildLifeController.handle_notify_child(notification, state)
   end
 
   defp do_handle_action({:spec, spec = %ParentSpec{}}, _cb, _params, state) do
