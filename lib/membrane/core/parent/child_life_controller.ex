@@ -71,10 +71,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {{:ok, children_names}, state}
   end
 
-  @spec handle_notify_child([{Membrane.Child.name_t(), any}], Parent.state_t()) ::
+  @spec handle_notify_child(
+          {Membrane.Child.name_t(), Membrane.ParentNotification.t()},
+          Parent.state_t()
+        ) ::
           {:ok | {:error, any}, Parent.state_t()}
-  def handle_notify_child(children_messages, state) do
-    result = Bunch.Enum.try_each(children_messages, &do_handle_notify_child(&1, state))
+  def handle_notify_child(notification, state) do
+    result = do_handle_notify_child(notification, state)
     {result, state}
   end
 
