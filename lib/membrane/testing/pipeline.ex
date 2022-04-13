@@ -414,7 +414,8 @@ defmodule Membrane.Testing.Pipeline do
         state
       )
 
-    :ok = notify_test_process(state.test_process, {:handle_element_start_of_stream, {element, pad}})
+    :ok =
+      notify_test_process(state.test_process, {:handle_element_start_of_stream, {element, pad}})
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
