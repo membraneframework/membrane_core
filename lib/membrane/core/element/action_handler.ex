@@ -24,7 +24,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   @impl CallbackHandler
   def handle_action(action, callback, params, state) do
     with {:ok, state} <- do_handle_action(action, callback, params, state) do
-      {:ok, state}
+      state
     else
       {{:error, reason}, state} ->
         raise ActionError, reason: reason, action: action, callback: {state.module, callback}
@@ -55,14 +55,17 @@ defmodule Membrane.Core.Element.ActionHandler do
     do: send_notification(notification, state)
 
   defp do_handle_action({:split, {callback, args_list}}, cb, params, state) do
-    CallbackHandler.exec_and_handle_splitted_callback(
-      callback,
-      cb,
-      __MODULE__,
-      params |> Map.merge(%{skip_invoking_redemands: true}),
-      args_list,
-      state
-    )
+    state =
+      CallbackHandler.exec_and_handle_splitted_callback(
+        callback,
+        cb,
+        __MODULE__,
+        params |> Map.merge(%{skip_invoking_redemands: true}),
+        args_list,
+        state
+      )
+
+    {:ok, state}
   end
 
   defp do_handle_action({:playback_change, :suspend}, cb, _params, state)
@@ -152,7 +155,8 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp do_handle_action({:start_timer, {id, interval, clock}}, _cb, _params, state) do
-    TimerController.start_timer(id, interval, clock, state)
+    state = TimerController.start_timer(id, interval, clock, state)
+    {:ok, state}
   end
 
   defp do_handle_action({:start_timer, {id, interval}}, cb, params, state) do
@@ -162,11 +166,13 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp do_handle_action({:timer_interval, {id, interval}}, cb, _params, state)
        when interval != :no_interval or cb == :handle_tick do
-    TimerController.timer_interval(id, interval, state)
+    state = TimerController.timer_interval(id, interval, state)
+    {:ok, state}
   end
 
   defp do_handle_action({:stop_timer, id}, _cb, _params, state) do
-    TimerController.stop_timer(id, state)
+    state = TimerController.stop_timer(id, state)
+    {:ok, state}
   end
 
   defp do_handle_action({:latency, latency}, _cb, _params, state) do
@@ -348,7 +354,7 @@ defmodule Membrane.Core.Element.ActionHandler do
           dir: %{direction: :input} <- pad_data,
           mode: %{mode: :pull} <- pad_data,
           demand_mode: %{demand_mode: :manual} <- pad_data do
-      DemandHandler.supply_demand(pad_ref, size, state)
+      {:ok, DemandHandler.supply_demand(pad_ref, size, state)}
     else
       data: {:error, reason} -> {:error, reason}
       dir: %{direction: dir} -> {:error, {:invalid_pad_dir, pad_ref, dir}}
@@ -365,7 +371,8 @@ defmodule Membrane.Core.Element.ActionHandler do
           dir: %{direction: :output} <- pad_data,
           mode: %{mode: :pull} <- pad_data,
           demand_mode: %{demand_mode: :manual} <- pad_data do
-      DemandHandler.handle_redemand(out_ref, state)
+      state = DemandHandler.handle_redemand(out_ref, state)
+      {:ok, state}
     else
       data: {:error, reason} -> {:error, reason}
       dir: %{direction: dir} -> {:error, {:invalid_pad_dir, out_ref, dir}}

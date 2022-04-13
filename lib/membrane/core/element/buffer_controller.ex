@@ -20,7 +20,7 @@ defmodule Membrane.Core.Element.BufferController do
   callback. Also calls `Membrane.Core.Element.DemandHandler.supply_demand/2`
   to check if there are any unsupplied demands.
   """
-  @spec handle_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.stateful_try_t()
+  @spec handle_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
   def handle_buffer(pad_ref, buffers, state) do
     data = PadModel.get_data!(state, pad_ref)
     %{direction: :input} = data
@@ -28,7 +28,7 @@ defmodule Membrane.Core.Element.BufferController do
   end
 
   @spec do_handle_buffer(Pad.ref_t(), PadModel.pad_data_t(), [Buffer.t()] | Buffer.t(), State.t()) ::
-          State.stateful_try_t()
+          State.t()
   defp do_handle_buffer(pad_ref, %{mode: :pull, demand_mode: :auto} = data, buffers, state) do
     %{demand: demand, demand_unit: demand_unit} = data
     buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
@@ -45,7 +45,7 @@ defmodule Membrane.Core.Element.BufferController do
     if old_input_queue |> InputQueue.empty?() do
       DemandHandler.supply_demand(pad_ref, state)
     else
-      {:ok, state}
+      state
     end
   end
 
@@ -60,7 +60,7 @@ defmodule Membrane.Core.Element.BufferController do
           Pad.ref_t(),
           [Buffer.t()] | Buffer.t(),
           State.t()
-        ) :: State.stateful_try_t()
+        ) :: State.t()
   def exec_buffer_callback(pad_ref, buffers, %State{type: :filter} = state) do
     require CallbackContext.Process
     Telemetry.report_metric("buffer", 1, inspect(pad_ref))

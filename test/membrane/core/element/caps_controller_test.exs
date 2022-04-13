@@ -54,7 +54,8 @@ defmodule Membrane.Core.Element.CapsControllerTest do
 
   describe "handle_caps for pull pad" do
     test "with empty input_queue", %{state: state} do
-      assert {:ok, _state} = @module.handle_caps(:input, %MockCaps{}, state)
+      @module.handle_caps(:input, %MockCaps{}, state)
+      assert true
     end
 
     test "with input_queue containing one buffer", %{state: state} do
@@ -66,9 +67,9 @@ defmodule Membrane.Core.Element.CapsControllerTest do
           &InputQueue.store(&1, :buffer, %Buffer{payload: "aa"})
         )
 
-      assert {:ok, new_state} = @module.handle_caps(:input, %MockCaps{}, state)
+      state = @module.handle_caps(:input, %MockCaps{}, state)
 
-      assert new_state.pads_data.input.input_queue.q |> Qex.last!() ==
+      assert state.pads_data.input.input_queue.q |> Qex.last!() ==
                {:non_buffer, :caps, %MockCaps{}}
     end
   end

@@ -72,12 +72,12 @@ defmodule Membrane.Core.Element.EventControllerTest do
     end
 
     test "start of stream successfully", %{state: state} do
-      assert {:ok, state} = EventController.handle_event(:input, %Events.StartOfStream{}, state)
+      state = EventController.handle_event(:input, %Events.StartOfStream{}, state)
       assert state.pads_data.input.start_of_stream?
     end
 
     test "ignoring end of stream when there was no start of stream prior", %{state: state} do
-      assert {:ok, state} = EventController.handle_event(:input, %Events.EndOfStream{}, state)
+      state = EventController.handle_event(:input, %Events.EndOfStream{}, state)
       refute state.pads_data.input.end_of_stream?
       refute state.pads_data.input.start_of_stream?
     end
@@ -85,19 +85,20 @@ defmodule Membrane.Core.Element.EventControllerTest do
     test "end of stream successfully", %{state: state} do
       state = put_start_of_stream(state, :input)
 
-      assert {:ok, state} = EventController.handle_event(:input, %Events.EndOfStream{}, state)
+      state = EventController.handle_event(:input, %Events.EndOfStream{}, state)
       assert state.pads_data.input.end_of_stream?
     end
   end
 
   describe "Event controller handles normal events" do
     test "succesfully when callback module returns {:ok, state}", %{state: state} do
-      assert {:ok, ^state} = EventController.handle_event(:input, %Event.Underrun{}, state)
+      assert state == EventController.handle_event(:input, %Event.Underrun{}, state)
     end
 
     test "processing error returned by callback module", %{state: state} do
-      assert {{:error, {:handle_event, :cause}}, ^state} =
-               EventController.handle_event(:input, %Event.Discontinuity{}, state)
+      assert_raise(Membrane.CallbackError, fn ->
+        EventController.handle_event(:input, %Event.Discontinuity{}, state)
+      end)
     end
   end
 

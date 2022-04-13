@@ -41,9 +41,16 @@ defmodule Membrane.CallbackError do
   defp mk_exception(:error, {module, fun}, opts) do
     reason = Keyword.fetch!(opts, :reason)
 
+    state =
+      case Keyword.fetch(opts, :state) do
+        {:ok, state} -> "Internal state: #{inspect(state, pretty: true)}"
+        :error -> ""
+      end
+
     msg = """
     Error returned from #{inspect(module)}.#{fun}:
     #{inspect(reason, pretty: true)}
+    #{state}
     """
 
     %__MODULE__{message: msg}
@@ -131,5 +138,9 @@ defmodule Membrane.LinkError do
 end
 
 defmodule Membrane.ElementError do
+  defexception [:message]
+end
+
+defmodule Membrane.TimerError do
   defexception [:message]
 end

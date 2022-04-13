@@ -146,7 +146,7 @@ defmodule Membrane.Core.ElementTest do
   end
 
   test "should return correct clock and should not modify the state" do
-    assert {:reply, {:ok, reply}, state} =
+    assert {:reply, reply, state} =
              Element.handle_call(
                Message.new(:get_clock),
                nil,
@@ -169,7 +169,7 @@ defmodule Membrane.Core.ElementTest do
     ]
     |> Enum.each(fn msg ->
       assert {:noreply, state} = Element.handle_info(msg, initial_state)
-      assert {:ok, state} == Element.PlaybackBuffer.store(msg, initial_state)
+      assert state == Element.PlaybackBuffer.store(msg, initial_state)
     end)
   end
 
@@ -257,14 +257,14 @@ defmodule Membrane.Core.ElementTest do
 
   test "should update timer on each tick" do
     {:ok, clock} = Membrane.Clock.start_link()
-    {:ok, state} = Membrane.Core.TimerController.start_timer(:timer, 1000, clock, get_state())
+    state = Membrane.Core.TimerController.start_timer(:timer, 1000, clock, get_state())
     assert {:noreply, state} = Element.handle_info(Message.new(:timer_tick, :timer), state)
     assert state.synchronization.timers.timer.time_passed == 2000
   end
 
   test "should update clock ratio" do
     {:ok, clock} = Membrane.Clock.start_link()
-    {:ok, state} = Membrane.Core.TimerController.start_timer(:timer, 1000, clock, get_state())
+    state = Membrane.Core.TimerController.start_timer(:timer, 1000, clock, get_state())
 
     assert {:noreply, state} = Element.handle_info({:membrane_clock_ratio, clock, 123}, state)
 
@@ -285,15 +285,12 @@ defmodule Membrane.Core.ElementTest do
       Message.new(:abc, :def, for_pad: :input)
     ]
     |> Enum.each(fn msg ->
-      assert {:stop, {:error, {:invalid_message, ^msg, _}}, _state} =
-               Element.handle_info(msg, get_state())
+      assert_raise Membrane.ElementError, fn -> Element.handle_info(msg, get_state()) end
 
-      assert {:reply, {:error, {:invalid_message, ^msg, _}}, _state} =
-               Element.handle_call(msg, nil, get_state())
+      assert_raise Membrane.ElementError, fn ->
+        Element.handle_call(msg, {self(), nil}, get_state())
+      end
     end)
-
-    assert {:reply, {:error, {:invalid_message, :abc, _}}, _state} =
-             Element.handle_call(:abc, nil, get_state())
   end
 
   test "other message" do

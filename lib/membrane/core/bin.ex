@@ -3,10 +3,8 @@ defmodule Membrane.Core.Bin do
   use Bunch
   use GenServer
 
-  import Membrane.Core.Helper.GenServer
-
   alias __MODULE__.State
-  alias Membrane.{CallbackError, Core, ComponentPath, Sync}
+  alias Membrane.{Core, ComponentPath, Sync}
   alias Membrane.Core.Bin.PadController
   alias Membrane.Core.{CallbackHandler, Message, Telemetry}
   alias Membrane.Core.Child.PadSpecHandler
@@ -115,28 +113,22 @@ defmodule Membrane.Core.Bin do
       }
       |> PadSpecHandler.init_pads()
 
-    with {:ok, state} <-
-           CallbackHandler.exec_and_handle_callback(
-             :handle_init,
-             Membrane.Core.Bin.ActionHandler,
-             %{},
-             [options.user_options],
-             state
-           ) do
-      {:ok, state}
-    else
-      {{:error, reason}, _state} ->
-        raise CallbackError, kind: :error, callback: {module, :handle_init}, reason: reason
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_init,
+        Membrane.Core.Bin.ActionHandler,
+        %{},
+        [options.user_options],
+        state
+      )
 
-      {other, _state} ->
-        raise CallbackError, kind: :bad_return, callback: {module, :handle_init}, value: other
-    end
+    {:ok, state}
   end
 
   @impl GenServer
   def handle_info(Message.new(:handle_unlink, pad_ref), state) do
-    PadController.handle_unlink(pad_ref, state)
-    |> noreply()
+    state = PadController.handle_unlink(pad_ref, state)
+    {:noreply, state}
   end
 
   @impl GenServer
@@ -164,7 +156,7 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def handle_call(Message.new(:get_clock), _from, state) do
-    reply({{:ok, state.synchronization.clock}, state})
+    {:reply, state.synchronization.clock, state}
   end
 
   @impl GenServer

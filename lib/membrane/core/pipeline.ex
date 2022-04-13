@@ -30,13 +30,16 @@ defmodule Membrane.Core.Pipeline do
       }
     }
 
-    CallbackHandler.exec_and_handle_callback(
-      :handle_init,
-      ActionHandler,
-      %{state: false},
-      [pipeline_options],
-      state
-    )
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_init,
+        ActionHandler,
+        %{state: false},
+        [pipeline_options],
+        state
+      )
+
+    {:ok, state}
   end
 
   @impl GenServer

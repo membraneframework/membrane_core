@@ -3,7 +3,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
   use Bunch
   use Membrane.Core.PlaybackHandler
 
-  alias Bunch.Type
   alias Membrane.{Child, Core, Notification, Pad, Sync}
   alias Membrane.Core.{CallbackHandler, Message, Component, Parent, PlaybackHandler}
   alias Membrane.Core.Events
@@ -46,13 +45,16 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
     callback_res =
       if callback do
-        CallbackHandler.exec_and_handle_callback(
-          callback,
-          action_handler,
-          %{context: context},
-          [],
-          state
-        )
+        state =
+          CallbackHandler.exec_and_handle_callback(
+            callback,
+            action_handler,
+            %{context: context},
+            [],
+            state
+          )
+
+        {:ok, state}
       else
         {:ok, state}
       end
@@ -87,13 +89,13 @@ defmodule Membrane.Core.Parent.LifecycleController do
   end
 
   @spec handle_notification(Child.name_t(), Notification.t(), Parent.state_t()) ::
-          Type.stateful_try_t(Parent.state_t())
+          Parent.state_t()
   def handle_notification(from, notification, state) do
     Membrane.Logger.debug_verbose(
       "Received notification #{inspect(notification)} from #{inspect(from)}"
     )
 
-    with {:ok, _} <- state |> Parent.ChildrenModel.get_child_data(from) do
+    with {:ok, _data} <- Parent.ChildrenModel.get_child_data(state, from) do
       context = Component.callback_context_generator(:parent, Notification, state)
       action_handler = get_callback_action_handler(state)
 
@@ -105,12 +107,13 @@ defmodule Membrane.Core.Parent.LifecycleController do
         state
       )
     else
-      error ->
-        {error, state}
+      {:error, {:unknown_child, child}} ->
+        raise Membrane.ParentError,
+              "Received a notification #{inspect(notification)} from an unknown child #{inspect(child)}"
     end
   end
 
-  @spec handle_other(any, Parent.state_t()) :: Type.stateful_try_t(Parent.state_t())
+  @spec handle_other(any, Parent.state_t()) :: Parent.state_t()
   def handle_other(message, state) do
     context = Component.callback_context_generator(:parent, Other, state)
     action_handler = get_callback_action_handler(state)
@@ -129,8 +132,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
           Child.name_t(),
           Pad.ref_t(),
           Parent.state_t()
-        ) ::
-          Type.stateful_try_t(Parent.state_t())
+        ) :: Parent.state_t()
   def handle_stream_management_event(%event_type{}, element_name, pad_ref, state)
       when event_type in [Events.StartOfStream, Events.EndOfStream] do
     context = Component.callback_context_generator(:parent, StreamManagement, state)
@@ -151,7 +153,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
-  @spec handle_log_metadata(Keyword.t(), Parent.state_t()) :: {:ok, Parent.state_t()}
+  @spec handle_log_metadata(Keyword.t(), Parent.state_t()) :: Parent.state_t()
   def handle_log_metadata(metadata, state) do
     :ok = Logger.metadata(metadata)
 
@@ -163,7 +165,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
     Bunch.KVEnum.each_value(state.children, &Message.send(&1.pid, :log_metadata, metadata))
 
-    {:ok, %{state | children_log_metadata: children_log_metadata}}
+    %{state | children_log_metadata: children_log_metadata}
   end
 
   @spec maybe_finish_playback_transition(Parent.state_t()) ::

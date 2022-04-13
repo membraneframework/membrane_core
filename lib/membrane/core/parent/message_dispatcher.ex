@@ -27,22 +27,25 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   end
 
   def handle_message(Message.new(:stream_management_event, [element_name, pad_ref, event]), state) do
-    LifecycleController.handle_stream_management_event(event, element_name, pad_ref, state)
-    |> noreply(state)
+    state =
+      LifecycleController.handle_stream_management_event(event, element_name, pad_ref, state)
+
+    {:noreply, state}
   end
 
   def handle_message(Message.new(:notification, [from, notification]), state) do
-    LifecycleController.handle_notification(from, notification, state)
-    |> noreply(state)
+    state = LifecycleController.handle_notification(from, notification, state)
+    {:noreply, state}
   end
 
   def handle_message(Message.new(:log_metadata, metadata), state) do
-    LifecycleController.handle_log_metadata(metadata, state)
-    |> noreply(state)
+    state = LifecycleController.handle_log_metadata(metadata, state)
+    {:noreply, state}
   end
 
   def handle_message(Message.new(:timer_tick, timer_id), state) do
-    TimerController.handle_tick(timer_id, state) |> noreply(state)
+    state = TimerController.handle_tick(timer_id, state)
+    {:noreply, state}
   end
 
   def handle_message(Message.new(:link_response, link_id), state) do
@@ -56,21 +59,30 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   end
 
   def handle_message({:membrane_clock_ratio, clock, ratio}, state) do
-    TimerController.handle_clock_update(clock, ratio, state) |> noreply(state)
+    state = TimerController.handle_clock_update(clock, ratio, state)
+    {:noreply, state}
   end
 
   def handle_message({:DOWN, _ref, :process, pid, reason} = message, state) do
     cond do
-      is_child_pid?(pid, state) -> ChildLifeController.handle_child_death(pid, reason, state)
-      is_parent_pid?(pid, state) -> {:stop, {:shutdown, :parent_crash}, state}
-      true -> LifecycleController.handle_other(message, state)
+      is_child_pid?(pid, state) ->
+        case ChildLifeController.handle_child_death(pid, reason, state) do
+          {:ok, state} -> {:noreply, state}
+          {:stop, reason, state} -> {:stop, reason, state}
+        end
+
+      is_parent_pid?(pid, state) ->
+        {:stop, {:shutdown, :parent_crash}, state}
+
+      true ->
+        state = LifecycleController.handle_other(message, state)
+        {:noreply, state}
     end
-    |> noreply(state)
   end
 
   def handle_message(message, state) do
-    LifecycleController.handle_other(message, state)
-    |> noreply(state)
+    state = LifecycleController.handle_other(message, state)
+    {:noreply, state}
   end
 
   defp is_parent_pid?(pid, state) do

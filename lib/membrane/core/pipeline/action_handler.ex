@@ -2,7 +2,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   @moduledoc false
   use Membrane.Core.CallbackHandler
 
-  alias Membrane.CallbackError
+  alias Membrane.ActionError
   alias Membrane.Core.{Parent, TimerController}
   alias Membrane.ParentSpec
 
@@ -16,16 +16,10 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   @impl CallbackHandler
   def handle_action(action, callback, params, state) do
     with {:ok, state} <- do_handle_action(action, callback, params, state) do
-      {:ok, state}
+      state
     else
-      {{:error, :invalid_action}, state} ->
-        raise CallbackError,
-          kind: :invalid_action,
-          action: action,
-          callback: {state.module, callback}
-
-      error ->
-        error
+      {{:error, reason}, state} ->
+        raise ActionError, reason: reason, action: action, callback: {state.module, callback}
     end
   end
 
@@ -39,8 +33,8 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   defp do_handle_action({:spec, spec = %ParentSpec{}}, _cb, _params, state) do
-    with {{:ok, _children}, state} <- Parent.ChildLifeController.handle_spec(spec, state),
-         do: {:ok, state}
+    state = Parent.ChildLifeController.handle_spec(spec, state)
+    {:ok, state}
   end
 
   defp do_handle_action({:remove_child, children}, _cb, _params, state) do
@@ -48,7 +42,8 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   defp do_handle_action({:start_timer, {id, interval, clock}}, _cb, _params, state) do
-    TimerController.start_timer(id, interval, clock, state)
+    state = TimerController.start_timer(id, interval, clock, state)
+    {:ok, state}
   end
 
   defp do_handle_action({:start_timer, {id, interval}}, cb, params, state) do
@@ -58,18 +53,20 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
 
   defp do_handle_action({:timer_interval, {id, interval}}, cb, _params, state)
        when interval != :no_interval or cb == :handle_tick do
-    TimerController.timer_interval(id, interval, state)
+    state = TimerController.timer_interval(id, interval, state)
+    {:ok, state}
   end
 
   defp do_handle_action({:stop_timer, id}, _cb, _params, state) do
-    TimerController.stop_timer(id, state)
+    state = TimerController.stop_timer(id, state)
+    {:ok, state}
   end
 
   defp do_handle_action({:playback, playback_state}, _cb, _params, state) do
     Membrane.Core.Parent.LifecycleController.change_playback_state(playback_state, state)
   end
 
-  defp do_handle_action(action, callback, _params, state) do
-    raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
+  defp do_handle_action(_action, _callback, _params, state) do
+    {{:error, :invalid_action}, state}
   end
 end

@@ -22,8 +22,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @type spec_ref_t :: reference()
 
-  @spec handle_spec(ParentSpec.t(), Parent.state_t()) ::
-          {{:ok, [Membrane.Child.name_t()]}, Parent.state_t()} | no_return
+  @spec handle_spec(ParentSpec.t(), Parent.state_t()) :: Parent.state_t() | no_return()
   def handle_spec(%ParentSpec{} = spec, state) do
     Membrane.Logger.debug("""
     Initializing spec
@@ -67,8 +66,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     state = ClockHandler.choose_clock(children, spec.clock_provider, state)
     state = LinkHandler.init_spec_linking(spec_ref, links, state)
-    {:ok, state} = StartupHandler.exec_handle_spec_started(children_names, state)
-    {{:ok, children_names}, state}
+    state = StartupHandler.exec_handle_spec_started(children_names, state)
+    state
   end
 
   @spec handle_forward([{Membrane.Child.name_t(), any}], Parent.state_t()) ::
@@ -148,8 +147,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   If a pid turns out not to be a pid of any child error is raised.
   """
-  @spec handle_child_death(child_pid :: pid(), reason :: atom(), state :: Parent.state_t()) ::
-          {:ok | {:error, :not_child}, Parent.state_t()}
+  @spec handle_child_death(child_pid :: pid(), reason :: any(), state :: Parent.state_t()) ::
+          {:ok, Parent.state_t()} | {:stop, reason :: any(), Parent.state_t()}
   def handle_child_death(pid, :normal, state) do
     with {:ok, child_name} <- child_by_pid(pid, state) do
       state = Bunch.Access.delete_in(state, [:children, child_name])
@@ -173,12 +172,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       if result == :removed do
         state = Enum.reduce(group.members, state, &Bunch.Access.delete_in(&2, [:children, &1]))
 
-        exec_handle_crash_group_down_callback(
-          group.name,
-          group.members,
-          group.crash_initiator || child_name,
-          state
-        )
+        state =
+          exec_handle_crash_group_down_callback(
+            group.name,
+            group.members,
+            group.crash_initiator || child_name,
+            state
+          )
+
+        {:ok, state}
       else
         {:ok, state}
       end

@@ -31,13 +31,9 @@ defmodule Membrane.Core.Element.DemandHandler do
     * If <span class="x x-first x-last">the </span>element isn't supplying demand at the moment <span class="x x-first x-last">and there's some unsupplied demand on the given </span>
       <span class="x x-first x-last">output, `</span>handle_demand<span class="x x-first x-last">` is invoked right away, so that the demand can be synchronously supplied.</span>
   """
-  @spec handle_redemand(Pad.ref_t(), State.t()) :: {:ok, State.t()}
+  @spec handle_redemand(Pad.ref_t(), State.t()) :: State.t()
   def handle_redemand(pad_ref, %State{supplying_demand?: true} = state) do
-    state =
-      state
-      |> Map.update!(:delayed_demands, &MapSet.put(&1, {pad_ref, :redemand}))
-
-    {:ok, state}
+    Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :redemand}))
   end
 
   def handle_redemand(pad_ref, state) do
@@ -64,28 +60,20 @@ defmodule Membrane.Core.Element.DemandHandler do
           Pad.ref_t(),
           size :: non_neg_integer | (non_neg_integer() -> non_neg_integer()),
           State.t()
-        ) :: {:ok, State.t()} | {{:error, any()}, State.t()}
+        ) :: State.t()
   def supply_demand(pad_ref, size, state) do
     state = update_demand(pad_ref, size, state)
     supply_demand(pad_ref, state)
   end
 
-  @spec supply_demand(
-          Pad.ref_t(),
-          State.t()
-        ) :: {:ok, State.t()} | {{:error, any()}, State.t()}
+  @spec supply_demand(Pad.ref_t(), State.t()) :: State.t()
   def supply_demand(pad_ref, %State{supplying_demand?: true} = state) do
-    state =
-      state
-      |> Map.update!(:delayed_demands, &MapSet.put(&1, {pad_ref, :supply}))
-
-    {:ok, state}
+    Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :supply}))
   end
 
   def supply_demand(pad_ref, state) do
-    with {:ok, state} <- do_supply_demand(pad_ref, state) do
-      handle_delayed_demands(state)
-    end
+    state = do_supply_demand(pad_ref, state)
+    handle_delayed_demands(state)
   end
 
   defp do_supply_demand(pad_ref, state) do
@@ -103,17 +91,8 @@ defmodule Membrane.Core.Element.DemandHandler do
       )
 
     state = PadModel.set_data!(state, pad_ref, :input_queue, new_input_queue)
-
-    with {:ok, state} <- handle_input_queue_output(pad_ref, data, state) do
-      {:ok, %State{state | supplying_demand?: false}}
-    else
-      {{:error, reason}, state} ->
-        Membrane.Logger.error("""
-        Error while supplying demand on pad #{inspect(pad_ref)} of size #{inspect(pad_data.demand)}
-        """)
-
-        {{:error, {:supply_demand, reason}}, %State{state | supplying_demand?: false}}
-    end
+    state = handle_input_queue_output(pad_ref, data, state)
+    %State{state | supplying_demand?: false}
   end
 
   @doc """
@@ -168,7 +147,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     PadModel.set_data!(state, pad_ref, :demand, new_demand)
   end
 
-  @spec handle_delayed_demands(State.t()) :: State.stateful_try_t()
+  @spec handle_delayed_demands(State.t()) :: State.t()
   defp handle_delayed_demands(%State{delayed_demands: delayed_demands} = state) do
     # Taking random element of `:delayed_demands` is done to keep data flow
     # balanced among pads, i.e. to prevent situation where demands requested by
@@ -176,20 +155,18 @@ defmodule Membrane.Core.Element.DemandHandler do
     # potentially for a long time.
     case Enum.take_random(state.delayed_demands, 1) do
       [] ->
-        {:ok, state}
+        state
 
       [{pad_ref, action} = entry] ->
         state = %State{state | delayed_demands: MapSet.delete(delayed_demands, entry)}
 
-        res =
+        state =
           case action do
             :supply -> do_supply_demand(pad_ref, state)
             :redemand -> handle_redemand(pad_ref, state)
           end
 
-        with {:ok, state} <- res do
-          handle_delayed_demands(state)
-        end
+        handle_delayed_demands(state)
     end
   end
 
@@ -197,10 +174,9 @@ defmodule Membrane.Core.Element.DemandHandler do
           Pad.ref_t(),
           [InputQueue.output_value_t()],
           State.t()
-        ) :: State.stateful_try_t()
+        ) :: State.t()
   defp handle_input_queue_output(pad_ref, data, state) do
-    data
-    |> Bunch.Enum.try_reduce(state, fn v, state ->
+    Enum.reduce(data, state, fn v, state ->
       do_handle_input_queue_output(pad_ref, v, state)
     end)
   end
@@ -209,7 +185,7 @@ defmodule Membrane.Core.Element.DemandHandler do
           Pad.ref_t(),
           InputQueue.output_value_t(),
           State.t()
-        ) :: State.stateful_try_t()
+        ) :: State.t()
   defp do_handle_input_queue_output(pad_ref, {:event, e}, state),
     do: EventController.exec_handle_event(pad_ref, e, state)
 
