@@ -13,7 +13,6 @@ defmodule Membrane.Testing.Assertions do
     quote do
       import ExUnit.Assertions
       pid_value = unquote(pid)
-
       unquote(assertion)(
         {Membrane.Testing.Pipeline, ^pid_value, unquote(pattern)},
         unquote(timeout),

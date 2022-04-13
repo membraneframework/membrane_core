@@ -116,11 +116,11 @@ defmodule Membrane.Core.BinTest do
 
       assert_playing(pipeline)
 
-      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_start_of_stream, {:sink, _}})
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_start_of_stream, :sink, _})
 
       assert_buffers_flow_through(pipeline, buffers, :test_bin)
 
-      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:sink, _}})
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, :sink, _})
       stop_pipeline(pipeline)
     end
 
@@ -143,15 +143,15 @@ defmodule Membrane.Core.BinTest do
       assert_pipeline_notified(
         pipeline,
         :test_bin,
-        {:handle_element_start_of_stream, {:filter, _}}
+        {:handle_element_start_of_stream, :filter, _}
       )
 
-      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_start_of_stream, {:sink, _}})
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_start_of_stream, :sink, _})
 
       assert_buffers_flow_through(pipeline, buffers, :test_bin)
 
-      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:filter, _}})
-      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:sink, _}})
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, :filter, _})
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, :sink, _})
       stop_pipeline(pipeline)
     end
   end
