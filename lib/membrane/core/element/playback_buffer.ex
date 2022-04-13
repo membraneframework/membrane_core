@@ -51,7 +51,7 @@ defmodule Membrane.Core.Element.PlaybackBuffer do
     with :ok <- PadModel.assert_instance(state, pad) do
       exec(msg, state)
     else
-      {:error, {:unknown_pad, _pad_ref}} -> state
+      {:error, :unknown_pad} -> state
     end
   end
 

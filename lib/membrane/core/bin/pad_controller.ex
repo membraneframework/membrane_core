@@ -46,7 +46,7 @@ defmodule Membrane.Core.Bin.PadController do
 
     state =
       case PadModel.get_data(state, pad_ref) do
-        {:error, {:unknown_pad, pad_ref}} ->
+        {:error, :unknown_pad} ->
           init_pad_data(pad_ref, info, state)
 
         # This case is for pads that were instantiated before the external link request,

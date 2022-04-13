@@ -179,7 +179,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad doesn't exist in the element", %{state: state} do
       state = state |> set_playback_state(:playing)
 
-      assert_raise MatchError, ~r/pad.*:invalid_pad_ref/i, fn ->
+      assert_raise MatchError, ~r/:unknown_pad/i, fn ->
         @module.handle_action(
           buffer_action(:invalid_pad_ref),
           :handle_other,
@@ -300,7 +300,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad doesn't exist in the element", %{state: state} do
       state = state |> set_playback_state(:playing)
 
-      assert_raise MatchError, ~r/pad.*:invalid_pad_ref/i, fn ->
+      assert_raise MatchError, ~r/:unknown_pad/i, fn ->
         @module.handle_action(
           event_action(:invalid_pad_ref),
           :handle_other,
@@ -372,7 +372,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad doesn't exist in the element", %{state: state} do
       state = state |> set_playback_state(:playing)
 
-      assert_raise MatchError, ~r/pad.*:invalid_pad_ref/i, fn ->
+      assert_raise MatchError, ~r/:unknown_pad/i, fn ->
         @module.handle_action(
           caps_action(:invalid_pad_ref),
           :handle_other,
@@ -472,7 +472,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad doesn't exist in the element", %{state: state} do
       state = state |> set_playback_state(:playing)
 
-      assert_raise MatchError, ~r/pad.*:invalid_pad_ref/i, fn ->
+      assert_raise MatchError, ~r/:unknown_pad/i, fn ->
         @module.handle_action(
           {:redemand, :invalid_pad_ref},
           :handle_other,

@@ -5,9 +5,8 @@ defmodule Membrane.Core.Child.PadModel do
 
   use Bunch
 
-  alias Bunch.Type
   alias Membrane.Core.Child
-  alias Membrane.Pad
+  alias Membrane.{Pad, UnknownPadError}
 
   @type bin_pad_data_t :: %Membrane.Bin.PadData{
           ref: Membrane.Pad.ref_t(),
@@ -66,12 +65,10 @@ defmodule Membrane.Core.Child.PadModel do
 
   @type pads_info_t :: %{Pad.name_t() => pad_info_t}
 
-  @type unknown_pad_error_t :: {:error, {:unknown_pad, Pad.name_t()}}
-
   @spec assert_instance(Child.state_t(), Pad.ref_t()) ::
-          :ok | unknown_pad_error_t
+          :ok | {:error, :unknown_pad}
   def assert_instance(%{pads_data: data}, pad_ref) when is_map_key(data, pad_ref), do: :ok
-  def assert_instance(_state, pad_ref), do: {:error, {:unknown_pad, pad_ref}}
+  def assert_instance(_state, _pad_ref), do: {:error, :unknown_pad}
 
   @spec assert_instance!(Child.state_t(), Pad.ref_t()) :: :ok
   def assert_instance!(state, pad_ref) do
@@ -84,8 +81,7 @@ defmodule Membrane.Core.Child.PadModel do
         if match?(unquote(pattern), data) do
           :ok
         else
-          {:error,
-           {:invalid_pad_data, ref: unquote(pad_ref), pattern: unquote(pattern), data: data}}
+          {:error, :no_match}
         end
       end
     end
@@ -93,7 +89,18 @@ defmodule Membrane.Core.Child.PadModel do
 
   defmacro assert_data!(state, pad_ref, pattern) do
     quote do
-      :ok = unquote(__MODULE__).assert_data(unquote(state), unquote(pad_ref), unquote(pattern))
+      pad_ref = unquote(pad_ref)
+      state = unquote(state)
+      data = unquote(__MODULE__).get_data!(state, pad_ref)
+
+      if match?(unquote(pattern), data) do
+        :ok
+      else
+        raise Membrane.PadError, """
+        Assertion on data of the pad #{inspect(pad_ref)} failed, pattern: #{unquote(Macro.to_string(pattern))}
+        Pad data: #{inspect(data, pretty: true)}
+        """
+      end
     end
   end
 
@@ -140,19 +147,23 @@ defmodule Membrane.Core.Child.PadModel do
             {:ok, unquote(FastMap.generate_get_in!(pad_data_var, keys))}
 
           _state ->
-            {:error, {:unknown_pad, pad_ref_var}}
+            {:error, :unknown_pad}
         end
       end
     end
 
     defmacro get_data!(state, pad_ref, keys \\ []) do
       keys = Bunch.listify(keys)
+
       FastMap.generate_get_in!(state, [:pads_data, pad_ref] ++ keys)
+      |> wrap_with_reraise(pad_ref, state)
     end
 
     defmacro set_data!(state, pad_ref, keys \\ [], value) do
       keys = Bunch.listify(keys)
+
       FastMap.generate_set_in!(state, [:pads_data, pad_ref] ++ keys, value)
+      |> wrap_with_reraise(pad_ref, state)
     end
 
     defmacro set_data(state, pad_ref, keys \\ [], value) do
@@ -164,7 +175,9 @@ defmodule Membrane.Core.Child.PadModel do
 
     defmacro update_data!(state, pad_ref, keys \\ [], f) do
       keys = Bunch.listify(keys)
+
       FastMap.generate_update_in!(state, [:pads_data, pad_ref] ++ keys, f)
+      |> wrap_with_reraise(pad_ref, state)
     end
 
     defmacro update_data(state, pad_ref, keys \\ [], f) do
@@ -176,7 +189,9 @@ defmodule Membrane.Core.Child.PadModel do
 
     defmacro get_and_update_data!(state, pad_ref, keys \\ [], f) do
       keys = Bunch.listify(keys)
+
       FastMap.generate_get_and_update_in!(state, [:pads_data, pad_ref] ++ keys, f)
+      |> wrap_with_reraise(pad_ref, state)
     end
 
     defmacro get_and_update_data(state, pad_ref, keys \\ [], f) do
@@ -184,12 +199,14 @@ defmodule Membrane.Core.Child.PadModel do
       |> wrap_with_pad_check(pad_ref, state)
     end
   else
+    @type unknown_pad_error_t :: {:error, :unknown_pad}
+
     @spec get_data(Child.state_t(), Pad.ref_t()) ::
             {:ok, pad_data_t() | any} | unknown_pad_error_t
     def get_data(%{pads_data: data}, pad_ref) do
       case Map.fetch(data, pad_ref) do
         {:ok, pad_data} -> {:ok, pad_data}
-        :error -> {:error, {:unknown_pad, pad_ref}}
+        :error -> {:error, :unknown_pad}
       end
     end
 
@@ -209,7 +226,7 @@ defmodule Membrane.Core.Child.PadModel do
       ~> {:ok, &1}
     end
 
-    def get_data(_state, pad_ref, _keys), do: {:error, {:unknown_pad, pad_ref}}
+    def get_data(_state, _pad_ref, _keys), do: {:error, :unknown_pad}
 
     @spec get_data!(Child.state_t(), Pad.ref_t()) :: pad_data_t | any
     def get_data!(state, pad_ref) do
@@ -224,7 +241,7 @@ defmodule Membrane.Core.Child.PadModel do
     end
 
     @spec set_data(Child.state_t(), Pad.ref_t(), keys :: atom | [atom], value :: term()) ::
-            Type.stateful_t(:ok | unknown_pad_error_t, Child.state_t())
+            Bunch.Type.stateful_t(:ok | unknown_pad_error_t, Child.state_t())
     def set_data(state, pad_ref, keys \\ [], value) do
       case assert_instance(state, pad_ref) do
         :ok ->
@@ -249,7 +266,7 @@ defmodule Membrane.Core.Child.PadModel do
             keys :: atom | [atom],
             (data -> {:ok | error, data})
           ) ::
-            Type.stateful_t(:ok | error | unknown_pad_error_t, Child.state_t())
+            Bunch.Type.stateful_t(:ok | error | unknown_pad_error_t, Child.state_t())
           when data: pad_data_t | any, error: {:error, reason :: any}
     def update_data(state, pad_ref, keys \\ [], f) do
       case assert_instance(state, pad_ref) do
@@ -276,7 +293,7 @@ defmodule Membrane.Core.Child.PadModel do
             Pad.ref_t(),
             keys :: atom | [atom],
             (data -> {success | error, data})
-          ) :: Type.stateful_t(success | error | unknown_pad_error_t, Child.state_t())
+          ) :: Bunch.Type.stateful_t(success | error | unknown_pad_error_t, Child.state_t())
           when data: pad_data_t | any, success: {:ok, data}, error: {:error, reason :: any}
     def get_and_update_data(state, pad_ref, keys \\ [], f) do
       case assert_instance(state, pad_ref) do
@@ -294,7 +311,7 @@ defmodule Membrane.Core.Child.PadModel do
             Pad.ref_t(),
             keys :: atom | [atom],
             (data -> {data, data})
-          ) :: Type.stateful_t(data, Child.state_t())
+          ) :: Bunch.Type.stateful_t(data, Child.state_t())
           when data: pad_data_t | any
     def get_and_update_data!(state, pad_ref, keys \\ [], f) do
       :ok = assert_instance(state, pad_ref)
@@ -317,22 +334,26 @@ defmodule Membrane.Core.Child.PadModel do
   end
 
   @spec pop_data(Child.state_t(), Pad.ref_t()) ::
-          Type.stateful_t({:ok, pad_data_t} | unknown_pad_error_t, Child.state_t())
+          {{:ok, pad_data_t} | {:error, :unknown_pad}, Child.state_t()}
   def pop_data(state, pad_ref) do
     with :ok <- assert_instance(state, pad_ref) do
       {data, state} = pop_in(state, [:pads_data, pad_ref])
       {{:ok, data}, state}
+    else
+      {:error, :unknown_pad} -> {{:error, :unknown_pad}, state}
     end
   end
 
-  @spec pop_data!(Child.state_t(), Pad.ref_t()) :: Type.stateful_t(pad_data_t, Child.state_t())
+  @spec pop_data!(Child.state_t(), Pad.ref_t()) :: {pad_data_t, Child.state_t()}
   def pop_data!(state, pad_ref) do
-    {{:ok, pad_data}, state} = pop_data(state, pad_ref)
-    {pad_data, state}
+    case pop_data(state, pad_ref) do
+      {{:ok, pad_data}, state} -> {pad_data, state}
+      {{:error, :unknown_pad}, state} -> raise UnknownPadError, pad: pad_ref, module: state.module
+    end
   end
 
   @spec delete_data(Child.state_t(), Pad.ref_t()) ::
-          Type.stateful_t(:ok | unknown_pad_error_t, Child.state_t())
+          {:ok | {:error, :unknown_pad}, Child.state_t()}
   def delete_data(state, pad_ref) do
     with {{:ok, _out}, state} <- pop_data(state, pad_ref) do
       {:ok, state}
@@ -341,8 +362,10 @@ defmodule Membrane.Core.Child.PadModel do
 
   @spec delete_data!(Child.state_t(), Pad.ref_t()) :: Child.state_t()
   def delete_data!(state, pad_ref) do
-    {:ok, state} = delete_data(state, pad_ref)
-    state
+    case delete_data(state, pad_ref) do
+      {:ok, state} -> state
+      {{:error, :unknown_pad}, state} -> raise UnknownPadError, pad: pad_ref, module: state.module
+    end
   end
 
   @spec constraints_met?(pad_data_t, map) :: boolean
@@ -356,7 +379,27 @@ defmodule Membrane.Core.Child.PadModel do
 
       case unquote(state) do
         %{pads_data: %{^pad_ref_var => _pad_data}} -> unquote(code)
-        state -> {{:error, {:unknown_pad, pad_ref_var}}, state}
+        state -> {{:error, :unknown_pad}, state}
+      end
+    end
+  end
+
+  defp wrap_with_reraise(code, pad_ref, state) do
+    quote do
+      try do
+        unquote(code)
+      rescue
+        e in MatchError ->
+          pad_ref = unquote(pad_ref)
+          state = unquote(state)
+
+          case unquote(__MODULE__).assert_instance(state, pad_ref) do
+            :ok ->
+              reraise e, __STACKTRACE__
+
+            {:error, :unknown_pad} ->
+              reraise UnknownPadError, [pad: pad_ref, module: state.module], __STACKTRACE__
+          end
       end
     end
   end

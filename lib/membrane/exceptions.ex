@@ -105,3 +105,18 @@ end
 defmodule Membrane.TimerError do
   defexception [:message]
 end
+
+defmodule Membrane.PadError do
+  defexception [:message]
+end
+
+defmodule Membrane.UnknownPadError do
+  defexception [:message]
+
+  @impl true
+  def exception(opts) do
+    pad = Keyword.fetch!(opts, :pad)
+    module = Keyword.fetch!(opts, :module)
+    %__MODULE__{message: "Unknown pad #{inspect(pad)} of #{inspect(module)}"}
+  end
+end
