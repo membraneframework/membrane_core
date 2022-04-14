@@ -77,12 +77,14 @@ defmodule Membrane.Core.Child.PadModel do
 
   defmacro assert_data(state, pad_ref, pattern) do
     quote do
-      with {:ok, data} <- unquote(__MODULE__).get_data(unquote(state), unquote(pad_ref)) do
-        if match?(unquote(pattern), data) do
-          :ok
-        else
-          {:error, :no_match}
-        end
+      use Bunch
+
+      withl get: {:ok, data} <- unquote(__MODULE__).get_data(unquote(state), unquote(pad_ref)),
+            match: unquote(pattern) <- data do
+        :ok
+      else
+        get: {:error, :unknown_pad} -> {:error, :unknown_pad}
+        match: _data -> {:error, :no_match}
       end
     end
   end
@@ -91,15 +93,16 @@ defmodule Membrane.Core.Child.PadModel do
     quote do
       pad_ref = unquote(pad_ref)
       state = unquote(state)
-      data = unquote(__MODULE__).get_data!(state, pad_ref)
 
-      if match?(unquote(pattern), data) do
-        :ok
-      else
-        raise Membrane.PadError, """
-        Assertion on data of the pad #{inspect(pad_ref)} failed, pattern: #{unquote(Macro.to_string(pattern))}
-        Pad data: #{inspect(data, pretty: true)}
-        """
+      case unquote(__MODULE__).get_data!(state, pad_ref) do
+        unquote(pattern) ->
+          :ok
+
+        data ->
+          raise Membrane.PadError, """
+          Assertion on data of the pad #{inspect(pad_ref)} failed, pattern: #{unquote(Macro.to_string(pattern))}
+          Pad data: #{inspect(data, pretty: true)}
+          """
       end
     end
   end
