@@ -90,10 +90,10 @@ defmodule Membrane.Integration.LinkingTest do
 
   setup do
     {:ok, pipeline} =
-      Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+      Testing.Pipeline.start_link(
         module: Pipeline,
         custom_args: %{testing_pid: self()}
-      })
+      )
 
     on_exit(fn ->
       Membrane.Pipeline.terminate(pipeline, blocking?: true)
