@@ -35,9 +35,7 @@ defmodule PipelineSynchronousCallTest do
 
   test "Pipeline should be able to reply to a call with :reply_to action" do
     {:ok, pid} =
-      Membrane.Testing.Pipeline.start_link(%Membrane.Testing.Pipeline.Options{
-        module: TestPipeline
-      })
+      Membrane.Testing.Pipeline.start_link(module: TestPipeline)
 
     reply = Pipeline.call(pid, {:postponed_reply, @msg})
     assert reply == @msg
@@ -45,9 +43,7 @@ defmodule PipelineSynchronousCallTest do
 
   test "Pipeline should be able to reply to a call with :reply action" do
     {:ok, pid} =
-      Membrane.Testing.Pipeline.start_link(%Membrane.Testing.Pipeline.Options{
-        module: TestPipeline
-      })
+      Membrane.Testing.Pipeline.start_link(module: TestPipeline)
 
     reply = Pipeline.call(pid, {:instant_reply, @msg})
     assert reply == @msg
