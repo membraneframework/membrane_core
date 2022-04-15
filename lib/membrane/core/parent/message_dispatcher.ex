@@ -63,13 +63,13 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
     cond do
       is_child_pid?(pid, state) -> ChildLifeController.handle_child_death(pid, reason, state)
       is_parent_pid?(pid, state) -> {:stop, {:shutdown, :parent_crash}, state}
-      true -> LifecycleController.handle_other(message, state)
+      true -> LifecycleController.handle_info(message, state)
     end
     |> noreply(state)
   end
 
   def handle_message(message, state) do
-    LifecycleController.handle_other(message, state)
+    LifecycleController.handle_info(message, state)
     |> noreply(state)
   end
 

@@ -412,12 +412,12 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @impl true
-  def handle_other({:exec_actions, actions}, _ctx, state) do
+  def handle_info({:exec_actions, actions}, _ctx, state) do
     {{:ok, actions}, state}
   end
 
   @impl true
-  def handle_other({:subscription, pattern}, _ctx, state) do
+  def handle_info({:subscription, pattern}, _ctx, state) do
     {:ok, %{state | matching_functions: [pattern | state.matching_functions]}}
   end
 

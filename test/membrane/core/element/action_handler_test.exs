@@ -41,7 +41,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     setup :demand_test_filter
 
     test "delaying demand", %{state: state} do
-      [{:playing, :handle_other}, {:prepared, :handle_prepared_to_playing}]
+      [{:playing, :handle_info}, {:prepared, :handle_prepared_to_playing}]
       |> Enum.each(fn {playback, callback} ->
         state = %{state | playback: %Playback{state: playback}, supplying_demand?: true}
         assert {:ok, state} = @module.handle_action({:demand, {:input, 10}}, callback, %{}, state)
@@ -54,7 +54,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert {:ok, state} =
                @module.handle_action(
                  {:demand, {:input, 10}},
-                 :handle_other,
+                 :handle_info,
                  %{},
                  %{state | supplying_demand?: true}
                )
@@ -67,13 +67,13 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       state = state |> set_playback_state(:prepared)
 
       assert_raise ActionError, ~r/prepared/, fn ->
-        @module.handle_action({:demand, {:input, 10}}, :handle_other, %{}, state)
+        @module.handle_action({:demand, {:input, 10}}, :handle_info, %{}, state)
       end
 
       state = state |> set_playback_state(:playing)
 
       assert_raise ActionError, ~r/pad :input_push.*:push mode/, fn ->
-        @module.handle_action({:demand, {:input_push, 10}}, :handle_other, %{}, state)
+        @module.handle_action({:demand, {:input_push, 10}}, :handle_info, %{}, state)
       end
     end
   end
@@ -132,20 +132,20 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/stopped/, fn ->
         @module.handle_action(
           buffer_action(:output),
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
       end
     end
 
-    test "swhen element is prepared and not moving to playing", %{state: state} do
+    test "when element is prepared and not moving to playing", %{state: state} do
       state = state |> set_playback_state(:prepared)
 
       assert_raise ActionError, ~r/prepared/, fn ->
         @module.handle_action(
           buffer_action(:output),
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -175,7 +175,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       result =
         @module.handle_action(
           buffer_action(:output),
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -190,7 +190,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/pad :invalid_pad_ref/i, fn ->
         @module.handle_action(
           buffer_action(:invalid_pad_ref),
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -207,7 +207,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/end ?of ?stream.*sent.*:output/i, fn ->
         @module.handle_action(
           buffer_action(:output),
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -221,7 +221,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/invalid buffer.*:not_a_buffer/i, fn ->
         @module.handle_action(
           {:buffer, {:output, :not_a_buffer}},
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -232,7 +232,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/invalid buffer.*:not_a_buffer/i, fn ->
         @module.handle_action(
           {:buffer, {:output, [@mock_buffer, :not_a_buffer]}},
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -248,7 +248,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       result =
         @module.handle_action(
           {:buffer, {:output, []}},
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -287,7 +287,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/stopped/, fn ->
         @module.handle_action(
           event_action(:output),
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -300,7 +300,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       result =
         @module.handle_action(
           event_action(:output),
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -315,7 +315,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/pad :invalid_pad_ref/i, fn ->
         @module.handle_action(
           event_action(:invalid_pad_ref),
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -328,7 +328,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/invalid event.*:not_an_event/i, fn ->
         @module.handle_action(
           {:event, {:output, :not_an_event}},
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -344,7 +344,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/end ?of ?stream.*sent.*:output/i, fn ->
         @module.handle_action(
           event_action(:output),
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -357,7 +357,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/pad :input.*:input direction/, fn ->
         @module.handle_action(
           event_action(:input),
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -374,7 +374,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/stopped/, fn ->
         @module.handle_action(
           caps_action(:output),
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -387,7 +387,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/pad :invalid_pad_ref/i, fn ->
         @module.handle_action(
           caps_action(:invalid_pad_ref),
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -403,7 +403,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       result =
         @module.handle_action(
           caps_action(:output),
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -421,7 +421,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/caps.*(don't|do not) match.*integer: 2/s, fn ->
         @module.handle_action(
           caps_action(:output),
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -436,7 +436,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/pad :input.*:input direction/, fn ->
         @module.handle_action(
           caps_action(:input),
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -457,7 +457,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       result =
         @module.handle_action(
           {:notify, @mock_notification},
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -474,7 +474,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/stopped/, fn ->
         @module.handle_action(
           {:redemand, :output},
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -487,7 +487,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/pad :invalid_pad_ref/i, fn ->
         @module.handle_action(
           {:redemand, :invalid_pad_ref},
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -500,7 +500,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/pad :output.*:push mode/i, fn ->
         @module.handle_action(
           {:redemand, :output},
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -517,7 +517,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       result =
         @module.handle_action(
           {:redemand, :output},
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -563,7 +563,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       result =
         @module.handle_actions(
           [notify: :a, notify: :b, redemand: :output],
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -581,7 +581,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       result =
         @module.handle_actions(
           [notify: :a, notify: :b, redemand: :output, redemand: :output],
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -597,7 +597,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_raise ActionError, ~r/redemand.*last/i, fn ->
         @module.handle_actions(
           [redemand: :output, notify: :a, notify: :b],
-          :handle_other,
+          :handle_info,
           %{},
           state
         )
@@ -611,7 +611,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       result =
         @module.handle_actions(
           [notify: :a, notify: :b],
-          :handle_other,
+          :handle_info,
           %{},
           state
         )

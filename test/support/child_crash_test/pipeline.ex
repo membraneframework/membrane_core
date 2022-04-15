@@ -36,7 +36,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
   end
 
   @impl true
-  def handle_other({:create_path, spec}, _ctx, state) do
+  def handle_info({:create_path, spec}, _ctx, state) do
     {{:ok, spec: spec}, state}
   end
 

@@ -17,7 +17,7 @@ defmodule PipelineSynchronousCallTest do
     end
 
     @impl true
-    def handle_other({{:please_reply, msg}, pid}, _ctx, state) do
+    def handle_info({{:please_reply, msg}, pid}, _ctx, state) do
       {{:ok, reply_to: {pid, msg}}, state}
     end
 
