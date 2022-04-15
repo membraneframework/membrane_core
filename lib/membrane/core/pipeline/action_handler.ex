@@ -69,6 +69,25 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
     Membrane.Core.Parent.LifecycleController.change_playback_state(playback_state, state)
   end
 
+  defp do_handle_action({:reply_to, {pid, message}}, _cb, _params, state) do
+    GenServer.reply(pid, message)
+    {:ok, state}
+  end
+
+  defp do_handle_action({:reply, message}, cb, params, state) when cb == :handle_call do
+    ctx = params.context.(state)
+    GenServer.reply(ctx.from, message)
+    {:ok, state}
+  end
+
+  defp do_handle_action({:reply, _message}, _cb, _params, state) do
+    Membrane.Logger.error(
+      ":reply action can be returned only from handle_call/3. Use :reply_to action instead."
+    )
+
+    {{:error, :invalid_action}, state}
+  end
+
   defp do_handle_action(action, callback, _params, state) do
     raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
   end

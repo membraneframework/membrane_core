@@ -96,6 +96,19 @@ defmodule Membrane.Pipeline.Action do
   Changes the playback state of the pipeline to the chosen one.
   """
 
+  @type reply_t :: {:reply, message :: any}
+  @typedoc """
+  Action that replies to a `Pipeline.call/2`. Can be returned only from the `handle_call/3` callback, in
+  which context the caller reference is available, with the `:from` key.
+  """
+
+  @type reply_to_t() :: {:reply_to, {GenServer.from(), message :: any}}
+  @typedoc """
+  Action that replies to a `Pipeline.call/2`. Useful when one does not want to reply in
+  `handle_call/3` callback. A caller reference is required to be passed, so one needs to save this
+  reference from the `handle_call/3` context, where it is available with the `:from` key.
+  """
+
   @type t ::
           forward_t
           | spec_t
@@ -105,4 +118,6 @@ defmodule Membrane.Pipeline.Action do
           | timer_interval_t
           | stop_timer_t
           | playback_t
+          | reply_t
+          | reply_to_t
 end

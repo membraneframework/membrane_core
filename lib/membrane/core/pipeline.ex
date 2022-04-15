@@ -58,12 +58,13 @@ defmodule Membrane.Core.Pipeline do
     # action_handler = get_callback_action_handler(state)
 
     CallbackHandler.exec_and_handle_callback(
-          :handle_call,
-          Membrane.Core.Pipeline.ActionHandler,
-          %{context: fn _ -> %{from: from} end},
-          [message],
-          state
-        )
-    {:reply, "Response", state}
+      :handle_call,
+      Membrane.Core.Pipeline.ActionHandler,
+      %{context: fn _ -> %{from: from} end},
+      [message],
+      state
+    )
+
+    {:noreply, state}
   end
 end

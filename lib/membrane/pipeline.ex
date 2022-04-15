@@ -189,7 +189,6 @@ defmodule Membrane.Pipeline do
               state :: state_t
             ) :: callback_return_t
 
-
   @doc """
   Callback invoked when pipeline is called using a synchronous call.
   """
@@ -305,7 +304,7 @@ defmodule Membrane.Pipeline do
   end
 
   @spec call(pid, any, integer()) :: :ok
-  def call(pipeline, message, timeout \\ 5000)do
+  def call(pipeline, message, timeout \\ 5000) do
     GenServer.call(pipeline, message, timeout)
   end
 
@@ -427,9 +426,6 @@ defmodule Membrane.Pipeline do
         defdelegate terminate(pipeline, opts \\ []), to: unquote(__MODULE__)
       end
 
-
-
-
       unless Enum.any?(1..2, &Module.defines?(__MODULE__, {:stop_and_terminate, &1})) do
         @doc """
         Changes pipeline's playback state to `:stopped` and terminates its process.
@@ -447,7 +443,6 @@ defmodule Membrane.Pipeline do
         @spec call(pid, any, timeout) :: :ok
         defdelegate call(pipeline, message, timeout), to: unquote(__MODULE__)
       end
-
     end
   end
 
