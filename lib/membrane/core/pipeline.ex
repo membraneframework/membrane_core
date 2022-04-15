@@ -7,9 +7,11 @@ defmodule Membrane.Core.Pipeline do
   alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Parent.MessageDispatcher
   alias Membrane.Core.Telemetry
+  alias Membrane.Core.Component
 
   require Membrane.Core.Telemetry
   require Membrane.Logger
+  require Membrane.Core.Component
 
   @impl GenServer
   def init({module, pipeline_options}) do
@@ -53,14 +55,11 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def handle_call(message, from, state) do
-    # context = Component.callback_context_generator(:parent, PlaybackChange, state)
-    # callback = PlaybackHandler.state_change_callback(old, new)
-    # action_handler = get_callback_action_handler(state)
-
+    context = Component.callback_context_generator([:Pipeline], Call, state, from: from)
     CallbackHandler.exec_and_handle_callback(
       :handle_call,
       Membrane.Core.Pipeline.ActionHandler,
-      %{context: fn _ -> %{from: from} end},
+      %{context: context},
       [message],
       state
     )
