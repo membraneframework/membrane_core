@@ -36,14 +36,13 @@ defmodule Membrane.Integration.DemandsTest do
   end
 
   test "Regular pipeline with proper demands" do
-    assert {:ok, pid} =
-             Pipeline.start_link(%Pipeline.Options{
-               elements: [
-                 source: Source,
-                 filter: Filter,
-                 sink: %Sink{autodemand: false}
-               ]
-             })
+    children = [
+      source: Source,
+      filter: Filter,
+      sink: %Sink{autodemand: false}
+    ]
+
+    assert {:ok, pid} = Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
 
     test_pipeline(pid)
   end
@@ -51,14 +50,13 @@ defmodule Membrane.Integration.DemandsTest do
   test "Pipeline with filter underestimating demand" do
     filter_demand_gen = fn _incoming_demand -> 2 end
 
-    assert {:ok, pid} =
-             Pipeline.start_link(%Pipeline.Options{
-               elements: [
-                 source: Source,
-                 filter: %Filter{demand_generator: filter_demand_gen},
-                 sink: %Sink{autodemand: false}
-               ]
-             })
+    children = [
+      source: Source,
+      filter: %Filter{demand_generator: filter_demand_gen},
+      sink: %Sink{autodemand: false}
+    ]
+
+    assert {:ok, pid} = Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
 
     test_pipeline(pid)
   end
@@ -77,14 +75,13 @@ defmodule Membrane.Integration.DemandsTest do
       ~> {&1, cnt + 4}
     end
 
-    assert {:ok, pid} =
-             Pipeline.start_link(%Pipeline.Options{
-               elements: [
-                 source: %Source{output: {0, actions_gen}},
-                 filter: Filter,
-                 sink: %Sink{autodemand: false}
-               ]
-             })
+    children = [
+      source: %Source{output: {0, actions_gen}},
+      filter: Filter,
+      sink: %Sink{autodemand: false}
+    ]
+
+    assert {:ok, pid} = Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
 
     test_pipeline(pid)
   end

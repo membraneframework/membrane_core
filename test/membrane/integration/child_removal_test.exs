@@ -13,7 +13,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
   test "Element can be removed when pipeline is in stopped state" do
     assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+             Testing.Pipeline.start_link(
                module: ChildRemovalTest.Pipeline,
                custom_args: %{
                  source: Testing.Source,
@@ -22,7 +22,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
                  filter3: ChildRemovalTest.Filter,
                  sink: Testing.Sink
                }
-             })
+             )
 
     Process.monitor(pipeline_pid)
 
@@ -42,7 +42,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
   test "Element can be removed when pipeline is in playing state" do
     assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+             Testing.Pipeline.start_link(
                module: ChildRemovalTest.Pipeline,
                custom_args: %{
                  source: Testing.Source,
@@ -51,7 +51,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
                  filter3: ChildRemovalTest.Filter,
                  sink: Testing.Sink
                }
-             })
+             )
 
     Process.monitor(pipeline_pid)
 
@@ -83,7 +83,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
   """
   test "When PlaybackBuffer is evaluated there is no buffers from removed element" do
     assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+             Testing.Pipeline.start_link(
                module: ChildRemovalTest.Pipeline,
                custom_args: %{
                  source: Testing.Source,
@@ -92,7 +92,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
                  filter3: %ChildRemovalTest.Filter{playing_delay: prepared_to_playing_delay()},
                  sink: Testing.Sink
                }
-             })
+             )
 
     Process.monitor(pipeline_pid)
 
