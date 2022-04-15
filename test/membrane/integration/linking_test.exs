@@ -4,7 +4,7 @@ defmodule Membrane.Integration.LinkingTest do
   import Membrane.Testing.Assertions
   import Membrane.ParentSpec
 
-  alias Membrane.Testing
+  alias Membrane.{Testing, Buffer}
 
   defmodule Bin do
     use Membrane.Bin
@@ -53,7 +53,7 @@ defmodule Membrane.Integration.LinkingTest do
 
     @impl true
     def handle_init(opts) do
-      {{:ok, playback: :playing}, %{testing_pid: opts.testing_pid}}
+      {:ok, %{testing_pid: opts.testing_pid}}
     end
 
     @impl true
@@ -69,6 +69,16 @@ defmodule Membrane.Integration.LinkingTest do
         ) do
       Enum.each(children_to_kill, &Process.exit(ctx.children[&1].pid, :kill))
       {{:ok, spec: spec}, state}
+    end
+
+    @impl true
+    def handle_other({:remove_child, child}, _ctx, state) do
+      {{:ok, remove_child: child}, state}
+    end
+
+    @impl true
+    def handle_other(_msg, _ctx, state) do
+      {:ok, state}
     end
 
     @impl true
@@ -90,6 +100,80 @@ defmodule Membrane.Integration.LinkingTest do
     end)
 
     %{pipeline: pipeline}
+  end
+
+  describe "when element is connected to a bin" do
+    test "and element is removed normally, handle_pad_removed should be called", %{
+      pipeline: pipeline
+    } do
+      spec = %Membrane.ParentSpec{
+        children: [
+          bin: %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}},
+          sink: Testing.Sink
+        ],
+        links: [
+          link(:bin) |> to(:sink)
+        ]
+      }
+
+      send(pipeline, {:start_spec, %{spec: spec}})
+      assert_receive(:spec_started)
+      Testing.Pipeline.execute_actions(pipeline, playback: :playing)
+      assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'a'})
+      assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'b'})
+      assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'c'})
+      send(pipeline, {:remove_child, :sink})
+      assert_pipeline_notified(pipeline, :bin, :handle_pad_removed)
+    end
+
+    test "and element crashes, bin forwards the unlink message to child", %{pipeline: pipeline} do
+      bin_spec = %Membrane.ParentSpec{
+        children: [
+          bin: %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}
+        ],
+        crash_group: {:group_1, :temporary}
+      }
+
+      sink_spec = %Membrane.ParentSpec{
+        children: [
+          sink: Testing.Sink
+        ],
+        crash_group: {:group_2, :temporary}
+      }
+
+      links_spec = %Membrane.ParentSpec{
+        links: [
+          link(:bin) |> to(:sink)
+        ]
+      }
+
+      send(pipeline, {:start_spec, %{spec: bin_spec}})
+      assert_receive(:spec_started)
+      send(pipeline, {:start_spec, %{spec: sink_spec}})
+      assert_receive(:spec_started)
+      sink_pid = get_child_pid(:sink, pipeline)
+      send(pipeline, {:start_spec, %{spec: links_spec}})
+      assert_receive(:spec_started)
+      bin_pid = get_child_pid(:bin, pipeline)
+      source_pid = get_child_pid(:source, bin_pid)
+      source_ref = Process.monitor(source_pid)
+      Testing.Pipeline.execute_actions(pipeline, playback: :playing)
+
+      assert_pipeline_playback_changed(pipeline, _, :playing)
+      Process.exit(sink_pid, :kill)
+      assert_pipeline_crash_group_down(pipeline, :group_2)
+
+      # Source has a static pad so it should crash when this pad is being unlinked while being
+      # in playing state. If source crashes with proper error it means that :handle_unlink message
+      # has been properly forwarded by a bin.
+      assert_receive(
+        {:DOWN, ^source_ref, :process, ^source_pid,
+         {%Membrane.LinkError{
+            message:
+              "Tried to unlink static pad output while :source was in or was transitioning to playback state playing."
+          }, _localization}}
+      )
+    end
   end
 
   test "element should crash when its neighbor connected via static pad crashes", %{
@@ -188,7 +272,12 @@ defmodule Membrane.Integration.LinkingTest do
     assert_receive(:spec_started)
     send(pipeline, {:start_spec, %{spec: links_spec}})
     assert_receive(:spec_started)
-
+    Testing.Pipeline.execute_actions(pipeline, playback: :playing)
     assert_pipeline_playback_changed(pipeline, _, :playing)
+  end
+
+  defp get_child_pid(ref, parent_pid) do
+    state = :sys.get_state(parent_pid)
+    state.children[ref].pid
   end
 end
