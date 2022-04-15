@@ -4,5 +4,5 @@ defmodule Membrane.Pipeline.CallbackContext.Call do
   pipeline is called with a synchronous call.
   """
   use Membrane.Core.Pipeline.CallbackContext,
-  from: [GenServer.from()]
+    from: [GenServer.from()]
 end

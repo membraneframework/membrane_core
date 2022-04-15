@@ -56,6 +56,7 @@ defmodule Membrane.Core.Pipeline do
   @impl GenServer
   def handle_call(message, from, state) do
     context = Component.callback_context_generator([:Pipeline], Call, state, from: from)
+
     CallbackHandler.exec_and_handle_callback(
       :handle_call,
       Membrane.Core.Pipeline.ActionHandler,
