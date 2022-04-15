@@ -189,6 +189,17 @@ defmodule Membrane.Pipeline do
               state :: state_t
             ) :: callback_return_t
 
+
+  @doc """
+  Callback invoked when pipeline is called using a synchronous call.
+  """
+  @callback handle_call(
+              message :: any,
+              context :: CallbackContext.Call.t(),
+              state :: state_t
+            ) ::
+              callback_return_t
+
   @optional_callbacks handle_init: 1,
                       handle_shutdown: 2,
                       handle_stopped_to_prepared: 2,
@@ -202,7 +213,8 @@ defmodule Membrane.Pipeline do
                       handle_element_end_of_stream: 3,
                       handle_notification: 4,
                       handle_tick: 3,
-                      handle_crash_group_down: 3
+                      handle_crash_group_down: 3,
+                      handle_call: 3
 
   @doc """
   Starts the Pipeline based on given module and links it to the current
@@ -290,6 +302,11 @@ defmodule Membrane.Pipeline do
     if blocking?,
       do: wait_for_down(ref, timeout),
       else: :ok
+  end
+
+  @spec call(pid, any, integer()) :: :ok
+  def call(pipeline, message, timeout \\ 5000)do
+    GenServer.call(pipeline, message, timeout)
   end
 
   defp wait_for_down(ref, timeout) do
@@ -410,6 +427,9 @@ defmodule Membrane.Pipeline do
         defdelegate terminate(pipeline, opts \\ []), to: unquote(__MODULE__)
       end
 
+
+
+
       unless Enum.any?(1..2, &Module.defines?(__MODULE__, {:stop_and_terminate, &1})) do
         @doc """
         Changes pipeline's playback state to `:stopped` and terminates its process.
@@ -419,6 +439,15 @@ defmodule Membrane.Pipeline do
         def stop_and_terminate(pipeline, opts \\ []),
           do: Membrane.Pipeline.terminate(pipeline, opts)
       end
+
+      unless Module.defines?(__MODULE__, {:call, 3}) do
+        @doc """
+        Synchronously calls the pipeline
+        """
+        @spec call(pid, any, timeout) :: :ok
+        defdelegate call(pipeline, message, timeout), to: unquote(__MODULE__)
+      end
+
     end
   end
 
@@ -498,6 +527,9 @@ defmodule Membrane.Pipeline do
       @impl true
       def handle_crash_group_down(_group_name, _ctx, state), do: {:ok, state}
 
+      @impl true
+      def handle_call(message, _ctx, state), do: {:ok, state}
+
       defoverridable handle_init: 1,
                      handle_shutdown: 2,
                      handle_stopped_to_prepared: 2,
@@ -510,7 +542,8 @@ defmodule Membrane.Pipeline do
                      handle_element_start_of_stream: 3,
                      handle_element_end_of_stream: 3,
                      handle_notification: 4,
-                     handle_crash_group_down: 3
+                     handle_crash_group_down: 3,
+                     handle_call: 3
     end
   end
 end

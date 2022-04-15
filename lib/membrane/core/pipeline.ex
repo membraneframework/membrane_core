@@ -50,4 +50,20 @@ defmodule Membrane.Core.Pipeline do
 
     :ok = state.module.handle_shutdown(reason, state.internal_state)
   end
+
+  @impl GenServer
+  def handle_call(message, from, state) do
+    # context = Component.callback_context_generator(:parent, PlaybackChange, state)
+    # callback = PlaybackHandler.state_change_callback(old, new)
+    # action_handler = get_callback_action_handler(state)
+
+    CallbackHandler.exec_and_handle_callback(
+          :handle_call,
+          Membrane.Core.Pipeline.ActionHandler,
+          %{context: fn _ -> %{from: from} end},
+          [message],
+          state
+        )
+    {:reply, "Response", state}
+  end
 end

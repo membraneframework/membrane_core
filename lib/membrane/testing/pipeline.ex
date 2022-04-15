@@ -406,6 +406,20 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
+  def handle_call(message, ctx, state) do
+    {custom_actions, custom_state} =
+      eval_injected_module_callback(
+        :handle_call,
+        [message, ctx],
+        state
+      )
+
+    :ok = notify_test_process(state.test_process, {:handle_call, message})
+
+    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
+  end
+
+  @impl true
   def handle_element_start_of_stream(endpoint, ctx, state) do
     {custom_actions, custom_state} =
       eval_injected_module_callback(

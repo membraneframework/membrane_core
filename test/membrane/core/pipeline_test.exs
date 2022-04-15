@@ -113,4 +113,6 @@ defmodule Membrane.Core.PipelineTest do
     Testing.Pipeline.execute_actions(pid, playback: :playing)
     assert_pipeline_playback_changed(pid, :prepared, :playing)
   end
+
+
 end
