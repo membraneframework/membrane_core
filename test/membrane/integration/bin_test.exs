@@ -296,7 +296,6 @@ defmodule Membrane.Core.BinTest do
         Testing.Pipeline.start_link(
           links: Membrane.ParentSpec.link_linear(children)
         )
-
       Testing.Pipeline.execute_actions(pipeline, notify_child: {:test_bin, "Some notification"})
       assert_pipeline_notified(pipeline, :test_bin, msg)
       assert msg == {"filter1", "Some notification"}
