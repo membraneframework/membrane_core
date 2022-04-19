@@ -287,15 +287,16 @@ defmodule Membrane.Core.BinTest do
 
     test "handle_parent_notification/3 works for Bin" do
       buffers = ['a', 'b', 'c']
+
       children = [
         source: %Testing.Source{output: buffers},
         test_bin: TestBins.NotifyingParentBin,
         sink: Testing.Sink
       ]
+
       {:ok, pipeline} =
-        Testing.Pipeline.start_link(
-          links: Membrane.ParentSpec.link_linear(children)
-        )
+        Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
+
       Testing.Pipeline.execute_actions(pipeline, notify_child: {:test_bin, "Some notification"})
       assert_pipeline_notified(pipeline, :test_bin, msg)
       assert msg == {"filter1", "Some notification"}
