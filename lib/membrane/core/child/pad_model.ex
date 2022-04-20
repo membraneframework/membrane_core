@@ -365,10 +365,8 @@ defmodule Membrane.Core.Child.PadModel do
 
   @spec delete_data!(Child.state_t(), Pad.ref_t()) :: Child.state_t()
   def delete_data!(state, pad_ref) do
-    case delete_data(state, pad_ref) do
-      {:ok, state} -> state
-      {{:error, :unknown_pad}, state} -> raise UnknownPadError, pad: pad_ref, module: state.module
-    end
+    {_data, state} = pop_data!(state, pad_ref)
+    state
   end
 
   @spec constraints_met?(pad_data_t, map) :: boolean
