@@ -172,7 +172,6 @@ defmodule Membrane.Core.CallbackHandler do
         e ->
           Membrane.Logger.error("""
           Error handling actions returned by callback #{inspect(state.module)}.#{callback}
-          State: #{inspect(new_internal_state, pretty: true)}
           """)
 
           reraise e, __STACKTRACE__
@@ -185,7 +184,6 @@ defmodule Membrane.Core.CallbackHandler do
         e ->
           Membrane.Logger.error("""
           Error handling action #{inspect(action)} returned by callback #{inspect(state.module)}.#{callback}
-          State: #{inspect(new_internal_state, pretty: true)}
           """)
 
           reraise e, __STACKTRACE__

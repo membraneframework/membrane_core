@@ -20,7 +20,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
 
   defp do_handle_action({action, _args}, :handle_init, _params, state)
        when action not in [:spec, :log_metadata, :playback] do
-    {{:error, :invalid_action}, state}
+    {{:error, :unknown_action}, state}
   end
 
   defp do_handle_action({:forward, children_messages}, _cb, _params, state) do
@@ -62,6 +62,6 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   defp do_handle_action(_action, _callback, _params, state) do
-    {{:error, :invalid_action}, state}
+    {{:error, :unknown_action}, state}
   end
 end

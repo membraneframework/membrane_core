@@ -5,7 +5,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
   alias Membrane.ActionError
   alias Membrane.Core.{Message, Parent, TimerController}
   alias Membrane.Core.Bin.State
-  alias Membrane.{CallbackError, Notification, ParentSpec}
+  alias Membrane.{Notification, ParentSpec}
 
   require Membrane.Logger
   require Message
@@ -63,8 +63,8 @@ defmodule Membrane.Core.Bin.ActionHandler do
     {:ok, state}
   end
 
-  defp do_handle_action(action, callback, _params, state) do
-    raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
+  defp do_handle_action(_action, _callback, _params, state) do
+    {{:error, :unknown_action}, state}
   end
 
   @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}

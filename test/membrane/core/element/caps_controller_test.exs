@@ -54,8 +54,8 @@ defmodule Membrane.Core.Element.CapsControllerTest do
 
   describe "handle_caps for pull pad" do
     test "with empty input_queue", %{state: state} do
-      @module.handle_caps(:input, %MockCaps{}, state)
-      assert true
+      assert PadModel.set_data!(state, :input, :caps, %MockCaps{}) ==
+               @module.handle_caps(:input, %MockCaps{}, state)
     end
 
     test "with input_queue containing one buffer", %{state: state} do

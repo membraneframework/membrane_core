@@ -27,17 +27,6 @@ defmodule Membrane.CallbackError do
     %__MODULE__{message: msg}
   end
 
-  defp mk_exception(:invalid_action, {module, fun}, opts) do
-    action = Keyword.fetch!(opts, :action)
-
-    msg = """
-    Invalid action returned from #{inspect(module)}.#{to_string(fun)}:
-    #{inspect(action, pretty: true)}\
-    """
-
-    %__MODULE__{message: msg}
-  end
-
   defp mk_exception(:error, {module, fun}, opts) do
     reason = Keyword.fetch!(opts, :reason)
 
