@@ -81,17 +81,14 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:split, {callback, args_list}}, cb, params, state) do
-    state =
-      CallbackHandler.exec_and_handle_splitted_callback(
-        callback,
-        cb,
-        __MODULE__,
-        params |> Map.merge(%{skip_invoking_redemands: true}),
-        args_list,
-        state
-      )
-
-    state
+    CallbackHandler.exec_and_handle_splitted_callback(
+      callback,
+      cb,
+      __MODULE__,
+      params |> Map.merge(%{skip_invoking_redemands: true}),
+      args_list,
+      state
+    )
   end
 
   @impl CallbackHandler
