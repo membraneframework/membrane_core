@@ -76,7 +76,7 @@ defmodule Membrane.Core.Bin do
   """
   @spec stop_and_terminate(bin :: pid) :: :ok
   def stop_and_terminate(bin) do
-    Message.send(bin, :stop_and_terminate)
+    Message.send(bin, :terminate)
     :ok
   end
 

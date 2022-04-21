@@ -2,13 +2,20 @@
 
 ## 0.10.0
  * Remove all deprecated stuff [#399](https://github.com/membraneframework/membrane_core/pull/399)
+ * Make `Membrane.Pipeline.{prepare, play, stop}` deprecated and add `:playback` action instead
+ * Make `Membrane.Pipeline.stop_and_terminate/2` deprecated and add `Membrane.Pipeline.terminate/2` instead
+ * Add `Membrane.RemoteControlled.Pipeline` - a basic implementation of a `Membrane.Pipeline` that </br> 
+   can be spawned and controlled by an external process [#366](https://github.com/membraneframework/membrane_core/pull/366)  
  * Disallow sending buffers without sending caps first [#341](https://github.com/membraneframework/membrane_core/issues/341)
+ * Refine the `Membrane.Testing.Pipeline` API - deprecate the `Membrane.Testing.Pipeline.Options` usage, use keyword list as options in `Membrane.Testing.Pipeline.start/1` and `Membrane.Testing.Pipeline.start_link/1`
  * Add `Membrane.FilterAggregator` that allows to run multiple filters sequentially within one process. [#355](https://github.com/membraneframework/membrane_core/pull/355)
 
 ## 0.9.0
  * Automatic demands [#313](https://github.com/membraneframework/membrane_core/pull/313)
  * Stop forwarding notifications by default in bins [#358](https://github.com/membraneframework/membrane_core/pull/358)
  * More fine-grained control over emitted metrics [#365](https://github.com/membraneframework/membrane_core/pull/365)
+
+ ### PRs not influencing public API:
  * Added log metadata when reporting init in telemetry [#376](https://github.com/membraneframework/membrane_core/pull/376)
  * Fix generation of pad documentation inside an element [#377](https://github.com/membraneframework/membrane_core/pull/377)
  * Leaving static pads unlinked and transiting to a playback state other than `:stopped` will result

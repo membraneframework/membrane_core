@@ -13,28 +13,26 @@ defmodule Membrane.Integration.SyncTest.TickingPace do
     actual_report_interval = 100
     reported_interval = 300
 
+    children = [
+      source: %Sync.Source{
+        tick_interval: tick_interval |> Time.milliseconds(),
+        test_process: self()
+      },
+      sink: Sync.Sink
+    ]
+
     assert {:ok, pipeline} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-               elements: [
-                 source: %Sync.Source{
-                   tick_interval: tick_interval |> Time.milliseconds(),
-                   test_process: self()
-                 },
-                 sink: Sync.Sink
-               ]
-             })
+             Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
 
     %{synchronization: %{clock_provider: %{clock: original_clock, provider: :sink}}} =
       :sys.get_state(pipeline)
-
-    Testing.Pipeline.play(pipeline)
 
     for _ <- 1..tries do
       send(original_clock, {:membrane_clock_update, reported_interval})
       Process.sleep(actual_report_interval)
     end
 
-    Testing.Pipeline.stop_and_terminate(pipeline)
+    Testing.Pipeline.terminate(pipeline)
 
     ticks_amount = Sync.Helper.receive_ticks()
 

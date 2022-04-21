@@ -13,7 +13,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
   test "Element can be removed when pipeline is in stopped state" do
     assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+             Testing.Pipeline.start_link(
                module: ChildRemovalTest.Pipeline,
                custom_args: %{
                  source: Testing.Source,
@@ -22,7 +22,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
                  filter3: ChildRemovalTest.Filter,
                  sink: Testing.Sink
                }
-             })
+             )
 
     Process.monitor(pipeline_pid)
 
@@ -42,7 +42,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
   test "Element can be removed when pipeline is in playing state" do
     assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+             Testing.Pipeline.start_link(
                module: ChildRemovalTest.Pipeline,
                custom_args: %{
                  source: Testing.Source,
@@ -51,15 +51,13 @@ defmodule Membrane.Integration.ChildRemovalTest do
                  filter3: ChildRemovalTest.Filter,
                  sink: Testing.Sink
                }
-             })
+             )
 
     Process.monitor(pipeline_pid)
 
     [filter_pid1, filter_pid2, filter_pid3] =
       [:filter1, :filter2, :filter3]
       |> Enum.map(&get_filter_pid(&1, pipeline_pid))
-
-    :ok = Pipeline.play(pipeline_pid)
 
     assert_pipeline_playback_changed(pipeline_pid, _, :playing)
     assert_pipeline_notified(pipeline_pid, :filter1, :playing)
@@ -85,7 +83,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
   """
   test "When PlaybackBuffer is evaluated there is no buffers from removed element" do
     assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+             Testing.Pipeline.start_link(
                module: ChildRemovalTest.Pipeline,
                custom_args: %{
                  source: Testing.Source,
@@ -94,7 +92,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
                  filter3: %ChildRemovalTest.Filter{playing_delay: prepared_to_playing_delay()},
                  sink: Testing.Sink
                }
-             })
+             )
 
     Process.monitor(pipeline_pid)
 
@@ -102,7 +100,6 @@ defmodule Membrane.Integration.ChildRemovalTest do
       [:filter1, :filter2, :filter3]
       |> Enum.map(&get_filter_pid(&1, pipeline_pid))
 
-    assert Pipeline.play(pipeline_pid) == :ok
     assert_pipeline_playback_changed(pipeline_pid, _, :playing)
     assert_pipeline_notified(pipeline_pid, :filter1, :playing)
     assert_pipeline_notified(pipeline_pid, :filter2, :playing)
@@ -122,7 +119,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
   #############
 
   defp stop_pipeline(pid) do
-    assert Pipeline.stop_and_terminate(pid) == :ok
+    assert Pipeline.terminate(pid) == :ok
     assert_pid_dead(pid)
   end
 

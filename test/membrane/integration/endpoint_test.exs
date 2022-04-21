@@ -14,8 +14,8 @@ defmodule Membrane.Core.EndpointTest do
       buffers = ['a', 'b', 'c']
 
       {:ok, pipeline} =
-        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          elements: [
+        Testing.Pipeline.start_link(
+          children: [
             endpoint: %Testing.Endpoint{output: buffers},
             filter: TestFilter
           ],
@@ -23,7 +23,7 @@ defmodule Membrane.Core.EndpointTest do
             link(:endpoint) |> to(:filter),
             link(:filter) |> to(:endpoint)
           ]
-        })
+        )
 
       assert_data_flows_through(pipeline, buffers, :endpoint)
     end
@@ -32,8 +32,8 @@ defmodule Membrane.Core.EndpointTest do
       buffers = ['a', 'b', 'c']
 
       {:ok, pipeline} =
-        Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-          elements: [
+        Testing.Pipeline.start_link(
+          children: [
             endpoint: %Testing.Endpoint{output: buffers},
             filter1: TestFilter,
             filter2: TestFilter,
@@ -45,15 +45,13 @@ defmodule Membrane.Core.EndpointTest do
             link(:filter2) |> to(:filter3),
             link(:filter3) |> to(:endpoint)
           ]
-        })
+        )
 
       assert_data_flows_through(pipeline, buffers, :endpoint)
     end
   end
 
   defp assert_data_flows_through(pipeline, buffers, receiving_element) do
-    :ok = Testing.Pipeline.play(pipeline)
-
     assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
     assert_pipeline_playback_changed(pipeline, :prepared, :playing)
 
@@ -65,6 +63,6 @@ defmodule Membrane.Core.EndpointTest do
     end)
 
     assert_end_of_stream(pipeline, ^receiving_element)
-    Testing.Pipeline.stop_and_terminate(pipeline, blocking?: true)
+    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 end
