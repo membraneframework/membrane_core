@@ -21,9 +21,11 @@ defmodule Membrane.FilterAggregator do
 
   def_input_pad :input,
     caps: :any,
+    demand_mode: :auto,
     demand_unit: :buffers
 
   def_output_pad :output,
+    demand_mode: :auto,
     caps: :any
 
   @impl true
@@ -119,33 +121,11 @@ defmodule Membrane.FilterAggregator do
   end
 
   @impl true
-  def handle_demand(:output, size, :buffers, _ctx, %{states: states}) do
-    {actions, states} = pipe_upstream([demand: {:input, size}], states)
-    actions = reject_internal_actions(actions)
-    {{:ok, actions}, %{states: states}}
-  end
-
-  @impl true
   def handle_process_list(:input, buffers, _ctx, %{states: states}) do
     {actions, states} = pipe_downstream([buffer: {:output, buffers}], states)
     actions = reject_internal_actions(actions)
 
     {{:ok, actions}, %{states: states}}
-  end
-
-  # Takes actions received from the downstream elements (closer to sink) and performs them on elements from last to first,
-  # i.e. in opposite direction to the data flow
-  defp pipe_upstream(downstream_actions, states) do
-    {states, actions} =
-      states
-      |> Enum.reverse()
-      |> Enum.map_reduce(downstream_actions, fn {name, module, context, state}, actions ->
-        {actions, next_context, next_state} = perform_actions(actions, module, context, state, [])
-
-        {{name, module, next_context, next_state}, actions}
-      end)
-
-    {actions, Enum.reverse(states)}
   end
 
   # Takes actions received from the upstream elements (closer to source) and performs them on elements from first to last,
@@ -262,20 +242,12 @@ defmodule Membrane.FilterAggregator do
     module.handle_end_of_stream(:input, cb_context, state)
   end
 
-  defp perform_action({:demand, {:input, size}}, module, context, state) do
-    cb_context =
-      context
-      |> Map.put(:incoming_demand, size)
-      |> then(&struct!(CallbackContext.Demand, &1))
-
-    # If downstream demands on input, we'd receive that on output
-    # TODO: how to handle demand size unit
-    module.handle_demand(:output, size, :buffers, cb_context, state)
+  defp perform_action({:demand, {:input, _size}}, _module, _context, _state) do
+    raise "Demands are not supported by #{inspect(__MODULE__)}"
   end
 
-  defp perform_action({:redemand, :output}, _module, _context, state) do
-    # Pass the action downstream, it may come back as a handle_demand call in the FilterAggregator
-    {{:ok, redemand: :output}, state}
+  defp perform_action({:redemand, :output}, _module, _context, _state) do
+    raise "Demands are not supported by #{inspect(__MODULE__)}"
   end
 
   defp perform_action({:notify, message}, _module, _context, state) do
@@ -311,19 +283,7 @@ defmodule Membrane.FilterAggregator do
         {result, {acc_context, state}}
       end)
 
-    # instead of redemands from split callback calls, put one after all other actions
-    actions =
-      actions
-      |> Enum.split_with(fn
-        {:redemand, _pad} -> true
-        _other -> false
-      end)
-      |> case do
-        {[], actions} -> actions ++ [merge_context: context]
-        {_redemands, actions} -> actions ++ [merge_context: context, redemand: :output]
-      end
-
-    {{:ok, actions}, state}
+    {{:ok, actions ++ [merge_context: context]}, state}
   end
 
   # Internal, FilterAggregator actions used to trigger playback state change with a proper callback

@@ -10,9 +10,7 @@ defmodule Membrane.FilterAggregatorTest do
 
   alias Membrane.Element.CallbackContext.{
     Caps,
-    Demand,
     Event,
-    Other,
     PlaybackChange,
     Process,
     StreamManagement
@@ -150,7 +148,7 @@ defmodule Membrane.FilterAggregatorTest do
     |> Enum.each(fn {pad, pad_data} ->
       assert pad_data.accepted_caps == :any
       assert pad_data.availability == :always
-      assert pad_data.demand == 0
+      assert pad_data.demand == nil
       assert pad_data.direction == pad
       assert pad_data.start_of_stream? == false
       assert pad_data.end_of_stream? == false
@@ -248,13 +246,14 @@ defmodule Membrane.FilterAggregatorTest do
   test "handle_process_list splitting and mapping buffers", ctx do
     test_range = 1..10
     buffers = test_range |> Enum.map(&%Buffer{payload: <<&1>>})
+    buffers_count = Enum.count(test_range)
 
-    expect(FilterA, :handle_process_list, fn :input, buffers, _ctx, %{module: FilterA} = state ->
+    FilterA
+    |> expect(:handle_process_list, fn :input, buffers, %Process{}, %{module: FilterA} = state ->
       args_list = buffers |> Enum.map(&[:input, &1])
       {{:ok, split: {:handle_process, args_list}}, state}
     end)
-
-    expect(FilterA, :handle_process, Enum.count(test_range), fn :input, buffer, _ctx, state ->
+    |> expect(:handle_process, buffers_count, fn :input, buffer, %Process{}, state ->
       assert state.module == FilterA
       assert %Buffer{payload: <<payload>>} = buffer
       out_payload = payload + 1
@@ -262,7 +261,8 @@ defmodule Membrane.FilterAggregatorTest do
       {{:ok, buffer: {:output, %Buffer{payload: <<out_payload>>}}}, state}
     end)
 
-    expect(FilterB, :handle_process, Enum.count(test_range), fn :input, buffer, _ctx, state ->
+    FilterB
+    |> expect(:handle_process_list, buffers_count, fn :input, [buffer], %Process{}, state ->
       assert state.module == FilterB
       assert %Buffer{payload: <<payload>>} = buffer
       out_payload = payload * 2
@@ -287,95 +287,7 @@ defmodule Membrane.FilterAggregatorTest do
     assert state_a == test_range |> Enum.map(&(&1 + 1)) |> Enum.sum()
     assert state_b == test_range |> Enum.map(&((&1 + 1) * 2)) |> Enum.sum()
 
-    assert ctx_a.pads.input.demand == -10
-    assert ctx_a.pads.output.demand == -10
-    assert ctx_b.pads.input.demand == -10
-    assert ctx_b.pads.output.demand == -10
-  end
-
-  test "handle_process with redemands", ctx do
-    test_range = 1..10
-    buffers = test_range |> Enum.map(&%Buffer{payload: <<&1>>})
-
-    expect(FilterA, :handle_process_list, fn :input, buffers, _ctx, %{module: FilterA} = state ->
-      args_list = buffers |> Enum.map(&[:input, &1])
-      {{:ok, split: {:handle_process, args_list}}, state}
-    end)
-
-    expect(FilterA, :handle_process, Enum.count(test_range), fn :input, buffer, _ctx, state ->
-      assert state.module == FilterA
-      assert %Buffer{payload: <<payload>>} = buffer
-      out_payload = payload + 1
-      state = %{state | state: (state.state || 0) + out_payload}
-
-      # Accumulate 3 first, modified buffers, send as one using accumulated state, the rest pass with modified payload
-      cond do
-        payload < 3 -> {{:ok, redemand: :output}, state}
-        payload == 3 -> {{:ok, buffer: {:output, %Buffer{payload: <<state.state>>}}}, state}
-        payload > 3 -> {{:ok, buffer: {:output, %Buffer{payload: <<out_payload>>}}}, state}
-      end
-    end)
-
-    expect(FilterB, :handle_process, Enum.count(3..10), fn :input, buffer, _ctx, state ->
-      assert state.module == FilterB
-      assert %Buffer{payload: <<payload>>} = buffer
-      out_payload = payload * 2
-      state = %{state | state: (state.state || 0) + out_payload}
-      {{:ok, buffer: {:output, %Buffer{payload: <<out_payload>>}}}, state}
-    end)
-
-    assert {{:ok, actions}, %{states: states}} =
-             TestedModule.handle_process_list(:input, buffers, %{}, %{states: ctx.states})
-
-    accumulated_buffer = {:buffer, {:output, %Buffer{payload: <<(2 + 3 + 4) * 2>>}}}
-
-    regular_actions =
-      4..10
-      |> Enum.map(&{:buffer, {:output, %Buffer{payload: <<(&1 + 1) * 2>>}}})
-
-    expected_actions = [accumulated_buffer | regular_actions] ++ [redemand: :output]
-
-    assert actions == expected_actions
-
-    assert [
-             {:a, FilterA, ctx_a, %{module: FilterA, state: state_a}},
-             {:b, FilterB, ctx_b, %{module: FilterB, state: state_b}}
-           ] = states
-
-    assert state_a == test_range |> Enum.map(&(&1 + 1)) |> Enum.sum()
-    assert state_b == test_range |> Enum.map(&((&1 + 1) * 2)) |> Enum.sum()
-  end
-
-  test "handle_demand", ctx do
-    incoming_demand = 10
-
-    expect(FilterB, :handle_demand, fn :output, demand, :buffers, _ctx, state ->
-      assert state.module == FilterB
-      assert demand == incoming_demand
-      out_demand = demand * 2
-      state = %{state | state: "B"}
-      {{:ok, demand: {:input, out_demand}}, state}
-    end)
-
-    expect(FilterA, :handle_demand, fn :output, demand, :buffers, _ctx, state ->
-      assert state.module == FilterA
-      out_demand = demand + 1
-      state = %{state | state: "A"}
-      {{:ok, demand: {:input, out_demand}}, state}
-    end)
-
-    assert {{:ok, actions}, %{states: states}} =
-             TestedModule.handle_demand(:output, incoming_demand, :buffers, %{}, %{
-               states: ctx.states
-             })
-
-    assert actions == [demand: {:input, incoming_demand * 2 + 1}]
-    assert [{:a, FilterA, ctx_a, state_a}, {:b, FilterB, ctx_b, state_b}] = states
-    assert state_a == %{module: FilterA, state: "A"}
-    assert state_b == %{module: FilterB, state: "B"}
-    assert ctx_b.pads.output.demand == incoming_demand
-    assert ctx_b.pads.input.demand == incoming_demand * 2
-    assert ctx_a.pads.output.demand == incoming_demand * 2
-    assert ctx_a.pads.input.demand == incoming_demand * 2 + 1
+    assert ctx_a == ctx.states |> Enum.at(0) |> elem(2)
+    assert ctx_b == ctx.states |> Enum.at(1) |> elem(2)
   end
 end

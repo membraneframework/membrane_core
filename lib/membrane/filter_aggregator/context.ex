@@ -43,7 +43,7 @@ defmodule Membrane.FilterAggregator.Context do
     |> Map.merge(%{
       accepted_caps: pad_description.caps,
       caps: nil,
-      demand: 0,
+      demand: nil,
       start_of_stream?: false,
       end_of_stream?: false,
       ref: pad_description.name,
@@ -81,16 +81,6 @@ defmodule Membrane.FilterAggregator.Context do
   end
 
   @spec before_incoming_action(t(), action :: any()) :: t()
-  def before_incoming_action(context, {:buffer, {:output, buffers}}) do
-    buf_size =
-      Membrane.Buffer.Metric.from_unit(context.pads.input.demand_unit).buffers_size(
-        buffers
-        |> List.wrap()
-      )
-
-    put_in(context.pads.input.demand, context.pads.input.demand - buf_size)
-  end
-
   def before_incoming_action(context, {:caps, {:output, _caps}}) do
     context
   end
@@ -101,11 +91,6 @@ defmodule Membrane.FilterAggregator.Context do
 
   def before_incoming_action(context, {:end_of_stream, :output}) do
     put_in(context.pads.input.end_of_stream?, true)
-  end
-
-  def before_incoming_action(context, {:demand, {:input, size}}) do
-    current_demand = context.pads.output.demand
-    put_in(context.pads.output.demand, current_demand + size)
   end
 
   def before_incoming_action(context, _action) do
@@ -127,16 +112,6 @@ defmodule Membrane.FilterAggregator.Context do
   end
 
   @spec after_out_action(t(), action :: any()) :: t()
-  def after_out_action(context, {:buffer, {:output, buffers}}) do
-    buf_size =
-      Membrane.Buffer.Metric.from_unit(context.pads.output.other_demand_unit).buffers_size(
-        buffers
-        |> List.wrap()
-      )
-
-    put_in(context.pads.output.demand, context.pads.output.demand - buf_size)
-  end
-
   def after_out_action(context, {:caps, {:input, caps}}) do
     put_in(context.pads.input.caps, caps)
   end
@@ -151,11 +126,6 @@ defmodule Membrane.FilterAggregator.Context do
 
   def after_out_action(context, {:end_of_stream, :output}) do
     put_in(context.pads.output.end_of_stream?, true)
-  end
-
-  def after_out_action(context, {:demand, {:input, size}}) do
-    current_demand = context.pads.input.demand
-    put_in(context.pads.input.demand, current_demand + size)
   end
 
   def after_out_action(context, action)
