@@ -50,7 +50,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
       end
 
     source_ref = Process.monitor(source_pid)
-
+    assert_pipeline_playback_changed pipeline, _, :playing
     Pipeline.message_child(pipeline, :source, :send_buffer)
     assert_receive {:DOWN, ^source_ref, :process, ^source_pid, {reason, _stack_trace}}
     assert %Membrane.ActionError{message: action_error_msg} = reason
