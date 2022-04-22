@@ -466,18 +466,15 @@ defmodule Membrane.ParentSpec do
 
   @doc """
   Links subsequent children using default pads (linking `:input` to `:output` of
-  previous element).
+  previous element). The list of children must consist at least of 2 elements.
 
   ## Example
 
       Membrane.ParentSpec.link_linear([el1: MembraneElement1, el2: MembraneElement2])
   """
   @spec link_linear(children :: [child_spec_t()]) :: links_spec_t()
-  def link_linear([]) do
-    []
-  end
 
-  def link_linear(children) when is_list(children) do
+  def link_linear(children) when is_list(children) and length(children) > 1 do
     [{first_child_name, first_child_spec} | other_children] = children
 
     links =
