@@ -41,7 +41,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     def_output_pad :output, caps: :any, demand_mode: :auto, availability: :on_request
 
     @impl true
-    def handle_process(:input, buffer, _ctx, state), do: {{:ok, notify_pad: buffer}, state}
+    def handle_process(:input, buffer, _ctx, state), do: {{:ok, forward: buffer}, state}
   end
 
   [

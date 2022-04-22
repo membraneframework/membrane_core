@@ -138,8 +138,8 @@ defmodule Membrane.Element.Action do
   forward buffers, `c:Membrane.Element.WithInputPads.handle_caps/4` - caps
   and `c:Membrane.Element.Base.handle_event/4` - events.
   """
-  @type notify_pad_t ::
-          {:notify_pad, Buffer.t() | [Buffer.t()] | Caps.t() | Event.t() | :end_of_stream}
+  @type forward_t ::
+          {:forward, Buffer.t() | [Buffer.t()] | Caps.t() | Event.t() | :end_of_stream}
 
   @typedoc """
   Suspends/resumes change of playback state.
@@ -234,7 +234,7 @@ defmodule Membrane.Element.Action do
           | buffer_t
           | demand_t
           | redemand_t
-          | notify_pad_t
+          | forward_t
           | playback_change_t
           | start_timer_t
           | stop_timer_t
