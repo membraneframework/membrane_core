@@ -114,6 +114,14 @@ defmodule Membrane.FilterAggregator do
   end
 
   @impl true
+  def handle_event(:input, event, _ctx, %{states: states}) do
+    {actions, states} = pipe_downstream([event: {:output, event}], states)
+    actions = reject_internal_actions(actions)
+
+    {{:ok, actions}, %{states: states}}
+  end
+
+  @impl true
   def handle_caps(:input, caps, _ctx, %{states: states}) do
     {actions, states} = pipe_downstream([caps: {:output, caps}], states)
     actions = reject_internal_actions(actions)
@@ -146,27 +154,6 @@ defmodule Membrane.FilterAggregator do
     {next_actions_acc |> Enum.reverse() |> List.flatten(), context, state}
   end
 
-  defp perform_actions([{:forward, data} | actions], module, context, state, next_actions_acc) do
-    action =
-      case data do
-        %Membrane.Buffer{} ->
-          {:buffer, {:output, data}}
-
-        [%Membrane.Buffer{} | _tail] ->
-          {:buffer, {:output, data}}
-
-        :end_of_stream ->
-          {:end_of_stream, :output}
-
-        %_struct{} ->
-          if Membrane.Event.event?(data),
-            do: {:event, {:output, data}},
-            else: {:caps, {:output, data}}
-      end
-
-    perform_actions([action | actions], module, context, state, next_actions_acc)
-  end
-
   defp perform_actions([action | actions], module, context, state, next_actions_acc) do
     context = Context.before_incoming_action(context, action)
     result = perform_action(action, module, context, state)
@@ -184,6 +171,7 @@ defmodule Membrane.FilterAggregator do
         )
 
       {{:ok, next_actions}, next_state} when is_list(next_actions) ->
+        next_actions = transform_out_actions(next_actions)
         next_context = Context.after_out_actions(context, next_actions)
 
         perform_actions(actions, module, next_context, next_state, [
@@ -337,6 +325,31 @@ defmodule Membrane.FilterAggregator do
           :playing_to_prepared,
           :prepared_to_stopped
         ]
+    end)
+  end
+
+  defp transform_out_actions(actions) do
+    actions
+    |> Enum.map(fn
+      {:forward, data} ->
+        case data do
+          %Membrane.Buffer{} ->
+            {:buffer, {:output, data}}
+
+          [%Membrane.Buffer{} | _tail] ->
+            {:buffer, {:output, data}}
+
+          :end_of_stream ->
+            {:end_of_stream, :output}
+
+          %_struct{} ->
+            if Membrane.Event.event?(data),
+              do: {:event, {:output, data}},
+              else: {:caps, {:output, data}}
+        end
+
+      action ->
+        action
     end)
   end
 end

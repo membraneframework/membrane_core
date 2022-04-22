@@ -290,4 +290,80 @@ defmodule Membrane.FilterAggregatorTest do
     assert ctx_a == ctx.states |> Enum.at(0) |> elem(2)
     assert ctx_b == ctx.states |> Enum.at(1) |> elem(2)
   end
+
+  test "Stream management events & forward action", ctx do
+    buffer = %Buffer{payload: "test"}
+
+    FilterA
+    |> expect(:handle_start_of_stream, fn :input, %StreamManagement{} = ctx, state ->
+      assert ctx.pads.input.start_of_stream? == true
+      {:ok, state}
+    end)
+    |> expect(:handle_process_list, fn :input, [^buffer], %Process{} = ctx, state ->
+      assert ctx.pads.input.start_of_stream? == true
+      {{:ok, forward: [buffer]}, state}
+    end)
+    |> expect(:handle_end_of_stream, fn :input, %StreamManagement{} = ctx, state ->
+      assert ctx.pads.input.end_of_stream? == true
+      {{:ok, forward: :end_of_stream}, %{state | state: :ok}}
+    end)
+
+    FilterB
+    |> expect(:handle_start_of_stream, fn :input, %StreamManagement{} = ctx, state ->
+      assert ctx.pads.input.start_of_stream? == true
+      {:ok, state}
+    end)
+    |> expect(:handle_process_list, fn :input, [^buffer], %Process{} = ctx, state ->
+      assert ctx.pads.input.start_of_stream? == true
+      {{:ok, buffer: {:output, [buffer]}}, state}
+    end)
+    |> expect(:handle_end_of_stream, fn :input, %StreamManagement{} = ctx, state ->
+      assert ctx.pads.input.end_of_stream? == true
+      {{:ok, end_of_stream: :output}, %{state | state: :ok}}
+    end)
+
+    assert {{:ok, []}, %{states: states}} =
+             TestedModule.handle_start_of_stream(:input, %{}, %{
+               states: ctx.states
+             })
+
+    assert {{:ok, buffer: {:output, buffers}}, %{states: states}} =
+             TestedModule.handle_process_list(:input, [buffer], %{}, %{states: states})
+
+    assert List.wrap(buffers) == [buffer]
+
+    assert {{:ok, end_of_stream: :output}, %{states: states}} =
+             TestedModule.handle_end_of_stream(:input, %{}, %{states: states})
+
+    assert [
+             {:a, FilterA, ctx_a, %{module: FilterA, state: :ok}},
+             {:b, FilterB, ctx_b, %{module: FilterB, state: :ok}}
+           ] = states
+
+    assert ctx_a.pads.output.end_of_stream? == true
+    assert ctx_b.pads.output.end_of_stream? == true
+  end
+
+  test "Custom events send & forward", ctx do
+    alias Membrane.Event.Discontinuity
+    event = %Discontinuity{}
+
+    FilterA
+    |> expect(:handle_event, fn :input, ^event, %Event{}, state ->
+      {{:ok, forward: event}, %{state | state: :ok}}
+    end)
+
+    FilterB
+    |> expect(:handle_event, fn :input, ^event, %Event{}, state ->
+      {{:ok, event: {:output, event}}, %{state | state: :ok}}
+    end)
+
+    assert {{:ok, event: {:output, ^event}}, %{states: states}} =
+             TestedModule.handle_event(:input, event, %{}, %{states: ctx.states})
+
+    assert [
+             {:a, FilterA, _ctx_a, %{module: FilterA, state: :ok}},
+             {:b, FilterB, _ctx_b, %{module: FilterB, state: :ok}}
+           ] = states
+  end
 end
