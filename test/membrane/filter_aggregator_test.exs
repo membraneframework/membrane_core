@@ -37,7 +37,7 @@ defmodule Membrane.FilterAggregatorTest do
     pad_description_template = %{
       availability: :always,
       caps: :any,
-      demand_mode: :manual,
+      demand_mode: :auto,
       demand_unit: :buffers,
       direction: nil,
       mode: :pull,
@@ -119,6 +119,16 @@ defmodule Membrane.FilterAggregatorTest do
   end
 
   setup :verify_on_exit!
+
+  test "handle_init with unsupported pad demand mode", ctx do
+    # use stub to get the default value
+    pads_descriptions = apply(FilterA, :membrane_pads, [])
+
+    FilterA
+    |> expect(:membrane_pads, fn -> put_in(pads_descriptions.input.demand_mode, :manual) end)
+
+    assert_raise RuntimeError, fn -> TestedModule.handle_init(ctx.stage_opts) end
+  end
 
   test "handle_init sets inital states", ctx do
     ctx.filters

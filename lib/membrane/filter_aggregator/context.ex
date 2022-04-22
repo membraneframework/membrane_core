@@ -25,6 +25,9 @@ defmodule Membrane.FilterAggregator.Context do
       """
     end
 
+    ensure_auto_demands!(pad_descriptions.input, module)
+    ensure_auto_demands!(pad_descriptions.output, module)
+
     pads_data =
       pad_descriptions
       |> Map.new(fn {name, description} -> {name, build_pad_data(description)} end)
@@ -36,6 +39,18 @@ defmodule Membrane.FilterAggregator.Context do
       parent_clock: nil,
       playback_state: :stopped
     }
+  end
+
+  defp ensure_auto_demands!(%{name: name, mode: :pull, demand_mode: mode}, module)
+       when mode != :auto do
+    raise """
+    `Membrane.FilterAggregator` supports only filters with demands in `:auto` mode.
+    Pad `#{inspect(name)}` of `#{inspect(module)}` uses `#{inspect(mode)}` mode.
+    """
+  end
+
+  defp ensure_auto_demands!(_pad_description, _module) do
+    :ok
   end
 
   defp build_pad_data(pad_description) do

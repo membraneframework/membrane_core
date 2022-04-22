@@ -15,7 +15,7 @@ defmodule Membrane.FilterAggregator do
   alias Membrane.Element.CallbackContext
 
   def_options filters: [
-                spec: [{String.t(), module() | struct()}],
+                spec: [{Membrane.Child.name_t(), module() | struct()}],
                 description: "A list of filters applied to incoming stream"
               ]
 
@@ -50,8 +50,8 @@ defmodule Membrane.FilterAggregator do
           {name, module, options}
       end)
       |> Enum.map(fn {name, module, options} ->
-        {:ok, state} = module.handle_init(options)
         context = Context.build_context!(name, module)
+        {:ok, state} = module.handle_init(options)
         {name, module, context, state}
       end)
 
