@@ -93,6 +93,8 @@ defmodule Membrane.Testing.Pipeline do
   alias Membrane.ParentSpec
   alias Membrane.Testing.Notification
 
+  require Membrane.Logger
+
   defmodule Options do
     @moduledoc """
     @deprecated
@@ -102,18 +104,18 @@ defmodule Membrane.Testing.Pipeline do
 
     - `:test_process` - `pid` of process that shall receive messages from testing pipeline, e.g. when pipeline's playback state changes.
       This allows using `Membrane.Testing.Assertions`
-    - `:children` - a list of element specs. Allows to create a simple pipeline without defining a module for it.
+    - `:elements` - a list of element specs. Allows to create a simple pipeline without defining a module for it.
     - `:links` - a list describing the links between children. If ommited (or set to `nil`), they will be populated automatically
       based on the children order using default pad names.
     - `:module` - pipeline module with custom callbacks - useful if a simple list of children is not enough.
     - `:custom_args`- arguments for the module's `handle_init` callback.
     """
 
-    defstruct [:children, :links, :test_process, :module, :custom_args]
+    defstruct [:elements, :links, :test_process, :module, :custom_args]
 
     @type t :: %__MODULE__{
             test_process: pid() | nil,
-            children: ParentSpec.children_spec_t() | nil,
+            elements: ParentSpec.children_spec_t() | nil,
             links: ParentSpec.links_spec_t() | nil,
             module: module() | nil,
             custom_args: Pipeline.pipeline_options_t() | nil
@@ -164,7 +166,7 @@ defmodule Membrane.Testing.Pipeline do
   def start_link(pipeline_options, process_options \\ [])
 
   def start_link(pipeline_options, process_options) when is_struct(pipeline_options, Options) do
-    IO.warn(
+    Membrane.Logger.warn(
       "Please pass options to Membrane.Testing.Pipeline.start_link/2 as keyword list, instead of using Membrane.Testing.Options"
     )
 
@@ -181,7 +183,7 @@ defmodule Membrane.Testing.Pipeline do
   def start(pipeline_options, process_options \\ [])
 
   def start(pipeline_options, process_options) when is_struct(pipeline_options, Options) do
-    IO.warn(
+    Membrane.Logger.warn(
       "Please pass options to Membrane.Testing.Pipeline.start/2 as keyword list, instead of using Membrane.Testing.Options"
     )
 
@@ -219,7 +221,7 @@ defmodule Membrane.Testing.Pipeline do
     end
   end
 
-  defp do_start(_type, %Options{children: nil, module: nil}, _process_options) do
+  defp do_start(_type, %Options{elements: nil, module: nil}, _process_options) do
     raise """
 
     You provided no information about pipeline contents. Please provide either:
@@ -230,7 +232,7 @@ defmodule Membrane.Testing.Pipeline do
     """
   end
 
-  defp do_start(_type, %Options{children: children, module: module}, _process_options)
+  defp do_start(_type, %Options{elements: children, module: module}, _process_options)
        when is_atom(module) and module != nil and children != nil do
     raise """
 
@@ -274,18 +276,37 @@ defmodule Membrane.Testing.Pipeline do
 
   @impl true
   def handle_init(%Options{links: nil, module: nil} = options) do
-    new_links = ParentSpec.link_linear(options.children)
-    do_handle_init_for_default_implementation(%Options{options | links: new_links})
+    {links, children} =
+      if length(options.elements) <= 1 do
+        {[], options.elements}
+      else
+        {ParentSpec.link_linear(options.elements), []}
+      end
+
+    options_map = %{children: children, links: links, test_process: options.test_process}
+    do_handle_init_for_default_implementation(options_map)
   end
 
   @impl true
   def handle_init(%Options{module: nil} = options) do
-    do_handle_init_for_default_implementation(options)
+    options_map = %{
+      children: options.elements,
+      links: options.links,
+      test_process: options.test_process
+    }
+
+    do_handle_init_for_default_implementation(options_map)
   end
 
   @impl true
-  def handle_init(%Options{links: nil, children: nil} = options) do
-    do_handle_init_with_custom_module(options)
+  def handle_init(%Options{links: nil, elements: nil} = options) do
+    options_map = %{
+      test_process: options.test_process,
+      module: options.module,
+      custom_args: options.custom_args
+    }
+
+    do_handle_init_with_custom_module(options_map)
   end
 
   @impl true
