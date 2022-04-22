@@ -277,7 +277,7 @@ defmodule Membrane.Testing.Pipeline do
   @impl true
   def handle_init(%Options{links: nil, module: nil} = options) do
     {links, children} =
-      if length(options.elements) == 1 do
+      if length(options.elements) <= 1 do
         {[], options.elements}
       else
         {ParentSpec.link_linear(options.elements), []}
