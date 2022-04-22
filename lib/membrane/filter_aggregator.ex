@@ -331,25 +331,26 @@ defmodule Membrane.FilterAggregator do
   defp transform_out_actions(actions) do
     actions
     |> Enum.map(fn
-      {:forward, data} ->
-        case data do
-          %Membrane.Buffer{} ->
-            {:buffer, {:output, data}}
-
-          [%Membrane.Buffer{} | _tail] ->
-            {:buffer, {:output, data}}
-
-          :end_of_stream ->
-            {:end_of_stream, :output}
-
-          %_struct{} ->
-            if Membrane.Event.event?(data),
-              do: {:event, {:output, data}},
-              else: {:caps, {:output, data}}
-        end
-
-      action ->
-        action
+      {:forward, data} -> resolve_forward_action(data)
+      action -> action
     end)
+  end
+
+  defp resolve_forward_action(%Membrane.Buffer{} = buffer) do
+    {:buffer, {:output, buffer}}
+  end
+
+  defp resolve_forward_action([%Membrane.Buffer{} | _tail] = buffers) do
+    {:buffer, {:output, buffers}}
+  end
+
+  defp resolve_forward_action(:end_of_stream) do
+    {:end_of_stream, :output}
+  end
+
+  defp resolve_forward_action(%_struct{} = data) do
+    if Membrane.Event.event?(data),
+      do: {:event, {:output, data}},
+      else: {:caps, {:output, data}}
   end
 end
