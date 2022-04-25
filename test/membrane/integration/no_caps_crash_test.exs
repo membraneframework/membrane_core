@@ -32,12 +32,14 @@ defmodule Membrane.FailWhenNoCapsAreSent do
   end
 
   test "if pipeline crashes when the caps are not sent before the first buffer" do
-    options = %Pipeline.Options{
-      elements: [
-        source: SourceWhichDoesNotSendCaps,
-        sink: Sink
-      ]
-    }
+    children = [
+      source: SourceWhichDoesNotSendCaps,
+      sink: Sink
+    ]
+
+    options = [
+      links: Membrane.ParentSpec.link_linear(children)
+    ]
 
     {:ok, pipeline} = Pipeline.start(options)
     Pipeline.message_child(pipeline, :source, {:send_your_pid, self()})
@@ -56,12 +58,14 @@ defmodule Membrane.FailWhenNoCapsAreSent do
   end
 
   test "if pipeline works properly when caps are sent before the first buffer" do
-    options = %Pipeline.Options{
-      elements: [
-        source: Source,
-        sink: Sink
-      ]
-    }
+    children = [
+      source: Source,
+      sink: Sink
+    ]
+
+    options = [
+      links: Membrane.ParentSpec.link_linear(children)
+    ]
 
     {:ok, pipeline} = Pipeline.start(options)
     ref = Process.monitor(pipeline)

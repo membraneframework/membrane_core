@@ -11,7 +11,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     ClockHandler,
     CrashGroup,
     LifecycleController,
-    Link,
     LinkParser
   }
 
@@ -151,7 +150,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   def handle_child_death(pid, :normal, state) do
     with {:ok, child_name} <- child_by_pid(pid, state) do
       state = Bunch.Access.delete_in(state, [:children, child_name])
-      state = remove_child_links(child_name, state)
+      state = LinkHandler.unlink_element(child_name, state)
       {_result, state} = remove_child_from_crash_group(state, pid)
       LifecycleController.maybe_finish_playback_transition(state)
     else
@@ -274,20 +273,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp remove_child_from_crash_group(state, group, child_pid) do
     CrashGroupHandler.remove_member_of_crash_group(state, group.name, child_pid)
     |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
-  end
-
-  defp remove_child_links(child_name, state) do
-    Map.update!(
-      state,
-      :links,
-      &(&1
-        |> Enum.reject(fn %Link{from: from, to: to} ->
-          %Link.Endpoint{child: from_name} = from
-          %Link.Endpoint{child: to_name} = to
-
-          from_name == child_name or to_name == child_name
-        end))
-    )
   end
 
   defp child_by_pid(pid, state) do

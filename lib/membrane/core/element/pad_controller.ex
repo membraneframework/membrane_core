@@ -147,7 +147,7 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   @doc """
-  Handles situation where pad has been unlinked (e.g. when connected element has been removed from pipline)
+  Handles situation where pad has been unlinked (e.g. when connected element has been removed from pipeline)
 
   Removes pad data.
   Signals an EoS (via handle_event) to the element if unlinked pad was an input.
@@ -157,14 +157,28 @@ defmodule Membrane.Core.Element.PadController do
   @spec handle_unlink(Pad.ref_t(), State.t()) :: State.t()
   def handle_unlink(pad_ref, state) do
     if :ok == Child.PadModel.assert_instance(state, pad_ref) do
+      :ok = check_if_pad_can_be_unlinked(pad_ref, state)
       state = flush_playback_buffer(pad_ref, state)
       state = generate_eos_if_needed(pad_ref, state)
       state = maybe_handle_pad_removed(pad_ref, state)
       state = remove_pad_associations(pad_ref, state)
-      state = PadModel.delete_data!(state, pad_ref)
-      state
+      PadModel.delete_data!(state, pad_ref)
     else
       state
+    end
+  end
+
+  @spec check_if_pad_can_be_unlinked(Pad.ref_t(), Core.Element.State.t()) ::
+          :ok | {:error, {:invalid_playback_state, Pad.name_t()}}
+  defp check_if_pad_can_be_unlinked(pad_ref, state) do
+    pad_data = PadModel.get_data!(state, pad_ref)
+
+    if state.playback.target_state in [:stopped, :terminating] or
+         Membrane.Pad.availability_mode(pad_data.availability) == :dynamic do
+      :ok
+    else
+      raise LinkError,
+            "Tried to unlink static pad #{pad_ref} while #{inspect(state.name)} was in or was transitioning to playback state #{state.playback.target_state}."
     end
   end
 

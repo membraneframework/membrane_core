@@ -68,14 +68,13 @@ defmodule Membrane.Integration.AutoDemandsTest do
       filter = %AutoDemandFilter{factor: factor, direction: direction}
 
       assert {:ok, pipeline} =
-               Pipeline.start_link(%Pipeline.Options{
-                 elements: [],
+               Pipeline.start_link(
                  links: [
                    link(:source, %Source{output: in_payloads})
                    |> reduce_link(1..filters, &to(&1, {:filter, &2}, filter))
                    |> to(:sink, Sink)
                  ]
-               })
+               )
 
       assert_pipeline_playback_changed(pipeline, :prepared, :playing)
 
@@ -95,14 +94,13 @@ defmodule Membrane.Integration.AutoDemandsTest do
     import Membrane.ParentSpec
 
     assert {:ok, pipeline} =
-             Pipeline.start_link(%Pipeline.Options{
-               elements: [],
+             Pipeline.start_link(
                links: [
                  link(:source, %Source{output: 1..100_000}) |> to(:tee, AutoDemandTee),
                  link(:tee) |> to(:left_sink, Sink),
                  link(:tee) |> to(:right_sink, %Sink{autodemand: false})
                ]
-             })
+             )
 
     assert_pipeline_playback_changed(pipeline, :prepared, :playing)
     Pipeline.message_child(pipeline, :right_sink, {:make_demand, 1000})
@@ -122,14 +120,13 @@ defmodule Membrane.Integration.AutoDemandsTest do
     import Membrane.ParentSpec
 
     assert {:ok, pipeline} =
-             Pipeline.start_link(%Pipeline.Options{
-               elements: [],
+             Pipeline.start_link(
                links: [
                  link(:source, %Source{output: 1..100_000}) |> to(:tee, AutoDemandTee),
                  link(:tee) |> to(:left_sink, Sink),
                  link(:tee) |> to(:right_sink, %Sink{autodemand: false})
                ]
-             })
+             )
 
     assert_pipeline_playback_changed(pipeline, :prepared, :playing)
     Process.sleep(500)
@@ -163,14 +160,13 @@ defmodule Membrane.Integration.AutoDemandsTest do
     import Membrane.ParentSpec
 
     assert {:ok, pipeline} =
-             Pipeline.start_link(%Pipeline.Options{
-               elements: [],
+             Pipeline.start_link(
                links: [
                  link(:source, PushSource)
                  |> to(:filter, AutoDemandFilter)
                  |> to(:sink, Sink)
                ]
-             })
+             )
 
     assert_pipeline_playback_changed(pipeline, :prepared, :playing)
     buffers = Enum.map(1..10, &%Membrane.Buffer{payload: &1})
@@ -194,14 +190,13 @@ defmodule Membrane.Integration.AutoDemandsTest do
     import Membrane.ParentSpec
 
     assert {:ok, pipeline} =
-             Pipeline.start(%Pipeline.Options{
-               elements: [],
+             Pipeline.start(
                links: [
                  link(:source, PushSource)
                  |> to(:filter, AutoDemandFilter)
                  |> to(:sink, %Sink{autodemand: false})
                ]
-             })
+             )
 
     Process.monitor(pipeline)
     assert_pipeline_playback_changed(pipeline, :prepared, :playing)

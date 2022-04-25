@@ -7,7 +7,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   use Bunch
   use Membrane.Core.PlaybackHandler
 
-  alias Membrane.{Clock, Core, Element, Sync}
+  alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.{CallbackHandler, Child, Element, Message}
   alias Membrane.Core.Element.{ActionHandler, PlaybackBuffer, State}
   alias Membrane.Element.CallbackContext
@@ -156,8 +156,6 @@ defmodule Membrane.Core.Element.LifecycleController do
   @impl PlaybackHandler
   def handle_playback_state_changed(old, new, state) do
     Membrane.Logger.debug_verbose("Playback state changed from #{old} to #{new}")
-
-    if new == :stopped, do: Core.Child.LifecycleController.unlink(state)
 
     state = PlaybackBuffer.eval(state)
 
