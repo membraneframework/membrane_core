@@ -43,20 +43,17 @@ defmodule Membrane.Core.Parent.LifecycleController do
     callback = PlaybackHandler.state_change_callback(old, new)
     action_handler = get_callback_action_handler(state)
 
-    callback_res =
+    state =
       if callback do
-        state =
-          CallbackHandler.exec_and_handle_callback(
-            callback,
-            action_handler,
-            %{context: context},
-            [],
-            state
-          )
-
-        {:ok, state}
+        CallbackHandler.exec_and_handle_callback(
+          callback,
+          action_handler,
+          %{context: context},
+          [],
+          state
+        )
       else
-        {:ok, state}
+        state
       end
 
     if state.__struct__ == Membrane.Core.Bin.State do
@@ -67,14 +64,12 @@ defmodule Membrane.Core.Parent.LifecycleController do
       end
     end
 
-    with {:ok, state} <- callback_res do
-      Membrane.Logger.debug("Playback state changed from #{old} to #{new}")
+    Membrane.Logger.debug("Playback state changed from #{old} to #{new}")
 
-      if new == :terminating do
-        {:stop, :normal, state}
-      else
-        {:ok, state}
-      end
+    if new == :terminating do
+      {:stop, :normal, state}
+    else
+      {:ok, state}
     end
   end
 

@@ -64,7 +64,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
   end
 
   defp do_handle_action(_action, _callback, _params, state) do
-    {{:error, :unknown_action}, state}
+    {{:error, {:unknown_action, Membrane.Bin.Action}}, state}
   end
 
   @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}

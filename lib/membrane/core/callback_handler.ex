@@ -66,15 +66,15 @@ defmodule Membrane.Core.CallbackHandler do
     handle_callback_result(result, callback, handler_module, handler_params, state)
   end
 
-  @spec exec_and_handle_splitted_callback(
+  @spec exec_and_handle_split_callback(
           callback :: atom,
           original_callback :: atom,
           module,
           handler_params_t,
-          args :: list,
+          args_list :: list,
           state_t
         ) :: state_t
-  def exec_and_handle_splitted_callback(
+  def exec_and_handle_split_callback(
         callback,
         original_callback,
         handler_module,
@@ -83,7 +83,7 @@ defmodule Membrane.Core.CallbackHandler do
         state
       )
 
-  def exec_and_handle_splitted_callback(
+  def exec_and_handle_split_callback(
         callback,
         original_callback,
         handler_module,
@@ -105,7 +105,7 @@ defmodule Membrane.Core.CallbackHandler do
     end)
   end
 
-  def exec_and_handle_splitted_callback(
+  def exec_and_handle_split_callback(
         callback,
         original_callback,
         handler_module,

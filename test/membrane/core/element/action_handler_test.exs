@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Element.ActionHandlerTest do
   use ExUnit.Case, async: true
 
-  alias Membrane.{ActionError, Buffer, ElementError}
+  alias Membrane.{ActionError, Buffer, ElementError, InvalidPadDirectionError}
   alias Membrane.Core.Playback
   alias Membrane.Core.Element.State
   alias Membrane.Support.DemandsTest.Filter
@@ -342,7 +342,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "invalid pad direction", %{state: state} do
       state = state |> set_playback_state(:playing)
 
-      assert_raise ElementError, ~r/input pad :input/, fn ->
+      assert_raise InvalidPadDirectionError, ~r/:input/, fn ->
         @module.handle_action(
           event_action(:input),
           :handle_other,
@@ -421,7 +421,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "invalid pad direction", %{state: state} do
       state = state |> set_playback_state(:playing)
 
-      assert_raise ElementError, ~r/input pad :input/, fn ->
+      assert_raise InvalidPadDirectionError, ~r/:input/, fn ->
         @module.handle_action(
           caps_action(:input),
           :handle_other,

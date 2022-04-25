@@ -3,8 +3,6 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   # Module handling demands requested on output pads.
 
-  use Bunch
-
   alias Membrane.Buffer
   alias Membrane.Core.Child.PadModel
 

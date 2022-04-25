@@ -8,7 +8,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   import Membrane.Pad, only: [is_pad_ref: 1]
 
-  alias Membrane.{ActionError, Buffer, Caps, ElementError, Event, Pad}
+  alias Membrane.{ActionError, Buffer, Caps, ElementError, Event, InvalidPadDirectionError, Pad}
   alias Membrane.Core.Element.{DemandHandler, LifecycleController, PadController, State}
   alias Membrane.Core.{Events, Message, PlaybackHandler, TimerController}
   alias Membrane.Core.Child.PadModel
@@ -23,27 +23,9 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def transform_actions(actions, callback, _handler_params, state) do
-    {redemands, actions_after_redemands} =
-      actions
-      |> Enum.drop_while(fn
-        {:redemand, _} -> false
-        _other_action -> true
-      end)
-      |> Enum.split_while(fn
-        {:redemand, _} -> true
-        _other_action -> false
-      end)
-
-    case {redemands, actions_after_redemands} do
-      {_, []} ->
-        {join_buffers(actions), state}
-
-      {[redemand | _], _} ->
-        raise ActionError,
-          reason: :actions_after_redemand,
-          action: redemand,
-          callback: {state.module, callback}
-    end
+    actions = join_buffers(actions)
+    ensure_nothing_after_redemand(actions, callback, state)
+    {actions, state}
   end
 
   defguardp is_demand_size(size) when is_integer(size) or is_function(size)
@@ -81,7 +63,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:split, {callback, args_list}}, cb, params, state) do
-    CallbackHandler.exec_and_handle_splitted_callback(
+    CallbackHandler.exec_and_handle_split_callback(
       callback,
       cb,
       __MODULE__,
@@ -246,7 +228,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_action(action, _callback, _params, _state) do
-    raise ActionError, action: action, reason: :unknown_action
+    raise ActionError, action: action, reason: {:unknown_action, Membrane.Element.Action}
   end
 
   defp join_buffers(actions) do
@@ -264,6 +246,30 @@ defmodule Membrane.Core.Element.ActionHandler do
           other
       end
     )
+  end
+
+  defp ensure_nothing_after_redemand(actions, callback, state) do
+    {redemands, actions_after_redemands} =
+      actions
+      |> Enum.drop_while(fn
+        {:redemand, _args} -> false
+        _other_action -> true
+      end)
+      |> Enum.split_while(fn
+        {:redemand, _args} -> true
+        _other_action -> false
+      end)
+
+    case {redemands, actions_after_redemands} do
+      {_redemands, []} ->
+        :ok
+
+      {[redemand | _redemands], _actions_after_redemands} ->
+        raise ActionError,
+          reason: :actions_after_redemand,
+          action: redemand,
+          callback: {state.module, callback}
+    end
   end
 
   @spec send_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
@@ -306,7 +312,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     else
       %{direction: :input} ->
-        raise ElementError, "Tried to send a buffer through an input pad #{inspect(pad_ref)}"
+        raise InvalidPadDirectionError, what: :buffer, direction: :input, pad: pad_ref
 
       %{end_of_stream?: true} ->
         raise ElementError,
@@ -338,7 +344,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     else
       data: %{direction: :input} ->
-        raise ElementError, "Tried to send caps through an input pad #{inspect(pad_ref)}"
+        raise InvalidPadDirectionError, what: :caps, direction: :input, pad: pad_ref
 
       caps: false ->
         raise ElementError, """
@@ -371,7 +377,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       DemandHandler.supply_demand(pad_ref, size, state)
     else
       %{direction: :output} ->
-        raise ElementError, "Tried to request a demand on output pad #{inspect(pad_ref)}"
+        raise InvalidPadDirectionError, what: :demand, direction: :output, pad: pad_ref
 
       %{mode: :push} ->
         raise ElementError,
@@ -428,7 +434,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
     else
       %{direction: :input} ->
-        raise ElementError, "Cannot set end of stream on input pad #{inspect(pad_ref)}"
+        raise InvalidPadDirectionError, what: "end of stream", direction: :input, pad: pad_ref
 
       %{end_of_stream?: true} ->
         raise ElementError, "End of stream already set on pad #{inspect(pad_ref)}"

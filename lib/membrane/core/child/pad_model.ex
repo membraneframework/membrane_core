@@ -202,10 +202,8 @@ defmodule Membrane.Core.Child.PadModel do
       |> wrap_with_pad_check(pad_ref, state)
     end
   else
-    @type unknown_pad_error_t :: {:error, :unknown_pad}
-
     @spec get_data(Child.state_t(), Pad.ref_t()) ::
-            {:ok, pad_data_t() | any} | unknown_pad_error_t
+            {:ok, pad_data_t() | any} | {:error, :unknown_pad}
     def get_data(%{pads_data: data}, pad_ref) do
       case Map.fetch(data, pad_ref) do
         {:ok, pad_data} -> {:ok, pad_data}
@@ -214,7 +212,7 @@ defmodule Membrane.Core.Child.PadModel do
     end
 
     @spec get_data(Child.state_t(), Pad.ref_t(), keys :: atom | [atom]) ::
-            {:ok, pad_data_t | any} | unknown_pad_error_t
+            {:ok, pad_data_t | any} | {:error, :unknown_pad}
     def get_data(%{pads_data: data}, pad_ref, keys)
         when is_map_key(data, pad_ref) and is_list(keys) do
       data
@@ -244,7 +242,7 @@ defmodule Membrane.Core.Child.PadModel do
     end
 
     @spec set_data(Child.state_t(), Pad.ref_t(), keys :: atom | [atom], value :: term()) ::
-            Bunch.Type.stateful_t(:ok | unknown_pad_error_t, Child.state_t())
+            Bunch.Type.stateful_t(:ok | {:error, :unknown_pad}, Child.state_t())
     def set_data(state, pad_ref, keys \\ [], value) do
       case assert_instance(state, pad_ref) do
         :ok ->
@@ -269,7 +267,7 @@ defmodule Membrane.Core.Child.PadModel do
             keys :: atom | [atom],
             (data -> {:ok | error, data})
           ) ::
-            Bunch.Type.stateful_t(:ok | error | unknown_pad_error_t, Child.state_t())
+            Bunch.Type.stateful_t(:ok | error | {:error, :unknown_pad}, Child.state_t())
           when data: pad_data_t | any, error: {:error, reason :: any}
     def update_data(state, pad_ref, keys \\ [], f) do
       case assert_instance(state, pad_ref) do
@@ -296,7 +294,7 @@ defmodule Membrane.Core.Child.PadModel do
             Pad.ref_t(),
             keys :: atom | [atom],
             (data -> {success | error, data})
-          ) :: Bunch.Type.stateful_t(success | error | unknown_pad_error_t, Child.state_t())
+          ) :: Bunch.Type.stateful_t(success | error | {:error, :unknown_pad}, Child.state_t())
           when data: pad_data_t | any, success: {:ok, data}, error: {:error, reason :: any}
     def get_and_update_data(state, pad_ref, keys \\ [], f) do
       case assert_instance(state, pad_ref) do

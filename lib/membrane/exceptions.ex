@@ -74,11 +74,12 @@ defmodule Membrane.ActionError do
     "Redemand action has to be last in actions list."
   end
 
-  defp format_reason(:unknown_action) do
+  defp format_reason({:unknown_action, doc_module}) do
     """
     We looked everywhere, but couldn't find out what this action is supposed to do.
     Make sure it's correct and valid for the component, callback, playback state or
-    other possible circumstances.\
+    other possible circumstances. See the docs for #{inspect(doc_module)} to check
+    which actions are supported and when you can return them.
     """
   end
 end
@@ -107,5 +108,18 @@ defmodule Membrane.UnknownPadError do
     pad = Keyword.fetch!(opts, :pad)
     module = Keyword.fetch!(opts, :module)
     %__MODULE__{message: "Unknown pad #{inspect(pad)} of #{inspect(module)}"}
+  end
+end
+
+defmodule Membrane.InvalidPadDirectionError do
+  defexception [:message]
+
+  @impl true
+  def exception(opts) do
+    opts = Map.new(opts)
+
+    %__MODULE__{
+      message: "Tried to send #{opts.what} via #{opts.direction} pad #{inspect(opts.pad)}"
+    }
   end
 end

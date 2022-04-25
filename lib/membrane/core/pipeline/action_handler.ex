@@ -13,14 +13,13 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
     with {:ok, state} <- do_handle_action(action, callback, params, state) do
       state
     else
-      {{:error, reason}, state} ->
-        raise ActionError, reason: reason, action: action, callback: {state.module, callback}
+      {{:error, reason}, _state} -> raise ActionError, reason: reason, action: action
     end
   end
 
   defp do_handle_action({action, _args}, :handle_init, _params, state)
        when action not in [:spec, :log_metadata, :playback] do
-    {{:error, :unknown_action}, state}
+    {{:error, {:unknown_action, Membrane.Pipeline.Action}}, state}
   end
 
   defp do_handle_action({:forward, children_messages}, _cb, _params, state) do
@@ -62,6 +61,6 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   defp do_handle_action(_action, _callback, _params, state) do
-    {{:error, :unknown_action}, state}
+    {{:error, {:unknown_action, Membrane.Pipeline.Action}}, state}
   end
 end

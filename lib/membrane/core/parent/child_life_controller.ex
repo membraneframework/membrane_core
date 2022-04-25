@@ -66,8 +66,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     state = ClockHandler.choose_clock(children, spec.clock_provider, state)
     state = LinkHandler.init_spec_linking(spec_ref, links, state)
-    state = StartupHandler.exec_handle_spec_started(children_names, state)
-    state
+    StartupHandler.exec_handle_spec_started(children_names, state)
   end
 
   @spec handle_forward([{Membrane.Child.name_t(), any}], Parent.state_t()) ::
