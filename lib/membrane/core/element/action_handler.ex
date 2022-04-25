@@ -303,7 +303,7 @@ defmodule Membrane.Core.Element.ActionHandler do
            pid: pid,
            other_ref: other_ref
          }
-         when caps != nil <- pad_data do
+         when caps != 0 <- pad_data do
       state =
         DemandHandler.handle_outgoing_buffers(pad_ref, pad_data, buffers, state)
         |> PadModel.set_data!(pad_ref, :start_of_stream?, true)

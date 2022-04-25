@@ -162,9 +162,10 @@ defmodule Membrane.Core.Element.LifecycleController do
     state = PlaybackBuffer.eval(state)
 
     if new == :terminating do
-      {:stop, :normal, state}
-    else
-      {:ok, state}
+      Process.flag(:trap_exit, false)
+      Process.exit(self(), :normal)
     end
+
+    {:ok, state}
   end
 end
