@@ -110,10 +110,10 @@ defmodule Membrane.FilterAggregatorTest do
       stub(filter, :__struct__, fn kv -> kv |> Map.new() |> Map.put(:__struct__, filter) end)
 
       stub(filter, :membrane_pads, fn ->
-        %{
+        [
           output: %{pad_description_template | name: :output, direction: :output},
           input: %{pad_description_template | name: :input, direction: :input}
-        }
+        ]
       end)
     end)
   end
@@ -125,7 +125,7 @@ defmodule Membrane.FilterAggregatorTest do
     pads_descriptions = apply(FilterA, :membrane_pads, [])
 
     FilterA
-    |> expect(:membrane_pads, fn -> put_in(pads_descriptions.input.demand_mode, :manual) end)
+    |> expect(:membrane_pads, fn -> put_in(pads_descriptions, [:input, :demand_mode], :manual) end)
 
     assert_raise RuntimeError, fn -> TestedModule.handle_init(ctx.stage_opts) end
   end

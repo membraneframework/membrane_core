@@ -25,8 +25,8 @@ defmodule Membrane.FilterAggregator.Context do
       """
     end
 
-    ensure_auto_demands!(pad_descriptions.input, module)
-    ensure_auto_demands!(pad_descriptions.output, module)
+    ensure_auto_demands!(pad_descriptions[:input], module)
+    ensure_auto_demands!(pad_descriptions[:output], module)
 
     pads_data =
       pad_descriptions
