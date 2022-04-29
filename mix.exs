@@ -75,7 +75,8 @@ defmodule Membrane.Mixfile do
         Membrane.Caps,
         Membrane.Event,
         Membrane.EventProtocol,
-        Membrane.Testing
+        Membrane.Testing,
+        Membrane.RemoteControlled
       ],
       groups_for_modules: [
         Pipeline: [~r/^Membrane\.Pipeline($|\.)/, ~r/^Membrane\.(CrashGroup)($|\.)/],
