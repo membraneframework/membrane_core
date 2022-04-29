@@ -168,7 +168,7 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  @spec check_if_pad_can_be_unlinked(Pad.ref_t(), Core.Element.State.t()) ::
+  @spec check_if_pad_can_be_unlinked(Pad.ref_t(), State.t()) ::
           :ok | {:error, {:invalid_playback_state, Pad.name_t()}}
   defp check_if_pad_can_be_unlinked(pad_ref, state) do
     pad_data = PadModel.get_data!(state, pad_ref)
