@@ -177,8 +177,12 @@ defmodule Membrane.Core.Element.PadController do
          Membrane.Pad.availability_mode(pad_data.availability) == :dynamic do
       :ok
     else
-      raise LinkError,
-            "Tried to unlink static pad #{pad_ref} while #{inspect(state.name)} was in or was transitioning to playback state #{state.playback.target_state}."
+      # TODO: after playback states refactor, make it raise
+      Membrane.Logger.debug(
+        "Tried to unlink static pad #{pad_ref} while #{inspect(state.name)} was in or was transitioning to playback state #{state.playback.target_state}."
+      )
+
+      :ok
     end
   end
 
