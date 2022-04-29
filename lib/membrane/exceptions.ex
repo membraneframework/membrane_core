@@ -111,7 +111,7 @@ defmodule Membrane.UnknownPadError do
   end
 end
 
-defmodule Membrane.InvalidPadDirectionError do
+defmodule Membrane.PadDirectionError do
   defexception [:message]
 
   @impl true
@@ -119,7 +119,8 @@ defmodule Membrane.InvalidPadDirectionError do
     opts = Map.new(opts)
 
     %__MODULE__{
-      message: "Tried to send #{opts.what} via #{opts.direction} pad #{inspect(opts.pad)}"
+      message:
+        "Sending #{opts.action} via pad #{inspect(opts.pad)} with #{opts.direction} direction is not allowed"
     }
   end
 end

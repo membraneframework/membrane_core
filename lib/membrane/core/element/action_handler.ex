@@ -8,7 +8,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   import Membrane.Pad, only: [is_pad_ref: 1]
 
-  alias Membrane.{ActionError, Buffer, Caps, ElementError, Event, InvalidPadDirectionError, Pad}
+  alias Membrane.{ActionError, Buffer, Caps, ElementError, Event, PadDirectionError, Pad}
   alias Membrane.Core.Element.{DemandHandler, LifecycleController, PadController, State}
   alias Membrane.Core.{Events, Message, PlaybackHandler, TimerController}
   alias Membrane.Core.Child.PadModel
@@ -312,7 +312,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     else
       %{direction: :input} ->
-        raise InvalidPadDirectionError, what: :buffer, direction: :input, pad: pad_ref
+        raise PadDirectionError, action: :buffer, direction: :input, pad: pad_ref
 
       %{end_of_stream?: true} ->
         raise ElementError,
@@ -344,7 +344,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       state
     else
       data: %{direction: :input} ->
-        raise InvalidPadDirectionError, what: :caps, direction: :input, pad: pad_ref
+        raise PadDirectionError, action: :caps, direction: :input, pad: pad_ref
 
       caps: false ->
         raise ElementError, """
@@ -377,7 +377,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       DemandHandler.supply_demand(pad_ref, size, state)
     else
       %{direction: :output} ->
-        raise InvalidPadDirectionError, what: :demand, direction: :output, pad: pad_ref
+        raise PadDirectionError, action: :demand, direction: :output, pad: pad_ref
 
       %{mode: :push} ->
         raise ElementError,
@@ -434,7 +434,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
     else
       %{direction: :input} ->
-        raise InvalidPadDirectionError, what: "end of stream", direction: :input, pad: pad_ref
+        raise PadDirectionError, action: "end of stream", direction: :input, pad: pad_ref
 
       %{end_of_stream?: true} ->
         raise ElementError, "End of stream already set on pad #{inspect(pad_ref)}"
