@@ -164,8 +164,12 @@ defmodule Membrane.Core.Element.PadController do
       {:ok, state}
     else
       {:error, {:invalid_playback_state, pad_ref}} ->
-        raise LinkError,
-              "Tried to unlink static pad #{pad_ref} while #{inspect(state.name)} was in or was transitioning to playback state #{state.playback.target_state}."
+        # TODO: after playback states refactor, make it raise
+        Membrane.Logger.debug(
+          "Tried to unlink static pad #{pad_ref} while #{inspect(state.name)} was in or was transitioning to playback state #{state.playback.target_state}."
+        )
+
+        {:ok, state}
 
       {:error, {:unknown_pad, _pad_ref}} ->
         {:ok, state}
