@@ -1,66 +1,43 @@
 defmodule Membrane.Core.Parent.ChildrenModel do
   @moduledoc false
 
-  alias Membrane.{Child, ChildEntry}
+  alias Membrane.{Child, ChildEntry, ParentError}
   alias Membrane.Core.Parent
 
   @type children_t :: %{Child.name_t() => ChildEntry.t()}
 
-  @spec add_child(Parent.state_t(), Child.name_t(), ChildEntry.t()) ::
-          {:ok | {:error, {:duplicate_child, Child.name_t()}}, Parent.state_t()}
-  def add_child(%{children: children} = state, child, data) do
-    if Map.has_key?(children, child) do
-      {{:error, {:duplicate_child, child}}, state}
-    else
-      {:ok, %{state | children: children |> Map.put(child, data)}}
+  @spec assert_child_exists!(Parent.state_t(), Child.name_t()) :: :ok
+  def assert_child_exists!(state, child) do
+    _data = get_child_data!(state, child)
+    :ok
+  end
+
+  @spec get_child_data!(Parent.state_t(), Child.name_t()) :: ChildEntry.t()
+  def get_child_data!(%{children: children}, child) do
+    case children do
+      %{^child => data} -> data
+      _children -> raise ParentError, "Unknown child #{inspect(child)}"
     end
   end
 
-  @spec get_child_data(Parent.state_t(), Child.name_t()) ::
-          {:ok, child_data :: ChildEntry.t()}
-          | {:error, {:unknown_child, Child.name_t()}}
-  def get_child_data(%{children: children}, child) do
-    children[child] |> Bunch.error_if_nil({:unknown_child, child})
-  end
-
-  @spec pop_child(Parent.state_t(), Child.name_t()) ::
-          {{:ok, child_data :: ChildEntry.t()}
-           | {:error, {:unknown_child, Child.name_t()}}, Parent.state_t()}
-  def pop_child(%{children: children} = state, child) do
-    {pid, children} = children |> Map.pop(child)
-
-    with {:ok, pid} <- pid |> Bunch.error_if_nil({:unknown_child, child}) do
-      state = %{state | children: children}
-      {{:ok, pid}, state}
-    end
-  end
-
-  @spec update_children(Parent.state_t(), [Child.name_t()], (ChildEntry.t() -> ChildEntry.t())) ::
-          {:ok, Parent.state_t()} | {:error, {:unknown_child, Child.name_t()}}
-  def update_children(state, children_names, mapper) do
-    result =
-      Bunch.Enum.try_reduce(children_names, state.children, fn name, children ->
-        if Map.has_key?(children, name) do
-          {:ok, Map.update!(children, name, mapper)}
-        else
-          {:error, {:unknown_child, name}}
+  @spec update_children!(Parent.state_t(), [Child.name_t()], (ChildEntry.t() -> ChildEntry.t())) ::
+          Parent.state_t()
+  def update_children!(%{children: children} = state, children_names, mapper) do
+    children =
+      Enum.reduce(children_names, children, fn name, children ->
+        case children do
+          %{^name => data} -> %{children | name => mapper.(data)}
+          _children -> raise ParentError, "Unknown child #{inspect(name)}"
         end
       end)
 
-    with {:ok, children} <- result do
-      {:ok, %{state | children: children}}
-    end
+    %{state | children: children}
   end
 
-  @spec update_children(Parent.state_t(), (ChildEntry.t() -> ChildEntry.t())) ::
-          {:ok, Parent.state_t()}
-  def update_children(state, mapper) do
-    children =
-      state.children
-      |> Enum.map(fn {name, entry} -> {name, mapper.(entry)} end)
-      |> Enum.into(%{})
-
-    {:ok, %{state | children: children}}
+  @spec update_children(Parent.state_t(), (ChildEntry.t() -> ChildEntry.t())) :: Parent.state_t()
+  def update_children(%{children: children} = state, mapper) do
+    children = Map.new(children, fn {name, entry} -> {name, mapper.(entry)} end)
+    %{state | children: children}
   end
 
   @spec all?(Parent.state_t(), (ChildEntry.t() -> as_boolean(term))) :: boolean()

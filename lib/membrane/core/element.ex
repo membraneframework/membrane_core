@@ -191,11 +191,6 @@ defmodule Membrane.Core.Element do
     {:noreply, state}
   end
 
-  defp do_handle_info(Message.new(:log_metadata, metadata), state) do
-    :ok = Logger.metadata(metadata)
-    {:noreply, state}
-  end
-
   defp do_handle_info(Message.new(_type, _args, _opts) = message, _state) do
     raise Membrane.ElementError, "Received invalid message #{inspect(message)}"
   end

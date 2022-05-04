@@ -1,8 +1,6 @@
 defmodule Membrane.Core.Parent.MessageDispatcher do
   @moduledoc false
 
-  import Membrane.Core.Helper.GenServer
-
   alias Membrane.Core.{Parent, TimerController}
   alias Membrane.Core.Message
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
@@ -17,13 +15,13 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
         Message.new(:playback_state_changed, [pid, new_playback_state]),
         state
       ) do
-    ChildLifeController.child_playback_changed(pid, new_playback_state, state)
-    |> noreply(state)
+    state = ChildLifeController.child_playback_changed(pid, new_playback_state, state)
+    {:noreply, state}
   end
 
   def handle_message(Message.new(:change_playback_state, new_state), state) do
-    LifecycleController.change_playback_state(new_state, state)
-    |> noreply(state)
+    state = LifecycleController.change_playback_state(new_state, state)
+    {:noreply, state}
   end
 
   def handle_message(Message.new(:stream_management_event, [element_name, pad_ref, event]), state) do
@@ -35,11 +33,6 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
 
   def handle_message(Message.new(:notification, [from, notification]), state) do
     state = LifecycleController.handle_notification(from, notification, state)
-    {:noreply, state}
-  end
-
-  def handle_message(Message.new(:log_metadata, metadata), state) do
-    state = LifecycleController.handle_log_metadata(metadata, state)
     {:noreply, state}
   end
 
@@ -66,10 +59,8 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
   def handle_message({:DOWN, _ref, :process, pid, reason} = message, state) do
     cond do
       is_child_pid?(pid, state) ->
-        case ChildLifeController.handle_child_death(pid, reason, state) do
-          {:ok, state} -> {:noreply, state}
-          {:stop, reason, state} -> {:stop, reason, state}
-        end
+        state = ChildLifeController.handle_child_death(pid, reason, state)
+        {:noreply, state}
 
       is_parent_pid?(pid, state) ->
         {:stop, {:shutdown, :parent_crash}, state}
