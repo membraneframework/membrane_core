@@ -4,7 +4,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   alias __MODULE__.{CrashGroupHandler, LinkHandler, StartupHandler}
   alias Membrane.ParentSpec
-  alias Membrane.Core.{CallbackHandler, Component, Parent, PlaybackHandler}
+  alias Membrane.Core.{Bin, CallbackHandler, Component, Parent, Pipeline, PlaybackHandler}
 
   alias Membrane.Core.Parent.{
     ChildEntryParser,
@@ -15,8 +15,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   }
 
   require Membrane.Core.Component
-  require Membrane.Bin
-  require Membrane.Element
+  require Membrane.Core.Message, as: Message
   require Membrane.Logger
 
   @type spec_ref_t :: reference()
@@ -54,6 +53,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     :ok = StartupHandler.maybe_activate_syncs(syncs, state)
     state = StartupHandler.add_children(children, state)
+    links = LinkHandler.resolve_links(links, spec_ref, state)
+
+    state =
+      put_in(state, [:pending_specs, spec_ref], %{
+        status: :initializing,
+        children: children_names,
+        links: links,
+        awaiting_responses: []
+      })
 
     # adding crash group to state
     state =
@@ -64,8 +72,131 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       end
 
     state = ClockHandler.choose_clock(children, spec.clock_provider, state)
-    state = LinkHandler.init_spec_linking(spec_ref, links, state)
-    StartupHandler.exec_handle_spec_started(children_names, state)
+    proceed_spec_startup(spec_ref, state)
+    # StartupHandler.exec_handle_spec_started(children_names, state)
+  end
+
+  @spec handle_spec_timeout(ChildLifeController.spec_ref_t(), Parent.state_t()) ::
+          Parent.state_t()
+  def handle_spec_timeout(spec_ref, state) do
+    {spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
+
+    unless spec_data == nil or spec_data.status == :linked do
+      raise Membrane.LinkError,
+            "Spec #{inspect(spec_ref)} linking took too long, spec_data: #{inspect(spec_data, pretty: true)}"
+    end
+
+    state
+  end
+
+  @spec proceed_spec_startup(ChildLifeController.spec_ref_t(), Parent.state_t()) ::
+          Parent.state_t()
+  def proceed_spec_startup(spec_ref, state) do
+    spec_data = Map.fetch!(state.pending_specs, spec_ref)
+    {spec_data, state} = do_proceed_spec_startup(spec_ref, spec_data, state)
+
+    if spec_data.status == :linked do
+      {_spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
+
+      if state.delayed_playback_change != nil do
+        LifecycleController.change_playback_state(
+          state.delayed_playback_change,
+          %{state | delayed_playback_change: nil}
+        )
+      else
+        state
+      end
+    else
+      put_in(state, [:pending_specs, spec_ref], spec_data)
+    end
+  end
+
+  defp do_proceed_spec_startup(spec_ref, %{status: :initializing} = spec_data, state) do
+    Enum.all?(spec_data.children_names, )
+  end
+
+  defp do_proceed_spec_startup(spec_ref, %{status: :initalized} = spec_data, state) do
+    Process.send_after(self(), Message.new(:spec_linking_timeout, spec_ref), 5000)
+
+    {awaiting_responses, state} =
+      Enum.map_reduce(spec_data.links, state, fn {link_id, link}, state ->
+        {awaiting_responses_from, state} =
+          LinkHandler.request_link(:output, link.from, link.to, spec_ref, link_id, state)
+
+        {awaiting_responses_to, state} =
+          LinkHandler.request_link(:input, link.to, link.from, spec_ref, link_id, state)
+
+        {{link_id, awaiting_responses_from + awaiting_responses_to}, state}
+      end)
+
+    spec_data = %{
+      spec_data
+      | awaiting_responses: Map.new(awaiting_responses),
+        status: :linking_internally
+    }
+
+    do_proceed_spec_startup(spec_ref, spec_data, state)
+  end
+
+  defp do_proceed_spec_startup(spec_ref, %{status: :linking_internally} = spec_data, state) do
+    links = spec_data.links |> Map.values()
+
+    if Enum.all?(links, &(&1.awaiting_responses == 0)) do
+      state = links |> Enum.map(& &1.link) |> Enum.reduce(state, &LinkHandler.link/2)
+      Membrane.Logger.debug("Spec #{inspect(spec_ref)} linked internally")
+      do_proceed_spec_startup(spec_ref, %{spec_data | status: :linked_internally}, state)
+    else
+      {spec_data, state}
+    end
+  end
+
+  defp do_proceed_spec_startup(
+         spec_ref,
+         %{status: :linked_internally} = spec_data,
+         %Pipeline.State{} = state
+       ) do
+    do_proceed_spec_startup(spec_ref, %{spec_data | status: :linked}, state)
+  end
+
+  defp do_proceed_spec_startup(
+         spec_ref,
+         %{status: :linked_internally} = spec_data,
+         %Bin.State{} = state
+       ) do
+    state = Bin.PadController.respond_links(spec_ref, state)
+    Membrane.Logger.debug("Linking spec #{inspect(spec_ref)} externally")
+    do_proceed_spec_startup(spec_ref, %{spec_data | status: :linking_externally}, state)
+  end
+
+  defp do_proceed_spec_startup(
+         spec_ref,
+         %{status: :linking_externally} = spec_data,
+         %Bin.State{} = state
+       ) do
+    if Bin.PadController.all_pads_linked?(spec_ref, state) do
+      Membrane.Logger.debug("Spec #{inspect(spec_ref)} linked externally")
+      do_proceed_spec_startup(spec_ref, %{spec_data | status: :linked}, state)
+    else
+      {spec_data, state}
+    end
+  end
+
+  defp do_proceed_spec_startup(spec_ref, %{status: :linked} = spec_data, state) do
+    state = StartupHandler.init_playback_state(spec_ref, state)
+    {spec_data, state}
+  end
+
+  def handle_child_ready(child, state) do
+    %{spec_ref: spec_ref} = Parent.ChildrenModel.get_child_data!(state, child)
+
+    if state.children
+       |> Map.values()
+       |> Enum.filter(&(&1.spec_ref == spec_ref))
+       |> Enum.all?(&(&1.status == :ready)) do
+      LinkHandler.init_spec_linking(spec_ref, state)
+    else
+      state
+    end
   end
 
   @spec handle_notify_child(

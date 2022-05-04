@@ -24,7 +24,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     LinkParser
   }
 
-  alias Membrane.Core.Parent.ChildLifeController.StartupHandler
+  alias Membrane.Core.Parent.ChildLifeController
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.LinkError
   alias Membrane.Pad
@@ -45,122 +45,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   @type state_t :: Pipeline.State.t() | Bin.State.t()
 
-  @spec init_spec_linking(ChildLifeController.spec_ref_t(), [LinkParser.raw_link_t()], state_t()) ::
-          state_t()
-  def init_spec_linking(spec_ref, links, state) do
-    Process.send_after(self(), Message.new(:spec_linking_timeout, spec_ref), 5000)
-
-    {links, state} =
-      Enum.map_reduce(links, state, fn link, state ->
-        link = %Link{
-          link
-          | from: resolve_endpoint(link.from, state),
-            to: resolve_endpoint(link.to, state)
-        }
-
-        link_id = {spec_ref, make_ref()}
-
-        {awaiting_responses_from, state} =
-          request_link(:output, link.from, link.to, spec_ref, link_id, state)
-
-        {awaiting_responses_to, state} =
-          request_link(:input, link.to, link.from, spec_ref, link_id, state)
-
-        {{link_id,
-          %{link: link, awaiting_responses: awaiting_responses_from + awaiting_responses_to}},
-         state}
-      end)
-
-    state =
-      put_in(state, [:pending_specs, spec_ref], %{
-        links: Map.new(links),
-        status: :linking_internally
-      })
-
-    proceed_spec_linking(spec_ref, state)
-  end
-
-  @spec handle_spec_timeout(ChildLifeController.spec_ref_t(), state_t()) :: state_t()
-  def handle_spec_timeout(spec_ref, state) do
-    {spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
-
-    unless spec_data == nil or spec_data.status == :linked do
-      raise LinkError,
-            "Spec #{inspect(spec_ref)} linking took too long, spec_data: #{inspect(spec_data, pretty: true)}"
-    end
-
-    state
-  end
-
-  @spec proceed_spec_linking(ChildLifeController.spec_ref_t(), state_t()) :: state_t()
-  def proceed_spec_linking(spec_ref, state) do
-    spec_data = Map.fetch!(state.pending_specs, spec_ref)
-    {spec_data, state} = do_proceed_spec_linking(spec_ref, spec_data, state)
-
-    if spec_data.status == :linked do
-      {_spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
-
-      if state.delayed_playback_change != nil do
-        LifecycleController.change_playback_state(
-          state.delayed_playback_change,
-          %{state | delayed_playback_change: nil}
-        )
-      else
-        state
-      end
-    else
-      put_in(state, [:pending_specs, spec_ref], spec_data)
-    end
-  end
-
-  defp do_proceed_spec_linking(spec_ref, %{status: :linking_internally} = spec_data, state) do
-    links = spec_data.links |> Map.values()
-
-    if Enum.all?(links, &(&1.awaiting_responses == 0)) do
-      state = links |> Enum.map(& &1.link) |> Enum.reduce(state, &link/2)
-      Membrane.Logger.debug("Spec #{inspect(spec_ref)} linked internally")
-      do_proceed_spec_linking(spec_ref, %{spec_data | status: :linked_internally}, state)
-    else
-      {spec_data, state}
-    end
-  end
-
-  defp do_proceed_spec_linking(
-         spec_ref,
-         %{status: :linked_internally} = spec_data,
-         %Pipeline.State{} = state
-       ) do
-    do_proceed_spec_linking(spec_ref, %{spec_data | status: :linked}, state)
-  end
-
-  defp do_proceed_spec_linking(
-         spec_ref,
-         %{status: :linked_internally} = spec_data,
-         %Bin.State{} = state
-       ) do
-    state = PadController.respond_links(spec_ref, state)
-    Membrane.Logger.debug("Linking spec #{inspect(spec_ref)} externally")
-    do_proceed_spec_linking(spec_ref, %{spec_data | status: :linking_externally}, state)
-  end
-
-  defp do_proceed_spec_linking(
-         spec_ref,
-         %{status: :linking_externally} = spec_data,
-         %Bin.State{} = state
-       ) do
-    if PadController.all_pads_linked?(spec_ref, state) do
-      Membrane.Logger.debug("Spec #{inspect(spec_ref)} linked externally")
-      do_proceed_spec_linking(spec_ref, %{spec_data | status: :linked}, state)
-    else
-      {spec_data, state}
-    end
-  end
-
-  defp do_proceed_spec_linking(spec_ref, %{status: :linked} = spec_data, state) do
-    state = StartupHandler.init_playback_state(spec_ref, state)
-    {spec_data, state}
-  end
-
   @spec handle_link_response(link_id_t(), state_t()) :: state_t()
   def handle_link_response(link_id, state) do
     {spec_ref, _link_ref} = link_id
@@ -168,11 +52,11 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     state =
       update_in(
         state,
-        [:pending_specs, spec_ref, :links, link_id, :awaiting_responses],
+        [:pending_specs, spec_ref, :awaiting_responses, link_id],
         &(&1 - 1)
       )
 
-    proceed_spec_linking(spec_ref, state)
+    ChildLifeController.proceed_spec_startup(spec_ref, state)
   end
 
   @spec unlink_crash_group(CrashGroup.t(), Parent.state_t()) :: Parent.state_t()
@@ -210,19 +94,19 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     )
   end
 
-  defp request_link(
-         _direction,
-         %Link.Endpoint{child: {Membrane.Bin, :itself}} = this,
-         other,
-         spec_ref,
-         _link_id,
-         state
-       ) do
+  def request_link(
+        _direction,
+        %Link.Endpoint{child: {Membrane.Bin, :itself}} = this,
+        other,
+        spec_ref,
+        _link_id,
+        state
+      ) do
     state = PadController.handle_internal_link_request(this.pad_ref, other, spec_ref, state)
     {0, state}
   end
 
-  defp request_link(direction, this, _other, _spec_ref, link_id, state) do
+  def request_link(direction, this, _other, _spec_ref, link_id, state) do
     if Map.fetch!(state.children, this.child).component_type == :bin do
       Message.send(this.pid, :link_request, [
         this.pad_ref,
@@ -235,6 +119,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     else
       {0, state}
     end
+  end
+
+  def resolve_links(links, spec_ref, state) do
+    Map.new(
+      links,
+      &{{spec_ref, make_ref()},
+       %Link{&1 | from: resolve_endpoint(&1.from, state), to: resolve_endpoint(&1.to, state)}}
+    )
   end
 
   @spec resolve_endpoint(LinkParser.raw_endpoint_t(), Parent.state_t()) ::
@@ -290,11 +182,11 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     end
   end
 
-  defp link(%Link{from: %Endpoint{child: child}, to: %Endpoint{child: child}}, _state) do
+  def link(%Link{from: %Endpoint{child: child}, to: %Endpoint{child: child}}, _state) do
     raise LinkError, "Tried to link element #{inspect(child)} with itself"
   end
 
-  defp link(%Link{from: from, to: to}, state) do
+  def link(%Link{from: from, to: to}, state) do
     Telemetry.report_link(from, to)
 
     if {Membrane.Bin, :itself} in [from.child, to.child] do
