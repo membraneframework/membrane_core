@@ -18,8 +18,6 @@ defmodule Membrane.Core.Element do
   use Bunch
   use GenServer
 
-  import Membrane.Core.Helper.GenServer
-
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.Element.{LifecycleController, PadController, PlaybackBuffer, State}
   alias Membrane.Core.{Message, PlaybackHandler, Telemetry, TimerController}
@@ -166,8 +164,10 @@ defmodule Membrane.Core.Element do
   @compile {:inline, do_handle_info: 2}
 
   defp do_handle_info(Message.new(:change_playback_state, new_playback_state), state) do
-    PlaybackHandler.change_playback_state(new_playback_state, LifecycleController, state)
-    |> noreply(state)
+    {:ok, state} =
+      PlaybackHandler.change_playback_state(new_playback_state, LifecycleController, state)
+
+    {:noreply, state}
   end
 
   defp do_handle_info(Message.new(type, _args, _opts) = msg, state)

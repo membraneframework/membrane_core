@@ -5,10 +5,11 @@ defmodule Membrane.Core.Pipeline do
   alias __MODULE__.{ActionHandler, State}
   alias Membrane.Clock
   alias Membrane.Core.CallbackHandler
-  alias Membrane.Core.Parent.MessageDispatcher
-  alias Membrane.Core.Telemetry
+  alias Membrane.Core.TimerController
+  alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
 
-  require Membrane.Core.Telemetry
+  require Membrane.Core.Message, as: Message
+  require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
 
   @impl GenServer
@@ -43,14 +44,82 @@ defmodule Membrane.Core.Pipeline do
   end
 
   @impl GenServer
+  def handle_info(
+        Message.new(:playback_state_changed, [pid, new_playback_state]),
+        state
+      ) do
+    state = ChildLifeController.child_playback_changed(pid, new_playback_state, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:change_playback_state, new_state), state) do
+    state = LifecycleController.change_playback_state(new_state, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:stream_management_event, [element_name, pad_ref, event]), state) do
+    state =
+      LifecycleController.handle_stream_management_event(event, element_name, pad_ref, state)
+
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:notification, [from, notification]), state) do
+    state = LifecycleController.handle_notification(from, notification, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:timer_tick, timer_id), state) do
+    state = TimerController.handle_tick(timer_id, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:link_response, link_id), state) do
+    state = ChildLifeController.LinkHandler.handle_link_response(link_id, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:spec_linking_timeout, spec_ref), state) do
+    state = ChildLifeController.LinkHandler.handle_spec_timeout(spec_ref, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info({:membrane_clock_ratio, clock, ratio}, state) do
+    state = TimerController.handle_clock_update(clock, ratio, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info({:DOWN, _ref, :process, pid, reason} = message, state) do
+    if is_child_pid?(pid, state) do
+      state = ChildLifeController.handle_child_death(pid, reason, state)
+      {:noreply, state}
+    else
+      state = LifecycleController.handle_other(message, state)
+      {:noreply, state}
+    end
+  end
+
+  @impl GenServer
   def handle_info(message, state) do
-    MessageDispatcher.handle_message(message, state)
+    state = LifecycleController.handle_other(message, state)
+    {:noreply, state}
   end
 
   @impl GenServer
   def terminate(reason, state) do
     Telemetry.report_terminate(:pipeline)
-
     :ok = state.module.handle_shutdown(reason, state.internal_state)
+  end
+
+  defp is_child_pid?(pid, state) do
+    Enum.any?(state.children, fn {_name, entry} -> entry.pid == pid end)
   end
 end
