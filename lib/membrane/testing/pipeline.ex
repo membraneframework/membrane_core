@@ -12,7 +12,7 @@ defmodule Membrane.Testing.Pipeline do
   To start a testing pipeline you need to build
   a keyword list representing the options used to determine the pipeline's behaviour and then
   pass that options list to the `Membrane.Testing.Pipeline.start_link/2`.
-  The testing pipeline can started in one of two modes - either with its `:default` behaviour, or by
+  The testing pipeline can be started in one of two modes - either with its `:default` behaviour, or by
   injecting a custom module behaviour. The usage of a `:default` pipeline implementation is presented below:
 
   ```
@@ -23,7 +23,6 @@ defmodule Membrane.Testing.Pipeline do
   ]
   options =  [
     module: :default # :default is the default value for this parameter, so you do not need to pass it here
-    children: children, # you do not need to pass :children option either, since the information about children specification is already inside :links
     links: Membrane.ParentSpec.link_linear(children)
   ]
   {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
@@ -31,7 +30,9 @@ defmodule Membrane.Testing.Pipeline do
   Note, that we have used `Membrane.Testing.ParentSpec.link_linear/1` function, that creates the list of links
   for the given list of children, linking them in linear manner (that means - children are linked in a way that
   `:output` pad of a given child is linked to `:input` pad of subsequent child). That is the case
-  which is often used while creating testing pipelines.
+  which is often used while creating testing pipelines. Be aware, that `Membrane.Testing.ParentSpec.link_linear/1`
+  creates also a children specification itself, which means, that you cannot pass that children specification
+  as another option's argument (adding `children: children` option would lead to a duplication of children specifications).
   If you need to link children in a different manner, you can of course do it by passing an appropriate list
   of links as a `:links` option, just as you would do with a regular pipeline.
 
@@ -69,11 +70,7 @@ defmodule Membrane.Testing.Pipeline do
           tested_element: TestedElement,
           sink: %Membrane.Testing.Sink{}
       ]
-      options = [
-        children: children,
-        links: Membrane.ParentSpec.link_linear(children)
-      ]
-      {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
+      {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
 
   We can now wait till the end of the stream reaches the sink element (don't forget
   to import `Membrane.Testing.Assertions`):
@@ -270,7 +267,7 @@ defmodule Membrane.Testing.Pipeline do
   """
   @spec execute_actions(pid(), Keyword.t()) :: :ok
   def execute_actions(pipeline, actions) do
-    send(pipeline, {:execute_actions, actions})
+    send(pipeline, {__MODULE__, :__execute_actions__, actions})
     :ok
   end
 
@@ -436,7 +433,7 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_other({:exec_actions, actions}, _ctx, %State{} = state) do
+  def handle_other({__MODULE__, :__execute_actions__, actions}, _ctx, %State{} = state) do
     {{:ok, actions}, state}
   end
 
@@ -451,19 +448,6 @@ defmodule Membrane.Testing.Pipeline do
 
     testing_pipeline_result = {{:ok, forward: {element, message}}, state}
 
-    combine_results(injected_module_result, testing_pipeline_result)
-  end
-
-  @impl true
-  def handle_other({:execute_actions, actions}, ctx, %State{} = state) do
-    injected_module_result =
-      eval_injected_module_callback(
-        :handle_other,
-        [{:execute_actions, actions}, ctx],
-        state
-      )
-
-    testing_pipeline_result = {{:ok, actions}, state}
     combine_results(injected_module_result, testing_pipeline_result)
   end
 
