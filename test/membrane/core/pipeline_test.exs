@@ -91,7 +91,7 @@ defmodule Membrane.Core.PipelineTest do
 
     notification = Message.new(:notification, [:non_existent_child, :abc])
 
-    assert_raise Membrane.ParentError, fn ->
+    assert_raise Membrane.UnknownChildError, fn ->
       @module.handle_info(notification, state)
     end
   end

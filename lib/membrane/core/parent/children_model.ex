@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Parent.ChildrenModel do
   @moduledoc false
 
-  alias Membrane.{Child, ChildEntry, ParentError}
+  alias Membrane.{Child, ChildEntry, UnknownChildError}
   alias Membrane.Core.Parent
 
   @type children_t :: %{Child.name_t() => ChildEntry.t()}
@@ -16,7 +16,7 @@ defmodule Membrane.Core.Parent.ChildrenModel do
   def get_child_data!(%{children: children}, child) do
     case children do
       %{^child => data} -> data
-      _children -> raise ParentError, "Unknown child #{inspect(child)}"
+      _children -> raise UnknownChildError, name: child, children: children
     end
   end
 
@@ -27,7 +27,7 @@ defmodule Membrane.Core.Parent.ChildrenModel do
       Enum.reduce(children_names, children, fn name, children ->
         case children do
           %{^name => data} -> %{children | name => mapper.(data)}
-          _children -> raise ParentError, "Unknown child #{inspect(name)}"
+          _children -> raise UnknownChildError, name: name, children: children
         end
       end)
 
