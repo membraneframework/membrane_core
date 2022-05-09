@@ -12,7 +12,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:forward, children_messages}, _cb, _params, state) do
-    :ok = Parent.ChildLifeController.handle_forward(Bunch.listify(children_messages), state)
+    :ok = children_messages |> Bunch.listify() |> Parent.ChildLifeController.handle_forward(state)
     state
   end
 
