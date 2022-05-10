@@ -6,7 +6,7 @@ defmodule Membrane.Core.Bin do
   import Membrane.Core.Helper.GenServer
 
   alias __MODULE__.State
-  alias Membrane.{CallbackError, Core, ComponentPath, Sync}
+  alias Membrane.{CallbackError, ComponentPath, Core, Sync}
   alias Membrane.Core.Bin.PadController
   alias Membrane.Core.{CallbackHandler, Message, Telemetry}
   alias Membrane.Core.Child.PadSpecHandler

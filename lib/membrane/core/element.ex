@@ -21,9 +21,10 @@ defmodule Membrane.Core.Element do
   import Membrane.Core.Helper.GenServer
 
   alias Membrane.{Clock, Element, Sync}
+  alias Membrane.ComponentPath
   alias Membrane.Core.Element.{LifecycleController, PadController, PlaybackBuffer, State}
   alias Membrane.Core.{Message, PlaybackHandler, Telemetry, TimerController}
-  alias Membrane.ComponentPath
+
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
   require Membrane.Logger

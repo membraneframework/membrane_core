@@ -3,8 +3,8 @@ defmodule Membrane.Integration.ChildCrashTest do
 
   import Membrane.Testing.Assertions
 
-  alias Membrane.Testing
   alias Membrane.Support.ChildCrashTest
+  alias Membrane.Testing
 
   test "Element that is not member of any crash group crashed when pipeline is in playing state" do
     Process.flag(:trap_exit, true)

@@ -5,12 +5,12 @@ defmodule Membrane.Core.Bin.PadController do
 
   use Bunch
   alias Bunch.Type
+  alias Membrane.Bin.CallbackContext
   alias Membrane.{Core, LinkError, Pad}
+  alias Membrane.Core.Bin.{ActionHandler, State}
   alias Membrane.Core.{CallbackHandler, Child, Message}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Bin.{ActionHandler, State}
   alias Membrane.Core.Parent.{ChildLifeController, Link, LinkParser}
-  alias Membrane.Bin.CallbackContext
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message

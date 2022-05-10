@@ -5,7 +5,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   alias Bunch.Type
   alias Membrane.{Child, Core, Notification, Pad, Sync}
-  alias Membrane.Core.{CallbackHandler, Message, Component, Parent, PlaybackHandler}
+  alias Membrane.Core.{CallbackHandler, Component, Message, Parent, PlaybackHandler}
   alias Membrane.Core.Events
   alias Membrane.Core.Parent.ChildrenModel
   alias Membrane.PlaybackState

@@ -6,9 +6,9 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
   use Membrane.Pipeline
 
+  alias Membrane.Support.Bin.TestBins
   alias Membrane.Support.ChildCrashTest.Filter
   alias Membrane.Testing
-  alias Membrane.Support.Bin.TestBins
 
   @spec crash_child(pid()) :: any()
   def crash_child(pid) do
