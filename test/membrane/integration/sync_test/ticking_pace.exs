@@ -1,8 +1,8 @@
 defmodule Membrane.Integration.SyncTest.TickingPace do
   use ExUnit.Case, async: false
 
-  alias Membrane.{Testing, Time}
   alias Membrane.Support.Sync
+  alias Membrane.{Testing, Time}
 
   @tag :long_running
   test "Ratio modifies ticking pace correctly" do

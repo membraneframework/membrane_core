@@ -3,8 +3,7 @@ defmodule Membrane.Core.Parent.MessageDispatcher do
 
   import Membrane.Core.Helper.GenServer
 
-  alias Membrane.Core.{Parent, TimerController}
-  alias Membrane.Core.Message
+  alias Membrane.Core.{Message, Parent, TimerController}
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
 
   require Membrane.Core.Message

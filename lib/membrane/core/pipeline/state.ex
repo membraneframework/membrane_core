@@ -9,9 +9,8 @@ defmodule Membrane.Core.Pipeline.State do
   use Bunch.Access
 
   alias Membrane.{Child, PlaybackState}
-  alias Membrane.Core.Parent.{ChildrenModel, Link}
+  alias Membrane.Core.Parent.{ChildrenModel, CrashGroup, Link}
   alias Membrane.Core.{Playback, Timer}
-  alias Membrane.Core.Parent.CrashGroup
 
   @type t :: %__MODULE__{
           internal_state: Membrane.Pipeline.state_t(),

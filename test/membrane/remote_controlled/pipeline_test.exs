@@ -1,8 +1,10 @@
 defmodule Membrane.RemoteControlled.PipelineTest do
   use ExUnit.Case
-  alias Membrane.RemoteControlled.Pipeline
-  alias Membrane.RemoteControlled.Message
+
   alias Membrane.ParentSpec
+  alias Membrane.RemoteControlled.Message
+  alias Membrane.RemoteControlled.Pipeline
+
   require Membrane.RemoteControlled.Pipeline
 
   defmodule Filter do

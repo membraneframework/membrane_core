@@ -3,10 +3,10 @@ defmodule Membrane.Core.BinTest do
 
   import Membrane.Testing.Assertions
 
-  alias Membrane.Support.Bin.TestBins
-  alias Membrane.Support.Bin.TestBins.{TestDynamicPadFilter, TestFilter}
   alias Membrane.Core.Bin
   alias Membrane.Core.Message
+  alias Membrane.Support.Bin.TestBins
+  alias Membrane.Support.Bin.TestBins.{TestDynamicPadFilter, TestFilter}
   alias Membrane.Testing
 
   require Membrane.Core.Message
