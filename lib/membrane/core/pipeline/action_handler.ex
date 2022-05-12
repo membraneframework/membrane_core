@@ -17,7 +17,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:forward, children_messages}, _cb, _params, state) do
-    :ok = Parent.ChildLifeController.handle_forward(Bunch.listify(children_messages), state)
+    Parent.ChildLifeController.handle_forward(Bunch.listify(children_messages), state)
     state
   end
 
