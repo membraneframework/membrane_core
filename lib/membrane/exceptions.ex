@@ -6,6 +6,21 @@ defmodule Membrane.ParentError do
   defexception [:message]
 end
 
+defmodule Membrane.UnknownChildError do
+  defexception [:message]
+
+  @impl true
+  def exception(opts) do
+    opts = Map.new(opts)
+
+    msg = """
+    Child of name #{inspect(opts.name)} doesn't exist. Available children are #{inspect(Map.keys(opts.children))}.
+    """
+
+    %__MODULE__{message: msg}
+  end
+end
+
 defmodule Membrane.CallbackError do
   defexception [:message]
 

@@ -12,33 +12,29 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
           [Membrane.Child.name_t()],
           [pid()],
           Pipeline.State.t()
-        ) ::
-          {:ok, Pipeline.State.t()}
+        ) :: Pipeline.State.t()
   def add_crash_group(group_spec, children_names, children_pids, state) do
     {group_name, mode} = group_spec
 
-    state =
-      Bunch.Access.update_in(state, [:crash_groups, group_name], fn
+    Bunch.Access.update_in(state, [:crash_groups, group_name], fn
+      %CrashGroup{
+        members: current_children_names,
+        alive_members_pids: current_alive_members
+      } = group ->
         %CrashGroup{
-          members: current_children_names,
-          alive_members_pids: current_alive_members
-        } = group ->
-          %CrashGroup{
-            group
-            | members: current_children_names ++ children_names,
-              alive_members_pids: current_alive_members ++ children_pids
-          }
+          group
+          | members: current_children_names ++ children_names,
+            alive_members_pids: current_alive_members ++ children_pids
+        }
 
-        nil ->
-          %CrashGroup{
-            name: group_name,
-            mode: mode,
-            members: children_names,
-            alive_members_pids: children_pids
-          }
-      end)
-
-    {:ok, state}
+      nil ->
+        %CrashGroup{
+          name: group_name,
+          mode: mode,
+          members: children_names,
+          alive_members_pids: children_pids
+        }
+    end)
   end
 
   @spec remove_crash_group_if_empty(Pipeline.State.t(), CrashGroup.name_t()) ::

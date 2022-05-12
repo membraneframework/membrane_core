@@ -24,7 +24,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     |> Enum.reject(&(&1.playback_sync == :not_synced))
     |> Enum.each(&PlaybackHandler.request_playback_state_change(&1.pid, new))
 
-    {:ok, state} =
+    state =
       ChildrenModel.update_children(
         state,
         &if(&1.playback_sync == :synced, do: %{&1 | playback_sync: :syncing}, else: &1)
@@ -73,13 +73,13 @@ defmodule Membrane.Core.Parent.LifecycleController do
     {:ok, state}
   end
 
-  @spec change_playback_state(PlaybackState.t(), Parent.state_t()) ::
-          PlaybackHandler.handler_return_t()
-  def change_playback_state(new_state, state) do
+  @spec change_playback_state(PlaybackState.t(), Parent.state_t()) :: Parent.state_t()
+  def change_playback_state(new_playback_state, state) do
     if Enum.empty?(state.pending_specs) do
-      PlaybackHandler.change_playback_state(new_state, __MODULE__, state)
+      {:ok, state} = PlaybackHandler.change_playback_state(new_playback_state, __MODULE__, state)
+      state
     else
-      {:ok, %{state | delayed_playback_change: new_state}}
+      %{state | delayed_playback_change: new_playback_state}
     end
   end
 
@@ -90,22 +90,17 @@ defmodule Membrane.Core.Parent.LifecycleController do
       "Received notification #{inspect(notification)} from #{inspect(from)}"
     )
 
-    with {:ok, _data} <- Parent.ChildrenModel.get_child_data(state, from) do
-      context = Component.callback_context_generator(:parent, Notification, state)
-      action_handler = get_callback_action_handler(state)
+    Parent.ChildrenModel.assert_child_exists!(state, from)
+    context = Component.callback_context_generator(:parent, Notification, state)
+    action_handler = get_callback_action_handler(state)
 
-      CallbackHandler.exec_and_handle_callback(
-        :handle_notification,
-        action_handler,
-        %{context: context},
-        [notification, from],
-        state
-      )
-    else
-      {:error, {:unknown_child, child}} ->
-        raise Membrane.ParentError,
-              "Received a notification #{inspect(notification)} from an unknown child #{inspect(child)}"
-    end
+    CallbackHandler.exec_and_handle_callback(
+      :handle_notification,
+      action_handler,
+      %{context: context},
+      [notification, from],
+      state
+    )
   end
 
   @spec handle_other(any, Parent.state_t()) :: Parent.state_t()
@@ -148,30 +143,15 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
-  @spec handle_log_metadata(Keyword.t(), Parent.state_t()) :: Parent.state_t()
-  def handle_log_metadata(metadata, state) do
-    :ok = Logger.metadata(metadata)
-
-    children_log_metadata =
-      state.children_log_metadata
-      |> Map.new()
-      |> Map.merge(Map.new(metadata))
-      |> Bunch.KVEnum.filter_by_values(&(&1 != nil))
-
-    Bunch.KVEnum.each_value(state.children, &Message.send(&1.pid, :log_metadata, metadata))
-
-    %{state | children_log_metadata: children_log_metadata}
-  end
-
-  @spec maybe_finish_playback_transition(Parent.state_t()) ::
-          {:ok | {:error, any}, Parent.state_t()}
+  @spec maybe_finish_playback_transition(Parent.state_t()) :: Parent.state_t()
   def maybe_finish_playback_transition(state) do
     all_children_in_sync? = ChildrenModel.all?(state, &(&1.playback_sync == :synced))
 
     if PlaybackHandler.suspended?(state) and all_children_in_sync? do
-      PlaybackHandler.continue_playback_change(__MODULE__, state)
+      {:ok, state} = PlaybackHandler.continue_playback_change(__MODULE__, state)
+      state
     else
-      {:ok, state}
+      state
     end
   end
 

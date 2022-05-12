@@ -4,10 +4,9 @@ defmodule Membrane.Core.Bin do
   use GenServer
 
   alias __MODULE__.State
-  alias Membrane.{Core, ComponentPath, Sync}
+  alias Membrane.{ComponentPath, Sync}
   alias Membrane.Core.Bin.PadController
-  alias Membrane.Core.{CallbackHandler, Message, Telemetry}
-  alias Membrane.Core.Child.PadSpecHandler
+  alias Membrane.Core.{CallbackHandler, Child, Message, Parent, Telemetry, TimerController}
 
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
@@ -111,7 +110,7 @@ defmodule Membrane.Core.Bin do
         },
         children_log_metadata: log_metadata
       }
-      |> PadSpecHandler.init_pads()
+      |> Child.PadSpecHandler.init_pads()
 
     state =
       CallbackHandler.exec_and_handle_callback(
@@ -140,8 +139,83 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
+  def handle_info(
+        Message.new(:playback_state_changed, [pid, new_playback_state]),
+        state
+      ) do
+    state = Parent.ChildLifeController.child_playback_changed(pid, new_playback_state, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:change_playback_state, new_state), state) do
+    state = Parent.LifecycleController.change_playback_state(new_state, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:stream_management_event, [element_name, pad_ref, event]), state) do
+    state =
+      Parent.LifecycleController.handle_stream_management_event(
+        event,
+        element_name,
+        pad_ref,
+        state
+      )
+
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:notification, [from, notification]), state) do
+    state = Parent.LifecycleController.handle_notification(from, notification, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:timer_tick, timer_id), state) do
+    state = TimerController.handle_tick(timer_id, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:link_response, link_id), state) do
+    state = Parent.ChildLifeController.LinkHandler.handle_link_response(link_id, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:spec_linking_timeout, spec_ref), state) do
+    state = Parent.ChildLifeController.LinkHandler.handle_spec_timeout(spec_ref, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info({:membrane_clock_ratio, clock, ratio}, state) do
+    state = TimerController.handle_clock_update(clock, ratio, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info({:DOWN, _ref, :process, pid, reason} = message, state) do
+    cond do
+      is_child_pid?(pid, state) ->
+        state = Parent.ChildLifeController.handle_child_death(pid, reason, state)
+        {:noreply, state}
+
+      is_parent_pid?(pid, state) ->
+        {:stop, {:shutdown, :parent_crash}, state}
+
+      true ->
+        state = Parent.LifecycleController.handle_other(message, state)
+        {:noreply, state}
+    end
+  end
+
+  @impl GenServer
   def handle_info(message, state) do
-    Core.Parent.MessageDispatcher.handle_message(message, state)
+    state = Parent.LifecycleController.handle_other(message, state)
+    {:noreply, state}
   end
 
   @impl GenServer
@@ -162,7 +236,14 @@ defmodule Membrane.Core.Bin do
   @impl GenServer
   def terminate(reason, state) do
     Telemetry.report_terminate(:bin)
-
     :ok = state.module.handle_shutdown(reason, state.internal_state)
+  end
+
+  defp is_parent_pid?(pid, state) do
+    state.parent_pid == pid
+  end
+
+  defp is_child_pid?(pid, state) do
+    Enum.any?(state.children, fn {_name, entry} -> entry.pid == pid end)
   end
 end

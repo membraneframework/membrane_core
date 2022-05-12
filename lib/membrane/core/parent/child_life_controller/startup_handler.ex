@@ -83,13 +83,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     children |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata))
   end
 
-  @spec add_children([ChildEntry.t()], Parent.state_t()) ::
-          {:ok | {:error, any}, Parent.state_t()}
+  @spec add_children([ChildEntry.t()], Parent.state_t()) :: Parent.state_t()
   def add_children(children, state) do
-    children
-    |> Bunch.Enum.try_reduce(state, fn child, state ->
-      state |> ChildrenModel.add_child(child.name, child)
-    end)
+    children =
+      Enum.reduce(children, state.children, fn child, children ->
+        Map.put(children, child.name, child)
+      end)
+
+    %{state | children: children}
   end
 
   @spec maybe_activate_syncs(%{Membrane.Child.name_t() => Sync.t()}, Parent.state_t()) ::
@@ -126,27 +127,24 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
   def init_playback_state(spec_ref, state) do
     Membrane.Logger.debug("Spec playback init #{inspect(spec_ref)} #{inspect(state.children)}")
 
-    {:ok, state} =
-      ChildrenModel.update_children(state, fn
-        %{spec_ref: ^spec_ref} = child ->
-          expected_playback = state.playback.pending_state || state.playback.state
+    ChildrenModel.update_children(state, fn
+      %{spec_ref: ^spec_ref} = child ->
+        expected_playback = state.playback.pending_state || state.playback.state
 
-          Membrane.Logger.debug(
-            "Initializing playback state #{inspect(expected_playback)} #{inspect(child)}"
-          )
+        Membrane.Logger.debug(
+          "Initializing playback state #{inspect(expected_playback)} #{inspect(child)}"
+        )
 
-          if expected_playback == :stopped do
-            %{child | playback_sync: :synced}
-          else
-            Message.send(child.pid, :change_playback_state, expected_playback)
-            %{child | playback_sync: :syncing}
-          end
+        if expected_playback == :stopped do
+          %{child | playback_sync: :synced}
+        else
+          Message.send(child.pid, :change_playback_state, expected_playback)
+          %{child | playback_sync: :syncing}
+        end
 
-        child ->
-          child
-      end)
-
-    state
+      child ->
+        child
+    end)
   end
 
   defp start_child(child, node, parent_clock, syncs, log_metadata) do
