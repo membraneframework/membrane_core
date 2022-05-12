@@ -2,7 +2,8 @@ defmodule Membrane.FailWhenNoCapsAreSent do
   use ExUnit.Case
 
   import Membrane.Testing.Assertions
-  alias Membrane.Testing.{Source, Sink, Pipeline}
+
+  alias Membrane.Testing.{Pipeline, Sink, Source}
 
   defmodule SourceWhichDoesNotSendCaps do
     use Membrane.Source

@@ -2,10 +2,10 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
   @moduledoc false
   # A module responsible for managing crash groups inside the state of pipeline.
 
-  alias Membrane.ParentSpec
   alias Membrane.Core.Parent
-  alias Membrane.Core.Pipeline
   alias Membrane.Core.Parent.CrashGroup
+  alias Membrane.Core.Pipeline
+  alias Membrane.ParentSpec
 
   @spec add_crash_group(
           ParentSpec.crash_group_spec_t(),

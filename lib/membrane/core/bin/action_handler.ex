@@ -2,10 +2,9 @@ defmodule Membrane.Core.Bin.ActionHandler do
   @moduledoc false
   use Membrane.Core.CallbackHandler
 
-  alias Membrane.ActionError
-  alias Membrane.Core.{Message, Parent, TimerController}
+  alias Membrane.{ActionError, ParentSpec}
   alias Membrane.Core.Bin.State
-  alias Membrane.ParentSpec
+  alias Membrane.Core.{Message, Parent, TimerController}
 
   require Membrane.Logger
   require Message

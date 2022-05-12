@@ -4,7 +4,7 @@ defmodule Membrane.Integration.LinkingTest do
   import Membrane.Testing.Assertions
   import Membrane.ParentSpec
 
-  alias Membrane.{Testing, Buffer}
+  alias Membrane.{Buffer, Testing}
 
   defmodule Bin do
     use Membrane.Bin
