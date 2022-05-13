@@ -2,7 +2,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
   @moduledoc false
   use Bunch
 
-  alias Membrane.{CallbackError, ChildEntry, Clock, Core, ParentError, Sync}
+  alias Membrane.{ChildEntry, Clock, Core, ParentError, Sync}
   alias Membrane.Core.{CallbackHandler, Component, Message, Parent}
   alias Membrane.Core.Parent.{ChildEntryParser, ChildLifeController, ChildrenModel}
 
@@ -83,13 +83,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     children |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata))
   end
 
-  @spec add_children([ChildEntry.t()], Parent.state_t()) ::
-          {:ok | {:error, any}, Parent.state_t()}
+  @spec add_children([ChildEntry.t()], Parent.state_t()) :: Parent.state_t()
   def add_children(children, state) do
-    children
-    |> Bunch.Enum.try_reduce(state, fn child, state ->
-      state |> ChildrenModel.add_child(child.name, child)
-    end)
+    children =
+      Enum.reduce(children, state.children, fn child, children ->
+        Map.put(children, child.name, child)
+      end)
+
+    %{state | children: children}
   end
 
   @spec maybe_activate_syncs(%{Membrane.Child.name_t() => Sync.t()}, Parent.state_t()) ::
@@ -102,8 +103,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     :ok
   end
 
-  @spec exec_handle_spec_started([Membrane.Child.name_t()], Parent.state_t()) ::
-          {:ok, Parent.state_t()} | no_return
+  @spec exec_handle_spec_started([Membrane.Child.name_t()], Parent.state_t()) :: Parent.state_t()
   def exec_handle_spec_started(children_names, state) do
     context = Component.callback_context_generator(:parent, SpecStarted, state)
 
@@ -113,25 +113,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
         %Core.Bin.State{} -> Core.Bin.ActionHandler
       end
 
-    callback_res =
-      CallbackHandler.exec_and_handle_callback(
-        :handle_spec_started,
-        action_handler,
-        %{context: context},
-        [children_names],
-        state
-      )
-
-    case callback_res do
-      {:ok, _} ->
-        callback_res
-
-      {{:error, reason}, _state} ->
-        raise CallbackError,
-          message: """
-          Callback :handle_spec_started failed with reason: #{inspect(reason)}
-          """
-    end
+    CallbackHandler.exec_and_handle_callback(
+      :handle_spec_started,
+      action_handler,
+      %{context: context},
+      [children_names],
+      state
+    )
   end
 
   @spec init_playback_state(ChildLifeController.spec_ref_t(), Parent.state_t()) ::
@@ -139,27 +127,24 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
   def init_playback_state(spec_ref, state) do
     Membrane.Logger.debug("Spec playback init #{inspect(spec_ref)} #{inspect(state.children)}")
 
-    {:ok, state} =
-      ChildrenModel.update_children(state, fn
-        %{spec_ref: ^spec_ref} = child ->
-          expected_playback = state.playback.pending_state || state.playback.state
+    ChildrenModel.update_children(state, fn
+      %{spec_ref: ^spec_ref} = child ->
+        expected_playback = state.playback.pending_state || state.playback.state
 
-          Membrane.Logger.debug(
-            "Initializing playback state #{inspect(expected_playback)} #{inspect(child)}"
-          )
+        Membrane.Logger.debug(
+          "Initializing playback state #{inspect(expected_playback)} #{inspect(child)}"
+        )
 
-          if expected_playback == :stopped do
-            %{child | playback_sync: :synced}
-          else
-            Message.send(child.pid, :change_playback_state, expected_playback)
-            %{child | playback_sync: :syncing}
-          end
+        if expected_playback == :stopped do
+          %{child | playback_sync: :synced}
+        else
+          Message.send(child.pid, :change_playback_state, expected_playback)
+          %{child | playback_sync: :syncing}
+        end
 
-        child ->
-          child
-      end)
-
-    state
+      child ->
+        child
+    end)
   end
 
   defp start_child(child, node, parent_clock, syncs, log_metadata) do
@@ -201,8 +186,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
           })
       end
 
-    with {:ok, pid} <- start_result,
-         {:ok, clock} <- Message.call(pid, :get_clock) do
+    with {:ok, pid} <- start_result do
+      clock = Message.call!(pid, :get_clock)
       %ChildEntry{child | pid: pid, clock: clock, sync: sync}
     else
       {:error, {error, stacktrace}} when is_exception(error) ->

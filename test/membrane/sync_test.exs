@@ -6,7 +6,7 @@ defmodule Membrane.SyncTest do
 
   @task_number 10
   @sync_delay 1
-  @error 5
+  @error 10
 
   @long_time 50
 

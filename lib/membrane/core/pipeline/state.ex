@@ -28,8 +28,7 @@ defmodule Membrane.Core.Pipeline.State do
               choice: :auto | :manual
             },
             clock_proxy: Membrane.Clock.t()
-          },
-          children_log_metadata: Keyword.t()
+          }
         }
 
   @enforce_keys [:module, :synchronization]
@@ -41,7 +40,6 @@ defmodule Membrane.Core.Pipeline.State do
                 delayed_playback_change: nil,
                 links: [],
                 pending_specs: %{},
-                playback: %Playback{},
-                children_log_metadata: []
+                playback: %Playback{}
               ]
 end
