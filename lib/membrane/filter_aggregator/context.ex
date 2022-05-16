@@ -1,4 +1,4 @@
-defmodule Membrane.Core.FilterAggregator.Context do
+defmodule Membrane.FilterAggregator.Context do
   @moduledoc false
 
   alias Membrane.Element

@@ -2,12 +2,16 @@ defmodule Membrane.FilterAggregator do
   @moduledoc """
   An element allowing to aggregate many filters within one Elixir process.
 
+  Warning: This element is still in experimental phase
+
   This element supports only filters with one input and one output
   with following restrictions:
   * not using timers
   * not relying on received messages
+  * not expecting any events coming from downstream elements
   * their pads have to be named `:input` and `:output`
-  * The first filter must make demands in buffers
+  * their pads cannot use manual demands
+  * the first filter must make demands in buffers
   """
   use Membrane.Filter
 
@@ -33,11 +37,14 @@ defmodule Membrane.FilterAggregator do
     states =
       filter_specs
       |> Enum.map(fn
-        {name, %module{} = sub_opts} ->
-          options = struct!(module, Map.from_struct(sub_opts))
+        {name, %module{} = options} ->
           {name, module, options}
 
         {name, module} ->
+          unless is_atom(module) and module.membrane_element?() do
+            raise "#{inspect(module)} is not an element!"
+          end
+
           options =
             module
             |> Code.ensure_loaded!()
