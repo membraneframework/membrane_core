@@ -231,7 +231,7 @@ defmodule Membrane.FilterAggregator do
   end
 
   defp perform_action({:demand, {:input, _size}}, _module, _context, _state) do
-    raise "Demands are not supported by #{inspect(__MODULE__)}"
+    raise "Manual demands are not supported by #{inspect(__MODULE__)}"
   end
 
   defp perform_action({:redemand, :output}, _module, _context, _state) do
