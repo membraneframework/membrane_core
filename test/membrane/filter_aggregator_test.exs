@@ -5,8 +5,8 @@ defmodule Membrane.FilterAggregatorTest do
 
   alias Membrane.Buffer
   alias Membrane.Caps.Mock, as: MockCaps
-  alias Membrane.FilterAggregator, as: TestedModule
   alias Membrane.Element.PadData
+  alias Membrane.FilterAggregator, as: TestedModule
 
   alias Membrane.Element.CallbackContext.{
     Caps,
