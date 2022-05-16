@@ -2,43 +2,39 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
   @moduledoc false
   # A module responsible for managing crash groups inside the state of pipeline.
 
-  alias Membrane.ParentSpec
   alias Membrane.Core.Parent
-  alias Membrane.Core.Pipeline
   alias Membrane.Core.Parent.CrashGroup
+  alias Membrane.Core.Pipeline
+  alias Membrane.ParentSpec
 
   @spec add_crash_group(
           ParentSpec.crash_group_spec_t(),
           [Membrane.Child.name_t()],
           [pid()],
           Pipeline.State.t()
-        ) ::
-          {:ok, Pipeline.State.t()}
+        ) :: Pipeline.State.t()
   def add_crash_group(group_spec, children_names, children_pids, state) do
     {group_name, mode} = group_spec
 
-    state =
-      Bunch.Access.update_in(state, [:crash_groups, group_name], fn
+    Bunch.Access.update_in(state, [:crash_groups, group_name], fn
+      %CrashGroup{
+        members: current_children_names,
+        alive_members_pids: current_alive_members
+      } = group ->
         %CrashGroup{
-          members: current_children_names,
-          alive_members_pids: current_alive_members
-        } = group ->
-          %CrashGroup{
-            group
-            | members: current_children_names ++ children_names,
-              alive_members_pids: current_alive_members ++ children_pids
-          }
+          group
+          | members: current_children_names ++ children_names,
+            alive_members_pids: current_alive_members ++ children_pids
+        }
 
-        nil ->
-          %CrashGroup{
-            name: group_name,
-            mode: mode,
-            members: children_names,
-            alive_members_pids: children_pids
-          }
-      end)
-
-    {:ok, state}
+      nil ->
+        %CrashGroup{
+          name: group_name,
+          mode: mode,
+          members: children_names,
+          alive_members_pids: children_pids
+        }
+    end)
   end
 
   @spec remove_crash_group_if_empty(Pipeline.State.t(), CrashGroup.name_t()) ::

@@ -48,8 +48,8 @@ defmodule Membrane.Element.Base do
 
   use Bunch
 
-  alias Membrane.{Element, Event, Pad}
   alias Membrane.Core.OptionsSpecs
+  alias Membrane.{Element, Event, Pad}
   alias Membrane.Element.{Action, CallbackContext}
 
   @typedoc """

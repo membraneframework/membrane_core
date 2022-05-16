@@ -2,22 +2,22 @@ defmodule Membrane.Core.Bin.ActionHandler do
   @moduledoc false
   use Membrane.Core.CallbackHandler
 
-  alias Membrane.Core.{Message, Parent, TimerController}
+  alias Membrane.{ActionError, ParentSpec}
   alias Membrane.Core.Bin.State
-  alias Membrane.{CallbackError, Notification, ParentSpec}
+  alias Membrane.Core.{Message, Parent, TimerController}
 
   require Membrane.Logger
   require Message
 
   @impl CallbackHandler
   def handle_action({:forward, children_messages}, _cb, _params, state) do
-    Parent.ChildLifeController.handle_forward(Bunch.listify(children_messages), state)
+    :ok = children_messages |> Bunch.listify() |> Parent.ChildLifeController.handle_forward(state)
+    state
   end
 
   @impl CallbackHandler
   def handle_action({:spec, spec = %ParentSpec{}}, _cb, _params, state) do
-    with {{:ok, _children}, state} <- Parent.ChildLifeController.handle_spec(spec, state),
-         do: {:ok, state}
+    Parent.ChildLifeController.handle_spec(spec, state)
   end
 
   @impl CallbackHandler
@@ -27,12 +27,14 @@ defmodule Membrane.Core.Bin.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:notify, notification}, _cb, _params, state) do
-    send_notification(notification, state)
-  end
+    %State{parent_pid: parent_pid, name: name} = state
 
-  @impl CallbackHandler
-  def handle_action({:log_metadata, metadata}, _cb, _params, state) do
-    Parent.LifecycleController.handle_log_metadata(metadata, state)
+    Membrane.Logger.debug_verbose(
+      "Sending notification #{inspect(notification)} (parent PID: #{inspect(parent_pid)})"
+    )
+
+    Message.send(parent_pid, :notification, [name, notification])
+    state
   end
 
   @impl CallbackHandler
@@ -58,17 +60,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action(action, callback, _params, state) do
-    raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
-  end
-
-  @spec send_notification(Notification.t(), State.t()) :: {:ok, State.t()}
-  defp send_notification(notification, %State{parent_pid: parent_pid, name: name} = state) do
-    Membrane.Logger.debug_verbose(
-      "Sending notification #{inspect(notification)} (parent PID: #{inspect(parent_pid)})"
-    )
-
-    Message.send(parent_pid, :notification, [name, notification])
-    {:ok, state}
+  def handle_action(action, _callback, _params, _state) do
+    raise ActionError, action: action, reason: {:unknown_action, Membrane.Bin.Action}
   end
 end

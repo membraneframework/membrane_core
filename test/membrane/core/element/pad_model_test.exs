@@ -20,7 +20,7 @@ defmodule Membrane.Core.Child.PadModelTest do
     end
 
     test "is :unknown_pad when the pad is not present", ctx do
-      assert PadModel.assert_instance(ctx.state, :output) == {:error, {:unknown_pad, :output}}
+      assert PadModel.assert_instance(ctx.state, :output) == {:error, :unknown_pad}
     end
   end
 
@@ -33,7 +33,7 @@ defmodule Membrane.Core.Child.PadModelTest do
 
     test "is :unknown_pad when the pad is not present", ctx do
       assert PadModel.get_data(ctx.state, :output, :demand) ==
-               {:error, {:unknown_pad, :output}}
+               {:error, :unknown_pad}
     end
   end
 
@@ -62,7 +62,7 @@ defmodule Membrane.Core.Child.PadModelTest do
 
     test "is :unknown_pad when the pad is not present", ctx do
       assert PadModel.set_data(ctx.state, :output, :start_of_stream?, true) ==
-               {{:error, {:unknown_pad, :output}}, ctx.state}
+               {{:error, :unknown_pad}, ctx.state}
     end
   end
 
@@ -92,7 +92,7 @@ defmodule Membrane.Core.Child.PadModelTest do
 
     test "is :unknown_pad and original state when the pad is not present", ctx do
       assert PadModel.update_data(ctx.state, :output, :demand, &{:ok, &1 + 1}) ==
-               {{:error, {:unknown_pad, :output}}, ctx.state}
+               {{:error, :unknown_pad}, ctx.state}
     end
   end
 

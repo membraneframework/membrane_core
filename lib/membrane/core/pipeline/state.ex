@@ -9,9 +9,8 @@ defmodule Membrane.Core.Pipeline.State do
   use Bunch.Access
 
   alias Membrane.{Child, PlaybackState}
-  alias Membrane.Core.Parent.{ChildrenModel, Link}
+  alias Membrane.Core.Parent.{ChildrenModel, CrashGroup, Link}
   alias Membrane.Core.{Playback, Timer}
-  alias Membrane.Core.Parent.CrashGroup
 
   @type t :: %__MODULE__{
           internal_state: Membrane.Pipeline.state_t(),
@@ -29,8 +28,7 @@ defmodule Membrane.Core.Pipeline.State do
               choice: :auto | :manual
             },
             clock_proxy: Membrane.Clock.t()
-          },
-          children_log_metadata: Keyword.t()
+          }
         }
 
   @enforce_keys [:module, :synchronization]
@@ -42,7 +40,6 @@ defmodule Membrane.Core.Pipeline.State do
                 delayed_playback_change: nil,
                 links: [],
                 pending_specs: %{},
-                playback: %Playback{},
-                children_log_metadata: []
+                playback: %Playback{}
               ]
 end

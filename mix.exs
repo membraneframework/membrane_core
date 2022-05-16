@@ -1,7 +1,7 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "0.10.0"
+  @version "0.10.1"
   @source_ref "v#{@version}"
 
   def project do
@@ -75,7 +75,8 @@ defmodule Membrane.Mixfile do
         Membrane.Caps,
         Membrane.Event,
         Membrane.EventProtocol,
-        Membrane.Testing
+        Membrane.Testing,
+        Membrane.RemoteControlled
       ],
       groups_for_modules: [
         Pipeline: [~r/^Membrane\.Pipeline($|\.)/, ~r/^Membrane\.(CrashGroup)($|\.)/],
