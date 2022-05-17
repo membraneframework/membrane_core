@@ -31,13 +31,6 @@ defmodule Membrane.Bin.Action do
           {:remove_child, Child.name_t() | [Child.name_t()]}
 
   @typedoc """
-  Action that sets `Logger` metadata for the bin and all its descendants.
-
-  Uses `Logger.metadata/1` underneath.
-  """
-  @type log_metadata_t :: {:log_metadata, Keyword.t()}
-
-  @typedoc """
   Starts a timer that will invoke `c:Membrane.Bin.handle_tick/3` callback
   every `interval` according to the given `clock`.
 
@@ -93,7 +86,6 @@ defmodule Membrane.Bin.Action do
           forward_t
           | spec_t
           | remove_child_t
-          | log_metadata_t
           | start_timer_t
           | timer_interval_t
           | stop_timer_t

@@ -7,17 +7,12 @@ defmodule Membrane.Core.Element.State do
 
   use Bunch.Access
 
-  alias Bunch.Type
   alias Membrane.{Clock, Element, Pad, Sync}
   alias Membrane.Core.{Playback, Timer}
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.Core.Element.PlaybackBuffer
 
   require Membrane.Pad
-
-  @type stateful_t(value) :: Type.stateful_t(value, t)
-  @type stateful_try_t :: Type.stateful_try_t(t)
-  @type stateful_try_t(value) :: Type.stateful_try_t(value, t)
 
   @type t :: %__MODULE__{
           module: module,

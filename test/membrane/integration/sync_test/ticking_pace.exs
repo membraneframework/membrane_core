@@ -1,8 +1,8 @@
 defmodule Membrane.Integration.SyncTest.TickingPace do
   use ExUnit.Case, async: false
 
-  alias Membrane.{Testing, Time}
   alias Membrane.Support.Sync
+  alias Membrane.{Testing, Time}
 
   @tag :long_running
   test "Ratio modifies ticking pace correctly" do
@@ -13,16 +13,16 @@ defmodule Membrane.Integration.SyncTest.TickingPace do
     actual_report_interval = 100
     reported_interval = 300
 
+    children = [
+      source: %Sync.Source{
+        tick_interval: tick_interval |> Time.milliseconds(),
+        test_process: self()
+      },
+      sink: Sync.Sink
+    ]
+
     assert {:ok, pipeline} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-               elements: [
-                 source: %Sync.Source{
-                   tick_interval: tick_interval |> Time.milliseconds(),
-                   test_process: self()
-                 },
-                 sink: Sync.Sink
-               ]
-             })
+             Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
 
     %{synchronization: %{clock_provider: %{clock: original_clock, provider: :sink}}} =
       :sys.get_state(pipeline)

@@ -1,8 +1,8 @@
 defmodule Membrane.Testing.SinkTest do
   use ExUnit.Case
 
-  alias Membrane.Testing.Sink
   alias Membrane.Testing.Notification
+  alias Membrane.Testing.Sink
 
   describe "Handle write" do
     test "demands when autodemand is true" do

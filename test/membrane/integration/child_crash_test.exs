@@ -3,19 +3,19 @@ defmodule Membrane.Integration.ChildCrashTest do
 
   import Membrane.Testing.Assertions
 
-  alias Membrane.Testing
   alias Membrane.Support.ChildCrashTest
+  alias Membrane.Testing
 
   test "Element that is not member of any crash group crashed when pipeline is in playing state" do
     Process.flag(:trap_exit, true)
 
     assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
+             Testing.Pipeline.start_link(
                module: ChildCrashTest.Pipeline,
                custom_args: %{
                  sink: Testing.Sink
                }
-             })
+             )
 
     ChildCrashTest.Pipeline.add_path(pipeline_pid, [:filter_1_1, :filter_2_1], :source_1)
 
@@ -40,10 +40,7 @@ defmodule Membrane.Integration.ChildCrashTest do
   test "small pipeline with one crash group test" do
     Process.flag(:trap_exit, true)
 
-    assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-               module: ChildCrashTest.Pipeline
-             })
+    assert {:ok, pipeline_pid} = Testing.Pipeline.start_link(module: ChildCrashTest.Pipeline)
 
     ChildCrashTest.Pipeline.add_path(pipeline_pid, [], :source, {1, :temporary})
 
@@ -69,10 +66,7 @@ defmodule Membrane.Integration.ChildCrashTest do
   test "Crash group consisting of bin crashes" do
     Process.flag(:trap_exit, true)
 
-    assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-               module: ChildCrashTest.Pipeline
-             })
+    assert {:ok, pipeline_pid} = Testing.Pipeline.start_link(module: ChildCrashTest.Pipeline)
 
     ChildCrashTest.Pipeline.add_bin(pipeline_pid, :bin_1, :source_1, {1, :temporary})
 
@@ -124,10 +118,7 @@ defmodule Membrane.Integration.ChildCrashTest do
   test "Crash two groups one after another" do
     Process.flag(:trap_exit, true)
 
-    assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-               module: ChildCrashTest.Pipeline
-             })
+    assert {:ok, pipeline_pid} = Testing.Pipeline.start_link(module: ChildCrashTest.Pipeline)
 
     ChildCrashTest.Pipeline.add_path(
       pipeline_pid,

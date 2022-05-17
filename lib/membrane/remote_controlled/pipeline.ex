@@ -44,10 +44,10 @@ defmodule Membrane.RemoteControlled.Pipeline do
   alias Membrane.RemoteControlled.Message
 
   alias Membrane.RemoteControlled.Message.{
-    PlaybackState,
-    StartOfStream,
     EndOfStream,
     Notification,
+    PlaybackState,
+    StartOfStream,
     Terminated
   }
 

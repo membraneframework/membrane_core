@@ -18,7 +18,7 @@ defmodule Membrane.Core.Element.CapsController do
   @doc """
   Handles incoming caps: either stores them in InputQueue, or executes element callback.
   """
-  @spec handle_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.stateful_try_t()
+  @spec handle_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.t()
   def handle_caps(pad_ref, caps, state) do
     Telemetry.report_metric(:caps, 1, inspect(pad_ref))
 
@@ -28,7 +28,7 @@ defmodule Membrane.Core.Element.CapsController do
     queue = data.input_queue
 
     if queue && not InputQueue.empty?(queue) do
-      PadModel.set_data(
+      PadModel.set_data!(
         state,
         pad_ref,
         :input_queue,
@@ -39,36 +39,29 @@ defmodule Membrane.Core.Element.CapsController do
     end
   end
 
-  @spec exec_handle_caps(Pad.ref_t(), Caps.t(), params :: map, State.t()) ::
-          State.stateful_try_t()
+  @spec exec_handle_caps(Pad.ref_t(), Caps.t(), params :: map, State.t()) :: State.t()
   def exec_handle_caps(pad_ref, caps, params \\ %{}, state) do
     require CallbackContext.Caps
     %{accepted_caps: accepted_caps} = PadModel.get_data!(state, pad_ref)
     context = &CallbackContext.Caps.from_state(&1, pad: pad_ref)
 
-    withl match: true <- Caps.Matcher.match?(accepted_caps, caps),
-          callback:
-            {:ok, state} <-
-              CallbackHandler.exec_and_handle_callback(
-                :handle_caps,
-                ActionHandler,
-                %{context: context} |> Map.merge(params),
-                [pad_ref, caps],
-                state
-              ) do
-      {:ok, PadModel.set_data!(state, pad_ref, :caps, caps)}
+    if Caps.Matcher.match?(accepted_caps, caps) do
+      state =
+        CallbackHandler.exec_and_handle_callback(
+          :handle_caps,
+          ActionHandler,
+          %{context: context} |> Map.merge(params),
+          [pad_ref, caps],
+          state
+        )
+
+      PadModel.set_data!(state, pad_ref, :caps, caps)
     else
-      match: false ->
-        Membrane.Logger.error("""
-        Received caps: #{inspect(caps)} that are not specified in def_input_pad
-        for pad #{inspect(pad_ref)}. Specs of accepted caps are:
-        #{inspect(accepted_caps, pretty: true)}
-        """)
-
-        {{:error, :invalid_caps}, state}
-
-      callback: {{:error, reason}, state} ->
-        {{:error, reason}, state}
+      raise """
+      Received caps: #{inspect(caps)} that are not specified in def_input_pad
+      for pad #{inspect(pad_ref)}. Specs of accepted caps are:
+      #{inspect(accepted_caps, pretty: true)}
+      """
     end
   end
 end

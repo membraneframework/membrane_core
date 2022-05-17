@@ -246,7 +246,7 @@ defmodule Membrane.Core.Element.InputQueueSpec do
     end
 
     context "when there are enough buffers" do
-      context "and buffers dont have to be splitted" do
+      context "and buffers dont have to be split" do
         let :to_take, do: 3
 
         it "should return `to_take` buffers from the queue" do
@@ -268,7 +268,7 @@ defmodule Membrane.Core.Element.InputQueueSpec do
         end
       end
 
-      context "and buffers have to be splitted" do
+      context "and buffers have to be split" do
         let :to_take, do: 4
 
         it "should return `to_take` buffers from the queue" do

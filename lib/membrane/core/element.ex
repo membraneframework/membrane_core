@@ -18,12 +18,11 @@ defmodule Membrane.Core.Element do
   use Bunch
   use GenServer
 
-  import Membrane.Core.Helper.GenServer
-
   alias Membrane.{Clock, Element, Sync}
+  alias Membrane.ComponentPath
   alias Membrane.Core.Element.{LifecycleController, PadController, PlaybackBuffer, State}
   alias Membrane.Core.{Message, PlaybackHandler, Telemetry, TimerController}
-  alias Membrane.ComponentPath
+
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
   require Membrane.Logger
@@ -110,25 +109,19 @@ defmodule Membrane.Core.Element do
 
     state = Map.take(options, [:module, :name, :parent_clock, :sync, :parent]) |> State.new()
 
-    with {:ok, state} <- LifecycleController.handle_init(options.user_options, state) do
-      {:ok, state}
-    else
-      {{:error, reason}, _state} -> {:stop, {:element_init, reason}}
-    end
+    state = LifecycleController.handle_init(options.user_options, state)
+    {:ok, state}
   end
 
   @impl GenServer
   def terminate(reason, state) do
     Telemetry.report_terminate(:element)
-
-    {:ok, _state} = LifecycleController.handle_shutdown(reason, state)
-
-    :ok
+    LifecycleController.handle_shutdown(reason, state)
   end
 
   @impl GenServer
   def handle_call(Message.new(:get_clock), _from, state) do
-    reply({{:ok, state.synchronization.clock}, state})
+    {:reply, state.synchronization.clock, state}
   end
 
   @impl GenServer
@@ -137,25 +130,25 @@ defmodule Membrane.Core.Element do
         _from,
         state
       ) do
-    reply(PadController.handle_link(direction, this, other, params, state), state)
+    {reply, state} = PadController.handle_link(direction, this, other, params, state)
+    {:reply, reply, state}
   end
 
   @impl GenServer
   def handle_call(Message.new(:set_stream_sync, sync), _from, state) do
-    new_state = put_in(state.synchronization.stream_sync, sync)
-    reply({:ok, new_state})
+    state = put_in(state.synchronization.stream_sync, sync)
+    {:reply, :ok, state}
   end
 
   @impl GenServer
-  def handle_call(message, _from, state) do
-    {{:error, {:invalid_message, message, mode: :call}}, state}
-    |> reply(state)
+  def handle_call(message, {pid, _tag}, _state) do
+    raise Membrane.ElementError,
+          "Received invalid message #{inspect(message)} from #{inspect(pid)}"
   end
 
   @impl GenServer
   def handle_info({:DOWN, _ref, :process, parent_pid, reason}, %{parent_pid: parent_pid} = state) do
-    {:ok, state} = LifecycleController.handle_pipeline_down(reason, state)
-
+    :ok = LifecycleController.handle_pipeline_down(reason, state)
     {:stop, {:shutdown, :parent_crash}, state}
   end
 
@@ -172,38 +165,39 @@ defmodule Membrane.Core.Element do
   @compile {:inline, do_handle_info: 2}
 
   defp do_handle_info(Message.new(:change_playback_state, new_playback_state), state) do
-    PlaybackHandler.change_playback_state(new_playback_state, LifecycleController, state)
-    |> noreply(state)
+    {:ok, state} =
+      PlaybackHandler.change_playback_state(new_playback_state, LifecycleController, state)
+
+    {:noreply, state}
   end
 
   defp do_handle_info(Message.new(type, _args, _opts) = msg, state)
        when type in [:demand, :buffer, :caps, :event] do
-    PlaybackBuffer.store(msg, state) |> noreply(state)
+    state = PlaybackBuffer.store(msg, state)
+    {:noreply, state}
   end
 
   defp do_handle_info(Message.new(:handle_unlink, pad_ref), state) do
-    PadController.handle_unlink(pad_ref, state) |> noreply(state)
+    state = PadController.handle_unlink(pad_ref, state)
+    {:noreply, state}
   end
 
   defp do_handle_info(Message.new(:timer_tick, timer_id), state) do
-    TimerController.handle_tick(timer_id, state) |> noreply(state)
+    state = TimerController.handle_tick(timer_id, state)
+    {:noreply, state}
   end
 
   defp do_handle_info({:membrane_clock_ratio, clock, ratio}, state) do
-    TimerController.handle_clock_update(clock, ratio, state) |> noreply()
+    state = TimerController.handle_clock_update(clock, ratio, state)
+    {:noreply, state}
   end
 
-  defp do_handle_info(Message.new(:log_metadata, metadata), state) do
-    :ok = Logger.metadata(metadata)
-    noreply({:ok, state})
-  end
-
-  defp do_handle_info(Message.new(_type, _args, _opts) = message, state) do
-    {{:error, {:invalid_message, message, mode: :info}}, state}
-    |> noreply(state)
+  defp do_handle_info(Message.new(_type, _args, _opts) = message, _state) do
+    raise Membrane.ElementError, "Received invalid message #{inspect(message)}"
   end
 
   defp do_handle_info(message, state) do
-    LifecycleController.handle_other(message, state) |> noreply(state)
+    state = LifecycleController.handle_other(message, state)
+    {:noreply, state}
   end
 end

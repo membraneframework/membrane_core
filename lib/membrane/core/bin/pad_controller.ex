@@ -4,13 +4,13 @@ defmodule Membrane.Core.Bin.PadController do
   # Module handling linking and unlinking pads.
 
   use Bunch
-  alias Bunch.Type
+
+  alias Membrane.Bin.CallbackContext
   alias Membrane.{Core, LinkError, Pad}
+  alias Membrane.Core.Bin.{ActionHandler, State}
   alias Membrane.Core.{CallbackHandler, Child, Message}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Bin.{ActionHandler, State}
   alias Membrane.Core.Parent.{ChildLifeController, Link, LinkParser}
-  alias Membrane.Bin.CallbackContext
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
@@ -47,7 +47,7 @@ defmodule Membrane.Core.Bin.PadController do
 
     state =
       case PadModel.get_data(state, pad_ref) do
-        {:error, {:unknown_pad, pad_ref}} ->
+        {:error, :unknown_pad} ->
           init_pad_data(pad_ref, info, state)
 
         # This case is for pads that were instantiated before the external link request,
@@ -64,8 +64,7 @@ defmodule Membrane.Core.Bin.PadController do
       end
 
     state = PadModel.update_data!(state, pad_ref, &%{&1 | link_id: link_id, options: pad_options})
-    {:ok, state} = maybe_handle_pad_added(pad_ref, state)
-    state
+    maybe_handle_pad_added(pad_ref, state)
   end
 
   @doc """
@@ -146,7 +145,7 @@ defmodule Membrane.Core.Bin.PadController do
           %{initiator: :parent}
           | %{initiator: :sibling, other_info: PadModel.pad_info_t() | nil, link_metadata: map},
           Core.Bin.State.t()
-        ) :: Type.stateful_try_t(PadModel.pad_info_t(), Core.Bin.State.t())
+        ) :: {Core.Element.PadController.link_call_reply_t(), Core.Bin.State.t()}
   def handle_link(direction, endpoint, other_endpoint, params, state) do
     pad_data = PadModel.get_data!(state, endpoint.pad_ref)
     %{spec_ref: spec_ref, endpoint: child_endpoint} = pad_data
@@ -194,15 +193,15 @@ defmodule Membrane.Core.Bin.PadController do
   @doc """
   Handles situation where the pad has been unlinked (e.g. when connected element has been removed from the pipeline)
   """
-  @spec handle_unlink(Pad.ref_t(), Core.Bin.State.t()) :: Type.stateful_try_t(Core.Bin.State.t())
+  @spec handle_unlink(Pad.ref_t(), Core.Bin.State.t()) :: Core.Bin.State.t()
   def handle_unlink(pad_ref, state) do
-    with {:ok, state} <- maybe_handle_pad_removed(pad_ref, state) do
-      PadModel.delete_data(state, pad_ref)
-    end
+    state = maybe_handle_pad_removed(pad_ref, state)
+    endpoint = PadModel.get_data!(state, pad_ref, :endpoint)
+    Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+    PadModel.delete_data!(state, pad_ref)
   end
 
-  @spec maybe_handle_pad_added(Pad.ref_t(), Core.Bin.State.t()) ::
-          Type.stateful_try_t(Core.Bin.State.t())
+  @spec maybe_handle_pad_added(Pad.ref_t(), Core.Bin.State.t()) :: Core.Bin.State.t()
   defp maybe_handle_pad_added(ref, state) do
     %{options: pad_opts, direction: direction, availability: availability} =
       PadModel.get_data!(state, ref)
@@ -218,12 +217,11 @@ defmodule Membrane.Core.Bin.PadController do
         state
       )
     else
-      {:ok, state}
+      state
     end
   end
 
-  @spec maybe_handle_pad_removed(Pad.ref_t(), Core.Bin.State.t()) ::
-          Type.stateful_try_t(Core.Bin.State.t())
+  @spec maybe_handle_pad_removed(Pad.ref_t(), Core.Bin.State.t()) :: Core.Bin.State.t()
   defp maybe_handle_pad_removed(ref, state) do
     %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
 
@@ -238,7 +236,7 @@ defmodule Membrane.Core.Bin.PadController do
         state
       )
     else
-      {:ok, state}
+      state
     end
   end
 

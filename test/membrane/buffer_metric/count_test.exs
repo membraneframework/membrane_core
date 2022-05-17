@@ -16,7 +16,7 @@ defmodule Membrane.Buffer.Metric.CountTest do
   end
 
   describe ".split_buffers/2" do
-    test "should return splitted buffers" do
+    test "should return split buffers" do
       {extracted, rest} = Count.split_buffers(@buffers, @count)
 
       assert extracted == [@buf1]

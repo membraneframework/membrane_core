@@ -101,13 +101,10 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
       {_spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
 
       if state.delayed_playback_change != nil do
-        {:ok, state} =
-          LifecycleController.change_playback_state(
-            state.delayed_playback_change,
-            %{state | delayed_playback_change: nil}
-          )
-
-        state
+        LifecycleController.change_playback_state(
+          state.delayed_playback_change,
+          %{state | delayed_playback_change: nil}
+        )
       else
         state
       end
@@ -182,20 +179,35 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   def unlink_crash_group(crash_group, state) do
     %CrashGroup{members: members_names} = crash_group
 
-    links_to_remove =
-      Enum.filter(state.links, fn %Link{from: from, to: to} ->
-        from.child in members_names or to.child in members_names
-      end)
-
-    Enum.each(links_to_remove, fn %Link{to: to, from: from} ->
-      cond do
-        from.child not in members_names -> Message.send(from.pid, :handle_unlink, from.pad_ref)
-        to.child not in members_names -> Message.send(to.pid, :handle_unlink, to.pad_ref)
-        true -> :ok
-      end
+    Enum.reduce(members_names, state, fn member_name, state ->
+      unlink_element(member_name, state)
     end)
+  end
 
-    Map.update!(state, :links, &Enum.reject(&1, fn link -> link in links_to_remove end))
+  @spec unlink_element(Membrane.Element.name_t(), Parent.state_t()) :: Parent.state_t()
+  def unlink_element(element_name, state) do
+    Map.update!(
+      state,
+      :links,
+      &(&1
+        |> Enum.reject(fn %Link{from: from, to: to} ->
+          from_name = from.child
+          to_name = to.child
+
+          cond do
+            element_name == from_name ->
+              Message.send(to.pid, :handle_unlink, to.pad_ref)
+              true
+
+            element_name == to_name ->
+              Message.send(from.pid, :handle_unlink, from.pad_ref)
+              true
+
+            true ->
+              false
+          end
+        end))
+    )
   end
 
   defp request_link(
@@ -252,16 +264,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   defp resolve_endpoint(endpoint, state) do
     %Endpoint{child: child, pad_spec: pad_spec} = endpoint
+    child_data = Parent.ChildrenModel.get_child_data!(state, child)
+    pad_name = Pad.name_by_ref(pad_spec)
 
-    withl child: {:ok, child_data} <- Parent.ChildrenModel.get_child_data(state, child),
-          do: pad_name = Pad.name_by_ref(pad_spec),
-          pad: {:ok, pad_info} <- Keyword.fetch(child_data.module.membrane_pads(), pad_name),
+    withl pad: {:ok, pad_info} <- Keyword.fetch(child_data.module.membrane_pads(), pad_name),
           ref: {:ok, ref} <- make_pad_ref(pad_spec, pad_info.availability) do
       %Endpoint{endpoint | pid: child_data.pid, pad_ref: ref, pad_info: pad_info}
     else
-      child: {:error, {:unknown_child, _child}} ->
-        raise LinkError, "Child #{inspect(child)} does not exist"
-
       pad: :error ->
         raise LinkError, "Child #{inspect(child)} does not have pad #{inspect(pad_spec)}"
 

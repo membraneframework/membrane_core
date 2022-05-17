@@ -2,7 +2,8 @@ defmodule Membrane.FailWhenNoCapsAreSent do
   use ExUnit.Case
 
   import Membrane.Testing.Assertions
-  alias Membrane.Testing.{Source, Sink, Pipeline}
+
+  alias Membrane.Testing.{Pipeline, Sink, Source}
 
   defmodule SourceWhichDoesNotSendCaps do
     use Membrane.Source
@@ -32,12 +33,14 @@ defmodule Membrane.FailWhenNoCapsAreSent do
   end
 
   test "if pipeline crashes when the caps are not sent before the first buffer" do
-    options = %Pipeline.Options{
-      elements: [
-        source: SourceWhichDoesNotSendCaps,
-        sink: Sink
-      ]
-    }
+    children = [
+      source: SourceWhichDoesNotSendCaps,
+      sink: Sink
+    ]
+
+    options = [
+      links: Membrane.ParentSpec.link_linear(children)
+    ]
 
     {:ok, pipeline} = Pipeline.start(options)
     Pipeline.message_child(pipeline, :source, {:send_your_pid, self()})
@@ -51,21 +54,19 @@ defmodule Membrane.FailWhenNoCapsAreSent do
 
     Pipeline.message_child(pipeline, :source, :send_buffer)
     assert_receive {:DOWN, ^source_ref, :process, ^source_pid, {reason, _stack_trace}}
-    assert %Membrane.ActionError{message: action_error_msg} = reason
-
-    assert Regex.match?(
-             ~r/Tried to send a buffer, while caps have not been sent on this pad/,
-             action_error_msg
-           )
+    assert %Membrane.ElementError{message: action_error_msg} = reason
+    assert action_error_msg =~ ~r/buffer.*caps.*not.*sent/
   end
 
   test "if pipeline works properly when caps are sent before the first buffer" do
-    options = %Pipeline.Options{
-      elements: [
-        source: Source,
-        sink: Sink
-      ]
-    }
+    children = [
+      source: Source,
+      sink: Sink
+    ]
+
+    options = [
+      links: Membrane.ParentSpec.link_linear(children)
+    ]
 
     {:ok, pipeline} = Pipeline.start(options)
     ref = Process.monitor(pipeline)
