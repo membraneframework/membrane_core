@@ -466,29 +466,30 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_element_start_of_stream(endpoint, ctx, state) do
+  def handle_element_start_of_stream(element, pad, ctx, state) do
     {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_element_start_of_stream,
-        [endpoint, ctx],
+        [element, pad, ctx],
         state
       )
 
-    :ok = notify_test_process(state.test_process, {:handle_element_start_of_stream, endpoint})
+    :ok =
+      notify_test_process(state.test_process, {:handle_element_start_of_stream, {element, pad}})
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
   @impl true
-  def handle_element_end_of_stream(endpoint, ctx, state) do
+  def handle_element_end_of_stream(element, pad, ctx, state) do
     {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_element_end_of_stream,
-        [endpoint, ctx],
+        [element, pad, ctx],
         state
       )
 
-    :ok = notify_test_process(state.test_process, {:handle_element_end_of_stream, endpoint})
+    :ok = notify_test_process(state.test_process, {:handle_element_end_of_stream, {element, pad}})
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end

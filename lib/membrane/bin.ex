@@ -157,7 +157,8 @@ defmodule Membrane.Bin do
   Callback invoked when a child element starts processing stream via given pad.
   """
   @callback handle_element_start_of_stream(
-              {Child.name_t(), Pad.ref_t()},
+              child :: Child.name_t(),
+              pad :: Pad.ref_t(),
               context :: CallbackContext.StreamManagement.t(),
               state :: state_t
             ) :: callback_return_t
@@ -166,7 +167,8 @@ defmodule Membrane.Bin do
   Callback invoked when a child element finishes processing stream via given pad.
   """
   @callback handle_element_end_of_stream(
-              {Child.name_t(), Pad.ref_t()},
+              child :: Child.name_t(),
+              pad :: Pad.ref_t(),
               context :: CallbackContext.StreamManagement.t(),
               state :: state_t
             ) :: callback_return_t
@@ -206,8 +208,8 @@ defmodule Membrane.Bin do
                       handle_stopped_to_terminating: 2,
                       handle_other: 3,
                       handle_spec_started: 3,
-                      handle_element_start_of_stream: 3,
-                      handle_element_end_of_stream: 3,
+                      handle_element_start_of_stream: 4,
+                      handle_element_end_of_stream: 4,
                       handle_notification: 4,
                       handle_tick: 3
 
@@ -347,10 +349,10 @@ defmodule Membrane.Bin do
       def handle_spec_started(new_children, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_element_start_of_stream({element, pad}, _ctx, state), do: {:ok, state}
+      def handle_element_start_of_stream(_element, _pad, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_element_end_of_stream({element, pad}, _ctx, state), do: {:ok, state}
+      def handle_element_end_of_stream(_element, _pad, _ctx, state), do: {:ok, state}
 
       @impl true
       def handle_notification(notification, element, _ctx, state), do: {:ok, state}
@@ -367,8 +369,8 @@ defmodule Membrane.Bin do
                      handle_stopped_to_terminating: 2,
                      handle_other: 3,
                      handle_spec_started: 3,
-                     handle_element_start_of_stream: 3,
-                     handle_element_end_of_stream: 3,
+                     handle_element_start_of_stream: 4,
+                     handle_element_end_of_stream: 4,
                      handle_notification: 4
     end
   end

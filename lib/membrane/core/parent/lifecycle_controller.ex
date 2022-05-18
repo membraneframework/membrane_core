@@ -138,7 +138,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
       callback,
       action_handler,
       %{context: context},
-      [{element_name, pad_ref}],
+      [element_name, pad_ref],
       state
     )
   end

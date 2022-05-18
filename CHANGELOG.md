@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.11.0
+ * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)
+
 ## 0.10.0
  * Remove all deprecated stuff [#399](https://github.com/membraneframework/membrane_core/pull/399)
  * Make `Membrane.Pipeline.{prepare, play, stop}` deprecated and add `:playback` action instead
@@ -8,6 +11,7 @@
    can be spawned and controlled by an external process [#366](https://github.com/membraneframework/membrane_core/pull/366)  
  * Disallow sending buffers without sending caps first [#341](https://github.com/membraneframework/membrane_core/issues/341)
  * Refine the `Membrane.Testing.Pipeline` API - deprecate the `Membrane.Testing.Pipeline.Options` usage, use keyword list as options in `Membrane.Testing.Pipeline.start/1` and `Membrane.Testing.Pipeline.start_link/1`
+
 ## 0.9.0
  * Automatic demands [#313](https://github.com/membraneframework/membrane_core/pull/313)
  * Stop forwarding notifications by default in bins [#358](https://github.com/membraneframework/membrane_core/pull/358)

@@ -244,7 +244,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
 
   describe "assert_start_of_stream" do
     test "does not flunk when :start_of_stream is handled by pipeline", %{state: state} do
-      Pipeline.handle_element_start_of_stream({:sink, :input}, context(), state)
+      Pipeline.handle_element_start_of_stream(:sink, :input, context(), state)
       assert_start_of_stream(self(), :sink)
     end
 
@@ -257,7 +257,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
 
   describe "assert_end_of_stream" do
     test "does not flunk when :end_of_stream is handled by pipeline", %{state: state} do
-      Pipeline.handle_element_end_of_stream({:sink, :input}, context(), state)
+      Pipeline.handle_element_end_of_stream(:sink, :input, context(), state)
       assert_end_of_stream(self(), :sink)
     end
 
