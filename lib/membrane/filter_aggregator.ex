@@ -15,7 +15,7 @@ defmodule Membrane.FilterAggregator do
   """
   use Membrane.Filter
 
-  alias __MODULE__.Context
+  alias Membrane.Core.FilterAggregator.Context
   alias Membrane.Element.CallbackContext
 
   def_options filters: [
@@ -201,6 +201,7 @@ defmodule Membrane.FilterAggregator do
     cb_context = struct!(CallbackContext.Process, context)
 
     module.handle_process_list(:input, List.wrap(buffer), cb_context, state)
+    |> normalize_cb_return(module, :handle_process_list)
   end
 
   defp perform_action({:caps, {:output, caps}}, module, context, state) do
@@ -210,12 +211,14 @@ defmodule Membrane.FilterAggregator do
       |> then(&struct!(CallbackContext.Caps, &1))
 
     module.handle_caps(:input, caps, cb_context, state)
+    |> normalize_cb_return(module, :handle_caps)
   end
 
   defp perform_action({:event, {:output, event}}, module, context, state) do
     cb_context = struct!(CallbackContext.Event, context)
 
     module.handle_event(:input, event, cb_context, state)
+    |> normalize_cb_return(module, :handle_event)
   end
 
   # Internal, FilterAggregator action used to trigger handle_start_of_stream
@@ -223,10 +226,8 @@ defmodule Membrane.FilterAggregator do
     cb_context = struct!(CallbackContext.StreamManagement, context)
 
     {{:ok, actions}, new_state} =
-      case module.handle_start_of_stream(:input, cb_context, state) do
-        {:ok, state} -> {{:ok, []}, state}
-        result -> result
-      end
+      module.handle_start_of_stream(:input, cb_context, state)
+      |> normalize_cb_return(module, :handle_start_of_stream)
 
     {{:ok, Keyword.put_new(actions, :start_of_stream, :output)}, new_state}
   end
@@ -235,6 +236,7 @@ defmodule Membrane.FilterAggregator do
     cb_context = struct!(CallbackContext.StreamManagement, context)
 
     module.handle_end_of_stream(:input, cb_context, state)
+    |> normalize_cb_return(module, :handle_end_of_stream)
   end
 
   defp perform_action({:demand, {:input, _size}}, _module, _context, _state) do
@@ -260,22 +262,19 @@ defmodule Membrane.FilterAggregator do
   end
 
   defp perform_action({:split, {:handle_process, args_lists}}, module, context, state) do
-    {{:ok, actions}, {context, state}} =
+    {actions, {context, state}} =
       args_lists
-      |> Bunch.Enum.try_flat_map_reduce({context, state}, fn [:input, buffer],
-                                                             {acc_context, acc_state} ->
+      |> Enum.flat_map_reduce({context, state}, fn [:input, buffer], {acc_context, acc_state} ->
         acc_context = Context.before_incoming_action(acc_context, {:buffer, {:output, buffer}})
         cb_context = struct!(CallbackContext.Process, acc_context)
-        {result, state} = module.handle_process(:input, buffer, cb_context, acc_state)
+
+        {{:ok, actions}, state} =
+          module.handle_process(:input, buffer, cb_context, acc_state)
+          |> normalize_cb_return(module, :handle_process)
+
         acc_context = Context.after_incoming_action(acc_context, {:buffer, {:output, buffer}})
 
-        result =
-          case result do
-            :ok -> {:ok, []}
-            _error -> result
-          end
-
-        {result, {acc_context, state}}
+        {actions, {acc_context, state}}
       end)
 
     {{:ok, actions ++ [merge_context: context]}, state}
@@ -308,12 +307,34 @@ defmodule Membrane.FilterAggregator do
     cb_context = struct!(CallbackContext.PlaybackChange, context)
 
     {{:ok, actions}, new_state} =
-      case apply(module, callback, [cb_context, state]) do
-        {:ok, state} -> {{:ok, []}, state}
-        result -> result
-      end
+      apply(module, callback, [cb_context, state])
+      |> normalize_cb_return(module, callback)
 
     {{:ok, actions ++ [pseudo_action]}, new_state}
+  end
+
+  defp normalize_cb_return({:ok, state}, _module, _callback) do
+    {{:ok, []}, state}
+  end
+
+  defp normalize_cb_return({{:ok, actions}, _state} = result, _module, _callback)
+       when is_list(actions) do
+    result
+  end
+
+  defp normalize_cb_return({{:error, reason}, state}, module, callback) do
+    raise Membrane.CallbackError,
+      kind: :error,
+      callback: {module, callback},
+      reason: reason,
+      state: state
+  end
+
+  defp normalize_cb_return(other, module, callback) do
+    raise Membrane.CallbackError,
+      kind: :bad_return,
+      callback: {module, callback},
+      val: other
   end
 
   defp reject_internal_actions(actions) do
