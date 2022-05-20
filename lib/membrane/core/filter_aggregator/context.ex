@@ -3,12 +3,16 @@ defmodule Membrane.Core.FilterAggregator.Context do
 
   alias Membrane.Element
 
+  require Membrane.Core.FilterAggregator.InternalAction, as: InternalAction
+
   @type t :: Membrane.Core.Element.CallbackContext.default_fields()
 
   @typedoc """
   Collection of states for encapsuled elements as kept in `Membrane.FilterAggregator` element
   """
   @type states :: [{Element.name_t(), module(), t(), Element.state_t()}]
+
+  @type action :: Element.Action.t() | Membrane.Core.FilterAggregator.InternalAction.t()
 
   @spec build_context!(Element.name_t(), module()) :: t()
   def build_context!(name, module) do
@@ -100,7 +104,7 @@ defmodule Membrane.Core.FilterAggregator.Context do
     context
   end
 
-  def before_incoming_action(context, {:start_of_stream, :output}) do
+  def before_incoming_action(context, InternalAction.start_of_stream(:output)) do
     put_in(context.pads.input.start_of_stream?, true)
   end
 
@@ -112,7 +116,7 @@ defmodule Membrane.Core.FilterAggregator.Context do
     context
   end
 
-  @spec after_incoming_action(t(), action :: any()) :: t()
+  @spec after_incoming_action(t(), action :: action()) :: t()
   def after_incoming_action(context, {:caps, {:output, caps}}) do
     put_in(context.pads.input.caps, caps)
   end
@@ -121,12 +125,12 @@ defmodule Membrane.Core.FilterAggregator.Context do
     context
   end
 
-  @spec after_out_actions(t(), action :: any()) :: t()
+  @spec after_out_actions(t(), actions :: [action()]) :: t()
   def after_out_actions(context, actions) do
     Enum.reduce(actions, context, fn action, ctx -> after_out_action(ctx, action) end)
   end
 
-  @spec after_out_action(t(), action :: any()) :: t()
+  @spec after_out_action(t(), action :: action()) :: t()
   def after_out_action(context, {:caps, {:input, caps}}) do
     put_in(context.pads.input.caps, caps)
   end
@@ -135,7 +139,7 @@ defmodule Membrane.Core.FilterAggregator.Context do
     put_in(context.pads.output.caps, caps)
   end
 
-  def after_out_action(context, {:start_of_stream, :output}) do
+  def after_out_action(context, InternalAction.start_of_stream(:output)) do
     put_in(context.pads.output.start_of_stream?, true)
   end
 
@@ -145,17 +149,17 @@ defmodule Membrane.Core.FilterAggregator.Context do
 
   def after_out_action(context, action)
       when action in [
-             :stopped_to_prepared,
-             :prepared_to_playing,
-             :playing_to_prepared,
-             :prepared_to_stopped
+             InternalAction.stopped_to_prepared(),
+             InternalAction.prepared_to_playing(),
+             InternalAction.playing_to_prepared(),
+             InternalAction.prepared_to_stopped()
            ] do
     pb_state =
       case action do
-        :stopped_to_prepared -> :prepared
-        :prepared_to_playing -> :playing
-        :playing_to_prepared -> :prepared
-        :prepared_to_stopped -> :stopped
+        InternalAction.stopped_to_prepared() -> :prepared
+        InternalAction.prepared_to_playing() -> :playing
+        InternalAction.playing_to_prepared() -> :prepared
+        InternalAction.prepared_to_stopped() -> :stopped
       end
 
     %{context | playback_state: pb_state}

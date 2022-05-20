@@ -120,6 +120,18 @@ defmodule Membrane.FilterAggregatorTest do
 
   setup :verify_on_exit!
 
+  test "InternalAction helpers" do
+    require Membrane.Core.FilterAggregator.InternalAction, as: IA
+
+    assert IA.is_internal_action(IA.stopped_to_prepared())
+    assert IA.is_internal_action(IA.start_of_stream(:output))
+
+    # Can be used as a pattern
+    pad = :output
+    assert IA.start_of_stream(_ignored) = IA.start_of_stream(pad)
+    assert IA.start_of_stream(^pad) = IA.start_of_stream(:output)
+  end
+
   test "handle_init with unsupported pad demand mode", ctx do
     # use stub to get the default value
     pads_descriptions = apply(FilterA, :membrane_pads, [])
