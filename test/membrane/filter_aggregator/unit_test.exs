@@ -1,4 +1,4 @@
-defmodule Membrane.FilterAggregatorTest do
+defmodule Membrane.FilterAggregator.UnitTest do
   use ExUnit.Case, async: true
 
   import Mox
@@ -6,7 +6,7 @@ defmodule Membrane.FilterAggregatorTest do
   alias Membrane.Buffer
   alias Membrane.Caps.Mock, as: MockCaps
   alias Membrane.Element.PadData
-  alias Membrane.FilterAggregator, as: TestedModule
+  alias Membrane.FilterAggregator
 
   alias Membrane.Element.CallbackContext.{
     Caps,
@@ -27,7 +27,7 @@ defmodule Membrane.FilterAggregatorTest do
     defmock(FilterA, for: behaviours)
     defmock(FilterB, for: behaviours)
 
-    stage_opts = %TestedModule{
+    stage_opts = %FilterAggregator{
       filters: [
         a: %{__struct__: FilterA},
         b: %{__struct__: FilterB}
@@ -120,18 +120,6 @@ defmodule Membrane.FilterAggregatorTest do
 
   setup :verify_on_exit!
 
-  test "InternalAction helpers" do
-    require Membrane.Core.FilterAggregator.InternalAction, as: IA
-
-    assert IA.is_internal_action(IA.stopped_to_prepared())
-    assert IA.is_internal_action(IA.start_of_stream(:output))
-
-    # Can be used as a pattern
-    pad = :output
-    assert IA.start_of_stream(_ignored) = IA.start_of_stream(pad)
-    assert IA.start_of_stream(^pad) = IA.start_of_stream(:output)
-  end
-
   test "handle_init with unsupported pad demand mode", ctx do
     # use stub to get the default value
     pads_descriptions = apply(FilterA, :membrane_pads, [])
@@ -139,7 +127,7 @@ defmodule Membrane.FilterAggregatorTest do
     FilterA
     |> expect(:membrane_pads, fn -> put_in(pads_descriptions, [:input, :demand_mode], :manual) end)
 
-    assert_raise RuntimeError, fn -> TestedModule.handle_init(ctx.stage_opts) end
+    assert_raise RuntimeError, fn -> FilterAggregator.handle_init(ctx.stage_opts) end
   end
 
   test "handle_init sets inital states", ctx do
@@ -148,7 +136,7 @@ defmodule Membrane.FilterAggregatorTest do
       expect(filter, :handle_init, fn %^filter{} -> {:ok, %{module: filter}} end)
     end)
 
-    assert {:ok, %{states: result}} = TestedModule.handle_init(ctx.stage_opts)
+    assert {:ok, %{states: result}} = FilterAggregator.handle_init(ctx.stage_opts)
 
     assert [{:a, FilterA, ctx_a, state_a}, {:b, FilterB, ctx_b, state_b}] = result
     assert state_a == %{module: FilterA}
@@ -248,7 +236,7 @@ defmodule Membrane.FilterAggregatorTest do
       end)
 
     assert {{:ok, actions}, %{states: states}} =
-             TestedModule.handle_prepared_to_playing(%{}, %{states: states})
+             FilterAggregator.handle_prepared_to_playing(%{}, %{states: states})
 
     assert actions == [caps: {:output, %MockCaps{integer: 2}}]
 
@@ -293,7 +281,7 @@ defmodule Membrane.FilterAggregatorTest do
     end)
 
     assert {{:ok, actions}, %{states: states}} =
-             TestedModule.handle_process_list(:input, buffers, %{}, %{states: ctx.states})
+             FilterAggregator.handle_process_list(:input, buffers, %{}, %{states: ctx.states})
 
     expected_actions =
       test_range
@@ -345,17 +333,17 @@ defmodule Membrane.FilterAggregatorTest do
     end)
 
     assert {{:ok, []}, %{states: states}} =
-             TestedModule.handle_start_of_stream(:input, %{}, %{
+             FilterAggregator.handle_start_of_stream(:input, %{}, %{
                states: ctx.states
              })
 
     assert {{:ok, buffer: {:output, buffers}}, %{states: states}} =
-             TestedModule.handle_process_list(:input, [buffer], %{}, %{states: states})
+             FilterAggregator.handle_process_list(:input, [buffer], %{}, %{states: states})
 
     assert List.wrap(buffers) == [buffer]
 
     assert {{:ok, end_of_stream: :output}, %{states: states}} =
-             TestedModule.handle_end_of_stream(:input, %{}, %{states: states})
+             FilterAggregator.handle_end_of_stream(:input, %{}, %{states: states})
 
     assert [
              {:a, FilterA, ctx_a, %{module: FilterA, state: :ok}},
@@ -381,7 +369,7 @@ defmodule Membrane.FilterAggregatorTest do
     end)
 
     assert {{:ok, event: {:output, ^event}}, %{states: states}} =
-             TestedModule.handle_event(:input, event, %{}, %{states: ctx.states})
+             FilterAggregator.handle_event(:input, event, %{}, %{states: ctx.states})
 
     assert [
              {:a, FilterA, _ctx_a, %{module: FilterA, state: :ok}},
