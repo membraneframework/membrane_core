@@ -19,6 +19,7 @@ defmodule Membrane.FilterAggregator do
   alias Membrane.Element.CallbackContext
 
   require Membrane.Core.FilterAggregator.InternalAction, as: InternalAction
+  require Membrane.Logger
 
   def_options filters: [
                 spec: [{Membrane.Child.name_t(), module() | struct()}],
@@ -36,6 +37,10 @@ defmodule Membrane.FilterAggregator do
 
   @impl true
   def handle_init(%__MODULE__{filters: filter_specs}) do
+    if filter_specs == [] do
+      Membrane.Logger.warn("No filters provided, #{inspect(__MODULE__)} will be a no-op")
+    end
+
     states =
       filter_specs
       |> Enum.map(fn
@@ -57,6 +62,9 @@ defmodule Membrane.FilterAggregator do
             end
 
           {name, module, options}
+
+        invalid_spec ->
+          raise ArgumentError, "Invalid filter spec: `#{inspect(invalid_spec)}`"
       end)
       |> Enum.map(fn {name, module, options} ->
         context = Context.build_context!(name, module)
