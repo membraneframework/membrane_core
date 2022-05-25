@@ -2,22 +2,22 @@ defmodule Membrane.Core.Bin.ActionHandler do
   @moduledoc false
   use Membrane.Core.CallbackHandler
 
-  alias Membrane.Core.{Message, Parent, TimerController}
+  alias Membrane.{ActionError, ParentSpec}
   alias Membrane.Core.Bin.State
-  alias Membrane.{CallbackError, ParentSpec}
+  alias Membrane.Core.{Message, Parent, TimerController}
 
   require Membrane.Logger
   require Message
 
   @impl CallbackHandler
   def handle_action({:notify_child, notification}, _cb, _params, state) do
-    Parent.ChildLifeController.handle_notify_child(notification, state)
+    :ok = Parent.ChildLifeController.handle_notify_child(notification, state)
+    state
   end
 
   @impl CallbackHandler
   def handle_action({:spec, spec = %ParentSpec{}}, _cb, _params, state) do
-    with {{:ok, _children}, state} <- Parent.ChildLifeController.handle_spec(spec, state),
-         do: {:ok, state}
+    Parent.ChildLifeController.handle_spec(spec, state)
   end
 
   @impl CallbackHandler
@@ -37,12 +37,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
     )
 
     Message.send(parent_pid, :child_notification, [name, notification])
-    {:ok, state}
-  end
-
-  @impl CallbackHandler
-  def handle_action({:log_metadata, metadata}, _cb, _params, state) do
-    Parent.LifecycleController.handle_log_metadata(metadata, state)
+    state
   end
 
   @impl CallbackHandler
@@ -68,7 +63,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action(action, callback, _params, state) do
-    raise CallbackError, kind: :invalid_action, action: action, callback: {state.module, callback}
+  def handle_action(action, _callback, _params, _state) do
+    raise ActionError, action: action, reason: {:unknown_action, Membrane.Bin.Action}
   end
 end

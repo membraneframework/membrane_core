@@ -227,13 +227,13 @@ defmodule Membrane.Support.Bin.TestBins do
     end
 
     @impl true
-    def handle_element_start_of_stream(arg, _ctx, state) do
-      {{:ok, notify_parent: {:handle_element_start_of_stream, arg}}, state}
+    def handle_element_start_of_stream(element, pad, _ctx, state) do
+      {{:ok, notify_parent: {:handle_element_start_of_stream, element, pad}}, state}
     end
 
     @impl true
-    def handle_element_end_of_stream(arg, _ctx, state) do
-      {{:ok, notify_parent: {:handle_element_end_of_stream, arg}}, state}
+    def handle_element_end_of_stream(element, pad, _ctx, state) do
+      {{:ok, notify_parent: {:handle_element_end_of_stream, element, pad}}, state}
     end
   end
 
@@ -269,13 +269,13 @@ defmodule Membrane.Support.Bin.TestBins do
     end
 
     @impl true
-    def handle_element_start_of_stream(arg, _ctx, state) do
-      {{:ok, notify_parent: {:handle_element_start_of_stream, arg}}, state}
+    def handle_element_start_of_stream(element, pad, _ctx, state) do
+      {{:ok, notify_parent: {:handle_element_start_of_stream, element, pad}}, state}
     end
 
     @impl true
-    def handle_element_end_of_stream(arg, _ctx, state) do
-      {{:ok, notify_parent: {:handle_element_end_of_stream, arg}}, state}
+    def handle_element_end_of_stream(element, pad, _ctx, state) do
+      {{:ok, notify_parent: {:handle_element_end_of_stream, element, pad}}, state}
     end
   end
 

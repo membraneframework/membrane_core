@@ -16,7 +16,7 @@ defmodule Membrane.Core.Element.EventController do
   require Membrane.Core.Telemetry
   require Membrane.Logger
 
-  @spec handle_start_of_stream(Pad.ref_t(), State.t()) :: State.stateful_try_t()
+  @spec handle_start_of_stream(Pad.ref_t(), State.t()) :: State.t()
   def handle_start_of_stream(pad_ref, state) do
     handle_event(pad_ref, %Events.StartOfStream{}, state)
   end
@@ -26,7 +26,7 @@ defmodule Membrane.Core.Element.EventController do
   Extra checks and tasks required by special events such as `:start_of_stream`
   or `:end_of_stream` are performed.
   """
-  @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.stateful_try_t()
+  @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.t()
   def handle_event(pad_ref, event, state) do
     Telemetry.report_metric(:event, 1, inspect(pad_ref))
 
@@ -39,44 +39,24 @@ defmodule Membrane.Core.Element.EventController do
         :input_queue,
         &InputQueue.store(&1, :event, event)
       )
-      ~> {:ok, &1}
     else
       exec_handle_event(pad_ref, event, state)
     end
   end
 
-  @spec exec_handle_event(Pad.ref_t(), Event.t(), params :: map, State.t()) ::
-          State.stateful_try_t()
+  @spec exec_handle_event(Pad.ref_t(), Event.t(), params :: map, State.t()) :: State.t()
   def exec_handle_event(pad_ref, event, params \\ %{}, state) do
-    withl handle: {{:ok, :handle}, state} <- handle_special_event(pad_ref, event, state),
-          try: {:ok, state} <- check_sync(event, state),
-          try: {:ok, state} <- do_exec_handle_event(pad_ref, event, params, state) do
-      {:ok, state}
-    else
-      handle: {{:ok, :ignore}, state} ->
-        Membrane.Logger.debug("Ignoring event #{inspect(event)}")
-        {:ok, state}
+    case handle_special_event(pad_ref, event, state) do
+      {:handle, state} ->
+        :ok = check_sync(event, state)
+        do_exec_handle_event(pad_ref, event, params, state)
 
-      handle: {{:error, reason}, state} ->
-        Membrane.Logger.error("""
-        Error while handling event, reason: #{inspect(reason)}
-        State: #{inspect(state, pretty: true)}
-        """)
-
-        {{:error, {:handle_event, reason}}, state}
-
-      try: {{:error, reason}, state} ->
-        Membrane.Logger.error("""
-        Error while handling event, reason: #{inspect(reason)}
-        State: #{inspect(state, pretty: true)}
-        """)
-
-        {{:error, {:handle_event, reason}}, state}
+      {:ignore, state} ->
+        state
     end
   end
 
-  @spec do_exec_handle_event(Pad.ref_t(), Event.t(), params :: map, State.t()) ::
-          State.stateful_try_t()
+  @spec do_exec_handle_event(Pad.ref_t(), Event.t(), params :: map, State.t()) :: State.t()
   defp do_exec_handle_event(pad_ref, %event_type{} = event, params, state)
        when event_type in [Events.StartOfStream, Events.EndOfStream] do
     data = PadModel.get_data!(state, pad_ref)
@@ -87,7 +67,7 @@ defmodule Membrane.Core.Element.EventController do
     new_params = Map.put(params, :direction, data.direction)
     args = [pad_ref, context]
 
-    res =
+    state =
       CallbackHandler.exec_and_handle_callback(
         callback,
         ActionHandler,
@@ -102,7 +82,7 @@ defmodule Membrane.Core.Element.EventController do
       event
     ])
 
-    res
+    state
   end
 
   defp do_exec_handle_event(pad_ref, event, params, state) do
@@ -122,54 +102,39 @@ defmodule Membrane.Core.Element.EventController do
       :ok = Sync.sync(state.synchronization.stream_sync)
     end
 
-    {:ok, state}
+    :ok
   end
 
-  defp check_sync(_event, state) do
-    {:ok, state}
+  defp check_sync(_event, _state) do
+    :ok
   end
 
   @spec handle_special_event(Pad.ref_t(), Event.t(), State.t()) ::
-          State.stateful_try_t(:handle | :ignore)
+          {:handle | :ignore, State.t()}
   defp handle_special_event(pad_ref, %Events.StartOfStream{}, state) do
-    with %{direction: :input, start_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
-      state
-      |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
-      ~> {{:ok, :handle}, &1}
-    else
-      %{direction: :output} ->
-        {{:error, {:received_start_of_stream_through_output, pad_ref}}, state}
-
-      %{start_of_stream?: true} ->
-        {{:error, {:start_of_stream_already_received, pad_ref}}, state}
-    end
+    state = PadModel.set_data!(state, pad_ref, :start_of_stream?, true)
+    {:handle, state}
   end
 
   defp handle_special_event(pad_ref, %Events.EndOfStream{}, state) do
     pad_data = PadModel.get_data!(state, pad_ref)
 
-    withl data: %{direction: :input, start_of_stream?: true, end_of_stream?: false} <- pad_data,
-          playback: %{state: :playing} <- state.playback do
+    with %{start_of_stream?: true, end_of_stream?: false} <- pad_data do
       state = PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
       state = PadController.remove_pad_associations(pad_ref, state)
-      {{:ok, :handle}, state}
+      {:handle, state}
     else
-      data: %{direction: :output} ->
-        {{:error, {:received_end_of_stream_through_output, pad_ref}}, state}
+      %{end_of_stream?: true} ->
+        Membrane.Logger.debug("Ignoring end of stream as it has already arrived before")
+        {:ignore, state}
 
-      data: %{end_of_stream?: true} ->
-        Membrane.Logger.debug("Ignoring end of stream as it has already come before")
-        {{:ok, :ignore}, state}
-
-      data: %{start_of_stream?: false} ->
-        {{:ok, :ignore}, state}
-
-      playback: %{state: playback_state} ->
-        raise "Received end of stream event in an incorrect state. State: #{inspect(playback_state, pretty: true)}, on pad: #{inspect(pad_ref)}"
+      %{start_of_stream?: false} ->
+        Membrane.Logger.debug("Ignoring end of stream as start of stream hasn't arrived yet")
+        {:ignore, state}
     end
   end
 
-  defp handle_special_event(_pad_ref, _event, state), do: {{:ok, :handle}, state}
+  defp handle_special_event(_pad_ref, _event, state), do: {:handle, state}
 
   defp buffers_before_event_present?(pad_data) do
     pad_data.input_queue && not InputQueue.empty?(pad_data.input_queue)

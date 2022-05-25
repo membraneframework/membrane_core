@@ -4,7 +4,6 @@ defmodule Membrane.Core.Child.PadsSpecs do
   # based on them.
   use Bunch
 
-  alias Bunch.Type
   alias Membrane.Caps
   alias Membrane.Core.OptionsSpecs
   alias Membrane.Pad
@@ -154,7 +153,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
   end
 
   @spec parse_pad_specs(Pad.spec_t(), Pad.direction_t(), :element | :bin) ::
-          Type.try_t({Pad.name_t(), Pad.description_t()})
+          {Pad.name_t(), Pad.description_t()} | {:error, reason :: any}
   def parse_pad_specs(spec, direction, component) do
     withl spec: {name, config} when Pad.is_pad_name(name) and is_list(config) <- spec,
           config:

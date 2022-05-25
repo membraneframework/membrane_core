@@ -4,8 +4,7 @@ defmodule Membrane.Core.Element.PadController do
   # Module handling linking and unlinking pads.
 
   use Bunch
-  alias Bunch.Type
-  alias Membrane.{Core, LinkError, Pad}
+  alias Membrane.{LinkError, Pad}
   alias Membrane.Core.{CallbackHandler, Child, Events, Message}
   alias Membrane.Core.Child.PadModel
 
@@ -28,24 +27,27 @@ defmodule Membrane.Core.Element.PadController do
   require Membrane.Logger
   require Membrane.Pad
 
-  @default_auto_demand_size_factor 4000
-
-  @doc """
-  Verifies linked pad, initializes it's data.
-  """
-  @spec handle_link(
-          Pad.direction_t(),
-          Endpoint.t(),
-          Endpoint.t(),
+  @type link_call_props_t ::
           %{initiator: :parent}
           | %{
               initiator: :sibling,
               other_info: PadModel.pad_info_t() | nil,
               link_metadata: %{toilet: Toilet.t() | nil}
-            },
-          State.t()
-        ) ::
-          {{:ok, {Endpoint.t(), PadModel.pad_info_t(), %{toilet: Toilet.t() | nil}}}, State.t()}
+            }
+
+  @type link_call_reply_props_t ::
+          {Endpoint.t(), PadModel.pad_info_t(), %{toilet: Toilet.t() | nil}}
+
+  @type link_call_reply_t ::
+          :ok | {:ok, link_call_reply_props_t} | {:error, {:neighbor_dead, reason :: any}}
+
+  @default_auto_demand_size_factor 4000
+
+  @doc """
+  Verifies linked pad, initializes it's data.
+  """
+  @spec handle_link(Pad.direction_t(), Endpoint.t(), Endpoint.t(), link_call_props_t, State.t()) ::
+          {link_call_reply_t, State.t()}
   def handle_link(direction, endpoint, other_endpoint, link_props, state) do
     Membrane.Logger.debug(
       "Element handle link on pad #{inspect(endpoint.pad_ref)} with pad #{inspect(other_endpoint.pad_ref)} of child #{inspect(other_endpoint.child)}"
@@ -102,7 +104,8 @@ defmodule Membrane.Core.Element.PadController do
             state
           )
 
-        maybe_handle_pad_added(endpoint.pad_ref, state)
+        state = maybe_handle_pad_added(endpoint.pad_ref, state)
+        {:ok, state}
 
       {:error, {:call_failure, reason}} ->
         {{:error, {:neighbor_dead, reason}}, state}
@@ -139,7 +142,7 @@ defmodule Membrane.Core.Element.PadController do
         state
       )
 
-    {:ok, state} = maybe_handle_pad_added(endpoint.pad_ref, state)
+    state = maybe_handle_pad_added(endpoint.pad_ref, state)
     {{:ok, {endpoint, info, link_metadata}}, state}
   end
 
@@ -151,31 +154,21 @@ defmodule Membrane.Core.Element.PadController do
   Executes `handle_pad_removed` callback if the pad was dynamic.
   Note: it also flushes all buffers from PlaybackBuffer.
   """
-  @spec handle_unlink(Pad.ref_t(), Core.Element.State.t()) ::
-          Type.stateful_try_t(Core.Element.State.t())
+  @spec handle_unlink(Pad.ref_t(), State.t()) :: State.t()
   def handle_unlink(pad_ref, state) do
-    with :ok <- Child.PadModel.assert_instance(state, pad_ref),
-         :ok <- check_if_pad_can_be_unlinked(pad_ref, state),
-         {:ok, state} <- flush_playback_buffer(pad_ref, state),
-         {:ok, state} <- generate_eos_if_needed(pad_ref, state),
-         {:ok, state} <- maybe_handle_pad_removed(pad_ref, state) do
+    if :ok == Child.PadModel.assert_instance(state, pad_ref) do
+      :ok = check_if_pad_can_be_unlinked(pad_ref, state)
+      state = flush_playback_buffer(pad_ref, state)
+      state = generate_eos_if_needed(pad_ref, state)
+      state = maybe_handle_pad_removed(pad_ref, state)
       state = remove_pad_associations(pad_ref, state)
-      state = PadModel.delete_data!(state, pad_ref)
-      {:ok, state}
+      PadModel.delete_data!(state, pad_ref)
     else
-      {:error, {:invalid_playback_state, pad_ref}} ->
-        raise LinkError,
-              "Tried to unlink static pad #{pad_ref} while #{inspect(state.name)} was in or was transitioning to playback state #{state.playback.target_state}."
-
-      {:error, {:unknown_pad, _pad_ref}} ->
-        {:ok, state}
-
-      error ->
-        error
+      state
     end
   end
 
-  @spec check_if_pad_can_be_unlinked(Pad.ref_t(), Core.Element.State.t()) ::
+  @spec check_if_pad_can_be_unlinked(Pad.ref_t(), State.t()) ::
           :ok | {:error, {:invalid_playback_state, Pad.name_t()}}
   defp check_if_pad_can_be_unlinked(pad_ref, state) do
     pad_data = PadModel.get_data!(state, pad_ref)
@@ -184,7 +177,12 @@ defmodule Membrane.Core.Element.PadController do
          Membrane.Pad.availability_mode(pad_data.availability) == :dynamic do
       :ok
     else
-      {:error, {:invalid_playback_state, Pad.name_by_ref(pad_ref)}}
+      # TODO: after playback states refactor, make it raise
+      Membrane.Logger.debug(
+        "Tried to unlink static pad #{pad_ref} while #{inspect(state.name)} was in or was transitioning to playback state #{state.playback.target_state}."
+      )
+
+      :ok
     end
   end
 
@@ -233,7 +231,7 @@ defmodule Membrane.Core.Element.PadController do
          props,
          other_info,
          metadata,
-         %Membrane.Core.Element.State{}
+         %State{}
        ) do
     %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
     enable_toilet? = other_info.mode == :push
@@ -266,7 +264,7 @@ defmodule Membrane.Core.Element.PadController do
          props,
          other_info,
          metadata,
-         %Membrane.Core.Element.State{} = state
+         %State{} = state
        ) do
     associated_pads =
       state.pads_data
@@ -315,8 +313,7 @@ defmodule Membrane.Core.Element.PadController do
   Generates end of stream on the given input pad if it hasn't been generated yet
   and playback state is `playing`.
   """
-  @spec generate_eos_if_needed(Pad.ref_t(), Core.Element.State.t()) ::
-          Type.stateful_try_t(Core.Element.State.t())
+  @spec generate_eos_if_needed(Pad.ref_t(), State.t()) :: State.t()
   def generate_eos_if_needed(pad_ref, state) do
     %{direction: direction, end_of_stream?: eos?} = PadModel.get_data!(state, pad_ref)
     %{state: playback_state} = state.playback
@@ -324,7 +321,7 @@ defmodule Membrane.Core.Element.PadController do
     if direction == :input and not eos? and playback_state == :playing do
       EventController.exec_handle_event(pad_ref, %Events.EndOfStream{}, state)
     else
-      {:ok, state}
+      state
     end
   end
 
@@ -356,8 +353,7 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  @spec maybe_handle_pad_added(Pad.ref_t(), Core.Element.State.t()) ::
-          Type.stateful_try_t(Core.Element.State.t())
+  @spec maybe_handle_pad_added(Pad.ref_t(), State.t()) :: State.t()
   defp maybe_handle_pad_added(ref, state) do
     %{options: pad_opts, direction: direction, availability: availability} =
       PadModel.get_data!(state, ref)
@@ -373,12 +369,11 @@ defmodule Membrane.Core.Element.PadController do
         state
       )
     else
-      {:ok, state}
+      state
     end
   end
 
-  @spec maybe_handle_pad_removed(Pad.ref_t(), Core.Element.State.t()) ::
-          Type.stateful_try_t(Core.Element.State.t())
+  @spec maybe_handle_pad_removed(Pad.ref_t(), State.t()) :: State.t()
   defp maybe_handle_pad_removed(ref, state) do
     %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
 
@@ -393,13 +388,12 @@ defmodule Membrane.Core.Element.PadController do
         state
       )
     else
-      {:ok, state}
+      state
     end
   end
 
   defp flush_playback_buffer(pad_ref, state) do
     new_playback_buf = PlaybackBuffer.flush_for_pad(state.playback_buffer, pad_ref)
-
-    {:ok, %{state | playback_buffer: new_playback_buf}}
+    %{state | playback_buffer: new_playback_buf}
   end
 end

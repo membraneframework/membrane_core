@@ -44,10 +44,10 @@ defmodule Membrane.RemoteControlled.Pipeline do
   alias Membrane.RemoteControlled.Message
 
   alias Membrane.RemoteControlled.Message.{
-    PlaybackState,
-    StartOfStream,
     EndOfStream,
     Notification,
+    PlaybackState,
+    StartOfStream,
     Terminated
   }
 
@@ -391,14 +391,14 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @impl true
-  def handle_element_end_of_stream({element_name, pad_ref}, _ctx, state) do
+  def handle_element_end_of_stream(element_name, pad_ref, _ctx, state) do
     pipeline_event = %Message.EndOfStream{from: self(), element: element_name, pad: pad_ref}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
-  def handle_element_start_of_stream({element_name, pad_ref}, _ctx, state) do
+  def handle_element_start_of_stream(element_name, pad_ref, _ctx, state) do
     pipeline_event = %Message.StartOfStream{from: self(), element: element_name, pad: pad_ref}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}

@@ -101,13 +101,10 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
       {_spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
 
       if state.delayed_playback_change != nil do
-        {:ok, state} =
-          LifecycleController.change_playback_state(
-            state.delayed_playback_change,
-            %{state | delayed_playback_change: nil}
-          )
-
-        state
+        LifecycleController.change_playback_state(
+          state.delayed_playback_change,
+          %{state | delayed_playback_change: nil}
+        )
       else
         state
       end
@@ -267,16 +264,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   defp resolve_endpoint(endpoint, state) do
     %Endpoint{child: child, pad_spec: pad_spec} = endpoint
+    child_data = Parent.ChildrenModel.get_child_data!(state, child)
+    pad_name = Pad.name_by_ref(pad_spec)
 
-    withl child: {:ok, child_data} <- Parent.ChildrenModel.get_child_data(state, child),
-          do: pad_name = Pad.name_by_ref(pad_spec),
-          pad: {:ok, pad_info} <- Keyword.fetch(child_data.module.membrane_pads(), pad_name),
+    withl pad: {:ok, pad_info} <- Keyword.fetch(child_data.module.membrane_pads(), pad_name),
           ref: {:ok, ref} <- make_pad_ref(pad_spec, pad_info.availability) do
       %Endpoint{endpoint | pid: child_data.pid, pad_ref: ref, pad_info: pad_info}
     else
-      child: {:error, {:unknown_child, _child}} ->
-        raise LinkError, "Child #{inspect(child)} does not exist"
-
       pad: :error ->
         raise LinkError, "Child #{inspect(child)} does not have pad #{inspect(pad_spec)}"
 

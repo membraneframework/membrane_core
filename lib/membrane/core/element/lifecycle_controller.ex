@@ -28,7 +28,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   @doc """
   Performs initialization tasks and executes `handle_init` callback.
   """
-  @spec handle_init(Element.options_t(), State.t()) :: State.stateful_try_t()
+  @spec handle_init(Element.options_t(), State.t()) :: State.t()
   def handle_init(options, %State{module: module} = state) do
     Membrane.Logger.debug(
       "Initializing element: #{inspect(module)}, options: #{inspect(options)}"
@@ -44,32 +44,23 @@ defmodule Membrane.Core.Element.LifecycleController do
         state
       end
 
-    with {:ok, state} <-
-           CallbackHandler.exec_and_handle_callback(
-             :handle_init,
-             ActionHandler,
-             %{},
-             [options],
-             state
-           ) do
-      Membrane.Logger.debug("Element initialized: #{inspect(module)}")
-      {:ok, state}
-    else
-      {{:error, reason}, state} ->
-        Membrane.Logger.error("""
-        Failed to initialize element
-        Reason: #{inspect(reason)}
-        State: #{inspect(state, pretty: true)}
-        """)
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_init,
+        ActionHandler,
+        %{},
+        [options],
+        state
+      )
 
-        {{:error, reason}, state}
-    end
+    Membrane.Logger.debug("Element initialized: #{inspect(module)}")
+    state
   end
 
   @doc """
   Performs shutdown checks and executes `handle_shutdown` callback.
   """
-  @spec handle_shutdown(reason :: any, State.t()) :: {:ok, State.t()}
+  @spec handle_shutdown(reason :: any, State.t()) :: :ok
   def handle_shutdown(reason, state) do
     playback_state = state.playback.state
 
@@ -92,12 +83,10 @@ defmodule Membrane.Core.Element.LifecycleController do
     end
 
     %State{module: module, internal_state: internal_state} = state
-
     :ok = module.handle_shutdown(reason, internal_state)
-    {:ok, state}
   end
 
-  @spec handle_pipeline_down(reason :: any, State.t()) :: {:ok, State.t()}
+  @spec handle_pipeline_down(reason :: any, State.t()) :: :ok
   def handle_pipeline_down(reason, state) do
     if reason != :normal do
       Membrane.Logger.debug("""
@@ -112,7 +101,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   @doc """
   Handles custom messages incoming to element.
   """
-  @spec handle_other(message :: any, State.t()) :: State.stateful_try_t()
+  @spec handle_other(message :: any, State.t()) :: State.t()
   def handle_other(message, state) do
     require CallbackContext.Other
     context = &CallbackContext.Other.from_state/1
@@ -143,8 +132,7 @@ defmodule Membrane.Core.Element.LifecycleController do
           |> Map.values()
           |> Enum.filter(&(&1.direction == :input))
           |> Enum.reduce(state, fn %{ref: pad_ref}, state_acc ->
-            {:ok, state} = Element.PadController.generate_eos_if_needed(pad_ref, state_acc)
-            state
+            Element.PadController.generate_eos_if_needed(pad_ref, state_acc)
           end)
 
         _other ->
@@ -152,13 +140,16 @@ defmodule Membrane.Core.Element.LifecycleController do
       end
 
     if callback do
-      CallbackHandler.exec_and_handle_callback(
-        callback,
-        ActionHandler,
-        %{context: context},
-        [],
-        state
-      )
+      state =
+        CallbackHandler.exec_and_handle_callback(
+          callback,
+          ActionHandler,
+          %{context: context},
+          [],
+          state
+        )
+
+      {:ok, state}
     else
       {:ok, state}
     end
@@ -168,15 +159,18 @@ defmodule Membrane.Core.Element.LifecycleController do
   def handle_playback_state_changed(old, new, state) do
     Membrane.Logger.debug_verbose("Playback state changed from #{old} to #{new}")
 
-    with {:ok, state} <- PlaybackBuffer.eval(state) do
-      if new == :terminating,
-        do: {:stop, :normal, state},
-        else: {:ok, state}
+    state = PlaybackBuffer.eval(state)
+
+    if new == :terminating do
+      Process.flag(:trap_exit, false)
+      Process.exit(self(), :normal)
     end
+
+    {:ok, state}
   end
 
   @spec handle_parent_notification(Membrane.ParentNotification.t(), State.t()) ::
-          State.stateful_try_t()
+          State.t()
   def handle_parent_notification(notification, state) do
     context = Component.callback_context_generator([:Element], ParentNotification, state)
 

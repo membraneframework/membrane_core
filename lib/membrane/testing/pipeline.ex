@@ -12,7 +12,7 @@ defmodule Membrane.Testing.Pipeline do
   To start a testing pipeline you need to build
   a keyword list representing the options used to determine the pipeline's behaviour and then
   pass that options list to the `Membrane.Testing.Pipeline.start_link/2`.
-  The testing pipeline can started in one of two modes - either with its `:default` behaviour, or by
+  The testing pipeline can be started in one of two modes - either with its `:default` behaviour, or by
   injecting a custom module behaviour. The usage of a `:default` pipeline implementation is presented below:
 
   ```
@@ -23,7 +23,6 @@ defmodule Membrane.Testing.Pipeline do
   ]
   options =  [
     module: :default # :default is the default value for this parameter, so you do not need to pass it here
-    children: children, # you do not need to pass :children option either, since the information about children specification is already inside :links
     links: Membrane.ParentSpec.link_linear(children)
   ]
   {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
@@ -31,7 +30,9 @@ defmodule Membrane.Testing.Pipeline do
   Note, that we have used `Membrane.Testing.ParentSpec.link_linear/1` function, that creates the list of links
   for the given list of children, linking them in linear manner (that means - children are linked in a way that
   `:output` pad of a given child is linked to `:input` pad of subsequent child). That is the case
-  which is often used while creating testing pipelines.
+  which is often used while creating testing pipelines. Be aware, that `Membrane.Testing.ParentSpec.link_linear/1`
+  creates also a children specification itself, which means, that you cannot pass that children specification
+  as another option's argument (adding `children: children` option would lead to a duplication of children specifications).
   If you need to link children in a different manner, you can of course do it by passing an appropriate list
   of links as a `:links` option, just as you would do with a regular pipeline.
 
@@ -69,11 +70,7 @@ defmodule Membrane.Testing.Pipeline do
           tested_element: TestedElement,
           sink: %Membrane.Testing.Sink{}
       ]
-      options = [
-        children: children,
-        links: Membrane.ParentSpec.link_linear(children)
-      ]
-      {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
+      {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
 
   We can now wait till the end of the stream reaches the sink element (don't forget
   to import `Membrane.Testing.Assertions`):
@@ -93,6 +90,8 @@ defmodule Membrane.Testing.Pipeline do
   alias Membrane.ParentSpec
   alias Membrane.Testing.Notification
 
+  require Membrane.Logger
+
   defmodule Options do
     @moduledoc """
     @deprecated
@@ -102,18 +101,18 @@ defmodule Membrane.Testing.Pipeline do
 
     - `:test_process` - `pid` of process that shall receive messages from testing pipeline, e.g. when pipeline's playback state changes.
       This allows using `Membrane.Testing.Assertions`
-    - `:children` - a list of element specs. Allows to create a simple pipeline without defining a module for it.
+    - `:elements` - a list of element specs. Allows to create a simple pipeline without defining a module for it.
     - `:links` - a list describing the links between children. If ommited (or set to `nil`), they will be populated automatically
       based on the children order using default pad names.
     - `:module` - pipeline module with custom callbacks - useful if a simple list of children is not enough.
     - `:custom_args`- arguments for the module's `handle_init` callback.
     """
 
-    defstruct [:children, :links, :test_process, :module, :custom_args]
+    defstruct [:elements, :links, :test_process, :module, :custom_args]
 
     @type t :: %__MODULE__{
             test_process: pid() | nil,
-            children: ParentSpec.children_spec_t() | nil,
+            elements: ParentSpec.children_spec_t() | nil,
             links: ParentSpec.links_spec_t() | nil,
             module: module() | nil,
             custom_args: Pipeline.pipeline_options_t() | nil
@@ -164,7 +163,7 @@ defmodule Membrane.Testing.Pipeline do
   def start_link(pipeline_options, process_options \\ [])
 
   def start_link(pipeline_options, process_options) when is_struct(pipeline_options, Options) do
-    IO.warn(
+    Membrane.Logger.warn(
       "Please pass options to Membrane.Testing.Pipeline.start_link/2 as keyword list, instead of using Membrane.Testing.Options"
     )
 
@@ -181,7 +180,7 @@ defmodule Membrane.Testing.Pipeline do
   def start(pipeline_options, process_options \\ [])
 
   def start(pipeline_options, process_options) when is_struct(pipeline_options, Options) do
-    IO.warn(
+    Membrane.Logger.warn(
       "Please pass options to Membrane.Testing.Pipeline.start/2 as keyword list, instead of using Membrane.Testing.Options"
     )
 
@@ -219,7 +218,7 @@ defmodule Membrane.Testing.Pipeline do
     end
   end
 
-  defp do_start(_type, %Options{children: nil, module: nil}, _process_options) do
+  defp do_start(_type, %Options{elements: nil, module: nil}, _process_options) do
     raise """
 
     You provided no information about pipeline contents. Please provide either:
@@ -230,7 +229,7 @@ defmodule Membrane.Testing.Pipeline do
     """
   end
 
-  defp do_start(_type, %Options{children: children, module: module}, _process_options)
+  defp do_start(_type, %Options{elements: children, module: module}, _process_options)
        when is_atom(module) and module != nil and children != nil do
     raise """
 
@@ -268,24 +267,43 @@ defmodule Membrane.Testing.Pipeline do
   """
   @spec execute_actions(pid(), Keyword.t()) :: :ok
   def execute_actions(pipeline, actions) do
-    send(pipeline, {:execute_actions, actions})
+    send(pipeline, {__MODULE__, :__execute_actions__, actions})
     :ok
   end
 
   @impl true
   def handle_init(%Options{links: nil, module: nil} = options) do
-    new_links = ParentSpec.link_linear(options.children)
-    do_handle_init_for_default_implementation(%Options{options | links: new_links})
+    {links, children} =
+      if length(options.elements) <= 1 do
+        {[], options.elements}
+      else
+        {ParentSpec.link_linear(options.elements), []}
+      end
+
+    options_map = %{children: children, links: links, test_process: options.test_process}
+    do_handle_init_for_default_implementation(options_map)
   end
 
   @impl true
   def handle_init(%Options{module: nil} = options) do
-    do_handle_init_for_default_implementation(options)
+    options_map = %{
+      children: options.elements,
+      links: options.links,
+      test_process: options.test_process
+    }
+
+    do_handle_init_for_default_implementation(options_map)
   end
 
   @impl true
-  def handle_init(%Options{links: nil, children: nil} = options) do
-    do_handle_init_with_custom_module(options)
+  def handle_init(%Options{links: nil, elements: nil} = options) do
+    options_map = %{
+      test_process: options.test_process,
+      module: options.module,
+      custom_args: options.custom_args
+    }
+
+    do_handle_init_with_custom_module(options_map)
   end
 
   @impl true
@@ -418,7 +436,7 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_other({:exec_actions, actions}, _ctx, %State{} = state) do
+  def handle_other({__MODULE__, :__execute_actions__, actions}, _ctx, %State{} = state) do
     {{:ok, actions}, state}
   end
 
@@ -437,19 +455,6 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_other({:execute_actions, actions}, ctx, %State{} = state) do
-    injected_module_result =
-      eval_injected_module_callback(
-        :handle_other,
-        [{:execute_actions, actions}, ctx],
-        state
-      )
-
-    testing_pipeline_result = {{:ok, actions}, state}
-    combine_results(injected_module_result, testing_pipeline_result)
-  end
-
-  @impl true
   def handle_other(message, ctx, %State{} = state) do
     {custom_actions, custom_state} =
       eval_injected_module_callback(
@@ -464,29 +469,30 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_element_start_of_stream(endpoint, ctx, state) do
+  def handle_element_start_of_stream(element, pad, ctx, state) do
     {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_element_start_of_stream,
-        [endpoint, ctx],
+        [element, pad, ctx],
         state
       )
 
-    :ok = notify_test_process(state.test_process, {:handle_element_start_of_stream, endpoint})
+    :ok =
+      notify_test_process(state.test_process, {:handle_element_start_of_stream, {element, pad}})
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
   @impl true
-  def handle_element_end_of_stream(endpoint, ctx, state) do
+  def handle_element_end_of_stream(element, pad, ctx, state) do
     {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_element_end_of_stream,
-        [endpoint, ctx],
+        [element, pad, ctx],
         state
       )
 
-    :ok = notify_test_process(state.test_process, {:handle_element_end_of_stream, endpoint})
+    :ok = notify_test_process(state.test_process, {:handle_element_end_of_stream, {element, pad}})
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end

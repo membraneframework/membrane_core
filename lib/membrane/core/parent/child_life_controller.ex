@@ -21,8 +21,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @type spec_ref_t :: reference()
 
-  @spec handle_spec(ParentSpec.t(), Parent.state_t()) ::
-          {{:ok, [Membrane.Child.name_t()]}, Parent.state_t()} | no_return
+  @spec handle_spec(ParentSpec.t(), Parent.state_t()) :: Parent.state_t() | no_return()
   def handle_spec(%ParentSpec{} = spec, state) do
     Membrane.Logger.debug("""
     Initializing spec
@@ -54,44 +53,33 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     :ok = Enum.each(children_pids, &Process.monitor(&1))
 
     :ok = StartupHandler.maybe_activate_syncs(syncs, state)
-    {:ok, state} = StartupHandler.add_children(children, state)
+    state = StartupHandler.add_children(children, state)
 
     # adding crash group to state
-    {:ok, state} =
+    state =
       if spec.crash_group do
         CrashGroupHandler.add_crash_group(spec.crash_group, children_names, children_pids, state)
       else
-        {:ok, state}
+        state
       end
 
     state = ClockHandler.choose_clock(children, spec.clock_provider, state)
     state = LinkHandler.init_spec_linking(spec_ref, links, state)
-    {:ok, state} = StartupHandler.exec_handle_spec_started(children_names, state)
-    {{:ok, children_names}, state}
+    StartupHandler.exec_handle_spec_started(children_names, state)
   end
 
   @spec handle_notify_child(
           {Membrane.Child.name_t(), Membrane.ParentNotification.t()},
           Parent.state_t()
-        ) ::
-          {:ok | {:error, any}, Parent.state_t()}
-  def handle_notify_child(notification, state) do
-    result = do_handle_notify_child(notification, state)
-    {result, state}
-  end
-
-  defp do_handle_notify_child({child_name, message}, state) do
-    with {:ok, %{pid: pid}} <- state |> Parent.ChildrenModel.get_child_data(child_name) do
-      Membrane.Core.Message.send(pid, :parent_notification, [message])
-      :ok
-    else
-      {:error, reason} ->
-        {:error, {:cannot_notify_child, [element: child_name, message: message], reason}}
-    end
+        ) :: :ok
+  def handle_notify_child({child_name, message}, state) do
+    %{pid: pid} = Parent.ChildrenModel.get_child_data!(state, child_name)
+    Membrane.Core.Message.send(pid, :parent_notification, [message])
+    :ok
   end
 
   @spec handle_remove_child(Membrane.Child.name_t() | [Membrane.Child.name_t()], Parent.state_t()) ::
-          {:ok | {:error, any}, Parent.state_t()}
+          Parent.state_t()
   def handle_remove_child(names, state) do
     names = names |> Bunch.listify()
 
@@ -102,43 +90,35 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         {:ok, state}
       end
 
-    with {:ok, data} <- Bunch.Enum.try_map(names, &Parent.ChildrenModel.get_child_data(state, &1)) do
-      {already_removing, data} = Enum.split_with(data, & &1.terminating?)
+    data = Enum.map(names, &Parent.ChildrenModel.get_child_data!(state, &1))
+    {already_removing, data} = Enum.split_with(data, & &1.terminating?)
 
-      if already_removing != [] do
-        Membrane.Logger.warn("""
-        Trying to remove children that are already being removed: #{Enum.map_join(already_removing, ", ", &inspect(&1.name))}. This may lead to 'unknown child' errors.
-        """)
-      end
-
-      data |> Enum.each(&PlaybackHandler.request_playback_state_change(&1.pid, :terminating))
-
-      {:ok, state} =
-        Parent.ChildrenModel.update_children(state, names, &%{&1 | terminating?: true})
-
-      {:ok, state}
-    else
-      error -> {error, state}
+    if already_removing != [] do
+      Membrane.Logger.warn("""
+      Trying to remove children that are already being removed: #{Enum.map_join(already_removing, ", ", &inspect(&1.name))}. This may lead to 'unknown child' errors.
+      """)
     end
+
+    Enum.each(data, &PlaybackHandler.request_playback_state_change(&1.pid, :terminating))
+    Parent.ChildrenModel.update_children!(state, names, &%{&1 | terminating?: true})
   end
 
   @spec child_playback_changed(pid, Membrane.PlaybackState.t(), Parent.state_t()) ::
-          {:ok | {:error, any}, Parent.state_t()}
+          Parent.state_t()
   def child_playback_changed(pid, child_pb_state, state) do
     {:ok, child} = child_by_pid(pid, state)
     %{playback: playback} = state
 
     cond do
       playback.pending_state == nil and playback.state == child_pb_state ->
-        state = put_in(state, [:children, child, :playback_sync], :synced)
-        {:ok, state}
+        put_in(state, [:children, child, :playback_sync], :synced)
 
       playback.pending_state == child_pb_state ->
         state = put_in(state, [:children, child, :playback_sync], :synced)
         LifecycleController.maybe_finish_playback_transition(state)
 
       true ->
-        {:ok, state}
+        state
     end
   end
 
@@ -150,8 +130,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   If a pid turns out not to be a pid of any child error is raised.
   """
-  @spec handle_child_death(child_pid :: pid(), reason :: atom(), state :: Parent.state_t()) ::
-          {:ok | {:error, :not_child}, Parent.state_t()}
+  @spec handle_child_death(child_pid :: pid(), reason :: any(), state :: Parent.state_t()) ::
+          Parent.state_t()
   def handle_child_death(pid, :normal, state) do
     with {:ok, child_name} <- child_by_pid(pid, state) do
       state = Bunch.Access.delete_in(state, [:children, child_name])
@@ -182,7 +162,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
           state
         )
       else
-        {:ok, state}
+        state
       end
     else
       {:error, :not_child} ->
@@ -199,7 +179,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         Terminating.
         """)
 
-        propagate_child_crash(state)
+        propagate_child_crash()
+        state
     end
   end
 
@@ -255,13 +236,14 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp crash_all_group_members(_crash_group, _crash_initiator, state), do: state
 
   # called when a dead child was not a member of any crash group
-  defp propagate_child_crash(state) do
+  defp propagate_child_crash() do
     Membrane.Logger.debug("""
     A child crashed but was not a member of any crash group.
     Terminating.
     """)
 
-    {:stop, {:shutdown, :child_crash}, state}
+    Process.flag(:trap_exit, false)
+    Process.exit(self(), {:shutdown, :child_crash})
   end
 
   defp remove_child_from_crash_group(state, child_pid) do

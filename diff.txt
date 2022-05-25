@@ -1,0 +1,861 @@
+diff --cc CHANGELOG.md
+index 4f23aac5,00a6cba0..00000000
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@@ -1,5 -1,8 +1,9 @@@
+  # Changelog
+  
++ ## 0.11.0
++  * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)
+++ * Refine communication between parent and its children [#270](https://github.com/membraneframework/membrane_core/issues/270)
++ 
+  ## 0.10.0
+   * Remove all deprecated stuff [#399](https://github.com/membraneframework/membrane_core/pull/399)
+   * Make `Membrane.Pipeline.{prepare, play, stop}` deprecated and add `:playback` action instead
+diff --cc lib/membrane/bin.ex
+index 44815555,76c82f9d..00000000
+--- a/lib/membrane/bin.ex
++++ b/lib/membrane/bin.ex
+@@@ -215,10 -208,9 +217,10 @@@ defmodule Membrane.Bin d
+                        handle_stopped_to_terminating: 2,
+                        handle_other: 3,
+                        handle_spec_started: 3,
+-                       handle_element_start_of_stream: 3,
+-                       handle_element_end_of_stream: 3,
++                       handle_element_start_of_stream: 4,
++                       handle_element_end_of_stream: 4,
+ -                      handle_notification: 4,
+ +                      handle_child_notification: 4,
+ +                      handle_parent_notification: 3,
+                        handle_tick: 3
+  
+    @doc PadsSpecs.def_pad_docs(:input, :bin)
+@@@ -357,16 -349,13 +359,16 @@@
+        def handle_spec_started(new_children, _ctx, state), do: {:ok, state}
+  
+        @impl true
+-       def handle_element_start_of_stream({element, pad}, _ctx, state), do: {:ok, state}
++       def handle_element_start_of_stream(_element, _pad, _ctx, state), do: {:ok, state}
+  
+        @impl true
+-       def handle_element_end_of_stream({element, pad}, _ctx, state), do: {:ok, state}
++       def handle_element_end_of_stream(_element, _pad, _ctx, state), do: {:ok, state}
+  
+        @impl true
+ -      def handle_notification(notification, element, _ctx, state), do: {:ok, state}
+ +      def handle_child_notification(_notification, _element, _ctx, state), do: {:ok, state}
+ +
+ +      @impl true
+ +      def handle_parent_notification(_notification, _ctx, state), do: {:ok, state}
+  
+        defoverridable membrane_clock?: 0,
+                       handle_init: 1,
+@@@ -380,10 -369,9 +382,10 @@@
+                       handle_stopped_to_terminating: 2,
+                       handle_other: 3,
+                       handle_spec_started: 3,
+-                      handle_element_start_of_stream: 3,
+-                      handle_element_end_of_stream: 3,
++                      handle_element_start_of_stream: 4,
++                      handle_element_end_of_stream: 4,
+ -                     handle_notification: 4
+ +                     handle_child_notification: 4,
+ +                     handle_parent_notification: 3
+      end
+    end
+  end
+diff --cc lib/membrane/core/bin.ex
+index 7cdb7aed,dc271655..00000000
+--- a/lib/membrane/core/bin.ex
++++ b/lib/membrane/core/bin.ex
+@@@ -3,14 -3,10 +3,10 @@@ defmodule Membrane.Core.Bin d
+    use Bunch
+    use GenServer
+  
+-   import Membrane.Core.Helper.GenServer
+- 
+    alias __MODULE__.State
+-   alias Membrane.{CallbackError, Core, ComponentPath, Sync}
++   alias Membrane.{ComponentPath, Sync}
+    alias Membrane.Core.Bin.PadController
+-   alias Membrane.Core.{CallbackHandler, Message, Telemetry}
+-   alias Membrane.Core.Child.PadSpecHandler
+-   alias Membrane.Core.Component
+ -  alias Membrane.Core.{CallbackHandler, Child, Message, Parent, Telemetry, TimerController}
+++  alias Membrane.Core.{CallbackHandler, Child, Message, Parent, Telemetry, TimerController, Component}
+  
+    require Membrane.Core.Message
+    require Membrane.Core.Telemetry
+@@@ -137,24 -126,10 +127,24 @@@
+  
+    @impl GenServer
+    def handle_info(Message.new(:handle_unlink, pad_ref), state) do
+-     PadController.handle_unlink(pad_ref, state)
+-     |> noreply()
++     state = PadController.handle_unlink(pad_ref, state)
++     {:noreply, state}
+    end
+  
+ +  @impl GenServer
+ +  def handle_info(Message.new(:parent_notification, notification), state) do
+ +    context = Component.callback_context_generator([:Bin], ParentNotification, state)
+ +
+-     CallbackHandler.exec_and_handle_callback(
+++    state = CallbackHandler.exec_and_handle_callback(
+ +      :handle_parent_notification,
+ +      Membrane.Core.Bin.ActionHandler,
+ +      %{context: context},
+ +      notification,
+ +      state
+ +    )
+-     |> noreply()
+++    {:noreply, state}
+ +  end
+ +
+    @impl GenServer
+    def handle_info(Message.new(:link_request, [pad_ref, direction, link_id, pad_props]), state) do
+      state =
+@@@ -163,9 -138,84 +153,84 @@@
+      {:noreply, state}
+    end
+  
++   @impl GenServer
++   def handle_info(
++         Message.new(:playback_state_changed, [pid, new_playback_state]),
++         state
++       ) do
++     state = Parent.ChildLifeController.child_playback_changed(pid, new_playback_state, state)
++     {:noreply, state}
++   end
++ 
++   @impl GenServer
++   def handle_info(Message.new(:change_playback_state, new_state), state) do
++     state = Parent.LifecycleController.change_playback_state(new_state, state)
++     {:noreply, state}
++   end
++ 
++   @impl GenServer
++   def handle_info(Message.new(:stream_management_event, [element_name, pad_ref, event]), state) do
++     state =
++       Parent.LifecycleController.handle_stream_management_event(
++         event,
++         element_name,
++         pad_ref,
++         state
++       )
++ 
++     {:noreply, state}
++   end
++ 
++   @impl GenServer
+ -  def handle_info(Message.new(:notification, [from, notification]), state) do
+ -    state = Parent.LifecycleController.handle_notification(from, notification, state)
+++  def handle_info(Message.new(:child_notification, [from, notification]), state) do
+++    state = Parent.LifecycleController.handle_child_notification(from, notification, state)
++     {:noreply, state}
++   end
++ 
++   @impl GenServer
++   def handle_info(Message.new(:timer_tick, timer_id), state) do
++     state = TimerController.handle_tick(timer_id, state)
++     {:noreply, state}
++   end
++ 
++   @impl GenServer
++   def handle_info(Message.new(:link_response, link_id), state) do
++     state = Parent.ChildLifeController.LinkHandler.handle_link_response(link_id, state)
++     {:noreply, state}
++   end
++ 
++   @impl GenServer
++   def handle_info(Message.new(:spec_linking_timeout, spec_ref), state) do
++     state = Parent.ChildLifeController.LinkHandler.handle_spec_timeout(spec_ref, state)
++     {:noreply, state}
++   end
++ 
++   @impl GenServer
++   def handle_info({:membrane_clock_ratio, clock, ratio}, state) do
++     state = TimerController.handle_clock_update(clock, ratio, state)
++     {:noreply, state}
++   end
++ 
++   @impl GenServer
++   def handle_info({:DOWN, _ref, :process, pid, reason} = message, state) do
++     cond do
++       is_child_pid?(pid, state) ->
++         state = Parent.ChildLifeController.handle_child_death(pid, reason, state)
++         {:noreply, state}
++ 
++       is_parent_pid?(pid, state) ->
++         {:stop, {:shutdown, :parent_crash}, state}
++ 
++       true ->
++         state = Parent.LifecycleController.handle_other(message, state)
++         {:noreply, state}
++     end
++   end
++ 
+    @impl GenServer
+    def handle_info(message, state) do
+-     Core.Parent.MessageDispatcher.handle_message(message, state)
++     state = Parent.LifecycleController.handle_other(message, state)
++     {:noreply, state}
+    end
+  
+    @impl GenServer
+diff --cc lib/membrane/core/bin/action_handler.ex
+index 1f8eef9e,639cd19f..00000000
+--- a/lib/membrane/core/bin/action_handler.ex
++++ b/lib/membrane/core/bin/action_handler.ex
+@@@ -10,8 -10,9 +10,9 @@@ defmodule Membrane.Core.Bin.ActionHandl
+    require Message
+  
+    @impl CallbackHandler
+ -  def handle_action({:forward, children_messages}, _cb, _params, state) do
+ -    :ok = children_messages |> Bunch.listify() |> Parent.ChildLifeController.handle_forward(state)
+ +  def handle_action({:notify_child, notification}, _cb, _params, state) do
+-     Parent.ChildLifeController.handle_notify_child(notification, state)
+++    :ok = Parent.ChildLifeController.handle_notify_child(notification, state)
++     state
+    end
+  
+    @impl CallbackHandler
+@@@ -26,25 -26,17 +26,21 @@@
+    end
+  
+    @impl CallbackHandler
+ -  def handle_action({:notify, notification}, _cb, _params, state) do
+ -    %State{parent_pid: parent_pid, name: name} = state
+ -
+ +  def handle_action(
+ +        {:notify_parent, notification},
+ +        _cb,
+ +        _params,
+ +        %State{parent_pid: parent_pid, name: name} = state
+ +      ) do
+      Membrane.Logger.debug_verbose(
+ -      "Sending notification #{inspect(notification)} (parent PID: #{inspect(parent_pid)})"
+ +      "Sending notification #{inspect(notification)} to parent (parent PID: #{inspect(parent_pid)})"
+      )
+  
+ -    Message.send(parent_pid, :notification, [name, notification])
+ +    Message.send(parent_pid, :child_notification, [name, notification])
+-     {:ok, state}
++     state
+    end
+  
+-   @impl CallbackHandler
+-   def handle_action({:log_metadata, metadata}, _cb, _params, state) do
+-     Parent.LifecycleController.handle_log_metadata(metadata, state)
+-   end
+ +
+    @impl CallbackHandler
+    def handle_action({:start_timer, {id, interval, clock}}, _cb, _params, state) do
+      TimerController.start_timer(id, interval, clock, state)
+diff --cc lib/membrane/core/element.ex
+index 88ae60d3,95029cbb..00000000
+--- a/lib/membrane/core/element.ex
++++ b/lib/membrane/core/element.ex
+@@@ -18,12 -18,11 +18,10 @@@ defmodule Membrane.Core.Element d
+    use Bunch
+    use GenServer
+  
+-   import Membrane.Core.Helper.GenServer
+- 
+    alias Membrane.{Clock, Element, Sync}
+ -  alias Membrane.ComponentPath
+    alias Membrane.Core.Element.{LifecycleController, PadController, PlaybackBuffer, State}
+    alias Membrane.Core.{Message, PlaybackHandler, Telemetry, TimerController}
+-   alias Membrane.ComponentPath
++ 
+    require Membrane.Core.Message
+    require Membrane.Core.Telemetry
+    require Membrane.Logger
+@@@ -98,13 -97,13 +96,11 @@@
+  
+    @impl GenServer
+    def init(options) do
+--    %{parent: parent, name: name, log_metadata: log_metadata} = options
+++    %{parent: parent, name: name} = options
+  
+      Process.monitor(parent)
+      name_str = if String.valid?(name), do: name, else: inspect(name)
+      :ok = Membrane.Logger.set_prefix(name_str)
+--    :ok = Logger.metadata(log_metadata)
+--    :ok = ComponentPath.set_and_append(log_metadata[:parent_path] || [], name_str)
+  
+      Telemetry.report_init(:element)
+  
+@@@ -190,22 -188,12 +185,17 @@@
+    end
+  
+    defp do_handle_info({:membrane_clock_ratio, clock, ratio}, state) do
+-     TimerController.handle_clock_update(clock, ratio, state) |> noreply()
+-   end
+- 
+-   defp do_handle_info(Message.new(:log_metadata, metadata), state) do
+-     :ok = Logger.metadata(metadata)
+-     noreply({:ok, state})
++     state = TimerController.handle_clock_update(clock, ratio, state)
++     {:noreply, state}
+    end
+  
+ +  defp do_handle_info(Message.new(:parent_notification, notification), state) do
+-     LifecycleController.handle_parent_notification(notification, state)
+-     |> noreply(state)
+++    state = LifecycleController.handle_parent_notification(notification, state)
+++    {:noreply, state}
+ +  end
+ +
+-   defp do_handle_info(Message.new(_type, _args, _opts) = message, state) do
+-     {{:error, {:invalid_message, message, mode: :info}}, state}
+-     |> noreply(state)
++   defp do_handle_info(Message.new(_type, _args, _opts) = message, _state) do
++     raise Membrane.ElementError, "Received invalid message #{inspect(message)}"
+    end
+  
+    defp do_handle_info(message, state) do
+diff --cc lib/membrane/core/element/action_handler.ex
+index 61c81519,250d048a..00000000
+--- a/lib/membrane/core/element/action_handler.ex
++++ b/lib/membrane/core/element/action_handler.ex
+@@@ -33,40 -29,40 +29,40 @@@ defmodule Membrane.Core.Element.ActionH
+  
+    defguardp is_demand_size(size) when is_integer(size) or is_function(size)
+  
+-   @spec do_handle_action(Action.t(), callback :: atom, params :: map, State.t()) ::
+-           State.stateful_try_t()
+-   defp do_handle_action({action, _}, :handle_init, _params, state)
+-        when action not in [:latency, :notify_parent] do
+-     {{:error, :invalid_action}, state}
++   @impl CallbackHandler
++   def handle_action({action, _}, :handle_init, _params, _state)
+ -      when action not in [:latency, :notify] do
+++      when action not in [:latency, :notify_parent] do
++     raise ActionError, action: action, reason: {:invalid_callback, :handle_init}
+    end
+  
+-   defp do_handle_action({action, _}, cb, _params, %State{playback: %{state: :stopped}} = state)
+-        when action in [:buffer, :event, :caps, :demand, :redemand, :forward, :end_of_stream] and
+-               cb != :handle_stopped_to_prepared do
+-     {{:error, {:playback_state, :stopped}}, state}
++   @impl CallbackHandler
++   def handle_action({action, _}, cb, _params, %State{playback: %{state: :stopped}})
++       when action in [:buffer, :event, :caps, :demand, :redemand, :forward, :end_of_stream] and
++              cb != :handle_stopped_to_prepared do
++     raise ActionError, action: action, reason: {:invalid_playback_state, :stopped}
+    end
+  
+-   defp do_handle_action({:event, {pad_ref, event}}, _cb, _params, state)
+-        when is_pad_ref(pad_ref) do
++   @impl CallbackHandler
++   def handle_action({:event, {pad_ref, event}}, _cb, _params, state)
++       when is_pad_ref(pad_ref) do
+      send_event(pad_ref, event, state)
+    end
+  
+-   defp do_handle_action(
+-          {:notify_parent, notification},
+-          _cb,
+-          _params,
+-          %State{parent_pid: parent_pid, name: name} = state
+-        ) do
++   @impl CallbackHandler
+ -  def handle_action({:notify, notification}, _cb, _params, state) do
+++  def handle_action({:notify_parent, notification}, _cb, _params, state) do
++     %State{name: name, parent_pid: parent_pid} = state
++ 
+      Membrane.Logger.debug_verbose(
+        "Sending notification #{inspect(notification)} (parent PID: #{inspect(parent_pid)})"
+      )
+  
+ -    Message.send(parent_pid, :notification, [name, notification])
+ +    Message.send(parent_pid, :child_notification, [name, notification])
+-     {:ok, state}
++     state
+    end
+  
+-   defp do_handle_action({:split, {callback, args_list}}, cb, params, state) do
+-     CallbackHandler.exec_and_handle_splitted_callback(
++   @impl CallbackHandler
++   def handle_action({:split, {callback, args_list}}, cb, params, state) do
++     CallbackHandler.exec_and_handle_split_callback(
+        callback,
+        cb,
+        __MODULE__,
+diff --cc lib/membrane/core/parent/child_life_controller.ex
+index c7222990,5cffe7e4..00000000
+--- a/lib/membrane/core/parent/child_life_controller.ex
++++ b/lib/membrane/core/parent/child_life_controller.ex
+@@@ -66,28 -65,18 +65,17 @@@ defmodule Membrane.Core.Parent.ChildLif
+  
+      state = ClockHandler.choose_clock(children, spec.clock_provider, state)
+      state = LinkHandler.init_spec_linking(spec_ref, links, state)
+-     {:ok, state} = StartupHandler.exec_handle_spec_started(children_names, state)
+-     {{:ok, children_names}, state}
++     StartupHandler.exec_handle_spec_started(children_names, state)
+    end
+  
+ -  @spec handle_forward([{Membrane.Child.name_t(), any}], Parent.state_t()) :: :ok
+ -  def handle_forward(children_messages, state) do
+ -    Enum.each(children_messages, &do_handle_forward(&1, state))
+ -  end
+ -
+ -  defp do_handle_forward({child_name, message}, state) do
+ -    %{pid: pid} = Parent.ChildrenModel.get_child_data!(state, child_name)
+ -    send(pid, message)
+ +  @spec handle_notify_child(
+ +          {Membrane.Child.name_t(), Membrane.ParentNotification.t()},
+ +          Parent.state_t()
+-         ) ::
+-           {:ok | {:error, any}, Parent.state_t()}
+-   def handle_notify_child(notification, state) do
+-     result = do_handle_notify_child(notification, state)
+-     {result, state}
+-   end
+- 
+-   defp do_handle_notify_child({child_name, message}, state) do
+-     with {:ok, %{pid: pid}} <- state |> Parent.ChildrenModel.get_child_data(child_name) do
+-       Membrane.Core.Message.send(pid, :parent_notification, [message])
+-       :ok
+-     else
+-       {:error, reason} ->
+-         {:error, {:cannot_notify_child, [element: child_name, message: message], reason}}
+-     end
+++        ) :: :ok
+++  def handle_notify_child({child_name, message}, state) do
+++    %{pid: pid} =  Parent.ChildrenModel.get_child_data!(state, child_name)
+++    Membrane.Core.Message.send(pid, :parent_notification, [message])
++     :ok
+    end
+  
+    @spec handle_remove_child(Membrane.Child.name_t() | [Membrane.Child.name_t()], Parent.state_t()) ::
+diff --cc lib/membrane/core/parent/lifecycle_controller.ex
+index ac8d1df2,c25f71df..00000000
+--- a/lib/membrane/core/parent/lifecycle_controller.ex
++++ b/lib/membrane/core/parent/lifecycle_controller.ex
+@@@ -3,9 -3,8 +3,9 @@@ defmodule Membrane.Core.Parent.Lifecycl
+    use Bunch
+    use Membrane.Core.PlaybackHandler
+  
+-   alias Bunch.Type
+ -  alias Membrane.{Child, Core, Notification, Pad, Sync}
+ +  alias Membrane.{Child, Core, ChildNotification, Pad, Sync}
+-   alias Membrane.Core.{CallbackHandler, Message, Component, Parent, PlaybackHandler}
++   alias Membrane.Core.{CallbackHandler, Component, Message, Parent, PlaybackHandler}
+++
+    alias Membrane.Core.Events
+    alias Membrane.Core.Parent.ChildrenModel
+    alias Membrane.PlaybackState
+@@@ -85,31 -83,27 +84,28 @@@
+      end
+    end
+  
+ -  @spec handle_notification(Child.name_t(), Notification.t(), Parent.state_t()) ::
+ +  @spec handle_child_notification(Child.name_t(), ChildNotification.t(), Parent.state_t()) ::
+-           Type.stateful_try_t(Parent.state_t())
++           Parent.state_t()
+ -  def handle_notification(from, notification, state) do
+ +  def handle_child_notification(from, notification, state) do
+      Membrane.Logger.debug_verbose(
+        "Received notification #{inspect(notification)} from #{inspect(from)}"
+      )
+  
+-     with {:ok, _} <- state |> Parent.ChildrenModel.get_child_data(from) do
+-       context = Component.callback_context_generator(:parent, ChildNotification, state)
+-       action_handler = get_callback_action_handler(state)
++     Parent.ChildrenModel.assert_child_exists!(state, from)
+ -    context = Component.callback_context_generator(:parent, Notification, state)
+++    context = Component.callback_context_generator(:parent, ChildNotification, state)
++     action_handler = get_callback_action_handler(state)
++ 
++     CallbackHandler.exec_and_handle_callback(
+ -      :handle_notification,
+++      :handle_child_notification,
++       action_handler,
++       %{context: context},
++       [notification, from],
++       state
++     )
+ +
+-       CallbackHandler.exec_and_handle_callback(
+-         :handle_child_notification,
+-         action_handler,
+-         %{context: context},
+-         [notification, from],
+-         state
+-       )
+-     else
+-       error ->
+-         {error, state}
+-     end
+    end
+  
+-   @spec handle_other(any, Parent.state_t()) :: Type.stateful_try_t(Parent.state_t())
++   @spec handle_other(any, Parent.state_t()) :: Parent.state_t()
+    def handle_other(message, state) do
+      context = Component.callback_context_generator(:parent, Other, state)
+      action_handler = get_callback_action_handler(state)
+diff --cc lib/membrane/core/pipeline/action_handler.ex
+index a456e3e4,977064b8..00000000
+--- a/lib/membrane/core/pipeline/action_handler.ex
++++ b/lib/membrane/core/pipeline/action_handler.ex
+@@@ -14,36 -16,18 +16,18 @@@ defmodule Membrane.Core.Pipeline.Action
+    end
+  
+    @impl CallbackHandler
+-   def handle_action(action, callback, params, state) do
+-     with {:ok, state} <- do_handle_action(action, callback, params, state) do
+-       {:ok, state}
+-     else
+-       {{:error, :invalid_action}, state} ->
+-         raise CallbackError,
+-           kind: :invalid_action,
+-           action: action,
+-           callback: {state.module, callback}
+- 
+-       error ->
+-         error
+-     end
+-   end
+- 
+-   defp do_handle_action({action, _args}, :handle_init, _params, state)
+-        when action not in [:spec, :log_metadata, :playback] do
+-     {{:error, :invalid_action}, state}
+-   end
+- 
+-   defp do_handle_action({:notify_child, notification}, _cb, _params, state) do
+ -  def handle_action({:forward, children_messages}, _cb, _params, state) do
+ -    Parent.ChildLifeController.handle_forward(Bunch.listify(children_messages), state)
+++  def handle_action({:notify_child, notification}, _cb, _params, state) do
+ +    Parent.ChildLifeController.handle_notify_child(notification, state)
++     state
+    end
+  
+-   defp do_handle_action({:spec, spec = %ParentSpec{}}, _cb, _params, state) do
+-     with {{:ok, _children}, state} <- Parent.ChildLifeController.handle_spec(spec, state),
+-          do: {:ok, state}
++   @impl CallbackHandler
++   def handle_action({:spec, spec = %ParentSpec{}}, _cb, _params, state) do
++     Parent.ChildLifeController.handle_spec(spec, state)
+    end
+  
+-   defp do_handle_action({:remove_child, children}, _cb, _params, state) do
++   @impl CallbackHandler
++   def handle_action({:remove_child, children}, _cb, _params, state) do
+      Parent.ChildLifeController.handle_remove_child(children, state)
+    end
+  
+diff --cc lib/membrane/pipeline.ex
+index 74dd36d6,b420ff88..00000000
+--- a/lib/membrane/pipeline.ex
++++ b/lib/membrane/pipeline.ex
+@@@ -198,9 -200,9 +200,9 @@@ defmodule Membrane.Pipeline d
+                        handle_stopped_to_terminating: 2,
+                        handle_other: 3,
+                        handle_spec_started: 3,
+-                       handle_element_start_of_stream: 3,
+-                       handle_element_end_of_stream: 3,
++                       handle_element_start_of_stream: 4,
++                       handle_element_end_of_stream: 4,
+ -                      handle_notification: 4,
+ +                      handle_child_notification: 4,
+                        handle_tick: 3,
+                        handle_crash_group_down: 3
+  
+@@@ -487,13 -489,13 +489,13 @@@
+        def handle_spec_started(new_children, _ctx, state), do: {:ok, state}
+  
+        @impl true
+-       def handle_element_start_of_stream({element, pad}, _ctx, state), do: {:ok, state}
++       def handle_element_start_of_stream(_element, _pad, _ctx, state), do: {:ok, state}
+  
+        @impl true
+-       def handle_element_end_of_stream({element, pad}, _ctx, state), do: {:ok, state}
++       def handle_element_end_of_stream(_element, _pad, _ctx, state), do: {:ok, state}
+  
+        @impl true
+ -      def handle_notification(notification, element, _ctx, state), do: {:ok, state}
+ +      def handle_child_notification(notification, element, _ctx, state), do: {:ok, state}
+  
+        @impl true
+        def handle_crash_group_down(_group_name, _ctx, state), do: {:ok, state}
+@@@ -507,9 -509,9 +509,9 @@@
+                       handle_stopped_to_terminating: 2,
+                       handle_other: 3,
+                       handle_spec_started: 3,
+-                      handle_element_start_of_stream: 3,
+-                      handle_element_end_of_stream: 3,
++                      handle_element_start_of_stream: 4,
++                      handle_element_end_of_stream: 4,
+ -                     handle_notification: 4,
+ +                     handle_child_notification: 4,
+                       handle_crash_group_down: 3
+      end
+    end
+diff --cc test/membrane/core/element/action_handler_test.exs
+index a40bf175,8363082a..00000000
+--- a/test/membrane/core/element/action_handler_test.exs
++++ b/test/membrane/core/element/action_handler_test.exs
+@@@ -461,9 -449,9 +449,8 @@@ defmodule Membrane.Core.Element.ActionH
+            %{},
+            state
+          )
+--
+-       assert result == {:ok, state}
++       assert result == state
+ -      assert_received Message.new(:notification, [:elem_name, @mock_notification])
+ +      assert_received Message.new(:child_notification, [:elem_name, @mock_notification])
+      end
+    end
+  
+@@@ -595,8 -559,8 +558,8 @@@
+  
+      test "when :redemand is not the last action", %{state: state} do
+        assert_raise ActionError, ~r/redemand.*last/i, fn ->
+-         @module.handle_actions(
++         @module.transform_actions(
+ -          [redemand: :output, notify: :a, notify: :b],
+ +          [redemand: :output, notify_parent: :a, notify_parent: :b],
+            :handle_other,
+            %{},
+            state
+diff --cc test/support/bin/test_bins.ex
+index 4da7edf8,52d99eb4..00000000
+--- a/test/support/bin/test_bins.ex
++++ b/test/support/bin/test_bins.ex
+@@@ -227,13 -226,13 +227,13 @@@ defmodule Membrane.Support.Bin.TestBin
+      end
+  
+      @impl true
+-     def handle_element_start_of_stream(arg, _ctx, state) do
+-       {{:ok, notify_parent: {:handle_element_start_of_stream, arg}}, state}
++     def handle_element_start_of_stream(element, pad, _ctx, state) do
+ -      {{:ok, notify: {:handle_element_start_of_stream, element, pad}}, state}
+++      {{:ok, notify_parent: {:handle_element_start_of_stream, element, pad}}, state}
+      end
+  
+      @impl true
+-     def handle_element_end_of_stream(arg, _ctx, state) do
+-       {{:ok, notify_parent: {:handle_element_end_of_stream, arg}}, state}
++     def handle_element_end_of_stream(element, pad, _ctx, state) do
+ -      {{:ok, notify: {:handle_element_end_of_stream, element, pad}}, state}
+++      {{:ok, notify_parent: {:handle_element_end_of_stream, element, pad}}, state}
+      end
+    end
+  
+@@@ -269,76 -268,13 +269,76 @@@
+      end
+  
+      @impl true
+-     def handle_element_start_of_stream(arg, _ctx, state) do
+-       {{:ok, notify_parent: {:handle_element_start_of_stream, arg}}, state}
++     def handle_element_start_of_stream(element, pad, _ctx, state) do
+ -      {{:ok, notify: {:handle_element_start_of_stream, element, pad}}, state}
+++      {{:ok, notify_parent: {:handle_element_start_of_stream, element, pad}}, state}
+      end
+  
+      @impl true
+-     def handle_element_end_of_stream(arg, _ctx, state) do
+-       {{:ok, notify_parent: {:handle_element_end_of_stream, arg}}, state}
++     def handle_element_end_of_stream(element, pad, _ctx, state) do
+ -      {{:ok, notify: {:handle_element_end_of_stream, element, pad}}, state}
+++      {{:ok, notify_parent: {:handle_element_end_of_stream, element, pad}}, state}
+ +    end
+ +  end
+ +
+ +  defmodule NotifyingParentElement do
+ +    @moduledoc false
+ +    use Membrane.Filter
+ +
+ +    def_input_pad :input, demand_unit: :buffers, caps: :any
+ +    def_output_pad :output, caps: :any, demand_unit: :buffers
+ +
+ +    @impl true
+ +    def handle_init(_opts) do
+ +      {:ok, %{}}
+ +    end
+ +
+ +    @impl true
+ +    def handle_parent_notification(notification, _ctx, state) do
+ +      {{:ok, notify_parent: {"filter1", notification}}, state}
+ +    end
+ +
+ +    @impl true
+ +    def handle_demand(_pad, _size, _unit, _ctx, state) do
+ +      {{:ok, []}, state}
+ +    end
+ +  end
+ +
+ +  defmodule NotifyingParentBin do
+ +    @moduledoc false
+ +    use Membrane.Bin
+ +
+ +    def_input_pad :input, demand_unit: :buffers, caps: :any
+ +
+ +    def_output_pad :output, caps: :any, demand_unit: :buffers
+ +
+ +    @impl true
+ +    def handle_init(_opts) do
+ +      children = [
+ +        filter1: NotifyingParentElement,
+ +        filter2: NotifyingParentElement
+ +      ]
+ +
+ +      links = [
+ +        link_bin_input() |> to(:filter1) |> to(:filter2) |> to_bin_output()
+ +      ]
+ +
+ +      spec = %ParentSpec{
+ +        children: children,
+ +        links: links
+ +      }
+ +
+ +      state = %{}
+ +
+ +      {{:ok, spec: spec}, state}
+ +    end
+ +
+ +    @impl true
+ +    def handle_parent_notification(notification, _ctx, state) do
+ +      {{:ok, notify_child: {:filter1, notification}}, state}
+ +    end
+ +
+ +    @impl true
+ +    def handle_child_notification(notification, :filter1, _ctx, state) do
+ +      {{:ok, notify_parent: notification}, state}
+      end
+    end
+  end
+diff --cc test/support/sync/sync_bin.ex
+index d1f74a49,0261877e..00000000
+--- a/test/support/sync/sync_bin.ex
++++ b/test/support/sync/sync_bin.ex
+@@@ -10,7 -10,7 +10,7 @@@ defmodule Membrane.Support.Sync.SyncBi
+    end
+  
+    @impl true
+-   def handle_element_start_of_stream({child, _pad}, _ctx, state) do
++   def handle_element_start_of_stream(child, _pad, _ctx, state) do
+ -    {{:ok, notify: {:start_of_stream, child}}, state}
+ +    {{:ok, notify_parent: {:start_of_stream, child}}, state}
+    end
+  end
+diff --git a/lib/membrane/core/element/lifecycle_controller.ex b/lib/membrane/core/element/lifecycle_controller.ex
+index 808ce7fe..45530333 100644
+--- a/lib/membrane/core/element/lifecycle_controller.ex
++++ b/lib/membrane/core/element/lifecycle_controller.ex
+@@ -170,7 +170,7 @@ defmodule Membrane.Core.Element.LifecycleController do
+   end
+ 
+   @spec handle_parent_notification(Membrane.ParentNotification.t(), State.t()) ::
+-          State.stateful_try_t()
++          State.t()
+   def handle_parent_notification(notification, state) do
+     context = Component.callback_context_generator([:Element], ParentNotification, state)
+ 
+* Unmerged path lib/membrane/core/parent/message_dispatcher.ex
+diff --git a/lib/membrane/core/parent/message_dispatcher.ex b/lib/membrane/core/parent/message_dispatcher.ex
+deleted file mode 100644
+index e92650b7..00000000
+--- a/lib/membrane/core/parent/message_dispatcher.ex
++++ /dev/null
+@@ -1,83 +0,0 @@
+-defmodule Membrane.Core.Parent.MessageDispatcher do
+-  @moduledoc false
+-
+-  import Membrane.Core.Helper.GenServer
+-
+-  alias Membrane.Core.{Parent, TimerController}
+-  alias Membrane.Core.Message
+-  alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
+-
+-  require Membrane.Core.Message
+-  require Membrane.Logger
+-
+-  @spec handle_message(Message.t(), Parent.state_t()) ::
+-          Membrane.Core.Helper.GenServer.genserver_return_t()
+-          | {:stop, reason :: :normal, Parent.state_t()}
+-  def handle_message(
+-        Message.new(:playback_state_changed, [pid, new_playback_state]),
+-        state
+-      ) do
+-    ChildLifeController.child_playback_changed(pid, new_playback_state, state)
+-    |> noreply(state)
+-  end
+-
+-  def handle_message(Message.new(:change_playback_state, new_state), state) do
+-    LifecycleController.change_playback_state(new_state, state)
+-    |> noreply(state)
+-  end
+-
+-  def handle_message(Message.new(:stream_management_event, [element_name, pad_ref, event]), state) do
+-    LifecycleController.handle_stream_management_event(event, element_name, pad_ref, state)
+-    |> noreply(state)
+-  end
+-
+-  def handle_message(Message.new(:child_notification, [from, notification]), state) do
+-    LifecycleController.handle_child_notification(from, notification, state)
+-    |> noreply(state)
+-  end
+-
+-  def handle_message(Message.new(:log_metadata, metadata), state) do
+-    LifecycleController.handle_log_metadata(metadata, state)
+-    |> noreply(state)
+-  end
+-
+-  def handle_message(Message.new(:timer_tick, timer_id), state) do
+-    TimerController.handle_tick(timer_id, state) |> noreply(state)
+-  end
+-
+-  def handle_message(Message.new(:link_response, link_id), state) do
+-    state = ChildLifeController.LinkHandler.handle_link_response(link_id, state)
+-    {:noreply, state}
+-  end
+-
+-  def handle_message(Message.new(:spec_linking_timeout, spec_ref), state) do
+-    state = ChildLifeController.LinkHandler.handle_spec_timeout(spec_ref, state)
+-    {:noreply, state}
+-  end
+-
+-  def handle_message({:membrane_clock_ratio, clock, ratio}, state) do
+-    TimerController.handle_clock_update(clock, ratio, state) |> noreply(state)
+-  end
+-
+-  def handle_message({:DOWN, _ref, :process, pid, reason} = message, state) do
+-    cond do
+-      is_child_pid?(pid, state) -> ChildLifeController.handle_child_death(pid, reason, state)
+-      is_parent_pid?(pid, state) -> {:stop, {:shutdown, :parent_crash}, state}
+-      true -> LifecycleController.handle_other(message, state)
+-    end
+-    |> noreply(state)
+-  end
+-
+-  def handle_message(message, state) do
+-    LifecycleController.handle_other(message, state)
+-    |> noreply(state)
+-  end
+-
+-  defp is_parent_pid?(pid, state) do
+-    state.parent_pid == pid
+-  end
+-
+-  defp is_child_pid?(pid, state) do
+-    Enum.any?(state.children, fn {_name, entry} -> entry.pid == pid end)
+-  end
+-end
+diff --git a/lib/membrane/core/pipeline.ex b/lib/membrane/core/pipeline.ex
+index f1f9e512..ac342f9d 100644
+--- a/lib/membrane/core/pipeline.ex
++++ b/lib/membrane/core/pipeline.ex
+@@ -67,8 +67,8 @@ defmodule Membrane.Core.Pipeline do
+   end
+ 
+   @impl GenServer
+-  def handle_info(Message.new(:notification, [from, notification]), state) do
+-    state = LifecycleController.handle_notification(from, notification, state)
++  def handle_info(Message.new(:child_notification, [from, notification]), state) do
++    state = LifecycleController.handle_child_notification(from, notification, state)
+     {:noreply, state}
+   end
+ 
