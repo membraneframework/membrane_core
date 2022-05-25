@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   use Bunch
   use Membrane.Core.PlaybackHandler
 
-  alias Membrane.{Child, ChildNotification, Pad, Sync}
+  alias Membrane.{Child, ChildNotification, Core, Pad, Sync}
   alias Membrane.Core.{CallbackHandler, Component, Message, Parent, PlaybackHandler}
 
   alias Membrane.Core.Events
@@ -156,10 +156,8 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
-  defp get_callback_action_handler(%Membrane.Core.Pipeline.State{}),
-    do: Core.Pipeline.ActionHandler
-
-  defp get_callback_action_handler(%Membrane.Core.Bin.State{}), do: Core.Bin.ActionHandler
+  defp get_callback_action_handler(%Core.Pipeline.State{}), do: Core.Pipeline.ActionHandler
+  defp get_callback_action_handler(%Core.Bin.State{}), do: Core.Bin.ActionHandler
 
   defp toggle_syncs_active(:prepared, :playing, children_data) do
     do_toggle_syncs_active(children_data, &Sync.activate/1)
