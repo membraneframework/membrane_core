@@ -99,8 +99,8 @@ defmodule Membrane.Core.Element.LifecycleController do
   @doc """
   Handles custom messages incoming to element.
   """
-  @spec handle_other(message :: any, State.t()) :: State.t()
-  def handle_other(message, state) do
+  @spec handle_info(message :: any, State.t()) :: State.t()
+  def handle_info(message, state) do
     require CallbackContext.Other
     context = &CallbackContext.Other.from_state/1
 

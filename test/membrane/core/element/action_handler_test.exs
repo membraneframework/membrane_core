@@ -50,7 +50,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       end)
 
       state = %{state | playback: %Playback{state: :playing}, supplying_demand?: true}
-      state = @module.handle_action({:demand, {:input, 10}}, :handle_other, %{}, state)
+      state = @module.handle_action({:demand, {:input, 10}}, :handle_info, %{}, state)
       assert state.pads_data.input.demand == 10
       assert MapSet.new([{:input, :supply}]) == state.delayed_demands
     end
@@ -65,7 +65,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       state = state |> set_playback_state(:playing)
 
       assert_raise ElementError, ~r/pad :input_push.*push mode/, fn ->
-        @module.handle_action({:demand, {:input_push, 10}}, :handle_other, %{}, state)
+        @module.handle_action({:demand, {:input_push, 10}}, :handle_info, %{}, state)
       end
     end
   end
@@ -552,7 +552,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           [notify: :a, notify: :b]
         ],
         fn actions ->
-          assert {actions, state} == @module.transform_actions(actions, :handle_other, %{}, state)
+          assert {actions, state} == @module.transform_actions(actions, :handle_info, %{}, state)
         end
       )
     end

@@ -104,14 +104,14 @@ defmodule Membrane.Core.Pipeline do
       state = ChildLifeController.handle_child_death(pid, reason, state)
       {:noreply, state}
     else
-      state = LifecycleController.handle_other(message, state)
+      state = LifecycleController.handle_info(message, state)
       {:noreply, state}
     end
   end
 
   @impl GenServer
   def handle_info(message, state) do
-    state = LifecycleController.handle_other(message, state)
+    state = LifecycleController.handle_info(message, state)
     {:noreply, state}
   end
 

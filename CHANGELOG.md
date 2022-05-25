@@ -2,7 +2,7 @@
 
 ## 0.11.0
  * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)
-*  Add `handle_call/3` callback in the pipeline, as well as a `:reply` and `:reply_to` actions. Rename `handle_other/3` callback into `handle_info/3` [#334](https://github.com/membraneframework/membrane_core/issues/334)
+*  Add `handle_call/3` callback in the pipeline, as well as a `:reply` and `:reply_to` actions. Rename pipeline's `handle_other/3` callback into `handle_info/3` [#334](https://github.com/membraneframework/membrane_core/issues/334)
 
 ## 0.10.0
  * Remove all deprecated stuff [#399](https://github.com/membraneframework/membrane_core/pull/399)
