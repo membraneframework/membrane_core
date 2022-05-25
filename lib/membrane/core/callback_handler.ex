@@ -7,7 +7,6 @@ defmodule Membrane.Core.CallbackHandler do
 
   use Bunch
 
-  alias Bunch.Type
   alias Membrane.CallbackError
 
   require Membrane.Logger
@@ -30,10 +29,9 @@ defmodule Membrane.Core.CallbackHandler do
 
   @type handler_params_t :: map
 
-  @callback handle_action(action :: any, callback :: atom, handler_params_t, state_t) ::
-              Type.stateful_try_t(state_t)
-  @callback handle_actions(actions :: list, callback :: atom, handler_params_t, state_t) ::
-              Type.stateful_try_t(state_t)
+  @callback handle_action(action :: any, callback :: atom, handler_params_t, state_t) :: state_t
+  @callback transform_actions(actions :: list, callback :: atom, handler_params_t, state_t) ::
+              {actions :: list, state_t}
 
   defmacro __using__(_args) do
     quote location: :keep do
@@ -41,12 +39,8 @@ defmodule Membrane.Core.CallbackHandler do
       @behaviour unquote(__MODULE__)
 
       @impl unquote(__MODULE__)
-      def handle_actions(actions, callback, handler_params, state)
-          when is_list(actions) do
-        actions
-        |> Bunch.Enum.try_reduce(state, fn action, state ->
-          handle_action(action, callback, handler_params, state)
-        end)
+      def transform_actions(actions, _callback, _handler_params, state) do
+        {actions, state}
       end
 
       defoverridable unquote(__MODULE__)
@@ -59,7 +53,7 @@ defmodule Membrane.Core.CallbackHandler do
           handler_params_t,
           args :: list,
           state_t
-        ) :: Type.stateful_try_t(state_t)
+        ) :: state_t
   def exec_and_handle_callback(
         callback,
         handler_module,
@@ -72,15 +66,15 @@ defmodule Membrane.Core.CallbackHandler do
     handle_callback_result(result, callback, handler_module, handler_params, state)
   end
 
-  @spec exec_and_handle_splitted_callback(
+  @spec exec_and_handle_split_callback(
           callback :: atom,
           original_callback :: atom,
           module,
           handler_params_t,
-          args :: list,
+          args_list :: list,
           state_t
-        ) :: Type.stateful_try_t(state_t)
-  def exec_and_handle_splitted_callback(
+        ) :: state_t
+  def exec_and_handle_split_callback(
         callback,
         original_callback,
         handler_module,
@@ -88,25 +82,46 @@ defmodule Membrane.Core.CallbackHandler do
         args_list,
         state
       )
-      when is_map(handler_params) do
-    split_continuation_arbiter =
-      handler_params |> Map.get(:split_continuation_arbiter, fn _state -> true end)
 
-    args_list
-    |> Bunch.Enum.try_reduce_while(state, fn args, state ->
+  def exec_and_handle_split_callback(
+        callback,
+        original_callback,
+        handler_module,
+        %{split_continuation_arbiter: split_continuation_arbiter} = handler_params,
+        args_list,
+        state
+      ) do
+    Enum.reduce_while(args_list, state, fn args, state ->
       if split_continuation_arbiter.(state) do
-        callback
-        |> exec_callback(args, handler_params, state)
-        |> handle_callback_result(original_callback, handler_module, handler_params, state)
-        ~>> ({:ok, state} -> {{:ok, :cont}, state})
+        state =
+          callback
+          |> exec_callback(args, handler_params, state)
+          |> handle_callback_result(original_callback, handler_module, handler_params, state)
+
+        {:cont, state}
       else
-        {{:ok, :halt}, state}
+        {:halt, state}
       end
     end)
   end
 
+  def exec_and_handle_split_callback(
+        callback,
+        original_callback,
+        handler_module,
+        %{} = handler_params,
+        args_list,
+        state
+      ) do
+    Enum.reduce(args_list, state, fn args, state ->
+      callback
+      |> exec_callback(args, handler_params, state)
+      |> handle_callback_result(original_callback, handler_module, handler_params, state)
+    end)
+  end
+
   @spec exec_callback(callback :: atom, args :: list, handler_params_t, state_t) ::
-          callback_return_t | any
+          {list, internal_state_t}
   defp exec_callback(:handle_init, args, _handler_params, %{module: module}) do
     module
     |> apply(:handle_init, args)
@@ -140,43 +155,50 @@ defmodule Membrane.Core.CallbackHandler do
   end
 
   @spec handle_callback_result(
-          {{:ok, actions :: Keyword.t()}, internal_state :: any},
+          {actions :: Keyword.t(), internal_state_t},
           callback :: atom,
           module,
           handler_params_t,
           state_t
-        ) :: Type.stateful_try_t(state_t)
+        ) :: state_t
   defp handle_callback_result(cb_result, callback, handler_module, handler_params, state) do
-    {result, new_internal_state} = cb_result
-    state = Map.put(state, :internal_state, new_internal_state)
+    {actions, new_internal_state} = cb_result
+    state = %{state | internal_state: new_internal_state}
 
-    with {{:ok, actions}, state} <- {result, state} do
-      exec_handle_actions(actions, callback, handler_module, handler_params, state)
-    end
-  end
+    {actions, state} =
+      try do
+        handler_module.transform_actions(actions, callback, handler_params, state)
+      rescue
+        e ->
+          Membrane.Logger.error("""
+          Error handling actions returned by callback #{inspect(state.module)}.#{callback}
+          """)
 
-  @spec exec_handle_actions(list, callback :: atom, module, handler_params_t, state_t) ::
-          Type.stateful_try_t(state_t)
-  defp exec_handle_actions(actions, callback, handler_module, handler_params, state) do
-    with {:ok, state} <- handler_module.handle_actions(actions, callback, handler_params, state) do
-      {:ok, state}
-    else
-      {{:error, reason}, state} ->
-        Membrane.Logger.error("""
-        Error while handling actions returned by callback #{inspect(callback)}
-        """)
+          reraise e, __STACKTRACE__
+      end
 
-        {{:error, {:error_handling_actions, reason}}, state}
-    end
+    Enum.reduce(actions, state, fn action, state ->
+      try do
+        handler_module.handle_action(action, callback, handler_params, state)
+      rescue
+        e ->
+          Membrane.Logger.error("""
+          Error handling action #{inspect(action)} returned by callback #{inspect(state.module)}.#{callback}
+          """)
+
+          reraise e, __STACKTRACE__
+      end
+    end)
   end
 
   @spec parse_callback_result(callback_return_t | any, module, callback :: atom) ::
-          Type.stateful_try_t(list, internal_state_t)
-  defp parse_callback_result({:ok, new_internal_state}, module, cb),
-    do: parse_callback_result({{:ok, []}, new_internal_state}, module, cb)
+          {list, internal_state_t}
+  defp parse_callback_result({:ok, new_internal_state}, _module, _cb) do
+    {[], new_internal_state}
+  end
 
   defp parse_callback_result({{:ok, actions}, new_internal_state}, _module, _cb) do
-    {{:ok, actions}, new_internal_state}
+    {actions, new_internal_state}
   end
 
   defp parse_callback_result({:error, reason}, module, :handle_init) do
@@ -184,12 +206,11 @@ defmodule Membrane.Core.CallbackHandler do
   end
 
   defp parse_callback_result({{:error, reason}, new_internal_state}, module, cb) do
-    Membrane.Logger.error("""
-    Callback #{inspect(cb)} from module #{inspect(module)} returned an error
-    Internal state: #{inspect(new_internal_state, pretty: true)}
-    """)
-
-    {{:error, reason}, new_internal_state}
+    raise CallbackError,
+      kind: :error,
+      callback: {module, cb},
+      reason: reason,
+      state: new_internal_state
   end
 
   defp parse_callback_result(result, module, cb) do
