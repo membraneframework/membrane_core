@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   alias Membrane.Core.{CallbackHandler, Child, Element, Message}
   alias Membrane.{Clock, Element, Sync}
-  alias Membrane.Core.{CallbackHandler, Component, Child, Element, Message}
+  alias Membrane.Core.{CallbackHandler, Child, Component, Element, Message}
   alias Membrane.Core.Element.{ActionHandler, PlaybackBuffer, State}
   alias Membrane.Element.CallbackContext
 

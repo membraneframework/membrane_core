@@ -10,11 +10,11 @@ defmodule Membrane.Core.Bin do
   alias Membrane.Core.{
     CallbackHandler,
     Child,
+    Component,
     Message,
     Parent,
     Telemetry,
-    TimerController,
-    Component
+    TimerController
   }
 
   require Membrane.Core.Message

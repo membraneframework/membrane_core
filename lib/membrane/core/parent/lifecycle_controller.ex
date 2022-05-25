@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   use Bunch
   use Membrane.Core.PlaybackHandler
 
-  alias Membrane.{Child, Core, ChildNotification, Pad, Sync}
+  alias Membrane.{Child, ChildNotification, Pad, Sync}
   alias Membrane.Core.{CallbackHandler, Component, Message, Parent, PlaybackHandler}
 
   alias Membrane.Core.Events
