@@ -97,7 +97,6 @@ defmodule Membrane.ActionError do
     which actions are supported and when you can return them.
     """
   end
-
 end
 
 defmodule Membrane.LinkError do
