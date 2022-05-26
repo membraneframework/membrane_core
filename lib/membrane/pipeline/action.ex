@@ -82,15 +82,15 @@ defmodule Membrane.Pipeline.Action do
   @type playback_t :: {:playback, :prepared | :playing | :stopped}
 
   @typedoc """
-  Action that replies to a `Membrane.Pipeline.call/2`. Can be returned only from the `Membrane.Pipeline.handle_call/3` callback, in
+  Action that replies to a `Membrane.Pipeline.call/3`. Can be returned only from the `c:Membrane.Pipeline.handle_call/3` callback, in
   which context the caller reference is available, under the `:from` key.
   """
   @type reply_t :: {:reply, message :: any}
 
   @typedoc """
-  Action that replies to a `Membrane.Pipeline.call/2`. Useful when one does not want to reply in
-  `Membrane.Pipeline.handle_call/3` callback. A caller reference is required to be passed, so one needs to save this
-  reference from the `Membrane.Pipeline.handle_call/3` context, where it is available under the `:from` key.
+  Action that replies to a `Membrane.Pipeline.call/3`. Useful when one does not want to reply in
+  `c:Membrane.Pipeline.handle_call/3` callback. A caller reference is required to be passed, so one needs to save this
+  reference from the `c:Membrane.Pipeline.handle_call/3` context, where it is available under the `:from` key.
   """
   @type reply_to_t :: {:reply_to, {GenServer.from(), message :: any}}
 
