@@ -437,14 +437,6 @@ defmodule Membrane.Pipeline do
         def stop_and_terminate(pipeline, opts \\ []),
           do: Membrane.Pipeline.terminate(pipeline, opts)
       end
-
-      unless Module.defines?(__MODULE__, {:call, 3}) do
-        @doc """
-        Synchronously calls the pipeline
-        """
-        @spec call(pid, any, timeout) :: :ok
-        defdelegate call(pipeline, message, timeout), to: unquote(__MODULE__)
-      end
     end
   end
 
