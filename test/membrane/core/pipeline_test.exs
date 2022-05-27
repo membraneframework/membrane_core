@@ -25,7 +25,7 @@ defmodule Membrane.Core.PipelineTest do
     end
 
     @impl true
-    def handle_other(message, _ctx, state) do
+    def handle_info(message, _ctx, state) do
       {:ok, Map.put(state, :other, message)}
     end
   end

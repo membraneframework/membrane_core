@@ -263,7 +263,7 @@ defmodule Membrane.Testing.Pipeline do
   @doc """
   Executes specified actions in the pipeline.
 
-  The actions are returned from the `handle_other` callback.
+  The actions are returned from the `handle_info` callback.
   """
   @spec execute_actions(pid(), Keyword.t()) :: :ok
   def execute_actions(pipeline, actions) do
@@ -433,15 +433,15 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_other({__MODULE__, :__execute_actions__, actions}, _ctx, %State{} = state) do
+  def handle_info({__MODULE__, :__execute_actions__, actions}, _ctx, %State{} = state) do
     {{:ok, actions}, state}
   end
 
   @impl true
-  def handle_other({:for_element, element, message}, ctx, %State{} = state) do
+  def handle_info({:for_element, element, message}, ctx, %State{} = state) do
     injected_module_result =
       eval_injected_module_callback(
-        :handle_other,
+        :handle_info,
         [{:for_element, element, message}, ctx],
         state
       )
@@ -452,15 +452,29 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_other(message, ctx, %State{} = state) do
+  def handle_info(message, ctx, %State{} = state) do
     {custom_actions, custom_state} =
       eval_injected_module_callback(
-        :handle_other,
+        :handle_info,
         [message, ctx],
         state
       )
 
-    :ok = notify_test_process(state.test_process, {:handle_other, message})
+    :ok = notify_test_process(state.test_process, {:handle_info, message})
+
+    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
+  end
+
+  @impl true
+  def handle_call(message, ctx, state) do
+    {custom_actions, custom_state} =
+      eval_injected_module_callback(
+        :handle_call,
+        [message, ctx],
+        state
+      )
+
+    :ok = notify_test_process(state.test_process, {:handle_call, message})
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end

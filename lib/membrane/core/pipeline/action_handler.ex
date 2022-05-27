@@ -59,6 +59,24 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   @impl CallbackHandler
+  def handle_action({:reply_to, {pid, message}}, _cb, _params, state) do
+    GenServer.reply(pid, message)
+    {:ok, state}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:reply, message}, :handle_call, params, state) do
+    ctx = params.context.(state)
+    GenServer.reply(ctx.from, message)
+    {:ok, state}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:reply, _message} = action, cb, _params, _state) do
+    raise ActionError, action: action, reason: {:invalid_callback, cb}
+  end
+
+  @impl CallbackHandler
   def handle_action(action, _callback, _params, _state) do
     raise ActionError, action: action, reason: {:unknown_action, Membrane.Pipeline.Action}
   end
