@@ -5,14 +5,15 @@ defmodule Membrane.Core.Pipeline do
   alias __MODULE__.{ActionHandler, State}
   alias Membrane.Clock
   alias Membrane.Core.CallbackHandler
-  alias Membrane.Core.Component
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
   alias Membrane.Core.TimerController
+  alias Membrane.Pipeline.CallbackContext
 
   require Membrane.Core.Message, as: Message
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
   require Membrane.Core.Component
+  require Membrane.Pipeline.CallbackContext.Call
 
   @impl GenServer
   def init({module, pipeline_options}) do
