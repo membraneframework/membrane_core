@@ -90,7 +90,7 @@ defmodule Membrane.Pipeline.Action do
   @typedoc """
   Action that replies to a `Membrane.Pipeline.call/3`. Useful when one does not want to reply in
   `c:Membrane.Pipeline.handle_call/3` callback. A caller reference is required to be passed, so one needs to save this
-  reference from the `c:Membrane.Pipeline.handle_call/3` context, where it is available under the `:from` key.
+  reference from the `Membrane.Pipeline.CallbackContext.Call`, where it is available under the `:from` key.
   """
   @type reply_to_t :: {:reply_to, {GenServer.from(), message :: any}}
 
