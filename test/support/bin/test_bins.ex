@@ -11,7 +11,7 @@ defmodule Membrane.Support.Bin.TestBins do
     def_input_pad :input, demand_unit: :buffers, caps: :any
 
     @impl true
-    def handle_other({:notify_parent, notif}, _ctx, state),
+    def handle_info({:notify_parent, notif}, _ctx, state),
       do: {{:ok, notify_parent: notif}, state}
 
     @impl true
@@ -31,7 +31,7 @@ defmodule Membrane.Support.Bin.TestBins do
     def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :on_request
 
     @impl true
-    def handle_other({:notify_parent, notif}, _ctx, state),
+    def handle_info({:notify_parent, notif}, _ctx, state),
       do: {{:ok, notify_parent: notif}, state}
 
     @impl true
@@ -97,7 +97,7 @@ defmodule Membrane.Support.Bin.TestBins do
     end
 
     @impl true
-    def handle_other(msg, _ctx, state) do
+    def handle_info(msg, _ctx, state) do
       {{:ok, notify_parent: msg}, state}
     end
   end

@@ -13,7 +13,7 @@ defmodule Membrane.Core.ElementTest do
     def_output_pad :output, caps: :any
 
     @impl true
-    def handle_other(msg, _ctx, state) do
+    def handle_info(msg, _ctx, state) do
       {{:ok, notify_parent: msg}, state}
     end
   end
@@ -312,7 +312,7 @@ defmodule Membrane.Core.ElementTest do
       assert_receive {:DOWN, ^ref, :process, ^elem_pid, {:shutdown, :parent_crash}}
     end
 
-    test "DOWN message should be delivered to handle_other if it's not coming from parent" do
+    test "DOWN message should be delivered to handle_info if it's not coming from parent" do
       {:ok, elem_pid} =
         self()
         |> element_init_options

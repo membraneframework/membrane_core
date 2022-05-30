@@ -202,7 +202,7 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(message, state) do
-    state = LifecycleController.handle_other(message, state)
+    state = LifecycleController.handle_info(message, state)
     {:noreply, state}
   end
 end

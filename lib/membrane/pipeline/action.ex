@@ -77,18 +77,29 @@ defmodule Membrane.Pipeline.Action do
   @type stop_timer_t :: {:stop_timer, timer_id :: any}
 
   @typedoc """
+  Changes the playback state of the pipeline to the chosen one.
+  """
+  @type playback_t :: {:playback, :prepared | :playing | :stopped}
+
+  @typedoc """
+  Action that replies to a `Membrane.Pipeline.call/3`. Can be returned only from the `c:Membrane.Pipeline.handle_call/3` callback, in
+  which context the caller reference is available, under the `:from` key.
+  """
+  @type reply_t :: {:reply, message :: any}
+
+  @typedoc """
+  Action that replies to a `Membrane.Pipeline.call/3`. Useful when one does not want to reply in
+  `c:Membrane.Pipeline.handle_call/3` callback. A caller reference is required to be passed, so one needs to save this
+  reference from the `Membrane.Pipeline.CallbackContext.Call`, where it is available under the `:from` key.
+  """
+  @type reply_to_t :: {:reply_to, {GenServer.from(), message :: any}}
+
+  @typedoc """
   Type describing actions that can be returned from pipeline callbacks.
 
   Returning actions is a way of pipeline interaction with its children and
   other parts of framework.
   """
-
-  @type playback_t :: {:playback, :prepared | :playing | :stopped}
-
-  @typedoc """
-  Changes the playback state of the pipeline to the chosen one.
-  """
-
   @type t ::
           notify_child_t
           | spec_t
@@ -97,4 +108,6 @@ defmodule Membrane.Pipeline.Action do
           | timer_interval_t
           | stop_timer_t
           | playback_t
+          | reply_t
+          | reply_to_t
 end

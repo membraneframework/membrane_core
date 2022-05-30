@@ -126,7 +126,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
   describe "assert_pipeline_receive" do
     test "does not flunk when pipeline receives a message", %{state: state} do
       message = "I am an important message"
-      Pipeline.handle_other(message, context(), state)
+      Pipeline.handle_info(message, context(), state)
       assert_pipeline_receive(self(), ^message)
     end
 
@@ -147,7 +147,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
 
     test "flunks when pipeline receives message", %{state: state} do
       message = "I am an important message"
-      Pipeline.handle_other(message, context(), state)
+      Pipeline.handle_info(message, context(), state)
 
       assert_raise ExUnit.AssertionError, fn ->
         refute_pipeline_receive(self(), ^message)

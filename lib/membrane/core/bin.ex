@@ -233,14 +233,14 @@ defmodule Membrane.Core.Bin do
         {:stop, {:shutdown, :parent_crash}, state}
 
       true ->
-        state = Parent.LifecycleController.handle_other(message, state)
+        state = Parent.LifecycleController.handle_info(message, state)
         {:noreply, state}
     end
   end
 
   @impl GenServer
   def handle_info(message, state) do
-    state = Parent.LifecycleController.handle_other(message, state)
+    state = Parent.LifecycleController.handle_info(message, state)
     {:noreply, state}
   end
 

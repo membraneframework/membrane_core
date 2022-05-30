@@ -53,7 +53,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   end
 
   @impl true
-  def handle_other(:resume_after_wait, _ctx, state) do
+  def handle_info(:resume_after_wait, _ctx, state) do
     {{:ok, playback_change: :resume, notify_parent: :playing}, state}
   end
 

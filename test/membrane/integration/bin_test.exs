@@ -169,7 +169,7 @@ defmodule Membrane.Core.BinTest do
       assert_receive {:DOWN, ^ref, :process, ^bin_pid, {:shutdown, :parent_crash}}
     end
 
-    test "DOWN message should be delivered to handle_other if it's not coming from parent" do
+    test "DOWN message should be delivered to handle_info if it's not coming from parent" do
       {:ok, bin_pid} =
         self()
         |> bin_init_options

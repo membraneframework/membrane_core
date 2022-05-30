@@ -152,7 +152,7 @@ defmodule Membrane.Element.Base do
 
   Useful for receiving ticks from timer, data sent from NIFs or other stuff.
   """
-  @callback handle_other(
+  @callback handle_info(
               message :: any(),
               context :: CallbackContext.Other.t(),
               state :: Element.state_t()
@@ -223,7 +223,7 @@ defmodule Membrane.Element.Base do
                       handle_prepared_to_playing: 2,
                       handle_playing_to_prepared: 2,
                       handle_prepared_to_stopped: 2,
-                      handle_other: 3,
+                      handle_info: 3,
                       handle_pad_added: 3,
                       handle_pad_removed: 3,
                       handle_event: 4,
@@ -327,7 +327,7 @@ defmodule Membrane.Element.Base do
       def handle_stopped_to_terminating(_context, state), do: {:ok, state}
 
       @impl true
-      def handle_other(_message, _context, state), do: {:ok, state}
+      def handle_info(_message, _context, state), do: {:ok, state}
 
       @impl true
       def handle_pad_added(_pad, _context, state), do: {:ok, state}
@@ -349,7 +349,7 @@ defmodule Membrane.Element.Base do
                      handle_playing_to_prepared: 2,
                      handle_prepared_to_playing: 2,
                      handle_prepared_to_stopped: 2,
-                     handle_other: 3,
+                     handle_info: 3,
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
                      handle_event: 4,

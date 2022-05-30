@@ -155,7 +155,7 @@ defmodule Membrane.Bin do
 
   Useful for receiving data sent from NIFs or other stuff.
   """
-  @callback handle_other(
+  @callback handle_info(
               message :: any,
               context :: CallbackContext.Other.t(),
               state :: state_t
@@ -215,7 +215,7 @@ defmodule Membrane.Bin do
                       handle_prepared_to_playing: 2,
                       handle_prepared_to_stopped: 2,
                       handle_stopped_to_terminating: 2,
-                      handle_other: 3,
+                      handle_info: 3,
                       handle_spec_started: 3,
                       handle_element_start_of_stream: 4,
                       handle_element_end_of_stream: 4,
@@ -353,7 +353,7 @@ defmodule Membrane.Bin do
       def handle_stopped_to_terminating(_ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_other(message, _ctx, state), do: {:ok, state}
+      def handle_info(message, _ctx, state), do: {:ok, state}
 
       @impl true
       def handle_spec_started(new_children, _ctx, state), do: {:ok, state}
@@ -380,7 +380,7 @@ defmodule Membrane.Bin do
                      handle_prepared_to_playing: 2,
                      handle_prepared_to_stopped: 2,
                      handle_stopped_to_terminating: 2,
-                     handle_other: 3,
+                     handle_info: 3,
                      handle_spec_started: 3,
                      handle_element_start_of_stream: 4,
                      handle_element_end_of_stream: 4,

@@ -30,7 +30,7 @@ defmodule Membrane.Support.ChildCrashTest.Filter do
   end
 
   @impl true
-  def handle_other(:crash, _ctx, state) do
+  def handle_info(:crash, _ctx, state) do
     # code that will cause crash of the filter
     Process.exit(self(), :crash)
 
