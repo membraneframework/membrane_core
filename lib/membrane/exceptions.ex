@@ -4,6 +4,19 @@ end
 
 defmodule Membrane.ParentError do
   defexception [:message]
+
+  @impl true
+  def exception(msg) when is_binary(msg), do: %__MODULE__{message: msg}
+
+  def exception(not_child: module) do
+    msg = """
+    Child module "#{inspect(module)}" is neither Membrane Element nor Bin.
+    Make sure that given module is the right one, implements proper behaviour
+    and all needed dependencies are properly specified in the Mixfile.
+    """
+
+    %__MODULE__{message: msg}
+  end
 end
 
 defmodule Membrane.UnknownChildError do

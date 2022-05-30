@@ -43,18 +43,9 @@ defmodule Membrane.Core.Parent.ChildEntryParser do
 
   defp component_type(module) do
     cond do
-      Membrane.Element.element?(module) ->
-        :element
-
-      Membrane.Bin.bin?(module) ->
-        :bin
-
-      true ->
-        raise ParentError, """
-        Child module #{inspect(module)} is neither Membrane Element nor Bin.
-        Make sure that given module is the right one, implements proper behaviour
-        and all needed dependencies are properly specified in the Mixfile.
-        """
+      Membrane.Element.element?(module) -> :element
+      Membrane.Bin.bin?(module) -> :bin
+      true -> raise ParentError, not_child: module
     end
   end
 end
