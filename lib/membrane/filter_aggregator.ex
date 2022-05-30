@@ -48,8 +48,12 @@ defmodule Membrane.FilterAggregator do
           {name, module, options}
 
         {name, module} ->
-          unless is_atom(module) and module.membrane_element?() do
-            raise "#{inspect(module)} is not an element!"
+          unless is_atom(module) and Membrane.Element.element?(module) do
+            raise ArgumentError, """
+            The module "#{inspect(module)}" is not a Membrane Element.
+            Make sure that given module is the right one, implements proper behaviour
+            and all needed dependencies are properly specified in the Mixfile.
+            """
           end
 
           options =
