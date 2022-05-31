@@ -13,8 +13,9 @@ defmodule Membrane.Event.Discontinuity do
   @derive Membrane.EventProtocol
 
   @type duration_t :: Membrane.Time.t() | nil
+  @type metadata_t :: any() | nil
 
-  defstruct duration: nil
+  defstruct duration: nil, metadata: nil
 
-  @type t :: %__MODULE__{duration: duration_t}
+  @type t :: %__MODULE__{duration: duration_t, metadata: metadata_t}
 end
