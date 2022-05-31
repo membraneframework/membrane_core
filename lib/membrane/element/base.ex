@@ -217,6 +217,20 @@ defmodule Membrane.Element.Base do
   @callback handle_shutdown(reason, state :: Element.state_t()) :: :ok
             when reason: :normal | :shutdown | {:shutdown, any} | term()
 
+  @doc """
+  A callback for constructing struct. Will be defined by `def_options/1` if used.
+
+  See `defstruct/1` for a more in-depth description.
+  """
+  @callback __struct__() :: struct()
+
+  @doc """
+  A callback for constructing struct with values. Will be defined by `def_options/1` if used.
+
+  See `defstruct/1` for a more in-depth description.
+  """
+  @callback __struct__(kv :: [atom | {atom, any()}]) :: struct()
+
   @optional_callbacks membrane_clock?: 0,
                       handle_init: 1,
                       handle_stopped_to_prepared: 2,
@@ -229,7 +243,9 @@ defmodule Membrane.Element.Base do
                       handle_event: 4,
                       handle_tick: 3,
                       handle_parent_notification: 3,
-                      handle_shutdown: 2
+                      handle_shutdown: 2,
+                      __struct__: 0,
+                      __struct__: 1
 
   @doc """
   Macro defining options that parametrize element.

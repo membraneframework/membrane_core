@@ -8,6 +8,14 @@ defmodule Membrane.Core.Element.CallbackContext do
     parent_clock: Membrane.Clock.t() | nil,
     name: Membrane.Element.name_t()
 
+  @type default_fields :: %{
+          pads: %{Membrane.Pad.ref_t() => Membrane.Element.PadData.t()},
+          playback_state: Membrane.PlaybackState.t(),
+          clock: Membrane.Clock.t() | nil,
+          parent_clock: Membrane.Clock.t() | nil,
+          name: Membrane.Element.name_t()
+        }
+
   @impl true
   def extract_default_fields(state, args) do
     quote do

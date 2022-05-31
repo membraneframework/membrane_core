@@ -121,16 +121,19 @@ defmodule Membrane.Mixfile do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.1", only: :dev, runtime: false},
-      {:credo, "~> 1.6", only: :dev, runtime: false},
-      {:espec, "~> 1.8.3", only: :test},
-      {:excoveralls, "~> 0.14", only: :test},
-      {:junit_formatter, "~> 3.1", only: :test},
       {:qex, "~> 0.3"},
       {:telemetry, "~> 1.0"},
       {:bunch, "~> 1.3"},
-      {:ratio, "~> 2.0"}
+      {:ratio, "~> 2.0"},
+      # Development
+      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.1", only: :dev, runtime: false},
+      {:credo, "~> 1.6", only: :dev, runtime: false},
+      # Testing
+      {:espec, "~> 1.8.3", only: :test},
+      {:mox, "~> 1.0", only: :test},
+      {:junit_formatter, "~> 3.1", only: :test},
+      {:excoveralls, "~> 0.14", only: :test}
     ]
   end
 end
