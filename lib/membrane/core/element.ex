@@ -20,8 +20,9 @@ defmodule Membrane.Core.Element do
 
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.ComponentPath
-  alias Membrane.Core.Element.{LifecycleController, PadController, PlaybackBuffer, State}
-  alias Membrane.Core.{Message, PlaybackHandler, Telemetry, TimerController}
+  alias Membrane.Core.Element.LifecycleController, as: ElementLifecycleController
+  alias Membrane.Core.Element.{PadController, PlaybackBuffer, State}
+  alias Membrane.Core.{Child, Message, PlaybackHandler, Telemetry, TimerController}
 
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
@@ -109,14 +110,14 @@ defmodule Membrane.Core.Element do
 
     state = Map.take(options, [:module, :name, :parent_clock, :sync, :parent]) |> State.new()
 
-    state = LifecycleController.handle_init(options.user_options, state)
+    state = ElementLifecycleController.handle_init(options.user_options, state)
     {:ok, state}
   end
 
   @impl GenServer
   def terminate(reason, state) do
     Telemetry.report_terminate(:element)
-    LifecycleController.handle_shutdown(reason, state)
+    ElementLifecycleController.handle_shutdown(reason, state)
   end
 
   @impl GenServer
@@ -148,7 +149,7 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_info({:DOWN, _ref, :process, parent_pid, reason}, %{parent_pid: parent_pid} = state) do
-    :ok = LifecycleController.handle_pipeline_down(reason, state)
+    :ok = ElementLifecycleController.handle_pipeline_down(reason, state)
     {:stop, {:shutdown, :parent_crash}, state}
   end
 
@@ -166,7 +167,7 @@ defmodule Membrane.Core.Element do
 
   defp do_handle_info(Message.new(:change_playback_state, new_playback_state), state) do
     {:ok, state} =
-      PlaybackHandler.change_playback_state(new_playback_state, LifecycleController, state)
+      PlaybackHandler.change_playback_state(new_playback_state, ElementLifecycleController, state)
 
     {:noreply, state}
   end
@@ -193,7 +194,7 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(Message.new(:parent_notification, notification), state) do
-    state = LifecycleController.handle_parent_notification(notification, state)
+    state = Child.LifecycleController.handle_parent_notification(notification, state)
     {:noreply, state}
   end
 
@@ -202,7 +203,7 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(message, state) do
-    state = LifecycleController.handle_info(message, state)
+    state = ElementLifecycleController.handle_info(message, state)
     {:noreply, state}
   end
 end

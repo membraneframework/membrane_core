@@ -12,7 +12,7 @@ defmodule PipelineSynchronousCallTest do
     end
 
     @impl true
-    def handle_notification(notification, child, _ctx, state) do
+    def handle_child_notification(notification, child, _ctx, state) do
       {:ok, Map.put(state, :notification, {notification, child})}
     end
 
