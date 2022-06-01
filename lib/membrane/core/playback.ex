@@ -4,6 +4,8 @@ defmodule Membrane.Core.Playback do
   # This module defines available playback states and struct that is held
   # internally by every module having playback state.
 
+  use Bunch.Access
+
   alias Membrane.PlaybackState
 
   defstruct state: :stopped,

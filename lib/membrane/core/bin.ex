@@ -201,7 +201,7 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def handle_info(Message.new(:spec_linking_timeout, spec_ref), state) do
-    state = Parent.ChildLifeController.LinkHandler.handle_spec_timeout(spec_ref, state)
+    state = Parent.ChildLifeController.handle_spec_timeout(spec_ref, state)
     {:noreply, state}
   end
 

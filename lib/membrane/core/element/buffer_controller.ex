@@ -8,7 +8,17 @@ defmodule Membrane.Core.Element.BufferController do
   alias Membrane.{Buffer, Pad}
   alias Membrane.Core.{CallbackHandler, Telemetry}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, DemandController, DemandHandler, InputQueue, State}
+
+  alias Membrane.Core.Element.{
+    ActionHandler,
+    DemandController,
+    DemandHandler,
+    EventController,
+    InputQueue,
+    State,
+    StatusQueue
+  }
+
   alias Membrane.Core.Telemetry
   alias Membrane.Element.CallbackContext
 
@@ -22,9 +32,26 @@ defmodule Membrane.Core.Element.BufferController do
   """
   @spec handle_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
   def handle_buffer(pad_ref, buffers, state) do
-    data = PadModel.get_data!(state, pad_ref)
-    %{direction: :input} = data
-    do_handle_buffer(pad_ref, data, buffers, state)
+    withl pad: {:ok, data} = PadModel.get_data(state, pad_ref),
+          status: %State{status: status} when status != :ready <- state do
+      %{direction: :input, start_of_stream?: start_of_stream?} = data
+
+      state =
+        if start_of_stream? do
+          state
+        else
+          EventController.handle_start_of_stream(pad_ref, state)
+        end
+
+      do_handle_buffer(pad_ref, data, buffers, state)
+    else
+      pad: :error ->
+        # We've got a buffer from already unlinked pad
+        state
+
+      status: _status ->
+        StatusQueue.store(&handle_buffer(pad_ref, buffers, &1), state)
+    end
   end
 
   @spec do_handle_buffer(Pad.ref_t(), PadModel.pad_data_t(), [Buffer.t()] | Buffer.t(), State.t()) ::

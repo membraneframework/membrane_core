@@ -43,7 +43,13 @@ defmodule Membrane.Core.Pipeline do
         state
       )
 
-    {:ok, state}
+    {:ok, state, {:continue, :init}}
+  end
+
+  @impl GenServer
+  def handle_continue(:init, state) do
+    state = LifecycleController.handle_setup(state)
+    {:noreply, state}
   end
 
   @impl GenServer
@@ -89,8 +95,19 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def handle_info(Message.new(:spec_linking_timeout, spec_ref), state) do
-    state = ChildLifeController.LinkHandler.handle_spec_timeout(spec_ref, state)
+    state = ChildLifeController.handle_spec_timeout(spec_ref, state)
     {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:initialized, child), state) do
+    state = ChildLifeController.handle_child_initialized(child, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(_type, _args, _opts) = message, _state) do
+    raise Membrane.PipelineError, "Received invalid message #{inspect(message)}"
   end
 
   @impl GenServer

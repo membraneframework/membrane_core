@@ -8,7 +8,7 @@ defmodule Membrane.Core.Element.EventController do
   alias Membrane.{Event, Pad, Sync}
   alias Membrane.Core.{CallbackHandler, Events, Message, Telemetry}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, InputQueue, PadController, State}
+  alias Membrane.Core.Element.{ActionHandler, InputQueue, PadController, State, StatusQueue}
   alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel
@@ -28,19 +28,27 @@ defmodule Membrane.Core.Element.EventController do
   """
   @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.t()
   def handle_event(pad_ref, event, state) do
-    Telemetry.report_metric(:event, 1, inspect(pad_ref))
+    withl pad: {:ok, data} = PadModel.get_data(state, pad_ref),
+          status: %State{status: status} when status != :ready <- state do
+      Telemetry.report_metric(:event, 1, inspect(pad_ref))
 
-    pad_data = PadModel.get_data!(state, pad_ref)
-
-    if not Event.async?(event) and buffers_before_event_present?(pad_data) do
-      PadModel.update_data!(
-        state,
-        pad_ref,
-        :input_queue,
-        &InputQueue.store(&1, :event, event)
-      )
+      if not Event.async?(event) and buffers_before_event_present?(data) do
+        PadModel.update_data!(
+          state,
+          pad_ref,
+          :input_queue,
+          &InputQueue.store(&1, :event, event)
+        )
+      else
+        exec_handle_event(pad_ref, event, state)
+      end
     else
-      exec_handle_event(pad_ref, event, state)
+      pad: :error ->
+        # We've got an event from already unlinked pad
+        state
+
+      status: _status ->
+        StatusQueue.store(&handle_event(pad_ref, event, &1), state)
     end
   end
 

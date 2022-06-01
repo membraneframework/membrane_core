@@ -18,14 +18,22 @@ defmodule Membrane.Core.Element do
   use Bunch
   use GenServer
 
-  alias Membrane.{Clock, Sync}
-  alias Membrane.ComponentPath
-  alias Membrane.Core.Element
-  alias Membrane.Core.Element.{PadController, PlaybackBuffer, State}
-  alias Membrane.Core.{Child, Message, PlaybackHandler, Telemetry, TimerController}
+  alias Membrane.{Clock, ComponentPath, Core, Sync}
 
-  require Membrane.Core.Message
-  require Membrane.Core.Telemetry
+  alias Membrane.Core.Element.{
+    BufferController,
+    CapsController,
+    DemandController,
+    EventController,
+    LifecycleController,
+    PadController,
+    State
+  }
+
+  alias Membrane.Core.{PlaybackHandler, TimerController}
+
+  require Membrane.Core.Message, as: Message
+  require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
 
   @type options_t :: %{
@@ -110,14 +118,20 @@ defmodule Membrane.Core.Element do
 
     state = Map.take(options, [:module, :name, :parent_clock, :sync, :parent]) |> State.new()
 
-    state = Element.LifecycleController.handle_init(options.user_options, state)
-    {:ok, state}
+    state = LifecycleController.handle_init(options.user_options, state)
+    {:ok, state, {:continue, :init}}
+  end
+
+  @impl GenServer
+  def handle_continue(:init, state) do
+    state = LifecycleController.handle_setup(state)
+    {:noreply, state}
   end
 
   @impl GenServer
   def terminate(reason, state) do
     Telemetry.report_terminate(:element)
-    Element.LifecycleController.handle_shutdown(reason, state)
+    LifecycleController.handle_shutdown(reason, state)
   end
 
   @impl GenServer
@@ -149,7 +163,7 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_info({:DOWN, _ref, :process, parent_pid, reason}, %{parent_pid: parent_pid} = state) do
-    :ok = Element.LifecycleController.handle_pipeline_down(reason, state)
+    :ok = LifecycleController.handle_pipeline_down(reason, state)
     {:stop, {:shutdown, :parent_crash}, state}
   end
 
@@ -176,9 +190,32 @@ defmodule Membrane.Core.Element do
     {:noreply, state}
   end
 
-  defp do_handle_info(Message.new(type, _args, _opts) = msg, state)
-       when type in [:demand, :buffer, :caps, :event] do
-    state = PlaybackBuffer.store(msg, state)
+  defp do_handle_info(Message.new(:demand, size, _opts) = msg, state) do
+    pad_ref = Message.for_pad(msg)
+    state = DemandController.handle_demand(pad_ref, size, state)
+    {:noreply, state}
+  end
+
+  defp do_handle_info(Message.new(:buffer, buffers, _opts) = msg, state) do
+    pad_ref = Message.for_pad(msg)
+    state = BufferController.handle_buffer(pad_ref, buffers, state)
+    {:noreply, state}
+  end
+
+  defp do_handle_info(Message.new(:caps, caps, _opts) = msg, state) do
+    pad_ref = Message.for_pad(msg)
+    state = CapsController.handle_caps(pad_ref, caps, state)
+    {:noreply, state}
+  end
+
+  defp do_handle_info(Message.new(:event, event, _opts) = msg, state) do
+    pad_ref = Message.for_pad(msg)
+    state = EventController.handle_event(pad_ref, event, state)
+    {:noreply, state}
+  end
+
+  defp do_handle_info(Message.new(:play), state) do
+    state = LifecycleController.handle_play(state)
     {:noreply, state}
   end
 
@@ -198,7 +235,7 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(Message.new(:parent_notification, notification), state) do
-    state = Child.LifecycleController.handle_parent_notification(notification, state)
+    state = Core.Child.LifecycleController.handle_parent_notification(notification, state)
     {:noreply, state}
   end
 
@@ -207,7 +244,7 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(message, state) do
-    state = Element.LifecycleController.handle_info(message, state)
+    state = LifecycleController.handle_info(message, state)
     {:noreply, state}
   end
 end

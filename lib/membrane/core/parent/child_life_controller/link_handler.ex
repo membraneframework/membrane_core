@@ -19,7 +19,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   alias Membrane.Core.Parent.{
     ChildLifeController,
     CrashGroup,
-    LifecycleController,
     Link,
     LinkParser
   }
@@ -161,7 +160,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
     withl pad: {:ok, pad_info} <- Keyword.fetch(child_data.module.membrane_pads(), pad_name),
           ref: {:ok, ref} <- make_pad_ref(pad_spec, pad_info.availability) do
-      %Endpoint{endpoint | pid: child_data.pid, pad_ref: ref, pad_info: pad_info}
+      %Endpoint{
+        endpoint
+        | pid: child_data.pid,
+          pad_ref: ref,
+          pad_info: pad_info,
+          child_spec_ref: child_data.spec_ref
+      }
     else
       pad: :error ->
         raise LinkError, "Child #{inspect(child)} does not have pad #{inspect(pad_spec)}"

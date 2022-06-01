@@ -34,6 +34,7 @@ defmodule Membrane.ChildEntry do
     :clock,
     :sync,
     :spec_ref,
+    status: :initializing,
     playback_sync: :not_synced,
     terminating?: false
   ]

@@ -15,6 +15,47 @@ defmodule Membrane.Core.Parent.LifecycleController do
   require Membrane.Logger
   require Membrane.PlaybackState
 
+  def handle_setup(state) do
+    context = Component.callback_context_generator(:parent, PlaybackChange, state)
+
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_stopped_to_prepared,
+        Component.action_handler(state),
+        %{context: context},
+        [],
+        state
+      )
+
+    state = put_in(state, [:playback, :state], :prepared)
+    state = %{state | status: :initialized}
+
+    case state do
+      %Core.Pipeline.State{play_request?: true} -> handle_play(state)
+      state -> state
+    end
+  end
+
+  def handle_play(state) do
+    Enum.each(state.children, fn {_name, %{pid: pid, status: status}} ->
+      if status == :ready, do: Message.send(pid, :play)
+    end)
+
+    context = Component.callback_context_generator(:parent, PlaybackChange, state)
+
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_prepared_to_playing,
+        Component.action_handler(state),
+        %{context: context},
+        [],
+        state
+      )
+
+    state = put_in(state, [:playback, :state], :playing)
+    %{state | status: :playing}
+  end
+
   @impl PlaybackHandler
   def handle_playback_state(old, new, state) do
     Membrane.Logger.debug("Changing playback state from #{old} to #{new}")

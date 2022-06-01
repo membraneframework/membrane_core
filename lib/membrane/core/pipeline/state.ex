@@ -40,6 +40,8 @@ defmodule Membrane.Core.Pipeline.State do
                 delayed_playback_change: nil,
                 links: [],
                 pending_specs: %{},
-                playback: %Playback{}
+                playback: %Playback{},
+                status: :initializing,
+                play_request?: false
               ]
 end

@@ -186,7 +186,7 @@ defmodule Membrane.Core.Bin.PadController do
 
     state = PadModel.set_data!(state, endpoint.pad_ref, :linked?, true)
     state = PadModel.set_data!(state, endpoint.pad_ref, :endpoint, child_endpoint)
-    state = ChildLifeController.LinkHandler.proceed_spec_startup(spec_ref, state)
+    state = ChildLifeController.proceed_spec_startup(spec_ref, state)
     {reply, state}
   end
 

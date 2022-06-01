@@ -8,7 +8,7 @@ defmodule Membrane.Core.Element.CapsController do
   alias Membrane.{Caps, Pad}
   alias Membrane.Core.{CallbackHandler, Telemetry}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, InputQueue, State}
+  alias Membrane.Core.Element.{ActionHandler, InputQueue, State, StatusQueue}
   alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel
@@ -20,22 +20,30 @@ defmodule Membrane.Core.Element.CapsController do
   """
   @spec handle_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.t()
   def handle_caps(pad_ref, caps, state) do
-    Telemetry.report_metric(:caps, 1, inspect(pad_ref))
+    withl pad: {:ok, data} = PadModel.get_data(state, pad_ref),
+          status: %State{status: status} when status != :ready <- state do
+      %{direction: :input} = data
+      Telemetry.report_metric(:caps, 1, inspect(pad_ref))
 
-    PadModel.assert_data!(state, pad_ref, %{direction: :input})
-    data = PadModel.get_data!(state, pad_ref)
+      queue = data.input_queue
 
-    queue = data.input_queue
-
-    if queue && not InputQueue.empty?(queue) do
-      PadModel.set_data!(
-        state,
-        pad_ref,
-        :input_queue,
-        InputQueue.store(queue, :caps, caps)
-      )
+      if queue && not InputQueue.empty?(queue) do
+        PadModel.set_data!(
+          state,
+          pad_ref,
+          :input_queue,
+          InputQueue.store(queue, :caps, caps)
+        )
+      else
+        exec_handle_caps(pad_ref, caps, state)
+      end
     else
-      exec_handle_caps(pad_ref, caps, state)
+      pad: :error ->
+        # We've got caps from already unlinked pad
+        state
+
+      status: _status ->
+        StatusQueue.store(&handle_caps(pad_ref, caps, &1), state)
     end
   end
 

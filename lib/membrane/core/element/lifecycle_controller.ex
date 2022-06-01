@@ -10,7 +10,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   alias Membrane.Core.{CallbackHandler, Child, Element, Message}
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.{CallbackHandler, Child, Element, Message}
-  alias Membrane.Core.Element.{ActionHandler, PlaybackBuffer, State}
+  alias Membrane.Core.Element.{ActionHandler, PlaybackBuffer, State, StatusQueue}
   alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel
@@ -54,6 +54,42 @@ defmodule Membrane.Core.Element.LifecycleController do
 
     Membrane.Logger.debug("Element initialized: #{inspect(module)}")
     state
+  end
+
+  def handle_setup(state) do
+    require CallbackContext.PlaybackChange
+    context = &CallbackContext.PlaybackChange.from_state/1
+
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_stopped_to_prepared,
+        ActionHandler,
+        %{context: context},
+        [],
+        state
+      )
+
+    state = put_in(state, [:playback, :state], :prepared)
+    Message.send(state.parent_pid, :initialized, state.name)
+    %State{state | status: :ready}
+  end
+
+  def handle_play(state) do
+    require CallbackContext.PlaybackChange
+    context = &CallbackContext.PlaybackChange.from_state/1
+
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_prepared_to_playing,
+        ActionHandler,
+        %{context: context},
+        [],
+        state
+      )
+
+    state = put_in(state, [:playback, :state], :playing)
+    state = %State{state | status: :playing}
+    StatusQueue.eval(state)
   end
 
   @doc """
