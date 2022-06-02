@@ -21,12 +21,12 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     end
 
     @impl true
-    def handle_info(:send_buffer, _ctx, state) do
+    def handle_parent_notification(:send_buffer, _ctx, state) do
       {{:ok, [buffer: {:output, %Membrane.Buffer{payload: "Something"}}]}, state}
     end
 
     @impl true
-    def handle_info({:send_your_pid, requester_pid}, _ctxt, state) do
+    def handle_parent_notification({:send_your_pid, requester_pid}, _ctx, state) do
       send(requester_pid, {:my_pid, self()})
       {:ok, state}
     end
@@ -51,7 +51,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
       end
 
     source_ref = Process.monitor(source_pid)
-
+    assert_pipeline_playback_changed(pipeline, _, :playing)
     Pipeline.message_child(pipeline, :source, :send_buffer)
     assert_receive {:DOWN, ^source_ref, :process, ^source_pid, {reason, _stack_trace}}
     assert %Membrane.ElementError{message: action_error_msg} = reason

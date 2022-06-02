@@ -91,7 +91,7 @@ defmodule Membrane.Mixfile do
         Parent: [~r/^Membrane\.(Parent|ParentSpec)($|\.)/],
         Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],
         Communication: [
-          ~r/^Membrane\.(Buffer|Payload|Caps|Event|EventProtocol|Notification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
+          ~r/^Membrane\.(Buffer|Payload|Caps|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
         ],
         Logging: [~r/^Membrane\.Logger($|\.)/],
         Testing: [~r/^Membrane\.Testing($|\.)/],

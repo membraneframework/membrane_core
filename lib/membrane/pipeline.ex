@@ -119,10 +119,10 @@ defmodule Membrane.Pipeline do
   @doc """
   Callback invoked when a notification comes in from an element.
   """
-  @callback handle_notification(
-              notification :: Membrane.Notification.t(),
+  @callback handle_child_notification(
+              notification :: Membrane.ChildNotification.t(),
               element :: Child.name_t(),
-              context :: CallbackContext.Notification.t(),
+              context :: CallbackContext.ChildNotification.t(),
               state :: state_t
             ) :: callback_return_t
 
@@ -212,7 +212,7 @@ defmodule Membrane.Pipeline do
                       handle_spec_started: 3,
                       handle_element_start_of_stream: 4,
                       handle_element_end_of_stream: 4,
-                      handle_notification: 4,
+                      handle_child_notification: 4,
                       handle_tick: 3,
                       handle_crash_group_down: 3,
                       handle_call: 3
@@ -511,7 +511,7 @@ defmodule Membrane.Pipeline do
       def handle_element_end_of_stream(_element, _pad, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_notification(notification, element, _ctx, state), do: {:ok, state}
+      def handle_child_notification(notification, element, _ctx, state), do: {:ok, state}
 
       @impl true
       def handle_crash_group_down(_group_name, _ctx, state), do: {:ok, state}
@@ -530,7 +530,7 @@ defmodule Membrane.Pipeline do
                      handle_spec_started: 3,
                      handle_element_start_of_stream: 4,
                      handle_element_end_of_stream: 4,
-                     handle_notification: 4,
+                     handle_child_notification: 4,
                      handle_crash_group_down: 3,
                      handle_call: 3
     end

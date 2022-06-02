@@ -11,6 +11,6 @@ defmodule Membrane.Support.Sync.SyncBin do
 
   @impl true
   def handle_element_start_of_stream(child, _pad, _ctx, state) do
-    {{:ok, notify: {:start_of_stream, child}}, state}
+    {{:ok, notify_parent: {:start_of_stream, child}}, state}
   end
 end

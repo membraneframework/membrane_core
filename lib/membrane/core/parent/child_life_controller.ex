@@ -68,14 +68,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     StartupHandler.exec_handle_spec_started(children_names, state)
   end
 
-  @spec handle_forward([{Membrane.Child.name_t(), any}], Parent.state_t()) :: :ok
-  def handle_forward(children_messages, state) do
-    Enum.each(children_messages, &do_handle_forward(&1, state))
-  end
-
-  defp do_handle_forward({child_name, message}, state) do
+  @spec handle_notify_child(
+          {Membrane.Child.name_t(), Membrane.ParentNotification.t()},
+          Parent.state_t()
+        ) :: :ok
+  def handle_notify_child({child_name, message}, state) do
     %{pid: pid} = Parent.ChildrenModel.get_child_data!(state, child_name)
-    send(pid, message)
+    Membrane.Core.Message.send(pid, :parent_notification, [message])
     :ok
   end
 

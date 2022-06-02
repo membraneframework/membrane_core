@@ -11,7 +11,8 @@ defmodule Membrane.Support.Bin.TestBins do
     def_input_pad :input, demand_unit: :buffers, caps: :any
 
     @impl true
-    def handle_info({:notify_parent, notif}, _ctx, state), do: {{:ok, notify: notif}, state}
+    def handle_info({:notify_parent, notif}, _ctx, state),
+      do: {{:ok, notify_parent: notif}, state}
 
     @impl true
     def handle_demand(:output, size, _unit, _ctx, state),
@@ -30,7 +31,8 @@ defmodule Membrane.Support.Bin.TestBins do
     def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :on_request
 
     @impl true
-    def handle_info({:notify_parent, notif}, _ctx, state), do: {{:ok, notify: notif}, state}
+    def handle_info({:notify_parent, notif}, _ctx, state),
+      do: {{:ok, notify_parent: notif}, state}
 
     @impl true
     def handle_demand(_output, _size, _unit, ctx, state) do
@@ -96,7 +98,7 @@ defmodule Membrane.Support.Bin.TestBins do
 
     @impl true
     def handle_info(msg, _ctx, state) do
-      {{:ok, notify: msg}, state}
+      {{:ok, notify_parent: msg}, state}
     end
   end
 
@@ -115,8 +117,7 @@ defmodule Membrane.Support.Bin.TestBins do
       ]
 
       spec = %ParentSpec{
-        children: children,
-        links: []
+        children: children
       }
 
       state = %{}
@@ -130,7 +131,7 @@ defmodule Membrane.Support.Bin.TestBins do
         link_bin_input(pad) |> to(:filter)
       ]
 
-      {{:ok, notify: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
+      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
     end
 
     def handle_pad_added(Pad.ref(:output, _id) = pad, _ctx, state) do
@@ -138,7 +139,7 @@ defmodule Membrane.Support.Bin.TestBins do
         link(:filter) |> to_bin_output(pad)
       ]
 
-      {{:ok, notify: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
+      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
     end
   end
 
@@ -180,7 +181,7 @@ defmodule Membrane.Support.Bin.TestBins do
         link_bin_input(pad) |> to(:filter1)
       ]
 
-      {{:ok, notify: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
+      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
     end
 
     def handle_pad_added(Pad.ref(:output, _id) = pad, _ctx, state) do
@@ -188,7 +189,7 @@ defmodule Membrane.Support.Bin.TestBins do
         link(:filter2) |> to_bin_output(pad)
       ]
 
-      {{:ok, notify: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
+      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
     end
   end
 
@@ -221,18 +222,18 @@ defmodule Membrane.Support.Bin.TestBins do
     end
 
     @impl true
-    def handle_notification(notification, _element, _ctx, state) do
-      {{:ok, notify: notification}, state}
+    def handle_child_notification(notification, _element, _ctx, state) do
+      {{:ok, notify_parent: notification}, state}
     end
 
     @impl true
     def handle_element_start_of_stream(element, pad, _ctx, state) do
-      {{:ok, notify: {:handle_element_start_of_stream, element, pad}}, state}
+      {{:ok, notify_parent: {:handle_element_start_of_stream, element, pad}}, state}
     end
 
     @impl true
     def handle_element_end_of_stream(element, pad, _ctx, state) do
-      {{:ok, notify: {:handle_element_end_of_stream, element, pad}}, state}
+      {{:ok, notify_parent: {:handle_element_end_of_stream, element, pad}}, state}
     end
   end
 
@@ -263,18 +264,81 @@ defmodule Membrane.Support.Bin.TestBins do
     end
 
     @impl true
-    def handle_notification(notification, _element, _ctx, state) do
-      {{:ok, notify: notification}, state}
+    def handle_child_notification(notification, _element, _ctx, state) do
+      {{:ok, notify_parent: notification}, state}
     end
 
     @impl true
     def handle_element_start_of_stream(element, pad, _ctx, state) do
-      {{:ok, notify: {:handle_element_start_of_stream, element, pad}}, state}
+      {{:ok, notify_parent: {:handle_element_start_of_stream, element, pad}}, state}
     end
 
     @impl true
     def handle_element_end_of_stream(element, pad, _ctx, state) do
-      {{:ok, notify: {:handle_element_end_of_stream, element, pad}}, state}
+      {{:ok, notify_parent: {:handle_element_end_of_stream, element, pad}}, state}
+    end
+  end
+
+  defmodule NotifyingParentElement do
+    @moduledoc false
+    use Membrane.Filter
+
+    def_input_pad :input, demand_unit: :buffers, caps: :any
+    def_output_pad :output, caps: :any, demand_unit: :buffers
+
+    @impl true
+    def handle_init(_opts) do
+      {:ok, %{}}
+    end
+
+    @impl true
+    def handle_parent_notification(notification, _ctx, state) do
+      {{:ok, notify_parent: {"filter1", notification}}, state}
+    end
+
+    @impl true
+    def handle_demand(_pad, _size, _unit, _ctx, state) do
+      {{:ok, []}, state}
+    end
+  end
+
+  defmodule NotifyingParentBin do
+    @moduledoc false
+    use Membrane.Bin
+
+    def_input_pad :input, demand_unit: :buffers, caps: :any
+
+    def_output_pad :output, caps: :any, demand_unit: :buffers
+
+    @impl true
+    def handle_init(_opts) do
+      children = [
+        filter1: NotifyingParentElement,
+        filter2: NotifyingParentElement
+      ]
+
+      links = [
+        link_bin_input() |> to(:filter1) |> to(:filter2) |> to_bin_output()
+      ]
+
+      spec = %ParentSpec{
+        children: children,
+        links: links
+      }
+
+      state = %{}
+
+      {{:ok, spec: spec}, state}
+    end
+
+    @impl true
+    def handle_parent_notification(notification, _ctx, state) do
+      {{:ok, notify_child: {:filter1, notification}}, state}
+    end
+
+    @impl true
+    def handle_child_notification(notification, :filter1, _ctx, state) do
+      {{:ok, notify_parent: notification}, state}
     end
   end
 end

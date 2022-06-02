@@ -276,7 +276,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     Pipeline.await_notification(pipeline, :element_id)
     ```
   """
-  @spec await_notification(pid(), Membrane.Notification.t()) ::
+  @spec await_notification(pid(), Membrane.ParentNotification.t()) ::
           Membrane.RemoteControlled.Message.Notification.t()
   def await_notification(pipeline, element) do
     do_await(pipeline, Notification, element: element)
@@ -405,7 +405,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @impl true
-  def handle_notification(notification, element, _ctx, state) do
+  def handle_child_notification(notification, element, _ctx, state) do
     pipeline_event = %Message.Notification{from: self(), data: notification, element: element}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}

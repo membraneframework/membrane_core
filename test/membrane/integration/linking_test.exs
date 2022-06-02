@@ -43,7 +43,7 @@ defmodule Membrane.Integration.LinkingTest do
 
     @impl true
     def handle_pad_removed(_pad, _ctx, _state) do
-      {{:ok, notify: :handle_pad_removed}, %{}}
+      {{:ok, notify_parent: :handle_pad_removed}, %{}}
     end
   end
 

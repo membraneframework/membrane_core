@@ -436,7 +436,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
   @mock_notification :hello_test
 
-  describe "handling :notification action" do
+  describe "handling :child_notification action" do
     setup :trivial_filter_state
 
     test "when parent pid is set", %{state: state} do
@@ -444,14 +444,14 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
       result =
         @module.handle_action(
-          {:notify, @mock_notification},
-          :handle_info,
+          {:notify_parent, @mock_notification},
+          :handle_other,
           %{},
           state
         )
 
       assert result == state
-      assert_received Message.new(:notification, [:elem_name, @mock_notification])
+      assert_received Message.new(:child_notification, [:elem_name, @mock_notification])
     end
   end
 
@@ -560,8 +560,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when :redemand is not the last action", %{state: state} do
       assert_raise ActionError, ~r/redemand.*last/i, fn ->
         @module.transform_actions(
-          [redemand: :output, notify: :a, notify: :b],
-          :handle_info,
+          [redemand: :output, notify_parent: :a, notify_parent: :b],
+          :handle_other,
           %{},
           state
         )

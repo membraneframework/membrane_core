@@ -84,7 +84,8 @@ defmodule Membrane.Filter do
       end
 
       @impl true
-      def handle_end_of_stream(pad, _context, state), do: {{:ok, forward: :end_of_stream}, state}
+      def handle_end_of_stream(pad, _context, state),
+        do: {{:ok, forward: :end_of_stream}, state}
 
       defoverridable handle_caps: 4,
                      handle_event: 4,

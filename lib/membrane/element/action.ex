@@ -10,13 +10,12 @@ defmodule Membrane.Element.Action do
   do not support returning any actions) unless explicitly stated otherwise.
   """
 
-  alias Membrane.{Buffer, Caps, Clock, Event, Notification}
-  alias Membrane.Pad
+  alias Membrane.{Buffer, Caps, ChildNotification, Clock, Event, Pad}
 
   @typedoc """
   Sends a message to the parent.
   """
-  @type notify_t :: {:notify, Notification.t()}
+  @type notify_parent_t :: {:notify_parent, ChildNotification.t()}
 
   @typedoc """
   Sends an event through a pad (input or output).
@@ -138,7 +137,8 @@ defmodule Membrane.Element.Action do
   forward buffers, `c:Membrane.Element.WithInputPads.handle_caps/4` - caps
   and `c:Membrane.Element.Base.handle_event/4` - events.
   """
-  @type forward_t :: {:forward, Buffer.t() | [Buffer.t()] | Caps.t() | Event.t() | :end_of_stream}
+  @type forward_t ::
+          {:forward, Buffer.t() | [Buffer.t()] | Caps.t() | Event.t() | :end_of_stream}
 
   @typedoc """
   Suspends/resumes change of playback state.
@@ -227,7 +227,7 @@ defmodule Membrane.Element.Action do
   """
   @type t ::
           event_t
-          | notify_t
+          | notify_parent_t
           | split_t
           | caps_t
           | buffer_t

@@ -6,7 +6,15 @@ defmodule Membrane.Core.Bin do
   alias __MODULE__.State
   alias Membrane.{ComponentPath, Sync}
   alias Membrane.Core.Bin.PadController
-  alias Membrane.Core.{CallbackHandler, Child, Message, Parent, Telemetry, TimerController}
+
+  alias Membrane.Core.{
+    CallbackHandler,
+    Child,
+    Message,
+    Parent,
+    Telemetry,
+    TimerController
+  }
 
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
@@ -131,6 +139,13 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
+  def handle_info(Message.new(:parent_notification, notification), state) do
+    state = Child.LifecycleController.handle_parent_notification(notification, state)
+
+    {:noreply, state}
+  end
+
+  @impl GenServer
   def handle_info(Message.new(:link_request, [pad_ref, direction, link_id, pad_props]), state) do
     state =
       PadController.handle_external_link_request(pad_ref, direction, link_id, pad_props, state)
@@ -167,8 +182,8 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
-  def handle_info(Message.new(:notification, [from, notification]), state) do
-    state = Parent.LifecycleController.handle_notification(from, notification, state)
+  def handle_info(Message.new(:child_notification, [from, notification]), state) do
+    state = Parent.LifecycleController.handle_child_notification(from, notification, state)
     {:noreply, state}
   end
 

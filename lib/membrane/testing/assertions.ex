@@ -50,7 +50,7 @@ defmodule Membrane.Testing.Assertions do
       unquote(
         assert_receive_from_pipeline(
           pipeline,
-          {:handle_notification,
+          {:handle_child_notification,
            {notification_pattern,
             quote do
               ^element_name_value
@@ -81,7 +81,7 @@ defmodule Membrane.Testing.Assertions do
       unquote(
         refute_receive_from_pipeline(
           pipeline,
-          {:handle_notification,
+          {:handle_child_notification,
            {notification_pattern,
             quote do
               ^element_name_value
@@ -294,7 +294,7 @@ defmodule Membrane.Testing.Assertions do
       unquote(
         assertion.(
           pipeline,
-          {:handle_notification,
+          {:handle_child_notification,
            {quote do
               {:caps, :input, unquote(caps)}
             end,
@@ -360,7 +360,7 @@ defmodule Membrane.Testing.Assertions do
       unquote(
         assertion.(
           pipeline,
-          {:handle_notification,
+          {:handle_child_notification,
            {{:buffer, pattern},
             quote do
               ^element_name_value
@@ -403,7 +403,7 @@ defmodule Membrane.Testing.Assertions do
       unquote(
         assertion.(
           pipeline,
-          {:handle_notification,
+          {:handle_child_notification,
            {{:event, event},
             quote do
               ^element_name_value

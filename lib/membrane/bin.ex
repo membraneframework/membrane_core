@@ -133,10 +133,19 @@ defmodule Membrane.Bin do
   @doc """
   Callback invoked when a notification comes in from an element.
   """
-  @callback handle_notification(
-              notification :: Membrane.Notification.t(),
+  @callback handle_child_notification(
+              notification :: Membrane.ChildNotification.t(),
               element :: Child.name_t(),
-              context :: CallbackContext.Notification.t(),
+              context :: CallbackContext.ChildNotification.t(),
+              state :: state_t
+            ) :: callback_return_t
+
+  @doc """
+  Callback invoked when a notification comes in from an parent.
+  """
+  @callback handle_parent_notification(
+              notification :: Membrane.ParentNotification.t(),
+              context :: CallbackContext.ParentNotification.t(),
               state :: state_t
             ) :: callback_return_t
 
@@ -210,7 +219,8 @@ defmodule Membrane.Bin do
                       handle_spec_started: 3,
                       handle_element_start_of_stream: 4,
                       handle_element_end_of_stream: 4,
-                      handle_notification: 4,
+                      handle_child_notification: 4,
+                      handle_parent_notification: 3,
                       handle_tick: 3
 
   @doc PadsSpecs.def_pad_docs(:input, :bin)
@@ -355,7 +365,10 @@ defmodule Membrane.Bin do
       def handle_element_end_of_stream(_element, _pad, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_notification(notification, element, _ctx, state), do: {:ok, state}
+      def handle_child_notification(_notification, _element, _ctx, state), do: {:ok, state}
+
+      @impl true
+      def handle_parent_notification(_notification, _ctx, state), do: {:ok, state}
 
       defoverridable membrane_clock?: 0,
                      handle_init: 1,
@@ -371,7 +384,8 @@ defmodule Membrane.Bin do
                      handle_spec_started: 3,
                      handle_element_start_of_stream: 4,
                      handle_element_end_of_stream: 4,
-                     handle_notification: 4
+                     handle_child_notification: 4,
+                     handle_parent_notification: 3
     end
   end
 end
