@@ -156,7 +156,7 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @impl PlaybackHandler
   def handle_playback_state_changed(old, new, state) do
-    Membrane.Logger.debug_verbose("Playback state changed from #{old} to #{new}")
+    Membrane.Logger.debug("Playback state changed from #{old} to #{new}")
 
     state = PlaybackBuffer.eval(state)
 
