@@ -18,9 +18,9 @@ defmodule Membrane.Core.Element do
   use Bunch
   use GenServer
 
-  alias Membrane.{Clock, Element, Sync}
+  alias Membrane.{Clock, Sync}
   alias Membrane.ComponentPath
-  alias Membrane.Core.Element.LifecycleController, as: ElementLifecycleController
+  alias Membrane.Core.Element
   alias Membrane.Core.Element.{PadController, PlaybackBuffer, State}
   alias Membrane.Core.{Child, Message, PlaybackHandler, Telemetry, TimerController}
 
@@ -30,9 +30,9 @@ defmodule Membrane.Core.Element do
 
   @type options_t :: %{
           module: module,
-          name: Element.name_t(),
+          name: Membrane.Element.name_t(),
           node: node | nil,
-          user_options: Element.options_t(),
+          user_options: Membrane.Element.options_t(),
           sync: Sync.t(),
           parent: pid,
           parent_clock: Clock.t(),
@@ -59,7 +59,7 @@ defmodule Membrane.Core.Element do
   defp do_start(method, options) do
     %{module: module, name: name, node: node, user_options: user_options} = options
 
-    if Element.element?(options.module) do
+    if Membrane.Element.element?(options.module) do
       Membrane.Logger.debug("""
       Element #{method}: #{inspect(name)}
       node: #{node},
@@ -110,14 +110,14 @@ defmodule Membrane.Core.Element do
 
     state = Map.take(options, [:module, :name, :parent_clock, :sync, :parent]) |> State.new()
 
-    state = ElementLifecycleController.handle_init(options.user_options, state)
+    state = Element.LifecycleController.handle_init(options.user_options, state)
     {:ok, state}
   end
 
   @impl GenServer
   def terminate(reason, state) do
     Telemetry.report_terminate(:element)
-    ElementLifecycleController.handle_shutdown(reason, state)
+    Element.LifecycleController.handle_shutdown(reason, state)
   end
 
   @impl GenServer
@@ -149,7 +149,7 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_info({:DOWN, _ref, :process, parent_pid, reason}, %{parent_pid: parent_pid} = state) do
-    :ok = ElementLifecycleController.handle_pipeline_down(reason, state)
+    :ok = Element.LifecycleController.handle_pipeline_down(reason, state)
     {:stop, {:shutdown, :parent_crash}, state}
   end
 
@@ -203,7 +203,7 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(message, state) do
-    state = ElementLifecycleController.handle_info(message, state)
+    state = Element.LifecycleController.handle_info(message, state)
     {:noreply, state}
   end
 end

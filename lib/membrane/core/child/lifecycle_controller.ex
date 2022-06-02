@@ -4,19 +4,11 @@ defmodule Membrane.Core.Child.LifecycleController do
 
   require Membrane.Core.Component
 
-  @type state_t ::
-          Membrane.Core.Bin.State.t()
-          | Membrane.Core.Element.State.t()
-
-  @spec handle_parent_notification(Membrane.ParentNotification.t(), state_t) ::
-          state_t
+  @spec handle_parent_notification(Membrane.ParentNotification.t(), Membrane.Core.Child.state_t()) ::
+          Membrane.Core.Child.state_t()
   def handle_parent_notification(notification, state) do
     context = Component.callback_context_generator(:child, ParentNotification, state)
-
-    action_handler =
-      if Component.is_bin?(state),
-        do: Membrane.Core.Bin.ActionHandler,
-        else: Membrane.Core.Element.ActionHandler
+    action_handler = Component.action_handler(state)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_parent_notification,
