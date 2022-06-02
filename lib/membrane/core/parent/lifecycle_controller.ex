@@ -67,7 +67,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     Membrane.Logger.debug("Playback state changed from #{old} to #{new}")
 
     if new == :terminating do
-      Process.flag(:trap_exit, false)
+      Process.flag(:trap_exit, true)
       Process.exit(self(), :normal)
     end
 

@@ -242,7 +242,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     Terminating.
     """)
 
-    Process.flag(:trap_exit, false)
+    Process.flag(:trap_exit, true)
     Process.exit(self(), {:shutdown, :child_crash})
   end
 
