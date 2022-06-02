@@ -167,7 +167,11 @@ defmodule Membrane.Core.Element do
 
   defp do_handle_info(Message.new(:change_playback_state, new_playback_state), state) do
     {:ok, state} =
-      PlaybackHandler.change_playback_state(new_playback_state, ElementLifecycleController, state)
+      PlaybackHandler.change_playback_state(
+        new_playback_state,
+        Element.LifecycleController,
+        state
+      )
 
     {:noreply, state}
   end
