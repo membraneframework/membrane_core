@@ -28,6 +28,8 @@ defprotocol Membrane.EventProtocol do
   """
   @spec async?(t) :: boolean
   def async?(_event)
+
+  def exports(_event)
 end
 
 defmodule Membrane.EventProtocol.DefaultImpl do
@@ -44,7 +46,11 @@ defmodule Membrane.EventProtocol.DefaultImpl do
       @impl true
       def async?(_event), do: false
 
-      defoverridable async?: 1, sticky?: 1
+      @impl true
+      def exports(event) do
+      end
+
+      defoverridable async?: 1, sticky?: 1, exports: 1
     end
   end
 end

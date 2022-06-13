@@ -10,12 +10,10 @@ defmodule Membrane.Event.Discontinuity do
 
   If duration of the discontinuity is known, it can be passed as an argument.
   """
-  @derive Membrane.EventProtocol
+
+  use Membrane.Event, async?: fn _ -> true end, sticky?: fn _ -> true end
 
   @type duration_t :: Membrane.Time.t() | nil
-  @type metadata_t :: any() | nil
 
-  defstruct duration: nil, metadata: nil
-
-  @type t :: %__MODULE__{duration: duration_t, metadata: metadata_t}
+  def_event_struct duration: [default: nil, type: duration_t], metadata: [default: "jeheheeh"]
 end
