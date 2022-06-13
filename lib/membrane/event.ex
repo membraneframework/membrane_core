@@ -9,60 +9,68 @@ defmodule Membrane.Event do
   """
 
   @base_fields [metadata: nil]
-  @type t :: EventProtocol.t()
 
-  @spec event?(t()) :: boolean
+  @spec event?(any) :: boolean
   def event?(event) do
-    if Keyword.has_key?(event.__struct__.__info__(:functions), :sticky?) and
+    if Keyword.has_key?(event.__struct__.__info__(:functions), :event?) and
+         Keyword.has_key?(event.__struct__.__info__(:functions), :sticky?) and
          Keyword.has_key?(event.__struct__.__info__(:functions), :async?),
        do: true,
        else: false
   end
 
-  @callback sticky?(Event.t()) :: bool()
+  @spec sticky?(any) :: boolean
+  def sticky?(event) do
+    if event?(event), do: event.__struct__.sticky?(), else: false
+  end
 
-  @callback async?(Event.t()) :: bool()
+  @spec async?(any) :: boolean
+  def async?(event) do
+    if event?(event), do: event.__struct__.async?(), else: false
+  end
+
+  @callback sticky?() :: bool()
+  @callback async?() :: bool()
 
   defmacro def_event_struct(fields) do
-    struct_definition = fields |> Enum.map(fn {field_name, field_options} -> {field_name, Keyword.get(field_options, :default, nil)} end)
-    types = fields |> Enum.map(fn {field_name, field_options} -> {field_name, Keyword.get(field_options, :type, nil)} end)
+    if Keyword.has_key?(fields, :metadata),
+      do:
+        raise(
+          ":metadata field is already defined for each Membrane.Event - you cannot redefine it"
+        )
+
+    struct_definition =
+      fields
+      |> Enum.map(fn {field_name, field_options} ->
+        {field_name, Keyword.get(field_options, :default, nil)}
+      end)
+
+    types =
+      fields
+      |> Enum.map(fn {field_name, field_options} ->
+        {field_name, Keyword.get(field_options, :type, nil)}
+      end)
+
     quote do
-      @type t :: %__MODULE__{unquote_splicing(types)}
+      def event?(), do: true
+
+      @type t :: %__MODULE__{unquote_splicing(types), metadata: map()}
       defstruct unquote(@base_fields) ++ unquote(struct_definition)
     end
   end
 
-  defmacro __using__(options) do
-    base =
-      quote do
-        import Membrane.Event
-        @behaviour Membrane.Event
-      end
-    sticky_implementation =
-      if Keyword.has_key?(options, :sticky?) do
-        quote do
-          @impl Membrane.Event
-          def sticky?(event), do: unquote(Keyword.get(options, :sticky?)).(event)
-        end
-      else
-        quote do
-          @impl Membrane.Event
-          def sticky?(_event), do: false
-        end
-      end
+  defmacro __using__(_options) do
+    quote do
+      import Membrane.Event
+      @behaviour Membrane.Event
 
-    async_implementation =
-      if Keyword.has_key?(options, :async?) do
-        quote do
-          @impl Membrane.Event
-          def async?(event), do: unquote(Keyword.get(options, :async?)).(event)
-        end
-      else
-        quote do
-          @impl Membrane.Event
-          def async?(_event), do: false
-        end
-      end
-    [base, sticky_implementation, async_implementation]
+      @implement Membrane.Event
+      def sticky?(), do: false
+
+      @implement Membrane.Event
+      def async?(), do: false
+
+      defoverridable sticky?: 0, async?: 0
+    end
   end
 end
