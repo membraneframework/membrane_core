@@ -12,7 +12,8 @@ defmodule Membrane.Event do
 
   @spec event?(any) :: boolean
   def event?(event) do
-    if Keyword.has_key?(event.__struct__.__info__(:functions), :event?) and
+    if is_struct(event) and Code.ensure_loaded?(event.__struct__) and
+         Keyword.has_key?(event.__struct__.__info__(:functions), :event?) and
          Keyword.has_key?(event.__struct__.__info__(:functions), :sticky?) and
          Keyword.has_key?(event.__struct__.__info__(:functions), :async?),
        do: true,
@@ -32,7 +33,7 @@ defmodule Membrane.Event do
   @callback sticky?() :: bool()
   @callback async?() :: bool()
 
-  defmacro def_event_struct(fields) do
+  defmacro def_event(fields \\ []) do
     if Keyword.has_key?(fields, :metadata),
       do:
         raise(

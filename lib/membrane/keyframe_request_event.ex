@@ -7,9 +7,8 @@ defmodule Membrane.KeyframeRequestEvent do
   frame without knowledge of the stream content before that
   point.
   """
-  @derive Membrane.EventProtocol
 
-  defstruct []
+  use Membrane.Event
 
-  @type t :: %__MODULE__{}
+  def_event()
 end

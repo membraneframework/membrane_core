@@ -3,6 +3,7 @@ defmodule Membrane.Testing.Event do
   Empty event that can be used in tests
   """
 
-  @derive Membrane.EventProtocol
-  defstruct []
+  use Membrane.Event
+
+  def_event()
 end

@@ -15,7 +15,5 @@ defmodule Membrane.Event.Discontinuity do
 
   @type duration_t :: Membrane.Time.t() | nil
 
-  def_event_struct(duration: [default: nil, type: duration_t])
-
-  def sticky?(), do: true
+  def_event(duration: [default: nil, type: duration_t])
 end

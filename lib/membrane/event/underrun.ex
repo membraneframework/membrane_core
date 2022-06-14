@@ -8,7 +8,7 @@ defmodule Membrane.Event.Underrun do
   It makes sense to use this event as an upstream event to notify previous
   elements in the pipeline that they should generate more buffers.
   """
-  @derive Membrane.EventProtocol
-  defstruct []
-  @type t :: %__MODULE__{}
+  use Membrane.Event
+
+  def_event()
 end
