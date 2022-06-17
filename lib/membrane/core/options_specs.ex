@@ -146,7 +146,7 @@ defmodule Membrane.Core.OptionsSpecs do
     end
   end
 
-  defp parse_opts(opts) when is_list(opts) do
+  def parse_opts(opts) when is_list(opts) do
     opts =
       KVEnum.map_values(opts, fn definition ->
         default_spec = @default_types_params[definition[:type]][:spec] || quote_expr(any)

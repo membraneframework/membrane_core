@@ -13,7 +13,10 @@ defmodule Membrane.Event.Discontinuity do
 
   use Membrane.Event
 
+  @typedoc "Duration"
   @type duration_t :: Membrane.Time.t() | nil
 
-  def_event(duration: [default: nil, type: duration_t])
+  def_event(
+    duration: [default: nil, spec: duration_t, description: "Duration of the discontinuity"]
+  )
 end
