@@ -10,8 +10,8 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   alias Membrane.{ActionError, Buffer, Caps, ElementError, Event, Pad, PadDirectionError}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{DemandHandler, LifecycleController, PadController, State}
-  alias Membrane.Core.{Events, Message, PlaybackHandler, TimerController}
+  alias Membrane.Core.Element.{DemandHandler, PadController, State}
+  alias Membrane.Core.{Events, Message, TimerController}
   alias Membrane.Core.Telemetry
   alias Membrane.Element.Action
 
@@ -70,24 +70,6 @@ defmodule Membrane.Core.Element.ActionHandler do
       args_list,
       state
     )
-  end
-
-  @impl CallbackHandler
-  def handle_action({:playback_change, :suspend}, cb, _params, state)
-      when cb in [
-             :handle_stopped_to_prepared,
-             :handle_playing_to_prepared,
-             :handle_prepared_to_playing,
-             :handle_prepared_to_stopped
-           ] do
-    {:ok, state} = PlaybackHandler.suspend_playback_change(state)
-    state
-  end
-
-  @impl CallbackHandler
-  def handle_action({:playback_change, :resume}, _cb, _params, state) do
-    {:ok, state} = PlaybackHandler.continue_playback_change(LifecycleController, state)
-    state
   end
 
   @impl CallbackHandler

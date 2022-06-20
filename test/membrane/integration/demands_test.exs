@@ -31,8 +31,6 @@ defmodule Membrane.Integration.DemandsTest do
 
     demand..(2 * demand - 1)
     |> assert_buffers_received(pid)
-
-    assert Pipeline.terminate(pid, blocking?: true) == :ok
   end
 
   test "Regular pipeline with proper demands" do
@@ -42,8 +40,7 @@ defmodule Membrane.Integration.DemandsTest do
       sink: %Sink{autodemand: false}
     ]
 
-    assert {:ok, pid} = Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
-
+    pid = Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
     test_pipeline(pid)
   end
 
@@ -56,8 +53,7 @@ defmodule Membrane.Integration.DemandsTest do
       sink: %Sink{autodemand: false}
     ]
 
-    assert {:ok, pid} = Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
-
+    pid = Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
     test_pipeline(pid)
   end
 
@@ -81,8 +77,7 @@ defmodule Membrane.Integration.DemandsTest do
       sink: %Sink{autodemand: false}
     ]
 
-    assert {:ok, pid} = Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
-
+    pid = Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
     test_pipeline(pid)
   end
 end

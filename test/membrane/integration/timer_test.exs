@@ -56,8 +56,8 @@ defmodule Membrane.Integration.TimerTest do
   end
 
   test "Stopping timer from handle_tick" do
-    {:ok, pipeline} =
-      Testing.Pipeline.start_link(
+    pipeline =
+      Testing.Pipeline.start_link_supervised!(
         module: Pipeline,
         custom_args: self()
       )

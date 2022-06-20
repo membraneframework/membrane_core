@@ -18,7 +18,7 @@ defmodule Membrane.Core.Element do
   use Bunch
   use GenServer
 
-  alias Membrane.{Clock, ComponentPath, Core, Sync}
+  alias Membrane.{Clock, Core, Sync}
 
   alias Membrane.Core.Element.{
     BufferController,
@@ -30,7 +30,7 @@ defmodule Membrane.Core.Element do
     State
   }
 
-  alias Membrane.Core.{PlaybackHandler, TimerController}
+  alias Membrane.Core.TimerController
 
   require Membrane.Core.Message, as: Message
   require Membrane.Core.Telemetry, as: Telemetry
@@ -89,35 +89,11 @@ defmodule Membrane.Core.Element do
     end
   end
 
-  @doc """
-  Stops given element process.
-
-  It will wait for reply for amount of time passed as second argument
-  (in milliseconds).
-
-  Will trigger calling `c:Membrane.Element.Base.handle_shutdown/2`
-  callback.
-  """
-  @spec shutdown(pid, timeout) :: :ok
-  def shutdown(server, timeout \\ 5000) do
-    GenServer.stop(server, :normal, timeout)
-    :ok
-  end
-
   @impl GenServer
   def init(options) do
-    %{parent: parent, name: name, log_metadata: log_metadata} = options
-
-    Process.monitor(parent)
-    name_str = if String.valid?(name), do: name, else: inspect(name)
-    :ok = Membrane.Logger.set_prefix(name_str)
-    :ok = Logger.metadata(log_metadata)
-    :ok = ComponentPath.set_and_append(log_metadata[:parent_path] || [], name_str)
-
+    options.setup_logger.(self())
     Telemetry.report_init(:element)
-
     state = Map.take(options, [:module, :name, :parent_clock, :sync, :parent]) |> State.new()
-
     state = LifecycleController.handle_init(options.user_options, state)
     {:ok, state, {:continue, :init}}
   end
@@ -131,7 +107,7 @@ defmodule Membrane.Core.Element do
   @impl GenServer
   def terminate(reason, state) do
     Telemetry.report_terminate(:element)
-    LifecycleController.handle_shutdown(reason, state)
+    LifecycleController.handle_terminate(reason, state)
   end
 
   @impl GenServer
@@ -162,12 +138,6 @@ defmodule Membrane.Core.Element do
   end
 
   @impl GenServer
-  def handle_info({:DOWN, _ref, :process, parent_pid, reason}, %{parent_pid: parent_pid} = state) do
-    :ok = LifecycleController.handle_pipeline_down(reason, state)
-    {:stop, {:shutdown, :parent_crash}, state}
-  end
-
-  @impl GenServer
   def handle_info(message, state) do
     Telemetry.report_metric(
       :queue_len,
@@ -178,17 +148,6 @@ defmodule Membrane.Core.Element do
   end
 
   @compile {:inline, do_handle_info: 2}
-
-  defp do_handle_info(Message.new(:change_playback_state, new_playback_state), state) do
-    {:ok, state} =
-      PlaybackHandler.change_playback_state(
-        new_playback_state,
-        Element.LifecycleController,
-        state
-      )
-
-    {:noreply, state}
-  end
 
   defp do_handle_info(Message.new(:demand, size, _opts) = msg, state) do
     pad_ref = Message.for_pad(msg)
@@ -229,18 +188,23 @@ defmodule Membrane.Core.Element do
     {:noreply, state}
   end
 
-  defp do_handle_info({:membrane_clock_ratio, clock, ratio}, state) do
-    state = TimerController.handle_clock_update(clock, ratio, state)
-    {:noreply, state}
-  end
-
   defp do_handle_info(Message.new(:parent_notification, notification), state) do
     state = Core.Child.LifecycleController.handle_parent_notification(notification, state)
     {:noreply, state}
   end
 
+  defp do_handle_info(Message.new(:terminate), state) do
+    state = LifecycleController.handle_terminate_request(state)
+    {:stop, :normal, state}
+  end
+
   defp do_handle_info(Message.new(_type, _args, _opts) = message, _state) do
     raise Membrane.ElementError, "Received invalid message #{inspect(message)}"
+  end
+
+  defp do_handle_info({:membrane_clock_ratio, clock, ratio}, state) do
+    state = TimerController.handle_clock_update(clock, ratio, state)
+    {:noreply, state}
   end
 
   defp do_handle_info(message, state) do

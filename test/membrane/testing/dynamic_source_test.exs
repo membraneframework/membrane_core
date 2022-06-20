@@ -23,8 +23,8 @@ defmodule Membrane.Testing.DynamicSourceTest do
   end
 
   test "Source works properly when payload are passed as enumerable" do
-    {:ok, pipeline} =
-      Testing.Pipeline.start_link(
+    pipeline =
+      Testing.Pipeline.start_link_supervised!(
         children: [
           source: %Testing.DynamicSource{output: ['a', 'b', 'c']},
           sink_1: Testing.Sink,
@@ -43,13 +43,11 @@ defmodule Membrane.Testing.DynamicSourceTest do
     assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: 'a'})
     assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: 'b'})
     assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: 'c'})
-
-    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 
   test "Source works properly when using generator function" do
-    {:ok, pipeline} =
-      Testing.Pipeline.start_link(
+    pipeline =
+      Testing.Pipeline.start_link_supervised!(
         children: [
           source: Testing.DynamicSource,
           sink_1: Testing.Sink,
@@ -68,7 +66,5 @@ defmodule Membrane.Testing.DynamicSourceTest do
     assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: <<0::16>>})
     assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: <<1::16>>})
     assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: <<2::16>>})
-
-    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 end

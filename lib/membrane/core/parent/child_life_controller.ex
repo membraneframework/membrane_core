@@ -4,13 +4,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   alias __MODULE__.{CrashGroupHandler, LinkHandler, StartupHandler}
   alias Membrane.ParentSpec
-  alias Membrane.Core.{Bin, CallbackHandler, Component, Parent, Pipeline, PlaybackHandler}
+  alias Membrane.Core.{Bin, CallbackHandler, Component, Parent, Pipeline}
 
   alias Membrane.Core.Parent.{
     ChildEntryParser,
+    ChildrenModel,
     ClockHandler,
     CrashGroup,
-    LifecycleController,
     LinkParser
   }
 
@@ -22,19 +22,28 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @spec handle_spec(ParentSpec.t(), Parent.state_t()) :: Parent.state_t() | no_return()
   def handle_spec(%ParentSpec{} = spec, state) do
+    spec_ref = Bunch.ShortRef.new()
+
     Membrane.Logger.debug("""
-    Initializing spec
+    New spec #{inspect(spec_ref)}
     children: #{inspect(spec.children)}
     links: #{inspect(spec.links)}
     """)
 
+    # FIXME ignore spec when terminating
+
     {links, children_spec_from_links} = LinkParser.parse(spec.links)
     children_spec = Enum.concat(spec.children, children_spec_from_links)
     children = ChildEntryParser.parse(children_spec)
-    spec_ref = make_ref()
     children = Enum.map(children, &%{&1 | spec_ref: spec_ref})
     :ok = StartupHandler.check_if_children_names_unique(children, state)
     syncs = StartupHandler.setup_syncs(children, spec.stream_sync)
+
+    log_metadata =
+      case state do
+        %Bin.State{children_log_metadata: metadata} -> metadata ++ spec.log_metadata
+        %Pipeline.State{} -> spec.log_metadata
+      end
 
     children =
       StartupHandler.start_children(
@@ -42,14 +51,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         spec.node,
         state.synchronization.clock_proxy,
         syncs,
-        spec.log_metadata
+        log_metadata,
+        state.children_supervisor
       )
 
     children_names = children |> Enum.map(& &1.name)
     children_pids = children |> Enum.map(& &1.pid)
-
-    # monitoring children
-    :ok = Enum.each(children_pids, &Process.monitor(&1))
 
     :ok = StartupHandler.maybe_activate_syncs(syncs, state)
     state = StartupHandler.add_children(children, state)
@@ -59,7 +66,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       links
       |> Map.values()
       |> Enum.flat_map(&[&1.from.child_spec_ref, &1.to.child_spec_ref])
-      |> Enum.reject(&(&1 in [spec_ref, nil]))
+      |> Enum.filter(&Map.has_key?(state.pending_specs, &1))
+      |> MapSet.new()
 
     state =
       put_in(state, [:pending_specs, spec_ref], %{
@@ -79,8 +87,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       end
 
     state = ClockHandler.choose_clock(children, spec.clock_provider, state)
-    proceed_spec_startup(spec_ref, state)
-    # StartupHandler.exec_handle_spec_started(children_names, state)
+    state = proceed_spec_startup(spec_ref, state)
+    StartupHandler.exec_handle_spec_started(children_names, state)
   end
 
   @spec handle_spec_timeout(ChildLifeController.spec_ref_t(), Parent.state_t()) ::
@@ -99,26 +107,24 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @spec proceed_spec_startup(ChildLifeController.spec_ref_t(), Parent.state_t()) ::
           Parent.state_t()
   def proceed_spec_startup(spec_ref, state) do
-    spec_data = Map.fetch!(state.pending_specs, spec_ref)
-    {spec_data, state} = do_proceed_spec_startup(spec_ref, spec_data, state)
-
-    if spec_data.status == :ready do
-      {_spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
-      state
+    withl spec_data: {:ok, spec_data} <- Map.fetch(state.pending_specs, spec_ref),
+          do: {spec_data, state} = do_proceed_spec_startup(spec_ref, spec_data, state),
+          status: :ready <- spec_data.status do
+      cleanup_spec_startup(spec_ref, state)
     else
-      put_in(state, [:pending_specs, spec_ref], spec_data)
+      spec_data: :error -> state
+      status: _status -> put_in(state, [:pending_specs, spec_ref], spec_data)
     end
   end
 
   defp do_proceed_spec_startup(spec_ref, %{status: :initializing} = spec_data, state) do
-    %{children: children, pending_specs: pending_specs} = state
+    Membrane.Logger.debug("Proceeding spec #{inspect(spec_ref)} startup: initializing")
+
+    %{children: children} = state
 
     if Enum.all?(spec_data.children_names, fn child ->
          Map.fetch!(children, child).status == :initialized
-       end) and
-         Enum.all?(spec_data.dependent_specs, fn spec ->
-           Map.fetch!(pending_specs, spec).status == :initialized
-         end) do
+       end) and Enum.empty?(spec_data.dependent_specs) do
       do_proceed_spec_startup(spec_ref, %{spec_data | status: :initialized}, state)
     else
       {spec_data, state}
@@ -126,6 +132,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp do_proceed_spec_startup(spec_ref, %{status: :initialized} = spec_data, state) do
+    Membrane.Logger.debug("Proceeding spec #{inspect(spec_ref)} startup: initialized")
     Process.send_after(self(), Message.new(:spec_linking_timeout, spec_ref), 5000)
 
     {awaiting_responses, state} =
@@ -149,9 +156,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp do_proceed_spec_startup(spec_ref, %{status: :linking_internally} = spec_data, state) do
+    Membrane.Logger.debug("Proceeding spec #{inspect(spec_ref)} startup: linking internally")
+
     if spec_data.awaiting_responses |> Map.values() |> Enum.all?(&(&1 == 0)) do
       state = spec_data.links |> Map.values() |> Enum.reduce(state, &LinkHandler.link/2)
-      Membrane.Logger.debug("Spec #{inspect(spec_ref)} linked internally")
       do_proceed_spec_startup(spec_ref, %{spec_data | status: :linked_internally}, state)
     else
       {spec_data, state}
@@ -163,6 +171,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
          %{status: :linked_internally} = spec_data,
          %Pipeline.State{} = state
        ) do
+    Membrane.Logger.debug("Proceeding spec #{inspect(spec_ref)} startup: linked internally")
+
     do_proceed_spec_startup(spec_ref, %{spec_data | status: :ready}, state)
   end
 
@@ -171,8 +181,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
          %{status: :linked_internally} = spec_data,
          %Bin.State{} = state
        ) do
+    Membrane.Logger.debug("Proceeding spec #{inspect(spec_ref)} startup: linked internally")
+
     state = Bin.PadController.respond_links(spec_ref, state)
-    Membrane.Logger.debug("Linking spec #{inspect(spec_ref)} externally")
     do_proceed_spec_startup(spec_ref, %{spec_data | status: :linking_externally}, state)
   end
 
@@ -181,28 +192,47 @@ defmodule Membrane.Core.Parent.ChildLifeController do
          %{status: :linking_externally} = spec_data,
          %Bin.State{} = state
        ) do
+    Membrane.Logger.debug("Proceeding spec #{inspect(spec_ref)} startup: linking externally")
+
     if Bin.PadController.all_pads_linked?(spec_ref, state) do
-      Membrane.Logger.debug("Spec #{inspect(spec_ref)} linked externally")
       do_proceed_spec_startup(spec_ref, %{spec_data | status: :ready}, state)
     else
       {spec_data, state}
     end
   end
 
-  defp do_proceed_spec_startup(_spec_ref, %{status: :ready} = spec_data, state) do
-    %{children: children} = state
+  defp do_proceed_spec_startup(spec_ref, %{status: :ready} = spec_data, state) do
+    Membrane.Logger.debug(
+      "Spec #{inspect(spec_ref)} ready, parent status: #{inspect(state.status)}"
+    )
 
-    if state.status == :playing do
-      Membrane.Logger.debug("playing")
+    state =
+      Enum.reduce(spec_data.children_names, state, fn child, state ->
+        if state.status == :playing,
+          do: send(Map.fetch!(state.children, child).pid, Message.new(:play))
 
-      Enum.each(spec_data.children_names, fn child ->
-        send(Map.fetch!(children, child).pid, Message.new(:play))
+        put_in(state, [:children, child, :status], :ready)
       end)
-    else
-      Membrane.Logger.debug("not playing")
-    end
 
     {spec_data, state}
+  end
+
+  defp cleanup_spec_startup(spec_ref, state) do
+    Membrane.Logger.debug("Cleaning spec #{inspect(spec_ref)}")
+
+    if Map.has_key?(state.pending_specs, spec_ref) do
+      pending_specs =
+        state.pending_specs
+        |> Map.delete(spec_ref)
+        |> Map.new(fn {ref, data} ->
+          {ref, Map.update!(data, :dependent_specs, &MapSet.delete(&1, spec_ref))}
+        end)
+
+      state = %{state | pending_specs: pending_specs}
+      Enum.reduce(Map.keys(pending_specs), state, &proceed_spec_startup/2)
+    else
+      state
+    end
   end
 
   def handle_child_initialized(child, state) do
@@ -221,16 +251,19 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     :ok
   end
 
-  @spec handle_remove_child(Membrane.Child.name_t() | [Membrane.Child.name_t()], Parent.state_t()) ::
+  @spec handle_remove_children(
+          Membrane.Child.name_t() | [Membrane.Child.name_t()],
           Parent.state_t()
-  def handle_remove_child(names, state) do
+        ) ::
+          Parent.state_t()
+  def handle_remove_children(names, state) do
     names = names |> Bunch.listify()
 
-    {:ok, state} =
+    state =
       if state.synchronization.clock_provider.provider in names do
         ClockHandler.reset_clock(state)
       else
-        {:ok, state}
+        state
       end
 
     data = Enum.map(names, &Parent.ChildrenModel.get_child_data!(state, &1))
@@ -242,27 +275,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       """)
     end
 
-    Enum.each(data, &PlaybackHandler.request_playback_state_change(&1.pid, :terminating))
+    Enum.each(data, &Message.send(&1.pid, :terminate))
     Parent.ChildrenModel.update_children!(state, names, &%{&1 | terminating?: true})
-  end
-
-  @spec child_playback_changed(pid, Membrane.PlaybackState.t(), Parent.state_t()) ::
-          Parent.state_t()
-  def child_playback_changed(pid, child_pb_state, state) do
-    {:ok, child} = child_by_pid(pid, state)
-    %{playback: playback} = state
-
-    cond do
-      playback.pending_state == nil and playback.state == child_pb_state ->
-        put_in(state, [:children, child, :playback_sync], :synced)
-
-      playback.pending_state == child_pb_state ->
-        state = put_in(state, [:children, child, :playback_sync], :synced)
-        LifecycleController.maybe_finish_playback_transition(state)
-
-      true ->
-        state
-    end
   end
 
   @doc """
@@ -274,29 +288,36 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   If a pid turns out not to be a pid of any child error is raised.
   """
   @spec handle_child_death(child_pid :: pid(), reason :: any(), state :: Parent.state_t()) ::
-          Parent.state_t()
-  def handle_child_death(pid, :normal, state) do
-    with {:ok, child_name} <- child_by_pid(pid, state) do
-      state = Bunch.Access.delete_in(state, [:children, child_name])
-      state = LinkHandler.unlink_element(child_name, state)
-      {_result, state} = remove_child_from_crash_group(state, pid)
-      LifecycleController.maybe_finish_playback_transition(state)
+          {:stop | :continue, Parent.state_t()}
+  def handle_child_death(child_name, reason, state) do
+    state = do_handle_child_death(child_name, reason, state)
+
+    if state.terminating? and Enum.empty?(state.children) do
+      {:stop, state}
     else
-      {:error, :not_child} ->
-        raise Membrane.PipelineError,
-              "Tried to handle death of process that wasn't a child of that pipeline."
+      {:continue, state}
     end
   end
 
-  def handle_child_death(pid, reason, state) do
-    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state),
-         {:ok, child_name} <- child_by_pid(pid, state) do
+  defp do_handle_child_death(child_name, :normal, state) do
+    {%{pid: child_pid, spec_ref: spec_ref}, state} =
+      Bunch.Access.pop_in(state, [:children, child_name])
+
+    state = LinkHandler.unlink_element(child_name, state)
+    {_result, state} = remove_child_from_crash_group(state, child_pid)
+    cleanup_spec_startup(spec_ref, state)
+  end
+
+  defp do_handle_child_death(child_name, reason, state) do
+    %{pid: child_pid} = ChildrenModel.get_child_data!(state, child_name)
+
+    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(child_pid, state) do
       {result, state} =
         crash_all_group_members(group, child_name, state)
-        |> remove_child_from_crash_group(group, pid)
+        |> remove_child_from_crash_group(group, child_pid)
 
       if result == :removed do
-        state = Enum.reduce(group.members, state, &Bunch.Access.delete_in(&2, [:children, &1]))
+        state = Enum.reduce(group.members, state, &do_handle_child_death(&1, :normal, &2))
 
         exec_handle_crash_group_down_callback(
           group.name,
@@ -308,10 +329,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         state
       end
     else
-      {:error, :not_child} ->
-        raise Membrane.PipelineError,
-              "Tried to handle death of process that wasn't a child of that pipeline."
-
       {:error, :not_member} when reason == {:shutdown, :membrane_crash_group_kill} ->
         raise Membrane.PipelineError,
               "Child that was not a member of any crash group killed with :membrane_crash_group_kill."
@@ -357,22 +374,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
          state
        ) do
     %CrashGroup{alive_members_pids: members_pids} = crash_group
-
     state = LinkHandler.unlink_crash_group(crash_group, state)
-
-    Enum.each(
-      members_pids,
-      fn pid ->
-        if node(pid) == node() do
-          if Process.alive?(pid),
-            do: GenServer.stop(pid, {:shutdown, :membrane_crash_group_kill})
-        else
-          if :rpc.call(node(pid), Process, :alive?, [pid]),
-            do: GenServer.stop(pid, {:shutdown, :membrane_crash_group_kill})
-        end
-      end
-    )
-
+    Enum.each(members_pids, &Process.exit(&1, {:shutdown, :membrane_crash_group_kill}))
     CrashGroupHandler.set_triggered(state, crash_group.name, crash_initiator)
   end
 
@@ -400,12 +403,5 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp remove_child_from_crash_group(state, group, child_pid) do
     CrashGroupHandler.remove_member_of_crash_group(state, group.name, child_pid)
     |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
-  end
-
-  defp child_by_pid(pid, state) do
-    case Enum.find(state.children, fn {_name, entry} -> entry.pid == pid end) do
-      {child_name, _child_data} -> {:ok, child_name}
-      nil -> {:error, :not_child}
-    end
   end
 end

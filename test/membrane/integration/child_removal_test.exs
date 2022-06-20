@@ -5,24 +5,23 @@ defmodule Membrane.Integration.ChildRemovalTest do
   import Membrane.Testing.Assertions
 
   alias Membrane.Core.Message
-  alias Membrane.Pipeline
   alias Membrane.Support.ChildRemovalTest
   alias Membrane.Testing
 
   require Message
 
   test "Element can be removed when pipeline is in stopped state" do
-    assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(
-               module: ChildRemovalTest.Pipeline,
-               custom_args: %{
-                 source: Testing.Source,
-                 filter1: ChildRemovalTest.Filter,
-                 filter2: ChildRemovalTest.Filter,
-                 filter3: ChildRemovalTest.Filter,
-                 sink: Testing.Sink
-               }
-             )
+    pipeline_pid =
+      Testing.Pipeline.start_link_supervised!(
+        module: ChildRemovalTest.Pipeline,
+        custom_args: %{
+          source: Testing.Source,
+          filter1: ChildRemovalTest.Filter,
+          filter2: ChildRemovalTest.Filter,
+          filter3: ChildRemovalTest.Filter,
+          sink: Testing.Sink
+        }
+      )
 
     Process.monitor(pipeline_pid)
 
@@ -36,22 +35,20 @@ defmodule Membrane.Integration.ChildRemovalTest do
     assert_pid_alive(pipeline_pid)
     assert_pid_alive(filter_pid1)
     assert_pid_alive(filter_pid3)
-
-    stop_pipeline(pipeline_pid)
   end
 
   test "Element can be removed when pipeline is in playing state" do
-    assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(
-               module: ChildRemovalTest.Pipeline,
-               custom_args: %{
-                 source: Testing.Source,
-                 filter1: ChildRemovalTest.Filter,
-                 filter2: ChildRemovalTest.Filter,
-                 filter3: ChildRemovalTest.Filter,
-                 sink: Testing.Sink
-               }
-             )
+    pipeline_pid =
+      Testing.Pipeline.start_link_supervised!(
+        module: ChildRemovalTest.Pipeline,
+        custom_args: %{
+          source: Testing.Source,
+          filter1: ChildRemovalTest.Filter,
+          filter2: ChildRemovalTest.Filter,
+          filter3: ChildRemovalTest.Filter,
+          sink: Testing.Sink
+        }
+      )
 
     Process.monitor(pipeline_pid)
 
@@ -69,8 +66,6 @@ defmodule Membrane.Integration.ChildRemovalTest do
     assert_pid_dead(filter_pid2)
     assert_pid_alive(filter_pid1)
     assert_pid_alive(filter_pid3)
-
-    stop_pipeline(pipeline_pid)
   end
 
   @doc """
@@ -82,17 +77,17 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
   """
   test "When PlaybackBuffer is evaluated there is no buffers from removed element" do
-    assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(
-               module: ChildRemovalTest.Pipeline,
-               custom_args: %{
-                 source: Testing.Source,
-                 filter1: ChildRemovalTest.Filter,
-                 filter2: ChildRemovalTest.Filter,
-                 filter3: %ChildRemovalTest.Filter{playing_delay: prepared_to_playing_delay()},
-                 sink: Testing.Sink
-               }
-             )
+    pipeline_pid =
+      Testing.Pipeline.start_link_supervised!(
+        module: ChildRemovalTest.Pipeline,
+        custom_args: %{
+          source: Testing.Source,
+          filter1: ChildRemovalTest.Filter,
+          filter2: ChildRemovalTest.Filter,
+          filter3: %ChildRemovalTest.Filter{playing_delay: prepared_to_playing_delay()},
+          sink: Testing.Sink
+        }
+      )
 
     Process.monitor(pipeline_pid)
 
@@ -110,18 +105,11 @@ defmodule Membrane.Integration.ChildRemovalTest do
     assert_pid_dead(filter_pid2)
     assert_pid_alive(filter_pid1)
     assert_pid_alive(filter_pid3)
-
-    stop_pipeline(pipeline_pid)
   end
 
   #############
   ## HELPERS ##
   #############
-
-  defp stop_pipeline(pid) do
-    assert Pipeline.terminate(pid) == :ok
-    assert_pid_dead(pid)
-  end
 
   defp assert_pid_dead(pid) do
     assert_receive {:DOWN, _, :process, ^pid, :normal}

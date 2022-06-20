@@ -16,10 +16,10 @@ defmodule Membrane.Pipeline do
 
   alias __MODULE__.{Action, CallbackContext}
   alias Membrane.{Child, Pad}
-  alias Membrane.Core.PlaybackHandler
   alias Membrane.CrashGroup
 
   require Membrane.Logger
+  require Membrane.Core.Message, as: Message
 
   @typedoc """
   Defines options that can be passed to `start/3` / `start_link/3` and received
@@ -254,11 +254,27 @@ defmodule Membrane.Pipeline do
       process options: #{inspect(process_options)}
       """)
 
-      apply(GenServer, method, [
-        Membrane.Core.Pipeline,
-        {module, pipeline_options},
-        process_options
-      ])
+      setup_logger = fn pipeline_pid ->
+        pipeline_name = "#{:erlang.pid_to_list(pipeline_pid)}/"
+        Membrane.ComponentPath.set([pipeline_name])
+        Membrane.Logger.set_prefix(pipeline_name)
+        []
+      end
+
+      Membrane.Core.Parent.Supervisor.go_brrr(
+        method,
+        &GenServer.start_link(
+          Membrane.Core.Pipeline,
+          %{
+            module: module,
+            options: pipeline_options,
+            setup_logger: setup_logger,
+            children_supervisor: &1
+          },
+          process_options
+        ),
+        setup_logger
+      )
     else
       Membrane.Logger.error("""
       Cannot start pipeline, passed module #{inspect(module)} is not a Membrane Pipeline.
@@ -297,12 +313,12 @@ defmodule Membrane.Pipeline do
     timeout = Keyword.get(opts, :timeout, 5000)
 
     ref = if blocking?, do: Process.monitor(pipeline)
+    Message.send(pipeline, :terminate)
 
-    PlaybackHandler.request_playback_state_change(pipeline, :terminating)
-
-    if blocking?,
+    if(blocking?,
       do: wait_for_down(ref, timeout),
       else: :ok
+    )
   end
 
   @spec call(pid, any, integer()) :: :ok
@@ -319,28 +335,6 @@ defmodule Membrane.Pipeline do
         {:error, :timeout}
     end
   end
-
-  @doc """
-  Changes playback state to `:playing`.
-  """
-  @spec play(pid) :: :ok
-  @deprecated "use pipeline's :playback action instead"
-  def play(pid), do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :playing)
-
-  @doc """
-  Changes playback state to `:prepared`.
-  """
-  @spec prepare(pid) :: :ok
-  @deprecated "use pipeline's :playback action instead"
-  def prepare(pid),
-    do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :prepared)
-
-  @doc """
-  Changes playback state to `:stopped`.
-  """
-  @spec stop(pid) :: :ok
-  @deprecated "use pipeline's :playback action instead"
-  def stop(pid), do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :stopped)
 
   @doc """
   Checks whether module is a pipeline.
@@ -390,52 +384,12 @@ defmodule Membrane.Pipeline do
         end
       end
 
-      unless Module.defines?(__MODULE__, {:play, 1}) do
-        @doc """
-        Changes playback state of pipeline to `:playing`.
-        """
-        @spec play(pid()) :: :ok
-        @deprecated "use pipeline's :playback action instead"
-        def play(pid),
-          do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :playing)
-      end
-
-      unless Module.defines?(__MODULE__, {:prepare, 1}) do
-        @doc """
-        Changes playback state to `:prepared`.
-        """
-        @spec prepare(pid()) :: :ok
-        @deprecated "use pipeline's :playback action instead"
-        def prepare(pid),
-          do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :prepared)
-      end
-
-      unless Module.defines?(__MODULE__, {:stop, 1}) do
-        @doc """
-        Changes playback state to `:stopped`.
-        """
-        @spec stop(pid()) :: :ok
-        @deprecated "use pipeline's :playback action instead"
-        def stop(pid),
-          do: Membrane.Core.PlaybackHandler.request_playback_state_change(pid, :stopped)
-      end
-
       unless Enum.any?(1..2, &Module.defines?(__MODULE__, {:terminate, &1})) do
         @doc """
         Changes pipeline's playback state to `:stopped` and terminates its process.
         """
         @spec terminate(pid, Keyword.t()) :: :ok
         defdelegate terminate(pipeline, opts \\ []), to: unquote(__MODULE__)
-      end
-
-      unless Enum.any?(1..2, &Module.defines?(__MODULE__, {:stop_and_terminate, &1})) do
-        @doc """
-        Changes pipeline's playback state to `:stopped` and terminates its process.
-        """
-        @spec stop_and_terminate(pid, Keyword.t()) :: :ok
-        @deprecated "use terminate/2 instead"
-        def stop_and_terminate(pipeline, opts \\ []),
-          do: Membrane.Pipeline.terminate(pipeline, opts)
       end
     end
   end
@@ -474,6 +428,18 @@ defmodule Membrane.Pipeline do
       unquote(bring_spec)
       unquote(bring_pad)
 
+      @doc """
+      Returns child specification for usage in `Membrane.PipelineSupervisor
+      """
+      @spec child_spec(list) :: Supervisor.child_spec()
+      def child_spec(arg) do
+        %{
+          id: __MODULE__,
+          start: {__MODULE__, :start_link, [arg]},
+          type: :supervisor
+        }
+      end
+
       @impl true
       def membrane_pipeline?, do: true
 
@@ -488,15 +454,6 @@ defmodule Membrane.Pipeline do
 
       @impl true
       def handle_prepared_to_playing(_ctx, state), do: {:ok, state}
-
-      @impl true
-      def handle_playing_to_prepared(_ctx, state), do: {:ok, state}
-
-      @impl true
-      def handle_prepared_to_stopped(_ctx, state), do: {:ok, state}
-
-      @impl true
-      def handle_stopped_to_terminating(_ctx, state), do: {:ok, state}
 
       @impl true
       def handle_info(message, _ctx, state), do: {:ok, state}
@@ -519,13 +476,11 @@ defmodule Membrane.Pipeline do
       @impl true
       def handle_call(message, _ctx, state), do: {:ok, state}
 
-      defoverridable handle_init: 1,
+      defoverridable child_spec: 1,
+                     handle_init: 1,
                      handle_shutdown: 2,
                      handle_stopped_to_prepared: 2,
-                     handle_playing_to_prepared: 2,
                      handle_prepared_to_playing: 2,
-                     handle_prepared_to_stopped: 2,
-                     handle_stopped_to_terminating: 2,
                      handle_info: 3,
                      handle_spec_started: 3,
                      handle_element_start_of_stream: 4,

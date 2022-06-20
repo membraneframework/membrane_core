@@ -158,6 +158,10 @@ defmodule Membrane.Testing.Pipeline do
   @type pipeline_keyword_list_t ::
           default_pipeline_keyword_list_t() | custom_pipeline_keyword_list_t()
 
+  def child_spec(options) do
+    super(options) |> Map.put(:restart, :transient)
+  end
+
   @spec start_link(Options.t() | pipeline_keyword_list_t(), GenServer.options()) ::
           GenServer.on_start()
   def start_link(pipeline_options, process_options \\ [])
@@ -190,6 +194,35 @@ defmodule Membrane.Testing.Pipeline do
   def start(pipeline_options, process_options) do
     pipeline_options = transform_pipeline_options(pipeline_options)
     do_start(:start, pipeline_options, process_options)
+  end
+
+  if Mix.env() == :test do
+    def start_link_supervised(pipeline_options) do
+      pipeline_options = Keyword.put_new(pipeline_options, :test_process, self())
+
+      with {:ok, supervisor, pipeline} <-
+             ExUnit.Callbacks.start_supervised({__MODULE__, pipeline_options}) do
+        Process.link(pipeline)
+        {:ok, supervisor, pipeline}
+      else
+        {:error, {error, _child_info}} -> {:error, error}
+      end
+    end
+
+    def start_link_supervised!(pipeline_options) do
+      {:ok, _supervisor, pipeline} = start_link_supervised(pipeline_options)
+      pipeline
+    end
+
+    def start_supervised(pipeline_options) do
+      pipeline_options = Keyword.put_new(pipeline_options, :test_process, self())
+      ExUnit.Callbacks.start_supervised({__MODULE__, pipeline_options})
+    end
+
+    def start_supervised!(pipeline_options) do
+      {:ok, _supervisor, pipeline} = start_supervised(pipeline_options)
+      pipeline
+    end
   end
 
   defp transform_pipeline_options(pipeline_options) do
@@ -536,9 +569,6 @@ defmodule Membrane.Testing.Pipeline do
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
-
-  defp default_options(%Options{test_process: nil} = options),
-    do: %Options{options | test_process: self()}
 
   defp default_options(%{test_process: nil} = options),
     do: %{options | test_process: self()}

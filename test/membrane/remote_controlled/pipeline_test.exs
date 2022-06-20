@@ -40,7 +40,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
   end
 
   defp setup_pipeline(_context) do
-    {:ok, pipeline} = Pipeline.start_link()
+    {:ok, _supervisor, pipeline} = Pipeline.start_link()
 
     children = [
       a: %Membrane.Testing.Source{output: [0xA1, 0xB2, 0xC3, 0xD4]},

@@ -72,24 +72,23 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     Map.update!(
       state,
       :links,
-      &(&1
-        |> Enum.reject(fn %Link{from: from, to: to} ->
-          from_name = from.child
-          to_name = to.child
+      &Enum.reject(&1, fn %Link{from: from, to: to} ->
+        from_name = from.child
+        to_name = to.child
 
-          cond do
-            element_name == from_name ->
-              Message.send(to.pid, :handle_unlink, to.pad_ref)
-              true
+        cond do
+          element_name == from_name ->
+            Message.send(to.pid, :handle_unlink, to.pad_ref)
+            true
 
-            element_name == to_name ->
-              Message.send(from.pid, :handle_unlink, from.pad_ref)
-              true
+          element_name == to_name ->
+            Message.send(from.pid, :handle_unlink, from.pad_ref)
+            true
 
-            true ->
-              false
-          end
-        end))
+          true ->
+            false
+        end
+      end)
     )
   end
 
@@ -123,7 +122,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   def resolve_links(links, spec_ref, state) do
     Map.new(
       links,
-      &{{spec_ref, make_ref()},
+      &{{spec_ref, Bunch.ShortRef.new()},
        %Link{&1 | from: resolve_endpoint(&1.from, state), to: resolve_endpoint(&1.to, state)}}
     )
   end

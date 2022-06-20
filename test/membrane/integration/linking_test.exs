@@ -89,15 +89,11 @@ defmodule Membrane.Integration.LinkingTest do
   end
 
   setup do
-    {:ok, pipeline} =
-      Testing.Pipeline.start_link(
+    pipeline =
+      Testing.Pipeline.start_link_supervised!(
         module: Pipeline,
         custom_args: %{testing_pid: self()}
       )
-
-    on_exit(fn ->
-      Membrane.Pipeline.terminate(pipeline, blocking?: true)
-    end)
 
     %{pipeline: pipeline}
   end

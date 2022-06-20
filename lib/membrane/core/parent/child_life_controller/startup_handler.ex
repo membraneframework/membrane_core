@@ -4,7 +4,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
 
   alias Membrane.{ChildEntry, Clock, Core, ParentError, Sync}
   alias Membrane.Core.{CallbackHandler, Component, Message, Parent}
-  alias Membrane.Core.Parent.{ChildEntryParser, ChildLifeController, ChildrenModel}
+
+  alias Membrane.Core.Parent.{
+    ChildEntryParser,
+    ChildLifeController,
+    ChildrenModel,
+    ChildrenSupervisor
+  }
 
   require Membrane.Core.Component
   require Membrane.Core.Message
@@ -69,9 +75,10 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
           node() | nil,
           parent_clock :: Clock.t(),
           syncs :: %{Membrane.Child.name_t() => pid()},
-          log_metadata :: Keyword.t()
+          log_metadata :: Keyword.t(),
+          supervisor :: pid
         ) :: [ChildEntry.t()]
-  def start_children(children, node, parent_clock, syncs, log_metadata) do
+  def start_children(children, node, parent_clock, syncs, log_metadata, supervisor) do
     # If the node is set to the current node, set it to nil, to avoid race conditions when
     # distribution changes
     node = if node == node(), do: nil, else: node
@@ -80,7 +87,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
       "Starting children: #{inspect(children)}#{if node, do: " on node #{node}"}"
     )
 
-    children |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata))
+    children |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata, supervisor))
   end
 
   @spec add_children([ChildEntry.t()], Parent.state_t()) :: Parent.state_t()
@@ -147,26 +154,36 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     end)
   end
 
-  defp start_child(child, node, parent_clock, syncs, log_metadata) do
+  defp start_child(child, node, parent_clock, syncs, log_metadata, supervisor) do
     %ChildEntry{name: name, module: module, options: options} = child
     Membrane.Logger.debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")
     sync = syncs |> Map.get(name, Sync.no_sync())
+    component_path = Membrane.ComponentPath.get()
 
-    log_metadata = log_metadata |> Keyword.put(:parent_path, Membrane.ComponentPath.get())
+    params = %{
+      parent: self(),
+      module: module,
+      name: name,
+      node: node,
+      user_options: options,
+      parent_clock: parent_clock,
+      sync: sync,
+      setup_logger: fn _pid ->
+        Logger.metadata(log_metadata)
 
-    start_result =
+        name_str =
+          "#{if String.valid?(name), do: name, else: inspect(name)}#{if child.component_type == :bin, do: "/", else: ""}"
+
+        Membrane.ComponentPath.set_and_append(component_path, name_str)
+        Membrane.Logger.set_prefix(Membrane.ComponentPath.get_formatted())
+        log_metadata
+      end
+    }
+
+    start_fun =
       case child.component_type do
         :element ->
-          Core.Element.start(%{
-            parent: self(),
-            module: module,
-            name: name,
-            node: node,
-            user_options: options,
-            parent_clock: parent_clock,
-            sync: sync,
-            log_metadata: log_metadata
-          })
+          fn -> Core.Element.start_link(params) end
 
         :bin ->
           unless sync == Sync.no_sync() do
@@ -175,29 +192,15 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
                   reason: bin cannot be synced with other elements"
           end
 
-          Core.Bin.start(%{
-            parent: self(),
-            name: name,
-            module: module,
-            node: node,
-            user_options: options,
-            parent_clock: parent_clock,
-            log_metadata: log_metadata
-          })
+          fn -> Core.Bin.start_link(params) end
       end
 
-    with {:ok, pid} <- start_result do
-      clock = Message.call!(pid, :get_clock)
-      %ChildEntry{child | pid: pid, clock: clock, sync: sync}
+    with {:ok, child_pid} <- ChildrenSupervisor.start_child(supervisor, name, start_fun) do
+      clock = Message.call!(child_pid, :get_clock)
+      %ChildEntry{child | pid: child_pid, clock: clock, sync: sync}
     else
-      {:error, {error, stacktrace}} when is_exception(error) ->
-        reraise error, stacktrace
-
       {:error, reason} ->
-        raise ParentError, """
-        Cannot start child #{inspect(name)},
-        reason: #{inspect(reason, pretty: true)}
-        """
+        raise ParentError, "Error starting child #{inspect(name)}, reason: #{inspect(reason)}"
     end
   end
 end

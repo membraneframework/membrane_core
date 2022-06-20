@@ -43,7 +43,7 @@ defmodule Membrane.Core.Bin.State do
           pending_specs: LinkHandler.pending_specs_t()
         }
 
-  @enforce_keys [:module, :synchronization]
+  @enforce_keys [:module, :synchronization, :children_supervisor]
   defstruct @enforce_keys ++
               [
                 internal_state: nil,
@@ -57,6 +57,9 @@ defmodule Membrane.Core.Bin.State do
                 crash_groups: %{},
                 children_log_metadata: [],
                 links: [],
-                pending_specs: %{}
+                pending_specs: %{},
+                status: :initializing,
+                play_request?: false,
+                terminating?: false
               ]
 end

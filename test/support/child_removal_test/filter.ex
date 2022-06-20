@@ -48,13 +48,8 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   end
 
   def handle_prepared_to_playing(_ctx, %{playing_delay: time} = state) do
-    Process.send_after(self(), :resume_after_wait, time)
-    {{:ok, playback_change: :suspend}, state}
-  end
-
-  @impl true
-  def handle_info(:resume_after_wait, _ctx, state) do
-    {{:ok, playback_change: :resume, notify_parent: :playing}, state}
+    Process.sleep(time)
+    {{:ok, notify_parent: :playing}, state}
   end
 
   @impl true

@@ -56,7 +56,10 @@ defmodule Membrane.Core.Bin.PadController do
         # received a link response for such a pad, so we should reply immediately.
         {:ok, data} ->
           if data.response_received? do
-            Membrane.Logger.debug("Sending link response, #{inspect(pad_ref)}")
+            Membrane.Logger.debug(
+              "Sending link response, link_id: #{inspect(link_id)}, pad: #{inspect(pad_ref)}"
+            )
+
             Message.send(state.parent_pid, :link_response, link_id)
           end
 
@@ -78,6 +81,10 @@ defmodule Membrane.Core.Bin.PadController do
           State.t()
         ) :: State.t()
   def handle_internal_link_request(pad_ref, child_endpoint, spec_ref, state) do
+    Membrane.Logger.debug(
+      "Got internal link request, pad ref #{inspect(pad_ref)}, child #{inspect(child_endpoint.child)}, spec #{inspect(spec_ref)}"
+    )
+
     pad_name = Pad.name_by_ref(pad_ref)
     info = Map.fetch!(state.pads_info, pad_name)
 
@@ -94,11 +101,14 @@ defmodule Membrane.Core.Bin.PadController do
           raise LinkError, "Dynamic pads must be firstly linked externally, then internally"
       end
 
-    PadModel.update_data!(
-      state,
-      pad_ref,
-      &%{&1 | endpoint: child_endpoint, spec_ref: spec_ref}
-    )
+    state =
+      PadModel.update_data!(
+        state,
+        pad_ref,
+        &%{&1 | endpoint: child_endpoint, spec_ref: spec_ref}
+      )
+
+    state
   end
 
   @doc """
@@ -111,6 +121,10 @@ defmodule Membrane.Core.Bin.PadController do
     |> Enum.filter(&(&1.spec_ref == spec_ref))
     |> Enum.reduce(state, fn pad_data, state ->
       if pad_data.link_id do
+        Membrane.Logger.debug(
+          "Sending link response, link_id: #{inspect(pad_data.link_id)}, pad: #{inspect(pad_data.ref)}"
+        )
+
         Message.send(state.parent_pid, :link_response, pad_data.link_id)
         state
       else
@@ -148,6 +162,9 @@ defmodule Membrane.Core.Bin.PadController do
         ) :: {Core.Element.PadController.link_call_reply_t(), Core.Bin.State.t()}
   def handle_link(direction, endpoint, other_endpoint, params, state) do
     pad_data = PadModel.get_data!(state, endpoint.pad_ref)
+
+    Membrane.Logger.debug("Handle link #{inspect(endpoint, pretty: true)}")
+
     %{spec_ref: spec_ref, endpoint: child_endpoint} = pad_data
 
     pad_props =

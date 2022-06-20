@@ -37,7 +37,7 @@ defmodule Membrane.Core.ElementTest do
   end
 
   defp get_state do
-    {:ok, state} =
+    {:ok, state, {:continue, :init}} =
       Element.init(%{
         module: Filter,
         user_options: nil,
@@ -45,7 +45,7 @@ defmodule Membrane.Core.ElementTest do
         parent_clock: nil,
         sync: Membrane.Sync.no_sync(),
         parent: self(),
-        log_metadata: []
+        setup_logger: fn _pid -> [] end
       })
 
     state

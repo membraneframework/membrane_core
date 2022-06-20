@@ -31,7 +31,7 @@ defmodule Membrane.Core.Pipeline.State do
           }
         }
 
-  @enforce_keys [:module, :synchronization]
+  @enforce_keys [:module, :synchronization, :children_supervisor]
   defstruct @enforce_keys ++
               [
                 internal_state: nil,
@@ -42,6 +42,7 @@ defmodule Membrane.Core.Pipeline.State do
                 pending_specs: %{},
                 playback: %Playback{},
                 status: :initializing,
-                play_request?: false
+                play_request?: false,
+                terminating?: false
               ]
 end

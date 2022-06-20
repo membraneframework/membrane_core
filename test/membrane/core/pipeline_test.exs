@@ -31,11 +31,14 @@ defmodule Membrane.Core.PipelineTest do
   end
 
   defp state(_ctx) do
+    children_supervisor = Membrane.Core.Parent.ChildrenSupervisor.start_link()
+
     [
       state: %State{
         module: TestPipeline,
         internal_state: %{},
-        synchronization: %{clock_proxy: nil}
+        synchronization: %{clock_proxy: nil},
+        children_supervisor: children_supervisor
       }
     ]
   end
@@ -49,9 +52,14 @@ defmodule Membrane.Core.PipelineTest do
       end
     end
 
-    test "executes successfully when callback module's handle_init returns {{:ok, spec: spec}}, state} " do
-      assert {:ok, state} =
-               @module.init({TestPipeline, {{:ok, spec: %Membrane.ParentSpec{}}, %{}}})
+    test "executes successfully when callback module's handle_init returns {{:ok, spec: spec}}, state} ",
+         %{state: state} do
+      assert {:ok, state, {:continue, :init}} =
+               @module.init(%{
+                 module: TestPipeline,
+                 children_supervisor: state.children_supervisor,
+                 options: {{:ok, spec: %Membrane.ParentSpec{}}, %{}}
+               })
 
       assert %State{internal_state: %{}, module: TestPipeline} = state
     end
@@ -103,12 +111,12 @@ defmodule Membrane.Core.PipelineTest do
   end
 
   test "Pipeline can be terminated synchronously" do
-    {:ok, pid} = Testing.Pipeline.start_link(module: TestPipeline)
+    pid = Testing.Pipeline.start_link_supervised!(module: TestPipeline)
     assert :ok == Testing.Pipeline.terminate(pid, blocking?: true)
   end
 
   test "Pipeline should be able to steer its playback state with :playback action" do
-    {:ok, pid} = Testing.Pipeline.start_link(module: TestPipeline)
+    pid = Testing.Pipeline.start_link_supervised!(module: TestPipeline)
     Testing.Pipeline.execute_actions(pid, playback: :prepared)
     assert_pipeline_playback_changed(pid, :stopped, :prepared)
     Testing.Pipeline.execute_actions(pid, playback: :playing)

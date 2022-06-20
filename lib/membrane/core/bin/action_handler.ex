@@ -22,7 +22,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:remove_child, children}, _cb, _params, state) do
-    Parent.ChildLifeController.handle_remove_child(children, state)
+    Parent.ChildLifeController.handle_remove_children(children, state)
   end
 
   @impl CallbackHandler

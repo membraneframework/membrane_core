@@ -42,7 +42,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
       links: Membrane.ParentSpec.link_linear(children)
     ]
 
-    {:ok, pipeline} = Pipeline.start(options)
+    pipeline = Pipeline.start_supervised!(options)
     Pipeline.message_child(pipeline, :source, {:send_your_pid, self()})
 
     source_pid =
@@ -68,10 +68,9 @@ defmodule Membrane.FailWhenNoCapsAreSent do
       links: Membrane.ParentSpec.link_linear(children)
     ]
 
-    {:ok, pipeline} = Pipeline.start(options)
+    pipeline = Pipeline.start_supervised!(options)
     ref = Process.monitor(pipeline)
     assert_start_of_stream(pipeline, :sink)
     refute_receive {:DOWN, ^ref, :process, ^pipeline, {:shutdown, :child_crash}}
-    Pipeline.terminate(pipeline, blocking?: true)
   end
 end
