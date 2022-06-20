@@ -242,8 +242,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     Terminating.
     """)
 
-    Process.flag(:trap_exit, false)
-    Process.exit(self(), {:shutdown, :child_crash})
+    exit({:shutdown, :child_crash})
   end
 
   defp remove_child_from_crash_group(state, child_pid) do
