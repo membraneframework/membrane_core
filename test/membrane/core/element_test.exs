@@ -12,9 +12,20 @@ defmodule Membrane.Core.ElementTest do
     use Membrane.Source
     def_output_pad :output, caps: :any
 
+    def_options test_pid: [spec: pid | nil, default: nil]
+
     @impl true
     def handle_info(msg, _ctx, state) do
       {{:ok, notify_parent: msg}, state}
+    end
+
+    @impl true
+    def handle_shutdown(reason, state) do
+      if state.test_pid do
+        send(state.test_pid, {:shutdown, reason})
+      end
+
+      :ok
     end
   end
 
@@ -309,6 +320,7 @@ defmodule Membrane.Core.ElementTest do
 
       ref = Process.monitor(elem_pid)
       send(pipeline_mock, :exit)
+      assert_receive({:shutdown, {:shutdown, :parent_crash}})
       assert_receive {:DOWN, ^ref, :process, ^elem_pid, {:shutdown, :parent_crash}}
     end
 
@@ -338,7 +350,7 @@ defmodule Membrane.Core.ElementTest do
       module: SomeElement,
       name: :name,
       node: nil,
-      user_options: %{},
+      user_options: %{test_pid: self()},
       parent: pipeline,
       parent_clock: nil,
       sync: Membrane.Sync.no_sync(),
