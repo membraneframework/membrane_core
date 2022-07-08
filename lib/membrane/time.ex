@@ -10,6 +10,7 @@ defmodule Membrane.Time do
   differ from platform to platform. Still, unless you need to perform calculations
   that do not touch hardware clock, you should use Membrane units for consistency.
   """
+  use Ratio
 
   @compile {:inline,
             native_units: 1, native_unit: 0, nanoseconds: 1, nanosecond: 0, second: 0, seconds: 1}
@@ -243,6 +244,24 @@ defmodule Membrane.Time do
     # credo:disable-for-next-line Credo.Check.Readability.Specs
     def unquote(unit.plural)(number) when is_integer(number) do
       number * unquote(unit.duration)
+    end
+
+    def unquote(unit.plural)(number) do
+      require Ratio
+      nanoseconds = Ratio.*(number, unquote(unit.duration))
+
+      nanoseconds =
+        if Ratio.is_rational?(nanoseconds),
+          do: nanoseconds,
+          else: %Ratio{numerator: nanoseconds, denominator: 1}
+
+      trunced = Kernel.div(nanoseconds.numerator, nanoseconds.denominator)
+      sign = sign(nanoseconds.numerator) * sign(nanoseconds.denominator)
+
+      if 2 * sign * Kernel.rem(nanoseconds.numerator, nanoseconds.denominator) >=
+           nanoseconds.denominator,
+         do: trunced + sign,
+         else: trunced
     end
 
     to_fun_name = :"to_#{unit.plural}"
