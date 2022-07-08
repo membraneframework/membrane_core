@@ -248,6 +248,13 @@ defmodule Membrane.Time do
 
     def unquote(unit.plural)(number) do
       require Ratio
+
+      if not Ratio.is_rational?(number),
+        do:
+          raise(
+            "Only integers and rationals can be converted with Membrane.Time.#{unquote(unit.plural)}"
+          )
+
       nanoseconds = Ratio.*(number, unquote(unit.duration))
 
       nanoseconds =
