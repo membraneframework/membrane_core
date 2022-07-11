@@ -253,32 +253,19 @@ defmodule Membrane.Time do
             "Only integers and rationals can be converted with Membrane.Time.#{unquote(unit.plural)}"
           )
 
-      in_nanoseconds = Ratio.*(number, unquote(unit.duration))
-
-      in_nanoseconds =
-        if Ratio.is_rational?(in_nanoseconds),
-          do: in_nanoseconds,
-          else: %Ratio{numerator: in_nanoseconds, denominator: 1}
-
-      trunced = Kernel.div(in_nanoseconds.numerator, in_nanoseconds.denominator)
-
-      # Rounding of the rational number
-      if 2 * Ratio.sign(in_nanoseconds) *
-           Kernel.rem(in_nanoseconds.numerator, in_nanoseconds.denominator) >=
-           in_nanoseconds.denominator,
-         do: trunced + Ratio.sign(in_nanoseconds),
-         else: trunced
+      Ratio.*(number, unquote(unit.duration))
+      |> round_rational()
     end
 
-    to_fun_name = :"to_#{unit.plural}"
+    round_to_fun_name = :"round_to_#{unit.plural}"
 
     @doc """
-    Returns time in #{unit.plural}. Rounded using `Kernel.round/1`.
+    Returns time in #{unit.plural}. Rounded to the nearest integer.
     """
-    @spec unquote(to_fun_name)(t) :: integer
+    @spec unquote(round_to_fun_name)(t) :: integer
     # credo:disable-for-next-line Credo.Check.Readability.Specs
-    def unquote(to_fun_name)(time) when is_time(time) do
-      round(time / unquote(unit.duration))
+    def unquote(round_to_fun_name)(time) when is_time(time) do
+      Ratio.new(time, unquote(unit.duration)) |> round_rational()
     end
 
     as_fun_name = :"as_#{unit.plural}"
@@ -296,5 +283,28 @@ defmodule Membrane.Time do
   defp best_unit(time) do
     unit = @units |> Enum.find(&(rem(time, &1.duration) == 0))
     {time |> div(unit.duration), unit}
+  end
+
+  defp round_rational(ratio) do
+    ratio = make_rational(ratio)
+    trunced = Kernel.div(ratio.numerator, ratio.denominator)
+
+    if 2 * sign_of_rational(ratio) *
+         Kernel.rem(ratio.numerator, ratio.denominator) >=
+         ratio.denominator,
+       do: trunced + sign_of_rational(ratio),
+       else: trunced
+  end
+
+  defp make_rational(number) do
+    if Ratio.is_rational?(number) do
+      number
+    else
+      %Ratio{numerator: number, denominator: 1}
+    end
+  end
+
+  defp sign_of_rational(ratio) do
+    if ratio.numerator == 0, do: 0, else: Ratio.sign(ratio)
   end
 end
