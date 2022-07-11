@@ -247,11 +247,9 @@ defmodule Membrane.Time do
 
     # credo:disable-for-next-line Credo.Check.Readability.Specs
     def unquote(unit.plural)(number) do
-      if not Ratio.is_rational?(number),
-        do:
-          raise(
-            "Only integers and rationals can be converted with Membrane.Time.#{unquote(unit.plural)}"
-          )
+      if not Ratio.is_rational?(number) do
+        raise "Only integers and rationals can be converted with Membrane.Time.#{unquote(unit.plural)}"
+      end
 
       Ratio.*(number, unquote(unit.duration))
       |> round_rational()
@@ -287,7 +285,7 @@ defmodule Membrane.Time do
 
   defp round_rational(ratio) do
     ratio = make_rational(ratio)
-    trunced = Kernel.div(ratio.numerator, ratio.denominator)
+    trunced = Ratio.trunc(ratio)
 
     if 2 * sign_of_rational(ratio) *
          Kernel.rem(ratio.numerator, ratio.denominator) >=
