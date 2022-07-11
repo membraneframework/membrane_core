@@ -186,7 +186,7 @@ defmodule Membrane.Sync do
     |> Enum.filter(&(&1.status == :sync))
     |> Enum.group_by(& &1.latency, & &1.reply_to)
     |> Enum.each(fn {latency, reply_to} ->
-      time = (max_latency - latency) |> Time.to_milliseconds()
+      time = (max_latency - latency) |> Time.round_to_milliseconds()
       Process.send_after(self(), {:reply, reply_to}, time)
     end)
   end

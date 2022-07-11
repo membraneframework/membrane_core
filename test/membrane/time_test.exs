@@ -47,4 +47,21 @@ defmodule Membrane.TimeTest do
   test "Monotonic time should be integer" do
     assert is_integer(@module.monotonic_time())
   end
+
+  test "Time units functions work properly with rational numbers" do
+    value = Ratio.new(1, 2)
+    assert @module.microseconds(value) == 500
+    assert @module.milliseconds(value) == 500_000
+    assert @module.seconds(value) == 500_000_000
+    assert @module.hours(value) == 1_800_000_000_000
+    assert @module.days(value) == 43_200_000_000_000
+  end
+
+  test "Time units functions properly round the values" do
+    assert @module.seconds(Ratio.new(1, 3)) == 333_333_333
+    assert @module.seconds(Ratio.new(-1, 3)) == -333_333_333
+
+    assert @module.seconds(Ratio.new(2, 3)) == 666_666_667
+    assert @module.seconds(Ratio.new(-2, 3)) == -666_666_667
+  end
 end
