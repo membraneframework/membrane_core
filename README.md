@@ -32,7 +32,7 @@ To get familiar with basic concepts and build your first application using Membr
 
 API documentation is available at [HexDocs](https://hexdocs.pm/membrane_core/).
 
-Moreover, we would like to invite you to take some of the [Membrane Tutorials](https://tutorials.membraneframework.org), based on real-life use cases.
+Moreover, we would like to invite you to take some of the [Membrane Tutorials](https://membrane.stream/learn), based on real-life use cases.
 
 ## Contributing
 
