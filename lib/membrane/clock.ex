@@ -212,9 +212,9 @@ defmodule Membrane.Clock do
   end
 
   defp handle_clock_update(till_next, state) do
-    use Ratio
+    use Numbers, overload_operators: true
 
-    if till_next < 0 do
+    if Ratio.lt?(till_next, 0) do
       raise "Clock update time cannot be negative, received: #{inspect(till_next)}"
     end
 
@@ -227,10 +227,10 @@ defmodule Membrane.Clock do
   end
 
   defp do_handle_clock_update(till_next, state) do
-    use Ratio
+    use Numbers, overload_operators: true
     %{till_next: from_previous, clock_time: clock_time} = state
     clock_time = clock_time + from_previous
-    ratio = clock_time / (state.time_provider.() - state.init_time)
+    ratio = Ratio.div(Ratio.new(clock_time), Ratio.new(state.time_provider.() - state.init_time))
     state = %{state | clock_time: clock_time, till_next: till_next}
     broadcast_and_update_ratio(ratio, state)
   end

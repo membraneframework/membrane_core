@@ -44,7 +44,7 @@ defmodule Membrane.Core.Timer do
   end
 
   def tick(timer) do
-    use Ratio
+    use Numbers, overload_operators: true
 
     %__MODULE__{
       id: id,
@@ -55,7 +55,10 @@ defmodule Membrane.Core.Timer do
     } = timer
 
     time_passed = time_passed + interval
-    time = (init_time + time_passed / ratio) |> Ratio.floor() |> Time.round_to_milliseconds()
+
+    time =
+      (init_time + Ratio.new(time_passed, ratio)) |> Ratio.floor() |> Time.round_to_milliseconds()
+
     timer_ref = Process.send_after(self(), Message.new(:timer_tick, id), time, abs: true)
     %__MODULE__{timer | time_passed: time_passed, timer_ref: timer_ref}
   end
