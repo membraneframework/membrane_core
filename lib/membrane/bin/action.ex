@@ -53,8 +53,8 @@ defmodule Membrane.Bin.Action do
   """
   @type start_timer_t ::
           {:start_timer,
-           {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval}
-           | {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval,
+           {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval}
+           | {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval,
               clock :: Membrane.Clock.t()}}
 
   @typedoc """
@@ -73,7 +73,7 @@ defmodule Membrane.Bin.Action do
   """
   @type timer_interval_t ::
           {:timer_interval,
-           {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval}}
+           {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval}}
 
   @typedoc """
   Stops a timer started with `t:start_timer_t/0` action.
