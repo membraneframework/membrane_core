@@ -70,7 +70,8 @@ defmodule Membrane.Core.Element.PadController do
     toilet =
       if direction == :input do
         counter_type =
-          if node(endpoint.pid) == node(other_endpoint.pid) do
+          if endpoint.pid == nil or other_endpoint.pid == nil or
+               node(endpoint.pid) == node(other_endpoint.pid) do
             :same_node
           else
             :different_nodes

@@ -1,8 +1,51 @@
 defmodule Membrane.Core.Element.Toilet do
+  @moduledoc false
+
+  # Toilet is an entity that can be filled and drained. If it's not drained on
+  # time and exceeds its capacity, it overflows by logging an error and killing
+  # the responsible process (passed on the toilet creation).
+
+  require Membrane.Logger
+
   defmodule DistributedCounter do
-    @moduledoc """
-    Atomic
-    """
+    @moduledoc false
+
+    # A module providing a common interface to access and modify a counter used in the toilet implementation.
+    # The counter uses :atomics module under the hood.
+    # The module allows to create and modify the value of a counter in the same manner both when the counter is about to be accessed
+    # from the same node, and from different nodes.
+
+    defmodule Worker do
+      @moduledoc false
+
+      # This is a GenServer created when the counter is about to be accessed from different nodes - it's running on the same node,
+      # where the :atomics variable is put, and processes from different nodes can ask it to modify the counter on their behalf.
+
+      use GenServer
+
+      @impl true
+      def init(_opts) do
+        {:ok, nil}
+      end
+
+      @impl true
+      def handle_call({:add_get, atomic_ref, value}, _from, _state) do
+        result = :atomics.add_get(atomic_ref, 1, value)
+        {:reply, result, nil}
+      end
+
+      @impl true
+      def handle_cast({:sub, atomic_ref, value}, _state) do
+        :atomics.sub(atomic_ref, 1, value)
+        {:noreply, nil}
+      end
+    end
+
+    @type t ::
+            {:same_node, :atomics.atomics_ref()}
+            | {:different_nodes, pid(), :atomics.atomics_ref()}
+
+    @spec new(:same_node | :different_nodes) :: t
     def new(type) do
       atomic_ref = :atomics.new(1, [])
 
@@ -11,11 +54,12 @@ defmodule Membrane.Core.Element.Toilet do
           {:same_node, atomic_ref}
 
         :different_nodes ->
-          {:ok, pid} = GenServer.start(Membrane.Core.Element.Toilet.DistributedCounterWorker, [])
+          {:ok, pid} = GenServer.start(Membrane.Core.Element.Toilet.DistributedCounter.Worker, [])
           {:different_nodes, pid, atomic_ref}
       end
     end
 
+    @spec add_get(t, integer()) :: integer()
     def add_get({:same_node, atomic_ref}, value) do
       :atomics.add_get(atomic_ref, 1, value)
     end
@@ -28,6 +72,7 @@ defmodule Membrane.Core.Element.Toilet do
       GenServer.call(pid, {:add_get, atomic_ref, value})
     end
 
+    @spec sub(t, integer()) :: :ok
     def sub({:same_node, atomic_ref}, value) do
       :atomics.sub(atomic_ref, 1, value)
     end
@@ -41,33 +86,7 @@ defmodule Membrane.Core.Element.Toilet do
     end
   end
 
-  defmodule DistributedCounterWorker do
-    use GenServer
-
-    def init(_) do
-      {:ok, nil}
-    end
-
-    def handle_call({:add_get, atomic_ref, value}, _from, _state) do
-      result = :atomics.add_get(atomic_ref, 1, value)
-      {:reply, result, nil}
-    end
-
-    def handle_cast({:sub, atomic_ref, value}, _state) do
-      :atomics.sub(atomic_ref, 1, value)
-      {:noreply, nil}
-    end
-  end
-
-  @moduledoc false
-
-  # Toilet is an entity that can be filled and drained. If it's not drained on
-  # time and exceeds its capacity, it overflows by logging an error and killing
-  # the responsible process (passed on the toilet creation).
-
-  require Membrane.Logger
-
-  @opaque t :: {__MODULE__, :atomics.atomics_ref(), pos_integer, Process.dest()}
+  @opaque t :: {__MODULE__, DistributedCounter.t(), pos_integer, Process.dest()}
 
   @default_capacity_factor 200
 
