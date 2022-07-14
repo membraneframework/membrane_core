@@ -1,54 +1,61 @@
 defmodule Membrane.Core.Element.Toilet do
-  defmodule Atomic do
+  defmodule DistributedCounter do
     @moduledoc """
     Atomic
     """
     def new(type) do
+      atomic_ref = :atomics.new(1, [])
+
       case type do
         :same_node ->
-          {:same_node, :atomics.new(1, [])}
+          {:same_node, atomic_ref}
 
         :different_nodes ->
-          {:ok, pid} = GenServer.start(Membrane.Core.Element.Toilet.AtomicProcess, [])
-          {:different_nodes, pid}
+          {:ok, pid} = GenServer.start(Membrane.Core.Element.Toilet.DistributedCounterWorker, [])
+          {:different_nodes, pid, atomic_ref}
       end
     end
 
-    def add_get({:different_nodes, ref}, value) do
-      GenServer.cast(ref, {:add, value})
-      GenServer.call(ref, :get)
+    def add_get({:same_node, atomic_ref}, value) do
+      :atomics.add_get(atomic_ref, 1, value)
     end
 
-    def add_get({:same_node, ref}, value) do
-      :atomics.add_get(ref, 1, value)
+    def add_get({:different_nodes, pid, atomic_ref}, value) when node(pid) == node(self()) do
+      :atomics.add_get(atomic_ref, 1, value)
     end
 
-    def sub({:different_nodes, ref}, value) do
-      GenServer.cast(ref, {:sub, value})
+    def add_get({:different_nodes, pid, atomic_ref}, value) do
+      GenServer.call(pid, {:add_get, atomic_ref, value})
     end
 
-    def sub({:same_node, ref}, value) do
-      :atomics.sub(ref, 1, value)
+    def sub({:same_node, atomic_ref}, value) do
+      :atomics.sub(atomic_ref, 1, value)
+    end
+
+    def sub({:different_nodes, pid, atomic_ref}, value) when node(pid) == node(self()) do
+      :atomics.sub(atomic_ref, 1, value)
+    end
+
+    def sub({:different_nodes, pid, atomic_ref}, value) do
+      GenServer.cast(pid, {:sub, atomic_ref, value})
     end
   end
 
-  defmodule AtomicProcess do
+  defmodule DistributedCounterWorker do
     use GenServer
 
     def init(_) do
-      {:ok, 0}
+      {:ok, nil}
     end
 
-    def handle_cast({:add, value}, state) do
-      {:noreply, state + value}
+    def handle_call({:add_get, atomic_ref, value}, _from, _state) do
+      result = :atomics.add_get(atomic_ref, 1, value)
+      {:reply, result, nil}
     end
 
-    def handle_cast({:sub, value}, state) do
-      {:noreply, state - value}
-    end
-
-    def handle_call(:get, _from, state) do
-      {:reply, state, state}
+    def handle_cast({:sub, atomic_ref, value}, _state) do
+      :atomics.sub(atomic_ref, 1, value)
+      {:noreply, nil}
     end
   end
 
@@ -64,20 +71,25 @@ defmodule Membrane.Core.Element.Toilet do
 
   @default_capacity_factor 200
 
-  @spec new(pos_integer() | nil, Membrane.Buffer.Metric.unit_t(), Process.dest()) :: t
-  def new(capacity, demand_unit, responsible_process) do
+  @spec new(
+          pos_integer() | nil,
+          Membrane.Buffer.Metric.unit_t(),
+          Process.dest(),
+          :same_node | :different_nodes
+        ) :: t
+  def new(capacity, demand_unit, responsible_process, counter_type) do
     default_capacity =
       Membrane.Buffer.Metric.from_unit(demand_unit).buffer_size_approximation() *
         @default_capacity_factor
 
-    toilet_ref = Atomic.new(:different_nodes)
+    toilet_ref = DistributedCounter.new(counter_type)
     capacity = capacity || default_capacity
     {__MODULE__, toilet_ref, capacity, responsible_process}
   end
 
   @spec fill(t, non_neg_integer) :: :ok | :overflow
   def fill({__MODULE__, atomic, capacity, responsible_process}, amount) do
-    size = Atomic.add_get(atomic, amount)
+    size = DistributedCounter.add_get(atomic, amount)
 
     if size > capacity do
       overflow(size, capacity, responsible_process)
@@ -89,7 +101,7 @@ defmodule Membrane.Core.Element.Toilet do
 
   @spec drain(t, non_neg_integer) :: :ok
   def drain({__MODULE__, atomic, _capacity, _responsible_process}, amount) do
-    Atomic.sub(atomic, amount)
+    DistributedCounter.sub(atomic, amount)
   end
 
   defp overflow(size, capacity, responsible_process) do
