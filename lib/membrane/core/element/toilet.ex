@@ -1,4 +1,57 @@
 defmodule Membrane.Core.Element.Toilet do
+  defmodule Atomic do
+    @moduledoc """
+    Atomic
+    """
+    def new(type) do
+      case type do
+        :same_node ->
+          {:same_node, :atomics.new(1, [])}
+
+        :different_nodes ->
+          {:ok, pid} = GenServer.start(Membrane.Core.Element.Toilet.AtomicProcess, [])
+          {:different_nodes, pid}
+      end
+    end
+
+    def add_get({:different_nodes, ref}, value) do
+      GenServer.cast(ref, {:add, value})
+      GenServer.call(ref, :get)
+    end
+
+    def add_get({:same_node, ref}, value) do
+      :atomics.add_get(ref, 1, value)
+    end
+
+    def sub({:different_nodes, ref}, value) do
+      GenServer.cast(ref, {:sub, value})
+    end
+
+    def sub({:same_node, ref}, value) do
+      :atomics.sub(ref, 1, value)
+    end
+  end
+
+  defmodule AtomicProcess do
+    use GenServer
+
+    def init(_) do
+      {:ok, 0}
+    end
+
+    def handle_cast({:add, value}, state) do
+      {:noreply, state + value}
+    end
+
+    def handle_cast({:sub, value}, state) do
+      {:noreply, state - value}
+    end
+
+    def handle_call(:get, _from, state) do
+      {:reply, state, state}
+    end
+  end
+
   @moduledoc false
 
   # Toilet is an entity that can be filled and drained. If it's not drained on
@@ -17,13 +70,14 @@ defmodule Membrane.Core.Element.Toilet do
       Membrane.Buffer.Metric.from_unit(demand_unit).buffer_size_approximation() *
         @default_capacity_factor
 
+    toilet_ref = Atomic.new(:different_nodes)
     capacity = capacity || default_capacity
-    {__MODULE__, :atomics.new(1, []), capacity, responsible_process}
+    {__MODULE__, toilet_ref, capacity, responsible_process}
   end
 
   @spec fill(t, non_neg_integer) :: :ok | :overflow
   def fill({__MODULE__, atomic, capacity, responsible_process}, amount) do
-    size = :atomics.add_get(atomic, 1, amount)
+    size = Atomic.add_get(atomic, amount)
 
     if size > capacity do
       overflow(size, capacity, responsible_process)
@@ -35,7 +89,7 @@ defmodule Membrane.Core.Element.Toilet do
 
   @spec drain(t, non_neg_integer) :: :ok
   def drain({__MODULE__, atomic, _capacity, _responsible_process}, amount) do
-    :atomics.sub(atomic, 1, amount)
+    Atomic.sub(atomic, amount)
   end
 
   defp overflow(size, capacity, responsible_process) do
