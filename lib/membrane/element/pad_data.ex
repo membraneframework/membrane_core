@@ -75,6 +75,8 @@ defmodule Membrane.Element.PadData do
                 auto_demand_size: nil,
                 sticky_messages: [],
                 toilet: nil,
-                associated_pads: []
+                associated_pads: [],
+                toilet_throttling_factor: 10,
+                unrinsed_buffers_size: 0
               ]
 end

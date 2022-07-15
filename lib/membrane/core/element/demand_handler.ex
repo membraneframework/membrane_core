@@ -109,19 +109,34 @@ defmodule Membrane.Core.Element.DemandHandler do
     PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
   end
 
-  def handle_outgoing_buffers(pad_ref, %{mode: :push, toilet: toilet} = data, buffers, state)
+  def handle_outgoing_buffers(
+        pad_ref,
+        %{
+          mode: :push,
+          toilet: toilet,
+          unrinsed_buffers_size: unrinsed_buffers_size,
+          toilet_throttling_factor: toilet_throttling_factor
+        } = data,
+        buffers,
+        state
+      )
       when toilet != nil do
     %{other_demand_unit: other_demand_unit} = data
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
 
-    case Toilet.fill(toilet, buf_size) do
-      :ok ->
-        state
+    if unrinsed_buffers_size + buf_size >= toilet_throttling_factor do
+      case Toilet.fill(toilet, unrinsed_buffers_size + buf_size) do
+        :ok ->
+          PadModel.set_data!(state, pad_ref, :unrinsed_buffers_size, 0)
 
-      :overflow ->
-        # if the toilet has overflowed, we remove it so it didn't overflow again
-        # and let the parent handle that situation by unlinking this output pad or crashing
-        PadModel.set_data!(state, pad_ref, :toilet, nil)
+        :overflow ->
+          # if the toilet has overflowed, we remove it so it didn't overflow again
+          # and let the parent handle that situation by unlinking this output pad or crashing
+          PadModel.set_data!(state, pad_ref, :toilet, nil)
+          |> PadModel.set_data!(pad_ref, :unrinsed_buffers_size, 0)
+      end
+    else
+      PadModel.set_data!(state, pad_ref, :unrinsed_buffers_size, unrinsed_buffers_size + buf_size)
     end
   end
 
