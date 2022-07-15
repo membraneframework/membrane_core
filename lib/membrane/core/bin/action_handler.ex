@@ -10,8 +10,18 @@ defmodule Membrane.Core.Bin.ActionHandler do
   require Message
 
   @impl CallbackHandler
+  def handle_action({name, args}, _cb, _params, %State{terminating?: true} = state)
+      when name in [:notify_child, :spec, :remove_child] do
+    Membrane.Logger.debug(
+      "Ignoring action #{inspect({name, args})} because already terminating the bin"
+    )
+
+    state
+  end
+
+  @impl CallbackHandler
   def handle_action({:notify_child, notification}, _cb, _params, state) do
-    :ok = Parent.ChildLifeController.handle_notify_child(notification, state)
+    Parent.ChildLifeController.handle_notify_child(notification, state)
     state
   end
 

@@ -56,7 +56,7 @@ defmodule Membrane.Core.Bin.State do
                 parent_pid: nil,
                 crash_groups: %{},
                 children_log_metadata: [],
-                links: [],
+                links: %{},
                 pending_specs: %{},
                 status: :initializing,
                 play_request?: false,

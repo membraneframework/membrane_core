@@ -46,16 +46,20 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
   @spec handle_link_response(link_id_t(), state_t()) :: state_t()
   def handle_link_response(link_id, state) do
-    {spec_ref, _link_ref} = link_id
+    case Map.fetch(state.links, link_id) do
+      {:ok, %Link{spec_ref: spec_ref}} ->
+        state =
+          update_in(
+            state,
+            [:pending_specs, spec_ref, :awaiting_responses, link_id],
+            &(&1 - 1)
+          )
 
-    state =
-      update_in(
-        state,
-        [:pending_specs, spec_ref, :awaiting_responses, link_id],
-        &(&1 - 1)
-      )
+        ChildLifeController.proceed_spec_startup(spec_ref, state)
 
-    ChildLifeController.proceed_spec_startup(spec_ref, state)
+      :error ->
+        state
+    end
   end
 
   @spec unlink_crash_group(CrashGroup.t(), Parent.state_t()) :: Parent.state_t()
@@ -72,17 +76,17 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     Map.update!(
       state,
       :links,
-      &Enum.reject(&1, fn %Link{from: from, to: to} ->
+      &Map.reject(&1, fn {_id, %Link{from: from, to: to, linked?: linked?}} ->
         from_name = from.child
         to_name = to.child
 
         cond do
           element_name == from_name ->
-            Message.send(to.pid, :handle_unlink, to.pad_ref)
+            if linked?, do: Message.send(to.pid, :handle_unlink, to.pad_ref)
             true
 
           element_name == to_name ->
-            Message.send(from.pid, :handle_unlink, from.pad_ref)
+            if linked?, do: Message.send(from.pid, :handle_unlink, from.pad_ref)
             true
 
           true ->
@@ -120,10 +124,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   end
 
   def resolve_links(links, spec_ref, state) do
-    Map.new(
+    Enum.map(
       links,
-      &{{spec_ref, Bunch.ShortRef.new()},
-       %Link{&1 | from: resolve_endpoint(&1.from, state), to: resolve_endpoint(&1.to, state)}}
+      &%Link{
+        &1
+        | spec_ref: spec_ref,
+          from: resolve_endpoint(&1.from, state),
+          to: resolve_endpoint(&1.to, state)
+      }
     )
   end
 
@@ -190,7 +198,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     raise LinkError, "Tried to link element #{inspect(child)} with itself"
   end
 
-  def link(%Link{from: from, to: to}, state) do
+  def link(%Link{from: from, to: to} = link, state) do
     Telemetry.report_link(from, to)
 
     if {Membrane.Bin, :itself} in [from.child, to.child] do
@@ -201,7 +209,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
 
       case Message.call(from.pid, :handle_link, [:output, from, to, %{initiator: :parent}]) do
         :ok ->
-          update_in(state, [:links], &[%Link{from: from, to: to} | &1])
+          put_in(state, [:links, link.id, :linked?], true)
 
         {:error, {:call_failure, _reason}} when to_availability == :static ->
           Process.exit(to.pid, :kill)

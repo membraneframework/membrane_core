@@ -38,7 +38,7 @@ defmodule Membrane.Core.Pipeline.State do
                 children: %{},
                 crash_groups: %{},
                 delayed_playback_change: nil,
-                links: [],
+                links: %{},
                 pending_specs: %{},
                 playback: %Playback{},
                 status: :initializing,

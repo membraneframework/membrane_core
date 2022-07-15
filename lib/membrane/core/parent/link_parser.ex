@@ -40,6 +40,7 @@ defmodule Membrane.Core.Parent.LinkParser do
       |> List.flatten()
       |> Enum.map(fn link ->
         %Link{
+          id: Bunch.ShortRef.new(),
           from: %Endpoint{
             child: link.from,
             pad_spec: link.from_pad,

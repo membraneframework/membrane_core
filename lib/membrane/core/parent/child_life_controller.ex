@@ -61,10 +61,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     :ok = StartupHandler.maybe_activate_syncs(syncs, state)
     state = StartupHandler.add_children(children, state)
     links = LinkHandler.resolve_links(links, spec_ref, state)
+    state = %{state | links: Map.merge(state.links, Map.new(links, &{&1.id, &1}))}
 
     dependent_specs =
       links
-      |> Map.values()
       |> Enum.flat_map(&[&1.from.child_spec_ref, &1.to.child_spec_ref])
       |> Enum.filter(&Map.has_key?(state.pending_specs, &1))
       |> MapSet.new()
@@ -73,7 +73,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       put_in(state, [:pending_specs, spec_ref], %{
         status: :initializing,
         children_names: children_names,
-        links: links,
+        links_ids: Enum.map(links, & &1.id),
         dependent_specs: dependent_specs,
         awaiting_responses: []
       })
@@ -136,12 +136,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     Process.send_after(self(), Message.new(:spec_linking_timeout, spec_ref), 5000)
 
     {awaiting_responses, state} =
-      Enum.map_reduce(spec_data.links, state, fn {link_id, link}, state ->
+      Enum.map_reduce(spec_data.links_ids, state, fn link_id, state ->
+        %Membrane.Core.Parent.Link{from: from, to: to, spec_ref: spec_ref} =
+          Map.fetch!(state.links, link_id)
+
         {awaiting_responses_from, state} =
-          LinkHandler.request_link(:output, link.from, link.to, spec_ref, link_id, state)
+          LinkHandler.request_link(:output, from, to, spec_ref, link_id, state)
 
         {awaiting_responses_to, state} =
-          LinkHandler.request_link(:input, link.to, link.from, spec_ref, link_id, state)
+          LinkHandler.request_link(:input, to, from, spec_ref, link_id, state)
 
         {{link_id, awaiting_responses_from + awaiting_responses_to}, state}
       end)
@@ -159,7 +162,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     Membrane.Logger.debug("Proceeding spec #{inspect(spec_ref)} startup: linking internally")
 
     if spec_data.awaiting_responses |> Map.values() |> Enum.all?(&(&1 == 0)) do
-      state = spec_data.links |> Map.values() |> Enum.reduce(state, &LinkHandler.link/2)
+      state =
+        spec_data.links_ids
+        |> Enum.map(&Map.fetch!(state.links, &1))
+        |> Enum.reduce(state, &LinkHandler.link/2)
+
       do_proceed_spec_startup(spec_ref, %{spec_data | status: :linked_internally}, state)
     else
       {spec_data, state}
@@ -218,9 +225,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp cleanup_spec_startup(spec_ref, state) do
-    Membrane.Logger.debug("Cleaning spec #{inspect(spec_ref)}")
-
     if Map.has_key?(state.pending_specs, spec_ref) do
+      Membrane.Logger.debug("Cleaning spec #{inspect(spec_ref)}")
+
       pending_specs =
         state.pending_specs
         |> Map.delete(spec_ref)

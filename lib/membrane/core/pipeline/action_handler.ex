@@ -5,6 +5,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   alias Membrane.ActionError
   alias Membrane.Core.{Parent, TimerController}
   alias Membrane.Core.Parent.LifecycleController
+  alias Membrane.Core.Pipeline.State
   alias Membrane.ParentSpec
 
   require Membrane.Logger
@@ -13,6 +14,16 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   def handle_action({action, _args}, :handle_init, _params, _state)
       when action not in [:spec, :playback] do
     raise ActionError, action: action, reason: {:invalid_callback, :handle_init}
+  end
+
+  @impl CallbackHandler
+  def handle_action({name, args}, _cb, _params, %State{terminating?: true} = state)
+      when name in [:notify_child, :spec, :remove_child] do
+    Membrane.Logger.debug(
+      "Ignoring action #{inspect({name, args})} because already terminating the pipeline"
+    )
+
+    state
   end
 
   @impl CallbackHandler

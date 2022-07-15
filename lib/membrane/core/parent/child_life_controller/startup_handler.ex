@@ -4,13 +4,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
 
   alias Membrane.{ChildEntry, Clock, Core, ParentError, Sync}
   alias Membrane.Core.{CallbackHandler, Component, Message, Parent}
-
-  alias Membrane.Core.Parent.{
-    ChildEntryParser,
-    ChildLifeController,
-    ChildrenModel,
-    ChildrenSupervisor
-  }
+  alias Membrane.Core.Parent.{ChildEntryParser, ChildrenSupervisor}
 
   require Membrane.Core.Component
   require Membrane.Core.Message
@@ -127,31 +121,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
       [children_names],
       state
     )
-  end
-
-  @spec init_playback_state(ChildLifeController.spec_ref_t(), Parent.state_t()) ::
-          Parent.state_t()
-  def init_playback_state(spec_ref, state) do
-    Membrane.Logger.debug("Spec playback init #{inspect(spec_ref)} #{inspect(state.children)}")
-
-    ChildrenModel.update_children(state, fn
-      %{spec_ref: ^spec_ref} = child ->
-        expected_playback = state.playback.pending_state || state.playback.state
-
-        Membrane.Logger.debug(
-          "Initializing playback state #{inspect(expected_playback)} #{inspect(child)}"
-        )
-
-        if expected_playback == :stopped do
-          %{child | playback_sync: :synced}
-        else
-          Message.send(child.pid, :change_playback_state, expected_playback)
-          %{child | playback_sync: :syncing}
-        end
-
-      child ->
-        child
-    end)
   end
 
   defp start_child(child, node, parent_clock, syncs, log_metadata, supervisor) do

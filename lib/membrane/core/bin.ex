@@ -199,8 +199,12 @@ defmodule Membrane.Core.Bin do
   end
 
   defp do_handle_info(Message.new(:child_death, [name, reason]), state) do
-    state = Parent.ChildLifeController.handle_child_death(name, reason, state)
-    {:noreply, state}
+    {result, state} = Parent.ChildLifeController.handle_child_death(name, reason, state)
+
+    case result do
+      :stop -> {:stop, :normal, state}
+      :continue -> {:noreply, state}
+    end
   end
 
   defp do_handle_info(Message.new(:play), state) do
@@ -211,6 +215,15 @@ defmodule Membrane.Core.Bin do
   defp do_handle_info(Message.new(:initialized, child), state) do
     state = Parent.ChildLifeController.handle_child_initialized(child, state)
     {:noreply, state}
+  end
+
+  defp do_handle_info(Message.new(:terminate), state) do
+    {result, state} = Parent.LifecycleController.handle_terminate_request(state)
+
+    case result do
+      :stop -> {:stop, :normal, state}
+      :continue -> {:noreply, state}
+    end
   end
 
   defp do_handle_info(Message.new(_type, _args, _opts) = message, _state) do
