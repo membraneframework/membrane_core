@@ -77,7 +77,13 @@ defmodule Membrane.Core.Element.PadController do
             :different_nodes
           end
 
-        Toilet.new(endpoint.pad_props.toilet_capacity, info.demand_unit, self(), counter_type)
+        Toilet.new(
+          endpoint.pad_props.toilet_capacity,
+          info.demand_unit,
+          self(),
+          counter_type,
+          endpoint.pad_props.throttling_factor
+        )
       else
         nil
       end

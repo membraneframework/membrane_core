@@ -114,8 +114,7 @@ defmodule Membrane.Core.Element.DemandHandler do
         %{
           mode: :push,
           toilet: toilet,
-          unrinsed_buffers_size: unrinsed_buffers_size,
-          toilet_throttling_factor: toilet_throttling_factor
+          unrinsed_buffers_size: unrinsed_buffers_size
         } = data,
         buffers,
         state
@@ -123,6 +122,8 @@ defmodule Membrane.Core.Element.DemandHandler do
       when toilet != nil do
     %{other_demand_unit: other_demand_unit} = data
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
+
+    {_, _, _, _, toilet_throttling_factor} = toilet
 
     if unrinsed_buffers_size + buf_size >= toilet_throttling_factor do
       case Toilet.fill(toilet, unrinsed_buffers_size + buf_size) do

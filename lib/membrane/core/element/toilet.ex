@@ -94,20 +94,21 @@ defmodule Membrane.Core.Element.Toilet do
           pos_integer() | nil,
           Membrane.Buffer.Metric.unit_t(),
           Process.dest(),
-          :same_node | :different_nodes
+          :same_node | :different_nodes,
+          pos_integer()
         ) :: t
-  def new(capacity, demand_unit, responsible_process, counter_type) do
+  def new(capacity, demand_unit, responsible_process, counter_type, throttling_factor) do
     default_capacity =
       Membrane.Buffer.Metric.from_unit(demand_unit).buffer_size_approximation() *
         @default_capacity_factor
 
     toilet_ref = DistributedCounter.new(counter_type)
     capacity = capacity || default_capacity
-    {__MODULE__, toilet_ref, capacity, responsible_process}
+    {__MODULE__, toilet_ref, capacity, responsible_process, throttling_factor}
   end
 
   @spec fill(t, non_neg_integer) :: :ok | :overflow
-  def fill({__MODULE__, atomic, capacity, responsible_process}, amount) do
+  def fill({__MODULE__, atomic, capacity, responsible_process, _throttling_factor}, amount) do
     size = DistributedCounter.add_get(atomic, amount)
 
     if size > capacity do
@@ -119,7 +120,7 @@ defmodule Membrane.Core.Element.Toilet do
   end
 
   @spec drain(t, non_neg_integer) :: :ok
-  def drain({__MODULE__, atomic, _capacity, _responsible_process}, amount) do
+  def drain({__MODULE__, atomic, _capacity, _responsible_process, _throttling_factor}, amount) do
     DistributedCounter.sub(atomic, amount)
   end
 

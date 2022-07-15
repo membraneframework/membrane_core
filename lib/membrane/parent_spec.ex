@@ -388,7 +388,8 @@ defmodule Membrane.ParentSpec do
         target_queue_size: [default: nil],
         min_demand_factor: [default: nil],
         auto_demand_size: [default: nil],
-        toilet_capacity: [default: nil]
+        toilet_capacity: [default: nil],
+        throttling_factor: [default: 10]
       )
       |> case do
         {:ok, props} ->
