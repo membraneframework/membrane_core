@@ -123,21 +123,23 @@ defmodule Membrane.Core.Element.DemandHandler do
     %{other_demand_unit: other_demand_unit} = data
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
 
-    {_, _, _, _, toilet_throttling_factor} = toilet
+    case Toilet.fill(toilet, unrinsed_buffers_size + buf_size) do
+      :ok ->
+        PadModel.set_data!(state, pad_ref, :unrinsed_buffers_size, 0)
 
-    if unrinsed_buffers_size + buf_size >= toilet_throttling_factor do
-      case Toilet.fill(toilet, unrinsed_buffers_size + buf_size) do
-        :ok ->
-          PadModel.set_data!(state, pad_ref, :unrinsed_buffers_size, 0)
+      :delay ->
+        PadModel.set_data!(
+          state,
+          pad_ref,
+          :unrinsed_buffers_size,
+          unrinsed_buffers_size + buf_size
+        )
 
-        :overflow ->
-          # if the toilet has overflowed, we remove it so it didn't overflow again
-          # and let the parent handle that situation by unlinking this output pad or crashing
-          PadModel.set_data!(state, pad_ref, :toilet, nil)
-          |> PadModel.set_data!(pad_ref, :unrinsed_buffers_size, 0)
-      end
-    else
-      PadModel.set_data!(state, pad_ref, :unrinsed_buffers_size, unrinsed_buffers_size + buf_size)
+      :overflow ->
+        # if the toilet has overflowed, we remove it so it didn't overflow again
+        # and let the parent handle that situation by unlinking this output pad or crashing
+        PadModel.set_data!(state, pad_ref, :toilet, nil)
+        |> PadModel.set_data!(pad_ref, :unrinsed_buffers_size, 0)
     end
   end
 

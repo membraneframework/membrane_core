@@ -86,7 +86,7 @@ defmodule Membrane.Core.Element.Toilet do
     end
   end
 
-  @opaque t :: {__MODULE__, DistributedCounter.t(), pos_integer, Process.dest()}
+  @opaque t :: {__MODULE__, DistributedCounter.t(), pos_integer, Process.dest(), pos_integer()}
 
   @default_capacity_factor 200
 
@@ -107,15 +107,19 @@ defmodule Membrane.Core.Element.Toilet do
     {__MODULE__, toilet_ref, capacity, responsible_process, throttling_factor}
   end
 
-  @spec fill(t, non_neg_integer) :: :ok | :overflow
-  def fill({__MODULE__, atomic, capacity, responsible_process, _throttling_factor}, amount) do
-    size = DistributedCounter.add_get(atomic, amount)
-
-    if size > capacity do
-      overflow(size, capacity, responsible_process)
-      :overflow
+  @spec fill(t, non_neg_integer) :: :ok | :delay | :overflow
+  def fill({__MODULE__, atomic, capacity, responsible_process, throttling_factor}, amount) do
+    if amount < throttling_factor do
+      :delay
     else
-      :ok
+      size = DistributedCounter.add_get(atomic, amount)
+
+      if size > capacity do
+        overflow(size, capacity, responsible_process)
+        :overflow
+      else
+        :ok
+      end
     end
   end
 
