@@ -63,15 +63,5 @@ defmodule Membrane.Core.EndpointTest do
     end)
 
     assert_end_of_stream(pipeline, ^receiving_element)
-    Testing.Pipeline.terminate(pipeline)
-    IO.inspect(:terminated)
-    # IO.inspect(self())
-    # Process.flag(:trap_exit, true)
-    # Process.exit(pipeline, :shutdown)
-    # IO.inspect(Process.alive?(pipeline))
-
-    # receive do
-    #   {:EXIT, _pid, reason} -> IO.inspect(reason)
-    # end
   end
 end

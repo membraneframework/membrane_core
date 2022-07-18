@@ -159,7 +159,7 @@ defmodule Membrane.Testing.Pipeline do
           default_pipeline_keyword_list_t() | custom_pipeline_keyword_list_t()
 
   def child_spec(options) do
-    super(options) |> Map.put(:restart, :transient)
+    super(options) |> Map.merge(%{restart: :transient, id: make_ref()})
   end
 
   @spec start_link(Options.t() | pipeline_keyword_list_t(), GenServer.options()) ::
@@ -197,7 +197,7 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   if Mix.env() == :test do
-    def start_link_supervised(pipeline_options) do
+    def start_link_supervised(pipeline_options \\ []) do
       pipeline_options = Keyword.put_new(pipeline_options, :test_process, self())
 
       with {:ok, supervisor, pipeline} <-
@@ -209,17 +209,17 @@ defmodule Membrane.Testing.Pipeline do
       end
     end
 
-    def start_link_supervised!(pipeline_options) do
+    def start_link_supervised!(pipeline_options \\ []) do
       {:ok, _supervisor, pipeline} = start_link_supervised(pipeline_options)
       pipeline
     end
 
-    def start_supervised(pipeline_options) do
+    def start_supervised(pipeline_options \\ []) do
       pipeline_options = Keyword.put_new(pipeline_options, :test_process, self())
       ExUnit.Callbacks.start_supervised({__MODULE__, pipeline_options})
     end
 
-    def start_supervised!(pipeline_options) do
+    def start_supervised!(pipeline_options \\ []) do
       {:ok, _supervisor, pipeline} = start_supervised(pipeline_options)
       pipeline
     end

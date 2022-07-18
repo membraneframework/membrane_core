@@ -30,8 +30,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     links: #{inspect(spec.links)}
     """)
 
-    # FIXME ignore spec when terminating
-
     {links, children_spec_from_links} = LinkParser.parse(spec.links)
     children_spec = Enum.concat(spec.children, children_spec_from_links)
     children = ChildEntryParser.parse(children_spec)
@@ -118,7 +116,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp do_proceed_spec_startup(spec_ref, %{status: :initializing} = spec_data, state) do
-    Membrane.Logger.debug("Proceeding spec #{inspect(spec_ref)} startup: initializing")
+    Membrane.Logger.debug(
+      "Proceeding spec #{inspect(spec_ref)} startup: initializing, dependent specs: #{inspect(spec_data.dependent_specs)}"
+    )
 
     %{children: children} = state
 

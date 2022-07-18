@@ -164,12 +164,22 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
           fn -> Core.Bin.start_link(params) end
       end
 
-    with {:ok, child_pid} <- ChildrenSupervisor.start_child(supervisor, name, start_fun) do
-      clock = Message.call!(child_pid, :get_clock)
+    with {:ok, child_pid} <- ChildrenSupervisor.start_child(supervisor, name, start_fun),
+         {:ok, clock} <- receive_clock(name) do
       %ChildEntry{child | pid: child_pid, clock: clock, sync: sync}
     else
       {:error, reason} ->
+        # ignore clock if element couldn't be started
+        receive_clock(name)
         raise ParentError, "Error starting child #{inspect(name)}, reason: #{inspect(reason)}"
+    end
+  end
+
+  defp receive_clock(child_name) do
+    receive do
+      Message.new(:clock, [^child_name, clock]) -> {:ok, clock}
+    after
+      0 -> {:error, :did_not_receive_clock}
     end
   end
 end

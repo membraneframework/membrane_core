@@ -47,22 +47,22 @@ defmodule Membrane.Core.Parent.Supervisor do
   end
 
   @impl true
-  def handle_info({:EXIT, pid, reason}, %{parent: {:alive, pid}} = state) do
+  def handle_info({:EXIT, pid, _reason}, %{parent: {:alive, pid}} = state) do
     Membrane.Logger.debug("Parent supervisor: parent exited, stopping children supervisor")
     Process.exit(state.children_supervisor, :shutdown)
-    {:noreply, %{state | parent: {:exited, reason}}}
+    {:noreply, %{state | parent: :exited}}
   end
 
   @impl true
   def handle_info(
         {:EXIT, pid, reason},
-        %{children_supervisor: pid, parent: {:exited, parent_exit_reason}} = state
+        %{children_supervisor: pid, parent: :exited} = state
       ) do
     Membrane.Logger.debug(
       "Parent supervisor: children supervisor exited, reason: #{inspect(reason)}. Exiting."
     )
 
-    {:stop, parent_exit_reason, state}
+    {:stop, :shutdown, state}
   end
 
   @impl true

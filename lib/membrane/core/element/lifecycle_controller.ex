@@ -28,13 +28,16 @@ defmodule Membrane.Core.Element.LifecycleController do
 
     :ok = Sync.register(state.synchronization.stream_sync)
 
-    state =
+    clock =
       if Bunch.Module.check_behaviour(module, :membrane_clock?) do
         {:ok, clock} = Clock.start_link()
-        put_in(state.synchronization.clock, clock)
+        clock
       else
-        state
+        nil
       end
+
+    state = put_in(state.synchronization.clock, clock)
+    Message.send(state.parent_pid, :clock, [state.name, clock])
 
     state =
       CallbackHandler.exec_and_handle_callback(
@@ -45,7 +48,6 @@ defmodule Membrane.Core.Element.LifecycleController do
         state
       )
 
-    Membrane.Logger.debug("Element initialized: #{inspect(module)}")
     state
   end
 
@@ -63,6 +65,8 @@ defmodule Membrane.Core.Element.LifecycleController do
       )
 
     state = put_in(state, [:playback, :state], :prepared)
+
+    Membrane.Logger.debug("Element initialized")
     Message.send(state.parent_pid, :initialized, state.name)
     %State{state | status: :ready}
   end

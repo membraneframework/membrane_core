@@ -99,6 +99,7 @@ defmodule Membrane.Core.Bin do
 
     clock_proxy = Membrane.Clock.start_link(proxy: true) ~> ({:ok, pid} -> pid)
     clock = if Bunch.Module.check_behaviour(module, :membrane_clock?), do: clock_proxy, else: nil
+    Message.send(options.parent, :clock, [name, clock])
 
     state =
       %State{

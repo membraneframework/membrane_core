@@ -45,12 +45,12 @@ defmodule Membrane.Core.Parent.ChildrenSupervisor do
 
   @impl true
   def handle_info(
-        {:EXIT, pid, reason},
+        {:EXIT, pid, _reason},
         %{parent_supervisor: {:alive, pid}, children: children} = state
       )
       when children == %{} do
-    Membrane.Logger.debug("Children supervisor: exiting, reason: #{inspect(reason)}")
-    {:stop, reason, state}
+    Membrane.Logger.debug("Children supervisor: exiting")
+    {:stop, :shutdown, state}
   end
 
   @impl true
@@ -60,22 +60,19 @@ defmodule Membrane.Core.Parent.ChildrenSupervisor do
     )
 
     state.children |> Map.keys() |> Enum.each(&Process.exit(&1, {:shutdown, :parent_crash}))
-    {:noreply, %{state | parent_supervisor: {:exit_requested, reason}}}
+    {:noreply, %{state | parent_supervisor: :exit_requested}}
   end
 
   @impl true
   def handle_info(
         {:EXIT, pid, _reason},
-        %{parent_supervisor: {:exit_requested, parent_exit_reason}} = state
+        %{parent_supervisor: :exit_requested} = state
       ) do
     {_name, state} = pop_in(state, [:children, pid])
 
     if state.children == %{} do
-      Membrane.Logger.debug(
-        "Children supervisor: exiting, reason: #{inspect(parent_exit_reason)}"
-      )
-
-      {:stop, parent_exit_reason, state}
+      Membrane.Logger.debug("Children supervisor: exiting")
+      {:stop, :shutdown, state}
     else
       {:noreply, state}
     end

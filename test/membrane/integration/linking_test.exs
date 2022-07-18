@@ -4,7 +4,9 @@ defmodule Membrane.Integration.LinkingTest do
   import Membrane.Testing.Assertions
   import Membrane.ParentSpec
 
-  alias Membrane.{Buffer, Testing}
+  alias Membrane.{Buffer, ParentSpec, Testing}
+
+  require Membrane.Pad, as: Pad
 
   defmodule Bin do
     use Membrane.Bin
@@ -271,6 +273,72 @@ defmodule Membrane.Integration.LinkingTest do
     assert_receive(:spec_started)
     Testing.Pipeline.execute_actions(pipeline, playback: :playing)
     assert_pipeline_playback_changed(pipeline, _, :playing)
+  end
+
+  defmodule SlowSetupSink do
+    use Membrane.Sink
+
+    def_input_pad :input, caps: :any, demand_mode: :auto
+
+    def_options setup_delay: [spec: non_neg_integer()]
+
+    @impl true
+    def handle_stopped_to_prepared(_ctx, state) do
+      Process.sleep(state.setup_delay)
+      {:ok, state}
+    end
+  end
+
+  @doc """
+  In this scenario, the first spec has a delay in initialization, so it should be linked
+  after the second spec (the one with `independent_*` children). The last spec has a link to
+  the `filter`, which is spawned in the first spec, so it has to wait till the first spec is linked.
+  """
+  test "Children are linked in proper order" do
+    pipeline = Testing.Pipeline.start_link_supervised!()
+
+    Testing.Pipeline.execute_actions(pipeline,
+      spec: %ParentSpec{
+        links: [
+          link(:src1, %Testing.Source{output: []})
+          |> via_in(Pad.ref(:input, 1))
+          |> to(:filter, Testing.DynamicFilter)
+          |> via_out(Pad.ref(:output, 1))
+          |> to(:sink1, %SlowSetupSink{setup_delay: 300})
+        ]
+      },
+      spec: %ParentSpec{
+        links: [
+          link(:independent_src, %Testing.Source{output: []})
+          |> to(:independent_filter, Testing.DynamicFilter)
+          |> to(:independent_sink, Testing.Sink)
+        ]
+      },
+      spec: %ParentSpec{
+        links: [
+          link(:src2, %Testing.Source{output: []})
+          |> via_in(Pad.ref(:input, 2))
+          |> to(:filter)
+          |> via_out(Pad.ref(:output, 2))
+          |> to(:sink2, Testing.Sink)
+        ]
+      }
+    )
+
+    assert [
+             independent_filter: Pad.ref(:input, _input_id),
+             independent_filter: Pad.ref(:output, _output_id),
+             filter: Pad.ref(:input, 1),
+             filter: Pad.ref(:output, 1),
+             filter: Pad.ref(:input, 2),
+             filter: Pad.ref(:output, 2)
+           ] =
+             Enum.map(1..6, fn _i ->
+               assert_receive {Testing.Pipeline, ^pipeline,
+                               {:handle_child_notification, {{:pad_added, pad}, element}}}
+
+               {element, pad}
+             end)
   end
 
   defp get_child_pid(ref, parent_pid) do
