@@ -109,7 +109,7 @@ defmodule Membrane.Core.BinTest do
 
       pipeline = Testing.Pipeline.start_link_supervised!(children: children)
 
-      assert_playing(pipeline)
+      assert_pipeline_play(pipeline)
 
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_start_of_stream, :sink, _})
 
@@ -132,7 +132,7 @@ defmodule Membrane.Core.BinTest do
       pipeline =
         Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
 
-      assert_playing(pipeline)
+      assert_pipeline_play(pipeline)
 
       assert_pipeline_notified(
         pipeline,
@@ -150,20 +150,7 @@ defmodule Membrane.Core.BinTest do
   end
 
   describe "Handling DOWN messages" do
-    test "should shutdown when parent is down" do
-      pipeline_mock = spawn(fn -> receive do: (:exit -> :ok) end)
-
-      {:ok, _supervisor, bin_pid} =
-        pipeline_mock
-        |> bin_init_options()
-        |> Bin.start()
-
-      ref = Process.monitor(bin_pid)
-      send(pipeline_mock, :exit)
-      assert_receive {:DOWN, ^ref, :process, ^bin_pid, {:shutdown, :parent_crash}}
-    end
-
-    test "DOWN message should be delivered to handle_info if it's not coming from parent" do
+    test "DOWN message should be delivered to handle_info" do
       {:ok, _supervisor, bin_pid} =
         self()
         |> bin_init_options()
@@ -185,7 +172,6 @@ defmodule Membrane.Core.BinTest do
   end
 
   describe "Dynamic pads" do
-    @tag :target
     test "handle_pad_added is called for dynamic pads" do
       alias Membrane.Pad
       require Pad
@@ -302,7 +288,7 @@ defmodule Membrane.Core.BinTest do
   end
 
   defp assert_data_flows_through(pipeline, buffers, receiving_element \\ :sink) do
-    assert_playing(pipeline)
+    assert_pipeline_play(pipeline)
 
     assert_start_of_stream(pipeline, ^receiving_element)
 
@@ -316,11 +302,6 @@ defmodule Membrane.Core.BinTest do
     |> Enum.each(fn b ->
       assert_sink_buffer(pipeline, receiving_element, %Membrane.Buffer{payload: ^b})
     end)
-  end
-
-  defp assert_playing(pipeline) do
-    assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
   end
 
   defp bin_init_options(pipeline) do

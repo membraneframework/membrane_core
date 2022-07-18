@@ -29,7 +29,7 @@ defmodule Membrane.Core.Element.EventController do
   @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.t()
   def handle_event(pad_ref, event, state) do
     withl pad: {:ok, data} = PadModel.get_data(state, pad_ref),
-          status: %State{status: status} when status != :ready <- state do
+          status: %State{status: :playing} <- state do
       Telemetry.report_metric(:event, 1, inspect(pad_ref))
 
       if not Event.async?(event) and buffers_before_event_present?(data) do
@@ -107,7 +107,9 @@ defmodule Membrane.Core.Element.EventController do
        |> Map.values()
        |> Enum.filter(&(&1.direction == :input))
        |> Enum.all?(& &1.start_of_stream?) do
+      Membrane.Logger.debug("Syncing")
       :ok = Sync.sync(state.synchronization.stream_sync)
+      Membrane.Logger.debug("Synced")
     end
 
     :ok
@@ -120,6 +122,7 @@ defmodule Membrane.Core.Element.EventController do
   @spec handle_special_event(Pad.ref_t(), Event.t(), State.t()) ::
           {:handle | :ignore, State.t()}
   defp handle_special_event(pad_ref, %Events.StartOfStream{}, state) do
+    Membrane.Logger.debug("received start of stream")
     state = PadModel.set_data!(state, pad_ref, :start_of_stream?, true)
     {:handle, state}
   end

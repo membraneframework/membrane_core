@@ -80,7 +80,7 @@ defmodule Membrane.FilterAggregator do
   end
 
   @impl true
-  def handle_stopped_to_prepared(agg_ctx, %{states: states}) do
+  def handle_setup(agg_ctx, %{states: states}) do
     contexts = states |> Enum.map(&elem(&1, 2))
     prev_contexts = contexts |> List.insert_at(-1, agg_ctx)
     next_contexts = [agg_ctx | contexts]
@@ -98,22 +98,8 @@ defmodule Membrane.FilterAggregator do
   end
 
   @impl true
-  def handle_prepared_to_playing(_ctx, %{states: states}) do
+  def handle_play(_ctx, %{states: states}) do
     {actions, states} = pipe_downstream([InternalAction.prepared_to_playing()], states)
-    actions = reject_internal_actions(actions)
-    {{:ok, actions}, %{states: states}}
-  end
-
-  @impl true
-  def handle_playing_to_prepared(_ctx, %{states: states}) do
-    {actions, states} = pipe_downstream([InternalAction.playing_to_prepared()], states)
-    actions = reject_internal_actions(actions)
-    {{:ok, actions}, %{states: states}}
-  end
-
-  @impl true
-  def handle_prepared_to_stopped(_ctx, %{states: states}) do
-    {actions, states} = pipe_downstream([InternalAction.prepared_to_stopped()], states)
     actions = reject_internal_actions(actions)
     {{:ok, actions}, %{states: states}}
   end
@@ -312,10 +298,8 @@ defmodule Membrane.FilterAggregator do
   defp perform_playback_change(pseudo_action, module, context, state) do
     callback =
       case pseudo_action do
-        InternalAction.stopped_to_prepared() -> :handle_stopped_to_prepared
-        InternalAction.prepared_to_playing() -> :handle_prepared_to_playing
-        InternalAction.playing_to_prepared() -> :handle_playing_to_prepared
-        InternalAction.prepared_to_stopped() -> :handle_prepared_to_stopped
+        InternalAction.stopped_to_prepared() -> :handle_setup
+        InternalAction.prepared_to_playing() -> :handle_play
       end
 
     cb_context = struct!(CallbackContext.PlaybackChange, context)

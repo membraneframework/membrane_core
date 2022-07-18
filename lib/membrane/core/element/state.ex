@@ -8,9 +8,8 @@ defmodule Membrane.Core.Element.State do
   use Bunch.Access
 
   alias Membrane.{Clock, Element, Pad, Sync}
-  alias Membrane.Core.{Playback, Timer}
+  alias Membrane.Core.Timer
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
-  alias Membrane.Core.Element.PlaybackBuffer
 
   require Membrane.Pad
 
@@ -22,8 +21,6 @@ defmodule Membrane.Core.Element.State do
           pads_info: PadModel.pads_info_t() | nil,
           pads_data: PadModel.pads_data_t() | nil,
           parent_pid: pid,
-          playback: Playback.t(),
-          playback_buffer: PlaybackBuffer.t(),
           supplying_demand?: boolean(),
           delayed_demands: MapSet.t({Pad.ref_t(), :supply | :redemand}),
           synchronization: %{
@@ -43,14 +40,12 @@ defmodule Membrane.Core.Element.State do
     :pads_info,
     :pads_data,
     :parent_pid,
-    :playback,
-    :playback_buffer,
     :supplying_demand?,
     :delayed_demands,
     :synchronization,
     :demand_size,
     :status,
-    :status_buffer
+    :status_queue
   ]
 
   @doc """
@@ -70,8 +65,6 @@ defmodule Membrane.Core.Element.State do
       name: options.name,
       internal_state: nil,
       parent_pid: options.parent,
-      playback: %Playback{},
-      playback_buffer: PlaybackBuffer.new(),
       supplying_demand?: false,
       delayed_demands: MapSet.new(),
       synchronization: %{
@@ -82,7 +75,7 @@ defmodule Membrane.Core.Element.State do
         latency: 0
       },
       status: :initializing,
-      status_buffer: []
+      status_queue: []
     }
     |> PadSpecHandler.init_pads()
   end

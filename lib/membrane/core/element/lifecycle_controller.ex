@@ -14,7 +14,6 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
-  require Membrane.Core.Playback
   require Membrane.Logger
 
   @doc """
@@ -57,14 +56,12 @@ defmodule Membrane.Core.Element.LifecycleController do
 
     state =
       CallbackHandler.exec_and_handle_callback(
-        :handle_stopped_to_prepared,
+        :handle_setup,
         ActionHandler,
         %{context: context},
         [],
         state
       )
-
-    state = put_in(state, [:playback, :state], :prepared)
 
     Membrane.Logger.debug("Element initialized")
     Message.send(state.parent_pid, :initialized, state.name)
@@ -73,24 +70,27 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   def handle_play(state) do
     Child.PadController.assert_all_static_pads_linked!(state)
+
+    Membrane.Logger.debug("Got play request")
+    state = %State{state | status: :playing}
     require CallbackContext.PlaybackChange
     context = &CallbackContext.PlaybackChange.from_state/1
 
     state =
       CallbackHandler.exec_and_handle_callback(
-        :handle_prepared_to_playing,
+        :handle_play,
         ActionHandler,
         %{context: context},
         [],
         state
       )
 
-    state = put_in(state, [:playback, :state], :playing)
-    state = %State{state | status: :playing}
     StatusQueue.eval(state)
   end
 
   def handle_terminate_request(state) do
+    Membrane.Logger.debug("Received terminate request")
+
     state.pads_data
     |> Map.values()
     |> Enum.filter(&(&1.direction == :input))
@@ -102,11 +102,11 @@ defmodule Membrane.Core.Element.LifecycleController do
   @spec handle_terminate(reason :: any, State.t()) :: :ok
   def handle_terminate(reason, state) do
     Membrane.Logger.debug("Terminating element, reason: #{inspect(reason)}")
-    result = state.module.handle_shutdown(reason, state.internal_state)
+    result = state.module.handle_terminate_yolo(reason, state.internal_state)
 
     if result != :ok do
       Membrane.Logger.warn(
-        "`#{inspect(state.module)}.handle_shutdown` callback returned value other than `:ok`"
+        "`#{inspect(state.module)}.handle_terminate_yolo` callback returned value other than `:ok`"
       )
     end
 

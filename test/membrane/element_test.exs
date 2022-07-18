@@ -71,13 +71,13 @@ defmodule Membrane.ElementTest do
 
   describe "Start of stream" do
     test "causes handle_start_of_stream/3 to be called", %{pipeline: pipeline} do
-      assert_pipeline_playback_changed(pipeline, _from, :playing)
+      assert_pipeline_play(pipeline)
 
       TestFilter.assert_callback_called(:handle_start_of_stream)
     end
 
     test "does not trigger calling callback handle_event/3", %{pipeline: pipeline} do
-      assert_pipeline_playback_changed(pipeline, _from, :playing)
+      assert_pipeline_play(pipeline)
 
       TestFilter.refute_callback_called(:handle_event)
     end
@@ -89,13 +89,13 @@ defmodule Membrane.ElementTest do
 
   describe "End of stream" do
     test "causes handle_end_of_stream/3 to be called", %{pipeline: pipeline} do
-      assert_pipeline_playback_changed(pipeline, _from, :playing)
+      assert_pipeline_play(pipeline)
 
       TestFilter.assert_callback_called(:handle_end_of_stream)
     end
 
     test "does not trigger calling callback handle_event/3", %{pipeline: pipeline} do
-      assert_pipeline_playback_changed(pipeline, _from, :playing)
+      assert_pipeline_play(pipeline)
 
       TestFilter.refute_callback_called(:handle_event)
     end

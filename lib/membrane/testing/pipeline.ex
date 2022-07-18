@@ -373,57 +373,29 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_stopped_to_prepared(ctx, %State{} = state) do
+  def handle_setup(ctx, %State{} = state) do
     {custom_actions, custom_state} =
       eval_injected_module_callback(
-        :handle_stopped_to_prepared,
+        :handle_setup,
         [ctx],
         state
       )
 
-    :ok = notify_playback_state_changed(state.test_process, :stopped, :prepared)
+    :ok = notify_test_process(state.test_process, :setup)
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
   @impl true
-  def handle_prepared_to_playing(ctx, %State{} = state) do
+  def handle_play(ctx, %State{} = state) do
     {custom_actions, custom_state} =
       eval_injected_module_callback(
-        :handle_prepared_to_playing,
+        :handle_play,
         [ctx],
         state
       )
 
-    :ok = notify_playback_state_changed(state.test_process, :prepared, :playing)
-
-    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
-  end
-
-  @impl true
-  def handle_playing_to_prepared(ctx, %State{} = state) do
-    {custom_actions, custom_state} =
-      eval_injected_module_callback(
-        :handle_playing_to_prepared,
-        [ctx],
-        state
-      )
-
-    :ok = notify_playback_state_changed(state.test_process, :playing, :prepared)
-
-    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
-  end
-
-  @impl true
-  def handle_prepared_to_stopped(ctx, %State{} = state) do
-    {custom_actions, custom_state} =
-      eval_injected_module_callback(
-        :handle_prepared_to_stopped,
-        [ctx],
-        state
-      )
-
-    :ok = notify_playback_state_changed(state.test_process, :prepared, :stopped)
+    :ok = notify_test_process(state.test_process, :play)
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
@@ -582,10 +554,6 @@ defmodule Membrane.Testing.Pipeline do
 
   defp eval_injected_module_callback(callback, args, state) do
     apply(state.module, callback, args ++ [state.custom_pipeline_state]) |> unify_result()
-  end
-
-  defp notify_playback_state_changed(test_process, previous, current) do
-    notify_test_process(test_process, {:playback_state_changed, previous, current})
   end
 
   defp notify_test_process(test_process, message) do

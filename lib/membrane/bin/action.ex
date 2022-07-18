@@ -5,7 +5,7 @@ defmodule Membrane.Bin.Action do
 
   Returning actions is a way of bin interaction with
   other components and parts of framework. Each action may be returned by any
-  callback (except for `c:Membrane.Bin.handle_shutdown/2`, as it
+  callback (except for `c:Membrane.Bin.handle_terminate_yolo/2`, as it
   does not support returning any actions) unless explicitly stated otherwise.
   """
 

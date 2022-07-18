@@ -11,7 +11,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
   require Membrane.Core.Component
   require Membrane.Core.Message
   require Membrane.Logger
-  require Membrane.PlaybackState
 
   def handle_setup(state) do
     Membrane.Logger.debug("Setup")
@@ -19,14 +18,13 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
     state =
       CallbackHandler.exec_and_handle_callback(
-        :handle_stopped_to_prepared,
+        :handle_setup,
         Component.action_handler(state),
         %{context: context},
         [],
         state
       )
 
-    state = put_in(state, [:playback, :state], :prepared)
     state = %{state | status: :initialized}
 
     case state do
@@ -55,19 +53,16 @@ defmodule Membrane.Core.Parent.LifecycleController do
       if status == :ready, do: Message.send(pid, :play)
     end)
 
+    state = %{state | status: :playing}
     context = Component.callback_context_generator(:parent, PlaybackChange, state)
 
-    state =
-      CallbackHandler.exec_and_handle_callback(
-        :handle_prepared_to_playing,
-        Component.action_handler(state),
-        %{context: context},
-        [],
-        state
-      )
-
-    state = put_in(state, [:playback, :state], :playing)
-    %{state | status: :playing}
+    CallbackHandler.exec_and_handle_callback(
+      :handle_play,
+      Component.action_handler(state),
+      %{context: context},
+      [],
+      state
+    )
   end
 
   def handle_terminate_request(state) do
@@ -88,11 +83,11 @@ defmodule Membrane.Core.Parent.LifecycleController do
   end
 
   def handle_terminate(reason, state) do
-    result = state.module.handle_shutdown(reason, state.internal_state)
+    result = state.module.handle_terminate_yolo(reason, state.internal_state)
 
     if result != :ok do
       Membrane.Logger.warn(
-        "`#{inspect(state.module)}.handle_shutdown` callback returned value other than `:ok`"
+        "`#{inspect(state.module)}.handle_terminate_yolo` callback returned value other than `:ok`"
       )
     end
 

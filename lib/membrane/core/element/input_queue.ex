@@ -209,7 +209,7 @@ defmodule Membrane.Core.Element.InputQueue do
     to_demand = max(demand, min_demand)
 
     """
-    Sending demand of size #{inspect(to_demand)} to input #{inspect(linked_output_ref)}
+    Sending demand of size #{inspect(to_demand)} to output #{inspect(linked_output_ref)}
     """
     |> mk_log(input_queue)
     |> Membrane.Logger.debug_verbose()

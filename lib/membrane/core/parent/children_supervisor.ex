@@ -50,7 +50,7 @@ defmodule Membrane.Core.Parent.ChildrenSupervisor do
       )
       when children == %{} do
     Membrane.Logger.debug("Children supervisor: exiting")
-    {:stop, :shutdown, state}
+    {:stop, :normal, state}
   end
 
   @impl true
@@ -72,7 +72,7 @@ defmodule Membrane.Core.Parent.ChildrenSupervisor do
 
     if state.children == %{} do
       Membrane.Logger.debug("Children supervisor: exiting")
-      {:stop, :shutdown, state}
+      {:stop, :normal, state}
     else
       {:noreply, state}
     end

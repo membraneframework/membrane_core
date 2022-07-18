@@ -31,9 +31,15 @@ defmodule Membrane.Core.PipelineTest do
   end
 
   defp state(_ctx) do
-    children_supervisor = Membrane.Core.Parent.ChildrenSupervisor.start_link()
+    {:ok, children_supervisor} = Membrane.Core.Parent.ChildrenSupervisor.start_link()
 
     [
+      init_opts: %{
+        module: TestPipeline,
+        children_supervisor: children_supervisor,
+        setup_logger: fn _pid -> [] end,
+        options: nil
+      },
       state: %State{
         module: TestPipeline,
         internal_state: %{},
@@ -46,20 +52,16 @@ defmodule Membrane.Core.PipelineTest do
   setup_all :state
 
   describe "Handle init" do
-    test "should raise an error if handle_init returns an error" do
+    test "should raise an error if handle_init returns an error", %{init_opts: init_opts} do
       assert_raise Membrane.CallbackError, fn ->
-        @module.init({TestPipeline, {:error, :reason}})
+        @module.init(%{init_opts | options: {:error, :reason}})
       end
     end
 
     test "executes successfully when callback module's handle_init returns {{:ok, spec: spec}}, state} ",
-         %{state: state} do
+         %{init_opts: init_opts} do
       assert {:ok, state, {:continue, :init}} =
-               @module.init(%{
-                 module: TestPipeline,
-                 children_supervisor: state.children_supervisor,
-                 options: {{:ok, spec: %Membrane.ParentSpec{}}, %{}}
-               })
+               @module.init(%{init_opts | options: {{:ok, spec: %Membrane.ParentSpec{}}, %{}}})
 
       assert %State{internal_state: %{}, module: TestPipeline} = state
     end
@@ -117,9 +119,7 @@ defmodule Membrane.Core.PipelineTest do
 
   test "Pipeline should be able to steer its playback state with :playback action" do
     pid = Testing.Pipeline.start_link_supervised!(module: TestPipeline)
-    Testing.Pipeline.execute_actions(pid, playback: :prepared)
-    assert_pipeline_playback_changed(pid, :stopped, :prepared)
     Testing.Pipeline.execute_actions(pid, playback: :playing)
-    assert_pipeline_playback_changed(pid, :prepared, :playing)
+    assert_pipeline_play(pid)
   end
 end

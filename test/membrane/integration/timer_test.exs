@@ -7,7 +7,7 @@ defmodule Membrane.Integration.TimerTest do
     use Membrane.Source
 
     @impl true
-    def handle_prepared_to_playing(_ctx, state) do
+    def handle_play(_ctx, state) do
       {{:ok, start_timer: {:timer, Time.milliseconds(100)}}, state}
     end
 
@@ -21,7 +21,7 @@ defmodule Membrane.Integration.TimerTest do
     use Membrane.Bin
 
     @impl true
-    def handle_prepared_to_playing(_ctx, state) do
+    def handle_play(_ctx, state) do
       {{:ok, start_timer: {:timer, Time.milliseconds(100)}}, state}
     end
 
@@ -44,7 +44,7 @@ defmodule Membrane.Integration.TimerTest do
     end
 
     @impl true
-    def handle_prepared_to_playing(_ctx, state) do
+    def handle_play(_ctx, state) do
       {{:ok, start_timer: {:timer, Time.milliseconds(100)}}, state}
     end
 
@@ -62,11 +62,10 @@ defmodule Membrane.Integration.TimerTest do
         custom_args: self()
       )
 
-    assert_pipeline_playback_changed(pipeline, _, :playing)
+    assert_pipeline_play(pipeline)
     assert_pipeline_notified(pipeline, :element, :tick)
     assert_pipeline_notified(pipeline, :bin, :tick)
     assert_receive :pipeline_tick
-    Testing.Pipeline.execute_actions(pipeline, playback: :stopped)
-    assert_pipeline_playback_changed(pipeline, _, :stopped)
+    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 end

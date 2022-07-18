@@ -12,8 +12,7 @@ defmodule Membrane.Testing.SourceTest do
   end
 
   test "Source sends caps on play" do
-    assert {{:ok, caps: {:output, :caps}}, _state} =
-             Source.handle_prepared_to_playing(nil, %{caps: :caps})
+    assert {{:ok, caps: {:output, :caps}}, _state} = Source.handle_play(nil, %{caps: :caps})
   end
 
   describe "Source when handling demand" do

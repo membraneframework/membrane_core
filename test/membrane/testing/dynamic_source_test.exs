@@ -17,7 +17,7 @@ defmodule Membrane.Testing.DynamicSourceTest do
 
   test "Source sends caps on play" do
     assert {{:ok, caps: {:output, :caps}}, _state} =
-             Testing.DynamicSource.handle_prepared_to_playing(%{pads: %{:output => %{}}}, %{
+             Testing.DynamicSource.handle_play(%{pads: %{:output => %{}}}, %{
                caps: :caps
              })
   end
@@ -36,7 +36,7 @@ defmodule Membrane.Testing.DynamicSourceTest do
         ]
       )
 
-    assert_pipeline_playback_changed(pipeline, _from, :playing)
+    assert_pipeline_play(pipeline)
     assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: 'a'})
     assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: 'b'})
     assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: 'c'})
@@ -59,7 +59,7 @@ defmodule Membrane.Testing.DynamicSourceTest do
         ]
       )
 
-    assert_pipeline_playback_changed(pipeline, _from, :playing)
+    assert_pipeline_play(pipeline)
     assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: <<0::16>>})
     assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: <<1::16>>})
     assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: <<2::16>>})

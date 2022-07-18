@@ -157,7 +157,7 @@ defmodule Membrane.Integration.LinkingTest do
       source_ref = Process.monitor(source_pid)
       Testing.Pipeline.execute_actions(pipeline, playback: :playing)
 
-      assert_pipeline_playback_changed(pipeline, _, :playing)
+      assert_pipeline_play(pipeline)
       Process.exit(sink_pid, :kill)
       assert_pipeline_crash_group_down(pipeline, :group_2)
 
@@ -272,7 +272,7 @@ defmodule Membrane.Integration.LinkingTest do
     send(pipeline, {:start_spec, %{spec: links_spec}})
     assert_receive(:spec_started)
     Testing.Pipeline.execute_actions(pipeline, playback: :playing)
-    assert_pipeline_playback_changed(pipeline, _, :playing)
+    assert_pipeline_play(pipeline)
   end
 
   defmodule SlowSetupSink do
@@ -283,7 +283,7 @@ defmodule Membrane.Integration.LinkingTest do
     def_options setup_delay: [spec: non_neg_integer()]
 
     @impl true
-    def handle_stopped_to_prepared(_ctx, state) do
+    def handle_setup(_ctx, state) do
       Process.sleep(state.setup_delay)
       {:ok, state}
     end

@@ -76,7 +76,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
           ]
         )
 
-      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+      assert_pipeline_play(pipeline)
 
       Enum.each(out_payloads, fn payload ->
         assert_sink_buffer(pipeline, :sink, buffer)
@@ -100,7 +100,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
         ]
       )
 
-    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+    assert_pipeline_play(pipeline)
     Pipeline.message_child(pipeline, :right_sink, {:make_demand, 1000})
 
     Enum.each(1..1000, fn payload ->
@@ -125,7 +125,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
         ]
       )
 
-    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+    assert_pipeline_play(pipeline)
     Process.sleep(500)
     Pipeline.execute_actions(pipeline, remove_child: :right_sink)
 
@@ -146,7 +146,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     end
 
     @impl true
-    def handle_prepared_to_playing(_ctx, state) do
+    def handle_play(_ctx, state) do
       {{:ok, [caps: {:output, :any}]}, state}
     end
   end
@@ -163,7 +163,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
         ]
       )
 
-    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+    assert_pipeline_play(pipeline)
     buffers = Enum.map(1..10, &%Membrane.Buffer{payload: &1})
     Pipeline.message_child(pipeline, :source, buffer: {:output, buffers})
 
@@ -194,7 +194,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
       )
 
     Process.monitor(pipeline)
-    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+    assert_pipeline_play(pipeline)
     buffers = Enum.map(1..100_000, &%Membrane.Buffer{payload: &1})
     Pipeline.message_child(pipeline, :source, buffer: {:output, buffers})
     assert_receive({:DOWN, _ref, :process, ^pipeline, {:shutdown, :child_crash}})

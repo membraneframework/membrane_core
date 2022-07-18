@@ -17,7 +17,7 @@ defmodule Membrane.Integration.DemandsTest do
 
   defp test_pipeline(pid) do
     pattern_gen = fn i -> %Buffer{payload: <<i::16>> <> <<255>>} end
-    assert_pipeline_playback_changed(pid, :prepared, :playing)
+    assert_pipeline_play(pid)
 
     demand = 500
     Pipeline.message_child(pid, :sink, {:make_demand, demand})

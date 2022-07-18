@@ -2,7 +2,6 @@ defmodule Membrane.Core.Bin.CallbackContext do
   @moduledoc false
 
   use Membrane.Core.CallbackContext,
-    playback_state: Membrane.PlaybackState.t(),
     clock: Membrane.Clock.t(),
     parent_clock: Membrane.Clock.t(),
     pads: %{Membrane.Pad.ref_t() => Membrane.Bin.PadData.t()},
@@ -13,7 +12,6 @@ defmodule Membrane.Core.Bin.CallbackContext do
   def extract_default_fields(state, args) do
     quote do
       [
-        playback_state: unquote(state).playback.state,
         clock: unquote(state).synchronization.clock,
         parent_clock: unquote(state).synchronization.parent_clock,
         pads: unquote(state).pads_data,

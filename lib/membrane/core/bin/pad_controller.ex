@@ -212,10 +212,28 @@ defmodule Membrane.Core.Bin.PadController do
   """
   @spec handle_unlink(Pad.ref_t(), Core.Bin.State.t()) :: Core.Bin.State.t()
   def handle_unlink(pad_ref, state) do
-    state = maybe_handle_pad_removed(pad_ref, state)
-    endpoint = PadModel.get_data!(state, pad_ref, :endpoint)
-    Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
-    PadModel.delete_data!(state, pad_ref)
+    with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
+      state = maybe_handle_pad_removed(pad_ref, state)
+      endpoint = PadModel.get_data!(state, pad_ref, :endpoint)
+      Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+      PadModel.delete_data!(state, pad_ref)
+    else
+      {:ok, %{availability: :always}} when state.terminating? ->
+        Membrane.Logger.debug(
+          "Ignoring unlinking a static pad #{inspect(pad_ref)} because of terminating"
+        )
+
+      {:ok, %{availability: :always}} ->
+        raise Membrane.PadError,
+              "Tried to unlink a static pad #{inspect(pad_ref)}. Static pads cannot be unlinked unless element is terminating"
+
+      {:error, :unknown_pad} ->
+        Membrane.Logger.debug(
+          "Ignoring unlinking pad #{inspect(pad_ref)} that didn't succeed to be linked"
+        )
+
+        state
+    end
   end
 
   @spec maybe_handle_pad_added(Pad.ref_t(), Core.Bin.State.t()) :: Core.Bin.State.t()

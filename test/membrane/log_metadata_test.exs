@@ -16,17 +16,13 @@ defmodule Membrane.LogMetadataTest do
                custom_args: %{elements: [element_1: metadata_1, element_2: metadata_2]}
              )
 
-    assert :sys.get_state(pipeline_pid).playback.state == :stopped
-
     assert_pipeline_notified(pipeline_pid, :element_1,
       mb_prefix: _mb_prefix,
-      parent_path: _parent_path,
       test: ^metadata_1
     )
 
     assert_pipeline_notified(pipeline_pid, :element_2,
       mb_prefix: _mb_prefix,
-      parent_path: _parent_path,
       test: ^metadata_2
     )
   end

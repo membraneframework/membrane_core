@@ -16,13 +16,13 @@ defmodule Membrane.RemoteControlled.Message do
           | __MODULE__.Notification.t()
           | __MODULE__.Terminated.t()
 
-  defmodule PlaybackState do
+  defmodule Play do
     @moduledoc """
-    Message sent when the pipeline changes its playback state
+    Message sent when the pipeline starts playing
     """
-    @type t :: %__MODULE__{from: pid(), state: Membrane.PlaybackState.t()}
+    @type t :: %__MODULE__{from: pid()}
 
-    @enforce_keys [:from, :state]
+    @enforce_keys [:from]
     defstruct @enforce_keys
   end
 

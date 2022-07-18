@@ -23,41 +23,40 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
         min_demand_factor: nil
       })
 
-    state =
-      %{
-        State.new(%{
-          module: DummyElement,
-          name: :test_name,
-          parent_clock: nil,
-          sync: nil,
-          parent: self()
-        })
-        | type: :filter,
-          pads_data: %{
-            input:
-              struct(Membrane.Element.PadData,
-                ref: :input,
-                accepted_caps: :any,
-                direction: :input,
-                pid: self(),
-                mode: :pull,
-                start_of_stream?: true,
-                end_of_stream?: false,
-                input_queue: input_queue,
-                demand: 0
-              )
-          }
-      }
-      |> Bunch.Struct.put_in([:playback, :state], :playing)
+    state = %{
+      State.new(%{
+        module: DummyElement,
+        name: :test_name,
+        parent_clock: nil,
+        sync: nil,
+        parent: self()
+      })
+      | type: :filter,
+        status: :playing,
+        pads_data: %{
+          input:
+            struct(Membrane.Element.PadData,
+              ref: :input,
+              accepted_caps: :any,
+              direction: :input,
+              pid: self(),
+              mode: :pull,
+              start_of_stream?: true,
+              end_of_stream?: false,
+              input_queue: input_queue,
+              demand: 0
+            )
+        }
+    }
 
     assert_received Message.new(:demand, _size, for_pad: :some_pad)
     [state: state]
   end
 
-  test "End of stream is generated when playback state changes from :playing to :prepared", %{
+  test "End of stream is generated upon termination", %{
     state: state
   } do
-    {:ok, state} = LifecycleController.handle_playback_state(:playing, :prepared, state)
+    state = LifecycleController.handle_terminate_request(state)
     assert state.pads_data.input.end_of_stream?
   end
 end

@@ -12,8 +12,7 @@ defmodule Membrane.Testing.EndpointTest do
   end
 
   test "Endpoint sends caps on play" do
-    assert {{:ok, caps: {:output, :caps}}, _state} =
-             Endpoint.handle_prepared_to_playing(nil, %{caps: :caps})
+    assert {{:ok, caps: {:output, :caps}}, _state} = Endpoint.handle_play(nil, %{caps: :caps})
   end
 
   describe "Handle write" do

@@ -13,7 +13,6 @@ defmodule Membrane.Core.Element.PadController do
     DemandController,
     EventController,
     InputQueue,
-    PlaybackBuffer,
     State,
     Toilet
   }
@@ -156,33 +155,22 @@ defmodule Membrane.Core.Element.PadController do
   """
   @spec handle_unlink(Pad.ref_t(), State.t()) :: State.t()
   def handle_unlink(pad_ref, state) do
-    if :ok == Child.PadModel.assert_instance(state, pad_ref) do
-      :ok = check_if_pad_can_be_unlinked(pad_ref, state)
-      state = flush_playback_buffer(pad_ref, state)
+    with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
       state = generate_eos_if_needed(pad_ref, state)
       state = maybe_handle_pad_removed(pad_ref, state)
       state = remove_pad_associations(pad_ref, state)
       PadModel.delete_data!(state, pad_ref)
     else
-      state
-    end
-  end
+      {:ok, %{availability: :always}} ->
+        raise Membrane.PadError,
+              "Tried to unlink a static pad #{inspect(pad_ref)}. Static pads cannot be unlinked unless element is terminating"
 
-  @spec check_if_pad_can_be_unlinked(Pad.ref_t(), State.t()) ::
-          :ok | {:error, {:invalid_playback_state, Pad.name_t()}}
-  defp check_if_pad_can_be_unlinked(pad_ref, state) do
-    pad_data = PadModel.get_data!(state, pad_ref)
+      {:error, :unknown_pad} ->
+        Membrane.Logger.debug(
+          "Ignoring unlinking pad #{inspect(pad_ref)} that didn't succeed to be linked"
+        )
 
-    if state.playback.target_state in [:stopped, :terminating] or
-         Membrane.Pad.availability_mode(pad_data.availability) == :dynamic do
-      :ok
-    else
-      # TODO: after playback states refactor, make it raise
-      Membrane.Logger.debug(
-        "Tried to unlink static pad #{pad_ref} while #{inspect(state.name)} was in or was transitioning to playback state #{state.playback.target_state}."
-      )
-
-      :ok
+        state
     end
   end
 
@@ -316,9 +304,8 @@ defmodule Membrane.Core.Element.PadController do
   @spec generate_eos_if_needed(Pad.ref_t(), State.t()) :: State.t()
   def generate_eos_if_needed(pad_ref, state) do
     %{direction: direction, end_of_stream?: eos?} = PadModel.get_data!(state, pad_ref)
-    %{state: playback_state} = state.playback
 
-    if direction == :input and not eos? and playback_state == :playing do
+    if direction == :input and not eos? and state.status == :playing do
       EventController.exec_handle_event(pad_ref, %Events.EndOfStream{}, state)
     else
       state
@@ -390,10 +377,5 @@ defmodule Membrane.Core.Element.PadController do
     else
       state
     end
-  end
-
-  defp flush_playback_buffer(pad_ref, state) do
-    new_playback_buf = PlaybackBuffer.flush_for_pad(state.playback_buffer, pad_ref)
-    %{state | playback_buffer: new_playback_buf}
   end
 end

@@ -24,29 +24,28 @@ defmodule Membrane.Core.Element.CapsControllerTest do
         min_demand_factor: nil
       })
 
-    state =
-      %{
-        State.new(%{
-          module: Filter,
-          name: :test_name,
-          parent_clock: nil,
-          sync: nil,
-          parent: self()
-        })
-        | type: :filter,
-          pads_data: %{
-            input:
-              struct(Membrane.Element.PadData,
-                accepted_caps: :any,
-                direction: :input,
-                pid: self(),
-                mode: :pull,
-                input_queue: input_queue,
-                demand: 0
-              )
-          }
-      }
-      |> Bunch.Struct.put_in([:playback, :state], :playing)
+    state = %{
+      State.new(%{
+        module: Filter,
+        name: :test_name,
+        parent_clock: nil,
+        sync: nil,
+        parent: self()
+      })
+      | type: :filter,
+        status: :playing,
+        pads_data: %{
+          input:
+            struct(Membrane.Element.PadData,
+              accepted_caps: :any,
+              direction: :input,
+              pid: self(),
+              mode: :pull,
+              input_queue: input_queue,
+              demand: 0
+            )
+        }
+    }
 
     assert_received Message.new(:demand, _size, for_pad: :some_pad)
     [state: state]

@@ -36,10 +36,10 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({action, _}, cb, _params, %State{playback: %{state: :stopped}})
-      when action in [:buffer, :event, :caps, :demand, :redemand, :forward, :end_of_stream] and
-             cb != :handle_stopped_to_prepared do
-    raise ActionError, action: action, reason: {:invalid_playback_state, :stopped}
+  def handle_action({action, _}, _cb, _params, %State{status: status})
+      when status != :playing and
+             action in [:buffer, :event, :caps, :demand, :redemand, :forward, :end_of_stream] do
+    raise ActionError, action: action, reason: {:invalid_component_status, status}
   end
 
   @impl CallbackHandler
@@ -66,18 +66,10 @@ defmodule Membrane.Core.Element.ActionHandler do
       callback,
       cb,
       __MODULE__,
-      params |> Map.merge(%{skip_invoking_redemands: true}),
+      params,
       args_list,
       state
     )
-  end
-
-  @impl CallbackHandler
-  def handle_action({:buffer, _args} = action, cb, _params, %State{
-        playback: %{state: playback_state}
-      })
-      when playback_state != :playing and cb != :handle_prepared_to_playing do
-    raise ActionError, action: action, reason: {:invalid_playback_state, playback_state}
   end
 
   @impl CallbackHandler
@@ -138,17 +130,6 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_action(
-        {:demand, _args} = action,
-        cb,
-        _params,
-        %State{playback: %{state: playback_state}}
-      )
-      when playback_state != :playing and cb != :handle_prepared_to_playing do
-    raise ActionError, action: action, reason: {:invalid_playback_state, playback_state}
-  end
-
-  @impl CallbackHandler
-  def handle_action(
         {:demand, pad_ref},
         cb,
         params,
@@ -197,12 +178,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action(
-        {:end_of_stream, pad_ref},
-        _callback,
-        _params,
-        %State{type: type, playback: %{state: :playing}} = state
-      )
+  def handle_action({:end_of_stream, pad_ref}, _callback, _params, %State{type: type} = state)
       when is_pad_ref(pad_ref) and type != :sink do
     send_event(pad_ref, %Events.EndOfStream{}, state)
   end

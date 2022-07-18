@@ -53,7 +53,7 @@ defmodule Membrane.Bin do
 
   Useful for any cleanup required.
   """
-  @callback handle_shutdown(reason, state :: state_t) :: :ok
+  @callback handle_terminate_yolo(reason, state :: state_t) :: :ok
             when reason: :normal | :shutdown | {:shutdown, any} | term()
 
   @doc """
@@ -85,17 +85,7 @@ defmodule Membrane.Bin do
   Callback invoked when bin transition from `:stopped` to `:prepared` state has finished,
   that is all of its children are prepared to enter `:playing` state.
   """
-  @callback handle_stopped_to_prepared(
-              context :: CallbackContext.PlaybackChange.t(),
-              state :: state_t
-            ) ::
-              callback_return_t
-
-  @doc """
-  Callback invoked when bin transition from `:playing` to `:prepared` state has finished,
-  that is all of its children are prepared to be stopped.
-  """
-  @callback handle_playing_to_prepared(
+  @callback handle_setup(
               context :: CallbackContext.PlaybackChange.t(),
               state :: state_t
             ) ::
@@ -105,30 +95,11 @@ defmodule Membrane.Bin do
   Callback invoked when bin is in `:playing` state, i.e. all its children
   are in this state.
   """
-  @callback handle_prepared_to_playing(
+  @callback handle_play(
               context :: CallbackContext.PlaybackChange.t(),
               state :: state_t
             ) ::
               callback_return_t
-
-  @doc """
-  Callback invoked when bin is in `:playing` state, i.e. all its children
-  are in this state.
-  """
-  @callback handle_prepared_to_stopped(
-              context :: CallbackContext.PlaybackChange.t(),
-              state :: state_t
-            ) ::
-              callback_return_t
-
-  @doc """
-  Callback invoked when bin is in `:terminating` state, i.e. all its children
-  are in this state.
-  """
-  @callback handle_stopped_to_terminating(
-              context :: CallbackContext.PlaybackChange.t(),
-              state :: state_t
-            ) :: callback_return_t
 
   @doc """
   Callback invoked when a notification comes in from an element.
@@ -207,14 +178,11 @@ defmodule Membrane.Bin do
 
   @optional_callbacks membrane_clock?: 0,
                       handle_init: 1,
-                      handle_shutdown: 2,
+                      handle_terminate_yolo: 2,
                       handle_pad_added: 3,
                       handle_pad_removed: 3,
-                      handle_stopped_to_prepared: 2,
-                      handle_playing_to_prepared: 2,
-                      handle_prepared_to_playing: 2,
-                      handle_prepared_to_stopped: 2,
-                      handle_stopped_to_terminating: 2,
+                      handle_setup: 2,
+                      handle_play: 2,
                       handle_info: 3,
                       handle_spec_started: 3,
                       handle_element_start_of_stream: 4,
@@ -329,7 +297,7 @@ defmodule Membrane.Bin do
       def handle_init(_options), do: {:ok, %{}}
 
       @impl true
-      def handle_shutdown(_reason, _state), do: :ok
+      def handle_terminate_yolo(_reason, _state), do: :ok
 
       @impl true
       def handle_pad_added(_pad, _ctx, state), do: {:ok, state}
@@ -338,19 +306,10 @@ defmodule Membrane.Bin do
       def handle_pad_removed(_pad, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_stopped_to_prepared(_ctx, state), do: {:ok, state}
+      def handle_setup(_ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_prepared_to_playing(_ctx, state), do: {:ok, state}
-
-      @impl true
-      def handle_playing_to_prepared(_ctx, state), do: {:ok, state}
-
-      @impl true
-      def handle_prepared_to_stopped(_ctx, state), do: {:ok, state}
-
-      @impl true
-      def handle_stopped_to_terminating(_ctx, state), do: {:ok, state}
+      def handle_play(_ctx, state), do: {:ok, state}
 
       @impl true
       def handle_info(message, _ctx, state), do: {:ok, state}
@@ -372,14 +331,11 @@ defmodule Membrane.Bin do
 
       defoverridable membrane_clock?: 0,
                      handle_init: 1,
-                     handle_shutdown: 2,
+                     handle_terminate_yolo: 2,
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
-                     handle_stopped_to_prepared: 2,
-                     handle_playing_to_prepared: 2,
-                     handle_prepared_to_playing: 2,
-                     handle_prepared_to_stopped: 2,
-                     handle_stopped_to_terminating: 2,
+                     handle_setup: 2,
+                     handle_play: 2,
                      handle_info: 3,
                      handle_spec_started: 3,
                      handle_element_start_of_stream: 4,

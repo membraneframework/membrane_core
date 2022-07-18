@@ -29,7 +29,7 @@ defmodule Membrane.Integration.SyncTest do
     for tries <- [100, 1000, 10_000] do
       pipeline = Testing.Pipeline.start_link_supervised!(pipeline_opts)
 
-      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+      assert_pipeline_play(pipeline)
       Process.sleep(tick_interval * tries)
 
       Testing.Pipeline.terminate(pipeline, blocking?: true)
@@ -65,8 +65,7 @@ defmodule Membrane.Integration.SyncTest do
 
     pipeline = Testing.Pipeline.start_link_supervised!(options)
 
-    assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+    assert_pipeline_play(pipeline)
     send(pipeline, {:spawn_children, spec})
 
     assert_start_of_stream(pipeline, :sink_a)
@@ -84,6 +83,7 @@ defmodule Membrane.Integration.SyncTest do
     pipeline = Testing.Pipeline.start_link_supervised!(options)
 
     assert_start_of_stream(pipeline, :sink_a)
+    Process.sleep(5000)
     assert_start_of_stream(pipeline, :sink_b, :input, @sync_error_ms)
   end
 

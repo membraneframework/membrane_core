@@ -33,7 +33,7 @@ defmodule Membrane.Core.Element.BufferController do
   @spec handle_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
   def handle_buffer(pad_ref, buffers, state) do
     withl pad: {:ok, data} = PadModel.get_data(state, pad_ref),
-          status: %State{status: status} when status != :ready <- state do
+          status: %State{status: :playing} <- state do
       %{direction: :input, start_of_stream?: start_of_stream?} = data
 
       state =

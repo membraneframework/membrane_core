@@ -8,18 +8,16 @@ defmodule Membrane.Core.Bin.State do
   use Bunch
   use Bunch.Access
 
-  alias Membrane.{Child, Clock, PlaybackState, Sync}
+  alias Membrane.{Child, Clock, Sync}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Parent.ChildLifeController.LinkHandler
   alias Membrane.Core.Parent.{ChildrenModel, CrashGroup, Link}
-  alias Membrane.Core.{Playback, Timer}
+  alias Membrane.Core.Timer
 
   @type t :: %__MODULE__{
           internal_state: Membrane.Bin.state_t() | nil,
-          playback: Playback.t(),
           module: module,
           children: ChildrenModel.children_t(),
-          delayed_playback_change: PlaybackState.t() | nil,
           name: Membrane.Bin.name_t() | nil,
           pads_info: PadModel.pads_info_t() | nil,
           pads_data: PadModel.pads_data_t() | nil,
@@ -47,9 +45,7 @@ defmodule Membrane.Core.Bin.State do
   defstruct @enforce_keys ++
               [
                 internal_state: nil,
-                playback: %Playback{},
                 children: %{},
-                delayed_playback_change: nil,
                 name: nil,
                 pads_info: nil,
                 pads_data: nil,

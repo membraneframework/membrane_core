@@ -338,16 +338,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     else
       {:error, :not_member} when reason == {:shutdown, :membrane_crash_group_kill} ->
         raise Membrane.PipelineError,
-              "Child that was not a member of any crash group killed with :membrane_crash_group_kill."
+              "Child #{inspect(child_name)} that was not a member of any crash group killed with :membrane_crash_group_kill."
 
       {:error, :not_member} ->
         Membrane.Logger.debug("""
-        Pipeline child crashed but was not a member of any crash group.
+        Child #{inspect(child_name)} crashed but was not a member of any crash group.
         Terminating.
         """)
 
-        propagate_child_crash()
-        state
+        exit({:shutdown, :child_crash})
     end
   end
 
@@ -387,17 +386,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp crash_all_group_members(_crash_group, _crash_initiator, state), do: state
-
-  # called when a dead child was not a member of any crash group
-  defp propagate_child_crash() do
-    Membrane.Logger.debug("""
-    A child crashed but was not a member of any crash group.
-    Terminating.
-    """)
-
-    Process.flag(:trap_exit, false)
-    Process.exit(self(), {:shutdown, :child_crash})
-  end
 
   defp remove_child_from_crash_group(state, child_pid) do
     with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(child_pid, state) do

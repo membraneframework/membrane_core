@@ -6,7 +6,7 @@ defmodule Membrane.Element.Action do
   Returning actions is a way of element interaction with
   other elements and parts of framework. Each action may be returned by any
   callback (except for `c:Membrane.Element.Base.handle_init/1`
-  and `c:Membrane.Element.Base.handle_shutdown/2`, as they
+  and `c:Membrane.Element.Base.handle_terminate_yolo/2`, as they
   do not support returning any actions) unless explicitly stated otherwise.
   """
 
@@ -141,23 +141,6 @@ defmodule Membrane.Element.Action do
           {:forward, Buffer.t() | [Buffer.t()] | Caps.t() | Event.t() | :end_of_stream}
 
   @typedoc """
-  Suspends/resumes change of playback state.
-
-  - `playback_change: :suspend` may be returned only from
-  `c:Membrane.Element.Base.handle_stopped_to_prepared/2`,
-  `c:Membrane.Element.Base.handle_playing_to_prepared/2`,
-  `c:Membrane.Element.Base.handle_prepared_to_playing/2` and
-  `c:Membrane.Element.Base.handle_prepared_to_stopped/2` callbacks,
-  and defers playback state change until `playback_change: :resume` is returned.
-  - `playback_change: :resume` may be returned from any callback, only when
-  playback state change is suspended, and causes it to finish.
-
-  There is no straight limit how long playback change can take, but keep in mind
-  that it may affect application quality if not done quick enough.
-  """
-  @type playback_change_t :: {:playback_change, :suspend | :resume}
-
-  @typedoc """
   Starts a timer that will invoke `c:Membrane.Element.Base.handle_tick/3` callback
   every `interval` according to the given `clock`.
 
@@ -234,7 +217,6 @@ defmodule Membrane.Element.Action do
           | demand_t
           | redemand_t
           | forward_t
-          | playback_change_t
           | start_timer_t
           | stop_timer_t
           | latency_t

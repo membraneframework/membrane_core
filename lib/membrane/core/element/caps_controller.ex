@@ -21,7 +21,7 @@ defmodule Membrane.Core.Element.CapsController do
   @spec handle_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.t()
   def handle_caps(pad_ref, caps, state) do
     withl pad: {:ok, data} = PadModel.get_data(state, pad_ref),
-          status: %State{status: status} when status != :ready <- state do
+          status: %State{status: :playing} <- state do
       %{direction: :input} = data
       Telemetry.report_metric(:caps, 1, inspect(pad_ref))
 

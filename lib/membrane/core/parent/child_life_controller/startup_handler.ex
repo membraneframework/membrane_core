@@ -96,7 +96,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
 
   @spec maybe_activate_syncs(%{Membrane.Child.name_t() => Sync.t()}, Parent.state_t()) ::
           :ok | {:error, :bad_activity_request}
-  def maybe_activate_syncs(syncs, %{playback: %{state: :playing}}) do
+  def maybe_activate_syncs(syncs, %{status: :playing}) do
     syncs |> MapSet.new(&elem(&1, 1)) |> Bunch.Enum.try_each(&Sync.activate/1)
   end
 

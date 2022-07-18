@@ -23,7 +23,7 @@ defmodule Membrane.Integration.ChildCrashTest do
       [:sink, :center_filter, :filter_1_1, :filter_2_1, :source_1]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
-    assert_pipeline_playback_changed(pipeline_pid, _, :playing)
+    assert_pipeline_play(pipeline_pid)
 
     ChildCrashTest.Pipeline.crash_child(filter_1_1_pid)
 
@@ -48,7 +48,7 @@ defmodule Membrane.Integration.ChildCrashTest do
       [:source, :center_filter, :sink]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
-    assert_pipeline_playback_changed(pipeline_pid, _, :playing)
+    assert_pipeline_play(pipeline_pid)
 
     Process.exit(source_pid, :crash)
     # member of group is dead
@@ -95,7 +95,7 @@ defmodule Membrane.Integration.ChildCrashTest do
       ]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
-    assert_pipeline_playback_changed(pipeline_pid, _, :playing)
+    assert_pipeline_play(pipeline_pid)
 
     filter_1_pid = get_pid(:filter, bin_1_pid)
 
@@ -155,7 +155,7 @@ defmodule Membrane.Integration.ChildCrashTest do
       ]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
-    assert_pipeline_playback_changed(pipeline_pid, _, :playing)
+    assert_pipeline_play(pipeline_pid)
 
     ChildCrashTest.Pipeline.crash_child(filter_1_1_pid)
 
