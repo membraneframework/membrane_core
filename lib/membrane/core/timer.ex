@@ -7,7 +7,7 @@ defmodule Membrane.Core.Timer do
   require Membrane.Core.Message
 
   @type id_t :: any()
-  @type interval_t :: Ratio.t() | non_neg_integer | :no_interval
+  @type interval_t :: Ratio.t() | Time.non_neg_t() | :no_interval
   @type t :: %__MODULE__{
           id: id_t,
           interval: interval_t,
