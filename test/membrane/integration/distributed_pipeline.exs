@@ -1,10 +1,10 @@
-defmodule  Membrane.Integration.DistributedPipelineTest do
+defmodule Membrane.Integration.DistributedPipelineTest do
   use ExUnit.Case
-  import ParentSpec
+  import Membrane.ParentSpec
   import Membrane.Testing.Assertions
   alias Membrane.ParentSpec
 
-  alias Membrane.Support.Distributed.Sink
+  alias Membrane.Support.Distributed.{Sink, Source}
 
   setup do
     hostname = start_nodes()
@@ -23,7 +23,7 @@ defmodule  Membrane.Integration.DistributedPipelineTest do
     Membrane.Testing.Pipeline.execute_actions(pid,
       spec: %ParentSpec{
         children: [
-          source: %Membrane.Testing.Source{output: [1, 2, 3, 4, 5]}
+          source: %Source{output: [1, 2, 3, 4, 5]}
         ],
         node: :"first@127.0.0.1"
       }
@@ -34,22 +34,16 @@ defmodule  Membrane.Integration.DistributedPipelineTest do
         children: [
           sink: Sink
         ],
-        node: :"first@127.0.0.1"
-      }
-    )
-
-    Membrane.Testing.Pipeline.execute_actions(pid,
-      spec: %ParentSpec{
         links: [
           link(:source)
           |> via_in(:input, toilet_capacity: 100, throttling_factor: 50)
           |> to(:sink)
-        ]
+        ],
+        node: :"second@127.0.0.1"
       }
     )
 
     Membrane.Testing.Pipeline.execute_actions(pid, playback: :playing)
-
     assert_pipeline_playback_changed(pid, _, :playing)
     assert_end_of_stream(pid, :sink)
   end

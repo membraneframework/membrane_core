@@ -5,21 +5,27 @@ defmodule Membrane.Support.Distributed do
     use Membrane.Source
 
     def_output_pad :output, caps: :any, mode: :push
+    def_options output: [spec: list(any())]
 
     @impl true
-    def handle_init(_opts) do
-      {:ok, %{}}
+    def handle_init(opts) do
+      {:ok, opts.output}
     end
 
     @impl true
-    def handle_prepared_to_playing(_ctx, state) do
+    def handle_prepared_to_playing(_ctx, list) do
       {{:ok, caps: {:output, :some}, start_timer: {:timer, Membrane.Time.milliseconds(100)}},
-       state}
+       list}
     end
 
     @impl true
-    def handle_tick(_timer_id, _context, state) do
-      {{:ok, buffer: {:output, %Membrane.Buffer{payload: "Test buffer"}}}, state}
+    def handle_tick(_timer_id, _context, [first | rest]) do
+      {{:ok, buffer: {:output, %Membrane.Buffer{payload: first}}}, rest}
+    end
+
+    @impl true
+    def handle_tick(_timer_id, _context, []) do
+      {{:ok, end_of_stream: :output, stop_timer: :timer}, []}
     end
   end
 
