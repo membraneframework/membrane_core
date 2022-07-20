@@ -1,12 +1,17 @@
-defmodule DistributedTest do
+defmodule  Membrane.Integration.DistributedPipelineTest do
   use ExUnit.Case
-  alias Membrane.ParentSpec
-  import Membrane.Testing.Assertions
-  alias Membrane.Support.Distributed.{Source, Sink, Pipeline}
   import ParentSpec
+  import Membrane.Testing.Assertions
+  alias Membrane.ParentSpec
+
+  alias Membrane.Support.Distributed.Sink
+
+  setup do
+    hostname = start_nodes()
+    on_exit(fn -> kill_node(hostname) end)
+  end
 
   test "if distributed pipeline works properly" do
-    {:ok, hostname} = start_nodes()
     {:ok, pid} = Membrane.Testing.Pipeline.start([])
 
     assert_pipeline_playback_changed(pid, _, :playing)
@@ -47,17 +52,16 @@ defmodule DistributedTest do
 
     assert_pipeline_playback_changed(pid, _, :playing)
     assert_end_of_stream(pid, :sink)
-    # kill_nodes(hostname)
   end
 
-  def start_nodes() do
+  defp start_nodes() do
     :net_kernel.start([:"first@127.0.0.1"])
-    {:ok, hostname} = :slave.start(:"127.0.0.1", :second)
+    {:ok, _pid, hostname} = :peer.start(%{hostname: :"127.0.0.1", name: :second})
     :rpc.call(hostname, :code, :add_paths, [:code.get_path()])
-    {:ok, hostname}
+    hostname
   end
 
-  def kill_nodes(node) do
+  defp kill_node(node) do
     :rpc.call(node, :init, :stop, [])
   end
 end
