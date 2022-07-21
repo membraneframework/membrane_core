@@ -226,6 +226,14 @@ defmodule Membrane.Time do
     round(value / native_unit())
   end
 
+  @doc """
+  Returns timestamp in timebase units. Rounded to the nearest integer.
+  """
+  @spec to_timebase(number | Ratio.t(), number | Ratio.t()) :: integer
+  def to_timebase(timestamp, timebase) do
+    Ratio.new(timestamp, timebase) |> round_rational()
+  end
+
   Enum.map(@units, fn unit ->
     @doc """
     Returns one #{unit.singular} in `#{inspect(__MODULE__)}` units.
