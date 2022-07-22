@@ -1,4 +1,4 @@
-defmodule Membrane.Core.ToiletTest do
+defmodule Membrane.Core.Element.ToiletTest do
   use ExUnit.Case
   alias Membrane.Core.Element.Toilet
 
@@ -9,8 +9,8 @@ defmodule Membrane.Core.ToiletTest do
   test "if toilet is implemented as :atomics for elements put on the same node", context do
     toilet = Toilet.new(100, :buffers, context.responsible_process, :same_node, 1)
 
-    {_module, {:same_node, atomic_ref}, _capacity, _responsible_process_pid, _throttling_factor} =
-      toilet
+    {_module, {:same_node, atomic_ref}, _capacity, _responsible_process_pid, _throttling_factor,
+     _unrinsed_buffers} = toilet
 
     Toilet.fill(toilet, 10)
     assert :atomics.get(atomic_ref, 1) == 10
@@ -23,7 +23,7 @@ defmodule Membrane.Core.ToiletTest do
     toilet = Toilet.new(100, :buffers, context.responsible_process, :different_nodes, 1)
 
     {_module, {:different_nodes, counter_pid, atomic_ref}, _capacity, _responsible_process_pid,
-     _throttling_factor} = toilet
+     _throttling_factor, _unrinsed_buffers} = toilet
 
     Toilet.fill(toilet, 10)
     assert GenServer.call(counter_pid, {:add_get, atomic_ref, 0}) == 10
@@ -35,10 +35,15 @@ defmodule Membrane.Core.ToiletTest do
 
   test "if throttling mechanism works properly", context do
     toilet = Toilet.new(100, :buffers, context.responsible_process, :same_node, 10)
-    :ok = Toilet.fill(toilet, 10)
-    :delay = Toilet.fill(toilet, 5)
-    :ok = Toilet.fill(toilet, 90)
-    :delay = Toilet.fill(toilet, 9)
-    :overflow = Toilet.fill(toilet, 11)
+    {:ok, toilet} = Toilet.fill(toilet, 10)
+    assert {_module, _counter, _capacity, _pid, _throttling_factor, 0} = toilet
+    {:delay, toilet} = Toilet.fill(toilet, 5)
+    assert {_module, _counter, _capacity, _pid, _throttling_factor, 5} = toilet
+    {:ok, toilet} = Toilet.fill(toilet, 80)
+    assert {_module, _counter, _capacity, _pid, _throttling_factor, 0} = toilet
+    {:delay, toilet} = Toilet.fill(toilet, 9)
+    assert {_module, _counter, _capacity, _pid, _throttling_factor, 9} = toilet
+    {:overflow, toilet} = Toilet.fill(toilet, 11)
+    assert {_module, _counter, _capacity, _pid, _throttling_factor, 0} = toilet
   end
 end

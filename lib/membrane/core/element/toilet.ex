@@ -54,7 +54,7 @@ defmodule Membrane.Core.Element.Toilet do
           {:same_node, atomic_ref}
 
         :different_nodes ->
-          {:ok, pid} = GenServer.start(Membrane.Core.Element.Toilet.DistributedCounter.Worker, [])
+          {:ok, pid} = GenServer.start(Worker, [])
           {:different_nodes, pid, atomic_ref}
       end
     end
@@ -86,7 +86,9 @@ defmodule Membrane.Core.Element.Toilet do
     end
   end
 
-  @opaque t :: {__MODULE__, DistributedCounter.t(), pos_integer, Process.dest(), pos_integer()}
+  @opaque t ::
+            {__MODULE__, DistributedCounter.t(), pos_integer, Process.dest(), pos_integer(),
+             non_neg_integer()}
 
   @default_capacity_factor 200
 
@@ -104,27 +106,37 @@ defmodule Membrane.Core.Element.Toilet do
 
     toilet_ref = DistributedCounter.new(counter_type)
     capacity = capacity || default_capacity
-    {__MODULE__, toilet_ref, capacity, responsible_process, throttling_factor}
+    {__MODULE__, toilet_ref, capacity, responsible_process, throttling_factor, 0}
   end
 
-  @spec fill(t, non_neg_integer) :: :ok | :delay | :overflow
-  def fill({__MODULE__, atomic, capacity, responsible_process, throttling_factor}, amount) do
-    if amount < throttling_factor do
-      :delay
+  @spec fill(t, non_neg_integer) :: {:ok | :delay | :overflow, t}
+  def fill(
+        {__MODULE__, atomic, capacity, responsible_process, throttling_factor,
+         unrinsed_buffers_size},
+        amount
+      ) do
+    if unrinsed_buffers_size + amount < throttling_factor do
+      {:delay,
+       {__MODULE__, atomic, capacity, responsible_process, throttling_factor,
+        amount + unrinsed_buffers_size}}
     else
-      size = DistributedCounter.add_get(atomic, amount)
+      size = DistributedCounter.add_get(atomic, amount + unrinsed_buffers_size)
 
       if size > capacity do
         overflow(size, capacity, responsible_process)
-        :overflow
+        {:overflow, {__MODULE__, atomic, capacity, responsible_process, throttling_factor, 0}}
       else
-        :ok
+        {:ok, {__MODULE__, atomic, capacity, responsible_process, throttling_factor, 0}}
       end
     end
   end
 
   @spec drain(t, non_neg_integer) :: :ok
-  def drain({__MODULE__, atomic, _capacity, _responsible_process, _throttling_factor}, amount) do
+  def drain(
+        {__MODULE__, atomic, _capacity, _responsible_process, _throttling_factor,
+         _unrinsed_buff_size},
+        amount
+      ) do
     DistributedCounter.sub(atomic, amount)
   end
 

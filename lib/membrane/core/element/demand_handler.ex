@@ -113,8 +113,7 @@ defmodule Membrane.Core.Element.DemandHandler do
         pad_ref,
         %{
           mode: :push,
-          toilet: toilet,
-          unrinsed_buffers_size: unrinsed_buffers_size
+          toilet: toilet
         } = data,
         buffers,
         state
@@ -123,23 +122,22 @@ defmodule Membrane.Core.Element.DemandHandler do
     %{other_demand_unit: other_demand_unit} = data
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
 
-    case Toilet.fill(toilet, unrinsed_buffers_size + buf_size) do
-      :ok ->
-        PadModel.set_data!(state, pad_ref, :unrinsed_buffers_size, 0)
+    case Toilet.fill(toilet, buf_size) do
+      {:ok, toilet} ->
+        PadModel.set_data!(state, pad_ref, :toilet, toilet)
 
-      :delay ->
+      {:delay, toilet} ->
         PadModel.set_data!(
           state,
           pad_ref,
-          :unrinsed_buffers_size,
-          unrinsed_buffers_size + buf_size
+          :toilet,
+          toilet
         )
 
-      :overflow ->
+      {:overflow, _toilet} ->
         # if the toilet has overflowed, we remove it so it didn't overflow again
         # and let the parent handle that situation by unlinking this output pad or crashing
         PadModel.set_data!(state, pad_ref, :toilet, nil)
-        |> PadModel.set_data!(pad_ref, :unrinsed_buffers_size, 0)
     end
   end
 
