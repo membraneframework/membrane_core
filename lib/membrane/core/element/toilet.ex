@@ -99,33 +99,33 @@ defmodule Membrane.Core.Element.Toilet do
 
   @spec fill(t, non_neg_integer) :: {:ok | :overflow, t}
   def fill(
-        {__MODULE__, atomic, capacity, responsible_process, throttling_factor,
+        {__MODULE__, counter, capacity, responsible_process, throttling_factor,
          unrinsed_buffers_size},
         amount
       ) do
     if unrinsed_buffers_size + amount < throttling_factor do
       {:ok,
-       {__MODULE__, atomic, capacity, responsible_process, throttling_factor,
+       {__MODULE__, counter, capacity, responsible_process, throttling_factor,
         amount + unrinsed_buffers_size}}
     else
-      size = DistributedCounter.add_get(atomic, amount + unrinsed_buffers_size)
+      size = DistributedCounter.add_get(counter, amount + unrinsed_buffers_size)
 
       if size > capacity do
         overflow(size, capacity, responsible_process)
-        {:overflow, {__MODULE__, atomic, capacity, responsible_process, throttling_factor, 0}}
+        {:overflow, {__MODULE__, counter, capacity, responsible_process, throttling_factor, 0}}
       else
-        {:ok, {__MODULE__, atomic, capacity, responsible_process, throttling_factor, 0}}
+        {:ok, {__MODULE__, counter, capacity, responsible_process, throttling_factor, 0}}
       end
     end
   end
 
   @spec drain(t, non_neg_integer) :: :ok
   def drain(
-        {__MODULE__, atomic, _capacity, _responsible_process, _throttling_factor,
+        {__MODULE__, counter, _capacity, _responsible_process, _throttling_factor,
          _unrinsed_buff_size},
         amount
       ) do
-    DistributedCounter.sub(atomic, amount)
+    DistributedCounter.sub(counter, amount)
   end
 
   defp overflow(size, capacity, responsible_process) do
