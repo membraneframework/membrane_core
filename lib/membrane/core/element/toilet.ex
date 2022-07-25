@@ -42,8 +42,8 @@ defmodule Membrane.Core.Element.Toilet do
       end
 
       @impl true
-      def handle_info({:DOWN, _ref, :process, _object, reason}, state) do
-        {:stop, {:parent_exited, reason}, state}
+      def handle_info({:DOWN, _ref, :process, _object, _reason}, state) do
+        {:stop, :normal, state}
       end
     end
 
