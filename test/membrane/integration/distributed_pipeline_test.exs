@@ -50,10 +50,7 @@ defmodule Membrane.Integration.DistributedPipelineTest do
 
   defp start_nodes() do
     System.cmd("epmd", ["-daemon"])
-    {:ok, pid} = :net_kernel.start([:"first@127.0.0.1"])
-    :erl_boot_server.start([])
-    {:ok, ipv4} = :inet.parse_ipv4_address(~c"127.0.0.1")
-    :erl_boot_server.add_slave(ipv4)
+    {:ok, _pid} = Node.start(:"first@127.0.0.1", :longnames)
     {:ok, _pid, hostname} = :peer.start(%{host: ~c"127.0.0.1", name: :second})
     :rpc.block_call(hostname, :code, :add_paths, [:code.get_path()])
     hostname
@@ -61,9 +58,5 @@ defmodule Membrane.Integration.DistributedPipelineTest do
 
   defp kill_node(node) do
     :rpc.call(node, :init, :stop, [])
-  end
-
-  defp inet_loader_args do
-    '-loader inet -hosts 127.0.0.1 -connect_all false -setcookie #{:erlang.get_cookie()}'
   end
 end
