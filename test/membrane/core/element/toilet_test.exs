@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.ToiletTest do
   test "if toilet is implemented as :atomics for elements put on the same node", context do
     toilet = Toilet.new(100, :buffers, context.responsible_process, 1)
 
-    {_module, {pid, atomic_ref}, _capacity, _responsible_process_pid, _throttling_factor,
+    {_module, {_pid, atomic_ref}, _capacity, _responsible_process_pid, _throttling_factor,
      _unrinsed_buffers} = toilet
 
     Toilet.fill(toilet, 10)

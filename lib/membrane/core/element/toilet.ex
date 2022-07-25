@@ -25,7 +25,7 @@ defmodule Membrane.Core.Element.Toilet do
 
       @impl true
       def init(_opts) do
-        {:ok, nil}
+        {:ok, nil, :hibernate}
       end
 
       @impl true
