@@ -9,9 +9,10 @@ defmodule Membrane.Integration.DistributedPipelineTest do
   setup do
     hostname = start_nodes()
     on_exit(fn -> kill_node(hostname) end)
+    [hostname: hostname]
   end
 
-  test "if distributed pipeline works properly" do
+  test "if distributed pipeline works properly", context do
     {:ok, pid} = Membrane.Testing.Pipeline.start([])
 
     assert_pipeline_playback_changed(pid, _, :playing)
@@ -39,7 +40,7 @@ defmodule Membrane.Integration.DistributedPipelineTest do
           |> via_in(:input, toilet_capacity: 100, throttling_factor: 50)
           |> to(:sink)
         ],
-        node: :"second@127.0.0.1"
+        node: context.hostname
       }
     )
 
