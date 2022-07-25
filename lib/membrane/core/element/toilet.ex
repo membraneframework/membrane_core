@@ -24,7 +24,8 @@ defmodule Membrane.Core.Element.Toilet do
       use GenServer
 
       @impl true
-      def init(_opts) do
+      def init(parent_pid) do
+        Process.monitor(parent_pid)
         {:ok, nil, :hibernate}
       end
 
@@ -39,6 +40,11 @@ defmodule Membrane.Core.Element.Toilet do
         :atomics.sub(atomic_ref, 1, value)
         {:noreply, nil}
       end
+
+      @impl true
+      def handle_info({:DOWN, _ref, :process, _object, reason}, state) do
+        {:stop, {:parent_exited, reason}, state}
+      end
     end
 
     @type t :: {pid(), :atomics.atomics_ref()}
@@ -46,7 +52,7 @@ defmodule Membrane.Core.Element.Toilet do
     @spec new() :: t
     def new() do
       atomic_ref = :atomics.new(1, [])
-      {:ok, pid} = GenServer.start(Worker, [])
+      {:ok, pid} = GenServer.start(Worker, self())
       {pid, atomic_ref}
     end
 
