@@ -228,9 +228,14 @@ defmodule Membrane.Time do
 
   @doc """
   Returns timestamp in timebase units. Rounded to the nearest integer.
+
+  ## Examples:
+  iex> timebase = 15
+  iex> Membrane.Time.round_to_timebase(3, Ratio.new(3, 2))
+
   """
-  @spec to_timebase(number | Ratio.t(), number | Ratio.t()) :: integer
-  def to_timebase(timestamp, timebase) do
+  @spec round_to_timebase(number | Ratio.t(), number | Ratio.t()) :: integer
+  def round_to_timebase(timestamp, timebase) do
     Ratio.new(timestamp, timebase) |> round_rational()
   end
 
