@@ -37,11 +37,11 @@ defmodule Membrane.Core.Element.ToiletTest do
     toilet = Toilet.new(100, :buffers, context.responsible_process, 10)
     {:ok, toilet} = Toilet.fill(toilet, 10)
     assert {_module, _counter, _capacity, _pid, _throttling_factor, 0} = toilet
-    {:delay, toilet} = Toilet.fill(toilet, 5)
+    {:ok, toilet} = Toilet.fill(toilet, 5)
     assert {_module, _counter, _capacity, _pid, _throttling_factor, 5} = toilet
     {:ok, toilet} = Toilet.fill(toilet, 80)
     assert {_module, _counter, _capacity, _pid, _throttling_factor, 0} = toilet
-    {:delay, toilet} = Toilet.fill(toilet, 9)
+    {:ok, toilet} = Toilet.fill(toilet, 9)
     assert {_module, _counter, _capacity, _pid, _throttling_factor, 9} = toilet
     {:overflow, toilet} = Toilet.fill(toilet, 11)
     assert {_module, _counter, _capacity, _pid, _throttling_factor, 0} = toilet

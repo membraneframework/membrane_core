@@ -126,14 +126,6 @@ defmodule Membrane.Core.Element.DemandHandler do
       {:ok, toilet} ->
         PadModel.set_data!(state, pad_ref, :toilet, toilet)
 
-      {:delay, toilet} ->
-        PadModel.set_data!(
-          state,
-          pad_ref,
-          :toilet,
-          toilet
-        )
-
       {:overflow, _toilet} ->
         # if the toilet has overflowed, we remove it so it didn't overflow again
         # and let the parent handle that situation by unlinking this output pad or crashing

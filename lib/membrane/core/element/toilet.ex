@@ -97,14 +97,14 @@ defmodule Membrane.Core.Element.Toilet do
     {__MODULE__, toilet_ref, capacity, responsible_process, throttling_factor, 0}
   end
 
-  @spec fill(t, non_neg_integer) :: {:ok | :delay | :overflow, t}
+  @spec fill(t, non_neg_integer) :: {:ok | :overflow, t}
   def fill(
         {__MODULE__, atomic, capacity, responsible_process, throttling_factor,
          unrinsed_buffers_size},
         amount
       ) do
     if unrinsed_buffers_size + amount < throttling_factor do
-      {:delay,
+      {:ok,
        {__MODULE__, atomic, capacity, responsible_process, throttling_factor,
         amount + unrinsed_buffers_size}}
     else
