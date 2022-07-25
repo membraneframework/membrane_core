@@ -83,7 +83,8 @@ defmodule Membrane.Core.ElementTest do
               min_demand_factor: nil,
               throttling_factor: 1
             },
-            child: :this
+            child: :this,
+            pid: self()
           },
           %Endpoint{pad_spec: :output, pad_ref: :output, pid: self(), child: :other},
           %{
