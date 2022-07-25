@@ -69,18 +69,10 @@ defmodule Membrane.Core.Element.PadController do
 
     toilet =
       if direction == :input do
-        counter_type =
-          if node(endpoint.pid) == node(other_endpoint.pid) do
-            :same_node
-          else
-            :different_nodes
-          end
-
         Toilet.new(
           endpoint.pad_props.toilet_capacity,
           info.demand_unit,
           self(),
-          counter_type,
           endpoint.pad_props.throttling_factor
         )
       else

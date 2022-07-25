@@ -7,9 +7,9 @@ defmodule Membrane.Core.Element.ToiletTest do
   end
 
   test "if toilet is implemented as :atomics for elements put on the same node", context do
-    toilet = Toilet.new(100, :buffers, context.responsible_process, :same_node, 1)
+    toilet = Toilet.new(100, :buffers, context.responsible_process, 1)
 
-    {_module, {:same_node, atomic_ref}, _capacity, _responsible_process_pid, _throttling_factor,
+    {_module, {pid, atomic_ref}, _capacity, _responsible_process_pid, _throttling_factor,
      _unrinsed_buffers} = toilet
 
     Toilet.fill(toilet, 10)
@@ -20,10 +20,10 @@ defmodule Membrane.Core.Element.ToiletTest do
 
   test "if the receiving element uses toilet with :atomics and the sending element with a interprocess message, when the toilet is distributed",
        context do
-    toilet = Toilet.new(100, :buffers, context.responsible_process, :different_nodes, 1)
+    toilet = Toilet.new(100, :buffers, context.responsible_process, 1)
 
-    {_module, {:different_nodes, counter_pid, atomic_ref}, _capacity, _responsible_process_pid,
-     _throttling_factor, _unrinsed_buffers} = toilet
+    {_module, {counter_pid, atomic_ref}, _capacity, _responsible_process_pid, _throttling_factor,
+     _unrinsed_buffers} = toilet
 
     Toilet.fill(toilet, 10)
     assert GenServer.call(counter_pid, {:add_get, atomic_ref, 0}) == 10
@@ -34,7 +34,7 @@ defmodule Membrane.Core.Element.ToiletTest do
   end
 
   test "if throttling mechanism works properly", context do
-    toilet = Toilet.new(100, :buffers, context.responsible_process, :same_node, 10)
+    toilet = Toilet.new(100, :buffers, context.responsible_process, 10)
     {:ok, toilet} = Toilet.fill(toilet, 10)
     assert {_module, _counter, _capacity, _pid, _throttling_factor, 0} = toilet
     {:delay, toilet} = Toilet.fill(toilet, 5)

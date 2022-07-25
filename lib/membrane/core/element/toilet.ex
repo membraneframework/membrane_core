@@ -41,47 +41,30 @@ defmodule Membrane.Core.Element.Toilet do
       end
     end
 
-    @type t ::
-            {:same_node, :atomics.atomics_ref()}
-            | {:different_nodes, pid(), :atomics.atomics_ref()}
+    @type t :: {pid(), :atomics.atomics_ref()}
 
-    @spec new(:same_node | :different_nodes) :: t
-    def new(type) do
+    @spec new() :: t
+    def new() do
       atomic_ref = :atomics.new(1, [])
-
-      case type do
-        :same_node ->
-          {:same_node, atomic_ref}
-
-        :different_nodes ->
-          {:ok, pid} = GenServer.start(Worker, [])
-          {:different_nodes, pid, atomic_ref}
-      end
+      {:ok, pid} = GenServer.start(Worker, [])
+      {pid, atomic_ref}
     end
 
     @spec add_get(t, integer()) :: integer()
-    def add_get({:same_node, atomic_ref}, value) do
+    def add_get({pid, atomic_ref}, value) when node(pid) == node(self()) do
       :atomics.add_get(atomic_ref, 1, value)
     end
 
-    def add_get({:different_nodes, pid, atomic_ref}, value) when node(pid) == node(self()) do
-      :atomics.add_get(atomic_ref, 1, value)
-    end
-
-    def add_get({:different_nodes, pid, atomic_ref}, value) do
+    def add_get({pid, atomic_ref}, value) do
       GenServer.call(pid, {:add_get, atomic_ref, value})
     end
 
     @spec sub(t, integer()) :: :ok
-    def sub({:same_node, atomic_ref}, value) do
+    def sub({pid, atomic_ref}, value) when node(pid) == node(self()) do
       :atomics.sub(atomic_ref, 1, value)
     end
 
-    def sub({:different_nodes, pid, atomic_ref}, value) when node(pid) == node(self()) do
-      :atomics.sub(atomic_ref, 1, value)
-    end
-
-    def sub({:different_nodes, pid, atomic_ref}, value) do
+    def sub({pid, atomic_ref}, value) do
       GenServer.cast(pid, {:sub, atomic_ref, value})
     end
   end
@@ -96,15 +79,14 @@ defmodule Membrane.Core.Element.Toilet do
           pos_integer() | nil,
           Membrane.Buffer.Metric.unit_t(),
           Process.dest(),
-          :same_node | :different_nodes,
           pos_integer()
         ) :: t
-  def new(capacity, demand_unit, responsible_process, counter_type, throttling_factor) do
+  def new(capacity, demand_unit, responsible_process, throttling_factor) do
     default_capacity =
       Membrane.Buffer.Metric.from_unit(demand_unit).buffer_size_approximation() *
         @default_capacity_factor
 
-    toilet_ref = DistributedCounter.new(counter_type)
+    toilet_ref = DistributedCounter.new()
     capacity = capacity || default_capacity
     {__MODULE__, toilet_ref, capacity, responsible_process, throttling_factor, 0}
   end
