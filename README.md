@@ -16,7 +16,7 @@ It is written in Elixir + C with outstanding Erlang VM underneath that gives us 
 
 ## Membrane Core
 
-This package provides core of the [Membrane Multimedia Framework](https://membraneframework.org).
+This package provides core of the [Membrane Multimedia Framework](https://membrane.stream).
 
 ## Installation
 
@@ -28,7 +28,7 @@ Add the following line to your `deps` in `mix.exs`. Run `mix deps.get`.
 
 ## Getting started
 
-To get familiar with basic concepts and build your first application using Membrane Framework, visit [Membrane Guide](https://membraneframework.org/guide).
+To get familiar with basic concepts and build your first application using Membrane Framework, visit [Membrane Guide](https://membrane.stream/guide).
 
 API documentation is available at [HexDocs](https://hexdocs.pm/membrane_core/).
 

@@ -114,7 +114,7 @@ defmodule Membrane.Mixfile do
       licenses: ["Apache-2.0"],
       links: %{
         "GitHub" => link(),
-        "Membrane Framework Homepage" => "https://membraneframework.org"
+        "Membrane Framework Homepage" => "https://membrane.stream"
       }
     ]
   end
