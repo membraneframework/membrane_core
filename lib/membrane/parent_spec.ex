@@ -355,6 +355,13 @@ defmodule Membrane.ParentSpec do
     for more info. Defaults to `#{Membrane.Core.Element.InputQueue.default_min_demand_factor()}` (the default may change in the future).
   - `auto_demand_size` - Size of automatically generated demands. Used only for pads working in pull mode with automatic demands.
     See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0` for more info.
+  - `throttling_factor` - an integer specifying how frequently should a sender update the number of buffers in the `Toilet`. Defaults to 1,
+    meaning, that the sender will update the toilet with each buffer being sent. Setting that factor for elements,
+    which are running on the same node, does not have an impact of performance. However, once the sending element and the receiving element are put on different nodes,
+    the sender updates the toilet with interprocess messages and setting a bigger `throttling_factor` can reduce the number of messages
+    in the system.
+    At the same time, setting a greater `throttling_factor` can result in a toilet overflow being detected later.
+
 
   See the _links_ section of the moduledoc for more information.
   """
@@ -363,7 +370,8 @@ defmodule Membrane.ParentSpec do
           toilet_capacity: number | nil,
           target_queue_size: number | nil,
           min_demand_factor: number | nil,
-          auto_demand_size: number | nil
+          auto_demand_size: number | nil,
+          throttling_factor: number | nil
         ) ::
           link_builder_t() | no_return
   def via_in(builder, pad, props \\ [])
@@ -388,7 +396,8 @@ defmodule Membrane.ParentSpec do
         target_queue_size: [default: nil],
         min_demand_factor: [default: nil],
         auto_demand_size: [default: nil],
-        toilet_capacity: [default: nil]
+        toilet_capacity: [default: nil],
+        throttling_factor: [default: 1]
       )
       |> case do
         {:ok, props} ->

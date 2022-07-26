@@ -158,7 +158,8 @@ defmodule Membrane.Core.Bin.PadController do
              :target_queue_size,
              :min_demand_factor,
              :auto_demand_size,
-             :toilet_capacity
+             :toilet_capacity,
+             :throttling_factor
            ] do
           external_value || internal_value
         else
