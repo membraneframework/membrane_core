@@ -305,7 +305,7 @@ defmodule Membrane.Core.Element.PadController do
   def generate_eos_if_needed(pad_ref, state) do
     %{direction: direction, end_of_stream?: eos?} = PadModel.get_data!(state, pad_ref)
 
-    if direction == :input and not eos? and state.status == :playing do
+    if direction == :input and not eos? and state.playback == :playing do
       EventController.exec_handle_event(pad_ref, %Events.EndOfStream{}, state)
     else
       state

@@ -138,8 +138,8 @@ defmodule Membrane.Core.ElementTest do
     ]
     |> Enum.each(fn msg ->
       assert {:noreply, state} = Element.handle_info(msg, initial_state)
-      assert %{state | status_queue: []} == initial_state
-      assert [fun] = state.status_queue
+      assert %{state | playback_queue: []} == initial_state
+      assert [fun] = state.playback_queue
       assert is_function(fun)
     end)
   end

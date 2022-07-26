@@ -36,10 +36,10 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({action, _}, _cb, _params, %State{status: status})
-      when status != :playing and
+  def handle_action({action, _}, _cb, _params, %State{playback: playback})
+      when playback != :playing and
              action in [:buffer, :event, :caps, :demand, :redemand, :forward, :end_of_stream] do
-    raise ActionError, action: action, reason: {:invalid_component_status, status}
+    raise ActionError, action: action, reason: {:invalid_component_playback, playback}
   end
 
   @impl CallbackHandler

@@ -7,7 +7,7 @@ defmodule Membrane.Core.Element.DemandController do
 
   alias Membrane.Core.{CallbackHandler, Message}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, State, StatusQueue, Toilet}
+  alias Membrane.Core.Element.{ActionHandler, State, PlaybackQueue, Toilet}
   alias Membrane.Element.CallbackContext
   alias Membrane.Pad
 
@@ -21,7 +21,7 @@ defmodule Membrane.Core.Element.DemandController do
   @spec handle_demand(Pad.ref_t(), non_neg_integer, State.t()) :: State.t()
   def handle_demand(pad_ref, size, state) do
     withl pad: {:ok, data} = PadModel.get_data(state, pad_ref),
-          status: %State{status: :playing} <- state do
+          playback: %State{playback: :playing} <- state do
       %{direction: :output, mode: :pull} = data
       do_handle_demand(pad_ref, size, data, state)
     else
@@ -29,8 +29,8 @@ defmodule Membrane.Core.Element.DemandController do
         # We've got a demand from already unlinked pad
         state
 
-      status: _status ->
-        StatusQueue.store(&handle_demand(pad_ref, size, &1), state)
+      playback: _playback ->
+        PlaybackQueue.store(&handle_demand(pad_ref, size, &1), state)
     end
   end
 

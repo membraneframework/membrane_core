@@ -37,7 +37,8 @@ defmodule Membrane.Core.Pipeline.State do
                 crash_groups: %{},
                 links: %{},
                 pending_specs: %{},
-                status: :initializing,
+                playback: :stopped,
+                initialized?: false,
                 play_request?: false,
                 terminating?: false
               ]

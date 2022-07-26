@@ -25,7 +25,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
         state
       )
 
-    state = %{state | status: :initialized}
+    state = %{state | initialized?: true}
 
     case state do
       %Core.Pipeline.State{play_request?: true} ->
@@ -49,11 +49,11 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
     activate_syncs(state.children)
 
-    Enum.each(state.children, fn {_name, %{pid: pid, status: status}} ->
-      if status == :ready, do: Message.send(pid, :play)
+    Enum.each(state.children, fn {_name, %{pid: pid, ready?: ready?}} ->
+      if ready?, do: Message.send(pid, :play)
     end)
 
-    state = %{state | status: :playing}
+    state = %{state | playback: :playing}
     context = Component.callback_context_generator(:parent, PlaybackChange, state)
 
     CallbackHandler.exec_and_handle_callback(

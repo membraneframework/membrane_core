@@ -16,7 +16,7 @@ defmodule Membrane.Core.Element.BufferController do
     EventController,
     InputQueue,
     State,
-    StatusQueue
+    PlaybackQueue
   }
 
   alias Membrane.Core.Telemetry
@@ -33,7 +33,7 @@ defmodule Membrane.Core.Element.BufferController do
   @spec handle_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
   def handle_buffer(pad_ref, buffers, state) do
     withl pad: {:ok, data} = PadModel.get_data(state, pad_ref),
-          status: %State{status: :playing} <- state do
+          playback: %State{playback: :playing} <- state do
       %{direction: :input, start_of_stream?: start_of_stream?} = data
 
       state =
@@ -49,8 +49,8 @@ defmodule Membrane.Core.Element.BufferController do
         # We've got a buffer from already unlinked pad
         state
 
-      status: _status ->
-        StatusQueue.store(&handle_buffer(pad_ref, buffers, &1), state)
+      playback: _playback ->
+        PlaybackQueue.store(&handle_buffer(pad_ref, buffers, &1), state)
     end
   end
 

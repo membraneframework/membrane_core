@@ -33,7 +33,8 @@ defmodule Membrane.ChildEntry do
     :clock,
     :sync,
     :spec_ref,
-    status: :initializing,
+    initialized?: false,
+    ready?: false,
     terminating?: false
   ]
 end

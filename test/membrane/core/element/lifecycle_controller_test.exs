@@ -32,7 +32,7 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
         parent: self()
       })
       | type: :filter,
-        status: :playing,
+        playback: :playing,
         pads_data: %{
           input:
             struct(Membrane.Element.PadData,

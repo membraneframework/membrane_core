@@ -98,8 +98,8 @@ defmodule Membrane.ActionError do
     "This action cannot be returned from the #{callback} callback."
   end
 
-  defp format_reason({:invalid_component_status, status}) do
-    "Cannot invoke this action while component status is #{status}."
+  defp format_reason({:invalid_component_playback, playback}) do
+    "Cannot invoke this action while component playback is #{playback}."
   end
 
   defp format_reason(:actions_after_redemand) do
@@ -109,7 +109,7 @@ defmodule Membrane.ActionError do
   defp format_reason({:unknown_action, doc_module}) do
     """
     We looked everywhere, but couldn't find out what this action is supposed to do.
-    Make sure it's correct and valid for the component, its status, callback or
+    Make sure it's correct and valid for the component, its playback, callback or
     other possible circumstances. See the docs for #{inspect(doc_module)} to check
     which actions are supported and when you can return them.
     """

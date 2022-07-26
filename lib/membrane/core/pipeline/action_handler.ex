@@ -66,12 +66,12 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:playback, :playing}, _cb, _params, state) do
-    Membrane.Logger.debug("play request, #{inspect(state.status)}")
+    Membrane.Logger.debug("Play request, #{inspect(state.playback)}")
 
-    case state.status do
-      :initializing -> %{state | play_request?: true}
-      :initialized -> LifecycleController.handle_play(state)
-      :playing -> state
+    cond do
+      state.playback == :playing -> state
+      state.initialized? -> LifecycleController.handle_play(state)
+      true -> %{state | play_request?: true}
     end
   end
 

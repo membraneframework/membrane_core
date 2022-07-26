@@ -54,7 +54,8 @@ defmodule Membrane.Core.Bin.State do
                 children_log_metadata: [],
                 links: %{},
                 pending_specs: %{},
-                status: :initializing,
+                playback: :stopped,
+                initialized?: false,
                 play_request?: false,
                 terminating?: false
               ]

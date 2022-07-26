@@ -44,8 +44,9 @@ defmodule Membrane.Core.Element.State do
     :delayed_demands,
     :synchronization,
     :demand_size,
-    :status,
-    :status_queue
+    :playback,
+    :initialized?,
+    :playback_queue
   ]
 
   @doc """
@@ -74,8 +75,9 @@ defmodule Membrane.Core.Element.State do
         stream_sync: options.sync,
         latency: 0
       },
-      status: :initializing,
-      status_queue: []
+      initialized?: false,
+      playback: :stopped,
+      playback_queue: []
     }
     |> PadSpecHandler.init_pads()
   end

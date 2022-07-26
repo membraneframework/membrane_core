@@ -43,7 +43,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
         parent: self()
       })
       | type: :filter,
-        status: :playing,
+        playback: :playing,
         pads_data: %{
           input:
             struct(Membrane.Element.PadData,

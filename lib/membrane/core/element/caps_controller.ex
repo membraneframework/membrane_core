@@ -8,7 +8,7 @@ defmodule Membrane.Core.Element.CapsController do
   alias Membrane.{Caps, Pad}
   alias Membrane.Core.{CallbackHandler, Telemetry}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, InputQueue, State, StatusQueue}
+  alias Membrane.Core.Element.{ActionHandler, InputQueue, State, PlaybackQueue}
   alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel
@@ -21,7 +21,7 @@ defmodule Membrane.Core.Element.CapsController do
   @spec handle_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.t()
   def handle_caps(pad_ref, caps, state) do
     withl pad: {:ok, data} = PadModel.get_data(state, pad_ref),
-          status: %State{status: :playing} <- state do
+          playback: %State{playback: :playing} <- state do
       %{direction: :input} = data
       Telemetry.report_metric(:caps, 1, inspect(pad_ref))
 
@@ -42,8 +42,8 @@ defmodule Membrane.Core.Element.CapsController do
         # We've got caps from already unlinked pad
         state
 
-      status: _status ->
-        StatusQueue.store(&handle_caps(pad_ref, caps, &1), state)
+      playback: _playback ->
+        PlaybackQueue.store(&handle_caps(pad_ref, caps, &1), state)
     end
   end
 

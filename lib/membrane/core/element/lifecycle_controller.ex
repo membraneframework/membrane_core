@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   alias Membrane.Core.{CallbackHandler, Child, Element, Message}
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.{CallbackHandler, Child, Element, Message}
-  alias Membrane.Core.Element.{ActionHandler, State, StatusQueue}
+  alias Membrane.Core.Element.{ActionHandler, State, PlaybackQueue}
   alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel
@@ -65,14 +65,14 @@ defmodule Membrane.Core.Element.LifecycleController do
 
     Membrane.Logger.debug("Element initialized")
     Message.send(state.parent_pid, :initialized, state.name)
-    %State{state | status: :ready}
+    %State{state | initialized?: true}
   end
 
   def handle_play(state) do
     Child.PadController.assert_all_static_pads_linked!(state)
 
     Membrane.Logger.debug("Got play request")
-    state = %State{state | status: :playing}
+    state = %State{state | playback: :playing}
     require CallbackContext.PlaybackChange
     context = &CallbackContext.PlaybackChange.from_state/1
 
@@ -85,7 +85,7 @@ defmodule Membrane.Core.Element.LifecycleController do
         state
       )
 
-    StatusQueue.eval(state)
+    PlaybackQueue.eval(state)
   end
 
   def handle_terminate_request(state) do
