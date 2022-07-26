@@ -80,9 +80,11 @@ defmodule Membrane.Core.ElementTest do
               toilet_capacity: nil,
               target_queue_size: nil,
               auto_demand_size: nil,
-              min_demand_factor: nil
+              min_demand_factor: nil,
+              throttling_factor: 1
             },
-            child: :this
+            child: :this,
+            pid: self()
           },
           %Endpoint{pad_spec: :output, pad_ref: :output, pid: self(), child: :other},
           %{
