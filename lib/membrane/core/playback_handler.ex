@@ -123,7 +123,6 @@ defmodule Membrane.Core.PlaybackHandler do
       end
     else
       {:error, reason} -> {{:error, reason}, state}
-
       other_error -> other_error
     end
   end
