@@ -212,8 +212,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     state =
       Enum.reduce(spec_data.children_names, state, fn child, state ->
-        if state.playback == :playing,
-          do: send(Map.fetch!(state.children, child).pid, Message.new(:play))
+        %{pid: pid, terminating?: terminating?} = get_in(state, [:children, child])
+
+        cond do
+          terminating? -> Message.send(pid, :terminate)
+          state.playback == :playing -> Message.send(pid, :play)
+          true -> :ok
+        end
 
         put_in(state, [:children, child, :ready?], true)
       end)
@@ -279,7 +284,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       """)
     end
 
-    Enum.each(data, &Message.send(&1.pid, :terminate))
+    data |> Enum.filter(& &1.ready?) |> Enum.each(&Message.send(&1.pid, :terminate))
     Parent.ChildrenModel.update_children!(state, names, &%{&1 | terminating?: true})
   end
 
@@ -304,12 +309,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp do_handle_child_death(child_name, :normal, state) do
-    {%{pid: child_pid, spec_ref: spec_ref}, state} =
-      Bunch.Access.pop_in(state, [:children, child_name])
-
+    {%{pid: child_pid}, state} = Bunch.Access.pop_in(state, [:children, child_name])
     state = LinkHandler.unlink_element(child_name, state)
     {_result, state} = remove_child_from_crash_group(state, child_pid)
-    cleanup_spec_startup(spec_ref, state)
+    state
   end
 
   defp do_handle_child_death(child_name, reason, state) do
@@ -321,7 +324,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         |> remove_child_from_crash_group(group, child_pid)
 
       if result == :removed do
-        state = Enum.reduce(group.members, state, &do_handle_child_death(&1, :normal, &2))
+        state =
+          Enum.reduce(group.members, state, fn child_name, state ->
+            {%{spec_ref: spec_ref}, state} = Bunch.Access.pop_in(state, [:children, child_name])
+            state = LinkHandler.unlink_element(child_name, state)
+            cleanup_spec_startup(spec_ref, state)
+          end)
 
         exec_handle_crash_group_down_callback(
           group.name,
