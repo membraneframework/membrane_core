@@ -9,7 +9,7 @@ defmodule Membrane.Support.Sync.Source do
 
   @impl true
   def handle_play(_ctx, %{tick_interval: interval} = state) do
-    {{:ok, start_timer: {:my_timer, interval}}, state}
+    {{:ok, notify_parent: :start_timer, start_timer: {:my_timer, interval}}, state}
   end
 
   @impl true
