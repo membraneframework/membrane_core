@@ -117,6 +117,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   @impl PlaybackHandler
   def handle_playback_state(old_playback_state, new_playback_state, state) do
     require CallbackContext.PlaybackChange
+
     context = &CallbackContext.PlaybackChange.from_state/1
     callback = PlaybackHandler.state_change_callback(old_playback_state, new_playback_state)
 
