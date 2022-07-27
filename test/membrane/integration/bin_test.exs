@@ -115,11 +115,11 @@ defmodule Membrane.Core.BinTest do
 
       assert_playing(pipeline)
 
-      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_start_of_stream, {:sink, _}})
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_start_of_stream, :sink, _})
 
       assert_buffers_flow_through(pipeline, buffers, :test_bin)
 
-      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:sink, _}})
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, :sink, _})
       stop_pipeline(pipeline)
     end
 
@@ -142,15 +142,15 @@ defmodule Membrane.Core.BinTest do
       assert_pipeline_notified(
         pipeline,
         :test_bin,
-        {:handle_element_start_of_stream, {:filter, _}}
+        {:handle_element_start_of_stream, :filter, _}
       )
 
-      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_start_of_stream, {:sink, _}})
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_start_of_stream, :sink, _})
 
       assert_buffers_flow_through(pipeline, buffers, :test_bin)
 
-      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:filter, _}})
-      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, {:sink, _}})
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, :filter, _})
+      assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, :sink, _})
       stop_pipeline(pipeline)
     end
   end
@@ -169,7 +169,7 @@ defmodule Membrane.Core.BinTest do
       assert_receive {:DOWN, ^ref, :process, ^bin_pid, {:shutdown, :parent_crash}}
     end
 
-    test "DOWN message should be delivered to handle_other if it's not coming from parent" do
+    test "DOWN message should be delivered to handle_info if it's not coming from parent" do
       {:ok, bin_pid} =
         self()
         |> bin_init_options
@@ -181,7 +181,7 @@ defmodule Membrane.Core.BinTest do
 
       send(bin_pid, {:DOWN, ref, :process, monitored_proc, :normal})
 
-      assert_receive Message.new(:notification, [
+      assert_receive Message.new(:child_notification, [
                        :name,
                        {:DOWN, ^ref, :process, ^monitored_proc, :normal}
                      ])
@@ -283,6 +283,24 @@ defmodule Membrane.Core.BinTest do
 
       assert proxy_for?(clock1, clock2)
       ClockPipeline.terminate(pid, blocking?: true)
+    end
+
+    test "handle_parent_notification/3 works for Bin" do
+      buffers = ['a', 'b', 'c']
+
+      children = [
+        source: %Testing.Source{output: buffers},
+        test_bin: TestBins.NotifyingParentBin,
+        sink: Testing.Sink
+      ]
+
+      {:ok, pipeline} =
+        Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
+
+      Testing.Pipeline.execute_actions(pipeline, notify_child: {:test_bin, "Some notification"})
+      assert_pipeline_notified(pipeline, :test_bin, msg)
+      assert msg == {"filter1", "Some notification"}
+      Testing.Pipeline.terminate(pipeline, blocking?: true)
     end
 
     defp proxy_for?(c1, c2) do

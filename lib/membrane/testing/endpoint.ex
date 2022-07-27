@@ -93,7 +93,7 @@ defmodule Membrane.Testing.Endpoint do
     do: {{:ok, notify({:caps, pad, caps})}, state}
 
   @impl true
-  def handle_other({:make_demand, size}, _ctx, %{autodemand: false} = state) do
+  def handle_info({:make_demand, size}, _ctx, %{autodemand: false} = state) do
     {{:ok, demand: {:input, size}}, state}
   end
 
@@ -153,6 +153,6 @@ defmodule Membrane.Testing.Endpoint do
   end
 
   defp notify(payload) do
-    [notify: %Notification{payload: payload}]
+    [notify_parent: %Notification{payload: payload}]
   end
 end

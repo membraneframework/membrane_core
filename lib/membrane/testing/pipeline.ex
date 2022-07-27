@@ -263,7 +263,7 @@ defmodule Membrane.Testing.Pipeline do
   @doc """
   Executes specified actions in the pipeline.
 
-  The actions are returned from the `handle_other` callback.
+  The actions are returned from the `handle_info` callback.
   """
   @spec execute_actions(pid(), Keyword.t()) :: :ok
   def execute_actions(pipeline, actions) do
@@ -396,26 +396,29 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_notification(
+  def handle_child_notification(
         %Notification{payload: notification},
         from,
         _ctx,
         %State{} = state
       ) do
-    :ok = notify_test_process(state.test_process, {:handle_notification, {notification, from}})
+    :ok =
+      notify_test_process(state.test_process, {:handle_child_notification, {notification, from}})
+
     {:ok, state}
   end
 
   @impl true
-  def handle_notification(notification, from, ctx, %State{} = state) do
+  def handle_child_notification(notification, from, ctx, %State{} = state) do
     {custom_actions, custom_state} =
       eval_injected_module_callback(
-        :handle_notification,
+        :handle_child_notification,
         [notification, from, ctx],
         state
       )
 
-    :ok = notify_test_process(state.test_process, {:handle_notification, {notification, from}})
+    :ok =
+      notify_test_process(state.test_process, {:handle_child_notification, {notification, from}})
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
@@ -433,62 +436,77 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_other({__MODULE__, :__execute_actions__, actions}, _ctx, %State{} = state) do
+  def handle_info({__MODULE__, :__execute_actions__, actions}, _ctx, %State{} = state) do
     {{:ok, actions}, state}
   end
 
   @impl true
-  def handle_other({:for_element, element, message}, ctx, %State{} = state) do
+  def handle_info({:for_element, element, message}, ctx, %State{} = state) do
     injected_module_result =
       eval_injected_module_callback(
-        :handle_other,
+        :handle_info,
         [{:for_element, element, message}, ctx],
         state
       )
 
-    testing_pipeline_result = {{:ok, forward: {element, message}}, state}
+    testing_pipeline_result = {{:ok, notify_child: {element, message}}, state}
 
     combine_results(injected_module_result, testing_pipeline_result)
   end
 
   @impl true
-  def handle_other(message, ctx, %State{} = state) do
+  def handle_info(message, ctx, %State{} = state) do
     {custom_actions, custom_state} =
       eval_injected_module_callback(
-        :handle_other,
+        :handle_info,
         [message, ctx],
         state
       )
 
-    :ok = notify_test_process(state.test_process, {:handle_other, message})
+    :ok = notify_test_process(state.test_process, {:handle_info, message})
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
   @impl true
-  def handle_element_start_of_stream(endpoint, ctx, state) do
+  def handle_call(message, ctx, state) do
+    {custom_actions, custom_state} =
+      eval_injected_module_callback(
+        :handle_call,
+        [message, ctx],
+        state
+      )
+
+    :ok = notify_test_process(state.test_process, {:handle_call, message})
+
+    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
+  end
+
+  @impl true
+  def handle_element_start_of_stream(element, pad, ctx, state) do
     {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_element_start_of_stream,
-        [endpoint, ctx],
+        [element, pad, ctx],
         state
       )
 
-    :ok = notify_test_process(state.test_process, {:handle_element_start_of_stream, endpoint})
+    :ok =
+      notify_test_process(state.test_process, {:handle_element_start_of_stream, {element, pad}})
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
   @impl true
-  def handle_element_end_of_stream(endpoint, ctx, state) do
+  def handle_element_end_of_stream(element, pad, ctx, state) do
     {custom_actions, custom_state} =
       eval_injected_module_callback(
         :handle_element_end_of_stream,
-        [endpoint, ctx],
+        [element, pad, ctx],
         state
       )
 
-    :ok = notify_test_process(state.test_process, {:handle_element_end_of_stream, endpoint})
+    :ok = notify_test_process(state.test_process, {:handle_element_end_of_stream, {element, pad}})
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end

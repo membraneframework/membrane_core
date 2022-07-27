@@ -3,8 +3,9 @@ defmodule Membrane.Core.Parent.LifecycleController do
   use Bunch
   use Membrane.Core.PlaybackHandler
 
-  alias Membrane.{Child, Core, Notification, Pad, Sync}
+  alias Membrane.{Child, ChildNotification, Core, Pad, Sync}
   alias Membrane.Core.{CallbackHandler, Component, Message, Parent, PlaybackHandler}
+
   alias Membrane.Core.Events
   alias Membrane.Core.Parent.ChildrenModel
   alias Membrane.PlaybackState
@@ -66,8 +67,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     Membrane.Logger.debug("Playback state changed from #{old} to #{new}")
 
     if new == :terminating do
-      Process.flag(:trap_exit, false)
-      Process.exit(self(), :normal)
+      exit(:normal)
     end
 
     {:ok, state}
@@ -83,19 +83,19 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
-  @spec handle_notification(Child.name_t(), Notification.t(), Parent.state_t()) ::
+  @spec handle_child_notification(Child.name_t(), ChildNotification.t(), Parent.state_t()) ::
           Parent.state_t()
-  def handle_notification(from, notification, state) do
+  def handle_child_notification(from, notification, state) do
     Membrane.Logger.debug_verbose(
       "Received notification #{inspect(notification)} from #{inspect(from)}"
     )
 
     Parent.ChildrenModel.assert_child_exists!(state, from)
-    context = Component.callback_context_generator(:parent, Notification, state)
+    context = Component.callback_context_generator(:parent, ChildNotification, state)
     action_handler = get_callback_action_handler(state)
 
     CallbackHandler.exec_and_handle_callback(
-      :handle_notification,
+      :handle_child_notification,
       action_handler,
       %{context: context},
       [notification, from],
@@ -103,13 +103,13 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
-  @spec handle_other(any, Parent.state_t()) :: Parent.state_t()
-  def handle_other(message, state) do
+  @spec handle_info(any, Parent.state_t()) :: Parent.state_t()
+  def handle_info(message, state) do
     context = Component.callback_context_generator(:parent, Other, state)
     action_handler = get_callback_action_handler(state)
 
     CallbackHandler.exec_and_handle_callback(
-      :handle_other,
+      :handle_info,
       action_handler,
       %{context: context},
       [message],
@@ -138,7 +138,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
       callback,
       action_handler,
       %{context: context},
-      [{element_name, pad_ref}],
+      [element_name, pad_ref],
       state
     )
   end

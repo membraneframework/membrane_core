@@ -68,14 +68,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     StartupHandler.exec_handle_spec_started(children_names, state)
   end
 
-  @spec handle_forward([{Membrane.Child.name_t(), any}], Parent.state_t()) :: :ok
-  def handle_forward(children_messages, state) do
-    Enum.each(children_messages, &do_handle_forward(&1, state))
-  end
-
-  defp do_handle_forward({child_name, message}, state) do
+  @spec handle_notify_child(
+          {Membrane.Child.name_t(), Membrane.ParentNotification.t()},
+          Parent.state_t()
+        ) :: :ok
+  def handle_notify_child({child_name, message}, state) do
     %{pid: pid} = Parent.ChildrenModel.get_child_data!(state, child_name)
-    send(pid, message)
+    Membrane.Core.Message.send(pid, :parent_notification, [message])
     :ok
   end
 
@@ -132,7 +131,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   If a pid turns out not to be a pid of any child error is raised.
   """
   @spec handle_child_death(child_pid :: pid(), reason :: any(), state :: Parent.state_t()) ::
-          Parent.state_t()
+          Parent.state_t() | no_return()
   def handle_child_death(pid, :normal, state) do
     with {:ok, child_name} <- child_by_pid(pid, state) do
       state = Bunch.Access.delete_in(state, [:children, child_name])
@@ -147,8 +146,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   def handle_child_death(pid, reason, state) do
-    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state),
-         {:ok, child_name} <- child_by_pid(pid, state) do
+    withl group: {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(pid, state),
+          child: {:ok, child_name} <- child_by_pid(pid, state) do
       {result, state} =
         crash_all_group_members(group, child_name, state)
         |> remove_child_from_crash_group(group, pid)
@@ -166,15 +165,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         state
       end
     else
-      {:error, :not_child} ->
+      child: {:error, :not_child} ->
         raise Membrane.PipelineError,
               "Tried to handle death of process that wasn't a child of that pipeline."
 
-      {:error, :not_member} when reason == {:shutdown, :membrane_crash_group_kill} ->
+      group: {:error, :not_member} when reason == {:shutdown, :membrane_crash_group_kill} ->
         raise Membrane.PipelineError,
               "Child that was not a member of any crash group killed with :membrane_crash_group_kill."
 
-      {:error, :not_member} ->
+      group: {:error, :not_member} ->
         Membrane.Logger.debug("""
         Pipeline child crashed but was not a member of any crash group.
         Terminating.
@@ -237,14 +236,14 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp crash_all_group_members(_crash_group, _crash_initiator, state), do: state
 
   # called when a dead child was not a member of any crash group
+  @spec propagate_child_crash() :: no_return()
   defp propagate_child_crash() do
     Membrane.Logger.debug("""
     A child crashed but was not a member of any crash group.
     Terminating.
     """)
 
-    Process.flag(:trap_exit, false)
-    Process.exit(self(), {:shutdown, :child_crash})
+    exit({:shutdown, :child_crash})
   end
 
   defp remove_child_from_crash_group(state, child_pid) do

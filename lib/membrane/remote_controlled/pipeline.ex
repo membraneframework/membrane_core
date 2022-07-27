@@ -276,7 +276,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     Pipeline.await_notification(pipeline, :element_id)
     ```
   """
-  @spec await_notification(pid(), Membrane.Notification.t()) ::
+  @spec await_notification(pid(), Membrane.ParentNotification.t()) ::
           Membrane.RemoteControlled.Message.Notification.t()
   def await_notification(pipeline, element) do
     do_await(pipeline, Notification, element: element)
@@ -391,33 +391,33 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @impl true
-  def handle_element_end_of_stream({element_name, pad_ref}, _ctx, state) do
+  def handle_element_end_of_stream(element_name, pad_ref, _ctx, state) do
     pipeline_event = %Message.EndOfStream{from: self(), element: element_name, pad: pad_ref}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
-  def handle_element_start_of_stream({element_name, pad_ref}, _ctx, state) do
+  def handle_element_start_of_stream(element_name, pad_ref, _ctx, state) do
     pipeline_event = %Message.StartOfStream{from: self(), element: element_name, pad: pad_ref}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
-  def handle_notification(notification, element, _ctx, state) do
+  def handle_child_notification(notification, element, _ctx, state) do
     pipeline_event = %Message.Notification{from: self(), data: notification, element: element}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
 
   @impl true
-  def handle_other({:exec_actions, actions}, _ctx, state) do
+  def handle_info({:exec_actions, actions}, _ctx, state) do
     {{:ok, actions}, state}
   end
 
   @impl true
-  def handle_other({:subscription, pattern}, _ctx, state) do
+  def handle_info({:subscription, pattern}, _ctx, state) do
     {:ok, %{state | matching_functions: [pattern | state.matching_functions]}}
   end
 

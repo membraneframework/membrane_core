@@ -43,7 +43,7 @@ defmodule Membrane.Integration.LinkingTest do
 
     @impl true
     def handle_pad_removed(_pad, _ctx, _state) do
-      {{:ok, notify: :handle_pad_removed}, %{}}
+      {{:ok, notify_parent: :handle_pad_removed}, %{}}
     end
   end
 
@@ -57,12 +57,12 @@ defmodule Membrane.Integration.LinkingTest do
     end
 
     @impl true
-    def handle_other({:start_spec, %{spec: spec}}, _ctx, state) do
+    def handle_info({:start_spec, %{spec: spec}}, _ctx, state) do
       {{:ok, spec: spec}, state}
     end
 
     @impl true
-    def handle_other(
+    def handle_info(
           {:start_spec_and_kill, %{spec: spec, children_to_kill: children_to_kill}},
           ctx,
           state
@@ -72,12 +72,12 @@ defmodule Membrane.Integration.LinkingTest do
     end
 
     @impl true
-    def handle_other({:remove_child, child}, _ctx, state) do
+    def handle_info({:remove_child, child}, _ctx, state) do
       {{:ok, remove_child: child}, state}
     end
 
     @impl true
-    def handle_other(_msg, _ctx, state) do
+    def handle_info(_msg, _ctx, state) do
       {:ok, state}
     end
 

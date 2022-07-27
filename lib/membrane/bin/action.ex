@@ -14,7 +14,13 @@ defmodule Membrane.Bin.Action do
   @typedoc """
   Action that sends a message to a child identified by name.
   """
-  @type forward_t :: {:forward, {Child.name_t(), any} | [{Child.name_t(), any}]}
+  @type notify_child_t ::
+          {:notify_child, {Child.name_t(), Membrane.ParentNotification.t()}}
+
+  @typedoc """
+  Sends a message to the parent.
+  """
+  @type notify_parent_t :: {:notify_parent, Membrane.ChildNotification.t()}
 
   @typedoc """
   Action that instantiates children and links them according to `Membrane.ParentSpec`.
@@ -47,8 +53,8 @@ defmodule Membrane.Bin.Action do
   """
   @type start_timer_t ::
           {:start_timer,
-           {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval}
-           | {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval,
+           {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval}
+           | {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval,
               clock :: Membrane.Clock.t()}}
 
   @typedoc """
@@ -67,7 +73,7 @@ defmodule Membrane.Bin.Action do
   """
   @type timer_interval_t ::
           {:timer_interval,
-           {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval}}
+           {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval}}
 
   @typedoc """
   Stops a timer started with `t:start_timer_t/0` action.
@@ -83,7 +89,8 @@ defmodule Membrane.Bin.Action do
   other parts of framework.
   """
   @type t ::
-          forward_t
+          notify_child_t
+          | notify_parent_t
           | spec_t
           | remove_child_t
           | start_timer_t

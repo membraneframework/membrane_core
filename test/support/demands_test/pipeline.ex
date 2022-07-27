@@ -27,8 +27,8 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
   end
 
   @impl true
-  def handle_other({:child_msg, name, msg}, _ctx, state) do
-    {{:ok, forward: {name, msg}}, state}
+  def handle_info({:child_msg, name, msg}, _ctx, state) do
+    {{:ok, notify_child: {name, msg}}, state}
   end
 
   @impl true

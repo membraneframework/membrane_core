@@ -7,6 +7,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   use Bunch
   use Membrane.Core.PlaybackHandler
 
+  alias Membrane.Core.{CallbackHandler, Child, Element, Message}
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.{CallbackHandler, Child, Element, Message}
   alias Membrane.Core.Element.{ActionHandler, PlaybackBuffer, State}
@@ -99,13 +100,13 @@ defmodule Membrane.Core.Element.LifecycleController do
   @doc """
   Handles custom messages incoming to element.
   """
-  @spec handle_other(message :: any, State.t()) :: State.t()
-  def handle_other(message, state) do
+  @spec handle_info(message :: any, State.t()) :: State.t()
+  def handle_info(message, state) do
     require CallbackContext.Other
     context = &CallbackContext.Other.from_state/1
 
     CallbackHandler.exec_and_handle_callback(
-      :handle_other,
+      :handle_info,
       ActionHandler,
       %{context: context},
       [message],
@@ -156,13 +157,12 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @impl PlaybackHandler
   def handle_playback_state_changed(old, new, state) do
-    Membrane.Logger.debug_verbose("Playback state changed from #{old} to #{new}")
+    Membrane.Logger.debug("Playback state changed from #{old} to #{new}")
 
     state = PlaybackBuffer.eval(state)
 
     if new == :terminating do
-      Process.flag(:trap_exit, false)
-      Process.exit(self(), :normal)
+      exit(:normal)
     end
 
     {:ok, state}

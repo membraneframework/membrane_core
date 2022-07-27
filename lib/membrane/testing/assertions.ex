@@ -50,7 +50,7 @@ defmodule Membrane.Testing.Assertions do
       unquote(
         assert_receive_from_pipeline(
           pipeline,
-          {:handle_notification,
+          {:handle_child_notification,
            {notification_pattern,
             quote do
               ^element_name_value
@@ -81,7 +81,7 @@ defmodule Membrane.Testing.Assertions do
       unquote(
         refute_receive_from_pipeline(
           pipeline,
-          {:handle_notification,
+          {:handle_child_notification,
            {notification_pattern,
             quote do
               ^element_name_value
@@ -213,7 +213,7 @@ defmodule Membrane.Testing.Assertions do
       assert_pipeline_receive(pid, :tick)
 
   Such call would flunk if the message `:tick` has not been handled by
-  `c:Membrane.Parent.handle_other/3` within the `timeout`.
+  `c:Membrane.Parent.handle_info/3` within the `timeout`.
   """
   defmacro assert_pipeline_receive(pipeline, message_pattern, timeout \\ @default_timeout) do
     do_pipeline_receive(&assert_receive_from_pipeline/3, pipeline, message_pattern, timeout)
@@ -231,14 +231,14 @@ defmodule Membrane.Testing.Assertions do
 
 
   Such call would flunk if the message `:tick` has been handled by
-  `c:Membrane.Parent.handle_other/3`.
+  `c:Membrane.Parent.handle_info/3`.
   """
   defmacro refute_pipeline_receive(pipeline, message_pattern, timeout \\ @default_timeout) do
     do_pipeline_receive(&refute_receive_from_pipeline/3, pipeline, message_pattern, timeout)
   end
 
   defp do_pipeline_receive(assertion, pipeline, message_pattern, timeout) do
-    assertion.(pipeline, {:handle_other, message_pattern}, timeout)
+    assertion.(pipeline, {:handle_info, message_pattern}, timeout)
   end
 
   @doc """
@@ -294,7 +294,7 @@ defmodule Membrane.Testing.Assertions do
       unquote(
         assertion.(
           pipeline,
-          {:handle_notification,
+          {:handle_child_notification,
            {quote do
               {:caps, :input, unquote(caps)}
             end,
@@ -360,7 +360,7 @@ defmodule Membrane.Testing.Assertions do
       unquote(
         assertion.(
           pipeline,
-          {:handle_notification,
+          {:handle_child_notification,
            {{:buffer, pattern},
             quote do
               ^element_name_value
@@ -403,7 +403,7 @@ defmodule Membrane.Testing.Assertions do
       unquote(
         assertion.(
           pipeline,
-          {:handle_notification,
+          {:handle_child_notification,
            {{:event, event},
             quote do
               ^element_name_value

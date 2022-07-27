@@ -14,7 +14,7 @@ defmodule Membrane.Pipeline.Action do
   @typedoc """
   Action that sends a message to a child identified by name.
   """
-  @type forward_t :: {:forward, {Child.name_t(), any} | [{Child.name_t(), any}]}
+  @type notify_child_t :: {:notify_child, {Child.name_t(), Membrane.ParentNotification.t()}}
 
   @typedoc """
   Action that instantiates children and links them according to `Membrane.ParentSpec`.
@@ -47,8 +47,8 @@ defmodule Membrane.Pipeline.Action do
   """
   @type start_timer_t ::
           {:start_timer,
-           {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval}
-           | {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval,
+           {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval}
+           | {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval,
               clock :: Membrane.Clock.t()}}
 
   @typedoc """
@@ -67,7 +67,7 @@ defmodule Membrane.Pipeline.Action do
   """
   @type timer_interval_t ::
           {:timer_interval,
-           {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval}}
+           {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval}}
 
   @typedoc """
   Stops a timer started with `t:start_timer_t/0` action.
@@ -77,24 +77,37 @@ defmodule Membrane.Pipeline.Action do
   @type stop_timer_t :: {:stop_timer, timer_id :: any}
 
   @typedoc """
+  Changes the playback state of the pipeline to the chosen one.
+  """
+  @type playback_t :: {:playback, :prepared | :playing | :stopped}
+
+  @typedoc """
+  Action that replies to a `Membrane.Pipeline.call/3`. Can be returned only from the `c:Membrane.Pipeline.handle_call/3` callback, in
+  which context the caller reference is available, under the `:from` key.
+  """
+  @type reply_t :: {:reply, message :: any}
+
+  @typedoc """
+  Action that replies to a `Membrane.Pipeline.call/3`. Useful when one does not want to reply in
+  `c:Membrane.Pipeline.handle_call/3` callback. A caller reference is required to be passed, so one needs to save this
+  reference from the `Membrane.Pipeline.CallbackContext.Call`, where it is available under the `:from` key.
+  """
+  @type reply_to_t :: {:reply_to, {GenServer.from(), message :: any}}
+
+  @typedoc """
   Type describing actions that can be returned from pipeline callbacks.
 
   Returning actions is a way of pipeline interaction with its children and
   other parts of framework.
   """
-
-  @type playback_t :: {:playback, :prepared | :playing | :stopped}
-
-  @typedoc """
-  Changes the playback state of the pipeline to the chosen one.
-  """
-
   @type t ::
-          forward_t
+          notify_child_t
           | spec_t
           | remove_child_t
           | start_timer_t
           | timer_interval_t
           | stop_timer_t
           | playback_t
+          | reply_t
+          | reply_to_t
 end

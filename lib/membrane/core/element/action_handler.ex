@@ -31,7 +31,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({action, _}, :handle_init, _params, _state)
-      when action not in [:latency, :notify] do
+      when action not in [:latency, :notify_parent] do
     raise ActionError, action: action, reason: {:invalid_callback, :handle_init}
   end
 
@@ -49,14 +49,14 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:notify, notification}, _cb, _params, state) do
+  def handle_action({:notify_parent, notification}, _cb, _params, state) do
     %State{name: name, parent_pid: parent_pid} = state
 
     Membrane.Logger.debug_verbose(
       "Sending notification #{inspect(notification)} (parent PID: #{inspect(parent_pid)})"
     )
 
-    Message.send(parent_pid, :notification, [name, notification])
+    Message.send(parent_pid, :child_notification, [name, notification])
     state
   end
 

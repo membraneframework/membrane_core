@@ -152,7 +152,7 @@ defmodule Membrane.Element.Base do
 
   Useful for receiving ticks from timer, data sent from NIFs or other stuff.
   """
-  @callback handle_other(
+  @callback handle_info(
               message :: any(),
               context :: CallbackContext.Other.t(),
               state :: Element.state_t()
@@ -202,11 +202,34 @@ defmodule Membrane.Element.Base do
             ) :: callback_return_t
 
   @doc """
+  Callback invoked when a message from the parent is received.
+  """
+  @callback handle_parent_notification(
+              notification :: Membrane.ParentNotification.t(),
+              context :: Membrane.Element.CallbackContext.ParentNotification.t(),
+              state :: Element.state_t()
+            ) :: callback_return_t
+
+  @doc """
   Callback invoked when element is shutting down just before process is exiting.
   Internally called in `c:GenServer.terminate/2` callback.
   """
   @callback handle_shutdown(reason, state :: Element.state_t()) :: :ok
             when reason: :normal | :shutdown | {:shutdown, any} | term()
+
+  @doc """
+  A callback for constructing struct. Will be defined by `def_options/1` if used.
+
+  See `defstruct/1` for a more in-depth description.
+  """
+  @callback __struct__() :: struct()
+
+  @doc """
+  A callback for constructing struct with values. Will be defined by `def_options/1` if used.
+
+  See `defstruct/1` for a more in-depth description.
+  """
+  @callback __struct__(kv :: [atom | {atom, any()}]) :: struct()
 
   @optional_callbacks membrane_clock?: 0,
                       handle_init: 1,
@@ -214,12 +237,15 @@ defmodule Membrane.Element.Base do
                       handle_prepared_to_playing: 2,
                       handle_playing_to_prepared: 2,
                       handle_prepared_to_stopped: 2,
-                      handle_other: 3,
+                      handle_info: 3,
                       handle_pad_added: 3,
                       handle_pad_removed: 3,
                       handle_event: 4,
                       handle_tick: 3,
-                      handle_shutdown: 2
+                      handle_parent_notification: 3,
+                      handle_shutdown: 2,
+                      __struct__: 0,
+                      __struct__: 1
 
   @doc """
   Macro defining options that parametrize element.
@@ -317,7 +343,7 @@ defmodule Membrane.Element.Base do
       def handle_stopped_to_terminating(_context, state), do: {:ok, state}
 
       @impl true
-      def handle_other(_message, _context, state), do: {:ok, state}
+      def handle_info(_message, _context, state), do: {:ok, state}
 
       @impl true
       def handle_pad_added(_pad, _context, state), do: {:ok, state}
@@ -329,6 +355,9 @@ defmodule Membrane.Element.Base do
       def handle_event(_pad, _event, _context, state), do: {:ok, state}
 
       @impl true
+      def handle_parent_notification(_notification, _ctx, state), do: {:ok, state}
+
+      @impl true
       def handle_shutdown(_reason, _state), do: :ok
 
       defoverridable handle_init: 1,
@@ -336,10 +365,11 @@ defmodule Membrane.Element.Base do
                      handle_playing_to_prepared: 2,
                      handle_prepared_to_playing: 2,
                      handle_prepared_to_stopped: 2,
-                     handle_other: 3,
+                     handle_info: 3,
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
                      handle_event: 4,
+                     handle_parent_notification: 3,
                      handle_shutdown: 2
     end
   end

@@ -10,8 +10,8 @@ defmodule Membrane.Core.Bin.ActionHandler do
   require Message
 
   @impl CallbackHandler
-  def handle_action({:forward, children_messages}, _cb, _params, state) do
-    :ok = children_messages |> Bunch.listify() |> Parent.ChildLifeController.handle_forward(state)
+  def handle_action({:notify_child, notification}, _cb, _params, state) do
+    :ok = Parent.ChildLifeController.handle_notify_child(notification, state)
     state
   end
 
@@ -26,14 +26,17 @@ defmodule Membrane.Core.Bin.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:notify, notification}, _cb, _params, state) do
-    %State{parent_pid: parent_pid, name: name} = state
-
+  def handle_action(
+        {:notify_parent, notification},
+        _cb,
+        _params,
+        %State{parent_pid: parent_pid, name: name} = state
+      ) do
     Membrane.Logger.debug_verbose(
-      "Sending notification #{inspect(notification)} (parent PID: #{inspect(parent_pid)})"
+      "Sending notification #{inspect(notification)} to parent (parent PID: #{inspect(parent_pid)})"
     )
 
-    Message.send(parent_pid, :notification, [name, notification])
+    Message.send(parent_pid, :child_notification, [name, notification])
     state
   end
 

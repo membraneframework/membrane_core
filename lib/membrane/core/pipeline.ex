@@ -7,10 +7,13 @@ defmodule Membrane.Core.Pipeline do
   alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
   alias Membrane.Core.TimerController
+  alias Membrane.Pipeline.CallbackContext
 
   require Membrane.Core.Message, as: Message
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
+  require Membrane.Core.Component
+  require Membrane.Pipeline.CallbackContext.Call
 
   @impl GenServer
   def init({module, pipeline_options}) do
@@ -67,8 +70,8 @@ defmodule Membrane.Core.Pipeline do
   end
 
   @impl GenServer
-  def handle_info(Message.new(:notification, [from, notification]), state) do
-    state = LifecycleController.handle_notification(from, notification, state)
+  def handle_info(Message.new(:child_notification, [from, notification]), state) do
+    state = LifecycleController.handle_child_notification(from, notification, state)
     {:noreply, state}
   end
 
@@ -102,14 +105,14 @@ defmodule Membrane.Core.Pipeline do
       state = ChildLifeController.handle_child_death(pid, reason, state)
       {:noreply, state}
     else
-      state = LifecycleController.handle_other(message, state)
+      state = LifecycleController.handle_info(message, state)
       {:noreply, state}
     end
   end
 
   @impl GenServer
   def handle_info(message, state) do
-    state = LifecycleController.handle_other(message, state)
+    state = LifecycleController.handle_info(message, state)
     {:noreply, state}
   end
 
@@ -117,6 +120,21 @@ defmodule Membrane.Core.Pipeline do
   def terminate(reason, state) do
     Telemetry.report_terminate(:pipeline)
     :ok = state.module.handle_shutdown(reason, state.internal_state)
+  end
+
+  @impl GenServer
+  def handle_call(message, from, state) do
+    context = &CallbackContext.Call.from_state(&1, from: from)
+
+    CallbackHandler.exec_and_handle_callback(
+      :handle_call,
+      Membrane.Core.Pipeline.ActionHandler,
+      %{context: context},
+      [message],
+      state
+    )
+
+    {:noreply, state}
   end
 
   defp is_child_pid?(pid, state) do

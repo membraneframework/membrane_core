@@ -91,7 +91,7 @@ defmodule Membrane.Mixfile do
         Parent: [~r/^Membrane\.(Parent|ParentSpec)($|\.)/],
         Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],
         Communication: [
-          ~r/^Membrane\.(Buffer|Payload|Caps|Event|EventProtocol|Notification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
+          ~r/^Membrane\.(Buffer|Payload|Caps|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
         ],
         Logging: [~r/^Membrane\.Logger($|\.)/],
         Testing: [~r/^Membrane\.Testing($|\.)/],
@@ -114,23 +114,26 @@ defmodule Membrane.Mixfile do
       licenses: ["Apache-2.0"],
       links: %{
         "GitHub" => link(),
-        "Membrane Framework Homepage" => "https://membraneframework.org"
+        "Membrane Framework Homepage" => "https://membrane.stream"
       }
     ]
   end
 
   defp deps do
     [
-      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.1", only: :dev, runtime: false},
-      {:credo, "~> 1.6", only: :dev, runtime: false},
-      {:espec, "~> 1.8.3", only: :test},
-      {:excoveralls, "~> 0.14", only: :test},
-      {:junit_formatter, "~> 3.1", only: :test},
       {:qex, "~> 0.3"},
       {:telemetry, "~> 1.0"},
       {:bunch, "~> 1.3"},
-      {:ratio, "~> 2.0"}
+      {:ratio, "~> 2.0"},
+      # Development
+      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.1", only: :dev, runtime: false},
+      {:credo, "~> 1.6", only: :dev, runtime: false},
+      # Testing
+      {:espec, "~> 1.8.3", only: :test},
+      {:mox, "~> 1.0", only: :test},
+      {:junit_formatter, "~> 3.1", only: :test},
+      {:excoveralls, "~> 0.14", only: :test}
     ]
   end
 end

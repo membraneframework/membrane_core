@@ -16,8 +16,8 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:forward, children_messages}, _cb, _params, state) do
-    Parent.ChildLifeController.handle_forward(Bunch.listify(children_messages), state)
+  def handle_action({:notify_child, notification}, _cb, _params, state) do
+    Parent.ChildLifeController.handle_notify_child(notification, state)
     state
   end
 
@@ -56,6 +56,24 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   @impl CallbackHandler
   def handle_action({:playback, playback_state}, _cb, _params, state) do
     LifecycleController.change_playback_state(playback_state, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:reply_to, {pid, message}}, _cb, _params, state) do
+    GenServer.reply(pid, message)
+    {:ok, state}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:reply, message}, :handle_call, params, state) do
+    ctx = params.context.(state)
+    GenServer.reply(ctx.from, message)
+    {:ok, state}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:reply, _message} = action, cb, _params, _state) do
+    raise ActionError, action: action, reason: {:invalid_callback, cb}
   end
 
   @impl CallbackHandler
