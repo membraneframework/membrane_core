@@ -64,7 +64,7 @@ defmodule Membrane.Filter do
 
       @behaviour unquote(__MODULE__)
 
-      @impl true
+      @spec membrane_element_type() :: Membrane.Element.type_t()
       def membrane_element_type, do: :filter
 
       @impl true
