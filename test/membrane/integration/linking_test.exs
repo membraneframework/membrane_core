@@ -341,6 +341,34 @@ defmodule Membrane.Integration.LinkingTest do
              end)
   end
 
+  test "Elements and bins can be spawned, linked and removed" do
+    alias Membrane.Support.Bin.TestBins.{TestDynamicPadBin, TestFilter}
+    pipeline = Testing.Pipeline.start_link_supervised!()
+
+    Testing.Pipeline.execute_actions(pipeline,
+      spec: %ParentSpec{
+        links: [
+          link(:source, %Testing.Source{output: [1, 2, 3]})
+          |> to(:filter1, %TestDynamicPadBin{
+            filter1: %TestDynamicPadBin{filter1: TestFilter, filter2: TestFilter},
+            filter2: TestFilter
+          })
+          |> to(:filter2, %TestDynamicPadBin{
+            filter1: %TestDynamicPadBin{
+              filter1: TestFilter,
+              filter2: %TestDynamicPadBin{filter1: TestFilter, filter2: TestFilter}
+            },
+            filter2: %TestDynamicPadBin{filter1: TestFilter, filter2: TestFilter}
+          })
+          |> to(:sink, Testing.Sink)
+        ]
+      }
+    )
+
+    assert_end_of_stream(pipeline, :sink)
+    Membrane.Pipeline.terminate(pipeline, blocking?: true)
+  end
+
   defp get_child_pid(ref, parent_pid) do
     state = :sys.get_state(parent_pid)
     state.children[ref].pid

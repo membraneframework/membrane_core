@@ -91,7 +91,7 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def init(options) do
-    options.setup_logger.(self())
+    options.setup_observability.(pid: self())
     Telemetry.report_init(:element)
     state = Map.take(options, [:module, :name, :parent_clock, :sync, :parent]) |> State.new()
     state = LifecycleController.handle_init(options.user_options, state)

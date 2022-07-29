@@ -27,10 +27,12 @@ defmodule Membrane.Core.Parent.ChildrenSupervisor do
   def handle_call(Message.new(:start_child, [name, start_fun]), _from, state) do
     case start_fun.() do
       {:ok, child_pid} ->
-        {:reply, {:ok, child_pid}, put_in(state, [:children, child_pid], name)}
+        {:reply, {:ok, child_pid},
+         put_in(state, [:children, child_pid], %{name: name, type: :worker})}
 
       {:ok, supervisor_pid, child_pid} ->
-        {:reply, {:ok, child_pid}, put_in(state, [:children, supervisor_pid], name)}
+        {:reply, {:ok, child_pid},
+         put_in(state, [:children, supervisor_pid], %{name: name, type: :supervisor})}
 
       {:error, reason} ->
         {:reply, {:error, reason}, state}
@@ -38,8 +40,14 @@ defmodule Membrane.Core.Parent.ChildrenSupervisor do
   end
 
   @impl true
-  def handle_info(Message.new(:setup_logger, setup_logger), state) do
-    setup_logger.()
+  def handle_call(:which_children, _from, state) do
+    reply = Enum.map(state.children, fn {pid, data} -> {data.name, pid, data.type, []} end)
+    {:reply, reply, state}
+  end
+
+  @impl true
+  def handle_info(Message.new(:setup_observability, setup_observability), state) do
+    setup_observability.(utility: "Children supervisor")
     {:noreply, state}
   end
 
@@ -68,7 +76,7 @@ defmodule Membrane.Core.Parent.ChildrenSupervisor do
         {:EXIT, pid, _reason},
         %{parent_supervisor: :exit_requested} = state
       ) do
-    {_name, state} = pop_in(state, [:children, pid])
+    {_data, state} = pop_in(state, [:children, pid])
 
     if state.children == %{} do
       Membrane.Logger.debug("Children supervisor: exiting")
@@ -80,10 +88,10 @@ defmodule Membrane.Core.Parent.ChildrenSupervisor do
 
   @impl true
   def handle_info({:EXIT, pid, reason}, state) do
-    {name, state} = pop_in(state, [:children, pid])
+    {data, state} = pop_in(state, [:children, pid])
 
     case state.parent_supervisor do
-      {:alive, pid} -> Message.send(pid, :child_death, [name, reason])
+      {:alive, pid} -> Message.send(pid, :child_death, [data.name, reason])
       _other -> :ok
     end
 

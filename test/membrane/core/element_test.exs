@@ -45,7 +45,7 @@ defmodule Membrane.Core.ElementTest do
         parent_clock: nil,
         sync: Membrane.Sync.no_sync(),
         parent: self(),
-        setup_logger: fn _pid -> [] end
+        setup_observability: fn _pid -> [] end
       })
 
     state
@@ -66,7 +66,7 @@ defmodule Membrane.Core.ElementTest do
           %{
             initiator: :sibling,
             other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
-            link_metadata: %{toilet: nil}
+            link_metadata: %{toilet: nil, observability_metadata: %{}}
           }
         ]),
         nil,
@@ -93,7 +93,7 @@ defmodule Membrane.Core.ElementTest do
           %{
             initiator: :sibling,
             other_info: %{direction: :output, mode: :pull},
-            link_metadata: %{toilet: nil}
+            link_metadata: %{toilet: nil, observability_metadata: %{}}
           }
         ]),
         nil,
@@ -196,7 +196,7 @@ defmodule Membrane.Core.ElementTest do
                  %{
                    initiator: :sibling,
                    other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
-                   link_metadata: %{toilet: nil}
+                   link_metadata: %{toilet: nil, observability_metadata: %{}}
                  }
                ]),
                nil,
@@ -311,7 +311,7 @@ defmodule Membrane.Core.ElementTest do
       parent: pipeline,
       parent_clock: nil,
       sync: Membrane.Sync.no_sync(),
-      setup_logger: fn _pid -> [] end
+      setup_observability: fn _pid -> [] end
     }
   end
 end

@@ -79,7 +79,6 @@ defmodule Membrane.Integration.SyncTest do
     pipeline = Testing.Pipeline.start_link_supervised!(options)
 
     assert_start_of_stream(pipeline, :sink_a)
-    Process.sleep(5000)
     assert_start_of_stream(pipeline, :sink_b, :input, @sync_error_ms)
   end
 

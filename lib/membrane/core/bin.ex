@@ -70,13 +70,13 @@ defmodule Membrane.Core.Bin do
         :rpc.call(node, Membrane.Core.Parent.Supervisor, :go_brrr, [
           method,
           start_fun,
-          options.setup_logger
+          options.setup_observability
         ])
       else
         Membrane.Core.Parent.Supervisor.go_brrr(
           method,
           start_fun,
-          options.setup_logger
+          options.setup_observability
         )
       end
     else
@@ -91,9 +91,9 @@ defmodule Membrane.Core.Bin do
   def init(options) do
     %{name: name, module: module} = options
     self_pid = self()
-    setup_logger = fn -> options.setup_logger.(self_pid) end
-    log_metadata = setup_logger.()
-    Message.send(options.children_supervisor, :setup_logger, setup_logger)
+    setup_observability = fn args -> options.setup_observability.([pid: self_pid] ++ args) end
+    log_metadata = setup_observability.([])
+    Message.send(options.children_supervisor, :setup_observability, setup_observability)
 
     Telemetry.report_init(:bin)
 

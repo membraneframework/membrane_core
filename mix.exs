@@ -31,7 +31,7 @@ defmodule Membrane.Mixfile do
   end
 
   def application do
-    [extra_applications: [:logger]]
+    [extra_applications: [:logger], mod: {Membrane, []}]
   end
 
   defp elixirc_paths(:test), do: ["lib", "spec/support", "test/support"]

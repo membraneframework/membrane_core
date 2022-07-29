@@ -18,9 +18,9 @@ defmodule Membrane.Core.Pipeline do
   @impl GenServer
   def init(params) do
     self_pid = self()
-    setup_logger = fn -> params.setup_logger.(self_pid) end
-    setup_logger.()
-    Message.send(params.children_supervisor, :setup_logger, setup_logger)
+    setup_observability = fn args -> params.setup_observability.([pid: self_pid] ++ args) end
+    setup_observability.([])
+    Message.send(params.children_supervisor, :setup_observability, setup_observability)
 
     Telemetry.report_init(:pipeline)
 

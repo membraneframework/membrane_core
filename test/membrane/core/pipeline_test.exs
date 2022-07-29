@@ -37,7 +37,7 @@ defmodule Membrane.Core.PipelineTest do
       init_opts: %{
         module: TestPipeline,
         children_supervisor: children_supervisor,
-        setup_logger: fn _pid -> [] end,
+        setup_observability: fn _pid -> [] end,
         options: nil
       },
       state: %State{

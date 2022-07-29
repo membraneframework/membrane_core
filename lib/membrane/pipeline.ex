@@ -222,12 +222,17 @@ defmodule Membrane.Pipeline do
       process options: #{inspect(process_options)}
       """)
 
-      setup_logger = fn pipeline_pid ->
-        pipeline_name = "#{:erlang.pid_to_list(pipeline_pid)}/"
-        Membrane.ComponentPath.set([pipeline_name])
-        Membrane.Logger.set_prefix(pipeline_name)
-        []
-      end
+      name =
+        case Keyword.fetch(process_options, :name) do
+          {:ok, name} when is_atom(name) -> Atom.to_string(name)
+          _other -> nil
+        end
+        |> case do
+          "Elixir." <> module -> module
+          name -> name
+        end
+
+      setup_observability = Membrane.Core.Observability.setup_fun(:pipeline, name)
 
       Membrane.Core.Parent.Supervisor.go_brrr(
         method,
@@ -236,12 +241,12 @@ defmodule Membrane.Pipeline do
           %{
             module: module,
             options: pipeline_options,
-            setup_logger: setup_logger,
+            setup_observability: setup_observability,
             children_supervisor: &1
           },
           process_options
         ),
-        setup_logger
+        setup_observability
       )
     else
       Membrane.Logger.error("""

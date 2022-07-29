@@ -127,7 +127,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     %ChildEntry{name: name, module: module, options: options} = child
     Membrane.Logger.debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")
     sync = syncs |> Map.get(name, Sync.no_sync())
-    component_path = Membrane.ComponentPath.get()
 
     params = %{
       parent: self(),
@@ -137,16 +136,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
       user_options: options,
       parent_clock: parent_clock,
       sync: sync,
-      setup_logger: fn _pid ->
-        Logger.metadata(log_metadata)
-
-        name_str =
-          "#{if String.valid?(name), do: name, else: inspect(name)}#{if child.component_type == :bin, do: "/", else: ""}"
-
-        Membrane.ComponentPath.set_and_append(component_path, name_str)
-        Membrane.Logger.set_prefix(Membrane.ComponentPath.get_formatted())
-        log_metadata
-      end
+      setup_observability:
+        Membrane.Core.Observability.setup_fun(child.component_type, name, log_metadata)
     }
 
     start_fun =

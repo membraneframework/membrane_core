@@ -6,8 +6,8 @@ defmodule Membrane.Core.Parent.Supervisor do
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
 
-  def go_brrr(method, start_fun, setup_logger) do
-    with {:ok, pid} <- GenServer.start(__MODULE__, {start_fun, setup_logger, self()}) do
+  def go_brrr(method, start_fun, setup_observability) do
+    with {:ok, pid} <- GenServer.start(__MODULE__, {start_fun, setup_observability, self()}) do
       # Not doing start_link here is a nasty hack to avoid `terminate` being called
       # once parent sends an `exit` signal. This way we receive it in `handle_info`
       # and can wait till the children exit without calling `receive`.
@@ -22,17 +22,29 @@ defmodule Membrane.Core.Parent.Supervisor do
   end
 
   @impl true
-  def init({start_fun, setup_logger, reply_to}) do
+  def init({start_fun, setup_observability, reply_to}) do
     Process.flag(:trap_exit, true)
     {:ok, children_supervisor} = ChildrenSupervisor.start_link()
 
     with {:ok, parent} <- start_fun.(children_supervisor) do
-      setup_logger.(parent)
+      setup_observability.(pid: parent, utility: "Supervisor")
       Message.send(reply_to, :parent_spawned, parent)
       {:ok, %{parent: {:alive, parent}, children_supervisor: children_supervisor}}
     else
       {:error, reason} -> {:stop, reason}
     end
+  end
+
+  @impl true
+  def handle_call(:which_children, _from, state) do
+    reply =
+      [{ChildrenSupervisor, state.children_supervisor, :supervisor, ChildrenSupervisor}] ++
+        case state.parent do
+          {:alive, pid} -> [{:parent, pid, :worker, []}]
+          {:exited, _reason} -> []
+        end
+
+    {:reply, reply, state}
   end
 
   @impl true

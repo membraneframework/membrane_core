@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.PadController do
 
   use Bunch
   alias Membrane.{LinkError, Pad}
-  alias Membrane.Core.{CallbackHandler, Child, Events, Message}
+  alias Membrane.Core.{CallbackHandler, Child, Events, Message, Observability}
   alias Membrane.Core.Child.PadModel
 
   alias Membrane.Core.Element.{
@@ -80,7 +80,14 @@ defmodule Membrane.Core.Element.PadController do
         Pad.opposite_direction(info.direction),
         other_endpoint,
         endpoint,
-        %{initiator: :sibling, other_info: info, link_metadata: %{toilet: toilet}}
+        %{
+          initiator: :sibling,
+          other_info: info,
+          link_metadata: %{
+            toilet: toilet,
+            observability_metadata: Observability.setup_link(endpoint.pad_ref)
+          }
+        }
       ])
 
     case handle_link_response do
@@ -120,7 +127,7 @@ defmodule Membrane.Core.Element.PadController do
          state
        ) do
     %{other_info: other_info, link_metadata: link_metadata} = link_props
-
+    Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
     link_metadata = %{link_metadata | toilet: link_metadata.toilet || toilet}
 
     :ok =
