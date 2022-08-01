@@ -164,14 +164,10 @@ defmodule Membrane.Integration.LinkingTest do
       # Source has a static pad so it should crash when this pad is being unlinked while being
       # in playing state. If source crashes with proper error it means that :handle_unlink message
       # has been properly forwarded by a bin.
-      # TODO: after playback states refactor, change to assert_receive
-      refute_receive(
-        {:DOWN, ^source_ref, :process, ^source_pid,
-         {%Membrane.LinkError{
-            message:
-              "Tried to unlink static pad output while :source was in or was transitioning to playback state playing."
-          }, _localization}}
-      )
+      assert_receive {:DOWN, ^source_ref, :process, ^source_pid,
+                      {%Membrane.PadError{message: message}, _localization}}
+
+      assert message =~ ~r/static.*pad.*unlink/u
     end
   end
 
