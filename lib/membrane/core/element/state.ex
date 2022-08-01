@@ -29,7 +29,10 @@ defmodule Membrane.Core.Element.State do
             latency: non_neg_integer(),
             stream_sync: Sync.t(),
             clock: Clock.t() | nil
-          }
+          },
+          initialized?: boolean(),
+          playback: Membrane.Playback.t(),
+          playback_queue: Membrane.Core.Element.PlaybackQueue.t()
         }
 
   defstruct [
@@ -44,8 +47,8 @@ defmodule Membrane.Core.Element.State do
     :delayed_demands,
     :synchronization,
     :demand_size,
-    :playback,
     :initialized?,
+    :playback,
     :playback_queue
   ]
 

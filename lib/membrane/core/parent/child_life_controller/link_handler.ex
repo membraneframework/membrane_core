@@ -33,18 +33,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   require Membrane.Logger
   require Membrane.Pad
 
-  @type link_id_t :: {ChildLifeController.spec_ref_t(), reference()}
-
-  @type pending_spec_t :: %{
-          status: :linking_internally | :linking_externally | :linked,
-          links: %{link_id_t => %{link: Parent.Link.t(), awaiting_responses: non_neg_integer()}}
-        }
-
-  @type pending_specs_t :: %{ChildLifeController.spec_ref_t() => pending_spec_t()}
-
   @type state_t :: Pipeline.State.t() | Bin.State.t()
 
-  @spec handle_link_response(link_id_t(), state_t()) :: state_t()
+  @spec handle_link_response(Parent.Link.id(), state_t()) :: state_t()
   def handle_link_response(link_id, state) do
     case Map.fetch(state.links, link_id) do
       {:ok, %Link{spec_ref: spec_ref}} ->

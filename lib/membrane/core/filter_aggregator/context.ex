@@ -41,7 +41,7 @@ defmodule Membrane.Core.FilterAggregator.Context do
       clock: nil,
       name: name,
       parent_clock: nil,
-      playback_state: :stopped
+      playback: :stopped
     }
   end
 

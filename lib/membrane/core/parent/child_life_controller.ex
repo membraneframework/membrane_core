@@ -11,6 +11,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     ChildrenModel,
     ClockHandler,
     CrashGroup,
+    Link,
     LinkParser
   }
 
@@ -20,9 +21,22 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @type spec_ref_t :: reference()
 
+  @type pending_spec_t :: %{
+          status: :linking_internally | :linked_internally | :linking_externally | :ready,
+          children_names: [Membrane.Child.name_t()],
+          links_ids: [Link.id()],
+          awaiting_responses: %{Link.id() => 0..2},
+          dependent_specs: MapSet.t(spec_ref_t),
+          links: %{
+            Link.id() => %{link: Link.t(), awaiting_responses: non_neg_integer()}
+          }
+        }
+
+  @type pending_specs_t :: %{spec_ref_t() => pending_spec_t()}
+
   @spec handle_spec(ParentSpec.t(), Parent.state_t()) :: Parent.state_t() | no_return()
   def handle_spec(%ParentSpec{} = spec, state) do
-    spec_ref = Bunch.ShortRef.new()
+    spec_ref = make_ref()
 
     Membrane.Logger.debug("""
     New spec #{inspect(spec_ref)}
@@ -89,7 +103,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     StartupHandler.exec_handle_spec_started(children_names, state)
   end
 
-  @spec handle_spec_timeout(ChildLifeController.spec_ref_t(), Parent.state_t()) ::
+  @spec handle_spec_timeout(spec_ref_t(), Parent.state_t()) ::
           Parent.state_t()
   def handle_spec_timeout(spec_ref, state) do
     {spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
@@ -102,7 +116,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     state
   end
 
-  @spec proceed_spec_startup(ChildLifeController.spec_ref_t(), Parent.state_t()) ::
+  @spec proceed_spec_startup(spec_ref_t(), Parent.state_t()) ::
           Parent.state_t()
   def proceed_spec_startup(spec_ref, state) do
     withl spec_data: {:ok, spec_data} <- Map.fetch(state.pending_specs, spec_ref),

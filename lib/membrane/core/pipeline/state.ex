@@ -17,7 +17,7 @@ defmodule Membrane.Core.Pipeline.State do
           module: module,
           children: ChildrenModel.children_t(),
           crash_groups: %{CrashGroup.name_t() => CrashGroup.t()},
-          links: [Link.t()],
+          links: %{Link.id() => Link.t()},
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
             clock_provider: %{
@@ -26,7 +26,11 @@ defmodule Membrane.Core.Pipeline.State do
               choice: :auto | :manual
             },
             clock_proxy: Membrane.Clock.t()
-          }
+          },
+          playback: Membrane.Playback.t(),
+          initialized?: boolean(),
+          play_request?: boolean(),
+          terminating?: boolean()
         }
 
   @enforce_keys [:module, :synchronization, :children_supervisor]

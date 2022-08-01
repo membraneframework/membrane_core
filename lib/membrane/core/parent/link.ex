@@ -8,9 +8,13 @@ defmodule Membrane.Core.Parent.Link do
   @enforce_keys [:id, :from, :to]
   defstruct @enforce_keys ++ [linked?: false, spec_ref: nil]
 
+  @type id :: reference()
+
   @type t :: %__MODULE__{
-          id: Bunch.ShortRef.t(),
+          id: id(),
           from: Endpoint.t(),
-          to: Endpoint.t()
+          to: Endpoint.t(),
+          linked?: boolean(),
+          spec_ref: Membrane.Core.Parent.ChildLifeController.spec_ref_t()
         }
 end

@@ -3,6 +3,8 @@ defmodule Membrane.Core.Element.PlaybackQueue do
 
   alias Membrane.Core.Element.State
 
+  @type t :: [(State.t() -> State.t())]
+
   @spec store((State.t() -> State.t()), State.t()) :: State.t()
   def store(function, %State{playback_queue: playback_queue} = state) do
     %State{state | playback_queue: [function | playback_queue]}

@@ -10,7 +10,7 @@ defmodule Membrane.Core.Bin.State do
 
   alias Membrane.{Child, Clock, Sync}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Parent.ChildLifeController.LinkHandler
+  alias Membrane.Core.Parent.ChildLifeController
   alias Membrane.Core.Parent.{ChildrenModel, CrashGroup, Link}
   alias Membrane.Core.Timer
 
@@ -18,11 +18,12 @@ defmodule Membrane.Core.Bin.State do
           internal_state: Membrane.Bin.state_t() | nil,
           module: module,
           children: ChildrenModel.children_t(),
+          children_supervisor: pid(),
           name: Membrane.Bin.name_t() | nil,
           pads_info: PadModel.pads_info_t() | nil,
           pads_data: PadModel.pads_data_t() | nil,
           parent_pid: pid,
-          links: [Link.t()],
+          links: %{Link.id() => Link.t()},
           crash_groups: %{CrashGroup.name_t() => CrashGroup.t()},
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
@@ -38,7 +39,11 @@ defmodule Membrane.Core.Bin.State do
             }
           },
           children_log_metadata: Keyword.t(),
-          pending_specs: LinkHandler.pending_specs_t()
+          pending_specs: ChildLifeController.pending_specs_t(),
+          playback: Membrane.Playback.t(),
+          initialized?: boolean(),
+          play_request?: boolean(),
+          terminating?: boolean()
         }
 
   @enforce_keys [:module, :synchronization, :children_supervisor]

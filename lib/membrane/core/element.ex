@@ -44,7 +44,7 @@ defmodule Membrane.Core.Element do
           sync: Sync.t(),
           parent: pid,
           parent_clock: Clock.t(),
-          log_metadata: Keyword.t()
+          setup_observability: Membrane.Core.Observability.setup_fun()
         }
 
   @doc """

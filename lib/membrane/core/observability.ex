@@ -5,6 +5,9 @@ defmodule Membrane.Core.Observability do
                                           []
                                         )
 
+  @type setup_fun :: ([pid: pid(), utility: String.Chars.t()] -> Logger.metadata())
+
+  @spec setup_fun(:element | :bin | :pipeline, name :: term, Logger.metadata()) :: setup_fun()
   def setup_fun(component_type, name, log_metadata \\ []) do
     component_path = Membrane.ComponentPath.get()
 

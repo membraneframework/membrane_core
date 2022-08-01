@@ -10,6 +10,7 @@ defmodule Membrane.Core.Bin do
     CallbackHandler,
     Child,
     Message,
+    Observability,
     Parent,
     Telemetry,
     TimerController
@@ -26,7 +27,7 @@ defmodule Membrane.Core.Bin do
           parent: pid,
           user_options: Membrane.Bin.options_t(),
           parent_clock: Membrane.Clock.t(),
-          log_metadata: Keyword.t(),
+          setup_observability: Observability.setup_fun(),
           sync: :membrane_no_sync
         }
 

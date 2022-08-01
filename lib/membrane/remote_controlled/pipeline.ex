@@ -117,7 +117,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     Pipeline.await_play(pipeline)
     ```
   """
-  @spec await_play(pid()) :: Membrane.RemoteControlled.Message.PlaybackState.t()
+  @spec await_play(pid()) :: Membrane.RemoteControlled.Message.Play.t()
   def await_play(pipeline) do
     do_await(pipeline, Play)
   end

@@ -24,7 +24,7 @@ defmodule Membrane.Core.Bin.PadController do
   @spec handle_external_link_request(
           Pad.ref_t(),
           Pad.direction_t(),
-          ChildLifeController.LinkHandler.link_id_t(),
+          Link.id(),
           Membrane.ParentSpec.pad_options_t(),
           State.t()
         ) :: State.t() | no_return
