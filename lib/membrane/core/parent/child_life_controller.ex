@@ -258,6 +258,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
+  @spec handle_child_initialized(Membrane.Child.name_t(), Parent.state_t()) :: Parent.state_t()
   def handle_child_initialized(child, state) do
     %{spec_ref: spec_ref} = Parent.ChildrenModel.get_child_data!(state, child)
     state = put_in(state, [:children, child, :initialized?], true)

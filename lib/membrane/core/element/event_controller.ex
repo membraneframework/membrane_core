@@ -8,7 +8,7 @@ defmodule Membrane.Core.Element.EventController do
   alias Membrane.{Event, Pad, Sync}
   alias Membrane.Core.{CallbackHandler, Events, Message, Telemetry}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, InputQueue, PadController, State, PlaybackQueue}
+  alias Membrane.Core.Element.{ActionHandler, InputQueue, PadController, PlaybackQueue, State}
   alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel

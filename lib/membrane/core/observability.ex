@@ -1,4 +1,6 @@
 defmodule Membrane.Core.Observability do
+  @moduledoc false
+
   @unsafely_name_processes_for_observer Application.compile_env(
                                           :membrane_core,
                                           :unsafely_name_processes_for_observer,
@@ -51,6 +53,8 @@ defmodule Membrane.Core.Observability do
     defp register_name_for_observer(_name), do: :ok
   end
 
+  @spec setup_link(Membrane.Pad.ref_t(), metadata) :: metadata
+        when metadata: %{optional(:process_to_link) => pid()}
   if :links in @unsafely_name_processes_for_observer do
     def setup_link(pad_ref, observability_metadata \\ %{}) do
       {:ok, observer_dbg_process} =
@@ -68,6 +72,6 @@ defmodule Membrane.Core.Observability do
       %{process_to_link: observer_dbg_process}
     end
   else
-    def setup_link(_pad_ref, _observability_metadata \\ nil), do: %{}
+    def setup_link(_pad_ref, _observability_metadata \\ %{}), do: %{}
   end
 end

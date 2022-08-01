@@ -62,31 +62,42 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     end)
   end
 
-  @spec unlink_element(Membrane.Element.name_t(), Parent.state_t()) :: Parent.state_t()
-  def unlink_element(element_name, state) do
+  @spec unlink_element(Membrane.Child.name_t(), Parent.state_t()) :: Parent.state_t()
+  def unlink_element(child_name, state) do
     Map.update!(
       state,
       :links,
-      &Map.reject(&1, fn {_id, %Link{from: from, to: to, linked?: linked?}} ->
-        from_name = from.child
-        to_name = to.child
-
-        cond do
-          element_name == from_name ->
-            if linked?, do: Message.send(to.pid, :handle_unlink, to.pad_ref)
+      &Map.reject(&1, fn {_id, %Link{linked?: linked?} = link} ->
+        case endpoint_to_unlink(child_name, link) do
+          %Endpoint{pid: pid, pad_ref: pad_ref} when linked? ->
+            Message.send(pid, :handle_unlink, pad_ref)
             true
 
-          element_name == to_name ->
-            if linked?, do: Message.send(from.pid, :handle_unlink, from.pad_ref)
+          %Endpoint{} ->
             true
 
-          true ->
+          nil ->
             false
         end
       end)
     )
   end
 
+  defp endpoint_to_unlink(child_name, %Link{from: %Endpoint{child: child_name}, to: to}), do: to
+
+  defp endpoint_to_unlink(child_name, %Link{to: %Endpoint{child: child_name}, from: from}),
+    do: from
+
+  defp endpoint_to_unlink(_child_name, _link), do: nil
+
+  @spec request_link(
+          Membrane.Pad.direction_t(),
+          Link.Endpoint.t(),
+          Link.Endpoint.t(),
+          ChildLifeController.spec_ref_t(),
+          Link.id(),
+          Parent.state_t()
+        ) :: {0..2, Parent.state_t()}
   def request_link(
         _direction,
         %Link.Endpoint{child: {Membrane.Bin, :itself}} = this,
@@ -114,6 +125,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     end
   end
 
+  @spec resolve_links(
+          [LinkParser.raw_link_t()],
+          ChildLifeController.spec_ref_t(),
+          Parent.state_t()
+        ) :: [
+          Link.t()
+        ]
   def resolve_links(links, spec_ref, state) do
     Enum.map(
       links,
@@ -185,6 +203,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
     end
   end
 
+  @spec link(Link.t(), Parent.state_t()) :: Parent.state_t()
   def link(%Link{from: %Endpoint{child: child}, to: %Endpoint{child: child}}, _state) do
     raise LinkError, "Tried to link element #{inspect(child)} with itself"
   end

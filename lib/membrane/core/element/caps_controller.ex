@@ -8,7 +8,7 @@ defmodule Membrane.Core.Element.CapsController do
   alias Membrane.{Caps, Pad}
   alias Membrane.Core.{CallbackHandler, Telemetry}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, InputQueue, State, PlaybackQueue}
+  alias Membrane.Core.Element.{ActionHandler, InputQueue, PlaybackQueue, State}
   alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel

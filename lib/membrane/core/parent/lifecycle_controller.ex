@@ -12,6 +12,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   require Membrane.Core.Message
   require Membrane.Logger
 
+  @spec handle_setup(Parent.state_t()) :: Parent.state_t()
   def handle_setup(state) do
     Membrane.Logger.debug("Setup")
     context = Component.callback_context_generator(:parent, PlaybackChange, state)
@@ -40,6 +41,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
+  @spec handle_play(Parent.state_t()) :: Parent.state_t()
   def handle_play(state) do
     Membrane.Logger.debug("Parent play")
 
@@ -65,6 +67,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
+  @spec handle_terminate_request(Parent.state_t()) :: {:continue | :stop, Parent.state_t()}
   def handle_terminate_request(state) do
     state = %{state | terminating?: true}
 
@@ -82,6 +85,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
+  @spec handle_terminate(reason :: any(), Parent.state_t()) :: :ok
   def handle_terminate(reason, state) do
     result = state.module.handle_terminate_yolo(reason, state.internal_state)
 

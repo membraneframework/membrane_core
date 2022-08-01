@@ -15,8 +15,8 @@ defmodule Membrane.Core.Element.BufferController do
     DemandHandler,
     EventController,
     InputQueue,
-    State,
-    PlaybackQueue
+    PlaybackQueue,
+    State
   }
 
   alias Membrane.Core.Telemetry

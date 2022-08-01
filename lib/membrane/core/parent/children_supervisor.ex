@@ -1,9 +1,12 @@
 defmodule Membrane.Core.Parent.ChildrenSupervisor do
+  @moduledoc false
+
   use GenServer
 
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
 
+  @spec start_link() :: {:ok, pid()}
   def start_link() do
     {:ok, pid} = GenServer.start(__MODULE__, self())
     # Not doing start_link here is a nasty hack to avoid `terminate` being called
@@ -13,6 +16,13 @@ defmodule Membrane.Core.Parent.ChildrenSupervisor do
     {:ok, pid}
   end
 
+  @spec start_child(
+          supervisor_pid,
+          name :: Membrane.Child.name_t(),
+          (() -> {:ok, child_pid} | {:ok, supervisor_pid, child_pid} | {:error, reason :: any()})
+        ) ::
+          {:ok, child_pid} | {:error, reason :: any()}
+        when child_pid: pid(), supervisor_pid: pid()
   def start_child(supervisor, name, start_fun) do
     Message.call!(supervisor, :start_child, [name, start_fun])
   end

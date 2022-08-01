@@ -7,7 +7,7 @@ defmodule Membrane.Core.Element.DemandController do
 
   alias Membrane.Core.{CallbackHandler, Message}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, State, PlaybackQueue, Toilet}
+  alias Membrane.Core.Element.{ActionHandler, PlaybackQueue, State, Toilet}
   alias Membrane.Element.CallbackContext
   alias Membrane.Pad
 

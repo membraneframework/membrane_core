@@ -1,4 +1,6 @@
 defmodule Membrane.Core.Parent.Supervisor do
+  @moduledoc false
+
   use GenServer
 
   alias Membrane.Core.Parent.ChildrenSupervisor
@@ -6,6 +8,11 @@ defmodule Membrane.Core.Parent.Supervisor do
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
 
+  @spec go_brrr(
+          :start_link | :start,
+          (children_supervisor :: pid() -> {:ok, pid()} | {:error, reason :: any()}),
+          Membrane.Core.Observability.setup_fun()
+        ) :: {:ok, pid()} | {:error, reason :: any()}
   def go_brrr(method, start_fun, setup_observability) do
     with {:ok, pid} <- GenServer.start(__MODULE__, {start_fun, setup_observability, self()}) do
       # Not doing start_link here is a nasty hack to avoid `terminate` being called
