@@ -8,11 +8,8 @@ defmodule Membrane.Support.Element.DynamicFilter do
   use Bunch
   use Membrane.Filter
 
-  def_output_pad :output, caps: :any
-
-  def_input_pad :input, caps: :any, availability: :on_request, demand_unit: :buffers
-
-  def_options pid: [type: :pid]
+  def_input_pad :input, caps: :any, availability: :on_request, demand_mode: :auto
+  def_output_pad :output, caps: :any, availability: :on_request, demand_mode: :auto
 
   @impl true
   def handle_init(_options) do
@@ -20,27 +17,17 @@ defmodule Membrane.Support.Element.DynamicFilter do
   end
 
   @impl true
-  def handle_pad_added(Pad.ref(:input, _id) = ref, _ctx, state) do
-    {:ok, state |> Map.put(:last_pad_addded, ref)}
+  def handle_pad_added(pad, _ctx, state) do
+    {{:ok, notify_parent: {:pad_added, pad}}, state |> Map.put(:last_pad_addded, pad)}
   end
 
   @impl true
-  def handle_pad_removed(Pad.ref(:input, _id) = ref, _ctx, state) do
-    {:ok, state |> Map.put(:last_pad_removed, ref)}
-  end
-
-  @impl true
-  def handle_demand(_ref, size, _unit, _ctx, state) do
-    {{:ok, demand: {Pad.ref(:input, 0), size}}, state}
-  end
-
-  @impl true
-  def handle_process(_ref, %Membrane.Buffer{payload: _payload}, %Ctx.Process{}, state) do
-    {:ok, state}
+  def handle_pad_removed(pad, _ctx, state) do
+    {{:ok, notify_parent: {:pad_removed, pad}}, state |> Map.put(:last_pad_removed, pad)}
   end
 
   @impl true
   def handle_event(ref, event, _ctx, state) do
-    {:ok, state |> Map.put(:last_event, {ref, event})}
+    {{:ok, forward: event}, state |> Map.put(:last_event, {ref, event})}
   end
 end

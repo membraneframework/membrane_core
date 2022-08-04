@@ -5,6 +5,7 @@ defmodule Membrane.Integration.LinkingTest do
   import Membrane.ParentSpec
 
   alias Membrane.{Buffer, ParentSpec, Testing}
+  alias Membrane.Support.Element.DynamicFilter
 
   require Membrane.Pad, as: Pad
 
@@ -298,7 +299,7 @@ defmodule Membrane.Integration.LinkingTest do
         links: [
           link(:src1, %Testing.Source{output: []})
           |> via_in(Pad.ref(:input, 1))
-          |> to(:filter, Testing.DynamicFilter)
+          |> to(:filter, DynamicFilter)
           |> via_out(Pad.ref(:output, 1))
           |> to(:sink1, %SlowSetupSink{setup_delay: 300})
         ]
@@ -306,7 +307,7 @@ defmodule Membrane.Integration.LinkingTest do
       spec: %ParentSpec{
         links: [
           link(:independent_src, %Testing.Source{output: []})
-          |> to(:independent_filter, Testing.DynamicFilter)
+          |> to(:independent_filter, DynamicFilter)
           |> to(:independent_sink, Testing.Sink)
         ]
       },

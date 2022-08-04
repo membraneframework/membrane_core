@@ -404,7 +404,7 @@ defmodule Membrane.Pipeline do
       @doc """
       Returns child specification for spawning under a supervisor
       """
-      @spec child_spec(list) :: Supervisor.child_spec()
+      # credo:disable-for-next-line Credo.Check.Readability.Specs
       def child_spec(arg) do
         %{
           id: __MODULE__,
