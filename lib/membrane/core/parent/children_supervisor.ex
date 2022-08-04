@@ -8,12 +8,12 @@ defmodule Membrane.Core.Parent.ChildrenSupervisor do
 
   @spec start_link() :: {:ok, pid()}
   def start_link() do
-    {:ok, pid} = GenServer.start(__MODULE__, self())
-    # Not doing start_link here is a nasty hack to avoid `terminate` being called
-    # once parent sends an `exit` signal. This way we receive it in `handle_info`
-    # and can wait till the children exit without calling `receive`.
-    Process.link(pid)
-    {:ok, pid}
+    # Not doing start_link here is a nasty hack to avoid the current process becoming
+    # a 'parent process' (in the OTP meaning) of the spawned supervisor. Exit signals from
+    # 'parent processes' are not received in `handle_info`, but `terminate` is called immediately,
+    # what is unwanted here, as the supervisor has to make sure that all the children exit.
+    # After that happens, the supervisor exits as well, so it follows the OTP conventions anyway.
+    GenServer.start(__MODULE__, self(), spawn_opt: [:link])
   end
 
   @spec start_child(

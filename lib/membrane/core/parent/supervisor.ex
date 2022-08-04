@@ -14,14 +14,15 @@ defmodule Membrane.Core.Parent.Supervisor do
           Membrane.Core.Observability.setup_fun()
         ) :: {:ok, pid()} | {:error, reason :: any()}
   def go_brrr(method, start_fun, setup_observability) do
-    with {:ok, pid} <- GenServer.start(__MODULE__, {start_fun, setup_observability, self()}) do
-      # Not doing start_link here is a nasty hack to avoid `terminate` being called
-      # once parent sends an `exit` signal. This way we receive it in `handle_info`
-      # and can wait till the children exit without calling `receive`.
-      if method == :start_link do
-        Process.link(pid)
-      end
+    # Not doing start_link here is a nasty hack to avoid the current process becoming
+    # a 'parent process' (in the OTP meaning) of the spawned supervisor. Exit signals from
+    # 'parent processes' are not received in `handle_info`, but `terminate` is called immediately,
+    # what is unwanted here, as the supervisor has to make sure that all the children exit.
+    # After that happens, the supervisor exits as well, so it follows the OTP conventions anyway.
+    process_opts = if method == :start_link, do: [spawn_opt: [:link]], else: []
 
+    with {:ok, pid} <-
+           GenServer.start(__MODULE__, {start_fun, setup_observability, self()}, process_opts) do
       receive do
         Message.new(:parent_spawned, parent) -> {:ok, pid, parent}
       end
@@ -38,7 +39,10 @@ defmodule Membrane.Core.Parent.Supervisor do
       Message.send(reply_to, :parent_spawned, parent)
       {:ok, %{parent: {:alive, parent}, children_supervisor: children_supervisor}}
     else
-      {:error, reason} -> {:stop, reason}
+      {:error, reason} ->
+        Process.exit(children_supervisor, :shutdown)
+        receive do: ({:EXIT, ^children_supervisor, _reason} -> :ok)
+        {:stop, reason}
     end
   end
 

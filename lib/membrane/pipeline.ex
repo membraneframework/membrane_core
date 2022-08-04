@@ -25,9 +25,17 @@ defmodule Membrane.Pipeline do
   Defines options that can be passed to `start/3` / `start_link/3` and received
   in `c:handle_init/1` callback.
   """
-  @type pipeline_options_t :: any
+  @type pipeline_options :: any
 
-  @type state_t :: map | struct
+  @type name :: GenServer.name()
+
+  @type config :: [name: name()]
+
+  @type on_start ::
+          {:ok, pipeline_pid :: pid, supervisor_pid :: pid}
+          | {:error, {:already_started, pid()} | term()}
+
+  @type state :: map | struct
 
   @typedoc """
   Defines return values from Pipeline callback functions.
@@ -36,14 +44,14 @@ defmodule Membrane.Pipeline do
 
     * `{:ok, state}` - Save process state, with no actions to change the pipeline.
     * `{{:ok, [action]}, state}` - Return a list of actions that will be performed within the
-      pipline. This can be used to start new children, or to send messages to specific children,
+      pipeline. This can be used to start new children, or to send messages to specific children,
       for example. Actions are a tuple of `{type, arguments}`, so may be written in the
       form a keyword list. See `Membrane.Pipeline.Action` for more info.
     * `{{:error, reason}, state}` - Terminates the pipeline with the given reason.
     * `{:error, reason}` - raises a `Membrane.CallbackError` with the error tuple.
   """
   @type callback_return_t ::
-          {:ok | {:ok, [Action.t()]} | {:error, any}, state_t}
+          {:ok | {:ok, [Action.t()]} | {:error, any}, state}
           | {:error, any}
 
   @doc """
@@ -56,7 +64,7 @@ defmodule Membrane.Pipeline do
   and initialize pipeline's internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
   """
-  @callback handle_init(options :: pipeline_options_t) :: callback_return_t()
+  @callback handle_init(options :: pipeline_options) :: callback_return_t()
 
   @doc """
   Callback invoked when pipeline is shutting down.
@@ -64,7 +72,7 @@ defmodule Membrane.Pipeline do
 
   Useful for any cleanup required.
   """
-  @callback handle_terminate_yolo(reason, state :: state_t) :: :ok
+  @callback handle_terminate_yolo(reason, state) :: :ok
             when reason: :normal | :shutdown | {:shutdown, any} | term()
 
   @doc """
@@ -73,7 +81,7 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_setup(
               context :: CallbackContext.PlaybackChange.t(),
-              state :: state_t
+              state
             ) ::
               callback_return_t
 
@@ -83,7 +91,7 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_play(
               context :: CallbackContext.PlaybackChange.t(),
-              state :: state_t
+              state
             ) ::
               callback_return_t
 
@@ -94,7 +102,7 @@ defmodule Membrane.Pipeline do
               notification :: Membrane.ChildNotification.t(),
               element :: Child.name_t(),
               context :: CallbackContext.ChildNotification.t(),
-              state :: state_t
+              state
             ) :: callback_return_t
 
   @doc """
@@ -106,7 +114,7 @@ defmodule Membrane.Pipeline do
   @callback handle_info(
               message :: any,
               context :: CallbackContext.Other.t(),
-              state :: state_t
+              state
             ) ::
               callback_return_t
 
@@ -117,7 +125,7 @@ defmodule Membrane.Pipeline do
               child :: Child.name_t(),
               pad :: Pad.ref_t(),
               context :: CallbackContext.StreamManagement.t(),
-              state :: state_t
+              state
             ) :: callback_return_t
 
   @doc """
@@ -127,7 +135,7 @@ defmodule Membrane.Pipeline do
               child :: Child.name_t(),
               pad :: Pad.ref_t(),
               context :: CallbackContext.StreamManagement.t(),
-              state :: state_t
+              state
             ) :: callback_return_t
 
   @doc """
@@ -140,7 +148,7 @@ defmodule Membrane.Pipeline do
   @callback handle_spec_started(
               children :: [Child.name_t()],
               context :: CallbackContext.SpecStarted.t(),
-              state :: state_t
+              state
             ) :: callback_return_t
 
   @doc """
@@ -150,7 +158,7 @@ defmodule Membrane.Pipeline do
   @callback handle_tick(
               timer_id :: any,
               context :: CallbackContext.Tick.t(),
-              state :: state_t
+              state
             ) :: callback_return_t
 
   @doc """
@@ -159,7 +167,7 @@ defmodule Membrane.Pipeline do
   @callback handle_crash_group_down(
               group_name :: CrashGroup.name_t(),
               context :: CallbackContext.CrashGroupDown.t(),
-              state :: state_t
+              state
             ) :: callback_return_t
 
   @doc """
@@ -168,7 +176,7 @@ defmodule Membrane.Pipeline do
   @callback handle_call(
               message :: any,
               context :: CallbackContext.Call.t(),
-              state :: state_t
+              state
             ) ::
               callback_return_t
 
@@ -195,22 +203,14 @@ defmodule Membrane.Pipeline do
 
   Returns the same values as `GenServer.start_link/3`.
   """
-  @spec start_link(
-          module,
-          pipeline_options :: pipeline_options_t,
-          process_options :: GenServer.options()
-        ) :: GenServer.on_start()
+  @spec start_link(module, pipeline_options, config) :: on_start
   def start_link(module, pipeline_options \\ nil, process_options \\ []),
     do: do_start(:start_link, module, pipeline_options, process_options)
 
   @doc """
   Does the same as `start_link/3` but starts process outside of supervision tree.
   """
-  @spec start(
-          module,
-          pipeline_options :: pipeline_options_t,
-          process_options :: GenServer.options()
-        ) :: GenServer.on_start()
+  @spec start(module, pipeline_options, config) :: on_start
   def start(module, pipeline_options \\ nil, process_options \\ []),
     do: do_start(:start, module, pipeline_options, process_options)
 
@@ -402,7 +402,7 @@ defmodule Membrane.Pipeline do
       unquote(bring_pad)
 
       @doc """
-      Returns child specification for usage in `Membrane.PipelineSupervisor
+      Returns child specification for spawning under a supervisor
       """
       @spec child_spec(list) :: Supervisor.child_spec()
       def child_spec(arg) do

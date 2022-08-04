@@ -11,7 +11,7 @@ defmodule Membrane.Testing.Pipeline do
 
   To start a testing pipeline you need to build
   a keyword list representing the options used to determine the pipeline's behaviour and then
-  pass that options list to the `Membrane.Testing.Pipeline.start_link/2`.
+  pass that options list to the `Membrane.Testing.Pipeline.start_link/1`.
   The testing pipeline can be started in one of two modes - either with its `:default` behaviour, or by
   injecting a custom module behaviour. The usage of a `:default` pipeline implementation is presented below:
 
@@ -92,47 +92,19 @@ defmodule Membrane.Testing.Pipeline do
 
   require Membrane.Logger
 
-  defmodule Options do
-    @moduledoc """
-    @deprecated
-    Structure representing `options` passed to testing pipeline.
-
-    ## Struct fields
-
-    - `:test_process` - `pid` of process that shall receive messages from testing pipeline, e.g. when pipeline's playback state changes.
-      This allows using `Membrane.Testing.Assertions`
-    - `:elements` - a list of element specs. Allows to create a simple pipeline without defining a module for it.
-    - `:links` - a list describing the links between children. If ommited (or set to `nil`), they will be populated automatically
-      based on the children order using default pad names.
-    - `:module` - pipeline module with custom callbacks - useful if a simple list of children is not enough.
-    - `:custom_args`- arguments for the module's `handle_init` callback.
-    """
-
-    defstruct [:elements, :links, :test_process, :module, :custom_args]
-
-    @type t :: %__MODULE__{
-            test_process: pid() | nil,
-            elements: ParentSpec.children_spec_t() | nil,
-            links: ParentSpec.links_spec_t() | nil,
-            module: module() | nil,
-            custom_args: Pipeline.pipeline_options_t() | nil
-          }
-  end
-
   defmodule State do
-    @moduledoc """
-    Structure representing `state`.
+    @moduledoc false
+    # Structure representing `state`.
 
-    ##  Test Process
-    `pid` of process that shall receive messages when Pipeline invokes playback
-    state change callback and receives notification.
+    # ##  Test Process
+    # `pid` of process that shall receive messages when Pipeline invokes playback
+    # state change callback and receives notification.
 
-    ## Module
-    Pipeline Module with custom callbacks.
+    # ## Module
+    # Pipeline Module with custom callbacks.
 
-    ## Custom Pipeline State
-    State of the pipeline defined by Module.
-    """
+    # ## Custom Pipeline State
+    # State of the pipeline defined by Module.
 
     @enforce_keys [:test_process, :module]
     defstruct @enforce_keys ++ [:custom_pipeline_state]
@@ -140,66 +112,47 @@ defmodule Membrane.Testing.Pipeline do
     @type t :: %__MODULE__{
             test_process: pid() | nil,
             module: module() | nil,
-            custom_pipeline_state: any
+            custom_pipeline_state: Pipeline.state()
           }
   end
 
-  @type default_pipeline_keyword_list_t :: [
-          module: :default,
-          children: ParentSpec.children_spec_t(),
-          links: ParentSpec.links_spec_t(),
-          test_process: pid()
-        ]
-  @type custom_pipeline_keyword_list_t :: [
-          module: module(),
-          custom_args: Pipeline.pipeline_options_t(),
-          test_process: pid()
-        ]
-  @type pipeline_keyword_list_t ::
-          default_pipeline_keyword_list_t() | custom_pipeline_keyword_list_t()
+  @type options ::
+          [
+            module: :default,
+            children: ParentSpec.children_spec_t(),
+            links: ParentSpec.links_spec_t(),
+            test_process: pid(),
+            name: Pipeline.name()
+          ]
+          | [
+              module: module(),
+              custom_args: Pipeline.pipeline_options(),
+              test_process: pid(),
+              name: Pipeline.name()
+            ]
 
+  @spec child_spec(options) :: Supervisor.child_spec()
   def child_spec(options) do
-    super(options) |> Map.merge(%{restart: :transient, id: make_ref()})
+    id = Keyword.get(options, :name, make_ref())
+    super(options) |> Map.merge(%{restart: :transient, id: id})
   end
 
-  @spec start_link(Options.t() | pipeline_keyword_list_t(), GenServer.options()) ::
-          GenServer.on_start()
-  def start_link(pipeline_options, process_options \\ [])
-
-  def start_link(pipeline_options, process_options) when is_struct(pipeline_options, Options) do
-    Membrane.Logger.warn(
-      "Please pass options to Membrane.Testing.Pipeline.start_link/2 as keyword list, instead of using Membrane.Testing.Options"
-    )
-
-    do_start(:start_link, pipeline_options, process_options)
+  @spec start_link(options) :: Pipeline.on_start()
+  def start_link(options) do
+    do_start(:start_link, options)
   end
 
-  def start_link(pipeline_options, process_options) do
-    pipeline_options = transform_pipeline_options(pipeline_options)
-    do_start(:start_link, pipeline_options, process_options)
-  end
-
-  @spec start(Options.t() | pipeline_keyword_list_t(), GenServer.options()) ::
-          GenServer.on_start()
-  def start(pipeline_options, process_options \\ [])
-
-  def start(pipeline_options, process_options) when is_struct(pipeline_options, Options) do
-    Membrane.Logger.warn(
-      "Please pass options to Membrane.Testing.Pipeline.start/2 as keyword list, instead of using Membrane.Testing.Options"
-    )
-
-    do_start(:start, pipeline_options, process_options)
-  end
-
-  def start(pipeline_options, process_options) do
-    pipeline_options = transform_pipeline_options(pipeline_options)
-    do_start(:start, pipeline_options, process_options)
+  @spec start(options) :: Pipeline.on_start()
+  def start(options) do
+    do_start(:start, options)
   end
 
   if Mix.env() == :test do
+    @spec start_link_supervised(options) :: Pipeline.on_start()
     def start_link_supervised(pipeline_options \\ []) do
       pipeline_options = Keyword.put_new(pipeline_options, :test_process, self())
 
+      # TODO use start_link_supervised when added
       with {:ok, supervisor, pipeline} <-
              ExUnit.Callbacks.start_supervised({__MODULE__, pipeline_options}) do
         Process.link(pipeline)
@@ -209,73 +162,29 @@ defmodule Membrane.Testing.Pipeline do
       end
     end
 
+    @spec start_link_supervised!(options) :: pipeline_pid :: pid
     def start_link_supervised!(pipeline_options \\ []) do
       {:ok, _supervisor, pipeline} = start_link_supervised(pipeline_options)
       pipeline
     end
 
+    @spec start_supervised(options) :: Pipeline.on_start()
     def start_supervised(pipeline_options \\ []) do
       pipeline_options = Keyword.put_new(pipeline_options, :test_process, self())
       ExUnit.Callbacks.start_supervised({__MODULE__, pipeline_options})
     end
 
+    @spec start_supervised!(options) :: pipeline_pid :: pid
     def start_supervised!(pipeline_options \\ []) do
       {:ok, _supervisor, pipeline} = start_supervised(pipeline_options)
       pipeline
     end
   end
 
-  defp transform_pipeline_options(pipeline_options) do
-    module = Keyword.get(pipeline_options, :module, :default)
-
-    case module do
-      :default ->
-        children = Keyword.get(pipeline_options, :children, [])
-        links = Keyword.get(pipeline_options, :links, [])
-        test_process = Keyword.get(pipeline_options, :test_process)
-        %{module: :default, children: children, links: links, test_process: test_process}
-
-      module when is_atom(module) ->
-        case Code.ensure_compiled(module) do
-          {:module, _} ->
-            custom_args = Keyword.get(pipeline_options, :custom_args)
-            test_process = Keyword.get(pipeline_options, :test_process)
-            %{module: module, custom_args: custom_args, test_process: test_process}
-
-          {:error, _} ->
-            raise "Unknown module: #{inspect(module)}"
-        end
-
-      not_a_module ->
-        raise "Not a module: #{inspect(not_a_module)}"
-    end
-  end
-
-  defp do_start(_type, %Options{elements: nil, module: nil}, _process_options) do
-    raise """
-
-    You provided no information about pipeline contents. Please provide either:
-     - list of children via `:children` field of Options struct with optional links between
-     them via `:links` field of `Options` struct
-     - module that implements `Membrane.Pipeline` callbacks via `module` field of `Options`
-     struct
-    """
-  end
-
-  defp do_start(_type, %Options{elements: children, module: module}, _process_options)
-       when is_atom(module) and module != nil and children != nil do
-    raise """
-
-    When working with Membrane.Testing.Pipeline you can't provide both
-    override module and children list in the Membrane.Testing.Pipeline.Options
-    struct.
-    """
-  end
-
-  defp do_start(type, options, process_options) do
-    pipeline_options = default_options(options)
-    args = [__MODULE__, pipeline_options, process_options]
-    apply(Pipeline, type, args)
+  defp do_start(type, options) do
+    {process_options, options} = Keyword.split(options, [:name])
+    options = Keyword.put_new(options, :test_process, self())
+    apply(Pipeline, type, [__MODULE__, options, process_options])
   end
 
   @doc """
@@ -305,71 +214,36 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_init(%Options{links: nil, module: nil} = options) do
-    {links, children} =
-      if length(options.elements) <= 1 do
-        {[], options.elements}
-      else
-        {ParentSpec.link_linear(options.elements), []}
-      end
+  def handle_init(options) do
+    case Keyword.get(options, :module, :default) do
+      :default ->
+        spec = %Membrane.ParentSpec{
+          children: Keyword.get(options, :children, []),
+          links: Keyword.get(options, :links, [])
+        }
 
-    options_map = %{children: children, links: links, test_process: options.test_process}
-    do_handle_init_for_default_implementation(options_map)
-  end
+        new_state = %State{test_process: Keyword.fetch!(options, :test_process), module: nil}
+        {{:ok, [spec: spec, playback: :playing]}, new_state}
 
-  @impl true
-  def handle_init(%Options{module: nil} = options) do
-    options_map = %{
-      children: options.elements,
-      links: options.links,
-      test_process: options.test_process
-    }
+      module when is_atom(module) ->
+        case Code.ensure_compiled(module) do
+          {:module, _} -> :ok
+          {:error, _} -> raise "Unknown module: #{inspect(module)}"
+        end
 
-    do_handle_init_for_default_implementation(options_map)
-  end
+        new_state = %State{
+          module: module,
+          custom_pipeline_state: Keyword.get(options, :custom_args),
+          test_process: Keyword.fetch!(options, :test_process)
+        }
 
-  @impl true
-  def handle_init(%Options{links: nil, elements: nil} = options) do
-    options_map = %{
-      test_process: options.test_process,
-      module: options.module,
-      custom_args: options.custom_args
-    }
+        injected_module_result = eval_injected_module_callback(:handle_init, [], new_state)
+        testing_pipeline_result = {:ok, new_state}
+        combine_results(injected_module_result, testing_pipeline_result)
 
-    do_handle_init_with_custom_module(options_map)
-  end
-
-  @impl true
-  def handle_init(%{module: :default} = options) do
-    do_handle_init_for_default_implementation(options)
-  end
-
-  @impl true
-  def handle_init(%{module: _module} = options) do
-    do_handle_init_with_custom_module(options)
-  end
-
-  defp do_handle_init_for_default_implementation(options) do
-    spec = %Membrane.ParentSpec{
-      children: options.children,
-      links: options.links
-    }
-
-    new_state = %State{test_process: options.test_process, module: nil}
-    {{:ok, [spec: spec, playback: :playing]}, new_state}
-  end
-
-  defp do_handle_init_with_custom_module(options) do
-    new_state = %State{
-      test_process: options.test_process,
-      module: options.module,
-      custom_pipeline_state: options.custom_args
-    }
-
-    injected_module_result = eval_injected_module_callback(:handle_init, [], new_state)
-    testing_pipeline_result = {:ok, new_state}
-
-    combine_results(injected_module_result, testing_pipeline_result)
+      not_a_module ->
+        raise "Not a module: #{inspect(not_a_module)}"
+    end
   end
 
   @impl true
@@ -541,11 +415,6 @@ defmodule Membrane.Testing.Pipeline do
 
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
-
-  defp default_options(%{test_process: nil} = options),
-    do: %{options | test_process: self()}
-
-  defp default_options(options), do: options
 
   defp eval_injected_module_callback(callback, args, state)
 
