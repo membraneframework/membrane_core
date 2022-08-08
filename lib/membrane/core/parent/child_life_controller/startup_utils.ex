@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
+defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
   @moduledoc false
   use Bunch
 
@@ -82,16 +82,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     )
 
     children |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata, supervisor))
-  end
-
-  @spec add_children([ChildEntry.t()], Parent.state_t()) :: Parent.state_t()
-  def add_children(children, state) do
-    children =
-      Enum.reduce(children, state.children, fn child, children ->
-        Map.put(children, child.name, child)
-      end)
-
-    %{state | children: children}
   end
 
   @spec maybe_activate_syncs(%{Membrane.Child.name_t() => Sync.t()}, Parent.state_t()) ::

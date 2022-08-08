@@ -15,20 +15,18 @@ defmodule Membrane.RemoteControlled.Pipeline do
   The controlling process can also subscribe to the messages
   sent by the pipeline and later on synchroniously await for these messages:
   ```
-  # subscribes to message which is sent when the pipeline enters any playback state
-  Pipeline.subscribe(pipeline, %Message.PlaybackState{state: _})
+  # subscribes to message which is sent when the pipeline enters `playing`
+  Pipeline.subscribe(pipeline, %Message.Play{})
   ...
-  # awaits for the message sent when the pipeline enters :playing playback state
-  Pipeline.await_playback_state(pipeline, :playing)
+  # awaits for the message sent when the pipeline enters :playing playback
+  Pipeline.await_play(pipeline)
   ...
-  # awaits for the message sent when the pipeline enters :stopped playback state
-  Pipeline.await_playback_state(pipeline, :stopped)
   ```
 
   `Membrane.RemoteControlled.Pipeline` can be used when there is no need for introducing a custom
   logic in the `Membrane.Pipeline` callbacks implementation. An example of usage could be running a
   pipeline from the elixir script. `Membrane.RemoteControlled.Pipeline` sends the following messages:
-  * `Membrane.RemoteControlled.Message.PlaybackState.t()` sent when pipeline enters a given playback state,
+  * `Membrane.RemoteControlled.Message.Play.t()` sent when pipeline enters `playing` playback,
   * `Membrane.RemoteControlled.Message.StartOfStream.t()` sent
   when one of direct pipeline children informs the pipeline about start of a stream,
   * `Membrane.RemoteControlled.Message.EndOfStream.t()` sent
@@ -294,11 +292,10 @@ defmodule Membrane.RemoteControlled.Pipeline do
     subscribe(pipeline, %Message.StartOfStream{element: :element_id, pad: _})
     ```
 
-  2) making the `Membrane.RemoteControlled.Pipeline` send to the controlling process `Message.PlaybackState` message when the pipeline playback state changes to any state
-    (that is - for all the :stopped, :prepared and :playing playback states).
+  2) making the `Membrane.RemoteControlled.Pipeline` send to the controlling process `Message.Play` message when the pipeline playback changes to `:playing`
 
     ```
-    subscribe(pipeline, %Message.PlaybackState{state: _})
+    subscribe(pipeline, %Message.Play{})
     ```
   """
   defmacro subscribe(pipeline, subscription_pattern) do

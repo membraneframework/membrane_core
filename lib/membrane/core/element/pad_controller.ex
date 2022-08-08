@@ -306,7 +306,7 @@ defmodule Membrane.Core.Element.PadController do
 
   @doc """
   Generates end of stream on the given input pad if it hasn't been generated yet
-  and playback state is `playing`.
+  and playback is `playing`.
   """
   @spec generate_eos_if_needed(Pad.ref_t(), State.t()) :: State.t()
   def generate_eos_if_needed(pad_ref, state) do

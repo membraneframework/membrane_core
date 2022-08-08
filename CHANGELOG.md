@@ -10,7 +10,7 @@
 ## 0.10.0
  * Remove all deprecated stuff [#399](https://github.com/membraneframework/membrane_core/pull/399)
  * Make `Membrane.Pipeline.{prepare, play, stop}` deprecated and add `:playback` action instead
- * Make `Membrane.Pipeline.stop_and_terminate/2` deprecated and add `Membrane.Pipeline.terminate/2` instead
+ * Make `Membrane.Pipeline.stop_and_terminate` deprecated and add `Membrane.Pipeline.terminate/2` instead
  * Add `Membrane.RemoteControlled.Pipeline` - a basic implementation of a `Membrane.Pipeline` that </br>
    can be spawned and controlled by an external process [#366](https://github.com/membraneframework/membrane_core/pull/366)
  * Disallow sending buffers without sending caps first [#341](https://github.com/membraneframework/membrane_core/issues/341)

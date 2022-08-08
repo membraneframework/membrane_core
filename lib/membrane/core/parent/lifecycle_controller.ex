@@ -15,7 +15,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @spec handle_setup(Parent.state_t()) :: Parent.state_t()
   def handle_setup(state) do
     Membrane.Logger.debug("Setup")
-    context = Component.callback_context_generator(:parent, PlaybackChange, state)
+    context = Component.callback_context_generator(:parent, Setup, state)
 
     state =
       CallbackHandler.exec_and_handle_callback(
@@ -56,7 +56,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end)
 
     state = %{state | playback: :playing}
-    context = Component.callback_context_generator(:parent, PlaybackChange, state)
+    context = Component.callback_context_generator(:parent, Play, state)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_play,

@@ -19,7 +19,7 @@ defmodule Membrane.Pipeline.Action do
   @typedoc """
   Action that instantiates children and links them according to `Membrane.ParentSpec`.
 
-  Children's playback state is changed to the current pipeline state.
+  Children's playback is changed to the current pipeline state.
   `c:Membrane.Pipeline.handle_spec_started/3` callback is executed once it happens.
   """
   @type spec_t :: {:spec, ParentSpec.t()}
@@ -77,9 +77,12 @@ defmodule Membrane.Pipeline.Action do
   @type stop_timer_t :: {:stop_timer, timer_id :: any}
 
   @typedoc """
-  Changes the playback state of the pipeline to the chosen one.
+  Action that instantiates children and links them according to `Membrane.ParentSpec`.
+
+  Children's playback is changed to the current bin playback.
+  `c:Membrane.Parent.handle_spec_started/3` callback is executed once the children are spawned.
   """
-  @type playback_t :: {:playback, :prepared | :playing | :stopped}
+  @type playback_t :: {:playback, :playing}
 
   @typedoc """
   Action that replies to a `Membrane.Pipeline.call/3`. Can be returned only from the `c:Membrane.Pipeline.handle_call/3` callback, in

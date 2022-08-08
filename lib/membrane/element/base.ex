@@ -87,33 +87,33 @@ defmodule Membrane.Element.Base do
   @callback membrane_element_type :: Element.type_t()
 
   @doc """
-  Callback invoked on initialization of element process. It should parse options
-  and initialize element internal state. Internally it is invoked inside
-  `c:GenServer.init/1` callback.
+  Callback invoked on initialization of element.
+
+  This callback is synchronous: the parent waits until it finishes. Also, any failures
+  that happen in this callback crash the parent as well, regardless of crash groups.
+  For these reasons, it's important to do any long-lasting or complex work in `c:handle_setup/2`,
+  while `handle_init` should be used for things like parsing options or initializing state.
   """
   @callback handle_init(options :: Element.options_t()) :: callback_return_t
 
   @doc """
-  Callback invoked when element goes to `:prepared` state from state `:stopped` and should get
-  ready to enter `:playing` state.
+  Callback invoked on element startup, after `c:handle_init/1`.
 
-  Usually most resources used by the element are allocated here.
-  For example, if element opens a file, this is the place to try to actually open it
-  and return error if that has failed.
+  Any long-lasting or complex initialization should happen here.
   """
   @callback handle_setup(
-              context :: CallbackContext.PlaybackChange.t(),
+              context :: CallbackContext.Setup.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
   @doc """
-  Callback invoked when element is supposed to start playing (goes from state `:prepared` to `:playing`).
+  Callback invoked when bin switches the playback to `:playing`.
 
-  This is moment when initial demands are sent and first buffers are generated
-  if there are any pads in the push mode.
+  From this point, element can send and receive buffers, events, caps and demands
+  through its pads.
   """
   @callback handle_play(
-              context :: CallbackContext.PlaybackChange.t(),
+              context :: CallbackContext.Play.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 

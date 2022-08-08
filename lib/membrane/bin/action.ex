@@ -25,8 +25,8 @@ defmodule Membrane.Bin.Action do
   @typedoc """
   Action that instantiates children and links them according to `Membrane.ParentSpec`.
 
-  Children's playback state is changed to the current bin state.
-  `c:Membrane.Parent.handle_spec_started/3` callback is executed once it happens.
+  Children's playback is changed to the current bin playback.
+  `c:Membrane.Parent.handle_spec_started/3` callback is executed once the children are spawned.
   """
   @type spec_t :: {:spec, ParentSpec.t()}
 

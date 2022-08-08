@@ -10,6 +10,52 @@ defmodule Membrane.Pipeline do
   To create a pipeline, use the `__using__/1` macro and implement callbacks
   of `Membrane.Pipeline` behaviour. For details on instantiating and linking
   children, see `Membrane.ParentSpec`.
+
+  ## Starting and supervision
+
+  Pipeline can be started with `start_link/2` or `start/2` functions. They both
+  return `{:ok, supervisor_pid, pipeline_pid}` in case of success, because the pipeline
+  is always spawned under a dedicated supervisor. The supervisor never restarts the
+  pipeline, but it makes sure that the pipeline and its children terminate properly.
+  If the pipeline needs to be restarted in case of failure, it should be spawned under
+  another supervisor with a proper strategy.
+
+  ### Starting under a supervision tree
+
+  The pipeline can be spawned under a supervision tree like any `GenServer`. Also,
+  `__using__/1` macro injects a `child_spec/1` function. A simple scenario can look like:
+
+      defmodule MyPipeline do
+        use Membrane.Pipeline
+
+        def start_link(options) do
+          Membrane.Pipeline.start_link(options, name: MyPipeline)
+        end
+
+        # ...
+      end
+
+      Supervisor.start_link([{MyPipeline, option: :value}], strategy: :one_for_one)
+      send(MyPipeline, :message)
+
+  ### Starting outside a supervision tree
+
+  When starting a pipeline outside a supervision tree and willing to interact with
+  the pipeline by pid, `pipeline_pid` returned from `start_link` can be used, for example
+
+      {:ok, _supervisor_pid, pipeline_pid} = Membrane.Pipeline.start_link(MyPipeline, option: :value)
+      send(pipeline_pid, :message)
+
+  ### Visualizing pipeline's supervision tree
+
+  Pipeline's internal supervision tree can be looked up with Applications tab of Erlang's Observer
+  or with Livebook's `Kino` library.
+  For debugging (and ONLY for debugging) purposes, you may use the following configuration:
+
+        config :membrane_core, unsafely_name_processes_for_observer: [:processes]
+
+  that makes the observer's process tree graph more readable by naming pipeline's descendants, for example:
+  ![Observer graph](assets/images/observer_graph.png).
   """
 
   use Bunch
@@ -60,9 +106,12 @@ defmodule Membrane.Pipeline do
   @callback membrane_pipeline? :: true
 
   @doc """
-  Callback invoked on initialization of pipeline process. It should parse options
-  and initialize pipeline's internal state. Internally it is invoked inside
-  `c:GenServer.init/1` callback.
+  Callback invoked on initialization of pipeline.
+
+  This callback is synchronous: the process which started the pipeline waits until `handle_init`
+  finishes. For that reason, it's important to do any long-lasting or complex work in `c:handle_setup/2`,
+  while `handle_init` should be used for things like parsing options, initializing state or spawning
+  children.
   """
   @callback handle_init(options :: pipeline_options) :: callback_return_t()
 
@@ -76,21 +125,21 @@ defmodule Membrane.Pipeline do
             when reason: :normal | :shutdown | {:shutdown, any} | term()
 
   @doc """
-  Callback invoked when pipeline transition from `:stopped` to `:prepared` state has finished,
-  that is all of its children are prepared to enter `:playing` state.
+  Callback invoked on pipeline startup, after `c:handle_init/1`.
+
+  Any long-lasting or complex initialization should happen here.
   """
   @callback handle_setup(
-              context :: CallbackContext.PlaybackChange.t(),
+              context :: CallbackContext.Setup.t(),
               state
             ) ::
               callback_return_t
 
   @doc """
-  Callback invoked when pipeline is in `:playing` state, i.e. all its children
-  are in this state.
+  Callback when pipeline switches the playback to `:playing`.
   """
   @callback handle_play(
-              context :: CallbackContext.PlaybackChange.t(),
+              context :: CallbackContext.Play.t(),
               state
             ) ::
               callback_return_t
@@ -139,11 +188,7 @@ defmodule Membrane.Pipeline do
             ) :: callback_return_t
 
   @doc """
-  Callback invoked when `Membrane.ParentSpec` is linked and in the same playback
-  state as pipeline.
-
-  This callback can be started from `c:handle_init/1` callback or as
-  `t:Membrane.Pipeline.Action.spec_t/0` action.
+  Callback invoked when children of `Membrane.ParentSpec` are started.
   """
   @callback handle_spec_started(
               children :: [Child.name_t()],
@@ -198,10 +243,8 @@ defmodule Membrane.Pipeline do
   process.
 
   Pipeline options are passed to module's `c:handle_init/1` callback.
-
-  Process options are internally passed to `GenServer.start_link/3`.
-
-  Returns the same values as `GenServer.start_link/3`.
+  Note that this function returns `{:ok, supervisor_pid, pipeline_pid}` in case of
+  success. Check the 'Starting and supervision' section of the moduledoc for details.
   """
   @spec start_link(module, pipeline_options, config) :: on_start
   def start_link(module, pipeline_options \\ nil, process_options \\ []),
@@ -259,22 +302,9 @@ defmodule Membrane.Pipeline do
   end
 
   @doc """
-  Changes pipeline's playback state to `:stopped` and terminates its process.
-  It accepts two options:
-    * `blocking?` - tells whether to stop the pipeline synchronously
-    * `timeout` - if `blocking?` is set to true it tells how much
-      time (ms) to wait for pipeline to get terminated. Defaults to 5000.
-  """
-  @spec stop_and_terminate(pipeline :: pid, Keyword.t()) ::
-          :ok | {:error, :timeout}
-  @deprecated "use terminate/2 instead"
-  def stop_and_terminate(pipeline, opts \\ []) do
-    terminate(pipeline, opts)
-  end
+  Gracefully terminates the pipeline.
 
-  @doc """
-  Changes pipeline's playback state to `:stopped` and terminates its process.
-  It accepts two options:
+  Accepts two options:
     * `blocking?` - tells whether to stop the pipeline synchronously
     * `timeout` - if `blocking?` is set to true it tells how much
       time (ms) to wait for pipeline to get terminated. Defaults to 5000.
@@ -320,8 +350,8 @@ defmodule Membrane.Pipeline do
   @doc false
   # Credo was disabled there, since it was complaining about too high CC of the following macro, which in fact does not look too complex.
   # The change which lead to CC increase was making the default definition of function call another function, instead of delegating to that function.
-  # It was necessary, since delegating to the deprecated function led to a depracation warning being printed once 'use Membrane.Pipleine' was done,
-  # despite the fact that the depreacted function wasn't called. In the future releases we will remove deprecated functions and we will also remove that
+  # It was necessary, since delegating to the deprecated function led to a deprecation warning being printed once 'use Membrane.Pipeline' was done,
+  # despite the fact that the deprecated function wasn't called. In the future releases we will remove deprecated functions and we will also remove that
   # credo disable instruction so this can be seen just as a temporary solution.
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defmacro __before_compile__(_env) do
@@ -359,7 +389,7 @@ defmodule Membrane.Pipeline do
 
       unless Enum.any?(1..2, &Module.defines?(__MODULE__, {:terminate, &1})) do
         @doc """
-        Changes pipeline's playback state to `:stopped` and terminates its process.
+        Changes pipeline's playback to `:stopped` and terminates its process.
         """
         @spec terminate(pid, Keyword.t()) :: :ok
         defdelegate terminate(pipeline, opts \\ []), to: unquote(__MODULE__)

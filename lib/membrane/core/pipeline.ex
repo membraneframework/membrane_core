@@ -76,7 +76,7 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def handle_info(Message.new(:link_response, link_id), state) do
-    state = ChildLifeController.LinkHandler.handle_link_response(link_id, state)
+    state = ChildLifeController.handle_link_response(link_id, state)
     {:noreply, state}
   end
 

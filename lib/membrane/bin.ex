@@ -41,9 +41,13 @@ defmodule Membrane.Bin do
   @callback membrane_bin? :: true
 
   @doc """
-  Callback invoked on initialization of bin process. It should parse options
-  and initialize bin's internal state. Internally it is invoked inside
-  `c:GenServer.init/1` callback.
+  Callback invoked on initialization of bin.
+
+  This callback is synchronous: the parent waits until it finishes. Also, any failures
+  that happen in this callback crash the parent as well, regardless of crash groups.
+  For these reasons, it's important to do any long-lasting or complex work in `c:handle_setup/2`,
+  while `handle_init` should be used for things like parsing options, initializing state or
+  spawning children.
   """
   @callback handle_init(options :: options_t) :: callback_return_t()
 
@@ -57,7 +61,7 @@ defmodule Membrane.Bin do
             when reason: :normal | :shutdown | {:shutdown, any} | term()
 
   @doc """
-  Callback that is called when new pad has beed added to bin. Executed
+  Callback that is called when new pad has been added to bin. Executed
   ONLY for dynamic pads.
   """
   @callback handle_pad_added(
@@ -67,7 +71,7 @@ defmodule Membrane.Bin do
             ) :: callback_return_t
 
   @doc """
-  Callback that is called when some pad of the bin has beed removed. Executed
+  Callback that is called when some pad of the bin has been removed. Executed
   ONLY for dynamic pads.
   """
   @callback handle_pad_removed(
@@ -82,21 +86,20 @@ defmodule Membrane.Bin do
   @callback membrane_clock? :: boolean()
 
   @doc """
-  Callback invoked when bin transition from `:stopped` to `:prepared` state has finished,
-  that is all of its children are prepared to enter `:playing` state.
+  Callback invoked on bin startup, after `c:handle_init/1`.
+
+  Any long-lasting or complex initialization should happen here.
   """
   @callback handle_setup(
-              context :: CallbackContext.PlaybackChange.t(),
+              context :: CallbackContext.Setup.t(),
               state :: state_t
-            ) ::
-              callback_return_t
+            ) :: callback_return_t
 
   @doc """
-  Callback invoked when bin is in `:playing` state, i.e. all its children
-  are in this state.
+  Callback invoked when bin switches the playback to `:playing`.
   """
   @callback handle_play(
-              context :: CallbackContext.PlaybackChange.t(),
+              context :: CallbackContext.Play.t(),
               state :: state_t
             ) ::
               callback_return_t
@@ -124,14 +127,13 @@ defmodule Membrane.Bin do
   Callback invoked when bin receives a message that is not recognized
   as an internal membrane message.
 
-  Useful for receiving data sent from NIFs or other stuff.
+  Can be used for receiving data from non-membrane processes.
   """
   @callback handle_info(
               message :: any,
               context :: CallbackContext.Other.t(),
               state :: state_t
-            ) ::
-              callback_return_t
+            ) :: callback_return_t
 
   @doc """
   Callback invoked when a child element starts processing stream via given pad.
@@ -154,11 +156,7 @@ defmodule Membrane.Bin do
             ) :: callback_return_t
 
   @doc """
-  Callback invoked when `Membrane.ParentSpec` is linked and in the same playback
-  state as bin.
-
-  This callback can be started from `c:handle_init/1` callback or as
-  `t:Membrane.Bin.Action.spec_t/0` action.
+  Callback invoked when children of `Membrane.ParentSpec` are started.
   """
   @callback handle_spec_started(
               children :: [Child.name_t()],

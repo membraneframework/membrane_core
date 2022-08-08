@@ -2,7 +2,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @moduledoc false
   use Bunch
 
-  alias __MODULE__.{CrashGroupHandler, LinkHandler, StartupHandler}
+  alias __MODULE__.{CrashGroupUtils, LinkUtils, StartupUtils}
   alias Membrane.ParentSpec
   alias Membrane.Core.{Bin, CallbackHandler, Component, Parent, Pipeline}
 
@@ -34,6 +34,34 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @type pending_specs_t :: %{spec_ref_t() => pending_spec_t()}
 
+  @doc """
+  Handles `Membrane.ParentSpec` returned with `spec` action.
+
+  Handling a spec consists of the following steps:
+  - Parse the spec
+  - Set up `Membrane.Sync`s
+  - Spawn children processes. If any process crashes when being spawned (that is in `handle_init`),
+    the parent is terminated.
+  - Activate syncs and choose clock
+  - Set spec status to `:initializing` and store the spec in `pending_specs` in state. It's kept there
+    until the spec is fully handled. If any child of the spec that is in a crash group crashes by then,
+    the spawning of the spec is cancelled and spec is cleaned up. That's possible because only one crash
+    group per spec is allowed.
+  - Optionally add crash group
+  - Execute `handle_spec_startup` callback
+  - Wait until all children are initialized and all dependent specs are fully handled. Dependent specs are
+    those containing children that are linked in the current spec.
+  - Set spec status to `:initialized`
+  - Send link requests for all the links in the spec. Set spec status to `:linking_internally`. Wait until
+    all link responses are received.
+  - Link all links that are not involving bin pads.
+  - If the parent is bin, send link responses for bin pads, set spec status to `:linking_externally` and wait
+    until all bin pads of the spec are linked. Linking bin pads is actually routing link calls to proper
+    bin children.
+  - Mark spec children as ready, optionally request to play or terminate
+  - Cleanup spec: remove it from `pending_specs` and all other specs' `dependent_specs` and try proceeding startup
+    for all other pending specs that depended on the spec.
+  """
   @spec handle_spec(ParentSpec.t(), Parent.state_t()) :: Parent.state_t() | no_return()
   def handle_spec(%ParentSpec{} = spec, state) do
     spec_ref = make_ref()
@@ -48,8 +76,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     children_spec = Enum.concat(spec.children, children_spec_from_links)
     children = ChildEntryParser.parse(children_spec)
     children = Enum.map(children, &%{&1 | spec_ref: spec_ref})
-    :ok = StartupHandler.check_if_children_names_unique(children, state)
-    syncs = StartupHandler.setup_syncs(children, spec.stream_sync)
+    :ok = StartupUtils.check_if_children_names_unique(children, state)
+    syncs = StartupUtils.setup_syncs(children, spec.stream_sync)
 
     log_metadata =
       case state do
@@ -58,7 +86,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       end
 
     children =
-      StartupHandler.start_children(
+      StartupUtils.start_children(
         children,
         spec.node,
         state.synchronization.clock_proxy,
@@ -70,9 +98,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     children_names = children |> Enum.map(& &1.name)
     children_pids = children |> Enum.map(& &1.pid)
 
-    :ok = StartupHandler.maybe_activate_syncs(syncs, state)
-    state = StartupHandler.add_children(children, state)
-    links = LinkHandler.resolve_links(links, spec_ref, state)
+    :ok = StartupUtils.maybe_activate_syncs(syncs, state)
+    state = ClockHandler.choose_clock(children, spec.clock_provider, state)
+    state = %{state | children: Map.merge(state.children, Map.new(children, &{&1.name, &1}))}
+    links = LinkUtils.resolve_links(links, spec_ref, state)
     state = %{state | links: Map.merge(state.links, Map.new(links, &{&1.id, &1}))}
 
     dependent_specs =
@@ -93,14 +122,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     # adding crash group to state
     state =
       if spec.crash_group do
-        CrashGroupHandler.add_crash_group(spec.crash_group, children_names, children_pids, state)
+        CrashGroupUtils.add_crash_group(spec.crash_group, children_names, children_pids, state)
       else
         state
       end
 
-    state = ClockHandler.choose_clock(children, spec.clock_provider, state)
-    state = proceed_spec_startup(spec_ref, state)
-    StartupHandler.exec_handle_spec_started(children_names, state)
+    state = StartupUtils.exec_handle_spec_started(children_names, state)
+    proceed_spec_startup(spec_ref, state)
   end
 
   @spec handle_spec_timeout(spec_ref_t(), Parent.state_t()) ::
@@ -138,6 +166,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     if Enum.all?(spec_data.children_names, &Map.fetch!(children, &1).initialized?) and
          Enum.empty?(spec_data.dependent_specs) do
+      Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to initialized")
       do_proceed_spec_startup(spec_ref, %{spec_data | status: :initialized}, state)
     else
       {spec_data, state}
@@ -145,7 +174,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp do_proceed_spec_startup(spec_ref, %{status: :initialized} = spec_data, state) do
-    Membrane.Logger.debug("Proceeding spec #{inspect(spec_ref)} startup: initialized")
     Process.send_after(self(), Message.new(:spec_linking_timeout, spec_ref), 5000)
 
     {awaiting_responses, state} =
@@ -154,10 +182,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
           Map.fetch!(state.links, link_id)
 
         {awaiting_responses_from, state} =
-          LinkHandler.request_link(:output, from, to, spec_ref, link_id, state)
+          LinkUtils.request_link(:output, from, to, spec_ref, link_id, state)
 
         {awaiting_responses_to, state} =
-          LinkHandler.request_link(:input, to, from, spec_ref, link_id, state)
+          LinkUtils.request_link(:input, to, from, spec_ref, link_id, state)
 
         {{link_id, awaiting_responses_from + awaiting_responses_to}, state}
       end)
@@ -168,18 +196,18 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         status: :linking_internally
     }
 
+    Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to linking internally")
     do_proceed_spec_startup(spec_ref, spec_data, state)
   end
 
   defp do_proceed_spec_startup(spec_ref, %{status: :linking_internally} = spec_data, state) do
-    Membrane.Logger.debug("Proceeding spec #{inspect(spec_ref)} startup: linking internally")
-
     if spec_data.awaiting_responses |> Map.values() |> Enum.all?(&(&1 == 0)) do
       state =
         spec_data.links_ids
         |> Enum.map(&Map.fetch!(state.links, &1))
-        |> Enum.reduce(state, &LinkHandler.link/2)
+        |> Enum.reduce(state, &LinkUtils.link/2)
 
+      Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to linked internally")
       do_proceed_spec_startup(spec_ref, %{spec_data | status: :linked_internally}, state)
     else
       {spec_data, state}
@@ -191,8 +219,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
          %{status: :linked_internally} = spec_data,
          %Pipeline.State{} = state
        ) do
-    Membrane.Logger.debug("Proceeding spec #{inspect(spec_ref)} startup: linked internally")
-
+    Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to ready")
     do_proceed_spec_startup(spec_ref, %{spec_data | status: :ready}, state)
   end
 
@@ -201,9 +228,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
          %{status: :linked_internally} = spec_data,
          %Bin.State{} = state
        ) do
-    Membrane.Logger.debug("Proceeding spec #{inspect(spec_ref)} startup: linked internally")
-
     state = Bin.PadController.respond_links(spec_ref, state)
+    Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to linking externally")
     do_proceed_spec_startup(spec_ref, %{spec_data | status: :linking_externally}, state)
   end
 
@@ -212,18 +238,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
          %{status: :linking_externally} = spec_data,
          %Bin.State{} = state
        ) do
-    Membrane.Logger.debug("Proceeding spec #{inspect(spec_ref)} startup: linking externally")
-
     if Bin.PadController.all_pads_linked?(spec_ref, state) do
+      Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to ready")
       do_proceed_spec_startup(spec_ref, %{spec_data | status: :ready}, state)
     else
       {spec_data, state}
     end
   end
 
-  defp do_proceed_spec_startup(spec_ref, %{status: :ready} = spec_data, state) do
-    Membrane.Logger.debug("Spec #{inspect(spec_ref)} ready")
-
+  defp do_proceed_spec_startup(_spec_ref, %{status: :ready} = spec_data, state) do
     state =
       Enum.reduce(spec_data.children_names, state, fn child, state ->
         %{pid: pid, terminating?: terminating?} = get_in(state, [:children, child])
@@ -255,6 +278,24 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       Enum.reduce(Map.keys(pending_specs), state, &proceed_spec_startup/2)
     else
       state
+    end
+  end
+
+  @spec handle_link_response(Parent.Link.id(), Parent.state_t()) :: Parent.state_t()
+  def handle_link_response(link_id, state) do
+    case Map.fetch(state.links, link_id) do
+      {:ok, %Link{spec_ref: spec_ref}} ->
+        state =
+          update_in(
+            state,
+            [:pending_specs, spec_ref, :awaiting_responses, link_id],
+            &(&1 - 1)
+          )
+
+        proceed_spec_startup(spec_ref, state)
+
+      :error ->
+        state
     end
   end
 
@@ -306,10 +347,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @doc """
   Handles death of a child:
   - removes it from state
-  - if in playback transition, checks if it can be finished (in case the dead child
-    was the last one we were waiting for to change the playback state)
-
-  If a pid turns out not to be a pid of any child error is raised.
+  - unlinks it from other children
+  - handles crash group (if applicable)
   """
   @spec handle_child_death(child_pid :: pid(), reason :: any(), state :: Parent.state_t()) ::
           {:stop | :continue, Parent.state_t()}
@@ -325,7 +364,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   defp do_handle_child_death(child_name, :normal, state) do
     {%{pid: child_pid}, state} = Bunch.Access.pop_in(state, [:children, child_name])
-    state = LinkHandler.unlink_element(child_name, state)
+    state = LinkUtils.unlink_element(child_name, state)
     {_result, state} = remove_child_from_crash_group(state, child_pid)
     state
   end
@@ -333,7 +372,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp do_handle_child_death(child_name, reason, state) do
     %{pid: child_pid} = ChildrenModel.get_child_data!(state, child_name)
 
-    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(child_pid, state) do
+    with {:ok, group} <- CrashGroupUtils.get_group_by_member_pid(child_pid, state) do
       {result, state} =
         crash_all_group_members(group, child_name, state)
         |> remove_child_from_crash_group(group, child_pid)
@@ -342,7 +381,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         state =
           Enum.reduce(group.members, state, fn child_name, state ->
             {%{spec_ref: spec_ref}, state} = Bunch.Access.pop_in(state, [:children, child_name])
-            state = LinkHandler.unlink_element(child_name, state)
+            state = LinkUtils.unlink_element(child_name, state)
             cleanup_spec_startup(spec_ref, state)
           end)
 
@@ -400,15 +439,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
          state
        ) do
     %CrashGroup{alive_members_pids: members_pids} = crash_group
-    state = LinkHandler.unlink_crash_group(crash_group, state)
+    state = LinkUtils.unlink_crash_group(crash_group, state)
     Enum.each(members_pids, &Process.exit(&1, {:shutdown, :membrane_crash_group_kill}))
-    CrashGroupHandler.set_triggered(state, crash_group.name, crash_initiator)
+    CrashGroupUtils.set_triggered(state, crash_group.name, crash_initiator)
   end
 
   defp crash_all_group_members(_crash_group, _crash_initiator, state), do: state
 
   defp remove_child_from_crash_group(state, child_pid) do
-    with {:ok, group} <- CrashGroupHandler.get_group_by_member_pid(child_pid, state) do
+    with {:ok, group} <- CrashGroupUtils.get_group_by_member_pid(child_pid, state) do
       remove_child_from_crash_group(state, group, child_pid)
     else
       {:error, :not_member} -> {:not_removed, state}
@@ -416,7 +455,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp remove_child_from_crash_group(state, group, child_pid) do
-    CrashGroupHandler.remove_member_of_crash_group(state, group.name, child_pid)
-    |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
+    CrashGroupUtils.remove_member_of_crash_group(state, group.name, child_pid)
+    |> CrashGroupUtils.remove_crash_group_if_empty(group.name)
   end
 end

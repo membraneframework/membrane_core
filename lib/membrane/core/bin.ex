@@ -191,7 +191,7 @@ defmodule Membrane.Core.Bin do
   end
 
   defp do_handle_info(Message.new(:link_response, link_id), state) do
-    state = Parent.ChildLifeController.LinkHandler.handle_link_response(link_id, state)
+    state = Parent.ChildLifeController.handle_link_response(link_id, state)
     {:noreply, state}
   end
 

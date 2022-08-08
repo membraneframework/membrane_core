@@ -117,7 +117,7 @@ defmodule Membrane.Core.PipelineTest do
     assert :ok == Testing.Pipeline.terminate(pid, blocking?: true)
   end
 
-  test "Pipeline should be able to steer its playback state with :playback action" do
+  test "Pipeline should be able to steer its playback with :playback action" do
     pid = Testing.Pipeline.start_link_supervised!(module: TestPipeline)
     Testing.Pipeline.execute_actions(pid, playback: :playing)
     assert_pipeline_play(pid)

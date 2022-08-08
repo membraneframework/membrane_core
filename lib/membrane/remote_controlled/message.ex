@@ -1,16 +1,13 @@
 defmodule Membrane.RemoteControlled.Message do
   @moduledoc """
   An abstract module aggregating all the messages that can be sent by the `RemoteControlled.Pipeline`.
-  The available messages are:
-  * `Membrane.RemoteControlled.Message.PlaybackState.t()`
-  * `Membrane.RemoteControlled.Message.StartOfStream.t()`
-  * `Membrane.RemoteControlled.Message.EndOfStream.t()`
-  * `Membrane.RemoteControlled.Message.Notification.t()`
-  * `Membrane.RemoteControlled.Message.Terminated.t()`
+
+  Check `t:t/0` for available messages.
   """
 
   @type t ::
-          __MODULE__.StartOfStream.t()
+          __MODULE__.Play.t()
+          | __MODULE__.StartOfStream.t()
           | __MODULE__.EndOfStream.t()
           | __MODULE__.Notification.t()
           | __MODULE__.Terminated.t()

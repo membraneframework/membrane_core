@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Element.LifecycleController do
   @moduledoc false
 
-  # Module handling element initialization, termination, playback state changes
+  # Module handling element initialization, termination, playback changes
   # and similar stuff.
 
   use Bunch
@@ -52,8 +52,8 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @spec handle_setup(State.t()) :: State.t()
   def handle_setup(state) do
-    require CallbackContext.PlaybackChange
-    context = &CallbackContext.PlaybackChange.from_state/1
+    require CallbackContext.Setup
+    context = &CallbackContext.Setup.from_state/1
 
     state =
       CallbackHandler.exec_and_handle_callback(
@@ -75,8 +75,8 @@ defmodule Membrane.Core.Element.LifecycleController do
 
     Membrane.Logger.debug("Got play request")
     state = %State{state | playback: :playing}
-    require CallbackContext.PlaybackChange
-    context = &CallbackContext.PlaybackChange.from_state/1
+    require CallbackContext.Play
+    context = &CallbackContext.Play.from_state/1
 
     state =
       CallbackHandler.exec_and_handle_callback(

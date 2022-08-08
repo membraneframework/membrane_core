@@ -3,7 +3,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   Module used in tests for elements removing.
 
   It allows to:
-  * slow down the moment of switching between :prepared and :playing states.
+  * slow down the moment of switching to :playing.
   * send demands and buffers from two input pads to one output pad.
 
   Should be used along with `Membrane.Support.ChildRemovalTest.Pipeline` as they

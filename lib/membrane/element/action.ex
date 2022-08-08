@@ -20,7 +20,7 @@ defmodule Membrane.Element.Action do
   @typedoc """
   Sends an event through a pad (input or output).
 
-  Forbidden when playback state is stopped.
+  Allowed only when playback is `playing`.
   """
   @type event_t :: {:event, {Pad.ref_t(), Event.t()}}
 
@@ -34,7 +34,7 @@ defmodule Membrane.Element.Action do
 
   Return value of each execution of sub-callback can be any valid return value
   of the original callback (this also means sub-callback can return any action
-  valid for the original callback, unless expliciltly stated). Returned actions
+  valid for the original callback, unless explicitly stated). Returned actions
   are executed immediately (they are NOT accumulated and executed after all
   sub-callback executions are finished).
 
@@ -50,7 +50,7 @@ defmodule Membrane.Element.Action do
 
   The pad must have output direction. Sent caps must fit constraints on the pad.
 
-  Forbidden when playback state is stopped.
+  Allowed only when playback is `playing`.
   """
   @type caps_t :: {:caps, {Pad.ref_t(), Caps.t()}}
 
@@ -59,7 +59,7 @@ defmodule Membrane.Element.Action do
 
   The pad must have output direction.
 
-  Allowed only when playback state is playing.
+  Allowed only when playback is playing.
   """
   @type buffer_t :: {:buffer, {Pad.ref_t(), Buffer.t() | [Buffer.t()]}}
 
@@ -78,7 +78,7 @@ defmodule Membrane.Element.Action do
   Demand size can be either a non-negative integer, that overrides existing demand,
   or a function that is passed current demand, and is to return the new demand.
 
-  Allowed only when playback state is playing.
+  Allowed only when playback is playing.
   """
   @type demand_t :: {:demand, {Pad.ref_t(), demand_size_t}}
   @type demand_size_t :: pos_integer | (pos_integer() -> non_neg_integer())
@@ -113,7 +113,7 @@ defmodule Membrane.Element.Action do
   bytes to parse the whole frame.
 
   ## Usage limitations
-  Allowed only when playback state is playing.
+  Allowed only when playback is playing.
   """
   @type redemand_t :: {:redemand, Pad.ref_t()}
 
@@ -130,8 +130,7 @@ defmodule Membrane.Element.Action do
   - callback is `c:Membrane.Filter.handle_process_list/4`,
   `c:Membrane.Element.WithInputPads.handle_caps/4`
   or `c:Membrane.Element.Base.handle_event/4`,
-  - playback state is valid for sending buffer, caps or event action
-  respectively.
+  - playback is `playing`
 
   Keep in mind that `c:Membrane.Filter.handle_process_list/4` can only
   forward buffers, `c:Membrane.Element.WithInputPads.handle_caps/4` - caps
@@ -205,7 +204,7 @@ defmodule Membrane.Element.Action do
   @typedoc """
   Type that defines a single action that may be returned from element callbacks.
 
-  Depending on element type, callback, current playback state and other
+  Depending on element type, callback, current playback and other
   circumstances there may be different actions available.
   """
   @type t ::

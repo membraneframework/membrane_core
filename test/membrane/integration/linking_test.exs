@@ -240,7 +240,7 @@ defmodule Membrane.Integration.LinkingTest do
     assert_pipeline_crash_group_down(pipeline, :group_2)
   end
 
-  test "pipeline playback state should change successfully after spec with links has been returned",
+  test "pipeline playback should change successfully after spec with links has been returned",
        %{pipeline: pipeline} do
     bin_spec = %Membrane.ParentSpec{
       children: [

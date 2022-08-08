@@ -1,19 +1,9 @@
-defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
+defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
   @moduledoc false
-
-  # Module responsible for linking children.
-  #
-  # The linking process consists of the following phases:
-  # - Internal linking - link requests are sent to all the children involved. After receiving link responses
-  #   for each link, the actual linking (sending `:handle_link` messages) happens. When all children are
-  #   linked, proceed to the next phase.
-  # - External linking - only for bins. Responding to link requests sent to bin and proxying linking messages
-  #   to the proper children. When all the messages are proxied, proceed to the next phase.
-  # - Linking finished - Playback state of all the new children of the spec is initialized.
 
   use Bunch
 
-  alias Membrane.Core.{Bin, Message, Parent, Pipeline, Telemetry}
+  alias Membrane.Core.{Bin, Message, Parent, Telemetry}
   alias Membrane.Core.Bin.PadController
 
   alias Membrane.Core.Parent.{
@@ -32,26 +22,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkHandler do
   require Membrane.Core.Telemetry
   require Membrane.Logger
   require Membrane.Pad
-
-  @type state_t :: Pipeline.State.t() | Bin.State.t()
-
-  @spec handle_link_response(Parent.Link.id(), state_t()) :: state_t()
-  def handle_link_response(link_id, state) do
-    case Map.fetch(state.links, link_id) do
-      {:ok, %Link{spec_ref: spec_ref}} ->
-        state =
-          update_in(
-            state,
-            [:pending_specs, spec_ref, :awaiting_responses, link_id],
-            &(&1 - 1)
-          )
-
-        ChildLifeController.proceed_spec_startup(spec_ref, state)
-
-      :error ->
-        state
-    end
-  end
 
   @spec unlink_crash_group(CrashGroup.t(), Parent.state_t()) :: Parent.state_t()
   def unlink_crash_group(crash_group, state) do

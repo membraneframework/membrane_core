@@ -2,7 +2,7 @@ defmodule Membrane.Testing.Pipeline do
   @moduledoc """
   This Pipeline was created to reduce testing boilerplate and ease communication
   with its children. It also provides a utility for informing testing process about
-  playback state changes and received notifications.
+  playback changes and received notifications.
 
   When you want a build Pipeline to test your children you need three things:
    - Pipeline Module
@@ -94,21 +94,22 @@ defmodule Membrane.Testing.Pipeline do
 
   defmodule State do
     @moduledoc false
-    # Structure representing `state`.
-
-    # ##  Test Process
-    # `pid` of process that shall receive messages when Pipeline invokes playback
-    # state change callback and receives notification.
-
-    # ## Module
-    # Pipeline Module with custom callbacks.
-
-    # ## Custom Pipeline State
-    # State of the pipeline defined by Module.
 
     @enforce_keys [:test_process, :module]
     defstruct @enforce_keys ++ [:custom_pipeline_state]
 
+    @typedoc """
+    Structure for holding state
+
+    ##  Test Process
+    `pid` of process that shall receive messages from the pipeline
+
+    ## Module
+    Pipeline Module with custom callbacks.
+
+    ## Custom Pipeline State
+    State of the pipeline defined by Module.
+    """
     @type t :: %__MODULE__{
             test_process: pid() | nil,
             module: module() | nil,
