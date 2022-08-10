@@ -122,4 +122,13 @@ defmodule Membrane.Core.PipelineTest do
     Testing.Pipeline.execute_actions(pid, playback: :playing)
     assert_pipeline_play(pid)
   end
+
+  test "Pipeline should be able to terminate itself with :terminate action" do
+    Enum.each([:normal, :shutdown], fn reason ->
+      {:ok, supervisor, pid} = Testing.Pipeline.start(module: TestPipeline)
+      Process.monitor(supervisor)
+      Testing.Pipeline.execute_actions(pid, terminate: reason)
+      assert_receive {:DOWN, _ref, :process, ^supervisor, ^reason}
+    end)
+  end
 end

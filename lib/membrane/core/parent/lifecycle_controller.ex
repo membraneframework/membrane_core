@@ -68,6 +68,10 @@ defmodule Membrane.Core.Parent.LifecycleController do
   end
 
   @spec handle_terminate_request(Parent.state_t()) :: {:continue | :stop, Parent.state_t()}
+  def handle_terminate_request(%{terminating?: true} = state) do
+    {:continue, state}
+  end
+
   def handle_terminate_request(state) do
     state = %{state | terminating?: true}
 

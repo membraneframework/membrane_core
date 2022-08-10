@@ -98,6 +98,15 @@ defmodule Membrane.Pipeline.Action do
   @type reply_to_t :: {:reply_to, {GenServer.from(), message :: any}}
 
   @typedoc """
+  Terminates the pipeline with given reason.
+
+  Termination reason follows the OTP semantics:
+  - use `:normal` for graceful termination
+  - if reason is neither `:normal`, `:shutdown` nor `{:shutdown, term}`, an error is logged
+  """
+  @type terminate_t :: {:terminate, reason :: :normal | :shutdown | {:shutdown, term} | term}
+
+  @typedoc """
   Type describing actions that can be returned from pipeline callbacks.
 
   Returning actions is a way of pipeline interaction with its children and
@@ -113,4 +122,5 @@ defmodule Membrane.Pipeline.Action do
           | playback_t
           | reply_t
           | reply_to_t
+          | terminate_t
 end

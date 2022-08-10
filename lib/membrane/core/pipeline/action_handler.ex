@@ -94,6 +94,19 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   @impl CallbackHandler
+  def handle_action({:terminate, :normal}, _cb, _params, state) do
+    case LifecycleController.handle_terminate_request(state) do
+      {:continue, state} -> state
+      {:stop, _state} -> exit(:normal)
+    end
+  end
+
+  @impl CallbackHandler
+  def handle_action({:terminate, reason}, _cb, _params, _state) do
+    exit(reason)
+  end
+
+  @impl CallbackHandler
   def handle_action(action, _callback, _params, _state) do
     raise ActionError, action: action, reason: {:unknown_action, Membrane.Pipeline.Action}
   end
