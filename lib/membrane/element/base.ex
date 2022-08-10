@@ -97,7 +97,7 @@ defmodule Membrane.Element.Base do
   @callback handle_init(options :: Element.options_t()) :: callback_return_t
 
   @doc """
-  Callback invoked on element startup, after `c:handle_init/1`.
+  Callback invoked on element startup, right after `c:handle_init/1`.
 
   Any long-lasting or complex initialization should happen here.
   """

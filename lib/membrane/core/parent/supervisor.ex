@@ -35,7 +35,7 @@ defmodule Membrane.Core.Parent.Supervisor do
     {:ok, children_supervisor} = ChildrenSupervisor.start_link()
 
     with {:ok, parent} <- start_fun.(children_supervisor) do
-      setup_observability.(pid: parent, utility: "Supervisor")
+      setup_observability.(pid: parent, utility: "Parent supervisor")
       Message.send(reply_to, :parent_spawned, parent)
       {:ok, %{parent: {:alive, parent}, children_supervisor: children_supervisor}}
     else
@@ -72,7 +72,7 @@ defmodule Membrane.Core.Parent.Supervisor do
   @impl true
   def handle_info({:EXIT, pid, reason}, %{parent: {:alive, pid}} = state) do
     Membrane.Logger.debug(
-      "Parent supervisor: parent exited with reason #{inspect(reason)}, stopping children supervisor"
+      "got exit from parent with reason #{inspect(reason)}, stopping children supervisor"
     )
 
     Process.exit(state.children_supervisor, :shutdown)
@@ -84,7 +84,7 @@ defmodule Membrane.Core.Parent.Supervisor do
         {:EXIT, pid, :normal},
         %{children_supervisor: pid, parent: {:exited, parent_exit_reason}} = state
       ) do
-    Membrane.Logger.debug("Parent supervisor: children supervisor exited. Exiting.")
+    Membrane.Logger.debug("got exit from children supervisor, exiting")
 
     reason =
       case parent_exit_reason do
@@ -103,7 +103,7 @@ defmodule Membrane.Core.Parent.Supervisor do
         %{children_supervisor: pid, parent: {:alive, _parent_pid}} = state
       ) do
     Membrane.Logger.debug(
-      "Parent supervisor: children supervisor failure, reason: #{inspect(reason)}. Exiting."
+      "got unexpected exit from children supervisor, reason: #{inspect(reason)}. Exiting."
     )
 
     {:stop, {:shutdown, :children_supervisor_failed}, state}
@@ -111,7 +111,7 @@ defmodule Membrane.Core.Parent.Supervisor do
 
   @impl true
   def handle_info({:EXIT, _pid, reason}, %{parent: {:alive, parent_pid}} = state) do
-    Membrane.Logger.debug("Parent supervisor: got exit from a linked process, stopping parent")
+    Membrane.Logger.debug("got exit from a linked process, stopping parent")
     Process.exit(parent_pid, reason)
     {:noreply, state}
   end
@@ -119,7 +119,7 @@ defmodule Membrane.Core.Parent.Supervisor do
   @impl true
   def handle_info({:EXIT, _pid, _reason}, state) do
     Membrane.Logger.debug(
-      "Parent supervisor: got exit from a linked process, parent already dead, waiting for children supervisor to exit"
+      "got exit from a linked process, parent already dead, waiting for children supervisor to exit"
     )
 
     {:noreply, state}

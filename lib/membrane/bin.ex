@@ -86,7 +86,7 @@ defmodule Membrane.Bin do
   @callback membrane_clock? :: boolean()
 
   @doc """
-  Callback invoked on bin startup, after `c:handle_init/1`.
+  Callback invoked on bin startup, right after `c:handle_init/1`.
 
   Any long-lasting or complex initialization should happen here.
   """

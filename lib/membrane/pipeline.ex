@@ -52,7 +52,7 @@ defmodule Membrane.Pipeline do
   or with Livebook's `Kino` library.
   For debugging (and ONLY for debugging) purposes, you may use the following configuration:
 
-        config :membrane_core, unsafely_name_processes_for_observer: [:processes]
+        config :membrane_core, unsafely_name_processes_for_observer: [:components]
 
   that makes the observer's process tree graph more readable by naming pipeline's descendants, for example:
   ![Observer graph](assets/images/observer_graph.png).
@@ -125,7 +125,7 @@ defmodule Membrane.Pipeline do
             when reason: :normal | :shutdown | {:shutdown, any} | term()
 
   @doc """
-  Callback invoked on pipeline startup, after `c:handle_init/1`.
+  Callback invoked on pipeline startup, right after `c:handle_init/1`.
 
   Any long-lasting or complex initialization should happen here.
   """
