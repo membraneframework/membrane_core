@@ -18,7 +18,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({name, args}, _cb, _params, %State{terminating?: true} = state)
-      when name in [:notify_child, :spec, :remove_child] do
+      when name in [:notify_child, :spec, :remove_child, :playback] do
     Membrane.Logger.debug(
       "Ignoring action #{inspect({name, args})} because already terminating the pipeline"
     )
