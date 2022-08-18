@@ -252,6 +252,7 @@ defmodule Membrane.Element.Base do
       #{unquote(doc)}
       """)
 
+      @doc false
       @spec membrane_clock?() :: true
       def membrane_clock?, do: true
     end
@@ -294,6 +295,7 @@ defmodule Membrane.Element.Base do
 
       unquote(bring_pad)
 
+      @doc false
       @spec membrane_element?() :: true
       def membrane_element?, do: true
 

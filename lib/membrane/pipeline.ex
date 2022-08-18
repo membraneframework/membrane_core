@@ -469,6 +469,7 @@ defmodule Membrane.Pipeline do
       unquote(bring_spec)
       unquote(bring_pad)
 
+      @doc false
       @spec membrane_pipeline?() :: true
       def membrane_pipeline?, do: true
 

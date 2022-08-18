@@ -28,6 +28,7 @@ defmodule Membrane.Source do
       use Membrane.Element.Base, unquote(options)
       use Membrane.Element.WithOutputPads
 
+      @doc false
       @spec membrane_element_type() :: Membrane.Element.type_t()
       def membrane_element_type, do: :source
     end

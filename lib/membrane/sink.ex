@@ -60,6 +60,7 @@ defmodule Membrane.Sink do
       use Membrane.Element.WithInputPads
       @behaviour unquote(__MODULE__)
 
+      @doc false
       @spec membrane_element_type() :: Membrane.Element.type_t()
       def membrane_element_type, do: :sink
 

@@ -240,6 +240,7 @@ defmodule Membrane.Bin do
       #{unquote(doc)}
       """)
 
+      @doc false
       @spec membrane_clock?() :: true
       def membrane_clock?, do: true
     end
@@ -308,6 +309,7 @@ defmodule Membrane.Bin do
 
       Membrane.Core.Child.PadsSpecs.ensure_default_membrane_pads()
 
+      @doc false
       @spec membrane_bin?() :: true
       def membrane_bin?, do: true
 
