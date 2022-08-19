@@ -44,7 +44,8 @@ defmodule Membrane.Core.Element do
           sync: Sync.t(),
           parent: pid,
           parent_clock: Clock.t(),
-          setup_observability: Membrane.Core.Observability.setup_fun()
+          setup_observability: Membrane.Core.Observability.setup_fun(),
+          children_supervisor: pid()
         }
 
   @doc """
@@ -91,7 +92,15 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def init(options) do
-    options.setup_observability.(pid: self())
+    self_pid = self()
+    setup_observability = fn args -> options.setup_observability.([pid: self_pid] ++ args) end
+    setup_observability.([])
+
+    Message.send(options.children_supervisor, :set_parent_component, [
+      self_pid,
+      setup_observability
+    ])
+
     Telemetry.report_init(:element)
     state = Map.take(options, [:module, :name, :parent_clock, :sync, :parent]) |> State.new()
     state = LifecycleController.handle_init(options.user_options, state)
