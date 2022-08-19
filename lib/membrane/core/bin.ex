@@ -28,7 +28,8 @@ defmodule Membrane.Core.Bin do
           user_options: Membrane.Bin.options_t(),
           parent_clock: Membrane.Clock.t(),
           setup_observability: Observability.setup_fun(),
-          sync: :membrane_no_sync
+          sync: :membrane_no_sync,
+          children_supervisor: pid()
         }
 
   @doc """
@@ -63,22 +64,10 @@ defmodule Membrane.Core.Bin do
       bin options: #{inspect(user_options)}
       """)
 
-      start_fun =
-        &GenServer.start_link(Membrane.Core.Bin, Map.put(options, :children_supervisor, &1))
-
-      # rpc if necessary
       if node do
-        :rpc.call(node, Membrane.Core.Parent.Supervisor, :go_brrr, [
-          method,
-          start_fun,
-          options.setup_observability
-        ])
+        :rpc.call(node, GenServer, method, [__MODULE__, options])
       else
-        Membrane.Core.Parent.Supervisor.go_brrr(
-          method,
-          start_fun,
-          options.setup_observability
-        )
+        apply(GenServer, method, [__MODULE__, options])
       end
     else
       raise """
@@ -94,7 +83,11 @@ defmodule Membrane.Core.Bin do
     self_pid = self()
     setup_observability = fn args -> options.setup_observability.([pid: self_pid] ++ args) end
     log_metadata = setup_observability.([])
-    Message.send(options.children_supervisor, :setup_observability, setup_observability)
+
+    Message.send(options.children_supervisor, :set_parent_component, [
+      self_pid,
+      setup_observability
+    ])
 
     Telemetry.report_init(:bin)
 

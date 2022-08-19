@@ -20,7 +20,7 @@ defmodule Membrane.Core.Pipeline do
     self_pid = self()
     setup_observability = fn args -> params.setup_observability.([pid: self_pid] ++ args) end
     setup_observability.([])
-    Message.send(params.children_supervisor, :setup_observability, setup_observability)
+    Message.send(params.children_supervisor, :set_parent_component, [self(), setup_observability])
 
     Telemetry.report_init(:pipeline)
 

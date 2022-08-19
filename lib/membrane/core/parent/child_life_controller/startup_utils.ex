@@ -3,8 +3,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
   use Bunch
 
   alias Membrane.{ChildEntry, Clock, Core, ParentError, Sync}
-  alias Membrane.Core.{CallbackHandler, Component, Message, Parent}
-  alias Membrane.Core.Parent.{ChildEntryParser, ChildrenSupervisor}
+  alias Membrane.Core.{CallbackHandler, ChildrenSupervisor, Component, Message, Parent}
+  alias Membrane.Core.Parent.ChildEntryParser
 
   require Membrane.Core.Component
   require Membrane.Core.Message
@@ -130,10 +130,10 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
         Membrane.Core.Observability.setup_fun(child.component_type, name, log_metadata)
     }
 
-    start_fun =
+    server_module =
       case child.component_type do
         :element ->
-          fn -> Core.Element.start_link(params) end
+          Core.Element
 
         :bin ->
           unless sync == Sync.no_sync() do
@@ -142,8 +142,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
                   reason: bin cannot be synced with other elements"
           end
 
-          fn -> Core.Bin.start_link(params) end
+          Core.Bin
       end
+
+    start_fun = fn supervisor ->
+      server_module.start_link(Map.put(params, :children_supervisor, supervisor))
+    end
 
     with {:ok, child_pid} <- ChildrenSupervisor.start_child(supervisor, name, start_fun),
          {:ok, clock} <- receive_clock(name) do

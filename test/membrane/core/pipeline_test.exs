@@ -31,7 +31,7 @@ defmodule Membrane.Core.PipelineTest do
   end
 
   defp state(_ctx) do
-    {:ok, children_supervisor} = Membrane.Core.Parent.ChildrenSupervisor.start_link()
+    children_supervisor = Membrane.Core.ChildrenSupervisor.start_link!()
 
     [
       init_opts: %{

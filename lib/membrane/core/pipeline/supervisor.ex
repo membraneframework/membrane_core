@@ -1,9 +1,9 @@
-defmodule Membrane.Core.Parent.Supervisor do
+defmodule Membrane.Core.Pipeline.Supervisor do
   @moduledoc false
 
   use GenServer
 
-  alias Membrane.Core.Parent.ChildrenSupervisor
+  alias Membrane.Core.ChildrenSupervisor
 
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
@@ -32,10 +32,10 @@ defmodule Membrane.Core.Parent.Supervisor do
   @impl true
   def init({start_fun, setup_observability, reply_to}) do
     Process.flag(:trap_exit, true)
-    {:ok, children_supervisor} = ChildrenSupervisor.start_link()
+    children_supervisor = ChildrenSupervisor.start_link!()
 
     with {:ok, parent} <- start_fun.(children_supervisor) do
-      setup_observability.(pid: parent, utility: "Parent supervisor")
+      setup_observability.(pid: parent, utility: "Pipeline supervisor")
       Message.send(reply_to, :parent_spawned, parent)
       {:ok, %{parent: {:alive, parent}, children_supervisor: children_supervisor}}
     else
@@ -56,17 +56,6 @@ defmodule Membrane.Core.Parent.Supervisor do
         end
 
     {:reply, reply, state}
-  end
-
-  @impl true
-  def handle_info(Message.new(:child_death, _args) = message, %{parent: {:alive, parent}} = state) do
-    send(parent, message)
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_info(Message.new(:child_death, _args), state) do
-    {:noreply, state}
   end
 
   @impl true
@@ -98,15 +87,8 @@ defmodule Membrane.Core.Parent.Supervisor do
   end
 
   @impl true
-  def handle_info(
-        {:EXIT, pid, reason},
-        %{children_supervisor: pid, parent: {:alive, _parent_pid}} = state
-      ) do
-    Membrane.Logger.debug(
-      "got unexpected exit from children supervisor, reason: #{inspect(reason)}. Exiting."
-    )
-
-    {:stop, {:shutdown, :children_supervisor_failed}, state}
+  def handle_info({:EXIT, pid, reason}, %{children_supervisor: pid, parent: {:alive, _parent_pid}}) do
+    raise "Children supervisor failure, reason: #{inspect(reason)}"
   end
 
   @impl true

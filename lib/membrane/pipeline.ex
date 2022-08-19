@@ -278,7 +278,7 @@ defmodule Membrane.Pipeline do
 
       setup_observability = Membrane.Core.Observability.setup_fun(:pipeline, name)
 
-      Membrane.Core.Parent.Supervisor.go_brrr(
+      Membrane.Core.Pipeline.Supervisor.go_brrr(
         method,
         &GenServer.start_link(
           Membrane.Core.Pipeline,

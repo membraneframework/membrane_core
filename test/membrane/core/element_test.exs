@@ -45,7 +45,8 @@ defmodule Membrane.Core.ElementTest do
         parent_clock: nil,
         sync: Membrane.Sync.no_sync(),
         parent: self(),
-        setup_observability: fn _pid -> [] end
+        setup_observability: fn _pid -> [] end,
+        children_supervisor: Membrane.Core.ChildrenSupervisor.start_link!()
       })
 
     state
@@ -311,7 +312,8 @@ defmodule Membrane.Core.ElementTest do
       parent: pipeline,
       parent_clock: nil,
       sync: Membrane.Sync.no_sync(),
-      setup_observability: fn _pid -> [] end
+      setup_observability: fn _pid -> [] end,
+      children_supervisor: Membrane.Core.ChildrenSupervisor.start_link!()
     }
   end
 end
