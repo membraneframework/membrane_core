@@ -36,11 +36,6 @@ defmodule Membrane.Bin do
   @type name_t :: any()
 
   @doc """
-  Enables to check whether module is membrane bin.
-  """
-  @callback membrane_bin? :: true
-
-  @doc """
   Callback invoked on initialization of bin process. It should parse options
   and initialize bin's internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
@@ -75,11 +70,6 @@ defmodule Membrane.Bin do
               context :: CallbackContext.PadRemoved.t(),
               state :: state_t
             ) :: callback_return_t
-
-  @doc """
-  Automatically implemented callback used to determine whether bin exports clock.
-  """
-  @callback membrane_clock? :: boolean()
 
   @doc """
   Callback invoked when bin transition from `:stopped` to `:prepared` state has finished,
@@ -205,8 +195,7 @@ defmodule Membrane.Bin do
               state :: state_t
             ) :: callback_return_t
 
-  @optional_callbacks membrane_clock?: 0,
-                      handle_init: 1,
+  @optional_callbacks handle_init: 1,
                       handle_shutdown: 2,
                       handle_pad_added: 3,
                       handle_pad_removed: 3,
@@ -251,7 +240,8 @@ defmodule Membrane.Bin do
       #{unquote(doc)}
       """)
 
-      @impl true
+      @doc false
+      @spec membrane_clock?() :: true
       def membrane_clock?, do: true
     end
   end
@@ -319,11 +309,9 @@ defmodule Membrane.Bin do
 
       Membrane.Core.Child.PadsSpecs.ensure_default_membrane_pads()
 
-      @impl true
+      @doc false
+      @spec membrane_bin?() :: true
       def membrane_bin?, do: true
-
-      @impl true
-      def membrane_clock?, do: false
 
       @impl true
       def handle_init(_options), do: {:ok, %{}}
@@ -370,8 +358,7 @@ defmodule Membrane.Bin do
       @impl true
       def handle_parent_notification(_notification, _ctx, state), do: {:ok, state}
 
-      defoverridable membrane_clock?: 0,
-                     handle_init: 1,
+      defoverridable handle_init: 1,
                      handle_shutdown: 2,
                      handle_pad_added: 3,
                      handle_pad_removed: 3,

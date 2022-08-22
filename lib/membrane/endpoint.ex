@@ -65,7 +65,8 @@ defmodule Membrane.Endpoint do
 
       @behaviour unquote(__MODULE__)
 
-      @impl true
+      @doc false
+      @spec membrane_element_type() :: Membrane.Element.type_t()
       def membrane_element_type, do: :endpoint
 
       @impl true

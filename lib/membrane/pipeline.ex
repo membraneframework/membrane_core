@@ -47,11 +47,6 @@ defmodule Membrane.Pipeline do
           | {:error, any}
 
   @doc """
-  Enables to check whether module is membrane pipeline
-  """
-  @callback membrane_pipeline? :: true
-
-  @doc """
   Callback invoked on initialization of pipeline process. It should parse options
   and initialize pipeline's internal state. Internally it is invoked inside
   `c:GenServer.init/1` callback.
@@ -474,7 +469,8 @@ defmodule Membrane.Pipeline do
       unquote(bring_spec)
       unquote(bring_pad)
 
-      @impl true
+      @doc false
+      @spec membrane_pipeline?() :: true
       def membrane_pipeline?, do: true
 
       @impl true

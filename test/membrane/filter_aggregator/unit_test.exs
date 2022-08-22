@@ -16,12 +16,17 @@ defmodule Membrane.FilterAggregator.UnitTest do
     StreamManagement
   }
 
+  defmodule ElementWithMembranePads do
+    @callback membrane_pads() :: [{Membrane.Pad.name_t(), Membrane.Pad.description_t()}]
+  end
+
   setup_all do
     behaviours = [
       Membrane.Filter,
       Membrane.Element.Base,
       Membrane.Element.WithInputPads,
-      Membrane.Element.WithOutputPads
+      Membrane.Element.WithOutputPads,
+      ElementWithMembranePads
     ]
 
     defmock(FilterA, for: behaviours)
