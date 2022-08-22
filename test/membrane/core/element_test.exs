@@ -116,15 +116,17 @@ defmodule Membrane.Core.ElementTest do
   end
 
   test "should return correct clock and should not modify the state" do
+    original_state = get_state()
+
     assert {:reply, reply, state} =
              Element.handle_call(
                Message.new(:get_clock),
                nil,
-               get_state()
+               original_state
              )
 
     assert reply == state.synchronization.clock
-    assert state == get_state()
+    assert state == original_state
   end
 
   test "should store demand/buffer/caps/event when not playing" do

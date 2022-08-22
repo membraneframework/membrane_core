@@ -149,7 +149,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
       server_module.start_link(Map.put(params, :children_supervisor, supervisor))
     end
 
-    with {:ok, child_pid} <- ChildrenSupervisor.start_child(supervisor, name, start_fun),
+    with {:ok, child_pid} <-
+           ChildrenSupervisor.start_component(supervisor, name, start_fun),
          {:ok, clock} <- receive_clock(name) do
       %ChildEntry{child | pid: child_pid, clock: clock, sync: sync}
     else

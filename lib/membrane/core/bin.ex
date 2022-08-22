@@ -95,6 +95,12 @@ defmodule Membrane.Core.Bin do
     clock = if Bunch.Module.check_behaviour(module, :membrane_clock?), do: clock_proxy, else: nil
     Message.send(options.parent, :clock, [name, clock])
 
+    {:ok, resource_guard} =
+      Membrane.Core.ChildrenSupervisor.start_utility(
+        options.children_supervisor,
+        {Membrane.ResourceGuard, self()}
+      )
+
     state =
       %State{
         module: module,
@@ -111,7 +117,8 @@ defmodule Membrane.Core.Bin do
           latency: 0
         },
         children_log_metadata: log_metadata,
-        children_supervisor: options.children_supervisor
+        children_supervisor: options.children_supervisor,
+        resource_guard: resource_guard
       }
       |> Child.PadSpecHandler.init_pads()
 

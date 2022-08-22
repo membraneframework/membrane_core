@@ -30,7 +30,8 @@ defmodule Membrane.Core.Element.CapsControllerTest do
         name: :test_name,
         parent_clock: nil,
         sync: nil,
-        parent: self()
+        parent: self(),
+        resource_guard: nil
       })
       | type: :filter,
         playback: :playing,

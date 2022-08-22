@@ -40,12 +40,13 @@ defmodule Membrane.Core.PipelineTest do
         setup_observability: fn _pid -> [] end,
         options: nil
       },
-      state: %State{
-        module: TestPipeline,
-        internal_state: %{},
-        synchronization: %{clock_proxy: nil},
-        children_supervisor: children_supervisor
-      }
+      state:
+        struct(State,
+          module: TestPipeline,
+          internal_state: %{},
+          synchronization: %{clock_proxy: nil},
+          children_supervisor: children_supervisor
+        )
     ]
   end
 

@@ -24,6 +24,12 @@ defmodule Membrane.Core.Pipeline do
 
     Telemetry.report_init(:pipeline)
 
+    {:ok, resource_guard} =
+      Membrane.Core.ChildrenSupervisor.start_utility(
+        params.children_supervisor,
+        {Membrane.ResourceGuard, self()}
+      )
+
     {:ok, clock} = Clock.start_link(proxy: true)
 
     state = %State{
@@ -33,7 +39,8 @@ defmodule Membrane.Core.Pipeline do
         clock_provider: %{clock: nil, provider: nil, choice: :auto},
         timers: %{}
       },
-      children_supervisor: params.children_supervisor
+      children_supervisor: params.children_supervisor,
+      resource_guard: resource_guard
     }
 
     state =
