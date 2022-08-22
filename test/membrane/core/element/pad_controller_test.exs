@@ -14,7 +14,14 @@ defmodule Membrane.Core.Element.PadControllerTest do
   @module Membrane.Core.Element.PadController
 
   defp prepare_state(elem_module, name \\ :element, status \\ :initializing) do
-    %{name: name, module: elem_module, parent_clock: nil, sync: nil, parent: self()}
+    %{
+      name: name,
+      module: elem_module,
+      parent_clock: nil,
+      sync: nil,
+      parent: self(),
+      resource_guard: nil
+    }
     |> State.new()
     |> Map.put(:status, status)
     |> PadSpecHandler.init_pads()

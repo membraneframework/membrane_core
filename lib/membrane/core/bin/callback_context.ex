@@ -7,7 +7,8 @@ defmodule Membrane.Core.Bin.CallbackContext do
     pads: %{Membrane.Pad.ref_t() => Membrane.Bin.PadData.t()},
     name: Membrane.Bin.name_t(),
     children: %{Membrane.Child.name_t() => Membrane.ChildEntry.t()},
-    playback: Membrane.Playback.t()
+    playback: Membrane.Playback.t(),
+    resource_guard: Membrane.ResourceGuard.t()
 
   @impl true
   def extract_default_fields(state, args) do
@@ -18,7 +19,8 @@ defmodule Membrane.Core.Bin.CallbackContext do
         pads: unquote(state).pads_data,
         name: unquote(state).name,
         children: unquote(state).children,
-        playback: unquote(state).playback
+        playback: unquote(state).playback,
+        resource_guard: unquote(state).resource_guard
       ]
     end ++ args
   end

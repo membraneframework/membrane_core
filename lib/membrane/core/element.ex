@@ -101,8 +101,19 @@ defmodule Membrane.Core.Element do
       setup_observability
     ])
 
+    {:ok, resource_guard} =
+      Membrane.Core.ChildrenSupervisor.start_utility(
+        options.children_supervisor,
+        {Membrane.ResourceGuard, self()}
+      )
+
     Telemetry.report_init(:element)
-    state = Map.take(options, [:module, :name, :parent_clock, :sync, :parent]) |> State.new()
+
+    state =
+      Map.take(options, [:module, :name, :parent_clock, :sync, :parent])
+      |> Map.put(:resource_guard, resource_guard)
+      |> State.new()
+
     state = LifecycleController.handle_init(options.user_options, state)
     {:ok, state, {:continue, :setup}}
   end

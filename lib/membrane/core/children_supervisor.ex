@@ -18,15 +18,42 @@ defmodule Membrane.Core.ChildrenSupervisor do
     pid
   end
 
-  @spec start_child(
+  @spec start_component(
           supervisor_pid,
           name :: Membrane.Child.name_t(),
           (supervisor_pid -> {:ok, child_pid} | {:error, reason :: any()})
         ) ::
           {:ok, child_pid} | {:error, reason :: any()}
         when child_pid: pid(), supervisor_pid: pid()
-  def start_child(supervisor, name, start_fun) do
-    Message.call!(supervisor, :start_child, [name, start_fun])
+  def start_component(supervisor, name, start_fun) do
+    Message.call!(supervisor, :start_component, [name, start_fun])
+  end
+
+  @spec start_utility(
+          supervisor_pid :: pid,
+          Supervisor.child_spec() | {module(), term()} | module()
+        ) ::
+          Supervisor.on_start_child()
+  def start_utility(supervisor, child_spec) do
+    child_spec = Supervisor.child_spec(child_spec, [])
+    Message.call!(supervisor, :start_utility, child_spec)
+  end
+
+  @spec start_link_utility(
+          supervisor_pid :: pid,
+          Supervisor.child_spec() | {module(), term()} | module()
+        ) ::
+          Supervisor.on_start_child()
+  def start_link_utility(supervisor, child_spec) do
+    result = start_utility(supervisor, child_spec)
+
+    case result do
+      {:ok, pid, _info} -> Process.link(pid)
+      {:ok, pid} -> Process.link(pid)
+      _error -> :ok
+    end
+
+    result
   end
 
   @impl true
@@ -42,7 +69,7 @@ defmodule Membrane.Core.ChildrenSupervisor do
   end
 
   @impl true
-  def handle_call(Message.new(:start_child, [name, start_fun]), _from, state) do
+  def handle_call(Message.new(:start_component, [name, start_fun]), _from, state) do
     children_supervisor = start_link!()
 
     with {:ok, child_pid} <- start_fun.(children_supervisor) do
@@ -51,12 +78,14 @@ defmodule Membrane.Core.ChildrenSupervisor do
         |> put_in([:children, child_pid], %{
           name: name,
           type: :worker,
-          supervisor_pid: children_supervisor
+          supervisor_pid: children_supervisor,
+          role: :component
         })
         |> put_in([:children, children_supervisor], %{
           name: {__MODULE__, name},
           type: :supervisor,
-          child_pid: child_pid
+          child_pid: child_pid,
+          role: :children_supervisor
         })
 
       {:reply, {:ok, child_pid}, state}
@@ -65,6 +94,37 @@ defmodule Membrane.Core.ChildrenSupervisor do
         Process.exit(children_supervisor, :shutdown)
         receive do: ({:EXIT, ^children_supervisor, _reason} -> :ok)
         {:reply, {:error, reason}, state}
+    end
+  end
+
+  @impl true
+  def handle_call(Message.new(:start_utility, child_spec), _from, state) do
+    try do
+      {m, f, a} = child_spec.start
+      apply(m, f, a)
+    rescue
+      error -> error
+    catch
+      error -> error
+    end
+    |> case do
+      {:ok, pid, _info} = result -> {:ok, pid, result}
+      {:ok, pid} = result -> {:ok, pid, result}
+      error -> error
+    end
+    |> case do
+      {:ok, pid, result} ->
+        state =
+          put_in(state, [:children, pid], %{
+            name: child_spec.id,
+            type: Map.get(child_spec, :type, :worker),
+            role: :utility
+          })
+
+        {:reply, result, state}
+
+      error ->
+        {:reply, error, state}
     end
   end
 
@@ -96,8 +156,8 @@ defmodule Membrane.Core.ChildrenSupervisor do
       "got exit request from parent, reason: #{inspect(reason)}, shutting down children"
     )
 
-    Enum.each(state.children, fn {pid, %{type: type}} ->
-      if type == :worker, do: Process.exit(pid, {:shutdown, :parent_crash})
+    Enum.each(state.children, fn {pid, %{role: role}} ->
+      if role != :children_supervisor, do: Process.exit(pid, {:shutdown, :parent_crash})
     end)
 
     {:noreply, %{state | parent_process: :exit_requested}}
@@ -117,7 +177,7 @@ defmodule Membrane.Core.ChildrenSupervisor do
     end
   end
 
-  defp handle_exit(%{type: :supervisor} = data, reason, state) do
+  defp handle_exit(%{role: :children_supervisor} = data, reason, state) do
     case Map.fetch(state.children, data.child_pid) do
       {:ok, child_data} ->
         raise "Children supervisor failure #{inspect(child_data.name)}, reason: #{inspect(reason)}"
@@ -127,8 +187,12 @@ defmodule Membrane.Core.ChildrenSupervisor do
     end
   end
 
-  defp handle_exit(%{type: :worker} = data, reason, state) do
+  defp handle_exit(%{role: :component} = data, reason, state) do
     Process.exit(data.supervisor_pid, :shutdown)
     Message.send(state.parent_component, :child_death, [data.name, reason])
+  end
+
+  defp handle_exit(%{role: :utility}, _reason, _state) do
+    :ok
   end
 end

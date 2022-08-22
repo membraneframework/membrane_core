@@ -13,7 +13,14 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   @mock_caps %Membrane.Caps.Mock{integer: 42}
   defp demand_test_filter(_context) do
     state = %{
-      State.new(%{module: Filter, name: :test_name, parent_clock: nil, sync: nil, parent: self()})
+      State.new(%{
+        module: Filter,
+        name: :test_name,
+        parent_clock: nil,
+        sync: nil,
+        parent: self(),
+        resource_guard: nil
+      })
       | type: :filter,
         pads_data: %{
           input:
@@ -66,7 +73,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         name: :elem_name,
         parent_clock: nil,
         sync: nil,
-        parent: nil
+        parent: nil,
+        resource_guard: nil
       })
       | type: :filter,
         pads_data: %{
@@ -496,7 +504,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         name: :elem_name,
         parent_clock: nil,
         sync: nil,
-        parent: self()
+        parent: self(),
+        resource_guard: nil
       })
       | type: :source,
         pads_data: %{
