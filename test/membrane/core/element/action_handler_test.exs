@@ -12,16 +12,14 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   @module Membrane.Core.Element.ActionHandler
   @mock_caps %Membrane.Caps.Mock{integer: 42}
   defp demand_test_filter(_context) do
-    state = %{
-      State.new(%{
+    state =
+      struct(State,
         module: Filter,
         name: :test_name,
-        parent_clock: nil,
-        sync: nil,
-        parent: self(),
-        resource_guard: nil
-      })
-      | type: :filter,
+        type: :filter,
+        playback: :stopped,
+        synchronization: %{clock: nil, parent_clock: nil},
+        delayed_demands: MapSet.new(),
         pads_data: %{
           input:
             struct(Membrane.Element.PadData,
@@ -38,7 +36,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
               mode: :push
             )
         }
-    }
+      )
 
     [state: state]
   end
@@ -67,16 +65,14 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   end
 
   defp trivial_filter_state(_context) do
-    state = %{
-      State.new(%{
+    state =
+      struct(State,
         module: TrivialFilter,
         name: :elem_name,
-        parent_clock: nil,
-        sync: nil,
-        parent: nil,
-        resource_guard: nil
-      })
-      | type: :filter,
+        type: :filter,
+        synchronization: %{clock: nil, parent_clock: nil},
+        delayed_demands: MapSet.new(),
+        playback: :stopped,
         pads_data: %{
           output: %{
             direction: :output,
@@ -102,7 +98,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             accepted_caps: :any
           }
         }
-    }
+      )
 
     [state: state]
   end
@@ -498,16 +494,12 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   end
 
   defp playing_trivial_source(_context) do
-    state = %{
-      State.new(%{
+    state =
+      struct(State,
         module: TrivialSource,
         name: :elem_name,
-        parent_clock: nil,
-        sync: nil,
-        parent: self(),
-        resource_guard: nil
-      })
-      | type: :source,
+        synchronization: %{clock: nil, parent_clock: nil},
+        type: :source,
         pads_data: %{
           output: %{
             direction: :output,
@@ -518,7 +510,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           }
         },
         playback: :playing
-    }
+      )
 
     [state: state]
   end
