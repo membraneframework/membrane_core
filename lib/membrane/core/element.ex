@@ -110,7 +110,7 @@ defmodule Membrane.Core.Element do
     Telemetry.report_init(:element)
 
     state =
-      Map.take(options, [:module, :name, :parent_clock, :sync, :parent])
+      Map.take(options, [:module, :name, :parent_clock, :sync, :parent, :children_supervisor])
       |> Map.put(:resource_guard, resource_guard)
       |> State.new()
 
