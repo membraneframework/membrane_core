@@ -13,7 +13,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
   def handle_action({name, args}, _cb, _params, %State{terminating?: true} = state)
       when name in [:notify_child, :spec, :remove_child] do
     Membrane.Logger.debug(
-      "Ignoring action #{inspect({name, args})} because already terminating the bin"
+      "Ignoring action #{inspect({name, args})} because the bin is already terminating"
     )
 
     state
