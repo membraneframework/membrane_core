@@ -33,7 +33,8 @@ defmodule Membrane.Core.Element.State do
           initialized?: boolean(),
           playback: Membrane.Playback.t(),
           playback_queue: Membrane.Core.Element.PlaybackQueue.t(),
-          resource_guard: Membrane.ResourceGuard.t()
+          resource_guard: Membrane.ResourceGuard.t(),
+          children_supervisor: pid
         }
 
   defstruct [
@@ -51,7 +52,8 @@ defmodule Membrane.Core.Element.State do
     :initialized?,
     :playback,
     :playback_queue,
-    :resource_guard
+    :resource_guard,
+    :children_supervisor
   ]
 
   @doc """
@@ -63,7 +65,8 @@ defmodule Membrane.Core.Element.State do
           parent_clock: Clock.t(),
           sync: Sync.t(),
           parent: pid,
-          resource_guard: Membrane.ResourceGuard.t()
+          resource_guard: Membrane.ResourceGuard.t(),
+          children_supervisor: pid()
         }) :: t
   def new(options) do
     %__MODULE__{
@@ -84,7 +87,8 @@ defmodule Membrane.Core.Element.State do
       initialized?: false,
       playback: :stopped,
       playback_queue: [],
-      resource_guard: options.resource_guard
+      resource_guard: options.resource_guard,
+      children_supervisor: options.children_supervisor
     }
     |> PadSpecHandler.init_pads()
   end
