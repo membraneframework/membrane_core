@@ -5,12 +5,12 @@ defmodule Membrane.Bin.PadData do
   The public fields are:
     - `:accepted_caps` - specification of possible caps that are accepted on the pad.
       See `Membrane.Caps.Matcher` for more information.
-    - `:availability` - see `Membrane.Pad.availability_t`
-    - `:direction` - see `Membrane.Pad.direction_t`
-    - `:mode` - see `Membrane.Pad.mode_t`
-    - `:name` - see `Membrane.Pad.name_t`. Do not mistake with `:ref`
+    - `:availability` - see `t:Membrane.Pad.availability_t/0`
+    - `:direction` - see `t:Membrane.Pad.direction_t/0`
+    - `:mode` - see `t:Membrane.Pad.mode_t/0`
+    - `:name` - see `t:Membrane.Pad.name_t/0`. Do not mistake with `:ref`
     - `:options` - options passed in `Membrane.ParentSpec` when linking pad
-    - `:ref` - see `Membrane.Pad.ref_t`
+    - `:ref` - see `t:Membrane.Pad.ref_t/0`
 
   Other fields in the struct ARE NOT PART OF THE PUBLIC API and should not be
   accessed or relied on.
