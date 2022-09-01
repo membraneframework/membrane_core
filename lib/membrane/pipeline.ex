@@ -38,7 +38,7 @@ defmodule Membrane.Pipeline do
       Supervisor.start_link([{MyPipeline, option: :value}], strategy: :one_for_one)
       send(MyPipeline, :message)
 
-  ### Starting outside a supervision tree
+  ### Starting outside of a supervision tree
 
   When starting a pipeline outside a supervision tree and willing to interact with
   the pipeline by pid, `pipeline_pid` returned from `start_link` can be used, for example
