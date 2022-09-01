@@ -136,7 +136,7 @@ defmodule Membrane.Pipeline do
               callback_return_t
 
   @doc """
-  Callback when pipeline switches the playback to `:playing`.
+  Callback invoked when pipeline switches the playback to `:playing`.
   """
   @callback handle_play(
               context :: CallbackContext.Play.t(),
