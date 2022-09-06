@@ -75,7 +75,8 @@ defmodule Membrane.Pipeline do
 
   @type name :: GenServer.name()
 
-  @type config :: [name: name()]
+  @type config :: [config_entry()]
+  @type config_entry :: {:name, name()}
 
   @type on_start ::
           {:ok, pipeline_pid :: pid, supervisor_pid :: pid}

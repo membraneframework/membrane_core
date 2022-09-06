@@ -13,7 +13,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   ```
 
   The controlling process can also subscribe to the messages
-  sent by the pipeline and later on synchroniously await for these messages:
+  sent by the pipeline and later on synchronously await for these messages:
   ```
   # subscribes to message which is sent when the pipeline enters `playing`
   Pipeline.subscribe(pipeline, %Message.Play{})
@@ -60,17 +60,19 @@ defmodule Membrane.RemoteControlled.Pipeline do
   Starts the `Membrane.RemoteControlled.Pipeline` and links it to the current process. The process
   that makes the call to the `start_link/1` automatically become the controller process.
   """
-  @spec start_link(GenServer.options()) :: GenServer.on_start()
-  def start_link(process_options \\ []) do
-    Pipeline.start_link(__MODULE__, %{controller_pid: self()}, process_options)
+  @spec start_link([Pipeline.config_entry() | {:controller_pid, pid()}]) :: Pipeline.on_start()
+  def start_link(options \\ []) do
+    {controller_pid, config} = Keyword.pop(options, :controller_pid, self())
+    Pipeline.start_link(__MODULE__, %{controller_pid: controller_pid}, config)
   end
 
   @doc """
   Does the same as the `start_link/1` but starts the process outside of the supervision tree.
   """
-  @spec start(GenServer.options()) :: GenServer.on_start()
-  def start(process_options \\ []) do
-    Pipeline.start(__MODULE__, %{controller_pid: self()}, process_options)
+  @spec start([Pipeline.config_entry() | {:controller_pid, pid()}]) :: Pipeline.on_start()
+  def start(options \\ []) do
+    {controller_pid, config} = Keyword.pop(options, :controller_pid, self())
+    Pipeline.start(__MODULE__, %{controller_pid: controller_pid}, config)
   end
 
   defmacrop pin_leaf_nodes(ast) do

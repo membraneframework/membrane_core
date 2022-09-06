@@ -40,7 +40,8 @@ defmodule Membrane.RemoteControlled.PipelineTest do
   end
 
   defp setup_pipeline(_context) do
-    {:ok, _supervisor, pipeline} = Pipeline.start_link()
+    {:ok, _supervisor, pipeline} = start_supervised({Pipeline, controller_pid: self()})
+    Process.link(pipeline)
 
     children = [
       a: %Membrane.Testing.Source{output: [0xA1, 0xB2, 0xC3, 0xD4]},
@@ -79,9 +80,6 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       assert_receive %Message.StartOfStream{from: ^pipeline, element: :b, pad: :input}
 
       refute_receive %Message.Terminated{from: ^pipeline}
-
-      # STOP
-      Pipeline.terminate(pipeline, blocking?: true)
     end
   end
 
@@ -108,9 +106,6 @@ defmodule Membrane.RemoteControlled.PipelineTest do
                element: :b,
                data: %Membrane.Buffer{payload: "test"}
              }
-
-      # STOP
-      Pipeline.terminate(pipeline, blocking?: true)
     end
 
     test "should await for requested messages with pinned variables as message body parts", %{
@@ -128,9 +123,6 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       # TEST
       Pipeline.await_play(pipeline)
       Pipeline.await_start_of_stream(pipeline, element, :input)
-
-      # STOP
-      Pipeline.terminate(pipeline, blocking?: true)
     end
   end
 end
