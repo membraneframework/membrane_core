@@ -45,11 +45,11 @@ defmodule Membrane.Core.Pipeline do
         state
       )
 
-    {:ok, state, {:continue, :init}}
+    {:ok, state, {:continue, :setup}}
   end
 
   @impl GenServer
-  def handle_continue(:init, state) do
+  def handle_continue(:setup, state) do
     state = LifecycleController.handle_setup(state)
     {:noreply, state}
   end

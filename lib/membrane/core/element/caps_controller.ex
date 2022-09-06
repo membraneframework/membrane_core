@@ -20,7 +20,7 @@ defmodule Membrane.Core.Element.CapsController do
   """
   @spec handle_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.t()
   def handle_caps(pad_ref, caps, state) do
-    withl pad: {:ok, data} = PadModel.get_data(state, pad_ref),
+    withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
           playback: %State{playback: :playing} <- state do
       %{direction: :input} = data
       Telemetry.report_metric(:caps, 1, inspect(pad_ref))
@@ -38,7 +38,7 @@ defmodule Membrane.Core.Element.CapsController do
         exec_handle_caps(pad_ref, caps, state)
       end
     else
-      pad: :error ->
+      pad: {:error, :unknown_pad} ->
         # We've got caps from already unlinked pad
         state
 

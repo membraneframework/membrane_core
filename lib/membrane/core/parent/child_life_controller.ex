@@ -263,24 +263,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {spec_data, state}
   end
 
-  defp cleanup_spec_startup(spec_ref, state) do
-    if Map.has_key?(state.pending_specs, spec_ref) do
-      Membrane.Logger.debug("Cleaning spec #{inspect(spec_ref)}")
-
-      pending_specs =
-        state.pending_specs
-        |> Map.delete(spec_ref)
-        |> Map.new(fn {ref, data} ->
-          {ref, Map.update!(data, :dependent_specs, &MapSet.delete(&1, spec_ref))}
-        end)
-
-      state = %{state | pending_specs: pending_specs}
-      Enum.reduce(Map.keys(pending_specs), state, &proceed_spec_startup/2)
-    else
-      state
-    end
-  end
-
   @spec handle_link_response(Parent.Link.id(), Parent.state_t()) :: Parent.state_t()
   def handle_link_response(link_id, state) do
     case Map.fetch(state.links, link_id) do
@@ -406,6 +388,24 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         """)
 
         exit({:shutdown, :child_crash})
+    end
+  end
+
+  defp cleanup_spec_startup(spec_ref, state) do
+    if Map.has_key?(state.pending_specs, spec_ref) do
+      Membrane.Logger.debug("Cleaning spec #{inspect(spec_ref)}")
+
+      pending_specs =
+        state.pending_specs
+        |> Map.delete(spec_ref)
+        |> Map.new(fn {ref, data} ->
+          {ref, Map.update!(data, :dependent_specs, &MapSet.delete(&1, spec_ref))}
+        end)
+
+      state = %{state | pending_specs: pending_specs}
+      Enum.reduce(Map.keys(pending_specs), state, &proceed_spec_startup/2)
+    else
+      state
     end
   end
 

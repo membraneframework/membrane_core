@@ -95,11 +95,11 @@ defmodule Membrane.Core.Element do
     Telemetry.report_init(:element)
     state = Map.take(options, [:module, :name, :parent_clock, :sync, :parent]) |> State.new()
     state = LifecycleController.handle_init(options.user_options, state)
-    {:ok, state, {:continue, :init}}
+    {:ok, state, {:continue, :setup}}
   end
 
   @impl GenServer
-  def handle_continue(:init, state) do
+  def handle_continue(:setup, state) do
     state = LifecycleController.handle_setup(state)
     {:noreply, state}
   end

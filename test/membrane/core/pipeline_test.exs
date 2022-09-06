@@ -60,7 +60,7 @@ defmodule Membrane.Core.PipelineTest do
 
     test "executes successfully when callback module's handle_init returns {{:ok, spec: spec}}, state} ",
          %{init_opts: init_opts} do
-      assert {:ok, state, {:continue, :init}} =
+      assert {:ok, state, {:continue, :setup}} =
                @module.init(%{init_opts | options: {{:ok, spec: %Membrane.ParentSpec{}}, %{}}})
 
       assert %State{internal_state: %{}, module: TestPipeline} = state

@@ -20,12 +20,12 @@ defmodule Membrane.Core.Element.DemandController do
   """
   @spec handle_demand(Pad.ref_t(), non_neg_integer, State.t()) :: State.t()
   def handle_demand(pad_ref, size, state) do
-    withl pad: {:ok, data} = PadModel.get_data(state, pad_ref),
+    withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
           playback: %State{playback: :playing} <- state do
       %{direction: :output, mode: :pull} = data
       do_handle_demand(pad_ref, size, data, state)
     else
-      pad: :error ->
+      pad: {:error, :unknown_pad} ->
         # We've got a demand from already unlinked pad
         state
 

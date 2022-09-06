@@ -42,19 +42,19 @@ defmodule Membrane.ComponentPath do
   end
 
   @doc """
-  Returns formatted string of given path's names joined with separator.
+  Returns formatted string of given path's names.
   """
-  @spec format(path_t(), String.t()) :: String.t()
-  def format(path, separator \\ "") do
-    path |> Enum.join(separator)
+  @spec format(path_t()) :: String.t()
+  def format(path) do
+    Enum.join(path)
   end
 
   @doc """
-  Works the same as `format/2` but uses currently stored path
+  Works the same way as `format/1` but uses currently stored path.
   """
-  @spec get_formatted(String.t()) :: String.t()
-  def get_formatted(separator \\ "") do
-    Process.get(@key, []) |> format(separator)
+  @spec get_formatted() :: String.t()
+  def get_formatted() do
+    Process.get(@key, []) |> format()
   end
 
   @doc """

@@ -28,7 +28,7 @@ defmodule Membrane.Core.Element.EventController do
   """
   @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.t()
   def handle_event(pad_ref, event, state) do
-    withl pad: {:ok, data} = PadModel.get_data(state, pad_ref),
+    withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
           playback: %State{playback: :playing} <- state do
       Telemetry.report_metric(:event, 1, inspect(pad_ref))
 
@@ -43,7 +43,7 @@ defmodule Membrane.Core.Element.EventController do
         exec_handle_event(pad_ref, event, state)
       end
     else
-      pad: :error ->
+      pad: {:error, :unknown_pad} ->
         # We've got an event from already unlinked pad
         state
 

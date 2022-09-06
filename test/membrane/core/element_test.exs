@@ -37,7 +37,7 @@ defmodule Membrane.Core.ElementTest do
   end
 
   defp get_state do
-    {:ok, state, {:continue, :init}} =
+    {:ok, state, {:continue, :setup}} =
       Element.init(%{
         module: Filter,
         user_options: nil,

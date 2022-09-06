@@ -29,7 +29,10 @@ defmodule Membrane.Core.Bin.PadController do
           State.t()
         ) :: State.t() | no_return
   def handle_external_link_request(pad_ref, direction, link_id, pad_options, state) do
-    Membrane.Logger.debug("Received link request on pad #{inspect(pad_ref)}")
+    Membrane.Logger.debug(
+      "Got external link request, link id: #{inspect(link_id)}, pad ref: #{inspect(pad_ref)}"
+    )
+
     pad_name = Pad.name_by_ref(pad_ref)
 
     info =

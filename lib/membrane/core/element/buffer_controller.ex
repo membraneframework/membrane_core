@@ -32,7 +32,7 @@ defmodule Membrane.Core.Element.BufferController do
   """
   @spec handle_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
   def handle_buffer(pad_ref, buffers, state) do
-    withl pad: {:ok, data} = PadModel.get_data(state, pad_ref),
+    withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
           playback: %State{playback: :playing} <- state do
       %{direction: :input, start_of_stream?: start_of_stream?} = data
 
@@ -45,7 +45,7 @@ defmodule Membrane.Core.Element.BufferController do
 
       do_handle_buffer(pad_ref, data, buffers, state)
     else
-      pad: :error ->
+      pad: {:error, :unknown_pad} ->
         # We've got a buffer from already unlinked pad
         state
 
