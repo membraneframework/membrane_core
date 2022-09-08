@@ -30,6 +30,12 @@ defmodule Membrane.ElementTest do
     def handle_init(opts), do: {:ok, opts}
 
     @impl true
+    def handle_play(_ctx, state) do
+      send(state.target, {:callback_called, :handle_play})
+      {:ok, state}
+    end
+
+    @impl true
     def handle_start_of_stream(_pad, _context, state) do
       send(state.target, {:callback_called, :handle_start_of_stream})
       {:ok, state}
@@ -67,6 +73,11 @@ defmodule Membrane.ElementTest do
       Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
 
     [pipeline: pipeline]
+  end
+
+  test "play", %{pipeline: pipeline} do
+    assert_pipeline_play(pipeline)
+    TestFilter.assert_callback_called(:handle_play)
   end
 
   describe "Start of stream" do
