@@ -19,8 +19,7 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
     ]
 
     spec = %Membrane.ParentSpec{
-      children: children,
-      links: links
+      structure: children ++ links
     }
 
     {{:ok, spec: spec, playback: :playing}, %{target: opts.target}}

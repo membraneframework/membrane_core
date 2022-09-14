@@ -22,8 +22,7 @@ defmodule Membrane.Testing.PipelineTest do
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
       assert spec == %Membrane.ParentSpec{
-               links: links,
-               children: elements
+               structure: links ++ elements
              }
     end
 
@@ -36,8 +35,7 @@ defmodule Membrane.Testing.PipelineTest do
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
       assert spec == %Membrane.ParentSpec{
-               links: links,
-               children: elements
+               structure: links ++ elements
              }
     end
 
@@ -58,14 +56,13 @@ defmodule Membrane.Testing.PipelineTest do
     test "uses prepared links if they were provided" do
       import ParentSpec
       elements = [elem: Elem, elem2: Elem]
-      links = link(:elem) |> to(:elem2)
+      links = [link(:elem) |> to(:elem2)]
       options = [module: :default, children: elements, links: links, test_process: nil]
       assert {{:ok, spec: spec, playback: :playing}, state} = Pipeline.handle_init(options)
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
       assert spec == %Membrane.ParentSpec{
-               links: links,
-               children: elements
+               structure: links ++ elements
              }
     end
   end

@@ -93,7 +93,7 @@ defmodule Membrane.Integration.SyncTest do
       children = [filter1: TestFilter, filter2: TestFilter]
 
       spec = %Membrane.ParentSpec{
-        children: children,
+        structure: children,
         stream_sync: []
       }
 
@@ -110,7 +110,7 @@ defmodule Membrane.Integration.SyncTest do
     ]
 
     spec = %Membrane.ParentSpec{
-      children: children,
+      structure: children,
       stream_sync: [[:el1, :el2]]
     }
 

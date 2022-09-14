@@ -222,34 +222,40 @@ defmodule Membrane.ParentSpec do
   @type child_spec_t :: module | struct
 
   @type children_spec_t ::
-          [{Child.name_t(), child_spec_t}]
-          | %{Child.name_t() => child_spec_t}
+          {Child.name_t(), child_spec_t}
 
   @type pad_options_t :: Keyword.t()
 
-  @type links_spec_t :: [link_builder_t() | links_spec_t]
+  @type structure_spec_t :: [link_builder_t() | children_spec_t]
 
-  @type crash_group_spec_t :: {any(), :temporary} | nil
   @typedoc """
   Struct used when starting and linking children within a pipeline or a bin.
   """
   @type t :: %__MODULE__{
-          children: children_spec_t,
-          links: links_spec_t,
-          crash_group: crash_group_spec_t() | nil,
+          structure: structure_spec_t,
+          crash_group: Membrane.CrashGroup.mode_t(),
           stream_sync: :sinks | [[Child.name_t()]],
           clock_provider: Child.name_t() | nil,
           node: node() | nil,
-          log_metadata: Keyword.t()
+          log_metadata: Keyword.t(),
+          children_group_id: Child.children_group_id_t()
         }
 
-  defstruct children: %{},
-            links: [],
+  defstruct structure: [],
             crash_group: nil,
             stream_sync: [],
             clock_provider: nil,
             node: nil,
-            log_metadata: []
+            log_metadata: [],
+            children_group_id: nil
+
+  @doc """
+  Spawns a children without linking it.
+  """
+  @spec spawn(Child.name_t(), child_spec_t) :: {Child.name_t(), child_spec_t}
+  def spawn(child_name, child_spec) do
+    {child_name, child_spec}
+  end
 
   @doc """
   Begins a link.
@@ -472,7 +478,7 @@ defmodule Membrane.ParentSpec do
 
       Membrane.ParentSpec.link_linear([el1: MembraneElement1, el2: MembraneElement2])
   """
-  @spec link_linear(children :: [child_spec_t()]) :: links_spec_t()
+  @spec link_linear(children :: [child_spec_t()]) :: structure_spec_t()
 
   def link_linear(children) when is_list(children) and length(children) > 1 do
     [{first_child_name, first_child_spec} | other_children] = children

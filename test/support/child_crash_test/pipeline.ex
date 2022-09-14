@@ -28,8 +28,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
     ]
 
     spec = %Membrane.ParentSpec{
-      children: children,
-      links: links
+      structure: children ++ links
     }
 
     {{:ok, spec: spec, playback: :playing}, %{}}
@@ -52,13 +51,12 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
     ]
 
     spec = %Membrane.ParentSpec{
-      children: children,
-      links: links
+      structure: children ++ links
     }
 
     spec =
       if group do
-        %{spec | crash_group: group}
+        %{spec | crash_group: :temporary, children_group_id: group}
       else
         spec
       end
@@ -75,13 +73,12 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
     ]
 
     spec = %Membrane.ParentSpec{
-      children: children,
-      links: links
+      structure: children ++ links
     }
 
     spec =
       if group do
-        %{spec | crash_group: group}
+        %{spec | crash_group: :temporary, children_group_id: group}
       else
         spec
       end
@@ -106,13 +103,12 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
       end)
 
     spec = %Membrane.ParentSpec{
-      children: children,
-      links: links
+      structure: children ++ links
     }
 
     spec =
       if group do
-        %{spec | crash_group: group}
+        %{spec | crash_group: :temporary, children_group_id: group}
       else
         spec
       end

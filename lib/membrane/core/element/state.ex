@@ -53,7 +53,8 @@ defmodule Membrane.Core.Element.State do
     :playback,
     :playback_queue,
     :resource_guard,
-    :children_supervisor
+    :children_supervisor,
+    :children_group_id
   ]
 
   @doc """

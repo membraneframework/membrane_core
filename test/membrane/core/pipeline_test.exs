@@ -72,7 +72,7 @@ defmodule Membrane.Core.PipelineTest do
     test "should raise if duplicate elements exist in spec", %{state: state} do
       assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
         ActionHandler.handle_action(
-          {:spec, %ParentSpec{children: [a: Membrane.Testing.Source, a: Membrane.Testing.Sink]}},
+          {:spec, %ParentSpec{structure: [a: Membrane.Testing.Source, a: Membrane.Testing.Sink]}},
           nil,
           [],
           state
@@ -85,7 +85,7 @@ defmodule Membrane.Core.PipelineTest do
 
       assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
         ActionHandler.handle_action(
-          {:spec, %ParentSpec{children: [a: Membrane.Testing.Source]}},
+          {:spec, %ParentSpec{structure: [a: Membrane.Testing.Source]}},
           nil,
           [],
           state

@@ -68,12 +68,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     Membrane.Logger.debug("""
     New spec #{inspect(spec_ref)}
-    children: #{inspect(spec.children)}
-    links: #{inspect(spec.links)}
+    structure: #{inspect(spec.structure)}
     """)
 
-    {links, children_spec_from_links} = LinkParser.parse(spec.links)
-    children_spec = Enum.concat(spec.children, children_spec_from_links)
+    {links, children_spec} = LinkParser.parse(spec.structure)
     children = ChildEntryParser.parse(children_spec)
     children = Enum.map(children, &%{&1 | spec_ref: spec_ref})
     :ok = StartupUtils.check_if_children_names_unique(children, state)
@@ -92,7 +90,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         state.synchronization.clock_proxy,
         syncs,
         log_metadata,
-        state.children_supervisor
+        state.children_supervisor,
+        spec.children_group_id
       )
 
     children_names = children |> Enum.map(& &1.name)
@@ -122,7 +121,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     # adding crash group to state
     state =
       if spec.crash_group do
-        CrashGroupUtils.add_crash_group(spec.crash_group, children_names, children_pids, state)
+        CrashGroupUtils.add_crash_group(
+          {spec.children_group_id, spec.crash_group},
+          children_names,
+          children_pids,
+          state
+        )
       else
         state
       end
@@ -299,12 +303,25 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   @spec handle_remove_children(
-          Membrane.Child.name_t() | [Membrane.Child.name_t()],
+          Membrane.Child.name_t()
+          | [Membrane.Child.name_t()]
+          | {:children_group_id, Membrane.Child.children_group_id_t()},
           Parent.state_t()
         ) ::
           Parent.state_t()
-  def handle_remove_children(names, state) do
-    names = names |> Bunch.listify()
+  def handle_remove_children(children, state) do
+    names =
+      case children do
+        {:children_group_id, children_group_id} ->
+          state.children
+          |> Enum.filter(fn {_name, child_entry} ->
+            child_entry.children_group_id == children_group_id
+          end)
+          |> Enum.map(fn {name, _child_entry} -> name end)
+
+        names ->
+          names |> Bunch.listify()
+      end
 
     state =
       if state.synchronization.clock_provider.provider in names do

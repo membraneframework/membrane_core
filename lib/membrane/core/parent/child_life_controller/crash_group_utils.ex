@@ -5,10 +5,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
   alias Membrane.Core.Parent
   alias Membrane.Core.Parent.CrashGroup
   alias Membrane.Core.Pipeline
-  alias Membrane.ParentSpec
 
   @spec add_crash_group(
-          ParentSpec.crash_group_spec_t(),
+          {Membrane.Child.children_group_id_t(), Membrane.CrashGroup.mode_t()},
           [Membrane.Child.name_t()],
           [pid()],
           Pipeline.State.t()

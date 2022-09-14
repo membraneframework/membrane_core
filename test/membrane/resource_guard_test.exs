@@ -72,7 +72,7 @@ defmodule Membrane.ResourceGuardTest do
     pipeline = Testing.Pipeline.start_link_supervised!(module: Pipeline)
 
     Testing.Pipeline.execute_actions(pipeline,
-      spec: %Membrane.ParentSpec{children: %{element: Element, bin: Bin}}
+      spec: %Membrane.ParentSpec{structure: [element: Element, bin: Bin]}
     )
 
     assert_pipeline_notified(pipeline, :element, :ready)

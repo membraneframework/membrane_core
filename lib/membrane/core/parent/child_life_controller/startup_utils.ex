@@ -70,18 +70,30 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
           parent_clock :: Clock.t(),
           syncs :: %{Membrane.Child.name_t() => pid()},
           log_metadata :: Keyword.t(),
-          supervisor :: pid
+          supervisor :: pid,
+          children_group_id :: any
         ) :: [ChildEntry.t()]
-  def start_children(children, node, parent_clock, syncs, log_metadata, supervisor) do
+  def start_children(
+        children,
+        node,
+        parent_clock,
+        syncs,
+        log_metadata,
+        supervisor,
+        children_group_id \\ nil
+      ) do
     # If the node is set to the current node, set it to nil, to avoid race conditions when
     # distribution changes
     node = if node == node(), do: nil, else: node
 
     Membrane.Logger.debug(
-      "Starting children: #{inspect(children)}#{if node, do: " on node #{node}"}"
+      "Starting children: #{inspect(children)} in children group: #{inspect(children_group_id)}#{if node, do: " on node #{node}"}"
     )
 
-    children |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata, supervisor))
+    children
+    |> Enum.map(
+      &start_child(&1, node, parent_clock, syncs, log_metadata, supervisor, children_group_id)
+    )
   end
 
   @spec maybe_activate_syncs(%{Membrane.Child.name_t() => Sync.t()}, Parent.state_t()) ::
@@ -113,9 +125,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
     )
   end
 
-  defp start_child(child, node, parent_clock, syncs, log_metadata, supervisor) do
+  defp start_child(child, node, parent_clock, syncs, log_metadata, supervisor, children_group_id) do
     %ChildEntry{name: name, module: module, options: options} = child
-    Membrane.Logger.debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")
+
+    Membrane.Logger.debug(
+      "Starting child: name: #{inspect(name)}, module: #{inspect(module)} in children group: #{inspect(children_group_id)}"
+    )
+
     sync = syncs |> Map.get(name, Sync.no_sync())
 
     params = %{
@@ -127,7 +143,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
       parent_clock: parent_clock,
       sync: sync,
       setup_observability:
-        Membrane.Core.Observability.setup_fun(child.component_type, name, log_metadata)
+        Membrane.Core.Observability.setup_fun(child.component_type, name, log_metadata),
+      children_group_id: children_group_id
     }
 
     server_module =
@@ -152,7 +169,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
     with {:ok, child_pid} <-
            ChildrenSupervisor.start_component(supervisor, name, start_fun),
          {:ok, clock} <- receive_clock(name) do
-      %ChildEntry{child | pid: child_pid, clock: clock, sync: sync}
+      %ChildEntry{
+        child
+        | pid: child_pid,
+          clock: clock,
+          sync: sync,
+          children_group_id: children_group_id
+      }
     else
       {:error, reason} ->
         # ignore clock if element couldn't be started

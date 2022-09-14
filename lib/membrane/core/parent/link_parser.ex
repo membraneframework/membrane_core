@@ -16,7 +16,7 @@ defmodule Membrane.Core.Parent.LinkParser do
           pad_props: map()
         }
 
-  @spec parse(ParentSpec.links_spec_t()) ::
+  @spec parse(ParentSpec.structure_spec_t()) ::
           {[raw_link_t], ParentSpec.children_spec_t()} | no_return
   def parse(links) when is_list(links) do
     {links, children} =
@@ -30,6 +30,9 @@ defmodule Membrane.Core.Parent.LinkParser do
           raise ParentError,
                 "Invalid link specification: link from #{inspect(from)} lacks its destination."
 
+        {name, child_spec} ->
+          {[], {name, child_spec}}
+
         _other ->
           from_spec_error(links)
       end)
@@ -38,7 +41,7 @@ defmodule Membrane.Core.Parent.LinkParser do
     links =
       links
       |> List.flatten()
-      |> Enum.map(fn link ->
+      |> Enum.map(fn %{} = link ->
         %Link{
           id: make_ref(),
           from: %Endpoint{

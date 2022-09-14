@@ -107,6 +107,88 @@ defmodule Membrane.Integration.ChildRemovalTest do
     assert_pid_alive(filter_pid3)
   end
 
+  defmodule FilterToBeRemoved do
+    use Membrane.Filter
+
+    def_input_pad :input, caps: :any, demand_mode: :auto
+    def_output_pad :output, caps: :any, demand_mode: :auto
+
+    @impl true
+    def handle_init(_opts) do
+      {:ok, %{}}
+    end
+
+    @impl true
+    def handle_process(:input, buffers, _context, state) do
+      {{:ok, buffer: {:output, buffers}}, state}
+    end
+  end
+
+  defmodule SourceNotyfingWhenPadRemoved do
+    use Membrane.Source
+
+    def_output_pad :first, caps: :any, demand_mode: :auto, availability: :on_request
+    def_output_pad :second, caps: :any, demand_mode: :auto, availability: :on_request
+    def_output_pad :third, caps: :any, demand_mode: :auto, availability: :on_request
+    def_output_pad :fourth, caps: :any, demand_mode: :auto, availability: :on_request
+    def_output_pad :fifth, caps: :any, demand_mode: :auto, availability: :on_request
+
+    @impl true
+    def handle_init(_opts) do
+      {:ok, %{}}
+    end
+
+    @impl true
+    def handle_pad_removed(pad, _ctx, state) do
+      {{:ok, notify_parent: {:pad_removed, pad}}, state}
+    end
+  end
+
+  defmodule ChildRemovingPipeline do
+    use Membrane.Pipeline
+    import ParentSpec
+
+    @impl true
+    def handle_init(_opts) do
+      structure1 = [spawn(:source, SourceNotyfingWhenPadRemoved)]
+      spec1 = %ParentSpec{structure: structure1}
+
+      structure2 = [
+        link(:source) |> via_out(:first) |> to(:filter1, FilterToBeRemoved),
+        link(:source) |> via_out(:second) |> to(:filter2, FilterToBeRemoved)
+      ]
+
+      spec2 = %ParentSpec{structure: structure2, children_group_id: :first_crash_group}
+
+      structure3 = [link(:source) |> via_out(:third) |> to(:filter3, FilterToBeRemoved)]
+      spec3 = %ParentSpec{structure: structure3, children_group_id: :first_crash_group}
+
+      structure4 = [
+        link(:source) |> via_out(:fourth) |> to(:filter4, FilterToBeRemoved),
+        link(:source) |> via_out(:fifth) |> to(:filter5, FilterToBeRemoved)
+      ]
+
+      spec4 = %ParentSpec{structure: structure4, children_group_id: :second_crash_group}
+
+      {{:ok, spec: spec1, spec: spec2, spec: spec3, spec: spec4}, %{}}
+    end
+  end
+
+  test "if all the children from the children group are removed" do
+    pipeline_pid = Testing.Pipeline.start_link_supervised!(module: ChildRemovingPipeline)
+
+    Testing.Pipeline.execute_actions(pipeline_pid, [
+      {:remove_child, {:children_group_id, :first_crash_group}}
+    ])
+
+    assert_pipeline_notified(pipeline_pid, :source, {:pad_removed, {Membrane.Pad, :first, _ref}})
+    assert_pipeline_notified(pipeline_pid, :source, {:pad_removed, {Membrane.Pad, :second, _ref}})
+    assert_pipeline_notified(pipeline_pid, :source, {:pad_removed, {Membrane.Pad, :third, _ref}})
+
+    refute_pipeline_notified(pipeline_pid, :source, {:pad_removed, {Membrane.Pad, :fourth, _ref}})
+    refute_pipeline_notified(pipeline_pid, :source, {:pad_removed, {Membrane.Pad, :fifth, _ref}})
+  end
+
   #############
   ## HELPERS ##
   #############

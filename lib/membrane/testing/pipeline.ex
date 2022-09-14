@@ -218,9 +218,11 @@ defmodule Membrane.Testing.Pipeline do
   def handle_init(options) do
     case Keyword.get(options, :module, :default) do
       :default ->
+        children = Bunch.listify(Keyword.get(options, :children, []))
+        links = Bunch.listify(Keyword.get(options, :links, []))
+
         spec = %Membrane.ParentSpec{
-          children: Keyword.get(options, :children, []),
-          links: Keyword.get(options, :links, [])
+          structure: links ++ children
         }
 
         new_state = %State{test_process: Keyword.fetch!(options, :test_process), module: nil}

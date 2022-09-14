@@ -25,8 +25,7 @@ defmodule Membrane.Support.Sync.Pipeline do
     ]
 
     %Membrane.ParentSpec{
-      children: children,
-      links: links,
+      structure: children ++ links,
       stream_sync: :sinks
     }
   end
