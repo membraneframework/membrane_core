@@ -10,7 +10,7 @@ defmodule Membrane.Core.Child.PadModel do
 
   @type bin_pad_data_t :: %Membrane.Bin.PadData{
           ref: Membrane.Pad.ref_t(),
-          options: Membrane.ParentSpec.pad_options_t(),
+          options: Membrane.ChildrenSpec.pad_options_t(),
           link_id: Membrane.Core.Parent.Link.id(),
           endpoint: Membrane.Core.Parent.Link.Endpoint.t(),
           linked?: boolean(),

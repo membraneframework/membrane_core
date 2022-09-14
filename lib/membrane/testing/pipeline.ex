@@ -23,14 +23,14 @@ defmodule Membrane.Testing.Pipeline do
   ]
   options =  [
     module: :default # :default is the default value for this parameter, so you do not need to pass it here
-    links: Membrane.ParentSpec.link_linear(children)
+    links: Membrane.ChildrenSpec.link_linear(children)
   ]
   {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
   ```
-  Note, that we have used `Membrane.Testing.ParentSpec.link_linear/1` function, that creates the list of links
+  Note, that we have used `Membrane.Testing.ChildrenSpec.link_linear/1` function, that creates the list of links
   for the given list of children, linking them in linear manner (that means - children are linked in a way that
   `:output` pad of a given child is linked to `:input` pad of subsequent child). That is the case
-  which is often used while creating testing pipelines. Be aware, that `Membrane.Testing.ParentSpec.link_linear/1`
+  which is often used while creating testing pipelines. Be aware, that `Membrane.Testing.ChildrenSpec.link_linear/1`
   creates also a children specification itself, which means, that you cannot pass that children specification
   as another option's argument (adding `children: children` option would lead to a duplication of children specifications).
   If you need to link children in a different manner, you can of course do it by passing an appropriate list
@@ -70,7 +70,7 @@ defmodule Membrane.Testing.Pipeline do
           tested_element: TestedElement,
           sink: %Membrane.Testing.Sink{}
       ]
-      {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
+      {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(links: Membrane.ChildrenSpec.link_linear(children))
 
   We can now wait till the end of the stream reaches the sink element (don't forget
   to import `Membrane.Testing.Assertions`):
@@ -86,8 +86,8 @@ defmodule Membrane.Testing.Pipeline do
 
   use Membrane.Pipeline
 
+  alias Membrane.ChildrenSpec
   alias Membrane.{Element, Pipeline}
-  alias Membrane.ParentSpec
   alias Membrane.Testing.Notification
 
   require Membrane.Logger
@@ -120,8 +120,7 @@ defmodule Membrane.Testing.Pipeline do
   @type options ::
           [
             module: :default,
-            children: ParentSpec.children_spec_t(),
-            links: ParentSpec.links_spec_t(),
+            structure: ChildrenSpec.structure_spec_t(),
             test_process: pid(),
             name: Pipeline.name()
           ]
@@ -218,9 +217,10 @@ defmodule Membrane.Testing.Pipeline do
   def handle_init(ctx, options) do
     case Keyword.get(options, :module, :default) do
       :default ->
-        spec = %Membrane.ParentSpec{
-          children: Keyword.get(options, :children, []),
-          links: Keyword.get(options, :links, [])
+        structure = Bunch.listify(Keyword.get(options, :structure, []))
+
+        spec = %Membrane.ChildrenSpec{
+          structure: structure
         }
 
         new_state = %State{test_process: Keyword.fetch!(options, :test_process), module: nil}

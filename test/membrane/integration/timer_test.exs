@@ -1,6 +1,9 @@
 defmodule Membrane.Integration.TimerTest do
   use ExUnit.Case, async: true
+
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
+
   alias Membrane.{Pipeline, Testing, Time}
 
   defmodule Element do
@@ -36,8 +39,8 @@ defmodule Membrane.Integration.TimerTest do
 
     @impl true
     def handle_init(_ctx, pid) do
-      spec = %ParentSpec{
-        children: [element: Element, bin: Bin]
+      spec = %ChildrenSpec{
+        structure: [child(:element, Element), child(:bin, Bin)]
       }
 
       {{:ok, spec: spec, playback: :playing}, %{pid: pid}}
@@ -84,7 +87,9 @@ defmodule Membrane.Integration.TimerTest do
   end
 
   test "Stopping timer with `:no_interval`" do
-    pipeline = Testing.Pipeline.start_link_supervised!(children: [element: StopNoInterval])
+    pipeline =
+      Testing.Pipeline.start_link_supervised!(structure: [child(:element, StopNoInterval)])
+
     assert_pipeline_play(pipeline)
     assert_pipeline_notified(pipeline, :element, :ok)
     Testing.Pipeline.terminate(pipeline, blocking?: true)

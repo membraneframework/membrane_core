@@ -1,6 +1,6 @@
 defmodule Membrane.Support.Bin.TestBins do
   @moduledoc false
-  alias Membrane.ParentSpec
+  alias Membrane.ChildrenSpec
 
   defmodule TestFilter do
     @moduledoc false
@@ -77,18 +77,15 @@ defmodule Membrane.Support.Bin.TestBins do
 
     @impl true
     def handle_init(_ctx, opts) do
-      children = [
-        filter1: opts.filter1,
-        filter2: opts.filter2
-      ]
-
       links = [
-        link_bin_input() |> to(:filter1) |> to(:filter2) |> to_bin_output()
+        bin_input()
+        |> child(:filter1, opts.filter1)
+        |> child(:filter2, opts.filter2)
+        |> bin_output()
       ]
 
-      spec = %ParentSpec{
-        children: children,
-        links: links
+      spec = %ChildrenSpec{
+        structure: links
       }
 
       state = %{}
@@ -113,11 +110,11 @@ defmodule Membrane.Support.Bin.TestBins do
     @impl true
     def handle_init(_ctx, _opts) do
       children = [
-        filter: Membrane.Support.ChildCrashTest.Filter
+        child(:filter, Membrane.Support.ChildCrashTest.Filter)
       ]
 
-      spec = %ParentSpec{
-        children: children
+      spec = %ChildrenSpec{
+        structure: children
       }
 
       state = %{}
@@ -128,18 +125,20 @@ defmodule Membrane.Support.Bin.TestBins do
     @impl true
     def handle_pad_added(Pad.ref(:input, _id) = pad, _ctx, state) do
       links = [
-        link_bin_input(pad) |> to(:filter)
+        bin_input(pad) |> get_child(:filter)
       ]
 
-      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
+      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ChildrenSpec{structure: links}},
+       state}
     end
 
     def handle_pad_added(Pad.ref(:output, _id) = pad, _ctx, state) do
       links = [
-        link(:filter) |> to_bin_output(pad)
+        get_child(:filter) |> bin_output(pad)
       ]
 
-      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
+      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ChildrenSpec{structure: links}},
+       state}
     end
   end
 
@@ -156,18 +155,12 @@ defmodule Membrane.Support.Bin.TestBins do
 
     @impl true
     def handle_init(_ctx, opts) do
-      children = [
-        filter1: opts.filter1,
-        filter2: opts.filter2
-      ]
-
       links = [
-        link(:filter1) |> to(:filter2)
+        child(:filter1, opts.filter1) |> child(:filter2, opts.filter2)
       ]
 
-      spec = %ParentSpec{
-        children: children,
-        links: links
+      spec = %ChildrenSpec{
+        structure: links
       }
 
       state = %{}
@@ -178,18 +171,20 @@ defmodule Membrane.Support.Bin.TestBins do
     @impl true
     def handle_pad_added(Pad.ref(:input, _id) = pad, _ctx, state) do
       links = [
-        link_bin_input(pad) |> to(:filter1)
+        bin_input(pad) |> get_child(:filter1)
       ]
 
-      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
+      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ChildrenSpec{structure: links}},
+       state}
     end
 
     def handle_pad_added(Pad.ref(:output, _id) = pad, _ctx, state) do
       links = [
-        link(:filter2) |> to_bin_output(pad)
+        get_child(:filter2) |> bin_output(pad)
       ]
 
-      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
+      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ChildrenSpec{structure: links}},
+       state}
     end
   end
 
@@ -204,16 +199,10 @@ defmodule Membrane.Support.Bin.TestBins do
 
     @impl true
     def handle_init(_ctx, opts) do
-      children = [
-        filter: opts.filter,
-        sink: opts.sink
-      ]
+      links = [bin_input() |> child(:filter, opts.filter) |> child(:sink, opts.sink)]
 
-      links = [link_bin_input() |> to(:filter) |> to(:sink)]
-
-      spec = %ParentSpec{
-        children: children,
-        links: links
+      spec = %ChildrenSpec{
+        structure: links
       }
 
       state = %{}
@@ -246,16 +235,10 @@ defmodule Membrane.Support.Bin.TestBins do
 
     @impl true
     def handle_init(_ctx, opts) do
-      children = [
-        source: opts.source,
-        sink: opts.sink
-      ]
+      links = [child(:source, opts.source) |> child(:sink, opts.sink)]
 
-      links = [link(:source) |> to(:sink)]
-
-      spec = %ParentSpec{
-        children: children,
-        links: links
+      spec = %ChildrenSpec{
+        structure: links
       }
 
       state = %{}
@@ -312,18 +295,15 @@ defmodule Membrane.Support.Bin.TestBins do
 
     @impl true
     def handle_init(_ctx, _opts) do
-      children = [
-        filter1: NotifyingParentElement,
-        filter2: NotifyingParentElement
-      ]
-
       links = [
-        link_bin_input() |> to(:filter1) |> to(:filter2) |> to_bin_output()
+        bin_input()
+        |> child(:filter1, NotifyingParentElement)
+        |> child(:filter2, NotifyingParentElement)
+        |> bin_output()
       ]
 
-      spec = %ParentSpec{
-        children: children,
-        links: links
+      spec = %ChildrenSpec{
+        structure: links
       }
 
       state = %{}

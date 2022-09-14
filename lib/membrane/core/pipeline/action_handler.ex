@@ -3,10 +3,10 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   use Membrane.Core.CallbackHandler
 
   alias Membrane.ActionError
+  alias Membrane.ChildrenSpec
   alias Membrane.Core.{Parent, TimerController}
   alias Membrane.Core.Parent.LifecycleController
   alias Membrane.Core.Pipeline.State
-  alias Membrane.ParentSpec
 
   require Membrane.Logger
 
@@ -30,7 +30,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:spec, spec = %ParentSpec{}}, _cb, _params, state) do
+  def handle_action({:spec, spec = %ChildrenSpec{}}, _cb, _params, state) do
     Parent.ChildLifeController.handle_spec(spec, state)
   end
 

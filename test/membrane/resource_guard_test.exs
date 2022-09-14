@@ -1,6 +1,7 @@
 defmodule Membrane.ResourceGuardTest do
   use ExUnit.Case, async: true
 
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.{ResourceGuard, Testing}
@@ -63,7 +64,7 @@ defmodule Membrane.ResourceGuardTest do
     pipeline = Testing.Pipeline.start_link_supervised!(module: Pipeline)
 
     Testing.Pipeline.execute_actions(pipeline,
-      spec: %Membrane.ParentSpec{children: %{element: Element, bin: Bin}}
+      spec: %Membrane.ChildrenSpec{structure: [child(:element, Element), child(:bin, Bin)]}
     )
 
     assert_pipeline_notified(pipeline, :element, :ready)

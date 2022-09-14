@@ -1,7 +1,7 @@
 defmodule Membrane.Testing.DynamicSourceTest do
   use ExUnit.Case
 
-  import Membrane.ParentSpec
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Buffer
@@ -27,15 +27,16 @@ defmodule Membrane.Testing.DynamicSourceTest do
   test "Source works properly when payload are passed as enumerable" do
     pipeline =
       Testing.Pipeline.start_link_supervised!(
-        children: [
-          source: %Testing.DynamicSource{output: ['a', 'b', 'c']},
-          sink_1: Testing.Sink,
-          sink_2: Testing.Sink
-        ],
-        links: [
-          link(:source) |> to(:sink_1),
-          link(:source) |> to(:sink_2)
-        ]
+        structure:
+          [
+            child(:source, %Testing.DynamicSource{output: ['a', 'b', 'c']}),
+            child(:sink_1, Testing.Sink),
+            child(:sink_2, Testing.Sink)
+          ] ++
+            [
+              get_child(:source) |> get_child(:sink_1),
+              get_child(:source) |> get_child(:sink_2)
+            ]
       )
 
     assert_pipeline_play(pipeline)
@@ -50,15 +51,16 @@ defmodule Membrane.Testing.DynamicSourceTest do
   test "Source works properly when using generator function" do
     pipeline =
       Testing.Pipeline.start_link_supervised!(
-        children: [
-          source: Testing.DynamicSource,
-          sink_1: Testing.Sink,
-          sink_2: Testing.Sink
-        ],
-        links: [
-          link(:source) |> to(:sink_1),
-          link(:source) |> to(:sink_2)
-        ]
+        structure:
+          [
+            child(:source, Testing.DynamicSource),
+            child(:sink_1, Testing.Sink),
+            child(:sink_2, Testing.Sink)
+          ] ++
+            [
+              get_child(:source) |> get_child(:sink_1),
+              get_child(:source) |> get_child(:sink_2)
+            ]
       )
 
     assert_pipeline_play(pipeline)

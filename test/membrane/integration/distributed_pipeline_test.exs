@@ -1,5 +1,6 @@
 defmodule Membrane.Integration.DistributedPipelineTest do
   use ExUnit.Case
+
   import Membrane.Testing.Assertions
 
   setup do
@@ -15,20 +16,17 @@ defmodule Membrane.Integration.DistributedPipelineTest do
       @impl true
       def handle_init(_ctx, _opts) do
         {{:ok,
-          spec: %ParentSpec{
-            children: [
-              source: %Source{output: [1, 2, 3, 4, 5]}
+          spec: %Membrane.ChildrenSpec{
+            structure: [
+              child(:source, %Source{output: [1, 2, 3, 4, 5]})
             ],
             node: :"first@127.0.0.1"
           },
-          spec: %ParentSpec{
-            children: [
-              sink: Sink
-            ],
-            links: [
-              link(:source)
+          spec: %Membrane.ChildrenSpec{
+            structure: [
+              get_child(:source)
               |> via_in(:input, toilet_capacity: 100, throttling_factor: 50)
-              |> to(:sink)
+              |> child(:sink, Sink)
             ],
             node: :"second@127.0.0.1"
           }}, %{}}

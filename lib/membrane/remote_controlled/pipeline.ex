@@ -8,7 +8,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   ```
     children = ...
     links = ...
-    actions = [{:spec, %ParentSpec{children: children, links: links}}]
+    actions = [{:spec, %ChildrenSpec{children: children, links: links}}]
     Pipeline.exec_actions(pipeline, actions)
   ```
 
@@ -313,12 +313,12 @@ defmodule Membrane.RemoteControlled.Pipeline do
   Sends a list of `Pipeline.Action.t()` to the given `Membrane.RemoteControlled.Pipeline` for execution.
 
   Usage example:
-    1) making the `Membrane.RemoteControlled.Pipeline` start the `Membrane.ParentSpec`
+    1) making the `Membrane.RemoteControlled.Pipeline` start the `Membrane.ChildrenSpec`
        specified in the action.
     ```
     children = ...
     links = ...
-    actions = [{:spec, %ParentSpec{children: children, links: links}}]
+    actions = [{:spec, %ChildrenSpec{children: children, links: links}}]
     Pipeline.exec_actions(pipeline, actions)
     ```
   """

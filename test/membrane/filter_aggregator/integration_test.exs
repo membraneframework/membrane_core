@@ -1,11 +1,11 @@
 defmodule Membrane.FilterAggregator.IntegrationTest do
   use ExUnit.Case, async: true
 
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Buffer
   alias Membrane.FilterAggregator
-  alias Membrane.ParentSpec
   alias Membrane.RemoteStream
   alias Membrane.Testing.{Pipeline, Sink, Source}
 
@@ -46,20 +46,18 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
     buffers_num_range = 1..100
     output = for i <- buffers_num_range, do: <<i, payload::binary>>
 
-    links =
-      [
-        src: %Source{output: output},
-        filters: %FilterAggregator{
-          filters: [
-            a: FilterA,
-            b: FilterB
-          ]
-        },
-        sink: Sink
-      ]
-      |> ParentSpec.link_linear()
+    links = [
+      child(:src, %Source{output: output})
+      |> child(:filters, %FilterAggregator{
+        filters: [
+          a: FilterA,
+          b: FilterB
+        ]
+      })
+      |> child(:sink, Sink)
+    ]
 
-    pid = Pipeline.start_link_supervised!(links: links)
+    pid = Pipeline.start_link_supervised!(structure: links)
     assert_start_of_stream(pid, :sink)
     assert_sink_caps(pid, :sink, %RemoteStream{})
 

@@ -35,7 +35,6 @@ defmodule Membrane.Core.Bin do
           subprocess_supervisor: pid(),
           parent_supervisor: pid()
         }
-
   @doc """
   Starts the Bin based on given module and links it to the current
   process.

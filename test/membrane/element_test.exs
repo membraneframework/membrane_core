@@ -1,6 +1,7 @@
 defmodule Membrane.ElementTest do
   use ExUnit.Case, async: true
 
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Testing
@@ -63,14 +64,13 @@ defmodule Membrane.ElementTest do
   end
 
   setup do
-    children = [
-      source: %Testing.Source{output: ['a', 'b', 'c']},
-      filter: %TestFilter{target: self()},
-      sink: Testing.Sink
+    links = [
+      child(:source, %Testing.Source{output: ['a', 'b', 'c']})
+      |> child(:filter, %TestFilter{target: self()})
+      |> child(:sink, Testing.Sink)
     ]
 
-    pipeline =
-      Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+    pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
 
     [pipeline: pipeline]
   end

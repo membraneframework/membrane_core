@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   use Bunch
 
   alias __MODULE__.{CrashGroupUtils, LinkUtils, StartupUtils}
-  alias Membrane.ParentSpec
+  alias Membrane.ChildrenSpec
   alias Membrane.Core.{Bin, CallbackHandler, Component, Parent, Pipeline}
 
   alias Membrane.Core.Parent.{
@@ -12,7 +12,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     ClockHandler,
     CrashGroup,
     Link,
-    LinkParser
+    StructureParser
   }
 
   require Membrane.Core.Component
@@ -32,7 +32,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @type pending_specs_t :: %{spec_ref_t() => pending_spec_t()}
 
   @doc """
-  Handles `Membrane.ParentSpec` returned with `spec` action.
+  Handles `Membrane.ChildrenSpec` returned with `spec` action.
 
   Handling a spec consists of the following steps:
   - Parse the spec
@@ -59,18 +59,18 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   - Cleanup spec: remove it from `pending_specs` and all other specs' `dependent_specs` and try proceeding startup
     for all other pending specs that depended on the spec.
   """
-  @spec handle_spec(ParentSpec.t(), Parent.state_t()) :: Parent.state_t() | no_return()
-  def handle_spec(%ParentSpec{} = spec, state) do
+  @spec handle_spec(ChildrenSpec.t(), Parent.state_t()) :: Parent.state_t() | no_return()
+  def handle_spec(%ChildrenSpec{} = spec, state) do
     spec_ref = make_ref()
 
     Membrane.Logger.debug("""
     New spec #{inspect(spec_ref)}
-    children: #{inspect(spec.children)}
-    links: #{inspect(spec.links)}
+    structure: #{inspect(spec.structure)}
     """)
 
-    {links, children_spec_from_links} = LinkParser.parse(spec.links)
-    children_spec = Enum.concat(spec.children, children_spec_from_links)
+    {links, children_spec} = StructureParser.parse(spec.structure)
+    children_spec = remove_unecessary_children_specs(children_spec, state)
+
     children = ChildEntryParser.parse(children_spec)
     children = Enum.map(children, &%{&1 | spec_ref: spec_ref})
     :ok = StartupUtils.check_if_children_names_unique(children, state)
@@ -119,7 +119,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     # adding crash group to state
     state =
       if spec.crash_group do
-        CrashGroupUtils.add_crash_group(spec.crash_group, children_names, children_pids, state)
+        CrashGroupUtils.add_crash_group(
+          spec.crash_group,
+          children_names,
+          children_pids,
+          state
+        )
       else
         state
       end
@@ -296,7 +301,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   @spec handle_remove_children(
-          Membrane.Child.name_t() | [Membrane.Child.name_t()],
+          Membrane.Child.name_t()
+          | [Membrane.Child.name_t()],
           Parent.state_t()
         ) ::
           Parent.state_t()
@@ -455,5 +461,20 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp remove_child_from_crash_group(state, group, child_pid) do
     CrashGroupUtils.remove_member_of_crash_group(state, group.name, child_pid)
     |> CrashGroupUtils.remove_crash_group_if_empty(group.name)
+  end
+
+  defp remove_unecessary_children_specs(children_spec, state) do
+    %{children: state_children} = state
+
+    children_spec
+    |> Enum.map(fn
+      {name, {child_spec, dont_spawn_if_already_exists: dont_spawn_if_already_exists}} ->
+        if dont_spawn_if_already_exists do
+          if Map.has_key?(state_children, name), do: nil, else: {name, child_spec}
+        else
+          {name, child_spec}
+        end
+    end)
+    |> Enum.filter(&(&1 != nil))
   end
 end

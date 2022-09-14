@@ -108,7 +108,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
   end
 
   describe "Children can defer being removed by not returning terminate from terminate request" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
 
     defmodule RemovalDeferSource do
       use Membrane.Source
@@ -164,8 +164,8 @@ defmodule Membrane.Integration.ChildRemovalTest do
       @impl true
       def handle_init(_ctx, opts) do
         Process.register(self(), __MODULE__)
-        links = [link(:source, RemovalDeferSource) |> to_bin_output()]
-        {{:ok, spec: %ParentSpec{links: links}}, Map.from_struct(opts)}
+        links = [child(:source, RemovalDeferSource) |> bin_output()]
+        {{:ok, spec: %ChildrenSpec{structure: links}}, Map.from_struct(opts)}
       end
 
       @impl true
@@ -189,7 +189,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
     test "two linked elements" do
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          links: [link(:source, RemovalDeferSource) |> to(:sink, RemovalDeferSink)]
+          structure: [child(:source, RemovalDeferSource) |> child(:sink, RemovalDeferSink)]
         )
 
       monitor = Process.monitor(pipeline)
@@ -203,9 +203,9 @@ defmodule Membrane.Integration.ChildRemovalTest do
     test "two linked elements, one in a bin" do
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          links: [
-            link(:bin, %RemovalDeferBin{defer?: false, test_process: self()})
-            |> to(:sink, RemovalDeferSink)
+          structure: [
+            child(:bin, %RemovalDeferBin{defer?: false, test_process: self()})
+            |> child(:sink, RemovalDeferSink)
           ]
         )
 
@@ -222,9 +222,9 @@ defmodule Membrane.Integration.ChildRemovalTest do
     test "two linked elements, one in a bin that defers termination" do
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          links: [
-            link(:bin, %RemovalDeferBin{defer?: true, test_process: self()})
-            |> to(:sink, RemovalDeferSink)
+          structure: [
+            child(:bin, %RemovalDeferBin{defer?: true, test_process: self()})
+            |> child(:sink, RemovalDeferSink)
           ]
         )
 

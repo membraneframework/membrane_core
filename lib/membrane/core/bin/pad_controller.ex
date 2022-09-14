@@ -10,7 +10,7 @@ defmodule Membrane.Core.Bin.PadController do
   alias Membrane.Core.Bin.{ActionHandler, State}
   alias Membrane.Core.{CallbackHandler, Child, Message}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Parent.{ChildLifeController, Link, LinkParser}
+  alias Membrane.Core.Parent.{ChildLifeController, Link, StructureParser}
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
@@ -25,7 +25,7 @@ defmodule Membrane.Core.Bin.PadController do
           Pad.ref_t(),
           Pad.direction_t(),
           Link.id(),
-          Membrane.ParentSpec.pad_options_t(),
+          Membrane.ChildrenSpec.pad_options_t(),
           State.t()
         ) :: State.t() | no_return
   def handle_external_link_request(pad_ref, direction, link_id, pad_options, state) do
@@ -157,8 +157,8 @@ defmodule Membrane.Core.Bin.PadController do
   """
   @spec handle_link(
           Pad.direction_t(),
-          LinkParser.raw_endpoint_t(),
-          LinkParser.raw_endpoint_t(),
+          StructureParser.raw_endpoint_t(),
+          StructureParser.raw_endpoint_t(),
           %{initiator: :parent}
           | %{initiator: :sibling, other_info: PadModel.pad_info_t() | nil, link_metadata: map},
           Core.Bin.State.t()

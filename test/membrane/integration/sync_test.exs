@@ -1,6 +1,7 @@
 defmodule Membrane.Integration.SyncTest do
   use ExUnit.Case, async: false
 
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.{Testing, Time}
@@ -15,15 +16,15 @@ defmodule Membrane.Integration.SyncTest do
     tick_interval = 1
 
     children = [
-      source: %Sync.Source{
+      child(:source, %Sync.Source{
         tick_interval: tick_interval |> Time.milliseconds(),
         test_process: self()
-      },
-      sink: Sync.Sink
+      }),
+      child(:sink, Sync.Sink)
     ]
 
     pipeline_opts = [
-      links: Membrane.ParentSpec.link_linear(children)
+      structure: Membrane.ChildrenSpec.link_linear(children)
     ]
 
     for tries <- [100, 1000, 10_000] do
@@ -56,7 +57,7 @@ defmodule Membrane.Integration.SyncTest do
 
     options = [
       module: Membrane.Support.Sync.Pipeline,
-      custom_args: %Membrane.ParentSpec{}
+      custom_args: %Membrane.ChildrenSpec{}
     ]
 
     pipeline = Testing.Pipeline.start_link_supervised!(options)
@@ -92,8 +93,8 @@ defmodule Membrane.Integration.SyncTest do
     def handle_init(_ctx, _options) do
       children = [filter1: TestFilter, filter2: TestFilter]
 
-      spec = %Membrane.ParentSpec{
-        children: children,
+      spec = %Membrane.ChildrenSpec{
+        structure: children,
         stream_sync: []
       }
 
@@ -105,12 +106,12 @@ defmodule Membrane.Integration.SyncTest do
     alias Membrane.Testing.Source
 
     children = [
-      el1: Source,
-      el2: SimpleBin
+      child(:el1, Source),
+      child(:el2, SimpleBin)
     ]
 
-    spec = %Membrane.ParentSpec{
-      children: children,
+    spec = %Membrane.ChildrenSpec{
+      structure: children,
       stream_sync: [[:el1, :el2]]
     }
 
@@ -125,9 +126,9 @@ defmodule Membrane.Integration.SyncTest do
   end
 
   test "synchronization inside a bin is possible" do
-    children = [bin: Sync.SyncBin]
+    children = [child(:bin, Sync.SyncBin)]
 
-    pipeline = Testing.Pipeline.start_link_supervised!(children: children)
+    pipeline = Testing.Pipeline.start_link_supervised!(structure: children)
 
     assert_pipeline_notified(pipeline, :bin, {:start_of_stream, :sink_a})
     assert_pipeline_notified(pipeline, :bin, {:start_of_stream, :sink_b}, @sync_error_ms)
