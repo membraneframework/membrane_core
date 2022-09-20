@@ -1,7 +1,7 @@
-defmodule Membrane.Core.Parent.LinkParserTest do
+defmodule Membrane.Core.Parent.StructureParserTest do
   use ExUnit.Case
 
-  alias Membrane.Core.Parent.{Link, LinkParser}
+  alias Membrane.Core.Parent.{Link, StructureParser}
   alias Membrane.Core.Parent.Link.Endpoint
 
   test "valid link" do
@@ -20,7 +20,7 @@ defmodule Membrane.Core.Parent.LinkParserTest do
       |> to_bin_output()
     ]
 
-    assert {links, []} = LinkParser.parse(links_spec)
+    assert {links, []} = StructureParser.parse(links_spec)
 
     assert [
              %Link{
@@ -95,7 +95,7 @@ defmodule Membrane.Core.Parent.LinkParserTest do
 
     links_spec = [link(:a) |> to(:b) |> to(:c), link(:d) |> to(:b) |> to(:e)]
 
-    assert {links, []} = LinkParser.parse(links_spec)
+    assert {links, []} = StructureParser.parse(links_spec)
 
     assert [
              %Link{
@@ -169,7 +169,7 @@ defmodule Membrane.Core.Parent.LinkParserTest do
     [:abc, [:abc], %{{:abc, :output} => {:def, :input}}]
     |> Enum.each(fn link_spec ->
       assert_raise Membrane.ParentError, ~r/.*Invalid links specification.*:abc/, fn ->
-        LinkParser.parse(link_spec)
+        StructureParser.parse(link_spec)
       end
     end)
   end
@@ -186,7 +186,7 @@ defmodule Membrane.Core.Parent.LinkParserTest do
     |> Enum.each(fn {from, link_spec} ->
       assert_raise Membrane.ParentError,
                    ~r/.*link from #{inspect(from)} lacks its destination.*/,
-                   fn -> LinkParser.parse(link_spec) end
+                   fn -> StructureParser.parse(link_spec) end
     end)
   end
 
@@ -194,7 +194,7 @@ defmodule Membrane.Core.Parent.LinkParserTest do
     import Membrane.ParentSpec
 
     links_spec = [link(:a, A) |> to(:b, B) |> to(:c, C)]
-    assert {links, children} = LinkParser.parse(links_spec)
+    assert {links, children} = StructureParser.parse(links_spec)
 
     assert [
              %Link{

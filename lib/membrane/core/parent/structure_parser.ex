@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Parent.LinkParser do
+defmodule Membrane.Core.Parent.StructureParser do
   @moduledoc false
   use Bunch
 

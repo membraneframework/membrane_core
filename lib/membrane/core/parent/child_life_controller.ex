@@ -12,7 +12,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     ClockHandler,
     CrashGroup,
     Link,
-    LinkParser
+    StructureParser
   }
 
   require Membrane.Core.Component
@@ -71,7 +71,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     structure: #{inspect(spec.structure)}
     """)
 
-    {links, children_spec} = LinkParser.parse(spec.structure)
+    {links, children_spec} = StructureParser.parse(spec.structure)
     children = ChildEntryParser.parse(children_spec)
     children = Enum.map(children, &%{&1 | spec_ref: spec_ref})
     :ok = StartupUtils.check_if_children_names_unique(children, state)
