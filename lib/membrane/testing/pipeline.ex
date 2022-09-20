@@ -120,8 +120,8 @@ defmodule Membrane.Testing.Pipeline do
   @type options ::
           [
             module: :default,
-            children: ParentSpec.children_spec_t(),
-            links: ParentSpec.links_spec_t(),
+            children: ParentSpec.structure_spec_t(),
+            links: ParentSpec.structure_spec_t(),
             test_process: pid(),
             name: Pipeline.name()
           ]

@@ -20,8 +20,7 @@ defmodule Membrane.Support.Element.TrivialPipeline do
     ]
 
     spec = %Membrane.ParentSpec{
-      children: children,
-      links: links
+      structure: children ++ links
     }
 
     {{:ok, spec: spec}, %{}}

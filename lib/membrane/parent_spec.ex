@@ -221,12 +221,9 @@ defmodule Membrane.ParentSpec do
 
   @type child_spec_t :: module | struct
 
-  @type children_spec_t ::
-          {Child.name_t(), child_spec_t}
-
   @type pad_options_t :: Keyword.t()
 
-  @type structure_spec_t :: [link_builder_t() | children_spec_t]
+  @type structure_spec_t :: [link_builder_t() | {Child.name_t(), child_spec_t}]
 
   @typedoc """
   Struct used when starting and linking children within a pipeline or a bin.
