@@ -107,8 +107,8 @@ defmodule Membrane.Integration.LinkingTest do
     } do
       spec = %Membrane.ParentSpec{
         structure: [
-          spawn(:bin, %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}),
-          spawn(:sink, Testing.Sink),
+          spawn_child(:bin, %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}),
+          spawn_child(:sink, Testing.Sink),
           link(:bin) |> to(:sink)
         ]
       }

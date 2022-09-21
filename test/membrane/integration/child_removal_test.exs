@@ -150,7 +150,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
     @impl true
     def handle_init(_opts) do
-      structure1 = [spawn(:source, SourceNotyfingWhenPadRemoved)]
+      structure1 = [spawn_child(:source, SourceNotyfingWhenPadRemoved)]
       spec1 = %ParentSpec{structure: structure1}
 
       structure2 = [

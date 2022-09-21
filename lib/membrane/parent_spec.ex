@@ -249,8 +249,8 @@ defmodule Membrane.ParentSpec do
   @doc """
   Spawns a children without linking it.
   """
-  @spec spawn(Child.name_t(), child_spec_t) :: {Child.name_t(), child_spec_t}
-  def spawn(child_name, child_spec) do
+  @spec spawn_child(Child.name_t(), child_spec_t) :: {Child.name_t(), child_spec_t}
+  def spawn_child(child_name, child_spec) do
     {child_name, child_spec}
   end
 

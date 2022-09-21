@@ -18,9 +18,9 @@ defmodule Membrane.Core.Parent.StructureParser do
 
   @spec parse(ParentSpec.structure_spec_t()) ::
           {[raw_link_t], [ParentSpec.child_spec_t()]} | no_return
-  def parse(links) when is_list(links) do
+  def parse(structure) when is_list(structure) do
     {links, children} =
-      links
+      structure
       |> List.flatten()
       |> Enum.map(fn
         %ParentSpec.LinkBuilder{links: links, children: children, status: :done} ->
@@ -34,7 +34,7 @@ defmodule Membrane.Core.Parent.StructureParser do
           {[], {name, child_spec}}
 
         _other ->
-          from_spec_error(links)
+          from_spec_error(structure)
       end)
       |> Enum.unzip()
 
@@ -61,13 +61,13 @@ defmodule Membrane.Core.Parent.StructureParser do
     {links, children}
   end
 
-  def parse(links), do: from_spec_error(links)
+  def parse(structure), do: from_spec_error(structure)
 
-  @spec from_spec_error([raw_link_t]) :: no_return
-  defp from_spec_error(links) do
+  @spec from_spec_error(ParentSpec.structure_spec_t()) :: no_return
+  defp from_spec_error(structure) do
     raise ParentError, """
-    Invalid links specification: #{inspect(links)}.
-    See `#{inspect(ParentSpec)}` for information on specifying links.
+    Invalid structure specification: #{inspect(structure)}.
+    See `#{inspect(ParentSpec)}` for information on specifying structure.
     """
   end
 end

@@ -168,7 +168,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   test "invalid link" do
     [:abc, [:abc], %{{:abc, :output} => {:def, :input}}]
     |> Enum.each(fn link_spec ->
-      assert_raise Membrane.ParentError, ~r/.*Invalid links specification.*:abc/, fn ->
+      assert_raise Membrane.ParentError, ~r/.*Invalid structure specification.*:abc/, fn ->
         StructureParser.parse(link_spec)
       end
     end)
