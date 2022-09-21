@@ -17,7 +17,7 @@ defmodule Membrane.Core.Parent.StructureParser do
         }
 
   @spec parse(ParentSpec.structure_spec_t()) ::
-          {[raw_link_t], [ParentSpec.child_spec_t()]} | no_return
+          {[raw_link_t], [{Membrane.Child.name_t(), ParentSpec.child_spec_t()}]} | no_return
   def parse(structure) when is_list(structure) do
     {links, children} =
       structure
@@ -26,9 +26,13 @@ defmodule Membrane.Core.Parent.StructureParser do
         %ParentSpec.LinkBuilder{links: links, children: children, status: :done} ->
           {Enum.reverse(links), Enum.reverse(children)}
 
-        %ParentSpec.LinkBuilder{links: [%{from: from} | _]} ->
-          raise ParentError,
-                "Invalid link specification: link from #{inspect(from)} lacks its destination."
+        %ParentSpec.LinkBuilder{links: [%{from: from} | _]} = builder ->
+          if length(builder.children) == 1 do
+            {[], builder.children}
+          else
+            raise ParentError,
+                  "Invalid link specification: link from #{inspect(from)} lacks its destination."
+          end
 
         {name, child_spec} ->
           {[], {name, child_spec}}

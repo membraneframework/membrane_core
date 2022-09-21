@@ -250,10 +250,11 @@ defmodule Membrane.ParentSpec do
   @doc """
   Spawns a children without linking it.
   """
-  @spec spawn_child(Child.name_t(), child_spec_t) :: {Child.name_t(), child_spec_t}
-  def spawn_child(child_name, child_spec) do
-    {child_name, child_spec}
-  end
+
+  # @spec spawn_child(Child.name_t(), child_spec_t) :: {Child.name_t(), child_spec_t}
+  # def spawn_child(child_name, child_spec) do
+  #   {child_name, child_spec}
+  # end
 
   @doc """
   Begins a link.
@@ -270,8 +271,8 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec link(Child.name_t(), child_spec_t()) :: link_builder_t()
-  def link(child_name, child_spec) do
+  @spec spawn_child(Child.name_t(), child_spec_t()) :: link_builder_t()
+  def spawn_child(child_name, child_spec) do
     link(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
   end
 
@@ -320,7 +321,6 @@ defmodule Membrane.ParentSpec do
     if Enum.at(should_skip, -1) do
       builder
     else
-
       :ok = validate_pad_name(pad)
 
       props =
@@ -486,14 +486,15 @@ defmodule Membrane.ParentSpec do
   end
 
   def ignore_unless(builder, condition) do
-    %LinkBuilder{builder | should_skip: builder.should_skip++[not condition]}
+    %LinkBuilder{builder | should_skip: builder.should_skip ++ [not condition]}
   end
 
   def end_ignore(builder) do
-    %LinkBuilder{builder | should_skip: Enum.take(builder.should_skip, length(builder.should_skip)-1) }
+    %LinkBuilder{
+      builder
+      | should_skip: Enum.take(builder.should_skip, length(builder.should_skip) - 1)
+    }
   end
-
-
 
   @doc """
   Links subsequent children using default pads (linking `:input` to `:output` of
@@ -510,16 +511,13 @@ defmodule Membrane.ParentSpec do
 
     links =
       other_children
-      |> Enum.reduce(link(first_child_name, first_child_spec), fn {child_name, child_spec},
-                                                                  builder ->
+      |> Enum.reduce(spawn_child(first_child_name, first_child_spec), fn {child_name, child_spec},
+                                                                         builder ->
         to(builder, child_name, child_spec)
       end)
 
     [links]
   end
-
-
-
 
   defp validate_pad_name(pad) when Pad.is_pad_name(pad) or Pad.is_pad_ref(pad) do
     :ok

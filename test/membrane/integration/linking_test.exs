@@ -303,7 +303,7 @@ defmodule Membrane.Integration.LinkingTest do
     Testing.Pipeline.execute_actions(pipeline,
       spec: %ParentSpec{
         structure: [
-          link(:src1, %Testing.Source{output: []})
+          spawn_child(:src1, %Testing.Source{output: []})
           |> via_in(Pad.ref(:input, 1))
           |> to(:filter, DynamicFilter)
           |> via_out(Pad.ref(:output, 1))
@@ -312,14 +312,14 @@ defmodule Membrane.Integration.LinkingTest do
       },
       spec: %ParentSpec{
         structure: [
-          link(:independent_src, %Testing.Source{output: []})
+          spawn_child(:independent_src, %Testing.Source{output: []})
           |> to(:independent_filter, DynamicFilter)
           |> to(:independent_sink, Testing.Sink)
         ]
       },
       spec: %ParentSpec{
         structure: [
-          link(:src2, %Testing.Source{output: []})
+          spawn_child(:src2, %Testing.Source{output: []})
           |> via_in(Pad.ref(:input, 2))
           |> to(:filter)
           |> via_out(Pad.ref(:output, 2))
@@ -351,7 +351,7 @@ defmodule Membrane.Integration.LinkingTest do
     Testing.Pipeline.execute_actions(pipeline,
       spec: %ParentSpec{
         structure: [
-          link(:source, %Testing.Source{output: [1, 2, 3]})
+          spawn_child(:source, %Testing.Source{output: [1, 2, 3]})
           |> to(:filter1, %TestDynamicPadBin{
             filter1: %TestDynamicPadBin{filter1: TestFilter, filter2: TestFilter},
             filter2: TestFilter
