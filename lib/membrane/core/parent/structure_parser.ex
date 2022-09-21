@@ -17,7 +17,7 @@ defmodule Membrane.Core.Parent.StructureParser do
         }
 
   @spec parse(ParentSpec.structure_spec_t()) ::
-          {[raw_link_t], [{Membrane.Child.name_t(), ParentSpec.child_spec_t()}]} | no_return
+          {[raw_link_t], [ParentSpec.child_spec_extended_t()]} | no_return
   def parse(structure) when is_list(structure) do
     {links, children} =
       structure

@@ -196,7 +196,7 @@ defmodule Membrane.ParentSpec do
     defstruct children: [], links: [], status: nil, should_skip: []
 
     @type t :: %__MODULE__{
-            children: [Membrane.ParentSpec.child_definition_t()],
+            children: [Membrane.ParentSpec.child_spec_extended_t()],
             links: [map],
             status: status_t,
             should_skip: [boolean()]
@@ -220,14 +220,14 @@ defmodule Membrane.ParentSpec do
 
   @opaque link_builder_t :: LinkBuilder.t()
 
-  @type child_spec_t :: module | struct
+  @type child_spec_t :: {Child.name_t(), struct() | module()}
 
   @type pad_options_t :: Keyword.t()
 
-  @type child_definition_t ::
-          {Child.name_t(), child_spec_t()}
-          | {Child.name_t(), {child_spec_t()}, :dont_spawn_if_already_exists}
-  @type structure_spec_t :: [link_builder_t() | child_definition_t()]
+  @type child_spec_extended_t ::
+          child_spec_t
+          | {child_spec_t(), :dont_spawn_if_already_exists}
+  @type structure_spec_t :: [link_builder_t() | child_spec_extended_t()]
 
   @typedoc """
   Struct used when starting and linking children within a pipeline or a bin.
@@ -269,7 +269,7 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec spawn_child(Child.name_t(), child_spec_t()) :: link_builder_t()
+  @spec spawn_child(Child.name_t(), struct() | module()) :: link_builder_t()
   def spawn_child(child_name, child_spec) do
     link(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
   end
@@ -449,7 +449,8 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec to_new(link_builder_t(), Child.name_t(), child_spec_t()) :: link_builder_t() | no_return
+  @spec to_new(link_builder_t(), Child.name_t(), struct() | module()) ::
+          link_builder_t() | no_return
   def to_new(%LinkBuilder{should_skip: should_skip} = builder, child_name, child_spec) do
     if Enum.at(should_skip, -1) do
       builder
@@ -510,7 +511,7 @@ defmodule Membrane.ParentSpec do
 
       Membrane.ParentSpec.link_linear([el1: MembraneElement1, el2: MembraneElement2])
   """
-  @spec link_linear(children :: [{Child.name_t(), child_spec_t()}]) :: structure_spec_t()
+  @spec link_linear(children :: [child_spec_t()]) :: structure_spec_t()
 
   def link_linear(children) when is_list(children) and length(children) > 1 do
     [{first_child_name, first_child_spec} | other_children] = children
