@@ -72,6 +72,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     """)
 
     {links, children_spec} = StructureParser.parse(spec.structure)
+    children_spec = remove_unecessary_children_specs(children_spec, state)
+
     children = ChildEntryParser.parse(children_spec)
     children = Enum.map(children, &%{&1 | spec_ref: spec_ref})
     :ok = StartupUtils.check_if_children_names_unique(children, state)
@@ -474,5 +476,19 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp remove_child_from_crash_group(state, group, child_pid) do
     CrashGroupUtils.remove_member_of_crash_group(state, group.name, child_pid)
     |> CrashGroupUtils.remove_crash_group_if_empty(group.name)
+  end
+
+  defp remove_unecessary_children_specs(children_spec, state) do
+    %{children: state_children} = state
+
+    children_spec
+    |> Enum.map(fn
+      {name, {child_spec, :dont_spawn_if_already_exists}} ->
+        if name in state_children, do: nil, else: {name, child_spec}
+
+      spec ->
+        spec
+    end)
+    |> Enum.filter(&(&1 != nil))
   end
 end

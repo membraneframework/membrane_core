@@ -154,18 +154,18 @@ defmodule Membrane.Integration.ChildRemovalTest do
       spec1 = %ParentSpec{structure: structure1}
 
       structure2 = [
-        link(:source) |> via_out(:first) |> to(:filter1, FilterToBeRemoved),
-        link(:source) |> via_out(:second) |> to(:filter2, FilterToBeRemoved)
+        link(:source) |> via_out(:first) |> to_new(:filter1, FilterToBeRemoved),
+        link(:source) |> via_out(:second) |> to_new(:filter2, FilterToBeRemoved)
       ]
 
       spec2 = %ParentSpec{structure: structure2, children_group_id: :first_crash_group}
 
-      structure3 = [link(:source) |> via_out(:third) |> to(:filter3, FilterToBeRemoved)]
+      structure3 = [link(:source) |> via_out(:third) |> to_new(:filter3, FilterToBeRemoved)]
       spec3 = %ParentSpec{structure: structure3, children_group_id: :first_crash_group}
 
       structure4 = [
-        link(:source) |> via_out(:fourth) |> to(:filter4, FilterToBeRemoved),
-        link(:source) |> via_out(:fifth) |> to(:filter5, FilterToBeRemoved)
+        link(:source) |> via_out(:fourth) |> to_new(:filter4, FilterToBeRemoved),
+        link(:source) |> via_out(:fifth) |> to_new(:filter5, FilterToBeRemoved)
       ]
 
       spec4 = %ParentSpec{structure: structure4, children_group_id: :second_crash_group}

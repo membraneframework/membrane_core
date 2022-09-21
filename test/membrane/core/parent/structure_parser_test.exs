@@ -193,7 +193,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   test "link creating children" do
     import Membrane.ParentSpec
 
-    links_spec = [spawn_child(:a, A) |> to(:b, B) |> to(:c, C)]
+    links_spec = [spawn_child(:a, A) |> to_new(:b, B) |> to_new(:c, C)]
     assert {links, children} = StructureParser.parse(links_spec)
 
     assert [
@@ -231,13 +231,17 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              }
            ] = links
 
-    assert Enum.sort(children) == [a: A, b: B, c: C]
+    assert Enum.sort(children) == [
+             a: A,
+             b: {B, :dont_spawn_if_already_exists},
+             c: {C, :dont_spawn_if_already_exists}
+           ]
   end
 
   test "Membrane.ParentSpec.link_linear/1 links children in a linear manner" do
     import Membrane.ParentSpec
     children = [source: nil, filter: nil, sink: nil]
-    desired_links = [spawn_child(:source, nil) |> to(:filter, nil) |> to(:sink, nil)]
+    desired_links = [spawn_child(:source, nil) |> to_new(:filter, nil) |> to_new(:sink, nil)]
     auto_generated_links = link_linear(children)
     assert desired_links == auto_generated_links
   end

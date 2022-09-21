@@ -305,16 +305,16 @@ defmodule Membrane.Integration.LinkingTest do
         structure: [
           spawn_child(:src1, %Testing.Source{output: []})
           |> via_in(Pad.ref(:input, 1))
-          |> to(:filter, DynamicFilter)
+          |> to_new(:filter, DynamicFilter)
           |> via_out(Pad.ref(:output, 1))
-          |> to(:sink1, %SlowSetupSink{setup_delay: 300})
+          |> to_new(:sink1, %SlowSetupSink{setup_delay: 300})
         ]
       },
       spec: %ParentSpec{
         structure: [
           spawn_child(:independent_src, %Testing.Source{output: []})
-          |> to(:independent_filter, DynamicFilter)
-          |> to(:independent_sink, Testing.Sink)
+          |> to_new(:independent_filter, DynamicFilter)
+          |> to_new(:independent_sink, Testing.Sink)
         ]
       },
       spec: %ParentSpec{
@@ -323,7 +323,7 @@ defmodule Membrane.Integration.LinkingTest do
           |> via_in(Pad.ref(:input, 2))
           |> to(:filter)
           |> via_out(Pad.ref(:output, 2))
-          |> to(:sink2, Testing.Sink)
+          |> to_new(:sink2, Testing.Sink)
         ]
       }
     )
@@ -352,18 +352,18 @@ defmodule Membrane.Integration.LinkingTest do
       spec: %ParentSpec{
         structure: [
           spawn_child(:source, %Testing.Source{output: [1, 2, 3]})
-          |> to(:filter1, %TestDynamicPadBin{
+          |> to_new(:filter1, %TestDynamicPadBin{
             filter1: %TestDynamicPadBin{filter1: TestFilter, filter2: TestFilter},
             filter2: TestFilter
           })
-          |> to(:filter2, %TestDynamicPadBin{
+          |> to_new(:filter2, %TestDynamicPadBin{
             filter1: %TestDynamicPadBin{
               filter1: TestFilter,
               filter2: %TestDynamicPadBin{filter1: TestFilter, filter2: TestFilter}
             },
             filter2: %TestDynamicPadBin{filter1: TestFilter, filter2: TestFilter}
           })
-          |> to(:sink, Testing.Sink)
+          |> to_new(:sink, Testing.Sink)
         ]
       }
     )

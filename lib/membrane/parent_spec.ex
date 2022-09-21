@@ -196,7 +196,7 @@ defmodule Membrane.ParentSpec do
     defstruct children: [], links: [], status: nil, should_skip: []
 
     @type t :: %__MODULE__{
-            children: [{Child.name_t(), module | struct}],
+            children: [Membrane.ParentSpec.child_definition_t()],
             links: [map],
             status: status_t,
             should_skip: [boolean()]
@@ -224,7 +224,10 @@ defmodule Membrane.ParentSpec do
 
   @type pad_options_t :: Keyword.t()
 
-  @type structure_spec_t :: [link_builder_t() | {Child.name_t(), child_spec_t}]
+  @type child_definition_t ::
+          {Child.name_t(), child_spec_t()}
+          | {Child.name_t(), {child_spec_t()}, :dont_spawn_if_already_exists}
+  @type structure_spec_t :: [link_builder_t() | child_definition_t()]
 
   @typedoc """
   Struct used when starting and linking children within a pipeline or a bin.
@@ -446,12 +449,14 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec to(link_builder_t(), Child.name_t(), child_spec_t()) :: link_builder_t() | no_return
-  def to(%LinkBuilder{should_skip: should_skip} = builder, child_name, child_spec) do
+  @spec to_new(link_builder_t(), Child.name_t(), child_spec_t()) :: link_builder_t() | no_return
+  def to_new(%LinkBuilder{should_skip: should_skip} = builder, child_name, child_spec) do
     if Enum.at(should_skip, -1) do
       builder
     else
-      builder |> to(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
+      builder
+      |> to(child_name)
+      |> Map.update!(:children, &[{child_name, {child_spec, :dont_spawn_if_already_exists}} | &1])
     end
   end
 
@@ -514,7 +519,7 @@ defmodule Membrane.ParentSpec do
       other_children
       |> Enum.reduce(spawn_child(first_child_name, first_child_spec), fn {child_name, child_spec},
                                                                          builder ->
-        to(builder, child_name, child_spec)
+        to_new(builder, child_name, child_spec)
       end)
 
     [links]
