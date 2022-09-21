@@ -22,7 +22,9 @@ defmodule Membrane.Integration.SyncTest.TickingPace do
     ]
 
     pipeline =
-      Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+      Testing.Pipeline.start_link_supervised!(
+        structure: Membrane.ParentSpec.link_linear(children)
+      )
 
     %{synchronization: %{clock_provider: %{clock: original_clock, provider: :sink}}} =
       :sys.get_state(pipeline)

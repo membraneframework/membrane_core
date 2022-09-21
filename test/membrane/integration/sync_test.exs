@@ -23,7 +23,7 @@ defmodule Membrane.Integration.SyncTest do
     ]
 
     pipeline_opts = [
-      links: Membrane.ParentSpec.link_linear(children)
+      structure: Membrane.ParentSpec.link_linear(children)
     ]
 
     for tries <- [100, 1000, 10_000] do
@@ -127,7 +127,7 @@ defmodule Membrane.Integration.SyncTest do
   test "synchronization inside a bin is possible" do
     children = [bin: Sync.SyncBin]
 
-    pipeline = Testing.Pipeline.start_link_supervised!(children: children)
+    pipeline = Testing.Pipeline.start_link_supervised!(structure: children)
 
     assert_pipeline_notified(pipeline, :bin, {:start_of_stream, :sink_a})
     assert_pipeline_notified(pipeline, :bin, {:start_of_stream, :sink_b}, @sync_error_ms)

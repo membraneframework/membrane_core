@@ -15,14 +15,15 @@ defmodule Membrane.Core.EndpointTest do
 
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          children: [
-            endpoint: %Testing.Endpoint{output: buffers},
-            filter: TestFilter
-          ],
-          links: [
-            link(:endpoint) |> to(:filter),
-            link(:filter) |> to(:endpoint)
-          ]
+          structure:
+            [
+              endpoint: %Testing.Endpoint{output: buffers},
+              filter: TestFilter
+            ] ++
+              [
+                link(:endpoint) |> to(:filter),
+                link(:filter) |> to(:endpoint)
+              ]
         )
 
       assert_data_flows_through(pipeline, buffers, :endpoint)
@@ -33,18 +34,19 @@ defmodule Membrane.Core.EndpointTest do
 
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          children: [
-            endpoint: %Testing.Endpoint{output: buffers},
-            filter1: TestFilter,
-            filter2: TestFilter,
-            filter3: TestFilter
-          ],
-          links: [
-            link(:endpoint) |> to(:filter1),
-            link(:filter1) |> to(:filter2),
-            link(:filter2) |> to(:filter3),
-            link(:filter3) |> to(:endpoint)
-          ]
+          structure:
+            [
+              endpoint: %Testing.Endpoint{output: buffers},
+              filter1: TestFilter,
+              filter2: TestFilter,
+              filter3: TestFilter
+            ] ++
+              [
+                link(:endpoint) |> to(:filter1),
+                link(:filter1) |> to(:filter2),
+                link(:filter2) |> to(:filter3),
+                link(:filter3) |> to(:endpoint)
+              ]
         )
 
       assert_data_flows_through(pipeline, buffers, :endpoint)

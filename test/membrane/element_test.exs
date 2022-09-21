@@ -64,7 +64,9 @@ defmodule Membrane.ElementTest do
     ]
 
     pipeline =
-      Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+      Testing.Pipeline.start_link_supervised!(
+        structure: Membrane.ParentSpec.link_linear(children)
+      )
 
     [pipeline: pipeline]
   end

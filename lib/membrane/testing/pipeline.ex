@@ -120,8 +120,7 @@ defmodule Membrane.Testing.Pipeline do
   @type options ::
           [
             module: :default,
-            children: ParentSpec.structure_spec_t(),
-            links: ParentSpec.structure_spec_t(),
+            structure: ParentSpec.structure_spec_t(),
             test_process: pid(),
             name: Pipeline.name()
           ]
@@ -218,11 +217,10 @@ defmodule Membrane.Testing.Pipeline do
   def handle_init(options) do
     case Keyword.get(options, :module, :default) do
       :default ->
-        children = Bunch.listify(Keyword.get(options, :children, []))
-        links = Bunch.listify(Keyword.get(options, :links, []))
+        structure = Bunch.listify(Keyword.get(options, :structure, []))
 
         spec = %Membrane.ParentSpec{
-          structure: links ++ children
+          structure: structure
         }
 
         new_state = %State{test_process: Keyword.fetch!(options, :test_process), module: nil}

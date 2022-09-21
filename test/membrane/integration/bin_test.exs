@@ -25,7 +25,9 @@ defmodule Membrane.Core.BinTest do
       ]
 
       pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+        Testing.Pipeline.start_link_supervised!(
+          structure: Membrane.ParentSpec.link_linear(children)
+        )
 
       assert_data_flows_through(pipeline, buffers)
     end
@@ -47,7 +49,9 @@ defmodule Membrane.Core.BinTest do
       ]
 
       pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+        Testing.Pipeline.start_link_supervised!(
+          structure: Membrane.ParentSpec.link_linear(children)
+        )
 
       assert_data_flows_through(pipeline, buffers)
     end
@@ -68,7 +72,9 @@ defmodule Membrane.Core.BinTest do
       ]
 
       pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+        Testing.Pipeline.start_link_supervised!(
+          structure: Membrane.ParentSpec.link_linear(children)
+        )
 
       assert_data_flows_through(pipeline, buffers)
     end
@@ -92,7 +98,9 @@ defmodule Membrane.Core.BinTest do
       ]
 
       pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+        Testing.Pipeline.start_link_supervised!(
+          structure: Membrane.ParentSpec.link_linear(children)
+        )
 
       assert_data_flows_through(pipeline, buffers)
     end
@@ -107,7 +115,7 @@ defmodule Membrane.Core.BinTest do
         }
       ]
 
-      pipeline = Testing.Pipeline.start_link_supervised!(children: children)
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: children)
 
       assert_pipeline_play(pipeline)
 
@@ -130,7 +138,9 @@ defmodule Membrane.Core.BinTest do
       ]
 
       pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+        Testing.Pipeline.start_link_supervised!(
+          structure: Membrane.ParentSpec.link_linear(children)
+        )
 
       assert_pipeline_play(pipeline)
 
@@ -193,7 +203,9 @@ defmodule Membrane.Core.BinTest do
       ]
 
       pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+        Testing.Pipeline.start_link_supervised!(
+          structure: Membrane.ParentSpec.link_linear(children)
+        )
 
       Process.sleep(2000)
       assert_data_flows_through(pipeline, buffers)
@@ -274,7 +286,9 @@ defmodule Membrane.Core.BinTest do
       ]
 
       pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+        Testing.Pipeline.start_link_supervised!(
+          structure: Membrane.ParentSpec.link_linear(children)
+        )
 
       Testing.Pipeline.execute_actions(pipeline, notify_child: {:test_bin, "Some notification"})
       assert_pipeline_notified(pipeline, :test_bin, msg)
