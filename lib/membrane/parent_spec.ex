@@ -247,14 +247,9 @@ defmodule Membrane.ParentSpec do
             log_metadata: [],
             children_group_id: nil
 
-  @doc """
-  Spawns a children without linking it.
-  """
-
-  # @spec spawn_child(Child.name_t(), child_spec_t) :: {Child.name_t(), child_spec_t}
-  # def spawn_child(child_name, child_spec) do
-  #   {child_name, child_spec}
-  # end
+  # @doc """
+  # Spawns a children without linking it.
+  # """
 
   @doc """
   Begins a link.
@@ -452,8 +447,12 @@ defmodule Membrane.ParentSpec do
   See the _links_ section of the moduledoc for more information.
   """
   @spec to(link_builder_t(), Child.name_t(), child_spec_t()) :: link_builder_t() | no_return
-  def to(%LinkBuilder{} = builder, child_name, child_spec) do
-    builder |> to(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
+  def to(%LinkBuilder{should_skip: should_skip} = builder, child_name, child_spec) do
+    if Enum.at(should_skip, -1) do
+      builder
+    else
+      builder |> to(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
+    end
   end
 
   @doc """
@@ -485,10 +484,12 @@ defmodule Membrane.ParentSpec do
     end
   end
 
-  def ignore_unless(builder, condition) do
+  @spec ignore_unless(link_builder_t, boolean) :: link_builder_t
+  def ignore_unless(builder, condition) when is_boolean(condition) do
     %LinkBuilder{builder | should_skip: builder.should_skip ++ [not condition]}
   end
 
+  @spec end_ignore(link_builder_t) :: link_builder_t
   def end_ignore(builder) do
     %LinkBuilder{
       builder
