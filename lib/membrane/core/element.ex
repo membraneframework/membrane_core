@@ -93,7 +93,11 @@ defmodule Membrane.Core.Element do
   @impl GenServer
   def init(options) do
     self_pid = self()
-    setup_observability = fn args -> options.setup_observability.([pid: self_pid] ++ args) end
+
+    setup_observability = fn args ->
+      options.setup_observability.([pid: self_pid] ++ args)
+    end
+
     setup_observability.([])
 
     Message.send(options.children_supervisor, :set_parent_component, [

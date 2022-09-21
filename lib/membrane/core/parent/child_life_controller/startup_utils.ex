@@ -143,7 +143,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
       parent_clock: parent_clock,
       sync: sync,
       setup_observability:
-        Membrane.Core.Observability.setup_fun(child.component_type, name, log_metadata),
+        Membrane.Core.Observability.setup_fun(
+          child.component_type,
+          name,
+          children_group_id,
+          log_metadata
+        ),
       children_group_id: children_group_id
     }
 
