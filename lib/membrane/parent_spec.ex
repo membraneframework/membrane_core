@@ -193,13 +193,13 @@ defmodule Membrane.ParentSpec do
 
     use Bunch.Access
 
-    defstruct children: [], links: [], status: nil, should_skip: []
+    defstruct children: [], links: [], status: nil, should_ignore: []
 
     @type t :: %__MODULE__{
             children: [Membrane.ParentSpec.child_spec_extended_t()],
             links: [map],
             status: status_t,
-            should_skip: [boolean()]
+            should_ignore: [boolean()]
           }
 
     @type status_t :: :from | :from_pad | :to_pad | :done
@@ -261,7 +261,7 @@ defmodule Membrane.ParentSpec do
   """
   @spec link(Child.name_t()) :: link_builder_t()
   def link(child_name) do
-    %LinkBuilder{links: [%{from: child_name}], status: :from, should_skip: [false]}
+    %LinkBuilder{links: [%{from: child_name}], status: :from, should_ignore: [false]}
   end
 
   @doc """
@@ -315,8 +315,8 @@ defmodule Membrane.ParentSpec do
           "Invalid link specification: output #{inspect(pad)} placed after bin's output"
   end
 
-  def via_out(%LinkBuilder{should_skip: should_skip} = builder, pad, props) do
-    if Enum.at(should_skip, -1) do
+  def via_out(%LinkBuilder{} = builder, pad, props) do
+    if should_ignore?(builder) do
       builder
     else
       :ok = validate_pad_name(pad)
@@ -385,8 +385,8 @@ defmodule Membrane.ParentSpec do
           "Invalid link specification: input #{inspect(pad)} placed after bin's output"
   end
 
-  def via_in(%LinkBuilder{should_skip: should_skip} = builder, pad, props) do
-    if Enum.at(should_skip, -1) do
+  def via_in(%LinkBuilder{} = builder, pad, props) do
+    if should_ignore?(builder) do
       builder
     else
       :ok = validate_pad_name(pad)
@@ -431,8 +431,8 @@ defmodule Membrane.ParentSpec do
           "Invalid link specification: child #{inspect(child_name)} placed after bin's output"
   end
 
-  def to(%LinkBuilder{should_skip: should_skip} = builder, child_name) do
-    if Enum.at(should_skip, -1) do
+  def to(%LinkBuilder{} = builder, child_name) do
+    if should_ignore?(builder) do
       builder
     else
       if builder.status == :to_pad do
@@ -451,8 +451,8 @@ defmodule Membrane.ParentSpec do
   """
   @spec to(link_builder_t(), Child.name_t(), struct() | module()) ::
           link_builder_t() | no_return
-  def to(%LinkBuilder{should_skip: should_skip} = builder, child_name, child_spec) do
-    if Enum.at(should_skip, -1) do
+  def to(%LinkBuilder{} = builder, child_name, child_spec) do
+    if should_ignore?(builder) do
       builder
     else
       builder
@@ -466,10 +466,10 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec  to_new(link_builder_t(), Child.name_t(), struct() | module()) ::
+  @spec to_new(link_builder_t(), Child.name_t(), struct() | module()) ::
           link_builder_t() | no_return
-  def  to_new(%LinkBuilder{should_skip: should_skip} = builder, child_name, child_spec) do
-    if Enum.at(should_skip, -1) do
+  def to_new(%LinkBuilder{} = builder, child_name, child_spec) do
+    if should_ignore?(builder) do
       builder
     else
       builder
@@ -491,8 +491,8 @@ defmodule Membrane.ParentSpec do
     raise ParentError, "Invalid link specification: bin's output #{pad} placed after an input"
   end
 
-  def to_bin_output(%LinkBuilder{should_skip: should_skip} = builder, pad) do
-    if Enum.at(should_skip, -1) do
+  def to_bin_output(%LinkBuilder{} = builder, pad) do
+    if should_ignore?(builder) do
       builder
     else
       :ok = validate_pad_name(pad)
@@ -509,10 +509,10 @@ defmodule Membrane.ParentSpec do
 
   @spec ignore_unless(link_builder_t, boolean) :: link_builder_t
   def ignore_unless(builder, condition) when is_boolean(condition) do
-    if Enum.at(builder.should_skip, -1) do
-      %LinkBuilder{builder | should_skip: builder.should_skip ++ [true]}
+    if should_ignore?(builder) do
+      %LinkBuilder{builder | should_ignore: builder.should_ignore ++ [true]}
     else
-      %LinkBuilder{builder | should_skip: builder.should_skip ++ [not condition]}
+      %LinkBuilder{builder | should_ignore: builder.should_ignore ++ [not condition]}
     end
   end
 
@@ -520,7 +520,7 @@ defmodule Membrane.ParentSpec do
   def end_ignore(builder) do
     %LinkBuilder{
       builder
-      | should_skip: Enum.take(builder.should_skip, length(builder.should_skip) - 1)
+      | should_ignore: Enum.take(builder.should_ignore, length(builder.should_ignore) - 1)
     }
   end
 
@@ -541,7 +541,7 @@ defmodule Membrane.ParentSpec do
       other_children
       |> Enum.reduce(spawn_child(first_child_name, first_child_spec), fn {child_name, child_spec},
                                                                          builder ->
-         to(builder, child_name, child_spec)
+        to(builder, child_name, child_spec)
       end)
 
     [links]
@@ -553,5 +553,9 @@ defmodule Membrane.ParentSpec do
 
   defp validate_pad_name(pad) do
     raise ParentError, "Invalid link specification: invalid pad name: #{inspect(pad)}"
+  end
+
+  defp should_ignore?(builder) do
+    Enum.at(builder.should_ignore, -1)
   end
 end

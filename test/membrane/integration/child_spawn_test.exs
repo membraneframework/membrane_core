@@ -8,7 +8,6 @@ defmodule Membrane.Integration.ChildSpawnTest do
   alias Membrane.ParentSpec
   alias Membrane.Testing
 
-
   require Message
 
   test "if  to/3 don't spawn child with a given name if there is already a child with given name among the children" do
@@ -32,7 +31,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
     pipeline_pid = Testing.Pipeline.start_link_supervised!(structure: [])
 
     structure = [
-      spawn_child(:source, %Testing.Source{output: [1, 2, 3]}) |>  to_new(:sink, Testing.Sink)
+      spawn_child(:source, %Testing.Source{output: [1, 2, 3]}) |> to_new(:sink, Testing.Sink)
     ]
 
     spec = %ParentSpec{structure: structure}
