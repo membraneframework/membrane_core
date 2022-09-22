@@ -492,7 +492,11 @@ defmodule Membrane.ParentSpec do
 
   @spec ignore_unless(link_builder_t, boolean) :: link_builder_t
   def ignore_unless(builder, condition) when is_boolean(condition) do
-    %LinkBuilder{builder | should_skip: builder.should_skip ++ [not condition]}
+    if Enum.at(builder.should_skip, -1) do
+      %LinkBuilder{builder | should_skip: builder.should_skip ++ [true]}
+    else
+      %LinkBuilder{builder | should_skip: builder.should_skip ++ [not condition]}
+    end
   end
 
   @spec end_ignore(link_builder_t) :: link_builder_t
