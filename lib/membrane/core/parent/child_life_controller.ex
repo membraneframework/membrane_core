@@ -484,7 +484,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     children_spec
     |> Enum.map(fn
       {name, {child_spec, :dont_spawn_if_already_exists}} ->
-        if name in state_children, do: nil, else: {name, child_spec}
+        if Map.has_key?(state_children, name), do: nil, else: {name, child_spec}
 
       spec ->
         spec

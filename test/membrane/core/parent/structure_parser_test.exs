@@ -246,174 +246,187 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     assert desired_links == auto_generated_links
   end
 
-
   test "if the conditional linking works properly" do
     import Membrane.ParentSpec
 
-    links_spec = [spawn_child(:a, A) |> ignore_unless(true) |> to_new(:b, B) |> end_ignore() |> to_new(:c, C)]
+    links_spec = [
+      spawn_child(:a, A) |> ignore_unless(true) |> to_new(:b, B) |> end_ignore() |> to_new(:c, C)
+    ]
+
     assert {links, children} = StructureParser.parse(links_spec)
 
     assert [
-      %Link{
-        from: %Endpoint{
-          child: :a,
-          pad_props: %{},
-          pad_spec: :output,
-          pad_ref: nil,
-          pid: nil
-        },
-        to: %Endpoint{
-          child: :b,
-          pad_props: %{},
-          pad_spec: :input,
-          pad_ref: nil,
-          pid: nil
-        }
-      },
-      %Link{
-        from: %Endpoint{
-          child: :b,
-          pad_props: %{},
-          pad_spec: :output,
-          pad_ref: nil,
-          pid: nil
-        },
-        to: %Endpoint{
-          child: :c,
-          pad_props: %{},
-          pad_spec: :input,
-          pad_ref: nil,
-          pid: nil
-        }
-      }
-    ] = links
+             %Link{
+               from: %Endpoint{
+                 child: :a,
+                 pad_props: %{},
+                 pad_spec: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 child: :b,
+                 pad_props: %{},
+                 pad_spec: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             },
+             %Link{
+               from: %Endpoint{
+                 child: :b,
+                 pad_props: %{},
+                 pad_spec: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 child: :c,
+                 pad_props: %{},
+                 pad_spec: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             }
+           ] = links
 
     assert Enum.sort(children) == [
-          a: A,
-          b: {B, :dont_spawn_if_already_exists},
-          c: {C, :dont_spawn_if_already_exists}
-        ]
+             a: A,
+             b: {B, :dont_spawn_if_already_exists},
+             c: {C, :dont_spawn_if_already_exists}
+           ]
   end
-
 
   test "if the conditional linking works properly 2" do
     import Membrane.ParentSpec
 
-    links_spec = [spawn_child(:a, A) |> ignore_unless(false) |> to_new(:b, B) |> end_ignore() |> to_new(:c, C)]
+    links_spec = [
+      spawn_child(:a, A) |> ignore_unless(false) |> to_new(:b, B) |> end_ignore() |> to_new(:c, C)
+    ]
+
     assert {links, children} = StructureParser.parse(links_spec)
 
     assert [
-      %Link{
-        from: %Endpoint{
-          child: :a,
-          pad_props: %{},
-          pad_spec: :output,
-          pad_ref: nil,
-          pid: nil
-        },
-        to: %Endpoint{
-          child: :c,
-          pad_props: %{},
-          pad_spec: :input,
-          pad_ref: nil,
-          pid: nil
-        }
-      },
-    ] = links
+             %Link{
+               from: %Endpoint{
+                 child: :a,
+                 pad_props: %{},
+                 pad_spec: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 child: :c,
+                 pad_props: %{},
+                 pad_spec: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             }
+           ] = links
 
     assert Enum.sort(children) == [
-          a: A,
-          c: {C, :dont_spawn_if_already_exists}
-        ]
+             a: A,
+             c: {C, :dont_spawn_if_already_exists}
+           ]
   end
 
   test "if nested conditional linking works properly" do
     import Membrane.ParentSpec
 
-    links_spec = [spawn_child(:a, A) |> ignore_unless(true) |> to_new(:b, B) |> ignore_unless(false) |> to_new(:c, C) |> end_ignore() |> end_ignore() |> to_new(:d, D)]
+    links_spec = [
+      spawn_child(:a, A)
+      |> ignore_unless(true)
+      |> to_new(:b, B)
+      |> ignore_unless(false)
+      |> to_new(:c, C)
+      |> end_ignore()
+      |> end_ignore()
+      |> to_new(:d, D)
+    ]
+
     assert {links, children} = StructureParser.parse(links_spec)
 
     assert [
-      %Link{
-        from: %Endpoint{
-          child: :a,
-          pad_props: %{},
-          pad_spec: :output,
-          pad_ref: nil,
-          pid: nil
-        },
-        to: %Endpoint{
-          child: :b,
-          pad_props: %{},
-          pad_spec: :input,
-          pad_ref: nil,
-          pid: nil
-        }
-      },
-      %Link{
-        from: %Endpoint{
-          child: :b,
-          pad_props: %{},
-          pad_spec: :output,
-          pad_ref: nil,
-          pid: nil
-        },
-        to: %Endpoint{
-          child: :d,
-          pad_props: %{},
-          pad_spec: :input,
-          pad_ref: nil,
-          pid: nil
-        }
-      }
-    ] = links
+             %Link{
+               from: %Endpoint{
+                 child: :a,
+                 pad_props: %{},
+                 pad_spec: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 child: :b,
+                 pad_props: %{},
+                 pad_spec: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             },
+             %Link{
+               from: %Endpoint{
+                 child: :b,
+                 pad_props: %{},
+                 pad_spec: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 child: :d,
+                 pad_props: %{},
+                 pad_spec: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             }
+           ] = links
 
     assert Enum.sort(children) == [
-          a: A,
-          b: {B, :dont_spawn_if_already_exists},
-          d: {D, :dont_spawn_if_already_exists}
-        ]
+             a: A,
+             b: {B, :dont_spawn_if_already_exists},
+             d: {D, :dont_spawn_if_already_exists}
+           ]
   end
-
 
   test "if nested conditional linking works properly 2" do
     import Membrane.ParentSpec
 
-    links_spec = [spawn_child(:a, A) |> ignore_unless(false) |> to_new(:b, B) |> ignore_unless(true) |> to_new(:c, C) |> end_ignore() |> end_ignore() |> to_new(:d, D)]
+    links_spec = [
+      spawn_child(:a, A)
+      |> ignore_unless(false)
+      |> to_new(:b, B)
+      |> ignore_unless(true)
+      |> to_new(:c, C)
+      |> end_ignore()
+      |> end_ignore()
+      |> to_new(:d, D)
+    ]
+
     assert {links, children} = StructureParser.parse(links_spec)
 
     assert [
-      %Link{
-        from: %Endpoint{
-          child: :a,
-          pad_props: %{},
-          pad_spec: :output,
-          pad_ref: nil,
-          pid: nil
-        },
-        to: %Endpoint{
-          child: :d,
-          pad_props: %{},
-          pad_spec: :input,
-          pad_ref: nil,
-          pid: nil
-        }
-      },
-    ] = links
+             %Link{
+               from: %Endpoint{
+                 child: :a,
+                 pad_props: %{},
+                 pad_spec: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 child: :d,
+                 pad_props: %{},
+                 pad_spec: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             }
+           ] = links
 
     assert Enum.sort(children) == [
-          a: A,
-          d: {D, :dont_spawn_if_already_exists}
-        ]
-  end
-
-
-
-  test "if to_new/3 don't create new children if a children with given name already exists" do
-
-  end
-
-  test "if to_new/3 create a new children if a children with given name doesn't exist" do
-
+             a: A,
+             d: {D, :dont_spawn_if_already_exists}
+           ]
   end
 end
