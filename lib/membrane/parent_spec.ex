@@ -266,12 +266,22 @@ defmodule Membrane.ParentSpec do
 
   @doc """
   Defines a child and begins a link with it.
-
-  See the _links_ section of the moduledoc for more information.
   """
   @spec spawn_child(Child.name_t(), struct() | module()) :: link_builder_t()
   def spawn_child(child_name, child_spec) do
     link(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
+  end
+
+  @doc """
+  Begins a link. If ta child with given name does not exist, creates that child based
+  on the child specification.
+
+  See the _links_ section of the moduledoc for more information.
+  """
+  @spec link_new(Child.name_t(), struct() | module()) :: link_builder_t()
+  def link_new(child_name, child_spec) do
+    link(child_name)
+    |> Map.update!(:children, &[{child_name, {child_spec, :dont_spawn_if_already_exists}} | &1])
   end
 
   @doc """
