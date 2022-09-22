@@ -11,7 +11,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
 
   require Message
 
-  test "if to_new/3 don't spawn child with a given name if there is already a child with given name among the children" do
+  test "if  to/3 don't spawn child with a given name if there is already a child with given name among the children" do
     import ParentSpec
 
     pipeline_pid =
@@ -26,13 +26,13 @@ defmodule Membrane.Integration.ChildSpawnTest do
     assert_pipeline_play(pipeline_pid)
   end
 
-  test "if to_new/3 spawns a new child with a given name if there is no child with given name among the children" do
+  test "if  to/3 spawns a new child with a given name if there is no child with given name among the children" do
     import ParentSpec
 
     pipeline_pid = Testing.Pipeline.start_link_supervised!(structure: [])
 
     structure = [
-      spawn_child(:source, %Testing.Source{output: [1, 2, 3]}) |> to_new(:sink, Testing.Sink)
+      spawn_child(:source, %Testing.Source{output: [1, 2, 3]}) |>  to_new(:sink, Testing.Sink)
     ]
 
     spec = %ParentSpec{structure: structure}

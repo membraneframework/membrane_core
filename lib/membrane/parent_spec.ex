@@ -449,9 +449,26 @@ defmodule Membrane.ParentSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec to_new(link_builder_t(), Child.name_t(), struct() | module()) ::
+  @spec to(link_builder_t(), Child.name_t(), struct() | module()) ::
           link_builder_t() | no_return
-  def to_new(%LinkBuilder{should_skip: should_skip} = builder, child_name, child_spec) do
+  def to(%LinkBuilder{should_skip: should_skip} = builder, child_name, child_spec) do
+    if Enum.at(should_skip, -1) do
+      builder
+    else
+      builder
+      |> to(child_name)
+      |> Map.update!(:children, &[{child_name, child_spec} | &1])
+    end
+  end
+
+  @doc """
+  Continues or ends a link. If a child with given name doesn't exists, creates it based on a given parentspec.
+
+  See the _links_ section of the moduledoc for more information.
+  """
+  @spec  to_new(link_builder_t(), Child.name_t(), struct() | module()) ::
+          link_builder_t() | no_return
+  def  to_new(%LinkBuilder{should_skip: should_skip} = builder, child_name, child_spec) do
     if Enum.at(should_skip, -1) do
       builder
     else
@@ -524,7 +541,7 @@ defmodule Membrane.ParentSpec do
       other_children
       |> Enum.reduce(spawn_child(first_child_name, first_child_spec), fn {child_name, child_spec},
                                                                          builder ->
-        to_new(builder, child_name, child_spec)
+         to(builder, child_name, child_spec)
       end)
 
     [links]

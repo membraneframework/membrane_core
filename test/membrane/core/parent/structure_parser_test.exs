@@ -193,7 +193,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   test "link creating children" do
     import Membrane.ParentSpec
 
-    links_spec = [spawn_child(:a, A) |> to_new(:b, B) |> to_new(:c, C)]
+    links_spec = [spawn_child(:a, A) |>  to(:b, B) |>  to(:c, C)]
     assert {links, children} = StructureParser.parse(links_spec)
 
     assert [
@@ -233,15 +233,15 @@ defmodule Membrane.Core.Parent.StructureParserTest do
 
     assert Enum.sort(children) == [
              a: A,
-             b: {B, :dont_spawn_if_already_exists},
-             c: {C, :dont_spawn_if_already_exists}
+             b: B,
+             c: C
            ]
   end
 
   test "Membrane.ParentSpec.link_linear/1 links children in a linear manner" do
     import Membrane.ParentSpec
     children = [source: nil, filter: nil, sink: nil]
-    desired_links = [spawn_child(:source, nil) |> to_new(:filter, nil) |> to_new(:sink, nil)]
+    desired_links = [spawn_child(:source, nil) |>  to(:filter, nil) |>  to(:sink, nil)]
     auto_generated_links = link_linear(children)
     assert desired_links == auto_generated_links
   end
@@ -250,7 +250,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     import Membrane.ParentSpec
 
     links_spec = [
-      spawn_child(:a, A) |> ignore_unless(true) |> to_new(:b, B) |> end_ignore() |> to_new(:c, C)
+      spawn_child(:a, A) |> ignore_unless(true) |>  to(:b, B) |> end_ignore() |>  to(:c, C)
     ]
 
     assert {links, children} = StructureParser.parse(links_spec)
@@ -292,8 +292,8 @@ defmodule Membrane.Core.Parent.StructureParserTest do
 
     assert Enum.sort(children) == [
              a: A,
-             b: {B, :dont_spawn_if_already_exists},
-             c: {C, :dont_spawn_if_already_exists}
+             b: B,
+             c: C
            ]
   end
 
@@ -301,7 +301,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     import Membrane.ParentSpec
 
     links_spec = [
-      spawn_child(:a, A) |> ignore_unless(false) |> to_new(:b, B) |> end_ignore() |> to_new(:c, C)
+      spawn_child(:a, A) |> ignore_unless(false) |>  to(:b, B) |> end_ignore() |>  to(:c, C)
     ]
 
     assert {links, children} = StructureParser.parse(links_spec)
@@ -327,7 +327,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
 
     assert Enum.sort(children) == [
              a: A,
-             c: {C, :dont_spawn_if_already_exists}
+             c: C
            ]
   end
 
@@ -337,12 +337,12 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     links_spec = [
       spawn_child(:a, A)
       |> ignore_unless(true)
-      |> to_new(:b, B)
+      |>  to(:b, B)
       |> ignore_unless(false)
-      |> to_new(:c, C)
+      |>  to(:c, C)
       |> end_ignore()
       |> end_ignore()
-      |> to_new(:d, D)
+      |>  to(:d, D)
     ]
 
     assert {links, children} = StructureParser.parse(links_spec)
@@ -384,8 +384,8 @@ defmodule Membrane.Core.Parent.StructureParserTest do
 
     assert Enum.sort(children) == [
              a: A,
-             b: {B, :dont_spawn_if_already_exists},
-             d: {D, :dont_spawn_if_already_exists}
+             b: B,
+             d: D
            ]
   end
 
@@ -395,12 +395,12 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     links_spec = [
       spawn_child(:a, A)
       |> ignore_unless(false)
-      |> to_new(:b, B)
+      |>  to(:b, B)
       |> ignore_unless(true)
-      |> to_new(:c, C)
+      |>  to(:c, C)
       |> end_ignore()
       |> end_ignore()
-      |> to_new(:d, D)
+      |>  to(:d, D)
     ]
 
     assert {links, children} = StructureParser.parse(links_spec)
@@ -426,7 +426,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
 
     assert Enum.sort(children) == [
              a: A,
-             d: {D, :dont_spawn_if_already_exists}
+             d: D
            ]
   end
 end
