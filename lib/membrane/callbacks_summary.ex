@@ -1,5 +1,4 @@
-defmodule DocsHelper do
-
+defmodule Membrane.CallbacksSummary.DocsHelper  do
   def generate_callbacks_description(module) do
     Module.create(ReflectionModule, quote do
       use unquote(module)
@@ -20,4 +19,25 @@ defmodule DocsHelper do
     #{"* " <> Enum.join(callbacks_names, "\n* ")}
     """
   end
+end
+
+defmodule Membrane.CallbacksSummary do
+  import Membrane.CallbacksSummary.DocsHelper
+  @moduledoc """
+  A list of callbacks available in each component type.
+  ## Filter
+  #{generate_callbacks_description(Membrane.Filter)}
+
+  ## Source
+  #{generate_callbacks_description(Membrane.Source)}
+
+  ## Sink
+  #{generate_callbacks_description(Membrane.Sink)}
+
+  ## Pipeline
+  #{generate_callbacks_description(Membrane.Pipeline)}
+
+  ## Bin
+  #{generate_callbacks_description(Membrane.Bin)}
+  """
 end
