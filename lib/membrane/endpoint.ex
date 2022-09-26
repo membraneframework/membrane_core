@@ -82,4 +82,10 @@ defmodule Membrane.Endpoint do
                      handle_write: 4
     end
   end
+
+  @moduledoc @moduledoc <> """
+  ## List of available callbacks
+  #{Membrane.DocsHelper.generate_callbacks_description_from_modules_list(__MODULE__, [Membrane.Element.Base, Membrane.Element.WithInputPads, Membrane.Element.WithOutputPads])}
+  """
+
 end

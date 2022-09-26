@@ -342,4 +342,5 @@ defmodule Membrane.Bin do
                      handle_parent_notification: 3
     end
   end
+
 end

@@ -32,4 +32,8 @@ defmodule Membrane.Source do
       def membrane_element_type, do: :source
     end
   end
+  @moduledoc @moduledoc <> """
+  ## List of available callbacks
+  #{Membrane.DocsHelper.generate_callbacks_description_from_modules_list(__MODULE__, [Membrane.Element.Base, Membrane.Element.WithOutputPads])}
+"""
 end

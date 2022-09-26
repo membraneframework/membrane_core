@@ -56,6 +56,9 @@ defmodule Membrane.Filter do
   Options:
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
   """
+
+
+
   defmacro __using__(options) do
     quote location: :keep do
       use Membrane.Element.Base, unquote(options)
@@ -94,4 +97,10 @@ defmodule Membrane.Filter do
                      handle_end_of_stream: 3
     end
   end
+
+  @moduledoc @moduledoc <> """
+    ## List of available callbacks
+    #{Membrane.DocsHelper.generate_callbacks_description_from_modules_list(__MODULE__, [Membrane.Element.Base, Membrane.Element.WithInputPads, Membrane.Element.WithOutputPads])}
+  """
+
 end
