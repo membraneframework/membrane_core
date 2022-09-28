@@ -78,14 +78,9 @@ defmodule Membrane.Sink do
     end
   end
 
-  {line, docstring} = Module.get_attribute(__MODULE__, :moduledoc)
-
-  new_docstring =
-    docstring <>
-      """
-      ## List of available callbacks
-      #{Membrane.DocsHelper.generate_docstring_with_list_of_callbacks(__MODULE__, [Membrane.Element.Base, Membrane.Element.WithInputPads])}
-      """
-
-  Module.put_attribute(__MODULE__, :moduledoc, {line, new_docstring})
+  Membrane.DocsHelper.add_callbacks_list_to_moduledoc(
+    __MODULE__,
+    [Membrane.Element.Base, Membrane.Element.WithInputPads],
+    "handle_"
+  )
 end

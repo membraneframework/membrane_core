@@ -1,11 +1,31 @@
 defmodule Membrane.DocsHelper do
   @moduledoc """
-  A module with function to generate a docstring with list of callbacks available
-  in a given component.
+  A module with a function to append a list of callbacks into the moduledoc.
   """
 
-  @spec generate_docstring_with_list_of_callbacks(module(), list(module())) :: String.t()
-  def generate_docstring_with_list_of_callbacks(module, modules_list) do
+  @doc """
+  A function that appends a list of callbacks to the @moduledoc of a given argument.
+
+  The list of callbacks is fetched out of the callbacks defined by that module, passed as the
+  first argument, and the callbacks fetched from each of the modules passed as a list in second argument.
+  The third argument filter the callbacks that should be put into the @moduledoc, as it is a prefix of the
+  callback names that are desired to be put there.
+  """
+  @spec add_callbacks_list_to_moduledoc(module(), list(module()), String.t()) :: :ok
+  def add_callbacks_list_to_moduledoc(module, inherited_modules_list, starting_with \\ "") do
+    {line, docstring} = Module.get_attribute(module, :moduledoc)
+
+    new_docstring =
+      docstring <>
+        """
+        ## List of available callbacks
+        #{generate_docstring_with_list_of_callbacks(module, inherited_modules_list, starting_with)}
+        """
+
+    Module.put_attribute(module, :moduledoc, {line, new_docstring})
+  end
+
+  defp generate_docstring_with_list_of_callbacks(module, modules_list, starting_with) do
     this_module_callbacks = get_callbacks_in_module(module)
 
     inherited_callbacks =
@@ -16,7 +36,7 @@ defmodule Membrane.DocsHelper do
     callbacks_names =
       (inherited_callbacks ++ this_module_callbacks)
       |> Enum.filter(fn {{name, _arity}, _module} ->
-        String.starts_with?(Atom.to_string(name), "handle_")
+        String.starts_with?(Atom.to_string(name), starting_with)
       end)
       |> Enum.map(fn {{name, arity}, module} ->
         "`c:#{inspect(module)}.#{Atom.to_string(name)}/#{arity}`"
