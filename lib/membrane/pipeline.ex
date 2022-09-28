@@ -494,4 +494,15 @@ defmodule Membrane.Pipeline do
                      handle_call: 3
     end
   end
+
+  {line, docstring} = Module.get_attribute(__MODULE__, :moduledoc)
+
+  new_docstring =
+    docstring <>
+      """
+      ## List of available callbacks
+      #{Membrane.DocsHelper.generate_docstring_with_list_of_callbacks(__MODULE__, [])}
+      """
+
+  Module.put_attribute(__MODULE__, :moduledoc, {line, new_docstring})
 end

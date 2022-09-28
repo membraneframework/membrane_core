@@ -89,7 +89,7 @@ defmodule Membrane.Endpoint do
     docstring <>
       """
       ## List of available callbacks
-      #{Membrane.DocsHelper.generate_callbacks_description(__MODULE__, [Membrane.Element.Base, Membrane.Element.WithInputPads, Membrane.Element.WithOutputPads])}
+      #{Membrane.DocsHelper.generate_docstring_with_list_of_callbacks(__MODULE__, [Membrane.Element.Base, Membrane.Element.WithInputPads, Membrane.Element.WithOutputPads])}
       """
 
   Module.put_attribute(__MODULE__, :moduledoc, {line, new_docstring})
