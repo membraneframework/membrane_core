@@ -28,8 +28,12 @@ defmodule Membrane.Core.Timer do
   end
 
   @spec stop(t) :: :ok
-  def stop(timer) do
-    Process.cancel_timer(timer.timer_ref)
+  def stop(%__MODULE__{timer_ref: nil}) do
+    :ok
+  end
+
+  def stop(%__MODULE__{timer_ref: timer_ref}) do
+    Process.cancel_timer(timer_ref)
     :ok
   end
 
