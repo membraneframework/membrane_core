@@ -1,5 +1,5 @@
 defmodule Membrane.Core.DocsHelper do
-  @moduledoc """
+  @moduledoc false
   A module with a function to append a list of callbacks into the moduledoc.
   """
 
@@ -67,7 +67,7 @@ defmodule Membrane.Core.DocsHelper do
     )
   end
 
-  defp parse_callback_ast({:"::", _line1, [{name, _line2, array} | _rest]}) do
-    {name, if(is_nil(array), do: 0, else: length(array))}
+  defp parse_callback_ast({:"::", _line1, [{name, _line2, args} | _rest]}) do
+    {name, if(is_nil(args), do: 0, else: length(args))}
   end
 end
