@@ -83,21 +83,24 @@ defmodule Membrane.ResourceGuard do
   end
 
   defp cleanup(function, name) do
-    try do
-      function.()
-      :ok
-    rescue
-      error -> {:error, error}
-    catch
-      error -> {:error, error}
+    {:ok, task} = Task.start_link(function)
+
+    receive do
+      {:EXIT, ^task, reason} -> reason
     end
     |> case do
-      :ok ->
+      :normal ->
         :ok
 
-      {:error, error} ->
+      :shutdown ->
+        :ok
+
+      {:shutdown, _reason} ->
+        :ok
+
+      reason ->
         Membrane.Logger.error(
-          "Error cleaning up resource #{inspect(name)}, got error #{inspect(error)}"
+          "Error cleaning up resource #{inspect(name)}, got error #{inspect(reason)}"
         )
     end
 
