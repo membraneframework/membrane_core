@@ -1,7 +1,5 @@
 defmodule Membrane.Core.DocsHelper do
   @moduledoc false
-  A module with a function to append a list of callbacks into the moduledoc.
-  """
 
   @doc """
   A function that appends a list of callbacks to the @moduledoc of a given argument.
@@ -19,7 +17,7 @@ defmodule Membrane.Core.DocsHelper do
       docstring <>
         """
         ## List of available callbacks
-        Below there is a list of all the callbacks available in a module, that implements `#{module}` behaviour.
+        Below there is a list of all the callbacks available in a module, that implements `#{inspect(module)}` behaviour.
         We have put it for your convenience, as some of these callbacks might not be directly defined in that module and
         their specification is available in different modules.
 
