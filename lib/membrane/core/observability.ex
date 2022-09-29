@@ -12,10 +12,9 @@ defmodule Membrane.Core.Observability do
   @spec setup_fun(
           :element | :bin | :pipeline,
           name :: term,
-          children_group_id :: Membrane.Child.children_group_id_t() | nil,
           Logger.metadata()
         ) :: setup_fun()
-  def setup_fun(component_type, name, children_group_id \\ nil, log_metadata \\ []) do
+  def setup_fun(component_type, name, log_metadata \\ []) do
     component_path = Membrane.ComponentPath.get()
 
     fn args ->
@@ -35,16 +34,8 @@ defmodule Membrane.Core.Observability do
 
       name_suffix = if component_type == :element, do: "", else: "/"
 
-      children_group_id_str =
-        cond do
-          children_group_id == nil -> ""
-          String.valid?(children_group_id) -> "(#{children_group_id})"
-          true -> "(#{inspect(children_group_id)})"
-        end
-
       name_str =
-        if(String.valid?(name), do: name, else: inspect(name)) <>
-          children_group_id_str <> name_suffix
+        if(String.valid?(name), do: name, else: inspect(name)) <> name_suffix
 
       register_name_for_observer(
         :"##{unique_prefix}#{name_str}#{component_type_suffix}#{utility_name}"

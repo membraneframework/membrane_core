@@ -8,5 +8,4 @@ defmodule Membrane.Child do
 
   @type options_t :: Element.options_t() | Bin.options_t()
 
-  @type children_group_id_t() :: any()
 end
