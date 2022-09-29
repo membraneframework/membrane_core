@@ -1,9 +1,9 @@
 defmodule Membrane.ResourceGuard do
   @moduledoc """
-  Utility for handling resources that must be cleaned up after using.
+  Utility for handling resources that must be cleaned up after use.
 
-  This utility uses a separate process that allows to register functions
-  that are called when owner process (passed to `start_link/1`) dies for
+  This utility uses a separate process that allows registering functions
+  that are called when the owner process (passed to `start_link/1`) dies for
   any reason. Each Membrane component spawns its resource guard on startup
   and provides it via callback context.
   """
