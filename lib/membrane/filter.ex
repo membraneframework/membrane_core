@@ -18,6 +18,7 @@ defmodule Membrane.Filter do
   """
 
   alias Membrane.{Buffer, Element, Pad}
+  alias Membrane.Core.DocsHelper
   alias Membrane.Element.CallbackContext
 
   @doc """
@@ -96,9 +97,8 @@ defmodule Membrane.Filter do
     end
   end
 
-  Membrane.DocsHelper.add_callbacks_list_to_moduledoc(
+  DocsHelper.add_callbacks_list_to_moduledoc(
     __MODULE__,
-    [Membrane.Element.Base, Membrane.Element.WithInputPads, Membrane.Element.WithOutputPads],
-    "handle_"
+    [Membrane.Element.Base, Membrane.Element.WithInputPads, Membrane.Element.WithOutputPads]
   )
 end
