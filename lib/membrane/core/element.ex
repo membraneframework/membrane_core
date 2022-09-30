@@ -20,6 +20,8 @@ defmodule Membrane.Core.Element do
 
   alias Membrane.{Clock, Core, Sync}
 
+  alias Membrane.Core.{ChildrenSupervisor, TimerController}
+
   alias Membrane.Core.Element.{
     BufferController,
     CapsController,
@@ -29,8 +31,6 @@ defmodule Membrane.Core.Element do
     PadController,
     State
   }
-
-  alias Membrane.Core.TimerController
 
   require Membrane.Core.Message, as: Message
   require Membrane.Core.Telemetry, as: Telemetry
@@ -102,14 +102,10 @@ defmodule Membrane.Core.Element do
     }
 
     Membrane.Core.Observability.setup(observability_config)
-
-    Message.send(options.children_supervisor, :set_parent_component, [
-      self(),
-      observability_config
-    ])
+    ChildrenSupervisor.set_parent_component(options.children_supervisor, observability_config)
 
     {:ok, resource_guard} =
-      Membrane.Core.ChildrenSupervisor.start_utility(
+      ChildrenSupervisor.start_utility(
         options.children_supervisor,
         {Membrane.ResourceGuard, self()}
       )
