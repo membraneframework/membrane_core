@@ -4,7 +4,7 @@ defmodule Membrane.Core.Pipeline do
 
   alias __MODULE__.{ActionHandler, State}
   alias Membrane.Clock
-  alias Membrane.Core.CallbackHandler
+  alias Membrane.Core.{CallbackHandler, ChildrenSupervisor}
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
   alias Membrane.Core.TimerController
   alias Membrane.Pipeline.CallbackContext
@@ -19,13 +19,11 @@ defmodule Membrane.Core.Pipeline do
   def init(params) do
     observability_config = %{name: params.name, component_type: :pipeline, pid: self()}
     Membrane.Core.Observability.setup(observability_config)
-
-    Message.send(params.children_supervisor, :set_parent_component, [self(), observability_config])
-
+    ChildrenSupervisor.set_parent_component(params.children_supervisor, observability_config)
     Telemetry.report_init(:pipeline)
 
     {:ok, resource_guard} =
-      Membrane.Core.ChildrenSupervisor.start_utility(
+      ChildrenSupervisor.start_utility(
         params.children_supervisor,
         {Membrane.ResourceGuard, self()}
       )

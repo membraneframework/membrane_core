@@ -9,6 +9,7 @@ defmodule Membrane.Core.Bin do
   alias Membrane.Core.{
     CallbackHandler,
     Child,
+    ChildrenSupervisor,
     Message,
     Parent,
     Telemetry,
@@ -90,12 +91,7 @@ defmodule Membrane.Core.Bin do
     }
 
     Membrane.Core.Observability.setup(observability_config)
-
-    Message.send(options.children_supervisor, :set_parent_component, [
-      self(),
-      observability_config
-    ])
-
+    ChildrenSupervisor.set_parent_component(options.children_supervisor, observability_config)
     Telemetry.report_init(:bin)
 
     clock_proxy = Membrane.Clock.start_link(proxy: true) ~> ({:ok, pid} -> pid)
@@ -103,7 +99,7 @@ defmodule Membrane.Core.Bin do
     Message.send(options.parent, :clock, [name, clock])
 
     {:ok, resource_guard} =
-      Membrane.Core.ChildrenSupervisor.start_utility(
+      ChildrenSupervisor.start_utility(
         options.children_supervisor,
         {Membrane.ResourceGuard, self()}
       )
