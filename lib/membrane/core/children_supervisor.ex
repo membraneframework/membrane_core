@@ -135,8 +135,8 @@ defmodule Membrane.Core.ChildrenSupervisor do
   end
 
   @impl true
-  def handle_info(Message.new(:set_parent_component, [pid, setup_observability]), state) do
-    setup_observability.(utility: "children supervisor")
+  def handle_info(Message.new(:set_parent_component, [pid, observability_config]), state) do
+    Membrane.Core.Observability.setup(observability_config, "children supervisor")
     {:noreply, %{state | parent_component: pid}}
   end
 

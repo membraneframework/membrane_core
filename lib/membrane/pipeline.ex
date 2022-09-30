@@ -276,21 +276,19 @@ defmodule Membrane.Pipeline do
           name -> name
         end
 
-      setup_observability = Membrane.Core.Observability.setup_fun(:pipeline, name)
-
       Membrane.Core.Pipeline.Supervisor.go_brrr(
         method,
+        name,
         &GenServer.start_link(
           Membrane.Core.Pipeline,
           %{
+            name: name,
             module: module,
             options: pipeline_options,
-            setup_observability: setup_observability,
             children_supervisor: &1
           },
           process_options
-        ),
-        setup_observability
+        )
       )
     else
       Membrane.Logger.error("""

@@ -17,10 +17,10 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def init(params) do
-    self_pid = self()
-    setup_observability = fn args -> params.setup_observability.([pid: self_pid] ++ args) end
-    setup_observability.([])
-    Message.send(params.children_supervisor, :set_parent_component, [self(), setup_observability])
+    observability_config = %{name: params.name, component_type: :pipeline, pid: self()}
+    Membrane.Core.Observability.setup(observability_config)
+
+    Message.send(params.children_supervisor, :set_parent_component, [self(), observability_config])
 
     Telemetry.report_init(:pipeline)
 
