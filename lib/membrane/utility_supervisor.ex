@@ -8,7 +8,14 @@ defmodule Membrane.UtilitySupervisor do
 
   The supervisor never restarts any processes, it just makes sure they
   terminate when the component that started them terminates. If restarting
-  is needed, a dedicated supervisor should be spawned under this supervisor.
+  is needed, a dedicated supervisor should be spawned under this supervisor, like
+
+      def handle_setup(ctx, state) do
+        Membrane.UtilitySupervisor.start_link_child(
+          ctx.utility_supervisor,
+          {MySupervisor, children: [SomeWorker, OtherWorker], restart: :one_for_one})
+      end
+
   """
   @type t :: pid()
 
