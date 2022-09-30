@@ -1,45 +1,47 @@
 defmodule Membrane.Core.Observability do
   @moduledoc false
 
+  alias Membrane.ComponentPath
+
   @unsafely_name_processes_for_observer Application.compile_env(
                                           :membrane_core,
                                           :unsafely_name_processes_for_observer,
                                           []
                                         )
 
-  @type setup_fun :: ([pid: pid(), utility: String.Chars.t()] -> Logger.metadata())
+  @type config :: %{
+          optional(:parent_path) => ComponentPath.path_t(),
+          optional(:log_metadata) => Logger.metadata(),
+          name: term,
+          component_type: :element | :bin | :pipeline,
+          pid: pid()
+        }
 
-  @spec setup_fun(:element | :bin | :pipeline, name :: term, Logger.metadata()) :: setup_fun()
-  def setup_fun(component_type, name, log_metadata \\ []) do
-    component_path = Membrane.ComponentPath.get()
+  @spec setup(config, utility_name :: String.Chars.t()) :: :ok
+  def setup(config, utility_name \\ "") do
+    %{name: name, component_type: component_type, pid: pid} = config
+    utility_name = if utility_name == "", do: "", else: " #{utility_name}"
+    parent_path = Map.get(config, :parent_path, [])
+    log_metadata = Map.get(config, :log_metadata, [])
+    Logger.metadata(log_metadata)
+    pid_string = pid |> :erlang.pid_to_list() |> to_string()
 
-    fn args ->
-      Logger.metadata(log_metadata)
-      pid_string = Keyword.fetch!(args, :pid) |> :erlang.pid_to_list() |> to_string()
+    {name, unique_prefix, component_type_suffix} =
+      if name,
+        do: {name, pid_string <> " ", ""},
+        else: {pid_string, "", " (#{component_type})"}
 
-      utility_name =
-        case Keyword.fetch(args, :utility) do
-          {:ok, utility_name} -> " #{utility_name}"
-          :error -> ""
-        end
+    name_suffix = if component_type == :element, do: "", else: "/"
+    name_str = if(String.valid?(name), do: name, else: inspect(name)) <> name_suffix
 
-      {name, unique_prefix, component_type_suffix} =
-        if name,
-          do: {name, pid_string <> " ", ""},
-          else: {pid_string, "", " (#{component_type})"}
+    register_name_for_observer(
+      :"##{unique_prefix}#{name_str}#{component_type_suffix}#{utility_name}"
+    )
 
-      name_suffix = if component_type == :element, do: "", else: "/"
-      name_str = if(String.valid?(name), do: name, else: inspect(name)) <> name_suffix
-
-      register_name_for_observer(
-        :"##{unique_prefix}#{name_str}#{component_type_suffix}#{utility_name}"
-      )
-
-      component_path = component_path ++ [name_str]
-      Membrane.ComponentPath.set(component_path)
-      Membrane.Logger.set_prefix(Membrane.ComponentPath.format(component_path) <> utility_name)
-      log_metadata
-    end
+    component_path = parent_path ++ [name_str]
+    ComponentPath.set(component_path)
+    Membrane.Logger.set_prefix(ComponentPath.format(component_path) <> utility_name)
+    :ok
   end
 
   if :components in @unsafely_name_processes_for_observer do

@@ -126,8 +126,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
       user_options: options,
       parent_clock: parent_clock,
       sync: sync,
-      setup_observability:
-        Membrane.Core.Observability.setup_fun(child.component_type, name, log_metadata)
+      parent_path: Membrane.ComponentPath.get(),
+      log_metadata: log_metadata
     }
 
     server_module =

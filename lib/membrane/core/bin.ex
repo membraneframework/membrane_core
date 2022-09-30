@@ -10,7 +10,6 @@ defmodule Membrane.Core.Bin do
     CallbackHandler,
     Child,
     Message,
-    Observability,
     Parent,
     Telemetry,
     TimerController
@@ -27,7 +26,8 @@ defmodule Membrane.Core.Bin do
           parent: pid,
           user_options: Membrane.Bin.options_t(),
           parent_clock: Membrane.Clock.t(),
-          setup_observability: Observability.setup_fun(),
+          parent_path: Membrane.ComponentPath.path_t(),
+          log_metadata: Logger.metadata(),
           sync: :membrane_no_sync,
           children_supervisor: pid()
         }
@@ -80,13 +80,20 @@ defmodule Membrane.Core.Bin do
   @impl GenServer
   def init(options) do
     %{name: name, module: module} = options
-    self_pid = self()
-    setup_observability = fn args -> options.setup_observability.([pid: self_pid] ++ args) end
-    log_metadata = setup_observability.([])
+
+    observability_config = %{
+      name: name,
+      component_type: :bin,
+      pid: self(),
+      parent_path: options.parent_path,
+      log_metadata: options.log_metadata
+    }
+
+    Membrane.Core.Observability.setup(observability_config)
 
     Message.send(options.children_supervisor, :set_parent_component, [
-      self_pid,
-      setup_observability
+      self(),
+      observability_config
     ])
 
     Telemetry.report_init(:bin)
@@ -116,7 +123,7 @@ defmodule Membrane.Core.Bin do
           stream_sync: Membrane.Sync.no_sync(),
           latency: 0
         },
-        children_log_metadata: log_metadata,
+        children_log_metadata: options.log_metadata,
         children_supervisor: options.children_supervisor,
         resource_guard: resource_guard
       }

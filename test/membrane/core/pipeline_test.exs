@@ -35,9 +35,11 @@ defmodule Membrane.Core.PipelineTest do
 
     [
       init_opts: %{
+        name: :test_pipeline,
         module: TestPipeline,
         children_supervisor: children_supervisor,
-        setup_observability: fn _pid -> [] end,
+        parent_path: [],
+        log_metadata: [],
         options: nil
       },
       state:

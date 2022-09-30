@@ -23,7 +23,7 @@ defmodule Membrane.ResourceGuard do
   Registers a resource cleanup function in the resource guard.
 
   Registered functions are called in the order reverse to the registration order.
-  Return value of a registered function is ignored. If a `name` is passed,
+  A return value of a registered function is ignored. If a `name` is passed,
   the function can be cleaned up manually with `cleanup_resource/2`. Many
   functions can be registered with the same name.
   """

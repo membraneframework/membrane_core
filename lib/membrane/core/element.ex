@@ -44,7 +44,8 @@ defmodule Membrane.Core.Element do
           sync: Sync.t(),
           parent: pid,
           parent_clock: Clock.t(),
-          setup_observability: Membrane.Core.Observability.setup_fun(),
+          parent_path: Membrane.ComponentPath.path_t(),
+          log_metadata: Logger.metadata(),
           children_supervisor: pid()
         }
 
@@ -92,13 +93,19 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def init(options) do
-    self_pid = self()
-    setup_observability = fn args -> options.setup_observability.([pid: self_pid] ++ args) end
-    setup_observability.([])
+    observability_config = %{
+      name: options.name,
+      component_type: :bin,
+      pid: self(),
+      parent_path: options.parent_path,
+      log_metadata: options.log_metadata
+    }
+
+    Membrane.Core.Observability.setup(observability_config)
 
     Message.send(options.children_supervisor, :set_parent_component, [
-      self_pid,
-      setup_observability
+      self(),
+      observability_config
     ])
 
     {:ok, resource_guard} =
