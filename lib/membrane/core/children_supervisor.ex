@@ -187,7 +187,7 @@ defmodule Membrane.Core.ChildrenSupervisor do
     )
 
     Enum.each(state.children, fn {pid, %{role: role}} ->
-      if role != :children_supervisor, do: Process.exit(pid, {:shutdown, :parent_crash})
+      if role != :children_supervisor, do: Process.exit(pid, :shutdown)
     end)
 
     {:noreply, %{state | parent_process: :exit_requested}}

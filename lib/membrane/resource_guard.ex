@@ -6,6 +6,19 @@ defmodule Membrane.ResourceGuard do
   that are called when the owner process (passed to `start_link/1`) dies for
   any reason. Each Membrane component spawns its resource guard on startup
   and provides it via callback context.
+
+  ### Example
+
+      def handle_setup(ctx, state) do
+        resource = MyResource.create()
+
+        Membrane.ResourceGuard.register_resource(ctx.resource_guard, fn ->
+          MyResource.cleanup(resource)
+        end)
+
+        {:ok, %{state | my_resource: resource}}
+      end
+
   """
   use GenServer
 
