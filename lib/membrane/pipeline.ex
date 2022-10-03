@@ -276,7 +276,7 @@ defmodule Membrane.Pipeline do
           name -> name
         end
 
-      Membrane.Core.Pipeline.Supervisor.go_brrr(
+      Membrane.Core.Pipeline.Supervisor.run(
         method,
         name,
         &GenServer.start_link(

@@ -8,12 +8,12 @@ defmodule Membrane.Core.Pipeline.Supervisor do
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
 
-  @spec go_brrr(
+  @spec run(
           :start_link | :start,
           name :: term,
           (children_supervisor :: pid() -> {:ok, pid()} | {:error, reason :: any()})
         ) :: {:ok, pid()} | {:error, reason :: any()}
-  def go_brrr(method, name, start_fun) do
+  def run(method, name, start_fun) do
     # Not doing start_link here is a nasty hack to avoid the current process becoming
     # a 'parent process' (in the OTP meaning) of the spawned supervisor. Exit signals from
     # 'parent processes' are not received in `handle_info`, but `terminate` is called immediately,
