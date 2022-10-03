@@ -13,31 +13,36 @@ defmodule Membrane.Core.DocsHelper do
   def add_callbacks_list_to_moduledoc(module, inherited_modules_list \\ []) do
     {line, docstring} = Module.get_attribute(module, :moduledoc)
 
-    new_docstring =
-      docstring <>
-        """
-        ## List of available callbacks
-        Below there is a list of all the callbacks available in a module, that implements `#{inspect(module)}` behaviour.
-        We have put it for your convenience, as some of these callbacks might not be directly defined in that module and
-        their specification is available in different modules.
+    inherited_modules_callbacks =
+      for module <- inherited_modules_list, do: get_callbacks_in_compiled_module(module)
 
-        The callbacks available in `#{module}` behaviour:
-        #{generate_docstring_with_list_of_callbacks(module, inherited_modules_list)}
-        """
+    callbacks_per_module_list = [
+      get_callbacks_in_uncompiled_module(module) | inherited_modules_callbacks
+    ]
+
+    all_modules = [module | inherited_modules_list]
+
+    new_docstring = """
+    #{docstring}
+    ## List of available callbacks
+    Below there is a list of all the callbacks available in a module, that implements `#{inspect(module)}` behaviour.
+    We have put it for your convenience, as some of these callbacks might not be directly defined in that module and
+    their specification is available in different modules.
+
+    The callbacks available in `#{inspect(module)}` behaviour:
+
+    #{Enum.zip(all_modules, callbacks_per_module_list) |> Enum.map_join(fn {module, callbacks_list} -> """
+      `#{inspect(module)}`
+      #{generate_docstring_with_list_of_callbacks(callbacks_list)}
+      """ end)}
+    """
 
     Module.put_attribute(module, :moduledoc, {line, new_docstring})
   end
 
-  defp generate_docstring_with_list_of_callbacks(module, modules_list) do
-    this_module_callbacks = get_callbacks_in_module(module)
-
-    inherited_callbacks =
-      Enum.flat_map(modules_list, fn module ->
-        Enum.map(module.behaviour_info(:callbacks), &{&1, module})
-      end)
-
+  defp generate_docstring_with_list_of_callbacks(list_of_callbacks) do
     callbacks_names =
-      (inherited_callbacks ++ this_module_callbacks)
+      list_of_callbacks
       |> Enum.map(fn {{name, arity}, module} ->
         "`c:#{inspect(module)}.#{Atom.to_string(name)}/#{arity}`"
       end)
@@ -47,7 +52,11 @@ defmodule Membrane.Core.DocsHelper do
     """
   end
 
-  defp get_callbacks_in_module(module) do
+  defp get_callbacks_in_compiled_module(module) do
+    Enum.map(module.behaviour_info(:callbacks), &{&1, module})
+  end
+
+  defp get_callbacks_in_uncompiled_module(module) do
     Enum.map(
       Module.get_attribute(module, :callback),
       fn
