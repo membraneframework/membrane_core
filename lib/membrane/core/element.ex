@@ -128,9 +128,8 @@ defmodule Membrane.Core.Element do
   end
 
   @impl GenServer
-  def terminate(reason, state) do
+  def terminate(_reason, _state) do
     Telemetry.report_terminate(:element)
-    LifecycleController.handle_terminate(reason, state)
   end
 
   @impl GenServer
@@ -218,7 +217,7 @@ defmodule Membrane.Core.Element do
 
   defp do_handle_info(Message.new(:terminate), state) do
     state = LifecycleController.handle_terminate_request(state)
-    {:stop, :normal, state}
+    {:noreply, state}
   end
 
   defp do_handle_info(Message.new(_type, _args, _opts) = message, _state) do

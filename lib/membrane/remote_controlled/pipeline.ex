@@ -377,7 +377,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   def handle_terminate_request(_ctx, state) do
     pipeline_event = %Message.Terminated{from: self()}
     send_event_to_controller_if_subscribed(pipeline_event, state)
-    :ok
+    {:ok, state}
   end
 
   defp send_event_to_controller_if_subscribed(message, state) do

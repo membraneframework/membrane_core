@@ -181,12 +181,8 @@ defmodule Membrane.Element.Base do
               state :: Element.state_t()
             ) :: callback_return_t
 
-  @doc """
-  Callback invoked when element is shutting down just before process is exiting.
-  Internally called in `c:GenServer.terminate/2` callback.
-  """
-  @callback handle_terminate_yolo(reason, state :: Element.state_t()) :: :ok
-            when reason: :normal | :shutdown | {:shutdown, any} | term()
+  @callback handle_terminate_request(context :: nil, state :: Element.state_t()) ::
+              callback_return_t()
 
   @doc """
   A callback for constructing struct. Will be defined by `def_options/1` if used.
@@ -212,7 +208,6 @@ defmodule Membrane.Element.Base do
                       handle_event: 4,
                       handle_tick: 3,
                       handle_parent_notification: 3,
-                      handle_terminate_yolo: 2,
                       __struct__: 0,
                       __struct__: 1
 
@@ -317,7 +312,7 @@ defmodule Membrane.Element.Base do
       def handle_parent_notification(_notification, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_terminate_yolo(_reason, _state), do: :ok
+      def handle_terminate_request(_ctx, state), do: {{:ok, terminate: :normal}, state}
 
       defoverridable handle_init: 1,
                      handle_setup: 2,
@@ -327,7 +322,7 @@ defmodule Membrane.Element.Base do
                      handle_pad_removed: 3,
                      handle_event: 4,
                      handle_parent_notification: 3,
-                     handle_terminate_yolo: 2
+                     handle_terminate_request: 2
     end
   end
 end

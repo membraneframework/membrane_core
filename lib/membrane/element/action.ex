@@ -5,9 +5,7 @@ defmodule Membrane.Element.Action do
 
   Returning actions is a way of element interaction with
   other elements and parts of framework. Each action may be returned by any
-  callback (except for `c:Membrane.Element.Base.handle_init/1`
-  and `c:Membrane.Element.Base.handle_terminate_yolo/2`, as they
-  do not support returning any actions) unless explicitly stated otherwise.
+  callback unless explicitly stated otherwise.
   """
 
   alias Membrane.{Buffer, Caps, ChildNotification, Clock, Event, Pad}

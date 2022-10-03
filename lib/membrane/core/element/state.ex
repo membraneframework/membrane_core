@@ -53,7 +53,8 @@ defmodule Membrane.Core.Element.State do
     :playback,
     :playback_queue,
     :resource_guard,
-    :children_supervisor
+    :children_supervisor,
+    :terminating?
   ]
 
   @doc """
@@ -88,7 +89,8 @@ defmodule Membrane.Core.Element.State do
       playback: :stopped,
       playback_queue: [],
       resource_guard: options.resource_guard,
-      children_supervisor: options.children_supervisor
+      children_supervisor: options.children_supervisor,
+      terminating?: false
     }
     |> PadSpecHandler.init_pads()
   end
