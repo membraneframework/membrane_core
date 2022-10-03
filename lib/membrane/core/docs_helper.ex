@@ -30,7 +30,7 @@ defmodule Membrane.Core.DocsHelper do
     #{docstring}
     ## List of available callbacks
     Below there is a list of all the callbacks available in a module, that implements `#{inspect(module)}` behaviour.
-    We have put it for your convenience, as some of these callbacks might not be directly defined in that module and
+    We have put it for your convenience, as some of these callbacks aren't directly defined in that module and
     their specification is available in different modules.
 
     The callbacks available in `#{inspect(module)}` behaviour:
