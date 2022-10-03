@@ -109,6 +109,7 @@ defmodule Membrane.ResourceGuard do
     after
       timeout ->
         Membrane.Logger.error("Cleanup of resource #{inspect(name)} timed out, killing")
+        Process.unlink(task)
         Process.exit(task, :kill)
         :normal
     end
