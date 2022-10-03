@@ -223,12 +223,8 @@ defmodule Membrane.Core.Bin do
   end
 
   defp do_handle_info(Message.new(:terminate), state) do
-    {result, state} = Parent.LifecycleController.handle_terminate_request(state)
-
-    case result do
-      :stop -> {:stop, :normal, state}
-      :continue -> {:noreply, state}
-    end
+    state = Parent.LifecycleController.handle_terminate_request(state)
+    {:noreply, state}
   end
 
   defp do_handle_info(Message.new(_type, _args, _opts) = message, _state) do
@@ -261,8 +257,7 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
-  def terminate(reason, state) do
+  def terminate(_reason, _state) do
     Telemetry.report_terminate(:bin)
-    Parent.LifecycleController.handle_terminate(reason, state)
   end
 end
