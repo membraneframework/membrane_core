@@ -1,7 +1,8 @@
 defmodule Membrane.PipelineTest do
   use ExUnit.Case, async: true
+
+  alias Membrane.Support.Elements.TrivialFilter, as: NotAPipeline
   alias Membrane.Support.TrivialPipeline
-  alias Module, as: NotAPipeline
 
   describe "Membrane.Pipeline.start_link/3 should" do
     test "return alive pid when starting a module implementing Membrane.Pipeline behaviour" do
