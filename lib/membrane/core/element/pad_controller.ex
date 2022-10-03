@@ -168,6 +168,11 @@ defmodule Membrane.Core.Element.PadController do
       state = remove_pad_associations(pad_ref, state)
       PadModel.delete_data!(state, pad_ref)
     else
+      {:ok, %{availability: :always}} when state.terminating? ->
+        Membrane.Logger.debug(
+          "Ignoring unlinking a static pad #{inspect(pad_ref)} because of terminating"
+        )
+
       {:ok, %{availability: :always}} ->
         raise Membrane.PadError,
               "Tried to unlink a static pad #{inspect(pad_ref)}. Static pads cannot be unlinked unless element is terminating"

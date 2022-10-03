@@ -67,7 +67,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
-  @spec handle_terminate_request(Parent.state_t()) :: Parent.State.t()
+  @spec handle_terminate_request(Parent.state_t()) :: Parent.state_t()
   def handle_terminate_request(%{terminating?: true} = state) do
     state
   end
@@ -85,11 +85,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
   end
 
   @spec handle_terminate(Parent.state_t()) :: {:continue | :stop, Parent.state_t()}
-  def handle_terminate(%Core.Bin.State{terminating?: false}) do
-    raise Membrane.ParentError,
-          "Cannot terminate a bin with reason `:normal` unless it's removed by its parent"
-  end
-
   def handle_terminate(state) do
     if Enum.empty?(state.children) do
       {:stop, state}

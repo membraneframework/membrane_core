@@ -70,6 +70,12 @@ defmodule Membrane.Core.Bin.ActionHandler do
   end
 
   @impl CallbackHandler
+  def handle_action({:terminate, :normal}, _cb, _params, %State{terminating?: false}) do
+    raise Membrane.BinError,
+          "Cannot terminate a bin with reason `:normal` unless it's removed by its parent"
+  end
+
+  @impl CallbackHandler
   def handle_action({:terminate, :normal}, _cb, _params, state) do
     case Parent.LifecycleController.handle_terminate(state) do
       {:continue, state} -> state

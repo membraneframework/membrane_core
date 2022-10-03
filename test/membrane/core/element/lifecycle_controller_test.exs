@@ -9,6 +9,11 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
   defmodule DummyElement do
     use Membrane.Filter
     def_output_pad :output, caps: :any
+
+    @impl true
+    def handle_terminate_request(_ctx, state) do
+      {:ok, state}
+    end
   end
 
   setup do
