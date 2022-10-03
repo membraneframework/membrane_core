@@ -15,7 +15,7 @@ defmodule Membrane.Bin do
   alias __MODULE__.{Action, CallbackContext}
   alias Membrane.{Child, Pad}
   alias Membrane.Core.Child.PadsSpecs
-  alias Membrane.Core.{DocsHelper, OptionsSpecs}
+  alias Membrane.Core.OptionsSpecs
 
   require Membrane.Core.Message
   require Membrane.Logger
@@ -342,6 +342,4 @@ defmodule Membrane.Bin do
                      handle_parent_notification: 3
     end
   end
-
-  DocsHelper.add_callbacks_list_to_moduledoc(__MODULE__)
 end

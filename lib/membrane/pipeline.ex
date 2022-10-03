@@ -62,7 +62,6 @@ defmodule Membrane.Pipeline do
 
   alias __MODULE__.{Action, CallbackContext}
   alias Membrane.{Child, Pad}
-  alias Membrane.Core.DocsHelper
   alias Membrane.CrashGroup
 
   require Membrane.Logger
@@ -495,6 +494,4 @@ defmodule Membrane.Pipeline do
                      handle_call: 3
     end
   end
-
-  DocsHelper.add_callbacks_list_to_moduledoc(__MODULE__)
 end
