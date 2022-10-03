@@ -16,11 +16,15 @@ defmodule Membrane.Core.DocsHelper do
     inherited_modules_callbacks =
       for module <- inherited_modules_list, do: get_callbacks_in_compiled_module(module)
 
-    callbacks_per_module_list = [
-      get_callbacks_in_uncompiled_module(module) | inherited_modules_callbacks
-    ]
+    this_module_callbacks = get_callbacks_in_uncompiled_module(module)
 
-    all_modules = [module | inherited_modules_list]
+    {callbacks_per_module_list, all_modules} =
+      if this_module_callbacks == [],
+        do: {inherited_modules_callbacks, inherited_modules_list},
+        else:
+          {[
+             this_module_callbacks | inherited_modules_callbacks
+           ], [module | inherited_modules_list]}
 
     new_docstring = """
     #{docstring}
