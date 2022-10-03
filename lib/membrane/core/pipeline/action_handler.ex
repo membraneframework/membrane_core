@@ -17,13 +17,10 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({name, args}, _cb, _params, %State{terminating?: true} = state)
-      when name in [:notify_child, :spec, :remove_child, :playback] do
-    Membrane.Logger.debug(
-      "Ignoring action #{inspect({name, args})} because the pipeline is already terminating"
-    )
-
-    state
+  def handle_action({name, args}, _cb, _params, %State{terminating?: true})
+      when name in [:spec, :playback] do
+    raise Membrane.ParentError,
+          "Action #{inspect({name, args})} cannot be handled because the bin is already terminating"
   end
 
   @impl CallbackHandler
@@ -95,7 +92,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:terminate, :normal}, _cb, _params, state) do
-    case LifecycleController.handle_terminate_request(state) do
+    case LifecycleController.handle_terminate(state) do
       {:continue, state} -> state
       {:stop, _state} -> exit(:normal)
     end

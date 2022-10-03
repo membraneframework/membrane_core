@@ -117,13 +117,11 @@ defmodule Membrane.Pipeline do
   @callback handle_init(options :: pipeline_options) :: callback_return_t()
 
   @doc """
-  Callback invoked when pipeline is shutting down.
-  Internally called in `c:GenServer.terminate/2` callback.
+  Callback invoked when pipeline is requested to terminate with `terminate/2`.
 
-  Useful for any cleanup required.
+  By default it returns `t:Membrane.Pipeline.Action.terminate_t/0` with reason `:normal`.
   """
-  @callback handle_terminate_yolo(reason, state) :: :ok
-            when reason: :normal | :shutdown | {:shutdown, any} | term()
+  @callback handle_terminate_request(context :: nil, state) :: callback_return_t()
 
   @doc """
   Callback invoked on pipeline startup, right after `c:handle_init/1`.
@@ -227,7 +225,6 @@ defmodule Membrane.Pipeline do
               callback_return_t
 
   @optional_callbacks handle_init: 1,
-                      handle_terminate_yolo: 2,
                       handle_setup: 2,
                       handle_playing: 2,
                       handle_info: 3,
@@ -237,7 +234,8 @@ defmodule Membrane.Pipeline do
                       handle_child_notification: 4,
                       handle_tick: 3,
                       handle_crash_group_down: 3,
-                      handle_call: 3
+                      handle_call: 3,
+                      handle_terminate_request: 2
 
   @doc """
   Starts the Pipeline based on given module and links it to the current
@@ -362,7 +360,7 @@ defmodule Membrane.Pipeline do
         A proxy for `#{inspect(unquote(__MODULE__))}.start_link/3`
         """
         @spec start_link(
-                pipeline_options :: unquote(__MODULE__).pipeline_options_t(),
+                pipeline_options :: unquote(__MODULE__).pipeline_options(),
                 process_options :: GenServer.options()
               ) :: GenServer.on_start()
         def start_link(pipeline_options \\ nil, process_options \\ []) do
@@ -378,7 +376,7 @@ defmodule Membrane.Pipeline do
         A proxy for `#{inspect(unquote(__MODULE__))}.start/3`
         """
         @spec start(
-                pipeline_options :: unquote(__MODULE__).pipeline_options_t(),
+                pipeline_options :: unquote(__MODULE__).pipeline_options(),
                 process_options :: GenServer.options()
               ) :: GenServer.on_start()
         def start(pipeline_options \\ nil, process_options \\ []) do
@@ -449,9 +447,6 @@ defmodule Membrane.Pipeline do
       def handle_init(_options), do: {:ok, %{}}
 
       @impl true
-      def handle_terminate_yolo(_reason, _state), do: :ok
-
-      @impl true
       def handle_setup(_ctx, state), do: {:ok, state}
 
       @impl true
@@ -478,9 +473,11 @@ defmodule Membrane.Pipeline do
       @impl true
       def handle_call(message, _ctx, state), do: {:ok, state}
 
+      @impl true
+      def handle_terminate_request(_ctx, state), do: {{:ok, terminate: :normal}, state}
+
       defoverridable child_spec: 1,
                      handle_init: 1,
-                     handle_terminate_yolo: 2,
                      handle_setup: 2,
                      handle_playing: 2,
                      handle_info: 3,
@@ -489,7 +486,8 @@ defmodule Membrane.Pipeline do
                      handle_element_end_of_stream: 4,
                      handle_child_notification: 4,
                      handle_crash_group_down: 3,
-                     handle_call: 3
+                     handle_call: 3,
+                     handle_terminate_request: 2
     end
   end
 end

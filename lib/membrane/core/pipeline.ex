@@ -109,12 +109,8 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def handle_info(Message.new(:terminate), state) do
-    {result, state} = LifecycleController.handle_terminate_request(state)
-
-    case result do
-      :stop -> {:stop, :normal, state}
-      :continue -> {:noreply, state}
-    end
+    state = LifecycleController.handle_terminate_request(state)
+    {:noreply, state}
   end
 
   @impl GenServer
@@ -135,12 +131,6 @@ defmodule Membrane.Core.Pipeline do
   end
 
   @impl GenServer
-  def terminate(reason, state) do
-    Telemetry.report_terminate(:pipeline)
-    LifecycleController.handle_terminate(reason, state)
-  end
-
-  @impl GenServer
   def handle_call(message, from, state) do
     context = &CallbackContext.Call.from_state(&1, from: from)
 
@@ -153,5 +143,10 @@ defmodule Membrane.Core.Pipeline do
     )
 
     {:noreply, state}
+  end
+
+  @impl GenServer
+  def terminate(_reason, _state) do
+    Telemetry.report_terminate(:pipeline)
   end
 end

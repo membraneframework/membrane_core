@@ -68,9 +68,9 @@ defmodule Membrane.RemoteControlled.Message do
     @moduledoc """
     Message sent when the pipeline gracefully terminates.
     """
-    @type t :: %__MODULE__{from: pid(), reason: :normal | :shutdown | {:shutdown, any()} | term()}
+    @type t :: %__MODULE__{from: pid()}
 
-    @enforce_keys [:from, :reason]
+    @enforce_keys [:from]
     defstruct @enforce_keys
   end
 end

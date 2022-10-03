@@ -374,8 +374,8 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @impl true
-  def handle_terminate_yolo(reason, state) do
-    pipeline_event = %Message.Terminated{from: self(), reason: reason}
+  def handle_terminate_request(_ctx, state) do
+    pipeline_event = %Message.Terminated{from: self()}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     :ok
   end
