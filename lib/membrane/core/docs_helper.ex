@@ -57,7 +57,7 @@ defmodule Membrane.Core.DocsHelper do
   end
 
   defp get_callbacks_in_compiled_module(module) do
-    Enum.map(module.behaviour_info(:callbacks), &{&1, module})
+    module.behaviour_info(:callbacks) |> Enum.sort() |> Enum.map(&{&1, module})
   end
 
   defp get_callbacks_in_uncompiled_module(module) do
