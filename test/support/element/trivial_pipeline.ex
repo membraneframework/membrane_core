@@ -1,10 +1,11 @@
 defmodule Membrane.Support.Element.TrivialPipeline do
+  @moduledoc false
   use Membrane.Pipeline
 
   alias Membrane.Support.Element.{TrivialFilter, TrivialSink, TrivialSource}
 
   @impl true
-  def handle_init(_) do
+  def handle_init(_opts) do
     children = [
       producer: TrivialSource,
       filter: TrivialFilter,
