@@ -28,7 +28,7 @@ defmodule Membrane.Core.Timer do
   end
 
   @spec stop(t) :: :ok
-  def stop(%__MODULE__{timer_ref: nil}) do
+  def stop(%__MODULE__{interval: :no_interval}) do
     :ok
   end
 
@@ -66,7 +66,8 @@ defmodule Membrane.Core.Timer do
 
   @spec set_interval(t, interval_t) :: t
   def set_interval(%__MODULE__{interval: :no_interval} = timer, interval) do
-    tick(%__MODULE__{timer | interval: interval})
+    %__MODULE__{timer | interval: interval}
+    |> tick()
   end
 
   def set_interval(timer, interval) do
