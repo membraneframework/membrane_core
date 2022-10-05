@@ -1,7 +1,6 @@
 defmodule Membrane.PipelineTest do
   use ExUnit.Case, async: true
 
-  alias Membrane.Support.Elements.TrivialFilter, as: NotAPipeline
   alias Membrane.Support.TrivialPipeline
 
   describe "Membrane.Pipeline.start_link/3 should" do
