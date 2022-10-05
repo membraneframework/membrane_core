@@ -222,9 +222,7 @@ defmodule Membrane.Core.Bin.PadController do
       PadModel.delete_data!(state, pad_ref)
     else
       {:ok, %{availability: :always}} when state.terminating? ->
-        Membrane.Logger.debug(
-          "Ignoring unlinking a static pad #{inspect(pad_ref)} because of terminating"
-        )
+        state
 
       {:ok, %{availability: :always}} ->
         raise Membrane.PadError,

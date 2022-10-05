@@ -168,7 +168,7 @@ defmodule Membrane.Bin do
   @doc """
   Callback invoked when bin is removed by its parent.
 
-  By default it returns `t:Membrane.Pipeline.Action.terminate_t/0` with reason `:normal`.
+  By default it returns `t:Membrane.Bin.Action.terminate_t/0` with reason `:normal`.
   """
   @callback handle_terminate_request(context :: nil, state_t) :: callback_return_t()
 

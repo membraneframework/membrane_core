@@ -181,6 +181,11 @@ defmodule Membrane.Element.Base do
               state :: Element.state_t()
             ) :: callback_return_t
 
+  @doc """
+  Callback invoked when element is removed by its parent.
+
+  By default it returns `t:Membrane.Element.Action.terminate_t/0` with reason `:normal`.
+  """
   @callback handle_terminate_request(context :: nil, state :: Element.state_t()) ::
               callback_return_t()
 
