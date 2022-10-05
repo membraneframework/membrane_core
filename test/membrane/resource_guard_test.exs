@@ -13,11 +13,8 @@ defmodule Membrane.ResourceGuardTest do
 
       @impl true
       def handle_setup(ctx, state) do
-        {:ok, pid} =
-          Task.start(fn ->
-            Process.register(self(), :membrane_resource_guard_test_element_resource)
-            Process.sleep(:infinity)
-          end)
+        {:ok, pid} = Task.start(fn -> Process.sleep(:infinity) end)
+        Process.register(pid, :membrane_resource_guard_test_element_resource)
 
         ResourceGuard.register_resource(ctx.resource_guard, fn ->
           Process.exit(pid, :shutdown)
@@ -34,11 +31,8 @@ defmodule Membrane.ResourceGuardTest do
 
       @impl true
       def handle_setup(ctx, state) do
-        {:ok, pid} =
-          Task.start(fn ->
-            Process.register(self(), :membrane_resource_guard_test_bin_resource)
-            Process.sleep(:infinity)
-          end)
+        {:ok, pid} = Task.start(fn -> Process.sleep(:infinity) end)
+        Process.register(pid, :membrane_resource_guard_test_bin_resource)
 
         ResourceGuard.register_resource(ctx.resource_guard, fn ->
           Process.exit(pid, :shutdown)
@@ -55,11 +49,8 @@ defmodule Membrane.ResourceGuardTest do
 
       @impl true
       def handle_call(:setup_guard, ctx, state) do
-        {:ok, pid} =
-          Task.start(fn ->
-            Process.register(self(), :membrane_resource_guard_test_pipeline_resource)
-            Process.sleep(:infinity)
-          end)
+        {:ok, pid} = Task.start(fn -> Process.sleep(:infinity) end)
+        Process.register(pid, :membrane_resource_guard_test_pipeline_resource)
 
         ResourceGuard.register_resource(ctx.resource_guard, fn ->
           Process.exit(pid, :shutdown)
