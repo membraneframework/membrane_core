@@ -200,6 +200,16 @@ defmodule Membrane.Element.Action do
   @type end_of_stream_t :: {:end_of_stream, Pad.ref_t()}
 
   @typedoc """
+  Terminates element with given reason.
+
+  Termination reason follows the OTP semantics:
+  - use `:normal` for graceful termination. Allowed only when termination was already requested
+    by parent, i.e. after `c:Membrane.Element.Base.handle_terminate_request/2` is called
+  - if reason is neither `:normal`, `:shutdown` nor `{:shutdown, term}`, an error is logged
+  """
+  @type terminate_t :: {:terminate, reason :: :normal | :shutdown | {:shutdown, term} | term}
+
+  @typedoc """
   Type that defines a single action that may be returned from element callbacks.
 
   Depending on element type, callback, current playback and other
@@ -218,4 +228,5 @@ defmodule Membrane.Element.Action do
           | stop_timer_t
           | latency_t
           | end_of_stream_t
+          | terminate_t
 end

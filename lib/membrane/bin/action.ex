@@ -82,6 +82,16 @@ defmodule Membrane.Bin.Action do
   @type stop_timer_t :: {:stop_timer, timer_id :: any}
 
   @typedoc """
+  Terminates bin with given reason.
+
+  Termination reason follows the OTP semantics:
+  - use `:normal` for graceful termination. Allowed only when termination was already requested
+    by parent, i.e. after `c:Membrane.Bin.handle_terminate_request/2` is called
+  - if reason is neither `:normal`, `:shutdown` nor `{:shutdown, term}`, an error is logged
+  """
+  @type terminate_t :: {:terminate, reason :: :normal | :shutdown | {:shutdown, term} | term}
+
+  @typedoc """
   Type describing actions that can be returned from bin callbacks.
 
   Returning actions is a way of bin interaction with its children and
@@ -95,4 +105,5 @@ defmodule Membrane.Bin.Action do
           | start_timer_t
           | timer_interval_t
           | stop_timer_t
+          | terminate_t
 end
