@@ -118,9 +118,6 @@ jobs:
           glob: "test/membrane/**/*.exs"
           split_by: "timings"
           command: "mix test --include long_running"
-      - run_tests:
-          glob: "spec/membrane/**/*.exs"
-          command: "mix espec"
       - store_test_results:
           path: "_build/test/lib/membrane_core"
 
