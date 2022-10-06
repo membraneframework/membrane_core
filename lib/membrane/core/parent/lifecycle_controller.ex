@@ -29,7 +29,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     state = %{state | initialized?: true}
 
     case state do
-      %Core.Pipeline.State{play_request?: true} ->
+      %Core.Pipeline.State{playing_requested?: true} ->
         handle_playing(state)
 
       %Core.Bin.State{} ->

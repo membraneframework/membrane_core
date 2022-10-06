@@ -29,7 +29,7 @@ defmodule Membrane.Core.Pipeline.State do
           },
           playback: Membrane.Playback.t(),
           initialized?: boolean(),
-          play_request?: boolean(),
+          playing_requested?: boolean(),
           terminating?: boolean()
         }
 
@@ -43,7 +43,7 @@ defmodule Membrane.Core.Pipeline.State do
                 pending_specs: %{},
                 playback: :stopped,
                 initialized?: false,
-                play_request?: false,
+                playing_requested?: false,
                 terminating?: false
               ]
 end
