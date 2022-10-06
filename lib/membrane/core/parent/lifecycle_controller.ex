@@ -30,7 +30,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
     case state do
       %Core.Pipeline.State{play_request?: true} ->
-        handle_play(state)
+        handle_playing(state)
 
       %Core.Bin.State{} ->
         Message.send(state.parent_pid, :initialized, state.name)
@@ -41,8 +41,8 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
-  @spec handle_play(Parent.state_t()) :: Parent.state_t()
-  def handle_play(state) do
+  @spec handle_playing(Parent.state_t()) :: Parent.state_t()
+  def handle_playing(state) do
     Membrane.Logger.debug("Parent play")
 
     if state.__struct__ == Membrane.Core.Bin.State do
@@ -59,7 +59,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     context = Component.callback_context_generator(:parent, Play, state)
 
     CallbackHandler.exec_and_handle_callback(
-      :handle_play,
+      :handle_playing,
       Component.action_handler(state),
       %{context: context},
       [],

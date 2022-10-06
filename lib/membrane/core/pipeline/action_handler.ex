@@ -70,7 +70,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
 
     cond do
       state.playback == :playing -> state
-      state.initialized? -> LifecycleController.handle_play(state)
+      state.initialized? -> LifecycleController.handle_playing(state)
       true -> %{state | play_request?: true}
     end
   end

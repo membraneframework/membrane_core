@@ -63,10 +63,10 @@ defmodule Membrane.Testing.Endpoint do
   end
 
   @impl true
-  def handle_play(_context, %{autodemand: true} = state),
+  def handle_playing(_context, %{autodemand: true} = state),
     do: {{:ok, demand: :input, caps: {:output, state.caps}}, state}
 
-  def handle_play(_context, state),
+  def handle_playing(_context, state),
     do: {{:ok, caps: {:output, state.caps}}, state}
 
   @impl true

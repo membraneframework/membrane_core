@@ -30,8 +30,8 @@ defmodule Membrane.ElementTest do
     def handle_init(opts), do: {:ok, opts}
 
     @impl true
-    def handle_play(_ctx, state) do
-      send(state.target, {:callback_called, :handle_play})
+    def handle_playing(_ctx, state) do
+      send(state.target, {:callback_called, :handle_playing})
       {:ok, state}
     end
 
@@ -77,7 +77,7 @@ defmodule Membrane.ElementTest do
 
   test "play", %{pipeline: pipeline} do
     assert_pipeline_play(pipeline)
-    TestFilter.assert_callback_called(:handle_play)
+    TestFilter.assert_callback_called(:handle_playing)
   end
 
   describe "Start of stream" do

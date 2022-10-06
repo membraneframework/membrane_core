@@ -32,7 +32,7 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
   end
 
   @impl true
-  def handle_play(_ctx, %{target: target} = state) do
+  def handle_playing(_ctx, %{target: target} = state) do
     send(target, :playing)
     {:ok, state}
   end

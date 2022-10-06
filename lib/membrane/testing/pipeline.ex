@@ -262,10 +262,10 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_play(ctx, %State{} = state) do
+  def handle_playing(ctx, %State{} = state) do
     {custom_actions, custom_state} =
       eval_injected_module_callback(
-        :handle_play,
+        :handle_playing,
         [ctx],
         state
       )

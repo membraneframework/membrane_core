@@ -336,7 +336,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @impl true
-  def handle_play(_ctx, state) do
+  def handle_playing(_ctx, state) do
     pipeline_event = %Message.Play{from: self()}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}

@@ -112,7 +112,7 @@ defmodule Membrane.Element.Base do
   From this point, element can send and receive buffers, events, caps and demands
   through its pads.
   """
-  @callback handle_play(
+  @callback handle_playing(
               context :: CallbackContext.Play.t(),
               state :: Element.state_t()
             ) :: callback_return_t
@@ -205,7 +205,7 @@ defmodule Membrane.Element.Base do
   @optional_callbacks membrane_clock?: 0,
                       handle_init: 1,
                       handle_setup: 2,
-                      handle_play: 2,
+                      handle_playing: 2,
                       handle_info: 3,
                       handle_pad_added: 3,
                       handle_pad_removed: 3,
@@ -300,7 +300,7 @@ defmodule Membrane.Element.Base do
       def handle_setup(_context, state), do: {:ok, state}
 
       @impl true
-      def handle_play(_context, state), do: {:ok, state}
+      def handle_playing(_context, state), do: {:ok, state}
       @impl true
       def handle_info(_message, _context, state), do: {:ok, state}
 
@@ -321,7 +321,7 @@ defmodule Membrane.Element.Base do
 
       defoverridable handle_init: 1,
                      handle_setup: 2,
-                     handle_play: 2,
+                     handle_playing: 2,
                      handle_info: 3,
                      handle_pad_added: 3,
                      handle_pad_removed: 3,

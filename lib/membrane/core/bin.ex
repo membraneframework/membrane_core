@@ -210,7 +210,7 @@ defmodule Membrane.Core.Bin do
   end
 
   defp do_handle_info(Message.new(:play), state) do
-    state = Parent.LifecycleController.handle_play(state)
+    state = Parent.LifecycleController.handle_playing(state)
     {:noreply, state}
   end
 
