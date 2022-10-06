@@ -140,7 +140,7 @@ defmodule Membrane.Pipeline do
   Callback invoked when pipeline switches the playback to `:playing`.
   """
   @callback handle_playing(
-              context :: CallbackContext.Play.t(),
+              context :: CallbackContext.Playing.t(),
               state
             ) ::
               callback_return_t

@@ -99,7 +99,7 @@ defmodule Membrane.Bin do
   Callback invoked when bin switches the playback to `:playing`.
   """
   @callback handle_playing(
-              context :: CallbackContext.Play.t(),
+              context :: CallbackContext.Playing.t(),
               state :: state_t
             ) ::
               callback_return_t

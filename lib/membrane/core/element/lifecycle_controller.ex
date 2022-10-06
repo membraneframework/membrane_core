@@ -75,8 +75,8 @@ defmodule Membrane.Core.Element.LifecycleController do
 
     Membrane.Logger.debug("Got play request")
     state = %State{state | playback: :playing}
-    require CallbackContext.Play
-    context = &CallbackContext.Play.from_state/1
+    require CallbackContext.Playing
+    context = &CallbackContext.Playing.from_state/1
 
     state =
       CallbackHandler.exec_and_handle_callback(

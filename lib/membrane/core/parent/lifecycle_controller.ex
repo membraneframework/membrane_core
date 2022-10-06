@@ -56,7 +56,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end)
 
     state = %{state | playback: :playing}
-    context = Component.callback_context_generator(:parent, Play, state)
+    context = Component.callback_context_generator(:parent, Playing, state)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_playing,

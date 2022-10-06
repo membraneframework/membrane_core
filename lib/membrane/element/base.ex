@@ -113,7 +113,7 @@ defmodule Membrane.Element.Base do
   through its pads.
   """
   @callback handle_playing(
-              context :: CallbackContext.Play.t(),
+              context :: CallbackContext.Playing.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 

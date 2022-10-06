@@ -1,4 +1,4 @@
-defmodule Membrane.Bin.CallbackContext.Play do
+defmodule Membrane.Bin.CallbackContext.Playing do
   @moduledoc """
   Structure representing a context that is passed to the `c:Membrane.Bin.handle_playing/2` callback.
   """

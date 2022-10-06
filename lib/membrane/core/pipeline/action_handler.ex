@@ -66,7 +66,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:playback, :playing}, _cb, _params, state) do
-    Membrane.Logger.debug("Play request, #{inspect(state.playback)}")
+    Membrane.Logger.debug("Playing request, #{inspect(state.playback)}")
 
     cond do
       state.playback == :playing -> state

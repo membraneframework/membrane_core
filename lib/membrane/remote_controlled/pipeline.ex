@@ -16,7 +16,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   sent by the pipeline and later on synchronously await for these messages:
   ```
   # subscribes to message which is sent when the pipeline enters `playing`
-  Pipeline.subscribe(pipeline, %Message.Play{})
+  Pipeline.subscribe(pipeline, %Message.Playing{})
   ...
   # awaits for the message sent when the pipeline enters :playing playback
   Pipeline.await_play(pipeline)
@@ -26,7 +26,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   `Membrane.RemoteControlled.Pipeline` can be used when there is no need for introducing a custom
   logic in the `Membrane.Pipeline` callbacks implementation. An example of usage could be running a
   pipeline from the elixir script. `Membrane.RemoteControlled.Pipeline` sends the following messages:
-  * `Membrane.RemoteControlled.Message.Play.t()` sent when pipeline enters `playing` playback,
+  * `Membrane.RemoteControlled.Message.Playing.t()` sent when pipeline enters `playing` playback,
   * `Membrane.RemoteControlled.Message.StartOfStream.t()` sent
   when one of direct pipeline children informs the pipeline about start of a stream,
   * `Membrane.RemoteControlled.Message.EndOfStream.t()` sent
@@ -44,7 +44,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   alias Membrane.RemoteControlled.Message.{
     EndOfStream,
     Notification,
-    Play,
+    Playing,
     StartOfStream,
     Terminated
   }
@@ -107,7 +107,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @doc """
-  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.Play()`
+  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.Playing()`
   It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
 
@@ -117,9 +117,9 @@ defmodule Membrane.RemoteControlled.Pipeline do
     Pipeline.await_play(pipeline)
     ```
   """
-  @spec await_play(pid()) :: Membrane.RemoteControlled.Message.Play.t()
+  @spec await_play(pid()) :: Membrane.RemoteControlled.Message.Playing.t()
   def await_play(pipeline) do
-    do_await(pipeline, Play)
+    do_await(pipeline, Playing)
   end
 
   @doc """
@@ -294,10 +294,10 @@ defmodule Membrane.RemoteControlled.Pipeline do
     subscribe(pipeline, %Message.StartOfStream{element: :element_id, pad: _})
     ```
 
-  2) making the `Membrane.RemoteControlled.Pipeline` send to the controlling process `Message.Play` message when the pipeline playback changes to `:playing`
+  2) making the `Membrane.RemoteControlled.Pipeline` send to the controlling process `Message.Playing` message when the pipeline playback changes to `:playing`
 
     ```
-    subscribe(pipeline, %Message.Play{})
+    subscribe(pipeline, %Message.Playing{})
     ```
   """
   defmacro subscribe(pipeline, subscription_pattern) do
@@ -337,7 +337,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   @impl true
   def handle_playing(_ctx, state) do
-    pipeline_event = %Message.Play{from: self()}
+    pipeline_event = %Message.Playing{from: self()}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
