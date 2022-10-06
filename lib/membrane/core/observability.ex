@@ -17,6 +17,13 @@ defmodule Membrane.Core.Observability do
           pid: pid()
         }
 
+  @doc """
+  Configures logger and component path.
+
+  Also registers the process with a meaningful name for easier introspection with
+  observer if enabled by setting `unsafely_name_processes_for_observer: :components`
+  in config.exs.
+  """
   @spec setup(config, utility_name :: String.Chars.t()) :: :ok
   def setup(config, utility_name \\ "") do
     %{name: name, component_type: component_type, pid: pid} = config
