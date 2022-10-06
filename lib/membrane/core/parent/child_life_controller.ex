@@ -26,10 +26,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
           children_names: [Membrane.Child.name_t()],
           links_ids: [Link.id()],
           awaiting_responses: %{Link.id() => 0..2},
-          dependent_specs: MapSet.t(spec_ref_t),
-          links: %{
-            Link.id() => %{link: Link.t(), awaiting_responses: non_neg_integer()}
-          }
+          dependent_specs: MapSet.t(spec_ref_t)
         }
 
   @type pending_specs_t :: %{spec_ref_t() => pending_spec_t()}

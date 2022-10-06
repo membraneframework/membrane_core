@@ -15,7 +15,7 @@ defmodule Membrane.Core.Observability do
 
     fn args ->
       Logger.metadata(log_metadata)
-      pid = Keyword.fetch!(args, :pid)
+      pid_string = Keyword.fetch!(args, :pid) |> :erlang.pid_to_list() |> to_string()
 
       utility_name =
         case Keyword.fetch(args, :utility) do
@@ -25,8 +25,8 @@ defmodule Membrane.Core.Observability do
 
       {name, unique_prefix, component_type_suffix} =
         if name,
-          do: {name, "#{:erlang.pid_to_list(pid)} ", ""},
-          else: {"#{:erlang.pid_to_list(pid)}", "", " (#{component_type})"}
+          do: {name, "#{pid_string} ", ""},
+          else: {"#{pid_string}", "", " (#{component_type})"}
 
       name_suffix = if component_type == :element, do: "", else: "/"
       name_str = if(String.valid?(name), do: name, else: inspect(name)) <> name_suffix
@@ -53,6 +53,12 @@ defmodule Membrane.Core.Observability do
     defp register_name_for_observer(_name), do: :ok
   end
 
+  @doc """
+  Starts processes to reflect pads structure in the process tree for visibility in observer.
+
+  Can be optionally turned on by setting `unsafely_name_processes_for_observer: :links` in
+  config.exs.
+  """
   @spec setup_link(Membrane.Pad.ref_t(), metadata) :: metadata
         when metadata: %{optional(:process_to_link) => pid()}
   if :links in @unsafely_name_processes_for_observer do
