@@ -166,7 +166,7 @@ defmodule Membrane.Bin do
             ) :: callback_return_t
 
   @doc """
-  Callback invoked when bin is removed by its parent.
+  A callback invoked when the bin is being removed by its parent.
 
   By default it returns `t:Membrane.Bin.Action.terminate_t/0` with reason `:normal`.
   """
