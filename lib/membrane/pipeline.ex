@@ -161,7 +161,7 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_info(
               message :: any,
-              context :: CallbackContext.Other.t(),
+              context :: CallbackContext.Info.t(),
               state
             ) ::
               callback_return_t

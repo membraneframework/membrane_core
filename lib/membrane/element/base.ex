@@ -125,7 +125,7 @@ defmodule Membrane.Element.Base do
   """
   @callback handle_info(
               message :: any(),
-              context :: CallbackContext.Other.t(),
+              context :: CallbackContext.Info.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 

@@ -128,7 +128,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   @spec handle_info(any, Parent.state_t()) :: Parent.state_t()
   def handle_info(message, state) do
-    context = Component.callback_context_generator(:parent, Other, state)
+    context = Component.callback_context_generator(:parent, Info, state)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_info,

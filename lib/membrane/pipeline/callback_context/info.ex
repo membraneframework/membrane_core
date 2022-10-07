@@ -1,4 +1,4 @@
-defmodule Membrane.Pipeline.CallbackContext.Other do
+defmodule Membrane.Pipeline.CallbackContext.Info do
   @moduledoc """
   Structure representing a context that is passed to the callback when
   pipeline receives an unrecognized message.

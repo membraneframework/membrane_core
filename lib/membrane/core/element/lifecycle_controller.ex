@@ -121,8 +121,8 @@ defmodule Membrane.Core.Element.LifecycleController do
   """
   @spec handle_info(message :: any, State.t()) :: State.t()
   def handle_info(message, state) do
-    require CallbackContext.Other
-    context = &CallbackContext.Other.from_state/1
+    require CallbackContext.Info
+    context = &CallbackContext.Info.from_state/1
 
     CallbackHandler.exec_and_handle_callback(
       :handle_info,

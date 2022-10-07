@@ -122,7 +122,7 @@ defmodule Membrane.Bin do
   """
   @callback handle_info(
               message :: any,
-              context :: CallbackContext.Other.t(),
+              context :: CallbackContext.Info.t(),
               state :: state_t
             ) :: callback_return_t
 
