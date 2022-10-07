@@ -7,5 +7,4 @@ defmodule Membrane.Child do
   @type name_t :: Element.name_t() | Bin.name_t()
 
   @type options_t :: Element.options_t() | Bin.options_t()
-
 end

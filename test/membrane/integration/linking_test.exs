@@ -211,7 +211,7 @@ defmodule Membrane.Integration.LinkingTest do
       structure: [
         source: %Testing.DynamicSource{output: ['a', 'b', 'c']}
       ],
-      crash_group:  {:group_1, :temporary}
+      crash_group: {:group_1, :temporary}
     }
 
     spec_2 = %Membrane.ParentSpec{

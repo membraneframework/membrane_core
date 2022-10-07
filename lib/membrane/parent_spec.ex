@@ -193,13 +193,12 @@ defmodule Membrane.ParentSpec do
 
     use Bunch.Access
 
-    defstruct children: [], links: [], status: nil, should_ignore: []
+    defstruct children: [], links: [], status: nil
 
     @type t :: %__MODULE__{
             children: [Membrane.ParentSpec.child_spec_extended_t()],
             links: [map],
-            status: status_t,
-            should_ignore: [boolean()]
+            status: status_t
           }
 
     @type status_t :: :from | :from_pad | :to_pad | :done
@@ -238,7 +237,7 @@ defmodule Membrane.ParentSpec do
           stream_sync: :sinks | [[Child.name_t()]],
           clock_provider: Child.name_t() | nil,
           node: node() | nil,
-          log_metadata: Keyword.t(),
+          log_metadata: Keyword.t()
         }
 
   defstruct structure: [],
@@ -259,7 +258,7 @@ defmodule Membrane.ParentSpec do
   """
   @spec link(Child.name_t()) :: link_builder_t()
   def link(child_name) do
-    %LinkBuilder{links: [%{from: child_name}], status: :from, should_ignore: [false]}
+    %LinkBuilder{links: [%{from: child_name}], status: :from}
   end
 
   @doc """
@@ -324,25 +323,21 @@ defmodule Membrane.ParentSpec do
   end
 
   def via_out(%LinkBuilder{} = builder, pad, props) do
-    if should_ignore?(builder) do
-      builder
-    else
-      :ok = validate_pad_name(pad)
+    :ok = validate_pad_name(pad)
 
-      props =
-        case Bunch.Config.parse(props, options: [default: []]) do
-          {:ok, props} ->
-            props
+    props =
+      case Bunch.Config.parse(props, options: [default: []]) do
+        {:ok, props} ->
+          props
 
-          {:error, reason} ->
-            raise ParentError, "Invalid link specification: invalid pad props: #{inspect(reason)}"
-        end
+        {:error, reason} ->
+          raise ParentError, "Invalid link specification: invalid pad props: #{inspect(reason)}"
+      end
 
-      LinkBuilder.update(builder, :from_pad,
-        from_pad: pad,
-        from_pad_props: props
-      )
-    end
+    LinkBuilder.update(builder, :from_pad,
+      from_pad: pad,
+      from_pad_props: props
+    )
   end
 
   @doc """
@@ -394,38 +389,34 @@ defmodule Membrane.ParentSpec do
   end
 
   def via_in(%LinkBuilder{} = builder, pad, props) do
-    if should_ignore?(builder) do
+    :ok = validate_pad_name(pad)
+
+    props =
+      props
+      |> Bunch.Config.parse(
+        options: [default: []],
+        target_queue_size: [default: nil],
+        min_demand_factor: [default: nil],
+        auto_demand_size: [default: nil],
+        toilet_capacity: [default: nil]
+      )
+      |> case do
+        {:ok, props} ->
+          props
+
+        {:error, reason} ->
+          raise ParentError, "Invalid link specification: invalid pad props: #{inspect(reason)}"
+      end
+
+    if builder.status == :from_pad do
       builder
     else
-      :ok = validate_pad_name(pad)
-
-      props =
-        props
-        |> Bunch.Config.parse(
-          options: [default: []],
-          target_queue_size: [default: nil],
-          min_demand_factor: [default: nil],
-          auto_demand_size: [default: nil],
-          toilet_capacity: [default: nil]
-        )
-        |> case do
-          {:ok, props} ->
-            props
-
-          {:error, reason} ->
-            raise ParentError, "Invalid link specification: invalid pad props: #{inspect(reason)}"
-        end
-
-      if builder.status == :from_pad do
-        builder
-      else
-        via_out(builder, :output)
-      end
-      |> LinkBuilder.update(:to_pad,
-        to_pad: pad,
-        to_pad_props: props
-      )
+      via_out(builder, :output)
     end
+    |> LinkBuilder.update(:to_pad,
+      to_pad: pad,
+      to_pad_props: props
+    )
   end
 
   @doc """
@@ -440,16 +431,12 @@ defmodule Membrane.ParentSpec do
   end
 
   def to(%LinkBuilder{} = builder, child_name) do
-    if should_ignore?(builder) do
+    if builder.status == :to_pad do
       builder
     else
-      if builder.status == :to_pad do
-        builder
-      else
-        via_in(builder, :input)
-      end
-      |> LinkBuilder.update(:done, to: child_name)
+      via_in(builder, :input)
     end
+    |> LinkBuilder.update(:done, to: child_name)
   end
 
   @doc """
@@ -460,13 +447,9 @@ defmodule Membrane.ParentSpec do
   @spec to(link_builder_t(), Child.name_t(), struct() | module()) ::
           link_builder_t() | no_return
   def to(%LinkBuilder{} = builder, child_name, child_spec) do
-    if should_ignore?(builder) do
-      builder
-    else
-      builder
-      |> to(child_name)
-      |> Map.update!(:children, &[{child_name, child_spec} | &1])
-    end
+    builder
+    |> to(child_name)
+    |> Map.update!(:children, &[{child_name, child_spec} | &1])
   end
 
   @doc """
@@ -477,13 +460,9 @@ defmodule Membrane.ParentSpec do
   @spec to_new(link_builder_t(), Child.name_t(), struct() | module()) ::
           link_builder_t() | no_return
   def to_new(%LinkBuilder{} = builder, child_name, child_spec) do
-    if should_ignore?(builder) do
-      builder
-    else
-      builder
-      |> to(child_name)
-      |> Map.update!(:children, &[{child_name, {child_spec, :dont_spawn_if_already_exists}} | &1])
-    end
+    builder
+    |> to(child_name)
+    |> Map.update!(:children, &[{child_name, {child_spec, :dont_spawn_if_already_exists}} | &1])
   end
 
   @doc """
@@ -500,36 +479,15 @@ defmodule Membrane.ParentSpec do
   end
 
   def to_bin_output(%LinkBuilder{} = builder, pad) do
-    if should_ignore?(builder) do
+    :ok = validate_pad_name(pad)
+
+    if builder.status == :from_pad do
       builder
     else
-      :ok = validate_pad_name(pad)
-
-      if builder.status == :from_pad do
-        builder
-      else
-        via_out(builder, :output)
-      end
-      |> LinkBuilder.update(:to_pad, to_pad: pad, to_pad_props: %{})
-      |> to({Membrane.Bin, :itself})
+      via_out(builder, :output)
     end
-  end
-
-  @spec ignore_unless(link_builder_t, boolean) :: link_builder_t
-  def ignore_unless(builder, condition) when is_boolean(condition) do
-    if should_ignore?(builder) do
-      %LinkBuilder{builder | should_ignore: builder.should_ignore ++ [true]}
-    else
-      %LinkBuilder{builder | should_ignore: builder.should_ignore ++ [not condition]}
-    end
-  end
-
-  @spec end_ignore(link_builder_t) :: link_builder_t
-  def end_ignore(builder) do
-    %LinkBuilder{
-      builder
-      | should_ignore: Enum.take(builder.should_ignore, length(builder.should_ignore) - 1)
-    }
+    |> LinkBuilder.update(:to_pad, to_pad: pad, to_pad_props: %{})
+    |> to({Membrane.Bin, :itself})
   end
 
   @doc """
@@ -561,9 +519,5 @@ defmodule Membrane.ParentSpec do
 
   defp validate_pad_name(pad) do
     raise ParentError, "Invalid link specification: invalid pad name: #{inspect(pad)}"
-  end
-
-  defp should_ignore?(builder) do
-    Enum.at(builder.should_ignore, -1)
   end
 end

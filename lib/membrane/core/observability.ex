@@ -34,8 +34,7 @@ defmodule Membrane.Core.Observability do
 
       name_suffix = if component_type == :element, do: "", else: "/"
 
-      name_str =
-        if(String.valid?(name), do: name, else: inspect(name)) <> name_suffix
+      name_str = if(String.valid?(name), do: name, else: inspect(name)) <> name_suffix
 
       register_name_for_observer(
         :"##{unique_prefix}#{name_str}#{component_type_suffix}#{utility_name}"

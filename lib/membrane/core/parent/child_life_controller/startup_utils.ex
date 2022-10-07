@@ -89,9 +89,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
     )
 
     children
-    |> Enum.map(
-      &start_child(&1, node, parent_clock, syncs, log_metadata, supervisor)
-    )
+    |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata, supervisor))
   end
 
   @spec maybe_activate_syncs(%{Membrane.Child.name_t() => Sync.t()}, Parent.state_t()) ::
@@ -126,9 +124,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
   defp start_child(child, node, parent_clock, syncs, log_metadata, supervisor) do
     %ChildEntry{name: name, module: module, options: options} = child
 
-    Membrane.Logger.debug(
-      "Starting child: name: #{inspect(name)}, module: #{inspect(module)}"
-    )
+    Membrane.Logger.debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")
 
     sync = syncs |> Map.get(name, Sync.no_sync())
 

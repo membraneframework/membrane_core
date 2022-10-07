@@ -21,7 +21,7 @@ defmodule Membrane.ChildEntry do
           pid: pid,
           clock: Membrane.Clock.t(),
           sync: Membrane.Sync.t(),
-          terminating?: boolean(),
+          terminating?: boolean()
         }
 
   defstruct [
