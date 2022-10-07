@@ -49,9 +49,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
       assert_received ^message
     end
 
-    test "send the demand if toilet is enabled not", context do
-      flush()
-
+    test "not send the demand if toilet is enabled", context do
       assert InputQueue.init(%{
                demand_unit: context.demand_unit,
                demand_pid: context.demand_pid,
@@ -321,12 +319,4 @@ defmodule Membrane.Core.Element.InputQueueTest do
   end
 
   defp bufs(n), do: Enum.to_list(1..n)
-
-  defp flush do
-    receive do
-      _some_message -> flush()
-    after
-      10 -> nil
-    end
-  end
 end
