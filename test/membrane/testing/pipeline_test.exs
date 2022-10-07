@@ -15,7 +15,7 @@ defmodule Membrane.Testing.PipelineTest do
     test "works with :default implementation" do
       import ChildrenSpec
       elements = [elem: Elem, elem2: Elem]
-      links = [link(:elem) |> to(:elem2)]
+      links = [get_child(:elem) |> get_child(:elem2)]
       options = [module: :default, structure: elements ++ links, test_process: nil]
       assert {{:ok, spec: spec, playback: :playing}, state} = Pipeline.handle_init(options)
 
@@ -29,7 +29,7 @@ defmodule Membrane.Testing.PipelineTest do
     test "by default chooses :default implementation" do
       import ChildrenSpec
       elements = [elem: Elem, elem2: Elem]
-      links = [link(:elem) |> to(:elem2)]
+      links = [get_child(:elem) |> get_child(:elem2)]
       options = [module: :default, structure: elements ++ links, test_process: nil]
       assert {{:ok, spec: spec, playback: :playing}, state} = Pipeline.handle_init(options)
       assert state == %Pipeline.State{module: nil, test_process: nil}
@@ -56,7 +56,7 @@ defmodule Membrane.Testing.PipelineTest do
     test "uses prepared links if they were provided" do
       import ChildrenSpec
       elements = [elem: Elem, elem2: Elem]
-      links = [link(:elem) |> to(:elem2)]
+      links = [get_child(:elem) |> get_child(:elem2)]
       options = [module: :default, structure: elements ++ links, test_process: nil]
       assert {{:ok, spec: spec, playback: :playing}, state} = Pipeline.handle_init(options)
       assert state == %Pipeline.State{module: nil, test_process: nil}

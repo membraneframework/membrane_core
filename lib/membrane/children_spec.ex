@@ -256,30 +256,36 @@ defmodule Membrane.ChildrenSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec link(Child.name_t()) :: link_builder_t()
-  def link(child_name) do
+  @spec get_child(Child.name_t()) :: link_builder_t()
+  def get_child(child_name) do
     %LinkBuilder{links: [%{from: child_name}], status: :from}
   end
 
-  @doc """
-  Defines a child and begins a link with it.
-  """
-  @spec spawn_child(Child.name_t(), struct() | module()) :: link_builder_t()
-  def spawn_child(child_name, child_spec) do
-    link(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
+  @spec get_child(link_builder_t(), Child.name_t()) :: link_builder_t()
+  def get_child(%LinkBuilder{} = link_builder, child_name) do
+    if link_builder.status == :to_pad do
+      link_builder
+    else
+      via_in(link_builder, :input)
+    end
+    |> LinkBuilder.update(:done, to: child_name)
   end
 
-  @doc """
-  Begins a link. If ta child with given name does not exist, creates that child based
-  on the child specification.
 
-  See the _links_ section of the moduledoc for more information.
-  """
-  @spec link_new(Child.name_t(), struct() | module()) :: link_builder_t()
-  def link_new(child_name, child_spec) do
-    link(child_name)
-    |> Map.update!(:children, &[{child_name, {child_spec, :dont_spawn_if_already_exists}} | &1])
+  @spec child(Child.name_t(), struct() | module()) :: link_builder_t()
+  def child(%LinkBuilder{} = _child_name, _child_spec) do
+    raise "Link builder cannot be used as a child name! Perhaps you meant to use get_child/2?"
   end
+
+  def child(child_name, child_spec) do
+    get_child(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
+  end
+
+  @spec child(link_builder_t(), Child.name_t(), struct() | module()) :: link_builder_t()
+  def child(%LinkBuilder{} = link_builder, child_name, child_spec) do
+    link_builder |> get_child(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
+  end
+
 
   @doc """
   Begins a link with a bin's pad.
@@ -290,7 +296,7 @@ defmodule Membrane.ChildrenSpec do
   def link_bin_input(pad \\ :input) do
     :ok = validate_pad_name(pad)
 
-    link({Membrane.Bin, :itself})
+    get_child({Membrane.Bin, :itself})
     |> LinkBuilder.update(:from_pad, from_pad: pad, from_pad_props: %{})
   end
 
@@ -420,52 +426,6 @@ defmodule Membrane.ChildrenSpec do
   end
 
   @doc """
-  Continues or ends a link.
-
-  See the _links_ section of the moduledoc for more information.
-  """
-  @spec to(link_builder_t(), Child.name_t()) :: link_builder_t() | no_return
-  def to(%LinkBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, child_name) do
-    raise ParentError,
-          "Invalid link specification: child #{inspect(child_name)} placed after bin's output"
-  end
-
-  def to(%LinkBuilder{} = builder, child_name) do
-    if builder.status == :to_pad do
-      builder
-    else
-      via_in(builder, :input)
-    end
-    |> LinkBuilder.update(:done, to: child_name)
-  end
-
-  @doc """
-  Defines a child and continues or ends a link with it.
-
-  See the _links_ section of the moduledoc for more information.
-  """
-  @spec to(link_builder_t(), Child.name_t(), struct() | module()) ::
-          link_builder_t() | no_return
-  def to(%LinkBuilder{} = builder, child_name, child_spec) do
-    builder
-    |> to(child_name)
-    |> Map.update!(:children, &[{child_name, child_spec} | &1])
-  end
-
-  @doc """
-  Continues or ends a link. If a child with given name doesn't exists, creates it based on a given parentspec.
-
-  See the _links_ section of the moduledoc for more information.
-  """
-  @spec to_new(link_builder_t(), Child.name_t(), struct() | module()) ::
-          link_builder_t() | no_return
-  def to_new(%LinkBuilder{} = builder, child_name, child_spec) do
-    builder
-    |> to(child_name)
-    |> Map.update!(:children, &[{child_name, {child_spec, :dont_spawn_if_already_exists}} | &1])
-  end
-
-  @doc """
   Ends a link with a bin's output.
 
   See the _links_ section of the moduledoc for more information.
@@ -487,7 +447,7 @@ defmodule Membrane.ChildrenSpec do
       via_out(builder, :output)
     end
     |> LinkBuilder.update(:to_pad, to_pad: pad, to_pad_props: %{})
-    |> to({Membrane.Bin, :itself})
+    |> get_child({Membrane.Bin, :itself})
   end
 
   @doc """
@@ -505,9 +465,9 @@ defmodule Membrane.ChildrenSpec do
 
     links =
       other_children
-      |> Enum.reduce(spawn_child(first_child_name, first_child_spec), fn {child_name, child_spec},
+      |> Enum.reduce(child(first_child_name, first_child_spec), fn {child_name, child_spec},
                                                                          builder ->
-        to(builder, child_name, child_spec)
+        child(builder, child_name, child_spec)
       end)
 
     [links]

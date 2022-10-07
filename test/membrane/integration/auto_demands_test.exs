@@ -70,9 +70,9 @@ defmodule Membrane.Integration.AutoDemandsTest do
       pipeline =
         Pipeline.start_link_supervised!(
           structure: [
-            spawn_child(:source, %Source{output: in_payloads})
-            |> reduce_link(1..filters, &to(&1, {:filter, &2}, filter))
-            |> to(:sink, Sink)
+            child(:source, %Source{output: in_payloads})
+            |> reduce_link(1..filters, &child(&1, {:filter, &2}, filter))
+            |> child(:sink, Sink)
           ]
         )
 
@@ -94,9 +94,9 @@ defmodule Membrane.Integration.AutoDemandsTest do
     pipeline =
       Pipeline.start_link_supervised!(
         structure: [
-          spawn_child(:source, %Source{output: 1..100_000}) |> to(:tee, AutoDemandTee),
-          link(:tee) |> to(:left_sink, Sink),
-          link(:tee) |> to(:right_sink, %Sink{autodemand: false})
+          child(:source, %Source{output: 1..100_000}) |> child(:tee, AutoDemandTee),
+          get_child(:tee) |> child(:left_sink, Sink),
+          get_child(:tee) |> child(:right_sink, %Sink{autodemand: false})
         ]
       )
 
@@ -119,9 +119,9 @@ defmodule Membrane.Integration.AutoDemandsTest do
     pipeline =
       Pipeline.start_link_supervised!(
         structure: [
-          spawn_child(:source, %Source{output: 1..100_000}) |> to(:tee, AutoDemandTee),
-          link(:tee) |> to(:left_sink, Sink),
-          link(:tee) |> to(:right_sink, %Sink{autodemand: false})
+          child(:source, %Source{output: 1..100_000}) |> child(:tee, AutoDemandTee),
+          get_child(:tee) |> child(:left_sink, Sink),
+          get_child(:tee) |> child(:right_sink, %Sink{autodemand: false})
         ]
       )
 
@@ -157,9 +157,9 @@ defmodule Membrane.Integration.AutoDemandsTest do
     pipeline =
       Pipeline.start_link_supervised!(
         structure: [
-          spawn_child(:source, PushSource)
-          |> to(:filter, AutoDemandFilter)
-          |> to(:sink, Sink)
+          child(:source, PushSource)
+          |> child(:filter, AutoDemandFilter)
+          |> child(:sink, Sink)
         ]
       )
 
@@ -187,9 +187,9 @@ defmodule Membrane.Integration.AutoDemandsTest do
     pipeline =
       Pipeline.start_supervised!(
         structure: [
-          spawn_child(:source, PushSource)
-          |> to(:filter, AutoDemandFilter)
-          |> to(:sink, %Sink{autodemand: false})
+          child(:source, PushSource)
+          |> child(:filter, AutoDemandFilter)
+          |> child(:sink, %Sink{autodemand: false})
         ]
       )
 

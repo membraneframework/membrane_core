@@ -23,8 +23,8 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
     ]
 
     links = [
-      link(:center_filter)
-      |> to(:sink)
+      get_child(:center_filter)
+      |> get_child(:sink)
     ]
 
     spec = %Membrane.ChildrenSpec{
@@ -46,8 +46,8 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
     ]
 
     links = [
-      link(source_name)
-      |> to(:center_filter)
+      get_child(source_name)
+      |> get_child(:center_filter)
     ]
 
     spec = %Membrane.ChildrenSpec{
@@ -69,7 +69,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
     children = [{source_name, Testing.Source}, {bin_name, TestBins.CrashTestBin}]
 
     links = [
-      link(source_name) |> to(bin_name) |> to(:center_filter)
+      get_child(source_name) |> get_child(bin_name) |> get_child(:center_filter)
     ]
 
     spec = %Membrane.ChildrenSpec{
@@ -99,7 +99,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
     links =
       Enum.chunk_every(children_names, 2, 1, [:center_filter])
       |> Enum.map(fn [first_elem, second_elem] ->
-        link(first_elem) |> to(second_elem)
+        get_child(first_elem) |> get_child(second_elem)
       end)
 
     spec = %Membrane.ChildrenSpec{

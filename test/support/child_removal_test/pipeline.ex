@@ -35,15 +35,15 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
 
     links =
       [
-        link(:source)
+        get_child(:source)
         |> via_in(:input1, target_queue_size: 10)
-        |> to(:filter1)
+        |> get_child(:filter1)
         |> via_in(:input1, target_queue_size: 10)
-        |> to(:filter2)
+        |> get_child(:filter2)
         |> via_in(:input1, target_queue_size: 10)
-        |> to(:filter3)
+        |> get_child(:filter3)
         |> via_in(:input, target_queue_size: 10)
-        |> to(:sink)
+        |> get_child(:sink)
       ]
       |> maybe_add_extra_source_link(opts)
 
@@ -71,7 +71,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
 
   defp maybe_add_extra_source_link(links, %{extra_source: _}) do
     [
-      link(:extra_source) |> via_in(:input2, target_queue_size: 10) |> to(:filter3)
+      get_child(:extra_source) |> via_in(:input2, target_queue_size: 10) |> get_child(:filter3)
       | links
     ]
   end

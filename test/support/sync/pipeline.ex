@@ -20,8 +20,8 @@ defmodule Membrane.Support.Sync.Pipeline do
     ]
 
     links = [
-      link(:source_a) |> to(:sink_a),
-      link(:source_b) |> to(:sink_b)
+      get_child(:source_a) |> get_child(:sink_a),
+      get_child(:source_b) |> get_child(:sink_b)
     ]
 
     %Membrane.ChildrenSpec{

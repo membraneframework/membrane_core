@@ -33,7 +33,7 @@ defmodule Membrane.Bin do
   @typedoc """
   Type that defines a bin name by which it is identified.
   """
-  @type name_t :: any()
+  @type name_t :: tuple() | atom()
 
   @doc """
   Enables to check whether module is membrane bin.

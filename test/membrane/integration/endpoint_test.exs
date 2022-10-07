@@ -21,8 +21,8 @@ defmodule Membrane.Core.EndpointTest do
               filter: TestFilter
             ] ++
               [
-                link(:endpoint) |> to(:filter),
-                link(:filter) |> to(:endpoint)
+                get_child(:endpoint) |> get_child(:filter),
+                get_child(:filter) |> get_child(:endpoint)
               ]
         )
 
@@ -42,10 +42,10 @@ defmodule Membrane.Core.EndpointTest do
               filter3: TestFilter
             ] ++
               [
-                link(:endpoint) |> to(:filter1),
-                link(:filter1) |> to(:filter2),
-                link(:filter2) |> to(:filter3),
-                link(:filter3) |> to(:endpoint)
+                get_child(:endpoint) |> get_child(:filter1),
+                get_child(:filter1) |> get_child(:filter2),
+                get_child(:filter2) |> get_child(:filter3),
+                get_child(:filter3) |> get_child(:endpoint)
               ]
         )
 

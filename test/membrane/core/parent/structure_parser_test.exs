@@ -10,13 +10,13 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     alias Membrane.Pad
 
     links_spec = [
-      link(:a)
-      |> to(:b)
+      get_child(:a)
+      |> get_child(:b)
       |> via_in(:input, options: [q: 1])
-      |> to(:c)
+      |> get_child(:c)
       |> via_out(:x)
       |> via_in(Pad.ref(:y, 2))
-      |> to(:d)
+      |> get_child(:d)
       |> to_bin_output()
     ]
 
@@ -93,7 +93,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   test "link with multiple branches" do
     import Membrane.ChildrenSpec
 
-    links_spec = [link(:a) |> to(:b) |> to(:c), link(:d) |> to(:b) |> to(:e)]
+    links_spec = [get_child(:a) |> get_child(:b) |> get_child(:c), get_child(:d) |> get_child(:b) |> get_child(:e)]
 
     assert {links, []} = StructureParser.parse(links_spec)
 
@@ -178,9 +178,9 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     import Membrane.ChildrenSpec
 
     %{
-      :a => [link(:a)],
-      :b => [link(:b) |> via_out(:x)],
-      :c => [link(:c) |> via_in(:y)],
+      :a => [get_child(:a)],
+      :b => [get_child(:b) |> via_out(:x)],
+      :c => [get_child(:c) |> via_in(:y)],
       {Membrane.Bin, :itself} => [link_bin_input()]
     }
     |> Enum.each(fn {from, link_spec} ->
@@ -193,7 +193,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   test "link creating children" do
     import Membrane.ChildrenSpec
 
-    links_spec = [spawn_child(:a, A) |> to(:b, B) |> to(:c, C)]
+    links_spec = [child(:a, A) |> child(:b, B) |> child(:c, C)]
     assert {links, children} = StructureParser.parse(links_spec)
 
     assert [
@@ -241,7 +241,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   test "Membrane.ChildrenSpec.link_linear/1 links children in a linear manner" do
     import Membrane.ChildrenSpec
     children = [source: nil, filter: nil, sink: nil]
-    desired_links = [spawn_child(:source, nil) |> to(:filter, nil) |> to(:sink, nil)]
+    desired_links = [child(:source, nil) |> child(:filter, nil) |> child(:sink, nil)]
     auto_generated_links = link_linear(children)
     assert desired_links == auto_generated_links
   end

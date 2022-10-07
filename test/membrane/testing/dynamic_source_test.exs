@@ -32,8 +32,8 @@ defmodule Membrane.Testing.DynamicSourceTest do
             sink_2: Testing.Sink
           ] ++
             [
-              link(:source) |> to(:sink_1),
-              link(:source) |> to(:sink_2)
+              get_child(:source) |> get_child(:sink_1),
+              get_child(:source) |> get_child(:sink_2)
             ]
       )
 
@@ -56,8 +56,8 @@ defmodule Membrane.Testing.DynamicSourceTest do
             sink_2: Testing.Sink
           ] ++
             [
-              link(:source) |> to(:sink_1),
-              link(:source) |> to(:sink_2)
+              get_child(:source) |> get_child(:sink_1),
+              get_child(:source) |> get_child(:sink_2)
             ]
       )
 

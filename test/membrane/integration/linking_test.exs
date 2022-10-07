@@ -34,7 +34,7 @@ defmodule Membrane.Integration.LinkingTest do
     @impl true
     def handle_pad_added(pad, _ctx, _state) do
       links = [
-        link(:source) |> to_bin_output(pad)
+        get_child(:source) |> to_bin_output(pad)
       ]
 
       spec = %ChildrenSpec{
@@ -107,9 +107,9 @@ defmodule Membrane.Integration.LinkingTest do
     } do
       spec = %Membrane.ChildrenSpec{
         structure: [
-          spawn_child(:bin, %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}),
-          spawn_child(:sink, Testing.Sink),
-          link(:bin) |> to(:sink)
+          child(:bin, %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}),
+          child(:sink, Testing.Sink),
+          get_child(:bin) |> get_child(:sink)
         ]
       }
 
@@ -140,7 +140,7 @@ defmodule Membrane.Integration.LinkingTest do
 
       links_spec = %Membrane.ChildrenSpec{
         structure: [
-          link(:bin) |> to(:sink)
+          get_child(:bin) |> get_child(:sink)
         ]
       }
 
@@ -189,7 +189,7 @@ defmodule Membrane.Integration.LinkingTest do
 
     links_spec = %Membrane.ChildrenSpec{
       structure: [
-        link(:source) |> to(:sink)
+        get_child(:source) |> get_child(:sink)
       ]
     }
 
@@ -223,7 +223,7 @@ defmodule Membrane.Integration.LinkingTest do
 
     links_spec = %Membrane.ChildrenSpec{
       structure: [
-        link(:source) |> to(:sink)
+        get_child(:source) |> get_child(:sink)
       ]
     }
 
@@ -256,7 +256,7 @@ defmodule Membrane.Integration.LinkingTest do
 
     links_spec = %Membrane.ChildrenSpec{
       structure: [
-        link(:bin) |> to(:sink)
+        get_child(:bin) |> get_child(:sink)
       ]
     }
 
@@ -295,27 +295,27 @@ defmodule Membrane.Integration.LinkingTest do
     Testing.Pipeline.execute_actions(pipeline,
       spec: %ChildrenSpec{
         structure: [
-          spawn_child(:src1, %Testing.Source{output: []})
+          child(:src1, %Testing.Source{output: []})
           |> via_in(Pad.ref(:input, 1))
-          |> to(:filter, DynamicFilter)
+          |> child(:filter, DynamicFilter)
           |> via_out(Pad.ref(:output, 1))
-          |> to(:sink1, %SlowSetupSink{setup_delay: 300})
+          |> child(:sink1, %SlowSetupSink{setup_delay: 300})
         ]
       },
       spec: %ChildrenSpec{
         structure: [
-          spawn_child(:independent_src, %Testing.Source{output: []})
-          |> to(:independent_filter, DynamicFilter)
-          |> to(:independent_sink, Testing.Sink)
+          child(:independent_src, %Testing.Source{output: []})
+          |> child(:independent_filter, DynamicFilter)
+          |> child(:independent_sink, Testing.Sink)
         ]
       },
       spec: %ChildrenSpec{
         structure: [
-          spawn_child(:src2, %Testing.Source{output: []})
+          child(:src2, %Testing.Source{output: []})
           |> via_in(Pad.ref(:input, 2))
-          |> to(:filter)
+          |> get_child(:filter)
           |> via_out(Pad.ref(:output, 2))
-          |> to(:sink2, Testing.Sink)
+          |> child(:sink2, Testing.Sink)
         ]
       }
     )
@@ -343,19 +343,19 @@ defmodule Membrane.Integration.LinkingTest do
     Testing.Pipeline.execute_actions(pipeline,
       spec: %ChildrenSpec{
         structure: [
-          spawn_child(:source, %Testing.Source{output: [1, 2, 3]})
-          |> to(:filter1, %TestDynamicPadBin{
+          child(:source, %Testing.Source{output: [1, 2, 3]})
+          |> child(:filter1, %TestDynamicPadBin{
             filter1: %TestDynamicPadBin{filter1: TestFilter, filter2: TestFilter},
             filter2: TestFilter
           })
-          |> to(:filter2, %TestDynamicPadBin{
+          |> child(:filter2, %TestDynamicPadBin{
             filter1: %TestDynamicPadBin{
               filter1: TestFilter,
               filter2: %TestDynamicPadBin{filter1: TestFilter, filter2: TestFilter}
             },
             filter2: %TestDynamicPadBin{filter1: TestFilter, filter2: TestFilter}
           })
-          |> to(:sink, Testing.Sink)
+          |> child(:sink, Testing.Sink)
         ]
       }
     )
