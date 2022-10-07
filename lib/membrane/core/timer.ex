@@ -13,13 +13,13 @@ defmodule Membrane.Core.Timer do
           interval: interval_t,
           init_time: Time.t(),
           clock: Clock.t(),
-          time_passed: Time.t(),
+          next_tick_time: Time.t(),
           ratio: Clock.ratio_t(),
           timer_ref: reference() | nil
         }
 
   @enforce_keys [:interval, :clock, :init_time, :id]
-  defstruct @enforce_keys ++ [time_passed: 0, ratio: 1, timer_ref: nil]
+  defstruct @enforce_keys ++ [next_tick_time: 0, ratio: 1, timer_ref: nil]
 
   @spec start(id_t, interval_t, Clock.t()) :: t
   def start(id, interval, clock) do
@@ -28,8 +28,12 @@ defmodule Membrane.Core.Timer do
   end
 
   @spec stop(t) :: :ok
-  def stop(timer) do
-    Process.cancel_timer(timer.timer_ref)
+  def stop(%__MODULE__{interval: :no_interval}) do
+    :ok
+  end
+
+  def stop(%__MODULE__{timer_ref: timer_ref}) do
+    Process.cancel_timer(timer_ref)
     :ok
   end
 
@@ -50,19 +54,26 @@ defmodule Membrane.Core.Timer do
       id: id,
       interval: interval,
       init_time: init_time,
-      time_passed: time_passed,
+      next_tick_time: next_tick_time,
       ratio: ratio
     } = timer
 
-    time_passed = time_passed + interval
-    time = (init_time + time_passed / ratio) |> Ratio.floor() |> Time.round_to_milliseconds()
-    timer_ref = Process.send_after(self(), Message.new(:timer_tick, id), time, abs: true)
-    %__MODULE__{timer | time_passed: time_passed, timer_ref: timer_ref}
+    next_tick_time = next_tick_time + interval
+
+    # Next tick time converted to BEAM clock time
+    beam_next_tick_time =
+      (init_time + next_tick_time / ratio) |> Ratio.floor() |> Time.round_to_milliseconds()
+
+    timer_ref =
+      Process.send_after(self(), Message.new(:timer_tick, id), beam_next_tick_time, abs: true)
+
+    %__MODULE__{timer | next_tick_time: next_tick_time, timer_ref: timer_ref}
   end
 
   @spec set_interval(t, interval_t) :: t
   def set_interval(%__MODULE__{interval: :no_interval} = timer, interval) do
-    tick(%__MODULE__{timer | interval: interval})
+    %__MODULE__{timer | interval: interval}
+    |> tick()
   end
 
   def set_interval(timer, interval) do

@@ -272,7 +272,7 @@ defmodule Membrane.Core.ElementTest do
     {:ok, clock} = Membrane.Clock.start_link()
     state = Membrane.Core.TimerController.start_timer(:timer, 1000, clock, get_state())
     assert {:noreply, state} = Element.handle_info(Message.new(:timer_tick, :timer), state)
-    assert state.synchronization.timers.timer.time_passed == 2000
+    assert state.synchronization.timers.timer.next_tick_time == 2000
   end
 
   test "should update clock ratio" do
