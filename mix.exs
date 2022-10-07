@@ -16,15 +16,15 @@ defmodule Membrane.Mixfile do
       name: "Membrane Core",
       source_url: link(),
       docs: docs(),
-      aliases: ["test.all": "test", docs: ["docs", &copy_assets/1]],
+      aliases: [docs: ["docs", &copy_assets/1]],
       preferred_cli_env: [
-        "test.all": :test,
+        test: :test,
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.post": :test,
         "coveralls.html": :test
       ],
-      test_coverage: [tool: ExCoveralls, test_task: "test.all"],
+      test_coverage: [tool: ExCoveralls, test_task: "test"],
       deps: deps()
     ]
   end
