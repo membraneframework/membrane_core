@@ -1,7 +1,7 @@
 defmodule Membrane.Support.LogMetadataTest.Pipeline do
   @moduledoc """
   Pipeline used to test log metadata.
-  Returns `Membrane.ParentSpec` containing `:log_metadata`.
+  Returns `Membrane.ChildrenSpec` containing `:log_metadata`.
   """
   use Membrane.Pipeline
 
@@ -30,7 +30,7 @@ defmodule Membrane.Support.LogMetadataTest.Pipeline do
       opts.elements
       |> Enum.map(fn {element_name, element_metadata} ->
         {:spec,
-         %Membrane.ParentSpec{
+         %Membrane.ChildrenSpec{
            structure: [{element_name, MetadataNotifyingElement}],
            log_metadata: [test: element_metadata]
          }}

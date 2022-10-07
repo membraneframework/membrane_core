@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Parent.ChildEntryParser do
   @moduledoc false
 
-  alias Membrane.{ChildEntry, ParentError, ParentSpec}
+  alias Membrane.{ChildEntry, ChildrenSpec, ParentError}
 
   @type raw_child_entry_t :: %ChildEntry{
           name: Membrane.Child.name_t(),
@@ -10,7 +10,7 @@ defmodule Membrane.Core.Parent.ChildEntryParser do
           component_type: :element | :bin
         }
 
-  @spec parse(ParentSpec.child_spec_t() | any) ::
+  @spec parse(ChildrenSpec.child_spec_t() | any) ::
           [raw_child_entry_t] | no_return
   def parse(children_spec)
       when is_map(children_spec) or is_list(children_spec) do

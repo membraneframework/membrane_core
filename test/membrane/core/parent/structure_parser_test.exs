@@ -5,7 +5,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   alias Membrane.Core.Parent.Link.Endpoint
 
   test "valid link" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
     require Membrane.Pad
     alias Membrane.Pad
 
@@ -91,7 +91,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   end
 
   test "link with multiple branches" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
 
     links_spec = [link(:a) |> to(:b) |> to(:c), link(:d) |> to(:b) |> to(:e)]
 
@@ -175,7 +175,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   end
 
   test "incomplete link" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
 
     %{
       :a => [link(:a)],
@@ -191,7 +191,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   end
 
   test "link creating children" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
 
     links_spec = [spawn_child(:a, A) |> to(:b, B) |> to(:c, C)]
     assert {links, children} = StructureParser.parse(links_spec)
@@ -238,8 +238,8 @@ defmodule Membrane.Core.Parent.StructureParserTest do
            ]
   end
 
-  test "Membrane.ParentSpec.link_linear/1 links children in a linear manner" do
-    import Membrane.ParentSpec
+  test "Membrane.ChildrenSpec.link_linear/1 links children in a linear manner" do
+    import Membrane.ChildrenSpec
     children = [source: nil, filter: nil, sink: nil]
     desired_links = [spawn_child(:source, nil) |> to(:filter, nil) |> to(:sink, nil)]
     auto_generated_links = link_linear(children)

@@ -4,7 +4,7 @@ defmodule Membrane.Core.Parent.StructureParser do
 
   alias Membrane.Core.Parent.Link
   alias Membrane.Core.Parent.Link.Endpoint
-  alias Membrane.{Element, Pad, ParentError, ParentSpec}
+  alias Membrane.{ChildrenSpec, Element, Pad, ParentError}
 
   @type raw_link_t :: %Link{from: raw_endpoint_t(), to: raw_endpoint_t()}
 
@@ -16,17 +16,17 @@ defmodule Membrane.Core.Parent.StructureParser do
           pad_props: map()
         }
 
-  @spec parse(ParentSpec.structure_spec_t()) ::
-          {[raw_link_t], [ParentSpec.child_spec_extended_t()]} | no_return
+  @spec parse(ChildrenSpec.structure_spec_t()) ::
+          {[raw_link_t], [ChildrenSpec.child_spec_extended_t()]} | no_return
   def parse(structure) when is_list(structure) do
     {links, children} =
       structure
       |> List.flatten()
       |> Enum.map(fn
-        %ParentSpec.LinkBuilder{links: links, children: children, status: :done} ->
+        %ChildrenSpec.LinkBuilder{links: links, children: children, status: :done} ->
           {Enum.reverse(links), Enum.reverse(children)}
 
-        %ParentSpec.LinkBuilder{links: [%{from: from} | _]} = builder ->
+        %ChildrenSpec.LinkBuilder{links: [%{from: from} | _]} = builder ->
           if length(builder.children) == 1 do
             {[], builder.children}
           else
@@ -67,11 +67,11 @@ defmodule Membrane.Core.Parent.StructureParser do
 
   def parse(structure), do: from_spec_error(structure)
 
-  @spec from_spec_error(ParentSpec.structure_spec_t()) :: no_return
+  @spec from_spec_error(ChildrenSpec.structure_spec_t()) :: no_return
   defp from_spec_error(structure) do
     raise ParentError, """
     Invalid structure specification: #{inspect(structure)}.
-    See `#{inspect(ParentSpec)}` for information on specifying structure.
+    See `#{inspect(ChildrenSpec)}` for information on specifying structure.
     """
   end
 end

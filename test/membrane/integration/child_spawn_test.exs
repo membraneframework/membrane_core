@@ -3,11 +3,11 @@ defmodule Membrane.Integration.ChildSpawnTest do
   use ExUnit.Case, async: false
 
   import Membrane.Testing.Assertions
-  import Membrane.ParentSpec
+  import Membrane.ChildrenSpec
 
   alias Membrane.Buffer
+  alias Membrane.ChildrenSpec
   alias Membrane.Core.Message
-  alias Membrane.ParentSpec
   alias Membrane.Testing
 
   require Message
@@ -17,7 +17,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
 
     @impl true
     def handle_init(structure) do
-      spec = %ParentSpec{structure: structure}
+      spec = %ChildrenSpec{structure: structure}
       {{:ok, spec: spec}, %{}}
     end
   end
@@ -47,7 +47,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
       |> to_new(:sink, SinkThatNotifiesParent)
     ]
 
-    spec = %ParentSpec{structure: structure}
+    spec = %ChildrenSpec{structure: structure}
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
     # a workaround - I need to wait for some time for pads to link, so that not let the
     # "unlinked pads" exception be thrown
@@ -68,7 +68,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
       spawn_child(:source, %Testing.Source{output: [1, 2, 3]}) |> to_new(:sink, Testing.Sink)
     ]
 
-    spec = %ParentSpec{structure: structure}
+    spec = %ChildrenSpec{structure: structure}
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec, playback: :playing)
     assert_pipeline_play(pipeline_pid)
   end
@@ -84,7 +84,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
       link_new(:source, %Testing.Source{output: [1, 2, 3]}) |> to(:sink, Testing.Sink)
     ]
 
-    spec = %ParentSpec{structure: structure}
+    spec = %ChildrenSpec{structure: structure}
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
     # a workaround - I need to wait for some time for pads to link, so that not let the
     # "unlinked pads" exception be thrown
@@ -110,7 +110,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
       link_new(:source, %Testing.Source{output: [1, 2, 3]}) |> to(:sink, Testing.Sink)
     ]
 
-    spec = %ParentSpec{structure: structure}
+    spec = %ChildrenSpec{structure: structure}
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
     # a workaround - I need to wait for some time for pads to link, so that not let the
     # "unlinked pads" exception be thrown

@@ -18,7 +18,7 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
       |> to(:sink)
     ]
 
-    spec = %Membrane.ParentSpec{
+    spec = %Membrane.ChildrenSpec{
       structure: children ++ links
     }
 

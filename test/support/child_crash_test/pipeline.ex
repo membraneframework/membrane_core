@@ -27,7 +27,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
       |> to(:sink)
     ]
 
-    spec = %Membrane.ParentSpec{
+    spec = %Membrane.ChildrenSpec{
       structure: children ++ links
     }
 
@@ -50,7 +50,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
       |> to(:center_filter)
     ]
 
-    spec = %Membrane.ParentSpec{
+    spec = %Membrane.ChildrenSpec{
       structure: children ++ links
     }
 
@@ -72,7 +72,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
       link(source_name) |> to(bin_name) |> to(:center_filter)
     ]
 
-    spec = %Membrane.ParentSpec{
+    spec = %Membrane.ChildrenSpec{
       structure: children ++ links
     }
 
@@ -102,7 +102,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
         link(first_elem) |> to(second_elem)
       end)
 
-    spec = %Membrane.ParentSpec{
+    spec = %Membrane.ChildrenSpec{
       structure: children ++ links
     }
 

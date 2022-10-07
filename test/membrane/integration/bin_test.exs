@@ -26,7 +26,7 @@ defmodule Membrane.Core.BinTest do
 
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          structure: Membrane.ParentSpec.link_linear(children)
+          structure: Membrane.ChildrenSpec.link_linear(children)
         )
 
       assert_data_flows_through(pipeline, buffers)
@@ -50,7 +50,7 @@ defmodule Membrane.Core.BinTest do
 
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          structure: Membrane.ParentSpec.link_linear(children)
+          structure: Membrane.ChildrenSpec.link_linear(children)
         )
 
       assert_data_flows_through(pipeline, buffers)
@@ -73,7 +73,7 @@ defmodule Membrane.Core.BinTest do
 
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          structure: Membrane.ParentSpec.link_linear(children)
+          structure: Membrane.ChildrenSpec.link_linear(children)
         )
 
       assert_data_flows_through(pipeline, buffers)
@@ -99,7 +99,7 @@ defmodule Membrane.Core.BinTest do
 
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          structure: Membrane.ParentSpec.link_linear(children)
+          structure: Membrane.ChildrenSpec.link_linear(children)
         )
 
       assert_data_flows_through(pipeline, buffers)
@@ -139,7 +139,7 @@ defmodule Membrane.Core.BinTest do
 
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          structure: Membrane.ParentSpec.link_linear(children)
+          structure: Membrane.ChildrenSpec.link_linear(children)
         )
 
       assert_pipeline_play(pipeline)
@@ -204,7 +204,7 @@ defmodule Membrane.Core.BinTest do
 
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          structure: Membrane.ParentSpec.link_linear(children)
+          structure: Membrane.ChildrenSpec.link_linear(children)
         )
 
       Process.sleep(2000)
@@ -234,7 +234,7 @@ defmodule Membrane.Core.BinTest do
       def handle_init(_options) do
         children = [element_child: ClockElement]
 
-        spec = %Membrane.ParentSpec{
+        spec = %Membrane.ChildrenSpec{
           structure: children,
           clock_provider: :element_child
         }
@@ -250,7 +250,7 @@ defmodule Membrane.Core.BinTest do
       def handle_init(_options) do
         children = [bin_child: ClockBin]
 
-        {{:ok, spec: %Membrane.ParentSpec{structure: children, clock_provider: :bin_child}},
+        {{:ok, spec: %Membrane.ChildrenSpec{structure: children, clock_provider: :bin_child}},
          :ignored}
       end
     end
@@ -287,7 +287,7 @@ defmodule Membrane.Core.BinTest do
 
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          structure: Membrane.ParentSpec.link_linear(children)
+          structure: Membrane.ChildrenSpec.link_linear(children)
         )
 
       Testing.Pipeline.execute_actions(pipeline, notify_child: {:test_bin, "Some notification"})

@@ -17,7 +17,7 @@ defmodule Membrane.Testing.Sink do
       ]
       {:ok, pid} = Testing.Pipeline.start_link(
         children: children,
-        links: Membrane.ParentSpec.link_linear(children)
+        links: Membrane.ChildrenSpec.link_linear(children)
       )
 
   Asserting that `Membrane.Testing.Sink` element processed a buffer that matches

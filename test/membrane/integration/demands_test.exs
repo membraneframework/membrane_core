@@ -40,7 +40,7 @@ defmodule Membrane.Integration.DemandsTest do
       sink: %Sink{autodemand: false}
     ]
 
-    pid = Pipeline.start_link_supervised!(structure: Membrane.ParentSpec.link_linear(children))
+    pid = Pipeline.start_link_supervised!(structure: Membrane.ChildrenSpec.link_linear(children))
     test_pipeline(pid)
   end
 
@@ -53,7 +53,7 @@ defmodule Membrane.Integration.DemandsTest do
       sink: %Sink{autodemand: false}
     ]
 
-    pid = Pipeline.start_link_supervised!(structure: Membrane.ParentSpec.link_linear(children))
+    pid = Pipeline.start_link_supervised!(structure: Membrane.ChildrenSpec.link_linear(children))
     test_pipeline(pid)
   end
 
@@ -77,7 +77,7 @@ defmodule Membrane.Integration.DemandsTest do
       sink: %Sink{autodemand: false}
     ]
 
-    pid = Pipeline.start_link_supervised!(structure: Membrane.ParentSpec.link_linear(children))
+    pid = Pipeline.start_link_supervised!(structure: Membrane.ChildrenSpec.link_linear(children))
     test_pipeline(pid)
   end
 end

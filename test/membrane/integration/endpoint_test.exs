@@ -1,7 +1,7 @@
 defmodule Membrane.Core.EndpointTest do
   use ExUnit.Case, async: true
 
-  import Membrane.ParentSpec
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Support.Bin.TestBins.TestFilter

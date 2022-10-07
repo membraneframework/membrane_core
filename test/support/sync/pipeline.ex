@@ -4,7 +4,7 @@ defmodule Membrane.Support.Sync.Pipeline do
 
   alias Membrane.Testing.{Sink, Source}
 
-  @spec default_spec() :: Membrane.ParentSpec.t()
+  @spec default_spec() :: Membrane.ChildrenSpec.t()
   def default_spec() do
     demand_generator = fn time, _size ->
       Process.sleep(time)
@@ -24,7 +24,7 @@ defmodule Membrane.Support.Sync.Pipeline do
       link(:source_b) |> to(:sink_b)
     ]
 
-    %Membrane.ParentSpec{
+    %Membrane.ChildrenSpec{
       structure: children ++ links,
       stream_sync: :sinks
     }

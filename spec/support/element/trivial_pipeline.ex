@@ -19,7 +19,7 @@ defmodule Membrane.Support.Element.TrivialPipeline do
       |> to(:consumer)
     ]
 
-    spec = %Membrane.ParentSpec{
+    spec = %Membrane.ChildrenSpec{
       structure: children ++ links
     }
 

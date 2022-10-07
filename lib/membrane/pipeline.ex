@@ -9,7 +9,7 @@ defmodule Membrane.Pipeline do
 
   To create a pipeline, use the `__using__/1` macro and implement callbacks
   of `Membrane.Pipeline` behaviour. For details on instantiating and linking
-  children, see `Membrane.ParentSpec`.
+  children, see `Membrane.ChildrenSpec`.
 
   ## Starting and supervision
 
@@ -189,7 +189,7 @@ defmodule Membrane.Pipeline do
             ) :: callback_return_t
 
   @doc """
-  Callback invoked when children of `Membrane.ParentSpec` are started.
+  Callback invoked when children of `Membrane.ChildrenSpec` are started.
   """
   @callback handle_spec_started(
               children :: [Child.name_t()],
@@ -402,15 +402,15 @@ defmodule Membrane.Pipeline do
   Brings all the stuff necessary to implement a pipeline.
 
   Options:
-    - `:bring_spec?` - if true (default) imports and aliases `Membrane.ParentSpec`
+    - `:bring_spec?` - if true (default) imports and aliases `Membrane.ChildrenSpec`
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
   """
   defmacro __using__(options) do
     bring_spec =
       if options |> Keyword.get(:bring_spec?, true) do
         quote do
-          import Membrane.ParentSpec
-          alias Membrane.ParentSpec
+          import Membrane.ChildrenSpec
+          alias Membrane.ChildrenSpec
         end
       end
 

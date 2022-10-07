@@ -1,4 +1,4 @@
-defmodule Membrane.ParentSpec do
+defmodule Membrane.ChildrenSpec do
   @moduledoc """
   Structure representing the topology of a pipeline/bin.
 
@@ -103,7 +103,7 @@ defmodule Membrane.ParentSpec do
         @impl true
         def handle_pad_added(Pad.ref(:input, _) = pad, _ctx, state) do
           links = [link_bin_input(pad) |> to(:mixer)]
-          {{:ok, spec: %ParentSpec{links: links}}, state}
+          {{:ok, spec: %ChildrenSpec{links: links}}, state}
         end
 
   ## Stream sync
@@ -121,8 +121,8 @@ defmodule Membrane.ParentSpec do
   Sample definitions:
 
     ```
-    %ParentSpec{stream_sync: [[:element1, :element2], [:element3, :element4]]}
-    %ParentSpec{stream_sync: :sinks}
+    %ChildrenSpec{stream_sync: [[:element1, :element2], [:element3, :element4]]}
+    %ChildrenSpec{stream_sync: :sinks}
     ```
 
   ## Clock provider
@@ -147,7 +147,7 @@ defmodule Membrane.ParentSpec do
     }
   }
 
-  spec = %ParentSpec{children: children, crash_group: {group_id, :temporary}}
+  spec = %ChildrenSpec{children: children, crash_group: {group_id, :temporary}}
   ```
 
   The crash group is defined by a two-element tuple, first element is an ID which is of type
@@ -158,7 +158,7 @@ defmodule Membrane.ParentSpec do
   to the crash group with id `group_id`. Crash of `:some_element_1` or `:some_element_2` propagates
   only to the rest of the members of the crash group and the pipeline stays alive.
 
-  Currently, crash group covers all children within one or more `ParentSpec`s.
+  Currently, crash group covers all children within one or more `ChildrenSpec`s.
 
   ### Handling crash of a crash group
 
@@ -180,7 +180,7 @@ defmodule Membrane.ParentSpec do
 
   ## Log metadata
   `:log_metadata` field can be used to set the `Membrane.Logger` metadata for all children from that
-  `Membrane.ParentSpec`
+  `Membrane.ChildrenSpec`
   """
 
   alias Membrane.{Child, Pad}
@@ -196,7 +196,7 @@ defmodule Membrane.ParentSpec do
     defstruct children: [], links: [], status: nil
 
     @type t :: %__MODULE__{
-            children: [Membrane.ParentSpec.child_spec_extended_t()],
+            children: [Membrane.ChildrenSpec.child_spec_extended_t()],
             links: [map],
             status: status_t
           }
@@ -496,7 +496,7 @@ defmodule Membrane.ParentSpec do
 
   ## Example
 
-      Membrane.ParentSpec.link_linear([el1: MembraneElement1, el2: MembraneElement2])
+      Membrane.ChildrenSpec.link_linear([el1: MembraneElement1, el2: MembraneElement2])
   """
   @spec link_linear(children :: [child_spec_t()]) :: structure_spec_t()
 

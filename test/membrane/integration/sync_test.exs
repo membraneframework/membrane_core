@@ -23,7 +23,7 @@ defmodule Membrane.Integration.SyncTest do
     ]
 
     pipeline_opts = [
-      structure: Membrane.ParentSpec.link_linear(children)
+      structure: Membrane.ChildrenSpec.link_linear(children)
     ]
 
     for tries <- [100, 1000, 10_000] do
@@ -56,7 +56,7 @@ defmodule Membrane.Integration.SyncTest do
 
     options = [
       module: Membrane.Support.Sync.Pipeline,
-      custom_args: %Membrane.ParentSpec{}
+      custom_args: %Membrane.ChildrenSpec{}
     ]
 
     pipeline = Testing.Pipeline.start_link_supervised!(options)
@@ -92,7 +92,7 @@ defmodule Membrane.Integration.SyncTest do
     def handle_init(_options) do
       children = [filter1: TestFilter, filter2: TestFilter]
 
-      spec = %Membrane.ParentSpec{
+      spec = %Membrane.ChildrenSpec{
         structure: children,
         stream_sync: []
       }
@@ -109,7 +109,7 @@ defmodule Membrane.Integration.SyncTest do
       el2: SimpleBin
     ]
 
-    spec = %Membrane.ParentSpec{
+    spec = %Membrane.ChildrenSpec{
       structure: children,
       stream_sync: [[:el1, :el2]]
     }

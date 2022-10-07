@@ -1,19 +1,19 @@
 defmodule Membrane.Testing.PipelineTest do
   use ExUnit.Case
 
-  alias Membrane.ParentSpec
+  alias Membrane.ChildrenSpec
   alias Membrane.Testing.Pipeline
 
   defmodule MockPipeline do
     use Membrane.Pipeline
 
     @impl true
-    def handle_init(_opts), do: {{:ok, spec: %Membrane.ParentSpec{}}, :state}
+    def handle_init(_opts), do: {{:ok, spec: %Membrane.ChildrenSpec{}}, :state}
   end
 
   describe "Testing pipeline creation" do
     test "works with :default implementation" do
-      import ParentSpec
+      import ChildrenSpec
       elements = [elem: Elem, elem2: Elem]
       links = [link(:elem) |> to(:elem2)]
       options = [module: :default, structure: elements ++ links, test_process: nil]
@@ -21,20 +21,20 @@ defmodule Membrane.Testing.PipelineTest do
 
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
-      assert spec == %Membrane.ParentSpec{
+      assert spec == %Membrane.ChildrenSpec{
                structure: elements ++ links
              }
     end
 
     test "by default chooses :default implementation" do
-      import ParentSpec
+      import ChildrenSpec
       elements = [elem: Elem, elem2: Elem]
       links = [link(:elem) |> to(:elem2)]
       options = [module: :default, structure: elements ++ links, test_process: nil]
       assert {{:ok, spec: spec, playback: :playing}, state} = Pipeline.handle_init(options)
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
-      assert spec == %Membrane.ParentSpec{
+      assert spec == %Membrane.ChildrenSpec{
                structure: elements ++ links
              }
     end
@@ -42,7 +42,7 @@ defmodule Membrane.Testing.PipelineTest do
     test "works with custom module injected" do
       options = [module: MockPipeline, test_process: nil, custom_args: []]
       assert {{:ok, spec: spec}, state} = Pipeline.handle_init(options)
-      assert spec == %Membrane.ParentSpec{}
+      assert spec == %Membrane.ChildrenSpec{}
 
       assert state == %Pipeline.State{
                custom_pipeline_state: :state,
@@ -54,14 +54,14 @@ defmodule Membrane.Testing.PipelineTest do
 
   describe "When initializing Testing Pipeline" do
     test "uses prepared links if they were provided" do
-      import ParentSpec
+      import ChildrenSpec
       elements = [elem: Elem, elem2: Elem]
       links = [link(:elem) |> to(:elem2)]
       options = [module: :default, structure: elements ++ links, test_process: nil]
       assert {{:ok, spec: spec, playback: :playing}, state} = Pipeline.handle_init(options)
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
-      assert spec == %Membrane.ParentSpec{
+      assert spec == %Membrane.ChildrenSpec{
                structure: elements ++ links
              }
     end

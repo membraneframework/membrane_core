@@ -5,7 +5,7 @@
 
 #   alias Membrane.Buffer
 #   alias Membrane.FilterAggregator
-#   alias Membrane.ParentSpec
+#   alias Membrane.ChildrenSpec
 #   alias Membrane.RemoteStream
 #   alias Membrane.Testing.{Pipeline, Sink, Source}
 
@@ -57,7 +57,7 @@
 #         },
 #         sink: Sink
 #       ]
-#       |> ParentSpec.link_linear()
+#       |> ChildrenSpec.link_linear()
 
 #     pid = Pipeline.start_link_supervised!(links: links)
 #     assert_start_of_stream(pid, :sink)

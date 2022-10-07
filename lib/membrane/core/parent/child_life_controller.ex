@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   use Bunch
 
   alias __MODULE__.{CrashGroupUtils, LinkUtils, StartupUtils}
-  alias Membrane.ParentSpec
+  alias Membrane.ChildrenSpec
   alias Membrane.Core.{Bin, CallbackHandler, Component, Parent, Pipeline}
 
   alias Membrane.Core.Parent.{
@@ -35,7 +35,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @type pending_specs_t :: %{spec_ref_t() => pending_spec_t()}
 
   @doc """
-  Handles `Membrane.ParentSpec` returned with `spec` action.
+  Handles `Membrane.ChildrenSpec` returned with `spec` action.
 
   Handling a spec consists of the following steps:
   - Parse the spec
@@ -62,8 +62,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   - Cleanup spec: remove it from `pending_specs` and all other specs' `dependent_specs` and try proceeding startup
     for all other pending specs that depended on the spec.
   """
-  @spec handle_spec(ParentSpec.t(), Parent.state_t()) :: Parent.state_t() | no_return()
-  def handle_spec(%ParentSpec{} = spec, state) do
+  @spec handle_spec(ChildrenSpec.t(), Parent.state_t()) :: Parent.state_t() | no_return()
+  def handle_spec(%ChildrenSpec{} = spec, state) do
     spec_ref = make_ref()
 
     Membrane.Logger.debug("""

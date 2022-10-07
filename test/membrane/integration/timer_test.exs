@@ -36,7 +36,7 @@ defmodule Membrane.Integration.TimerTest do
 
     @impl true
     def handle_init(pid) do
-      spec = %ParentSpec{
+      spec = %ChildrenSpec{
         structure: [element: Element, bin: Bin]
       }
 

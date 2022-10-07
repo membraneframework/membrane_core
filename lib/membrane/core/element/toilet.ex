@@ -73,7 +73,7 @@ defmodule Membrane.Core.Element.Toilet do
     processes the stream too slow or doesn't process it at all.
     To have control over amount of buffers being produced, consider using output in pull mode
     (see `Membrane.Pad.mode_t`).
-    You can also try changing the `toilet_capacity` in `Membrane.ParentSpec.via_in/3`.
+    You can also try changing the `toilet_capacity` in `Membrane.ChildrenSpec.via_in/3`.
     """)
 
     Process.exit(responsible_process, :kill)

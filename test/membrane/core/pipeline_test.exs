@@ -2,9 +2,9 @@ defmodule Membrane.Core.PipelineTest do
   use ExUnit.Case
 
   import Membrane.Testing.Assertions
+  alias Membrane.ChildrenSpec
   alias Membrane.Core.Message
   alias Membrane.Core.Pipeline.{ActionHandler, State}
-  alias Membrane.ParentSpec
   alias Membrane.Testing
 
   require Membrane.Core.Message
@@ -62,7 +62,7 @@ defmodule Membrane.Core.PipelineTest do
     test "executes successfully when callback module's handle_init returns {{:ok, spec: spec}}, state} ",
          %{init_opts: init_opts} do
       assert {:ok, state, {:continue, :setup}} =
-               @module.init(%{init_opts | options: {{:ok, spec: %Membrane.ParentSpec{}}, %{}}})
+               @module.init(%{init_opts | options: {{:ok, spec: %Membrane.ChildrenSpec{}}, %{}}})
 
       assert %State{internal_state: %{}, module: TestPipeline} = state
     end
@@ -72,7 +72,8 @@ defmodule Membrane.Core.PipelineTest do
     test "should raise if duplicate elements exist in spec", %{state: state} do
       assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
         ActionHandler.handle_action(
-          {:spec, %ParentSpec{structure: [a: Membrane.Testing.Source, a: Membrane.Testing.Sink]}},
+          {:spec,
+           %ChildrenSpec{structure: [a: Membrane.Testing.Source, a: Membrane.Testing.Sink]}},
           nil,
           [],
           state
@@ -85,7 +86,7 @@ defmodule Membrane.Core.PipelineTest do
 
       assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
         ActionHandler.handle_action(
-          {:spec, %ParentSpec{structure: [a: Membrane.Testing.Source]}},
+          {:spec, %ChildrenSpec{structure: [a: Membrane.Testing.Source]}},
           nil,
           [],
           state

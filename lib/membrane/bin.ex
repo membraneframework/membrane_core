@@ -156,7 +156,7 @@ defmodule Membrane.Bin do
             ) :: callback_return_t
 
   @doc """
-  Callback invoked when children of `Membrane.ParentSpec` are started.
+  Callback invoked when children of `Membrane.ChildrenSpec` are started.
   """
   @callback handle_spec_started(
               children :: [Child.name_t()],
@@ -250,15 +250,15 @@ defmodule Membrane.Bin do
   Brings all the stuff necessary to implement a bin.
 
   Options:
-    - `:bring_spec?` - if true (default) imports and aliases `Membrane.ParentSpec`
+    - `:bring_spec?` - if true (default) imports and aliases `Membrane.ChildrenSpec`
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
   """
   defmacro __using__(options) do
     bring_spec =
       if options |> Keyword.get(:bring_spec?, true) do
         quote do
-          import Membrane.ParentSpec
-          alias Membrane.ParentSpec
+          import Membrane.ChildrenSpec
+          alias Membrane.ChildrenSpec
         end
       end
 

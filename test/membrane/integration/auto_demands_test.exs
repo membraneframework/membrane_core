@@ -51,7 +51,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
   ]
   |> Enum.map(fn opts ->
     test "buffers pass through auto-demand filters; setup: #{inspect(opts)}" do
-      import Membrane.ParentSpec
+      import Membrane.ChildrenSpec
 
       %{payloads: payloads, factor: factor, direction: direction, filters: filters} =
         unquote(Macro.escape(opts))
@@ -89,7 +89,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
   end)
 
   test "buffers pass through auto-demand tee" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
 
     pipeline =
       Pipeline.start_link_supervised!(
@@ -114,7 +114,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
   end
 
   test "handle removed branch" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
 
     pipeline =
       Pipeline.start_link_supervised!(
@@ -152,7 +152,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
   end
 
   test "toilet" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
 
     pipeline =
       Pipeline.start_link_supervised!(
@@ -182,7 +182,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
   end
 
   test "toilet overflow" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
 
     pipeline =
       Pipeline.start_supervised!(

@@ -1,7 +1,7 @@
 defmodule Membrane.Testing.DynamicSourceTest do
   use ExUnit.Case
 
-  import Membrane.ParentSpec
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Buffer

@@ -13,7 +13,7 @@ defmodule Membrane.Element.PadData do
     - `:end_of_stream?` - flag determining whether the stream processing via the pad has been finished
     - `:mode` - see `Membrane.Pad.mode_t`.
     - `:name` - see `Membrane.Pad.name_t`. Do not mistake with `:ref`
-    - `:options` - options passed in `Membrane.ParentSpec` when linking pad
+    - `:options` - options passed in `Membrane.ChildrenSpec` when linking pad
     - `:ref` - see `Membrane.Pad.ref_t`
     - `:start_of_stream?` - flag determining whether the stream processing via the pad has been started
 

@@ -47,7 +47,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
       ]
       |> maybe_add_extra_source_link(opts)
 
-    spec = %Membrane.ParentSpec{
+    spec = %Membrane.ChildrenSpec{
       structure: links ++ children
     }
 

@@ -25,7 +25,7 @@ defmodule Membrane.Core.Bin.PadController do
           Pad.ref_t(),
           Pad.direction_t(),
           Link.id(),
-          Membrane.ParentSpec.pad_options_t(),
+          Membrane.ChildrenSpec.pad_options_t(),
           State.t()
         ) :: State.t() | no_return
   def handle_external_link_request(pad_ref, direction, link_id, pad_options, state) do
