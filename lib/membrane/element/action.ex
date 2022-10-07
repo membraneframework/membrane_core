@@ -203,8 +203,8 @@ defmodule Membrane.Element.Action do
   Terminates element with given reason.
 
   Termination reason follows the OTP semantics:
-  - use `:normal` for graceful termination. Allowed only when termination was already requested
-    by parent, i.e. after `c:Membrane.Element.Base.handle_terminate_request/2` is called
+  - use `:normal` for graceful termination. Allowed only when the parent already requested termination,
+    i.e. after `c:Membrane.Element.Base.handle_terminate_request/2` is called
   - if reason is neither `:normal`, `:shutdown` nor `{:shutdown, term}`, an error is logged
   """
   @type terminate_t :: {:terminate, reason :: :normal | :shutdown | {:shutdown, term} | term}

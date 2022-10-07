@@ -20,7 +20,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   def handle_action({name, args}, _cb, _params, %State{terminating?: true})
       when name in [:spec, :playback] do
     raise Membrane.ParentError,
-          "Action #{inspect({name, args})} cannot be handled because the bin is already terminating"
+          "Action #{inspect({name, args})} cannot be handled because the pipeline is already terminating"
   end
 
   @impl CallbackHandler
