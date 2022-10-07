@@ -121,7 +121,8 @@ defmodule Membrane.Pipeline do
 
   By default it returns `t:Membrane.Pipeline.Action.terminate_t/0` with reason `:normal`.
   """
-  @callback handle_terminate_request(context :: nil, state) :: callback_return_t()
+  @callback handle_terminate_request(context :: CallbackContext.TerminateRequest.t(), state) ::
+              callback_return_t()
 
   @doc """
   Callback invoked on pipeline startup, right after `c:handle_init/1`.

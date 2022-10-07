@@ -170,7 +170,8 @@ defmodule Membrane.Bin do
 
   By default it returns `t:Membrane.Bin.Action.terminate_t/0` with reason `:normal`.
   """
-  @callback handle_terminate_request(context :: nil, state_t) :: callback_return_t()
+  @callback handle_terminate_request(context :: CallbackContext.TerminateRequest.t(), state_t) ::
+              callback_return_t()
 
   @optional_callbacks membrane_clock?: 0,
                       handle_init: 1,

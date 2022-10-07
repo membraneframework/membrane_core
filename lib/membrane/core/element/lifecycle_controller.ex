@@ -104,11 +104,14 @@ defmodule Membrane.Core.Element.LifecycleController do
 
     state = %{state | terminating?: true}
 
+    require CallbackContext.TerminateRequest
+    context = &CallbackContext.TerminateRequest.from_state/1
+
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_terminate_request,
         ActionHandler,
-        %{context: fn _state -> nil end},
+        %{context: context},
         [],
         state
       )

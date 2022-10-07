@@ -74,11 +74,12 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   def handle_terminate_request(state) do
     state = %{state | terminating?: true}
+    context = Component.callback_context_generator(:parent, TerminateRequest, state)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_terminate_request,
       Component.action_handler(state),
-      %{context: fn _state -> nil end},
+      %{context: context},
       [],
       state
     )

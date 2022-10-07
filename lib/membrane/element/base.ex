@@ -186,7 +186,10 @@ defmodule Membrane.Element.Base do
 
   By default it returns `t:Membrane.Element.Action.terminate_t/0` with reason `:normal`.
   """
-  @callback handle_terminate_request(context :: nil, state :: Element.state_t()) ::
+  @callback handle_terminate_request(
+              context :: CallbackContext.TerminateRequest.t(),
+              state :: Element.state_t()
+            ) ::
               callback_return_t()
 
   @doc """
