@@ -85,9 +85,15 @@ defmodule Membrane.Bin.Action do
   Terminates bin with given reason.
 
   Termination reason follows the OTP semantics:
-  - use `:normal` for graceful termination. Allowed only when the parent already requested termination,
-    i.e. after `c:Membrane.Bin.handle_terminate_request/2` is called
-  - if reason is neither `:normal`, `:shutdown` nor `{:shutdown, term}`, an error is logged
+  - Use `:normal` for graceful termination. Allowed only when the parent already requested termination,
+  i.e. after `c:Membrane.Bin.handle_terminate_request/2` is called. If the bin has no children, it
+  terminates immediately. Otherwise, it switches to the zombie mode, requests all the children to terminate,
+  waits for them to terminate and then terminates itself. In the zombie mode, no bin callbacks
+  are called and all messages and calls to the bin are ignored (apart from Membrane internal
+  messages)
+  - If the reason is other than `:normal`, the bin terminates immediately. The bin supervisor
+  terminates all the children with the reason `:shutdown`
+  - If the reason is neither `:normal`, `:shutdown` nor `{:shutdown, term}`, an error is logged
   """
   @type terminate_t :: {:terminate, reason :: :normal | :shutdown | {:shutdown, term} | term}
 

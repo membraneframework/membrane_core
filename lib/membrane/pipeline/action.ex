@@ -100,8 +100,14 @@ defmodule Membrane.Pipeline.Action do
   Terminates the pipeline with given reason.
 
   Termination reason follows the OTP semantics:
-  - use `:normal` for graceful termination
-  - if reason is neither `:normal`, `:shutdown` nor `{:shutdown, term}`, an error is logged
+  - Use `:normal` for graceful termination. If the pipeline has no children, it terminates
+  immediately. Otherwise, it switches to the zombie mode, requests all the children to terminate,
+  waits for them to terminate and then terminates itself. In the zombie mode, no pipeline callbacks
+  are called and all messages and calls to the pipeline are ignored (apart from Membrane internal
+  messages)
+  - If the reason is other than `:normal`, the pipeline terminates immediately. The pipeline supervisor
+  terminates all the children with the reason `:shutdown`
+  - If the reason is neither `:normal`, `:shutdown` nor `{:shutdown, term}`, an error is logged
   """
   @type terminate_t :: {:terminate, reason :: :normal | :shutdown | {:shutdown, term} | term}
 
