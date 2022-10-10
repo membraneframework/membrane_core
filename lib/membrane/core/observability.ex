@@ -35,8 +35,9 @@ defmodule Membrane.Core.Observability do
         :"##{unique_prefix}#{name_str}#{component_type_suffix}#{utility_name}"
       )
 
-      Membrane.ComponentPath.set_and_append(component_path, name_str)
-      Membrane.Logger.set_prefix(Membrane.ComponentPath.get_formatted() <> utility_name)
+      component_path = component_path ++ [name_str]
+      Membrane.ComponentPath.set(component_path)
+      Membrane.Logger.set_prefix(Membrane.ComponentPath.format(component_path) <> utility_name)
       log_metadata
     end
   end
