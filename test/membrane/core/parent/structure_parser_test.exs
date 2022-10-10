@@ -17,7 +17,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
       |> via_out(:x)
       |> via_in(Pad.ref(:y, 2))
       |> get_child(:d)
-      |> to_bin_output()
+      |> bin_output()
     ]
 
     assert {links, []} = StructureParser.parse(links_spec)
@@ -184,7 +184,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
       :a => [get_child(:a)],
       :b => [get_child(:b) |> via_out(:x)],
       :c => [get_child(:c) |> via_in(:y)],
-      {Membrane.Bin, :itself} => [link_bin_input()]
+      {Membrane.Bin, :itself} => [bin_input()]
     }
     |> Enum.each(fn {from, link_spec} ->
       assert_raise Membrane.ParentError,

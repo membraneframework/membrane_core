@@ -36,7 +36,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
   end
 
   test "if child/4 doesn't spawn child with a given name if there is already a child with given name among the children
-  and the `ignore_duplicates` option is enabled" do
+  and the `get_if_exists` option is enabled" do
     pipeline_pid =
       Testing.Pipeline.start_link_supervised!(
         module: PipelineWhichDoesntPlayOnStartup,
@@ -45,7 +45,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
 
     structure = [
       child(:source, %Testing.Source{output: [1, 2, 3]})
-      |> child(:sink, SinkThatNotifiesParent, ignore_duplicates: true)
+      |> child(:sink, SinkThatNotifiesParent, get_if_exists: true)
     ]
 
     spec = %ChildrenSpec{structure: structure}
@@ -59,7 +59,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
   end
 
   test "if child/4 spawns a new child with a given name if there is no child with given name among the children
-  and the `ignore_duplicates` option is enabled" do
+  and the `get_if_exists` option is enabled" do
     pipeline_pid =
       Testing.Pipeline.start_link_supervised!(
         module: PipelineWhichDoesntPlayOnStartup,
@@ -68,7 +68,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
 
     structure = [
       child(:source, %Testing.Source{output: [1, 2, 3]})
-      |> child(:sink, Testing.Sink, ignore_duplicates: true)
+      |> child(:sink, Testing.Sink, get_if_exists: true)
     ]
 
     spec = %ChildrenSpec{structure: structure}
@@ -77,7 +77,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
   end
 
   test "if child/3 doesn't spawn child with a given name if there is already a child with given name among the children
-  and the `ignore_duplicates` option is enabled" do
+  and the `get_if_exists` option is enabled" do
     pipeline_pid =
       Testing.Pipeline.start_link_supervised!(
         module: PipelineWhichDoesntPlayOnStartup,
@@ -85,7 +85,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
       )
 
     structure = [
-      child(:source, %Testing.Source{output: [1, 2, 3]}, ignore_duplicates: true)
+      child(:source, %Testing.Source{output: [1, 2, 3]}, get_if_exists: true)
       |> child(:sink, Testing.Sink)
     ]
 
@@ -105,7 +105,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
   end
 
   test "if child/3 spawns a new child with a given name if there is no child with given name among the children
-  and the `ignore_duplicates` option is enabled" do
+  and the `get_if_exists` option is enabled" do
     pipeline_pid =
       Testing.Pipeline.start_link_supervised!(
         module: PipelineWhichDoesntPlayOnStartup,
@@ -114,7 +114,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
 
     structure = [
       child(:source, %Testing.Source{output: [1, 2, 3]})
-      |> child(:sink, Testing.Sink, ignore_duplicates: true)
+      |> child(:sink, Testing.Sink, get_if_exists: true)
     ]
 
     spec = %ChildrenSpec{structure: structure}

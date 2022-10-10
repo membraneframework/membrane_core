@@ -34,7 +34,7 @@ defmodule Membrane.Integration.LinkingTest do
     @impl true
     def handle_pad_added(pad, _ctx, _state) do
       links = [
-        get_child(:source) |> to_bin_output(pad)
+        get_child(:source) |> bin_output(pad)
       ]
 
       spec = %ChildrenSpec{

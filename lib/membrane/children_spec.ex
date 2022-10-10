@@ -7,104 +7,112 @@ defmodule Membrane.ChildrenSpec do
   action, respectively. This commonly happens within `c:Membrane.Pipeline.handle_init/1`
   and `c:Membrane.Bin.handle_init/1`, but can be done in any other callback also.
 
-  ## Children
+  ## Structure
+  The most important part of the `Membrane.ChildrenSpec` is the `:structure` field.
+  The structure allows specifying the children that need to be spawned in the action, as well as
+  links between the children (both the children spawned in that action, and already existing children).
 
-  Children that should be spawned when the pipeline/bin starts can be defined
-  with the `:children` field.
-  You have to set it to a map, where keys are valid children names (`t:Membrane.Child.name_t/0`)
-  that are unique within this pipeline/bin and values are either child's module or
-  struct of that module.
+  The children's processes are spawned with the use of `child/3` and `child/4` functions.
+  These two functions can be used for inline spawning nodes of a link:
+  ```
+  structure = [child(:source, Source) |> child(:filter, %Filter{option: 1}) |> child(:sink, Sink)]
+  ```
+  or just to spawn children processes, without linking the newly created children:
+  ```
+  structure = [child(:source, Source),
+  child(:filter, Filter),
+  child(:sink, Sink)]
+  ```
 
-  Sample definitions:
+  In case you need to refer to an already existing child (which could be spawned, i.e. in the previous `spec_t` actions),
+  use `get_child/1` and `get_child/2` functions, as in the example below:
+  ```
+  structure = [get_child(:already_existing_source) |> child(:this_filter_will_be_spawned, Filter) |> get_child(:already_existing_sink)]
+  ```
 
-      %{
-        first_element: %Element.With.Options.Struct{option_a: 42},
-        some_element: Element.Without.Options,
-        some_bin: Bin.Using.Default.Options
-      }
+  The `child/3` and `child/4` functions allow specifying `:get_if_exists` option.
+  It might be helpful when you are not certain if the child with given name exists, and, therefore, you are unable to
+  choose between `get_child` and `child` functions. After setting the `get_if_exists: true` option in `child/3` and `child/4` functions you can be sure
+  that in case a child with a given name already exists, you will simply refer to that child instead of respawning it.
+  ```
+  structure = [child(:sink, Sink),
+  child(:sink, Sink, get_if_exists: true) |> child(:source, Source)]
+  ```
+  In the example above you can see, that the `:sink` child is created in the first element of the `structure` list.
+  In the second element of that list, the `get_if_exists: true` option is used within `child/3`, which will have the same effect as if
+  `get_child(:sink)` was used. At the same time, if the `:sink` child wasn't already spawned, it would be created in that link definition.
 
-  ## Links
+  ### Links between pads
 
-  Links that should be made when the children are spawned can be defined with the
-  `:links` field. Links can be defined with the use of `link/1` and `to/2` functions
-  that allow specifying elements linked, and `via_in/2` and `via_out/2` that allow
+  `via_in/2` and `via_out/2` functions allow
   specifying pads' names and parameters. If pads are not specified, name `:input`
   is assumed for inputs and `:output` for outputs.
 
   Sample definition:
-
-      [
-        link(:source_a)
-        |> to(:converter)
-        |> via_in(:input_a, target_queue_size: 20)
-        |> to(:mixer),
-        link(:source_b)
-        |> via_out(:custom_output)
-        |> via_in(:input_b, options: [mute: true])
-        |> to(:mixer)
-        |> via_in(:input, toilet_capacity: 500)
-        |> to(:sink)
-      ]
+  [
+  get_child(:source_a)
+  |> get_child(:converter)
+  |> via_in(:input_a, target_queue_size: 20)
+  |> get_child(:mixer),
+  get_child(:source_b)
+  |> via_out(:custom_output)
+  |> via_in(:input_b, options: [mute: true])
+  |> get_child(:mixer)
+  |> via_in(:input, toilet_capacity: 500)
+  |> get_child(:sink)
+  ]
 
   See the docs for `via_in/3` and `via_out/3` for details on pad properties that can be set.
-  Links can also contain children definitions, for example:
+  Links can also contain children's definitions, for example:
 
-      [
-        link(:first_element, %Element.With.Options.Struct{option_a: 42})
-        |> to(:some_element, Element.Without.Options)
-        |> to(:element_specified_in_children)
-      ]
+  [
+  child(:first_element, %Element.With.Options.Struct{option_a: 42})
+  |> child(:some_element, Element.Without.Options)
+  |> get_child(:element_specified_before)
+  ]
 
-  Which is particularly convenient for creating links conditionally:
 
-      maybe_link = &to(&1, :some_element, Some.Element)
-      [
-        link(:first_element)
-        |> then(if condition?, do: maybe_link, else: & &1)
-        |> to(:another_element)
-      ]
+  You can also use `link_linear/1` in order to link subsequent children using default pads
+  (linking `:input` to `:output` of previous element). That might be especially helpful when creating
+  testing pipelines.
 
-   You can also use `link_linear/1` in order to link subsequent children using default pads
-   (linking `:input` to `:output` of previous element). That might be especially helpful when creating
-   testing pipelines.
-
-      children = [source: Some.Source, filter: Some.Filter, sink: Some.Sink]
-      links = link_linear(children)
+  children = [child(:source, Some.Source), child(:filter, Some.Filter), child(:sink, Some.Sink)]
+  links = link_linear(children)
 
   ### Bins
 
-  For bins boundaries, there are special links allowed. The user should define links
-  between the bin's input and the first child's input (input-input type) and last
-  child's output and bin output (output-output type). In this case, `link_bin_input/1`
-  and `to_bin_output/2` should be used.
+  For bin boundaries, there are special links allowed. The user should define links
+  between the bin's input and the first child's input (input-input type) and the last
+  child's output and bin output (output-output type). In this case, `bin_input/1`
+  and `bin_output/2` should be used.
 
   Sample definition:
 
-      [
-        link_bin_input() |> to(:filter1) |> to(:filter2) |> to_bin_output(:custom_output)
-      ]
+  [
+  bin_input() |> get_child(:filter1) |> get_child(:filter2) |> bin_output(:custom_output)
+  ]
 
   ### Dynamic pads
 
   In most cases, dynamic pads can be linked the same way as static ones, although
-  in the following situations, exact pad reference must be passed instead of a name:
+  in the following situations, an exact pad reference must be passed instead of a name:
 
   - When that reference is needed later, for example, to handle a notification related
   to that particular pad instance
 
-        pad = Pad.ref(:output, make_ref())
-        [
-          link(:tee) |> via_out(pad) |> to(:sink)
-        ]
+  pad = Pad.ref(:output, make_ref())
+  [
+  get_child(:tee) |> via_out(pad) |> get_child(:sink)
+  ]
 
   - When linking dynamic pads of a bin with its children, for example in
   `c:Membrane.Bin.handle_pad_added/3`
 
-        @impl true
-        def handle_pad_added(Pad.ref(:input, _) = pad, _ctx, state) do
-          links = [link_bin_input(pad) |> to(:mixer)]
-          {{:ok, spec: %ChildrenSpec{links: links}}, state}
-        end
+  @impl true
+  def handle_pad_added(Pad.ref(:input, _) = pad, _ctx, state) do
+  structure = [bin_input(pad) |> get_child(:mixer)]
+  {{:ok, spec: %ChildrenSpec{structure: structure}}, state}
+  end
 
   ## Stream sync
 
@@ -112,7 +120,7 @@ defmodule Membrane.ChildrenSpec do
   at the same moment. An example can be audio and video player sinks. This option
   accepts either `:sinks` atom or a list of groups (lists) of elements. Passing `:sinks`
   results in synchronizing all sinks in the pipeline, while passing a list of groups
-  of elements synchronizes all elements in each group. It is worth mentioning
+  of elements to synchronize all elements in each group. It is worth mentioning
   that to keep the stream synchronized all involved elements need to rely on
   the same clock.
 
@@ -120,10 +128,10 @@ defmodule Membrane.ChildrenSpec do
 
   Sample definitions:
 
-    ```
-    %ChildrenSpec{stream_sync: [[:element1, :element2], [:element3, :element4]]}
-    %ChildrenSpec{stream_sync: :sinks}
-    ```
+  ```
+  %ChildrenSpec{stream_sync: [[:element1, :element2], [:element3, :element4]]}
+  %ChildrenSpec{stream_sync: :sinks}
+  ```
 
   ## Clock provider
 
@@ -138,27 +146,27 @@ defmodule Membrane.ChildrenSpec do
   ### Adding children to a crash group
 
   ```elixir
-  children = %{
-    :some_element_1 => %SomeElement{
-      # ...
-    },
-    :some_element_2 => %SomeElement{
-      # ...
-    }
+  structure = [
+  child(:some_element_1, %SomeElement{
+  # ...
+  },
+  child(:some_element_2, %SomeElement{
+  # ...
   }
+  ]
 
-  spec = %ChildrenSpec{children: children, crash_group: {group_id, :temporary}}
+  spec = %ChildrenSpec{structure: children, crash_group: {group_id, :temporary}}
   ```
 
   The crash group is defined by a two-element tuple, first element is an ID which is of type
   `Membrane.CrashGroup.name_t()`, and the second is a mode. Currently, we support only
   `:temporary` mode which means that Membrane will not make any attempts to restart crashed child.
 
-  In the above snippet, we create new children - `:some_element_1` and `:some_element_2`, we add it
+  In the above snippet, we create new children - `:some_element_1` and `:some_element_2`, we add them
   to the crash group with id `group_id`. Crash of `:some_element_1` or `:some_element_2` propagates
   only to the rest of the members of the crash group and the pipeline stays alive.
 
-  Currently, crash group covers all children within one or more `ChildrenSpec`s.
+  Currently, the crash group covers all children within one or more `ChildrenSpec`s.
 
   ### Handling crash of a crash group
 
@@ -169,7 +177,7 @@ defmodule Membrane.ChildrenSpec do
   ```elixir
   @impl true
   def handle_crash_group_down(crash_group_id, ctx, state) do
-    # do some stuff in reaction to crash of group with id crash_group_id
+  # do some stuff in reaction to the crash of the group with id crash_group_id
   end
   ```
 
@@ -230,8 +238,8 @@ defmodule Membrane.ChildrenSpec do
           | {child_spec_t(), :dont_spawn_if_already_exists}
   @type structure_spec_t :: [link_builder_t() | child_spec_extended_t()]
 
-  @default_child_opts [ignore_duplicates: false]
-  @type child_opts_t :: [ignore_duplicates: boolean]
+  @default_child_opts [get_if_exists: false]
+  @type child_opts_t :: [get_if_exists: boolean]
 
   @typedoc """
   Struct used when starting and linking children within a pipeline or a bin.
@@ -294,7 +302,7 @@ defmodule Membrane.ChildrenSpec do
 
   defp do_child(child_name, child_spec, opts) do
     child_spec =
-      if opts[:ignore_duplicates],
+      if opts[:get_if_exists],
         do: {child_spec, :dont_spawn_if_already_exists},
         else: child_spec
 
@@ -309,7 +317,7 @@ defmodule Membrane.ChildrenSpec do
 
   defp do_child(%LinkBuilder{} = link_builder, child_name, child_spec, opts) do
     child_spec =
-      if opts[:ignore_duplicates],
+      if opts[:get_if_exists],
         do: {child_spec, :dont_spawn_if_already_exists},
         else: child_spec
 
@@ -323,8 +331,8 @@ defmodule Membrane.ChildrenSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec link_bin_input(Pad.name_t() | Pad.ref_t()) :: link_builder_t() | no_return
-  def link_bin_input(pad \\ :input) do
+  @spec bin_input(Pad.name_t() | Pad.ref_t()) :: link_builder_t() | no_return
+  def bin_input(pad \\ :input) do
     :ok = validate_pad_name(pad)
 
     get_child({Membrane.Bin, :itself})
@@ -336,8 +344,8 @@ defmodule Membrane.ChildrenSpec do
 
   The possible properties are:
   - `options` - If a pad defines options, they can be passed here as a keyword list. Pad options are documented
-    in moduledoc of each element. See `Membrane.Element.WithOutputPads.def_output_pad/2` and `Membrane.Bin.def_output_pad/2`
-    for information about defining pad options.
+  in moduledoc of each element. See `Membrane.Element.WithOutputPads.def_output_pad/2` and `Membrane.Bin.def_output_pad/2`
+  for information about defining pad options.
 
   See the _links_ section of the moduledoc for more information.
   """
@@ -382,26 +390,26 @@ defmodule Membrane.ChildrenSpec do
 
   The possible properties are:
   - `options` - If a pad defines options, they can be passed here as a keyword list. Pad options are documented
-    in moduledoc of each element. See `Membrane.Element.WithInputPads.def_input_pad/2` and `Membrane.Bin.def_input_pad/2`
-    for information about defining pad options.
+  in moduledoc of each element. See `Membrane.Element.WithInputPads.def_input_pad/2` and `Membrane.Bin.def_input_pad/2`
+  for information about defining pad options.
 
   Additionally, the following properties can be used to adjust the flow control parameters. If set within a bin
   on an input that connects to the bin input, they will be overridden if set when linking to the bin in its parent.
 
   - `toilet_capacity` - Used when a toilet is created, that is for pull input pads that have push output pads
-    linked to them. When a push output produces more buffers than the pull input can consume, the buffers are accumulated
-    in a queue called toilet. If the toilet size grows above its capacity, it overflows by raising an error.
+  linked to them. When a push output produces more buffers than the pull input can consume, the buffers are accumulated
+  in a queue called a toilet. If the toilet size grows above its capacity, it overflows by raising an error.
   - `target_queue_size` - The size of the queue of the input pad that Membrane will try to maintain. That allows for fulfilling
-    the demands of the element by taking data from the queue while the actual sending of demands is done asynchronously,
-    smoothing the processing. Used only for pads working in pull mode with manual demands. See `t:Membrane.Pad.mode_t/0`
-    and `t:Membrane.Pad.demand_mode_t/0` for more info.
+  the demands of the element by taking data from the queue while the actual sending of demands is done asynchronously,
+  smoothing the processing. Used only for pads working in pull mode with manual demands. See `t:Membrane.Pad.mode_t/0`
+  and `t:Membrane.Pad.demand_mode_t/0` for more info.
   - `min_demand_factor` - A factor used to calculate `minimal demand` (`minimal_demand = target_queue_size * min_demand_factor`).
-    Membrane won't send smaller demand that `minimal demand`, to reduce demands' overhead. However, user will always receive
-    as many buffers as they actually demanded, all excess buffers will be queued internally.
-    Used only for pads working in pull mode with manual demands. See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0`
-    for more info. Defaults to `#{Membrane.Core.Element.InputQueue.default_min_demand_factor()}` (the default may change in the future).
+  Membrane won't send smaller demand than `minimal demand`, to reduce demands' overhead. However, the user will always receive
+  as many buffers, as demanded, all excess buffers will be queued internally.
+  Used only for pads working in pull mode with manual demands. See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0`
+  for more info. Defaults to `#{Membrane.Core.Element.InputQueue.default_min_demand_factor()}` (the default may change in the future).
   - `auto_demand_size` - Size of automatically generated demands. Used only for pads working in pull mode with automatic demands.
-    See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0` for more info.
+  See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0` for more info.
 
   See the _links_ section of the moduledoc for more information.
   """
@@ -461,15 +469,15 @@ defmodule Membrane.ChildrenSpec do
 
   See the _links_ section of the moduledoc for more information.
   """
-  @spec to_bin_output(link_builder_t(), Pad.name_t() | Pad.ref_t()) ::
+  @spec bin_output(link_builder_t(), Pad.name_t() | Pad.ref_t()) ::
           link_builder_t() | no_return
-  def to_bin_output(builder, pad \\ :output)
+  def bin_output(builder, pad \\ :output)
 
-  def to_bin_output(%LinkBuilder{status: :to_pad}, pad) do
+  def bin_output(%LinkBuilder{status: :to_pad}, pad) do
     raise ParentError, "Invalid link specification: bin's output #{pad} placed after an input"
   end
 
-  def to_bin_output(%LinkBuilder{} = builder, pad) do
+  def bin_output(%LinkBuilder{} = builder, pad) do
     :ok = validate_pad_name(pad)
 
     if builder.status == :from_pad do
@@ -483,11 +491,11 @@ defmodule Membrane.ChildrenSpec do
 
   @doc """
   Links subsequent children using default pads (linking `:input` to `:output` of
-  previous element). The list of children must consist at least of 2 elements.
+  the previous element). The list of children must consist at least of 2 elements.
 
   ## Example
 
-      Membrane.ChildrenSpec.link_linear([el1: MembraneElement1, el2: MembraneElement2])
+  Membrane.ChildrenSpec.link_linear([el1: MembraneElement1, el2: MembraneElement2])
   """
   @spec link_linear(children :: [child_spec_t()]) :: structure_spec_t()
 
