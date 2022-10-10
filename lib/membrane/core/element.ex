@@ -18,7 +18,7 @@ defmodule Membrane.Core.Element do
   use Bunch
   use GenServer
 
-  alias Membrane.{Clock, Core, Sync}
+  alias Membrane.{Clock, Core, ResourceGuard, Sync}
 
   alias Membrane.Core.{ChildrenSupervisor, TimerController}
 
@@ -105,12 +105,11 @@ defmodule Membrane.Core.Element do
     ChildrenSupervisor.set_parent_component(options.children_supervisor, observability_config)
 
     {:ok, resource_guard} =
-      ChildrenSupervisor.start_utility(
-        options.children_supervisor,
-        {Membrane.ResourceGuard, self()}
-      )
+      ChildrenSupervisor.start_utility(options.children_supervisor, {ResourceGuard, self()})
 
     Telemetry.report_init(:element)
+
+    ResourceGuard.register_resource(resource_guard, fn -> Telemetry.report_terminate(:element) end)
 
     state =
       Map.take(options, [:module, :name, :parent_clock, :sync, :parent, :children_supervisor])
@@ -125,11 +124,6 @@ defmodule Membrane.Core.Element do
   def handle_continue(:setup, state) do
     state = LifecycleController.handle_setup(state)
     {:noreply, state}
-  end
-
-  @impl GenServer
-  def terminate(_reason, _state) do
-    Telemetry.report_terminate(:element)
   end
 
   @impl GenServer

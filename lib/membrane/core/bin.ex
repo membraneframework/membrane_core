@@ -16,6 +16,8 @@ defmodule Membrane.Core.Bin do
     TimerController
   }
 
+  alias Membrane.ResourceGuard
+
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
   require Membrane.Logger
@@ -92,17 +94,16 @@ defmodule Membrane.Core.Bin do
 
     Membrane.Core.Observability.setup(observability_config)
     ChildrenSupervisor.set_parent_component(options.children_supervisor, observability_config)
-    Telemetry.report_init(:bin)
 
     clock_proxy = Membrane.Clock.start_link(proxy: true) ~> ({:ok, pid} -> pid)
     clock = if Bunch.Module.check_behaviour(module, :membrane_clock?), do: clock_proxy, else: nil
     Message.send(options.parent, :clock, [name, clock])
 
     {:ok, resource_guard} =
-      ChildrenSupervisor.start_utility(
-        options.children_supervisor,
-        {Membrane.ResourceGuard, self()}
-      )
+      ChildrenSupervisor.start_utility(options.children_supervisor, {ResourceGuard, self()})
+
+    Telemetry.report_init(:bin)
+    ResourceGuard.register_resource(resource_guard, fn -> Telemetry.report_terminate(:bin) end)
 
     state =
       %State{
@@ -254,10 +255,5 @@ defmodule Membrane.Core.Bin do
   @impl GenServer
   def handle_call(Message.new(:get_clock), _from, state) do
     {:reply, state.synchronization.clock, state}
-  end
-
-  @impl GenServer
-  def terminate(_reason, _state) do
-    Telemetry.report_terminate(:bin)
   end
 end
