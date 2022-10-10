@@ -31,21 +31,24 @@ defmodule Membrane.Core.PipelineTest do
   end
 
   defp state(_ctx) do
-    {:ok, children_supervisor} = Membrane.Core.Parent.ChildrenSupervisor.start_link()
+    children_supervisor = Membrane.Core.ChildrenSupervisor.start_link!()
 
     [
       init_opts: %{
+        name: :test_pipeline,
         module: TestPipeline,
         children_supervisor: children_supervisor,
-        setup_observability: fn _pid -> [] end,
+        parent_path: [],
+        log_metadata: [],
         options: nil
       },
-      state: %State{
-        module: TestPipeline,
-        internal_state: %{},
-        synchronization: %{clock_proxy: nil},
-        children_supervisor: children_supervisor
-      }
+      state:
+        struct(State,
+          module: TestPipeline,
+          internal_state: %{},
+          synchronization: %{clock_proxy: nil},
+          children_supervisor: children_supervisor
+        )
     ]
   end
 

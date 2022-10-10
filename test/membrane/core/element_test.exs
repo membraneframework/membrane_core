@@ -45,7 +45,9 @@ defmodule Membrane.Core.ElementTest do
         parent_clock: nil,
         sync: Membrane.Sync.no_sync(),
         parent: self(),
-        setup_observability: fn _pid -> [] end
+        parent_path: [],
+        log_metadata: [],
+        children_supervisor: Membrane.Core.ChildrenSupervisor.start_link!()
       })
 
     state
@@ -115,15 +117,17 @@ defmodule Membrane.Core.ElementTest do
   end
 
   test "should return correct clock and should not modify the state" do
+    original_state = get_state()
+
     assert {:reply, reply, state} =
              Element.handle_call(
                Message.new(:get_clock),
                nil,
-               get_state()
+               original_state
              )
 
     assert reply == state.synchronization.clock
-    assert state == get_state()
+    assert state == original_state
   end
 
   test "should store demand/buffer/caps/event when not playing" do
@@ -311,7 +315,9 @@ defmodule Membrane.Core.ElementTest do
       parent: pipeline,
       parent_clock: nil,
       sync: Membrane.Sync.no_sync(),
-      setup_observability: fn _pid -> [] end
+      parent_path: [],
+      log_metadata: [],
+      children_supervisor: Membrane.Core.ChildrenSupervisor.start_link!()
     }
   end
 end

@@ -23,16 +23,14 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
         min_demand_factor: nil
       })
 
-    state = %{
-      State.new(%{
+    state =
+      struct(State,
         module: DummyElement,
         name: :test_name,
-        parent_clock: nil,
-        sync: nil,
-        parent: self()
-      })
-      | type: :filter,
+        type: :filter,
         playback: :playing,
+        parent_pid: self(),
+        synchronization: %{clock: nil, parent_clock: nil},
         pads_data: %{
           input:
             struct(Membrane.Element.PadData,
@@ -47,7 +45,7 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
               demand: 0
             )
         }
-    }
+      )
 
     assert_received Message.new(:demand, _size, for_pad: :some_pad)
     [state: state]

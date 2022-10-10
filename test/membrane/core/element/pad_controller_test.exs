@@ -13,12 +13,15 @@ defmodule Membrane.Core.Element.PadControllerTest do
 
   @module Membrane.Core.Element.PadController
 
-  defp prepare_state(elem_module, name \\ :element, status \\ :initializing) do
-    %{name: name, module: elem_module, parent_clock: nil, sync: nil, parent: self()}
-    |> State.new()
-    |> Map.put(:status, status)
+  defp prepare_state(elem_module, name \\ :element) do
+    struct(State,
+      name: name,
+      module: elem_module,
+      parent_pid: self(),
+      internal_state: %{},
+      synchronization: %{clock: nil, parent_clock: nil}
+    )
     |> PadSpecHandler.init_pads()
-    |> Bunch.Access.put_in(:internal_state, %{})
   end
 
   describe ".handle_link" do
@@ -57,10 +60,10 @@ defmodule Membrane.Core.Element.PadControllerTest do
     end
   end
 
-  defp prepare_static_state(elem_module, name, pad_name, status) do
+  defp prepare_static_state(elem_module, name, pad_name) do
     {info, state} =
       elem_module
-      |> prepare_state(name, status)
+      |> prepare_state(name)
       |> Bunch.Access.pop_in([:pads_info, pad_name])
 
     data =
@@ -74,8 +77,8 @@ defmodule Membrane.Core.Element.PadControllerTest do
     |> Bunch.Access.put_in([:pads_data, pad_name], data)
   end
 
-  defp prepare_dynamic_state(elem_module, name, status, pad_name, pad_ref) do
-    state = elem_module |> prepare_state(name, status)
+  defp prepare_dynamic_state(elem_module, name, pad_name, pad_ref) do
+    state = elem_module |> prepare_state(name)
     info = state.pads_info[pad_name]
 
     data =
@@ -90,7 +93,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
 
   describe "handle_unlink" do
     test "for a static pad" do
-      state = prepare_static_state(TrivialFilter, :element, :output, :stopped)
+      state = prepare_static_state(TrivialFilter, :element, :output)
       assert state.pads_data |> Map.has_key?(:output)
 
       assert_raise Membrane.PadError, fn ->
@@ -100,7 +103,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
 
     test "for dynamic input pad" do
       pad_ref = Pad.ref(:input, 0)
-      state = prepare_dynamic_state(DynamicFilter, :element, :playing, :input, pad_ref)
+      state = prepare_dynamic_state(DynamicFilter, :element, :input, pad_ref)
       assert state.pads_data |> Map.has_key?(pad_ref)
       state = @module.handle_unlink(pad_ref, state)
       assert state.internal_state[:last_event] == nil

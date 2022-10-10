@@ -41,7 +41,9 @@ defmodule Membrane.Core.FilterAggregator.Context do
       clock: nil,
       name: name,
       parent_clock: nil,
-      playback: :stopped
+      playback: :stopped,
+      resource_guard: Membrane.ResourceGuard.start_link() |> then(fn {:ok, pid} -> pid end),
+      utility_supervisor: Membrane.Core.ChildrenSupervisor.start_link!()
     }
   end
 

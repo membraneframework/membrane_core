@@ -4,7 +4,7 @@ defmodule Membrane.Core.Pipeline do
 
   alias __MODULE__.{ActionHandler, State}
   alias Membrane.Clock
-  alias Membrane.Core.CallbackHandler
+  alias Membrane.Core.{CallbackHandler, ChildrenSupervisor}
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
   alias Membrane.Core.TimerController
   alias Membrane.Pipeline.CallbackContext
@@ -17,12 +17,16 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def init(params) do
-    self_pid = self()
-    setup_observability = fn args -> params.setup_observability.([pid: self_pid] ++ args) end
-    setup_observability.([])
-    Message.send(params.children_supervisor, :setup_observability, setup_observability)
-
+    observability_config = %{name: params.name, component_type: :pipeline, pid: self()}
+    Membrane.Core.Observability.setup(observability_config)
+    ChildrenSupervisor.set_parent_component(params.children_supervisor, observability_config)
     Telemetry.report_init(:pipeline)
+
+    {:ok, resource_guard} =
+      ChildrenSupervisor.start_utility(
+        params.children_supervisor,
+        {Membrane.ResourceGuard, self()}
+      )
 
     {:ok, clock} = Clock.start_link(proxy: true)
 
@@ -33,7 +37,8 @@ defmodule Membrane.Core.Pipeline do
         clock_provider: %{clock: nil, provider: nil, choice: :auto},
         timers: %{}
       },
-      children_supervisor: params.children_supervisor
+      children_supervisor: params.children_supervisor,
+      resource_guard: resource_guard
     }
 
     state =

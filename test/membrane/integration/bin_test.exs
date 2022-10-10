@@ -151,7 +151,7 @@ defmodule Membrane.Core.BinTest do
 
   describe "Handling DOWN messages" do
     test "DOWN message should be delivered to handle_info" do
-      {:ok, _supervisor, bin_pid} =
+      {:ok, bin_pid} =
         self()
         |> bin_init_options()
         |> Bin.start()
@@ -311,11 +311,13 @@ defmodule Membrane.Core.BinTest do
       node: nil,
       parent: pipeline,
       parent_clock: nil,
-      setup_observability: fn _pid -> [] end,
+      parent_path: [],
+      log_metadata: [],
       user_options: %{
         filter1: TestFilter,
         filter2: TestFilter
-      }
+      },
+      children_supervisor: Membrane.Core.ChildrenSupervisor.start_link!()
     }
   end
 end

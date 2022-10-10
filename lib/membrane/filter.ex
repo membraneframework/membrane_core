@@ -18,6 +18,7 @@ defmodule Membrane.Filter do
   """
 
   alias Membrane.{Buffer, Element, Pad}
+  alias Membrane.Core.DocsHelper
   alias Membrane.Element.CallbackContext
 
   @doc """
@@ -56,6 +57,7 @@ defmodule Membrane.Filter do
   Options:
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
   """
+
   defmacro __using__(options) do
     quote location: :keep do
       use Membrane.Element.Base, unquote(options)
@@ -94,4 +96,9 @@ defmodule Membrane.Filter do
                      handle_end_of_stream: 3
     end
   end
+
+  DocsHelper.add_callbacks_list_to_moduledoc(
+    __MODULE__,
+    [Membrane.Element.Base, Membrane.Element.WithInputPads, Membrane.Element.WithOutputPads]
+  )
 end
