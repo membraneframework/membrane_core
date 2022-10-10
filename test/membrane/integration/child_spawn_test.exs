@@ -35,29 +35,31 @@ defmodule Membrane.Integration.ChildSpawnTest do
     end
   end
 
-  # test "if to_new/3 doesn't spawn child with a given name if there is already a child with given name among the children" do
-  #   pipeline_pid =
-  #     Testing.Pipeline.start_link_supervised!(
-  #       module: PipelineWhichDoesntPlayOnStartup,
-  #       custom_args: [child(:sink, Testing.Sink)]
-  #     )
+  test "if child/4 doesn't spawn child with a given name if there is already a child with given name among the children
+  and the `ignore_duplicates` option is enabled" do
+    pipeline_pid =
+      Testing.Pipeline.start_link_supervised!(
+        module: PipelineWhichDoesntPlayOnStartup,
+        custom_args: [child(:sink, Testing.Sink)]
+      )
 
-  #   structure = [
-  #     child(:source, %Testing.Source{output: [1, 2, 3]})
-  #     |> child(:sink, SinkThatNotifiesParent)
-  #   ]
+    structure = [
+      child(:source, %Testing.Source{output: [1, 2, 3]})
+      |> child(:sink, SinkThatNotifiesParent, ignore_duplicates: true)
+    ]
 
-  #   spec = %ChildrenSpec{structure: structure}
-  #   Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
-  #   # a workaround - I need to wait for some time for pads to link, so that not let the
-  #   # "unlinked pads" exception be thrown
-  #   :timer.sleep(1000)
-  #   Testing.Pipeline.execute_actions(pipeline_pid, playback: :playing)
-  #   assert_pipeline_play(pipeline_pid)
-  #   refute_pipeline_notified(pipeline_pid, :sink, :message_from_sink)
-  # end
+    spec = %ChildrenSpec{structure: structure}
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
+    # a workaround - I need to wait for some time for pads to link, so that not let the
+    # "unlinked pads" exception be thrown
+    :timer.sleep(1000)
+    Testing.Pipeline.execute_actions(pipeline_pid, playback: :playing)
+    assert_pipeline_play(pipeline_pid)
+    refute_pipeline_notified(pipeline_pid, :sink, :message_from_sink)
+  end
 
-  test "if to_new/3 spawns a new child with a given name if there is no child with given name among the children" do
+  test "if child/4 spawns a new child with a given name if there is no child with given name among the children
+  and the `ignore_duplicates` option is enabled" do
     pipeline_pid =
       Testing.Pipeline.start_link_supervised!(
         module: PipelineWhichDoesntPlayOnStartup,
@@ -65,7 +67,8 @@ defmodule Membrane.Integration.ChildSpawnTest do
       )
 
     structure = [
-      child(:source, %Testing.Source{output: [1, 2, 3]}) |> child(:sink, Testing.Sink)
+      child(:source, %Testing.Source{output: [1, 2, 3]})
+      |> child(:sink, Testing.Sink, ignore_duplicates: true)
     ]
 
     spec = %ChildrenSpec{structure: structure}
@@ -73,33 +76,36 @@ defmodule Membrane.Integration.ChildSpawnTest do
     assert_pipeline_play(pipeline_pid)
   end
 
-  # test "if link_new/2 doesn't spawn child with a given name if there is already a child with given name among the children" do
-  #   pipeline_pid =
-  #     Testing.Pipeline.start_link_supervised!(
-  #       module: PipelineWhichDoesntPlayOnStartup,
-  #       custom_args: [child(:source, %Testing.Source{output: [1, 2, 3]})]
-  #     )
+  test "if child/3 doesn't spawn child with a given name if there is already a child with given name among the children
+  and the `ignore_duplicates` option is enabled" do
+    pipeline_pid =
+      Testing.Pipeline.start_link_supervised!(
+        module: PipelineWhichDoesntPlayOnStartup,
+        custom_args: [child(:source, %Testing.Source{output: [1, 2, 3]})]
+      )
 
-  #   structure = [
-  #     child(:source, %Testing.Source{output: [1, 2, 3]}) |> child(:sink, Testing.Sink)
-  #   ]
+    structure = [
+      child(:source, %Testing.Source{output: [1, 2, 3]}, ignore_duplicates: true)
+      |> child(:sink, Testing.Sink)
+    ]
 
-  #   spec = %ChildrenSpec{structure: structure}
-  #   Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
-  #   # a workaround - I need to wait for some time for pads to link, so that not let the
-  #   # "unlinked pads" exception be thrown
-  #   :timer.sleep(1000)
-  #   Testing.Pipeline.execute_actions(pipeline_pid, playback: :playing)
-  #   assert_pipeline_play(pipeline_pid)
-  #   assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 1})
-  #   assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 2})
-  #   assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 3})
-  #   refute_sink_buffer(pipeline_pid, :sink, %Buffer{payload: "a"})
-  #   refute_sink_buffer(pipeline_pid, :sink, %Buffer{payload: "b"})
-  #   refute_sink_buffer(pipeline_pid, :sink, %Buffer{payload: "c"})
-  # end
+    spec = %ChildrenSpec{structure: structure}
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
+    # a workaround - I need to wait for some time for pads to link, so that not let the
+    # "unlinked pads" exception be thrown
+    :timer.sleep(1000)
+    Testing.Pipeline.execute_actions(pipeline_pid, playback: :playing)
+    assert_pipeline_play(pipeline_pid)
+    assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 1})
+    assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 2})
+    assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 3})
+    refute_sink_buffer(pipeline_pid, :sink, %Buffer{payload: "a"})
+    refute_sink_buffer(pipeline_pid, :sink, %Buffer{payload: "b"})
+    refute_sink_buffer(pipeline_pid, :sink, %Buffer{payload: "c"})
+  end
 
-  test "if link_new/2 spawns a new child with a given name if there is no child with given name among the children" do
+  test "if child/3 spawns a new child with a given name if there is no child with given name among the children
+  and the `ignore_duplicates` option is enabled" do
     pipeline_pid =
       Testing.Pipeline.start_link_supervised!(
         module: PipelineWhichDoesntPlayOnStartup,
@@ -107,7 +113,8 @@ defmodule Membrane.Integration.ChildSpawnTest do
       )
 
     structure = [
-      child(:source, %Testing.Source{output: [1, 2, 3]}) |> child(:sink, Testing.Sink)
+      child(:source, %Testing.Source{output: [1, 2, 3]})
+      |> child(:sink, Testing.Sink, ignore_duplicates: true)
     ]
 
     spec = %ChildrenSpec{structure: structure}

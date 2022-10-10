@@ -342,4 +342,6 @@ defmodule Membrane.Bin do
                      handle_parent_notification: 3
     end
   end
+
+  defguard is_bin_name?(arg) when is_atom(arg) or is_tuple(arg)
 end

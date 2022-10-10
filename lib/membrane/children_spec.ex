@@ -183,6 +183,8 @@ defmodule Membrane.ChildrenSpec do
   `Membrane.ChildrenSpec`
   """
 
+  import Membrane.Child, only: [is_child_name?: 1]
+
   alias Membrane.{Child, Pad}
   alias Membrane.ParentError
 
@@ -228,6 +230,9 @@ defmodule Membrane.ChildrenSpec do
           | {child_spec_t(), :dont_spawn_if_already_exists}
   @type structure_spec_t :: [link_builder_t() | child_spec_extended_t()]
 
+  @default_child_opts [ignore_duplicates: false]
+  @type child_opts_t :: [ignore_duplicates: boolean]
+
   @typedoc """
   Struct used when starting and linking children within a pipeline or a bin.
   """
@@ -271,21 +276,47 @@ defmodule Membrane.ChildrenSpec do
     |> LinkBuilder.update(:done, to: child_name)
   end
 
+  @spec child(Child.name_t() | LinkBuilder.t(), struct() | module(), child_opts_t()) ::
+          link_builder_t()
+  def child(child_name, child_spec, opts \\ [])
 
-  @spec child(Child.name_t(), struct() | module()) :: link_builder_t()
-  def child(%LinkBuilder{} = _child_name, _child_spec) do
+  def child(%LinkBuilder{} = first_arg, second_arg, third_arg) do
+    do_child(first_arg, second_arg, third_arg, @default_child_opts)
+  end
+
+  def child(first_arg, second_arg, third_arg) when is_child_name?(first_arg) do
+    do_child(first_arg, second_arg, third_arg)
+  end
+
+  def child(_first_arg, _second_arg, _third_arg) do
     raise "Link builder cannot be used as a child name! Perhaps you meant to use get_child/2?"
   end
 
-  def child(child_name, child_spec) do
+  defp do_child(child_name, child_spec, opts) do
+    child_spec =
+      if opts[:ignore_duplicates],
+        do: {child_spec, :dont_spawn_if_already_exists},
+        else: child_spec
+
     get_child(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
   end
 
-  @spec child(link_builder_t(), Child.name_t(), struct() | module()) :: link_builder_t()
-  def child(%LinkBuilder{} = link_builder, child_name, child_spec) do
-    link_builder |> get_child(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
+  @spec child(link_builder_t(), Child.name_t(), struct() | module(), child_opts_t()) ::
+          link_builder_t()
+  def child(link_builder, child_name, child_spec, opts) do
+    do_child(link_builder, child_name, child_spec, opts)
   end
 
+  defp do_child(%LinkBuilder{} = link_builder, child_name, child_spec, opts) do
+    child_spec =
+      if opts[:ignore_duplicates],
+        do: {child_spec, :dont_spawn_if_already_exists},
+        else: child_spec
+
+    link_builder
+    |> get_child(child_name)
+    |> Map.update!(:children, &[{child_name, child_spec} | &1])
+  end
 
   @doc """
   Begins a link with a bin's pad.
@@ -466,7 +497,7 @@ defmodule Membrane.ChildrenSpec do
     links =
       other_children
       |> Enum.reduce(child(first_child_name, first_child_spec), fn {child_name, child_spec},
-                                                                         builder ->
+                                                                   builder ->
         child(builder, child_name, child_spec)
       end)
 

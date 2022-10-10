@@ -93,7 +93,10 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   test "link with multiple branches" do
     import Membrane.ChildrenSpec
 
-    links_spec = [get_child(:a) |> get_child(:b) |> get_child(:c), get_child(:d) |> get_child(:b) |> get_child(:e)]
+    links_spec = [
+      get_child(:a) |> get_child(:b) |> get_child(:c),
+      get_child(:d) |> get_child(:b) |> get_child(:e)
+    ]
 
     assert {links, []} = StructureParser.parse(links_spec)
 
