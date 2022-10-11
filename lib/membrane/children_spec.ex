@@ -13,7 +13,7 @@ defmodule Membrane.ChildrenSpec do
   links between the children (both the children spawned in that action, and already existing children).
 
   The children's processes are spawned with the use of `child/3` and `child/4` functions.
-  These two functions can be used for inline spawning nodes of a link:
+  These two functions can be used for spawning nodes of a link in an inline manner:
   ```
   structure = [child(:source, Source) |> child(:filter, %Filter{option: 1}) |> child(:sink, Sink)]
   ```
@@ -24,7 +24,7 @@ defmodule Membrane.ChildrenSpec do
   child(:sink, Sink)]
   ```
 
-  In case you need to refer to an already existing child (which could be spawned, i.e. in the previous `spec_t` actions),
+  In case you need to refer to an already existing child (which could be spawned, i.e. in the previous `spec_t` action),
   use `get_child/1` and `get_child/2` functions, as in the example below:
   ```
   structure = [get_child(:already_existing_source) |> child(:this_filter_will_be_spawned, Filter) |> get_child(:already_existing_sink)]
