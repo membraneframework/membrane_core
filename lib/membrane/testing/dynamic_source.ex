@@ -102,7 +102,7 @@ defmodule Membrane.Testing.DynamicSource do
   end
 
   @impl true
-  def handle_play(ctx, state) do
+  def handle_playing(ctx, state) do
     actions = Map.keys(ctx.pads) |> Enum.map(&{:caps, {&1, state.caps}})
     {{:ok, actions}, state}
   end

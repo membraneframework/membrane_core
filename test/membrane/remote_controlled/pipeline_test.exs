@@ -64,7 +64,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
     test "testing process should receive all subscribed events", %{pipeline: pipeline} do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.Play{})
+      Pipeline.subscribe(pipeline, %Message.Playing{})
       Pipeline.subscribe(pipeline, %Message.Notification{element: :b, data: %Membrane.Buffer{}})
       Pipeline.subscribe(pipeline, %Message.StartOfStream{element: :b, pad: :input})
 
@@ -72,7 +72,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       Pipeline.exec_actions(pipeline, playback: :playing)
 
       # TEST
-      assert_receive %Message.Play{from: ^pipeline}
+      assert_receive %Message.Playing{from: ^pipeline}
 
       assert_receive %Message.Notification{
         from: ^pipeline,
@@ -93,7 +93,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       pipeline: pipeline
     } do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.Play{})
+      Pipeline.subscribe(pipeline, %Message.Playing{})
       Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
       Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
 
@@ -115,7 +115,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       pipeline: pipeline
     } do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.Play{})
+      Pipeline.subscribe(pipeline, %Message.Playing{})
       Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
       Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
       element = :c

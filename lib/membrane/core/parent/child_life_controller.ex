@@ -26,17 +26,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
           children_names: [Membrane.Child.name_t()],
           links_ids: [Link.id()],
           awaiting_responses: %{Link.id() => 0..2},
-          dependent_specs: MapSet.t(spec_ref_t),
-          links: %{
-            Link.id() => %{link: Link.t(), awaiting_responses: non_neg_integer()}
-          }
+          dependent_specs: MapSet.t(spec_ref_t)
         }
 
   @type pending_specs_t :: %{spec_ref_t() => pending_spec_t()}
 
   @doc """
   Handles `Membrane.ChildrenSpec` returned with `spec` action.
-
   Handling a spec consists of the following steps:
   - Parse the spec
   - Set up `Membrane.Sync`s
@@ -304,8 +300,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   @spec handle_remove_children(
-          Membrane.Child.name_t()
-          | [Membrane.Child.name_t()],
+          Membrane.Child.name_t() | [Membrane.Child.name_t()],
           Parent.state_t()
         ) ::
           Parent.state_t()
@@ -338,7 +333,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   - unlinks it from other children
   - handles crash group (if applicable)
   """
-  @spec handle_child_death(child_pid :: pid(), reason :: any(), state :: Parent.state_t()) ::
+
+  @spec handle_child_death(
+          child_name :: Membrane.Child.name_t(),
+          reason :: any(),
+          state :: Parent.state_t()
+        ) ::
           {:stop | :continue, Parent.state_t()}
   def handle_child_death(child_name, reason, state) do
     state = do_handle_child_death(child_name, reason, state)

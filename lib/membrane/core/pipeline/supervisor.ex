@@ -8,12 +8,12 @@ defmodule Membrane.Core.Pipeline.Supervisor do
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
 
-  @spec go_brrr(
+  @spec run(
           :start_link | :start,
-          (children_supervisor :: pid() -> {:ok, pid()} | {:error, reason :: any()}),
-          Membrane.Core.Observability.setup_fun()
+          name :: term,
+          (children_supervisor :: pid() -> {:ok, pid()} | {:error, reason :: any()})
         ) :: {:ok, pid()} | {:error, reason :: any()}
-  def go_brrr(method, start_fun, setup_observability) do
+  def run(method, name, start_fun) do
     # Not doing start_link here is a nasty hack to avoid the current process becoming
     # a 'parent process' (in the OTP meaning) of the spawned supervisor. Exit signals from
     # 'parent processes' are not received in `handle_info`, but `terminate` is called immediately,
@@ -22,7 +22,7 @@ defmodule Membrane.Core.Pipeline.Supervisor do
     process_opts = if method == :start_link, do: [spawn_opt: [:link]], else: []
 
     with {:ok, pid} <-
-           GenServer.start(__MODULE__, {start_fun, setup_observability, self()}, process_opts) do
+           GenServer.start(__MODULE__, {start_fun, name, self()}, process_opts) do
       receive do
         Message.new(:parent_spawned, parent) -> {:ok, pid, parent}
       end
@@ -30,12 +30,16 @@ defmodule Membrane.Core.Pipeline.Supervisor do
   end
 
   @impl true
-  def init({start_fun, setup_observability, reply_to}) do
+  def init({start_fun, name, reply_to}) do
     Process.flag(:trap_exit, true)
     children_supervisor = ChildrenSupervisor.start_link!()
 
     with {:ok, parent} <- start_fun.(children_supervisor) do
-      setup_observability.(pid: parent, utility: "Pipeline supervisor")
+      Membrane.Core.Observability.setup(
+        %{name: name, component_type: :pipeline, pid: parent},
+        "Pipeline supervisor"
+      )
+
       Message.send(reply_to, :parent_spawned, parent)
       {:ok, %{parent: {:alive, parent}, children_supervisor: children_supervisor}}
     else

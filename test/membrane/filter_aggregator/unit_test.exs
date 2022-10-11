@@ -170,8 +170,8 @@
 #     end)
 #   end
 
-#   test "handle_play with caps sending", test_ctx do
-#     expect(FilterA, :handle_play, fn ctx_a, %{module: FilterA} = state ->
+#   test "handle_playing with caps sending", test_ctx do
+#     expect(FilterA, :handle_playing, fn ctx_a, %{module: FilterA} = state ->
 #       assert %{
 #                clock: nil,
 #                name: :a,
@@ -206,7 +206,7 @@
 #       {{:ok, caps: {:output, %MockCaps{integer: 2}}}, %{state | state: :caps_sent}}
 #     end)
 
-#     expect(FilterB, :handle_play, fn ctx_b, state ->
+#     expect(FilterB, :handle_playing, fn ctx_b, state ->
 #       # ensure proper callbacks order
 #       assert state == %{module: FilterB, state: :caps_sent}
 
@@ -236,7 +236,7 @@
 #       end)
 
 #     assert {{:ok, actions}, %{states: states}} =
-#              FilterAggregator.handle_play(%{}, %{states: states})
+#              FilterAggregator.handle_playing(%{}, %{states: states})
 
 #     assert actions == [caps: {:output, %MockCaps{integer: 2}}]
 

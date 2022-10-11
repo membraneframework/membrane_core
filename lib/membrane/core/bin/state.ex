@@ -42,7 +42,7 @@ defmodule Membrane.Core.Bin.State do
           pending_specs: ChildLifeController.pending_specs_t(),
           playback: Membrane.Playback.t(),
           initialized?: boolean(),
-          play_request?: boolean(),
+          playing_requested?: boolean(),
           terminating?: boolean(),
           resource_guard: Membrane.ResourceGuard.t()
         }
@@ -62,7 +62,7 @@ defmodule Membrane.Core.Bin.State do
                 pending_specs: %{},
                 playback: :stopped,
                 initialized?: false,
-                play_request?: false,
+                playing_requested?: false,
                 terminating?: false
               ]
 end

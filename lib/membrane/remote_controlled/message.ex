@@ -6,13 +6,13 @@ defmodule Membrane.RemoteControlled.Message do
   """
 
   @type t ::
-          __MODULE__.Play.t()
+          __MODULE__.Playing.t()
           | __MODULE__.StartOfStream.t()
           | __MODULE__.EndOfStream.t()
           | __MODULE__.Notification.t()
           | __MODULE__.Terminated.t()
 
-  defmodule Play do
+  defmodule Playing do
     @moduledoc """
     Message sent when the pipeline starts playing
     """

@@ -20,6 +20,8 @@ defmodule Membrane.Core.Element do
 
   alias Membrane.{Clock, Core, Sync}
 
+  alias Membrane.Core.{ChildrenSupervisor, TimerController}
+
   alias Membrane.Core.Element.{
     BufferController,
     CapsController,
@@ -29,8 +31,6 @@ defmodule Membrane.Core.Element do
     PadController,
     State
   }
-
-  alias Membrane.Core.TimerController
 
   require Membrane.Core.Message, as: Message
   require Membrane.Core.Telemetry, as: Telemetry
@@ -44,7 +44,8 @@ defmodule Membrane.Core.Element do
           sync: Sync.t(),
           parent: pid,
           parent_clock: Clock.t(),
-          setup_observability: Membrane.Core.Observability.setup_fun(),
+          parent_path: Membrane.ComponentPath.path_t(),
+          log_metadata: Logger.metadata(),
           children_supervisor: pid()
         }
 
@@ -92,21 +93,19 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def init(options) do
-    self_pid = self()
+    observability_config = %{
+      name: options.name,
+      component_type: :bin,
+      pid: self(),
+      parent_path: options.parent_path,
+      log_metadata: options.log_metadata
+    }
 
-    setup_observability = fn args ->
-      options.setup_observability.([pid: self_pid] ++ args)
-    end
-
-    setup_observability.([])
-
-    Message.send(options.children_supervisor, :set_parent_component, [
-      self_pid,
-      setup_observability
-    ])
+    Membrane.Core.Observability.setup(observability_config)
+    ChildrenSupervisor.set_parent_component(options.children_supervisor, observability_config)
 
     {:ok, resource_guard} =
-      Membrane.Core.ChildrenSupervisor.start_utility(
+      ChildrenSupervisor.start_utility(
         options.children_supervisor,
         {Membrane.ResourceGuard, self()}
       )
@@ -198,7 +197,7 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(Message.new(:play), state) do
-    state = LifecycleController.handle_play(state)
+    state = LifecycleController.handle_playing(state)
     {:noreply, state}
   end
 

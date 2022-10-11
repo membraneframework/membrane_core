@@ -8,7 +8,7 @@ defmodule Membrane.Support.Sync.Source do
               test_process: [type: :pid]
 
   @impl true
-  def handle_play(_ctx, %{tick_interval: interval} = state) do
+  def handle_playing(_ctx, %{tick_interval: interval} = state) do
     {{:ok, notify_parent: :start_timer, start_timer: {:my_timer, interval}}, state}
   end
 

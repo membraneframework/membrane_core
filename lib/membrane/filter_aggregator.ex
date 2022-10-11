@@ -98,7 +98,7 @@ defmodule Membrane.FilterAggregator do
   end
 
   @impl true
-  def handle_play(_ctx, %{states: states}) do
+  def handle_playing(_ctx, %{states: states}) do
     {actions, states} = pipe_downstream([InternalAction.prepared_to_playing()], states)
     actions = reject_internal_actions(actions)
     {{:ok, actions}, %{states: states}}
@@ -299,7 +299,7 @@ defmodule Membrane.FilterAggregator do
     callback =
       case pseudo_action do
         InternalAction.stopped_to_prepared() -> :handle_setup
-        InternalAction.prepared_to_playing() -> :handle_play
+        InternalAction.prepared_to_playing() -> :handle_playing
       end
 
     cb_context = struct!(CallbackContext.PlaybackChange, context)

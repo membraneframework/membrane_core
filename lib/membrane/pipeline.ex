@@ -139,8 +139,8 @@ defmodule Membrane.Pipeline do
   @doc """
   Callback invoked when pipeline switches the playback to `:playing`.
   """
-  @callback handle_play(
-              context :: CallbackContext.Play.t(),
+  @callback handle_playing(
+              context :: CallbackContext.Playing.t(),
               state
             ) ::
               callback_return_t
@@ -229,7 +229,7 @@ defmodule Membrane.Pipeline do
   @optional_callbacks handle_init: 1,
                       handle_terminate_yolo: 2,
                       handle_setup: 2,
-                      handle_play: 2,
+                      handle_playing: 2,
                       handle_info: 3,
                       handle_spec_started: 3,
                       handle_element_start_of_stream: 4,
@@ -276,21 +276,19 @@ defmodule Membrane.Pipeline do
           name -> name
         end
 
-      setup_observability = Membrane.Core.Observability.setup_fun(:pipeline, name)
-
-      Membrane.Core.Pipeline.Supervisor.go_brrr(
+      Membrane.Core.Pipeline.Supervisor.run(
         method,
+        name,
         &GenServer.start_link(
           Membrane.Core.Pipeline,
           %{
+            name: name,
             module: module,
             options: pipeline_options,
-            setup_observability: setup_observability,
             children_supervisor: &1
           },
           process_options
-        ),
-        setup_observability
+        )
       )
     else
       Membrane.Logger.error("""
@@ -457,7 +455,7 @@ defmodule Membrane.Pipeline do
       def handle_setup(_ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_play(_ctx, state), do: {:ok, state}
+      def handle_playing(_ctx, state), do: {:ok, state}
 
       @impl true
       def handle_info(message, _ctx, state), do: {:ok, state}
@@ -484,7 +482,7 @@ defmodule Membrane.Pipeline do
                      handle_init: 1,
                      handle_terminate_yolo: 2,
                      handle_setup: 2,
-                     handle_play: 2,
+                     handle_playing: 2,
                      handle_info: 3,
                      handle_spec_started: 3,
                      handle_element_start_of_stream: 4,

@@ -174,7 +174,7 @@ defmodule Membrane.Core.Element.PadController do
 
       {:error, :unknown_pad} ->
         Membrane.Logger.debug(
-          "Ignoring unlinking pad #{inspect(pad_ref)} that didn't succeed to be linked"
+          "Ignoring unlinking pad #{inspect(pad_ref)} that hasn't been successfully linked"
         )
 
         state

@@ -9,8 +9,8 @@ defmodule Membrane.Core.Bin do
   alias Membrane.Core.{
     CallbackHandler,
     Child,
+    ChildrenSupervisor,
     Message,
-    Observability,
     Parent,
     Telemetry,
     TimerController
@@ -27,7 +27,8 @@ defmodule Membrane.Core.Bin do
           parent: pid,
           user_options: Membrane.Bin.options_t(),
           parent_clock: Membrane.Clock.t(),
-          setup_observability: Observability.setup_fun(),
+          parent_path: Membrane.ComponentPath.path_t(),
+          log_metadata: Logger.metadata(),
           sync: :membrane_no_sync,
           children_supervisor: pid()
         }
@@ -80,15 +81,17 @@ defmodule Membrane.Core.Bin do
   @impl GenServer
   def init(options) do
     %{name: name, module: module} = options
-    self_pid = self()
-    setup_observability = fn args -> options.setup_observability.([pid: self_pid] ++ args) end
-    log_metadata = setup_observability.([])
 
-    Message.send(options.children_supervisor, :set_parent_component, [
-      self_pid,
-      setup_observability
-    ])
+    observability_config = %{
+      name: name,
+      component_type: :bin,
+      pid: self(),
+      parent_path: options.parent_path,
+      log_metadata: options.log_metadata
+    }
 
+    Membrane.Core.Observability.setup(observability_config)
+    ChildrenSupervisor.set_parent_component(options.children_supervisor, observability_config)
     Telemetry.report_init(:bin)
 
     clock_proxy = Membrane.Clock.start_link(proxy: true) ~> ({:ok, pid} -> pid)
@@ -96,7 +99,7 @@ defmodule Membrane.Core.Bin do
     Message.send(options.parent, :clock, [name, clock])
 
     {:ok, resource_guard} =
-      Membrane.Core.ChildrenSupervisor.start_utility(
+      ChildrenSupervisor.start_utility(
         options.children_supervisor,
         {Membrane.ResourceGuard, self()}
       )
@@ -116,7 +119,7 @@ defmodule Membrane.Core.Bin do
           stream_sync: Membrane.Sync.no_sync(),
           latency: 0
         },
-        children_log_metadata: log_metadata,
+        children_log_metadata: options.log_metadata,
         children_supervisor: options.children_supervisor,
         resource_guard: resource_guard
       }
@@ -210,7 +213,7 @@ defmodule Membrane.Core.Bin do
   end
 
   defp do_handle_info(Message.new(:play), state) do
-    state = Parent.LifecycleController.handle_play(state)
+    state = Parent.LifecycleController.handle_playing(state)
     {:noreply, state}
   end
 

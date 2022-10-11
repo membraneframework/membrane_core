@@ -4,6 +4,8 @@ defmodule Membrane.Core.ChildrenSupervisor do
   use Bunch
   use GenServer
 
+  alias Membrane.Core.Observability
+
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
 
@@ -18,6 +20,9 @@ defmodule Membrane.Core.ChildrenSupervisor do
     pid
   end
 
+  @doc """
+  Starts a Membrane component under the supervisor
+  """
   @spec start_component(
           supervisor_pid,
           name :: Membrane.Child.name_t(),
@@ -29,6 +34,11 @@ defmodule Membrane.Core.ChildrenSupervisor do
     Message.call!(supervisor, :start_component, [name, start_fun])
   end
 
+  @doc """
+  Starts a utility process under the supervisor.
+
+  The process will be terminated when the parent component dies.
+  """
   @spec start_utility(
           supervisor_pid :: pid,
           Supervisor.child_spec() | {module(), term()} | module()
@@ -39,6 +49,9 @@ defmodule Membrane.Core.ChildrenSupervisor do
     Message.call!(supervisor, :start_utility, child_spec)
   end
 
+  @doc """
+  Like `start_utility/2`, but links the spawned utility to the calling process.
+  """
   @spec start_link_utility(
           supervisor_pid :: pid,
           Supervisor.child_spec() | {module(), term()} | module()
@@ -54,6 +67,23 @@ defmodule Membrane.Core.ChildrenSupervisor do
     end
 
     result
+  end
+
+  @doc """
+  Sets the calling Membrane component as the parent component for children and utilities
+  spawned with the supervisor.
+  """
+  @spec set_parent_component(
+          supervisor_pid :: pid,
+          observability_config :: Observability.config()
+        ) :: :ok
+  def set_parent_component(supervisor, observability_config) do
+    Message.send(supervisor, :set_parent_component, [
+      self(),
+      observability_config
+    ])
+
+    :ok
   end
 
   @impl true
@@ -135,8 +165,8 @@ defmodule Membrane.Core.ChildrenSupervisor do
   end
 
   @impl true
-  def handle_info(Message.new(:set_parent_component, [pid, setup_observability]), state) do
-    setup_observability.(utility: "children supervisor")
+  def handle_info(Message.new(:set_parent_component, [pid, observability_config]), state) do
+    Membrane.Core.Observability.setup(observability_config, "children supervisor")
     {:noreply, %{state | parent_component: pid}}
   end
 
@@ -157,7 +187,7 @@ defmodule Membrane.Core.ChildrenSupervisor do
     )
 
     Enum.each(state.children, fn {pid, %{role: role}} ->
-      if role != :children_supervisor, do: Process.exit(pid, {:shutdown, :parent_crash})
+      if role != :children_supervisor, do: Process.exit(pid, :shutdown)
     end)
 
     {:noreply, %{state | parent_process: :exit_requested}}

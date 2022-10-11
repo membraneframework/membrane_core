@@ -38,7 +38,7 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
   end
 
   test "assert_pipeline_play works", %{state: state} do
-    Pipeline.handle_play(context(), state)
+    Pipeline.handle_playing(context(), state)
     assert_pipeline_play(self())
 
     assert_raise ExUnit.AssertionError, fn ->

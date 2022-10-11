@@ -17,7 +17,7 @@ defmodule Membrane.Testing.DynamicSourceTest do
 
   test "Source sends caps on play" do
     assert {{:ok, caps: {:output, :caps}}, _state} =
-             Testing.DynamicSource.handle_play(%{pads: %{:output => %{}}}, %{
+             Testing.DynamicSource.handle_playing(%{pads: %{:output => %{}}}, %{
                caps: :caps
              })
   end

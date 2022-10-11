@@ -137,7 +137,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       result =
         @module.handle_action(
           buffer_action(:output),
-          :handle_play,
+          :handle_playing,
           %{},
           state
         )

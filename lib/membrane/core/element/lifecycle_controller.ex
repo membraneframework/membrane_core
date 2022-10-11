@@ -69,18 +69,18 @@ defmodule Membrane.Core.Element.LifecycleController do
     %State{state | initialized?: true}
   end
 
-  @spec handle_play(State.t()) :: State.t()
-  def handle_play(state) do
+  @spec handle_playing(State.t()) :: State.t()
+  def handle_playing(state) do
     Child.PadController.assert_all_static_pads_linked!(state)
 
     Membrane.Logger.debug("Got play request")
     state = %State{state | playback: :playing}
-    require CallbackContext.Play
-    context = &CallbackContext.Play.from_state/1
+    require CallbackContext.Playing
+    context = &CallbackContext.Playing.from_state/1
 
     state =
       CallbackHandler.exec_and_handle_callback(
-        :handle_play,
+        :handle_playing,
         ActionHandler,
         %{context: context},
         [],

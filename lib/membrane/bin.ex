@@ -98,8 +98,8 @@ defmodule Membrane.Bin do
   @doc """
   Callback invoked when bin switches the playback to `:playing`.
   """
-  @callback handle_play(
-              context :: CallbackContext.Play.t(),
+  @callback handle_playing(
+              context :: CallbackContext.Playing.t(),
               state :: state_t
             ) ::
               callback_return_t
@@ -180,7 +180,7 @@ defmodule Membrane.Bin do
                       handle_pad_added: 3,
                       handle_pad_removed: 3,
                       handle_setup: 2,
-                      handle_play: 2,
+                      handle_playing: 2,
                       handle_info: 3,
                       handle_spec_started: 3,
                       handle_element_start_of_stream: 4,
@@ -307,7 +307,7 @@ defmodule Membrane.Bin do
       def handle_setup(_ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_play(_ctx, state), do: {:ok, state}
+      def handle_playing(_ctx, state), do: {:ok, state}
 
       @impl true
       def handle_info(message, _ctx, state), do: {:ok, state}
@@ -333,7 +333,7 @@ defmodule Membrane.Bin do
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
                      handle_setup: 2,
-                     handle_play: 2,
+                     handle_playing: 2,
                      handle_info: 3,
                      handle_spec_started: 3,
                      handle_element_start_of_stream: 4,

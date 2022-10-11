@@ -146,7 +146,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     end
 
     @impl true
-    def handle_play(_ctx, state) do
+    def handle_playing(_ctx, state) do
       {{:ok, [caps: {:output, :any}]}, state}
     end
   end

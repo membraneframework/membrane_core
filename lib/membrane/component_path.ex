@@ -10,18 +10,6 @@ defmodule Membrane.ComponentPath do
   @key :membrane_path
 
   @doc """
-  Appends given name to the current path.
-
-  If path has not been previously set then creates new one with given name.
-  """
-  @spec append(String.t()) :: :ok
-  def append(name) do
-    path = Process.get(@key, [])
-    Process.put(@key, path ++ [name])
-    :ok
-  end
-
-  @doc """
   Sets current path.
 
   If path had already existed then replaces it.
@@ -30,15 +18,6 @@ defmodule Membrane.ComponentPath do
   def set(path) do
     Process.put(@key, path)
     :ok
-  end
-
-  @doc """
-  Convenient combination of `set/1` and `append/1`.
-  """
-  @spec set_and_append(path_t(), String.t()) :: :ok
-  def set_and_append(path, name) do
-    :ok = set(path)
-    append(name)
   end
 
   @doc """
@@ -54,7 +33,7 @@ defmodule Membrane.ComponentPath do
   """
   @spec get_formatted() :: String.t()
   def get_formatted() do
-    Process.get(@key, []) |> format()
+    get() |> format()
   end
 
   @doc """

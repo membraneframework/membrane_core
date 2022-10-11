@@ -7,7 +7,7 @@ defmodule Membrane.Integration.TimerTest do
     use Membrane.Source
 
     @impl true
-    def handle_play(_ctx, state) do
+    def handle_playing(_ctx, state) do
       {{:ok, start_timer: {:timer, Time.milliseconds(100)}}, state}
     end
 
@@ -21,7 +21,7 @@ defmodule Membrane.Integration.TimerTest do
     use Membrane.Bin
 
     @impl true
-    def handle_play(_ctx, state) do
+    def handle_playing(_ctx, state) do
       {{:ok, start_timer: {:timer, Time.milliseconds(100)}}, state}
     end
 
@@ -44,7 +44,7 @@ defmodule Membrane.Integration.TimerTest do
     end
 
     @impl true
-    def handle_play(_ctx, state) do
+    def handle_playing(_ctx, state) do
       {{:ok, start_timer: {:timer, Time.milliseconds(100)}}, state}
     end
 

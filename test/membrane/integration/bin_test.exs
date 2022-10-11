@@ -325,7 +325,8 @@ defmodule Membrane.Core.BinTest do
       node: nil,
       parent: pipeline,
       parent_clock: nil,
-      setup_observability: fn _pid -> [] end,
+      parent_path: [],
+      log_metadata: [],
       user_options: %{
         filter1: TestFilter,
         filter2: TestFilter
