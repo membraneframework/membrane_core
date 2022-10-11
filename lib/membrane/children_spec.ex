@@ -120,7 +120,7 @@ defmodule Membrane.ChildrenSpec do
   at the same moment. An example can be audio and video player sinks. This option
   accepts either `:sinks` atom or a list of groups (lists) of elements. Passing `:sinks`
   results in synchronizing all sinks in the pipeline, while passing a list of groups
-  of elements to synchronize all elements in each group. It is worth mentioning
+  of elements synchronizes all elements in each group. It is worth mentioning
   that to keep the stream synchronized all involved elements need to rely on
   the same clock.
 
