@@ -39,7 +39,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     ]
 
     options = [
-      links: Membrane.ParentSpec.link_linear(children)
+      structure: Membrane.ChildrenSpec.link_linear(children)
     ]
 
     pipeline = Pipeline.start_supervised!(options)
@@ -65,7 +65,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     ]
 
     options = [
-      links: Membrane.ParentSpec.link_linear(children)
+      structure: Membrane.ChildrenSpec.link_linear(children)
     ]
 
     pipeline = Pipeline.start_supervised!(options)

@@ -23,13 +23,12 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
     ]
 
     links = [
-      link(:center_filter)
-      |> to(:sink)
+      get_child(:center_filter)
+      |> get_child(:sink)
     ]
 
-    spec = %Membrane.ParentSpec{
-      children: children,
-      links: links
+    spec = %Membrane.ChildrenSpec{
+      structure: children ++ links
     }
 
     {{:ok, spec: spec, playback: :playing}, %{}}
@@ -47,18 +46,17 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
     ]
 
     links = [
-      link(source_name)
-      |> to(:center_filter)
+      get_child(source_name)
+      |> get_child(:center_filter)
     ]
 
-    spec = %Membrane.ParentSpec{
-      children: children,
-      links: links
+    spec = %Membrane.ChildrenSpec{
+      structure: children ++ links
     }
 
     spec =
       if group do
-        %{spec | crash_group: group}
+        %{spec | crash_group: {group, :temporary}}
       else
         spec
       end
@@ -71,17 +69,16 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
     children = [{source_name, Testing.Source}, {bin_name, TestBins.CrashTestBin}]
 
     links = [
-      link(source_name) |> to(bin_name) |> to(:center_filter)
+      get_child(source_name) |> get_child(bin_name) |> get_child(:center_filter)
     ]
 
-    spec = %Membrane.ParentSpec{
-      children: children,
-      links: links
+    spec = %Membrane.ChildrenSpec{
+      structure: children ++ links
     }
 
     spec =
       if group do
-        %{spec | crash_group: group}
+        %{spec | crash_group: {group, :temporary}}
       else
         spec
       end
@@ -102,17 +99,16 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
     links =
       Enum.chunk_every(children_names, 2, 1, [:center_filter])
       |> Enum.map(fn [first_elem, second_elem] ->
-        link(first_elem) |> to(second_elem)
+        get_child(first_elem) |> get_child(second_elem)
       end)
 
-    spec = %Membrane.ParentSpec{
-      children: children,
-      links: links
+    spec = %Membrane.ChildrenSpec{
+      structure: children ++ links
     }
 
     spec =
       if group do
-        %{spec | crash_group: group}
+        %{spec | crash_group: {group, :temporary}}
       else
         spec
       end

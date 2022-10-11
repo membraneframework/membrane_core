@@ -43,10 +43,11 @@ defmodule Membrane.Core.Bin.State do
           playback: Membrane.Playback.t(),
           initialized?: boolean(),
           playing_requested?: boolean(),
-          terminating?: boolean()
+          terminating?: boolean(),
+          resource_guard: Membrane.ResourceGuard.t()
         }
 
-  @enforce_keys [:module, :synchronization, :children_supervisor]
+  @enforce_keys [:module, :synchronization, :children_supervisor, :resource_guard]
   defstruct @enforce_keys ++
               [
                 internal_state: nil,

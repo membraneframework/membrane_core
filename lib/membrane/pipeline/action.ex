@@ -9,7 +9,7 @@ defmodule Membrane.Pipeline.Action do
   does not support returning any actions) unless explicitly stated otherwise.
   """
 
-  alias Membrane.{Child, ParentSpec}
+  alias Membrane.{Child, ChildrenSpec}
 
   @typedoc """
   Action that sends a message to a child identified by name.
@@ -17,12 +17,12 @@ defmodule Membrane.Pipeline.Action do
   @type notify_child_t :: {:notify_child, {Child.name_t(), Membrane.ParentNotification.t()}}
 
   @typedoc """
-  Action that instantiates children and links them according to `Membrane.ParentSpec`.
+  Action that instantiates children and links them according to `Membrane.ChildrenSpec`.
 
   Children's playback is changed to the current pipeline state.
   `c:Membrane.Pipeline.handle_spec_started/3` callback is executed once it happens.
   """
-  @type spec_t :: {:spec, ParentSpec.t()}
+  @type spec_t :: {:spec, ChildrenSpec.t()}
 
   @typedoc """
   Action that stops, unlinks and removes specified child/children from the pipeline.
@@ -77,7 +77,7 @@ defmodule Membrane.Pipeline.Action do
   @type stop_timer_t :: {:stop_timer, timer_id :: any}
 
   @typedoc """
-  Action that instantiates children and links them according to `Membrane.ParentSpec`.
+  Action that instantiates children and links them according to `Membrane.ChildrenSpec`.
 
   Children's playback is changed to the current bin playback.
   `c:Membrane.Parent.handle_spec_started/3` callback is executed once the children are spawned.

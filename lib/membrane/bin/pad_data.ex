@@ -9,7 +9,7 @@ defmodule Membrane.Bin.PadData do
     - `:direction` - see `Membrane.Pad.direction_t`
     - `:mode` - see `Membrane.Pad.mode_t`
     - `:name` - see `Membrane.Pad.name_t`. Do not mistake with `:ref`
-    - `:options` - options passed in `Membrane.ParentSpec` when linking pad
+    - `:options` - options passed in `Membrane.ChildrenSpec` when linking pad
     - `:ref` - see `Membrane.Pad.ref_t`
 
   Other fields in the struct ARE NOT PART OF THE PUBLIC API and should not be
@@ -21,7 +21,7 @@ defmodule Membrane.Bin.PadData do
 
   @type t :: %__MODULE__{
           ref: Membrane.Pad.ref_t(),
-          options: Membrane.ParentSpec.pad_options_t(),
+          options: Membrane.ChildrenSpec.pad_options_t(),
           accepted_caps: Membrane.Caps.Matcher.caps_specs_t(),
           availability: Membrane.Pad.availability_t(),
           direction: Membrane.Pad.direction_t(),

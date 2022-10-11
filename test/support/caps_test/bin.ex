@@ -23,19 +23,11 @@ defmodule Membrane.Support.CapsTest.Bin do
 
   @impl true
   def handle_init(%__MODULE__{test_pid: test_pid}) do
-    children = [
-      sink: %CapsTest.Sink{test_pid: test_pid}
-    ]
-
-    links = [
-      link_bin_input()
-      |> via_in(:input)
-      |> to(:sink)
-    ]
-
-    spec = %ParentSpec{
-      children: children,
-      links: links
+    spec = %Membrane.ChildrenSpec{
+      structure: [
+        bin_input()
+        |> child(:sink, %CapsTest.Sink{test_pid: test_pid})
+      ]
     }
 
     state = %{}

@@ -29,7 +29,7 @@ defmodule Membrane.Support.CapsTest.Source do
   end
 
   @impl true
-  def handle_parent_notification({:send_caps, caps}, _ctx, state) do
+  def handle_parent_notification({:send_caps, caps}, _ctx, _state) do
     {:ok, %{caps: caps}}
   end
 end

@@ -3,8 +3,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
   use Bunch
 
   alias Membrane.{ChildEntry, Clock, Core, ParentError, Sync}
-  alias Membrane.Core.{CallbackHandler, Component, Message, Parent}
-  alias Membrane.Core.Parent.{ChildEntryParser, ChildrenSupervisor}
+  alias Membrane.Core.{CallbackHandler, ChildrenSupervisor, Component, Message, Parent}
+  alias Membrane.Core.Parent.ChildEntryParser
 
   require Membrane.Core.Component
   require Membrane.Core.Message
@@ -72,16 +72,24 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
           log_metadata :: Keyword.t(),
           supervisor :: pid
         ) :: [ChildEntry.t()]
-  def start_children(children, node, parent_clock, syncs, log_metadata, supervisor) do
+  def start_children(
+        children,
+        node,
+        parent_clock,
+        syncs,
+        log_metadata,
+        supervisor
+      ) do
     # If the node is set to the current node, set it to nil, to avoid race conditions when
     # distribution changes
     node = if node == node(), do: nil, else: node
 
     Membrane.Logger.debug(
-      "Starting children: #{inspect(children)}#{if node, do: " on node #{node}"}"
+      "Starting children: #{inspect(children)} #{if node, do: " on node #{node}"}"
     )
 
-    children |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata, supervisor))
+    children
+    |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata, supervisor))
   end
 
   @spec maybe_activate_syncs(%{Membrane.Child.name_t() => Sync.t()}, Parent.state_t()) ::
@@ -115,7 +123,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
 
   defp start_child(child, node, parent_clock, syncs, log_metadata, supervisor) do
     %ChildEntry{name: name, module: module, options: options} = child
+
     Membrane.Logger.debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")
+
     sync = syncs |> Map.get(name, Sync.no_sync())
 
     params = %{
@@ -126,14 +136,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
       user_options: options,
       parent_clock: parent_clock,
       sync: sync,
-      setup_observability:
-        Membrane.Core.Observability.setup_fun(child.component_type, name, log_metadata)
+      parent_path: Membrane.ComponentPath.get(),
+      log_metadata: log_metadata
     }
 
-    start_fun =
+    server_module =
       case child.component_type do
         :element ->
-          fn -> Core.Element.start_link(params) end
+          Core.Element
 
         :bin ->
           unless sync == Sync.no_sync() do
@@ -142,12 +152,22 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
                   reason: bin cannot be synced with other elements"
           end
 
-          fn -> Core.Bin.start_link(params) end
+          Core.Bin
       end
 
-    with {:ok, child_pid} <- ChildrenSupervisor.start_child(supervisor, name, start_fun),
+    start_fun = fn supervisor ->
+      server_module.start_link(Map.put(params, :children_supervisor, supervisor))
+    end
+
+    with {:ok, child_pid} <-
+           ChildrenSupervisor.start_component(supervisor, name, start_fun),
          {:ok, clock} <- receive_clock(name) do
-      %ChildEntry{child | pid: child_pid, clock: clock, sync: sync}
+      %ChildEntry{
+        child
+        | pid: child_pid,
+          clock: clock,
+          sync: sync
+      }
     else
       {:error, reason} ->
         # ignore clock if element couldn't be started

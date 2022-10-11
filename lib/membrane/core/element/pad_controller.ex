@@ -191,7 +191,8 @@ defmodule Membrane.Core.Element.PadController do
       |> Map.merge(%{
         pid: other_endpoint.pid,
         other_ref: other_endpoint.pad_ref,
-        options: Child.PadController.parse_pad_options!(info.name, endpoint.pad_props.options, state),
+        options:
+          Child.PadController.parse_pad_options!(info.name, endpoint.pad_props.options, state),
         ref: endpoint.pad_ref,
         parents_accepted_caps: parents_accepted_caps,
         caps: nil,
@@ -201,7 +202,10 @@ defmodule Membrane.Core.Element.PadController do
       })
 
     data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, state))
-    data = data |> Map.merge(init_pad_mode_data(data, endpoint.pad_props, other_info, metadata, state))
+
+    data =
+      data |> Map.merge(init_pad_mode_data(data, endpoint.pad_props, other_info, metadata, state))
+
     data = struct!(Membrane.Element.PadData, data)
     state = put_in(state, [:pads_data, endpoint.pad_ref], data)
 

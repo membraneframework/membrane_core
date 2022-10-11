@@ -1,7 +1,7 @@
 defmodule Membrane.RemoteControlled.PipelineTest do
   use ExUnit.Case
 
-  alias Membrane.ParentSpec
+  alias Membrane.ChildrenSpec
   alias Membrane.RemoteControlled.Message
   alias Membrane.RemoteControlled.Pipeline
 
@@ -49,8 +49,11 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       c: Membrane.Testing.Sink
     ]
 
-    links = [ParentSpec.link(:a) |> ParentSpec.to(:b) |> ParentSpec.to(:c)]
-    actions = [{:spec, %ParentSpec{children: children, links: links}}]
+    links = [
+      ChildrenSpec.get_child(:a) |> ChildrenSpec.get_child(:b) |> ChildrenSpec.get_child(:c)
+    ]
+
+    actions = [{:spec, %ChildrenSpec{structure: children ++ links}}]
 
     Pipeline.exec_actions(pipeline, actions)
     {:ok, pipeline: pipeline}

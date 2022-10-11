@@ -54,7 +54,7 @@ defmodule Membrane.Core.Child.PadController do
     :ok
   end
 
-  @spec parse_pad_options!(Pad.name_t(), Membrane.ParentSpec.pad_options_t(), state_t()) ::
+  @spec parse_pad_options!(Pad.name_t(), Membrane.ChildrenSpec.pad_options_t(), state_t()) ::
           map | no_return
   def parse_pad_options!(pad_name, options, state) do
     {_pad_name, pad_spec} =

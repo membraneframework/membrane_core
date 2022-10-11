@@ -12,16 +12,15 @@ defmodule Membrane.Support.Element.TrivialPipeline do
     ]
 
     links = [
-      link(:producer)
+      get_child(:producer)
       |> via_in(:input, target_queue_size: 10)
-      |> to(:filter)
+      |> get_child(:filter)
       |> via_in(:input, target_queue_size: 10)
-      |> to(:consumer)
+      |> get_child(:consumer)
     ]
 
-    spec = %Membrane.ParentSpec{
-      children: children,
-      links: links
+    spec = %Membrane.ChildrenSpec{
+      structure: children ++ links
     }
 
     {{:ok, spec: spec}, %{}}

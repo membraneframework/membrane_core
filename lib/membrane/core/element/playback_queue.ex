@@ -14,8 +14,7 @@ defmodule Membrane.Core.Element.PlaybackQueue do
   def eval(%State{playback_queue: playback_queue} = state) do
     state =
       playback_queue
-      |> Enum.reverse()
-      |> Enum.reduce(state, fn function, state -> function.(state) end)
+      |> List.foldr(state, fn function, state -> function.(state) end)
 
     %State{state | playback_queue: []}
   end

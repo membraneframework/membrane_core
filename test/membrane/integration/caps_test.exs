@@ -7,12 +7,13 @@ defmodule Membrane.CapsTest do
   alias Membrane.Testing.Pipeline
 
   setup do
-    children = [
-      source: CapsTest.Source,
-      bin: %CapsTest.Bin{test_pid: self()}
-    ]
+    structure =
+      Membrane.ChildrenSpec.link_linear(
+        source: CapsTest.Source,
+        bin: %CapsTest.Bin{test_pid: self()}
+      )
 
-    pipeline = Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+    pipeline = Pipeline.start_link_supervised!(structure: structure)
 
     [pipeline: pipeline]
   end

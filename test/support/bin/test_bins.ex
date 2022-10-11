@@ -1,6 +1,6 @@
 defmodule Membrane.Support.Bin.TestBins do
   @moduledoc false
-  alias Membrane.ParentSpec
+  alias Membrane.ChildrenSpec
 
   defmodule TestFilter do
     @moduledoc false
@@ -83,12 +83,11 @@ defmodule Membrane.Support.Bin.TestBins do
       ]
 
       links = [
-        link_bin_input() |> to(:filter1) |> to(:filter2) |> to_bin_output()
+        bin_input() |> get_child(:filter1) |> get_child(:filter2) |> bin_output()
       ]
 
-      spec = %ParentSpec{
-        children: children,
-        links: links
+      spec = %ChildrenSpec{
+        structure: children ++ links
       }
 
       state = %{}
@@ -116,8 +115,8 @@ defmodule Membrane.Support.Bin.TestBins do
         filter: Membrane.Support.ChildCrashTest.Filter
       ]
 
-      spec = %ParentSpec{
-        children: children
+      spec = %ChildrenSpec{
+        structure: children
       }
 
       state = %{}
@@ -128,18 +127,20 @@ defmodule Membrane.Support.Bin.TestBins do
     @impl true
     def handle_pad_added(Pad.ref(:input, _id) = pad, _ctx, state) do
       links = [
-        link_bin_input(pad) |> to(:filter)
+        bin_input(pad) |> get_child(:filter)
       ]
 
-      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
+      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ChildrenSpec{structure: links}},
+       state}
     end
 
     def handle_pad_added(Pad.ref(:output, _id) = pad, _ctx, state) do
       links = [
-        link(:filter) |> to_bin_output(pad)
+        get_child(:filter) |> bin_output(pad)
       ]
 
-      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
+      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ChildrenSpec{structure: links}},
+       state}
     end
   end
 
@@ -162,12 +163,11 @@ defmodule Membrane.Support.Bin.TestBins do
       ]
 
       links = [
-        link(:filter1) |> to(:filter2)
+        get_child(:filter1) |> get_child(:filter2)
       ]
 
-      spec = %ParentSpec{
-        children: children,
-        links: links
+      spec = %ChildrenSpec{
+        structure: children ++ links
       }
 
       state = %{}
@@ -178,18 +178,20 @@ defmodule Membrane.Support.Bin.TestBins do
     @impl true
     def handle_pad_added(Pad.ref(:input, _id) = pad, _ctx, state) do
       links = [
-        link_bin_input(pad) |> to(:filter1)
+        bin_input(pad) |> get_child(:filter1)
       ]
 
-      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
+      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ChildrenSpec{structure: links}},
+       state}
     end
 
     def handle_pad_added(Pad.ref(:output, _id) = pad, _ctx, state) do
       links = [
-        link(:filter2) |> to_bin_output(pad)
+        get_child(:filter2) |> bin_output(pad)
       ]
 
-      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ParentSpec{links: links}}, state}
+      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ChildrenSpec{structure: links}},
+       state}
     end
   end
 
@@ -209,11 +211,10 @@ defmodule Membrane.Support.Bin.TestBins do
         sink: opts.sink
       ]
 
-      links = [link_bin_input() |> to(:filter) |> to(:sink)]
+      links = [bin_input() |> get_child(:filter) |> get_child(:sink)]
 
-      spec = %ParentSpec{
-        children: children,
-        links: links
+      spec = %ChildrenSpec{
+        structure: children ++ links
       }
 
       state = %{}
@@ -251,11 +252,10 @@ defmodule Membrane.Support.Bin.TestBins do
         sink: opts.sink
       ]
 
-      links = [link(:source) |> to(:sink)]
+      links = [get_child(:source) |> get_child(:sink)]
 
-      spec = %ParentSpec{
-        children: children,
-        links: links
+      spec = %ChildrenSpec{
+        structure: children ++ links
       }
 
       state = %{}
@@ -318,12 +318,11 @@ defmodule Membrane.Support.Bin.TestBins do
       ]
 
       links = [
-        link_bin_input() |> to(:filter1) |> to(:filter2) |> to_bin_output()
+        bin_input() |> get_child(:filter1) |> get_child(:filter2) |> bin_output()
       ]
 
-      spec = %ParentSpec{
-        children: children,
-        links: links
+      spec = %ChildrenSpec{
+        structure: children ++ links
       }
 
       state = %{}

@@ -11,16 +11,15 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
     ]
 
     links = [
-      link(:source)
+      get_child(:source)
       |> via_in(:input, target_queue_size: 50)
-      |> to(:filter)
+      |> get_child(:filter)
       |> via_in(:input, target_queue_size: 50)
-      |> to(:sink)
+      |> get_child(:sink)
     ]
 
-    spec = %Membrane.ParentSpec{
-      children: children,
-      links: links
+    spec = %Membrane.ChildrenSpec{
+      structure: children ++ links
     }
 
     {{:ok, spec: spec, playback: :playing}, %{target: opts.target}}

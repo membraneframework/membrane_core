@@ -2,7 +2,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
   @moduledoc false
   use Membrane.Core.CallbackHandler
 
-  alias Membrane.{ActionError, ParentSpec}
+  alias Membrane.{ActionError, ChildrenSpec}
   alias Membrane.Core.Bin.State
   alias Membrane.Core.{Message, Parent, TimerController}
 
@@ -26,7 +26,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:spec, spec = %ParentSpec{}}, _cb, _params, state) do
+  def handle_action({:spec, spec = %ChildrenSpec{}}, _cb, _params, state) do
     Parent.ChildLifeController.handle_spec(spec, state)
   end
 

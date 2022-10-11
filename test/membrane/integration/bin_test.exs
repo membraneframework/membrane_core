@@ -25,7 +25,9 @@ defmodule Membrane.Core.BinTest do
       ]
 
       pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+        Testing.Pipeline.start_link_supervised!(
+          structure: Membrane.ChildrenSpec.link_linear(children)
+        )
 
       assert_data_flows_through(pipeline, buffers)
     end
@@ -47,7 +49,9 @@ defmodule Membrane.Core.BinTest do
       ]
 
       pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+        Testing.Pipeline.start_link_supervised!(
+          structure: Membrane.ChildrenSpec.link_linear(children)
+        )
 
       assert_data_flows_through(pipeline, buffers)
     end
@@ -68,7 +72,9 @@ defmodule Membrane.Core.BinTest do
       ]
 
       pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+        Testing.Pipeline.start_link_supervised!(
+          structure: Membrane.ChildrenSpec.link_linear(children)
+        )
 
       assert_data_flows_through(pipeline, buffers)
     end
@@ -92,7 +98,9 @@ defmodule Membrane.Core.BinTest do
       ]
 
       pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+        Testing.Pipeline.start_link_supervised!(
+          structure: Membrane.ChildrenSpec.link_linear(children)
+        )
 
       assert_data_flows_through(pipeline, buffers)
     end
@@ -107,7 +115,7 @@ defmodule Membrane.Core.BinTest do
         }
       ]
 
-      pipeline = Testing.Pipeline.start_link_supervised!(children: children)
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: children)
 
       assert_pipeline_play(pipeline)
 
@@ -130,7 +138,9 @@ defmodule Membrane.Core.BinTest do
       ]
 
       pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+        Testing.Pipeline.start_link_supervised!(
+          structure: Membrane.ChildrenSpec.link_linear(children)
+        )
 
       assert_pipeline_play(pipeline)
 
@@ -151,7 +161,7 @@ defmodule Membrane.Core.BinTest do
 
   describe "Handling DOWN messages" do
     test "DOWN message should be delivered to handle_info" do
-      {:ok, _supervisor, bin_pid} =
+      {:ok, bin_pid} =
         self()
         |> bin_init_options()
         |> Bin.start()
@@ -193,7 +203,9 @@ defmodule Membrane.Core.BinTest do
       ]
 
       pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+        Testing.Pipeline.start_link_supervised!(
+          structure: Membrane.ChildrenSpec.link_linear(children)
+        )
 
       Process.sleep(2000)
       assert_data_flows_through(pipeline, buffers)
@@ -222,8 +234,8 @@ defmodule Membrane.Core.BinTest do
       def handle_init(_options) do
         children = [element_child: ClockElement]
 
-        spec = %Membrane.ParentSpec{
-          children: children,
+        spec = %Membrane.ChildrenSpec{
+          structure: children,
           clock_provider: :element_child
         }
 
@@ -238,7 +250,7 @@ defmodule Membrane.Core.BinTest do
       def handle_init(_options) do
         children = [bin_child: ClockBin]
 
-        {{:ok, spec: %Membrane.ParentSpec{children: children, clock_provider: :bin_child}},
+        {{:ok, spec: %Membrane.ChildrenSpec{structure: children, clock_provider: :bin_child}},
          :ignored}
       end
     end
@@ -274,7 +286,9 @@ defmodule Membrane.Core.BinTest do
       ]
 
       pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+        Testing.Pipeline.start_link_supervised!(
+          structure: Membrane.ChildrenSpec.link_linear(children)
+        )
 
       Testing.Pipeline.execute_actions(pipeline, notify_child: {:test_bin, "Some notification"})
       assert_pipeline_notified(pipeline, :test_bin, msg)
@@ -311,11 +325,13 @@ defmodule Membrane.Core.BinTest do
       node: nil,
       parent: pipeline,
       parent_clock: nil,
-      setup_observability: fn _pid -> [] end,
+      parent_path: [],
+      log_metadata: [],
       user_options: %{
         filter1: TestFilter,
         filter2: TestFilter
-      }
+      },
+      children_supervisor: Membrane.Core.ChildrenSupervisor.start_link!()
     }
   end
 end

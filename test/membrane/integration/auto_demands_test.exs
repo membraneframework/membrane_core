@@ -51,7 +51,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
   ]
   |> Enum.map(fn opts ->
     test "buffers pass through auto-demand filters; setup: #{inspect(opts)}" do
-      import Membrane.ParentSpec
+      import Membrane.ChildrenSpec
 
       %{payloads: payloads, factor: factor, direction: direction, filters: filters} =
         unquote(Macro.escape(opts))
@@ -69,10 +69,10 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
       pipeline =
         Pipeline.start_link_supervised!(
-          links: [
-            link(:source, %Source{output: in_payloads})
-            |> reduce_link(1..filters, &to(&1, {:filter, &2}, filter))
-            |> to(:sink, Sink)
+          structure: [
+            child(:source, %Source{output: in_payloads})
+            |> reduce_link(1..filters, &child(&1, {:filter, &2}, filter))
+            |> child(:sink, Sink)
           ]
         )
 
@@ -89,14 +89,14 @@ defmodule Membrane.Integration.AutoDemandsTest do
   end)
 
   test "buffers pass through auto-demand tee" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
 
     pipeline =
       Pipeline.start_link_supervised!(
-        links: [
-          link(:source, %Source{output: 1..100_000}) |> to(:tee, AutoDemandTee),
-          link(:tee) |> to(:left_sink, Sink),
-          link(:tee) |> to(:right_sink, %Sink{autodemand: false})
+        structure: [
+          child(:source, %Source{output: 1..100_000}) |> child(:tee, AutoDemandTee),
+          get_child(:tee) |> child(:left_sink, Sink),
+          get_child(:tee) |> child(:right_sink, %Sink{autodemand: false})
         ]
       )
 
@@ -114,14 +114,14 @@ defmodule Membrane.Integration.AutoDemandsTest do
   end
 
   test "handle removed branch" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
 
     pipeline =
       Pipeline.start_link_supervised!(
-        links: [
-          link(:source, %Source{output: 1..100_000}) |> to(:tee, AutoDemandTee),
-          link(:tee) |> to(:left_sink, Sink),
-          link(:tee) |> to(:right_sink, %Sink{autodemand: false})
+        structure: [
+          child(:source, %Source{output: 1..100_000}) |> child(:tee, AutoDemandTee),
+          get_child(:tee) |> child(:left_sink, Sink),
+          get_child(:tee) |> child(:right_sink, %Sink{autodemand: false})
         ]
       )
 
@@ -152,14 +152,14 @@ defmodule Membrane.Integration.AutoDemandsTest do
   end
 
   test "toilet" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
 
     pipeline =
       Pipeline.start_link_supervised!(
-        links: [
-          link(:source, PushSource)
-          |> to(:filter, AutoDemandFilter)
-          |> to(:sink, Sink)
+        structure: [
+          child(:source, PushSource)
+          |> child(:filter, AutoDemandFilter)
+          |> child(:sink, Sink)
         ]
       )
 
@@ -182,14 +182,14 @@ defmodule Membrane.Integration.AutoDemandsTest do
   end
 
   test "toilet overflow" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
 
     pipeline =
       Pipeline.start_supervised!(
-        links: [
-          link(:source, PushSource)
-          |> to(:filter, AutoDemandFilter)
-          |> to(:sink, %Sink{autodemand: false})
+        structure: [
+          child(:source, PushSource)
+          |> child(:filter, AutoDemandFilter)
+          |> child(:sink, %Sink{autodemand: false})
         ]
       )
 

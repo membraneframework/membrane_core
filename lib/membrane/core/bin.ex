@@ -9,8 +9,8 @@ defmodule Membrane.Core.Bin do
   alias Membrane.Core.{
     CallbackHandler,
     Child,
+    ChildrenSupervisor,
     Message,
-    Observability,
     Parent,
     Telemetry,
     TimerController
@@ -27,8 +27,10 @@ defmodule Membrane.Core.Bin do
           parent: pid,
           user_options: Membrane.Bin.options_t(),
           parent_clock: Membrane.Clock.t(),
-          setup_observability: Observability.setup_fun(),
-          sync: :membrane_no_sync
+          parent_path: Membrane.ComponentPath.path_t(),
+          log_metadata: Logger.metadata(),
+          sync: :membrane_no_sync,
+          children_supervisor: pid()
         }
 
   @doc """
@@ -63,22 +65,10 @@ defmodule Membrane.Core.Bin do
       bin options: #{inspect(user_options)}
       """)
 
-      start_fun =
-        &GenServer.start_link(Membrane.Core.Bin, Map.put(options, :children_supervisor, &1))
-
-      # rpc if necessary
       if node do
-        :rpc.call(node, Membrane.Core.Parent.Supervisor, :go_brrr, [
-          method,
-          start_fun,
-          options.setup_observability
-        ])
+        :rpc.call(node, GenServer, method, [__MODULE__, options])
       else
-        Membrane.Core.Parent.Supervisor.go_brrr(
-          method,
-          start_fun,
-          options.setup_observability
-        )
+        apply(GenServer, method, [__MODULE__, options])
       end
     else
       raise """
@@ -91,16 +81,28 @@ defmodule Membrane.Core.Bin do
   @impl GenServer
   def init(options) do
     %{name: name, module: module} = options
-    self_pid = self()
-    setup_observability = fn args -> options.setup_observability.([pid: self_pid] ++ args) end
-    log_metadata = setup_observability.([])
-    Message.send(options.children_supervisor, :setup_observability, setup_observability)
 
+    observability_config = %{
+      name: name,
+      component_type: :bin,
+      pid: self(),
+      parent_path: options.parent_path,
+      log_metadata: options.log_metadata
+    }
+
+    Membrane.Core.Observability.setup(observability_config)
+    ChildrenSupervisor.set_parent_component(options.children_supervisor, observability_config)
     Telemetry.report_init(:bin)
 
     clock_proxy = Membrane.Clock.start_link(proxy: true) ~> ({:ok, pid} -> pid)
     clock = if Bunch.Module.check_behaviour(module, :membrane_clock?), do: clock_proxy, else: nil
     Message.send(options.parent, :clock, [name, clock])
+
+    {:ok, resource_guard} =
+      ChildrenSupervisor.start_utility(
+        options.children_supervisor,
+        {Membrane.ResourceGuard, self()}
+      )
 
     state =
       %State{
@@ -117,8 +119,9 @@ defmodule Membrane.Core.Bin do
           stream_sync: Membrane.Sync.no_sync(),
           latency: 0
         },
-        children_log_metadata: log_metadata,
-        children_supervisor: options.children_supervisor
+        children_log_metadata: options.log_metadata,
+        children_supervisor: options.children_supervisor,
+        resource_guard: resource_guard
       }
       |> Child.PadSpecHandler.init_pads()
 
