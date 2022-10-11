@@ -51,15 +51,11 @@ defmodule Membrane.Core.Element.CapsController do
   def exec_handle_caps(pad_ref, caps, params \\ %{}, state) do
     require CallbackContext.Caps
 
-    # dupa: accepted_caps są wyciagane ze state. trzeba ogarnac gdzie są tam wrzucane i je tam dorzucic jak link przychodzi do elementy
-    # kolejna rzecz jaka trzeba ogarnac, a wlasciwie pierwsza, to z uwagi ze parent wola tylko link do sendera, to jak wyglada flow wiadomosci do receivera? chociaz pewnie tak samo
-    # no i mozna rzucic okiem czy robienie tego stuffu na `request_link` zamiast na `link` moze bedzie prostsze ??? <- eee nie, nie bedzie xd
     %{accepted_caps: accepted_caps, parents_accepted_caps: parents_accepted_caps} =
       PadModel.get_data!(state, pad_ref)
 
     context = &CallbackContext.Caps.from_state(&1, pad: pad_ref)
 
-    # dupa: tutaj trzeba dodac sprawdzanie listy capsow, ktora przyszla z calla `link` od parenta
     [accepted_caps | parents_accepted_caps]
     |> Enum.any?(&(not Caps.Matcher.match?(&1, caps)))
     |> if do

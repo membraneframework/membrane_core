@@ -75,7 +75,6 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp do_handle_link(endpoint, other_endpoint, info, toilet, %{initiator: :parent}, state) do
-    # dupa: tutaj jest wolanie call link element -> sibling (czyli sender -> receiver)
     handle_link_response =
       Message.call(other_endpoint.pid, :handle_link, [
         Pad.opposite_direction(info.direction),
@@ -101,17 +100,7 @@ defmodule Membrane.Core.Element.PadController do
           )
 
         state =
-          init_pad_data(
-            endpoint.pad_ref,
-            info,
-            endpoint.pad_props,
-            [],
-            other_endpoint.pad_ref,
-            other_endpoint.pid,
-            other_info,
-            link_metadata,
-            state
-          )
+          init_pad_data(endpoint, other_endpoint, info, [], other_info, link_metadata, state)
 
         state = maybe_handle_pad_added(endpoint.pad_ref, state)
         {:ok, state}
@@ -129,10 +118,6 @@ defmodule Membrane.Core.Element.PadController do
          %{initiator: :sibling} = link_props,
          state
        ) do
-    # dupa: w tym miejscu trzeba z wiadomosci wyciagac liste caps patternow od binow i ją gdziestam zapisywac (pewnie w state???)
-    # hipoteza: klucz :accepted_caps juz jest w state, teraz trzeba tylko do state dorzucic to od binow
-    # hipoteza 2: w binach wyzej tez te caps patterny są w :accepted_caps w stanie
-
     %{
       other_info: other_info,
       link_metadata: link_metadata,
@@ -148,16 +133,12 @@ defmodule Membrane.Core.Element.PadController do
         {other_endpoint.pad_ref, other_info}
       )
 
-    # tutaj wrzuc :parents_accepted_caps ponizej
-
     state =
       init_pad_data(
-        endpoint.pad_ref,
+        endpoint,
+        other_endpoint,
         info,
-        endpoint.pad_props,
         parents_accepted_caps,
-        other_endpoint.pad_ref,
-        other_endpoint.pid,
         other_info,
         link_metadata,
         state
@@ -197,12 +178,10 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp init_pad_data(
-         ref,
+         endpoint,
+         other_endpoint,
          info,
-         props,
          parents_accepted_caps,
-         other_ref,
-         other_pid,
          other_info,
          metadata,
          state
@@ -210,10 +189,10 @@ defmodule Membrane.Core.Element.PadController do
     data =
       info
       |> Map.merge(%{
-        pid: other_pid,
-        other_ref: other_ref,
-        options: Child.PadController.parse_pad_options!(info.name, props.options, state),
-        ref: ref,
+        pid: other_endpoint.pid,
+        other_ref: other_endpoint.pad_ref,
+        options: Child.PadController.parse_pad_options!(info.name, endpoint.pad_props.options, state),
+        ref: endpoint.pad_ref,
         parents_accepted_caps: parents_accepted_caps,
         caps: nil,
         start_of_stream?: false,
@@ -221,10 +200,10 @@ defmodule Membrane.Core.Element.PadController do
         associated_pads: []
       })
 
-    data = data |> Map.merge(init_pad_direction_data(data, props, state))
-    data = data |> Map.merge(init_pad_mode_data(data, props, other_info, metadata, state))
+    data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, state))
+    data = data |> Map.merge(init_pad_mode_data(data, endpoint.pad_props, other_info, metadata, state))
     data = struct!(Membrane.Element.PadData, data)
-    state = put_in(state, [:pads_data, ref], data)
+    state = put_in(state, [:pads_data, endpoint.pad_ref], data)
 
     if data.demand_mode == :auto do
       state =
@@ -236,7 +215,7 @@ defmodule Membrane.Core.Element.PadController do
         end)
 
       case data.direction do
-        :input -> DemandController.send_auto_demand_if_needed(ref, state)
+        :input -> DemandController.send_auto_demand_if_needed(endpoint.pad_ref, state)
         :output -> state
       end
     else

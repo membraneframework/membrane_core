@@ -193,17 +193,14 @@ defmodule Membrane.Core.Bin.PadController do
 
     child_endpoint = %{child_endpoint | pad_props: pad_props}
 
-    if params.initiator == :sibling do
-      :ok =
-        Child.PadController.validate_pad_mode!(
-          {endpoint.pad_ref, pad_data},
-          {other_endpoint.pad_ref, params.other_info}
-        )
-    end
-
-    # dupa: dodaj tutaj sensownego matcha
     params =
       if params.initiator == :sibling do
+        :ok =
+          Child.PadController.validate_pad_mode!(
+            {endpoint.pad_ref, pad_data},
+            {other_endpoint.pad_ref, params.other_info}
+          )
+
         Map.update!(
           params,
           :parents_accepted_caps,
@@ -213,8 +210,6 @@ defmodule Membrane.Core.Bin.PadController do
         params
       end
 
-    # dupa: w tym callu trzeba przekazac caps pattern z binu gdzie jest to wywolywane
-    # dupa: jest to potrzebne tylko jesli %{initiator: :sibling} = params
     reply =
       Message.call!(child_endpoint.pid, :handle_link, [
         direction,
