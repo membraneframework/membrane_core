@@ -160,7 +160,12 @@ defmodule Membrane.Core.Bin.PadController do
           LinkParser.raw_endpoint_t(),
           LinkParser.raw_endpoint_t(),
           %{initiator: :parent}
-          | %{initiator: :sibling, other_info: PadModel.pad_info_t() | nil, link_metadata: map},
+          | %{
+              initiator: :sibling,
+              other_info: PadModel.pad_info_t() | nil,
+              link_metadata: map,
+              parents_accepted_caps: [struct() | module() | tuple()]
+            },
           Core.Bin.State.t()
         ) :: {Core.Element.PadController.link_call_reply_t(), Core.Bin.State.t()}
   def handle_link(direction, endpoint, other_endpoint, params, state) do
@@ -196,6 +201,20 @@ defmodule Membrane.Core.Bin.PadController do
         )
     end
 
+    # dupa: dodaj tutaj sensownego matcha
+    params =
+      if params.initiator == :sibling do
+        Map.update!(
+          params,
+          :parents_accepted_caps,
+          &[state.pads_info[direction].accepted_caps | &1]
+        )
+      else
+        params
+      end
+
+    # dupa: w tym callu trzeba przekazac caps pattern z binu gdzie jest to wywolywane
+    # dupa: jest to potrzebne tylko jesli %{initiator: :sibling} = params
     reply =
       Message.call!(child_endpoint.pid, :handle_link, [
         direction,

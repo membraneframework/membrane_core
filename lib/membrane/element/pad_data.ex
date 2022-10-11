@@ -3,7 +3,9 @@ defmodule Membrane.Element.PadData do
   Struct describing current pad state.
 
   The public fields are:
-    - `:accepted_caps` - specification of possible caps that are accepted on the pad.
+    - `:accepted_caps` - specification of possible caps that are accepted on the pad in the element.
+      See `Membrane.Caps.Matcher` for more information.
+    - `:parents_accepted_caps` - specification of possible caps that are accepted on the pad in the ancestors of the element.
       See `Membrane.Caps.Matcher` for more information.
     - `:availability` - see `Membrane.Pad.availability_t`
     - `:caps` - the most recent `Membrane.Caps` that have been sent (output) or received (input)
@@ -28,6 +30,7 @@ defmodule Membrane.Element.PadData do
 
   @type t :: %__MODULE__{
           accepted_caps: Caps.Matcher.caps_specs_t(),
+          parents_accepted_caps: [Caps.Matcher.caps_specs_t()],
           availability: Pad.availability_t(),
           caps: Caps.t() | nil,
           start_of_stream?: boolean(),
@@ -77,6 +80,7 @@ defmodule Membrane.Element.PadData do
                 sticky_messages: [],
                 toilet: nil,
                 associated_pads: [],
-                sticky_events: []
+                sticky_events: [],
+                parents_accepted_caps: []
               ]
 end

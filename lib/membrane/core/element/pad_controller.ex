@@ -75,6 +75,7 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp do_handle_link(endpoint, other_endpoint, info, toilet, %{initiator: :parent}, state) do
+    # dupa: tutaj jest wolanie call link element -> sibling (czyli sender -> receiver)
     handle_link_response =
       Message.call(other_endpoint.pid, :handle_link, [
         Pad.opposite_direction(info.direction),
@@ -86,7 +87,8 @@ defmodule Membrane.Core.Element.PadController do
           link_metadata: %{
             toilet: toilet,
             observability_metadata: Observability.setup_link(endpoint.pad_ref)
-          }
+          },
+          parents_accepted_caps: []
         }
       ])
 
@@ -103,6 +105,7 @@ defmodule Membrane.Core.Element.PadController do
             endpoint.pad_ref,
             info,
             endpoint.pad_props,
+            [],
             other_endpoint.pad_ref,
             other_endpoint.pid,
             other_info,
@@ -126,7 +129,16 @@ defmodule Membrane.Core.Element.PadController do
          %{initiator: :sibling} = link_props,
          state
        ) do
-    %{other_info: other_info, link_metadata: link_metadata} = link_props
+    # dupa: w tym miejscu trzeba z wiadomosci wyciagac liste caps patternow od binow i ją gdziestam zapisywac (pewnie w state???)
+    # hipoteza: klucz :accepted_caps juz jest w state, teraz trzeba tylko do state dorzucic to od binow
+    # hipoteza 2: w binach wyzej tez te caps patterny są w :accepted_caps w stanie
+
+    %{
+      other_info: other_info,
+      link_metadata: link_metadata,
+      parents_accepted_caps: parents_accepted_caps
+    } = link_props
+
     Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
     link_metadata = %{link_metadata | toilet: link_metadata.toilet || toilet}
 
@@ -136,11 +148,14 @@ defmodule Membrane.Core.Element.PadController do
         {other_endpoint.pad_ref, other_info}
       )
 
+    # tutaj wrzuc :parents_accepted_caps ponizej
+
     state =
       init_pad_data(
         endpoint.pad_ref,
         info,
         endpoint.pad_props,
+        parents_accepted_caps,
         other_endpoint.pad_ref,
         other_endpoint.pid,
         other_info,
@@ -181,7 +196,17 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  defp init_pad_data(ref, info, props, other_ref, other_pid, other_info, metadata, state) do
+  defp init_pad_data(
+         ref,
+         info,
+         props,
+         parents_accepted_caps,
+         other_ref,
+         other_pid,
+         other_info,
+         metadata,
+         state
+       ) do
     data =
       info
       |> Map.merge(%{
@@ -189,6 +214,7 @@ defmodule Membrane.Core.Element.PadController do
         other_ref: other_ref,
         options: Child.PadController.parse_pad_options!(info.name, props.options, state),
         ref: ref,
+        parents_accepted_caps: parents_accepted_caps,
         caps: nil,
         start_of_stream?: false,
         end_of_stream?: false,

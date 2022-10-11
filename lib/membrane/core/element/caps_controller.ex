@@ -50,10 +50,25 @@ defmodule Membrane.Core.Element.CapsController do
   @spec exec_handle_caps(Pad.ref_t(), Caps.t(), params :: map, State.t()) :: State.t()
   def exec_handle_caps(pad_ref, caps, params \\ %{}, state) do
     require CallbackContext.Caps
-    %{accepted_caps: accepted_caps} = PadModel.get_data!(state, pad_ref)
+
+    # dupa: accepted_caps są wyciagane ze state. trzeba ogarnac gdzie są tam wrzucane i je tam dorzucic jak link przychodzi do elementy
+    # kolejna rzecz jaka trzeba ogarnac, a wlasciwie pierwsza, to z uwagi ze parent wola tylko link do sendera, to jak wyglada flow wiadomosci do receivera? chociaz pewnie tak samo
+    # no i mozna rzucic okiem czy robienie tego stuffu na `request_link` zamiast na `link` moze bedzie prostsze ??? <- eee nie, nie bedzie xd
+    %{accepted_caps: accepted_caps, parents_accepted_caps: parents_accepted_caps} =
+      PadModel.get_data!(state, pad_ref)
+
     context = &CallbackContext.Caps.from_state(&1, pad: pad_ref)
 
-    if Caps.Matcher.match?(accepted_caps, caps) do
+    # dupa: tutaj trzeba dodac sprawdzanie listy capsow, ktora przyszla z calla `link` od parenta
+    [accepted_caps | parents_accepted_caps]
+    |> Enum.any?(&(not Caps.Matcher.match?(&1, caps)))
+    |> if do
+      raise """
+      Received caps: #{inspect(caps)} that are not specified in def_input_pad
+      for pad #{inspect(pad_ref)}. Specs of accepted caps are:
+      #{inspect([accepted_caps | parents_accepted_caps], pretty: true)}
+      """
+    else
       state =
         CallbackHandler.exec_and_handle_callback(
           :handle_caps,
@@ -64,12 +79,6 @@ defmodule Membrane.Core.Element.CapsController do
         )
 
       PadModel.set_data!(state, pad_ref, :caps, caps)
-    else
-      raise """
-      Received caps: #{inspect(caps)} that are not specified in def_input_pad
-      for pad #{inspect(pad_ref)}. Specs of accepted caps are:
-      #{inspect(accepted_caps, pretty: true)}
-      """
     end
   end
 end
