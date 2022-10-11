@@ -260,20 +260,21 @@ defmodule Membrane.ChildrenSpec do
             node: nil,
             log_metadata: []
 
-  # @doc """
-  # Spawns a children without linking it.
-  # """
-
   @doc """
-  Begins a link.
+  Used to refer to an existing child at a beggining of a link specification.
 
-  See the _links_ section of the moduledoc for more information.
+  See the _structure_ section of the moduledoc for more information.
   """
   @spec get_child(Child.name_t()) :: link_builder_t()
   def get_child(child_name) do
     %LinkBuilder{links: [%{from: child_name}], status: :from}
   end
 
+  @doc """
+  Used to refer to an existing child in a middle of a link specification.
+
+  See the _structure_ section of the moduledoc for more information.
+  """
   @spec get_child(link_builder_t(), Child.name_t()) :: link_builder_t()
   def get_child(%LinkBuilder{} = link_builder, child_name) do
     if link_builder.status == :to_pad do
@@ -284,6 +285,12 @@ defmodule Membrane.ChildrenSpec do
     |> LinkBuilder.update(:done, to: child_name)
   end
 
+  @doc """
+  Used to spawn an unlinked child or to spawn a child at the beggining of
+  a link specification.
+
+  See the _structure_ section of the moduledoc for more information.
+  """
   @spec child(Child.name_t() | link_builder_t, struct() | module(), child_opts_t()) ::
           link_builder_t()
   def child(child_name, child_spec, opts \\ [])
@@ -309,6 +316,11 @@ defmodule Membrane.ChildrenSpec do
     get_child(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
   end
 
+  @doc """
+  Used to spawn a child in the middle of a link specification.
+
+  See the _structure_ section of the moduledoc for more information.
+  """
   @spec child(link_builder_t(), Child.name_t(), struct() | module(), child_opts_t()) ::
           link_builder_t()
   def child(link_builder, child_name, child_spec, opts) do
@@ -329,7 +341,7 @@ defmodule Membrane.ChildrenSpec do
   @doc """
   Begins a link with a bin's pad.
 
-  See the _links_ section of the moduledoc for more information.
+  See the _structure_ section of the moduledoc for more information.
   """
   @spec bin_input(Pad.name_t() | Pad.ref_t()) :: link_builder_t() | no_return
   def bin_input(pad \\ :input) do
@@ -347,7 +359,7 @@ defmodule Membrane.ChildrenSpec do
   in moduledoc of each element. See `Membrane.Element.WithOutputPads.def_output_pad/2` and `Membrane.Bin.def_output_pad/2`
   for information about defining pad options.
 
-  See the _links_ section of the moduledoc for more information.
+  See the _structure_ section of the moduledoc for more information.
   """
   @spec via_out(link_builder_t(), Pad.name_t() | Pad.ref_t(), options: pad_options_t()) ::
           link_builder_t() | no_return
@@ -411,7 +423,7 @@ defmodule Membrane.ChildrenSpec do
   - `auto_demand_size` - Size of automatically generated demands. Used only for pads working in pull mode with automatic demands.
   See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0` for more info.
 
-  See the _links_ section of the moduledoc for more information.
+  See the _structure_ section of the moduledoc for more information.
   """
   @spec via_in(link_builder_t(), Pad.name_t() | Pad.ref_t(),
           options: pad_options_t(),
@@ -467,7 +479,7 @@ defmodule Membrane.ChildrenSpec do
   @doc """
   Ends a link with a bin's output.
 
-  See the _links_ section of the moduledoc for more information.
+  See the _structure_ section of the moduledoc for more information.
   """
   @spec bin_output(link_builder_t(), Pad.name_t() | Pad.ref_t()) ::
           link_builder_t() | no_return
