@@ -284,7 +284,7 @@ defmodule Membrane.ChildrenSpec do
     |> LinkBuilder.update(:done, to: child_name)
   end
 
-  @spec child(Child.name_t() | LinkBuilder.t(), struct() | module(), child_opts_t()) ::
+  @spec child(Child.name_t() | link_builder_t, struct() | module(), child_opts_t()) ::
           link_builder_t()
   def child(child_name, child_spec, opts \\ [])
 
