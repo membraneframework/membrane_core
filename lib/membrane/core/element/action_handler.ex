@@ -191,6 +191,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:terminate, reason}, _cb, _params, _state) do
+    Membrane.Logger.debug("Terminating with reason #{inspect(reason)}")
     exit(reason)
   end
 
