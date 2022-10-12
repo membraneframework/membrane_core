@@ -1,5 +1,9 @@
 defmodule Membrane.Core.ChildrenSupervisor do
   @moduledoc false
+  # Supervisor that can be used by components to spawn and supervise whatever child processes
+  # they want - another components or some utilities. The supervisor doesn't restart any
+  # processes - it only makes sure that they terminate properly and informs the parent
+  # component about their termination.
 
   use Bunch
   use GenServer
