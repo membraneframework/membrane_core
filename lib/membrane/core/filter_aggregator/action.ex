@@ -4,21 +4,12 @@ defmodule Membrane.Core.FilterAggregator.InternalAction do
 
   @type t :: {__MODULE__, atom()} | {__MODULE__, atom(), args :: any()}
 
-  # Playback state change actions
-  defmacro stopped_to_prepared() do
-    quote do: {unquote(__MODULE__), :stopped_to_prepared}
+  defmacro setup() do
+    quote do: {unquote(__MODULE__), :setup}
   end
 
-  defmacro prepared_to_playing() do
-    quote do: {unquote(__MODULE__), :prepared_to_playing}
-  end
-
-  defmacro playing_to_prepared() do
-    quote do: {unquote(__MODULE__), :playing_to_prepared}
-  end
-
-  defmacro prepared_to_stopped() do
-    quote do: {unquote(__MODULE__), :prepared_to_stopped}
+  defmacro playing() do
+    quote do: {unquote(__MODULE__), :playing}
   end
 
   defmacro start_of_stream(pad) do
