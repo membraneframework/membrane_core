@@ -232,6 +232,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
       Testing.Pipeline.terminate(pipeline)
       assert %{module: Membrane.Core.Pipeline.Zombie} = :sys.get_state(pipeline)
       assert_receive {RemovalDeferBin, :terminate_request}
+      assert %{module: RemovalDeferBin} = :sys.get_state(RemovalDeferBin)
       send(RemovalDeferSource, :terminate)
       bin_monitor = Process.monitor(RemovalDeferBin)
       send(RemovalDeferBin, :terminate)
