@@ -219,7 +219,7 @@ defmodule Membrane.Core.BinTest do
       def_clock()
 
       @impl true
-      def handle_init(_options) do
+      def handle_init(_ctx, _options) do
         children = [element_child: ClockElement]
 
         spec = %Membrane.ParentSpec{
@@ -235,7 +235,7 @@ defmodule Membrane.Core.BinTest do
       use Membrane.Pipeline
 
       @impl true
-      def handle_init(_options) do
+      def handle_init(_ctx, _options) do
         children = [bin_child: ClockBin]
 
         {{:ok, spec: %Membrane.ParentSpec{children: children, clock_provider: :bin_child}},

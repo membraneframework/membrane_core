@@ -8,7 +8,7 @@ defmodule Membrane.Testing.PipelineTest do
     use Membrane.Pipeline
 
     @impl true
-    def handle_init(_opts), do: {{:ok, spec: %Membrane.ParentSpec{}}, :state}
+    def handle_init(_ctx, _opts), do: {{:ok, spec: %Membrane.ParentSpec{}}, :state}
   end
 
   describe "Testing pipeline creation" do
@@ -17,7 +17,7 @@ defmodule Membrane.Testing.PipelineTest do
       elements = [elem: Elem, elem2: Elem]
       links = [link(:elem) |> to(:elem2)]
       options = [module: :default, children: elements, links: links, test_process: nil]
-      assert {{:ok, spec: spec, playback: :playing}, state} = Pipeline.handle_init(options)
+      assert {{:ok, spec: spec, playback: :playing}, state} = Pipeline.handle_init(%{}, options)
 
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
@@ -32,7 +32,7 @@ defmodule Membrane.Testing.PipelineTest do
       elements = [elem: Elem, elem2: Elem]
       links = [link(:elem) |> to(:elem2)]
       options = [module: :default, children: elements, links: links, test_process: nil]
-      assert {{:ok, spec: spec, playback: :playing}, state} = Pipeline.handle_init(options)
+      assert {{:ok, spec: spec, playback: :playing}, state} = Pipeline.handle_init(%{}, options)
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
       assert spec == %Membrane.ParentSpec{
@@ -43,7 +43,7 @@ defmodule Membrane.Testing.PipelineTest do
 
     test "works with custom module injected" do
       options = [module: MockPipeline, test_process: nil, custom_args: []]
-      assert {{:ok, spec: spec}, state} = Pipeline.handle_init(options)
+      assert {{:ok, spec: spec}, state} = Pipeline.handle_init(%{}, options)
       assert spec == %Membrane.ParentSpec{}
 
       assert state == %Pipeline.State{
@@ -60,7 +60,7 @@ defmodule Membrane.Testing.PipelineTest do
       elements = [elem: Elem, elem2: Elem]
       links = link(:elem) |> to(:elem2)
       options = [module: :default, children: elements, links: links, test_process: nil]
-      assert {{:ok, spec: spec, playback: :playing}, state} = Pipeline.handle_init(options)
+      assert {{:ok, spec: spec, playback: :playing}, state} = Pipeline.handle_init(%{}, options)
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
       assert spec == %Membrane.ParentSpec{

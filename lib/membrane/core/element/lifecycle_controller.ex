@@ -37,14 +37,15 @@ defmodule Membrane.Core.Element.LifecycleController do
 
     state = put_in(state.synchronization.clock, clock)
     Message.send(state.parent_pid, :clock, [state.name, clock])
+    require CallbackContext.Init
 
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_init,
         ActionHandler,
-        %{},
-        [options],
-        state
+        %{context: &CallbackContext.Init.from_state/1},
+        [],
+        %{state | internal_state: options}
       )
 
     state

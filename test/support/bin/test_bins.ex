@@ -76,7 +76,7 @@ defmodule Membrane.Support.Bin.TestBins do
     def_output_pad :output, caps: :any, demand_unit: :buffers
 
     @impl true
-    def handle_init(opts) do
+    def handle_init(_ctx, opts) do
       children = [
         filter1: opts.filter1,
         filter2: opts.filter2
@@ -111,7 +111,7 @@ defmodule Membrane.Support.Bin.TestBins do
     def_output_pad :output, caps: :any, availability: :on_request, demand_unit: :buffers
 
     @impl true
-    def handle_init(_opts) do
+    def handle_init(_ctx, _opts) do
       children = [
         filter: Membrane.Support.ChildCrashTest.Filter
       ]
@@ -155,7 +155,7 @@ defmodule Membrane.Support.Bin.TestBins do
     def_output_pad :output, caps: :any, availability: :on_request, demand_unit: :buffers
 
     @impl true
-    def handle_init(opts) do
+    def handle_init(_ctx, opts) do
       children = [
         filter1: opts.filter1,
         filter2: opts.filter2
@@ -203,7 +203,7 @@ defmodule Membrane.Support.Bin.TestBins do
     def_input_pad :input, demand_unit: :buffers, caps: :any
 
     @impl true
-    def handle_init(opts) do
+    def handle_init(_ctx, opts) do
       children = [
         filter: opts.filter,
         sink: opts.sink
@@ -245,7 +245,7 @@ defmodule Membrane.Support.Bin.TestBins do
                 sink: [type: :atom]
 
     @impl true
-    def handle_init(opts) do
+    def handle_init(_ctx, opts) do
       children = [
         source: opts.source,
         sink: opts.sink
@@ -287,7 +287,7 @@ defmodule Membrane.Support.Bin.TestBins do
     def_output_pad :output, caps: :any, demand_unit: :buffers
 
     @impl true
-    def handle_init(_opts) do
+    def handle_init(_ctx, _opts) do
       {:ok, %{}}
     end
 
@@ -311,7 +311,7 @@ defmodule Membrane.Support.Bin.TestBins do
     def_output_pad :output, caps: :any, demand_unit: :buffers
 
     @impl true
-    def handle_init(_opts) do
+    def handle_init(_ctx, _opts) do
       children = [
         filter1: NotifyingParentElement,
         filter2: NotifyingParentElement

@@ -43,13 +43,15 @@ defmodule Membrane.Core.Pipeline do
       resource_guard: resource_guard
     }
 
+    require CallbackContext.Init
+
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_init,
         ActionHandler,
-        %{state: false},
-        [params.options],
-        state
+        %{context: &CallbackContext.Init.from_state/1},
+        [],
+        %{state | internal_state: params.options}
       )
 
     {:ok, state, {:continue, :setup}}

@@ -18,7 +18,7 @@ defmodule Membrane.Integration.LinkingTest do
     def_output_pad :output, demand_unit: :buffers, caps: :any, availability: :on_request
 
     @impl true
-    def handle_init(opts) do
+    def handle_init(_ctx, opts) do
       children = [
         source: opts.child
       ]
@@ -55,7 +55,7 @@ defmodule Membrane.Integration.LinkingTest do
     use Membrane.Pipeline
 
     @impl true
-    def handle_init(opts) do
+    def handle_init(_ctx, opts) do
       {:ok, %{testing_pid: opts.testing_pid}}
     end
 

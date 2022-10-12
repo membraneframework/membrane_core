@@ -11,7 +11,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     def_output_pad(:output, caps: :any, mode: :pull)
 
     @impl true
-    def handle_init(_options) do
+    def handle_init(_ctx, _options) do
       {:ok, %{}}
     end
 

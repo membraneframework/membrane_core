@@ -329,7 +329,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @impl true
-  def handle_init(opts) do
+  def handle_init(_ctx, opts) do
     %{controller_pid: controller_pid} = opts
     state = %State{controller_pid: controller_pid}
     {:ok, state}

@@ -12,7 +12,7 @@ defmodule Membrane.Support.Element.DynamicFilter do
   def_output_pad :output, caps: :any, availability: :on_request, demand_mode: :auto
 
   @impl true
-  def handle_init(_options) do
+  def handle_init(_ctx, _options) do
     {:ok, %{}}
   end
 

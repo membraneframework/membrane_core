@@ -3,7 +3,7 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
   use Membrane.Pipeline
 
   @impl true
-  def handle_init(opts) do
+  def handle_init(_ctx, opts) do
     children = [
       source: opts.source,
       filter: opts.filter,

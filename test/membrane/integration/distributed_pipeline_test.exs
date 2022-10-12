@@ -13,7 +13,7 @@ defmodule Membrane.Integration.DistributedPipelineTest do
       alias Membrane.Support.Distributed.{Sink, Source}
 
       @impl true
-      def handle_init(_opts) do
+      def handle_init(_ctx, _opts) do
         {{:ok,
           spec: %ParentSpec{
             children: [

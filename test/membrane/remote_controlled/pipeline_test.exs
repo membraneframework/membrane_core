@@ -15,7 +15,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
     def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :always
 
     @impl true
-    def handle_init(_opts) do
+    def handle_init(_ctx, _opts) do
       {:ok, %{buffer_count: 0}}
     end
 

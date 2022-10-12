@@ -128,16 +128,20 @@ defmodule Membrane.FilterAggregator.UnitTest do
     FilterA
     |> expect(:membrane_pads, fn -> put_in(pads_descriptions, [:input, :demand_mode], :manual) end)
 
-    assert_raise RuntimeError, fn -> FilterAggregator.handle_init(ctx.stage_opts) end
+    assert_raise RuntimeError, fn -> FilterAggregator.handle_init(%{}, ctx.stage_opts) end
   end
 
   test "handle_init sets inital states", ctx do
     ctx.filters
     |> Enum.each(fn filter ->
-      expect(filter, :handle_init, fn %^filter{} -> {:ok, %{module: filter}} end)
+      expect(filter, :handle_init, fn _ctx, %^filter{} -> {:ok, %{module: filter}} end)
     end)
 
-    assert {:ok, %{states: result}} = FilterAggregator.handle_init(ctx.stage_opts)
+    assert {:ok, %{states: result}} =
+             FilterAggregator.handle_init(
+               %{resource_guard: nil, utility_supervisor: nil},
+               ctx.stage_opts
+             )
 
     assert [{:a, FilterA, ctx_a, state_a}, {:b, FilterB, ctx_b, state_b}] = result
     assert state_a == %{module: FilterA}

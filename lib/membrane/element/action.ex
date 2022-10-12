@@ -186,7 +186,7 @@ defmodule Membrane.Element.Action do
   @typedoc """
   This action sets the latency for the element.
 
-  This action is not premitted in callback `c:Membrane.Element.Base.handle_init/1`.
+  This action is not premitted in callback `c:Membrane.Element.Base.handle_init/2`.
   """
   @type latency_t :: {:latency, latency :: Membrane.Time.non_neg_t()}
 

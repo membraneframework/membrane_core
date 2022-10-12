@@ -69,7 +69,7 @@ defmodule Membrane.Pipeline do
 
   @typedoc """
   Defines options that can be passed to `start/3` / `start_link/3` and received
-  in `c:handle_init/1` callback.
+  in `c:handle_init/2` callback.
   """
   @type pipeline_options :: any
 
@@ -109,7 +109,8 @@ defmodule Membrane.Pipeline do
   while `handle_init` should be used for things like parsing options, initializing state or spawning
   children.
   """
-  @callback handle_init(options :: pipeline_options) :: callback_return_t()
+  @callback handle_init(context :: CallbackContext.Init.t(), options :: pipeline_options) ::
+              callback_return_t()
 
   @doc """
   Callback invoked when pipeline is requested to terminate with `terminate/2`.
@@ -120,7 +121,7 @@ defmodule Membrane.Pipeline do
               callback_return_t()
 
   @doc """
-  Callback invoked on pipeline startup, right after `c:handle_init/1`.
+  Callback invoked on pipeline startup, right after `c:handle_init/2`.
 
   Any long-lasting or complex initialization should happen here.
   """
@@ -220,7 +221,7 @@ defmodule Membrane.Pipeline do
             ) ::
               callback_return_t
 
-  @optional_callbacks handle_init: 1,
+  @optional_callbacks handle_init: 2,
                       handle_setup: 2,
                       handle_playing: 2,
                       handle_info: 3,
@@ -237,7 +238,7 @@ defmodule Membrane.Pipeline do
   Starts the Pipeline based on given module and links it to the current
   process.
 
-  Pipeline options are passed to module's `c:handle_init/1` callback.
+  Pipeline options are passed to module's `c:handle_init/2` callback.
   Note that this function returns `{:ok, supervisor_pid, pipeline_pid}` in case of
   success. Check the 'Starting and supervision' section of the moduledoc for details.
   """
@@ -441,7 +442,7 @@ defmodule Membrane.Pipeline do
       def membrane_pipeline?, do: true
 
       @impl true
-      def handle_init(_options), do: {:ok, %{}}
+      def handle_init(_ctx, _options), do: {:ok, %{}}
 
       @impl true
       def handle_setup(_ctx, state), do: {:ok, state}
@@ -474,7 +475,7 @@ defmodule Membrane.Pipeline do
       def handle_terminate_request(_ctx, state), do: {{:ok, terminate: :normal}, state}
 
       defoverridable child_spec: 1,
-                     handle_init: 1,
+                     handle_init: 2,
                      handle_setup: 2,
                      handle_playing: 2,
                      handle_info: 3,

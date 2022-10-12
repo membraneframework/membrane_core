@@ -3,8 +3,8 @@ defmodule Membrane.Core.Bin do
   use Bunch
   use GenServer
 
-  alias __MODULE__.State
-  alias Membrane.Core.Bin.PadController
+  alias __MODULE__.{ActionHandler, PadController, State}
+  alias Membrane.Bin.CallbackContext
 
   alias Membrane.Core.{
     CallbackHandler,
@@ -40,7 +40,7 @@ defmodule Membrane.Core.Bin do
   Starts the Bin based on given module and links it to the current
   process.
 
-  Bin options are passed to module's `c:Membrane.Bin.handle_init/1` callback.
+  Bin options are passed to module's `c:Membrane.Bin.handle_init/2` callback.
 
   Process options are internally passed to `GenServer.start_link/3`.
 
@@ -126,13 +126,15 @@ defmodule Membrane.Core.Bin do
       }
       |> Child.PadSpecHandler.init_pads()
 
+    require CallbackContext.Init
+
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_init,
-        Membrane.Core.Bin.ActionHandler,
-        %{},
-        [options.user_options],
-        state
+        ActionHandler,
+        %{context: &CallbackContext.Init.from_state/1},
+        [],
+        %{state | internal_state: options.user_options}
       )
 
     {:ok, state, {:continue, :setup}}

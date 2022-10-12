@@ -36,7 +36,7 @@ defmodule Membrane.FilterAggregator do
     caps: :any
 
   @impl true
-  def handle_init(%__MODULE__{filters: filter_specs}) do
+  def handle_init(agg_ctx, %__MODULE__{filters: filter_specs}) do
     if filter_specs == [] do
       Membrane.Logger.warn("No filters provided, #{inspect(__MODULE__)} will be a no-op")
     end
@@ -71,8 +71,8 @@ defmodule Membrane.FilterAggregator do
           raise ArgumentError, "Invalid filter spec: `#{inspect(invalid_spec)}`"
       end)
       |> Enum.map(fn {name, module, options} ->
-        context = Context.build_context!(name, module)
-        {:ok, state} = module.handle_init(options)
+        context = Context.build_context!(name, module, agg_ctx)
+        {:ok, state} = module.handle_init(context, options)
         {name, module, context, state}
       end)
 

@@ -26,7 +26,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
               playing_delay: [type: :integer, default: 0]
 
   @impl true
-  def handle_init(opts) do
+  def handle_init(_ctx, opts) do
     {:ok, Map.put(opts, :pads, MapSet.new())}
   end
 

@@ -35,7 +35,7 @@ defmodule Membrane.Integration.TimerTest do
     use Membrane.Pipeline
 
     @impl true
-    def handle_init(pid) do
+    def handle_init(_ctx, pid) do
       spec = %ParentSpec{
         children: [element: Element, bin: Bin]
       }

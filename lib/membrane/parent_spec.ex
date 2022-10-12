@@ -4,8 +4,8 @@ defmodule Membrane.ParentSpec do
 
   It can be incorporated into a pipeline or a bin by returning
   `t:Membrane.Pipeline.Action.spec_t/0` or `t:Membrane.Bin.Action.spec_t/0`
-  action, respectively. This commonly happens within `c:Membrane.Pipeline.handle_init/1`
-  and `c:Membrane.Bin.handle_init/1`, but can be done in any other callback also.
+  action, respectively. This commonly happens within `c:Membrane.Pipeline.handle_init/2`
+  and `c:Membrane.Bin.handle_init/2`, but can be done in any other callback also.
 
   ## Children
 

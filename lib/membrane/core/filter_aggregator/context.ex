@@ -14,8 +14,8 @@ defmodule Membrane.Core.FilterAggregator.Context do
 
   @type action :: Element.Action.t() | Membrane.Core.FilterAggregator.InternalAction.t()
 
-  @spec build_context!(Element.name_t(), module()) :: t()
-  def build_context!(name, module) do
+  @spec build_context!(Element.name_t(), module(), t()) :: t()
+  def build_context!(name, module, agg_ctx) do
     pad_descriptions = module.membrane_pads()
     pads = pad_descriptions |> MapSet.new(fn {k, _v} -> k end)
 
@@ -42,8 +42,8 @@ defmodule Membrane.Core.FilterAggregator.Context do
       name: name,
       parent_clock: nil,
       playback: :stopped,
-      resource_guard: Membrane.ResourceGuard.start_link() |> then(fn {:ok, pid} -> pid end),
-      utility_supervisor: Membrane.Core.SubprocessSupervisor.start_link!()
+      resource_guard: agg_ctx.resource_guard,
+      utility_supervisor: agg_ctx.utility_supervisor
     }
   end
 
