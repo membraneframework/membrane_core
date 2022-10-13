@@ -280,7 +280,11 @@ defmodule Membrane.Bin do
       def membrane_bin?, do: true
 
       @impl true
-      def handle_init(_ctx, _options), do: {:ok, %{}}
+      def handle_init(_ctx, %opt_struct{} = options),
+        do: {:ok, options |> Map.from_struct()}
+
+      @impl true
+      def handle_init(_ctx, options), do: {:ok, options}
 
       @impl true
       def handle_pad_added(_pad, _ctx, state), do: {:ok, state}
