@@ -99,7 +99,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
   end
 
   @doc """
-  Generates `membrane_pads/0` function, along with docs and typespecs.
+  Generates `membrane_pads/0` function.
   """
   defmacro generate_membrane_pads(env) do
     pads = Module.get_attribute(env.module, :membrane_pads, []) |> Enum.reverse()
@@ -108,9 +108,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
     alias Membrane.Pad
 
     quote do
-      @doc """
-      Returns pads descriptions for `#{inspect(__MODULE__)}`
-      """
+      @doc false
       @spec membrane_pads() :: [{unquote(Pad).name_t(), unquote(Pad).description_t()}]
       def membrane_pads() do
         unquote(pads |> Macro.escape())

@@ -28,7 +28,7 @@ defmodule Membrane.Core.Bin.State do
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
             parent_clock: Clock.t(),
-            latency: non_neg_integer(),
+            latency: Membrane.Time.non_neg_t(),
             stream_sync: Sync.t(),
             clock: Clock.t() | nil,
             clock_proxy: Clock.t(),

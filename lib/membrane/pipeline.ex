@@ -102,11 +102,6 @@ defmodule Membrane.Pipeline do
           | {:error, any}
 
   @doc """
-  Enables to check whether module is membrane pipeline
-  """
-  @callback membrane_pipeline? :: true
-
-  @doc """
   Callback invoked on initialization of pipeline.
 
   This callback is synchronous: the process which started the pipeline waits until `handle_init`
@@ -441,7 +436,8 @@ defmodule Membrane.Pipeline do
         }
       end
 
-      @impl true
+      @doc false
+      @spec membrane_pipeline?() :: true
       def membrane_pipeline?, do: true
 
       @impl true

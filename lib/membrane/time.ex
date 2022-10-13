@@ -226,6 +226,20 @@ defmodule Membrane.Time do
     round(value / native_unit())
   end
 
+  @doc """
+  Returns timestamp in timebase units. Rounded to the nearest integer.
+
+  ## Examples:
+      iex> timestamp = 10 |> Membrane.Time.seconds()
+      iex> timebase = Ratio.new(Membrane.Time.second(), 30)
+      iex> Membrane.Time.round_to_timebase(timestamp, timebase)
+      300
+  """
+  @spec round_to_timebase(number | Ratio.t(), number | Ratio.t()) :: integer
+  def round_to_timebase(timestamp, timebase) do
+    Ratio.new(timestamp, timebase) |> round_rational()
+  end
+
   Enum.map(@units, fn unit ->
     @doc """
     Returns one #{unit.singular} in `#{inspect(__MODULE__)}` units.
@@ -239,21 +253,31 @@ defmodule Membrane.Time do
     @doc """
     Returns given amount of #{unit.plural} in `#{inspect(__MODULE__)}` units.
     """
-    @spec unquote(unit.plural)(integer) :: t
+    @spec unquote(unit.plural)(integer | Ratio.t()) :: t
     # credo:disable-for-next-line Credo.Check.Readability.Specs
     def unquote(unit.plural)(number) when is_integer(number) do
       number * unquote(unit.duration)
     end
 
-    to_fun_name = :"to_#{unit.plural}"
+    # credo:disable-for-next-line Credo.Check.Readability.Specs
+    def unquote(unit.plural)(number) do
+      if not Ratio.is_rational?(number) do
+        raise "Only integers and rationals can be converted with Membrane.Time.#{unquote(unit.plural)}"
+      end
+
+      Ratio.*(number, unquote(unit.duration))
+      |> round_rational()
+    end
+
+    round_to_fun_name = :"round_to_#{unit.plural}"
 
     @doc """
-    Returns time in #{unit.plural}. Rounded using `Kernel.round/1`.
+    Returns time in #{unit.plural}. Rounded to the nearest integer.
     """
-    @spec unquote(to_fun_name)(t) :: integer
+    @spec unquote(round_to_fun_name)(t) :: integer
     # credo:disable-for-next-line Credo.Check.Readability.Specs
-    def unquote(to_fun_name)(time) when is_time(time) do
-      round(time / unquote(unit.duration))
+    def unquote(round_to_fun_name)(time) when is_time(time) do
+      Ratio.new(time, unquote(unit.duration)) |> round_rational()
     end
 
     as_fun_name = :"as_#{unit.plural}"
@@ -271,5 +295,28 @@ defmodule Membrane.Time do
   defp best_unit(time) do
     unit = @units |> Enum.find(&(rem(time, &1.duration) == 0))
     {time |> div(unit.duration), unit}
+  end
+
+  defp round_rational(ratio) do
+    ratio = make_rational(ratio)
+    trunced = Ratio.trunc(ratio)
+
+    if 2 * sign_of_rational(ratio) *
+         Kernel.rem(ratio.numerator, ratio.denominator) >=
+         ratio.denominator,
+       do: trunced + sign_of_rational(ratio),
+       else: trunced
+  end
+
+  defp make_rational(number) do
+    if Ratio.is_rational?(number) do
+      number
+    else
+      %Ratio{numerator: number, denominator: 1}
+    end
+  end
+
+  defp sign_of_rational(ratio) do
+    if ratio.numerator == 0, do: 0, else: Ratio.sign(ratio)
   end
 end

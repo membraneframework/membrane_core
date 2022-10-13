@@ -154,8 +154,8 @@ defmodule Membrane.Element.Action do
   """
   @type start_timer_t ::
           {:start_timer,
-           {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval}
-           | {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval,
+           {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval}
+           | {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval,
               clock :: Clock.t()}}
 
   @typedoc """
@@ -174,7 +174,7 @@ defmodule Membrane.Element.Action do
   """
   @type timer_interval_t ::
           {:timer_interval,
-           {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval}}
+           {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval}}
 
   @typedoc """
   Stops a timer started with `t:start_timer_t/0` action.
@@ -188,7 +188,7 @@ defmodule Membrane.Element.Action do
 
   This action is not premitted in callback `c:Membrane.Element.Base.handle_init/1`.
   """
-  @type latency_t :: {:latency, latency :: non_neg_integer}
+  @type latency_t :: {:latency, latency :: Membrane.Time.non_neg_t()}
 
   @typedoc """
   Marks that processing via a pad (output) has been finished and the pad instance

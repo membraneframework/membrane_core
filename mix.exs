@@ -1,7 +1,7 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "0.10.1"
+  @version "0.10.2"
   @source_ref "v#{@version}"
 
   def project do
@@ -118,7 +118,7 @@ defmodule Membrane.Mixfile do
       licenses: ["Apache-2.0"],
       links: %{
         "GitHub" => link(),
-        "Membrane Framework Homepage" => "https://membraneframework.org"
+        "Membrane Framework Homepage" => "https://membrane.stream"
       }
     ]
   end

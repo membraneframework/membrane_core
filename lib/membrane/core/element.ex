@@ -75,6 +75,7 @@ defmodule Membrane.Core.Element do
       node: #{node},
       module: #{inspect(module)},
       element options: #{inspect(user_options)},
+      method: #{method}
       """)
 
       # rpc if necessary

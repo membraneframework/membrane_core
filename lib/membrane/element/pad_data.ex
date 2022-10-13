@@ -5,16 +5,16 @@ defmodule Membrane.Element.PadData do
   The public fields are:
     - `:accepted_caps` - specification of possible caps that are accepted on the pad.
       See `Membrane.Caps.Matcher` for more information.
-    - `:availability` - see `Membrane.Pad.availability_t`
+    - `:availability` - see `t:Membrane.Pad.availability_t/0`
     - `:caps` - the most recent `Membrane.Caps` that have been sent (output) or received (input)
       on the pad. May be `nil` if not yet set.
     - `:demand` - current demand requested on the pad working in pull mode.
-    - `:direction` - see `Membrane.Pad.direction_t`
+    - `:direction` - see `t:Membrane.Pad.direction_t/0`
     - `:end_of_stream?` - flag determining whether the stream processing via the pad has been finished
-    - `:mode` - see `Membrane.Pad.mode_t`.
-    - `:name` - see `Membrane.Pad.name_t`. Do not mistake with `:ref`
+    - `:mode` - see `t:Membrane.Pad.mode_t/0`.
+    - `:name` - see `t:Membrane.Pad.name_t/0`. Do not mistake with `:ref`
     - `:options` - options passed in `Membrane.ParentSpec` when linking pad
-    - `:ref` - see `Membrane.Pad.ref_t`
+    - `:ref` - see `t:Membrane.Pad.ref_t/0`
     - `:start_of_stream?` - flag determining whether the stream processing via the pad has been started
 
   Other fields in the struct ARE NOT PART OF THE PUBLIC API and should not be

@@ -67,9 +67,16 @@ defmodule Membrane.Core.Element.PadController do
     :ok = Child.PadController.validate_pad_being_linked!(endpoint.pad_ref, direction, info, state)
 
     toilet =
-      if direction == :input,
-        do: Toilet.new(endpoint.pad_props.toilet_capacity, info.demand_unit, self()),
-        else: nil
+      if direction == :input do
+        Toilet.new(
+          endpoint.pad_props.toilet_capacity,
+          info.demand_unit,
+          self(),
+          endpoint.pad_props.throttling_factor
+        )
+      else
+        nil
+      end
 
     do_handle_link(endpoint, other_endpoint, info, toilet, link_props, state)
   end

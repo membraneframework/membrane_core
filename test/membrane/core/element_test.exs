@@ -12,6 +12,8 @@ defmodule Membrane.Core.ElementTest do
     use Membrane.Source
     def_output_pad :output, caps: :any
 
+    def_options test_pid: [spec: pid | nil, default: nil]
+
     @impl true
     def handle_info(msg, _ctx, state) do
       {{:ok, notify_parent: msg}, state}
@@ -87,9 +89,11 @@ defmodule Membrane.Core.ElementTest do
               toilet_capacity: nil,
               target_queue_size: nil,
               auto_demand_size: nil,
-              min_demand_factor: nil
+              min_demand_factor: nil,
+              throttling_factor: 1
             },
-            child: :this
+            child: :this,
+            pid: self()
           },
           %Endpoint{pad_spec: :output, pad_ref: :output, pid: self(), child: :other},
           %{
@@ -237,7 +241,7 @@ defmodule Membrane.Core.ElementTest do
     {:ok, clock} = Membrane.Clock.start_link()
     state = Membrane.Core.TimerController.start_timer(:timer, 1000, clock, get_state())
     assert {:noreply, state} = Element.handle_info(Message.new(:timer_tick, :timer), state)
-    assert state.synchronization.timers.timer.time_passed == 2000
+    assert state.synchronization.timers.timer.next_tick_time == 2000
   end
 
   test "should update clock ratio" do
@@ -311,7 +315,7 @@ defmodule Membrane.Core.ElementTest do
       module: SomeElement,
       name: :name,
       node: nil,
-      user_options: %{},
+      user_options: %{test_pid: self()},
       parent: pipeline,
       parent_clock: nil,
       sync: Membrane.Sync.no_sync(),

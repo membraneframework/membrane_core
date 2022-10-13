@@ -16,12 +16,17 @@
 #     StreamManagement
 #   }
 
+#   defmodule ElementWithMembranePads do
+#     @callback membrane_pads() :: [{Membrane.Pad.name_t(), Membrane.Pad.description_t()}]
+#   end
+
 #   setup_all do
 #     behaviours = [
 #       Membrane.Filter,
 #       Membrane.Element.Base,
 #       Membrane.Element.WithInputPads,
-#       Membrane.Element.WithOutputPads
+#       Membrane.Element.WithOutputPads,
+#       ElementWithMembranePads
 #     ]
 
 #     defmock(FilterA, for: behaviours)
@@ -170,9 +175,9 @@
 #     end)
 #   end
 
-#   test "handle_playing with caps sending", test_ctx do
-#     expect(FilterA, :handle_playing, fn ctx_a, %{module: FilterA} = state ->
-#       assert %{
+#   test "handle_prepared_to_playing with caps sending", test_ctx do
+#     expect(FilterA, :handle_prepared_to_playing, fn ctx_a, %{module: FilterA} = state ->
+#       assert %PlaybackChange{
 #                clock: nil,
 #                name: :a,
 #                pads: pads,
@@ -190,7 +195,7 @@
 #     expect(FilterB, :handle_caps, fn :input, %MockCaps{integer: 1}, ctx_b, state ->
 #       assert state == %{module: FilterB, state: nil}
 
-#       assert %{
+#       assert %Caps{
 #                clock: nil,
 #                name: :b,
 #                old_caps: nil,
@@ -206,11 +211,11 @@
 #       {{:ok, caps: {:output, %MockCaps{integer: 2}}}, %{state | state: :caps_sent}}
 #     end)
 
-#     expect(FilterB, :handle_playing, fn ctx_b, state ->
+#     expect(FilterB, :handle_prepared_to_playing, fn ctx_b, state ->
 #       # ensure proper callbacks order
 #       assert state == %{module: FilterB, state: :caps_sent}
 
-#       assert %{
+#       assert %PlaybackChange{
 #                clock: nil,
 #                name: :b,
 #                pads: pads,
@@ -236,7 +241,7 @@
 #       end)
 
 #     assert {{:ok, actions}, %{states: states}} =
-#              FilterAggregator.handle_playing(%{}, %{states: states})
+#              FilterAggregator.handle_prepared_to_playing(%{}, %{states: states})
 
 #     assert actions == [caps: {:output, %MockCaps{integer: 2}}]
 
