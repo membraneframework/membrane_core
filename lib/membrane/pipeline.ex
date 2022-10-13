@@ -284,7 +284,7 @@ defmodule Membrane.Pipeline do
             name: name,
             module: module,
             options: pipeline_options,
-            children_supervisor: &1
+            subprocess_supervisor: &1
           },
           process_options
         )

@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
   use Bunch
 
   alias Membrane.{ChildEntry, Clock, Core, ParentError, Sync}
-  alias Membrane.Core.{CallbackHandler, ChildrenSupervisor, Component, Message, Parent}
+  alias Membrane.Core.{CallbackHandler, Component, Message, Parent, SubprocessSupervisor}
   alias Membrane.Core.Parent.ChildEntryParser
 
   require Membrane.Core.Component
@@ -146,11 +146,11 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
       end
 
     start_fun = fn supervisor ->
-      server_module.start_link(Map.put(params, :children_supervisor, supervisor))
+      server_module.start_link(Map.put(params, :subprocess_supervisor, supervisor))
     end
 
     with {:ok, child_pid} <-
-           ChildrenSupervisor.start_component(supervisor, name, start_fun),
+           SubprocessSupervisor.start_component(supervisor, name, start_fun),
          {:ok, clock} <- receive_clock(name) do
       %ChildEntry{child | pid: child_pid, clock: clock, sync: sync}
     else

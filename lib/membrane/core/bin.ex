@@ -9,9 +9,9 @@ defmodule Membrane.Core.Bin do
   alias Membrane.Core.{
     CallbackHandler,
     Child,
-    ChildrenSupervisor,
     Message,
     Parent,
+    SubprocessSupervisor,
     Telemetry,
     TimerController
   }
@@ -32,7 +32,7 @@ defmodule Membrane.Core.Bin do
           parent_path: Membrane.ComponentPath.path_t(),
           log_metadata: Logger.metadata(),
           sync: :membrane_no_sync,
-          children_supervisor: pid()
+          subprocess_supervisor: pid()
         }
 
   @doc """
@@ -93,14 +93,14 @@ defmodule Membrane.Core.Bin do
     }
 
     Membrane.Core.Observability.setup(observability_config)
-    ChildrenSupervisor.set_parent_component(options.children_supervisor, observability_config)
+    SubprocessSupervisor.set_parent_component(options.subprocess_supervisor, observability_config)
 
     clock_proxy = Membrane.Clock.start_link(proxy: true) ~> ({:ok, pid} -> pid)
     clock = if Bunch.Module.check_behaviour(module, :membrane_clock?), do: clock_proxy, else: nil
     Message.send(options.parent, :clock, [name, clock])
 
     {:ok, resource_guard} =
-      ChildrenSupervisor.start_utility(options.children_supervisor, {ResourceGuard, self()})
+      SubprocessSupervisor.start_utility(options.subprocess_supervisor, {ResourceGuard, self()})
 
     Telemetry.report_init(:bin)
     ResourceGuard.register_resource(resource_guard, fn -> Telemetry.report_terminate(:bin) end)
@@ -121,7 +121,7 @@ defmodule Membrane.Core.Bin do
           latency: 0
         },
         children_log_metadata: options.log_metadata,
-        children_supervisor: options.children_supervisor,
+        subprocess_supervisor: options.subprocess_supervisor,
         resource_guard: resource_guard
       }
       |> Child.PadSpecHandler.init_pads()

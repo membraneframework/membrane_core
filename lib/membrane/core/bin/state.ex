@@ -18,7 +18,7 @@ defmodule Membrane.Core.Bin.State do
           internal_state: Membrane.Bin.state_t() | nil,
           module: module,
           children: ChildrenModel.children_t(),
-          children_supervisor: pid(),
+          subprocess_supervisor: pid(),
           name: Membrane.Bin.name_t() | nil,
           pads_info: PadModel.pads_info_t() | nil,
           pads_data: PadModel.pads_data_t() | nil,
@@ -47,7 +47,7 @@ defmodule Membrane.Core.Bin.State do
           resource_guard: Membrane.ResourceGuard.t()
         }
 
-  @enforce_keys [:module, :synchronization, :children_supervisor, :resource_guard]
+  @enforce_keys [:module, :synchronization, :subprocess_supervisor, :resource_guard]
   defstruct @enforce_keys ++
               [
                 internal_state: nil,

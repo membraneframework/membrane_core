@@ -34,7 +34,7 @@ defmodule Membrane.Core.Element.State do
           playback: Membrane.Playback.t(),
           playback_queue: Membrane.Core.Element.PlaybackQueue.t(),
           resource_guard: Membrane.ResourceGuard.t(),
-          children_supervisor: pid
+          subprocess_supervisor: pid
         }
 
   defstruct [
@@ -53,7 +53,7 @@ defmodule Membrane.Core.Element.State do
     :playback,
     :playback_queue,
     :resource_guard,
-    :children_supervisor,
+    :subprocess_supervisor,
     :terminating?
   ]
 
@@ -67,7 +67,7 @@ defmodule Membrane.Core.Element.State do
           sync: Sync.t(),
           parent: pid,
           resource_guard: Membrane.ResourceGuard.t(),
-          children_supervisor: pid()
+          subprocess_supervisor: pid()
         }) :: t
   def new(options) do
     %__MODULE__{
@@ -89,7 +89,7 @@ defmodule Membrane.Core.Element.State do
       playback: :stopped,
       playback_queue: [],
       resource_guard: options.resource_guard,
-      children_supervisor: options.children_supervisor,
+      subprocess_supervisor: options.subprocess_supervisor,
       terminating?: false
     }
     |> PadSpecHandler.init_pads()

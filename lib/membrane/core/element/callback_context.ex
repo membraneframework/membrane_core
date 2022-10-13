@@ -20,7 +20,7 @@ defmodule Membrane.Core.Element.CallbackContext do
         name: unquote(state).name,
         playback: unquote(state).playback,
         resource_guard: unquote(state).resource_guard,
-        utility_supervisor: unquote(state).children_supervisor
+        utility_supervisor: unquote(state).subprocess_supervisor
       ]
     end ++ args
   end

@@ -89,7 +89,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         state.synchronization.clock_proxy,
         syncs,
         log_metadata,
-        state.children_supervisor
+        state.subprocess_supervisor
       )
 
     children_names = children |> Enum.map(& &1.name)

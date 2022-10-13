@@ -34,7 +34,7 @@ defmodule Membrane.Core.Pipeline.State do
           resource_guard: Membrane.ResourceGuard.t()
         }
 
-  @enforce_keys [:module, :synchronization, :children_supervisor, :resource_guard]
+  @enforce_keys [:module, :synchronization, :subprocess_supervisor, :resource_guard]
   defstruct @enforce_keys ++
               [
                 internal_state: nil,

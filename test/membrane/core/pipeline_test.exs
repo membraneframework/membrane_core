@@ -31,13 +31,13 @@ defmodule Membrane.Core.PipelineTest do
   end
 
   defp state(_ctx) do
-    children_supervisor = Membrane.Core.ChildrenSupervisor.start_link!()
+    subprocess_supervisor = Membrane.Core.SubprocessSupervisor.start_link!()
 
     [
       init_opts: %{
         name: :test_pipeline,
         module: TestPipeline,
-        children_supervisor: children_supervisor,
+        subprocess_supervisor: subprocess_supervisor,
         parent_path: [],
         log_metadata: [],
         options: nil
@@ -47,7 +47,7 @@ defmodule Membrane.Core.PipelineTest do
           module: TestPipeline,
           internal_state: %{},
           synchronization: %{clock_proxy: nil},
-          children_supervisor: children_supervisor
+          subprocess_supervisor: subprocess_supervisor
         )
     ]
   end
