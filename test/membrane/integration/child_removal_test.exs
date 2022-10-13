@@ -107,6 +107,141 @@ defmodule Membrane.Integration.ChildRemovalTest do
     assert_pid_alive(filter_pid3)
   end
 
+  describe "Children can defer being removed by not returning terminate from terminate request" do
+    import Membrane.ParentSpec
+
+    defmodule RemovalDeferSource do
+      use Membrane.Source
+
+      def_output_pad :output, demand_mode: :auto, caps: :any
+
+      @impl true
+      def handle_init(_opts) do
+        Process.register(self(), __MODULE__)
+        {:ok, %{}}
+      end
+
+      @impl true
+      def handle_terminate_request(_ctx, state) do
+        {:ok, state}
+      end
+
+      @impl true
+      def handle_info(:terminate, _ctx, state) do
+        {{:ok, terminate: :normal}, state}
+      end
+    end
+
+    defmodule RemovalDeferSink do
+      use Membrane.Sink
+
+      def_input_pad :input, demand_mode: :auto, caps: :any
+
+      @impl true
+      def handle_init(_opts) do
+        Process.register(self(), __MODULE__)
+        {:ok, %{}}
+      end
+
+      @impl true
+      def handle_terminate_request(_ctx, state) do
+        {:ok, state}
+      end
+
+      @impl true
+      def handle_info(:terminate, _ctx, state) do
+        {{:ok, terminate: :normal}, state}
+      end
+    end
+
+    defmodule RemovalDeferBin do
+      use Membrane.Bin
+
+      def_options defer?: [spec: boolean], test_process: [spec: pid]
+
+      def_output_pad :output, caps: :any, demand_mode: :auto
+
+      @impl true
+      def handle_init(opts) do
+        Process.register(self(), __MODULE__)
+        links = [link(:source, RemovalDeferSource) |> to_bin_output()]
+        {{:ok, spec: %ParentSpec{links: links}}, Map.from_struct(opts)}
+      end
+
+      @impl true
+      def handle_terminate_request(_ctx, %{defer?: true} = state) do
+        send(state.test_process, {__MODULE__, :terminate_request})
+        {{:ok, remove_child: :source}, state}
+      end
+
+      @impl true
+      def handle_terminate_request(ctx, %{defer?: false} = state) do
+        send(state.test_process, {__MODULE__, :terminate_request})
+        super(ctx, state)
+      end
+
+      @impl true
+      def handle_info(:terminate, _ctx, state) do
+        {{:ok, terminate: :normal}, state}
+      end
+    end
+
+    test "two linked elements" do
+      pipeline =
+        Testing.Pipeline.start_link_supervised!(
+          links: [link(:source, RemovalDeferSource) |> to(:sink, RemovalDeferSink)]
+        )
+
+      monitor = Process.monitor(pipeline)
+      Testing.Pipeline.terminate(pipeline)
+      assert %{module: Membrane.Core.Pipeline.Zombie} = :sys.get_state(pipeline)
+      send(RemovalDeferSource, :terminate)
+      send(RemovalDeferSink, :terminate)
+      assert_receive {:DOWN, ^monitor, :process, _pid, :normal}
+    end
+
+    test "two linked elements, one in a bin" do
+      pipeline =
+        Testing.Pipeline.start_link_supervised!(
+          links: [
+            link(:bin, %RemovalDeferBin{defer?: false, test_process: self()})
+            |> to(:sink, RemovalDeferSink)
+          ]
+        )
+
+      monitor = Process.monitor(pipeline)
+      Testing.Pipeline.terminate(pipeline)
+      assert %{module: Membrane.Core.Pipeline.Zombie} = :sys.get_state(pipeline)
+      assert_receive {RemovalDeferBin, :terminate_request}
+      assert %{module: Membrane.Core.Bin.Zombie} = :sys.get_state(RemovalDeferBin)
+      send(RemovalDeferSource, :terminate)
+      send(RemovalDeferSink, :terminate)
+      assert_receive {:DOWN, ^monitor, :process, _pid, :normal}
+    end
+
+    test "two linked elements, one in a bin that defers termination" do
+      pipeline =
+        Testing.Pipeline.start_link_supervised!(
+          links: [
+            link(:bin, %RemovalDeferBin{defer?: true, test_process: self()})
+            |> to(:sink, RemovalDeferSink)
+          ]
+        )
+
+      pipeline_monitor = Process.monitor(pipeline)
+      Testing.Pipeline.terminate(pipeline)
+      assert %{module: Membrane.Core.Pipeline.Zombie} = :sys.get_state(pipeline)
+      assert_receive {RemovalDeferBin, :terminate_request}
+      assert %{module: RemovalDeferBin} = :sys.get_state(RemovalDeferBin)
+      send(RemovalDeferSource, :terminate)
+      bin_monitor = Process.monitor(RemovalDeferBin)
+      send(RemovalDeferBin, :terminate)
+      assert_receive {:DOWN, ^bin_monitor, :process, _pid, :normal}
+      send(RemovalDeferSink, :terminate)
+      assert_receive {:DOWN, ^pipeline_monitor, :process, _pid, :normal}
+    end
+  end
+
   #############
   ## HELPERS ##
   #############

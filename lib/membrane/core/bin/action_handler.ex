@@ -10,13 +10,10 @@ defmodule Membrane.Core.Bin.ActionHandler do
   require Message
 
   @impl CallbackHandler
-  def handle_action({name, args}, _cb, _params, %State{terminating?: true} = state)
-      when name in [:notify_child, :spec, :remove_child] do
-    Membrane.Logger.debug(
-      "Ignoring action #{inspect({name, args})} because the bin is already terminating"
-    )
-
-    state
+  def handle_action({name, args}, _cb, _params, %State{terminating?: true})
+      when name in [:spec, :playback] do
+    raise Membrane.ParentError,
+          "Action #{inspect({name, args})} cannot be handled because the bin is already terminating"
   end
 
   @impl CallbackHandler
@@ -70,6 +67,25 @@ defmodule Membrane.Core.Bin.ActionHandler do
   @impl CallbackHandler
   def handle_action({:stop_timer, id}, _cb, _params, state) do
     TimerController.stop_timer(id, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:terminate, :normal}, _cb, _params, %State{terminating?: false}) do
+    raise Membrane.BinError,
+          "Cannot terminate a bin with reason `:normal` unless it's removed by its parent"
+  end
+
+  @impl CallbackHandler
+  def handle_action({:terminate, :normal}, _cb, _params, state) do
+    case Parent.LifecycleController.handle_terminate(state) do
+      {:continue, state} -> state
+      {:stop, _state} -> exit(:normal)
+    end
+  end
+
+  @impl CallbackHandler
+  def handle_action({:terminate, reason}, _cb, _params, _state) do
+    exit(reason)
   end
 
   @impl CallbackHandler

@@ -52,15 +52,6 @@ defmodule Membrane.Bin do
   @callback handle_init(options :: options_t) :: callback_return_t()
 
   @doc """
-  Callback invoked when bin is shutting down.
-  Internally called in `c:GenServer.terminate/2` callback.
-
-  Useful for any cleanup required.
-  """
-  @callback handle_terminate_yolo(reason, state :: state_t) :: :ok
-            when reason: :normal | :shutdown | {:shutdown, any} | term()
-
-  @doc """
   Callback that is called when new pad has been added to bin. Executed
   ONLY for dynamic pads.
   """
@@ -131,7 +122,7 @@ defmodule Membrane.Bin do
   """
   @callback handle_info(
               message :: any,
-              context :: CallbackContext.Other.t(),
+              context :: CallbackContext.Info.t(),
               state :: state_t
             ) :: callback_return_t
 
@@ -174,9 +165,16 @@ defmodule Membrane.Bin do
               state :: state_t
             ) :: callback_return_t
 
+  @doc """
+  A callback invoked when the bin is being removed by its parent.
+
+  By default it returns `t:Membrane.Bin.Action.terminate_t/0` with reason `:normal`.
+  """
+  @callback handle_terminate_request(context :: CallbackContext.TerminateRequest.t(), state_t) ::
+              callback_return_t()
+
   @optional_callbacks membrane_clock?: 0,
                       handle_init: 1,
-                      handle_terminate_yolo: 2,
                       handle_pad_added: 3,
                       handle_pad_removed: 3,
                       handle_setup: 2,
@@ -187,7 +185,8 @@ defmodule Membrane.Bin do
                       handle_element_end_of_stream: 4,
                       handle_child_notification: 4,
                       handle_parent_notification: 3,
-                      handle_tick: 3
+                      handle_tick: 3,
+                      handle_terminate_request: 2
 
   @doc PadsSpecs.def_pad_docs(:input, :bin)
   defmacro def_input_pad(name, spec) do
@@ -295,9 +294,6 @@ defmodule Membrane.Bin do
       def handle_init(_options), do: {:ok, %{}}
 
       @impl true
-      def handle_terminate_yolo(_reason, _state), do: :ok
-
-      @impl true
       def handle_pad_added(_pad, _ctx, state), do: {:ok, state}
 
       @impl true
@@ -327,9 +323,11 @@ defmodule Membrane.Bin do
       @impl true
       def handle_parent_notification(_notification, _ctx, state), do: {:ok, state}
 
+      @impl true
+      def handle_terminate_request(_ctx, state), do: {{:ok, terminate: :normal}, state}
+
       defoverridable membrane_clock?: 0,
                      handle_init: 1,
-                     handle_terminate_yolo: 2,
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
                      handle_setup: 2,
@@ -339,7 +337,8 @@ defmodule Membrane.Bin do
                      handle_element_start_of_stream: 4,
                      handle_element_end_of_stream: 4,
                      handle_child_notification: 4,
-                     handle_parent_notification: 3
+                     handle_parent_notification: 3,
+                     handle_terminate_request: 2
     end
   end
 end

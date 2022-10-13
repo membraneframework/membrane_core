@@ -184,6 +184,18 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
+  def handle_action({:terminate, :normal}, _cb, _params, %State{terminating?: false}) do
+    raise Membrane.ElementError,
+          "Cannot terminate an element with reason `:normal` unless it's removed by its parent"
+  end
+
+  @impl CallbackHandler
+  def handle_action({:terminate, reason}, _cb, _params, _state) do
+    Membrane.Logger.debug("Terminating with reason #{inspect(reason)}")
+    exit(reason)
+  end
+
+  @impl CallbackHandler
   def handle_action(action, _callback, _params, _state) do
     raise ActionError, action: action, reason: {:unknown_action, Membrane.Element.Action}
   end

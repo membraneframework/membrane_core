@@ -89,7 +89,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         state.synchronization.clock_proxy,
         syncs,
         log_metadata,
-        state.children_supervisor
+        state.subprocess_supervisor
       )
 
     children_names = children |> Enum.map(& &1.name)
@@ -302,6 +302,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
           Parent.state_t()
   def handle_remove_children(names, state) do
     names = names |> Bunch.listify()
+    Membrane.Logger.debug("Removing children: #{inspect(names)}")
 
     state =
       if state.synchronization.clock_provider.provider in names do

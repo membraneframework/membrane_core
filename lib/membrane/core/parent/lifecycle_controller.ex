@@ -67,14 +67,26 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
-  @spec handle_terminate_request(Parent.state_t()) :: {:continue | :stop, Parent.state_t()}
+  @spec handle_terminate_request(Parent.state_t()) :: Parent.state_t()
   def handle_terminate_request(%{terminating?: true} = state) do
-    {:continue, state}
+    state
   end
 
   def handle_terminate_request(state) do
     state = %{state | terminating?: true}
+    context = Component.callback_context_generator(:parent, TerminateRequest, state)
 
+    CallbackHandler.exec_and_handle_callback(
+      :handle_terminate_request,
+      Component.action_handler(state),
+      %{context: context},
+      [],
+      state
+    )
+  end
+
+  @spec handle_terminate(Parent.state_t()) :: {:continue | :stop, Parent.state_t()}
+  def handle_terminate(state) do
     if Enum.empty?(state.children) do
       {:stop, state}
     else
@@ -85,21 +97,15 @@ defmodule Membrane.Core.Parent.LifecycleController do
         |> Enum.map(& &1.name)
         |> ChildLifeController.handle_remove_children(state)
 
+      zombie_module =
+        case state do
+          %Core.Pipeline.State{} -> Core.Pipeline.Zombie
+          %Core.Bin.State{} -> Core.Bin.Zombie
+        end
+
+      state = %{state | module: zombie_module, internal_state: %{original_module: state.module}}
       {:continue, state}
     end
-  end
-
-  @spec handle_terminate(reason :: any(), Parent.state_t()) :: :ok
-  def handle_terminate(reason, state) do
-    result = state.module.handle_terminate_yolo(reason, state.internal_state)
-
-    if result != :ok do
-      Membrane.Logger.warn(
-        "`#{inspect(state.module)}.handle_terminate_yolo` callback returned value other than `:ok`"
-      )
-    end
-
-    :ok
   end
 
   @spec handle_child_notification(Child.name_t(), ChildNotification.t(), Parent.state_t()) ::
@@ -123,7 +129,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   @spec handle_info(any, Parent.state_t()) :: Parent.state_t()
   def handle_info(message, state) do
-    context = Component.callback_context_generator(:parent, Other, state)
+    context = Component.callback_context_generator(:parent, Info, state)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_info,

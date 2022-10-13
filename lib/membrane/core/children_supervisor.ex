@@ -1,5 +1,9 @@
-defmodule Membrane.Core.ChildrenSupervisor do
+defmodule Membrane.Core.SubprocessSupervisor do
   @moduledoc false
+  # Supervisor that can be used by components to spawn and supervise whatever child processes
+  # they want - another components or some utilities. The supervisor doesn't restart any
+  # processes - it only makes sure that they terminate properly and informs the parent
+  # component about their termination.
 
   use Bunch
   use GenServer
@@ -100,29 +104,29 @@ defmodule Membrane.Core.ChildrenSupervisor do
 
   @impl true
   def handle_call(Message.new(:start_component, [name, start_fun]), _from, state) do
-    children_supervisor = start_link!()
+    subprocess_supervisor = start_link!()
 
-    with {:ok, child_pid} <- start_fun.(children_supervisor) do
+    with {:ok, child_pid} <- start_fun.(subprocess_supervisor) do
       state =
         state
         |> put_in([:children, child_pid], %{
           name: name,
           type: :worker,
-          supervisor_pid: children_supervisor,
+          supervisor_pid: subprocess_supervisor,
           role: :component
         })
-        |> put_in([:children, children_supervisor], %{
+        |> put_in([:children, subprocess_supervisor], %{
           name: {__MODULE__, name},
           type: :supervisor,
           child_pid: child_pid,
-          role: :children_supervisor
+          role: :subprocess_supervisor
         })
 
       {:reply, {:ok, child_pid}, state}
     else
       {:error, reason} ->
-        Process.exit(children_supervisor, :shutdown)
-        receive do: ({:EXIT, ^children_supervisor, _reason} -> :ok)
+        Process.exit(subprocess_supervisor, :shutdown)
+        receive do: ({:EXIT, ^subprocess_supervisor, _reason} -> :ok)
         {:reply, {:error, reason}, state}
     end
   end
@@ -187,7 +191,7 @@ defmodule Membrane.Core.ChildrenSupervisor do
     )
 
     Enum.each(state.children, fn {pid, %{role: role}} ->
-      if role != :children_supervisor, do: Process.exit(pid, :shutdown)
+      if role != :subprocess_supervisor, do: Process.exit(pid, :shutdown)
     end)
 
     {:noreply, %{state | parent_process: :exit_requested}}
@@ -207,7 +211,7 @@ defmodule Membrane.Core.ChildrenSupervisor do
     end
   end
 
-  defp handle_exit(%{role: :children_supervisor} = data, reason, state) do
+  defp handle_exit(%{role: :subprocess_supervisor} = data, reason, state) do
     case Map.fetch(state.children, data.child_pid) do
       {:ok, child_data} ->
         raise "Children supervisor failure #{inspect(child_data.name)}, reason: #{inspect(reason)}"

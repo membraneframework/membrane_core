@@ -5,9 +5,7 @@ defmodule Membrane.Element.Action do
 
   Returning actions is a way of element interaction with
   other elements and parts of framework. Each action may be returned by any
-  callback (except for `c:Membrane.Element.Base.handle_init/1`
-  and `c:Membrane.Element.Base.handle_terminate_yolo/2`, as they
-  do not support returning any actions) unless explicitly stated otherwise.
+  callback unless explicitly stated otherwise.
   """
 
   alias Membrane.{Buffer, Caps, ChildNotification, Clock, Event, Pad}
@@ -202,6 +200,16 @@ defmodule Membrane.Element.Action do
   @type end_of_stream_t :: {:end_of_stream, Pad.ref_t()}
 
   @typedoc """
+  Terminates element with given reason.
+
+  Termination reason follows the OTP semantics:
+  - Use `:normal` for graceful termination. Allowed only when the parent already requested termination,
+    i.e. after `c:Membrane.Element.Base.handle_terminate_request/2` is called
+  - If reason is neither `:normal`, `:shutdown` nor `{:shutdown, term}`, an error is logged
+  """
+  @type terminate_t :: {:terminate, reason :: :normal | :shutdown | {:shutdown, term} | term}
+
+  @typedoc """
   Type that defines a single action that may be returned from element callbacks.
 
   Depending on element type, callback, current playback and other
@@ -220,4 +228,5 @@ defmodule Membrane.Element.Action do
           | stop_timer_t
           | latency_t
           | end_of_stream_t
+          | terminate_t
 end

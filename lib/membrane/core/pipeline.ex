@@ -3,8 +3,8 @@ defmodule Membrane.Core.Pipeline do
   use GenServer
 
   alias __MODULE__.{ActionHandler, State}
-  alias Membrane.Clock
-  alias Membrane.Core.{CallbackHandler, ChildrenSupervisor}
+  alias Membrane.{Clock, ResourceGuard}
+  alias Membrane.Core.{CallbackHandler, SubprocessSupervisor}
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
   alias Membrane.Core.TimerController
   alias Membrane.Pipeline.CallbackContext
@@ -19,14 +19,16 @@ defmodule Membrane.Core.Pipeline do
   def init(params) do
     observability_config = %{name: params.name, component_type: :pipeline, pid: self()}
     Membrane.Core.Observability.setup(observability_config)
-    ChildrenSupervisor.set_parent_component(params.children_supervisor, observability_config)
-    Telemetry.report_init(:pipeline)
+    SubprocessSupervisor.set_parent_component(params.subprocess_supervisor, observability_config)
 
     {:ok, resource_guard} =
-      ChildrenSupervisor.start_utility(
-        params.children_supervisor,
-        {Membrane.ResourceGuard, self()}
-      )
+      SubprocessSupervisor.start_utility(params.subprocess_supervisor, {ResourceGuard, self()})
+
+    Telemetry.report_init(:pipeline)
+
+    ResourceGuard.register_resource(resource_guard, fn ->
+      Telemetry.report_terminate(:pipeline)
+    end)
 
     {:ok, clock} = Clock.start_link(proxy: true)
 
@@ -37,7 +39,7 @@ defmodule Membrane.Core.Pipeline do
         clock_provider: %{clock: nil, provider: nil, choice: :auto},
         timers: %{}
       },
-      children_supervisor: params.children_supervisor,
+      subprocess_supervisor: params.subprocess_supervisor,
       resource_guard: resource_guard
     }
 
@@ -109,12 +111,8 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def handle_info(Message.new(:terminate), state) do
-    {result, state} = LifecycleController.handle_terminate_request(state)
-
-    case result do
-      :stop -> {:stop, :normal, state}
-      :continue -> {:noreply, state}
-    end
+    state = LifecycleController.handle_terminate_request(state)
+    {:noreply, state}
   end
 
   @impl GenServer
@@ -132,12 +130,6 @@ defmodule Membrane.Core.Pipeline do
   def handle_info(message, state) do
     state = LifecycleController.handle_info(message, state)
     {:noreply, state}
-  end
-
-  @impl GenServer
-  def terminate(reason, state) do
-    Telemetry.report_terminate(:pipeline)
-    LifecycleController.handle_terminate(reason, state)
   end
 
   @impl GenServer

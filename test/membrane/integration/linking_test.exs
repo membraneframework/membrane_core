@@ -12,9 +12,8 @@ defmodule Membrane.Integration.LinkingTest do
   defmodule Bin do
     use Membrane.Bin
 
-    def_options child: [
-                  spec: struct() | module()
-                ]
+    def_options child: [spec: struct() | module()],
+                remove_child_on_unlink: [spec: boolean(), default: true]
 
     def_output_pad :output, demand_unit: :buffers, caps: :any, availability: :on_request
 
@@ -28,11 +27,11 @@ defmodule Membrane.Integration.LinkingTest do
         children: children
       }
 
-      {{:ok, spec: spec}, %{}}
+      {{:ok, spec: spec}, Map.from_struct(opts)}
     end
 
     @impl true
-    def handle_pad_added(pad, _ctx, _state) do
+    def handle_pad_added(pad, _ctx, state) do
       links = [
         link(:source) |> to_bin_output(pad)
       ]
@@ -41,12 +40,13 @@ defmodule Membrane.Integration.LinkingTest do
         links: links
       }
 
-      {{:ok, spec: spec}, %{}}
+      {{:ok, spec: spec}, state}
     end
 
     @impl true
-    def handle_pad_removed(_pad, _ctx, _state) do
-      {{:ok, notify_parent: :handle_pad_removed}, %{}}
+    def handle_pad_removed(_pad, _ctx, state) do
+      remove_child = if state.remove_child_on_unlink, do: [remove_child: :source], else: []
+      {{:ok, remove_child ++ [notify_parent: :handle_pad_removed]}, %{}}
     end
   end
 
@@ -128,7 +128,10 @@ defmodule Membrane.Integration.LinkingTest do
     test "and element crashes, bin forwards the unlink message to child", %{pipeline: pipeline} do
       bin_spec = %Membrane.ParentSpec{
         children: [
-          bin: %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}
+          bin: %Bin{
+            child: %Testing.Source{output: ['a', 'b', 'c']},
+            remove_child_on_unlink: false
+          }
         ],
         crash_group: {:group_1, :temporary}
       }

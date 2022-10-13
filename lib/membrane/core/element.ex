@@ -18,9 +18,9 @@ defmodule Membrane.Core.Element do
   use Bunch
   use GenServer
 
-  alias Membrane.{Clock, Core, Sync}
+  alias Membrane.{Clock, Core, ResourceGuard, Sync}
 
-  alias Membrane.Core.{ChildrenSupervisor, TimerController}
+  alias Membrane.Core.{SubprocessSupervisor, TimerController}
 
   alias Membrane.Core.Element.{
     BufferController,
@@ -46,7 +46,7 @@ defmodule Membrane.Core.Element do
           parent_clock: Clock.t(),
           parent_path: Membrane.ComponentPath.path_t(),
           log_metadata: Logger.metadata(),
-          children_supervisor: pid()
+          subprocess_supervisor: pid()
         }
 
   @doc """
@@ -102,18 +102,17 @@ defmodule Membrane.Core.Element do
     }
 
     Membrane.Core.Observability.setup(observability_config)
-    ChildrenSupervisor.set_parent_component(options.children_supervisor, observability_config)
+    SubprocessSupervisor.set_parent_component(options.subprocess_supervisor, observability_config)
 
     {:ok, resource_guard} =
-      ChildrenSupervisor.start_utility(
-        options.children_supervisor,
-        {Membrane.ResourceGuard, self()}
-      )
+      SubprocessSupervisor.start_utility(options.subprocess_supervisor, {ResourceGuard, self()})
 
     Telemetry.report_init(:element)
 
+    ResourceGuard.register_resource(resource_guard, fn -> Telemetry.report_terminate(:element) end)
+
     state =
-      Map.take(options, [:module, :name, :parent_clock, :sync, :parent, :children_supervisor])
+      Map.take(options, [:module, :name, :parent_clock, :sync, :parent, :subprocess_supervisor])
       |> Map.put(:resource_guard, resource_guard)
       |> State.new()
 
@@ -125,12 +124,6 @@ defmodule Membrane.Core.Element do
   def handle_continue(:setup, state) do
     state = LifecycleController.handle_setup(state)
     {:noreply, state}
-  end
-
-  @impl GenServer
-  def terminate(reason, state) do
-    Telemetry.report_terminate(:element)
-    LifecycleController.handle_terminate(reason, state)
   end
 
   @impl GenServer
@@ -218,7 +211,7 @@ defmodule Membrane.Core.Element do
 
   defp do_handle_info(Message.new(:terminate), state) do
     state = LifecycleController.handle_terminate_request(state)
-    {:stop, :normal, state}
+    {:noreply, state}
   end
 
   defp do_handle_info(Message.new(_type, _args, _opts) = message, _state) do

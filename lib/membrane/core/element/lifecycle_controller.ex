@@ -94,26 +94,29 @@ defmodule Membrane.Core.Element.LifecycleController do
   def handle_terminate_request(state) do
     Membrane.Logger.debug("Received terminate request")
 
-    state.pads_data
-    |> Map.values()
-    |> Enum.filter(&(&1.direction == :input))
-    |> Enum.reduce(state, fn %{ref: pad_ref}, state_acc ->
-      Element.PadController.generate_eos_if_needed(pad_ref, state_acc)
-    end)
-  end
+    state =
+      state.pads_data
+      |> Map.values()
+      |> Enum.filter(&(&1.direction == :input))
+      |> Enum.reduce(state, fn %{ref: pad_ref}, state_acc ->
+        Element.PadController.generate_eos_if_needed(pad_ref, state_acc)
+      end)
 
-  @spec handle_terminate(reason :: any, State.t()) :: :ok
-  def handle_terminate(reason, state) do
-    Membrane.Logger.debug("Terminating element, reason: #{inspect(reason)}")
-    result = state.module.handle_terminate_yolo(reason, state.internal_state)
+    state = %{state | terminating?: true}
 
-    if result != :ok do
-      Membrane.Logger.warn(
-        "`#{inspect(state.module)}.handle_terminate_yolo` callback returned value other than `:ok`"
+    require CallbackContext.TerminateRequest
+    context = &CallbackContext.TerminateRequest.from_state/1
+
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_terminate_request,
+        ActionHandler,
+        %{context: context},
+        [],
+        state
       )
-    end
 
-    :ok
+    %{state | playback: :stopped}
   end
 
   @doc """
@@ -121,8 +124,8 @@ defmodule Membrane.Core.Element.LifecycleController do
   """
   @spec handle_info(message :: any, State.t()) :: State.t()
   def handle_info(message, state) do
-    require CallbackContext.Other
-    context = &CallbackContext.Other.from_state/1
+    require CallbackContext.Info
+    context = &CallbackContext.Info.from_state/1
 
     CallbackHandler.exec_and_handle_callback(
       :handle_info,

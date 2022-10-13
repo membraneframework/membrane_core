@@ -317,7 +317,7 @@ defmodule Membrane.Core.BinTest do
         filter1: TestFilter,
         filter2: TestFilter
       },
-      children_supervisor: Membrane.Core.ChildrenSupervisor.start_link!()
+      subprocess_supervisor: Membrane.Core.SubprocessSupervisor.start_link!()
     }
   end
 end

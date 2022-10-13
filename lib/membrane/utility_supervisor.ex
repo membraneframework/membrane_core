@@ -24,7 +24,7 @@ defmodule Membrane.UtilitySupervisor do
   """
   @spec start_child(t, Supervisor.child_spec()) :: Supervisor.on_start_child()
   defdelegate start_child(supervisor, child_spec),
-    to: Membrane.Core.ChildrenSupervisor,
+    to: Membrane.Core.SubprocessSupervisor,
     as: :start_utility
 
   @doc """
@@ -32,6 +32,6 @@ defmodule Membrane.UtilitySupervisor do
   """
   @spec start_link_child(t, Supervisor.child_spec()) :: Supervisor.on_start_child()
   defdelegate start_link_child(supervisor, child_spec),
-    to: Membrane.Core.ChildrenSupervisor,
+    to: Membrane.Core.SubprocessSupervisor,
     as: :start_link_utility
 end

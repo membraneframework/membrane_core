@@ -47,7 +47,7 @@ defmodule Membrane.Core.ElementTest do
         parent: self(),
         parent_path: [],
         log_metadata: [],
-        children_supervisor: Membrane.Core.ChildrenSupervisor.start_link!()
+        subprocess_supervisor: Membrane.Core.SubprocessSupervisor.start_link!()
       })
 
     state
@@ -317,7 +317,7 @@ defmodule Membrane.Core.ElementTest do
       sync: Membrane.Sync.no_sync(),
       parent_path: [],
       log_metadata: [],
-      children_supervisor: Membrane.Core.ChildrenSupervisor.start_link!()
+      subprocess_supervisor: Membrane.Core.SubprocessSupervisor.start_link!()
     }
   end
 end

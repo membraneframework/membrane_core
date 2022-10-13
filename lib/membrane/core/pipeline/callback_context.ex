@@ -16,7 +16,7 @@ defmodule Membrane.Core.Pipeline.CallbackContext do
         children: unquote(state).children,
         playback: unquote(state).playback,
         resource_guard: unquote(state).resource_guard,
-        utility_supervisor: unquote(state).children_supervisor
+        utility_supervisor: unquote(state).subprocess_supervisor
       ]
     end ++ args
   end
