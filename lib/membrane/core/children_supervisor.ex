@@ -30,10 +30,10 @@ defmodule Membrane.Core.SubprocessSupervisor do
   @spec start_component(
           supervisor_pid,
           name :: Membrane.Child.name_t(),
-          (supervisor_pid -> {:ok, child_pid} | {:error, reason :: any()})
+          (supervisor_pid, parent_supervisor_pid -> {:ok, child_pid} | {:error, reason :: any()})
         ) ::
           {:ok, child_pid} | {:error, reason :: any()}
-        when child_pid: pid(), supervisor_pid: pid()
+        when child_pid: pid(), supervisor_pid: pid(), parent_supervisor_pid: pid
   def start_component(supervisor, name, start_fun) do
     Message.call!(supervisor, :start_component, [name, start_fun])
   end
@@ -106,7 +106,7 @@ defmodule Membrane.Core.SubprocessSupervisor do
   def handle_call(Message.new(:start_component, [name, start_fun]), _from, state) do
     subprocess_supervisor = start_link!()
 
-    with {:ok, child_pid} <- start_fun.(subprocess_supervisor) do
+    with {:ok, child_pid} <- start_fun.(subprocess_supervisor, self()) do
       state =
         state
         |> put_in([:children, child_pid], %{

@@ -32,7 +32,8 @@ defmodule Membrane.Core.Bin do
           parent_path: Membrane.ComponentPath.path_t(),
           log_metadata: Logger.metadata(),
           sync: :membrane_no_sync,
-          subprocess_supervisor: pid()
+          subprocess_supervisor: pid(),
+          parent_supervisor: pid()
         }
 
   @doc """
@@ -80,6 +81,7 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def init(options) do
+    Process.link(options.parent_supervisor)
     %{name: name, module: module} = options
 
     observability_config = %{

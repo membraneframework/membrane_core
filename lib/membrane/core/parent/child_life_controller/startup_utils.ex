@@ -145,8 +145,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
           Core.Bin
       end
 
-    start_fun = fn supervisor ->
-      server_module.start_link(Map.put(params, :subprocess_supervisor, supervisor))
+    start_fun = fn supervisor, parent_supervisor ->
+      server_module.start(
+        Map.merge(params, %{
+          subprocess_supervisor: supervisor,
+          parent_supervisor: parent_supervisor
+        })
+      )
     end
 
     with {:ok, child_pid} <-

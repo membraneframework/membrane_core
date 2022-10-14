@@ -46,7 +46,8 @@ defmodule Membrane.Core.Element do
           parent_clock: Clock.t(),
           parent_path: Membrane.ComponentPath.path_t(),
           log_metadata: Logger.metadata(),
-          subprocess_supervisor: pid()
+          subprocess_supervisor: pid(),
+          parent_supervisor: pid()
         }
 
   @doc """
@@ -91,6 +92,8 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def init(options) do
+    Process.link(options.parent_supervisor)
+
     observability_config = %{
       name: options.name,
       component_type: :bin,
