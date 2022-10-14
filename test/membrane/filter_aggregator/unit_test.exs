@@ -8,7 +8,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
   alias Membrane.Element.PadData
   alias Membrane.FilterAggregator
 
-  alias Membrane.Element.CallbackContext.{Event, Process, StreamManagement}
+  alias Membrane.Element.CallbackContext.{Event, Playing, Process, StreamManagement}
 
   defmodule ElementWithMembranePads do
     @callback membrane_pads() :: [{Membrane.Pad.name_t(), Membrane.Pad.description_t()}]
@@ -177,7 +177,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
 
   test "handle_playing with caps sending", test_ctx do
     expect(FilterA, :handle_playing, fn ctx_a, %{module: FilterA} = state ->
-      assert %{
+      assert %Playing{
                clock: nil,
                name: :a,
                pads: pads,
@@ -215,7 +215,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
       # ensure proper callbacks order
       assert state == %{module: FilterB, state: :caps_sent}
 
-      assert %{
+      assert %Playing{
                clock: nil,
                name: :b,
                pads: pads,
