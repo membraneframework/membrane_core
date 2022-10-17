@@ -71,7 +71,7 @@ defmodule Membrane.Core.Element.CapsController do
 
   end
 
-  @spec ensure_caps_match(Pad.direction_t() ,[{module(), Pad.name_t()}], Caps.t()) :: :ok
+  @spec ensure_caps_match(Pad.direction_t(), [{module(), Pad.name_t()}], Caps.t()) :: :ok
   def ensure_caps_match(direction, modules_with_pads, caps) do
     for {module, pad_name} <- modules_with_pads do
       if not module.caps_match?(pad_name, caps) do

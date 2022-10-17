@@ -29,7 +29,7 @@ defmodule Membrane.Element.PadData do
   @type private_field :: term()
 
   @type t :: %__MODULE__{
-          parents_with_pads: [Caps.Matcher.caps_specs_t()],
+          parents_with_pads: [{module(), Pad.name_t()}],
           availability: Pad.availability_t(),
           caps: Caps.t() | nil,
           start_of_stream?: boolean(),

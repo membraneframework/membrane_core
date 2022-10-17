@@ -82,7 +82,11 @@ defmodule Membrane.Core.Child.PadsSpecs do
                      )
       unquote(pad_opts_typedef)
 
-      @spec caps_match?(any(), any()) :: boolean()
+      if not Module.get_attribute(__MODULE__, :has_caps_match_spec, false) do
+        Module.put_attribute(__MODULE__, :has_caps_match_spec, true)
+        @spec caps_match?(any(), any()) :: boolean()
+      end
+
       def caps_match?(unquote(pad_name), caps) do
         match?(unquote(caps_pattern), caps)
       end
@@ -263,28 +267,6 @@ defmodule Membrane.Core.Child.PadsSpecs do
       </table>
       """ <> unquote(options_doc)
     end
-  end
-
-  defp generate_pad_property_doc(:caps, caps) do
-    caps
-    |> Bunch.listify()
-    |> Enum.map(fn
-      {module, params} ->
-        params_doc =
-          # Enum.map_join(params, ",<br/>", fn {k, v} ->
-          #   Bunch.Markdown.hard_indent("<code>#{k}: #{inspect(v)}</code>")
-          # end)
-          "dupsko"
-
-        "<code>#{inspect(module)}</code>, restrictions:<br/>#{params_doc}"
-
-      module ->
-        "<code>#{inspect(module)}</code>"
-    end)
-    ~> (
-      [doc] -> doc
-      docs -> docs |> Enum.join(",<br/>")
-    )
   end
 
   defp generate_pad_property_doc(_k, v) do
