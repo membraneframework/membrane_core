@@ -7,8 +7,8 @@ defmodule Membrane.CapsTest do
 
   alias Membrane.Support.CapsTest.Stream.{
     FormatAcceptedByAll,
-    FormatAcceptedByOuterBins,
-    FormatAcceptedByInnerBins
+    FormatAcceptedByInnerBins,
+    FormatAcceptedByOuterBins
   }
 
   alias Membrane.Testing.Pipeline
