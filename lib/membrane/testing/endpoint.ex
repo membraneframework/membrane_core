@@ -8,11 +8,12 @@ defmodule Membrane.Testing.Endpoint do
   @type generator ::
           (state :: any(), buffers_cnt :: pos_integer -> {[Action.t()], state :: any()})
 
-  def_output_pad :output, caps: :any
+  def_output_pad :output,
+    caps_pattern: _any
 
   def_input_pad :input,
-    demand_unit: :buffers,
-    caps: :any
+    caps_pattern: _any,
+    demand_unit: :buffers
 
   def_options autodemand: [
                 type: :boolean,

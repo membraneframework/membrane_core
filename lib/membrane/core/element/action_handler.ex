@@ -294,8 +294,9 @@ defmodule Membrane.Core.Element.ActionHandler do
 
     pad_data = PadModel.get_data!(state, pad_ref)
 
-    withl data: %{direction: :output, pid: pid, other_ref: other_ref} <- pad_data,
-          caps: true <- Caps.Matcher.match?(pad_data.accepted_caps, caps) do
+    # todo: add validation caps match below
+    withl data: %{direction: :output, pid: pid, other_ref: other_ref} <- pad_data do
+      # caps: true <- Caps.Matcher.match?(pad_data.accepted_caps, caps) do
       state = PadModel.set_data!(state, pad_ref, :caps, caps)
       Message.send(pid, :caps, caps, for_pad: other_ref)
       state

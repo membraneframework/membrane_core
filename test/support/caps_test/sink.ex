@@ -9,7 +9,7 @@ defmodule Membrane.Support.CapsTest.Sink do
 
   def_input_pad :input,
     demand_unit: :buffers,
-    caps: :any,
+    caps_pattern: _any,
     availability: :always,
     mode: :push
 

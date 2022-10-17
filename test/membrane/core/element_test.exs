@@ -10,7 +10,7 @@ defmodule Membrane.Core.ElementTest do
 
   defmodule SomeElement do
     use Membrane.Source
-    def_output_pad :output, caps: :any
+    def_output_pad :output, caps_pattern: _any
 
     @impl true
     def handle_info(msg, _ctx, state) do
@@ -21,9 +21,9 @@ defmodule Membrane.Core.ElementTest do
   defmodule Filter do
     use Membrane.Filter
 
-    def_output_pad :output, caps: :any
+    def_output_pad :output, caps_pattern: _any
 
-    def_input_pad :dynamic_input, caps: :any, demand_unit: :buffers, availability: :on_request
+    def_input_pad :dynamic_input, caps_pattern: _any, demand_unit: :buffers, availability: :on_request
 
     @impl true
     def handle_tick(_timer, _ctx, state) do
@@ -69,7 +69,7 @@ defmodule Membrane.Core.ElementTest do
             initiator: :sibling,
             other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
             link_metadata: %{toilet: nil, observability_metadata: %{}},
-            parents_accepted_caps: []
+            parents_with_pads: []
           }
         ]),
         nil,
@@ -97,7 +97,7 @@ defmodule Membrane.Core.ElementTest do
             initiator: :sibling,
             other_info: %{direction: :output, mode: :pull},
             link_metadata: %{toilet: nil, observability_metadata: %{}},
-            parents_accepted_caps: []
+            parents_with_pads: []
           }
         ]),
         nil,
@@ -203,7 +203,7 @@ defmodule Membrane.Core.ElementTest do
                    initiator: :sibling,
                    other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
                    link_metadata: %{toilet: nil, observability_metadata: %{}},
-                   parents_accepted_caps: []
+                   parents_with_pads: []
                  }
                ]),
                nil,
@@ -212,7 +212,6 @@ defmodule Membrane.Core.ElementTest do
 
     assert {%{child: :this, pad_props: %{options: []}, pad_ref: :output},
             %{
-              accepted_caps: :any,
               availability: :always,
               demand_mode: :manual,
               demand_unit: :buffers,

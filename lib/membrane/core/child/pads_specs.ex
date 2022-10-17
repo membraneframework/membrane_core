@@ -10,23 +10,23 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
   require Pad
 
-  @spec def_pads([{Pad.name_t(), raw_spec :: Macro.t()}], Pad.direction_t(), :element | :bin) ::
-          Macro.t()
-  def def_pads(pads, direction, component) do
-    pads
-    |> Enum.reduce(
-      quote do
-      end,
-      fn {name, spec}, acc ->
-        pad_def = def_pad(component, name, direction, spec)
+  # @spec def_pads([{Pad.name_t(), raw_spec :: Macro.t()}], Pad.direction_t(), :element | :bin) ::
+  #         Macro.t()
+  # def def_pads(pads, direction, component) do
+  #   pads
+  #   |> Enum.reduce(
+  #     quote do
+  #     end,
+  #     fn {name, spec}, acc ->
+  #       pad_def = def_pad(component, name, direction, spec)
 
-        quote do
-          unquote(acc)
-          unquote(pad_def)
-        end
-      end
-    )
-  end
+  #       quote do
+  #         unquote(acc)
+  #         unquote(pad_def)
+  #       end
+  #     end
+  #   )
+  # end
 
   @doc """
   Returns documentation string common for both input and output pads
@@ -68,9 +68,8 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
     {escaped_pad_opts, pad_opts_typedef} = OptionsSpecs.def_pad_options(pad_name, specs[:options])
 
-    specs =
-      specs
-      |> Keyword.put(:options, escaped_pad_opts)
+    specs = Keyword.put(specs, :options, escaped_pad_opts)
+    {caps_pattern, specs} = Keyword.pop!(specs, :caps_pattern)
 
     quote do
       unquote(do_ensure_default_membrane_pads())
@@ -79,9 +78,14 @@ defmodule Membrane.Core.Child.PadsSpecs do
                        {unquote(pad_name), unquote(specs)},
                        unquote(direction),
                        unquote(component),
-                       __ENV__
+                        __ENV__
                      )
       unquote(pad_opts_typedef)
+
+      @spec caps_match?(any(), any()) :: boolean()
+      def caps_match?(unquote(pad_name), caps) do
+        match?(unquote(caps_pattern), caps)
+      end
     end
   end
 
@@ -161,7 +165,6 @@ defmodule Membrane.Core.Child.PadsSpecs do
               config
               |> Bunch.Config.parse(
                 availability: [in: [:always, :on_request], default: :always],
-                caps: [validate: &Caps.Matcher.validate_specs/1],
                 mode: [in: [:pull, :push], default: :pull],
                 demand_mode: [
                   in: [:auto, :manual],
@@ -268,9 +271,10 @@ defmodule Membrane.Core.Child.PadsSpecs do
     |> Enum.map(fn
       {module, params} ->
         params_doc =
-          Enum.map_join(params, ",<br/>", fn {k, v} ->
-            Bunch.Markdown.hard_indent("<code>#{k}: #{inspect(v)}</code>")
-          end)
+          # Enum.map_join(params, ",<br/>", fn {k, v} ->
+          #   Bunch.Markdown.hard_indent("<code>#{k}: #{inspect(v)}</code>")
+          # end)
+          "dupsko"
 
         "<code>#{inspect(module)}</code>, restrictions:<br/>#{params_doc}"
 

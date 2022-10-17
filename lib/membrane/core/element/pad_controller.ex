@@ -87,7 +87,7 @@ defmodule Membrane.Core.Element.PadController do
             toilet: toilet,
             observability_metadata: Observability.setup_link(endpoint.pad_ref)
           },
-          parents_accepted_caps: []
+          parents_with_pads: []
         }
       ])
 
@@ -121,7 +121,7 @@ defmodule Membrane.Core.Element.PadController do
     %{
       other_info: other_info,
       link_metadata: link_metadata,
-      parents_accepted_caps: parents_accepted_caps
+      parents_with_pads: parents_with_pads
     } = link_props
 
     Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
@@ -138,7 +138,7 @@ defmodule Membrane.Core.Element.PadController do
         endpoint,
         other_endpoint,
         info,
-        parents_accepted_caps,
+        parents_with_pads,
         other_info,
         link_metadata,
         state
@@ -181,7 +181,7 @@ defmodule Membrane.Core.Element.PadController do
          endpoint,
          other_endpoint,
          info,
-         parents_accepted_caps,
+         parents_with_pads,
          other_info,
          metadata,
          state
@@ -194,7 +194,7 @@ defmodule Membrane.Core.Element.PadController do
         options:
           Child.PadController.parse_pad_options!(info.name, endpoint.pad_props.options, state),
         ref: endpoint.pad_ref,
-        parents_accepted_caps: parents_accepted_caps,
+        parents_with_pads: parents_with_pads,
         caps: nil,
         start_of_stream?: false,
         end_of_stream?: false,

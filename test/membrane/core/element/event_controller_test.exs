@@ -10,7 +10,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
   defmodule MockEventHandlingElement do
     use Membrane.Filter
 
-    def_output_pad :output, caps: :any
+    def_output_pad :output, caps_pattern: _any
 
     @impl true
     def handle_event(_pad, %Membrane.Event.Discontinuity{}, _ctx, state) do
@@ -46,7 +46,6 @@ defmodule Membrane.Core.Element.EventControllerTest do
           input:
             struct(Membrane.Element.PadData,
               ref: :input,
-              accepted_caps: :any,
               direction: :input,
               pid: self(),
               mode: :pull,

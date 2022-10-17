@@ -8,7 +8,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
   defmodule SourceWhichDoesNotSendCaps do
     use Membrane.Source
 
-    def_output_pad(:output, caps: :any, mode: :pull)
+    def_output_pad :output, caps_pattern: _any, mode: :pull
 
     @impl true
     def handle_init(_options) do

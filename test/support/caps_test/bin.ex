@@ -9,13 +9,14 @@ defmodule Membrane.Support.CapsTest.Bin do
   use Membrane.Bin
 
   alias Membrane.Support.CapsTest
+  alias Membrane.Support.CapsTest.Stream
 
-  @accepted_format CapsTest.Stream.FormatA
-  @unaccepted_format CapsTest.Stream.FormatB
+  @accepted_format Stream.FormatA
+  @unaccepted_format Stream.FormatB
 
   def_input_pad :input,
     demand_unit: :buffers,
-    caps: {CapsTest.Stream, format: @accepted_format},
+    caps_pattern: %Stream{format: @accepted_format},
     availability: :always,
     mode: :push
 

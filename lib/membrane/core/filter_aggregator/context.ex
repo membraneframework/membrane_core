@@ -62,7 +62,6 @@ defmodule Membrane.Core.FilterAggregator.Context do
   defp build_pad_data(pad_description) do
     pad_description
     |> Map.merge(%{
-      accepted_caps: pad_description.caps,
       caps: nil,
       demand: nil,
       start_of_stream?: false,

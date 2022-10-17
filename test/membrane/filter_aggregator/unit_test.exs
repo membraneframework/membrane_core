@@ -36,7 +36,7 @@
 
 #     pad_description_template = %{
 #       availability: :always,
-#       caps: :any,
+#       caps_pattern: _any,
 #       demand_mode: :auto,
 #       demand_unit: :buffers,
 #       direction: nil,
@@ -48,7 +48,6 @@
 #     common_pad_data =
 #       pad_description_template
 #       |> Map.merge(%{
-#         accepted_caps: :any,
 #         caps: nil,
 #         demand: 0,
 #         ref: nil,

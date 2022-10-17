@@ -37,7 +37,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
                    initiator: :sibling,
                    other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
                    link_metadata: %{toilet: make_ref(), observability_metadata: %{}},
-                   parents_accepted_caps: []
+                   parents_with_pads: []
                  },
                  state
                )

@@ -27,7 +27,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
 
     def_input_pad :input,
       demand_unit: :buffers,
-      caps: :any
+      caps_pattern: _any
 
     @impl true
     def handle_init(_opts) do

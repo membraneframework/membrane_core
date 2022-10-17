@@ -51,30 +51,37 @@ defmodule Membrane.Core.Element.CapsController do
   def exec_handle_caps(pad_ref, caps, params \\ %{}, state) do
     require CallbackContext.Caps
 
-    %{accepted_caps: accepted_caps, parents_accepted_caps: parents_accepted_caps} =
+    %{parents_with_pads: parents_with_pads, name: pad_name} =
       PadModel.get_data!(state, pad_ref)
 
     context = &CallbackContext.Caps.from_state(&1, pad: pad_ref)
 
-    [accepted_caps | parents_accepted_caps]
-    |> Enum.any?(&(not Caps.Matcher.match?(&1, caps)))
-    |> if do
-      raise """
-      Received caps: #{inspect(caps)} that are not specified in def_input_pad
-      for pad #{inspect(pad_ref)}. Specs of accepted caps are:
-      #{inspect([accepted_caps | parents_accepted_caps], pretty: true)}
-      """
-    else
-      state =
-        CallbackHandler.exec_and_handle_callback(
-          :handle_caps,
-          ActionHandler,
-          %{context: context} |> Map.merge(params),
-          [pad_ref, caps],
-          state
-        )
+    :ok = ensure_caps_match(:input, [{state.module, pad_name} | parents_with_pads], caps)
 
-      PadModel.set_data!(state, pad_ref, :caps, caps)
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_caps,
+        ActionHandler,
+        %{context: context} |> Map.merge(params),
+        [pad_ref, caps],
+        state
+      )
+
+    PadModel.set_data!(state, pad_ref, :caps, caps)
+
+  end
+
+  @spec ensure_caps_match(Pad.direction_t() ,[{module(), Pad.name_t()}], Caps.t()) :: :ok
+  def ensure_caps_match(direction, modules_with_pads, caps) do
+    for {module, pad_name} <- modules_with_pads do
+      if not module.caps_match?(pad_name, caps) do
+        raise """
+        Received caps: #{inspect(caps)} that are not matching caps_pattern in
+        def_#{direction}_pad for pad #{inspect(pad_name)} in #{inspect(module)}
+        """
+      end
     end
+
+    :ok
   end
 end

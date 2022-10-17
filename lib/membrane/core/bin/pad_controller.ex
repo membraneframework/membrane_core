@@ -164,7 +164,7 @@ defmodule Membrane.Core.Bin.PadController do
               initiator: :sibling,
               other_info: PadModel.pad_info_t() | nil,
               link_metadata: map,
-              parents_accepted_caps: [struct() | module() | tuple()]
+              parents_with_pads: [{module(), Pad.name_t()}]
             },
           Core.Bin.State.t()
         ) :: {Core.Element.PadController.link_call_reply_t(), Core.Bin.State.t()}
@@ -173,7 +173,7 @@ defmodule Membrane.Core.Bin.PadController do
 
     Membrane.Logger.debug("Handle link #{inspect(endpoint, pretty: true)}")
 
-    %{spec_ref: spec_ref, endpoint: child_endpoint} = pad_data
+    %{spec_ref: spec_ref, endpoint: child_endpoint, name: pad_name} = pad_data
 
     pad_props =
       Map.merge(endpoint.pad_props, child_endpoint.pad_props, fn key,
@@ -203,8 +203,8 @@ defmodule Membrane.Core.Bin.PadController do
 
         Map.update!(
           params,
-          :parents_accepted_caps,
-          &[state.pads_info[direction].accepted_caps | &1]
+          :parents_with_pads,
+          &[{state.module, pad_name} | &1]
         )
       else
         params
