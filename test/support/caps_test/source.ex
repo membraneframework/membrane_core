@@ -12,9 +12,12 @@ defmodule Membrane.Support.CapsTest.Source do
     availability: :always,
     mode: :push
 
+  def_options test_pid: [type: :pid]
+
   @impl true
-  def handle_init(_opts) do
-    {:ok, %{}}
+  def handle_init(%__MODULE__{test_pid: test_pid}) do
+    send(test_pid, {:source_pid, self()})
+    {:ok, %{test_pid: test_pid}}
   end
 
   @impl true
@@ -33,7 +36,7 @@ defmodule Membrane.Support.CapsTest.Source do
   end
 
   @impl true
-  def handle_parent_notification({:send_caps, caps}, _ctx, _state) do
-    {:ok, %{caps: caps}}
+  def handle_parent_notification({:send_caps, caps}, _ctx, state) do
+    {:ok, Map.put(state, :caps, caps)}
   end
 end

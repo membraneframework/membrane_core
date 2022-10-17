@@ -13,7 +13,7 @@ defmodule Membrane.Pad do
   use Bunch
   use Bunch.Typespec
 
-  alias Membrane.{Buffer, Caps}
+  alias Membrane.Buffer
 
   @typedoc """
   Defines the term by which the pad instance is identified.

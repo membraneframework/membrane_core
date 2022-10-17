@@ -1,22 +1,20 @@
-defmodule Membrane.Support.CapsTest.Bin do
+defmodule Membrane.Support.CapsTest.InnerSinkBin do
   @moduledoc """
   Bin used in caps test.
-  Has caps spec for `:input` pad.
+  Has caps pattern for `:input` pad.
   Spawns `Membrane.Support.CapsTest.Sink` as its child.
-  Forwards all notifications from children to parent.
   """
 
   use Membrane.Bin
 
   alias Membrane.Support.CapsTest
   alias Membrane.Support.CapsTest.Stream
-
-  @accepted_format Stream.FormatA
-  @unaccepted_format Stream.FormatB
+  alias Membrane.Support.CapsTest.Stream.{FormatAcceptedByAll, FormatAcceptedByInnerBins}
 
   def_input_pad :input,
     demand_unit: :buffers,
-    caps_pattern: %Stream{format: @accepted_format},
+    caps_pattern:
+      %Stream{format: format} when format in [FormatAcceptedByAll, FormatAcceptedByInnerBins],
     availability: :always,
     mode: :push
 
@@ -31,19 +29,11 @@ defmodule Membrane.Support.CapsTest.Bin do
       ]
     }
 
-    state = %{}
-
-    {{:ok, spec: spec}, state}
+    {{:ok, spec: spec}, %{}}
   end
 
   @impl true
   def handle_child_notification(msg, _child, _ctx, state) do
     {{:ok, notify_parent: msg}, state}
   end
-
-  @spec accepted_format() :: module()
-  def accepted_format(), do: @accepted_format
-
-  @spec unaccepted_format() :: module()
-  def unaccepted_format(), do: @unaccepted_format
 end

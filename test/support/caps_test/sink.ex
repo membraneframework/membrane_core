@@ -18,7 +18,7 @@ defmodule Membrane.Support.CapsTest.Sink do
   @impl true
   def handle_init(%__MODULE__{test_pid: test_pid}) do
     send(test_pid, {:sink_pid, self()})
-    {:ok, %{}}
+    {:ok, %{test_pid: test_pid}}
   end
 
   @impl true

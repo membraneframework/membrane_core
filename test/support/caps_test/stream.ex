@@ -4,20 +4,30 @@ defmodule Membrane.Support.CapsTest.Stream do
   """
 
   @type t() :: %__MODULE__{
-          format: nil | FormatA | FormatB
+          format:
+            nil | FormatAcceptedByAll | FormatAcceptedByOuterBins | FormatAcceptedByInnerBins
         }
 
   defstruct [:format]
 
-  defmodule FormatA do
+  defmodule FormatAcceptedByAll do
     @moduledoc """
-    Stream format definition used in caps test.
+    Stream format definition used in caps tests.
+    Accepted by caps patterns in all bins used in caps tests.
     """
   end
 
-  defmodule FormatB do
+  defmodule FormatAcceptedByOuterBins do
     @moduledoc """
     Stream format definition used in caps test.
+    Accepted by caps patterns in outer bins used in caps tests.
+    """
+  end
+
+  defmodule FormatAcceptedByInnerBins do
+    @moduledoc """
+    Stream format definition used in caps test.
+    Accepted by caps patterns in inner bins used in caps tests.
     """
   end
 end
