@@ -89,30 +89,14 @@ defmodule Membrane.CapsTest do
   end
 
   defp assert_source_down() do
-    source_pid =
-      receive do
-        {:source_pid, source_pid} ->
-          Process.monitor(source_pid)
-          source_pid
-      after
-        2000 ->
-          raise "Source hasn't sent its pid before timeout"
-      end
-
+    assert_receive({:source_pid, source_pid})
+    Process.monitor(source_pid)
     assert_receive({:DOWN, _ref, :process, ^source_pid, {%Membrane.ElementError{}, _stacktrace}})
   end
 
   defp assert_sink_down() do
-    sink_pid =
-      receive do
-        {:sink_pid, sink_pid} ->
-          Process.monitor(sink_pid)
-          sink_pid
-      after
-        2000 ->
-          raise "Sink hasn't sent its pid before timeout"
-      end
-
+    assert_receive({:sink_pid, sink_pid})
+    Process.monitor(sink_pid)
     assert_receive({:DOWN, _ref, :process, ^sink_pid, {%Membrane.ElementError{}, _stacktrace}})
   end
 end
