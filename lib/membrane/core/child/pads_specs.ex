@@ -78,7 +78,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
                        {unquote(pad_name), unquote(specs)},
                        unquote(direction),
                        unquote(component),
-                        __ENV__
+                       __ENV__
                      )
       unquote(pad_opts_typedef)
 

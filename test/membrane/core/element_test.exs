@@ -23,7 +23,10 @@ defmodule Membrane.Core.ElementTest do
 
     def_output_pad :output, caps_pattern: _any
 
-    def_input_pad :dynamic_input, caps_pattern: _any, demand_unit: :buffers, availability: :on_request
+    def_input_pad :dynamic_input,
+      caps_pattern: _any,
+      demand_unit: :buffers,
+      availability: :on_request
 
     @impl true
     def handle_tick(_timer, _ctx, state) do

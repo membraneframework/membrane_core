@@ -51,8 +51,7 @@ defmodule Membrane.Core.Element.CapsController do
   def exec_handle_caps(pad_ref, caps, params \\ %{}, state) do
     require CallbackContext.Caps
 
-    %{parents_with_pads: parents_with_pads, name: pad_name} =
-      PadModel.get_data!(state, pad_ref)
+    %{parents_with_pads: parents_with_pads, name: pad_name} = PadModel.get_data!(state, pad_ref)
 
     context = &CallbackContext.Caps.from_state(&1, pad: pad_ref)
 
@@ -68,14 +67,13 @@ defmodule Membrane.Core.Element.CapsController do
       )
 
     PadModel.set_data!(state, pad_ref, :caps, caps)
-
   end
 
   @spec ensure_caps_match(Pad.direction_t(), [{module(), Pad.name_t()}], Caps.t()) :: :ok
   def ensure_caps_match(direction, modules_with_pads, caps) do
     for {module, pad_name} <- modules_with_pads do
       if not module.caps_match?(pad_name, caps) do
-        raise """
+        raise Membrane.ElementError, """
         Received caps: #{inspect(caps)} that are not matching caps_pattern in
         def_#{direction}_pad for pad #{inspect(pad_name)} in #{inspect(module)}
         """

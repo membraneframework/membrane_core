@@ -203,10 +203,10 @@ defmodule Membrane.Core.Bin.PadController do
 
     params =
       Map.update!(
-          params,
-          :parents_with_pads,
-          &[{state.module, pad_name} | &1]
-        )
+        params,
+        :parents_with_pads,
+        &[{state.module, pad_name} | &1]
+      )
 
     reply =
       Message.call!(child_endpoint.pid, :handle_link, [

@@ -6,7 +6,11 @@ defmodule Membrane.Support.CapsTest.Source do
 
   use Membrane.Source
 
-  def_output_pad :output, demand_unit: :buffers, caps_pattern: _any, availability: :always, mode: :push
+  def_output_pad :output,
+    demand_unit: :buffers,
+    caps_pattern: _any,
+    availability: :always,
+    mode: :push
 
   @impl true
   def handle_init(_opts) do

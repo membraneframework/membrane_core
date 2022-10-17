@@ -74,7 +74,14 @@ defmodule Membrane.Core.Element.PadController do
     do_handle_link(endpoint, other_endpoint, info, toilet, link_props, state)
   end
 
-  defp do_handle_link(endpoint, other_endpoint, info, toilet, %{initiator: :parent} = props, state) do
+  defp do_handle_link(
+         endpoint,
+         other_endpoint,
+         info,
+         toilet,
+         %{initiator: :parent} = props,
+         state
+       ) do
     handle_link_response =
       Message.call(other_endpoint.pid, :handle_link, [
         Pad.opposite_direction(info.direction),
@@ -100,7 +107,15 @@ defmodule Membrane.Core.Element.PadController do
           )
 
         state =
-          init_pad_data(endpoint, other_endpoint, info, props.parents_with_pads, other_info, link_metadata, state)
+          init_pad_data(
+            endpoint,
+            other_endpoint,
+            info,
+            props.parents_with_pads,
+            other_info,
+            link_metadata,
+            state
+          )
 
         state = maybe_handle_pad_added(endpoint.pad_ref, state)
         {:ok, state}

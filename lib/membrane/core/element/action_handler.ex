@@ -10,7 +10,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   alias Membrane.{ActionError, Buffer, Caps, ElementError, Event, Pad, PadDirectionError}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{DemandHandler, PadController, State}
+  alias Membrane.Core.Element.{CapsController, DemandHandler, PadController, State}
   alias Membrane.Core.{Events, Message, TimerController}
   alias Membrane.Core.Telemetry
   alias Membrane.Element.Action
@@ -294,22 +294,17 @@ defmodule Membrane.Core.Element.ActionHandler do
 
     pad_data = PadModel.get_data!(state, pad_ref)
 
-    # todo: add validation caps match below
-    withl data: %{direction: :output, pid: pid, other_ref: other_ref} <- pad_data do
-      # caps: true <- Caps.Matcher.match?(pad_data.accepted_caps, caps) do
+    with %{direction: :output, pid: pid, other_ref: other_ref} <- pad_data do
+      %{name: pad_name, parents_with_pads: parents_with_pads} = pad_data
+      modules_with_pads = [{state.module, pad_name} | parents_with_pads]
+      :ok = CapsController.ensure_caps_match(:output, modules_with_pads, caps)
+
       state = PadModel.set_data!(state, pad_ref, :caps, caps)
       Message.send(pid, :caps, caps, for_pad: other_ref)
       state
     else
-      data: %{direction: :input} ->
+      %{direction: :input} ->
         raise PadDirectionError, action: :caps, direction: :input, pad: pad_ref
-
-      caps: false ->
-        raise ElementError, """
-        Trying to send caps that do not match the specification
-        Caps being sent: #{inspect(caps, pretty: true)}
-        Allowed caps spec: #{inspect(pad_data.accepted_caps, pretty: true)}\
-        """
     end
   end
 
