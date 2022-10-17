@@ -3,8 +3,6 @@ defmodule Membrane.Bin.PadData do
   Struct describing current pad state.
 
   The public fields are:
-    - `:accepted_caps` - specification of possible caps that are accepted on the pad.
-      See `Membrane.Caps.Matcher` for more information.
     - `:availability` - see `Membrane.Pad.availability_t`
     - `:direction` - see `Membrane.Pad.direction_t`
     - `:mode` - see `Membrane.Pad.mode_t`

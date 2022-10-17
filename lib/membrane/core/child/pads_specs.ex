@@ -4,29 +4,10 @@ defmodule Membrane.Core.Child.PadsSpecs do
   # based on them.
   use Bunch
 
-  alias Membrane.Caps
   alias Membrane.Core.OptionsSpecs
   alias Membrane.Pad
 
   require Pad
-
-  # @spec def_pads([{Pad.name_t(), raw_spec :: Macro.t()}], Pad.direction_t(), :element | :bin) ::
-  #         Macro.t()
-  # def def_pads(pads, direction, component) do
-  #   pads
-  #   |> Enum.reduce(
-  #     quote do
-  #     end,
-  #     fn {name, spec}, acc ->
-  #       pad_def = def_pad(component, name, direction, spec)
-
-  #       quote do
-  #         unquote(acc)
-  #         unquote(pad_def)
-  #       end
-  #     end
-  #   )
-  # end
 
   @doc """
   Returns documentation string common for both input and output pads
@@ -42,9 +23,6 @@ defmodule Membrane.Core.Child.PadsSpecs do
     """
     Macro that defines #{direction} pad for the #{entity}.
 
-    Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
-    without module prefix.
-
     It automatically generates documentation from the given definition
     and adds compile-time caps specs validation.
 
@@ -56,16 +34,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
   Returns AST inserted into element's or bin's module defining a pad
   """
   @spec def_pad(Pad.name_t(), Pad.direction_t(), Macro.t(), :element | :bin) :: Macro.t()
-  def def_pad(pad_name, direction, raw_specs, component) do
-    Code.ensure_loaded(Caps.Matcher)
-
-    specs =
-      raw_specs
-      |> Bunch.Macro.inject_calls([
-        {Caps.Matcher, :one_of},
-        {Caps.Matcher, :range}
-      ])
-
+  def def_pad(pad_name, direction, specs, component) do
     {escaped_pad_opts, pad_opts_typedef} = OptionsSpecs.def_pad_options(pad_name, specs[:options])
 
     specs = Keyword.put(specs, :options, escaped_pad_opts)

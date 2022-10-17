@@ -3,10 +3,7 @@ defmodule Membrane.Element.PadData do
   Struct describing current pad state.
 
   The public fields are:
-    - `:accepted_caps` - specification of possible caps that are accepted on the pad in the element.
-      See `Membrane.Caps.Matcher` for more information.
-    - `:parents_with_pads` - specification of possible caps that are accepted on the pad in the ancestors of the element.
-      See `Membrane.Caps.Matcher` for more information.
+    - `:parents_with_pads` - list of parents bins with related pads names
     - `:availability` - see `Membrane.Pad.availability_t`
     - `:caps` - the most recent `Membrane.Caps` that have been sent (output) or received (input)
       on the pad. May be `nil` if not yet set.
