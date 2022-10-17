@@ -159,7 +159,7 @@ defmodule Membrane.Core.Bin.PadController do
           Pad.direction_t(),
           StructureParser.raw_endpoint_t(),
           StructureParser.raw_endpoint_t(),
-          %{initiator: :parent}
+          %{initiator: :parent, parents_with_pads: [{module(), Pad.name_t()}]}
           | %{
               initiator: :sibling,
               other_info: PadModel.pad_info_t() | nil,
@@ -193,22 +193,20 @@ defmodule Membrane.Core.Bin.PadController do
 
     child_endpoint = %{child_endpoint | pad_props: pad_props}
 
-    params =
-      if params.initiator == :sibling do
-        :ok =
-          Child.PadController.validate_pad_mode!(
-            {endpoint.pad_ref, pad_data},
-            {other_endpoint.pad_ref, params.other_info}
-          )
+    if params.initiator == :sibling do
+      :ok =
+        Child.PadController.validate_pad_mode!(
+          {endpoint.pad_ref, pad_data},
+          {other_endpoint.pad_ref, params.other_info}
+        )
+    end
 
-        Map.update!(
+    params =
+      Map.update!(
           params,
           :parents_with_pads,
           &[{state.module, pad_name} | &1]
         )
-      else
-        params
-      end
 
     reply =
       Message.call!(child_endpoint.pid, :handle_link, [

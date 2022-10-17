@@ -54,7 +54,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
           :output,
           %{pad_ref: :invalid_pad_ref, child: :a},
           %{pad_ref: :x, child: :b},
-          %{link_initiator: :parent},
+          %{link_initiator: :parent, parents_with_pads: []},
           state
         )
       end

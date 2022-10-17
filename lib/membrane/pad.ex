@@ -129,7 +129,6 @@ defmodule Membrane.Pad do
   @type common_spec_options_t ::
           {:availability, availability_t()}
           | {:mode, mode_t()}
-          | {:caps, Caps.Matcher.caps_specs_t()}
           | {:options, Keyword.t()}
 
   @typedoc """
