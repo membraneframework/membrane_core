@@ -69,26 +69,23 @@ defmodule Membrane.Core.Element do
   defp do_start(method, options) do
     %{module: module, name: name, node: node, user_options: user_options} = options
 
-    if Membrane.Element.element?(options.module) do
-      Membrane.Logger.debug("""
-      Element #{method}: #{inspect(name)}
-      node: #{node},
-      module: #{inspect(module)},
-      element options: #{inspect(user_options)},
-      method: #{method}
-      """)
+    Membrane.Logger.debug("""
+    Element #{method}: #{inspect(name)}
+    node: #{node},
+    module: #{inspect(module)},
+    element options: #{inspect(user_options)},
+    method: #{method}
+    """)
 
-      # rpc if necessary
-      if node do
-        :rpc.call(node, GenServer, method, [__MODULE__, options])
-      else
-        apply(GenServer, method, [__MODULE__, options])
-      end
+    # rpc if necessary
+    if node do
+      result = :rpc.call(node, GenServer, :start, [__MODULE__, options])
+
+      # TODO: use an atomic way of linking once https://github.com/erlang/otp/issues/6375 is solved
+      with {:start_link, {:ok, pid}} <- {method, result}, do: Process.link(pid)
+      result
     else
-      raise """
-      Cannot start element, passed module #{inspect(module)} is not a Membrane Element.
-      Make sure that given module is the right one and it uses Membrane.{Source | Filter | Endpoint | Sink}
-      """
+      apply(GenServer, method, [__MODULE__, options])
     end
   end
 

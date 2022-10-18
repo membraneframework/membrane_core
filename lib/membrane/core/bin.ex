@@ -52,6 +52,7 @@ defmodule Membrane.Core.Bin do
   @doc """
   Works similarly to `start_link/3`, but does not link to the current process.
   """
+
   @spec start(options_t()) :: GenServer.on_start()
   def start(options),
     do: do_start(:start, options)
@@ -59,24 +60,21 @@ defmodule Membrane.Core.Bin do
   defp do_start(method, options) do
     %{module: module, name: name, node: node, user_options: user_options} = options
 
-    if Membrane.Bin.bin?(module) do
-      Membrane.Logger.debug("""
-      Bin #{method}: #{inspect(name)}
-      node: #{node},
-      module: #{inspect(module)},
-      bin options: #{inspect(user_options)}
-      """)
+    Membrane.Logger.debug("""
+    Bin #{method}: #{inspect(name)}
+    node: #{node},
+    module: #{inspect(module)},
+    bin options: #{inspect(user_options)}
+    """)
 
-      if node do
-        :rpc.call(node, GenServer, method, [__MODULE__, options])
-      else
-        apply(GenServer, method, [__MODULE__, options])
-      end
+    if node do
+      result = :rpc.call(node, GenServer, :start, [__MODULE__, options])
+
+      # TODO: use an atomic way of linking once https://github.com/erlang/otp/issues/6375 is solved
+      with {:start_link, {:ok, pid}} <- {method, result}, do: Process.link(pid)
+      result
     else
-      raise """
-      Cannot start bin, passed module #{inspect(options.module)} is not a Membrane Bin.
-      Make sure that given module is the right one and it uses Membrane.Bin
-      """
+      apply(GenServer, method, [__MODULE__, options])
     end
   end
 
