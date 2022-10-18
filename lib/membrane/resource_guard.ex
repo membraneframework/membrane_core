@@ -125,7 +125,7 @@ defmodule Membrane.ResourceGuard do
 
       reason ->
         Membrane.Logger.error(
-          "Error cleaning up resource #{inspect(name)}, got error #{inspect(reason)}"
+          "Error cleaning up resource #{inspect(name)}, due to: #{inspect(reason)}"
         )
     end
 
