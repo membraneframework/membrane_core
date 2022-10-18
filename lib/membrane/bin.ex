@@ -26,7 +26,7 @@ defmodule Membrane.Bin do
 
   @typedoc """
   Defines options that can be passed to `start_link/3` and received
-  in `c:handle_init/1` callback.
+  in `c:handle_init/2` callback.
   """
   @type options_t :: struct | nil
 
@@ -44,7 +44,8 @@ defmodule Membrane.Bin do
   while `handle_init` should be used for things like parsing options, initializing state or
   spawning children.
   """
-  @callback handle_init(options :: options_t) :: callback_return_t()
+  @callback handle_init(context :: CallbackContext.Init.t(), options :: options_t) ::
+              callback_return_t()
 
   @doc """
   Callback that is called when new pad has been added to bin. Executed
@@ -67,7 +68,7 @@ defmodule Membrane.Bin do
             ) :: callback_return_t
 
   @doc """
-  Callback invoked on bin startup, right after `c:handle_init/1`.
+  Callback invoked on bin startup, right after `c:handle_init/2`.
 
   Any long-lasting or complex initialization should happen here.
   """
@@ -163,7 +164,7 @@ defmodule Membrane.Bin do
   @callback handle_terminate_request(context :: CallbackContext.TerminateRequest.t(), state_t) ::
               callback_return_t()
 
-  @optional_callbacks handle_init: 1,
+  @optional_callbacks handle_init: 2,
                       handle_pad_added: 3,
                       handle_pad_removed: 3,
                       handle_setup: 2,
@@ -279,7 +280,11 @@ defmodule Membrane.Bin do
       def membrane_bin?, do: true
 
       @impl true
-      def handle_init(_options), do: {:ok, %{}}
+      def handle_init(_ctx, %_opt_struct{} = options),
+        do: {:ok, options |> Map.from_struct()}
+
+      @impl true
+      def handle_init(_ctx, options), do: {:ok, options}
 
       @impl true
       def handle_pad_added(_pad, _ctx, state), do: {:ok, state}
@@ -314,7 +319,7 @@ defmodule Membrane.Bin do
       @impl true
       def handle_terminate_request(_ctx, state), do: {{:ok, terminate: :normal}, state}
 
-      defoverridable handle_init: 1,
+      defoverridable handle_init: 2,
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
                      handle_setup: 2,

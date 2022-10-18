@@ -22,7 +22,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
   end
 
   @impl true
-  def handle_init(opts) do
+  def handle_init(_ctx, opts) do
     children =
       [
         source: opts.source,

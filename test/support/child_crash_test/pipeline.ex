@@ -16,7 +16,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
   end
 
   @impl true
-  def handle_init(_opts) do
+  def handle_init(_ctx, _opts) do
     children = [
       center_filter: Filter,
       sink: Testing.Sink

@@ -69,10 +69,11 @@ defmodule Membrane.Element.Base do
   For these reasons, it's important to do any long-lasting or complex work in `c:handle_setup/2`,
   while `handle_init` should be used for things like parsing options or initializing state.
   """
-  @callback handle_init(options :: Element.options_t()) :: callback_return_t
+  @callback handle_init(context :: CallbackContext.Init.t(), options :: Element.options_t()) ::
+              callback_return_t
 
   @doc """
-  Callback invoked on element startup, right after `c:handle_init/1`.
+  Callback invoked on element startup, right after `c:handle_init/2`.
 
   Any long-lasting or complex initialization should happen here.
   """
@@ -181,7 +182,7 @@ defmodule Membrane.Element.Base do
   """
   @callback __struct__(kv :: [atom | {atom, any()}]) :: struct()
 
-  @optional_callbacks handle_init: 1,
+  @optional_callbacks handle_init: 2,
                       handle_setup: 2,
                       handle_playing: 2,
                       handle_info: 3,
@@ -272,14 +273,18 @@ defmodule Membrane.Element.Base do
       def membrane_element?, do: true
 
       @impl true
-      def handle_init(%opt_struct{} = options), do: {:ok, options |> Map.from_struct()}
-      def handle_init(options), do: {:ok, options}
+      def handle_init(_ctx, %_opt_struct{} = options),
+        do: {:ok, options |> Map.from_struct()}
+
+      @impl true
+      def handle_init(_ctx, options), do: {:ok, options}
 
       @impl true
       def handle_setup(_context, state), do: {:ok, state}
 
       @impl true
       def handle_playing(_context, state), do: {:ok, state}
+
       @impl true
       def handle_info(_message, _context, state), do: {:ok, state}
 
@@ -298,7 +303,7 @@ defmodule Membrane.Element.Base do
       @impl true
       def handle_terminate_request(_ctx, state), do: {{:ok, terminate: :normal}, state}
 
-      defoverridable handle_init: 1,
+      defoverridable handle_init: 2,
                      handle_setup: 2,
                      handle_playing: 2,
                      handle_info: 3,

@@ -7,7 +7,7 @@ defmodule PipelineSynchronousCallTest do
   defmodule TestPipeline do
     use Membrane.Pipeline
     @impl true
-    def handle_init(result) do
+    def handle_init(_ctx, result) do
       result || {:ok, %{}}
     end
 

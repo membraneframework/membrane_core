@@ -67,7 +67,7 @@ defmodule Membrane.Testing.Source do
               ]
 
   @impl true
-  def handle_init(opts) do
+  def handle_init(_ctx, opts) do
     opts = Map.from_struct(opts)
 
     case opts.output do

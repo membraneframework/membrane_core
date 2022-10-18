@@ -7,7 +7,7 @@ defmodule Membrane.Element do
   """
 
   @typedoc """
-  Defines options that can be received in `c:Membrane.Element.Base.handle_init/1`
+  Defines options that can be received in `c:Membrane.Element.Base.handle_init/2`
   callback.
   """
   @type options_t :: struct | nil

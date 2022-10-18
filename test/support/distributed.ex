@@ -8,7 +8,7 @@ defmodule Membrane.Support.Distributed do
     def_options output: [spec: list(any())]
 
     @impl true
-    def handle_init(opts) do
+    def handle_init(_ctx, opts) do
       {:ok, opts.output}
     end
 

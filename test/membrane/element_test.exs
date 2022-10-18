@@ -27,7 +27,7 @@ defmodule Membrane.ElementTest do
     end
 
     @impl true
-    def handle_init(opts), do: {:ok, opts}
+    def handle_init(_ctx, opts), do: {:ok, opts}
 
     @impl true
     def handle_playing(_ctx, state) do

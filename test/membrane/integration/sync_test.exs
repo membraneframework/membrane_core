@@ -89,7 +89,7 @@ defmodule Membrane.Integration.SyncTest do
     def_output_pad :output, caps: :any, demand_unit: :buffers
 
     @impl true
-    def handle_init(_options) do
+    def handle_init(_ctx, _options) do
       children = [filter1: TestFilter, filter2: TestFilter]
 
       spec = %Membrane.ParentSpec{

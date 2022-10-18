@@ -12,7 +12,9 @@ defmodule Membrane.Testing.DynamicSourceTest do
 
     assert {:ok,
             %{type: :generator, generator: ^generator, generator_state: :abc, state_for_pad: %{}}} =
-             Testing.DynamicSource.handle_init(%Testing.DynamicSource{output: {:abc, generator}})
+             Testing.DynamicSource.handle_init(%{}, %Testing.DynamicSource{
+               output: {:abc, generator}
+             })
   end
 
   test "Source sends caps on play" do

@@ -14,7 +14,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     def_options factor: [default: 1], direction: [default: :up]
 
     @impl true
-    def handle_init(opts) do
+    def handle_init(_ctx, opts) do
       {:ok, opts |> Map.from_struct() |> Map.merge(%{counter: 1})}
     end
 

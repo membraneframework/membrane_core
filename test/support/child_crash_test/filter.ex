@@ -11,7 +11,7 @@ defmodule Membrane.Support.ChildCrashTest.Filter do
   def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :on_request
 
   @impl true
-  def handle_init(_opts) do
+  def handle_init(_ctx, _opts) do
     {:ok, Map.put(%{}, :pads, MapSet.new())}
   end
 

@@ -8,7 +8,7 @@ defmodule Membrane.Testing.SourceTest do
     generator = fn _state, _size -> nil end
 
     assert {:ok, %{output: ^generator, generator_state: :abc}} =
-             Source.handle_init(%Source{output: {:abc, generator}})
+             Source.handle_init(%{}, %Source{output: {:abc, generator}})
   end
 
   test "Source sends caps on play" do

@@ -116,7 +116,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
       def_output_pad :output, demand_mode: :auto, caps: :any
 
       @impl true
-      def handle_init(_opts) do
+      def handle_init(_ctx, _opts) do
         Process.register(self(), __MODULE__)
         {:ok, %{}}
       end
@@ -138,7 +138,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
       def_input_pad :input, demand_mode: :auto, caps: :any
 
       @impl true
-      def handle_init(_opts) do
+      def handle_init(_ctx, _opts) do
         Process.register(self(), __MODULE__)
         {:ok, %{}}
       end
@@ -162,7 +162,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
       def_output_pad :output, caps: :any, demand_mode: :auto
 
       @impl true
-      def handle_init(opts) do
+      def handle_init(_ctx, opts) do
         Process.register(self(), __MODULE__)
         links = [link(:source, RemovalDeferSource) |> to_bin_output()]
         {{:ok, spec: %ParentSpec{links: links}}, Map.from_struct(opts)}

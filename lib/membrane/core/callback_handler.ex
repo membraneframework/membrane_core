@@ -122,12 +122,6 @@ defmodule Membrane.Core.CallbackHandler do
 
   @spec exec_callback(callback :: atom, args :: list, handler_params_t, state_t) ::
           {list, internal_state_t}
-  defp exec_callback(:handle_init, args, _handler_params, %{module: module}) do
-    module
-    |> apply(:handle_init, args)
-    |> parse_callback_result(module, :handle_init)
-  end
-
   defp exec_callback(
          callback,
          args,

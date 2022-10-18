@@ -215,7 +215,7 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_init(options) do
+  def handle_init(ctx, options) do
     case Keyword.get(options, :module, :default) do
       :default ->
         spec = %Membrane.ParentSpec{
@@ -238,7 +238,7 @@ defmodule Membrane.Testing.Pipeline do
           test_process: Keyword.fetch!(options, :test_process)
         }
 
-        injected_module_result = eval_injected_module_callback(:handle_init, [], new_state)
+        injected_module_result = eval_injected_module_callback(:handle_init, [ctx], new_state)
         testing_pipeline_result = {:ok, new_state}
         combine_results(injected_module_result, testing_pipeline_result)
 
