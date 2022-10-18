@@ -73,7 +73,7 @@ defmodule Membrane.Core.Element.CapsController do
   def ensure_caps_match(direction, modules_with_pads, caps) do
     for {module, pad_name} <- modules_with_pads do
       if not module.caps_match?(pad_name, caps) do
-        raise Membrane.ElementError, """
+        raise Membrane.CapsMatchError, """
         Received caps: #{inspect(caps)} that are not matching caps_pattern in
         def_#{direction}_pad for pad #{inspect(pad_name)} in #{inspect(module)}
         """

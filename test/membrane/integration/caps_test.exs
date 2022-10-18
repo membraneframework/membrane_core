@@ -91,12 +91,15 @@ defmodule Membrane.CapsTest do
   defp assert_source_down() do
     assert_receive({:source_pid, source_pid})
     Process.monitor(source_pid)
-    assert_receive({:DOWN, _ref, :process, ^source_pid, {%Membrane.ElementError{}, _stacktrace}})
+
+    assert_receive(
+      {:DOWN, _ref, :process, ^source_pid, {%Membrane.CapsMatchError{}, _stacktrace}}
+    )
   end
 
   defp assert_sink_down() do
     assert_receive({:sink_pid, sink_pid})
     Process.monitor(sink_pid)
-    assert_receive({:DOWN, _ref, :process, ^sink_pid, {%Membrane.ElementError{}, _stacktrace}})
+    assert_receive({:DOWN, _ref, :process, ^sink_pid, {%Membrane.CapsMatchError{}, _stacktrace}})
   end
 end
