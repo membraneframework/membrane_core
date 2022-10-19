@@ -295,9 +295,9 @@ defmodule Membrane.Core.Element.ActionHandler do
     pad_data = PadModel.get_data!(state, pad_ref)
 
     with %{direction: :output, pid: pid, other_ref: other_ref} <- pad_data do
-      %{name: pad_name, parents_with_pads: parents_with_pads} = pad_data
-      modules_with_pads = [{state.module, pad_name} | parents_with_pads]
-      :ok = CapsController.ensure_caps_match(:output, modules_with_pads, caps)
+      %{name: pad_name, ancestors_with_pads: ancestors_with_pads} = pad_data
+      modules_with_pads = [{state.module, pad_name} | ancestors_with_pads]
+      :ok = CapsController.ensure_caps_match!(:output, modules_with_pads, caps)
 
       state = PadModel.set_data!(state, pad_ref, :caps, caps)
       Message.send(pid, :caps, caps, for_pad: other_ref)

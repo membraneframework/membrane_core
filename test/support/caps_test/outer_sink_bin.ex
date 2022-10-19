@@ -1,7 +1,7 @@
 defmodule Membrane.Support.CapsTest.OuterSinkBin do
   @moduledoc """
   Bin used in caps test.
-  Has caps pattern for `:input` pad.
+  It has a caps pattern defined for the `:input` pad.
   Spawns `Membrane.Support.CapsTest.InnerSinkBin` as its child.
   """
 

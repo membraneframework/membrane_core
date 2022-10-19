@@ -159,12 +159,12 @@ defmodule Membrane.Core.Bin.PadController do
           Pad.direction_t(),
           StructureParser.raw_endpoint_t(),
           StructureParser.raw_endpoint_t(),
-          %{initiator: :parent, parents_with_pads: [{module(), Pad.name_t()}]}
+          %{initiator: :parent, ancestors_with_pads: [Pad.module_with_pad_t()]}
           | %{
               initiator: :sibling,
               other_info: PadModel.pad_info_t() | nil,
               link_metadata: map,
-              parents_with_pads: [{module(), Pad.name_t()}]
+              ancestors_with_pads: [Pad.module_with_pad_t()]
             },
           Core.Bin.State.t()
         ) :: {Core.Element.PadController.link_call_reply_t(), Core.Bin.State.t()}
@@ -204,7 +204,7 @@ defmodule Membrane.Core.Bin.PadController do
     params =
       Map.update!(
         params,
-        :parents_with_pads,
+        :ancestors_with_pads,
         &[{state.module, pad_name} | &1]
       )
 

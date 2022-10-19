@@ -51,12 +51,12 @@ defmodule Membrane.Core.Child.PadsSpecs do
                      )
       unquote(pad_opts_typedef)
 
-      if not Module.get_attribute(__MODULE__, :has_caps_match_spec, false) do
-        Module.put_attribute(__MODULE__, :has_caps_match_spec, true)
-        @spec caps_match?(any(), any()) :: boolean()
+      unless Module.defines?(__MODULE__, {:membrane_caps_match?, 2}) do
+        @doc false
+        @spec membrane_caps_match?(Pad.name_t(), any()) :: boolean()
       end
 
-      def caps_match?(unquote(pad_name), caps) do
+      def membrane_caps_match?(unquote(pad_name), caps) do
         match?(unquote(caps_pattern), caps)
       end
     end

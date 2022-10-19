@@ -1,4 +1,4 @@
-defmodule Membrane.Support.CapsTest.Source do
+defmodule Membrane.Support.CapsTest.RestrictiveSource do
   @moduledoc """
   Source used in caps test.
   Sends caps received in message from parent, after entering the `:playing` playback state.
@@ -6,9 +6,11 @@ defmodule Membrane.Support.CapsTest.Source do
 
   use Membrane.Source
 
+  alias Membrane.Support.CapsTest.Stream
+
   def_output_pad :output,
     demand_unit: :buffers,
-    caps_pattern: _any,
+    caps_pattern: %Stream{format: Stream.FormatAcceptedByAll},
     availability: :always,
     mode: :push
 

@@ -1,4 +1,4 @@
-defmodule Membrane.Support.CapsTest.Sink do
+defmodule Membrane.Support.CapsTest.RestrictiveSink do
   @moduledoc """
   Sink used in caps test.
   Sends a message with its own pid to the process specified in the options.
@@ -7,9 +7,11 @@ defmodule Membrane.Support.CapsTest.Sink do
 
   use Membrane.Endpoint
 
+  alias Membrane.Support.CapsTest.Stream
+
   def_input_pad :input,
     demand_unit: :buffers,
-    caps_pattern: _any,
+    caps_pattern: %Stream{format: Stream.FormatAcceptedByAll},
     availability: :always,
     mode: :push
 

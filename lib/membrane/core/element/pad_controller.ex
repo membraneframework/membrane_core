@@ -27,11 +27,12 @@ defmodule Membrane.Core.Element.PadController do
   require Membrane.Pad
 
   @type link_call_props_t ::
-          %{initiator: :parent, parents_with_pads: [{module(), Pad.name_t()}]}
+          %{initiator: :parent, ancestors_with_pads: [Pad.module_with_pad_t()]}
           | %{
               initiator: :sibling,
               other_info: PadModel.pad_info_t() | nil,
-              link_metadata: %{toilet: Toilet.t() | nil}
+              link_metadata: %{toilet: Toilet.t() | nil},
+              ancestors_with_pads: [Pad.module_with_pad_t()]
             }
 
   @type link_call_reply_props_t ::
@@ -94,7 +95,7 @@ defmodule Membrane.Core.Element.PadController do
             toilet: toilet,
             observability_metadata: Observability.setup_link(endpoint.pad_ref)
           },
-          parents_with_pads: []
+          ancestors_with_pads: []
         }
       ])
 
@@ -111,7 +112,7 @@ defmodule Membrane.Core.Element.PadController do
             endpoint,
             other_endpoint,
             info,
-            props.parents_with_pads,
+            props.ancestors_with_pads,
             other_info,
             link_metadata,
             state
@@ -136,7 +137,7 @@ defmodule Membrane.Core.Element.PadController do
     %{
       other_info: other_info,
       link_metadata: link_metadata,
-      parents_with_pads: parents_with_pads
+      ancestors_with_pads: ancestors_with_pads
     } = link_props
 
     Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
@@ -153,7 +154,7 @@ defmodule Membrane.Core.Element.PadController do
         endpoint,
         other_endpoint,
         info,
-        parents_with_pads,
+        ancestors_with_pads,
         other_info,
         link_metadata,
         state
@@ -196,7 +197,7 @@ defmodule Membrane.Core.Element.PadController do
          endpoint,
          other_endpoint,
          info,
-         parents_with_pads,
+         ancestors_with_pads,
          other_info,
          metadata,
          state
@@ -209,7 +210,7 @@ defmodule Membrane.Core.Element.PadController do
         options:
           Child.PadController.parse_pad_options!(info.name, endpoint.pad_props.options, state),
         ref: endpoint.pad_ref,
-        parents_with_pads: parents_with_pads,
+        ancestors_with_pads: ancestors_with_pads,
         caps: nil,
         start_of_stream?: false,
         end_of_stream?: false,

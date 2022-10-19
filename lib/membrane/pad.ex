@@ -144,6 +144,11 @@ defmodule Membrane.Pad do
           optional(:demand_mode) => demand_mode_t()
         }
 
+  @typedoc """
+  Type describing module with a name of a pad defined in it.
+  """
+  @type module_with_pad_t() :: {module(), name_t()}
+
   @doc """
   Creates a static pad reference.
   """
