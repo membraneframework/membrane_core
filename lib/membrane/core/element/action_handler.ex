@@ -10,8 +10,8 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   alias Membrane.{ActionError, Buffer, Caps, ElementError, Event, Pad, PadDirectionError}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{DemandHandler, LifecycleController, PadController, State}
-  alias Membrane.Core.{Events, Message, PlaybackHandler, TimerController}
+  alias Membrane.Core.Element.{DemandHandler, PadController, State}
+  alias Membrane.Core.{Events, Message, TimerController}
   alias Membrane.Core.Telemetry
   alias Membrane.Element.Action
 
@@ -36,10 +36,10 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({action, _}, cb, _params, %State{playback: %{state: :stopped}})
-      when action in [:buffer, :event, :caps, :demand, :redemand, :forward, :end_of_stream] and
-             cb != :handle_stopped_to_prepared do
-    raise ActionError, action: action, reason: {:invalid_playback_state, :stopped}
+  def handle_action({action, _}, _cb, _params, %State{playback: playback})
+      when playback != :playing and
+             action in [:buffer, :event, :caps, :demand, :redemand, :forward, :end_of_stream] do
+    raise ActionError, action: action, reason: {:invalid_component_playback, playback}
   end
 
   @impl CallbackHandler
@@ -66,36 +66,10 @@ defmodule Membrane.Core.Element.ActionHandler do
       callback,
       cb,
       __MODULE__,
-      params |> Map.merge(%{skip_invoking_redemands: true}),
+      params,
       args_list,
       state
     )
-  end
-
-  @impl CallbackHandler
-  def handle_action({:playback_change, :suspend}, cb, _params, state)
-      when cb in [
-             :handle_stopped_to_prepared,
-             :handle_playing_to_prepared,
-             :handle_prepared_to_playing,
-             :handle_prepared_to_stopped
-           ] do
-    {:ok, state} = PlaybackHandler.suspend_playback_change(state)
-    state
-  end
-
-  @impl CallbackHandler
-  def handle_action({:playback_change, :resume}, _cb, _params, state) do
-    {:ok, state} = PlaybackHandler.continue_playback_change(LifecycleController, state)
-    state
-  end
-
-  @impl CallbackHandler
-  def handle_action({:buffer, _args} = action, cb, _params, %State{
-        playback: %{state: playback_state}
-      })
-      when playback_state != :playing and cb != :handle_prepared_to_playing do
-    raise ActionError, action: action, reason: {:invalid_playback_state, playback_state}
   end
 
   @impl CallbackHandler
@@ -156,17 +130,6 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_action(
-        {:demand, _args} = action,
-        cb,
-        _params,
-        %State{playback: %{state: playback_state}}
-      )
-      when playback_state != :playing and cb != :handle_prepared_to_playing do
-    raise ActionError, action: action, reason: {:invalid_playback_state, playback_state}
-  end
-
-  @impl CallbackHandler
-  def handle_action(
         {:demand, pad_ref},
         cb,
         params,
@@ -215,14 +178,21 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action(
-        {:end_of_stream, pad_ref},
-        _callback,
-        _params,
-        %State{type: type, playback: %{state: :playing}} = state
-      )
+  def handle_action({:end_of_stream, pad_ref}, _callback, _params, %State{type: type} = state)
       when is_pad_ref(pad_ref) and type != :sink do
     send_event(pad_ref, %Events.EndOfStream{}, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:terminate, :normal}, _cb, _params, %State{terminating?: false}) do
+    raise Membrane.ElementError,
+          "Cannot terminate an element with reason `:normal` unless it's removed by its parent"
+  end
+
+  @impl CallbackHandler
+  def handle_action({:terminate, reason}, _cb, _params, _state) do
+    Membrane.Logger.debug("Terminating with reason #{inspect(reason)}")
+    exit(reason)
   end
 
   @impl CallbackHandler

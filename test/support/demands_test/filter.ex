@@ -15,7 +15,7 @@ defmodule Membrane.Support.DemandsTest.Filter do
               ]
 
   @impl true
-  def handle_init(opts) do
+  def handle_init(_ctx, opts) do
     {:ok, opts}
   end
 

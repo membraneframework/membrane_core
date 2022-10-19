@@ -4,7 +4,7 @@ defmodule Membrane.FilterAggregator.InternalActionTest do
   require Membrane.Core.FilterAggregator.InternalAction, as: IA
 
   test "is_internal_action" do
-    assert IA.is_internal_action(IA.stopped_to_prepared())
+    assert IA.is_internal_action(IA.setup())
     assert IA.is_internal_action(IA.start_of_stream(:output))
   end
 

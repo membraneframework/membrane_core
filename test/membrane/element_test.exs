@@ -27,7 +27,13 @@ defmodule Membrane.ElementTest do
     end
 
     @impl true
-    def handle_init(opts), do: {:ok, opts}
+    def handle_init(_ctx, opts), do: {:ok, opts}
+
+    @impl true
+    def handle_playing(_ctx, state) do
+      send(state.target, {:callback_called, :handle_playing})
+      {:ok, state}
+    end
 
     @impl true
     def handle_start_of_stream(_pad, _context, state) do
@@ -63,25 +69,26 @@ defmodule Membrane.ElementTest do
       sink: Testing.Sink
     ]
 
-    {:ok, pipeline} =
-      Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
-
-    on_exit(fn ->
-      Membrane.Pipeline.terminate(pipeline, blocking?: true)
-    end)
+    pipeline =
+      Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
 
     [pipeline: pipeline]
   end
 
+  test "play", %{pipeline: pipeline} do
+    assert_pipeline_play(pipeline)
+    TestFilter.assert_callback_called(:handle_playing)
+  end
+
   describe "Start of stream" do
     test "causes handle_start_of_stream/3 to be called", %{pipeline: pipeline} do
-      assert_pipeline_playback_changed(pipeline, _from, :playing)
+      assert_pipeline_play(pipeline)
 
       TestFilter.assert_callback_called(:handle_start_of_stream)
     end
 
     test "does not trigger calling callback handle_event/3", %{pipeline: pipeline} do
-      assert_pipeline_playback_changed(pipeline, _from, :playing)
+      assert_pipeline_play(pipeline)
 
       TestFilter.refute_callback_called(:handle_event)
     end
@@ -93,13 +100,13 @@ defmodule Membrane.ElementTest do
 
   describe "End of stream" do
     test "causes handle_end_of_stream/3 to be called", %{pipeline: pipeline} do
-      assert_pipeline_playback_changed(pipeline, _from, :playing)
+      assert_pipeline_play(pipeline)
 
       TestFilter.assert_callback_called(:handle_end_of_stream)
     end
 
     test "does not trigger calling callback handle_event/3", %{pipeline: pipeline} do
-      assert_pipeline_playback_changed(pipeline, _from, :playing)
+      assert_pipeline_play(pipeline)
 
       TestFilter.refute_callback_called(:handle_event)
     end

@@ -5,6 +5,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   alias Membrane.ActionError
   alias Membrane.Core.{Parent, TimerController}
   alias Membrane.Core.Parent.LifecycleController
+  alias Membrane.Core.Pipeline.State
   alias Membrane.ParentSpec
 
   require Membrane.Logger
@@ -13,6 +14,13 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   def handle_action({action, _args}, :handle_init, _params, _state)
       when action not in [:spec, :playback] do
     raise ActionError, action: action, reason: {:invalid_callback, :handle_init}
+  end
+
+  @impl CallbackHandler
+  def handle_action({name, args}, _cb, _params, %State{terminating?: true})
+      when name in [:spec, :playback] do
+    raise Membrane.ParentError,
+          "Action #{inspect({name, args})} cannot be handled because the pipeline is already terminating"
   end
 
   @impl CallbackHandler
@@ -28,7 +36,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:remove_child, children}, _cb, _params, state) do
-    Parent.ChildLifeController.handle_remove_child(children, state)
+    Parent.ChildLifeController.handle_remove_children(children, state)
   end
 
   @impl CallbackHandler
@@ -54,8 +62,14 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:playback, playback_state}, _cb, _params, state) do
-    LifecycleController.change_playback_state(playback_state, state)
+  def handle_action({:playback, :playing}, _cb, _params, state) do
+    Membrane.Logger.debug("Playing request, #{inspect(state.playback)}")
+
+    cond do
+      state.playback == :playing -> state
+      state.initialized? -> LifecycleController.handle_playing(state)
+      true -> %{state | playing_requested?: true}
+    end
   end
 
   @impl CallbackHandler
@@ -74,6 +88,19 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   @impl CallbackHandler
   def handle_action({:reply, _message} = action, cb, _params, _state) do
     raise ActionError, action: action, reason: {:invalid_callback, cb}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:terminate, :normal}, _cb, _params, state) do
+    case LifecycleController.handle_terminate(state) do
+      {:continue, state} -> state
+      {:stop, _state} -> exit(:normal)
+    end
+  end
+
+  @impl CallbackHandler
+  def handle_action({:terminate, reason}, _cb, _params, _state) do
+    exit(reason)
   end
 
   @impl CallbackHandler

@@ -5,7 +5,7 @@ defmodule Membrane.Support.Sync.SyncBin do
   alias Membrane.Support.Sync
 
   @impl true
-  def handle_init(_options) do
+  def handle_init(_ctx, _options) do
     {{:ok, spec: Sync.Pipeline.default_spec()}, %{}}
   end
 

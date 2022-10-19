@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupHandler do
+defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
   @moduledoc false
   # A module responsible for managing crash groups inside the state of pipeline.
 

@@ -7,7 +7,7 @@ defmodule PipelineSynchronousCallTest do
   defmodule TestPipeline do
     use Membrane.Pipeline
     @impl true
-    def handle_init(result) do
+    def handle_init(_ctx, result) do
       result || {:ok, %{}}
     end
 
@@ -34,14 +34,14 @@ defmodule PipelineSynchronousCallTest do
   end
 
   test "Pipeline should be able to reply to a call with :reply_to action" do
-    {:ok, pid} = Membrane.Testing.Pipeline.start_link(module: TestPipeline)
+    pid = Membrane.Testing.Pipeline.start_link_supervised!(module: TestPipeline)
 
     reply = Pipeline.call(pid, {:postponed_reply, @msg})
     assert reply == @msg
   end
 
   test "Pipeline should be able to reply to a call with :reply action" do
-    {:ok, pid} = Membrane.Testing.Pipeline.start_link(module: TestPipeline)
+    pid = Membrane.Testing.Pipeline.start_link_supervised!(module: TestPipeline)
 
     reply = Pipeline.call(pid, {:instant_reply, @msg})
     assert reply == @msg

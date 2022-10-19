@@ -8,12 +8,11 @@ defmodule Membrane.Testing.EndpointTest do
     generator = fn _state, _size -> nil end
 
     assert {:ok, %{output: ^generator, generator_state: :abc}} =
-             Endpoint.handle_init(%Endpoint{output: {:abc, generator}})
+             Endpoint.handle_init(%{}, %Endpoint{output: {:abc, generator}})
   end
 
   test "Endpoint sends caps on play" do
-    assert {{:ok, caps: {:output, :caps}}, _state} =
-             Endpoint.handle_prepared_to_playing(nil, %{caps: :caps})
+    assert {{:ok, caps: {:output, :caps}}, _state} = Endpoint.handle_playing(nil, %{caps: :caps})
   end
 
   describe "Handle write" do

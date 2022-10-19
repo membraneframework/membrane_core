@@ -50,7 +50,7 @@ defmodule Membrane.Testing.Endpoint do
               ]
 
   @impl true
-  def handle_init(opts) do
+  def handle_init(_ctx, opts) do
     opts = Map.from_struct(opts)
 
     case opts.output do
@@ -63,10 +63,10 @@ defmodule Membrane.Testing.Endpoint do
   end
 
   @impl true
-  def handle_prepared_to_playing(_context, %{autodemand: true} = state),
+  def handle_playing(_context, %{autodemand: true} = state),
     do: {{:ok, demand: :input, caps: {:output, state.caps}}, state}
 
-  def handle_prepared_to_playing(_context, state),
+  def handle_playing(_context, state),
     do: {{:ok, caps: {:output, state.caps}}, state}
 
   @impl true

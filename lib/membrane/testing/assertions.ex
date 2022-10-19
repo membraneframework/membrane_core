@@ -142,65 +142,12 @@ defmodule Membrane.Testing.Assertions do
     end
   end
 
-  @doc """
-  Asserts that pipeline's playback state (see `Membrane.PlaybackState`)
-  changed or will change from `previous_state` to `current_state` within
-  the `timeout` period specified in milliseconds.
-
-  The `prev_state` and `current_state` must be match patterns.
-
-  Assertion can be either made by providing state before and after the change as
-  atoms:
-
-         assert_pipeline_playback_changed(pipeline, :prepared, :playing)
-
-  Or by using an `_` to assert on change from any state to other:
-
-        assert_pipeline_playback_changed(pipeline, _, :playing)
-  """
-  defmacro assert_pipeline_playback_changed(
-             pipeline,
-             previous_state,
-             current_state,
-             timeout \\ @default_timeout
-           ) do
-    with :ok <- validate_playback_change(previous_state, current_state) do
-      pattern =
-        quote do: {:playback_state_changed, unquote(previous_state), unquote(current_state)}
-
-      assert_receive_from_pipeline(pipeline, pattern, timeout, nil)
-    else
-      {:error, flunk} -> flunk
-    end
+  defmacro assert_pipeline_setup(pipeline, timeout \\ @default_timeout) do
+    assert_receive_from_pipeline(pipeline, :setup, timeout)
   end
 
-  defp validate_playback_change(previous_state, current_state) do
-    valid_changes = [
-      {:stopped, :prepared},
-      {:prepared, :playing},
-      {:playing, :prepared},
-      {:prepared, :stopped}
-    ]
-
-    are_arguments_values = is_atom(previous_state) and is_atom(current_state)
-
-    if are_arguments_values and {previous_state, current_state} not in valid_changes do
-      transitions =
-        Enum.map_join(valid_changes, "\n", fn {from, to} ->
-          "  " <> to_string(from) <> " -> " <> to_string(to)
-        end)
-
-      message = """
-      Transition from #{previous_state} to #{current_state} is not valid.
-      Valid transitions are:
-      #{transitions}
-      """
-
-      flunk = quote do: flunk(unquote(message))
-      {:error, flunk}
-    else
-      :ok
-    end
+  defmacro assert_pipeline_play(pipeline, timeout \\ @default_timeout) do
+    assert_receive_from_pipeline(pipeline, :play, timeout)
   end
 
   @doc """

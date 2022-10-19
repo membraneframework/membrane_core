@@ -59,7 +59,7 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
       ]
       |> ParentSpec.link_linear()
 
-    assert {:ok, pid} = Pipeline.start_link(links: links)
+    pid = Pipeline.start_link_supervised!(links: links)
     assert_start_of_stream(pid, :sink)
     assert_sink_caps(pid, :sink, %RemoteStream{})
 
@@ -70,6 +70,5 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
     end
 
     assert_end_of_stream(pid, :sink)
-    Pipeline.terminate(pid, blocking?: true)
   end
 end

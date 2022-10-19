@@ -26,7 +26,7 @@ defmodule Membrane.Bin do
 
   @typedoc """
   Defines options that can be passed to `start_link/3` and received
-  in `c:handle_init/1` callback.
+  in `c:handle_init/2` callback.
   """
   @type options_t :: struct | nil
 
@@ -36,23 +36,19 @@ defmodule Membrane.Bin do
   @type name_t :: any()
 
   @doc """
-  Callback invoked on initialization of bin process. It should parse options
-  and initialize bin's internal state. Internally it is invoked inside
-  `c:GenServer.init/1` callback.
+  Callback invoked on initialization of bin.
+
+  This callback is synchronous: the parent waits until it finishes. Also, any failures
+  that happen in this callback crash the parent as well, regardless of crash groups.
+  For these reasons, it's important to do any long-lasting or complex work in `c:handle_setup/2`,
+  while `handle_init` should be used for things like parsing options, initializing state or
+  spawning children.
   """
-  @callback handle_init(options :: options_t) :: callback_return_t()
+  @callback handle_init(context :: CallbackContext.Init.t(), options :: options_t) ::
+              callback_return_t()
 
   @doc """
-  Callback invoked when bin is shutting down.
-  Internally called in `c:GenServer.terminate/2` callback.
-
-  Useful for any cleanup required.
-  """
-  @callback handle_shutdown(reason, state :: state_t) :: :ok
-            when reason: :normal | :shutdown | {:shutdown, any} | term()
-
-  @doc """
-  Callback that is called when new pad has beed added to bin. Executed
+  Callback that is called when new pad has been added to bin. Executed
   ONLY for dynamic pads.
   """
   @callback handle_pad_added(
@@ -62,7 +58,7 @@ defmodule Membrane.Bin do
             ) :: callback_return_t
 
   @doc """
-  Callback that is called when some pad of the bin has beed removed. Executed
+  Callback that is called when some pad of the bin has been removed. Executed
   ONLY for dynamic pads.
   """
   @callback handle_pad_removed(
@@ -72,53 +68,23 @@ defmodule Membrane.Bin do
             ) :: callback_return_t
 
   @doc """
-  Callback invoked when bin transition from `:stopped` to `:prepared` state has finished,
-  that is all of its children are prepared to enter `:playing` state.
-  """
-  @callback handle_stopped_to_prepared(
-              context :: CallbackContext.PlaybackChange.t(),
-              state :: state_t
-            ) ::
-              callback_return_t
+  Callback invoked on bin startup, right after `c:handle_init/2`.
 
-  @doc """
-  Callback invoked when bin transition from `:playing` to `:prepared` state has finished,
-  that is all of its children are prepared to be stopped.
+  Any long-lasting or complex initialization should happen here.
   """
-  @callback handle_playing_to_prepared(
-              context :: CallbackContext.PlaybackChange.t(),
-              state :: state_t
-            ) ::
-              callback_return_t
-
-  @doc """
-  Callback invoked when bin is in `:playing` state, i.e. all its children
-  are in this state.
-  """
-  @callback handle_prepared_to_playing(
-              context :: CallbackContext.PlaybackChange.t(),
-              state :: state_t
-            ) ::
-              callback_return_t
-
-  @doc """
-  Callback invoked when bin is in `:playing` state, i.e. all its children
-  are in this state.
-  """
-  @callback handle_prepared_to_stopped(
-              context :: CallbackContext.PlaybackChange.t(),
-              state :: state_t
-            ) ::
-              callback_return_t
-
-  @doc """
-  Callback invoked when bin is in `:terminating` state, i.e. all its children
-  are in this state.
-  """
-  @callback handle_stopped_to_terminating(
-              context :: CallbackContext.PlaybackChange.t(),
+  @callback handle_setup(
+              context :: CallbackContext.Setup.t(),
               state :: state_t
             ) :: callback_return_t
+
+  @doc """
+  Callback invoked when bin switches the playback to `:playing`.
+  """
+  @callback handle_playing(
+              context :: CallbackContext.Playing.t(),
+              state :: state_t
+            ) ::
+              callback_return_t
 
   @doc """
   Callback invoked when a notification comes in from an element.
@@ -143,14 +109,13 @@ defmodule Membrane.Bin do
   Callback invoked when bin receives a message that is not recognized
   as an internal membrane message.
 
-  Useful for receiving data sent from NIFs or other stuff.
+  Can be used for receiving data from non-membrane processes.
   """
   @callback handle_info(
               message :: any,
-              context :: CallbackContext.Other.t(),
+              context :: CallbackContext.Info.t(),
               state :: state_t
-            ) ::
-              callback_return_t
+            ) :: callback_return_t
 
   @doc """
   Callback invoked when a child element starts processing stream via given pad.
@@ -173,11 +138,7 @@ defmodule Membrane.Bin do
             ) :: callback_return_t
 
   @doc """
-  Callback invoked when `Membrane.ParentSpec` is linked and in the same playback
-  state as bin.
-
-  This callback can be started from `c:handle_init/1` callback or as
-  `t:Membrane.Bin.Action.spec_t/0` action.
+  Callback invoked when children of `Membrane.ParentSpec` are started.
   """
   @callback handle_spec_started(
               children :: [Child.name_t()],
@@ -195,22 +156,27 @@ defmodule Membrane.Bin do
               state :: state_t
             ) :: callback_return_t
 
-  @optional_callbacks handle_init: 1,
-                      handle_shutdown: 2,
+  @doc """
+  A callback invoked when the bin is being removed by its parent.
+
+  By default it returns `t:Membrane.Bin.Action.terminate_t/0` with reason `:normal`.
+  """
+  @callback handle_terminate_request(context :: CallbackContext.TerminateRequest.t(), state_t) ::
+              callback_return_t()
+
+  @optional_callbacks handle_init: 2,
                       handle_pad_added: 3,
                       handle_pad_removed: 3,
-                      handle_stopped_to_prepared: 2,
-                      handle_playing_to_prepared: 2,
-                      handle_prepared_to_playing: 2,
-                      handle_prepared_to_stopped: 2,
-                      handle_stopped_to_terminating: 2,
+                      handle_setup: 2,
+                      handle_playing: 2,
                       handle_info: 3,
                       handle_spec_started: 3,
                       handle_element_start_of_stream: 4,
                       handle_element_end_of_stream: 4,
                       handle_child_notification: 4,
                       handle_parent_notification: 3,
-                      handle_tick: 3
+                      handle_tick: 3,
+                      handle_terminate_request: 2
 
   @doc PadsSpecs.def_pad_docs(:input, :bin)
   defmacro def_input_pad(name, spec) do
@@ -314,10 +280,11 @@ defmodule Membrane.Bin do
       def membrane_bin?, do: true
 
       @impl true
-      def handle_init(_options), do: {:ok, %{}}
+      def handle_init(_ctx, %_opt_struct{} = options),
+        do: {:ok, options |> Map.from_struct()}
 
       @impl true
-      def handle_shutdown(_reason, _state), do: :ok
+      def handle_init(_ctx, options), do: {:ok, options}
 
       @impl true
       def handle_pad_added(_pad, _ctx, state), do: {:ok, state}
@@ -326,19 +293,10 @@ defmodule Membrane.Bin do
       def handle_pad_removed(_pad, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_stopped_to_prepared(_ctx, state), do: {:ok, state}
+      def handle_setup(_ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_prepared_to_playing(_ctx, state), do: {:ok, state}
-
-      @impl true
-      def handle_playing_to_prepared(_ctx, state), do: {:ok, state}
-
-      @impl true
-      def handle_prepared_to_stopped(_ctx, state), do: {:ok, state}
-
-      @impl true
-      def handle_stopped_to_terminating(_ctx, state), do: {:ok, state}
+      def handle_playing(_ctx, state), do: {:ok, state}
 
       @impl true
       def handle_info(message, _ctx, state), do: {:ok, state}
@@ -358,21 +316,21 @@ defmodule Membrane.Bin do
       @impl true
       def handle_parent_notification(_notification, _ctx, state), do: {:ok, state}
 
-      defoverridable handle_init: 1,
-                     handle_shutdown: 2,
+      @impl true
+      def handle_terminate_request(_ctx, state), do: {{:ok, terminate: :normal}, state}
+
+      defoverridable handle_init: 2,
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
-                     handle_stopped_to_prepared: 2,
-                     handle_playing_to_prepared: 2,
-                     handle_prepared_to_playing: 2,
-                     handle_prepared_to_stopped: 2,
-                     handle_stopped_to_terminating: 2,
+                     handle_setup: 2,
+                     handle_playing: 2,
                      handle_info: 3,
                      handle_spec_started: 3,
                      handle_element_start_of_stream: 4,
                      handle_element_end_of_stream: 4,
                      handle_child_notification: 4,
-                     handle_parent_notification: 3
+                     handle_parent_notification: 3,
+                     handle_terminate_request: 2
     end
   end
 end

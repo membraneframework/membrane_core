@@ -13,8 +13,8 @@ defmodule Membrane.Core.EndpointTest do
     test "with one endpoint and filter" do
       buffers = ['a', 'b', 'c']
 
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(
+      pipeline =
+        Testing.Pipeline.start_link_supervised!(
           children: [
             endpoint: %Testing.Endpoint{output: buffers},
             filter: TestFilter
@@ -31,8 +31,8 @@ defmodule Membrane.Core.EndpointTest do
     test "with one endpoint and many filters in between" do
       buffers = ['a', 'b', 'c']
 
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(
+      pipeline =
+        Testing.Pipeline.start_link_supervised!(
           children: [
             endpoint: %Testing.Endpoint{output: buffers},
             filter1: TestFilter,
@@ -52,8 +52,7 @@ defmodule Membrane.Core.EndpointTest do
   end
 
   defp assert_data_flows_through(pipeline, buffers, receiving_element) do
-    assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+    assert_pipeline_play(pipeline)
 
     assert_start_of_stream(pipeline, ^receiving_element)
 
@@ -63,6 +62,5 @@ defmodule Membrane.Core.EndpointTest do
     end)
 
     assert_end_of_stream(pipeline, ^receiving_element)
-    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 end

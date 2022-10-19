@@ -16,6 +16,7 @@ defmodule Membrane.Sink do
   """
 
   alias Membrane.{Buffer, Element, Pad}
+  alias Membrane.Core.DocsHelper
   alias Membrane.Element.CallbackContext
 
   @doc """
@@ -78,4 +79,9 @@ defmodule Membrane.Sink do
                      handle_write: 4
     end
   end
+
+  DocsHelper.add_callbacks_list_to_moduledoc(
+    __MODULE__,
+    [Membrane.Element.Base, Membrane.Element.WithInputPads]
+  )
 end

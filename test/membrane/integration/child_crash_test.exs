@@ -9,8 +9,8 @@ defmodule Membrane.Integration.ChildCrashTest do
   test "Element that is not member of any crash group crashed when pipeline is in playing state" do
     Process.flag(:trap_exit, true)
 
-    assert {:ok, pipeline_pid} =
-             Testing.Pipeline.start_link(
+    assert pipeline_pid =
+             Testing.Pipeline.start_link_supervised!(
                module: ChildCrashTest.Pipeline,
                custom_args: %{
                  sink: Testing.Sink
@@ -23,7 +23,7 @@ defmodule Membrane.Integration.ChildCrashTest do
       [:sink, :center_filter, :filter_1_1, :filter_2_1, :source_1]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
-    assert_pipeline_playback_changed(pipeline_pid, _, :playing)
+    assert_pipeline_play(pipeline_pid)
 
     ChildCrashTest.Pipeline.crash_child(filter_1_1_pid)
 
@@ -40,7 +40,7 @@ defmodule Membrane.Integration.ChildCrashTest do
   test "small pipeline with one crash group test" do
     Process.flag(:trap_exit, true)
 
-    assert {:ok, pipeline_pid} = Testing.Pipeline.start_link(module: ChildCrashTest.Pipeline)
+    pipeline_pid = Testing.Pipeline.start_link_supervised!(module: ChildCrashTest.Pipeline)
 
     ChildCrashTest.Pipeline.add_path(pipeline_pid, [], :source, {1, :temporary})
 
@@ -48,14 +48,13 @@ defmodule Membrane.Integration.ChildCrashTest do
       [:source, :center_filter, :sink]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
-    assert_pipeline_playback_changed(pipeline_pid, _, :playing)
+    assert_pipeline_play(pipeline_pid)
 
     Process.exit(source_pid, :crash)
     # member of group is dead
     assert_pid_dead(source_pid)
 
     # other parts of pipeline are alive
-    assert_pid_alive(source_pid)
     assert_pid_alive(center_filter_pid)
     assert_pid_alive(sink_pid)
     assert_pid_alive(pipeline_pid)
@@ -66,7 +65,7 @@ defmodule Membrane.Integration.ChildCrashTest do
   test "Crash group consisting of bin crashes" do
     Process.flag(:trap_exit, true)
 
-    assert {:ok, pipeline_pid} = Testing.Pipeline.start_link(module: ChildCrashTest.Pipeline)
+    pipeline_pid = Testing.Pipeline.start_link_supervised!(module: ChildCrashTest.Pipeline)
 
     ChildCrashTest.Pipeline.add_bin(pipeline_pid, :bin_1, :source_1, {1, :temporary})
 
@@ -96,7 +95,7 @@ defmodule Membrane.Integration.ChildCrashTest do
       ]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
-    assert_pipeline_playback_changed(pipeline_pid, _, :playing)
+    assert_pipeline_play(pipeline_pid)
 
     filter_1_pid = get_pid(:filter, bin_1_pid)
 
@@ -118,7 +117,7 @@ defmodule Membrane.Integration.ChildCrashTest do
   test "Crash two groups one after another" do
     Process.flag(:trap_exit, true)
 
-    assert {:ok, pipeline_pid} = Testing.Pipeline.start_link(module: ChildCrashTest.Pipeline)
+    pipeline_pid = Testing.Pipeline.start_link_supervised!(module: ChildCrashTest.Pipeline)
 
     ChildCrashTest.Pipeline.add_path(
       pipeline_pid,
@@ -156,7 +155,7 @@ defmodule Membrane.Integration.ChildCrashTest do
       ]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
-    assert_pipeline_playback_changed(pipeline_pid, _, :playing)
+    assert_pipeline_play(pipeline_pid)
 
     ChildCrashTest.Pipeline.crash_child(filter_1_1_pid)
 

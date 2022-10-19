@@ -62,62 +62,34 @@ defmodule Membrane.Element.Base do
           {:ok | {:ok, [Action.t()]} | {:error, any}, Element.state_t()} | {:error, any}
 
   @doc """
-  Callback invoked on initialization of element process. It should parse options
-  and initialize element internal state. Internally it is invoked inside
-  `c:GenServer.init/1` callback.
+  Callback invoked on initialization of element.
+
+  This callback is synchronous: the parent waits until it finishes. Also, any failures
+  that happen in this callback crash the parent as well, regardless of crash groups.
+  For these reasons, it's important to do any long-lasting or complex work in `c:handle_setup/2`,
+  while `handle_init` should be used for things like parsing options or initializing state.
   """
-  @callback handle_init(options :: Element.options_t()) :: callback_return_t
+  @callback handle_init(context :: CallbackContext.Init.t(), options :: Element.options_t()) ::
+              callback_return_t
 
   @doc """
-  Callback invoked when element goes to `:prepared` state from state `:stopped` and should get
-  ready to enter `:playing` state.
+  Callback invoked on element startup, right after `c:handle_init/2`.
 
-  Usually most resources used by the element are allocated here.
-  For example, if element opens a file, this is the place to try to actually open it
-  and return error if that has failed. Such resources should be released in `c:handle_prepared_to_stopped/2`.
+  Any long-lasting or complex initialization should happen here.
   """
-  @callback handle_stopped_to_prepared(
-              context :: CallbackContext.PlaybackChange.t(),
+  @callback handle_setup(
+              context :: CallbackContext.Setup.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
   @doc """
-  Callback invoked when element goes to `:prepared` state from state `:playing` and should get
-  ready to enter `:stopped` state.
+  Callback invoked when bin switches the playback to `:playing`.
 
-  All resources allocated in `c:handle_prepared_to_playing/2` callback should be released here, and no more buffers or
-  demands should be sent.
+  From this point, element can send and receive buffers, events, caps and demands
+  through its pads.
   """
-  @callback handle_playing_to_prepared(
-              context :: CallbackContext.PlaybackChange.t(),
-              state :: Element.state_t()
-            ) :: callback_return_t
-
-  @doc """
-  Callback invoked when element is supposed to start playing (goes from state `:prepared` to `:playing`).
-
-  This is moment when initial demands are sent and first buffers are generated
-  if there are any pads in the push mode.
-  """
-  @callback handle_prepared_to_playing(
-              context :: CallbackContext.PlaybackChange.t(),
-              state :: Element.state_t()
-            ) :: callback_return_t
-
-  @doc """
-  Callback invoked when element is supposed to stop (goes from state `:prepared` to `:stopped`).
-
-  Usually this is the place for releasing all remaining resources
-  used by the element. For example, if element opens a file in `c:handle_stopped_to_prepared/2`,
-  this is the place to close it.
-  """
-  @callback handle_prepared_to_stopped(
-              context :: CallbackContext.PlaybackChange.t(),
-              state :: Element.state_t()
-            ) :: callback_return_t
-
-  @callback handle_stopped_to_terminating(
-              context :: CallbackContext.PlaybackChange.t(),
+  @callback handle_playing(
+              context :: CallbackContext.Playing.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -129,7 +101,7 @@ defmodule Membrane.Element.Base do
   """
   @callback handle_info(
               message :: any(),
-              context :: CallbackContext.Other.t(),
+              context :: CallbackContext.Info.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -186,11 +158,15 @@ defmodule Membrane.Element.Base do
             ) :: callback_return_t
 
   @doc """
-  Callback invoked when element is shutting down just before process is exiting.
-  Internally called in `c:GenServer.terminate/2` callback.
+  Callback invoked when element is removed by its parent.
+
+  By default it returns `t:Membrane.Element.Action.terminate_t/0` with reason `:normal`.
   """
-  @callback handle_shutdown(reason, state :: Element.state_t()) :: :ok
-            when reason: :normal | :shutdown | {:shutdown, any} | term()
+  @callback handle_terminate_request(
+              context :: CallbackContext.TerminateRequest.t(),
+              state :: Element.state_t()
+            ) ::
+              callback_return_t()
 
   @doc """
   A callback for constructing struct. Will be defined by `def_options/1` if used.
@@ -206,18 +182,15 @@ defmodule Membrane.Element.Base do
   """
   @callback __struct__(kv :: [atom | {atom, any()}]) :: struct()
 
-  @optional_callbacks handle_init: 1,
-                      handle_stopped_to_prepared: 2,
-                      handle_prepared_to_playing: 2,
-                      handle_playing_to_prepared: 2,
-                      handle_prepared_to_stopped: 2,
+  @optional_callbacks handle_init: 2,
+                      handle_setup: 2,
+                      handle_playing: 2,
                       handle_info: 3,
                       handle_pad_added: 3,
                       handle_pad_removed: 3,
                       handle_event: 4,
                       handle_tick: 3,
                       handle_parent_notification: 3,
-                      handle_shutdown: 2,
                       __struct__: 0,
                       __struct__: 1
 
@@ -300,23 +273,17 @@ defmodule Membrane.Element.Base do
       def membrane_element?, do: true
 
       @impl true
-      def handle_init(%opt_struct{} = options), do: {:ok, options |> Map.from_struct()}
-      def handle_init(options), do: {:ok, options}
+      def handle_init(_ctx, %_opt_struct{} = options),
+        do: {:ok, options |> Map.from_struct()}
 
       @impl true
-      def handle_stopped_to_prepared(_context, state), do: {:ok, state}
+      def handle_init(_ctx, options), do: {:ok, options}
 
       @impl true
-      def handle_prepared_to_playing(_context, state), do: {:ok, state}
+      def handle_setup(_context, state), do: {:ok, state}
 
       @impl true
-      def handle_playing_to_prepared(_context, state), do: {:ok, state}
-
-      @impl true
-      def handle_prepared_to_stopped(_context, state), do: {:ok, state}
-
-      @impl true
-      def handle_stopped_to_terminating(_context, state), do: {:ok, state}
+      def handle_playing(_context, state), do: {:ok, state}
 
       @impl true
       def handle_info(_message, _context, state), do: {:ok, state}
@@ -334,19 +301,17 @@ defmodule Membrane.Element.Base do
       def handle_parent_notification(_notification, _ctx, state), do: {:ok, state}
 
       @impl true
-      def handle_shutdown(_reason, _state), do: :ok
+      def handle_terminate_request(_ctx, state), do: {{:ok, terminate: :normal}, state}
 
-      defoverridable handle_init: 1,
-                     handle_stopped_to_prepared: 2,
-                     handle_playing_to_prepared: 2,
-                     handle_prepared_to_playing: 2,
-                     handle_prepared_to_stopped: 2,
+      defoverridable handle_init: 2,
+                     handle_setup: 2,
+                     handle_playing: 2,
                      handle_info: 3,
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
                      handle_event: 4,
                      handle_parent_notification: 3,
-                     handle_shutdown: 2
+                     handle_terminate_request: 2
     end
   end
 end

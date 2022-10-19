@@ -8,12 +8,12 @@ defmodule Membrane.Support.Distributed do
     def_options output: [spec: list(any())]
 
     @impl true
-    def handle_init(opts) do
+    def handle_init(_ctx, opts) do
       {:ok, opts.output}
     end
 
     @impl true
-    def handle_prepared_to_playing(_ctx, list) do
+    def handle_playing(_ctx, list) do
       {{:ok, caps: {:output, :some}, start_timer: {:timer, Membrane.Time.milliseconds(100)}},
        list}
     end
@@ -37,7 +37,7 @@ defmodule Membrane.Support.Distributed do
     def_input_pad :input, caps: :any, demand_unit: :buffers, mode: :pull
 
     @impl true
-    def handle_prepared_to_playing(_ctx, state) do
+    def handle_playing(_ctx, state) do
       {{:ok, demand: {:input, 1}}, state}
     end
 

@@ -11,7 +11,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     def_output_pad(:output, caps: :any, mode: :pull)
 
     @impl true
-    def handle_init(_options) do
+    def handle_init(_ctx, _options) do
       {:ok, %{}}
     end
 
@@ -42,7 +42,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
       links: Membrane.ParentSpec.link_linear(children)
     ]
 
-    {:ok, pipeline} = Pipeline.start(options)
+    pipeline = Pipeline.start_supervised!(options)
     Pipeline.message_child(pipeline, :source, {:send_your_pid, self()})
 
     source_pid =
@@ -51,7 +51,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
       end
 
     source_ref = Process.monitor(source_pid)
-    assert_pipeline_playback_changed(pipeline, _, :playing)
+    assert_pipeline_play(pipeline)
     Pipeline.message_child(pipeline, :source, :send_buffer)
     assert_receive {:DOWN, ^source_ref, :process, ^source_pid, {reason, _stack_trace}}
     assert %Membrane.ElementError{message: action_error_msg} = reason
@@ -68,10 +68,9 @@ defmodule Membrane.FailWhenNoCapsAreSent do
       links: Membrane.ParentSpec.link_linear(children)
     ]
 
-    {:ok, pipeline} = Pipeline.start(options)
+    pipeline = Pipeline.start_supervised!(options)
     ref = Process.monitor(pipeline)
     assert_start_of_stream(pipeline, :sink)
     refute_receive {:DOWN, ^ref, :process, ^pipeline, {:shutdown, :child_crash}}
-    Pipeline.terminate(pipeline, blocking?: true)
   end
 end

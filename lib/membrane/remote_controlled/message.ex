@@ -1,28 +1,24 @@
 defmodule Membrane.RemoteControlled.Message do
   @moduledoc """
   An abstract module aggregating all the messages that can be sent by the `RemoteControlled.Pipeline`.
-  The available messages are:
-  * `Membrane.RemoteControlled.Message.PlaybackState.t()`
-  * `Membrane.RemoteControlled.Message.StartOfStream.t()`
-  * `Membrane.RemoteControlled.Message.EndOfStream.t()`
-  * `Membrane.RemoteControlled.Message.Notification.t()`
-  * `Membrane.RemoteControlled.Message.Terminated.t()`
+
+  Check `t:t/0` for available messages.
   """
 
   @type t ::
-          __MODULE__.PlaybackState.t()
+          __MODULE__.Playing.t()
           | __MODULE__.StartOfStream.t()
           | __MODULE__.EndOfStream.t()
           | __MODULE__.Notification.t()
           | __MODULE__.Terminated.t()
 
-  defmodule PlaybackState do
+  defmodule Playing do
     @moduledoc """
-    Message sent when the pipeline changes its playback state
+    Message sent when the pipeline starts playing
     """
-    @type t :: %__MODULE__{from: pid(), state: Membrane.PlaybackState.t()}
+    @type t :: %__MODULE__{from: pid()}
 
-    @enforce_keys [:from, :state]
+    @enforce_keys [:from]
     defstruct @enforce_keys
   end
 
@@ -72,9 +68,9 @@ defmodule Membrane.RemoteControlled.Message do
     @moduledoc """
     Message sent when the pipeline gracefully terminates.
     """
-    @type t :: %__MODULE__{from: pid(), reason: :normal | :shutdown | {:shutdown, any()} | term()}
+    @type t :: %__MODULE__{from: pid()}
 
-    @enforce_keys [:from, :reason]
+    @enforce_keys [:from]
     defstruct @enforce_keys
   end
 end

@@ -18,14 +18,22 @@ defmodule Membrane.Core.Element do
   use Bunch
   use GenServer
 
-  alias Membrane.{Clock, Sync}
-  alias Membrane.ComponentPath
-  alias Membrane.Core.Element
-  alias Membrane.Core.Element.{PadController, PlaybackBuffer, State}
-  alias Membrane.Core.{Child, Message, PlaybackHandler, Telemetry, TimerController}
+  alias Membrane.{Clock, Core, ResourceGuard, Sync}
 
-  require Membrane.Core.Message
-  require Membrane.Core.Telemetry
+  alias Membrane.Core.{SubprocessSupervisor, TimerController}
+
+  alias Membrane.Core.Element.{
+    BufferController,
+    CapsController,
+    DemandController,
+    EventController,
+    LifecycleController,
+    PadController,
+    State
+  }
+
+  require Membrane.Core.Message, as: Message
+  require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
 
   @type options_t :: %{
@@ -36,7 +44,10 @@ defmodule Membrane.Core.Element do
           sync: Sync.t(),
           parent: pid,
           parent_clock: Clock.t(),
-          log_metadata: Keyword.t()
+          parent_path: Membrane.ComponentPath.path_t(),
+          log_metadata: Logger.metadata(),
+          subprocess_supervisor: pid(),
+          parent_supervisor: pid()
         }
 
   @doc """
@@ -59,66 +70,61 @@ defmodule Membrane.Core.Element do
   defp do_start(method, options) do
     %{module: module, name: name, node: node, user_options: user_options} = options
 
-    if Membrane.Element.element?(options.module) do
-      Membrane.Logger.debug("""
-      Element #{method}: #{inspect(name)}
-      node: #{node},
-      module: #{inspect(module)},
-      element options: #{inspect(user_options)},
-      method: #{method}
-      """)
+    Membrane.Logger.debug("""
+    Element #{method}: #{inspect(name)}
+    node: #{node},
+    module: #{inspect(module)},
+    element options: #{inspect(user_options)},
+    method: #{method}
+    """)
 
-      # rpc if necessary
-      if node do
-        :rpc.call(node, GenServer, method, [__MODULE__, options])
-      else
-        apply(GenServer, method, [__MODULE__, options])
-      end
+    # rpc if necessary
+    if node do
+      result = :rpc.call(node, GenServer, :start, [__MODULE__, options])
+
+      # TODO: use an atomic way of linking once https://github.com/erlang/otp/issues/6375 is solved
+      with {:start_link, {:ok, pid}} <- {method, result}, do: Process.link(pid)
+      result
     else
-      raise """
-      Cannot start element, passed module #{inspect(module)} is not a Membrane Element.
-      Make sure that given module is the right one and it uses Membrane.{Source | Filter | Endpoint | Sink}
-      """
+      apply(GenServer, method, [__MODULE__, options])
     end
-  end
-
-  @doc """
-  Stops given element process.
-
-  It will wait for reply for amount of time passed as second argument
-  (in milliseconds).
-
-  Will trigger calling `c:Membrane.Element.Base.handle_shutdown/2`
-  callback.
-  """
-  @spec shutdown(pid, timeout) :: :ok
-  def shutdown(server, timeout \\ 5000) do
-    GenServer.stop(server, :normal, timeout)
-    :ok
   end
 
   @impl GenServer
   def init(options) do
-    %{parent: parent, name: name, log_metadata: log_metadata} = options
+    Process.link(options.parent_supervisor)
 
-    Process.monitor(parent)
-    name_str = if String.valid?(name), do: name, else: inspect(name)
-    :ok = Membrane.Logger.set_prefix(name_str)
-    :ok = Logger.metadata(log_metadata)
-    :ok = ComponentPath.set_and_append(log_metadata[:parent_path] || [], name_str)
+    observability_config = %{
+      name: options.name,
+      component_type: :bin,
+      pid: self(),
+      parent_path: options.parent_path,
+      log_metadata: options.log_metadata
+    }
+
+    Membrane.Core.Observability.setup(observability_config)
+    SubprocessSupervisor.set_parent_component(options.subprocess_supervisor, observability_config)
+
+    {:ok, resource_guard} =
+      SubprocessSupervisor.start_utility(options.subprocess_supervisor, {ResourceGuard, self()})
 
     Telemetry.report_init(:element)
 
-    state = Map.take(options, [:module, :name, :parent_clock, :sync, :parent]) |> State.new()
+    ResourceGuard.register_resource(resource_guard, fn -> Telemetry.report_terminate(:element) end)
 
-    state = Element.LifecycleController.handle_init(options.user_options, state)
-    {:ok, state}
+    state =
+      Map.take(options, [:module, :name, :parent_clock, :sync, :parent, :subprocess_supervisor])
+      |> Map.put(:resource_guard, resource_guard)
+      |> State.new()
+
+    state = LifecycleController.handle_init(options.user_options, state)
+    {:ok, state, {:continue, :setup}}
   end
 
   @impl GenServer
-  def terminate(reason, state) do
-    Telemetry.report_terminate(:element)
-    Element.LifecycleController.handle_shutdown(reason, state)
+  def handle_continue(:setup, state) do
+    state = LifecycleController.handle_setup(state)
+    {:noreply, state}
   end
 
   @impl GenServer
@@ -149,12 +155,6 @@ defmodule Membrane.Core.Element do
   end
 
   @impl GenServer
-  def handle_info({:DOWN, _ref, :process, parent_pid, reason}, %{parent_pid: parent_pid} = state) do
-    :ok = Element.LifecycleController.handle_pipeline_down(reason, state)
-    {:stop, {:shutdown, :parent_crash}, state}
-  end
-
-  @impl GenServer
   def handle_info(message, state) do
     Telemetry.report_metric(
       :queue_len,
@@ -166,20 +166,32 @@ defmodule Membrane.Core.Element do
 
   @compile {:inline, do_handle_info: 2}
 
-  defp do_handle_info(Message.new(:change_playback_state, new_playback_state), state) do
-    {:ok, state} =
-      PlaybackHandler.change_playback_state(
-        new_playback_state,
-        Element.LifecycleController,
-        state
-      )
-
+  defp do_handle_info(Message.new(:demand, size, _opts) = msg, state) do
+    pad_ref = Message.for_pad(msg)
+    state = DemandController.handle_demand(pad_ref, size, state)
     {:noreply, state}
   end
 
-  defp do_handle_info(Message.new(type, _args, _opts) = msg, state)
-       when type in [:demand, :buffer, :caps, :event] do
-    state = PlaybackBuffer.store(msg, state)
+  defp do_handle_info(Message.new(:buffer, buffers, _opts) = msg, state) do
+    pad_ref = Message.for_pad(msg)
+    state = BufferController.handle_buffer(pad_ref, buffers, state)
+    {:noreply, state}
+  end
+
+  defp do_handle_info(Message.new(:caps, caps, _opts) = msg, state) do
+    pad_ref = Message.for_pad(msg)
+    state = CapsController.handle_caps(pad_ref, caps, state)
+    {:noreply, state}
+  end
+
+  defp do_handle_info(Message.new(:event, event, _opts) = msg, state) do
+    pad_ref = Message.for_pad(msg)
+    state = EventController.handle_event(pad_ref, event, state)
+    {:noreply, state}
+  end
+
+  defp do_handle_info(Message.new(:play), state) do
+    state = LifecycleController.handle_playing(state)
     {:noreply, state}
   end
 
@@ -193,13 +205,13 @@ defmodule Membrane.Core.Element do
     {:noreply, state}
   end
 
-  defp do_handle_info({:membrane_clock_ratio, clock, ratio}, state) do
-    state = TimerController.handle_clock_update(clock, ratio, state)
+  defp do_handle_info(Message.new(:parent_notification, notification), state) do
+    state = Core.Child.LifecycleController.handle_parent_notification(notification, state)
     {:noreply, state}
   end
 
-  defp do_handle_info(Message.new(:parent_notification, notification), state) do
-    state = Child.LifecycleController.handle_parent_notification(notification, state)
+  defp do_handle_info(Message.new(:terminate), state) do
+    state = LifecycleController.handle_terminate_request(state)
     {:noreply, state}
   end
 
@@ -207,8 +219,13 @@ defmodule Membrane.Core.Element do
     raise Membrane.ElementError, "Received invalid message #{inspect(message)}"
   end
 
+  defp do_handle_info({:membrane_clock_ratio, clock, ratio}, state) do
+    state = TimerController.handle_clock_update(clock, ratio, state)
+    {:noreply, state}
+  end
+
   defp do_handle_info(message, state) do
-    state = Element.LifecycleController.handle_info(message, state)
+    state = LifecycleController.handle_info(message, state)
     {:noreply, state}
   end
 end

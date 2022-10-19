@@ -28,98 +28,21 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
     end
   end
 
-  describe "assert_pipeline_playback_changed" do
-    test "does not flunk when state change is handled", %{
-      state: state
-    } do
-      Pipeline.handle_prepared_to_stopped(context(), state)
-      assert_pipeline_playback_changed(self(), :prepared, :stopped)
+  test "assert_pipeline_setup works", %{state: state} do
+    Pipeline.handle_setup(context(), state)
+    assert_pipeline_setup(self())
+
+    assert_raise ExUnit.AssertionError, fn ->
+      assert_pipeline_setup(self(), 0)
     end
+  end
 
-    test "flunks when state is not changed" do
-      assert_raise ExUnit.AssertionError, fn ->
-        assert_pipeline_playback_changed(self(), :prepared, :stopped, 0)
-      end
-    end
+  test "assert_pipeline_play works", %{state: state} do
+    Pipeline.handle_playing(context(), state)
+    assert_pipeline_play(self())
 
-    test "flunks when state change does not match given one", %{state: state} do
-      Pipeline.handle_prepared_to_stopped(context(), state)
-
-      assert_raise ExUnit.AssertionError, fn ->
-        assert_pipeline_playback_changed(self(), :stopped, :prepared, 0)
-      end
-    end
-
-    test "supports pattern as argument", %{
-      state: state
-    } do
-      Pipeline.handle_prepared_to_stopped(context(), state)
-      prev_state = :prepared
-      current_state = :stopped
-      assert_pipeline_playback_changed(self(), ^prev_state, ^current_state)
-    end
-
-    test "flunks when state is not changed when patterns are provided" do
-      assert_raise ExUnit.AssertionError, fn ->
-        prev_state = :prepared
-        current_state = :stopped
-        assert_pipeline_playback_changed(self(), ^prev_state, ^current_state, 0)
-      end
-    end
-
-    test "flunks when state change does not match provided pattern", %{
-      state: state
-    } do
-      Pipeline.handle_stopped_to_prepared(context(), state)
-
-      assert_raise ExUnit.AssertionError, fn ->
-        prev_state = :prepared
-        current_state = :stopped
-        assert_pipeline_playback_changed(self(), ^prev_state, ^current_state, 0)
-      end
-    end
-
-    test "raises an error if invalid arguments are provided" do
-      pattern =
-        """
-        \\s*Transition from stopped to playing is not valid\.\
-        \\s*Valid transitions are:\
-        \\s*stopped -> prepared\
-        \\s*prepared -> playing\
-        \\s*playing -> prepared\
-        \\s*prepared -> stopped\s*
-        """
-        |> Regex.compile!()
-
-      assert_raise(
-        ExUnit.AssertionError,
-        pattern,
-        fn ->
-          assert_pipeline_playback_changed(self(), :stopped, :playing)
-        end
-      )
-    end
-
-    test "allows for wildcard as first argument", %{state: state} do
-      Pipeline.handle_prepared_to_stopped(context(), state)
-      assert_pipeline_playback_changed(self(), _, :stopped)
-    end
-
-    test "allows for wildcard as second argument", %{state: state} do
-      Pipeline.handle_playing_to_prepared(context(), state)
-      assert_pipeline_playback_changed(self(), :playing, _)
-    end
-
-    test "when using wildcard as first argument flunks if state hasn't changed" do
-      assert_raise(ExUnit.AssertionError, fn ->
-        assert_pipeline_playback_changed(self(), _, :stopped, 0)
-      end)
-    end
-
-    test "when using wildcard as second argument flunks if state hasn't changed" do
-      assert_raise(ExUnit.AssertionError, fn ->
-        assert_pipeline_playback_changed(self(), :prepared, _, 0)
-      end)
+    assert_raise ExUnit.AssertionError, fn ->
+      assert_pipeline_play(self(), 0)
     end
   end
 

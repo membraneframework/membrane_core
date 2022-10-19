@@ -24,12 +24,15 @@ defmodule Membrane.Core.Bin.PadController do
   @spec handle_external_link_request(
           Pad.ref_t(),
           Pad.direction_t(),
-          ChildLifeController.LinkHandler.link_id_t(),
+          Link.id(),
           Membrane.ParentSpec.pad_options_t(),
           State.t()
         ) :: State.t() | no_return
   def handle_external_link_request(pad_ref, direction, link_id, pad_options, state) do
-    Membrane.Logger.debug("Received link request on pad #{inspect(pad_ref)}")
+    Membrane.Logger.debug(
+      "Got external link request, link id: #{inspect(link_id)}, pad ref: #{inspect(pad_ref)}"
+    )
+
     pad_name = Pad.name_by_ref(pad_ref)
 
     info =
@@ -56,7 +59,10 @@ defmodule Membrane.Core.Bin.PadController do
         # received a link response for such a pad, so we should reply immediately.
         {:ok, data} ->
           if data.response_received? do
-            Membrane.Logger.debug("Sending link response, #{inspect(pad_ref)}")
+            Membrane.Logger.debug(
+              "Sending link response, link_id: #{inspect(link_id)}, pad: #{inspect(pad_ref)}"
+            )
+
             Message.send(state.parent_pid, :link_response, link_id)
           end
 
@@ -78,6 +84,10 @@ defmodule Membrane.Core.Bin.PadController do
           State.t()
         ) :: State.t()
   def handle_internal_link_request(pad_ref, child_endpoint, spec_ref, state) do
+    Membrane.Logger.debug(
+      "Got internal link request, pad ref #{inspect(pad_ref)}, child #{inspect(child_endpoint.child)}, spec #{inspect(spec_ref)}"
+    )
+
     pad_name = Pad.name_by_ref(pad_ref)
     info = Map.fetch!(state.pads_info, pad_name)
 
@@ -94,11 +104,14 @@ defmodule Membrane.Core.Bin.PadController do
           raise LinkError, "Dynamic pads must be firstly linked externally, then internally"
       end
 
-    PadModel.update_data!(
-      state,
-      pad_ref,
-      &%{&1 | endpoint: child_endpoint, spec_ref: spec_ref}
-    )
+    state =
+      PadModel.update_data!(
+        state,
+        pad_ref,
+        &%{&1 | endpoint: child_endpoint, spec_ref: spec_ref}
+      )
+
+    state
   end
 
   @doc """
@@ -111,6 +124,10 @@ defmodule Membrane.Core.Bin.PadController do
     |> Enum.filter(&(&1.spec_ref == spec_ref))
     |> Enum.reduce(state, fn pad_data, state ->
       if pad_data.link_id do
+        Membrane.Logger.debug(
+          "Sending link response, link_id: #{inspect(pad_data.link_id)}, pad: #{inspect(pad_data.ref)}"
+        )
+
         Message.send(state.parent_pid, :link_response, pad_data.link_id)
         state
       else
@@ -148,6 +165,9 @@ defmodule Membrane.Core.Bin.PadController do
         ) :: {Core.Element.PadController.link_call_reply_t(), Core.Bin.State.t()}
   def handle_link(direction, endpoint, other_endpoint, params, state) do
     pad_data = PadModel.get_data!(state, endpoint.pad_ref)
+
+    Membrane.Logger.debug("Handle link #{inspect(endpoint, pretty: true)}")
+
     %{spec_ref: spec_ref, endpoint: child_endpoint} = pad_data
 
     pad_props =
@@ -187,7 +207,7 @@ defmodule Membrane.Core.Bin.PadController do
 
     state = PadModel.set_data!(state, endpoint.pad_ref, :linked?, true)
     state = PadModel.set_data!(state, endpoint.pad_ref, :endpoint, child_endpoint)
-    state = ChildLifeController.LinkHandler.proceed_spec_linking(spec_ref, state)
+    state = ChildLifeController.proceed_spec_startup(spec_ref, state)
     {reply, state}
   end
 
@@ -196,10 +216,26 @@ defmodule Membrane.Core.Bin.PadController do
   """
   @spec handle_unlink(Pad.ref_t(), Core.Bin.State.t()) :: Core.Bin.State.t()
   def handle_unlink(pad_ref, state) do
-    state = maybe_handle_pad_removed(pad_ref, state)
-    endpoint = PadModel.get_data!(state, pad_ref, :endpoint)
-    Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
-    PadModel.delete_data!(state, pad_ref)
+    with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
+      state = maybe_handle_pad_removed(pad_ref, state)
+      endpoint = PadModel.get_data!(state, pad_ref, :endpoint)
+      Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+      PadModel.delete_data!(state, pad_ref)
+    else
+      {:ok, %{availability: :always}} when state.terminating? ->
+        state
+
+      {:ok, %{availability: :always}} ->
+        raise Membrane.PadError,
+              "Tried to unlink a static pad #{inspect(pad_ref)}. Static pads cannot be unlinked unless element is terminating"
+
+      {:error, :unknown_pad} ->
+        Membrane.Logger.debug(
+          "Ignoring unlinking pad #{inspect(pad_ref)} that hasn't been successfully linked"
+        )
+
+        state
+    end
   end
 
   @spec maybe_handle_pad_added(Pad.ref_t(), Core.Bin.State.t()) :: Core.Bin.State.t()

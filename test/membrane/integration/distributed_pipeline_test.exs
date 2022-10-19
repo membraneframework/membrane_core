@@ -1,10 +1,6 @@
 defmodule Membrane.Integration.DistributedPipelineTest do
   use ExUnit.Case
-  import Membrane.ParentSpec
   import Membrane.Testing.Assertions
-  alias Membrane.ParentSpec
-
-  alias Membrane.Support.Distributed.{Sink, Source}
 
   setup do
     hostname = start_nodes()
@@ -12,40 +8,37 @@ defmodule Membrane.Integration.DistributedPipelineTest do
   end
 
   test "if distributed pipeline works properly" do
-    {:ok, pid} = Membrane.Testing.Pipeline.start([])
+    defmodule Pipeline do
+      use Membrane.Pipeline
+      alias Membrane.Support.Distributed.{Sink, Source}
 
-    assert_pipeline_playback_changed(pid, _, :playing)
+      @impl true
+      def handle_init(_ctx, _opts) do
+        {{:ok,
+          spec: %ParentSpec{
+            children: [
+              source: %Source{output: [1, 2, 3, 4, 5]}
+            ],
+            node: :"first@127.0.0.1"
+          },
+          spec: %ParentSpec{
+            children: [
+              sink: Sink
+            ],
+            links: [
+              link(:source)
+              |> via_in(:input, toilet_capacity: 100, throttling_factor: 50)
+              |> to(:sink)
+            ],
+            node: :"second@127.0.0.1"
+          }}, %{}}
+      end
+    end
 
-    Membrane.Testing.Pipeline.execute_actions(pid, playback: :stopped)
-
-    assert_pipeline_playback_changed(pid, _, :stopped)
-
-    Membrane.Testing.Pipeline.execute_actions(pid,
-      spec: %ParentSpec{
-        children: [
-          source: %Source{output: [1, 2, 3, 4, 5]}
-        ],
-        node: :"first@127.0.0.1"
-      }
-    )
-
-    Membrane.Testing.Pipeline.execute_actions(pid,
-      spec: %ParentSpec{
-        children: [
-          sink: Sink
-        ],
-        links: [
-          link(:source)
-          |> via_in(:input, toilet_capacity: 100, throttling_factor: 50)
-          |> to(:sink)
-        ],
-        node: :"second@127.0.0.1"
-      }
-    )
-
-    Membrane.Testing.Pipeline.execute_actions(pid, playback: :playing)
-    assert_pipeline_playback_changed(pid, _, :playing)
-    assert_end_of_stream(pid, :sink)
+    pipeline = Membrane.Testing.Pipeline.start_link_supervised!(module: Pipeline)
+    Membrane.Testing.Pipeline.execute_actions(pipeline, playback: :playing)
+    assert_pipeline_play(pipeline)
+    assert_end_of_stream(pipeline, :sink)
   end
 
   defp start_nodes() do

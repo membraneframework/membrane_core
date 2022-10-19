@@ -3,7 +3,7 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
   use Membrane.Pipeline
 
   @impl true
-  def handle_init(opts) do
+  def handle_init(_ctx, opts) do
     children = [
       source: opts.source,
       filter: opts.filter,
@@ -32,7 +32,7 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
   end
 
   @impl true
-  def handle_prepared_to_playing(_ctx, %{target: target} = state) do
+  def handle_playing(_ctx, %{target: target} = state) do
     send(target, :playing)
     {:ok, state}
   end

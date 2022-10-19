@@ -15,7 +15,7 @@ defmodule Membrane.Core.PipelineTest do
     use Membrane.Pipeline
 
     @impl true
-    def handle_init(result) do
+    def handle_init(_ctx, result) do
       result || {:ok, %{}}
     end
 
@@ -31,27 +31,42 @@ defmodule Membrane.Core.PipelineTest do
   end
 
   defp state(_ctx) do
+    subprocess_supervisor = Membrane.Core.SubprocessSupervisor.start_link!()
+    parent_supervisor = Membrane.Core.SubprocessSupervisor.start_link!()
+
     [
-      state: %State{
+      init_opts: %{
+        name: :test_pipeline,
         module: TestPipeline,
-        internal_state: %{},
-        synchronization: %{clock_proxy: nil}
-      }
+        subprocess_supervisor: subprocess_supervisor,
+        parent_supervisor: parent_supervisor,
+        parent_path: [],
+        log_metadata: [],
+        options: nil
+      },
+      state:
+        struct(State,
+          module: TestPipeline,
+          internal_state: %{},
+          synchronization: %{clock_proxy: nil},
+          subprocess_supervisor: subprocess_supervisor
+        )
     ]
   end
 
   setup_all :state
 
   describe "Handle init" do
-    test "should raise an error if handle_init returns an error" do
+    test "should raise an error if handle_init returns an error", %{init_opts: init_opts} do
       assert_raise Membrane.CallbackError, fn ->
-        @module.init({TestPipeline, {:error, :reason}})
+        @module.init(%{init_opts | options: {:error, :reason}})
       end
     end
 
-    test "executes successfully when callback module's handle_init returns {{:ok, spec: spec}}, state} " do
-      assert {:ok, state} =
-               @module.init({TestPipeline, {{:ok, spec: %Membrane.ParentSpec{}}, %{}}})
+    test "executes successfully when callback module's handle_init returns {{:ok, spec: spec}}, state} ",
+         %{init_opts: init_opts} do
+      assert {:ok, state, {:continue, :setup}} =
+               @module.init(%{init_opts | options: {{:ok, spec: %Membrane.ParentSpec{}}, %{}}})
 
       assert %State{internal_state: %{}, module: TestPipeline} = state
     end
@@ -103,15 +118,22 @@ defmodule Membrane.Core.PipelineTest do
   end
 
   test "Pipeline can be terminated synchronously" do
-    {:ok, pid} = Testing.Pipeline.start_link(module: TestPipeline)
+    pid = Testing.Pipeline.start_link_supervised!(module: TestPipeline)
     assert :ok == Testing.Pipeline.terminate(pid, blocking?: true)
   end
 
-  test "Pipeline should be able to steer its playback state with :playback action" do
-    {:ok, pid} = Testing.Pipeline.start_link(module: TestPipeline)
-    Testing.Pipeline.execute_actions(pid, playback: :prepared)
-    assert_pipeline_playback_changed(pid, :stopped, :prepared)
+  test "Pipeline should be able to steer its playback with :playback action" do
+    pid = Testing.Pipeline.start_link_supervised!(module: TestPipeline)
     Testing.Pipeline.execute_actions(pid, playback: :playing)
-    assert_pipeline_playback_changed(pid, :prepared, :playing)
+    assert_pipeline_play(pid)
+  end
+
+  test "Pipeline should be able to terminate itself with :terminate action" do
+    Enum.each([:normal, :shutdown], fn reason ->
+      {:ok, supervisor, pid} = Testing.Pipeline.start(module: TestPipeline)
+      Process.monitor(supervisor)
+      Testing.Pipeline.execute_actions(pid, terminate: reason)
+      assert_receive {:DOWN, _ref, :process, ^supervisor, ^reason}
+    end)
   end
 end

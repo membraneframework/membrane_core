@@ -7,7 +7,7 @@ defmodule Membrane.Integration.TimerTest do
     use Membrane.Source
 
     @impl true
-    def handle_prepared_to_playing(_ctx, state) do
+    def handle_playing(_ctx, state) do
       {{:ok, start_timer: {:timer, Time.milliseconds(100)}}, state}
     end
 
@@ -21,7 +21,7 @@ defmodule Membrane.Integration.TimerTest do
     use Membrane.Bin
 
     @impl true
-    def handle_prepared_to_playing(_ctx, state) do
+    def handle_playing(_ctx, state) do
       {{:ok, start_timer: {:timer, Time.milliseconds(100)}}, state}
     end
 
@@ -35,7 +35,7 @@ defmodule Membrane.Integration.TimerTest do
     use Membrane.Pipeline
 
     @impl true
-    def handle_init(pid) do
+    def handle_init(_ctx, pid) do
       spec = %ParentSpec{
         children: [element: Element, bin: Bin]
       }
@@ -44,7 +44,7 @@ defmodule Membrane.Integration.TimerTest do
     end
 
     @impl true
-    def handle_prepared_to_playing(_ctx, state) do
+    def handle_playing(_ctx, state) do
       {{:ok, start_timer: {:timer, Time.milliseconds(100)}}, state}
     end
 
@@ -56,25 +56,23 @@ defmodule Membrane.Integration.TimerTest do
   end
 
   test "Stopping timer from handle_tick" do
-    {:ok, pipeline} =
-      Testing.Pipeline.start_link(
+    pipeline =
+      Testing.Pipeline.start_link_supervised!(
         module: Pipeline,
         custom_args: self()
       )
 
-    assert_pipeline_playback_changed(pipeline, _, :playing)
+    assert_pipeline_play(pipeline)
     assert_pipeline_notified(pipeline, :element, :tick)
     assert_pipeline_notified(pipeline, :bin, :tick)
     assert_receive :pipeline_tick
-    Testing.Pipeline.execute_actions(pipeline, playback: :stopped)
-    assert_pipeline_playback_changed(pipeline, _, :stopped)
     Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 
   defmodule StopNoInterval do
     use Membrane.Source
     @impl true
-    def handle_prepared_to_playing(_ctx, state) do
+    def handle_setup(_ctx, state) do
       Process.send_after(self(), :stop_timer, 0)
       {{:ok, start_timer: {:timer, :no_interval}}, state}
     end
@@ -86,9 +84,8 @@ defmodule Membrane.Integration.TimerTest do
   end
 
   test "Stopping timer with `:no_interval`" do
-    {:ok, pipeline} = Testing.Pipeline.start_link(children: [element: StopNoInterval])
-
-    assert_pipeline_playback_changed(pipeline, _, :playing)
+    pipeline = Testing.Pipeline.start_link_supervised!(children: [element: StopNoInterval])
+    assert_pipeline_play(pipeline)
     assert_pipeline_notified(pipeline, :element, :ok)
     Testing.Pipeline.terminate(pipeline, blocking?: true)
   end

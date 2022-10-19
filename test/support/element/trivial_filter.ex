@@ -1,6 +1,6 @@
 defmodule Membrane.Support.Element.TrivialFilter do
   @moduledoc """
-  This is the most basic filter. It does nothing, but is used in specs.
+  This is the most basic filter. It does nothing, but is used in tests.
   """
 
   use Membrane.Filter

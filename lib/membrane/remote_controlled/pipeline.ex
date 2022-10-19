@@ -13,22 +13,20 @@ defmodule Membrane.RemoteControlled.Pipeline do
   ```
 
   The controlling process can also subscribe to the messages
-  sent by the pipeline and later on synchroniously await for these messages:
+  sent by the pipeline and later on synchronously await for these messages:
   ```
-  # subscribes to message which is sent when the pipeline enters any playback state
-  Pipeline.subscribe(pipeline, %Message.PlaybackState{state: _})
+  # subscribes to message which is sent when the pipeline enters `playing`
+  Pipeline.subscribe(pipeline, %Message.Playing{})
   ...
-  # awaits for the message sent when the pipeline enters :playing playback state
-  Pipeline.await_playback_state(pipeline, :playing)
+  # awaits for the message sent when the pipeline enters :playing playback
+  Pipeline.await_playing(pipeline)
   ...
-  # awaits for the message sent when the pipeline enters :stopped playback state
-  Pipeline.await_playback_state(pipeline, :stopped)
   ```
 
   `Membrane.RemoteControlled.Pipeline` can be used when there is no need for introducing a custom
   logic in the `Membrane.Pipeline` callbacks implementation. An example of usage could be running a
   pipeline from the elixir script. `Membrane.RemoteControlled.Pipeline` sends the following messages:
-  * `Membrane.RemoteControlled.Message.PlaybackState.t()` sent when pipeline enters a given playback state,
+  * `Membrane.RemoteControlled.Message.Playing.t()` sent when pipeline enters `playing` playback,
   * `Membrane.RemoteControlled.Message.StartOfStream.t()` sent
   when one of direct pipeline children informs the pipeline about start of a stream,
   * `Membrane.RemoteControlled.Message.EndOfStream.t()` sent
@@ -46,7 +44,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   alias Membrane.RemoteControlled.Message.{
     EndOfStream,
     Notification,
-    PlaybackState,
+    Playing,
     StartOfStream,
     Terminated
   }
@@ -62,17 +60,19 @@ defmodule Membrane.RemoteControlled.Pipeline do
   Starts the `Membrane.RemoteControlled.Pipeline` and links it to the current process. The process
   that makes the call to the `start_link/1` automatically become the controller process.
   """
-  @spec start_link(GenServer.options()) :: GenServer.on_start()
-  def start_link(process_options \\ []) do
-    Pipeline.start_link(__MODULE__, %{controller_pid: self()}, process_options)
+  @spec start_link([Pipeline.config_entry() | {:controller_pid, pid()}]) :: Pipeline.on_start()
+  def start_link(options \\ []) do
+    {controller_pid, config} = Keyword.pop(options, :controller_pid, self())
+    Pipeline.start_link(__MODULE__, %{controller_pid: controller_pid}, config)
   end
 
   @doc """
   Does the same as the `start_link/1` but starts the process outside of the supervision tree.
   """
-  @spec start(GenServer.options()) :: GenServer.on_start()
-  def start(process_options \\ []) do
-    Pipeline.start(__MODULE__, %{controller_pid: self()}, process_options)
+  @spec start([Pipeline.config_entry() | {:controller_pid, pid()}]) :: Pipeline.on_start()
+  def start(options \\ []) do
+    {controller_pid, config} = Keyword.pop(options, :controller_pid, self())
+    Pipeline.start(__MODULE__, %{controller_pid: controller_pid}, config)
   end
 
   defmacrop pin_leaf_nodes(ast) do
@@ -107,38 +107,19 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @doc """
-  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.PlaybackState()`
-  message with no further constraints, sent by the process with `pipeline` pid.
+  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.Playing()`
   It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
 
   Usage example:
-    1) awaiting for any playback state change occuring in the pipeline:
+    1) awaiting until the pipeline starts playing:
     ```
-    Pipeline.await_playback_state(pipeline)
-    ```
-  """
-  @spec await_playback_state(pid()) :: Membrane.RemoteControlled.Message.PlaybackState.t()
-  def await_playback_state(pipeline) do
-    do_await(pipeline, PlaybackState)
-  end
-
-  @doc """
-  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.PlaybackState()`
-  message with the given `state`, sent by the process with `pipeline` pid.
-  It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
-  for that message.
-
-  Usage example:
-    1) awaiting for the pipeline's playback state to change into `:playing`:
-    ```
-    Pipeline.await_playback_state(pipeline, :playing)
+    Pipeline.await_playing(pipeline)
     ```
   """
-  @spec await_playback_state(pid, Membrane.PlaybackState.t()) ::
-          Membrane.RemoteControlled.Message.PlaybackState.t()
-  def await_playback_state(pipeline, playback_state) do
-    do_await(pipeline, PlaybackState, state: playback_state)
+  @spec await_playing(pid()) :: Membrane.RemoteControlled.Message.Playing.t()
+  def await_playing(pipeline) do
+    do_await(pipeline, Playing)
   end
 
   @doc """
@@ -313,11 +294,10 @@ defmodule Membrane.RemoteControlled.Pipeline do
     subscribe(pipeline, %Message.StartOfStream{element: :element_id, pad: _})
     ```
 
-  2) making the `Membrane.RemoteControlled.Pipeline` send to the controlling process `Message.PlaybackState` message when the pipeline playback state changes to any state
-    (that is - for all the :stopped, :prepared and :playing playback states).
+  2) making the `Membrane.RemoteControlled.Pipeline` send to the controlling process `Message.Playing` message when the pipeline playback changes to `:playing`
 
     ```
-    subscribe(pipeline, %Message.PlaybackState{state: _})
+    subscribe(pipeline, %Message.Playing{})
     ```
   """
   defmacro subscribe(pipeline, subscription_pattern) do
@@ -349,43 +329,15 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @impl true
-  def handle_init(opts) do
+  def handle_init(_ctx, opts) do
     %{controller_pid: controller_pid} = opts
     state = %State{controller_pid: controller_pid}
     {:ok, state}
   end
 
   @impl true
-  def handle_playing_to_prepared(_ctx, state) do
-    pipeline_event = %Message.PlaybackState{from: self(), state: :prepared}
-    send_event_to_controller_if_subscribed(pipeline_event, state)
-    {:ok, state}
-  end
-
-  @impl true
-  def handle_prepared_to_playing(_ctx, state) do
-    pipeline_event = %Message.PlaybackState{from: self(), state: :playing}
-    send_event_to_controller_if_subscribed(pipeline_event, state)
-    {:ok, state}
-  end
-
-  @impl true
-  def handle_prepared_to_stopped(_ctx, state) do
-    pipeline_event = %Message.PlaybackState{from: self(), state: :stopped}
-    send_event_to_controller_if_subscribed(pipeline_event, state)
-    {:ok, state}
-  end
-
-  @impl true
-  def handle_stopped_to_prepared(_ctx, state) do
-    pipeline_event = %Message.PlaybackState{from: self(), state: :prepared}
-    send_event_to_controller_if_subscribed(pipeline_event, state)
-    {:ok, state}
-  end
-
-  @impl true
-  def handle_stopped_to_terminating(_ctx, state) do
-    pipeline_event = %Message.PlaybackState{from: self(), state: :terminating}
+  def handle_playing(_ctx, state) do
+    pipeline_event = %Message.Playing{from: self()}
     send_event_to_controller_if_subscribed(pipeline_event, state)
     {:ok, state}
   end
@@ -422,10 +374,10 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @impl true
-  def handle_shutdown(reason, state) do
-    pipeline_event = %Message.Terminated{from: self(), reason: reason}
+  def handle_terminate_request(_ctx, state) do
+    pipeline_event = %Message.Terminated{from: self()}
     send_event_to_controller_if_subscribed(pipeline_event, state)
-    :ok
+    {:ok, state}
   end
 
   defp send_event_to_controller_if_subscribed(message, state) do

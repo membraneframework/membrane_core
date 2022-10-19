@@ -24,7 +24,7 @@ defmodule Membrane.Core.Parent.LinkParser do
       |> List.flatten()
       |> Enum.map(fn
         %ParentSpec.LinkBuilder{links: links, children: children, status: :done} ->
-          {Enum.reverse(links), children}
+          {Enum.reverse(links), Enum.reverse(children)}
 
         %ParentSpec.LinkBuilder{links: [%{from: from} | _]} ->
           raise ParentError,
@@ -40,6 +40,7 @@ defmodule Membrane.Core.Parent.LinkParser do
       |> List.flatten()
       |> Enum.map(fn link ->
         %Link{
+          id: make_ref(),
           from: %Endpoint{
             child: link.from,
             pad_spec: link.from_pad,

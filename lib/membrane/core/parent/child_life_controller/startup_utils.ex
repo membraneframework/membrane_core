@@ -1,10 +1,10 @@
-defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
+defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
   @moduledoc false
   use Bunch
 
   alias Membrane.{ChildEntry, Clock, Core, ParentError, Sync}
-  alias Membrane.Core.{CallbackHandler, Component, Message, Parent}
-  alias Membrane.Core.Parent.{ChildEntryParser, ChildLifeController, ChildrenModel}
+  alias Membrane.Core.{CallbackHandler, Component, Message, Parent, SubprocessSupervisor}
+  alias Membrane.Core.Parent.ChildEntryParser
 
   require Membrane.Core.Component
   require Membrane.Core.Message
@@ -69,9 +69,10 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
           node() | nil,
           parent_clock :: Clock.t(),
           syncs :: %{Membrane.Child.name_t() => pid()},
-          log_metadata :: Keyword.t()
+          log_metadata :: Keyword.t(),
+          supervisor :: pid
         ) :: [ChildEntry.t()]
-  def start_children(children, node, parent_clock, syncs, log_metadata) do
+  def start_children(children, node, parent_clock, syncs, log_metadata, supervisor) do
     # If the node is set to the current node, set it to nil, to avoid race conditions when
     # distribution changes
     node = if node == node(), do: nil, else: node
@@ -80,22 +81,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
       "Starting children: #{inspect(children)}#{if node, do: " on node #{node}"}"
     )
 
-    children |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata))
-  end
-
-  @spec add_children([ChildEntry.t()], Parent.state_t()) :: Parent.state_t()
-  def add_children(children, state) do
-    children =
-      Enum.reduce(children, state.children, fn child, children ->
-        Map.put(children, child.name, child)
-      end)
-
-    %{state | children: children}
+    children |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata, supervisor))
   end
 
   @spec maybe_activate_syncs(%{Membrane.Child.name_t() => Sync.t()}, Parent.state_t()) ::
           :ok | {:error, :bad_activity_request}
-  def maybe_activate_syncs(syncs, %{playback: %{state: :playing}}) do
+  def maybe_activate_syncs(syncs, %{playback: :playing}) do
     syncs |> MapSet.new(&elem(&1, 1)) |> Bunch.Enum.try_each(&Sync.activate/1)
   end
 
@@ -122,51 +113,27 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     )
   end
 
-  @spec init_playback_state(ChildLifeController.spec_ref_t(), Parent.state_t()) ::
-          Parent.state_t()
-  def init_playback_state(spec_ref, state) do
-    Membrane.Logger.debug("Spec playback init #{inspect(spec_ref)} #{inspect(state.children)}")
-
-    ChildrenModel.update_children(state, fn
-      %{spec_ref: ^spec_ref} = child ->
-        expected_playback = state.playback.pending_state || state.playback.state
-
-        Membrane.Logger.debug(
-          "Initializing playback state #{inspect(expected_playback)} #{inspect(child)}"
-        )
-
-        if expected_playback == :stopped do
-          %{child | playback_sync: :synced}
-        else
-          Message.send(child.pid, :change_playback_state, expected_playback)
-          %{child | playback_sync: :syncing}
-        end
-
-      child ->
-        child
-    end)
-  end
-
-  defp start_child(child, node, parent_clock, syncs, log_metadata) do
+  defp start_child(child, node, parent_clock, syncs, log_metadata, supervisor) do
     %ChildEntry{name: name, module: module, options: options} = child
     Membrane.Logger.debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")
     sync = syncs |> Map.get(name, Sync.no_sync())
 
-    log_metadata = log_metadata |> Keyword.put(:parent_path, Membrane.ComponentPath.get())
+    params = %{
+      parent: self(),
+      module: module,
+      name: name,
+      node: node,
+      user_options: options,
+      parent_clock: parent_clock,
+      sync: sync,
+      parent_path: Membrane.ComponentPath.get(),
+      log_metadata: log_metadata
+    }
 
-    start_result =
+    server_module =
       case child.component_type do
         :element ->
-          Core.Element.start(%{
-            parent: self(),
-            module: module,
-            name: name,
-            node: node,
-            user_options: options,
-            parent_clock: parent_clock,
-            sync: sync,
-            log_metadata: log_metadata
-          })
+          Core.Element
 
         :bin ->
           unless sync == Sync.no_sync() do
@@ -175,29 +142,35 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
                   reason: bin cannot be synced with other elements"
           end
 
-          Core.Bin.start(%{
-            parent: self(),
-            name: name,
-            module: module,
-            node: node,
-            user_options: options,
-            parent_clock: parent_clock,
-            log_metadata: log_metadata
-          })
+          Core.Bin
       end
 
-    with {:ok, pid} <- start_result do
-      clock = Message.call!(pid, :get_clock)
-      %ChildEntry{child | pid: pid, clock: clock, sync: sync}
-    else
-      {:error, {error, stacktrace}} when is_exception(error) ->
-        reraise error, stacktrace
+    start_fun = fn supervisor, parent_supervisor ->
+      server_module.start(
+        Map.merge(params, %{
+          subprocess_supervisor: supervisor,
+          parent_supervisor: parent_supervisor
+        })
+      )
+    end
 
+    with {:ok, child_pid} <-
+           SubprocessSupervisor.start_component(supervisor, name, start_fun),
+         {:ok, clock} <- receive_clock(name) do
+      %ChildEntry{child | pid: child_pid, clock: clock, sync: sync}
+    else
       {:error, reason} ->
-        raise ParentError, """
-        Cannot start child #{inspect(name)},
-        reason: #{inspect(reason, pretty: true)}
-        """
+        # ignore clock if element couldn't be started
+        receive_clock(name)
+        raise ParentError, "Error starting child #{inspect(name)}, reason: #{inspect(reason)}"
+    end
+  end
+
+  defp receive_clock(child_name) do
+    receive do
+      Message.new(:clock, [^child_name, clock]) -> {:ok, clock}
+    after
+      0 -> {:error, :did_not_receive_clock}
     end
   end
 end

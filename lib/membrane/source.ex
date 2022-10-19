@@ -23,6 +23,8 @@ defmodule Membrane.Source do
   Options:
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
   """
+  alias Membrane.Core.DocsHelper
+
   defmacro __using__(options) do
     quote location: :keep do
       use Membrane.Element.Base, unquote(options)
@@ -33,4 +35,9 @@ defmodule Membrane.Source do
       def membrane_element_type, do: :source
     end
   end
+
+  DocsHelper.add_callbacks_list_to_moduledoc(
+    __MODULE__,
+    [Membrane.Element.Base, Membrane.Element.WithOutputPads]
+  )
 end

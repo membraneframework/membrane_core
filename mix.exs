@@ -16,7 +16,7 @@ defmodule Membrane.Mixfile do
       name: "Membrane Core",
       source_url: link(),
       docs: docs(),
-      aliases: ["test.all": "do espec, test"],
+      aliases: ["test.all": "do espec, test", docs: ["docs", &copy_assets/1]],
       preferred_cli_env: [
         espec: :test,
         "test.all": :test,
@@ -99,13 +99,17 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane\.Clock($|\.)/,
           ~r/^Membrane\.Sync($|\.)/,
           ~r/^Membrane\.Time($|\.)/,
-          ~r/^Membrane\.PlaybackState($|\.)/,
+          ~r/^Membrane\.Playback($|\.)/,
           ~r/^Membrane\.Telemetry($|\.)/,
           ~r/^Membrane\.ComponentPath($|\.)/
         ],
         Errors: [~r/Error$/]
       ]
     ]
+  end
+
+  defp copy_assets(_args) do
+    File.cp_r("assets", "doc/assets", fn _source, _destination -> true end)
   end
 
   defp package do

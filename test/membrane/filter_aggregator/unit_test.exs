@@ -8,13 +8,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
   alias Membrane.Element.PadData
   alias Membrane.FilterAggregator
 
-  alias Membrane.Element.CallbackContext.{
-    Caps,
-    Event,
-    PlaybackChange,
-    Process,
-    StreamManagement
-  }
+  alias Membrane.Element.CallbackContext.{Event, Playing, Process, StreamManagement}
 
   defmodule ElementWithMembranePads do
     @callback membrane_pads() :: [{Membrane.Pad.name_t(), Membrane.Pad.description_t()}]
@@ -83,7 +77,9 @@ defmodule Membrane.FilterAggregator.UnitTest do
       clock: nil,
       name: nil,
       parent_clock: nil,
-      playback_state: :stopped
+      playback: :stopped,
+      resource_guard: nil,
+      utility_supervisor: nil
     }
 
     states = [
@@ -132,16 +128,20 @@ defmodule Membrane.FilterAggregator.UnitTest do
     FilterA
     |> expect(:membrane_pads, fn -> put_in(pads_descriptions, [:input, :demand_mode], :manual) end)
 
-    assert_raise RuntimeError, fn -> FilterAggregator.handle_init(ctx.stage_opts) end
+    assert_raise RuntimeError, fn -> FilterAggregator.handle_init(%{}, ctx.stage_opts) end
   end
 
   test "handle_init sets inital states", ctx do
     ctx.filters
     |> Enum.each(fn filter ->
-      expect(filter, :handle_init, fn %^filter{} -> {:ok, %{module: filter}} end)
+      expect(filter, :handle_init, fn _ctx, %^filter{} -> {:ok, %{module: filter}} end)
     end)
 
-    assert {:ok, %{states: result}} = FilterAggregator.handle_init(ctx.stage_opts)
+    assert {:ok, %{states: result}} =
+             FilterAggregator.handle_init(
+               %{resource_guard: nil, utility_supervisor: nil},
+               ctx.stage_opts
+             )
 
     assert [{:a, FilterA, ctx_a, state_a}, {:b, FilterB, ctx_b, state_b}] = result
     assert state_a == %{module: FilterA}
@@ -175,14 +175,14 @@ defmodule Membrane.FilterAggregator.UnitTest do
     end)
   end
 
-  test "handle_prepared_to_playing with caps sending", test_ctx do
-    expect(FilterA, :handle_prepared_to_playing, fn ctx_a, %{module: FilterA} = state ->
-      assert %PlaybackChange{
+  test "handle_playing with caps sending", test_ctx do
+    expect(FilterA, :handle_playing, fn ctx_a, %{module: FilterA} = state ->
+      assert %Playing{
                clock: nil,
                name: :a,
                pads: pads,
                parent_clock: nil,
-               playback_state: :prepared
+               playback: :stopped
              } = ctx_a
 
       assert pads.input == test_ctx.gen_pad_data.(:input)
@@ -195,13 +195,13 @@ defmodule Membrane.FilterAggregator.UnitTest do
     expect(FilterB, :handle_caps, fn :input, %MockCaps{integer: 1}, ctx_b, state ->
       assert state == %{module: FilterB, state: nil}
 
-      assert %Caps{
+      assert %{
                clock: nil,
                name: :b,
                old_caps: nil,
                pads: pads,
                parent_clock: nil,
-               playback_state: :prepared
+               playback: :stopped
              } = ctx_b
 
       assert pads.input == test_ctx.gen_pad_data.(:input)
@@ -211,16 +211,16 @@ defmodule Membrane.FilterAggregator.UnitTest do
       {{:ok, caps: {:output, %MockCaps{integer: 2}}}, %{state | state: :caps_sent}}
     end)
 
-    expect(FilterB, :handle_prepared_to_playing, fn ctx_b, state ->
+    expect(FilterB, :handle_playing, fn ctx_b, state ->
       # ensure proper callbacks order
       assert state == %{module: FilterB, state: :caps_sent}
 
-      assert %PlaybackChange{
+      assert %Playing{
                clock: nil,
                name: :b,
                pads: pads,
                parent_clock: nil,
-               playback_state: :prepared
+               playback: :stopped
              } = ctx_b
 
       assert pads.input ==
@@ -237,11 +237,19 @@ defmodule Membrane.FilterAggregator.UnitTest do
     states =
       test_ctx.states
       |> Enum.map(fn {name, module, ctx, state} ->
-        {name, module, %{ctx | playback_state: :prepared}, state}
+        {name, module, %{ctx | playback: :stopped}, state}
       end)
 
     assert {{:ok, actions}, %{states: states}} =
-             FilterAggregator.handle_prepared_to_playing(%{}, %{states: states})
+             FilterAggregator.handle_playing(
+               %{
+                 pads: %{
+                   input: %{demand_unit: :buffers, other_name: :output},
+                   output: %{demand_unit: :buffers, other_name: :input}
+                 }
+               },
+               %{states: states}
+             )
 
     assert actions == [caps: {:output, %MockCaps{integer: 2}}]
 
@@ -254,8 +262,8 @@ defmodule Membrane.FilterAggregator.UnitTest do
     assert ctx_b.pads.input.caps == %MockCaps{integer: 1}
     assert ctx_b.pads.output.caps == %MockCaps{integer: 2}
 
-    assert ctx_a.playback_state == :playing
-    assert ctx_b.playback_state == :playing
+    assert ctx_a.playback == :playing
+    assert ctx_b.playback == :playing
   end
 
   test "handle_process_list splitting and mapping buffers", ctx do

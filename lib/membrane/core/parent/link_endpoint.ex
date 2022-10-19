@@ -6,7 +6,8 @@ defmodule Membrane.Core.Parent.Link.Endpoint do
   alias Membrane.{Element, Pad}
 
   @enforce_keys [:child, :pad_spec]
-  defstruct @enforce_keys ++ [pad_ref: nil, pid: nil, pad_props: [], pad_info: %{}]
+  defstruct @enforce_keys ++
+              [pad_ref: nil, pid: nil, pad_props: [], pad_info: %{}, child_spec_ref: nil]
 
   @type t() :: %__MODULE__{
           child: Element.name_t() | {Membrane.Bin, :itself},

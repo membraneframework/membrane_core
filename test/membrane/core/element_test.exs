@@ -18,15 +18,6 @@ defmodule Membrane.Core.ElementTest do
     def handle_info(msg, _ctx, state) do
       {{:ok, notify_parent: msg}, state}
     end
-
-    @impl true
-    def handle_shutdown(reason, state) do
-      if state.test_pid do
-        send(state.test_pid, {:shutdown, reason})
-      end
-
-      :ok
-    end
   end
 
   defmodule Filter do
@@ -34,7 +25,7 @@ defmodule Membrane.Core.ElementTest do
 
     def_output_pad :output, caps: :any
 
-    def_input_pad :input, caps: :any, demand_unit: :buffers
+    def_input_pad :dynamic_input, caps: :any, demand_unit: :buffers, availability: :on_request
 
     @impl true
     def handle_tick(_timer, _ctx, state) do
@@ -43,12 +34,12 @@ defmodule Membrane.Core.ElementTest do
 
     @impl true
     def handle_demand(:output, size, _unit, _ctx, state) do
-      {{:ok, demand: {:input, size}}, state}
+      {{:ok, demand: {:dynamic_input, size}}, state}
     end
   end
 
   defp get_state do
-    {:ok, state} =
+    {:ok, state, {:continue, :setup}} =
       Element.init(%{
         module: Filter,
         user_options: nil,
@@ -56,7 +47,10 @@ defmodule Membrane.Core.ElementTest do
         parent_clock: nil,
         sync: Membrane.Sync.no_sync(),
         parent: self(),
-        log_metadata: []
+        parent_path: [],
+        log_metadata: [],
+        subprocess_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
+        parent_supervisor: Membrane.Core.SubprocessSupervisor.start_link!()
       })
 
     state
@@ -68,11 +62,16 @@ defmodule Membrane.Core.ElementTest do
         Message.new(:handle_link, [
           :output,
           %Endpoint{pad_spec: :output, pad_ref: :output, pad_props: %{options: []}, child: :this},
-          %Endpoint{pad_spec: :input, pad_ref: :input, pid: self(), child: :other},
+          %Endpoint{
+            pad_spec: :dynamic_input,
+            pad_ref: :dynamic_input,
+            pid: self(),
+            child: :other
+          },
           %{
             initiator: :sibling,
             other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
-            link_metadata: %{toilet: nil}
+            link_metadata: %{toilet: nil, observability_metadata: %{}}
           }
         ]),
         nil,
@@ -84,8 +83,8 @@ defmodule Membrane.Core.ElementTest do
         Message.new(:handle_link, [
           :input,
           %Endpoint{
-            pad_spec: :input,
-            pad_ref: :input,
+            pad_spec: :dynamic_input,
+            pad_ref: :dynamic_input,
             pad_props: %{
               options: [],
               toilet_capacity: nil,
@@ -101,7 +100,7 @@ defmodule Membrane.Core.ElementTest do
           %{
             initiator: :sibling,
             other_info: %{direction: :output, mode: :pull},
-            link_metadata: %{toilet: nil}
+            link_metadata: %{toilet: nil, observability_metadata: %{}}
           }
         ]),
         nil,
@@ -112,62 +111,28 @@ defmodule Membrane.Core.ElementTest do
   end
 
   defp playing_state do
-    {:noreply, state} =
-      Element.handle_info(Message.new(:change_playback_state, :playing), linked_state())
-
+    {:noreply, state} = Element.handle_info(Message.new(:play), linked_state())
     state
   end
 
-  test "should change playback state" do
-    assert {:noreply, state} =
-             Element.handle_info(
-               Message.new(:change_playback_state, :prepared),
-               linked_state()
-             )
-
-    assert state.playback.state == :prepared
-
-    assert {:noreply, state} =
-             Element.handle_info(Message.new(:change_playback_state, :playing), state)
-
-    assert state.playback.state == :playing
-
-    assert {:noreply, state} =
-             Element.handle_info(Message.new(:change_playback_state, :prepared), state)
-
-    assert state.playback.state == :prepared
-
-    assert {:noreply, state} =
-             Element.handle_info(Message.new(:change_playback_state, :stopped), state)
-
-    assert state.playback.state == :stopped
-
-    assert {:noreply, state} =
-             Element.handle_info(Message.new(:change_playback_state, :playing), state)
-
-    assert state.playback.state == :playing
-  end
-
-  test "should raise when static pads unlinked is playback state other than stopped" do
+  test "should raise when static pads not linked when getting play request" do
     assert_raise Membrane.LinkError, fn ->
-      assert {:noreply, _state} =
-               Element.handle_info(
-                 Message.new(:change_playback_state, :prepared),
-                 get_state()
-               )
+      assert {:noreply, _state} = Element.handle_info(Message.new(:play), get_state())
     end
   end
 
   test "should return correct clock and should not modify the state" do
+    original_state = get_state()
+
     assert {:reply, reply, state} =
              Element.handle_call(
                Message.new(:get_clock),
                nil,
-               get_state()
+               original_state
              )
 
     assert reply == state.synchronization.clock
-    assert state == get_state()
+    assert state == original_state
   end
 
   test "should store demand/buffer/caps/event when not playing" do
@@ -175,14 +140,16 @@ defmodule Membrane.Core.ElementTest do
 
     [
       Message.new(:demand, 10, for_pad: :output),
-      Message.new(:buffer, %Membrane.Buffer{payload: <<>>}, for_pad: :input),
-      Message.new(:caps, :caps, for_pad: :input),
-      Message.new(:event, %Membrane.Testing.Event{}, for_pad: :input),
+      Message.new(:buffer, %Membrane.Buffer{payload: <<>>}, for_pad: :dynamic_input),
+      Message.new(:caps, :caps, for_pad: :dynamic_input),
+      Message.new(:event, %Membrane.Testing.Event{}, for_pad: :dynamic_input),
       Message.new(:event, %Membrane.Testing.Event{}, for_pad: :output)
     ]
     |> Enum.each(fn msg ->
       assert {:noreply, state} = Element.handle_info(msg, initial_state)
-      assert state == Element.PlaybackBuffer.store(msg, initial_state)
+      assert %{state | playback_queue: []} == initial_state
+      assert [fun] = state.playback_queue
+      assert is_function(fun)
     end)
   end
 
@@ -192,25 +159,28 @@ defmodule Membrane.Core.ElementTest do
     assert state.pads_data.output.demand == 10
   end
 
-  test "should store incoming buffers in input buffer" do
-    msg = Message.new(:buffer, [%Membrane.Buffer{payload: <<123>>}], for_pad: :input)
+  test "should store incoming buffers in dynamic_input buffer" do
+    msg = Message.new(:buffer, [%Membrane.Buffer{payload: <<123>>}], for_pad: :dynamic_input)
     assert {:noreply, state} = Element.handle_info(msg, playing_state())
-    assert state.pads_data.input.input_queue.size == 1
+    assert state.pads_data.dynamic_input.input_queue.size == 1
   end
 
   test "should assign incoming caps to the pad and forward them" do
     assert {:noreply, state} =
-             Element.handle_info(Message.new(:caps, :caps, for_pad: :input), playing_state())
+             Element.handle_info(
+               Message.new(:caps, :caps, for_pad: :dynamic_input),
+               playing_state()
+             )
 
-    assert state.pads_data.input.caps == :caps
+    assert state.pads_data.dynamic_input.caps == :caps
     assert state.pads_data.output.caps == :caps
 
-    assert_receive Message.new(:caps, :caps, for_pad: :input)
+    assert_receive Message.new(:caps, :caps, for_pad: :dynamic_input)
   end
 
   test "should forward events" do
     [
-      Message.new(:event, %Membrane.Testing.Event{}, for_pad: :input),
+      Message.new(:event, %Membrane.Testing.Event{}, for_pad: :dynamic_input),
       Message.new(:event, %Membrane.Testing.Event{}, for_pad: :output)
     ]
     |> Enum.each(fn msg ->
@@ -231,11 +201,11 @@ defmodule Membrane.Core.ElementTest do
                    pad_props: %{options: [], toilet_capacity: nil},
                    child: :this
                  },
-                 %{pad_ref: :input, pid: pid, child: :other},
+                 %{pad_ref: :dynamic_input, pid: pid, child: :other},
                  %{
                    initiator: :sibling,
                    other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
-                   link_metadata: %{toilet: nil}
+                   link_metadata: %{toilet: nil, observability_metadata: %{}}
                  }
                ]),
                nil,
@@ -256,16 +226,16 @@ defmodule Membrane.Core.ElementTest do
 
     assert %Membrane.Element.PadData{
              pid: ^pid,
-             other_ref: :input,
+             other_ref: :dynamic_input,
              other_demand_unit: :buffers
            } = state.pads_data.output
   end
 
   test "should handle unlinking pads" do
     assert {:noreply, state} =
-             Element.handle_info(Message.new(:handle_unlink, :input), linked_state())
+             Element.handle_info(Message.new(:handle_unlink, :dynamic_input), linked_state())
 
-    refute Map.has_key?(state.pads_data, :input)
+    refute Map.has_key?(state.pads_data, :dynamic_input)
   end
 
   test "should update timer on each tick" do
@@ -295,7 +265,7 @@ defmodule Membrane.Core.ElementTest do
     [
       Message.new(:abc),
       Message.new(:abc, :def),
-      Message.new(:abc, :def, for_pad: :input)
+      Message.new(:abc, :def, for_pad: :dynamic_input)
     ]
     |> Enum.each(fn msg ->
       assert_raise Membrane.ElementError, fn -> Element.handle_info(msg, get_state()) end
@@ -312,35 +282,29 @@ defmodule Membrane.Core.ElementTest do
   end
 
   describe "Not linked element" do
-    test "should shutdown when pipeline is down" do
-      pipeline_mock = spawn(fn -> receive do: (:exit -> :ok) end)
+    test "DOWN message should be delivered to handle_info" do
+      parent_pid = self()
 
       {:ok, elem_pid} =
-        pipeline_mock
-        |> element_init_options
-        |> Element.start()
-
-      ref = Process.monitor(elem_pid)
-      send(pipeline_mock, :exit)
-      assert_receive({:shutdown, {:shutdown, :parent_crash}})
-      assert_receive {:DOWN, ^ref, :process, ^elem_pid, {:shutdown, :parent_crash}}
-    end
-
-    test "DOWN message should be delivered to handle_info if it's not coming from parent" do
-      {:ok, elem_pid} =
-        self()
+        parent_pid
         |> element_init_options
         |> Element.start()
 
       monitored_proc = spawn(fn -> receive do: (:exit -> :ok) end)
       on_exit(fn -> send(monitored_proc, :exit) end)
-      ref = Process.monitor(monitored_proc)
-
+      ref = make_ref()
       send(elem_pid, {:DOWN, ref, :process, monitored_proc, :normal})
 
       assert_receive Message.new(:child_notification, [
                        :name,
                        {:DOWN, ^ref, :process, ^monitored_proc, :normal}
+                     ])
+
+      send(elem_pid, {:DOWN, ref, :process, parent_pid, :normal})
+
+      assert_receive Message.new(:child_notification, [
+                       :name,
+                       {:DOWN, ^ref, :process, ^parent_pid, :normal}
                      ])
 
       assert Process.alive?(elem_pid)
@@ -356,7 +320,10 @@ defmodule Membrane.Core.ElementTest do
       parent: pipeline,
       parent_clock: nil,
       sync: Membrane.Sync.no_sync(),
-      log_metadata: []
+      parent_path: [],
+      log_metadata: [],
+      subprocess_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
+      parent_supervisor: Membrane.Core.SubprocessSupervisor.start_link!()
     }
   end
 end

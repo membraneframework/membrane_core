@@ -8,23 +8,22 @@ defmodule Membrane.Core.Bin.State do
   use Bunch
   use Bunch.Access
 
-  alias Membrane.{Child, Clock, PlaybackState, Sync}
+  alias Membrane.{Child, Clock, Sync}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Parent.ChildLifeController.LinkHandler
+  alias Membrane.Core.Parent.ChildLifeController
   alias Membrane.Core.Parent.{ChildrenModel, CrashGroup, Link}
-  alias Membrane.Core.{Playback, Timer}
+  alias Membrane.Core.Timer
 
   @type t :: %__MODULE__{
           internal_state: Membrane.Bin.state_t() | nil,
-          playback: Playback.t(),
           module: module,
           children: ChildrenModel.children_t(),
-          delayed_playback_change: PlaybackState.t() | nil,
+          subprocess_supervisor: pid(),
           name: Membrane.Bin.name_t() | nil,
           pads_info: PadModel.pads_info_t() | nil,
           pads_data: PadModel.pads_data_t() | nil,
           parent_pid: pid,
-          links: [Link.t()],
+          links: %{Link.id() => Link.t()},
           crash_groups: %{CrashGroup.name_t() => CrashGroup.t()},
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
@@ -40,23 +39,30 @@ defmodule Membrane.Core.Bin.State do
             }
           },
           children_log_metadata: Keyword.t(),
-          pending_specs: LinkHandler.pending_specs_t()
+          pending_specs: ChildLifeController.pending_specs_t(),
+          playback: Membrane.Playback.t(),
+          initialized?: boolean(),
+          playing_requested?: boolean(),
+          terminating?: boolean(),
+          resource_guard: Membrane.ResourceGuard.t()
         }
 
-  @enforce_keys [:module, :synchronization]
+  @enforce_keys [:module, :synchronization, :subprocess_supervisor, :resource_guard]
   defstruct @enforce_keys ++
               [
                 internal_state: nil,
-                playback: %Playback{},
                 children: %{},
-                delayed_playback_change: nil,
                 name: nil,
                 pads_info: nil,
                 pads_data: nil,
                 parent_pid: nil,
                 crash_groups: %{},
                 children_log_metadata: [],
-                links: [],
-                pending_specs: %{}
+                links: %{},
+                pending_specs: %{},
+                playback: :stopped,
+                initialized?: false,
+                playing_requested?: false,
+                terminating?: false
               ]
 end

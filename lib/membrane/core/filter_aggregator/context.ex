@@ -14,8 +14,8 @@ defmodule Membrane.Core.FilterAggregator.Context do
 
   @type action :: Element.Action.t() | Membrane.Core.FilterAggregator.InternalAction.t()
 
-  @spec build_context!(Element.name_t(), module()) :: t()
-  def build_context!(name, module) do
+  @spec build_context!(Element.name_t(), module(), t()) :: t()
+  def build_context!(name, module, agg_ctx) do
     pad_descriptions = module.membrane_pads()
     pads = pad_descriptions |> MapSet.new(fn {k, _v} -> k end)
 
@@ -41,7 +41,9 @@ defmodule Membrane.Core.FilterAggregator.Context do
       clock: nil,
       name: name,
       parent_clock: nil,
-      playback_state: :stopped
+      playback: :stopped,
+      resource_guard: agg_ctx.resource_guard,
+      utility_supervisor: agg_ctx.utility_supervisor
     }
   end
 
@@ -147,22 +149,8 @@ defmodule Membrane.Core.FilterAggregator.Context do
     put_in(context.pads.output.end_of_stream?, true)
   end
 
-  def after_out_action(context, action)
-      when action in [
-             InternalAction.stopped_to_prepared(),
-             InternalAction.prepared_to_playing(),
-             InternalAction.playing_to_prepared(),
-             InternalAction.prepared_to_stopped()
-           ] do
-    pb_state =
-      case action do
-        InternalAction.stopped_to_prepared() -> :prepared
-        InternalAction.prepared_to_playing() -> :playing
-        InternalAction.playing_to_prepared() -> :prepared
-        InternalAction.prepared_to_stopped() -> :stopped
-      end
-
-    %{context | playback_state: pb_state}
+  def after_out_action(context, InternalAction.playing()) do
+    %{context | playback: :playing}
   end
 
   def after_out_action(context, _action) do

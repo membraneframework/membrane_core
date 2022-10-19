@@ -80,7 +80,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
     pad_data = state |> PadModel.get_data!(pad_ref)
 
-    {{_buffer_status, data}, new_input_queue} =
+    {{_queue_status, data}, new_input_queue} =
       InputQueue.take_and_demand(
         pad_data.input_queue,
         pad_data.demand,

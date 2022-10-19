@@ -19,6 +19,7 @@ defmodule Membrane.Endpoint do
   """
 
   alias Membrane.{Buffer, Element, Pad}
+  alias Membrane.Core.DocsHelper
   alias Membrane.Element.CallbackContext
 
   @doc """
@@ -83,4 +84,9 @@ defmodule Membrane.Endpoint do
                      handle_write: 4
     end
   end
+
+  DocsHelper.add_callbacks_list_to_moduledoc(
+    __MODULE__,
+    [Membrane.Element.Base, Membrane.Element.WithInputPads, Membrane.Element.WithOutputPads]
+  )
 end

@@ -5,9 +5,7 @@ defmodule Membrane.Element.Action do
 
   Returning actions is a way of element interaction with
   other elements and parts of framework. Each action may be returned by any
-  callback (except for `c:Membrane.Element.Base.handle_init/1`
-  and `c:Membrane.Element.Base.handle_shutdown/2`, as they
-  do not support returning any actions) unless explicitly stated otherwise.
+  callback unless explicitly stated otherwise.
   """
 
   alias Membrane.{Buffer, Caps, ChildNotification, Clock, Event, Pad}
@@ -20,7 +18,7 @@ defmodule Membrane.Element.Action do
   @typedoc """
   Sends an event through a pad (input or output).
 
-  Forbidden when playback state is stopped.
+  Allowed only when playback is `playing`.
   """
   @type event_t :: {:event, {Pad.ref_t(), Event.t()}}
 
@@ -34,7 +32,7 @@ defmodule Membrane.Element.Action do
 
   Return value of each execution of sub-callback can be any valid return value
   of the original callback (this also means sub-callback can return any action
-  valid for the original callback, unless expliciltly stated). Returned actions
+  valid for the original callback, unless explicitly stated). Returned actions
   are executed immediately (they are NOT accumulated and executed after all
   sub-callback executions are finished).
 
@@ -50,7 +48,7 @@ defmodule Membrane.Element.Action do
 
   The pad must have output direction. Sent caps must fit constraints on the pad.
 
-  Forbidden when playback state is stopped.
+  Allowed only when playback is `playing`.
   """
   @type caps_t :: {:caps, {Pad.ref_t(), Caps.t()}}
 
@@ -59,7 +57,7 @@ defmodule Membrane.Element.Action do
 
   The pad must have output direction.
 
-  Allowed only when playback state is playing.
+  Allowed only when playback is playing.
   """
   @type buffer_t :: {:buffer, {Pad.ref_t(), Buffer.t() | [Buffer.t()]}}
 
@@ -78,7 +76,7 @@ defmodule Membrane.Element.Action do
   Demand size can be either a non-negative integer, that overrides existing demand,
   or a function that is passed current demand, and is to return the new demand.
 
-  Allowed only when playback state is playing.
+  Allowed only when playback is playing.
   """
   @type demand_t :: {:demand, {Pad.ref_t(), demand_size_t}}
   @type demand_size_t :: pos_integer | (pos_integer() -> non_neg_integer())
@@ -113,7 +111,7 @@ defmodule Membrane.Element.Action do
   bytes to parse the whole frame.
 
   ## Usage limitations
-  Allowed only when playback state is playing.
+  Allowed only when playback is playing.
   """
   @type redemand_t :: {:redemand, Pad.ref_t()}
 
@@ -130,8 +128,7 @@ defmodule Membrane.Element.Action do
   - callback is `c:Membrane.Filter.handle_process_list/4`,
   `c:Membrane.Element.WithInputPads.handle_caps/4`
   or `c:Membrane.Element.Base.handle_event/4`,
-  - playback state is valid for sending buffer, caps or event action
-  respectively.
+  - playback is `playing`
 
   Keep in mind that `c:Membrane.Filter.handle_process_list/4` can only
   forward buffers, `c:Membrane.Element.WithInputPads.handle_caps/4` - caps
@@ -139,23 +136,6 @@ defmodule Membrane.Element.Action do
   """
   @type forward_t ::
           {:forward, Buffer.t() | [Buffer.t()] | Caps.t() | Event.t() | :end_of_stream}
-
-  @typedoc """
-  Suspends/resumes change of playback state.
-
-  - `playback_change: :suspend` may be returned only from
-  `c:Membrane.Element.Base.handle_stopped_to_prepared/2`,
-  `c:Membrane.Element.Base.handle_playing_to_prepared/2`,
-  `c:Membrane.Element.Base.handle_prepared_to_playing/2` and
-  `c:Membrane.Element.Base.handle_prepared_to_stopped/2` callbacks,
-  and defers playback state change until `playback_change: :resume` is returned.
-  - `playback_change: :resume` may be returned from any callback, only when
-  playback state change is suspended, and causes it to finish.
-
-  There is no straight limit how long playback change can take, but keep in mind
-  that it may affect application quality if not done quick enough.
-  """
-  @type playback_change_t :: {:playback_change, :suspend | :resume}
 
   @typedoc """
   Starts a timer that will invoke `c:Membrane.Element.Base.handle_tick/3` callback
@@ -206,7 +186,7 @@ defmodule Membrane.Element.Action do
   @typedoc """
   This action sets the latency for the element.
 
-  This action is not premitted in callback `c:Membrane.Element.Base.handle_init/1`.
+  This action is not premitted in callback `c:Membrane.Element.Base.handle_init/2`.
   """
   @type latency_t :: {:latency, latency :: Membrane.Time.non_neg_t()}
 
@@ -220,9 +200,19 @@ defmodule Membrane.Element.Action do
   @type end_of_stream_t :: {:end_of_stream, Pad.ref_t()}
 
   @typedoc """
+  Terminates element with given reason.
+
+  Termination reason follows the OTP semantics:
+  - Use `:normal` for graceful termination. Allowed only when the parent already requested termination,
+    i.e. after `c:Membrane.Element.Base.handle_terminate_request/2` is called
+  - If reason is neither `:normal`, `:shutdown` nor `{:shutdown, term}`, an error is logged
+  """
+  @type terminate_t :: {:terminate, reason :: :normal | :shutdown | {:shutdown, term} | term}
+
+  @typedoc """
   Type that defines a single action that may be returned from element callbacks.
 
-  Depending on element type, callback, current playback state and other
+  Depending on element type, callback, current playback and other
   circumstances there may be different actions available.
   """
   @type t ::
@@ -234,9 +224,9 @@ defmodule Membrane.Element.Action do
           | demand_t
           | redemand_t
           | forward_t
-          | playback_change_t
           | start_timer_t
           | stop_timer_t
           | latency_t
           | end_of_stream_t
+          | terminate_t
 end

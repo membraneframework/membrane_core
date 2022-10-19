@@ -35,31 +35,28 @@ defmodule Membrane.Core.Element.EventControllerTest do
       })
 
     state =
-      %{
-        State.new(%{
-          module: MockEventHandlingElement,
-          name: :test_name,
-          parent_clock: nil,
-          sync: nil,
-          parent: self()
-        })
-        | type: :filter,
-          pads_data: %{
-            input:
-              struct(Membrane.Element.PadData,
-                ref: :input,
-                accepted_caps: :any,
-                direction: :input,
-                pid: self(),
-                mode: :pull,
-                start_of_stream?: false,
-                end_of_stream?: false,
-                input_queue: input_queue,
-                demand: 0
-              )
-          }
-      }
-      |> Bunch.Struct.put_in([:playback, :state], :playing)
+      struct(State,
+        module: MockEventHandlingElement,
+        name: :test_name,
+        type: :filter,
+        playback: :playing,
+        parent_pid: self(),
+        synchronization: %{clock: nil, parent_clock: nil, stream_sync: nil},
+        pads_data: %{
+          input:
+            struct(Membrane.Element.PadData,
+              ref: :input,
+              accepted_caps: :any,
+              direction: :input,
+              pid: self(),
+              mode: :pull,
+              start_of_stream?: false,
+              end_of_stream?: false,
+              input_queue: input_queue,
+              demand: 0
+            )
+        }
+      )
 
     assert_received Message.new(:demand, _size, for_pad: :some_pad)
     [state: state]

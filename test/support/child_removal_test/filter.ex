@@ -3,7 +3,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   Module used in tests for elements removing.
 
   It allows to:
-  * slow down the moment of switching between :prepared and :playing states.
+  * slow down the moment of switching to :playing.
   * send demands and buffers from two input pads to one output pad.
 
   Should be used along with `Membrane.Support.ChildRemovalTest.Pipeline` as they
@@ -26,7 +26,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
               playing_delay: [type: :integer, default: 0]
 
   @impl true
-  def handle_init(opts) do
+  def handle_init(_ctx, opts) do
     {:ok, Map.put(opts, :pads, MapSet.new())}
   end
 
@@ -43,18 +43,9 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   end
 
   @impl true
-  def handle_prepared_to_playing(_ctx, %{playing_delay: 0} = state) do
+  def handle_playing(_ctx, %{playing_delay: time} = state) do
+    Process.sleep(time)
     {{:ok, notify_parent: :playing}, state}
-  end
-
-  def handle_prepared_to_playing(_ctx, %{playing_delay: time} = state) do
-    Process.send_after(self(), :resume_after_wait, time)
-    {{:ok, playback_change: :suspend}, state}
-  end
-
-  @impl true
-  def handle_info(:resume_after_wait, _ctx, state) do
-    {{:ok, playback_change: :resume, notify_parent: :playing}, state}
   end
 
   @impl true

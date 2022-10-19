@@ -25,28 +25,25 @@ defmodule Membrane.Core.Element.CapsControllerTest do
       })
 
     state =
-      %{
-        State.new(%{
-          module: Filter,
-          name: :test_name,
-          parent_clock: nil,
-          sync: nil,
-          parent: self()
-        })
-        | type: :filter,
-          pads_data: %{
-            input:
-              struct(Membrane.Element.PadData,
-                accepted_caps: :any,
-                direction: :input,
-                pid: self(),
-                mode: :pull,
-                input_queue: input_queue,
-                demand: 0
-              )
-          }
-      }
-      |> Bunch.Struct.put_in([:playback, :state], :playing)
+      struct(State,
+        module: Filter,
+        name: :test_name,
+        parent: self(),
+        type: :filter,
+        playback: :playing,
+        synchronization: %{clock: nil, parent_clock: nil},
+        pads_data: %{
+          input:
+            struct(Membrane.Element.PadData,
+              accepted_caps: :any,
+              direction: :input,
+              pid: self(),
+              mode: :pull,
+              input_queue: input_queue,
+              demand: 0
+            )
+        }
+      )
 
     assert_received Message.new(:demand, _size, for_pad: :some_pad)
     [state: state]

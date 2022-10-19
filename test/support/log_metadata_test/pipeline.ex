@@ -19,13 +19,13 @@ defmodule Membrane.Support.LogMetadataTest.Pipeline do
     def_input_pad :input, demand_unit: :buffers, caps: :any
 
     @impl true
-    def handle_init(_opts) do
+    def handle_init(_ctx, _opts) do
       {{:ok, notify_parent: Logger.metadata()}, %{}}
     end
   end
 
   @impl true
-  def handle_init(opts) do
+  def handle_init(_ctx, opts) do
     actions =
       opts.elements
       |> Enum.map(fn {element_name, element_metadata} ->

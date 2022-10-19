@@ -46,15 +46,15 @@ defmodule Membrane.Testing.Sink do
               ]
 
   @impl true
-  def handle_init(opts) do
+  def handle_init(_ctx, opts) do
     {:ok, opts}
   end
 
   @impl true
-  def handle_prepared_to_playing(_context, %{autodemand: true} = state),
+  def handle_playing(_context, %{autodemand: true} = state),
     do: {{:ok, demand: :input}, state}
 
-  def handle_prepared_to_playing(_context, state), do: {:ok, state}
+  def handle_playing(_context, state), do: {:ok, state}
 
   @impl true
   def handle_event(:input, event, _context, state) do

@@ -1,28 +1,20 @@
 defmodule Membrane.Core.Element.LifecycleController do
   @moduledoc false
 
-  # Module handling element initialization, termination, playback state changes
+  # Module handling element initialization, termination, playback changes
   # and similar stuff.
 
   use Bunch
-  use Membrane.Core.PlaybackHandler
 
   alias Membrane.Core.{CallbackHandler, Child, Element, Message}
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.{CallbackHandler, Child, Element, Message}
-  alias Membrane.Core.Element.{ActionHandler, PlaybackBuffer, State}
+  alias Membrane.Core.Element.{ActionHandler, PlaybackQueue, State}
   alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
-  require Membrane.Core.Playback
   require Membrane.Logger
-
-  @safe_shutdown_reasons [
-    {:shutdown, :child_crash},
-    {:shutdown, :membrane_crash_group_kill},
-    {:shutdown, :parent_crash}
-  ]
 
   @doc """
   Performs initialization tasks and executes `handle_init` callback.
@@ -35,66 +27,97 @@ defmodule Membrane.Core.Element.LifecycleController do
 
     :ok = Sync.register(state.synchronization.stream_sync)
 
-    state =
+    clock =
       if Bunch.Module.check_behaviour(module, :membrane_clock?) do
         {:ok, clock} = Clock.start_link()
-        put_in(state.synchronization.clock, clock)
+        clock
       else
-        state
+        nil
       end
+
+    state = put_in(state.synchronization.clock, clock)
+    Message.send(state.parent_pid, :clock, [state.name, clock])
+    require CallbackContext.Init
 
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_init,
         ActionHandler,
-        %{},
-        [options],
-        state
+        %{context: &CallbackContext.Init.from_state/1},
+        [],
+        %{state | internal_state: options}
       )
 
-    Membrane.Logger.debug("Element initialized: #{inspect(module)}")
     state
   end
 
-  @doc """
-  Performs shutdown checks and executes `handle_shutdown` callback.
-  """
-  @spec handle_shutdown(reason :: any, State.t()) :: :ok
-  def handle_shutdown(reason, state) do
-    playback_state = state.playback.state
+  @spec handle_setup(State.t()) :: State.t()
+  def handle_setup(state) do
+    require CallbackContext.Setup
+    context = &CallbackContext.Setup.from_state/1
 
-    cond do
-      playback_state == :terminating ->
-        Membrane.Logger.debug("Terminating element, reason: #{inspect(reason)}")
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_setup,
+        ActionHandler,
+        %{context: context},
+        [],
+        state
+      )
 
-      reason in @safe_shutdown_reasons ->
-        Membrane.Logger.debug("""
-        Terminating element possibly not prepared for termination as it was in state #{inspect(playback_state)}.
-        Reason: #{inspect(reason)}"
-        """)
-
-      true ->
-        Membrane.Logger.warn("""
-        Terminating element possibly not prepared for termination as it was in state #{inspect(playback_state)}.
-        Reason: #{inspect(reason)},
-        State: #{inspect(state, pretty: true)}
-        """)
-    end
-
-    %State{module: module, internal_state: internal_state} = state
-    :ok = module.handle_shutdown(reason, internal_state)
+    Membrane.Logger.debug("Element initialized")
+    Message.send(state.parent_pid, :initialized, state.name)
+    %State{state | initialized?: true}
   end
 
-  @spec handle_pipeline_down(reason :: any, State.t()) :: :ok
-  def handle_pipeline_down(reason, state) do
-    if reason != :normal do
-      Membrane.Logger.debug("""
-      Shutting down because of pipeline failure
-      Reason: #{inspect(reason)}
-      """)
-    end
+  @spec handle_playing(State.t()) :: State.t()
+  def handle_playing(state) do
+    Child.PadController.assert_all_static_pads_linked!(state)
 
-    handle_shutdown(reason, state)
+    Membrane.Logger.debug("Got play request")
+    state = %State{state | playback: :playing}
+    require CallbackContext.Playing
+    context = &CallbackContext.Playing.from_state/1
+
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_playing,
+        ActionHandler,
+        %{context: context},
+        [],
+        state
+      )
+
+    PlaybackQueue.eval(state)
+  end
+
+  @spec handle_terminate_request(State.t()) :: State.t()
+  def handle_terminate_request(state) do
+    Membrane.Logger.debug("Received terminate request")
+
+    state =
+      state.pads_data
+      |> Map.values()
+      |> Enum.filter(&(&1.direction == :input))
+      |> Enum.reduce(state, fn %{ref: pad_ref}, state_acc ->
+        Element.PadController.generate_eos_if_needed(pad_ref, state_acc)
+      end)
+
+    state = %{state | terminating?: true}
+
+    require CallbackContext.TerminateRequest
+    context = &CallbackContext.TerminateRequest.from_state/1
+
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_terminate_request,
+        ActionHandler,
+        %{context: context},
+        [],
+        state
+      )
+
+    %{state | playback: :stopped}
   end
 
   @doc """
@@ -102,8 +125,8 @@ defmodule Membrane.Core.Element.LifecycleController do
   """
   @spec handle_info(message :: any, State.t()) :: State.t()
   def handle_info(message, state) do
-    require CallbackContext.Other
-    context = &CallbackContext.Other.from_state/1
+    require CallbackContext.Info
+    context = &CallbackContext.Info.from_state/1
 
     CallbackHandler.exec_and_handle_callback(
       :handle_info,
@@ -112,59 +135,5 @@ defmodule Membrane.Core.Element.LifecycleController do
       [message],
       state
     )
-  end
-
-  @impl PlaybackHandler
-  def handle_playback_state(old_playback_state, new_playback_state, state) do
-    require CallbackContext.PlaybackChange
-
-    context = &CallbackContext.PlaybackChange.from_state/1
-    callback = PlaybackHandler.state_change_callback(old_playback_state, new_playback_state)
-
-    state =
-      case {old_playback_state, new_playback_state} do
-        {:stopped, :prepared} ->
-          Child.PadController.assert_all_static_pads_linked!(state)
-          state
-
-        {:playing, :prepared} ->
-          state.pads_data
-          |> Map.values()
-          |> Enum.filter(&(&1.direction == :input))
-          |> Enum.reduce(state, fn %{ref: pad_ref}, state_acc ->
-            Element.PadController.generate_eos_if_needed(pad_ref, state_acc)
-          end)
-
-        _other ->
-          state
-      end
-
-    if callback do
-      state =
-        CallbackHandler.exec_and_handle_callback(
-          callback,
-          ActionHandler,
-          %{context: context},
-          [],
-          state
-        )
-
-      {:ok, state}
-    else
-      {:ok, state}
-    end
-  end
-
-  @impl PlaybackHandler
-  def handle_playback_state_changed(old, new, state) do
-    Membrane.Logger.debug("Playback state changed from #{old} to #{new}")
-
-    state = PlaybackBuffer.eval(state)
-
-    if new == :terminating do
-      exit(:normal)
-    end
-
-    {:ok, state}
   end
 end

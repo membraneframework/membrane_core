@@ -5,8 +5,7 @@ defmodule Membrane.Bin.Action do
 
   Returning actions is a way of bin interaction with
   other components and parts of framework. Each action may be returned by any
-  callback (except for `c:Membrane.Bin.handle_shutdown/2`, as it
-  does not support returning any actions) unless explicitly stated otherwise.
+  callback unless explicitly stated otherwise.
   """
 
   alias Membrane.{Child, ParentSpec}
@@ -25,8 +24,8 @@ defmodule Membrane.Bin.Action do
   @typedoc """
   Action that instantiates children and links them according to `Membrane.ParentSpec`.
 
-  Children's playback state is changed to the current bin state.
-  `c:Membrane.Parent.handle_spec_started/3` callback is executed once it happens.
+  Children's playback is changed to the current bin playback.
+  `c:Membrane.Parent.handle_spec_started/3` callback is executed once the children are spawned.
   """
   @type spec_t :: {:spec, ParentSpec.t()}
 
@@ -83,6 +82,22 @@ defmodule Membrane.Bin.Action do
   @type stop_timer_t :: {:stop_timer, timer_id :: any}
 
   @typedoc """
+  Terminates bin with given reason.
+
+  Termination reason follows the OTP semantics:
+  - Use `:normal` for graceful termination. Allowed only when the parent already requested termination,
+  i.e. after `c:Membrane.Bin.handle_terminate_request/2` is called. If the bin has no children, it
+  terminates immediately. Otherwise, it switches to the zombie mode, requests all the children to terminate,
+  waits for them to terminate and then terminates itself. In the zombie mode, no bin callbacks
+  are called and all messages and calls to the bin are ignored (apart from Membrane internal
+  messages)
+  - If the reason is other than `:normal`, the bin terminates immediately. The bin supervisor
+  terminates all the children with the reason `:shutdown`
+  - If the reason is neither `:normal`, `:shutdown` nor `{:shutdown, term}`, an error is logged
+  """
+  @type terminate_t :: {:terminate, reason :: :normal | :shutdown | {:shutdown, term} | term}
+
+  @typedoc """
   Type describing actions that can be returned from bin callbacks.
 
   Returning actions is a way of bin interaction with its children and
@@ -96,4 +111,5 @@ defmodule Membrane.Bin.Action do
           | start_timer_t
           | timer_interval_t
           | stop_timer_t
+          | terminate_t
 end
