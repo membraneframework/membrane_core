@@ -39,16 +39,16 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
     specs = Keyword.put(specs, :options, escaped_pad_opts)
     {caps_pattern, specs} = Keyword.pop!(specs, :caps_pattern)
+    specs = [{:caps_pattern, Macro.to_string(caps_pattern)} | specs]
 
     caps_patterns = Bunch.listify(caps_pattern)
 
     case_statement_cases =
-      Enum.map(caps_patterns, fn pattern ->
+      Enum.flat_map(caps_patterns, fn pattern ->
         quote do
           unquote(pattern) -> true
         end
       end)
-      |> Enum.concat()
 
     case_statement_cases =
       caps_patterns
@@ -161,6 +161,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
               config
               |> Bunch.Config.parse(
                 availability: [in: [:always, :on_request], default: :always],
+                caps_pattern: [default: nil],
                 mode: [in: [:pull, :push], default: :pull],
                 demand_mode: [
                   in: [:auto, :manual],
@@ -259,6 +260,27 @@ defmodule Membrane.Core.Child.PadsSpecs do
       </table>
       """ <> unquote(options_doc)
     end
+  end
+
+  defp generate_pad_property_doc(:caps, caps) do
+    caps
+    |> Bunch.listify()
+    |> Enum.map(fn
+      {module, params} ->
+        params_doc =
+          Enum.map_join(params, ",<br/>", fn {k, v} ->
+            Bunch.Markdown.hard_indent("<code>#{k}: #{inspect(v)}</code>")
+          end)
+
+        "<code>#{inspect(module)}</code>, restrictions:<br/>#{params_doc}"
+
+      module ->
+        "<code>#{inspect(module)}</code>"
+    end)
+    ~> (
+      [doc] -> doc
+      docs -> docs |> Enum.join(",<br/>")
+    )
   end
 
   defp generate_pad_property_doc(_k, v) do

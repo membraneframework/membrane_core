@@ -29,6 +29,7 @@ defmodule Membrane.Element.PadData do
           ancestors_with_pads: [Pad.module_with_pad_t()],
           availability: Pad.availability_t(),
           caps: Caps.t() | nil,
+          caps_pattern: String.t(),
           start_of_stream?: boolean(),
           end_of_stream?: boolean(),
           direction: Pad.direction_t(),
@@ -53,6 +54,7 @@ defmodule Membrane.Element.PadData do
   @enforce_keys [
     :availability,
     :caps,
+    :caps_pattern,
     :direction,
     :mode,
     :name,
