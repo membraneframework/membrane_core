@@ -131,14 +131,16 @@ defmodule Membrane.Integration.LinkingTest do
             remove_child_on_unlink: false
           })
         ],
-        crash_group: {:group_1, :temporary}
+        crash_group: :temporary,
+        children_group_id: :group_1
       }
 
       sink_spec = %Membrane.ChildrenSpec{
         structure: [
           child(:sink, Testing.Sink)
         ],
-        crash_group: {:group_2, :temporary}
+        crash_group: :temporary,
+        children_group_id: :group_2
       }
 
       links_spec = %Membrane.ChildrenSpec{
@@ -180,14 +182,16 @@ defmodule Membrane.Integration.LinkingTest do
       structure: [
         child(:source, %Testing.Source{output: ['a', 'b', 'c']})
       ],
-      crash_group: {:group_1, :temporary}
+      crash_group: :temporary,
+      children_group_id: :group_1
     }
 
     spec_2 = %Membrane.ChildrenSpec{
       structure: [
         child(:sink, Testing.Sink)
       ],
-      crash_group: {:group_2, :temporary}
+      crash_group: :temporary,
+      children_group_id: :group_2
     }
 
     links_spec = %Membrane.ChildrenSpec{
@@ -214,14 +218,16 @@ defmodule Membrane.Integration.LinkingTest do
       structure: [
         child(:source, %Testing.DynamicSource{output: ['a', 'b', 'c']})
       ],
-      crash_group: {:group_1, :temporary}
+      crash_group: :temporary,
+      children_group_id: :group_1
     }
 
     spec_2 = %Membrane.ChildrenSpec{
       structure: [
         child(:sink, Testing.Sink)
       ],
-      crash_group: {:group_2, :temporary}
+      crash_group: :temporary,
+      children_group_id: :group_2
     }
 
     links_spec = %Membrane.ChildrenSpec{
@@ -247,14 +253,16 @@ defmodule Membrane.Integration.LinkingTest do
       structure: [
         child(:bin, %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}})
       ],
-      crash_group: {:group_1, :temporary}
+      crash_group: :temporary,
+      children_group_id: :group_1
     }
 
     sink_spec = %Membrane.ChildrenSpec{
       structure: [
         child(:sink, Testing.Sink)
       ],
-      crash_group: {:group_1, :temporary}
+      crash_group: :temporary,
+      children_group_id: :group_1
     }
 
     links_spec = %Membrane.ChildrenSpec{

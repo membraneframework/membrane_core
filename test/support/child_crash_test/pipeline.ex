@@ -56,7 +56,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
     spec =
       if group do
-        %{spec | crash_group: {group, :temporary}}
+        %{spec | crash_group: :temporary, children_group_id: group}
       else
         spec
       end
@@ -78,7 +78,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
     spec =
       if group do
-        %{spec | crash_group: {group, :temporary}}
+        %{spec | crash_group: :temporary, children_group_id: group}
       else
         spec
       end
@@ -110,7 +110,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
     spec =
       if group do
-        %{spec | crash_group: {group, :temporary}}
+        %{spec | crash_group: :temporary, children_group_id: group}
       else
         spec
       end
