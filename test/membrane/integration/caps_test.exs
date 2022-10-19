@@ -49,62 +49,38 @@ defmodule Membrane.CapsTest do
   describe "Error should be raised, when caps don't match" do
     test "input caps patterns in element" do
       pipeline = caps_test_pipeline(Source, RestrictiveSink)
-
-      assert_receive({:my_pid, RestrictiveSink, pid})
-      Process.monitor(pid)
-
       send_caps(pipeline, FormatAcceptedByOuterBins)
-
-      assert_receive({:DOWN, _ref, :process, ^pid, {%Membrane.CapsMatchError{}, _stacktrace}})
+      assert_down(RestrictiveSink)
     end
 
     test "input caps patterns in inner bin" do
       pipeline = caps_test_pipeline(Source, OuterSinkBin)
-
-      assert_receive({:my_pid, Sink, pid})
-      Process.monitor(pid)
-
       send_caps(pipeline, FormatAcceptedByOuterBins)
-
-      assert_receive({:DOWN, _ref, :process, ^pid, {%Membrane.CapsMatchError{}, _stacktrace}})
+      assert_down(Sink)
     end
 
     test "input caps patterns in outer bin" do
       pipeline = caps_test_pipeline(Source, OuterSinkBin)
-
-      assert_receive({:my_pid, Sink, pid})
-      Process.monitor(pid)
-
       send_caps(pipeline, FormatAcceptedByInnerBins)
-
-      assert_receive({:DOWN, _ref, :process, ^pid, {%Membrane.CapsMatchError{}, _stacktrace}})
+      assert_down(Sink)
     end
 
     test "output caps patterns in element" do
       pipeline = caps_test_pipeline(RestrictiveSource, Sink)
       send_caps(pipeline, FormatAcceptedByOuterBins)
-
-      assert_receive({:my_pid, RestrictiveSource, pid})
-      Process.monitor(pid)
-      assert_receive({:DOWN, _ref, :process, ^pid, {%Membrane.CapsMatchError{}, _stacktrace}})
+      assert_down(RestrictiveSource)
     end
 
     test "output caps patterns in inner bin" do
       pipeline = caps_test_pipeline(OuterSourceBin, Sink)
       send_caps(pipeline, FormatAcceptedByOuterBins)
-
-      assert_receive({:my_pid, Source, pid})
-      Process.monitor(pid)
-      assert_receive({:DOWN, _ref, :process, ^pid, {%Membrane.CapsMatchError{}, _stacktrace}})
+      assert_down(Source)
     end
 
     test "output caps patterns in outer bin" do
       pipeline = caps_test_pipeline(OuterSourceBin, Sink)
       send_caps(pipeline, FormatAcceptedByInnerBins)
-
-      assert_receive({:my_pid, Source, pid})
-      Process.monitor(pid)
-      assert_receive({:DOWN, _ref, :process, ^pid, {%Membrane.CapsMatchError{}, _stacktrace}})
+      assert_down(Source)
     end
   end
 
@@ -115,11 +91,17 @@ defmodule Membrane.CapsTest do
         sink: struct!(sink, test_pid: self())
       )
 
-    Pipeline.start_link_supervised!(structure: structure)
+    Pipeline.start_supervised!(structure: structure)
   end
 
   defp send_caps(pipeline, caps_format) do
     caps = %CapsTest.Stream{format: caps_format}
     Pipeline.execute_actions(pipeline, notify_child: {:source, {:send_caps, caps}})
+  end
+
+  defp assert_down(module) do
+    assert_receive({:my_pid, ^module, pid})
+    Process.monitor(pid)
+    assert_receive({:DOWN, _ref, :process, ^pid, {%Membrane.CapsMatchError{}, _stacktrace}})
   end
 end

@@ -40,6 +40,29 @@ defmodule Membrane.Core.Child.PadsSpecs do
     specs = Keyword.put(specs, :options, escaped_pad_opts)
     {caps_pattern, specs} = Keyword.pop!(specs, :caps_pattern)
 
+    caps_patterns = Bunch.listify(caps_pattern)
+
+    case_statement_cases =
+      Enum.map(caps_patterns, fn pattern ->
+        quote do
+          unquote(pattern) -> true
+        end
+      end)
+      |> Enum.concat()
+
+    case_statement_cases =
+      caps_patterns
+      |> Enum.any?(&match?({var, _meta, nil} when is_atom(var), &1))
+      |> if do
+        # when in there is a clause, that will always match
+        case_statement_cases
+      else
+        case_statement_cases ++
+          quote do
+            _else -> false
+          end
+      end
+
     quote do
       unquote(do_ensure_default_membrane_pads())
 
@@ -57,7 +80,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
       end
 
       def membrane_caps_match?(unquote(pad_name), caps) do
-        match?(unquote(caps_pattern), caps)
+        case caps, do: unquote(case_statement_cases)
       end
     end
   end
