@@ -46,17 +46,21 @@ defmodule Membrane.Core.Observability do
     children_group_id_str =
       cond do
         children_group_id == nil -> ""
-        String.valid?(children_group_id) -> "(#{children_group_id})"
-        true -> "(#{inspect(children_group_id)})"
+        String.valid?(children_group_id) -> " [children group: #{children_group_id}] "
+        true -> " [children group: #{inspect(children_group_id)}] "
       end
 
     register_name_for_observer(
       :"##{unique_prefix}#{name_str}#{component_type_suffix}#{utility_name}"
     )
 
-    component_path = parent_path ++ [name_str, children_group_id_str]
+    component_path = parent_path ++ [name_str]
     ComponentPath.set(component_path)
-    Membrane.Logger.set_prefix(ComponentPath.format(component_path) <> utility_name)
+
+    Membrane.Logger.set_prefix(
+      ComponentPath.format(component_path) <> children_group_id_str <> utility_name
+    )
+
     :ok
   end
 
