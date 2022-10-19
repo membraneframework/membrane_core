@@ -81,10 +81,51 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
       refute_receive %Message.Terminated{from: ^pipeline}
     end
+
+    test "should allow to use wildcards in subscription pattern", %{pipeline: pipeline} do
+      # SETUP
+      Pipeline.subscribe(pipeline, %Message.Playing{})
+      Pipeline.subscribe(pipeline, %Message.EndOfStream{})
+
+      # RUN
+      Pipeline.exec_actions(pipeline, playback: :playing)
+
+      # TEST
+      assert_receive %Message.Playing{from: ^pipeline}
+
+      assert_receive %Message.EndOfStream{from: ^pipeline, element: :b, pad: :input}
+
+      assert_receive %Message.EndOfStream{from: ^pipeline, element: :c, pad: :input}
+
+      # STOP
+      Pipeline.terminate(pipeline, blocking?: true)
+
+      # TEST
+      refute_receive %Message.Terminated{from: ^pipeline}
+      refute_receive %Message.Notification{from: ^pipeline}
+      refute_receive %Message.StartOfStream{from: ^pipeline, element: _, pad: _}
+    end
   end
 
   describe "Membrane.RemoteControlled.Pipeline await_* functions" do
     setup :setup_pipeline
+
+    test "should await for requested messages", %{pipeline: pipeline} do
+      # SETUP
+      Pipeline.subscribe(pipeline, %Message.Playing{})
+      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
+      Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
+      Pipeline.subscribe(pipeline, %Message.Terminated{})
+
+      # RUN
+      Pipeline.exec_actions(pipeline, playback: :playing)
+
+      # TEST
+      Pipeline.await_playing(pipeline)
+
+      Pipeline.await_start_of_stream(pipeline, :c, :input)
+      Pipeline.await_notification(pipeline, :b)
+    end
 
     test "should await for requested messages with parts of message body not being specified", %{
       pipeline: pipeline
