@@ -19,7 +19,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   Pipeline.subscribe(pipeline, %Message.Playing{})
   ...
   # awaits for the message sent when the pipeline enters :playing playback
-  Pipeline.await_play(pipeline)
+  Pipeline.await_playing(pipeline)
   ...
   ```
 
@@ -114,11 +114,11 @@ defmodule Membrane.RemoteControlled.Pipeline do
   Usage example:
     1) awaiting until the pipeline starts playing:
     ```
-    Pipeline.await_play(pipeline)
+    Pipeline.await_playing(pipeline)
     ```
   """
-  @spec await_play(pid()) :: Membrane.RemoteControlled.Message.Playing.t()
-  def await_play(pipeline) do
+  @spec await_playing(pid()) :: Membrane.RemoteControlled.Message.Playing.t()
+  def await_playing(pipeline) do
     do_await(pipeline, Playing)
   end
 

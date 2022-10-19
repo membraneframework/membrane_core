@@ -121,7 +121,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       Pipeline.exec_actions(pipeline, playback: :playing)
 
       # TEST
-      Pipeline.await_play(pipeline)
+      Pipeline.await_playing(pipeline)
       Pipeline.await_start_of_stream(pipeline, element, :input)
     end
   end
