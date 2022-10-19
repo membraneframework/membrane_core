@@ -294,8 +294,13 @@ defmodule Membrane.Core.Element.ActionHandler do
 
     pad_data = PadModel.get_data!(state, pad_ref)
 
-    with %{direction: :output, pid: pid, other_ref: other_ref} <- pad_data do
-      %{name: pad_name, ancestors_with_pads: ancestors_with_pads} = pad_data
+    with %{
+           direction: :output,
+           pid: pid,
+           other_ref: other_ref,
+           name: pad_name,
+           ancestors_with_pads: ancestors_with_pads
+         } <- pad_data do
       modules_with_pads = [{state.module, pad_name} | ancestors_with_pads]
       :ok = CapsController.ensure_caps_match!(:output, modules_with_pads, caps)
 
