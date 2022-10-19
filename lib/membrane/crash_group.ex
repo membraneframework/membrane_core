@@ -5,5 +5,4 @@ defmodule Membrane.CrashGroup do
   """
   @type mode_t() :: :temporary | nil
   @type name_t() :: any()
-  @type t :: {name_t, mode_t}
 end

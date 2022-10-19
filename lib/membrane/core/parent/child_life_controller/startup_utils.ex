@@ -70,7 +70,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
           parent_clock :: Clock.t(),
           syncs :: %{Membrane.Child.name_t() => pid()},
           log_metadata :: Keyword.t(),
-          supervisor :: pid
+          supervisor :: pid,
+          children_group_id :: any
         ) :: [ChildEntry.t()]
   def start_children(
         children,
@@ -78,18 +79,21 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
         parent_clock,
         syncs,
         log_metadata,
-        supervisor
+        supervisor,
+        children_group_id
       ) do
     # If the node is set to the current node, set it to nil, to avoid race conditions when
     # distribution changes
     node = if node == node(), do: nil, else: node
 
     Membrane.Logger.debug(
-      "Starting children: #{inspect(children)} #{if node, do: " on node #{node}"}"
+      "Starting children: #{inspect(children)} in children group: #{inspect(children_group_id)}#{if node, do: " on node #{node}"}"
     )
 
     children
-    |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata, supervisor))
+    |> Enum.map(
+      &start_child(&1, node, parent_clock, syncs, log_metadata, supervisor, children_group_id)
+    )
   end
 
   @spec maybe_activate_syncs(%{Membrane.Child.name_t() => Sync.t()}, Parent.state_t()) ::
@@ -121,10 +125,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
     )
   end
 
-  defp start_child(child, node, parent_clock, syncs, log_metadata, supervisor) do
+  defp start_child(child, node, parent_clock, syncs, log_metadata, supervisor, children_group_id) do
     %ChildEntry{name: name, module: module, options: options} = child
 
-    Membrane.Logger.debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")
+    Membrane.Logger.debug(
+      "Starting child: name: #{inspect(name)}, module: #{inspect(module)} in children group: #{inspect(children_group_id)}"
+    )
 
     sync = syncs |> Map.get(name, Sync.no_sync())
 
@@ -137,6 +143,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
       parent_clock: parent_clock,
       sync: sync,
       parent_path: Membrane.ComponentPath.get(),
+      children_group_id: children_group_id,
       log_metadata: log_metadata
     }
 
@@ -166,7 +173,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
         child
         | pid: child_pid,
           clock: clock,
-          sync: sync
+          sync: sync,
+          children_group_id: children_group_id
       }
     else
       {:error, reason} ->

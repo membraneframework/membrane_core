@@ -331,7 +331,8 @@ defmodule Membrane.Core.BinTest do
         filter1: TestFilter,
         filter2: TestFilter
       },
-      children_supervisor: Membrane.Core.ChildrenSupervisor.start_link!()
+      children_supervisor: Membrane.Core.ChildrenSupervisor.start_link!(),
+      children_group_id: nil
     }
   end
 end

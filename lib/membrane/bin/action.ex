@@ -36,7 +36,8 @@ defmodule Membrane.Bin.Action do
   @type remove_child_t ::
           {:remove_child,
            Child.name_t()
-           | [Child.name_t()]}
+           | [Child.name_t()]
+           | {:children_group, Membrane.Child.children_group_id_t()}}
 
   @typedoc """
   Starts a timer that will invoke `c:Membrane.Bin.handle_tick/3` callback

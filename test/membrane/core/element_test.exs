@@ -47,7 +47,8 @@ defmodule Membrane.Core.ElementTest do
         parent: self(),
         parent_path: [],
         log_metadata: [],
-        children_supervisor: Membrane.Core.ChildrenSupervisor.start_link!()
+        children_supervisor: Membrane.Core.ChildrenSupervisor.start_link!(),
+        children_group_id: nil
       })
 
     state
@@ -317,7 +318,8 @@ defmodule Membrane.Core.ElementTest do
       sync: Membrane.Sync.no_sync(),
       parent_path: [],
       log_metadata: [],
-      children_supervisor: Membrane.Core.ChildrenSupervisor.start_link!()
+      children_supervisor: Membrane.Core.ChildrenSupervisor.start_link!(),
+      children_group_id: nil
     }
   end
 end
