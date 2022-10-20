@@ -257,6 +257,10 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
+  defp generate_pad_property_doc(:caps_pattern, pattern_string) when is_binary(pattern_string) do
+    "<code>#{pattern_string}</code>"
+  end
+
   defp generate_pad_property_doc(_k, v) do
     "<code>#{inspect(v)}</code>"
   end
