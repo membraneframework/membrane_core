@@ -6,9 +6,11 @@ defmodule Membrane.Support.CapsTest.Source do
 
   use Membrane.Source
 
+  alias Membrane.Support.CapsTest.Stream
+
   def_output_pad :output,
     demand_unit: :buffers,
-    caps: _any,
+    caps: Stream,
     availability: :always,
     mode: :push
 

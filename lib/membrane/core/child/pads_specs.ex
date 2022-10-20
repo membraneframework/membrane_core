@@ -47,6 +47,10 @@ defmodule Membrane.Core.Child.PadsSpecs do
         ast -> ast
       end
       |> Bunch.listify()
+      |> Enum.flat_map(fn
+        {:__aliases__, _meta, _module} = ast -> [ast, {:%, [], [ast, {:%{}, [], []}]}]
+        ast -> [ast]
+      end)
       |> Enum.flat_map(fn pattern ->
         quote do
           unquote(pattern) -> true

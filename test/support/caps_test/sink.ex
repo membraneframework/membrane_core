@@ -7,9 +7,11 @@ defmodule Membrane.Support.CapsTest.Sink do
 
   use Membrane.Endpoint
 
+  alias Membrane.Support.CapsTest.Stream
+
   def_input_pad :input,
     demand_unit: :buffers,
-    caps: _any,
+    caps: Stream,
     availability: :always,
     mode: :push
 
