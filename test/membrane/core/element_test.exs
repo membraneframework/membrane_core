@@ -10,7 +10,7 @@ defmodule Membrane.Core.ElementTest do
 
   defmodule SomeElement do
     use Membrane.Source
-    def_output_pad :output, caps_pattern: _any
+    def_output_pad :output, caps: _any
 
     @impl true
     def handle_info(msg, _ctx, state) do
@@ -21,10 +21,10 @@ defmodule Membrane.Core.ElementTest do
   defmodule Filter do
     use Membrane.Filter
 
-    def_output_pad :output, caps_pattern: _any
+    def_output_pad :output, caps: _any
 
     def_input_pad :dynamic_input,
-      caps_pattern: _any,
+      caps: _any,
       demand_unit: :buffers,
       availability: :on_request
 

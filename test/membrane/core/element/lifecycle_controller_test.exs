@@ -8,7 +8,7 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
 
   defmodule DummyElement do
     use Membrane.Filter
-    def_output_pad :output, caps_pattern: _any
+    def_output_pad :output, caps: _any
   end
 
   setup do

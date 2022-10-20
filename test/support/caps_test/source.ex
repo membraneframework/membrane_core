@@ -8,7 +8,7 @@ defmodule Membrane.Support.CapsTest.Source do
 
   def_output_pad :output,
     demand_unit: :buffers,
-    caps_pattern: _any,
+    caps: _any,
     availability: :always,
     mode: :push
 

@@ -14,9 +14,9 @@ defmodule Membrane.Support.LogMetadataTest.Pipeline do
 
     require Membrane.Logger
 
-    def_output_pad :output, caps_pattern: _any
+    def_output_pad :output, caps: _any
 
-    def_input_pad :input, demand_unit: :buffers, caps_pattern: _any
+    def_input_pad :input, demand_unit: :buffers, caps: _any
 
     @impl true
     def handle_init(_opts) do

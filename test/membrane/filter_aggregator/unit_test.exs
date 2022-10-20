@@ -36,7 +36,7 @@
 
 #     pad_description_template = %{
 #       availability: :always,
-#       caps_pattern: _any,
+#       caps: _any,
 #       demand_mode: :auto,
 #       demand_unit: :buffers,
 #       direction: nil,

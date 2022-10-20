@@ -8,9 +8,9 @@ defmodule Membrane.ElementTest do
   defmodule TestFilter do
     use Membrane.Filter
 
-    def_input_pad :input, caps_pattern: _any, demand_unit: :buffers
+    def_input_pad :input, caps: _any, demand_unit: :buffers
 
-    def_output_pad :output, caps_pattern: _any
+    def_output_pad :output, caps: _any
 
     def_options target: [type: :pid]
 

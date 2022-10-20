@@ -4,9 +4,9 @@ defmodule Membrane.Support.DemandsTest.Filter do
 
   alias Membrane.Buffer
 
-  def_output_pad :output, caps_pattern: _any
+  def_output_pad :output, caps: _any
 
-  def_input_pad :input, demand_unit: :buffers, caps_pattern: _any
+  def_input_pad :input, demand_unit: :buffers, caps: _any
 
   def_options demand_generator: [
                 type: :function,

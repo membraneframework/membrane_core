@@ -38,7 +38,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
     {escaped_pad_opts, pad_opts_typedef} = OptionsSpecs.def_pad_options(pad_name, specs[:options])
 
     specs = Keyword.put(specs, :options, escaped_pad_opts)
-    {caps_pattern, specs} = Keyword.pop!(specs, :caps_pattern)
+    {caps_pattern, specs} = Keyword.pop!(specs, :caps)
     specs = [{:caps_pattern, Macro.to_string(caps_pattern)} | specs]
 
     caps_patterns = Bunch.listify(caps_pattern)

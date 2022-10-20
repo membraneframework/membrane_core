@@ -13,8 +13,7 @@ defmodule Membrane.Support.CapsTest.InnerSourceBin do
 
   def_output_pad :output,
     demand_unit: :buffers,
-    caps_pattern:
-      %Stream{format: format} when format in [FormatAcceptedByAll, FormatAcceptedByInnerBins]
+    caps: %Stream{format: format} when format in [FormatAcceptedByAll, FormatAcceptedByInnerBins]
 
   def_options test_pid: [type: :pid]
 

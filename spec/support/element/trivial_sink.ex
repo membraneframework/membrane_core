@@ -5,5 +5,5 @@ defmodule Membrane.Support.Element.TrivialSink do
 
   use Membrane.Sink
 
-  def_input_pad :input, caps_pattern: _any, demand_unit: :buffers
+  def_input_pad :input, caps: _any, demand_unit: :buffers
 end

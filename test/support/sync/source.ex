@@ -2,7 +2,7 @@ defmodule Membrane.Support.Sync.Source do
   @moduledoc false
   use Membrane.Source
 
-  def_output_pad :output, caps_pattern: _any
+  def_output_pad :output, caps: _any
 
   def_options tick_interval: [type: :time],
               test_process: [type: :pid]

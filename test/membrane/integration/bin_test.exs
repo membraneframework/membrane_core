@@ -220,7 +220,7 @@ defmodule Membrane.Core.BinTest do
     defmodule ClockElement do
       use Membrane.Source
 
-      def_output_pad :output, caps_pattern: _any
+      def_output_pad :output, caps: _any
 
       def_clock()
     end
