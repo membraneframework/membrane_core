@@ -262,27 +262,6 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  defp generate_pad_property_doc(:caps, caps) do
-    caps
-    |> Bunch.listify()
-    |> Enum.map(fn
-      {module, params} ->
-        params_doc =
-          Enum.map_join(params, ",<br/>", fn {k, v} ->
-            Bunch.Markdown.hard_indent("<code>#{k}: #{inspect(v)}</code>")
-          end)
-
-        "<code>#{inspect(module)}</code>, restrictions:<br/>#{params_doc}"
-
-      module ->
-        "<code>#{inspect(module)}</code>"
-    end)
-    ~> (
-      [doc] -> doc
-      docs -> docs |> Enum.join(",<br/>")
-    )
-  end
-
   defp generate_pad_property_doc(_k, v) do
     "<code>#{inspect(v)}</code>"
   end
