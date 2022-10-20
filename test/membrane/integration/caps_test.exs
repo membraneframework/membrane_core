@@ -24,8 +24,7 @@ defmodule Membrane.CapsTest do
 
   describe "Caps should be accepted, when they match" do
     test "input caps patterns in bins" do
-      pipeline = caps_test_pipeline(Source, OuterSinkBin)
-      send_caps(pipeline, FormatAcceptedByAll)
+      pipeline = start_test_pipeline(Source, OuterSinkBin, FormatAcceptedByAll)
 
       assert_pipeline_notified(
         pipeline,
@@ -35,8 +34,7 @@ defmodule Membrane.CapsTest do
     end
 
     test "output caps patterns in bins" do
-      pipeline = caps_test_pipeline(OuterSourceBin, Sink)
-      send_caps(pipeline, FormatAcceptedByAll)
+      pipeline = start_test_pipeline(OuterSourceBin, Sink, FormatAcceptedByAll)
 
       assert_pipeline_notified(
         pipeline,
@@ -48,55 +46,46 @@ defmodule Membrane.CapsTest do
 
   describe "Error should be raised, when caps don't match" do
     test "input caps patterns in element" do
-      pipeline = caps_test_pipeline(Source, RestrictiveSink)
-      send_caps(pipeline, FormatAcceptedByOuterBins)
+      start_test_pipeline(Source, RestrictiveSink, FormatAcceptedByOuterBins)
       assert_down(RestrictiveSink)
     end
 
     test "input caps patterns in inner bin" do
-      pipeline = caps_test_pipeline(Source, OuterSinkBin)
-      send_caps(pipeline, FormatAcceptedByOuterBins)
+      start_test_pipeline(Source, OuterSinkBin, FormatAcceptedByOuterBins)
       assert_down(Sink)
     end
 
     test "input caps patterns in outer bin" do
-      pipeline = caps_test_pipeline(Source, OuterSinkBin)
-      send_caps(pipeline, FormatAcceptedByInnerBins)
+      start_test_pipeline(Source, OuterSinkBin, FormatAcceptedByInnerBins)
       assert_down(Sink)
     end
 
     test "output caps patterns in element" do
-      pipeline = caps_test_pipeline(RestrictiveSource, Sink)
-      send_caps(pipeline, FormatAcceptedByOuterBins)
+      start_test_pipeline(RestrictiveSource, Sink, FormatAcceptedByOuterBins)
       assert_down(RestrictiveSource)
     end
 
     test "output caps patterns in inner bin" do
-      pipeline = caps_test_pipeline(OuterSourceBin, Sink)
-      send_caps(pipeline, FormatAcceptedByOuterBins)
+      start_test_pipeline(OuterSourceBin, Sink, FormatAcceptedByOuterBins)
       assert_down(Source)
     end
 
     test "output caps patterns in outer bin" do
-      pipeline = caps_test_pipeline(OuterSourceBin, Sink)
-      send_caps(pipeline, FormatAcceptedByInnerBins)
+      start_test_pipeline(OuterSourceBin, Sink, FormatAcceptedByInnerBins)
       assert_down(Source)
     end
   end
 
-  defp caps_test_pipeline(source, sink) do
+  defp start_test_pipeline(source, sink, caps_format) do
+    caps = %CapsTest.Stream{format: caps_format}
+
     structure =
       Membrane.ChildrenSpec.link_linear(
-        source: struct!(source, test_pid: self()),
+        source: struct!(source, test_pid: self(), caps: caps),
         sink: struct!(sink, test_pid: self())
       )
 
     Pipeline.start_supervised!(structure: structure)
-  end
-
-  defp send_caps(pipeline, caps_format) do
-    caps = %CapsTest.Stream{format: caps_format}
-    Pipeline.execute_actions(pipeline, notify_child: {:source, {:send_caps, caps}})
   end
 
   defp assert_down(module) do

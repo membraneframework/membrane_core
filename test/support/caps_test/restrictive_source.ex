@@ -14,31 +14,17 @@ defmodule Membrane.Support.CapsTest.RestrictiveSource do
     availability: :always,
     mode: :push
 
-  def_options test_pid: [type: :pid]
+  def_options test_pid: [type: :pid],
+              caps: [type: :any]
 
   @impl true
-  def handle_init(%__MODULE__{test_pid: test_pid}) do
+  def handle_init(%__MODULE__{test_pid: test_pid, caps: caps}) do
     send(test_pid, {:my_pid, __MODULE__, self()})
-    {:ok, %{test_pid: test_pid}}
+    {:ok, %{test_pid: test_pid, caps: caps}}
   end
 
   @impl true
   def handle_playing(_ctx, %{caps: caps} = state) do
     {{:ok, caps: {:output, caps}}, state}
-  end
-
-  @impl true
-  def handle_playing(_ctx, state) do
-    {:ok, state}
-  end
-
-  @impl true
-  def handle_parent_notification({:send_caps, caps}, %{playback: :playing}, state) do
-    {{:ok, caps: {:output, caps}}, state}
-  end
-
-  @impl true
-  def handle_parent_notification({:send_caps, caps}, _ctx, state) do
-    {:ok, Map.put(state, :caps, caps)}
   end
 end

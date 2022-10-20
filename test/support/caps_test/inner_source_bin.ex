@@ -15,22 +15,18 @@ defmodule Membrane.Support.CapsTest.InnerSourceBin do
     demand_unit: :buffers,
     caps: %Stream{format: format} when format in [FormatAcceptedByAll, FormatAcceptedByInnerBins]
 
-  def_options test_pid: [type: :pid]
+  def_options test_pid: [type: :pid],
+              caps: [type: :any]
 
   @impl true
-  def handle_init(%__MODULE__{test_pid: test_pid}) do
+  def handle_init(%__MODULE__{test_pid: test_pid, caps: caps}) do
     spec = %Membrane.ChildrenSpec{
       structure: [
-        child(:source, %CapsTest.Source{test_pid: test_pid})
+        child(:source, %CapsTest.Source{test_pid: test_pid, caps: caps})
         |> bin_output()
       ]
     }
 
     {{:ok, spec: spec}, %{}}
-  end
-
-  @impl true
-  def handle_parent_notification(msg, _ctx, state) do
-    {{:ok, notify_child: {:source, msg}}, state}
   end
 end
