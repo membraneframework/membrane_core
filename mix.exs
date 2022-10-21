@@ -16,16 +16,14 @@ defmodule Membrane.Mixfile do
       name: "Membrane Core",
       source_url: link(),
       docs: docs(),
-      aliases: ["test.all": "do espec, test", docs: ["docs", &copy_assets/1]],
+      aliases: [docs: ["docs", &copy_assets/1]],
       preferred_cli_env: [
-        espec: :test,
-        "test.all": :test,
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.post": :test,
         "coveralls.html": :test
       ],
-      test_coverage: [tool: ExCoveralls, test_task: "test.all"],
+      test_coverage: [tool: ExCoveralls, test_task: "test"],
       deps: deps()
     ]
   end
@@ -134,7 +132,6 @@ defmodule Membrane.Mixfile do
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
       {:credo, "~> 1.6", only: :dev, runtime: false},
       # Testing
-      {:espec, "~> 1.8.3", only: :test},
       {:mox, "~> 1.0", only: :test},
       {:junit_formatter, "~> 3.1", only: :test},
       {:excoveralls, "~> 0.14", only: :test}

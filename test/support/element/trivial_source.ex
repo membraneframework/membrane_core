@@ -1,6 +1,6 @@
 defmodule Membrane.Support.Element.TrivialSource do
   @moduledoc """
-  This is the most basic source. It does nothing, but is used in specs.
+  This is the most basic source. It does nothing, but is used in tests.
   """
 
   use Bunch

@@ -1,6 +1,6 @@
 defmodule Membrane.Support.Element.TrivialSink do
   @moduledoc """
-  This is the most basic sink. It does nothing, but is used in specs.
+  This is the most basic sink. It does nothing, but is used in tests.
   """
 
   use Membrane.Sink
