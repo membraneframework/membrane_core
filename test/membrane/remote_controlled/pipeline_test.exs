@@ -1,6 +1,8 @@
 defmodule Membrane.RemoteControlled.PipelineTest do
   use ExUnit.Case
 
+  import Membrane.ChildrenSpec
+
   alias Membrane.ChildrenSpec
   alias Membrane.RemoteControlled.Message
   alias Membrane.RemoteControlled.Pipeline
@@ -44,9 +46,9 @@ defmodule Membrane.RemoteControlled.PipelineTest do
     Process.link(pipeline)
 
     children = [
-      a: %Membrane.Testing.Source{output: [0xA1, 0xB2, 0xC3, 0xD4]},
-      b: Filter,
-      c: Membrane.Testing.Sink
+      child(:a, %Membrane.Testing.Source{output: [0xA1, 0xB2, 0xC3, 0xD4]}),
+      child(:b, Filter),
+      child(:c, Membrane.Testing.Sink)
     ]
 
     links = [

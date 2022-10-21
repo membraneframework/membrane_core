@@ -27,9 +27,9 @@ defmodule Membrane.Testing.DynamicSourceTest do
       Testing.Pipeline.start_link_supervised!(
         structure:
           [
-            source: %Testing.DynamicSource{output: ['a', 'b', 'c']},
-            sink_1: Testing.Sink,
-            sink_2: Testing.Sink
+            child(:source, %Testing.DynamicSource{output: ['a', 'b', 'c']}),
+            child(:sink_1, Testing.Sink),
+            child(:sink_2, Testing.Sink)
           ] ++
             [
               get_child(:source) |> get_child(:sink_1),
@@ -51,9 +51,9 @@ defmodule Membrane.Testing.DynamicSourceTest do
       Testing.Pipeline.start_link_supervised!(
         structure:
           [
-            source: Testing.DynamicSource,
-            sink_1: Testing.Sink,
-            sink_2: Testing.Sink
+            child(:source, Testing.DynamicSource),
+            child(:sink_1, Testing.Sink),
+            child(:sink_2, Testing.Sink)
           ] ++
             [
               get_child(:source) |> get_child(:sink_1),

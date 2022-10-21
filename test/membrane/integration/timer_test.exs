@@ -1,6 +1,9 @@
 defmodule Membrane.Integration.TimerTest do
   use ExUnit.Case, async: true
+
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
+
   alias Membrane.{Pipeline, Testing, Time}
 
   defmodule Element do
@@ -37,7 +40,7 @@ defmodule Membrane.Integration.TimerTest do
     @impl true
     def handle_init(pid) do
       spec = %ChildrenSpec{
-        structure: [element: Element, bin: Bin]
+        structure: [child(:element, Element), child(:bin, Bin)]
       }
 
       {{:ok, spec: spec, playback: :playing}, %{pid: pid}}

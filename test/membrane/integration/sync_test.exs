@@ -1,6 +1,7 @@
 defmodule Membrane.Integration.SyncTest do
   use ExUnit.Case, async: false
 
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.{Testing, Time}
@@ -15,11 +16,11 @@ defmodule Membrane.Integration.SyncTest do
     tick_interval = 1
 
     children = [
-      source: %Sync.Source{
+      child(:source, %Sync.Source{
         tick_interval: tick_interval |> Time.milliseconds(),
         test_process: self()
-      },
-      sink: Sync.Sink
+      }),
+      child(:sink, Sync.Sink)
     ]
 
     pipeline_opts = [
@@ -105,8 +106,8 @@ defmodule Membrane.Integration.SyncTest do
     alias Membrane.Testing.Source
 
     children = [
-      el1: Source,
-      el2: SimpleBin
+      child(:el1, Source),
+      child(:el2, SimpleBin)
     ]
 
     spec = %Membrane.ChildrenSpec{
@@ -125,7 +126,7 @@ defmodule Membrane.Integration.SyncTest do
   end
 
   test "synchronization inside a bin is possible" do
-    children = [bin: Sync.SyncBin]
+    children = [child(:bin, Sync.SyncBin)]
 
     pipeline = Testing.Pipeline.start_link_supervised!(structure: children)
 
