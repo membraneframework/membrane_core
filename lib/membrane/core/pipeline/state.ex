@@ -13,7 +13,7 @@ defmodule Membrane.Core.Pipeline.State do
   alias Membrane.Core.Timer
 
   @type t :: %__MODULE__{
-          internal_state: Membrane.Pipeline.state(),
+          internal_state: Membrane.Pipeline.state() | nil,
           module: module,
           children: ChildrenModel.children_t(),
           crash_groups: %{CrashGroup.name_t() => CrashGroup.t()},

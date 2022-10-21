@@ -16,25 +16,17 @@ defmodule Membrane.Testing.Pipeline do
   injecting a custom module behaviour. The usage of a `:default` pipeline implementation is presented below:
 
   ```
-  children = [
-      el1: MembraneElement1,
-      el2: MembraneElement2,
+  links = [
+      child(:el1, MembraneElement1) |>
+      child(:el2, MembraneElement2)
       ...
   ]
   options =  [
     module: :default # :default is the default value for this parameter, so you do not need to pass it here
-    links: Membrane.ChildrenSpec.link_linear(children)
+    structure: links
   ]
   {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
   ```
-  Note, that we have used `Membrane.Testing.ChildrenSpec.link_linear/1` function, that creates the list of links
-  for the given list of children, linking them in linear manner (that means - children are linked in a way that
-  `:output` pad of a given child is linked to `:input` pad of subsequent child). That is the case
-  which is often used while creating testing pipelines. Be aware, that `Membrane.Testing.ChildrenSpec.link_linear/1`
-  creates also a children specification itself, which means, that you cannot pass that children specification
-  as another option's argument (adding `children: children` option would lead to a duplication of children specifications).
-  If you need to link children in a different manner, you can of course do it by passing an appropriate list
-  of links as a `:links` option, just as you would do with a regular pipeline.
 
   You can also pass your custom pipeline's module as a `:module` option of
   the options list. Every callback of the module
@@ -65,12 +57,13 @@ defmodule Membrane.Testing.Pipeline do
   ## Example usage
 
   Firstly, we can start the pipeline providing its options as a keyword list:
+      import Membrane.ChildrenSpec
       children = [
-          source: %Membrane.Testing.Source{},
-          tested_element: TestedElement,
-          sink: %Membrane.Testing.Sink{}
+          child(source, %Membrane.Testing.Source{} ) |>
+          child(:tested_element, TestedElement) |>
+          child(sink, %Membrane.Testing.Sink{})
       ]
-      {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(links: Membrane.ChildrenSpec.link_linear(children))
+      {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(structure: links)
 
   We can now wait till the end of the stream reaches the sink element (don't forget
   to import `Membrane.Testing.Assertions`):

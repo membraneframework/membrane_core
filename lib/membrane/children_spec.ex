@@ -71,14 +71,6 @@ defmodule Membrane.ChildrenSpec do
   |> get_child(:element_specified_before)
   ]
 
-
-  You can also use `link_linear/1` in order to link subsequent children using default pads
-  (linking `:input` to `:output` of previous element). That might be especially helpful when creating
-  testing pipelines.
-
-  children = [child(:source, Some.Source), child(:filter, Some.Filter), child(:sink, Some.Sink)]
-  links = link_linear(children)
-
   ### Bins
 
   For bin boundaries, there are special links allowed. The user should define links
@@ -507,29 +499,6 @@ defmodule Membrane.ChildrenSpec do
     end
     |> LinkBuilder.update(:to_pad, to_pad: pad, to_pad_props: %{})
     |> get_child({Membrane.Bin, :itself})
-  end
-
-  @doc """
-  Links subsequent children using default pads (linking `:input` to `:output` of
-  the previous element). The list of children must consist at least of 2 elements.
-
-  ## Example
-
-  Membrane.ChildrenSpec.link_linear([el1: MembraneElement1, el2: MembraneElement2])
-  """
-  @spec link_linear(children :: [child_spec_t()]) :: structure_spec_t()
-
-  def link_linear(children) when is_list(children) and length(children) > 1 do
-    [{first_child_name, first_child_spec} | other_children] = children
-
-    links =
-      other_children
-      |> Enum.reduce(child(first_child_name, first_child_spec), fn {child_name, child_spec},
-                                                                   builder ->
-        child(builder, child_name, child_spec)
-      end)
-
-    [links]
   end
 
   defp validate_pad_name(pad) when Pad.is_pad_name(pad) or Pad.is_pad_ref(pad) do

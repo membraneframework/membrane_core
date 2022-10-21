@@ -15,16 +15,16 @@ defmodule Membrane.Integration.SyncTest do
   test "When ratio = 1 amount of lost ticks is roughly the same regardless of the time of transmission" do
     tick_interval = 1
 
-    children = [
+    links = [
       child(:source, %Sync.Source{
         tick_interval: tick_interval |> Time.milliseconds(),
         test_process: self()
-      }),
-      child(:sink, Sync.Sink)
+      })
+      |> child(:sink, Sync.Sink)
     ]
 
     pipeline_opts = [
-      structure: Membrane.ChildrenSpec.link_linear(children)
+      structure: links
     ]
 
     for tries <- [100, 1000, 10_000] do

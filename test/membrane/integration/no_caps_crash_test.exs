@@ -2,6 +2,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
   use ExUnit.Case
 
   import Membrane.Testing.Assertions
+  import Membrane.ChildrenSpec
 
   alias Membrane.Testing.{Pipeline, Sink, Source}
 
@@ -33,13 +34,13 @@ defmodule Membrane.FailWhenNoCapsAreSent do
   end
 
   test "if pipeline crashes when the caps are not sent before the first buffer" do
-    children = [
-      source: SourceWhichDoesNotSendCaps,
-      sink: Sink
+    links = [
+      child(:source, SourceWhichDoesNotSendCaps)
+      |> child(:sink, Sink)
     ]
 
     options = [
-      structure: Membrane.ChildrenSpec.link_linear(children)
+      structure: links
     ]
 
     pipeline = Pipeline.start_supervised!(options)
@@ -59,13 +60,13 @@ defmodule Membrane.FailWhenNoCapsAreSent do
   end
 
   test "if pipeline works properly when caps are sent before the first buffer" do
-    children = [
-      source: Source,
-      sink: Sink
+    links = [
+      child(:source, Source)
+      |> child(:sink, Sink)
     ]
 
     options = [
-      structure: Membrane.ChildrenSpec.link_linear(children)
+      structure: links
     ]
 
     pipeline = Pipeline.start_supervised!(options)

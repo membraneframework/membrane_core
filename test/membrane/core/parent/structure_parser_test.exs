@@ -240,12 +240,4 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              c: {C, [dont_spawn_if_already_exists: false]}
            ]
   end
-
-  test "Membrane.ChildrenSpec.link_linear/1 links children in a linear manner" do
-    import Membrane.ChildrenSpec
-    children = [source: nil, filter: nil, sink: nil]
-    desired_links = [child(:source, nil) |> child(:filter, nil) |> child(:sink, nil)]
-    auto_generated_links = link_linear(children)
-    assert desired_links == auto_generated_links
-  end
 end

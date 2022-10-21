@@ -336,7 +336,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   - unlinks it from other children
   - handles crash group (if applicable)
   """
-  @spec handle_child_death(child_pid :: pid(), reason :: any(), state :: Parent.state_t()) ::
+  @spec handle_child_death(
+          child_name :: Membrane.Child.name_t(),
+          reason :: any(),
+          state :: Parent.state_t()
+        ) ::
           {:stop | :continue, Parent.state_t()}
   def handle_child_death(child_name, reason, state) do
     state = do_handle_child_death(child_name, reason, state)
