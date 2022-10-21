@@ -18,7 +18,6 @@ defmodule Membrane.Mixfile do
       docs: docs(),
       aliases: [docs: ["docs", &copy_assets/1]],
       preferred_cli_env: [
-        test: :test,
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.post": :test,
