@@ -219,17 +219,17 @@ defmodule Membrane.ChildrenSpec do
     end
   end
 
+  @type pad_options_t :: Keyword.t()
   @opaque link_builder_t :: LinkBuilder.t()
 
-  @type child_spec_t :: {Child.name_t(), struct() | module()}
-
-  @type pad_options_t :: Keyword.t()
-
-  @opaque child_spec_extended_t :: {child_spec_t(), child_spec_options_t()}
-
-  @type child_spec_options_t :: [dont_spawn_if_exists: boolean()]
-  @type structure_spec_t :: [link_builder_t()]
+  @type child_spec_t :: struct() | module()
   @type child_opts_t :: [get_if_exists: boolean]
+
+  @type child_spec_extension_options_t :: [dont_spawn_if_exists: boolean()]
+  @type child_spec_extended_t ::
+          {Child.name_t(), child_spec_t(), child_spec_extension_options_t()}
+
+  @type structure_spec_t :: [link_builder_t()]
 
   @default_child_opts [get_if_exists: false]
 
@@ -285,8 +285,8 @@ defmodule Membrane.ChildrenSpec do
   """
   @spec child(
           link_builder_t | Child.name_t(),
-          Child.name_t() | struct() | module(),
-          struct() | module() | child_opts_t()
+          Child.name_t() | child_spec_t(),
+          child_spec_t() | child_opts_t()
         ) ::
           link_builder_t()
   def child(child_name, child_spec, opts \\ @default_child_opts)
@@ -304,10 +304,11 @@ defmodule Membrane.ChildrenSpec do
   end
 
   defp do_child(child_name, child_spec, opts) do
-    child_spec =
-      {child_spec, dont_spawn_if_already_exists: Keyword.get(opts, :get_if_exists, false)}
+    child_spec_extended =
+      {child_name, child_spec,
+       dont_spawn_if_already_exists: Keyword.get(opts, :get_if_exists, false)}
 
-    get_child(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
+    get_child(child_name) |> Map.update!(:children, &[child_spec_extended | &1])
   end
 
   @doc """
@@ -315,19 +316,20 @@ defmodule Membrane.ChildrenSpec do
 
   See the _structure_ section of the moduledoc for more information.
   """
-  @spec child(link_builder_t(), Child.name_t(), struct() | module(), child_opts_t()) ::
+  @spec child(link_builder_t(), Child.name_t(), child_spec_t(), child_opts_t()) ::
           link_builder_t()
   def child(link_builder, child_name, child_spec, opts) do
     do_child(link_builder, child_name, child_spec, opts)
   end
 
   defp do_child(%LinkBuilder{} = link_builder, child_name, child_spec, opts) do
-    child_spec =
-      {child_spec, dont_spawn_if_already_exists: Keyword.get(opts, :get_if_exists, false)}
+    child_spec_extended =
+      {child_name, child_spec,
+       dont_spawn_if_already_exists: Keyword.get(opts, :get_if_exists, false)}
 
     link_builder
     |> get_child(child_name)
-    |> Map.update!(:children, &[{child_name, child_spec} | &1])
+    |> Map.update!(:children, &[child_spec_extended | &1])
   end
 
   @doc """

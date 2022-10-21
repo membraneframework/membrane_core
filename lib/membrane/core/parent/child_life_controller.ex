@@ -68,8 +68,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     structure: #{inspect(spec.structure)}
     """)
 
-    {links, children_spec} = StructureParser.parse(spec.structure)
-    children_spec = remove_unecessary_children_specs(children_spec, state)
+    {links, children_specs_extended} = StructureParser.parse(spec.structure)
+    children_spec = remove_unecessary_children_specs(children_specs_extended, state)
 
     children = ChildEntryParser.parse(children_spec)
     children = Enum.map(children, &%{&1 | spec_ref: spec_ref})
@@ -472,11 +472,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     children_spec
     |> Enum.map(fn
-      {name, {child_spec, dont_spawn_if_already_exists: dont_spawn_if_already_exists}} ->
+      {name, child_spec, [dont_spawn_if_already_exists: dont_spawn_if_already_exists] = options} ->
         if dont_spawn_if_already_exists do
-          if Map.has_key?(state_children, name), do: nil, else: {name, child_spec}
+          if Map.has_key?(state_children, name), do: nil, else: {name, child_spec, options}
         else
-          {name, child_spec}
+          {name, child_spec, options}
         end
     end)
     |> Enum.filter(&(&1 != nil))
