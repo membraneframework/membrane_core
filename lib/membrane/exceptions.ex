@@ -124,7 +124,7 @@ defmodule Membrane.ElementError do
   defexception [:message]
 end
 
-defmodule Membrane.CapsMatchError do
+defmodule Membrane.CapsError do
   defexception [:message]
 end
 

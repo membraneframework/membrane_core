@@ -41,15 +41,16 @@ defmodule Membrane.Core.Child.PadsSpecs do
     {caps_pattern, specs} = Keyword.pop!(specs, :caps)
     specs = [{:caps_pattern, Macro.to_string(caps_pattern)} | specs]
 
-    case_statement_cases =
+    case_statement_clauses =
       case caps_pattern do
         {:alternative, _meta, args} -> args
         ast -> ast
       end
       |> Bunch.listify()
-      |> Enum.flat_map(fn
-        {:__aliases__, _meta, _module} = ast -> [ast, {:%, [], [ast, {:%{}, [], []}]}]
-        ast -> [ast]
+      |> Enum.map(fn
+        {:__aliases__, _meta, _module} = ast -> quote do: %unquote(ast){}
+        ast when is_atom(ast) -> quote do: %unquote(ast){}
+        ast -> ast
       end)
       |> Enum.flat_map(fn pattern ->
         quote do
@@ -75,11 +76,11 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
       unless Module.defines?(__MODULE__, {:membrane_caps_match?, 2}) do
         @doc false
-        @spec membrane_caps_match?(Pad.name_t(), any()) :: boolean()
+        @spec membrane_caps_match?(Membrane.Pad.name_t(), Membrane.Caps.t()) :: boolean()
       end
 
       def membrane_caps_match?(unquote(pad_name), caps) do
-        case caps, do: unquote(case_statement_cases)
+        case caps, do: unquote(case_statement_clauses)
       end
     end
   end

@@ -140,6 +140,10 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     def_output_pad :output, mode: :push, caps: _any
 
+    defmodule Caps do
+      defstruct []
+    end
+
     @impl true
     def handle_parent_notification(actions, _ctx, state) do
       {{:ok, actions}, state}
@@ -147,7 +151,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     @impl true
     def handle_playing(_ctx, state) do
-      {{:ok, [caps: {:output, :any}]}, state}
+      {{:ok, [caps: {:output, %Caps{}}]}, state}
     end
   end
 

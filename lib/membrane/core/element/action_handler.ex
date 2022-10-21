@@ -302,7 +302,7 @@ defmodule Membrane.Core.Element.ActionHandler do
            ancestors_with_pads: ancestors_with_pads
          } <- pad_data do
       modules_with_pads = [{state.module, pad_name} | ancestors_with_pads]
-      :ok = CapsController.ensure_caps_match!(:output, modules_with_pads, caps)
+      :ok = CapsController.validate_caps!(:output, modules_with_pads, caps)
 
       state = PadModel.set_data!(state, pad_ref, :caps, caps)
       Message.send(pid, :caps, caps, for_pad: other_ref)

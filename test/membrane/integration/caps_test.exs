@@ -91,6 +91,6 @@ defmodule Membrane.CapsTest do
   defp assert_down(module) do
     assert_receive({:my_pid, ^module, pid})
     Process.monitor(pid)
-    assert_receive({:DOWN, _ref, :process, ^pid, {%Membrane.CapsMatchError{}, _stacktrace}})
+    assert_receive({:DOWN, _ref, :process, ^pid, {%Membrane.CapsError{}, _stacktrace}})
   end
 end

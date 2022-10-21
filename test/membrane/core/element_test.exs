@@ -39,6 +39,10 @@ defmodule Membrane.Core.ElementTest do
     end
   end
 
+  defmodule Caps do
+    defstruct []
+  end
+
   defp get_state do
     {:ok, state, {:continue, :setup}} =
       Element.init(%{
@@ -141,7 +145,7 @@ defmodule Membrane.Core.ElementTest do
     [
       Message.new(:demand, 10, for_pad: :output),
       Message.new(:buffer, %Membrane.Buffer{payload: <<>>}, for_pad: :dynamic_input),
-      Message.new(:caps, :caps, for_pad: :dynamic_input),
+      Message.new(:caps, %Caps{}, for_pad: :dynamic_input),
       Message.new(:event, %Membrane.Testing.Event{}, for_pad: :dynamic_input),
       Message.new(:event, %Membrane.Testing.Event{}, for_pad: :output)
     ]
@@ -168,14 +172,14 @@ defmodule Membrane.Core.ElementTest do
   test "should assign incoming caps to the pad and forward them" do
     assert {:noreply, state} =
              Element.handle_info(
-               Message.new(:caps, :caps, for_pad: :dynamic_input),
+               Message.new(:caps, %Caps{}, for_pad: :dynamic_input),
                playing_state()
              )
 
-    assert state.pads_data.dynamic_input.caps == :caps
-    assert state.pads_data.output.caps == :caps
+    assert state.pads_data.dynamic_input.caps == %Caps{}
+    assert state.pads_data.output.caps == %Caps{}
 
-    assert_receive Message.new(:caps, :caps, for_pad: :dynamic_input)
+    assert_receive Message.new(:caps, %Caps{}, for_pad: :dynamic_input)
   end
 
   test "should forward events" do
