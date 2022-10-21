@@ -3,6 +3,11 @@ defmodule Membrane.RemoteControlled.Pipeline do
   `Membrane.RemoteControlled.Pipeline` is a basic `Membrane.Pipeline` implementation that can be
   controlled by a controlling process.
 
+  The easiest way to start this pipeline is to use `start_link!/1`
+  ```
+    pipeline = Pipeline.start_link!()
+  ```
+
   The controlling process can request the execution of arbitrary
   valid `Membrane.Pipeline.Action`:
   ```
@@ -58,7 +63,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   @doc """
   Starts the `Membrane.RemoteControlled.Pipeline` and links it to the current process. The process
-  that makes the call to the `start_link/1` automatically become the controller process.
+  that makes the call to the `start_link/1` automatically becomes the controller process.
   """
   @spec start_link([Pipeline.config_entry() | {:controller_pid, pid()}]) :: Pipeline.on_start()
   def start_link(options \\ []) do
@@ -66,13 +71,25 @@ defmodule Membrane.RemoteControlled.Pipeline do
     Pipeline.start_link(__MODULE__, %{controller_pid: controller_pid}, config)
   end
 
+  @spec start_link!([Pipeline.config_entry() | {:controller_pid, pid()}]) :: pid
+  def start_link!(options \\ []) do
+    {:ok, _supervisor, pipeline} = start_link(options)
+    pipeline
+  end
+
   @doc """
-  Does the same as the `start_link/1` but starts the process outside of the supervision tree.
+  Does the same as the `start_link/1` but starts the process outside of the current supervision tree.
   """
   @spec start([Pipeline.config_entry() | {:controller_pid, pid()}]) :: Pipeline.on_start()
   def start(options \\ []) do
     {controller_pid, config} = Keyword.pop(options, :controller_pid, self())
     Pipeline.start(__MODULE__, %{controller_pid: controller_pid}, config)
+  end
+
+  @spec start!([Pipeline.config_entry() | {:controller_pid, pid()}]) :: pid
+  def start!(options \\ []) do
+    {:ok, _supervisor, pipeline} = start(options)
+    pipeline
   end
 
   defmacrop pin_leaf_nodes(ast) do

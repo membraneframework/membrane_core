@@ -65,7 +65,7 @@ defmodule Membrane.Core.Pipeline.Supervisor do
   @impl true
   def handle_info({:EXIT, pid, reason}, %{parent: {:alive, pid}} = state) do
     Membrane.Logger.debug(
-      "got exit from parent with reason #{inspect(reason)}, stopping children supervisor"
+      "got exit from parent with reason #{inspect(reason)}, stopping subprocess supervisor"
     )
 
     Process.exit(state.subprocess_supervisor, :shutdown)
@@ -77,7 +77,7 @@ defmodule Membrane.Core.Pipeline.Supervisor do
         {:EXIT, pid, :normal},
         %{subprocess_supervisor: pid, parent: {:exited, parent_exit_reason}} = state
       ) do
-    Membrane.Logger.debug("got exit from children supervisor, exiting")
+    Membrane.Logger.debug("got exit from subprocess supervisor, exiting")
 
     reason =
       case parent_exit_reason do
@@ -95,7 +95,7 @@ defmodule Membrane.Core.Pipeline.Supervisor do
         subprocess_supervisor: pid,
         parent: {:alive, _parent_pid}
       }) do
-    raise "Children supervisor failure, reason: #{inspect(reason)}"
+    raise "Subprocess supervisor failure, reason: #{inspect(reason)}"
   end
 
   @impl true
@@ -108,7 +108,7 @@ defmodule Membrane.Core.Pipeline.Supervisor do
   @impl true
   def handle_info({:EXIT, _pid, _reason}, state) do
     Membrane.Logger.debug(
-      "got exit from a linked process, parent already dead, waiting for children supervisor to exit"
+      "got exit from a linked process, parent already dead, waiting for subprocess supervisor to exit"
     )
 
     {:noreply, state}

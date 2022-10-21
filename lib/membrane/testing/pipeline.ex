@@ -11,7 +11,7 @@ defmodule Membrane.Testing.Pipeline do
 
   To start a testing pipeline you need to build
   a keyword list representing the options used to determine the pipeline's behaviour and then
-  pass that options list to the `Membrane.Testing.Pipeline.start_link/1`.
+  pass that options list to the `Membrane.Testing.Pipeline.start_link_supervised!/1`.
   The testing pipeline can be started in one of two modes - either with its `:default` behaviour, or by
   injecting a custom module behaviour. The usage of a `:default` pipeline implementation is presented below:
 
@@ -25,7 +25,7 @@ defmodule Membrane.Testing.Pipeline do
     module: :default # :default is the default value for this parameter, so you do not need to pass it here
     links: Membrane.ParentSpec.link_linear(children)
   ]
-  {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
+  pipeline = Membrane.Testing.Pipeline.start_link_supervised!(options)
   ```
   Note, that we have used `Membrane.Testing.ParentSpec.link_linear/1` function, that creates the list of links
   for the given list of children, linking them in linear manner (that means - children are linked in a way that
@@ -47,10 +47,10 @@ defmodule Membrane.Testing.Pipeline do
   options = [
     module: Your.Module
   ]
-  {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
+  pipeline = Membrane.Testing.Pipeline.start_link_supervised!(options)
   ```
 
-  See `t:Membrane.Testing.Pipeline.pipeline_keyword_list_t/0` for available options.
+  See `t:Membrane.Testing.Pipeline.options/0` for available options.
 
   ## Assertions
 
@@ -70,7 +70,7 @@ defmodule Membrane.Testing.Pipeline do
           tested_element: TestedElement,
           sink: %Membrane.Testing.Sink{}
       ]
-      {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
+      pipeline = Membrane.Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
 
   We can now wait till the end of the stream reaches the sink element (don't forget
   to import `Membrane.Testing.Assertions`):
@@ -148,44 +148,56 @@ defmodule Membrane.Testing.Pipeline do
     do_start(:start, options)
   end
 
-  if Mix.env() == :test do
-    @spec start_link_supervised(options) :: Pipeline.on_start()
-    def start_link_supervised(pipeline_options \\ []) do
-      pipeline_options = Keyword.put_new(pipeline_options, :test_process, self())
-
-      # TODO use start_link_supervised when added
-      with {:ok, supervisor, pipeline} <-
-             ExUnit.Callbacks.start_supervised({__MODULE__, pipeline_options}) do
-        Process.link(pipeline)
-        {:ok, supervisor, pipeline}
-      else
-        {:error, {error, _child_info}} -> {:error, error}
-      end
-    end
-
-    @spec start_link_supervised!(options) :: pipeline_pid :: pid
-    def start_link_supervised!(pipeline_options \\ []) do
-      {:ok, _supervisor, pipeline} = start_link_supervised(pipeline_options)
-      pipeline
-    end
-
-    @spec start_supervised(options) :: Pipeline.on_start()
-    def start_supervised(pipeline_options \\ []) do
-      pipeline_options = Keyword.put_new(pipeline_options, :test_process, self())
-      ExUnit.Callbacks.start_supervised({__MODULE__, pipeline_options})
-    end
-
-    @spec start_supervised!(options) :: pipeline_pid :: pid
-    def start_supervised!(pipeline_options \\ []) do
-      {:ok, _supervisor, pipeline} = start_supervised(pipeline_options)
-      pipeline
-    end
-  end
-
   defp do_start(type, options) do
     {process_options, options} = Keyword.split(options, [:name])
     options = Keyword.put_new(options, :test_process, self())
     apply(Pipeline, type, [__MODULE__, options, process_options])
+  end
+
+  @doc """
+  Starts the pipeline under the ExUnit test supervisor and links it to the current process.
+
+  Can be used only in tests.
+  """
+  @spec start_link_supervised(options) :: Pipeline.on_start()
+  def start_link_supervised(pipeline_options \\ []) do
+    pipeline_options = Keyword.put_new(pipeline_options, :test_process, self())
+
+    # TODO use start_link_supervised when added
+    with {:ok, supervisor, pipeline} <- ex_unit_start_supervised({__MODULE__, pipeline_options}) do
+      Process.link(pipeline)
+      {:ok, supervisor, pipeline}
+    else
+      {:error, {error, _child_info}} -> {:error, error}
+    end
+  end
+
+  @spec start_link_supervised!(options) :: pipeline_pid :: pid
+  def start_link_supervised!(pipeline_options \\ []) do
+    {:ok, _supervisor, pipeline} = start_link_supervised(pipeline_options)
+    pipeline
+  end
+
+  @doc """
+  Starts the pipeline under the ExUnit test supervisor.
+
+  Can be used only in tests.
+  """
+  @spec start_supervised(options) :: Pipeline.on_start()
+  def start_supervised(pipeline_options \\ []) do
+    pipeline_options = Keyword.put_new(pipeline_options, :test_process, self())
+    ex_unit_start_supervised({__MODULE__, pipeline_options})
+  end
+
+  @spec start_supervised!(options) :: pipeline_pid :: pid
+  def start_supervised!(pipeline_options \\ []) do
+    {:ok, _supervisor, pipeline} = start_supervised(pipeline_options)
+    pipeline
+  end
+
+  defp ex_unit_start_supervised(child_spec) do
+    # It's not a 'normal' call to keep dialyzer quiet
+    apply(ExUnit.Callbacks, :start_supervised, [child_spec])
   end
 
   @doc """
