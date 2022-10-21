@@ -26,14 +26,14 @@ defmodule Membrane.RemoteControlled.Pipeline do
   `Membrane.RemoteControlled.Pipeline` can be used when there is no need for introducing a custom
   logic in the `Membrane.Pipeline` callbacks implementation. An example of usage could be running a
   pipeline from the elixir script. `Membrane.RemoteControlled.Pipeline` sends the following messages:
-  * `Membrane.RemoteControlled.Message.Playing.t()` sent when pipeline enters `playing` playback,
-  * `Membrane.RemoteControlled.Message.StartOfStream.t()` sent
+  * `t:Membrane.RemoteControlled.Message.Playing.t/0` sent when pipeline enters `playing` playback,
+  * `t:Membrane.RemoteControlled.Message.StartOfStream.t/0` sent
   when one of direct pipeline children informs the pipeline about start of a stream,
-  * `Membrane.RemoteControlled.Message.EndOfStream.t()` sent
+  * `t:Membrane.RemoteControlled.Message.EndOfStream.t/0` sent
   when one of direct pipeline children informs the pipeline about end of a stream,
-  * `Membrane.RemoteControlled.Message.Notification.t()` sent when pipeline
+  * `t:Membrane.RemoteControlled.Message.Notification.t/0` sent when pipeline
   receives notification from one of its children,
-  * `Membrane.RemoteControlled.Message.Terminated.t()` sent when the pipeline gracefully terminates.
+  * `t:Membrane.RemoteControlled.Message.Terminated.t/0` sent when the pipeline gracefully terminates.
   """
 
   use Membrane.Pipeline
@@ -107,7 +107,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @doc """
-  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.Playing()`
+  Awaits for the first `t:Membrane.RemoteControlled.Message.t/0` wrapping the `t:Membrane.RemoteControlled.Message.Playing.t/0`
   It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
 
@@ -123,7 +123,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @doc """
-  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.StartOfStream()` message
+  Awaits for the first `t:Membrane.RemoteControlled.Message.t/0` wrapping the `t:Membrane.RemoteControlled.Message.StartOfStream.t/0` message
   with no further constraints, sent by the process with `pipeline` pid.
   It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
@@ -140,7 +140,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @doc """
-  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.StartOfStream()` message
+  Awaits for the first `t:Membrane.RemoteControlled.Message.t/0` wrapping the `t:Membrane.RemoteControlled.Message.StartOfStream.t/0` message
   concerning the given `element`, sent by the process with `pipeline` pid.
   It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
@@ -158,7 +158,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @doc """
-  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.StartOfStream()` message
+  Awaits for the first `t:Membrane.RemoteControlled.Message.t/0` wrapping the `t:Membrane.RemoteControlled.Message.StartOfStream.t/0` message
   concerning the given `element` and the `pad`, sent by the process with `pipeline` pid.
   It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
@@ -176,7 +176,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @doc """
-  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.EndOfStream()` message
+  Awaits for the first `t:Membrane.RemoteControlled.Message.t/0` wrapping the `t:Membrane.RemoteControlled.Message.EndOfStream.t/0` message
   with no further constraints, sent by the process with `pipeline` pid.
   It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
@@ -193,7 +193,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @doc """
-  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.EndOfStream()` message
+  Awaits for the first `t:Membrane.RemoteControlled.Message.t/0` wrapping the `t:Membrane.RemoteControlled.Message.EndOfStream.t/0` message
   concerning the given `element`, sent by the process with `pipeline` pid.
   It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
@@ -211,7 +211,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @doc """
-  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.EndOfStream()` message
+  Awaits for the first `t:Membrane.RemoteControlled.Message.t/0` wrapping the `t:Membrane.RemoteControlled.Message.EndOfStream.t/0` message
   concerning the given `element` and the `pad`, sent by the process with `pipeline` pid.
   It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
@@ -229,7 +229,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @doc """
-  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.Notification()`
+  Awaits for the first `t:Membrane.RemoteControlled.Message.t/0` wrapping the `t:Membrane.RemoteControlled.Message.Notification.t/0`
   message with no further constraints, sent by the process with `pipeline` pid.
   It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
@@ -246,7 +246,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @doc """
-  Awaits for the first `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.Notification()` message
+  Awaits for the first `t:Membrane.RemoteControlled.Message.t/0` wrapping the `t:Membrane.RemoteControlled.Message.Notification.t/0` message
   concerning the given `element`, sent by the process with `pipeline` pid.
   It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
@@ -264,7 +264,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @doc """
-  Awaits for the `Membrane.RemoteControlled.Message()` wrapping the `Membrane.RemoteControlled.Message.Terminated` message,
+  Awaits for the `t:Membrane.RemoteControlled.Message.t/0` wrapping the `Membrane.RemoteControlled.Message.Terminated` message,
   which is send when the pipeline gracefully terminates.
   It is required to firstly use the `subscribe/2` to subscribe to a given message before awaiting
   for that message.
@@ -282,7 +282,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
 
   @doc """
   Subscribes to a given `subscription_pattern`. The `subscription_pattern` should describe some subset
-  of elements of `Membrane.RemoteControlled.Pipeline.message_t()` type. The `subscription_pattern`
+  of elements of `t:Membrane.RemoteControlled.Pipeline.Message.t/0` type. The `subscription_pattern`
   must be a match pattern.
 
 
@@ -310,7 +310,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   end
 
   @doc """
-  Sends a list of `Pipeline.Action.t()` to the given `Membrane.RemoteControlled.Pipeline` for execution.
+  Sends a list of `t:Pipeline.Action.t/0` to the given `Membrane.RemoteControlled.Pipeline` for execution.
 
   Usage example:
     1) making the `Membrane.RemoteControlled.Pipeline` start the `Membrane.ParentSpec`

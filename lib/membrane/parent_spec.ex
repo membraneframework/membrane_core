@@ -151,7 +151,7 @@ defmodule Membrane.ParentSpec do
   ```
 
   The crash group is defined by a two-element tuple, first element is an ID which is of type
-  `Membrane.CrashGroup.name_t()`, and the second is a mode. Currently, we support only
+  `t:Membrane.CrashGroup.name_t/0`, and the second is a mode. Currently, we support only
   `:temporary` mode which means that Membrane will not make any attempts to restart crashed child.
 
   In the above snippet, we create new children - `:some_element_1` and `:some_element_2`, we add it

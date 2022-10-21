@@ -50,7 +50,7 @@ defmodule Membrane.Testing.Pipeline do
   {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
   ```
 
-  See `Membrane.Testing.Pipeline.pipeline_keyword_list_t()` for available options.
+  See `t:Membrane.Testing.Pipeline.pipeline_keyword_list_t/0` for available options.
 
   ## Assertions
 
