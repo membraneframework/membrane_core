@@ -23,10 +23,10 @@ defmodule Membrane.Core.Parent.StructureParser do
       structure
       |> List.flatten()
       |> Enum.map(fn
-        %ChildrenSpec.LinkBuilder{links: links, children: children, status: :done} ->
+        %ChildrenSpec.StructureBuilder{links: links, children: children, status: :done} ->
           {Enum.reverse(links), Enum.reverse(children)}
 
-        %ChildrenSpec.LinkBuilder{links: [%{from: from} | _]} = builder ->
+        %ChildrenSpec.StructureBuilder{links: [%{from: from} | _]} = builder ->
           if length(builder.children) == 1 do
             {[], builder.children}
           else
