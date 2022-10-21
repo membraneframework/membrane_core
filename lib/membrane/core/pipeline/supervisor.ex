@@ -12,11 +12,11 @@ defmodule Membrane.Core.Pipeline.Supervisor do
           :start_link | :start,
           name :: term,
           (subprocess_supervisor :: pid() -> {:ok, pid()} | {:error, reason :: any()})
-        ) :: {:ok, pid()} | {:error, reason :: any()}
+        ) :: {:ok, supervisor_pid :: pid(), pipeline_pid :: pid()} | {:error, reason :: any()}
   def run(method, name, start_fun) do
     # Not doing start_link here is a nasty hack to avoid the current process becoming
-    # a 'parent process' (in the OTP meaning) of the spawned supervisor. Exit signals from
-    # 'parent processes' are not received in `handle_info`, but `terminate` is called immediately,
+    # a 'pipeline process' (in the OTP meaning) of the spawned supervisor. Exit signals from
+    # 'pipeline processes' are not received in `handle_info`, but `terminate` is called immediately,
     # what is unwanted here, as the supervisor has to make sure that all the children exit.
     # After that happens, the supervisor exits as well, so it follows the OTP conventions anyway.
     process_opts = if method == :start_link, do: [spawn_opt: [:link]], else: []
@@ -24,7 +24,7 @@ defmodule Membrane.Core.Pipeline.Supervisor do
     with {:ok, pid} <-
            GenServer.start(__MODULE__, {start_fun, name, self()}, process_opts) do
       receive do
-        Message.new(:parent_spawned, parent) -> {:ok, pid, parent}
+        Message.new(:pipeline_spawned, pipeline) -> {:ok, pid, pipeline}
       end
     end
   end
@@ -34,14 +34,14 @@ defmodule Membrane.Core.Pipeline.Supervisor do
     Process.flag(:trap_exit, true)
     subprocess_supervisor = SubprocessSupervisor.start_link!()
 
-    with {:ok, parent} <- start_fun.(subprocess_supervisor) do
+    with {:ok, pipeline} <- start_fun.(subprocess_supervisor) do
       Membrane.Core.Observability.setup(
-        %{name: name, component_type: :pipeline, pid: parent},
+        %{name: name, component_type: :pipeline, pid: pipeline},
         "Pipeline supervisor"
       )
 
-      Message.send(reply_to, :parent_spawned, parent)
-      {:ok, %{parent: {:alive, parent}, subprocess_supervisor: subprocess_supervisor}}
+      Message.send(reply_to, :pipeline_spawned, pipeline)
+      {:ok, %{pipeline: {:alive, pipeline}, subprocess_supervisor: subprocess_supervisor}}
     else
       {:error, reason} ->
         Process.exit(subprocess_supervisor, :shutdown)
@@ -54,8 +54,8 @@ defmodule Membrane.Core.Pipeline.Supervisor do
   def handle_call(:which_children, _from, state) do
     reply =
       [{SubprocessSupervisor, state.subprocess_supervisor, :supervisor, SubprocessSupervisor}] ++
-        case state.parent do
-          {:alive, pid} -> [{:parent, pid, :worker, []}]
+        case state.pipeline do
+          {:alive, pid} -> [{:pipeline, pid, :worker, []}]
           {:exited, _reason} -> []
         end
 
@@ -63,24 +63,24 @@ defmodule Membrane.Core.Pipeline.Supervisor do
   end
 
   @impl true
-  def handle_info({:EXIT, pid, reason}, %{parent: {:alive, pid}} = state) do
+  def handle_info({:EXIT, pid, reason}, %{pipeline: {:alive, pid}} = state) do
     Membrane.Logger.debug(
-      "got exit from parent with reason #{inspect(reason)}, stopping subprocess supervisor"
+      "got exit from pipeline with reason #{inspect(reason)}, stopping subprocess supervisor"
     )
 
     Process.exit(state.subprocess_supervisor, :shutdown)
-    {:noreply, %{state | parent: {:exited, reason}}}
+    {:noreply, %{state | pipeline: {:exited, reason}}}
   end
 
   @impl true
   def handle_info(
         {:EXIT, pid, :normal},
-        %{subprocess_supervisor: pid, parent: {:exited, parent_exit_reason}} = state
+        %{subprocess_supervisor: pid, pipeline: {:exited, pipeline_exit_reason}} = state
       ) do
     Membrane.Logger.debug("got exit from subprocess supervisor, exiting")
 
     reason =
-      case parent_exit_reason do
+      case pipeline_exit_reason do
         :normal -> :normal
         :shutdown -> :shutdown
         {:shutdown, reason} -> {:shutdown, reason}
@@ -93,22 +93,22 @@ defmodule Membrane.Core.Pipeline.Supervisor do
   @impl true
   def handle_info({:EXIT, pid, reason}, %{
         subprocess_supervisor: pid,
-        parent: {:alive, _parent_pid}
+        pipeline: {:alive, _pipeline_pid}
       }) do
     raise "Subprocess supervisor failure, reason: #{inspect(reason)}"
   end
 
   @impl true
-  def handle_info({:EXIT, _pid, reason}, %{parent: {:alive, parent_pid}} = state) do
-    Membrane.Logger.debug("got exit from a linked process, stopping parent")
-    Process.exit(parent_pid, reason)
+  def handle_info({:EXIT, _pid, reason}, %{pipeline: {:alive, pipeline_pid}} = state) do
+    Membrane.Logger.debug("got exit from a linked process, stopping pipeline")
+    Process.exit(pipeline_pid, reason)
     {:noreply, state}
   end
 
   @impl true
   def handle_info({:EXIT, _pid, _reason}, state) do
     Membrane.Logger.debug(
-      "got exit from a linked process, parent already dead, waiting for subprocess supervisor to exit"
+      "got exit from a linked process, pipeline already dead, waiting for subprocess supervisor to exit"
     )
 
     {:noreply, state}
