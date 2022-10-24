@@ -22,12 +22,10 @@ defmodule Membrane.Element.PadData do
   use Bunch.Access
 
   alias Membrane.{Caps, Pad}
-  alias Membrane.Core.Element.CapsController
 
   @type private_field :: term()
 
   @type t :: %__MODULE__{
-          ancestors_with_pads: CapsController.caps_validation_params_t(),
           availability: Pad.availability_t(),
           caps: Caps.t() | nil,
           caps_pattern: String.t(),
@@ -38,6 +36,7 @@ defmodule Membrane.Element.PadData do
           name: Pad.name_t(),
           ref: Pad.ref_t(),
           options: %{optional(atom) => any},
+          ancestors_with_pads: private_field(),
           pid: private_field,
           other_ref: private_field,
           input_queue: private_field,
