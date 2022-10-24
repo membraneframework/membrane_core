@@ -128,21 +128,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     proceed_spec_startup(spec_ref, state)
   end
 
-  @spec handle_spec_timeout(spec_ref_t(), Parent.state_t()) ::
-          Parent.state_t()
-  def handle_spec_timeout(spec_ref, state) do
-    {spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
-
-    unless spec_data == nil or spec_data.status == :ready do
-      raise Membrane.LinkError,
-            "Spec #{inspect(spec_ref)} linking took too long, spec_data: #{inspect(spec_data, pretty: true)}"
-    end
-
-    state
-  end
-
-  @spec proceed_spec_startup(spec_ref_t(), Parent.state_t()) ::
-          Parent.state_t()
+  @spec proceed_spec_startup(spec_ref_t(), Parent.state_t()) :: Parent.state_t()
   def proceed_spec_startup(spec_ref, state) do
     withl spec_data: {:ok, spec_data} <- Map.fetch(state.pending_specs, spec_ref),
           do: {spec_data, state} = do_proceed_spec_startup(spec_ref, spec_data, state),
@@ -171,8 +157,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp do_proceed_spec_startup(spec_ref, %{status: :initialized} = spec_data, state) do
-    Process.send_after(self(), Message.new(:spec_linking_timeout, spec_ref), 5000)
-
     {awaiting_responses, state} =
       Enum.flat_map_reduce(spec_data.links_ids, state, fn link_id, state ->
         %Membrane.Core.Parent.Link{from: from, to: to, spec_ref: spec_ref} =

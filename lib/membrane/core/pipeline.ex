@@ -90,12 +90,6 @@ defmodule Membrane.Core.Pipeline do
   end
 
   @impl GenServer
-  def handle_info(Message.new(:spec_linking_timeout, spec_ref), state) do
-    state = ChildLifeController.handle_spec_timeout(spec_ref, state)
-    {:noreply, state}
-  end
-
-  @impl GenServer
   def handle_info(Message.new(:initialized, child), state) do
     state = ChildLifeController.handle_child_initialized(child, state)
     {:noreply, state}

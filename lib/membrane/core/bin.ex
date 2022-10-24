@@ -201,8 +201,8 @@ defmodule Membrane.Core.Bin do
     {:noreply, state}
   end
 
-  defp do_handle_info(Message.new(:spec_linking_timeout, spec_ref), state) do
-    state = Parent.ChildLifeController.handle_spec_timeout(spec_ref, state)
+  defp do_handle_info(Message.new(:linking_timeout, pad_ref), state) do
+    PadController.handle_linking_timeout(pad_ref, state)
     {:noreply, state}
   end
 
