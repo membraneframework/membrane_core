@@ -1,5 +1,5 @@
 defmodule Membrane.Integration.LinkingTest do
-  use ExUnit.Case
+  use ExUnit.Case, async?: true
 
   import Membrane.Testing.Assertions
   import Membrane.ParentSpec
@@ -367,6 +367,23 @@ defmodule Membrane.Integration.LinkingTest do
 
     assert_end_of_stream(pipeline, :sink)
     Membrane.Pipeline.terminate(pipeline, blocking?: true)
+  end
+
+  test "Bin should crash if it doesn't link internally within timeout" do
+    defmodule NoInternalLinkBin do
+      use Membrane.Bin
+
+      def_input_pad :input, availability: :on_request, caps: :any, demand_unit: :buffers
+    end
+
+    pipeline =
+      Testing.Pipeline.start_supervised!(
+        links: [link(:source, Testing.Source) |> to(:bin, NoInternalLinkBin)]
+      )
+
+    bin_pid = get_child_pid(:bin, pipeline)
+    monitor = Process.monitor(bin_pid)
+    assert_receive {:DOWN, ^monitor, :process, _pid, {%Membrane.LinkError{}, _stacktrace}}, 6000
   end
 
   defp get_child_pid(ref, parent_pid) do
