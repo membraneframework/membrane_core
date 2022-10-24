@@ -1,11 +1,10 @@
 defmodule Membrane.RemoteControlled.Pipeline do
   @moduledoc """
-  `Membrane.RemoteControlled.Pipeline` is a basic `Membrane.Pipeline` implementation that can be
-  controlled by a controlling process.
+  Basic `Membrane.Pipeline` implementation that can be controlled by a controlling process.
 
   The easiest way to start this pipeline is to use `start_link!/1`
   ```
-    pipeline = Pipeline.start_link!()
+    pipeline = Membrane.RemoteControlled.Pipeline.start_link!()
   ```
 
   The controlling process can request the execution of arbitrary
@@ -14,17 +13,17 @@ defmodule Membrane.RemoteControlled.Pipeline do
     children = ...
     links = ...
     actions = [{:spec, %ParentSpec{children: children, links: links}}]
-    Pipeline.exec_actions(pipeline, actions)
+    Membrane.RemoteControlled.Pipeline.exec_actions(pipeline, actions)
   ```
 
   The controlling process can also subscribe to the messages
   sent by the pipeline and later on synchronously await for these messages:
   ```
   # subscribes to message which is sent when the pipeline enters `playing`
-  Pipeline.subscribe(pipeline, %Message.Playing{})
+  Membrane.RemoteControlled.Pipeline.subscribe(pipeline, %Message.Playing{})
   ...
   # awaits for the message sent when the pipeline enters :playing playback
-  Pipeline.await_playing(pipeline)
+  Membrane.RemoteControlled.Pipeline.await_playing(pipeline)
   ...
   ```
 
