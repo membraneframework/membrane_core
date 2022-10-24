@@ -26,13 +26,10 @@ defmodule Membrane.Core.Parent.StructureParser do
         %ChildrenSpec.StructureBuilder{links: links, children: children, status: :done} ->
           {Enum.reverse(links), Enum.reverse(children)}
 
-        %ChildrenSpec.StructureBuilder{links: [%{from: from} | _]} = builder ->
-          if length(builder.children) == 1 do
-            {[], builder.children}
-          else
-            raise ParentError,
-                  "Invalid link specification: link from #{inspect(from)} lacks its destination."
-          end
+        %ChildrenSpec.StructureBuilder{links: [%{from: from} | _]} ->
+          raise ParentError,
+                "Invalid link specification: link from #{inspect(from)} lacks its destination. Perhaps you have used `get_child/1` without linking
+            it to other children?"
 
         {name, child_spec} ->
           {[], {name, child_spec}}
@@ -45,6 +42,7 @@ defmodule Membrane.Core.Parent.StructureParser do
     links =
       links
       |> List.flatten()
+      |> Enum.filter(fn link -> Map.has_key?(link, :from_pad) end)
       |> Enum.map(fn %{} = link ->
         %Link{
           id: make_ref(),

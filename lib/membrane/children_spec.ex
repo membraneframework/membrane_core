@@ -203,7 +203,7 @@ defmodule Membrane.ChildrenSpec do
             status: status_t
           }
 
-    @type status_t :: :from | :from_pad | :to_pad | :done
+    @type status_t :: :from | :from_pad | :to_pad | :done | nil
 
     @spec update(t, status_t, Keyword.t()) :: t
     def update(
@@ -308,7 +308,9 @@ defmodule Membrane.ChildrenSpec do
       {child_name, child_spec,
        dont_spawn_if_already_exists: Keyword.get(opts, :get_if_exists, false)}
 
-    get_child(child_name) |> Map.update!(:children, &[child_spec_extended | &1])
+    get_child(child_name)
+    |> Map.update!(:children, &[child_spec_extended | &1])
+    |> Map.put(:status, :done)
   end
 
   @doc """

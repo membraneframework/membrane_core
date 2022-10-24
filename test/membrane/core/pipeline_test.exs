@@ -80,7 +80,7 @@ defmodule Membrane.Core.PipelineTest do
         ActionHandler.handle_action(
           {:spec,
            %ChildrenSpec{
-             structure: [child(:a, Membrane.Testing.Source), child(:a, Membrane.Testing.Sink)]
+             structure: [child(:a, Membrane.Testing.Source) |> child(:a, Membrane.Testing.Sink)]
            }},
           nil,
           [],
