@@ -10,6 +10,7 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.Core.Element.{
     ActionHandler,
+    CapsController,
     DemandController,
     EventController,
     InputQueue,
@@ -27,12 +28,12 @@ defmodule Membrane.Core.Element.PadController do
   require Membrane.Pad
 
   @type link_call_props_t ::
-          %{initiator: :parent, ancestors_with_pads: [Pad.module_with_pad_t()]}
+          %{initiator: :parent, ancestors_with_pads: CapsController.caps_validation_params_t()}
           | %{
               initiator: :sibling,
               other_info: PadModel.pad_info_t() | nil,
               link_metadata: %{toilet: Toilet.t() | nil},
-              ancestors_with_pads: [Pad.module_with_pad_t()]
+              ancestors_with_pads: CapsController.caps_validation_params_t()
             }
 
   @type link_call_reply_props_t ::

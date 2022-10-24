@@ -15,6 +15,9 @@ defmodule Membrane.Core.Element.CapsController do
   require Membrane.Core.Telemetry
   require Membrane.Logger
 
+  @type caps_validation_param_t() :: {module(), Pad.name_t()}
+  @type caps_validation_params_t() :: [caps_validation_param_t()]
+
   @doc """
   Handles incoming caps: either stores them in InputQueue, or executes element callback.
   """
@@ -70,7 +73,7 @@ defmodule Membrane.Core.Element.CapsController do
     PadModel.set_data!(state, pad_ref, :caps, caps)
   end
 
-  @spec validate_caps!(Pad.direction_t(), [Pad.module_with_pad_t()], Caps.t()) :: :ok
+  @spec validate_caps!(Pad.direction_t(), caps_validation_params_t(), Caps.t()) :: :ok
   def validate_caps!(direction, modules_with_pads, caps) do
     unless is_struct(caps) do
       raise Membrane.CapsError, """

@@ -128,6 +128,7 @@ defmodule Membrane.Pad do
   """
   @type common_spec_options_t ::
           {:availability, availability_t()}
+          | {:caps_pattern, code :: any()}
           | {:mode, mode_t()}
           | {:options, Keyword.t()}
 
@@ -144,11 +145,6 @@ defmodule Membrane.Pad do
           :options => nil | Keyword.t(),
           optional(:demand_mode) => demand_mode_t()
         }
-
-  @typedoc """
-  Type describing module with a name of a pad defined in it.
-  """
-  @type module_with_pad_t() :: {module(), name_t()}
 
   @doc """
   Creates a static pad reference.

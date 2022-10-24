@@ -42,11 +42,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
     specs = [{:caps_pattern, Macro.to_string(caps_pattern)} | specs]
 
     case_statement_clauses =
-      case caps_pattern do
-        {:alternative, _meta, args} -> args
-        ast -> ast
-      end
-      |> Bunch.listify()
+      Bunch.listify(caps_pattern)
       |> Enum.map(fn
         {:__aliases__, _meta, _module} = ast -> quote do: %unquote(ast){}
         ast when is_atom(ast) -> quote do: %unquote(ast){}

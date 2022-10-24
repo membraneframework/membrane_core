@@ -10,6 +10,7 @@ defmodule Membrane.Core.Bin.PadController do
   alias Membrane.Core.Bin.{ActionHandler, State}
   alias Membrane.Core.{CallbackHandler, Child, Message}
   alias Membrane.Core.Child.PadModel
+  alias Membrane.Core.Element.CapsController
   alias Membrane.Core.Parent.{ChildLifeController, Link, StructureParser}
 
   require Membrane.Core.Child.PadModel
@@ -159,12 +160,12 @@ defmodule Membrane.Core.Bin.PadController do
           Pad.direction_t(),
           StructureParser.raw_endpoint_t(),
           StructureParser.raw_endpoint_t(),
-          %{initiator: :parent, ancestors_with_pads: [Pad.module_with_pad_t()]}
+          %{initiator: :parent, ancestors_with_pads: CapsController.caps_validation_params_t()}
           | %{
               initiator: :sibling,
               other_info: PadModel.pad_info_t() | nil,
               link_metadata: map,
-              ancestors_with_pads: [Pad.module_with_pad_t()]
+              ancestors_with_pads: CapsController.caps_validation_params_t()
             },
           Core.Bin.State.t()
         ) :: {Core.Element.PadController.link_call_reply_t(), Core.Bin.State.t()}
