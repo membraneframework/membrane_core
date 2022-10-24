@@ -160,12 +160,12 @@ defmodule Membrane.Core.Bin.PadController do
           Pad.direction_t(),
           StructureParser.raw_endpoint_t(),
           StructureParser.raw_endpoint_t(),
-          %{initiator: :parent, ancestors_with_pads: CapsController.caps_validation_params_t()}
+          %{initiator: :parent, caps_validation_params: CapsController.caps_validation_params_t()}
           | %{
               initiator: :sibling,
               other_info: PadModel.pad_info_t() | nil,
               link_metadata: map,
-              ancestors_with_pads: CapsController.caps_validation_params_t()
+              caps_validation_params: CapsController.caps_validation_params_t()
             },
           Core.Bin.State.t()
         ) :: {Core.Element.PadController.link_call_reply_t(), Core.Bin.State.t()}
@@ -205,7 +205,7 @@ defmodule Membrane.Core.Bin.PadController do
     params =
       Map.update!(
         params,
-        :ancestors_with_pads,
+        :caps_validation_params,
         &[{state.module, pad_name} | &1]
       )
 

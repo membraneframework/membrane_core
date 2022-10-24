@@ -299,10 +299,10 @@ defmodule Membrane.Core.Element.ActionHandler do
            pid: pid,
            other_ref: other_ref,
            name: pad_name,
-           ancestors_with_pads: ancestors_with_pads
+           caps_validation_params: caps_validation_params
          } <- pad_data do
-      modules_with_pads = [{state.module, pad_name} | ancestors_with_pads]
-      :ok = CapsController.validate_caps!(:output, modules_with_pads, caps)
+      caps_validation_params = [{state.module, pad_name} | caps_validation_params]
+      :ok = CapsController.validate_caps!(:output, caps_validation_params, caps)
 
       state = PadModel.set_data!(state, pad_ref, :caps, caps)
       Message.send(pid, :caps, caps, for_pad: other_ref)

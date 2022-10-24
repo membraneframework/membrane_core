@@ -76,7 +76,7 @@ defmodule Membrane.Core.ElementTest do
             initiator: :sibling,
             other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
             link_metadata: %{toilet: nil, observability_metadata: %{}},
-            ancestors_with_pads: []
+            caps_validation_params: []
           }
         ]),
         nil,
@@ -104,7 +104,7 @@ defmodule Membrane.Core.ElementTest do
             initiator: :sibling,
             other_info: %{direction: :output, mode: :pull},
             link_metadata: %{toilet: nil, observability_metadata: %{}},
-            ancestors_with_pads: []
+            caps_validation_params: []
           }
         ]),
         nil,
@@ -210,7 +210,7 @@ defmodule Membrane.Core.ElementTest do
                    initiator: :sibling,
                    other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
                    link_metadata: %{toilet: nil, observability_metadata: %{}},
-                   ancestors_with_pads: []
+                   caps_validation_params: []
                  }
                ]),
                nil,

@@ -54,12 +54,12 @@ defmodule Membrane.Core.Element.CapsController do
   def exec_handle_caps(pad_ref, caps, params \\ %{}, state) do
     require CallbackContext.Caps
 
-    %{ancestors_with_pads: ancestors_with_pads, name: pad_name} =
+    %{caps_validation_params: caps_validation_params, name: pad_name} =
       PadModel.get_data!(state, pad_ref)
 
     context = &CallbackContext.Caps.from_state(&1, pad: pad_ref)
 
-    :ok = validate_caps!(:input, [{state.module, pad_name} | ancestors_with_pads], caps)
+    :ok = validate_caps!(:input, [{state.module, pad_name} | caps_validation_params], caps)
 
     state =
       CallbackHandler.exec_and_handle_callback(
@@ -74,14 +74,14 @@ defmodule Membrane.Core.Element.CapsController do
   end
 
   @spec validate_caps!(Pad.direction_t(), caps_validation_params_t(), Caps.t()) :: :ok
-  def validate_caps!(direction, modules_with_pads, caps) do
+  def validate_caps!(direction, params, caps) do
     unless is_struct(caps) do
       raise Membrane.CapsError, """
       Caps: #{inspect(caps)} are not a struct, even though they have to be
       """
     end
 
-    for {module, pad_name} <- modules_with_pads do
+    for {module, pad_name} <- params do
       unless module.membrane_caps_match?(pad_name, caps) do
         raise Membrane.CapsError, """
         Caps: #{inspect(caps)} are not matching caps pattern in def_#{direction}_pad

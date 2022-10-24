@@ -96,6 +96,13 @@ defmodule Membrane.Pad do
   @type availability_mode_t :: :static | :dynamic
 
   @typedoc """
+  Describes pattern, that should be matched by caps send by element on specific pad.
+  Will not be evaluated during runtime, but used for matching struct passed in `:caps`
+  action.
+  """
+  @type caps_t :: any()
+
+  @typedoc """
   Describes how a pad should be declared in element or bin.
   """
   @type spec_t :: output_spec_t | input_spec_t | bin_spec_t
@@ -128,7 +135,7 @@ defmodule Membrane.Pad do
   """
   @type common_spec_options_t ::
           {:availability, availability_t()}
-          | {:caps_pattern, code :: any()}
+          | {:caps, caps_t()}
           | {:mode, mode_t()}
           | {:options, Keyword.t()}
 

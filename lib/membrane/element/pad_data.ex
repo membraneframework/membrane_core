@@ -3,7 +3,6 @@ defmodule Membrane.Element.PadData do
   Struct describing current pad state.
 
   The public fields are:
-    - `:ancestors_with_pads` - list of ancestors bins with related pads names
     - `:availability` - see `Membrane.Pad.availability_t`
     - `:caps` - the most recent `Membrane.Caps` that have been sent (output) or received (input)
       on the pad. May be `nil` if not yet set.
@@ -36,7 +35,7 @@ defmodule Membrane.Element.PadData do
           name: Pad.name_t(),
           ref: Pad.ref_t(),
           options: %{optional(atom) => any},
-          ancestors_with_pads: private_field(),
+          caps_validation_params: private_field(),
           pid: private_field,
           other_ref: private_field,
           input_queue: private_field,
@@ -78,6 +77,6 @@ defmodule Membrane.Element.PadData do
                 toilet: nil,
                 associated_pads: [],
                 sticky_events: [],
-                ancestors_with_pads: []
+                caps_validation_params: []
               ]
 end
