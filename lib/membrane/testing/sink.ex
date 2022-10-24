@@ -11,13 +11,13 @@ defmodule Membrane.Testing.Sink do
   enable asserting on buffers and events it receives.
 
       alias Membrane.Testing
-      children = [
-          ...,
-          sink: %Testing.Sink{}
+      links = [
+          ... |>
+          child(:sink, %Testing.Sink{}) |>
+          ...
       ]
       {:ok, pid} = Testing.Pipeline.start_link(
-        children: children,
-        links: Membrane.ChildrenSpec.link_linear(children)
+        structure: links
       )
 
   Asserting that `Membrane.Testing.Sink` element processed a buffer that matches
