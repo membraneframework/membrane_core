@@ -63,7 +63,7 @@ defmodule Membrane.Core.Bin.PadController do
               "Sending link response, link_id: #{inspect(link_id)}, pad: #{inspect(pad_ref)}"
             )
 
-            Message.send(state.parent_pid, :link_response, link_id)
+            Message.send(state.parent_pid, :link_response, [link_id, direction])
           end
 
           state
@@ -128,7 +128,7 @@ defmodule Membrane.Core.Bin.PadController do
           "Sending link response, link_id: #{inspect(pad_data.link_id)}, pad: #{inspect(pad_data.ref)}"
         )
 
-        Message.send(state.parent_pid, :link_response, pad_data.link_id)
+        Message.send(state.parent_pid, :link_response, [pad_data.link_id, pad_data.direction])
         state
       else
         Membrane.Core.Child.PadModel.set_data!(

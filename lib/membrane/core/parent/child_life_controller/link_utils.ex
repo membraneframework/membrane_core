@@ -67,7 +67,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
           ChildLifeController.spec_ref_t(),
           Link.id(),
           Parent.state_t()
-        ) :: {0..2, Parent.state_t()}
+        ) :: {[{Link.id(), Membrane.Pad.direction_t()}], Parent.state_t()}
   def request_link(
         _direction,
         %Link.Endpoint{child: {Membrane.Bin, :itself}} = this,
@@ -77,7 +77,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
         state
       ) do
     state = PadController.handle_internal_link_request(this.pad_ref, other, spec_ref, state)
-    {0, state}
+    {[], state}
   end
 
   def request_link(direction, this, _other, _spec_ref, link_id, state) do
@@ -89,9 +89,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
         this.pad_props.options
       ])
 
-      {1, state}
+      {[{link_id, direction}], state}
     else
-      {0, state}
+      {[], state}
     end
   end
 
