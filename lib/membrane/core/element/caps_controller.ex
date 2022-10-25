@@ -77,7 +77,7 @@ defmodule Membrane.Core.Element.CapsController do
   def validate_caps!(direction, params, caps) do
     unless is_struct(caps) do
       raise Membrane.CapsError, """
-      Caps: #{inspect(caps)} are not a struct, even though they have to be
+      Caps must be defined as a struct, therefore they cannot be: #{inspect(caps)}
       """
     end
 

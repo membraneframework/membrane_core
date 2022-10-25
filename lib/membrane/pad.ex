@@ -100,7 +100,7 @@ defmodule Membrane.Pad do
   Will not be evaluated during runtime, but used for matching struct passed in `:caps`
   action.
   """
-  @type caps_t :: any()
+  @type caps_t :: module() | (pattern :: term())
 
   @typedoc """
   Describes how a pad should be declared in element or bin.
@@ -135,7 +135,7 @@ defmodule Membrane.Pad do
   """
   @type common_spec_options_t ::
           {:availability, availability_t()}
-          | {:caps, caps_t()}
+          | {:caps, caps_t() | [caps_t()]}
           | {:mode, mode_t()}
           | {:options, Keyword.t()}
 
