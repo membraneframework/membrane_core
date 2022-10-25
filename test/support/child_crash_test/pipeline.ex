@@ -18,8 +18,8 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
   @impl true
   def handle_init(_opts) do
     children = [
-      center_filter: Filter,
-      sink: Testing.Sink
+      child(:center_filter, Filter),
+      child(:sink, Testing.Sink)
     ]
 
     links = [
@@ -42,7 +42,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
   @spec add_single_source(pid(), any(), any(), any()) :: any()
   def add_single_source(pid, source_name, group \\ nil, source \\ Testing.Source) do
     children = [
-      {source_name, source}
+      child(source_name, source)
     ]
 
     links = [
@@ -66,7 +66,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
   @spec add_bin(pid(), atom(), atom(), any()) :: any()
   def add_bin(pid, bin_name, source_name, group \\ nil) do
-    children = [{source_name, Testing.Source}, {bin_name, TestBins.CrashTestBin}]
+    children = [child(source_name, Testing.Source), child(bin_name, TestBins.CrashTestBin)]
 
     links = [
       get_child(source_name) |> get_child(bin_name) |> get_child(:center_filter)
@@ -93,8 +93,10 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
         source_name,
         group \\ nil
       ) do
-    children = [{source_name, Testing.Source}] ++ (filters_names |> Enum.map(&{&1, Filter}))
-    children_names = children |> Enum.map(&elem(&1, 0))
+    children =
+      [child(source_name, Testing.Source)] ++ (filters_names |> Enum.map(&child(&1, Filter)))
+
+    children_names = [source_name | filters_names]
 
     links =
       Enum.chunk_every(children_names, 2, 1, [:center_filter])

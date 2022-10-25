@@ -2,6 +2,8 @@ defmodule Membrane.Support.Sync.Pipeline do
   @moduledoc false
   use Membrane.Pipeline
 
+  import Membrane.ChildrenSpec
+
   alias Membrane.Testing.{Sink, Source}
 
   @spec default_spec() :: Membrane.ChildrenSpec.t()
@@ -13,10 +15,10 @@ defmodule Membrane.Support.Sync.Pipeline do
     end
 
     children = [
-      source_a: %Source{output: ["a"]},
-      sink_a: %Sink{},
-      source_b: %Source{output: {200, demand_generator}},
-      sink_b: %Sink{}
+      child(:source_a, %Source{output: ["a"]}),
+      child(:sink_a, %Sink{}),
+      child(:source_b, %Source{output: {200, demand_generator}}),
+      child(:sink_b, %Sink{})
     ]
 
     links = [

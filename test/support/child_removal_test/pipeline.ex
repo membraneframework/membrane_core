@@ -25,11 +25,11 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
   def handle_init(opts) do
     children =
       [
-        source: opts.source,
-        filter1: opts.filter1,
-        filter2: opts.filter2,
-        filter3: opts.filter3,
-        sink: opts.sink
+        child(:source, opts.source),
+        child(:filter1, opts.filter1),
+        child(:filter2, opts.filter2),
+        child(:filter3, opts.filter3),
+        child(:sink, opts.sink)
       ]
       |> maybe_add_extra_source(opts)
 
@@ -65,7 +65,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
   end
 
   defp maybe_add_extra_source(children, %{extra_source: source}),
-    do: [{:extra_source, source} | children]
+    do: [child(:extra_source, source) | children]
 
   defp maybe_add_extra_source(children, _opts), do: children
 

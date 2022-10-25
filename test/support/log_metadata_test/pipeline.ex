@@ -12,6 +12,8 @@ defmodule Membrane.Support.LogMetadataTest.Pipeline do
 
     use Membrane.Filter
 
+    import Membrane.ChildrenSpec
+
     require Membrane.Logger
 
     def_output_pad :output, caps: _any
@@ -31,7 +33,7 @@ defmodule Membrane.Support.LogMetadataTest.Pipeline do
       |> Enum.map(fn {element_name, element_metadata} ->
         {:spec,
          %Membrane.ChildrenSpec{
-           structure: [{element_name, MetadataNotifyingElement}],
+           structure: [child(element_name, MetadataNotifyingElement)],
            log_metadata: [test: element_metadata]
          }}
       end)

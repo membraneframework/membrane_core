@@ -21,7 +21,7 @@ defmodule Membrane.Integration.LinkingTest do
     @impl true
     def handle_init(opts) do
       children = [
-        source: opts.child
+        child(:source, opts.child)
       ]
 
       spec = %ChildrenSpec{
@@ -126,14 +126,14 @@ defmodule Membrane.Integration.LinkingTest do
     test "and element crashes, bin forwards the unlink message to child", %{pipeline: pipeline} do
       bin_spec = %Membrane.ChildrenSpec{
         structure: [
-          bin: %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}
+          child(:bin, %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}})
         ],
         crash_group: {:group_1, :temporary}
       }
 
       sink_spec = %Membrane.ChildrenSpec{
         structure: [
-          sink: Testing.Sink
+          child(:sink, Testing.Sink)
         ],
         crash_group: {:group_2, :temporary}
       }
@@ -175,14 +175,14 @@ defmodule Membrane.Integration.LinkingTest do
   } do
     spec_1 = %Membrane.ChildrenSpec{
       structure: [
-        source: %Testing.Source{output: ['a', 'b', 'c']}
+        child(:source, %Testing.Source{output: ['a', 'b', 'c']})
       ],
       crash_group: {:group_1, :temporary}
     }
 
     spec_2 = %Membrane.ChildrenSpec{
       structure: [
-        sink: Testing.Sink
+        child(:sink, Testing.Sink)
       ],
       crash_group: {:group_2, :temporary}
     }
@@ -209,14 +209,14 @@ defmodule Membrane.Integration.LinkingTest do
   } do
     spec_1 = %Membrane.ChildrenSpec{
       structure: [
-        source: %Testing.DynamicSource{output: ['a', 'b', 'c']}
+        child(:source, %Testing.DynamicSource{output: ['a', 'b', 'c']})
       ],
       crash_group: {:group_1, :temporary}
     }
 
     spec_2 = %Membrane.ChildrenSpec{
       structure: [
-        sink: Testing.Sink
+        child(:sink, Testing.Sink)
       ],
       crash_group: {:group_2, :temporary}
     }
@@ -242,14 +242,14 @@ defmodule Membrane.Integration.LinkingTest do
        %{pipeline: pipeline} do
     bin_spec = %Membrane.ChildrenSpec{
       structure: [
-        bin: %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}
+        child(:bin, %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}})
       ],
       crash_group: {:group_1, :temporary}
     }
 
     sink_spec = %Membrane.ChildrenSpec{
       structure: [
-        sink: Testing.Sink
+        child(:sink, Testing.Sink)
       ],
       crash_group: {:group_1, :temporary}
     }

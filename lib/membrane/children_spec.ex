@@ -147,12 +147,12 @@ defmodule Membrane.ChildrenSpec do
 
   ```elixir
   structure = [
-  child(:some_element_1, %SomeElement{
-  # ...
-  },
-  child(:some_element_2, %SomeElement{
-  # ...
-  }
+    child(:some_element_1, %SomeElement{
+      # ...
+    },
+    child(:some_element_2, %SomeElement{
+      # ...
+    }
   ]
 
   spec = %ChildrenSpec{structure: children, crash_group: {group_id, :temporary}}
@@ -233,13 +233,13 @@ defmodule Membrane.ChildrenSpec do
 
   @type pad_options_t :: Keyword.t()
 
-  @type child_spec_extended_t ::
-          child_spec_t
-          | {child_spec_t(), :dont_spawn_if_already_exists}
-  @type structure_spec_t :: [link_builder_t() | child_spec_extended_t()]
+  @opaque child_spec_extended_t :: {child_spec_t(), child_spec_options_t()}
+
+  @type child_spec_options_t :: [dont_spawn_if_exists: boolean()]
+  @type structure_spec_t :: [link_builder_t()]
+  @type child_opts_t :: [get_if_exists: boolean]
 
   @default_child_opts [get_if_exists: false]
-  @type child_opts_t :: [get_if_exists: boolean]
 
   @typedoc """
   Struct used when starting and linking children within a pipeline or a bin.
@@ -291,16 +291,20 @@ defmodule Membrane.ChildrenSpec do
 
   See the _structure_ section of the moduledoc for more information.
   """
-  @spec child(Child.name_t() | link_builder_t, struct() | module(), child_opts_t()) ::
+  @spec child(
+          link_builder_t | Child.name_t(),
+          Child.name_t() | struct() | module(),
+          struct() | module() | child_opts_t()
+        ) ::
           link_builder_t()
-  def child(child_name, child_spec, opts \\ [])
+  def child(child_name, child_spec, opts \\ @default_child_opts)
 
-  def child(%LinkBuilder{} = first_arg, second_arg, third_arg) do
-    do_child(first_arg, second_arg, third_arg, @default_child_opts)
+  def child(%LinkBuilder{} = link_builder, child_name, child_spec) do
+    do_child(link_builder, child_name, child_spec, @default_child_opts)
   end
 
-  def child(first_arg, second_arg, third_arg) when is_child_name?(first_arg) do
-    do_child(first_arg, second_arg, third_arg)
+  def child(child_name, child_spec, options) when is_child_name?(child_name) do
+    do_child(child_name, child_spec, options)
   end
 
   def child(_first_arg, _second_arg, _third_arg) do
@@ -309,9 +313,7 @@ defmodule Membrane.ChildrenSpec do
 
   defp do_child(child_name, child_spec, opts) do
     child_spec =
-      if opts[:get_if_exists],
-        do: {child_spec, :dont_spawn_if_already_exists},
-        else: child_spec
+      {child_spec, dont_spawn_if_already_exists: Keyword.get(opts, :get_if_exists, false)}
 
     get_child(child_name) |> Map.update!(:children, &[{child_name, child_spec} | &1])
   end
@@ -329,9 +331,7 @@ defmodule Membrane.ChildrenSpec do
 
   defp do_child(%LinkBuilder{} = link_builder, child_name, child_spec, opts) do
     child_spec =
-      if opts[:get_if_exists],
-        do: {child_spec, :dont_spawn_if_already_exists},
-        else: child_spec
+      {child_spec, dont_spawn_if_already_exists: Keyword.get(opts, :get_if_exists, false)}
 
     link_builder
     |> get_child(child_name)

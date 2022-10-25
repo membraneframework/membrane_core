@@ -2,6 +2,8 @@ defmodule Membrane.Core.PipelineTest do
   use ExUnit.Case
 
   import Membrane.Testing.Assertions
+  import Membrane.ChildrenSpec
+
   alias Membrane.ChildrenSpec
   alias Membrane.Core.Message
   alias Membrane.Core.Pipeline.{ActionHandler, State}
@@ -75,7 +77,9 @@ defmodule Membrane.Core.PipelineTest do
       assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
         ActionHandler.handle_action(
           {:spec,
-           %ChildrenSpec{structure: [a: Membrane.Testing.Source, a: Membrane.Testing.Sink]}},
+           %ChildrenSpec{
+             structure: [child(:a, Membrane.Testing.Source), child(:a, Membrane.Testing.Sink)]
+           }},
           nil,
           [],
           state
@@ -88,7 +92,7 @@ defmodule Membrane.Core.PipelineTest do
 
       assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
         ActionHandler.handle_action(
-          {:spec, %ChildrenSpec{structure: [a: Membrane.Testing.Source]}},
+          {:spec, %ChildrenSpec{structure: [child(:a, Membrane.Testing.Source)]}},
           nil,
           [],
           state
