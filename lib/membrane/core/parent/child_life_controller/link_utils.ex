@@ -126,10 +126,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
     new_pads_representatives
     |> Enum.frequencies()
-    |> IO.inspect(label: "dupa1")
     |> Enum.find(fn {_key, count} -> count > 1 end)
-    |> IO.inspect(label: "dupa")
-
     |> case do
       nil ->
         :ok
@@ -147,7 +144,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
       |> MapSet.new()
 
     new_pads_representatives
-    |> Enum.find(& MapSet.member?(existing_pads_representatives, &1))
+    |> Enum.find(&MapSet.member?(existing_pads_representatives, &1))
     |> case do
       nil ->
         :ok
@@ -164,8 +161,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
   defp links_to_pads_representatives(links) when is_list(links) do
     links
-    |> Enum.flat_map(& [&1.from, &1.to])
-    |> Enum.map(& {&1.child, &1.pad_ref})
+    |> Enum.flat_map(&[&1.from, &1.to])
+    |> Enum.map(&{&1.child, &1.pad_ref})
   end
 
   @spec resolve_endpoint(StructureParser.raw_endpoint_t(), Parent.state_t()) ::
