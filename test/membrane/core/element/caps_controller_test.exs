@@ -35,8 +35,8 @@ defmodule Membrane.Core.Element.CapsControllerTest do
         pads_data: %{
           input:
             struct(Membrane.Element.PadData,
-              accepted_caps: :any,
               direction: :input,
+              name: :input,
               pid: self(),
               mode: :pull,
               input_queue: input_queue,

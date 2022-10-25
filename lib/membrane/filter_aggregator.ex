@@ -27,13 +27,13 @@ defmodule Membrane.FilterAggregator do
               ]
 
   def_input_pad :input,
-    caps: :any,
+    caps: _any,
     demand_mode: :auto,
     demand_unit: :buffers
 
   def_output_pad :output,
     demand_mode: :auto,
-    caps: :any
+    caps: _any
 
   @impl true
   def handle_init(agg_ctx, %__MODULE__{filters: filter_specs}) do

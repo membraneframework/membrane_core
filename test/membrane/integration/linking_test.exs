@@ -15,7 +15,7 @@ defmodule Membrane.Integration.LinkingTest do
     def_options child: [spec: struct() | module()],
                 remove_child_on_unlink: [spec: boolean(), default: true]
 
-    def_output_pad :output, demand_unit: :buffers, caps: :any, availability: :on_request
+    def_output_pad :output, demand_unit: :buffers, caps: _any, availability: :on_request
 
     @impl true
     def handle_init(_ctx, opts) do
@@ -276,7 +276,7 @@ defmodule Membrane.Integration.LinkingTest do
   defmodule SlowSetupSink do
     use Membrane.Sink
 
-    def_input_pad :input, caps: :any, demand_mode: :auto
+    def_input_pad :input, caps: _any, demand_mode: :auto
 
     def_options setup_delay: [spec: non_neg_integer()]
 

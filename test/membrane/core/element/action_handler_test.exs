@@ -83,8 +83,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             start_of_stream?: true,
             end_of_stream?: false,
             mode: :push,
-            demand_mode: nil,
-            accepted_caps: :any
+            demand_mode: nil
           },
           input: %{
             direction: :input,
@@ -94,8 +93,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             start_of_stream?: true,
             end_of_stream?: false,
             mode: :push,
-            demand_mode: nil,
-            accepted_caps: :any
+            demand_mode: nil
           }
         }
       )
@@ -361,40 +359,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           state
         )
       end
-    end
-
-    test "when element is playing and caps match the spec", %{state: state} do
-      state =
-        %{state | playback: :playing}
-        |> PadModel.set_data!(:output, :accepted_caps, {Membrane.Caps.Mock, [integer: 42]})
-
-      result =
-        @module.handle_action(
-          caps_action(:output),
-          :handle_info,
-          %{},
-          state
-        )
-
-      assert result == PadModel.set_data!(state, :output, :caps, @mock_caps)
-      assert_received Message.new(:caps, @mock_caps, for_pad: :other_ref)
-    end
-
-    test "when caps doesn't match specs", %{state: state} do
-      state =
-        %{state | playback: :playing}
-        |> PadModel.set_data!(:output, :accepted_caps, {Membrane.Caps.Mock, [integer: 2]})
-
-      assert_raise ElementError, ~r/caps.*(don't|do not) match.*integer: 2/s, fn ->
-        @module.handle_action(
-          caps_action(:output),
-          :handle_info,
-          %{},
-          state
-        )
-      end
-
-      refute_received Message.new(:caps, @mock_caps, for_pad: :other_ref)
     end
 
     test "invalid pad direction", %{state: state} do

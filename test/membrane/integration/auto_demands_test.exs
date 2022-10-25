@@ -8,8 +8,8 @@ defmodule Membrane.Integration.AutoDemandsTest do
   defmodule AutoDemandFilter do
     use Membrane.Filter
 
-    def_input_pad :input, caps: :any, demand_mode: :auto
-    def_output_pad :output, caps: :any, demand_mode: :auto
+    def_input_pad :input, caps: _any, demand_mode: :auto
+    def_output_pad :output, caps: _any, demand_mode: :auto
 
     def_options factor: [default: 1], direction: [default: :up]
 
@@ -37,8 +37,8 @@ defmodule Membrane.Integration.AutoDemandsTest do
   defmodule AutoDemandTee do
     use Membrane.Filter
 
-    def_input_pad :input, caps: :any, demand_mode: :auto
-    def_output_pad :output, caps: :any, demand_mode: :auto, availability: :on_request
+    def_input_pad :input, caps: _any, demand_mode: :auto
+    def_output_pad :output, caps: _any, demand_mode: :auto, availability: :on_request
 
     @impl true
     def handle_process(:input, buffer, _ctx, state), do: {{:ok, forward: buffer}, state}
@@ -138,7 +138,11 @@ defmodule Membrane.Integration.AutoDemandsTest do
   defmodule PushSource do
     use Membrane.Source
 
-    def_output_pad :output, mode: :push, caps: :any
+    def_output_pad :output, mode: :push, caps: _any
+
+    defmodule Caps do
+      defstruct []
+    end
 
     @impl true
     def handle_parent_notification(actions, _ctx, state) do
@@ -147,7 +151,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     @impl true
     def handle_playing(_ctx, state) do
-      {{:ok, [caps: {:output, :any}]}, state}
+      {{:ok, [caps: {:output, %Caps{}}]}, state}
     end
   end
 

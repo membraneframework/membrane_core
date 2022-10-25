@@ -13,7 +13,7 @@ defmodule Membrane.Pad do
   use Bunch
   use Bunch.Typespec
 
-  alias Membrane.{Buffer, Caps}
+  alias Membrane.Buffer
 
   @typedoc """
   Defines the term by which the pad instance is identified.
@@ -96,6 +96,13 @@ defmodule Membrane.Pad do
   @type availability_mode_t :: :static | :dynamic
 
   @typedoc """
+  Describes pattern, that should be matched by caps send by element on specific pad.
+  Will not be evaluated during runtime, but used for matching struct passed in `:caps`
+  action.
+  """
+  @type caps_t :: module() | (pattern :: term())
+
+  @typedoc """
   Describes how a pad should be declared in element or bin.
   """
   @type spec_t :: output_spec_t | input_spec_t | bin_spec_t
@@ -128,8 +135,8 @@ defmodule Membrane.Pad do
   """
   @type common_spec_options_t ::
           {:availability, availability_t()}
+          | {:caps, caps_t() | [caps_t()]}
           | {:mode, mode_t()}
-          | {:caps, Caps.Matcher.caps_specs_t()}
           | {:options, Keyword.t()}
 
   @typedoc """
@@ -139,7 +146,7 @@ defmodule Membrane.Pad do
           :availability => availability_t(),
           :mode => mode_t(),
           :name => name_t(),
-          :caps => Caps.Matcher.caps_specs_t(),
+          :caps_pattern => String.t(),
           optional(:demand_unit) => Buffer.Metric.unit_t(),
           :direction => direction_t(),
           :options => nil | Keyword.t(),

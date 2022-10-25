@@ -15,6 +15,9 @@ defmodule Membrane.Core.Element.CapsController do
   require Membrane.Core.Telemetry
   require Membrane.Logger
 
+  @type caps_validation_param_t() :: {module(), Pad.name_t()}
+  @type caps_validation_params_t() :: [caps_validation_param_t()]
+
   @doc """
   Handles incoming caps: either stores them in InputQueue, or executes element callback.
   """
@@ -50,26 +53,43 @@ defmodule Membrane.Core.Element.CapsController do
   @spec exec_handle_caps(Pad.ref_t(), Caps.t(), params :: map, State.t()) :: State.t()
   def exec_handle_caps(pad_ref, caps, params \\ %{}, state) do
     require CallbackContext.Caps
-    %{accepted_caps: accepted_caps} = PadModel.get_data!(state, pad_ref)
+
+    %{caps_validation_params: caps_validation_params, name: pad_name} =
+      PadModel.get_data!(state, pad_ref)
+
     context = &CallbackContext.Caps.from_state(&1, pad: pad_ref)
 
-    if Caps.Matcher.match?(accepted_caps, caps) do
-      state =
-        CallbackHandler.exec_and_handle_callback(
-          :handle_caps,
-          ActionHandler,
-          %{context: context} |> Map.merge(params),
-          [pad_ref, caps],
-          state
-        )
+    :ok = validate_caps!(:input, [{state.module, pad_name} | caps_validation_params], caps)
 
-      PadModel.set_data!(state, pad_ref, :caps, caps)
-    else
-      raise """
-      Received caps: #{inspect(caps)} that are not specified in def_input_pad
-      for pad #{inspect(pad_ref)}. Specs of accepted caps are:
-      #{inspect(accepted_caps, pretty: true)}
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_caps,
+        ActionHandler,
+        %{context: context} |> Map.merge(params),
+        [pad_ref, caps],
+        state
+      )
+
+    PadModel.set_data!(state, pad_ref, :caps, caps)
+  end
+
+  @spec validate_caps!(Pad.direction_t(), caps_validation_params_t(), Caps.t()) :: :ok
+  def validate_caps!(direction, params, caps) do
+    unless is_struct(caps) do
+      raise Membrane.CapsError, """
+      Caps must be defined as a struct, therefore they cannot be: #{inspect(caps)}
       """
     end
+
+    for {module, pad_name} <- params do
+      unless module.membrane_caps_match?(pad_name, caps) do
+        raise Membrane.CapsError, """
+        Caps: #{inspect(caps)} are not matching caps pattern in def_#{direction}_pad
+        for pad #{inspect(pad_name)} in #{inspect(module)}
+        """
+      end
+    end
+
+    :ok
   end
 end
