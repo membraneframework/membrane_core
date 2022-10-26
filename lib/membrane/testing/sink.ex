@@ -37,7 +37,7 @@ defmodule Membrane.Testing.Sink do
     caps: :any
 
   def_options autodemand: [
-                type: :boolean,
+                spec: boolean(),
                 default: true,
                 description: """
                 If true element will automatically make demands.
