@@ -33,7 +33,7 @@ defmodule Membrane.Mixfile do
   end
 
   defp elixirc_paths(:test), do: ["lib", "spec/support", "test/support"]
-  defp elixirc_paths(_env), do: ["lib"]
+  defp elixirc_paths(_env), do: ["lib", "spec/support", "test/support"]
 
   defp dialyzer() do
     opts = [

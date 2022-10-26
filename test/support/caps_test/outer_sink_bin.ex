@@ -13,7 +13,7 @@ defmodule Membrane.Support.CapsTest.OuterSinkBin do
 
   def_input_pad :input,
     demand_unit: :buffers,
-    caps: %Stream{format: format} when format in [FormatAcceptedByAll, FormatAcceptedByOuterBins],
+    caps: [%Stream{format: FormatAcceptedByAll}, %Stream{format: FormatAcceptedByOuterBins}],
     availability: :always,
     mode: :push
 

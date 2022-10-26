@@ -7,7 +7,8 @@ defmodule Membrane.Core.Child.PadsSpecs do
   alias Membrane.Core.OptionsSpecs
   alias Membrane.Pad
 
-  require Pad
+  require Membrane.Logger
+  require Membrane.Pad
 
   @doc """
   Returns documentation string common for both input and output pads
@@ -39,10 +40,22 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
     specs = Keyword.put(specs, :options, escaped_pad_opts)
     {caps_pattern, specs} = Keyword.pop!(specs, :caps)
-    specs = [{:caps_pattern, Macro.to_string(caps_pattern)} | specs]
+
+    caps_pattern_spec =
+      Bunch.listify(caps_pattern)
+      |> Enum.map(&Macro.to_string/1)
+
+    specs = [{:caps_pattern, caps_pattern_spec} | specs]
 
     case_statement_clauses =
-      Bunch.listify(caps_pattern)
+      with :any <- caps_pattern do
+        Membrane.Logger.warn("""
+        Remeber, that `caps: :any` in pad definition will be satisified by caps
+        in form of %:any{}, not >>any<< caps (to achieve such a effect, put
+        `caps: _any` in your code)
+        """)
+      end
+      |> Bunch.listify()
       |> Enum.map(fn
         {:__aliases__, _meta, _module} = ast -> quote do: %unquote(ast){}
         ast when is_atom(ast) -> quote do: %unquote(ast){}
@@ -155,7 +168,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
               config
               |> Bunch.Config.parse(
                 availability: [in: [:always, :on_request], default: :always],
-                caps_pattern: [default: nil],
+                caps_pattern: [],
                 mode: [in: [:pull, :push], default: :pull],
                 demand_mode: [
                   in: [:auto, :manual],
@@ -256,8 +269,9 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  defp generate_pad_property_doc(:caps_pattern, pattern_string) when is_binary(pattern_string) do
-    "<code>#{pattern_string}</code>"
+  defp generate_pad_property_doc(:caps_pattern, caps_pattern) do
+    Enum.map(caps_pattern, &"<p><code>#{&1}</code></p>")
+    |> Enum.join()
   end
 
   defp generate_pad_property_doc(_k, v) do
