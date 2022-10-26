@@ -20,8 +20,8 @@ defmodule Membrane.ChildrenSpec do
   or just to spawn children processes, without linking the newly created children:
   ```
   structure = [child(:source, Source),
-  child(:filter, Filter),
-  child(:sink, Sink)]
+    child(:filter, Filter),
+    child(:sink, Sink)]
   ```
 
   In case you need to refer to an already existing child (which could be spawned, i.e. in the previous `spec_t` action),
@@ -36,7 +36,7 @@ defmodule Membrane.ChildrenSpec do
   that in case a child with a given name already exists, you will simply refer to that child instead of respawning it.
   ```
   structure = [child(:sink, Sink),
-  child(:sink, Sink, get_if_exists: true) |> child(:source, Source)]
+    child(:sink, Sink, get_if_exists: true) |> child(:source, Source)]
   ```
   In the example above you can see, that the `:sink` child is created in the first element of the `structure` list.
   In the second element of that list, the `get_if_exists: true` option is used within `child/3`, which will have the same effect as if
@@ -50,25 +50,25 @@ defmodule Membrane.ChildrenSpec do
 
   Sample definition:
   [
-  get_child(:source_a)
-  |> get_child(:converter)
-  |> via_in(:input_a, target_queue_size: 20)
-  |> get_child(:mixer),
-  get_child(:source_b)
-  |> via_out(:custom_output)
-  |> via_in(:input_b, options: [mute: true])
-  |> get_child(:mixer)
-  |> via_in(:input, toilet_capacity: 500)
-  |> get_child(:sink)
+    get_child(:source_a)
+    |> get_child(:converter)
+    |> via_in(:input_a, target_queue_size: 20)
+    |> get_child(:mixer),
+    get_child(:source_b)
+    |> via_out(:custom_output)
+    |> via_in(:input_b, options: [mute: true])
+    |> get_child(:mixer)
+    |> via_in(:input, toilet_capacity: 500)
+    |> get_child(:sink)
   ]
 
   See the docs for `via_in/3` and `via_out/3` for details on pad properties that can be set.
   Links can also contain children's definitions, for example:
 
   [
-  child(:first_element, %Element.With.Options.Struct{option_a: 42})
-  |> child(:some_element, Element.Without.Options)
-  |> get_child(:element_specified_before)
+    child(:first_element, %Element.With.Options.Struct{option_a: 42})
+    |> child(:some_element, Element.Without.Options)
+    |> get_child(:element_specified_before)
   ]
 
   ### Bins
@@ -81,7 +81,7 @@ defmodule Membrane.ChildrenSpec do
   Sample definition:
 
   [
-  bin_input() |> get_child(:filter1) |> get_child(:filter2) |> bin_output(:custom_output)
+    bin_input() |> get_child(:filter1) |> get_child(:filter2) |> bin_output(:custom_output)
   ]
 
   ### Dynamic pads
@@ -94,7 +94,7 @@ defmodule Membrane.ChildrenSpec do
 
   pad = Pad.ref(:output, make_ref())
   [
-  get_child(:tee) |> via_out(pad) |> get_child(:sink)
+    get_child(:tee) |> via_out(pad) |> get_child(:sink)
   ]
 
   - When linking dynamic pads of a bin with its children, for example in
@@ -440,15 +440,15 @@ defmodule Membrane.ChildrenSpec do
           structure_builder_t() | no_return
   def via_in(builder, pad, props \\ [])
 
-  # def via_in(%StructureBuilder{status: :to_pad}, pad, _props) do
-  #   raise ParentError,
-  #         "Invalid link specification: input #{inspect(pad)} placed after another input"
-  # end
+  def via_in(%StructureBuilder{status: :to_pad}, pad, _props) do
+    raise ParentError,
+          "Invalid link specification: input #{inspect(pad)} placed after another input"
+  end
 
-  # def via_in(%StructureBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, pad, _props) do
-  #   raise ParentError,
-  #         "Invalid link specification: input #{inspect(pad)} placed after bin's output"
-  # end
+  def via_in(%StructureBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, pad, _props) do
+    raise ParentError,
+          "Invalid link specification: input #{inspect(pad)} placed after bin's output"
+  end
 
   def via_in(%StructureBuilder{status: status} = builder, pad, props)
       when status == :from_pad or status == :done do
@@ -496,19 +496,19 @@ defmodule Membrane.ChildrenSpec do
           structure_builder_t() | no_return
   def via_out(builder, pad, props \\ [])
 
-  # def via_out(%StructureBuilder{status: :from_pad}, pad, _props) do
-  #   raise ParentError,
-  #         "Invalid link specification: output #{inspect(pad)} placed after another output or bin's input"
-  # end
+  def via_out(%StructureBuilder{status: :from_pad}, pad, _props) do
+    raise ParentError,
+          "Invalid link specification: output #{inspect(pad)} placed after another output or bin's input"
+  end
 
-  # def via_out(%StructureBuilder{status: :to_pad}, pad, _props) do
-  #   raise ParentError, "Invalid link specification: output #{inspect(pad)} placed after an input"
-  # end
+  def via_out(%StructureBuilder{status: :to_pad}, pad, _props) do
+    raise ParentError, "Invalid link specification: output #{inspect(pad)} placed after an input"
+  end
 
-  # def via_out(%StructureBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, pad, _props) do
-  #   raise ParentError,
-  #         "Invalid link specification: output #{inspect(pad)} placed after bin's output"
-  # end
+  def via_out(%StructureBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, pad, _props) do
+    raise ParentError,
+          "Invalid link specification: output #{inspect(pad)} placed after bin's output"
+  end
 
   def via_out(%StructureBuilder{status: :done} = builder, pad, props) do
     :ok = validate_pad_name(pad)

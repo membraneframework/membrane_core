@@ -68,7 +68,7 @@ defmodule Membrane.Core.Parent.StructureParser do
   @spec from_spec_error(ChildrenSpec.structure_spec_t()) :: no_return
   defp from_spec_error(structure) do
     raise ParentError, """
-    Invalid structure specification: #{inspect(structure)}.
+    Invalid structure specification: #{inspect(structure)}. The link lacks it destination.
     See `#{inspect(ChildrenSpec)}` for information on specifying structure.
     """
   end
