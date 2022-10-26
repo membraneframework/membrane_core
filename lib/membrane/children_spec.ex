@@ -378,12 +378,11 @@ defmodule Membrane.ChildrenSpec do
           structure_builder_t() | no_return
   def bin_output(builder, pad \\ :output)
 
-  # def bin_output(%StructureBuilder{status: :to_pad}, pad) do
-  #   raise ParentError, "Invalid link specification: bin's output #{pad} placed after an input"
-  # end
+  def bin_output(%StructureBuilder{status: :to_pad}, pad) do
+    raise ParentError, "Invalid link specification: bin's output #{pad} placed after an input"
+  end
 
-  def bin_output(%StructureBuilder{status: status} = builder, pad)
-      when status == :done or status == :from_pad do
+  def bin_output(%StructureBuilder{} = builder, pad) do
     :ok = validate_pad_name(pad)
 
     if builder.status == :from_pad do
@@ -450,8 +449,7 @@ defmodule Membrane.ChildrenSpec do
           "Invalid link specification: input #{inspect(pad)} placed after bin's output"
   end
 
-  def via_in(%StructureBuilder{status: status} = builder, pad, props)
-      when status == :from_pad or status == :done do
+  def via_in(%StructureBuilder{} = builder, pad, props) do
     :ok = validate_pad_name(pad)
 
     props =
