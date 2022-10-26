@@ -256,12 +256,11 @@ defmodule Membrane.ChildrenSpec do
   """
   @type t :: %__MODULE__{
           structure: structure_spec_t,
-          crash_group: Membrane.CrashGroup.mode_t(),
+          crash_group: Membrane.CrashGroup.t(),
           stream_sync: :sinks | [[Child.name_t()]],
           clock_provider: Child.name_t() | nil,
           node: node() | nil,
-          log_metadata: Keyword.t(),
-          children_group_id: Child.children_group_id_t()
+          log_metadata: Keyword.t()
         }
 
   defstruct structure: [],
@@ -269,8 +268,7 @@ defmodule Membrane.ChildrenSpec do
             stream_sync: [],
             clock_provider: nil,
             node: nil,
-            log_metadata: [],
-            children_group_id: nil
+            log_metadata: []
 
   @doc """
   Used to refer to an existing child at a beggining of a link specification.

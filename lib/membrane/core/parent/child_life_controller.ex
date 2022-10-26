@@ -89,8 +89,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         state.synchronization.clock_proxy,
         syncs,
         log_metadata,
-        state.subprocess_supervisor,
-        spec.children_group_id
+        state.subprocess_supervisor
       )
 
     children_names = children |> Enum.map(& &1.name)
@@ -121,7 +120,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     state =
       if spec.crash_group do
         CrashGroupUtils.add_crash_group(
-          {spec.children_group_id, spec.crash_group},
+          spec.crash_group,
           children_names,
           children_pids,
           state
@@ -303,25 +302,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @spec handle_remove_children(
           Membrane.Child.name_t()
-          | [Membrane.Child.name_t()]
-          | {:children_group_id, Membrane.Child.children_group_id_t()},
+          | [Membrane.Child.name_t()],
           Parent.state_t()
         ) ::
           Parent.state_t()
-  def handle_remove_children(children, state) do
-    names =
-      case children do
-        {:children_group_id, children_group_id} ->
-          state.children
-          |> Enum.filter(fn {_name, child_entry} ->
-            child_entry.children_group_id == children_group_id
-          end)
-          |> Enum.map(fn {name, _child_entry} -> name end)
-
-        names ->
-          names |> Bunch.listify()
-      end
-
+  def handle_remove_children(names, state) do
+    names = names |> Bunch.listify()
     Membrane.Logger.debug("Removing children: #{inspect(names)}")
 
     state =

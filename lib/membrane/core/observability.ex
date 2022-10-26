@@ -12,7 +12,6 @@ defmodule Membrane.Core.Observability do
   @type config :: %{
           optional(:parent_path) => ComponentPath.path_t(),
           optional(:log_metadata) => Logger.metadata(),
-          optional(:children_group_id) => Membrane.Child.children_group_id_t(),
           name: term,
           component_type: :element | :bin | :pipeline,
           pid: pid()
@@ -31,7 +30,6 @@ defmodule Membrane.Core.Observability do
     utility_name = if utility_name == "", do: "", else: " #{utility_name}"
     parent_path = Map.get(config, :parent_path, [])
     log_metadata = Map.get(config, :log_metadata, [])
-    children_group_id = Map.get(config, :children_group_id, nil)
     Logger.metadata(log_metadata)
     pid_string = pid |> :erlang.pid_to_list() |> to_string()
 
@@ -43,18 +41,11 @@ defmodule Membrane.Core.Observability do
     name_suffix = if component_type == :element, do: "", else: "/"
     name_str = if(String.valid?(name), do: name, else: inspect(name)) <> name_suffix
 
-    children_group_id_str =
-      cond do
-        children_group_id == nil -> ""
-        String.valid?(children_group_id) -> "(#{children_group_id})"
-        true -> "(#{inspect(children_group_id)})"
-      end
-
     register_name_for_observer(
       :"##{unique_prefix}#{name_str}#{component_type_suffix}#{utility_name}"
     )
 
-    component_path = parent_path ++ [name_str, children_group_id_str]
+    component_path = parent_path ++ [name_str]
     ComponentPath.set(component_path)
     Membrane.Logger.set_prefix(ComponentPath.format(component_path) <> utility_name)
     :ok
