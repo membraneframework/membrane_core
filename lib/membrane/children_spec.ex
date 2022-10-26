@@ -195,27 +195,45 @@ defmodule Membrane.ChildrenSpec do
 
     use Bunch.Access
 
-    defstruct children: [], links: [], status: nil
+    defstruct children: [],
+              links: [],
+              status: :done,
+              from_pad: nil,
+              from_pad_props: nil,
+              to_pad: nil,
+              to_pad_props: nil,
+              link_starting_child: nil
 
     @type t :: %__MODULE__{
             children: [Membrane.ChildrenSpec.child_spec_extended_t()],
             links: [map],
-            status: status_t
+            status: status_t,
+            from_pad: Membrane.Pad.name_t() | Membrane.Pad.ref_t() | nil,
+            from_pad_props: %{} | nil,
+            to_pad: Membrane.Pad.name_t() | Membrane.Pad.ref_t() | nil,
+            to_pad_props: %{} | nil,
+            link_starting_child: Child.name_t()
           }
 
-    @type status_t :: :from | :from_pad | :to_pad | :done | nil
+    @type status_t :: :from_pad | :to_pad | :done
 
-    @spec update(t, status_t, Keyword.t()) :: t
-    def update(
-          %__MODULE__{links: [%{to: to} | _] = links, status: :done} = builder,
-          status,
-          entries
-        ) do
-      %__MODULE__{builder | links: [Map.new([from: to] ++ entries) | links], status: status}
-    end
+    @spec finish_link(t(), Child.name_t()) :: t()
+    def finish_link(%__MODULE__{status: :to_pad} = builder, child_name) do
+      new_link = %{
+        from: builder.link_starting_child,
+        from_pad: builder.from_pad,
+        from_pad_props: builder.from_pad_props,
+        to: child_name,
+        to_pad: builder.to_pad,
+        to_pad_props: builder.to_pad_props
+      }
 
-    def update(%__MODULE__{links: [link | links]} = builder, status, entries) do
-      %__MODULE__{builder | links: [Map.merge(link, Map.new(entries)) | links], status: status}
+      %StructureBuilder{
+        builder
+        | status: :done,
+          link_starting_child: child_name,
+          links: [new_link | builder.links]
+      }
     end
   end
 
@@ -261,7 +279,7 @@ defmodule Membrane.ChildrenSpec do
   """
   @spec get_child(Child.name_t()) :: structure_builder_t()
   def get_child(child_name) do
-    %StructureBuilder{links: [%{from: child_name}], status: :from}
+    %StructureBuilder{link_starting_child: child_name}
   end
 
   @doc """
@@ -276,7 +294,7 @@ defmodule Membrane.ChildrenSpec do
     else
       via_in(structure_builder, :input)
     end
-    |> StructureBuilder.update(:done, to: child_name)
+    |> StructureBuilder.finish_link(child_name)
   end
 
   @doc """
@@ -310,9 +328,7 @@ defmodule Membrane.ChildrenSpec do
       {child_name, child_spec,
        dont_spawn_if_already_exists: Keyword.get(opts, :get_if_exists, false)}
 
-    get_child(child_name)
-    |> Map.update!(:children, &[child_spec_extended | &1])
-    |> Map.put(:status, :done)
+    %StructureBuilder{children: [child_spec_extended], link_starting_child: child_name}
   end
 
   @doc """
@@ -331,9 +347,13 @@ defmodule Membrane.ChildrenSpec do
       {child_name, child_spec,
        dont_spawn_if_already_exists: Keyword.get(opts, :get_if_exists, false)}
 
-    structure_builder
-    |> get_child(child_name)
-    |> Map.update!(:children, &[child_spec_extended | &1])
+    if structure_builder.status == :to_pad do
+      structure_builder
+    else
+      via_in(structure_builder, :input)
+    end
+    |> StructureBuilder.finish_link(child_name)
+    |> then(&%StructureBuilder{&1 | children: [child_spec_extended | &1.children]})
   end
 
   @doc """
@@ -346,53 +366,33 @@ defmodule Membrane.ChildrenSpec do
     :ok = validate_pad_name(pad)
 
     get_child({Membrane.Bin, :itself})
-    |> StructureBuilder.update(:from_pad, from_pad: pad, from_pad_props: %{})
+    |> then(&%StructureBuilder{&1 | status: :from_pad, from_pad: pad, from_pad_props: %{}})
   end
 
   @doc """
-  Specifies output pad name and properties of the preceding child.
-
-  The possible properties are:
-  - `options` - If a pad defines options, they can be passed here as a keyword list. Pad options are documented
-  in moduledoc of each element. See `Membrane.Element.WithOutputPads.def_output_pad/2` and `Membrane.Bin.def_output_pad/2`
-  for information about defining pad options.
+  Ends a link with a bin's output.
 
   See the _structure_ section of the moduledoc for more information.
   """
-  @spec via_out(structure_builder_t(), Pad.name_t() | Pad.ref_t(), options: pad_options_t()) ::
+  @spec bin_output(structure_builder_t(), Pad.name_t() | Pad.ref_t()) ::
           structure_builder_t() | no_return
-  def via_out(builder, pad, props \\ [])
+  def bin_output(builder, pad \\ :output)
 
-  def via_out(%StructureBuilder{status: :from_pad}, pad, _props) do
-    raise ParentError,
-          "Invalid link specification: output #{inspect(pad)} placed after another output or bin's input"
-  end
+  # def bin_output(%StructureBuilder{status: :to_pad}, pad) do
+  #   raise ParentError, "Invalid link specification: bin's output #{pad} placed after an input"
+  # end
 
-  def via_out(%StructureBuilder{status: :to_pad}, pad, _props) do
-    raise ParentError, "Invalid link specification: output #{inspect(pad)} placed after an input"
-  end
-
-  def via_out(%StructureBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, pad, _props) do
-    raise ParentError,
-          "Invalid link specification: output #{inspect(pad)} placed after bin's output"
-  end
-
-  def via_out(%StructureBuilder{} = builder, pad, props) do
+  def bin_output(%StructureBuilder{status: status} = builder, pad)
+      when status == :done or status == :from_pad do
     :ok = validate_pad_name(pad)
 
-    props =
-      case Bunch.Config.parse(props, options: [default: []]) do
-        {:ok, props} ->
-          props
-
-        {:error, reason} ->
-          raise ParentError, "Invalid link specification: invalid pad props: #{inspect(reason)}"
-      end
-
-    StructureBuilder.update(builder, :from_pad,
-      from_pad: pad,
-      from_pad_props: props
-    )
+    if builder.status == :from_pad do
+      builder
+    else
+      via_out(builder, :output)
+    end
+    |> then(&%StructureBuilder{&1 | status: :to_pad, to_pad: pad, to_pad_props: %{}})
+    |> get_child({Membrane.Bin, :itself})
   end
 
   @doc """
@@ -440,17 +440,18 @@ defmodule Membrane.ChildrenSpec do
           structure_builder_t() | no_return
   def via_in(builder, pad, props \\ [])
 
-  def via_in(%StructureBuilder{status: :to_pad}, pad, _props) do
-    raise ParentError,
-          "Invalid link specification: input #{inspect(pad)} placed after another input"
-  end
+  # def via_in(%StructureBuilder{status: :to_pad}, pad, _props) do
+  #   raise ParentError,
+  #         "Invalid link specification: input #{inspect(pad)} placed after another input"
+  # end
 
-  def via_in(%StructureBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, pad, _props) do
-    raise ParentError,
-          "Invalid link specification: input #{inspect(pad)} placed after bin's output"
-  end
+  # def via_in(%StructureBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, pad, _props) do
+  #   raise ParentError,
+  #         "Invalid link specification: input #{inspect(pad)} placed after bin's output"
+  # end
 
-  def via_in(%StructureBuilder{} = builder, pad, props) do
+  def via_in(%StructureBuilder{status: status} = builder, pad, props)
+      when status == :from_pad or status == :done do
     :ok = validate_pad_name(pad)
 
     props =
@@ -476,35 +477,57 @@ defmodule Membrane.ChildrenSpec do
     else
       via_out(builder, :output)
     end
-    |> StructureBuilder.update(:to_pad,
-      to_pad: pad,
-      to_pad_props: props
+    |> then(
+      &%StructureBuilder{&1 | status: :to_pad, to_pad: pad, to_pad_props: Enum.into(props, %{})}
     )
   end
 
   @doc """
-  Ends a link with a bin's output.
+  Specifies output pad name and properties of the preceding child.
+
+  The possible properties are:
+  - `options` - If a pad defines options, they can be passed here as a keyword list. Pad options are documented
+  in moduledoc of each element. See `Membrane.Element.WithOutputPads.def_output_pad/2` and `Membrane.Bin.def_output_pad/2`
+  for information about defining pad options.
 
   See the _structure_ section of the moduledoc for more information.
   """
-  @spec bin_output(structure_builder_t(), Pad.name_t() | Pad.ref_t()) ::
+  @spec via_out(structure_builder_t(), Pad.name_t() | Pad.ref_t(), options: pad_options_t()) ::
           structure_builder_t() | no_return
-  def bin_output(builder, pad \\ :output)
+  def via_out(builder, pad, props \\ [])
 
-  def bin_output(%StructureBuilder{status: :to_pad}, pad) do
-    raise ParentError, "Invalid link specification: bin's output #{pad} placed after an input"
-  end
+  # def via_out(%StructureBuilder{status: :from_pad}, pad, _props) do
+  #   raise ParentError,
+  #         "Invalid link specification: output #{inspect(pad)} placed after another output or bin's input"
+  # end
 
-  def bin_output(%StructureBuilder{} = builder, pad) do
+  # def via_out(%StructureBuilder{status: :to_pad}, pad, _props) do
+  #   raise ParentError, "Invalid link specification: output #{inspect(pad)} placed after an input"
+  # end
+
+  # def via_out(%StructureBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, pad, _props) do
+  #   raise ParentError,
+  #         "Invalid link specification: output #{inspect(pad)} placed after bin's output"
+  # end
+
+  def via_out(%StructureBuilder{status: :done} = builder, pad, props) do
     :ok = validate_pad_name(pad)
 
-    if builder.status == :from_pad do
+    props =
+      case Bunch.Config.parse(props, options: [default: []]) do
+        {:ok, props} ->
+          props
+
+        {:error, reason} ->
+          raise ParentError, "Invalid link specification: invalid pad props: #{inspect(reason)}"
+      end
+
+    %StructureBuilder{
       builder
-    else
-      via_out(builder, :output)
-    end
-    |> StructureBuilder.update(:to_pad, to_pad: pad, to_pad_props: %{})
-    |> get_child({Membrane.Bin, :itself})
+      | status: :from_pad,
+        from_pad: pad,
+        from_pad_props: Enum.into(props, %{})
+    }
   end
 
   defp validate_pad_name(pad) when Pad.is_pad_name(pad) or Pad.is_pad_ref(pad) do
