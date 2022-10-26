@@ -270,8 +270,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
   end
 
   defp generate_pad_property_doc(:caps_pattern, caps_pattern) do
-    Enum.map(caps_pattern, &"<p><code>#{&1}</code></p>")
-    |> Enum.join()
+    Enum.map_join(caps_pattern, &"<p><code>#{&1}</code></p>")
   end
 
   defp generate_pad_property_doc(_k, v) do
