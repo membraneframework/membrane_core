@@ -3,10 +3,10 @@ defmodule Membrane.LinksValidationTest do
 
   import Membrane.ChildrenSpec
 
-  require Membrane.Pad
-
   alias Membrane.Pad
   alias Membrane.Testing.Pipeline
+
+  require Membrane.Pad
 
   defmodule Caps do
     defstruct []
@@ -37,11 +37,6 @@ defmodule Membrane.LinksValidationTest do
         caps = %Membrane.LinksValidationTest.Caps{}
         {{:ok, caps: {:output, caps}}, state}
       end
-
-      @impl true
-      def handle_parent_notification(msg, _ctx, state) do
-        {{:ok, buffer: {:output, msg}}, state}
-      end
     end
   end
 
@@ -69,11 +64,6 @@ defmodule Membrane.LinksValidationTest do
       def handle_playing(_ctx, state) do
         caps = %Membrane.LinksValidationTest.Caps{}
         {{:ok, caps: {:output, caps}}, state}
-      end
-
-      @impl true
-      def handle_parent_notification(msg, _ctx, state) do
-        {{:ok, buffer: {:output, msg}}, state}
       end
     end
   end
