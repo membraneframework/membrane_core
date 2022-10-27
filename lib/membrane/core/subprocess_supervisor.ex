@@ -170,7 +170,7 @@ defmodule Membrane.Core.SubprocessSupervisor do
 
   @impl true
   def handle_info(Message.new(:set_parent_component, [pid, observability_config]), state) do
-    Membrane.Core.Observability.setup(observability_config, "children supervisor")
+    Membrane.Core.Observability.setup(observability_config, "subprocess supervisor")
     {:noreply, %{state | parent_component: pid}}
   end
 
@@ -214,7 +214,7 @@ defmodule Membrane.Core.SubprocessSupervisor do
   defp handle_exit(%{role: :subprocess_supervisor} = data, reason, state) do
     case Map.fetch(state.children, data.child_pid) do
       {:ok, child_data} ->
-        raise "Children supervisor failure #{inspect(child_data.name)}, reason: #{inspect(reason)}"
+        raise "Subprocess supervisor failure #{inspect(child_data.name)}, reason: #{inspect(reason)}"
 
       :error ->
         :ok

@@ -63,7 +63,6 @@ defmodule Membrane.Mixfile do
       source_ref: @source_ref,
       nest_modules_by_prefix: [
         Membrane.Bin,
-        Membrane.Pipeline,
         Membrane.Element,
         Membrane.Element.CallbackContext,
         Membrane.Pipeline.CallbackContext,
@@ -74,13 +73,19 @@ defmodule Membrane.Mixfile do
         Membrane.Event,
         Membrane.EventProtocol,
         Membrane.Testing,
-        Membrane.RemoteControlled
+        Membrane.RemoteControlled,
+        Membrane.RemoteControlled.Message
       ],
       groups_for_modules: [
-        Pipeline: [~r/^Membrane\.Pipeline($|\.)/, ~r/^Membrane\.(CrashGroup)($|\.)/],
+        Pipeline: [
+          ~r/^Membrane\.Pipeline($|\.)/,
+          ~r/^Membrane\.(CrashGroup)($|\.)/,
+          ~r/^Membrane\.(RemoteControlled)($|\.)/
+        ],
         Bin: [~r/^Membrane\.Bin($|\.)/],
         Element: [
           ~r/^Membrane\.Filter($|\.)/,
+          ~r/^Membrane\.FilterAggregator($|\.)/,
           ~r/^Membrane\.Endpoint($|\.)/,
           ~r/^Membrane\.Sink($|\.)/,
           ~r/^Membrane\.Source($|\.)/,
@@ -99,7 +104,9 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane\.Time($|\.)/,
           ~r/^Membrane\.Playback($|\.)/,
           ~r/^Membrane\.Telemetry($|\.)/,
-          ~r/^Membrane\.ComponentPath($|\.)/
+          ~r/^Membrane\.ComponentPath($|\.)/,
+          ~r/^Membrane\.ResourceGuard($|\.)/,
+          ~r/^Membrane\.UtilitySupervisor($|\.)/
         ],
         Errors: [~r/Error$/]
       ]
