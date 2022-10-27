@@ -120,49 +120,27 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
   end
 
   defp validate_links(links, state) do
-    new_pads_representatives =
-      links
-      |> links_to_pads_representatives()
-
-    new_pads_representatives
-    |> Enum.frequencies()
-    |> Enum.find(fn {_key, count} -> count > 1 end)
+    links
+    |> Enum.concat(Map.values(state.links))
+    |> Enum.flat_map(&[&1.from, &1.to])
+    |> Enum.map(&{&1.child, &1.pad_ref})
+    |> Bunch.Enum.duplicates()
     |> case do
-      nil ->
+      [] ->
         :ok
 
-      {{child, pad_ref}, _count} ->
+      duplicates ->
+        inspected_duplicated_pads =
+          Enum.map_join(duplicates, ", ", fn {child, pad_ref} ->
+            "pad #{inspect(pad_ref)} of child #{inspect(child)}"
+          end)
+
         raise LinkError, """
-        Attempt to link child #{inspect(child)} via pad with pad_ref: #{inspect(pad_ref)} more than once
-        """
-    end
-
-    existing_pads_representatives =
-      state.links
-      |> Map.values()
-      |> links_to_pads_representatives()
-      |> MapSet.new()
-
-    new_pads_representatives
-    |> Enum.find(&MapSet.member?(existing_pads_representatives, &1))
-    |> case do
-      nil ->
-        :ok
-
-      {child, pad_ref} ->
-        raise LinkError, """
-        Child #{inspect(child)} already has a pad with pad_ref: #{inspect(pad_ref)}
-        You cannot link a child via an existing pad
+        Attempted to link the following pads more than once: #{inspected_duplicated_pads}
         """
     end
 
     :ok
-  end
-
-  defp links_to_pads_representatives(links) when is_list(links) do
-    links
-    |> Enum.flat_map(&[&1.from, &1.to])
-    |> Enum.map(&{&1.child, &1.pad_ref})
   end
 
   @spec resolve_endpoint(StructureParser.raw_endpoint_t(), Parent.state_t()) ::
