@@ -41,11 +41,11 @@ defmodule Membrane.Core.Child.PadsSpecs do
     specs = Keyword.put(specs, :options, escaped_pad_opts)
     {caps_pattern, specs} = Keyword.pop!(specs, :caps)
 
-    caps_pattern_spec =
+    caps_pattern_str =
       Bunch.listify(caps_pattern)
       |> Enum.map(&Macro.to_string/1)
 
-    specs = [{:caps_pattern, caps_pattern_spec} | specs]
+    specs = [{:caps_pattern_str, caps_pattern_str} | specs]
 
     case_statement_clauses =
       with :any <- caps_pattern do
@@ -168,7 +168,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
               config
               |> Bunch.Config.parse(
                 availability: [in: [:always, :on_request], default: :always],
-                caps_pattern: [],
+                caps_pattern_str: [],
                 mode: [in: [:pull, :push], default: :pull],
                 demand_mode: [
                   in: [:auto, :manual],
@@ -269,8 +269,8 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  defp generate_pad_property_doc(:caps_pattern, caps_pattern) do
-    Enum.map_join(caps_pattern, &"<p><code>#{&1}</code></p>")
+  defp generate_pad_property_doc(:caps_pattern_str, patterns) do
+    Enum.map_join(patterns, &"<p><code>#{&1}</code></p>")
   end
 
   defp generate_pad_property_doc(_k, v) do

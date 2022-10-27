@@ -20,7 +20,7 @@ defmodule Membrane.Support.Distributed do
 
     @impl true
     def handle_playing(_ctx, list) do
-      caps = %Membrane.Support.Distributed.SomeCaps{}
+      caps = %SomeCaps{}
       {{:ok, caps: {:output, caps}, start_timer: {:timer, Membrane.Time.milliseconds(100)}}, list}
     end
 

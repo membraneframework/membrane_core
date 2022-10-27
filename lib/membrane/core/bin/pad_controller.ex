@@ -292,7 +292,7 @@ defmodule Membrane.Core.Bin.PadController do
 
   defp init_pad_data(pad_ref, info, state) do
     data =
-      Map.delete(info, :caps_pattern)
+      Map.delete(info, :caps_pattern_str)
       |> Map.merge(%{
         ref: pad_ref,
         link_id: nil,

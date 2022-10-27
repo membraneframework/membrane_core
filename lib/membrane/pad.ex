@@ -99,6 +99,14 @@ defmodule Membrane.Pad do
   Describes pattern, that should be matched by caps send by element on specific pad.
   Will not be evaluated during runtime, but used for matching struct passed in `:caps`
   action.
+  Can be a module name, pattern describing struct, or list, which elements are such
+  a patterns or modules names.
+  If a module name is passed to the `:caps` option or is included in a list passed
+  there, it will be converted to the match on a struct defined in that module, eg.
+  `caps: My.Format` will have this same effect, as `caps: %My.Format{}` and
+  `caps: [My.Format, %My.Another.Format{field: value} when value in [:some, :enumeration]]`
+  will have this same effect, as `caps: [%My.Format{}, %My.Another.Format{field: value}
+  when value in [:some, :enumeration]]`
   """
   @type caps_t :: module() | (pattern :: term())
 
@@ -146,7 +154,7 @@ defmodule Membrane.Pad do
           :availability => availability_t(),
           :mode => mode_t(),
           :name => name_t(),
-          :caps_pattern => String.t() | [String.t()],
+          :caps_pattern_str => [String.t()],
           optional(:demand_unit) => Buffer.Metric.unit_t(),
           :direction => direction_t(),
           :options => nil | Keyword.t(),

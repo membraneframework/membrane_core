@@ -215,7 +215,7 @@ defmodule Membrane.Core.Element.PadController do
        ) do
     data =
       info
-      |> Map.delete(:caps_pattern)
+      |> Map.delete(:caps_pattern_str)
       |> Map.merge(%{
         pid: other_endpoint.pid,
         other_ref: other_endpoint.pad_ref,
