@@ -7,6 +7,7 @@
  * Add `Membrane.FilterAggregator` that allows to run multiple filters sequentially within one process. [#355](https://github.com/membraneframework/membrane_core/pull/355)
  * Log info about element's playback state change as debug, not as debug_verbose. [#430](https://github.com/membraneframework/membrane_core/pull/430)
  * Rename `Membrane.Time.to_<unit name>/1` into `Membrane.Time.round_to_<unit name>/1` to indicate that the result will be rounded. Make `Membrane.Time.<plural unit name>/1` accept `%Ratio{}` as an argument. Add `Membrane.Time.round_to_timebase/2` function.
+ * Remove `:type` from specs passed to `def_options/1` macro in bins and elements.  
 
 ## 0.10.0
  * Remove all deprecated stuff [#399](https://github.com/membraneframework/membrane_core/pull/399)
