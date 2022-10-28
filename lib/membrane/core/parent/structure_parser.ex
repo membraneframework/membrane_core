@@ -6,6 +6,8 @@ defmodule Membrane.Core.Parent.StructureParser do
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.{ChildrenSpec, Element, Pad, ParentError}
 
+  require Membrane.Logger
+
   @type raw_link_t :: %Link{from: raw_endpoint_t(), to: raw_endpoint_t()}
 
   @type raw_endpoint_t :: %Endpoint{
@@ -23,16 +25,14 @@ defmodule Membrane.Core.Parent.StructureParser do
       structure
       |> List.flatten()
       |> Enum.map(fn
-        %ChildrenSpec.StructureBuilder{links: links, children: children, status: :done} ->
+        %ChildrenSpec.StructureBuilder{links: links, children: children, status: :done} = builder ->
+          if links == [] and children == [] do
+            Membrane.Logger.warn(
+              "The structure specification you have passed: #{builder} has no effect - it doesn't produce any children nor links."
+            )
+          end
+
           {Enum.reverse(links), Enum.reverse(children)}
-
-        %ChildrenSpec.StructureBuilder{links: [%{from: from} | _]} ->
-          raise ParentError,
-                "Invalid link specification: link from #{inspect(from)} lacks its destination. Perhaps you have used `get_child/1` without linking
-            it to other children?"
-
-        {name, child_spec} ->
-          {[], {name, child_spec}}
 
         _other ->
           from_spec_error(structure)
@@ -68,7 +68,7 @@ defmodule Membrane.Core.Parent.StructureParser do
   @spec from_spec_error(ChildrenSpec.structure_spec_t()) :: no_return
   defp from_spec_error(structure) do
     raise ParentError, """
-    Invalid structure specification: #{inspect(structure)}.
+    Invalid structure specification: #{inspect(structure)}. The link lacks it destination.
     See `#{inspect(ChildrenSpec)}` for information on specifying structure.
     """
   end

@@ -180,15 +180,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   test "incomplete link" do
     import Membrane.ChildrenSpec
 
-    %{
-      :a => [get_child(:a)],
-      :b => [get_child(:b) |> via_out(:x)],
-      :c => [get_child(:c) |> via_in(:y)],
-      {Membrane.Bin, :itself} => [bin_input()]
-    }
-    |> Enum.each(fn {from, link_spec} ->
+    [
+      [get_child(:b) |> via_out(:x)],
+      [get_child(:c) |> via_in(:y)],
+      [bin_input()]
+    ]
+    |> Enum.each(fn link_spec ->
       assert_raise Membrane.ParentError,
-                   ~r/.*link from #{inspect(from)} lacks its destination.*/,
+                   ~r/.*Invalid structure specification.*/,
                    fn -> StructureParser.parse(link_spec) end
     end)
   end
