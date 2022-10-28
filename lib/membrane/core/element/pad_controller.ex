@@ -64,7 +64,7 @@ defmodule Membrane.Core.Element.PadController do
                 "Tried to link via unknown pad #{inspect(name)} of #{inspect(state.name)}"
       end
 
-    :ok = Child.PadController.validate_pad_being_linked!(endpoint.pad_ref, direction, info, state)
+    :ok = Child.PadController.validate_pad_being_linked!(direction, info)
 
     toilet =
       if direction == :input do

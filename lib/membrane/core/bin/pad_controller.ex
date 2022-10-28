@@ -45,7 +45,7 @@ defmodule Membrane.Core.Bin.PadController do
                 "Tried to link via unknown pad #{inspect(pad_name)} of #{inspect(state.name)}"
       end
 
-    :ok = Child.PadController.validate_pad_being_linked!(pad_ref, direction, info, state)
+    :ok = Child.PadController.validate_pad_being_linked!(direction, info)
     pad_options = Child.PadController.parse_pad_options!(pad_name, pad_options, state)
 
     state =
