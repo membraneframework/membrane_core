@@ -10,26 +10,19 @@ defmodule Membrane.Core.Child.PadController do
   @type state_t :: Membrane.Core.Bin.State.t() | Membrane.Core.Element.State.t()
 
   @spec validate_pad_being_linked!(
-          Pad.ref_t(),
           Pad.direction_t(),
-          PadModel.pad_info_t(),
-          state_t()
+          PadModel.pad_info_t()
         ) :: :ok
-  def validate_pad_being_linked!(pad_ref, direction, info, state) do
-    cond do
-      :ok == PadModel.assert_data(state, pad_ref, linked?: true) ->
-        raise LinkError, "Pad #{inspect(pad_ref)} has already been linked"
-
-      info.direction != direction ->
-        raise LinkError, """
-        Invalid pad direction:
-          expected: #{inspect(info.direction)},
-          actual: #{inspect(direction)}
-        """
-
-      true ->
-        :ok
+  def validate_pad_being_linked!(direction, info) do
+    if info.direction != direction do
+      raise LinkError, """
+      Invalid pad direction:
+        expected: #{inspect(info.direction)},
+        actual: #{inspect(direction)}
+      """
     end
+
+    :ok
   end
 
   @spec validate_pad_mode!(
