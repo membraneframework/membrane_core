@@ -9,10 +9,10 @@ defmodule Membrane.Testing.Endpoint do
           (state :: any(), buffers_cnt :: pos_integer -> {[Action.t()], state :: any()})
 
   def_output_pad :output,
-    caps: _any
+    accepted_format: _any
 
   def_input_pad :input,
-    caps: _any,
+    accepted_format: _any,
     demand_unit: :buffers
 
   def_options autodemand: [

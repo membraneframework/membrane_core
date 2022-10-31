@@ -11,7 +11,7 @@ defmodule Membrane.Support.CapsTest.Sink do
 
   def_input_pad :input,
     demand_unit: :buffers,
-    caps: Stream,
+    accepted_format: Stream,
     availability: :always,
     mode: :push
 

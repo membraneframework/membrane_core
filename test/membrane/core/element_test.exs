@@ -10,7 +10,7 @@ defmodule Membrane.Core.ElementTest do
 
   defmodule SomeElement do
     use Membrane.Source
-    def_output_pad :output, caps: _any
+    def_output_pad :output, accepted_format: _any
 
     def_options test_pid: [spec: pid | nil, default: nil]
 
@@ -23,10 +23,10 @@ defmodule Membrane.Core.ElementTest do
   defmodule Filter do
     use Membrane.Filter
 
-    def_output_pad :output, caps: _any
+    def_output_pad :output, accepted_format: _any
 
     def_input_pad :dynamic_input,
-      caps: _any,
+      accepted_format: _any,
       demand_unit: :buffers,
       availability: :on_request
 

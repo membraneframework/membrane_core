@@ -10,7 +10,7 @@ defmodule Membrane.Support.CapsTest.RestrictiveSource do
 
   def_output_pad :output,
     demand_unit: :buffers,
-    caps: %Stream{format: Stream.FormatAcceptedByAll},
+    accepted_format: %Stream{format: Stream.FormatAcceptedByAll},
     availability: :always,
     mode: :push
 

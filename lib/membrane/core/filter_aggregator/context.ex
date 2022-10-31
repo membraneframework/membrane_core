@@ -61,7 +61,7 @@ defmodule Membrane.Core.FilterAggregator.Context do
 
   defp build_pad_data(pad_description) do
     pad_description
-    |> Map.delete(:caps_pattern_str)
+    |> Map.delete(:accepted_formats_str)
     |> Map.merge(%{
       caps: nil,
       demand: nil,

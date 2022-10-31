@@ -12,8 +12,8 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
   defmodule FilterA do
     use Membrane.Filter
 
-    def_input_pad :input, demand_unit: :buffers, demand_mode: :auto, caps: RemoteStream
-    def_output_pad :output, demand_mode: :auto, caps: RemoteStream
+    def_input_pad :input, demand_unit: :buffers, demand_mode: :auto, accepted_format: RemoteStream
+    def_output_pad :output, demand_mode: :auto, accepted_format: RemoteStream
 
     @impl true
     def handle_process(:input, %Buffer{payload: <<idx, payload::binary>>}, _ctx, state) do
@@ -25,8 +25,8 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
   defmodule FilterB do
     use Membrane.Filter
 
-    def_input_pad :input, demand_unit: :buffers, demand_mode: :auto, caps: RemoteStream
-    def_output_pad :output, demand_mode: :auto, caps: RemoteStream
+    def_input_pad :input, demand_unit: :buffers, demand_mode: :auto, accepted_format: RemoteStream
+    def_output_pad :output, demand_mode: :auto, accepted_format: RemoteStream
 
     @impl true
     def handle_process_list(:input, buffers, _ctx, state) do

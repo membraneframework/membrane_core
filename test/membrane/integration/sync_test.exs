@@ -86,8 +86,8 @@ defmodule Membrane.Integration.SyncTest do
   defmodule SimpleBin do
     use Membrane.Bin
 
-    def_input_pad :input, demand_unit: :buffers, caps: _any
-    def_output_pad :output, caps: _any, demand_unit: :buffers
+    def_input_pad :input, demand_unit: :buffers, accepted_format: _any
+    def_output_pad :output, accepted_format: _any, demand_unit: :buffers
 
     @impl true
     def handle_init(_ctx, _options) do

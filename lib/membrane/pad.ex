@@ -96,19 +96,19 @@ defmodule Membrane.Pad do
   @type availability_mode_t :: :static | :dynamic
 
   @typedoc """
-  Describes pattern, that should be matched by caps send by element on specific pad.
-  Will not be evaluated during runtime, but used for matching struct passed in `:caps`
-  action.
-  Can be a module name, pattern describing struct, or list, which elements are such
-  a patterns or modules names.
-  If a module name is passed to the `:caps` option or is included in a list passed
-  there, it will be converted to the match on a struct defined in that module, eg.
-  `caps: My.Format` will have this same effect, as `caps: %My.Format{}` and
-  `caps: [My.Format, %My.Another.Format{field: value} when value in [:some, :enumeration]]`
-  will have this same effect, as `caps: [%My.Format{}, %My.Another.Format{field: value}
-  when value in [:some, :enumeration]]`
+  Describes pattern, that should be matched by stream format send by element on specific
+  pad. Will not be evaluated during runtime, but used for matching struct passed in
+  `:stream_format` action.
+  Can be a module name, pattern describing struct, or call to `any_of` function, which
+  arguments are such patterns or modules names.
+  If a module name is passed to the `:accepted_format` option or is passed to `any_of`,
+  it will be converted to the match on a struct defined in that module, eg.
+  `accepted_format: My.Format` will have this same effect, as `accepted_format: %My.Format{}`
+  and `accepted_format: any_of(My.Format, %My.Another.Format{field: value} when value in
+  [:some, :enumeration])` will have this same effect, as `accepted_format: any_of(%My.Format{},
+  %My.Another.Format{field: value} when value in [:some, :enumeration])`
   """
-  @type caps_t :: module() | (pattern :: term())
+  @type accepted_format_t :: module() | (pattern :: term())
 
   @typedoc """
   Describes how a pad should be declared in element or bin.
@@ -143,7 +143,7 @@ defmodule Membrane.Pad do
   """
   @type common_spec_options_t ::
           {:availability, availability_t()}
-          | {:caps, caps_t() | [caps_t()]}
+          | {:accepted_format, accepted_format_t()}
           | {:mode, mode_t()}
           | {:options, Keyword.t()}
 
@@ -154,7 +154,7 @@ defmodule Membrane.Pad do
           :availability => availability_t(),
           :mode => mode_t(),
           :name => name_t(),
-          :caps_pattern_str => [String.t()],
+          :accepted_formats_str => [String.t()],
           optional(:demand_unit) => Buffer.Metric.unit_t(),
           :direction => direction_t(),
           :options => nil | Keyword.t(),

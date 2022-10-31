@@ -11,7 +11,7 @@ defmodule Membrane.Support.CapsTest.RestrictiveSink do
 
   def_input_pad :input,
     demand_unit: :buffers,
-    caps: %Stream{format: Stream.FormatAcceptedByAll},
+    accepted_format: %Stream{format: Stream.FormatAcceptedByAll},
     availability: :always,
     mode: :push
 

@@ -39,32 +39,39 @@ defmodule Membrane.Core.Child.PadsSpecs do
     {escaped_pad_opts, pad_opts_typedef} = OptionsSpecs.def_pad_options(pad_name, specs[:options])
 
     specs = Keyword.put(specs, :options, escaped_pad_opts)
-    {caps_pattern, specs} = Keyword.pop!(specs, :caps)
+    {accepted_format, specs} = Keyword.pop!(specs, :accepted_format)
 
-    caps_pattern_str =
-      Bunch.listify(caps_pattern)
-      |> Enum.map(&Macro.to_string/1)
+    accepted_formats =
+      case accepted_format do
+        {:any_of, _meta, args} -> args
+        other -> [other]
+      end
 
-    specs = [{:caps_pattern_str, caps_pattern_str} | specs]
-
-    case_statement_clauses =
-      with :any <- caps_pattern do
+    for format <- accepted_formats do
+      with :any <- format do
         Membrane.Logger.warn("""
         Remeber, that `caps: :any` in pad definition will be satisified by caps in form of %:any{}, \
         not >>any<< caps (to achieve such an effect, put `caps: _any` in your code)
         """)
-
-        caps_pattern
       end
-      |> Bunch.listify()
+    end
+
+    specs =
+      accepted_formats
+      |> Enum.map(&Macro.to_string/1)
+      |> then(&[accepted_formats_str: &1])
+      |> Enum.concat(specs)
+
+    case_statement_clauses =
+      accepted_formats
       |> Enum.map(fn
         {:__aliases__, _meta, _module} = ast -> quote do: %unquote(ast){}
         ast when is_atom(ast) -> quote do: %unquote(ast){}
         ast -> ast
       end)
-      |> Enum.flat_map(fn pattern ->
+      |> Enum.flat_map(fn ast ->
         quote do
-          unquote(pattern) -> true
+          unquote(ast) -> true
         end
       end)
       |> Enum.concat(
@@ -169,7 +176,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
               config
               |> Bunch.Config.parse(
                 availability: [in: [:always, :on_request], default: :always],
-                caps_pattern_str: [],
+                accepted_formats_str: [],
                 mode: [in: [:pull, :push], default: :pull],
                 demand_mode: [
                   in: [:auto, :manual],
@@ -236,12 +243,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
     config_doc =
       config
-      |> Enum.map(fn {k, v} ->
-        {
-          k |> to_string() |> String.replace("_", " ") |> String.capitalize(),
-          generate_pad_property_doc(k, v)
-        }
-      end)
+      |> Enum.map(&generate_pad_property_doc/1)
       |> Enum.map_join("\n", fn {k, v} ->
         "<tr><td>#{k}</td> <td>#{v}</td></tr>"
       end)
@@ -270,11 +272,17 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  defp generate_pad_property_doc(:caps_pattern_str, patterns) do
-    Enum.map_join(patterns, &"<p><code>#{&1}</code></p>")
+  defp generate_pad_property_doc({:accepted_formats_str, formats}) do
+    {
+      "Accepted formats",
+      Enum.map_join(formats, &"<p><code>#{&1}</code></p>")
+    }
   end
 
-  defp generate_pad_property_doc(_k, v) do
-    "<code>#{inspect(v)}</code>"
+  defp generate_pad_property_doc({property, value}) do
+    {
+      property |> to_string() |> String.replace("_", " ") |> String.capitalize(),
+      "<code>#{inspect(value)}</code>"
+    }
   end
 end

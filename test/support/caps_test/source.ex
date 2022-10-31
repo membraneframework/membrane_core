@@ -10,7 +10,7 @@ defmodule Membrane.Support.CapsTest.Source do
 
   def_output_pad :output,
     demand_unit: :buffers,
-    caps: Stream,
+    accepted_format: Stream,
     availability: :always,
     mode: :push
 

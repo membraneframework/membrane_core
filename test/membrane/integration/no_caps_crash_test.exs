@@ -9,7 +9,7 @@ defmodule Membrane.FailWhenNoCapsAreSent do
   defmodule SourceWhichDoesNotSendCaps do
     use Membrane.Source
 
-    def_output_pad :output, caps: _any, mode: :pull
+    def_output_pad :output, accepted_format: _any, mode: :pull
 
     @impl true
     def handle_init(_ctx, _options) do
