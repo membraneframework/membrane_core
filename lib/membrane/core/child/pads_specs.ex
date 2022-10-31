@@ -51,7 +51,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
       with :any <- caps_pattern do
         Membrane.Logger.warn("""
         Remeber, that `caps: :any` in pad definition will be satisified by caps
-        in form of %:any{}, not >>any<< caps (to achieve such a effect, put
+        in form of %:any{}, not >>any<< caps (to achieve such an effect, put
         `caps: _any` in your code)
         """)
       end
