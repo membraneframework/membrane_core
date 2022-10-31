@@ -1,6 +1,6 @@
 defmodule Membrane.Support.AcceptedFormatTest.Sink do
   @moduledoc """
-  Sink used in stream format test.
+  Sink used in accepted format tests.
   Sends a message with its own pid to the process specified in the options.
   Notifies parent on stream format arrival.
   """

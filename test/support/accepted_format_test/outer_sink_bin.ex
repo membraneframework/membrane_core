@@ -1,6 +1,6 @@
 defmodule Membrane.Support.AcceptedFormatTest.OuterSinkBin do
   @moduledoc """
-  Bin used in stream format test.
+  Bin used in accepted format tests.
   It has a :accepted_format defined for the `:input` pad.
   Spawns `Membrane.Support.AcceptedFormatTest.InnerSinkBin` as its child.
   """

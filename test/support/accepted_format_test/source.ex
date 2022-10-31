@@ -1,6 +1,6 @@
 defmodule Membrane.Support.AcceptedFormatTest.Source do
   @moduledoc """
-  Source used in stream format test.
+  Source used in accepted format tests.
   Sends stream format passed in opts, after entering the `:playing` playback state.
   """
 

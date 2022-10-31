@@ -1,6 +1,6 @@
 defmodule Membrane.Support.AcceptedFormatTest.StreamFormat do
   @moduledoc """
-  Stream formats definitions used in stream format test.
+  Stream formats definitions used in accepted format tests.
   """
 
   @type t() :: %__MODULE__{
