@@ -10,6 +10,7 @@ defmodule Membrane.Core.Bin.PadController do
   alias Membrane.Core.Bin.{ActionHandler, State}
   alias Membrane.Core.{CallbackHandler, Child, Message}
   alias Membrane.Core.Child.PadModel
+  alias Membrane.Core.Element.CapsController
   alias Membrane.Core.Parent.{ChildLifeController, Link, StructureParser}
 
   require Membrane.Core.Child.PadModel
@@ -159,8 +160,13 @@ defmodule Membrane.Core.Bin.PadController do
           Pad.direction_t(),
           StructureParser.raw_endpoint_t(),
           StructureParser.raw_endpoint_t(),
-          %{initiator: :parent}
-          | %{initiator: :sibling, other_info: PadModel.pad_info_t() | nil, link_metadata: map},
+          %{initiator: :parent, caps_validation_params: CapsController.caps_validation_params_t()}
+          | %{
+              initiator: :sibling,
+              other_info: PadModel.pad_info_t() | nil,
+              link_metadata: map,
+              caps_validation_params: CapsController.caps_validation_params_t()
+            },
           Core.Bin.State.t()
         ) :: {Core.Element.PadController.link_call_reply_t(), Core.Bin.State.t()}
   def handle_link(direction, endpoint, other_endpoint, params, state) do
@@ -168,7 +174,7 @@ defmodule Membrane.Core.Bin.PadController do
 
     Membrane.Logger.debug("Handle link #{inspect(endpoint, pretty: true)}")
 
-    %{spec_ref: spec_ref, endpoint: child_endpoint} = pad_data
+    %{spec_ref: spec_ref, endpoint: child_endpoint, name: pad_name} = pad_data
 
     pad_props =
       Map.merge(endpoint.pad_props, child_endpoint.pad_props, fn key,
@@ -196,6 +202,13 @@ defmodule Membrane.Core.Bin.PadController do
           {other_endpoint.pad_ref, params.other_info}
         )
     end
+
+    params =
+      Map.update!(
+        params,
+        :caps_validation_params,
+        &[{state.module, pad_name} | &1]
+      )
 
     reply =
       Message.call!(child_endpoint.pid, :handle_link, [
@@ -279,7 +292,8 @@ defmodule Membrane.Core.Bin.PadController do
 
   defp init_pad_data(pad_ref, info, state) do
     data =
-      Map.merge(info, %{
+      Map.delete(info, :caps_pattern_str)
+      |> Map.merge(%{
         ref: pad_ref,
         link_id: nil,
         endpoint: nil,

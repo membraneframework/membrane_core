@@ -13,8 +13,8 @@ defmodule Membrane.RemoteControlled.PipelineTest do
     use Membrane.Filter
     alias Membrane.Buffer
 
-    def_output_pad :output, caps: :any, availability: :always
-    def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :always
+    def_output_pad :output, caps: _any, availability: :always
+    def_input_pad :input, demand_unit: :buffers, caps: _any, availability: :always
 
     @impl true
     def handle_init(_ctx, _opts) do

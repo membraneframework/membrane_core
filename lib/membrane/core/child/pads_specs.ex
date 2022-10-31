@@ -4,29 +4,11 @@ defmodule Membrane.Core.Child.PadsSpecs do
   # based on them.
   use Bunch
 
-  alias Membrane.Caps
   alias Membrane.Core.OptionsSpecs
   alias Membrane.Pad
 
-  require Pad
-
-  @spec def_pads([{Pad.name_t(), raw_spec :: Macro.t()}], Pad.direction_t(), :element | :bin) ::
-          Macro.t()
-  def def_pads(pads, direction, component) do
-    pads
-    |> Enum.reduce(
-      quote do
-      end,
-      fn {name, spec}, acc ->
-        pad_def = def_pad(component, name, direction, spec)
-
-        quote do
-          unquote(acc)
-          unquote(pad_def)
-        end
-      end
-    )
-  end
+  require Membrane.Logger
+  require Membrane.Pad
 
   @doc """
   Returns documentation string common for both input and output pads
@@ -42,9 +24,6 @@ defmodule Membrane.Core.Child.PadsSpecs do
     """
     Macro that defines #{direction} pad for the #{entity}.
 
-    Allows to use `one_of/1` and `range/2` functions from `Membrane.Caps.Matcher`
-    without module prefix.
-
     It automatically generates documentation from the given definition
     and adds compile-time caps specs validation.
 
@@ -56,21 +35,43 @@ defmodule Membrane.Core.Child.PadsSpecs do
   Returns AST inserted into element's or bin's module defining a pad
   """
   @spec def_pad(Pad.name_t(), Pad.direction_t(), Macro.t(), :element | :bin) :: Macro.t()
-  def def_pad(pad_name, direction, raw_specs, component) do
-    Code.ensure_loaded(Caps.Matcher)
-
-    specs =
-      raw_specs
-      |> Bunch.Macro.inject_calls([
-        {Caps.Matcher, :one_of},
-        {Caps.Matcher, :range}
-      ])
-
+  def def_pad(pad_name, direction, specs, component) do
     {escaped_pad_opts, pad_opts_typedef} = OptionsSpecs.def_pad_options(pad_name, specs[:options])
 
-    specs =
-      specs
-      |> Keyword.put(:options, escaped_pad_opts)
+    specs = Keyword.put(specs, :options, escaped_pad_opts)
+    {caps_pattern, specs} = Keyword.pop!(specs, :caps)
+
+    caps_pattern_str =
+      Bunch.listify(caps_pattern)
+      |> Enum.map(&Macro.to_string/1)
+
+    specs = [{:caps_pattern_str, caps_pattern_str} | specs]
+
+    case_statement_clauses =
+      with :any <- caps_pattern do
+        Membrane.Logger.warn("""
+        Remeber, that `caps: :any` in pad definition will be satisified by caps in form of %:any{}, \
+        not >>any<< caps (to achieve such an effect, put `caps: _any` in your code)
+        """)
+
+        caps_pattern
+      end
+      |> Bunch.listify()
+      |> Enum.map(fn
+        {:__aliases__, _meta, _module} = ast -> quote do: %unquote(ast){}
+        ast when is_atom(ast) -> quote do: %unquote(ast){}
+        ast -> ast
+      end)
+      |> Enum.flat_map(fn pattern ->
+        quote do
+          unquote(pattern) -> true
+        end
+      end)
+      |> Enum.concat(
+        quote generated: true do
+          _else -> false
+        end
+      )
 
     quote do
       unquote(do_ensure_default_membrane_pads())
@@ -82,6 +83,15 @@ defmodule Membrane.Core.Child.PadsSpecs do
                        __ENV__
                      )
       unquote(pad_opts_typedef)
+
+      unless Module.defines?(__MODULE__, {:membrane_caps_match?, 2}) do
+        @doc false
+        @spec membrane_caps_match?(Membrane.Pad.name_t(), Membrane.Caps.t()) :: boolean()
+      end
+
+      def membrane_caps_match?(unquote(pad_name), caps) do
+        case caps, do: unquote(case_statement_clauses)
+      end
     end
   end
 
@@ -159,7 +169,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
               config
               |> Bunch.Config.parse(
                 availability: [in: [:always, :on_request], default: :always],
-                caps: [validate: &Caps.Matcher.validate_specs/1],
+                caps_pattern_str: [],
                 mode: [in: [:pull, :push], default: :pull],
                 demand_mode: [
                   in: [:auto, :manual],
@@ -260,25 +270,8 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  defp generate_pad_property_doc(:caps, caps) do
-    caps
-    |> Bunch.listify()
-    |> Enum.map(fn
-      {module, params} ->
-        params_doc =
-          Enum.map_join(params, ",<br/>", fn {k, v} ->
-            Bunch.Markdown.hard_indent("<code>#{k}: #{inspect(v)}</code>")
-          end)
-
-        "<code>#{inspect(module)}</code>, restrictions:<br/>#{params_doc}"
-
-      module ->
-        "<code>#{inspect(module)}</code>"
-    end)
-    ~> (
-      [doc] -> doc
-      docs -> docs |> Enum.join(",<br/>")
-    )
+  defp generate_pad_property_doc(:caps_pattern_str, patterns) do
+    Enum.map_join(patterns, &"<p><code>#{&1}</code></p>")
   end
 
   defp generate_pad_property_doc(_k, v) do

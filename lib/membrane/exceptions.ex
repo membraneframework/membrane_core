@@ -124,6 +124,10 @@ defmodule Membrane.ElementError do
   defexception [:message]
 end
 
+defmodule Membrane.CapsError do
+  defexception [:message]
+end
+
 defmodule Membrane.TimerError do
   defexception [:message]
 end

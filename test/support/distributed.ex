@@ -1,10 +1,16 @@
 defmodule Membrane.Support.Distributed do
   @moduledoc false
+
+  defmodule SomeCaps do
+    @moduledoc false
+    defstruct []
+  end
+
   defmodule Source do
     @moduledoc false
     use Membrane.Source
 
-    def_output_pad :output, caps: :any, mode: :push
+    def_output_pad :output, caps: _any, mode: :push
     def_options output: [spec: list(any())]
 
     @impl true
@@ -14,8 +20,8 @@ defmodule Membrane.Support.Distributed do
 
     @impl true
     def handle_playing(_ctx, list) do
-      {{:ok, caps: {:output, :some}, start_timer: {:timer, Membrane.Time.milliseconds(100)}},
-       list}
+      caps = %SomeCaps{}
+      {{:ok, caps: {:output, caps}, start_timer: {:timer, Membrane.Time.milliseconds(100)}}, list}
     end
 
     @impl true
@@ -34,7 +40,7 @@ defmodule Membrane.Support.Distributed do
 
     use Membrane.Sink
 
-    def_input_pad :input, caps: :any, demand_unit: :buffers, mode: :pull
+    def_input_pad :input, caps: _any, demand_unit: :buffers, mode: :pull
 
     @impl true
     def handle_playing(_ctx, state) do

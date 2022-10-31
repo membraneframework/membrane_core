@@ -16,7 +16,6 @@ defmodule Membrane.Core.Child.PadModel do
           linked?: boolean(),
           response_received?: boolean(),
           spec_ref: Membrane.Core.Parent.ChildLifeController.spec_ref_t(),
-          accepted_caps: Membrane.Caps.Matcher.caps_specs_t(),
           availability: Pad.availability_t(),
           direction: Pad.direction_t(),
           mode: Pad.mode_t(),
@@ -25,7 +24,6 @@ defmodule Membrane.Core.Child.PadModel do
         }
 
   @type element_pad_data_t :: %Membrane.Element.PadData{
-          accepted_caps: Membrane.Caps.Matcher.caps_specs_t(),
           availability: Pad.availability_t(),
           caps: Membrane.Caps.t() | nil,
           demand: integer() | nil,
@@ -54,7 +52,6 @@ defmodule Membrane.Core.Child.PadModel do
   @type pads_data_t :: %{Pad.ref_t() => pad_data_t}
 
   @type pad_info_t :: %{
-          required(:accepted_caps) => any,
           required(:availability) => Pad.availability_t(),
           required(:direction) => Pad.direction_t(),
           required(:mode) => Pad.mode_t(),

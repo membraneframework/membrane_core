@@ -113,7 +113,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
     defmodule RemovalDeferSource do
       use Membrane.Source
 
-      def_output_pad :output, demand_mode: :auto, caps: :any
+      def_output_pad :output, demand_mode: :auto, caps: _any
 
       @impl true
       def handle_init(_ctx, _opts) do
@@ -135,7 +135,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
     defmodule RemovalDeferSink do
       use Membrane.Sink
 
-      def_input_pad :input, demand_mode: :auto, caps: :any
+      def_input_pad :input, demand_mode: :auto, caps: _any
 
       @impl true
       def handle_init(_ctx, _opts) do
@@ -159,7 +159,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
       def_options defer?: [spec: boolean], test_process: [spec: pid]
 
-      def_output_pad :output, caps: :any, demand_mode: :auto
+      def_output_pad :output, caps: _any, demand_mode: :auto
 
       @impl true
       def handle_init(_ctx, opts) do

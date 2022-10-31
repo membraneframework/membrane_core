@@ -47,7 +47,6 @@ defmodule Membrane.FilterAggregator.UnitTest do
     common_pad_data =
       pad_description_template
       |> Map.merge(%{
-        accepted_caps: :any,
         caps: nil,
         demand: 0,
         ref: nil,
@@ -161,7 +160,6 @@ defmodule Membrane.FilterAggregator.UnitTest do
     [ctx_a, ctx_b]
     |> Enum.flat_map(& &1.pads)
     |> Enum.each(fn {pad, pad_data} ->
-      assert pad_data.accepted_caps == :any
       assert pad_data.availability == :always
       assert pad_data.demand == nil
       assert pad_data.direction == pad

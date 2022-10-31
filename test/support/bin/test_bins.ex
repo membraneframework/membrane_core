@@ -6,9 +6,9 @@ defmodule Membrane.Support.Bin.TestBins do
     @moduledoc false
     use Membrane.Filter
 
-    def_output_pad :output, caps: :any
+    def_output_pad :output, caps: _any
 
-    def_input_pad :input, demand_unit: :buffers, caps: :any
+    def_input_pad :input, demand_unit: :buffers, caps: _any
 
     @impl true
     def handle_info({:notify_parent, notif}, _ctx, state),
@@ -26,9 +26,9 @@ defmodule Membrane.Support.Bin.TestBins do
     @moduledoc false
     use Membrane.Filter
 
-    def_output_pad :output, caps: :any, availability: :on_request
+    def_output_pad :output, caps: _any, availability: :on_request
 
-    def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :on_request
+    def_input_pad :input, demand_unit: :buffers, caps: _any, availability: :on_request
 
     @impl true
     def handle_info({:notify_parent, notif}, _ctx, state),
@@ -71,9 +71,9 @@ defmodule Membrane.Support.Bin.TestBins do
     def_options filter1: [type: :atom],
                 filter2: [type: :atom]
 
-    def_input_pad :input, demand_unit: :buffers, caps: :any
+    def_input_pad :input, demand_unit: :buffers, caps: _any
 
-    def_output_pad :output, caps: :any, demand_unit: :buffers
+    def_output_pad :output, caps: _any, demand_unit: :buffers
 
     @impl true
     def handle_init(_ctx, opts) do
@@ -103,9 +103,9 @@ defmodule Membrane.Support.Bin.TestBins do
     @moduledoc false
     use Membrane.Bin
 
-    def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :on_request
+    def_input_pad :input, demand_unit: :buffers, caps: _any, availability: :on_request
 
-    def_output_pad :output, caps: :any, availability: :on_request, demand_unit: :buffers
+    def_output_pad :output, caps: _any, availability: :on_request, demand_unit: :buffers
 
     @impl true
     def handle_init(_ctx, _opts) do
@@ -149,9 +149,9 @@ defmodule Membrane.Support.Bin.TestBins do
     def_options filter1: [type: :atom],
                 filter2: [type: :atom]
 
-    def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :on_request
+    def_input_pad :input, demand_unit: :buffers, caps: _any, availability: :on_request
 
-    def_output_pad :output, caps: :any, availability: :on_request, demand_unit: :buffers
+    def_output_pad :output, caps: _any, availability: :on_request, demand_unit: :buffers
 
     @impl true
     def handle_init(_ctx, opts) do
@@ -195,7 +195,7 @@ defmodule Membrane.Support.Bin.TestBins do
     def_options filter: [type: :atom],
                 sink: [type: :atom]
 
-    def_input_pad :input, demand_unit: :buffers, caps: :any
+    def_input_pad :input, demand_unit: :buffers, caps: _any
 
     @impl true
     def handle_init(_ctx, opts) do
@@ -266,8 +266,8 @@ defmodule Membrane.Support.Bin.TestBins do
     @moduledoc false
     use Membrane.Filter
 
-    def_input_pad :input, demand_unit: :buffers, caps: :any
-    def_output_pad :output, caps: :any, demand_unit: :buffers
+    def_input_pad :input, demand_unit: :buffers, caps: _any
+    def_output_pad :output, caps: _any, demand_unit: :buffers
 
     @impl true
     def handle_init(_ctx, _opts) do
@@ -289,9 +289,9 @@ defmodule Membrane.Support.Bin.TestBins do
     @moduledoc false
     use Membrane.Bin
 
-    def_input_pad :input, demand_unit: :buffers, caps: :any
+    def_input_pad :input, demand_unit: :buffers, caps: _any
 
-    def_output_pad :output, caps: :any, demand_unit: :buffers
+    def_output_pad :output, caps: _any, demand_unit: :buffers
 
     @impl true
     def handle_init(_ctx, _opts) do

@@ -34,7 +34,7 @@ defmodule Membrane.Testing.Sink do
 
   def_input_pad :input,
     demand_unit: :buffers,
-    caps: :any
+    caps: _any
 
   def_options autodemand: [
                 type: :boolean,

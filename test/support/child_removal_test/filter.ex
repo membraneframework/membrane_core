@@ -12,11 +12,11 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   use Membrane.Filter
 
-  def_output_pad :output, caps: :any, availability: :on_request
+  def_output_pad :output, caps: _any, availability: :on_request
 
-  def_input_pad :input1, demand_unit: :buffers, caps: :any, availability: :on_request
+  def_input_pad :input1, demand_unit: :buffers, caps: _any, availability: :on_request
 
-  def_input_pad :input2, demand_unit: :buffers, caps: :any, availability: :on_request
+  def_input_pad :input2, demand_unit: :buffers, caps: _any, availability: :on_request
 
   def_options demand_generator: [
                 type: :function,

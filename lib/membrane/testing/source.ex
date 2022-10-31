@@ -37,7 +37,7 @@ defmodule Membrane.Testing.Source do
   @type generator ::
           (state :: any(), buffers_cnt :: pos_integer -> {[Action.t()], state :: any()})
 
-  def_output_pad :output, caps: :any
+  def_output_pad :output, caps: _any
 
   def_options output: [
                 spec: {initial_state :: any(), generator} | Enum.t(),
