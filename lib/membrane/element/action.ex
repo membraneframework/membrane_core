@@ -8,7 +8,7 @@ defmodule Membrane.Element.Action do
   callback unless explicitly stated otherwise.
   """
 
-  alias Membrane.{Buffer, StreamFormat, ChildNotification, Clock, Event, Pad}
+  alias Membrane.{Buffer, ChildNotification, Clock, Event, Pad, StreamFormat}
 
   @typedoc """
   Sends a message to the parent.

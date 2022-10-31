@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.StreamFormatController do
 
   use Bunch
 
-  alias Membrane.{StreamFormat, Pad}
+  alias Membrane.{Pad, StreamFormat}
   alias Membrane.Core.{CallbackHandler, Telemetry}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{ActionHandler, InputQueue, PlaybackQueue, State}

@@ -8,11 +8,11 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   alias Membrane.Core.Element.{
     BufferController,
-    StreamFormatController,
     DemandController,
     EventController,
     InputQueue,
     State,
+    StreamFormatController,
     Toilet
   }
 

@@ -24,12 +24,12 @@ defmodule Membrane.Core.Element do
 
   alias Membrane.Core.Element.{
     BufferController,
-    StreamFormatController,
     DemandController,
     EventController,
     LifecycleController,
     PadController,
-    State
+    State,
+    StreamFormatController
   }
 
   require Membrane.Core.Message, as: Message

@@ -2,9 +2,9 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
   use ExUnit.Case, async: true
 
   alias Membrane.Buffer
-  alias Membrane.StreamFormat.Mock, as: MockStreamFormat
   alias Membrane.Core.Message
   alias Membrane.Core.Element.{InputQueue, State}
+  alias Membrane.StreamFormat.Mock, as: MockStreamFormat
   alias Membrane.Support.DemandsTest.Filter
 
   require Membrane.Core.Child.PadModel, as: PadModel

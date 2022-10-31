@@ -10,11 +10,11 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.Core.Element.{
     ActionHandler,
-    StreamFormatController,
     DemandController,
     EventController,
     InputQueue,
     State,
+    StreamFormatController,
     Toilet
   }
 

@@ -4,11 +4,12 @@ defmodule Membrane.FilterAggregator.UnitTest do
   import Mox
 
   alias Membrane.Buffer
-  alias Membrane.StreamFormat.Mock, as: MockStreamFormat
   alias Membrane.Element.PadData
   alias Membrane.FilterAggregator
 
   alias Membrane.Element.CallbackContext.{Event, Playing, Process, StreamManagement}
+
+  alias Membrane.StreamFormat.Mock, as: MockStreamFormat
 
   defmodule ElementWithMembranePads do
     @callback membrane_pads() :: [{Membrane.Pad.name_t(), Membrane.Pad.description_t()}]

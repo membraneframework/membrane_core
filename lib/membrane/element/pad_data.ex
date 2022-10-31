@@ -20,7 +20,7 @@ defmodule Membrane.Element.PadData do
   """
   use Bunch.Access
 
-  alias Membrane.{StreamFormat, Pad}
+  alias Membrane.{Pad, StreamFormat}
 
   @type private_field :: term()
 

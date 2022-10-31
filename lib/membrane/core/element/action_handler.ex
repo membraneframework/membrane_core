@@ -8,9 +8,9 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   import Membrane.Pad, only: [is_pad_ref: 1]
 
-  alias Membrane.{ActionError, Buffer, StreamFormat, ElementError, Event, Pad, PadDirectionError}
+  alias Membrane.{ActionError, Buffer, ElementError, Event, Pad, PadDirectionError, StreamFormat}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{StreamFormatController, DemandHandler, PadController, State}
+  alias Membrane.Core.Element.{DemandHandler, PadController, State, StreamFormatController}
   alias Membrane.Core.{Events, Message, TimerController}
   alias Membrane.Core.Telemetry
   alias Membrane.Element.Action
