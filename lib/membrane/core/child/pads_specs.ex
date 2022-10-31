@@ -50,10 +50,11 @@ defmodule Membrane.Core.Child.PadsSpecs do
     case_statement_clauses =
       with :any <- caps_pattern do
         Membrane.Logger.warn("""
-        Remeber, that `caps: :any` in pad definition will be satisified by caps
-        in form of %:any{}, not >>any<< caps (to achieve such an effect, put
-        `caps: _any` in your code)
+        Remeber, that `caps: :any` in pad definition will be satisified by caps in form of %:any{}, \
+        not >>any<< caps (to achieve such an effect, put `caps: _any` in your code)
         """)
+
+        caps_pattern
       end
       |> Bunch.listify()
       |> Enum.map(fn

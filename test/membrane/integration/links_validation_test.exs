@@ -18,7 +18,7 @@ defmodule Membrane.LinksValidationTest do
 
       def_input_pad :input,
         demand_unit: :buffers,
-        caps: :any,
+        caps: _any,
         availability: :always,
         mode: :push
     end
@@ -28,7 +28,7 @@ defmodule Membrane.LinksValidationTest do
 
       def_output_pad :output,
         demand_unit: :buffers,
-        caps: :any,
+        caps: _any,
         availability: :always,
         mode: :push
 
@@ -46,7 +46,7 @@ defmodule Membrane.LinksValidationTest do
 
       def_input_pad :input,
         demand_unit: :buffers,
-        caps: :any,
+        caps: _any,
         availability: :on_request,
         mode: :push
     end
@@ -56,7 +56,7 @@ defmodule Membrane.LinksValidationTest do
 
       def_output_pad :output,
         demand_unit: :buffers,
-        caps: :any,
+        caps: _any,
         availability: :on_request,
         mode: :push
 
