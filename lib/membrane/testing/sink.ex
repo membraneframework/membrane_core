@@ -70,8 +70,8 @@ defmodule Membrane.Testing.Sink do
     do: {{:ok, notify({:end_of_stream, pad})}, state}
 
   @impl true
-  def handle_caps(pad, caps, _context, state),
-    do: {{:ok, notify({:caps, pad, caps})}, state}
+  def handle_stream_format(pad, stream_format, _context, state),
+    do: {{:ok, notify({:stream_format, pad, stream_format})}, state}
 
   @impl true
   def handle_parent_notification({:make_demand, size}, _ctx, %{autodemand: false} = state) do

@@ -1,7 +1,7 @@
 defmodule Membrane.Support.Distributed do
   @moduledoc false
 
-  defmodule SomeCaps do
+  defmodule SomeStreamFormat do
     @moduledoc false
     defstruct []
   end
@@ -20,8 +20,11 @@ defmodule Membrane.Support.Distributed do
 
     @impl true
     def handle_playing(_ctx, list) do
-      caps = %SomeCaps{}
-      {{:ok, caps: {:output, caps}, start_timer: {:timer, Membrane.Time.milliseconds(100)}}, list}
+      stream_format = %SomeStreamFormat{}
+
+      {{:ok,
+        stream_format: {:output, stream_format},
+        start_timer: {:timer, Membrane.Time.milliseconds(100)}}, list}
     end
 
     @impl true

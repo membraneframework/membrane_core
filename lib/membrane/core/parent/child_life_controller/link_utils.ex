@@ -215,7 +215,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     else
       from_availability = Pad.availability_mode(from.pad_info.availability)
       to_availability = Pad.availability_mode(to.pad_info.availability)
-      params = %{initiator: :parent, caps_validation_params: []}
+      params = %{initiator: :parent, stream_format_validation_params: []}
 
       case Message.call(from.pid, :handle_link, [:output, from, to, params]) do
         :ok ->

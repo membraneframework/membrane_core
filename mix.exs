@@ -70,7 +70,7 @@ defmodule Membrane.Mixfile do
         Membrane.Bin.CallbackContext,
         Membrane.Payload,
         Membrane.Buffer,
-        Membrane.Caps,
+        Membrane.StreamFormat,
         Membrane.Event,
         Membrane.EventProtocol,
         Membrane.Testing,
@@ -89,7 +89,7 @@ defmodule Membrane.Mixfile do
         Parent: [~r/^Membrane\.(Parent|ChildrenSpec)($|\.)/],
         Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],
         Communication: [
-          ~r/^Membrane\.(Buffer|Payload|Caps|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
+          ~r/^Membrane\.(Buffer|Payload|StreamFormat|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
         ],
         Logging: [~r/^Membrane\.Logger($|\.)/],
         Testing: [~r/^Membrane\.Testing($|\.)/],

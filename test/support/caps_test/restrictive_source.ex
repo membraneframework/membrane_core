@@ -1,30 +1,30 @@
-defmodule Membrane.Support.CapsTest.RestrictiveSource do
+defmodule Membrane.Support.StreamFormatTest.RestrictiveSource do
   @moduledoc """
-  Source used in caps test.
-  Sends caps received in message from parent, after entering the `:playing` playback state.
+  Source used in stream format test.
+  Sends stream format passed in opts, after entering the `:playing` playback state.
   """
 
   use Membrane.Source
 
-  alias Membrane.Support.CapsTest.Stream
+  alias Membrane.Support.StreamFormatTest.StreamFormat
 
   def_output_pad :output,
     demand_unit: :buffers,
-    accepted_format: %Stream{format: Stream.FormatAcceptedByAll},
+    accepted_format: %StreamFormat{format: StreamFormat.AcceptedByAll},
     availability: :always,
     mode: :push
 
   def_options test_pid: [type: :pid],
-              caps: [type: :any]
+              stream_format: [type: :any]
 
   @impl true
-  def handle_init(_ctx, %__MODULE__{test_pid: test_pid, caps: caps}) do
+  def handle_init(_ctx, %__MODULE__{test_pid: test_pid, stream_format: stream_format}) do
     send(test_pid, {:my_pid, __MODULE__, self()})
-    {:ok, %{test_pid: test_pid, caps: caps}}
+    {:ok, %{test_pid: test_pid, stream_format: stream_format}}
   end
 
   @impl true
-  def handle_playing(_ctx, %{caps: caps} = state) do
-    {{:ok, caps: {:output, caps}}, state}
+  def handle_playing(_ctx, %{stream_format: stream_format} = state) do
+    {{:ok, stream_format: {:output, stream_format}}, state}
   end
 end

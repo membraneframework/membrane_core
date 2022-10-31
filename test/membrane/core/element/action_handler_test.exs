@@ -10,7 +10,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   require Membrane.Core.Message, as: Message
 
   @module Membrane.Core.Element.ActionHandler
-  @mock_caps %Membrane.Caps.Mock{integer: 42}
+  @mock_stream_format %Membrane.StreamFormat.Mock{integer: 42}
   defp demand_test_filter(_context) do
     state =
       struct(State,
@@ -78,7 +78,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             direction: :output,
             pid: self(),
             other_ref: :other_ref,
-            caps: nil,
+            stream_format: nil,
             other_demand_unit: :bytes,
             start_of_stream?: true,
             end_of_stream?: false,
@@ -89,7 +89,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             direction: :input,
             pid: self(),
             other_ref: :other_input,
-            caps: nil,
+            stream_format: nil,
             start_of_stream?: true,
             end_of_stream?: false,
             mode: :push,
@@ -130,7 +130,9 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
 
     test "when element is moving to playing", %{state: state} do
-      state = %{state | playback: :playing} |> PadModel.set_data!(:output, :caps, @mock_caps)
+      state =
+        %{state | playback: :playing}
+        |> PadModel.set_data!(:output, :stream_format, @mock_stream_format)
 
       result =
         @module.handle_action(
@@ -145,7 +147,9 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
 
     test "when element is playing", %{state: state} do
-      state = %{state | playback: :playing} |> PadModel.set_data!(:output, :caps, @mock_caps)
+      state =
+        %{state | playback: :playing}
+        |> PadModel.set_data!(:output, :stream_format, @mock_stream_format)
 
       result =
         @module.handle_action(
@@ -176,7 +180,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       state =
         %{state | playback: :playing}
         |> PadModel.set_data!(:output, :end_of_stream?, true)
-        |> PadModel.set_data!(:output, :caps, @mock_caps)
+        |> PadModel.set_data!(:output, :stream_format, @mock_stream_format)
 
       assert_raise ElementError, ~r/:output.*end ?of ?stream.*sent/i, fn ->
         @module.handle_action(
@@ -189,7 +193,9 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
 
     test "with invalid buffer(s)", %{state: state} do
-      state = %{state | playback: :playing} |> PadModel.set_data!(:output, :caps, @mock_caps)
+      state =
+        %{state | playback: :playing}
+        |> PadModel.set_data!(:output, :stream_format, @mock_stream_format)
 
       assert_raise ElementError, ~r/invalid buffer.*:not_a_buffer/i, fn ->
         @module.handle_action(
@@ -215,7 +221,9 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
 
     test "with empty buffer list", %{state: state} do
-      state = %{state | playback: :playing} |> PadModel.set_data!(:output, :caps, @mock_caps)
+      state =
+        %{state | playback: :playing}
+        |> PadModel.set_data!(:output, :stream_format, @mock_stream_format)
 
       result =
         @module.handle_action(
@@ -229,12 +237,13 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       refute_received Message.new(:buffer, [_, :other_ref])
     end
 
-    test "if action handler raises exception when caps are sent before the first buffer", %{
-      state: state
-    } do
+    test "if action handler raises exception when stream format is sent before the first buffer",
+         %{
+           state: state
+         } do
       state = %{state | playback: :playing}
 
-      assert_raise(ElementError, ~r/buffer.*caps.*not.*sent/, fn ->
+      assert_raise(ElementError, ~r/buffer.*stream.*format.*not.*sent/, fn ->
         @module.handle_action(
           {:buffer, {:output, %Membrane.Buffer{payload: "test"}}},
           :handle_demand,
@@ -332,15 +341,15 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
   end
 
-  defp caps_action(pad), do: {:caps, {pad, @mock_caps}}
+  defp stream_format_action(pad), do: {:stream_format, {pad, @mock_stream_format}}
 
-  describe "handling :caps action" do
+  describe "handling :stream_format action" do
     setup :trivial_filter_state
 
     test "when element is stopped", %{state: state} do
       assert_raise ActionError, ~r/stopped/, fn ->
         @module.handle_action(
-          caps_action(:output),
+          stream_format_action(:output),
           :handle_info,
           %{},
           state
@@ -353,7 +362,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
       assert_raise MatchError, ~r/:unknown_pad/i, fn ->
         @module.handle_action(
-          caps_action(:invalid_pad_ref),
+          stream_format_action(:invalid_pad_ref),
           :handle_info,
           %{},
           state
@@ -366,14 +375,14 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
       assert_raise PadDirectionError, ~r/:input/, fn ->
         @module.handle_action(
-          caps_action(:input),
+          stream_format_action(:input),
           :handle_info,
           %{},
           state
         )
       end
 
-      refute_received Message.new(:caps, @mock_caps, for_pad: :other_ref)
+      refute_received Message.new(:stream_format, @mock_stream_format, for_pad: :other_ref)
     end
   end
 

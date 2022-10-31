@@ -11,8 +11,9 @@ defmodule Membrane.Testing.EndpointTest do
              Endpoint.handle_init(%{}, %Endpoint{output: {:abc, generator}})
   end
 
-  test "Endpoint sends caps on play" do
-    assert {{:ok, caps: {:output, :caps}}, _state} = Endpoint.handle_playing(nil, %{caps: :caps})
+  test "Endpoint sends stream format on play" do
+    assert {{:ok, stream_format: {:output, :stream_format}}, _state} =
+             Endpoint.handle_playing(nil, %{stream_format: :stream_format})
   end
 
   describe "Handle write" do

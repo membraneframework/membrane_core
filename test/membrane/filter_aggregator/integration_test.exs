@@ -59,7 +59,7 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
 
     pid = Pipeline.start_link_supervised!(structure: links)
     assert_start_of_stream(pid, :sink)
-    assert_sink_caps(pid, :sink, %RemoteStream{})
+    assert_sink_stream_format(pid, :sink, %RemoteStream{})
 
     expected_payload = for i <- 0..253, into: <<>>, do: <<i>>
 

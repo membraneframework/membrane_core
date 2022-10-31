@@ -25,7 +25,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
     Macro that defines #{direction} pad for the #{entity}.
 
     It automatically generates documentation from the given definition
-    and adds compile-time caps specs validation.
+    and adds compile-time stream format specs validation.
 
     The type `t:Membrane.Pad.#{pad_type_spec}` describes how the definition of pads should look.
     """
@@ -50,8 +50,8 @@ defmodule Membrane.Core.Child.PadsSpecs do
     for format <- accepted_formats do
       with :any <- format do
         Membrane.Logger.warn("""
-        Remeber, that `caps: :any` in pad definition will be satisified by caps in form of %:any{}, \
-        not >>any<< caps (to achieve such an effect, put `caps: _any` in your code)
+        Remeber, that `accepted_format: :any` in pad definition will be satisified by stream format in form of %:any{}, \
+        not >>any<< stream format (to achieve such an effect, put `accepted_format: _any` in your code)
         """)
       end
     end
@@ -91,13 +91,14 @@ defmodule Membrane.Core.Child.PadsSpecs do
                      )
       unquote(pad_opts_typedef)
 
-      unless Module.defines?(__MODULE__, {:membrane_caps_match?, 2}) do
+      unless Module.defines?(__MODULE__, {:membrane_stream_format_match?, 2}) do
         @doc false
-        @spec membrane_caps_match?(Membrane.Pad.name_t(), Membrane.Caps.t()) :: boolean()
+        @spec membrane_stream_format_match?(Membrane.Pad.name_t(), Membrane.StreamFormat.t()) ::
+                boolean()
       end
 
-      def membrane_caps_match?(unquote(pad_name), caps) do
-        case caps, do: unquote(case_statement_clauses)
+      def membrane_stream_format_match?(unquote(pad_name), stream_format) do
+        case stream_format, do: unquote(case_statement_clauses)
       end
     end
   end

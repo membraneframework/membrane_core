@@ -24,7 +24,7 @@ defmodule Membrane.Core.Element do
 
   alias Membrane.Core.Element.{
     BufferController,
-    CapsController,
+    StreamFormatController,
     DemandController,
     EventController,
     LifecycleController,
@@ -178,9 +178,9 @@ defmodule Membrane.Core.Element do
     {:noreply, state}
   end
 
-  defp do_handle_info(Message.new(:caps, caps, _opts) = msg, state) do
+  defp do_handle_info(Message.new(:stream_format, stream_format, _opts) = msg, state) do
     pad_ref = Message.for_pad(msg)
-    state = CapsController.handle_caps(pad_ref, caps, state)
+    state = StreamFormatController.handle_stream_format(pad_ref, stream_format, state)
     {:noreply, state}
   end
 

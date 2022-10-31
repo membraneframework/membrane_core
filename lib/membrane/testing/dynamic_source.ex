@@ -62,11 +62,11 @@ defmodule Membrane.Testing.DynamicSource do
                 used for the next call.
                 """
               ],
-              caps: [
+              stream_format: [
                 spec: struct(),
                 default: %Membrane.RemoteStream{},
                 description: """
-                Caps to be sent before the `output`.
+                Stream format to be sent before the `output`.
                 """
               ]
 
@@ -103,7 +103,7 @@ defmodule Membrane.Testing.DynamicSource do
 
   @impl true
   def handle_playing(ctx, state) do
-    actions = Map.keys(ctx.pads) |> Enum.map(&{:caps, {&1, state.caps}})
+    actions = Map.keys(ctx.pads) |> Enum.map(&{:stream_format, {&1, state.stream_format}})
     {{:ok, actions}, state}
   end
 

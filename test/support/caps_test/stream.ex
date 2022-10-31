@@ -1,6 +1,6 @@
-defmodule Membrane.Support.CapsTest.Stream do
+defmodule Membrane.Support.StreamFormatTest.StreamFormat do
   @moduledoc """
-  Stream definition used in caps test.
+  Stream formats definitions used in stream format test.
   """
 
   @type t() :: %__MODULE__{
@@ -10,24 +10,24 @@ defmodule Membrane.Support.CapsTest.Stream do
 
   defstruct [:format]
 
-  defmodule FormatAcceptedByAll do
+  defmodule AcceptedByAll do
     @moduledoc """
-    Stream format definition used in caps tests.
-    Accepted by caps patterns in all bins used in caps tests.
+    Stream format definition used in stream format tests.
+    Accepted by all bins used in stream format tests.
     """
   end
 
-  defmodule FormatAcceptedByOuterBins do
+  defmodule AcceptedByOuterBins do
     @moduledoc """
-    Stream format definition used in caps test.
-    Accepted by caps patterns in outer bins used in caps tests.
+    Stream format definition used in stream format test.
+    Accepted by outer bins used in stream format tests.
     """
   end
 
-  defmodule FormatAcceptedByInnerBins do
+  defmodule AcceptedByInnerBins do
     @moduledoc """
-    Stream format definition used in caps test.
-    Accepted by caps patterns in inner bins used in caps tests.
+    Stream format definition used in stream format test.
+    Accepted by inner bins used in stream format tests.
     """
   end
 end

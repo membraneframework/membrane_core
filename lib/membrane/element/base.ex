@@ -85,7 +85,7 @@ defmodule Membrane.Element.Base do
   @doc """
   Callback invoked when bin switches the playback to `:playing`.
 
-  From this point, element can send and receive buffers, events, caps and demands
+  From this point, element can send and receive buffers, events, stream formats and demands
   through its pads.
   """
   @callback handle_playing(

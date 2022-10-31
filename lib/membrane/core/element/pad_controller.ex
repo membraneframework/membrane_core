@@ -10,7 +10,7 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.Core.Element.{
     ActionHandler,
-    CapsController,
+    StreamFormatController,
     DemandController,
     EventController,
     InputQueue,
@@ -28,12 +28,17 @@ defmodule Membrane.Core.Element.PadController do
   require Membrane.Pad
 
   @type link_call_props_t ::
-          %{initiator: :parent, caps_validation_params: CapsController.caps_validation_params_t()}
+          %{
+            initiator: :parent,
+            stream_format_validation_params:
+              StreamFormatController.stream_format_validation_params_t()
+          }
           | %{
               initiator: :sibling,
               other_info: PadModel.pad_info_t() | nil,
               link_metadata: %{toilet: Toilet.t() | nil},
-              caps_validation_params: CapsController.caps_validation_params_t()
+              stream_format_validation_params:
+                StreamFormatController.stream_format_validation_params_t()
             }
 
   @type link_call_reply_props_t ::
@@ -103,7 +108,7 @@ defmodule Membrane.Core.Element.PadController do
             toilet: toilet,
             observability_metadata: Observability.setup_link(endpoint.pad_ref)
           },
-          caps_validation_params: []
+          stream_format_validation_params: []
         }
       ])
 
@@ -120,7 +125,7 @@ defmodule Membrane.Core.Element.PadController do
             endpoint,
             other_endpoint,
             info,
-            props.caps_validation_params,
+            props.stream_format_validation_params,
             other_info,
             link_metadata,
             state
@@ -145,7 +150,7 @@ defmodule Membrane.Core.Element.PadController do
     %{
       other_info: other_info,
       link_metadata: link_metadata,
-      caps_validation_params: caps_validation_params
+      stream_format_validation_params: stream_format_validation_params
     } = link_props
 
     Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
@@ -162,7 +167,7 @@ defmodule Membrane.Core.Element.PadController do
         endpoint,
         other_endpoint,
         info,
-        caps_validation_params,
+        stream_format_validation_params,
         other_info,
         link_metadata,
         state
@@ -208,7 +213,7 @@ defmodule Membrane.Core.Element.PadController do
          endpoint,
          other_endpoint,
          info,
-         caps_validation_params,
+         stream_format_validation_params,
          other_info,
          metadata,
          state
@@ -222,8 +227,8 @@ defmodule Membrane.Core.Element.PadController do
         options:
           Child.PadController.parse_pad_options!(info.name, endpoint.pad_props.options, state),
         ref: endpoint.pad_ref,
-        caps_validation_params: caps_validation_params,
-        caps: nil,
+        stream_format_validation_params: stream_format_validation_params,
+        stream_format: nil,
         start_of_stream?: false,
         end_of_stream?: false,
         associated_pads: []

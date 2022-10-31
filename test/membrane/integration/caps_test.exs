@@ -1,85 +1,84 @@
-defmodule Membrane.CapsTest do
+defmodule Membrane.StreamFormatTest do
   use ExUnit.Case
 
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
-  alias Membrane.Support.CapsTest
-
-  alias Membrane.Support.CapsTest.{
+  alias Membrane.Support.StreamFormatTest.{
     OuterSinkBin,
     OuterSourceBin,
     RestrictiveSink,
     RestrictiveSource,
     Sink,
-    Source
+    Source,
+    StreamFormat
   }
 
-  alias Membrane.Support.CapsTest.Stream.{
-    FormatAcceptedByAll,
-    FormatAcceptedByInnerBins,
-    FormatAcceptedByOuterBins
+  alias Membrane.Support.StreamFormatTest.StreamFormat.{
+    AcceptedByAll,
+    AcceptedByInnerBins,
+    AcceptedByOuterBins
   }
 
   alias Membrane.Testing.Pipeline
 
-  describe "Caps should be accepted, when they match" do
-    test "input caps patterns in bins" do
-      pipeline = start_test_pipeline(Source, OuterSinkBin, FormatAcceptedByAll)
+  describe "Stream format should be accepted, when they match" do
+    test "input pad :accepted_format in bins" do
+      pipeline = start_test_pipeline(Source, OuterSinkBin, AcceptedByAll)
 
       assert_pipeline_notified(
         pipeline,
         :sink,
-        {:caps_received, %CapsTest.Stream{format: FormatAcceptedByAll}}
+        {:stream_format_received, %StreamFormat{format: AcceptedByAll}}
       )
     end
 
-    test "output caps patterns in bins" do
-      pipeline = start_test_pipeline(OuterSourceBin, Sink, FormatAcceptedByAll)
+    test "output pad :accepted_format in bins" do
+      pipeline = start_test_pipeline(OuterSourceBin, Sink, AcceptedByAll)
 
       assert_pipeline_notified(
         pipeline,
         :sink,
-        {:caps_received, %CapsTest.Stream{format: FormatAcceptedByAll}}
+        {:stream_format_received, %StreamFormat{format: AcceptedByAll}}
       )
     end
   end
 
-  describe "Error should be raised, when caps don't match" do
-    test "input caps patterns in element" do
-      start_test_pipeline(Source, RestrictiveSink, FormatAcceptedByOuterBins)
+  describe "Error should be raised, when stream format don't match" do
+    test "input pad :accepted_format in element" do
+      start_test_pipeline(Source, RestrictiveSink, AcceptedByOuterBins)
       assert_down(RestrictiveSink)
     end
 
-    test "input caps patterns in inner bin" do
-      start_test_pipeline(Source, OuterSinkBin, FormatAcceptedByOuterBins)
+    test "input pad :accepted_format in inner bin" do
+      start_test_pipeline(Source, OuterSinkBin, AcceptedByOuterBins)
       assert_down(Sink)
     end
 
-    test "input caps patterns in outer bin" do
-      start_test_pipeline(Source, OuterSinkBin, FormatAcceptedByInnerBins)
+    test "input pad :accepted_format in outer bin" do
+      start_test_pipeline(Source, OuterSinkBin, AcceptedByInnerBins)
       assert_down(Sink)
     end
 
-    test "output caps patterns in element" do
-      start_test_pipeline(RestrictiveSource, Sink, FormatAcceptedByOuterBins)
+    test "output pad :accepted_format in element" do
+      start_test_pipeline(RestrictiveSource, Sink, AcceptedByOuterBins)
       assert_down(RestrictiveSource)
     end
 
-    test "output caps patterns in inner bin" do
-      start_test_pipeline(OuterSourceBin, Sink, FormatAcceptedByOuterBins)
+    test "output pad :accepted_format in inner bin" do
+      start_test_pipeline(OuterSourceBin, Sink, AcceptedByOuterBins)
       assert_down(Source)
     end
 
-    test "output caps patterns in outer bin" do
-      start_test_pipeline(OuterSourceBin, Sink, FormatAcceptedByInnerBins)
+    test "output pad :accepted_format in outer bin" do
+      start_test_pipeline(OuterSourceBin, Sink, AcceptedByInnerBins)
       assert_down(Source)
     end
   end
 
-  defp start_test_pipeline(source, sink, caps_format) do
-    caps = %CapsTest.Stream{format: caps_format}
-    source_struct = struct!(source, test_pid: self(), caps: caps)
+  defp start_test_pipeline(source, sink, stream_format_format) do
+    stream_format = %StreamFormat{format: stream_format_format}
+    source_struct = struct!(source, test_pid: self(), stream_format: stream_format)
     sink_struct = struct!(sink, test_pid: self())
 
     structure = [
@@ -93,6 +92,6 @@ defmodule Membrane.CapsTest do
   defp assert_down(module) do
     assert_receive({:my_pid, ^module, pid})
     Process.monitor(pid)
-    assert_receive({:DOWN, _ref, :process, ^pid, {%Membrane.CapsError{}, _stacktrace}})
+    assert_receive({:DOWN, _ref, :process, ^pid, {%Membrane.StreamFormatError{}, _stacktrace}})
   end
 end

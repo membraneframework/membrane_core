@@ -1,29 +1,32 @@
-defmodule Membrane.Support.CapsTest.OuterSourceBin do
+defmodule Membrane.Support.StreamFormatTest.OuterSourceBin do
   @moduledoc """
-  Bin used in caps test.
-  It has a caps pattern defined for the `:output` pad.
-  Spawns `Membrane.Support.CapsTest.InnerSourceBin` as its child.
+  Bin used in stream format test.
+  It has a accepted_format defined for the `:output` pad.
+  Spawns `Membrane.Support.StreamFormatTest.InnerSourceBin` as its child.
   """
 
   use Membrane.Bin
 
-  alias Membrane.Support.CapsTest
-  alias Membrane.Support.CapsTest.Stream
-  alias Membrane.Support.CapsTest.Stream.{FormatAcceptedByAll, FormatAcceptedByOuterBins}
+  alias Membrane.Support.StreamFormatTest
+  alias Membrane.Support.StreamFormatTest.StreamFormat
+  alias Membrane.Support.StreamFormatTest.StreamFormat.{AcceptedByAll, AcceptedByOuterBins}
 
   def_output_pad :output,
     demand_unit: :buffers,
     accepted_format:
-      %Stream{format: format} when format in [FormatAcceptedByAll, FormatAcceptedByOuterBins]
+      %StreamFormat{format: format} when format in [AcceptedByAll, AcceptedByOuterBins]
 
   def_options test_pid: [type: :pid],
-              caps: [type: :any]
+              stream_format: [type: :any]
 
   @impl true
-  def handle_init(_ctx, %__MODULE__{test_pid: test_pid, caps: caps}) do
+  def handle_init(_ctx, %__MODULE__{test_pid: test_pid, stream_format: stream_format}) do
     spec = %Membrane.ChildrenSpec{
       structure: [
-        child(:inner_source_bin, %CapsTest.InnerSourceBin{test_pid: test_pid, caps: caps})
+        child(:inner_source_bin, %StreamFormatTest.InnerSourceBin{
+          test_pid: test_pid,
+          stream_format: stream_format
+        })
         |> bin_output()
       ]
     }

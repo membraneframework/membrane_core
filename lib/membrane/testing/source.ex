@@ -58,11 +58,11 @@ defmodule Membrane.Testing.Source do
                 used for the next call.
                 """
               ],
-              caps: [
+              stream_format: [
                 spec: struct(),
                 default: %Membrane.RemoteStream{},
                 description: """
-                Caps to be sent before the `output`.
+                StreamFormat to be sent before the `output`.
                 """
               ]
 
@@ -81,7 +81,7 @@ defmodule Membrane.Testing.Source do
 
   @impl true
   def handle_playing(_ctx, state) do
-    {{:ok, caps: {:output, state.caps}}, state}
+    {{:ok, stream_format: {:output, state.stream_format}}, state}
   end
 
   @impl true

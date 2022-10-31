@@ -1,20 +1,20 @@
-defmodule Membrane.Support.CapsTest.OuterSinkBin do
+defmodule Membrane.Support.StreamFormatTest.OuterSinkBin do
   @moduledoc """
-  Bin used in caps test.
-  It has a caps pattern defined for the `:input` pad.
-  Spawns `Membrane.Support.CapsTest.InnerSinkBin` as its child.
+  Bin used in stream format test.
+  It has a :accepted_format defined for the `:input` pad.
+  Spawns `Membrane.Support.StreamFormatTest.InnerSinkBin` as its child.
   """
 
   use Membrane.Bin
 
-  alias Membrane.Support.CapsTest
-  alias Membrane.Support.CapsTest.Stream
-  alias Membrane.Support.CapsTest.Stream.{FormatAcceptedByAll, FormatAcceptedByOuterBins}
+  alias Membrane.Support.StreamFormatTest
+  alias Membrane.Support.StreamFormatTest.StreamFormat
+  alias Membrane.Support.StreamFormatTest.StreamFormat.{AcceptedByAll, AcceptedByOuterBins}
 
   def_input_pad :input,
     demand_unit: :buffers,
     accepted_format:
-      any_of(%Stream{format: FormatAcceptedByAll}, %Stream{format: FormatAcceptedByOuterBins}),
+      any_of(%StreamFormat{format: AcceptedByAll}, %StreamFormat{format: AcceptedByOuterBins}),
     availability: :always,
     mode: :push
 
@@ -25,7 +25,7 @@ defmodule Membrane.Support.CapsTest.OuterSinkBin do
     spec = %Membrane.ChildrenSpec{
       structure: [
         bin_input()
-        |> child(:sink, %CapsTest.InnerSinkBin{test_pid: test_pid})
+        |> child(:sink, %StreamFormatTest.InnerSinkBin{test_pid: test_pid})
       ]
     }
 

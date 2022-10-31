@@ -37,7 +37,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
                    initiator: :sibling,
                    other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
                    link_metadata: %{toilet: make_ref(), observability_metadata: %{}},
-                   caps_validation_params: []
+                   stream_format_validation_params: []
                  },
                  state
                )
@@ -54,7 +54,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
           :output,
           %{pad_ref: :invalid_pad_ref, child: :a},
           %{pad_ref: :x, child: :b},
-          %{link_initiator: :parent, caps_validation_params: []},
+          %{link_initiator: :parent, stream_format_validation_params: []},
           state
         )
       end

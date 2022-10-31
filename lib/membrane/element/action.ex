@@ -8,7 +8,7 @@ defmodule Membrane.Element.Action do
   callback unless explicitly stated otherwise.
   """
 
-  alias Membrane.{Buffer, Caps, ChildNotification, Clock, Event, Pad}
+  alias Membrane.{Buffer, StreamFormat, ChildNotification, Clock, Event, Pad}
 
   @typedoc """
   Sends a message to the parent.
@@ -44,13 +44,13 @@ defmodule Membrane.Element.Action do
   @type split_t :: {:split, {callback_name :: atom, args_list :: [[any]]}}
 
   @typedoc """
-  Sends caps through a pad.
+  Sends stream format through a pad.
 
-  The pad must have output direction. Sent caps must fit constraints on the pad.
+  The pad must have output direction. Sent stream format must fit constraints on the pad.
 
   Allowed only when playback is `playing`.
   """
-  @type caps_t :: {:caps, {Pad.ref_t(), Caps.t()}}
+  @type stream_format_t :: {:stream_format, {Pad.ref_t(), StreamFormat.t()}}
 
   @typedoc """
   Sends buffers through a pad.
@@ -116,26 +116,26 @@ defmodule Membrane.Element.Action do
   @type redemand_t :: {:redemand, Pad.ref_t()}
 
   @typedoc """
-  Sends buffers/caps/event to all output pads of element (or to input pads when
+  Sends buffers/stream format/event to all output pads of element (or to input pads when
   event occurs on the output pad).
 
   Used by default implementations of
-  `c:Membrane.Element.WithInputPads.handle_caps/4` and
+  `c:Membrane.Element.WithInputPads.handle_stream_format/4` and
   `c:Membrane.Element.Base.handle_event/4` callbacks in filter.
 
   Allowed only when _all_ below conditions are met:
   - element is filter,
   - callback is `c:Membrane.Filter.handle_process_list/4`,
-  `c:Membrane.Element.WithInputPads.handle_caps/4`
+  `c:Membrane.Element.WithInputPads.handle_stream_format/4`
   or `c:Membrane.Element.Base.handle_event/4`,
   - playback is `playing`
 
   Keep in mind that `c:Membrane.Filter.handle_process_list/4` can only
-  forward buffers, `c:Membrane.Element.WithInputPads.handle_caps/4` - caps
+  forward buffers, `c:Membrane.Element.WithInputPads.handle_stream_format/4` - stream formats
   and `c:Membrane.Element.Base.handle_event/4` - events.
   """
   @type forward_t ::
-          {:forward, Buffer.t() | [Buffer.t()] | Caps.t() | Event.t() | :end_of_stream}
+          {:forward, Buffer.t() | [Buffer.t()] | StreamFormat.t() | Event.t() | :end_of_stream}
 
   @typedoc """
   Starts a timer that will invoke `c:Membrane.Element.Base.handle_tick/3` callback
@@ -219,7 +219,7 @@ defmodule Membrane.Element.Action do
           event_t
           | notify_parent_t
           | split_t
-          | caps_t
+          | stream_format_t
           | buffer_t
           | demand_t
           | redemand_t

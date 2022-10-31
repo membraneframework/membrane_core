@@ -42,11 +42,11 @@ defmodule Membrane.Testing.Endpoint do
                 used for the next call.
                 """
               ],
-              caps: [
+              stream_format: [
                 spec: struct(),
                 default: %Membrane.RemoteStream{},
                 description: """
-                Caps to be sent before the `output`.
+                Stream format to be sent before the `output`.
                 """
               ]
 
@@ -65,10 +65,10 @@ defmodule Membrane.Testing.Endpoint do
 
   @impl true
   def handle_playing(_context, %{autodemand: true} = state),
-    do: {{:ok, demand: :input, caps: {:output, state.caps}}, state}
+    do: {{:ok, demand: :input, stream_format: {:output, state.stream_format}}, state}
 
   def handle_playing(_context, state),
-    do: {{:ok, caps: {:output, state.caps}}, state}
+    do: {{:ok, stream_format: {:output, state.stream_format}}, state}
 
   @impl true
   def handle_event(:input, event, _context, state) do
@@ -90,8 +90,8 @@ defmodule Membrane.Testing.Endpoint do
     do: {{:ok, notify({:end_of_stream, pad})}, state}
 
   @impl true
-  def handle_caps(pad, caps, _context, state),
-    do: {{:ok, notify({:caps, pad, caps})}, state}
+  def handle_stream_format(pad, stream_format, _context, state),
+    do: {{:ok, notify({:stream_format, pad, stream_format})}, state}
 
   @impl true
   def handle_info({:make_demand, size}, _ctx, %{autodemand: false} = state) do

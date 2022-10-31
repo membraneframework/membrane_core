@@ -8,7 +8,7 @@ defmodule Membrane.LinksValidationTest do
 
   require Membrane.Pad
 
-  defmodule Caps do
+  defmodule StreamFormat do
     defstruct []
   end
 
@@ -34,8 +34,8 @@ defmodule Membrane.LinksValidationTest do
 
       @impl true
       def handle_playing(_ctx, state) do
-        caps = %Membrane.LinksValidationTest.Caps{}
-        {{:ok, caps: {:output, caps}}, state}
+        stream_format = %Membrane.LinksValidationTest.StreamFormat{}
+        {{:ok, stream_format: {:output, stream_format}}, state}
       end
     end
   end
@@ -62,8 +62,8 @@ defmodule Membrane.LinksValidationTest do
 
       @impl true
       def handle_playing(_ctx, state) do
-        caps = %Membrane.LinksValidationTest.Caps{}
-        {{:ok, caps: {:output, caps}}, state}
+        stream_format = %Membrane.LinksValidationTest.StreamFormat{}
+        {{:ok, stream_format: {:output, stream_format}}, state}
       end
     end
   end

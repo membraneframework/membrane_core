@@ -4,7 +4,7 @@ defmodule Membrane.Element.PadData do
 
   The public fields are:
     - `:availability` - see `t:Membrane.Pad.availability_t/0`
-    - `:caps` - the most recent `Membrane.Caps` that have been sent (output) or received (input)
+    - `:stream_format` - the most recent `t:Membrane.StreamFormat.t/0` that have been sent (output) or received (input)
       on the pad. May be `nil` if not yet set.
     - `:demand` - current demand requested on the pad working in pull mode.
     - `:direction` - see `t:Membrane.Pad.direction_t/0`
@@ -20,13 +20,13 @@ defmodule Membrane.Element.PadData do
   """
   use Bunch.Access
 
-  alias Membrane.{Caps, Pad}
+  alias Membrane.{StreamFormat, Pad}
 
   @type private_field :: term()
 
   @type t :: %__MODULE__{
           availability: Pad.availability_t(),
-          caps: Caps.t() | nil,
+          stream_format: StreamFormat.t() | nil,
           start_of_stream?: boolean(),
           end_of_stream?: boolean(),
           direction: Pad.direction_t(),
@@ -34,7 +34,7 @@ defmodule Membrane.Element.PadData do
           name: Pad.name_t(),
           ref: Pad.ref_t(),
           options: %{optional(atom) => any},
-          caps_validation_params: private_field,
+          stream_format_validation_params: private_field,
           pid: private_field,
           other_ref: private_field,
           input_queue: private_field,
@@ -51,7 +51,7 @@ defmodule Membrane.Element.PadData do
 
   @enforce_keys [
     :availability,
-    :caps,
+    :stream_format,
     :direction,
     :mode,
     :name,
@@ -75,6 +75,6 @@ defmodule Membrane.Element.PadData do
                 toilet: nil,
                 associated_pads: [],
                 sticky_events: [],
-                caps_validation_params: []
+                stream_format_validation_params: []
               ]
 end

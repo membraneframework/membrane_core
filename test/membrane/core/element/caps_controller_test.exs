@@ -1,8 +1,8 @@
-defmodule Membrane.Core.Element.CapsControllerTest do
+defmodule Membrane.Core.Element.StreamFormatControllerTest do
   use ExUnit.Case, async: true
 
   alias Membrane.Buffer
-  alias Membrane.Caps.Mock, as: MockCaps
+  alias Membrane.StreamFormat.Mock, as: MockStreamFormat
   alias Membrane.Core.Message
   alias Membrane.Core.Element.{InputQueue, State}
   alias Membrane.Support.DemandsTest.Filter
@@ -10,7 +10,7 @@ defmodule Membrane.Core.Element.CapsControllerTest do
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message, as: Message
 
-  @module Membrane.Core.Element.CapsController
+  @module Membrane.Core.Element.StreamFormatController
 
   setup do
     input_queue =
@@ -49,10 +49,10 @@ defmodule Membrane.Core.Element.CapsControllerTest do
     [state: state]
   end
 
-  describe "handle_caps for pull pad" do
+  describe "handle_stream_format for pull pad" do
     test "with empty input_queue", %{state: state} do
-      assert PadModel.set_data!(state, :input, :caps, %MockCaps{}) ==
-               @module.handle_caps(:input, %MockCaps{}, state)
+      assert PadModel.set_data!(state, :input, :stream_format, %MockStreamFormat{}) ==
+               @module.handle_stream_format(:input, %MockStreamFormat{}, state)
     end
 
     test "with input_queue containing one buffer", %{state: state} do
@@ -64,10 +64,10 @@ defmodule Membrane.Core.Element.CapsControllerTest do
           &InputQueue.store(&1, :buffer, %Buffer{payload: "aa"})
         )
 
-      state = @module.handle_caps(:input, %MockCaps{}, state)
+      state = @module.handle_stream_format(:input, %MockStreamFormat{}, state)
 
       assert state.pads_data.input.input_queue.q |> Qex.last!() ==
-               {:non_buffer, :caps, %MockCaps{}}
+               {:non_buffer, :stream_format, %MockStreamFormat{}}
     end
   end
 end

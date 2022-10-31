@@ -78,32 +78,45 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
     end
   end
 
-  describe "assert_sink_caps" do
-    test "does not flunk when caps are handled", %{state: state} do
-      caps = %{property: :value}
-      Pipeline.handle_child_notification({:caps, :input, caps}, :sink, context(), state)
-      assert_sink_caps(self(), :sink, ^caps)
+  describe "assert_sink_stream_format" do
+    test "does not flunk when stream format is handled", %{state: state} do
+      stream_format = %{property: :value}
+
+      Pipeline.handle_child_notification(
+        {:stream_format, :input, stream_format},
+        :sink,
+        context(),
+        state
+      )
+
+      assert_sink_stream_format(self(), :sink, ^stream_format)
     end
 
-    test "flunks when caps are not handled" do
+    test "flunks when stream_format are not handled" do
       assert_raise ExUnit.AssertionError, fn ->
-        assert_sink_caps(self(), :sink, _, 0)
+        assert_sink_stream_format(self(), :sink, _, 0)
       end
     end
   end
 
-  describe "refute_sink_caps" do
-    test "flunks when caps are handled", %{state: state} do
-      caps = %{property: :value}
-      Pipeline.handle_child_notification({:caps, :input, caps}, :sink, context(), state)
+  describe "refute_sink_stream_format" do
+    test "flunks when stream format is handled", %{state: state} do
+      stream_format = %{property: :value}
+
+      Pipeline.handle_child_notification(
+        {:stream_format, :input, stream_format},
+        :sink,
+        context(),
+        state
+      )
 
       assert_raise ExUnit.AssertionError, fn ->
-        refute_sink_caps(self(), :sink, ^caps)
+        refute_sink_stream_format(self(), :sink, ^stream_format)
       end
     end
 
-    test "does not flunk when caps are not handled" do
-      refute_sink_caps(self(), :sink, _, 0)
+    test "does not flunk when stream format is not handled" do
+      refute_sink_stream_format(self(), :sink, _, 0)
     end
   end
 

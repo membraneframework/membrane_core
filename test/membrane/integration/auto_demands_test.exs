@@ -140,7 +140,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     def_output_pad :output, mode: :push, accepted_format: _any
 
-    defmodule Caps do
+    defmodule StreamFormat do
       defstruct []
     end
 
@@ -151,7 +151,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     @impl true
     def handle_playing(_ctx, state) do
-      {{:ok, [caps: {:output, %Caps{}}]}, state}
+      {{:ok, [stream_format: {:output, %StreamFormat{}}]}, state}
     end
   end
 
