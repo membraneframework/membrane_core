@@ -4,7 +4,7 @@ defmodule Membrane.StreamFormatTest do
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
-  alias Membrane.Support.StreamFormatTest.{
+  alias Membrane.Support.AcceptedFormatTest.{
     OuterSinkBin,
     OuterSourceBin,
     RestrictiveSink,
@@ -14,7 +14,7 @@ defmodule Membrane.StreamFormatTest do
     StreamFormat
   }
 
-  alias Membrane.Support.StreamFormatTest.StreamFormat.{
+  alias Membrane.Support.AcceptedFormatTest.StreamFormat.{
     AcceptedByAll,
     AcceptedByInnerBins,
     AcceptedByOuterBins

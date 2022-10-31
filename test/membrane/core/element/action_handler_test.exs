@@ -237,7 +237,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       refute_received Message.new(:buffer, [_, :other_ref])
     end
 
-    test "if action handler raises exception when stream format is sent before the first buffer",
+    test "if action handler raises exception when stream format is not sent before the first buffer",
          %{
            state: state
          } do

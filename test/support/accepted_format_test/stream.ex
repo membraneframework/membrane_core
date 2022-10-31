@@ -1,4 +1,4 @@
-defmodule Membrane.Support.StreamFormatTest.StreamFormat do
+defmodule Membrane.Support.AcceptedFormatTest.StreamFormat do
   @moduledoc """
   Stream formats definitions used in stream format test.
   """

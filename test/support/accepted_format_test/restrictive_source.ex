@@ -1,4 +1,4 @@
-defmodule Membrane.Support.StreamFormatTest.RestrictiveSource do
+defmodule Membrane.Support.AcceptedFormatTest.RestrictiveSource do
   @moduledoc """
   Source used in stream format test.
   Sends stream format passed in opts, after entering the `:playing` playback state.
@@ -6,7 +6,7 @@ defmodule Membrane.Support.StreamFormatTest.RestrictiveSource do
 
   use Membrane.Source
 
-  alias Membrane.Support.StreamFormatTest.StreamFormat
+  alias Membrane.Support.AcceptedFormatTest.StreamFormat
 
   def_output_pad :output,
     demand_unit: :buffers,

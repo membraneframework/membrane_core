@@ -1,20 +1,20 @@
-defmodule Membrane.Support.StreamFormatTest.InnerSinkBin do
+defmodule Membrane.Support.AcceptedFormatTest.OuterSinkBin do
   @moduledoc """
   Bin used in stream format test.
   It has a :accepted_format defined for the `:input` pad.
-  Spawns `Membrane.Support.StreamFormatTest.Sink` as its child.
+  Spawns `Membrane.Support.AcceptedFormatTest.InnerSinkBin` as its child.
   """
 
   use Membrane.Bin
 
-  alias Membrane.Support.StreamFormatTest
-  alias Membrane.Support.StreamFormatTest.StreamFormat
-  alias Membrane.Support.StreamFormatTest.StreamFormat.{AcceptedByAll, AcceptedByInnerBins}
+  alias Membrane.Support.AcceptedFormatTest
+  alias Membrane.Support.AcceptedFormatTest.StreamFormat
+  alias Membrane.Support.AcceptedFormatTest.StreamFormat.{AcceptedByAll, AcceptedByOuterBins}
 
   def_input_pad :input,
     demand_unit: :buffers,
     accepted_format:
-      %StreamFormat{format: format} when format in [AcceptedByAll, AcceptedByInnerBins],
+      any_of(%StreamFormat{format: AcceptedByAll}, %StreamFormat{format: AcceptedByOuterBins}),
     availability: :always,
     mode: :push
 
@@ -25,7 +25,7 @@ defmodule Membrane.Support.StreamFormatTest.InnerSinkBin do
     spec = %Membrane.ChildrenSpec{
       structure: [
         bin_input()
-        |> child(:sink, %StreamFormatTest.Sink{test_pid: test_pid})
+        |> child(:sink, %AcceptedFormatTest.InnerSinkBin{test_pid: test_pid})
       ]
     }
 

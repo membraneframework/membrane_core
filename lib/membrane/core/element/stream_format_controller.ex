@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Element.StreamFormatController do
   @moduledoc false
 
-  # Module handling stream_format received on input pads.
+  # Module handling stream format received on input pads.
 
   use Bunch
 

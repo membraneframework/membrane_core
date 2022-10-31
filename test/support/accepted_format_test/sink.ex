@@ -1,4 +1,4 @@
-defmodule Membrane.Support.StreamFormatTest.Sink do
+defmodule Membrane.Support.AcceptedFormatTest.Sink do
   @moduledoc """
   Sink used in stream format test.
   Sends a message with its own pid to the process specified in the options.
@@ -7,7 +7,7 @@ defmodule Membrane.Support.StreamFormatTest.Sink do
 
   use Membrane.Endpoint
 
-  alias Membrane.Support.StreamFormatTest.StreamFormat
+  alias Membrane.Support.AcceptedFormatTest.StreamFormat
 
   def_input_pad :input,
     demand_unit: :buffers,
