@@ -16,7 +16,7 @@ defmodule Membrane.Core.OptionsSpecs do
       * `default:` default value for option. If not present, value for this option
         will have to be provided each time options struct is created
       * `inspector:` function converting fields' value to a string. Used when
-        creating documentation instead of `inspect/1`
+        creating documentation instead of `inspect/1`, eg. `inspector: &Time.inspect/1`
       * `description:` string describing an option. It will be used for generating the docs
     """
   end
