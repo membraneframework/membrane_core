@@ -68,8 +68,8 @@ defmodule Membrane.Support.Bin.TestBins do
     @moduledoc false
     use Membrane.Bin
 
-    def_options filter1: [type: :atom],
-                filter2: [type: :atom]
+    def_options filter1: [spec: module()],
+                filter2: [spec: module()]
 
     def_input_pad :input, demand_unit: :buffers, caps: :any
 
@@ -147,8 +147,8 @@ defmodule Membrane.Support.Bin.TestBins do
     @moduledoc false
     use Membrane.Bin
 
-    def_options filter1: [type: :atom],
-                filter2: [type: :atom]
+    def_options filter1: [spec: module()],
+                filter2: [spec: module()]
 
     def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :on_request
 
@@ -197,8 +197,8 @@ defmodule Membrane.Support.Bin.TestBins do
     @moduledoc false
     use Membrane.Bin
 
-    def_options filter: [type: :atom],
-                sink: [type: :atom]
+    def_options filter: [spec: module()],
+                sink: [spec: module()]
 
     def_input_pad :input, demand_unit: :buffers, caps: :any
 
@@ -241,8 +241,8 @@ defmodule Membrane.Support.Bin.TestBins do
     @moduledoc false
     use Membrane.Bin
 
-    def_options source: [type: :atom],
-                sink: [type: :atom]
+    def_options source: [spec: module()],
+                sink: [spec: module()]
 
     @impl true
     def handle_init(_ctx, opts) do
