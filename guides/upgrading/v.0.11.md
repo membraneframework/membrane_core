@@ -71,3 +71,25 @@ Option `:accepted_format` is able to receive:
 - caps: [My.Format, {My.Another.Format, field: :strict_value}, My.Yet.Another.Format]
 + accepted_format: any_of(My.Format, %My.Another.Format{field: :strict_value}, My.Yet.Another.Format)
 ```
+
+## Update options definitions
+
+Remove `:type` key and related value from defined options. Add `:spec` instead, if it haven't been added before, and proper `:inspector`, if option has default value, that shouldn't be inspected by `inspect/1` during generating docs.
+
+```diff 
+- def_options tick_interval: [
+-                 type: :time, 
+-                 default: Membrane.Time.seconds(1)
+-             ],
+-             process: [
+-                 type: :pid
+-             ]
++ def_options tick_interval: [
++                 spec: Membrane.Time.t(),
++                 default: Membrane.Time.seconds(1),
++                 inspector: &Membrane.Time.inspect/1
++             ],
++             process: [
++                 spec: pid()
++             ] 
+```
