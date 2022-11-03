@@ -14,35 +14,60 @@ defp deps do
 end
 ```
 
-## Actions
+## Update callbacks
 
-The following actions have changed their names:
- * `:caps` -> `:stream_format`
+To update callbacks
+  * rename `handle_caps/4` on `handle_stream_format/4`
+  * ...
 
-## Callbacks
+```diff
+- def handle_caps(pad_ref, caps, ctx, state) do
++ def handle_stream_format(pad_ref, stream_format, ctx, state) do
+```
 
-The following callbacks have changed their names:
- * `handle_caps/4` -> `handle_stream_format/4`
+## Update actions returned from callbacks
 
-## Pads definitions
+To update actions, rename:
+  * `:caps` -> `:stream_format`
+  * ...
 
-In `v0.11` `:caps` option passed to `def_input_pad/2` or `def_output_pad/2` has been deleted. Instead of it, we have added new option - `:accepted_format`. The main principle of these two options is the same - validation of value passed to `:caps` or `:stream_format` action. While `:caps` required module name or specific tuple format as argument, `:accepted_format` requires following types of terms:
+```diff
+- {{:ok, caps: %My.Format{freq: 1}}, state}
++ {{:ok, stream_format: %My.Format{freq: 1}}, state}
+```
 
-  * Elixir pattern - eg. `accepted_format: %My.Custom.Format{field: value} when value in [:some, :enumeration]`
+## Update pads definitions
 
-    Value passed to `:stream_format` action has to match provided pattern. In this case, requirement above would 
-    be satisfied by eg. `stream_format: %My.Custom.Format{field: :some}`
+Instead of using `:caps`, use `:accepted_format` option.
+Option `:accepted_format` is able to receive:
 
-  * Module name - eg. `accepted_format: My.Custom.Format`
-    This would be equal to match on struct of passed module, in this case `accepted_format: %My.Custom.Format{}`
+ * Module name
 
-  * Call to `any_of` function - you can pass as many arguments to it, as you want. Each argment should be Elixir pattern 
-    or a module name, eg. `stream_format: any_of(My.Custom.Format, %My.Another.Custom.Format{field: :value})`
+```diff
+- caps: My.Format
++ accepted_format: My.Format 
+```
 
-    If you use `any_of`, value passed to `:stream_format` will have to match to at least one of passed 
-    arguments. In this case, `stream_format: %My.Custom.Format{frequency: 1}` would be ok, but 
-    `stream_format: %My.Another.Custom.Format{field: :not_allowed_value}` would fail
+ * Elixir pattern
 
-Option `:accepted_format` is required. If you don't want to perform any check on `stream_format`, you can always write `accepted_format: _any`, but it is not suggested. 
+```diff
+- caps: {My.Format, field: one_of([:some, :enumeration])}
++ accepted_format: %My.Format{field: value} when value in [:some, :enumeration]
+```
 
-Checks on `stream_format` will be performed on both, `intput` and `output` pads, just as `caps` were checked in those places. 
+```diff
+- caps: :any
++ accepted_format: _any
+```
+
+ * Call to `any_of` function. You can pass there as many arguments, as you want. Each argment should be Elixir pattern or a module name
+
+```diff
+- caps: [My.Format, My.Another.Format]
++ accepted_format: any_of(My.Format, My.Another.Format)
+```
+
+```diff
+- caps: [My.Format, {My.Another.Format, field: :strict_value}, My.Yet.Another.Format]
++ accepted_format: any_of(My.Format, %My.Another.Format{field: :strict_value}, My.Yet.Another.Format)
+```
