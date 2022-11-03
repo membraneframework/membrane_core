@@ -3,7 +3,6 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   use Membrane.Core.CallbackHandler
 
   alias Membrane.ActionError
-  alias Membrane.ChildrenSpec
   alias Membrane.Core.{Parent, TimerController}
   alias Membrane.Core.Parent.LifecycleController
   alias Membrane.Core.Pipeline.State

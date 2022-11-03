@@ -10,7 +10,7 @@ defmodule Membrane.Telemetry do
   ## Instrumentation
   The following events are published by Membrane's Core with following measurement types and metadata:
 
-    * `[:membrane, :metric, :value]` - used to report metrics, such as input buffer's size inside functions, incoming events and received caps.
+    * `[:membrane, :metric, :value]` - used to report metrics, such as input buffer's size inside functions, incoming events and received stream format
         * Measurement: `t:metric_event_value_t/0`
         * Metadata: `%{}`
 
@@ -55,7 +55,7 @@ defmodule Membrane.Telemetry do
   * `:buffer` - number of buffers being sent from a particular element
   * `:bitrate` - total number of bits carried by the buffers mentioned above
   * `:queue_len` - number of messages in element's message queue during GenServer's `handle_info` invocation
-  * `:caps` - indicates that given element has received new caps, value always equals '1'
+  * `:stream_format` - indicates that given element has received new stream format, value always equals '1'
   * `:event` - indicates that given element has received a new event, value always equals '1'
   * `:store` - reports the current size of a input buffer when storing a new buffer
   * `:take_and_demand` - reports the current size of a input buffer when taking buffers and making a new demand

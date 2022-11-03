@@ -27,13 +27,13 @@ defmodule Membrane.FilterAggregator do
               ]
 
   def_input_pad :input,
-    caps: _any,
+    accepted_format: _any,
     demand_mode: :auto,
     demand_unit: :buffers
 
   def_output_pad :output,
     demand_mode: :auto,
-    caps: _any
+    accepted_format: _any
 
   @impl true
   def handle_init(agg_ctx, %__MODULE__{filters: filter_specs}) do
@@ -129,8 +129,8 @@ defmodule Membrane.FilterAggregator do
   end
 
   @impl true
-  def handle_caps(:input, caps, _ctx, %{states: states}) do
-    {actions, states} = pipe_downstream([caps: {:output, caps}], states)
+  def handle_stream_format(:input, stream_format, _ctx, %{states: states}) do
+    {actions, states} = pipe_downstream([stream_format: {:output, stream_format}], states)
     actions = reject_internal_actions(actions)
     {{:ok, actions}, %{states: states}}
   end
@@ -204,14 +204,14 @@ defmodule Membrane.FilterAggregator do
     |> normalize_cb_return(module, :handle_process_list)
   end
 
-  defp perform_action({:caps, {:output, caps}}, module, context, state) do
+  defp perform_action({:stream_format, {:output, stream_format}}, module, context, state) do
     cb_context =
       context
-      |> Map.put(:old_caps, context.pads.input.caps)
-      |> then(&struct!(CallbackContext.Caps, &1))
+      |> Map.put(:old_stream_format, context.pads.input.stream_format)
+      |> then(&struct!(CallbackContext.StreamFormat, &1))
 
-    module.handle_caps(:input, caps, cb_context, state)
-    |> normalize_cb_return(module, :handle_caps)
+    module.handle_stream_format(:input, stream_format, cb_context, state)
+    |> normalize_cb_return(module, :handle_stream_format)
   end
 
   defp perform_action({:event, {:output, event}}, module, context, state) do
@@ -354,6 +354,6 @@ defmodule Membrane.FilterAggregator do
   defp resolve_forward_action(%_struct{} = data) do
     if Membrane.Event.event?(data),
       do: {:event, {:output, data}},
-      else: {:caps, {:output, data}}
+      else: {:stream_format, {:output, data}}
   end
 end

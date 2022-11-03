@@ -13,19 +13,19 @@ defmodule Membrane.Element.WithInputPads do
   alias Membrane.Element.CallbackContext
 
   @doc """
-  Callback invoked when Element is receiving information about new caps for
+  Callback invoked when Element is receiving information about new stream format for
   given pad.
 
-  In filters those caps are forwarded through all output pads by default.
+  In filters stream format is forwarded through all output pads by default.
   """
-  @callback handle_caps(
+  @callback handle_stream_format(
               pad :: Pad.ref_t(),
-              caps :: Membrane.Caps.t(),
-              context :: CallbackContext.Caps.t(),
+              stream_format :: Membrane.StreamFormat.t(),
+              context :: CallbackContext.StreamFormat.t(),
               state :: Element.state_t()
             ) :: Membrane.Element.Base.callback_return_t()
 
-  @optional_callbacks handle_caps: 4
+  @optional_callbacks handle_stream_format: 4
 
   @doc """
   Callback invoked when element receives `Membrane.Event.StartOfStream` event.
@@ -58,7 +58,7 @@ defmodule Membrane.Element.WithInputPads do
       import unquote(__MODULE__), only: [def_input_pad: 2]
 
       @impl true
-      def handle_caps(_pad, _caps, _context, state), do: {:ok, state}
+      def handle_stream_format(_pad, _stream_format, _context, state), do: {:ok, state}
 
       @impl true
       def handle_start_of_stream(pad, _context, state), do: {:ok, state}
@@ -66,7 +66,7 @@ defmodule Membrane.Element.WithInputPads do
       @impl true
       def handle_end_of_stream(pad, _context, state), do: {:ok, state}
 
-      defoverridable handle_caps: 4,
+      defoverridable handle_stream_format: 4,
                      handle_start_of_stream: 3,
                      handle_end_of_stream: 3
     end

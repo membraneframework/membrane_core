@@ -8,9 +8,9 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   import Membrane.Pad, only: [is_pad_ref: 1]
 
-  alias Membrane.{ActionError, Buffer, Caps, ElementError, Event, Pad, PadDirectionError}
+  alias Membrane.{ActionError, Buffer, ElementError, Event, Pad, PadDirectionError, StreamFormat}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{CapsController, DemandHandler, PadController, State}
+  alias Membrane.Core.Element.{DemandHandler, PadController, State, StreamFormatController}
   alias Membrane.Core.{Events, Message, TimerController}
   alias Membrane.Core.Telemetry
   alias Membrane.Element.Action
@@ -38,7 +38,15 @@ defmodule Membrane.Core.Element.ActionHandler do
   @impl CallbackHandler
   def handle_action({action, _}, _cb, _params, %State{playback: playback})
       when playback != :playing and
-             action in [:buffer, :event, :caps, :demand, :redemand, :forward, :end_of_stream] do
+             action in [
+               :buffer,
+               :event,
+               :stream_format,
+               :demand,
+               :redemand,
+               :forward,
+               :end_of_stream
+             ] do
     raise ActionError, action: action, reason: {:invalid_component_playback, playback}
   end
 
@@ -79,9 +87,14 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:caps, {pad_ref, caps}}, _cb, _params, %State{type: type} = state)
+  def handle_action(
+        {:stream_format, {pad_ref, stream_format}},
+        _cb,
+        _params,
+        %State{type: type} = state
+      )
       when type in [:source, :filter, :endpoint] and is_pad_ref(pad_ref) do
-    send_caps(pad_ref, caps, state)
+    send_stream_format(pad_ref, stream_format, state)
   end
 
   @impl CallbackHandler
@@ -102,7 +115,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   @impl CallbackHandler
   def handle_action({:forward, data}, cb, params, %State{type: :filter} = state)
       when cb in [
-             :handle_caps,
+             :handle_stream_format,
              :handle_event,
              :handle_process_list,
              :handle_end_of_stream
@@ -120,7 +133,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         case cb do
           :handle_event -> {:event, {pad, data}}
           :handle_process_list -> {:buffer, {pad, data}}
-          :handle_caps -> {:caps, {pad, data}}
+          :handle_stream_format -> {:stream_format, {pad, data}}
           :handle_end_of_stream -> {:end_of_stream, pad}
         end
 
@@ -268,11 +281,11 @@ defmodule Membrane.Core.Element.ActionHandler do
     with %{
            direction: :output,
            end_of_stream?: false,
-           caps: caps,
+           stream_format: stream_format,
            pid: pid,
            other_ref: other_ref
          }
-         when caps != nil <- pad_data do
+         when stream_format != nil <- pad_data do
       state =
         DemandHandler.handle_outgoing_buffers(pad_ref, pad_data, buffers, state)
         |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
@@ -287,9 +300,9 @@ defmodule Membrane.Core.Element.ActionHandler do
         raise ElementError,
               "Tried to send a buffer through a pad #{inspect(pad_ref)} where end of stream has already been sent"
 
-      %{caps: nil} ->
+      %{stream_format: nil} ->
         raise ElementError,
-              "Tried to send a buffer through a pad #{inspect(pad_ref)} where caps have not been sent yet"
+              "Tried to send a buffer through a pad #{inspect(pad_ref)} where stream format have not been sent yet"
     end
   end
 
@@ -297,11 +310,11 @@ defmodule Membrane.Core.Element.ActionHandler do
     raise ElementError, "Tried to send an invalid buffer #{inspect(invalid_value)}"
   end
 
-  @spec send_caps(Pad.ref_t(), Caps.t(), State.t()) :: State.t()
-  def send_caps(pad_ref, caps, state) do
+  @spec send_stream_format(Pad.ref_t(), StreamFormat.t(), State.t()) :: State.t()
+  def send_stream_format(pad_ref, stream_format, state) do
     Membrane.Logger.debug("""
-    Sending caps through pad #{inspect(pad_ref)}
-    Caps: #{inspect(caps)}
+    Sending stream format through pad #{inspect(pad_ref)}
+    Stream format: #{inspect(stream_format)}
     """)
 
     pad_data = PadModel.get_data!(state, pad_ref)
@@ -311,17 +324,25 @@ defmodule Membrane.Core.Element.ActionHandler do
            pid: pid,
            other_ref: other_ref,
            name: pad_name,
-           caps_validation_params: caps_validation_params
+           stream_format_validation_params: stream_format_validation_params
          } <- pad_data do
-      caps_validation_params = [{state.module, pad_name} | caps_validation_params]
-      :ok = CapsController.validate_caps!(:output, caps_validation_params, caps)
+      stream_format_validation_params = [
+        {state.module, pad_name} | stream_format_validation_params
+      ]
 
-      state = PadModel.set_data!(state, pad_ref, :caps, caps)
-      Message.send(pid, :caps, caps, for_pad: other_ref)
+      :ok =
+        StreamFormatController.validate_stream_format!(
+          :output,
+          stream_format_validation_params,
+          stream_format
+        )
+
+      state = PadModel.set_data!(state, pad_ref, :stream_format, stream_format)
+      Message.send(pid, :stream_format, stream_format, for_pad: other_ref)
       state
     else
       %{direction: :input} ->
-        raise PadDirectionError, action: :caps, direction: :input, pad: pad_ref
+        raise PadDirectionError, action: :stream_format, direction: :input, pad: pad_ref
     end
   end
 

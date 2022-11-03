@@ -1,17 +1,17 @@
-defmodule Membrane.Support.CapsTest.Sink do
+defmodule Membrane.Support.AcceptedFormatTest.RestrictiveSink do
   @moduledoc """
-  Sink used in caps test.
+  Sink used in accepted format tests.
   Sends a message with its own pid to the process specified in the options.
-  Notifies parent on caps arrival.
+  Notifies parent on stream format arrival.
   """
 
   use Membrane.Endpoint
 
-  alias Membrane.Support.CapsTest.Stream
+  alias Membrane.Support.AcceptedFormatTest.StreamFormat
 
   def_input_pad :input,
     demand_unit: :buffers,
-    caps: Stream,
+    accepted_format: %StreamFormat{format: StreamFormat.AcceptedByAll},
     availability: :always,
     mode: :push
 
@@ -24,7 +24,7 @@ defmodule Membrane.Support.CapsTest.Sink do
   end
 
   @impl true
-  def handle_caps(:input, caps, _ctx, state) do
-    {{:ok, notify_parent: {:caps_received, caps}}, state}
+  def handle_stream_format(:input, stream_format, _ctx, state) do
+    {{:ok, notify_parent: {:stream_format_received, stream_format}}, state}
   end
 end

@@ -71,7 +71,8 @@ defmodule Membrane.Filter do
       def membrane_element_type, do: :filter
 
       @impl true
-      def handle_caps(_pad, caps, _context, state), do: {{:ok, forward: caps}, state}
+      def handle_stream_format(_pad, stream_format, _context, state),
+        do: {{:ok, forward: stream_format}, state}
 
       @impl true
       def handle_event(_pad, event, _context, state), do: {{:ok, forward: event}, state}
@@ -90,7 +91,7 @@ defmodule Membrane.Filter do
       def handle_end_of_stream(pad, _context, state),
         do: {{:ok, forward: :end_of_stream}, state}
 
-      defoverridable handle_caps: 4,
+      defoverridable handle_stream_format: 4,
                      handle_event: 4,
                      handle_process_list: 4,
                      handle_process: 4,

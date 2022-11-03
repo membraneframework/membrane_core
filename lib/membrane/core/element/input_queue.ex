@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.InputQueue do
   @moduledoc false
   # Queue that is attached to the `:input` pad when working in a `:pull` mode.
 
-  # It stores `Membrane.Buffer`, `Membrane.Event` and `Membrane.Caps` structs and
+  # It stores `Membrane.Buffer`, `Membrane.Event` and `Membrane.StreamFormat` structs and
   # prevents the situation where the data in a stream contains the discontinuities.
   # It also guarantees that element won't be flooded with the incoming data.
 
@@ -18,9 +18,9 @@ defmodule Membrane.Core.Element.InputQueue do
 
   @qe Qex
 
-  @non_buf_types [:event, :caps]
+  @non_buf_types [:event, :stream_format]
 
-  @type output_value_t :: {:event | :caps, any} | {:buffers, list, pos_integer}
+  @type output_value_t :: {:event | :stream_format, any} | {:buffers, list, pos_integer}
   @type output_t :: {:empty | :value, [output_value_t]}
 
   @type t :: %__MODULE__{

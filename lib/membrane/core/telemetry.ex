@@ -8,7 +8,7 @@ defmodule Membrane.Core.Telemetry do
   @telemetry_flags Application.compile_env(:membrane_core, :telemetry_flags, [])
 
   @doc """
-  Reports metrics such as input buffer's size inside functions, incoming events and received caps.
+  Reports metrics such as input buffer's size inside functions, incoming events and received stream format.
   """
   defmacro report_metric(metric, value, log_tag \\ nil) do
     event =
