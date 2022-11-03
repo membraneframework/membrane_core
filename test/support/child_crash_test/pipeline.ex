@@ -27,9 +27,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
       |> get_child(:sink)
     ]
 
-    spec = %Membrane.ChildrenSpec{
-      structure: children ++ links
-    }
+    spec = children ++ links
 
     {{:ok, spec: spec, playback: :playing}, %{}}
   end
@@ -50,13 +48,11 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
       |> get_child(:center_filter)
     ]
 
-    spec = %Membrane.ChildrenSpec{
-      structure: children ++ links
-    }
+    spec = children ++ links
 
     spec =
       if group do
-        %{spec | crash_group: {group, :temporary}}
+        {spec, crash_group: {group, :temporary}}
       else
         spec
       end
@@ -72,13 +68,11 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
       get_child(source_name) |> get_child(bin_name) |> get_child(:center_filter)
     ]
 
-    spec = %Membrane.ChildrenSpec{
-      structure: children ++ links
-    }
+    spec = children ++ links
 
     spec =
       if group do
-        %{spec | crash_group: {group, :temporary}}
+        {spec, crash_group: {group, :temporary}}
       else
         spec
       end
@@ -104,13 +98,11 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
         get_child(first_elem) |> get_child(second_elem)
       end)
 
-    spec = %Membrane.ChildrenSpec{
-      structure: children ++ links
-    }
+    spec = children ++ links
 
     spec =
       if group do
-        %{spec | crash_group: {group, :temporary}}
+        {spec, crash_group: {group, :temporary}}
       else
         spec
       end

@@ -251,24 +251,26 @@ defmodule Membrane.ChildrenSpec do
 
   @default_child_opts [get_if_exists: false]
 
-  @typedoc """
-  Struct used when starting and linking children within a pipeline or a bin.
-  """
-  @type t :: %__MODULE__{
-          structure: structure_spec_t,
+  @type children_spec_options_t :: [
           crash_group: Membrane.CrashGroup.t(),
           stream_sync: :sinks | [[Child.name_t()]],
           clock_provider: Child.name_t() | nil,
           node: node() | nil,
           log_metadata: Keyword.t()
-        }
+        ]
 
-  defstruct structure: [],
-            crash_group: nil,
-            stream_sync: [],
-            clock_provider: nil,
-            node: nil,
-            log_metadata: []
+  @default_childrenspec_options [
+    links: [],
+    crash_group: nil,
+    stream_sync: [],
+    clock_provider: nil,
+    node: nil,
+    log_metadata: []
+  ]
+  @typedoc """
+  Struct used when starting and linking children within a pipeline or a bin.
+  """
+  @type t :: {structure_spec_t, children_spec_options_t}
 
   @doc """
   Used to refer to an existing child at a beggining of a link specification.
@@ -524,6 +526,18 @@ defmodule Membrane.ChildrenSpec do
         from_pad: pad,
         from_pad_props: Enum.into(props, %{})
     }
+  end
+
+  @spec set_default_childrenspec_options(t()) :: t()
+  def set_default_childrenspec_options({structure, options}) do
+    structure = Bunch.listify(structure)
+    options = Keyword.merge(@default_childrenspec_options, options)
+
+    {structure, options}
+  end
+
+  def set_default_childrenspec_options(spec) do
+    set_default_childrenspec_options({spec, []})
   end
 
   defp validate_pad_name(pad) when Pad.is_pad_name(pad) or Pad.is_pad_ref(pad) do

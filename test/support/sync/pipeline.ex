@@ -26,8 +26,8 @@ defmodule Membrane.Support.Sync.Pipeline do
       get_child(:source_b) |> get_child(:sink_b)
     ]
 
-    %Membrane.ChildrenSpec{
-      structure: children ++ links,
+    {
+      children ++ links,
       stream_sync: :sinks
     }
   end

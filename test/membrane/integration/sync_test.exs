@@ -52,12 +52,12 @@ defmodule Membrane.Integration.SyncTest do
   end
 
   test "synchronize dynamically spawned elements" do
-    spec = Membrane.Support.Sync.Pipeline.default_spec()
-    spec = %{spec | stream_sync: [[:sink_a, :sink_b]]}
+    {structure, spec_options} = Membrane.Support.Sync.Pipeline.default_spec()
+    spec = {structure, Keyword.put(spec_options, :stream_sync, [[:sink_a, :sink_b]])}
 
     options = [
       module: Membrane.Support.Sync.Pipeline,
-      custom_args: %Membrane.ChildrenSpec{}
+      custom_args: []
     ]
 
     pipeline = Testing.Pipeline.start_link_supervised!(options)
@@ -70,11 +70,12 @@ defmodule Membrane.Integration.SyncTest do
   end
 
   test "synchronize selected groups" do
-    spec = Membrane.Support.Sync.Pipeline.default_spec()
+    {structure, spec_options} = Membrane.Support.Sync.Pipeline.default_spec()
+    spec = {structure, Keyword.put(spec_options, :stream_sync, [[:sink_a, :sink_b]])}
 
     options = [
       module: Membrane.Support.Sync.Pipeline,
-      custom_args: %{spec | stream_sync: [[:sink_a, :sink_b]]}
+      custom_args: spec
     ]
 
     pipeline = Testing.Pipeline.start_link_supervised!(options)
@@ -91,10 +92,10 @@ defmodule Membrane.Integration.SyncTest do
 
     @impl true
     def handle_init(_ctx, _options) do
-      children = [filter1: TestFilter, filter2: TestFilter]
+      children = [child(:filter1, TestFilter), child(:filter2, TestFilter)]
 
-      spec = %Membrane.ChildrenSpec{
-        structure: children,
+      spec = {
+        children,
         stream_sync: []
       }
 
@@ -110,14 +111,14 @@ defmodule Membrane.Integration.SyncTest do
       child(:el2, SimpleBin)
     ]
 
-    spec = %Membrane.ChildrenSpec{
-      structure: children,
+    spec = {
+      children,
       stream_sync: [[:el1, :el2]]
     }
 
     options = [
       module: Membrane.Support.Sync.Pipeline,
-      custom_args: %{spec | stream_sync: [[:el1, :el2]]}
+      custom_args: spec
     ]
 
     assert {:error, reason} = Testing.Pipeline.start_link_supervised(options)

@@ -20,12 +20,9 @@ defmodule Membrane.Support.CapsTest.InnerSourceBin do
 
   @impl true
   def handle_init(_ctx, %__MODULE__{test_pid: test_pid, caps: caps}) do
-    spec = %Membrane.ChildrenSpec{
-      structure: [
-        child(:source, %CapsTest.Source{test_pid: test_pid, caps: caps})
-        |> bin_output()
-      ]
-    }
+    spec =
+      child(:source, %CapsTest.Source{test_pid: test_pid, caps: caps})
+      |> bin_output()
 
     {{:ok, spec: spec}, %{}}
   end

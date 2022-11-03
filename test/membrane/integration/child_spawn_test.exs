@@ -17,8 +17,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
 
     @impl true
     def handle_init(_ctx, structure) do
-      spec = %ChildrenSpec{structure: structure}
-      {{:ok, spec: spec}, %{}}
+      {{:ok, spec: structure}, %{}}
     end
   end
 
@@ -48,8 +47,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
       |> child(:sink, SinkThatNotifiesParent, get_if_exists: true)
     ]
 
-    spec = %ChildrenSpec{structure: structure}
-    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: structure)
     # a workaround - I need to wait for some time for pads to link, so that not let the
     # "unlinked pads" exception be thrown
     :timer.sleep(1000)
@@ -71,8 +69,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
       |> child(:sink, Testing.Sink, get_if_exists: true)
     ]
 
-    spec = %ChildrenSpec{structure: structure}
-    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec, playback: :playing)
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: structure, playback: :playing)
     assert_pipeline_play(pipeline_pid)
   end
 
@@ -89,8 +86,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
       |> child(:sink, Testing.Sink)
     ]
 
-    spec = %ChildrenSpec{structure: structure}
-    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: structure)
     # a workaround - I need to wait for some time for pads to link, so that not let the
     # "unlinked pads" exception be thrown
     :timer.sleep(1000)
@@ -117,8 +113,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
       |> child(:sink, Testing.Sink, get_if_exists: true)
     ]
 
-    spec = %ChildrenSpec{structure: structure}
-    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: structure)
     # a workaround - I need to wait for some time for pads to link, so that not let the
     # "unlinked pads" exception be thrown
     :timer.sleep(1000)

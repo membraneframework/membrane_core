@@ -8,7 +8,7 @@ defmodule Membrane.Testing.PipelineTest do
     use Membrane.Pipeline
 
     @impl true
-    def handle_init(_ctx, _opts), do: {{:ok, spec: %ChildrenSpec{}}, :state}
+    def handle_init(_ctx, _opts), do: {{:ok, spec: []}, :state}
   end
 
   describe "Testing pipeline creation" do
@@ -21,9 +21,7 @@ defmodule Membrane.Testing.PipelineTest do
 
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
-      assert spec == %Membrane.ChildrenSpec{
-               structure: elements ++ links
-             }
+      assert spec == elements ++ links
     end
 
     test "by default chooses :default implementation" do
@@ -33,15 +31,13 @@ defmodule Membrane.Testing.PipelineTest do
       assert {{:ok, spec: spec, playback: :playing}, state} = Pipeline.handle_init(%{}, options)
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
-      assert spec == %Membrane.ChildrenSpec{
-               structure: links
-             }
+      assert spec == links
     end
 
     test "works with custom module injected" do
       options = [module: MockPipeline, test_process: nil, custom_args: []]
       assert {{:ok, spec: spec}, state} = Pipeline.handle_init(%{}, options)
-      assert spec == %Membrane.ChildrenSpec{}
+      assert spec == []
 
       assert state == %Pipeline.State{
                custom_pipeline_state: :state,
@@ -59,9 +55,7 @@ defmodule Membrane.Testing.PipelineTest do
       assert {{:ok, spec: spec, playback: :playing}, state} = Pipeline.handle_init(%{}, options)
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
-      assert spec == %Membrane.ChildrenSpec{
-               structure: links
-             }
+      assert spec == links
     end
   end
 

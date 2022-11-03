@@ -212,9 +212,7 @@ defmodule Membrane.Testing.Pipeline do
       :default ->
         structure = Bunch.listify(Keyword.get(options, :structure, []))
 
-        spec = %Membrane.ChildrenSpec{
-          structure: structure
-        }
+        spec = structure
 
         new_state = %State{test_process: Keyword.fetch!(options, :test_process), module: nil}
         {{:ok, [spec: spec, playback: :playing]}, new_state}

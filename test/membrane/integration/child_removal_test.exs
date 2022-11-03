@@ -165,7 +165,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
       def handle_init(_ctx, opts) do
         Process.register(self(), __MODULE__)
         links = [child(:source, RemovalDeferSource) |> bin_output()]
-        {{:ok, spec: %ChildrenSpec{structure: links}}, Map.from_struct(opts)}
+        {{:ok, spec: links}, Map.from_struct(opts)}
       end
 
       @impl true

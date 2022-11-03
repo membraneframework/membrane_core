@@ -60,32 +60,36 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     for all other pending specs that depended on the spec.
   """
   @spec handle_spec(ChildrenSpec.t(), Parent.state_t()) :: Parent.state_t() | no_return()
-  def handle_spec(%ChildrenSpec{} = spec, state) do
+  def handle_spec(spec, state) do
+    {structure, options} = ChildrenSpec.set_default_childrenspec_options(spec)
     spec_ref = make_ref()
 
     Membrane.Logger.debug("""
     New spec #{inspect(spec_ref)}
-    structure: #{inspect(spec.structure)}
+    structure: #{inspect(structure)}
     """)
 
-    {links, children_specs_extended} = StructureParser.parse(spec.structure)
+    {links, children_specs_extended} = StructureParser.parse(structure)
     children_spec = remove_unecessary_children_specs(children_specs_extended, state)
 
     children = ChildEntryParser.parse(children_spec)
     children = Enum.map(children, &%{&1 | spec_ref: spec_ref})
     :ok = StartupUtils.check_if_children_names_unique(children, state)
-    syncs = StartupUtils.setup_syncs(children, spec.stream_sync)
+    syncs = StartupUtils.setup_syncs(children, Keyword.get(options, :stream_sync))
 
     log_metadata =
       case state do
-        %Bin.State{children_log_metadata: metadata} -> metadata ++ spec.log_metadata
-        %Pipeline.State{} -> spec.log_metadata
+        %Bin.State{children_log_metadata: metadata} ->
+          metadata ++ Keyword.get(options, :log_metadata)
+
+        %Pipeline.State{} ->
+          Keyword.get(options, :log_metadata)
       end
 
     children =
       StartupUtils.start_children(
         children,
-        spec.node,
+        Keyword.get(options, :node),
         state.synchronization.clock_proxy,
         syncs,
         log_metadata,
@@ -96,7 +100,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     children_pids = children |> Enum.map(& &1.pid)
 
     :ok = StartupUtils.maybe_activate_syncs(syncs, state)
-    state = ClockHandler.choose_clock(children, spec.clock_provider, state)
+    state = ClockHandler.choose_clock(children, Keyword.get(options, :clock_provider), state)
     state = %{state | children: Map.merge(state.children, Map.new(children, &{&1.name, &1}))}
     links = LinkUtils.resolve_links(links, spec_ref, state)
     state = %{state | links: Map.merge(state.links, Map.new(links, &{&1.id, &1}))}
@@ -118,9 +122,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     # adding crash group to state
     state =
-      if spec.crash_group do
+      if Keyword.get(options, :crash_group) do
         CrashGroupUtils.add_crash_group(
-          spec.crash_group,
+          Keyword.get(options, :crash_group),
           children_names,
           children_pids,
           state

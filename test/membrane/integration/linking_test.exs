@@ -23,11 +23,7 @@ defmodule Membrane.Integration.LinkingTest do
         child(:source, opts.child)
       ]
 
-      spec = %ChildrenSpec{
-        structure: children
-      }
-
-      {{:ok, spec: spec}, Map.from_struct(opts)}
+      {{:ok, spec: children}, Map.from_struct(opts)}
     end
 
     @impl true
@@ -36,11 +32,7 @@ defmodule Membrane.Integration.LinkingTest do
         get_child(:source) |> bin_output(pad)
       ]
 
-      spec = %ChildrenSpec{
-        structure: links
-      }
-
-      {{:ok, spec: spec}, state}
+      {{:ok, spec: links}, state}
     end
 
     @impl true
@@ -105,13 +97,11 @@ defmodule Membrane.Integration.LinkingTest do
     test "and element is removed normally, handle_pad_removed should be called", %{
       pipeline: pipeline
     } do
-      spec = %Membrane.ChildrenSpec{
-        structure: [
-          child(:bin, %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}),
-          child(:sink, Testing.Sink),
-          get_child(:bin) |> get_child(:sink)
-        ]
-      }
+      spec = [
+        child(:bin, %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}),
+        child(:sink, Testing.Sink),
+        get_child(:bin) |> get_child(:sink)
+      ]
 
       send(pipeline, {:start_spec, %{spec: spec}})
       assert_receive(:spec_started)
@@ -124,28 +114,20 @@ defmodule Membrane.Integration.LinkingTest do
     end
 
     test "and element crashes, bin forwards the unlink message to child", %{pipeline: pipeline} do
-      bin_spec = %Membrane.ChildrenSpec{
-        structure: [
-          child(:bin, %Bin{
-            child: %Testing.Source{output: ['a', 'b', 'c']},
-            remove_child_on_unlink: false
-          })
-        ],
+      bin_spec = {
+        child(:bin, %Bin{
+          child: %Testing.Source{output: ['a', 'b', 'c']},
+          remove_child_on_unlink: false
+        }),
         crash_group: {:group_1, :temporary}
       }
 
-      sink_spec = %Membrane.ChildrenSpec{
-        structure: [
-          child(:sink, Testing.Sink)
-        ],
+      sink_spec = {
+        child(:sink, Testing.Sink),
         crash_group: {:group_2, :temporary}
       }
 
-      links_spec = %Membrane.ChildrenSpec{
-        structure: [
-          get_child(:bin) |> get_child(:sink)
-        ]
-      }
+      links_spec = get_child(:bin) |> get_child(:sink)
 
       send(pipeline, {:start_spec, %{spec: bin_spec}})
       assert_receive(:spec_started)
@@ -176,25 +158,14 @@ defmodule Membrane.Integration.LinkingTest do
   test "element should crash when its neighbor connected via static pad crashes", %{
     pipeline: pipeline
   } do
-    spec_1 = %Membrane.ChildrenSpec{
-      structure: [
-        child(:source, %Testing.Source{output: ['a', 'b', 'c']})
-      ],
+    spec_1 = {
+      child(:source, %Testing.Source{output: ['a', 'b', 'c']}),
       crash_group: {:group_1, :temporary}
     }
 
-    spec_2 = %Membrane.ChildrenSpec{
-      structure: [
-        child(:sink, Testing.Sink)
-      ],
-      crash_group: {:group_2, :temporary}
-    }
+    spec_2 = {child(:sink, Testing.Sink), crash_group: {:group_2, :temporary}}
 
-    links_spec = %Membrane.ChildrenSpec{
-      structure: [
-        get_child(:source) |> get_child(:sink)
-      ]
-    }
+    links_spec = get_child(:source) |> get_child(:sink)
 
     send(pipeline, {:start_spec, %{spec: spec_1}})
     assert_receive(:spec_started)
@@ -210,25 +181,17 @@ defmodule Membrane.Integration.LinkingTest do
   test "element shouldn't crash when its neighbor connected via dynamic pad crashes", %{
     pipeline: pipeline
   } do
-    spec_1 = %Membrane.ChildrenSpec{
-      structure: [
-        child(:source, %Testing.DynamicSource{output: ['a', 'b', 'c']})
-      ],
+    spec_1 = {
+      child(:source, %Testing.DynamicSource{output: ['a', 'b', 'c']}),
       crash_group: {:group_1, :temporary}
     }
 
-    spec_2 = %Membrane.ChildrenSpec{
-      structure: [
-        child(:sink, Testing.Sink)
-      ],
+    spec_2 = {
+      child(:sink, Testing.Sink),
       crash_group: {:group_2, :temporary}
     }
 
-    links_spec = %Membrane.ChildrenSpec{
-      structure: [
-        get_child(:source) |> get_child(:sink)
-      ]
-    }
+    links_spec = get_child(:source) |> get_child(:sink)
 
     send(pipeline, {:start_spec, %{spec: spec_1}})
     assert_receive(:spec_started)
@@ -243,25 +206,17 @@ defmodule Membrane.Integration.LinkingTest do
 
   test "pipeline playback should change successfully after spec with links has been returned",
        %{pipeline: pipeline} do
-    bin_spec = %Membrane.ChildrenSpec{
-      structure: [
-        child(:bin, %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}})
-      ],
+    bin_spec = {
+      child(:bin, %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}),
       crash_group: {:group_1, :temporary}
     }
 
-    sink_spec = %Membrane.ChildrenSpec{
-      structure: [
-        child(:sink, Testing.Sink)
-      ],
+    sink_spec = {
+      child(:sink, Testing.Sink),
       crash_group: {:group_1, :temporary}
     }
 
-    links_spec = %Membrane.ChildrenSpec{
-      structure: [
-        get_child(:bin) |> get_child(:sink)
-      ]
-    }
+    links_spec = get_child(:bin) |> get_child(:sink)
 
     send(pipeline, {:start_spec, %{spec: bin_spec}})
     assert_receive(:spec_started)
@@ -296,31 +251,25 @@ defmodule Membrane.Integration.LinkingTest do
     pipeline = Testing.Pipeline.start_link_supervised!()
 
     Testing.Pipeline.execute_actions(pipeline,
-      spec: %ChildrenSpec{
-        structure: [
-          child(:src1, %Testing.Source{output: []})
-          |> via_in(Pad.ref(:input, 1))
-          |> child(:filter, DynamicFilter)
-          |> via_out(Pad.ref(:output, 1))
-          |> child(:sink1, %SlowSetupSink{setup_delay: 300})
-        ]
-      },
-      spec: %ChildrenSpec{
-        structure: [
-          child(:independent_src, %Testing.Source{output: []})
-          |> child(:independent_filter, DynamicFilter)
-          |> child(:independent_sink, Testing.Sink)
-        ]
-      },
-      spec: %ChildrenSpec{
-        structure: [
-          child(:src2, %Testing.Source{output: []})
-          |> via_in(Pad.ref(:input, 2))
-          |> get_child(:filter)
-          |> via_out(Pad.ref(:output, 2))
-          |> child(:sink2, Testing.Sink)
-        ]
-      }
+      spec: [
+        child(:src1, %Testing.Source{output: []})
+        |> via_in(Pad.ref(:input, 1))
+        |> child(:filter, DynamicFilter)
+        |> via_out(Pad.ref(:output, 1))
+        |> child(:sink1, %SlowSetupSink{setup_delay: 300})
+      ],
+      spec: [
+        child(:independent_src, %Testing.Source{output: []})
+        |> child(:independent_filter, DynamicFilter)
+        |> child(:independent_sink, Testing.Sink)
+      ],
+      spec: [
+        child(:src2, %Testing.Source{output: []})
+        |> via_in(Pad.ref(:input, 2))
+        |> get_child(:filter)
+        |> via_out(Pad.ref(:output, 2))
+        |> child(:sink2, Testing.Sink)
+      ]
     )
 
     assert [
@@ -344,23 +293,21 @@ defmodule Membrane.Integration.LinkingTest do
     pipeline = Testing.Pipeline.start_link_supervised!()
 
     Testing.Pipeline.execute_actions(pipeline,
-      spec: %ChildrenSpec{
-        structure: [
-          child(:source, %Testing.Source{output: [1, 2, 3]})
-          |> child(:filter1, %TestDynamicPadBin{
-            filter1: %TestDynamicPadBin{filter1: TestFilter, filter2: TestFilter},
-            filter2: TestFilter
-          })
-          |> child(:filter2, %TestDynamicPadBin{
-            filter1: %TestDynamicPadBin{
-              filter1: TestFilter,
-              filter2: %TestDynamicPadBin{filter1: TestFilter, filter2: TestFilter}
-            },
+      spec: [
+        child(:source, %Testing.Source{output: [1, 2, 3]})
+        |> child(:filter1, %TestDynamicPadBin{
+          filter1: %TestDynamicPadBin{filter1: TestFilter, filter2: TestFilter},
+          filter2: TestFilter
+        })
+        |> child(:filter2, %TestDynamicPadBin{
+          filter1: %TestDynamicPadBin{
+            filter1: TestFilter,
             filter2: %TestDynamicPadBin{filter1: TestFilter, filter2: TestFilter}
-          })
-          |> child(:sink, Testing.Sink)
-        ]
-      }
+          },
+          filter2: %TestDynamicPadBin{filter1: TestFilter, filter2: TestFilter}
+        })
+        |> child(:sink, Testing.Sink)
+      ]
     )
 
     assert_end_of_stream(pipeline, :sink)

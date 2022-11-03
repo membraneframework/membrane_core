@@ -18,9 +18,7 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
       |> get_child(:sink)
     ]
 
-    spec = %Membrane.ChildrenSpec{
-      structure: children ++ links
-    }
+    spec = children ++ links
 
     {{:ok, spec: spec, playback: :playing}, %{target: opts.target}}
   end

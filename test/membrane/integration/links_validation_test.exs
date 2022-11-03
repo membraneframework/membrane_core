@@ -107,11 +107,7 @@ defmodule Membrane.LinksValidationTest do
       pipeline = Pipeline.start_supervised!(structure: structure)
       ref = Process.monitor(pipeline)
 
-      spec = %Membrane.ChildrenSpec{
-        structure: [
-          get_child(:source) |> get_child(:sink)
-        ]
-      }
+      spec = get_child(:source) |> get_child(:sink)
 
       Pipeline.execute_actions(pipeline, spec: spec)
 
@@ -129,14 +125,11 @@ defmodule Membrane.LinksValidationTest do
       pipeline = Pipeline.start_supervised!(structure: structure)
       ref = Process.monitor(pipeline)
 
-      spec = %Membrane.ChildrenSpec{
-        structure: [
-          get_child(:source)
-          |> via_out(Pad.ref(:output, 1))
-          |> via_in(Pad.ref(:input, 1))
-          |> get_child(:sink)
-        ]
-      }
+      spec =
+        get_child(:source)
+        |> via_out(Pad.ref(:output, 1))
+        |> via_in(Pad.ref(:input, 1))
+        |> get_child(:sink)
 
       Pipeline.execute_actions(pipeline, spec: spec)
 

@@ -55,7 +55,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       ChildrenSpec.get_child(:a) |> ChildrenSpec.get_child(:b) |> ChildrenSpec.get_child(:c)
     ]
 
-    actions = [{:spec, %ChildrenSpec{structure: children ++ links}}]
+    actions = [{:spec, children ++ links}]
 
     Pipeline.exec_actions(pipeline, actions)
     {:ok, pipeline: pipeline}

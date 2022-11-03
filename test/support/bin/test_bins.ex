@@ -84,13 +84,9 @@ defmodule Membrane.Support.Bin.TestBins do
         |> bin_output()
       ]
 
-      spec = %ChildrenSpec{
-        structure: links
-      }
-
       state = %{}
 
-      {{:ok, spec: spec}, state}
+      {{:ok, spec: links}, state}
     end
 
     @impl true
@@ -113,13 +109,9 @@ defmodule Membrane.Support.Bin.TestBins do
         child(:filter, Membrane.Support.ChildCrashTest.Filter)
       ]
 
-      spec = %ChildrenSpec{
-        structure: children
-      }
-
       state = %{}
 
-      {{:ok, spec: spec}, state}
+      {{:ok, spec: children}, state}
     end
 
     @impl true
@@ -128,8 +120,7 @@ defmodule Membrane.Support.Bin.TestBins do
         bin_input(pad) |> get_child(:filter)
       ]
 
-      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ChildrenSpec{structure: links}},
-       state}
+      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: links}, state}
     end
 
     def handle_pad_added(Pad.ref(:output, _id) = pad, _ctx, state) do
@@ -137,8 +128,7 @@ defmodule Membrane.Support.Bin.TestBins do
         get_child(:filter) |> bin_output(pad)
       ]
 
-      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ChildrenSpec{structure: links}},
-       state}
+      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: links}, state}
     end
   end
 
@@ -159,13 +149,9 @@ defmodule Membrane.Support.Bin.TestBins do
         child(:filter1, opts.filter1) |> child(:filter2, opts.filter2)
       ]
 
-      spec = %ChildrenSpec{
-        structure: links
-      }
-
       state = %{}
 
-      {{:ok, spec: spec}, state}
+      {{:ok, spec: links}, state}
     end
 
     @impl true
@@ -174,8 +160,7 @@ defmodule Membrane.Support.Bin.TestBins do
         bin_input(pad) |> get_child(:filter1)
       ]
 
-      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ChildrenSpec{structure: links}},
-       state}
+      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: links}, state}
     end
 
     def handle_pad_added(Pad.ref(:output, _id) = pad, _ctx, state) do
@@ -183,8 +168,7 @@ defmodule Membrane.Support.Bin.TestBins do
         get_child(:filter2) |> bin_output(pad)
       ]
 
-      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: %ChildrenSpec{structure: links}},
-       state}
+      {{:ok, notify_parent: {:handle_pad_added, pad}, spec: links}, state}
     end
   end
 
@@ -201,13 +185,9 @@ defmodule Membrane.Support.Bin.TestBins do
     def handle_init(_ctx, opts) do
       links = [bin_input() |> child(:filter, opts.filter) |> child(:sink, opts.sink)]
 
-      spec = %ChildrenSpec{
-        structure: links
-      }
-
       state = %{}
 
-      {{:ok, spec: spec}, state}
+      {{:ok, spec: links}, state}
     end
 
     @impl true
@@ -237,13 +217,9 @@ defmodule Membrane.Support.Bin.TestBins do
     def handle_init(_ctx, opts) do
       links = [child(:source, opts.source) |> child(:sink, opts.sink)]
 
-      spec = %ChildrenSpec{
-        structure: links
-      }
-
       state = %{}
 
-      {{:ok, spec: spec}, state}
+      {{:ok, spec: links}, state}
     end
 
     @impl true
@@ -302,13 +278,9 @@ defmodule Membrane.Support.Bin.TestBins do
         |> bin_output()
       ]
 
-      spec = %ChildrenSpec{
-        structure: links
-      }
-
       state = %{}
 
-      {{:ok, spec: spec}, state}
+      {{:ok, spec: links}, state}
     end
 
     @impl true

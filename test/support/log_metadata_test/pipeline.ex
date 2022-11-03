@@ -32,10 +32,7 @@ defmodule Membrane.Support.LogMetadataTest.Pipeline do
       opts.elements
       |> Enum.map(fn {element_name, element_metadata} ->
         {:spec,
-         %Membrane.ChildrenSpec{
-           structure: [child(element_name, MetadataNotifyingElement)],
-           log_metadata: [test: element_metadata]
-         }}
+         {child(element_name, MetadataNotifyingElement), log_metadata: [test: element_metadata]}}
       end)
 
     {{:ok, actions}, %{}}

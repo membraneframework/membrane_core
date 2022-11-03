@@ -21,12 +21,10 @@ defmodule Membrane.Support.CapsTest.OuterSinkBin do
 
   @impl true
   def handle_init(_ctx, %__MODULE__{test_pid: test_pid}) do
-    spec = %Membrane.ChildrenSpec{
-      structure: [
-        bin_input()
-        |> child(:sink, %CapsTest.InnerSinkBin{test_pid: test_pid})
-      ]
-    }
+    spec = [
+      bin_input()
+      |> child(:sink, %CapsTest.InnerSinkBin{test_pid: test_pid})
+    ]
 
     {{:ok, spec: spec}, %{}}
   end

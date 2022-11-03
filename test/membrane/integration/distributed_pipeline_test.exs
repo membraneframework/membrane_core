@@ -16,14 +16,14 @@ defmodule Membrane.Integration.DistributedPipelineTest do
       @impl true
       def handle_init(_ctx, _opts) do
         {{:ok,
-          spec: %Membrane.ChildrenSpec{
-            structure: [
+          spec: {
+            [
               child(:source, %Source{output: [1, 2, 3, 4, 5]})
             ],
             node: :"first@127.0.0.1"
           },
-          spec: %Membrane.ChildrenSpec{
-            structure: [
+          spec: {
+            [
               get_child(:source)
               |> via_in(:input, toilet_capacity: 100, throttling_factor: 50)
               |> child(:sink, Sink)

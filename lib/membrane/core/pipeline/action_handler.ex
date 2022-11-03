@@ -30,7 +30,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:spec, spec = %ChildrenSpec{}}, _cb, _params, state) do
+  def handle_action({:spec, spec}, _cb, _params, state) do
     Parent.ChildLifeController.handle_spec(spec, state)
   end
 
