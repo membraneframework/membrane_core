@@ -10,7 +10,7 @@ defmodule Membrane.Core.ElementTest do
 
   defmodule SomeElement do
     use Membrane.Source
-    def_output_pad :output, caps: _any
+    def_output_pad :output, accepted_format: _any
 
     def_options test_pid: [spec: pid | nil, default: nil]
 
@@ -23,10 +23,10 @@ defmodule Membrane.Core.ElementTest do
   defmodule Filter do
     use Membrane.Filter
 
-    def_output_pad :output, caps: _any
+    def_output_pad :output, accepted_format: _any
 
     def_input_pad :dynamic_input,
-      caps: _any,
+      accepted_format: _any,
       demand_unit: :buffers,
       availability: :on_request
 
@@ -41,7 +41,7 @@ defmodule Membrane.Core.ElementTest do
     end
   end
 
-  defmodule Caps do
+  defmodule StreamFormat do
     defstruct []
   end
 
@@ -79,7 +79,7 @@ defmodule Membrane.Core.ElementTest do
             initiator: :sibling,
             other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
             link_metadata: %{toilet: nil, observability_metadata: %{}},
-            caps_validation_params: []
+            stream_format_validation_params: []
           }
         ]),
         nil,
@@ -109,7 +109,7 @@ defmodule Membrane.Core.ElementTest do
             initiator: :sibling,
             other_info: %{direction: :output, mode: :pull},
             link_metadata: %{toilet: nil, observability_metadata: %{}},
-            caps_validation_params: []
+            stream_format_validation_params: []
           }
         ]),
         nil,
@@ -144,13 +144,13 @@ defmodule Membrane.Core.ElementTest do
     assert state == original_state
   end
 
-  test "should store demand/buffer/caps/event when not playing" do
+  test "should store demand/buffer/event/stream format when not playing" do
     initial_state = linked_state()
 
     [
       Message.new(:demand, 10, for_pad: :output),
       Message.new(:buffer, %Membrane.Buffer{payload: <<>>}, for_pad: :dynamic_input),
-      Message.new(:caps, %Caps{}, for_pad: :dynamic_input),
+      Message.new(:stream_format, %StreamFormat{}, for_pad: :dynamic_input),
       Message.new(:event, %Membrane.Testing.Event{}, for_pad: :dynamic_input),
       Message.new(:event, %Membrane.Testing.Event{}, for_pad: :output)
     ]
@@ -174,17 +174,17 @@ defmodule Membrane.Core.ElementTest do
     assert state.pads_data.dynamic_input.input_queue.size == 1
   end
 
-  test "should assign incoming caps to the pad and forward them" do
+  test "should assign incoming stream_format to the pad and forward them" do
     assert {:noreply, state} =
              Element.handle_info(
-               Message.new(:caps, %Caps{}, for_pad: :dynamic_input),
+               Message.new(:stream_format, %StreamFormat{}, for_pad: :dynamic_input),
                playing_state()
              )
 
-    assert state.pads_data.dynamic_input.caps == %Caps{}
-    assert state.pads_data.output.caps == %Caps{}
+    assert state.pads_data.dynamic_input.stream_format == %StreamFormat{}
+    assert state.pads_data.output.stream_format == %StreamFormat{}
 
-    assert_receive Message.new(:caps, %Caps{}, for_pad: :dynamic_input)
+    assert_receive Message.new(:stream_format, %StreamFormat{}, for_pad: :dynamic_input)
   end
 
   test "should forward events" do
@@ -215,7 +215,7 @@ defmodule Membrane.Core.ElementTest do
                    initiator: :sibling,
                    other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
                    link_metadata: %{toilet: nil, observability_metadata: %{}},
-                   caps_validation_params: []
+                   stream_format_validation_params: []
                  }
                ]),
                nil,

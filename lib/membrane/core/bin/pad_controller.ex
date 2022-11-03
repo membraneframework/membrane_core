@@ -10,7 +10,7 @@ defmodule Membrane.Core.Bin.PadController do
   alias Membrane.Core.Bin.{ActionHandler, State}
   alias Membrane.Core.{CallbackHandler, Child, Message}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.CapsController
+  alias Membrane.Core.Element.StreamFormatController
   alias Membrane.Core.Parent.{ChildLifeController, Link, StructureParser}
 
   require Membrane.Core.Child.PadModel
@@ -160,12 +160,17 @@ defmodule Membrane.Core.Bin.PadController do
           Pad.direction_t(),
           StructureParser.raw_endpoint_t(),
           StructureParser.raw_endpoint_t(),
-          %{initiator: :parent, caps_validation_params: CapsController.caps_validation_params_t()}
+          %{
+            initiator: :parent,
+            stream_format_validation_params:
+              StreamFormatController.stream_format_validation_params_t()
+          }
           | %{
               initiator: :sibling,
               other_info: PadModel.pad_info_t() | nil,
               link_metadata: map,
-              caps_validation_params: CapsController.caps_validation_params_t()
+              stream_format_validation_params:
+                StreamFormatController.stream_format_validation_params_t()
             },
           Core.Bin.State.t()
         ) :: {Core.Element.PadController.link_call_reply_t(), Core.Bin.State.t()}
@@ -206,7 +211,7 @@ defmodule Membrane.Core.Bin.PadController do
     params =
       Map.update!(
         params,
-        :caps_validation_params,
+        :stream_format_validation_params,
         &[{state.module, pad_name} | &1]
       )
 
@@ -292,7 +297,7 @@ defmodule Membrane.Core.Bin.PadController do
 
   defp init_pad_data(pad_ref, info, state) do
     data =
-      Map.delete(info, :caps_pattern_str)
+      Map.delete(info, :accepted_formats_str)
       |> Map.merge(%{
         ref: pad_ref,
         link_id: nil,

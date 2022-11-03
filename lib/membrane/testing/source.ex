@@ -37,7 +37,7 @@ defmodule Membrane.Testing.Source do
   @type generator ::
           (state :: any(), buffers_cnt :: pos_integer -> {[Action.t()], state :: any()})
 
-  def_output_pad :output, caps: _any
+  def_output_pad :output, accepted_format: _any
 
   def_options output: [
                 spec: {initial_state :: any(), generator} | Enum.t(),
@@ -58,11 +58,11 @@ defmodule Membrane.Testing.Source do
                 used for the next call.
                 """
               ],
-              caps: [
+              stream_format: [
                 spec: struct(),
                 default: %Membrane.RemoteStream{},
                 description: """
-                Caps to be sent before the `output`.
+                StreamFormat to be sent before the `output`.
                 """
               ]
 
@@ -81,7 +81,7 @@ defmodule Membrane.Testing.Source do
 
   @impl true
   def handle_playing(_ctx, state) do
-    {{:ok, caps: {:output, state.caps}}, state}
+    {{:ok, stream_format: {:output, state.stream_format}}, state}
   end
 
   @impl true

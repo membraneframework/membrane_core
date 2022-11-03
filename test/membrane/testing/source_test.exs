@@ -11,8 +11,9 @@ defmodule Membrane.Testing.SourceTest do
              Source.handle_init(%{}, %Source{output: {:abc, generator}})
   end
 
-  test "Source sends caps on play" do
-    assert {{:ok, caps: {:output, :caps}}, _state} = Source.handle_playing(nil, %{caps: :caps})
+  test "Source sends stream format on play" do
+    assert {{:ok, stream_format: {:output, :stream_format}}, _state} =
+             Source.handle_playing(nil, %{stream_format: :stream_format})
   end
 
   describe "Source when handling demand" do

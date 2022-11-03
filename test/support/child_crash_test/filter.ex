@@ -6,9 +6,9 @@ defmodule Membrane.Support.ChildCrashTest.Filter do
 
   use Membrane.Filter
 
-  def_output_pad :output, caps: _any
+  def_output_pad :output, accepted_format: _any
 
-  def_input_pad :input, demand_unit: :buffers, caps: _any, availability: :on_request
+  def_input_pad :input, demand_unit: :buffers, accepted_format: _any, availability: :on_request
 
   @impl true
   def handle_init(_ctx, _opts) do

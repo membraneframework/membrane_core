@@ -1,4 +1,4 @@
-defmodule Membrane.Caps do
+defmodule Membrane.StreamFormat do
   @moduledoc """
   Describes capabilities of some pad.
 

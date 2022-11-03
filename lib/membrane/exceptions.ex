@@ -124,7 +124,7 @@ defmodule Membrane.ElementError do
   defexception [:message]
 end
 
-defmodule Membrane.CapsError do
+defmodule Membrane.StreamFormatError do
   defexception [:message]
 end
 

@@ -1,4 +1,4 @@
-defmodule Membrane.FailWhenNoCapsAreSent do
+defmodule Membrane.FailWhenNoStreamFormatAreSent do
   use ExUnit.Case
 
   import Membrane.Testing.Assertions
@@ -6,10 +6,10 @@ defmodule Membrane.FailWhenNoCapsAreSent do
 
   alias Membrane.Testing.{Pipeline, Sink, Source}
 
-  defmodule SourceWhichDoesNotSendCaps do
+  defmodule SourceWhichDoesNotSendStreamFormat do
     use Membrane.Source
 
-    def_output_pad :output, caps: _any, mode: :pull
+    def_output_pad :output, accepted_format: _any, mode: :pull
 
     @impl true
     def handle_init(_ctx, _options) do
@@ -33,9 +33,9 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     end
   end
 
-  test "if pipeline crashes when the caps are not sent before the first buffer" do
+  test "if pipeline crashes when the stream format are not sent before the first buffer" do
     links = [
-      child(:source, SourceWhichDoesNotSendCaps)
+      child(:source, SourceWhichDoesNotSendStreamFormat)
       |> child(:sink, Sink)
     ]
 
@@ -56,10 +56,10 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     Pipeline.message_child(pipeline, :source, :send_buffer)
     assert_receive {:DOWN, ^source_ref, :process, ^source_pid, {reason, _stack_trace}}
     assert %Membrane.ElementError{message: action_error_msg} = reason
-    assert action_error_msg =~ ~r/buffer.*caps.*not.*sent/
+    assert action_error_msg =~ ~r/buffer.*stream.*format.*not.*sent/
   end
 
-  test "if pipeline works properly when caps are sent before the first buffer" do
+  test "if pipeline works properly when stream format are sent before the first buffer" do
     links = [
       child(:source, Source)
       |> child(:sink, Sink)
