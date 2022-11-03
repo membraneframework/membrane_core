@@ -24,7 +24,7 @@ defmodule Membrane.Buffer do
   defstruct @enforce_keys ++ [pts: nil, dts: nil, metadata: Map.new()]
 
   @doc """
-  Returns `Membrane.Buffer.t()` `:dts` if available or `:pts` if `:dts` is not set.
+  Returns `t:Membrane.Buffer.t/0` `:dts` if available or `:pts` if `:dts` is not set.
   If none of them is set `nil` is returned.
   """
   @spec get_dts_or_pts(__MODULE__.t()) :: Time.t() | nil

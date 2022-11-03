@@ -1,4 +1,5 @@
 import Config
 
-config :junit_formatter,
-  include_filename?: true
+if config_env() == :test do
+  config :junit_formatter, include_filename?: true
+end

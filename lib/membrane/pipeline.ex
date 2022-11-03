@@ -79,7 +79,7 @@ defmodule Membrane.Pipeline do
   @type config_entry :: {:name, name()}
 
   @type on_start ::
-          {:ok, pipeline_pid :: pid, supervisor_pid :: pid}
+          {:ok, supervisor_pid :: pid, pipeline_pid :: pid}
           | {:error, {:already_started, pid()} | term()}
 
   @type state :: map | struct
