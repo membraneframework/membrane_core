@@ -298,12 +298,9 @@ defmodule Membrane.ChildrenSpec do
 
   See the _structure_ section of the moduledoc for more information.
   """
-  @spec child(
-          structure_builder_t | Child.name_t(),
-          Child.name_t() | child_definition_t(),
-          child_definition_t() | child_opts_t()
-        ) ::
+  @spec child(structure_builder_t(), Child.name_t(), child_definition_t()) ::
           structure_builder_t()
+  @spec child(Child.name_t(), child_definition_t(), child_opts_t()) :: structure_builder_t()
   def child(child_name, child_definition, opts \\ @default_child_opts)
 
   def child(%StructureBuilder{} = structure_builder, child_name, child_definition) do

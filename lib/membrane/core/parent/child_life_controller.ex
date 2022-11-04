@@ -71,10 +71,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     structure: #{inspect(specs_with_other_options)}
     """)
 
-    {links, children_specs_extended} = StructureParser.parse(specs_for_this_options)
-    children_spec = remove_unecessary_children_specs(children_specs_extended, state)
+    {children_specs, links} = StructureParser.parse(specs_for_this_options)
+    children_specs = remove_unecessary_children_specs(children_specs, state)
 
-    children = ChildEntryParser.parse(children_spec)
+    children = ChildEntryParser.parse(children_specs)
     children = Enum.map(children, &%{&1 | spec_ref: spec_ref})
     :ok = StartupUtils.check_if_children_names_unique(children, state)
     syncs = StartupUtils.setup_syncs(children, Keyword.get(options, :stream_sync))
@@ -309,11 +309,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   @spec handle_remove_children(
-          Membrane.Child.name_t()
-          | [Membrane.Child.name_t()],
+          Membrane.Child.name_t() | [Membrane.Child.name_t()],
           Parent.state_t()
-        ) ::
-          Parent.state_t()
+        ) :: Parent.state_t()
   def handle_remove_children(names, state) do
     names = names |> Bunch.listify()
     Membrane.Logger.debug("Removing children: #{inspect(names)}")
@@ -348,8 +346,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
           child_name :: Membrane.Child.name_t(),
           reason :: any(),
           state :: Parent.state_t()
-        ) ::
-          {:stop | :continue, Parent.state_t()}
+        ) :: {:stop | :continue, Parent.state_t()}
   def handle_child_death(child_name, reason, state) do
     state = do_handle_child_death(child_name, reason, state)
 
@@ -475,19 +472,18 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     |> CrashGroupUtils.remove_crash_group_if_empty(group.name)
   end
 
-  defp remove_unecessary_children_specs(children_spec, state) do
+  defp remove_unecessary_children_specs(children_specs, state) do
     %{children: state_children} = state
 
-    children_spec
-    |> Enum.map(fn
-      {name, child_spec, [get_if_exists: get_if_exists] = options} ->
-        if get_if_exists do
-          if Map.has_key?(state_children, name), do: nil, else: {name, child_spec, options}
+    children_specs
+    |> Enum.filter(fn
+      {name, child_spec, options} ->
+        if Keyword.get(options, :get_if_exists) and Map.has_key?(state_children, name) do
+          false
         else
-          {name, child_spec, options}
+          true
         end
     end)
-    |> Enum.filter(&(&1 != nil))
   end
 
   defp make_canonical({structure, options}) do

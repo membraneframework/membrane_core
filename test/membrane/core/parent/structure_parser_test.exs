@@ -20,7 +20,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
       |> bin_output()
     ]
 
-    assert {links, []} = StructureParser.parse(links_spec)
+    assert {[], links} = StructureParser.parse(links_spec)
 
     assert [
              %Link{
@@ -98,7 +98,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
       get_child(:d) |> get_child(:b) |> get_child(:e)
     ]
 
-    assert {links, []} = StructureParser.parse(links_spec)
+    assert {[], links} = StructureParser.parse(links_spec)
 
     assert [
              %Link{
@@ -196,7 +196,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     import Membrane.ChildrenSpec
 
     links_spec = [child(:a, A) |> child(:b, B) |> child(:c, C)]
-    assert {links, children} = StructureParser.parse(links_spec)
+    assert {children, links} = StructureParser.parse(links_spec)
 
     assert [
              %Link{
