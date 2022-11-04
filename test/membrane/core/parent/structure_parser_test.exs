@@ -234,9 +234,9 @@ defmodule Membrane.Core.Parent.StructureParserTest do
            ] = links
 
     assert Enum.sort(children) == [
-             {:a, A, [dont_spawn_if_already_exists: false]},
-             {:b, B, [dont_spawn_if_already_exists: false]},
-             {:c, C, [dont_spawn_if_already_exists: false]}
+             {:a, A, [get_if_exists: false]},
+             {:b, B, [get_if_exists: false]},
+             {:c, C, [get_if_exists: false]}
            ]
   end
 end

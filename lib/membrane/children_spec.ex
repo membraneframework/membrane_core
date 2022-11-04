@@ -205,7 +205,7 @@ defmodule Membrane.ChildrenSpec do
               link_starting_child: nil
 
     @type t :: %__MODULE__{
-            children: [Membrane.ChildrenSpec.child_spec_extended_t()],
+            children: [Membrane.ChildrenSpec.child_spec_t()],
             links: [map],
             status: status_t,
             from_pad: Membrane.Pad.name_t() | Membrane.Pad.ref_t() | nil,
@@ -237,17 +237,16 @@ defmodule Membrane.ChildrenSpec do
     end
   end
 
-  @type pad_options_t :: Keyword.t()
   @opaque structure_builder_t :: StructureBuilder.t()
 
-  @type child_spec_t :: struct() | module()
+  @type pad_options_t :: Keyword.t()
+
+  @type child_definition_t :: struct() | module()
   @type child_opts_t :: [get_if_exists: boolean]
-
-  @type child_spec_extension_options_t :: [dont_spawn_if_exists: boolean()]
-  @type child_spec_extended_t ::
-          {Child.name_t(), child_spec_t(), child_spec_extension_options_t()}
-
   @default_child_opts [get_if_exists: false]
+
+  @type child_spec_t ::
+          {Child.name_t(), child_definition_t(), child_opts_t()}
 
   @type childrenspec_options_t :: [
           crash_group: Membrane.CrashGroup.t(),
@@ -256,7 +255,6 @@ defmodule Membrane.ChildrenSpec do
           node: node() | nil,
           log_metadata: Keyword.t()
         ]
-
   @default_childrenspec_options [
     crash_group: nil,
     stream_sync: [],
@@ -302,30 +300,28 @@ defmodule Membrane.ChildrenSpec do
   """
   @spec child(
           structure_builder_t | Child.name_t(),
-          Child.name_t() | child_spec_t(),
-          child_spec_t() | child_opts_t()
+          Child.name_t() | child_definition_t(),
+          child_definition_t() | child_opts_t()
         ) ::
           structure_builder_t()
-  def child(child_name, child_spec, opts \\ @default_child_opts)
+  def child(child_name, child_definition, opts \\ @default_child_opts)
 
-  def child(%StructureBuilder{} = structure_builder, child_name, child_spec) do
-    do_child(structure_builder, child_name, child_spec, @default_child_opts)
+  def child(%StructureBuilder{} = structure_builder, child_name, child_definition) do
+    do_child(structure_builder, child_name, child_definition, @default_child_opts)
   end
 
-  def child(child_name, child_spec, options) when is_child_name?(child_name) do
-    do_child(child_name, child_spec, options)
+  def child(child_name, child_definition, options) when is_child_name?(child_name) do
+    do_child(child_name, child_definition, options)
   end
 
   def child(_first_arg, _second_arg, _third_arg) do
     raise "Link builder cannot be used as a child name! Perhaps you meant to use get_child/2?"
   end
 
-  defp do_child(child_name, child_spec, opts) do
-    child_spec_extended =
-      {child_name, child_spec,
-       dont_spawn_if_already_exists: Keyword.get(opts, :get_if_exists, false)}
-
-    %StructureBuilder{children: [child_spec_extended], link_starting_child: child_name}
+  defp do_child(child_name, child_definition, opts) do
+    opts = Keyword.merge(@default_child_opts, opts)
+    child_spec = {child_name, child_definition, opts}
+    %StructureBuilder{children: [child_spec], link_starting_child: child_name}
   end
 
   @doc """
@@ -333,16 +329,15 @@ defmodule Membrane.ChildrenSpec do
 
   See the _structure_ section of the moduledoc for more information.
   """
-  @spec child(structure_builder_t(), Child.name_t(), child_spec_t(), child_opts_t()) ::
+  @spec child(structure_builder_t(), Child.name_t(), child_definition_t(), child_opts_t()) ::
           structure_builder_t()
-  def child(structure_builder, child_name, child_spec, opts) do
-    do_child(structure_builder, child_name, child_spec, opts)
+  def child(structure_builder, child_name, child_definition, opts) do
+    do_child(structure_builder, child_name, child_definition, opts)
   end
 
-  defp do_child(%StructureBuilder{} = structure_builder, child_name, child_spec, opts) do
-    child_spec_extended =
-      {child_name, child_spec,
-       dont_spawn_if_already_exists: Keyword.get(opts, :get_if_exists, false)}
+  defp do_child(%StructureBuilder{} = structure_builder, child_name, child_definition, opts) do
+    opts = Keyword.merge(@default_child_opts, opts)
+    child_spec = {child_name, child_definition, opts}
 
     if structure_builder.status == :to_pad do
       structure_builder
@@ -350,7 +345,7 @@ defmodule Membrane.ChildrenSpec do
       via_in(structure_builder, :input)
     end
     |> StructureBuilder.finish_link(child_name)
-    |> then(&%StructureBuilder{&1 | children: [child_spec_extended | &1.children]})
+    |> then(&%StructureBuilder{&1 | children: [child_spec | &1.children]})
   end
 
   @doc """
