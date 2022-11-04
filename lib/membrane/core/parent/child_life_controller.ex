@@ -138,6 +138,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     state = StartupUtils.exec_handle_spec_started(children_names, state)
     state = proceed_spec_startup(spec_ref, state)
 
+    specs_with_other_options =
+      Enum.map(specs_with_other_options, fn {inner_spec, inner_options} ->
+        {inner_spec, Keyword.merge(options, inner_options)}
+      end)
+
     Enum.reduce(specs_with_other_options, state, fn spec, state -> handle_spec(spec, state) end)
   end
 
@@ -477,12 +482,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     children_specs
     |> Enum.filter(fn
-      {name, child_spec, options} ->
-        if Keyword.get(options, :get_if_exists) and Map.has_key?(state_children, name) do
-          false
-        else
-          true
-        end
+      {name, _child_spec, options} ->
+        not (Keyword.get(options, :get_if_exists) and Map.has_key?(state_children, name))
     end)
   end
 

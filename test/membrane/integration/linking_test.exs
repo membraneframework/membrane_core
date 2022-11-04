@@ -207,7 +207,7 @@ defmodule Membrane.Integration.LinkingTest do
     assert_pipeline_crash_group_down(pipeline, :group_2)
   end
 
-  test "element shouldn't crash when its neighbor connected via dynamic pad crashes and the crash groups are set withing a nested spec",
+  test "element shouldn't crash when its neighbor connected via dynamic pad crashes and the crash groups are set within nested spec",
        %{
          pipeline: pipeline
        } do
