@@ -24,7 +24,6 @@ defmodule Membrane.Core.Bin.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:spec, spec}, _cb, _params, state) do
-    spec = Membrane.ChildrenSpec.set_default_childrenspec_options(spec)
     Parent.ChildLifeController.handle_spec(spec, state)
   end
 

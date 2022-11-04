@@ -247,11 +247,9 @@ defmodule Membrane.ChildrenSpec do
   @type child_spec_extended_t ::
           {Child.name_t(), child_spec_t(), child_spec_extension_options_t()}
 
-  @type structure_spec_t :: [structure_builder_t()]
-
   @default_child_opts [get_if_exists: false]
 
-  @type children_spec_options_t :: [
+  @type childrenspec_options_t :: [
           crash_group: Membrane.CrashGroup.t(),
           stream_sync: :sinks | [[Child.name_t()]],
           clock_provider: Child.name_t() | nil,
@@ -260,7 +258,6 @@ defmodule Membrane.ChildrenSpec do
         ]
 
   @default_childrenspec_options [
-    links: [],
     crash_group: nil,
     stream_sync: [],
     clock_provider: nil,
@@ -270,7 +267,7 @@ defmodule Membrane.ChildrenSpec do
   @typedoc """
   Struct used when starting and linking children within a pipeline or a bin.
   """
-  @type t :: {structure_spec_t, children_spec_options_t}
+  @type t :: structure_builder_t() | [t()] | {t(), childrenspec_options_t()}
 
   @doc """
   Used to refer to an existing child at a beggining of a link specification.
@@ -528,17 +525,11 @@ defmodule Membrane.ChildrenSpec do
     }
   end
 
-  @spec set_default_childrenspec_options(t()) :: t()
-  def set_default_childrenspec_options({structure, options}) do
-    structure = Bunch.listify(structure)
-    options = Keyword.merge(@default_childrenspec_options, options)
-
-    {structure, options}
-  end
-
-  def set_default_childrenspec_options(spec) do
-    set_default_childrenspec_options({spec, []})
-  end
+  @doc """
+  Returns a keyword list with default children specification options.
+  """
+  @spec get_default_childrenspec_options() :: childrenspec_options_t
+  def get_default_childrenspec_options(), do: @default_childrenspec_options
 
   defp validate_pad_name(pad) when Pad.is_pad_name(pad) or Pad.is_pad_ref(pad) do
     :ok

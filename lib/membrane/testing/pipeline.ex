@@ -113,7 +113,7 @@ defmodule Membrane.Testing.Pipeline do
   @type options ::
           [
             module: :default,
-            structure: ChildrenSpec.structure_spec_t(),
+            structure: [ChildrenSpec.structure_builder_t()],
             test_process: pid(),
             name: Pipeline.name()
           ]

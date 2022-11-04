@@ -61,15 +61,17 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   """
   @spec handle_spec(ChildrenSpec.t(), Parent.state_t()) :: Parent.state_t() | no_return()
   def handle_spec(spec, state) do
-    {structure, options} = ChildrenSpec.set_default_childrenspec_options(spec)
+    {spec, options} = make_canonical(spec)
+    specs_with_other_options = Enum.filter(spec, &is_tuple(&1))
+    specs_for_this_options = Enum.filter(spec, &(not is_tuple(&1)))
     spec_ref = make_ref()
 
     Membrane.Logger.debug("""
     New spec #{inspect(spec_ref)}
-    structure: #{inspect(structure)}
+    structure: #{inspect(specs_with_other_options)}
     """)
 
-    {links, children_specs_extended} = StructureParser.parse(structure)
+    {links, children_specs_extended} = StructureParser.parse(specs_for_this_options)
     children_spec = remove_unecessary_children_specs(children_specs_extended, state)
 
     children = ChildEntryParser.parse(children_spec)
@@ -134,7 +136,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       end
 
     state = StartupUtils.exec_handle_spec_started(children_names, state)
-    proceed_spec_startup(spec_ref, state)
+    state = proceed_spec_startup(spec_ref, state)
+
+    Enum.reduce(specs_with_other_options, state, fn spec, state -> handle_spec(spec, state) end)
   end
 
   @spec handle_spec_timeout(spec_ref_t(), Parent.state_t()) ::
@@ -484,5 +488,16 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         end
     end)
     |> Enum.filter(&(&1 != nil))
+  end
+
+  defp make_canonical({structure, options}) do
+    structure = Bunch.listify(structure)
+    options = Keyword.merge(ChildrenSpec.get_default_childrenspec_options(), options)
+
+    {structure, options}
+  end
+
+  defp make_canonical(spec) do
+    make_canonical({spec, []})
   end
 end

@@ -18,7 +18,7 @@ defmodule Membrane.Core.Parent.StructureParser do
           pad_props: map()
         }
 
-  @spec parse(ChildrenSpec.structure_spec_t()) ::
+  @spec parse([ChildrenSpec.structure_builder_t()]) ::
           {[raw_link_t], [ChildrenSpec.child_spec_extended_t()]} | no_return
   def parse(structure) when is_list(structure) do
     {links, children} =
@@ -65,7 +65,7 @@ defmodule Membrane.Core.Parent.StructureParser do
 
   def parse(structure), do: from_spec_error(structure)
 
-  @spec from_spec_error(ChildrenSpec.structure_spec_t()) :: no_return
+  @spec from_spec_error([ChildrenSpec.structure_builder_t()]) :: no_return
   defp from_spec_error(structure) do
     raise ParentError, """
     Invalid structure specification: #{inspect(structure)}. The link lacks it destination.

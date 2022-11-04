@@ -207,6 +207,31 @@ defmodule Membrane.Integration.LinkingTest do
     assert_pipeline_crash_group_down(pipeline, :group_2)
   end
 
+  test "element shouldn't crash when its neighbor connected via dynamic pad crashes and the crash groups are set withing a nested spec",
+       %{
+         pipeline: pipeline
+       } do
+    spec_inner = {
+      child(:sink, Testing.Sink),
+      crash_group: {:group_2, :temporary}
+    }
+
+    spec = {
+      [spec_inner, child(:source, %Testing.DynamicSource{output: ['a', 'b', 'c']})],
+      crash_group: {:group_1, :temporary}
+    }
+
+    links_spec = get_child(:source) |> get_child(:sink)
+
+    send(pipeline, {:start_spec, %{spec: spec}})
+    assert_receive(:spec_started)
+    send(pipeline, {:start_spec_and_kill, %{spec: links_spec, children_to_kill: [:sink]}})
+    assert_receive(:spec_started)
+
+    refute_pipeline_crash_group_down(pipeline, :group_1)
+    assert_pipeline_crash_group_down(pipeline, :group_2)
+  end
+
   test "pipeline playback should change successfully after spec with links has been returned",
        %{pipeline: pipeline} do
     bin_spec = {
