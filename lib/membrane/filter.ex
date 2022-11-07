@@ -51,6 +51,8 @@ defmodule Membrane.Filter do
               state :: Element.state_t()
             ) :: Membrane.Element.Base.callback_return_t()
 
+  @optional_callbacks handle_process: 4
+
   @doc """
   Brings all the stuff necessary to implement a filter element.
 
@@ -65,7 +67,6 @@ defmodule Membrane.Filter do
       use Membrane.Element.WithInputPads
 
       @behaviour unquote(__MODULE__)
-      @dialyzer {:no_return, {:handle_process, 4}}
 
       @doc false
       @spec membrane_element_type() :: Membrane.Element.type_t()
@@ -77,15 +78,6 @@ defmodule Membrane.Filter do
 
       @impl true
       def handle_event(_pad, event, _context, state), do: {[forward: event], state}
-
-      @impl true
-      def handle_process(_pad, _buffer, _context, state) do
-        raise Membrane.CallbackError,
-          kind: :not_implemented,
-          callback: {__MODULE__, :handle_process}
-
-        {[], state}
-      end
 
       @impl true
       def handle_process_list(pad, buffers, _context, state) do
@@ -100,7 +92,6 @@ defmodule Membrane.Filter do
       defoverridable handle_stream_format: 4,
                      handle_event: 4,
                      handle_process_list: 4,
-                     handle_process: 4,
                      handle_end_of_stream: 3
     end
   end

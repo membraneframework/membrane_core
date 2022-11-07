@@ -52,6 +52,8 @@ defmodule Membrane.Endpoint do
               state :: Element.state_t()
             ) :: Membrane.Element.Base.callback_return_t()
 
+  @optional_callbacks handle_write: 4
+
   @doc """
   Brings all the stuff necessary to implement a endpoint element.
 
@@ -65,20 +67,10 @@ defmodule Membrane.Endpoint do
       use Membrane.Element.WithInputPads
 
       @behaviour unquote(__MODULE__)
-      @dialyzer {:no_return, {:handle_write, 4}}
 
       @doc false
       @spec membrane_element_type() :: Membrane.Element.type_t()
       def membrane_element_type, do: :endpoint
-
-      @impl true
-      def handle_write(_pad, _buffer, _context, state) do
-        raise Membrane.CallbackError,
-          kind: :not_implemented,
-          callback: {__MODULE__, :handle_write}
-
-        {[], state}
-      end
 
       @impl true
       def handle_write_list(pad, buffers, _context, state) do
@@ -86,8 +78,7 @@ defmodule Membrane.Endpoint do
         {[split: {:handle_write, args_list}], state}
       end
 
-      defoverridable handle_write_list: 4,
-                     handle_write: 4
+      defoverridable handle_write_list: 4
     end
   end
 
