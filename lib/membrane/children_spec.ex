@@ -243,7 +243,7 @@ defmodule Membrane.ChildrenSpec do
 
   @type child_definition_t :: struct() | module()
   @type child_opts_t :: [get_if_exists: boolean]
-  @default_child_opts [get_if_exists: false]
+  @default_child_opts [get_if_exists: [default: false]]
 
   @type child_spec_t ::
           {Child.name_t(), child_definition_t(), child_opts_t()}
@@ -256,11 +256,11 @@ defmodule Membrane.ChildrenSpec do
           log_metadata: Keyword.t()
         ]
   @default_childrenspec_options [
-    crash_group: nil,
-    stream_sync: [],
-    clock_provider: nil,
-    node: nil,
-    log_metadata: []
+    crash_group: [default: nil],
+    stream_sync: [default: []],
+    clock_provider: [default: nil],
+    node: [default: nil],
+    log_metadata: [default: []]
   ]
   @typedoc """
   Struct used when starting and linking children within a pipeline or a bin.
@@ -301,10 +301,10 @@ defmodule Membrane.ChildrenSpec do
   @spec child(structure_builder_t(), Child.name_t(), child_definition_t()) ::
           structure_builder_t()
   @spec child(Child.name_t(), child_definition_t(), child_opts_t()) :: structure_builder_t()
-  def child(child_name, child_definition, opts \\ @default_child_opts)
+  def child(child_name, child_definition, opts \\ [])
 
   def child(%StructureBuilder{} = structure_builder, child_name, child_definition) do
-    do_child(structure_builder, child_name, child_definition, @default_child_opts)
+    do_child(structure_builder, child_name, child_definition, [])
   end
 
   def child(child_name, child_definition, options) when is_child_name?(child_name) do
@@ -316,7 +316,7 @@ defmodule Membrane.ChildrenSpec do
   end
 
   defp do_child(child_name, child_definition, opts) do
-    opts = Keyword.merge(@default_child_opts, opts)
+    {:ok, opts} = Bunch.Config.parse(opts, @default_child_opts)
     child_spec = {child_name, child_definition, opts}
     %StructureBuilder{children: [child_spec], link_starting_child: child_name}
   end
@@ -333,7 +333,7 @@ defmodule Membrane.ChildrenSpec do
   end
 
   defp do_child(%StructureBuilder{} = structure_builder, child_name, child_definition, opts) do
-    opts = Keyword.merge(@default_child_opts, opts)
+    {:ok, opts} = Bunch.Config.parse(opts, @default_child_opts)
     child_spec = {child_name, child_definition, opts}
 
     if structure_builder.status == :to_pad do
