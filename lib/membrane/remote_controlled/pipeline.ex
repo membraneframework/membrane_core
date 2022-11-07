@@ -8,7 +8,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   ```
     children = ...
     links = ...
-    actions = [{:spec, %ChildrenSpec{children: children, links: links}}]
+    actions = [{:spec, children++links}]
     Pipeline.exec_actions(pipeline, actions)
   ```
 
@@ -318,7 +318,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
     ```
     children = ...
     links = ...
-    actions = [{:spec, %ChildrenSpec{children: children, links: links}}]
+    actions = [{:spec, children++links}]
     Pipeline.exec_actions(pipeline, actions)
     ```
   """

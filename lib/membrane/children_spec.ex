@@ -103,7 +103,7 @@ defmodule Membrane.ChildrenSpec do
   @impl true
   def handle_pad_added(Pad.ref(:input, _) = pad, _ctx, state) do
   structure = [bin_input(pad) |> get_child(:mixer)]
-  {{:ok, spec: %ChildrenSpec{structure: structure}}, state}
+  {{:ok, spec: structure}, state}
   end
 
   ## Stream sync
@@ -121,8 +121,8 @@ defmodule Membrane.ChildrenSpec do
   Sample definitions:
 
   ```
-  %ChildrenSpec{stream_sync: [[:element1, :element2], [:element3, :element4]]}
-  %ChildrenSpec{stream_sync: :sinks}
+  {[], stream_sync: [[:element1, :element2], [:element3, :element4]]}
+  {[], stream_sync: :sinks}
   ```
 
   ## Clock provider
@@ -147,7 +147,7 @@ defmodule Membrane.ChildrenSpec do
     }
   ]
 
-  spec = %ChildrenSpec{structure: children, crash_group: {group_id, :temporary}}
+  spec = children, crash_group: {group_id, :temporary}
   ```
 
   The crash group is defined by a two-element tuple, first element is an ID which is of type
