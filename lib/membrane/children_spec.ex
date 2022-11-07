@@ -1,15 +1,17 @@
 defmodule Membrane.ChildrenSpec do
   @moduledoc """
-  Structure representing the topology of a pipeline/bin.
+  A module with functionalities that allow to represent a topology of a pipeline/bin.
 
-  It can be incorporated into a pipeline or a bin by returning
+  The children specification (commonly refered as a "children_spec") is represented by the following type:
+  `t:t/0`
+
+  The describes the desired topology and can be incorporated into a pipeline or a bin by returning
   `t:Membrane.Pipeline.Action.spec_t/0` or `t:Membrane.Bin.Action.spec_t/0`
   action, respectively. This commonly happens within `c:Membrane.Pipeline.handle_init/2`
   and `c:Membrane.Bin.handle_init/2`, but can be done in any other callback also.
 
-  ## Structure
-  The most important part of the `Membrane.ChildrenSpec` is the `:structure` field.
-  The structure allows specifying the children that need to be spawned in the action, as well as
+  ## Children structure
+  The children structure allows specifying the children that need to be spawned in the action, as well as
   links between the children (both the children spawned in that action, and already existing children).
 
   The children's processes are spawned with the use of `child/3` and `child/4` functions.
@@ -102,8 +104,8 @@ defmodule Membrane.ChildrenSpec do
 
   @impl true
   def handle_pad_added(Pad.ref(:input, _) = pad, _ctx, state) do
-  structure = [bin_input(pad) |> get_child(:mixer)]
-  {{:ok, spec: structure}, state}
+    structure = [bin_input(pad) |> get_child(:mixer)]
+    {{:ok, spec: structure}, state}
   end
 
   ## Stream sync
@@ -119,10 +121,10 @@ defmodule Membrane.ChildrenSpec do
   By default, no elements are synchronized.
 
   Sample definitions:
-
   ```
-  {[], stream_sync: [[:element1, :element2], [:element3, :element4]]}
-  {[], stream_sync: :sinks}
+  children = ...
+  {children, stream_sync: [[:element1, :element2], [:element3, :element4]]}
+  {children, stream_sync: :sinks}
   ```
 
   ## Clock provider
@@ -147,7 +149,7 @@ defmodule Membrane.ChildrenSpec do
     }
   ]
 
-  spec = children, crash_group: {group_id, :temporary}
+  spec = {structure, crash_group: {group_id, :temporary}}
   ```
 
   The crash group is defined by a two-element tuple, first element is an ID which is of type
@@ -157,8 +159,6 @@ defmodule Membrane.ChildrenSpec do
   In the above snippet, we create new children - `:some_element_1` and `:some_element_2`, we add them
   to the crash group with id `group_id`. Crash of `:some_element_1` or `:some_element_2` propagates
   only to the rest of the members of the crash group and the pipeline stays alive.
-
-  Currently, the crash group covers all children within one or more `ChildrenSpec`s.
 
   ### Handling crash of a crash group
 
@@ -179,8 +179,7 @@ defmodule Membrane.ChildrenSpec do
   Crash groups work only in pipelines and are not supported in bins.
 
   ## Log metadata
-  `:log_metadata` field can be used to set the `Membrane.Logger` metadata for all children from that
-  `Membrane.ChildrenSpec`
+  `:log_metadata` field can be used to set the `Membrane.Logger` metadata for all children in given children specification.
   """
 
   import Membrane.Child, only: [is_child_name?: 1]
@@ -266,7 +265,7 @@ defmodule Membrane.ChildrenSpec do
         }
 
   @typedoc """
-  Struct used when starting and linking children within a pipeline or a bin.
+  Used to describe the inner topology of the pipeline/bin.
   """
   @type t :: structure_builder_t() | [t()] | {t(), children_spec_options_t()}
 
