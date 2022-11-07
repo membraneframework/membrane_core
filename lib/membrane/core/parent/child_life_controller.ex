@@ -31,6 +31,14 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @type pending_specs_t :: %{spec_ref_t() => pending_spec_t()}
 
+  @default_childrenspec_options [
+    crash_group: [default: nil],
+    stream_sync: [default: []],
+    clock_provider: [default: nil],
+    node: [default: nil],
+    log_metadata: [default: []]
+  ]
+
   @doc """
   Handles `Membrane.ChildrenSpec` returned with `spec` action.
 
@@ -66,7 +74,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   defp do_handle_spec(specs, state, previous_level_options_keywords_list \\ []) do
     {specs, options_map, options_keywords_list} =
-      ChildrenSpec.make_canonical(specs, previous_level_options_keywords_list)
+      make_canonical(specs, previous_level_options_keywords_list)
 
     {inner_specs, this_level_specs} = Enum.split_with(specs, &is_tuple(&1))
     spec_ref = make_ref()
@@ -483,9 +491,24 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     %{children: state_children} = state
 
     children_specs
-    |> Enum.filter(fn
+    |> Enum.reject(fn
       {name, _child_spec, options} ->
-        not (options.get_if_exists and Map.has_key?(state_children, name))
+        options.get_if_exists and Map.has_key?(state_children, name)
     end)
+  end
+
+  defp make_canonical({spec, options_keywords_list}, previous_level_options_keywords_list) do
+    spec = Bunch.listify(spec)
+
+    options_keywords_list =
+      Keyword.merge(previous_level_options_keywords_list, options_keywords_list)
+
+    {:ok, options_map} = Bunch.Config.parse(options_keywords_list, @default_childrenspec_options)
+
+    {spec, options_map, options_keywords_list}
+  end
+
+  defp make_canonical(spec, previous_level_options_keywords_list) do
+    make_canonical({spec, []}, previous_level_options_keywords_list)
   end
 end

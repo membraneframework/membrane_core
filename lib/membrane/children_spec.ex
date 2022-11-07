@@ -250,20 +250,13 @@ defmodule Membrane.ChildrenSpec do
   @type child_spec_t ::
           {Child.name_t(), child_definition_t(), child_opts_map_t()}
 
-  @type childrenspec_options_t :: [
+  @type children_spec_options_t :: [
           crash_group: Membrane.CrashGroup.t() | nil,
           stream_sync: :sinks | [[Child.name_t()]],
           clock_provider: Child.name_t() | nil,
           node: node() | nil,
           log_metadata: Keyword.t()
         ]
-  @default_childrenspec_options [
-    crash_group: [default: nil],
-    stream_sync: [default: []],
-    clock_provider: [default: nil],
-    node: [default: nil],
-    log_metadata: [default: []]
-  ]
   @type childrenspec_options_map_t :: %{
           crash_group: Membrane.CrashGroup.t() | nil,
           stream_sync: :sinks | [[Child.name_t()]],
@@ -275,7 +268,7 @@ defmodule Membrane.ChildrenSpec do
   @typedoc """
   Struct used when starting and linking children within a pipeline or a bin.
   """
-  @type t :: structure_builder_t() | [t()] | {t(), childrenspec_options_t()}
+  @type t :: structure_builder_t() | [t()] | {t(), children_spec_options_t()}
 
   @doc """
   Used to refer to an existing child at a beggining of a link specification.
@@ -322,7 +315,7 @@ defmodule Membrane.ChildrenSpec do
   end
 
   def child(_first_arg, _second_arg, _third_arg) do
-    raise "Link builder cannot be used as a child name! Perhaps you meant to use get_child/2?"
+    raise "Improper child name! Perhaps you meant to use get_child/2 while building your link?"
   end
 
   defp do_child(child_name, child_definition, opts) do
@@ -525,32 +518,6 @@ defmodule Membrane.ChildrenSpec do
         from_pad: pad,
         from_pad_props: Enum.into(props, %{})
     }
-  end
-
-  @doc """
-  Returns a canonical representation of a given children specification and propagates the children specification
-  options to the inner specifications.
-
-  A cannonical representation of a children specification is of the following form:
-  ```
-  {list(children_spec_t()), childrenspec_options_t}
-  ```
-  """
-  @spec make_canonical(t(), childrenspec_options_t()) ::
-          {t(), childrenspec_options_map_t(), childrenspec_options_t()}
-  def make_canonical({spec, options_keywords_list}, previous_level_options_keywords_list) do
-    spec = Bunch.listify(spec)
-
-    options_keywords_list =
-      Keyword.merge(previous_level_options_keywords_list, options_keywords_list)
-
-    {:ok, options_map} = Bunch.Config.parse(options_keywords_list, @default_childrenspec_options)
-
-    {spec, options_map, options_keywords_list}
-  end
-
-  def make_canonical(spec, previous_level_options_keywords_list) do
-    make_canonical({spec, []}, previous_level_options_keywords_list)
   end
 
   defp validate_pad_name(pad) when Pad.is_pad_name(pad) or Pad.is_pad_ref(pad) do
