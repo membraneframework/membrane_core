@@ -58,7 +58,13 @@ defmodule Membrane.Mixfile do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md", "CHANGELOG.md", "CONTRIBUTING.md", LICENSE: [title: "License"]],
+      extras: [
+        "README.md",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
+        "guides/upgrading/v0.11.md",
+        LICENSE: [title: "License"]
+      ],
       formatters: ["html"],
       source_ref: @source_ref,
       nest_modules_by_prefix: [
