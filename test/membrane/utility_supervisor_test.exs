@@ -21,7 +21,7 @@ defmodule Membrane.UtilitySupervisorTest do
            end}
         )
 
-        {{:ok, notify_parent: :setup}, state}
+        {[notify_parent: :setup], state}
       end
     end
 

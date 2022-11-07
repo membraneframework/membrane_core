@@ -18,7 +18,7 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
     @impl true
     def handle_process(:input, %Buffer{payload: <<idx, payload::binary>>}, _ctx, state) do
       payload = for <<i <- payload>>, into: <<>>, do: <<i - 2>>
-      {{:ok, buffer: {:output, %Buffer{payload: <<idx, payload::binary>>}}}, state}
+      {[buffer: {:output, %Buffer{payload: <<idx, payload::binary>>}}], state}
     end
   end
 
@@ -37,7 +37,7 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
           %Buffer{payload: <<idx, payload::binary>>}
         end)
 
-      {{:ok, buffer: {:output, buffers}}, state}
+      {[buffer: {:output, buffers}], state}
     end
   end
 

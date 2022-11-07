@@ -59,19 +59,16 @@ defmodule Membrane.CallbackError do
     %__MODULE__{message: msg}
   end
 
-  defp mk_exception(:error, {module, fun}, opts) do
-    reason = Keyword.fetch!(opts, :reason)
-
-    state =
-      case Keyword.fetch(opts, :state) do
-        {:ok, state} -> "Internal state: #{inspect(state, pretty: true)}"
-        :error -> ""
+  defp mk_exception(:not_implemented, {module, fun}, _opts) do
+    arity =
+      case fun do
+        :handle_demand -> 5
+        :handle_process -> 4
+        :handle_write -> 4
       end
 
     msg = """
-    Error returned from #{inspect(module)}.#{fun}:
-    #{inspect(reason, pretty: true)}
-    #{state}
+    Callback #{fun}/#{arity} not implemented in #{inspect(module)}
     """
 
     %__MODULE__{message: msg}

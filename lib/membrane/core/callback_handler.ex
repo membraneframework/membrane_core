@@ -20,10 +20,7 @@ defmodule Membrane.Core.CallbackHandler do
   @type internal_state_t :: any
 
   @type callback_return_t(action, internal_state) ::
-          {:ok, internal_state}
-          | {{:ok, [action]}, internal_state}
-          | {{:error, any}, internal_state}
-          | {:error, any}
+          {[action], internal_state}
 
   @type callback_return_t :: callback_return_t(any, any)
 
@@ -132,7 +129,7 @@ defmodule Membrane.Core.CallbackHandler do
 
     module
     |> apply(callback, args)
-    |> parse_callback_result(module, callback)
+    |> check_callback_result(module, callback)
   end
 
   defp exec_callback(
@@ -145,7 +142,7 @@ defmodule Membrane.Core.CallbackHandler do
 
     module
     |> apply(callback, args)
-    |> parse_callback_result(module, callback)
+    |> check_callback_result(module, callback)
   end
 
   @spec handle_callback_result(
@@ -185,29 +182,13 @@ defmodule Membrane.Core.CallbackHandler do
     end)
   end
 
-  @spec parse_callback_result(callback_return_t | any, module, callback :: atom) ::
+  @spec check_callback_result(callback_return_t | any, module, callback :: atom) ::
           {list, internal_state_t}
-  defp parse_callback_result({:ok, new_internal_state}, _module, _cb) do
-    {[], new_internal_state}
+  defp check_callback_result({actions, _state} = result, _module, _cb) when is_list(actions) do
+    result
   end
 
-  defp parse_callback_result({{:ok, actions}, new_internal_state}, _module, _cb) do
-    {actions, new_internal_state}
-  end
-
-  defp parse_callback_result({:error, reason}, module, :handle_init) do
-    raise CallbackError, kind: :error, callback: {module, :handle_init}, reason: reason
-  end
-
-  defp parse_callback_result({{:error, reason}, new_internal_state}, module, cb) do
-    raise CallbackError,
-      kind: :error,
-      callback: {module, cb},
-      reason: reason,
-      state: new_internal_state
-  end
-
-  defp parse_callback_result(result, module, cb) do
+  defp check_callback_result(result, module, cb) do
     raise CallbackError, kind: :bad_return, callback: {module, cb}, val: result
   end
 end

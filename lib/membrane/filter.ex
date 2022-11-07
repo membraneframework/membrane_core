@@ -72,24 +72,27 @@ defmodule Membrane.Filter do
 
       @impl true
       def handle_stream_format(_pad, stream_format, _context, state),
-        do: {{:ok, forward: stream_format}, state}
+        do: {[forward: stream_format], state}
 
       @impl true
-      def handle_event(_pad, event, _context, state), do: {{:ok, forward: event}, state}
+      def handle_event(_pad, event, _context, state), do: {[forward: event], state}
 
       @impl true
-      def handle_process(_pad, _buffer, _context, state),
-        do: {{:error, :handle_process_not_implemented}, state}
+      def handle_process(_pad, _buffer, _context, state) do
+        raise Membrane.CallbackError,
+          kind: :not_implemented,
+          callback: {__MODULE__, :handle_process}
+      end
 
       @impl true
       def handle_process_list(pad, buffers, _context, state) do
         args_list = buffers |> Enum.map(&[pad, &1])
-        {{:ok, split: {:handle_process, args_list}}, state}
+        {[split: {:handle_process, args_list}], state}
       end
 
       @impl true
       def handle_end_of_stream(pad, _context, state),
-        do: {{:ok, forward: :end_of_stream}, state}
+        do: {[forward: :end_of_stream], state}
 
       defoverridable handle_stream_format: 4,
                      handle_event: 4,

@@ -4,12 +4,11 @@ defmodule Membrane.FilterAggregator.UnitTest do
   import Mox
 
   alias Membrane.Buffer
+  alias Membrane.Caps.Mock, as: MockCaps
   alias Membrane.Element.PadData
   alias Membrane.FilterAggregator
 
   alias Membrane.Element.CallbackContext.{Event, Playing, Process, StreamManagement}
-
-  alias Membrane.StreamFormat.Mock, as: MockStreamFormat
 
   defmodule ElementWithMembranePads do
     @callback membrane_pads() :: [{Membrane.Pad.name_t(), Membrane.Pad.description_t()}]
@@ -36,7 +35,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
 
     pad_description_template = %{
       availability: :always,
-      stream_format: :any,
+      caps: :any,
       demand_mode: :auto,
       demand_unit: :buffers,
       direction: nil,
@@ -48,7 +47,8 @@ defmodule Membrane.FilterAggregator.UnitTest do
     common_pad_data =
       pad_description_template
       |> Map.merge(%{
-        stream_format: nil,
+        accepted_caps: :any,
+        caps: nil,
         demand: 0,
         ref: nil,
         other_ref: nil,
@@ -170,11 +170,11 @@ defmodule Membrane.FilterAggregator.UnitTest do
       assert pad_data.name == pad
       assert pad_data.ref == pad
       # private fields
-      assert pad_data.stream_format == nil
+      assert pad_data.caps == nil
     end)
   end
 
-  test "handle_playing with stream format sending", test_ctx do
+  test "handle_playing with caps sending", test_ctx do
     expect(FilterA, :handle_playing, fn ctx_a, %{module: FilterA} = state ->
       assert %Playing{
                clock: nil,
@@ -188,19 +188,16 @@ defmodule Membrane.FilterAggregator.UnitTest do
       assert pads.output == test_ctx.gen_pad_data.(:output)
       assert map_size(pads) == 2
 
-      {{:ok, stream_format: {:output, %MockStreamFormat{integer: 1}}}, state}
+      {{:ok, caps: {:output, %MockCaps{integer: 1}}}, state}
     end)
 
-    expect(FilterB, :handle_stream_format, fn :input,
-                                              %MockStreamFormat{integer: 1},
-                                              ctx_b,
-                                              state ->
+    expect(FilterB, :handle_caps, fn :input, %MockCaps{integer: 1}, ctx_b, state ->
       assert state == %{module: FilterB, state: nil}
 
       assert %{
                clock: nil,
                name: :b,
-               old_stream_format: nil,
+               old_caps: nil,
                pads: pads,
                parent_clock: nil,
                playback: :stopped
@@ -210,13 +207,12 @@ defmodule Membrane.FilterAggregator.UnitTest do
       assert pads.output == test_ctx.gen_pad_data.(:output)
       assert map_size(pads) == 2
 
-      {{:ok, stream_format: {:output, %MockStreamFormat{integer: 2}}},
-       %{state | state: :stream_format_sent}}
+      {{:ok, caps: {:output, %MockCaps{integer: 2}}}, %{state | state: :caps_sent}}
     end)
 
     expect(FilterB, :handle_playing, fn ctx_b, state ->
       # ensure proper callbacks order
-      assert state == %{module: FilterB, state: :stream_format_sent}
+      assert state == %{module: FilterB, state: :caps_sent}
 
       assert %Playing{
                clock: nil,
@@ -227,14 +223,10 @@ defmodule Membrane.FilterAggregator.UnitTest do
              } = ctx_b
 
       assert pads.input ==
-               :input
-               |> test_ctx.gen_pad_data.()
-               |> Map.put(:stream_format, %MockStreamFormat{integer: 1})
+               :input |> test_ctx.gen_pad_data.() |> Map.put(:caps, %MockCaps{integer: 1})
 
       assert pads.output ==
-               :output
-               |> test_ctx.gen_pad_data.()
-               |> Map.put(:stream_format, %MockStreamFormat{integer: 2})
+               :output |> test_ctx.gen_pad_data.() |> Map.put(:caps, %MockCaps{integer: 2})
 
       assert map_size(pads) == 2
 
@@ -258,16 +250,16 @@ defmodule Membrane.FilterAggregator.UnitTest do
                %{states: states}
              )
 
-    assert actions == [stream_format: {:output, %MockStreamFormat{integer: 2}}]
+    assert actions == [caps: {:output, %MockCaps{integer: 2}}]
 
     assert [{:a, FilterA, ctx_a, state_a}, {:b, FilterB, ctx_b, state_b}] = states
     assert state_a == %{module: FilterA, state: nil}
-    assert state_b == %{module: FilterB, state: :stream_format_sent}
+    assert state_b == %{module: FilterB, state: :caps_sent}
 
-    assert ctx_a.pads.input.stream_format == nil
-    assert ctx_a.pads.output.stream_format == %MockStreamFormat{integer: 1}
-    assert ctx_b.pads.input.stream_format == %MockStreamFormat{integer: 1}
-    assert ctx_b.pads.output.stream_format == %MockStreamFormat{integer: 2}
+    assert ctx_a.pads.input.caps == nil
+    assert ctx_a.pads.output.caps == %MockCaps{integer: 1}
+    assert ctx_b.pads.input.caps == %MockCaps{integer: 1}
+    assert ctx_b.pads.output.caps == %MockCaps{integer: 2}
 
     assert ctx_a.playback == :playing
     assert ctx_b.playback == :playing

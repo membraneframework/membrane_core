@@ -89,17 +89,13 @@ defmodule Membrane.Pipeline do
 
   ## Return values
 
-    * `{:ok, state}` - Save process state, with no actions to change the pipeline.
-    * `{{:ok, [action]}, state}` - Return a list of actions that will be performed within the
+    * `{[action], state}` - Return a list of actions that will be performed within the
       pipeline. This can be used to start new children, or to send messages to specific children,
       for example. Actions are a tuple of `{type, arguments}`, so may be written in the
       form a keyword list. See `Membrane.Pipeline.Action` for more info.
-    * `{{:error, reason}, state}` - Terminates the pipeline with the given reason.
-    * `{:error, reason}` - raises a `Membrane.CallbackError` with the error tuple.
   """
   @type callback_return_t ::
-          {:ok | {:ok, [Action.t()]} | {:error, any}, state}
-          | {:error, any}
+          {[Action.t()], state}
 
   @doc """
   Callback invoked on initialization of pipeline.
@@ -443,40 +439,40 @@ defmodule Membrane.Pipeline do
 
       @impl true
       def handle_init(_ctx, %_opt_struct{} = options),
-        do: {:ok, options |> Map.from_struct()}
+        do: {[], options |> Map.from_struct()}
 
       @impl true
-      def handle_init(_ctx, options), do: {:ok, options}
+      def handle_init(_ctx, options), do: {[], options}
 
       @impl true
-      def handle_setup(_ctx, state), do: {:ok, state}
+      def handle_setup(_ctx, state), do: {[], state}
 
       @impl true
-      def handle_playing(_ctx, state), do: {:ok, state}
+      def handle_playing(_ctx, state), do: {[], state}
 
       @impl true
-      def handle_info(message, _ctx, state), do: {:ok, state}
+      def handle_info(message, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_spec_started(new_children, _ctx, state), do: {:ok, state}
+      def handle_spec_started(new_children, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_element_start_of_stream(_element, _pad, _ctx, state), do: {:ok, state}
+      def handle_element_start_of_stream(_element, _pad, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_element_end_of_stream(_element, _pad, _ctx, state), do: {:ok, state}
+      def handle_element_end_of_stream(_element, _pad, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_child_notification(notification, element, _ctx, state), do: {:ok, state}
+      def handle_child_notification(notification, element, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_crash_group_down(_group_name, _ctx, state), do: {:ok, state}
+      def handle_crash_group_down(_group_name, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_call(message, _ctx, state), do: {:ok, state}
+      def handle_call(message, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_terminate_request(_ctx, state), do: {{:ok, terminate: :normal}, state}
+      def handle_terminate_request(_ctx, state), do: {[terminate: :normal], state}
 
       defoverridable child_spec: 1,
                      handle_init: 2,

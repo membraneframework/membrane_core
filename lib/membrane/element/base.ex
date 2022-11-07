@@ -54,12 +54,8 @@ defmodule Membrane.Element.Base do
 
   @typedoc """
   Type that defines all valid return values from most callbacks.
-
-  In case of error, a callback is supposed to return `{:error, any}` if it is not
-  passed state, and `{{:error, any}, state}` otherwise.
   """
-  @type callback_return_t ::
-          {:ok | {:ok, [Action.t()]} | {:error, any}, Element.state_t()} | {:error, any}
+  @type callback_return_t :: {[Action.t()], Element.state_t()}
 
   @doc """
   Callback invoked on initialization of element.
@@ -274,34 +270,34 @@ defmodule Membrane.Element.Base do
 
       @impl true
       def handle_init(_ctx, %_opt_struct{} = options),
-        do: {:ok, options |> Map.from_struct()}
+        do: {[], options |> Map.from_struct()}
 
       @impl true
-      def handle_init(_ctx, options), do: {:ok, options}
+      def handle_init(_ctx, options), do: {[], options}
 
       @impl true
-      def handle_setup(_context, state), do: {:ok, state}
+      def handle_setup(_context, state), do: {[], state}
 
       @impl true
-      def handle_playing(_context, state), do: {:ok, state}
+      def handle_playing(_context, state), do: {[], state}
 
       @impl true
-      def handle_info(_message, _context, state), do: {:ok, state}
+      def handle_info(_message, _context, state), do: {[], state}
 
       @impl true
-      def handle_pad_added(_pad, _context, state), do: {:ok, state}
+      def handle_pad_added(_pad, _context, state), do: {[], state}
 
       @impl true
-      def handle_pad_removed(_pad, _context, state), do: {:ok, state}
+      def handle_pad_removed(_pad, _context, state), do: {[], state}
 
       @impl true
-      def handle_event(_pad, _event, _context, state), do: {:ok, state}
+      def handle_event(_pad, _event, _context, state), do: {[], state}
 
       @impl true
-      def handle_parent_notification(_notification, _ctx, state), do: {:ok, state}
+      def handle_parent_notification(_notification, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_terminate_request(_ctx, state), do: {{:ok, terminate: :normal}, state}
+      def handle_terminate_request(_ctx, state), do: {[terminate: :normal], state}
 
       defoverridable handle_init: 2,
                      handle_setup: 2,

@@ -99,7 +99,7 @@ defmodule Membrane.Integration.SyncTest do
         stream_sync: []
       }
 
-      {{:ok, spec: spec}, :ignored}
+      {[spec: spec], :ignored}
     end
   end
 

@@ -7,12 +7,12 @@ defmodule Membrane.Testing.SourceTest do
   test "Source initializes buffer generator and its state properly" do
     generator = fn _state, _size -> nil end
 
-    assert {:ok, %{output: ^generator, generator_state: :abc}} =
+    assert {[], %{output: ^generator, generator_state: :abc}} =
              Source.handle_init(%{}, %Source{output: {:abc, generator}})
   end
 
   test "Source sends stream format on play" do
-    assert {{:ok, stream_format: {:output, :stream_format}}, _state} =
+    assert {[stream_format: {:output, :stream_format}], _state} =
              Source.handle_playing(nil, %{stream_format: :stream_format})
   end
 
@@ -21,7 +21,7 @@ defmodule Membrane.Testing.SourceTest do
       payloads = Enum.into(1..10, [])
       demand_size = 3
 
-      assert {{:ok, actions}, state} =
+      assert {actions, state} =
                Source.handle_demand(:output, demand_size, :buffers, nil, %{output: payloads})
 
       assert [{:buffer, {:output, buffers}}] = actions
@@ -38,7 +38,7 @@ defmodule Membrane.Testing.SourceTest do
       payload = 1
       payloads = [payload]
 
-      assert {{:ok, actions}, _state} =
+      assert {actions, _state} =
                Source.handle_demand(:output, 2, :buffers, nil, %{output: payloads})
 
       assert [
@@ -54,7 +54,7 @@ defmodule Membrane.Testing.SourceTest do
     buffers = [%Membrane.Buffer{payload: 1}]
     assert {state, generator} = Source.output_from_buffers(buffers)
 
-    assert {{:ok, actions}, _state} =
+    assert {actions, _state} =
              Source.handle_demand(:output, 2, :buffers, nil, %{
                generator_state: state,
                output: generator

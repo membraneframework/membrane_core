@@ -215,7 +215,7 @@ defmodule Membrane.Testing.Pipeline do
         spec = structure
 
         new_state = %State{test_process: Keyword.fetch!(options, :test_process), module: nil}
-        {{:ok, [spec: spec, playback: :playing]}, new_state}
+        {[spec: spec, playback: :playing], new_state}
 
       module when is_atom(module) ->
         case Code.ensure_compiled(module) do
@@ -230,7 +230,7 @@ defmodule Membrane.Testing.Pipeline do
         }
 
         injected_module_result = eval_injected_module_callback(:handle_init, [ctx], new_state)
-        testing_pipeline_result = {:ok, new_state}
+        testing_pipeline_result = {[], new_state}
         combine_results(injected_module_result, testing_pipeline_result)
 
       not_a_module ->
@@ -276,7 +276,7 @@ defmodule Membrane.Testing.Pipeline do
     :ok =
       notify_test_process(state.test_process, {:handle_child_notification, {notification, from}})
 
-    {:ok, state}
+    {[], state}
   end
 
   @impl true
@@ -308,7 +308,7 @@ defmodule Membrane.Testing.Pipeline do
 
   @impl true
   def handle_info({__MODULE__, :__execute_actions__, actions}, _ctx, %State{} = state) do
-    {{:ok, actions}, state}
+    {actions, state}
   end
 
   @impl true
@@ -320,7 +320,7 @@ defmodule Membrane.Testing.Pipeline do
         state
       )
 
-    testing_pipeline_result = {{:ok, notify_child: {element, message}}, state}
+    testing_pipeline_result = {[notify_child: {element, message}], state}
 
     combine_results(injected_module_result, testing_pipeline_result)
   end
@@ -411,10 +411,10 @@ defmodule Membrane.Testing.Pipeline do
   defp eval_injected_module_callback(callback, args, state)
 
   defp eval_injected_module_callback(_callback, _args, %State{module: nil} = state),
-    do: {:ok, state} |> unify_result()
+    do: {[], state}
 
   defp eval_injected_module_callback(callback, args, state) do
-    apply(state.module, callback, args ++ [state.custom_pipeline_state]) |> unify_result()
+    apply(state.module, callback, args ++ [state.custom_pipeline_state])
   end
 
   defp notify_test_process(test_process, message) do
@@ -422,22 +422,7 @@ defmodule Membrane.Testing.Pipeline do
     :ok
   end
 
-  defp unify_result({:ok, state}),
-    do: {{:ok, []}, state}
-
-  defp unify_result({{_, _}, _} = result),
-    do: result
-
   defp combine_results({custom_actions, custom_state}, {actions, state}) do
-    {combine_actions(custom_actions, actions),
-     Map.put(state, :custom_pipeline_state, custom_state)}
-  end
-
-  defp combine_actions(l, r) do
-    case {l, r} do
-      {l, :ok} -> l
-      {{:ok, actions_l}, {:ok, actions_r}} -> {:ok, actions_l ++ actions_r}
-      {_l, r} -> r
-    end
+    {Enum.concat(custom_actions, actions), Map.put(state, :custom_pipeline_state, custom_state)}
   end
 end

@@ -28,6 +28,6 @@ defmodule Membrane.Support.AcceptedFormatTest.InnerSourceBin do
       })
       |> bin_output()
 
-    {{:ok, spec: spec}, %{}}
+    {[spec: spec], %{}}
   end
 end

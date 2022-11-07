@@ -26,7 +26,7 @@ defmodule Membrane.Integration.LinkingTest do
         child(:source, opts.child)
       ]
 
-      {{:ok, spec: children}, Map.from_struct(opts)}
+      {[spec: children], Map.from_struct(opts)}
     end
 
     @impl true
@@ -35,13 +35,13 @@ defmodule Membrane.Integration.LinkingTest do
         get_child(:source) |> bin_output(pad)
       ]
 
-      {{:ok, spec: links}, state}
+      {[spec: links], state}
     end
 
     @impl true
     def handle_pad_removed(_pad, _ctx, state) do
       remove_child = if state.remove_child_on_unlink, do: [remove_child: :source], else: []
-      {{:ok, remove_child ++ [notify_parent: :handle_pad_removed]}, %{}}
+      {remove_child ++ [notify_parent: :handle_pad_removed], %{}}
     end
   end
 
@@ -51,12 +51,12 @@ defmodule Membrane.Integration.LinkingTest do
 
     @impl true
     def handle_init(_ctx, opts) do
-      {:ok, %{testing_pid: opts.testing_pid}}
+      {[], %{testing_pid: opts.testing_pid}}
     end
 
     @impl true
     def handle_info({:start_spec, %{spec: spec}}, _ctx, state) do
-      {{:ok, spec: spec}, state}
+      {[spec: spec], state}
     end
 
     @impl true
@@ -66,23 +66,23 @@ defmodule Membrane.Integration.LinkingTest do
           state
         ) do
       Enum.each(children_to_kill, &Process.exit(ctx.children[&1].pid, :kill))
-      {{:ok, spec: spec}, state}
+      {[spec: spec], state}
     end
 
     @impl true
     def handle_info({:remove_child, child}, _ctx, state) do
-      {{:ok, remove_child: child}, state}
+      {[remove_child: child], state}
     end
 
     @impl true
     def handle_info(_msg, _ctx, state) do
-      {:ok, state}
+      {[], state}
     end
 
     @impl true
     def handle_spec_started(_children, _ctx, state) do
       send(state.testing_pid, :spec_started)
-      {:ok, state}
+      {[], state}
     end
   end
 
@@ -266,7 +266,7 @@ defmodule Membrane.Integration.LinkingTest do
     @impl true
     def handle_setup(_ctx, state) do
       Process.sleep(state.setup_delay)
-      {:ok, state}
+      {[], state}
     end
   end
 

@@ -13,12 +13,8 @@ defmodule Membrane.Core.Element.EventControllerTest do
     def_output_pad :output, accepted_format: _any
 
     @impl true
-    def handle_event(_pad, %Membrane.Event.Discontinuity{}, _ctx, state) do
-      {{:error, :cause}, state}
-    end
-
     def handle_event(_pad, %Membrane.Event.Underrun{}, _ctx, state) do
-      {:ok, state}
+      {[], state}
     end
   end
 
@@ -87,14 +83,8 @@ defmodule Membrane.Core.Element.EventControllerTest do
   end
 
   describe "Event controller handles normal events" do
-    test "succesfully when callback module returns {:ok, state}", %{state: state} do
+    test "succesfully when callback module returns {[], state}", %{state: state} do
       assert state == EventController.handle_event(:input, %Event.Underrun{}, state)
-    end
-
-    test "processing error returned by callback module", %{state: state} do
-      assert_raise(Membrane.CallbackError, fn ->
-        EventController.handle_event(:input, %Event.Discontinuity{}, state)
-      end)
     end
   end
 

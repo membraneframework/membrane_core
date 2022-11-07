@@ -34,11 +34,11 @@ defmodule Membrane.Support.Sync.Pipeline do
 
   @impl true
   def handle_init(_ctx, spec) do
-    {{:ok, spec: spec, playback: :playing}, %{}}
+    {[spec: spec, playback: :playing], %{}}
   end
 
   @impl true
   def handle_info({:spawn_children, spec}, _ctx, state) do
-    {{:ok, spec: spec}, state}
+    {[spec: spec], state}
   end
 end

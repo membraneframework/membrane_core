@@ -35,7 +35,7 @@ defmodule Membrane.LinksValidationTest do
       @impl true
       def handle_playing(_ctx, state) do
         stream_format = %Membrane.LinksValidationTest.StreamFormat{}
-        {{:ok, stream_format: {:output, stream_format}}, state}
+        {[stream_format: {:output, stream_format}], state}
       end
     end
   end
@@ -63,7 +63,7 @@ defmodule Membrane.LinksValidationTest do
       @impl true
       def handle_playing(_ctx, state) do
         stream_format = %Membrane.LinksValidationTest.StreamFormat{}
-        {{:ok, stream_format: {:output, stream_format}}, state}
+        {[stream_format: {:output, stream_format}], state}
       end
     end
   end

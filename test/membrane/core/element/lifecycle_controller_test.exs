@@ -12,7 +12,7 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
 
     @impl true
     def handle_terminate_request(_ctx, state) do
-      {:ok, state}
+      {[], state}
     end
   end
 
