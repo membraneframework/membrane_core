@@ -242,14 +242,16 @@ defmodule Membrane.ChildrenSpec do
   @type pad_options_t :: Keyword.t()
 
   @type child_definition_t :: struct() | module()
-  @type child_opts_t :: [get_if_exists: boolean]
+
+  @type child_options_t :: [get_if_exists: boolean]
   @default_child_opts [get_if_exists: [default: false]]
+  @type child_opts_map_t :: %{get_if_exists: boolean}
 
   @type child_spec_t ::
-          {Child.name_t(), child_definition_t(), child_opts_t()}
+          {Child.name_t(), child_definition_t(), child_opts_map_t()}
 
   @type childrenspec_options_t :: [
-          crash_group: Membrane.CrashGroup.t(),
+          crash_group: Membrane.CrashGroup.t() | nil,
           stream_sync: :sinks | [[Child.name_t()]],
           clock_provider: Child.name_t() | nil,
           node: node() | nil,
@@ -262,6 +264,14 @@ defmodule Membrane.ChildrenSpec do
     node: [default: nil],
     log_metadata: [default: []]
   ]
+  @type childrenspec_options_map_t :: %{
+          crash_group: Membrane.CrashGroup.t() | nil,
+          stream_sync: :sinks | [[Child.name_t()]],
+          clock_provider: Child.name_t() | nil,
+          node: node() | nil,
+          log_metadata: Keyword.t()
+        }
+
   @typedoc """
   Struct used when starting and linking children within a pipeline or a bin.
   """
@@ -300,7 +310,7 @@ defmodule Membrane.ChildrenSpec do
   """
   @spec child(structure_builder_t(), Child.name_t(), child_definition_t()) ::
           structure_builder_t()
-  @spec child(Child.name_t(), child_definition_t(), child_opts_t()) :: structure_builder_t()
+  @spec child(Child.name_t(), child_definition_t(), child_options_t()) :: structure_builder_t()
   def child(child_name, child_definition, opts \\ [])
 
   def child(%StructureBuilder{} = structure_builder, child_name, child_definition) do
@@ -326,7 +336,7 @@ defmodule Membrane.ChildrenSpec do
 
   See the _structure_ section of the moduledoc for more information.
   """
-  @spec child(structure_builder_t(), Child.name_t(), child_definition_t(), child_opts_t()) ::
+  @spec child(structure_builder_t(), Child.name_t(), child_definition_t(), child_options_t()) ::
           structure_builder_t()
   def child(structure_builder, child_name, child_definition, opts) do
     do_child(structure_builder, child_name, child_definition, opts)
@@ -518,10 +528,30 @@ defmodule Membrane.ChildrenSpec do
   end
 
   @doc """
-  Returns a keyword list with default children specification options.
+  Returns a canonical representation of a given children specification and propagates the children specification
+  options to the inner specifications.
+
+  A cannonical representation of a children specification is of the following form:
+  ```
+  {list(children_spec_t()), childrenspec_options_t}
+  ```
   """
-  @spec get_default_childrenspec_options() :: childrenspec_options_t
-  def get_default_childrenspec_options(), do: @default_childrenspec_options
+  @spec make_canonical(t(), childrenspec_options_t()) ::
+          {t(), childrenspec_options_map_t(), childrenspec_options_t()}
+  def make_canonical({spec, options_keywords_list}, previous_level_options_keywords_list) do
+    spec = Bunch.listify(spec)
+
+    options_keywords_list =
+      Keyword.merge(previous_level_options_keywords_list, options_keywords_list)
+
+    {:ok, options_map} = Bunch.Config.parse(options_keywords_list, @default_childrenspec_options)
+
+    {spec, options_map, options_keywords_list}
+  end
+
+  def make_canonical(spec, previous_level_options_keywords_list) do
+    make_canonical({spec, []}, previous_level_options_keywords_list)
+  end
 
   defp validate_pad_name(pad) when Pad.is_pad_name(pad) or Pad.is_pad_ref(pad) do
     :ok

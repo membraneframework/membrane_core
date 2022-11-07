@@ -64,18 +64,19 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     do_handle_spec(spec, state)
   end
 
-  defp do_handle_spec(spec, state, previous_level_options_keywords \\ []) do
-    {spec, options_map, options_keywords} = make_canonical(spec, previous_level_options_keywords)
-    specs_with_other_options = Enum.filter(spec, &is_tuple(&1))
-    specs_for_this_options = Enum.filter(spec, &(not is_tuple(&1)))
+  defp do_handle_spec(specs, state, previous_level_options_keywords_list \\ []) do
+    {specs, options_map, options_keywords_list} =
+      ChildrenSpec.make_canonical(specs, previous_level_options_keywords_list)
+
+    {inner_specs, this_level_specs} = Enum.split_with(specs, &is_tuple(&1))
     spec_ref = make_ref()
 
     Membrane.Logger.debug("""
     New spec #{inspect(spec_ref)}
-    structure: #{inspect(specs_for_this_options)}
+    structure: #{inspect(this_level_specs)}
     """)
 
-    {children_specs, links} = StructureParser.parse(specs_for_this_options)
+    {children_specs, links} = StructureParser.parse(this_level_specs)
     children_specs = remove_unecessary_children_specs(children_specs, state)
 
     children = ChildEntryParser.parse(children_specs)
@@ -88,7 +89,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         %Bin.State{children_log_metadata: metadata} ->
           metadata ++ options_map.log_metadata
 
-        %Pipeline.State{} -> options_map.log_metadata
+        %Pipeline.State{} ->
+          options_map.log_metadata
       end
 
     children =
@@ -141,7 +143,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     state = StartupUtils.exec_handle_spec_started(children_names, state)
     state = proceed_spec_startup(spec_ref, state)
 
-    Enum.reduce(specs_with_other_options, state, fn spec, state -> do_handle_spec(spec, state, options_keywords) end)
+    Enum.reduce(inner_specs, state, fn spec, state ->
+      do_handle_spec(spec, state, options_keywords_list)
+    end)
   end
 
   @spec handle_spec_timeout(spec_ref_t(), Parent.state_t()) ::
@@ -483,17 +487,5 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       {name, _child_spec, options} ->
         not (options.get_if_exists and Map.has_key?(state_children, name))
     end)
-  end
-
-  defp make_canonical({structure, options_keywords}, previous_level_options_keywords) do
-    structure = Bunch.listify(structure)
-    options_keywords = Keyword.merge(previous_level_options_keywords, options_keywords)
-    {:ok, options_map} = Bunch.Config.parse(options_keywords, ChildrenSpec.get_default_childrenspec_options())
-
-    {structure, options_map, options_keywords}
-  end
-
-  defp make_canonical(spec, previous_level_options_keywords) do
-    make_canonical({spec, []}, previous_level_options_keywords)
   end
 end
