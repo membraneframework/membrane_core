@@ -3,9 +3,9 @@ defmodule Membrane.ChildrenSpec do
   A module with functionalities that allow to represent a topology of a pipeline/bin.
 
   The children specification (commonly refered as a "children_spec") is represented by the following type:
-  `t:t/0`
+  `t:t/0`. It consists of two parts - a chilren structure and the children specification options.
 
-  The describes the desired topology and can be incorporated into a pipeline or a bin by returning
+  The children specification describes the desired topology and can be incorporated into a pipeline or a bin by returning
   `t:Membrane.Pipeline.Action.spec_t/0` or `t:Membrane.Bin.Action.spec_t/0`
   action, respectively. This commonly happens within `c:Membrane.Pipeline.handle_init/2`
   and `c:Membrane.Bin.handle_init/2`, but can be done in any other callback also.
@@ -107,8 +107,8 @@ defmodule Membrane.ChildrenSpec do
     structure = [bin_input(pad) |> get_child(:mixer)]
     {{:ok, spec: structure}, state}
   end
-
-  ## Stream sync
+  ## Children specification options
+  ### Stream sync
 
   `:stream_sync` field can be used for specifying elements that should start playing
   at the same moment. An example can be audio and video player sinks. This option
@@ -127,13 +127,13 @@ defmodule Membrane.ChildrenSpec do
   {children, stream_sync: :sinks}
   ```
 
-  ## Clock provider
+  ### Clock provider
 
   A clock provider is an element that exports a clock that should be used as the pipeline
   clock. The pipeline clock is the default clock used by elements' timers.
   For more information see `Membrane.Element.Base.def_clock/1`.
 
-  ## Crash groups
+  ### Crash groups
   A crash group is a logical entity that prevents the whole pipeline from crashing when one of
   its children crash.
 
@@ -160,7 +160,7 @@ defmodule Membrane.ChildrenSpec do
   to the crash group with id `group_id`. Crash of `:some_element_1` or `:some_element_2` propagates
   only to the rest of the members of the crash group and the pipeline stays alive.
 
-  ### Handling crash of a crash group
+  #### Handling crash of a crash group
 
   When any of the members of the crash group goes down, the callback:
   [`handle_crash_group_down/3`](https://hexdocs.pm/membrane_core/Membrane.Pipeline.html#c:handle_crash_group_down/3)
@@ -173,13 +173,30 @@ defmodule Membrane.ChildrenSpec do
   end
   ```
 
-  ### Limitations
+  #### Limitations
 
   At this moment crash groups are only useful for elements with dynamic pads.
   Crash groups work only in pipelines and are not supported in bins.
 
-  ## Log metadata
+  ### Log metadata
   `:log_metadata` field can be used to set the `Membrane.Logger` metadata for all children in given children specification.
+
+  ## Nesting children specifications
+  The children specifications can be be nested withing themselves.
+
+  Consider the following children specification:
+  ```
+  {[
+    child(:a, A) |> child(:b, B),
+    {child(:c, C), crash_group:
+      {:second, :temporary}}
+  ], crash_group: {:first, :temporary, node: some_node}}
+  ```
+
+  Child `:c` will be spawned in the `:second` crash group, while children `:a` and `:b` will be spawned in the `:first` crash group.
+  Furthermore, since the inner children specification does not define the `:node` option, it will be inherited from the outer children specification.
+  That means that child `:c` will be spawned on the `some_node` node, along with children `:a` and `:b`.
+
   """
 
   import Membrane.Child, only: [is_child_name?: 1]
