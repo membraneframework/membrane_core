@@ -31,7 +31,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @type pending_specs_t :: %{spec_ref_t() => pending_spec_t()}
 
-  @default_childrenspec_options [
+  @default_children_spec_options [
     crash_group: [default: nil],
     stream_sync: [default: []],
     clock_provider: [default: nil],
@@ -503,7 +503,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     options_keywords_list =
       Keyword.merge(previous_level_options_keywords_list, options_keywords_list)
 
-    {:ok, options_map} = Bunch.Config.parse(options_keywords_list, @default_childrenspec_options)
+    {:ok, options_map} = Bunch.Config.parse(options_keywords_list, @default_children_spec_options)
 
     {spec, options_map, options_keywords_list}
   end

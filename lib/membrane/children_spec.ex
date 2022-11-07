@@ -257,7 +257,7 @@ defmodule Membrane.ChildrenSpec do
           node: node() | nil,
           log_metadata: Keyword.t()
         ]
-  @type childrenspec_options_map_t :: %{
+  @type children_spec_options_map_t :: %{
           crash_group: Membrane.CrashGroup.t() | nil,
           stream_sync: :sinks | [[Child.name_t()]],
           clock_provider: Child.name_t() | nil,
