@@ -137,21 +137,4 @@ defmodule Membrane.Core.PipelineTest do
       assert_receive {:DOWN, _ref, :process, ^supervisor, ^reason}
     end)
   end
-
-  # test "Pipeline should properly spawn children with nested children specification", %{
-  #   state: state
-  # } do
-  #   import Membrane.ChildrenSpec
-
-  #   x = Membrane.Core.Parent.ChildLifeController.handle_spec(
-  #     {[
-  #       child(:x, Testing.Sink),
-  #       {child(:y, Testing.Sink), crash_group: {:second, :temporary}}
-  #     ],
-  #     crash_group: {:first, :temporary}},
-  #     state
-  #   )
-
-  #   IO.inspect(x)
-  # end
 end
