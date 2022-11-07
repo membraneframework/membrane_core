@@ -47,14 +47,17 @@ defmodule Membrane.Element.WithOutputPads do
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
+      @dialyzer {:no_return, {:handle_demand, 5}}
 
       import unquote(__MODULE__), only: [def_output_pad: 2]
 
       @impl true
-      def handle_demand(_pad, _size, _unit, _context, _state) do
+      def handle_demand(_pad, _size, _unit, _context, state) do
         raise Membrane.CallbackError,
           kind: :not_implemented,
           callback: {__MODULE__, :handle_demand}
+
+        {[], state}
       end
 
       defoverridable handle_demand: 5

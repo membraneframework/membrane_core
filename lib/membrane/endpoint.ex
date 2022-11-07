@@ -65,16 +65,19 @@ defmodule Membrane.Endpoint do
       use Membrane.Element.WithInputPads
 
       @behaviour unquote(__MODULE__)
+      @dialyzer {:no_return, {:handle_write, 4}}
 
       @doc false
       @spec membrane_element_type() :: Membrane.Element.type_t()
       def membrane_element_type, do: :endpoint
 
       @impl true
-      def handle_write(_pad, _buffer, _context, _state) do
+      def handle_write(_pad, _buffer, _context, state) do
         raise Membrane.CallbackError,
           kind: :not_implemented,
           callback: {__MODULE__, :handle_write}
+
+        {[], state}
       end
 
       @impl true

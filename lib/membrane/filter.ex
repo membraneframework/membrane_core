@@ -65,6 +65,7 @@ defmodule Membrane.Filter do
       use Membrane.Element.WithInputPads
 
       @behaviour unquote(__MODULE__)
+      @dialyzer {:no_return, {:handle_process, 4}}
 
       @doc false
       @spec membrane_element_type() :: Membrane.Element.type_t()
@@ -82,6 +83,8 @@ defmodule Membrane.Filter do
         raise Membrane.CallbackError,
           kind: :not_implemented,
           callback: {__MODULE__, :handle_process}
+
+        {[], state}
       end
 
       @impl true
