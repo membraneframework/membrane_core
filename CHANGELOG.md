@@ -10,6 +10,7 @@
  * New `spec` action syntax - the structure of pipeline is now defined with the use as `Membrane.ChildrenSpec.t()`
  * Rename `:caps` to `:stream_format`.
  * Use Elixir patterns as `:accepted_format` in pad definition.
+ * Delete `:ok` from tuples returned from callbacks 
 
 ## 0.10.0
  * Remove all deprecated stuff [#399](https://github.com/membraneframework/membrane_core/pull/399)
