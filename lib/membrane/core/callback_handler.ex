@@ -139,9 +139,9 @@ defmodule Membrane.Core.CallbackHandler do
       rescue
         e in UndefinedFunctionError ->
           with %{module: ^module, function: ^callback} <- e do
-            raise Membrane.CallbackError,
-              kind: :not_implemented,
-              callback: {module, callback}
+            reraise Membrane.CallbackError,
+                    [kind: :not_implemented, callback: {module, callback}],
+                    __STACKTRACE__
           end
 
           reraise e, __STACKTRACE__

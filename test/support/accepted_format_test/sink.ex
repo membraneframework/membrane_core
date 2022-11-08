@@ -5,7 +5,7 @@ defmodule Membrane.Support.AcceptedFormatTest.Sink do
   Notifies parent on stream format arrival.
   """
 
-  use Membrane.Endpoint
+  use Membrane.Sink
 
   alias Membrane.Support.AcceptedFormatTest.StreamFormat
 

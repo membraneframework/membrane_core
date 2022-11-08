@@ -68,7 +68,7 @@ defmodule Membrane.CallbackError do
       end
 
     msg = """
-    Callback #{fun}/#{arity} not implemented in #{inspect(module)}
+    Callback #{fun}/#{arity} is not implemented in #{inspect(module)}
     """
 
     %__MODULE__{message: msg}
