@@ -145,8 +145,8 @@ defmodule Membrane.Core.PipelineTest do
 
     spec = {
       [
-        {get_child(:a) |> child(:b, Testing.Sink), opts2},
-        child(:a, %Testing.Source{output: [1, 2, 3]})
+        {child(:b, Testing.Sink), opts2},
+        child(:a, %Testing.Source{output: [1, 2, 3]}) |> get_child(:b)
       ],
       opts1
     }

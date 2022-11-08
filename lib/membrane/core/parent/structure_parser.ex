@@ -20,9 +20,9 @@ defmodule Membrane.Core.Parent.StructureParser do
 
   @spec parse([ChildrenSpec.structure_builder_t()]) ::
           {[ChildrenSpec.child_spec_t()], [raw_link_t]} | no_return
-  def parse(structure) when is_list(structure) do
+  def parse(structures) when is_list(structures) do
     {children, links} =
-      structure
+      structures
       |> List.flatten()
       |> Enum.map(fn
         %ChildrenSpec.StructureBuilder{links: links, children: children, status: :done} = builder ->
@@ -35,7 +35,7 @@ defmodule Membrane.Core.Parent.StructureParser do
           {Enum.reverse(children), Enum.reverse(links)}
 
         _other ->
-          from_spec_error(structure)
+          from_spec_error(structures)
       end)
       |> Enum.unzip()
 
