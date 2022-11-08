@@ -59,13 +59,8 @@ defmodule Membrane.CallbackError do
     %__MODULE__{message: msg}
   end
 
-  defp mk_exception(:not_implemented, {module, fun}, _opts) do
-    arity =
-      case fun do
-        :handle_demand -> 5
-        :handle_process -> 4
-        :handle_write -> 4
-      end
+  defp mk_exception(:not_implemented, {module, fun}, opts) do
+    arity = Keyword.fetch!(opts, :arity)
 
     msg = """
     Callback #{fun}/#{arity} is not implemented in #{inspect(module)}
