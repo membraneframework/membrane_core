@@ -122,26 +122,32 @@ defmodule Membrane.Core.CallbackHandler do
   defp exec_callback(
          callback,
          args,
-         %{context: context_fun},
+         handler_params,
          %{module: module, internal_state: internal_state} = state
        ) do
-    args = args ++ [context_fun.(state), internal_state]
+    maybe_context =
+      case handler_params do
+        %{context: context_fun} -> [context_fun.(state)]
+        _else -> []
+      end
 
-    module
-    |> apply(callback, args)
-    |> check_callback_result(module, callback)
-  end
+    args = args ++ maybe_context ++ [internal_state]
 
-  defp exec_callback(
-         callback,
-         args,
-         _handler_params,
-         %{module: module, internal_state: internal_state}
-       ) do
-    args = args ++ [internal_state]
+    callback_result =
+      try do
+        apply(module, callback, args)
+      rescue
+        e in UndefinedFunctionError ->
+          with %{module: ^module, function: ^callback} <- e do
+            raise Membrane.CallbackError,
+              kind: :not_implemented,
+              callback: {module, callback}
+          end
 
-    module
-    |> apply(callback, args)
+          reraise e, __STACKTRACE__
+      end
+
+    callback_result
     |> check_callback_result(module, callback)
   end
 
