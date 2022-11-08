@@ -16,11 +16,11 @@ defmodule Membrane.ChildrenSpec do
 
   The children's processes are spawned with the use of `child/3` and `child/4` functions.
   These two functions can be used for spawning nodes of a link in an inline manner:
-  ```
+  ```elixir
   structure = [child(:source, Source) |> child(:filter, %Filter{option: 1}) |> child(:sink, Sink)]
   ```
   or just to spawn children processes, without linking the newly created children:
-  ```
+  ```elixir
   structure = [child(:source, Source),
     child(:filter, Filter),
     child(:sink, Sink)]
@@ -121,7 +121,7 @@ defmodule Membrane.ChildrenSpec do
   By default, no elements are synchronized.
 
   Sample definitions:
-  ```
+  ```elixir
   children = ...
   {children, stream_sync: [[:element1, :element2], [:element3, :element4]]}
   {children, stream_sync: :sinks}
@@ -133,11 +133,31 @@ defmodule Membrane.ChildrenSpec do
   clock. The pipeline clock is the default clock used by elements' timers.
   For more information see `Membrane.Element.Base.def_clock/1`.
 
+  ### Children groups
+  Children groups allow aggregating the spawned children in a easily identifiable groups.
+  With the use of them it is possible to refer to all the children of the group with a single identifier.
+  Example:
+  ```elixir
+  spec1 = {links1, children_group_id: :first_children_group}
+  spec2 = {links2, children_group_id: :second_children_group}
+  ```
+  The children spawned within `links1` structure specification will be put inside `:first_children_group`, whereas the
+  children spawned within `links2` structure will be put inside `second_children_group`.
+
+  Later on, the children from a given group can be refered with their `children_group_id`, as in the example below:
+  ```elixir
+  actions = [remove_child: {children_group_id: :first_children_group}]
+  ```
+  With the action defined above, all the children from the `first_children_group` can be removed at once.
+
   ### Crash groups
   A crash group is a logical entity that prevents the whole pipeline from crashing when one of
-  its children crash.
+  its children crash. A crash group is defined with the use of two children specification options:
+  * `children_group_id` - which acts as a crash group identifier
+  * `crash_group_mode` - its value specifies the behaviour of children in the crash group. Currently, we support only
+  `:temporary` mode which means that Membrane will not make any attempts to restart crashed child.
 
-  ### Adding children to a crash group
+  #### Adding children to a crash group
 
   ```elixir
   structure = [
@@ -149,16 +169,12 @@ defmodule Membrane.ChildrenSpec do
     }
   ]
 
-  spec = {structure, crash_group: {group_id, :temporary}}
+  spec = {structure, children_group_id: group_id, crash_group_mode: :temporary}
   ```
 
-  The crash group is defined by a two-element tuple, first element is an ID which is of type
-  `Membrane.CrashGroup.name_t()`, and the second is a mode. Currently, we support only
-  `:temporary` mode which means that Membrane will not make any attempts to restart crashed child.
-
   In the above snippet, we create new children - `:some_element_1` and `:some_element_2`, we add them
-  to the crash group with id `group_id`. Crash of `:some_element_1` or `:some_element_2` propagates
-  only to the rest of the members of the crash group and the pipeline stays alive.
+  to the crash group associated with `group_id` children group id. Crash of `:some_element_1` or `:some_element_2` propagates
+  only to the rest of the members of that children group and the pipeline stays alive.
 
   #### Handling crash of a crash group
 
@@ -185,12 +201,12 @@ defmodule Membrane.ChildrenSpec do
   The children specifications can be be nested withing themselves.
 
   Consider the following children specification:
-  ```
+  ```elixir
   {[
     child(:a, A) |> child(:b, B),
     {child(:c, C), crash_group:
       {:second, :temporary}}
-  ], crash_group: {:first, :temporary, node: some_node}}
+  ], crash_group_mode: :temporary, children_group_id: :first, node: some_node}
   ```
 
   Child `:c` will be spawned in the `:second` crash group, while children `:a` and `:b` will be spawned in the `:first` crash group.
@@ -267,18 +283,21 @@ defmodule Membrane.ChildrenSpec do
           {Child.name_t(), child_definition_t(), child_opts_map_t()}
 
   @type children_spec_options_t :: [
-          crash_group: Membrane.CrashGroup.t() | nil,
+          children_group_id: Child.children_group_id_t(),
+          crash_group_mode: Membrane.CrashGroup.mode_t() | nil,
           stream_sync: :sinks | [[Child.name_t()]],
           clock_provider: Child.name_t() | nil,
           node: node() | nil,
           log_metadata: Keyword.t()
         ]
   @type children_spec_options_map_t :: %{
-          crash_group: Membrane.CrashGroup.t() | nil,
+          children_group_id: Child.children_group_id_t(),
+          crash_group_mode: Membrane.CrashGroup.mode_t() | nil,
           stream_sync: :sinks | [[Child.name_t()]],
           clock_provider: Child.name_t() | nil,
           node: node() | nil,
-          log_metadata: Keyword.t()
+          log_metadata: Keyword.t(),
+          children_group_id: Child.children_group_id_t()
         }
 
   @typedoc """

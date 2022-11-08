@@ -122,12 +122,12 @@ defmodule Membrane.Integration.LinkingTest do
           child: %Testing.Source{output: ['a', 'b', 'c']},
           remove_child_on_unlink: false
         }),
-        crash_group: {:group_1, :temporary}
+        crash_group_mode: :temporary, children_group_id: :group_1
       }
 
       sink_spec = {
         child(:sink, Testing.Sink),
-        crash_group: {:group_2, :temporary}
+        crash_group_mode: :temporary, children_group_id: :group_2
       }
 
       links_spec = get_child(:bin) |> get_child(:sink)
@@ -163,10 +163,11 @@ defmodule Membrane.Integration.LinkingTest do
   } do
     spec_1 = {
       child(:source, %Testing.Source{output: ['a', 'b', 'c']}),
-      crash_group: {:group_1, :temporary}
+      children_group_id: :group_1, crash_group_mode: :temporary
     }
 
-    spec_2 = {child(:sink, Testing.Sink), crash_group: {:group_2, :temporary}}
+    spec_2 =
+      {child(:sink, Testing.Sink), children_group_id: :group_2, crash_group_mode: :temporary}
 
     links_spec = get_child(:source) |> get_child(:sink)
 
@@ -186,12 +187,12 @@ defmodule Membrane.Integration.LinkingTest do
   } do
     spec_1 = {
       child(:source, %Testing.DynamicSource{output: ['a', 'b', 'c']}),
-      crash_group: {:group_1, :temporary}
+      children_group_id: :group_1, crash_group_mode: :temporary
     }
 
     spec_2 = {
       child(:sink, Testing.Sink),
-      crash_group: {:group_2, :temporary}
+      children_group_id: :group_2, crash_group_mode: :temporary
     }
 
     links_spec = get_child(:source) |> get_child(:sink)
@@ -213,12 +214,12 @@ defmodule Membrane.Integration.LinkingTest do
        } do
     spec_inner = {
       child(:sink, Testing.Sink),
-      crash_group: {:group_2, :temporary}
+      crash_group_mode: :temporary, children_group_id: :group_2
     }
 
     spec = {
       [spec_inner, child(:source, %Testing.DynamicSource{output: ['a', 'b', 'c']})],
-      crash_group: {:group_1, :temporary}
+      crash_group_mode: :temporary, children_group_id: :group_1
     }
 
     links_spec = get_child(:source) |> get_child(:sink)
@@ -236,12 +237,12 @@ defmodule Membrane.Integration.LinkingTest do
        %{pipeline: pipeline} do
     bin_spec = {
       child(:bin, %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}),
-      crash_group: {:group_1, :temporary}
+      crash_group_mode: :temporary, children_group_id: :group_1
     }
 
     sink_spec = {
       child(:sink, Testing.Sink),
-      crash_group: {:group_1, :temporary}
+      crash_group_mode: :temporary, children_group_id: :group_1
     }
 
     links_spec = get_child(:bin) |> get_child(:sink)

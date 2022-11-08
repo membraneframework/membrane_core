@@ -17,7 +17,12 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def init(params) do
-    observability_config = %{name: params.name, component_type: :pipeline, pid: self()}
+    observability_config = %{
+      name: params.name,
+      component_type: :pipeline,
+      pid: self()
+    }
+
     Membrane.Core.Observability.setup(observability_config)
     SubprocessSupervisor.set_parent_component(params.subprocess_supervisor, observability_config)
 

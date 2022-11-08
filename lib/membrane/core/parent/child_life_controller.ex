@@ -32,7 +32,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @type pending_specs_t :: %{spec_ref_t() => pending_spec_t()}
 
   @default_children_spec_options [
-    crash_group: [default: nil],
+    children_group_id: [default: nil],
+    crash_group_mode: [default: nil],
     stream_sync: [default: []],
     clock_provider: [default: nil],
     node: [default: nil],
@@ -108,7 +109,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         state.synchronization.clock_proxy,
         syncs,
         log_metadata,
-        state.subprocess_supervisor
+        state.subprocess_supervisor,
+        options_map.children_group_id
       )
 
     children_names = children |> Enum.map(& &1.name)
@@ -137,9 +139,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     # adding crash group to state
     state =
-      if options_map.crash_group do
+      if options_map.crash_group_mode do
         CrashGroupUtils.add_crash_group(
-          options_map.crash_group,
+          {options_map.children_group_id, options_map.crash_group_mode},
           children_names,
           children_pids,
           state
@@ -324,11 +326,25 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   @spec handle_remove_children(
-          Membrane.Child.name_t() | [Membrane.Child.name_t()],
+          Membrane.Child.name_t()
+          | [Membrane.Child.name_t()]
+          | {:children_group_id, Membrane.Child.children_group_id_t()},
           Parent.state_t()
         ) :: Parent.state_t()
-  def handle_remove_children(names, state) do
-    names = names |> Bunch.listify()
+  def handle_remove_children(children, state) do
+    names =
+      case children do
+        {:children_group_id, children_group_id} ->
+          state.children
+          |> Enum.filter(fn {_name, child_entry} ->
+            child_entry.children_group_id == children_group_id
+          end)
+          |> Enum.map(fn {name, _child_entry} -> name end)
+
+        names ->
+          names |> Bunch.listify()
+      end
+
     Membrane.Logger.debug("Removing children: #{inspect(names)}")
 
     state =
