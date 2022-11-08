@@ -137,4 +137,21 @@ defmodule Membrane.Core.PipelineTest do
       assert_receive {:DOWN, _ref, :process, ^supervisor, ^reason}
     end)
   end
+
+  test "Pipeline should be able to spawn its children in a nested specification" do
+    pid = Testing.Pipeline.start_link_supervised!(module: TestPipeline)
+    opts1 = []
+    opts2 = []
+
+    spec = {
+      [
+        {get_child(:a) |> child(:b, Testing.Sink), opts2},
+        child(:a, %Testing.Source{output: [1, 2, 3]})
+      ],
+      opts1
+    }
+
+    Testing.Pipeline.execute_actions(pid, spec: spec, playback: :playing)
+    assert_pipeline_play(pid)
+  end
 end

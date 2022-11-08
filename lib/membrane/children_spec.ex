@@ -273,13 +273,6 @@ defmodule Membrane.ChildrenSpec do
           node: node() | nil,
           log_metadata: Keyword.t()
         ]
-  @type children_spec_options_map_t :: %{
-          crash_group: Membrane.CrashGroup.t() | nil,
-          stream_sync: :sinks | [[Child.name_t()]],
-          clock_provider: Child.name_t() | nil,
-          node: node() | nil,
-          log_metadata: Keyword.t()
-        }
 
   @typedoc """
   Used to describe the inner topology of the pipeline/bin.
@@ -334,12 +327,6 @@ defmodule Membrane.ChildrenSpec do
     raise "Improper child name! Perhaps you meant to use get_child/2 while building your link?"
   end
 
-  defp do_child(child_name, child_definition, opts) do
-    {:ok, opts} = Bunch.Config.parse(opts, @default_child_opts)
-    child_spec = {child_name, child_definition, opts}
-    %StructureBuilder{children: [child_spec], link_starting_child: child_name}
-  end
-
   @doc """
   Used to spawn a child in the middle of a link specification.
 
@@ -349,6 +336,12 @@ defmodule Membrane.ChildrenSpec do
           structure_builder_t()
   def child(structure_builder, child_name, child_definition, opts) do
     do_child(structure_builder, child_name, child_definition, opts)
+  end
+
+  defp do_child(child_name, child_definition, opts) do
+    {:ok, opts} = Bunch.Config.parse(opts, @default_child_opts)
+    child_spec = {child_name, child_definition, opts}
+    %StructureBuilder{children: [child_spec], link_starting_child: child_name}
   end
 
   defp do_child(%StructureBuilder{} = structure_builder, child_name, child_definition, opts) do

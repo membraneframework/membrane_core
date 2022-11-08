@@ -31,6 +31,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @type pending_specs_t :: %{spec_ref_t() => pending_spec_t()}
 
+  @type children_spec_options_map_t :: %{
+          crash_group: Membrane.CrashGroup.t() | nil,
+          stream_sync: :sinks | [[Membrane.Child.name_t()]],
+          clock_provider: Membrane.Child.name_t() | nil,
+          node: node() | nil,
+          log_metadata: Keyword.t()
+        }
   @default_children_spec_options [
     crash_group: [default: nil],
     stream_sync: [default: []],
@@ -69,15 +76,16 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   """
   @spec handle_spec(ChildrenSpec.t(), Parent.state_t()) :: Parent.state_t() | no_return()
   def handle_spec(spec, state) do
-    do_handle_spec(spec, state)
+    spec_ref = make_ref()
+    state = do_handle_spec(spec, state, [], spec_ref)
+    proceed_spec_startup(spec_ref, state)
   end
 
-  defp do_handle_spec(specs, state, previous_level_options_keywords_list \\ []) do
+  defp do_handle_spec(specs, state, previous_level_options_keywords_list, spec_ref) do
     {specs, options_map, options_keywords_list} =
       make_canonical(specs, previous_level_options_keywords_list)
 
     {inner_specs, this_level_specs} = Enum.split_with(specs, &is_tuple(&1))
-    spec_ref = make_ref()
 
     Membrane.Logger.debug("""
     New spec #{inspect(spec_ref)}
@@ -152,7 +160,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     state = proceed_spec_startup(spec_ref, state)
 
     Enum.reduce(inner_specs, state, fn spec, state ->
-      do_handle_spec(spec, state, options_keywords_list)
+      do_handle_spec(spec, state, options_keywords_list, spec_ref)
     end)
   end
 
