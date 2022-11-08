@@ -1,15 +1,17 @@
 defmodule Membrane.ChildrenSpec do
   @moduledoc """
-  Structure representing the topology of a pipeline/bin.
+  A module with functionalities that allow to represent a topology of a pipeline/bin.
 
-  It can be incorporated into a pipeline or a bin by returning
+  The children specification (commonly refered as a "children_spec") is represented by the following type:
+  `t:t/0`. It consists of two parts - a chilren structure and the children specification options.
+
+  The children specification describes the desired topology and can be incorporated into a pipeline or a bin by returning
   `t:Membrane.Pipeline.Action.spec_t/0` or `t:Membrane.Bin.Action.spec_t/0`
   action, respectively. This commonly happens within `c:Membrane.Pipeline.handle_init/2`
   and `c:Membrane.Bin.handle_init/2`, but can be done in any other callback also.
 
-  ## Structure
-  The most important part of the `Membrane.ChildrenSpec` is the `:structure` field.
-  The structure allows specifying the children that need to be spawned in the action, as well as
+  ## Children structure
+  The children structure allows specifying the children that need to be spawned in the action, as well as
   links between the children (both the children spawned in that action, and already existing children).
 
   The children's processes are spawned with the use of `child/3` and `child/4` functions.
@@ -102,11 +104,11 @@ defmodule Membrane.ChildrenSpec do
 
   @impl true
   def handle_pad_added(Pad.ref(:input, _) = pad, _ctx, state) do
-  structure = [bin_input(pad) |> get_child(:mixer)]
-  {{:ok, spec: %ChildrenSpec{structure: structure}}, state}
+    structure = [bin_input(pad) |> get_child(:mixer)]
+    {{:ok, spec: structure}, state}
   end
-
-  ## Stream sync
+  ## Children specification options
+  ### Stream sync
 
   `:stream_sync` field can be used for specifying elements that should start playing
   at the same moment. An example can be audio and video player sinks. This option
@@ -119,19 +121,19 @@ defmodule Membrane.ChildrenSpec do
   By default, no elements are synchronized.
 
   Sample definitions:
-
   ```
-  %ChildrenSpec{stream_sync: [[:element1, :element2], [:element3, :element4]]}
-  %ChildrenSpec{stream_sync: :sinks}
+  children = ...
+  {children, stream_sync: [[:element1, :element2], [:element3, :element4]]}
+  {children, stream_sync: :sinks}
   ```
 
-  ## Clock provider
+  ### Clock provider
 
   A clock provider is an element that exports a clock that should be used as the pipeline
   clock. The pipeline clock is the default clock used by elements' timers.
   For more information see `Membrane.Element.Base.def_clock/1`.
 
-  ## Crash groups
+  ### Crash groups
   A crash group is a logical entity that prevents the whole pipeline from crashing when one of
   its children crash.
 
@@ -147,7 +149,7 @@ defmodule Membrane.ChildrenSpec do
     }
   ]
 
-  spec = %ChildrenSpec{structure: children, crash_group: {group_id, :temporary}}
+  spec = {structure, crash_group: {group_id, :temporary}}
   ```
 
   The crash group is defined by a two-element tuple, first element is an ID which is of type
@@ -158,9 +160,7 @@ defmodule Membrane.ChildrenSpec do
   to the crash group with id `group_id`. Crash of `:some_element_1` or `:some_element_2` propagates
   only to the rest of the members of the crash group and the pipeline stays alive.
 
-  Currently, the crash group covers all children within one or more `ChildrenSpec`s.
-
-  ### Handling crash of a crash group
+  #### Handling crash of a crash group
 
   When any of the members of the crash group goes down, the callback:
   [`handle_crash_group_down/3`](https://hexdocs.pm/membrane_core/Membrane.Pipeline.html#c:handle_crash_group_down/3)
@@ -173,14 +173,30 @@ defmodule Membrane.ChildrenSpec do
   end
   ```
 
-  ### Limitations
+  #### Limitations
 
   At this moment crash groups are only useful for elements with dynamic pads.
   Crash groups work only in pipelines and are not supported in bins.
 
-  ## Log metadata
-  `:log_metadata` field can be used to set the `Membrane.Logger` metadata for all children from that
-  `Membrane.ChildrenSpec`
+  ### Log metadata
+  `:log_metadata` field can be used to set the `Membrane.Logger` metadata for all children in given children specification.
+
+  ## Nesting children specifications
+  The children specifications can be be nested withing themselves.
+
+  Consider the following children specification:
+  ```
+  {[
+    child(:a, A) |> child(:b, B),
+    {child(:c, C), crash_group:
+      {:second, :temporary}}
+  ], crash_group: {:first, :temporary, node: some_node}}
+  ```
+
+  Child `:c` will be spawned in the `:second` crash group, while children `:a` and `:b` will be spawned in the `:first` crash group.
+  Furthermore, since the inner children specification does not define the `:node` option, it will be inherited from the outer children specification.
+  That means that child `:c` will be spawned on the `some_node` node, along with children `:a` and `:b`.
+
   """
 
   import Membrane.Child, only: [is_child_name?: 1]
@@ -242,30 +258,33 @@ defmodule Membrane.ChildrenSpec do
   @type pad_options_t :: Keyword.t()
 
   @type child_definition_t :: struct() | module()
-  @type child_opts_t :: [get_if_exists: boolean]
-  @default_child_opts [get_if_exists: false]
+
+  @type child_options_t :: [get_if_exists: boolean]
+  @default_child_opts [get_if_exists: [default: false]]
+  @type child_opts_map_t :: %{get_if_exists: boolean}
 
   @type child_spec_t ::
-          {Child.name_t(), child_definition_t(), child_opts_t()}
+          {Child.name_t(), child_definition_t(), child_opts_map_t()}
 
-  @type childrenspec_options_t :: [
-          crash_group: Membrane.CrashGroup.t(),
+  @type children_spec_options_t :: [
+          crash_group: Membrane.CrashGroup.t() | nil,
           stream_sync: :sinks | [[Child.name_t()]],
           clock_provider: Child.name_t() | nil,
           node: node() | nil,
           log_metadata: Keyword.t()
         ]
-  @default_childrenspec_options [
-    crash_group: nil,
-    stream_sync: [],
-    clock_provider: nil,
-    node: nil,
-    log_metadata: []
-  ]
+  @type children_spec_options_map_t :: %{
+          crash_group: Membrane.CrashGroup.t() | nil,
+          stream_sync: :sinks | [[Child.name_t()]],
+          clock_provider: Child.name_t() | nil,
+          node: node() | nil,
+          log_metadata: Keyword.t()
+        }
+
   @typedoc """
-  Struct used when starting and linking children within a pipeline or a bin.
+  Used to describe the inner topology of the pipeline/bin.
   """
-  @type t :: structure_builder_t() | [t()] | {t(), childrenspec_options_t()}
+  @type t :: structure_builder_t() | [t()] | {t(), children_spec_options_t()}
 
   @doc """
   Used to refer to an existing child at a beggining of a link specification.
@@ -300,11 +319,11 @@ defmodule Membrane.ChildrenSpec do
   """
   @spec child(structure_builder_t(), Child.name_t(), child_definition_t()) ::
           structure_builder_t()
-  @spec child(Child.name_t(), child_definition_t(), child_opts_t()) :: structure_builder_t()
-  def child(child_name, child_definition, opts \\ @default_child_opts)
+  @spec child(Child.name_t(), child_definition_t(), child_options_t()) :: structure_builder_t()
+  def child(child_name, child_definition, opts \\ [])
 
   def child(%StructureBuilder{} = structure_builder, child_name, child_definition) do
-    do_child(structure_builder, child_name, child_definition, @default_child_opts)
+    do_child(structure_builder, child_name, child_definition, [])
   end
 
   def child(child_name, child_definition, options) when is_child_name?(child_name) do
@@ -312,11 +331,11 @@ defmodule Membrane.ChildrenSpec do
   end
 
   def child(_first_arg, _second_arg, _third_arg) do
-    raise "Link builder cannot be used as a child name! Perhaps you meant to use get_child/2?"
+    raise "Improper child name! Perhaps you meant to use get_child/2 while building your link?"
   end
 
   defp do_child(child_name, child_definition, opts) do
-    opts = Keyword.merge(@default_child_opts, opts)
+    {:ok, opts} = Bunch.Config.parse(opts, @default_child_opts)
     child_spec = {child_name, child_definition, opts}
     %StructureBuilder{children: [child_spec], link_starting_child: child_name}
   end
@@ -326,14 +345,14 @@ defmodule Membrane.ChildrenSpec do
 
   See the _structure_ section of the moduledoc for more information.
   """
-  @spec child(structure_builder_t(), Child.name_t(), child_definition_t(), child_opts_t()) ::
+  @spec child(structure_builder_t(), Child.name_t(), child_definition_t(), child_options_t()) ::
           structure_builder_t()
   def child(structure_builder, child_name, child_definition, opts) do
     do_child(structure_builder, child_name, child_definition, opts)
   end
 
   defp do_child(%StructureBuilder{} = structure_builder, child_name, child_definition, opts) do
-    opts = Keyword.merge(@default_child_opts, opts)
+    {:ok, opts} = Bunch.Config.parse(opts, @default_child_opts)
     child_spec = {child_name, child_definition, opts}
 
     if structure_builder.status == :to_pad do
@@ -516,12 +535,6 @@ defmodule Membrane.ChildrenSpec do
         from_pad_props: Enum.into(props, %{})
     }
   end
-
-  @doc """
-  Returns a keyword list with default children specification options.
-  """
-  @spec get_default_childrenspec_options() :: childrenspec_options_t
-  def get_default_childrenspec_options(), do: @default_childrenspec_options
 
   defp validate_pad_name(pad) when Pad.is_pad_name(pad) or Pad.is_pad_ref(pad) do
     :ok
