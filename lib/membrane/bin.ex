@@ -20,7 +20,7 @@ defmodule Membrane.Bin do
   require Membrane.Core.Message
   require Membrane.Logger
 
-  @type state_t :: map | struct
+  @type state_t :: any()
 
   @type callback_return_t :: {[Action.t()], state_t()}
 

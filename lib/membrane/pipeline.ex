@@ -82,7 +82,7 @@ defmodule Membrane.Pipeline do
           {:ok, pipeline_pid :: pid, supervisor_pid :: pid}
           | {:error, {:already_started, pid()} | term()}
 
-  @type state :: map | struct
+  @type state :: any()
 
   @typedoc """
   Defines return values from Pipeline callback functions.
