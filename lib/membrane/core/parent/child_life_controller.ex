@@ -79,7 +79,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     spec_ref = make_ref()
 
     canonical_spec = make_canonical(spec)
-    canonical_spec = Enum.flat_map(canonical_spec, fn {structure_builders, options} -> Enum.map(structure_builders, & {&1, options}) end)
+
+    canonical_spec =
+      Enum.flat_map(canonical_spec, fn {structure_builders, options} ->
+        Enum.map(structure_builders, &{&1, options})
+      end)
 
     Membrane.Logger.debug("""
     New spec #{inspect(spec_ref)}
@@ -88,30 +92,65 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     results =
       Enum.map(canonical_spec, fn {structure, options} ->
-        #TODO - change StructureParser.parse/1 signature
-        {this_structures_children_defs, this_structures_links} = StructureParser.parse([structure])
+        # TODO - change StructureParser.parse/1 signature
+        {this_structures_children_defs, this_structures_links} =
+          StructureParser.parse([structure])
+
         {this_structures_children_defs, this_structures_links, options}
       end)
-    children_defs = Enum.flat_map(results, fn {child_def, _link, options} -> Enum.map(child_def, &{&1, options}) end)|> Enum.filter(fn {child_def, _options}->child_def != [] end)
 
-    IO.inspect(children_defs, label: :children_defs)
-    links = Enum.flat_map(results, fn {_child_def, link, options} -> Enum.map(link, &{&1, options}) end)|> Enum.filter(fn {link, _options}->link != [] end)
-    IO.inspect(links, label: :links)
+    children_defs =
+      Enum.flat_map(results, fn {child_def, _link, options} ->
+        Enum.map(child_def, &{&1, options})
+      end)
+      |> Enum.filter(fn {child_def, _options} -> child_def != [] end)
 
-    {children, state} =
+    children_defs = remove_unecessary_children_specs(children_defs, state)
+    links = Enum.flat_map(results, fn {_child_def, link, _options} -> link end)
+
+    {all_children_names, state} =
       Enum.map_reduce(children_defs, state, fn {children_def, options}, state ->
         # TODO - change first_step/4 signature
-        first_step([children_def], options, spec_ref, state)
+        {children, state} = first_step([children_def], options, spec_ref, state)
+        children_names = children |> Enum.map(& &1.name)
+        children_pids = children |> Enum.map(& &1.pid)
+
+        # adding crash group to state
+        state =
+          if options.crash_group do
+            CrashGroupUtils.add_crash_group(
+              options.crash_group,
+              children_names,
+              children_pids,
+              state
+            )
+          else
+            state
+          end
+
+        {children_names, state}
       end)
 
+    all_children_names = List.flatten(all_children_names)
+    resolved_links = LinkUtils.resolve_links(links, spec_ref, state)
+    state = %{state | links: Map.merge(state.links, Map.new(resolved_links, &{&1.id, &1}))}
 
-    children = List.flatten(children)
-    IO.inspect(children, label: :children)
-    links = links |> Enum.map(fn {link, _options} -> link end)
-    state =  second_step(children, links, spec_ref, state)
+    dependent_specs =
+      links
+      |> Enum.flat_map(&[&1.from.child_spec_ref, &1.to.child_spec_ref])
+      |> Enum.filter(&Map.has_key?(state.pending_specs, &1))
+      |> MapSet.new()
 
+    state =
+      put_in(state, [:pending_specs, spec_ref], %{
+        status: :initializing,
+        children_names: all_children_names,
+        links_ids: Enum.map(links, & &1.id),
+        dependent_specs: dependent_specs,
+        awaiting_responses: []
+      })
 
-
+    state = StartupUtils.exec_handle_spec_started(all_children_names, state)
     proceed_spec_startup(spec_ref, state)
   end
 
@@ -145,45 +184,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     state = %{state | children: Map.merge(state.children, Map.new(children, &{&1.name, &1}))}
 
     {children, state}
-  end
-
-  defp second_step(children, links, spec_ref, state) do
-    children_names = children |> Enum.map(& &1.name)
-    children_pids = children |> Enum.map(& &1.pid)
-
-    links = LinkUtils.resolve_links(links, spec_ref, state)
-    state = %{state | links: Map.merge(state.links, Map.new(links, &{&1.id, &1}))}
-
-    dependent_specs =
-      links
-      |> Enum.flat_map(&[&1.from.child_spec_ref, &1.to.child_spec_ref])
-      |> Enum.filter(&Map.has_key?(state.pending_specs, &1))
-      |> MapSet.new()
-
-    state =
-      put_in(state, [:pending_specs, spec_ref], %{
-        status: :initializing,
-        children_names: children_names,
-        links_ids: Enum.map(links, & &1.id),
-        dependent_specs: dependent_specs,
-        awaiting_responses: []
-      })
-
-    # adding crash group to state
-    # state =
-    #   if options.crash_group do
-    #     CrashGroupUtils.add_crash_group(
-    #       options.crash_group,
-    #       children_names,
-    #       children_pids,
-    #       state
-    #     )
-    #   else
-    #     state
-    #   end
-
-    state = StartupUtils.exec_handle_spec_started(children_names, state)
-    state
   end
 
   @spec handle_spec_timeout(spec_ref_t(), Parent.state_t()) ::
@@ -517,12 +517,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     |> CrashGroupUtils.remove_crash_group_if_empty(group.name)
   end
 
-  defp remove_unecessary_children_specs(children_specs, state) do
+  defp remove_unecessary_children_specs(children_defs, state) do
     %{children: state_children} = state
 
-    children_specs
+    children_defs
     |> Enum.reject(fn
-      {name, _child_spec, options} ->
+      {{name, _child_spec, options}, _children_spec_options} ->
         options.get_if_exists and Map.has_key?(state_children, name)
     end)
   end
