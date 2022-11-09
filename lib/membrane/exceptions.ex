@@ -49,7 +49,7 @@ defmodule Membrane.CallbackError do
   end
 
   defp mk_exception(:bad_return, {module, fun}, opts) do
-    val = Keyword.fetch!(opts, :val)
+    val = Keyword.fetch!(opts, :value)
 
     msg = """
     Invalid value returned from #{inspect(module)}.#{inspect(fun)}:

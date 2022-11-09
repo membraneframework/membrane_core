@@ -128,7 +128,7 @@ defmodule Membrane.Core.CallbackHandler do
     maybe_context =
       case handler_params do
         %{context: context_fun} -> [context_fun.(state)]
-        _else -> []
+        _params -> []
       end
 
     args = args ++ maybe_context ++ [internal_state]
@@ -151,8 +151,11 @@ defmodule Membrane.Core.CallbackHandler do
       {actions, _state} when is_list(actions) ->
         callback_result
 
-      _else ->
-        raise CallbackError, kind: :bad_return, callback: {module, callback}, val: callback_result
+      _result ->
+        raise CallbackError,
+          kind: :bad_return,
+          callback: {module, callback},
+          value: callback_result
     end
   end
 
