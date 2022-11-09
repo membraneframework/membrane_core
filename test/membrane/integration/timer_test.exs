@@ -11,12 +11,12 @@ defmodule Membrane.Integration.TimerTest do
 
     @impl true
     def handle_playing(_ctx, state) do
-      {{:ok, start_timer: {:timer, Time.milliseconds(100)}}, state}
+      {[start_timer: {:timer, Time.milliseconds(100)}], state}
     end
 
     @impl true
     def handle_tick(:timer, _ctx, state) do
-      {{:ok, notify_parent: :tick, stop_timer: :timer}, state}
+      {[notify_parent: :tick, stop_timer: :timer], state}
     end
   end
 
@@ -25,12 +25,12 @@ defmodule Membrane.Integration.TimerTest do
 
     @impl true
     def handle_playing(_ctx, state) do
-      {{:ok, start_timer: {:timer, Time.milliseconds(100)}}, state}
+      {[start_timer: {:timer, Time.milliseconds(100)}], state}
     end
 
     @impl true
     def handle_tick(:timer, _ctx, state) do
-      {{:ok, notify_parent: :tick, stop_timer: :timer}, state}
+      {[notify_parent: :tick, stop_timer: :timer], state}
     end
   end
 
@@ -41,18 +41,18 @@ defmodule Membrane.Integration.TimerTest do
     def handle_init(_ctx, pid) do
       spec = [child(:element, Element), child(:bin, Bin)]
 
-      {{:ok, spec: spec, playback: :playing}, %{pid: pid}}
+      {[spec: spec, playback: :playing], %{pid: pid}}
     end
 
     @impl true
     def handle_playing(_ctx, state) do
-      {{:ok, start_timer: {:timer, Time.milliseconds(100)}}, state}
+      {[start_timer: {:timer, Time.milliseconds(100)}], state}
     end
 
     @impl true
     def handle_tick(:timer, _ctx, state) do
       send(state.pid, :pipeline_tick)
-      {{:ok, stop_timer: :timer}, state}
+      {[stop_timer: :timer], state}
     end
   end
 
@@ -75,12 +75,12 @@ defmodule Membrane.Integration.TimerTest do
     @impl true
     def handle_setup(_ctx, state) do
       Process.send_after(self(), :stop_timer, 0)
-      {{:ok, start_timer: {:timer, :no_interval}}, state}
+      {[start_timer: {:timer, :no_interval}], state}
     end
 
     @impl true
     def handle_info(:stop_timer, _ctx, state) do
-      {{:ok, stop_timer: :timer, notify_parent: :ok}, state}
+      {[stop_timer: :timer, notify_parent: :ok], state}
     end
   end
 

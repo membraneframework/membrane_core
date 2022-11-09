@@ -18,17 +18,17 @@ defmodule Membrane.Core.PipelineTest do
 
     @impl true
     def handle_init(_ctx, result) do
-      result || {:ok, %{}}
+      result || {[], %{}}
     end
 
     @impl true
     def handle_child_notification(notification, child, _ctx, state) do
-      {:ok, Map.put(state, :child_notification, {notification, child})}
+      {[], Map.put(state, :child_notification, {notification, child})}
     end
 
     @impl true
     def handle_info(message, _ctx, state) do
-      {:ok, Map.put(state, :other, message)}
+      {[], Map.put(state, :other, message)}
     end
   end
 
@@ -59,15 +59,9 @@ defmodule Membrane.Core.PipelineTest do
   setup_all :state
 
   describe "Handle init" do
-    test "should raise an error if handle_init returns an error", %{init_opts: init_opts} do
-      assert_raise Membrane.CallbackError, fn ->
-        @module.init(%{init_opts | options: {:error, :reason}})
-      end
-    end
-
-    test "executes successfully when callback module's handle_init returns {{:ok, spec: spec}}, state} ",
+    test "executes successfully when callback module's handle_init returns {[spec: spec], state} ",
          %{init_opts: init_opts} do
-      assert {:ok, state, {:continue, :setup}} = @module.init(%{init_opts | options: {:ok, %{}}})
+      assert {:ok, state, {:continue, :setup}} = @module.init(%{init_opts | options: {[], %{}}})
 
       assert %State{internal_state: %{}, module: TestPipeline} = state
     end

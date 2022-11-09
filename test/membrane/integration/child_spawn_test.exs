@@ -17,7 +17,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
 
     @impl true
     def handle_init(_ctx, structure) do
-      {{:ok, spec: structure}, %{}}
+      {[spec: structure], %{}}
     end
   end
 
@@ -30,7 +30,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
 
     @impl true
     def handle_init(_ctx, _opts) do
-      {{:ok, notify_parent: :message_from_sink}, %{}}
+      {[notify_parent: :message_from_sink], %{}}
     end
   end
 

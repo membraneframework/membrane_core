@@ -49,17 +49,17 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
 
     spec = links ++ children
 
-    {{:ok, spec: spec, playback: :playing}, %{}}
+    {[spec: spec, playback: :playing], %{}}
   end
 
   @impl true
   def handle_info({:child_msg, name, msg}, _ctx, state) do
-    {{:ok, notify_child: {name, msg}}, state}
+    {[notify_child: {name, msg}], state}
   end
 
   @impl true
   def handle_info({:remove_child, name}, _ctx, state) do
-    {{:ok, remove_child: name}, state}
+    {[remove_child: name], state}
   end
 
   defp maybe_add_extra_source(children, %{extra_source: source}),

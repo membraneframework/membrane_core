@@ -49,7 +49,7 @@ defmodule Membrane.CallbackError do
   end
 
   defp mk_exception(:bad_return, {module, fun}, opts) do
-    val = Keyword.fetch!(opts, :val)
+    val = Keyword.fetch!(opts, :value)
 
     msg = """
     Invalid value returned from #{inspect(module)}.#{inspect(fun)}:
@@ -59,19 +59,11 @@ defmodule Membrane.CallbackError do
     %__MODULE__{message: msg}
   end
 
-  defp mk_exception(:error, {module, fun}, opts) do
-    reason = Keyword.fetch!(opts, :reason)
-
-    state =
-      case Keyword.fetch(opts, :state) do
-        {:ok, state} -> "Internal state: #{inspect(state, pretty: true)}"
-        :error -> ""
-      end
+  defp mk_exception(:not_implemented, {module, fun}, opts) do
+    arity = Keyword.fetch!(opts, :arity)
 
     msg = """
-    Error returned from #{inspect(module)}.#{fun}:
-    #{inspect(reason, pretty: true)}
-    #{state}
+    Callback #{fun}/#{arity} is not implemented in #{inspect(module)}
     """
 
     %__MODULE__{message: msg}

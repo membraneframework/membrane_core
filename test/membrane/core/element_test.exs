@@ -16,7 +16,7 @@ defmodule Membrane.Core.ElementTest do
 
     @impl true
     def handle_info(msg, _ctx, state) do
-      {{:ok, notify_parent: msg}, state}
+      {[notify_parent: msg], state}
     end
   end
 
@@ -32,12 +32,12 @@ defmodule Membrane.Core.ElementTest do
 
     @impl true
     def handle_tick(_timer, _ctx, state) do
-      {:ok, state}
+      {[], state}
     end
 
     @impl true
     def handle_demand(:output, size, _unit, _ctx, state) do
-      {{:ok, demand: {:dynamic_input, size}}, state}
+      {[demand: {:dynamic_input, size}], state}
     end
   end
 

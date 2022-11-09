@@ -8,28 +8,28 @@ defmodule PipelineSynchronousCallTest do
     use Membrane.Pipeline
     @impl true
     def handle_init(_ctx, result) do
-      result || {:ok, %{}}
+      result || {[], %{}}
     end
 
     @impl true
     def handle_child_notification(notification, child, _ctx, state) do
-      {:ok, Map.put(state, :notification, {notification, child})}
+      {[], Map.put(state, :notification, {notification, child})}
     end
 
     @impl true
     def handle_info({{:please_reply, msg}, pid}, _ctx, state) do
-      {{:ok, reply_to: {pid, msg}}, state}
+      {[reply_to: {pid, msg}], state}
     end
 
     @impl true
     def handle_call({:instant_reply, msg}, _ctx, state) do
-      {{:ok, reply: msg}, state}
+      {[reply: msg], state}
     end
 
     @impl true
     def handle_call({:postponed_reply, msg}, ctx, state) do
       send(self(), {{:please_reply, msg}, ctx.from})
-      {:ok, state}
+      {[], state}
     end
   end
 
