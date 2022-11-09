@@ -139,7 +139,7 @@ defmodule Membrane.Core.CallbackHandler do
       rescue
         e in UndefinedFunctionError ->
           with %{module: ^module, function: ^callback, arity: arity} <- e do
-            reraise Membrane.CallbackError,
+            reraise CallbackError,
                     [kind: :not_implemented, callback: {module, callback}, arity: arity],
                     __STACKTRACE__
           end
@@ -147,8 +147,13 @@ defmodule Membrane.Core.CallbackHandler do
           reraise e, __STACKTRACE__
       end
 
-    callback_result
-    |> check_callback_result(module, callback)
+    case callback_result do
+      {actions, _state} when is_list(actions) ->
+        callback_result
+
+      _else ->
+        raise CallbackError, kind: :bad_return, callback: {module, callback}, val: callback_result
+    end
   end
 
   @spec handle_callback_result(
@@ -186,15 +191,5 @@ defmodule Membrane.Core.CallbackHandler do
           reraise e, __STACKTRACE__
       end
     end)
-  end
-
-  @spec check_callback_result(callback_return_t | any, module, callback :: atom) ::
-          {list, internal_state_t}
-  defp check_callback_result({actions, _state} = result, _module, _cb) when is_list(actions) do
-    result
-  end
-
-  defp check_callback_result(result, module, cb) do
-    raise CallbackError, kind: :bad_return, callback: {module, cb}, val: result
   end
 end
