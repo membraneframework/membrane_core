@@ -93,13 +93,23 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     {results, state} =
       Enum.map_reduce(results, state, fn {this_structures_children_defs, links, options}, state ->
-        {children, state} = first_step(this_structures_children_defs, options, spec_ref, state)
-        {{children, links, options}, state}
+        if this_structures_children_defs != [] do
+          {children, state} = first_step(this_structures_children_defs, options, spec_ref, state)
+          {{children, links, options}, state}
+        else
+          {{[], links, options}, state}
+        end
       end)
 
+    children = Enum.reduce(results, [], &(elem(&1, 0) ++ &2))
+
     state =
-      Enum.reduce(results, state, fn {children, links, options}, state ->
-        second_step(children, links, options, spec_ref, state)
+      Enum.reduce(results, state, fn {_children, links, options}, state ->
+        if links != [] do
+          second_step(children, links, options, spec_ref, state)
+        else
+          state
+        end
       end)
 
     proceed_spec_startup(spec_ref, state)
@@ -530,9 +540,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {:ok, options} = Bunch.Config.parse(options_keywords_list, @default_children_spec_options)
 
     [{this_level_specs, options}] ++
-      if inner_specs != [],
-        do: Enum.flat_map(inner_specs, &make_canonical(&1, options_keywords_list)),
-        else: []
+      Enum.flat_map(inner_specs, &make_canonical(&1, options_keywords_list))
+  end
+
+  def make_canonical(specs, previous_level_options_keywords_list) when is_list(specs) do
+    Enum.flat_map(specs, &make_canonical(&1, previous_level_options_keywords_list))
   end
 
   def make_canonical(spec, previous_level_options_keywords_list) do
