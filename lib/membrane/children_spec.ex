@@ -211,17 +211,15 @@ defmodule Membrane.ChildrenSpec do
 
     use Bunch.Access
 
-    defstruct children: [],
-              links: [],
-              status: :done,
-              from_pad: nil,
-              from_pad_props: nil,
-              to_pad: nil,
-              to_pad_props: nil,
-              link_starting_child: nil
+    @typep child_options_map_t :: %{get_if_exists: boolean}
+
+    @type child_spec_t ::
+            {Child.name_t(), Membrane.ChildrenSpec.child_definition_t(), child_options_map_t()}
+
+    @type status_t :: :from_pad | :to_pad | :done
 
     @type t :: %__MODULE__{
-            children: [Membrane.ChildrenSpec.child_spec_t()],
+            children: [child_spec_t()],
             links: [map],
             status: status_t,
             from_pad: Membrane.Pad.name_t() | Membrane.Pad.ref_t() | nil,
@@ -231,7 +229,14 @@ defmodule Membrane.ChildrenSpec do
             link_starting_child: Child.name_t()
           }
 
-    @type status_t :: :from_pad | :to_pad | :done
+    defstruct children: [],
+              links: [],
+              status: :done,
+              from_pad: nil,
+              from_pad_props: nil,
+              to_pad: nil,
+              to_pad_props: nil,
+              link_starting_child: nil
 
     @spec finish_link(t(), Child.name_t()) :: t()
     def finish_link(%__MODULE__{status: :to_pad} = builder, child_name) do
@@ -260,11 +265,7 @@ defmodule Membrane.ChildrenSpec do
   @type child_definition_t :: struct() | module()
 
   @type child_options_t :: [get_if_exists: boolean]
-  @default_child_opts [get_if_exists: [default: false]]
-  @type child_opts_map_t :: %{get_if_exists: boolean}
-
-  @type child_spec_t ::
-          {Child.name_t(), child_definition_t(), child_opts_map_t()}
+  @default_child_options [get_if_exists: [default: false]]
 
   @type children_spec_options_t :: [
           crash_group: Membrane.CrashGroup.t() | nil,
@@ -310,8 +311,6 @@ defmodule Membrane.ChildrenSpec do
 
   See the _structure_ section of the moduledoc for more information.
   """
-  @spec child(structure_builder_t(), Child.name_t(), child_definition_t()) ::
-          structure_builder_t()
   @spec child(Child.name_t(), child_definition_t(), child_options_t()) :: structure_builder_t()
   def child(child_name, child_definition, opts \\ [])
 
@@ -339,13 +338,13 @@ defmodule Membrane.ChildrenSpec do
   end
 
   defp do_child(child_name, child_definition, opts) do
-    {:ok, opts} = Bunch.Config.parse(opts, @default_child_opts)
+    {:ok, opts} = Bunch.Config.parse(opts, @default_child_options)
     child_spec = {child_name, child_definition, opts}
     %StructureBuilder{children: [child_spec], link_starting_child: child_name}
   end
 
   defp do_child(%StructureBuilder{} = structure_builder, child_name, child_definition, opts) do
-    {:ok, opts} = Bunch.Config.parse(opts, @default_child_opts)
+    {:ok, opts} = Bunch.Config.parse(opts, @default_child_options)
     child_spec = {child_name, child_definition, opts}
 
     if structure_builder.status == :to_pad do
