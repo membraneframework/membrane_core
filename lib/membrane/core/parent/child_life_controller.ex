@@ -80,38 +80,60 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     canonical_spec = make_canonical(spec)
 
-    canonical_spec =
-      Enum.flat_map(canonical_spec, fn {structure_builders, options} ->
-        Enum.map(structure_builders, &{&1, options})
-      end)
-
     Membrane.Logger.debug("""
     New spec #{inspect(spec_ref)}
     structure: #{inspect(spec)}
     """)
 
     results =
-      Enum.map(canonical_spec, fn {structure, options} ->
+      Enum.map(canonical_spec, fn {structures, options} ->
         # TODO - change StructureParser.parse/1 signature
-        {this_structures_children_defs, this_structures_links} =
-          StructureParser.parse([structure])
+        {this_structures_children_defs, this_structures_links} = StructureParser.parse(structures)
 
         {this_structures_children_defs, this_structures_links, options}
       end)
 
     children_defs =
-      Enum.flat_map(results, fn {child_def, _link, options} ->
-        Enum.map(child_def, &{&1, options})
+      Enum.map(results, fn {children_defs, _links, options} ->
+        {children_defs, options}
       end)
-      |> Enum.filter(fn {child_def, _options} -> child_def != [] end)
+      |> Enum.filter(fn {children_defs, _options} -> children_defs != [] end)
 
     children_defs = remove_unecessary_children_specs(children_defs, state)
-    links = Enum.flat_map(results, fn {_child_def, link, _options} -> link end)
+
+    links = Enum.flat_map(results, fn {_child_def, links, _options} -> links end)
 
     {all_children_names, state} =
-      Enum.map_reduce(children_defs, state, fn {children_def, options}, state ->
-        # TODO - change first_step/4 signature
-        {children, state} = first_step([children_def], options, spec_ref, state)
+      Enum.map_reduce(children_defs, state, fn {children_defs_with_given_options, options},
+                                               state ->
+        children = ChildEntryParser.parse(children_defs_with_given_options)
+        children = Enum.map(children, &%{&1 | spec_ref: spec_ref})
+        :ok = StartupUtils.check_if_children_names_unique(children, state)
+        syncs = StartupUtils.setup_syncs(children, options.stream_sync)
+
+        log_metadata =
+          case state do
+            %Bin.State{children_log_metadata: metadata} ->
+              metadata ++ options.log_metadata
+
+            %Pipeline.State{} ->
+              options.log_metadata
+          end
+
+        children =
+          StartupUtils.start_children(
+            children,
+            options.node,
+            state.synchronization.clock_proxy,
+            syncs,
+            log_metadata,
+            state.subprocess_supervisor
+          )
+
+        :ok = StartupUtils.maybe_activate_syncs(syncs, state)
+        state = ClockHandler.choose_clock(children, options.clock_provider, state)
+        state = %{state | children: Map.merge(state.children, Map.new(children, &{&1.name, &1}))}
+
         children_names = children |> Enum.map(& &1.name)
         children_pids = children |> Enum.map(& &1.pid)
 
@@ -136,9 +158,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     state = %{state | links: Map.merge(state.links, Map.new(resolved_links, &{&1.id, &1}))}
 
     dependent_specs =
-      links
+      resolved_links
       |> Enum.flat_map(&[&1.from.child_spec_ref, &1.to.child_spec_ref])
-      |> Enum.filter(&Map.has_key?(state.pending_specs, &1))
+      |> Enum.filter(fn x ->
+        Map.has_key?(state.pending_specs, x)
+      end)
       |> MapSet.new()
 
     state =
@@ -152,38 +176,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     state = StartupUtils.exec_handle_spec_started(all_children_names, state)
     proceed_spec_startup(spec_ref, state)
-  end
-
-  defp first_step(children_definitions, options, spec_ref, state) do
-    children = ChildEntryParser.parse(children_definitions)
-    children = Enum.map(children, &%{&1 | spec_ref: spec_ref})
-    :ok = StartupUtils.check_if_children_names_unique(children, state)
-    syncs = StartupUtils.setup_syncs(children, options.stream_sync)
-
-    log_metadata =
-      case state do
-        %Bin.State{children_log_metadata: metadata} ->
-          metadata ++ options.log_metadata
-
-        %Pipeline.State{} ->
-          options.log_metadata
-      end
-
-    children =
-      StartupUtils.start_children(
-        children,
-        options.node,
-        state.synchronization.clock_proxy,
-        syncs,
-        log_metadata,
-        state.subprocess_supervisor
-      )
-
-    :ok = StartupUtils.maybe_activate_syncs(syncs, state)
-    state = ClockHandler.choose_clock(children, options.clock_provider, state)
-    state = %{state | children: Map.merge(state.children, Map.new(children, &{&1.name, &1}))}
-
-    {children, state}
   end
 
   @spec handle_spec_timeout(spec_ref_t(), Parent.state_t()) ::
@@ -517,19 +509,21 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     |> CrashGroupUtils.remove_crash_group_if_empty(group.name)
   end
 
-  defp remove_unecessary_children_specs(children_defs, state) do
+  defp remove_unecessary_children_specs(children_defs_list, state) do
     %{children: state_children} = state
 
-    children_defs
-    |> Enum.reject(fn
-      {{name, _child_spec, options}, _children_spec_options} ->
-        options.get_if_exists and Map.has_key?(state_children, name)
+    Enum.map(children_defs_list, fn {children_defs, children_spec_options} ->
+      {children_defs
+       |> Enum.reject(fn
+         {name, _child_spec, options} ->
+           options.get_if_exists and Map.has_key?(state_children, name)
+       end), children_spec_options}
     end)
   end
 
-  def make_canonical(spec, previous_level_options_keywords_list \\ [])
+  defp make_canonical(spec, previous_level_options_keywords_list \\ [])
 
-  def make_canonical({spec, options_keywords_list}, previous_level_options_keywords_list) do
+  defp make_canonical({spec, options_keywords_list}, previous_level_options_keywords_list) do
     spec = Bunch.listify(spec)
 
     {inner_specs, this_level_specs} = Enum.split_with(spec, &is_tuple(&1))
@@ -543,11 +537,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       Enum.flat_map(inner_specs, &make_canonical(&1, options_keywords_list))
   end
 
-  def make_canonical(specs, previous_level_options_keywords_list) when is_list(specs) do
+  defp make_canonical(specs, previous_level_options_keywords_list) when is_list(specs) do
     Enum.flat_map(specs, &make_canonical(&1, previous_level_options_keywords_list))
   end
 
-  def make_canonical(spec, previous_level_options_keywords_list) do
+  defp make_canonical(spec, previous_level_options_keywords_list) do
     spec = Bunch.listify(spec)
 
     {:ok, options} =
