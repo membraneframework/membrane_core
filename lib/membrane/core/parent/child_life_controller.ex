@@ -38,13 +38,22 @@ defmodule Membrane.Core.Parent.ChildLifeController do
           node: node() | nil,
           log_metadata: Keyword.t()
         }
-  @default_children_spec_options [
-    crash_group: [default: nil],
-    stream_sync: [default: []],
-    clock_provider: [default: nil],
-    node: [default: nil],
-    log_metadata: [default: []]
+
+  @children_spec_options_fields_specs [
+    crash_group: [require?: false],
+    stream_sync: [require?: false],
+    clock_provider: [require?: false],
+    node: [require?: false],
+    log_metadata: [require?: false]
   ]
+
+  @default_children_spec_options %{
+    crash_group: nil,
+    stream_sync: [],
+    clock_provider: nil,
+    node: nil,
+    log_metadata: []
+  }
 
   @doc """
   Handles `Membrane.ChildrenSpec` returned with `spec` action.
@@ -523,32 +532,34 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end)
   end
 
-  defp make_canonical(spec, previous_level_options_keywords_list \\ [])
+  defp make_canonical(spec, defaults \\ @default_children_spec_options)
 
-  defp make_canonical({spec, options_keywords_list}, previous_level_options_keywords_list) do
+  defp make_canonical({spec, options_keywords_list}, defaults) do
     spec = Bunch.listify(spec)
-
     {inner_specs, this_level_specs} = Enum.split_with(spec, &is_tuple(&1))
 
-    options_keywords_list =
-      Keyword.merge(previous_level_options_keywords_list, options_keywords_list)
+    {:ok, options} =
+      Bunch.Config.parse(options_keywords_list, @children_spec_options_fields_specs)
 
-    {:ok, options} = Bunch.Config.parse(options_keywords_list, @default_children_spec_options)
+    options = Map.merge(defaults, options)
+
+    options_to_pass_to_nested =
+      Enum.reject(options, fn {key, _value} -> key in [:clock_provider, :stream_sync] end) |> Map.new()
+
+    defaults_for_nested = Map.merge(@default_children_spec_options, options_to_pass_to_nested)
 
     [{this_level_specs, options}] ++
-      Enum.flat_map(inner_specs, &make_canonical(&1, options_keywords_list))
+      Enum.flat_map(inner_specs, &make_canonical(&1, defaults_for_nested))
   end
 
-  defp make_canonical(specs, previous_level_options_keywords_list) when is_list(specs) do
-    Enum.flat_map(specs, &make_canonical(&1, previous_level_options_keywords_list))
+  defp make_canonical(specs, defaults) when is_list(specs) do
+    Enum.flat_map(specs, &make_canonical(&1, defaults))
   end
 
-  defp make_canonical(spec, previous_level_options_keywords_list) do
+  defp make_canonical(spec, defaults) do
     spec = Bunch.listify(spec)
-
-    {:ok, options} =
-      Bunch.Config.parse(previous_level_options_keywords_list, @default_children_spec_options)
-
+    {:ok, options} = Bunch.Config.parse([], @children_spec_options_fields_specs)
+    options = Map.merge(defaults, options)
     [{spec, options}]
   end
 end
