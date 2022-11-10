@@ -114,57 +114,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       Enum.flat_map(parsed_structures, fn {_children_definitions, links, _options} -> links end)
 
     {all_children_names, state} =
-      Enum.map_reduce(children_definitions, state, fn {children_definitions_with_given_options,
-                                                       options},
-                                                      state ->
-        children = ChildEntryParser.parse(children_definitions_with_given_options)
-        children = Enum.map(children, &%{&1 | spec_ref: spec_ref})
-        :ok = StartupUtils.check_if_children_names_unique(children, state)
-        syncs = StartupUtils.setup_syncs(children, options.stream_sync)
+      Enum.flat_map_reduce(children_definitions, state, &setup_children(&1, spec_ref, &2))
 
-        log_metadata =
-          case state do
-            %Bin.State{children_log_metadata: metadata} ->
-              metadata ++ options.log_metadata
-
-            %Pipeline.State{} ->
-              options.log_metadata
-          end
-
-        children =
-          StartupUtils.start_children(
-            children,
-            options.node,
-            state.synchronization.clock_proxy,
-            syncs,
-            log_metadata,
-            state.subprocess_supervisor
-          )
-
-        :ok = StartupUtils.maybe_activate_syncs(syncs, state)
-        state = ClockHandler.choose_clock(children, options.clock_provider, state)
-        state = %{state | children: Map.merge(state.children, Map.new(children, &{&1.name, &1}))}
-
-        children_names = children |> Enum.map(& &1.name)
-        children_pids = children |> Enum.map(& &1.pid)
-
-        # adding crash group to state
-        state =
-          if options.crash_group do
-            CrashGroupUtils.add_crash_group(
-              options.crash_group,
-              children_names,
-              children_pids,
-              state
-            )
-          else
-            state
-          end
-
-        {children_names, state}
-      end)
-
-    all_children_names = List.flatten(all_children_names)
     resolved_links = LinkUtils.resolve_links(links, spec_ref, state)
     state = %{state | links: Map.merge(state.links, Map.new(resolved_links, &{&1.id, &1}))}
 
@@ -544,7 +495,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     options = Map.merge(defaults, options)
 
     options_to_pass_to_nested =
-      Enum.reject(options, fn {key, _value} -> key in [:clock_provider, :stream_sync] end) |> Map.new()
+      Enum.reject(options, fn {key, _value} -> key in [:clock_provider, :stream_sync] end)
+      |> Map.new()
 
     defaults_for_nested = Map.merge(@default_children_spec_options, options_to_pass_to_nested)
 
@@ -561,5 +513,57 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {:ok, options} = Bunch.Config.parse([], @children_spec_options_fields_specs)
     options = Map.merge(defaults, options)
     [{spec, options}]
+  end
+
+  defp setup_children(
+         {children_definitions_with_given_options, options},
+         spec_ref,
+         state
+       ) do
+    children = ChildEntryParser.parse(children_definitions_with_given_options)
+    children = Enum.map(children, &%{&1 | spec_ref: spec_ref})
+    :ok = StartupUtils.check_if_children_names_unique(children, state)
+    syncs = StartupUtils.setup_syncs(children, options.stream_sync)
+
+    log_metadata =
+      case state do
+        %Bin.State{children_log_metadata: metadata} ->
+          metadata ++ options.log_metadata
+
+        %Pipeline.State{} ->
+          options.log_metadata
+      end
+
+    children =
+      StartupUtils.start_children(
+        children,
+        options.node,
+        state.synchronization.clock_proxy,
+        syncs,
+        log_metadata,
+        state.subprocess_supervisor
+      )
+
+    :ok = StartupUtils.maybe_activate_syncs(syncs, state)
+    state = ClockHandler.choose_clock(children, options.clock_provider, state)
+    state = %{state | children: Map.merge(state.children, Map.new(children, &{&1.name, &1}))}
+
+    children_names = children |> Enum.map(& &1.name)
+    children_pids = children |> Enum.map(& &1.pid)
+
+    # adding crash group to state
+    state =
+      if options.crash_group do
+        CrashGroupUtils.add_crash_group(
+          options.crash_group,
+          children_names,
+          children_pids,
+          state
+        )
+      else
+        state
+      end
+
+    {children_names, state}
   end
 end
