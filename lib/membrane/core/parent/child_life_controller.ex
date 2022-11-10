@@ -85,28 +85,30 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     structure: #{inspect(spec)}
     """)
 
-    results =
+    parsed_structures =
       Enum.map(canonical_spec, fn {structures, options} ->
-        # TODO - change StructureParser.parse/1 signature
-        {this_structures_children_defs, this_structures_links} = StructureParser.parse(structures)
+        {this_structures_children_definitions, this_structures_links} =
+          StructureParser.parse(structures)
 
-        {this_structures_children_defs, this_structures_links, options}
+        {this_structures_children_definitions, this_structures_links, options}
       end)
 
-    children_defs =
-      Enum.map(results, fn {children_defs, _links, options} ->
-        {children_defs, options}
+    children_definitions =
+      Enum.map(parsed_structures, fn {children_definitions, _links, options} ->
+        {children_definitions, options}
       end)
-      |> Enum.filter(fn {children_defs, _options} -> children_defs != [] end)
+      |> Enum.filter(fn {children_definitions, _options} -> children_definitions != [] end)
 
-    children_defs = remove_unecessary_children_specs(children_defs, state)
+    children_definitions = remove_unecessary_children_specs(children_definitions, state)
 
-    links = Enum.flat_map(results, fn {_child_def, links, _options} -> links end)
+    links =
+      Enum.flat_map(parsed_structures, fn {_children_definitions, links, _options} -> links end)
 
     {all_children_names, state} =
-      Enum.map_reduce(children_defs, state, fn {children_defs_with_given_options, options},
-                                               state ->
-        children = ChildEntryParser.parse(children_defs_with_given_options)
+      Enum.map_reduce(children_definitions, state, fn {children_definitions_with_given_options,
+                                                       options},
+                                                      state ->
+        children = ChildEntryParser.parse(children_definitions_with_given_options)
         children = Enum.map(children, &%{&1 | spec_ref: spec_ref})
         :ok = StartupUtils.check_if_children_names_unique(children, state)
         syncs = StartupUtils.setup_syncs(children, options.stream_sync)
@@ -509,11 +511,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     |> CrashGroupUtils.remove_crash_group_if_empty(group.name)
   end
 
-  defp remove_unecessary_children_specs(children_defs_list, state) do
+  defp remove_unecessary_children_specs(children_definitions_list, state) do
     %{children: state_children} = state
 
-    Enum.map(children_defs_list, fn {children_defs, children_spec_options} ->
-      {children_defs
+    Enum.map(children_definitions_list, fn {children_definitions, children_spec_options} ->
+      {children_definitions
        |> Enum.reject(fn
          {name, _child_spec, options} ->
            options.get_if_exists and Map.has_key?(state_children, name)
