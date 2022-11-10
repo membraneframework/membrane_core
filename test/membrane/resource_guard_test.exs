@@ -89,17 +89,22 @@ defmodule Membrane.ResourceGuardTest do
       Task.start_link(fn ->
         {:ok, guard} = ResourceGuard.start_link()
 
-        ResourceGuard.register_resource(guard, fn -> send(test_pid, :cleanup) end, name: :resource)
+        ResourceGuard.register_resource(guard, fn -> send(test_pid, :cleanup) end, name: :name)
 
-        ResourceGuard.register_resource(guard, fn -> send(test_pid, :cleanup2) end,
-          name: :resource
-        )
+        ResourceGuard.register_resource(guard, fn -> send(test_pid, :cleanup2) end, name: :name)
 
         ResourceGuard.register_resource(guard, fn -> send(test_pid, :cleanup3) end,
           name: :other_name
         )
 
-        ResourceGuard.cleanup_resource(guard, :resource)
+        ResourceGuard.register_resource(guard, fn -> send(test_pid, :cleanup4) end,
+          name: :yet_another_name
+        )
+
+        ResourceGuard.cleanup_resource(guard, :name)
+
+        ResourceGuard.unregister_resource(guard, :yet_another_name)
+
         receive do: (:exit -> :ok)
       end)
 
@@ -112,5 +117,6 @@ defmodule Membrane.ResourceGuardTest do
     refute_receive :cleanup
     refute_receive :cleanup2
     assert_receive :cleanup3
+    refute_receive :cleanup4
   end
 end

@@ -51,6 +51,19 @@ defmodule Membrane.ResourceGuard do
   end
 
   @doc """
+  Unregisters a resource from the resource guard.
+
+  All cleanup functions related to this resource are deleted.
+
+  Works only with named resources.
+  """
+  @spec unregister_resource(t, name :: term) :: :ok
+  def unregister_resource(resource_guard, name) do
+    Message.send(resource_guard, :unregister_resource, name)
+    :ok
+  end
+
+  @doc """
   Cleans up a named resource manually.
 
   If many resources are registered with the name, all of them are cleaned up.
@@ -73,6 +86,17 @@ defmodule Membrane.ResourceGuard do
     name = Keyword.get(opts, :name)
     timeout = Keyword.get(opts, :timeout, 5000)
     {:noreply, %{state | guards: [{function, name, timeout} | state.guards]}}
+  end
+
+  @impl true
+  def handle_info(Message.new(:unregister_resource, name), state) do
+    guards =
+      Enum.reject(state.guards, fn
+        {_function, ^name, _timeout} -> true
+        _other -> false
+      end)
+
+    {:noreply, %{state | guards: guards}}
   end
 
   @impl true
