@@ -13,23 +13,23 @@ defmodule Membrane.FailWhenNoStreamFormatAreSent do
 
     @impl true
     def handle_init(_ctx, _options) do
-      {:ok, %{}}
+      {[], %{}}
     end
 
     @impl true
     def handle_demand(_pad, _size, _unit, _ctx, state) do
-      {:ok, state}
+      {[], state}
     end
 
     @impl true
     def handle_parent_notification(:send_buffer, _ctx, state) do
-      {{:ok, [buffer: {:output, %Membrane.Buffer{payload: "Something"}}]}, state}
+      {[buffer: {:output, %Membrane.Buffer{payload: "Something"}}], state}
     end
 
     @impl true
     def handle_parent_notification({:send_your_pid, requester_pid}, _ctx, state) do
       send(requester_pid, {:my_pid, self()})
-      {:ok, state}
+      {[], state}
     end
   end
 

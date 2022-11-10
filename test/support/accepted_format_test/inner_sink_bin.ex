@@ -26,11 +26,11 @@ defmodule Membrane.Support.AcceptedFormatTest.InnerSinkBin do
       bin_input()
       |> child(:sink, %AcceptedFormatTest.Sink{test_pid: test_pid})
 
-    {{:ok, spec: spec}, %{}}
+    {[spec: spec], %{}}
   end
 
   @impl true
   def handle_child_notification(msg, _child, _ctx, state) do
-    {{:ok, notify_parent: msg}, state}
+    {[notify_parent: msg], state}
   end
 end

@@ -27,25 +27,25 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   @impl true
   def handle_init(_ctx, opts) do
-    {:ok, Map.put(opts, :pads, MapSet.new())}
+    {[], Map.put(opts, :pads, MapSet.new())}
   end
 
   @impl true
   def handle_pad_added(pad, _ctx, state) do
     new_pads = MapSet.put(state.pads, pad)
-    {:ok, %{state | pads: new_pads}}
+    {[], %{state | pads: new_pads}}
   end
 
   @impl true
   def handle_pad_removed(pad, _ctx, state) do
     new_pads = MapSet.delete(state.pads, pad)
-    {:ok, %{state | pads: new_pads}}
+    {[], %{state | pads: new_pads}}
   end
 
   @impl true
   def handle_playing(_ctx, %{playing_delay: time} = state) do
     Process.sleep(time)
-    {{:ok, notify_parent: :playing}, state}
+    {[notify_parent: :playing], state}
   end
 
   @impl true
@@ -56,7 +56,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
       |> Enum.filter(&(&1.direction == :input))
       |> Enum.map(fn pad -> {:demand, {pad.ref, state.demand_generator.(size)}} end)
 
-    {{:ok, demands}, state}
+    {demands, state}
   end
 
   @impl true
@@ -67,12 +67,12 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
       |> Enum.filter(&(&1.direction == :output))
       |> Enum.map(&{:buffer, {&1.ref, buf}})
 
-    {{:ok, buffers}, state}
+    {buffers, state}
   end
 
   @impl true
   def handle_end_of_stream(pad, _ctx, state) do
-    {:ok, %{state | pads: MapSet.delete(state.pads, pad)}}
+    {[], %{state | pads: MapSet.delete(state.pads, pad)}}
   end
 
   @spec default_demand_generator(integer()) :: integer()

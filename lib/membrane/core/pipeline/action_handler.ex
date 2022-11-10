@@ -74,14 +74,14 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   @impl CallbackHandler
   def handle_action({:reply_to, {pid, message}}, _cb, _params, state) do
     GenServer.reply(pid, message)
-    {:ok, state}
+    state
   end
 
   @impl CallbackHandler
   def handle_action({:reply, message}, :handle_call, params, state) do
     ctx = params.context.(state)
     GenServer.reply(ctx.from, message)
-    {:ok, state}
+    state
   end
 
   @impl CallbackHandler

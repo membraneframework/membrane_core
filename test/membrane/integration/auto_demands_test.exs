@@ -15,21 +15,21 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     @impl true
     def handle_init(_ctx, opts) do
-      {:ok, opts |> Map.from_struct() |> Map.merge(%{counter: 1})}
+      {[], opts |> Map.from_struct() |> Map.merge(%{counter: 1})}
     end
 
     @impl true
     def handle_process(:input, buffer, _ctx, %{direction: :up} = state) do
       buffers = Enum.map(1..state.factor, fn _i -> buffer end)
-      {{:ok, buffer: {:output, buffers}}, state}
+      {[buffer: {:output, buffers}], state}
     end
 
     @impl true
     def handle_process(:input, buffer, _ctx, %{direction: :down} = state) do
       if state.counter < state.factor do
-        {:ok, %{state | counter: state.counter + 1}}
+        {[], %{state | counter: state.counter + 1}}
       else
-        {{:ok, buffer: {:output, buffer}}, %{state | counter: 1}}
+        {[buffer: {:output, buffer}], %{state | counter: 1}}
       end
     end
   end
@@ -41,7 +41,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     def_output_pad :output, accepted_format: _any, demand_mode: :auto, availability: :on_request
 
     @impl true
-    def handle_process(:input, buffer, _ctx, state), do: {{:ok, forward: buffer}, state}
+    def handle_process(:input, buffer, _ctx, state), do: {[forward: buffer], state}
   end
 
   [
@@ -146,12 +146,12 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     @impl true
     def handle_parent_notification(actions, _ctx, state) do
-      {{:ok, actions}, state}
+      {actions, state}
     end
 
     @impl true
     def handle_playing(_ctx, state) do
-      {{:ok, [stream_format: {:output, %StreamFormat{}}]}, state}
+      {[stream_format: {:output, %StreamFormat{}}], state}
     end
   end
 

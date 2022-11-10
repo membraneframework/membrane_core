@@ -10,7 +10,7 @@ defmodule Membrane.Testing.DynamicSourceTest do
   test "Source initializes buffer generator and its state properly" do
     generator = fn _state, _size -> nil end
 
-    assert {:ok,
+    assert {[],
             %{type: :generator, generator: ^generator, generator_state: :abc, state_for_pad: %{}}} =
              Testing.DynamicSource.handle_init(%{}, %Testing.DynamicSource{
                output: {:abc, generator}
@@ -18,7 +18,7 @@ defmodule Membrane.Testing.DynamicSourceTest do
   end
 
   test "Source sends stream format on play" do
-    assert {{:ok, stream_format: {:output, :stream_format}}, _state} =
+    assert {[stream_format: {:output, :stream_format}], _state} =
              Testing.DynamicSource.handle_playing(%{pads: %{:output => %{}}}, %{
                stream_format: :stream_format
              })

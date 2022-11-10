@@ -19,7 +19,7 @@ defmodule Membrane.Core.Element.StreamFormatController do
   @type stream_format_validation_params_t() :: [stream_format_validation_param_t()]
 
   @doc """
-  Handles incoming stream format: either stores them in InputQueue, or executes element callback.
+  Handles incoming stream format: either stores it in InputQueue, or executes element callback.
   """
   @spec handle_stream_format(Pad.ref_t(), StreamFormat.t(), State.t()) :: State.t()
   def handle_stream_format(pad_ref, stream_format, state) do
@@ -87,14 +87,14 @@ defmodule Membrane.Core.Element.StreamFormatController do
   def validate_stream_format!(direction, params, stream_format) do
     unless is_struct(stream_format) do
       raise Membrane.StreamFormatError, """
-      Stream format must be defined as a struct, therefore they cannot be: #{inspect(stream_format)}
+      Stream format must be defined as a struct, therefore it cannot be: #{inspect(stream_format)}
       """
     end
 
     for {module, pad_name} <- params do
       unless module.membrane_stream_format_match?(pad_name, stream_format) do
         raise Membrane.StreamFormatError, """
-        Stream format: #{inspect(stream_format)} are not matching accepted format pattern in def_#{direction}_pad
+        Stream format: #{inspect(stream_format)} is not matching accepted format pattern in def_#{direction}_pad
         for pad #{inspect(pad_name)} in #{inspect(module)}
         """
       end

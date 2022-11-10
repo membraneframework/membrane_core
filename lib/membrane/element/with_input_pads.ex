@@ -58,13 +58,13 @@ defmodule Membrane.Element.WithInputPads do
       import unquote(__MODULE__), only: [def_input_pad: 2]
 
       @impl true
-      def handle_stream_format(_pad, _stream_format, _context, state), do: {:ok, state}
+      def handle_stream_format(_pad, _stream_format, _context, state), do: {[], state}
 
       @impl true
-      def handle_start_of_stream(pad, _context, state), do: {:ok, state}
+      def handle_start_of_stream(pad, _context, state), do: {[], state}
 
       @impl true
-      def handle_end_of_stream(pad, _context, state), do: {:ok, state}
+      def handle_end_of_stream(pad, _context, state), do: {[], state}
 
       defoverridable handle_stream_format: 4,
                      handle_start_of_stream: 3,

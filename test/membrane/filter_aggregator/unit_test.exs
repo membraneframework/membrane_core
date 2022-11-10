@@ -134,10 +134,10 @@ defmodule Membrane.FilterAggregator.UnitTest do
   test "handle_init sets inital states", ctx do
     ctx.filters
     |> Enum.each(fn filter ->
-      expect(filter, :handle_init, fn _ctx, %^filter{} -> {:ok, %{module: filter}} end)
+      expect(filter, :handle_init, fn _ctx, %^filter{} -> {[], %{module: filter}} end)
     end)
 
-    assert {:ok, %{states: result}} =
+    assert {[], %{states: result}} =
              FilterAggregator.handle_init(
                %{resource_guard: nil, utility_supervisor: nil},
                ctx.stage_opts
@@ -188,7 +188,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
       assert pads.output == test_ctx.gen_pad_data.(:output)
       assert map_size(pads) == 2
 
-      {{:ok, stream_format: {:output, %MockStreamFormat{integer: 1}}}, state}
+      {[stream_format: {:output, %MockStreamFormat{integer: 1}}], state}
     end)
 
     expect(FilterB, :handle_stream_format, fn :input,
@@ -210,7 +210,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
       assert pads.output == test_ctx.gen_pad_data.(:output)
       assert map_size(pads) == 2
 
-      {{:ok, stream_format: {:output, %MockStreamFormat{integer: 2}}},
+      {[stream_format: {:output, %MockStreamFormat{integer: 2}}],
        %{state | state: :stream_format_sent}}
     end)
 
@@ -238,7 +238,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
 
       assert map_size(pads) == 2
 
-      {:ok, state}
+      {[], state}
     end)
 
     states =
@@ -247,7 +247,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
         {name, module, %{ctx | playback: :stopped}, state}
       end)
 
-    assert {{:ok, actions}, %{states: states}} =
+    assert {actions, %{states: states}} =
              FilterAggregator.handle_playing(
                %{
                  pads: %{
@@ -281,14 +281,14 @@ defmodule Membrane.FilterAggregator.UnitTest do
     FilterA
     |> expect(:handle_process_list, fn :input, buffers, %Process{}, %{module: FilterA} = state ->
       args_list = buffers |> Enum.map(&[:input, &1])
-      {{:ok, split: {:handle_process, args_list}}, state}
+      {[split: {:handle_process, args_list}], state}
     end)
     |> expect(:handle_process, buffers_count, fn :input, buffer, %Process{}, state ->
       assert state.module == FilterA
       assert %Buffer{payload: <<payload>>} = buffer
       out_payload = payload + 1
       state = %{state | state: (state.state || 0) + out_payload}
-      {{:ok, buffer: {:output, %Buffer{payload: <<out_payload>>}}}, state}
+      {[buffer: {:output, %Buffer{payload: <<out_payload>>}}], state}
     end)
 
     FilterB
@@ -297,10 +297,10 @@ defmodule Membrane.FilterAggregator.UnitTest do
       assert %Buffer{payload: <<payload>>} = buffer
       out_payload = payload * 2
       state = %{state | state: (state.state || 0) + out_payload}
-      {{:ok, buffer: {:output, %Buffer{payload: <<out_payload>>}}}, state}
+      {[buffer: {:output, %Buffer{payload: <<out_payload>>}}], state}
     end)
 
-    assert {{:ok, actions}, %{states: states}} =
+    assert {actions, %{states: states}} =
              FilterAggregator.handle_process_list(:input, buffers, %{}, %{states: ctx.states})
 
     expected_actions =
@@ -327,42 +327,42 @@ defmodule Membrane.FilterAggregator.UnitTest do
     FilterA
     |> expect(:handle_start_of_stream, fn :input, %StreamManagement{} = ctx, state ->
       assert ctx.pads.input.start_of_stream? == true
-      {:ok, state}
+      {[], state}
     end)
     |> expect(:handle_process_list, fn :input, [^buffer], %Process{} = ctx, state ->
       assert ctx.pads.input.start_of_stream? == true
-      {{:ok, forward: [buffer]}, state}
+      {[forward: [buffer]], state}
     end)
     |> expect(:handle_end_of_stream, fn :input, %StreamManagement{} = ctx, state ->
       assert ctx.pads.input.end_of_stream? == true
-      {{:ok, forward: :end_of_stream}, %{state | state: :ok}}
+      {[forward: :end_of_stream], %{state | state: :ok}}
     end)
 
     FilterB
     |> expect(:handle_start_of_stream, fn :input, %StreamManagement{} = ctx, state ->
       assert ctx.pads.input.start_of_stream? == true
-      {:ok, state}
+      {[], state}
     end)
     |> expect(:handle_process_list, fn :input, [^buffer], %Process{} = ctx, state ->
       assert ctx.pads.input.start_of_stream? == true
-      {{:ok, buffer: {:output, [buffer]}}, state}
+      {[buffer: {:output, [buffer]}], state}
     end)
     |> expect(:handle_end_of_stream, fn :input, %StreamManagement{} = ctx, state ->
       assert ctx.pads.input.end_of_stream? == true
-      {{:ok, end_of_stream: :output}, %{state | state: :ok}}
+      {[end_of_stream: :output], %{state | state: :ok}}
     end)
 
-    assert {{:ok, []}, %{states: states}} =
+    assert {[], %{states: states}} =
              FilterAggregator.handle_start_of_stream(:input, %{}, %{
                states: ctx.states
              })
 
-    assert {{:ok, buffer: {:output, buffers}}, %{states: states}} =
+    assert {[buffer: {:output, buffers}], %{states: states}} =
              FilterAggregator.handle_process_list(:input, [buffer], %{}, %{states: states})
 
     assert List.wrap(buffers) == [buffer]
 
-    assert {{:ok, end_of_stream: :output}, %{states: states}} =
+    assert {[end_of_stream: :output], %{states: states}} =
              FilterAggregator.handle_end_of_stream(:input, %{}, %{states: states})
 
     assert [
@@ -380,15 +380,15 @@ defmodule Membrane.FilterAggregator.UnitTest do
 
     FilterA
     |> expect(:handle_event, fn :input, ^event, %Event{}, state ->
-      {{:ok, forward: event}, %{state | state: :ok}}
+      {[forward: event], %{state | state: :ok}}
     end)
 
     FilterB
     |> expect(:handle_event, fn :input, ^event, %Event{}, state ->
-      {{:ok, event: {:output, event}}, %{state | state: :ok}}
+      {[event: {:output, event}], %{state | state: :ok}}
     end)
 
-    assert {{:ok, event: {:output, ^event}}, %{states: states}} =
+    assert {[event: {:output, ^event}], %{states: states}} =
              FilterAggregator.handle_event(:input, event, %{}, %{states: ctx.states})
 
     assert [

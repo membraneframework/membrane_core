@@ -15,26 +15,27 @@ defmodule Membrane.Support.Distributed do
 
     @impl true
     def handle_init(_ctx, opts) do
-      {:ok, opts.output}
+      {[], opts.output}
     end
 
     @impl true
     def handle_playing(_ctx, list) do
       stream_format = %SomeStreamFormat{}
 
-      {{:ok,
-        stream_format: {:output, stream_format},
-        start_timer: {:timer, Membrane.Time.milliseconds(100)}}, list}
+      {[
+         stream_format: {:output, stream_format},
+         start_timer: {:timer, Membrane.Time.milliseconds(100)}
+       ], list}
     end
 
     @impl true
     def handle_tick(_timer_id, _context, [first | rest]) do
-      {{:ok, buffer: {:output, %Membrane.Buffer{payload: first}}}, rest}
+      {[buffer: {:output, %Membrane.Buffer{payload: first}}], rest}
     end
 
     @impl true
     def handle_tick(_timer_id, _context, []) do
-      {{:ok, end_of_stream: :output, stop_timer: :timer}, []}
+      {[end_of_stream: :output, stop_timer: :timer], []}
     end
   end
 
@@ -47,12 +48,12 @@ defmodule Membrane.Support.Distributed do
 
     @impl true
     def handle_playing(_ctx, state) do
-      {{:ok, demand: {:input, 1}}, state}
+      {[demand: {:input, 1}], state}
     end
 
     @impl true
     def handle_write(_pad, _buffer, _ctx, state) do
-      {{:ok, demand: {:input, 1}}, state}
+      {[demand: {:input, 1}], state}
     end
   end
 end
