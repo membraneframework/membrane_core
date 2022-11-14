@@ -29,7 +29,7 @@ defmodule Membrane.Element do
   @typedoc """
   Type of user-managed state of element.
   """
-  @type state_t :: map | struct
+  @type state_t :: any()
 
   @doc """
   Checks whether module is an element.

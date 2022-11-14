@@ -43,7 +43,7 @@ defmodule Membrane.Testing.Source do
                 spec: {initial_state :: any(), generator} | Enum.t(),
                 default: {0, &__MODULE__.default_buf_gen/2},
                 description: """
-                If `output` is an enumerable with `Membrane.Payload.t()` then
+                If `output` is an enumerable with `t:Membrane.Payload.t/0` then
                 buffer containing those payloads will be sent through the
                 `:output` pad and followed by `t:Membrane.Element.Action.end_of_stream_t/0`.
 
@@ -72,22 +72,21 @@ defmodule Membrane.Testing.Source do
 
     case opts.output do
       {initial_state, generator} when is_function(generator) ->
-        {:ok, opts |> Map.merge(%{generator_state: initial_state, output: generator})}
+        {[], opts |> Map.merge(%{generator_state: initial_state, output: generator})}
 
       _enumerable_output ->
-        {:ok, opts}
+        {[], opts}
     end
   end
 
   @impl true
   def handle_playing(_ctx, state) do
-    {{:ok, stream_format: {:output, state.stream_format}}, state}
+    {[stream_format: {:output, state.stream_format}], state}
   end
 
   @impl true
   def handle_demand(:output, size, :buffers, _ctx, state) do
-    {actions, state} = get_actions(state, size)
-    {{:ok, actions}, state}
+    get_actions(state, size)
   end
 
   @spec default_buf_gen(integer(), integer()) :: {[Action.t()], integer()}

@@ -37,7 +37,7 @@ defmodule Membrane.Testing.Sink do
     accepted_format: _any
 
   def_options autodemand: [
-                type: :boolean,
+                spec: boolean(),
                 default: true,
                 description: """
                 If true element will automatically make demands.
@@ -47,42 +47,42 @@ defmodule Membrane.Testing.Sink do
 
   @impl true
   def handle_init(_ctx, opts) do
-    {:ok, opts}
+    {[], opts}
   end
 
   @impl true
   def handle_playing(_context, %{autodemand: true} = state),
-    do: {{:ok, demand: :input}, state}
+    do: {[demand: :input], state}
 
-  def handle_playing(_context, state), do: {:ok, state}
+  def handle_playing(_context, state), do: {[], state}
 
   @impl true
   def handle_event(:input, event, _context, state) do
-    {{:ok, notify({:event, event})}, state}
+    {notify({:event, event}), state}
   end
 
   @impl true
   def handle_start_of_stream(pad, _ctx, state),
-    do: {{:ok, notify({:start_of_stream, pad})}, state}
+    do: {notify({:start_of_stream, pad}), state}
 
   @impl true
   def handle_end_of_stream(pad, _ctx, state),
-    do: {{:ok, notify({:end_of_stream, pad})}, state}
+    do: {notify({:end_of_stream, pad}), state}
 
   @impl true
   def handle_stream_format(pad, stream_format, _context, state),
-    do: {{:ok, notify({:stream_format, pad, stream_format})}, state}
+    do: {notify({:stream_format, pad, stream_format}), state}
 
   @impl true
   def handle_parent_notification({:make_demand, size}, _ctx, %{autodemand: false} = state) do
-    {{:ok, demand: {:input, size}}, state}
+    {[demand: {:input, size}], state}
   end
 
   @impl true
   def handle_write(:input, buf, _ctx, state) do
     case state do
-      %{autodemand: false} -> {{:ok, notify({:buffer, buf})}, state}
-      %{autodemand: true} -> {{:ok, [demand: :input] ++ notify({:buffer, buf})}, state}
+      %{autodemand: false} -> {notify({:buffer, buf}), state}
+      %{autodemand: true} -> {[demand: :input] ++ notify({:buffer, buf}), state}
     end
   end
 

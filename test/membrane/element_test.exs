@@ -13,7 +13,7 @@ defmodule Membrane.ElementTest do
 
     def_output_pad :output, accepted_format: _any
 
-    def_options target: [type: :pid]
+    def_options target: [spec: pid()]
 
     @spec assert_callback_called(atom) :: :ok
     def assert_callback_called(name) do
@@ -28,39 +28,39 @@ defmodule Membrane.ElementTest do
     end
 
     @impl true
-    def handle_init(_ctx, opts), do: {:ok, opts}
+    def handle_init(_ctx, opts), do: {[], opts}
 
     @impl true
     def handle_playing(_ctx, state) do
       send(state.target, {:callback_called, :handle_playing})
-      {:ok, state}
+      {[], state}
     end
 
     @impl true
     def handle_start_of_stream(_pad, _context, state) do
       send(state.target, {:callback_called, :handle_start_of_stream})
-      {:ok, state}
+      {[], state}
     end
 
     @impl true
     def handle_end_of_stream(_pad, _context, state) do
       send(state.target, {:callback_called, :handle_end_of_stream})
-      {:ok, state}
+      {[], state}
     end
 
     @impl true
     def handle_event(_pad, _event, _context, state) do
       send(state.target, {:callback_called, :handle_event})
-      {:ok, state}
+      {[], state}
     end
 
     @impl true
     def handle_demand(_pad, size, _unit, _context, state) do
-      {{:ok, demand: {:input, size}}, state}
+      {[demand: {:input, size}], state}
     end
 
     @impl true
-    def handle_process(_pad, _buffer, _context, state), do: {:ok, state}
+    def handle_process(_pad, _buffer, _context, state), do: {[], state}
   end
 
   setup do

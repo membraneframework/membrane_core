@@ -29,6 +29,6 @@ defmodule Membrane.Support.ChildRemovalTest.ChildRemovingPipeline do
 
     spec4 = {structure4, children_group_id: :second_crash_group, crash_group_mode: :temporary}
 
-    {{:ok, spec: spec1, spec: spec2, spec: spec3, spec: spec4}, %{}}
+    {[spec: spec1, spec: spec2, spec: spec3, spec: spec4], %{}}
   end
 end

@@ -58,12 +58,17 @@ defmodule Membrane.Mixfile do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md", "CHANGELOG.md", "CONTRIBUTING.md", LICENSE: [title: "License"]],
+      extras: [
+        "README.md",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
+        "guides/upgrading/v0.11.md",
+        LICENSE: [title: "License"]
+      ],
       formatters: ["html"],
       source_ref: @source_ref,
       nest_modules_by_prefix: [
         Membrane.Bin,
-        Membrane.Pipeline,
         Membrane.Element,
         Membrane.Element.CallbackContext,
         Membrane.Pipeline.CallbackContext,
@@ -74,13 +79,19 @@ defmodule Membrane.Mixfile do
         Membrane.Event,
         Membrane.EventProtocol,
         Membrane.Testing,
-        Membrane.RemoteControlled
+        Membrane.RemoteControlled,
+        Membrane.RemoteControlled.Message
       ],
       groups_for_modules: [
-        Pipeline: [~r/^Membrane\.Pipeline($|\.)/, ~r/^Membrane\.(CrashGroup)($|\.)/],
+        Pipeline: [
+          ~r/^Membrane\.Pipeline($|\.)/,
+          ~r/^Membrane\.(CrashGroup)($|\.)/,
+          ~r/^Membrane\.(RemoteControlled)($|\.)/
+        ],
         Bin: [~r/^Membrane\.Bin($|\.)/],
         Element: [
           ~r/^Membrane\.Filter($|\.)/,
+          ~r/^Membrane\.FilterAggregator($|\.)/,
           ~r/^Membrane\.Endpoint($|\.)/,
           ~r/^Membrane\.Sink($|\.)/,
           ~r/^Membrane\.Source($|\.)/,
@@ -99,7 +110,9 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane\.Time($|\.)/,
           ~r/^Membrane\.Playback($|\.)/,
           ~r/^Membrane\.Telemetry($|\.)/,
-          ~r/^Membrane\.ComponentPath($|\.)/
+          ~r/^Membrane\.ComponentPath($|\.)/,
+          ~r/^Membrane\.ResourceGuard($|\.)/,
+          ~r/^Membrane\.UtilitySupervisor($|\.)/
         ],
         Errors: [~r/Error$/]
       ]
@@ -125,7 +138,7 @@ defmodule Membrane.Mixfile do
     [
       {:qex, "~> 0.3"},
       {:telemetry, "~> 1.0"},
-      {:bunch, "~> 1.3"},
+      {:bunch, github: "membraneframework/bunch", branch: "config-require"},
       {:ratio, "~> 2.0"},
       # Development
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},

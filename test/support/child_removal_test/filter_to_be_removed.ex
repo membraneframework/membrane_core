@@ -7,11 +7,11 @@ defmodule Membrane.Support.ChildRemovalTest.FilterToBeRemoved do
 
   @impl true
   def handle_init(_ctx, _opts) do
-    {:ok, %{}}
+    {[], %{}}
   end
 
   @impl true
   def handle_process(:input, buffers, _context, state) do
-    {{:ok, buffer: {:output, buffers}}, state}
+    {[buffer: {:output, buffers}], state}
   end
 end

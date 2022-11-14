@@ -21,7 +21,7 @@ defmodule Membrane.ResourceGuardTest do
           Process.exit(pid, :shutdown)
         end)
 
-        {{:ok, notify_parent: :ready}, state}
+        {[notify_parent: :ready], state}
       end
     end
 
@@ -39,7 +39,7 @@ defmodule Membrane.ResourceGuardTest do
           Process.exit(pid, :shutdown)
         end)
 
-        {{:ok, notify_parent: :ready}, state}
+        {[notify_parent: :ready], state}
       end
     end
 
@@ -57,7 +57,7 @@ defmodule Membrane.ResourceGuardTest do
           Process.exit(pid, :shutdown)
         end)
 
-        {{:ok, reply: :ready}, state}
+        {[reply: :ready], state}
       end
     end
 

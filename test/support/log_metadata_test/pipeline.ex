@@ -22,7 +22,7 @@ defmodule Membrane.Support.LogMetadataTest.Pipeline do
 
     @impl true
     def handle_init(_ctx, _opts) do
-      {{:ok, notify_parent: Logger.metadata()}, %{}}
+      {[notify_parent: Logger.metadata()], %{}}
     end
   end
 
@@ -35,6 +35,6 @@ defmodule Membrane.Support.LogMetadataTest.Pipeline do
          {child(element_name, MetadataNotifyingElement), log_metadata: [test: element_metadata]}}
       end)
 
-    {{:ok, actions}, %{}}
+    {actions, %{}}
   end
 end

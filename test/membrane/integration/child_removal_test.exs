@@ -118,17 +118,17 @@ defmodule Membrane.Integration.ChildRemovalTest do
       @impl true
       def handle_init(_ctx, _opts) do
         Process.register(self(), __MODULE__)
-        {:ok, %{}}
+        {[], %{}}
       end
 
       @impl true
       def handle_terminate_request(_ctx, state) do
-        {:ok, state}
+        {[], state}
       end
 
       @impl true
       def handle_info(:terminate, _ctx, state) do
-        {{:ok, terminate: :normal}, state}
+        {[terminate: :normal], state}
       end
     end
 
@@ -140,17 +140,17 @@ defmodule Membrane.Integration.ChildRemovalTest do
       @impl true
       def handle_init(_ctx, _opts) do
         Process.register(self(), __MODULE__)
-        {:ok, %{}}
+        {[], %{}}
       end
 
       @impl true
       def handle_terminate_request(_ctx, state) do
-        {:ok, state}
+        {[], state}
       end
 
       @impl true
       def handle_info(:terminate, _ctx, state) do
-        {{:ok, terminate: :normal}, state}
+        {[terminate: :normal], state}
       end
     end
 
@@ -165,13 +165,13 @@ defmodule Membrane.Integration.ChildRemovalTest do
       def handle_init(_ctx, opts) do
         Process.register(self(), __MODULE__)
         links = [child(:source, RemovalDeferSource) |> bin_output()]
-        {{:ok, spec: links}, Map.from_struct(opts)}
+        {[spec: links], Map.from_struct(opts)}
       end
 
       @impl true
       def handle_terminate_request(_ctx, %{defer?: true} = state) do
         send(state.test_process, {__MODULE__, :terminate_request})
-        {{:ok, remove_child: :source}, state}
+        {[remove_child: :source], state}
       end
 
       @impl true
@@ -182,7 +182,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
       @impl true
       def handle_info(:terminate, _ctx, state) do
-        {{:ok, terminate: :normal}, state}
+        {[terminate: :normal], state}
       end
     end
 

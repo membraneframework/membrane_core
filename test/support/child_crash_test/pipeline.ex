@@ -29,12 +29,12 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
     spec = children ++ links
 
-    {{:ok, spec: spec, playback: :playing}, %{}}
+    {[spec: spec, playback: :playing], %{}}
   end
 
   @impl true
   def handle_info({:create_path, spec}, _ctx, state) do
-    {{:ok, spec: spec}, state}
+    {[spec: spec], state}
   end
 
   @spec add_single_source(pid(), any(), any(), any()) :: any()

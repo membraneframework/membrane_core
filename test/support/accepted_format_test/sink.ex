@@ -5,7 +5,7 @@ defmodule Membrane.Support.AcceptedFormatTest.Sink do
   Notifies parent on stream format arrival.
   """
 
-  use Membrane.Endpoint
+  use Membrane.Sink
 
   alias Membrane.Support.AcceptedFormatTest.StreamFormat
 
@@ -20,11 +20,11 @@ defmodule Membrane.Support.AcceptedFormatTest.Sink do
   @impl true
   def handle_init(_ctx, %__MODULE__{test_pid: test_pid}) do
     send(test_pid, {:my_pid, __MODULE__, self()})
-    {:ok, %{test_pid: test_pid}}
+    {[], %{test_pid: test_pid}}
   end
 
   @impl true
   def handle_stream_format(:input, stream_format, _ctx, state) do
-    {{:ok, notify_parent: {:stream_format_received, stream_format}}, state}
+    {[notify_parent: {:stream_format_received, stream_format}], state}
   end
 end

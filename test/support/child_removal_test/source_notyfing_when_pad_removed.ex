@@ -10,11 +10,11 @@ defmodule Membrane.Support.ChildRemovalTest.SourceNotyfingWhenPadRemoved do
 
   @impl true
   def handle_init(_ctx, _opts) do
-    {:ok, %{}}
+    {[], %{}}
   end
 
   @impl true
   def handle_pad_removed(pad, _ctx, state) do
-    {{:ok, notify_parent: {:pad_removed, pad}}, state}
+    {[notify_parent: {:pad_removed, pad}], state}
   end
 end

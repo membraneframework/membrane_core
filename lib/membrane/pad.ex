@@ -11,9 +11,10 @@ defmodule Membrane.Pad do
   """
 
   use Bunch
-  use Bunch.Typespec
 
   alias Membrane.Buffer
+
+  @availability_values [:always, :on_request]
 
   @typedoc """
   Defines the term by which the pad instance is identified.
@@ -83,7 +84,8 @@ defmodule Membrane.Pad do
   linked to another pad. Thus linking the pad with _k_ other pads, creates _k_
   instances of the pad, and links each with another pad.
   """
-  @list_type availability_t :: [:always, :on_request]
+
+  @type availability_t :: unquote(Bunch.Typespec.enum_to_alternative(@availability_values))
 
   @typedoc """
   Type describing availability mode of a created pad:
@@ -186,7 +188,7 @@ defmodule Membrane.Pad do
 
   defguard is_pad_name(term) when is_atom(term)
 
-  defguard is_availability(term) when term in @availability_t
+  defguard is_availability(term) when term in @availability_values
 
   defguard is_availability_dynamic(availability) when availability == :on_request
   defguard is_availability_static(availability) when availability == :always

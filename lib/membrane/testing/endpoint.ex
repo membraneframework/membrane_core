@@ -16,7 +16,7 @@ defmodule Membrane.Testing.Endpoint do
     demand_unit: :buffers
 
   def_options autodemand: [
-                type: :boolean,
+                spec: boolean(),
                 default: true,
                 description: """
                 If true element will automatically make demands.
@@ -27,7 +27,7 @@ defmodule Membrane.Testing.Endpoint do
                 spec: {initial_state :: any(), generator} | Enum.t(),
                 default: {0, &__MODULE__.default_buf_gen/2},
                 description: """
-                If `output` is an enumerable with `Membrane.Payload.t()` then
+                If `output` is an enumerable with `t:Membrane.Payload.t/0` then
                 buffer containing those payloads will be sent through the
                 `:output` pad and followed by `t:Membrane.Element.Action.end_of_stream_t/0`.
 
@@ -56,53 +56,52 @@ defmodule Membrane.Testing.Endpoint do
 
     case opts.output do
       {initial_state, generator} when is_function(generator) ->
-        {:ok, opts |> Map.merge(%{generator_state: initial_state, output: generator})}
+        {[], opts |> Map.merge(%{generator_state: initial_state, output: generator})}
 
       _enumerable_output ->
-        {:ok, opts}
+        {[], opts}
     end
   end
 
   @impl true
   def handle_playing(_context, %{autodemand: true} = state),
-    do: {{:ok, demand: :input, stream_format: {:output, state.stream_format}}, state}
+    do: {[demand: :input, stream_format: {:output, state.stream_format}], state}
 
   def handle_playing(_context, state),
-    do: {{:ok, stream_format: {:output, state.stream_format}}, state}
+    do: {[stream_format: {:output, state.stream_format}], state}
 
   @impl true
   def handle_event(:input, event, _context, state) do
-    {{:ok, notify({:event, event})}, state}
+    {notify({:event, event}), state}
   end
 
   @impl true
   def handle_demand(:output, size, :buffers, _ctx, state) do
-    {actions, state} = get_actions(state, size)
-    {{:ok, actions}, state}
+    get_actions(state, size)
   end
 
   @impl true
   def handle_start_of_stream(pad, _ctx, state),
-    do: {{:ok, notify({:start_of_stream, pad})}, state}
+    do: {notify({:start_of_stream, pad}), state}
 
   @impl true
   def handle_end_of_stream(pad, _ctx, state),
-    do: {{:ok, notify({:end_of_stream, pad})}, state}
+    do: {notify({:end_of_stream, pad}), state}
 
   @impl true
   def handle_stream_format(pad, stream_format, _context, state),
-    do: {{:ok, notify({:stream_format, pad, stream_format})}, state}
+    do: {notify({:stream_format, pad, stream_format}), state}
 
   @impl true
   def handle_info({:make_demand, size}, _ctx, %{autodemand: false} = state) do
-    {{:ok, demand: {:input, size}}, state}
+    {[demand: {:input, size}], state}
   end
 
   @impl true
   def handle_write(:input, buf, _ctx, state) do
     case state do
-      %{autodemand: false} -> {{:ok, notify({:buffer, buf})}, state}
-      %{autodemand: true} -> {{:ok, [demand: :input] ++ notify({:buffer, buf})}, state}
+      %{autodemand: false} -> {notify({:buffer, buf}), state}
+      %{autodemand: true} -> {[demand: :input] ++ notify({:buffer, buf}), state}
     end
   end
 

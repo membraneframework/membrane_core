@@ -23,6 +23,6 @@ defmodule Membrane.Support.Element.TrivialPipeline do
       structure: children ++ links
     }
 
-    {{:ok, spec: spec}, %{}}
+    {[spec: spec], %{}}
   end
 end

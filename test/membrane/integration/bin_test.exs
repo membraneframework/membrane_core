@@ -222,7 +222,7 @@ defmodule Membrane.Core.BinTest do
           clock_provider: :element_child
         }
 
-        {{:ok, spec: spec}, :ignored}
+        {[spec: spec], :ignored}
       end
     end
 
@@ -233,7 +233,7 @@ defmodule Membrane.Core.BinTest do
       def handle_init(_ctx, _options) do
         children = [child(:bin_child, ClockBin)]
 
-        {{:ok, spec: {children, clock_provider: :bin_child}}, :ignored}
+        {[spec: {children, clock_provider: :bin_child}], :ignored}
       end
     end
 

@@ -71,7 +71,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
           syncs :: %{Membrane.Child.name_t() => pid()},
           log_metadata :: Keyword.t(),
           supervisor :: pid,
-          children_group_id :: any
+          children_group_id :: Membrane.Child.children_group_id_t()
         ) :: [ChildEntry.t()]
   def start_children(
         children,

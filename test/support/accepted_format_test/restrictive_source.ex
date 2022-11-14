@@ -20,11 +20,11 @@ defmodule Membrane.Support.AcceptedFormatTest.RestrictiveSource do
   @impl true
   def handle_init(_ctx, %__MODULE__{test_pid: test_pid, stream_format: stream_format}) do
     send(test_pid, {:my_pid, __MODULE__, self()})
-    {:ok, %{test_pid: test_pid, stream_format: stream_format}}
+    {[], %{test_pid: test_pid, stream_format: stream_format}}
   end
 
   @impl true
   def handle_playing(_ctx, %{stream_format: stream_format} = state) do
-    {{:ok, stream_format: {:output, stream_format}}, state}
+    {[stream_format: {:output, stream_format}], state}
   end
 end

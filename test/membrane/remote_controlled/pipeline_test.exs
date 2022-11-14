@@ -18,7 +18,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
     @impl true
     def handle_init(_ctx, _opts) do
-      {:ok, %{buffer_count: 0}}
+      {[], %{buffer_count: 0}}
     end
 
     @impl true
@@ -32,12 +32,12 @@ defmodule Membrane.RemoteControlled.PipelineTest do
           []
         end
 
-      {{:ok, [{:buffer, {:output, buf}}] ++ notification_actions}, state}
+      {[{:buffer, {:output, buf}}] ++ notification_actions, state}
     end
 
     @impl true
     def handle_demand(:output, size, _unit, _ctx, state) do
-      {{:ok, demand: {:input, size}}, state}
+      {[demand: {:input, size}], state}
     end
   end
 
@@ -56,8 +56,8 @@ defmodule Membrane.RemoteControlled.PipelineTest do
     ]
 
     actions = [{:spec, children ++ links}]
-
     Pipeline.exec_actions(pipeline, actions)
+
     {:ok, pipeline: pipeline}
   end
 

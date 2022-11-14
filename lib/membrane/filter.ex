@@ -51,6 +51,8 @@ defmodule Membrane.Filter do
               state :: Element.state_t()
             ) :: Membrane.Element.Base.callback_return_t()
 
+  @optional_callbacks handle_process: 4
+
   @doc """
   Brings all the stuff necessary to implement a filter element.
 
@@ -72,29 +74,24 @@ defmodule Membrane.Filter do
 
       @impl true
       def handle_stream_format(_pad, stream_format, _context, state),
-        do: {{:ok, forward: stream_format}, state}
+        do: {[forward: stream_format], state}
 
       @impl true
-      def handle_event(_pad, event, _context, state), do: {{:ok, forward: event}, state}
-
-      @impl true
-      def handle_process(_pad, _buffer, _context, state),
-        do: {{:error, :handle_process_not_implemented}, state}
+      def handle_event(_pad, event, _context, state), do: {[forward: event], state}
 
       @impl true
       def handle_process_list(pad, buffers, _context, state) do
         args_list = buffers |> Enum.map(&[pad, &1])
-        {{:ok, split: {:handle_process, args_list}}, state}
+        {[split: {:handle_process, args_list}], state}
       end
 
       @impl true
       def handle_end_of_stream(pad, _context, state),
-        do: {{:ok, forward: :end_of_stream}, state}
+        do: {[forward: :end_of_stream], state}
 
       defoverridable handle_stream_format: 4,
                      handle_event: 4,
                      handle_process_list: 4,
-                     handle_process: 4,
                      handle_end_of_stream: 3
     end
   end

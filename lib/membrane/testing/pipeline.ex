@@ -11,7 +11,7 @@ defmodule Membrane.Testing.Pipeline do
 
   To start a testing pipeline you need to build
   a keyword list representing the options used to determine the pipeline's behaviour and then
-  pass that options list to the `Membrane.Testing.Pipeline.start_link/1`.
+  pass that options list to the `Membrane.Testing.Pipeline.start_link_supervised!/1`.
   The testing pipeline can be started in one of two modes - either with its `:default` behaviour, or by
   injecting a custom module behaviour. The usage of a `:default` pipeline implementation is presented below:
 
@@ -25,7 +25,7 @@ defmodule Membrane.Testing.Pipeline do
     module: :default # :default is the default value for this parameter, so you do not need to pass it here
     structure: links
   ]
-  {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
+  pipeline = Membrane.Testing.Pipeline.start_link_supervised!(options)
   ```
 
   You can also pass your custom pipeline's module as a `:module` option of
@@ -39,10 +39,10 @@ defmodule Membrane.Testing.Pipeline do
   options = [
     module: Your.Module
   ]
-  {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(options)
+  pipeline = Membrane.Testing.Pipeline.start_link_supervised!(options)
   ```
 
-  See `Membrane.Testing.Pipeline.pipeline_keyword_list_t()` for available options.
+  See `t:Membrane.Testing.Pipeline.options/0` for available options.
 
   ## Assertions
 
@@ -57,13 +57,13 @@ defmodule Membrane.Testing.Pipeline do
   ## Example usage
 
   Firstly, we can start the pipeline providing its options as a keyword list:
-      import Membrane.ChildrenSpec
-      children = [
-          child(source, %Membrane.Testing.Source{} ) |>
-          child(:tested_element, TestedElement) |>
-          child(sink, %Membrane.Testing.Sink{})
-      ]
-      {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(structure: links)
+    import Membrane.ChildrenSpec
+    children = [
+        child(source, %Membrane.Testing.Source{} ) |>
+        child(:tested_element, TestedElement) |>
+        child(sink, %Membrane.Testing.Sink{})
+    ]
+    {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(structure: links)
 
   We can now wait till the end of the stream reaches the sink element (don't forget
   to import `Membrane.Testing.Assertions`):
@@ -140,44 +140,56 @@ defmodule Membrane.Testing.Pipeline do
     do_start(:start, options)
   end
 
-  if Mix.env() == :test do
-    @spec start_link_supervised(options) :: Pipeline.on_start()
-    def start_link_supervised(pipeline_options \\ []) do
-      pipeline_options = Keyword.put_new(pipeline_options, :test_process, self())
-
-      # TODO use start_link_supervised when added
-      with {:ok, supervisor, pipeline} <-
-             ExUnit.Callbacks.start_supervised({__MODULE__, pipeline_options}) do
-        Process.link(pipeline)
-        {:ok, supervisor, pipeline}
-      else
-        {:error, {error, _child_info}} -> {:error, error}
-      end
-    end
-
-    @spec start_link_supervised!(options) :: pipeline_pid :: pid
-    def start_link_supervised!(pipeline_options \\ []) do
-      {:ok, _supervisor, pipeline} = start_link_supervised(pipeline_options)
-      pipeline
-    end
-
-    @spec start_supervised(options) :: Pipeline.on_start()
-    def start_supervised(pipeline_options \\ []) do
-      pipeline_options = Keyword.put_new(pipeline_options, :test_process, self())
-      ExUnit.Callbacks.start_supervised({__MODULE__, pipeline_options})
-    end
-
-    @spec start_supervised!(options) :: pipeline_pid :: pid
-    def start_supervised!(pipeline_options \\ []) do
-      {:ok, _supervisor, pipeline} = start_supervised(pipeline_options)
-      pipeline
-    end
-  end
-
   defp do_start(type, options) do
     {process_options, options} = Keyword.split(options, [:name])
     options = Keyword.put_new(options, :test_process, self())
     apply(Pipeline, type, [__MODULE__, options, process_options])
+  end
+
+  @doc """
+  Starts the pipeline under the ExUnit test supervisor and links it to the current process.
+
+  Can be used only in tests.
+  """
+  @spec start_link_supervised(options) :: Pipeline.on_start()
+  def start_link_supervised(pipeline_options \\ []) do
+    pipeline_options = Keyword.put_new(pipeline_options, :test_process, self())
+
+    # TODO use start_link_supervised when added
+    with {:ok, supervisor, pipeline} <- ex_unit_start_supervised({__MODULE__, pipeline_options}) do
+      Process.link(pipeline)
+      {:ok, supervisor, pipeline}
+    else
+      {:error, {error, _child_info}} -> {:error, error}
+    end
+  end
+
+  @spec start_link_supervised!(options) :: pipeline_pid :: pid
+  def start_link_supervised!(pipeline_options \\ []) do
+    {:ok, _supervisor, pipeline} = start_link_supervised(pipeline_options)
+    pipeline
+  end
+
+  @doc """
+  Starts the pipeline under the ExUnit test supervisor.
+
+  Can be used only in tests.
+  """
+  @spec start_supervised(options) :: Pipeline.on_start()
+  def start_supervised(pipeline_options \\ []) do
+    pipeline_options = Keyword.put_new(pipeline_options, :test_process, self())
+    ex_unit_start_supervised({__MODULE__, pipeline_options})
+  end
+
+  @spec start_supervised!(options) :: pipeline_pid :: pid
+  def start_supervised!(pipeline_options \\ []) do
+    {:ok, _supervisor, pipeline} = start_supervised(pipeline_options)
+    pipeline
+  end
+
+  defp ex_unit_start_supervised(child_spec) do
+    # It's not a 'normal' call to keep dialyzer quiet
+    apply(ExUnit.Callbacks, :start_supervised, [child_spec])
   end
 
   @doc """
@@ -215,7 +227,7 @@ defmodule Membrane.Testing.Pipeline do
         spec = structure
 
         new_state = %State{test_process: Keyword.fetch!(options, :test_process), module: nil}
-        {{:ok, [spec: spec, playback: :playing]}, new_state}
+        {[spec: spec, playback: :playing], new_state}
 
       module when is_atom(module) ->
         case Code.ensure_compiled(module) do
@@ -230,7 +242,7 @@ defmodule Membrane.Testing.Pipeline do
         }
 
         injected_module_result = eval_injected_module_callback(:handle_init, [ctx], new_state)
-        testing_pipeline_result = {:ok, new_state}
+        testing_pipeline_result = {[], new_state}
         combine_results(injected_module_result, testing_pipeline_result)
 
       not_a_module ->
@@ -276,7 +288,7 @@ defmodule Membrane.Testing.Pipeline do
     :ok =
       notify_test_process(state.test_process, {:handle_child_notification, {notification, from}})
 
-    {:ok, state}
+    {[], state}
   end
 
   @impl true
@@ -308,7 +320,7 @@ defmodule Membrane.Testing.Pipeline do
 
   @impl true
   def handle_info({__MODULE__, :__execute_actions__, actions}, _ctx, %State{} = state) do
-    {{:ok, actions}, state}
+    {actions, state}
   end
 
   @impl true
@@ -320,7 +332,7 @@ defmodule Membrane.Testing.Pipeline do
         state
       )
 
-    testing_pipeline_result = {{:ok, notify_child: {element, message}}, state}
+    testing_pipeline_result = {[notify_child: {element, message}], state}
 
     combine_results(injected_module_result, testing_pipeline_result)
   end
@@ -411,10 +423,10 @@ defmodule Membrane.Testing.Pipeline do
   defp eval_injected_module_callback(callback, args, state)
 
   defp eval_injected_module_callback(_callback, _args, %State{module: nil} = state),
-    do: {:ok, state} |> unify_result()
+    do: {[], state}
 
   defp eval_injected_module_callback(callback, args, state) do
-    apply(state.module, callback, args ++ [state.custom_pipeline_state]) |> unify_result()
+    apply(state.module, callback, args ++ [state.custom_pipeline_state])
   end
 
   defp notify_test_process(test_process, message) do
@@ -422,22 +434,7 @@ defmodule Membrane.Testing.Pipeline do
     :ok
   end
 
-  defp unify_result({:ok, state}),
-    do: {{:ok, []}, state}
-
-  defp unify_result({{_, _}, _} = result),
-    do: result
-
   defp combine_results({custom_actions, custom_state}, {actions, state}) do
-    {combine_actions(custom_actions, actions),
-     Map.put(state, :custom_pipeline_state, custom_state)}
-  end
-
-  defp combine_actions(l, r) do
-    case {l, r} do
-      {l, :ok} -> l
-      {{:ok, actions_l}, {:ok, actions_r}} -> {:ok, actions_l ++ actions_r}
-      {_l, r} -> r
-    end
+    {Enum.concat(custom_actions, actions), Map.put(state, :custom_pipeline_state, custom_state)}
   end
 end
