@@ -5,17 +5,6 @@ defmodule Membrane.Core.OptionsSpecs do
 
   alias Bunch.{KVEnum, Markdown}
   alias Membrane.Pad
-  alias Membrane.Time
-
-  @default_types_params %{
-    atom: [spec: quote_expr(atom)],
-    boolean: [spec: quote_expr(boolean)],
-    string: [spec: quote_expr(String.t())],
-    keyword: [spec: quote_expr(keyword)],
-    struct: [spec: quote_expr(struct)],
-    caps: [spec: quote_expr(struct)],
-    time: [spec: quote_expr(Time.t()), inspector: &Time.to_code_str/1]
-  }
 
   @spec options_doc() :: String.t()
   def options_doc do
@@ -23,14 +12,11 @@ defmodule Membrane.Core.OptionsSpecs do
     Options are defined by a keyword list, where each key is an option name and
     is described by another keyword list with following fields:
 
-      * `type:` atom, used for parsing
-      * `spec:` typespec for value in struct. If ommitted, for types:
-        `#{inspect(Map.keys(@default_types_params))}` the default typespec is provided,
-        for others typespec is set to `t:any/0`
+      * `spec:` typespec for value in struct
       * `default:` default value for option. If not present, value for this option
         will have to be provided each time options struct is created
       * `inspector:` function converting fields' value to a string. Used when
-        creating documentation instead of `inspect/1`
+        creating documentation instead of `inspect/1`, eg. `inspector: &Membrane.Time.inspect/1`
       * `description:` string describing an option. It will be used for generating the docs
     """
   end
@@ -123,7 +109,7 @@ defmodule Membrane.Core.OptionsSpecs do
           opt_definition
           |> Keyword.get(
             :inspector,
-            @default_types_params[opt_definition[:type]][:inspector] || quote(do: &inspect/1)
+            quote(do: &inspect/1)
           )
 
         quote do
@@ -147,12 +133,7 @@ defmodule Membrane.Core.OptionsSpecs do
   end
 
   defp parse_opts(opts) when is_list(opts) do
-    opts =
-      KVEnum.map_values(opts, fn definition ->
-        default_spec = @default_types_params[definition[:type]][:spec] || quote_expr(any)
-        Keyword.put_new(definition, :spec, default_spec)
-      end)
-
+    opts = KVEnum.map_values(opts, &Keyword.put_new(&1, :spec, quote_expr(any)))
     opts_typespecs = KVEnum.map_values(opts, & &1[:spec])
 
     escaped_opts =

@@ -25,7 +25,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
           status: :linking_internally | :linked_internally | :linking_externally | :ready,
           children_names: [Membrane.Child.name_t()],
           links_ids: [Link.id()],
-          awaiting_responses: %{Link.id() => 0..2},
+          awaiting_responses: MapSet.t({Link.id(), Membrane.Pad.direction_t()}),
           dependent_specs: MapSet.t(spec_ref_t)
         }
 
@@ -133,28 +133,14 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         children_names: all_children_names,
         links_ids: Enum.map(links, & &1.id),
         dependent_specs: dependent_specs,
-        awaiting_responses: []
+        awaiting_responses: MapSet.new()
       })
 
     state = StartupUtils.exec_handle_spec_started(all_children_names, state)
     proceed_spec_startup(spec_ref, state)
   end
 
-  @spec handle_spec_timeout(spec_ref_t(), Parent.state_t()) ::
-          Parent.state_t()
-  def handle_spec_timeout(spec_ref, state) do
-    {spec_data, state} = pop_in(state, [:pending_specs, spec_ref])
-
-    unless spec_data == nil or spec_data.status == :ready do
-      raise Membrane.LinkError,
-            "Spec #{inspect(spec_ref)} linking took too long, spec_data: #{inspect(spec_data, pretty: true)}"
-    end
-
-    state
-  end
-
-  @spec proceed_spec_startup(spec_ref_t(), Parent.state_t()) ::
-          Parent.state_t()
+  @spec proceed_spec_startup(spec_ref_t(), Parent.state_t()) :: Parent.state_t()
   def proceed_spec_startup(spec_ref, state) do
     withl spec_data: {:ok, spec_data} <- Map.fetch(state.pending_specs, spec_ref),
           do: {spec_data, state} = do_proceed_spec_startup(spec_ref, spec_data, state),
@@ -183,25 +169,23 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp do_proceed_spec_startup(spec_ref, %{status: :initialized} = spec_data, state) do
-    Process.send_after(self(), Message.new(:spec_linking_timeout, spec_ref), 5000)
-
     {awaiting_responses, state} =
-      Enum.map_reduce(spec_data.links_ids, state, fn link_id, state ->
+      Enum.flat_map_reduce(spec_data.links_ids, state, fn link_id, state ->
         %Membrane.Core.Parent.Link{from: from, to: to, spec_ref: spec_ref} =
           Map.fetch!(state.links, link_id)
 
-        {awaiting_responses_from, state} =
+        {output_awaiting, state} =
           LinkUtils.request_link(:output, from, to, spec_ref, link_id, state)
 
-        {awaiting_responses_to, state} =
+        {input_awaiting, state} =
           LinkUtils.request_link(:input, to, from, spec_ref, link_id, state)
 
-        {{link_id, awaiting_responses_from + awaiting_responses_to}, state}
+        {output_awaiting ++ input_awaiting, state}
       end)
 
     spec_data = %{
       spec_data
-      | awaiting_responses: Map.new(awaiting_responses),
+      | awaiting_responses: MapSet.new(awaiting_responses),
         status: :linking_internally
     }
 
@@ -210,7 +194,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp do_proceed_spec_startup(spec_ref, %{status: :linking_internally} = spec_data, state) do
-    if spec_data.awaiting_responses |> Map.values() |> Enum.all?(&(&1 == 0)) do
+    if Enum.empty?(spec_data.awaiting_responses) do
       state =
         spec_data.links_ids
         |> Enum.map(&Map.fetch!(state.links, &1))
@@ -272,15 +256,16 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {spec_data, state}
   end
 
-  @spec handle_link_response(Parent.Link.id(), Parent.state_t()) :: Parent.state_t()
-  def handle_link_response(link_id, state) do
+  @spec handle_link_response(Parent.Link.id(), Membrane.Pad.direction_t(), Parent.state_t()) ::
+          Parent.state_t()
+  def handle_link_response(link_id, direction, state) do
     case Map.fetch(state.links, link_id) do
       {:ok, %Link{spec_ref: spec_ref}} ->
         state =
           update_in(
             state,
-            [:pending_specs, spec_ref, :awaiting_responses, link_id],
-            &(&1 - 1)
+            [:pending_specs, spec_ref, :awaiting_responses],
+            &MapSet.delete(&1, {link_id, direction})
           )
 
         proceed_spec_startup(spec_ref, state)

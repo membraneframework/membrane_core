@@ -195,13 +195,13 @@ defmodule Membrane.Core.Bin do
     {:noreply, state}
   end
 
-  defp do_handle_info(Message.new(:link_response, link_id), state) do
-    state = Parent.ChildLifeController.handle_link_response(link_id, state)
+  defp do_handle_info(Message.new(:link_response, [link_id, direction]), state) do
+    state = Parent.ChildLifeController.handle_link_response(link_id, direction, state)
     {:noreply, state}
   end
 
-  defp do_handle_info(Message.new(:spec_linking_timeout, spec_ref), state) do
-    state = Parent.ChildLifeController.handle_spec_timeout(spec_ref, state)
+  defp do_handle_info(Message.new(:linking_timeout, pad_ref), state) do
+    PadController.handle_linking_timeout(pad_ref, state)
     {:noreply, state}
   end
 

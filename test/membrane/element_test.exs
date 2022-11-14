@@ -13,7 +13,7 @@ defmodule Membrane.ElementTest do
 
     def_output_pad :output, accepted_format: _any
 
-    def_options target: [type: :pid]
+    def_options target: [spec: pid()]
 
     @spec assert_callback_called(atom) :: :ok
     def assert_callback_called(name) do

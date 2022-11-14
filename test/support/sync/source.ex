@@ -4,8 +4,8 @@ defmodule Membrane.Support.Sync.Source do
 
   def_output_pad :output, accepted_format: _any
 
-  def_options tick_interval: [type: :time],
-              test_process: [type: :pid]
+  def_options tick_interval: [spec: Membrane.Time.t()],
+              test_process: [spec: pid()]
 
   @impl true
   def handle_playing(_ctx, %{tick_interval: interval} = state) do

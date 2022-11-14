@@ -9,7 +9,6 @@ defmodule Membrane.Support.DemandsTest.Filter do
   def_input_pad :input, demand_unit: :buffers, accepted_format: _any
 
   def_options demand_generator: [
-                type: :function,
                 spec: (pos_integer -> non_neg_integer),
                 default: &__MODULE__.default_demand_generator/1
               ]

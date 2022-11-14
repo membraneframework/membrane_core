@@ -64,14 +64,34 @@ defmodule Membrane.Core.Bin.PadController do
               "Sending link response, link_id: #{inspect(link_id)}, pad: #{inspect(pad_ref)}"
             )
 
-            Message.send(state.parent_pid, :link_response, link_id)
+            Message.send(state.parent_pid, :link_response, [link_id, direction])
           end
 
           state
       end
 
     state = PadModel.update_data!(state, pad_ref, &%{&1 | link_id: link_id, options: pad_options})
-    maybe_handle_pad_added(pad_ref, state)
+    state = maybe_handle_pad_added(pad_ref, state)
+
+    unless PadModel.get_data!(state, pad_ref, :endpoint) do
+      # If there's no endpoint associated to the pad, no internal link to the pad
+      # has been requested in the bin yet
+      Process.send_after(self(), Message.new(:linking_timeout, pad_ref), 5000)
+    end
+
+    state
+  end
+
+  @spec handle_linking_timeout(Pad.ref_t(), State.t()) :: :ok | no_return()
+  def handle_linking_timeout(pad_ref, state) do
+    case PadModel.get_data(state, pad_ref) do
+      {:ok, %{endpoint: nil}} = pad_data ->
+        raise Membrane.LinkError,
+              "Bin pad #{inspect(pad_ref)} wasn't linked internally within timeout. Pad data: #{inspect(pad_data, pretty: true)}"
+
+      _other ->
+        :ok
+    end
   end
 
   @doc """
@@ -129,7 +149,7 @@ defmodule Membrane.Core.Bin.PadController do
           "Sending link response, link_id: #{inspect(pad_data.link_id)}, pad: #{inspect(pad_data.ref)}"
         )
 
-        Message.send(state.parent_pid, :link_response, pad_data.link_id)
+        Message.send(state.parent_pid, :link_response, [pad_data.link_id, pad_data.direction])
         state
       else
         Membrane.Core.Child.PadModel.set_data!(

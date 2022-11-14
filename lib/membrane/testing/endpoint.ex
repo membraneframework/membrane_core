@@ -16,7 +16,7 @@ defmodule Membrane.Testing.Endpoint do
     demand_unit: :buffers
 
   def_options autodemand: [
-                type: :boolean,
+                spec: boolean(),
                 default: true,
                 description: """
                 If true element will automatically make demands.
@@ -27,7 +27,7 @@ defmodule Membrane.Testing.Endpoint do
                 spec: {initial_state :: any(), generator} | Enum.t(),
                 default: {0, &__MODULE__.default_buf_gen/2},
                 description: """
-                If `output` is an enumerable with `Membrane.Payload.t()` then
+                If `output` is an enumerable with `t:Membrane.Payload.t/0` then
                 buffer containing those payloads will be sent through the
                 `:output` pad and followed by `t:Membrane.Element.Action.end_of_stream_t/0`.
 
