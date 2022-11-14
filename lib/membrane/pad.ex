@@ -83,8 +83,8 @@ defmodule Membrane.Pad do
   linked to another pad. Thus linking the pad with _k_ other pads, creates _k_
   instances of the pad, and links each with another pad.
   """
-  @list_type availability_t :: [:always, :on_request]
-
+  @availability_t [:always, :on_request]
+  @type availability_t :: unquote(Bunch.Typespec.enum_to_alternative(@availability_t))
   @typedoc """
   Type describing availability mode of a created pad:
 
