@@ -111,6 +111,17 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       end)
       |> Enum.filter(fn {children_definitions, _options} -> children_definitions != [] end)
 
+    # map names into full names, of form: {children_group_id, children_name}
+    children_definitions =
+      Enum.map(children_definitions, fn {children_definitions, children_spec_options} ->
+        {children_definitions
+         |> Enum.map(fn
+           {name, child_spec, options} ->
+             full_name = {children_spec_options.children_group_id, name}
+             {full_name, child_spec, options}
+         end), children_spec_options}
+      end)
+
     children_definitions = remove_unecessary_children_specs(children_definitions, state)
 
     links =
