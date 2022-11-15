@@ -31,13 +31,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @type pending_specs_t :: %{spec_ref_t() => pending_spec_t()}
 
-  @type children_spec_options_map_t :: %{
-          crash_group: Membrane.CrashGroup.t() | nil,
-          stream_sync: :sinks | [[Membrane.Child.name_t()]],
-          clock_provider: Membrane.Child.name_t() | nil,
-          node: node() | nil,
-          log_metadata: Keyword.t()
-        }
+  @typep children_spec_options_map_t :: %{
+           crash_group: Membrane.CrashGroup.t() | nil,
+           stream_sync: :sinks | [[Membrane.Child.name_t()]],
+           clock_provider: Membrane.Child.name_t() | nil,
+           node: node() | nil,
+           log_metadata: Keyword.t()
+         }
 
   @children_spec_options_fields_specs [
     crash_group: [require?: false],
@@ -138,6 +138,105 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     state = StartupUtils.exec_handle_spec_started(all_children_names, state)
     proceed_spec_startup(spec_ref, state)
+  end
+
+  @spec make_canonical(Membrane.ChildrenSpec.t(), children_spec_options_map_t()) :: [
+          {[Membrane.ChildrenSpec.structure_builder_t()],
+           Membrane.ChildrenSpec.children_spec_options_t()}
+        ]
+  defp make_canonical(spec, defaults \\ @default_children_spec_options)
+
+  defp make_canonical({spec, options_keywords_list}, defaults) do
+    spec = Bunch.listify(spec)
+    {inner_specs, this_level_specs} = Enum.split_with(spec, &is_tuple(&1))
+
+    {:ok, options} =
+      Bunch.Config.parse(options_keywords_list, @children_spec_options_fields_specs)
+
+    options = Map.merge(defaults, options)
+
+    options_to_pass_to_nested =
+      Map.reject(options, fn {key, _value} -> key in [:clock_provider, :stream_sync] end)
+
+    defaults_for_nested = Map.merge(@default_children_spec_options, options_to_pass_to_nested)
+
+    [{this_level_specs, options}] ++
+      Enum.flat_map(inner_specs, &make_canonical(&1, defaults_for_nested))
+  end
+
+  defp make_canonical(specs, defaults) when is_list(specs) do
+    Enum.flat_map(specs, &make_canonical(&1, defaults))
+  end
+
+  defp make_canonical(spec, defaults) do
+    spec = Bunch.listify(spec)
+    {:ok, options} = Bunch.Config.parse([], @children_spec_options_fields_specs)
+    options = Map.merge(defaults, options)
+    [{spec, options}]
+  end
+
+  defp setup_children(
+         {children_definitions_with_given_options, options},
+         spec_ref,
+         state
+       ) do
+    children = ChildEntryParser.parse(children_definitions_with_given_options)
+    children = Enum.map(children, &%{&1 | spec_ref: spec_ref})
+    :ok = StartupUtils.check_if_children_names_unique(children, state)
+    syncs = StartupUtils.setup_syncs(children, options.stream_sync)
+
+    log_metadata =
+      case state do
+        %Bin.State{children_log_metadata: metadata} ->
+          metadata ++ options.log_metadata
+
+        %Pipeline.State{} ->
+          options.log_metadata
+      end
+
+    children =
+      StartupUtils.start_children(
+        children,
+        options.node,
+        state.synchronization.clock_proxy,
+        syncs,
+        log_metadata,
+        state.subprocess_supervisor
+      )
+
+    :ok = StartupUtils.maybe_activate_syncs(syncs, state)
+    state = ClockHandler.choose_clock(children, options.clock_provider, state)
+    state = %{state | children: Map.merge(state.children, Map.new(children, &{&1.name, &1}))}
+
+    children_names = children |> Enum.map(& &1.name)
+    children_pids = children |> Enum.map(& &1.pid)
+
+    # adding crash group to state
+    state =
+      if options.crash_group do
+        CrashGroupUtils.add_crash_group(
+          options.crash_group,
+          children_names,
+          children_pids,
+          state
+        )
+      else
+        state
+      end
+
+    {children_names, state}
+  end
+
+  defp remove_unecessary_children_specs(children_definitions_list, state) do
+    %{children: state_children} = state
+
+    Enum.map(children_definitions_list, fn {children_definitions, children_spec_options} ->
+      {children_definitions
+       |> Enum.reject(fn
+         {name, _child_spec, options} ->
+           options.get_if_exists and Map.has_key?(state_children, name)
+       end), children_spec_options}
+    end)
   end
 
   @spec proceed_spec_startup(spec_ref_t(), Parent.state_t()) :: Parent.state_t()
@@ -454,101 +553,5 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp remove_child_from_crash_group(state, group, child_pid) do
     CrashGroupUtils.remove_member_of_crash_group(state, group.name, child_pid)
     |> CrashGroupUtils.remove_crash_group_if_empty(group.name)
-  end
-
-  defp remove_unecessary_children_specs(children_definitions_list, state) do
-    %{children: state_children} = state
-
-    Enum.map(children_definitions_list, fn {children_definitions, children_spec_options} ->
-      {children_definitions
-       |> Enum.reject(fn
-         {name, _child_spec, options} ->
-           options.get_if_exists and Map.has_key?(state_children, name)
-       end), children_spec_options}
-    end)
-  end
-
-  defp make_canonical(spec, defaults \\ @default_children_spec_options)
-
-  defp make_canonical({spec, options_keywords_list}, defaults) do
-    spec = Bunch.listify(spec)
-    {inner_specs, this_level_specs} = Enum.split_with(spec, &is_tuple(&1))
-
-    {:ok, options} =
-      Bunch.Config.parse(options_keywords_list, @children_spec_options_fields_specs)
-
-    options = Map.merge(defaults, options)
-
-    options_to_pass_to_nested =
-      Enum.reject(options, fn {key, _value} -> key in [:clock_provider, :stream_sync] end)
-      |> Map.new()
-
-    defaults_for_nested = Map.merge(@default_children_spec_options, options_to_pass_to_nested)
-
-    [{this_level_specs, options}] ++
-      Enum.flat_map(inner_specs, &make_canonical(&1, defaults_for_nested))
-  end
-
-  defp make_canonical(specs, defaults) when is_list(specs) do
-    Enum.flat_map(specs, &make_canonical(&1, defaults))
-  end
-
-  defp make_canonical(spec, defaults) do
-    spec = Bunch.listify(spec)
-    {:ok, options} = Bunch.Config.parse([], @children_spec_options_fields_specs)
-    options = Map.merge(defaults, options)
-    [{spec, options}]
-  end
-
-  defp setup_children(
-         {children_definitions_with_given_options, options},
-         spec_ref,
-         state
-       ) do
-    children = ChildEntryParser.parse(children_definitions_with_given_options)
-    children = Enum.map(children, &%{&1 | spec_ref: spec_ref})
-    :ok = StartupUtils.check_if_children_names_unique(children, state)
-    syncs = StartupUtils.setup_syncs(children, options.stream_sync)
-
-    log_metadata =
-      case state do
-        %Bin.State{children_log_metadata: metadata} ->
-          metadata ++ options.log_metadata
-
-        %Pipeline.State{} ->
-          options.log_metadata
-      end
-
-    children =
-      StartupUtils.start_children(
-        children,
-        options.node,
-        state.synchronization.clock_proxy,
-        syncs,
-        log_metadata,
-        state.subprocess_supervisor
-      )
-
-    :ok = StartupUtils.maybe_activate_syncs(syncs, state)
-    state = ClockHandler.choose_clock(children, options.clock_provider, state)
-    state = %{state | children: Map.merge(state.children, Map.new(children, &{&1.name, &1}))}
-
-    children_names = children |> Enum.map(& &1.name)
-    children_pids = children |> Enum.map(& &1.pid)
-
-    # adding crash group to state
-    state =
-      if options.crash_group do
-        CrashGroupUtils.add_crash_group(
-          options.crash_group,
-          children_names,
-          children_pids,
-          state
-        )
-      else
-        state
-      end
-
-    {children_names, state}
   end
 end
