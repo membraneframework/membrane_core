@@ -10,7 +10,6 @@ defmodule Membrane.Support.AcceptedFormatTest.RestrictiveSink do
   alias Membrane.Support.AcceptedFormatTest.StreamFormat
 
   def_input_pad :input,
-    demand_unit: :buffers,
     accepted_format: %StreamFormat{format: StreamFormat.AcceptedByAll},
     availability: :always,
     mode: :push

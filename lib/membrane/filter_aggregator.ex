@@ -28,8 +28,7 @@ defmodule Membrane.FilterAggregator do
 
   def_input_pad :input,
     accepted_format: _any,
-    demand_mode: :auto,
-    demand_unit: :buffers
+    demand_mode: :auto
 
   def_output_pad :output,
     demand_mode: :auto,

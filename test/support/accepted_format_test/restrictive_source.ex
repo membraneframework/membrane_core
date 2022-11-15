@@ -9,7 +9,6 @@ defmodule Membrane.Support.AcceptedFormatTest.RestrictiveSource do
   alias Membrane.Support.AcceptedFormatTest.StreamFormat
 
   def_output_pad :output,
-    demand_unit: :buffers,
     accepted_format: %StreamFormat{format: StreamFormat.AcceptedByAll},
     availability: :always,
     mode: :push

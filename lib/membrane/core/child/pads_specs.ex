@@ -185,7 +185,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
                 ],
                 demand_unit: [
                   in: [:buffers, :bytes],
-                  require_if:
+                  accept_when:
                     &(&1.mode == :pull and &1.demand_mode != :auto and
                         (component == :bin or direction == :input)),
                   default: :buffers

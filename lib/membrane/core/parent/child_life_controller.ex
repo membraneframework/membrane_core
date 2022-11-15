@@ -480,7 +480,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     options = Map.merge(defaults, options)
 
     options_to_pass_to_nested =
-      Enum.reject(options, fn {key, _value} -> key in [:clock_provider, :stream_sync] end)
+      Map.reject(options, fn {key, _value} -> key in [:clock_provider, :stream_sync] end)
       |> Map.new()
 
     defaults_for_nested = Map.merge(@default_children_spec_options, options_to_pass_to_nested)

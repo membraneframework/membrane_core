@@ -12,7 +12,7 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
   defmodule FilterA do
     use Membrane.Filter
 
-    def_input_pad :input, demand_unit: :buffers, demand_mode: :auto, accepted_format: RemoteStream
+    def_input_pad :input, demand_mode: :auto, accepted_format: RemoteStream
     def_output_pad :output, demand_mode: :auto, accepted_format: RemoteStream
 
     @impl true
@@ -25,7 +25,7 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
   defmodule FilterB do
     use Membrane.Filter
 
-    def_input_pad :input, demand_unit: :buffers, demand_mode: :auto, accepted_format: RemoteStream
+    def_input_pad :input, demand_mode: :auto, accepted_format: RemoteStream
     def_output_pad :output, demand_mode: :auto, accepted_format: RemoteStream
 
     @impl true
