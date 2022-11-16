@@ -1,5 +1,5 @@
 %{
-  "bunch": {:git, "https://github.com/membraneframework/bunch.git", "622e40266eaf39cce4282721ef5ec8ee09e5afce", [branch: "config-require"]},
+  "bunch": {:git, "https://github.com/membraneframework/bunch.git", "9ebe289d71ae58aa80b1dd40fa77b9dfd4aa0cd5", [branch: "config-require"]},
   "bunt": {:hex, :bunt, "0.2.1", "e2d4792f7bc0ced7583ab54922808919518d0e57ee162901a16a1b6664ef3b14", [:mix], [], "hexpm", "a330bfb4245239787b15005e66ae6845c9cd524a288f0d141c148b02603777a5"},
   "certifi": {:hex, :certifi, "2.9.0", "6f2a475689dd47f19fb74334859d460a2dc4e3252a3324bd2111b8f0429e7e21", [:rebar3], [], "hexpm", "266da46bdb06d6c6d35fde799bcb28d36d985d424ad7c08b5bb48f5b5cdd4641"},
   "coerce": {:hex, :coerce, "1.0.1", "211c27386315dc2894ac11bc1f413a0e38505d808153367bd5c6e75a4003d096", [:mix], [], "hexpm", "b44a691700f7a1a15b4b7e2ff1fa30bebd669929ac8aa43cffe9e2f8bf051cf1"},
