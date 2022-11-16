@@ -31,7 +31,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @type pending_specs_t :: %{spec_ref_t() => pending_spec_t()}
 
-  @typep children_spec_options_map_t :: %{
+  @typep parsed_children_spec_options_t :: %{
            crash_group: Membrane.CrashGroup.t() | nil,
            stream_sync: :sinks | [[Membrane.Child.name_t()]],
            clock_provider: Membrane.Child.name_t() | nil,
@@ -140,9 +140,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     proceed_spec_startup(spec_ref, state)
   end
 
-  @spec make_canonical(Membrane.ChildrenSpec.t(), children_spec_options_map_t()) :: [
-          {[Membrane.ChildrenSpec.structure_builder_t()],
-           Membrane.ChildrenSpec.children_spec_options_t()}
+  @spec make_canonical(Membrane.ChildrenSpec.t(), parsed_children_spec_options_t()) :: [
+          {[Membrane.ChildrenSpec.structure_builder_t()], parsed_children_spec_options_t()}
         ]
   defp make_canonical(spec, defaults \\ @default_children_spec_options)
 
