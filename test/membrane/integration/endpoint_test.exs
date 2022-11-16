@@ -1,7 +1,7 @@
 defmodule Membrane.Core.EndpointTest do
   use ExUnit.Case, async: true
 
-  import Membrane.ParentSpec
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Support.Bin.TestBins.TestFilter
@@ -15,13 +15,9 @@ defmodule Membrane.Core.EndpointTest do
 
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          children: [
-            endpoint: %Testing.Endpoint{output: buffers},
-            filter: TestFilter
-          ],
-          links: [
-            link(:endpoint) |> to(:filter),
-            link(:filter) |> to(:endpoint)
+          structure: [
+            child(:endpoint, %Testing.Endpoint{output: buffers}) |> child(:filter, TestFilter),
+            get_child(:filter) |> get_child(:endpoint)
           ]
         )
 
@@ -33,18 +29,19 @@ defmodule Membrane.Core.EndpointTest do
 
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          children: [
-            endpoint: %Testing.Endpoint{output: buffers},
-            filter1: TestFilter,
-            filter2: TestFilter,
-            filter3: TestFilter
-          ],
-          links: [
-            link(:endpoint) |> to(:filter1),
-            link(:filter1) |> to(:filter2),
-            link(:filter2) |> to(:filter3),
-            link(:filter3) |> to(:endpoint)
-          ]
+          structure:
+            [
+              child(:endpoint, %Testing.Endpoint{output: buffers}),
+              child(:filter1, TestFilter),
+              child(:filter2, TestFilter),
+              child(:filter3, TestFilter)
+            ] ++
+              [
+                get_child(:endpoint) |> get_child(:filter1),
+                get_child(:filter1) |> get_child(:filter2),
+                get_child(:filter2) |> get_child(:filter3),
+                get_child(:filter3) |> get_child(:endpoint)
+              ]
         )
 
       assert_data_flows_through(pipeline, buffers, :endpoint)

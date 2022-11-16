@@ -18,7 +18,6 @@ defmodule Membrane.ResourceGuard do
 
         {:ok, %{state | my_resource: resource}}
       end
-
   """
   use GenServer
 

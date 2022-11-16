@@ -8,28 +8,28 @@ defmodule Membrane.Integration.AutoDemandsTest do
   defmodule AutoDemandFilter do
     use Membrane.Filter
 
-    def_input_pad :input, caps: :any, demand_mode: :auto
-    def_output_pad :output, caps: :any, demand_mode: :auto
+    def_input_pad :input, accepted_format: _any, demand_mode: :auto
+    def_output_pad :output, accepted_format: _any, demand_mode: :auto
 
     def_options factor: [default: 1], direction: [default: :up]
 
     @impl true
     def handle_init(_ctx, opts) do
-      {:ok, opts |> Map.from_struct() |> Map.merge(%{counter: 1})}
+      {[], opts |> Map.from_struct() |> Map.merge(%{counter: 1})}
     end
 
     @impl true
     def handle_process(:input, buffer, _ctx, %{direction: :up} = state) do
       buffers = Enum.map(1..state.factor, fn _i -> buffer end)
-      {{:ok, buffer: {:output, buffers}}, state}
+      {[buffer: {:output, buffers}], state}
     end
 
     @impl true
     def handle_process(:input, buffer, _ctx, %{direction: :down} = state) do
       if state.counter < state.factor do
-        {:ok, %{state | counter: state.counter + 1}}
+        {[], %{state | counter: state.counter + 1}}
       else
-        {{:ok, buffer: {:output, buffer}}, %{state | counter: 1}}
+        {[buffer: {:output, buffer}], %{state | counter: 1}}
       end
     end
   end
@@ -37,11 +37,11 @@ defmodule Membrane.Integration.AutoDemandsTest do
   defmodule AutoDemandTee do
     use Membrane.Filter
 
-    def_input_pad :input, caps: :any, demand_mode: :auto
-    def_output_pad :output, caps: :any, demand_mode: :auto, availability: :on_request
+    def_input_pad :input, accepted_format: _any, demand_mode: :auto
+    def_output_pad :output, accepted_format: _any, demand_mode: :auto, availability: :on_request
 
     @impl true
-    def handle_process(:input, buffer, _ctx, state), do: {{:ok, forward: buffer}, state}
+    def handle_process(:input, buffer, _ctx, state), do: {[forward: buffer], state}
   end
 
   [
@@ -51,7 +51,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
   ]
   |> Enum.map(fn opts ->
     test "buffers pass through auto-demand filters; setup: #{inspect(opts)}" do
-      import Membrane.ParentSpec
+      import Membrane.ChildrenSpec
 
       %{payloads: payloads, factor: factor, direction: direction, filters: filters} =
         unquote(Macro.escape(opts))
@@ -69,10 +69,10 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
       pipeline =
         Pipeline.start_link_supervised!(
-          links: [
-            link(:source, %Source{output: in_payloads})
-            |> reduce_link(1..filters, &to(&1, {:filter, &2}, filter))
-            |> to(:sink, Sink)
+          structure: [
+            child(:source, %Source{output: in_payloads})
+            |> reduce_link(1..filters, &child(&1, {:filter, &2}, filter))
+            |> child(:sink, Sink)
           ]
         )
 
@@ -89,14 +89,14 @@ defmodule Membrane.Integration.AutoDemandsTest do
   end)
 
   test "buffers pass through auto-demand tee" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
 
     pipeline =
       Pipeline.start_link_supervised!(
-        links: [
-          link(:source, %Source{output: 1..100_000}) |> to(:tee, AutoDemandTee),
-          link(:tee) |> to(:left_sink, Sink),
-          link(:tee) |> to(:right_sink, %Sink{autodemand: false})
+        structure: [
+          child(:source, %Source{output: 1..100_000}) |> child(:tee, AutoDemandTee),
+          get_child(:tee) |> child(:left_sink, Sink),
+          get_child(:tee) |> child(:right_sink, %Sink{autodemand: false})
         ]
       )
 
@@ -114,14 +114,14 @@ defmodule Membrane.Integration.AutoDemandsTest do
   end
 
   test "handle removed branch" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
 
     pipeline =
       Pipeline.start_link_supervised!(
-        links: [
-          link(:source, %Source{output: 1..100_000}) |> to(:tee, AutoDemandTee),
-          link(:tee) |> to(:left_sink, Sink),
-          link(:tee) |> to(:right_sink, %Sink{autodemand: false})
+        structure: [
+          child(:source, %Source{output: 1..100_000}) |> child(:tee, AutoDemandTee),
+          get_child(:tee) |> child(:left_sink, Sink),
+          get_child(:tee) |> child(:right_sink, %Sink{autodemand: false})
         ]
       )
 
@@ -138,28 +138,32 @@ defmodule Membrane.Integration.AutoDemandsTest do
   defmodule PushSource do
     use Membrane.Source
 
-    def_output_pad :output, mode: :push, caps: :any
+    def_output_pad :output, mode: :push, accepted_format: _any
+
+    defmodule StreamFormat do
+      defstruct []
+    end
 
     @impl true
     def handle_parent_notification(actions, _ctx, state) do
-      {{:ok, actions}, state}
+      {actions, state}
     end
 
     @impl true
     def handle_playing(_ctx, state) do
-      {{:ok, [caps: {:output, :any}]}, state}
+      {[stream_format: {:output, %StreamFormat{}}], state}
     end
   end
 
   test "toilet" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
 
     pipeline =
       Pipeline.start_link_supervised!(
-        links: [
-          link(:source, PushSource)
-          |> to(:filter, AutoDemandFilter)
-          |> to(:sink, Sink)
+        structure: [
+          child(:source, PushSource)
+          |> child(:filter, AutoDemandFilter)
+          |> child(:sink, Sink)
         ]
       )
 
@@ -182,14 +186,14 @@ defmodule Membrane.Integration.AutoDemandsTest do
   end
 
   test "toilet overflow" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
 
     pipeline =
       Pipeline.start_supervised!(
-        links: [
-          link(:source, PushSource)
-          |> to(:filter, AutoDemandFilter)
-          |> to(:sink, %Sink{autodemand: false})
+        structure: [
+          child(:source, PushSource)
+          |> child(:filter, AutoDemandFilter)
+          |> child(:sink, %Sink{autodemand: false})
         ]
       )
 

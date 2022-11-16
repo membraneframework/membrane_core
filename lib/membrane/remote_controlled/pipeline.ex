@@ -12,8 +12,8 @@ defmodule Membrane.RemoteControlled.Pipeline do
   ```
     children = ...
     links = ...
-    actions = [{:spec, %ParentSpec{children: children, links: links}}]
-    Membrane.RemoteControlled.Pipeline.exec_actions(pipeline, actions)
+    actions = [{:spec, children++links}]
+    Pipeline.exec_actions(pipeline, actions)
   ```
 
   The controlling process can also subscribe to the messages
@@ -329,12 +329,12 @@ defmodule Membrane.RemoteControlled.Pipeline do
   Sends a list of `t:Pipeline.Action.t/0` to the given `Membrane.RemoteControlled.Pipeline` for execution.
 
   Usage example:
-    1) making the `Membrane.RemoteControlled.Pipeline` start the `Membrane.ParentSpec`
+    1) making the `Membrane.RemoteControlled.Pipeline` start the `Membrane.ChildrenSpec`
        specified in the action.
     ```
     children = ...
     links = ...
-    actions = [{:spec, %ParentSpec{children: children, links: links}}]
+    actions = [{:spec, children++links}]
     Pipeline.exec_actions(pipeline, actions)
     ```
   """
@@ -348,52 +348,52 @@ defmodule Membrane.RemoteControlled.Pipeline do
   def handle_init(_ctx, opts) do
     %{controller_pid: controller_pid} = opts
     state = %State{controller_pid: controller_pid}
-    {:ok, state}
+    {[], state}
   end
 
   @impl true
   def handle_playing(_ctx, state) do
     pipeline_event = %Message.Playing{from: self()}
     send_event_to_controller_if_subscribed(pipeline_event, state)
-    {:ok, state}
+    {[], state}
   end
 
   @impl true
   def handle_element_end_of_stream(element_name, pad_ref, _ctx, state) do
     pipeline_event = %Message.EndOfStream{from: self(), element: element_name, pad: pad_ref}
     send_event_to_controller_if_subscribed(pipeline_event, state)
-    {:ok, state}
+    {[], state}
   end
 
   @impl true
   def handle_element_start_of_stream(element_name, pad_ref, _ctx, state) do
     pipeline_event = %Message.StartOfStream{from: self(), element: element_name, pad: pad_ref}
     send_event_to_controller_if_subscribed(pipeline_event, state)
-    {:ok, state}
+    {[], state}
   end
 
   @impl true
   def handle_child_notification(notification, element, _ctx, state) do
     pipeline_event = %Message.Notification{from: self(), data: notification, element: element}
     send_event_to_controller_if_subscribed(pipeline_event, state)
-    {:ok, state}
+    {[], state}
   end
 
   @impl true
   def handle_info({:exec_actions, actions}, _ctx, state) do
-    {{:ok, actions}, state}
+    {actions, state}
   end
 
   @impl true
   def handle_info({:subscription, pattern}, _ctx, state) do
-    {:ok, %{state | matching_functions: [pattern | state.matching_functions]}}
+    {[], %{state | matching_functions: [pattern | state.matching_functions]}}
   end
 
   @impl true
   def handle_terminate_request(_ctx, state) do
     pipeline_event = %Message.Terminated{from: self()}
     send_event_to_controller_if_subscribed(pipeline_event, state)
-    {:ok, state}
+    {[], state}
   end
 
   defp send_event_to_controller_if_subscribed(message, state) do

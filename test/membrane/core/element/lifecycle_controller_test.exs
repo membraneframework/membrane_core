@@ -8,11 +8,11 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
 
   defmodule DummyElement do
     use Membrane.Filter
-    def_output_pad :output, caps: :any
+    def_output_pad :output, accepted_format: _any
 
     @impl true
     def handle_terminate_request(_ctx, state) do
-      {:ok, state}
+      {[], state}
     end
   end
 
@@ -40,7 +40,6 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
           input:
             struct(Membrane.Element.PadData,
               ref: :input,
-              accepted_caps: :any,
               direction: :input,
               pid: self(),
               mode: :pull,

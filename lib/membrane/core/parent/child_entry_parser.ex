@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Parent.ChildEntryParser do
   @moduledoc false
 
-  alias Membrane.{ChildEntry, ParentError, ParentSpec}
+  alias Membrane.{ChildEntry, ChildrenSpec, ParentError}
 
   @type raw_child_entry_t :: %ChildEntry{
           name: Membrane.Child.name_t(),
@@ -10,29 +10,28 @@ defmodule Membrane.Core.Parent.ChildEntryParser do
           component_type: :element | :bin
         }
 
-  @spec parse(ParentSpec.children_spec_t() | any) ::
+  @spec parse([ChildrenSpec.StructureBuilder.child_spec_t()]) ::
           [raw_child_entry_t] | no_return
-  def parse(children_spec)
-      when is_map(children_spec) or is_list(children_spec) do
-    children_spec |> Enum.map(&parse_child/1)
+  def parse(children_spec) do
+    Enum.map(children_spec, &parse_child/1)
   end
 
-  defp parse_child({name, %module{} = options}) do
+  defp parse_child({name, %module{} = struct, _options}) do
     %ChildEntry{
       name: name,
       module: module,
-      options: options,
+      options: struct,
       component_type: component_type(module)
     }
   end
 
-  defp parse_child({name, module}) when is_atom(module) do
-    options = module |> Bunch.Module.struct()
+  defp parse_child({name, module, _options}) when is_atom(module) do
+    struct = module |> Bunch.Module.struct()
 
     %ChildEntry{
       name: name,
       module: module,
-      options: options,
+      options: struct,
       component_type: component_type(module)
     }
   end
