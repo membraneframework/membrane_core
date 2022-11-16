@@ -44,7 +44,8 @@ defmodule Membrane.ResourceGuard do
           t,
           (() -> any),
           opts :: [tag: any, timeout: milliseconds :: non_neg_integer]
-        ) :: any()
+        ) :: tag
+        when tag: any()
   def register_resource(resource_guard, cleanup_function, opts \\ []) do
     opts = Keyword.put_new_lazy(opts, :tag, &make_ref/0)
     Message.send(resource_guard, :register_resource, [cleanup_function, opts])
@@ -131,7 +132,7 @@ defmodule Membrane.ResourceGuard do
       {:EXIT, ^task, reason} -> reason
     after
       timeout ->
-        Membrane.Logger.error("Cleanup of resource wit tag: #{inspect(tag)} timed out, killing")
+        Membrane.Logger.error("Cleanup of resource with tag: #{inspect(tag)} timed out, killing")
         Process.unlink(task)
         Process.exit(task, :kill)
         :normal
