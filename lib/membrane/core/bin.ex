@@ -102,7 +102,7 @@ defmodule Membrane.Core.Bin do
       SubprocessSupervisor.start_utility(options.subprocess_supervisor, {ResourceGuard, self()})
 
     Telemetry.report_init(:bin)
-    ResourceGuard.register_resource(resource_guard, fn -> Telemetry.report_terminate(:bin) end)
+    ResourceGuard.register(resource_guard, fn -> Telemetry.report_terminate(:bin) end)
 
     state =
       %State{
