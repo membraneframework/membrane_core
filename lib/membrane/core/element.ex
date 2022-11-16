@@ -110,7 +110,7 @@ defmodule Membrane.Core.Element do
 
     Telemetry.report_init(:element)
 
-    ResourceGuard.register_resource(resource_guard, fn -> Telemetry.report_terminate(:element) end)
+    ResourceGuard.register(resource_guard, fn -> Telemetry.report_terminate(:element) end)
 
     state =
       Map.take(options, [:module, :name, :parent_clock, :sync, :parent, :subprocess_supervisor])

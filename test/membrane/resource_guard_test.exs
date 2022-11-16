@@ -16,7 +16,7 @@ defmodule Membrane.ResourceGuardTest do
         {:ok, pid} = Task.start(fn -> Process.sleep(:infinity) end)
         Process.register(pid, :membrane_resource_guard_test_element_resource)
 
-        ResourceGuard.register_resource(ctx.resource_guard, fn ->
+        ResourceGuard.register(ctx.resource_guard, fn ->
           Process.exit(pid, :shutdown)
         end)
 
@@ -34,7 +34,7 @@ defmodule Membrane.ResourceGuardTest do
         {:ok, pid} = Task.start(fn -> Process.sleep(:infinity) end)
         Process.register(pid, :membrane_resource_guard_test_bin_resource)
 
-        ResourceGuard.register_resource(ctx.resource_guard, fn ->
+        ResourceGuard.register(ctx.resource_guard, fn ->
           Process.exit(pid, :shutdown)
         end)
 
@@ -52,7 +52,7 @@ defmodule Membrane.ResourceGuardTest do
         {:ok, pid} = Task.start(fn -> Process.sleep(:infinity) end)
         Process.register(pid, :membrane_resource_guard_test_pipeline_resource)
 
-        ResourceGuard.register_resource(ctx.resource_guard, fn ->
+        ResourceGuard.register(ctx.resource_guard, fn ->
           Process.exit(pid, :shutdown)
         end)
 
@@ -89,19 +89,12 @@ defmodule Membrane.ResourceGuardTest do
       Task.start_link(fn ->
         {:ok, guard} = ResourceGuard.start_link()
 
-        ResourceGuard.register_resource(guard, fn -> send(test_pid, :cleanup) end, tag: :tag)
-
-        ResourceGuard.register_resource(guard, fn -> send(test_pid, :cleanup2) end, tag: :tag)
-
-        ResourceGuard.register_resource(guard, fn -> send(test_pid, :cleanup3) end,
-          tag: :other_tag
-        )
-
-        resource_tag = ResourceGuard.register_resource(guard, fn -> send(test_pid, :cleanup4) end)
-
-        ResourceGuard.cleanup_resource(guard, :tag)
-
-        ResourceGuard.unregister_resource(guard, resource_tag)
+        ResourceGuard.register(guard, fn -> send(test_pid, :cleanup) end, tag: :tag)
+        ResourceGuard.register(guard, fn -> send(test_pid, :cleanup2) end, tag: :tag)
+        ResourceGuard.register(guard, fn -> send(test_pid, :cleanup3) end, tag: :other_tag)
+        resource_tag = ResourceGuard.register(guard, fn -> send(test_pid, :cleanup4) end)
+        ResourceGuard.cleanup(guard, :tag)
+        ResourceGuard.unregister(guard, resource_tag)
 
         receive do: (:exit -> :ok)
       end)
