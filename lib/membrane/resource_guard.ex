@@ -63,7 +63,16 @@ defmodule Membrane.ResourceGuard do
   end
 
   @doc """
-  Cleans up resource manually.
+  Executes all cleanup functions registered in the resource gurard.
+  """
+  @spec cleanup(t) :: :ok
+  def cleanup(resource_guard) do
+    Message.send(resource_guard, :cleanup_all)
+    :ok
+  end
+
+  @doc """
+  Executes cleanup functions registered with the specifc tag.
 
   If many cleanup functions are registered with the same tag, all of them are executed.
   """
@@ -96,6 +105,15 @@ defmodule Membrane.ResourceGuard do
       end)
 
     {:noreply, %{state | guards: guards}}
+  end
+
+  @impl true
+  def handle_info(Message.new(:cleanup_all), state) do
+    for {function, tag, timeout} <- state.guards do
+      cleanup(function, tag, timeout)
+    end
+
+    {:noreply, %{state | guards: []}}
   end
 
   @impl true
