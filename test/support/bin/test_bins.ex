@@ -249,7 +249,7 @@ defmodule Membrane.Support.Bin.TestBins do
     use Membrane.Filter
 
     def_input_pad :input, demand_unit: :buffers, accepted_format: _any
-    def_output_pad :output, accepted_format: _any, demand_unit: :buffers
+    def_output_pad :output, accepted_format: _any
 
     @impl true
     def handle_init(_ctx, _opts) do
