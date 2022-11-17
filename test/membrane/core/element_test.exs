@@ -226,7 +226,6 @@ defmodule Membrane.Core.ElementTest do
             %{
               availability: :always,
               demand_mode: :manual,
-              demand_unit: :buffers,
               direction: :output,
               mode: :pull,
               name: :output,

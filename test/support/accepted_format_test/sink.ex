@@ -10,7 +10,6 @@ defmodule Membrane.Support.AcceptedFormatTest.Sink do
   alias Membrane.Support.AcceptedFormatTest.StreamFormat
 
   def_input_pad :input,
-    demand_unit: :buffers,
     accepted_format: StreamFormat,
     availability: :always,
     mode: :push

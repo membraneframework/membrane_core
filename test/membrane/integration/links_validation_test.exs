@@ -17,7 +17,6 @@ defmodule Membrane.LinksValidationTest do
       use Membrane.Sink
 
       def_input_pad :input,
-        demand_unit: :buffers,
         accepted_format: _any,
         availability: :always,
         mode: :push
@@ -27,7 +26,6 @@ defmodule Membrane.LinksValidationTest do
       use Membrane.Source
 
       def_output_pad :output,
-        demand_unit: :buffers,
         accepted_format: _any,
         availability: :always,
         mode: :push
@@ -45,7 +43,6 @@ defmodule Membrane.LinksValidationTest do
       use Membrane.Sink
 
       def_input_pad :input,
-        demand_unit: :buffers,
         accepted_format: _any,
         availability: :on_request,
         mode: :push
@@ -55,7 +52,6 @@ defmodule Membrane.LinksValidationTest do
       use Membrane.Source
 
       def_output_pad :output,
-        demand_unit: :buffers,
         accepted_format: _any,
         availability: :on_request,
         mode: :push
