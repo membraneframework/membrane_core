@@ -475,7 +475,7 @@ defmodule Membrane.Testing.Assertions do
            ) do
     assert_receive_from_resource_guard(
       mock_guard,
-      {:cleanup, tag},
+      {:unregister, tag},
       timeout
     )
   end
