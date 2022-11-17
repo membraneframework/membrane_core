@@ -12,6 +12,7 @@
  * Use Elixir patterns as `:accepted_format` in pad definition.
  * Delete `:ok` from tuples returned from callbacks 
  * Remove `:type` from specs passed to `def_options/1` macro in bins and elements.  
+ * Add `Membrane.Testing.MockResourceGuard`
 
 ## 0.10.0
  * Remove all deprecated stuff [#399](https://github.com/membraneframework/membrane_core/pull/399)
