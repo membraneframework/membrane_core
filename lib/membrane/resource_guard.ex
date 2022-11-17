@@ -12,7 +12,7 @@ defmodule Membrane.ResourceGuard do
       def handle_setup(ctx, state) do
         resource = MyResource.create()
 
-        Membrane.ResourceGuard.register_resource(ctx.resource_guard, fn ->
+        Membrane.ResourceGuard.register(ctx.resource_guard, fn ->
           MyResource.cleanup(resource)
         end)
 
@@ -35,28 +35,41 @@ defmodule Membrane.ResourceGuard do
   Registers a resource cleanup function in the resource guard.
 
   Registered functions are called in the order reverse to the registration order.
-  A return value of a registered function is ignored. If a `name` is passed,
-  the function can be cleaned up manually with `cleanup_resource/2`. Many
-  functions can be registered with the same name.
+  Function returns a tag of the registered cleanup function. Tag can be passed
+  under a `:tag` key in `opts`. Many functions can be registered with the same tag.
+  If there is no `:tag` key in `opts`, tag will be result of `make_ref()`.
   """
-  @spec register_resource(
+  @spec register(
           t,
           (() -> any),
-          opts :: [name: term, timeout: milliseconds :: non_neg_integer]
-        ) :: :ok
-  def register_resource(resource_guard, cleanup_function, opts \\ []) do
-    Message.send(resource_guard, :register_resource, [cleanup_function, opts])
+          opts :: [tag: any, timeout: milliseconds :: non_neg_integer]
+        ) :: tag
+        when tag: any()
+  def register(resource_guard, cleanup_function, opts \\ []) do
+    opts = Keyword.put_new_lazy(opts, :tag, &make_ref/0)
+    Message.send(resource_guard, :register, [cleanup_function, opts])
+    Keyword.get(opts, :tag)
+  end
+
+  @doc """
+  Unregisters a resource cleanup function from the resource guard.
+
+  All cleanup functions with tag `tag` are deleted.
+  """
+  @spec unregister(t, tag :: any) :: :ok
+  def unregister(resource_guard, tag) do
+    Message.send(resource_guard, :unregister, tag)
     :ok
   end
 
   @doc """
-  Cleans up a named resource manually.
+  Cleans up resource manually.
 
-  If many resources are registered with the name, all of them are cleaned up.
+  If many cleanup functions are registered with the same tag, all of them are executed.
   """
-  @spec cleanup_resource(t, name :: any) :: :ok
-  def cleanup_resource(resource_guard, name) do
-    Message.send(resource_guard, :cleanup_resource, name)
+  @spec cleanup(t, tag :: any) :: :ok
+  def cleanup(resource_guard, tag) do
+    Message.send(resource_guard, :cleanup, tag)
     :ok
   end
 
@@ -68,18 +81,29 @@ defmodule Membrane.ResourceGuard do
   end
 
   @impl true
-  def handle_info(Message.new(:register_resource, [function, opts]), state) do
-    name = Keyword.get(opts, :name)
+  def handle_info(Message.new(:register, [function, opts]), state) do
+    tag = Keyword.fetch!(opts, :tag)
     timeout = Keyword.get(opts, :timeout, 5000)
-    {:noreply, %{state | guards: [{function, name, timeout} | state.guards]}}
+    {:noreply, %{state | guards: [{function, tag, timeout} | state.guards]}}
   end
 
   @impl true
-  def handle_info(Message.new(:cleanup_resource, name), state) do
+  def handle_info(Message.new(:unregister, tag), state) do
     guards =
       Enum.reject(state.guards, fn
-        {function, ^name, timeout} ->
-          cleanup(function, name, timeout)
+        {_function, ^tag, _timeout} -> true
+        _other -> false
+      end)
+
+    {:noreply, %{state | guards: guards}}
+  end
+
+  @impl true
+  def handle_info(Message.new(:cleanup, tag), state) do
+    guards =
+      Enum.reject(state.guards, fn
+        {function, ^tag, timeout} ->
+          cleanup(function, tag, timeout)
           true
 
         _other ->
@@ -91,7 +115,7 @@ defmodule Membrane.ResourceGuard do
 
   @impl true
   def handle_info({:DOWN, monitor, :process, _pid, _reason}, %{monitor: monitor} = state) do
-    Enum.each(state.guards, fn {function, name, timeout} -> cleanup(function, name, timeout) end)
+    Enum.each(state.guards, fn {function, tag, timeout} -> cleanup(function, tag, timeout) end)
     {:stop, :normal, state}
   end
 
@@ -100,14 +124,14 @@ defmodule Membrane.ResourceGuard do
     {:noreply, state}
   end
 
-  defp cleanup(function, name, timeout) do
+  defp cleanup(function, tag, timeout) do
     {:ok, task} = Task.start_link(function)
 
     receive do
       {:EXIT, ^task, reason} -> reason
     after
       timeout ->
-        Membrane.Logger.error("Cleanup of resource #{inspect(name)} timed out, killing")
+        Membrane.Logger.error("Cleanup of resource with tag: #{inspect(tag)} timed out, killing")
         Process.unlink(task)
         Process.exit(task, :kill)
         :normal
@@ -124,7 +148,7 @@ defmodule Membrane.ResourceGuard do
 
       reason ->
         Membrane.Logger.error(
-          "Error cleaning up resource #{inspect(name)}, due to: #{inspect(reason)}"
+          "Error cleaning up resource with tag: #{inspect(tag)}, due to: #{inspect(reason)}"
         )
     end
 
