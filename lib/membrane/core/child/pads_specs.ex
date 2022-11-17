@@ -185,7 +185,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
                 ],
                 demand_unit:
                   &if &1.mode == :pull and (component == :bin or direction == :input) do
-                    [in: [:buffers, :bytes], default: :buffers]
+                    [in: [:buffers, :bytes], default: :buffers, required?: &1.demand_mode == :manual]
                   end,
                 options: [default: nil]
               ) do
