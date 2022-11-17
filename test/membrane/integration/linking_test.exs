@@ -4,7 +4,7 @@ defmodule Membrane.Integration.LinkingTest do
   import Membrane.Testing.Assertions
   import Membrane.ChildrenSpec
 
-  alias Membrane.{Buffer, ChildrenSpec, Testing}
+  alias Membrane.{Buffer, Testing}
   alias Membrane.Support.Element.DynamicFilter
 
   require Membrane.Pad, as: Pad

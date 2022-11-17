@@ -109,10 +109,7 @@ defmodule Membrane.ResourceGuard do
 
   @impl true
   def handle_info(Message.new(:cleanup_all), state) do
-    for {function, tag, timeout} <- state.guards do
-      cleanup(function, tag, timeout)
-    end
-
+    do_cleanup_all(state.guards)
     {:noreply, %{state | guards: []}}
   end
 
@@ -121,7 +118,7 @@ defmodule Membrane.ResourceGuard do
     guards =
       Enum.reject(state.guards, fn
         {function, ^tag, timeout} ->
-          cleanup(function, tag, timeout)
+          do_cleanup(function, tag, timeout)
           true
 
         _other ->
@@ -133,7 +130,7 @@ defmodule Membrane.ResourceGuard do
 
   @impl true
   def handle_info({:DOWN, monitor, :process, _pid, _reason}, %{monitor: monitor} = state) do
-    Enum.each(state.guards, fn {function, tag, timeout} -> cleanup(function, tag, timeout) end)
+    do_cleanup_all(state.guards)
     {:stop, :normal, state}
   end
 
@@ -142,7 +139,13 @@ defmodule Membrane.ResourceGuard do
     {:noreply, state}
   end
 
-  defp cleanup(function, tag, timeout) do
+  defp do_cleanup_all(guards) do
+    for {function, tag, timeout} <- guards do
+      do_cleanup(function, tag, timeout)
+    end
+  end
+
+  defp do_cleanup(function, tag, timeout) do
     {:ok, task} = Task.start_link(function)
 
     receive do
