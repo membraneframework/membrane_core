@@ -14,6 +14,7 @@ defmodule Membrane.Core.Element.PadController do
     EventController,
     InputQueue,
     State,
+    StreamFormatController,
     Toilet
   }
 
@@ -27,11 +28,17 @@ defmodule Membrane.Core.Element.PadController do
   require Membrane.Pad
 
   @type link_call_props_t ::
-          %{initiator: :parent}
+          %{
+            initiator: :parent,
+            stream_format_validation_params:
+              StreamFormatController.stream_format_validation_params_t()
+          }
           | %{
               initiator: :sibling,
               other_info: PadModel.pad_info_t() | nil,
-              link_metadata: %{toilet: Toilet.t() | nil}
+              link_metadata: %{toilet: Toilet.t() | nil},
+              stream_format_validation_params:
+                StreamFormatController.stream_format_validation_params_t()
             }
 
   @type link_call_reply_props_t ::
@@ -64,7 +71,7 @@ defmodule Membrane.Core.Element.PadController do
                 "Tried to link via unknown pad #{inspect(name)} of #{inspect(state.name)}"
       end
 
-    :ok = Child.PadController.validate_pad_being_linked!(endpoint.pad_ref, direction, info, state)
+    :ok = Child.PadController.validate_pad_being_linked!(direction, info)
 
     toilet =
       if direction == :input do
@@ -81,7 +88,14 @@ defmodule Membrane.Core.Element.PadController do
     do_handle_link(endpoint, other_endpoint, info, toilet, link_props, state)
   end
 
-  defp do_handle_link(endpoint, other_endpoint, info, toilet, %{initiator: :parent}, state) do
+  defp do_handle_link(
+         endpoint,
+         other_endpoint,
+         info,
+         toilet,
+         %{initiator: :parent} = props,
+         state
+       ) do
     handle_link_response =
       Message.call(other_endpoint.pid, :handle_link, [
         Pad.opposite_direction(info.direction),
@@ -93,7 +107,8 @@ defmodule Membrane.Core.Element.PadController do
           link_metadata: %{
             toilet: toilet,
             observability_metadata: Observability.setup_link(endpoint.pad_ref)
-          }
+          },
+          stream_format_validation_params: []
         }
       ])
 
@@ -107,11 +122,10 @@ defmodule Membrane.Core.Element.PadController do
 
         state =
           init_pad_data(
-            endpoint.pad_ref,
+            endpoint,
+            other_endpoint,
             info,
-            endpoint.pad_props,
-            other_endpoint.pad_ref,
-            other_endpoint.pid,
+            props.stream_format_validation_params,
             other_info,
             link_metadata,
             state
@@ -133,7 +147,12 @@ defmodule Membrane.Core.Element.PadController do
          %{initiator: :sibling} = link_props,
          state
        ) do
-    %{other_info: other_info, link_metadata: link_metadata} = link_props
+    %{
+      other_info: other_info,
+      link_metadata: link_metadata,
+      stream_format_validation_params: stream_format_validation_params
+    } = link_props
+
     Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
     link_metadata = %{link_metadata | toilet: link_metadata.toilet || toilet}
 
@@ -145,11 +164,10 @@ defmodule Membrane.Core.Element.PadController do
 
     state =
       init_pad_data(
-        endpoint.pad_ref,
+        endpoint,
+        other_endpoint,
         info,
-        endpoint.pad_props,
-        other_endpoint.pad_ref,
-        other_endpoint.pid,
+        stream_format_validation_params,
         other_info,
         link_metadata,
         state
@@ -191,24 +209,38 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  defp init_pad_data(ref, info, props, other_ref, other_pid, other_info, metadata, state) do
+  defp init_pad_data(
+         endpoint,
+         other_endpoint,
+         info,
+         stream_format_validation_params,
+         other_info,
+         metadata,
+         state
+       ) do
     data =
       info
+      |> Map.delete(:accepted_formats_str)
       |> Map.merge(%{
-        pid: other_pid,
-        other_ref: other_ref,
-        options: Child.PadController.parse_pad_options!(info.name, props.options, state),
-        ref: ref,
-        caps: nil,
+        pid: other_endpoint.pid,
+        other_ref: other_endpoint.pad_ref,
+        options:
+          Child.PadController.parse_pad_options!(info.name, endpoint.pad_props.options, state),
+        ref: endpoint.pad_ref,
+        stream_format_validation_params: stream_format_validation_params,
+        stream_format: nil,
         start_of_stream?: false,
         end_of_stream?: false,
         associated_pads: []
       })
 
-    data = data |> Map.merge(init_pad_direction_data(data, props, state))
-    data = data |> Map.merge(init_pad_mode_data(data, props, other_info, metadata, state))
+    data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, state))
+
+    data =
+      data |> Map.merge(init_pad_mode_data(data, endpoint.pad_props, other_info, metadata, state))
+
     data = struct!(Membrane.Element.PadData, data)
-    state = put_in(state, [:pads_data, ref], data)
+    state = put_in(state, [:pads_data, endpoint.pad_ref], data)
 
     if data.demand_mode == :auto do
       state =
@@ -220,7 +252,7 @@ defmodule Membrane.Core.Element.PadController do
         end)
 
       case data.direction do
-        :input -> DemandController.send_auto_demand_if_needed(ref, state)
+        :input -> DemandController.send_auto_demand_if_needed(endpoint.pad_ref, state)
         :output -> state
       end
     else

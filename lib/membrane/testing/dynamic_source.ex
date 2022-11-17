@@ -40,7 +40,7 @@ defmodule Membrane.Testing.DynamicSource do
           (state :: any(), pad :: Pad.ref_t(), buffers_cnt :: pos_integer ->
              {[Action.t()], state :: any()})
 
-  def_output_pad :output, caps: :any, availability: :on_request
+  def_output_pad :output, accepted_format: _any, availability: :on_request
 
   def_options output: [
                 spec: {initial_state :: any(), generator()} | Enum.t(),
@@ -62,11 +62,11 @@ defmodule Membrane.Testing.DynamicSource do
                 used for the next call.
                 """
               ],
-              caps: [
+              stream_format: [
                 spec: struct(),
                 default: %Membrane.RemoteStream{},
                 description: """
-                Caps to be sent before the `output`.
+                Stream format to be sent before the `output`.
                 """
               ]
 
@@ -88,7 +88,7 @@ defmodule Membrane.Testing.DynamicSource do
 
     case opts.output do
       {initial_state, generator} when is_function(generator) ->
-        {:ok,
+        {[],
          Map.merge(opts, %{
            type: :generator,
            generator: generator,
@@ -97,24 +97,24 @@ defmodule Membrane.Testing.DynamicSource do
          })}
 
       _enumerable_output ->
-        {:ok, Map.merge(opts, %{type: :enum, output: opts.output, output_for_pad: %{}})}
+        {[], Map.merge(opts, %{type: :enum, output: opts.output, output_for_pad: %{}})}
     end
   end
 
   @impl true
   def handle_playing(ctx, state) do
-    actions = Map.keys(ctx.pads) |> Enum.map(&{:caps, {&1, state.caps}})
-    {{:ok, actions}, state}
+    actions = Map.keys(ctx.pads) |> Enum.map(&{:stream_format, {&1, state.stream_format}})
+    {actions, state}
   end
 
   @impl true
   def handle_pad_added(pad, _ctx, %{type: :enum} = state) do
-    {:ok, Map.update!(state, :output_for_pad, &Map.put(&1, pad, state.output))}
+    {[], Map.update!(state, :output_for_pad, &Map.put(&1, pad, state.output))}
   end
 
   @impl true
   def handle_pad_added(pad, _ctx, %{type: :generator} = state) do
-    {:ok, Map.update!(state, :state_for_pad, &Map.put(&1, pad, state.generator_state))}
+    {[], Map.update!(state, :state_for_pad, &Map.put(&1, pad, state.generator_state))}
   end
 
   @impl true
@@ -124,13 +124,15 @@ defmodule Membrane.Testing.DynamicSource do
     if length(output_for_pad) > 0 do
       [payload | rest] = output_for_pad
 
-      {{:ok,
+      {
         [
           {:buffer, {pad, %Buffer{payload: payload}}},
           {:redemand, pad}
-        ]}, Map.update!(state, :output_for_pad, &Map.put(&1, pad, rest))}
+        ],
+        Map.update!(state, :output_for_pad, &Map.put(&1, pad, rest))
+      }
     else
-      {{:ok, [end_of_stream: pad]}, state}
+      {[end_of_stream: pad], state}
     end
   end
 
@@ -139,7 +141,6 @@ defmodule Membrane.Testing.DynamicSource do
     state_for_pad = state.state_for_pad[pad]
     {actions, new_state} = state.generator.(state_for_pad, pad, 1)
 
-    {{:ok, actions ++ [redemand: pad]},
-     Map.update!(state, :state_for_pad, &Map.put(&1, pad, new_state))}
+    {actions ++ [redemand: pad], Map.update!(state, :state_for_pad, &Map.put(&1, pad, new_state))}
   end
 end

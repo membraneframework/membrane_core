@@ -2,9 +2,11 @@ defmodule Membrane.Core.PipelineTest do
   use ExUnit.Case
 
   import Membrane.Testing.Assertions
+  import Membrane.ChildrenSpec
+
+  alias Membrane.ChildrenSpec
   alias Membrane.Core.Message
   alias Membrane.Core.Pipeline.{ActionHandler, State}
-  alias Membrane.ParentSpec
   alias Membrane.Testing
 
   require Membrane.Core.Message
@@ -16,17 +18,17 @@ defmodule Membrane.Core.PipelineTest do
 
     @impl true
     def handle_init(_ctx, result) do
-      result || {:ok, %{}}
+      result || {[], %{}}
     end
 
     @impl true
     def handle_child_notification(notification, child, _ctx, state) do
-      {:ok, Map.put(state, :child_notification, {notification, child})}
+      {[], Map.put(state, :child_notification, {notification, child})}
     end
 
     @impl true
     def handle_info(message, _ctx, state) do
-      {:ok, Map.put(state, :other, message)}
+      {[], Map.put(state, :other, message)}
     end
   end
 
@@ -57,16 +59,9 @@ defmodule Membrane.Core.PipelineTest do
   setup_all :state
 
   describe "Handle init" do
-    test "should raise an error if handle_init returns an error", %{init_opts: init_opts} do
-      assert_raise Membrane.CallbackError, fn ->
-        @module.init(%{init_opts | options: {:error, :reason}})
-      end
-    end
-
-    test "executes successfully when callback module's handle_init returns {{:ok, spec: spec}}, state} ",
+    test "executes successfully when callback module's handle_init returns {[spec: spec], state} ",
          %{init_opts: init_opts} do
-      assert {:ok, state, {:continue, :setup}} =
-               @module.init(%{init_opts | options: {{:ok, spec: %Membrane.ParentSpec{}}, %{}}})
+      assert {:ok, state, {:continue, :setup}} = @module.init(%{init_opts | options: {[], %{}}})
 
       assert %State{internal_state: %{}, module: TestPipeline} = state
     end
@@ -76,7 +71,7 @@ defmodule Membrane.Core.PipelineTest do
     test "should raise if duplicate elements exist in spec", %{state: state} do
       assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
         ActionHandler.handle_action(
-          {:spec, %ParentSpec{children: [a: Membrane.Testing.Source, a: Membrane.Testing.Sink]}},
+          {:spec, [child(:a, Membrane.Testing.Source) |> child(:a, Membrane.Testing.Sink)]},
           nil,
           [],
           state
@@ -89,7 +84,7 @@ defmodule Membrane.Core.PipelineTest do
 
       assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
         ActionHandler.handle_action(
-          {:spec, %ParentSpec{children: [a: Membrane.Testing.Source]}},
+          {:spec, [child(:a, Membrane.Testing.Source)]},
           nil,
           [],
           state
@@ -135,5 +130,22 @@ defmodule Membrane.Core.PipelineTest do
       Testing.Pipeline.execute_actions(pid, terminate: reason)
       assert_receive {:DOWN, _ref, :process, ^supervisor, ^reason}
     end)
+  end
+
+  test "Pipeline should be able to spawn its children in a nested specification" do
+    pid = Testing.Pipeline.start_link_supervised!(module: TestPipeline)
+    opts1 = []
+    opts2 = []
+
+    spec = {
+      [
+        {child(:b, Testing.Sink), opts2},
+        child(:a, %Testing.Source{output: [1, 2, 3]}) |> get_child(:b)
+      ],
+      opts1
+    }
+
+    Testing.Pipeline.execute_actions(pid, spec: spec, playback: :playing)
+    assert_pipeline_play(pid)
   end
 end

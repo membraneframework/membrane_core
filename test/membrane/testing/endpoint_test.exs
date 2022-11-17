@@ -7,20 +7,20 @@ defmodule Membrane.Testing.EndpointTest do
   test "Endpoint initializes buffer generator and its state properly" do
     generator = fn _state, _size -> nil end
 
-    assert {:ok, %{output: ^generator, generator_state: :abc}} =
+    assert {[], %{output: ^generator, generator_state: :abc}} =
              Endpoint.handle_init(%{}, %Endpoint{output: {:abc, generator}})
   end
 
-  test "Endpoint sends caps on play" do
-    assert {{:ok, caps: {:output, :caps}}, _state} = Endpoint.handle_playing(nil, %{caps: :caps})
+  test "Endpoint sends stream format on play" do
+    assert {[stream_format: {:output, :stream_format}], _state} =
+             Endpoint.handle_playing(nil, %{stream_format: :stream_format})
   end
 
   describe "Handle write" do
     test "demands when autodemand is true" do
       buffer = %Membrane.Buffer{payload: 123}
 
-      assert {{:ok, actions}, _state} =
-               Endpoint.handle_write(:input, buffer, nil, %{autodemand: true})
+      assert {actions, _state} = Endpoint.handle_write(:input, buffer, nil, %{autodemand: true})
 
       assert actions == [
                demand: :input,
@@ -31,8 +31,7 @@ defmodule Membrane.Testing.EndpointTest do
     test "does not demand when autodemand is false" do
       buffer = %Membrane.Buffer{payload: 123}
 
-      assert {{:ok, actions}, _state} =
-               Endpoint.handle_write(:input, buffer, nil, %{autodemand: false})
+      assert {actions, _state} = Endpoint.handle_write(:input, buffer, nil, %{autodemand: false})
 
       assert actions == [notify_parent: %Notification{payload: {:buffer, buffer}}]
     end
@@ -43,7 +42,7 @@ defmodule Membrane.Testing.EndpointTest do
       payloads = Enum.into(1..10, [])
       demand_size = 3
 
-      assert {{:ok, actions}, state} =
+      assert {actions, state} =
                Endpoint.handle_demand(:output, demand_size, :buffers, nil, %{output: payloads})
 
       assert [{:buffer, {:output, buffers}}] = actions
@@ -60,7 +59,7 @@ defmodule Membrane.Testing.EndpointTest do
       payload = 1
       payloads = [payload]
 
-      assert {{:ok, actions}, _state} =
+      assert {actions, _state} =
                Endpoint.handle_demand(:output, 2, :buffers, nil, %{output: payloads})
 
       assert [
@@ -76,7 +75,7 @@ defmodule Membrane.Testing.EndpointTest do
     buffers = [%Membrane.Buffer{payload: 1}]
     assert {state, generator} = Endpoint.output_from_buffers(buffers)
 
-    assert {{:ok, actions}, _state} =
+    assert {actions, _state} =
              Endpoint.handle_demand(:output, 2, :buffers, nil, %{
                generator_state: state,
                output: generator

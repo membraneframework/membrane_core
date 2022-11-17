@@ -2,6 +2,7 @@ defmodule Membrane.Core.BinTest do
   use ExUnit.Case, async: true
 
   import Membrane.Testing.Assertions
+  import Membrane.ChildrenSpec
 
   alias Membrane.Core.Bin
   alias Membrane.Core.Message
@@ -15,17 +16,16 @@ defmodule Membrane.Core.BinTest do
     test "in simple, flat use case" do
       buffers = ['a', 'b', 'c']
 
-      children = [
-        source: %Testing.Source{output: buffers},
-        test_bin: %TestBins.SimpleBin{
+      links = [
+        child(:source, %Testing.Source{output: buffers})
+        |> child(:test_bin, %TestBins.SimpleBin{
           filter1: TestFilter,
           filter2: TestFilter
-        },
-        sink: Testing.Sink
+        })
+        |> child(:sink, Testing.Sink)
       ]
 
-      pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
 
       assert_data_flows_through(pipeline, buffers)
     end
@@ -33,21 +33,20 @@ defmodule Membrane.Core.BinTest do
     test "when bin is next to a bin" do
       buffers = ['a', 'b', 'c']
 
-      children = [
-        source: %Testing.Source{output: buffers},
-        test_bin1: %TestBins.SimpleBin{
+      links = [
+        child(:source, %Testing.Source{output: buffers})
+        |> child(:test_bin1, %TestBins.SimpleBin{
           filter1: TestFilter,
           filter2: TestFilter
-        },
-        test_bin2: %TestBins.SimpleBin{
+        })
+        |> child(:test_bin2, %TestBins.SimpleBin{
           filter1: TestFilter,
           filter2: TestFilter
-        },
-        sink: Testing.Sink
+        })
+        |> child(:sink, Testing.Sink)
       ]
 
-      pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
 
       assert_data_flows_through(pipeline, buffers)
     end
@@ -55,20 +54,19 @@ defmodule Membrane.Core.BinTest do
     test "when bins are nested" do
       buffers = ['a', 'b', 'c']
 
-      children = [
-        source: %Testing.Source{output: buffers},
-        test_bin: %TestBins.SimpleBin{
+      links = [
+        child(:source, %Testing.Source{output: buffers})
+        |> child(:test_bin, %TestBins.SimpleBin{
           filter1: TestFilter,
           filter2: %TestBins.SimpleBin{
             filter1: TestFilter,
             filter2: TestFilter
           }
-        },
-        sink: Testing.Sink
+        })
+        |> child(:sink, Testing.Sink)
       ]
 
-      pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
 
       assert_data_flows_through(pipeline, buffers)
     end
@@ -76,9 +74,9 @@ defmodule Membrane.Core.BinTest do
     test "when there are consecutive bins that are nested" do
       buffers = ['a', 'b', 'c']
 
-      children = [
-        source: %Testing.Source{output: buffers},
-        test_bin: %TestBins.SimpleBin{
+      links = [
+        child(:source, %Testing.Source{output: buffers})
+        |> child(:test_bin, %TestBins.SimpleBin{
           filter1: %TestBins.SimpleBin{
             filter1: TestFilter,
             filter2: TestFilter
@@ -87,12 +85,11 @@ defmodule Membrane.Core.BinTest do
             filter1: TestFilter,
             filter2: TestFilter
           }
-        },
-        sink: Testing.Sink
+        })
+        |> child(:sink, Testing.Sink)
       ]
 
-      pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
 
       assert_data_flows_through(pipeline, buffers)
     end
@@ -101,13 +98,13 @@ defmodule Membrane.Core.BinTest do
       buffers = ['a', 'b', 'c']
 
       children = [
-        test_bin: %TestBins.TestPadlessBin{
+        child(:test_bin, %TestBins.TestPadlessBin{
           source: %Testing.Source{output: buffers},
           sink: Testing.Sink
-        }
+        })
       ]
 
-      pipeline = Testing.Pipeline.start_link_supervised!(children: children)
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: children)
 
       assert_pipeline_play(pipeline)
 
@@ -121,16 +118,15 @@ defmodule Membrane.Core.BinTest do
     test "when bin is a sink bin" do
       buffers = ['a', 'b', 'c']
 
-      children = [
-        source: %Testing.Source{output: buffers},
-        test_bin: %TestBins.TestSinkBin{
+      links = [
+        child(:source, %Testing.Source{output: buffers})
+        |> child(:test_bin, %TestBins.TestSinkBin{
           filter: TestFilter,
           sink: Testing.Sink
-        }
+        })
       ]
 
-      pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
 
       assert_pipeline_play(pipeline)
 
@@ -177,9 +173,9 @@ defmodule Membrane.Core.BinTest do
       require Pad
       buffers = ['a', 'b', 'c']
 
-      children = [
-        source: %Testing.Source{output: buffers},
-        test_bin: %TestBins.TestDynamicPadBin{
+      links = [
+        child(:source, %Testing.Source{output: buffers})
+        |> child(:test_bin, %TestBins.TestDynamicPadBin{
           filter1: %TestBins.TestDynamicPadBin{
             filter1: TestDynamicPadFilter,
             filter2: TestDynamicPadFilter
@@ -188,12 +184,11 @@ defmodule Membrane.Core.BinTest do
             filter1: TestDynamicPadFilter,
             filter2: TestDynamicPadFilter
           }
-        },
-        sink: Testing.Sink
+        })
+        |> child(:sink, Testing.Sink)
       ]
 
-      pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
 
       Process.sleep(2000)
       assert_data_flows_through(pipeline, buffers)
@@ -208,7 +203,7 @@ defmodule Membrane.Core.BinTest do
     defmodule ClockElement do
       use Membrane.Source
 
-      def_output_pad :output, caps: :any
+      def_output_pad :output, accepted_format: _any
 
       def_clock()
     end
@@ -220,14 +215,14 @@ defmodule Membrane.Core.BinTest do
 
       @impl true
       def handle_init(_ctx, _options) do
-        children = [element_child: ClockElement]
+        children = [child(:element_child, ClockElement)]
 
-        spec = %Membrane.ParentSpec{
-          children: children,
+        spec = {
+          children,
           clock_provider: :element_child
         }
 
-        {{:ok, spec: spec}, :ignored}
+        {[spec: spec], :ignored}
       end
     end
 
@@ -236,10 +231,9 @@ defmodule Membrane.Core.BinTest do
 
       @impl true
       def handle_init(_ctx, _options) do
-        children = [bin_child: ClockBin]
+        children = [child(:bin_child, ClockBin)]
 
-        {{:ok, spec: %Membrane.ParentSpec{children: children, clock_provider: :bin_child}},
-         :ignored}
+        {[spec: {children, clock_provider: :bin_child}], :ignored}
       end
     end
 
@@ -267,14 +261,13 @@ defmodule Membrane.Core.BinTest do
     test "handle_parent_notification/3 works for Bin" do
       buffers = ['a', 'b', 'c']
 
-      children = [
-        source: %Testing.Source{output: buffers},
-        test_bin: TestBins.NotifyingParentBin,
-        sink: Testing.Sink
+      links = [
+        child(:source, %Testing.Source{output: buffers})
+        |> child(:test_bin, TestBins.NotifyingParentBin)
+        |> child(:sink, Testing.Sink)
       ]
 
-      pipeline =
-        Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
 
       Testing.Pipeline.execute_actions(pipeline, notify_child: {:test_bin, "Some notification"})
       assert_pipeline_notified(pipeline, :test_bin, msg)

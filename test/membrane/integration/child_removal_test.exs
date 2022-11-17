@@ -108,49 +108,49 @@ defmodule Membrane.Integration.ChildRemovalTest do
   end
 
   describe "Children can defer being removed by not returning terminate from terminate request" do
-    import Membrane.ParentSpec
+    import Membrane.ChildrenSpec
 
     defmodule RemovalDeferSource do
       use Membrane.Source
 
-      def_output_pad :output, demand_mode: :auto, caps: :any
+      def_output_pad :output, demand_mode: :auto, accepted_format: _any
 
       @impl true
       def handle_init(_ctx, _opts) do
         Process.register(self(), __MODULE__)
-        {:ok, %{}}
+        {[], %{}}
       end
 
       @impl true
       def handle_terminate_request(_ctx, state) do
-        {:ok, state}
+        {[], state}
       end
 
       @impl true
       def handle_info(:terminate, _ctx, state) do
-        {{:ok, terminate: :normal}, state}
+        {[terminate: :normal], state}
       end
     end
 
     defmodule RemovalDeferSink do
       use Membrane.Sink
 
-      def_input_pad :input, demand_mode: :auto, caps: :any
+      def_input_pad :input, demand_mode: :auto, accepted_format: _any
 
       @impl true
       def handle_init(_ctx, _opts) do
         Process.register(self(), __MODULE__)
-        {:ok, %{}}
+        {[], %{}}
       end
 
       @impl true
       def handle_terminate_request(_ctx, state) do
-        {:ok, state}
+        {[], state}
       end
 
       @impl true
       def handle_info(:terminate, _ctx, state) do
-        {{:ok, terminate: :normal}, state}
+        {[terminate: :normal], state}
       end
     end
 
@@ -159,19 +159,19 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
       def_options defer?: [spec: boolean], test_process: [spec: pid]
 
-      def_output_pad :output, caps: :any, demand_mode: :auto
+      def_output_pad :output, accepted_format: _any, demand_mode: :auto
 
       @impl true
       def handle_init(_ctx, opts) do
         Process.register(self(), __MODULE__)
-        links = [link(:source, RemovalDeferSource) |> to_bin_output()]
-        {{:ok, spec: %ParentSpec{links: links}}, Map.from_struct(opts)}
+        links = [child(:source, RemovalDeferSource) |> bin_output()]
+        {[spec: links], Map.from_struct(opts)}
       end
 
       @impl true
       def handle_terminate_request(_ctx, %{defer?: true} = state) do
         send(state.test_process, {__MODULE__, :terminate_request})
-        {{:ok, remove_child: :source}, state}
+        {[remove_child: :source], state}
       end
 
       @impl true
@@ -182,14 +182,14 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
       @impl true
       def handle_info(:terminate, _ctx, state) do
-        {{:ok, terminate: :normal}, state}
+        {[terminate: :normal], state}
       end
     end
 
     test "two linked elements" do
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          links: [link(:source, RemovalDeferSource) |> to(:sink, RemovalDeferSink)]
+          structure: [child(:source, RemovalDeferSource) |> child(:sink, RemovalDeferSink)]
         )
 
       monitor = Process.monitor(pipeline)
@@ -203,9 +203,9 @@ defmodule Membrane.Integration.ChildRemovalTest do
     test "two linked elements, one in a bin" do
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          links: [
-            link(:bin, %RemovalDeferBin{defer?: false, test_process: self()})
-            |> to(:sink, RemovalDeferSink)
+          structure: [
+            child(:bin, %RemovalDeferBin{defer?: false, test_process: self()})
+            |> child(:sink, RemovalDeferSink)
           ]
         )
 
@@ -222,9 +222,9 @@ defmodule Membrane.Integration.ChildRemovalTest do
     test "two linked elements, one in a bin that defers termination" do
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          links: [
-            link(:bin, %RemovalDeferBin{defer?: true, test_process: self()})
-            |> to(:sink, RemovalDeferSink)
+          structure: [
+            child(:bin, %RemovalDeferBin{defer?: true, test_process: self()})
+            |> child(:sink, RemovalDeferSink)
           ]
         )
 

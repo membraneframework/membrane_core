@@ -6,7 +6,6 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   alias Membrane.Core.{Parent, TimerController}
   alias Membrane.Core.Parent.LifecycleController
   alias Membrane.Core.Pipeline.State
-  alias Membrane.ParentSpec
 
   require Membrane.Logger
 
@@ -30,7 +29,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:spec, spec = %ParentSpec{}}, _cb, _params, state) do
+  def handle_action({:spec, spec}, _cb, _params, state) do
     Parent.ChildLifeController.handle_spec(spec, state)
   end
 
@@ -75,14 +74,14 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   @impl CallbackHandler
   def handle_action({:reply_to, {pid, message}}, _cb, _params, state) do
     GenServer.reply(pid, message)
-    {:ok, state}
+    state
   end
 
   @impl CallbackHandler
   def handle_action({:reply, message}, :handle_call, params, state) do
     ctx = params.context.(state)
     GenServer.reply(ctx.from, message)
-    {:ok, state}
+    state
   end
 
   @impl CallbackHandler

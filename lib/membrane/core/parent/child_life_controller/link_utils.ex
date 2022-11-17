@@ -10,7 +10,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     ChildLifeController,
     CrashGroup,
     Link,
-    LinkParser
+    StructureParser
   }
 
   alias Membrane.Core.Parent.ChildLifeController
@@ -96,25 +96,54 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
   end
 
   @spec resolve_links(
-          [LinkParser.raw_link_t()],
+          [StructureParser.raw_link_t()],
           ChildLifeController.spec_ref_t(),
           Parent.state_t()
         ) :: [
           Link.t()
         ]
   def resolve_links(links, spec_ref, state) do
-    Enum.map(
-      links,
-      &%Link{
-        &1
-        | spec_ref: spec_ref,
-          from: resolve_endpoint(&1.from, state),
-          to: resolve_endpoint(&1.to, state)
-      }
-    )
+    links =
+      Enum.map(
+        links,
+        &%Link{
+          &1
+          | spec_ref: spec_ref,
+            from: resolve_endpoint(&1.from, state),
+            to: resolve_endpoint(&1.to, state)
+        }
+      )
+
+    :ok = validate_links(links, state)
+
+    links
   end
 
-  @spec resolve_endpoint(LinkParser.raw_endpoint_t(), Parent.state_t()) ::
+  defp validate_links(links, state) do
+    links
+    |> Enum.concat(Map.values(state.links))
+    |> Enum.flat_map(&[&1.from, &1.to])
+    |> Enum.map(&{&1.child, &1.pad_ref})
+    |> Bunch.Enum.duplicates()
+    |> case do
+      [] ->
+        :ok
+
+      duplicates ->
+        inspected_duplicated_pads =
+          Enum.map_join(duplicates, ", ", fn {child, pad_ref} ->
+            "pad #{inspect(pad_ref)} of child #{inspect(child)}"
+          end)
+
+        raise LinkError, """
+        Attempted to link the following pads more than once: #{inspected_duplicated_pads}
+        """
+    end
+
+    :ok
+  end
+
+  @spec resolve_endpoint(StructureParser.raw_endpoint_t(), Parent.state_t()) ::
           Endpoint.t() | no_return
   defp resolve_endpoint(
          %Endpoint{child: {Membrane.Bin, :itself}} = endpoint,
@@ -186,8 +215,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     else
       from_availability = Pad.availability_mode(from.pad_info.availability)
       to_availability = Pad.availability_mode(to.pad_info.availability)
+      params = %{initiator: :parent, stream_format_validation_params: []}
 
-      case Message.call(from.pid, :handle_link, [:output, from, to, %{initiator: :parent}]) do
+      case Message.call(from.pid, :handle_link, [:output, from, to, params]) do
         :ok ->
           put_in(state, [:links, link.id, :linked?], true)
 

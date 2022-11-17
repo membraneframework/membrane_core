@@ -1,6 +1,9 @@
 defmodule Membrane.Integration.TimerTest do
   use ExUnit.Case, async: true
+
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
+
   alias Membrane.{Pipeline, Testing, Time}
 
   defmodule Element do
@@ -8,12 +11,12 @@ defmodule Membrane.Integration.TimerTest do
 
     @impl true
     def handle_playing(_ctx, state) do
-      {{:ok, start_timer: {:timer, Time.milliseconds(100)}}, state}
+      {[start_timer: {:timer, Time.milliseconds(100)}], state}
     end
 
     @impl true
     def handle_tick(:timer, _ctx, state) do
-      {{:ok, notify_parent: :tick, stop_timer: :timer}, state}
+      {[notify_parent: :tick, stop_timer: :timer], state}
     end
   end
 
@@ -22,12 +25,12 @@ defmodule Membrane.Integration.TimerTest do
 
     @impl true
     def handle_playing(_ctx, state) do
-      {{:ok, start_timer: {:timer, Time.milliseconds(100)}}, state}
+      {[start_timer: {:timer, Time.milliseconds(100)}], state}
     end
 
     @impl true
     def handle_tick(:timer, _ctx, state) do
-      {{:ok, notify_parent: :tick, stop_timer: :timer}, state}
+      {[notify_parent: :tick, stop_timer: :timer], state}
     end
   end
 
@@ -36,22 +39,20 @@ defmodule Membrane.Integration.TimerTest do
 
     @impl true
     def handle_init(_ctx, pid) do
-      spec = %ParentSpec{
-        children: [element: Element, bin: Bin]
-      }
+      spec = [child(:element, Element), child(:bin, Bin)]
 
-      {{:ok, spec: spec, playback: :playing}, %{pid: pid}}
+      {[spec: spec, playback: :playing], %{pid: pid}}
     end
 
     @impl true
     def handle_playing(_ctx, state) do
-      {{:ok, start_timer: {:timer, Time.milliseconds(100)}}, state}
+      {[start_timer: {:timer, Time.milliseconds(100)}], state}
     end
 
     @impl true
     def handle_tick(:timer, _ctx, state) do
       send(state.pid, :pipeline_tick)
-      {{:ok, stop_timer: :timer}, state}
+      {[stop_timer: :timer], state}
     end
   end
 
@@ -74,17 +75,19 @@ defmodule Membrane.Integration.TimerTest do
     @impl true
     def handle_setup(_ctx, state) do
       Process.send_after(self(), :stop_timer, 0)
-      {{:ok, start_timer: {:timer, :no_interval}}, state}
+      {[start_timer: {:timer, :no_interval}], state}
     end
 
     @impl true
     def handle_info(:stop_timer, _ctx, state) do
-      {{:ok, stop_timer: :timer, notify_parent: :ok}, state}
+      {[stop_timer: :timer, notify_parent: :ok], state}
     end
   end
 
   test "Stopping timer with `:no_interval`" do
-    pipeline = Testing.Pipeline.start_link_supervised!(children: [element: StopNoInterval])
+    pipeline =
+      Testing.Pipeline.start_link_supervised!(structure: [child(:element, StopNoInterval)])
+
     assert_pipeline_play(pipeline)
     assert_pipeline_notified(pipeline, :element, :ok)
     Testing.Pipeline.terminate(pipeline, blocking?: true)

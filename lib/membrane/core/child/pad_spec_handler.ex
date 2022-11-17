@@ -6,7 +6,6 @@ defmodule Membrane.Core.Child.PadSpecHandler do
   use Bunch
 
   alias Membrane.Core.{Bin, Child, Element}
-  alias Membrane.Core.Child.PadModel
   alias Membrane.Pad
 
   require Membrane.Pad
@@ -21,15 +20,9 @@ defmodule Membrane.Core.Child.PadSpecHandler do
       state
       | pads_info:
           get_pads(state)
-          |> Bunch.KVList.map_values(&init_pad_info/1)
           |> Map.new(),
         pads_data: %{}
     }
-  end
-
-  @spec init_pad_info(Pad.description_t()) :: PadModel.pad_info_t()
-  defp init_pad_info(specs) do
-    specs |> Bunch.Map.move!(:caps, :accepted_caps)
   end
 
   @spec get_pads(Child.state_t()) :: [{Pad.name_t(), Pad.description_t()}]

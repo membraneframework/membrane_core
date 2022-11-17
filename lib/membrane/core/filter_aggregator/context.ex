@@ -61,9 +61,9 @@ defmodule Membrane.Core.FilterAggregator.Context do
 
   defp build_pad_data(pad_description) do
     pad_description
+    |> Map.delete(:accepted_formats_str)
     |> Map.merge(%{
-      accepted_caps: pad_description.caps,
-      caps: nil,
+      stream_format: nil,
       demand: nil,
       start_of_stream?: false,
       end_of_stream?: false,
@@ -102,7 +102,7 @@ defmodule Membrane.Core.FilterAggregator.Context do
   end
 
   @spec before_incoming_action(t(), action :: any()) :: t()
-  def before_incoming_action(context, {:caps, {:output, _caps}}) do
+  def before_incoming_action(context, {:stream_format, {:output, _stream_format}}) do
     context
   end
 
@@ -119,8 +119,8 @@ defmodule Membrane.Core.FilterAggregator.Context do
   end
 
   @spec after_incoming_action(t(), action :: action()) :: t()
-  def after_incoming_action(context, {:caps, {:output, caps}}) do
-    put_in(context.pads.input.caps, caps)
+  def after_incoming_action(context, {:stream_format, {:output, stream_format}}) do
+    put_in(context.pads.input.stream_format, stream_format)
   end
 
   def after_incoming_action(context, _action) do
@@ -133,12 +133,12 @@ defmodule Membrane.Core.FilterAggregator.Context do
   end
 
   @spec after_out_action(t(), action :: action()) :: t()
-  def after_out_action(context, {:caps, {:input, caps}}) do
-    put_in(context.pads.input.caps, caps)
+  def after_out_action(context, {:stream_format, {:input, stream_format}}) do
+    put_in(context.pads.input.stream_format, stream_format)
   end
 
-  def after_out_action(context, {:caps, {:output, caps}}) do
-    put_in(context.pads.output.caps, caps)
+  def after_out_action(context, {:stream_format, {:output, stream_format}}) do
+    put_in(context.pads.output.stream_format, stream_format)
   end
 
   def after_out_action(context, InternalAction.start_of_stream(:output)) do

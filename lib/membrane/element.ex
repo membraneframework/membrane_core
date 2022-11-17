@@ -15,7 +15,7 @@ defmodule Membrane.Element do
   @typedoc """
   Type that defines an element name by which it is identified.
   """
-  @type name_t :: any()
+  @type name_t :: tuple() | atom()
 
   @typedoc """
   Defines possible element types:
@@ -29,7 +29,7 @@ defmodule Membrane.Element do
   @typedoc """
   Type of user-managed state of element.
   """
-  @type state_t :: map | struct
+  @type state_t :: any()
 
   @doc """
   Checks whether module is an element.
@@ -38,4 +38,6 @@ defmodule Membrane.Element do
   def element?(module) do
     module |> Bunch.Module.check_behaviour(:membrane_element?)
   end
+
+  defguard is_element_name?(arg) when is_atom(arg) or is_tuple(arg)
 end

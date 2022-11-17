@@ -1,6 +1,8 @@
 defmodule Membrane.Integration.SyncTest.TickingPace do
   use ExUnit.Case, async: false
 
+  import Membrane.ChildrenSpec
+
   alias Membrane.Support.Sync
   alias Membrane.{Testing, Time}
 
@@ -13,16 +15,15 @@ defmodule Membrane.Integration.SyncTest.TickingPace do
     actual_report_interval = 100
     reported_interval = 300
 
-    children = [
-      source: %Sync.Source{
+    links = [
+      child(:source, %Sync.Source{
         tick_interval: tick_interval |> Time.milliseconds(),
         test_process: self()
-      },
-      sink: Sync.Sink
+      })
+      |> child(:sink, Sync.Sink)
     ]
 
-    pipeline =
-      Testing.Pipeline.start_link_supervised!(links: Membrane.ParentSpec.link_linear(children))
+    pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
 
     %{synchronization: %{clock_provider: %{clock: original_clock, provider: :sink}}} =
       :sys.get_state(pipeline)
