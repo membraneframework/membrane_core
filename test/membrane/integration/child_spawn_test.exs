@@ -6,7 +6,6 @@ defmodule Membrane.Integration.ChildSpawnTest do
   import Membrane.ChildrenSpec
 
   alias Membrane.Buffer
-  alias Membrane.ChildrenSpec
   alias Membrane.Core.Message
   alias Membrane.Testing
 
