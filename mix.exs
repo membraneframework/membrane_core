@@ -1,7 +1,7 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "0.10.2"
+  @version "0.11.0"
   @source_ref "v#{@version}"
 
   def project do
@@ -138,7 +138,7 @@ defmodule Membrane.Mixfile do
     [
       {:qex, "~> 0.3"},
       {:telemetry, "~> 1.0"},
-      {:bunch, github: "membraneframework/bunch", branch: "config-require"},
+      {:bunch, "~> 1.5"},
       {:ratio, "~> 2.0"},
       # Development
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
