@@ -1,32 +1,32 @@
 defmodule Membrane.FilterAggregator.IntegrationTest do
   use ExUnit.Case, async: true
 
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Buffer
   alias Membrane.FilterAggregator
-  alias Membrane.ParentSpec
   alias Membrane.RemoteStream
   alias Membrane.Testing.{Pipeline, Sink, Source}
 
   defmodule FilterA do
     use Membrane.Filter
 
-    def_input_pad :input, demand_unit: :buffers, demand_mode: :auto, caps: RemoteStream
-    def_output_pad :output, demand_mode: :auto, caps: RemoteStream
+    def_input_pad :input, demand_mode: :auto, accepted_format: RemoteStream
+    def_output_pad :output, demand_mode: :auto, accepted_format: RemoteStream
 
     @impl true
     def handle_process(:input, %Buffer{payload: <<idx, payload::binary>>}, _ctx, state) do
       payload = for <<i <- payload>>, into: <<>>, do: <<i - 2>>
-      {{:ok, buffer: {:output, %Buffer{payload: <<idx, payload::binary>>}}}, state}
+      {[buffer: {:output, %Buffer{payload: <<idx, payload::binary>>}}], state}
     end
   end
 
   defmodule FilterB do
     use Membrane.Filter
 
-    def_input_pad :input, demand_unit: :buffers, demand_mode: :auto, caps: RemoteStream
-    def_output_pad :output, demand_mode: :auto, caps: RemoteStream
+    def_input_pad :input, demand_mode: :auto, accepted_format: RemoteStream
+    def_output_pad :output, demand_mode: :auto, accepted_format: RemoteStream
 
     @impl true
     def handle_process_list(:input, buffers, _ctx, state) do
@@ -37,7 +37,7 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
           %Buffer{payload: <<idx, payload::binary>>}
         end)
 
-      {{:ok, buffer: {:output, buffers}}, state}
+      {[buffer: {:output, buffers}], state}
     end
   end
 
@@ -46,22 +46,20 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
     buffers_num_range = 1..100
     output = for i <- buffers_num_range, do: <<i, payload::binary>>
 
-    links =
-      [
-        src: %Source{output: output},
-        filters: %FilterAggregator{
-          filters: [
-            a: FilterA,
-            b: FilterB
-          ]
-        },
-        sink: Sink
-      ]
-      |> ParentSpec.link_linear()
+    links = [
+      child(:src, %Source{output: output})
+      |> child(:filters, %FilterAggregator{
+        filters: [
+          a: FilterA,
+          b: FilterB
+        ]
+      })
+      |> child(:sink, Sink)
+    ]
 
-    pid = Pipeline.start_link_supervised!(links: links)
+    pid = Pipeline.start_link_supervised!(structure: links)
     assert_start_of_stream(pid, :sink)
-    assert_sink_caps(pid, :sink, %RemoteStream{})
+    assert_sink_stream_format(pid, :sink, %RemoteStream{})
 
     expected_payload = for i <- 0..253, into: <<>>, do: <<i>>
 

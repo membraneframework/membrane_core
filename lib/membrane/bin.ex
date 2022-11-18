@@ -20,9 +20,9 @@ defmodule Membrane.Bin do
   require Membrane.Core.Message
   require Membrane.Logger
 
-  @type state_t :: map | struct
+  @type state_t :: any()
 
-  @type callback_return_t :: {:ok | {:ok, [Action.t()]} | {:error, any}, state_t} | {:error, any}
+  @type callback_return_t :: {[Action.t()], state_t()}
 
   @typedoc """
   Defines options that can be passed to `start_link/3` and received
@@ -33,7 +33,7 @@ defmodule Membrane.Bin do
   @typedoc """
   Type that defines a bin name by which it is identified.
   """
-  @type name_t :: any()
+  @type name_t :: tuple() | atom()
 
   @doc """
   Callback invoked on initialization of bin.
@@ -138,7 +138,7 @@ defmodule Membrane.Bin do
             ) :: callback_return_t
 
   @doc """
-  Callback invoked when children of `Membrane.ParentSpec` are started.
+  Callback invoked when children of `Membrane.ChildrenSpec` are started.
   """
   @callback handle_spec_started(
               children :: [Child.name_t()],
@@ -240,15 +240,15 @@ defmodule Membrane.Bin do
   Brings all the stuff necessary to implement a bin.
 
   Options:
-    - `:bring_spec?` - if true (default) imports and aliases `Membrane.ParentSpec`
+    - `:bring_spec?` - if true (default) imports and aliases `Membrane.ChildrenSpec`
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
   """
   defmacro __using__(options) do
     bring_spec =
       if options |> Keyword.get(:bring_spec?, true) do
         quote do
-          import Membrane.ParentSpec
-          alias Membrane.ParentSpec
+          import Membrane.ChildrenSpec
+          alias Membrane.ChildrenSpec
         end
       end
 
@@ -281,43 +281,43 @@ defmodule Membrane.Bin do
 
       @impl true
       def handle_init(_ctx, %_opt_struct{} = options),
-        do: {:ok, options |> Map.from_struct()}
+        do: {[], options |> Map.from_struct()}
 
       @impl true
-      def handle_init(_ctx, options), do: {:ok, options}
+      def handle_init(_ctx, options), do: {[], options}
 
       @impl true
-      def handle_pad_added(_pad, _ctx, state), do: {:ok, state}
+      def handle_pad_added(_pad, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_pad_removed(_pad, _ctx, state), do: {:ok, state}
+      def handle_pad_removed(_pad, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_setup(_ctx, state), do: {:ok, state}
+      def handle_setup(_ctx, state), do: {[], state}
 
       @impl true
-      def handle_playing(_ctx, state), do: {:ok, state}
+      def handle_playing(_ctx, state), do: {[], state}
 
       @impl true
-      def handle_info(message, _ctx, state), do: {:ok, state}
+      def handle_info(message, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_spec_started(new_children, _ctx, state), do: {:ok, state}
+      def handle_spec_started(new_children, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_element_start_of_stream(_element, _pad, _ctx, state), do: {:ok, state}
+      def handle_element_start_of_stream(_element, _pad, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_element_end_of_stream(_element, _pad, _ctx, state), do: {:ok, state}
+      def handle_element_end_of_stream(_element, _pad, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_child_notification(_notification, _element, _ctx, state), do: {:ok, state}
+      def handle_child_notification(_notification, _element, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_parent_notification(_notification, _ctx, state), do: {:ok, state}
+      def handle_parent_notification(_notification, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_terminate_request(_ctx, state), do: {{:ok, terminate: :normal}, state}
+      def handle_terminate_request(_ctx, state), do: {[terminate: :normal], state}
 
       defoverridable handle_init: 2,
                      handle_pad_added: 3,
@@ -333,4 +333,6 @@ defmodule Membrane.Bin do
                      handle_terminate_request: 2
     end
   end
+
+  defguard is_bin_name?(arg) when is_atom(arg) or is_tuple(arg)
 end

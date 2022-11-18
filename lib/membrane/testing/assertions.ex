@@ -9,13 +9,13 @@ defmodule Membrane.Testing.Assertions do
 
   @default_timeout 2000
 
-  defp do_assert_receive_from_pipeline(assertion, pid, pattern, timeout, failure_message) do
+  defp assert_receive_from_entity(assertion, entity, pid, pattern, timeout, failure_message) do
     quote do
       import ExUnit.Assertions
       pid_value = unquote(pid)
 
       unquote(assertion)(
-        {Membrane.Testing.Pipeline, ^pid_value, unquote(pattern)},
+        {unquote(entity), ^pid_value, unquote(pattern)},
         unquote(timeout),
         unquote(failure_message)
       )
@@ -23,11 +23,36 @@ defmodule Membrane.Testing.Assertions do
   end
 
   defp assert_receive_from_pipeline(pid, pattern, timeout, failure_message \\ nil) do
-    do_assert_receive_from_pipeline(:assert_receive, pid, pattern, timeout, failure_message)
+    assert_receive_from_entity(
+      :assert_receive,
+      Membrane.Testing.Pipeline,
+      pid,
+      pattern,
+      timeout,
+      failure_message
+    )
   end
 
   defp refute_receive_from_pipeline(pid, pattern, timeout, failure_message \\ nil) do
-    do_assert_receive_from_pipeline(:refute_receive, pid, pattern, timeout, failure_message)
+    assert_receive_from_entity(
+      :refute_receive,
+      Membrane.Testing.Pipeline,
+      pid,
+      pattern,
+      timeout,
+      failure_message
+    )
+  end
+
+  defp assert_receive_from_resource_guard(pid, pattern, timeout, failure_message \\ nil) do
+    assert_receive_from_entity(
+      :assert_receive,
+      Membrane.Testing.MockResourceGuard,
+      pid,
+      pattern,
+      timeout,
+      failure_message
+    )
   end
 
   @doc """
@@ -190,51 +215,73 @@ defmodule Membrane.Testing.Assertions do
 
   @doc """
   Asserts that `Membrane.Testing.Sink` with name `sink_name` received or will
-  receive caps matching `pattern` within the `timeout` period specified in
+  receive stream format matching `pattern` within the `timeout` period specified in
   milliseconds.
 
   When the `Membrane.Testing.Sink` is a part of `Membrane.Testing.Pipeline` you
-  can assert whether it received caps matching provided pattern.
+  can assert whether it received stream format matching provided pattern.
+      import Membrane.ChildrenSpec
       children = [
           ....,
-          the_sink: %Membrane.Testing.Sink{}
+          child(:the_sink, %Membrane.Testing.Sink{})
       ]
       {:ok, pid} = Membrane.Testing.Pipeline.start_link(
-        children: children,
-        links: Membrane.ParentSpec.link_linear(children)
+        structure: children,
       )
 
   You can match for exact value:
 
-      assert_sink_caps(pid, :the_sink , %Caps{prop: ^value})
+      assert_sink_stream_format(pid, :the_sink , %StreamFormat{prop: ^value})
 
-  You can also use pattern to extract data from the caps:
+  You can also use pattern to extract data from the stream_format:
 
-      assert_sink_caps(pid, :the_sink , %Caps{prop: value})
+      assert_sink_stream_format(pid, :the_sink , %StreamFormat{prop: value})
       do_something(value)
   """
-  defmacro assert_sink_caps(pipeline, element_name, caps_pattern, timeout \\ @default_timeout) do
-    do_sink_caps(&assert_receive_from_pipeline/3, pipeline, element_name, caps_pattern, timeout)
+  defmacro assert_sink_stream_format(
+             pipeline,
+             element_name,
+             stream_format_pattern,
+             timeout \\ @default_timeout
+           ) do
+    do_sink_stream_format(
+      &assert_receive_from_pipeline/3,
+      pipeline,
+      element_name,
+      stream_format_pattern,
+      timeout
+    )
   end
 
   @doc """
   Asserts that `Membrane.Testing.Sink` with name `sink_name` has not received
-  and will not receive caps matching `caps_pattern` within the `timeout`
+  and will not receive stream format matching `stream_format_pattern` within the `timeout`
   period specified in milliseconds.
 
-  Similarly as in the `assert_sink_caps/4` `the_sink` needs to be part of a
+  Similarly as in the `assert_sink_stream_format/4` `the_sink` needs to be part of a
   `Membrane.Testing.Pipeline`.
 
-      refute_sink_caps(pipeline, :the_sink, %Caps{prop: ^val})
+      refute_sink_stream_format(pipeline, :the_sink, %StreamFormat{prop: ^val})
 
-  Such expression will flunk if `the_sink` received or will receive caps with
+  Such expression will flunk if `the_sink` received or will receive stream_format with
   property equal to value of `val` variable.
   """
-  defmacro refute_sink_caps(pipeline, element_name, caps_pattern, timeout \\ @default_timeout) do
-    do_sink_caps(&refute_receive_from_pipeline/3, pipeline, element_name, caps_pattern, timeout)
+  defmacro refute_sink_stream_format(
+             pipeline,
+             element_name,
+             stream_format_pattern,
+             timeout \\ @default_timeout
+           ) do
+    do_sink_stream_format(
+      &refute_receive_from_pipeline/3,
+      pipeline,
+      element_name,
+      stream_format_pattern,
+      timeout
+    )
   end
 
-  defp do_sink_caps(assertion, pipeline, sink_name, caps, timeout) do
+  defp do_sink_stream_format(assertion, pipeline, sink_name, stream_format, timeout) do
     quote do
       element_name_value = unquote(sink_name)
 
@@ -243,7 +290,7 @@ defmodule Membrane.Testing.Assertions do
           pipeline,
           {:handle_child_notification,
            {quote do
-              {:caps, :input, unquote(caps)}
+              {:stream_format, :input, unquote(stream_format)}
             end,
             quote do
               ^element_name_value
@@ -261,13 +308,14 @@ defmodule Membrane.Testing.Assertions do
 
   When the `Membrane.Testing.Sink` is a part of `Membrane.Testing.Pipeline` you
   can assert whether it received a buffer matching provided pattern.
+      import Membrane.ChildrenSpec
       children = [
           ....,
-          the_sink: %Membrane.Testing.Sink{}
+          child(:the_sink, %Membrane.Testing.Sink{})
       ]
       {:ok, pid} = Membrane.Testing.Pipeline.start_link(
-        children: children,
-        links: Membrane.ParentSpec.link_linear(children)
+        structure: children,
+        links: Membrane.ChildrenSpec.link_linear(children)
       )
 
   You can match for exact value:
@@ -397,6 +445,52 @@ defmodule Membrane.Testing.Assertions do
     assert_receive_from_pipeline(
       pipeline,
       {:handle_element_end_of_stream, {element_name, pad}},
+      timeout
+    )
+  end
+
+  @doc """
+  Asserts that a cleanup function was registered in `Membrane.Testing.MockResourceGuard`.
+  """
+  defmacro assert_resource_guard_register(
+             mock_guard,
+             function,
+             tag,
+             timeout \\ @default_timeout
+           ) do
+    assert_receive_from_resource_guard(
+      mock_guard,
+      {:register, {function, tag}},
+      timeout
+    )
+  end
+
+  @doc """
+  Asserts that a tag was unregistered in `Membrane.Testing.MockResourceGuard`.
+  """
+  defmacro assert_resource_guard_unregister(
+             mock_guard,
+             tag,
+             timeout \\ @default_timeout
+           ) do
+    assert_receive_from_resource_guard(
+      mock_guard,
+      {:unregister, tag},
+      timeout
+    )
+  end
+
+  @doc """
+  Asserts that `Membrane.Testing.MockResourceGuard` was requested to cleanup a given tag.
+  """
+  defmacro assert_resource_guard_cleanup(
+             mock_guard,
+             tag,
+             timeout \\ @default_timeout
+           ) do
+    assert_receive_from_resource_guard(
+      mock_guard,
+      {:cleanup, tag},
       timeout
     )
   end

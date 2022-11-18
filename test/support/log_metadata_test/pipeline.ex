@@ -1,7 +1,7 @@
 defmodule Membrane.Support.LogMetadataTest.Pipeline do
   @moduledoc """
   Pipeline used to test log metadata.
-  Returns `Membrane.ParentSpec` containing `:log_metadata`.
+  Returns `Membrane.ChildrenSpec` containing `:log_metadata`.
   """
   use Membrane.Pipeline
 
@@ -12,15 +12,17 @@ defmodule Membrane.Support.LogMetadataTest.Pipeline do
 
     use Membrane.Filter
 
+    import Membrane.ChildrenSpec
+
     require Membrane.Logger
 
-    def_output_pad :output, caps: :any
+    def_output_pad :output, accepted_format: _any
 
-    def_input_pad :input, demand_unit: :buffers, caps: :any
+    def_input_pad :input, demand_unit: :buffers, accepted_format: _any
 
     @impl true
     def handle_init(_ctx, _opts) do
-      {{:ok, notify_parent: Logger.metadata()}, %{}}
+      {[notify_parent: Logger.metadata()], %{}}
     end
   end
 
@@ -30,12 +32,9 @@ defmodule Membrane.Support.LogMetadataTest.Pipeline do
       opts.elements
       |> Enum.map(fn {element_name, element_metadata} ->
         {:spec,
-         %Membrane.ParentSpec{
-           children: [{element_name, MetadataNotifyingElement}],
-           log_metadata: [test: element_metadata]
-         }}
+         {child(element_name, MetadataNotifyingElement), log_metadata: [test: element_metadata]}}
       end)
 
-    {{:ok, actions}, %{}}
+    {actions, %{}}
   end
 end

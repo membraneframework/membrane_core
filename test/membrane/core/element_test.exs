@@ -10,32 +10,39 @@ defmodule Membrane.Core.ElementTest do
 
   defmodule SomeElement do
     use Membrane.Source
-    def_output_pad :output, caps: :any
+    def_output_pad :output, accepted_format: _any
 
     def_options test_pid: [spec: pid | nil, default: nil]
 
     @impl true
     def handle_info(msg, _ctx, state) do
-      {{:ok, notify_parent: msg}, state}
+      {[notify_parent: msg], state}
     end
   end
 
   defmodule Filter do
     use Membrane.Filter
 
-    def_output_pad :output, caps: :any
+    def_output_pad :output, accepted_format: _any
 
-    def_input_pad :dynamic_input, caps: :any, demand_unit: :buffers, availability: :on_request
+    def_input_pad :dynamic_input,
+      accepted_format: _any,
+      demand_unit: :buffers,
+      availability: :on_request
 
     @impl true
     def handle_tick(_timer, _ctx, state) do
-      {:ok, state}
+      {[], state}
     end
 
     @impl true
     def handle_demand(:output, size, _unit, _ctx, state) do
-      {{:ok, demand: {:dynamic_input, size}}, state}
+      {[demand: {:dynamic_input, size}], state}
     end
+  end
+
+  defmodule StreamFormat do
+    defstruct []
   end
 
   defp get_state do
@@ -71,7 +78,8 @@ defmodule Membrane.Core.ElementTest do
           %{
             initiator: :sibling,
             other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
-            link_metadata: %{toilet: nil, observability_metadata: %{}}
+            link_metadata: %{toilet: nil, observability_metadata: %{}},
+            stream_format_validation_params: []
           }
         ]),
         nil,
@@ -100,7 +108,8 @@ defmodule Membrane.Core.ElementTest do
           %{
             initiator: :sibling,
             other_info: %{direction: :output, mode: :pull},
-            link_metadata: %{toilet: nil, observability_metadata: %{}}
+            link_metadata: %{toilet: nil, observability_metadata: %{}},
+            stream_format_validation_params: []
           }
         ]),
         nil,
@@ -135,13 +144,13 @@ defmodule Membrane.Core.ElementTest do
     assert state == original_state
   end
 
-  test "should store demand/buffer/caps/event when not playing" do
+  test "should store demand/buffer/event/stream format when not playing" do
     initial_state = linked_state()
 
     [
       Message.new(:demand, 10, for_pad: :output),
       Message.new(:buffer, %Membrane.Buffer{payload: <<>>}, for_pad: :dynamic_input),
-      Message.new(:caps, :caps, for_pad: :dynamic_input),
+      Message.new(:stream_format, %StreamFormat{}, for_pad: :dynamic_input),
       Message.new(:event, %Membrane.Testing.Event{}, for_pad: :dynamic_input),
       Message.new(:event, %Membrane.Testing.Event{}, for_pad: :output)
     ]
@@ -165,17 +174,17 @@ defmodule Membrane.Core.ElementTest do
     assert state.pads_data.dynamic_input.input_queue.size == 1
   end
 
-  test "should assign incoming caps to the pad and forward them" do
+  test "should assign incoming stream_format to the pad and forward them" do
     assert {:noreply, state} =
              Element.handle_info(
-               Message.new(:caps, :caps, for_pad: :dynamic_input),
+               Message.new(:stream_format, %StreamFormat{}, for_pad: :dynamic_input),
                playing_state()
              )
 
-    assert state.pads_data.dynamic_input.caps == :caps
-    assert state.pads_data.output.caps == :caps
+    assert state.pads_data.dynamic_input.stream_format == %StreamFormat{}
+    assert state.pads_data.output.stream_format == %StreamFormat{}
 
-    assert_receive Message.new(:caps, :caps, for_pad: :dynamic_input)
+    assert_receive Message.new(:stream_format, %StreamFormat{}, for_pad: :dynamic_input)
   end
 
   test "should forward events" do
@@ -205,7 +214,8 @@ defmodule Membrane.Core.ElementTest do
                  %{
                    initiator: :sibling,
                    other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
-                   link_metadata: %{toilet: nil, observability_metadata: %{}}
+                   link_metadata: %{toilet: nil, observability_metadata: %{}},
+                   stream_format_validation_params: []
                  }
                ]),
                nil,
@@ -214,10 +224,8 @@ defmodule Membrane.Core.ElementTest do
 
     assert {%{child: :this, pad_props: %{options: []}, pad_ref: :output},
             %{
-              accepted_caps: :any,
               availability: :always,
               demand_mode: :manual,
-              demand_unit: :buffers,
               direction: :output,
               mode: :pull,
               name: :output,

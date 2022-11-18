@@ -8,11 +8,11 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   alias Membrane.Core.Element.{
     BufferController,
-    CapsController,
     DemandController,
     EventController,
     InputQueue,
     State,
+    StreamFormatController,
     Toilet
   }
 
@@ -195,8 +195,8 @@ defmodule Membrane.Core.Element.DemandHandler do
   defp do_handle_input_queue_output(pad_ref, {:event, e}, state),
     do: EventController.exec_handle_event(pad_ref, e, state)
 
-  defp do_handle_input_queue_output(pad_ref, {:caps, c}, state),
-    do: CapsController.exec_handle_caps(pad_ref, c, state)
+  defp do_handle_input_queue_output(pad_ref, {:stream_format, c}, state),
+    do: StreamFormatController.exec_handle_stream_format(pad_ref, c, state)
 
   defp do_handle_input_queue_output(
          pad_ref,

@@ -1,6 +1,7 @@
 defmodule Membrane.UtilitySupervisorTest do
   use ExUnit.Case
 
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Testing
@@ -20,11 +21,12 @@ defmodule Membrane.UtilitySupervisorTest do
            end}
         )
 
-        {{:ok, notify_parent: :setup}, state}
+        {[notify_parent: :setup], state}
       end
     end
 
-    pipeline = Testing.Pipeline.start_supervised!(children: [filter: TestFilter])
+    pipeline = Testing.Pipeline.start_supervised!(structure: [child(:filter, TestFilter)])
+
     assert_pipeline_notified(pipeline, :filter, :setup)
     monitor = Process.monitor(:utility_supervisor_test_task)
     Testing.Pipeline.terminate(pipeline)

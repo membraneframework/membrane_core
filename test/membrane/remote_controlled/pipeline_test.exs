@@ -1,7 +1,9 @@
 defmodule Membrane.RemoteControlled.PipelineTest do
   use ExUnit.Case
 
-  alias Membrane.ParentSpec
+  import Membrane.ChildrenSpec
+
+  alias Membrane.ChildrenSpec
   alias Membrane.RemoteControlled.Message
   alias Membrane.RemoteControlled.Pipeline
 
@@ -11,12 +13,12 @@ defmodule Membrane.RemoteControlled.PipelineTest do
     use Membrane.Filter
     alias Membrane.Buffer
 
-    def_output_pad :output, caps: :any, availability: :always
-    def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :always
+    def_output_pad :output, accepted_format: _any, availability: :always
+    def_input_pad :input, demand_unit: :buffers, accepted_format: _any, availability: :always
 
     @impl true
     def handle_init(_ctx, _opts) do
-      {:ok, %{buffer_count: 0}}
+      {[], %{buffer_count: 0}}
     end
 
     @impl true
@@ -30,12 +32,12 @@ defmodule Membrane.RemoteControlled.PipelineTest do
           []
         end
 
-      {{:ok, [{:buffer, {:output, buf}}] ++ notification_actions}, state}
+      {[{:buffer, {:output, buf}}] ++ notification_actions, state}
     end
 
     @impl true
     def handle_demand(:output, size, _unit, _ctx, state) do
-      {{:ok, demand: {:input, size}}, state}
+      {[demand: {:input, size}], state}
     end
   end
 
@@ -44,15 +46,18 @@ defmodule Membrane.RemoteControlled.PipelineTest do
     Process.link(pipeline)
 
     children = [
-      a: %Membrane.Testing.Source{output: [0xA1, 0xB2, 0xC3, 0xD4]},
-      b: Filter,
-      c: Membrane.Testing.Sink
+      child(:a, %Membrane.Testing.Source{output: [0xA1, 0xB2, 0xC3, 0xD4]}),
+      child(:b, Filter),
+      child(:c, Membrane.Testing.Sink)
     ]
 
-    links = [ParentSpec.link(:a) |> ParentSpec.to(:b) |> ParentSpec.to(:c)]
-    actions = [{:spec, %ParentSpec{children: children, links: links}}]
+    links = [
+      ChildrenSpec.get_child(:a) |> ChildrenSpec.get_child(:b) |> ChildrenSpec.get_child(:c)
+    ]
 
+    actions = [{:spec, children ++ links}]
     Pipeline.exec_actions(pipeline, actions)
+
     {:ok, pipeline: pipeline}
   end
 

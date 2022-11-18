@@ -10,7 +10,8 @@ defmodule Membrane.Core.Bin.PadController do
   alias Membrane.Core.Bin.{ActionHandler, State}
   alias Membrane.Core.{CallbackHandler, Child, Message}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Parent.{ChildLifeController, Link, LinkParser}
+  alias Membrane.Core.Element.StreamFormatController
+  alias Membrane.Core.Parent.{ChildLifeController, Link, StructureParser}
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
@@ -25,7 +26,7 @@ defmodule Membrane.Core.Bin.PadController do
           Pad.ref_t(),
           Pad.direction_t(),
           Link.id(),
-          Membrane.ParentSpec.pad_options_t(),
+          Membrane.ChildrenSpec.pad_options_t(),
           State.t()
         ) :: State.t() | no_return
   def handle_external_link_request(pad_ref, direction, link_id, pad_options, state) do
@@ -45,7 +46,7 @@ defmodule Membrane.Core.Bin.PadController do
                 "Tried to link via unknown pad #{inspect(pad_name)} of #{inspect(state.name)}"
       end
 
-    :ok = Child.PadController.validate_pad_being_linked!(pad_ref, direction, info, state)
+    :ok = Child.PadController.validate_pad_being_linked!(direction, info)
     pad_options = Child.PadController.parse_pad_options!(pad_name, pad_options, state)
 
     state =
@@ -177,10 +178,20 @@ defmodule Membrane.Core.Bin.PadController do
   """
   @spec handle_link(
           Pad.direction_t(),
-          LinkParser.raw_endpoint_t(),
-          LinkParser.raw_endpoint_t(),
-          %{initiator: :parent}
-          | %{initiator: :sibling, other_info: PadModel.pad_info_t() | nil, link_metadata: map},
+          StructureParser.raw_endpoint_t(),
+          StructureParser.raw_endpoint_t(),
+          %{
+            initiator: :parent,
+            stream_format_validation_params:
+              StreamFormatController.stream_format_validation_params_t()
+          }
+          | %{
+              initiator: :sibling,
+              other_info: PadModel.pad_info_t() | nil,
+              link_metadata: map,
+              stream_format_validation_params:
+                StreamFormatController.stream_format_validation_params_t()
+            },
           Core.Bin.State.t()
         ) :: {Core.Element.PadController.link_call_reply_t(), Core.Bin.State.t()}
   def handle_link(direction, endpoint, other_endpoint, params, state) do
@@ -188,7 +199,7 @@ defmodule Membrane.Core.Bin.PadController do
 
     Membrane.Logger.debug("Handle link #{inspect(endpoint, pretty: true)}")
 
-    %{spec_ref: spec_ref, endpoint: child_endpoint} = pad_data
+    %{spec_ref: spec_ref, endpoint: child_endpoint, name: pad_name} = pad_data
 
     pad_props =
       Map.merge(endpoint.pad_props, child_endpoint.pad_props, fn key,
@@ -216,6 +227,13 @@ defmodule Membrane.Core.Bin.PadController do
           {other_endpoint.pad_ref, params.other_info}
         )
     end
+
+    params =
+      Map.update!(
+        params,
+        :stream_format_validation_params,
+        &[{state.module, pad_name} | &1]
+      )
 
     reply =
       Message.call!(child_endpoint.pid, :handle_link, [
@@ -299,7 +317,8 @@ defmodule Membrane.Core.Bin.PadController do
 
   defp init_pad_data(pad_ref, info, state) do
     data =
-      Map.merge(info, %{
+      Map.delete(info, :accepted_formats_str)
+      |> Map.merge(%{
         ref: pad_ref,
         link_id: nil,
         endpoint: nil,

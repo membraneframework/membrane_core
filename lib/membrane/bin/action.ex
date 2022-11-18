@@ -8,7 +8,7 @@ defmodule Membrane.Bin.Action do
   callback unless explicitly stated otherwise.
   """
 
-  alias Membrane.{Child, ParentSpec}
+  alias Membrane.{Child, ChildrenSpec}
 
   @typedoc """
   Action that sends a message to a child identified by name.
@@ -22,18 +22,20 @@ defmodule Membrane.Bin.Action do
   @type notify_parent_t :: {:notify_parent, Membrane.ChildNotification.t()}
 
   @typedoc """
-  Action that instantiates children and links them according to `Membrane.ParentSpec`.
+  Action that instantiates children and links them according to `Membrane.ChildrenSpec`.
 
   Children's playback is changed to the current bin playback.
   `c:Membrane.Parent.handle_spec_started/3` callback is executed once the children are spawned.
   """
-  @type spec_t :: {:spec, ParentSpec.t()}
+  @type spec_t :: {:spec, ChildrenSpec.t()}
 
   @typedoc """
   Action that stops, unlinks and removes specified child/children from the bin.
   """
   @type remove_child_t ::
-          {:remove_child, Child.name_t() | [Child.name_t()]}
+          {:remove_child,
+           Child.name_t()
+           | [Child.name_t()]}
 
   @typedoc """
   Starts a timer that will invoke `c:Membrane.Bin.handle_tick/3` callback

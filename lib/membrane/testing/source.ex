@@ -37,7 +37,7 @@ defmodule Membrane.Testing.Source do
   @type generator ::
           (state :: any(), buffers_cnt :: pos_integer -> {[Action.t()], state :: any()})
 
-  def_output_pad :output, caps: :any
+  def_output_pad :output, accepted_format: _any
 
   def_options output: [
                 spec: {initial_state :: any(), generator} | Enum.t(),
@@ -58,11 +58,11 @@ defmodule Membrane.Testing.Source do
                 used for the next call.
                 """
               ],
-              caps: [
+              stream_format: [
                 spec: struct(),
                 default: %Membrane.RemoteStream{},
                 description: """
-                Caps to be sent before the `output`.
+                StreamFormat to be sent before the `output`.
                 """
               ]
 
@@ -72,22 +72,21 @@ defmodule Membrane.Testing.Source do
 
     case opts.output do
       {initial_state, generator} when is_function(generator) ->
-        {:ok, opts |> Map.merge(%{generator_state: initial_state, output: generator})}
+        {[], opts |> Map.merge(%{generator_state: initial_state, output: generator})}
 
       _enumerable_output ->
-        {:ok, opts}
+        {[], opts}
     end
   end
 
   @impl true
   def handle_playing(_ctx, state) do
-    {{:ok, caps: {:output, state.caps}}, state}
+    {[stream_format: {:output, state.stream_format}], state}
   end
 
   @impl true
   def handle_demand(:output, size, :buffers, _ctx, state) do
-    {actions, state} = get_actions(state, size)
-    {{:ok, actions}, state}
+    get_actions(state, size)
   end
 
   @spec default_buf_gen(integer(), integer()) :: {[Action.t()], integer()}

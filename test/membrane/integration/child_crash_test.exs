@@ -42,7 +42,7 @@ defmodule Membrane.Integration.ChildCrashTest do
 
     pipeline_pid = Testing.Pipeline.start_link_supervised!(module: ChildCrashTest.Pipeline)
 
-    ChildCrashTest.Pipeline.add_path(pipeline_pid, [], :source, {1, :temporary})
+    ChildCrashTest.Pipeline.add_path(pipeline_pid, [], :source, 1)
 
     [source_pid, center_filter_pid, sink_pid] =
       [:source, :center_filter, :sink]
@@ -67,11 +67,11 @@ defmodule Membrane.Integration.ChildCrashTest do
 
     pipeline_pid = Testing.Pipeline.start_link_supervised!(module: ChildCrashTest.Pipeline)
 
-    ChildCrashTest.Pipeline.add_bin(pipeline_pid, :bin_1, :source_1, {1, :temporary})
+    ChildCrashTest.Pipeline.add_bin(pipeline_pid, :bin_1, :source_1, 1)
 
-    ChildCrashTest.Pipeline.add_bin(pipeline_pid, :bin_2, :source_2, {2, :temporary})
+    ChildCrashTest.Pipeline.add_bin(pipeline_pid, :bin_2, :source_2, 2)
 
-    ChildCrashTest.Pipeline.add_bin(pipeline_pid, :bin_3, :source_3, {3, :temporary})
+    ChildCrashTest.Pipeline.add_bin(pipeline_pid, :bin_3, :source_3, 3)
 
     [
       sink_pid,
@@ -123,14 +123,14 @@ defmodule Membrane.Integration.ChildCrashTest do
       pipeline_pid,
       [:filter_1_1, :filter_2_1],
       :source_1,
-      {1, :temporary}
+      1
     )
 
     ChildCrashTest.Pipeline.add_path(
       pipeline_pid,
       [:filter_1_2, :filter_2_2],
       :source_2,
-      {2, :temporary}
+      2
     )
 
     [

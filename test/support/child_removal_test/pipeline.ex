@@ -25,54 +25,51 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
   def handle_init(_ctx, opts) do
     children =
       [
-        source: opts.source,
-        filter1: opts.filter1,
-        filter2: opts.filter2,
-        filter3: opts.filter3,
-        sink: opts.sink
+        child(:source, opts.source),
+        child(:filter1, opts.filter1),
+        child(:filter2, opts.filter2),
+        child(:filter3, opts.filter3),
+        child(:sink, opts.sink)
       ]
       |> maybe_add_extra_source(opts)
 
     links =
       [
-        link(:source)
+        get_child(:source)
         |> via_in(:input1, target_queue_size: 10)
-        |> to(:filter1)
+        |> get_child(:filter1)
         |> via_in(:input1, target_queue_size: 10)
-        |> to(:filter2)
+        |> get_child(:filter2)
         |> via_in(:input1, target_queue_size: 10)
-        |> to(:filter3)
+        |> get_child(:filter3)
         |> via_in(:input, target_queue_size: 10)
-        |> to(:sink)
+        |> get_child(:sink)
       ]
       |> maybe_add_extra_source_link(opts)
 
-    spec = %Membrane.ParentSpec{
-      children: children,
-      links: links
-    }
+    spec = links ++ children
 
-    {{:ok, spec: spec, playback: :playing}, %{}}
+    {[spec: spec, playback: :playing], %{}}
   end
 
   @impl true
   def handle_info({:child_msg, name, msg}, _ctx, state) do
-    {{:ok, notify_child: {name, msg}}, state}
+    {[notify_child: {name, msg}], state}
   end
 
   @impl true
   def handle_info({:remove_child, name}, _ctx, state) do
-    {{:ok, remove_child: name}, state}
+    {[remove_child: name], state}
   end
 
   defp maybe_add_extra_source(children, %{extra_source: source}),
-    do: [{:extra_source, source} | children]
+    do: [child(:extra_source, source) | children]
 
   defp maybe_add_extra_source(children, _opts), do: children
 
   defp maybe_add_extra_source_link(links, %{extra_source: _}) do
     [
-      link(:extra_source) |> via_in(:input2, target_queue_size: 10) |> to(:filter3)
+      get_child(:extra_source) |> via_in(:input2, target_queue_size: 10) |> get_child(:filter3)
       | links
     ]
   end

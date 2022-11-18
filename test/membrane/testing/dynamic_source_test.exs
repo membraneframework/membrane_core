@@ -1,7 +1,7 @@
 defmodule Membrane.Testing.DynamicSourceTest do
   use ExUnit.Case
 
-  import Membrane.ParentSpec
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Buffer
@@ -10,32 +10,33 @@ defmodule Membrane.Testing.DynamicSourceTest do
   test "Source initializes buffer generator and its state properly" do
     generator = fn _state, _size -> nil end
 
-    assert {:ok,
+    assert {[],
             %{type: :generator, generator: ^generator, generator_state: :abc, state_for_pad: %{}}} =
              Testing.DynamicSource.handle_init(%{}, %Testing.DynamicSource{
                output: {:abc, generator}
              })
   end
 
-  test "Source sends caps on play" do
-    assert {{:ok, caps: {:output, :caps}}, _state} =
+  test "Source sends stream format on play" do
+    assert {[stream_format: {:output, :stream_format}], _state} =
              Testing.DynamicSource.handle_playing(%{pads: %{:output => %{}}}, %{
-               caps: :caps
+               stream_format: :stream_format
              })
   end
 
   test "Source works properly when payload are passed as enumerable" do
     pipeline =
       Testing.Pipeline.start_link_supervised!(
-        children: [
-          source: %Testing.DynamicSource{output: ['a', 'b', 'c']},
-          sink_1: Testing.Sink,
-          sink_2: Testing.Sink
-        ],
-        links: [
-          link(:source) |> to(:sink_1),
-          link(:source) |> to(:sink_2)
-        ]
+        structure:
+          [
+            child(:source, %Testing.DynamicSource{output: ['a', 'b', 'c']}),
+            child(:sink_1, Testing.Sink),
+            child(:sink_2, Testing.Sink)
+          ] ++
+            [
+              get_child(:source) |> get_child(:sink_1),
+              get_child(:source) |> get_child(:sink_2)
+            ]
       )
 
     assert_pipeline_play(pipeline)
@@ -50,15 +51,16 @@ defmodule Membrane.Testing.DynamicSourceTest do
   test "Source works properly when using generator function" do
     pipeline =
       Testing.Pipeline.start_link_supervised!(
-        children: [
-          source: Testing.DynamicSource,
-          sink_1: Testing.Sink,
-          sink_2: Testing.Sink
-        ],
-        links: [
-          link(:source) |> to(:sink_1),
-          link(:source) |> to(:sink_2)
-        ]
+        structure:
+          [
+            child(:source, Testing.DynamicSource),
+            child(:sink_1, Testing.Sink),
+            child(:sink_2, Testing.Sink)
+          ] ++
+            [
+              get_child(:source) |> get_child(:sink_1),
+              get_child(:source) |> get_child(:sink_2)
+            ]
       )
 
     assert_pipeline_play(pipeline)

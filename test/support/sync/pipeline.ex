@@ -2,9 +2,11 @@ defmodule Membrane.Support.Sync.Pipeline do
   @moduledoc false
   use Membrane.Pipeline
 
+  import Membrane.ChildrenSpec
+
   alias Membrane.Testing.{Sink, Source}
 
-  @spec default_spec() :: Membrane.ParentSpec.t()
+  @spec default_spec() :: Membrane.ChildrenSpec.t()
   def default_spec() do
     demand_generator = fn time, _size ->
       Process.sleep(time)
@@ -13,31 +15,30 @@ defmodule Membrane.Support.Sync.Pipeline do
     end
 
     children = [
-      source_a: %Source{output: ["a"]},
-      sink_a: %Sink{},
-      source_b: %Source{output: {200, demand_generator}},
-      sink_b: %Sink{}
+      child(:source_a, %Source{output: ["a"]}),
+      child(:sink_a, %Sink{}),
+      child(:source_b, %Source{output: {200, demand_generator}}),
+      child(:sink_b, %Sink{})
     ]
 
     links = [
-      link(:source_a) |> to(:sink_a),
-      link(:source_b) |> to(:sink_b)
+      get_child(:source_a) |> get_child(:sink_a),
+      get_child(:source_b) |> get_child(:sink_b)
     ]
 
-    %Membrane.ParentSpec{
-      children: children,
-      links: links,
+    {
+      children ++ links,
       stream_sync: :sinks
     }
   end
 
   @impl true
   def handle_init(_ctx, spec) do
-    {{:ok, spec: spec, playback: :playing}, %{}}
+    {[spec: spec, playback: :playing], %{}}
   end
 
   @impl true
   def handle_info({:spawn_children, spec}, _ctx, state) do
-    {{:ok, spec: spec}, state}
+    {[spec: spec], state}
   end
 end

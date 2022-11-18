@@ -1,7 +1,7 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "0.10.2"
+  @version "0.11.0"
   @source_ref "v#{@version}"
 
   def project do
@@ -32,7 +32,7 @@ defmodule Membrane.Mixfile do
     [extra_applications: [:logger]]
   end
 
-  defp elixirc_paths(:test), do: ["lib", "spec/support", "test/support"]
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_env), do: ["lib"]
 
   defp dialyzer() do
@@ -75,7 +75,7 @@ defmodule Membrane.Mixfile do
         Membrane.Bin.CallbackContext,
         Membrane.Payload,
         Membrane.Buffer,
-        Membrane.Caps,
+        Membrane.StreamFormat,
         Membrane.Event,
         Membrane.EventProtocol,
         Membrane.Testing,
@@ -97,10 +97,10 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane\.Source($|\.)/,
           ~r/^Membrane\.Element($|\.)/
         ],
-        Parent: [~r/^Membrane\.(Parent|ParentSpec)($|\.)/],
+        Parent: [~r/^Membrane\.(Parent|ChildrenSpec)($|\.)/],
         Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],
         Communication: [
-          ~r/^Membrane\.(Buffer|Payload|Caps|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
+          ~r/^Membrane\.(Buffer|Payload|StreamFormat|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
         ],
         Logging: [~r/^Membrane\.Logger($|\.)/],
         Testing: [~r/^Membrane\.Testing($|\.)/],
@@ -138,7 +138,7 @@ defmodule Membrane.Mixfile do
     [
       {:qex, "~> 0.3"},
       {:telemetry, "~> 1.0"},
-      {:bunch, "~> 1.4"},
+      {:bunch, "~> 1.5"},
       {:ratio, "~> 2.0"},
       # Development
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},

@@ -9,7 +9,7 @@ defmodule Membrane.Pipeline do
 
   To create a pipeline, use the `__using__/1` macro and implement callbacks
   of `Membrane.Pipeline` behaviour. For details on instantiating and linking
-  children, see `Membrane.ParentSpec`.
+  children, see `Membrane.ChildrenSpec`.
 
   ## Starting and supervision
 
@@ -82,30 +82,27 @@ defmodule Membrane.Pipeline do
           {:ok, supervisor_pid :: pid, pipeline_pid :: pid}
           | {:error, {:already_started, pid()} | term()}
 
-  @type state :: map | struct
+  @type state :: any()
 
   @typedoc """
   Defines return values from Pipeline callback functions.
 
   ## Return values
 
-    * `{:ok, state}` - Save process state, with no actions to change the pipeline.
-    * `{{:ok, [action]}, state}` - Return a list of actions that will be performed within the
+    * `{[action], state}` - Return a list of actions that will be performed within the
       pipeline. This can be used to start new children, or to send messages to specific children,
       for example. Actions are a tuple of `{type, arguments}`, so may be written in the
       form a keyword list. See `Membrane.Pipeline.Action` for more info.
-    * `{{:error, reason}, state}` - Terminates the pipeline with the given reason.
-    * `{:error, reason}` - raises a `Membrane.CallbackError` with the error tuple.
   """
   @type callback_return_t ::
-          {:ok | {:ok, [Action.t()]} | {:error, any}, state}
-          | {:error, any}
+          {[Action.t()], state}
 
   @doc """
   Callback invoked on initialization of pipeline.
 
   This callback is synchronous: the process which started the pipeline waits until `handle_init`
-  finishes. For that reason, it's important to do any long-lasting or complex work in `c:handle_setup/2`,
+  finishes. Also, OTP supervisors won't restart a pipeline that crashed in `handle_init`.
+  For these reasons, it's important to do any long-lasting or complex work in `c:handle_setup/2`,
   while `handle_init` should be used for things like parsing options, initializing state or spawning
   children.
   """
@@ -184,7 +181,7 @@ defmodule Membrane.Pipeline do
             ) :: callback_return_t
 
   @doc """
-  Callback invoked when children of `Membrane.ParentSpec` are started.
+  Callback invoked when children of `Membrane.ChildrenSpec` are started.
   """
   @callback handle_spec_started(
               children :: [Child.name_t()],
@@ -395,15 +392,15 @@ defmodule Membrane.Pipeline do
   Brings all the stuff necessary to implement a pipeline.
 
   Options:
-    - `:bring_spec?` - if true (default) imports and aliases `Membrane.ParentSpec`
+    - `:bring_spec?` - if true (default) imports and aliases `Membrane.ChildrenSpec`
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
   """
   defmacro __using__(options) do
     bring_spec =
       if options |> Keyword.get(:bring_spec?, true) do
         quote do
-          import Membrane.ParentSpec
-          alias Membrane.ParentSpec
+          import Membrane.ChildrenSpec
+          alias Membrane.ChildrenSpec
         end
       end
 
@@ -443,40 +440,40 @@ defmodule Membrane.Pipeline do
 
       @impl true
       def handle_init(_ctx, %_opt_struct{} = options),
-        do: {:ok, options |> Map.from_struct()}
+        do: {[], options |> Map.from_struct()}
 
       @impl true
-      def handle_init(_ctx, options), do: {:ok, options}
+      def handle_init(_ctx, options), do: {[], options}
 
       @impl true
-      def handle_setup(_ctx, state), do: {:ok, state}
+      def handle_setup(_ctx, state), do: {[], state}
 
       @impl true
-      def handle_playing(_ctx, state), do: {:ok, state}
+      def handle_playing(_ctx, state), do: {[], state}
 
       @impl true
-      def handle_info(message, _ctx, state), do: {:ok, state}
+      def handle_info(message, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_spec_started(new_children, _ctx, state), do: {:ok, state}
+      def handle_spec_started(new_children, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_element_start_of_stream(_element, _pad, _ctx, state), do: {:ok, state}
+      def handle_element_start_of_stream(_element, _pad, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_element_end_of_stream(_element, _pad, _ctx, state), do: {:ok, state}
+      def handle_element_end_of_stream(_element, _pad, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_child_notification(notification, element, _ctx, state), do: {:ok, state}
+      def handle_child_notification(notification, element, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_crash_group_down(_group_name, _ctx, state), do: {:ok, state}
+      def handle_crash_group_down(_group_name, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_call(message, _ctx, state), do: {:ok, state}
+      def handle_call(message, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_terminate_request(_ctx, state), do: {{:ok, terminate: :normal}, state}
+      def handle_terminate_request(_ctx, state), do: {[terminate: :normal], state}
 
       defoverridable child_spec: 1,
                      handle_init: 2,
