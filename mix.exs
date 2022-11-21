@@ -138,7 +138,7 @@ defmodule Membrane.Mixfile do
     [
       {:qex, "~> 0.3"},
       {:telemetry, "~> 1.0"},
-      {:bunch, github: "membraneframework/bunch", branch: "config-require"},
+      {:bunch, "~> 1.5.0"},
       {:ratio, "~> 2.0"},
       # Development
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},

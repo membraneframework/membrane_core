@@ -130,16 +130,16 @@ defmodule Membrane.Integration.LinkingTest do
         crash_group_mode: :temporary, children_group_id: :group_2
       }
 
-      links_spec = get_child(:bin) |> get_child(:sink)
+      links_spec = get_child({:group_1, :bin}) |> get_child({:group_2, :sink})
 
       send(pipeline, {:start_spec, %{spec: bin_spec}})
       assert_receive(:spec_started)
       send(pipeline, {:start_spec, %{spec: sink_spec}})
       assert_receive(:spec_started)
-      sink_pid = get_child_pid(:sink, pipeline)
+      sink_pid = get_child_pid({:group_2, :sink}, pipeline)
       send(pipeline, {:start_spec, %{spec: links_spec}})
       assert_receive(:spec_started)
-      bin_pid = get_child_pid(:bin, pipeline)
+      bin_pid = get_child_pid({:group_1, :bin}, pipeline)
       source_pid = get_child_pid(:source, bin_pid)
       source_ref = Process.monitor(source_pid)
       Testing.Pipeline.execute_actions(pipeline, playback: :playing)
@@ -169,13 +169,18 @@ defmodule Membrane.Integration.LinkingTest do
     spec_2 =
       {child(:sink, Testing.Sink), children_group_id: :group_2, crash_group_mode: :temporary}
 
-    links_spec = get_child(:source) |> get_child(:sink)
+    links_spec = get_child({:group_1, :source}) |> get_child({:group_2, :sink})
 
     send(pipeline, {:start_spec, %{spec: spec_1}})
     assert_receive(:spec_started)
     send(pipeline, {:start_spec, %{spec: spec_2}})
     assert_receive(:spec_started)
-    send(pipeline, {:start_spec_and_kill, %{spec: links_spec, children_to_kill: [:sink]}})
+
+    send(
+      pipeline,
+      {:start_spec_and_kill, %{spec: links_spec, children_to_kill: [{:group_2, :sink}]}}
+    )
+
     assert_receive(:spec_started)
 
     assert_pipeline_crash_group_down(pipeline, :group_1)
@@ -195,13 +200,18 @@ defmodule Membrane.Integration.LinkingTest do
       children_group_id: :group_2, crash_group_mode: :temporary
     }
 
-    links_spec = get_child(:source) |> get_child(:sink)
+    links_spec = get_child({:group_1, :source}) |> get_child({:group_2, :sink})
 
     send(pipeline, {:start_spec, %{spec: spec_1}})
     assert_receive(:spec_started)
     send(pipeline, {:start_spec, %{spec: spec_2}})
     assert_receive(:spec_started)
-    send(pipeline, {:start_spec_and_kill, %{spec: links_spec, children_to_kill: [:sink]}})
+
+    send(
+      pipeline,
+      {:start_spec_and_kill, %{spec: links_spec, children_to_kill: [{:group_2, :sink}]}}
+    )
+
     assert_receive(:spec_started)
 
     refute_pipeline_crash_group_down(pipeline, :group_1)
@@ -222,11 +232,16 @@ defmodule Membrane.Integration.LinkingTest do
       crash_group_mode: :temporary, children_group_id: :group_1
     }
 
-    links_spec = get_child(:source) |> get_child(:sink)
+    links_spec = get_child({:group_1, :source}) |> get_child({:group_2, :sink})
 
     send(pipeline, {:start_spec, %{spec: spec}})
     assert_receive(:spec_started)
-    send(pipeline, {:start_spec_and_kill, %{spec: links_spec, children_to_kill: [:sink]}})
+
+    send(
+      pipeline,
+      {:start_spec_and_kill, %{spec: links_spec, children_to_kill: [{:group_2, :sink}]}}
+    )
+
     assert_receive(:spec_started)
 
     refute_pipeline_crash_group_down(pipeline, :group_1)
@@ -245,7 +260,7 @@ defmodule Membrane.Integration.LinkingTest do
       crash_group_mode: :temporary, children_group_id: :group_1
     }
 
-    links_spec = get_child(:bin) |> get_child(:sink)
+    links_spec = get_child({:group_1, :bin}) |> get_child({:group_1, :sink})
 
     send(pipeline, {:start_spec, %{spec: bin_spec}})
     assert_receive(:spec_started)

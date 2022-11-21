@@ -89,7 +89,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @spec handle_spec(ChildrenSpec.t(), Parent.state_t()) :: Parent.state_t() | no_return()
   def handle_spec(spec, state) do
     spec_ref = make_ref()
-
     canonical_spec = make_canonical(spec)
 
     Membrane.Logger.debug("""
@@ -117,7 +116,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         {children_definitions
          |> Enum.map(fn
            {name, child_spec, options} ->
-             full_name = {children_spec_options.children_group_id, name}
+             full_name =
+               if children_spec_options.children_group_id != nil,
+                 do: {children_spec_options.children_group_id, name},
+                 else: name
+
              {full_name, child_spec, options}
          end), children_spec_options}
       end)
@@ -125,7 +128,34 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     children_definitions = remove_unecessary_children_specs(children_definitions, state)
 
     links =
-      Enum.flat_map(parsed_structures, fn {_children_definitions, links, _options} -> links end)
+      Enum.flat_map(parsed_structures, fn {_children_definitions, links, options} ->
+        Enum.map(links, fn link ->
+          link =
+            if options.children_group_id != nil and
+                 is_child_with_given_name_spawned(
+                   children_definitions,
+                   {options.children_group_id, link.from.child}
+                 ) do
+              Bunch.Access.put_in(
+                link,
+                [:from, :child],
+                {options.children_group_id, link.from.child}
+              )
+            else
+              link
+            end
+
+          if options.children_group_id != nil and
+               is_child_with_given_name_spawned(
+                 children_definitions,
+                 {options.children_group_id, link.to.child}
+               ) do
+            Bunch.Access.put_in(link, [:to, :child], {options.children_group_id, link.to.child})
+          else
+            link
+          end
+        end)
+      end)
 
     {all_children_names, state} =
       Enum.flat_map_reduce(children_definitions, state, &setup_children(&1, spec_ref, &2))
@@ -152,6 +182,17 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     state = StartupUtils.exec_handle_spec_started(all_children_names, state)
     proceed_spec_startup(spec_ref, state)
+  end
+
+  defp is_child_with_given_name_spawned(children_definitions, name) do
+    all_children_definitions =
+      Enum.flat_map(children_definitions, fn {partial_children_definitions, _options} ->
+        partial_children_definitions
+      end)
+
+    Enum.any?(all_children_definitions, fn {children_full_name, _module, _options} ->
+      children_full_name == name
+    end)
   end
 
   @spec proceed_spec_startup(spec_ref_t(), Parent.state_t()) :: Parent.state_t()

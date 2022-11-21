@@ -39,22 +39,16 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
   @spec add_single_source(pid(), any(), any(), any()) :: any()
   def add_single_source(pid, source_name, group \\ nil, source \\ Testing.Source) do
-    children = [
+    structure = [
       child(source_name, source)
-    ]
-
-    links = [
-      get_child(source_name)
       |> get_child(:center_filter)
     ]
 
-    spec = children ++ links
-
     spec =
       if group do
-        {spec, crash_group_mode: :temporary, children_group_id: group}
+        {structure, crash_group_mode: :temporary, children_group_id: group}
       else
-        spec
+        structure
       end
 
     send(pid, {:create_path, spec})
@@ -62,35 +56,41 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
   @spec add_bin(pid(), atom(), atom(), any()) :: any()
   def add_bin(pid, bin_name, source_name, group \\ nil) do
-    children = [child(source_name, Testing.Source), child(bin_name, TestBins.CrashTestBin)]
-
-    links = [
-      get_child(source_name) |> get_child(bin_name) |> get_child(:center_filter)
+    structure = [
+      child(source_name, Testing.Source)
+      |> child(bin_name, TestBins.CrashTestBin)
+      |> get_child(:center_filter)
     ]
-
-    spec = children ++ links
 
     spec =
       if group do
-        {spec, crash_group_mode: :temporary, children_group_id: group}
+        {structure, crash_group_mode: :temporary, children_group_id: group}
       else
-        spec
+        structure
       end
 
     send(pid, {:create_path, spec})
   end
 
-  @spec add_path(pid(), [atom()], atom(), any()) :: any()
+  @spec add_path(pid(), [atom()], atom(), any(), any()) :: any()
   def add_path(
         pid,
         filters_names,
         source_name,
-        group \\ nil
+        group,
+        group_mode
       ) do
     children =
       [child(source_name, Testing.Source)] ++ (filters_names |> Enum.map(&child(&1, Filter)))
 
     children_names = [source_name | filters_names]
+
+    children_names =
+      if group != nil do
+        Enum.map(children_names, fn name -> {group, name} end)
+      else
+        children_names
+      end
 
     links =
       Enum.chunk_every(children_names, 2, 1, [:center_filter])
@@ -102,7 +102,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
     spec =
       if group do
-        {spec, crash_group_mode: :temporary, children_group_id: group}
+        {spec, crash_group_mode: group_mode, children_group_id: group}
       else
         spec
       end

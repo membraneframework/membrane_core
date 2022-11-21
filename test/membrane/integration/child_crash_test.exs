@@ -17,10 +17,10 @@ defmodule Membrane.Integration.ChildCrashTest do
                }
              )
 
-    ChildCrashTest.Pipeline.add_path(pipeline_pid, [:filter_1_1, :filter_2_1], :source_1)
+    ChildCrashTest.Pipeline.add_path(pipeline_pid, [:filter_1_1, :filter_2_1], :source_1, 1, nil)
 
-    [sink_pid, center_filter_pid, filter_1_1_pid, filter_1_2_pid, source_1_pid] =
-      [:sink, :center_filter, :filter_1_1, :filter_2_1, :source_1]
+    [sink_pid, center_filter_pid, filter_1_1_pid, filter_2_1_pid, source_1_pid] =
+      [:sink, :center_filter, {1, :filter_1_1}, {1, :filter_2_1}, {1, :source_1}]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
     assert_pipeline_play(pipeline_pid)
@@ -30,7 +30,7 @@ defmodule Membrane.Integration.ChildCrashTest do
     # assert all members of pipeline and pipeline itself down
     assert_pid_dead(source_1_pid)
     assert_pid_dead(filter_1_1_pid)
-    assert_pid_dead(filter_1_2_pid)
+    assert_pid_dead(filter_2_1_pid)
     assert_pid_dead(center_filter_pid)
     assert_pid_dead(sink_pid)
 
@@ -42,10 +42,10 @@ defmodule Membrane.Integration.ChildCrashTest do
 
     pipeline_pid = Testing.Pipeline.start_link_supervised!(module: ChildCrashTest.Pipeline)
 
-    ChildCrashTest.Pipeline.add_path(pipeline_pid, [], :source, 1)
+    ChildCrashTest.Pipeline.add_path(pipeline_pid, [], :source, 1, :group_1)
 
     [source_pid, center_filter_pid, sink_pid] =
-      [:source, :center_filter, :sink]
+      [{1, :source}, :center_filter, :sink]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
     assert_pipeline_play(pipeline_pid)
@@ -86,12 +86,12 @@ defmodule Membrane.Integration.ChildCrashTest do
       [
         :sink,
         :center_filter,
-        :bin_1,
-        :bin_2,
-        :bin_3,
-        :source_1,
-        :source_2,
-        :source_3
+        {1, :bin_1},
+        {2, :bin_2},
+        {3, :bin_3},
+        {1, :source_1},
+        {2, :source_2},
+        {3, :source_3}
       ]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
@@ -123,14 +123,16 @@ defmodule Membrane.Integration.ChildCrashTest do
       pipeline_pid,
       [:filter_1_1, :filter_2_1],
       :source_1,
-      1
+      1,
+      :temporary
     )
 
     ChildCrashTest.Pipeline.add_path(
       pipeline_pid,
       [:filter_1_2, :filter_2_2],
       :source_2,
-      2
+      2,
+      :temporary
     )
 
     [
@@ -146,12 +148,12 @@ defmodule Membrane.Integration.ChildCrashTest do
       [
         :sink,
         :center_filter,
-        :filter_1_1,
-        :filter_2_1,
-        :source_1,
-        :filter_1_2,
-        :filter_2_2,
-        :source_2
+        {1, :filter_1_1},
+        {1, :filter_2_1},
+        {1, :source_1},
+        {2, :filter_1_2},
+        {2, :filter_2_2},
+        {2, :source_2}
       ]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
