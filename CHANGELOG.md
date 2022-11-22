@@ -1,5 +1,6 @@
 # Changelog
-
+## 1.0.0
+  * Add children groups - a mechanism that allows refering to multiple children with a single identifier
 ## 0.11.0
  * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)
  * Refine communication between parent and its children [#270](https://github.com/membraneframework/membrane_core/issues/270)
