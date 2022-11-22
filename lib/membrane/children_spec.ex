@@ -329,16 +329,49 @@ defmodule Membrane.ChildrenSpec do
   end
 
   @doc """
-  Used to spawn an unlinked child or to spawn a child at the beggining of
-  a link specification.
+  Used to spawn an anonymous child at the beggining of the link.
+  """
+  @spec child(child_definition_t()) :: structure_builder_t()
+  def child(child_definition) do
+    child_name = {:anonymous_child, make_ref()}
+    do_child(child_name, child_definition, [])
+  end
+
+  @doc """
+  Used to spawn a child at the beggining of the link.
+  """
+  @spec child(Child.name_t() | child_definition_t(), child_definition_t() | child_options_t) ::
+          Membrane.ChildrenSpec.StructureBuilder.t()
+  def child(child_name, child_definition) when is_child_name?(child_name) do
+    do_child(child_name, child_definition, [])
+  end
+
+  def child(child_definition, opts) do
+    child_name = {:anonymous_child, make_ref()}
+    do_child(child_name, child_definition, opts)
+  end
+
+  @doc """
+  Used to spawn an unlinked child, anonymous child in the middle of the link
+  or to spawn a child at the beggining of a link.
 
   See the _structure_ section of the moduledoc for more information.
   """
-  @spec child(Child.name_t(), child_definition_t(), child_options_t()) :: structure_builder_t()
-  def child(child_name, child_definition, opts \\ [])
+  @spec child(
+          StructureBuilder.t() | Child.name_t(),
+          Child.name_t() | child_definition_t(),
+          child_options_t()
+        ) :: structure_builder_t()
+  def child(first_arg, second_arg, third_arg)
 
-  def child(%StructureBuilder{} = structure_builder, child_name, child_definition) do
+  def child(%StructureBuilder{} = structure_builder, child_name, child_definition)
+      when is_child_name?(child_name) do
     do_child(structure_builder, child_name, child_definition, [])
+  end
+
+  def child(%StructureBuilder{} = structure_builder, child_definition, options) do
+    child_name = {:anonymous_child, make_ref()}
+    do_child(structure_builder, child_name, child_definition, options)
   end
 
   def child(child_name, child_definition, options) when is_child_name?(child_name) do

@@ -173,4 +173,9 @@ defmodule Membrane.Integration.ChildSpawnTest do
 
     Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
   end
+
+  test "if children can be spawned anonymously" do
+  end
+
+  test "if anonymous children spawned in children groups can be removed with children group id"
 end
