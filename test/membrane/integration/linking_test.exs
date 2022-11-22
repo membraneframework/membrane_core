@@ -40,7 +40,7 @@ defmodule Membrane.Integration.LinkingTest do
 
     @impl true
     def handle_pad_removed(_pad, _ctx, state) do
-      remove_child = if state.remove_child_on_unlink, do: [remove_child: :source], else: []
+      remove_child = if state.remove_child_on_unlink, do: [remove_children: :source], else: []
       {remove_child ++ [notify_parent: :handle_pad_removed], %{}}
     end
   end
@@ -70,8 +70,8 @@ defmodule Membrane.Integration.LinkingTest do
     end
 
     @impl true
-    def handle_info({:remove_child, child}, _ctx, state) do
-      {[remove_child: child], state}
+    def handle_info({:remove_children, child}, _ctx, state) do
+      {[remove_children: child], state}
     end
 
     @impl true
@@ -112,7 +112,7 @@ defmodule Membrane.Integration.LinkingTest do
       assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'a'})
       assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'b'})
       assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'c'})
-      send(pipeline, {:remove_child, :sink})
+      send(pipeline, {:remove_children, :sink})
       assert_pipeline_notified(pipeline, :bin, :handle_pad_removed)
     end
 

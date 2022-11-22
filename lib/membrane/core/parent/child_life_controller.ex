@@ -455,22 +455,20 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @spec handle_remove_children(
           Membrane.Child.name_t()
           | [Membrane.Child.name_t()]
-          | {:children_group_id, Membrane.Child.children_group_id_t()},
+          | Membrane.Child.children_group_id_t()
+          | [Membrane.Child.children_group_id_t()],
           Parent.state_t()
         ) :: Parent.state_t()
-  def handle_remove_children(children, state) do
-    names =
-      case children do
-        {:children_group_id, children_group_id} ->
-          state.children
-          |> Enum.filter(fn {_name, child_entry} ->
-            child_entry.children_group_id == children_group_id
-          end)
-          |> Enum.map(fn {name, _child_entry} -> name end)
+  def handle_remove_children(children_or_children_groups, state) do
+    children_or_children_groups = Bunch.listify(children_or_children_groups)
 
-        names ->
-          names |> Bunch.listify()
-      end
+    names =
+      state.children
+      |> Enum.filter(fn {child_name, child_entry} ->
+        child_name in children_or_children_groups or
+          child_entry.children_group_id in children_or_children_groups
+      end)
+      |> Enum.map(fn {name, _child_entry} -> name end)
 
     Membrane.Logger.debug("Removing children: #{inspect(names)}")
 

@@ -69,12 +69,12 @@ defmodule Membrane.ResourceGuardTest do
 
     assert_pipeline_notified(pipeline, :element, :ready)
     monitor_ref = Process.monitor(:membrane_resource_guard_test_element_resource)
-    Testing.Pipeline.execute_actions(pipeline, remove_child: :element)
+    Testing.Pipeline.execute_actions(pipeline, remove_children: :element)
     assert_receive {:DOWN, ^monitor_ref, :process, _pid, :shutdown}
 
     assert_pipeline_notified(pipeline, :bin, :ready)
     monitor_ref = Process.monitor(:membrane_resource_guard_test_bin_resource)
-    Testing.Pipeline.execute_actions(pipeline, remove_child: :bin)
+    Testing.Pipeline.execute_actions(pipeline, remove_children: :bin)
     assert_receive {:DOWN, ^monitor_ref, :process, _pid, :shutdown}
 
     assert :ready = Membrane.Pipeline.call(pipeline, :setup_guard)

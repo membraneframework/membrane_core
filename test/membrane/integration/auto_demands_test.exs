@@ -127,7 +127,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     assert_pipeline_play(pipeline)
     Process.sleep(500)
-    Pipeline.execute_actions(pipeline, remove_child: :right_sink)
+    Pipeline.execute_actions(pipeline, remove_children: :right_sink)
 
     Enum.each(1..100_000, fn payload ->
       assert_sink_buffer(pipeline, :left_sink, buffer)

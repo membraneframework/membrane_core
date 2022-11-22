@@ -146,7 +146,7 @@ defmodule Membrane.ChildrenSpec do
 
   Later on, the children from a given group can be refered with their `children_group_id`, as in the example below:
   ```elixir
-  actions = [remove_child: {children_group_id: :first_children_group}]
+  actions = [remove_children: :first_children_group]
   ```
   With the action defined above, all the children from the `first_children_group` can be removed at once.
 

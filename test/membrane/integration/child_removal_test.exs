@@ -171,7 +171,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
       @impl true
       def handle_terminate_request(_ctx, %{defer?: true} = state) do
         send(state.test_process, {__MODULE__, :terminate_request})
-        {[remove_child: :source], state}
+        {[remove_children: :source], state}
       end
 
       @impl true
@@ -246,7 +246,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
         Testing.Pipeline.start_link_supervised!(module: ChildRemovalTest.ChildRemovingPipeline)
 
       Testing.Pipeline.execute_actions(pipeline_pid, [
-        {:remove_child, {:children_group_id, :first_crash_group}}
+        {:remove_children, :first_crash_group}
       ])
 
       assert_pipeline_notified(
