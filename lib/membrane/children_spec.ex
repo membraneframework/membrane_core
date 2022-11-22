@@ -121,7 +121,7 @@ defmodule Membrane.ChildrenSpec do
   By default, no elements are synchronized.
 
   Sample definitions:
-  ```elixir
+  ```
   children = ...
   {children, stream_sync: [[:element1, :element2], [:element3, :element4]]}
   {children, stream_sync: :sinks}
@@ -173,8 +173,8 @@ defmodule Membrane.ChildrenSpec do
   ```
 
   In the above snippet, we create new children - `:some_element_1` and `:some_element_2`, we add them
-  to the crash group associated with `group_id` children group id. Crash of `:some_element_1` or `:some_element_2` propagates
-  only to the rest of the members of that children group and the pipeline stays alive.
+  to the crash group with id `group_id`. Crash of `:some_element_1` or `:some_element_2` propagates
+  only to the rest of the members of the crash group and the pipeline stays alive.
 
   #### Handling crash of a crash group
 
@@ -201,7 +201,7 @@ defmodule Membrane.ChildrenSpec do
   The children specifications can be be nested withing themselves.
 
   Consider the following children specification:
-  ```elixir
+  ```
   {[
     child(:a, A) |> child(:b, B),
     {child(:c, C), crash_group:

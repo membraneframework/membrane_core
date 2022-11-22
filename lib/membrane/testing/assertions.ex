@@ -9,13 +9,13 @@ defmodule Membrane.Testing.Assertions do
 
   @default_timeout 2000
 
-  defp do_assert_receive_from_pipeline(assertion, pid, pattern, timeout, failure_message) do
+  defp assert_receive_from_entity(assertion, entity, pid, pattern, timeout, failure_message) do
     quote do
       import ExUnit.Assertions
       pid_value = unquote(pid)
 
       unquote(assertion)(
-        {Membrane.Testing.Pipeline, ^pid_value, unquote(pattern)},
+        {unquote(entity), ^pid_value, unquote(pattern)},
         unquote(timeout),
         unquote(failure_message)
       )
@@ -23,11 +23,36 @@ defmodule Membrane.Testing.Assertions do
   end
 
   defp assert_receive_from_pipeline(pid, pattern, timeout, failure_message \\ nil) do
-    do_assert_receive_from_pipeline(:assert_receive, pid, pattern, timeout, failure_message)
+    assert_receive_from_entity(
+      :assert_receive,
+      Membrane.Testing.Pipeline,
+      pid,
+      pattern,
+      timeout,
+      failure_message
+    )
   end
 
   defp refute_receive_from_pipeline(pid, pattern, timeout, failure_message \\ nil) do
-    do_assert_receive_from_pipeline(:refute_receive, pid, pattern, timeout, failure_message)
+    assert_receive_from_entity(
+      :refute_receive,
+      Membrane.Testing.Pipeline,
+      pid,
+      pattern,
+      timeout,
+      failure_message
+    )
+  end
+
+  defp assert_receive_from_resource_guard(pid, pattern, timeout, failure_message \\ nil) do
+    assert_receive_from_entity(
+      :assert_receive,
+      Membrane.Testing.MockResourceGuard,
+      pid,
+      pattern,
+      timeout,
+      failure_message
+    )
   end
 
   @doc """
@@ -420,6 +445,52 @@ defmodule Membrane.Testing.Assertions do
     assert_receive_from_pipeline(
       pipeline,
       {:handle_element_end_of_stream, {element_name, pad}},
+      timeout
+    )
+  end
+
+  @doc """
+  Asserts that a cleanup function was registered in `Membrane.Testing.MockResourceGuard`.
+  """
+  defmacro assert_resource_guard_register(
+             mock_guard,
+             function,
+             tag,
+             timeout \\ @default_timeout
+           ) do
+    assert_receive_from_resource_guard(
+      mock_guard,
+      {:register, {function, tag}},
+      timeout
+    )
+  end
+
+  @doc """
+  Asserts that a tag was unregistered in `Membrane.Testing.MockResourceGuard`.
+  """
+  defmacro assert_resource_guard_unregister(
+             mock_guard,
+             tag,
+             timeout \\ @default_timeout
+           ) do
+    assert_receive_from_resource_guard(
+      mock_guard,
+      {:unregister, tag},
+      timeout
+    )
+  end
+
+  @doc """
+  Asserts that `Membrane.Testing.MockResourceGuard` was requested to cleanup a given tag.
+  """
+  defmacro assert_resource_guard_cleanup(
+             mock_guard,
+             tag,
+             timeout \\ @default_timeout
+           ) do
+    assert_receive_from_resource_guard(
+      mock_guard,
+      {:cleanup, tag},
       timeout
     )
   end

@@ -1,7 +1,7 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "0.10.2"
+  @version "0.11.0"
   @source_ref "v#{@version}"
 
   def project do
@@ -138,10 +138,11 @@ defmodule Membrane.Mixfile do
     [
       {:qex, "~> 0.3"},
       {:telemetry, "~> 1.0"},
-      {:bunch, "~> 1.5.0"},
+      {:bunch, "~> 1.5"},
       {:ratio, "~> 2.0"},
       # Development
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
+      {:makeup_diff, "~> 0.1", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
       {:credo, "~> 1.6", only: :dev, runtime: false},
       # Testing

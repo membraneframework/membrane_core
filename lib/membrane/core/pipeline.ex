@@ -31,7 +31,7 @@ defmodule Membrane.Core.Pipeline do
 
     Telemetry.report_init(:pipeline)
 
-    ResourceGuard.register_resource(resource_guard, fn ->
+    ResourceGuard.register(resource_guard, fn ->
       Telemetry.report_terminate(:pipeline)
     end)
 

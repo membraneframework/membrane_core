@@ -74,7 +74,7 @@ defmodule Membrane.Core.Element.PadController do
     :ok = Child.PadController.validate_pad_being_linked!(direction, info)
 
     toilet =
-      if direction == :input do
+      if direction == :input and info.mode == :pull do
         Toilet.new(
           endpoint.pad_props.toilet_capacity,
           info.demand_unit,
