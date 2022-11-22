@@ -128,33 +128,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     children_definitions = remove_unecessary_children_specs(children_definitions, state)
 
     links =
-      Enum.flat_map(parsed_structures, fn {_children_definitions, links, options} ->
-        Enum.map(links, fn link ->
-          link =
-            if options.children_group_id != nil and
-                 is_child_with_given_name_spawned(
-                   children_definitions,
-                   {options.children_group_id, link.from.child}
-                 ) do
-              Bunch.Access.put_in(
-                link,
-                [:from, :child],
-                {options.children_group_id, link.from.child}
-              )
-            else
-              link
-            end
-
-          if options.children_group_id != nil and
-               is_child_with_given_name_spawned(
-                 children_definitions,
-                 {options.children_group_id, link.to.child}
-               ) do
-            Bunch.Access.put_in(link, [:to, :child], {options.children_group_id, link.to.child})
-          else
-            link
-          end
-        end)
+      Enum.flat_map(parsed_structures, fn {_children, links, options} ->
+        Enum.map(
+          links,
+          &get_link_with_full_name(&1, options.children_group_id, children_definitions)
+        )
       end)
 
     {all_children_names, state} =
@@ -270,6 +248,33 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       end
 
     {children_names, state}
+  end
+
+  defp get_link_with_full_name(link, children_group_id, children_definitions) do
+    link =
+      if children_group_id != nil and
+           is_child_with_given_name_spawned(
+             children_definitions,
+             {children_group_id, link.from.child}
+           ) do
+        Bunch.Access.put_in(
+          link,
+          [:from, :child],
+          {children_group_id, link.from.child}
+        )
+      else
+        link
+      end
+
+    if children_group_id != nil and
+         is_child_with_given_name_spawned(
+           children_definitions,
+           {children_group_id, link.to.child}
+         ) do
+      Bunch.Access.put_in(link, [:to, :child], {children_group_id, link.to.child})
+    else
+      link
+    end
   end
 
   defp is_child_with_given_name_spawned(children_definitions, name) do
