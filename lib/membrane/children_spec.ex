@@ -150,6 +150,12 @@ defmodule Membrane.ChildrenSpec do
   ```
   With the action defined above, all the children from the `first_children_group` can be removed at once.
 
+  In case you need to refer to a single child which resides in a children group, you need to use a tuple of form: {children_group_id, children_name}:
+  ```elixir
+  spec1 = {child(:source, Source), children_group_id: :first_group)
+  spec2 = get_child({:first_group, :source}) |> child(:sink, Sink)
+  ```
+
   ### Crash groups
   A crash group is a logical entity that prevents the whole pipeline from crashing when one of
   its children crash. A crash group is defined with the use of two children specification options:

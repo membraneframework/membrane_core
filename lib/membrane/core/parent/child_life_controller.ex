@@ -110,6 +110,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       end)
       |> Enum.filter(fn {children_definitions, _options} -> children_definitions != [] end)
 
+    check_if_children_names_and_children_groups_ids_are_unique(children_definitions, state)
+
     # map names into full names, of form: {children_group_id, children_name}
     children_definitions =
       Enum.map(children_definitions, fn {children_definitions, children_spec_options} ->
@@ -126,7 +128,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       end)
 
     children_definitions = remove_unecessary_children_specs(children_definitions, state)
-    check_if_children_names_and_children_groups_ids_are_unique(children_definitions, state)
 
     links =
       Enum.flat_map(parsed_structures, fn {_children, links, options} ->
@@ -285,7 +286,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     there are already children groups with such ids."
         )
 
-    duplicated = Enum.filter(new_children_names, &(&1 in state_children_groups))
+    duplicated = Enum.filter(new_children_names, &(&1 in new_children_groups))
 
     if length(duplicated) > 0,
       do:

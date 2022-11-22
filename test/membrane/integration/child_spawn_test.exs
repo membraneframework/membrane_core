@@ -157,17 +157,20 @@ defmodule Membrane.Integration.ChildSpawnTest do
     Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
   end
 
-  # test "if the pipeline raises an exception when a children group and a child with the same names are added" do
-  #   pipeline_pid = Testing.Pipeline.start_supervised!()
-  #   pipeline_ref = Process.monitor(pipeline_pid)
+  test "if the pipeline raises an exception when a children group and a child with the same names are added" do
+    pipeline_pid = Testing.Pipeline.start_supervised!()
+    pipeline_ref = Process.monitor(pipeline_pid)
 
-  #   spec =
-  #     {child(:first_group, %Testing.Source{output: [1, 2, 3]}) |> child(:sink, Testing.Sink),
-  #      children_group_id: :first_group}
+    spec =
+      {child(:first_group, %Testing.Source{output: [1, 2, 3]}) |> child(:sink, Testing.Sink),
+       children_group_id: :first_group}
 
-  #   Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
-  #   assert_receive {:DOWN, ^pipeline_ref, :process, ^pipeline_pid, {reason, _stack_trace}}
-  #   assert reason.message =~ ~r/Cannot spawn children with names: \[:first_group\]/
-  #   Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
-  # end
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
+    assert_receive {:DOWN, ^pipeline_ref, :process, ^pipeline_pid, {reason, _stack_trace}}
+
+    assert reason.message =~
+             ~r/Cannot proceed, since the children group ids and children names created in this process are duplicating: \[:first_group\]/
+
+    Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
+  end
 end
