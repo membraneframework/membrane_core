@@ -126,6 +126,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       end)
 
     children_definitions = remove_unecessary_children_specs(children_definitions, state)
+    check_if_children_names_and_children_groups_ids_are_unique(children_definitions, state)
 
     links =
       Enum.flat_map(parsed_structures, fn {_children, links, options} ->
@@ -248,6 +249,50 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       end
 
     {children_names, state}
+  end
+
+  defp check_if_children_names_and_children_groups_ids_are_unique(children_definitions, state) do
+    state_children_groups =
+      Enum.map(state.children, fn {_child_name, child_entry} -> child_entry.children_group_id end)
+
+    new_children_groups =
+      Enum.map(children_definitions, fn {_children, options} -> options.children_group_id end)
+
+    state_children_names = Map.keys(state.children)
+
+    new_children_names =
+      Enum.flat_map(children_definitions, fn {children, _options} ->
+        Enum.map(children, fn {child_name, _child_module, _options} -> child_name end)
+      end)
+
+    duplicated = Enum.filter(new_children_groups, &(&1 in state_children_names))
+
+    if length(duplicated) > 0,
+      do:
+        raise(
+          Membrane.ParentError,
+          "Cannot create children groups with ids: #{inspect(duplicated)} since
+    there are already children with such names."
+        )
+
+    duplicated = Enum.filter(new_children_names, &(&1 in state_children_groups))
+
+    if length(duplicated) > 0,
+      do:
+        raise(
+          Membrane.ParentError,
+          "Cannot spawn children with names: #{inspect(duplicated)} since
+    there are already children groups with such ids."
+        )
+
+    duplicated = Enum.filter(new_children_names, &(&1 in state_children_groups))
+
+    if length(duplicated) > 0,
+      do:
+        raise(
+          Membrane.ParentError,
+          "Cannot proceed, since the children group ids and children names created in this process are duplicating: #{inspect(duplicated)}"
+        )
   end
 
   defp get_link_with_full_name(link, children_group_id, children_definitions) do

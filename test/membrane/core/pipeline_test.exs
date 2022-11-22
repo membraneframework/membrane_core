@@ -80,7 +80,7 @@ defmodule Membrane.Core.PipelineTest do
     end
 
     test "should raise if trying to spawn element with already taken name", %{state: state} do
-      state = %State{state | children: %{a: self()}}
+      state = %State{state | children: %{a: %{children_group_id: nil, name: :a}}}
 
       assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
         ActionHandler.handle_action(

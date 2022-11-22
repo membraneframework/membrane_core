@@ -2,8 +2,8 @@ defmodule Membrane.Integration.ChildSpawnTest do
   use Bunch
   use ExUnit.Case, async: false
 
-  import Membrane.Testing.Assertions
   import Membrane.ChildrenSpec
+  import Membrane.Testing.Assertions
 
   alias Membrane.Buffer
   alias Membrane.ChildrenSpec
@@ -123,4 +123,51 @@ defmodule Membrane.Integration.ChildSpawnTest do
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 2})
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 3})
   end
+
+  test "if the pipeline raises an exception when a child with the same name as an exisiting children group is added" do
+    pipeline_pid = Testing.Pipeline.start_supervised!()
+    pipeline_ref = Process.monitor(pipeline_pid)
+
+    spec1 = child(:source, %Testing.Source{output: [1, 2, 3]}) |> child(:sink, Testing.Sink)
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec1)
+
+    spec2 =
+      {child(:another_source, %Testing.Source{output: [1, 2, 3]}), children_group_id: :source}
+
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec2)
+    assert_receive {:DOWN, ^pipeline_ref, :process, ^pipeline_pid, {reason, _stack_trace}}
+    assert reason.message =~ ~r/Cannot create children groups with ids: \[:source\]/
+    Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
+  end
+
+  test "if the pipeline raises an exception when a children group with the same name as an exisiting child is added" do
+    pipeline_pid = Testing.Pipeline.start_supervised!()
+    pipeline_ref = Process.monitor(pipeline_pid)
+
+    spec1 =
+      {child(:source, %Testing.Source{output: [1, 2, 3]}) |> child(:sink, Testing.Sink),
+       children_group_id: :first_group}
+
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec1)
+
+    spec2 = child(:first_group, %Testing.Source{output: [1, 2, 3]})
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec2)
+    assert_receive {:DOWN, ^pipeline_ref, :process, ^pipeline_pid, {reason, _stack_trace}}
+    assert reason.message =~ ~r/Cannot spawn children with names: \[:first_group\]/
+    Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
+  end
+
+  # test "if the pipeline raises an exception when a children group and a child with the same names are added" do
+  #   pipeline_pid = Testing.Pipeline.start_supervised!()
+  #   pipeline_ref = Process.monitor(pipeline_pid)
+
+  #   spec =
+  #     {child(:first_group, %Testing.Source{output: [1, 2, 3]}) |> child(:sink, Testing.Sink),
+  #      children_group_id: :first_group}
+
+  #   Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
+  #   assert_receive {:DOWN, ^pipeline_ref, :process, ^pipeline_pid, {reason, _stack_trace}}
+  #   assert reason.message =~ ~r/Cannot spawn children with names: \[:first_group\]/
+  #   Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
+  # end
 end
