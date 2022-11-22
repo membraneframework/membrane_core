@@ -341,7 +341,7 @@ defmodule Membrane.ChildrenSpec do
   Used to spawn a child at the beggining of the link.
   """
   @spec child(Child.name_t() | child_definition_t(), child_definition_t() | child_options_t) ::
-          Membrane.ChildrenSpec.StructureBuilder.t()
+          structure_builder_t()
   def child(child_name, child_definition) when is_child_name?(child_name) do
     do_child(child_name, child_definition, [])
   end
@@ -358,7 +358,7 @@ defmodule Membrane.ChildrenSpec do
   See the _structure_ section of the moduledoc for more information.
   """
   @spec child(
-          StructureBuilder.t() | Child.name_t(),
+          structure_builder_t | Child.name_t(),
           Child.name_t() | child_definition_t(),
           child_options_t()
         ) :: structure_builder_t()
