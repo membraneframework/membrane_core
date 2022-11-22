@@ -175,7 +175,11 @@ defmodule Membrane.Integration.ChildSpawnTest do
   end
 
   test "if children can be spawned anonymously" do
-  end
+    pipeline_pid = Testing.Pipeline.start_supervised!()
+    spec = child(%Testing.Source{output: [1, 2, 3]}) |> child(Testing.Sink)
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
+    assert_pipeline_play(pipeline_pid)
 
-  test "if anonymous children spawned in children groups can be removed with children group id"
+    Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
+  end
 end

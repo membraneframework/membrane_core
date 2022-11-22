@@ -330,6 +330,8 @@ defmodule Membrane.ChildrenSpec do
 
   @doc """
   Used to spawn an anonymous child at the beggining of the link.
+
+  See the _structure_ section of the moduledoc for more information.
   """
   @spec child(child_definition_t()) :: structure_builder_t()
   def child(child_definition) do
@@ -338,12 +340,20 @@ defmodule Membrane.ChildrenSpec do
   end
 
   @doc """
-  Used to spawn a child at the beggining of the link.
+  Used to spawn a child at the beggining of the link
+  or an anynomous child.
+
+  See the _structure_ section of the moduledoc for more information.
   """
   @spec child(Child.name_t() | child_definition_t(), child_definition_t() | child_options_t) ::
           structure_builder_t()
   def child(child_name, child_definition) when is_child_name?(child_name) do
     do_child(child_name, child_definition, [])
+  end
+
+  def child(%StructureBuilder{} = structure_builder, child_definition) do
+    child_name = {:anonymous_child, make_ref()}
+    do_child(structure_builder, child_name, child_definition, [])
   end
 
   def child(child_definition, opts) do
