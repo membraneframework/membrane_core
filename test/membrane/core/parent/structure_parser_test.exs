@@ -1,6 +1,9 @@
 defmodule Membrane.Core.Parent.StructureParserTest do
   use ExUnit.Case
 
+  import Membrane.ChildrenSpec
+  require Membrane.ChildrenSpec
+
   alias Membrane.Core.Parent.{Link, StructureParser}
   alias Membrane.Core.Parent.Link.Endpoint
 
@@ -196,6 +199,10 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     import Membrane.ChildrenSpec
 
     links_spec = [child(:a, A) |> child(:b, B) |> child(:c, C)]
+
+    links_spec =
+      Membrane.Core.Parent.ChildLifeController.make_canonical(links_spec) |> Enum.at(0) |> elem(0)
+
     assert {children, links} = StructureParser.parse(links_spec)
 
     assert [
@@ -237,6 +244,214 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              {:a, A, %{get_if_exists: false}},
              {:b, B, %{get_if_exists: false}},
              {:c, C, %{get_if_exists: false}}
+           ]
+  end
+
+  test "if the conditional linking works properly" do
+    links_spec =
+      child(:a, A)
+      |> ignore_unless true do
+        child(:b, B) |> child(:c, C)
+      end
+      |> child(:d, D)
+
+    links_spec =
+      Membrane.Core.Parent.ChildLifeController.make_canonical(links_spec) |> Enum.at(0) |> elem(0)
+
+    assert {children, links} = StructureParser.parse(links_spec)
+
+    assert [
+             %Link{
+               from: %Endpoint{
+                 child: :a,
+                 pad_props: %{},
+                 pad_spec: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 child: :b,
+                 pad_props: %{},
+                 pad_spec: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             },
+             %Link{
+               from: %Endpoint{
+                 child: :b,
+                 pad_props: %{},
+                 pad_spec: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 child: :c,
+                 pad_props: %{},
+                 pad_spec: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             },
+             %Link{
+               from: %Endpoint{
+                 child: :c,
+                 pad_props: %{},
+                 pad_spec: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 child: :d,
+                 pad_props: %{},
+                 pad_spec: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             }
+           ] = links
+
+    assert Enum.sort(children) == [
+             {:a, A, %{get_if_exists: false}},
+             {:b, B, %{get_if_exists: false}},
+             {:c, C, %{get_if_exists: false}},
+             {:d, D, %{get_if_exists: false}}
+           ]
+  end
+
+  test "if the conditional linking works properly 2" do
+    links_spec =
+      child(:a, A)
+      |> ignore_unless false do
+        child(:b, B)
+      end
+      |> child(:c, C)
+
+    links_spec =
+      Membrane.Core.Parent.ChildLifeController.make_canonical(links_spec) |> Enum.at(0) |> elem(0)
+
+    assert {children, links} = StructureParser.parse(links_spec)
+
+    assert [
+             %Link{
+               from: %Endpoint{
+                 child: :a,
+                 pad_props: %{},
+                 pad_spec: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 child: :c,
+                 pad_props: %{},
+                 pad_spec: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             }
+           ] = links
+
+    assert Enum.sort(children) == [
+             {:a, A, %{get_if_exists: false}},
+             {:c, C, %{get_if_exists: false}}
+           ]
+  end
+
+  test "if nested conditional linking works properly" do
+    links_spec = [
+      child(:a, A)
+      |> ignore_unless true do
+        child(:b, B)
+        |> ignore_unless false do
+          child(:c, C)
+        end
+      end
+      |> child(:d, D)
+    ]
+
+    links_spec =
+      Membrane.Core.Parent.ChildLifeController.make_canonical(links_spec) |> Enum.at(0) |> elem(0)
+
+    assert {children, links} = StructureParser.parse(links_spec)
+
+    assert [
+             %Link{
+               from: %Endpoint{
+                 child: :a,
+                 pad_props: %{},
+                 pad_spec: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 child: :b,
+                 pad_props: %{},
+                 pad_spec: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             },
+             %Link{
+               from: %Endpoint{
+                 child: :b,
+                 pad_props: %{},
+                 pad_spec: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 child: :d,
+                 pad_props: %{},
+                 pad_spec: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             }
+           ] = links
+
+    assert Enum.sort(children) == [
+             {:a, A, %{get_if_exists: false}},
+             {:b, B, %{get_if_exists: false}},
+             {:d, D, %{get_if_exists: false}}
+           ]
+  end
+
+  test "if nested conditional linking works properly 2" do
+    links_spec = [
+      child(:a, A)
+      |> ignore_unless false do
+        child(:b, B)
+        |> ignore_unless true do
+          child(:c, C)
+        end
+      end
+      |> child(:d, D)
+    ]
+
+    assert {children, links} = StructureParser.parse(links_spec)
+
+    assert [
+             %Link{
+               from: %Endpoint{
+                 child: :a,
+                 pad_props: %{},
+                 pad_spec: :output,
+                 pad_ref: nil,
+                 pid: nil
+               },
+               to: %Endpoint{
+                 child: :d,
+                 pad_props: %{},
+                 pad_spec: :input,
+                 pad_ref: nil,
+                 pid: nil
+               }
+             }
+           ] = links
+
+    assert Enum.sort(children) == [
+             {:a, A, %{get_if_exists: false}},
+             {:d, D, %{get_if_exists: false}}
            ]
   end
 end

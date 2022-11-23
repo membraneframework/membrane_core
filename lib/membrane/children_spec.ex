@@ -601,4 +601,14 @@ defmodule Membrane.ChildrenSpec do
   defp validate_pad_name(pad) do
     raise ParentError, "Invalid link specification: invalid pad name: #{inspect(pad)}"
   end
+
+  defmacro ignore_unless(structure_builder, condition, do: nested_structure_builder) do
+    quote do
+      if unquote(condition) do
+        unquote(structure_builder) |> unquote(nested_structure_builder)
+      else
+        unquote(structure_builder)
+      end
+    end
+  end
 end

@@ -164,12 +164,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     proceed_spec_startup(spec_ref, state)
   end
 
+  @doc """
+  Returns a unified (so called "cannonical") representation of a structure specification.
+  """
   @spec make_canonical(Membrane.ChildrenSpec.t(), parsed_children_spec_options_t()) :: [
           {[Membrane.ChildrenSpec.structure_builder_t()], parsed_children_spec_options_t()}
         ]
-  defp make_canonical(spec, defaults \\ @default_children_spec_options)
+  def make_canonical(spec, defaults \\ @default_children_spec_options)
 
-  defp make_canonical({spec, options_keywords_list}, defaults) do
+  def make_canonical({spec, options_keywords_list}, defaults) do
     spec = Bunch.listify(spec)
     {inner_specs, this_level_specs} = Enum.split_with(spec, &is_tuple(&1))
 
@@ -188,11 +191,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       Enum.flat_map(inner_specs, &make_canonical(&1, defaults_for_nested))
   end
 
-  defp make_canonical(specs, defaults) when is_list(specs) do
+  def make_canonical(specs, defaults) when is_list(specs) do
     Enum.flat_map(specs, &make_canonical(&1, defaults))
   end
 
-  defp make_canonical(spec, defaults) do
+  def make_canonical(spec, defaults) do
     spec = Bunch.listify(spec)
     {:ok, options} = Bunch.Config.parse([], @children_spec_options_fields_specs)
     options = Map.merge(defaults, options)
