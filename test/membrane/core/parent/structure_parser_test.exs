@@ -1,12 +1,11 @@
 defmodule Membrane.Core.Parent.StructureParserTest do
   use ExUnit.Case
+  use Bunch
 
   import Membrane.ChildrenSpec
 
   alias Membrane.Core.Parent.{Link, StructureParser}
   alias Membrane.Core.Parent.Link.Endpoint
-
-  require Membrane.ChildrenSpec
 
   test "valid link" do
     import Membrane.ChildrenSpec
@@ -251,9 +250,9 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   test "if the conditional linking works properly" do
     links_spec =
       child(:a, A)
-      |> link_if true do
-        child(:b, B) |> child(:c, C)
-      end
+      |> then_if(true, fn structure ->
+        structure |> child(:b, B) |> child(:c, C)
+      end)
       |> child(:d, D)
 
     links_spec =
@@ -323,9 +322,9 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   test "if the conditional linking works properly 2" do
     links_spec =
       child(:a, A)
-      |> link_if false do
-        child(:b, B)
-      end
+      |> then_if(false, fn structure ->
+        structure |> child(:b, B)
+      end)
       |> child(:c, C)
 
     links_spec =
@@ -359,16 +358,16 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   end
 
   test "if nested conditional linking works properly" do
-    links_spec = [
+    links_spec =
       child(:a, A)
-      |> link_if true do
-        child(:b, B)
-        |> link_if false do
-          child(:c, C)
-        end
-      end
+      |> Bunch.then_if(true, fn structure ->
+        structure
+        |> child(:b, B)
+        |> Bunch.then_if(false, fn structure ->
+          structure |> child(:c, C)
+        end)
+      end)
       |> child(:d, D)
-    ]
 
     links_spec =
       Membrane.Core.Parent.ChildLifeController.make_canonical(links_spec) |> Enum.at(0) |> elem(0)
@@ -418,16 +417,19 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   end
 
   test "if nested conditional linking works properly 2" do
-    links_spec = [
+    links_spec =
       child(:a, A)
-      |> link_if false do
-        child(:b, B)
-        |> link_if true do
-          child(:c, C)
-        end
-      end
+      |> then_if(false, fn structure ->
+        structure
+        |> child(:b, B)
+        |> then_if(true, fn structure ->
+          structure |> child(:c, C)
+        end)
+      end)
       |> child(:d, D)
-    ]
+
+    links_spec =
+      Membrane.Core.Parent.ChildLifeController.make_canonical(links_spec) |> Enum.at(0) |> elem(0)
 
     assert {children, links} = StructureParser.parse(links_spec)
 
