@@ -251,7 +251,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   test "if the conditional linking works properly" do
     links_spec =
       child(:a, A)
-      |> ignore_unless true do
+      |> link_if true do
         child(:b, B) |> child(:c, C)
       end
       |> child(:d, D)
@@ -323,7 +323,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   test "if the conditional linking works properly 2" do
     links_spec =
       child(:a, A)
-      |> ignore_unless false do
+      |> link_if false do
         child(:b, B)
       end
       |> child(:c, C)
@@ -361,9 +361,9 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   test "if nested conditional linking works properly" do
     links_spec = [
       child(:a, A)
-      |> ignore_unless true do
+      |> link_if true do
         child(:b, B)
-        |> ignore_unless false do
+        |> link_if false do
           child(:c, C)
         end
       end
@@ -420,9 +420,9 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   test "if nested conditional linking works properly 2" do
     links_spec = [
       child(:a, A)
-      |> ignore_unless false do
+      |> link_if false do
         child(:b, B)
-        |> ignore_unless true do
+        |> link_if true do
           child(:c, C)
         end
       end

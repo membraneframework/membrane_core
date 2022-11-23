@@ -602,7 +602,25 @@ defmodule Membrane.ChildrenSpec do
     raise ParentError, "Invalid link specification: invalid pad name: #{inspect(pad)}"
   end
 
-  defmacro ignore_unless(structure_builder, condition, do: nested_structure_builder) do
+  @doc """
+  A macro that allows to create conditional links.
+
+  Example:
+  ```
+  child(:a, A)
+  |> link_if true do
+    child(:b, B)
+    |> link_if false do
+      child(:c, C)
+    end
+  end
+  |> child(:d, D)
+  ```
+
+  With the structure specified in the code snippet above, children: `:a`, `:b` and `:d` will be spawned
+  and linked, whereas child `:c` won't be created.
+  """
+  defmacro link_if(structure_builder, condition, do: nested_structure_builder) do
     quote do
       if unquote(condition) do
         unquote(structure_builder) |> unquote(nested_structure_builder)
