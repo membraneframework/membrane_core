@@ -2,10 +2,11 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   use ExUnit.Case
 
   import Membrane.ChildrenSpec
-  require Membrane.ChildrenSpec
 
   alias Membrane.Core.Parent.{Link, StructureParser}
   alias Membrane.Core.Parent.Link.Endpoint
+
+  require Membrane.ChildrenSpec
 
   test "valid link" do
     import Membrane.ChildrenSpec
