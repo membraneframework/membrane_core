@@ -16,6 +16,7 @@ defmodule Membrane.Sink do
   """
 
   alias Membrane.{Buffer, Element, Pad}
+  alias Membrane.Core.DocsHelper
   alias Membrane.Element.CallbackContext
 
   @doc """
@@ -48,6 +49,8 @@ defmodule Membrane.Sink do
               state :: Element.state_t()
             ) :: Membrane.Element.Base.callback_return_t()
 
+  @optional_callbacks handle_write: 4
+
   @doc """
   Brings all the stuff necessary to implement a sink element.
 
@@ -58,23 +61,25 @@ defmodule Membrane.Sink do
     quote location: :keep do
       use Membrane.Element.Base, unquote(options)
       use Membrane.Element.WithInputPads
+
       @behaviour unquote(__MODULE__)
 
-      @impl true
+      @doc false
+      @spec membrane_element_type() :: Membrane.Element.type_t()
       def membrane_element_type, do: :sink
-
-      @impl true
-      def handle_write(_pad, _buffer, _context, state),
-        do: {{:error, :handle_write_not_implemented}, state}
 
       @impl true
       def handle_write_list(pad, buffers, _context, state) do
         args_list = buffers |> Enum.map(&[pad, &1])
-        {{:ok, split: {:handle_write, args_list}}, state}
+        {[split: {:handle_write, args_list}], state}
       end
 
-      defoverridable handle_write_list: 4,
-                     handle_write: 4
+      defoverridable handle_write_list: 4
     end
   end
+
+  DocsHelper.add_callbacks_list_to_moduledoc(
+    __MODULE__,
+    [Membrane.Element.Base, Membrane.Element.WithInputPads]
+  )
 end

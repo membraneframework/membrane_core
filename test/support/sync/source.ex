@@ -2,25 +2,22 @@ defmodule Membrane.Support.Sync.Source do
   @moduledoc false
   use Membrane.Source
 
-  def_output_pad :output, caps: :any
+  def_output_pad :output, accepted_format: _any
 
-  def_options tick_interval: [type: :time],
-              test_process: [type: :pid]
+  def_options tick_interval: [spec: Membrane.Time.t()],
+              test_process: [spec: pid()]
 
   @impl true
-  def handle_prepared_to_playing(_ctx, %{tick_interval: interval} = state) do
-    {{:ok, start_timer: {:my_timer, interval}}, state}
+  def handle_playing(_ctx, %{tick_interval: interval} = state) do
+    {[notify_parent: :start_timer, start_timer: {:my_timer, interval}], state}
   end
-
-  @impl true
-  def handle_playing_to_prepared(_ctx, state), do: {{:ok, stop_timer: :my_timer}, state}
 
   @impl true
   def handle_tick(:my_timer, _ctx, state) do
     send(state.test_process, :tick)
-    {:ok, state}
+    {[], state}
   end
 
   @impl true
-  def handle_demand(:output, _size, _unit, _ctx, state), do: {:ok, state}
+  def handle_demand(:output, _size, _unit, _ctx, state), do: {[], state}
 end

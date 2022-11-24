@@ -14,8 +14,8 @@ defmodule Membrane.Core.FilterAggregator.Context do
 
   @type action :: Element.Action.t() | Membrane.Core.FilterAggregator.InternalAction.t()
 
-  @spec build_context!(Element.name_t(), module()) :: t()
-  def build_context!(name, module) do
+  @spec build_context!(Element.name_t(), module(), t()) :: t()
+  def build_context!(name, module, agg_ctx) do
     pad_descriptions = module.membrane_pads()
     pads = pad_descriptions |> MapSet.new(fn {k, _v} -> k end)
 
@@ -41,7 +41,9 @@ defmodule Membrane.Core.FilterAggregator.Context do
       clock: nil,
       name: name,
       parent_clock: nil,
-      playback_state: :stopped
+      playback: :stopped,
+      resource_guard: agg_ctx.resource_guard,
+      utility_supervisor: agg_ctx.utility_supervisor
     }
   end
 
@@ -59,9 +61,9 @@ defmodule Membrane.Core.FilterAggregator.Context do
 
   defp build_pad_data(pad_description) do
     pad_description
+    |> Map.delete(:accepted_formats_str)
     |> Map.merge(%{
-      accepted_caps: pad_description.caps,
-      caps: nil,
+      stream_format: nil,
       demand: nil,
       start_of_stream?: false,
       end_of_stream?: false,
@@ -100,7 +102,7 @@ defmodule Membrane.Core.FilterAggregator.Context do
   end
 
   @spec before_incoming_action(t(), action :: any()) :: t()
-  def before_incoming_action(context, {:caps, {:output, _caps}}) do
+  def before_incoming_action(context, {:stream_format, {:output, _stream_format}}) do
     context
   end
 
@@ -117,8 +119,8 @@ defmodule Membrane.Core.FilterAggregator.Context do
   end
 
   @spec after_incoming_action(t(), action :: action()) :: t()
-  def after_incoming_action(context, {:caps, {:output, caps}}) do
-    put_in(context.pads.input.caps, caps)
+  def after_incoming_action(context, {:stream_format, {:output, stream_format}}) do
+    put_in(context.pads.input.stream_format, stream_format)
   end
 
   def after_incoming_action(context, _action) do
@@ -131,12 +133,12 @@ defmodule Membrane.Core.FilterAggregator.Context do
   end
 
   @spec after_out_action(t(), action :: action()) :: t()
-  def after_out_action(context, {:caps, {:input, caps}}) do
-    put_in(context.pads.input.caps, caps)
+  def after_out_action(context, {:stream_format, {:input, stream_format}}) do
+    put_in(context.pads.input.stream_format, stream_format)
   end
 
-  def after_out_action(context, {:caps, {:output, caps}}) do
-    put_in(context.pads.output.caps, caps)
+  def after_out_action(context, {:stream_format, {:output, stream_format}}) do
+    put_in(context.pads.output.stream_format, stream_format)
   end
 
   def after_out_action(context, InternalAction.start_of_stream(:output)) do
@@ -147,22 +149,8 @@ defmodule Membrane.Core.FilterAggregator.Context do
     put_in(context.pads.output.end_of_stream?, true)
   end
 
-  def after_out_action(context, action)
-      when action in [
-             InternalAction.stopped_to_prepared(),
-             InternalAction.prepared_to_playing(),
-             InternalAction.playing_to_prepared(),
-             InternalAction.prepared_to_stopped()
-           ] do
-    pb_state =
-      case action do
-        InternalAction.stopped_to_prepared() -> :prepared
-        InternalAction.prepared_to_playing() -> :playing
-        InternalAction.playing_to_prepared() -> :prepared
-        InternalAction.prepared_to_stopped() -> :stopped
-      end
-
-    %{context | playback_state: pb_state}
+  def after_out_action(context, InternalAction.playing()) do
+    %{context | playback: :playing}
   end
 
   def after_out_action(context, _action) do

@@ -8,6 +8,8 @@ defmodule Membrane.Core.CallbackContext do
     quote do
       @behaviour unquote(__MODULE__)
 
+      @type default_fields :: %{unquote_splicing(default_fields)}
+
       @impl true
       def extract_default_fields(_state, args) do
         args

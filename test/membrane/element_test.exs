@@ -1,6 +1,7 @@
 defmodule Membrane.ElementTest do
   use ExUnit.Case, async: true
 
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Testing
@@ -8,11 +9,11 @@ defmodule Membrane.ElementTest do
   defmodule TestFilter do
     use Membrane.Filter
 
-    def_input_pad :input, demand_unit: :buffers, caps: :any
+    def_input_pad :input, accepted_format: _any, demand_unit: :buffers
 
-    def_output_pad :output, caps: :any
+    def_output_pad :output, accepted_format: _any
 
-    def_options target: [type: :pid]
+    def_options target: [spec: pid()]
 
     @spec assert_callback_called(atom) :: :ok
     def assert_callback_called(name) do
@@ -27,61 +28,67 @@ defmodule Membrane.ElementTest do
     end
 
     @impl true
-    def handle_init(opts), do: {:ok, opts}
+    def handle_init(_ctx, opts), do: {[], opts}
+
+    @impl true
+    def handle_playing(_ctx, state) do
+      send(state.target, {:callback_called, :handle_playing})
+      {[], state}
+    end
 
     @impl true
     def handle_start_of_stream(_pad, _context, state) do
       send(state.target, {:callback_called, :handle_start_of_stream})
-      {:ok, state}
+      {[], state}
     end
 
     @impl true
     def handle_end_of_stream(_pad, _context, state) do
       send(state.target, {:callback_called, :handle_end_of_stream})
-      {:ok, state}
+      {[], state}
     end
 
     @impl true
     def handle_event(_pad, _event, _context, state) do
       send(state.target, {:callback_called, :handle_event})
-      {:ok, state}
+      {[], state}
     end
 
     @impl true
     def handle_demand(_pad, size, _unit, _context, state) do
-      {{:ok, demand: {:input, size}}, state}
+      {[demand: {:input, size}], state}
     end
 
     @impl true
-    def handle_process(_pad, _buffer, _context, state), do: {:ok, state}
+    def handle_process(_pad, _buffer, _context, state), do: {[], state}
   end
 
   setup do
-    children = [
-      source: %Testing.Source{output: ['a', 'b', 'c']},
-      filter: %TestFilter{target: self()},
-      sink: Testing.Sink
+    links = [
+      child(:source, %Testing.Source{output: ['a', 'b', 'c']})
+      |> child(:filter, %TestFilter{target: self()})
+      |> child(:sink, Testing.Sink)
     ]
 
-    {:ok, pipeline} =
-      Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
-
-    on_exit(fn ->
-      Membrane.Pipeline.terminate(pipeline, blocking?: true)
-    end)
+    pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
 
     [pipeline: pipeline]
   end
 
+  test "play", %{pipeline: pipeline} do
+    assert_pipeline_play(pipeline)
+    TestFilter.assert_callback_called(:handle_playing)
+  end
+
   describe "Start of stream" do
     test "causes handle_start_of_stream/3 to be called", %{pipeline: pipeline} do
-      assert_pipeline_playback_changed(pipeline, _from, :playing)
+      assert_pipeline_play(pipeline)
 
       TestFilter.assert_callback_called(:handle_start_of_stream)
     end
 
     test "does not trigger calling callback handle_event/3", %{pipeline: pipeline} do
-      assert_pipeline_playback_changed(pipeline, _from, :playing)
+      assert_pipeline_play(pipeline)
 
       TestFilter.refute_callback_called(:handle_event)
     end
@@ -93,13 +100,13 @@ defmodule Membrane.ElementTest do
 
   describe "End of stream" do
     test "causes handle_end_of_stream/3 to be called", %{pipeline: pipeline} do
-      assert_pipeline_playback_changed(pipeline, _from, :playing)
+      assert_pipeline_play(pipeline)
 
       TestFilter.assert_callback_called(:handle_end_of_stream)
     end
 
     test "does not trigger calling callback handle_event/3", %{pipeline: pipeline} do
-      assert_pipeline_playback_changed(pipeline, _from, :playing)
+      assert_pipeline_play(pipeline)
 
       TestFilter.refute_callback_called(:handle_event)
     end

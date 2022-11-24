@@ -3,6 +3,7 @@ defmodule Membrane.Integration.DemandsTest do
   use ExUnit.Case, async: false
 
   import ExUnit.Assertions
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Buffer
@@ -17,7 +18,7 @@ defmodule Membrane.Integration.DemandsTest do
 
   defp test_pipeline(pid) do
     pattern_gen = fn i -> %Buffer{payload: <<i::16>> <> <<255>>} end
-    assert_pipeline_playback_changed(pid, :prepared, :playing)
+    assert_pipeline_play(pid)
 
     demand = 500
     Pipeline.message_child(pid, :sink, {:make_demand, demand})
@@ -31,33 +32,29 @@ defmodule Membrane.Integration.DemandsTest do
 
     demand..(2 * demand - 1)
     |> assert_buffers_received(pid)
-
-    assert Pipeline.terminate(pid, blocking?: true) == :ok
   end
 
   test "Regular pipeline with proper demands" do
-    children = [
-      source: Source,
-      filter: Filter,
-      sink: %Sink{autodemand: false}
+    links = [
+      child(:source, Source)
+      |> child(:filter, Filter)
+      |> child(:sink, %Sink{autodemand: false})
     ]
 
-    assert {:ok, pid} = Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
-
+    pid = Pipeline.start_link_supervised!(structure: links)
     test_pipeline(pid)
   end
 
   test "Pipeline with filter underestimating demand" do
     filter_demand_gen = fn _incoming_demand -> 2 end
 
-    children = [
-      source: Source,
-      filter: %Filter{demand_generator: filter_demand_gen},
-      sink: %Sink{autodemand: false}
+    links = [
+      child(:source, Source)
+      |> child(:filter, %Filter{demand_generator: filter_demand_gen})
+      |> child(:sink, %Sink{autodemand: false})
     ]
 
-    assert {:ok, pid} = Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
-
+    pid = Pipeline.start_link_supervised!(structure: links)
     test_pipeline(pid)
   end
 
@@ -75,14 +72,13 @@ defmodule Membrane.Integration.DemandsTest do
       ~> {&1, cnt + 4}
     end
 
-    children = [
-      source: %Source{output: {0, actions_gen}},
-      filter: Filter,
-      sink: %Sink{autodemand: false}
+    links = [
+      child(:source, %Source{output: {0, actions_gen}})
+      |> child(:filter, Filter)
+      |> child(:sink, %Sink{autodemand: false})
     ]
 
-    assert {:ok, pid} = Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
-
+    pid = Pipeline.start_link_supervised!(structure: links)
     test_pipeline(pid)
   end
 end

@@ -10,15 +10,11 @@ defmodule Membrane.Core.Element.EventControllerTest do
   defmodule MockEventHandlingElement do
     use Membrane.Filter
 
-    def_output_pad :output, caps: :any
+    def_output_pad :output, accepted_format: _any
 
     @impl true
-    def handle_event(_pad, %Membrane.Event.Discontinuity{}, _ctx, state) do
-      {{:error, :cause}, state}
-    end
-
     def handle_event(_pad, %Membrane.Event.Underrun{}, _ctx, state) do
-      {:ok, state}
+      {[], state}
     end
   end
 
@@ -35,31 +31,27 @@ defmodule Membrane.Core.Element.EventControllerTest do
       })
 
     state =
-      %{
-        State.new(%{
-          module: MockEventHandlingElement,
-          name: :test_name,
-          parent_clock: nil,
-          sync: nil,
-          parent: self()
-        })
-        | type: :filter,
-          pads_data: %{
-            input:
-              struct(Membrane.Element.PadData,
-                ref: :input,
-                accepted_caps: :any,
-                direction: :input,
-                pid: self(),
-                mode: :pull,
-                start_of_stream?: false,
-                end_of_stream?: false,
-                input_queue: input_queue,
-                demand: 0
-              )
-          }
-      }
-      |> Bunch.Struct.put_in([:playback, :state], :playing)
+      struct(State,
+        module: MockEventHandlingElement,
+        name: :test_name,
+        type: :filter,
+        playback: :playing,
+        parent_pid: self(),
+        synchronization: %{clock: nil, parent_clock: nil, stream_sync: nil},
+        pads_data: %{
+          input:
+            struct(Membrane.Element.PadData,
+              ref: :input,
+              direction: :input,
+              pid: self(),
+              mode: :pull,
+              start_of_stream?: false,
+              end_of_stream?: false,
+              input_queue: input_queue,
+              demand: 0
+            )
+        }
+      )
 
     assert_received Message.new(:demand, _size, for_pad: :some_pad)
     [state: state]
@@ -91,14 +83,8 @@ defmodule Membrane.Core.Element.EventControllerTest do
   end
 
   describe "Event controller handles normal events" do
-    test "succesfully when callback module returns {:ok, state}", %{state: state} do
+    test "succesfully when callback module returns {[], state}", %{state: state} do
       assert state == EventController.handle_event(:input, %Event.Underrun{}, state)
-    end
-
-    test "processing error returned by callback module", %{state: state} do
-      assert_raise(Membrane.CallbackError, fn ->
-        EventController.handle_event(:input, %Event.Discontinuity{}, state)
-      end)
     end
   end
 

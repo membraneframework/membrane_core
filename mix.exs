@@ -1,7 +1,7 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "0.10.1"
+  @version "0.11.0"
   @source_ref "v#{@version}"
 
   def project do
@@ -16,16 +16,14 @@ defmodule Membrane.Mixfile do
       name: "Membrane Core",
       source_url: link(),
       docs: docs(),
-      aliases: ["test.all": "do espec, test"],
+      aliases: [docs: ["docs", &copy_assets/1]],
       preferred_cli_env: [
-        espec: :test,
-        "test.all": :test,
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.post": :test,
         "coveralls.html": :test
       ],
-      test_coverage: [tool: ExCoveralls, test_task: "test.all"],
+      test_coverage: [tool: ExCoveralls, test_task: "test"],
       deps: deps()
     ]
   end
@@ -34,7 +32,7 @@ defmodule Membrane.Mixfile do
     [extra_applications: [:logger]]
   end
 
-  defp elixirc_paths(:test), do: ["lib", "spec/support", "test/support"]
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_env), do: ["lib"]
 
   defp dialyzer() do
@@ -60,38 +58,49 @@ defmodule Membrane.Mixfile do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md", "CHANGELOG.md", "CONTRIBUTING.md", LICENSE: [title: "License"]],
+      extras: [
+        "README.md",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
+        "guides/upgrading/v0.11.md",
+        LICENSE: [title: "License"]
+      ],
       formatters: ["html"],
       source_ref: @source_ref,
       nest_modules_by_prefix: [
         Membrane.Bin,
-        Membrane.Pipeline,
         Membrane.Element,
         Membrane.Element.CallbackContext,
         Membrane.Pipeline.CallbackContext,
         Membrane.Bin.CallbackContext,
         Membrane.Payload,
         Membrane.Buffer,
-        Membrane.Caps,
+        Membrane.StreamFormat,
         Membrane.Event,
         Membrane.EventProtocol,
         Membrane.Testing,
-        Membrane.RemoteControlled
+        Membrane.RemoteControlled,
+        Membrane.RemoteControlled.Message
       ],
       groups_for_modules: [
-        Pipeline: [~r/^Membrane\.Pipeline($|\.)/, ~r/^Membrane\.(CrashGroup)($|\.)/],
+        Pipeline: [
+          ~r/^Membrane\.Pipeline($|\.)/,
+          ~r/^Membrane\.(CrashGroup)($|\.)/,
+          ~r/^Membrane\.(RemoteControlled)($|\.)/
+        ],
         Bin: [~r/^Membrane\.Bin($|\.)/],
         Element: [
           ~r/^Membrane\.Filter($|\.)/,
+          ~r/^Membrane\.FilterAggregator($|\.)/,
           ~r/^Membrane\.Endpoint($|\.)/,
           ~r/^Membrane\.Sink($|\.)/,
           ~r/^Membrane\.Source($|\.)/,
           ~r/^Membrane\.Element($|\.)/
         ],
-        Parent: [~r/^Membrane\.(Parent|ParentSpec)($|\.)/],
+        Parent: [~r/^Membrane\.(Parent|ChildrenSpec)($|\.)/],
         Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],
         Communication: [
-          ~r/^Membrane\.(Buffer|Payload|Caps|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
+          ~r/^Membrane\.(Buffer|Payload|StreamFormat|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
         ],
         Logging: [~r/^Membrane\.Logger($|\.)/],
         Testing: [~r/^Membrane\.Testing($|\.)/],
@@ -99,13 +108,19 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane\.Clock($|\.)/,
           ~r/^Membrane\.Sync($|\.)/,
           ~r/^Membrane\.Time($|\.)/,
-          ~r/^Membrane\.PlaybackState($|\.)/,
+          ~r/^Membrane\.Playback($|\.)/,
           ~r/^Membrane\.Telemetry($|\.)/,
-          ~r/^Membrane\.ComponentPath($|\.)/
+          ~r/^Membrane\.ComponentPath($|\.)/,
+          ~r/^Membrane\.ResourceGuard($|\.)/,
+          ~r/^Membrane\.UtilitySupervisor($|\.)/
         ],
         Errors: [~r/Error$/]
       ]
     ]
+  end
+
+  defp copy_assets(_args) do
+    File.cp_r("assets", "doc/assets", fn _source, _destination -> true end)
   end
 
   defp package do
@@ -114,7 +129,7 @@ defmodule Membrane.Mixfile do
       licenses: ["Apache-2.0"],
       links: %{
         "GitHub" => link(),
-        "Membrane Framework Homepage" => "https://membraneframework.org"
+        "Membrane Framework Homepage" => "https://membrane.stream"
       }
     ]
   end
@@ -123,14 +138,14 @@ defmodule Membrane.Mixfile do
     [
       {:qex, "~> 0.3"},
       {:telemetry, "~> 1.0"},
-      {:bunch, "~> 1.3"},
+      {:bunch, "~> 1.5"},
       {:ratio, "~> 3.0"},
       # Development
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
+      {:makeup_diff, "~> 0.1", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
       {:credo, "~> 1.6", only: :dev, runtime: false},
       # Testing
-      {:espec, "~> 1.8.3", only: :test},
       {:mox, "~> 1.0", only: :test},
       {:junit_formatter, "~> 3.1", only: :test},
       {:excoveralls, "~> 0.14", only: :test}

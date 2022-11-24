@@ -1,7 +1,7 @@
 defmodule Membrane.Core.EndpointTest do
   use ExUnit.Case, async: true
 
-  import Membrane.ParentSpec
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Support.Bin.TestBins.TestFilter
@@ -13,15 +13,11 @@ defmodule Membrane.Core.EndpointTest do
     test "with one endpoint and filter" do
       buffers = ['a', 'b', 'c']
 
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(
-          children: [
-            endpoint: %Testing.Endpoint{output: buffers},
-            filter: TestFilter
-          ],
-          links: [
-            link(:endpoint) |> to(:filter),
-            link(:filter) |> to(:endpoint)
+      pipeline =
+        Testing.Pipeline.start_link_supervised!(
+          structure: [
+            child(:endpoint, %Testing.Endpoint{output: buffers}) |> child(:filter, TestFilter),
+            get_child(:filter) |> get_child(:endpoint)
           ]
         )
 
@@ -31,20 +27,21 @@ defmodule Membrane.Core.EndpointTest do
     test "with one endpoint and many filters in between" do
       buffers = ['a', 'b', 'c']
 
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(
-          children: [
-            endpoint: %Testing.Endpoint{output: buffers},
-            filter1: TestFilter,
-            filter2: TestFilter,
-            filter3: TestFilter
-          ],
-          links: [
-            link(:endpoint) |> to(:filter1),
-            link(:filter1) |> to(:filter2),
-            link(:filter2) |> to(:filter3),
-            link(:filter3) |> to(:endpoint)
-          ]
+      pipeline =
+        Testing.Pipeline.start_link_supervised!(
+          structure:
+            [
+              child(:endpoint, %Testing.Endpoint{output: buffers}),
+              child(:filter1, TestFilter),
+              child(:filter2, TestFilter),
+              child(:filter3, TestFilter)
+            ] ++
+              [
+                get_child(:endpoint) |> get_child(:filter1),
+                get_child(:filter1) |> get_child(:filter2),
+                get_child(:filter2) |> get_child(:filter3),
+                get_child(:filter3) |> get_child(:endpoint)
+              ]
         )
 
       assert_data_flows_through(pipeline, buffers, :endpoint)
@@ -52,8 +49,7 @@ defmodule Membrane.Core.EndpointTest do
   end
 
   defp assert_data_flows_through(pipeline, buffers, receiving_element) do
-    assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+    assert_pipeline_play(pipeline)
 
     assert_start_of_stream(pipeline, ^receiving_element)
 
@@ -63,6 +59,5 @@ defmodule Membrane.Core.EndpointTest do
     end)
 
     assert_end_of_stream(pipeline, ^receiving_element)
-    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 end

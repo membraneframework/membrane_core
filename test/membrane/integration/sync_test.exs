@@ -1,6 +1,7 @@
 defmodule Membrane.Integration.SyncTest do
   use ExUnit.Case, async: false
 
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.{Testing, Time}
@@ -14,28 +15,24 @@ defmodule Membrane.Integration.SyncTest do
   test "When ratio = 1 amount of lost ticks is roughly the same regardless of the time of transmission" do
     tick_interval = 1
 
-    children = [
-      source: %Sync.Source{
+    links = [
+      child(:source, %Sync.Source{
         tick_interval: tick_interval |> Time.milliseconds(),
         test_process: self()
-      },
-      sink: Sync.Sink
+      })
+      |> child(:sink, Sync.Sink)
     ]
 
     pipeline_opts = [
-      links: Membrane.ParentSpec.link_linear(children)
+      structure: links
     ]
 
     for tries <- [100, 1000, 10_000] do
-      assert {:ok, pipeline} = Testing.Pipeline.start_link(pipeline_opts)
-
-      assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+      pipeline = Testing.Pipeline.start_link_supervised!(pipeline_opts)
+      assert_pipeline_notified(pipeline, :source, :start_timer)
       Process.sleep(tick_interval * tries)
-
       Testing.Pipeline.terminate(pipeline, blocking?: true)
-
       ticks_amount = Sync.Helper.receive_ticks()
-
       assert_in_delta ticks_amount, tries, @tick_number_error
     end
   end
@@ -48,64 +45,61 @@ defmodule Membrane.Integration.SyncTest do
       custom_args: spec
     ]
 
-    {:ok, pipeline} = Testing.Pipeline.start_link(options)
+    pipeline = Testing.Pipeline.start_link_supervised!(options)
 
     assert_start_of_stream(pipeline, :sink_a)
     assert_start_of_stream(pipeline, :sink_b, :input, @sync_error_ms)
-    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 
   test "synchronize dynamically spawned elements" do
-    spec = Membrane.Support.Sync.Pipeline.default_spec()
-    spec = %{spec | stream_sync: [[:sink_a, :sink_b]]}
+    {structure, spec_options} = Membrane.Support.Sync.Pipeline.default_spec()
+    spec = {structure, Keyword.put(spec_options, :stream_sync, [[:sink_a, :sink_b]])}
 
     options = [
       module: Membrane.Support.Sync.Pipeline,
-      custom_args: %Membrane.ParentSpec{}
+      custom_args: []
     ]
 
-    {:ok, pipeline} = Testing.Pipeline.start_link(options)
+    pipeline = Testing.Pipeline.start_link_supervised!(options)
 
-    assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
+    assert_pipeline_play(pipeline)
     send(pipeline, {:spawn_children, spec})
 
     assert_start_of_stream(pipeline, :sink_a)
     assert_start_of_stream(pipeline, :sink_b, :input, @sync_error_ms)
-    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 
   test "synchronize selected groups" do
-    spec = Membrane.Support.Sync.Pipeline.default_spec()
+    {structure, spec_options} = Membrane.Support.Sync.Pipeline.default_spec()
+    spec = {structure, Keyword.put(spec_options, :stream_sync, [[:sink_a, :sink_b]])}
 
     options = [
       module: Membrane.Support.Sync.Pipeline,
-      custom_args: %{spec | stream_sync: [[:sink_a, :sink_b]]}
+      custom_args: spec
     ]
 
-    {:ok, pipeline} = Testing.Pipeline.start_link(options)
+    pipeline = Testing.Pipeline.start_link_supervised!(options)
 
     assert_start_of_stream(pipeline, :sink_a)
     assert_start_of_stream(pipeline, :sink_b, :input, @sync_error_ms)
-    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 
   defmodule SimpleBin do
     use Membrane.Bin
 
-    def_input_pad :input, demand_unit: :buffers, caps: :any
-    def_output_pad :output, caps: :any, demand_unit: :buffers
+    def_input_pad :input, demand_unit: :buffers, accepted_format: _any
+    def_output_pad :output, accepted_format: _any, demand_unit: :buffers
 
     @impl true
-    def handle_init(_options) do
-      children = [filter1: TestFilter, filter2: TestFilter]
+    def handle_init(_ctx, _options) do
+      children = [child(:filter1, TestFilter), child(:filter2, TestFilter)]
 
-      spec = %Membrane.ParentSpec{
-        children: children,
+      spec = {
+        children,
         stream_sync: []
       }
 
-      {{:ok, spec: spec}, :ignored}
+      {[spec: spec], :ignored}
     end
   end
 
@@ -113,29 +107,29 @@ defmodule Membrane.Integration.SyncTest do
     alias Membrane.Testing.Source
 
     children = [
-      el1: Source,
-      el2: SimpleBin
+      child(:el1, Source),
+      child(:el2, SimpleBin)
     ]
 
-    spec = %Membrane.ParentSpec{
-      children: children,
+    spec = {
+      children,
       stream_sync: [[:el1, :el2]]
     }
 
     options = [
       module: Membrane.Support.Sync.Pipeline,
-      custom_args: %{spec | stream_sync: [[:el1, :el2]]}
+      custom_args: spec
     ]
 
-    assert {:error, reason} = Testing.Pipeline.start_link(options)
+    assert {:error, reason} = Testing.Pipeline.start_link_supervised(options)
 
     assert {%Membrane.ParentError{}, _} = reason
   end
 
   test "synchronization inside a bin is possible" do
-    children = [bin: Sync.SyncBin]
+    children = [child(:bin, Sync.SyncBin)]
 
-    {:ok, pipeline} = Testing.Pipeline.start_link(children: children)
+    pipeline = Testing.Pipeline.start_link_supervised!(structure: children)
 
     assert_pipeline_notified(pipeline, :bin, {:start_of_stream, :sink_a})
     assert_pipeline_notified(pipeline, :bin, {:start_of_stream, :sink_b}, @sync_error_ms)

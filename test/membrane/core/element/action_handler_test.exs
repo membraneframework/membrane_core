@@ -3,7 +3,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
   alias Membrane.{ActionError, Buffer, ElementError, PadDirectionError}
   alias Membrane.Core.Element.State
-  alias Membrane.Core.Playback
   alias Membrane.Support.DemandsTest.Filter
   alias Membrane.Support.Element.{TrivialFilter, TrivialSource}
 
@@ -11,11 +10,16 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   require Membrane.Core.Message, as: Message
 
   @module Membrane.Core.Element.ActionHandler
-  @mock_caps %Membrane.Caps.Mock{integer: 42}
+  @mock_stream_format %Membrane.StreamFormat.Mock{integer: 42}
   defp demand_test_filter(_context) do
-    state = %{
-      State.new(%{module: Filter, name: :test_name, parent_clock: nil, sync: nil, parent: self()})
-      | type: :filter,
+    state =
+      struct(State,
+        module: Filter,
+        name: :test_name,
+        type: :filter,
+        playback: :stopped,
+        synchronization: %{clock: nil, parent_clock: nil},
+        delayed_demands: MapSet.new(),
         pads_data: %{
           input:
             struct(Membrane.Element.PadData,
@@ -32,7 +36,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
               mode: :push
             )
         }
-    }
+      )
 
     [state: state]
   end
@@ -41,28 +45,18 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     setup :demand_test_filter
 
     test "delaying demand", %{state: state} do
-      [{:playing, :handle_info}, {:prepared, :handle_prepared_to_playing}]
-      |> Enum.each(fn {playback, callback} ->
-        state = %{state | playback: %Playback{state: playback}, supplying_demand?: true}
-        state = @module.handle_action({:demand, {:input, 10}}, callback, %{}, state)
-        assert state.pads_data.input.demand == 10
-        assert MapSet.new([{:input, :supply}]) == state.delayed_demands
-      end)
-
-      state = %{state | playback: %Playback{state: :playing}, supplying_demand?: true}
+      state = %{state | playback: :playing, supplying_demand?: true}
       state = @module.handle_action({:demand, {:input, 10}}, :handle_info, %{}, state)
       assert state.pads_data.input.demand == 10
       assert MapSet.new([{:input, :supply}]) == state.delayed_demands
     end
 
     test "returning error on invalid constraints", %{state: state} do
-      state = state |> set_playback_state(:prepared)
-
-      assert_raise ActionError, ~r/prepared/, fn ->
+      assert_raise ActionError, ~r/stopped/, fn ->
         @module.handle_action({:demand, {:input, 10}}, :handle_info, %{}, state)
       end
 
-      state = state |> set_playback_state(:playing)
+      state = %{state | playback: :playing}
 
       assert_raise ElementError, ~r/pad :input_push.*push mode/, fn ->
         @module.handle_action({:demand, {:input_push, 10}}, :handle_info, %{}, state)
@@ -71,47 +65,40 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   end
 
   defp trivial_filter_state(_context) do
-    state = %{
-      State.new(%{
+    state =
+      struct(State,
         module: TrivialFilter,
         name: :elem_name,
-        parent_clock: nil,
-        sync: nil,
-        parent: nil
-      })
-      | type: :filter,
+        type: :filter,
+        synchronization: %{clock: nil, parent_clock: nil},
+        delayed_demands: MapSet.new(),
+        playback: :stopped,
         pads_data: %{
           output: %{
             direction: :output,
             pid: self(),
             other_ref: :other_ref,
-            caps: nil,
+            stream_format: nil,
             other_demand_unit: :bytes,
             start_of_stream?: true,
             end_of_stream?: false,
             mode: :push,
-            demand_mode: nil,
-            accepted_caps: :any
+            demand_mode: nil
           },
           input: %{
             direction: :input,
             pid: self(),
             other_ref: :other_input,
-            caps: nil,
+            stream_format: nil,
             start_of_stream?: true,
             end_of_stream?: false,
             mode: :push,
-            demand_mode: nil,
-            accepted_caps: :any
+            demand_mode: nil
           }
         }
-    }
+      )
 
     [state: state]
-  end
-
-  defp set_playback_state(element_state, pb_state) do
-    element_state |> Bunch.Struct.put_in([:playback, :state], pb_state)
   end
 
   @mock_buffer %Buffer{payload: "Hello"}
@@ -131,10 +118,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       end
     end
 
-    test "when element is prepared and not moving to playing", %{state: state} do
-      state = state |> set_playback_state(:prepared)
-
-      assert_raise ActionError, ~r/prepared/, fn ->
+    test "when element is stopped and not moving to playing", %{state: state} do
+      assert_raise ActionError, ~r/stopped/, fn ->
         @module.handle_action(
           buffer_action(:output),
           :handle_info,
@@ -146,12 +131,13 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
     test "when element is moving to playing", %{state: state} do
       state =
-        state |> set_playback_state(:prepared) |> PadModel.set_data!(:output, :caps, @mock_caps)
+        %{state | playback: :playing}
+        |> PadModel.set_data!(:output, :stream_format, @mock_stream_format)
 
       result =
         @module.handle_action(
           buffer_action(:output),
-          :handle_prepared_to_playing,
+          :handle_playing,
           %{},
           state
         )
@@ -162,7 +148,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
     test "when element is playing", %{state: state} do
       state =
-        state |> set_playback_state(:playing) |> PadModel.set_data!(:output, :caps, @mock_caps)
+        %{state | playback: :playing}
+        |> PadModel.set_data!(:output, :stream_format, @mock_stream_format)
 
       result =
         @module.handle_action(
@@ -177,7 +164,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
 
     test "when pad doesn't exist in the element", %{state: state} do
-      state = state |> set_playback_state(:playing)
+      state = %{state | playback: :playing}
 
       assert_raise MatchError, ~r/:unknown_pad/i, fn ->
         @module.handle_action(
@@ -191,10 +178,9 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
     test "when eos has already been sent", %{state: state} do
       state =
-        state
-        |> set_playback_state(:playing)
+        %{state | playback: :playing}
         |> PadModel.set_data!(:output, :end_of_stream?, true)
-        |> PadModel.set_data!(:output, :caps, @mock_caps)
+        |> PadModel.set_data!(:output, :stream_format, @mock_stream_format)
 
       assert_raise ElementError, ~r/:output.*end ?of ?stream.*sent/i, fn ->
         @module.handle_action(
@@ -208,7 +194,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
     test "with invalid buffer(s)", %{state: state} do
       state =
-        state |> set_playback_state(:playing) |> PadModel.set_data!(:output, :caps, @mock_caps)
+        %{state | playback: :playing}
+        |> PadModel.set_data!(:output, :stream_format, @mock_stream_format)
 
       assert_raise ElementError, ~r/invalid buffer.*:not_a_buffer/i, fn ->
         @module.handle_action(
@@ -235,7 +222,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
     test "with empty buffer list", %{state: state} do
       state =
-        state |> set_playback_state(:playing) |> PadModel.set_data!(:output, :caps, @mock_caps)
+        %{state | playback: :playing}
+        |> PadModel.set_data!(:output, :stream_format, @mock_stream_format)
 
       result =
         @module.handle_action(
@@ -249,12 +237,13 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       refute_received Message.new(:buffer, [_, :other_ref])
     end
 
-    test "if action handler raises exception when caps are sent before the first buffer", %{
-      state: state
-    } do
-      state = state |> set_playback_state(:playing)
+    test "if action handler raises exception when stream format is not sent before the first buffer",
+         %{
+           state: state
+         } do
+      state = %{state | playback: :playing}
 
-      assert_raise(ElementError, ~r/buffer.*caps.*not.*sent/, fn ->
+      assert_raise(ElementError, ~r/buffer.*stream.*format.*not.*sent/, fn ->
         @module.handle_action(
           {:buffer, {:output, %Membrane.Buffer{payload: "test"}}},
           :handle_demand,
@@ -283,7 +272,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
 
     test "when element is playing and event is EndOfStream", %{state: state} do
-      state = state |> set_playback_state(:playing)
+      state = %{state | playback: :playing}
 
       result =
         @module.handle_action(
@@ -298,7 +287,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
 
     test "when pad doesn't exist in the element", %{state: state} do
-      state = state |> set_playback_state(:playing)
+      state = %{state | playback: :playing}
 
       assert_raise MatchError, ~r/:unknown_pad/i, fn ->
         @module.handle_action(
@@ -311,7 +300,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
 
     test "with invalid event", %{state: state} do
-      state = state |> set_playback_state(:playing)
+      state = %{state | playback: :playing}
 
       assert_raise ElementError, ~r/invalid event.*:not_an_event/i, fn ->
         @module.handle_action(
@@ -325,8 +314,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
     test "when eos has already been sent", %{state: state} do
       state =
-        state
-        |> set_playback_state(:playing)
+        %{state | playback: :playing}
         |> PadModel.set_data!(:output, :end_of_stream?, true)
 
       assert_raise ElementError, ~r/end ?of ?stream.*set.*:output/i, fn ->
@@ -340,7 +328,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
 
     test "invalid pad direction", %{state: state} do
-      state = state |> set_playback_state(:playing)
+      state = %{state | playback: :playing}
 
       assert_raise PadDirectionError, ~r/:input/, fn ->
         @module.handle_action(
@@ -353,15 +341,15 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
   end
 
-  defp caps_action(pad), do: {:caps, {pad, @mock_caps}}
+  defp stream_format_action(pad), do: {:stream_format, {pad, @mock_stream_format}}
 
-  describe "handling :caps action" do
+  describe "handling :stream_format action" do
     setup :trivial_filter_state
 
     test "when element is stopped", %{state: state} do
       assert_raise ActionError, ~r/stopped/, fn ->
         @module.handle_action(
-          caps_action(:output),
+          stream_format_action(:output),
           :handle_info,
           %{},
           state
@@ -370,67 +358,31 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
 
     test "when pad doesn't exist in the element", %{state: state} do
-      state = state |> set_playback_state(:playing)
+      state = %{state | playback: :playing}
 
       assert_raise MatchError, ~r/:unknown_pad/i, fn ->
         @module.handle_action(
-          caps_action(:invalid_pad_ref),
+          stream_format_action(:invalid_pad_ref),
           :handle_info,
           %{},
           state
         )
       end
-    end
-
-    test "when element is playing and caps match the spec", %{state: state} do
-      state =
-        state
-        |> set_playback_state(:playing)
-        |> PadModel.set_data!(:output, :accepted_caps, {Membrane.Caps.Mock, [integer: 42]})
-
-      result =
-        @module.handle_action(
-          caps_action(:output),
-          :handle_info,
-          %{},
-          state
-        )
-
-      assert result == PadModel.set_data!(state, :output, :caps, @mock_caps)
-      assert_received Message.new(:caps, @mock_caps, for_pad: :other_ref)
-    end
-
-    test "when caps doesn't match specs", %{state: state} do
-      state =
-        state
-        |> set_playback_state(:playing)
-        |> PadModel.set_data!(:output, :accepted_caps, {Membrane.Caps.Mock, [integer: 2]})
-
-      assert_raise ElementError, ~r/caps.*(don't|do not) match.*integer: 2/s, fn ->
-        @module.handle_action(
-          caps_action(:output),
-          :handle_info,
-          %{},
-          state
-        )
-      end
-
-      refute_received Message.new(:caps, @mock_caps, for_pad: :other_ref)
     end
 
     test "invalid pad direction", %{state: state} do
-      state = state |> set_playback_state(:playing)
+      state = %{state | playback: :playing}
 
       assert_raise PadDirectionError, ~r/:input/, fn ->
         @module.handle_action(
-          caps_action(:input),
+          stream_format_action(:input),
           :handle_info,
           %{},
           state
         )
       end
 
-      refute_received Message.new(:caps, @mock_caps, for_pad: :other_ref)
+      refute_received Message.new(:stream_format, @mock_stream_format, for_pad: :other_ref)
     end
   end
 
@@ -470,7 +422,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
 
     test "when pad doesn't exist in the element", %{state: state} do
-      state = state |> set_playback_state(:playing)
+      state = %{state | playback: :playing}
 
       assert_raise MatchError, ~r/:unknown_pad/i, fn ->
         @module.handle_action(
@@ -483,7 +435,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     end
 
     test "when pad works in push mode", %{state: state} do
-      state = state |> set_playback_state(:playing)
+      state = %{state | playback: :playing}
 
       assert_raise ElementError, ~r/pad :output.*push mode/i, fn ->
         @module.handle_action(
@@ -497,8 +449,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
     test "when pad works in pull mode", %{state: state} do
       state =
-        %{state | supplying_demand?: true}
-        |> set_playback_state(:playing)
+        %{state | supplying_demand?: true, playback: :playing}
         |> PadModel.set_data!(:output, :mode, :pull)
         |> PadModel.set_data!(:output, :demand_mode, :manual)
 
@@ -517,26 +468,22 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
   defp playing_trivial_source(_context) do
     state =
-      %{
-        State.new(%{
-          module: TrivialSource,
-          name: :elem_name,
-          parent_clock: nil,
-          sync: nil,
-          parent: self()
-        })
-        | type: :source,
-          pads_data: %{
-            output: %{
-              direction: :output,
-              pid: self(),
-              mode: :pull,
-              demand_mode: :manual,
-              demand: 0
-            }
+      struct(State,
+        module: TrivialSource,
+        name: :elem_name,
+        synchronization: %{clock: nil, parent_clock: nil},
+        type: :source,
+        pads_data: %{
+          output: %{
+            direction: :output,
+            pid: self(),
+            mode: :pull,
+            demand_mode: :manual,
+            demand: 0
           }
-      }
-      |> set_playback_state(:playing)
+        },
+        playback: :playing
+      )
 
     [state: state]
   end

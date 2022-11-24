@@ -142,7 +142,7 @@ defmodule Membrane.Logger do
     Logger.metadata(mb_prefix: prefix)
 
     if Membrane.Logger.get_config(:prefix, true) do
-      Process.put(:membrane_logger_prefix, "[" <> prefix <> "] ")
+      Process.put(:membrane_logger_prefix, "#{prefix} ")
     end
 
     :ok

@@ -6,18 +6,18 @@ defmodule Membrane.Support.ChildCrashTest.Filter do
 
   use Membrane.Filter
 
-  def_output_pad :output, caps: :any
+  def_output_pad :output, accepted_format: _any
 
-  def_input_pad :input, demand_unit: :buffers, caps: :any, availability: :on_request
+  def_input_pad :input, demand_unit: :buffers, accepted_format: _any, availability: :on_request
 
   @impl true
-  def handle_init(_opts) do
-    {:ok, Map.put(%{}, :pads, MapSet.new())}
+  def handle_init(_ctx, _opts) do
+    {[], Map.put(%{}, :pads, MapSet.new())}
   end
 
   @impl true
   def handle_pad_added(pad, _ctx, state) do
-    {:ok, %{state | pads: MapSet.put(state.pads, pad)}}
+    {[], %{state | pads: MapSet.put(state.pads, pad)}}
   end
 
   @impl true
@@ -26,7 +26,7 @@ defmodule Membrane.Support.ChildCrashTest.Filter do
       state.pads
       |> Enum.map(fn pad -> {:demand, {pad, size}} end)
 
-    {{:ok, demands}, state}
+    {demands, state}
   end
 
   @impl true
@@ -34,17 +34,17 @@ defmodule Membrane.Support.ChildCrashTest.Filter do
     # code that will cause crash of the filter
     Process.exit(self(), :crash)
 
-    {:ok, state}
+    {[], state}
   end
 
   @impl true
   def handle_process(_pad, buf, _ctx, state) do
-    {{:ok, buffer: {:output, buf}}, state}
+    {[buffer: {:output, buf}], state}
   end
 
   @impl true
   def handle_end_of_stream(pad, _ctx, state) do
-    {:ok, %{state | pads: MapSet.delete(state.pads, pad)}}
+    {[], %{state | pads: MapSet.delete(state.pads, pad)}}
   end
 
   @spec crash(pid()) :: any()

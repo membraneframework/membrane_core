@@ -8,18 +8,16 @@ defmodule Membrane.Core.Pipeline.State do
   use Bunch
   use Bunch.Access
 
-  alias Membrane.{Child, PlaybackState}
+  alias Membrane.Child
   alias Membrane.Core.Parent.{ChildrenModel, CrashGroup, Link}
-  alias Membrane.Core.{Playback, Timer}
+  alias Membrane.Core.Timer
 
   @type t :: %__MODULE__{
-          internal_state: Membrane.Pipeline.state_t(),
-          playback: Playback.t(),
+          internal_state: Membrane.Pipeline.state() | nil,
           module: module,
           children: ChildrenModel.children_t(),
           crash_groups: %{CrashGroup.name_t() => CrashGroup.t()},
-          delayed_playback_change: {PlaybackState.t(), PlaybackState.t()} | nil,
-          links: [Link.t()],
+          links: %{Link.id() => Link.t()},
           synchronization: %{
             timers: %{Timer.id_t() => Timer.t()},
             clock_provider: %{
@@ -28,18 +26,25 @@ defmodule Membrane.Core.Pipeline.State do
               choice: :auto | :manual
             },
             clock_proxy: Membrane.Clock.t()
-          }
+          },
+          playback: Membrane.Playback.t(),
+          initialized?: boolean(),
+          playing_requested?: boolean(),
+          terminating?: boolean(),
+          resource_guard: Membrane.ResourceGuard.t()
         }
 
-  @enforce_keys [:module, :synchronization]
+  @enforce_keys [:module, :synchronization, :subprocess_supervisor, :resource_guard]
   defstruct @enforce_keys ++
               [
                 internal_state: nil,
                 children: %{},
                 crash_groups: %{},
-                delayed_playback_change: nil,
-                links: [],
+                links: %{},
                 pending_specs: %{},
-                playback: %Playback{}
+                playback: :stopped,
+                initialized?: false,
+                playing_requested?: false,
+                terminating?: false
               ]
 end

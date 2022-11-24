@@ -5,11 +5,10 @@ defmodule Membrane.Bin.Action do
 
   Returning actions is a way of bin interaction with
   other components and parts of framework. Each action may be returned by any
-  callback (except for `c:Membrane.Bin.handle_shutdown/2`, as it
-  does not support returning any actions) unless explicitly stated otherwise.
+  callback unless explicitly stated otherwise.
   """
 
-  alias Membrane.{Child, ParentSpec}
+  alias Membrane.{Child, ChildrenSpec}
 
   @typedoc """
   Action that sends a message to a child identified by name.
@@ -23,18 +22,20 @@ defmodule Membrane.Bin.Action do
   @type notify_parent_t :: {:notify_parent, Membrane.ChildNotification.t()}
 
   @typedoc """
-  Action that instantiates children and links them according to `Membrane.ParentSpec`.
+  Action that instantiates children and links them according to `Membrane.ChildrenSpec`.
 
-  Children's playback state is changed to the current bin state.
-  `c:Membrane.Parent.handle_spec_started/3` callback is executed once it happens.
+  Children's playback is changed to the current bin playback.
+  `c:Membrane.Parent.handle_spec_started/3` callback is executed once the children are spawned.
   """
-  @type spec_t :: {:spec, ParentSpec.t()}
+  @type spec_t :: {:spec, ChildrenSpec.t()}
 
   @typedoc """
   Action that stops, unlinks and removes specified child/children from the bin.
   """
   @type remove_child_t ::
-          {:remove_child, Child.name_t() | [Child.name_t()]}
+          {:remove_child,
+           Child.name_t()
+           | [Child.name_t()]}
 
   @typedoc """
   Starts a timer that will invoke `c:Membrane.Bin.handle_tick/3` callback
@@ -53,8 +54,8 @@ defmodule Membrane.Bin.Action do
   """
   @type start_timer_t ::
           {:start_timer,
-           {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval}
-           | {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval,
+           {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval}
+           | {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval,
               clock :: Membrane.Clock.t()}}
 
   @typedoc """
@@ -73,7 +74,7 @@ defmodule Membrane.Bin.Action do
   """
   @type timer_interval_t ::
           {:timer_interval,
-           {timer_id :: any, interval :: Ratio.t() | non_neg_integer | :no_interval}}
+           {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval}}
 
   @typedoc """
   Stops a timer started with `t:start_timer_t/0` action.
@@ -81,6 +82,22 @@ defmodule Membrane.Bin.Action do
   This action is atomic: stopping timer guarantees that no ticks will arrive from it.
   """
   @type stop_timer_t :: {:stop_timer, timer_id :: any}
+
+  @typedoc """
+  Terminates bin with given reason.
+
+  Termination reason follows the OTP semantics:
+  - Use `:normal` for graceful termination. Allowed only when the parent already requested termination,
+  i.e. after `c:Membrane.Bin.handle_terminate_request/2` is called. If the bin has no children, it
+  terminates immediately. Otherwise, it switches to the zombie mode, requests all the children to terminate,
+  waits for them to terminate and then terminates itself. In the zombie mode, no bin callbacks
+  are called and all messages and calls to the bin are ignored (apart from Membrane internal
+  messages)
+  - If the reason is other than `:normal`, the bin terminates immediately. The bin supervisor
+  terminates all the children with the reason `:shutdown`
+  - If the reason is neither `:normal`, `:shutdown` nor `{:shutdown, term}`, an error is logged
+  """
+  @type terminate_t :: {:terminate, reason :: :normal | :shutdown | {:shutdown, term} | term}
 
   @typedoc """
   Type describing actions that can be returned from bin callbacks.
@@ -96,4 +113,5 @@ defmodule Membrane.Bin.Action do
           | start_timer_t
           | timer_interval_t
           | stop_timer_t
+          | terminate_t
 end

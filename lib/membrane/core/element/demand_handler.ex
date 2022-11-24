@@ -8,11 +8,11 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   alias Membrane.Core.Element.{
     BufferController,
-    CapsController,
     DemandController,
     EventController,
     InputQueue,
     State,
+    StreamFormatController,
     Toilet
   }
 
@@ -80,7 +80,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
     pad_data = state |> PadModel.get_data!(pad_ref)
 
-    {{_buffer_status, data}, new_input_queue} =
+    {{_queue_status, data}, new_input_queue} =
       InputQueue.take_and_demand(
         pad_data.input_queue,
         pad_data.demand,
@@ -109,16 +109,24 @@ defmodule Membrane.Core.Element.DemandHandler do
     PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
   end
 
-  def handle_outgoing_buffers(pad_ref, %{mode: :push, toilet: toilet} = data, buffers, state)
+  def handle_outgoing_buffers(
+        pad_ref,
+        %{
+          mode: :push,
+          toilet: toilet
+        } = data,
+        buffers,
+        state
+      )
       when toilet != nil do
     %{other_demand_unit: other_demand_unit} = data
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
 
     case Toilet.fill(toilet, buf_size) do
-      :ok ->
-        state
+      {:ok, toilet} ->
+        PadModel.set_data!(state, pad_ref, :toilet, toilet)
 
-      :overflow ->
+      {:overflow, _toilet} ->
         # if the toilet has overflowed, we remove it so it didn't overflow again
         # and let the parent handle that situation by unlinking this output pad or crashing
         PadModel.set_data!(state, pad_ref, :toilet, nil)
@@ -187,8 +195,8 @@ defmodule Membrane.Core.Element.DemandHandler do
   defp do_handle_input_queue_output(pad_ref, {:event, e}, state),
     do: EventController.exec_handle_event(pad_ref, e, state)
 
-  defp do_handle_input_queue_output(pad_ref, {:caps, c}, state),
-    do: CapsController.exec_handle_caps(pad_ref, c, state)
+  defp do_handle_input_queue_output(pad_ref, {:stream_format, c}, state),
+    do: StreamFormatController.exec_handle_stream_format(pad_ref, c, state)
 
   defp do_handle_input_queue_output(
          pad_ref,

@@ -2,6 +2,10 @@ defmodule Membrane.PipelineError do
   defexception [:message]
 end
 
+defmodule Membrane.BinError do
+  defexception [:message]
+end
+
 defmodule Membrane.ParentError do
   defexception [:message]
 
@@ -45,7 +49,7 @@ defmodule Membrane.CallbackError do
   end
 
   defp mk_exception(:bad_return, {module, fun}, opts) do
-    val = Keyword.fetch!(opts, :val)
+    val = Keyword.fetch!(opts, :value)
 
     msg = """
     Invalid value returned from #{inspect(module)}.#{inspect(fun)}:
@@ -55,19 +59,11 @@ defmodule Membrane.CallbackError do
     %__MODULE__{message: msg}
   end
 
-  defp mk_exception(:error, {module, fun}, opts) do
-    reason = Keyword.fetch!(opts, :reason)
-
-    state =
-      case Keyword.fetch(opts, :state) do
-        {:ok, state} -> "Internal state: #{inspect(state, pretty: true)}"
-        :error -> ""
-      end
+  defp mk_exception(:not_implemented, {module, fun}, opts) do
+    arity = Keyword.fetch!(opts, :arity)
 
     msg = """
-    Error returned from #{inspect(module)}.#{fun}:
-    #{inspect(reason, pretty: true)}
-    #{state}
+    Callback #{fun}/#{arity} is not implemented in #{inspect(module)}
     """
 
     %__MODULE__{message: msg}
@@ -94,8 +90,8 @@ defmodule Membrane.ActionError do
     "This action cannot be returned from the #{callback} callback."
   end
 
-  defp format_reason({:invalid_playback_state, playback_state}) do
-    "Cannot invoke this action in #{playback_state} state."
+  defp format_reason({:invalid_component_playback, playback}) do
+    "Cannot invoke this action while component playback is #{playback}."
   end
 
   defp format_reason(:actions_after_redemand) do
@@ -105,7 +101,7 @@ defmodule Membrane.ActionError do
   defp format_reason({:unknown_action, doc_module}) do
     """
     We looked everywhere, but couldn't find out what this action is supposed to do.
-    Make sure it's correct and valid for the component, callback, playback state or
+    Make sure it's correct and valid for the component, its playback, callback or
     other possible circumstances. See the docs for #{inspect(doc_module)} to check
     which actions are supported and when you can return them.
     """
@@ -117,6 +113,10 @@ defmodule Membrane.LinkError do
 end
 
 defmodule Membrane.ElementError do
+  defexception [:message]
+end
+
+defmodule Membrane.StreamFormatError do
   defexception [:message]
 end
 

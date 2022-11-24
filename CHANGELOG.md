@@ -6,12 +6,18 @@
  * Add `handle_call/3` callback in the pipeline, as well as a `:reply` and `:reply_to` actions. Rename `handle_other/3` callback into `handle_info/3` [#334](https://github.com/membraneframework/membrane_core/issues/334)
  * Add `Membrane.FilterAggregator` that allows to run multiple filters sequentially within one process. [#355](https://github.com/membraneframework/membrane_core/pull/355)
  * Log info about element's playback state change as debug, not as debug_verbose. [#430](https://github.com/membraneframework/membrane_core/pull/430)
- * Rename `Membrane.Time.to_<unit name>/1` into `Membrane.Time.round_to_<unit name>/1` to indicate that the result will be rounded. Make `Membrane.Time.<plural unit name>/1` accept `%Ratio{}` as an argument.
+ * Rename `Membrane.Time.to_<unit name>/1` into `Membrane.Time.round_to_<unit name>/1` to indicate that the result will be rounded. Make `Membrane.Time.<plural unit name>/1` accept `%Ratio{}` as an argument. Add `Membrane.Time.round_to_timebase/2` function.
+ * New `spec` action syntax - the structure of pipeline is now defined with the use of `Membrane.ChildrenSpec`
+ * Rename `:caps` to `:stream_format`.
+ * Use Elixir patterns as `:accepted_format` in pad definition.
+ * Delete `:ok` from tuples returned from callbacks 
+ * Remove `:type` from specs passed to `def_options/1` macro in bins and elements.  
+ * Add `Membrane.Testing.MockResourceGuard`
 
 ## 0.10.0
  * Remove all deprecated stuff [#399](https://github.com/membraneframework/membrane_core/pull/399)
  * Make `Membrane.Pipeline.{prepare, play, stop}` deprecated and add `:playback` action instead
- * Make `Membrane.Pipeline.stop_and_terminate/2` deprecated and add `Membrane.Pipeline.terminate/2` instead
+ * Make `Membrane.Pipeline.stop_and_terminate` deprecated and add `Membrane.Pipeline.terminate/2` instead
  * Add `Membrane.RemoteControlled.Pipeline` - a basic implementation of a `Membrane.Pipeline` that </br>
    can be spawned and controlled by an external process [#366](https://github.com/membraneframework/membrane_core/pull/366)
  * Disallow sending buffers without sending caps first [#341](https://github.com/membraneframework/membrane_core/issues/341)

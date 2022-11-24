@@ -21,7 +21,6 @@ defmodule Membrane.ChildEntry do
           pid: pid,
           clock: Membrane.Clock.t(),
           sync: Membrane.Sync.t(),
-          playback_sync: :not_synced | :syncing | :synced,
           terminating?: boolean()
         }
 
@@ -34,7 +33,8 @@ defmodule Membrane.ChildEntry do
     :clock,
     :sync,
     :spec_ref,
-    playback_sync: :not_synced,
+    initialized?: false,
+    ready?: false,
     terminating?: false
   ]
 end

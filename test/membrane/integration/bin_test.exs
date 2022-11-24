@@ -2,6 +2,7 @@ defmodule Membrane.Core.BinTest do
   use ExUnit.Case, async: true
 
   import Membrane.Testing.Assertions
+  import Membrane.ChildrenSpec
 
   alias Membrane.Core.Bin
   alias Membrane.Core.Message
@@ -15,73 +16,67 @@ defmodule Membrane.Core.BinTest do
     test "in simple, flat use case" do
       buffers = ['a', 'b', 'c']
 
-      children = [
-        source: %Testing.Source{output: buffers},
-        test_bin: %TestBins.SimpleBin{
+      links = [
+        child(:source, %Testing.Source{output: buffers})
+        |> child(:test_bin, %TestBins.SimpleBin{
           filter1: TestFilter,
           filter2: TestFilter
-        },
-        sink: Testing.Sink
+        })
+        |> child(:sink, Testing.Sink)
       ]
 
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
 
       assert_data_flows_through(pipeline, buffers)
-      stop_pipeline(pipeline)
     end
 
     test "when bin is next to a bin" do
       buffers = ['a', 'b', 'c']
 
-      children = [
-        source: %Testing.Source{output: buffers},
-        test_bin1: %TestBins.SimpleBin{
+      links = [
+        child(:source, %Testing.Source{output: buffers})
+        |> child(:test_bin1, %TestBins.SimpleBin{
           filter1: TestFilter,
           filter2: TestFilter
-        },
-        test_bin2: %TestBins.SimpleBin{
+        })
+        |> child(:test_bin2, %TestBins.SimpleBin{
           filter1: TestFilter,
           filter2: TestFilter
-        },
-        sink: Testing.Sink
+        })
+        |> child(:sink, Testing.Sink)
       ]
 
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
 
       assert_data_flows_through(pipeline, buffers)
-      stop_pipeline(pipeline)
     end
 
     test "when bins are nested" do
       buffers = ['a', 'b', 'c']
 
-      children = [
-        source: %Testing.Source{output: buffers},
-        test_bin: %TestBins.SimpleBin{
+      links = [
+        child(:source, %Testing.Source{output: buffers})
+        |> child(:test_bin, %TestBins.SimpleBin{
           filter1: TestFilter,
           filter2: %TestBins.SimpleBin{
             filter1: TestFilter,
             filter2: TestFilter
           }
-        },
-        sink: Testing.Sink
+        })
+        |> child(:sink, Testing.Sink)
       ]
 
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
 
       assert_data_flows_through(pipeline, buffers)
-      stop_pipeline(pipeline)
     end
 
     test "when there are consecutive bins that are nested" do
       buffers = ['a', 'b', 'c']
 
-      children = [
-        source: %Testing.Source{output: buffers},
-        test_bin: %TestBins.SimpleBin{
+      links = [
+        child(:source, %Testing.Source{output: buffers})
+        |> child(:test_bin, %TestBins.SimpleBin{
           filter1: %TestBins.SimpleBin{
             filter1: TestFilter,
             filter2: TestFilter
@@ -90,54 +85,50 @@ defmodule Membrane.Core.BinTest do
             filter1: TestFilter,
             filter2: TestFilter
           }
-        },
-        sink: Testing.Sink
+        })
+        |> child(:sink, Testing.Sink)
       ]
 
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
 
       assert_data_flows_through(pipeline, buffers)
-      stop_pipeline(pipeline)
     end
 
     test "when pipeline has only one element being a padless bin" do
       buffers = ['a', 'b', 'c']
 
       children = [
-        test_bin: %TestBins.TestPadlessBin{
+        child(:test_bin, %TestBins.TestPadlessBin{
           source: %Testing.Source{output: buffers},
           sink: Testing.Sink
-        }
+        })
       ]
 
-      {:ok, pipeline} = Testing.Pipeline.start_link(children: children)
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: children)
 
-      assert_playing(pipeline)
+      assert_pipeline_play(pipeline)
 
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_start_of_stream, :sink, _})
 
       assert_buffers_flow_through(pipeline, buffers, :test_bin)
 
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, :sink, _})
-      stop_pipeline(pipeline)
     end
 
     test "when bin is a sink bin" do
       buffers = ['a', 'b', 'c']
 
-      children = [
-        source: %Testing.Source{output: buffers},
-        test_bin: %TestBins.TestSinkBin{
+      links = [
+        child(:source, %Testing.Source{output: buffers})
+        |> child(:test_bin, %TestBins.TestSinkBin{
           filter: TestFilter,
           sink: Testing.Sink
-        }
+        })
       ]
 
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
 
-      assert_playing(pipeline)
+      assert_pipeline_play(pipeline)
 
       assert_pipeline_notified(
         pipeline,
@@ -151,28 +142,14 @@ defmodule Membrane.Core.BinTest do
 
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, :filter, _})
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_end_of_stream, :sink, _})
-      stop_pipeline(pipeline)
     end
   end
 
   describe "Handling DOWN messages" do
-    test "should shutdown when parent is down" do
-      pipeline_mock = spawn(fn -> receive do: (:exit -> :ok) end)
-
-      {:ok, bin_pid} =
-        pipeline_mock
-        |> bin_init_options
-        |> Bin.start()
-
-      ref = Process.monitor(bin_pid)
-      send(pipeline_mock, :exit)
-      assert_receive {:DOWN, ^ref, :process, ^bin_pid, {:shutdown, :parent_crash}}
-    end
-
-    test "DOWN message should be delivered to handle_info if it's not coming from parent" do
+    test "DOWN message should be delivered to handle_info" do
       {:ok, bin_pid} =
         self()
-        |> bin_init_options
+        |> bin_init_options()
         |> Bin.start()
 
       monitored_proc = spawn(fn -> receive do: (:exit -> :ok) end)
@@ -191,15 +168,14 @@ defmodule Membrane.Core.BinTest do
   end
 
   describe "Dynamic pads" do
-    @tag :target
     test "handle_pad_added is called for dynamic pads" do
       alias Membrane.Pad
       require Pad
       buffers = ['a', 'b', 'c']
 
-      children = [
-        source: %Testing.Source{output: buffers},
-        test_bin: %TestBins.TestDynamicPadBin{
+      links = [
+        child(:source, %Testing.Source{output: buffers})
+        |> child(:test_bin, %TestBins.TestDynamicPadBin{
           filter1: %TestBins.TestDynamicPadBin{
             filter1: TestDynamicPadFilter,
             filter2: TestDynamicPadFilter
@@ -208,12 +184,11 @@ defmodule Membrane.Core.BinTest do
             filter1: TestDynamicPadFilter,
             filter2: TestDynamicPadFilter
           }
-        },
-        sink: Testing.Sink
+        })
+        |> child(:sink, Testing.Sink)
       ]
 
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
 
       Process.sleep(2000)
       assert_data_flows_through(pipeline, buffers)
@@ -221,7 +196,6 @@ defmodule Membrane.Core.BinTest do
       assert_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, Pad.ref(:output, _)})
 
       refute_pipeline_notified(pipeline, :test_bin, {:handle_pad_added, _})
-      stop_pipeline(pipeline)
     end
   end
 
@@ -229,7 +203,7 @@ defmodule Membrane.Core.BinTest do
     defmodule ClockElement do
       use Membrane.Source
 
-      def_output_pad :output, caps: :any
+      def_output_pad :output, accepted_format: _any
 
       def_clock()
     end
@@ -240,15 +214,15 @@ defmodule Membrane.Core.BinTest do
       def_clock()
 
       @impl true
-      def handle_init(_options) do
-        children = [element_child: ClockElement]
+      def handle_init(_ctx, _options) do
+        children = [child(:element_child, ClockElement)]
 
-        spec = %Membrane.ParentSpec{
-          children: children,
+        spec = {
+          children,
           clock_provider: :element_child
         }
 
-        {{:ok, spec: spec}, :ignored}
+        {[spec: spec], :ignored}
       end
     end
 
@@ -256,16 +230,15 @@ defmodule Membrane.Core.BinTest do
       use Membrane.Pipeline
 
       @impl true
-      def handle_init(_options) do
-        children = [bin_child: ClockBin]
+      def handle_init(_ctx, _options) do
+        children = [child(:bin_child, ClockBin)]
 
-        {{:ok, spec: %Membrane.ParentSpec{children: children, clock_provider: :bin_child}},
-         :ignored}
+        {[spec: {children, clock_provider: :bin_child}], :ignored}
       end
     end
 
     test "Bin is clock_provider" do
-      {:ok, pid} = ClockPipeline.start_link()
+      {:ok, _supervisor, pid} = ClockPipeline.start_link()
 
       %Membrane.Core.Pipeline.State{synchronization: %{clock_provider: pipeline_clock_provider}} =
         state = :sys.get_state(pid)
@@ -288,19 +261,17 @@ defmodule Membrane.Core.BinTest do
     test "handle_parent_notification/3 works for Bin" do
       buffers = ['a', 'b', 'c']
 
-      children = [
-        source: %Testing.Source{output: buffers},
-        test_bin: TestBins.NotifyingParentBin,
-        sink: Testing.Sink
+      links = [
+        child(:source, %Testing.Source{output: buffers})
+        |> child(:test_bin, TestBins.NotifyingParentBin)
+        |> child(:sink, Testing.Sink)
       ]
 
-      {:ok, pipeline} =
-        Testing.Pipeline.start_link(links: Membrane.ParentSpec.link_linear(children))
+      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
 
       Testing.Pipeline.execute_actions(pipeline, notify_child: {:test_bin, "Some notification"})
       assert_pipeline_notified(pipeline, :test_bin, msg)
       assert msg == {"filter1", "Some notification"}
-      Testing.Pipeline.terminate(pipeline, blocking?: true)
     end
 
     defp proxy_for?(c1, c2) do
@@ -310,14 +281,13 @@ defmodule Membrane.Core.BinTest do
   end
 
   defp assert_data_flows_through(pipeline, buffers, receiving_element \\ :sink) do
-    assert_playing(pipeline)
+    assert_pipeline_play(pipeline)
 
     assert_start_of_stream(pipeline, ^receiving_element)
 
     assert_buffers_flow_through(pipeline, buffers, receiving_element)
 
     assert_end_of_stream(pipeline, ^receiving_element)
-    Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 
   defp assert_buffers_flow_through(pipeline, buffers, receiving_element) do
@@ -327,11 +297,6 @@ defmodule Membrane.Core.BinTest do
     end)
   end
 
-  defp assert_playing(pipeline) do
-    assert_pipeline_playback_changed(pipeline, :stopped, :prepared)
-    assert_pipeline_playback_changed(pipeline, :prepared, :playing)
-  end
-
   defp bin_init_options(pipeline) do
     %{
       name: :name,
@@ -339,15 +304,14 @@ defmodule Membrane.Core.BinTest do
       node: nil,
       parent: pipeline,
       parent_clock: nil,
+      parent_path: [],
       log_metadata: [],
       user_options: %{
         filter1: TestFilter,
         filter2: TestFilter
-      }
+      },
+      subprocess_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
+      parent_supervisor: Membrane.Core.SubprocessSupervisor.start_link!()
     }
-  end
-
-  defp stop_pipeline(pipeline) do
-    Membrane.Pipeline.terminate(pipeline, blocking?: true)
   end
 end

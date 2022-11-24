@@ -27,16 +27,15 @@ defmodule Membrane.FilterAggregator do
               ]
 
   def_input_pad :input,
-    caps: :any,
-    demand_mode: :auto,
-    demand_unit: :buffers
+    accepted_format: _any,
+    demand_mode: :auto
 
   def_output_pad :output,
     demand_mode: :auto,
-    caps: :any
+    accepted_format: _any
 
   @impl true
-  def handle_init(%__MODULE__{filters: filter_specs}) do
+  def handle_init(agg_ctx, %__MODULE__{filters: filter_specs}) do
     if filter_specs == [] do
       Membrane.Logger.warn("No filters provided, #{inspect(__MODULE__)} will be a no-op")
     end
@@ -71,17 +70,24 @@ defmodule Membrane.FilterAggregator do
           raise ArgumentError, "Invalid filter spec: `#{inspect(invalid_spec)}`"
       end)
       |> Enum.map(fn {name, module, options} ->
-        context = Context.build_context!(name, module)
-        {:ok, state} = module.handle_init(options)
+        context = Context.build_context!(name, module, agg_ctx)
+        {[], state} = module.handle_init(context, options)
         {name, module, context, state}
       end)
 
-    {:ok, %{states: states}}
+    {[], %{states: states}}
   end
 
   @impl true
-  def handle_stopped_to_prepared(agg_ctx, %{states: states}) do
-    contexts = states |> Enum.map(&elem(&1, 2))
+  def handle_setup(_ctx, %{states: states}) do
+    {actions, states} = pipe_downstream([InternalAction.setup()], states)
+    actions = reject_internal_actions(actions)
+    {actions, %{states: states}}
+  end
+
+  @impl true
+  def handle_playing(agg_ctx, %{states: states}) do
+    contexts = states |> Enum.map(fn {_name, _module, context, _state} -> context end)
     prev_contexts = contexts |> List.insert_at(-1, agg_ctx)
     next_contexts = [agg_ctx | contexts]
 
@@ -92,30 +98,9 @@ defmodule Membrane.FilterAggregator do
         {name, module, context, state}
       end)
 
-    {actions, states} = pipe_downstream([InternalAction.stopped_to_prepared()], states)
+    {actions, states} = pipe_downstream([InternalAction.playing()], states)
     actions = reject_internal_actions(actions)
-    {{:ok, actions}, %{states: states}}
-  end
-
-  @impl true
-  def handle_prepared_to_playing(_ctx, %{states: states}) do
-    {actions, states} = pipe_downstream([InternalAction.prepared_to_playing()], states)
-    actions = reject_internal_actions(actions)
-    {{:ok, actions}, %{states: states}}
-  end
-
-  @impl true
-  def handle_playing_to_prepared(_ctx, %{states: states}) do
-    {actions, states} = pipe_downstream([InternalAction.playing_to_prepared()], states)
-    actions = reject_internal_actions(actions)
-    {{:ok, actions}, %{states: states}}
-  end
-
-  @impl true
-  def handle_prepared_to_stopped(_ctx, %{states: states}) do
-    {actions, states} = pipe_downstream([InternalAction.prepared_to_stopped()], states)
-    actions = reject_internal_actions(actions)
-    {{:ok, actions}, %{states: states}}
+    {actions, %{states: states}}
   end
 
   @impl true
@@ -123,7 +108,7 @@ defmodule Membrane.FilterAggregator do
     {actions, states} = pipe_downstream([InternalAction.start_of_stream(:output)], states)
     actions = reject_internal_actions(actions)
 
-    {{:ok, actions}, %{states: states}}
+    {actions, %{states: states}}
   end
 
   @impl true
@@ -131,7 +116,7 @@ defmodule Membrane.FilterAggregator do
     {actions, states} = pipe_downstream([end_of_stream: :output], states)
     actions = reject_internal_actions(actions)
 
-    {{:ok, actions}, %{states: states}}
+    {actions, %{states: states}}
   end
 
   @impl true
@@ -139,14 +124,14 @@ defmodule Membrane.FilterAggregator do
     {actions, states} = pipe_downstream([event: {:output, event}], states)
     actions = reject_internal_actions(actions)
 
-    {{:ok, actions}, %{states: states}}
+    {actions, %{states: states}}
   end
 
   @impl true
-  def handle_caps(:input, caps, _ctx, %{states: states}) do
-    {actions, states} = pipe_downstream([caps: {:output, caps}], states)
+  def handle_stream_format(:input, stream_format, _ctx, %{states: states}) do
+    {actions, states} = pipe_downstream([stream_format: {:output, stream_format}], states)
     actions = reject_internal_actions(actions)
-    {{:ok, actions}, %{states: states}}
+    {actions, %{states: states}}
   end
 
   @impl true
@@ -154,7 +139,7 @@ defmodule Membrane.FilterAggregator do
     {actions, states} = pipe_downstream([buffer: {:output, buffers}], states)
     actions = reject_internal_actions(actions)
 
-    {{:ok, actions}, %{states: states}}
+    {actions, %{states: states}}
   end
 
   # Takes actions received from the upstream elements (closer to source) and performs them on elements from first to last,
@@ -182,7 +167,7 @@ defmodule Membrane.FilterAggregator do
 
     case result do
       # Perform split actions within the same element
-      {{:ok, [{:split, _action} | _tail] = next_actions}, next_state} ->
+      {[{:split, _action} | _tail] = next_actions, next_state} ->
         perform_actions(
           next_actions ++ actions,
           module,
@@ -191,7 +176,7 @@ defmodule Membrane.FilterAggregator do
           next_actions_acc
         )
 
-      {{:ok, next_actions}, next_state} when is_list(next_actions) ->
+      {next_actions, next_state} when is_list(next_actions) ->
         next_actions = transform_out_actions(next_actions)
         next_context = Context.after_out_actions(context, next_actions)
 
@@ -199,7 +184,7 @@ defmodule Membrane.FilterAggregator do
           next_actions | next_actions_acc
         ])
 
-      {:ok, next_state} ->
+      {[], next_state} ->
         perform_actions(actions, module, context, next_state, next_actions_acc)
 
       term ->
@@ -208,49 +193,40 @@ defmodule Membrane.FilterAggregator do
   end
 
   defp perform_action({:buffer, {:output, []}}, _module, _context, state) do
-    {:ok, state}
+    {[], state}
   end
 
   defp perform_action({:buffer, {:output, buffer}}, module, context, state) do
     cb_context = struct!(CallbackContext.Process, context)
-
     module.handle_process_list(:input, List.wrap(buffer), cb_context, state)
-    |> normalize_cb_return(module, :handle_process_list)
   end
 
-  defp perform_action({:caps, {:output, caps}}, module, context, state) do
+  defp perform_action({:stream_format, {:output, stream_format}}, module, context, state) do
     cb_context =
       context
-      |> Map.put(:old_caps, context.pads.input.caps)
-      |> then(&struct!(CallbackContext.Caps, &1))
+      |> Map.put(:old_stream_format, context.pads.input.stream_format)
+      |> then(&struct!(CallbackContext.StreamFormat, &1))
 
-    module.handle_caps(:input, caps, cb_context, state)
-    |> normalize_cb_return(module, :handle_caps)
+    module.handle_stream_format(:input, stream_format, cb_context, state)
   end
 
   defp perform_action({:event, {:output, event}}, module, context, state) do
     cb_context = struct!(CallbackContext.Event, context)
-
     module.handle_event(:input, event, cb_context, state)
-    |> normalize_cb_return(module, :handle_event)
   end
 
   # Internal, FilterAggregator action used to trigger handle_start_of_stream
   defp perform_action(InternalAction.start_of_stream(:output), module, context, state) do
     cb_context = struct!(CallbackContext.StreamManagement, context)
 
-    {{:ok, actions}, new_state} =
-      module.handle_start_of_stream(:input, cb_context, state)
-      |> normalize_cb_return(module, :handle_start_of_stream)
+    {actions, new_state} = module.handle_start_of_stream(:input, cb_context, state)
 
-    {{:ok, [InternalAction.start_of_stream(:output) | actions]}, new_state}
+    {[InternalAction.start_of_stream(:output) | actions], new_state}
   end
 
   defp perform_action({:end_of_stream, :output}, module, context, state) do
     cb_context = struct!(CallbackContext.StreamManagement, context)
-
     module.handle_end_of_stream(:input, cb_context, state)
-    |> normalize_cb_return(module, :handle_end_of_stream)
   end
 
   defp perform_action({:demand, {:input, _size}}, _module, _context, _state) do
@@ -263,16 +239,16 @@ defmodule Membrane.FilterAggregator do
 
   defp perform_action({:notify, message}, _module, _context, state) do
     # Pass the action downstream
-    {{:ok, notify: message}, state}
+    {[notify: message], state}
   end
 
   # Internal action used to manipulate context after performing an action
   defp perform_action(InternalAction.merge_context(_ctx_data), _module, _context, state) do
-    {:ok, state}
+    {[], state}
   end
 
   defp perform_action({:split, {:handle_process, []}}, _module, _context, state) do
-    {:ok, state}
+    {[], state}
   end
 
   defp perform_action({:split, {:handle_process, args_lists}}, module, context, state) do
@@ -282,73 +258,30 @@ defmodule Membrane.FilterAggregator do
         acc_context = Context.before_incoming_action(acc_context, {:buffer, {:output, buffer}})
         cb_context = struct!(CallbackContext.Process, acc_context)
 
-        {{:ok, actions}, state} =
-          module.handle_process(:input, buffer, cb_context, acc_state)
-          |> normalize_cb_return(module, :handle_process)
+        {actions, state} = module.handle_process(:input, buffer, cb_context, acc_state)
 
         acc_context = Context.after_incoming_action(acc_context, {:buffer, {:output, buffer}})
 
         {actions, {acc_context, state}}
       end)
 
-    {{:ok, actions ++ [InternalAction.merge_context(context)]}, state}
+    {actions ++ [InternalAction.merge_context(context)], state}
   end
 
-  # Internal, FilterAggregator actions used to trigger playback state change with a proper callback
-  defp perform_action(action, module, context, state)
-       when action in [
-              InternalAction.stopped_to_prepared(),
-              InternalAction.prepared_to_playing(),
-              InternalAction.playing_to_prepared(),
-              InternalAction.prepared_to_stopped()
-            ] do
-    perform_playback_change(action, module, context, state)
+  defp perform_action(InternalAction.setup(), module, context, state) do
+    cb_context = struct!(CallbackContext.Setup, context)
+    {actions, state} = module.handle_setup(cb_context, state)
+    {actions ++ [InternalAction.setup()], state}
+  end
+
+  defp perform_action(InternalAction.playing(), module, context, state) do
+    cb_context = struct!(CallbackContext.Playing, context)
+    {actions, state} = module.handle_playing(cb_context, state)
+    {actions ++ [InternalAction.playing()], state}
   end
 
   defp perform_action({:latency, _latency}, _module, _context, _state) do
     raise "latency action not supported in #{inspect(__MODULE__)}"
-  end
-
-  defp perform_playback_change(pseudo_action, module, context, state) do
-    callback =
-      case pseudo_action do
-        InternalAction.stopped_to_prepared() -> :handle_stopped_to_prepared
-        InternalAction.prepared_to_playing() -> :handle_prepared_to_playing
-        InternalAction.playing_to_prepared() -> :handle_playing_to_prepared
-        InternalAction.prepared_to_stopped() -> :handle_prepared_to_stopped
-      end
-
-    cb_context = struct!(CallbackContext.PlaybackChange, context)
-
-    {{:ok, actions}, new_state} =
-      apply(module, callback, [cb_context, state])
-      |> normalize_cb_return(module, callback)
-
-    {{:ok, actions ++ [pseudo_action]}, new_state}
-  end
-
-  defp normalize_cb_return({:ok, state}, _module, _callback) do
-    {{:ok, []}, state}
-  end
-
-  defp normalize_cb_return({{:ok, actions}, _state} = result, _module, _callback)
-       when is_list(actions) do
-    result
-  end
-
-  defp normalize_cb_return({{:error, reason}, state}, module, callback) do
-    raise Membrane.CallbackError,
-      kind: :error,
-      callback: {module, callback},
-      reason: reason,
-      state: state
-  end
-
-  defp normalize_cb_return(other, module, callback) do
-    raise Membrane.CallbackError,
-      kind: :bad_return,
-      callback: {module, callback},
-      val: other
   end
 
   defp reject_internal_actions(actions) do
@@ -379,6 +312,6 @@ defmodule Membrane.FilterAggregator do
   defp resolve_forward_action(%_struct{} = data) do
     if Membrane.Event.event?(data),
       do: {:event, {:output, data}},
-      else: {:caps, {:output, data}}
+      else: {:stream_format, {:output, data}}
   end
 end

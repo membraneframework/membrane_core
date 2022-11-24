@@ -3,8 +3,8 @@ defmodule Membrane.Core.Pipeline do
   use GenServer
 
   alias __MODULE__.{ActionHandler, State}
-  alias Membrane.Clock
-  alias Membrane.Core.CallbackHandler
+  alias Membrane.{Clock, ResourceGuard}
+  alias Membrane.Core.{CallbackHandler, SubprocessSupervisor}
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
   alias Membrane.Core.TimerController
   alias Membrane.Pipeline.CallbackContext
@@ -16,48 +16,50 @@ defmodule Membrane.Core.Pipeline do
   require Membrane.Pipeline.CallbackContext.Call
 
   @impl GenServer
-  def init({module, pipeline_options}) do
-    pipeline_name = "pipeline@#{:erlang.pid_to_list(self())}"
-    :ok = Membrane.ComponentPath.set([pipeline_name])
-    :ok = Membrane.Logger.set_prefix(pipeline_name)
+  def init(params) do
+    observability_config = %{name: params.name, component_type: :pipeline, pid: self()}
+    Membrane.Core.Observability.setup(observability_config)
+    SubprocessSupervisor.set_parent_component(params.subprocess_supervisor, observability_config)
+
+    {:ok, resource_guard} =
+      SubprocessSupervisor.start_utility(params.subprocess_supervisor, {ResourceGuard, self()})
 
     Telemetry.report_init(:pipeline)
+
+    ResourceGuard.register(resource_guard, fn ->
+      Telemetry.report_terminate(:pipeline)
+    end)
 
     {:ok, clock} = Clock.start_link(proxy: true)
 
     state = %State{
-      module: module,
+      module: params.module,
       synchronization: %{
         clock_proxy: clock,
         clock_provider: %{clock: nil, provider: nil, choice: :auto},
         timers: %{}
-      }
+      },
+      subprocess_supervisor: params.subprocess_supervisor,
+      resource_guard: resource_guard
     }
+
+    require CallbackContext.Init
 
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_init,
         ActionHandler,
-        %{state: false},
-        [pipeline_options],
-        state
+        %{context: &CallbackContext.Init.from_state/1},
+        [],
+        %{state | internal_state: params.options}
       )
 
-    {:ok, state}
+    {:ok, state, {:continue, :setup}}
   end
 
   @impl GenServer
-  def handle_info(
-        Message.new(:playback_state_changed, [pid, new_playback_state]),
-        state
-      ) do
-    state = ChildLifeController.child_playback_changed(pid, new_playback_state, state)
-    {:noreply, state}
-  end
-
-  @impl GenServer
-  def handle_info(Message.new(:change_playback_state, new_state), state) do
-    state = LifecycleController.change_playback_state(new_state, state)
+  def handle_continue(:setup, state) do
+    state = LifecycleController.handle_setup(state)
     {:noreply, state}
   end
 
@@ -82,15 +84,36 @@ defmodule Membrane.Core.Pipeline do
   end
 
   @impl GenServer
-  def handle_info(Message.new(:link_response, link_id), state) do
-    state = ChildLifeController.LinkHandler.handle_link_response(link_id, state)
+  def handle_info(Message.new(:link_response, [link_id, direction]), state) do
+    state = ChildLifeController.handle_link_response(link_id, direction, state)
     {:noreply, state}
   end
 
   @impl GenServer
-  def handle_info(Message.new(:spec_linking_timeout, spec_ref), state) do
-    state = ChildLifeController.LinkHandler.handle_spec_timeout(spec_ref, state)
+  def handle_info(Message.new(:initialized, child), state) do
+    state = ChildLifeController.handle_child_initialized(child, state)
     {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:child_death, [name, reason]), state) do
+    {result, state} = ChildLifeController.handle_child_death(name, reason, state)
+
+    case result do
+      :stop -> {:stop, :normal, state}
+      :continue -> {:noreply, state}
+    end
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(:terminate), state) do
+    state = LifecycleController.handle_terminate_request(state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info(Message.new(_type, _args, _opts) = message, _state) do
+    raise Membrane.PipelineError, "Received invalid message #{inspect(message)}"
   end
 
   @impl GenServer
@@ -100,26 +123,9 @@ defmodule Membrane.Core.Pipeline do
   end
 
   @impl GenServer
-  def handle_info({:DOWN, _ref, :process, pid, reason} = message, state) do
-    if is_child_pid?(pid, state) do
-      state = ChildLifeController.handle_child_death(pid, reason, state)
-      {:noreply, state}
-    else
-      state = LifecycleController.handle_info(message, state)
-      {:noreply, state}
-    end
-  end
-
-  @impl GenServer
   def handle_info(message, state) do
     state = LifecycleController.handle_info(message, state)
     {:noreply, state}
-  end
-
-  @impl GenServer
-  def terminate(reason, state) do
-    Telemetry.report_terminate(:pipeline)
-    :ok = state.module.handle_shutdown(reason, state.internal_state)
   end
 
   @impl GenServer
@@ -135,9 +141,5 @@ defmodule Membrane.Core.Pipeline do
     )
 
     {:noreply, state}
-  end
-
-  defp is_child_pid?(pid, state) do
-    Enum.any?(state.children, fn {_name, entry} -> entry.pid == pid end)
   end
 end

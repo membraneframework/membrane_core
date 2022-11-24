@@ -20,10 +20,7 @@ defmodule Membrane.Core.CallbackHandler do
   @type internal_state_t :: any
 
   @type callback_return_t(action, internal_state) ::
-          {:ok, internal_state}
-          | {{:ok, [action]}, internal_state}
-          | {{:error, any}, internal_state}
-          | {:error, any}
+          {[action], internal_state}
 
   @type callback_return_t :: callback_return_t(any, any)
 
@@ -122,36 +119,44 @@ defmodule Membrane.Core.CallbackHandler do
 
   @spec exec_callback(callback :: atom, args :: list, handler_params_t, state_t) ::
           {list, internal_state_t}
-  defp exec_callback(:handle_init, args, _handler_params, %{module: module}) do
-    module
-    |> apply(:handle_init, args)
-    |> parse_callback_result(module, :handle_init)
-  end
-
   defp exec_callback(
          callback,
          args,
-         %{context: context_fun},
+         handler_params,
          %{module: module, internal_state: internal_state} = state
        ) do
-    args = args ++ [context_fun.(state), internal_state]
+    maybe_context =
+      case handler_params do
+        %{context: context_fun} -> [context_fun.(state)]
+        _params -> []
+      end
 
-    module
-    |> apply(callback, args)
-    |> parse_callback_result(module, callback)
-  end
+    args = args ++ maybe_context ++ [internal_state]
 
-  defp exec_callback(
-         callback,
-         args,
-         _handler_params,
-         %{module: module, internal_state: internal_state}
-       ) do
-    args = args ++ [internal_state]
+    callback_result =
+      try do
+        apply(module, callback, args)
+      rescue
+        e in UndefinedFunctionError ->
+          with %{module: ^module, function: ^callback, arity: arity} <- e do
+            reraise CallbackError,
+                    [kind: :not_implemented, callback: {module, callback}, arity: arity],
+                    __STACKTRACE__
+          end
 
-    module
-    |> apply(callback, args)
-    |> parse_callback_result(module, callback)
+          reraise e, __STACKTRACE__
+      end
+
+    case callback_result do
+      {actions, _state} when is_list(actions) ->
+        callback_result
+
+      _result ->
+        raise CallbackError,
+          kind: :bad_return,
+          callback: {module, callback},
+          value: callback_result
+    end
   end
 
   @spec handle_callback_result(
@@ -189,31 +194,5 @@ defmodule Membrane.Core.CallbackHandler do
           reraise e, __STACKTRACE__
       end
     end)
-  end
-
-  @spec parse_callback_result(callback_return_t | any, module, callback :: atom) ::
-          {list, internal_state_t}
-  defp parse_callback_result({:ok, new_internal_state}, _module, _cb) do
-    {[], new_internal_state}
-  end
-
-  defp parse_callback_result({{:ok, actions}, new_internal_state}, _module, _cb) do
-    {actions, new_internal_state}
-  end
-
-  defp parse_callback_result({:error, reason}, module, :handle_init) do
-    raise CallbackError, kind: :error, callback: {module, :handle_init}, reason: reason
-  end
-
-  defp parse_callback_result({{:error, reason}, new_internal_state}, module, cb) do
-    raise CallbackError,
-      kind: :error,
-      callback: {module, cb},
-      reason: reason,
-      state: new_internal_state
-  end
-
-  defp parse_callback_result(result, module, cb) do
-    raise CallbackError, kind: :bad_return, callback: {module, cb}, val: result
   end
 end

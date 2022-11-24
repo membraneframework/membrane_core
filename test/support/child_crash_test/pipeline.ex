@@ -16,49 +16,43 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
   end
 
   @impl true
-  def handle_init(_opts) do
+  def handle_init(_ctx, _opts) do
     children = [
-      center_filter: Filter,
-      sink: Testing.Sink
+      child(:center_filter, Filter),
+      child(:sink, Testing.Sink)
     ]
 
     links = [
-      link(:center_filter)
-      |> to(:sink)
+      get_child(:center_filter)
+      |> get_child(:sink)
     ]
 
-    spec = %Membrane.ParentSpec{
-      children: children,
-      links: links
-    }
+    spec = children ++ links
 
-    {{:ok, spec: spec, playback: :playing}, %{}}
+    {[spec: spec, playback: :playing], %{}}
   end
 
   @impl true
   def handle_info({:create_path, spec}, _ctx, state) do
-    {{:ok, spec: spec}, state}
+    {[spec: spec], state}
   end
 
   @spec add_single_source(pid(), any(), any(), any()) :: any()
   def add_single_source(pid, source_name, group \\ nil, source \\ Testing.Source) do
     children = [
-      {source_name, source}
+      child(source_name, source)
     ]
 
     links = [
-      link(source_name)
-      |> to(:center_filter)
+      get_child(source_name)
+      |> get_child(:center_filter)
     ]
 
-    spec = %Membrane.ParentSpec{
-      children: children,
-      links: links
-    }
+    spec = children ++ links
 
     spec =
       if group do
-        %{spec | crash_group: group}
+        {spec, crash_group: {group, :temporary}}
       else
         spec
       end
@@ -68,20 +62,17 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
   @spec add_bin(pid(), atom(), atom(), any()) :: any()
   def add_bin(pid, bin_name, source_name, group \\ nil) do
-    children = [{source_name, Testing.Source}, {bin_name, TestBins.CrashTestBin}]
+    children = [child(source_name, Testing.Source), child(bin_name, TestBins.CrashTestBin)]
 
     links = [
-      link(source_name) |> to(bin_name) |> to(:center_filter)
+      get_child(source_name) |> get_child(bin_name) |> get_child(:center_filter)
     ]
 
-    spec = %Membrane.ParentSpec{
-      children: children,
-      links: links
-    }
+    spec = children ++ links
 
     spec =
       if group do
-        %{spec | crash_group: group}
+        {spec, crash_group: {group, :temporary}}
       else
         spec
       end
@@ -96,23 +87,22 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
         source_name,
         group \\ nil
       ) do
-    children = [{source_name, Testing.Source}] ++ (filters_names |> Enum.map(&{&1, Filter}))
-    children_names = children |> Enum.map(&elem(&1, 0))
+    children =
+      [child(source_name, Testing.Source)] ++ (filters_names |> Enum.map(&child(&1, Filter)))
+
+    children_names = [source_name | filters_names]
 
     links =
       Enum.chunk_every(children_names, 2, 1, [:center_filter])
       |> Enum.map(fn [first_elem, second_elem] ->
-        link(first_elem) |> to(second_elem)
+        get_child(first_elem) |> get_child(second_elem)
       end)
 
-    spec = %Membrane.ParentSpec{
-      children: children,
-      links: links
-    }
+    spec = children ++ links
 
     spec =
       if group do
-        %{spec | crash_group: group}
+        {spec, crash_group: {group, :temporary}}
       else
         spec
       end

@@ -18,6 +18,7 @@ defmodule Membrane.Filter do
   """
 
   alias Membrane.{Buffer, Element, Pad}
+  alias Membrane.Core.DocsHelper
   alias Membrane.Element.CallbackContext
 
   @doc """
@@ -50,12 +51,15 @@ defmodule Membrane.Filter do
               state :: Element.state_t()
             ) :: Membrane.Element.Base.callback_return_t()
 
+  @optional_callbacks handle_process: 4
+
   @doc """
   Brings all the stuff necessary to implement a filter element.
 
   Options:
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
   """
+
   defmacro __using__(options) do
     quote location: :keep do
       use Membrane.Element.Base, unquote(options)
@@ -64,34 +68,36 @@ defmodule Membrane.Filter do
 
       @behaviour unquote(__MODULE__)
 
-      @impl true
+      @doc false
+      @spec membrane_element_type() :: Membrane.Element.type_t()
       def membrane_element_type, do: :filter
 
       @impl true
-      def handle_caps(_pad, caps, _context, state), do: {{:ok, forward: caps}, state}
+      def handle_stream_format(_pad, stream_format, _context, state),
+        do: {[forward: stream_format], state}
 
       @impl true
-      def handle_event(_pad, event, _context, state), do: {{:ok, forward: event}, state}
-
-      @impl true
-      def handle_process(_pad, _buffer, _context, state),
-        do: {{:error, :handle_process_not_implemented}, state}
+      def handle_event(_pad, event, _context, state), do: {[forward: event], state}
 
       @impl true
       def handle_process_list(pad, buffers, _context, state) do
         args_list = buffers |> Enum.map(&[pad, &1])
-        {{:ok, split: {:handle_process, args_list}}, state}
+        {[split: {:handle_process, args_list}], state}
       end
 
       @impl true
       def handle_end_of_stream(pad, _context, state),
-        do: {{:ok, forward: :end_of_stream}, state}
+        do: {[forward: :end_of_stream], state}
 
-      defoverridable handle_caps: 4,
+      defoverridable handle_stream_format: 4,
                      handle_event: 4,
                      handle_process_list: 4,
-                     handle_process: 4,
                      handle_end_of_stream: 3
     end
   end
+
+  DocsHelper.add_callbacks_list_to_moduledoc(
+    __MODULE__,
+    [Membrane.Element.Base, Membrane.Element.WithInputPads, Membrane.Element.WithOutputPads]
+  )
 end
