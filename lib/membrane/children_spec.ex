@@ -335,7 +335,8 @@ defmodule Membrane.ChildrenSpec do
   """
   @spec child(child_definition_t()) :: structure_builder_t()
   def child(child_definition) do
-    child_name = {:anonymous_child, make_ref()}
+    child_module = get_module(child_definition)
+    child_name = {child_module, make_ref()}
     do_child(child_name, child_definition, [])
   end
 
@@ -352,12 +353,14 @@ defmodule Membrane.ChildrenSpec do
   end
 
   def child(%StructureBuilder{} = structure_builder, child_definition) do
-    child_name = {:anonymous_child, make_ref()}
+    child_module = get_module(child_definition)
+    child_name = {child_module, make_ref()}
     do_child(structure_builder, child_name, child_definition, [])
   end
 
   def child(child_definition, opts) do
-    child_name = {:anonymous_child, make_ref()}
+    child_module = get_module(child_definition)
+    child_name = {child_module, make_ref()}
     do_child(child_name, child_definition, opts)
   end
 
@@ -380,7 +383,8 @@ defmodule Membrane.ChildrenSpec do
   end
 
   def child(%StructureBuilder{} = structure_builder, child_definition, options) do
-    child_name = {:anonymous_child, make_ref()}
+    child_module = get_module(child_definition)
+    child_name = {child_module, make_ref()}
     do_child(structure_builder, child_name, child_definition, options)
   end
 
@@ -404,12 +408,14 @@ defmodule Membrane.ChildrenSpec do
   end
 
   defp do_child(child_name, child_definition, opts) do
+    ensure_is_child_definition(child_definition)
     {:ok, opts} = Bunch.Config.parse(opts, @default_child_options)
     child_spec = {child_name, child_definition, opts}
     %StructureBuilder{children: [child_spec], link_starting_child: child_name}
   end
 
   defp do_child(%StructureBuilder{} = structure_builder, child_name, child_definition, opts) do
+    ensure_is_child_definition(child_definition)
     {:ok, opts} = Bunch.Config.parse(opts, @default_child_options)
     child_spec = {child_name, child_definition, opts}
 
@@ -600,5 +606,19 @@ defmodule Membrane.ChildrenSpec do
 
   defp validate_pad_name(pad) do
     raise ParentError, "Invalid link specification: invalid pad name: #{inspect(pad)}"
+  end
+
+  defp get_module(child_definition) when is_struct(child_definition) do
+    %module{} = child_definition
+    module
+  end
+
+  defp get_module(module), do: module
+
+  defp ensure_is_child_definition(child_definition) do
+    if not (is_struct(child_definition) or
+              (is_atom(child_definition) and Code.ensure_loaded?(child_definition))) do
+      raise ParentError, not_module_nor_struct: child_definition
+    end
   end
 end

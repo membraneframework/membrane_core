@@ -4,6 +4,10 @@ defmodule Membrane.Testing.PipelineTest do
   alias Membrane.ChildrenSpec
   alias Membrane.Testing.Pipeline
 
+  defmodule Elem do
+    use Membrane.Filter
+  end
+
   defmodule MockPipeline do
     use Membrane.Pipeline
 
@@ -50,6 +54,7 @@ defmodule Membrane.Testing.PipelineTest do
   describe "When initializing Testing Pipeline" do
     test "uses prepared links if they were provided" do
       import ChildrenSpec
+
       links = [child(:elem, Elem) |> child(:elem2, Elem)]
       options = [module: :default, structure: links, test_process: nil]
       assert {[spec: spec, playback: :playing], state} = Pipeline.handle_init(%{}, options)
