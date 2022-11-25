@@ -11,7 +11,7 @@ defmodule Membrane.Clock do
   the time passed, in practice the described approach turns out to be more convenient,
   as it simplifies the first update.
 
-  Basing on updates, Clock calculates the `t:ratio_t/0` of its time to the reference
+  Basing on updates, Clock calculates the `t:Ratio.t/0` of its time to the reference
   time. The reference time can be configured with `:time_provider` option. The ratio
   is broadcasted (see `t:ratio_message_t/0`) to _subscribers_ (see `subscribe/2`)
   - processes willing to synchronize to the custom clock. Subscribers can adjust
@@ -35,11 +35,6 @@ defmodule Membrane.Clock do
   @type t :: pid
 
   @typedoc """
-  Ratio of the Clock time to the reference time.
-  """
-  @type ratio_t :: Ratio.t() | non_neg_integer
-
-  @typedoc """
   Update message received by the Clock. It should contain the time till the next
   update.
   """
@@ -48,13 +43,13 @@ defmodule Membrane.Clock do
            milliseconds ::
              non_neg_integer
              | Ratio.t()
-             | {numerator :: non_neg_integer, denominator :: pos_integer}}
+             | {numerator :: non_neg_integer, denominator :: non_neg_integer()}}
 
   @typedoc """
   Ratio message sent by the Clock to all its subscribers. It contains the ratio
   of the custom clock time to the reference time.
   """
-  @type ratio_message_t :: {:membrane_clock_ratio, clock :: pid, ratio_t}
+  @type ratio_message_t :: {:membrane_clock_ratio, clock :: pid, Ratio.t()}
 
   @typedoc """
   Options accepted by `start_link/2` and `start/2` functions.
@@ -200,7 +195,7 @@ defmodule Membrane.Clock do
   defp get_proxy_options(true, _proxy_for), do: %{proxy: true, proxy_for: nil}
 
   defp get_proxy_options(_proxy, _proxy_for),
-    do: %{init_time: nil, clock_time: 0, till_next: nil, proxy: false}
+    do: %{init_time: nil, clock_time: Ratio.new(0), till_next: nil, proxy: false}
 
   defp handle_unsubscribe(pid, state) do
     Process.demonitor(state.subscribers[pid].monitor, [:flush])
@@ -212,13 +207,13 @@ defmodule Membrane.Clock do
   end
 
   defp handle_clock_update(till_next, state) do
-    use Numbers, overload_operators: true
+    till_next = Ratio.new(till_next)
 
     if Ratio.lt?(till_next, 0) do
       raise "Clock update time cannot be negative, received: #{inspect(till_next)}"
     end
 
-    till_next = till_next * Time.millisecond()
+    till_next = Ratio.mult(till_next, Ratio.new(Time.millisecond()))
 
     case state.init_time do
       nil -> %{state | init_time: state.time_provider.(), till_next: till_next}
@@ -227,10 +222,9 @@ defmodule Membrane.Clock do
   end
 
   defp do_handle_clock_update(till_next, state) do
-    use Numbers, overload_operators: true
     %{till_next: from_previous, clock_time: clock_time} = state
-    clock_time = clock_time + from_previous
-    ratio = Ratio.div(Ratio.new(clock_time), Ratio.new(state.time_provider.() - state.init_time))
+    clock_time = Ratio.add(clock_time, from_previous)
+    ratio = Ratio.new(clock_time, state.time_provider.() - state.init_time)
     state = %{state | clock_time: clock_time, till_next: till_next}
     broadcast_and_update_ratio(ratio, state)
   end

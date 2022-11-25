@@ -14,12 +14,12 @@ defmodule Membrane.Core.Timer do
           init_time: Time.t(),
           clock: Clock.t(),
           next_tick_time: Time.t(),
-          ratio: Clock.ratio_t(),
+          ratio: Ratio.t(),
           timer_ref: reference() | nil
         }
 
   @enforce_keys [:interval, :clock, :init_time, :id]
-  defstruct @enforce_keys ++ [next_tick_time: 0, ratio: 1, timer_ref: nil]
+  defstruct @enforce_keys ++ [next_tick_time: 0, ratio: Ratio.new(1), timer_ref: nil]
 
   @spec start(id_t, interval_t, Clock.t()) :: t
   def start(id, interval, clock) do
@@ -37,7 +37,7 @@ defmodule Membrane.Core.Timer do
     :ok
   end
 
-  @spec update_ratio(t, Clock.ratio_t()) :: t
+  @spec update_ratio(t, Ratio.t()) :: t
   def update_ratio(timer, ratio) do
     %__MODULE__{timer | ratio: ratio}
   end
