@@ -43,7 +43,7 @@ defmodule Membrane.Clock do
            milliseconds ::
              non_neg_integer
              | Ratio.t()
-             | {numerator :: non_neg_integer, denominator :: non_neg_integer()}}
+             | {numerator :: non_neg_integer, denominator :: pos_integer()}}
 
   @typedoc """
   Ratio message sent by the Clock to all its subscribers. It contains the ratio
