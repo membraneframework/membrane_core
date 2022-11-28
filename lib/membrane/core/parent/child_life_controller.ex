@@ -31,17 +31,17 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @type pending_specs_t :: %{spec_ref_t() => pending_spec_t()}
 
-  @typep parsed_children_spec_options_t :: %{
-           children_group_id: Membrane.Child.children_group_id_t(),
-           crash_group_mode: Membrane.CrashGroup.mode_t(),
-           stream_sync: :sinks | [[Membrane.Child.name_t()]],
-           clock_provider: Membrane.Child.name_t() | nil,
-           node: node() | nil,
-           log_metadata: Keyword.t()
-         }
+  @opaque parsed_children_spec_options_t :: %{
+            group: Membrane.Child.group_t(),
+            crash_group_mode: Membrane.CrashGroup.mode_t(),
+            stream_sync: :sinks | [[Membrane.Child.name_t()]],
+            clock_provider: Membrane.Child.name_t() | nil,
+            node: node() | nil,
+            log_metadata: Keyword.t()
+          }
 
   @children_spec_options_fields_specs [
-    children_group_id: [require?: false],
+    group: [require?: false],
     crash_group_mode: [require?: false],
     stream_sync: [require?: false],
     clock_provider: [require?: false],
@@ -50,7 +50,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   ]
 
   @default_children_spec_options %{
-    children_group_id: nil,
+    group: nil,
     crash_group_mode: nil,
     stream_sync: [],
     clock_provider: nil,
@@ -110,17 +110,20 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       end)
       |> Enum.filter(fn {children_definitions, _options} -> children_definitions != [] end)
 
-    check_if_children_names_and_children_groups_ids_are_unique(children_definitions, state)
+    StartupUtils.check_if_children_names_and_children_groups_ids_are_unique(
+      children_definitions,
+      state
+    )
 
-    # map names into full names, of form: {children_group_id, children_name}
+    # map names into full names, of form: {group, children_name}
     children_definitions =
       Enum.map(children_definitions, fn {children_definitions, children_spec_options} ->
         {children_definitions
          |> Enum.map(fn
            {name, child_spec, options} ->
              full_name =
-               if children_spec_options.children_group_id != nil,
-                 do: {children_spec_options.children_group_id, name},
+               if children_spec_options.group != nil,
+                 do: {children_spec_options.group, name},
                  else: name
 
              {full_name, child_spec, options}
@@ -133,7 +136,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       Enum.flat_map(parsed_structures, fn {_children, links, options} ->
         Enum.map(
           links,
-          &get_link_with_full_name(&1, options.children_group_id, children_definitions)
+          &get_link_with_full_name(&1, options.group, children_definitions)
         )
       end)
 
@@ -226,7 +229,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         syncs,
         log_metadata,
         state.subprocess_supervisor,
-        options.children_group_id
+        options.group
       )
 
     :ok = StartupUtils.maybe_activate_syncs(syncs, state)
@@ -240,7 +243,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     state =
       if options.crash_group_mode != nil do
         CrashGroupUtils.add_crash_group(
-          {options.children_group_id, options.crash_group_mode},
+          {options.group, options.crash_group_mode},
           children_names,
           children_pids,
           state
@@ -252,72 +255,28 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {children_names, state}
   end
 
-  defp check_if_children_names_and_children_groups_ids_are_unique(children_definitions, state) do
-    state_children_groups =
-      Enum.map(state.children, fn {_child_name, child_entry} -> child_entry.children_group_id end)
-
-    new_children_groups =
-      Enum.map(children_definitions, fn {_children, options} -> options.children_group_id end)
-
-    state_children_names = Map.keys(state.children)
-
-    new_children_names =
-      Enum.flat_map(children_definitions, fn {children, _options} ->
-        Enum.map(children, fn {child_name, _child_module, _options} -> child_name end)
-      end)
-
-    duplicated = Enum.filter(new_children_groups, &(&1 in state_children_names))
-
-    if length(duplicated) > 0,
-      do:
-        raise(
-          Membrane.ParentError,
-          "Cannot create children groups with ids: #{inspect(duplicated)} since
-    there are already children with such names."
-        )
-
-    duplicated = Enum.filter(new_children_names, &(&1 in state_children_groups))
-
-    if length(duplicated) > 0,
-      do:
-        raise(
-          Membrane.ParentError,
-          "Cannot spawn children with names: #{inspect(duplicated)} since
-    there are already children groups with such ids."
-        )
-
-    duplicated = Enum.filter(new_children_names, &(&1 in new_children_groups))
-
-    if length(duplicated) > 0,
-      do:
-        raise(
-          Membrane.ParentError,
-          "Cannot proceed, since the children group ids and children names created in this process are duplicating: #{inspect(duplicated)}"
-        )
-  end
-
-  defp get_link_with_full_name(link, children_group_id, children_definitions) do
+  defp get_link_with_full_name(link, group, children_definitions) do
     link =
-      if children_group_id != nil and
+      if group != nil and
            is_child_with_given_name_spawned(
              children_definitions,
-             {children_group_id, link.from.child}
+             {group, link.from.child}
            ) do
         Bunch.Access.put_in(
           link,
           [:from, :child],
-          {children_group_id, link.from.child}
+          {group, link.from.child}
         )
       else
         link
       end
 
-    if children_group_id != nil and
+    if group != nil and
          is_child_with_given_name_spawned(
            children_definitions,
-           {children_group_id, link.to.child}
+           {group, link.to.child}
          ) do
-      Bunch.Access.put_in(link, [:to, :child], {children_group_id, link.to.child})
+      Bunch.Access.put_in(link, [:to, :child], {group, link.to.child})
     else
       link
     end
@@ -501,8 +460,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @spec handle_remove_children(
           Membrane.Child.name_t()
           | [Membrane.Child.name_t()]
-          | Membrane.Child.children_group_id_t()
-          | [Membrane.Child.children_group_id_t()],
+          | Membrane.Child.group_t()
+          | [Membrane.Child.group_t()],
           Parent.state_t()
         ) :: Parent.state_t()
   def handle_remove_children(children_or_children_groups, state) do
@@ -512,7 +471,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       state.children
       |> Enum.filter(fn {child_name, child_entry} ->
         child_name in children_or_children_groups or
-          child_entry.children_group_id in children_or_children_groups
+          child_entry.group in children_or_children_groups
       end)
       |> Enum.map(fn {name, _child_entry} -> name end)
 

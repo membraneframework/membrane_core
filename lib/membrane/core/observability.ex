@@ -12,7 +12,7 @@ defmodule Membrane.Core.Observability do
   @type config :: %{
           optional(:parent_path) => ComponentPath.path_t(),
           optional(:log_metadata) => Logger.metadata(),
-          optional(:children_group_id) => Membrane.Child.children_group_id_t(),
+          optional(:group) => Membrane.Child.group_t(),
           name: term,
           component_type: :element | :bin | :pipeline,
           pid: pid()
@@ -31,7 +31,7 @@ defmodule Membrane.Core.Observability do
     utility_name = if utility_name == "", do: "", else: " #{utility_name}"
     parent_path = Map.get(config, :parent_path, [])
     log_metadata = Map.get(config, :log_metadata, [])
-    children_group_id = Map.get(config, :children_group_id, nil)
+    group = Map.get(config, :group, nil)
     Logger.metadata(log_metadata)
     pid_string = pid |> :erlang.pid_to_list() |> to_string()
 
@@ -43,11 +43,11 @@ defmodule Membrane.Core.Observability do
     name_suffix = if component_type == :element, do: "", else: "/"
     name_str = if(String.valid?(name), do: name, else: inspect(name)) <> name_suffix
 
-    children_group_id_str =
+    group_str =
       cond do
-        children_group_id == nil -> ""
-        String.valid?(children_group_id) -> " [children group: #{children_group_id}] "
-        true -> " [children group: #{inspect(children_group_id)}] "
+        group == nil -> ""
+        String.valid?(group) -> " [children group: #{group}] "
+        true -> " [children group: #{inspect(group)}] "
       end
 
     register_name_for_observer(
@@ -57,9 +57,7 @@ defmodule Membrane.Core.Observability do
     component_path = parent_path ++ [name_str]
     ComponentPath.set(component_path)
 
-    Membrane.Logger.set_prefix(
-      ComponentPath.format(component_path) <> children_group_id_str <> utility_name
-    )
+    Membrane.Logger.set_prefix(ComponentPath.format(component_path) <> group_str <> utility_name)
 
     :ok
   end

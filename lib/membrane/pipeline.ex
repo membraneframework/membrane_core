@@ -201,7 +201,7 @@ defmodule Membrane.Pipeline do
   Callback invoked when crash of the crash group happens.
   """
   @callback handle_crash_group_down(
-              group_name :: Child.children_group_id_t(),
+              group_name :: Child.group_t(),
               context :: CallbackContext.CrashGroupDown.t(),
               state
             ) :: callback_return_t

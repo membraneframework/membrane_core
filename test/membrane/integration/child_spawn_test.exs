@@ -131,8 +131,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
     spec1 = child(:source, %Testing.Source{output: [1, 2, 3]}) |> child(:sink, Testing.Sink)
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec1)
 
-    spec2 =
-      {child(:another_source, %Testing.Source{output: [1, 2, 3]}), children_group_id: :source}
+    spec2 = {child(:another_source, %Testing.Source{output: [1, 2, 3]}), group: :source}
 
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec2)
     assert_receive {:DOWN, ^pipeline_ref, :process, ^pipeline_pid, {reason, _stack_trace}}
@@ -146,7 +145,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
 
     spec1 =
       {child(:source, %Testing.Source{output: [1, 2, 3]}) |> child(:sink, Testing.Sink),
-       children_group_id: :first_group}
+       group: :first_group}
 
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec1)
 
@@ -163,7 +162,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
 
     spec =
       {child(:first_group, %Testing.Source{output: [1, 2, 3]}) |> child(:sink, Testing.Sink),
-       children_group_id: :first_group}
+       group: :first_group}
 
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
     assert_receive {:DOWN, ^pipeline_ref, :process, ^pipeline_pid, {reason, _stack_trace}}

@@ -58,7 +58,7 @@ defmodule Membrane.Core.ElementTest do
         log_metadata: [],
         subprocess_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
         parent_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
-        children_group_id: nil
+        group: nil
       })
 
     state
@@ -333,7 +333,7 @@ defmodule Membrane.Core.ElementTest do
       log_metadata: [],
       subprocess_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
       parent_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
-      children_group_id: nil
+      group: nil
     }
   end
 end

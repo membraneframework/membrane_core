@@ -100,7 +100,7 @@ defmodule Membrane.Core.Element do
       pid: self(),
       parent_path: options.parent_path,
       log_metadata: options.log_metadata,
-      children_group_id: options.children_group_id
+      group: options.group
     }
 
     Membrane.Core.Observability.setup(observability_config)
