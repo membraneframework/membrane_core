@@ -608,17 +608,15 @@ defmodule Membrane.ChildrenSpec do
     raise ParentError, "Invalid link specification: invalid pad name: #{inspect(pad)}"
   end
 
-  defp get_module(child_definition) when is_struct(child_definition) do
-    %module{} = child_definition
-    module
-  end
-
+  defp get_module(%module{}), do: module
   defp get_module(module), do: module
 
   defp ensure_is_child_definition(child_definition) do
-    if not (is_struct(child_definition) or
-              (is_atom(child_definition) and Code.ensure_loaded?(child_definition))) do
-      raise ParentError, not_module_nor_struct: child_definition
+    module = get_module(child_definition)
+
+    if not is_atom(module) or
+         (not Membrane.Element.element?(module) and not Membrane.Bin.bin?(module)) do
+      raise ParentError, not_child: child_definition
     end
   end
 end
