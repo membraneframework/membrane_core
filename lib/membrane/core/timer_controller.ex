@@ -74,7 +74,7 @@ defmodule Membrane.Core.TimerController do
     state
   end
 
-  @spec handle_clock_update(Timer.id_t(), Ratio.t(), Component.state_t()) ::
+  @spec handle_clock_update(Timer.id_t(), Clock.ratio_t(), Component.state_t()) ::
           Component.state_t()
   def handle_clock_update(clock, ratio, state) do
     update_in(

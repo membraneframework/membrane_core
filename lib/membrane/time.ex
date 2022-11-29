@@ -263,9 +263,7 @@ defmodule Membrane.Time do
 
     # credo:disable-for-next-line Credo.Check.Readability.Specs
     def unquote(unit.plural)(number) when Ratio.is_rational(number) do
-      use Numbers, overload_operators: true
-
-      (number * unquote(unit.duration))
+      Ratio.mult(number, Ratio.new(unquote(unit.duration)))
       |> round_rational()
     end
 

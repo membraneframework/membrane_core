@@ -1,6 +1,5 @@
 defmodule Membrane.ClockTest do
   use ExUnit.Case
-  use Numbers, overload_operators: true
 
   @module Membrane.Clock
 
@@ -17,7 +16,7 @@ defmodule Membrane.ClockTest do
     refute_receive {:membrane_clock_ratio, ^clock, _ratio}
     send(clock, {:membrane_clock_update, 2})
     send(clock, time: 13)
-    two = Ratio.new(2, 1)
+    two = Ratio.new(2)
     assert_receive {:membrane_clock_ratio, ^clock, ^two}
     send(clock, {:membrane_clock_update, random_time()})
     send(clock, time: 33)
@@ -38,7 +37,9 @@ defmodule Membrane.ClockTest do
     send(clock, {:membrane_clock_update, 5})
     send(clock, time: 20)
     @module.subscribe(clock)
-    ratio = Ratio.div(5 + Ratio.new(1, 3) * 2, Ratio.new(20 - 5))
+    two = Ratio.new(2)
+    five = Ratio.new(5)
+    ratio = Ratio.div(Ratio.add(five, Ratio.mult(Ratio.new(1, 3), two)), Ratio.new(20 - 5))
     assert_receive {:membrane_clock_ratio, ^clock, ^ratio}
   end
 

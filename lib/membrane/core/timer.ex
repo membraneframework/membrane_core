@@ -14,7 +14,7 @@ defmodule Membrane.Core.Timer do
           init_time: Time.t(),
           clock: Clock.t(),
           next_tick_time: Time.t(),
-          ratio: Ratio.t(),
+          ratio: Clock.ratio_t(),
           timer_ref: reference() | nil
         }
 
@@ -37,7 +37,7 @@ defmodule Membrane.Core.Timer do
     :ok
   end
 
-  @spec update_ratio(t, Ratio.t()) :: t
+  @spec update_ratio(t, Clock.ratio_t()) :: t
   def update_ratio(timer, ratio) do
     %__MODULE__{timer | ratio: ratio}
   end
@@ -48,8 +48,6 @@ defmodule Membrane.Core.Timer do
   end
 
   def tick(timer) do
-    use Numbers, overload_operators: true
-
     %__MODULE__{
       id: id,
       interval: interval,
@@ -58,18 +56,18 @@ defmodule Membrane.Core.Timer do
       ratio: ratio
     } = timer
 
-    next_tick_time = next_tick_time + interval
+    next_tick_time = Ratio.add(Ratio.new(next_tick_time), Ratio.new(interval))
 
     # Next tick time converted to BEAM clock time
     beam_next_tick_time =
-      (init_time + Ratio.new(next_tick_time, ratio))
+      Ratio.add(Ratio.new(init_time), Ratio.div(next_tick_time, ratio))
       |> Ratio.floor()
       |> Time.round_to_milliseconds()
 
     timer_ref =
       Process.send_after(self(), Message.new(:timer_tick, id), beam_next_tick_time, abs: true)
 
-    %__MODULE__{timer | next_tick_time: next_tick_time, timer_ref: timer_ref}
+    %__MODULE__{timer | next_tick_time: next_tick_time |> Ratio.floor(), timer_ref: timer_ref}
   end
 
   @spec set_interval(t, interval_t) :: t
