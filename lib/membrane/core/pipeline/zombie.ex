@@ -7,14 +7,12 @@ defmodule Membrane.Core.Pipeline.Zombie do
   require Membrane.Logger
 
   defp log_debug(name, args) do
-    Membrane.Logger.debug(
-      "Not calling the #{name} callback with the following arguments:
+    Membrane.Logger.debug("Not calling the #{name} callback with the following arguments:
       #{Enum.map_join(args, ", ", &inspect/1)}
-      because the pipeline is in the zombie mode"
-    )
+      because the pipeline is in the zombie mode")
   end
 
-  # Overrides all the overridable callbacks to add a debug message that the original
+  # Overrides all the overridable and optional callbacks to add a debug message that the original
   # implementation is not called
   Membrane.Pipeline.behaviour_info(:callbacks)
   |> Enum.map(fn callback ->
@@ -28,7 +26,6 @@ defmodule Membrane.Core.Pipeline.Zombie do
           log_debug(unquote(name), unquote(args))
           super(unquote_splicing(args))
         end
-
 
       callback in Membrane.Pipeline.behaviour_info(:optional_callbacks) ->
         {name, arity} = callback

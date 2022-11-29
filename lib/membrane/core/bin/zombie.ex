@@ -6,11 +6,9 @@ defmodule Membrane.Core.Bin.Zombie do
   require Membrane.Logger
 
   defp log_debug(name, args) do
-    Membrane.Logger.debug(
-      "Not calling the #{name} callback with the following arguments:
+    Membrane.Logger.debug("Not calling the #{name} callback with the following arguments:
       #{Enum.map_join(args, ", ", &inspect/1)}
-      because the bin is in the zombie mode"
-    )
+      because the bin is in the zombie mode")
   end
 
   # Overrides all the overridable and optional callbacks to add a debug message that the original
@@ -27,7 +25,6 @@ defmodule Membrane.Core.Bin.Zombie do
           log_debug(unquote(name), unquote(args))
           super(unquote_splicing(args))
         end
-
 
       callback in Membrane.Bin.behaviour_info(:optional_callbacks) ->
         {name, arity} = callback
