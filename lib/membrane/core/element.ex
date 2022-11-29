@@ -99,8 +99,7 @@ defmodule Membrane.Core.Element do
       component_type: :bin,
       pid: self(),
       parent_path: options.parent_path,
-      log_metadata: options.log_metadata,
-      group: options.group
+      log_metadata: options.log_metadata
     }
 
     Membrane.Core.Observability.setup(observability_config)

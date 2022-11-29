@@ -289,6 +289,9 @@ defmodule Membrane.ChildrenSpec do
   @type child_options_t :: [get_if_exists: boolean]
   @default_child_options [get_if_exists: [default: false]]
 
+  @type get_child_options_t :: [group: Child.group_t()]
+  @default_get_child_options [group: [default: nil]]
+
   @type children_spec_options_t :: [
           group: Child.group_t(),
           crash_group_mode: Membrane.CrashGroup.mode_t() | nil,
@@ -308,9 +311,16 @@ defmodule Membrane.ChildrenSpec do
 
   See the _structure_ section of the moduledoc for more information.
   """
-  @spec get_child(Child.name_t()) :: structure_builder_t()
-  def get_child(child_name) do
-    %StructureBuilder{link_starting_child: child_name}
+  @spec get_child(Child.name_t(), child_options_t()) :: structure_builder_t()
+  @spec get_child(structure_builder_t(), Child.name_t()) :: structure_builder_t()
+  def get_child(first_arg, second_arg \\ [])
+
+  def get_child(child_name, opts) when is_child_name?(child_name) do
+    do_get_child(child_name, opts)
+  end
+
+  def get_child(%StructureBuilder{} = structure_builder, child_name) do
+    do_get_child(structure_builder, child_name, [])
   end
 
   @doc """
@@ -318,8 +328,37 @@ defmodule Membrane.ChildrenSpec do
 
   See the _structure_ section of the moduledoc for more information.
   """
-  @spec get_child(structure_builder_t(), Child.name_t()) :: structure_builder_t()
-  def get_child(%StructureBuilder{} = structure_builder, child_name) do
+  @spec get_child(structure_builder_t(), Child.name_t(), child_options_t()) ::
+          structure_builder_t()
+  def get_child(%StructureBuilder{} = structure_builder, child_name, opts) do
+    do_get_child(structure_builder, child_name, opts)
+  end
+
+  defp do_get_child(child_name, opts) do
+    validate_child_name(child_name)
+    {:ok, opts} = Bunch.Config.parse(opts, @default_get_child_options)
+
+    child_name =
+      if opts.group != nil do
+        {:__membrane_child_group_member__, opts.group, child_name}
+      else
+        child_name
+      end
+
+    %StructureBuilder{link_starting_child: child_name}
+  end
+
+  defp do_get_child(structure_builder, child_name, opts) do
+    validate_child_name(child_name)
+    {:ok, opts} = Bunch.Config.parse(opts, @default_get_child_options)
+
+    child_name =
+      if opts.group != nil do
+        {:__membrane_child_group_member__, opts.group, child_name}
+      else
+        child_name
+      end
+
     if structure_builder.status == :to_pad do
       structure_builder
     else
@@ -361,12 +400,14 @@ defmodule Membrane.ChildrenSpec do
   end
 
   defp do_child(child_name, child_definition, opts) do
+    validate_child_name(child_name)
     {:ok, opts} = Bunch.Config.parse(opts, @default_child_options)
     child_spec = {child_name, child_definition, opts}
     %StructureBuilder{children: [child_spec], link_starting_child: child_name}
   end
 
   defp do_child(%StructureBuilder{} = structure_builder, child_name, child_definition, opts) do
+    validate_child_name(child_name)
     {:ok, opts} = Bunch.Config.parse(opts, @default_child_options)
     child_spec = {child_name, child_definition, opts}
 
@@ -557,5 +598,12 @@ defmodule Membrane.ChildrenSpec do
 
   defp validate_pad_name(pad) do
     raise ParentError, "Invalid link specification: invalid pad name: #{inspect(pad)}"
+  end
+
+  defp validate_child_name(child_name) do
+    if Kernel.match?({:__membrane_child_group_member__, _, _}, child_name) do
+      raise "Improper child name: #{inspect(child_name)}. The child name cannot match the reserved internal Membrane's pattern.
+      If you attempt to refer to a child being a member of a children group with the `get_child` function, use the `:group` option."
+    end
   end
 end

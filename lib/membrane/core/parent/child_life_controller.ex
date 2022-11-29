@@ -123,7 +123,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
            {name, child_spec, options} ->
              full_name =
                if children_spec_options.group != nil,
-                 do: {children_spec_options.group, name},
+                 do: {:__membrane_child_group_member__, children_spec_options.group, name},
                  else: name
 
              {full_name, child_spec, options}
@@ -260,12 +260,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       if group != nil and
            is_child_with_given_name_spawned(
              children_definitions,
-             {group, link.from.child}
+             {:__membrane_child_group_member__, group, link.from.child}
            ) do
         Bunch.Access.put_in(
           link,
           [:from, :child],
-          {group, link.from.child}
+          {:__membrane_child_group_member__, group, link.from.child}
         )
       else
         link
@@ -274,9 +274,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     if group != nil and
          is_child_with_given_name_spawned(
            children_definitions,
-           {group, link.to.child}
+           {:__membrane_child_group_member__, group, link.to.child}
          ) do
-      Bunch.Access.put_in(link, [:to, :child], {group, link.to.child})
+      Bunch.Access.put_in(
+        link,
+        [:to, :child],
+        {:__membrane_child_group_member__, group, link.to.child}
+      )
     else
       link
     end

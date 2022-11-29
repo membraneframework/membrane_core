@@ -172,4 +172,18 @@ defmodule Membrane.Integration.ChildSpawnTest do
 
     Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
   end
+
+  test "if the pipeline raises an exception when there is an attempt to spawn a child with a name satisfying the Membrane's reserved pattern" do
+    assert_raise RuntimeError,
+                 ~r/Improper child name: {:__membrane_child_group_member__, :first_group, :source}/,
+                 fn ->
+                   child(
+                     {:__membrane_child_group_member__, :first_group, :source},
+                     %Testing.Source{
+                       output: [1, 2, 3]
+                     }
+                   )
+                   |> child(:sink, Testing.Sink)
+                 end
+  end
 end
