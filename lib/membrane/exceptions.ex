@@ -21,11 +21,6 @@ defmodule Membrane.ParentError do
 
     %__MODULE__{message: msg}
   end
-
-  def exception(not_child: child_definition) do
-    msg = "Child definition: #{inspect(child_definition)} is not a module nor a struct."
-    %__MODULE__{message: msg}
-  end
 end
 
 defmodule Membrane.UnknownChildError do
