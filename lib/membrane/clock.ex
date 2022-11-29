@@ -118,7 +118,7 @@ defmodule Membrane.Clock do
 
     state =
       %{
-        ratio: 1,
+        ratio: Ratio.new(1),
         subscribers: %{},
         time_provider: options |> Keyword.get(:time_provider, fn -> Time.monotonic_time() end)
       }

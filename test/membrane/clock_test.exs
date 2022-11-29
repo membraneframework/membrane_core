@@ -3,7 +3,7 @@ defmodule Membrane.ClockTest do
 
   @module Membrane.Clock
 
-  @initial_ratio 1
+  @initial_ratio Ratio.new(1)
 
   test "should calculate proper ratio and send it to subscribers on each (but the first) update" do
     {:ok, clock} =
