@@ -220,11 +220,16 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp map_child_name(child_name, group) do
     case child_name do
       # child name created with get_child(name, group: nil), bin_input() and bin_output()
-      {:__membrane_child_group_member__, nil, just_name} -> just_name
+      {:__membrane_full_child_name__, nil, just_name} ->
+        just_name
+
       # child name created with get_child(name, group: group)
-      {:__membrane_child_group_member__, _group, _name} = name -> name
+      {:__membrane_full_child_name__, group, just_name} ->
+        {:__membrane_child_group_member__, group, just_name}
+
       # child name created with child(...)
-      name -> if group != nil, do: {:__membrane_child_group_member__, group, name}, else: name
+      {:__membrane_incomplete_child_name__, just_name} ->
+        if group != nil, do: {:__membrane_child_group_member__, group, just_name}, else: just_name
     end
   end
 

@@ -340,7 +340,7 @@ defmodule Membrane.ChildrenSpec do
     validate_child_name(child_name)
     {:ok, opts} = Bunch.Config.parse(opts, @default_get_child_options)
 
-    child_name = {:__membrane_child_group_member__, opts.group, child_name}
+    child_name = {:__membrane_full_child_name__, opts.group, child_name}
 
     %StructureBuilder{link_starting_child: child_name}
   end
@@ -349,7 +349,7 @@ defmodule Membrane.ChildrenSpec do
     validate_child_name(child_name)
     {:ok, opts} = Bunch.Config.parse(opts, @default_get_child_options)
 
-    child_name = {:__membrane_child_group_member__, opts.group, child_name}
+    child_name = {:__membrane_full_child_name__, opts.group, child_name}
 
     if structure_builder.status == :to_pad do
       structure_builder
@@ -394,6 +394,7 @@ defmodule Membrane.ChildrenSpec do
   defp do_child(child_name, child_definition, opts) do
     validate_child_name(child_name)
     {:ok, opts} = Bunch.Config.parse(opts, @default_child_options)
+    child_name = {:__membrane_incomplete_child_name__, child_name}
     child_spec = {child_name, child_definition, opts}
     %StructureBuilder{children: [child_spec], link_starting_child: child_name}
   end
@@ -401,6 +402,7 @@ defmodule Membrane.ChildrenSpec do
   defp do_child(%StructureBuilder{} = structure_builder, child_name, child_definition, opts) do
     validate_child_name(child_name)
     {:ok, opts} = Bunch.Config.parse(opts, @default_child_options)
+    child_name = {:__membrane_incomplete_child_name__, child_name}
     child_spec = {child_name, child_definition, opts}
 
     if structure_builder.status == :to_pad do

@@ -25,14 +25,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     assert [
              %Link{
                from: %Endpoint{
-                 child: {:__membrane_child_group_member__, nil, :a},
+                 child: {:__membrane_full_child_name__, nil, :a},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:__membrane_child_group_member__, nil, :b},
+                 child: {:__membrane_full_child_name__, nil, :b},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -41,14 +41,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: {:__membrane_child_group_member__, nil, :b},
+                 child: {:__membrane_full_child_name__, nil, :b},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:__membrane_child_group_member__, nil, :c},
+                 child: {:__membrane_full_child_name__, nil, :c},
                  pad_props: %{options: [q: 1]},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -57,14 +57,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: {:__membrane_child_group_member__, nil, :c},
+                 child: {:__membrane_full_child_name__, nil, :c},
                  pad_props: %{},
                  pad_spec: :x,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:__membrane_child_group_member__, nil, :d},
+                 child: {:__membrane_full_child_name__, nil, :d},
                  pad_props: %{},
                  pad_spec: Pad.ref(:y, 2),
                  pad_ref: nil,
@@ -73,14 +73,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: {:__membrane_child_group_member__, nil, :d},
+                 child: {:__membrane_full_child_name__, nil, :d},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:__membrane_child_group_member__, nil, {Membrane.Bin, :itself}},
+                 child: {:__membrane_full_child_name__, nil, {Membrane.Bin, :itself}},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
@@ -103,14 +103,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     assert [
              %Link{
                from: %Endpoint{
-                 child: {:__membrane_child_group_member__, nil, :a},
+                 child: {:__membrane_full_child_name__, nil, :a},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:__membrane_child_group_member__, nil, :b},
+                 child: {:__membrane_full_child_name__, nil, :b},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -119,14 +119,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: {:__membrane_child_group_member__, nil, :b},
+                 child: {:__membrane_full_child_name__, nil, :b},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:__membrane_child_group_member__, nil, :c},
+                 child: {:__membrane_full_child_name__, nil, :c},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -135,14 +135,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: {:__membrane_child_group_member__, nil, :d},
+                 child: {:__membrane_full_child_name__, nil, :d},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:__membrane_child_group_member__, nil, :b},
+                 child: {:__membrane_full_child_name__, nil, :b},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -151,14 +151,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: {:__membrane_child_group_member__, nil, :b},
+                 child: {:__membrane_full_child_name__, nil, :b},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:__membrane_child_group_member__, nil, :e},
+                 child: {:__membrane_full_child_name__, nil, :e},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -201,14 +201,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     assert [
              %Link{
                from: %Endpoint{
-                 child: :a,
+                 child: {:__membrane_incomplete_child_name__, :a},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :b,
+                 child: {:__membrane_incomplete_child_name__, :b},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -217,14 +217,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: :b,
+                 child: {:__membrane_incomplete_child_name__, :b},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :c,
+                 child: {:__membrane_incomplete_child_name__, :c},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -234,9 +234,9 @@ defmodule Membrane.Core.Parent.StructureParserTest do
            ] = links
 
     assert Enum.sort(children) == [
-             {:a, A, %{get_if_exists: false}},
-             {:b, B, %{get_if_exists: false}},
-             {:c, C, %{get_if_exists: false}}
+             {{:__membrane_incomplete_child_name__, :a}, A, %{get_if_exists: false}},
+             {{:__membrane_incomplete_child_name__, :b}, B, %{get_if_exists: false}},
+             {{:__membrane_incomplete_child_name__, :c}, C, %{get_if_exists: false}}
            ]
   end
 end
