@@ -6,43 +6,22 @@ defmodule Membrane.Core.Pipeline.Zombie do
   use Membrane.Pipeline
   require Membrane.Logger
 
-  defp log_debug(name, args) do
-    Membrane.Logger.debug(
-      "Not calling the #{name} callback with the following arguments:
-      #{Enum.map_join(args, ", ", &inspect/1)}
-      because the pipeline is in the zombie mode"
-    )
-  end
-
   # Overrides all the overridable callbacks to add a debug message that the original
   # implementation is not called
   Membrane.Pipeline.behaviour_info(:callbacks)
-  |> Enum.map(fn callback ->
-    cond do
-      Module.overridable?(__MODULE__, callback) ->
-        {name, arity} = callback
-        args = Enum.map(1..arity//1, &Macro.var(:"arg#{&1}", __MODULE__))
+  |> Enum.filter(&Module.overridable?(__MODULE__, &1))
+  |> Enum.map(fn {name, arity} ->
+    args = Enum.map(1..arity//1, &Macro.var(:"arg#{&1}", __MODULE__))
 
-        @impl true
-        def unquote(name)(unquote_splicing(args)) do
-          log_debug(unquote(name), unquote(args))
-          super(unquote_splicing(args))
-        end
+    @impl true
+    def unquote(name)(unquote_splicing(args)) do
+      Membrane.Logger.debug(
+        "Not calling the #{unquote(name)} callback with the following arguments:
+        #{Enum.map_join(unquote(args), ", ", &inspect/1)}
+        because the pipeline is in the zombie mode"
+      )
 
-
-      callback in Membrane.Pipeline.behaviour_info(:optional_callbacks) ->
-        {name, arity} = callback
-        args = Enum.map(1..arity//1, &Macro.var(:"arg#{&1}", __MODULE__))
-
-        @impl true
-        def unquote(name)(unquote_splicing(args)) do
-          log_debug(unquote(name), unquote(args))
-          {[], %{}}
-        end
-
-      true ->
-        :pass
+      super(unquote_splicing(args))
     end
   end)
-  |> Enum.reject(&(&1 == :pass))
 end
