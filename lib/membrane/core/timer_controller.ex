@@ -36,6 +36,16 @@ defmodule Membrane.Core.TimerController do
     end
   end
 
+  @spec stop_timers(Component.state_t()) :: Component.state_t()
+  def stop_timers(state) do
+    for {_id, timer} <- state.synchronization.timers do
+      :ok = timer |> Timer.stop()
+      timer.clock |> Clock.unsubscribe()
+    end
+
+    Bunch.Access.put_in(state, [:synchronization, :timers], %{})
+  end
+
   @spec stop_timer(Timer.id_t(), Component.state_t()) :: Component.state_t()
   def stop_timer(id, state) do
     {timer, state} = state |> Bunch.Access.pop_in([:synchronization, :timers, id])
