@@ -277,7 +277,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
   defp generate_pad_property_doc({:accepted_formats_str, formats}) do
     {
       "Accepted formats",
-      Enum.map_join(formats, &"<p><code>#{&1}</code></p>")
+      Enum.map_join(formats, "<br>", &"<code>#{&1}</code>")
     }
   end
 
