@@ -141,12 +141,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
 
     new_children_names =
       Enum.flat_map(children_definitions, fn {children, _options} ->
-        Enum.map(children, fn {child_name, _child_module, _options} ->
-          case child_name do
-            {:__membrane_child_group_member__, _group, name} -> name
-            child_name -> child_name
-          end
-        end)
+        get_children_names(children)
       end)
 
     duplicated = Enum.filter(new_children_groups, &(&1 in state_children_names))
@@ -179,6 +174,15 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
         )
 
     :ok
+  end
+
+  defp get_children_names(children) do
+    Enum.map(children, fn {child_name, _child_module, _options} ->
+      case child_name do
+        {:__membrane_child_group_member__, _group, name} -> name
+        child_name -> child_name
+      end
+    end)
   end
 
   defp start_child(child, node, parent_clock, syncs, log_metadata, supervisor, group) do

@@ -115,21 +115,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       state
     )
 
-    # # map names into full names, of form: {group, children_name}
-    # children_definitions =
-    #   Enum.map(children_definitions, fn {children_definitions, children_spec_options} ->
-    #     {children_definitions
-    #      |> Enum.map(fn
-    #        {name, child_spec, options} ->
-    #          full_name =
-    #            if children_spec_options.group != nil,
-    #              do: {:__membrane_child_group_member__, children_spec_options.group, name},
-    #              else: name
-
-    #          {full_name, child_spec, options}
-    #      end), children_spec_options}
-    #   end)
-
     children_definitions = remove_unecessary_children_specs(children_definitions, state)
 
     links =
@@ -206,13 +191,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     specs =
       Enum.map(specs, fn spec ->
         children =
-          Enum.map(spec.children, fn {child_name, child_definition, child_options} ->
-            full_name =
-              if group != nil,
-                do: {:__membrane_child_group_member__, group, child_name},
-                else: child_name
-
-            {full_name, child_definition, child_options}
+          Enum.map(spec.children, fn {child_name, child_definition, options} ->
+            full_child_name = map_child_name(child_name, group)
+            {full_child_name, child_definition, options}
           end)
 
         %{spec | children: children}
@@ -225,32 +206,26 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp get_link_with_full_name(link, group) do
-    link_from =
-      case link.from do
-        {:__membrane_child_group_member__, nil, name} -> name
-        {:__membrane_child_group_member__, _group, _name} = name -> name
-        name -> if group != nil, do: {:__membrane_child_group_member__, group, name}, else: name
-      end
-
-    link =
-      Bunch.Access.put_in(
-        link,
-        [:from],
-        link_from
-      )
-
-    link_to =
-      case link.to do
-        {:__membrane_child_group_member__, nil, name} -> name
-        {:__membrane_child_group_member__, _group, _name} = name -> name
-        name -> if group != nil, do: {:__membrane_child_group_member__, group, name}, else: name
-      end
-
     Bunch.Access.put_in(
       link,
-      [:to],
-      link_to
+      [:from],
+      map_child_name(link.from, group)
     )
+    |> Bunch.Access.put_in(
+      [:to],
+      map_child_name(link.to, group)
+    )
+  end
+
+  defp map_child_name(child_name, group) do
+    case child_name do
+      # child name created with get_child(name, group: nil), bin_input() and bin_output()
+      {:__membrane_child_group_member__, nil, just_name} -> just_name
+      # child name created with get_child(name, group: group)
+      {:__membrane_child_group_member__, _group, _name} = name -> name
+      # child name created with child(...)
+      name -> if group != nil, do: {:__membrane_child_group_member__, group, name}, else: name
+    end
   end
 
   defp setup_children(
