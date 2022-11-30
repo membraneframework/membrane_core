@@ -141,6 +141,7 @@ defmodule Membrane.Integration.ChildCrashTest do
       :temporary
     )
 
+    # :timer.sleep(3000)
     [
       sink_pid,
       center_filter_pid,

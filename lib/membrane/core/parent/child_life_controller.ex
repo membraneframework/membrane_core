@@ -115,29 +115,26 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       state
     )
 
-    # map names into full names, of form: {group, children_name}
-    children_definitions =
-      Enum.map(children_definitions, fn {children_definitions, children_spec_options} ->
-        {children_definitions
-         |> Enum.map(fn
-           {name, child_spec, options} ->
-             full_name =
-               if children_spec_options.group != nil,
-                 do: {:__membrane_child_group_member__, children_spec_options.group, name},
-                 else: name
+    # # map names into full names, of form: {group, children_name}
+    # children_definitions =
+    #   Enum.map(children_definitions, fn {children_definitions, children_spec_options} ->
+    #     {children_definitions
+    #      |> Enum.map(fn
+    #        {name, child_spec, options} ->
+    #          full_name =
+    #            if children_spec_options.group != nil,
+    #              do: {:__membrane_child_group_member__, children_spec_options.group, name},
+    #              else: name
 
-             {full_name, child_spec, options}
-         end), children_spec_options}
-      end)
+    #          {full_name, child_spec, options}
+    #      end), children_spec_options}
+    #   end)
 
     children_definitions = remove_unecessary_children_specs(children_definitions, state)
 
     links =
-      Enum.flat_map(parsed_structures, fn {_children, links, options} ->
-        Enum.map(
-          links,
-          &get_link_with_full_name(&1, options.group, children_definitions)
-        )
+      Enum.flat_map(parsed_structures, fn {_children, links, _options} ->
+        links
       end)
 
     {all_children_names, state} =
@@ -187,6 +184,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     defaults_for_nested = Map.merge(@default_children_spec_options, options_to_pass_to_nested)
 
+    this_level_specs = supply_full_children_name(this_level_specs, options.group)
+
     [{this_level_specs, options}] ++
       Enum.flat_map(inner_specs, &make_canonical(&1, defaults_for_nested))
   end
@@ -199,7 +198,59 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     spec = Bunch.listify(spec)
     {:ok, options} = Bunch.Config.parse([], @children_spec_options_fields_specs)
     options = Map.merge(defaults, options)
+    spec = supply_full_children_name(spec, options.group)
     [{spec, options}]
+  end
+
+  defp supply_full_children_name(specs, group) do
+    specs =
+      Enum.map(specs, fn spec ->
+        children =
+          Enum.map(spec.children, fn {child_name, child_definition, child_options} ->
+            full_name =
+              if group != nil,
+                do: {:__membrane_child_group_member__, group, child_name},
+                else: child_name
+
+            {full_name, child_definition, child_options}
+          end)
+
+        %{spec | children: children}
+      end)
+
+    Enum.map(specs, fn spec ->
+      links = Enum.map(spec.links, &get_link_with_full_name(&1, group))
+      %{spec | links: links}
+    end)
+  end
+
+  defp get_link_with_full_name(link, group) do
+    link_from =
+      case link.from do
+        {:__membrane_child_group_member__, nil, name} -> name
+        {:__membrane_child_group_member__, _group, _name} = name -> name
+        name -> if group != nil, do: {:__membrane_child_group_member__, group, name}, else: name
+      end
+
+    link =
+      Bunch.Access.put_in(
+        link,
+        [:from],
+        link_from
+      )
+
+    link_to =
+      case link.to do
+        {:__membrane_child_group_member__, nil, name} -> name
+        {:__membrane_child_group_member__, _group, _name} = name -> name
+        name -> if group != nil, do: {:__membrane_child_group_member__, group, name}, else: name
+      end
+
+    Bunch.Access.put_in(
+      link,
+      [:to],
+      link_to
+    )
   end
 
   defp setup_children(
@@ -253,48 +304,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       end
 
     {children_names, state}
-  end
-
-  defp get_link_with_full_name(link, group, children_definitions) do
-    link =
-      if group != nil and
-           is_child_with_given_name_spawned(
-             children_definitions,
-             {:__membrane_child_group_member__, group, link.from.child}
-           ) do
-        Bunch.Access.put_in(
-          link,
-          [:from, :child],
-          {:__membrane_child_group_member__, group, link.from.child}
-        )
-      else
-        link
-      end
-
-    if group != nil and
-         is_child_with_given_name_spawned(
-           children_definitions,
-           {:__membrane_child_group_member__, group, link.to.child}
-         ) do
-      Bunch.Access.put_in(
-        link,
-        [:to, :child],
-        {:__membrane_child_group_member__, group, link.to.child}
-      )
-    else
-      link
-    end
-  end
-
-  defp is_child_with_given_name_spawned(children_definitions, name) do
-    all_children_definitions =
-      Enum.flat_map(children_definitions, fn {partial_children_definitions, _options} ->
-        partial_children_definitions
-      end)
-
-    Enum.any?(all_children_definitions, fn {children_full_name, _module, _options} ->
-      children_full_name == name
-    end)
   end
 
   defp remove_unecessary_children_specs(children_definitions_list, state) do
