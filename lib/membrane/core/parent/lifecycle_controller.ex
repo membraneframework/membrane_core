@@ -96,7 +96,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
         |> Enum.reject(& &1.terminating?)
         |> Enum.map(& &1.name)
         |> ChildLifeController.handle_remove_children(state)
-        |> TimerController.stop_timers()
+        |> TimerController.stop_all_timers()
 
       zombie_module =
         case state do
