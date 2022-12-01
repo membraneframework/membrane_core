@@ -4,6 +4,10 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   alias Membrane.Core.Parent.{Link, StructureParser}
   alias Membrane.Core.Parent.Link.Endpoint
 
+  defmodule A do
+    use Membrane.Filter
+  end
+
   test "valid link" do
     import Membrane.ChildrenSpec
     require Membrane.Pad
@@ -195,7 +199,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   test "link creating children" do
     import Membrane.ChildrenSpec
 
-    links_spec = [child(:a, A) |> child(:b, B) |> child(:c, C)]
+    links_spec = [child(:a, A) |> child(:b, A) |> child(:c, A)]
     assert {children, links} = StructureParser.parse(links_spec)
 
     assert [
@@ -235,8 +239,8 @@ defmodule Membrane.Core.Parent.StructureParserTest do
 
     assert Enum.sort(children) == [
              {{:__membrane_incomplete_child_name__, :a}, A, %{get_if_exists: false}},
-             {{:__membrane_incomplete_child_name__, :b}, B, %{get_if_exists: false}},
-             {{:__membrane_incomplete_child_name__, :c}, C, %{get_if_exists: false}}
+             {{:__membrane_incomplete_child_name__, :b}, A, %{get_if_exists: false}},
+             {{:__membrane_incomplete_child_name__, :c}, A, %{get_if_exists: false}}
            ]
   end
 end

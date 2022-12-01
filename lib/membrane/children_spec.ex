@@ -338,7 +338,7 @@ defmodule Membrane.ChildrenSpec do
   end
 
   defp do_get_child(child_name, opts) do
-    validate_child_name(child_name)
+    validate_child_name!(child_name)
     {:ok, opts} = Bunch.Config.parse(opts, @default_get_child_options)
 
     child_name = {:__membrane_full_child_name__, opts.group, child_name}
@@ -347,7 +347,7 @@ defmodule Membrane.ChildrenSpec do
   end
 
   defp do_get_child(structure_builder, child_name, opts) do
-    validate_child_name(child_name)
+    validate_child_name!(child_name)
     {:ok, opts} = Bunch.Config.parse(opts, @default_get_child_options)
 
     child_name = {:__membrane_full_child_name__, opts.group, child_name}
@@ -361,16 +361,62 @@ defmodule Membrane.ChildrenSpec do
   end
 
   @doc """
-  Used to spawn an unlinked child or to spawn a child at the beginning of
-  a link specification.
+  Used to spawn an anonymous child at the beggining of the link.
+  See the _structure_ section of the moduledoc for more information.
+  """
+  @spec child(child_definition_t()) :: structure_builder_t()
+  def child(child_definition) do
+    child_module = get_module(child_definition)
+    child_name = {child_module, make_ref()}
+    do_child(child_name, child_definition, [])
+  end
+
+  @doc """
+  Used to spawn a named child at the beggining of the link
+  or to spawn an anynomous child in the middle of the link.
 
   See the _structure_ section of the moduledoc for more information.
   """
-  @spec child(Child.name_t(), child_definition_t(), child_options_t()) :: structure_builder_t()
-  def child(child_name, child_definition, opts \\ [])
+  @spec child(Child.name_t() | child_definition_t(), child_definition_t() | child_options_t) ::
+          structure_builder_t()
+  def child(child_name, child_definition) when is_child_name?(child_name) do
+    do_child(child_name, child_definition, [])
+  end
 
-  def child(%StructureBuilder{} = structure_builder, child_name, child_definition) do
+  def child(%StructureBuilder{} = structure_builder, child_definition) do
+    child_module = get_module(child_definition)
+    child_name = {child_module, make_ref()}
     do_child(structure_builder, child_name, child_definition, [])
+  end
+
+  def child(child_definition, opts) do
+    child_module = get_module(child_definition)
+    child_name = {child_module, make_ref()}
+    do_child(child_name, child_definition, opts)
+  end
+
+  @doc """
+  Used to spawn an unlinked child, anonymous child in the middle of the link
+  or to spawn a child at the beggining of a link.
+
+  See the _structure_ section of the moduledoc for more information.
+  """
+  @spec child(
+          structure_builder_t | Child.name_t(),
+          Child.name_t() | child_definition_t(),
+          child_options_t()
+        ) :: structure_builder_t()
+  def child(first_arg, second_arg, third_arg)
+
+  def child(%StructureBuilder{} = structure_builder, child_name, child_definition)
+      when is_child_name?(child_name) do
+    do_child(structure_builder, child_name, child_definition, [])
+  end
+
+  def child(%StructureBuilder{} = structure_builder, child_definition, options) do
+    child_module = get_module(child_definition)
+    child_name = {child_module, make_ref()}
+    do_child(structure_builder, child_name, child_definition, options)
   end
 
   def child(child_name, child_definition, options) when is_child_name?(child_name) do
@@ -393,7 +439,8 @@ defmodule Membrane.ChildrenSpec do
   end
 
   defp do_child(child_name, child_definition, opts) do
-    validate_child_name(child_name)
+    ensure_is_child_definition!(child_definition)
+    validate_child_name!(child_name)
     {:ok, opts} = Bunch.Config.parse(opts, @default_child_options)
     child_name = {:__membrane_incomplete_child_name__, child_name}
     child_spec = {child_name, child_definition, opts}
@@ -401,7 +448,8 @@ defmodule Membrane.ChildrenSpec do
   end
 
   defp do_child(%StructureBuilder{} = structure_builder, child_name, child_definition, opts) do
-    validate_child_name(child_name)
+    ensure_is_child_definition!(child_definition)
+    validate_child_name!(child_name)
     {:ok, opts} = Bunch.Config.parse(opts, @default_child_options)
     child_name = {:__membrane_incomplete_child_name__, child_name}
     child_spec = {child_name, child_definition, opts}
@@ -595,7 +643,19 @@ defmodule Membrane.ChildrenSpec do
     raise ParentError, "Invalid link specification: invalid pad name: #{inspect(pad)}"
   end
 
-  defp validate_child_name(child_name) do
+  defp get_module(%module{}), do: module
+  defp get_module(module), do: module
+
+  defp ensure_is_child_definition!(child_definition) do
+    module = get_module(child_definition)
+
+    unless is_atom(module) and
+             (Membrane.Element.element?(module) or Membrane.Bin.bin?(module)) do
+      raise ParentError, not_child: child_definition
+    end
+  end
+
+  defp validate_child_name!(child_name) do
     if Kernel.match?({:__membrane_children_group_member__, _, _}, child_name) do
       raise "Improper child name: #{inspect(child_name)}. The child's name cannot match the reserved internal Membrane's pattern.
       If you attempt to refer to a child being a member of a children group with the `get_child` function, use the `:group` option."

@@ -173,6 +173,15 @@ defmodule Membrane.Integration.ChildSpawnTest do
     Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
   end
 
+  test "if children can be spawned anonymously" do
+    pipeline_pid = Testing.Pipeline.start_supervised!()
+    spec = child(%Testing.Source{output: [1, 2, 3]}) |> child(Testing.Sink)
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
+    assert_pipeline_play(pipeline_pid)
+
+    Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
+  end
+
   test "if the pipeline raises an exception when there is an attempt to spawn a child with a name satisfying the Membrane's reserved pattern" do
     assert_raise RuntimeError,
                  ~r/Improper child name: {:__membrane_children_group_member__, :first_group, :source}/,
