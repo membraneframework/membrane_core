@@ -12,5 +12,5 @@ defmodule Membrane.Child do
   @type options_t :: Element.options_t() | Bin.options_t()
 
   defguard is_child_name?(arg) when is_element_name?(arg) or is_bin_name?(arg)
-  @type children_group_id_t() :: any()
+  @type group_t() :: any()
 end

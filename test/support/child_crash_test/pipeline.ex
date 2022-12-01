@@ -46,7 +46,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
     spec =
       if group do
-        {structure, crash_group_mode: :temporary, children_group_id: group}
+        {structure, crash_group_mode: :temporary, group: group}
       else
         structure
       end
@@ -64,7 +64,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
     spec =
       if group do
-        {structure, crash_group_mode: :temporary, children_group_id: group}
+        {structure, crash_group_mode: :temporary, group: group}
       else
         structure
       end
@@ -85,24 +85,20 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
     children_names = [source_name | filters_names]
 
-    children_names =
-      if group != nil do
-        Enum.map(children_names, fn name -> {group, name} end)
-      else
-        children_names
-      end
+    children_names = Enum.map(children_names, fn name -> {group, name} end)
 
     links =
-      Enum.chunk_every(children_names, 2, 1, [:center_filter])
-      |> Enum.map(fn [first_elem, second_elem] ->
-        get_child(first_elem) |> get_child(second_elem)
+      Enum.chunk_every(children_names, 2, 1, [{nil, :center_filter}])
+      |> Enum.map(fn [{first_elem_group, first_elem_name}, {second_elem_group, second_elem_name}] ->
+        get_child(first_elem_name, group: first_elem_group)
+        |> get_child(second_elem_name, group: second_elem_group)
       end)
 
     spec = children ++ links
 
     spec =
       if group do
-        {spec, crash_group_mode: group_mode, children_group_id: group}
+        {spec, crash_group_mode: group_mode, group: group}
       else
         spec
       end

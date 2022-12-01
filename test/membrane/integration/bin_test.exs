@@ -312,7 +312,7 @@ defmodule Membrane.Core.BinTest do
       },
       subprocess_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
       parent_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
-      children_group_id: nil
+      group: nil
     }
   end
 end

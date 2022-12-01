@@ -88,8 +88,7 @@ defmodule Membrane.Core.Bin do
       component_type: :bin,
       pid: self(),
       parent_path: options.parent_path,
-      log_metadata: options.log_metadata,
-      children_group_id: options.children_group_id
+      log_metadata: options.log_metadata
     }
 
     Membrane.Core.Observability.setup(observability_config)
