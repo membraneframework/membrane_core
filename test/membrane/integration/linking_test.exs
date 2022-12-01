@@ -362,13 +362,11 @@ defmodule Membrane.Integration.LinkingTest do
     assert_receive {:DOWN, ^monitor, :process, _pid, {%Membrane.LinkError{}, _stacktrace}}, 6000
   end
 
-  @tag :target
   test "A spec entailing multiple dependent specs in a bin should work" do
     defmodule MultiSpecBin do
       use Membrane.Bin
 
       def_input_pad :input,
-        availability: :on_request,
         accepted_format: _any
 
       def_output_pad :output,
@@ -376,8 +374,8 @@ defmodule Membrane.Integration.LinkingTest do
         accepted_format: _any
 
       @impl true
-      def handle_pad_added(Pad.ref(:input, _id) = pad, _ctx, state) do
-        {[spec: bin_input(pad) |> child(:filter, __MODULE__.Filter)], state}
+      def handle_init(_ctx, state) do
+        {[spec: bin_input() |> child(:filter, __MODULE__.Filter)], state}
       end
 
       @impl true
@@ -390,7 +388,6 @@ defmodule Membrane.Integration.LinkingTest do
       use Membrane.Filter
 
       def_input_pad :input,
-        availability: :on_request,
         accepted_format: _any,
         demand_mode: :auto
 
