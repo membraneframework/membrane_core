@@ -614,8 +614,8 @@ defmodule Membrane.ChildrenSpec do
   defp ensure_is_child_definition(child_definition) do
     module = get_module(child_definition)
 
-    if not is_atom(module) or
-         (not Membrane.Element.element?(module) and not Membrane.Bin.bin?(module)) do
+    unless is_atom(module) and
+         (Membrane.Element.element?(module) or Membrane.Bin.bin?(module)) do
       raise ParentError, not_child: child_definition
     end
   end
