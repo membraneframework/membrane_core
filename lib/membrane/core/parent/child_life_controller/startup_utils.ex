@@ -179,7 +179,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
   defp get_children_names(children) do
     Enum.map(children, fn {child_name, _child_module, _options} ->
       case child_name do
-        {:__membrane_child_group_member__, _group, name} -> name
+        {:__membrane_children_group_member__, _group, name} -> name
         child_name -> child_name
       end
     end)

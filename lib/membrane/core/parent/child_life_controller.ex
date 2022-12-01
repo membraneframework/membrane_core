@@ -225,11 +225,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
       # child name created with get_child(name, group: group)
       {:__membrane_full_child_name__, group, just_name} ->
-        {:__membrane_child_group_member__, group, just_name}
+        {:__membrane_children_group_member__, group, just_name}
 
       # child name created with child(...)
       {:__membrane_incomplete_child_name__, just_name} ->
-        if group != nil, do: {:__membrane_child_group_member__, group, just_name}, else: just_name
+        if group != nil,
+          do: {:__membrane_children_group_member__, group, just_name},
+          else: just_name
     end
   end
 

@@ -145,17 +145,18 @@ defmodule Membrane.ChildrenSpec do
   ```
   The children spawned within `links1` structure specification will be put inside `:first_children_group`, whereas the
   children spawned within `links2` structure will be put inside `second_children_group`.
+  A child with name `:name` spawned in a children group `:children_group` will have a name: `{:__membrane_children_group_member__, :children_group, :name}`.
 
   Later on, the children from a given group can be referred with their `group`, as in the example below:
   ```
     actions = [remove_children: :first_children_group]
   ```
-  With the action defined above, all the children from the `first_children_group` can be removed at once.
+  With the action defined above, all the children from the `:first_children_group` can be removed at once.
 
-  In case you need to refer to a single child who resides in a children group, you need to use a tuple of the form: `{group, children_name}`:
+  In case you need to refer to a single child who resides in a children group, use `:group` option of the `get_child` function:
   ```
     spec1 = {child(:source, Source), group: :first_group)
-    spec2 = get_child({:first_group, :source}) |> child(:sink, Sink)
+    spec2 = get_child(:source, group: :first_group) |> child(:sink, Sink)
   ```
 
   ### Crash groups
@@ -595,7 +596,7 @@ defmodule Membrane.ChildrenSpec do
   end
 
   defp validate_child_name(child_name) do
-    if Kernel.match?({:__membrane_child_group_member__, _, _}, child_name) do
+    if Kernel.match?({:__membrane_children_group_member__, _, _}, child_name) do
       raise "Improper child name: #{inspect(child_name)}. The child's name cannot match the reserved internal Membrane's pattern.
       If you attempt to refer to a child being a member of a children group with the `get_child` function, use the `:group` option."
     end
