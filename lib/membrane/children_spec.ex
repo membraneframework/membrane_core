@@ -611,7 +611,7 @@ defmodule Membrane.ChildrenSpec do
   defp get_module(%module{}), do: module
   defp get_module(module), do: module
 
-  defp ensure_is_child_definition(child_definition) do
+  defp ensure_is_child_definition!(child_definition) do
     module = get_module(child_definition)
 
     unless is_atom(module) and
