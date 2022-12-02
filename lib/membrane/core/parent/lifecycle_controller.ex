@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   use Bunch
 
   alias Membrane.{Child, ChildNotification, Core, Pad, Sync}
-  alias Membrane.Core.{CallbackHandler, Component, Message, Parent}
+  alias Membrane.Core.{CallbackHandler, Component, Message, Parent, TimerController}
 
   alias Membrane.Core.Events
   alias Membrane.Core.Parent.{ChildLifeController}
@@ -96,6 +96,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
         |> Enum.reject(& &1.terminating?)
         |> Enum.map(& &1.name)
         |> ChildLifeController.handle_remove_children(state)
+        |> TimerController.stop_all_timers()
 
       zombie_module =
         case state do
