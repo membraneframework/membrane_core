@@ -183,16 +183,24 @@ defmodule Membrane.Integration.ChildSpawnTest do
   end
 
   test "if the pipeline raises an exception when there is an attempt to spawn a child with a name satisfying the Membrane's reserved pattern" do
-    assert_raise RuntimeError,
-                 ~r/Improper child name: {:__membrane_children_group_member__, :first_group, :source}/,
-                 fn ->
-                   child(
-                     {:__membrane_children_group_member__, :first_group, :source},
-                     %Testing.Source{
-                       output: [1, 2, 3]
-                     }
-                   )
-                   |> child(:sink, Testing.Sink)
-                 end
+    pipeline_pid = Testing.Pipeline.start_supervised!()
+    pipeline_ref = Process.monitor(pipeline_pid)
+
+    spec =
+      child(
+        {:__membrane_children_group_member__, :first_group, :source},
+        %Testing.Source{
+          output: [1, 2, 3]
+        }
+      )
+      |> child(:sink, Testing.Sink)
+
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
+    assert_receive {:DOWN, ^pipeline_ref, :process, ^pipeline_pid, {reason, _stack_trace}}
+
+    assert reason.message =~
+             ~r/Improper child name: {:__membrane_children_group_member__, :first_group, :source}/
+
+    Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
   end
 end

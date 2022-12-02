@@ -192,7 +192,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       Enum.map(specs, fn spec ->
         children =
           Enum.map(spec.children, fn {child_name, child_definition, options} ->
-            full_child_name = map_child_name(child_name, group)
+            full_child_name = get_child_ref(child_name, group)
             {full_child_name, child_definition, options}
           end)
 
@@ -209,29 +209,20 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     Bunch.Access.put_in(
       link,
       [:from],
-      map_child_name(link.from, group)
+      get_child_ref(link.from, group)
     )
     |> Bunch.Access.put_in(
       [:to],
-      map_child_name(link.to, group)
+      get_child_ref(link.to, group)
     )
   end
 
-  defp map_child_name(child_name, group) do
-    case child_name do
-      # child name created with get_child(name, group: nil), bin_input() and bin_output()
-      {:__membrane_full_child_name__, nil, just_name} ->
-        just_name
-
-      # child name created with get_child(name, group: group)
-      {:__membrane_full_child_name__, group, just_name} ->
-        {:__membrane_children_group_member__, group, just_name}
-
+  defp get_child_ref(child_name_or_ref, group) do
+    case child_name_or_ref do
       # child name created with child(...)
-      {:__membrane_incomplete_child_name__, just_name} ->
-        if group != nil,
-          do: {:__membrane_children_group_member__, group, just_name},
-          else: just_name
+      {:__membrane_just_child_name__, child_name} -> Membrane.Child.ref(child_name, group: group)
+      # child name created with get_child(...), bin_input() and bin_output()
+      ref -> ref
     end
   end
 

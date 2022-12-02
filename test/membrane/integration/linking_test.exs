@@ -4,7 +4,7 @@ defmodule Membrane.Integration.LinkingTest do
   import Membrane.Testing.Assertions
   import Membrane.ChildrenSpec
 
-  alias Membrane.{Buffer, ChildrenSpec, Testing}
+  alias Membrane.{Buffer, Child, ChildrenSpec, Testing}
   alias Membrane.Support.Element.DynamicFilter
 
   require Membrane.Pad, as: Pad
@@ -130,7 +130,9 @@ defmodule Membrane.Integration.LinkingTest do
         crash_group_mode: :temporary, group: :group_2
       }
 
-      links_spec = get_child(:bin, group: :group_1) |> get_child(:sink, group: :group_2)
+      links_spec =
+        get_child(Child.ref(:bin, group: :group_1))
+        |> get_child(Child.ref(:sink, group: :group_2))
 
       send(pipeline, {:start_spec, %{spec: bin_spec}})
       assert_receive(:spec_started)
@@ -168,7 +170,9 @@ defmodule Membrane.Integration.LinkingTest do
 
     spec_2 = {child(:sink, Testing.Sink), group: :group_2, crash_group_mode: :temporary}
 
-    links_spec = get_child(:source, group: :group_1) |> get_child(:sink, group: :group_2)
+    links_spec =
+      get_child(Child.ref(:source, group: :group_1))
+      |> get_child(Child.ref(:sink, group: :group_2))
 
     send(pipeline, {:start_spec, %{spec: spec_1}})
     assert_receive(:spec_started)
@@ -203,7 +207,9 @@ defmodule Membrane.Integration.LinkingTest do
       group: :group_2, crash_group_mode: :temporary
     }
 
-    links_spec = get_child(:source, group: :group_1) |> get_child(:sink, group: :group_2)
+    links_spec =
+      get_child(Child.ref(:source, group: :group_1))
+      |> get_child(Child.ref(:sink, group: :group_2))
 
     send(pipeline, {:start_spec, %{spec: spec_1}})
     assert_receive(:spec_started)
@@ -239,7 +245,9 @@ defmodule Membrane.Integration.LinkingTest do
       crash_group_mode: :temporary, group: :group_1
     }
 
-    links_spec = get_child(:source, group: :group_1) |> get_child(:sink, group: :group_2)
+    links_spec =
+      get_child(Child.ref(:source, group: :group_1))
+      |> get_child(Child.ref(:sink, group: :group_2))
 
     send(pipeline, {:start_spec, %{spec: spec}})
     assert_receive(:spec_started)
@@ -271,7 +279,8 @@ defmodule Membrane.Integration.LinkingTest do
       group: :group_1, crash_group_mode: :temporary
     }
 
-    links_spec = get_child(:bin, group: :group_1) |> get_child(:sink, group: :group_1)
+    links_spec =
+      get_child(Child.ref(:bin, group: :group_1)) |> get_child(Child.ref(:sink, group: :group_1))
 
     send(pipeline, {:start_spec, %{spec: bin_spec}})
     assert_receive(:spec_started)
