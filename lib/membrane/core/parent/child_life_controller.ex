@@ -444,8 +444,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   @spec handle_remove_children(
-          Membrane.Child.name_t()
-          | [Membrane.Child.name_t()]
+          Membrane.Child.ref_t()
+          | [Membrane.Child.ref_t()]
           | Membrane.Child.group_t()
           | [Membrane.Child.group_t()],
           Parent.state_t()
@@ -453,24 +453,24 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   def handle_remove_children(children_or_children_groups, state) do
     children_or_children_groups = Bunch.listify(children_or_children_groups)
 
-    names =
+    refs =
       state.children
-      |> Enum.filter(fn {child_name, child_entry} ->
-        child_name in children_or_children_groups or
+      |> Enum.filter(fn {child_ref, child_entry} ->
+        child_ref in children_or_children_groups or
           child_entry.group in children_or_children_groups
       end)
-      |> Enum.map(fn {name, _child_entry} -> name end)
+      |> Enum.map(fn {ref, _child_entry} -> ref end)
 
-    Membrane.Logger.debug("Removing children: #{inspect(names)}")
+    Membrane.Logger.debug("Removing children: #{inspect(refs)}")
 
     state =
-      if state.synchronization.clock_provider.provider in names do
+      if state.synchronization.clock_provider.provider in refs do
         ClockHandler.reset_clock(state)
       else
         state
       end
 
-    data = Enum.map(names, &Parent.ChildrenModel.get_child_data!(state, &1))
+    data = Enum.map(refs, &Parent.ChildrenModel.get_child_data!(state, &1))
     {already_removing, data} = Enum.split_with(data, & &1.terminating?)
 
     if already_removing != [] do
@@ -480,7 +480,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
 
     data |> Enum.filter(& &1.ready?) |> Enum.each(&Message.send(&1.pid, :terminate))
-    Parent.ChildrenModel.update_children!(state, names, &%{&1 | terminating?: true})
+    Parent.ChildrenModel.update_children!(state, refs, &%{&1 | terminating?: true})
   end
 
   @doc """

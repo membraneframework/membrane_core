@@ -23,20 +23,19 @@ defmodule Membrane.Child do
   """
   @spec ref(name_t(), child_ref_options_t()) :: ref_t()
   def ref(name, options \\ []) do
-    validate_child_name!(name)
+    validate_name!(name)
     {:ok, options} = Bunch.Config.parse(options, @default_ref_options)
+    validate_name!(options.group)
 
     if options.group != nil,
       do: {:__membrane_children_group_member__, options.group, name},
       else: name
   end
 
-  @spec validate_child_name!(Membrane.Child.name_t()) :: no_return() | :ok
-  defp validate_child_name!(child_name) do
-    if is_tuple(child_name) and
-         elem(child_name, 0) |> Atom.to_string() |> String.starts_with?("__membrane") do
-      raise "Improper child name: #{inspect(child_name)}. The child's name cannot match the reserved internal Membrane's pattern.
-      If you attempt to refer to a child being a member of a children group with the `get_child` function, use the `:group` option."
+  defp validate_name!(name) do
+    if is_tuple(name) and
+         elem(name, 0) |> Atom.to_string() |> String.starts_with?("__membrane") do
+      raise "Improper name: #{inspect(name)}. The name cannot match the reserved internal Membrane's pattern."
     end
 
     :ok
