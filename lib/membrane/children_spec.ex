@@ -156,8 +156,13 @@ defmodule Membrane.ChildrenSpec do
   ```
   The children spawned within `links1` structure specification will be put inside `:first_children_group`, whereas the
   children spawned within `links2` structure will be put inside `second_children_group`.
-  A child with name `:name` spawned in a children group `:children_group` will have a full identifier
-  of the following form: `{:__membrane_children_group_member__, :children_group, :name}`.
+
+  In order to refer to a child which resides inside the children group, you need to use the `Membrane.Child.ref/2` function,
+  as in the example below:
+   ```
+    spec1 = {child(:source, Source), group: :first_group)
+    spec2 = get_child(Membrane.Child.ref(:source, group: :first_group)) |> child(:sink, Sink)
+   ```
 
   Later on, the children from a given group can be referred with their `group`, as in the example below:
   ```
@@ -165,11 +170,7 @@ defmodule Membrane.ChildrenSpec do
   ```
   With the action defined above, all the children from the `:first_children_group` can be removed at once.
 
-  In case you need to refer to a single child who resides in a children group, use `:group` option of the `get_child` function:
-  ```
-    spec1 = {child(:source, Source), group: :first_group)
-    spec2 = get_child(:source, group: :first_group) |> child(:sink, Sink)
-  ```
+
 
   ### Crash groups
   A crash group is a logical entity that prevents the whole pipeline from crashing when one of

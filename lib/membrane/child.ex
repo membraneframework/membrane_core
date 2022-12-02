@@ -10,7 +10,7 @@ defmodule Membrane.Child do
 
   @type name_t :: Element.name_t() | Bin.name_t()
   @type group_t() :: any()
-  @opaque ref_t :: {:__membrane_children_group_member__, group_t(), name_t()} | name_t()
+  @type ref_t :: {:__membrane_children_group_member__, group_t(), name_t()} | name_t()
 
   @type options_t :: Element.options_t() | Bin.options_t()
 
