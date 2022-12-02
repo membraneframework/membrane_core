@@ -132,12 +132,19 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
         ) :: :ok
   def check_if_children_names_and_children_groups_ids_are_unique(children_definitions, state) do
     state_children_groups =
-      Enum.map(state.children, fn {_child_name, child_entry} -> child_entry.group end)
+      Enum.map(state.children, fn {_child_ref, child_entry} -> child_entry.group end)
 
     new_children_groups =
       Enum.map(children_definitions, fn {_children, options} -> options.group end)
 
-    state_children_names = Map.keys(state.children)
+    state_children_names =
+      Map.keys(state.children)
+      |> Enum.map(fn child_ref ->
+        case child_ref do
+          {:__membrane_children_group_member__, _group, child_name} -> child_name
+          child_name -> child_name
+        end
+      end)
 
     new_children_names =
       Enum.flat_map(children_definitions, fn {children, _options} ->
@@ -177,9 +184,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
   end
 
   defp get_children_names(children) do
-    Enum.map(children, fn {child_name, _child_module, _options} ->
-      case child_name do
-        {:__membrane_children_group_member__, _group, name} -> name
+    Enum.map(children, fn {child_ref, _child_module, _options} ->
+      case child_ref do
+        {:__membrane_children_group_member__, _group, child_name} -> child_name
         child_name -> child_name
       end
     end)

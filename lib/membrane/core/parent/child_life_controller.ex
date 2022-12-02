@@ -169,7 +169,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     defaults_for_nested = Map.merge(@default_children_spec_options, options_to_pass_to_nested)
 
-    this_level_specs = supply_full_children_name(this_level_specs, options.group)
+    this_level_specs = equip_spec_with_children_refs(this_level_specs, options.group)
 
     [{this_level_specs, options}] ++
       Enum.flat_map(inner_specs, &make_canonical(&1, defaults_for_nested))
@@ -183,29 +183,29 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     spec = Bunch.listify(spec)
     {:ok, options} = Bunch.Config.parse([], @children_spec_options_fields_specs)
     options = Map.merge(defaults, options)
-    spec = supply_full_children_name(spec, options.group)
+    spec = equip_spec_with_children_refs(spec, options.group)
     [{spec, options}]
   end
 
-  defp supply_full_children_name(specs, group) do
+  defp equip_spec_with_children_refs(specs, group) do
     specs =
       Enum.map(specs, fn spec ->
         children =
           Enum.map(spec.children, fn {child_name, child_definition, options} ->
-            full_child_name = get_child_ref(child_name, group)
-            {full_child_name, child_definition, options}
+            child_ref = get_child_ref(child_name, group)
+            {child_ref, child_definition, options}
           end)
 
         %{spec | children: children}
       end)
 
     Enum.map(specs, fn spec ->
-      links = Enum.map(spec.links, &get_link_with_full_name(&1, group))
+      links = Enum.map(spec.links, &equip_link_with_child_ref(&1, group))
       %{spec | links: links}
     end)
   end
 
-  defp get_link_with_full_name(link, group) do
+  defp equip_link_with_child_ref(link, group) do
     Bunch.Access.put_in(
       link,
       [:from],

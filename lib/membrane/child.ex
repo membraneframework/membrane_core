@@ -33,8 +33,8 @@ defmodule Membrane.Child do
 
   @spec validate_child_name!(Membrane.Child.name_t()) :: no_return() | :ok
   defp validate_child_name!(child_name) do
-    if Kernel.match?({:__membrane_children_group_member__, _, _}, child_name) or
-         Kernel.match?({:__membrane_just_child_name__, _}, child_name) do
+    if is_tuple(child_name) and
+         elem(child_name, 0) |> Atom.to_string() |> String.starts_with?("__membrane") do
       raise "Improper child name: #{inspect(child_name)}. The child's name cannot match the reserved internal Membrane's pattern.
       If you attempt to refer to a child being a member of a children group with the `get_child` function, use the `:group` option."
     end
