@@ -45,6 +45,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
             log_metadata: Keyword.t()
           }
 
+  @type children_spec_canonical_form_t :: [
+          {[Membrane.ChildrenSpec.structure_builder_t()], parsed_children_spec_options_t()}
+        ]
+
   @spec_dependency_requiring_statuses [:initializing, :linking_internally]
 
   @children_spec_options_fields_specs [
@@ -156,9 +160,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     proceed_spec_startup(spec_ref, state)
   end
 
-  @spec make_canonical(Membrane.ChildrenSpec.t(), parsed_children_spec_options_t()) :: [
-          {[Membrane.ChildrenSpec.structure_builder_t()], parsed_children_spec_options_t()}
-        ]
+  @spec make_canonical(Membrane.ChildrenSpec.t(), parsed_children_spec_options_t()) ::
+          children_spec_canonical_form_t()
   defp make_canonical(spec, defaults \\ @default_children_spec_options)
 
   defp make_canonical({spec, options_keywords_list}, defaults) do

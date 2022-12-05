@@ -124,10 +124,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
   end
 
   @spec check_if_children_names_and_children_groups_ids_are_unique(
-          [
-            {[Membrane.ChildrenSpec.StructureBuilder.child_spec_t()],
-             ChildLifeController.parsed_children_spec_options_t()}
-          ],
+          ChildLifeController.children_spec_canonical_form_t(),
           Parent.state_t()
         ) :: :ok
   def check_if_children_names_and_children_groups_ids_are_unique(children_definitions, state) do
