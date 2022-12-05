@@ -29,14 +29,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     assert [
              %Link{
                from: %Endpoint{
-                 child: :a,
+                 child: {:child_ref, :a},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :b,
+                 child: {:child_ref, :b},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -45,14 +45,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: :b,
+                 child: {:child_ref, :b},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :c,
+                 child: {:child_ref, :c},
                  pad_props: %{options: [q: 1]},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -61,14 +61,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: :c,
+                 child: {:child_ref, :c},
                  pad_props: %{},
                  pad_spec: :x,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :d,
+                 child: {:child_ref, :d},
                  pad_props: %{},
                  pad_spec: Pad.ref(:y, 2),
                  pad_ref: nil,
@@ -77,14 +77,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: :d,
+                 child: {:child_ref, :d},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {Membrane.Bin, :itself},
+                 child: {:child_ref, {Membrane.Bin, :itself}},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
@@ -107,14 +107,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     assert [
              %Link{
                from: %Endpoint{
-                 child: :a,
+                 child: {:child_ref, :a},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :b,
+                 child: {:child_ref, :b},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -123,14 +123,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: :b,
+                 child: {:child_ref, :b},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :c,
+                 child: {:child_ref, :c},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -139,14 +139,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: :d,
+                 child: {:child_ref, :d},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :b,
+                 child: {:child_ref, :b},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -155,14 +155,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: :b,
+                 child: {:child_ref, :b},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :e,
+                 child: {:child_ref, :e},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -205,14 +205,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     assert [
              %Link{
                from: %Endpoint{
-                 child: {:__membrane_just_child_name__, :a},
+                 child: {:child_name, :a},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:__membrane_just_child_name__, :b},
+                 child: {:child_name, :b},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -221,14 +221,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: {:__membrane_just_child_name__, :b},
+                 child: {:child_name, :b},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:__membrane_just_child_name__, :c},
+                 child: {:child_name, :c},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -238,9 +238,9 @@ defmodule Membrane.Core.Parent.StructureParserTest do
            ] = links
 
     assert Enum.sort(children) == [
-             {{:__membrane_just_child_name__, :a}, A, %{get_if_exists: false}},
-             {{:__membrane_just_child_name__, :b}, A, %{get_if_exists: false}},
-             {{:__membrane_just_child_name__, :c}, A, %{get_if_exists: false}}
+             {{:child_name, :a}, A, %{get_if_exists: false}},
+             {{:child_name, :b}, A, %{get_if_exists: false}},
+             {{:child_name, :c}, A, %{get_if_exists: false}}
            ]
   end
 end

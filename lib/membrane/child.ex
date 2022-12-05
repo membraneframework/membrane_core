@@ -10,7 +10,7 @@ defmodule Membrane.Child do
 
   @type name_t :: Element.name_t() | Bin.name_t()
   @type group_t() :: any()
-  @type ref_t :: {:__membrane_children_group_member__, group_t(), name_t()} | name_t()
+  @type ref_t :: {Membrane.Child, group_t(), name_t()} | name_t()
 
   @type options_t :: Element.options_t() | Bin.options_t()
 
@@ -28,13 +28,12 @@ defmodule Membrane.Child do
     validate_name!(options.group)
 
     if options.group != nil,
-      do: {:__membrane_children_group_member__, options.group, name},
+      do: {Membrane.Child, options.group, name},
       else: name
   end
 
   defp validate_name!(name) do
-    if is_tuple(name) and
-         elem(name, 0) |> Atom.to_string() |> String.starts_with?("__membrane") do
+    if is_tuple(name) and elem(name, 0) == Membrane.Child do
       raise "Improper name: #{inspect(name)}. The name cannot match the reserved internal Membrane's pattern."
     end
 

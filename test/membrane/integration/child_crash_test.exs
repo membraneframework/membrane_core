@@ -23,9 +23,9 @@ defmodule Membrane.Integration.ChildCrashTest do
       [
         :sink,
         :center_filter,
-        {:__membrane_children_group_member__, 1, :filter_1_1},
-        {:__membrane_children_group_member__, 1, :filter_2_1},
-        {:__membrane_children_group_member__, 1, :source_1}
+        {Membrane.Child, 1, :filter_1_1},
+        {Membrane.Child, 1, :filter_2_1},
+        {Membrane.Child, 1, :source_1}
       ]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
@@ -51,7 +51,7 @@ defmodule Membrane.Integration.ChildCrashTest do
     ChildCrashTest.Pipeline.add_path(pipeline_pid, [], :source, 1, :group_1)
 
     [source_pid, center_filter_pid, sink_pid] =
-      [{:__membrane_children_group_member__, 1, :source}, :center_filter, :sink]
+      [{Membrane.Child, 1, :source}, :center_filter, :sink]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
     assert_pipeline_play(pipeline_pid)
@@ -92,12 +92,12 @@ defmodule Membrane.Integration.ChildCrashTest do
       [
         :sink,
         :center_filter,
-        {:__membrane_children_group_member__, 1, :bin_1},
-        {:__membrane_children_group_member__, 2, :bin_2},
-        {:__membrane_children_group_member__, 3, :bin_3},
-        {:__membrane_children_group_member__, 1, :source_1},
-        {:__membrane_children_group_member__, 2, :source_2},
-        {:__membrane_children_group_member__, 3, :source_3}
+        {Membrane.Child, 1, :bin_1},
+        {Membrane.Child, 2, :bin_2},
+        {Membrane.Child, 3, :bin_3},
+        {Membrane.Child, 1, :source_1},
+        {Membrane.Child, 2, :source_2},
+        {Membrane.Child, 3, :source_3}
       ]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
@@ -155,12 +155,12 @@ defmodule Membrane.Integration.ChildCrashTest do
       [
         :sink,
         :center_filter,
-        {:__membrane_children_group_member__, 1, :filter_1_1},
-        {:__membrane_children_group_member__, 1, :filter_2_1},
-        {:__membrane_children_group_member__, 1, :source_1},
-        {:__membrane_children_group_member__, 2, :filter_1_2},
-        {:__membrane_children_group_member__, 2, :filter_2_2},
-        {:__membrane_children_group_member__, 2, :source_2}
+        {Membrane.Child, 1, :filter_1_1},
+        {Membrane.Child, 1, :filter_2_1},
+        {Membrane.Child, 1, :source_1},
+        {Membrane.Child, 2, :filter_1_2},
+        {Membrane.Child, 2, :filter_2_2},
+        {Membrane.Child, 2, :source_2}
       ]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 

@@ -187,21 +187,16 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     [{spec, options}]
   end
 
-  defp equip_spec_with_children_refs(specs, group) do
-    specs =
-      Enum.map(specs, fn spec ->
-        children =
-          Enum.map(spec.children, fn {child_name, child_definition, options} ->
-            child_ref = get_child_ref(child_name, group)
-            {child_ref, child_definition, options}
-          end)
+  defp equip_spec_with_children_refs(structure_builders, group) do
+    Enum.map(structure_builders, fn structure_builder ->
+      children =
+        Enum.map(structure_builder.children, fn {child_name, child_definition, options} ->
+          child_ref = get_child_ref(child_name, group)
+          {child_ref, child_definition, options}
+        end)
 
-        %{spec | children: children}
-      end)
-
-    Enum.map(specs, fn spec ->
-      links = Enum.map(spec.links, &equip_link_with_child_ref(&1, group))
-      %{spec | links: links}
+      links = Enum.map(structure_builder.links, &equip_link_with_child_ref(&1, group))
+      %{structure_builder | children: children, links: links}
     end)
   end
 
@@ -220,9 +215,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp get_child_ref(child_name_or_ref, group) do
     case child_name_or_ref do
       # child name created with child(...)
-      {:__membrane_just_child_name__, child_name} -> Membrane.Child.ref(child_name, group: group)
+      {:child_name, child_name} -> Membrane.Child.ref(child_name, group: group)
       # child name created with get_child(...), bin_input() and bin_output()
-      ref -> ref
+      {:child_ref, ref} -> ref
     end
   end
 

@@ -188,7 +188,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
 
     spec =
       child(
-        {:__membrane_children_group_member__, :first_group, :source},
+        {Membrane.Child, :first_group, :source},
         %Testing.Source{
           output: [1, 2, 3]
         }
@@ -199,7 +199,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
     assert_receive {:DOWN, ^pipeline_ref, :process, ^pipeline_pid, {reason, _stack_trace}}
 
     assert reason.message =~
-             ~r/Improper name: {:__membrane_children_group_member__, :first_group, :source}/
+             ~r/Improper name: {Membrane.Child, :first_group, :source}/
 
     Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
   end

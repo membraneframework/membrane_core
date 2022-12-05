@@ -141,7 +141,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
       Map.keys(state.children)
       |> Enum.map(fn child_ref ->
         case child_ref do
-          {:__membrane_children_group_member__, _group, child_name} -> child_name
+          {Membrane.Child, _group, child_name} -> child_name
           child_name -> child_name
         end
       end)
@@ -186,7 +186,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
   defp get_children_names(children) do
     Enum.map(children, fn {child_ref, _child_module, _options} ->
       case child_ref do
-        {:__membrane_children_group_member__, _group, child_name} -> child_name
+        {Membrane.Child, _group, child_name} -> child_name
         child_name -> child_name
       end
     end)

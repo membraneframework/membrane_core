@@ -138,10 +138,10 @@ defmodule Membrane.Integration.LinkingTest do
       assert_receive(:spec_started)
       send(pipeline, {:start_spec, %{spec: sink_spec}})
       assert_receive(:spec_started)
-      sink_pid = get_child_pid({:__membrane_children_group_member__, :group_2, :sink}, pipeline)
+      sink_pid = get_child_pid({Membrane.Child, :group_2, :sink}, pipeline)
       send(pipeline, {:start_spec, %{spec: links_spec}})
       assert_receive(:spec_started)
-      bin_pid = get_child_pid({:__membrane_children_group_member__, :group_1, :bin}, pipeline)
+      bin_pid = get_child_pid({Membrane.Child, :group_1, :bin}, pipeline)
       source_pid = get_child_pid(:source, bin_pid)
       source_ref = Process.monitor(source_pid)
       Testing.Pipeline.execute_actions(pipeline, playback: :playing)
@@ -184,7 +184,7 @@ defmodule Membrane.Integration.LinkingTest do
       {:start_spec_and_kill,
        %{
          spec: links_spec,
-         children_to_kill: [{:__membrane_children_group_member__, :group_2, :sink}]
+         children_to_kill: [{Membrane.Child, :group_2, :sink}]
        }}
     )
 
@@ -221,7 +221,7 @@ defmodule Membrane.Integration.LinkingTest do
       {:start_spec_and_kill,
        %{
          spec: links_spec,
-         children_to_kill: [{:__membrane_children_group_member__, :group_2, :sink}]
+         children_to_kill: [{Membrane.Child, :group_2, :sink}]
        }}
     )
 
@@ -257,7 +257,7 @@ defmodule Membrane.Integration.LinkingTest do
       {:start_spec_and_kill,
        %{
          spec: links_spec,
-         children_to_kill: [{:__membrane_children_group_member__, :group_2, :sink}]
+         children_to_kill: [{Membrane.Child, :group_2, :sink}]
        }}
     )
 

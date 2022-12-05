@@ -250,7 +250,8 @@ defmodule Membrane.ChildrenSpec do
     @typep child_options_map_t :: %{get_if_exists: boolean}
 
     @type child_spec_t ::
-            {Child.name_t(), Membrane.ChildrenSpec.child_definition_t(), child_options_map_t()}
+            {{:child_name, Child.name_t()} | {:child_ref, Child.name_t()},
+             Membrane.ChildrenSpec.child_definition_t(), child_options_map_t()}
 
     @type status_t :: :from_pad | :to_pad | :done
 
@@ -339,7 +340,7 @@ defmodule Membrane.ChildrenSpec do
   end
 
   defp do_get_child(child_ref) do
-    %StructureBuilder{link_starting_child: child_ref}
+    %StructureBuilder{link_starting_child: {:child_ref, child_ref}}
   end
 
   defp do_get_child(structure_builder, child_ref) do
@@ -348,7 +349,7 @@ defmodule Membrane.ChildrenSpec do
     else
       via_in(structure_builder, :input)
     end
-    |> StructureBuilder.finish_link(child_ref)
+    |> StructureBuilder.finish_link({:child_ref, child_ref})
   end
 
   @doc """
@@ -434,7 +435,7 @@ defmodule Membrane.ChildrenSpec do
   defp do_child(child_name, child_definition, opts) do
     ensure_is_child_definition!(child_definition)
     {:ok, opts} = Bunch.Config.parse(opts, @default_child_options)
-    child_name = {:__membrane_just_child_name__, child_name}
+    child_name = {:child_name, child_name}
     child_spec = {child_name, child_definition, opts}
     %StructureBuilder{children: [child_spec], link_starting_child: child_name}
   end
@@ -442,7 +443,7 @@ defmodule Membrane.ChildrenSpec do
   defp do_child(%StructureBuilder{} = structure_builder, child_name, child_definition, opts) do
     ensure_is_child_definition!(child_definition)
     {:ok, opts} = Bunch.Config.parse(opts, @default_child_options)
-    child_name = {:__membrane_just_child_name__, child_name}
+    child_name = {:child_name, child_name}
     child_spec = {child_name, child_definition, opts}
 
     if structure_builder.status == :to_pad do
