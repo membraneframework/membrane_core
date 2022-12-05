@@ -189,7 +189,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
     test "two linked elements" do
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          structure: [child(:source, RemovalDeferSource) |> child(:sink, RemovalDeferSink)]
+          spec: child(:source, RemovalDeferSource) |> child(:sink, RemovalDeferSink)
         )
 
       monitor = Process.monitor(pipeline)
@@ -203,10 +203,9 @@ defmodule Membrane.Integration.ChildRemovalTest do
     test "two linked elements, one in a bin" do
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          structure: [
+          spec:
             child(:bin, %RemovalDeferBin{defer?: false, test_process: self()})
             |> child(:sink, RemovalDeferSink)
-          ]
         )
 
       monitor = Process.monitor(pipeline)
@@ -222,10 +221,9 @@ defmodule Membrane.Integration.ChildRemovalTest do
     test "two linked elements, one in a bin that defers termination" do
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          structure: [
+          spec:
             child(:bin, %RemovalDeferBin{defer?: true, test_process: self()})
             |> child(:sink, RemovalDeferSink)
-          ]
         )
 
       pipeline_monitor = Process.monitor(pipeline)

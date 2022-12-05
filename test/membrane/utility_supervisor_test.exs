@@ -25,7 +25,7 @@ defmodule Membrane.UtilitySupervisorTest do
       end
     end
 
-    pipeline = Testing.Pipeline.start_supervised!(structure: [child(:filter, TestFilter)])
+    pipeline = Testing.Pipeline.start_supervised!(spec: [child(:filter, TestFilter)])
 
     assert_pipeline_notified(pipeline, :filter, :setup)
     monitor = Process.monitor(:utility_supervisor_test_task)

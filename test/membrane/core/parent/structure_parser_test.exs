@@ -1,7 +1,7 @@
-defmodule Membrane.Core.Parent.StructureParserTest do
+defmodule Membrane.Core.Parent.SpecificationParserTest do
   use ExUnit.Case
 
-  alias Membrane.Core.Parent.{Link, StructureParser}
+  alias Membrane.Core.Parent.{Link, SpecificationParser}
   alias Membrane.Core.Parent.Link.Endpoint
 
   defmodule A do
@@ -24,7 +24,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
       |> bin_output()
     ]
 
-    assert {[], links} = StructureParser.parse(links_spec)
+    assert {[], links} = SpecificationParser.parse(links_spec)
 
     assert [
              %Link{
@@ -102,7 +102,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
       get_child(:d) |> get_child(:b) |> get_child(:e)
     ]
 
-    assert {[], links} = StructureParser.parse(links_spec)
+    assert {[], links} = SpecificationParser.parse(links_spec)
 
     assert [
              %Link{
@@ -175,8 +175,8 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   test "invalid link" do
     [:abc, [:abc], %{{:abc, :output} => {:def, :input}}]
     |> Enum.each(fn link_spec ->
-      assert_raise Membrane.ParentError, ~r/.*Invalid structure specification.*:abc/, fn ->
-        StructureParser.parse(link_spec)
+      assert_raise Membrane.ParentError, ~r/.*Invalid specification.*:abc/, fn ->
+        SpecificationParser.parse(link_spec)
       end
     end)
   end
@@ -191,8 +191,8 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     ]
     |> Enum.each(fn link_spec ->
       assert_raise Membrane.ParentError,
-                   ~r/.*Invalid structure specification.*/,
-                   fn -> StructureParser.parse(link_spec) end
+                   ~r/.*Invalid specification.*/,
+                   fn -> SpecificationParser.parse(link_spec) end
     end)
   end
 
@@ -200,7 +200,7 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     import Membrane.ChildrenSpec
 
     links_spec = [child(:a, A) |> child(:b, A) |> child(:c, A)]
-    assert {children, links} = StructureParser.parse(links_spec)
+    assert {children, links} = SpecificationParser.parse(links_spec)
 
     assert [
              %Link{

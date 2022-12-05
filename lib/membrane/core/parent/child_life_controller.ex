@@ -12,7 +12,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     ClockHandler,
     CrashGroup,
     Link,
-    StructureParser
+    SpecificationParser
   }
 
   require Membrane.Core.Component
@@ -46,7 +46,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
           }
 
   @type children_spec_canonical_form_t :: [
-          {[Membrane.ChildrenSpec.structure_builder_t()], parsed_children_spec_options_t()}
+          {[Membrane.ChildrenSpec.builder_t()], parsed_children_spec_options_t()}
         ]
 
   @spec_dependency_requiring_statuses [:initializing, :linking_internally]
@@ -103,20 +103,20 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     canonical_spec = make_canonical(spec)
 
     Membrane.Logger.debug("""
-    New spec #{inspect(spec_ref)}
-    structure: #{inspect(spec)}
+    New spec with ref: #{inspect(spec_ref)}
+    specification: #{inspect(spec)}
     """)
 
-    parsed_structures =
-      Enum.map(canonical_spec, fn {structures, options} ->
-        {this_structures_children_definitions, this_structures_links} =
-          StructureParser.parse(structures)
+    parsed_specifications =
+      Enum.map(canonical_spec, fn {specifications, options} ->
+        {this_specifications_children_definitions, this_specifications_links} =
+          SpecificationParser.parse(specifications)
 
-        {this_structures_children_definitions, this_structures_links, options}
+        {this_specifications_children_definitions, this_specifications_links, options}
       end)
 
     children_definitions =
-      Enum.map(parsed_structures, fn {children_definitions, _links, options} ->
+      Enum.map(parsed_specifications, fn {children_definitions, _links, options} ->
         {children_definitions, options}
       end)
       |> Enum.filter(fn {children_definitions, _options} -> children_definitions != [] end)
@@ -129,7 +129,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     children_definitions = remove_unecessary_children_specs(children_definitions, state)
 
     links =
-      Enum.flat_map(parsed_structures, fn {_children, links, _options} ->
+      Enum.flat_map(parsed_specifications, fn {_children, links, _options} ->
         links
       end)
 
@@ -197,16 +197,16 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     [{spec, options}]
   end
 
-  defp equip_spec_with_children_refs(structure_builders, group) do
-    Enum.map(structure_builders, fn structure_builder ->
+  defp equip_spec_with_children_refs(specification_builders, group) do
+    Enum.map(specification_builders, fn specification_builder ->
       children =
-        Enum.map(structure_builder.children, fn {child_name, child_definition, options} ->
+        Enum.map(specification_builder.children, fn {child_name, child_definition, options} ->
           child_ref = get_child_ref(child_name, group)
           {child_ref, child_definition, options}
         end)
 
-      links = Enum.map(structure_builder.links, &equip_link_with_child_ref(&1, group))
-      %{structure_builder | children: children, links: links}
+      links = Enum.map(specification_builder.links, &equip_link_with_child_ref(&1, group))
+      %{specification_builder | children: children, links: links}
     end)
   end
 

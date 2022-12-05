@@ -390,7 +390,7 @@ defmodule Membrane.Integration.LinkingTest do
 
     pipeline =
       Testing.Pipeline.start_supervised!(
-        structure: [child(:source, Testing.Source) |> child(:bin, NoInternalLinkBin)]
+        spec: child(:source, Testing.Source) |> child(:bin, NoInternalLinkBin)
       )
 
     bin_pid = get_child_pid(:bin, pipeline)
@@ -440,7 +440,7 @@ defmodule Membrane.Integration.LinkingTest do
 
     pipeline =
       Testing.Pipeline.start_link_supervised!(
-        structure:
+        spec:
           child(:source, %Testing.Source{output: [1, 2, 3]})
           |> child(:bin, MultiSpecBin)
           |> child(:sink, Testing.Sink)

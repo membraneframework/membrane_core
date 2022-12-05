@@ -69,11 +69,10 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
       pipeline =
         Pipeline.start_link_supervised!(
-          structure: [
+          spec:
             child(:source, %Source{output: in_payloads})
             |> reduce_link(1..filters, &child(&1, {:filter, &2}, filter))
             |> child(:sink, Sink)
-          ]
         )
 
       assert_pipeline_play(pipeline)
@@ -93,7 +92,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     pipeline =
       Pipeline.start_link_supervised!(
-        structure: [
+        spec: [
           child(:source, %Source{output: 1..100_000}) |> child(:tee, AutoDemandTee),
           get_child(:tee) |> child(:left_sink, Sink),
           get_child(:tee) |> child(:right_sink, %Sink{autodemand: false})
@@ -118,7 +117,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     pipeline =
       Pipeline.start_link_supervised!(
-        structure: [
+        spec: [
           child(:source, %Source{output: 1..100_000}) |> child(:tee, AutoDemandTee),
           get_child(:tee) |> child(:left_sink, Sink),
           get_child(:tee) |> child(:right_sink, %Sink{autodemand: false})
@@ -160,11 +159,10 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     pipeline =
       Pipeline.start_link_supervised!(
-        structure: [
+        spec:
           child(:source, PushSource)
           |> child(:filter, AutoDemandFilter)
           |> child(:sink, Sink)
-        ]
       )
 
     assert_pipeline_play(pipeline)
@@ -190,11 +188,10 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     pipeline =
       Pipeline.start_supervised!(
-        structure: [
+        spec:
           child(:source, PushSource)
           |> child(:filter, AutoDemandFilter)
           |> child(:sink, %Sink{autodemand: false})
-        ]
       )
 
     Process.monitor(pipeline)
