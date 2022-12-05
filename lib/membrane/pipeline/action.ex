@@ -29,6 +29,8 @@ defmodule Membrane.Pipeline.Action do
   @type remove_child_t ::
           {:remove_child, Child.name_t() | [Child.name_t()]}
 
+  @type remove_link_t :: {:remove_link, {Child.name_t(), Pad.ref_t()}}
+
   @typedoc """
   Starts a timer that will invoke `c:Membrane.Pipeline.handle_tick/3` callback
   every `interval` according to the given `clock`.
@@ -121,6 +123,7 @@ defmodule Membrane.Pipeline.Action do
           notify_child_t
           | spec_t
           | remove_child_t
+          | remove_link_t
           | start_timer_t
           | timer_interval_t
           | stop_timer_t

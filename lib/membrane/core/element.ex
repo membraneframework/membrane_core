@@ -195,6 +195,11 @@ defmodule Membrane.Core.Element do
     {:noreply, state}
   end
 
+  # defp do_handle_info(Message.new(:handle_remove_link, pad_ref), state) do
+  #   state = PadController.handle_remove_link(pad_ref, state)
+  #   {:noreply, state}
+  # end
+
   defp do_handle_info(Message.new(:handle_unlink, pad_ref), state) do
     state = PadController.handle_unlink(pad_ref, state)
     {:noreply, state}

@@ -15,6 +15,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     StructureParser
   }
 
+  alias Membrane.Pad
+
   require Membrane.Core.Component
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
@@ -416,6 +418,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     data |> Enum.filter(& &1.ready?) |> Enum.each(&Message.send(&1.pid, :terminate))
     Parent.ChildrenModel.update_children!(state, names, &%{&1 | terminating?: true})
+  end
+
+  @spec handle_remove_link(Membrane.Child.name_t(), Pad.ref_t(), Parent.state_t()) ::
+          Parent.state_t()
+  def handle_remove_link(child_name, pad_ref, state) do
+    LinkUtils.remove_link(child_name, pad_ref, state)
   end
 
   @doc """

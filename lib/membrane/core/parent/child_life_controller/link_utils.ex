@@ -32,6 +32,22 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     end)
   end
 
+  @spec remove_link(Membrane.Child.name_t(), Pad.ref_t(), Parent.state_t()) :: Parent.state_t()
+  def remove_link(child_name, pad_ref, state) do
+    {_link_id, link} =
+      Enum.find(state.links, fn {_link_id, link} ->
+        [link.from, link.to]
+        |> Enum.any?(&(&1.child == child_name and &1.pad_ref == pad_ref))
+      end)
+
+    for endpoint <- [link.from, link.to] do
+      Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+    end
+
+    links = Map.delete(state.links, link.id)
+    Map.put(state, :links, links)
+  end
+
   @spec unlink_element(Membrane.Child.name_t(), Parent.state_t()) :: Parent.state_t()
   def unlink_element(child_name, state) do
     Map.update!(

@@ -9,6 +9,28 @@ defmodule Membrane.Integration.LinkingTest do
 
   require Membrane.Pad, as: Pad
 
+  defmodule Element do
+    use Membrane.Endpoint
+
+    def_input_pad :input,
+      availability: :on_request,
+      accepted_format: _any
+
+    def_output_pad :output,
+      availability: :on_request,
+      accepted_format: _any
+
+    @impl true
+    def handle_demand(_pad, _size, _unit, _ctx, state) do
+      {[], state}
+    end
+
+    @impl true
+    def handle_pad_removed(pad_ref, _ctx, state) do
+      {[notify_parent: {:handle_pad_removed, pad_ref}], state}
+    end
+  end
+
   defmodule Bin do
     use Membrane.Bin
 
@@ -360,6 +382,49 @@ defmodule Membrane.Integration.LinkingTest do
     bin_pid = get_child_pid(:bin, pipeline)
     monitor = Process.monitor(bin_pid)
     assert_receive {:DOWN, ^monitor, :process, _pid, {%Membrane.LinkError{}, _stacktrace}}, 6000
+  end
+
+  test "Parent successfully unlinks children with dynamic pads using :remove_link action" do
+    structure =
+      [
+        child(:source, __MODULE__.Element)
+        |> child(:sink, __MODULE__.Element)
+      ] ++
+        Enum.map(1..10, fn i ->
+          get_child(:source)
+          |> via_out(Pad.ref(:output, i))
+          |> via_in(Pad.ref(:input, i))
+          |> get_child(:sink)
+        end)
+
+    pipeline = Testing.Pipeline.start_link_supervised!(structure: structure)
+
+    for pad_id <- 1..10 do
+      actions =
+        if rem(pad_id, 2) == 0,
+          do: [remove_link: {:source, Pad.ref(:output, pad_id)}],
+          else: [remove_link: {:sink, Pad.ref(:input, pad_id)}]
+
+      Testing.Pipeline.execute_actions(pipeline, actions)
+
+      assert_pad_removed(pipeline, pad_id)
+
+      if pad_id < 10 do
+        for i <- (pad_id + 1)..10 do
+          refute_pad_removed(pipeline, i)
+        end
+      end
+    end
+  end
+
+  defp assert_pad_removed(pipeline, id) do
+    assert_pipeline_notified(pipeline, :source, {:handle_pad_removed, Pad.ref(:output, ^id)}, 1)
+    assert_pipeline_notified(pipeline, :sink, {:handle_pad_removed, Pad.ref(:input, ^id)}, 1)
+  end
+
+  defp refute_pad_removed(pipeline, id) do
+    refute_pipeline_notified(pipeline, :source, {:handle_pad_removed, Pad.ref(:output, ^id)}, 1)
+    refute_pipeline_notified(pipeline, :sink, {:handle_pad_removed, Pad.ref(:input, ^id)}, 1)
   end
 
   defp get_child_pid(ref, parent_pid) do
