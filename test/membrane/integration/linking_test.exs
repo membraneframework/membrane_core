@@ -398,6 +398,57 @@ defmodule Membrane.Integration.LinkingTest do
     assert_receive {:DOWN, ^monitor, :process, _pid, {%Membrane.LinkError{}, _stacktrace}}, 6000
   end
 
+  test "A spec entailing multiple dependent specs in a bin should work" do
+    defmodule MultiSpecBin do
+      use Membrane.Bin
+
+      def_input_pad :input,
+        accepted_format: _any
+
+      def_output_pad :output,
+        availability: :on_request,
+        accepted_format: _any
+
+      @impl true
+      def handle_init(_ctx, state) do
+        {[spec: bin_input() |> child(:filter, __MODULE__.Filter)], state}
+      end
+
+      @impl true
+      def handle_pad_added(Pad.ref(:output, _id) = pad, _ctx, state) do
+        {[spec: get_child(:filter) |> bin_output(pad)], state}
+      end
+    end
+
+    defmodule MultiSpecBin.Filter do
+      use Membrane.Filter
+
+      def_input_pad :input,
+        accepted_format: _any,
+        demand_mode: :auto
+
+      def_output_pad :output,
+        availability: :on_request,
+        accepted_format: _any,
+        demand_mode: :auto
+
+      @impl true
+      def handle_process(_input, buffer, _ctx, state) do
+        {[forward: buffer], state}
+      end
+    end
+
+    pipeline =
+      Testing.Pipeline.start_link_supervised!(
+        structure:
+          child(:source, %Testing.Source{output: [1, 2, 3]})
+          |> child(:bin, MultiSpecBin)
+          |> child(:sink, Testing.Sink)
+      )
+
+    assert_start_of_stream(pipeline, :sink)
+  end
+
   defp get_child_pid(ref, parent_pid) do
     state = :sys.get_state(parent_pid)
     state.children[ref].pid
