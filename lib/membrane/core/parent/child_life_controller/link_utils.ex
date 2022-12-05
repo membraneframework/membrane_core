@@ -34,18 +34,24 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
   @spec remove_link(Membrane.Child.name_t(), Pad.ref_t(), Parent.state_t()) :: Parent.state_t()
   def remove_link(child_name, pad_ref, state) do
-    {_link_id, link} =
-      Enum.find(state.links, fn {_link_id, link} ->
-        [link.from, link.to]
-        |> Enum.any?(&(&1.child == child_name and &1.pad_ref == pad_ref))
-      end)
+    Enum.find(state.links, fn {_id, link} ->
+      [link.from, link.to]
+      |> Enum.any?(&(&1.child == child_name and &1.pad_ref == pad_ref))
+    end)
+    |> case do
+      {_id, %Link{} = link} ->
+        for endpoint <- [link.from, link.to] do
+          Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+        end
 
-    for endpoint <- [link.from, link.to] do
-      Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+        links = Map.delete(state.links, link.id)
+        Map.put(state, :links, links)
+
+      nil ->
+        raise LinkError, """
+        Attempted to unlink pad #{inspect(pad_ref)} of child #{inspect(child_name)}, but this child does not have this pad
+        """
     end
-
-    links = Map.delete(state.links, link.id)
-    Map.put(state, :links, links)
   end
 
   @spec unlink_element(Membrane.Child.name_t(), Parent.state_t()) :: Parent.state_t()

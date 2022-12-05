@@ -387,8 +387,8 @@ defmodule Membrane.Integration.LinkingTest do
   test "Parent successfully unlinks children with dynamic pads using :remove_link action" do
     structure =
       [
-        child(:source, __MODULE__.Element)
-        |> child(:sink, __MODULE__.Element)
+        child(:source, __MODULE__.Element),
+        child(:sink, __MODULE__.Element)
       ] ++
         Enum.map(1..10, fn i ->
           get_child(:source)
@@ -418,13 +418,13 @@ defmodule Membrane.Integration.LinkingTest do
   end
 
   defp assert_pad_removed(pipeline, id) do
-    assert_pipeline_notified(pipeline, :source, {:handle_pad_removed, Pad.ref(:output, ^id)}, 1)
-    assert_pipeline_notified(pipeline, :sink, {:handle_pad_removed, Pad.ref(:input, ^id)}, 1)
+    assert_pipeline_notified(pipeline, :source, {:handle_pad_removed, Pad.ref(:output, ^id)})
+    assert_pipeline_notified(pipeline, :sink, {:handle_pad_removed, Pad.ref(:input, ^id)})
   end
 
   defp refute_pad_removed(pipeline, id) do
-    refute_pipeline_notified(pipeline, :source, {:handle_pad_removed, Pad.ref(:output, ^id)}, 1)
-    refute_pipeline_notified(pipeline, :sink, {:handle_pad_removed, Pad.ref(:input, ^id)}, 1)
+    refute_pipeline_notified(pipeline, :source, {:handle_pad_removed, Pad.ref(:output, ^id)}, 10)
+    refute_pipeline_notified(pipeline, :sink, {:handle_pad_removed, Pad.ref(:input, ^id)}, 10)
   end
 
   defp get_child_pid(ref, parent_pid) do
