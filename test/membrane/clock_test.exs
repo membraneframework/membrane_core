@@ -3,7 +3,7 @@ defmodule Membrane.ClockTest do
 
   @module Membrane.Clock
 
-  @initial_ratio 1
+  @initial_ratio Ratio.new(1)
 
   test "should calculate proper ratio and send it to subscribers on each (but the first) update" do
     {:ok, clock} =
@@ -16,7 +16,8 @@ defmodule Membrane.ClockTest do
     refute_receive {:membrane_clock_ratio, ^clock, _ratio}
     send(clock, {:membrane_clock_update, 2})
     send(clock, time: 13)
-    assert_receive {:membrane_clock_ratio, ^clock, 2}
+    two = Ratio.new(2)
+    assert_receive {:membrane_clock_ratio, ^clock, ^two}
     send(clock, {:membrane_clock_update, random_time()})
     send(clock, time: 33)
     ratio = Ratio.new(20 + 2, 33 - 3)
@@ -24,8 +25,6 @@ defmodule Membrane.ClockTest do
   end
 
   test "should handle different ratio formats" do
-    use Ratio
-
     {:ok, clock} =
       @module.start_link(time_provider: fn -> receive do: (time: t -> ms_to_ns(t)) end)
 
@@ -38,7 +37,9 @@ defmodule Membrane.ClockTest do
     send(clock, {:membrane_clock_update, 5})
     send(clock, time: 20)
     @module.subscribe(clock)
-    ratio = (5 + Ratio.new(1, 3) * 2) / (20 - 5)
+    two = Ratio.new(2)
+    five = Ratio.new(5)
+    ratio = Ratio.div(Ratio.add(five, Ratio.mult(Ratio.new(1, 3), two)), Ratio.new(20 - 5))
     assert_receive {:membrane_clock_ratio, ^clock, ^ratio}
   end
 
