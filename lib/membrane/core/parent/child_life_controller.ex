@@ -24,7 +24,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @type spec_ref_t :: reference()
 
   @type pending_spec_t :: %{
-          status: :linking_internally | :linked_internally | :linking_externally | :ready,
+          status:
+            :initializing
+            | :linking_internally
+            | :linked_internally
+            | :linking_externally
+            | :ready,
           children_names: [Membrane.Child.name_t()],
           links_ids: [Link.id()],
           awaiting_responses: MapSet.t({Link.id(), Membrane.Pad.direction_t()}),
@@ -40,6 +45,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
            node: node() | nil,
            log_metadata: Keyword.t()
          }
+
+  @spec_dependency_requiring_statuses [:initializing, :linking_internally]
 
   @children_spec_options_fields_specs [
     crash_group: [require?: false],
@@ -124,8 +131,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     dependent_specs =
       resolved_links
       |> Enum.flat_map(&[&1.from.child_spec_ref, &1.to.child_spec_ref])
-      |> Enum.filter(fn x ->
-        Map.has_key?(state.pending_specs, x)
+      |> Enum.filter(fn spec_ref ->
+        get_in(state, [:pending_specs, spec_ref, :status]) in @spec_dependency_requiring_statuses
       end)
       |> MapSet.new()
 
@@ -313,6 +320,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
          %Pipeline.State{} = state
        ) do
     Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to ready")
+    state = remove_spec_from_dependencies(spec_ref, state)
     do_proceed_spec_startup(spec_ref, %{spec_data | status: :ready}, state)
   end
 
@@ -322,6 +330,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
          %Bin.State{} = state
        ) do
     state = Bin.PadController.respond_links(spec_ref, state)
+    state = remove_spec_from_dependencies(spec_ref, state)
     Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to linking externally")
     do_proceed_spec_startup(spec_ref, %{spec_data | status: :linking_externally}, state)
   end
@@ -495,21 +504,32 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp cleanup_spec_startup(spec_ref, state) do
-    if Map.has_key?(state.pending_specs, spec_ref) do
-      Membrane.Logger.debug("Cleaning spec #{inspect(spec_ref)}")
+    {spec_ref, state} = pop_in(state, [:pending_specs, spec_ref])
 
-      pending_specs =
-        state.pending_specs
-        |> Map.delete(spec_ref)
-        |> Map.new(fn {ref, data} ->
-          {ref, Map.update!(data, :dependent_specs, &MapSet.delete(&1, spec_ref))}
-        end)
+    case spec_ref do
+      nil ->
+        state
 
-      state = %{state | pending_specs: pending_specs}
-      Enum.reduce(Map.keys(pending_specs), state, &proceed_spec_startup/2)
-    else
-      state
+      %{status: status} when status in @spec_dependency_requiring_statuses ->
+        Membrane.Logger.debug("Cleaning spec #{inspect(spec_ref)}")
+        remove_spec_from_dependencies(spec_ref, state)
+
+      _spec_data ->
+        Membrane.Logger.debug("Cleaning spec #{inspect(spec_ref)}")
+        state
     end
+  end
+
+  defp remove_spec_from_dependencies(spec_ref, state) do
+    dependent_specs =
+      state.pending_specs
+      |> Enum.filter(fn {_ref, data} -> spec_ref in data.dependent_specs end)
+      |> Map.new(fn {ref, data} ->
+        {ref, Map.update!(data, :dependent_specs, &MapSet.delete(&1, spec_ref))}
+      end)
+
+    state = %{state | pending_specs: Map.merge(state.pending_specs, dependent_specs)}
+    dependent_specs |> Map.keys() |> Enum.reduce(state, &proceed_spec_startup/2)
   end
 
   defp exec_handle_crash_group_down_callback(
