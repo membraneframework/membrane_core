@@ -37,6 +37,9 @@ defmodule Membrane.Bin.Action do
            Child.name_t()
            | [Child.name_t()]}
 
+  @typedoc """
+  Actions that removes link, that realates to specified child and pad.
+  """
   @type remove_link_t :: {:remove_link, {Child.name_t(), Pad.ref_t()}}
 
   @typedoc """
