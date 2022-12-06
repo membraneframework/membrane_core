@@ -246,15 +246,23 @@ defmodule Membrane.Core.Child.PadsSpecs do
     config_doc =
       config
       |> Enum.map(&generate_pad_property_doc/1)
-      |> Enum.map_join("\n", fn {k, v} ->
-        "<tr><td>#{k}</td> <td>#{v}</td></tr>"
+      |> Enum.map_join("\n", fn
+        {k, v} ->
+          if String.contains?(v, "\n") do
+            "#{k}:\n#{v}"
+          else
+            "#{k}: | #{v}"
+          end
+
+        nil ->
+          ""
       end)
 
     options_doc =
       if pad_opts != nil do
         quote do
           """
-          #{Bunch.Markdown.indent("Options:")}
+          Pad options:
 
           #{unquote(OptionsSpecs.generate_opts_doc(pad_opts))}
           """
@@ -267,24 +275,34 @@ defmodule Membrane.Core.Child.PadsSpecs do
       """
       ### `#{inspect(unquote(name))}`
 
-      <table>
       #{unquote(config_doc)}
-      </table>
+
       """ <> unquote(options_doc)
     end
+  end
+
+  defp generate_pad_property_doc({:name, _name}) do
+    nil
   end
 
   defp generate_pad_property_doc({:accepted_formats_str, formats}) do
     {
       "Accepted formats",
-      Enum.map_join(formats, &"<p><code>#{&1}</code></p>")
+      Enum.map_join(
+        formats,
+        &"""
+        ```
+        #{&1}
+        ```
+        """
+      )
     }
   end
 
   defp generate_pad_property_doc({property, value}) do
     {
       property |> to_string() |> String.replace("_", " ") |> String.capitalize(),
-      "<code>#{inspect(value)}</code>"
+      "`#{inspect(value)}`"
     }
   end
 end
