@@ -8,7 +8,7 @@ defmodule Membrane.Bin.Action do
   callback unless explicitly stated otherwise.
   """
 
-  alias Membrane.{Child, ChildrenSpec}
+  alias Membrane.{Child, ChildrenSpec, Pad}
 
   @typedoc """
   Action that sends a message to a child identified by name.
