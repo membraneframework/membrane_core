@@ -458,22 +458,22 @@ defmodule Membrane.Integration.LinkingTest do
 
       Testing.Pipeline.execute_actions(pipeline, actions)
 
-      assert_pad_removed(pipeline, pad_id)
+      assert_link_removed(pipeline, pad_id)
 
       if pad_id < 10 do
         for i <- (pad_id + 1)..10 do
-          refute_pad_removed(pipeline, i)
+          refute_link_removed(pipeline, i)
         end
       end
     end
   end
 
-  defp assert_pad_removed(pipeline, id) do
+  defp assert_link_removed(pipeline, id) do
     assert_pipeline_notified(pipeline, :source, {:handle_pad_removed, Pad.ref(:output, ^id)})
     assert_pipeline_notified(pipeline, :sink, {:handle_pad_removed, Pad.ref(:input, ^id)})
   end
 
-  defp refute_pad_removed(pipeline, id) do
+  defp refute_link_removed(pipeline, id) do
     refute_pipeline_notified(pipeline, :source, {:handle_pad_removed, Pad.ref(:output, ^id)}, 10)
     refute_pipeline_notified(pipeline, :sink, {:handle_pad_removed, Pad.ref(:input, ^id)}, 10)
   end

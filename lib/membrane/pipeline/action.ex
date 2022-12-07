@@ -30,7 +30,7 @@ defmodule Membrane.Pipeline.Action do
           {:remove_child, Child.name_t() | [Child.name_t()]}
 
   @typedoc """
-  Actions that removes link, that relates to specified child and pad.
+  Action that removes link, which relates to specified child and pad.
   """
   @type remove_link_t :: {:remove_link, {Child.name_t(), Pad.ref_t()}}
 
