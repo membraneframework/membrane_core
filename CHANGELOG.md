@@ -1,5 +1,12 @@
 # Changelog
 
+# 0.11.1
+ * Fix subprocess supervisor crash when a child fails in handle_init [#488](https://github.com/membraneframework/membrane_core/pull/488)
+ * Fix bug in pads docs generation [#490](https://github.com/membraneframework/membrane_core/pull/490)
+ * Fix a deadlock when pipeline spawns a spec entailing two dependent specs in a bin [#484](https://github.com/membraneframework/membrane_core/pull/484)
+ * Implement running all cleanup functions in ResourceGuard [#477](https://github.com/membraneframework/membrane_core/pull/477)
+ * Stop all timers, when componenet enters zombie mode [#485](https://github.com/membraneframework/membrane_core/pull/485)
+
 ## 0.11.0
  * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)
  * Refine communication between parent and its children [#270](https://github.com/membraneframework/membrane_core/issues/270)
