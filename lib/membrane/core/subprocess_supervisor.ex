@@ -229,4 +229,10 @@ defmodule Membrane.Core.SubprocessSupervisor do
   defp handle_exit(%{role: :utility}, _reason, _state) do
     :ok
   end
+
+  # Clause handling the case when child start function returns error
+  # and we don't know its PID, but we still receive exit signal from it.
+  defp handle_exit(nil, _reason, _state) do
+    :ok
+  end
 end
