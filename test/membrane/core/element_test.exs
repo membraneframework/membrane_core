@@ -257,10 +257,9 @@ defmodule Membrane.Core.ElementTest do
     {:ok, clock} = Membrane.Clock.start_link()
     state = Membrane.Core.TimerController.start_timer(:timer, 1000, clock, get_state())
 
-    assert {:noreply, state} =
-             Element.handle_info({:membrane_clock_ratio, clock, Ratio.new(123)}, state)
+    assert {:noreply, state} = Element.handle_info({:membrane_clock_ratio, clock, 123}, state)
 
-    assert state.synchronization.timers.timer.ratio == Ratio.new(123)
+    assert state.synchronization.timers.timer.ratio == 123
   end
 
   test "should set stream sync" do

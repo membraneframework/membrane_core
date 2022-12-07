@@ -11,8 +11,6 @@ defmodule Membrane.Time do
   that do not touch hardware clock, you should use Membrane units for consistency.
   """
 
-  require Ratio
-
   @compile {:inline,
             native_units: 1, native_unit: 0, nanoseconds: 1, nanosecond: 0, second: 0, seconds: 1}
 
@@ -32,7 +30,7 @@ defmodule Membrane.Time do
   # Difference between 01.01.1900 (start of NTP epoch) and 01.01.1970 (start of Unix epoch) in seconds
   @ntp_unix_epoch_diff 2_208_988_800
 
-  @two_to_pow_32 Ratio.pow(Ratio.new(2, 1), 32) |> Ratio.trunc()
+  @two_to_pow_32 Ratio.pow(2, 32)
 
   @doc """
   Checks whether a value is `Membrane.Time.t`.
@@ -262,8 +260,12 @@ defmodule Membrane.Time do
     end
 
     # credo:disable-for-next-line Credo.Check.Readability.Specs
-    def unquote(unit.plural)(number) when Ratio.is_rational(number) do
-      Ratio.mult(number, Ratio.new(unquote(unit.duration)))
+    def unquote(unit.plural)(number) do
+      if not Ratio.is_rational?(number) do
+        raise "Only integers and rationals can be converted with Membrane.Time.#{unquote(unit.plural)}"
+      end
+
+      Ratio.*(number, unquote(unit.duration))
       |> round_rational()
     end
 
@@ -286,7 +288,7 @@ defmodule Membrane.Time do
     @spec unquote(as_fun_name)(t) :: integer | Ratio.t()
     # credo:disable-for-next-line Credo.Check.Readability.Specs
     def unquote(as_fun_name)(time) when is_time(time) do
-      Ratio.new(time, unquote(unit.duration))
+      Ratio./(time, unquote(unit.duration))
     end
   end)
 
@@ -296,6 +298,7 @@ defmodule Membrane.Time do
   end
 
   defp round_rational(ratio) do
+    ratio = make_rational(ratio)
     trunced = Ratio.trunc(ratio)
 
     if 2 * sign_of_rational(ratio) *
@@ -303,6 +306,14 @@ defmodule Membrane.Time do
          ratio.denominator,
        do: trunced + sign_of_rational(ratio),
        else: trunced
+  end
+
+  defp make_rational(number) do
+    if Ratio.is_rational?(number) do
+      number
+    else
+      %Ratio{numerator: number, denominator: 1}
+    end
   end
 
   defp sign_of_rational(ratio) do
