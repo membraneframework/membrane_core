@@ -12,7 +12,7 @@ defmodule Membrane.Core.Child.PadModel do
           ref: Membrane.Pad.ref_t(),
           options: Membrane.ChildrenSpec.pad_options_t(),
           link_id: Membrane.Core.Parent.Link.id(),
-          endpoint: Membrane.Core.Parent.Link.Endpoint.t(),
+          endpoint: Membrane.Core.Parent.Link.Endpoint.t() | nil,
           linked?: boolean(),
           response_received?: boolean(),
           spec_ref: Membrane.Core.Parent.ChildLifeController.spec_ref_t(),
