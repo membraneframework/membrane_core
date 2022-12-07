@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.0
+ * Introduce `:remove_link` action in pipelines and bins.
+
 ## 0.11.0
  * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)
  * Refine communication between parent and its children [#270](https://github.com/membraneframework/membrane_core/issues/270)
