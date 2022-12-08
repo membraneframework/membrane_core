@@ -1,5 +1,8 @@
 # Changelog
 
+# 0.11.2
+ * Fix bug in Membrane.ChildrenSpec.child/3 spec.
+
 # 0.11.1
  * Fix subprocess supervisor crash when a child fails in handle_init [#488](https://github.com/membraneframework/membrane_core/pull/488)
  * Fix bug in pads docs generation [#490](https://github.com/membraneframework/membrane_core/pull/490)
