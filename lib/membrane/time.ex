@@ -229,16 +229,16 @@ defmodule Membrane.Time do
   end
 
   @doc """
-  Returns timestamp in timebase units. Rounded to the nearest integer.
+  Divides timestamp by timebase. Rounded to the nearest integer.
 
   ## Examples:
       iex> timestamp = 10 |> Membrane.Time.seconds()
       iex> timebase = Ratio.new(Membrane.Time.second(), 30)
-      iex> Membrane.Time.round_to_timebase(timestamp, timebase)
+      iex> Membrane.Time.divide_by_timebase(timestamp, timebase)
       300
   """
-  @spec round_to_timebase(number | Ratio.t(), number | Ratio.t()) :: integer
-  def round_to_timebase(timestamp, timebase) do
+  @spec divide_by_timebase(number | Ratio.t(), number | Ratio.t()) :: integer
+  def divide_by_timebase(timestamp, timebase) do
     Ratio.new(timestamp, timebase) |> round_rational()
   end
 
@@ -267,26 +267,21 @@ defmodule Membrane.Time do
       |> round_rational()
     end
 
-    round_to_fun_name = :"round_to_#{unit.plural}"
-
-    @doc """
-    Returns time in #{unit.plural}. Rounded to the nearest integer.
-    """
-    @spec unquote(round_to_fun_name)(t) :: integer
-    # credo:disable-for-next-line Credo.Check.Readability.Specs
-    def unquote(round_to_fun_name)(time) when is_time(time) do
-      Ratio.new(time, unquote(unit.duration)) |> round_rational()
-    end
-
     as_fun_name = :"as_#{unit.plural}"
 
     @doc """
-    Returns time in #{unit.plural}, represented as a rational number.
+    Returns time in #{unit.plural}. If second argument is not provided
+    or is equal to `:exact`, result is represented as a rational number.
+    If second argument is equal to `:round`, result is rounded to the
+    nearest integer.
     """
-    @spec unquote(as_fun_name)(t) :: integer | Ratio.t()
+    @spec unquote(as_fun_name)(t, :round | :exact) :: integer | Ratio.t()
     # credo:disable-for-next-line Credo.Check.Readability.Specs
-    def unquote(as_fun_name)(time) when is_time(time) do
-      Ratio.new(time, unquote(unit.duration))
+    def unquote(as_fun_name)(time, mode \\ :exact) when is_time(time) do
+      case mode do
+        :exact -> Ratio.new(time, unquote(unit.duration))
+        :round -> Ratio.new(time, unquote(unit.duration)) |> round_rational()
+      end
     end
   end)
 
