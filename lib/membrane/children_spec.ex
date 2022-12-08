@@ -2,7 +2,7 @@ defmodule Membrane.ChildrenSpec do
   @moduledoc """
   A module with functionalities that allow to represent a topology of a pipeline/bin.
 
-  The children specification (commonly refered as a "children_spec") is represented by the following type:
+  The children specification (commonly refered as a "children spec") is represented by the following type:
   `t:t/0`. It consists of two parts - a chilren structure and the children specification options.
 
   The children specification describes the desired topology and can be incorporated into a pipeline or a bin by returning
@@ -51,6 +51,8 @@ defmodule Membrane.ChildrenSpec do
   is assumed for inputs and `:output` for outputs.
 
   Sample definition:
+
+  ```
   [
     get_child(:source_a)
     |> get_child(:converter)
@@ -63,15 +65,18 @@ defmodule Membrane.ChildrenSpec do
     |> via_in(:input, toilet_capacity: 500)
     |> get_child(:sink)
   ]
+  ```
 
   See the docs for `via_in/3` and `via_out/3` for details on pad properties that can be set.
   Links can also contain children's definitions, for example:
 
+  ```
   [
     child(:first_element, %Element.With.Options.Struct{option_a: 42})
     |> child(:some_element, Element.Without.Options)
     |> get_child(:element_specified_before)
   ]
+  ```
 
   ### Bins
 
@@ -82,9 +87,11 @@ defmodule Membrane.ChildrenSpec do
 
   Sample definition:
 
+  ```
   [
     bin_input() |> get_child(:filter1) |> get_child(:filter2) |> bin_output(:custom_output)
   ]
+  ```
 
   ### Dynamic pads
 
@@ -94,20 +101,26 @@ defmodule Membrane.ChildrenSpec do
   - When that reference is needed later, for example, to handle a notification related
   to that particular pad instance
 
+  ```
   pad = Pad.ref(:output, make_ref())
   [
     get_child(:tee) |> via_out(pad) |> get_child(:sink)
   ]
+  ```
 
   - When linking dynamic pads of a bin with its children, for example in
   `c:Membrane.Bin.handle_pad_added/3`
 
+  ```
   @impl true
   def handle_pad_added(Pad.ref(:input, _) = pad, _ctx, state) do
     structure = [bin_input(pad) |> get_child(:mixer)]
     {{:ok, spec: structure}, state}
   end
+  ```
+
   ## Children specification options
+
   ### Stream sync
 
   `:stream_sync` field can be used for specifying elements that should start playing
@@ -121,6 +134,7 @@ defmodule Membrane.ChildrenSpec do
   By default, no elements are synchronized.
 
   Sample definitions:
+
   ```
   children = ...
   {children, stream_sync: [[:element1, :element2], [:element3, :element4]]}
@@ -134,6 +148,7 @@ defmodule Membrane.ChildrenSpec do
   For more information see `Membrane.Element.Base.def_clock/1`.
 
   ### Crash groups
+
   A crash group is a logical entity that prevents the whole pipeline from crashing when one of
   its children crash.
 
