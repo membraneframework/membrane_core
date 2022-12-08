@@ -324,8 +324,8 @@ defmodule Membrane.ChildrenSpec do
     do_child(child_name, child_definition, options)
   end
 
-  def child(_first_arg, _second_arg, _third_arg) do
-    raise "Improper child name! Perhaps you meant to use get_child/2 while building your link?"
+  def child(child_name, _second_arg, _third_arg) do
+    raise "Invalid child name #{inspect(child_name)}. Child name can be an atom or a tuple."
   end
 
   @doc """
