@@ -241,22 +241,25 @@ defmodule Membrane.Core.Child.PadsSpecs do
   end
 
   defp generate_docs_from_pad_specs({name, config}) do
-    {pad_opts, config} = config |> Map.pop(:options)
+    config = config |> Map.delete(:name)
+
+    accepted_formats_doc = """
+    Accepted formats:
+    #{Enum.map_join(config.accepted_formats_str, "\n", &"```\n#{&1}\n```")}
+    """
 
     config_doc =
-      config
-      |> Enum.map(&generate_pad_property_doc/1)
-      |> Enum.map_join("\n", fn {k, v} ->
-        "<tr><td>#{k}</td> <td>#{v}</td></tr>"
-      end)
+      [:direction, :availability, :mode, :demand_mode, :demand_unit]
+      |> Enum.filter(&Map.has_key?(config, &1))
+      |> Enum.map_join("\n", &generate_pad_property_doc(&1, Map.fetch!(config, &1)))
 
     options_doc =
-      if pad_opts != nil do
+      if config.options do
         quote do
           """
-          #{Bunch.Markdown.indent("Options:")}
+          Pad options:
 
-          #{unquote(OptionsSpecs.generate_opts_doc(pad_opts))}
+          #{unquote(OptionsSpecs.generate_opts_doc(config.options))}
           """
         end
       else
@@ -267,24 +270,15 @@ defmodule Membrane.Core.Child.PadsSpecs do
       """
       ### `#{inspect(unquote(name))}`
 
-      <table>
+      #{unquote(accepted_formats_doc)}
       #{unquote(config_doc)}
-      </table>
-      """ <> unquote(options_doc)
+      #{unquote(options_doc)}
+      """
     end
   end
 
-  defp generate_pad_property_doc({:accepted_formats_str, formats}) do
-    {
-      "Accepted formats",
-      Enum.map_join(formats, &"<p><code>#{&1}</code></p>")
-    }
-  end
-
-  defp generate_pad_property_doc({property, value}) do
-    {
-      property |> to_string() |> String.replace("_", " ") |> String.capitalize(),
-      "<code>#{inspect(value)}</code>"
-    }
+  defp generate_pad_property_doc(property, value) do
+    property_str = property |> to_string() |> String.replace("_", " ") |> String.capitalize()
+    "#{property_str}: | `#{inspect(value)}`"
   end
 end
