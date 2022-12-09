@@ -23,7 +23,7 @@ defmodule Membrane.Testing.Pipeline do
   ]
   options =  [
     module: :default # :default is the default value for this parameter, so you do not need to pass it here
-    structure: links
+    spec: links
   ]
   pipeline = Membrane.Testing.Pipeline.start_link_supervised!(options)
   ```
@@ -63,7 +63,7 @@ defmodule Membrane.Testing.Pipeline do
         child(:tested_element, TestedElement) |>
         child(sink, %Membrane.Testing.Sink{})
     ]
-    {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(structure: links)
+    {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(spec: links)
 
   We can now wait till the end of the stream reaches the sink element (don't forget
   to import `Membrane.Testing.Assertions`):
@@ -113,7 +113,7 @@ defmodule Membrane.Testing.Pipeline do
   @type options ::
           [
             module: :default,
-            structure: [ChildrenSpec.structure_builder_t()],
+            spec: [ChildrenSpec.builder_t()],
             test_process: pid(),
             name: Pipeline.name()
           ]
@@ -222,9 +222,7 @@ defmodule Membrane.Testing.Pipeline do
   def handle_init(ctx, options) do
     case Keyword.get(options, :module, :default) do
       :default ->
-        structure = Bunch.listify(Keyword.get(options, :structure, []))
-
-        spec = structure
+        spec = Bunch.listify(Keyword.get(options, :spec, []))
 
         new_state = %State{test_process: Keyword.fetch!(options, :test_process), module: nil}
         {[spec: spec, playback: :playing], new_state}

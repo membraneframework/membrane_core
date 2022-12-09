@@ -3,25 +3,25 @@ defmodule Membrane.ChildrenSpec do
   A module with functionalities that allow to represent a topology of a pipeline/bin.
 
   The children specification (commonly referred to as a "children_spec") is represented by the following type:
-  `t:t/0`. It consists of two parts - a children's structure and the children's specification options.
+  `t:t/0`. It consists of two parts - a children's specification and the children's specification options.
 
   The children's specification describes the desired topology and can be incorporated into a pipeline or a bin by returning
   `t:Membrane.Pipeline.Action.spec_t/0` or `t:Membrane.Bin.Action.spec_t/0`
   action, respectively. This commonly happens within `c:Membrane.Pipeline.handle_init/2`
   and `c:Membrane.Bin.handle_init/2`, but can be done in any other callback also.
 
-  ## Children's structure
-  The children's structure allows specifying the children that need to be spawned in the action, as well as
+  ## Children's specification
+  The children's specification allows specifying the children that need to be spawned in the action, as well as
   links between the children (both the children spawned in that action, and already existing children).
 
   The children's processes are spawned with the use of `child/1`, `child/2`, `child/3` and `child/4` functions.
   These functions can be used for spawning nodes of a link in an inline manner:
   ```
-    structure = [child(:source, Source) |> child(:filter, %Filter{option: 1}) |> child(:sink, Sink)]
+    spec = [child(:source, Source) |> child(:filter, %Filter{option: 1}) |> child(:sink, Sink)]
   ```
   or just to spawn children processes, without linking the newly created children:
   ```
-    structure = [ child(:source, Source),
+    spec = [child(:source, Source),
       child(:filter, Filter),
       child(:sink, Sink)
     ]
@@ -30,7 +30,7 @@ defmodule Membrane.ChildrenSpec do
   Providing a child name is not necessary - you can spawn an anonymous child if you do not
   need to refer to that child later on:
   ```
-  structure = child(Source) |> child(Filter)
+    spec = child(Source) |> child(Filter)
   ```
   Children created that way will have their automatically generated identifier consisting of a module
   name and a random unique reference number, so that you will be able to distinguish between anonymous
@@ -39,7 +39,7 @@ defmodule Membrane.ChildrenSpec do
   In case you need to refer to an already existing child (which could be spawned, i.e. in the previous `spec_t` action),
   use `get_child/1` and `get_child/2` functions, as in the example below:
   ```
-    structure = [get_child(:already_existing_source) |> child(:this_filter_will_be_spawned, Filter) |> get_child(:already_existing_sink)]
+    spec = [get_child(:already_existing_source) |> child(:this_filter_will_be_spawned, Filter) |> get_child(:already_existing_sink)]
   ```
 
   The `child` functions allow specifying `:get_if_exists` option.
@@ -47,10 +47,10 @@ defmodule Membrane.ChildrenSpec do
   choose between `get_child` and `child` functions. After setting the `get_if_exists: true` option in `child/3` and `child/4` functions you can be sure
   that in case a child with a given name already exists, you will simply refer to that child instead of respawning it.
   ```
-    structure = [child(:sink, Sink),
-    child(:sink, Sink, get_if_exists: true) |> child(:source, Source)]
+    spec = [child(:sink, Sink),
+      child(:sink, Sink, get_if_exists: true) |> child(:source, Source)]
   ```
-  In the example above you can see, that the `:sink` child is created in the first element of the `structure` list.
+  In the example above you can see, that the `:sink` child is created in the first element of the `spec` list.
   In the second element of that list, the `get_if_exists: true` option is used within `child/3`, which will have the same effect as if
   `get_child(:sink)` was used. At the same time, if the `:sink` child wasn't already spawned, it would be created in that link definition.
   Please note that it makes sense to use `:get_if_exists` option only with named children.
@@ -125,8 +125,8 @@ defmodule Membrane.ChildrenSpec do
   ```
   @impl true
   def handle_pad_added(Pad.ref(:input, _) = pad, _ctx, state) do
-    structure = [bin_input(pad) |> get_child(:mixer)]
-    {{:ok, spec: structure}, state}
+    spec = [bin_input(pad) |> get_child(:mixer)]
+    {{:ok, spec: spec}, state}
   end
 
   ## Children's specification options
@@ -165,8 +165,8 @@ defmodule Membrane.ChildrenSpec do
     spec1 = {links1, group: :first_children_group}
     spec2 = {links2, group: :second_children_group}
   ```
-  The children spawned within `links1` structure specification will be put inside `:first_children_group`, whereas the
-  children spawned within `links2` structure will be put inside `second_children_group`.
+  The children spawned within `links1` specification will be put inside `:first_children_group`, whereas the
+  children spawned within `links2` specification will be put inside `second_children_group`.
 
   In order to refer to a child which resides inside the children group, you need to use the `Membrane.Child.ref/2` function,
   as in the example below:
@@ -192,7 +192,7 @@ defmodule Membrane.ChildrenSpec do
   #### Adding children to a crash group
 
   ```
-  structure = [
+  spec = [
     child(:some_element_1, %SomeElement{
       # ...
     },
@@ -201,7 +201,7 @@ defmodule Membrane.ChildrenSpec do
     }
   ]
 
-  spec = {structure, group: group_id, crash_group_mode: :temporary}
+  spec = {spec, group: group_id, crash_group_mode: :temporary}
   ```
 
   In the above snippet, we create new children - `:some_element_1` and `:some_element_2`, we add them
@@ -254,7 +254,7 @@ defmodule Membrane.ChildrenSpec do
 
   require Membrane.Pad
 
-  defmodule StructureBuilder do
+  defmodule Builder do
     @moduledoc false
 
     use Bunch.Access
@@ -298,7 +298,7 @@ defmodule Membrane.ChildrenSpec do
         to_pad_props: builder.to_pad_props
       }
 
-      %StructureBuilder{
+      %Builder{
         builder
         | status: :done,
           link_starting_child: child_name,
@@ -307,7 +307,7 @@ defmodule Membrane.ChildrenSpec do
     end
   end
 
-  @opaque structure_builder_t :: StructureBuilder.t()
+  @opaque builder_t :: Builder.t()
 
   @type pad_options_t :: Keyword.t()
 
@@ -328,14 +328,14 @@ defmodule Membrane.ChildrenSpec do
   @typedoc """
   Used to describe the inner topology of the pipeline/bin.
   """
-  @type t :: structure_builder_t() | [t()] | {t(), children_spec_options_t()}
+  @type t :: builder_t() | [t()] | {t(), children_spec_options_t()}
 
   @doc """
   Used to refer to an existing child at a beginning of a link specification.
 
-  See the _Children's structure_ section of the moduledoc for more information.
+  See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec get_child(Child.name_t()) :: structure_builder_t()
+  @spec get_child(Child.name_t()) :: builder_t()
   def get_child(child_name) do
     do_get_child(child_name)
   end
@@ -343,33 +343,32 @@ defmodule Membrane.ChildrenSpec do
   @doc """
   Used to refer to an existing child in a middle of a link specification.
 
-  See the _Children's structure_ section of the moduledoc for more information.
+  See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec get_child(structure_builder_t(), Child.name_t()) ::
-          structure_builder_t()
-  def get_child(%StructureBuilder{} = structure_builder, child_ref) do
-    do_get_child(structure_builder, child_ref)
+  @spec get_child(builder_t(), Child.name_t()) :: builder_t()
+  def get_child(%Builder{} = builder, child_ref) do
+    do_get_child(builder, child_ref)
   end
 
   defp do_get_child(child_ref) do
-    %StructureBuilder{link_starting_child: {:child_ref, child_ref}}
+    %Builder{link_starting_child: {:child_ref, child_ref}}
   end
 
-  defp do_get_child(structure_builder, child_ref) do
-    if structure_builder.status == :to_pad do
-      structure_builder
+  defp do_get_child(builder, child_ref) do
+    if builder.status == :to_pad do
+      builder
     else
-      via_in(structure_builder, :input)
+      via_in(builder, :input)
     end
-    |> StructureBuilder.finish_link({:child_ref, child_ref})
+    |> Builder.finish_link({:child_ref, child_ref})
   end
 
   @doc """
   Used to spawn an anonymous child at the beggining of the link specification.
 
-  See the _Children's structure_ section of the moduledoc for more information.
+  See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec child(child_definition_t()) :: structure_builder_t()
+  @spec child(child_definition_t()) :: builder_t()
   def child(child_definition) do
     child_module = get_module(child_definition)
     child_name = {child_module, make_ref()}
@@ -380,19 +379,19 @@ defmodule Membrane.ChildrenSpec do
   Used to spawn a named child at the beggining of the link
   specification or to spawn an anynomous child.
 
-  See the _Children's structure_ section of the moduledoc for more information.
+  See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec child(Child.name_t(), child_definition_t()) :: structure_builder_t()
-  @spec child(structure_builder_t(), child_definition_t()) :: structure_builder_t()
-  @spec child(child_definition_t(), child_options_t()) :: structure_builder_t()
+  @spec child(Child.name_t(), child_definition_t()) :: builder_t()
+  @spec child(builder_t(), child_definition_t()) :: builder_t()
+  @spec child(child_definition_t(), child_options_t()) :: builder_t()
   def child(child_name, child_definition) when is_child_name?(child_name) do
     do_child(child_name, child_definition, [])
   end
 
-  def child(%StructureBuilder{} = structure_builder, child_definition) do
+  def child(%Builder{} = builder, child_definition) do
     child_module = get_module(child_definition)
     child_name = {child_module, make_ref()}
-    do_child(structure_builder, child_name, child_definition, [])
+    do_child(builder, child_name, child_definition, [])
   end
 
   def child(child_definition, opts) do
@@ -405,24 +404,22 @@ defmodule Membrane.ChildrenSpec do
   Used to spawn a named child or an anonymous child in the middle
   of the link specification.
 
-  See the _Children's structure_ section of the moduledoc for more information.
+  See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec child(structure_builder_t(), Child.name_t(), child_definition_t()) ::
-          structure_builder_t()
-  @spec child(structure_builder_t(), child_definition_t(), child_options_t()) ::
-          structure_builder_t()
-  @spec child(Child.name_t(), child_definition_t(), child_options_t()) :: structure_builder_t()
+  @spec child(builder_t(), Child.name_t(), child_definition_t()) :: builder_t()
+  @spec child(builder_t(), child_definition_t(), child_options_t()) :: builder_t()
+  @spec child(Child.name_t(), child_definition_t(), child_options_t()) :: builder_t()
   def child(first_arg, second_arg, third_arg)
 
-  def child(%StructureBuilder{} = structure_builder, child_name, child_definition)
+  def child(%Builder{} = builder, child_name, child_definition)
       when is_child_name?(child_name) do
-    do_child(structure_builder, child_name, child_definition, [])
+    do_child(builder, child_name, child_definition, [])
   end
 
-  def child(%StructureBuilder{} = structure_builder, child_definition, options) do
+  def child(%Builder{} = builder, child_definition, options) do
     child_module = get_module(child_definition)
     child_name = {child_module, make_ref()}
-    do_child(structure_builder, child_name, child_definition, options)
+    do_child(builder, child_name, child_definition, options)
   end
 
   def child(child_name, child_definition, options) when is_child_name?(child_name) do
@@ -436,12 +433,11 @@ defmodule Membrane.ChildrenSpec do
   @doc """
   Used to spawn a named child in the middle of a link specification.
 
-  See the _Children's structure_ section of the moduledoc for more information.
+  See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec child(structure_builder_t(), Child.name_t(), child_definition_t(), child_options_t()) ::
-          structure_builder_t()
-  def child(structure_builder, child_name, child_definition, opts) do
-    do_child(structure_builder, child_name, child_definition, opts)
+  @spec child(builder_t(), Child.name_t(), child_definition_t(), child_options_t()) :: builder_t()
+  def child(builder, child_name, child_definition, opts) do
+    do_child(builder, child_name, child_definition, opts)
   end
 
   defp do_child(child_name, child_definition, opts) do
@@ -449,51 +445,50 @@ defmodule Membrane.ChildrenSpec do
     {:ok, opts} = Bunch.Config.parse(opts, @default_child_options)
     child_name = {:child_name, child_name}
     child_spec = {child_name, child_definition, opts}
-    %StructureBuilder{children: [child_spec], link_starting_child: child_name}
+    %Builder{children: [child_spec], link_starting_child: child_name}
   end
 
-  defp do_child(%StructureBuilder{} = structure_builder, child_name, child_definition, opts) do
+  defp do_child(%Builder{} = builder, child_name, child_definition, opts) do
     ensure_is_child_definition!(child_definition)
     {:ok, opts} = Bunch.Config.parse(opts, @default_child_options)
     child_name = {:child_name, child_name}
     child_spec = {child_name, child_definition, opts}
 
-    if structure_builder.status == :to_pad do
-      structure_builder
+    if builder.status == :to_pad do
+      builder
     else
-      via_in(structure_builder, :input)
+      via_in(builder, :input)
     end
-    |> StructureBuilder.finish_link(child_name)
-    |> then(&%StructureBuilder{&1 | children: [child_spec | &1.children]})
+    |> Builder.finish_link(child_name)
+    |> then(&%Builder{&1 | children: [child_spec | &1.children]})
   end
 
   @doc """
   Begins a link with a bin's pad.
 
-  See the _Children's structure_ section of the moduledoc for more information.
+  See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec bin_input(Pad.name_t() | Pad.ref_t()) :: structure_builder_t() | no_return
+  @spec bin_input(Pad.name_t() | Pad.ref_t()) :: builder_t() | no_return
   def bin_input(pad \\ :input) do
     :ok = validate_pad_name(pad)
 
     get_child({Membrane.Bin, :itself})
-    |> then(&%StructureBuilder{&1 | status: :from_pad, from_pad: pad, from_pad_props: %{}})
+    |> then(&%Builder{&1 | status: :from_pad, from_pad: pad, from_pad_props: %{}})
   end
 
   @doc """
   Ends a link with a bin's output.
 
-  See the _Children's structure_ section of the moduledoc for more information.
+  See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec bin_output(structure_builder_t(), Pad.name_t() | Pad.ref_t()) ::
-          structure_builder_t() | no_return
+  @spec bin_output(builder_t(), Pad.name_t() | Pad.ref_t()) :: builder_t() | no_return
   def bin_output(builder, pad \\ :output)
 
-  def bin_output(%StructureBuilder{status: :to_pad}, pad) do
+  def bin_output(%Builder{status: :to_pad}, pad) do
     raise ParentError, "Invalid link specification: bin's output #{pad} placed after an input"
   end
 
-  def bin_output(%StructureBuilder{} = builder, pad) do
+  def bin_output(%Builder{} = builder, pad) do
     :ok = validate_pad_name(pad)
 
     if builder.status == :from_pad do
@@ -501,7 +496,7 @@ defmodule Membrane.ChildrenSpec do
     else
       via_out(builder, :output)
     end
-    |> then(&%StructureBuilder{&1 | status: :to_pad, to_pad: pad, to_pad_props: %{}})
+    |> then(&%Builder{&1 | status: :to_pad, to_pad: pad, to_pad_props: %{}})
     |> get_child({Membrane.Bin, :itself})
   end
 
@@ -537,30 +532,29 @@ defmodule Membrane.ChildrenSpec do
     in the system.
     At the same time, setting a greater `throttling_factor` can result in a toilet overflow being detected later.
 
-  See the _Children's structure_ section of the moduledoc for more information.
+  See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec via_in(structure_builder_t(), Pad.name_t() | Pad.ref_t(),
+  @spec via_in(builder_t(), Pad.name_t() | Pad.ref_t(),
           options: pad_options_t(),
           toilet_capacity: number | nil,
           target_queue_size: number | nil,
           min_demand_factor: number | nil,
           auto_demand_size: number | nil,
           throttling_factor: number | nil
-        ) ::
-          structure_builder_t() | no_return
+        ) :: builder_t() | no_return
   def via_in(builder, pad, props \\ [])
 
-  def via_in(%StructureBuilder{status: :to_pad}, pad, _props) do
+  def via_in(%Builder{status: :to_pad}, pad, _props) do
     raise ParentError,
           "Invalid link specification: input #{inspect(pad)} placed after another input"
   end
 
-  def via_in(%StructureBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, pad, _props) do
+  def via_in(%Builder{links: [%{to: {Membrane.Bin, :itself}} | _]}, pad, _props) do
     raise ParentError,
           "Invalid link specification: input #{inspect(pad)} placed after bin's output"
   end
 
-  def via_in(%StructureBuilder{} = builder, pad, props) do
+  def via_in(%Builder{} = builder, pad, props) do
     :ok = validate_pad_name(pad)
 
     props =
@@ -586,9 +580,7 @@ defmodule Membrane.ChildrenSpec do
     else
       via_out(builder, :output)
     end
-    |> then(
-      &%StructureBuilder{&1 | status: :to_pad, to_pad: pad, to_pad_props: Enum.into(props, %{})}
-    )
+    |> then(&%Builder{&1 | status: :to_pad, to_pad: pad, to_pad_props: Enum.into(props, %{})})
   end
 
   @doc """
@@ -599,27 +591,27 @@ defmodule Membrane.ChildrenSpec do
   in moduledoc of each element. See `Membrane.Element.WithOutputPads.def_output_pad/2` and `Membrane.Bin.def_output_pad/2`
   for information about defining pad options.
 
-  See the _Children's structure_ section of the moduledoc for more information.
+  See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec via_out(structure_builder_t(), Pad.name_t() | Pad.ref_t(), options: pad_options_t()) ::
-          structure_builder_t() | no_return
+  @spec via_out(builder_t(), Pad.name_t() | Pad.ref_t(), options: pad_options_t()) ::
+          builder_t() | no_return
   def via_out(builder, pad, props \\ [])
 
-  def via_out(%StructureBuilder{status: :from_pad}, pad, _props) do
+  def via_out(%Builder{status: :from_pad}, pad, _props) do
     raise ParentError,
           "Invalid link specification: output #{inspect(pad)} placed after another output or bin's input"
   end
 
-  def via_out(%StructureBuilder{status: :to_pad}, pad, _props) do
+  def via_out(%Builder{status: :to_pad}, pad, _props) do
     raise ParentError, "Invalid link specification: output #{inspect(pad)} placed after an input"
   end
 
-  def via_out(%StructureBuilder{links: [%{to: {Membrane.Bin, :itself}} | _]}, pad, _props) do
+  def via_out(%Builder{links: [%{to: {Membrane.Bin, :itself}} | _]}, pad, _props) do
     raise ParentError,
           "Invalid link specification: output #{inspect(pad)} placed after bin's output"
   end
 
-  def via_out(%StructureBuilder{status: :done} = builder, pad, props) do
+  def via_out(%Builder{status: :done} = builder, pad, props) do
     :ok = validate_pad_name(pad)
 
     props =
@@ -631,7 +623,7 @@ defmodule Membrane.ChildrenSpec do
           raise ParentError, "Invalid link specification: invalid pad props: #{inspect(reason)}"
       end
 
-    %StructureBuilder{
+    %Builder{
       builder
       | status: :from_pad,
         from_pad: pad,

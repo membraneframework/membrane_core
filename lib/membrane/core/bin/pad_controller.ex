@@ -11,7 +11,7 @@ defmodule Membrane.Core.Bin.PadController do
   alias Membrane.Core.{CallbackHandler, Child, Message}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.StreamFormatController
-  alias Membrane.Core.Parent.{ChildLifeController, Link, StructureParser}
+  alias Membrane.Core.Parent.{ChildLifeController, Link, SpecificationParser}
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
@@ -178,8 +178,8 @@ defmodule Membrane.Core.Bin.PadController do
   """
   @spec handle_link(
           Pad.direction_t(),
-          StructureParser.raw_endpoint_t(),
-          StructureParser.raw_endpoint_t(),
+          SpecificationParser.raw_endpoint_t(),
+          SpecificationParser.raw_endpoint_t(),
           %{
             initiator: :parent,
             stream_format_validation_params:

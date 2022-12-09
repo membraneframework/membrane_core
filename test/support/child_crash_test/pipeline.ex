@@ -40,16 +40,13 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
   @spec add_single_source(pid(), any(), any(), any()) :: any()
   def add_single_source(pid, source_name, group \\ nil, source \\ Testing.Source) do
-    structure = [
-      child(source_name, source)
-      |> get_child(:center_filter)
-    ]
+    spec = child(source_name, source) |> get_child(:center_filter)
 
     spec =
       if group do
-        {structure, crash_group_mode: :temporary, group: group}
+        {spec, crash_group_mode: :temporary, group: group}
       else
-        structure
+        spec
       end
 
     send(pid, {:create_path, spec})
@@ -57,17 +54,16 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
   @spec add_bin(pid(), atom(), atom(), any()) :: any()
   def add_bin(pid, bin_name, source_name, group \\ nil) do
-    structure = [
+    spec =
       child(source_name, Testing.Source)
       |> child(bin_name, TestBins.CrashTestBin)
       |> get_child(:center_filter)
-    ]
 
     spec =
       if group do
-        {structure, crash_group_mode: :temporary, group: group}
+        {spec, crash_group_mode: :temporary, group: group}
       else
-        structure
+        spec
       end
 
     send(pid, {:create_path, spec})
