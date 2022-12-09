@@ -128,6 +128,7 @@ defmodule Membrane.ChildrenSpec do
     spec = [bin_input(pad) |> get_child(:mixer)]
     {{:ok, spec: spec}, state}
   end
+  ```
 
   ## Children's specification options
 
