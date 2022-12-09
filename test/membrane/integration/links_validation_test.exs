@@ -66,7 +66,7 @@ defmodule Membrane.LinksValidationTest do
 
   describe "returning a spec with many links to this same" do
     test "static pads" do
-      structure = [
+      spec = [
         child(:source, StaticPads.Source)
         |> child(:sink, StaticPads.Sink),
         get_child(:source)
@@ -74,11 +74,11 @@ defmodule Membrane.LinksValidationTest do
       ]
 
       {:error, {{%Membrane.LinkError{}, _stackstrace}, _meta}} =
-        Pipeline.start_supervised(structure: structure)
+        Pipeline.start_supervised(spec: spec)
     end
 
     test "dynamic pads" do
-      structure = [
+      spec = [
         child(:source, DynamicPads.Source)
         |> via_out(Pad.ref(:output, 1))
         |> via_in(Pad.ref(:input, 1))
@@ -90,17 +90,15 @@ defmodule Membrane.LinksValidationTest do
       ]
 
       {:error, {{%Membrane.LinkError{}, _stackstrace}, _meta}} =
-        Pipeline.start_supervised(structure: structure)
+        Pipeline.start_supervised(spec: spec)
     end
   end
 
   describe "returning a spec with links to already used" do
     test "static pads" do
-      structure = [
-        child(:source, StaticPads.Source) |> child(:sink, StaticPads.Sink)
-      ]
+      spec = child(:source, StaticPads.Source) |> child(:sink, StaticPads.Sink)
 
-      pipeline = Pipeline.start_supervised!(structure: structure)
+      pipeline = Pipeline.start_supervised!(spec: spec)
       ref = Process.monitor(pipeline)
 
       spec = get_child(:source) |> get_child(:sink)
@@ -111,14 +109,13 @@ defmodule Membrane.LinksValidationTest do
     end
 
     test "dynamic pads" do
-      structure = [
+      spec =
         child(:source, DynamicPads.Source)
         |> via_out(Pad.ref(:output, 1))
         |> via_in(Pad.ref(:input, 1))
         |> child(:sink, DynamicPads.Sink)
-      ]
 
-      pipeline = Pipeline.start_supervised!(structure: structure)
+      pipeline = Pipeline.start_supervised!(spec: spec)
       ref = Process.monitor(pipeline)
 
       spec =

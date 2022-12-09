@@ -21,7 +21,8 @@ defmodule Membrane.ChildEntry do
           pid: pid,
           clock: Membrane.Clock.t(),
           sync: Membrane.Sync.t(),
-          terminating?: boolean()
+          terminating?: boolean(),
+          group: Membrane.Child.group_t()
         }
 
   defstruct [
@@ -33,6 +34,7 @@ defmodule Membrane.ChildEntry do
     :clock,
     :sync,
     :spec_ref,
+    :group,
     initialized?: false,
     ready?: false,
     terminating?: false

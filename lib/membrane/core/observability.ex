@@ -12,7 +12,7 @@ defmodule Membrane.Core.Observability do
   @type config :: %{
           optional(:parent_path) => ComponentPath.path_t(),
           optional(:log_metadata) => Logger.metadata(),
-          name: term,
+          name: Membrane.Child.name_t(),
           component_type: :element | :bin | :pipeline,
           pid: pid()
         }
@@ -47,7 +47,9 @@ defmodule Membrane.Core.Observability do
 
     component_path = parent_path ++ [name_str]
     ComponentPath.set(component_path)
+
     Membrane.Logger.set_prefix(ComponentPath.format(component_path) <> utility_name)
+
     :ok
   end
 

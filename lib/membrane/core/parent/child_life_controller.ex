@@ -12,7 +12,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     ClockHandler,
     CrashGroup,
     Link,
-    StructureParser
+    SpecificationParser
   }
 
   require Membrane.Core.Component
@@ -36,18 +36,24 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @type pending_specs_t :: %{spec_ref_t() => pending_spec_t()}
 
-  @typep parsed_children_spec_options_t :: %{
-           crash_group: Membrane.CrashGroup.t() | nil,
-           stream_sync: :sinks | [[Membrane.Child.name_t()]],
-           clock_provider: Membrane.Child.name_t() | nil,
-           node: node() | nil,
-           log_metadata: Keyword.t()
-         }
+  @opaque parsed_children_spec_options_t :: %{
+            group: Membrane.Child.group_t(),
+            crash_group_mode: Membrane.CrashGroup.mode_t(),
+            stream_sync: :sinks | [[Membrane.Child.name_t()]],
+            clock_provider: Membrane.Child.name_t() | nil,
+            node: node() | nil,
+            log_metadata: Keyword.t()
+          }
+
+  @type children_spec_canonical_form_t :: [
+          {[Membrane.ChildrenSpec.builder_t()], parsed_children_spec_options_t()}
+        ]
 
   @spec_dependency_requiring_statuses [:initializing, :linking_internally]
 
   @children_spec_options_fields_specs [
-    crash_group: [require?: false],
+    group: [require?: false],
+    crash_group_mode: [require?: false],
     stream_sync: [require?: false],
     clock_provider: [require?: false],
     node: [require?: false],
@@ -55,7 +61,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   ]
 
   @default_children_spec_options %{
-    crash_group: nil,
+    group: nil,
+    crash_group_mode: nil,
     stream_sync: [],
     clock_provider: nil,
     node: nil,
@@ -93,32 +100,38 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @spec handle_spec(ChildrenSpec.t(), Parent.state_t()) :: Parent.state_t() | no_return()
   def handle_spec(spec, state) do
     spec_ref = make_ref()
-
     canonical_spec = make_canonical(spec)
 
     Membrane.Logger.debug("""
-    New spec #{inspect(spec_ref)}
-    structure: #{inspect(spec)}
+    New spec with ref: #{inspect(spec_ref)}
+    specification: #{inspect(spec)}
     """)
 
-    parsed_structures =
-      Enum.map(canonical_spec, fn {structures, options} ->
-        {this_structures_children_definitions, this_structures_links} =
-          StructureParser.parse(structures)
+    parsed_specifications =
+      Enum.map(canonical_spec, fn {specifications, options} ->
+        {this_specifications_children_definitions, this_specifications_links} =
+          SpecificationParser.parse(specifications)
 
-        {this_structures_children_definitions, this_structures_links, options}
+        {this_specifications_children_definitions, this_specifications_links, options}
       end)
 
     children_definitions =
-      Enum.map(parsed_structures, fn {children_definitions, _links, options} ->
+      Enum.map(parsed_specifications, fn {children_definitions, _links, options} ->
         {children_definitions, options}
       end)
       |> Enum.filter(fn {children_definitions, _options} -> children_definitions != [] end)
 
+    StartupUtils.check_if_children_names_and_children_groups_ids_are_unique(
+      children_definitions,
+      state
+    )
+
     children_definitions = remove_unecessary_children_specs(children_definitions, state)
 
     links =
-      Enum.flat_map(parsed_structures, fn {_children_definitions, links, _options} -> links end)
+      Enum.flat_map(parsed_specifications, fn {_children, links, _options} ->
+        links
+      end)
 
     {all_children_names, state} =
       Enum.flat_map_reduce(children_definitions, state, &setup_children(&1, spec_ref, &2))
@@ -147,9 +160,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     proceed_spec_startup(spec_ref, state)
   end
 
-  @spec make_canonical(Membrane.ChildrenSpec.t(), parsed_children_spec_options_t()) :: [
-          {[Membrane.ChildrenSpec.structure_builder_t()], parsed_children_spec_options_t()}
-        ]
+  @spec make_canonical(Membrane.ChildrenSpec.t(), parsed_children_spec_options_t()) ::
+          children_spec_canonical_form_t()
   defp make_canonical(spec, defaults \\ @default_children_spec_options)
 
   defp make_canonical({spec, options_keywords_list}, defaults) do
@@ -162,9 +174,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     options = Map.merge(defaults, options)
 
     options_to_pass_to_nested =
-      Map.reject(options, fn {key, _value} -> key in [:clock_provider, :stream_sync] end)
+      Enum.reject(options, fn {key, _value} -> key in [:clock_provider, :stream_sync] end)
+      |> Map.new()
 
     defaults_for_nested = Map.merge(@default_children_spec_options, options_to_pass_to_nested)
+
+    this_level_specs = equip_spec_with_children_refs(this_level_specs, options.group)
 
     [{this_level_specs, options}] ++
       Enum.flat_map(inner_specs, &make_canonical(&1, defaults_for_nested))
@@ -178,7 +193,42 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     spec = Bunch.listify(spec)
     {:ok, options} = Bunch.Config.parse([], @children_spec_options_fields_specs)
     options = Map.merge(defaults, options)
+    spec = equip_spec_with_children_refs(spec, options.group)
     [{spec, options}]
+  end
+
+  defp equip_spec_with_children_refs(specification_builders, group) do
+    Enum.map(specification_builders, fn specification_builder ->
+      children =
+        Enum.map(specification_builder.children, fn {child_name, child_definition, options} ->
+          child_ref = get_child_ref(child_name, group)
+          {child_ref, child_definition, options}
+        end)
+
+      links = Enum.map(specification_builder.links, &equip_link_with_child_ref(&1, group))
+      %{specification_builder | children: children, links: links}
+    end)
+  end
+
+  defp equip_link_with_child_ref(link, group) do
+    Bunch.Access.put_in(
+      link,
+      [:from],
+      get_child_ref(link.from, group)
+    )
+    |> Bunch.Access.put_in(
+      [:to],
+      get_child_ref(link.to, group)
+    )
+  end
+
+  defp get_child_ref(child_name_or_ref, group) do
+    case child_name_or_ref do
+      # child name created with child(...)
+      {:child_name, child_name} -> Membrane.Child.ref(child_name, group: group)
+      # child name created with get_child(...), bin_input() and bin_output()
+      {:child_ref, ref} -> ref
+    end
   end
 
   defp setup_children(
@@ -207,7 +257,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         state.synchronization.clock_proxy,
         syncs,
         log_metadata,
-        state.subprocess_supervisor
+        state.subprocess_supervisor,
+        options.group
       )
 
     :ok = StartupUtils.maybe_activate_syncs(syncs, state)
@@ -219,9 +270,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     # adding crash group to state
     state =
-      if options.crash_group do
+      if options.crash_group_mode != nil do
         CrashGroupUtils.add_crash_group(
-          options.crash_group,
+          {options.group, options.crash_group_mode},
           children_names,
           children_pids,
           state
@@ -400,21 +451,33 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   @spec handle_remove_children(
-          Membrane.Child.name_t() | [Membrane.Child.name_t()],
+          Membrane.Child.ref_t()
+          | [Membrane.Child.ref_t()]
+          | Membrane.Child.group_t()
+          | [Membrane.Child.group_t()],
           Parent.state_t()
         ) :: Parent.state_t()
-  def handle_remove_children(names, state) do
-    names = names |> Bunch.listify()
-    Membrane.Logger.debug("Removing children: #{inspect(names)}")
+  def handle_remove_children(children_or_children_groups, state) do
+    children_or_children_groups = Bunch.listify(children_or_children_groups)
+
+    refs =
+      state.children
+      |> Enum.filter(fn {child_ref, child_entry} ->
+        child_ref in children_or_children_groups or
+          child_entry.group in children_or_children_groups
+      end)
+      |> Enum.map(fn {ref, _child_entry} -> ref end)
+
+    Membrane.Logger.debug("Removing children: #{inspect(refs)}")
 
     state =
-      if state.synchronization.clock_provider.provider in names do
+      if state.synchronization.clock_provider.provider in refs do
         ClockHandler.reset_clock(state)
       else
         state
       end
 
-    data = Enum.map(names, &Parent.ChildrenModel.get_child_data!(state, &1))
+    data = Enum.map(refs, &Parent.ChildrenModel.get_child_data!(state, &1))
     {already_removing, data} = Enum.split_with(data, & &1.terminating?)
 
     if already_removing != [] do
@@ -424,7 +487,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
 
     data |> Enum.filter(& &1.ready?) |> Enum.each(&Message.send(&1.pid, :terminate))
-    Parent.ChildrenModel.update_children!(state, names, &%{&1 | terminating?: true})
+    Parent.ChildrenModel.update_children!(state, refs, &%{&1 | terminating?: true})
   end
 
   @doc """

@@ -70,7 +70,7 @@ defmodule Membrane.ElementTest do
       |> child(:sink, Testing.Sink)
     ]
 
-    pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
+    pipeline = Testing.Pipeline.start_link_supervised!(spec: links)
 
     [pipeline: pipeline]
   end

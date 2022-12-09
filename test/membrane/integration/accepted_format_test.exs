@@ -81,12 +81,9 @@ defmodule Membrane.StreamFormatTest do
     source_struct = struct!(source, test_pid: self(), stream_format: stream_format)
     sink_struct = struct!(sink, test_pid: self())
 
-    structure = [
-      child(:source, source_struct)
-      |> child(:sink, sink_struct)
-    ]
+    spec = child(:source, source_struct) |> child(:sink, sink_struct)
 
-    Pipeline.start_supervised!(structure: structure)
+    Pipeline.start_supervised!(spec: spec)
   end
 
   defp assert_down(module) do

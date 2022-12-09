@@ -62,7 +62,6 @@ defmodule Membrane.Pipeline do
 
   alias __MODULE__.{Action, CallbackContext}
   alias Membrane.{Child, Pad}
-  alias Membrane.CrashGroup
 
   require Membrane.Logger
   require Membrane.Core.Message, as: Message
@@ -202,7 +201,7 @@ defmodule Membrane.Pipeline do
   Callback invoked when crash of the crash group happens.
   """
   @callback handle_crash_group_down(
-              group_name :: CrashGroup.name_t(),
+              group_name :: Child.group_t(),
               context :: CallbackContext.CrashGroupDown.t(),
               state
             ) :: callback_return_t
