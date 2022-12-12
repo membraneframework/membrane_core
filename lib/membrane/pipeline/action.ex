@@ -25,9 +25,12 @@ defmodule Membrane.Pipeline.Action do
 
   @typedoc """
   Action that stops, unlinks and removes specified child/children from the pipeline.
+
+  A child name, list of children names, children group id or a list of children group ids can be specified
+  as an argument.
   """
-  @type remove_child_t ::
-          {:remove_child, Child.name_t() | [Child.name_t()]}
+  @type remove_children_t ::
+          {:remove_children, Child.name_t() | [Child.name_t()]}
 
   @typedoc """
   Starts a timer that will invoke `c:Membrane.Pipeline.handle_tick/3` callback
@@ -120,7 +123,7 @@ defmodule Membrane.Pipeline.Action do
   @type t ::
           notify_child_t
           | spec_t
-          | remove_child_t
+          | remove_children_t
           | start_timer_t
           | timer_interval_t
           | stop_timer_t

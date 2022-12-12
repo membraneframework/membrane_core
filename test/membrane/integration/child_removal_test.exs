@@ -171,7 +171,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
       @impl true
       def handle_terminate_request(_ctx, %{defer?: true} = state) do
         send(state.test_process, {__MODULE__, :terminate_request})
-        {[remove_child: :source], state}
+        {[remove_children: :source], state}
       end
 
       @impl true
@@ -189,7 +189,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
     test "two linked elements" do
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          structure: [child(:source, RemovalDeferSource) |> child(:sink, RemovalDeferSink)]
+          spec: child(:source, RemovalDeferSource) |> child(:sink, RemovalDeferSink)
         )
 
       monitor = Process.monitor(pipeline)
@@ -203,10 +203,9 @@ defmodule Membrane.Integration.ChildRemovalTest do
     test "two linked elements, one in a bin" do
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          structure: [
+          spec:
             child(:bin, %RemovalDeferBin{defer?: false, test_process: self()})
             |> child(:sink, RemovalDeferSink)
-          ]
         )
 
       monitor = Process.monitor(pipeline)
@@ -222,10 +221,9 @@ defmodule Membrane.Integration.ChildRemovalTest do
     test "two linked elements, one in a bin that defers termination" do
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          structure: [
+          spec:
             child(:bin, %RemovalDeferBin{defer?: true, test_process: self()})
             |> child(:sink, RemovalDeferSink)
-          ]
         )
 
       pipeline_monitor = Process.monitor(pipeline)
@@ -239,6 +237,45 @@ defmodule Membrane.Integration.ChildRemovalTest do
       assert_receive {:DOWN, ^bin_monitor, :process, _pid, :normal}
       send(RemovalDeferSink, :terminate)
       assert_receive {:DOWN, ^pipeline_monitor, :process, _pid, :normal}
+    end
+
+    test "if all the children from the children group are removed" do
+      pipeline_pid =
+        Testing.Pipeline.start_link_supervised!(module: ChildRemovalTest.ChildRemovingPipeline)
+
+      Testing.Pipeline.execute_actions(pipeline_pid, [
+        {:remove_children, :first_crash_group}
+      ])
+
+      assert_pipeline_notified(
+        pipeline_pid,
+        :source,
+        {:pad_removed, {Membrane.Pad, :first, _ref}}
+      )
+
+      assert_pipeline_notified(
+        pipeline_pid,
+        :source,
+        {:pad_removed, {Membrane.Pad, :second, _ref}}
+      )
+
+      assert_pipeline_notified(
+        pipeline_pid,
+        :source,
+        {:pad_removed, {Membrane.Pad, :third, _ref}}
+      )
+
+      refute_pipeline_notified(
+        pipeline_pid,
+        :source,
+        {:pad_removed, {Membrane.Pad, :fourth, _ref}}
+      )
+
+      refute_pipeline_notified(
+        pipeline_pid,
+        :source,
+        {:pad_removed, {Membrane.Pad, :fifth, _ref}}
+      )
     end
   end
 
