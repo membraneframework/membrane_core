@@ -10,7 +10,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     ChildLifeController,
     CrashGroup,
     Link,
-    StructureParser
+    SpecificationParser
   }
 
   alias Membrane.Core.Parent.ChildLifeController
@@ -118,7 +118,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
   end
 
   @spec resolve_links(
-          [StructureParser.raw_link_t()],
+          [SpecificationParser.raw_link_t()],
           ChildLifeController.spec_ref_t(),
           Parent.state_t()
         ) :: [
@@ -165,7 +165,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     :ok
   end
 
-  @spec resolve_endpoint(StructureParser.raw_endpoint_t(), Parent.state_t()) ::
+  @spec resolve_endpoint(SpecificationParser.raw_endpoint_t(), Parent.state_t()) ::
           Endpoint.t() | no_return
   defp resolve_endpoint(
          %Endpoint{child: {Membrane.Bin, :itself}} = endpoint,

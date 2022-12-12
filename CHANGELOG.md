@@ -2,6 +2,9 @@
 
 ## 1.0.0
  * Introduce `:remove_link` action in pipelines and bins.
+  * Add children groups - a mechanism that allows refering to multiple children with a single identifier. 
+  * Rename `remove_child_t` action into `remove_children_t` and allow for removing a children group with a single action.
+  * Add an ability to spawn anonymous children.
 
 ## 0.11.0
  * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)

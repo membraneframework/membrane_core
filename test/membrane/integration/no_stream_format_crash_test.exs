@@ -40,7 +40,7 @@ defmodule Membrane.FailWhenNoStreamFormatAreSent do
     ]
 
     options = [
-      structure: links
+      spec: links
     ]
 
     pipeline = Pipeline.start_supervised!(options)
@@ -66,7 +66,7 @@ defmodule Membrane.FailWhenNoStreamFormatAreSent do
     ]
 
     options = [
-      structure: links
+      spec: links
     ]
 
     pipeline = Pipeline.start_supervised!(options)

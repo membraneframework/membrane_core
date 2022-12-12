@@ -4,7 +4,7 @@ defmodule Membrane.Integration.LinkingTest do
   import Membrane.Testing.Assertions
   import Membrane.ChildrenSpec
 
-  alias Membrane.{Buffer, Testing}
+  alias Membrane.{Buffer, Child, Testing}
   alias Membrane.Support.Element.DynamicFilter
 
   require Membrane.Pad, as: Pad
@@ -62,7 +62,7 @@ defmodule Membrane.Integration.LinkingTest do
 
     @impl true
     def handle_pad_removed(_pad, _ctx, state) do
-      remove_child = if state.remove_child_on_unlink, do: [remove_child: :source], else: []
+      remove_child = if state.remove_child_on_unlink, do: [remove_children: :source], else: []
       {remove_child ++ [notify_parent: :handle_pad_removed], %{}}
     end
   end
@@ -92,8 +92,8 @@ defmodule Membrane.Integration.LinkingTest do
     end
 
     @impl true
-    def handle_info({:remove_child, child}, _ctx, state) do
-      {[remove_child: child], state}
+    def handle_info({:remove_children, child}, _ctx, state) do
+      {[remove_children: child], state}
     end
 
     @impl true
@@ -134,7 +134,7 @@ defmodule Membrane.Integration.LinkingTest do
       assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'a'})
       assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'b'})
       assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'c'})
-      send(pipeline, {:remove_child, :sink})
+      send(pipeline, {:remove_children, :sink})
       assert_pipeline_notified(pipeline, :bin, :handle_pad_removed)
     end
 
@@ -144,24 +144,26 @@ defmodule Membrane.Integration.LinkingTest do
           child: %Testing.Source{output: ['a', 'b', 'c']},
           remove_child_on_unlink: false
         }),
-        crash_group: {:group_1, :temporary}
+        crash_group_mode: :temporary, group: :group_1
       }
 
       sink_spec = {
         child(:sink, Testing.Sink),
-        crash_group: {:group_2, :temporary}
+        crash_group_mode: :temporary, group: :group_2
       }
 
-      links_spec = get_child(:bin) |> get_child(:sink)
+      links_spec =
+        get_child(Child.ref(:bin, group: :group_1))
+        |> get_child(Child.ref(:sink, group: :group_2))
 
       send(pipeline, {:start_spec, %{spec: bin_spec}})
       assert_receive(:spec_started)
       send(pipeline, {:start_spec, %{spec: sink_spec}})
       assert_receive(:spec_started)
-      sink_pid = get_child_pid(:sink, pipeline)
+      sink_pid = get_child_pid({Membrane.Child, :group_2, :sink}, pipeline)
       send(pipeline, {:start_spec, %{spec: links_spec}})
       assert_receive(:spec_started)
-      bin_pid = get_child_pid(:bin, pipeline)
+      bin_pid = get_child_pid({Membrane.Child, :group_1, :bin}, pipeline)
       source_pid = get_child_pid(:source, bin_pid)
       source_ref = Process.monitor(source_pid)
       Testing.Pipeline.execute_actions(pipeline, playback: :playing)
@@ -185,18 +187,29 @@ defmodule Membrane.Integration.LinkingTest do
   } do
     spec_1 = {
       child(:source, %Testing.Source{output: ['a', 'b', 'c']}),
-      crash_group: {:group_1, :temporary}
+      group: :group_1, crash_group_mode: :temporary
     }
 
-    spec_2 = {child(:sink, Testing.Sink), crash_group: {:group_2, :temporary}}
+    spec_2 = {child(:sink, Testing.Sink), group: :group_2, crash_group_mode: :temporary}
 
-    links_spec = get_child(:source) |> get_child(:sink)
+    links_spec =
+      get_child(Child.ref(:source, group: :group_1))
+      |> get_child(Child.ref(:sink, group: :group_2))
 
     send(pipeline, {:start_spec, %{spec: spec_1}})
     assert_receive(:spec_started)
     send(pipeline, {:start_spec, %{spec: spec_2}})
     assert_receive(:spec_started)
-    send(pipeline, {:start_spec_and_kill, %{spec: links_spec, children_to_kill: [:sink]}})
+
+    send(
+      pipeline,
+      {:start_spec_and_kill,
+       %{
+         spec: links_spec,
+         children_to_kill: [{Membrane.Child, :group_2, :sink}]
+       }}
+    )
+
     assert_receive(:spec_started)
 
     assert_pipeline_crash_group_down(pipeline, :group_1)
@@ -208,21 +221,32 @@ defmodule Membrane.Integration.LinkingTest do
   } do
     spec_1 = {
       child(:source, %Testing.DynamicSource{output: ['a', 'b', 'c']}),
-      crash_group: {:group_1, :temporary}
+      group: :group_1, crash_group_mode: :temporary
     }
 
     spec_2 = {
       child(:sink, Testing.Sink),
-      crash_group: {:group_2, :temporary}
+      group: :group_2, crash_group_mode: :temporary
     }
 
-    links_spec = get_child(:source) |> get_child(:sink)
+    links_spec =
+      get_child(Child.ref(:source, group: :group_1))
+      |> get_child(Child.ref(:sink, group: :group_2))
 
     send(pipeline, {:start_spec, %{spec: spec_1}})
     assert_receive(:spec_started)
     send(pipeline, {:start_spec, %{spec: spec_2}})
     assert_receive(:spec_started)
-    send(pipeline, {:start_spec_and_kill, %{spec: links_spec, children_to_kill: [:sink]}})
+
+    send(
+      pipeline,
+      {:start_spec_and_kill,
+       %{
+         spec: links_spec,
+         children_to_kill: [{Membrane.Child, :group_2, :sink}]
+       }}
+    )
+
     assert_receive(:spec_started)
 
     refute_pipeline_crash_group_down(pipeline, :group_1)
@@ -235,19 +259,30 @@ defmodule Membrane.Integration.LinkingTest do
        } do
     spec_inner = {
       child(:sink, Testing.Sink),
-      crash_group: {:group_2, :temporary}
+      crash_group_mode: :temporary, group: :group_2
     }
 
     spec = {
       [spec_inner, child(:source, %Testing.DynamicSource{output: ['a', 'b', 'c']})],
-      crash_group: {:group_1, :temporary}
+      crash_group_mode: :temporary, group: :group_1
     }
 
-    links_spec = get_child(:source) |> get_child(:sink)
+    links_spec =
+      get_child(Child.ref(:source, group: :group_1))
+      |> get_child(Child.ref(:sink, group: :group_2))
 
     send(pipeline, {:start_spec, %{spec: spec}})
     assert_receive(:spec_started)
-    send(pipeline, {:start_spec_and_kill, %{spec: links_spec, children_to_kill: [:sink]}})
+
+    send(
+      pipeline,
+      {:start_spec_and_kill,
+       %{
+         spec: links_spec,
+         children_to_kill: [{Membrane.Child, :group_2, :sink}]
+       }}
+    )
+
     assert_receive(:spec_started)
 
     refute_pipeline_crash_group_down(pipeline, :group_1)
@@ -258,15 +293,16 @@ defmodule Membrane.Integration.LinkingTest do
        %{pipeline: pipeline} do
     bin_spec = {
       child(:bin, %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}),
-      crash_group: {:group_1, :temporary}
+      group: :group_1, crash_group_mode: :temporary
     }
 
     sink_spec = {
       child(:sink, Testing.Sink),
-      crash_group: {:group_1, :temporary}
+      group: :group_1, crash_group_mode: :temporary
     }
 
-    links_spec = get_child(:bin) |> get_child(:sink)
+    links_spec =
+      get_child(Child.ref(:bin, group: :group_1)) |> get_child(Child.ref(:sink, group: :group_1))
 
     send(pipeline, {:start_spec, %{spec: bin_spec}})
     assert_receive(:spec_started)
@@ -376,7 +412,7 @@ defmodule Membrane.Integration.LinkingTest do
 
     pipeline =
       Testing.Pipeline.start_supervised!(
-        structure: [child(:source, Testing.Source) |> child(:bin, NoInternalLinkBin)]
+        spec: child(:source, Testing.Source) |> child(:bin, NoInternalLinkBin)
       )
 
     bin_pid = get_child_pid(:bin, pipeline)
@@ -426,7 +462,7 @@ defmodule Membrane.Integration.LinkingTest do
 
     pipeline =
       Testing.Pipeline.start_link_supervised!(
-        structure:
+        spec:
           child(:source, %Testing.Source{output: [1, 2, 3]})
           |> child(:bin, MultiSpecBin)
           |> child(:sink, Testing.Sink)
@@ -436,7 +472,7 @@ defmodule Membrane.Integration.LinkingTest do
   end
 
   test "Parent successfully unlinks children with dynamic pads using :remove_link action" do
-    structure =
+    spec =
       [
         child(:source, __MODULE__.Element),
         child(:sink, __MODULE__.Element)
@@ -448,7 +484,7 @@ defmodule Membrane.Integration.LinkingTest do
           |> get_child(:sink)
         end)
 
-    pipeline = Testing.Pipeline.start_link_supervised!(structure: structure)
+    pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
 
     for pad_id <- 1..10 do
       actions =
