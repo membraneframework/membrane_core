@@ -71,7 +71,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       Pipeline.subscribe(pipeline, %Message.StartOfStream{element: :b, pad: :input})
 
       # RUN
-      Pipeline.exec_actions(pipeline, playback: :playing)
+      Pipeline.exec_actions(pipeline, setup: :complete)
 
       # TEST
       assert_receive %Message.Playing{from: ^pipeline}
@@ -93,7 +93,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       Pipeline.subscribe(pipeline, %Message.EndOfStream{})
 
       # RUN
-      Pipeline.exec_actions(pipeline, playback: :playing)
+      Pipeline.exec_actions(pipeline, setup: :complete)
 
       # TEST
       assert_receive %Message.Playing{from: ^pipeline}
@@ -123,7 +123,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       Pipeline.subscribe(pipeline, %Message.Terminated{})
 
       # RUN
-      Pipeline.exec_actions(pipeline, playback: :playing)
+      Pipeline.exec_actions(pipeline, setup: :complete)
 
       # TEST
       Pipeline.await_playing(pipeline)
@@ -141,7 +141,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
 
       # RUN
-      Pipeline.exec_actions(pipeline, playback: :playing)
+      Pipeline.exec_actions(pipeline, setup: :complete)
 
       # TEST
       Pipeline.await_start_of_stream(pipeline, :c)
@@ -164,7 +164,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       element = :c
 
       # START
-      Pipeline.exec_actions(pipeline, playback: :playing)
+      Pipeline.exec_actions(pipeline, setup: :complete)
 
       # TEST
       Pipeline.await_playing(pipeline)

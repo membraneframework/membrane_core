@@ -108,7 +108,6 @@ defmodule Membrane.Integration.LinkingTest do
 
       send(pipeline, {:start_spec, %{spec: spec}})
       assert_receive(:spec_started)
-      Testing.Pipeline.execute_actions(pipeline, playback: :playing)
       assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'a'})
       assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'b'})
       assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'c'})
@@ -144,7 +143,6 @@ defmodule Membrane.Integration.LinkingTest do
       bin_pid = get_child_pid({Membrane.Child, :group_1, :bin}, pipeline)
       source_pid = get_child_pid(:source, bin_pid)
       source_ref = Process.monitor(source_pid)
-      Testing.Pipeline.execute_actions(pipeline, playback: :playing)
 
       assert_pipeline_play(pipeline)
       Process.exit(sink_pid, :kill)
@@ -288,7 +286,6 @@ defmodule Membrane.Integration.LinkingTest do
     assert_receive(:spec_started)
     send(pipeline, {:start_spec, %{spec: links_spec}})
     assert_receive(:spec_started)
-    Testing.Pipeline.execute_actions(pipeline, playback: :playing)
     assert_pipeline_play(pipeline)
   end
 

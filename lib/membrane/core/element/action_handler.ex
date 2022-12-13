@@ -31,7 +31,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({action, _}, :handle_init, _params, _state)
-      when action not in [:latency, :notify_parent] do
+      when action not in [:latency, :notify_parent, :setup] do
     raise ActionError, action: action, reason: {:invalid_callback, :handle_init}
   end
 

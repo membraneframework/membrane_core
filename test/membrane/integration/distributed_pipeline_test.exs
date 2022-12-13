@@ -27,7 +27,6 @@ defmodule Membrane.Integration.DistributedPipelineTest do
     end
 
     pipeline = Membrane.Testing.Pipeline.start_link_supervised!(module: Pipeline)
-    Membrane.Testing.Pipeline.execute_actions(pipeline, playback: :playing)
     assert_pipeline_play(pipeline)
     assert_end_of_stream(pipeline, :sink)
   end

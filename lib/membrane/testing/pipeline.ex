@@ -225,7 +225,7 @@ defmodule Membrane.Testing.Pipeline do
         spec = Bunch.listify(Keyword.get(options, :spec, []))
 
         new_state = %State{test_process: Keyword.fetch!(options, :test_process), module: nil}
-        {[spec: spec, playback: :playing], new_state}
+        {[spec: spec], new_state}
 
       module when is_atom(module) ->
         case Code.ensure_compiled(module) do

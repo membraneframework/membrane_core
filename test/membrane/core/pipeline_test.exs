@@ -117,11 +117,7 @@ defmodule Membrane.Core.PipelineTest do
     assert :ok == Testing.Pipeline.terminate(pid, blocking?: true)
   end
 
-  test "Pipeline should be able to steer its playback with :playback action" do
-    pid = Testing.Pipeline.start_link_supervised!(module: TestPipeline)
-    Testing.Pipeline.execute_actions(pid, playback: :playing)
-    assert_pipeline_play(pid)
-  end
+  # dupa: todo: add here test for deferring setup
 
   test "Pipeline should be able to terminate itself with :terminate action" do
     Enum.each([:normal, :shutdown], fn reason ->
@@ -145,7 +141,7 @@ defmodule Membrane.Core.PipelineTest do
       opts1
     }
 
-    Testing.Pipeline.execute_actions(pid, spec: spec, playback: :playing)
+    Testing.Pipeline.execute_actions(pid, spec: spec)
     assert_pipeline_play(pid)
   end
 end

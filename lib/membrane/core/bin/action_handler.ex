@@ -11,10 +11,9 @@ defmodule Membrane.Core.Bin.ActionHandler do
   require Message
 
   @impl CallbackHandler
-  def handle_action({name, args}, _cb, _params, %State{terminating?: true})
-      when name in [:spec, :playback] do
+  def handle_action({:spec, args}, _cb, _params, %State{terminating?: true}) do
     raise Membrane.ParentError,
-          "Action #{inspect({name, args})} cannot be handled because the bin is already terminating"
+          "Action #{inspect({:spec, args})} cannot be handled because the bin is already terminating"
   end
 
   @impl CallbackHandler

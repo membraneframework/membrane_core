@@ -30,7 +30,7 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
     spec = children ++ links
 
-    {[spec: spec, playback: :playing], %{}}
+    {[spec: spec], %{}}
   end
 
   @impl true

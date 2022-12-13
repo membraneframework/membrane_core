@@ -29,10 +29,7 @@ defmodule Membrane.Core.PlaybackController do
     cond do
       Component.is_pipeline?(state) ->
         Membrane.Logger.debug("Pipeline initialized")
-
-        with %{playing_requested?: true} <- state do
-          Parent.LifecycleController.handle_playing(state)
-        end
+        Parent.LifecycleController.handle_playing(state)
 
       Component.is_bin?(state) ->
         Membrane.Logger.debug("Bin initialized")
@@ -51,12 +48,12 @@ defmodule Membrane.Core.PlaybackController do
     do_assert(operation, callback, deferred?)
   end
 
-  defp do_assert(:defer, :handle_setup, true) do
-    raise "Action {:setup, :defer} was returned from handle_setup/4, but setup has already been deferred"
+  defp do_assert(:defer, callback, true)  do
+    raise "Action {:setup, :defer} was returned from callback #{inspect(callback)}, but setup has already been deferred"
   end
 
-  defp do_assert(:defer, callback, _status) when callback != :handle_setup do
-    raise "Action {:setup, :defer} was returned from callback #{inspect(callback)}, but it can be returend only from :handle_setup"
+  defp do_assert(:defer, callback, _status) when callback not in [:handle_init, :handle_setup] do
+    raise "Action {:setup, :defer} was returned from callback #{inspect(callback)}, but it can be returend only from :handle_init or :handle_setup"
   end
 
   defp do_assert(:complete, callback, _status) when callback in [:handle_init, :handle_setup] do

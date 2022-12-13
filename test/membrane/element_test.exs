@@ -75,38 +75,6 @@ defmodule Membrane.ElementTest do
     [pipeline: pipeline]
   end
 
-  defmodule DupaBin do
-    use Membrane.Bin
-
-    @impl true
-    def handle_setup(_ctx, state) do
-      {[setup: :defer], state}
-    end
-
-    @impl true
-    def handle_parent_notification(:start, _ctx, state) do
-      {[setup: :complete], state}
-    end
-
-    @impl true
-    def handle_playing(_ctx, state) do
-      IO.puts("DUPA ELEMENT PLAYING")
-      {[], state}
-    end
-  end
-
-  @tag :dupa
-  test "dupa" do
-    pid = Testing.Pipeline.start_link_supervised!(spec: child(:bin, DupaBin))
-
-    Process.sleep(1000)
-
-    IO.puts("DUPA JESZCZE MA NIE BYC PLAYING")
-    Testing.Pipeline.execute_actions(pid, notify_child: {:bin, :start})
-
-    Process.sleep(1000)
-  end
-
   test "play", %{pipeline: pipeline} do
     assert_pipeline_play(pipeline)
     TestFilter.assert_callback_called(:handle_playing)

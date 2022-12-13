@@ -50,7 +50,6 @@ defmodule Membrane.Integration.ChildSpawnTest do
     # a workaround - I need to wait for some time for pads to link, so that not let the
     # "unlinked pads" exception be thrown
     :timer.sleep(1000)
-    Testing.Pipeline.execute_actions(pipeline_pid, playback: :playing)
     assert_pipeline_play(pipeline_pid)
     refute_pipeline_notified(pipeline_pid, :sink, :message_from_sink)
   end
@@ -67,7 +66,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
       child(:source, %Testing.Source{output: [1, 2, 3]})
       |> child(:sink, Testing.Sink, get_if_exists: true)
 
-    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec, playback: :playing)
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
     assert_pipeline_play(pipeline_pid)
   end
 
@@ -87,7 +86,6 @@ defmodule Membrane.Integration.ChildSpawnTest do
     # a workaround - I need to wait for some time for pads to link, so that not let the
     # "unlinked pads" exception be thrown
     :timer.sleep(1000)
-    Testing.Pipeline.execute_actions(pipeline_pid, playback: :playing)
     assert_pipeline_play(pipeline_pid)
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 1})
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 2})
@@ -113,7 +111,6 @@ defmodule Membrane.Integration.ChildSpawnTest do
     # a workaround - I need to wait for some time for pads to link, so that not let the
     # "unlinked pads" exception be thrown
     :timer.sleep(1000)
-    Testing.Pipeline.execute_actions(pipeline_pid, playback: :playing)
     assert_pipeline_play(pipeline_pid)
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 1})
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 2})

@@ -81,14 +81,6 @@ defmodule Membrane.Pipeline.Action do
   @type stop_timer_t :: {:stop_timer, timer_id :: any}
 
   @typedoc """
-  Action that instantiates children and links them according to `Membrane.ChildrenSpec`.
-
-  Children's playback is changed to the current bin playback.
-  `c:Membrane.Parent.handle_spec_started/3` callback is executed once the children are spawned.
-  """
-  @type playback_t :: {:playback, :playing}
-
-  @typedoc """
   Action that replies to a `Membrane.Pipeline.call/3`. Can be returned only from the `c:Membrane.Pipeline.handle_call/3` callback, in
   which context the caller reference is available, under the `:from` key.
   """
@@ -130,7 +122,6 @@ defmodule Membrane.Pipeline.Action do
           | start_timer_t
           | timer_interval_t
           | stop_timer_t
-          | playback_t
           | reply_t
           | reply_to_t
           | terminate_t
