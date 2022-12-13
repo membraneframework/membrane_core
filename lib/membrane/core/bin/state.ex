@@ -44,7 +44,8 @@ defmodule Membrane.Core.Bin.State do
           initialized?: boolean(),
           playing_requested?: boolean(),
           terminating?: boolean(),
-          resource_guard: Membrane.ResourceGuard.t()
+          resource_guard: Membrane.ResourceGuard.t(),
+          setup_deferred?: boolean()
         }
 
   @enforce_keys [:module, :synchronization, :subprocess_supervisor, :resource_guard]
@@ -63,6 +64,7 @@ defmodule Membrane.Core.Bin.State do
                 playback: :stopped,
                 initialized?: false,
                 playing_requested?: false,
-                terminating?: false
+                terminating?: false,
+                setup_deferred?: false
               ]
 end

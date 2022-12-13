@@ -6,9 +6,8 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   use Bunch
 
-  alias Membrane.Core.{CallbackHandler, Child, Element, Message}
   alias Membrane.{Clock, Element, Sync}
-  alias Membrane.Core.{CallbackHandler, Child, Element, Message}
+  alias Membrane.Core.{CallbackHandler, Child, Element, Message, PlaybackController}
   alias Membrane.Core.Element.{ActionHandler, PlaybackQueue, State}
   alias Membrane.Element.CallbackContext
 
@@ -65,9 +64,9 @@ defmodule Membrane.Core.Element.LifecycleController do
         state
       )
 
-    Membrane.Logger.debug("Element initialized")
-    Message.send(state.parent_pid, :initialized, state.name)
-    %State{state | initialized?: true}
+    with %{setup_deferred?: false} <- state do
+      PlaybackController.complete_setup(state)
+    end
   end
 
   @spec handle_playing(State.t()) :: State.t()

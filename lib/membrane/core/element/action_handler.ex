@@ -11,9 +11,9 @@ defmodule Membrane.Core.Element.ActionHandler do
   alias Membrane.{ActionError, Buffer, ElementError, Event, Pad, PadDirectionError, StreamFormat}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{DemandHandler, PadController, State, StreamFormatController}
-  alias Membrane.Core.{Events, Message, TimerController}
-  alias Membrane.Core.Telemetry
+  alias Membrane.Core.{Events, Message, PlaybackController, Telemetry, TimerController}
   alias Membrane.Element.Action
+  alias Membrane.SetupStatus
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
@@ -48,6 +48,11 @@ defmodule Membrane.Core.Element.ActionHandler do
                :end_of_stream
              ] do
     raise ActionError, action: action, reason: {:invalid_component_playback, playback}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:setup, operation}, cb, _params, state) do
+    PlaybackController.handle_setup_operation(operation, cb, state)
   end
 
   @impl CallbackHandler

@@ -2,9 +2,10 @@ defmodule Membrane.Core.Bin.ActionHandler do
   @moduledoc false
   use Membrane.Core.CallbackHandler
 
+  alias Membrane.Core.CallbackHandler
   alias Membrane.ActionError
   alias Membrane.Core.Bin.State
-  alias Membrane.Core.{Message, Parent, TimerController}
+  alias Membrane.Core.{Message, Parent, PlaybackController, TimerController}
 
   require Membrane.Logger
   require Message
@@ -14,6 +15,11 @@ defmodule Membrane.Core.Bin.ActionHandler do
       when name in [:spec, :playback] do
     raise Membrane.ParentError,
           "Action #{inspect({name, args})} cannot be handled because the bin is already terminating"
+  end
+
+  @impl CallbackHandler
+  def handle_action({:setup, operation}, cb, _params, state) do
+    PlaybackController.handle_setup_operation(operation, cb, state)
   end
 
   @impl CallbackHandler

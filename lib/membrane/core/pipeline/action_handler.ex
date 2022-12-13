@@ -3,7 +3,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   use Membrane.Core.CallbackHandler
 
   alias Membrane.ActionError
-  alias Membrane.Core.{Parent, TimerController}
+  alias Membrane.Core.{Parent, PlaybackController, TimerController}
   alias Membrane.Core.Parent.LifecycleController
   alias Membrane.Core.Pipeline.State
 
@@ -20,6 +20,11 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
       when name in [:spec, :playback] do
     raise Membrane.ParentError,
           "Action #{inspect({name, args})} cannot be handled because the pipeline is already terminating"
+  end
+
+  @impl CallbackHandler
+  def handle_action({:setup, operation}, cb, _params, state) do
+    PlaybackController.handle_setup_operation(operation, cb, state)
   end
 
   @impl CallbackHandler

@@ -10,6 +10,8 @@ defmodule Membrane.Bin.Action do
 
   alias Membrane.{Child, ChildrenSpec}
 
+  @type setup_t :: {:setup, :defer | :complete}
+
   @typedoc """
   Action that sends a message to a child identified by name.
   """
@@ -111,7 +113,8 @@ defmodule Membrane.Bin.Action do
   other parts of framework.
   """
   @type t ::
-          notify_child_t
+          setup_t
+          | notify_child_t
           | notify_parent_t
           | spec_t
           | remove_children_t
