@@ -222,11 +222,11 @@ defmodule Membrane.Testing.Assertions do
   can assert whether it received stream format matching provided pattern.
       import Membrane.ChildrenSpec
       children = [
-          ....,
+          ...,
           child(:the_sink, %Membrane.Testing.Sink{})
       ]
       {:ok, pid} = Membrane.Testing.Pipeline.start_link(
-        structure: children,
+        spec: children,
       )
 
   You can match for exact value:
@@ -309,13 +309,13 @@ defmodule Membrane.Testing.Assertions do
   When the `Membrane.Testing.Sink` is a part of `Membrane.Testing.Pipeline` you
   can assert whether it received a buffer matching provided pattern.
       import Membrane.ChildrenSpec
-      children = [
-          ....,
-          child(:the_sink, %Membrane.Testing.Sink{})
+      spec = [
+          ...
+          |> child(:the_sink, %Membrane.Testing.Sink{}) |>
+          ...
       ]
       {:ok, pid} = Membrane.Testing.Pipeline.start_link(
-        structure: children,
-        links: Membrane.ChildrenSpec.link_linear(children)
+        spec: spec,
       )
 
   You can match for exact value:

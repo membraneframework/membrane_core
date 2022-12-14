@@ -35,26 +35,24 @@ defmodule Membrane.Integration.DemandsTest do
   end
 
   test "Regular pipeline with proper demands" do
-    links = [
+    links =
       child(:source, Source)
       |> child(:filter, Filter)
       |> child(:sink, %Sink{autodemand: false})
-    ]
 
-    pid = Pipeline.start_link_supervised!(structure: links)
+    pid = Pipeline.start_link_supervised!(spec: links)
     test_pipeline(pid)
   end
 
   test "Pipeline with filter underestimating demand" do
     filter_demand_gen = fn _incoming_demand -> 2 end
 
-    links = [
+    links =
       child(:source, Source)
       |> child(:filter, %Filter{demand_generator: filter_demand_gen})
       |> child(:sink, %Sink{autodemand: false})
-    ]
 
-    pid = Pipeline.start_link_supervised!(structure: links)
+    pid = Pipeline.start_link_supervised!(spec: links)
     test_pipeline(pid)
   end
 
@@ -72,13 +70,12 @@ defmodule Membrane.Integration.DemandsTest do
       ~> {&1, cnt + 4}
     end
 
-    links = [
+    spec =
       child(:source, %Source{output: {0, actions_gen}})
       |> child(:filter, Filter)
       |> child(:sink, %Sink{autodemand: false})
-    ]
 
-    pid = Pipeline.start_link_supervised!(structure: links)
+    pid = Pipeline.start_link_supervised!(spec: spec)
     test_pipeline(pid)
   end
 end

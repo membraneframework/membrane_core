@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Parent.StructureParser do
+defmodule Membrane.Core.Parent.SpecificationParser do
   @moduledoc false
   use Bunch
 
@@ -18,24 +18,24 @@ defmodule Membrane.Core.Parent.StructureParser do
           pad_props: map()
         }
 
-  @spec parse([ChildrenSpec.structure_builder_t()]) ::
-          {[ChildrenSpec.StructureBuilder.child_spec_t()], [raw_link_t]} | no_return
-  def parse(structures) when is_list(structures) do
+  @spec parse([ChildrenSpec.builder_t()]) ::
+          {[ChildrenSpec.Builder.child_spec_t()], [raw_link_t]} | no_return
+  def parse(specifications) when is_list(specifications) do
     {children, links} =
-      structures
+      specifications
       |> List.flatten()
       |> Enum.map(fn
-        %ChildrenSpec.StructureBuilder{links: links, children: children, status: :done} = builder ->
+        %ChildrenSpec.Builder{links: links, children: children, status: :done} = builder ->
           if links == [] and children == [] do
             Membrane.Logger.warn(
-              "The structure specification you have passed: #{builder} has no effect - it doesn't produce any children nor links."
+              "The specification you have passed: #{builder} has no effect - it doesn't produce any children nor links."
             )
           end
 
           {Enum.reverse(children), Enum.reverse(links)}
 
         _other ->
-          from_spec_error(structures)
+          from_spec_error(specifications)
       end)
       |> Enum.unzip()
 
@@ -63,13 +63,14 @@ defmodule Membrane.Core.Parent.StructureParser do
     {children, links}
   end
 
-  def parse(structure), do: from_spec_error(structure)
+  def parse(specification), do: from_spec_error([specification])
 
-  @spec from_spec_error([ChildrenSpec.structure_builder_t()]) :: no_return
-  defp from_spec_error(structure) do
+  @spec from_spec_error([ChildrenSpec.builder_t()]) :: no_return
+  defp from_spec_error(specifications) do
     raise ParentError, """
-    Invalid structure specification: #{inspect(structure)}. The link lacks it destination.
-    See `#{inspect(ChildrenSpec)}` for information on specifying structure.
+    Invalid specifications: #{inspect(specifications)}. The link lacks it destination.
+    See `#{inspect(ChildrenSpec)}` for information on how to specify children and links
+    beween them.
     """
   end
 end

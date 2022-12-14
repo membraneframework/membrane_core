@@ -57,7 +57,7 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
       |> child(:sink, Sink)
     ]
 
-    pid = Pipeline.start_link_supervised!(structure: links)
+    pid = Pipeline.start_link_supervised!(spec: links)
     assert_start_of_stream(pid, :sink)
     assert_sink_stream_format(pid, :sink, %RemoteStream{})
 

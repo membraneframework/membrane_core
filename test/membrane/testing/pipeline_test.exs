@@ -4,6 +4,10 @@ defmodule Membrane.Testing.PipelineTest do
   alias Membrane.ChildrenSpec
   alias Membrane.Testing.Pipeline
 
+  defmodule Elem do
+    use Membrane.Filter
+  end
+
   defmodule MockPipeline do
     use Membrane.Pipeline
 
@@ -16,7 +20,7 @@ defmodule Membrane.Testing.PipelineTest do
       import ChildrenSpec
       elements = [elem: Elem, elem2: Elem]
       links = [get_child(:elem) |> get_child(:elem2)]
-      options = [module: :default, structure: elements ++ links, test_process: nil]
+      options = [module: :default, spec: elements ++ links, test_process: nil]
       assert {[spec: spec, playback: :playing], state} = Pipeline.handle_init(%{}, options)
 
       assert state == %Pipeline.State{module: nil, test_process: nil}
@@ -27,7 +31,7 @@ defmodule Membrane.Testing.PipelineTest do
     test "by default chooses :default implementation" do
       import ChildrenSpec
       links = [child(:elem, Elem) |> child(:elem2, Elem)]
-      options = [module: :default, structure: links, test_process: nil]
+      options = [module: :default, spec: links, test_process: nil]
       assert {[spec: spec, playback: :playing], state} = Pipeline.handle_init(%{}, options)
       assert state == %Pipeline.State{module: nil, test_process: nil}
 
@@ -50,8 +54,9 @@ defmodule Membrane.Testing.PipelineTest do
   describe "When initializing Testing Pipeline" do
     test "uses prepared links if they were provided" do
       import ChildrenSpec
+
       links = [child(:elem, Elem) |> child(:elem2, Elem)]
-      options = [module: :default, structure: links, test_process: nil]
+      options = [module: :default, spec: links, test_process: nil]
       assert {[spec: spec, playback: :playing], state} = Pipeline.handle_init(%{}, options)
       assert state == %Pipeline.State{module: nil, test_process: nil}
 

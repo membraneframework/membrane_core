@@ -31,11 +31,16 @@ defmodule Membrane.Bin.Action do
 
   @typedoc """
   Action that stops, unlinks and removes specified child/children from the bin.
+
+  A child ref, list of children refs, children group id or a list of children group ids can be specified
+  as an argument. In case you need to refer to a single child from a children group, use `Membrane.Child.ref/2`.
   """
-  @type remove_child_t ::
-          {:remove_child,
-           Child.name_t()
-           | [Child.name_t()]}
+  @type remove_children_t ::
+          {:remove_children,
+           Child.ref_t()
+           | [Child.ref_t()]
+           | Membrane.Child.group_t()
+           | [Membrane.Child.group_t()]}
 
   @typedoc """
   Starts a timer that will invoke `c:Membrane.Bin.handle_tick/3` callback
@@ -109,7 +114,7 @@ defmodule Membrane.Bin.Action do
           notify_child_t
           | notify_parent_t
           | spec_t
-          | remove_child_t
+          | remove_children_t
           | start_timer_t
           | timer_interval_t
           | stop_timer_t
