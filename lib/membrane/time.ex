@@ -229,7 +229,7 @@ defmodule Membrane.Time do
   end
 
   @doc """
-  Divides timestamp by timebase. Rounded to the nearest integer.
+  Divides timestamp by a timebase. The result is rounded to the nearest integer.
 
   ## Examples:
       iex> timestamp = 10 |> Membrane.Time.seconds()
@@ -270,10 +270,10 @@ defmodule Membrane.Time do
     as_fun_name = :"as_#{unit.plural}"
 
     @doc """
-    Returns time in #{unit.plural}. If second argument is not provided
-    or is equal to `:exact`, result is represented as a rational number.
-    If second argument is equal to `:round`, result is rounded to the
-    nearest integer.
+    Returns time in #{unit.plural}. The default value of the second argument
+    is `:exact`. If  the second argument is equal to `:exact`, the result is
+    represented as a rational number. Otherwise, if the second argument is
+    equal to `:round`, the result is rounded to the nearest integer.
     """
     @spec unquote(as_fun_name)(t, :round | :exact) :: integer | Ratio.t()
     # credo:disable-for-next-line Credo.Check.Readability.Specs
