@@ -3,6 +3,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
   use Bunch
 
+  alias Membrane.ParentError
   alias Membrane.Core.{Bin, Message, Parent, Telemetry}
   alias Membrane.Core.Bin.PadController
 
@@ -48,6 +49,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
         Map.put(state, :links, links)
 
       nil ->
+        with %{^child_name => _child_entry} <- state.children do
+          raise ParentError, """
+          Attempted to unlink pad #{inspect(pad_ref)} of child #{inspect(child_name)}, but such a child does not exist
+          """
+        end
+
         raise LinkError, """
         Attempted to unlink pad #{inspect(pad_ref)} of child #{inspect(child_name)}, but this child does not have this pad
         """

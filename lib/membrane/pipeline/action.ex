@@ -34,6 +34,8 @@ defmodule Membrane.Pipeline.Action do
 
   @typedoc """
   Action that removes link, which relates to specified child and pad.
+
+  Removed link has to have dynamic pads on both ends.
   """
   @type remove_link_t :: {:remove_link, {Child.name_t(), Pad.ref_t()}}
 

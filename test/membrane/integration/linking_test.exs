@@ -496,10 +496,8 @@ defmodule Membrane.Integration.LinkingTest do
 
       assert_link_removed(pipeline, pad_id)
 
-      if pad_id < 10 do
-        for i <- (pad_id + 1)..10 do
-          refute_link_removed(pipeline, i)
-        end
+      for i <- (pad_id + 1)..10//1 do
+        refute_link_removed(pipeline, i)
       end
     end
   end
