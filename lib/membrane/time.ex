@@ -270,12 +270,13 @@ defmodule Membrane.Time do
     as_fun_name = :"as_#{unit.plural}"
 
     @doc """
-    Returns time in #{unit.plural}. The default value of the second argument
-    is `:exact`. If  the second argument is equal to `:exact`, the result is
-    represented as a rational number. Otherwise, if the second argument is
-    equal to `:round`, the result is rounded to the nearest integer.
+    Returns time in #{unit.plural}.
+
+    If the `mode` argument is set to `:exact` (default), the result is
+    represented as a rational number. Otherwise, if the `mode` is
+    `:round`, the result is rounded to the nearest integer.
     """
-    @spec unquote(as_fun_name)(t, :round | :exact) :: integer | Ratio.t()
+    @spec unquote(as_fun_name)(t, mode :: :round | :exact) :: integer | Ratio.t()
     # credo:disable-for-next-line Credo.Check.Readability.Specs
     def unquote(as_fun_name)(time, mode \\ :exact) when is_time(time) do
       case mode do
