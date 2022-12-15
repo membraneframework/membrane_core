@@ -8,7 +8,7 @@ defmodule Membrane.Bin.Action do
   callback unless explicitly stated otherwise.
   """
 
-  alias Membrane.{Child, ChildrenSpec}
+  alias Membrane.{Child, ChildrenSpec, Pad}
 
   @typedoc """
   Action that sends a message to a child identified by name.
@@ -41,6 +41,13 @@ defmodule Membrane.Bin.Action do
            | [Child.ref_t()]
            | Membrane.Child.group_t()
            | [Membrane.Child.group_t()]}
+
+  @typedoc """
+  Action that removes link, which relates to specified child and pad.
+
+  Removed link has to have dynamic pads on both ends.
+  """
+  @type remove_link_t :: {:remove_link, {Child.name_t(), Pad.ref_t()}}
 
   @typedoc """
   Starts a timer that will invoke `c:Membrane.Bin.handle_tick/3` callback
@@ -115,6 +122,7 @@ defmodule Membrane.Bin.Action do
           | notify_parent_t
           | spec_t
           | remove_children_t
+          | remove_link_t
           | start_timer_t
           | timer_interval_t
           | stop_timer_t
