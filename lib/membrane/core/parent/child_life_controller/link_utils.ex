@@ -51,12 +51,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
       nil ->
         with %{^child_name => _child_entry} <- state.children do
           raise ParentError, """
-          Attempted to unlink pad #{inspect(pad_ref)} of child #{inspect(child_name)}, but such a child does not exist
+          Attempted to unlink pad #{inspect(pad_ref)} of child #{inspect(child_name)}, but this child does not have this pad linked
           """
         end
 
-        raise LinkError, """
-        Attempted to unlink pad #{inspect(pad_ref)} of child #{inspect(child_name)}, but this child does not have this pad
+        raise ParentError, """
+        Attempted to unlink pad #{inspect(pad_ref)} of child #{inspect(child_name)}, but such a child does not exist
         """
     end
   end
