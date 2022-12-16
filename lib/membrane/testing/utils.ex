@@ -8,17 +8,15 @@ defmodule Membrane.Testing.Utils do
   require Membrane.Core.Message, as: Message
 
   @doc """
-  Gets pid of child `child_name` of parent `parent_pid`.
-
-  If child is inside child group, group name has to be passed in `opts`,
-  as in `Membrane.Child.ref/2`
+  Gets pid of child `child_ref` of parent `parent_pid`.
 
   Returns
    * `{:ok, child_pid}`, if parent contains child with provided name
    * `{:error, :child_not_found}`, if parent does not have such a child
    * `{:error, :parent_not_alive}`, if parent is not alive
   """
-  @spec get_child_pid(pid(), Child.ref_t()) :: {:ok, pid()} | {:error, :parent_not_alive | :child_not_found}
+  @spec get_child_pid(pid(), Child.ref_t()) ::
+          {:ok, pid()} | {:error, :parent_not_alive | :child_not_found}
   def get_child_pid(parent_pid, child_ref) do
     msg = Message.new(:get_child_pid, child_ref)
 
@@ -31,9 +29,7 @@ defmodule Membrane.Testing.Utils do
   end
 
   @doc """
-  Gets pid of child `child_name` of parent `parent_pid` and returns it.
-
-  If child is inside child group, group name has to be passed in `opts`.
+  Returns pid of child `child_ref` of parent `parent_pid`.
 
   Raises an error, if parent is not alive or doesn't have specified child.
   """
