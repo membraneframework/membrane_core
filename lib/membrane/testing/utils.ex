@@ -8,7 +8,8 @@ defmodule Membrane.Testing.Utils do
   @doc """
   Gets pid of child `child_name` of parent `parent_pid`.
 
-  If child is inside child group, group name has to be passed in `opts`.
+  If child is inside child group, group name has to be passed in `opts`,
+  as in `Membrane.Child.ref/2`
 
   Returns
    * `{:ok, child_pid}`, if parent contains child with provided name
