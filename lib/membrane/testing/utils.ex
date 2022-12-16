@@ -18,9 +18,11 @@ defmodule Membrane.Testing.Utils do
   @spec get_child_pid(pid(), Child.name_t(), Child.child_ref_options_t()) ::
           {:ok, pid()} | {:error, :parent_not_alive | :child_not_found}
   def get_child_pid(parent_pid, child_name, opts \\ []) do
+    child_ref = Child.ref(child_name, opts)
+
     try do
       case :sys.get_state(parent_pid) do
-        %{children: %{^child_name => %{pid: child_pid}}} ->
+        %{children: %{^child_ref => %{pid: child_pid}}} ->
           {:ok, child_pid}
 
         _other ->
