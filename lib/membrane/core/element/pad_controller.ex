@@ -271,11 +271,16 @@ defmodule Membrane.Core.Element.PadController do
          %State{}
        ) do
     %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
+
+    input_demand_unit =
+      if other_info[:demand_unit] != nil, do: other_info[:demand_unit], else: demand_unit
+
     enable_toilet? = other_info.mode == :push
 
     input_queue =
       InputQueue.init(%{
-        demand_unit: demand_unit,
+        input_demand_unit: input_demand_unit,
+        output_demand_unit: demand_unit,
         demand_pid: pid,
         demand_pad: other_ref,
         log_tag: inspect(ref),
