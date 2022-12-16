@@ -5,6 +5,8 @@ defmodule Membrane.Testing.Utils do
 
   alias Membrane.Child
 
+  require Membrane.Core.Message, as: Message
+
   @doc """
   Gets pid of child `child_name` of parent `parent_pid`.
 
@@ -16,21 +18,14 @@ defmodule Membrane.Testing.Utils do
    * `{:error, :child_not_found}`, if parent does not have such a child
    * `{:error, :parent_not_alive}`, if parent is not alive
   """
-  @spec get_child_pid(pid(), Child.name_t(), Child.child_ref_options_t()) ::
-          {:ok, pid()} | {:error, :parent_not_alive | :child_not_found}
-  def get_child_pid(parent_pid, child_name, opts \\ []) do
-    child_ref = Child.ref(child_name, opts)
+  @spec get_child_pid(pid(), Child.ref_t()) :: {:ok, pid()} | {:error, :parent_not_alive | :child_not_found}
+  def get_child_pid(parent_pid, child_ref) do
+    msg = Message.new(:get_child_pid, child_ref)
 
     try do
-      case :sys.get_state(parent_pid) do
-        %{children: %{^child_ref => %{pid: child_pid}}} ->
-          {:ok, child_pid}
-
-        _other ->
-          {:error, :child_not_found}
-      end
+      GenServer.call(parent_pid, msg)
     catch
-      :exit, {:noproc, {:sys, :get_state, [^parent_pid]}} ->
+      :exit, {:noproc, {GenServer, :call, [^parent_pid, ^msg | _tail]}} ->
         {:error, :parent_not_alive}
     end
   end
@@ -42,9 +37,9 @@ defmodule Membrane.Testing.Utils do
 
   Raises an error, if parent is not alive or doesn't have specified child.
   """
-  @spec get_child_pid!(pid(), Child.name_t(), Child.child_ref_options_t()) :: pid()
-  def get_child_pid!(parent_pid, child_name, opts \\ []) do
-    {:ok, child_pid} = get_child_pid(parent_pid, child_name, opts)
+  @spec get_child_pid!(pid(), Child.ref_t()) :: pid()
+  def get_child_pid!(parent_pid, child_ref) do
+    {:ok, child_pid} = get_child_pid(parent_pid, child_ref)
     child_pid
   end
 end

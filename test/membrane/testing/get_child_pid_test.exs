@@ -91,7 +91,7 @@ defmodule Membrane.Testing.GetChildPidTest do
 
     assert_pipeline_notified(pipeline, element_ref, {:pid, element_pid, ^element_ref})
 
-    assert {:ok, element_pid} == Utils.get_child_pid(pipeline, :element, group: :group)
+    assert {:ok, element_pid} == Utils.get_child_pid(pipeline, element_ref)
 
     # returning error tuple with proper reason
     {:ok, bin_pid} = Utils.get_child_pid(pipeline, :bin_1)
