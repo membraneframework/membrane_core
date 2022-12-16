@@ -1,12 +1,12 @@
 defmodule Membrane.Testing.GetChildPidTest do
   use ExUnit.Case
 
+  import Membrane.ChildrenSpec
+  import Membrane.Testing.Assertions
+
   alias Membrane.Child
   alias Membrane.Testing
   alias Membrane.Testing.Utils
-
-  import Membrane.ChildrenSpec
-  import Membrane.Testing.Assertions
 
   defmodule Element do
     use Membrane.Filter
