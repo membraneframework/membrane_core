@@ -218,6 +218,9 @@ defmodule Membrane.Core.Element.PadController do
          metadata,
          state
        ) do
+    other_demand_unit =
+      if other_info[:demand_unit] != nil, do: other_info[:demand_unit], else: info.demand_unit
+
     data =
       info
       |> Map.delete(:accepted_formats_str)
@@ -231,7 +234,8 @@ defmodule Membrane.Core.Element.PadController do
         stream_format: nil,
         start_of_stream?: false,
         end_of_stream?: false,
-        associated_pads: []
+        associated_pads: [],
+        other_demand_unit: other_demand_unit
       })
 
     data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, state))
@@ -293,13 +297,16 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp init_pad_mode_data(
-         %{mode: :pull, direction: :output, demand_mode: :manual},
+         %{mode: :pull, direction: :output, demand_mode: :manual, demand_unit: demand_unit},
          _props,
          other_info,
          _metadata,
          _state
-       ),
-       do: %{demand: 0, other_demand_unit: other_info[:demand_unit]}
+       ) do
+    other_demand_unit = if demand_unit != nil, do: demand_unit, else: other_info[:demand_unit]
+
+    %{demand: 0, other_demand_unit: other_demand_unit}
+  end
 
   defp init_pad_mode_data(
          %{mode: :pull, demand_mode: :auto, direction: direction},
