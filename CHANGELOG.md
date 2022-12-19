@@ -3,6 +3,8 @@
   * Add children groups - a mechanism that allows refering to multiple children with a single identifier. 
   * Rename `remove_child_t` action into `remove_children_t` and allow for removing a children group with a single action.
   * Add an ability to spawn anonymous children.
+  * All Membrane Elements can be compatible till now on - pads working in `:pull` mode, handling different `demand_units`, can be now linked.
+  * Output pads working in `:pull` mode should have their `demand_unit` specified. If case it's not available, it's assumed that the pad handles demands in both `:bytes` and `:buffers` units.
 ## 0.11.0
  * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)
  * Refine communication between parent and its children [#270](https://github.com/membraneframework/membrane_core/issues/270)
