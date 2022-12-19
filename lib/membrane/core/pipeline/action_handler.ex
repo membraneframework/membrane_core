@@ -39,6 +39,11 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   @impl CallbackHandler
+  def handle_action({:remove_link, {child_name, pad_ref}}, _cb, _params, state) do
+    Parent.ChildLifeController.handle_remove_link(child_name, pad_ref, state)
+  end
+
+  @impl CallbackHandler
   def handle_action({:start_timer, {id, interval, clock}}, _cb, _params, state) do
     TimerController.start_timer(id, interval, clock, state)
   end
