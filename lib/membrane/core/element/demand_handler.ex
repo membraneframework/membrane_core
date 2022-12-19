@@ -198,7 +198,6 @@ defmodule Membrane.Core.Element.DemandHandler do
   defp do_handle_input_queue_output(pad_ref, {:stream_format, c}, state),
     do: StreamFormatController.exec_handle_stream_format(pad_ref, c, state)
 
-  # TUTAJ!
   defp do_handle_input_queue_output(
          pad_ref,
          {:buffers, buffers, _input_metric_buf_size, _output_metric_buf_size},
@@ -206,7 +205,7 @@ defmodule Membrane.Core.Element.DemandHandler do
        ) do
     metric = Buffer.Metric.from_unit(PadModel.get_data!(state, pad_ref).other_demand_unit)
     size = metric.buffers_size(buffers)
-    # IO.inspect(PadModel.get_data!(state, pad_ref).other_demand_unit)
+
     state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - size))
 
     if toilet = PadModel.get_data!(state, pad_ref, :toilet) do

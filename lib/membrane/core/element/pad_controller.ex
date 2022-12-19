@@ -113,7 +113,7 @@ defmodule Membrane.Core.Element.PadController do
       ])
 
     case handle_link_response do
-      {:ok, {other_endpoint, other_info, link_metadata}} ->
+      {:ok, {info, other_endpoint, other_info, link_metadata}} ->
         :ok =
           Child.PadController.validate_pad_mode!(
             {endpoint.pad_ref, info},
@@ -162,6 +162,9 @@ defmodule Membrane.Core.Element.PadController do
         {other_endpoint.pad_ref, other_info}
       )
 
+    {info, other_info} = resolve_demand_unit(info, other_info)
+    # PadModel.set_data!(state, endpoint.pad_ref, :demand_unit, info.demand_unit)
+    # PadModel.update_data!(state, other_endpoint.pad_ref, :pad_info, other_info)
     state =
       init_pad_data(
         endpoint,
@@ -174,7 +177,7 @@ defmodule Membrane.Core.Element.PadController do
       )
 
     state = maybe_handle_pad_added(endpoint.pad_ref, state)
-    {{:ok, {endpoint, info, link_metadata}}, state}
+    {{:ok, {other_info, endpoint, info, link_metadata}}, state}
   end
 
   @doc """
@@ -209,6 +212,26 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
+  defp resolve_demand_unit(info, other_info) do
+    if info.mode == :pull and other_info.mode == :pull do
+      case info.direction do
+        :output ->
+          demand_unit =
+            if info[:demand_unit] == nil, do: other_info.demand_unit, else: info.demand_unit
+
+          {Map.put(info, :demand_unit, demand_unit), other_info}
+
+        :input ->
+          other_demand_unit =
+            if other_info[:demand_unit] == nil, do: info.demand_unit, else: other_info.demand_unit
+
+          {info, Map.put(other_info, :demand_unit, other_demand_unit)}
+      end
+    else
+      {info, other_info}
+    end
+  end
+
   defp init_pad_data(
          endpoint,
          other_endpoint,
@@ -218,9 +241,6 @@ defmodule Membrane.Core.Element.PadController do
          metadata,
          state
        ) do
-    other_demand_unit =
-      if other_info[:demand_unit] != nil, do: other_info[:demand_unit], else: info.demand_unit
-
     data =
       info
       |> Map.delete(:accepted_formats_str)
@@ -235,7 +255,7 @@ defmodule Membrane.Core.Element.PadController do
         start_of_stream?: false,
         end_of_stream?: false,
         associated_pads: [],
-        other_demand_unit: other_demand_unit
+        other_demand_unit: other_info[:demand_unit]
       })
 
     data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, state))
@@ -274,17 +294,14 @@ defmodule Membrane.Core.Element.PadController do
          metadata,
          %State{}
        ) do
-    %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
-
-    input_demand_unit =
-      if other_info[:demand_unit] != nil, do: other_info[:demand_unit], else: demand_unit
+    %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: this_demand_unit} = data
 
     enable_toilet? = other_info.mode == :push
 
     input_queue =
       InputQueue.init(%{
-        input_demand_unit: input_demand_unit,
-        output_demand_unit: demand_unit,
+        input_demand_unit: other_info[:demand_unit],
+        output_demand_unit: this_demand_unit,
         demand_pid: pid,
         demand_pad: other_ref,
         log_tag: inspect(ref),
@@ -297,15 +314,13 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp init_pad_mode_data(
-         %{mode: :pull, direction: :output, demand_mode: :manual, demand_unit: demand_unit},
+         %{mode: :pull, direction: :output, demand_mode: :manual},
          _props,
          other_info,
          _metadata,
          _state
        ) do
-    other_demand_unit = if demand_unit != nil, do: demand_unit, else: other_info[:demand_unit]
-
-    %{demand: 0, other_demand_unit: other_demand_unit}
+    %{demand: 0, other_demand_unit: other_info[:demand_unit]}
   end
 
   defp init_pad_mode_data(

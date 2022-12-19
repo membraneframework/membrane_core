@@ -145,8 +145,6 @@ defmodule Membrane.Core.Element.InputQueue do
     |> mk_log(input_queue)
     |> Membrane.Logger.debug_verbose()
 
-    IO.inspect(Enum.count(q))
-
     %__MODULE__{
       input_queue
       | q: q |> @qe.push({:buffers, v, input_metric_buffer_size, output_metric_buffer_size}),
@@ -200,34 +198,36 @@ defmodule Membrane.Core.Element.InputQueue do
     q
     |> @qe.pop
     |> case do
-      {{:value, {:buffers, b, input_metric_buf_size, output_metric_buf_size}}, nq} ->
+      {{:value, {:buffers, b, _input_metric_buf_size, _output_metric_buf_size}}, nq} ->
         {b, back} = b |> output_metric.split_buffers(size_to_take_in_output_metric)
+        b_input_metric_size = input_metric.buffers_size(b)
+        b_output_metric_size = output_metric.buffers_size(b)
 
-        if output_metric_buf_size < size_to_take_in_output_metric do
+        if b_output_metric_size < size_to_take_in_output_metric do
           q_pop(
             nq,
-            size_to_take_in_output_metric - output_metric_buf_size,
+            size_to_take_in_output_metric - b_output_metric_size,
             input_metric,
             output_metric,
-            queue_size - input_metric_buf_size,
+            queue_size - b_input_metric_size,
             [
-              {:buffers, b, input_metric_buf_size, output_metric_buf_size} | acc
+              {:buffers, b, b_input_metric_size, b_output_metric_size} | acc
             ]
           )
         else
-          {nq, newly_added} =
+          nq =
             if back != [],
               do:
-                {nq
-                 |> @qe.push_front(
-                   {:buffers, back, input_metric.buffers_size(back),
-                    output_metric.buffers_size(back)}
-                 ), input_metric.buffers_size(back)},
-              else: {nq, 0}
+                nq
+                |> @qe.push_front(
+                  {:buffers, back, input_metric.buffers_size(back),
+                   output_metric.buffers_size(back)}
+                ),
+              else: nq
 
           {{:value,
-            [{:buffers, b, input_metric_buf_size, output_metric_buf_size} | acc] |> Enum.reverse()},
-           nq, queue_size - input_metric_buf_size + newly_added}
+            [{:buffers, b, b_input_metric_size, b_output_metric_size} | acc] |> Enum.reverse()},
+           nq, queue_size - b_input_metric_size}
         end
 
       {:empty, nq} ->

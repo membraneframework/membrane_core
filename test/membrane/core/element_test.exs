@@ -223,7 +223,8 @@ defmodule Membrane.Core.ElementTest do
                get_state()
              )
 
-    assert {%{child: :this, pad_props: %{options: []}, pad_ref: :output},
+    assert {%{demand_unit: :buffers, direction: :input, mode: :pull},
+            %{child: :this, pad_props: %{options: []}, pad_ref: :output},
             %{
               availability: :always,
               demand_mode: :manual,

@@ -112,7 +112,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
   describe ".store/3 should" do
     setup do
-      {:ok, %{size: 10, q: Qex.new() |> Qex.push({:buffers, [], 3}), payload: <<1, 2, 3>>}}
+      {:ok, %{size: 10, q: Qex.new() |> Qex.push({:buffers, [], 3, 3}), payload: <<1, 2, 3>>}}
     end
 
     test "increment `size` when `:metric` is `Count`", context do
@@ -156,7 +156,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
       %{q: new_q} = InputQueue.store(input_queue, :buffers, v)
       {{:value, last_elem}, remaining_q} = new_q |> Qex.pop_back()
       assert remaining_q == context.q
-      assert last_elem == {:buffers, v, 3}
+      assert last_elem == {:buffers, v, 3, 3}
     end
 
     test "append event to the queue", context do
@@ -217,7 +217,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
     end
 
     test "send demands to the pid and updates demand", %{input_queue: input_queue} do
-      assert {{:value, [{:buffers, [1], 1}]}, new_input_queue} =
+      assert {{:value, [{:buffers, [1], 1, 1}]}, new_input_queue} =
                input_queue
                |> InputQueue.store(bufs(10))
                |> InputQueue.take_and_demand(1, self(), :pad)
@@ -232,8 +232,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
   describe ".take_and_demand/4 should also" do
     setup do
       size = 6
-      buffers1 = {:buffers, [:b1, :b2, :b3], 3}
-      buffers2 = {:buffers, [:b4, :b5, :b6], 3}
+      buffers1 = {:buffers, [:b1, :b2, :b3], 3, 3}
+      buffers2 = {:buffers, [:b4, :b5, :b6], 3, 3}
       q = Qex.new() |> Qex.push(buffers1) |> Qex.push(buffers2)
 
       input_queue =
@@ -319,8 +319,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
           :linked_output_ref
         )
 
-      exp_buf2 = {:buffers, [:b4], 1}
-      exp_rest = {:buffers, [:b5, :b6], 2}
+      exp_buf2 = {:buffers, [:b4], 1, 1}
+      exp_rest = {:buffers, [:b5, :b6], 2, 2}
       assert result == {:value, [context.buffers1, exp_buf2]}
 
       list = new_q |> Enum.into([])

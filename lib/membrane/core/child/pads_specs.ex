@@ -194,8 +194,8 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
                     &1.mode == :pull and direction == :output ->
                       [
-                        in: [:buffers, :bytes, :both],
-                        default: :both
+                        in: [:buffers, :bytes, nil],
+                        default: nil
                       ]
 
                     true ->
