@@ -157,7 +157,7 @@ defmodule Membrane.Pad do
           :mode => mode_t(),
           :name => name_t(),
           :accepted_formats_str => [String.t()],
-          optional(:demand_unit) => Buffer.Metric.unit_t(),
+          optional(:demand_unit) => Buffer.Metric.unit_t() | nil,
           :direction => direction_t(),
           :options => nil | Keyword.t(),
           optional(:demand_mode) => demand_mode_t()
