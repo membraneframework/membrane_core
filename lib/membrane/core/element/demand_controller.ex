@@ -51,8 +51,6 @@ defmodule Membrane.Core.Element.DemandController do
     data = %{data | demand: demand}
     state = PadModel.set_data!(state, pad_ref, data)
 
-    # demand_unit =
-    # if data[:demand_unit] != nil, do: data[:demand_unit], else: data.other_demand_unit
     if exec_handle_demand?(data) do
       require CallbackContext.Demand
       context = &CallbackContext.Demand.from_state(&1, incoming_demand: size)
