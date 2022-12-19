@@ -34,12 +34,44 @@ defmodule Membrane.Integration.ChildSpawnTest do
     end
   end
 
+  defmodule SinkWithDynamicPads do
+    use Membrane.Sink
+
+    def_input_pad :input,
+      demand_unit: :buffers,
+      accepted_format: _any,
+      availability: :on_request
+  end
+
+  defmodule BinWithDynamicPads do
+    use Membrane.Bin
+
+    def_output_pad :output,
+      demand_unit: :buffers,
+      accepted_format: _any,
+      availability: :on_request
+
+    @impl true
+    def handle_pad_added(pad, _ctx, state) do
+      spec =
+        child({:source, pad}, %Testing.Source{output: [1, 2, 3]})
+        |> bin_output(pad)
+
+      {[spec: spec], state}
+    end
+
+    @impl true
+    def handle_pad_removed(pad, _ctx, state) do
+      {[remove_children: {:source, pad}], state}
+    end
+  end
+
   test "if child/4 doesn't spawn child with a given name if there is already a child with given name among the children
   and the `get_if_exists` option is enabled" do
     pipeline_pid =
       Testing.Pipeline.start_link_supervised!(
         module: PipelineWhichDoesntPlayOnStartup,
-        custom_args: [child(:sink, Testing.Sink)]
+        custom_args: [child(:sink, SinkWithDynamicPads)]
       )
 
     spec =
@@ -47,9 +79,6 @@ defmodule Membrane.Integration.ChildSpawnTest do
       |> child(:sink, SinkThatNotifiesParent, get_if_exists: true)
 
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
-    # a workaround - I need to wait for some time for pads to link, so that not let the
-    # "unlinked pads" exception be thrown
-    :timer.sleep(1000)
     assert_pipeline_play(pipeline_pid)
     refute_pipeline_notified(pipeline_pid, :sink, :message_from_sink)
   end
@@ -66,7 +95,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
       child(:source, %Testing.Source{output: [1, 2, 3]})
       |> child(:sink, Testing.Sink, get_if_exists: true)
 
-    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec, setup: :complete)
     assert_pipeline_play(pipeline_pid)
   end
 
@@ -75,17 +104,14 @@ defmodule Membrane.Integration.ChildSpawnTest do
     pipeline_pid =
       Testing.Pipeline.start_link_supervised!(
         module: PipelineWhichDoesntPlayOnStartup,
-        custom_args: [child(:source, %Testing.Source{output: [1, 2, 3]})]
+        custom_args: [child(:source, BinWithDynamicPads)]
       )
 
     spec =
-      child(:source, %Testing.Source{output: [1, 2, 3]}, get_if_exists: true)
+      child(:source, %Testing.Source{output: ["a", "b", "c"]}, get_if_exists: true)
       |> child(:sink, Testing.Sink)
 
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
-    # a workaround - I need to wait for some time for pads to link, so that not let the
-    # "unlinked pads" exception be thrown
-    :timer.sleep(1000)
     assert_pipeline_play(pipeline_pid)
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 1})
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 2})
@@ -108,9 +134,6 @@ defmodule Membrane.Integration.ChildSpawnTest do
       |> child(:sink, Testing.Sink, get_if_exists: true)
 
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
-    # a workaround - I need to wait for some time for pads to link, so that not let the
-    # "unlinked pads" exception be thrown
-    :timer.sleep(1000)
     assert_pipeline_play(pipeline_pid)
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 1})
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 2})

@@ -32,6 +32,10 @@ defmodule Membrane.Core.PipelineTest do
     end
   end
 
+  defmodule TestBin do
+    use Membrane.Bin
+  end
+
   defp state(_ctx) do
     subprocess_supervisor = Membrane.Core.SubprocessSupervisor.start_link!()
     parent_supervisor = Membrane.Core.SubprocessSupervisor.start_link!()
@@ -84,7 +88,7 @@ defmodule Membrane.Core.PipelineTest do
 
       assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
         ActionHandler.handle_action(
-          {:spec, [child(:a, Membrane.Testing.Source)]},
+          {:spec, [child(:a, TestBin)]},
           nil,
           [],
           state
@@ -116,8 +120,6 @@ defmodule Membrane.Core.PipelineTest do
     pid = Testing.Pipeline.start_link_supervised!(module: TestPipeline)
     assert :ok == Testing.Pipeline.terminate(pid, blocking?: true)
   end
-
-  # dupa: todo: add here test for deferring setup
 
   test "Pipeline should be able to terminate itself with :terminate action" do
     Enum.each([:normal, :shutdown], fn reason ->

@@ -48,7 +48,7 @@ defmodule Membrane.Core.PlaybackController do
     do_assert(operation, callback, deferred?)
   end
 
-  defp do_assert(:defer, callback, true)  do
+  defp do_assert(:defer, callback, true) do
     raise "Action {:setup, :defer} was returned from callback #{inspect(callback)}, but setup has already been deferred"
   end
 

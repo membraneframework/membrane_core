@@ -13,7 +13,6 @@ defmodule Membrane.Core.Element.ActionHandler do
   alias Membrane.Core.Element.{DemandHandler, PadController, State, StreamFormatController}
   alias Membrane.Core.{Events, Message, PlaybackController, Telemetry, TimerController}
   alias Membrane.Element.Action
-  alias Membrane.SetupStatus
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message

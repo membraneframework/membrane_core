@@ -15,6 +15,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     SpecificationParser
   }
 
+  alias Membrane.ParentError
+
   require Membrane.Core.Component
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
@@ -133,6 +135,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         links
       end)
 
+    assert_static_pads_linked(children_definitions, links)
+
     {all_children_names, state} =
       Enum.flat_map_reduce(children_definitions, state, &setup_children(&1, spec_ref, &2))
 
@@ -158,6 +162,37 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     state = StartupUtils.exec_handle_spec_started(all_children_names, state)
     proceed_spec_startup(spec_ref, state)
+  end
+
+  defp assert_static_pads_linked(children_definitions, links) do
+    linked_pads_set =
+      links
+      |> Enum.flat_map(&[&1.from, &1.to])
+      |> MapSet.new(&{&1.child, &1.pad_spec})
+
+    children_definitions
+    |> Enum.flat_map(fn {definitions, _options} -> definitions end)
+    |> Enum.flat_map(fn {child_name, child_definition, _opts} ->
+      child_module =
+        case child_definition do
+          %module{} -> module
+          module when is_atom(module) -> module
+        end
+
+      child_module.membrane_pads()
+      |> Enum.map(fn {_pad_name, pad} -> pad end)
+      |> Enum.filter(&(&1.availability == :always))
+      |> Enum.map(&{child_name, &1.name})
+    end)
+    |> Enum.find(&(not MapSet.member?(linked_pads_set, &1)))
+    |> case do
+      {child_name, pad_name} ->
+        raise ParentError,
+              "Child #{inspect(child_name)} has static pad #{inspect(pad_name)}, but it is not linked in spec"
+
+      nil ->
+        :ok
+    end
   end
 
   @spec make_canonical(Membrane.ChildrenSpec.t(), parsed_children_spec_options_t()) ::
