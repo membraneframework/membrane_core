@@ -163,8 +163,7 @@ defmodule Membrane.Core.Element.PadController do
       )
 
     {info, other_info} = resolve_demand_unit(info, other_info)
-    # PadModel.set_data!(state, endpoint.pad_ref, :demand_unit, info.demand_unit)
-    # PadModel.update_data!(state, other_endpoint.pad_ref, :pad_info, other_info)
+
     state =
       init_pad_data(
         endpoint,
@@ -298,9 +297,12 @@ defmodule Membrane.Core.Element.PadController do
 
     enable_toilet? = other_info.mode == :push
 
+    input_queue_demand_unit =
+      if other_info[:demand_unit] != nil, do: other_info[:demand_unit], else: this_demand_unit
+
     input_queue =
       InputQueue.init(%{
-        input_demand_unit: other_info[:demand_unit],
+        input_demand_unit: input_queue_demand_unit,
         output_demand_unit: this_demand_unit,
         demand_pid: pid,
         demand_pad: other_ref,

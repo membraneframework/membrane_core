@@ -203,7 +203,14 @@ defmodule Membrane.Core.Element.DemandHandler do
          {:buffers, buffers, _input_metric_buf_size, _output_metric_buf_size},
          state
        ) do
-    metric = Buffer.Metric.from_unit(PadModel.get_data!(state, pad_ref).other_demand_unit)
+    pad_data = PadModel.get_data!(state, pad_ref)
+
+    demand_unit =
+      if pad_data.other_demand_unit != nil,
+        do: pad_data.other_demand_unit,
+        else: pad_data.demand_unit
+
+    metric = Buffer.Metric.from_unit(demand_unit)
     size = metric.buffers_size(buffers)
 
     state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - size))
