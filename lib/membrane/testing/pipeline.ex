@@ -80,10 +80,12 @@ defmodule Membrane.Testing.Pipeline do
   use Membrane.Pipeline
 
   alias Membrane.ChildrenSpec
+  alias Membrane.Core.Message
   alias Membrane.{Element, Pipeline}
   alias Membrane.Testing.Notification
 
   require Membrane.Logger
+  require Membrane.Core.Message
 
   defmodule State do
     @moduledoc false
@@ -216,6 +218,61 @@ defmodule Membrane.Testing.Pipeline do
   def execute_actions(pipeline, actions) do
     send(pipeline, {__MODULE__, :__execute_actions__, actions})
     :ok
+  end
+
+
+  @doc """
+  Accepts pipeline pid as a first argument and a child reference or path
+  of child references as a second argument.
+
+  If second argument is a child reference, function gets pid of this child
+  from pipeline.
+
+  Id second argument is a path of child references, function gets pid of
+  last a component pointed by this path.
+
+  Returns
+   * `{:ok, child_pid}`, if a child was succesfully found
+   * `{:error, :child_not_found}`, if there is no child under provided path
+   * `{:error, :pipeline_not_alive}`, if pipeline is not alive
+  """
+  @spec get_child_pid(pid(), child_ref_path :: Child.ref_t() | [Child.ref_t()]) ::
+          {:ok, pid()} | {:error, :parent_not_alive | :child_not_found}
+  def get_child_pid(parent_pid, []), do: {:ok, parent_pid}
+
+  def get_child_pid(parent_pid, [child_ref | tail]) do
+    case do_get_child_pid(parent_pid, child_ref) do
+      {:ok, child_pid} ->
+        get_child_pid(child_pid, tail)
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  def get_child_pid(parent_pid, child_ref) do
+    do_get_child_pid(parent_pid, child_ref)
+  end
+
+  @doc """
+  Works as get_child_pid/2, but raises an error instead of returning
+  `{:error, _reason}` tuple.
+  """
+  @spec get_child_pid!(pid(), child_ref_path :: Child.ref_t() | [Child.ref_t()]) :: pid()
+  def get_child_pid!(parent_pid, child_ref_path) do
+    {:ok, child_pid} = get_child_pid(parent_pid, child_ref_path)
+    child_pid
+  end
+
+  defp do_get_child_pid(parent_pid, child_ref) do
+    msg = Message.new(:get_child_pid, child_ref)
+
+    try do
+      GenServer.call(parent_pid, msg)
+    catch
+      :exit, {:noproc, {GenServer, :call, [^parent_pid, ^msg | _tail]}} ->
+        {:error, :pipeline_not_alive}
+    end
   end
 
   @impl true
@@ -435,4 +492,6 @@ defmodule Membrane.Testing.Pipeline do
   defp combine_results({custom_actions, custom_state}, {actions, state}) do
     {Enum.concat(custom_actions, actions), Map.put(state, :custom_pipeline_state, custom_state)}
   end
+
+
 end
