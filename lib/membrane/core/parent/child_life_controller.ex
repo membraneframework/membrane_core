@@ -15,6 +15,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     SpecificationParser
   }
 
+  alias Membrane.Pad
   alias Membrane.ParentError
 
   require Membrane.Core.Component
@@ -523,6 +524,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     data |> Enum.filter(& &1.ready?) |> Enum.each(&Message.send(&1.pid, :terminate))
     Parent.ChildrenModel.update_children!(state, refs, &%{&1 | terminating?: true})
+  end
+
+  @spec handle_remove_link(Membrane.Child.name_t(), Pad.ref_t(), Parent.state_t()) ::
+          Parent.state_t()
+  def handle_remove_link(child_name, pad_ref, state) do
+    LinkUtils.remove_link(child_name, pad_ref, state)
   end
 
   @doc """

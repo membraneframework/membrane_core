@@ -3,6 +3,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
   use Bunch
 
+  alias Membrane.ParentError
   alias Membrane.Core.{Bin, Message, Parent, Telemetry}
   alias Membrane.Core.Bin.PadController
 
@@ -30,6 +31,34 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     Enum.reduce(members_names, state, fn member_name, state ->
       unlink_element(member_name, state)
     end)
+  end
+
+  @spec remove_link(Membrane.Child.name_t(), Pad.ref_t(), Parent.state_t()) :: Parent.state_t()
+  def remove_link(child_name, pad_ref, state) do
+    Enum.find(state.links, fn {_id, link} ->
+      [link.from, link.to]
+      |> Enum.any?(&(&1.child == child_name and &1.pad_ref == pad_ref))
+    end)
+    |> case do
+      {_id, %Link{} = link} ->
+        for endpoint <- [link.from, link.to] do
+          Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+        end
+
+        links = Map.delete(state.links, link.id)
+        Map.put(state, :links, links)
+
+      nil ->
+        with %{^child_name => _child_entry} <- state.children do
+          raise ParentError, """
+          Attempted to unlink pad #{inspect(pad_ref)} of child #{inspect(child_name)}, but this child does not have this pad linked
+          """
+        end
+
+        raise ParentError, """
+        Attempted to unlink pad #{inspect(pad_ref)} of child #{inspect(child_name)}, but such a child does not exist
+        """
+    end
   end
 
   @spec unlink_element(Membrane.Child.name_t(), Parent.state_t()) :: Parent.state_t()

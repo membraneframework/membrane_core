@@ -4,7 +4,6 @@ defmodule Membrane.Core.PipelineTest do
   import Membrane.Testing.Assertions
   import Membrane.ChildrenSpec
 
-  alias Membrane.ChildrenSpec
   alias Membrane.Core.Message
   alias Membrane.Core.Pipeline.{ActionHandler, State}
   alias Membrane.Testing
