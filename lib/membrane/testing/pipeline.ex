@@ -79,6 +79,7 @@ defmodule Membrane.Testing.Pipeline do
 
   use Membrane.Pipeline
 
+  alias Membrane.Child
   alias Membrane.ChildrenSpec
   alias Membrane.Core.Message
   alias Membrane.{Element, Pipeline}
