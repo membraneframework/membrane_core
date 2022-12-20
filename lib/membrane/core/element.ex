@@ -149,6 +149,11 @@ defmodule Membrane.Core.Element do
   end
 
   @impl GenServer
+  def handle_call(Message.new(:get_child_pid, _child_ref), _from, state) do
+    {:reply, {:error, :child_not_found}, state}
+  end
+
+  @impl GenServer
   def handle_call(message, {pid, _tag}, _state) do
     raise Membrane.ElementError,
           "Received invalid message #{inspect(message)} from #{inspect(pid)}"

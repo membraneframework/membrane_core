@@ -92,6 +92,9 @@ defmodule Membrane.Testing.GetChildPidTest do
     # returning error tuple with proper reason
     assert {:error, :child_not_found} = Pipeline.get_child_pid(pipeline, :nonexisting_child)
 
+    assert {:error, :child_not_found} =
+             Pipeline.get_child_pid(pipeline, [element_ref, element_ref])
+
     monitor_ref = Process.monitor(pipeline)
     Pipeline.terminate(pipeline)
     assert_receive {:DOWN, ^monitor_ref, :process, ^pipeline, _reason}

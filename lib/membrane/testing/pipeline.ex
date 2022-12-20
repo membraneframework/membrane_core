@@ -220,7 +220,6 @@ defmodule Membrane.Testing.Pipeline do
     :ok
   end
 
-
   @doc """
   Accepts pipeline pid as a first argument and a child reference or path
   of child references as a second argument.
@@ -492,6 +491,4 @@ defmodule Membrane.Testing.Pipeline do
   defp combine_results({custom_actions, custom_state}, {actions, state}) do
     {Enum.concat(custom_actions, actions), Map.put(state, :custom_pipeline_state, custom_state)}
   end
-
-
 end
