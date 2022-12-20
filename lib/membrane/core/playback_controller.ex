@@ -1,5 +1,8 @@
 defmodule Membrane.Core.PlaybackController do
+  @moduledoc false
+
   alias Membrane.Core.{Component, Message, Parent}
+  alias Membrane.PlaybackError
 
   require Membrane.Core.Message
   require Membrane.Logger
@@ -19,6 +22,7 @@ defmodule Membrane.Core.PlaybackController do
 
   @spec defer_setup(Component.state_t()) :: Component.state_t()
   def defer_setup(state) do
+    Membrane.Logger.debug("Component deferred initialization")
     %{state | setup_deferred?: true}
   end
 
@@ -49,19 +53,22 @@ defmodule Membrane.Core.PlaybackController do
   end
 
   defp do_assert(:defer, callback, true) do
-    raise "Action {:setup, :defer} was returned from callback #{inspect(callback)}, but setup has already been deferred"
+    raise PlaybackError, """
+    Action {:setup, :defer} was returned from callback #{inspect(callback)}, but setup has already been deferred
+    """
   end
 
   defp do_assert(:defer, callback, _status) when callback not in [:handle_init, :handle_setup] do
-    raise "Action {:setup, :defer} was returned from callback #{inspect(callback)}, but it can be returend only from :handle_init or :handle_setup"
-  end
-
-  defp do_assert(:complete, callback, _status) when callback in [:handle_init, :handle_setup] do
-    raise "Action {:setup, :complete} cannot be returned from #{inspect(callback)}"
+    raise PlaybackError, """
+    Action {:setup, :defer} was returned from callback #{inspect(callback)}, but it can be returend only from
+    :handle_init or :handle_setup
+    """
   end
 
   defp do_assert(:complete, callback, false) do
-    raise "Action {:setup, :complete} was returned from callback #{inspect(callback)}, but setup is not deferred"
+    raise PlaybackError, """
+    Action {:setup, :complete} was returned from callback #{inspect(callback)}, but setup is not deferred
+    """
   end
 
   defp do_assert(_operation, _callback, _status), do: :ok

@@ -348,7 +348,7 @@ defmodule Membrane.RemoteControlled.Pipeline do
   def handle_init(_ctx, opts) do
     %{controller_pid: controller_pid} = opts
     state = %State{controller_pid: controller_pid}
-    {[setup: :defer], state}
+    {[], state}
   end
 
   @impl true
