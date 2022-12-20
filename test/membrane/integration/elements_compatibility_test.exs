@@ -1,11 +1,16 @@
 defmodule Membrane.Integration.ElementsCompatibilityTest do
   use ExUnit.Case, async: true
 
+  import Membrane.ChildrenSpec
+  import Membrane.Testing.Assertions
+  alias Membrane.Testing.Pipeline
+
   defmodule StreamFormat do
     defstruct []
   end
 
   defmodule Utilities do
+    @spec buffer() :: list(string_t())
     def buffer, do: ["SOME", "EXEMPLARY", "MESSAGES", "BEING", "SENT", "TO", "OUTPUT"]
   end
 
@@ -165,10 +170,6 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
       {[], state}
     end
   end
-
-  import Membrane.ChildrenSpec
-  alias Membrane.Testing.Pipeline
-  import Membrane.Testing.Assertions
 
   defp test_sink(source_module) do
     {:ok, _supervisor_pid, pid} =
