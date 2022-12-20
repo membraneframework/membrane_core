@@ -4,9 +4,9 @@ defmodule Membrane.Support.ChildCrashTest.Filter do
   Can be crashed on demand by sending `:crash` message.
   """
 
-  alias Membrane.Pad
-
   use Membrane.Filter
+
+  alias Membrane.Pad
 
   def_output_pad :output, accepted_format: _any, availability: :on_request
 
