@@ -10,7 +10,7 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
   end
 
   defmodule Utilities do
-    @spec buffer() :: list(string_t())
+    @spec buffer() :: list(String.t())
     def buffer, do: ["SOME", "EXEMPLARY", "MESSAGES", "BEING", "SENT", "TO", "OUTPUT"]
   end
 
