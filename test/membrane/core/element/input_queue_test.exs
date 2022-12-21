@@ -331,5 +331,83 @@ defmodule Membrane.Core.Element.InputQueueTest do
     end
   end
 
+  test "if the queue works properly for :bytes input metric and :buffers output metric" do
+    queue =
+      InputQueue.init(%{
+        input_demand_unit: :bytes,
+        output_demand_unit: :buffers,
+        demand_pid: self(),
+        demand_pad: :input,
+        log_tag: nil,
+        toilet?: false,
+        target_size: 10,
+        min_demand_factor: 1
+      })
+
+    assert_receive {Membrane.Core.Message, :demand, 10, [for_pad: :input]}
+    assert queue.demand == 0
+    queue = InputQueue.store(queue, [%Buffer{payload: "1234"}])
+    assert queue.size == 4
+    queue = InputQueue.store(queue, [%Buffer{payload: "12345678"}])
+    queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
+    queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
+    assert queue.size == 16
+    assert queue.demand == 0
+    {out, queue} = InputQueue.take_and_demand(queue, 2, self(), :input)
+    assert bufs_size(out, :buffers) == 2
+    assert queue.size == 4
+    assert queue.demand == 0
+    assert_receive {Membrane.Core.Message, :demand, 12, [for_pad: :input]}
+    queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
+    queue = InputQueue.store(queue, [%Buffer{payload: "1234"}])
+    {out, queue} = InputQueue.take_and_demand(queue, 1, self(), :input)
+    assert bufs_size(out, :buffers) == 1
+    assert queue.size == 8
+    assert queue.demand == -8
+  end
+
+  test "if the queue works properly for :buffers input metric and :bytes output metric" do
+    queue =
+      InputQueue.init(%{
+        input_demand_unit: :buffers,
+        output_demand_unit: :bytes,
+        demand_pid: self(),
+        demand_pad: :input,
+        log_tag: nil,
+        toilet?: false,
+        target_size: 3,
+        min_demand_factor: 1
+      })
+
+    assert_receive {Membrane.Core.Message, :demand, 3, [for_pad: :input]}
+    assert queue.demand == 0
+    queue = InputQueue.store(queue, [%Buffer{payload: "1234"}])
+    assert queue.size == 1
+    queue = InputQueue.store(queue, [%Buffer{payload: "12345678"}])
+    queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
+    queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
+    assert queue.size == 4
+    assert queue.demand == 0
+    {out, queue} = InputQueue.take_and_demand(queue, 2, self(), :input)
+    assert bufs_size(out, :bytes) == 2
+    assert queue.size == 4
+    assert queue.demand == 0
+    refute_receive {Membrane.Core.Message, :demand, _size, [for_pad: :input]}
+    {out, queue} = InputQueue.take_and_demand(queue, 11, self(), :input)
+    assert bufs_size(out, :bytes) == 11
+    assert queue.size == 2
+    assert queue.demand == -1
+    assert_receive {Membrane.Core.Message, :demand, 3, [for_pad: :input]}
+  end
+
+  defp bufs_size(output, unit) do
+    {_state, bufs} = output
+
+    Enum.flat_map(bufs, fn {:buffers, bufs_list, _input_metric_size, _output_metric_size} ->
+      bufs_list
+    end)
+    |> Membrane.Buffer.Metric.from_unit(unit).buffers_size()
+  end
+
   defp bufs(n), do: Enum.to_list(1..n)
 end
