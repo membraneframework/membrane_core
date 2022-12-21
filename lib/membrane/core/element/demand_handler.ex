@@ -200,23 +200,13 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   defp do_handle_input_queue_output(
          pad_ref,
-         {:buffers, buffers, _input_metric_buf_size, _output_metric_buf_size},
+         {:buffers, buffers, _input_metric_buf_size, output_metric_buf_size},
          state
        ) do
-    pad_data = PadModel.get_data!(state, pad_ref)
-
-    demand_unit =
-      if pad_data.other_demand_unit != nil,
-        do: pad_data.other_demand_unit,
-        else: pad_data.demand_unit
-
-    metric = Buffer.Metric.from_unit(demand_unit)
-    size = metric.buffers_size(buffers)
-
-    state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - size))
+    state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - output_metric_buf_size))
 
     if toilet = PadModel.get_data!(state, pad_ref, :toilet) do
-      Toilet.drain(toilet, size)
+      Toilet.drain(toilet, output_metric_buf_size)
     end
 
     BufferController.exec_buffer_callback(pad_ref, buffers, state)

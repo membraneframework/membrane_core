@@ -20,7 +20,8 @@ defmodule Membrane.Core.Element.InputQueue do
 
   @non_buf_types [:event, :stream_format]
 
-  @type output_value_t :: {:event | :stream_format, any} | {:buffers, list, pos_integer}
+  @type output_value_t ::
+          {:event | :stream_format, any} | {:buffers, list, pos_integer, pos_integer}
   @type output_t :: {:empty | :value, [output_value_t]}
 
   @type t :: %__MODULE__{
@@ -28,7 +29,7 @@ defmodule Membrane.Core.Element.InputQueue do
           log_tag: String.t(),
           target_size: pos_integer(),
           size: non_neg_integer(),
-          demand: non_neg_integer(),
+          demand: integer(),
           min_demand: pos_integer(),
           input_metric: module(),
           output_metric: module(),
@@ -138,8 +139,8 @@ defmodule Membrane.Core.Element.InputQueue do
            input_queue,
          v
        ) do
-    input_metric_buffer_size = v |> input_metric.buffers_size
-    output_metric_buffer_size = v |> output_metric.buffers_size
+    input_metric_buffer_size = input_metric.buffers_size(v)
+    output_metric_buffer_size = output_metric.buffers_size(v)
 
     "Storing #{inspect(input_metric_buffer_size)} buffers"
     |> mk_log(input_queue)
@@ -215,38 +216,42 @@ defmodule Membrane.Core.Element.InputQueue do
     q
     |> @qe.pop
     |> case do
-      {{:value, {:buffers, b, input_metric_buf_size, output_metric_buf_size}}, nq} ->
+      {{:value, {:buffers, b, input_metric_buf_size, _output_metric_buf_size}}, nq} ->
         {b, back} = b |> output_metric.split_buffers(size_to_take_in_output_metric)
         b_input_metric_size = input_metric.buffers_size(b)
         b_output_metric_size = output_metric.buffers_size(b)
 
-        if b_output_metric_size < size_to_take_in_output_metric do
-          q_pop(
-            nq,
-            size_to_take_in_output_metric - b_output_metric_size,
-            input_metric,
-            output_metric,
-            queue_size - b_input_metric_size,
-            demand_size + b_output_metric_size,
-            [
-              {:buffers, b, b_input_metric_size, b_output_metric_size} | acc
-            ]
-          )
-        else
-          {nq, _newly_added_input_metric_size} =
-            if back != [],
-              do:
-                {nq
-                 |> @qe.push_front(
-                   {:buffers, back, input_metric.buffers_size(back),
-                    output_metric.buffers_size(back)}
-                 ), input_metric.buffers_size(back)},
-              else: {nq, 0}
+        cond do
+          b_output_metric_size < size_to_take_in_output_metric ->
+            q_pop(
+              nq,
+              size_to_take_in_output_metric - b_output_metric_size,
+              input_metric,
+              output_metric,
+              queue_size - input_metric_buf_size,
+              demand_size + input_metric_buf_size,
+              [
+                {:buffers, b, b_input_metric_size, b_output_metric_size} | acc
+              ]
+            )
 
-          {{:value,
-            [{:buffers, b, b_input_metric_size, b_output_metric_size} | acc] |> Enum.reverse()},
-           nq, queue_size - input_metric_buf_size + input_metric.buffers_size(back),
-           demand_size + output_metric_buf_size - input_metric.buffers_size(back)}
+          b_output_metric_size == size_to_take_in_output_metric and back == [] ->
+            {{:value,
+              [{:buffers, b, b_input_metric_size, b_output_metric_size} | acc] |> Enum.reverse()},
+             nq, queue_size - input_metric_buf_size, demand_size + input_metric_buf_size}
+
+          b_output_metric_size == size_to_take_in_output_metric and back != [] ->
+            nq =
+              @qe.push_front(
+                nq,
+                {:buffers, back, input_metric.buffers_size(back),
+                 output_metric.buffers_size(back)}
+              )
+
+            {{:value,
+              [{:buffers, b, b_input_metric_size, b_output_metric_size} | acc] |> Enum.reverse()},
+             nq, queue_size - input_metric_buf_size + input_metric.buffers_size(back),
+             demand_size + input_metric_buf_size - input_metric.buffers_size(back)}
         end
 
       {:empty, nq} ->
