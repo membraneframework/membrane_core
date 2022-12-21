@@ -62,7 +62,7 @@ defmodule Membrane.Core.Timer do
     beam_next_tick_time =
       Ratio.add(Ratio.new(init_time), Ratio.div(next_tick_time, ratio))
       |> Ratio.floor()
-      |> Time.round_to_milliseconds()
+      |> Time.as_milliseconds(:round)
 
     timer_ref =
       Process.send_after(self(), Message.new(:timer_tick, id), beam_next_tick_time, abs: true)
