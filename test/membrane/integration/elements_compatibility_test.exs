@@ -14,7 +14,7 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
     def buffer, do: ["SOME", "EXEMPLARY", "MESSAGES", "BEING", "SENT", "TO", "OUTPUT"]
   end
 
-  # ======================= SOURCES ====================================================
+  # ========================== SOURCES ===================================
 
   defmodule PullBuffersSource do
     use Membrane.Source
@@ -97,7 +97,32 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
     end
   end
 
-  # ======================================== SINKS ========================================================
+  # ======================================= FILTERS =============================================
+  defmodule AutodemandFilter do
+    use Membrane.Filter
+
+    def_input_pad :input,
+      accepted_format: _any,
+      mode: :pull,
+      demand_mode: :auto
+
+    def_output_pad :output,
+      accepted_format: _any,
+      mode: :pull,
+      demand_mode: :auto
+
+    @impl true
+    def handle_init(_ctx, _opts) do
+      {[], nil}
+    end
+
+    @impl true
+    def handle_process(:input, buf, _ctx, state) do
+      {[buffer: {:output, buf}], state}
+    end
+  end
+
+  # ======================================== SINKS ==============================================
 
   defmodule PullBuffersSink do
     use Membrane.Sink
@@ -129,7 +154,7 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
           {[], state}
 
         state.received == state.demanded ->
-          Process.send_after(self(), :demand, 100)
+          Process.send_after(self(), :demand, 10)
           {[], state}
 
         state.received > state.demanded ->
@@ -206,7 +231,10 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
   defp test_sink(source_module, sink_module) do
     {:ok, _supervisor_pid, pid} =
       Pipeline.start_link(
-        spec: child(source_module) |> child(sink_module.__struct__(test_pid: self()))
+        spec:
+          child(source_module)
+          |> child(AutodemandFilter)
+          |> child(sink_module.__struct__(test_pid: self()))
       )
 
     assert_pipeline_play(pid)
