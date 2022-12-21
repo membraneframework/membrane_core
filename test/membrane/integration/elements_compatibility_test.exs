@@ -112,18 +112,34 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
 
     @impl true
     def handle_init(_ctx, opts) do
-      {[], %{test_pid: opts.test_pid, buffers: []}}
+      {[], %{test_pid: opts.test_pid, buffers: [], demanded: 0, received: 0}}
     end
 
     @impl true
     def handle_playing(_ctx, state) do
-      {[demand: {:input, 2}], state}
+      {[demand: {:input, 2}], %{state | demanded: 2}}
     end
 
     @impl true
     def handle_write(_pad, buffer, _ctx, state) do
-      state = %{state | buffers: [buffer.payload | state.buffers]}
-      {[demand: {:input, 2}], state}
+      state = %{state | buffers: [buffer.payload | state.buffers], received: state.received + 1}
+
+      cond do
+        state.received < state.demanded ->
+          {[], state}
+
+        state.received == state.demanded ->
+          Process.send_after(self(), :demand, 100)
+          {[], state}
+
+        state.received > state.demanded ->
+          raise "Received more then demanded"
+      end
+    end
+
+    @impl true
+    def handle_info(:demand, _ctx, state) do
+      {[demand: {:input, 2}], %{state | demanded: state.demanded + 2}}
     end
 
     @impl true
@@ -146,22 +162,38 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
 
     @impl true
     def handle_init(_ctx, opts) do
-      {[], %{test_pid: opts.test_pid, buffers: []}}
+      {[], %{test_pid: opts.test_pid, buffers: [], demanded: 0, received: 0}}
     end
 
     @impl true
     def handle_playing(_ctx, state) do
-      {[demand: {:input, 2}], state}
+      {[demand: {:input, 2}], %{state | demanded: 2}}
     end
 
     @impl true
     def handle_write(_pad, buffer, _ctx, state) do
-      if byte_size(buffer.payload) > 2 do
-        raise "Too large buffer!"
-      end
+      state = %{
+        state
+        | buffers: [buffer.payload | state.buffers],
+          received: state.received + byte_size(buffer.payload)
+      }
 
-      state = %{state | buffers: [buffer.payload | state.buffers]}
-      {[demand: {:input, 2}], state}
+      cond do
+        state.received < state.demanded ->
+          {[], state}
+
+        state.received == state.demanded ->
+          Process.send_after(self(), :demand, 10)
+          {[], state}
+
+        state.received > state.demanded ->
+          raise "Received more then demanded"
+      end
+    end
+
+    @impl true
+    def handle_info(:demand, _ctx, state) do
+      {[demand: {:input, 2}], %{state | demanded: state.demanded + 2}}
     end
 
     @impl true
@@ -171,9 +203,11 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
     end
   end
 
-  defp test_sink(source_module) do
+  defp test_sink(source_module, sink_module) do
     {:ok, _supervisor_pid, pid} =
-      Pipeline.start(spec: child(source_module) |> child(%PullBytesSink{test_pid: self()}))
+      Pipeline.start_link(
+        spec: child(source_module) |> child(sink_module.__struct__(test_pid: self()))
+      )
 
     assert_pipeline_play(pid)
 
@@ -187,10 +221,10 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
   end
 
   test "if sink demanding in bytes receives all the data and no more then demanded number of bytes at once" do
-    Enum.each([PushSource, PullBytesSource, PullBuffersSource], &test_sink(&1))
+    Enum.each([PushSource, PullBytesSource, PullBuffersSource], &test_sink(&1, PullBytesSink))
   end
 
   test "if sink demanding in buffers receives all the data" do
-    Enum.each([PushSource, PullBytesSource, PullBuffersSource], &test_sink(&1))
+    Enum.each([PushSource, PullBytesSource, PullBuffersSource], &test_sink(&1, PullBuffersSink))
   end
 end
