@@ -257,7 +257,15 @@ defmodule Membrane.Core.Bin.PadController do
     with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
       state = maybe_handle_pad_removed(pad_ref, state)
       endpoint = PadModel.get_data!(state, pad_ref, :endpoint)
-      Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+
+      if endpoint do
+        Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+      else
+        Membrane.Logger.debug(
+          "Tried to send :handle_unlink to the endpoint during unlinking #{inspect(pad_ref)}, but endpoint is neither linked internally yet nor :handle_link was sent"
+        )
+      end
+
       PadModel.delete_data!(state, pad_ref)
     else
       {:ok, %{availability: :always}} when state.terminating? ->

@@ -20,6 +20,7 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.Element.CallbackContext
+  alias Membrane.Time
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
@@ -48,6 +49,20 @@ defmodule Membrane.Core.Element.PadController do
           :ok | {:ok, link_call_reply_props_t} | {:error, {:neighbor_dead, reason :: any}}
 
   @default_auto_demand_size_factor 4000
+
+  @default_static_pads_check_timeout Time.seconds(5)
+
+  @spec start_static_pads_check_timer(Time.t()) :: :ok
+  def start_static_pads_check_timer(timeout \\ @default_static_pads_check_timeout) do
+    milliseconds = Time.as_milliseconds(timeout, :round)
+    Process.send_after(self(), Message.new(:static_pads_check_timeout), milliseconds)
+    :ok
+  end
+
+  @spec handle_static_pads_check(State.t()) :: :ok | no_return()
+  def handle_static_pads_check(state) do
+    Child.PadController.assert_all_static_pads_linked!(state)
+  end
 
   @doc """
   Verifies linked pad, initializes it's data.
