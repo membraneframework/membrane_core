@@ -228,12 +228,12 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
     end
   end
 
-  defp test_sink(source_module, sink_module) do
+  defp test_sink(source_module, sink_module, should_add_filter?) do
     {:ok, _supervisor_pid, pid} =
       Pipeline.start_link(
         spec:
           child(source_module)
-          |> child(AutodemandFilter)
+          |> Bunch.then_if(should_add_filter?, &child(&1, AutodemandFilter))
           |> child(sink_module.__struct__(test_pid: self()))
       )
 
@@ -249,10 +249,30 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
   end
 
   test "if sink demanding in bytes receives all the data and no more then demanded number of bytes at once" do
-    Enum.each([PushSource, PullBytesSource, PullBuffersSource], &test_sink(&1, PullBytesSink))
+    Enum.each(
+      [PushSource, PullBytesSource, PullBuffersSource],
+      &test_sink(&1, PullBytesSink, false)
+    )
   end
 
   test "if sink demanding in buffers receives all the data" do
-    Enum.each([PushSource, PullBytesSource, PullBuffersSource], &test_sink(&1, PullBuffersSink))
+    Enum.each(
+      [PushSource, PullBytesSource, PullBuffersSource],
+      &test_sink(&1, PullBuffersSink, false)
+    )
+  end
+
+  test "if sink demanding in bytes receives all the data and no more then demanded number of bytes at once when is preceed by  autodemand filter" do
+    Enum.each(
+      [PushSource, PullBytesSource, PullBuffersSource],
+      &test_sink(&1, PullBytesSink, true)
+    )
+  end
+
+  test "if sink demanding in buffers receives all the data when is preceed by  autodemand filter" do
+    Enum.each(
+      [PushSource, PullBytesSource, PullBuffersSource],
+      &test_sink(&1, PullBuffersSink, true)
+    )
   end
 end
