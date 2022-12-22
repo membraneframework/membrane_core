@@ -379,16 +379,84 @@ defmodule Membrane.Integration.LinkingTest do
         availability: :on_request,
         accepted_format: _any,
         demand_unit: :buffers
+
+      def_output_pad :output,
+        availability: :on_request,
+        accepted_format: _any,
+        demand_unit: :buffers
     end
 
     pipeline =
       Testing.Pipeline.start_supervised!(
-        spec: child(:source, Testing.Source) |> child(:bin, NoInternalLinkBin)
+        spec: {
+          child(:bin_1, NoInternalLinkBin),
+          group: :group_1, crash_group_mode: :temporary
+        }
       )
 
-    bin_pid = get_child_pid(:bin, pipeline)
-    monitor = Process.monitor(bin_pid)
-    assert_receive {:DOWN, ^monitor, :process, _pid, {%Membrane.LinkError{}, _stacktrace}}, 6000
+    Testing.Pipeline.execute_actions(pipeline,
+      spec: [
+        {
+          child(:bin_2, NoInternalLinkBin),
+          group: :group_2, crash_group_mode: :temporary
+        },
+        get_child(Child.ref(:bin_1, group: :group_1))
+        |> get_child(Child.ref(:bin_2, group: :group_2))
+      ]
+    )
+
+    Process.sleep(1000)
+
+    bin_1_pid = get_child_pid(Child.ref(:bin_1, group: :group_1), pipeline)
+    bin_2_pid = get_child_pid(Child.ref(:bin_2, group: :group_2), pipeline)
+
+    monitor_1 = Process.monitor(bin_1_pid)
+    monitor_2 = Process.monitor(bin_2_pid)
+
+    assert_receive {:DOWN, ^monitor_1, :process, _pid, {%Membrane.LinkError{}, _stacktrace}}, 6000
+    assert_receive {:DOWN, ^monitor_2, :process, _pid, {%Membrane.LinkError{}, _stacktrace}}, 6000
+
+    Testing.Pipeline.terminate(pipeline)
+  end
+
+  test "Element should crash if has static pad unlinked after a timeout" do
+    defmodule SleepingBin do
+      use Membrane.Bin
+
+      def_input_pad :input,
+        availability: :on_request,
+        accepted_format: _any,
+        demand_unit: :buffers
+
+      @impl true
+      def handle_pad_added(_pad, _ctx, state) do
+        Process.sleep(10_000)
+        {[], state}
+      end
+    end
+
+    pipeline =
+      Testing.Pipeline.start_supervised!(
+        spec: [
+          {
+            child(:source, Testing.Source),
+            group: :group, crash_group_mode: :temporary
+          },
+          get_child(Child.ref(:source, group: :group))
+          |> child(:bin, SleepingBin)
+        ]
+      )
+
+    source_pid = get_child_pid(Child.ref(:source, group: :group), pipeline)
+    monitor_ref = Process.monitor(source_pid)
+
+    assert_receive {:DOWN, ^monitor_ref, :process, ^source_pid,
+                    {%Membrane.LinkError{message: message}, _stacktrace}},
+                   6000
+
+    message =~ ~r/static.*pad.*unlink/u
+
+    Testing.Pipeline.terminate(pipeline)
   end
 
   test "A spec entailing multiple dependent specs in a bin should work" do
