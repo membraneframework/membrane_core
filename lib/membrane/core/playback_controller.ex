@@ -7,28 +7,26 @@ defmodule Membrane.Core.PlaybackController do
   require Membrane.Core.Message
   require Membrane.Logger
 
-  @type setup_operation_t :: :defer | :complete
+  @type setup_operation_t :: :incomplete | :complete
 
   @spec handle_setup_operation(setup_operation_t(), atom(), Component.state_t()) ::
           Component.state_t()
   def handle_setup_operation(operation, callback, state) do
-    :ok = assert_operation_allowed(operation, callback, state.setup_deferred?)
+    :ok = assert_operation_allowed(operation, callback, state.setup_incomplete_returned?)
 
     case operation do
-      :defer -> defer_setup(state)
-      :complete -> complete_setup(state)
-    end
-  end
+      :incomplete ->
+        Membrane.Logger.debug("Component deferred initialization")
+        %{state | setup_incomplete_returned?: true}
 
-  @spec defer_setup(Component.state_t()) :: Component.state_t()
-  def defer_setup(state) do
-    Membrane.Logger.debug("Component deferred initialization")
-    %{state | setup_deferred?: true}
+      :complete ->
+        complete_setup(state)
+    end
   end
 
   @spec complete_setup(Component.state_t()) :: Component.state_t()
   def complete_setup(state) do
-    state = %{state | initialized?: true, setup_deferred?: false}
+    state = %{state | initialized?: true, setup_incomplete_returned?: false}
 
     cond do
       Component.is_pipeline?(state) ->
@@ -48,28 +46,24 @@ defmodule Membrane.Core.PlaybackController do
   end
 
   @spec assert_operation_allowed(setup_operation_t(), atom(), boolean()) :: :ok | no_return()
-  defp assert_operation_allowed(operation, callback, deferred?) do
-    do_assert(operation, callback, deferred?)
-  end
-
-  defp do_assert(:defer, callback, true) do
+  defp assert_operation_allowed(:incomplete, :handle_setup, true) do
     raise PlaybackError, """
-    Action {:setup, :defer} was returned from callback #{inspect(callback)}, but setup has already been deferred
+    Action {:setup, :incomplete} was returned mutliple times from :handle_setup
     """
   end
 
-  defp do_assert(:defer, callback, _status) when callback not in [:handle_init, :handle_setup] do
+  defp assert_operation_allowed(:incomplete, callback, _status) when callback != :handle_setup do
     raise PlaybackError, """
-    Action {:setup, :defer} was returned from callback #{inspect(callback)}, but it can be returend only from
-    :handle_init or :handle_setup
+    Action {:setup, :incomplete} was returned from callback #{inspect(callback)}, but it can be returend only
+    from :handle_setup
     """
   end
 
-  defp do_assert(:complete, callback, false) do
+  defp assert_operation_allowed(:complete, callback, false) do
     raise PlaybackError, """
-    Action {:setup, :complete} was returned from callback #{inspect(callback)}, but setup is not deferred
+    Action {:setup, :complete} was returned from callback #{inspect(callback)}, but setup is already completed
     """
   end
 
-  defp do_assert(_operation, _callback, _status), do: :ok
+  defp assert_operation_allowed(_operation, _callback, _status), do: :ok
 end

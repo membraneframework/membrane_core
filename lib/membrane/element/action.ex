@@ -10,7 +10,7 @@ defmodule Membrane.Element.Action do
 
   alias Membrane.{Buffer, ChildNotification, Clock, Event, Pad, StreamFormat}
 
-  @type setup_t :: {:setup, :defer | :complete}
+  @type setup_t :: {:setup, :incomplete | :complete}
 
   @typedoc """
   Sends a message to the parent.

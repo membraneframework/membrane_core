@@ -22,23 +22,19 @@ defmodule Membrane.Integration.DeferSetupTest do
       availability: :on_request,
       demand_mode: :manual
 
-    def_options defer: [spec: atom(), default: :in_setup],
+    def_options defer_play: [spec: boolean(), default: true],
                 specs_list: [spec: list(), default: []]
 
     @impl true
     def handle_init(_ctx, opts) do
       state = Map.from_struct(opts)
-
-      actions =
-        Enum.map(state.specs_list, &{:spec, &1}) ++
-          if(state.defer == :in_init, do: [setup: :defer], else: [])
-
+      actions = Enum.map(state.specs_list, &{:spec, &1})
       {actions, state}
     end
 
     @impl true
     def handle_setup(_ctx, state) do
-      actions = if state.defer == :in_setup, do: [setup: :defer], else: []
+      actions = if state.defer_play, do: [setup: :incomplete], else: []
       {actions, state}
     end
 
@@ -87,19 +83,18 @@ defmodule Membrane.Integration.DeferSetupTest do
     end
   end
 
-  test "[setup: :defer] and [setup: :complete]" do
+  test "[setup: :incomplete] and [setup: :complete]" do
     pipeline =
       Pipeline.start_supervised!(
         spec:
           child(:bin_1, %Bin{
-            defer: :in_init,
             specs_list: [
               child(:bin_a, Bin),
-              child(:bin_b, %Bin{defer: :in_init})
+              child(:bin_b, Bin)
               |> child(:bin_c, Bin)
             ]
           })
-          |> child(:bin_2, %Bin{defer: :not_at_all})
+          |> child(:bin_2, %Bin{defer_play: false})
       )
 
     assert_pipeline_play(pipeline)

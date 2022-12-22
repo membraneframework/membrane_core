@@ -4,7 +4,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
 
   alias Membrane.ActionError
   alias Membrane.Core.Bin.State
-  alias Membrane.Core.{CallbackHandler, Message, Parent, PlaybackController, TimerController}
+  alias Membrane.Core.{Message, Parent, PlaybackController, TimerController}
 
   require Membrane.Logger
   require Message

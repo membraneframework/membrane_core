@@ -10,7 +10,7 @@ defmodule Membrane.Pipeline.Action do
 
   alias Membrane.{Child, ChildrenSpec, Pad}
 
-  @type setup_t :: {:setup, :defer | :complete}
+  @type setup_t :: {:setup, :incomplete | :complete}
 
   @typedoc """
   Action that sends a message to a child identified by name.

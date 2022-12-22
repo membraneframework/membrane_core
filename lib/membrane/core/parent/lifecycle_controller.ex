@@ -34,7 +34,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
         state
       )
 
-    with %{setup_deferred?: false} <- state do
+    with %{setup_incomplete_returned?: false} <- state do
       PlaybackController.complete_setup(state)
     end
   end
