@@ -1,8 +1,8 @@
-defmodule Membrane.Core.PlaybackController do
+defmodule Membrane.Core.LifecycleController do
   @moduledoc false
 
   alias Membrane.Core.{Component, Message, Parent}
-  alias Membrane.PlaybackError
+  alias Membrane.SetupError
 
   require Membrane.Core.Message
   require Membrane.Logger
@@ -46,21 +46,21 @@ defmodule Membrane.Core.PlaybackController do
   end
 
   @spec assert_operation_allowed(setup_operation_t(), atom(), boolean()) :: :ok | no_return()
-  defp assert_operation_allowed(:incomplete, :handle_setup, true) do
-    raise PlaybackError, """
-    Action {:setup, :incomplete} was returned mutliple times from :handle_setup
+  defp assert_operation_allowed(:incomplete, callback, true) do
+    raise SetupError, """
+    Action {:setup, :incomplete} was returned more than once
     """
   end
 
   defp assert_operation_allowed(:incomplete, callback, _status) when callback != :handle_setup do
-    raise PlaybackError, """
+    raise SetupError, """
     Action {:setup, :incomplete} was returned from callback #{inspect(callback)}, but it can be returend only
     from :handle_setup
     """
   end
 
   defp assert_operation_allowed(:complete, callback, false) do
-    raise PlaybackError, """
+    raise SetupError, """
     Action {:setup, :complete} was returned from callback #{inspect(callback)}, but setup is already completed
     """
   end
