@@ -302,8 +302,8 @@ defmodule Membrane.Core.Element.PadController do
 
     input_queue =
       InputQueue.init(%{
-        input_demand_unit: input_queue_demand_unit,
-        output_demand_unit: this_demand_unit,
+        inbound_demand_unit: input_queue_demand_unit,
+        outbound_demand_unit: this_demand_unit,
         demand_pid: pid,
         demand_pad: other_ref,
         log_tag: inspect(ref),

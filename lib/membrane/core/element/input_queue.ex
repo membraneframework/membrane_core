@@ -31,8 +31,8 @@ defmodule Membrane.Core.Element.InputQueue do
           size: non_neg_integer(),
           demand: integer(),
           min_demand: pos_integer(),
-          input_metric: module(),
-          output_metric: module(),
+          inbound_metric: module(),
+          outbound_metric: module(),
           toilet?: boolean()
         }
 
@@ -43,8 +43,8 @@ defmodule Membrane.Core.Element.InputQueue do
     :size,
     :demand,
     :min_demand,
-    :input_metric,
-    :output_metric,
+    :inbound_metric,
+    :outbound_metric,
     :toilet?
   ]
 
@@ -56,8 +56,8 @@ defmodule Membrane.Core.Element.InputQueue do
   def default_min_demand_factor, do: 0.25
 
   @spec init(%{
-          input_demand_unit: Buffer.Metric.unit_t(),
-          output_demand_unit: Buffer.Metric.unit_t(),
+          inbound_demand_unit: Buffer.Metric.unit_t(),
+          outbound_demand_unit: Buffer.Metric.unit_t(),
           demand_pid: pid(),
           demand_pad: Pad.ref_t(),
           log_tag: String.t(),
@@ -67,8 +67,8 @@ defmodule Membrane.Core.Element.InputQueue do
         }) :: t()
   def init(config) do
     %{
-      input_demand_unit: input_demand_unit,
-      output_demand_unit: output_demand_unit,
+      inbound_demand_unit: inbound_demand_unit,
+      outbound_demand_unit: outbound_demand_unit,
       demand_pid: demand_pid,
       demand_pad: demand_pad,
       log_tag: log_tag,
@@ -77,10 +77,10 @@ defmodule Membrane.Core.Element.InputQueue do
       min_demand_factor: min_demand_factor
     } = config
 
-    input_metric = Buffer.Metric.from_unit(input_demand_unit)
-    output_metric = Buffer.Metric.from_unit(output_demand_unit)
+    inbound_metric = Buffer.Metric.from_unit(inbound_demand_unit)
+    outbound_metric = Buffer.Metric.from_unit(outbound_demand_unit)
 
-    default_target_size = input_metric.buffer_size_approximation() * @default_target_size_factor
+    default_target_size = inbound_metric.buffer_size_approximation() * @default_target_size_factor
 
     target_size = target_size || default_target_size
 
@@ -94,8 +94,8 @@ defmodule Membrane.Core.Element.InputQueue do
       size: 0,
       demand: target_size,
       min_demand: min_demand,
-      input_metric: input_metric,
-      output_metric: output_metric,
+      inbound_metric: inbound_metric,
+      outbound_metric: outbound_metric,
       toilet?: toilet?
     }
     |> send_demands(demand_pid, demand_pad)
@@ -135,21 +135,25 @@ defmodule Membrane.Core.Element.InputQueue do
   end
 
   defp do_store_buffers(
-         %__MODULE__{q: q, size: size, input_metric: input_metric, output_metric: output_metric} =
-           input_queue,
+         %__MODULE__{
+           q: q,
+           size: size,
+           inbound_metric: inbound_metric,
+           outbound_metric: outbound_metric
+         } = input_queue,
          v
        ) do
-    input_metric_buffer_size = input_metric.buffers_size(v)
-    output_metric_buffer_size = output_metric.buffers_size(v)
+    inbound_metric_buffer_size = inbound_metric.buffers_size(v)
+    outbound_metric_buffer_size = outbound_metric.buffers_size(v)
 
-    "Storing #{inspect(input_metric_buffer_size)} buffers"
+    "Storing #{inspect(inbound_metric_buffer_size)} buffers"
     |> mk_log(input_queue)
     |> Membrane.Logger.debug_verbose()
 
     %__MODULE__{
       input_queue
-      | q: q |> @qe.push({:buffers, v, input_metric_buffer_size, output_metric_buffer_size}),
-        size: size + input_metric_buffer_size
+      | q: q |> @qe.push({:buffers, v, inbound_metric_buffer_size, outbound_metric_buffer_size}),
+        size: size + inbound_metric_buffer_size
     }
   end
 
@@ -161,7 +165,7 @@ defmodule Membrane.Core.Element.InputQueue do
         demand_pad
       )
       when count >= 0 do
-    "Taking #{inspect(count)} #{inspect(input_queue.output_metric)}"
+    "Taking #{inspect(count)} #{inspect(input_queue.outbound_metric)}"
     |> mk_log(input_queue)
     |> Membrane.Logger.debug_verbose()
 
@@ -175,14 +179,14 @@ defmodule Membrane.Core.Element.InputQueue do
          %__MODULE__{
            q: q,
            size: size,
-           input_metric: input_metric,
-           output_metric: output_metric,
+           inbound_metric: inbound_metric,
+           outbound_metric: outbound_metric,
            demand: demand
          } = input_queue,
          count
        ) do
-    {out, nq, new_queue_size, new_demand_size} =
-      q |> q_pop(count, input_metric, output_metric, size, demand)
+    {out, nq, new_queue_size} = q |> q_pop(count, inbound_metric, outbound_metric, size)
+    new_demand_size = demand + (size - new_queue_size)
 
     {out,
      %__MODULE__{
@@ -195,76 +199,69 @@ defmodule Membrane.Core.Element.InputQueue do
 
   defp q_pop(
          q,
-         size_to_take_in_output_metric,
-         input_metric,
-         output_metric,
+         size_to_take_in_outbound_metric,
+         inbound_metric,
+         outbound_metric,
          queue_size,
-         demand_size,
          acc \\ []
        )
 
   defp q_pop(
          q,
-         size_to_take_in_output_metric,
-         input_metric,
-         output_metric,
+         size_to_take_in_outbound_metric,
+         inbound_metric,
+         outbound_metric,
          queue_size,
-         demand_size,
          acc
        )
-       when size_to_take_in_output_metric > 0 do
+       when size_to_take_in_outbound_metric > 0 do
     q
     |> @qe.pop
     |> case do
-      {{:value, {:buffers, b, input_metric_buf_size, _output_metric_buf_size}}, nq} ->
-        {b, back} = b |> output_metric.split_buffers(size_to_take_in_output_metric)
-        b_input_metric_size = input_metric.buffers_size(b)
-        b_output_metric_size = output_metric.buffers_size(b)
+      {{:value, {:buffers, b, inbound_metric_buf_size, _outbound_metric_buf_size}}, nq} ->
+        {b, back} = b |> outbound_metric.split_buffers(size_to_take_in_outbound_metric)
+        b_inbound_metric_size = inbound_metric.buffers_size(b)
+        b_outbound_metric_size = outbound_metric.buffers_size(b)
 
-        cond do
-          b_output_metric_size < size_to_take_in_output_metric ->
+        case back do
+          [] ->
             q_pop(
               nq,
-              size_to_take_in_output_metric - b_output_metric_size,
-              input_metric,
-              output_metric,
-              queue_size - input_metric_buf_size,
-              demand_size + input_metric_buf_size,
+              size_to_take_in_outbound_metric - b_outbound_metric_size,
+              inbound_metric,
+              outbound_metric,
+              queue_size - inbound_metric_buf_size,
               [
-                {:buffers, b, b_input_metric_size, b_output_metric_size} | acc
+                {:buffers, b, b_inbound_metric_size, b_outbound_metric_size} | acc
               ]
             )
 
-          b_output_metric_size == size_to_take_in_output_metric and back == [] ->
-            {{:value,
-              [{:buffers, b, b_input_metric_size, b_output_metric_size} | acc] |> Enum.reverse()},
-             nq, queue_size - input_metric_buf_size, demand_size + input_metric_buf_size}
+          non_empty_back ->
+            back_inbound_metric_size = inbound_metric.buffers_size(non_empty_back)
+            back_outbound_metric_size = outbound_metric.buffers_size(non_empty_back)
 
-          b_output_metric_size == size_to_take_in_output_metric and back != [] ->
             nq =
               @qe.push_front(
                 nq,
-                {:buffers, back, input_metric.buffers_size(back),
-                 output_metric.buffers_size(back)}
+                {:buffers, back, back_inbound_metric_size, back_outbound_metric_size}
               )
 
             {{:value,
-              [{:buffers, b, b_input_metric_size, b_output_metric_size} | acc] |> Enum.reverse()},
-             nq, queue_size - input_metric_buf_size + input_metric.buffers_size(back),
-             demand_size + input_metric_buf_size - input_metric.buffers_size(back)}
+              [{:buffers, b, b_inbound_metric_size, b_outbound_metric_size} | acc]
+              |> Enum.reverse()}, nq,
+             queue_size - inbound_metric_buf_size + back_inbound_metric_size}
         end
 
       {:empty, nq} ->
-        {{:empty, acc |> Enum.reverse()}, nq, queue_size, demand_size}
+        {{:empty, acc |> Enum.reverse()}, nq, queue_size}
 
       {{:value, {:non_buffer, type, e}}, nq} ->
         q_pop(
           nq,
-          size_to_take_in_output_metric,
-          input_metric,
-          output_metric,
+          size_to_take_in_outbound_metric,
+          inbound_metric,
+          outbound_metric,
           queue_size,
-          demand_size,
           [
             {type, e} | acc
           ]
@@ -272,15 +269,15 @@ defmodule Membrane.Core.Element.InputQueue do
     end
   end
 
-  defp q_pop(q, 0, input_metric, output_metric, queue_size, demand_size, acc) do
+  defp q_pop(q, 0, inbound_metric, outbound_metric, queue_size, acc) do
     q
     |> @qe.pop
     |> case do
       {{:value, {:non_buffer, type, e}}, nq} ->
-        q_pop(nq, 0, input_metric, output_metric, queue_size, demand_size, [{type, e} | acc])
+        q_pop(nq, 0, inbound_metric, outbound_metric, queue_size, [{type, e} | acc])
 
       _empty_or_buffer ->
-        {{:value, acc |> Enum.reverse()}, q, queue_size, demand_size}
+        {{:value, acc |> Enum.reverse()}, q, queue_size}
     end
   end
 

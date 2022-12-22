@@ -15,8 +15,8 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
   setup do
     input_queue =
       InputQueue.init(%{
-        input_demand_unit: :buffers,
-        output_demand_unit: :buffers,
+        inbound_demand_unit: :buffers,
+        outbound_demand_unit: :buffers,
         demand_pid: self(),
         demand_pad: :some_pad,
         log_tag: "test",

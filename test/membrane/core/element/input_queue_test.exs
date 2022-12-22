@@ -15,8 +15,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
          log_tag: "test",
          target_queue_size: 100,
          min_demand_factor: 0.1,
-         input_demand_unit: :bytes,
-         output_demand_unit: :bytes,
+         inbound_demand_unit: :bytes,
+         outbound_demand_unit: :bytes,
          demand_pid: self(),
          linked_output_ref: :output_pad_ref,
          expected_metric: Buffer.Metric.from_unit(:bytes),
@@ -26,8 +26,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
     test "return InputQueue struct and send demand message", context do
       assert InputQueue.init(%{
-               input_demand_unit: context.input_demand_unit,
-               output_demand_unit: context.output_demand_unit,
+               inbound_demand_unit: context.inbound_demand_unit,
+               outbound_demand_unit: context.outbound_demand_unit,
                demand_pid: context.demand_pid,
                demand_pad: context.linked_output_ref,
                log_tag: context.log_tag,
@@ -41,8 +41,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
                size: 0,
                demand: 0,
                min_demand: context.expected_min_demand,
-               input_metric: context.expected_metric,
-               output_metric: context.expected_metric,
+               inbound_metric: context.expected_metric,
+               outbound_metric: context.expected_metric,
                toilet?: false
              }
 
@@ -54,8 +54,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
     test "not send the demand if toilet is enabled", context do
       assert InputQueue.init(%{
-               input_demand_unit: context.input_demand_unit,
-               output_demand_unit: context.output_demand_unit,
+               inbound_demand_unit: context.inbound_demand_unit,
+               outbound_demand_unit: context.outbound_demand_unit,
                demand_pid: context.demand_pid,
                demand_pad: context.linked_output_ref,
                log_tag: context.log_tag,
@@ -69,8 +69,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
                size: 0,
                demand: context.target_queue_size,
                min_demand: context.expected_min_demand,
-               input_metric: context.expected_metric,
-               output_metric: context.expected_metric,
+               inbound_metric: context.expected_metric,
+               outbound_metric: context.expected_metric,
                toilet?: true
              }
 
@@ -85,8 +85,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         struct(InputQueue,
           size: 0,
-          input_metric: Buffer.Metric.Count,
-          output_metric: Buffer.Metric.Count,
+          inbound_metric: Buffer.Metric.Count,
+          outbound_metric: Buffer.Metric.Count,
           q: Qex.new()
         )
 
@@ -119,8 +119,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         struct(InputQueue,
           size: context.size,
-          input_metric: Buffer.Metric.Count,
-          output_metric: Buffer.Metric.Count,
+          inbound_metric: Buffer.Metric.Count,
+          outbound_metric: Buffer.Metric.Count,
           q: context.q
         )
 
@@ -133,8 +133,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         struct(InputQueue,
           size: context.size,
-          input_metric: Buffer.Metric.ByteSize,
-          output_metric: Buffer.Metric.ByteSize,
+          inbound_metric: Buffer.Metric.ByteSize,
+          outbound_metric: Buffer.Metric.ByteSize,
           q: context.q
         )
 
@@ -147,8 +147,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         struct(InputQueue,
           size: context.size,
-          input_metric: Buffer.Metric.ByteSize,
-          output_metric: Buffer.Metric.ByteSize,
+          inbound_metric: Buffer.Metric.ByteSize,
+          outbound_metric: Buffer.Metric.ByteSize,
           q: context.q
         )
 
@@ -163,8 +163,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         struct(InputQueue,
           size: context.size,
-          input_metric: Buffer.Metric.ByteSize,
-          output_metric: Buffer.Metric.ByteSize,
+          inbound_metric: Buffer.Metric.ByteSize,
+          outbound_metric: Buffer.Metric.ByteSize,
           q: context.q
         )
 
@@ -179,8 +179,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         struct(InputQueue,
           size: context.size,
-          input_metric: Buffer.Metric.ByteSize,
-          output_metric: Buffer.Metric.ByteSize,
+          inbound_metric: Buffer.Metric.ByteSize,
+          outbound_metric: Buffer.Metric.ByteSize,
           q: context.q
         )
 
@@ -194,8 +194,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
     setup do
       input_queue =
         InputQueue.init(%{
-          input_demand_unit: :buffers,
-          output_demand_unit: :buffers,
+          inbound_demand_unit: :buffers,
+          outbound_demand_unit: :buffers,
           demand_pid: self(),
           demand_pad: :pad,
           log_tag: "test",
@@ -243,8 +243,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
           min_demand: 0,
           target_queue_size: 100,
           toilet?: false,
-          input_metric: Buffer.Metric.Count,
-          output_metric: Buffer.Metric.Count,
+          inbound_metric: Buffer.Metric.Count,
+          outbound_metric: Buffer.Metric.Count,
           q: q
         )
 
@@ -334,8 +334,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
   test "if the queue works properly for :bytes input metric and :buffers output metric" do
     queue =
       InputQueue.init(%{
-        input_demand_unit: :bytes,
-        output_demand_unit: :buffers,
+        inbound_demand_unit: :bytes,
+        outbound_demand_unit: :buffers,
         demand_pid: self(),
         demand_pad: :input,
         log_tag: nil,
@@ -369,8 +369,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
   test "if the queue works properly for :buffers input metric and :bytes output metric" do
     queue =
       InputQueue.init(%{
-        input_demand_unit: :buffers,
-        output_demand_unit: :bytes,
+        inbound_demand_unit: :buffers,
+        outbound_demand_unit: :bytes,
         demand_pid: self(),
         demand_pad: :input,
         log_tag: nil,
@@ -403,7 +403,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
   defp bufs_size(output, unit) do
     {_state, bufs} = output
 
-    Enum.flat_map(bufs, fn {:buffers, bufs_list, _input_metric_size, _output_metric_size} ->
+    Enum.flat_map(bufs, fn {:buffers, bufs_list, _inbound_metric_size, _outbound_metric_size} ->
       bufs_list
     end)
     |> Membrane.Buffer.Metric.from_unit(unit).buffers_size()
