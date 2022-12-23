@@ -185,14 +185,13 @@ defmodule Membrane.Core.Child.PadsSpecs do
                 ],
                 demand_unit:
                   &cond do
-                    &1.mode == :pull and direction == :input ->
+                    &1.mode == :pull and &1.demand_mode == :manual and direction == :input ->
                       [
                         in: [:buffers, :bytes],
-                        default: :buffers,
-                        required?: &1.demand_mode == :manual
+                        default: :buffers
                       ]
 
-                    &1.mode == :pull and direction == :output ->
+                    &1.mode == :pull and &1.demand_mode == :manual and direction == :output ->
                       [
                         in: [:buffers, :bytes, nil],
                         default: nil

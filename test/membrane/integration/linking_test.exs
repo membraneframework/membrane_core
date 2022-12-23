@@ -14,11 +14,13 @@ defmodule Membrane.Integration.LinkingTest do
 
     def_input_pad :input,
       availability: :on_request,
-      accepted_format: _any
+      accepted_format: _any,
+      demand_unit: :buffers
 
     def_output_pad :output,
       availability: :on_request,
-      accepted_format: _any
+      accepted_format: _any,
+      demand_unit: :buffers
 
     @impl true
     def handle_demand(_pad, _size, _unit, _ctx, state) do

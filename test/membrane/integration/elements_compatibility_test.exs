@@ -117,6 +117,15 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
     end
 
     @impl true
+    def handle_playing(ctx, state) do
+      if ctx.pads.output.demand_unit != ctx.pads.output.other_demand_unit do
+        raise "Autodemand demand unit resolved improperly"
+      end
+
+      {[], state}
+    end
+
+    @impl true
     def handle_process(:input, buf, _ctx, state) do
       {[buffer: {:output, buf}], state}
     end
@@ -264,7 +273,7 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
 
   test "if sink demanding in bytes receives all the data and no more then demanded number of bytes at once when is preceed by  autodemand filter" do
     Enum.each(
-      [PushSource, PullBytesSource, PullBuffersSource],
+      [PullBytesSource],
       &test_sink(&1, PullBytesSink, true)
     )
   end

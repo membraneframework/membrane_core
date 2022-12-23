@@ -77,7 +77,7 @@ defmodule Membrane.Core.Element.PadController do
       if direction == :input and info.mode == :pull do
         Toilet.new(
           endpoint.pad_props.toilet_capacity,
-          info.demand_unit,
+          :buffers,
           self(),
           endpoint.pad_props.throttling_factor
         )
@@ -212,22 +212,49 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp resolve_demand_unit(info, other_info) do
-    if info.mode == :pull and other_info.mode == :pull do
-      case info.direction do
-        :output ->
-          demand_unit =
-            if info[:demand_unit] == nil, do: other_info.demand_unit, else: info.demand_unit
+    cond do
+      # AUTO
+      info.demand_mode == :auto and other_info.demand_mode == :auto ->
+        info = Map.put(info, :demand_unit, :buffers) |> Map.put(:other_demand_unit, :buffers)
 
-          {Map.put(info, :demand_unit, demand_unit), other_info}
+        other_info =
+          Map.put(other_info, :demand_unit, :buffers) |> Map.put(:other_demand_unit, :buffers)
 
-        :input ->
-          other_demand_unit =
-            if other_info[:demand_unit] == nil, do: info.demand_unit, else: other_info.demand_unit
+        {info, other_info}
 
-          {info, Map.put(other_info, :demand_unit, other_demand_unit)}
-      end
-    else
-      {info, other_info}
+      info.demand_mode == :auto ->
+        demand_unit =
+          if other_info[:demand_unit] != nil, do: other_info.demand_unit, else: :buffers
+
+        info =
+          Map.put(info, :demand_unit, demand_unit) |> Map.put(:other_demand_unit, demand_unit)
+
+        other_info =
+          Map.put(other_info, :demand_unit, demand_unit)
+          |> Map.put(:other_demand_unit, demand_unit)
+
+        {info, other_info}
+
+      # MANUAL
+      info.mode == :pull and other_info.mode == :pull ->
+        case info.direction do
+          :output ->
+            demand_unit =
+              if info[:demand_unit] == nil, do: other_info.demand_unit, else: info.demand_unit
+
+            {Map.put(info, :demand_unit, demand_unit), other_info}
+
+          :input ->
+            other_demand_unit =
+              if other_info[:demand_unit] == nil,
+                do: info.demand_unit,
+                else: other_info.demand_unit
+
+            {info, Map.put(other_info, :demand_unit, other_demand_unit)}
+        end
+
+      true ->
+        {info, other_info}
     end
   end
 
@@ -298,7 +325,7 @@ defmodule Membrane.Core.Element.PadController do
     enable_toilet? = other_info.mode == :push
 
     input_queue_demand_unit =
-      if other_info[:demand_unit] != nil, do: other_info[:demand_unit], else: this_demand_unit
+      if other_info[:demand_input] != nil, do: other_info.demand_unit, else: this_demand_unit
 
     input_queue =
       InputQueue.init(%{
@@ -357,7 +384,7 @@ defmodule Membrane.Core.Element.PadController do
     %{
       demand: 0,
       associated_pads: associated_pads,
-      other_demand_unit: other_info[:demand_unit],
+      other_demand_unit: other_info.demand_unit,
       auto_demand_size: auto_demand_size,
       toilet: toilet
     }

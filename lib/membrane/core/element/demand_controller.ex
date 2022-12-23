@@ -36,7 +36,6 @@ defmodule Membrane.Core.Element.DemandController do
 
   defp do_handle_demand(pad_ref, size, %{demand_mode: :auto} = data, state) do
     %{demand: old_demand, associated_pads: associated_pads} = data
-
     state = PadModel.set_data!(state, pad_ref, :demand, old_demand + size)
 
     if old_demand <= 0 do
@@ -86,6 +85,7 @@ defmodule Membrane.Core.Element.DemandController do
 
     %{
       demand: demand,
+      demand_unit: demand_unit,
       toilet: toilet,
       associated_pads: associated_pads,
       auto_demand_size: demand_request_size
