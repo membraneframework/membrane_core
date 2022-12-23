@@ -20,7 +20,6 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.Element.CallbackContext
-  alias Membrane.Time
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
