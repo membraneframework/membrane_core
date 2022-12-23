@@ -112,8 +112,6 @@ defmodule Membrane.Core.Element do
 
     ResourceGuard.register(resource_guard, fn -> Telemetry.report_terminate(:element) end)
 
-    PadController.start_static_pads_check_timer()
-
     state =
       Map.take(options, [:module, :name, :parent_clock, :sync, :parent, :subprocess_supervisor])
       |> Map.put(:resource_guard, resource_guard)
@@ -154,12 +152,6 @@ defmodule Membrane.Core.Element do
   def handle_call(message, {pid, _tag}, _state) do
     raise Membrane.ElementError,
           "Received invalid message #{inspect(message)} from #{inspect(pid)}"
-  end
-
-  @impl GenServer
-  def handle_info(Message.new(:static_pads_check_timeout), state) do
-    PadController.handle_static_pads_check(state)
-    {:noreply, state}
   end
 
   @impl GenServer

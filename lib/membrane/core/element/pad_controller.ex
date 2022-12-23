@@ -50,20 +50,6 @@ defmodule Membrane.Core.Element.PadController do
 
   @default_auto_demand_size_factor 4000
 
-  @default_static_pads_check_timeout Time.seconds(5)
-
-  @spec start_static_pads_check_timer(Time.t()) :: :ok
-  def start_static_pads_check_timer(timeout \\ @default_static_pads_check_timeout) do
-    milliseconds = Time.as_milliseconds(timeout, :round)
-    Process.send_after(self(), Message.new(:static_pads_check_timeout), milliseconds)
-    :ok
-  end
-
-  @spec handle_static_pads_check(State.t()) :: :ok | no_return()
-  def handle_static_pads_check(state) do
-    Child.PadController.assert_all_static_pads_linked!(state)
-  end
-
   @doc """
   Verifies linked pad, initializes it's data.
   """
@@ -216,6 +202,12 @@ defmodule Membrane.Core.Element.PadController do
               "Tried to unlink a static pad #{inspect(pad_ref)}. Static pads cannot be unlinked unless element is terminating"
 
       {:error, :unknown_pad} ->
+        with false <- state.terminating?,
+             %{availability: :always} <- state.pads_info[Pad.name_by_ref(pad_ref)] do
+          raise Membrane.PadError,
+                "Tried to unlink a static pad #{inspect(pad_ref)}, before it was linked. Static pads cannot be unlinked unless element is terminating"
+        end
+
         Membrane.Logger.debug(
           "Ignoring unlinking pad #{inspect(pad_ref)} that hasn't been successfully linked"
         )
