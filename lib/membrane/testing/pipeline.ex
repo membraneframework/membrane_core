@@ -222,8 +222,10 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @doc """
-  Accepts pipeline pid as a first argument and a child reference or path
-  of child references as a second argument.
+  Returns the pid of the children process.
+
+  Accepts pipeline pid as a first argument and a child reference or a list
+  of child references representing a path as a second argument.
 
   If second argument is a child reference, function gets pid of this child
   from pipeline.
@@ -233,30 +235,23 @@ defmodule Membrane.Testing.Pipeline do
 
   Returns
    * `{:ok, child_pid}`, if a child was succesfully found
-   * `{:error, :child_not_found}`, if there is no child under provided path
-   * `{:error, :pipeline_not_alive}`, if pipeline is not alive
+   * `{:error, reason}`, if, for example, pipeline is not alive or children path is invalid
   """
   @spec get_child_pid(pid(), child_ref_path :: Child.ref_t() | [Child.ref_t()]) ::
-          {:ok, pid()} | {:error, :parent_not_alive | :child_not_found}
-  def get_child_pid(parent_pid, []), do: {:ok, parent_pid}
-
-  def get_child_pid(parent_pid, [child_ref | tail]) do
-    case do_get_child_pid(parent_pid, child_ref) do
-      {:ok, child_pid} ->
-        get_child_pid(child_pid, tail)
-
-      {:error, _reason} = error ->
-        error
-    end
+          {:ok, pid()} | {:error, reason :: term()}
+  def get_child_pid(pipeline, [_head | _tail] = child_ref_path) do
+    do_get_child_pid(pipeline, child_ref_path)
   end
 
-  def get_child_pid(parent_pid, child_ref) do
-    do_get_child_pid(parent_pid, child_ref)
+  def get_child_pid(pipeline, child_ref) when not is_list(child_ref) do
+    do_get_child_pid(pipeline, [child_ref])
   end
 
   @doc """
+  Returns the pid of the children process.
+
   Works as get_child_pid/2, but raises an error instead of returning
-  `{:error, _reason}` tuple.
+  `{:error, reason}` tuple.
   """
   @spec get_child_pid!(pid(), child_ref_path :: Child.ref_t() | [Child.ref_t()]) :: pid()
   def get_child_pid!(parent_pid, child_ref_path) do
@@ -264,14 +259,24 @@ defmodule Membrane.Testing.Pipeline do
     child_pid
   end
 
-  defp do_get_child_pid(parent_pid, child_ref) do
-    msg = Message.new(:get_child_pid, child_ref)
+  defp do_get_child_pid(component_pid, child_ref_path, is_pipeline? \\ true)
 
-    try do
-      GenServer.call(parent_pid, msg)
-    catch
-      :exit, {:noproc, {GenServer, :call, [^parent_pid, ^msg | _tail]}} ->
-        {:error, :pipeline_not_alive}
+  defp do_get_child_pid(component_pid, [], _is_pipeline?) do
+    {:ok, component_pid}
+  end
+
+  defp do_get_child_pid(component_pid, [child_ref | child_ref_path_tail], is_pipeline?) do
+    case Message.call(component_pid, :get_child_pid, child_ref) do
+      {:ok, child_pid} ->
+        do_get_child_pid(child_pid, child_ref_path_tail, false)
+
+      {:error, {:call_failure, {:noproc, _call_info}}} ->
+        if is_pipeline?,
+          do: {:error, :pipeline_not_alive},
+          else: {:error, {:child_not_alive, child_ref}}
+
+      {:error, _reason} = error ->
+        error
     end
   end
 

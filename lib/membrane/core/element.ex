@@ -150,7 +150,7 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_call(Message.new(:get_child_pid, _child_ref), _from, state) do
-    {:reply, {:error, :child_not_found}, state}
+    {:reply, {:error, :element_cannot_have_children}, state}
   end
 
   @impl GenServer
