@@ -36,7 +36,7 @@ defmodule Membrane.Core.Element.State do
           resource_guard: Membrane.ResourceGuard.t(),
           subprocess_supervisor: pid,
           terminating?: boolean(),
-          setup_incomplete_returned?: boolean()
+          setup_incomplete?: boolean()
         }
 
   defstruct [
@@ -57,7 +57,7 @@ defmodule Membrane.Core.Element.State do
     :resource_guard,
     :subprocess_supervisor,
     :terminating?,
-    :setup_incomplete_returned?
+    :setup_incomplete?
   ]
 
   @doc """
@@ -94,7 +94,7 @@ defmodule Membrane.Core.Element.State do
       resource_guard: options.resource_guard,
       subprocess_supervisor: options.subprocess_supervisor,
       terminating?: false,
-      setup_incomplete_returned?: false
+      setup_incomplete?: false
     }
     |> PadSpecHandler.init_pads()
   end
