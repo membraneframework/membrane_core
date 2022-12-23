@@ -261,9 +261,10 @@ defmodule Membrane.Core.Bin.PadController do
       if endpoint do
         Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
       else
-        Membrane.Logger.debug(
-          "Tried to send :handle_unlink to the endpoint during unlinking #{inspect(pad_ref)}, but endpoint is neither linked internally yet nor :handle_link was sent"
-        )
+        Membrane.Logger.debug("""
+        Tried to send :handle_unlink to the endpoint while unlinking #{inspect(pad_ref)},
+        but the endpoint is neither linked internally nor :handle_link was received yet
+        """)
       end
 
       PadModel.delete_data!(state, pad_ref)

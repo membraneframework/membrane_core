@@ -420,46 +420,6 @@ defmodule Membrane.Integration.LinkingTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
-  # test "Element should crash if has static pad unlinked after a timeout" do
-  #   defmodule SleepingBin do
-  #     use Membrane.Bin
-
-  #     def_input_pad :input,
-  #       availability: :on_request,
-  #       accepted_format: _any,
-  #       demand_unit: :buffers
-
-  #     @impl true
-  #     def handle_pad_added(_pad, _ctx, state) do
-  #       Process.sleep(10_000)
-  #       {[], state}
-  #     end
-  #   end
-
-  #   pipeline =
-  #     Testing.Pipeline.start_supervised!(
-  #       spec: [
-  #         {
-  #           child(:source, Testing.Source),
-  #           group: :group, crash_group_mode: :temporary
-  #         },
-  #         get_child(Child.ref(:source, group: :group))
-  #         |> child(:bin, SleepingBin)
-  #       ]
-  #     )
-
-  #   source_pid = get_child_pid(Child.ref(:source, group: :group), pipeline)
-  #   monitor_ref = Process.monitor(source_pid)
-
-  #   assert_receive {:DOWN, ^monitor_ref, :process, ^source_pid,
-  #                   {%Membrane.LinkError{message: message}, _stacktrace}},
-  #                  6000
-
-  #   message =~ ~r/static.*pad.*unlink/u
-
-  #   Testing.Pipeline.terminate(pipeline)
-  # end
-
   test "A spec entailing multiple dependent specs in a bin should work" do
     defmodule MultiSpecBin do
       use Membrane.Bin
