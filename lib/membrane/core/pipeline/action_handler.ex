@@ -28,8 +28,8 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:setup, operation}, cb, _params, state) do
-    Core.LifecycleController.handle_setup_operation(operation, cb, state)
+  def handle_action({:setup, operation}, _cb, _params, state) do
+    Core.LifecycleController.handle_setup_operation(operation, state)
   end
 
   @impl CallbackHandler

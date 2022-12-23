@@ -9,10 +9,10 @@ defmodule Membrane.Core.LifecycleController do
 
   @type setup_operation_t :: :incomplete | :complete
 
-  @spec handle_setup_operation(setup_operation_t(), atom(), Component.state_t()) ::
+  @spec handle_setup_operation(setup_operation_t(), Component.state_t()) ::
           Component.state_t()
-  def handle_setup_operation(operation, callback, state) do
-    :ok = assert_operation_allowed!(operation, callback, state.setup_incomplete?)
+  def handle_setup_operation(operation, state) do
+    :ok = assert_operation_allowed!(operation, state.setup_incomplete?)
 
     case operation do
       :incomplete ->
@@ -39,18 +39,18 @@ defmodule Membrane.Core.LifecycleController do
     end
   end
 
-  @spec assert_operation_allowed!(setup_operation_t(), atom(), boolean()) :: :ok | no_return()
-  defp assert_operation_allowed!(:incomplete, callback, true) do
+  @spec assert_operation_allowed!(setup_operation_t(), boolean()) :: :ok | no_return()
+  defp assert_operation_allowed!(:incomplete, true) do
     raise SetupError, """
     Action {:setup, :incomplete} was returned more than once
     """
   end
 
-  defp assert_operation_allowed!(:complete, callback, false) do
+  defp assert_operation_allowed!(:complete, false) do
     raise SetupError, """
-    Action {:setup, :complete} was returned from callback #{inspect(callback)}, but setup is already completed
+    Action {:setup, :complete} was returned, but setup is already completed
     """
   end
 
-  defp assert_operation_allowed!(_operation, _callback, _status), do: :ok
+  defp assert_operation_allowed!(_operation, _status), do: :ok
 end
