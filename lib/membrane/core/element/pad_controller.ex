@@ -218,6 +218,7 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defp resolve_demand_units(info, other_info) do
     output_info = if info.direction == :output, do: info, else: other_info
     input_info = if info.direction == :input, do: info, else: other_info
@@ -232,9 +233,6 @@ defmodule Membrane.Core.Element.PadController do
             input_info[:demand_mode] == :auto ->
           {:buffers, :buffers}
 
-        output_info.mode == :push and input_info[:demand_mode] == :auto ->
-          {nil, :buffers}
-
         output_info[:demand_mode] == :auto and input_info[:demand_mode] == :manual ->
           {input_info.demand_unit, nil}
 
@@ -245,37 +243,12 @@ defmodule Membrane.Core.Element.PadController do
             input_info[:demand_mode] == :manual ->
           {input_info.demand_unit, nil}
 
+        output_info.mode == :push and input_info[:demand_mode] == :auto ->
+          {nil, :buffers}
+
         true ->
           {nil, nil}
       end
-
-    # info.mode != :pull and other_info.mode != :pull -> {nil, nil}
-    # # AUTO
-    # info.demand_mode == :auto and other_info.demand_mode == :auto ->
-    #   {:buffers, :buffers}
-
-    # info.demand_mode == :auto ->
-    #   demand_unit =
-    #     if other_info[:demand_unit] != nil, do: other_info.demand_unit, else: :buffers
-    #   {demand_unit, demand_unit}
-
-    # # MANUAL
-    # info.direction == :output ->
-    #   demand_unit =
-    #     if info[:demand_unit] == nil, do: other_info.demand_unit, else: info.demand_unit
-
-    #   {demand_unit, nil}
-
-    # info.direction == :input ->
-    #   other_demand_unit =
-    #     if other_info[:demand_unit] == nil,
-    #       do: info.demand_unit,
-    #       else: other_info.demand_unit
-
-    #   {nil, other_demand_unit}
-
-    # true ->
-    #   {nil, nil}
 
     {output_info, input_info} =
       if output_demand_unit != nil do
