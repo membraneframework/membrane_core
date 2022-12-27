@@ -85,7 +85,6 @@ defmodule Membrane.Core.Element.DemandController do
 
     %{
       demand: demand,
-      demand_unit: demand_unit,
       toilet: toilet,
       associated_pads: associated_pads,
       auto_demand_size: demand_request_size
