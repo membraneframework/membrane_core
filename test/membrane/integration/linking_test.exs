@@ -40,7 +40,6 @@ defmodule Membrane.Integration.LinkingTest do
                 remove_child_on_unlink: [spec: boolean(), default: true]
 
     def_output_pad :output,
-      demand_unit: :buffers,
       accepted_format: _any,
       availability: :on_request
 
@@ -408,8 +407,7 @@ defmodule Membrane.Integration.LinkingTest do
 
       def_input_pad :input,
         availability: :on_request,
-        accepted_format: _any,
-        demand_unit: :buffers
+        accepted_format: _any
     end
 
     pipeline =

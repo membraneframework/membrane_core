@@ -73,26 +73,13 @@ defmodule Membrane.Core.Element.PadController do
 
     :ok = Child.PadController.validate_pad_being_linked!(direction, info)
 
-    toilet =
-      if direction == :input and info.mode == :pull do
-        Toilet.new(
-          endpoint.pad_props.toilet_capacity,
-          :buffers,
-          self(),
-          endpoint.pad_props.throttling_factor
-        )
-      else
-        nil
-      end
-
-    do_handle_link(endpoint, other_endpoint, info, toilet, link_props, state)
+    do_handle_link(endpoint, other_endpoint, info, link_props, state)
   end
 
   defp do_handle_link(
          endpoint,
          other_endpoint,
          info,
-         toilet,
          %{initiator: :parent} = props,
          state
        ) do
@@ -105,7 +92,6 @@ defmodule Membrane.Core.Element.PadController do
           initiator: :sibling,
           other_info: info,
           link_metadata: %{
-            toilet: toilet,
             observability_metadata: Observability.setup_link(endpoint.pad_ref)
           },
           stream_format_validation_params: []
@@ -143,7 +129,6 @@ defmodule Membrane.Core.Element.PadController do
          endpoint,
          other_endpoint,
          info,
-         toilet,
          %{initiator: :sibling} = link_props,
          state
        ) do
@@ -153,16 +138,38 @@ defmodule Membrane.Core.Element.PadController do
       stream_format_validation_params: stream_format_validation_params
     } = link_props
 
+    {info, other_info} = resolve_demand_unit(info, other_info)
+
+    toilet =
+      cond do
+        info.direction == :input and info.mode == :pull ->
+          Toilet.new(
+            endpoint.pad_props.toilet_capacity,
+            info.demand_unit,
+            self(),
+            endpoint.pad_props.throttling_factor
+          )
+
+        info.direction == :output and other_info.mode == :pull ->
+          Toilet.new(
+            other_endpoint.pad_props.toilet_capacity,
+            other_info.demand_unit,
+            self(),
+            other_endpoint.pad_props.throttling_factor
+          )
+
+        true ->
+          nil
+      end
+
     Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
-    link_metadata = %{link_metadata | toilet: link_metadata.toilet || toilet}
+    link_metadata = Map.put(link_metadata, :toilet, toilet)
 
     :ok =
       Child.PadController.validate_pad_mode!(
         {endpoint.pad_ref, info},
         {other_endpoint.pad_ref, other_info}
       )
-
-    {info, other_info} = resolve_demand_unit(info, other_info)
 
     state =
       init_pad_data(
