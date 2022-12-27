@@ -179,21 +179,24 @@ defmodule Membrane.Core.Child.PadsSpecs do
                 availability: [in: [:always, :on_request], default: :always],
                 accepted_formats_str: [],
                 mode: [in: [:pull, :push], default: :pull],
-                demand_mode: [
-                  in: [:auto, :manual],
-                  default: :manual
-                ],
+                demand_mode:
+                  &if &1.mode == :pull do
+                    [
+                      in: [:auto, :manual],
+                      default: :manual
+                    ]
+                  end,
                 demand_unit:
                   &cond do
-                    component == :bin ->
+                    component == :bin or &1[:demand_mode] != :manual ->
                       nil
 
-                    &1.mode == :pull and &1.demand_mode == :manual and direction == :input ->
+                    direction == :input ->
                       [
                         in: [:buffers, :bytes]
                       ]
 
-                    &1.mode == :pull and &1.demand_mode == :manual and direction == :output ->
+                    direction == :output ->
                       [
                         in: [:buffers, :bytes, nil],
                         default: nil

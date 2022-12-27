@@ -138,7 +138,7 @@ defmodule Membrane.Core.Element.PadController do
       stream_format_validation_params: stream_format_validation_params
     } = link_props
 
-    {info, other_info} = resolve_demand_unit(info, other_info)
+    {info, other_info} = resolve_demand_units(info, other_info)
 
     toilet =
       cond do
@@ -218,50 +218,85 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  defp resolve_demand_unit(info, other_info) do
-    cond do
-      # AUTO
-      info.demand_mode == :auto and other_info.demand_mode == :auto ->
-        info = Map.put(info, :demand_unit, :buffers) |> Map.put(:other_demand_unit, :buffers)
+  defp resolve_demand_units(info, other_info) do
+    output_info = if info.direction == :output, do: info, else: other_info
+    input_info = if info.direction == :input, do: info, else: other_info
 
-        other_info =
-          Map.put(other_info, :demand_unit, :buffers) |> Map.put(:other_demand_unit, :buffers)
+    {output_demand_unit, input_demand_unit} =
+      cond do
+        output_info[:demand_mode] == :manual and output_info[:demand_unit] != nil and
+            input_info[:demand_mode] == :auto ->
+          {nil, output_info.demand_unit}
 
-        {info, other_info}
+        output_info[:demand_mode] == :manual and output_info[:demand_unit] == nil and
+            input_info[:demand_mode] == :auto ->
+          {:buffers, :buffers}
 
-      info.demand_mode == :auto ->
-        demand_unit =
-          if other_info[:demand_unit] != nil, do: other_info.demand_unit, else: :buffers
+        output_info.mode == :push and input_info[:demand_mode] == :auto ->
+          {nil, :buffers}
 
-        info =
-          Map.put(info, :demand_unit, demand_unit) |> Map.put(:other_demand_unit, demand_unit)
+        output_info[:demand_mode] == :auto and input_info[:demand_mode] == :manual ->
+          {input_info.demand_unit, nil}
 
-        other_info =
-          Map.put(other_info, :demand_unit, demand_unit)
-          |> Map.put(:other_demand_unit, demand_unit)
+        output_info[:demand_mode] == :auto and input_info[:demand_mode] == :auto ->
+          {:buffers, :buffers}
 
-        {info, other_info}
+        output_info[:demand_mode] == :manual and output_info[:demand_unit] == nil and
+            input_info[:demand_mode] == :manual ->
+          {input_info.demand_unit, nil}
 
-      # MANUAL
-      info.mode == :pull and other_info.mode == :pull ->
-        case info.direction do
-          :output ->
-            demand_unit =
-              if info[:demand_unit] == nil, do: other_info.demand_unit, else: info.demand_unit
+        true ->
+          {nil, nil}
+      end
 
-            {Map.put(info, :demand_unit, demand_unit), other_info}
+    # info.mode != :pull and other_info.mode != :pull -> {nil, nil}
+    # # AUTO
+    # info.demand_mode == :auto and other_info.demand_mode == :auto ->
+    #   {:buffers, :buffers}
 
-          :input ->
-            other_demand_unit =
-              if other_info[:demand_unit] == nil,
-                do: info.demand_unit,
-                else: other_info.demand_unit
+    # info.demand_mode == :auto ->
+    #   demand_unit =
+    #     if other_info[:demand_unit] != nil, do: other_info.demand_unit, else: :buffers
+    #   {demand_unit, demand_unit}
 
-            {info, Map.put(other_info, :demand_unit, other_demand_unit)}
-        end
+    # # MANUAL
+    # info.direction == :output ->
+    #   demand_unit =
+    #     if info[:demand_unit] == nil, do: other_info.demand_unit, else: info.demand_unit
 
-      true ->
-        {info, other_info}
+    #   {demand_unit, nil}
+
+    # info.direction == :input ->
+    #   other_demand_unit =
+    #     if other_info[:demand_unit] == nil,
+    #       do: info.demand_unit,
+    #       else: other_info.demand_unit
+
+    #   {nil, other_demand_unit}
+
+    # true ->
+    #   {nil, nil}
+
+    {output_info, input_info} =
+      if output_demand_unit != nil do
+        {Map.put(output_info, :demand_unit, output_demand_unit),
+         Map.put(input_info, :other_demand_unit, output_demand_unit)}
+      else
+        {output_info, input_info}
+      end
+
+    {output_info, input_info} =
+      if input_demand_unit != nil do
+        {Map.put(output_info, :other_demand_unit, input_demand_unit),
+         Map.put(input_info, :demand_unit, input_demand_unit)}
+      else
+        {output_info, input_info}
+      end
+
+    if info.direction == :input do
+      {input_info, output_info}
+    else
+      {output_info, input_info}
     end
   end
 
@@ -352,11 +387,11 @@ defmodule Membrane.Core.Element.PadController do
   defp init_pad_mode_data(
          %{mode: :pull, direction: :output, demand_mode: :manual},
          _props,
-         other_info,
+         _other_info,
          _metadata,
          _state
        ) do
-    %{demand: 0, other_demand_unit: other_info[:demand_unit]}
+    %{demand: 0}
   end
 
   defp init_pad_mode_data(
@@ -391,7 +426,6 @@ defmodule Membrane.Core.Element.PadController do
     %{
       demand: 0,
       associated_pads: associated_pads,
-      other_demand_unit: other_info.demand_unit,
       auto_demand_size: auto_demand_size,
       toilet: toilet
     }
@@ -400,11 +434,11 @@ defmodule Membrane.Core.Element.PadController do
   defp init_pad_mode_data(
          %{mode: :push, direction: :output},
          _props,
-         %{mode: :pull} = other_info,
+         %{mode: :pull},
          metadata,
          _state
        ) do
-    %{toilet: metadata.toilet, other_demand_unit: other_info[:demand_unit]}
+    %{toilet: metadata.toilet}
   end
 
   defp init_pad_mode_data(_data, _props, _other_info, _metadata, _state), do: %{}
