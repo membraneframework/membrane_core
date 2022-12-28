@@ -1,7 +1,7 @@
 defmodule Membrane.Testing.PipelineTest do
   use ExUnit.Case
 
-  import  Membrane.ChildrenSpec
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Testing.Pipeline
@@ -54,7 +54,6 @@ defmodule Membrane.Testing.PipelineTest do
 
   describe "When initializing Testing Pipeline" do
     test "uses prepared links if they were provided" do
-
       links = [child(:elem, Elem) |> child(:elem2, Elem)]
       options = [module: :default, spec: links, test_process: nil]
       assert {[spec: spec, playback: :playing], state} = Pipeline.handle_init(%{}, options)

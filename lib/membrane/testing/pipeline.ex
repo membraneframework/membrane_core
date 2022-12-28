@@ -273,7 +273,7 @@ defmodule Membrane.Testing.Pipeline do
       {:error, {:call_failure, {:noproc, _call_info}}} ->
         if is_pipeline?,
           do: {:error, :pipeline_not_alive},
-          else: {:error, {:child_not_alive, child_ref}}
+          else: {:error, :component_not_alive}
 
       {:error, _reason} = error ->
         error
