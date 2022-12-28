@@ -267,7 +267,8 @@ defmodule Membrane.Core.Bin.PadController do
         """)
       end
 
-      PadModel.delete_data!(state, pad_ref)
+      {pad_data, state} = PadModel.pop_data!(state, pad_ref)
+      ChildLifeController.proceed_spec_startup(pad_data.spec_ref, state)
     else
       {:ok, %{availability: :always}} when state.terminating? ->
         state
