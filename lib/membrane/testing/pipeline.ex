@@ -230,7 +230,7 @@ defmodule Membrane.Testing.Pipeline do
   If second argument is a child reference, function gets pid of this child
   from pipeline.
 
-  Id second argument is a path of child references, function gets pid of
+  If second argument is a path of child references, function gets pid of
   last a component pointed by this path.
 
   Returns
