@@ -237,6 +237,7 @@ defmodule Membrane.Element.Action do
           | redemand_t
           | forward_t
           | start_timer_t
+          | timer_interval_t
           | stop_timer_t
           | latency_t
           | end_of_stream_t
