@@ -4,8 +4,8 @@ defmodule Membrane.Testing.PipelineTest do
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
-  alias Membrane.Testing.Pipeline
   alias Membrane.Child
+  alias Membrane.Testing.Pipeline
 
   defmodule Elem do
     use Membrane.Filter
