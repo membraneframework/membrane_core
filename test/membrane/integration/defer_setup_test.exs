@@ -104,12 +104,12 @@ defmodule Membrane.Integration.DeferSetupTest do
     end
 
     for bin <- [:bin_a, :bin_b, :bin_c] do
-      refute_grandhild_playing(pipeline, :bin_1, bin)
+      refute_grandchild_playing(pipeline, :bin_1, bin)
     end
 
     complete_grandchild_setup(pipeline, :bin_1, :bin_a)
 
-    refute_grandhild_playing(pipeline, :bin_1, :bin_a)
+    refute_grandchild_playing(pipeline, :bin_1, :bin_a)
 
     refute_child_playing(pipeline, :bin_1)
     complete_child_setup(pipeline, :bin_1)
@@ -121,13 +121,13 @@ defmodule Membrane.Integration.DeferSetupTest do
     assert_grandhild_playing(pipeline, :bin_1, :bin_a)
 
     for bin <- [:bin_b, :bin_c] do
-      refute_grandhild_playing(pipeline, :bin_1, bin)
+      refute_grandchild_playing(pipeline, :bin_1, bin)
     end
 
     complete_grandchild_setup(pipeline, :bin_1, :bin_b)
 
     for bin <- [:bin_b, :bin_c] do
-      refute_grandhild_playing(pipeline, :bin_1, bin)
+      refute_grandchild_playing(pipeline, :bin_1, bin)
     end
 
     complete_grandchild_setup(pipeline, :bin_1, :bin_c)
@@ -161,7 +161,7 @@ defmodule Membrane.Integration.DeferSetupTest do
     refute_pipeline_notified(pipeline, child, :handle_playing)
   end
 
-  defp refute_grandhild_playing(pipeline, child, grandchild) do
+  defp refute_grandchild_playing(pipeline, child, grandchild) do
     refute_pipeline_notified(pipeline, child, {^grandchild, :handle_playing})
   end
 end

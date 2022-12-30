@@ -9,6 +9,8 @@ defmodule Membrane.Playback do
   By default, component setup ends with the end of `handle_setup/2` callback.
   If `{:setup, :incomplete}` is returned there, setup lasts until `{:setup, :complete}`
   is returned from antoher callback.
+
+  Untils the setup lasts, the component won't enter `:playing` playback state.
   """
   @type t :: :stopped | :playing
 end

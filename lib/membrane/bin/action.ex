@@ -16,6 +16,8 @@ defmodule Membrane.Bin.Action do
   By default, component setup ends with the end of `c:Membrane.Bin.handle_setup/2` callback.
   If `{:setup, :incomplete}` is returned there, setup lasts until `{:setup, :complete}`
   is returned from antoher callback.
+
+  Untils the setup lasts, the component won't enter `:playing` playback state.
   """
   @type setup_t :: {:setup, :incomplete | :complete}
 
