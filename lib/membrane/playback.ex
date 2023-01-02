@@ -10,7 +10,7 @@ defmodule Membrane.Playback do
   If `{:setup, :incomplete}` is returned there, setup lasts until `{:setup, :complete}`
   is returned from antoher callback.
 
-  Untils the setup lasts, the component won't enter `:playing` playback state.
+  Untils the setup lasts, the component won't enter `:playing` playback.
   """
   @type t :: :stopped | :playing
 end

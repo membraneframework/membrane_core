@@ -1,7 +1,7 @@
 defmodule Membrane.Support.AcceptedFormatTest.RestrictiveSource do
   @moduledoc """
   Source used in accepted format tests.
-  Sends stream format passed in opts, after entering the `:playing` playback state.
+  Sends stream format passed in opts, after entering the `:playing` playback.
   """
 
   use Membrane.Source
