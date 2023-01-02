@@ -66,11 +66,11 @@ defmodule Membrane.TimeTest do
   end
 
   test "Time.to_timebase/2 works properly" do
-    assert @module.round_to_timebase(4, 2) == 2
-    assert @module.round_to_timebase(3, Ratio.new(3, 2)) == 2
-    assert @module.round_to_timebase(Ratio.new(15, 2), 2) == 4
-    assert @module.round_to_timebase(Ratio.new(15, 2), Ratio.new(3, 2)) == 5
-    assert @module.round_to_timebase(4, 10) == 0
-    assert @module.round_to_timebase(4, 7) == 1
+    assert @module.divide_by_timebase(4, 2) == 2
+    assert @module.divide_by_timebase(3, Ratio.new(3, 2)) == 2
+    assert @module.divide_by_timebase(Ratio.new(15, 2), 2) == 4
+    assert @module.divide_by_timebase(Ratio.new(15, 2), Ratio.new(3, 2)) == 5
+    assert @module.divide_by_timebase(4, 10) == 0
+    assert @module.divide_by_timebase(4, 7) == 1
   end
 end
