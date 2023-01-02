@@ -79,11 +79,14 @@ defmodule Membrane.Testing.Pipeline do
 
   use Membrane.Pipeline
 
+  alias Membrane.Child
   alias Membrane.ChildrenSpec
+  alias Membrane.Core.Message
   alias Membrane.{Element, Pipeline}
   alias Membrane.Testing.Notification
 
   require Membrane.Logger
+  require Membrane.Core.Message
 
   defmodule State do
     @moduledoc false
@@ -216,6 +219,65 @@ defmodule Membrane.Testing.Pipeline do
   def execute_actions(pipeline, actions) do
     send(pipeline, {__MODULE__, :__execute_actions__, actions})
     :ok
+  end
+
+  @doc """
+  Returns the pid of the children process.
+
+  Accepts pipeline pid as a first argument and a child reference or a list
+  of child references representing a path as a second argument.
+
+  If second argument is a child reference, function gets pid of this child
+  from pipeline.
+
+  If second argument is a path of child references, function gets pid of
+  last a component pointed by this path.
+
+  Returns
+   * `{:ok, child_pid}`, if a child was succesfully found
+   * `{:error, reason}`, if, for example, pipeline is not alive or children path is invalid
+  """
+  @spec get_child_pid(pid(), child_ref_path :: Child.ref_t() | [Child.ref_t()]) ::
+          {:ok, pid()} | {:error, reason :: term()}
+  def get_child_pid(pipeline, [_head | _tail] = child_ref_path) do
+    do_get_child_pid(pipeline, child_ref_path)
+  end
+
+  def get_child_pid(pipeline, child_ref) when not is_list(child_ref) do
+    do_get_child_pid(pipeline, [child_ref])
+  end
+
+  @doc """
+  Returns the pid of the children process.
+
+  Works as get_child_pid/2, but raises an error instead of returning
+  `{:error, reason}` tuple.
+  """
+  @spec get_child_pid!(pid(), child_ref_path :: Child.ref_t() | [Child.ref_t()]) :: pid()
+  def get_child_pid!(parent_pid, child_ref_path) do
+    {:ok, child_pid} = get_child_pid(parent_pid, child_ref_path)
+    child_pid
+  end
+
+  defp do_get_child_pid(component_pid, child_ref_path, is_pipeline? \\ true)
+
+  defp do_get_child_pid(component_pid, [], _is_pipeline?) do
+    {:ok, component_pid}
+  end
+
+  defp do_get_child_pid(component_pid, [child_ref | child_ref_path_tail], is_pipeline?) do
+    case Message.call(component_pid, :get_child_pid, child_ref) do
+      {:ok, child_pid} ->
+        do_get_child_pid(child_pid, child_ref_path_tail, false)
+
+      {:error, {:call_failure, {:noproc, _call_info}}} ->
+        if is_pipeline?,
+          do: {:error, :pipeline_not_alive},
+          else: {:error, :component_not_alive}
+
+      {:error, _reason} = error ->
+        error
+    end
   end
 
   @impl true

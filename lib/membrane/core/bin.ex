@@ -257,4 +257,16 @@ defmodule Membrane.Core.Bin do
   def handle_call(Message.new(:get_clock), _from, state) do
     {:reply, state.synchronization.clock, state}
   end
+
+  @impl GenServer
+  def handle_call(Message.new(:get_child_pid, child_ref), _from, state) do
+    reply =
+      with %State{children: %{^child_ref => %{pid: child_pid}}} <- state do
+        {:ok, child_pid}
+      else
+        _other -> {:error, :child_not_found}
+      end
+
+    {:reply, reply, state}
+  end
 end
