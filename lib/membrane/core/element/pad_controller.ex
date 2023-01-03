@@ -340,7 +340,7 @@ defmodule Membrane.Core.Element.PadController do
     enable_toilet? = other_info.mode == :push
 
     input_queue_demand_unit =
-      if other_info[:demand_input] != nil, do: other_info.demand_unit, else: this_demand_unit
+      if other_info[:demand_unit] != nil, do: other_info.demand_unit, else: this_demand_unit
 
     input_queue =
       InputQueue.init(%{
