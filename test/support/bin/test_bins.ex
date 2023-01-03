@@ -109,7 +109,7 @@ defmodule Membrane.Support.Bin.TestBins do
     @impl true
     def handle_init(_ctx, _opts) do
       children = [
-        child(:filter, Membrane.Support.ChildCrashTest.Filter)
+        child(:filter, TestDynamicPadFilter)
       ]
 
       state = %{}

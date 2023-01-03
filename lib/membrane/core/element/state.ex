@@ -34,7 +34,9 @@ defmodule Membrane.Core.Element.State do
           playback: Membrane.Playback.t(),
           playback_queue: Membrane.Core.Element.PlaybackQueue.t(),
           resource_guard: Membrane.ResourceGuard.t(),
-          subprocess_supervisor: pid
+          subprocess_supervisor: pid,
+          terminating?: boolean(),
+          setup_incomplete?: boolean()
         }
 
   defstruct [
@@ -54,7 +56,8 @@ defmodule Membrane.Core.Element.State do
     :playback_queue,
     :resource_guard,
     :subprocess_supervisor,
-    :terminating?
+    :terminating?,
+    :setup_incomplete?
   ]
 
   @doc """
@@ -90,7 +93,8 @@ defmodule Membrane.Core.Element.State do
       playback_queue: [],
       resource_guard: options.resource_guard,
       subprocess_supervisor: options.subprocess_supervisor,
-      terminating?: false
+      terminating?: false,
+      setup_incomplete?: false
     }
     |> PadSpecHandler.init_pads()
   end

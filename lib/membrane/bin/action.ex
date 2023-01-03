@@ -11,6 +11,17 @@ defmodule Membrane.Bin.Action do
   alias Membrane.{Child, ChildrenSpec, Pad}
 
   @typedoc """
+  Action that manages the end of the component setup.
+
+  By default, component setup ends with the end of `c:Membrane.Bin.handle_setup/2` callback.
+  If `{:setup, :incomplete}` is returned there, setup lasts until `{:setup, :complete}`
+  is returned from antoher callback.
+
+  Untils the setup lasts, the component won't enter `:playing` playback.
+  """
+  @type setup_t :: {:setup, :incomplete | :complete}
+
+  @typedoc """
   Action that sends a message to a child identified by name.
   """
   @type notify_child_t ::
@@ -118,7 +129,8 @@ defmodule Membrane.Bin.Action do
   other parts of framework.
   """
   @type t ::
-          notify_child_t
+          setup_t
+          | notify_child_t
           | notify_parent_t
           | spec_t
           | remove_children_t

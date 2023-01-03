@@ -66,13 +66,10 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     Map.update!(
       state,
       :links,
-      &Map.reject(&1, fn {_id, %Link{linked?: linked?} = link} ->
+      &Map.reject(&1, fn {_id, %Link{} = link} ->
         case endpoint_to_unlink(child_name, link) do
-          %Endpoint{pid: pid, pad_ref: pad_ref} when linked? ->
+          %Endpoint{pid: pid, pad_ref: pad_ref} ->
             Message.send(pid, :handle_unlink, pad_ref)
-            true
-
-          %Endpoint{} ->
             true
 
           nil ->

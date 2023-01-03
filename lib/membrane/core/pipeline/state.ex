@@ -29,9 +29,9 @@ defmodule Membrane.Core.Pipeline.State do
           },
           playback: Membrane.Playback.t(),
           initialized?: boolean(),
-          playing_requested?: boolean(),
           terminating?: boolean(),
-          resource_guard: Membrane.ResourceGuard.t()
+          resource_guard: Membrane.ResourceGuard.t(),
+          setup_incomplete?: boolean()
         }
 
   @enforce_keys [:module, :synchronization, :subprocess_supervisor, :resource_guard]
@@ -44,7 +44,7 @@ defmodule Membrane.Core.Pipeline.State do
                 pending_specs: %{},
                 playback: :stopped,
                 initialized?: false,
-                playing_requested?: false,
-                terminating?: false
+                terminating?: false,
+                setup_incomplete?: false
               ]
 end

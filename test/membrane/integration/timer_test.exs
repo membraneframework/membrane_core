@@ -41,7 +41,7 @@ defmodule Membrane.Integration.TimerTest do
     def handle_init(_ctx, pid) do
       spec = [child(:element, Element), child(:bin, Bin)]
 
-      {[spec: spec, playback: :playing], %{pid: pid}}
+      {[spec: spec], %{pid: pid}}
     end
 
     @impl true
