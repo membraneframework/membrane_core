@@ -127,7 +127,7 @@ defmodule Membrane.Pad do
   @typedoc """
   Describes how an output pad should be declared inside an element.
   """
-  @type output_spec_t :: {name_t(), [common_spec_options_t | {:demand_mode, demand_mode_t()}]}
+  @type output_spec_t :: {name_t(), [common_spec_options_t | {:demand_mode, demand_mode_t()} | {:demand_unit, Buffer.Metric.unit_t()}]}
 
   @typedoc """
   Describes how an input pad should be declared inside an element.
