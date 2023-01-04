@@ -220,7 +220,12 @@ defmodule Membrane.Core.ElementTest do
                  },
                  %{
                    initiator: :sibling,
-                   other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
+                   other_info: %{
+                     direction: :input,
+                     mode: :pull,
+                     demand_unit: :buffers,
+                     demand_mode: :manual
+                   },
                    link_metadata: %{observability_metadata: %{}},
                    stream_format_validation_params: []
                  }
@@ -229,8 +234,7 @@ defmodule Membrane.Core.ElementTest do
                get_state()
              )
 
-    assert {%{demand_unit: :buffers, direction: :input, mode: :pull},
-            %{child: :this, pad_props: %{options: []}, pad_ref: :output},
+    assert {%{child: :this, pad_props: %{options: []}, pad_ref: :output},
             %{
               availability: :always,
               demand_mode: :manual,
@@ -238,7 +242,8 @@ defmodule Membrane.Core.ElementTest do
               mode: :pull,
               name: :output,
               options: nil
-            }, %{toilet: toilet}} = reply
+            },
+            %{toilet: toilet, output_demand_unit: :buffers, input_demand_unit: :buffers}} = reply
 
     assert toilet != nil
 
