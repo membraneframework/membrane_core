@@ -537,8 +537,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       if result == :removed do
         state =
           Enum.reduce(group.members, state, fn child_name, state ->
-            with {%{spec_ref: spec_ref}, state} <-
-                   Bunch.Access.pop_in(state, [:children, child_name]) do
+            with {%{spec_ref: spec_ref}, state} <- pop_in(state, [:children, child_name]) do
               state = LinkUtils.unlink_element(child_name, state)
               cleanup_spec_startup(spec_ref, state)
             else
