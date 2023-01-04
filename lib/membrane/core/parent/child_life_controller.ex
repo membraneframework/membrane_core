@@ -136,7 +136,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         links
       end)
 
-    assert_static_pads_linked(children_definitions, links)
+    :ok = assert_all_static_pads_linked_in_spec!(children_definitions, links)
 
     {all_children_names, state} =
       Enum.flat_map_reduce(children_definitions, state, &setup_children(&1, spec_ref, &2))
@@ -165,8 +165,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     proceed_spec_startup(spec_ref, state)
   end
 
-  defp assert_static_pads_linked(children_definitions, links) do
-    linked_pads_set =
+  defp assert_all_static_pads_linked_in_spec!(children_definitions, links) do
+    pads_to_link =
       links
       |> Enum.flat_map(&[&1.from, &1.to])
       |> MapSet.new(&{&1.child, &1.pad_spec})
@@ -181,11 +181,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         end
 
       child_module.membrane_pads()
-      |> Enum.map(fn {_pad_name, pad} -> pad end)
+      |> Keyword.values()
       |> Enum.filter(&(&1.availability == :always))
       |> Enum.map(&{child_name, &1.name})
     end)
-    |> Enum.find(&(not MapSet.member?(linked_pads_set, &1)))
+    |> Enum.find(&(not MapSet.member?(pads_to_link, &1)))
     |> case do
       {child_name, pad_name} ->
         raise ParentError,

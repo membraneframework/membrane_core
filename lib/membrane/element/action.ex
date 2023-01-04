@@ -10,7 +10,16 @@ defmodule Membrane.Element.Action do
 
   alias Membrane.{Buffer, ChildNotification, Clock, Event, Pad, StreamFormat}
 
-  @type setup_t :: {:setup, :defer | :complete}
+  @typedoc """
+  Action that manages the end of the component setup.
+
+  By default, component setup ends with the end of `c:Membrane.Element.Base.handle_setup/2` callback.
+  If `{:setup, :incomplete}` is returned there, setup lasts until `{:setup, :complete}`
+  is returned from antoher callback.
+
+  Untils the setup lasts, the component won't enter `:playing` playback.
+  """
+  @type setup_t :: {:setup, :incomplete | :complete}
 
   @typedoc """
   Sends a message to the parent.

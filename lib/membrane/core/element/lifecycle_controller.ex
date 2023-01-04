@@ -7,7 +7,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   use Bunch
 
   alias Membrane.{Clock, Element, Sync}
-  alias Membrane.Core.{CallbackHandler, Child, Element, Message, PlaybackController}
+  alias Membrane.Core.{CallbackHandler, Child, Element, Message}
   alias Membrane.Core.Element.{ActionHandler, PlaybackQueue, State}
   alias Membrane.Element.CallbackContext
 
@@ -64,8 +64,8 @@ defmodule Membrane.Core.Element.LifecycleController do
         state
       )
 
-    with %{setup_deferred?: false} <- state do
-      PlaybackController.complete_setup(state)
+    with %{setup_incomplete?: false} <- state do
+      Membrane.Core.LifecycleController.complete_setup(state)
     end
   end
 

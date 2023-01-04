@@ -9,7 +9,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
     Component,
     Message,
     Parent,
-    PlaybackController,
     TimerController
   }
 
@@ -34,8 +33,8 @@ defmodule Membrane.Core.Parent.LifecycleController do
         state
       )
 
-    with %{setup_deferred?: false} <- state do
-      PlaybackController.complete_setup(state)
+    with %{setup_incomplete?: false} <- state do
+      Membrane.Core.LifecycleController.complete_setup(state)
     end
   end
 

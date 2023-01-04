@@ -108,7 +108,7 @@ defmodule Membrane.ActionError do
   end
 end
 
-defmodule Membrane.PlaybackError do
+defmodule Membrane.SetupError do
   defexception [:message]
 end
 

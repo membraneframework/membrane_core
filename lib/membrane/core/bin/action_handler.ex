@@ -3,8 +3,9 @@ defmodule Membrane.Core.Bin.ActionHandler do
   use Membrane.Core.CallbackHandler
 
   alias Membrane.ActionError
+  alias Membrane.Core
   alias Membrane.Core.Bin.State
-  alias Membrane.Core.{CallbackHandler, Message, Parent, PlaybackController, TimerController}
+  alias Membrane.Core.{Message, Parent, TimerController}
 
   require Membrane.Logger
   require Message
@@ -16,8 +17,14 @@ defmodule Membrane.Core.Bin.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:setup, operation}, cb, _params, state) do
-    PlaybackController.handle_setup_operation(operation, cb, state)
+  def handle_action({:setup, :incomplete} = action, cb, _params, _state)
+      when cb != :handle_setup do
+    raise ActionError, action: action, reason: {:invalid_callback, :handle_setup}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:setup, operation}, _cb, _params, state) do
+    Core.LifecycleController.handle_setup_operation(operation, state)
   end
 
   @impl CallbackHandler

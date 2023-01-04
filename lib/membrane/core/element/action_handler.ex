@@ -8,10 +8,20 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   import Membrane.Pad, only: [is_pad_ref: 1]
 
-  alias Membrane.{ActionError, Buffer, ElementError, Event, Pad, PadDirectionError, StreamFormat}
+  alias Membrane.{
+    ActionError,
+    Buffer,
+    Core,
+    ElementError,
+    Event,
+    Pad,
+    PadDirectionError,
+    StreamFormat
+  }
+
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{DemandHandler, PadController, State, StreamFormatController}
-  alias Membrane.Core.{Events, Message, PlaybackController, Telemetry, TimerController}
+  alias Membrane.Core.{Events, Message, Telemetry, TimerController}
   alias Membrane.Element.Action
 
   require Membrane.Core.Child.PadModel
@@ -30,7 +40,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({action, _}, :handle_init, _params, _state)
-      when action not in [:latency, :notify_parent, :setup] do
+      when action not in [:latency, :notify_parent] do
     raise ActionError, action: action, reason: {:invalid_callback, :handle_init}
   end
 
@@ -50,8 +60,14 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:setup, operation}, cb, _params, state) do
-    PlaybackController.handle_setup_operation(operation, cb, state)
+  def handle_action({:setup, :incomplete} = action, cb, _params, _state)
+      when cb != :handle_setup do
+    raise ActionError, action: action, reason: {:invalid_callback, :handle_setup}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:setup, operation}, _cb, _params, state) do
+    Core.LifecycleController.handle_setup_operation(operation, state)
   end
 
   @impl CallbackHandler

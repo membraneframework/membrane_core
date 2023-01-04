@@ -3,15 +3,15 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   use Membrane.Core.CallbackHandler
 
   alias Membrane.ActionError
-  alias Membrane.Core.{Parent, PlaybackController, TimerController}
+  alias Membrane.Core
+  alias Membrane.Core.{Parent, TimerController}
   alias Membrane.Core.Parent.LifecycleController
   alias Membrane.Core.Pipeline.State
 
   require Membrane.Logger
 
   @impl CallbackHandler
-  def handle_action({action, _args}, :handle_init, _params, _state)
-      when action not in [:spec, :setup] do
+  def handle_action({action, _args}, :handle_init, _params, _state) when action != :spec do
     raise ActionError, action: action, reason: {:invalid_callback, :handle_init}
   end
 
@@ -22,8 +22,14 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:setup, operation}, cb, _params, state) do
-    PlaybackController.handle_setup_operation(operation, cb, state)
+  def handle_action({:setup, :incomplete} = action, cb, _params, _state)
+      when cb != :handle_setup do
+    raise ActionError, action: action, reason: {:invalid_callback, :handle_setup}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:setup, operation}, _cb, _params, state) do
+    Core.LifecycleController.handle_setup_operation(operation, state)
   end
 
   @impl CallbackHandler
