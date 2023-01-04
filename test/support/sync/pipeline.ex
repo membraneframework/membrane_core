@@ -34,7 +34,7 @@ defmodule Membrane.Support.Sync.Pipeline do
 
   @impl true
   def handle_init(_ctx, spec) do
-    {[spec: spec, playback: :playing], %{}}
+    {[spec: spec], %{}}
   end
 
   @impl true

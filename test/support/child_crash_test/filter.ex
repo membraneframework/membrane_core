@@ -6,24 +6,39 @@ defmodule Membrane.Support.ChildCrashTest.Filter do
 
   use Membrane.Filter
 
-  def_output_pad :output, accepted_format: _any
+  alias Membrane.Pad
+
+  def_output_pad :output, accepted_format: _any, availability: :on_request
 
   def_input_pad :input, demand_unit: :buffers, accepted_format: _any, availability: :on_request
 
   @impl true
   def handle_init(_ctx, _opts) do
-    {[], Map.put(%{}, :pads, MapSet.new())}
+    state = %{
+      input_pads: MapSet.new(),
+      output_pads: MapSet.new()
+    }
+
+    {[], state}
   end
 
   @impl true
-  def handle_pad_added(pad, _ctx, state) do
-    {[], %{state | pads: MapSet.put(state.pads, pad)}}
+  def handle_pad_added(Pad.ref(name, _ref) = pad, _ctx, state) do
+    key =
+      case name do
+        :output -> :output_pads
+        :input -> :input_pads
+      end
+
+    state = Map.update!(state, key, &MapSet.put(&1, pad))
+
+    {[], state}
   end
 
   @impl true
-  def handle_demand(:output, size, _unit, _ctx, state) do
+  def handle_demand(Pad.ref(:output, _pad_ref), size, _unit, _ctx, state) do
     demands =
-      state.pads
+      state.input_pads
       |> Enum.map(fn pad -> {:demand, {pad, size}} end)
 
     {demands, state}
@@ -39,12 +54,17 @@ defmodule Membrane.Support.ChildCrashTest.Filter do
 
   @impl true
   def handle_process(_pad, buf, _ctx, state) do
-    {[buffer: {:output, buf}], state}
+    actions =
+      for pad <- state.output_pads do
+        {:buffer, {pad, buf}}
+      end
+
+    {actions, state}
   end
 
   @impl true
   def handle_end_of_stream(pad, _ctx, state) do
-    {[], %{state | pads: MapSet.delete(state.pads, pad)}}
+    {[], %{state | input_pads: MapSet.delete(state.input_pads, pad)}}
   end
 
   @spec crash(pid()) :: any()

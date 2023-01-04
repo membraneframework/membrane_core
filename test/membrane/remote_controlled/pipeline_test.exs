@@ -3,7 +3,6 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
   import Membrane.ChildrenSpec
 
-  alias Membrane.ChildrenSpec
   alias Membrane.RemoteControlled.Message
   alias Membrane.RemoteControlled.Pipeline
 
@@ -41,22 +40,13 @@ defmodule Membrane.RemoteControlled.PipelineTest do
     end
   end
 
+  @pipeline_spec child(:a, %Membrane.Testing.Source{output: [0xA1, 0xB2, 0xC3, 0xD4]})
+                 |> child(:b, Filter)
+                 |> child(:c, Membrane.Testing.Sink)
+
   defp setup_pipeline(_context) do
     {:ok, _supervisor, pipeline} = start_supervised({Pipeline, controller_pid: self()})
     Process.link(pipeline)
-
-    children = [
-      child(:a, %Membrane.Testing.Source{output: [0xA1, 0xB2, 0xC3, 0xD4]}),
-      child(:b, Filter),
-      child(:c, Membrane.Testing.Sink)
-    ]
-
-    links = [
-      ChildrenSpec.get_child(:a) |> ChildrenSpec.get_child(:b) |> ChildrenSpec.get_child(:c)
-    ]
-
-    actions = [{:spec, children ++ links}]
-    Pipeline.exec_actions(pipeline, actions)
 
     {:ok, pipeline: pipeline}
   end
@@ -66,16 +56,13 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
     test "testing process should receive all subscribed events", %{pipeline: pipeline} do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.Playing{})
       Pipeline.subscribe(pipeline, %Message.Notification{element: :b, data: %Membrane.Buffer{}})
       Pipeline.subscribe(pipeline, %Message.StartOfStream{element: :b, pad: :input})
 
       # RUN
-      Pipeline.exec_actions(pipeline, playback: :playing)
+      Pipeline.exec_actions(pipeline, spec: @pipeline_spec)
 
       # TEST
-      assert_receive %Message.Playing{from: ^pipeline}
-
       assert_receive %Message.Notification{
         from: ^pipeline,
         element: :b,
@@ -89,15 +76,12 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
     test "should allow to use wildcards in subscription pattern", %{pipeline: pipeline} do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.Playing{})
       Pipeline.subscribe(pipeline, %Message.EndOfStream{})
 
       # RUN
-      Pipeline.exec_actions(pipeline, playback: :playing)
+      Pipeline.exec_actions(pipeline, spec: @pipeline_spec)
 
       # TEST
-      assert_receive %Message.Playing{from: ^pipeline}
-
       assert_receive %Message.EndOfStream{from: ^pipeline, element: :b, pad: :input}
 
       assert_receive %Message.EndOfStream{from: ^pipeline, element: :c, pad: :input}
@@ -117,17 +101,14 @@ defmodule Membrane.RemoteControlled.PipelineTest do
 
     test "should await for requested messages", %{pipeline: pipeline} do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.Playing{})
       Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
       Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
       Pipeline.subscribe(pipeline, %Message.Terminated{})
 
       # RUN
-      Pipeline.exec_actions(pipeline, playback: :playing)
+      Pipeline.exec_actions(pipeline, spec: @pipeline_spec)
 
       # TEST
-      Pipeline.await_playing(pipeline)
-
       Pipeline.await_start_of_stream(pipeline, :c, :input)
       Pipeline.await_notification(pipeline, :b)
     end
@@ -136,12 +117,11 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       pipeline: pipeline
     } do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.Playing{})
       Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
       Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
 
       # RUN
-      Pipeline.exec_actions(pipeline, playback: :playing)
+      Pipeline.exec_actions(pipeline, spec: @pipeline_spec)
 
       # TEST
       Pipeline.await_start_of_stream(pipeline, :c)
@@ -158,16 +138,14 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       pipeline: pipeline
     } do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.Playing{})
       Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
       Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
       element = :c
 
       # START
-      Pipeline.exec_actions(pipeline, playback: :playing)
+      Pipeline.exec_actions(pipeline, spec: @pipeline_spec)
 
       # TEST
-      Pipeline.await_playing(pipeline)
       Pipeline.await_start_of_stream(pipeline, element, :input)
     end
   end

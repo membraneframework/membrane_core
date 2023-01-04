@@ -3,6 +3,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   use Membrane.Core.CallbackHandler
 
   alias Membrane.ActionError
+  alias Membrane.Core
   alias Membrane.Core.{Parent, TimerController}
   alias Membrane.Core.Parent.LifecycleController
   alias Membrane.Core.Pipeline.State
@@ -10,16 +11,25 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   require Membrane.Logger
 
   @impl CallbackHandler
-  def handle_action({action, _args}, :handle_init, _params, _state)
-      when action not in [:spec, :playback] do
+  def handle_action({action, _args}, :handle_init, _params, _state) when action != :spec do
     raise ActionError, action: action, reason: {:invalid_callback, :handle_init}
   end
 
   @impl CallbackHandler
-  def handle_action({name, args}, _cb, _params, %State{terminating?: true})
-      when name in [:spec, :playback] do
+  def handle_action({:spec, args}, _cb, _params, %State{terminating?: true}) do
     raise Membrane.ParentError,
-          "Action #{inspect({name, args})} cannot be handled because the pipeline is already terminating"
+          "Action #{inspect({:spec, args})} cannot be handled because the pipeline is already terminating"
+  end
+
+  @impl CallbackHandler
+  def handle_action({:setup, :incomplete} = action, cb, _params, _state)
+      when cb != :handle_setup do
+    raise ActionError, action: action, reason: {:invalid_callback, :handle_setup}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:setup, operation}, _cb, _params, state) do
+    Core.LifecycleController.handle_setup_operation(operation, state)
   end
 
   @impl CallbackHandler
@@ -63,17 +73,6 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   @impl CallbackHandler
   def handle_action({:stop_timer, id}, _cb, _params, state) do
     TimerController.stop_timer(id, state)
-  end
-
-  @impl CallbackHandler
-  def handle_action({:playback, :playing}, _cb, _params, state) do
-    Membrane.Logger.debug("Playing request, #{inspect(state.playback)}")
-
-    cond do
-      state.playback == :playing -> state
-      state.initialized? -> LifecycleController.handle_playing(state)
-      true -> %{state | playing_requested?: true}
-    end
   end
 
   @impl CallbackHandler

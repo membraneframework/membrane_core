@@ -11,6 +11,17 @@ defmodule Membrane.Pipeline.Action do
   alias Membrane.{Child, ChildrenSpec, Pad}
 
   @typedoc """
+  Action that manages the end of the component setup.
+
+  By default, component setup ends with the end of `c:Membrane.Pipeline.handle_setup/2` callback.
+  If `{:setup, :incomplete}` is returned there, setup lasts until `{:setup, :complete}`
+  is returned from antoher callback.
+
+  Untils the setup lasts, the component won't enter `:playing` playback.
+  """
+  @type setup_t :: {:setup, :incomplete | :complete}
+
+  @typedoc """
   Action that sends a message to a child identified by name.
   """
   @type notify_child_t :: {:notify_child, {Child.name_t(), Membrane.ParentNotification.t()}}
@@ -86,14 +97,6 @@ defmodule Membrane.Pipeline.Action do
   @type stop_timer_t :: {:stop_timer, timer_id :: any}
 
   @typedoc """
-  Action that instantiates children and links them according to `Membrane.ChildrenSpec`.
-
-  Children's playback is changed to the current bin playback.
-  `c:Membrane.Parent.handle_spec_started/3` callback is executed once the children are spawned.
-  """
-  @type playback_t :: {:playback, :playing}
-
-  @typedoc """
   Action that replies to a `Membrane.Pipeline.call/3`. Can be returned only from the `c:Membrane.Pipeline.handle_call/3` callback, in
   which context the caller reference is available, under the `:from` key.
   """
@@ -128,14 +131,14 @@ defmodule Membrane.Pipeline.Action do
   other parts of framework.
   """
   @type t ::
-          notify_child_t
+          setup_t
+          | notify_child_t
           | spec_t
           | remove_children_t
           | remove_link_t
           | start_timer_t
           | timer_interval_t
           | stop_timer_t
-          | playback_t
           | reply_t
           | reply_to_t
           | terminate_t

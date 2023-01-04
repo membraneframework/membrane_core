@@ -20,7 +20,7 @@ defmodule Membrane.Support.DemandsTest.Pipeline do
 
     spec = children ++ links
 
-    {[spec: spec, playback: :playing], %{target: opts.target}}
+    {[spec: spec], %{target: opts.target}}
   end
 
   @impl true
