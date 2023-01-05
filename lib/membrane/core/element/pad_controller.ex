@@ -215,33 +215,18 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defp resolve_demand_units(output_info, input_info) do
-    cond do
-      output_info[:demand_mode] == :manual and output_info[:demand_unit] != nil and
-          input_info[:demand_mode] == :auto ->
-        {output_info.demand_unit, output_info.demand_unit}
+    output_demand_unit =
+      if output_info[:mode] == :push,
+        do: nil,
+        else: output_info[:demand_unit] || input_info[:demand_unit] || :buffers
 
-      output_info[:demand_mode] == :manual and output_info[:demand_unit] == nil and
-          input_info[:demand_mode] == :auto ->
-        {:buffers, :buffers}
+    input_demand_unit =
+      if input_info[:mode] == :push,
+        do: nil,
+        else: input_info[:demand_unit] || output_info[:demand_unit] || :buffers
 
-      output_info[:demand_mode] == :auto and input_info[:demand_mode] == :manual ->
-        {input_info.demand_unit, input_info.demand_unit}
-
-      output_info[:demand_mode] == :auto and input_info[:demand_mode] == :auto ->
-        {:buffers, :buffers}
-
-      output_info[:demand_mode] == :manual and output_info[:demand_unit] == nil and
-          input_info[:demand_mode] == :manual ->
-        {input_info.demand_unit, input_info.demand_unit}
-
-      output_info.mode == :push and input_info[:demand_mode] == :auto ->
-        {nil, :buffers}
-
-      true ->
-        {output_info[:demand_unit], input_info[:demand_unit]}
-    end
+    {output_demand_unit, input_demand_unit}
   end
 
   defp init_pad_data(

@@ -115,30 +115,18 @@ defmodule Membrane.Pad do
   @typedoc """
   Describes how a pad should be declared in element or bin.
   """
-  @type spec_t :: output_spec_t | input_spec_t | bin_spec_t
+  @type spec_t :: element_spec_t | bin_spec_t
 
   @typedoc """
-  For bins there are exactly the same options for both directions.
   Demand unit is derived from the first element inside the bin linked to the
   given input.
   """
   @type bin_spec_t :: {name_t(), [common_spec_options_t]}
 
   @typedoc """
-  Describes how an output pad should be declared inside an element.
+  Describes how and pad should be declared inside an element.
   """
-  @type output_spec_t ::
-          {name_t(),
-           [
-             common_spec_options_t
-             | {:demand_mode, demand_mode_t()}
-             | {:demand_unit, Buffer.Metric.unit_t()}
-           ]}
-
-  @typedoc """
-  Describes how an input pad should be declared inside an element.
-  """
-  @type input_spec_t ::
+  @type element_spec_t ::
           {name_t(),
            [
              common_spec_options_t
