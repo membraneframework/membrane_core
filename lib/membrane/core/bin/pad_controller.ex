@@ -257,18 +257,19 @@ defmodule Membrane.Core.Bin.PadController do
     with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
       state = maybe_handle_pad_removed(pad_ref, state)
       endpoint = PadModel.get_data!(state, pad_ref, :endpoint)
+      {pad_data, state} = PadModel.pop_data!(state, pad_ref)
 
       if endpoint do
         Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+        ChildLifeController.proceed_spec_startup(pad_data.spec_ref, state)
       else
         Membrane.Logger.debug("""
         Tried to send :handle_unlink to the endpoint while unlinking #{inspect(pad_ref)},
         but the endpoint is neither linked internally nor :handle_link was received yet
         """)
-      end
 
-      {pad_data, state} = PadModel.pop_data!(state, pad_ref)
-      ChildLifeController.proceed_spec_startup(pad_data.spec_ref, state)
+        state
+      end
     else
       {:ok, %{availability: :always}} when state.terminating? ->
         state
