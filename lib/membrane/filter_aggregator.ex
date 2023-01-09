@@ -16,7 +16,6 @@ defmodule Membrane.FilterAggregator do
   use Membrane.Filter
 
   alias Membrane.Core.FilterAggregator.Context
-  alias Membrane.Element.CallbackContext
 
   require Membrane.Core.FilterAggregator.InternalAction, as: InternalAction
   require Membrane.Logger
