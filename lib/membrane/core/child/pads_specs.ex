@@ -18,7 +18,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
     {entity, pad_type_spec} =
       case component do
         :bin -> {"bin", "bin_spec_t/0"}
-        :element -> {"element", "#{direction}_spec_t/0"}
+        :element -> {"element", "element_spec_t/0"}
       end
 
     """
