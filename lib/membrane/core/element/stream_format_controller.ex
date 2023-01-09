@@ -8,8 +8,7 @@ defmodule Membrane.Core.Element.StreamFormatController do
   alias Membrane.{Pad, StreamFormat}
   alias Membrane.Core.{CallbackHandler, Telemetry}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, InputQueue, PlaybackQueue, State}
-  alias Membrane.Element.CallbackContext
+  alias Membrane.Core.Element.{ActionHandler, CallbackContext, InputQueue, PlaybackQueue, State}
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Telemetry

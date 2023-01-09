@@ -5,9 +5,9 @@ defmodule Membrane.Core.Pipeline do
   alias __MODULE__.{ActionHandler, State}
   alias Membrane.{Clock, ResourceGuard}
   alias Membrane.Core.{CallbackHandler, SubprocessSupervisor}
+  alias Membrane.Core.Pipeline.CallbackContext
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
   alias Membrane.Core.TimerController
-  alias Membrane.Pipeline.CallbackContext
 
   require Membrane.Core.Message, as: Message
   require Membrane.Core.Telemetry, as: Telemetry

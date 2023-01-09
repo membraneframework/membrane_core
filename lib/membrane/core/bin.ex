@@ -4,7 +4,7 @@ defmodule Membrane.Core.Bin do
   use GenServer
 
   alias __MODULE__.{ActionHandler, PadController, State}
-  alias Membrane.Bin.CallbackContext
+  alias Membrane.Core.Bin.CallbackContext
 
   alias Membrane.Core.{
     CallbackHandler,

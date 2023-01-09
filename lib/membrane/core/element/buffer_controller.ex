@@ -11,6 +11,7 @@ defmodule Membrane.Core.Element.BufferController do
 
   alias Membrane.Core.Element.{
     ActionHandler,
+    CallbackContext,
     DemandController,
     DemandHandler,
     EventController,
@@ -20,7 +21,6 @@ defmodule Membrane.Core.Element.BufferController do
   }
 
   alias Membrane.Core.Telemetry
-  alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Telemetry

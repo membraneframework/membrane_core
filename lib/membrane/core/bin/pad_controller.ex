@@ -5,9 +5,8 @@ defmodule Membrane.Core.Bin.PadController do
 
   use Bunch
 
-  alias Membrane.Bin.CallbackContext
   alias Membrane.{Core, LinkError, Pad}
-  alias Membrane.Core.Bin.{ActionHandler, State}
+  alias Membrane.Core.Bin.{ActionHandler, CallbackContext, State}
   alias Membrane.Core.{CallbackHandler, Child, Message}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.StreamFormatController
@@ -15,7 +14,6 @@ defmodule Membrane.Core.Bin.PadController do
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
-  require Membrane.Bin.CallbackContext
   require Membrane.Logger
   require Membrane.Pad
 
