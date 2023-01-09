@@ -118,13 +118,15 @@ defmodule Membrane.Pad do
   @type spec_t :: element_spec_t | bin_spec_t
 
   @typedoc """
+  Describes how a pad should be declared inside a bin.
+
   Demand unit is derived from the first element inside the bin linked to the
   given input.
   """
   @type bin_spec_t :: {name_t(), [common_spec_options_t]}
 
   @typedoc """
-  Describes how and pad should be declared inside an element.
+  Describes how a pad should be declared inside an element.
   """
   @type element_spec_t ::
           {name_t(),
