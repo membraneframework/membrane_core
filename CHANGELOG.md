@@ -8,6 +8,7 @@
  * Replace `Membrane.Time.round_to_<unit_name>` with `Membrane.Time.as_<unit_name>/2` with second argument equal `:round`. Rename `Membrane.Time.round_to_timebase` to `Membrane.Time.divide_by_timebase/2`. [#494](https://github.com/membraneframework/membrane_core/pull/494)
  * Remove `:playback` action. Introduce `:setup` action. [#496](https://github.com/membraneframework/membrane_core/pull/496)
  * Add `Membrane.Testing.Pipeline.get_child_pid/2`. [#497](https://github.com/membraneframework/membrane_core/pull/497)
+ * Make callback contexts to be maps. [#504](https://github.com/membraneframework/membrane_core/pull/504)
 
 ## 0.11.0
  * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)
