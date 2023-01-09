@@ -5,7 +5,6 @@ defmodule Membrane.Core.TimerController do
   alias Membrane.Core.{CallbackHandler, Component, Timer}
 
   require Membrane.Core.Component
-  require Membrane.Element.CallbackContext.Tick
 
   defguardp is_timer_present(timer_id, state)
             when is_map_key(state.synchronization.timers, timer_id)
@@ -59,13 +58,13 @@ defmodule Membrane.Core.TimerController do
 
   @spec handle_tick(Timer.id_t(), Component.state_t()) :: Component.state_t()
   def handle_tick(timer_id, state) when is_timer_present(timer_id, state) do
-    context = Component.callback_context_generator(:any, Tick, state)
+    # context = Component.callback_context(state)
 
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_tick,
         Component.action_handler(state),
-        %{context: context},
+        %{context: &Component.callback_context/1},
         [timer_id],
         state
       )

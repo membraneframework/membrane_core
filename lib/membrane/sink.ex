@@ -32,7 +32,7 @@ defmodule Membrane.Sink do
   @callback handle_write_list(
               pad :: Pad.ref_t(),
               buffers :: list(Buffer.t()),
-              context :: CallbackContext.Write.t(),
+              context :: CallbackContext.t(),
               state :: Element.state_t()
             ) :: Membrane.Element.Base.callback_return_t()
 
@@ -45,7 +45,7 @@ defmodule Membrane.Sink do
   @callback handle_write(
               pad :: Pad.ref_t(),
               buffer :: Buffer.t(),
-              context :: CallbackContext.Write.t(),
+              context :: CallbackContext.t(),
               state :: Element.state_t()
             ) :: Membrane.Element.Base.callback_return_t()
 

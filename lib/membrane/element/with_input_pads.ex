@@ -21,7 +21,7 @@ defmodule Membrane.Element.WithInputPads do
   @callback handle_stream_format(
               pad :: Pad.ref_t(),
               stream_format :: Membrane.StreamFormat.t(),
-              context :: CallbackContext.StreamFormat.t(),
+              context :: CallbackContext.t(),
               state :: Element.state_t()
             ) :: Membrane.Element.Base.callback_return_t()
 
@@ -32,7 +32,7 @@ defmodule Membrane.Element.WithInputPads do
   """
   @callback handle_start_of_stream(
               pad :: Pad.ref_t(),
-              context :: CallbackContext.StreamManagement.t(),
+              context :: CallbackContext.t(),
               state :: Element.state_t()
             ) :: Membrane.Element.Base.callback_return_t()
 
@@ -42,7 +42,7 @@ defmodule Membrane.Element.WithInputPads do
   """
   @callback handle_end_of_stream(
               pad :: Pad.ref_t(),
-              context :: CallbackContext.StreamManagement.t(),
+              context :: CallbackContext.t(),
               state :: Element.state_t()
             ) :: Membrane.Element.Base.callback_return_t()
 

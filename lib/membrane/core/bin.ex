@@ -125,13 +125,11 @@ defmodule Membrane.Core.Bin do
       }
       |> Child.PadSpecHandler.init_pads()
 
-    require CallbackContext.Init
-
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_init,
         ActionHandler,
-        %{context: &CallbackContext.Init.from_state/1},
+        %{context: &CallbackContext.from_state/1},
         [],
         %{state | internal_state: options.user_options}
       )

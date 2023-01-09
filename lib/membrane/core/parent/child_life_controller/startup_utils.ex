@@ -106,7 +106,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
 
   @spec exec_handle_spec_started([Membrane.Child.name_t()], Parent.state_t()) :: Parent.state_t()
   def exec_handle_spec_started(children_names, state) do
-    context = Component.callback_context_generator(:parent, SpecStarted, state)
+    # context = Component.callback_context(state)
 
     action_handler =
       case state do
@@ -117,7 +117,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
     CallbackHandler.exec_and_handle_callback(
       :handle_spec_started,
       action_handler,
-      %{context: context},
+      %{context: &Component.callback_context/1},
       [children_names],
       state
     )

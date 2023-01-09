@@ -23,7 +23,7 @@ defmodule Membrane.Core.Element.PadController do
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
-  require Membrane.Element.CallbackContext.{PadAdded, PadRemoved}
+  require Membrane.Element.CallbackContext
   require Membrane.Logger
   require Membrane.Pad
 
@@ -391,11 +391,10 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec maybe_handle_pad_added(Pad.ref_t(), State.t()) :: State.t()
   defp maybe_handle_pad_added(ref, state) do
-    %{options: pad_opts, direction: direction, availability: availability} =
-      PadModel.get_data!(state, ref)
+    %{options: pad_opts, availability: availability} = PadModel.get_data!(state, ref)
 
     if Pad.availability_mode(availability) == :dynamic do
-      context = &CallbackContext.PadAdded.from_state(&1, options: pad_opts, direction: direction)
+      context = &CallbackContext.from_state(&1, pad_options: pad_opts)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_added,
@@ -411,15 +410,13 @@ defmodule Membrane.Core.Element.PadController do
 
   @spec maybe_handle_pad_removed(Pad.ref_t(), State.t()) :: State.t()
   defp maybe_handle_pad_removed(ref, state) do
-    %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
+    %{availability: availability} = PadModel.get_data!(state, ref)
 
     if Pad.availability_mode(availability) == :dynamic do
-      context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
-
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_removed,
         ActionHandler,
-        %{context: context},
+        %{context: &CallbackContext.from_state/1},
         [ref],
         state
       )

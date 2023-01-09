@@ -89,13 +89,12 @@ defmodule Membrane.Core.Element.BufferController do
           State.t()
         ) :: State.t()
   def exec_buffer_callback(pad_ref, buffers, %State{type: :filter} = state) do
-    require CallbackContext.Process
     Telemetry.report_metric("buffer", 1, inspect(pad_ref))
 
     CallbackHandler.exec_and_handle_callback(
       :handle_process_list,
       ActionHandler,
-      %{context: &CallbackContext.Process.from_state/1},
+      %{context: &CallbackContext.from_state/1},
       [pad_ref, buffers],
       state
     )
@@ -103,15 +102,13 @@ defmodule Membrane.Core.Element.BufferController do
 
   def exec_buffer_callback(pad_ref, buffers, %State{type: type} = state)
       when type in [:sink, :endpoint] do
-    require CallbackContext.Write
-
     Telemetry.report_metric(:buffer, length(List.wrap(buffers)))
     Telemetry.report_bitrate(buffers)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_write_list,
       ActionHandler,
-      %{context: &CallbackContext.Write.from_state/1},
+      %{context: &CallbackContext.from_state/1},
       [pad_ref, buffers],
       state
     )

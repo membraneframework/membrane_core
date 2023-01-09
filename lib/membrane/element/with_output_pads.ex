@@ -33,7 +33,7 @@ defmodule Membrane.Element.WithOutputPads do
               pad :: Pad.ref_t(),
               size :: non_neg_integer,
               unit :: Buffer.Metric.unit_t(),
-              context :: CallbackContext.Demand.t(),
+              context :: CallbackContext.t(),
               state :: Element.state_t()
             ) :: Membrane.Element.Base.callback_return_t()
 

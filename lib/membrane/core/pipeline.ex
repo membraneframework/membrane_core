@@ -13,7 +13,6 @@ defmodule Membrane.Core.Pipeline do
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
   require Membrane.Core.Component
-  require Membrane.Pipeline.CallbackContext.Call
 
   @impl GenServer
   def init(params) do
@@ -48,13 +47,11 @@ defmodule Membrane.Core.Pipeline do
       resource_guard: resource_guard
     }
 
-    require CallbackContext.Init
-
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_init,
         ActionHandler,
-        %{context: &CallbackContext.Init.from_state/1},
+        %{context: &CallbackContext.from_state/1},
         [],
         %{state | internal_state: params.options}
       )
@@ -147,7 +144,7 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def handle_call(message, from, state) do
-    context = &CallbackContext.Call.from_state(&1, from: from)
+    context = &CallbackContext.from_state(&1, from: from)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_call,

@@ -5,7 +5,7 @@ defmodule Membrane.Core.FilterAggregator.Context do
 
   require Membrane.Core.FilterAggregator.InternalAction, as: InternalAction
 
-  @type t :: Membrane.Core.Element.CallbackContext.default_fields()
+  @type t :: Element.CallbackContext.t()
 
   @typedoc """
   Collection of states for encapsuled elements as kept in `Membrane.FilterAggregator` element

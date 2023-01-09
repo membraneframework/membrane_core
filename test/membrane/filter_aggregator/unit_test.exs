@@ -7,8 +7,6 @@ defmodule Membrane.FilterAggregator.UnitTest do
   alias Membrane.Element.PadData
   alias Membrane.FilterAggregator
 
-  alias Membrane.Element.CallbackContext.{Event, Playing, Process, StreamManagement}
-
   alias Membrane.StreamFormat.Mock, as: MockStreamFormat
 
   defmodule ElementWithMembranePads do
@@ -176,7 +174,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
 
   test "handle_playing with stream format sending", test_ctx do
     expect(FilterA, :handle_playing, fn ctx_a, %{module: FilterA} = state ->
-      assert %Playing{
+      assert %{
                clock: nil,
                name: :a,
                pads: pads,
@@ -218,7 +216,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
       # ensure proper callbacks order
       assert state == %{module: FilterB, state: :stream_format_sent}
 
-      assert %Playing{
+      assert %{
                clock: nil,
                name: :b,
                pads: pads,
@@ -279,11 +277,11 @@ defmodule Membrane.FilterAggregator.UnitTest do
     buffers_count = Enum.count(test_range)
 
     FilterA
-    |> expect(:handle_process_list, fn :input, buffers, %Process{}, %{module: FilterA} = state ->
+    |> expect(:handle_process_list, fn :input, buffers, %{}, %{module: FilterA} = state ->
       args_list = buffers |> Enum.map(&[:input, &1])
       {[split: {:handle_process, args_list}], state}
     end)
-    |> expect(:handle_process, buffers_count, fn :input, buffer, %Process{}, state ->
+    |> expect(:handle_process, buffers_count, fn :input, buffer, %{}, state ->
       assert state.module == FilterA
       assert %Buffer{payload: <<payload>>} = buffer
       out_payload = payload + 1
@@ -292,7 +290,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
     end)
 
     FilterB
-    |> expect(:handle_process_list, buffers_count, fn :input, [buffer], %Process{}, state ->
+    |> expect(:handle_process_list, buffers_count, fn :input, [buffer], %{}, state ->
       assert state.module == FilterB
       assert %Buffer{payload: <<payload>>} = buffer
       out_payload = payload * 2
@@ -325,29 +323,29 @@ defmodule Membrane.FilterAggregator.UnitTest do
     buffer = %Buffer{payload: "test"}
 
     FilterA
-    |> expect(:handle_start_of_stream, fn :input, %StreamManagement{} = ctx, state ->
+    |> expect(:handle_start_of_stream, fn :input, %{} = ctx, state ->
       assert ctx.pads.input.start_of_stream? == true
       {[], state}
     end)
-    |> expect(:handle_process_list, fn :input, [^buffer], %Process{} = ctx, state ->
+    |> expect(:handle_process_list, fn :input, [^buffer], %{} = ctx, state ->
       assert ctx.pads.input.start_of_stream? == true
       {[forward: [buffer]], state}
     end)
-    |> expect(:handle_end_of_stream, fn :input, %StreamManagement{} = ctx, state ->
+    |> expect(:handle_end_of_stream, fn :input, %{} = ctx, state ->
       assert ctx.pads.input.end_of_stream? == true
       {[forward: :end_of_stream], %{state | state: :ok}}
     end)
 
     FilterB
-    |> expect(:handle_start_of_stream, fn :input, %StreamManagement{} = ctx, state ->
+    |> expect(:handle_start_of_stream, fn :input, %{} = ctx, state ->
       assert ctx.pads.input.start_of_stream? == true
       {[], state}
     end)
-    |> expect(:handle_process_list, fn :input, [^buffer], %Process{} = ctx, state ->
+    |> expect(:handle_process_list, fn :input, [^buffer], %{} = ctx, state ->
       assert ctx.pads.input.start_of_stream? == true
       {[buffer: {:output, [buffer]}], state}
     end)
-    |> expect(:handle_end_of_stream, fn :input, %StreamManagement{} = ctx, state ->
+    |> expect(:handle_end_of_stream, fn :input, %{} = ctx, state ->
       assert ctx.pads.input.end_of_stream? == true
       {[end_of_stream: :output], %{state | state: :ok}}
     end)
@@ -379,12 +377,12 @@ defmodule Membrane.FilterAggregator.UnitTest do
     event = %Discontinuity{}
 
     FilterA
-    |> expect(:handle_event, fn :input, ^event, %Event{}, state ->
+    |> expect(:handle_event, fn :input, ^event, %{}, state ->
       {[forward: event], %{state | state: :ok}}
     end)
 
     FilterB
-    |> expect(:handle_event, fn :input, ^event, %Event{}, state ->
+    |> expect(:handle_event, fn :input, ^event, %{}, state ->
       {[event: {:output, event}], %{state | state: :ok}}
     end)
 

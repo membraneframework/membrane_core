@@ -65,7 +65,7 @@ defmodule Membrane.Element.Base do
   For these reasons, it's important to do any long-lasting or complex work in `c:handle_setup/2`,
   while `handle_init` should be used for things like parsing options or initializing state.
   """
-  @callback handle_init(context :: CallbackContext.Init.t(), options :: Element.options_t()) ::
+  @callback handle_init(context :: CallbackContext.t(), options :: Element.options_t()) ::
               callback_return_t
 
   @doc """
@@ -74,7 +74,7 @@ defmodule Membrane.Element.Base do
   Any long-lasting or complex initialization should happen here.
   """
   @callback handle_setup(
-              context :: CallbackContext.Setup.t(),
+              context :: CallbackContext.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -85,7 +85,7 @@ defmodule Membrane.Element.Base do
   through its pads.
   """
   @callback handle_playing(
-              context :: CallbackContext.Playing.t(),
+              context :: CallbackContext.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -97,7 +97,7 @@ defmodule Membrane.Element.Base do
   """
   @callback handle_info(
               message :: any(),
-              context :: CallbackContext.Info.t(),
+              context :: CallbackContext.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -107,7 +107,7 @@ defmodule Membrane.Element.Base do
   """
   @callback handle_pad_added(
               pad :: Pad.ref_t(),
-              context :: CallbackContext.PadAdded.t(),
+              context :: CallbackContext.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -117,7 +117,7 @@ defmodule Membrane.Element.Base do
   """
   @callback handle_pad_removed(
               pad :: Pad.ref_t(),
-              context :: CallbackContext.PadRemoved.t(),
+              context :: CallbackContext.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -130,7 +130,7 @@ defmodule Membrane.Element.Base do
   @callback handle_event(
               pad :: Pad.ref_t(),
               event :: Event.t(),
-              context :: CallbackContext.Event.t(),
+              context :: CallbackContext.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -140,7 +140,7 @@ defmodule Membrane.Element.Base do
   """
   @callback handle_tick(
               timer_id :: any,
-              context :: CallbackContext.Tick.t(),
+              context :: CallbackContext.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -149,7 +149,7 @@ defmodule Membrane.Element.Base do
   """
   @callback handle_parent_notification(
               notification :: Membrane.ParentNotification.t(),
-              context :: Membrane.Element.CallbackContext.ParentNotification.t(),
+              context :: CallbackContext.t(),
               state :: Element.state_t()
             ) :: callback_return_t
 
@@ -159,7 +159,7 @@ defmodule Membrane.Element.Base do
   By default it returns `t:Membrane.Element.Action.terminate_t/0` with reason `:normal`.
   """
   @callback handle_terminate_request(
-              context :: CallbackContext.TerminateRequest.t(),
+              context :: CallbackContext.t(),
               state :: Element.state_t()
             ) ::
               callback_return_t()

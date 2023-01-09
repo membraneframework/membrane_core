@@ -197,36 +197,30 @@ defmodule Membrane.FilterAggregator do
   end
 
   defp perform_action({:buffer, {:output, buffer}}, module, context, state) do
-    cb_context = struct!(CallbackContext.Process, context)
-    module.handle_process_list(:input, List.wrap(buffer), cb_context, state)
+    module.handle_process_list(:input, List.wrap(buffer), context, state)
   end
 
   defp perform_action({:stream_format, {:output, stream_format}}, module, context, state) do
     cb_context =
       context
       |> Map.put(:old_stream_format, context.pads.input.stream_format)
-      |> then(&struct!(CallbackContext.StreamFormat, &1))
 
     module.handle_stream_format(:input, stream_format, cb_context, state)
   end
 
   defp perform_action({:event, {:output, event}}, module, context, state) do
-    cb_context = struct!(CallbackContext.Event, context)
-    module.handle_event(:input, event, cb_context, state)
+    module.handle_event(:input, event, context, state)
   end
 
   # Internal, FilterAggregator action used to trigger handle_start_of_stream
   defp perform_action(InternalAction.start_of_stream(:output), module, context, state) do
-    cb_context = struct!(CallbackContext.StreamManagement, context)
-
-    {actions, new_state} = module.handle_start_of_stream(:input, cb_context, state)
+    {actions, new_state} = module.handle_start_of_stream(:input, context, state)
 
     {[InternalAction.start_of_stream(:output) | actions], new_state}
   end
 
   defp perform_action({:end_of_stream, :output}, module, context, state) do
-    cb_context = struct!(CallbackContext.StreamManagement, context)
-    module.handle_end_of_stream(:input, cb_context, state)
+    module.handle_end_of_stream(:input, context, state)
   end
 
   defp perform_action({:demand, {:input, _size}}, _module, _context, _state) do
@@ -256,9 +250,8 @@ defmodule Membrane.FilterAggregator do
       args_lists
       |> Enum.flat_map_reduce({context, state}, fn [:input, buffer], {acc_context, acc_state} ->
         acc_context = Context.before_incoming_action(acc_context, {:buffer, {:output, buffer}})
-        cb_context = struct!(CallbackContext.Process, acc_context)
 
-        {actions, state} = module.handle_process(:input, buffer, cb_context, acc_state)
+        {actions, state} = module.handle_process(:input, buffer, context, acc_state)
 
         acc_context = Context.after_incoming_action(acc_context, {:buffer, {:output, buffer}})
 
@@ -269,14 +262,12 @@ defmodule Membrane.FilterAggregator do
   end
 
   defp perform_action(InternalAction.setup(), module, context, state) do
-    cb_context = struct!(CallbackContext.Setup, context)
-    {actions, state} = module.handle_setup(cb_context, state)
+    {actions, state} = module.handle_setup(context, state)
     {actions ++ [InternalAction.setup()], state}
   end
 
   defp perform_action(InternalAction.playing(), module, context, state) do
-    cb_context = struct!(CallbackContext.Playing, context)
-    {actions, state} = module.handle_playing(cb_context, state)
+    {actions, state} = module.handle_playing(context, state)
     {actions ++ [InternalAction.playing()], state}
   end
 

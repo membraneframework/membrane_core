@@ -635,8 +635,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
          crash_initiator,
          state
        ) do
-    context =
-      Component.callback_context_generator(:parent, CrashGroupDown, state,
+    context_generator =
+      &Component.callback_context(&1,
         members: group_members,
         crash_initiator: crash_initiator
       )
@@ -644,7 +644,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     CallbackHandler.exec_and_handle_callback(
       :handle_crash_group_down,
       Membrane.Core.Pipeline.ActionHandler,
-      %{context: context},
+      %{context: context_generator},
       [group_name],
       state
     )

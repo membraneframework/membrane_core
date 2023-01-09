@@ -11,7 +11,6 @@ defmodule Membrane.Core.Element.DemandController do
   alias Membrane.Element.CallbackContext
   alias Membrane.Pad
 
-  require CallbackContext.Demand
   require Membrane.Core.Child.PadModel
   require Membrane.Logger
 
@@ -51,8 +50,7 @@ defmodule Membrane.Core.Element.DemandController do
     state = PadModel.set_data!(state, pad_ref, data)
 
     if exec_handle_demand?(data) do
-      require CallbackContext.Demand
-      context = &CallbackContext.Demand.from_state(&1, incoming_demand: size)
+      context = &CallbackContext.from_state(&1, incoming_demand: size)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_demand,

@@ -35,7 +35,7 @@ defmodule Membrane.Endpoint do
   @callback handle_write_list(
               pad :: Pad.ref_t(),
               buffers :: list(Buffer.t()),
-              context :: CallbackContext.Process.t(),
+              context :: CallbackContext.t(),
               state :: Element.state_t()
             ) :: Membrane.Element.Base.callback_return_t()
 
@@ -48,7 +48,7 @@ defmodule Membrane.Endpoint do
   @callback handle_write(
               pad :: Pad.ref_t(),
               buffer :: Buffer.t(),
-              context :: CallbackContext.Process.t(),
+              context :: CallbackContext.t(),
               state :: Element.state_t()
             ) :: Membrane.Element.Base.callback_return_t()
 

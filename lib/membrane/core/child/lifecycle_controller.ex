@@ -7,13 +7,13 @@ defmodule Membrane.Core.Child.LifecycleController do
   @spec handle_parent_notification(Membrane.ParentNotification.t(), Membrane.Core.Child.state_t()) ::
           Membrane.Core.Child.state_t()
   def handle_parent_notification(notification, state) do
-    context = Component.callback_context_generator(:child, ParentNotification, state)
+    # context = Component.callback_context(state)
     action_handler = Component.action_handler(state)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_parent_notification,
       action_handler,
-      %{context: context},
+      %{context: &Component.callback_context/1},
       notification,
       state
     )
