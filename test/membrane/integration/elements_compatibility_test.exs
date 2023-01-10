@@ -117,6 +117,20 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
     end
 
     @impl true
+    def handle_playing(ctx, state) do
+      if ctx.pads.output.demand_unit != ctx.pads.output.other_demand_unit do
+        raise "Autodemand demand unit resolved improperly"
+      end
+
+      if ctx.pads.input[:other_demand_unit] != nil and
+           ctx.pads.input.demand_unit != ctx.pads.input.other_demand_unit do
+        raise "Autodemand demand unit resolved improperly"
+      end
+
+      {[], state}
+    end
+
+    @impl true
     def handle_process(:input, buf, _ctx, state) do
       {[buffer: {:output, buf}], state}
     end

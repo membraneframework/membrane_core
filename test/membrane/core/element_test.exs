@@ -74,7 +74,8 @@ defmodule Membrane.Core.ElementTest do
             pad_spec: :dynamic_input,
             pad_ref: :dynamic_input,
             pid: self(),
-            child: :other
+            child: :other,
+            pad_props: %{options: [], toilet_capacity: nil, throttling_factor: nil}
           },
           %{
             initiator: :sibling,
@@ -211,11 +212,21 @@ defmodule Membrane.Core.ElementTest do
                    pad_props: %{options: [], toilet_capacity: nil},
                    child: :this
                  },
-                 %{pad_ref: :dynamic_input, pid: pid, child: :other},
+                 %{
+                   pad_ref: :dynamic_input,
+                   pid: pid,
+                   child: :other,
+                   pad_props: %{options: [], toilet_capacity: nil, throttling_factor: nil}
+                 },
                  %{
                    initiator: :sibling,
-                   other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
-                   link_metadata: %{toilet: nil, observability_metadata: %{}},
+                   other_info: %{
+                     direction: :input,
+                     mode: :pull,
+                     demand_unit: :buffers,
+                     demand_mode: :manual
+                   },
+                   link_metadata: %{observability_metadata: %{}},
                    stream_format_validation_params: []
                  }
                ]),
@@ -223,8 +234,7 @@ defmodule Membrane.Core.ElementTest do
                get_state()
              )
 
-    assert {%{demand_unit: :buffers, direction: :input, mode: :pull},
-            %{child: :this, pad_props: %{options: []}, pad_ref: :output},
+    assert {%{child: :this, pad_props: %{options: []}, pad_ref: :output},
             %{
               availability: :always,
               demand_mode: :manual,
@@ -232,7 +242,10 @@ defmodule Membrane.Core.ElementTest do
               mode: :pull,
               name: :output,
               options: nil
-            }, %{toilet: nil}} = reply
+            },
+            %{toilet: toilet, output_demand_unit: :buffers, input_demand_unit: :buffers}} = reply
+
+    assert toilet != nil
 
     assert %Membrane.Element.PadData{
              pid: ^pid,
