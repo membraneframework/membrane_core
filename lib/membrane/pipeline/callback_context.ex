@@ -3,6 +3,14 @@ defmodule Membrane.Pipeline.CallbackContext do
   Module describing context passed to the `Membrane.Pipeline` callbacks.
   """
 
+  @typedoc """
+  Type describing context passed to the `Membrane.Pipeline` callbacks.
+
+  Field `:from` is present only in `c:Membrane.Pipeline.handle_call/3`.
+
+  Fields `:members` and `:crash_initiator` are present only in
+  `c:Membrane.Pipeline.handle_crash_group_down/3`.
+  """
   @type t :: %{
           :clock => Membrane.Clock.t(),
           :children => %{Membrane.Child.name_t() => Membrane.ChildEntry.t()},

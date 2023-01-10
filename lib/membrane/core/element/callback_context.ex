@@ -8,7 +8,8 @@ defmodule Membrane.Core.Element.CallbackContext do
 
   @type options_t :: [option_t()]
 
-  @spec from_state(Membrane.Core.Element.State.t(), options_t()) :: Membrane.Element.CallbackContext.t()
+  @spec from_state(Membrane.Core.Element.State.t(), options_t()) ::
+          Membrane.Element.CallbackContext.t()
   def from_state(state, additional_fields \\ []) do
     Map.new(additional_fields)
     |> Map.merge(%{
