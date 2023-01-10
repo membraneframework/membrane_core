@@ -1,6 +1,6 @@
 defmodule Membrane.RCPipeline do
   @moduledoc """
-  Basic `Membrane.Pipeline` implementation that can be controlled by a controlling process.
+  Remote controlled pipeline - a basic `Membrane.Pipeline` implementation that can be remotely controlled from an external process.
 
   The easiest way to start this pipeline is to use `start_link!/1`
   ```

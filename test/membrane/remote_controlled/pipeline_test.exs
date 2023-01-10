@@ -51,7 +51,7 @@ defmodule Membrane.RCPipelineTest do
     {:ok, pipeline: pipeline}
   end
 
-  describe "Membrane.RCRCPipeline.subscribe/2" do
+  describe "Membrane.RCPipeline.subscribe/2" do
     setup :setup_pipeline
 
     test "testing process should receive all subscribed events", %{pipeline: pipeline} do
@@ -100,7 +100,7 @@ defmodule Membrane.RCPipelineTest do
     end
   end
 
-  describe "Membrane.RCRCPipeline await_* functions" do
+  describe "Membrane.RCPipeline await_* functions" do
     setup :setup_pipeline
 
     test "should await for requested messages", %{pipeline: pipeline} do
