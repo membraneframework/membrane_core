@@ -18,7 +18,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
     {entity, pad_type_spec} =
       case component do
         :bin -> {"bin", "bin_spec_t/0"}
-        :element -> {"element", "#{direction}_spec_t/0"}
+        :element -> {"element", "element_spec_t/0"}
       end
 
     """
@@ -179,17 +179,31 @@ defmodule Membrane.Core.Child.PadsSpecs do
                 availability: [in: [:always, :on_request], default: :always],
                 accepted_formats_str: [],
                 mode: [in: [:pull, :push], default: :pull],
-                demand_mode: [
-                  in: [:auto, :manual],
-                  default: :manual
-                ],
-                demand_unit:
-                  &if &1.mode == :pull and (component == :bin or direction == :input) do
+                demand_mode:
+                  &if &1.mode == :pull do
                     [
-                      in: [:buffers, :bytes],
-                      default: :buffers,
-                      required?: &1.demand_mode == :manual
+                      in: [:auto, :manual],
+                      default: :manual
                     ]
+                  end,
+                demand_unit:
+                  &cond do
+                    component == :bin or &1[:demand_mode] != :manual ->
+                      nil
+
+                    direction == :input ->
+                      [
+                        in: [:buffers, :bytes]
+                      ]
+
+                    direction == :output ->
+                      [
+                        in: [:buffers, :bytes, nil],
+                        default: nil
+                      ]
+
+                    true ->
+                      nil
                   end,
                 options: [default: nil]
               ) do

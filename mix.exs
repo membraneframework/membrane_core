@@ -79,14 +79,17 @@ defmodule Membrane.Mixfile do
         Membrane.Event,
         Membrane.EventProtocol,
         Membrane.Testing,
-        Membrane.RemoteControlled,
-        Membrane.RemoteControlled.Message
+        Membrane.RCPipeline,
+        Membrane.RCMessage
       ],
       groups_for_modules: [
         Pipeline: [
           ~r/^Membrane\.Pipeline($|\.)/,
-          ~r/^Membrane\.(CrashGroup)($|\.)/,
-          ~r/^Membrane\.(RemoteControlled)($|\.)/
+          ~r/^Membrane\.(CrashGroup)($|\.)/
+        ],
+        "RC Pipeline": [
+          ~r/^Membrane\.(RCPipeline)($|\.)/,
+          ~r/^Membrane\.(RCMessage)($|\.)/
         ],
         Bin: [~r/^Membrane\.Bin($|\.)/],
         Element: [
@@ -138,7 +141,7 @@ defmodule Membrane.Mixfile do
     [
       {:qex, "~> 0.3"},
       {:telemetry, "~> 1.0"},
-      {:bunch, "~> 1.5"},
+      {:bunch, "~> 1.6"},
       {:ratio, "~> 3.0"},
       # Development
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},

@@ -1,6 +1,6 @@
-defmodule Membrane.RemoteControlled.Message do
+defmodule Membrane.RCMessage do
   @moduledoc """
-  An abstract module aggregating all the messages that can be sent by the `RemoteControlled.Pipeline`.
+  An abstract module aggregating all the messages that can be sent by the `RCPipeline`.
 
   Check `t:t/0` for available messages.
   """

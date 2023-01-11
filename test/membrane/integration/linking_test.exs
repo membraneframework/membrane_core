@@ -14,11 +14,13 @@ defmodule Membrane.Integration.LinkingTest do
 
     def_input_pad :input,
       availability: :on_request,
-      accepted_format: _any
+      accepted_format: _any,
+      demand_unit: :buffers
 
     def_output_pad :output,
       availability: :on_request,
-      accepted_format: _any
+      accepted_format: _any,
+      demand_unit: :buffers
 
     @impl true
     def handle_demand(_pad, _size, _unit, _ctx, state) do
@@ -38,7 +40,6 @@ defmodule Membrane.Integration.LinkingTest do
                 remove_child_on_unlink: [spec: boolean(), default: true]
 
     def_output_pad :output,
-      demand_unit: :buffers,
       accepted_format: _any,
       availability: :on_request
 
@@ -139,50 +140,49 @@ defmodule Membrane.Integration.LinkingTest do
       assert_pipeline_notified(pipeline, :bin, :handle_pad_removed)
     end
 
-    # Test below is commented out due to occuring a race condition in linking components.
-    # It should be uncommented, when race condition will be solved.
-    # For problem description, you can go to https://membraneframework.atlassian.net/jira/software/c/projects/MC/boards/5/backlog?view=detail&selectedIssue=MC-135&issueLimit=100
-    # test "and element crashes, bin forwards the unlink message to child", %{pipeline: pipeline} do
-    #   bin_spec = {
-    #     child(:bin, %Bin{
-    #       child: %Testing.Source{output: ['a', 'b', 'c']},
-    #       remove_child_on_unlink: false
-    #     }),
-    #     crash_group_mode: :temporary, group: :group_1
-    #   }
+    test "and element crashes, bin forwards the unlink message to child", %{pipeline: pipeline} do
+      bin_spec = {
+        child(:bin, %Bin{
+          child: %Testing.Source{output: ['a', 'b', 'c']},
+          remove_child_on_unlink: false
+        }),
+        crash_group_mode: :temporary, group: :group_1
+      }
 
-    #   sink_spec = [
-    #     {
-    #       child(:sink, Testing.Sink),
-    #       crash_group_mode: :temporary, group: :group_2
-    #     },
-    #     get_child(Child.ref(:bin, group: :group_1))
-    #     |> get_child(Child.ref(:sink, group: :group_2))
-    #   ]
+      sink_spec = [
+        {
+          child(:sink, Testing.Sink),
+          crash_group_mode: :temporary, group: :group_2
+        },
+        get_child(Child.ref(:bin, group: :group_1))
+        |> get_child(Child.ref(:sink, group: :group_2))
+      ]
 
-    #   send(pipeline, {:start_spec, %{spec: bin_spec}})
-    #   assert_receive(:spec_started)
+      send(pipeline, {:start_spec, %{spec: bin_spec}})
+      assert_receive(:spec_started)
 
-    #   send(pipeline, {:start_spec, %{spec: sink_spec}})
-    #   assert_receive(:spec_started)
+      send(pipeline, {:start_spec, %{spec: sink_spec}})
+      assert_receive(:spec_started)
 
-    #   sink_pid = get_child_pid({Membrane.Child, :group_2, :sink}, pipeline)
-    #   bin_pid = get_child_pid({Membrane.Child, :group_1, :bin}, pipeline)
-    #   source_pid = get_child_pid(:source, bin_pid)
-    #   source_ref = Process.monitor(source_pid)
+      sink_pid = get_child_pid({Membrane.Child, :group_2, :sink}, pipeline)
+      bin_pid = get_child_pid({Membrane.Child, :group_1, :bin}, pipeline)
+      source_pid = get_child_pid(:source, bin_pid)
+      source_ref = Process.monitor(source_pid)
 
-    #   assert_pipeline_play(pipeline)
-    #   Process.exit(sink_pid, :kill)
-    #   assert_pipeline_crash_group_down(pipeline, :group_2)
+      assert_pipeline_play(pipeline)
+      Process.exit(sink_pid, :kill)
+      assert_pipeline_crash_group_down(pipeline, :group_2)
 
-    #   # Source has a static pad so it should crash when this pad is being unlinked while being
-    #   # in playing state. If source crashes with proper error it means that :handle_unlink message
-    #   # has been properly forwarded by a bin.
-    #   assert_receive {:DOWN, ^source_ref, :process, ^source_pid,
-    #                   {%Membrane.PadError{message: message}, _localization}}
+      # Source has a static pad so it should crash when this pad is being unlinked while being
+      # in playing state. If source crashes with proper error it means that :handle_unlink message
+      # has been properly forwarded by a bin.
+      assert_receive {:DOWN, ^source_ref, :process, ^source_pid, {error, _localization}}, 6_000
 
-    #   assert message =~ ~r/static.*pad.*unlink/u
-    # end
+      assert match?(%Membrane.LinkError{}, error) or
+               match?(%Membrane.PadError{}, error)
+
+      assert error.message =~ ~r/static.*pad.*unlink/u
+    end
   end
 
   test "element should crash when its neighbor connected via static pad crashes", %{
@@ -379,18 +379,44 @@ defmodule Membrane.Integration.LinkingTest do
 
       def_input_pad :input,
         availability: :on_request,
-        accepted_format: _any,
-        demand_unit: :buffers
+        accepted_format: _any
+
+      def_output_pad :output,
+        availability: :on_request,
+        accepted_format: _any
     end
 
     pipeline =
       Testing.Pipeline.start_supervised!(
-        spec: child(:source, Testing.Source) |> child(:bin, NoInternalLinkBin)
+        spec: {
+          child(:bin_1, NoInternalLinkBin),
+          group: :group_1, crash_group_mode: :temporary
+        }
       )
 
-    bin_pid = get_child_pid(:bin, pipeline)
-    monitor = Process.monitor(bin_pid)
-    assert_receive {:DOWN, ^monitor, :process, _pid, {%Membrane.LinkError{}, _stacktrace}}, 6000
+    Testing.Pipeline.execute_actions(pipeline,
+      spec: [
+        {
+          child(:bin_2, NoInternalLinkBin),
+          group: :group_2, crash_group_mode: :temporary
+        },
+        get_child(Child.ref(:bin_1, group: :group_1))
+        |> get_child(Child.ref(:bin_2, group: :group_2))
+      ]
+    )
+
+    Process.sleep(1000)
+
+    bin_1_pid = get_child_pid(Child.ref(:bin_1, group: :group_1), pipeline)
+    bin_2_pid = get_child_pid(Child.ref(:bin_2, group: :group_2), pipeline)
+
+    monitor_1 = Process.monitor(bin_1_pid)
+    monitor_2 = Process.monitor(bin_2_pid)
+
+    assert_receive {:DOWN, ^monitor_1, :process, _pid, {%Membrane.LinkError{}, _stacktrace}}, 6000
+    assert_receive {:DOWN, ^monitor_2, :process, _pid, {%Membrane.LinkError{}, _stacktrace}}, 6000
+
+    Testing.Pipeline.terminate(pipeline)
   end
 
   test "A spec entailing multiple dependent specs in a bin should work" do

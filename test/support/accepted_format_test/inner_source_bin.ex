@@ -12,7 +12,6 @@ defmodule Membrane.Support.AcceptedFormatTest.InnerSourceBin do
   alias Membrane.Support.AcceptedFormatTest.StreamFormat.{AcceptedByAll, AcceptedByInnerBins}
 
   def_output_pad :output,
-    demand_unit: :buffers,
     accepted_format:
       %StreamFormat{format: format} when format in [AcceptedByAll, AcceptedByInnerBins]
 
