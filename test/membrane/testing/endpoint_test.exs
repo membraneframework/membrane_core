@@ -16,7 +16,7 @@ defmodule Membrane.Testing.EndpointTest do
              Endpoint.handle_playing(nil, %{stream_format: :stream_format})
   end
 
-  describe "Handle write" do
+  describe "Handle buffer" do
     test "demands when autodemand is true" do
       buffer = %Membrane.Buffer{payload: 123}
 

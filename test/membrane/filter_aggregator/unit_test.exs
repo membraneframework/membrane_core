@@ -270,13 +270,13 @@ defmodule Membrane.FilterAggregator.UnitTest do
     assert ctx_b.playback == :playing
   end
 
-  test "handle_buffer_list splitting and mapping buffers", ctx do
+  test "handle_buffers_batch splitting and mapping buffers", ctx do
     test_range = 1..10
     buffers = test_range |> Enum.map(&%Buffer{payload: <<&1>>})
     buffers_count = Enum.count(test_range)
 
     FilterA
-    |> expect(:handle_buffer_list, fn :input, buffers, %{}, %{module: FilterA} = state ->
+    |> expect(:handle_buffers_batch, fn :input, buffers, %{}, %{module: FilterA} = state ->
       args_list = buffers |> Enum.map(&[:input, &1])
       {[split: {:handle_buffer, args_list}], state}
     end)
@@ -289,7 +289,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
     end)
 
     FilterB
-    |> expect(:handle_buffer_list, buffers_count, fn :input, [buffer], %{}, state ->
+    |> expect(:handle_buffers_batch, buffers_count, fn :input, [buffer], %{}, state ->
       assert state.module == FilterB
       assert %Buffer{payload: <<payload>>} = buffer
       out_payload = payload * 2
@@ -298,7 +298,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
     end)
 
     assert {actions, %{states: states}} =
-             FilterAggregator.handle_buffer_list(:input, buffers, %{}, %{states: ctx.states})
+             FilterAggregator.handle_buffers_batch(:input, buffers, %{}, %{states: ctx.states})
 
     expected_actions =
       test_range
@@ -326,7 +326,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
       assert ctx.pads.input.start_of_stream? == true
       {[], state}
     end)
-    |> expect(:handle_buffer_list, fn :input, [^buffer], %{} = ctx, state ->
+    |> expect(:handle_buffers_batch, fn :input, [^buffer], %{} = ctx, state ->
       assert ctx.pads.input.start_of_stream? == true
       {[forward: [buffer]], state}
     end)
@@ -340,7 +340,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
       assert ctx.pads.input.start_of_stream? == true
       {[], state}
     end)
-    |> expect(:handle_buffer_list, fn :input, [^buffer], %{} = ctx, state ->
+    |> expect(:handle_buffers_batch, fn :input, [^buffer], %{} = ctx, state ->
       assert ctx.pads.input.start_of_stream? == true
       {[buffer: {:output, [buffer]}], state}
     end)
@@ -355,7 +355,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
              })
 
     assert {[buffer: {:output, buffers}], %{states: states}} =
-             FilterAggregator.handle_buffer_list(:input, [buffer], %{}, %{states: states})
+             FilterAggregator.handle_buffers_batch(:input, [buffer], %{}, %{states: states})
 
     assert List.wrap(buffers) == [buffer]
 

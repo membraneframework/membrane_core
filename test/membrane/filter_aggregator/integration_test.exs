@@ -29,7 +29,7 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
     def_output_pad :output, demand_mode: :auto, accepted_format: RemoteStream
 
     @impl true
-    def handle_buffer_list(:input, buffers, _ctx, state) do
+    def handle_buffers_batch(:input, buffers, _ctx, state) do
       buffers =
         buffers
         |> Enum.map(fn %Buffer{payload: <<idx, payload::binary>>} ->
