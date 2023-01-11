@@ -165,6 +165,7 @@ defmodule Membrane.Logger do
     |> Keyword.get(key, default)
   end
 
+
   defp prepend_prefix_ast(message) when is_binary(message) or is_list(message) do
     [@get_prefix_ast, message]
   end
