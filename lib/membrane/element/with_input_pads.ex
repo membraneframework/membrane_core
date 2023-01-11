@@ -64,7 +64,7 @@ defmodule Membrane.Element.WithInputPads do
             ) :: Membrane.Element.Base.callback_return_t()
 
   @doc """
-  Callback that is called when buffer should be written by the Element. In contrast
+  Callback that is called when buffer should be processed by the Element. In contrast
   to `c:handle_buffer_list/4`, it is passed only a single buffer.
 
   Called by default implementation of `c:handle_buffer_list/4`.
