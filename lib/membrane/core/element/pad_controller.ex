@@ -73,26 +73,13 @@ defmodule Membrane.Core.Element.PadController do
 
     :ok = Child.PadController.validate_pad_being_linked!(direction, info)
 
-    toilet =
-      if direction == :input and info.mode == :pull do
-        Toilet.new(
-          endpoint.pad_props.toilet_capacity,
-          info.demand_unit,
-          self(),
-          endpoint.pad_props.throttling_factor
-        )
-      else
-        nil
-      end
-
-    do_handle_link(endpoint, other_endpoint, info, toilet, link_props, state)
+    do_handle_link(endpoint, other_endpoint, info, link_props, state)
   end
 
   defp do_handle_link(
          endpoint,
          other_endpoint,
          info,
-         toilet,
          %{initiator: :parent} = props,
          state
        ) do
@@ -105,7 +92,6 @@ defmodule Membrane.Core.Element.PadController do
           initiator: :sibling,
           other_info: info,
           link_metadata: %{
-            toilet: toilet,
             observability_metadata: Observability.setup_link(endpoint.pad_ref)
           },
           stream_format_validation_params: []
@@ -143,7 +129,6 @@ defmodule Membrane.Core.Element.PadController do
          endpoint,
          other_endpoint,
          info,
-         toilet,
          %{initiator: :sibling} = link_props,
          state
        ) do
@@ -153,8 +138,29 @@ defmodule Membrane.Core.Element.PadController do
       stream_format_validation_params: stream_format_validation_params
     } = link_props
 
+    {output_info, input_info, input_endpoint} =
+      if info.direction == :output,
+        do: {info, other_info, other_endpoint},
+        else: {other_info, info, endpoint}
+
+    {output_demand_unit, input_demand_unit} = resolve_demand_units(output_info, input_info)
+
+    link_metadata =
+      Map.put(link_metadata, :input_demand_unit, input_demand_unit)
+      |> Map.put(:output_demand_unit, output_demand_unit)
+
+    toilet =
+      if input_demand_unit != nil,
+        do:
+          Toilet.new(
+            input_endpoint.pad_props.toilet_capacity,
+            input_demand_unit,
+            self(),
+            input_endpoint.pad_props.throttling_factor
+          )
+
     Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
-    link_metadata = %{link_metadata | toilet: link_metadata.toilet || toilet}
+    link_metadata = Map.put(link_metadata, :toilet, toilet)
 
     :ok =
       Child.PadController.validate_pad_mode!(
@@ -215,6 +221,20 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
+  defp resolve_demand_units(output_info, input_info) do
+    output_demand_unit =
+      if output_info[:mode] == :push,
+        do: nil,
+        else: output_info[:demand_unit] || input_info[:demand_unit] || :buffers
+
+    input_demand_unit =
+      if input_info[:mode] == :push,
+        do: nil,
+        else: input_info[:demand_unit] || output_info[:demand_unit] || :buffers
+
+    {output_demand_unit, input_demand_unit}
+  end
+
   defp init_pad_data(
          endpoint,
          other_endpoint,
@@ -240,7 +260,7 @@ defmodule Membrane.Core.Element.PadController do
         associated_pads: []
       })
 
-    data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, state))
+    data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, metadata, state))
 
     data =
       data |> Map.merge(init_pad_mode_data(data, endpoint.pad_props, other_info, metadata, state))
@@ -266,8 +286,15 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  defp init_pad_direction_data(%{direction: :input}, _props, _state), do: %{sticky_messages: []}
-  defp init_pad_direction_data(%{direction: :output}, _props, _state), do: %{}
+  defp init_pad_direction_data(%{direction: :input}, _props, metadata, _state),
+    do: %{
+      sticky_messages: [],
+      demand_unit: metadata.input_demand_unit,
+      other_demand_unit: metadata.output_demand_unit
+    }
+
+  defp init_pad_direction_data(%{direction: :output}, _props, metadata, _state),
+    do: %{demand_unit: metadata.output_demand_unit, other_demand_unit: metadata.input_demand_unit}
 
   defp init_pad_mode_data(
          %{mode: :pull, direction: :input, demand_mode: :manual} = data,
@@ -276,12 +303,14 @@ defmodule Membrane.Core.Element.PadController do
          metadata,
          %State{}
        ) do
-    %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
+    %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: this_demand_unit} = data
+
     enable_toilet? = other_info.mode == :push
 
     input_queue =
       InputQueue.init(%{
-        demand_unit: demand_unit,
+        inbound_demand_unit: other_info[:demand_unit] || this_demand_unit,
+        outbound_demand_unit: this_demand_unit,
         demand_pid: pid,
         demand_pad: other_ref,
         log_tag: inspect(ref),
@@ -296,11 +325,12 @@ defmodule Membrane.Core.Element.PadController do
   defp init_pad_mode_data(
          %{mode: :pull, direction: :output, demand_mode: :manual},
          _props,
-         other_info,
+         _other_info,
          _metadata,
          _state
-       ),
-       do: %{demand: 0, other_demand_unit: other_info[:demand_unit]}
+       ) do
+    %{demand: 0}
+  end
 
   defp init_pad_mode_data(
          %{mode: :pull, demand_mode: :auto, direction: direction},
@@ -334,7 +364,6 @@ defmodule Membrane.Core.Element.PadController do
     %{
       demand: 0,
       associated_pads: associated_pads,
-      other_demand_unit: other_info[:demand_unit],
       auto_demand_size: auto_demand_size,
       toilet: toilet
     }
@@ -343,11 +372,11 @@ defmodule Membrane.Core.Element.PadController do
   defp init_pad_mode_data(
          %{mode: :push, direction: :output},
          _props,
-         %{mode: :pull} = other_info,
+         %{mode: :pull},
          metadata,
          _state
        ) do
-    %{toilet: metadata.toilet, other_demand_unit: other_info[:demand_unit]}
+    %{toilet: metadata.toilet}
   end
 
   defp init_pad_mode_data(_data, _props, _other_info, _metadata, _state), do: %{}

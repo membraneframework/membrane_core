@@ -69,12 +69,12 @@ defmodule Membrane.Element.PadData do
                 demand_unit: nil,
                 start_of_stream?: false,
                 end_of_stream?: false,
-                other_demand_unit: nil,
                 auto_demand_size: nil,
                 sticky_messages: [],
                 toilet: nil,
                 associated_pads: [],
                 sticky_events: [],
-                stream_format_validation_params: []
+                stream_format_validation_params: [],
+                other_demand_unit: nil
               ]
 end

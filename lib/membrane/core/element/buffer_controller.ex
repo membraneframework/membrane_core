@@ -58,6 +58,7 @@ defmodule Membrane.Core.Element.BufferController do
           State.t()
   defp do_handle_buffer(pad_ref, %{mode: :pull, demand_mode: :auto} = data, buffers, state) do
     %{demand: demand, demand_unit: demand_unit} = data
+
     buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
     state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
     state = DemandController.send_auto_demand_if_needed(pad_ref, state)

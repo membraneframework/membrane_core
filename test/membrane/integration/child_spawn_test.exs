@@ -46,7 +46,6 @@ defmodule Membrane.Integration.ChildSpawnTest do
     use Membrane.Bin
 
     def_output_pad :output,
-      demand_unit: :buffers,
       accepted_format: _any,
       availability: :on_request
 

@@ -11,13 +11,11 @@ defmodule Membrane.Integration.DeferSetupTest do
     use Membrane.Bin
 
     def_input_pad :input,
-      demand_unit: :buffers,
       accepted_format: _any,
       availability: :on_request,
       demand_mode: :manual
 
     def_output_pad :output,
-      demand_unit: :buffers,
       accepted_format: _any,
       availability: :on_request,
       demand_mode: :manual

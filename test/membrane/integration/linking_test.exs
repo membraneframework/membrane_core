@@ -14,11 +14,13 @@ defmodule Membrane.Integration.LinkingTest do
 
     def_input_pad :input,
       availability: :on_request,
-      accepted_format: _any
+      accepted_format: _any,
+      demand_unit: :buffers
 
     def_output_pad :output,
       availability: :on_request,
-      accepted_format: _any
+      accepted_format: _any,
+      demand_unit: :buffers
 
     @impl true
     def handle_demand(_pad, _size, _unit, _ctx, state) do
@@ -38,7 +40,6 @@ defmodule Membrane.Integration.LinkingTest do
                 remove_child_on_unlink: [spec: boolean(), default: true]
 
     def_output_pad :output,
-      demand_unit: :buffers,
       accepted_format: _any,
       availability: :on_request
 
@@ -378,13 +379,11 @@ defmodule Membrane.Integration.LinkingTest do
 
       def_input_pad :input,
         availability: :on_request,
-        accepted_format: _any,
-        demand_unit: :buffers
+        accepted_format: _any
 
       def_output_pad :output,
         availability: :on_request,
-        accepted_format: _any,
-        demand_unit: :buffers
+        accepted_format: _any
     end
 
     pipeline =

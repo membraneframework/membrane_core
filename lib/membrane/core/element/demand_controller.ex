@@ -36,6 +36,7 @@ defmodule Membrane.Core.Element.DemandController do
 
   defp do_handle_demand(pad_ref, size, %{demand_mode: :auto} = data, state) do
     %{demand: old_demand, associated_pads: associated_pads} = data
+
     state = PadModel.set_data!(state, pad_ref, :demand, old_demand + size)
 
     if old_demand <= 0 do
@@ -61,7 +62,7 @@ defmodule Membrane.Core.Element.DemandController do
           split_continuation_arbiter: &exec_handle_demand?(PadModel.get_data!(&1, pad_ref)),
           context: context
         },
-        [pad_ref, demand, data.other_demand_unit],
+        [pad_ref, demand, data[:demand_unit]],
         state
       )
     else

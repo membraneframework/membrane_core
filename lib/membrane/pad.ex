@@ -115,39 +115,32 @@ defmodule Membrane.Pad do
   @typedoc """
   Describes how a pad should be declared in element or bin.
   """
-  @type spec_t :: output_spec_t | input_spec_t | bin_spec_t
+  @type spec_t :: element_spec_t | bin_spec_t
 
   @typedoc """
-  For bins there are exactly the same options for both directions.
+  Describes how a pad should be declared inside a bin.
+
   Demand unit is derived from the first element inside the bin linked to the
   given input.
   """
-  @type bin_spec_t :: {name_t(), [common_spec_options_t]}
-
-  @typedoc """
-  Describes how an output pad should be declared inside an element.
-  """
-  @type output_spec_t :: {name_t(), [common_spec_options_t | {:demand_mode, demand_mode_t()}]}
-
-  @typedoc """
-  Describes how an input pad should be declared inside an element.
-  """
-  @type input_spec_t ::
+  @type bin_spec_t ::
           {name_t(),
-           [
-             common_spec_options_t
-             | {:demand_mode, demand_mode_t()}
-             | {:demand_unit, Buffer.Metric.unit_t()}
-           ]}
+           availability: availability_t(),
+           accepted_format: accepted_format_t(),
+           mode: mode_t(),
+           options: Keyword.t()}
 
   @typedoc """
-  Pad options used in `t:spec_t/0`
+  Describes how a pad should be declared inside an element.
   """
-  @type common_spec_options_t ::
-          {:availability, availability_t()}
-          | {:accepted_format, accepted_format_t()}
-          | {:mode, mode_t()}
-          | {:options, Keyword.t()}
+  @type element_spec_t ::
+          {name_t(),
+           availability: availability_t(),
+           accepted_format: accepted_format_t(),
+           mode: mode_t(),
+           options: Keyword.t(),
+           demand_mode: demand_mode_t(),
+           demand_unit: Buffer.Metric.unit_t()}
 
   @typedoc """
   Type describing a pad. Contains data parsed from `t:spec_t/0`
@@ -157,7 +150,7 @@ defmodule Membrane.Pad do
           :mode => mode_t(),
           :name => name_t(),
           :accepted_formats_str => [String.t()],
-          optional(:demand_unit) => Buffer.Metric.unit_t(),
+          optional(:demand_unit) => Buffer.Metric.unit_t() | nil,
           :direction => direction_t(),
           :options => nil | Keyword.t(),
           optional(:demand_mode) => demand_mode_t()

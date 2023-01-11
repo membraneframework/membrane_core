@@ -71,9 +71,9 @@ defmodule Membrane.Support.Bin.TestBins do
     def_options filter1: [spec: module()],
                 filter2: [spec: module()]
 
-    def_input_pad :input, accepted_format: _any, demand_unit: :buffers
+    def_input_pad :input, accepted_format: _any
 
-    def_output_pad :output, accepted_format: _any, demand_unit: :buffers
+    def_output_pad :output, accepted_format: _any
 
     @impl true
     def handle_init(_ctx, opts) do
@@ -99,12 +99,11 @@ defmodule Membrane.Support.Bin.TestBins do
     @moduledoc false
     use Membrane.Bin
 
-    def_input_pad :input, demand_unit: :buffers, accepted_format: _any, availability: :on_request
+    def_input_pad :input, accepted_format: _any, availability: :on_request
 
     def_output_pad :output,
       accepted_format: _any,
-      availability: :on_request,
-      demand_unit: :buffers
+      availability: :on_request
 
     @impl true
     def handle_init(_ctx, _opts) do
@@ -142,12 +141,11 @@ defmodule Membrane.Support.Bin.TestBins do
     def_options filter1: [spec: module()],
                 filter2: [spec: module()]
 
-    def_input_pad :input, demand_unit: :buffers, accepted_format: _any, availability: :on_request
+    def_input_pad :input, accepted_format: _any, availability: :on_request
 
     def_output_pad :output,
       accepted_format: _any,
-      availability: :on_request,
-      demand_unit: :buffers
+      availability: :on_request
 
     @impl true
     def handle_init(_ctx, opts) do
@@ -185,7 +183,7 @@ defmodule Membrane.Support.Bin.TestBins do
     def_options filter: [spec: module()],
                 sink: [spec: module()]
 
-    def_input_pad :input, demand_unit: :buffers, accepted_format: _any
+    def_input_pad :input, accepted_format: _any
 
     @impl true
     def handle_init(_ctx, opts) do
@@ -271,9 +269,9 @@ defmodule Membrane.Support.Bin.TestBins do
     @moduledoc false
     use Membrane.Bin
 
-    def_input_pad :input, demand_unit: :buffers, accepted_format: _any
+    def_input_pad :input, accepted_format: _any
 
-    def_output_pad :output, accepted_format: _any, demand_unit: :buffers
+    def_output_pad :output, accepted_format: _any
 
     @impl true
     def handle_init(_ctx, _opts) do
